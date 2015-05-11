@@ -5,11 +5,11 @@
     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{F4609545-6D91-4B2D-A811-3201F4934505}</ProjectGuid>
+    <ProjectGuid>{6B2E2C3C-B2E0-4C9F-A1DA-3E78BDB3A141}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>TecWare.PPSn</RootNamespace>
-    <AssemblyName>PPSn.Core</AssemblyName>
+    <AssemblyName>PPSn.Client</AssemblyName>
     <DefaultLanguage>de-DE</DefaultLanguage>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{786C830F-07A1-408B-BD7F-6EE04809D6DB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -34,11 +34,17 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Data\DataColumn.cs" />
-    <Compile Include="Data\DataHelper.cs" />
-    <Compile Include="Data\DataRow.cs" />
-    <Compile Include="Data\DataSet.cs" />
-    <Compile Include="Data\DataTable.cs" />
+    <!-- A reference to the entire .NET Framework is automatically included -->
+    <ProjectReference Include="..\Extern\DESCore\DESCore\DESCore.csproj">
+      <Project>{67528843-e631-4c05-b6e8-514cc8bec7b6}</Project>
+      <Name>DESCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\PPSnCore\PPSnCore.csproj">
+      <Project>{f4609545-6d91-4b2d-a811-3201f4934505}</Project>
+      <Name>PPSnCore</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -49,12 +55,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Extern\DESCore\DESCore\DESCore.csproj">
-      <Project>{67528843-e631-4c05-b6e8-514cc8bec7b6}</Project>
-      <Name>DESCore</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Portable\$(TargetFrameworkVersion)\Microsoft.Portable.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
