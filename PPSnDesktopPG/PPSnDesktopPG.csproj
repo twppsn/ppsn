@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{C7D09A93-DA78-4B81-8D3C-260442C61C5F}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{41BA2001-EECF-49F2-A1A9-E0A274FAB361}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>TecWare.PPSn</RootNamespace>
-    <AssemblyName>PPSn.Desktop.UI</AssemblyName>
+    <RootNamespace>TecWare.PPSn.Playground</RootNamespace>
+    <AssemblyName>PPSnDesktopPG</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -34,9 +34,6 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject />
-  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Neo.Lua, Version=5.3.0.0, Culture=neutral, PublicKeyToken=fdb0cd4fe8a6e3b2, processorArchitecture=MSIL">
       <HintPath>..\packages\NeoLua.1.0.1-beta\lib\net45\Neo.Lua.dll</HintPath>
@@ -61,29 +58,61 @@
     <Reference Include="PresentationFramework" />
   </ItemGroup>
   <ItemGroup>
+    <ApplicationDefinition Include="App.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <Content Include="Example\MasterData.Contacts.xaml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Page Include="MainWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="App.xaml.cs">
+      <DependentUpon>App.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MainWindow.xaml.cs">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
-    <AppDesigner Include="Properties\" />
-    <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
-    <Compile Include="UI\PpsGenericWpfWindowPane.cs" />
-    <Compile Include="UI\PpsWindowPane.cs" />
-  </ItemGroup>
-  <ItemGroup>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <None Include="Example\MasterData.Contacts.dxml" />
+    <None Include="Example\MasterData.Contacts.sxml" />
+    <None Include="Example\MasterData.Contracts.lua" />
     <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <AppDesigner Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\twdes\Core\DESCore\DESCore.csproj">
-      <Project>{67528843-e631-4c05-b6e8-514cc8bec7b6}</Project>
-      <Name>DESCore</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\PPSnCore\PPSnClient\PPSnClient.csproj">
-      <Project>{6b2e2c3c-b2e0-4c9f-a1da-3e78bdb3a141}</Project>
-      <Name>PPSnClient</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\PPSnCore\PPSnCore\PPSnCore.csproj">
-      <Project>{f4609545-6d91-4b2d-a811-3201f4934505}</Project>
-      <Name>PPSnCore</Name>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PPSnDesktopUI\PPSnDesktopUI.csproj">
+      <Project>{c7d09a93-da78-4b81-8d3c-260442c61c5f}</Project>
+      <Name>PPSnDesktopUI</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

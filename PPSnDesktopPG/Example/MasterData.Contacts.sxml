@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<dataset>
+	<table name="KONT">
+		<column name="KONTID" datatype="long" />
+		<column name="KONTNAME" datatype="string">
+			<MaxLength datatype="int">50</MaxLength>
+			<Caption datatype="string">Bezeichnung</Caption>
+		</column>
+	</table>
+	<table name="ADDR">
+		<column name="ADDRID" datatype="long" />
+		<column name="ADDRKONTID" datatype="long" />
+		<column name="ADDRTEXT" datatype="string" />
+	</table>
+	<meta>
+		<Caption datatype="string">Kontakte</Caption>
+	</meta>
+</dataset>

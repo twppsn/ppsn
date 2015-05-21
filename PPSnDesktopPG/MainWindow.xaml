@@ -1,0 +1,14 @@
+﻿<Window x:Class="TecWare.PPSn.Playground.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MainWindow" Height="350" Width="525">
+   <DockPanel LastChildFill="true">
+		<Grid Height="32" DockPanel.Dock="Top">
+			<StackPanel Orientation="Horizontal" Margin="4,4,4,5">
+				<Button Content="Exit" Width="100" />
+			</StackPanel>
+			<Separator VerticalAlignment="Bottom" />
+		</Grid>
+		<ContentPresenter x:Name="contentPresenter" />
+	</DockPanel>
+</Window>
