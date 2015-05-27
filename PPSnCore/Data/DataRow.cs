@@ -334,7 +334,7 @@ namespace TecWare.PPSn.Data
 			foreach (XElement xValue in xRow.Elements("v")) // Werte
 			{
 				XElement xOriginal = xValue.Element("o");
-				XElement xCurrent = xValue.Element("v");
+				XElement xCurrent = xValue.Element("c");
 
 				// Konvertierung wird durch den Konstruktur erledigt
 				Type valueType = table.Columns[i].DataType;

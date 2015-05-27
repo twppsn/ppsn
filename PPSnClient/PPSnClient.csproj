@@ -45,7 +45,11 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data\DataColumn.cs" />
+    <Compile Include="Data\DataHelper.cs" />
     <Compile Include="Data\DataSet.cs" />
+    <Compile Include="Data\DataTable.cs" />
+    <Compile Include="Data\DataUndoStack.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
