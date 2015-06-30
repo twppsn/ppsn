@@ -9,16 +9,6 @@ using TecWare.DES.Stuff;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- class PpsDataSetHelper ---------------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public static class PpsDataSetHelper
-	{
-	} // class PpsDataSetHelper
-
-	#endregion
-
 	#region -- class PpsMetaCollection --------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////

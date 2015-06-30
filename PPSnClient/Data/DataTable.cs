@@ -12,7 +12,7 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsDataTableClientDefinition : PpsDataTableDefinition
+	public sealed class PpsDataTableDefinitionClient : PpsDataTableDefinition
 	{
 		#region -- class PpsDataTableMetaCollectionClient ---------------------------------
 
@@ -30,15 +30,19 @@ namespace TecWare.PPSn.Data
 
 		private PpsDataTableMetaCollectionClient metaInfo;
 
-		public PpsDataTableClientDefinition(PpsDataSetClientDefinition dataset, XElement xTable)
+		public PpsDataTableDefinitionClient(PpsDataSetDefinitionClient dataset, XElement xTable)
 			: base(xTable.GetAttribute("name", String.Empty))
 		{
 			foreach (XElement c in xTable.Elements())
 			{
-				if (c.Name.LocalName == "column")
-					AddColumn(new PpsDataColumnClientDefinition(this, c));
-				else if (c.Name.LocalName == "meta")
-					metaInfo = new PpsDataTableMetaCollectionClient(c);
+                if (c.Name.LocalName == "column")
+                    AddColumn(new PpsDataColumnClientDefinition(this, c));
+                else if (c.Name.LocalName == "meta")
+                    metaInfo = new PpsDataTableMetaCollectionClient(c);
+                else
+                    throw new NotSupportedException(
+                        string.Format("Nicht unterstütztes Element, Name: '{0}', in der Datendefinition. \nBitte Definitionsdatei '*.sxml' korrigieren."
+                        , c.Name.LocalName));
 			}
 		} // ctor
 

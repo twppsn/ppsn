@@ -160,8 +160,8 @@ namespace TecWare.PPSn.Data
 					Expression.AndAlso(
 						Expression.TypeIs(Expression, typeof(PpsDataTable)),
 						Expression.Equal(
-							Expression.Property(Expression.Convert(Expression, typeof(PpsDataTable)), ClassPropertyInfo),
-							Expression.Constant(table.Class)
+							Expression.Property(Expression.Convert(Expression, typeof(PpsDataTable)), TableDefinitionPropertyInfo),
+							Expression.Constant(table.TableDefinition)
 						)
 					)
 				);
@@ -182,9 +182,9 @@ namespace TecWare.PPSn.Data
 				else
 				{
 					PpsDataTable table = (PpsDataTable)Value;
-					int iColumnIndex = table.Class.FindColumnIndex(binder.Name);
+					int iColumnIndex = table.TableDefinition.FindColumnIndex(binder.Name);
 					if (iColumnIndex == -1)
-						return new DynamicMetaObject(table.Class.Meta.GetMetaConstantExpression(binder.Name), GetBindingRestrictions(table));
+						return new DynamicMetaObject(table.TableDefinition.Meta.GetMetaConstantExpression(binder.Name), GetBindingRestrictions(table));
 					else
 						return new DynamicMetaObject(
 							Expression.MakeIndex(
@@ -206,8 +206,8 @@ namespace TecWare.PPSn.Data
 		/// <summary>Gibt Auskunft über die Änderungen in der Liste</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
-		private PpsDataTableDefinition tableClass;  // Zugehörige Klasse der Tabelle
-		private PpsDataSet dataset;									// Zugeordnetes DataSet
+		private PpsDataTableDefinition tableDefinition;  // Zugehörige Definition dieser Tabelle
+		private PpsDataSet dataset;						 // Eigentümer dieser Tabelle
 
 		private PpsDataRow emptyRow;
 		private List<PpsDataRow> rows = new List<PpsDataRow>();					// Alle Datenzeilen
@@ -219,15 +219,15 @@ namespace TecWare.PPSn.Data
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		public PpsDataTable(PpsDataTableDefinition tableClass, PpsDataSet dataset)
+		public PpsDataTable(PpsDataTableDefinition tableDefinition, PpsDataSet dataset)
 		{
 			if (dataset == null)
 				throw new ArgumentNullException();
 
-			this.dataset = dataset;
-			this.tableClass = tableClass;
+			this.dataset = dataset; 
+			this.tableDefinition = tableDefinition;
 
-			this.emptyRow = new PpsDataRow(this, PpsDataRowState.Unchanged, new object[tableClass.Columns.Count], null);
+			this.emptyRow = new PpsDataRow(this, PpsDataRowState.Unchanged, new object[tableDefinition.Columns.Count], null);
 			this.rowsView = new ReadOnlyCollection<PpsDataRow>(rows);
 			this.rowsOriginal = new ReadOnlyCollection<PpsDataRow>(originalRows);
 		} // ctor
@@ -455,23 +455,21 @@ namespace TecWare.PPSn.Data
 		/// <param name="x"></param>
 		public void Read(XElement x)
 		{
-			if (x.Name.LocalName == "t") // Tabellendefinition
-			{
-				foreach (XElement xRow in x.Elements("r")) // Zeilen lesen
-					AddInternal(xRow.GetAttribute("a", "0") != "1", new PpsDataRow(this, xRow));
-			}
-			else
-				throw new NotSupportedException();
+            Checker.Assert(x.Name.LocalName == Xml.tag_table); // muss Tabellenelement sein
+			
+            foreach (XElement xRow in x.Elements(Xml.tag_row)) // Zeilen lesen
+                AddInternal(xRow.GetAttribute(Xml.tag_rowAdded, "0") != "1", new PpsDataRow(this, xRow));
+;
 		} // proc Read
 
 		public void Write(XmlWriter x)
 		{
-			x.WriteStartElement("t");
+            x.WriteStartElement(Xml.tag_table);
 
 			// Schreibe die Datenzeilen
 			foreach (PpsDataRow r in rows)
 			{
-				x.WriteStartElement("r");
+                x.WriteStartElement(Xml.tag_row);
 				r.Write(x);
 				x.WriteEndElement();
 			}
@@ -484,11 +482,11 @@ namespace TecWare.PPSn.Data
 		/// <summary>Zugriff auf das dazugehörige DataSet</summary>
 		public PpsDataSet DataSet { get { return dataset; } }
 		/// <summary>Zugriff auf die Klasse</summary>
-		public PpsDataTableDefinition Class { get { return tableClass; } }
+		public PpsDataTableDefinition TableDefinition { get { return tableDefinition; } }
 		/// <summary>Name der Tabelle</summary>
-		public string Name { get { return tableClass.Name; } }
+		public string Name { get { return tableDefinition.Name; } }
 		/// <summary>Zugriff auf die Spalteninformationen</summary>
-		public ReadOnlyCollection<PpsDataColumnDefinition> Columns { get { return tableClass.Columns; } }
+		public ReadOnlyCollection<PpsDataColumnDefinition> Columns { get { return tableDefinition.Columns; } }
 
 		/// <summary>Gesamtzahl der Datenzeilen in der Tabelle.</summary>
 		public int Count { get { return currentRows.Count; } }
@@ -527,21 +525,33 @@ namespace TecWare.PPSn.Data
 
 		// -- Static --------------------------------------------------------------
 
-		private static readonly PropertyInfo ReadOnlyCollectionIndexPropertyInfo;
-		private static readonly PropertyInfo ColumnsPropertyInfo;
-		internal static readonly PropertyInfo ClassPropertyInfo;
+		private static readonly PropertyInfo ReadOnlyCollectionIndexPropertyInfo; //~Ri: ?, unused
+		private static readonly PropertyInfo ColumnsPropertyInfo; //~Ri: ?, unused
+		internal static readonly PropertyInfo TableDefinitionPropertyInfo;
 
 		static PpsDataTable()
 		{
 			TypeInfo typeInfo = typeof(PpsDataTable).GetTypeInfo();
 			ColumnsPropertyInfo = typeInfo.GetDeclaredProperty("Columns");
-			ClassPropertyInfo = typeInfo.GetDeclaredProperty("Class");
+			TableDefinitionPropertyInfo = typeInfo.GetDeclaredProperty("TableDefinition");
 
 			ReadOnlyCollectionIndexPropertyInfo = typeof(ReadOnlyCollection<PpsDataColumnDefinition>).GetTypeInfo().GetDeclaredProperty("Item");
 
-			if (ColumnsPropertyInfo == null || ClassPropertyInfo == null || ReadOnlyCollectionIndexPropertyInfo == null)
+			if (ColumnsPropertyInfo == null || TableDefinitionPropertyInfo == null || ReadOnlyCollectionIndexPropertyInfo == null)
 				throw new InvalidOperationException("Reflection fehlgeschlagen (PpsDataTable)");
 		} // sctor
+
+        public void Accept(IVisitor visitor)
+        {
+            visitor.Visit(this);
+
+            // visit all "children" of this instance
+            foreach (var row in rows)
+            {
+                row.Accept(visitor);
+            }
+        }
+
 	} // class PpsDataTable
 
 	#endregion

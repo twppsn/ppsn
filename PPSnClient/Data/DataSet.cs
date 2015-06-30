@@ -13,7 +13,7 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsDataSetClientDefinition : PpsDataSetDefinition
+	public sealed class PpsDataSetDefinitionClient : PpsDataSetDefinition
 	{
 		#region -- class PpsDataSetMetaCollectionClient -----------------------------------
 
@@ -31,13 +31,13 @@ namespace TecWare.PPSn.Data
 
 		private PpsDataSetMetaCollectionClient metaInfo;
 
-		public PpsDataSetClientDefinition(XElement xSchema)
+		public PpsDataSetDefinitionClient(XElement xSchema)
 		{
 			// Lade die Tabellen
 			foreach (XElement c in xSchema.Elements())
 			{
 				if (c.Name == PpsDataHelperClient.xnTable)
-					Add(new PpsDataTableClientDefinition(this, c));
+					Add(new PpsDataTableDefinitionClient(this, c));
 				else if (c.Name == PpsDataHelperClient.xnMeta)
 					metaInfo = new PpsDataSetMetaCollectionClient(c);
 			}
@@ -61,9 +61,12 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public sealed class PpsDataSetClient : PpsDataSet
 	{
+        public UndoRedo UndoRedo { get; private set; }
+
 		internal PpsDataSetClient(PpsDataSetDefinition datasetDefinition)
 			: base(datasetDefinition)
 		{
+            UndoRedo = new UndoRedo();
 		} // ctor
 	} // class PpsDataSetClient
 }

@@ -31,7 +31,7 @@ namespace TecWare.PPSn.Data
 
 		private PpsDataColumnMetaCollectionClient metaInfo;
 
-		public PpsDataColumnClientDefinition(PpsDataTableClientDefinition table, XElement xColumn)
+		public PpsDataColumnClientDefinition(PpsDataTableDefinitionClient table, XElement xColumn)
 			: base(table, xColumn.GetAttribute("name", String.Empty), LuaType.GetType(xColumn.GetAttribute("datatype", "object"), lLateAllowed: false).Type)
 		{
 			metaInfo = new PpsDataColumnMetaCollectionClient(xColumn);

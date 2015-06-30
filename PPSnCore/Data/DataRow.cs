@@ -9,19 +9,86 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using System.Diagnostics;
+
 using TecWare.DES.Stuff;
+using System.Collections.ObjectModel;
 
 namespace TecWare.PPSn.Data
 {
+    //~todo: remove class to appropriate file
+    public class AssertionException : Exception
+    {
+        public AssertionException()
+        {
+        }
+
+        public AssertionException(string message)
+            : base(message)
+        {
+        }
+
+        public AssertionException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
+    }
+
+    //~todo: remove class to appropriate file
+    public class AppException : Exception
+    {
+        public AppException()
+        {
+        }
+
+        public AppException(string message)
+            : base(message)
+        {
+        }
+
+        public AppException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
+    }
+
+    public class Checker
+    {
+        public static void Assert(bool condition)
+        {
+            if (!condition)
+            {
+                throw new AssertionException("Assertion failed.");
+            }
+        }
+
+        public static void Assert(bool condition, string message)
+        {
+            if (!condition)
+            {
+                throw new AssertionException(string.Format("Assertion failed: '{0}'", message));
+            }
+        }
+    }
+
+
+
+
+
+
+
+
 	#region -- enum PpsDataRowState -----------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Status der Zeile.</summary>
 	public enum PpsDataRowState
 	{
-		/// <summary>In der Datenzeile wurde nichts geändert</summary>
-		Unchanged = 0,
-		/// <summary>Datenzeile wurde geändert</summary>
+        /// <summary>In der Datenzeile wurde nichts geändert</summary>
+        Unknown = -1,
+        /// <summary>In der Datenzeile wurde nichts geändert</summary>
+        Unchanged = 0,
+        /// <summary>Datenzeile wurde geändert</summary>
 		Changed = 1,
 		/// <summary>Datenzeile wurde gelöscht</summary>
 		Deleted = 2
@@ -79,8 +146,8 @@ namespace TecWare.PPSn.Data
 					Expression.AndAlso(
 						exprType,
 						Expression.Equal(
-							Expression.Property(Expression.Field(expr, TableFieldInfo), PpsDataTable.ClassPropertyInfo),
-							Expression.Constant(Row.table.Class, typeof(PpsDataTableDefinition))
+							Expression.Property(Expression.Field(expr, TableFieldInfo), PpsDataTable.TableDefinitionPropertyInfo),
+							Expression.Constant(Row.table.TableDefinition, typeof(PpsDataTableDefinition))
 						)
 					);
 
@@ -108,7 +175,7 @@ namespace TecWare.PPSn.Data
 				if (IsStandardMember(binder.Name))
 					return base.BindGetMember(binder);
 
-				int iColumnIndex = Row.table.Class.FindColumnIndex(binder.Name);
+				int iColumnIndex = Row.table.TableDefinition.FindColumnIndex(binder.Name);
 				if (iColumnIndex >= 0)
 					return new DynamicMetaObject(GetIndexExpression(iColumnIndex), GetRestriction());
 				else
@@ -120,7 +187,7 @@ namespace TecWare.PPSn.Data
 				if (IsStandardMember(binder.Name))
 					return base.BindSetMember(binder, value);
 
-				int iColumnIndex = Row.table.Class.FindColumnIndex(binder.Name);
+				int iColumnIndex = Row.table.TableDefinition.FindColumnIndex(binder.Name);
 				if (iColumnIndex >= 0){
 					return new DynamicMetaObject(
 						Expression.Assign(GetIndexExpression(iColumnIndex), Expression.Convert(value.Expression, typeof(object))),
@@ -203,12 +270,15 @@ namespace TecWare.PPSn.Data
 			/// <returns>Wert in der Spalte</returns>
 			public object this[string sColumnName]
 			{
-				get { return this[Row.table.Class.FindColumnIndex(sColumnName, true)]; }
-				set { this[Row.table.Class.FindColumnIndex(sColumnName, true)] = value; }
+				get { return this[Row.table.TableDefinition.FindColumnIndex(sColumnName, true)]; }
+				set { this[Row.table.TableDefinition.FindColumnIndex(sColumnName, true)] = value; }
 			} // prop this
 
 			/// <summary>Zugriff auf die Datenzeile.</summary>
 			protected internal PpsDataRow Row { get { return row; } }
+
+            public Action<PpsDataRow, int, object, object> actionUndo;
+
 		} // class RowValues
 
 		#endregion
@@ -248,19 +318,27 @@ namespace TecWare.PPSn.Data
 			{
 				get
 				{
-					object currentValue = Row.currentValues[iColumnIndex];
-					return currentValue == NotSet ? Row.originalValues[iColumnIndex] : currentValue;
+                    object currentValue = Row.currentValues[iColumnIndex] == NotSet ? Row.originalValues[iColumnIndex] : Row.currentValues[iColumnIndex];
+					//return currentValue == NotSet ? Row.originalValues[iColumnIndex] : currentValue;
+                    return currentValue;
 				}
 				set
 				{
 					// Konvertiere als erstes den Wert
-					value = Procs.ChangeType(value, Row.table.Class.Columns[iColumnIndex].DataType);
+					value = Procs.ChangeType(value, Row.table.TableDefinition.Columns[iColumnIndex].DataType);
 
 					// Prüfe die Änderung
 					if (!Object.Equals(this[iColumnIndex], value))
 					{
-						Row.currentValues[iColumnIndex] = value;
-						Row.OnPropertyChanged(iColumnIndex);
+                        // undo handling part
+                        object oldValue = (Row.currentValues[iColumnIndex] == PpsDataRow.NotSet) 
+                            ? Row.Original[iColumnIndex] 
+                            : Row.currentValues[iColumnIndex];
+                        actionUndo(this.Row, iColumnIndex, oldValue, value);
+                        
+                        // data handling part
+                        Row.currentValues[iColumnIndex] = value;
+                        Row.OnPropertyChanged(iColumnIndex);
 					}
 				}
 			} // prop CurrentRowValues
@@ -274,14 +352,14 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		internal static readonly object NotSet = new NotSetValue();
+		public static readonly object NotSet = new NotSetValue();
 
 		/// <summary>Wird ausgelöst, wenn sich eine Eigenschaft geändert hat</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		private PpsDataTable table;
+		protected PpsDataTable table;
 
-		private PpsDataRowState state;
+		private PpsDataRowState rowState;
 		private OriginalRowValues orignalValuesProxy;
 		private CurrentRowValues currentValuesProxy;
 		private object[] originalValues;
@@ -289,32 +367,37 @@ namespace TecWare.PPSn.Data
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		private PpsDataRow(PpsDataTable table, PpsDataRowState state)
+		private PpsDataRow(PpsDataTable table)
 		{
+			this.rowState = PpsDataRowState.Unknown;
+
 			this.table = table;
-			this.state = state;
 			this.orignalValuesProxy = new OriginalRowValues(this);
 			this.currentValuesProxy = new CurrentRowValues(this);
 
 			// Initialisiere die Datenspalten
 			this.originalValues = new object[table.Columns.Count];
 			this.currentValues = new object[originalValues.Length];
+            
+            this.CurrentValuesUnmanipulated = new ReadOnlyCollection<object>(currentValues);
 		} // ctor
 
-		/// <summary>Erzeugt eine neue Datenspalte</summary>
-		/// <param name="table">Tabelle, zu der diese Zeile zugeordnet wird.</param>
+		/// <summary>Erzeugt eine neue Datenzeile</summary>
+		/// <param name="table">Tabelle, welche diese Zeile besitzt.</param>
 		/// <param name="state"></param>
 		/// <param name="originalValues">Originalwerte für die Initialisierung der Zeile.</param>
 		/// <param name="currentValues">Aktuelle Werte der Zeile.</param>
 		internal PpsDataRow(PpsDataTable table, PpsDataRowState state, object[] originalValues, object[] currentValues)
-			: this(table, state)
+			: this(table)
 		{
+			this.rowState = state;
+
 			int iLength = table.Columns.Count;
 
 			if (originalValues == null || originalValues.Length != iLength)
-				throw new ArgumentException("Nicht genug werde für die Initialisierung.");
+				throw new ArgumentException("Nicht genug Werte für die Initialisierung.");
 			if (currentValues != null && currentValues.Length != iLength)
-				throw new ArgumentException("Nicht genug werde für die Initialisierung.");
+				throw new ArgumentException("Nicht genug Werte für die Initialisierung.");
 
 			for (int i = 0; i < iLength; i++)
 			{
@@ -325,16 +408,22 @@ namespace TecWare.PPSn.Data
 		} // ctor
 
 		internal PpsDataRow(PpsDataTable table, XElement xRow)
-			: this(table, PpsDataRowState.Unchanged)
+			: this(table)
 		{
-			this.table = table;
-			this.state = (PpsDataRowState)xRow.GetAttribute("s", 0);
+            int rowState = xRow.GetAttribute(Xml.tag_rowState, 0); // optionales Attribut für Zeilenstatus
+            if ( ! Enum.IsDefined(typeof(PpsDataRowState), rowState))
+            {
+                throw new NotSupportedException(string.Format("Unbekannter Zeilenstatus-Wert '{0}' (=Wert des XML Attributes 's'); erlaubte Werte: siehe Typ 'PpsDataRowState'.", rowState));
+            }
+            this.rowState = (PpsDataRowState)rowState;
 
 			int i = 0;
-			foreach (XElement xValue in xRow.Elements("v")) // Werte
+			foreach (XElement xValue in xRow.Elements(Xml.tag_value)) // Werte
 			{
-				XElement xOriginal = xValue.Element("o");
-				XElement xCurrent = xValue.Element("c");
+                Checker.Assert(i < table.Columns.Count, "Mehr Datenwerte als Spaltendefinitionen gefunden");
+
+				XElement xOriginal = xValue.Element(Xml.tag_originalValue);
+				XElement xCurrent = xValue.Element(Xml.tag_currentValue);
 
 				// Konvertierung wird durch den Konstruktur erledigt
 				Type valueType = table.Columns[i].DataType;
@@ -379,7 +468,7 @@ namespace TecWare.PPSn.Data
 			}
 
 			// Die Zeile ist gelöscht, stelle Sie wieder her
-			if (state == PpsDataRowState.Deleted)
+			if (rowState == PpsDataRowState.Deleted)
 				table.RestoreInternal(this);
 
 			RowState = PpsDataRowState.Unchanged;
@@ -390,7 +479,7 @@ namespace TecWare.PPSn.Data
 		{
 			CheckForTable();
 
-			if (state == PpsDataRowState.Deleted)
+			if (rowState == PpsDataRowState.Deleted)
 			{
 				table.RemoveInternal(this, true);
 			}
@@ -413,7 +502,7 @@ namespace TecWare.PPSn.Data
 		/// <returns><c>true</c>, wenn die Zeile als gelöscht markiert werden konnte.</returns>
 		public bool Remove()
 		{
-			if (state == PpsDataRowState.Deleted || table == null)
+			if (rowState == PpsDataRowState.Deleted || table == null)
 				return false;
 
 			bool r = table.RemoveInternal(this, false);
@@ -430,19 +519,19 @@ namespace TecWare.PPSn.Data
 		internal void Write(XmlWriter x)
 		{
 			// Status
-			x.WriteAttributeString("s", ((int)state).ToString());
+            x.WriteAttributeString(Xml.tag_rowState, ((int)rowState).ToString());
 			if (IsAdded)
-				x.WriteAttributeString("a", "1");
+				x.WriteAttributeString(Xml.tag_rowAdded, "1");
 
 			// Werte
 			for (int i = 0; i < originalValues.Length; i++)
 			{
-				x.WriteStartElement("v");
+				x.WriteStartElement(Xml.tag_value);
 
 				if (!IsAdded && originalValues[i] != null)
-					WriteValue(x, "o", originalValues[i]);
-				if (state != PpsDataRowState.Deleted && currentValues[i] != NotSet)
-					WriteValue(x, "c", currentValues[i]);
+					WriteValue(x, Xml.tag_originalValue, originalValues[i]);
+				if (rowState != PpsDataRowState.Deleted && currentValues[i] != NotSet)
+					WriteValue(x, Xml.tag_currentValue, currentValues[i]);
 
 				x.WriteEndElement();
 			}
@@ -496,18 +585,21 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Zugriff auf die aktuellen Werte</summary>
 		public RowValues Current { get { return currentValuesProxy; } }
+		/// <summary>access to unmanipulated current values</summary>
+		//public object[] CurrentValuesUnmanipulated { get { return currentValues; } }
+        public ReadOnlyCollection<object> CurrentValuesUnmanipulated;
 		/// <summary>Originale Werte, mit der diese Zeile initialisiert wurde</summary>
 		public RowValues Original { get { return orignalValuesProxy; } }
 
 		/// <summary>Status der Zeile</summary>
 		public PpsDataRowState RowState
 		{
-			get { return state; }
+			get { return rowState; }
 			private set
 			{
-				if (state != value)
+				if (rowState != value)
 				{
-					state = value;
+					rowState = value;
 					OnPropertyChanged("RowState");
 				}
 			}
@@ -569,7 +661,15 @@ namespace TecWare.PPSn.Data
 		} // func FindItemIndex
 
 		#endregion
-	} // class PpsDataRow
+
+        public void Accept(IVisitor visitor)
+        {
+            visitor.Visit(this);
+
+            // we are in tree's leave, so there are no children we have to visit
+        }
+
+    } // class PpsDataRow
 
 	#endregion
 }

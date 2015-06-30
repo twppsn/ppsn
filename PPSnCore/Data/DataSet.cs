@@ -57,18 +57,18 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		private List<PpsDataTableDefinition> tables;
-		private ReadOnlyCollection<PpsDataTableDefinition> tableCollection;
+		private ReadOnlyCollection<PpsDataTableDefinition> tableDefinitions;
 
 		protected PpsDataSetDefinition()
 		{
 			this.tables = new List<PpsDataTableDefinition>();
-			this.tableCollection = new ReadOnlyCollection<PpsDataTableDefinition>(tables);
+			this.tableDefinitions = new ReadOnlyCollection<PpsDataTableDefinition>(tables);
 		} // ctor
 
 		/// <summary>Beendet die Initialisierung des DataSet's</summary>
 		public virtual void EndInit()
 		{
-			foreach (var t in Tables)
+			foreach (var t in TableDefinitions)
 				t.EndInit();
 		} // proc EndInit
 
@@ -97,7 +97,7 @@ namespace TecWare.PPSn.Data
 		} // func FindTable
 
 		/// <summary>Zugriff auf die Tabellendaten</summary>
-		public ReadOnlyCollection<PpsDataTableDefinition> Tables { get { return tableCollection; } }
+		public ReadOnlyCollection<PpsDataTableDefinition> TableDefinitions { get { return tableDefinitions; } }
 		/// <summary>Zugriff auf die MetaInformationen</summary>
 		public abstract PpsDataSetMetaCollection Meta { get; }
 	} // class PpsDataSetDefinition
@@ -128,7 +128,7 @@ namespace TecWare.PPSn.Data
 						Expression.TypeIs(Expression, typeof(PpsDataSet)),
 						Expression.Equal(
 							Expression.Property(Expression.Convert(Expression, typeof(PpsDataSet)), DefinitionPropertyInfo),
-							Expression.Constant(dataset.Definition)
+							Expression.Constant(dataset.DataSetDefinition)
 						)
 					)
 				);
@@ -142,7 +142,7 @@ namespace TecWare.PPSn.Data
 				// Suche die Entsprechende Tabelle
 				int iTableIndex = Array.FindIndex(dataset.tables, c => String.Compare(c.Name, binder.Name) == 0);
 				if (iTableIndex == -1) // Suche die Meta-Daten
-					expr = dataset.Definition.Meta.GetMetaConstantExpression(binder.Name);
+					expr = dataset.DataSetDefinition.Meta.GetMetaConstantExpression(binder.Name);
 				else
 					expr = Expression.ArrayIndex(Expression.Field(Expression.Convert(Expression, typeof(PpsDataSet)), TableFieldInfo), Expression.Constant(iTableIndex));
 
@@ -155,23 +155,24 @@ namespace TecWare.PPSn.Data
 
 				return 
 					(from t in dataset.Tables select t.Name)
-					.Concat(from m in dataset.Definition.Meta select m.Key);
+					.Concat(from m in dataset.DataSetDefinition.Meta select m.Key);
 			} // func GetDynamicMemberNames
 		} // class PpsDataSetMetaObject
 
 		#endregion
 
-		private PpsDataSetDefinition datasetClass;
+
+		private PpsDataSetDefinition datasetDefinition;
 		private PpsDataTable[] tables;
 		private ReadOnlyCollection<PpsDataTable> tableCollection;
-		
-		public PpsDataSet(PpsDataSetDefinition datasetClass)
+
+        public PpsDataSet(PpsDataSetDefinition datasetDefinition)
 		{
-			this.datasetClass = datasetClass;
-			this.tables = new PpsDataTable[datasetClass.Tables.Count];
+            this.datasetDefinition = datasetDefinition;
+            this.tables = new PpsDataTable[datasetDefinition.TableDefinitions.Count];
 
 			for (int i = 0; i < tables.Length; i++)
-				tables[i] = datasetClass.Tables[i].CreateDataTable(this);
+                tables[i] = datasetDefinition.TableDefinitions[i].CreateDataTable(this);
 
 			this.tableCollection = new ReadOnlyCollection<PpsDataTable>(tables);
 		} // ctor
@@ -195,10 +196,10 @@ namespace TecWare.PPSn.Data
 
 		public void Read(XElement x)
 		{
-			if (x.Name != "data")
+            if (x.Name != Xml.tag_data)
 				throw new ArgumentException();
 
-			bool lReadCombine = x.GetAttribute("combine", false);
+			bool lReadCombine = x.GetAttribute(Xml.tag_combine, false);
 
 			// Lösche die vorhanden Daten
 			if (!lReadCombine)
@@ -206,16 +207,16 @@ namespace TecWare.PPSn.Data
 
 			// Lade die entsprechenden Tabellen
 			int iTableIndex = 0;
-			foreach (XElement xTable in x.Elements("t")) // lese die Tabellen
+            foreach (XElement xTable in x.Elements(Xml.tag_table)) // lese die Tabellen
 			{
 				if (lReadCombine) // suche die Tabelle
 				{
-					string sTableName = xTable.GetAttribute("n", String.Empty);
+					string sTableName = xTable.GetAttribute(Xml.tag_dontKnow, String.Empty);
 					if (String.IsNullOrEmpty(sTableName) || (iTableIndex = FindTableIndex(sTableName)) == -1)
 						throw new ArgumentException();
 				}
 
-				PpsDataTable t = tables[iTableIndex];
+				PpsDataTable t = tables[iTableIndex]; // Voraussetzung: Schema-Datei und Daten-Datei haben identische Tabellensequenz, bezogen auf Tabellentypen
 				if (!lReadCombine)
 					t.ClearInternal();
 				t.Read(xTable);
@@ -227,7 +228,7 @@ namespace TecWare.PPSn.Data
 
 		public void Write(XmlWriter x)
 		{
-			x.WriteStartElement("data");
+            x.WriteStartElement(Xml.tag_data);
 			foreach (var table in tables)
 				table.Write(x);
 			x.WriteEndElement();
@@ -246,7 +247,7 @@ namespace TecWare.PPSn.Data
 		} // proc Reset
 
 		/// <summary>Zugriff auf die Definition der Datensammlung</summary>
-		public PpsDataSetDefinition Definition { get { return datasetClass; } }
+		public PpsDataSetDefinition DataSetDefinition { get { return datasetDefinition; } }
 		/// <summary>Zugriff auf die Tabellendaten.</summary>
 		public ReadOnlyCollection<PpsDataTable> Tables { get { return tableCollection; } }
 
@@ -270,12 +271,25 @@ namespace TecWare.PPSn.Data
 
 			typeInfo = typeof(PpsDataSet).GetTypeInfo();
 			TableFieldInfo = typeInfo.GetDeclaredField("tables");
-			DefinitionPropertyInfo = typeInfo.GetDeclaredProperty("Definition");
+			DefinitionPropertyInfo = typeInfo.GetDeclaredProperty("DataSetDefinition");
 
 
 			if (TableFieldInfo == null || DefinitionPropertyInfo == null)
 				throw new ArgumentException("sctor @ PpsDataSet");
 		} // sctor
+
+
+        public void Accept(IVisitor visitor)
+        {
+            visitor.Visit(this);
+
+            // visit all "children" of this instance
+            foreach (var table in tables)
+            {
+                table.Accept(visitor);
+            }
+        }
+
 	} // class PpsDataSet
 
 	#endregion
