@@ -2,17 +2,21 @@
 <dataset>
 	<table name="KONT">
 		<column name="KONTID" datatype="long" />
-		<column name="KONTNAME" datatype="string">
-			<MaxLength datatype="int">50</MaxLength>
-			<Caption datatype="string">Bezeichnung</Caption>
-		</column>
-	</table>
+    <column name="KONTNAME" datatype="string">
+      <MaxLength datatype="int">50</MaxLength>
+      <Caption datatype="string">Name</Caption>
+    </column>
+    <column name="KONTVORNAME" datatype="string">
+      <MaxLength datatype="int">50</MaxLength>
+      <Caption datatype="string">Vorname</Caption>
+    </column>
+  </table>
 	<table name="ADDR">
 		<column name="ADDRID" datatype="long" />
 		<column name="ADDRKONTID" datatype="long" />
 		<column name="ADDRTEXT" datatype="string" />
 	</table>
 	<meta>
-		<Caption datatype="string">Kontakte</Caption>
+		<Caption datatype="string">Caption Kontakte</Caption>
 	</meta>
 </dataset>

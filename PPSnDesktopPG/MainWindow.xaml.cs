@@ -33,9 +33,11 @@ namespace TecWare.PPSn.Playground
 						if (t.Exception != null)
 							Dispatcher.Invoke(new Action<Exception>(RaiseException), t.Exception);
 						else
-							Dispatcher.Invoke(RefreshView);
+                        {
+ 							Dispatcher.Invoke(RefreshView);
+                       }
 					});
-		} // ctor
+        } // ctor
 
 		private async Task LoadMask(string sXamlFile)
 		{
@@ -59,5 +61,10 @@ namespace TecWare.PPSn.Playground
 			else
 				MessageBox.Show(e.Message);
 		} // proc RaiseException
-	}
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            //~ on exit
+        }
+    }
 }

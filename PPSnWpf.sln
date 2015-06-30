@@ -17,6 +17,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnDesktopPG", "PPSnDeskto
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DESCore", "..\PPSnCore\Extern\DESCore\DESCore\DESCore.csproj", "{67528843-E631-4C05-B6E8-514CC8BEC7B6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{70FDA9BB-BD27-40C7-881B-B3BF9F861CE2}"
+	ProjectSection(SolutionItems) = preProject
+		Richter_Memo.txt = Richter_Memo.txt
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

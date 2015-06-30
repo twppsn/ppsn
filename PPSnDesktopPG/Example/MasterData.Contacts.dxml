@@ -3,10 +3,13 @@
 	<t>
 		<r>
 			<v>
-				<o>1</o>
+				<o>111</o>
 			</v>
 			<v>
-				<o>Name</o>
+				<o>Original.KONTNAME</o>
+			</v>
+			<v>
+				<o>Original.KONTvorNAME</o>
 			</v>
 		</r>
 	</t>
@@ -16,10 +19,10 @@
 				<o>1</o>
 			</v>
 			<v>
-				<o>1</o>
+				<o>111</o>
 			</v>
 			<v>
-				<o>Addresse 1</o>
+				<o>Original.ADDRTEXT 1</o>
 			</v>
 		</r>
 		<r>
@@ -27,10 +30,10 @@
 				<o>2</o>
 			</v>
 			<v>
-				<o>1</o>
+				<o>222</o>
 			</v>
 			<v>
-				<o>Addresse 2</o>
+				<o>Original.ADDRTEXT 2</o>
 			</v>
 		</r>
 	</t>

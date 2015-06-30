@@ -5,7 +5,7 @@
    <DockPanel LastChildFill="true">
 		<Grid Height="32" DockPanel.Dock="Top">
 			<StackPanel Orientation="Horizontal" Margin="4,4,4,5">
-				<Button Content="Exit" Width="100" />
+				<Button Content="Exit" Width="100" Click="Button_Click"  />
 			</StackPanel>
 			<Separator VerticalAlignment="Bottom" />
 		</Grid>

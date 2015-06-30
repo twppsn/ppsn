@@ -2,7 +2,7 @@
 
 Add = command(function () : void
 	print("Hallo Welt");
-	Data.KONT.First.KONTNAME = "Hallo Welt";
+	Data.KONT.First.KONTNAME = "KONTNAME - Changed Value ";
 	--[[
 	do (operation = Data:BeginOperation("Addresse anfügen"))
 	
