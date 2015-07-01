@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.40418.0
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnDesktop", "PPSnDesktop\PPSnDesktop.csproj", "{399842B7-9C2D-4C1F-8B39-5D479D9C66A7}"
 EndProject
@@ -16,11 +16,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnDesktopPG", "PPSnDesktopPG\PPSnDesktopPG.csproj", "{41BA2001-EECF-49F2-A1A9-E0A274FAB361}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DESCore", "..\PPSnCore\Extern\DESCore\DESCore\DESCore.csproj", "{67528843-E631-4C05-B6E8-514CC8BEC7B6}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{70FDA9BB-BD27-40C7-881B-B3BF9F861CE2}"
-	ProjectSection(SolutionItems) = preProject
-		Richter_Memo.txt = Richter_Memo.txt
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

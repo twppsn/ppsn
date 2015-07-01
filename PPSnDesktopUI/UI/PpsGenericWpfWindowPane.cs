@@ -13,88 +13,96 @@ using System.Windows.Controls;
 
 namespace TecWare.PPSn.UI
 {
-    ///////////////////////////////////////////////////////////////////////////////
-    /// <summary>Inhalt, welche aus einem Xaml und einem Lua-Script besteht.</summary>
-    public class PpsGenericWpfWindowPane : LuaTable, IPpsWindowPane
-    {
-        private static readonly XName xnCode = XName.Get("Code", "http://schemas.microsoft.com/winfx/2006/xaml");
-        private string sXamlFile;
-        private FrameworkElement control;
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Inhalt, welche aus einem Xaml und einem Lua-Script besteht.</summary>
+	public class PpsGenericWpfWindowPane : LuaTable, IPpsWindowPane
+	{
+		private static readonly XName xnCode = XName.Get("Code", "http://schemas.microsoft.com/winfx/2006/xaml");
+		private string sXamlFile;
+		private FrameworkElement control;
 
-        private Lua lua = new Lua(); // todo: muss von außen kommen
+		private Lua lua = new Lua(); // todo: muss von außen kommen
 
-        #region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor --------------------------------------------------------------
 
-        public PpsGenericWpfWindowPane(string sXamlFile)
-        {
-            this.sXamlFile = sXamlFile;
-        } // ctor
+		public PpsGenericWpfWindowPane(string sXamlFile)
+		{
+			this.sXamlFile = sXamlFile;
+		} // ctor
 
-        ~PpsGenericWpfWindowPane()
-        {
-            Dispose(false);
-        } // ctor
+		~PpsGenericWpfWindowPane()
+		{
+			Dispose(false);
+		} // ctor
 
-        public void Dispose()
-        {
-            GC.SuppressFinalize(this);
-            Dispose(true);
-        } // proc Dispose
+		public void Dispose()
+		{
+			GC.SuppressFinalize(this);
+			Dispose(true);
+		} // proc Dispose
 
-        protected virtual void Dispose(bool lDisposing)
-        {
-        } // proc Dispose
+		protected virtual void Dispose(bool lDisposing)
+		{
+		} // proc Dispose
 
-        #endregion
+		#endregion
 
-        public virtual async Task LoadAsync()
-        {
-            await Task.Yield();
+		#region -- Load/Unload ------------------------------------------------------------
 
-            var xaml = XDocument.Load(sXamlFile, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);
+		public virtual async Task LoadAsync()
+		{
+			await Task.Yield();
 
-            // Lade den Inhalt Code zur Initialisierung des
-            var xCode = xaml.Root.Element(xnCode);
-            if (xCode != null)
-            {
-                var chunk = lua.CompileChunk(xCode.Value, Path.GetFileName(sXamlFile), null);
+			var xaml = XDocument.Load(sXamlFile, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);
 
-                // Führe den Code im UI-Thread aus
-                Dispatcher.Invoke(() => chunk.Run(this));
+			// Load the content of the code-tag, to initialize extend functionality
+			var xCode = xaml.Root.Element(xnCode);
+			if (xCode != null)
+			{
+				var chunk = lua.CompileChunk(xCode.Value, Path.GetFileName(sXamlFile), null);
 
-                xCode.Remove();
-            }
+				// Lua code runs in the UI-Thread
+				Dispatcher.Invoke(() => chunk.Run(this));
 
-            // Parse das Xaml
-            var xamlReader = new XamlReader();
-            await Dispatcher.InvokeAsync(() =>
-                {
-                    control = xamlReader.LoadAsync(xaml.CreateReader()) as FrameworkElement;
-                    control.DataContext = this;
+				xCode.Remove();
+			}
 
-                    control.Loaded += new RoutedEventHandler(PaneLoaded);
-                });
-        } // proc LoadAsync
+			// Create the Wpf-Control
+			var xamlReader = new XamlReader();
+			await Dispatcher.InvokeAsync(() =>
+				{
+					control = xamlReader.LoadAsync(xaml.CreateReader()) as FrameworkElement;
+					OnControlCreated();
+					control.DataContext = this;
+				});
+		} // proc LoadAsync
 
-        public Task<bool> UnloadAsync()
-        {
-            return Task.FromResult<bool>(true);
-        } // func UnloadAsync
+		protected virtual void OnControlCreated()
+		{
+		} // proc OnControlCreated
 
-        public virtual string Title { get { return Path.GetFileName(sXamlFile); } }
+		public Task<bool> UnloadAsync()
+		{
+			return Task.FromResult<bool>(true);
+		} // func UnloadAsync
 
-        protected FrameworkElement Control { get { return control; } }
-        protected string XamlFileName { get { return sXamlFile; } }
-        public string BaseUri { get { return Path.GetDirectoryName(sXamlFile); } }
+		#endregion
 
-        object IPpsWindowPane.Control { get { return control; } }
+		/// <summary>Name of the panel</summary>
+		public virtual string Title { get { return Path.GetFileName(sXamlFile); } }
 
-        public Dispatcher Dispatcher { get { return Application.Current.Dispatcher; } }
-        public Lua Lua { get { return lua; } }
+		/// <summary>Wpf-Control</summary>
+		protected FrameworkElement Control { get { return control; } }
+		/// <summary>Source of the Wpf-Control</summary>
+		protected string XamlFileName { get { return sXamlFile; } }
+		/// <summary>BaseUri of the Wpf-Control</summary>
+		public string BaseUri { get { return Path.GetDirectoryName(sXamlFile); } }
 
-        protected virtual void PaneLoaded(object sender, RoutedEventArgs e)
-        {
-        }
+		object IPpsWindowPane.Control { get { return control; } }
 
-    } // class PpsGenericWpfWindowPane
+		/// <summary>Synchronization to the UI.</summary>
+		public Dispatcher Dispatcher { get { return Application.Current.Dispatcher; } }
+		/// <summary>Access to the current lua compiler</summary>
+		public Lua Lua { get { return lua; } }
+	} // class PpsGenericWpfWindowPane
 }
