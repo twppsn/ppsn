@@ -95,17 +95,17 @@ namespace TecWare.PPSn.Data
 
 		private PpsDataTableDefinition table;
 
-		private readonly string sColumnName;	// Interne Bezeichnung der Spalte
+		private readonly string columnName;	// Interne Bezeichnung der Spalte
 		private Type dataType;								// Datentyp des des Wertes der Spalte innerhalb der Zeile
 
 		/// <summary>Erzeugt eine neue Spaltendefinition.</summary>
 		/// <param name="table">Zugehörige Tabelle</param>
-		/// <param name="sColumnName">Name der Spalte</param>
+		/// <param name="columnName">Name der Spalte</param>
 		/// <param name="dataType">Zugeordneter Datentyp.</param>
-		public PpsDataColumnDefinition(PpsDataTableDefinition table, string sColumnName, Type dataType)
+		public PpsDataColumnDefinition(PpsDataTableDefinition table, string columnName, Type dataType)
 		{
 			this.table = table;
-			this.sColumnName = sColumnName;
+			this.columnName = columnName;
 			this.dataType = dataType;
 		} // ctor
 
@@ -118,7 +118,7 @@ namespace TecWare.PPSn.Data
 		public PpsDataTableDefinition Table { get { return table; } }
 
 		/// <summary>Name der Spalte</summary>
-		public string Name { get { return sColumnName; } }
+		public string Name { get { return columnName; } }
 		/// <summary>Datentyp der Spalte</summary>
 		public Type DataType { get { return dataType; } protected set { dataType = value; } }
 		/// <summary>Index der Spalte innerhalb der Datentabelle</summary>

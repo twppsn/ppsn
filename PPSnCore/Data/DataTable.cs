@@ -71,15 +71,15 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		private readonly string sName;
+		private readonly string name;
 		private List<PpsDataColumnDefinition> columns;
 		private ReadOnlyCollection<PpsDataColumnDefinition> columnCollection;
 
 		private bool lIsInitialized = false;
 
-		protected PpsDataTableDefinition(string sTableName)
+		protected PpsDataTableDefinition(string tableName)
 		{
-			this.sName = sTableName;
+			this.name = tableName;
 			this.columns = new List<PpsDataColumnDefinition>();
 			this.columnCollection = new ReadOnlyCollection<PpsDataColumnDefinition>(columns);
 		} // ctor
@@ -108,26 +108,26 @@ namespace TecWare.PPSn.Data
 				columns.Add(column);
 		} // proc AddColumn
 
-		public PpsDataColumnDefinition FindColumn(string sColumnName)
+		public PpsDataColumnDefinition FindColumn(string columnName)
 		{
-			return columns.Find(c => String.Compare(c.Name, sColumnName, StringComparison.OrdinalIgnoreCase) == 0);
+			return columns.Find(c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
 		} // func FindColumn
 
-		public int FindColumnIndex(string sColumnName)
+		public int FindColumnIndex(string columnName)
 		{
-			return columns.FindIndex(c => String.Compare(c.Name, sColumnName, StringComparison.OrdinalIgnoreCase) == 0);
+			return columns.FindIndex(c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
 		} // func FindColumnIndex
 
-		public int FindColumnIndex(string sColumnName, bool lThrowException)
+		public int FindColumnIndex(string columnName, bool lThrowException)
 		{
-			int iIndex = FindColumnIndex(sColumnName);
+			int iIndex = FindColumnIndex(columnName);
 			if (iIndex == -1 && lThrowException)
-				throw new ArgumentException(String.Format("Spalte '{0}.{1}' nicht gefunden.", Name, sColumnName));
+				throw new ArgumentException(String.Format("Spalte '{0}.{1}' nicht gefunden.", Name, columnName));
 			return iIndex;
 		} // func FindColumnIndex
 
 		/// <summary>Bezeichnung der Tabelle</summary>
-		public string Name { get { return sName; } }
+		public string Name { get { return name; } }
 		/// <summary>Wurde die Tabelle entgültig geladen.</summary>
 		public bool IsInitialized { get { return lIsInitialized; } }
 		/// <summary>Spaltendefinitionen</summary>
@@ -298,9 +298,9 @@ namespace TecWare.PPSn.Data
 
 		/// <summary></summary>
 		/// <param name="row"></param>
-		/// <param name="lRemoveOriginal"><c>true</c>, für ein tatsächliches Entfernen.</param>
+		/// <param name="removeOriginal"><c>true</c>, für ein tatsächliches Entfernen.</param>
 		/// <returns>Wurde der Eintrag gelöscht</returns>
-		internal bool RemoveInternal(PpsDataRow row, bool lRemoveOriginal)
+		internal bool RemoveInternal(PpsDataRow row, bool removeOriginal)
 		{
 			bool lReturn = false;
 
@@ -324,7 +324,7 @@ namespace TecWare.PPSn.Data
 			}
 			else // Orginal geladene Zeile
 			{
-				if (lRemoveOriginal)
+				if (removeOriginal)
 				{
 					row.Table = null;
 					rows.Remove(row);
@@ -479,9 +479,9 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		protected internal virtual void OnColumnValueChanged(PpsDataRow row, int iColumnIndex, object oldValue, object value)
+		protected internal virtual void OnColumnValueChanged(PpsDataRow row, int columnIndex, object oldValue, object value)
 		{
-			dataset.OnTableColumnValueChanged(this, row, iColumnIndex, oldValue, value);
+			dataset.OnTableColumnValueChanged(this, row, columnIndex, oldValue, value);
 		} // proc OnColumnValueChanged
 
 		/// <summary>Zugriff auf das dazugehörige DataSet</summary>
@@ -530,8 +530,8 @@ namespace TecWare.PPSn.Data
 
 		// -- Static --------------------------------------------------------------
 
-		private static readonly PropertyInfo ReadOnlyCollectionIndexPropertyInfo; //~Ri: ?, unused
-		private static readonly PropertyInfo ColumnsPropertyInfo; //~Ri: ?, unused
+		private static readonly PropertyInfo ReadOnlyCollectionIndexPropertyInfo;
+		private static readonly PropertyInfo ColumnsPropertyInfo;
 		internal static readonly PropertyInfo TableDefinitionPropertyInfo;
 
 		static PpsDataTable()

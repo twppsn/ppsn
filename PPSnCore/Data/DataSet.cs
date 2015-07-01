@@ -206,9 +206,9 @@ namespace TecWare.PPSn.Data
 			this.undoSink = undoSink;
 		} // proc RegisterUndoSink
 
-		private int FindTableIndex(string sTableName)
+		private int FindTableIndex(string tableName)
 		{
-			return Array.FindIndex(tables, dt => String.Compare(dt.Name, sTableName, StringComparison.OrdinalIgnoreCase) == 0);
+			return Array.FindIndex(tables, dt => String.Compare(dt.Name, tableName, StringComparison.OrdinalIgnoreCase) == 0);
 		} // func FindTableIndex
 
 		private void ClearInternal()

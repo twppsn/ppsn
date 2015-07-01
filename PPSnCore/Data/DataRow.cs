@@ -58,38 +58,38 @@ namespace TecWare.PPSn.Data
 		private class PpsDataRowValueChangedItem : IPpsUndoItem
 		{
 			private PpsDataRow row;
-			private int iColumnIndex;
+			private int columnIndex;
 			private object oldValue;
 			private object newValue;
 
-			public PpsDataRowValueChangedItem(PpsDataRow row, int iColumnIndex, object oldValue, object newValue)
+			public PpsDataRowValueChangedItem(PpsDataRow row, int columnIndex, object oldValue, object newValue)
 			{
 				this.row = row;
-				this.iColumnIndex = iColumnIndex;
+				this.columnIndex = columnIndex;
 				this.oldValue = oldValue;
 				this.newValue = newValue;
 			} // ctor
 
 			public override string ToString()
 			{
-				return String.Format("Undo ColumnChanged: {0}", iColumnIndex);
+				return String.Format("Undo ColumnChanged: {0}", columnIndex);
 			} // func ToString
 
 			private object GetOldValue()
 			{
-				return oldValue == NotSet ? row.originalValues[iColumnIndex] : oldValue;
+				return oldValue == NotSet ? row.originalValues[columnIndex] : oldValue;
 			} // func GetOldValue
 
 			public void Undo()
 			{
-				row.currentValues[iColumnIndex] = oldValue;
-				row.OnValueChanged(iColumnIndex, newValue, GetOldValue());
+				row.currentValues[columnIndex] = oldValue;
+				row.OnValueChanged(columnIndex, newValue, GetOldValue());
 			} // proc Undo
 
 			public void Redo()
 			{
-				row.currentValues[iColumnIndex] = newValue;
-				row.OnValueChanged(iColumnIndex, GetOldValue(), newValue);
+				row.currentValues[columnIndex] = newValue;
+				row.OnValueChanged(columnIndex, GetOldValue(), newValue);
 			} // proc Redo
 		} // class PpsDataRowValueChangedItem
 
@@ -275,12 +275,12 @@ namespace TecWare.PPSn.Data
 			#endregion
 
 			/// <summary>Ermöglicht den Zugriff auf die Spalte.</summary>
-			/// <param name="iColumnIndex">Index der Spalte</param>
+			/// <param name="columnIndex">Index der Spalte</param>
 			/// <returns>Wert in der Spalte</returns>
 			public abstract object this[int iColumnIndex] { get; set; }
 
 			/// <summary>Ermöglicht den Zugriff auf die Spalte.</summary>
-			/// <param name="sColumnName">Name der Spalte</param>
+			/// <param name="columnName">Name der Spalte</param>
 			/// <returns>Wert in der Spalte</returns>
 			public object this[string sColumnName]
 			{
@@ -555,11 +555,11 @@ namespace TecWare.PPSn.Data
 			return sink != null && !sink.InUndoRedoOperation ? sink : null;
 		} // func GetUndoSink
 
-		private void SetCurrentValue(int iColumnIndex, object oldValue, object value)
+		private void SetCurrentValue(int columnIndex, object oldValue, object value)
 		{
-			object realCurrentValue = currentValues[iColumnIndex];
+			object realCurrentValue = currentValues[columnIndex];
 
-			currentValues[iColumnIndex] = value; // change the value
+			currentValues[columnIndex] = value; // change the value
 
 			// fill undo stack
 			var undo = GetUndoSink();
@@ -569,16 +569,16 @@ namespace TecWare.PPSn.Data
 				if (!undo.InTransaction) // no transaction defined, create a simple
 				{
 					// calculate caption
-					var column = table.Columns[iColumnIndex];
+					var column = table.Columns[columnIndex];
 					trans = undo.BeginTransaction(String.Format(">{0}< geändert.", column.Meta.Get(PpsDataColumnMetaData.Caption, column.Name)));
 				}
 
-				undo.Append(new PpsDataRowValueChangedItem(this, iColumnIndex, realCurrentValue, value));
+				undo.Append(new PpsDataRowValueChangedItem(this, columnIndex, realCurrentValue, value));
 			}
 
 			try
 			{
-				OnValueChanged(iColumnIndex, oldValue, value); // Notify the value change 
+				OnValueChanged(columnIndex, oldValue, value); // Notify the value change 
 			}
 			finally
 			{
@@ -588,10 +588,10 @@ namespace TecWare.PPSn.Data
 		} // proc SetCurrentValue
 
 		/// <summary>If the value of the row gets changed, this method is called.</summary>
-		/// <param name="iColumnIndex"></param>
+		/// <param name="columnIndex"></param>
 		/// <param name="oldValue"></param>
 		/// <param name="value"></param>
-		protected virtual void OnValueChanged(int iColumnIndex, object oldValue, object value)
+		protected virtual void OnValueChanged(int columnIndex, object oldValue, object value)
 		{
 			if (RowState == PpsDataRowState.Unchanged)
 			{
@@ -601,8 +601,8 @@ namespace TecWare.PPSn.Data
 				RowState = PpsDataRowState.Modified;
 			}
 
-			table.OnColumnValueChanged(this, iColumnIndex, oldValue, value);
-			OnPropertyChanged(table.Columns[iColumnIndex].Name);
+			table.OnColumnValueChanged(this, columnIndex, oldValue, value);
+			OnPropertyChanged(table.Columns[columnIndex].Name);
 		} // proc OnValueChanged
 
 		protected virtual void OnPropertyChanged(string sPropertyName)
@@ -612,21 +612,21 @@ namespace TecWare.PPSn.Data
 		} // proc OnPropertyChanged
 
 		/// <summary>Zugriff auf den aktuellen Wert.</summary>
-		/// <param name="iColumnIndex">Spalte</param>
+		/// <param name="columnIndex">Spalte</param>
 		/// <returns></returns>
-		public object this[int iColumnIndex]
+		public object this[int columnIndex]
 		{
-			get { return currentValuesProxy[iColumnIndex]; }
-			set { currentValuesProxy[iColumnIndex] = value; }
+			get { return currentValuesProxy[columnIndex]; }
+			set { currentValuesProxy[columnIndex] = value; }
 		} // prop this
 
 		/// <summary>Zugriff auf den aktuellen Wert.</summary>
-		/// <param name="sColumnName">Spalte</param>
+		/// <param name="columnName">Spalte</param>
 		/// <returns></returns>
-		public object this[string sColumnName]
+		public object this[string columnName]
 		{
-			get { return currentValuesProxy[sColumnName]; }
-			set { currentValuesProxy[sColumnName] = value; }
+			get { return currentValuesProxy[columnName]; }
+			set { currentValuesProxy[columnName] = value; }
 		} // prop this
 
 		/// <summary>Zugriff auf die aktuellen Werte</summary>

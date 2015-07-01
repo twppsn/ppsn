@@ -50,25 +50,25 @@ namespace TecWare.PPSn.Data
 		private sealed class PpsUndoGroup : IPpsUndoStep
 		{
 			private PpsUndoManager manager;
-			private string sDescription;
+			private string description;
 			private IPpsUndoItem[] items;
 
-			public PpsUndoGroup(PpsUndoManager manager, string sDescription, IPpsUndoItem[] items)
+			public PpsUndoGroup(PpsUndoManager manager, string description, IPpsUndoItem[] items)
 			{
 				this.manager = manager;
-				this.sDescription = sDescription;
+				this.description = description;
 				this.items = items;
 			} // ctor
 
 			public void Goto()
 			{
-				int iIndex = manager.items.IndexOf(this);
-				if (iIndex <= -1)
+				int index = manager.items.IndexOf(this);
+				if (index <= -1)
 					throw new InvalidOperationException("Undo group has no manager.");
-				else if (iIndex < manager.iUndoBorder)
-					manager.Undo(manager.iUndoBorder - iIndex);
+				else if (index < manager.undoBorder)
+					manager.Undo(manager.undoBorder - index);
 				else
-					manager.Redo(iIndex - manager.iUndoBorder + 1);
+					manager.Redo(index - manager.undoBorder + 1);
 			} // proc Goto
 
 			internal void Undo()
@@ -90,14 +90,14 @@ namespace TecWare.PPSn.Data
 					int iIndex = manager.items.IndexOf(this);
 					if (iIndex <= -1)
 						throw new InvalidOperationException("Undo group has no manager.");
-					else if (iIndex < manager.iUndoBorder)
+					else if (iIndex < manager.undoBorder)
 						return PpsUndoStepType.Undo;
 					else
 						return PpsUndoStepType.Redo;
 				}
 			} // prop Type
 
-			public string Description { get { return sDescription; } }
+			public string Description { get { return description; } }
 		} // class PpsUndoGroup
 
 		#endregion
@@ -106,31 +106,31 @@ namespace TecWare.PPSn.Data
 
 		private abstract class PpsUndoTransaction : IPpsUndoTransaction
 		{
-			protected string sDescription;
-			private bool? lCommited = null;
+			protected string description;
+			private bool? commited = null;
 			private PpsUndoTransaction blockingTransaction = null;
 
-			public PpsUndoTransaction(string sDescription)
+			public PpsUndoTransaction(string description)
 			{
-				if (String.IsNullOrEmpty(sDescription))
+				if (String.IsNullOrEmpty(description))
 					throw new ArgumentNullException("description");
 
-				this.sDescription = sDescription;
+				this.description = description;
 			} // ctor
 
 			public void Dispose()
 			{
-				if (!lCommited.HasValue)
+				if (!commited.HasValue)
 					Rollback();
 			} // proc Dispose
 
 			internal void CloseTransaction(bool lCommit)
 			{
 				CheckBlockingTransaction();
-				if (lCommited.HasValue)
+				if (commited.HasValue)
 					throw new ObjectDisposedException(String.Format("Undo Operation: {0}", Description));
 
-				lCommited = lCommit;
+				commited = lCommit;
 			} // proc CloseTransaction
 
 			private void CheckBlockingTransaction()
@@ -170,7 +170,7 @@ namespace TecWare.PPSn.Data
 				UpdateCurrentTransaction(this);
 			} // proc UnlockTransaction
 
-			public string Description { get { return sDescription; } }
+			public string Description { get { return description; } }
 		} // class PpsUndoTransaction
 
 		#endregion
@@ -232,13 +232,13 @@ namespace TecWare.PPSn.Data
 		private sealed class PpsUndoParentTransaction : PpsUndoTransaction
 		{
 			private PpsUndoTransaction parent;
-			private int iRollbackIndex;
+			private int rollbackIndex;
 
 			public PpsUndoParentTransaction(PpsUndoTransaction parent, string sDescription)
 				: base(sDescription)
 			{
 				this.parent = parent;
-				this.iRollbackIndex = parent.LockTransaction(this);
+				this.rollbackIndex = parent.LockTransaction(this);
 			} // ctor
 
 			public override void Append(IPpsUndoItem item)
@@ -246,18 +246,18 @@ namespace TecWare.PPSn.Data
 				parent.Append(item);
 			} // proc Append
 
-			internal override void RollbackToIndex(int iRollbackIndex) { parent.RollbackToIndex(iRollbackIndex); }
+			internal override void RollbackToIndex(int rollbackIndex) { parent.RollbackToIndex(rollbackIndex); }
 			internal override int GetRollbackIndex() { return parent.GetRollbackIndex(); }
 			internal override void UpdateCurrentTransaction(PpsUndoTransaction trans) { parent.UpdateCurrentTransaction(trans); }
 
 			public override void Commit()
 			{
-				parent.UnlockTransaction(true, iRollbackIndex);
+				parent.UnlockTransaction(true, rollbackIndex);
 			} // proc Commit
 
 			public override void Rollback()
 			{
-				parent.UnlockTransaction(false, iRollbackIndex);
+				parent.UnlockTransaction(false, rollbackIndex);
 			} // proc Rollback
 		} // class PpsUndoParentTransaction
 
@@ -267,10 +267,10 @@ namespace TecWare.PPSn.Data
 		public event EventHandler CanRedoChanged;
 
 		private List<PpsUndoGroup> items = new List<PpsUndoGroup>();
-		private int iUndoBorder = 0;
+		private int undoBorder = 0;
 
 		private PpsUndoTransaction currentUndoTransaction = null;
-		private int iAppendSuspended = 0;
+		private int appendSuspended = 0;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -294,30 +294,37 @@ namespace TecWare.PPSn.Data
 
 		private void SuspendAppend()
 		{
-			iAppendSuspended++;
+			appendSuspended++;
 		} // proc SuspendAppend
 
 		private void ResumeAppend()
 		{
-			iAppendSuspended--; //~todo: throw logic errors
+			appendSuspended--; //~todo: throw logic errors
 		} // proc SuspendAppend
 
 		private void AppendUndoGroup(PpsUndoGroup undoGroup)
 		{
-			items.Insert(iUndoBorder++, undoGroup); //~todo: redo kürzen, sonst ist die bedienung komisch
+			// Remove undo commands
+			items.RemoveRange(undoBorder, items.Count - undoBorder);
+
+			// add the undo item
+			items.Add(undoGroup);
+			undoBorder++;
+
 			RaiseCanUndo();
+			RaiseCanRedo();
 		} // proc AppendUndoGroup
 
 		#endregion
 
 		#region -- BeginTransaction -------------------------------------------------------
 
-		public IPpsUndoTransaction BeginTransaction(string sDescription)
+		public IPpsUndoTransaction BeginTransaction(string description)
 		{
 			currentUndoTransaction =
 				currentUndoTransaction == null ?
-					new PpsUndoRootTransaction(this, sDescription) :
-					currentUndoTransaction = new PpsUndoParentTransaction(currentUndoTransaction, sDescription);
+					new PpsUndoRootTransaction(this, description) :
+					currentUndoTransaction = new PpsUndoParentTransaction(currentUndoTransaction, description);
 
 			return currentUndoTransaction;
 		} // func BeginTransaction
@@ -326,18 +333,18 @@ namespace TecWare.PPSn.Data
 
 		#region -- Undo/Redo --------------------------------------------------------------
 
-		public void Undo(int iCount = 1)
+		public void Undo(int count = 1)
 		{
 			if (!CanUndo)
 				return;
-			if (iCount != 1) //~todo: für mehrere
+			if (count != 1) //~todo: für mehrere
 				throw new ArgumentOutOfRangeException("count");
 
 			SuspendAppend();
 			try
 			{
-				items[iUndoBorder - 1].Undo();
-				iUndoBorder--;
+				items[undoBorder - 1].Undo();
+				undoBorder--;
 			}
 			finally
 			{
@@ -348,18 +355,18 @@ namespace TecWare.PPSn.Data
 			RaiseCanUndo();
 		} // proc Undo
 
-		public void Redo(int iCount = 1)
+		public void Redo(int count = 1)
 		{
 			if (!CanRedo)
 				return;
-			if (iCount != 1) //~todo: für mehrere
+			if (count != 1) //~todo: für mehrere
 				throw new ArgumentOutOfRangeException("count");
 
 			SuspendAppend();
 			try
 			{
-				items[iUndoBorder].Redo();
-				iUndoBorder++;
+				items[undoBorder].Redo();
+				undoBorder++;
 			}
 			finally
 			{
@@ -397,14 +404,14 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		/// <summary></summary>
-		public bool CanUndo { get { return iUndoBorder > 0; } }
+		public bool CanUndo { get { return undoBorder > 0; } }
 		/// <summary></summary>
-		public bool CanRedo { get { return iUndoBorder < items.Count; } }
+		public bool CanRedo { get { return undoBorder < items.Count; } }
 
 		/// <summary></summary>
 		public bool InTransaction { get { return currentUndoTransaction != null; } }
 		/// <summary></summary>
-		public bool InUndoRedoOperation { get { return iAppendSuspended > 0; } }
+		public bool InUndoRedoOperation { get { return appendSuspended > 0; } }
 	} // class PpsUndoManager
 
 	#endregion
