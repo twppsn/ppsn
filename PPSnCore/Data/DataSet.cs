@@ -103,13 +103,31 @@ namespace TecWare.PPSn.Data
 	} // class PpsDataSetDefinition
 
 	#endregion
-	
+
 	#region -- class PpsDataSet ---------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class PpsDataSet : IDynamicMetaObjectProvider
 	{
+		#region -- Element/Atributenamen des Daten-XML --
+
+		internal static readonly XName xnData = "data";
+		internal static readonly XName xnTable = "t";
+		internal static readonly XName xnRow = "r";
+
+		internal static readonly XName xnRowValue = "v";
+		internal static readonly XName xnRowValueOriginal = "o";
+		internal static readonly XName xnRowValueCurrent = "c";
+
+		internal static readonly XName xnRowState = "s";
+		internal static readonly XName xnRowAdd = "a";
+		internal static readonly XName xnRowName = "n";
+
+		public static readonly XName xnCombine = "combine";
+
+		#endregion
+
 		#region -- class PpsDataSetMetaObject --------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
@@ -153,7 +171,7 @@ namespace TecWare.PPSn.Data
 			{
 				PpsDataSet dataset = (PpsDataSet)Value;
 
-				return 
+				return
 					(from t in dataset.Tables select t.Name)
 					.Concat(from m in dataset.DataSetDefinition.Meta select m.Key);
 			} // func GetDynamicMemberNames
@@ -161,18 +179,19 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-
 		private PpsDataSetDefinition datasetDefinition;
 		private PpsDataTable[] tables;
 		private ReadOnlyCollection<PpsDataTable> tableCollection;
 
-        public PpsDataSet(PpsDataSetDefinition datasetDefinition)
+		private IPpsUndoSink undoSink = null;
+
+		public PpsDataSet(PpsDataSetDefinition datasetDefinition)
 		{
-            this.datasetDefinition = datasetDefinition;
-            this.tables = new PpsDataTable[datasetDefinition.TableDefinitions.Count];
+			this.datasetDefinition = datasetDefinition;
+			this.tables = new PpsDataTable[datasetDefinition.TableDefinitions.Count];
 
 			for (int i = 0; i < tables.Length; i++)
-                tables[i] = datasetDefinition.TableDefinitions[i].CreateDataTable(this);
+				tables[i] = datasetDefinition.TableDefinitions[i].CreateDataTable(this);
 
 			this.tableCollection = new ReadOnlyCollection<PpsDataTable>(tables);
 		} // ctor
@@ -181,6 +200,11 @@ namespace TecWare.PPSn.Data
 		{
 			return new PpsDataSetMetaObject(parameter, this);
 		} // func GetMetaObject
+
+		public void RegisterUndoSink(IPpsUndoSink undoSink)
+		{
+			this.undoSink = undoSink;
+		} // proc RegisterUndoSink
 
 		private int FindTableIndex(string sTableName)
 		{
@@ -196,10 +220,10 @@ namespace TecWare.PPSn.Data
 
 		public void Read(XElement x)
 		{
-            if (x.Name != Xml.tag_data)
+			if (x.Name != xnData)
 				throw new ArgumentException();
 
-			bool lReadCombine = x.GetAttribute(Xml.tag_combine, false);
+			bool lReadCombine = x.GetAttribute(xnCombine, false);
 
 			// Lösche die vorhanden Daten
 			if (!lReadCombine)
@@ -207,11 +231,11 @@ namespace TecWare.PPSn.Data
 
 			// Lade die entsprechenden Tabellen
 			int iTableIndex = 0;
-            foreach (XElement xTable in x.Elements(Xml.tag_table)) // lese die Tabellen
+			foreach (XElement xTable in x.Elements(xnTable)) // lese die Tabellen
 			{
 				if (lReadCombine) // suche die Tabelle
 				{
-					string sTableName = xTable.GetAttribute(Xml.tag_dontKnow, String.Empty);
+					string sTableName = xTable.GetAttribute(xnRowName, String.Empty);
 					if (String.IsNullOrEmpty(sTableName) || (iTableIndex = FindTableIndex(sTableName)) == -1)
 						throw new ArgumentException();
 				}
@@ -228,7 +252,7 @@ namespace TecWare.PPSn.Data
 
 		public void Write(XmlWriter x)
 		{
-            x.WriteStartElement(Xml.tag_data);
+			x.WriteStartElement(xnData.LocalName);
 			foreach (var table in tables)
 				table.Write(x);
 			x.WriteEndElement();
@@ -246,10 +270,16 @@ namespace TecWare.PPSn.Data
 				t.Reset();
 		} // proc Reset
 
+		protected internal virtual void OnTableColumnValueChanged(PpsDataTable table, PpsDataRow row, int iColumnIndex, object oldValue, object value)
+		{
+		} // proc OnTableColumnValueChanged
+
 		/// <summary>Zugriff auf die Definition der Datensammlung</summary>
 		public PpsDataSetDefinition DataSetDefinition { get { return datasetDefinition; } }
 		/// <summary>Zugriff auf die Tabellendaten.</summary>
 		public ReadOnlyCollection<PpsDataTable> Tables { get { return tableCollection; } }
+		/// <summary></summary>
+		public IPpsUndoSink UndoSink { get { return undoSink; } }
 
 		// -- Static --------------------------------------------------------------
 
@@ -260,7 +290,7 @@ namespace TecWare.PPSn.Data
 		static PpsDataSet()
 		{
 			var typeInfo = typeof(ArgumentOutOfRangeException).GetTypeInfo();
-			
+
 			//ArgumentOutOfRangeExceptionConstructorInfo =
 			//	(
 			//		from ci in typeInfo.DeclaredConstructors
@@ -277,19 +307,6 @@ namespace TecWare.PPSn.Data
 			if (TableFieldInfo == null || DefinitionPropertyInfo == null)
 				throw new ArgumentException("sctor @ PpsDataSet");
 		} // sctor
-
-
-        public void Accept(IVisitor visitor)
-        {
-            visitor.Visit(this);
-
-            // visit all "children" of this instance
-            foreach (var table in tables)
-            {
-                table.Accept(visitor);
-            }
-        }
-
 	} // class PpsDataSet
 
 	#endregion

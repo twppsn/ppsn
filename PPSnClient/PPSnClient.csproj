@@ -49,9 +49,8 @@
     <Compile Include="Data\DataHelper.cs" />
     <Compile Include="Data\DataSet.cs" />
     <Compile Include="Data\DataTable.cs" />
-    <Compile Include="Data\DataUndoStack.cs" />
     <Compile Include="Data\PpsDataTableClient.cs" />
-    <Compile Include="Data\UndoRedo.cs" />
+    <Compile Include="Data\DataUndoManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -61,7 +60,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="ClassDiagram1.cd" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Portable\$(TargetFrameworkVersion)\Microsoft.Portable.CSharp.targets" />

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- enum PpsDataColumnMetaData ----------------------------------------------+
+	#region -- enum PpsDataColumnMetaData -----------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Vordefinierte Meta-Daten an der Spalte.</summary>

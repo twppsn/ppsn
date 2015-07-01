@@ -61,12 +61,9 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public sealed class PpsDataSetClient : PpsDataSet
 	{
-        public UndoRedo UndoRedo { get; private set; }
-
 		internal PpsDataSetClient(PpsDataSetDefinition datasetDefinition)
 			: base(datasetDefinition)
 		{
-            UndoRedo = new UndoRedo();
 		} // ctor
 	} // class PpsDataSetClient
 }
