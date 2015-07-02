@@ -167,6 +167,7 @@ namespace TecWare.PPSn.Data
 
 				// Close the current transaction
 				blockingTransaction.CloseTransaction(lCommit);
+				blockingTransaction = null;
 				UpdateCurrentTransaction(this);
 			} // proc UnlockTransaction
 

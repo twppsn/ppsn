@@ -563,28 +563,19 @@ namespace TecWare.PPSn.Data
 
 			// fill undo stack
 			var undo = GetUndoSink();
-			IPpsUndoTransaction trans = null;
 			if (undo != null)
 			{
-				if (!undo.InTransaction) // no transaction defined, create a simple
+				// calculate caption and define the transaction
+				var column = table.Columns[columnIndex];
+				using (var trans = undo.BeginTransaction(String.Format(">{0}< geändert.", column.Meta.Get(PpsDataColumnMetaData.Caption, column.Name))))
 				{
-					// calculate caption
-					var column = table.Columns[columnIndex];
-					trans = undo.BeginTransaction(String.Format(">{0}< geändert.", column.Meta.Get(PpsDataColumnMetaData.Caption, column.Name)));
-				}
-
-				undo.Append(new PpsDataRowValueChangedItem(this, columnIndex, realCurrentValue, value));
-			}
-
-			try
-			{
-				OnValueChanged(columnIndex, oldValue, value); // Notify the value change 
-			}
-			finally
-			{
-				if (trans != null)
+					undo.Append(new PpsDataRowValueChangedItem(this, columnIndex, realCurrentValue, value));
+					OnValueChanged(columnIndex, oldValue, value); // Notify the value change 
 					trans.Commit();
+				}
 			}
+			else
+				OnValueChanged(columnIndex, oldValue, value); // Notify the value change 
 		} // proc SetCurrentValue
 
 		/// <summary>If the value of the row gets changed, this method is called.</summary>
