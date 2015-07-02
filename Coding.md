@@ -25,7 +25,7 @@ public class FooBar
 * Fields lowerCase, e.g. simpleField
 * Delegate: UpperCase and end with 'Delegate', e.g. ImportantDelegate
 * Events: UpperCase
-* Constants (public): lowerCase
+* Constants (private): lowerCase
 * Constants (public): UpperCase
 * Properties: UpperCase
 * Arguments: lowerCase
@@ -35,6 +35,7 @@ public class FooBar
 * Use plural names for flags (enums)
 
 * Avoid: Hungarian notation or any other type identification in identifiers
+* Boolean variables start with a "is", "was", "has", ...
 * Allowed: Abbreviations
     * xn for XName
     * x for XElement
@@ -61,8 +62,8 @@ public struct Foo
 ### Basic Layout
 
 1. Readonly/Consts
-2. Events
 2. Sub Types, Delegates
+2. Events
 3. Fields
 4. Ctor/Dtor
 5. Methods
@@ -92,6 +93,8 @@ public struct Foo
   #endregion
 ```
 
+* Methods, Events, ... only for non groupable methods
+
 ### File Layout
 
 1. Defines
@@ -104,7 +107,7 @@ public struct Foo
 ### Atributes
 
 * Single attribute single line e.g, [Flags]
-* Multiple attributes multible lines
+* Multiple attributes multiple lines
 [
 Attribute(),
 Attribute(),
@@ -114,6 +117,7 @@ Attribute()
 ### Use of partial types
 
 * It is allowed to group functionallity in different files
+* Modifiers must be equal
 
 ### Static
 
@@ -123,7 +127,7 @@ Attribute()
 ### Comments
 
 * Use xml comments e.g. <summary>
-* Manly place the comment on separate lines, before the statements
+* Manly place the long comments on separate lines, before the statements
 * If a comment is only for one short statement, it is allowed at the end of line
 * Insert one space between the comment delimiter (//) and the comment text
 * Do not create formatted blocks of asterisks around comments.
@@ -141,12 +145,18 @@ Attribute()
 
 ### Code
 
+* Lines should be no longer than 160 chars
+
 * Use the default Code Editor settings (smart indenting, four-character indents)
 * Use Tabs not spaces
 * Write only one statement per line
 * Write only one declaration per line
+Exception:
+int i, j, k, l; counter
 * Add one blank line between definitions
 * Use parentheses to make clauses in an expression apparent
+e.g. if ((a && b) || (c && d))
+
 * vertically align (curly) brackets, e.g.
 ```C#
     new XElement("test",
@@ -157,7 +167,7 @@ Attribute()
 ```
 * Do start a line with a operator
 * If block
-  * Short if block
+  * Short if block (one liner)
 ```C#
     if (test)
         foo();
@@ -186,12 +196,15 @@ Attribute()
 * Try to use the “@” prefix for string literals instead of escaped strings
 * Use String.Empty
 * Use String.IsNullOrEmpty
-* Use String.Compare with StringComparision
+* Use String.Compare with StringComparision, not the bool overload
 
-* Use implicit typing for local variables when the type of the variable is obvious from the right side of the assignment, or when the precise type is not important
+* Use implicit typing for local variables when the type of the variable is obvious
+  from the right side of the assignment, or when the precise type is not important.
 * Do not use var when the type is not apparent from the right side of the assignment
 * Use var in compination with casts, e.g. var test = (Test)GetTest();
+
 * Use object initializers to simplify object creation
+
 * Use "as", "(cast)" in the right way
 * Do only use dynamic, when it not avoidable
 * Do not rely on the variable name to specify the type of the variable. It might not be correct (e.g. the prefix)
@@ -213,36 +226,58 @@ var names = new string[] {
 ```
 
 * Use explicit exception handling in methods
-    * Use only short scopes
-    * avoid exceptions
-* Only the ui is allowed to catch all
+* short scopes
+* avoid exceptions, it is not allowed for controlling the regulare program flow
+* no empty catch blocks
+* Goodstyle:
+    try
+    {
+    }
+    catch
+    {
+
+    throw; <--important
+ALternative:
+    throw new SomeException(innerException: e); // new exceptions contain the original exception
+* Always set the innerException property on thrown exceptions so the exception chain & call stack are maintained
+    }
+
 * Do not create exceptions, prefare build exceptions
 * Use descriping error text
-* Always set the innerException property on thrown exceptions so the exception chain & call stack are maintained
 
-* Simplify your code by using the C# using statement. If you have a try-finally statement in which the only code in the finally block is a call to the Dispose method, use a using statement instead.
-* Do not use Enable/Disable scenarios without using or try-finally
+* Simplify your code by using the C# using statement. If you have a try-finally statement in which the 
+only code in the finally block is a call to the Dispose method, use a using statement instead.
+* Use using or try-finally pair wise operations (e.g. Enable/Disable)
+
+EnableXXXX
+try
+{
+}
+finally
+{
+  DisableXXXX;
+}
+
 * Do not create Enable/Disable functions with bool's, use counter instead
 * Use lock() not Monitor
 
 * If you are defining an event handler that you do not need to remove later, use a lambda expression
 
 * Internationalization (expect, no german or us formats, letters)
+* Persist only invariants and UTC
 
 * Do not trust the caller
 
 * Use only auto properties for simple classes.
-* No protected fields are allowed
-
-* .net framework serves first (do not reimplemnt features they are already exist)
+* Only private/internal fields are allowed
 
 * Use predefined type names (int) instead of system types (Int32) on declarations, e.g. int i;
 * Use system types instead of predefined types names on static calls, e.g. Int32.Parse("1");
 
-### Enginierung rules
+### Re/Enginierung rules
 
 * Do not make members public
 * Define small interfaces
 * Define simple interfaces
 * Do not define chatty interfaces
-* Every external interface needs to be auditted
+* Every external interface needs to be auditted (by coding internal)
