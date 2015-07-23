@@ -83,7 +83,7 @@ namespace TecWare.PPSn.Data
 		{
 			return ((System.Collections.IEnumerable)this).GetEnumerator();
 		} // func System.Collections.IEnumerable.GetEnumerator
-		
+
 		public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
 		{
 			return metaInfo.GetEnumerator();

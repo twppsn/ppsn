@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -70,15 +71,15 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		private readonly string sName;
+		private readonly string name;
 		private List<PpsDataColumnDefinition> columns;
 		private ReadOnlyCollection<PpsDataColumnDefinition> columnCollection;
 
 		private bool lIsInitialized = false;
 
-		protected PpsDataTableDefinition(string sTableName)
+		protected PpsDataTableDefinition(string tableName)
 		{
-			this.sName = sTableName;
+			this.name = tableName;
 			this.columns = new List<PpsDataColumnDefinition>();
 			this.columnCollection = new ReadOnlyCollection<PpsDataColumnDefinition>(columns);
 		} // ctor
@@ -107,26 +108,26 @@ namespace TecWare.PPSn.Data
 				columns.Add(column);
 		} // proc AddColumn
 
-		public PpsDataColumnDefinition FindColumn(string sColumnName)
+		public PpsDataColumnDefinition FindColumn(string columnName)
 		{
-			return columns.Find(c => String.Compare(c.Name, sColumnName, StringComparison.OrdinalIgnoreCase) == 0);
+			return columns.Find(c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
 		} // func FindColumn
 
-		public int FindColumnIndex(string sColumnName)
+		public int FindColumnIndex(string columnName)
 		{
-			return columns.FindIndex(c => String.Compare(c.Name, sColumnName, StringComparison.OrdinalIgnoreCase) == 0);
+			return columns.FindIndex(c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
 		} // func FindColumnIndex
 
-		public int FindColumnIndex(string sColumnName, bool lThrowException)
+		public int FindColumnIndex(string columnName, bool lThrowException)
 		{
-			int iIndex = FindColumnIndex(sColumnName);
+			int iIndex = FindColumnIndex(columnName);
 			if (iIndex == -1 && lThrowException)
-				throw new ArgumentException(String.Format("Spalte '{0}.{1}' nicht gefunden.", Name, sColumnName));
+				throw new ArgumentException(String.Format("Spalte '{0}.{1}' nicht gefunden.", Name, columnName));
 			return iIndex;
 		} // func FindColumnIndex
 
 		/// <summary>Bezeichnung der Tabelle</summary>
-		public string Name { get { return sName; } }
+		public string Name { get { return name; } }
 		/// <summary>Wurde die Tabelle entgültig geladen.</summary>
 		public bool IsInitialized { get { return lIsInitialized; } }
 		/// <summary>Spaltendefinitionen</summary>
@@ -224,7 +225,7 @@ namespace TecWare.PPSn.Data
 			if (dataset == null)
 				throw new ArgumentNullException();
 
-			this.dataset = dataset; 
+			this.dataset = dataset;
 			this.tableDefinition = tableDefinition;
 
 			this.emptyRow = new PpsDataRow(this, PpsDataRowState.Unchanged, new object[tableDefinition.Columns.Count], null);
@@ -297,9 +298,9 @@ namespace TecWare.PPSn.Data
 
 		/// <summary></summary>
 		/// <param name="row"></param>
-		/// <param name="lRemoveOriginal"><c>true</c>, für ein tatsächliches Entfernen.</param>
+		/// <param name="removeOriginal"><c>true</c>, für ein tatsächliches Entfernen.</param>
 		/// <returns>Wurde der Eintrag gelöscht</returns>
-		internal bool RemoveInternal(PpsDataRow row, bool lRemoveOriginal)
+		internal bool RemoveInternal(PpsDataRow row, bool removeOriginal)
 		{
 			bool lReturn = false;
 
@@ -323,7 +324,7 @@ namespace TecWare.PPSn.Data
 			}
 			else // Orginal geladene Zeile
 			{
-				if (lRemoveOriginal)
+				if (removeOriginal)
 				{
 					row.Table = null;
 					rows.Remove(row);
@@ -352,9 +353,9 @@ namespace TecWare.PPSn.Data
 			if (values != null && values.Length == 0)
 				values = null;
 
-			return AddInternal(false, new PpsDataRow(this, PpsDataRowState.Changed, new object[Columns.Count], values));
+			return AddInternal(false, new PpsDataRow(this, PpsDataRowState.Modified, new object[Columns.Count], values));
 		} // proc Add
-			
+
 		/// <summary>Entfernt die Datenzeile</summary>
 		/// <param name="row">Datenzeile, die als Entfernt markiert werden soll.</param>
 		public bool Remove(PpsDataRow row)
@@ -441,11 +442,11 @@ namespace TecWare.PPSn.Data
 		void ICollection.CopyTo(Array array, int index) { ((IList)currentRows).CopyTo(array, index); }
 
 		bool IList.IsFixedSize { get { return false; } }
-		bool IList.IsReadOnly		{			get { return true; }		} // es wurde IList.Add, IList.Insert nicht implementiert
+		bool IList.IsReadOnly { get { return true; } } // es wurde IList.Add, IList.Insert nicht implementiert
 		bool ICollection.IsSynchronized { get { return false; } }
 		object ICollection.SyncRoot { get { return null; } }
 
-		object IList.this[int index]		{			get			{				return this[index];			}			set			{				throw new NotSupportedException();			}		}
+		object IList.this[int index] { get { return this[index]; } set { throw new NotSupportedException(); } }
 
 		#endregion
 
@@ -455,21 +456,20 @@ namespace TecWare.PPSn.Data
 		/// <param name="x"></param>
 		public void Read(XElement x)
 		{
-            Checker.Assert(x.Name.LocalName == Xml.tag_table); // muss Tabellenelement sein
-			
-            foreach (XElement xRow in x.Elements(Xml.tag_row)) // Zeilen lesen
-                AddInternal(xRow.GetAttribute(Xml.tag_rowAdded, "0") != "1", new PpsDataRow(this, xRow));
-;
+			Debug.Assert(x.Name.LocalName == PpsDataSet.xnTable); // muss Tabellenelement sein
+
+			foreach (XElement xRow in x.Elements(PpsDataSet.xnRow)) // Zeilen lesen
+				AddInternal(xRow.GetAttribute(PpsDataSet.xnRowAdd, "0") != "1", new PpsDataRow(this, xRow));
 		} // proc Read
 
 		public void Write(XmlWriter x)
 		{
-            x.WriteStartElement(Xml.tag_table);
+			x.WriteStartElement(PpsDataSet.xnTable.LocalName);
 
 			// Schreibe die Datenzeilen
 			foreach (PpsDataRow r in rows)
 			{
-                x.WriteStartElement(Xml.tag_row);
+				x.WriteStartElement(PpsDataSet.xnRow.LocalName);
 				r.Write(x);
 				x.WriteEndElement();
 			}
@@ -478,6 +478,11 @@ namespace TecWare.PPSn.Data
 		} // proc Write
 
 		#endregion
+
+		protected internal virtual void OnColumnValueChanged(PpsDataRow row, int columnIndex, object oldValue, object value)
+		{
+			dataset.OnTableColumnValueChanged(this, row, columnIndex, oldValue, value);
+		} // proc OnColumnValueChanged
 
 		/// <summary>Zugriff auf das dazugehörige DataSet</summary>
 		public PpsDataSet DataSet { get { return dataset; } }
@@ -525,8 +530,8 @@ namespace TecWare.PPSn.Data
 
 		// -- Static --------------------------------------------------------------
 
-		private static readonly PropertyInfo ReadOnlyCollectionIndexPropertyInfo; //~Ri: ?, unused
-		private static readonly PropertyInfo ColumnsPropertyInfo; //~Ri: ?, unused
+		private static readonly PropertyInfo ReadOnlyCollectionIndexPropertyInfo;
+		private static readonly PropertyInfo ColumnsPropertyInfo;
 		internal static readonly PropertyInfo TableDefinitionPropertyInfo;
 
 		static PpsDataTable()
@@ -540,18 +545,6 @@ namespace TecWare.PPSn.Data
 			if (ColumnsPropertyInfo == null || TableDefinitionPropertyInfo == null || ReadOnlyCollectionIndexPropertyInfo == null)
 				throw new InvalidOperationException("Reflection fehlgeschlagen (PpsDataTable)");
 		} // sctor
-
-        public void Accept(IVisitor visitor)
-        {
-            visitor.Visit(this);
-
-            // visit all "children" of this instance
-            foreach (var row in rows)
-            {
-                row.Accept(visitor);
-            }
-        }
-
 	} // class PpsDataTable
 
 	#endregion
