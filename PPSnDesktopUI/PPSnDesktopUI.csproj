@@ -65,8 +65,10 @@
       <SubType>Code</SubType>
     </Compile>
     <AppDesigner Include="Properties\" />
+    <Compile Include="UI\PpsDialogWindow.cs" />
     <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
     <Compile Include="UI\PpsGenericWpfWindowPane.cs" />
+    <Compile Include="UI\PpsWindow.cs" />
     <Compile Include="UI\PpsWindowPane.cs" />
   </ItemGroup>
   <ItemGroup>

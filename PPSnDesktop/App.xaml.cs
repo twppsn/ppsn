@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace PPSnDesktop
+namespace TecWare.PPSn
 {
 	/// <summary>
 	/// Interaktionslogik für "App.xaml"

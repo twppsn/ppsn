@@ -1,8 +1,8 @@
-﻿<Window x:Class="PPSnDesktop.MainWindow"
+﻿<Window x:Class="TecWare.PPSn.UI.PpsMainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MainWindow" Height="449" Width="803">
+        Title="PpsMainWindow" Height="300" Width="300">
     <Grid>
-
+        
     </Grid>
 </Window>
