@@ -41,7 +41,7 @@ namespace TecWare.PPSn.Data
 	#region -- class PpsUndoManager -----------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Manages the undo/redo elements.</summary>
+	/// <summary>Manages the undo/redo elements. The undo operations are collected in transactions.</summary>
 	/// ~todo: Reset,Commit,Rollback müssen UndoManager ändern können, sonst ist er invalid
 	public sealed class PpsUndoManager : IPpsUndoSink, IEnumerable<IPpsUndoStep>
 	{
