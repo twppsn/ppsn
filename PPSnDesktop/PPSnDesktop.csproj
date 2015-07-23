@@ -109,6 +109,12 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PPSnDesktopUI\PPSnDesktopUI.csproj">
+      <Project>{c7d09a93-da78-4b81-8d3c-260442c61c5f}</Project>
+      <Name>PPSnDesktopUI</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

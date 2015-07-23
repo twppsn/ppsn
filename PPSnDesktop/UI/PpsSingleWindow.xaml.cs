@@ -14,14 +14,13 @@ using System.Windows.Shapes;
 
 namespace TecWare.PPSn.UI
 {
-	/// <summary>
-	/// Interaktionslogik für PpsSingleWindow.xaml
-	/// </summary>
-	public partial class PpsSingleWindow : Window
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public partial class PpsSingleWindow : PpsWindow
 	{
 		public PpsSingleWindow()
 		{
 			InitializeComponent();
-		}
-	}
+		} // ctor
+	} // class PpsSingleWindow
 }
