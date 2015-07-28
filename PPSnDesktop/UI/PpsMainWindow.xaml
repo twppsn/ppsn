@@ -3,7 +3,20 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 				xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
         Title="PpsMainWindow" Height="300" Width="300">
-    <Grid>
-        
-    </Grid>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="32" />
+			<RowDefinition />
+		</Grid.RowDefinitions>
+		<StackPanel Orientation="Horizontal">
+			<Button Content="Login" Command="{x:Static ui:PpsWindow.LoginCommand}" />
+			<TextBlock >
+				<Run Text="Test ("/>
+				<Run Text="{Binding WindowIndex,Mode=OneWay}" />
+				<Run Text="):" />
+				<Run Text="{Binding CurrentPane.Title,Mode=OneWay}" />
+			</TextBlock>
+		</StackPanel>
+		<ContentPresenter Grid.Row="1" Content="{Binding CurrentPane.Control,Mode=OneWay}" />
+	</Grid>
 </ui:PpsWindow>

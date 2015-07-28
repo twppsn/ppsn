@@ -18,6 +18,8 @@ namespace TecWare.PPSn.UI
 	/// <summary></summary>
 	public partial class PpsSingleWindow : PpsWindow
 	{
+		//private Stack<PpsPaneHost> paneHosts;
+
 		public PpsSingleWindow()
 		{
 			InitializeComponent();

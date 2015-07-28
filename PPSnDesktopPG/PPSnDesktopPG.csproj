@@ -65,6 +65,9 @@
     <Content Include="Example\MasterData.Contacts.xaml">
       <SubType>Designer</SubType>
     </Content>
+    <Content Include="Example\TestWpfGeneric.xaml">
+      <SubType>Designer</SubType>
+    </Content>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -99,6 +102,7 @@
     <None Include="Example\MasterData.Contacts.dxml" />
     <None Include="Example\MasterData.Contacts.sxml" />
     <None Include="Example\MasterData.Contracts.lua" />
+    <None Include="Example\TestWpfGeneric.lua" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -110,6 +114,18 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\PPSnCore\Extern\DESCore\DESCore\DESCore.csproj">
+      <Project>{67528843-e631-4c05-b6e8-514cc8bec7b6}</Project>
+      <Name>DESCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\PPSnCore\PPSnClient\PPSnClient.csproj">
+      <Project>{6b2e2c3c-b2e0-4c9f-a1da-3e78bdb3a141}</Project>
+      <Name>PPSnClient</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\PPSnCore\PPSnCore\PPSnCore.csproj">
+      <Project>{f4609545-6d91-4b2d-a811-3201f4934505}</Project>
+      <Name>PPSnCore</Name>
+    </ProjectReference>
     <ProjectReference Include="..\PPSnDesktopUI\PPSnDesktopUI.csproj">
       <Project>{c7d09a93-da78-4b81-8d3c-260442c61c5f}</Project>
       <Name>PPSnDesktopUI</Name>

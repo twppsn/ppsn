@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using TecWare.DES.Stuff;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Playground
@@ -41,8 +42,8 @@ namespace TecWare.PPSn.Playground
 
 		private async Task LoadMask(string sXamlFile)
 		{
-			pane = new PpsGenericMaskWindowPane(sXamlFile);
-			await pane.LoadAsync();
+			pane = new PpsGenericMaskWindowPane(null);
+			await pane.LoadAsync(Procs.CreateLuaTable(new KeyValuePair<string, object>("template", sXamlFile)));
 		} // func LoadMask
 
 		private void RefreshView()

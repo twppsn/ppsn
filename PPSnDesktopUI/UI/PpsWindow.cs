@@ -18,5 +18,19 @@ namespace TecWare.PPSn.UI
 		public readonly static RoutedCommand MaximizeCommand = new RoutedCommand("Maximize", typeof(PpsWindow));
 		/// <summary>Command for closing the window.</summary>
 		public readonly static RoutedCommand CloseCommand = new RoutedCommand("Close", typeof(PpsWindow));
+		/// <summary>Starts the use login.</summary>
+		public readonly static RoutedCommand LoginCommand = new RoutedCommand("Login", typeof(PpsWindow));
+
+		private PpsEnvironment environment;
+
+		public PpsEnvironment Environment
+		{
+			get
+			{
+				if (environment == null)
+					environment = PpsEnvironment.GetEnvironment(this);
+				return environment;
+			}
+		} // prop Environment
 	} // class PpsWindow
 }

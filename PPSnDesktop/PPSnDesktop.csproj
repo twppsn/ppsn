@@ -62,6 +62,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="PpsMainEnvironment.cs" />
+    <Compile Include="UI\Panes\PpsLoginPane.xaml.cs">
+      <DependentUpon>PpsLoginPane.xaml</DependentUpon>
+    </Compile>
     <Compile Include="UI\PpsMainWindow.xaml.cs">
       <DependentUpon>PpsMainWindow.xaml</DependentUpon>
     </Compile>
@@ -72,6 +76,10 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="UI\Panes\PpsLoginPane.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="UI\PpsMainWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -110,6 +118,18 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\PPSnCore\Extern\DESCore\DESCore\DESCore.csproj">
+      <Project>{67528843-e631-4c05-b6e8-514cc8bec7b6}</Project>
+      <Name>DESCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\PPSnCore\PPSnClient\PPSnClient.csproj">
+      <Project>{6b2e2c3c-b2e0-4c9f-a1da-3e78bdb3a141}</Project>
+      <Name>PPSnClient</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\PPSnCore\PPSnCore\PPSnCore.csproj">
+      <Project>{f4609545-6d91-4b2d-a811-3201f4934505}</Project>
+      <Name>PPSnCore</Name>
+    </ProjectReference>
     <ProjectReference Include="..\PPSnDesktopUI\PPSnDesktopUI.csproj">
       <Project>{c7d09a93-da78-4b81-8d3c-260442c61c5f}</Project>
       <Name>PPSnDesktopUI</Name>

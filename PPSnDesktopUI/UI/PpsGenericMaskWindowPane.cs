@@ -18,49 +18,15 @@ namespace TecWare.PPSn.UI
 	/// und einer Dataset</summary>
 	public class PpsGenericMaskWindowPane : PpsGenericWpfWindowPane
 	{
-		#region -- Q and D --
-
-		private class LuaCommandImplementaion : ICommand
-		{
-			public event EventHandler CanExecuteChanged;
-
-			private Action command;
-			private Func<bool> canExecute;
-
-			public LuaCommandImplementaion(Action command, Func<bool> canExecute)
-			{
-				this.command = command;
-				this.canExecute = canExecute;
-			} // ctor
-
-			public bool CanExecute(object parameter)
-			{
-				return canExecute == null || canExecute();
-			}
-
-			public void Execute(object parameter)
-			{
-				command();
-			}
-
-			public void Refresh()
-			{
-				if (CanExecuteChanged != null)
-					CanExecuteChanged(this, EventArgs.Empty);
-			}
-		} // class LuaCommandImplementaion
-
-		#endregion
-
 		private PpsUndoManager undoManager = new PpsUndoManager();
 		private PpsDataSetClient dataSet; // DataSet which is controlled by the mask
 
-		public PpsGenericMaskWindowPane(string sXamlFile)
-			: base(sXamlFile)
+		public PpsGenericMaskWindowPane(PpsEnvironment environment)
+			: base(environment)
 		{
 		} // ctor
 
-		public override async Task LoadAsync()
+		public override async Task LoadAsync(LuaTable arguments)
 		{
 			await Task.Yield();
 
@@ -75,28 +41,10 @@ namespace TecWare.PPSn.UI
 			dataSet.RegisterUndoSink(undoManager);
 
 			// Lade die Maske
-			await base.LoadAsync();
+			await base.LoadAsync(arguments);
 
 			await Dispatcher.InvokeAsync(() => OnPropertyChanged("Data"));
 		} // proc LoadAsync
-
-		[LuaMember("print")]
-		private void LuaPrint(string sText)
-		{
-			System.Windows.MessageBox.Show(sText);
-		} // proc LuaPrint
-
-		[LuaMember("command")]
-		private object LuaCommand(Action command, Func<bool> canExecute = null)
-		{
-			return new LuaCommandImplementaion(command, canExecute);
-		} // func LuaCommand
-
-		[LuaMember("require")]
-		private void LuaRequire(string sFileName)
-		{
-			Lua.CompileChunk(Path.Combine(BaseUri, sFileName), null).Run(this);
-		} // proc LuaRequire
 
 		[LuaMember("UndoManager")]
 		public PpsUndoManager LuaUndoManager { get { return undoManager; } }
@@ -104,15 +52,6 @@ namespace TecWare.PPSn.UI
 		[LuaMember("Data")]
 		public PpsDataSet Data { get { return dataSet; } }
 
-		public override string Title
-		{
-			get
-			{
-				if (dataSet == null)
-					return "Maske wird geladen...";
-				else
-					return ((dynamic)dataSet).Caption;
-			}
-		} // prop Title
+		public override string Title { get { return ((GetMemberValue("Title") ?? ((dynamic)dataSet).Caption) ?? base.Title).ToString(); } }
 	} // class PpsGenericMaskWindowPane
 }

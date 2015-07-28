@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,6 +12,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using Neo.IronLua;
+using TecWare.DES.Stuff;
 
 namespace TecWare.PPSn.UI
 {
@@ -18,9 +21,109 @@ namespace TecWare.PPSn.UI
 	/// <summary></summary>
 	public partial class PpsMainWindow : PpsWindow
 	{
-		public PpsMainWindow()
+		private readonly static DependencyPropertyKey CurrentPaneKey = DependencyProperty.RegisterReadOnly("CurrentPane", typeof(IPpsWindowPane), typeof(PpsMainWindow), new PropertyMetadata(null));
+		private readonly static DependencyProperty CurrentPaneProperty = CurrentPaneKey.DependencyProperty;
+
+		private int windowIndex = -1;
+		
+		public PpsMainWindow(int windowIndex)
 		{
+			this.windowIndex = windowIndex;
+
 			InitializeComponent();
+
+			CommandBindings.Add(
+				new CommandBinding(PpsWindow.LoginCommand,
+					async (sender, e) => await StartLoginAsync(),
+					(sender, e) => e.CanExecute = !Environment.IsAuthentificated
+				)
+			);
+
+			Loaded += OnLoaded;
+
+			this.DataContext = this;
+
+			RefreshTitle();
 		} // ctor
+
+		private void OnLoaded(object sender, RoutedEventArgs e)
+		{
+		} // proc OnLoaded
+
+		private async Task StartLoginAsync()
+		{
+			//await LoadPaneAsync(typeof(Panes.PpsLoginPane), null);
+			await LoadPaneAsync(typeof(PpsGenericWpfWindowPane),
+				Procs.CreateLuaTable(
+					new KeyValuePair<string, object>("template", @"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktopPG\Example\TestWpfGeneric.xaml")
+				)
+			);
+		} // proc StartLogin
+
+		private async Task LoadPaneAsync(Type paneType, LuaTable arguments)
+		{
+			// unload the current pane
+			if (!await UnloadPaneAsync())
+				return;
+
+			// set the new pane
+			var ci = paneType.GetConstructors().FirstOrDefault();
+			if (ci == null)
+				throw new ArgumentException("No ctor"); // todo: exception
+
+			var parameterInfo = ci.GetParameters();
+			var paneArguments = new object[parameterInfo.Length];
+			for (int i = 0; i < paneArguments.Length; i++)
+			{
+				var pi = parameterInfo[i];
+				if (pi.ParameterType.IsAssignableFrom(typeof(PpsMainEnvironment)))
+					paneArguments[i] = Environment;
+				else
+					throw new ArgumentException("Unsupported argument."); // todo: Exception
+			}
+
+			// Create pane
+			var currentPane = (IPpsWindowPane)Activator.CreateInstance(paneType, paneArguments);
+			SetValue(CurrentPaneKey, currentPane);
+
+			// load the pane
+			await currentPane.LoadAsync(arguments);
+		} // proc StartPaneAsync
+
+		protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+		{
+			base.OnPropertyChanged(e);
+		}
+
+		private async Task<bool> UnloadPaneAsync()
+		{
+			if (CurrentPane == null)
+				return true;
+			else
+			{
+				var currentPane = CurrentPane;
+				if (await currentPane.UnloadAsync())
+				{
+					Procs.FreeAndNil(ref currentPane);
+					SetValue(CurrentPaneKey, null);
+					return true;
+				}
+				else
+					return false;
+			}
+		} // proc UnloadPaneAsync
+				
+		public void RefreshTitle()
+		{
+			this.Title = CurrentPane == null ? "PPS2000n" : String.Format("PPS2000n - {0}", CurrentPane.Title);
+		} // proc RefreshTitle
+
+		/// <summary>Returns the current view of the pane as a wpf control.</summary>
+		public IPpsWindowPane CurrentPane { get { return (IPpsWindowPane)GetValue(CurrentPaneProperty); } }
+
+		/// <summary>Index of the current window</summary>
+		public int WindowIndex { get { return windowIndex; } }
+
+		public new PpsMainEnvironment Environment { get { return (PpsMainEnvironment)base.Environment; } }
 	} // class PpsMainWindow
 }
