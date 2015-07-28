@@ -66,7 +66,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Wpf oder Win32Window, welches Angezeigt werden soll.</summary>
 		object Control { get; }
 
-		/// <summary>Attached commands</summary>
-		IEnumerable<IPpsWindowCommand> Commands { get; }
+		///// <summary>Attached commands</summary>
+		//IEnumerable<IPpsWindowCommand> Commands { get; }
 	} // interface IPpsWindowPane
 }
