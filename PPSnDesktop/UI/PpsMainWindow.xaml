@@ -1,24 +1,86 @@
 ﻿<ui:PpsWindow x:Class="TecWare.PPSn.UI.PpsMainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-				xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
-        Title="PpsMainWindow" Height="300" Width="300">
+              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			  xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
+			Style="{StaticResource PpsWindow}" Title="PpsMainWindow" Height="300" Width="300">
 	<Grid>
 		<Grid.RowDefinitions>
+			<RowDefinition Height="52" />
 			<RowDefinition Height="32" />
-			<RowDefinition />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="24" />
 		</Grid.RowDefinitions>
-		<StackPanel Orientation="Horizontal">
-			<Button Content="Login" Command="{x:Static ui:PpsWindow.LoginCommand}" />
-			<TextBlock >
-				<Run Text="Test ("/>
-				<Run Text="{Binding WindowIndex,Mode=OneWay}" />
-				<Run Text="):" />
-				<Run Text="{Binding CurrentPane.Title,Mode=OneWay}" />
-			</TextBlock>
-			<ToolBar ItemsSource="{Binding CurrentPane.Commands,Mode=OneWay}" />
-			<Label Content="{Binding Environment.UsernameDisplay,Mode=OneWay}" />
-		</StackPanel>
-		<ContentPresenter Grid.Row="1" Content="{Binding CurrentPane.Control,Mode=OneWay}" />
+
+		<DockPanel x:Name="PART_Header"  Grid.Row="0" Background="{StaticResource PPSnWindowBrush}">
+			<Button Content="Login" Width="52" Command="{x:Static ui:PpsWindow.LoginCommand}" Focusable="False" IsTabStop="False" />
+			<ToolBar DockPanel.Dock="Bottom" ToolBarTray.IsLocked="True" Height="26" Background="Transparent" ItemsSource="{Binding CurrentPane.Commands}"></ToolBar>
+			<Button x:Name="PART_CloseButton" Style="{StaticResource PpsWindowButton}" Focusable ="False" Command="{x:Static ui:PpsWindow.CloseCommand}" DockPanel.Dock="Right">
+				<Path
+					Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+					StrokeThickness="1.5"
+					Stretch="Fill"
+					RenderOptions.EdgeMode="Aliased"
+					Data="{StaticResource PpsWindowCloseButton}" />
+			</Button>
+			<Button x:Name="PART_MaxButton" Style="{StaticResource PpsWindowButton}" Focusable ="False" Command="{x:Static ui:PpsWindow.MaximizeCommand}" DockPanel.Dock="Right">
+				<Path
+					x:Name="PART_MaxButtonPath"
+					Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+					Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+					StrokeThickness="1"
+					StrokeMiterLimit="2.75" 
+					Stretch="Fill"
+					RenderOptions.EdgeMode="Aliased">
+					<Path.Style>
+						<Style TargetType="Path">
+							<Setter Property="Data" Value="{StaticResource PpsWindowMaximizeButton}" />
+							<Style.Triggers>
+								<DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized">
+									<Setter Property="Data" Value="{StaticResource PpsWindowRestoreButton}" />
+								</DataTrigger>
+							</Style.Triggers>
+						</Style>
+					</Path.Style>
+				</Path>
+			</Button>
+			<Button x:Name="PART_MinButton" Style="{StaticResource PpsWindowButton}" Focusable ="False" Command="{x:Static ui:PpsWindow.MinimizeCommand}" DockPanel.Dock="Right">
+				<Rectangle
+					Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+						Stretch="Fill"
+						RenderOptions.EdgeMode="Aliased" 
+						VerticalAlignment="Bottom"
+						HorizontalAlignment="Center"
+						Margin="0,0,0,1"
+						Width="9" 
+						Height="3"/>
+			</Button>
+			<Label x:Name="PART_Caption" Content="{Binding Title, Mode=OneWay}" Padding="16,0,0,0"
+                            HorizontalContentAlignment="Left"
+                            VerticalContentAlignment="Center" 
+                            FontSize="{DynamicResource {x:Static SystemFonts.CaptionFontSizeKey}}"
+							FontFamily="{DynamicResource {x:Static SystemFonts.CaptionFontFamilyKey}}">
+				<Label.Style>
+					<Style TargetType="Label">
+						<Setter Property="Foreground" Value="Black" />
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding Path=IsActive, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="False">
+								<Setter Property="Foreground" Value="LightGray" />
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Label.Style>
+				<Label.Tag>
+					<ui:PpsWindowHitTest HitTest="2"/>
+				</Label.Tag>
+			</Label>
+		</DockPanel>
+		<TextBlock Grid.Row="1" VerticalAlignment="Center">
+			<Run Text="Test ("/>
+			<Run Text="{Binding WindowIndex, Mode=OneWay}" />
+			<Run Text="):" />
+			<Run Text="{Binding CurrentPane.Title, Mode=OneWay}" />
+		</TextBlock>
+		<StatusBar Background="Blue" Grid.Row="3"></StatusBar>
+		<ContentPresenter Grid.Row="2" Content="{Binding CurrentPane.Control,Mode=OneWay}"  />
 	</Grid>
 </ui:PpsWindow>
