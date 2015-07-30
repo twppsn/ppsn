@@ -55,7 +55,7 @@ namespace TecWare.PPSn.UI
 			//await LoadPaneAsync(typeof(Panes.PpsLoginPane), null);
 			await LoadPaneAsync(typeof(PpsGenericWpfWindowPane),
 				Procs.CreateLuaTable(
-					new KeyValuePair<string, object>("template", @"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktopPG\Example\TestWpfGeneric.xaml")
+					new KeyValuePair<string, object>("template", @"C:\Projects\PPSn\PPSnWpf\PPSnDesktopPG\Example\TestWpfGeneric.xaml")
 				)
 			);
 		} // proc StartLogin
@@ -88,6 +88,8 @@ namespace TecWare.PPSn.UI
 
 			// load the pane
 			await currentPane.LoadAsync(arguments);
+			// TEST SCHMIDT
+			RefreshTitle();
 		} // proc StartPaneAsync
 
 		protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)

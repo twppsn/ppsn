@@ -77,8 +77,8 @@
       <SubType>Code</SubType>
     </Compile>
     <Page Include="UI\Panes\PpsLoginPane.xaml">
-      <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="UI\PpsMainWindow.xaml">
       <SubType>Designer</SubType>
