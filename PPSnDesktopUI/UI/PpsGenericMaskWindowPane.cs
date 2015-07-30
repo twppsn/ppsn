@@ -51,7 +51,5 @@ namespace TecWare.PPSn.UI
 
 		[LuaMember("Data")]
 		public PpsDataSet Data { get { return dataSet; } }
-
-		public override string Title { get { return ((GetMemberValue("Title") ?? ((dynamic)dataSet).Caption) ?? base.Title).ToString(); } }
 	} // class PpsGenericMaskWindowPane
 }

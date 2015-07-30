@@ -2,6 +2,7 @@
 print("Trace Line");
 
 HalloEnabled = true;
+Counter = 0;
 
 HalloCommand = command(
 	function (parameter) : void
@@ -11,3 +12,8 @@ HalloCommand = command(
 		return HalloEnabled;
 	end
 );
+
+function Button_Click(sender, e)
+	--Control.Title = "Geklickt";
+	Counter = Counter + 1;
+end;

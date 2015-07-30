@@ -74,8 +74,10 @@ namespace TecWare.PPSn.UI
 
 	internal struct POINT
 	{
+#pragma warning disable 0649
 		public int x;
 		public int y;
+#pragma warning restore 0649
 	}
 
 	[Serializable]

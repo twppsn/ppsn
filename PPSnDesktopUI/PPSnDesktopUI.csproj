@@ -67,6 +67,7 @@
       <SubType>Code</SubType>
     </Compile>
     <AppDesigner Include="Properties\" />
+    <Compile Include="UI\Markups.cs" />
     <Compile Include="UI\NatveMethods.cs" />
     <Compile Include="UI\PpsDialogWindow.cs" />
     <Compile Include="UI\PpsGenericMaskWindowPane.cs" />

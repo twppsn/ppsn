@@ -42,8 +42,8 @@ namespace TecWare.PPSn.Playground
 
 		private async Task LoadMask(string sXamlFile)
 		{
-			pane = new PpsGenericMaskWindowPane(null);
-			await pane.LoadAsync(Procs.CreateLuaTable(new KeyValuePair<string, object>("template", sXamlFile)));
+			//pane = new PpsGenericMaskWindowPane(null);
+			//await pane.LoadAsync(Procs.CreateLuaTable(new KeyValuePair<string, object>("template", sXamlFile)));
 		} // func LoadMask
 
 		private void RefreshView()

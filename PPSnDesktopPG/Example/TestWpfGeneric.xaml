@@ -1,19 +1,26 @@
-﻿<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+﻿<ui:PpsGenericWpfControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             mc:Ignorable="d" 
+						xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
+             mc:Ignorable="d" Title="Hallo Welt"
              d:DesignHeight="300" d:DesignWidth="300">
 	<x:Code>
 		<![CDATA[
-		Title = "Hallo Welt";
 		
 		require "TestWpfGeneric.lua";
 		]]>
 	</x:Code>
 	<StackPanel>
-		<Label Content="Hallo" />
+		<Label>
+			<TextBlock>Zähler (<Run Text="{Binding Counter}" />)</TextBlock>
+		</Label>
 		<Button Content="Hallo" Command="{Binding HalloCommand}" />
 		<CheckBox Content="Enabled" IsChecked="{Binding HalloEnabled}" />
+		<Label Content="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" />
 	</StackPanel>
-</UserControl>
+
+	<ui:PpsGenericWpfControl.Commands>
+		<Button ui:PpsGenericWpfControl.Order="100;1" Content="Test" Click="{ui:LuaEvent Button_Click}" ToolTip="Irgendwas" />
+	</ui:PpsGenericWpfControl.Commands>
+</ui:PpsGenericWpfControl>

@@ -46,6 +46,49 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsIdleCommand ---------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class PpsIdleCommand : ICommand, IPpsIdleAction
+	{
+		private Action<object> command;
+		private Func<object, bool> canExecute;
+
+		public PpsIdleCommand(Action<object> command, Func<object, bool> canExecute)
+		{
+			this.command = command;
+			this.canExecute = canExecute;
+		} // ctor
+
+		#region -- ICommand Member ---------------------------------------------------------
+
+		public event EventHandler CanExecuteChanged;
+
+		public virtual bool CanExecute(object parameter)
+		{
+			return canExecute == null || canExecute(parameter);
+		} // func CanExecute
+
+		public virtual void Execute(object parameter)
+		{
+			command(parameter);
+		} // proc Execute
+
+		#endregion
+
+		public void Refresh()
+		{
+			if (CanExecuteChanged != null)
+				CanExecuteChanged(this, EventArgs.Empty);
+		} // proc Refresh
+
+		void IPpsIdleAction.OnIdle() { Refresh(); }
+	} // class PpsIdleCommand
+
+
+	#endregion
+
 	#region -- class PpsEnvironment -----------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -76,7 +119,7 @@ namespace TecWare.PPSn
 		private DispatcherTimer idleTimer;
 		private List<WeakReference<IPpsIdleAction>> idleActions = new List<WeakReference<IPpsIdleAction>>();
 		private PreProcessInputEventHandler preProcessInputEventHandler;
-
+		
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		public PpsEnvironment(Uri remoteUri, ResourceDictionary mainResources)
@@ -91,7 +134,7 @@ namespace TecWare.PPSn
 			// Start idle implementation
 			idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), currentDispatcher);
 			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer();
-
+			
 			// Register Service
 			mainResources[EnvironmentService] = this;
 		} // ctor
@@ -123,6 +166,7 @@ namespace TecWare.PPSn
 
 		public void LoginUser()
 		{
+			userInfo = CredentialCache.DefaultNetworkCredentials;
 		} // proc LoginUser
 
 		public void LogoutUser()
@@ -230,6 +274,8 @@ namespace TecWare.PPSn
 		public bool IsOffline { get { return isOffline; } }
 		/// <summary>Current user the is logged in.</summary>
 		public string Username { get { return userInfo == null ? String.Empty : userInfo.UserName; } }
+		/// <summary>Display name for the user.</summary>
+		public string UsernameDisplay { get { return "No User"; } }
 
 		/// <summary>Dispatcher of the ui-thread.</summary>
 		public Dispatcher Dispatcher { get { return currentDispatcher; } }
