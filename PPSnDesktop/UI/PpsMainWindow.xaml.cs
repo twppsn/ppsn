@@ -50,6 +50,17 @@ namespace TecWare.PPSn.UI
 		{
 		} // proc OnLoaded
 
+
+		private void ToolBar_Loaded(object sender, RoutedEventArgs e)
+		{
+			ToolBar toolBar = sender as ToolBar;
+			var overflowGrid = toolBar.Template.FindName("OverflowGrid", toolBar) as FrameworkElement;
+			if (overflowGrid != null)
+			{
+				overflowGrid.Visibility = Visibility.Collapsed;
+			}
+		}
+
 		private async Task StartLoginAsync()
 		{
 			var  tmp = @"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktopPG\Example\TestWpfGeneric.xaml";

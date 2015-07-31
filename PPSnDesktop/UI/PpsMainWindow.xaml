@@ -11,9 +11,13 @@
 			<RowDefinition Height="24" />
 		</Grid.RowDefinitions>
 
-		<DockPanel x:Name="PART_Header"  Grid.Row="0" Background="{StaticResource PPSnWindowBrush}">
+		<DockPanel x:Name="PART_Header" Grid.Row="0" Background="{StaticResource PPSnWindowBrush}">
 			<Button Content="Login" Width="52" Command="{x:Static ui:PpsWindow.LoginCommand}" Focusable="False" IsTabStop="False" />
-			<ToolBar DockPanel.Dock="Bottom" ToolBarTray.IsLocked="True" Height="26" Background="Transparent" ItemsSource="{Binding CurrentPane.Commands}"></ToolBar>
+			<DockPanel DockPanel.Dock="Bottom">
+				<Label Content="{Binding Environment.UsernameDisplay}" DockPanel.Dock="Right" VerticalContentAlignment="Top" Padding="0,4,8,0"> </Label>
+				<ToolBar ToolBarTray.IsLocked="True" Height="26" Background="Transparent" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" Loaded="ToolBar_Loaded"> </ToolBar>
+			</DockPanel>
+			
 			<Button x:Name="PART_CloseButton" Style="{StaticResource PpsWindowButton}" Focusable ="False" Command="{x:Static ui:PpsWindow.CloseCommand}" DockPanel.Dock="Right">
 				<Path
 					Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"

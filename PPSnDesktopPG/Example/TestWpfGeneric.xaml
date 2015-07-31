@@ -22,5 +22,7 @@
 
 	<ui:PpsGenericWpfControl.Commands>
 		<Button ui:PpsGenericWpfControl.Order="100;1" Content="Test" Click="{ui:LuaEvent Button_Click}" ToolTip="Irgendwas" />
+		<Separator/>
+		<Button Content="Hallo" Command="{Binding HalloCommand}" />
 	</ui:PpsGenericWpfControl.Commands>
 </ui:PpsGenericWpfControl>

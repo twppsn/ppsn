@@ -43,6 +43,7 @@
       <HintPath>..\packages\NeoLua.1.0.1-beta\lib\net45\Neo.Lua.Desktop.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="PresentationFramework.Aero2" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
