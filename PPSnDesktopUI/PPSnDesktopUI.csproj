@@ -61,6 +61,8 @@
     <Reference Include="PresentationFramework" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Controls\Toolbar.cs" />
+    <Compile Include="UI\LuaValueConverter.cs" />
     <Compile Include="PpsEnvironment.cs" />
     <Compile Include="PpsTraceLog.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
@@ -69,6 +71,7 @@
     <AppDesigner Include="Properties\" />
     <Compile Include="UI\Markups.cs" />
     <Compile Include="UI\NatveMethods.cs" />
+    <Compile Include="UI\PpsCommand.cs" />
     <Compile Include="UI\PpsDialogWindow.cs" />
     <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
     <Compile Include="UI\PpsGenericWpfWindowPane.cs" />
@@ -77,6 +80,8 @@
     <Compile Include="UI\PpsWindowPane.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Controls\text.fx" />
+    <None Include="Controls\text.fx.ps" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -104,7 +109,6 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Controls\" />
     <Folder Include="Design\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

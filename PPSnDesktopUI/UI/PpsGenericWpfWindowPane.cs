@@ -79,7 +79,7 @@ namespace TecWare.PPSn.UI
 		[LuaMember("command")]
 		private object LuaCommand(Action<object> command, Func<object, bool> canExecute = null, bool idleCall = true)
 		{
-			var cmd = new PpsIdleCommand(command, canExecute);
+			var cmd = new PpsCommand(command, canExecute);
 			if (idleCall)
 				Environment.AddIdleAction(cmd);
 			return cmd;
@@ -133,6 +133,9 @@ namespace TecWare.PPSn.UI
 						desc.AddValueChanged(control, (sender, e) => OnPropertyChanged("Title"));
 					}
 
+					foreach (PpsUICommand c in ((PpsGenericWpfControl)control).Commands)
+						((PpsGenericWpfControl)control).Test(c);
+
 					// notify changes on control
 					OnPropertyChanged("Control");
 					OnPropertyChanged("Commands");
@@ -185,103 +188,8 @@ namespace TecWare.PPSn.UI
 		/// <summary>Access to the current lua compiler</summary>
 		public Lua Lua { get { return environment.Lua; } }
 
-		public IEnumerable<UIElement> Commands { get { return control == null ? null : ((PpsGenericWpfControl)control).Commands; } }
+		public IEnumerable<object> Commands { get { return control == null ? null : ((PpsGenericWpfControl)control).Commands; } }
 	} // class PpsGenericWpfWindowContext
-
-	#endregion
-
-	#region -- class PpsGenericCommandOrderConverter ------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public sealed class PpsGenericCommandOrderConverter : TypeConverter
-	{
-		public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
-		{
-			return sourceType == typeof(string);
-		} // func CanConvertFrom
-
-		public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
-		{
-			return destinationType == typeof(InstanceDescriptor) || destinationType == typeof(string);
-		} // func CanConvertTo
-
-		public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
-		{
-			if (value != null && value is string)
-			{
-				var parts = ((string)value).Split(new char[] { ';', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-				if (parts.Length == 0)
-					return PpsGenericCommandOrder.Empty;
-				else if (parts.Length == 2)
-				{
-					return new PpsGenericCommandOrder(
-						int.Parse(parts[0], culture),
-						int.Parse(parts[1], culture)
-					);
-				}
-				else
-					throw GetConvertFromException(value);
-			}
-			else
-				throw GetConvertFromException(value);
-		} // func ConvertFrom
-
-		public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
-		{
-			var order = value as PpsGenericCommandOrder;
-			if (value != null && order == null)
-				throw GetConvertToException(value, destinationType);
-
-			if (destinationType == typeof(string))
-			{
-				if (order == null)
-					return null;
-				else
-					return String.Format(culture, "{0}; {1}", order.Group, order.Order);
-			}
-			else if (destinationType == typeof(InstanceDescriptor))
-			{
-				var ci = typeof(PpsGenericCommandOrder).GetConstructor(new Type[] { typeof(int), typeof(int) });
-				return new InstanceDescriptor(ci,
-					order == null ?
-						new object[] { -1, -1 } :
-						new object[] { order.Group, order.Order },
-					true
-				);
-			}
-
-			return base.ConvertTo(context, culture, value, destinationType);
-		} // func ConvertTo
-	} // class PpsGenericCommandOrderConverter
-
-	#endregion
-
-	#region -- class PpsGenericCommandOrder ---------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	[TypeConverter(typeof(PpsGenericCommandOrderConverter))]
-	public sealed class PpsGenericCommandOrder
-	{
-		private readonly int group;
-		private readonly int order;
-
-		public PpsGenericCommandOrder(int group, int order)
-		{
-			this.group = group;
-			this.order = order;
-		} // ctor
-
-		public int Group { get { return group; } }
-		public int Order { get { return order; } }
-
-		public bool IsEmpty {get{return order < 0 && group < 0;}}
-
-		private static readonly PpsGenericCommandOrder empty = new PpsGenericCommandOrder(-1,-1);
-
-		public static PpsGenericCommandOrder Empty { get { return empty; } }
-	} // class PpsGenericCommandOrder
 
 	#endregion
 
@@ -292,9 +200,9 @@ namespace TecWare.PPSn.UI
 	public class PpsGenericWpfControl : ContentControl, ILuaEventSink
 	{
 		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register("Title", typeof(string), typeof(PpsGenericWpfControl), new UIPropertyMetadata(String.Empty));
-		public static readonly DependencyProperty OrderProperty = DependencyProperty.RegisterAttached("Order", typeof(PpsGenericCommandOrder), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(PpsGenericCommandOrder.Empty));
+		public static readonly DependencyProperty OrderProperty = DependencyProperty.RegisterAttached("Order", typeof(PpsCommandOrder), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(PpsCommandOrder.Empty));
 
-		private List<UIElement> commands = new List<UIElement>();
+		private PPsUICommandCollection commands = new PPsUICommandCollection();
 
 		#region -- ILuaEventSink Member ---------------------------------------------------
 
@@ -315,19 +223,24 @@ namespace TecWare.PPSn.UI
 		public string Title { get { return (string)this.GetValue(TitleProperty); } set { SetValue(TitleProperty, value); } }
 		/// <summary>List of commands for the main toolbar.</summary>
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
-		public List<UIElement> Commands { get { return commands; } }
+		public PPsUICommandCollection Commands { get { return commands; } }
 
 		// -- Static --------------------------------------------------------------
 
-		public static void SetOrder(UIElement element, PpsGenericCommandOrder order)
+		public static void SetOrder(UIElement element, PpsCommandOrder order)
 		{
 			element.SetValue(OrderProperty, order);
 		} // proc SetOrder
 
-		public static PpsGenericCommandOrder GetOrder(UIElement element)
+		public static PpsCommandOrder GetOrder(UIElement element)
 		{
-			return (PpsGenericCommandOrder)element.GetValue(OrderProperty);
+			return (PpsCommandOrder)element.GetValue(OrderProperty);
 		} // func GetOrder
+
+		internal void Test(PpsUICommand c)
+		{
+			AddLogicalChild(c);
+		}
 	} // class PpsGenericWpfWindowPane
 
 	#endregion

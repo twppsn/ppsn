@@ -46,49 +46,6 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsIdleCommand ---------------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public class PpsIdleCommand : ICommand, IPpsIdleAction
-	{
-		private Action<object> command;
-		private Func<object, bool> canExecute;
-
-		public PpsIdleCommand(Action<object> command, Func<object, bool> canExecute)
-		{
-			this.command = command;
-			this.canExecute = canExecute;
-		} // ctor
-
-		#region -- ICommand Member ---------------------------------------------------------
-
-		public event EventHandler CanExecuteChanged;
-
-		public virtual bool CanExecute(object parameter)
-		{
-			return canExecute == null || canExecute(parameter);
-		} // func CanExecute
-
-		public virtual void Execute(object parameter)
-		{
-			command(parameter);
-		} // proc Execute
-
-		#endregion
-
-		public void Refresh()
-		{
-			if (CanExecuteChanged != null)
-				CanExecuteChanged(this, EventArgs.Empty);
-		} // proc Refresh
-
-		void IPpsIdleAction.OnIdle() { Refresh(); }
-	} // class PpsIdleCommand
-
-
-	#endregion
-
 	#region -- class PpsEnvironment -----------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -119,7 +76,7 @@ namespace TecWare.PPSn
 		private DispatcherTimer idleTimer;
 		private List<WeakReference<IPpsIdleAction>> idleActions = new List<WeakReference<IPpsIdleAction>>();
 		private PreProcessInputEventHandler preProcessInputEventHandler;
-		
+
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		public PpsEnvironment(Uri remoteUri, ResourceDictionary mainResources)

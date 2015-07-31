@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -44,6 +45,7 @@ namespace TecWare.PPSn.UI
 			this.DataContext = this;
 
 			RefreshTitle();
+			Trace.TraceInformation("MainWindow[{0}] created.", windowIndex);
 		} // ctor
 
 		private void OnLoaded(object sender, RoutedEventArgs e)

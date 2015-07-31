@@ -13,7 +13,7 @@
 
 		<DockPanel x:Name="PART_Header"  Grid.Row="0" Background="{StaticResource PPSnWindowBrush}">
 			<Button Content="Login" Width="52" Command="{x:Static ui:PpsWindow.LoginCommand}" Focusable="False" IsTabStop="False" />
-			<ToolBar DockPanel.Dock="Bottom" ToolBarTray.IsLocked="True" Height="26" Background="Transparent" ItemsSource="{Binding CurrentPane.Commands}"></ToolBar>
+			<ToolBar DockPanel.Dock="Bottom" ToolBarTray.IsLocked="True" Height="26" Background="Transparent" ItemsSource="{Binding CurrentPane.Commands}" Style="{StaticResource MainToolbarStyle}"></ToolBar>
 			<Button x:Name="PART_CloseButton" Style="{StaticResource PpsWindowButton}" Focusable ="False" Command="{x:Static ui:PpsWindow.CloseCommand}" DockPanel.Dock="Right">
 				<Path
 					Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"

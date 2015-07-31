@@ -1,6 +1,7 @@
 ﻿<Application x:Class="TecWare.PPSn.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:ctrls="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
 			 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
 			 xmlns:uim="clr-namespace:TecWare.PPSn.UI"
              ShutdownMode="OnLastWindowClose">
@@ -9,6 +10,27 @@
 			<ResourceDictionary.MergedDictionaries>
 				<ResourceDictionary Source="pack://application:,,,/PPSn.Desktop.UI;component/UI/UI.xaml" />
 			</ResourceDictionary.MergedDictionaries>
+			
+			<Style x:Key="MainToolbarStyle" TargetType="{x:Type ToolBar}">
+				<Style.Resources>
+					<DataTemplate x:Key="{x:Type ui:PpsUICommandButton}" DataType="{x:Type ui:PpsUICommandButton}">
+						<Button Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" ToolTip="{Binding Description}" Command="{Binding Command}">
+							<StackPanel Orientation="Horizontal">
+								<Image Source="{Binding Image}" Width="24" Height="24" />
+								<TextBlock Text="{Binding DisplayText}" />
+							</StackPanel>
+						</Button>
+					</DataTemplate>
+					<DataTemplate x:Key="Seperator" DataType="{x:Type FrameworkContentElement}">
+						<Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" />
+					</DataTemplate>
+				</Style.Resources>
+				<Setter Property="ItemTemplateSelector">
+					<Setter.Value>
+						<ctrls:PpsToolbarDataTemplateSelector />
+					</Setter.Value>
+				</Setter>
+			</Style>
 		</ResourceDictionary>
 	</Application.Resources>
 </Application>
