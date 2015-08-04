@@ -72,6 +72,22 @@ namespace TecWare.PPSn.UI
 		public string lpszClassName;
 	}
 
+	internal enum MonitorOptions : uint
+	{
+		MONITOR_DEFAULTTONULL = 0x00000000,
+		MONITOR_DEFAULTTOPRIMARY = 0x00000001,
+		MONITOR_DEFAULTTONEAREST = 0x00000002
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	internal struct MONITORINFO
+	{
+		public int cbSize;
+		public RECT rcMonitor;
+		public RECT rcWork;
+		public uint dwFlags;
+	}
+
 	internal struct POINT
 	{
 #pragma warning disable 0649
@@ -274,6 +290,9 @@ namespace TecWare.PPSn.UI
 		[return: MarshalAs(UnmanagedType.Bool)]
 		public static extern bool GetWindowInfo(IntPtr hwnd, WINDOWINFO pwi);
 
-
+		[DllImport("user32.dll", SetLastError = true)]
+		public static extern IntPtr MonitorFromRect([In] ref RECT lprc, MonitorOptions dwFlags);
+		[DllImport("user32.dll")]
+		public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
 	} // class NativeMethods
 }

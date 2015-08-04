@@ -15,6 +15,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Neo.IronLua;
 using TecWare.DES.Stuff;
+using System.Configuration;
 
 namespace TecWare.PPSn.UI
 {
@@ -26,31 +27,30 @@ namespace TecWare.PPSn.UI
 		private readonly static DependencyProperty CurrentPaneProperty = CurrentPaneKey.DependencyProperty;
 
 		private int windowIndex = -1;
-		
+		private PpsWindowApplicationSettings settings;
+
 		public PpsMainWindow(int windowIndex)
 		{
 			this.windowIndex = windowIndex;
 
 			InitializeComponent();
 
+			// initialize settings
+			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
+
+			// set basic command bindings
 			CommandBindings.Add(
 				new CommandBinding(PpsWindow.LoginCommand,
-					async (sender, e) => await StartLoginAsync(),
+					async (sender, e) =>  await StartLoginAsync(),
 					(sender, e) => e.CanExecute = !Environment.IsAuthentificated
 				)
 			);
-
-			Loaded += OnLoaded;
-
+			
 			this.DataContext = this;
 
 			RefreshTitle();
 			Trace.TraceInformation("MainWindow[{0}] created.", windowIndex);
 		} // ctor
-
-		private void OnLoaded(object sender, RoutedEventArgs e)
-		{
-		} // proc OnLoaded
 
 		private async Task StartLoginAsync()
 		{
@@ -127,10 +127,12 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Returns the current view of the pane as a wpf control.</summary>
 		public IPpsWindowPane CurrentPane { get { return (IPpsWindowPane)GetValue(CurrentPaneProperty); } }
+		/// <summary>Settings of the current window.</summary>
+		public PpsWindowApplicationSettings Settings { get { return settings; } }
 
 		/// <summary>Index of the current window</summary>
 		public int WindowIndex { get { return windowIndex; } }
-
+		/// <summary>Access to the current environment,</summary>
 		public new PpsMainEnvironment Environment { get { return (PpsMainEnvironment)base.Environment; } }
 	} // class PpsMainWindow
 }
