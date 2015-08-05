@@ -35,6 +35,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject>TecWare.PPSn.App</StartupObject>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Neo.Lua, Version=5.3.0.0, Culture=neutral, PublicKeyToken=fdb0cd4fe8a6e3b2, processorArchitecture=MSIL">
       <HintPath>..\packages\NeoLua.1.0.1-beta\lib\net45\Neo.Lua.dll</HintPath>
@@ -44,6 +47,7 @@
       <HintPath>..\packages\NeoLua.1.0.1-beta\lib\net45\Neo.Lua.Desktop.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="PresentationFramework.Aero2" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
@@ -71,6 +75,7 @@
     <Compile Include="UI\PpsMainWindow.xaml.cs">
       <DependentUpon>PpsMainWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UI\PpsNavigatorModel.cs" />
     <Compile Include="UI\PpsSingleWindow.xaml.cs">
       <DependentUpon>PpsSingleWindow.xaml</DependentUpon>
     </Compile>

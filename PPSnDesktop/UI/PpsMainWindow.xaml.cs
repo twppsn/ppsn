@@ -28,6 +28,7 @@ namespace TecWare.PPSn.UI
 
 		private int windowIndex = -1;
 		private PpsWindowApplicationSettings settings;
+		private PpsNavigatorModel navigator;
 
 		public PpsMainWindow(int windowIndex)
 		{
@@ -36,6 +37,7 @@ namespace TecWare.PPSn.UI
 			InitializeComponent();
 
 			// initialize settings
+			navigator = new PpsNavigatorModel();
 			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
 
 			// set basic command bindings
@@ -126,13 +128,15 @@ namespace TecWare.PPSn.UI
 		} // proc RefreshTitle
 
 		/// <summary>Returns the current view of the pane as a wpf control.</summary>
-		public IPpsWindowPane CurrentPane { get { return (IPpsWindowPane)GetValue(CurrentPaneProperty); } }
+		public IPpsWindowPane CurrentPane => (IPpsWindowPane)GetValue(CurrentPaneProperty);
+		/// <summary></summary>
+		public PpsNavigatorModel Navigator => navigator;
 		/// <summary>Settings of the current window.</summary>
-		public PpsWindowApplicationSettings Settings { get { return settings; } }
+		public PpsWindowApplicationSettings Settings => settings;
 
 		/// <summary>Index of the current window</summary>
-		public int WindowIndex { get { return windowIndex; } }
+		public int WindowIndex => windowIndex; 
 		/// <summary>Access to the current environment,</summary>
-		public new PpsMainEnvironment Environment { get { return (PpsMainEnvironment)base.Environment; } }
+		public new PpsMainEnvironment Environment => (PpsMainEnvironment)base.Environment;
 	} // class PpsMainWindow
 }

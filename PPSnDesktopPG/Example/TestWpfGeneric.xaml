@@ -33,5 +33,6 @@
 	<ui:PpsGenericWpfControl.Commands>
 		<ui:PpsUICommandButton Order="100,100" DisplayText="{Binding Counter,Mode=OneWay,Converter={StaticResource convertInt2}}" Description="Testchen" Image="disks.png" Command="{Binding HalloCommand}" />
 		<x:Null />
+		<ui:PpsUICommandButton DisplayText="Komando2" Description="Kommando2" Image="disks.png"/>
 	</ui:PpsGenericWpfControl.Commands>
 </ui:PpsGenericWpfControl>

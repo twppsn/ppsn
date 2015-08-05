@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,7 +11,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using TecWare.DES.Stuff;
+using System.Windows.Media.Imaging;
 
 namespace TecWare.PPSn.UI
 {
@@ -19,24 +19,309 @@ namespace TecWare.PPSn.UI
 	/// <summary></summary>
 	public partial class PpsWindow
 	{
+		#region -- enum GlowDirection -------------------------------------------------
+
+		private enum GlowDirection
+		{
+			West,
+			North,
+			East,
+			South
+		} // enum GlowDirection
+
+		#endregion
+
+		#region -- class GlowDrawingHelper --------------------------------------------
+
+		private class GlowDrawingHelper : IDisposable
+		{
+			private readonly IntPtr windowHandle;
+			private readonly GlowBitmap windowBitmap;
+			private readonly IntPtr hdcScreen;
+			private readonly IntPtr hdcWindow;
+			private readonly IntPtr hdcBackground;
+			private BLENDFUNCTION blendFunc;
+			private int left;
+			private int top;
+			private int width;
+			private int height;
+			private bool disposed = false;
+
+			#region -- ctor / dtor ----------------------------------------------------
+
+			public GlowDrawingHelper(IntPtr handle)
+			{
+				windowHandle = handle;
+				GetBounds(handle);
+
+				hdcScreen = NativeMethods.GetDC(IntPtr.Zero);
+				hdcWindow = NativeMethods.CreateCompatibleDC(hdcScreen);
+				hdcBackground = NativeMethods.CreateCompatibleDC(hdcScreen);
+				blendFunc.BlendOp = 0;
+				blendFunc.BlendFlags = 0;
+				blendFunc.SourceConstantAlpha = 255;
+				blendFunc.AlphaFormat = 1;
+				windowBitmap = new GlowBitmap(hdcScreen, width, height);
+				NativeMethods.SelectObject(hdcWindow, windowBitmap.Handle);
+			} // ctor
+
+			public void Dispose()
+			{
+				Dispose(true);
+				GC.SuppressFinalize(this);
+			}
+
+			protected virtual void Dispose(bool disposing)
+			{
+				if (disposed)
+					return;
+
+				// Free managed objects here
+				if (disposing)
+				{
+					windowBitmap.Dispose();
+				}
+				// Free unmanaged objects here. 
+				NativeMethods.ReleaseDC(IntPtr.Zero, hdcScreen);
+				NativeMethods.DeleteDC(hdcWindow);
+				NativeMethods.DeleteDC(hdcBackground);
+				disposed = true;
+			}
+
+			#endregion
+
+			private void GetBounds(IntPtr handle)
+			{
+				RECT rect;
+				NativeMethods.GetWindowRect(handle, out rect);
+				left = rect.Left;
+				top = rect.Top;
+				width = rect.Width;
+				height = rect.Height;
+			} // proc GetBounds
+
+			#region -- drawing stuff --------------------------------------------------
+
+			public void DrawBitmap(GlowBitmap[] bitmaps, Orientation orientation, int offset)
+			{
+				if (orientation == Orientation.Horizontal)
+					BlendHorizontal(bitmaps, offset);
+				else
+					BlendVertical(bitmaps, offset);
+
+				Render();
+			}
+
+			private void BlendVertical(GlowBitmap[] bitmaps, int offset)
+			{
+				GlowBitmap bmpTop = bitmaps[0];
+				GlowBitmap bmpMiddle = bitmaps[1];
+				GlowBitmap bmpBottom = bitmaps[2];
+
+				int yMiddle = bmpTop.Height;
+				int yBottom = height - bmpBottom.Height;
+				int hMiddle = yBottom - yMiddle;
+
+				Blend(bmpTop, 0, 0, bmpTop.Width, bmpTop.Height);
+				if (hMiddle > 0)
+					Blend(bmpMiddle, 0, yMiddle, bmpMiddle.Width, hMiddle);
+				Blend(bmpBottom, 0, yBottom, bmpBottom.Width, bmpBottom.Height);
+			}
+
+			private void BlendHorizontal(GlowBitmap[] bitmaps, int offset)
+			{
+				GlowBitmap bmpLeft = bitmaps[0];
+				GlowBitmap bmpMiddle = bitmaps[1];
+				GlowBitmap bmpRight = bitmaps[2];
+
+				int xLeft = offset;
+				int xMiddle = xLeft + bmpLeft.Width;
+				int xRight = width - offset - bmpRight.Width;
+				int wMiddle = xRight - xMiddle;
+				Blend(bmpLeft, xLeft, 0, bmpLeft.Width, bmpLeft.Height);
+				if (wMiddle > 0)
+					Blend(bmpMiddle, xMiddle, 0, wMiddle, bmpMiddle.Height);
+				Blend(bmpRight, xRight, 0, bmpRight.Width, bmpRight.Height);
+			}
+
+			private void Blend(GlowBitmap bmp, int xOriginDest, int yOriginDest, int widthDest, int heightDest)
+			{
+				NativeMethods.SelectObject(hdcBackground, bmp.Handle);
+				NativeMethods.AlphaBlend(hdcWindow, xOriginDest, yOriginDest, widthDest, heightDest, hdcBackground, 0, 0, bmp.Width, bmp.Height, blendFunc);
+			}
+  
+			private void Render()
+			{
+				POINT pptDst = new POINT { x = left, y = top };
+				SIZE psize = new SIZE { cx = width, cy = height };
+				POINT pptSrc = new POINT { x = 0, y = 0 };
+				NativeMethods.UpdateLayeredWindow(windowHandle, hdcScreen, ref pptDst, ref psize, hdcWindow, ref pptSrc, 0u, ref blendFunc, NativeMethods.ULW_ALPHA);
+			}
+
+			#endregion
+		} // class GlowDrawingHelper
+
+		#endregion
+
+		#region -- class GlowBitmap ---------------------------------------------------
+
+		private class GlowBitmap : IDisposable
+		{
+
+			#region -- enum BitmapPart ------------------------------------------------
+
+			private enum BitmapPart
+			{
+				WestTop,
+				WestMiddle,
+				WestBottom,
+				NorthLeft,
+				NorthMiddle,
+				NorthRight,
+				EastTop,
+				EastMiddle,
+				EastBottom,
+				SouthLeft,
+				SouthMiddle,
+				SouthRight
+			}
+
+			#endregion
+
+			#region -- class CachedBitmapInfo -----------------------------------------
+
+			private class CachedBitmapInfo
+			{
+				public readonly int Width;
+				public readonly int Height;
+				public readonly byte[] DIBits;
+				public CachedBitmapInfo(byte[] diBits, int width, int height)
+				{
+					Width = width;
+					Height = height;
+					DIBits = diBits;
+				}
+			}  // class CachedBitmapInfo
+
+			#endregion
+
+			private static readonly CachedBitmapInfo[] alphaMasks = new CachedBitmapInfo[12];
+			private readonly IntPtr hBmp;
+			private readonly IntPtr pbits;
+			private readonly BITMAPINFO bitmapInfo;
+			private bool disposed = false;
+
+			#region -- ctor / dtor-----------------------------------------------------
+
+			public GlowBitmap(IntPtr hdc, int width, int height)
+			{
+				bitmapInfo.biSize = Marshal.SizeOf(typeof(BITMAPINFOHEADER));
+				bitmapInfo.biPlanes = 1;
+				bitmapInfo.biBitCount = 32;
+				bitmapInfo.biCompression = NativeMethods.BI_RGB;
+				bitmapInfo.biXPelsPerMeter = 0;
+				bitmapInfo.biYPelsPerMeter = 0;
+				bitmapInfo.biWidth = width;
+				// negatve: top-down DIB 
+				bitmapInfo.biHeight = -height;
+				hBmp = NativeMethods.CreateDIBSection(hdc, ref bitmapInfo, NativeMethods.DIB_RGB_COLORS, out pbits, IntPtr.Zero, 0u);
+			} // ctor
+
+			public static GlowBitmap FromImage(int imagePos, Color color)
+			{
+				CreateAlphaMask();
+				CachedBitmapInfo alphaMask = alphaMasks[imagePos];
+				IntPtr hdc = NativeMethods.GetDC(IntPtr.Zero);
+				GlowBitmap glowBitmap = new GlowBitmap(hdc, alphaMask.Width, alphaMask.Height);
+				for (int i = 0; i < alphaMask.DIBits.Length; i += 4)
+				{
+					byte alpha = alphaMask.DIBits[i + 3];
+					byte red = (byte)((double)(color.R * alpha) / 255.0);
+					byte green = (byte)((double)(color.G * alpha) / 255.0);
+					byte blue = (byte)((double)(color.B * alpha) / 255.0);
+					Marshal.WriteByte(glowBitmap.DIBits, i, blue);
+					Marshal.WriteByte(glowBitmap.DIBits, i + 1, green);
+					Marshal.WriteByte(glowBitmap.DIBits, i + 2, red);
+					Marshal.WriteByte(glowBitmap.DIBits, i + 3, alpha);
+				}
+				NativeMethods.ReleaseDC(IntPtr.Zero, hdc);
+				return glowBitmap;
+			} // ctor static
+
+			public void Dispose()
+			{
+				Dispose(true);
+				GC.SuppressFinalize(this);
+			}
+
+			protected virtual void Dispose(bool disposing)
+			{
+				if (disposed)
+					return;
+				// no managed objects
+
+				// Free unmanaged objects here. 
+				NativeMethods.DeleteObject(hBmp);
+				disposed = true;
+			}
+
+			#endregion
+
+			private static void CreateAlphaMask()
+			{
+				// run once
+				if (alphaMasks[0] != null)
+					return;
+
+				string assembly = typeof(GlowBitmap).Assembly.GetName().Name;
+				for (int i = 0; i < 12; i++)
+				{
+					string path = String.Format("Images/{0}.png", (BitmapPart)i);
+					Uri uri = new Uri(String.Format("pack://application:,,,/{0};component/{1}", assembly, path), UriKind.Absolute);
+					BitmapImage bitmapImage = new BitmapImage(uri);
+					byte[] array = new byte[4 * bitmapImage.PixelWidth * bitmapImage.PixelHeight];
+					int stride = 4 * bitmapImage.PixelWidth;
+					bitmapImage.CopyPixels(array, stride, 0);
+					alphaMasks[i] = new CachedBitmapInfo(array, bitmapImage.PixelWidth, bitmapImage.PixelHeight);
+				}
+			}
+			public IntPtr Handle { get { return hBmp; } }
+			public IntPtr DIBits { get { return pbits; } }
+			public int Width { get { return bitmapInfo.biWidth; } }
+			public int Height { get { return -bitmapInfo.biHeight; } }
+		} // class GlowBitmap
+
+		#endregion
+
 		#region -- class GlowWindow ---------------------------------------------------
 
 		private sealed class GlowWindow
 		{
+			#region -- enum PropertyType ----------------------------------------------
+
 			[Flags]
 			private enum PropertyType
 			{
 				None = 0,
 				Location = 1,
 				Size = 2,
-				Visibility = 4
+				Visibility = 4,
+				ActiveColor = 8,
+				InactiveColor = 16,
+				Draw = 32
 			} // enum PropertyType
 
-			private const int dimension = 9;
+			#endregion
+
+			private const int glowDimension = 10;
 			private static ushort sharedClassAtom = 0;
+			private static NativeMethods.WndProc sharedWndProc;
 			private static int sharedClassCount = 0;
+
 			private readonly PpsWindow ownerWindow;
-			private readonly Dock orientation;
+			private readonly GlowDirection direction;
+			private readonly GlowBitmap[] activeBitmaps = new GlowBitmap[3];
+			private readonly GlowBitmap[] inactiveBitmaps = new GlowBitmap[3];
 			private IntPtr handle;
 			private Delegate wndProc;
 			private PropertyType changedPropertys;
@@ -45,17 +330,20 @@ namespace TecWare.PPSn.UI
 			private int width;
 			private int height;
 			private bool isVisible;
+			private bool isActive;
+			private Color activeColor = Colors.Black;
+			private Color inactiveColor = Colors.LightGray;
 
 			#region -- ctor / dtor ----------------------------------------------------
 
-			public GlowWindow(PpsWindow ownerWindow, Dock orientation)
+			public GlowWindow(PpsWindow ownerWindow, GlowDirection direction)
 			{
 				this.ownerWindow = ownerWindow;
-				this.orientation = orientation;
+				this.direction = direction;
 				CreateNativeWindow();
 			} // ctor
 
-			public void DestroyNativeResources()
+			public void Destroy()
 			{
 				DestroyNativeWindow();
 			} // dtor
@@ -64,12 +352,14 @@ namespace TecWare.PPSn.UI
 			{
 				CreateWindowClass();
 				CreateWindowHandle();
+				CreateBitMaps();
 			}
 
 			private void DestroyNativeWindow()
 			{
 				DestroyWindowHandle();
 				DestroyWindowClass();
+				DestroyBitmaps();
 			}
 
 			#endregion
@@ -82,13 +372,15 @@ namespace TecWare.PPSn.UI
 				if (sharedClassAtom != 0)
 					return;
 
+				sharedWndProc = new NativeMethods.WndProc(NativeMethods.DefWindowProc);
+
 				WNDCLASS wndclass = default(WNDCLASS);
 				wndclass.cbClsExtra = 0;
 				wndclass.cbWndExtra = 0;
-				wndclass.hbrBackground = IntPtr.Add(IntPtr.Zero, 17); //  IntPtr.Zero;
+				wndclass.hbrBackground = IntPtr.Zero;
 				wndclass.hCursor = IntPtr.Zero;
 				wndclass.hIcon = IntPtr.Zero;
-				wndclass.lpfnWndProc = new NativeMethods.WndProc(NativeMethods.DefWindowProc);
+				wndclass.lpfnWndProc = sharedWndProc;
 				wndclass.lpszClassName = "PpsWindowGlowWnd";
 				wndclass.lpszMenuName = null;
 				wndclass.style = 0u;
@@ -112,21 +404,22 @@ namespace TecWare.PPSn.UI
 
 			private void CreateWindowHandle()
 			{
-				int dwExStyle = NativeMethods.WS_EX_TOOLWINDOW;// | NativeMethods.WS_EX_LAYERED;
+				int dwExStyle = NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_LAYERED;
 				int dwStyle = NativeMethods.WS_POPUP | NativeMethods.WS_CLIPCHILDREN | NativeMethods.WS_CLIPSIBLINGS;
 				handle = NativeMethods.CreateWindowEx(dwExStyle, new IntPtr((int)sharedClassAtom), string.Empty, dwStyle, 0, 0, 0, 0, new WindowInteropHelper(ownerWindow).Owner, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
 				wndProc = new NativeMethods.WndProc(WndProc);
+				// subclass
 				NativeMethods.SetWindowLongPtr(handle, NativeMethods.GWL_WNDPROC, Marshal.GetFunctionPointerForDelegate(wndProc));
-			}
+			} // proc CreateWindowHandle
 
 			private void DestroyWindowHandle()
 			{
-				if (handle != IntPtr.Zero)
-				{
-					bool b = NativeMethods.DestroyWindow(handle);
-					handle = IntPtr.Zero;
-				}
-			}
+				if (handle == IntPtr.Zero)
+					return;
+
+				NativeMethods.DestroyWindow(handle);
+				handle = IntPtr.Zero;
+			} // proc DestroyWindowHandle
 
 			private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam)
 			{
@@ -140,7 +433,7 @@ namespace TecWare.PPSn.UI
 						Marshal.StructureToPtr(windowpos, lParam, true);
 						break;
 					case WinMsg.WM_NCHITTEST:
-						return new IntPtr(this.WmNcHitTest(lParam));
+						return new IntPtr(WmNcHitTest(lParam));
 					case WinMsg.WM_NCLBUTTONDOWN:
 					case WinMsg.WM_NCLBUTTONDBLCLK:
 					case WinMsg.WM_NCRBUTTONDOWN:
@@ -157,30 +450,30 @@ namespace TecWare.PPSn.UI
 						}
 				}
 				return NativeMethods.DefWindowProc(hwnd, msg, wParam, lParam);
-			}
+			} // func WndProc
 
 			private int WmNcHitTest(IntPtr lParam)
 			{
-				int xLParam = NativeMethods.GetXLParam(lParam.ToInt32());
-				int yLParam = NativeMethods.GetYLParam(lParam.ToInt32());
 				RECT rect;
 				NativeMethods.GetWindowRect(handle, out rect);
-				int offset = 2 * dimension;
-				switch (orientation)
+				int xLParam = lParam.ToInt32() & 0xFFFF;
+				int yLParam = lParam.ToInt32() >> 16;
+				int offset = 2 * glowDimension;
+				switch (direction)
 				{
-					case Dock.Left:
+					case GlowDirection.West:
 						if (yLParam - offset < rect.Top)
 							return (int)HitTestValues.HTTOPLEFT;
 						if (yLParam + offset > rect.Bottom)
 							return (int)HitTestValues.HTBOTTOMLEFT;
 						return (int)HitTestValues.HTLEFT;
-					case Dock.Top:
+					case GlowDirection.North:
 						if (xLParam - offset < rect.Left)
 							return (int)HitTestValues.HTTOPLEFT;
 						if (xLParam + offset > rect.Right)
 							return (int)HitTestValues.HTTOPRIGHT;
 						return (int)HitTestValues.HTTOP;
-					case Dock.Right:
+					case GlowDirection.East:
 						if (yLParam - offset < rect.Top)
 							return (int)HitTestValues.HTTOPRIGHT;
 						if (yLParam + offset > rect.Bottom)
@@ -193,17 +486,45 @@ namespace TecWare.PPSn.UI
 							return (int)HitTestValues.HTBOTTOMRIGHT;
 						return (int)HitTestValues.HTBOTTOM;
 				}
+			} // func WmNcHitTest
+
+			#endregion
+
+			#region -- Bitmaps --------------------------------------------------------
+
+			private void CreateBitMaps()
+			{
+				int offset = 3 * (int)direction;
+				for (int i = 0; i < 3; i++)
+				{
+					activeBitmaps[i] = GlowBitmap.FromImage(i + offset, activeColor);
+					inactiveBitmaps[i] = GlowBitmap.FromImage(i + offset, inactiveColor);
+				}
+			}
+
+			private void DestroyBitmaps()
+			{
+				for (int i = 0; i < 3; i++)
+				{
+					activeBitmaps[i].Dispose();
+					inactiveBitmaps[i].Dispose();
+				}
+			}
+
+			private void ChangeBitmaps(GlowBitmap[] bitmaps, Color newColor)
+			{
+				int offset = 3 * (int)direction;
+				for (int i = 0; i < 3; i++)
+				{
+					bitmaps[i].Dispose();
+					bitmaps[i] = null;
+					bitmaps[i] = GlowBitmap.FromImage(i + offset, newColor);
+				}
 			}
 
 			#endregion
 
 			#region -- Updating -------------------------------------------------------
-
-			public void CommitChanges()
-			{
-				UpdateWindowPos();
-				changedPropertys = PropertyType.None;
-			}
 
 			public void UpdateBounds()
 			{
@@ -213,33 +534,60 @@ namespace TecWare.PPSn.UI
 				NativeMethods.GetWindowRect(ownerWindowHandle, out rect);
 				if (IsVisible)
 				{
-					switch (orientation)
+					// Ecken müssen sich Überschneiden, sonst ist beim Resize mit der Mouse der Hintergrund sichtbar
+					switch (direction)
 					{
-						case Dock.Left:
-							Left = rect.Left - dimension;
-							Top = rect.Top - dimension;
-							Width = dimension;
-							Height = rect.Height + 2 * dimension;
+						case GlowDirection.West:
+							Left = rect.Left - glowDimension;
+							Top = rect.Top - glowDimension;
+							Width = glowDimension;
+							Height = rect.Height + 2 * glowDimension;
 							return;
-						case Dock.Top:
-							Left = rect.Left - dimension;
-							Top = rect.Top - dimension;
-							Width = rect.Width + 2 * dimension;
-							Height = dimension;
+						case GlowDirection.North:
+							Left = rect.Left - glowDimension;
+							Top = rect.Top - glowDimension;
+							Width = rect.Width + 2 * glowDimension;
+							Height = glowDimension;
 							return;
-						case Dock.Right:
+						case GlowDirection.East:
 							Left = rect.Right;
-							Top = rect.Top - dimension;
-							Width = dimension;
-							Height = rect.Height + 2 * dimension;
+							Top = rect.Top - glowDimension;
+							Width = glowDimension;
+							Height = rect.Height + 2 * glowDimension;
 							return;
 						default:
-							Left = rect.Left - dimension;
+							Left = rect.Left - glowDimension;
 							Top = rect.Bottom;
-							Width = rect.Width + 2 * dimension;
-							Height = dimension;
+							Width = rect.Width + 2 * glowDimension;
+							Height = glowDimension;
 							break;
 					}
+				}
+			}
+
+			public void UpdateColors(Color activeColor, Color inactiveColor)
+			{
+				ActiveColor = activeColor;
+				InactiveColor = inactiveColor;
+			}
+
+			public void CommitChanges()
+			{
+				UpdateColors();
+				UpdateWindowPos();
+				UpdateCanvas();
+				changedPropertys = PropertyType.None;
+			}
+
+			private void UpdateColors()
+			{
+				if (changedPropertys.HasFlag(PropertyType.ActiveColor))
+				{
+					ChangeBitmaps(activeBitmaps, activeColor);
+				}
+				if (changedPropertys.HasFlag(PropertyType.InactiveColor))
+				{
+					ChangeBitmaps(inactiveBitmaps, inactiveColor);
 				}
 			}
 
@@ -257,15 +605,38 @@ namespace TecWare.PPSn.UI
 					}
 					if (!changedPropertys.HasFlag(PropertyType.Location))
 					{
-						flags |= 2;
+						flags |= NativeMethods.SWP_NOMOVE;
 					}
 					if (!changedPropertys.HasFlag(PropertyType.Size))
 					{
-						flags |= 1;
+						flags |= NativeMethods.SWP_NOSIZE;
 					}
 					NativeMethods.SetWindowPos(handle, IntPtr.Zero, Left, Top, Width, Height, flags);
 				}
-			}
+			} // proc UpdateWindowPos
+
+			private void UpdateCanvas()
+			{
+				if (!isVisible || !changedPropertys.HasFlag(PropertyType.Draw))
+					return;
+
+				using (var draw = new GlowDrawingHelper(handle))
+				{
+					Orientation orientation;
+					switch (direction)
+					{
+						case GlowDirection.West:
+						case GlowDirection.East:
+							orientation = Orientation.Vertical;
+							break;
+						default:
+							orientation = Orientation.Horizontal;
+							break;
+					}
+					GlowBitmap[] bitmaps = IsActive ? activeBitmaps : inactiveBitmaps;
+					draw.DrawBitmap(bitmaps, orientation, glowDimension);
+				}
+			} // proc UpdateWindowCanvas
 
 			#endregion
 
@@ -273,15 +644,21 @@ namespace TecWare.PPSn.UI
 
 			public IntPtr Handle { get { return handle; } }
 
-			public bool IsVisible { get { return isVisible; } set { UpdateProperty(ref isVisible, value, PropertyType.Visibility); } }
+			public bool IsVisible { get { return isVisible; } set { UpdateProperty(ref isVisible, value, PropertyType.Visibility | PropertyType.Draw); } }
+
+			public bool IsActive { get { return isActive; } set { UpdateProperty(ref isActive, value, PropertyType.Draw); } }
+
+			private Color ActiveColor { get { return activeColor; } set { UpdateProperty(ref activeColor, value, PropertyType.ActiveColor | PropertyType.Draw); } }
+
+			private Color InactiveColor { get { return inactiveColor; } set { UpdateProperty(ref inactiveColor, value, PropertyType.InactiveColor | PropertyType.Draw); } }
 
 			private int Left { get { return left; } set { UpdateProperty(ref left, value, PropertyType.Location); } }
 
 			private int Top { get { return top; } set { UpdateProperty(ref top, value, PropertyType.Location); } }
 
-			private int Width { get { return width; } set { UpdateProperty(ref width, value, PropertyType.Size); } }
+			private int Width { get { return width; } set { UpdateProperty(ref width, value, PropertyType.Size | PropertyType.Draw); } }
 
-			private int Height { get { return height; } set { UpdateProperty(ref height, value, PropertyType.Size); } }
+			private int Height { get { return height; } set { UpdateProperty(ref height, value, PropertyType.Size | PropertyType.Draw); } }
 
 			private void UpdateProperty<T>(ref T field, T value, PropertyType propertytype) where T : struct
 			{
@@ -293,7 +670,7 @@ namespace TecWare.PPSn.UI
 						CommitChanges();
 				}
 			}
-
+	
 			#endregion
 		} // class GlowWindow
 
@@ -320,21 +697,18 @@ namespace TecWare.PPSn.UI
 
 			protected virtual void Dispose(bool disposing)
 			{
-				// Check to see if Dispose has already been called.
-				if (!this.disposed)
+				if (disposed)
+					return;
+
+				if (disposing)
 				{
-					if (disposing)
-					{
-						ownerWindow.glowPendingUpdates--;
-						if (ownerWindow.glowPendingUpdates == 0)
-						{
-							ownerWindow.CommitGlowChanges();
-						}
-					}
-					disposed = true;
+					ownerWindow.glowPendingUpdates--;
+					if (ownerWindow.glowPendingUpdates == 0)
+						ownerWindow.CommitGlowChanges();
 				}
+				disposed = true;
 			}
-		} // glass GlowWindowChanging
+		}
 
 		#endregion
 
@@ -356,14 +730,14 @@ namespace TecWare.PPSn.UI
 			hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
 			hwndSource.AddHook(wndProc);
 			base.OnSourceInitialized(e);
-		} // proc OnSourceInitialized
+		}
 
 		protected override void OnClosed(EventArgs e)
 		{
 			hwndSource.RemoveHook(wndProc);
 			DestroyGlowWindows();
 			base.OnClosed(e);
-		} // proc OnClosed
+		}
 
 		protected override void OnStateChanged(EventArgs e)
 		{
@@ -383,18 +757,35 @@ namespace TecWare.PPSn.UI
 			base.OnRenderSizeChanged(sizeInfo);
 		}
 
+		protected override void OnActivated(EventArgs e)
+		{
+			UpdateGlowWindowActiveState();
+			base.OnActivated(e);
+		}
+
+		protected override void OnDeactivated(EventArgs e)
+		{
+			UpdateGlowWindowActiveState();
+			base.OnDeactivated(e);
+		}
+
+		private static void OnGlowColorChanged(DependencyObject obj, DependencyPropertyChangedEventArgs args)
+		{
+			((PpsWindow)obj).UpdateGlowWindowColors();
+		}
+
 		#region -- GlowWindowManagement -----------------------------------------------
 
 		private void CreateGlowWindows()
 		{
 			for (int i = 0; i < 4; i++)
-				glowWindows[i] = new GlowWindow(this, (Dock)i);
+				glowWindows[i] = new GlowWindow(this, (GlowDirection)i);
 		} // proc CreateGlowWindows
 
 		private void DestroyGlowWindows()
 		{
 			for (int i = 0; i < 4; i++)
-				glowWindows[i].DestroyNativeResources();
+				glowWindows[i].Destroy();
 		} // proc DestroyGlowWindows
 
 		private void UpdateGlowWindowBounds()
@@ -407,6 +798,15 @@ namespace TecWare.PPSn.UI
 			}
 		}
 
+		private void UpdateGlowWindowColors()
+		{
+			using (var gwc = new GlowWindowChanging(this))
+			{
+				for (int i = 0; i < 4; i++)
+					glowWindows[i].UpdateColors(ActiveGlowColor, InactiveGlowColor);
+			}
+		}
+
 		private void UpdateGlowWindowVisibility()
 		{
 			bool showGlow = Visibility == Visibility.Visible && WindowState == System.Windows.WindowState.Normal;
@@ -415,6 +815,15 @@ namespace TecWare.PPSn.UI
 				isGlowVisible = showGlow;
 				for (int i = 0; i < 4; i++)
 					glowWindows[i].IsVisible = isGlowVisible;
+			}
+		}
+
+		private void UpdateGlowWindowActiveState()
+		{
+			using (var gwc = new GlowWindowChanging(this))
+			{
+				for (int i = 0; i < 4; i++)
+					glowWindows[i].IsActive = base.IsActive;
 			}
 		}
 
@@ -439,8 +848,7 @@ namespace TecWare.PPSn.UI
 			{
 				updatingZOrder = false;
 			}
-		} // proc UpdateZOrder
-
+		} // proc UpdateGlowWindowZOrder
 
 		private void CommitGlowChanges()
 		{
@@ -474,9 +882,9 @@ namespace TecWare.PPSn.UI
 				RECT rcWindow = (RECT)Marshal.PtrToStructure(lParam, typeof(RECT));
 				NativeMethods.DefWindowProc(hwnd, (int)WinMsg.WM_NCCALCSIZE, wParam, lParam);
 				RECT rcClient = (RECT)Marshal.PtrToStructure(lParam, typeof(RECT));
-				WINDOWINFO wi = new WINDOWINFO();
-				NativeMethods.GetWindowInfo(hwnd, wi);
-				rcClient.Top = rcWindow.Top + (int)wi.cyWindowBorders;
+				WINDOWINFO windowinfo = new WINDOWINFO();
+				NativeMethods.GetWindowInfo(hwnd, windowinfo);
+				rcClient.Top = rcWindow.Top + (int)windowinfo.cyWindowBorders;
 				Marshal.StructureToPtr(rcClient, lParam, true);
 			}
 			handled = true;
@@ -487,11 +895,11 @@ namespace TecWare.PPSn.UI
 		{
 			UpdateGlowWindowZOrder();
 			return IntPtr.Zero;
-		} // func WmWindowPosChanged
+		}
 
 		private IntPtr WmNcHitTest(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
 		{
-			Point point = this.PointFromScreen(new Point(lParam.ToInt32() & 0xFFFF, lParam.ToInt32() >> 16));
+			Point point = PointFromScreen(new Point(lParam.ToInt32() & 0xFFFF, lParam.ToInt32() >> 16));
 			DependencyObject visualHit = null;
 			VisualTreeHelper.HitTest(
 				this,
@@ -526,5 +934,8 @@ namespace TecWare.PPSn.UI
 		} // func WmNcHitTest
 
 		#endregion
+
+		public Color ActiveGlowColor { get { return (Color)base.GetValue(ActiveGlowColorProperty); } set { base.SetValue(ActiveGlowColorProperty, value); } }
+		public Color InactiveGlowColor { get { return (Color)base.GetValue(InactiveGlowColorProperty); } set { base.SetValue(InactiveGlowColorProperty, value); } }
 	} // class PpsWindow
 }

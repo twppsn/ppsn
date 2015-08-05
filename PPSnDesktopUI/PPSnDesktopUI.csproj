@@ -48,6 +48,7 @@
       <HintPath>..\packages\NeoLua.1.0.1-beta\lib\net45\Neo.Lua.Desktop.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="PresentationFramework.Aero2" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
@@ -83,6 +84,15 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Controls\text.fx" />
+    <Resource Include="Images\SizeGrip.png" />
+    <Resource Include="Images\EastBottom.png" />
+    <Resource Include="Images\EastMiddle.png" />
+    <Resource Include="Images\EastTop.png" />
+    <Resource Include="Images\NorthMiddle.png" />
+    <Resource Include="Images\SouthMiddle.png" />
+    <Resource Include="Images\WestBottom.png" />
+    <Resource Include="Images\WestMiddle.png" />
+    <Resource Include="Images\WestTop.png" />
     <None Include="Controls\text.fx.ps" />
     <None Include="packages.config" />
   </ItemGroup>
@@ -106,12 +116,18 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="UI\UI.xaml">
-      <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Design\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\NorthLeft.png" />
+    <Resource Include="Images\NorthRight.png" />
+    <Resource Include="Images\SouthLeft.png" />
+    <Resource Include="Images\SouthRight.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

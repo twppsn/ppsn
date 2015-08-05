@@ -69,7 +69,7 @@ namespace TecWare.PPSn.UI
 		{
 			MessageBox.Show(text, caption ?? "Information", MessageBoxButton.OK, MessageBoxImage.Information);
 		} // proc LuaMsgBox
-
+	
 		[LuaMember("require")]
 		private void LuaRequire(string fileName)
 		{
