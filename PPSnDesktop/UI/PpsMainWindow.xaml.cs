@@ -37,7 +37,7 @@ namespace TecWare.PPSn.UI
 			InitializeComponent();
 
 			// initialize settings
-			navigator = new PpsNavigatorModel();
+			navigator = new PpsNavigatorModel(this);
 			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
 
 			// set basic command bindings

@@ -36,19 +36,51 @@ namespace TecWare.PPSn
   public class PpsMainEnvironment : PpsEnvironment
 	{
 		private PpsEnvironmentCollection<PpsMainActionDefinition> actions;
+		private PpsEnvironmentCollection<PpsMainViewDefinition> views;
 
 		public PpsMainEnvironment(Uri remoteUri, ResourceDictionary mainResources)
 			: base(remoteUri, mainResources)
 		{
 			this.actions = new PpsEnvironmentCollection<PpsMainActionDefinition>(this);
+			this.views = new PpsEnvironmentCollection<PpsMainViewDefinition>(this);
 
       // test
       actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Offline, "Test1", "Test 1", null));
       actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Offline, "Test2", "Test 2", null));
       actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Online, "Test1", "Test 2", null));
-    } // ctor
 
-    public void CreateMainWindow()
+			views.AppendItem(new PpsMainViewDefinition(this, PpsEnvironmentDefinitionSource.Offline, "TE", "Teilestamm",
+				new PpsMainViewFilter[] 
+				{
+					new PpsMainViewFilter("Aktiv"),
+					new PpsMainViewFilter("InAktiv")
+				},
+				new PpsMainViewSort[]
+				{
+					new PpsMainViewSort("Teilenummer"),
+					new PpsMainViewSort("Teilname"),
+					new PpsMainViewSort("Teilmatch")
+				}));
+
+			views.AppendItem(new PpsMainViewDefinition(this, PpsEnvironmentDefinitionSource.Offline, "CO", "Kontakte",
+				new PpsMainViewFilter[]
+				{
+					new PpsMainViewFilter("Lieferanten"),
+					new PpsMainViewFilter("Kunden"),
+					new PpsMainViewFilter("Speditionen"),
+          new PpsMainViewFilter("Interessenten")
+				},
+				new PpsMainViewSort[]
+				{
+					new PpsMainViewSort("Kundennummer"),
+					new PpsMainViewSort("Kundenname"),
+					new PpsMainViewSort("Debitorennummer"),
+					new PpsMainViewSort("Kreditorennummer"),
+					new PpsMainViewSort("Kundenmatch")
+				}));
+		} // ctor
+
+		public void CreateMainWindow()
 		{
 			Dispatcher.Invoke(() =>
 				{
@@ -73,7 +105,7 @@ namespace TecWare.PPSn
 			return null;
 		} // func GetWindow
 
-		public PpsEnvironmentCollection<PpsMainActionDefinition> Actions
-    { get { return actions; } }
+		public PpsEnvironmentCollection<PpsMainActionDefinition> Actions => actions;
+		public PpsEnvironmentCollection<PpsMainViewDefinition> Views => views;
 	} // class PpsMainEnvironment
 }

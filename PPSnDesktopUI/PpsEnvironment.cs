@@ -291,8 +291,8 @@ namespace TecWare.PPSn
 		{
 			lock (items)
 			{
-				foreach (var i in keys.Values)
-					yield return new KeyValuePair<string, T>(items[i].Name, items[i]);
+				foreach (T c in this)
+					yield return new KeyValuePair<string, T>(c.Name, c);
 			}
 		} // func IEnumerable<KeyValuePair<string, T>>.GetEnumerator
 
@@ -311,10 +311,13 @@ namespace TecWare.PPSn
 				return keys.ContainsKey(key);
 		} // func IDictionary<string, T>.ContainsKey
 
-		IEnumerator IEnumerable.GetEnumerator()
+		public IEnumerator GetEnumerator()
 		{
-			// normally the locking is done by the consumer
-			return items.GetEnumerator();
+			lock (items)
+			{
+				foreach (var i in keys.Values)
+					yield return items[i];
+			}
 		} // func IEnumerable.GetEnumerator
 
 		void IDictionary<string, T>.Add(string key, T value) { throw new NotSupportedException(); }
