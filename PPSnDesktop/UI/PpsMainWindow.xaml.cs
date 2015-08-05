@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -44,6 +45,7 @@ namespace TecWare.PPSn.UI
 			this.DataContext = this;
 
 			RefreshTitle();
+			Trace.TraceInformation("MainWindow[{0}] created.", windowIndex);
 		} // ctor
 
 		private void OnLoaded(object sender, RoutedEventArgs e)
@@ -141,5 +143,12 @@ namespace TecWare.PPSn.UI
 		public int WindowIndex { get { return windowIndex; } }
 
 		public new PpsMainEnvironment Environment { get { return (PpsMainEnvironment)base.Environment; } }
+
+		// Test ws
+		private void Button_Click(object sender, RoutedEventArgs e)
+		{
+			var win = new PpsMainWindow(windowIndex + 1);
+			win.Show();
+		}
 	} // class PpsMainWindow
 }

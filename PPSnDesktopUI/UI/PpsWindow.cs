@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace TecWare.PPSn.UI
 {
@@ -25,8 +26,16 @@ namespace TecWare.PPSn.UI
 		public readonly static RoutedCommand MaximizeCommand = new RoutedCommand("Maximize", typeof(PpsWindow));
 		/// <summary>Command for closing the window.</summary>
 		public readonly static RoutedCommand CloseCommand = new RoutedCommand("Close", typeof(PpsWindow));
-		/// <summary>Starts the use login.</summary>
+		/// <summary>Starts the user login.</summary>
 		public readonly static RoutedCommand LoginCommand = new RoutedCommand("Login", typeof(PpsWindow));
+		/// <summary>Starts the user logout.</summary>
+		public readonly static RoutedCommand LogoutCommand = new RoutedCommand("Logout", typeof(PpsWindow));
+		/// <summary>Opens a trace pane.</summary>
+		public readonly static RoutedCommand TraceLogCommand = new RoutedCommand("TraceLog", typeof(PpsWindow));
+		/// <summary>GlowColor when window is active.</summary>
+		public static readonly DependencyProperty ActiveGlowColorProperty = DependencyProperty.Register("ActiveGlowColor", typeof(Color), typeof(PpsWindow), new FrameworkPropertyMetadata(Colors.Black, new PropertyChangedCallback(OnGlowColorChanged)));
+		/// <summary>GlowColor when window is inactive.</summary>
+		public static readonly DependencyProperty InactiveGlowColorProperty = DependencyProperty.Register("InactiveGlowColor", typeof(Color), typeof(PpsWindow), new FrameworkPropertyMetadata(Colors.LightGray, new PropertyChangedCallback(OnGlowColorChanged)));
 
 		private PpsEnvironment environment;
 

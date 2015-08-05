@@ -5,11 +5,14 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Data;
 using System.Windows.Markup;
 using System.Xaml;
 
 namespace TecWare.PPSn.UI
 {
+	#region -- class LuaEventExtension ---------------------------------------------------
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface ILuaEventSink
@@ -69,4 +72,38 @@ namespace TecWare.PPSn.UI
 		[ConstructorArgument("methodName")]
 		public string MethodName { get { return methodName; } set { methodName = value; } }
 	} // class LuaEventExtension
+
+	#endregion
+
+	#region -- class LuaConvertExtension ------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class LuaConvertExtension : MarkupExtension
+	{
+		private string code;
+
+		public LuaConvertExtension(string code)
+		{
+			this.code = code;
+		} // ctor
+
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			var target = (IProvideValueTarget)serviceProvider.GetService(typeof(IProvideValueTarget));
+			var property = target.TargetProperty as PropertyInfo;
+			if(property == null)
+				throw new ArgumentException("This markup is only allowed on properties.");
+
+			if (!property.PropertyType.IsAssignableFrom(typeof(IValueConverter)))
+				throw new ArgumentException("The property must except IValueConverter's.");
+
+			return new LuaValueConverter() { ConvertExpression = code };
+		} // func ProvideValue
+
+		[ConstructorArgument("code")]
+		public string Code { get { return code; } set { code = value; } }
+	} // class LuaConvertExtension
+
+	#endregion
 }

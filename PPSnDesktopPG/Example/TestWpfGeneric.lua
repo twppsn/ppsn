@@ -15,5 +15,5 @@ HalloCommand = command(
 
 function Button_Click(sender, e)
 	--Control.Title = "Geklickt";
-	Counter = Counter + 1;
+	Counter = Counter + 1000;
 end;

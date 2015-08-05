@@ -3,30 +3,28 @@
               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			  xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
 			Style="{StaticResource PpsWindow}" Title="PpsMainWindow" Height="300" Width="300">
-	<Grid>
+	<Grid x:Name="PART_MainWindowGrid" Background="{StaticResource PPSnWindowBrush}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="52" />
-			<RowDefinition Height="32" />
 			<RowDefinition Height="*" />
-			<RowDefinition Height="24" />
+			<RowDefinition Height="23" />
 		</Grid.RowDefinitions>
 
-		<DockPanel x:Name="PART_Header" Grid.Row="0" Background="{StaticResource PPSnWindowBrush}">
+		<DockPanel x:Name="PART_Header" Grid.Row="0">
 			<Button Content="Login" Width="52" Command="{x:Static ui:PpsWindow.LoginCommand}" Focusable="False" IsTabStop="False" />
 			<DockPanel DockPanel.Dock="Bottom">
-				<Label Content="{Binding Environment.UsernameDisplay}" DockPanel.Dock="Right" VerticalContentAlignment="Top" Padding="0,4,8,0"> </Label>
-				<ToolBar ToolBarTray.IsLocked="True" Height="26" Background="Transparent" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" Loaded="ToolBar_Loaded"> </ToolBar>
+				<Label Content="{Binding Environment.UsernameDisplay}" DockPanel.Dock="Right" VerticalContentAlignment="Top" Padding="0,4,8,0"></Label>
+				<ToolBar Height="26" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" Style="{StaticResource MainToolbarStyle}"> </ToolBar>
 			</DockPanel>
-			
-			<Button x:Name="PART_CloseButton" Style="{StaticResource PpsWindowButton}" Focusable ="False" Command="{x:Static ui:PpsWindow.CloseCommand}" DockPanel.Dock="Right">
+			<Button x:Name="PART_CloseButton" Style="{StaticResource PpsWindowButton}" Command="{x:Static ui:PpsWindow.CloseCommand}" DockPanel.Dock="Right">
 				<Path
 					Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
 					StrokeThickness="1.5"
 					Stretch="Fill"
-					RenderOptions.EdgeMode="Aliased"
+					RenderOptions.EdgeMode="Unspecified"
 					Data="{StaticResource PpsWindowCloseButton}" />
 			</Button>
-			<Button x:Name="PART_MaxButton" Style="{StaticResource PpsWindowButton}" Focusable ="False" Command="{x:Static ui:PpsWindow.MaximizeCommand}" DockPanel.Dock="Right">
+			<Button x:Name="PART_MaxButton" Style="{StaticResource PpsWindowButton}" Command="{x:Static ui:PpsWindow.MaximizeCommand}" DockPanel.Dock="Right">
 				<Path
 					x:Name="PART_MaxButtonPath"
 					Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
@@ -47,7 +45,7 @@
 					</Path.Style>
 				</Path>
 			</Button>
-			<Button x:Name="PART_MinButton" Style="{StaticResource PpsWindowButton}" Focusable ="False" Command="{x:Static ui:PpsWindow.MinimizeCommand}" DockPanel.Dock="Right">
+			<Button x:Name="PART_MinButton" Style="{StaticResource PpsWindowButton}"  Command="{x:Static ui:PpsWindow.MinimizeCommand}" DockPanel.Dock="Right">
 				<Rectangle
 					Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
 						Stretch="Fill"
@@ -77,14 +75,42 @@
 					<ui:PpsWindowHitTest HitTest="2"/>
 				</Label.Tag>
 			</Label>
+			<DockPanel.Style>
+				<Style TargetType="DockPanel">
+					<Setter Property="Background" Value="{StaticResource PPSnWindowActiveHeaderBrush}" />
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding Path=IsActive, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="False">
+							<Setter Property="Background" Value="{StaticResource PPSnWindowInactiveHeaderBrush}" />
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</DockPanel.Style>
 		</DockPanel>
-		<TextBlock Grid.Row="1" VerticalAlignment="Center">
-			<Run Text="Test ("/>
-			<Run Text="{Binding WindowIndex, Mode=OneWay}" />
-			<Run Text="):" />
-			<Run Text="{Binding CurrentPane.Title, Mode=OneWay}" />
-		</TextBlock>
-		<StatusBar Background="Blue" Grid.Row="3"></StatusBar>
-		<ContentPresenter Grid.Row="2" Content="{Binding CurrentPane.Control,Mode=OneWay}"  />
+
+		<DockPanel x:Name="PART_StatusBar" Background="{StaticResource PPSnWindowFooterBrush}" Grid.Row="2" LastChildFill="False">
+			<Label Content="CurrentPane:" Margin="8,0,0,0" Padding="0" VerticalContentAlignment="Center" Foreground="White" Opacity="0.7"> </Label>
+			<Label Content="{Binding CurrentPane.Title, Mode=OneWay}" Margin="6,0,0,0" Padding="0" VerticalContentAlignment="Center" Foreground="White" Opacity="0.9"> </Label>
+			<Viewbox x:Name="PART_SizeGripper" DockPanel.Dock="Right" Width="15" VerticalAlignment="Bottom">
+				<Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SizeGrip.png">
+					<Image.Tag>
+						<ui:PpsWindowHitTest HitTest="17"/>
+					</Image.Tag>
+				</Image>
+				<Viewbox.Style>
+					<Style TargetType="Viewbox">
+						<Setter Property="Visibility" Value="Visible" />
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized">
+								<Setter Property="Visibility" Value="Hidden" />
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Viewbox.Style>
+			</Viewbox>
+		</DockPanel>
+		<ContentPresenter Grid.Row="1" Content="{Binding CurrentPane.Control,Mode=OneWay}"  />
+
+		
+		<Button Content="Test neues Fenster" HorizontalAlignment="Left" Margin="180,164,0,0" Grid.Row="1" VerticalAlignment="Top" Click="Button_Click" RenderTransformOrigin="0.51,-0.4"/>
 	</Grid>
 </ui:PpsWindow>

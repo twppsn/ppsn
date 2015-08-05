@@ -62,6 +62,8 @@
     <Reference Include="PresentationFramework" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Controls\Toolbar.cs" />
+    <Compile Include="UI\LuaValueConverter.cs" />
     <Compile Include="PpsEnvironment.cs" />
     <Compile Include="PpsTraceLog.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
@@ -70,6 +72,7 @@
     <AppDesigner Include="Properties\" />
     <Compile Include="UI\Markups.cs" />
     <Compile Include="UI\NatveMethods.cs" />
+    <Compile Include="UI\PpsCommand.cs" />
     <Compile Include="UI\PpsDialogWindow.cs" />
     <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
     <Compile Include="UI\PpsGenericWpfWindowPane.cs" />
@@ -78,6 +81,17 @@
     <Compile Include="UI\PpsWindowPane.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Controls\text.fx" />
+    <Resource Include="Images\SizeGrip.png" />
+    <Resource Include="Images\EastBottom.png" />
+    <Resource Include="Images\EastMiddle.png" />
+    <Resource Include="Images\EastTop.png" />
+    <Resource Include="Images\NorthMiddle.png" />
+    <Resource Include="Images\SouthMiddle.png" />
+    <Resource Include="Images\WestBottom.png" />
+    <Resource Include="Images\WestMiddle.png" />
+    <Resource Include="Images\WestTop.png" />
+    <None Include="Controls\text.fx.ps" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -105,8 +119,13 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Controls\" />
     <Folder Include="Design\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\NorthLeft.png" />
+    <Resource Include="Images\NorthRight.png" />
+    <Resource Include="Images\SouthLeft.png" />
+    <Resource Include="Images\SouthRight.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

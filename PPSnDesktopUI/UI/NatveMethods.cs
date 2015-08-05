@@ -13,7 +13,6 @@ namespace TecWare.PPSn.UI
 		WM_ACTIVATE = 0x0006,
 		WM_WINDOWPOSCHANGING = 0x0046,
 		WM_WINDOWPOSCHANGED = 0x0047,
-		WM_NCPAINT = 0x0085,
 		WM_NCCALCSIZE = 0x0083,
 		WM_NCLBUTTONDOWN = 0x00A1,
 		WM_NCLBUTTONDBLCLK = 0x00A3,
@@ -23,6 +22,7 @@ namespace TecWare.PPSn.UI
 		WM_NCMBUTTONDBLCLK = 0x00A9,
 		WM_NCXBUTTONDOWN = 0x00AB,
 		WM_NCXBUTTONDBLCLK = 0x00AD,
+		WM_NCRBUTTONUP = 0x00A5,
 		WM_NCHITTEST = 0x0084
 	}
 
@@ -54,7 +54,6 @@ namespace TecWare.PPSn.UI
 		HTHELP = 21
 	} // enum HitTestValues
 
-
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 	internal struct WNDCLASS
 	{
@@ -78,6 +77,13 @@ namespace TecWare.PPSn.UI
 		public int x;
 		public int y;
 #pragma warning restore 0649
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	internal struct SIZE
+	{
+		public int cx;
+		public int cy;
 	}
 
 	[Serializable]
@@ -120,7 +126,7 @@ namespace TecWare.PPSn.UI
 		{
 			return new Int32Rect(this.Left, this.Top, this.Width, this.Height);
 		}
-	}
+	} // struct RECT
 
 	[StructLayout(LayoutKind.Sequential)]
 	internal class WINDOWPOS
@@ -160,6 +166,77 @@ namespace TecWare.PPSn.UI
 		public ushort wCreatorVersion;
 	}
 
+	internal struct BITMAPINFO
+	{
+		internal int biSize;
+		internal int biWidth;
+		internal int biHeight;
+		internal short biPlanes;
+		internal short biBitCount;
+		internal int biCompression;
+		internal int biSizeImage;
+		internal int biXPelsPerMeter;
+		internal int biYPelsPerMeter;
+		internal int biClrUsed;
+		internal int biClrImportant;
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 1024)]
+		internal byte[] bmiColors;
+		internal static BITMAPINFO Default
+		{
+			get
+			{
+				return new BITMAPINFO
+				{
+					biSize = 40,
+					biPlanes = 1
+				};
+			}
+		}
+	} // struct BITMAPINFO
+
+	internal struct BITMAPINFOHEADER
+	{
+		internal uint biSize;
+		internal int biWidth;
+		internal int biHeight;
+		internal ushort biPlanes;
+		internal ushort biBitCount;
+		internal uint biCompression;
+		internal uint biSizeImage;
+		internal int biXPelsPerMeter;
+		internal int biYPelsPerMeter;
+		internal uint biClrUsed;
+		internal uint biClrImportant;
+		internal static BITMAPINFOHEADER Default
+		{
+			get
+			{
+				return new BITMAPINFOHEADER
+				{
+					biSize = 40u,
+					biWidth = 0,
+					biHeight = 0,
+					biPlanes = 1,
+					biBitCount = 32,
+					biCompression = 0,
+					biSizeImage = 0,
+					biXPelsPerMeter = 0,
+					biYPelsPerMeter = 0,
+					biClrUsed = 0,
+					biClrImportant = 0
+				};
+			}
+		}
+	} // struct BITMAPINFOHEADER
+
+	internal struct BLENDFUNCTION
+	{
+		public byte BlendOp;
+		public byte BlendFlags;
+		public byte SourceConstantAlpha;
+		public byte AlphaFormat;
+	}
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	internal static class NativeMethods
@@ -186,27 +263,11 @@ namespace TecWare.PPSn.UI
 		public const int SW_SHOWMAXIMIZED = 3;
 		public const int WA_CLICKACTIVE = 2;
 		public const int GW_HWNDPREV = 3;
+		public const uint ULW_ALPHA = 2;
+		public const uint DIB_RGB_COLORS = 0;
+		public const int BI_RGB = 0;
 
 		#endregion
-
-		internal static int GetXLParam(int lParam)
-		{
-			return LoWord(lParam);
-		}
-		internal static int LoWord(int value)
-		{
-			return (int)((short)(value & 65535));
-		}
-
-		internal static int GetYLParam(int lParam)
-		{
-			return HiWord(lParam);
-		}
-		internal static int HiWord(int value)
-		{
-			return (int)((short)(value >> 16));
-		}
-
 
 		public delegate IntPtr WndProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
@@ -274,6 +335,35 @@ namespace TecWare.PPSn.UI
 		[return: MarshalAs(UnmanagedType.Bool)]
 		public static extern bool GetWindowInfo(IntPtr hwnd, WINDOWINFO pwi);
 
+		[DllImport("gdi32.dll", SetLastError = true)]
+		internal static extern IntPtr CreateDIBSection(IntPtr hdc, ref BITMAPINFO pbmi, uint iUsage, out IntPtr ppvBits, IntPtr hSection, uint dwOffset);
 
+		[DllImport("User32.dll", CallingConvention = CallingConvention.StdCall, ExactSpelling = true)]
+		internal static extern IntPtr GetDC(IntPtr hWnd);
+
+		[DllImport("gdi32.dll", SetLastError = true)]
+		internal static extern IntPtr CreateCompatibleDC(IntPtr hdc);
+
+		[DllImport("User32.dll", CallingConvention = CallingConvention.StdCall, ExactSpelling = true)]
+		internal static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+		[DllImport("gdi32.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		internal static extern bool DeleteDC(IntPtr hdc);
+
+		[DllImport("gdi32.dll", ExactSpelling = true, SetLastError = true)]
+		internal static extern IntPtr SelectObject(IntPtr hdc, IntPtr hgdiobj);
+
+		[DllImport("gdi32.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		public static extern bool DeleteObject(IntPtr hObject);
+
+		[DllImport("user32.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		public static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDest, ref POINT pptDest, ref SIZE psize, IntPtr hdcSrc, ref POINT pptSrc, uint crKey, [In] ref BLENDFUNCTION pblend, uint dwFlags);
+
+		[DllImport("msimg32.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		internal static extern bool AlphaBlend(IntPtr hdcDest, int xoriginDest, int yoriginDest, int wDest, int hDest, IntPtr hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, BLENDFUNCTION pfn);
 	} // class NativeMethods
 }
