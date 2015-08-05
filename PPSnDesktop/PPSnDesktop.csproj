@@ -64,6 +64,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="PpsMainEnvironment.cs" />
+    <Compile Include="PpsMainEnvironment.Views.cs" />
     <Compile Include="UI\Panes\PpsLoginPane.xaml.cs">
       <DependentUpon>PpsLoginPane.xaml</DependentUpon>
     </Compile>

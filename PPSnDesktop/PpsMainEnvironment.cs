@@ -4,20 +4,51 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public class PpsMainEnvironment : PpsEnvironment
+  #region -- class PpsMainActionDefinition --------------------------------------------
+
+  ///////////////////////////////////////////////////////////////////////////////
+  /// <summary></summary>
+  public class PpsMainActionDefinition : PpsEnvironmentDefinition
 	{
+    private readonly string displayName;
+    private readonly ICommand command;
+
+		internal PpsMainActionDefinition(PpsEnvironment environment, PpsEnvironmentDefinitionSource source, string name, string displayName, ICommand command)
+			: base(environment, source, name)
+		{
+      this.displayName = displayName;
+      this.command = command;
+		} // ctor
+
+    public string DisplayName => displayName;
+    public ICommand Command => command;
+	} // class PpsMainActionDefinition
+
+  #endregion
+
+  ///////////////////////////////////////////////////////////////////////////////
+  /// <summary></summary>
+  public class PpsMainEnvironment : PpsEnvironment
+	{
+		private PpsEnvironmentCollection<PpsMainActionDefinition> actions;
+
 		public PpsMainEnvironment(Uri remoteUri, ResourceDictionary mainResources)
 			: base(remoteUri, mainResources)
 		{
-		} // ctor
+			this.actions = new PpsEnvironmentCollection<PpsMainActionDefinition>(this);
 
-		public void CreateMainWindow()
+      // test
+      actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Offline, "Test1", "Test 1", null));
+      actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Offline, "Test2", "Test 2", null));
+      actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Online, "Test1", "Test 2", null));
+    } // ctor
+
+    public void CreateMainWindow()
 		{
 			Dispatcher.Invoke(() =>
 				{
@@ -41,5 +72,8 @@ namespace TecWare.PPSn
 			}
 			return null;
 		} // func GetWindow
+
+		public PpsEnvironmentCollection<PpsMainActionDefinition> Actions
+    { get { return actions; } }
 	} // class PpsMainEnvironment
 }
