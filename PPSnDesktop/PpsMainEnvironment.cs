@@ -68,7 +68,7 @@ namespace TecWare.PPSn
 					new PpsMainViewFilter("Lieferanten"),
 					new PpsMainViewFilter("Kunden"),
 					new PpsMainViewFilter("Speditionen"),
-          new PpsMainViewFilter("Interessenten")
+					new PpsMainViewFilter("Interessenten")
 				},
 				new PpsMainViewSort[]
 				{
@@ -77,6 +77,40 @@ namespace TecWare.PPSn
 					new PpsMainViewSort("Debitorennummer"),
 					new PpsMainViewSort("Kreditorennummer"),
 					new PpsMainViewSort("Kundenmatch")
+				}));
+
+			views.AppendItem(new PpsMainViewDefinition(this, PpsEnvironmentDefinitionSource.Offline, "BE", "Bestellungen",
+				new PpsMainViewFilter[]
+				{
+					new PpsMainViewFilter("Aktiv"),
+					new PpsMainViewFilter("Archiv")
+				},
+				new PpsMainViewSort[]
+				{
+					new PpsMainViewSort("Lieferantennummer"),
+					new PpsMainViewSort("Lieferantenname")
+				}));
+			views.AppendItem(new PpsMainViewDefinition(this, PpsEnvironmentDefinitionSource.Offline, "AU", "Aufträge",
+				new PpsMainViewFilter[]
+				{
+					new PpsMainViewFilter("Aktiv"),
+					new PpsMainViewFilter("Archiv")
+				},
+				new PpsMainViewSort[]
+				{
+					new PpsMainViewSort("Kundennummer"),
+					new PpsMainViewSort("Kundenname")
+				}));
+			views.AppendItem(new PpsMainViewDefinition(this, PpsEnvironmentDefinitionSource.Offline, "FE", "Fertigungsaufträge",
+				new PpsMainViewFilter[]
+				{
+					new PpsMainViewFilter("Aktiv"),
+					new PpsMainViewFilter("Archiv")
+				},
+				new PpsMainViewSort[]
+				{
+					new PpsMainViewSort("Kundennummer"),
+					new PpsMainViewSort("Kundenname")
 				}));
 		} // ctor
 

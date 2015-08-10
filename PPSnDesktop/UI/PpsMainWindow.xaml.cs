@@ -23,6 +23,11 @@ namespace TecWare.PPSn.UI
 	/// <summary></summary>
 	public partial class PpsMainWindow : PpsWindow
 	{
+		/// <summary>Toggles between DataPanel and OverViewPanel.</summary>
+		public readonly static RoutedCommand NavigatorToggleCommand = new RoutedCommand("NavigatorToggle", typeof(PpsMainWindow));
+		/// <summary>Flag Navigator visibility.</summary>
+		public static readonly DependencyProperty NavigatorVisibilityProperty = DependencyProperty.Register("NavigatorVisibility", typeof(bool), typeof(PpsMainWindow), new UIPropertyMetadata(true));
+
 		private readonly static DependencyPropertyKey CurrentPaneKey = DependencyProperty.RegisterReadOnly("CurrentPane", typeof(IPpsWindowPane), typeof(PpsMainWindow), new PropertyMetadata(null));
 		private readonly static DependencyProperty CurrentPaneProperty = CurrentPaneKey.DependencyProperty;
 
@@ -47,7 +52,14 @@ namespace TecWare.PPSn.UI
 					(sender, e) => e.CanExecute = !Environment.IsAuthentificated
 				)
 			);
-			
+
+			CommandBindings.Add(
+				new CommandBinding(NavigatorToggleCommand,
+					(sender, e) => ToggleNavigatorState(),
+					(sender, e) => e.CanExecute = true
+				)
+			);
+
 			this.DataContext = this;
 
 			RefreshTitle();
@@ -99,10 +111,34 @@ namespace TecWare.PPSn.UI
 			RefreshTitle();
 		} // proc StartPaneAsync
 
+		private void ToggleNavigatorState()
+		{
+			bool currentState = (bool)GetValue(NavigatorVisibilityProperty);
+			SetNavigatorVisibility(!currentState);
+        }
+
+		private void SetNavigatorVisibility(bool visible)
+		{
+			SetValue(NavigatorVisibilityProperty, visible);
+		}
+
 		protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
 		{
 			base.OnPropertyChanged(e);
 		}
+
+		// TEST Schmidt open ContextMenu CurrentUser with MouseButtonLeft
+		private void PART_User_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+		{
+			e.Handled = true;
+			var mouseDownEvent =
+				new MouseButtonEventArgs(Mouse.PrimaryDevice, System.Environment.TickCount, MouseButton.Right)
+				{
+					RoutedEvent = Mouse.MouseUpEvent,
+					Source = PART_User,
+				};
+			InputManager.Current.ProcessInput(mouseDownEvent);
+		} // event PART_User_MouseLeftButtonUp
 
 		private async Task<bool> UnloadPaneAsync()
 		{

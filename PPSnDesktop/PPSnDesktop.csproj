@@ -78,6 +78,9 @@
     <Compile Include="UI\PpsMainWindow.xaml.cs">
       <DependentUpon>PpsMainWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UI\PpsNavigatorControl.xaml.cs">
+      <DependentUpon>PpsNavigatorControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="UI\PpsNavigatorModel.cs" />
     <Compile Include="UI\PpsSingleWindow.xaml.cs">
       <DependentUpon>PpsSingleWindow.xaml</DependentUpon>
@@ -91,6 +94,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="UI\PpsMainWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\PpsNavigatorControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

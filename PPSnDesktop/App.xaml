@@ -4,6 +4,7 @@
 			 xmlns:ctrls="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
 			 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
 			 xmlns:uim="clr-namespace:TecWare.PPSn.UI"
+			 xmlns:env="clr-namespace:TecWare.PPSn"
              ShutdownMode="OnLastWindowClose">
 	<Application.Resources>
 		<ResourceDictionary>
@@ -11,11 +12,10 @@
 				<ResourceDictionary Source="pack://application:,,,/PPSn.Desktop.UI;component/UI/UI.xaml" />
 			</ResourceDictionary.MergedDictionaries>
 			
-			<Style x:Key="MainToolbarStyle" TargetType="{x:Type ToolBar}">
+			<Style x:Key="PanePresenterToolBarStyle" TargetType="{x:Type ToolBar}">
 				<Style.Resources>
 					<DataTemplate x:Key="{x:Type ui:PpsUICommandButton}" DataType="{x:Type ui:PpsUICommandButton}">
-						<!--<Button Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" ToolTip="{Binding Description}" Height="26" Command="{Binding Command}">-->
-						<Button Style="{StaticResource PpsToolBarButton}" ToolTip="{Binding Description}" Height="26" Command="{Binding Command}">
+						<Button Style="{StaticResource PpsToolBarButton}" ToolTip="{Binding Description}" Command="{Binding Command}">
 							<StackPanel Orientation="Horizontal" Margin="0,0,0,0">
 								<Image Source="{Binding Image}" Width="24" Height="24" Margin="0,0,0,0"/>
 								<TextBlock Text="{Binding DisplayText}" VerticalAlignment="Center" Margin="3,0,0,0"/>
@@ -31,7 +31,6 @@
 						<ctrls:PpsToolbarDataTemplateSelector />
 					</Setter.Value>
 				</Setter>
-
 				<Setter Property="Background" Value="Transparent"></Setter>
 				<Setter Property="Template">
 					<Setter.Value>
@@ -43,6 +42,7 @@
 					</Setter.Value>
 				</Setter>
 			</Style>
-		</ResourceDictionary>
+
+        </ResourceDictionary>
 	</Application.Resources>
 </Application>

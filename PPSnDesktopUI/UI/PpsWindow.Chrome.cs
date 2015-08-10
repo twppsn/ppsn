@@ -40,6 +40,7 @@ namespace TecWare.PPSn.UI
 			private readonly IntPtr hdcScreen;
 			private readonly IntPtr hdcWindow;
 			private readonly IntPtr hdcBackground;
+
 			private BLENDFUNCTION blendFunc;
 			private int left;
 			private int top;
@@ -86,6 +87,11 @@ namespace TecWare.PPSn.UI
 				NativeMethods.DeleteDC(hdcWindow);
 				NativeMethods.DeleteDC(hdcBackground);
 				disposed = true;
+			}
+
+			~GlowDrawingHelper()
+			{
+				Dispose(false);
 			}
 
 			#endregion
@@ -152,9 +158,9 @@ namespace TecWare.PPSn.UI
   
 			private void Render()
 			{
-				POINT pptDst = new POINT { x = left, y = top };
-				SIZE psize = new SIZE { cx = width, cy = height };
-				POINT pptSrc = new POINT { x = 0, y = 0 };
+				var pptDst = new POINT { x = left, y = top };
+				var psize = new SIZE { cx = width, cy = height };
+				var pptSrc = new POINT { x = 0, y = 0 };
 				NativeMethods.UpdateLayeredWindow(windowHandle, hdcScreen, ref pptDst, ref psize, hdcWindow, ref pptSrc, 0u, ref blendFunc, NativeMethods.ULW_ALPHA);
 			}
 
@@ -167,7 +173,6 @@ namespace TecWare.PPSn.UI
 
 		private class GlowBitmap : IDisposable
 		{
-
 			#region -- enum BitmapPart ------------------------------------------------
 
 			private enum BitmapPart
@@ -232,7 +237,7 @@ namespace TecWare.PPSn.UI
 				CreateAlphaMask();
 				CachedBitmapInfo alphaMask = alphaMasks[imagePos];
 				IntPtr hdc = NativeMethods.GetDC(IntPtr.Zero);
-				GlowBitmap glowBitmap = new GlowBitmap(hdc, alphaMask.Width, alphaMask.Height);
+				var glowBitmap = new GlowBitmap(hdc, alphaMask.Width, alphaMask.Height);
 				for (int i = 0; i < alphaMask.DIBits.Length; i += 4)
 				{
 					byte alpha = alphaMask.DIBits[i + 3];
@@ -265,6 +270,11 @@ namespace TecWare.PPSn.UI
 				disposed = true;
 			}
 
+			~GlowBitmap()
+			{
+				Dispose(false);
+			}
+
 			#endregion
 
 			private static void CreateAlphaMask()
@@ -277,8 +287,8 @@ namespace TecWare.PPSn.UI
 				for (int i = 0; i < 12; i++)
 				{
 					string path = String.Format("Images/{0}.png", (BitmapPart)i);
-					Uri uri = new Uri(String.Format("pack://application:,,,/{0};component/{1}", assembly, path), UriKind.Absolute);
-					BitmapImage bitmapImage = new BitmapImage(uri);
+					var uri = new Uri(String.Format("pack://application:,,,/{0};component/{1}", assembly, path), UriKind.Absolute);
+					var bitmapImage = new BitmapImage(uri);
 					byte[] array = new byte[4 * bitmapImage.PixelWidth * bitmapImage.PixelHeight];
 					int stride = 4 * bitmapImage.PixelWidth;
 					bitmapImage.CopyPixels(array, stride, 0);
@@ -295,7 +305,7 @@ namespace TecWare.PPSn.UI
 
 		#region -- class GlowWindow ---------------------------------------------------
 
-		private sealed class GlowWindow
+		private sealed class GlowWindow : IDisposable
 		{
 			#region -- enum PropertyType ----------------------------------------------
 
@@ -331,7 +341,8 @@ namespace TecWare.PPSn.UI
 			private int height;
 			private bool isVisible;
 			private bool isActive;
-			private Color activeColor = Colors.Black;
+			private bool disposed;
+            private Color activeColor = Colors.Black;
 			private Color inactiveColor = Colors.LightGray;
 
 			#region -- ctor / dtor ----------------------------------------------------
@@ -343,11 +354,6 @@ namespace TecWare.PPSn.UI
 				CreateNativeWindow();
 			} // ctor
 
-			public void Destroy()
-			{
-				DestroyNativeWindow();
-			} // dtor
-
 			private void CreateNativeWindow()
 			{
 				CreateWindowClass();
@@ -355,11 +361,31 @@ namespace TecWare.PPSn.UI
 				CreateBitMaps();
 			}
 
-			private void DestroyNativeWindow()
+			public void Dispose()
 			{
+				Dispose(true);
+				GC.SuppressFinalize(this);
+			}
+
+			private void Dispose(bool disposing)
+			{
+				if (disposed)
+					return;
+
+				// Free managed objects here
+				if (disposing)
+				{
+					DestroyBitmaps();
+                }
+				// Free unmanaged objects here. 
 				DestroyWindowHandle();
 				DestroyWindowClass();
-				DestroyBitmaps();
+				disposed = true;
+			}
+
+			~GlowWindow()
+			{
+				Dispose(false);
 			}
 
 			#endregion
@@ -443,7 +469,7 @@ namespace TecWare.PPSn.UI
 					case WinMsg.WM_NCXBUTTONDOWN:
 					case WinMsg.WM_NCXBUTTONDBLCLK:
 						{
-							IntPtr ownerWindowHandle = new WindowInteropHelper(ownerWindow).Handle;
+							var ownerWindowHandle = new WindowInteropHelper(ownerWindow).Handle;
 							NativeMethods.SendMessage(ownerWindowHandle, (int)WinMsg.WM_ACTIVATE, new IntPtr(NativeMethods.WA_CLICKACTIVE), IntPtr.Zero);
 							NativeMethods.SendMessage(ownerWindowHandle, msg, wParam, IntPtr.Zero);
 							return IntPtr.Zero;
@@ -507,7 +533,9 @@ namespace TecWare.PPSn.UI
 				for (int i = 0; i < 3; i++)
 				{
 					activeBitmaps[i].Dispose();
+					activeBitmaps[i] = null;
 					inactiveBitmaps[i].Dispose();
+					inactiveBitmaps[i] = null;
 				}
 			}
 
@@ -528,7 +556,7 @@ namespace TecWare.PPSn.UI
 
 			public void UpdateBounds()
 			{
-				IntPtr ownerWindowHandle = new WindowInteropHelper(ownerWindow).Handle;
+				var ownerWindowHandle = new WindowInteropHelper(ownerWindow).Handle;
 
 				RECT rect;
 				NativeMethods.GetWindowRect(ownerWindowHandle, out rect);
@@ -670,7 +698,7 @@ namespace TecWare.PPSn.UI
 						CommitChanges();
 				}
 			}
-	
+
 			#endregion
 		} // class GlowWindow
 
@@ -718,6 +746,7 @@ namespace TecWare.PPSn.UI
 		private bool updatingZOrder = false;
 		private bool isGlowVisible = false;
 		private int glowPendingUpdates = 0;
+		private bool launchSysMenuOnRButttonUp = false;
 
 		private void InitChrome()
 		{
@@ -785,7 +814,7 @@ namespace TecWare.PPSn.UI
 		private void DestroyGlowWindows()
 		{
 			for (int i = 0; i < 4; i++)
-				glowWindows[i].Destroy();
+				glowWindows[i].Dispose();
 		} // proc DestroyGlowWindows
 
 		private void UpdateGlowWindowBounds()
@@ -834,7 +863,7 @@ namespace TecWare.PPSn.UI
 			try
 			{
 				updatingZOrder = true;
-				WindowInteropHelper windowInteropHelper = new WindowInteropHelper(this);
+				var windowInteropHelper = new WindowInteropHelper(this);
 				IntPtr handle = windowInteropHelper.Handle;
 				foreach (var cur in glowWindows)
 				{
@@ -870,6 +899,21 @@ namespace TecWare.PPSn.UI
 					return WmNcCalcSize(hWnd, msg, wParam, lParam, ref handled);
 				case WinMsg.WM_NCHITTEST:
 					return WmNcHitTest(hWnd, msg, wParam, lParam, ref handled);
+				case WinMsg.WM_RBUTTONDOWN:
+				case WinMsg.WM_RBUTTONUP:
+				case WinMsg.WM_NCXBUTTONDBLCLK:
+					launchSysMenuOnRButttonUp = false;
+					break;
+				case WinMsg.WM_NCRBUTTONDOWN:
+					launchSysMenuOnRButttonUp = wParam == (IntPtr)HitTestValues.HTCAPTION;
+					break;
+				case WinMsg.WM_NCRBUTTONUP:
+					if(launchSysMenuOnRButttonUp && wParam == (IntPtr)HitTestValues.HTCAPTION)
+					{
+						System.Diagnostics.Debug.Print("------------------------------>  CONTEXTMENU");
+                    }
+					launchSysMenuOnRButttonUp = false;
+					break;
 			}
 			return IntPtr.Zero;
 		} // func WndProc
@@ -882,7 +926,7 @@ namespace TecWare.PPSn.UI
 				RECT rcWindow = (RECT)Marshal.PtrToStructure(lParam, typeof(RECT));
 				NativeMethods.DefWindowProc(hwnd, (int)WinMsg.WM_NCCALCSIZE, wParam, lParam);
 				RECT rcClient = (RECT)Marshal.PtrToStructure(lParam, typeof(RECT));
-				WINDOWINFO windowinfo = new WINDOWINFO();
+				var windowinfo = new WINDOWINFO();
 				NativeMethods.GetWindowInfo(hwnd, windowinfo);
 				rcClient.Top = rcWindow.Top + (int)windowinfo.cyWindowBorders;
 				Marshal.StructureToPtr(rcClient, lParam, true);
