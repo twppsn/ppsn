@@ -1,17 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Markup;
+using System.Windows.Media;
 using System.Xaml;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- class LuaEventExtension ---------------------------------------------------
+	#region -- class LuaEventExtension --------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -65,7 +62,7 @@ namespace TecWare.PPSn.UI
 					Expression.Constant(methodName), Expression.NewArrayInit(typeof(object), parameterExpressions)
 				),
 				parameterExpressions);
-			
+
 			return eventBody.Compile();
 		} // func ProvideValue
 
@@ -92,7 +89,7 @@ namespace TecWare.PPSn.UI
 		{
 			var target = (IProvideValueTarget)serviceProvider.GetService(typeof(IProvideValueTarget));
 			var property = target.TargetProperty as PropertyInfo;
-			if(property == null)
+			if (property == null)
 				throw new ArgumentException("This markup is only allowed on properties.");
 
 			if (!property.PropertyType.IsAssignableFrom(typeof(IValueConverter)))
@@ -104,6 +101,132 @@ namespace TecWare.PPSn.UI
 		[ConstructorArgument("code")]
 		public string Code { get { return code; } set { code = value; } }
 	} // class LuaConvertExtension
+
+	#endregion
+
+	#region -- class AlphaBlendColor ----------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Mixes two colors to one color.</summary>
+	public class AlphaBlendColor : MarkupExtension
+	{
+		public AlphaBlendColor()
+		{
+		} // ctor
+
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			var destinationPart = 1.0f - SourcePart;
+
+			if (SourcePart < 0.0f)
+				return ProvideColorValue(serviceProvider, Color.FromScRgb(Alpha, Source.ScR, Source.ScG, Source.ScB));
+			else if (SourcePart > 1.0f)
+				return ProvideColorValue(serviceProvider, Color.FromScRgb(Alpha, Destination.ScR, Destination.ScG, Destination.ScB));
+
+			var color = Color.FromScRgb(
+				Alpha,
+				Source.ScR * SourcePart + Destination.ScR * destinationPart,
+				Source.ScG * SourcePart + Destination.ScG * destinationPart,
+				Source.ScB * SourcePart + Destination.ScB * destinationPart
+			);
+
+			return ProvideColorValue(serviceProvider, color);
+		} // func ProvideValue
+
+		public Color Source { get; set; } = Colors.Black;
+    public Color Destination { get; set; } = Colors.White;
+		public float SourcePart { get; set; } = 0.5f;
+		public float Alpha { get; set; } = 1.0f;
+
+		internal static object ProvideColorValue(IServiceProvider sp, Color color)
+		{
+			var target = (IProvideValueTarget)sp.GetService(typeof(IProvideValueTarget));
+			var propertyInfo = target.TargetProperty as System.Windows.DependencyProperty;
+
+			if (propertyInfo != null && propertyInfo.PropertyType == typeof(Brush))
+				return new SolidColorBrush(color);
+			else
+				return color;
+		} // func ProvideColorValue
+	} // class AlphaBlendColor
+
+	#endregion
+
+	#region -- class WeightColor --------------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Makes the color dark.</summary>
+	public class WeightColor : MarkupExtension
+	{
+		public WeightColor()
+		{
+		} // ctor
+
+		public WeightColor(Color source)
+		{
+			this.Source = source;
+		} // ctor
+
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			var a = Source.ScA;
+			var r = Source.ScR;
+			var g = Source.ScG;
+			var b = Source.ScB;
+
+
+			if (Factor < 0.0f)
+				r = g = b = 0.0f;
+			else if (Factor > 1.0f)
+				r = g = b = 1.0f;
+			else
+			{
+				for (int i = 0; i < Times; i++)
+				{
+					r += Factor * (1 - r);
+					g += Factor * (1 - g);
+					b += Factor * (1 - b);
+				}
+			}
+
+			return AlphaBlendColor.ProvideColorValue(serviceProvider, Color.FromScRgb(a, r, g, b));
+		} // func ProvideValue
+
+		[ConstructorArgument("source")]
+		public Color Source { get; set; } = Colors.Gray;
+
+		public float Factor { get; set; } = 0.3f;
+		public int Times { get; set; } = 1;
+	} // class WeightColor
+
+	#endregion
+
+	#region -- class GrayColor ----------------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Makes the color dark.</summary>
+	public class GrayColor : MarkupExtension
+	{
+		public GrayColor()
+		{
+		} // ctor
+
+		public GrayColor(Color source)
+		{
+			this.Source = source;
+		} // ctor
+
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			var a = Source.ScA;
+			var c = Source.ScR * 0.2126f + Source.ScG * 0.7152f + Source.ScB * 0.0722f;
+
+			return AlphaBlendColor.ProvideColorValue(serviceProvider, Color.FromScRgb(a, c, c, c));
+		} // func ProvideValue
+
+		[ConstructorArgument("source")]
+		public Color Source { get; set; }
+	} // class GrayColor
 
 	#endregion
 }

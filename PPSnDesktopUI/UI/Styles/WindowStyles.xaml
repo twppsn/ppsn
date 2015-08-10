@@ -2,18 +2,16 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	                xmlns:ui="clr-namespace:TecWare.PPSn.UI">
 
-
 	<SolidColorBrush x:Key="PPSnWindowActiveHeaderBrush" Color="#EFEFF2" />
 	<SolidColorBrush x:Key="PPSnWindowInactiveHeaderBrush" Color="#EFEFF2" />
 	<SolidColorBrush x:Key="PPSnWindowBrush" Color="#EFEFF2" />
 	<SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="#007ACC" />
-	<Color x:Key="PPSnWindowActiveGlowColor">#0D202D</Color>
-	<Color x:Key="PPSnWindowInActiveGlowColor">#60728C</Color>
-
-	<SolidColorBrush x:Key="PPSnWindowButtonPressedBrush" Color="#FF007ACC" />
+  <Color x:Key="PPSnWindowActiveGlowColor">#6DB8F2</Color>
+  <Color x:Key="PPSnWindowInActiveGlowColor">#60728C</Color>
+  
+  <SolidColorBrush x:Key="PPSnWindowButtonPressedBrush" Color="#FF007ACC" />
 	<SolidColorBrush x:Key="PPSnWindowButtonHotdBrush" Color="#C8FFFFFF" />
 	<SolidColorBrush x:Key="PPSnWindowButtonBorderBrush" Color="#60728C" />
-
 
 	<Geometry x:Key="PpsWindowCloseButton">M 0.5,0.5L 9.5,9.5M 9.5,0.5L 0.5,9.5</Geometry>
 	<Geometry x:Key="PpsWindowMaximizeButton">M 8.5,1.5L 0.5,1.5L 0.5,9.5L 8.5,9.5L 8.5,1.5 Z M 0.5,9.5L 0.5,3.27777L 8.5,3.27777L 8.5,9.5L 0.5,9.5 Z</Geometry>
