@@ -118,7 +118,7 @@
             <DockPanel DockPanel.Dock="Bottom" Height="46">
                 <!--Rechter Margin darf nicht kleiner sein (ContextMenu und 2 Screens Bug)-->
                 <Label x:Name="PART_User" Content="{Binding Environment.UsernameDisplay}" DockPanel.Dock="Right" Foreground="{StaticResource PPSnContentForegroundBrush}" VerticalContentAlignment="Top" Padding="0" Cursor="Hand"
-                    Margin="24,0,24,28"
+                    Margin="24,0,18,24"
                     MouseLeftButtonUp="PART_User_MouseLeftButtonUp"
                     ContextMenuService.HasDropShadow="False"
                     ContextMenuService.PlacementTarget="{Binding ElementName=PART_User}"
