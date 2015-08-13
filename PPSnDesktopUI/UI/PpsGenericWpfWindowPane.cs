@@ -15,6 +15,8 @@ using System.Windows.Input;
 using System.ComponentModel;
 using System.ComponentModel.Design.Serialization;
 using System.Globalization;
+using System.Web;
+using TecWare.DES.Stuff;
 
 namespace TecWare.PPSn.UI
 {
@@ -26,7 +28,7 @@ namespace TecWare.PPSn.UI
 	{
 		private static readonly XName xnCode = XName.Get("Code", "http://schemas.microsoft.com/winfx/2006/xaml");
 
-		private string sXamlFile;
+		private BaseWebReqeust fileSource;
 		private FrameworkElement control;
 
 		private PpsEnvironment environment;
@@ -71,9 +73,10 @@ namespace TecWare.PPSn.UI
 		} // proc LuaMsgBox
 	
 		[LuaMember("require")]
-		private void LuaRequire(string fileName)
+		private void LuaRequire(string path)
 		{
-			Lua.CompileChunk(Path.Combine(BaseUri, fileName), null).Run(this);
+			using (var tr = Task.Run<TextReader>(async () => await fileSource.GetTextReaderAsync(path, MimeTypes.Text)).Result)
+				Lua.CompileChunk(tr, path, null).Run(this);
 		} // proc LuaRequire
 
 		[LuaMember("command")]
@@ -97,18 +100,20 @@ namespace TecWare.PPSn.UI
 			this.arguments = arguments;
 
 			// get the basic template
-			sXamlFile = arguments["template"].ToString();
-			if (String.IsNullOrEmpty(sXamlFile))
+			var xamlFile = arguments["template"].ToString();
+			if (String.IsNullOrEmpty(xamlFile))
 				throw new ArgumentException("template is missing."); // todo: exception
 
-			var xaml = XDocument.Load(sXamlFile, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo); // todo: load via env
+			// Loads the xaml file from the source
+			var xaml = XDocument.Load(xamlFile, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);
+			fileSource = new BaseWebReqeust(new Uri(xamlFile), Encoding.Default);
 
 			// Load the content of the code-tag, to initialize extend functionality
 			var xCode = xaml.Root.Element(xnCode);
 			var chunk = (LuaChunk)null;
 			if (xCode != null)
-			{
-				chunk = Lua.CompileChunk(xCode.Value, Path.GetFileName(sXamlFile), null); // todo: compile via env
+      {
+				chunk = Lua.CompileChunk(xCode.Value, xamlFile.ToString(), null); // todo: compile via env
 				xCode.Remove();
 			}
 
@@ -178,10 +183,8 @@ namespace TecWare.PPSn.UI
 		/// <summary>This member is resolved dynamic, that is the reason the FrameworkElement Control is public.</summary>
 		object IPpsWindowPane.Control { get { return control; } }
 
-		/// <summary>Source of the Wpf-Control</summary>
-		protected string XamlFileName { get { return sXamlFile; } }
 		/// <summary>BaseUri of the Wpf-Control</summary>
-		public string BaseUri { get { return Path.GetDirectoryName(sXamlFile); } }
+		public Uri BaseUri => fileSource?.BaseUri;
 
 		/// <summary>Synchronization to the UI.</summary>
 		public Dispatcher Dispatcher { get { return control == null ? Application.Current.Dispatcher : control.Dispatcher; } }

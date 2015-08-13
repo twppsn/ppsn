@@ -1,10 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using TecWare.DES.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
@@ -35,6 +40,36 @@ namespace TecWare.PPSn
   /// <summary></summary>
   public class PpsMainEnvironment : PpsEnvironment
 	{
+		#region -- class PpsMainLocalStore ------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class PpsMainLocalStore : PpsLocalDataStore
+		{
+			public PpsMainLocalStore(PpsEnvironment environment) 
+				: base(environment)
+			{
+			} // ctor
+			
+			protected override void GetResponseDataStream(PpsStoreResponse r)
+			{
+				var actionName = r.Request.Arguments.Get("action");
+				if (r.Request.Path == "/" && String.Compare(actionName, "getviews", StringComparison.OrdinalIgnoreCase) == 0) // get all local views
+				{
+					r.SetResponseData(CollectLocalViews(), MimeTypes.Xml);
+				}
+				else
+					base.GetResponseDataStream(r);
+			} // func GetResponseDataStream
+			
+			private Stream CollectLocalViews()
+			{
+				return new FileStream(Path.GetFullPath(@"..\..\Local\Views.xml"), FileMode.Open);
+			} // func CollectLocalView
+		} // class PpsMainLocalStore
+
+		#endregion
+
 		private PpsEnvironmentCollection<PpsMainActionDefinition> actions;
 		private PpsEnvironmentCollection<PpsMainViewDefinition> views;
 
@@ -48,71 +83,18 @@ namespace TecWare.PPSn
       actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Offline, "Test1", "Test 1", null));
       actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Offline, "Test2", "Test 2", null));
       actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Online, "Test1", "Test 2", null));
-
-			views.AppendItem(new PpsMainViewDefinition(this, PpsEnvironmentDefinitionSource.Offline, "TE", "Teilestamm",
-				new PpsMainViewFilter[] 
-				{
-					new PpsMainViewFilter("Aktiv"),
-					new PpsMainViewFilter("InAktiv")
-				},
-				new PpsMainViewSort[]
-				{
-					new PpsMainViewSort("Teilenummer"),
-					new PpsMainViewSort("Teilname"),
-					new PpsMainViewSort("Teilmatch")
-				}));
-
-			views.AppendItem(new PpsMainViewDefinition(this, PpsEnvironmentDefinitionSource.Offline, "CO", "Kontakte",
-				new PpsMainViewFilter[]
-				{
-					new PpsMainViewFilter("Lieferanten"),
-					new PpsMainViewFilter("Kunden"),
-					new PpsMainViewFilter("Speditionen"),
-					new PpsMainViewFilter("Interessenten")
-				},
-				new PpsMainViewSort[]
-				{
-					new PpsMainViewSort("Kundennummer"),
-					new PpsMainViewSort("Kundenname"),
-					new PpsMainViewSort("Debitorennummer"),
-					new PpsMainViewSort("Kreditorennummer"),
-					new PpsMainViewSort("Kundenmatch")
-				}));
-
-			views.AppendItem(new PpsMainViewDefinition(this, PpsEnvironmentDefinitionSource.Offline, "BE", "Bestellungen",
-				new PpsMainViewFilter[]
-				{
-					new PpsMainViewFilter("Aktiv"),
-					new PpsMainViewFilter("Archiv")
-				},
-				new PpsMainViewSort[]
-				{
-					new PpsMainViewSort("Lieferantennummer"),
-					new PpsMainViewSort("Lieferantenname")
-				}));
-			views.AppendItem(new PpsMainViewDefinition(this, PpsEnvironmentDefinitionSource.Offline, "AU", "Aufträge",
-				new PpsMainViewFilter[]
-				{
-					new PpsMainViewFilter("Aktiv"),
-					new PpsMainViewFilter("Archiv")
-				},
-				new PpsMainViewSort[]
-				{
-					new PpsMainViewSort("Kundennummer"),
-					new PpsMainViewSort("Kundenname")
-				}));
-			views.AppendItem(new PpsMainViewDefinition(this, PpsEnvironmentDefinitionSource.Offline, "FE", "Fertigungsaufträge",
-				new PpsMainViewFilter[]
-				{
-					new PpsMainViewFilter("Aktiv"),
-					new PpsMainViewFilter("Archiv")
-				},
-				new PpsMainViewSort[]
-				{
-					new PpsMainViewSort("Kundennummer"),
-					new PpsMainViewSort("Kundenname")
-				}));
 		} // ctor
+
+		protected override PpsLocalDataStore CreateLocalDataStore() => new PpsMainLocalStore(this);
+
+		public async override Task RefreshAsync()
+		{
+			await base.RefreshAsync();
+
+			await RefreshViewsAsync(PpsEnvironmentDefinitionSource.Offline);
+			if (IsOnline)
+				await RefreshViewsAsync(PpsEnvironmentDefinitionSource.Online);
+		} // proc RefreshAsync
 
 		public void CreateMainWindow()
 		{
@@ -127,6 +109,19 @@ namespace TecWare.PPSn
 					window.Show();
 				});
 		} // proc CreateMainWindow
+
+		private async Task RefreshViewsAsync(PpsEnvironmentDefinitionSource source)
+		{
+			// Lade die Views
+			var xViews = await this.Web[source].GetXmlAsync("?action=getviews", rootName: PpsMainViewDefinition.xnViews);
+
+			// Remove all views
+			views.Clear((PpsEnvironmentClearFlags)source);
+
+			foreach (var cur in xViews.Elements(PpsMainViewDefinition.xnView))
+				views.AppendItem(new PpsMainViewDefinition(this, source, cur));
+		} // proc RefreshViewsAsync
+		
 
 		public PpsMainWindow GetWindow(int index)
 		{

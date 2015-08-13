@@ -12,6 +12,7 @@ using Neo.IronLua;
 using TecWare.DES.Stuff;
 using System.Collections;
 using System.Collections.Specialized;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {
@@ -54,8 +55,8 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public enum PpsEnvironmentDefinitionSource
 	{
-		Offline = 0,
-		Online
+		Offline = 1,
+		Online = 2
 	} // enum PpsEnvironmentDefinitionSource
 
 	#endregion
@@ -367,14 +368,70 @@ namespace TecWare.PPSn
 	{
 		public const string EnvironmentService = "PpsEnvironmentService";
 
+		#region -- class PpsWebRequestCreate ----------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
-		public event EventHandler IsOfflineChanged;
+		private class PpsWebRequestCreate : IWebRequestCreate
+		{
+			private readonly WeakReference< PpsEnvironment> environment;
+
+			public PpsWebRequestCreate(PpsEnvironment environment)
+			{
+				this.environment = new WeakReference<PpsEnvironment>(environment);
+			} // ctor
+
+			public WebRequest Create(Uri uri)
+			{
+				PpsEnvironment env;
+				if (environment.TryGetTarget(out env))
+					return env.CreateWebRequest(uri);
+				else
+					throw new ObjectDisposedException("Environment does not exists anymore.");
+			}
+		} // class PpsWebRequestCreate
+
+		#endregion
+
+		#region -- class WebIndex ---------------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		public class WebIndex
+		{
+			private readonly PpsEnvironment environment;
+
+			internal WebIndex(PpsEnvironment environment)
+			{
+				this.environment = environment;
+			} // ctor
+
+			public BaseWebReqeust this[PpsEnvironmentDefinitionSource source]
+			{
+				get
+				{
+					if (source == PpsEnvironmentDefinitionSource.Offline)
+						return environment.localRequest;
+					else
+						return environment.remoteRequest;
+				}
+			} // prop this
+		} // class WebIndex
+
+		#endregion
+		
+		/// <summary></summary>
+		public event EventHandler IsOnlineChanged;
 		/// <summary></summary>
 		public event EventHandler UsernameChanged;
 
 		private Uri remoteUri;                // remote source
-		private bool isOffline = true;        // is the application online
+		private Uri baseUri;									// internal uri for the environment
 		private NetworkCredential userInfo;   // currently credentials of the user
+
+		private BaseWebReqeust localRequest;
+		private PpsLocalDataStore localStore;
+		private BaseWebReqeust remoteRequest;
 
 		private Lua lua;
 		private Dispatcher currentDispatcher; // Synchronisation
@@ -398,25 +455,30 @@ namespace TecWare.PPSn
 			this.currentDispatcher = Dispatcher.CurrentDispatcher;
 			this.inputManager = InputManager.Current;
 			this.synchronizationContext = new DispatcherSynchronizationContext(currentDispatcher);
+			this.Web = new WebIndex(this);
 
 			// Start idle implementation
 			idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), currentDispatcher);
 			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer();
 
+			// Register internal uri
+			baseUri = new Uri("http://environment1");
+			localStore = CreateLocalDataStore();
+			WebRequest.RegisterPrefix(baseUri.ToString(), new PpsWebRequestCreate(this));
+
+			localRequest = new BaseWebReqeust(new Uri(baseUri, "local/"), Encoding.UTF8);
+			remoteRequest = null;
+
 			// Register Service
 			mainResources[EnvironmentService] = this;
 		} // ctor
 
-		~PpsEnvironment()
-		{
-			Dispose(false);
-		} // dtor
-
 		public void Dispose()
 		{
-			GC.SuppressFinalize(this);
 			Dispose(true);
 		} // proc Dispose
+
+		protected virtual PpsLocalDataStore CreateLocalDataStore() => new PpsLocalDataStore(this);
 
 		protected virtual void Dispose(bool disposing)
 		{
@@ -440,7 +502,7 @@ namespace TecWare.PPSn
 		public void LogoutUser()
 		{
 		} // proc LogoutUser
-
+		
 		protected virtual void OnUsernameChanged()
 		{
 			var tmp = UsernameChanged;
@@ -458,17 +520,17 @@ namespace TecWare.PPSn
 
 		/// <summary>Loads basic data for the environment.</summary>
 		/// <returns></returns>
-		public Task RefreshAsync()
+		public virtual Task RefreshAsync()
 		{
 			return Task.Delay(1000);
 		} // proc RefreshAsync
 
-		protected virtual void OnIsOfflineChanged()
+		protected virtual void OnIsOnlineChanged()
 		{
-			var tmp = IsOfflineChanged;
+			var tmp = IsOnlineChanged;
 			if (tmp != null)
 				tmp(this, EventArgs.Empty);
-		} // proc OnIsOfflineChanged
+		} // proc OnIsOnlineChanged
 
 		#region -- Idle service -----------------------------------------------------------
 
@@ -531,15 +593,26 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		private WebRequest CreateWebRequest(Uri uri)
+		{
+			if (uri.AbsolutePath.StartsWith("/local")) // local request
+				return localStore.GetRequest(uri, uri.AbsolutePath.Substring(6));
+			else
+				throw new NotImplementedException();
+		} // func CreateWebRequest
+
 		public void ShowException(ExceptionShowFlags flags, Exception exception, object alternativeMessage = null)
 		{
 			System.Windows.MessageBox.Show("todo: " + (alternativeMessage ?? exception.Message));
 		} // proc ShowException
 
+		/// <summary></summary>
+		public WebIndex Web { get; }
+
 		/// <summary>Has the application login data.</summary>
 		public bool IsAuthentificated { get { return userInfo != null; } }
 		/// <summary>Is <c>true</c>, if the application is online.</summary>
-		public bool IsOffline { get { return isOffline; } }
+		public bool IsOnline => remoteRequest != null;
 		/// <summary>Current user the is logged in.</summary>
 		public string Username { get { return userInfo == null ? String.Empty : userInfo.UserName; } }
 		/// <summary>Display name for the user.</summary>

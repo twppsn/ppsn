@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<views>
+  <view id="Contacts" shortcut="KO" displayname="Kontakte">
+    <source><![CDATA[?action=getlist&id=contacts]]></source>
+    <filter name="liefonly" displayname="Lieferanten" />
+    <filter name="kundonly" displayname="Kunden" />
+    <filter name="intonly" displayname="Interessenten" />
+    <order displayname="Kontaktnummer">OBJKNR</order>
+    <order displayname="Matchcode">OBJKMATCH</order>
+    <order displayname="Bezeichnung">LIEFNAME</order>
+    <order displayname="Debitorennummer">LIEFDEBITNR</order>
+    <order displayname="Kreditorennummer">LIEFKREBITNR</order>
+  </view>
+  <view id="Parts" shortcut="TE" displayname="Artikelstamm">
+    <source><![CDATA[?action=getlist&id=parts]]></source>
+    <filter name="active" displayname="Aktiv" />
+    <filter name="inactive" displayname="InAktiv" />
+    <order displayname="Teilenummer">OBJKNR</order>
+    <order displayname="Matchcode">OBJKMATCH</order>
+    <order displayname="Teilenummer">OBJKNR</order>
+    <order displayname="Artikelname">TEILNAME</order>
+  </view>
+
+<!--
+  //views.AppendItem(new PpsMainViewDefinition(this, PpsEnvironmentDefinitionSource.Offline, "BE", "Bestellungen",
+  //	new PpsMainViewFilter[]
+  //	{
+  //		new PpsMainViewFilter("Aktiv"),
+  //		new PpsMainViewFilter("Archiv")
+  //	},
+  //	new PpsMainViewSort[]
+  //	{
+  //		new PpsMainViewSort("Lieferantennummer"),
+  //		new PpsMainViewSort("Lieferantenname")
+  //	}));
+  //views.AppendItem(new PpsMainViewDefinition(this, PpsEnvironmentDefinitionSource.Offline, "AU", "Aufträge",
+  //	new PpsMainViewFilter[]
+  //	{
+  //		new PpsMainViewFilter("Aktiv"),
+  //		new PpsMainViewFilter("Archiv")
+  //	},
+  //	new PpsMainViewSort[]
+  //	{
+  //		new PpsMainViewSort("Kundennummer"),
+  //		new PpsMainViewSort("Kundenname")
+  //	}));
+  //views.AppendItem(new PpsMainViewDefinition(this, PpsEnvironmentDefinitionSource.Offline, "FE", "Fertigungsaufträge",
+  //	new PpsMainViewFilter[]
+  //	{
+  //		new PpsMainViewFilter("Aktiv"),
+  //		new PpsMainViewFilter("Archiv")
+  //	},
+  //	new PpsMainViewSort[]
+  //	{
+  //		new PpsMainViewSort("Kundennummer"),
+  //		new PpsMainViewSort("Kundenname")
+  //	})); -->
+</views>

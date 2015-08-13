@@ -73,7 +73,7 @@
         </Border>
         <ListBox x:Name="PART_Views" Grid.Column="0" Grid.Row="1" Style="{StaticResource NavigatorListBoxStyle}" Margin="32,0,0,0" FontSize="14.667" SnapsToDevicePixels="True"
                  DataContext="{Binding Navigator}"
-                 ItemsSource="{Binding VisibleViews}">
+                 ItemsSource="{Binding VisibleViews}" IsSynchronizedWithCurrentItem="True">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="{x:Type ListBoxItem}">
                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -82,9 +82,10 @@
                             <ControlTemplate TargetType="{x:Type ListBoxItem}">
                                 <StackPanel SnapsToDevicePixels="True">
                                     <Separator x:Name="PART_Separator" IsTabStop="False" Background="{StaticResource PPSnSeparatorBrush}" Margin="0,2"/>
-                                    <Button x:Name="PART_Button" Style="{StaticResource ViewsButtonStyle}" SnapsToDevicePixels="True"
+                                    <ToggleButton x:Name="PART_Button" SnapsToDevicePixels="True" IsChecked="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}"
                                             Content="{Binding DisplayName}">
-                                    </Button>
+                    <!-- Style="{StaticResource ViewsButtonStyle}"  -->
+                                    </ToggleButton>
                                 </StackPanel>
                                 <ControlTemplate.Triggers>
                                     <DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">

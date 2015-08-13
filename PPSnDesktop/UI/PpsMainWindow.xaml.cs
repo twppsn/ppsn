@@ -68,9 +68,7 @@ namespace TecWare.PPSn.UI
 
 		private async Task StartLoginAsync()
 		{
-			var  tmp = @"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktopPG\Example\TestWpfGeneric.xaml";
-			if (!System.IO.File.Exists(tmp))
-				tmp = @"C:\Projects\PPSn\PPSnWpf\PPSnDesktopPG\Example\TestWpfGeneric.xaml";
+			var  tmp =  @"http://environment1/local/masks/TestWpfGeneric.xaml";
 			//await LoadPaneAsync(typeof(Panes.PpsLoginPane), null);
 			await LoadPaneAsync(typeof(PpsGenericWpfWindowPane),
 				Procs.CreateLuaTable(
