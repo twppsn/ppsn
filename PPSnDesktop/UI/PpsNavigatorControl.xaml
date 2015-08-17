@@ -4,10 +4,21 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
  			 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
+             xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="600">
 
     <UserControl.Resources>
+		<Style x:Key="NavigatorFocusVisualStyle">
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Rectangle Margin="0" StrokeThickness="1" StrokeDashArray="1 2"  Stroke="{StaticResource PPSnWindowForegroundBrush}" RenderOptions.EdgeMode="Aliased" SnapsToDevicePixels="True"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="NavigatorListBoxStyle" TargetType="{x:Type ListBox}">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -15,7 +26,6 @@
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Hidden"/>
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
             <Setter Property="ScrollViewer.PanningMode" Value="VerticalOnly"/>
-            <Setter Property="Stylus.IsFlicksEnabled" Value="False"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type ListBox}">
@@ -29,32 +39,115 @@
             </Setter>
         </Style>
 
-        <Style x:Key="ViewsButtonStyle" TargetType="{x:Type Button}">
+        <Style x:Key="NavigatorViewsButtonStyle" TargetType="{x:Type ToggleButton}">
             <Setter Property="Height" Value="32"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource NavigatorFocusVisualStyle}"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{StaticResource PPSnContentForegroundBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type Button}">
+                    <ControlTemplate TargetType="{x:Type ToggleButton}">
                         <Border BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
                             <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
                         </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+                            </Trigger>
+                            <!--<MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                    --><!--<Condition Property="IsPressed" Value="False" />--><!--
+                                 </MultiTrigger.Conditions>
+                                <Setter Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" />
+                            </MultiTrigger>-->
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="true">
-                    <Setter Property="Background" Value="{StaticResource PPSnWindowButtonHotBrush}"/>
-                </Trigger>
-            </Style.Triggers>
         </Style>
 
-        <!--<AlternationConverter x:Key="BackgroundConverter">
-            <SolidColorBrush Color="Red" />
-            <SolidColorBrush Color="Blue" />
-        </AlternationConverter>-->
+        <Style x:Key="NavigatorViewsContainerStyle" TargetType="{x:Type ListBoxItem}">
+            <!--Focus Button in Container!-->
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                        <StackPanel SnapsToDevicePixels="True">
+                            <Separator x:Name="PART_Separator" Background="{StaticResource PPSnSeparatorBrush}" Margin="0,2"/>
+                            <ToggleButton x:Name="PART_Button"
+										  Content="{Binding DisplayName}"
+										  Style="{StaticResource NavigatorViewsButtonStyle}"
+										  IsChecked="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}"
+										  Margin="0">
+                            </ToggleButton>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
+                                <Setter TargetName="PART_Separator" Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="FocusManager.FocusedElement" Value="{Binding ElementName=PART_Button}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+		<Style x:Key="NavigatorActionButtonStyle" TargetType="{x:Type Button}">
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="IsTabStop" Value="False"/>
+			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Height" Value="64"/>
+			<Setter Property="Margin" Value="0,0,16,0"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="Button">
+						<Grid>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="40"></RowDefinition>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+							<Ellipse x:Name="PART_Circle" Grid.Row="0" Height="36" Width="36" SnapsToDevicePixels="True" VerticalAlignment="Top"
+									 Fill="Transparent"
+									 StrokeThickness="1.5"
+									 Stroke="{StaticResource PPSnWindowForegroundBrush}" >
+							</Ellipse>
+                            <TextBlock x:Name="PART_Glyph" Text="&#xE113;" FontFamily="Segoe UI Symbol" FontSize="18.667" Margin="0,5,0,0" HorizontalAlignment="Center"  Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
+                            <Border x:Name="PART_Content" Grid.Row="1" BorderThickness="0" SnapsToDevicePixels="true" IsHitTestVisible="True">
+                                <ContentPresenter  Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Top"></ContentPresenter>
+                            </Border>
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal"/>
+                                    <VisualState x:Name="MouseOver">
+                                        <Storyboard>
+                                            <ObjectAnimationUsingKeyFrames  Storyboard.TargetName="PART_Circle" Storyboard.TargetProperty="Fill">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Pressed">
+                                        <Storyboard>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_Circle" Storyboard.TargetProperty="Fill">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnButtonPressedBrush}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                        </Grid>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
     </UserControl.Resources>
 
     <Grid>
@@ -65,54 +158,33 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="27" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <Border x:Name="PART_ViewsHeader" Margin="32,0,0,2" BorderThickness="0,0,0,3" BorderBrush="{StaticResource PPSnContentForegroundBrush}" SnapsToDevicePixels="True">
-            <TextBlock Foreground="{StaticResource PPSnContentForegroundBrush}" VerticalAlignment="Bottom" Margin="0,0,0,3" FontSize="14.667"
+        <Border x:Name="PART_ViewsHeader" Margin="32,0,0,2" BorderThickness="0,0,0,4" BorderBrush="{StaticResource PPSnWindowForegroundBrush}" SnapsToDevicePixels="True">
+            <TextBlock Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="0,0,0,2" FontSize="14.667" FontWeight="DemiBold"
                        DataContext="{Binding Navigator}"
-                       Text="{Binding CurrentViewCaption}"/>
+                       Text="{Binding CurrentViewCaption}" />
         </Border>
         <ListBox x:Name="PART_Views" Grid.Column="0" Grid.Row="1" Style="{StaticResource NavigatorListBoxStyle}" Margin="32,0,0,0" FontSize="14.667" SnapsToDevicePixels="True"
-                 DataContext="{Binding Navigator}"
-                 ItemsSource="{Binding VisibleViews}" IsSynchronizedWithCurrentItem="True">
-            <ListBox.ItemContainerStyle>
-                <Style TargetType="{x:Type ListBoxItem}">
-                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                                <StackPanel SnapsToDevicePixels="True">
-                                    <Separator x:Name="PART_Separator" IsTabStop="False" Background="{StaticResource PPSnSeparatorBrush}" Margin="0,2"/>
-                                    <ToggleButton x:Name="PART_Button" SnapsToDevicePixels="True" IsChecked="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}"
-                                            Content="{Binding DisplayName}">
-                    <!-- Style="{StaticResource ViewsButtonStyle}"  -->
-                                    </ToggleButton>
-                                </StackPanel>
-                                <ControlTemplate.Triggers>
-                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
-                                        <Setter TargetName="PART_Separator" Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                </Style>
-            </ListBox.ItemContainerStyle>
-        </ListBox>
+				 DataContext="{Binding Navigator}"
+                 ItemsSource="{Binding VisibleViews}"
+				 IsSynchronizedWithCurrentItem="True"
+                 ItemContainerStyle="{StaticResource NavigatorViewsContainerStyle}" />
 
-        <ListBox x:Name="PART_Testlist" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource NavigatorListBoxStyle}" Margin="50,22,50,0"  FontSize="14.667" SnapsToDevicePixels="True"
+        <ListBox x:Name="PART_Testlist" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource NavigatorListBoxStyle}" Margin="50,21,50,0"  FontSize="14.667" SnapsToDevicePixels="True"
                  AlternationCount="2"
                  DataContext="{Binding Navigator}"
                  ItemsSource="{Binding Items}">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="{x:Type ListBoxItem}">
-                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                    <Setter Property="FocusVisualStyle" Value="{StaticResource NavigatorFocusVisualStyle}"/>
                     <Setter Property="Margin" Value="0,0,0,1"/>
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="{x:Type ListBoxItem}">
                                 <StackPanel x:Name="PART_Panel" Orientation="Horizontal" Height="37" SnapsToDevicePixels="True">
-                                    <Label Content="{Binding Path=OBJKID}" Foreground="{StaticResource PPSnContentForegroundBrush}" VerticalContentAlignment="Center"/>
-                                    <Label Content="{Binding Path=OBJKMATCH}" Foreground="{StaticResource PPSnContentForegroundBrush}" VerticalContentAlignment="Center" />
+                                    <Label Content="{Binding Path=OBJKID}"  VerticalContentAlignment="Center"/>
+                                    <Label Content="{Binding Path=OBJKMATCH}" VerticalContentAlignment="Center" />
                                 </StackPanel>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="ItemsControl.AlternationIndex" Value="0">
@@ -128,6 +200,20 @@
                 </Style>
             </ListBox.ItemContainerStyle>
         </ListBox>
+
+        <ItemsControl x:Name="PART_Actions" Grid.Row="2" Grid.Column="1"  DataContext="{Binding Navigator}" ItemsSource="{Binding VisibleActions}" IsTabStop="False" >
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" Margin="50,16"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button Content="{Binding DisplayName}" Command="{Binding}" Style="{StaticResource NavigatorActionButtonStyle}" FontSize="14.667"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
     </Grid>
 
 </UserControl>
