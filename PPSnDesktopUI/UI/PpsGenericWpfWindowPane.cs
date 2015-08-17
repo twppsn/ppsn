@@ -17,6 +17,7 @@ using System.ComponentModel.Design.Serialization;
 using System.Globalization;
 using System.Web;
 using TecWare.DES.Stuff;
+using TecWare.DES.Networking;
 
 namespace TecWare.PPSn.UI
 {

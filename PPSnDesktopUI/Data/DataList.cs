@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Neo.IronLua;
+using TecWare.DES.Networking;
 
 namespace TecWare.PPSn.Data
 {
@@ -29,6 +30,7 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
+		private PpsEnvironment environment;
 		private Uri dataSource;			// Source of the current list
 		private int windowSize;			// Size of the window, that will be fetched
 
@@ -46,21 +48,18 @@ namespace TecWare.PPSn.Data
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		/// <summary>Creates a list, that will fetch the data in pages.</summary>
-		/// <param name="dataSource">Uri of the data.</param>
 		/// <param name="windowSize"></param>
-		public PpsDataList(Uri dataSource, int windowSize = 50)
+		public PpsDataList(PpsEnvironment environment, int windowSize = 50)
 		{
 			if (dataSource != null)
 				throw new ArgumentNullException("dataSource");
 			if (windowSize < 1)
 				throw new IndexOutOfRangeException("windowSize darf nicht unter 1 liegen.");
 
-			this.dataSource = dataSource;
+			this.environment = environment;
 			this.windowSize = windowSize;
 
-			// Lade die erste Seite
 			procFetchNextWindow = FetchNextWindow;
-			BeginFetchNextWindow();
 		} // ctor
 
 		#endregion
@@ -72,6 +71,17 @@ namespace TecWare.PPSn.Data
 			ClearAsync().Wait();
 		} // proc Clear
 
+		public async Task Reset(Uri dataSource)
+		{
+			// clear current list
+			await ClearAsync();
+
+			this.dataSource = dataSource;
+
+			// Load first page
+			BeginFetchNextWindow();
+		} // proc Reset
+
 		/// <summary>Lädt die Liste neu</summary>
 		public async Task ClearAsync()
 		{
@@ -80,14 +90,18 @@ namespace TecWare.PPSn.Data
 				await Task.Run(new Action(EndFetchNextWindow));
 
 			// Lösche den Inhalt der Liste
-			lock (rowLock)
-			{
-				visibleCount = 0;
-				loadedCount = 0;
-				IsLoaded = false;
-				rows = emptyList;
-				OnCollectionChanged();
-			}
+			await Environment.Dispatcher.InvokeAsync(
+				() =>
+				{
+					lock (rowLock)
+					{
+						visibleCount = 0;
+						loadedCount = 0;
+						IsLoaded = false;
+						rows = emptyList;
+						OnCollectionChanged();
+					}
+				});
 
 			// Starte das Fetchen der Daten erneut
 			BeginFetchNextWindow();
@@ -141,9 +155,9 @@ namespace TecWare.PPSn.Data
 				{
 					procFetchNextWindow.EndInvoke(ar);
 				}
-				catch (Exception)
+				catch (Exception e)
 				{
-					//context.Sync.Post(s => context.ShowException(ExceptionShowFlags.None, (Exception)s), e);
+					Environment.ShowException(ExceptionShowFlags.None, e);
 					throw;
 				}
 				finally
@@ -184,46 +198,44 @@ namespace TecWare.PPSn.Data
 
 			// Lade die Zeilen
 			int iFetchedStarted = visibleCount;
-			//using (IDataReader r = context.Server.GetDataReaderAsync(sFetchUrl).Result)
-			//{
-			//	while (r.Read())
-			//	{
-			//		// Zeilen werden als Tabellen verwaltet
-			//		LuaTable t = new LuaTable();
+			var web = new BaseWebReqeust(null, Encoding.Default);
+			foreach (var c in web.GetReaderAsync(sFetchUrl).Result)
+			{
+				// Zeilen werden als Tabellen verwaltet
+				LuaTable t = new LuaTable();
 
-			//		// Übertrage die Attribute
-			//		for (int i = 0; i < r.FieldCount; i++)
-			//		{
-			//			if (!r.IsDBNull(i))
-			//				t[r.GetName(i)] = r.GetValue(i);
-			//		}
+				// Übertrage die Attribute
+				for (int i = 0; i < c.FieldCount; i++)
+				{
+					if (!c.IsNull(i))
+						t[c.GetName(i)] = c[i];
+				}
 
-			//		AppendRow(t);
-			//		if (iLoadedCount - iVisibleCount >= iWindowCount)
-			//			OnCountChanged();
-			//	}
-			//}
+				AppendRow(t);
+				if (loadedCount - visibleCount >= windowSize)
+					OnCountChanged();
+			}
 
 			OnCountChanged();
 		} // func FetchNextWindow
 
-		//		private void AppendRow(LuaTable t)
-		//		{
-		//			lock (rowLock)
-		//			{
-		//				if (iLoadedCount >= rows.Length) // Vergrößere das Array
-		//				{
-		//					dynamic[] newRows = new dynamic[rows.Length == 0 ? 16 : rows.Length * 2];
-		//					Array.Copy(rows, 0, newRows, 0, rows.Length);
-		//					rows = newRows;
-		//				}
-		//#if LDEBUG
-		//				t.SetMemberValue("__Index", iLoadedCount);
-		//#endif
-		//				rows[iLoadedCount] = t;
-		//				iLoadedCount++;
-		//			}
-		//		} // proc AppendRow
+		private void AppendRow(LuaTable t)
+		{
+			lock (rowLock)
+			{
+				if (loadedCount >= rows.Length) // Vergrößere das Array
+				{
+					dynamic[] newRows = new dynamic[rows.Length == 0 ? 16 : rows.Length * 2];
+					Array.Copy(rows, 0, newRows, 0, rows.Length);
+					rows = newRows;
+				}
+#if LDEBUG
+						t.SetMemberValue("__Index", iLoadedCount);
+#endif
+				rows[loadedCount] = t;
+				loadedCount++;
+			}
+		} // proc AppendRow
 
 		private void OnCountChanged()
 		{
@@ -235,22 +247,24 @@ namespace TecWare.PPSn.Data
 				// Benachrichtige die UI, indem VisibleCount neu gesetzt wird
 				DebugPrint("Collection added l:{0} --> v:{1}", loadedCount, visibleCount);
 
-				//context.Sync.Post(s =>
-				//{
-				//	if (CollectionChanged != null)
-				//	{
-				//		while (true)
-				//		{
-				//			lock (rowLock)
-				//			{
-				//				if (iVisibleCount < iLoadedCount)
-				//					CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, rows[iVisibleCount++]));
-				//				else
-				//					break;
-				//			}
-				//		}
-				//	}
-				//}, null);
+				Environment.Dispatcher.BeginInvoke(
+					new Action(() =>
+					{
+						if (CollectionChanged != null)
+						{
+							while (true)
+							{
+								lock (rowLock)
+								{
+									if (visibleCount < loadedCount)
+										CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, rows[visibleCount++]));
+									else
+										break;
+								}
+							}
+						}
+					})
+				);
 			}
 		} // proc OnCountChanged
 
@@ -262,9 +276,9 @@ namespace TecWare.PPSn.Data
 #if LDEBUG
 						//DebugPrint("Fetch detail[{0}]: {1} [{2}]", (object)item.__Index, (object)item.OBJKID, (object)item.OBJKTYP);
 #endif
-			//	dynamic cls = context.Data.Classes[(string)item.OBJKTYP];
-			//	if (cls != null)
-			//		PushFetchDetail(this, item, cls);
+				//dynamic cls = context.Data.Classes[(string)item.OBJKTYP];
+				//if (cls != null)
+				//	PushFetchDetail(this, item, cls);
 			}
 			return item;
 		} // proc FetchDetailData
@@ -288,22 +302,26 @@ namespace TecWare.PPSn.Data
 		{
 			DebugPrint("Collection reset.");
 
-			//context.Sync.Send(s =>
-			//{
-			//	if (CollectionChanged != null)
-			//		CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-			//}, null);
+			Environment.Dispatcher.Invoke(
+				() =>
+				{
+					if (CollectionChanged != null)
+						CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+				}
+			);
 		} // proc OnCollectionChanged
 
 		private void OnPropertyChanged([CallerMemberName] string sPropertyName = null)
 		{
 			DebugPrint("{0} changed.", sPropertyName);
 
-			//context.Sync.Post(s =>
-			//{
-			//	if (PropertyChanged != null)
-			//		PropertyChanged(this, new PropertyChangedEventArgs(sPropertyName));
-			//}, null);
+			Environment.Dispatcher.BeginInvoke(new Action(
+				() =>
+				{
+					if (PropertyChanged != null)
+						PropertyChanged(this, new PropertyChangedEventArgs(sPropertyName));
+				})
+			);
 		} // prop OnPropertyChanged
 
 		bool IList.Contains(object value)
@@ -358,6 +376,8 @@ namespace TecWare.PPSn.Data
 
 		bool ICollection.IsSynchronized => true;
 		object ICollection.SyncRoot => rowLock;
+
+		public PpsEnvironment Environment => environment;
 
 		/// <summary>Zugriff auf das angegebene Element</summary>
 		/// <param name="index"></param>

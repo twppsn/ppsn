@@ -7,9 +7,9 @@
     <filter name="intonly" displayname="Interessenten" />
     <order displayname="Kontaktnummer">OBJKNR</order>
     <order displayname="Matchcode">OBJKMATCH</order>
-    <order displayname="Bezeichnung">LIEFNAME</order>
-    <order displayname="Debitorennummer">LIEFDEBITNR</order>
-    <order displayname="Kreditorennummer">LIEFKREBITNR</order>
+    <order displayname="Bezeichnung">KONTNAME</order>
+    <order displayname="Debitorennummer">KONTDEBNR</order>
+    <order displayname="Kreditorennummer">KONTKREDNR</order>
   </view>
   <view id="Parts" shortcut="TE" displayname="Artikelstamm">
     <source><![CDATA[?action=getlist&id=parts]]></source>

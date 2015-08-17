@@ -13,6 +13,7 @@ using TecWare.DES.Stuff;
 using System.Collections;
 using System.Collections.Specialized;
 using TecWare.PPSn.Data;
+using TecWare.DES.Networking;
 
 namespace TecWare.PPSn
 {
@@ -603,7 +604,11 @@ namespace TecWare.PPSn
 
 		public void ShowException(ExceptionShowFlags flags, Exception exception, object alternativeMessage = null)
 		{
-			System.Windows.MessageBox.Show("todo: " + (alternativeMessage ?? exception.Message));
+			Dispatcher.Invoke(
+				() =>
+				{
+					System.Windows.MessageBox.Show("todo: " + (alternativeMessage ?? exception.Message));
+        });
 		} // proc ShowException
 
 		/// <summary></summary>

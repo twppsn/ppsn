@@ -102,7 +102,7 @@
         <ListBox x:Name="PART_Testlist" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource NavigatorListBoxStyle}" Margin="50,22,50,0"  FontSize="14.667" SnapsToDevicePixels="True"
                  AlternationCount="2"
                  DataContext="{Binding Navigator}"
-                 ItemsSource="{Binding TestItems}">
+                 ItemsSource="{Binding Items}">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="{x:Type ListBoxItem}">
                     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -111,8 +111,8 @@
                         <Setter.Value>
                             <ControlTemplate TargetType="{x:Type ListBoxItem}">
                                 <StackPanel x:Name="PART_Panel" Orientation="Horizontal" Height="37" SnapsToDevicePixels="True">
-                                    <Label Content="{Binding Path=Name}" Foreground="{StaticResource PPSnContentForegroundBrush}" VerticalContentAlignment="Center"/>
-                                    <Label Content="{Binding Path=FirstName}" Foreground="{StaticResource PPSnContentForegroundBrush}" VerticalContentAlignment="Center" />
+                                    <Label Content="{Binding Path=OBJKID}" Foreground="{StaticResource PPSnContentForegroundBrush}" VerticalContentAlignment="Center"/>
+                                    <Label Content="{Binding Path=OBJKMATCH}" Foreground="{StaticResource PPSnContentForegroundBrush}" VerticalContentAlignment="Center" />
                                 </StackPanel>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="ItemsControl.AlternationIndex" Value="0">

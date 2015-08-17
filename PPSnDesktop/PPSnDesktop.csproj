@@ -89,7 +89,8 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Resource Include="Local\Data\lief.xml" />
+    <Resource Include="Local\Data\Kont.xml" />
+    <Resource Include="Local\Data\Teil.xml" />
     <Content Include="Local\Masks\TestWpfGeneric.xaml">
       <SubType>Designer</SubType>
     </Content>

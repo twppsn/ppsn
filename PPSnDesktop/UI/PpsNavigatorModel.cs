@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Input;
 using TecWare.DES.Data;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
@@ -95,6 +96,10 @@ namespace TecWare.PPSn.UI
 		private PpsOrderView currentOrder;
 		private bool sortAscending = true;
 
+		private PpsDataList items;
+		private ICollectionView itemsView;
+
+
 		private string currentSearchText = String.Empty;
 		private string currentViewCaption = String.Empty;
 
@@ -111,10 +116,14 @@ namespace TecWare.PPSn.UI
 			views.SortDescriptions.Add(new SortDescription("DisplayName", ListSortDirection.Ascending));
 			views.CurrentChanged += (sender, e) => UpdateCurrentView((PpsMainViewDefinition)views.CurrentItem);
 
+			// init data list
+			items = new PpsDataList(Environment);
+			itemsView = CollectionViewSource.GetDefaultView(items);
+
 			// Update the view
 			if (!views.MoveCurrentToFirst())
 				UpdateCurrentView((PpsMainViewDefinition)views.CurrentItem);
-
+			
 			currentViewCaption = "Daten";
 		} // ctor
 
@@ -130,11 +139,13 @@ namespace TecWare.PPSn.UI
 			{
 				currentFilter = null;
 				currentFilters = null;
+				currentOrder = null;
 				currentOrders = null;
 			}
 			else
 			{
 				currentFilter = null;
+				currentOrder = null;
 				currentFilters = (from c in currentView.Filters select new PpsFilterView(this, c)).ToArray();
 				currentOrders = (from c in currentView.SortOrders select new PpsOrderView(this, c)).ToArray();
 			}
@@ -172,7 +183,7 @@ namespace TecWare.PPSn.UI
 					oldOrder = null;
 				}
 				else
-					newOrder = null;
+					currentOrder = newOrder = null;
 			}
 			else
 			{
@@ -186,8 +197,23 @@ namespace TecWare.PPSn.UI
 				newOrder.FireIsCheckedChanged();
     } // proc UpdateCurrentOrder
 
-		private void RefreshData()
+		private async void RefreshData()
 		{
+			// build neu data source
+			if (CurrentView == null)
+				await items.ClearAsync();
+			else
+			{
+				var relativeSource = $"?action=getlist&id={CurrentView.Name}";
+
+				if (currentFilter != null)
+					relativeSource += "&filter=" + currentFilter.FilterName;
+
+				if (currentOrder != null)
+					relativeSource += "&order=" + currentOrder.ColumnName + (sortAscending ? "+" : "-");
+
+				await items.Reset(new Uri(windowModel.Environment.Web[PpsEnvironmentDefinitionSource.Offline].BaseUri, relativeSource));
+			}
 		} // proc RefreshData
 
 		protected override object OnIndex(object key)
@@ -207,34 +233,10 @@ namespace TecWare.PPSn.UI
 		public ICollectionView VisibleViews => views;
 		/// <summary></summary>
 		public ICollectionView VisibleActions => actions;
+		/// <summary>Data Items</summary>
+		public ICollectionView Items => itemsView;
 
 		public string CurrentSearchText { get { return currentSearchText; } set { currentSearchText = value; } }
 		public string CurrentViewCaption { get { return currentViewCaption; } set { currentViewCaption = value; } }
-
-		// Q+D TEST Schmidt
-		public List<TestCustomer> TestItems
-		{
-			get
-			{
-				return new List<TestCustomer>
-				{
-					new TestCustomer { Name = "Müller", FirstName = "Walther" },
-					new TestCustomer { Name = "Schmidt", FirstName = "Tim" },
-					new TestCustomer { Name = "Mustermann", FirstName = "Theo" },
-					new TestCustomer { Name = "Meier", FirstName = "Ralf" },
-					new TestCustomer { Name = "Knopf", FirstName = "Jim" },
-					new TestCustomer { Name = "Hawkins", FirstName = "Sam" },
-					new TestCustomer { Name = "Liebers", FirstName = "Anatol" },
-					new TestCustomer { Name = "Lehmann", FirstName = "Urs" }
-				};
-			}
-		}
-		public class TestCustomer
-		{
-			public string Name { get; set; }
-			public string FirstName { get; set; }
-		}
-
 	} // class PpsNavigatorModel
-
 }

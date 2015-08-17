@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using TecWare.DES.Networking;
 using TecWare.DES.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
