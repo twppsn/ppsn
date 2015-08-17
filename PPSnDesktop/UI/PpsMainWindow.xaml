@@ -5,310 +5,277 @@
 			  xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
 			Style="{StaticResource PpsWindow}" Title="PpsMainWindow" Height="300" Width="600">
 
-  <ui:PpsWindow.Resources>
-    <Style x:Key="PpsWindowButtonStyle" TargetType="{x:Type Button}">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="{StaticResource PPSnContentForegroundBrush}" />
-      <Setter Property="Focusable" Value="False" />
-      <Setter Property="Width" Value="34"/>
-      <Setter Property="Height" Value="26" />
-      <Setter Property="Margin" Value="0,0,0,8" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="{x:Type Button}">
-            <Border x:Name="PART_border" BorderBrush="Transparent" BorderThickness="0,0,0,0" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
-              <ContentPresenter SnapsToDevicePixels="True" MaxHeight="10" MaxWidth="10" HorizontalAlignment="Center"/>
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="PART_border" Property="Background" Value="{StaticResource PPSnWindowButtonHotBrush}" />
-              </Trigger>
-              <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="PART_border" Property="Background" Value="{StaticResource PPSnWindowButtonPressedBrush}"/>
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
+	<ui:PpsWindow.Resources>
+		<Style x:Key="PpsWindowButtonStyle" TargetType="{x:Type Button}">
+			<Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}" />
+			<Setter Property="Focusable" Value="False" />
+			<Setter Property="IsTabStop" Value="False" />
+			<Setter Property="Width" Value="34 "/>
+			<Setter Property="Height" Value="26" />
+			<Setter Property="Margin" Value="0,0,0,8" />
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type Button}">
+						<Border x:Name="PART_Content" BorderBrush="Transparent" BorderThickness="0,0,0,0" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+							<ContentPresenter SnapsToDevicePixels="True" MaxHeight="10" MaxWidth="10" HorizontalAlignment="Center"/>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" />
+							</Trigger>
+							<Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
 
-    <Style x:Key="NavigatorOrderButtonStyle" TargetType="{x:Type ToggleButton}">
-      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="Foreground" Value="{StaticResource PPSnContentForegroundBrush}"/>
-      <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="IsThreeState" Value="True"/>
-      <Setter Property="Focusable" Value="False"/>
-      <Setter Property="IsChecked" Value="{x:Null}"/>
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="{x:Type ToggleButton}">
-            <Grid>
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="16" />
-              </Grid.ColumnDefinitions>
-              <Border x:Name="PART_Border" Grid.Column="0" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
-                <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
-              </Border>
-              <Path x:Name="PART_Arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Hidden" Fill="{TemplateBinding Foreground}"/>
-            </Grid>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsChecked" Value="True">
-                <Setter TargetName="PART_Arrow" Property="Visibility" Value="Visible"/>
-                <Setter TargetName="PART_Arrow" Property="Data" Value="M 0 7 L 5 2 L 10 7 Z"/>
-              </Trigger>
-              <Trigger Property="IsChecked" Value="False">
-                <Setter TargetName="PART_Arrow" Property="Visibility" Value="Visible"/>
-                <Setter TargetName="PART_Arrow" Property="Data" Value="M 0 2 L 5 7 L 10 2 Z"/>
-              </Trigger>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="PART_Border" Property="Background"  Value="{StaticResource PPSnWindowButtonHotBrush}" />
-              </Trigger>
-              <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="PART_Border" Property="Background" Value="{StaticResource PPSnWindowButtonPressedBrush}"/>
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
+        <Style x:Key="NavigatorOrderButtonStyle" TargetType="{x:Type ToggleButton}">
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="IsThreeState" Value="True"/>
+			<Setter Property="Focusable" Value="True"/>
+			<Setter Property="IsTabStop" Value="False"/>
+			<Setter Property="IsChecked" Value="{x:Null}"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ToggleButton}">
+						<Grid>
+							<Grid.ColumnDefinitions>
+							<ColumnDefinition />
+								<ColumnDefinition Width="12" />
+							</Grid.ColumnDefinitions>
+							<Border x:Name="PART_Content" Grid.Column="0" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+								<ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+							</Border>
+							<Path x:Name="PART_Arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Hidden" Fill="{TemplateBinding Foreground}"/>
+						</Grid>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsChecked" Value="True">
+								<Setter TargetName="PART_Arrow" Property="Visibility" Value="Visible"/>
+								<Setter TargetName="PART_Arrow" Property="Data" Value="M 0 7 L 5 2 L 10 7 Z"/>
+							</Trigger>
+							<Trigger Property="IsChecked" Value="False">
+								<Setter TargetName="PART_Arrow" Property="Visibility" Value="Visible"/>
+								<Setter TargetName="PART_Arrow" Property="Data" Value="M 0 2 L 5 7 L 10 2 Z"/>
+							</Trigger>
+							<Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PART_Content" Property="Background"  Value="{StaticResource PPSnButtonMouseOverBrush}" />
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
 
-    <Style x:Key="NavigatorFilterButtonStyle" TargetType="{x:Type ToggleButton}">
-      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-      <Setter Property="Height" Value="23" />
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="{StaticResource PPSnContentForegroundBrush}" />
-      <Setter Property="BorderThickness" Value="0,0,0,3" />
-      <Setter Property="BorderBrush" Value="{StaticResource PPSnContentForegroundBrush}" />
-      <Setter Property="Focusable" Value="False" />
-      <Setter Property="IsChecked" Value="False" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="{x:Type ToggleButton}">
-            <Border x:Name="PART_Border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
-              <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,2,0" />
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsChecked" Value="True">
-                <Setter TargetName="PART_Border" Property="BorderBrush" Value="Yellow"/>
-              </Trigger>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="PART_Border" Property="Background" Value="{StaticResource PPSnWindowButtonHotBrush}" />
-              </Trigger>
-              <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="PART_Border" Property="Background" Value="{StaticResource PPSnWindowButtonPressedBrush}"/>
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-  </ui:PpsWindow.Resources>
+        <Style x:Key="NavigatorFilterButtonStyle" TargetType="{x:Type ToggleButton}">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="VerticalAlignment" Value="Bottom" />
+            <Setter Property="Margin" Value="0,0,18,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,4" />
+            <Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}" />
+            <Setter Property="Focusable" Value="True" />
+			<Setter Property="IsTabStop" Value="False" />
+            <Setter Property="IsChecked" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ToggleButton}">
+                        <Border x:Name="PART_Content" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,2,0" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="PART_Content" Property="BorderBrush" Value="{StaticResource PPSnMarkerBrush}"/>
+                                <Setter Property="IsEnabled" Value="False" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
-  <Grid x:Name="PART_MainWindowGrid" Background="{StaticResource PPSnWindowBrush}">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="80" />
-      <RowDefinition Height="*" />
-      <RowDefinition Height="23" />
-    </Grid.RowDefinitions>
+        <Geometry x:Key="PpsWindowCloseButton">M 0.5,0.5L 9.5,9.5M 9.5,0.5L 0.5,9.5</Geometry>
+        <Geometry x:Key="PpsWindowMaximizeButton">M 8.5,1.5L 0.5,1.5L 0.5,9.5L 8.5,9.5L 8.5,1.5 Z M 0.5,9.5L 0.5,3.27777L 8.5,3.27777L 8.5,9.5L 0.5,9.5 Z</Geometry>
+        <Geometry x:Key="PpsWindowRestoreButton">M 0.5,9.5L 0.5,4.5L 0.5,9.5L 7.5,9.5L 7.5,3.5L 0.5,3.5L 0.5,4.5L 7.5,4.5L 7.5,9.5L 0.5,9.5M 3.5,1.5L 9.5,1.5L 9.5,7.5L 9.5,1.5L 3.5,1.5</Geometry>
+    </ui:PpsWindow.Resources>
 
-    <DockPanel x:Name="PART_Header" Grid.Row="0">
-      <Button x:Name="PART_ToggleButtton" Content="Toggle" Width="58" Height="58" VerticalAlignment="Top" Command="{x:Static uiL:PpsMainWindow.NavigatorToggleCommand}" Focusable="False" IsTabStop="False" />
-      <DockPanel DockPanel.Dock="Bottom" Height="46">
-        <!--Rechter Margin darf nicht kleiner sein (ContextMenu und 2 Screens Bug)-->
-        <Label x:Name="PART_User" Content="{Binding Environment.UsernameDisplay}" DockPanel.Dock="Right" Foreground="{StaticResource PPSnContentForegroundBrush}" VerticalContentAlignment="Top" Padding="0" Cursor="Hand"
-                    Margin="24,0,18,24"
-                    MouseLeftButtonUp="PART_User_MouseLeftButtonUp"
-                    ContextMenuService.HasDropShadow="False"
-                    ContextMenuService.PlacementTarget="{Binding ElementName=PART_User}"
-                    ContextMenuService.Placement="Left"
-                    ContextMenuService.HorizontalOffset="{Binding RelativeSource={RelativeSource Self}, Path=ActualWidth}"
-                    ContextMenuService.VerticalOffset="24">
-          <Label.ContextMenu>
-            <ContextMenu>
-              <MenuItem Header="Anmelden" Command="{x:Static ui:PpsWindow.LoginCommand}" CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
-              <MenuItem Header="Abmelden" Command="{x:Static ui:PpsWindow.LogoutCommand}" CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
-            </ContextMenu>
-          </Label.ContextMenu>
+    <Grid x:Name="PART_MainWindowGrid" Background="{StaticResource PPSnWindowBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32" />
+            <RowDefinition Height="36" />
+            <RowDefinition Height="23" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="23" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="58" />
+            <ColumnDefinition Width="224" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="34" />
+            <ColumnDefinition Width="34" />
+            <ColumnDefinition Width="34" />
+        </Grid.ColumnDefinitions>
+
+        <Button x:Name="PART_ToggleButtton" Grid.RowSpan="2" Content="Toggle" Width="58" Height="58" VerticalAlignment="Top" Focusable="False" IsTabStop="False" Command="{x:Static uiL:PpsMainWindow.NavigatorToggleCommand}" >
+        </Button>
+        <Label x:Name="PART_Caption" Grid.Column="1" Grid.ColumnSpan="2" Content="{Binding Title, Mode=OneWay}" Foreground="{StaticResource PPSnWindowForegroundBrush}" Padding="12,1,0,0" FontSize="21.333" >
+            <Label.Tag>
+                <ui:PpsWindowHitTest HitTest="2" />
+            </Label.Tag>
         </Label>
-        <Grid DockPanel.Dock="Bottom">
-          <Grid x:Name="PART_NavigatorCommands" Margin="224,0,0,0">
-            <Grid.RowDefinitions>
-              <RowDefinition Height="*" />
-              <RowDefinition Height="19" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="Auto" />
-              <ColumnDefinition />
-            </Grid.ColumnDefinitions>
-
-            <ItemsControl x:Name="PART_Filters" Grid.ColumnSpan="2" FontSize="14.667" DataContext="{Binding Navigator}" ItemsSource="{Binding CurrentFilters}">
-              <ItemsControl.ItemsPanel>
+        <Button x:Name="PART_MinButton" Grid.Column="3" Style="{StaticResource PpsWindowButtonStyle}" VerticalAlignment="Top" ToolTip="Minimieren" Command="{x:Static ui:PpsWindow.MinimizeCommand}" >
+            <Rectangle
+				Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+				Stretch="Fill"
+				RenderOptions.EdgeMode="Aliased" 
+				VerticalAlignment="Bottom"
+				HorizontalAlignment="Center"
+				Margin="0,0,0,1"
+				Width="9" 
+				Height="3" />
+        </Button>
+		<Button x:Name="PART_MaxButton" Grid.Column="4" Command="{x:Static ui:PpsWindow.MaximizeCommand}" >
+			<Path x:Name="PART_MaxButtonPath"
+				  Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+				  Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+				  StrokeThickness="1"
+				  StrokeMiterLimit="2.75"
+				  Stretch="Fill"
+				  RenderOptions.EdgeMode="Aliased">
+				<Path.Style>
+					<Style TargetType="Path">
+						<Setter Property="Data" Value="{StaticResource PpsWindowMaximizeButton}" />
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized">
+								<Setter Property="Data" Value="{StaticResource PpsWindowRestoreButton}" />
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Path.Style>
+			</Path>
+			<Button.Style>
+                <Style TargetType="Button" BasedOn="{StaticResource PpsWindowButtonStyle}" >
+                    <Setter Property="ToolTip" Value="Maximieren" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized" >
+                            <Setter Property="ToolTip" Value="Verkleinern" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+			</Button.Style>
+		</Button>
+        <Button x:Name="PART_CloseButton" Grid.Column="5" Style="{StaticResource PpsWindowButtonStyle}" VerticalAlignment="Top" ToolTip="Schließen" Command="{x:Static ui:PpsWindow.CloseCommand}" >
+            <Path
+				Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+				StrokeThickness="1.5"
+				Stretch="Fill"
+				RenderOptions.EdgeMode="Aliased"
+				Data="{StaticResource PpsWindowCloseButton}" />
+        </Button>
+        <Label x:Name="PART_User" Grid.Column="2" Grid.Row="1" Grid.ColumnSpan="4" HorizontalAlignment="Right" Margin="0,0,22,0" Padding="0" VerticalAlignment="Top" Cursor="Hand"
+			   Content="{Binding Environment.UsernameDisplay}"
+			   Foreground="{StaticResource PPSnWindowForegroundBrush}"
+			   MouseLeftButtonUp="PART_User_MouseLeftButtonUp"
+			   ContextMenuService.HasDropShadow="False"
+			   ContextMenuService.PlacementTarget="{Binding ElementName=PART_User}"
+			   ContextMenuService.Placement="Left"
+			   ContextMenuService.HorizontalOffset="{Binding RelativeSource={RelativeSource Self}, Path=ActualWidth}"
+			   ContextMenuService.VerticalOffset="24" >
+            <Label.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Anmelden" Command="{x:Static ui:PpsWindow.LoginCommand}" CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
+                    <MenuItem Header="Abmelden" Command="{x:Static ui:PpsWindow.LogoutCommand}" CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
+                </ContextMenu>
+            </Label.ContextMenu>
+        </Label>
+        <ItemsControl x:Name="PART_Filters" Grid.Column="2" Grid.Row="1" Grid.ColumnSpan="4" DataContext="{Binding Navigator}" ItemsSource="{Binding CurrentFilters}" FontSize="14.667" 
+					  Visibility="{Binding Path=NavigatorVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" IsTabStop="False" Focusable="False" >
+            <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                  <StackPanel Orientation="Horizontal"/>
+                    <StackPanel Orientation="Horizontal"/>
                 </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <ToggleButton Style="{StaticResource NavigatorFilterButtonStyle}" Content="{Binding DisplayName}" IsChecked="{Binding IsSelected, Mode=OneWay}" Command="{Binding}" Margin="0,0,16,0" />
+                    <ToggleButton Style="{StaticResource NavigatorFilterButtonStyle}" Content="{Binding DisplayName}" IsChecked="{Binding IsSelected, Mode=OneWay}" Command="{Binding}" />
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-            <TextBlock x:Name="PART_OrderLabel" Grid.Row="1" Text="SORTIERUNG:" Foreground="{StaticResource PPSnContentForegroundBrush}" Margin="0,2,8,0" VerticalAlignment="Center" />
-
-            <ItemsControl x:Name="PART_Orders" Grid.Column="1" Grid.Row="1" DataContext="{Binding Navigator}" ItemsSource="{Binding CurrentOrders}" Margin="0,2,0,0">
-              <ItemsControl.ItemsPanel>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <HeaderedItemsControl x:Name="PART_Orders" Grid.Column="2" Grid.Row="2" Grid.ColumnSpan="4" DataContext="{Binding Navigator}" ItemsSource="{Binding CurrentOrders}"
+							  Visibility="{Binding Path=NavigatorVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Focusable="False" IsTabStop="False" >
+            <HeaderedItemsControl.Header>
+                <TextBlock Text="SORTIERUNG:" Margin="0,4,8,0" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Center"/>
+            </HeaderedItemsControl.Header>
+            <HeaderedItemsControl.Template>
+                <ControlTemplate TargetType="{x:Type HeaderedItemsControl}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <ContentPresenter x:Name="PART_Header" ContentSource="Header" />
+                        <ItemsPresenter x:Name="PART_Items" Grid.Column="1" Margin="0,4,0,0"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <DataTrigger Binding="{Binding Path=CurrentOrders}" Value="{x:Null}">
+                            <Setter TargetName="PART_Header" Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </HeaderedItemsControl.Template>
+            <HeaderedItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                  <StackPanel Orientation="Horizontal" />
+                    <StackPanel Orientation="Horizontal" />
                 </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
+            </HeaderedItemsControl.ItemsPanel>
+            <HeaderedItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <ToggleButton Style="{StaticResource NavigatorOrderButtonStyle}" Content="{Binding DisplayName}" IsChecked="{Binding IsChecked, Mode=OneWay}" Command="{Binding}" Margin="0,0,4,0" />
+                    <ToggleButton Style="{StaticResource NavigatorOrderButtonStyle}" Content="{Binding DisplayName}" IsChecked="{Binding IsChecked, Mode=OneWay}" Command="{Binding}" />
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <Grid.Style>
-              <Style TargetType="Grid">
-                <Setter Property="Visibility" Value="Visible"/>
-                <Style.Triggers>
-                  <DataTrigger Binding="{Binding Path=NavigatorVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="False">
-                    <Setter Property="Visibility" Value="Hidden" />
-                  </DataTrigger>
-                </Style.Triggers>
-              </Style>
-            </Grid.Style>
-          </Grid>
-
-          <ToolBar x:Name="PART_PanePresenterToolBar" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}">
-            <ToolBar.Style>
-              <Style TargetType="ToolBar" BasedOn="{StaticResource PanePresenterToolBarStyle}">
-                <Setter Property="Visibility" Value="Hidden"/>
-                <Style.Triggers>
-                  <DataTrigger Binding="{Binding Path=NavigatorVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="False">
-                    <Setter Property="Visibility" Value="Visible" />
-                  </DataTrigger>
-                </Style.Triggers>
-              </Style>
-            </ToolBar.Style>
-          </ToolBar>
-        </Grid>
-      </DockPanel>
-      <Button x:Name="PART_CloseButton" Style="{StaticResource PpsWindowButtonStyle}" Command="{x:Static ui:PpsWindow.CloseCommand}" DockPanel.Dock="Right" ToolTip="Schließen">
-        <Path
-					Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-					StrokeThickness="1.5"
-					Stretch="Fill"
-					RenderOptions.EdgeMode="Aliased"
-					Data="{StaticResource PpsWindowCloseButton}" />
-      </Button>
-      <Button x:Name="PART_MaxButton" Command="{x:Static ui:PpsWindow.MaximizeCommand}" DockPanel.Dock="Right">
-        <Path
-					x:Name="PART_MaxButtonPath"
-					Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-					Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-					StrokeThickness="1"
-					StrokeMiterLimit="2.75" 
-					Stretch="Fill"
-					RenderOptions.EdgeMode="Aliased">
-          <Path.Style>
-            <Style TargetType="Path">
-              <Setter Property="Data" Value="{StaticResource PpsWindowMaximizeButton}" />
-              <Style.Triggers>
-                <DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized">
-                  <Setter Property="Data" Value="{StaticResource PpsWindowRestoreButton}" />
-                </DataTrigger>
-              </Style.Triggers>
-            </Style>
-          </Path.Style>
-        </Path>
-        <Button.Style>
-          <Style TargetType="Button" BasedOn="{StaticResource PpsWindowButtonStyle}">
-            <Setter Property="ToolTip" Value="Maximieren" />
-            <Style.Triggers>
-              <DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized">
-                <Setter Property="ToolTip" Value="Verkleinern" />
-              </DataTrigger>
-            </Style.Triggers>
-          </Style>
-        </Button.Style>
-      </Button>
-      <Button x:Name="PART_MinButton" Style="{StaticResource PpsWindowButtonStyle}"  Command="{x:Static ui:PpsWindow.MinimizeCommand}" DockPanel.Dock="Right" ToolTip="Minimieren">
-        <Rectangle
-					Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-						Stretch="Fill"
-						RenderOptions.EdgeMode="Aliased" 
-						VerticalAlignment="Bottom"
-						HorizontalAlignment="Center"
-						Margin="0,0,0,1"
-						Width="9" 
-						Height="3"/>
-      </Button>
-      <Label x:Name="PART_Caption" Content="{Binding Title, Mode=OneWay}" Padding="16,0,0,0" FontSize="21.333" VerticalContentAlignment="Center">
-        <Label.Style>
-          <Style TargetType="Label">
-            <Setter Property="Foreground" Value="{StaticResource PPSnContentForegroundBrush}" />
-            <Style.Triggers>
-              <DataTrigger Binding="{Binding Path=IsActive, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="False">
-                <Setter Property="Foreground" Value="Gray" />
-              </DataTrigger>
-            </Style.Triggers>
-          </Style>
-        </Label.Style>
-        <Label.Tag>
-          <ui:PpsWindowHitTest HitTest="2"/>
-        </Label.Tag>
-      </Label>
-    </DockPanel>
-
-    <DockPanel x:Name="PART_StatusBar" Grid.Row="2" Background="{StaticResource PPSnWindowFooterBrush}" LastChildFill="False">
-      <Label Content="CurrentPane:" Margin="8,0,0,0" Padding="0" VerticalContentAlignment="Center" Foreground="White" Opacity="0.7"></Label>
-      <Label Content="{Binding CurrentPane.Title, Mode=OneWay}" Margin="6,0,0,0" Padding="0" VerticalContentAlignment="Center" Foreground="White" Opacity="0.9"></Label>
-      <Viewbox x:Name="PART_SizeGripper" DockPanel.Dock="Right" Width="15" VerticalAlignment="Bottom">
-        <Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SizeGrip.png">
-          <Image.Tag>
-            <ui:PpsWindowHitTest HitTest="17"/>
-          </Image.Tag>
-        </Image>
-        <Viewbox.Style>
-          <Style TargetType="Viewbox">
-            <Setter Property="Visibility" Value="Visible" />
-            <Style.Triggers>
-              <DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized">
-                <Setter Property="Visibility" Value="Hidden" />
-              </DataTrigger>
-            </Style.Triggers>
-          </Style>
-        </Viewbox.Style>
-      </Viewbox>
-    </DockPanel>
-
-    <uiL:PpsNavigatorControl x:Name="PART_Navigator" Grid.Row="1">
-      <uiL:PpsNavigatorControl.Style>
-        <Style TargetType="uiL:PpsNavigatorControl">
-          <Setter Property="Visibility" Value="Visible" />
-          <Style.Triggers>
-            <DataTrigger Binding="{Binding Path=NavigatorVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="False">
-              <Setter Property="Visibility" Value="Hidden" />
-            </DataTrigger>
-          </Style.Triggers>
-        </Style>
-      </uiL:PpsNavigatorControl.Style>
-    </uiL:PpsNavigatorControl>
-
-    <ContentPresenter x:Name="PART_PanePresenter" Grid.Row="1" Content="{Binding CurrentPane.Control,Mode=OneWay}">
-      <ContentPresenter.Style>
-        <Style TargetType="ContentPresenter">
-          <Setter Property="Visibility" Value="Hidden" />
-          <Style.Triggers>
-            <DataTrigger Binding="{Binding Path=NavigatorVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="False">
-              <Setter Property="Visibility" Value="Visible" />
-            </DataTrigger>
-          </Style.Triggers>
-        </Style>
-      </ContentPresenter.Style>
-    </ContentPresenter>
-  </Grid>
+            </HeaderedItemsControl.ItemTemplate>
+        </HeaderedItemsControl>
+        <ToolBar x:Name="PART_PanePresenterToolBar" Grid.Column="1" Grid.Row="1" Grid.ColumnSpan ="4" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}"
+				 Style="{StaticResource PanePresenterToolBarStyle}"
+				 Visibility="{Binding Path=PaneVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" >
+		</ToolBar>
+        <uiL:PpsNavigatorControl x:Name="PART_Navigator" Grid.Row="3" Grid.ColumnSpan="6"
+								 Visibility="{Binding Path=NavigatorVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" >
+		</uiL:PpsNavigatorControl>
+        <ContentPresenter x:Name="PART_PanePresenter" Grid.Row="3" Grid.ColumnSpan="6" Content="{Binding CurrentPane.Control, Mode=OneWay}"
+						  Visibility="{Binding Path=PaneVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" >
+        </ContentPresenter>
+        <DockPanel x:Name="PART_StatusBar" Grid.Row="4" Grid.ColumnSpan="6"  Background="{StaticResource PPSnWindowFooterBrush}" LastChildFill="False">
+            <Label Content="CurrentPane:" Margin="8,0,0,0" Padding="0" VerticalContentAlignment="Center" Foreground="White" Opacity="0.7"></Label>
+            <Label Content="{Binding CurrentPane.Title, Mode=OneWay}" Margin="6,0,0,0" Padding="0" VerticalContentAlignment="Center" Foreground="White" Opacity="0.9"></Label>
+            <Viewbox x:Name="PART_SizeGripper" DockPanel.Dock="Right" Width="15" VerticalAlignment="Bottom">
+                <Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SizeGrip.png">
+                    <Image.Tag>
+                        <ui:PpsWindowHitTest HitTest="17"/>
+                    </Image.Tag>
+                </Image>
+                <Viewbox.Style>
+                    <Style TargetType="Viewbox">
+                        <Setter Property="Visibility" Value="Visible" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized">
+                                <Setter Property="Visibility" Value="Hidden" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Viewbox.Style>
+            </Viewbox>
+        </DockPanel>
+</Grid>
 </ui:PpsWindow>

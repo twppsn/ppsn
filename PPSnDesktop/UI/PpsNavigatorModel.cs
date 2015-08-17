@@ -115,7 +115,7 @@ namespace TecWare.PPSn.UI
 			if (!views.MoveCurrentToFirst())
 				UpdateCurrentView((PpsMainViewDefinition)views.CurrentItem);
 
-			currentViewCaption = "Daten";
+			currentViewCaption = "DATEN";
 		} // ctor
 
 		private bool FilterAction(object item)
@@ -146,7 +146,7 @@ namespace TecWare.PPSn.UI
 
 			// Update States
 			UpdateCurrentFilter(null);
-			
+
 			RefreshData();
 		} // proc UpdateCurrentView
 

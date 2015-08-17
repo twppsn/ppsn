@@ -23,11 +23,10 @@ namespace TecWare.PPSn.UI
 	/// <summary></summary>
 	public partial class PpsMainWindow : PpsWindow
 	{
-		/// <summary>Toggles between DataPanel and OverViewPanel.</summary>
+		/// <summary>Toggles between DataPane and Navigator.</summary>
 		public readonly static RoutedCommand NavigatorToggleCommand = new RoutedCommand("NavigatorToggle", typeof(PpsMainWindow));
-		/// <summary>Flag Navigator visibility.</summary>
-		public static readonly DependencyProperty NavigatorVisibilityProperty = DependencyProperty.Register("NavigatorVisibility", typeof(bool), typeof(PpsMainWindow), new UIPropertyMetadata(true));
-
+		private readonly static DependencyProperty NavigatorVisibilityProperty = DependencyProperty.Register("NavigatorVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Visible));
+		private readonly static DependencyProperty PaneVisibilityProperty = DependencyProperty.Register("PaneVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Collapsed));
 		private readonly static DependencyPropertyKey CurrentPaneKey = DependencyProperty.RegisterReadOnly("CurrentPane", typeof(IPpsWindowPane), typeof(PpsMainWindow), new PropertyMetadata(null));
 		private readonly static DependencyProperty CurrentPaneProperty = CurrentPaneKey.DependencyProperty;
 
@@ -111,13 +110,28 @@ namespace TecWare.PPSn.UI
 
 		private void ToggleNavigatorState()
 		{
-			bool currentState = (bool)GetValue(NavigatorVisibilityProperty);
-			SetNavigatorVisibility(!currentState);
-        }
+			var current = (Visibility)GetValue(NavigatorVisibilityProperty);
+			switch (current)
+			{
+				case Visibility.Visible:
+					SetNavigatorVisibility(Visibility.Collapsed);
+					SetPaneVisibility(Visibility.Visible);
+					break;
+				default:
+					SetPaneVisibility(Visibility.Collapsed);
+					SetNavigatorVisibility(Visibility.Visible);
+					break;
+			}
+		}
 
-		private void SetNavigatorVisibility(bool visible)
+		private void SetNavigatorVisibility(Visibility visibility)
 		{
-			SetValue(NavigatorVisibilityProperty, visible);
+			SetValue(NavigatorVisibilityProperty, visibility);
+		}
+
+		private void SetPaneVisibility(Visibility visibility)
+		{
+			SetValue(PaneVisibilityProperty, visibility);
 		}
 
 		protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
@@ -167,7 +181,6 @@ namespace TecWare.PPSn.UI
 		public PpsNavigatorModel Navigator => navigator;
 		/// <summary>Settings of the current window.</summary>
 		public PpsWindowApplicationSettings Settings => settings;
-
 		/// <summary>Index of the current window</summary>
 		public int WindowIndex => windowIndex; 
 		/// <summary>Access to the current environment,</summary>

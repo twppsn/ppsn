@@ -80,9 +80,9 @@ namespace TecWare.PPSn
 			this.views = new PpsEnvironmentCollection<PpsMainViewDefinition>(this);
 
       // test
-      actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Offline, "Test1", "Test 1", null));
-      actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Offline, "Test2", "Test 2", null));
-      actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Online, "Test1", "Test 2", null));
+      actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Offline, "Test1", "Test A", null));
+      actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Offline, "Test2", "Test BBBBBBBBBBB", null));
+      actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Online, "Test1", "Test C", null));
 		} // ctor
 
 		protected override PpsLocalDataStore CreateLocalDataStore() => new PpsMainLocalStore(this);

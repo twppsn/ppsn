@@ -2,30 +2,27 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	                xmlns:ui="clr-namespace:TecWare.PPSn.UI">
 
-    <SolidColorBrush x:Key="PPSnWindowBrush" Color="#3B4A62" />
-    <SolidColorBrush x:Key="PPSnContentForegroundBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="PPSnSeparatorBrush" Color="#80FFFFFF" />
-    <SolidColorBrush x:Key="PPSnAlternation0Brush" Color="#2DFFFFFF" />
-    <SolidColorBrush x:Key="PPSnAlternation1Brush" Color="#19FFFFFF" />
-    <SolidColorBrush x:Key="PPSnWindowButtonHotBrush" Color="#80FFFFFF" />
-    <SolidColorBrush x:Key="PPSnWindowButtonPressedBrush" Color="#40000000" />
+    <Color x:Key="PPSnDesktopColor">#3B4A62</Color>
+    <Color x:Key="PPSnAccentColor">#FFF</Color>
+    <Color x:Key="PPSnAccentColor1">#F7E51D</Color>
+    <Color x:Key="PPSnButtonMouseOverColor">#1F6588</Color>
+    <Color x:Key="PPSnButtonPressedColor">#333333</Color>
 
-    <!--<SolidColorBrush x:Key="PPSnWindowBrush" Color="#EFEFF2" />
-    <SolidColorBrush x:Key="PPSnContentForegroundBrush" Color="Black" />
-    <SolidColorBrush x:Key="PPSnSeparatorBrush" Color="#80000000" />-->
-
-
-    <SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="#007ACC" />
+    <SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="{StaticResource PPSnDesktopColor}" />
+    <SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="{StaticResource PPSnAccentColor}" />
+    <SolidColorBrush x:Key="PPSnSeparatorBrush" Color="{StaticResource PPSnAccentColor}" Opacity=".5"/>
+    <SolidColorBrush x:Key="PPSnAlternation0Brush" Color="{StaticResource PPSnAccentColor}" Opacity=".175"/>
+    <SolidColorBrush x:Key="PPSnAlternation1Brush" Color="{StaticResource PPSnAccentColor}" Opacity=".098"/>
+    <SolidColorBrush x:Key="PPSnMarkerBrush" Color="{StaticResource PPSnAccentColor1}"/>
+    <SolidColorBrush x:Key="PPSnButtonMouseOverBrush" Color="{StaticResource PPSnButtonMouseOverColor}"/>
+    <SolidColorBrush x:Key="PPSnButtonPressedBrush" Color="{StaticResource PPSnButtonPressedColor}"/>
+	<SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="#007ACC" />
       
     <Color x:Key="PPSnWindowActiveGlowColor">#007ACC</Color>
     <Color x:Key="PPSnWindowInActiveGlowColor">#60728C</Color>
-	
-	<Geometry x:Key="PpsWindowCloseButton">M 0.5,0.5L 9.5,9.5M 9.5,0.5L 0.5,9.5</Geometry>
-	<Geometry x:Key="PpsWindowMaximizeButton">M 8.5,1.5L 0.5,1.5L 0.5,9.5L 8.5,9.5L 8.5,1.5 Z M 0.5,9.5L 0.5,3.27777L 8.5,3.27777L 8.5,9.5L 0.5,9.5 Z</Geometry>
-	<Geometry x:Key="PpsWindowRestoreButton">M 0.5,9.5L 0.5,4.5L 0.5,9.5L 7.5,9.5L 7.5,3.5L 0.5,3.5L 0.5,4.5L 7.5,4.5L 7.5,9.5L 0.5,9.5M 3.5,1.5L 9.5,1.5L 9.5,7.5L 9.5,1.5L 3.5,1.5</Geometry>
 
 	<Style x:Key="PpsToolBarButton" TargetType="{x:Type Button}">
-        <Setter Property="Foreground" Value="{StaticResource PPSnContentForegroundBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="Background" Value="Transparent" />
 		<Setter Property="Focusable" Value="False" />
 		<Setter Property="BorderThickness" Value="0" />
@@ -38,10 +35,10 @@
 					</Border>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsMouseOver" Value="true">
-							<Setter Property="Background" TargetName="PART_Border" Value="{StaticResource PPSnWindowButtonHotBrush}"/>
+                            <Setter Property="Background" TargetName="PART_Border" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
 						</Trigger>
 						<Trigger Property="IsPressed" Value="true">
-							<Setter Property="Background" TargetName="PART_Border" Value="{StaticResource PPSnWindowButtonPressedBrush}"/>
+                            <Setter Property="Background" TargetName="PART_Border" Value="{StaticResource PPSnButtonPressedBrush}"/>
 							<Setter Property="Foreground" Value="#FFF"/>
 						</Trigger>
 						<Trigger Property="IsEnabled" Value="false">
@@ -78,6 +75,47 @@
             </Setter.Value>
         </Setter>
     </Style>-->
+
+	<Style x:Key="PPSnRoundedButton" TargetType="Button">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="Button">
+					<Grid>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto"></RowDefinition>
+							<RowDefinition Height="30"></RowDefinition>
+						</Grid.RowDefinitions>
+						<Ellipse x:Name="Ellipse" Grid.Row="0" StrokeThickness="1" Fill="{TemplateBinding Background}" Height="40" Width="40"  Stroke="White"></Ellipse>
+						<ContentPresenter x:Name="Content" Grid.Row="0" Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center"></ContentPresenter>
+                        <TextBlock Text="{TemplateBinding Tag}" Grid.Row="1" Margin="0,-2,0,0" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" Foreground="White"></TextBlock>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="PointerOver">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Opacity" Storyboard.TargetName="Ellipse">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="0.8"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Fill" Storyboard.TargetName="Ellipse">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnButtonPressedBrush}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <!--<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Foreground" Storyboard.TargetName="Content">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="Red"/>
+                                        </ObjectAnimationUsingKeyFrames>-->
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 
     <!--<Style x:Key="PpsMenuItem" TargetType="{x:Type MenuItem}">
     <Setter Property="Foreground" Value="{Binding Path=Foreground, RelativeSource={RelativeSource AncestorType={x:Type Menu}}}"/>
