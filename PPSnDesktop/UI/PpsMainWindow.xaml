@@ -95,7 +95,6 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="PART_Content" Property="BorderBrush" Value="{StaticResource PPSnMarkerBrush}"/>
-                                <Setter Property="IsEnabled" Value="False" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" />
@@ -246,7 +245,7 @@
                 </DataTemplate>
             </HeaderedItemsControl.ItemTemplate>
         </HeaderedItemsControl>
-        <ToolBar x:Name="PART_PanePresenterToolBar" Grid.Column="1" Grid.Row="1" Grid.ColumnSpan ="4" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}"
+        <ToolBar x:Name="PART_PanePresenterToolBar" Grid.Column="1" Grid.Row="2" Grid.ColumnSpan ="4" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}"
 				 Style="{StaticResource PanePresenterToolBarStyle}"
 				 Visibility="{Binding Path=PaneVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" >
 		</ToolBar>
