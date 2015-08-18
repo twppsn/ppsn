@@ -73,8 +73,8 @@
     <Compile Include="Controls\Toolbar.cs" />
     <Compile Include="Data\DataStore.cs" />
     <Compile Include="Data\LocalDataStore.cs" />
-    <Compile Include="Data\DataList.cs" />
     <Compile Include="Data\RemoteDataStore.cs" />
+    <Compile Include="Stuff.cs" />
     <Compile Include="UI\LuaValueConverter.cs" />
     <Compile Include="PpsEnvironment.cs" />
     <Compile Include="PpsTraceLog.cs" />

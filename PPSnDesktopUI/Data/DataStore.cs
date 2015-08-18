@@ -7,6 +7,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using TecWare.DES.Networking;
 using TecWare.DES.Stuff;
 
 namespace TecWare.PPSn.Data
@@ -237,5 +238,17 @@ namespace TecWare.PPSn.Data
 		/// <summary>Gets the data for the current request.</summary>
 		/// <param name="r">Response that will be returned.</param>
 		protected abstract void GetResponseDataStream(PpsStoreResponse r);
+
+		public virtual IEnumerable<IDataRecord> GetListData(PpsShellGetList arguments)
+		{
+			// todo: redirect to a http request
+			throw new NotImplementedException();
+		} // func GetListData
+
+		public virtual IDataRecord GetDetailedData(long objectId, string typ)
+		{
+			// todo: redirect to a http request
+			throw new NotImplementedException();
+		} // func GetDetailedData
 	} // class PpsDataStore
 }

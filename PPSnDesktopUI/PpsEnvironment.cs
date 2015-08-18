@@ -17,27 +17,6 @@ using TecWare.DES.Networking;
 
 namespace TecWare.PPSn
 {
-	#region -- enum ExceptionShowFlags --------------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Wie soll die Nachricht angezeigt werden.</summary>
-	[Flags]
-	public enum ExceptionShowFlags
-	{
-		/// <summary>Keine näheren Angaben</summary>
-		None = 0,
-		/// <summary>Beenden soll angezeigt werden.</summary>
-		ExitButton = 1,
-		/// <summary>Shutdown der Anwendung soll gestartet werden.</summary>
-		Shutown = 2,
-		/// <summary>Schwere Meldung, Anwendung muss geschlossen werden</summary>
-		Fatal = ExitButton | Shutown,
-		/// <summary>Ohne Dialog anzeigen, nur sammeln.</summary>
-		Background = 4
-	} // enum ExceptionShowFlags
-
-	#endregion
-
 	#region -- interface IPpsIdleAction -------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -594,25 +573,52 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- Data Request -----------------------------------------------------------
+
 		private WebRequest CreateWebRequest(Uri uri)
 		{
 			if (uri.AbsolutePath.StartsWith("/local")) // local request
 				return localStore.GetRequest(uri, uri.AbsolutePath.Substring(6));
-			else
+			else // todo: wenn nicht /local /remote, dann wähle erste remote dann local
 				throw new NotImplementedException();
 		} // func CreateWebRequest
 
+		public IEnumerable<IDataRecord> GetListData(PpsShellGetList arguments)
+		{
+			return localStore.GetListData(arguments);
+		} // func GetListData
+
+		public IDataRecord GetDetailedData(long objectId, string typ)
+		{
+			return localStore.GetDetailedData(objectId, typ);
+		} // func GetDetailedData
+
+		#endregion
+
+		#region -- UI - Helper ------------------------------------------------------------
+
+		void IPpsShell.BeginInvoke(Action action) => Dispatcher.BeginInvoke(action);
+		async Task IPpsShell.InvokeAsync(Action action) => await Dispatcher.InvokeAsync(action);
+		async Task<T> IPpsShell.InvokeAsync<T>(Func<T> func) => await Dispatcher.InvokeAsync<T>(func);
+
 		public void ShowException(ExceptionShowFlags flags, Exception exception, object alternativeMessage = null)
 		{
-			Dispatcher.Invoke(
-				() =>
-				{
-					System.Windows.MessageBox.Show("todo: " + (alternativeMessage ?? exception.Message));
-        });
+			System.Windows.MessageBox.Show("todo: " + (alternativeMessage ?? exception.Message));
 		} // proc ShowException
 
+		public async Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, object alternativeMessage = null)
+		{
+			await Dispatcher.InvokeAsync(() => ShowException(flags, exception, alternativeMessage));
+		} // proc ShowException
+
+		#endregion
+
+		/// <summary>Internal Uri of the environment.</summary>
+		public Uri BaseUri => baseUri;
 		/// <summary></summary>
 		public WebIndex Web { get; }
+		/// <summary>Default encodig for strings.</summary>
+		public Encoding Encoding => Encoding.Default;
 
 		/// <summary>Has the application login data.</summary>
 		public bool IsAuthentificated { get { return userInfo != null; } }

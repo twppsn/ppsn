@@ -19,9 +19,31 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public class PpsLocalDataStore : PpsDataStore
 	{
-		// Q&D
-		private System.Data.DataTable dtKund;
-		private System.Data.DataTable dtTeil;
+		#region Q&D
+		private class QDRowDataRecord : IDataRecord
+		{
+			private System.Data.DataRowView row;
+
+			public QDRowDataRecord(System.Data.DataRowView row)
+			{
+				this.row = row;
+			}
+
+			public object this[string fieldName] => row[fieldName];
+
+			public object this[int fieldIndex] => row[fieldIndex];
+
+			public int FieldCount => row.DataView.Table.Columns.Count;
+
+			public Type GetFieldType(int fieldIndex) => row.DataView.Table.Columns[fieldIndex].DataType;
+
+			public string GetName(int fieldIndex) => row.DataView.Table.Columns[fieldIndex].ColumnName;
+
+			public bool IsNull(int fieldIndex) => row[fieldIndex] == DBNull.Value || row[fieldIndex] == null;
+		}
+
+		private Dictionary<string, System.Data.DataTable> localData = new Dictionary<string, System.Data.DataTable>(StringComparer.OrdinalIgnoreCase);
+		#endregion
 
 		public PpsLocalDataStore(PpsEnvironment environment)
 			: base(environment)
@@ -60,89 +82,15 @@ namespace TecWare.PPSn.Data
 
 			dt.AcceptChanges();
 		} // proc LoadTestData
-		
-		private void GetLocalList(PpsStoreResponse r)
-		{
-			var listId = r.Request.Arguments.Get("id").ToLower();
-			var filterId = r.Request.Arguments.Get("filter");
-			var orderDef = r.Request.Arguments.Get("order");
-			var startAtString = r.Request.Arguments.Get("start");
-			var countString = r.Request.Arguments.Get("count");
-
-			// get the table
-			string filterExpression = String.Empty;
-			System.Data.DataTable dt = null;
-			if (listId == "parts")
-			{
-				LoadTestData(@"..\..\Local\Data\Teil.xml", ref dtTeil);
-				dt = dtTeil;
-
-				if (!String.IsNullOrEmpty(filterId))
-					if (filterId == "active")
-						filterExpression = "TEILSTATUS = '10'";
-					else if (filterId == "inactive")
-						filterExpression = "TEILSTATUS = '90'";
-			}
-			else if (listId == "contacts")
-			{
-				LoadTestData(@"..\..\Local\Data\Kont.xml", ref dtKund);
-				dt = dtKund;
-
-				if (!String.IsNullOrEmpty(filterId))
-					if (filterId == "liefonly")
-						filterExpression = "KONTDEBNR is null";
-					else if (filterId == "kundonly")
-						filterExpression = "KONTKREDNR is null";
-					else if (filterId == "intonly")
-						filterExpression = "1 = 0";
-			}
-
-			// filter data
-			if (orderDef != null)
-				orderDef = orderDef.Replace("+", " asc").Replace("-", " desc");
-			var startAt = Int32.Parse(startAtString);
-			var count = Int32.Parse(countString);
-
-			var xDataReader = new XElement("datareader");
-			var xColumns = new XElement("columns");
-			xDataReader.Add(xColumns);
-			foreach (System.Data.DataColumn col in dt.Columns)
-				xColumns.Add(new XElement("column", new XAttribute("name", col.ColumnName), new XAttribute("type", LuaType.GetType(col.DataType).AliasOrFullName)));
-
-			var xItems = new XElement("items");
-			xDataReader.Add(xItems);
-			using (var dv = new System.Data.DataView(dt, filterExpression, orderDef, System.Data.DataViewRowState.CurrentRows))
-				for (int i = 0; i < count; i++)
-				{
-					var index = startAt + i;
-					if (index < dv.Count)
-					{
-						var xItem = new XElement("item");
-
-						for (int j = 0; j < dt.Columns.Count; j++)
-							xItem.Add(new XElement(dt.Columns[j].ColumnName, dv[index][j]));
-
-						xItems.Add(xItem);								
-					}
-				}
-
-			// create result
-			var src = new MemoryStream();
-			var b = Encoding.ASCII.GetBytes(xDataReader.ToString());
-			src.Write(b, 0, b.Length);
-			src.Position = 0;
-
-			r.SetResponseData(src, MimeTypes.Xml);
-		} // func GetLocalList
-
+				
 		protected override void GetResponseDataStream(PpsStoreResponse r)
 		{
 			var actionName = r.Request.Arguments.Get("action");
-			if (actionName == "getlist")
-			{
-				GetLocalList(r);
-				return;
-			}
+			//if (actionName == "getlist") // todo support getlist
+			//{
+			//	GetLocalList(r);
+			//	return;
+			//}
 
 			var fi = new FileInfo(Path.Combine(@"..\..\Local", r.Request.Path.Substring(1).Replace('/', '\\')));
 			if (!fi.Exists)
@@ -156,5 +104,67 @@ namespace TecWare.PPSn.Data
 
 			r.SetResponseData(fi.OpenRead(), contentType);
 		} // func GetResponseDataStream
+
+		/// <summary>Override to support a better stream of the locally stored data.</summary>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public override IEnumerable<IDataRecord> GetListData(PpsShellGetList arguments)
+		{
+			// get the table
+			string filterExpression = String.Empty;
+			System.Data.DataTable dt = null;
+
+			// get the datatable
+			if (!localData.TryGetValue(arguments.ListId, out dt))
+			{
+				LoadTestData(@"..\..\Local\Data\" + arguments.ListId + ".xml", ref dt);
+				localData[arguments.ListId] = dt;
+			}
+
+			#region Q&D
+			var filterId = arguments.PreFilterId;
+			if (!String.IsNullOrEmpty(filterId))
+			{
+				switch (arguments.ListId.ToLower())
+				{
+					case "parts":
+						if (filterId == "active")
+							filterExpression = "TEILSTATUS = '10'";
+						else if (filterId == "inactive")
+							filterExpression = "TEILSTATUS = '90'";
+						break;
+
+					case "contacts":
+						if (!String.IsNullOrEmpty(filterId))
+							if (filterId == "liefonly")
+								filterExpression = "KONTDEBNR is null";
+							else if (filterId == "kundonly")
+								filterExpression = "KONTKREDNR is null";
+							else if (filterId == "intonly")
+								filterExpression = "1 = 0";
+						break;
+				}
+			}
+			#endregion
+
+			// filter data
+			var orderDef = arguments.OrderId;
+			if (orderDef != null)
+				orderDef = orderDef.Replace("+", " asc").Replace("-", " desc");
+				
+			// enumerate lines
+			using (var dv = new System.Data.DataView(dt, filterExpression, orderDef, System.Data.DataViewRowState.CurrentRows))
+				for (int i = 0; i < arguments.Count; i++)
+				{
+					var index = arguments.Start + i;
+					if (index < dv.Count)
+						yield return new QDRowDataRecord(dv[index]);
+				}
+		} // func GetListData
+
+		public override IDataRecord GetDetailedData(long objectId, string typ)
+		{
+			return null;
+		} // func GetDetailedData
 	} // class PpsLocalDataStore
 }
