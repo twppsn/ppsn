@@ -47,6 +47,7 @@
   <ItemGroup>
     <Compile Include="Data\DataColumn.cs" />
     <Compile Include="Data\DataHelper.cs" />
+    <Compile Include="Data\DataList.cs" />
     <Compile Include="Data\DataSet.cs" />
     <Compile Include="Data\DataTable.cs" />
     <Compile Include="Data\PpsDataTableClient.cs" />
