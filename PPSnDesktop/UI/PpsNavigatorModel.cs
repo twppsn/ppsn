@@ -204,15 +204,15 @@ namespace TecWare.PPSn.UI
 				await items.ClearAsync();
 			else
 			{
-				var relativeSource = $"?action=getlist&id={CurrentView.Name}";
+				var dataSource = new PpsShellGetList(CurrentView.Name) { Detailed = false };
 
 				if (currentFilter != null)
-					relativeSource += "&filter=" + currentFilter.FilterName;
-
+					dataSource.PreFilterId = currentFilter.FilterName;
 				if (currentOrder != null)
-					relativeSource += "&order=" + currentOrder.ColumnName + (sortAscending ? "+" : "-");
+					dataSource.OrderId = currentOrder.ColumnName + (sortAscending ? "+" : "-");
+				dataSource.CustomFilter = null;
 
-				await items.Reset(new Uri(windowModel.Environment.Web[PpsEnvironmentDefinitionSource.Offline].BaseUri, relativeSource));
+				await items.Reset(dataSource);
 			}
 		} // proc RefreshData
 

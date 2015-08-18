@@ -89,8 +89,8 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Resource Include="Local\Data\Kont.xml" />
-    <Resource Include="Local\Data\Teil.xml" />
+    <Resource Include="Local\Data\contacts.xml" />
+    <Resource Include="Local\Data\parts.xml" />
     <Content Include="Local\Masks\TestWpfGeneric.xaml">
       <SubType>Designer</SubType>
     </Content>
@@ -164,9 +164,7 @@
       <SubType>Designer</SubType>
     </Resource>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Local\Data\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
