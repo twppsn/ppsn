@@ -31,17 +31,17 @@ namespace TecWare.PPSn.Data
 		/// <summary>Notifies if a property of the datalist is changed.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		private IPpsShell shell;						// shell for the data list, to retrieve data and synchronize the events
+		private IPpsShell shell;            // shell for the data list, to retrieve data and synchronize the events
 		private PpsShellGetList dataSource = PpsShellGetList.Empty; // List, that will be fetched
-		private int windowSize;							// Size of the window, that will be fetched
+		private int windowSize;             // Size of the window, that will be fetched
 
-		private bool fullyLoaded = false;				// is all data fetched
+		private bool fullyLoaded = false;       // is all data fetched
 		private object rowLock = new object();  // Synchronisation
-		private int loadedCount = 0;						// Current number of items in the array
-		private int visibleCount = 0;						// Current number of items for the ui
-		private dynamic[] rows = emptyList;			// Currently loaded lines
+		private int loadedCount = 0;            // Current number of items in the array
+		private int visibleCount = 0;           // Current number of items for the ui
+		private dynamic[] rows = emptyList;     // Currently loaded lines
 
-		private Action<int, int> procFetchNextWindow;	// Delegate, for the background fetch of a page
+		private Action<int, int> procFetchNextWindow; // Delegate, for the background fetch of a page
 		private int currentFetchTo = 0;               // position to read
 		private FetchFollow currentFetchFollow = FetchFollow.None; // type of background fetch
 		private IAsyncResult currentFetchResult = null; // Current fetch
@@ -66,7 +66,7 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		#region -- Reset, Clear -----------------------------------------------------------
-		
+
 		/// <summary>Resets the datasource.</summary>
 		/// <param name="dataSource"></param>
 		/// <returns></returns>
@@ -456,7 +456,7 @@ namespace TecWare.PPSn.Data
 
 		// -- Static --------------------------------------------------------------
 
-#region -- class FetchItem --------------------------------------------------------
+		#region -- class FetchItem --------------------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
@@ -464,7 +464,7 @@ namespace TecWare.PPSn.Data
 		{
 			private readonly WeakReference<PpsDataList> pOwner;
 			private readonly WeakReference<object> pItem;
-			
+
 			public FetchItem(PpsDataList owner, object item)
 			{
 				this.pOwner = new WeakReference<PpsDataList>(owner);
@@ -483,11 +483,11 @@ namespace TecWare.PPSn.Data
 						var sw = Stopwatch.StartNew();
 #endif
 
-						long objectId = item.OBJKID;
-						string objectTyp = item.OBJKTYP;
-						var r = owner.Shell.GetDetailedData(objectId, objectTyp);
-						if (r != null)
-							owner.Shell.BeginInvoke(() => owner.UpdateTableWithRecord(item, r));
+						//long objectId = item.OBJKID;
+						//string objectTyp = item.OBJKTYP;
+						//var r = owner.Shell.GetDetailedData(objectId, objectTyp);
+						//if (r != null)
+						//	owner.Shell.BeginInvoke(() => owner.UpdateTableWithRecord(item, r));
 #if LDEBUG
 						Debug.WriteLine("ID = {0} ==> {1} ms", objectId, sw.ElapsedMilliseconds);
 #endif
@@ -500,7 +500,7 @@ namespace TecWare.PPSn.Data
 			} // proc Update
 		} // class FetchItem
 
-#endregion
+		#endregion
 
 		private static readonly LuaTable[] emptyList = new LuaTable[0];
 

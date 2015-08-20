@@ -83,11 +83,6 @@ namespace TecWare.PPSn
 		/// <param name="arguments"></param>
 		/// <returns></returns>
 		IEnumerable<IDataRecord> GetListData(PpsShellGetList arguments);
-		/// <summary>Returns detailed data to the givven object id.</summary>
-		/// <param name="objectId">Id of the object.</param>
-		/// <param name="typ">Typ of the object.</param>
-		/// <returns>Data</returns>
-		IDataRecord GetDetailedData(long objectId, string typ);
 
 		/// <summary>Synchronization with UI</summary>
 		/// <param name="action"></param>
