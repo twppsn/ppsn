@@ -89,11 +89,16 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Resource Include="Local\Templates.xml" />
     <Resource Include="Local\Data\contacts.xml" />
     <Resource Include="Local\Data\parts.xml" />
     <Content Include="Local\Masks\TestWpfGeneric.xaml">
       <SubType>Designer</SubType>
     </Content>
+    <Page Include="Local\Templates.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="UI\Panes\PpsLoginPane.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
  			 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
+						 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
              xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="600">
@@ -47,7 +48,7 @@
 									   Cursor="Arrow"
 									   Minimum="0" 
 									   Maximum="{TemplateBinding ScrollableHeight}" 
-									   Opacity=".6"
+									   Opacity="1"
 									   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" 
 									   Value="{Binding VerticalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" 
 									   ViewportSize="{TemplateBinding ViewportHeight}"/>
@@ -57,7 +58,7 @@
 									   Cursor="Arrow"
 									   Minimum="0"
 									   Maximum="{TemplateBinding ScrollableWidth}"
-									   Opacity=".6"
+									   Opacity="1"
 									   Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" 
 									   Value="{Binding HorizontalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" 
 									   ViewportSize="{TemplateBinding ViewportWidth}"/>
@@ -71,7 +72,7 @@
 								<Trigger.EnterActions>
 									<BeginStoryboard>
 										<Storyboard>
-											<DoubleAnimation Storyboard.TargetName="PART_VerticalScrollBar" Storyboard.TargetProperty="Opacity"  From="0.0" To="0.6" Duration="0:0:0.5"/>
+											<DoubleAnimation Storyboard.TargetName="PART_VerticalScrollBar" Storyboard.TargetProperty="Opacity"  From="0.0" To="1" Duration="0:0:0.5"/>
 										</Storyboard>
 									</BeginStoryboard>
 								</Trigger.EnterActions>
@@ -244,7 +245,7 @@
 				 IsSynchronizedWithCurrentItem="True"
                  ItemContainerStyle="{StaticResource NavigatorViewsContainerStyle}" />
 
-        <ListBox x:Name="PART_Testlist" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource NavigatorListBoxStyle}" Margin="50,21,50,0"  FontSize="14.667" SnapsToDevicePixels="True"
+        <uiC:DataListControl x:Name="PART_Testlist" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource NavigatorListBoxStyle}" Margin="50,21,50,0"  FontSize="14.667" SnapsToDevicePixels="True"
                  AlternationCount="2"
                  DataContext="{Binding Navigator}"
                  ItemsSource="{Binding Items}">
@@ -256,8 +257,7 @@
                         <Setter.Value>
                             <ControlTemplate TargetType="{x:Type ListBoxItem}">
                                 <StackPanel x:Name="PART_Panel" Orientation="Horizontal" Height="37" SnapsToDevicePixels="True">
-                                    <Label Content="{Binding Path=OBJKID}" VerticalContentAlignment="Center" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
-                                    <Label Content="{Binding Path=OBJKMATCH}" VerticalContentAlignment="Center" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
+                                    <ContentPresenter />
                                 </StackPanel>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="ItemsControl.AlternationIndex" Value="0">
@@ -272,7 +272,7 @@
                     </Setter>
                 </Style>
             </ListBox.ItemContainerStyle>
-        </ListBox>
+        </uiC:DataListControl>
 
         <ItemsControl x:Name="PART_Actions" Grid.Row="2" Grid.Column="1"  DataContext="{Binding Navigator}" ItemsSource="{Binding VisibleActions}" IsTabStop="False" >
             <ItemsControl.ItemsPanel>

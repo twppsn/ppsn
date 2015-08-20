@@ -10,58 +10,50 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Neo.IronLua;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Controls
 {
+	#region -- class PpsDataListTemplateSelector ----------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class PpsDataListTemplateSelector : DataTemplateSelector
+	{
+		private PpsEnvironment environment;
+
+		public PpsDataListTemplateSelector(PpsEnvironment environment)
+		{
+			this.environment = environment;
+		} // ctor
+
+		public override DataTemplate SelectTemplate(object item, DependencyObject container)
+		{
+			var table = item as LuaTable;
+			var key = table != null ? table.GetMemberValue("OBJKTYP") : ((dynamic)item).OBJKTYP;
+			if (key == null)
+				return null;
+
+			var typeDef = environment.DataListItemTypes[key];
+			return typeDef?.FindTemplate(item);
+		} // proc SelectTemplate
+	} // class PpsDataListTemplateSelector
+
+	#endregion
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Spezial Control to display data list</summary>
 	public class DataListControl : ListBox
 	{
-		private ICollectionView currentDataList = null;
-		private NotifyCollectionChangedEventHandler collectionChanged;
-
 		public DataListControl()
 		{
 			// Create a virtual listbox
-			SetValue(HorizontalContentAlignmentProperty, System.Windows.HorizontalAlignment.Stretch);
+			SetValue(HorizontalContentAlignmentProperty, HorizontalAlignment.Stretch);
 			SetValue(VirtualizingStackPanel.IsVirtualizingProperty, true);
 			SetValue(VirtualizingStackPanel.VirtualizationModeProperty, VirtualizationMode.Recycling);
 			SetValue(ScrollViewer.IsDeferredScrollingEnabledProperty, true);
-
-			this.collectionChanged = (sender, e) => ResetList(e);
 		} // ctor
-
-		private PpsDataList GetPpsData()
-		{
-			return this.DataContext as PpsDataList;
-		} // func GetPpsData
-
-		protected override void OnItemsSourceChanged(IEnumerable oldValue, IEnumerable newValue)
-		{
-			base.OnItemsSourceChanged(oldValue, newValue);
-
-			if (currentDataList != null)
-				currentDataList.CollectionChanged += collectionChanged;
-
-			currentDataList = newValue as ICollectionView;
-
-			if (currentDataList != null)
-			{
-				currentDataList.CollectionChanged += collectionChanged;
-				ResetList(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-			}
-		} // proc OnItemsSourceChanged
-		
-		private void ResetList(NotifyCollectionChangedEventArgs e)
-		{
-			if (e.Action == NotifyCollectionChangedAction.Reset)
-			{
-				var scroll = this.GetVisualChild<ScrollViewer>();
-				if (scroll != null)
-					scroll.ScrollToTop();
-			}
-		} // proc ResetList
 
 		//private bool ShowClassContextMenu(dynamic item)
 		//{
@@ -90,6 +82,14 @@ namespace TecWare.PPSn.Controls
 			//	e.Handled = ShowClassContextMenu(this.SelectedItem);
 			base.OnKeyUp(e);
 		} // proc OnKeyUp
+
+		protected override void OnItemsSourceChanged(IEnumerable oldValue, IEnumerable newValue)
+		{
+			if (this.ItemTemplateSelector == null)
+				this.ItemTemplateSelector = PpsEnvironment.GetEnvironment(this).DataListTemplateSelector;
+
+			base.OnItemsSourceChanged(oldValue, newValue);
+		} // proc OnItemsSourceChanged
 
 		//protected override void OnMouseDoubleClick(MouseButtonEventArgs e)
 		//{

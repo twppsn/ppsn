@@ -1,0 +1,8 @@
+﻿<templates>
+  <template key="KO" datatemplate="PartsTemplate">
+    <!--<Condition></Condition>
+    <Code></Code>-->
+  </template>
+  <template key="TL" datatemplate="PartsTemplate">
+  </template>
+</templates>
