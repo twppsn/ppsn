@@ -59,6 +59,10 @@ namespace TecWare.PPSn.UI
 				});
 		} // ctor
 
+		protected virtual void OnWindowCaptionClicked()
+		{
+		}
+
 		public PpsEnvironment Environment
 		{
 			get
@@ -74,7 +78,7 @@ namespace TecWare.PPSn.UI
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-  public class PpsWindowApplicationSettings : ApplicationSettingsBase
+	public class PpsWindowApplicationSettings : ApplicationSettingsBase
 	{
 		private PpsWindow owner;
 		private DispatcherTimer persistTimer;

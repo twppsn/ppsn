@@ -5,6 +5,7 @@
     <Color x:Key="PPSnDesktopColor">#3B4A62</Color>
     <Color x:Key="PPSnAccentColor">#FFF</Color>
     <Color x:Key="PPSnAccentColor1">#F7E51D</Color>
+    <Color x:Key="PPSnBlackColor">#000</Color>
     <Color x:Key="PPSnButtonMouseOverColor">#1F6588</Color>
     <Color x:Key="PPSnButtonPressedColor">#333333</Color>
 
@@ -17,7 +18,7 @@
     <SolidColorBrush x:Key="PPSnButtonMouseOverBrush" Color="{StaticResource PPSnButtonMouseOverColor}"/>
     <SolidColorBrush x:Key="PPSnButtonPressedBrush" Color="{StaticResource PPSnButtonPressedColor}"/>
 	<SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="#007ACC" />
-      
+
     <Color x:Key="PPSnWindowActiveGlowColor">#007ACC</Color>
     <Color x:Key="PPSnWindowInActiveGlowColor">#60728C</Color>
 

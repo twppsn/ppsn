@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
  			 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
+ 			 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
              xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="600">
@@ -234,9 +235,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Border x:Name="PART_ViewsHeader" Margin="32,0,0,2" BorderThickness="0,0,0,4" BorderBrush="{StaticResource PPSnWindowForegroundBrush}" SnapsToDevicePixels="True">
-            <TextBlock Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="0,0,0,2" FontSize="14.667" FontWeight="DemiBold"
-                       DataContext="{Binding Navigator}"
-                       Text="{Binding CurrentViewCaption}" />
+            <TextBlock Text="DATEN" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="0,0,0,2" FontSize="14.667" FontWeight="DemiBold" />
         </Border>
         <ListBox x:Name="PART_Views" Grid.Column="0" Grid.Row="1" Style="{StaticResource NavigatorListBoxStyle}" Margin="32,0,0,0" FontSize="14.667" SnapsToDevicePixels="True"
 				 DataContext="{Binding Navigator}"
@@ -244,7 +243,7 @@
 				 IsSynchronizedWithCurrentItem="True"
                  ItemContainerStyle="{StaticResource NavigatorViewsContainerStyle}" />
 
-        <ListBox x:Name="PART_Testlist" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource NavigatorListBoxStyle}" Margin="50,21,50,0"  FontSize="14.667" SnapsToDevicePixels="True"
+        <uiC:DataListControl x:Name="PART_Items" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource NavigatorListBoxStyle}" Margin="50,21,50,0"  FontSize="14.667" SnapsToDevicePixels="True"
                  AlternationCount="2"
                  DataContext="{Binding Navigator}"
                  ItemsSource="{Binding Items}">
@@ -272,7 +271,7 @@
                     </Setter>
                 </Style>
             </ListBox.ItemContainerStyle>
-        </ListBox>
+        </uiC:DataListControl>
 
         <ItemsControl x:Name="PART_Actions" Grid.Row="2" Grid.Column="1"  DataContext="{Binding Navigator}" ItemsSource="{Binding VisibleActions}" IsTabStop="False" >
             <ItemsControl.ItemsPanel>

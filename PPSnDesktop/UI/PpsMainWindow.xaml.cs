@@ -138,6 +138,20 @@ namespace TecWare.PPSn.UI
 		{
 			base.OnPropertyChanged(e);
 		}
+		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+		{
+			base.OnPreviewMouseDown(e);
+			if (object.Equals(e.Source, PART_SearchBox))
+				ExpandSearchBox();
+			else
+				CollapseSearchBox();
+		}
+
+		//protected override void OnKeyDown(KeyEventArgs e)
+		//{
+		//	base.OnKeyDown(e);
+		//	e.Handled = ExpandSearchBox(e);
+		//}
 
 		// TEST Schmidt open ContextMenu CurrentUser with MouseButtonLeft
 		private void PART_User_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -151,6 +165,48 @@ namespace TecWare.PPSn.UI
 				};
 			InputManager.Current.ProcessInput(mouseDownEvent);
 		} // event PART_User_MouseLeftButtonUp
+
+		#region -- SearchBoxHandling --------------------------------------------------
+
+		protected override void OnWindowCaptionClicked()
+		{
+			CollapseSearchBox();
+		}
+
+
+		//private bool ExpandSearchBox(KeyEventArgs e)
+		//{
+		//	if (object.Equals(e.Source, PART_SearchBox))
+		//		return false;
+		//	switch (e.Key)
+		//	{
+		//		case Key.Tab:
+		//		case Key.Enter:
+		//			return false;
+		//		default:
+		//			ExpandSearchBox();
+		//			break;
+		//	}
+
+		//	return true;
+		//}
+
+
+		private void ExpandSearchBox()
+		{
+			if (PART_SearchBox.Visibility != Visibility.Visible || (PpsnSearchBoxState)PART_SearchBox.Tag == PpsnSearchBoxState.Expanded)
+				return;
+			PART_SearchBox.Tag = PpsnSearchBoxState.Expanded;
+		}
+
+		private void CollapseSearchBox()
+		{
+			if (PART_SearchBox.Visibility != Visibility.Visible || (PpsnSearchBoxState)PART_SearchBox.Tag == PpsnSearchBoxState.Collapsed)
+				return;
+			PART_SearchBox.Tag = PpsnSearchBoxState.Collapsed;
+		}
+
+		#endregion
 
 		private async Task<bool> UnloadPaneAsync()
 		{
@@ -185,5 +241,20 @@ namespace TecWare.PPSn.UI
 		public int WindowIndex => windowIndex; 
 		/// <summary>Access to the current environment,</summary>
 		public new PpsMainEnvironment Environment => (PpsMainEnvironment)base.Environment;
+
+		private void PART_SearchBox_LostFocus(object sender, RoutedEventArgs e)
+		{
+
+		}
 	} // class PpsMainWindow
+
+	#region -- enum PpsnSearchBoxState ------------------------------------------------
+
+	internal enum PpsnSearchBoxState
+	{
+		Expanded,
+		Collapsed
+	}
+
+	#endregion
 }

@@ -134,7 +134,7 @@ namespace TecWare.PPSn.UI
 		} // func ProvideValue
 
 		public Color Source { get; set; } = Colors.Black;
-    public Color Destination { get; set; } = Colors.White;
+		public Color Destination { get; set; } = Colors.White;
 		public float SourcePart { get; set; } = 0.5f;
 		public float Alpha { get; set; } = 1.0f;
 
