@@ -5,4 +5,16 @@
   </template>
   <template key="TL" datatemplate="PartsTemplate">
   </template>
+  <template key="BE" datatemplate="PartsTemplate">
+  </template>
+  <template key="WE" datatemplate="PartsTemplate">
+  </template>
+  <template key="AU" datatemplate="PartsTemplate">
+  </template>
+  <template key="WA" datatemplate="JobsTemplate">
+  </template>
+  <template key="AN" datatemplate="PartsTemplate">
+  </template>
+  <template key="AF" datatemplate="PartsTemplate">
+  </template>
 </templates>

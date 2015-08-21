@@ -20,6 +20,60 @@
     <order displayname="Teilenummer">OBJKNR</order>
     <order displayname="Artikelname">TEILNAME</order>
   </view>
+  <view id="Orders" shortcut="BE" displayname="Bestellungen">
+    <source><![CDATA[?action=getlist&id=orders]]></source>
+    <filter name="active" displayname="Aktiv" />
+    <filter name="inactive" displayname="InAktiv" />
+    <order displayname="Bestellnummer">OBJKNR</order>
+    <order displayname="Matchcode">OBJKMATCH</order>
+    <order displayname="Lieferantennummer">BEKOLNR</order>
+    <order displayname="Lieferantenname">LIEFNAME</order>
+  </view>
+  <view id="Receipts" shortcut="WE" displayname="Wareneingänge">
+    <source><![CDATA[?action=getlist&id=receipts]]></source>
+    <order displayname="Wareneingangsnummer">OBJKNR</order>
+    <order displayname="Matchcode">OBJKMATCH</order>
+    <order displayname="Lieferantennummer">WENRLNR</order>
+    <order displayname="Lieferantenname">LIEFNAME</order>
+    <order displayname="Artikelnummer">WENRTNR</order>
+    <order displayname="Artikelname">TEILNAME</order>
+  </view>
+  <view id="PurchaseOrders" shortcut="AU" displayname="Aufträge">
+    <source><![CDATA[?action=getlist&id=purchaseorders]]></source>
+    <filter name="active" displayname="Aktiv" />
+    <filter name="inactive" displayname="InAktiv" />
+    <order displayname="Auftragsnummer">OBJKNR</order>
+    <order displayname="Matchcode">OBJKMATCH</order>
+    <order displayname="Kundennummer">AUKOKNR</order>
+    <order displayname="Kundenname">KUNDNAME</order>
+  </view>
+  <view id="Jobs" shortcut="WA" displayname="Werkaufträge">
+    <source><![CDATA[?action=getlist&id=jobs]]></source>
+    <filter name="active" displayname="Offen" />
+    <filter name="inactive" displayname="Abgeschlossen" />
+    <order displayname="Werkauftragsnummer">OBJKNR</order>
+    <order displayname="Matchcode">OBJKMATCH</order>
+    <order displayname="Artikelnummer">WAKOTNR</order>
+    <order displayname="Artikelname">TEILNAME</order>
+  </view>
+  <view id="Offers" shortcut="AN" displayname="Angebote">
+    <source><![CDATA[?action=getlist&id=offers]]></source>
+    <filter name="active" displayname="Aktiv" />
+    <filter name="inactive" displayname="InAktiv" />
+    <order displayname="Auftragsnummer">OBJKNR</order>
+    <order displayname="Matchcode">OBJKMATCH</order>
+    <order displayname="Kundennummer">ANKOKNR</order>
+    <order displayname="Kundenname">KUNDNAME</order>
+  </view>
+  <view id="Enquiries" shortcut="AF" displayname="Anfragen">
+    <source><![CDATA[?action=getlist&id=enquiries]]></source>
+    <filter name="active" displayname="Aktiv" />
+    <filter name="inactive" displayname="InAktiv" />
+    <order displayname="Auftragsnummer">OBJKNR</order>
+    <order displayname="Matchcode">OBJKMATCH</order>
+    <order displayname="Lieferantennummer">AFKOKNR</order>
+    <order displayname="Lieferantenname">LIEFNAME</order>
+  </view>
 
 <!--
   //views.AppendItem(new PpsMainViewDefinition(this, PpsEnvironmentDefinitionSource.Offline, "BE", "Bestellungen",
