@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<actions>
+  <action name="newpart" shortcut="new" displayname="Neuer Artikel">
+    <condition><![CDATA[ return CurrentView == Views['Parts'] ]]></condition>
+    <code><![CDATA[msgbox('Hallo');]]></code>
+  </action>
+  <action name="editpart" shortcut="edit" displayname="Bearbeiten">
+    <condition><![CDATA[ return IsItemType(CurrentItem, 'TL') ]]></condition>
+    <code><![CDATA[msgbox('Hallo');]]></code>
+  </action>
+  <action name="newcontact" shortcut="new" base="TL" displayname="Neuer Kontakt">
+    <condition><![CDATA[ return CurrentView == Views['Contacts'] ]]></condition>
+    <code><![CDATA[msgbox('Hallo');]]></code>
+  </action>
+  <action name="editcontent" shortcut="edit" displayname="Bearbeiten">
+    <condition><![CDATA[ return IsItemType(CurrentItem, 'KO') ]]></condition>
+    <code><![CDATA[ LoadMask({ template = 'local/Masks/MasterData.Contacts.xaml', OBJKID = CurrentItem.OBJKID }); ]]></code>
+  </action>
+  <action name="test" displayname="Test" priority="-110">
+    <code><![CDATA[LoadPane({ template = "local/Masks/TestWpfGeneric.xaml"})]]></code>
+  </action>
+  <action name="closeapp" displayname="Beenden" priority="-100">
+    <code><![CDATA[ msgbox('Beenden'); ]]></code>
+  </action>
+</actions>

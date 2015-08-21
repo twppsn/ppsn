@@ -8,43 +8,61 @@ using TecWare.DES.Stuff;
 
 namespace TecWare.PPSn
 {
+	#region -- class PpsMainViewOrder ---------------------------------------------------
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class PpsMainViewOrder
+	public sealed class PpsMainViewOrder
 	{
-		internal PpsMainViewOrder(XElement x)
+		internal PpsMainViewOrder(XElement x, ref int priority)
 		{
 			this.ColumnName = x.Value;
 			if (String.IsNullOrEmpty(this.ColumnName))
 				throw new ArgumentNullException("@name");
+
 			this.DisplayName = x.GetAttribute("displayname", ColumnName);
+
+			this.Priority = priority = x.GetAttribute("priority", priority + 1);
 		} // ctor
 
 		public string DisplayName { get; }
 		public string ColumnName { get; }
+		public int Priority { get; }
 	} // class PpsMainViewSort
+
+	#endregion
+
+	#region -- class PpsMainViewFilter --------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class PpsMainViewFilter
+	public sealed class PpsMainViewFilter
 	{
-		internal PpsMainViewFilter(XElement x)
+		internal PpsMainViewFilter(XElement x, ref int priority)
 		{
 			this.Name = x.GetAttribute("name", String.Empty);
 			if (String.IsNullOrEmpty(this.Name))
         throw new ArgumentNullException("@name");
+
       this.DisplayName = x.GetAttribute("displayname", this.Name);
 			this.ShortCut = x.GetAttribute("shortcut", String.Empty);
+
+			this.Priority = priority = x.GetAttribute("priority", priority + 1);
 		} // ctor
 
 		public string Name { get; }
 		public string ShortCut { get; }
 		public string DisplayName { get; }
+		public int Priority { get; }
 	} // class PpsMainViewFilter
+
+	#endregion
+
+	#region -- class PpsMainViewDefinition ----------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class PpsMainViewDefinition : PpsEnvironmentDefinition
+	public sealed class PpsMainViewDefinition : PpsEnvironmentDefinition
 	{
 		public static readonly XName xnViews = "views";
 		public static readonly XName xnView = "view";
@@ -72,13 +90,17 @@ namespace TecWare.PPSn
 				throw new ArgumentException("List source missing."); // todo: exception
 
 			// parse the filters
-			this.filters = (from c in xDefinition.Elements(xnFilter) select new PpsMainViewFilter(c)).ToArray();
+			var priority = 0;
+			this.filters = (from c in xDefinition.Elements(xnFilter) select new PpsMainViewFilter(c, ref priority)).OrderBy(c => c.Priority).ToArray();
 			// parse orders
-			this.sortOrders = (from c in xDefinition.Elements(xnOrder) select new PpsMainViewOrder(c)).ToArray();
+			priority = 0;
+      this.sortOrders = (from c in xDefinition.Elements(xnOrder) select new PpsMainViewOrder(c, ref priority)).OrderBy(c => c.Priority).ToArray();
 		} // ctor
 
 		public string DisplayName => displayName;
 		public IEnumerable<PpsMainViewFilter> Filters => filters;
 		public IEnumerable<PpsMainViewOrder> SortOrders => sortOrders;
 	} // class PpsMainViewDefinition
+
+	#endregion
 }

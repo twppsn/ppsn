@@ -14,6 +14,8 @@ using System.Collections;
 using System.Collections.Specialized;
 using TecWare.PPSn.Data;
 using TecWare.DES.Networking;
+using System.Xml.Linq;
+using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn
 {
@@ -420,6 +422,8 @@ namespace TecWare.PPSn
 		private ResourceDictionary mainResources;
 
 		private PpsTraceLog logData = new PpsTraceLog();
+		private PpsDataListTemplateSelector dataListTemplateSelector;
+		private PpsEnvironmentCollection<PpsDataListItemDefinition> datalistItems;
 
 		private DispatcherTimer idleTimer;
 		private List<WeakReference<IPpsIdleAction>> idleActions = new List<WeakReference<IPpsIdleAction>>();
@@ -436,7 +440,9 @@ namespace TecWare.PPSn
 			this.inputManager = InputManager.Current;
 			this.synchronizationContext = new DispatcherSynchronizationContext(currentDispatcher);
 			this.Web = new WebIndex(this);
-
+			this.dataListTemplateSelector = new PpsDataListTemplateSelector(this);
+			this.datalistItems = new PpsEnvironmentCollection<PpsDataListItemDefinition>(this);
+			
 			// Start idle implementation
 			idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), currentDispatcher);
 			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer();
@@ -500,9 +506,26 @@ namespace TecWare.PPSn
 
 		/// <summary>Loads basic data for the environment.</summary>
 		/// <returns></returns>
-		public virtual Task RefreshAsync()
+		public async virtual Task RefreshAsync()
 		{
-			return Task.Delay(1000);
+			await Task.Yield();
+
+			var xTemplates = XDocument.Load(@"..\..\Local\Templates.xml");
+			foreach (var xTemplate in xTemplates.Root.Elements("template"))
+			{
+				var key = xTemplate.GetAttribute("key", String.Empty);
+				if (String.IsNullOrEmpty(key))
+					continue;
+
+				var typeDef = datalistItems[key];
+				if (typeDef == null)
+				{
+					typeDef = new PpsDataListItemDefinition(this, PpsEnvironmentDefinitionSource.Offline, key);
+					datalistItems.AppendItem(typeDef);
+				}
+
+				typeDef.AppendTemplate(xTemplate);
+			}
 		} // proc RefreshAsync
 
 		protected virtual void OnIsOnlineChanged()
@@ -587,17 +610,12 @@ namespace TecWare.PPSn
 		{
 			return localStore.GetListData(arguments);
 		} // func GetListData
-
-		public IDataRecord GetDetailedData(long objectId, string typ)
-		{
-			return localStore.GetDetailedData(objectId, typ);
-		} // func GetDetailedData
-
+		
 		#endregion
 
 		#region -- UI - Helper ------------------------------------------------------------
 
-		void IPpsShell.BeginInvoke(Action action) => Dispatcher.BeginInvoke(action);
+		void IPpsShell.BeginInvoke(Action action) => Dispatcher.BeginInvoke(action, DispatcherPriority.ApplicationIdle); // must be idle, that method is invoked after the current changes
 		async Task IPpsShell.InvokeAsync(Action action) => await Dispatcher.InvokeAsync(action);
 		async Task<T> IPpsShell.InvokeAsync<T>(Func<T> func) => await Dispatcher.InvokeAsync<T>(func);
 
@@ -610,6 +628,26 @@ namespace TecWare.PPSn
 		{
 			await Dispatcher.InvokeAsync(() => ShowException(flags, exception, alternativeMessage));
 		} // proc ShowException
+
+		#endregion
+
+		#region -- LuaHelper --------------------------------------------------------------
+
+		[LuaMember("msgbox")]
+		private void LuaMsgBox(string text, string caption)
+		{
+			MessageBox.Show(text, caption ?? "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+		} // proc LuaMsgBox
+
+		#endregion
+
+		#region -- Resources --------------------------------------------------------------
+
+		public T FindResource<T>(object resourceKey)
+			where T : class
+		{
+			return mainResources[resourceKey] as T;
+		} // func FindResource 
 
 		#endregion
 
@@ -628,6 +666,11 @@ namespace TecWare.PPSn
 		public string Username { get { return userInfo == null ? String.Empty : userInfo.UserName; } }
 		/// <summary>Display name for the user.</summary>
 		public string UsernameDisplay { get { return "No User"; } }
+
+		/// <summary></summary>
+		public PpsEnvironmentCollection<PpsDataListItemDefinition> DataListItemTypes => datalistItems;
+		/// <summary></summary>
+		public PpsDataListTemplateSelector DataListTemplateSelector => dataListTemplateSelector;
 
 		/// <summary>Dispatcher of the ui-thread.</summary>
 		public Dispatcher Dispatcher { get { return currentDispatcher; } }

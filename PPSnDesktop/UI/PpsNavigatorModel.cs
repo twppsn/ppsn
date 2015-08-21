@@ -98,17 +98,16 @@ namespace TecWare.PPSn.UI
 
 		private PpsDataList items;
 		private ICollectionView itemsView;
-
-
+		
 		private string currentSearchText = String.Empty;
-		private string currentViewCaption = String.Empty;
-
+		
 		public PpsNavigatorModel(PpsMainWindow windowModel)
 		{
 			this.windowModel = windowModel;
 
 			// Create a view for the actions
 			actions = CollectionViewSource.GetDefaultView(Environment.Actions);
+			actions.SortDescriptions.Add(new SortDescription("Priority", ListSortDirection.Ascending));
 			actions.Filter += FilterAction;
 
 			// Create a view for the views
@@ -119,18 +118,17 @@ namespace TecWare.PPSn.UI
 			// init data list
 			items = new PpsDataList(Environment);
 			itemsView = CollectionViewSource.GetDefaultView(items);
+			itemsView.CurrentChanged += (sender, e) => RefreshActions();
 
 			// Update the view
 			if (!views.MoveCurrentToFirst())
 				UpdateCurrentView((PpsMainViewDefinition)views.CurrentItem);
-			
-			currentViewCaption = "Daten";
 		} // ctor
 
 		private bool FilterAction(object item)
 		{
 			var action = item as PpsMainActionDefinition;
-			return action != null;
+			return action != null ? action.CheckCondition(this, false) : false;
 		} // func ActionFilter
 		
 		private void UpdateCurrentView(PpsMainViewDefinition currentView)
@@ -159,6 +157,7 @@ namespace TecWare.PPSn.UI
 			UpdateCurrentFilter(null);
 			
 			RefreshData();
+			RefreshActions();
 		} // proc UpdateCurrentView
 
 		private void UpdateCurrentFilter(PpsFilterView newFilter)
@@ -216,6 +215,36 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc RefreshData
 
+		private void RefreshActions()
+		{
+			actions.Refresh();
+		} // proc RefreshActions
+
+		[LuaMember(nameof(IsItemType))]
+		public bool IsItemType(object item, string typ)
+		{
+			var t = item as LuaTable;
+			if (t == null)
+				return false;
+			else
+			{
+				var itemTyp = t.GetOptionalValue("OBJKTYP", String.Empty);
+				return itemTyp == typ;
+			}
+		} // func IsItemType
+
+		[LuaMember("LoadPane")]
+		private async Task LuaLoadGenericPaneAsync(LuaTable arguments)
+		{
+			await windowModel.LoadPaneAsync(typeof(PpsGenericWpfWindowPane), arguments);
+		} // proc LuaLoadGenericPane
+
+		[LuaMember("LoadMask")]
+		private async Task LoadGenericMaskAsync(LuaTable arguments)
+		{
+			await windowModel.LoadPaneAsync(typeof(PpsGenericMaskWindowPane), arguments);
+		} // proc LoadGenericMask
+
 		protected override object OnIndex(object key)
 		{
 			return base.OnIndex(key) ?? Environment.GetValue(key); // inherit from the environment
@@ -223,8 +252,11 @@ namespace TecWare.PPSn.UI
 
 		public PpsMainEnvironment Environment => windowModel.Environment;
 
+		[LuaMember(nameof(CurrentItem))]
+		public object CurrentItem => itemsView?.CurrentItem;
 		/// <summary>Points to the current view</summary>
-		public PpsMainViewDefinition CurrentView => views.CurrentItem as PpsMainViewDefinition;
+		[LuaMember(nameof(CurrentView))]
+		public PpsMainViewDefinition CurrentView => views?.CurrentItem as PpsMainViewDefinition;
 		/// <summary>Returns the current filters</summary>
 		public IEnumerable<PpsFilterView> CurrentFilters => currentFilters;
 		/// <summary>Returns the current orders</summary>
@@ -237,6 +269,5 @@ namespace TecWare.PPSn.UI
 		public ICollectionView Items => itemsView;
 
 		public string CurrentSearchText { get { return currentSearchText; } set { currentSearchText = value; } }
-		public string CurrentViewCaption { get { return currentViewCaption; } set { currentViewCaption = value; } }
 	} // class PpsNavigatorModel
 }

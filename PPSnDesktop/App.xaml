@@ -10,6 +10,7 @@
 		<ResourceDictionary>
 			<ResourceDictionary.MergedDictionaries>
 				<ResourceDictionary Source="pack://application:,,,/PPSn.Desktop.UI;component/UI/UI.xaml" />
+				<ResourceDictionary Source="Local/Templates.xaml" />
 			</ResourceDictionary.MergedDictionaries>
 			
 			<Style x:Key="PanePresenterToolBarStyle" TargetType="{x:Type ToolBar}">

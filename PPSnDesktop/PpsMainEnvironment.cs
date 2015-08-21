@@ -8,6 +8,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DES.Networking;
 using TecWare.DES.Stuff;
 using TecWare.PPSn.Data;
@@ -21,18 +23,41 @@ namespace TecWare.PPSn
   /// <summary></summary>
   public class PpsMainActionDefinition : PpsEnvironmentDefinition
 	{
-    private readonly string displayName;
-    private readonly ICommand command;
+		public static readonly XName xnActions = "actions";
+		public static readonly XName xnAction="action";
+		public static readonly XName xnCondition = "condition";
+		public static readonly XName xnCode = "code";
 
-		internal PpsMainActionDefinition(PpsEnvironment environment, PpsEnvironmentDefinitionSource source, string name, string displayName, ICommand command)
-			: base(environment, source, name)
+		private readonly string displayName;
+		private readonly LuaChunk condition;
+		private readonly LuaChunk code;
+
+		internal PpsMainActionDefinition(PpsMainEnvironment environment, PpsEnvironmentDefinitionSource source, XElement xCur, ref int priority)
+			: base(environment, source, xCur.GetAttribute("name", String.Empty))
 		{
-      this.displayName = displayName;
-      this.command = command;
+			this.displayName = xCur.GetAttribute("displayname", this.Name);
+			this.Priority = priority = xCur.GetAttribute("priority", priority + 1);
+
+			condition = environment.CreateLuaChunk(xCur.Element(xnCondition)); // , new KeyValuePair<string, Type>("contextMenu", typeof(bool))
+			code = environment.CreateLuaChunk(xCur.Element(xnCode));
 		} // ctor
 
+		public bool CheckCondition(LuaTable environment, bool contextMenu)
+		{
+			if (condition != null)
+				return (bool)Lua.RtConvertValue(condition.Run(environment), typeof(bool));
+			else
+				return true;
+		}// func CheckCondition
+
+		public void Execute(LuaTable environment)
+		{
+			if (code != null)
+				code.Run(environment);
+		} // proc Execute
+				
     public string DisplayName => displayName;
-    public ICommand Command => command;
+		public int Priority { get; }
 	} // class PpsMainActionDefinition
 
   #endregion
@@ -59,6 +84,10 @@ namespace TecWare.PPSn
 				{
 					r.SetResponseData(CollectLocalViews(), MimeTypes.Xml);
 				}
+				else if (r.Request.Path == "/" && String.Compare(actionName, "getactions", StringComparison.OrdinalIgnoreCase) == 0) // get all local actions
+				{
+					r.SetResponseData(CollectLocalActions(), MimeTypes.Xml);
+				}
 				else
 					base.GetResponseDataStream(r);
 			} // func GetResponseDataStream
@@ -67,6 +96,11 @@ namespace TecWare.PPSn
 			{
 				return new FileStream(Path.GetFullPath(@"..\..\Local\Views.xml"), FileMode.Open);
 			} // func CollectLocalView
+
+			private Stream CollectLocalActions()
+			{
+				return new FileStream(Path.GetFullPath(@"..\..\Local\Actions.xml"), FileMode.Open);
+			} // func CollectLocalActions
 		} // class PpsMainLocalStore
 
 		#endregion
@@ -79,11 +113,6 @@ namespace TecWare.PPSn
 		{
 			this.actions = new PpsEnvironmentCollection<PpsMainActionDefinition>(this);
 			this.views = new PpsEnvironmentCollection<PpsMainViewDefinition>(this);
-
-      // test
-      actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Offline, "Test1", "Test A", null));
-      actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Offline, "Test2", "Test BBBBBBBBBBB", null));
-      actions.AppendItem(new PpsMainActionDefinition(this, PpsEnvironmentDefinitionSource.Online, "Test1", "Test C", null));
 		} // ctor
 
 		protected override PpsLocalDataStore CreateLocalDataStore() => new PpsMainLocalStore(this);
@@ -111,16 +140,28 @@ namespace TecWare.PPSn
 				});
 		} // proc CreateMainWindow
 
+		public LuaChunk CreateLuaChunk(XElement xCode, params KeyValuePair<string, Type>[] args)
+		{
+			var code = xCode?.Value;
+			return code != null ? Lua.CompileChunk(code, "dummy", null, args) : null;
+		} // proc CreateLuaChunk
+
 		private async Task RefreshViewsAsync(PpsEnvironmentDefinitionSource source)
 		{
 			// Lade die Views
 			var xViews = await this.Web[source].GetXmlAsync("?action=getviews", rootName: PpsMainViewDefinition.xnViews);
+			var xActions = await this.Web[source].GetXmlAsync("?action=getactions", rootName: PpsMainActionDefinition.xnActions);
 
-			// Remove all views
+			// Remove all views, actions
 			views.Clear((PpsEnvironmentClearFlags)source);
-
+			actions.Clear((PpsEnvironmentClearFlags)source);
+			
 			foreach (var cur in xViews.Elements(PpsMainViewDefinition.xnView))
 				views.AppendItem(new PpsMainViewDefinition(this, source, cur));
+
+			var priority = 0;
+			foreach (var cur in xActions.Elements(PpsMainActionDefinition.xnAction))
+				actions.AppendItem(new PpsMainActionDefinition(this, source, cur, ref priority));
 		} // proc RefreshViewsAsync
 		
 
@@ -135,7 +176,9 @@ namespace TecWare.PPSn
 			return null;
 		} // func GetWindow
 
+		[LuaMember(nameof(Actions))]
 		public PpsEnvironmentCollection<PpsMainActionDefinition> Actions => actions;
+		[LuaMember(nameof(Views))]
 		public PpsEnvironmentCollection<PpsMainViewDefinition> Views => views;
 	} // class PpsMainEnvironment
 }
