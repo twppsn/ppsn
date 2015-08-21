@@ -30,13 +30,15 @@ namespace TecWare.PPSn.UI
 		{
 			await Task.Yield();
 
-			// Lade die Definition
-			////string sSchema = Path.ChangeExtension(XamlFileName, ".sxml");
-			//var def = new PpsDataSetDefinitionClient(XDocument.Load(sSchema).Root);
-			//dataSet = (PpsDataSetClient)def.CreateDataSet();
+			var templateUri = new Uri(Environment.BaseUri, (string)arguments.GetMemberValue("template"));
 
-			//string sData = Path.ChangeExtension(XamlFileName, ".dxml");
-			//dataSet.Read(XDocument.Load(sData).Root);
+			// Lade die Definition
+			string sSchema = templateUri.ToString().Replace(".xaml", ".sxml");
+			var def = new PpsDataSetDefinitionClient(XDocument.Load(sSchema).Root);
+			dataSet = (PpsDataSetClient)def.CreateDataSet();
+
+			string sData = templateUri.ToString().Replace(".xaml", ".dxml");
+			dataSet.Read(XDocument.Load(sData).Root);
 
 			dataSet.RegisterUndoSink(undoManager);
 

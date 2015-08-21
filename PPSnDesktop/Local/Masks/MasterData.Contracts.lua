@@ -1,4 +1,4 @@
-﻿
+﻿--[[
 UndoManager.CanUndoChanged:add(function (sender, e) : void
 	UndoCommand:Refresh();
 end);
@@ -43,3 +43,4 @@ RedoCommand = command(
 		return UndoManager:CanRedo;
 	end
 );
+]]

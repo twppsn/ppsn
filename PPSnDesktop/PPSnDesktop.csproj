@@ -92,7 +92,11 @@
     <Resource Include="Local\Templates.xml" />
     <Resource Include="Local\Data\contacts.xml" />
     <Resource Include="Local\Data\parts.xml" />
+    <Resource Include="Local\Actions.xml" />
     <Content Include="Local\Masks\TestWpfGeneric.xaml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Local\Masks\MasterData.Contacts.xaml">
       <SubType>Designer</SubType>
     </Content>
     <Page Include="Local\Templates.xaml">
@@ -135,6 +139,9 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <None Include="app.manifest" />
+    <None Include="Local\Masks\MasterData.Contacts.dxml" />
+    <None Include="Local\Masks\MasterData.Contacts.sxml" />
+    <None Include="Local\Masks\MasterData.Contracts.lua" />
     <None Include="Local\Masks\TestWpfGeneric.lua" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">

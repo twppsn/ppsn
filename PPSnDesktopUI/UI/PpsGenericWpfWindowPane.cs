@@ -106,7 +106,8 @@ namespace TecWare.PPSn.UI
 				throw new ArgumentException("template is missing."); // todo: exception
 
 			// Loads the xaml file from the source
-			var xaml = XDocument.Load(xamlFile, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);
+			xamlFile = new Uri(environment.BaseUri, xamlFile).ToString();
+      var xaml = XDocument.Load(xamlFile, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);
 			fileSource = new BaseWebReqeust(new Uri(xamlFile), Encoding.Default);
 
 			// Load the content of the code-tag, to initialize extend functionality

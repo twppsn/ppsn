@@ -23,6 +23,6 @@ namespace TecWare.PPSn.UI
 		public PpsNavigatorControl()
 		{
 			InitializeComponent();
-		}
-	}
+		} // ctor
+	} // class PpsNavigatorControl
 }

@@ -25,6 +25,9 @@ namespace TecWare.PPSn.UI
 	{
 		/// <summary>Toggles between DataPane and Navigator.</summary>
 		public readonly static RoutedCommand NavigatorToggleCommand = new RoutedCommand("NavigatorToggle", typeof(PpsMainWindow));
+		/// <summary></summary>
+		public readonly static RoutedCommand RunActionCommand = new RoutedCommand("RunAction", typeof(PpsNavigatorControl));
+
 		private readonly static DependencyProperty NavigatorVisibilityProperty = DependencyProperty.Register("NavigatorVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Visible));
 		private readonly static DependencyProperty PaneVisibilityProperty = DependencyProperty.Register("PaneVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Collapsed));
 		private readonly static DependencyPropertyKey CurrentPaneKey = DependencyProperty.RegisterReadOnly("CurrentPane", typeof(IPpsWindowPane), typeof(PpsMainWindow), new PropertyMetadata(null));
@@ -47,15 +50,33 @@ namespace TecWare.PPSn.UI
 			// set basic command bindings
 			CommandBindings.Add(
 				new CommandBinding(PpsWindow.LoginCommand,
-					async (sender, e) =>  await StartLoginAsync(),
+					async (sender, e) =>
+					{
+						e.Handled = true;
+						await StartLoginAsync();
+					},
 					(sender, e) => e.CanExecute = !Environment.IsAuthentificated
 				)
 			);
 
 			CommandBindings.Add(
 				new CommandBinding(NavigatorToggleCommand,
-					(sender, e) => ToggleNavigatorState(),
+					(sender, e) =>
+					{
+						IsNavigatorVisible = !IsNavigatorVisible;
+						e.Handled = true;
+					},
 					(sender, e) => e.CanExecute = true
+				)
+			);
+
+			CommandBindings.Add(
+				new CommandBinding(RunActionCommand,
+					(sender, e) =>
+					{
+						((PpsMainActionDefinition)((Button)e.OriginalSource).DataContext).Execute(navigator);
+						e.Handled = true;
+					}
 				)
 			);
 
@@ -76,7 +97,7 @@ namespace TecWare.PPSn.UI
 			);
 		} // proc StartLogin
 
-		private async Task LoadPaneAsync(Type paneType, LuaTable arguments)
+		public async Task LoadPaneAsync(Type paneType, LuaTable arguments)
 		{
 			// unload the current pane
 			if (!await UnloadPaneAsync())
@@ -104,40 +125,14 @@ namespace TecWare.PPSn.UI
 
 			// load the pane
 			await currentPane.LoadAsync(arguments);
-			// TEST SCHMIDT
-			RefreshTitle();
-		} // proc StartPaneAsync
 
-		private void ToggleNavigatorState()
-		{
-			var current = (Visibility)GetValue(NavigatorVisibilityProperty);
-			switch (current)
+			// Hide Navigator
+			await Dispatcher.InvokeAsync(() =>
 			{
-				case Visibility.Visible:
-					SetNavigatorVisibility(Visibility.Collapsed);
-					SetPaneVisibility(Visibility.Visible);
-					break;
-				default:
-					SetPaneVisibility(Visibility.Collapsed);
-					SetNavigatorVisibility(Visibility.Visible);
-					break;
-			}
-		}
-
-		private void SetNavigatorVisibility(Visibility visibility)
-		{
-			SetValue(NavigatorVisibilityProperty, visibility);
-		}
-
-		private void SetPaneVisibility(Visibility visibility)
-		{
-			SetValue(PaneVisibilityProperty, visibility);
-		}
-
-		protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
-		{
-			base.OnPropertyChanged(e);
-		}
+				IsNavigatorVisible = false;
+				RefreshTitle();
+			});
+		} // proc StartPaneAsync
 
 		// TEST Schmidt open ContextMenu CurrentUser with MouseButtonLeft
 		private void PART_User_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -185,5 +180,29 @@ namespace TecWare.PPSn.UI
 		public int WindowIndex => windowIndex; 
 		/// <summary>Access to the current environment,</summary>
 		public new PpsMainEnvironment Environment => (PpsMainEnvironment)base.Environment;
+
+		public bool IsNavigatorVisible
+		{
+			get
+			{
+				return (Visibility)GetValue(NavigatorVisibilityProperty) == Visibility.Visible;
+			}
+			set
+			{
+				if (IsNavigatorVisible != value)
+				{
+					if (value)
+					{
+						SetValue(NavigatorVisibilityProperty, Visibility.Visible);
+						SetValue(PaneVisibilityProperty, Visibility.Collapsed);
+					}
+					else
+					{
+						SetValue(NavigatorVisibilityProperty, Visibility.Collapsed);
+						SetValue(PaneVisibilityProperty, Visibility.Visible);
+					}
+				}
+			}
+		} // prop NavigatorState
 	} // class PpsMainWindow
 }

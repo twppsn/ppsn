@@ -24,7 +24,7 @@
   <!--<StackPanel Background="{ui:AlphaBlendColor Source=Red, Destination=Green, SourcePart=0.6}">-->
   <!--<StackPanel Background="{ui:WeightColor Source={ui:GrayColor Blue}}">-->
   <!--<StackPanel Background="{ui:GrayColor Red}">-->
-  <StackPanel>
+  <StackPanel Width="200">
     <Label>
       <TextBlock>Zähler (<Run Text="{Binding Counter, Converter={StaticResource convertInt}}" />)</TextBlock>
     </Label>

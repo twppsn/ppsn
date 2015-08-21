@@ -246,7 +246,7 @@
                  ItemContainerStyle="{StaticResource NavigatorViewsContainerStyle}" />
 
         <uiC:DataListControl x:Name="PART_Testlist" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource NavigatorListBoxStyle}" Margin="50,21,50,0"  FontSize="14.667" SnapsToDevicePixels="True"
-                 AlternationCount="2"
+                 AlternationCount="2" IsSynchronizedWithCurrentItem="True"
                  DataContext="{Binding Navigator}"
                  ItemsSource="{Binding Items}">
             <ListBox.ItemContainerStyle>
@@ -282,7 +282,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Button Content="{Binding DisplayName}" Command="{Binding}" Tag="&#xE113;" Style="{StaticResource NavigatorActionButtonStyle}" FontSize="14.667"/>
+          <Button Content="{Binding DisplayName}" Command="{x:Static uiL:PpsMainWindow.RunActionCommand}" Tag="&#xE113;" Style="{StaticResource NavigatorActionButtonStyle}" FontSize="14.667"/>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
