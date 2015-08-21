@@ -134,6 +134,16 @@ namespace TecWare.PPSn.UI
 			});
 		} // proc StartPaneAsync
 
+
+		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+		{
+			base.OnPreviewMouseDown(e);
+			if (object.Equals(e.Source, PART_SearchBox))
+				ExpandSearchBox();
+			else
+				CollapseSearchBox();
+		}
+
 		// TEST Schmidt open ContextMenu CurrentUser with MouseButtonLeft
 		private void PART_User_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
 		{
@@ -153,25 +163,6 @@ namespace TecWare.PPSn.UI
 		{
 			CollapseSearchBox();
 		}
-
-
-		//private bool ExpandSearchBox(KeyEventArgs e)
-		//{
-		//	if (object.Equals(e.Source, PART_SearchBox))
-		//		return false;
-		//	switch (e.Key)
-		//	{
-		//		case Key.Tab:
-		//		case Key.Enter:
-		//			return false;
-		//		default:
-		//			ExpandSearchBox();
-		//			break;
-		//	}
-
-		//	return true;
-		//}
-
 
 		private void ExpandSearchBox()
 		{
