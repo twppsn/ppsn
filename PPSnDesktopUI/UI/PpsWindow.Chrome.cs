@@ -746,7 +746,7 @@ namespace TecWare.PPSn.UI
 		private bool updatingZOrder = false;
 		private bool isGlowVisible = false;
 		private int glowPendingUpdates = 0;
-		private bool launchSysMenuOnRButttonUp = false;
+		//private bool launchSysMenuOnRButttonUp = false;  Handling SysMenu
 
 		private void InitChrome()
 		{
@@ -899,21 +899,29 @@ namespace TecWare.PPSn.UI
 					return WmNcCalcSize(hWnd, msg, wParam, lParam, ref handled);
 				case WinMsg.WM_NCHITTEST:
 					return WmNcHitTest(hWnd, msg, wParam, lParam, ref handled);
-				case WinMsg.WM_RBUTTONDOWN:
-				case WinMsg.WM_RBUTTONUP:
-				case WinMsg.WM_NCXBUTTONDBLCLK:
-					launchSysMenuOnRButttonUp = false;
-					break;
+				case WinMsg.WM_NCLBUTTONDOWN:
+				case WinMsg.WM_NCMBUTTONDOWN:
 				case WinMsg.WM_NCRBUTTONDOWN:
-					launchSysMenuOnRButttonUp = wParam == (IntPtr)HitTestValues.HTCAPTION;
+				case WinMsg.WM_NCXBUTTONDOWN:
+					OnWindowCaptionClicked();
 					break;
-				case WinMsg.WM_NCRBUTTONUP:
-					if(launchSysMenuOnRButttonUp && wParam == (IntPtr)HitTestValues.HTCAPTION)
-					{
-						System.Diagnostics.Debug.Print("------------------------------>  CONTEXTMENU");
-                    }
-					launchSysMenuOnRButttonUp = false;
-					break;
+				// future work: SystemMenu
+				//case WinMsg.WM_RBUTTONDOWN:
+				//case WinMsg.WM_RBUTTONUP:
+				//case WinMsg.WM_NCXBUTTONDBLCLK:
+				//	launchSysMenuOnRButttonUp = false;
+				//	break;
+				//case WinMsg.WM_NCRBUTTONDOWN:
+				//	OnWindowCaptionClicked();
+				//	launchSysMenuOnRButttonUp = wParam == (IntPtr)HitTestValues.HTCAPTION;
+				//	break;
+				//case WinMsg.WM_NCRBUTTONUP:
+				//	if (launchSysMenuOnRButttonUp && wParam == (IntPtr)HitTestValues.HTCAPTION)
+				//	{
+				//		System.Diagnostics.Debug.Print("------------------------------>  CONTEXTMENU");
+				//	}
+				//	launchSysMenuOnRButttonUp = false;
+				//	break;
 			}
 			return IntPtr.Zero;
 		} // func WndProc

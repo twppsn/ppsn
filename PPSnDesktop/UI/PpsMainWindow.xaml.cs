@@ -25,6 +25,9 @@ namespace TecWare.PPSn.UI
 	{
 		/// <summary>Toggles between DataPane and Navigator.</summary>
 		public readonly static RoutedCommand NavigatorToggleCommand = new RoutedCommand("NavigatorToggle", typeof(PpsMainWindow));
+		/// <summary></summary>
+		public readonly static RoutedCommand RunActionCommand = new RoutedCommand("RunAction", typeof(PpsNavigatorControl));
+
 		private readonly static DependencyProperty NavigatorVisibilityProperty = DependencyProperty.Register("NavigatorVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Visible));
 		private readonly static DependencyProperty PaneVisibilityProperty = DependencyProperty.Register("PaneVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Collapsed));
 		private readonly static DependencyPropertyKey CurrentPaneKey = DependencyProperty.RegisterReadOnly("CurrentPane", typeof(IPpsWindowPane), typeof(PpsMainWindow), new PropertyMetadata(null));
@@ -47,15 +50,33 @@ namespace TecWare.PPSn.UI
 			// set basic command bindings
 			CommandBindings.Add(
 				new CommandBinding(PpsWindow.LoginCommand,
-					async (sender, e) =>  await StartLoginAsync(),
+					async (sender, e) =>
+					{
+						e.Handled = true;
+						await StartLoginAsync();
+					},
 					(sender, e) => e.CanExecute = !Environment.IsAuthentificated
 				)
 			);
 
 			CommandBindings.Add(
 				new CommandBinding(NavigatorToggleCommand,
-					(sender, e) => ToggleNavigatorState(),
+					(sender, e) =>
+					{
+						IsNavigatorVisible = !IsNavigatorVisible;
+						e.Handled = true;
+					},
 					(sender, e) => e.CanExecute = true
+				)
+			);
+
+			CommandBindings.Add(
+				new CommandBinding(RunActionCommand,
+					(sender, e) =>
+					{
+						((PpsMainActionDefinition)((Button)e.OriginalSource).DataContext).Execute(navigator);
+						e.Handled = true;
+					}
 				)
 			);
 
@@ -76,7 +97,7 @@ namespace TecWare.PPSn.UI
 			);
 		} // proc StartLogin
 
-		private async Task LoadPaneAsync(Type paneType, LuaTable arguments)
+		public async Task LoadPaneAsync(Type paneType, LuaTable arguments)
 		{
 			// unload the current pane
 			if (!await UnloadPaneAsync())
@@ -104,39 +125,23 @@ namespace TecWare.PPSn.UI
 
 			// load the pane
 			await currentPane.LoadAsync(arguments);
-			// TEST SCHMIDT
-			RefreshTitle();
+
+			// Hide Navigator
+			await Dispatcher.InvokeAsync(() =>
+			{
+				IsNavigatorVisible = false;
+				RefreshTitle();
+			});
 		} // proc StartPaneAsync
 
-		private void ToggleNavigatorState()
-		{
-			var current = (Visibility)GetValue(NavigatorVisibilityProperty);
-			switch (current)
-			{
-				case Visibility.Visible:
-					SetNavigatorVisibility(Visibility.Collapsed);
-					SetPaneVisibility(Visibility.Visible);
-					break;
-				default:
-					SetPaneVisibility(Visibility.Collapsed);
-					SetNavigatorVisibility(Visibility.Visible);
-					break;
-			}
-		}
 
-		private void SetNavigatorVisibility(Visibility visibility)
+		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
-			SetValue(NavigatorVisibilityProperty, visibility);
-		}
-
-		private void SetPaneVisibility(Visibility visibility)
-		{
-			SetValue(PaneVisibilityProperty, visibility);
-		}
-
-		protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
-		{
-			base.OnPropertyChanged(e);
+			base.OnPreviewMouseDown(e);
+			if (object.Equals(e.Source, PART_SearchBox))
+				ExpandSearchBox();
+			else
+				CollapseSearchBox();
 		}
 
 		// TEST Schmidt open ContextMenu CurrentUser with MouseButtonLeft
@@ -151,6 +156,29 @@ namespace TecWare.PPSn.UI
 				};
 			InputManager.Current.ProcessInput(mouseDownEvent);
 		} // event PART_User_MouseLeftButtonUp
+
+		#region -- SearchBoxHandling --------------------------------------------------
+
+		protected override void OnWindowCaptionClicked()
+		{
+			CollapseSearchBox();
+		}
+
+		private void ExpandSearchBox()
+		{
+			if (PART_SearchBox.Visibility != Visibility.Visible || (PpsnSearchBoxState)PART_SearchBox.Tag == PpsnSearchBoxState.Expanded)
+				return;
+			PART_SearchBox.Tag = PpsnSearchBoxState.Expanded;
+		}
+
+		private void CollapseSearchBox()
+		{
+			if (PART_SearchBox.Visibility != Visibility.Visible || (PpsnSearchBoxState)PART_SearchBox.Tag == PpsnSearchBoxState.Collapsed)
+				return;
+			PART_SearchBox.Tag = PpsnSearchBoxState.Collapsed;
+		}
+
+		#endregion
 
 		private async Task<bool> UnloadPaneAsync()
 		{
@@ -185,5 +213,39 @@ namespace TecWare.PPSn.UI
 		public int WindowIndex => windowIndex; 
 		/// <summary>Access to the current environment,</summary>
 		public new PpsMainEnvironment Environment => (PpsMainEnvironment)base.Environment;
+
+		public bool IsNavigatorVisible
+		{
+			get
+			{
+				return (Visibility)GetValue(NavigatorVisibilityProperty) == Visibility.Visible;
+			}
+			set
+			{
+				if (IsNavigatorVisible != value)
+				{
+					if (value)
+					{
+						SetValue(NavigatorVisibilityProperty, Visibility.Visible);
+						SetValue(PaneVisibilityProperty, Visibility.Collapsed);
+					}
+					else
+					{
+						SetValue(NavigatorVisibilityProperty, Visibility.Collapsed);
+						SetValue(PaneVisibilityProperty, Visibility.Visible);
+					}
+				}
+			}
+		} // prop NavigatorState
 	} // class PpsMainWindow
+
+	#region -- enum PpsnSearchBoxState ------------------------------------------------
+
+	internal enum PpsnSearchBoxState
+	{
+		Expanded,
+		Collapsed
+	}
+
+	#endregion
 }

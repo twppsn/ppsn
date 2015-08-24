@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
  			 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
-						 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
+ 			 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
              xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="600">
@@ -48,7 +48,7 @@
 									   Cursor="Arrow"
 									   Minimum="0" 
 									   Maximum="{TemplateBinding ScrollableHeight}" 
-									   Opacity="1"
+									   Opacity=".6"
 									   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" 
 									   Value="{Binding VerticalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" 
 									   ViewportSize="{TemplateBinding ViewportHeight}"/>
@@ -58,7 +58,7 @@
 									   Cursor="Arrow"
 									   Minimum="0"
 									   Maximum="{TemplateBinding ScrollableWidth}"
-									   Opacity="1"
+									   Opacity=".6"
 									   Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" 
 									   Value="{Binding HorizontalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" 
 									   ViewportSize="{TemplateBinding ViewportWidth}"/>
@@ -72,7 +72,7 @@
 								<Trigger.EnterActions>
 									<BeginStoryboard>
 										<Storyboard>
-											<DoubleAnimation Storyboard.TargetName="PART_VerticalScrollBar" Storyboard.TargetProperty="Opacity"  From="0.0" To="1" Duration="0:0:0.5"/>
+											<DoubleAnimation Storyboard.TargetName="PART_VerticalScrollBar" Storyboard.TargetProperty="Opacity"  From="0.0" To="0.6" Duration="0:0:0.5"/>
 										</Storyboard>
 									</BeginStoryboard>
 								</Trigger.EnterActions>
@@ -235,9 +235,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Border x:Name="PART_ViewsHeader" Margin="32,0,0,2" BorderThickness="0,0,0,4" BorderBrush="{StaticResource PPSnWindowForegroundBrush}" SnapsToDevicePixels="True">
-            <TextBlock Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="0,0,0,2" FontSize="14.667" FontWeight="DemiBold"
-                       DataContext="{Binding Navigator}"
-                       Text="{Binding CurrentViewCaption}" />
+            <TextBlock Text="DATEN" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="0,0,0,2" FontSize="14.667" FontWeight="DemiBold" />
         </Border>
         <ListBox x:Name="PART_Views" Grid.Column="0" Grid.Row="1" Style="{StaticResource NavigatorListBoxStyle}" Margin="32,0,0,0" FontSize="14.667" SnapsToDevicePixels="True"
 				 DataContext="{Binding Navigator}"
@@ -245,8 +243,8 @@
 				 IsSynchronizedWithCurrentItem="True"
                  ItemContainerStyle="{StaticResource NavigatorViewsContainerStyle}" />
 
-        <uiC:DataListControl x:Name="PART_Testlist" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource NavigatorListBoxStyle}" Margin="50,21,50,0"  FontSize="14.667" SnapsToDevicePixels="True"
-                 AlternationCount="2"
+        <uiC:DataListControl x:Name="PART_Items" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource NavigatorListBoxStyle}" Margin="50,21,50,0"  FontSize="14.667" SnapsToDevicePixels="True"
+                 AlternationCount="2" IsSynchronizedWithCurrentItem="True"
                  DataContext="{Binding Navigator}"
                  ItemsSource="{Binding Items}">
             <ListBox.ItemContainerStyle>
@@ -282,7 +280,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Button Content="{Binding DisplayName}" Command="{Binding}" Tag="&#xE113;" Style="{StaticResource NavigatorActionButtonStyle}" FontSize="14.667"/>
+									<Button Content="{Binding DisplayName}" Command="{x:Static uiL:PpsMainWindow.RunActionCommand}" Tag="&#xE113;" Style="{StaticResource NavigatorActionButtonStyle}" FontSize="14.667"/>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>

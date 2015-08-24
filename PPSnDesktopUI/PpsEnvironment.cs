@@ -631,6 +631,16 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- LuaHelper --------------------------------------------------------------
+
+		[LuaMember("msgbox")]
+		private void LuaMsgBox(string text, string caption)
+		{
+			MessageBox.Show(text, caption ?? "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+		} // proc LuaMsgBox
+
+		#endregion
+
 		#region -- Resources --------------------------------------------------------------
 
 		public T FindResource<T>(object resourceKey)

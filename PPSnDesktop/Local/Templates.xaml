@@ -1,36 +1,43 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
+>
   <DataTemplate x:Key="PartsTemplate">
     <Grid>
       <Grid.RowDefinitions>
-				<RowDefinition Height="20" />
+        <RowDefinition Height="20" />
         <RowDefinition Height="20" />
       </Grid.RowDefinitions>
       <StackPanel>
-				<TextBlock Text="Test: " />
-				<TextBlock Text="{Binding OBJKNR}" />
+        <TextBlock Text="Test: " />
+        <TextBlock Text="{Binding OBJKNR}" />
       </StackPanel>
       <TextBlock Text="{Binding OBJKMATCH}" Grid.Row="1" />
-		</Grid>
-	</DataTemplate>
-    <DataTemplate x:Key="JobsTemplate">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="20" />
-                <RowDefinition Height="20" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="100" />
-                <ColumnDefinition Width="50" />
-                <ColumnDefinition Width="200" />
-                <ColumnDefinition Width="200" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Text="{Binding OBJKNR}" Grid.Row="0" />
-            <TextBlock Text="{Binding WAKOTNR}" Grid.Row="1" FontSize="11"/>
-            <TextBlock Text="{Binding WAKOSTATUS}" Grid.Column="1" Grid.RowSpan="2" VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding TEILNAME}" Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" FontSize="11"/>
-            <TextBlock Text="{Binding WAKOSTART}" Grid.Column="2"  />
-            <TextBlock Text="{Binding WAKOENDE}" Grid.Column="3"  />
-        </Grid>
-    </DataTemplate>
+    </Grid>
+  </DataTemplate>
+  <DataTemplate x:Key="JobsTemplate">
+    <DataTemplate.Resources>
+      <ui:LuaValueConverter x:Key="DateConverter" >
+				<![CDATA[ return cast(System.DateTime, value):ToString("d"); ]]>
+			</ui:LuaValueConverter>
+		</DataTemplate.Resources>
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="20" />
+        <RowDefinition Height="20" />
+      </Grid.RowDefinitions>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="100" />
+        <ColumnDefinition Width="50" />
+        <ColumnDefinition Width="200" />
+        <ColumnDefinition Width="200" />
+      </Grid.ColumnDefinitions>
+      <TextBlock Text="{Binding OBJKNR}" Grid.Row="0" />
+      <TextBlock Text="{Binding WAKOTNR}" Grid.Row="1" FontSize="11"/>
+      <TextBlock Text="{Binding WAKOSTATUS}" Grid.Column="1" Grid.RowSpan="2" VerticalAlignment="Center"/>
+      <TextBlock Text="{Binding TEILNAME}" Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" FontSize="11"/>
+      <TextBlock Text="{Binding WAKOSTART, Converter={StaticResource DateConverter}}" Grid.Column="2"  />
+      <TextBlock Text="{Binding WAKOENDE, Converter={StaticResource DateConverter}}" Grid.Column="3"  />
+    </Grid>
+  </DataTemplate>
 </ResourceDictionary>
