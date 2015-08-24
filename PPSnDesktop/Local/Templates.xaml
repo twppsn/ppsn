@@ -13,4 +13,24 @@
       <TextBlock Text="{Binding OBJKMATCH}" Grid.Row="1" />
 		</Grid>
 	</DataTemplate>
+    <DataTemplate x:Key="JobsTemplate">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="20" />
+                <RowDefinition Height="20" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="50" />
+                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="200" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding OBJKNR}" Grid.Row="0" />
+            <TextBlock Text="{Binding WAKOTNR}" Grid.Row="1" FontSize="11"/>
+            <TextBlock Text="{Binding WAKOSTATUS}" Grid.Column="1" Grid.RowSpan="2" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding TEILNAME}" Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" FontSize="11"/>
+            <TextBlock Text="{Binding WAKOSTART}" Grid.Column="2"  />
+            <TextBlock Text="{Binding WAKOENDE}" Grid.Column="3"  />
+        </Grid>
+    </DataTemplate>
 </ResourceDictionary>
