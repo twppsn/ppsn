@@ -185,8 +185,14 @@ namespace TecWare.PPSn.Data
 					PpsDataTable table = (PpsDataTable)Value;
 					int iColumnIndex = table.TableDefinition.FindColumnIndex(binder.Name);
 					if (iColumnIndex == -1)
-						return new DynamicMetaObject(table.TableDefinition.Meta.GetMetaConstantExpression(binder.Name), GetBindingRestrictions(table));
+					{
+						if (table.TableDefinition.Meta == null)
+							return new DynamicMetaObject(Expression.Constant(null, typeof(object)), GetBindingRestrictions(table));
+						else
+							return new DynamicMetaObject(table.TableDefinition.Meta.GetMetaConstantExpression(binder.Name), GetBindingRestrictions(table));
+					}
 					else
+					{
 						return new DynamicMetaObject(
 							Expression.MakeIndex(
 								Expression.Property(
@@ -198,6 +204,7 @@ namespace TecWare.PPSn.Data
 							),
 							GetBindingRestrictions(table)
 						);
+					}
 				}
 			} // func BindGetMember
 		} // class PpsDataTableMetaObject
