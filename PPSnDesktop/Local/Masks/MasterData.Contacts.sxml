@@ -106,7 +106,7 @@
 			<MaxLength datatype="string">10</MaxLength>
 			<Caption datatype="string">Symbol</Caption>
 		</column>
-		<column name="WAEHSYS" datatype="bit" >
+		<column name="WAEHSYS" datatype="bool" >
 			<Caption datatype="string">Systemwährung</Caption>
 		</column>
 	</table>
