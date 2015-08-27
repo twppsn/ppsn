@@ -94,12 +94,12 @@ namespace TecWare.PPSn
 			
 			private Stream CollectLocalViews()
 			{
-				return new FileStream(Path.GetFullPath(@"..\..\Local\Views.xml"), FileMode.Open);
+				return new FileStream(Path.GetFullPath(@"..\..\..\PPSnDesktop\Local\Views.xml"), FileMode.Open);
 			} // func CollectLocalView
 
 			private Stream CollectLocalActions()
 			{
-				return new FileStream(Path.GetFullPath(@"..\..\Local\Actions.xml"), FileMode.Open);
+				return new FileStream(Path.GetFullPath(@"..\..\..\PPSnDesktop\Local\Actions.xml"), FileMode.Open);
 			} // func CollectLocalActions
 		} // class PpsMainLocalStore
 

@@ -16,6 +16,7 @@ using TecWare.PPSn.Data;
 using TecWare.DES.Networking;
 using System.Xml.Linq;
 using TecWare.PPSn.Controls;
+using System.IO;
 
 namespace TecWare.PPSn
 {
@@ -510,7 +511,11 @@ namespace TecWare.PPSn
 		{
 			await Task.Yield();
 
-			var xTemplates = XDocument.Load(@"..\..\Local\Templates.xml");
+			string p = @"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktop\Local\Templates.xml";
+			if (!File.Exists(p))
+				p = @"..\..\..\PPSnDesktop\Local\Templates.xml";
+
+			var xTemplates = XDocument.Load(p);
 			foreach (var xTemplate in xTemplates.Root.Elements("template"))
 			{
 				var key = xTemplate.GetAttribute("key", String.Empty);

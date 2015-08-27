@@ -252,6 +252,9 @@ namespace TecWare.PPSn.UI
 
 		public PpsMainEnvironment Environment => windowModel.Environment;
 
+		[LuaMember(nameof(Window))]
+		public PpsMainWindow Window => windowModel;
+
 		[LuaMember(nameof(CurrentItem))]
 		public object CurrentItem => itemsView?.CurrentItem;
 		/// <summary>Points to the current view</summary>

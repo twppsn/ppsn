@@ -1,0 +1,9 @@
+﻿<Application x:Class="PPSnExcel.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+						 xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             ShutdownMode="OnExplicitShutdown">
+  <Application.Resources>
+    <sys:String x:Key="testString">Test</sys:String>
+	</Application.Resources>
+</Application>

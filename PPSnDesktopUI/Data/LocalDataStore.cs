@@ -92,7 +92,7 @@ namespace TecWare.PPSn.Data
 			//	return;
 			//}
 
-			var fi = new FileInfo(Path.Combine(@"..\..\Local", r.Request.Path.Substring(1).Replace('/', '\\')));
+			var fi = new FileInfo(Path.Combine(@"..\..\..\PPSnDesktop\Local", r.Request.Path.Substring(1).Replace('/', '\\')));
 			if (!fi.Exists)
 				throw new WebException("File not found.", WebExceptionStatus.ProtocolError);
 
@@ -117,7 +117,7 @@ namespace TecWare.PPSn.Data
 			// get the datatable
 			if (!localData.TryGetValue(arguments.ListId, out dt))
 			{
-				LoadTestData(@"..\..\Local\Data\" + arguments.ListId + ".xml", ref dt);
+				LoadTestData(@"..\..\..\PPSnDesktop\Local\Data\" + arguments.ListId + ".xml", ref dt);
 				localData[arguments.ListId] = dt;
 			}
 

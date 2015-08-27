@@ -137,6 +137,9 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <None Include="app.manifest" />
+    <None Include="Local\Data\contact.xsd">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Local\Masks\MasterData.Contacts.dxml" />
     <None Include="Local\Masks\MasterData.Contacts.sxml" />
     <None Include="Local\Masks\MasterData.Contracts.lua" />
@@ -174,9 +177,7 @@
       <SubType>Designer</SubType>
     </Resource>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Local\Data\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
