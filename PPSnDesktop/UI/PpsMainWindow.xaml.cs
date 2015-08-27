@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Neo.IronLua;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -13,9 +15,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using Neo.IronLua;
 using TecWare.DES.Stuff;
-using System.Configuration;
 
 namespace TecWare.PPSn.UI
 {
@@ -26,9 +26,12 @@ namespace TecWare.PPSn.UI
 		/// <summary>Toggles between DataPane and Navigator.</summary>
 		public readonly static RoutedCommand NavigatorToggleCommand = new RoutedCommand("NavigatorToggle", typeof(PpsMainWindow));
 		/// <summary></summary>
+		public readonly static RoutedCommand NavigatorViewsToggleDescriptionCommand = new RoutedCommand("NavigatorViewsToggleDescription", typeof(PpsMainWindow));
+		/// <summary></summary>
 		public readonly static RoutedCommand RunActionCommand = new RoutedCommand("RunAction", typeof(PpsNavigatorControl));
 
 		private readonly static DependencyProperty NavigatorVisibilityProperty = DependencyProperty.Register("NavigatorVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Visible));
+		private readonly static DependencyProperty NavigatorViewsDescriptionVisibilityProperty = DependencyProperty.Register("NavigatorViewsDescriptionVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Visible));
 		private readonly static DependencyProperty PaneVisibilityProperty = DependencyProperty.Register("PaneVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Collapsed));
 		private readonly static DependencyPropertyKey CurrentPaneKey = DependencyProperty.RegisterReadOnly("CurrentPane", typeof(IPpsWindowPane), typeof(PpsMainWindow), new PropertyMetadata(null));
 		private readonly static DependencyProperty CurrentPaneProperty = CurrentPaneKey.DependencyProperty;
@@ -69,6 +72,18 @@ namespace TecWare.PPSn.UI
 					(sender, e) => e.CanExecute = true
 				)
 			);
+
+			CommandBindings.Add(
+				new CommandBinding(NavigatorViewsToggleDescriptionCommand,
+					(sender, e) =>
+					{
+						IsViewsDescriptionVisible = !IsViewsDescriptionVisible;
+						e.Handled = true;
+					},
+					(sender, e) => e.CanExecute = true
+				)
+			);
+
 
 			CommandBindings.Add(
 				new CommandBinding(RunActionCommand,
@@ -134,15 +149,49 @@ namespace TecWare.PPSn.UI
 			});
 		} // proc StartPaneAsync
 
-
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
 			base.OnPreviewMouseDown(e);
-			if (object.Equals(e.Source, PART_SearchBox))
-				ExpandSearchBox();
-			else
+			if (!object.Equals(e.Source, PART_SearchBox))
 				CollapseSearchBox();
 		}
+
+		protected override void OnPreviewTextInput(TextCompositionEventArgs e)
+		{
+			base.OnPreviewTextInput(e);
+			if (!object.Equals(e.Source, PART_SearchBox))
+				e.Handled = ExpandSearchBox(e.Text);
+		}
+
+		protected override void OnWindowCaptionClicked()
+		{
+			CollapseSearchBox();
+		}
+
+		#region -- SearchBoxHandling --------------------------------------------------
+
+		private bool ExpandSearchBox(string input)
+		{
+			if (PART_SearchBox.Visibility != Visibility.Visible || (PpsnSearchBoxState)PART_SearchBox.Tag == PpsnSearchBoxState.Expanded)
+				return false;
+			if (!char.IsLetterOrDigit(input, 0))
+				return false;
+			PART_SearchBox.Text += input;
+			PART_SearchBox.Select(PART_SearchBox.Text.Length, 0);
+			FocusManager.SetFocusedElement(PART_MainWindowGrid, PART_SearchBox);
+			Keyboard.Focus(PART_SearchBox);
+			return true;
+		}
+
+		private void CollapseSearchBox()
+		{
+			if (PART_SearchBox.Visibility != Visibility.Visible || (PpsnSearchBoxState)PART_SearchBox.Tag == PpsnSearchBoxState.Collapsed)
+				return;
+			FocusManager.SetFocusedElement(PART_MainWindowGrid, PART_Caption);
+			Keyboard.Focus(PART_Caption);
+		}
+
+		#endregion
 
 		// TEST Schmidt open ContextMenu CurrentUser with MouseButtonLeft
 		private void PART_User_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -156,29 +205,6 @@ namespace TecWare.PPSn.UI
 				};
 			InputManager.Current.ProcessInput(mouseDownEvent);
 		} // event PART_User_MouseLeftButtonUp
-
-		#region -- SearchBoxHandling --------------------------------------------------
-
-		protected override void OnWindowCaptionClicked()
-		{
-			CollapseSearchBox();
-		}
-
-		private void ExpandSearchBox()
-		{
-			if (PART_SearchBox.Visibility != Visibility.Visible || (PpsnSearchBoxState)PART_SearchBox.Tag == PpsnSearchBoxState.Expanded)
-				return;
-			PART_SearchBox.Tag = PpsnSearchBoxState.Expanded;
-		}
-
-		private void CollapseSearchBox()
-		{
-			if (PART_SearchBox.Visibility != Visibility.Visible || (PpsnSearchBoxState)PART_SearchBox.Tag == PpsnSearchBoxState.Collapsed)
-				return;
-			PART_SearchBox.Tag = PpsnSearchBoxState.Collapsed;
-		}
-
-		#endregion
 
 		private async Task<bool> UnloadPaneAsync()
 		{
@@ -237,6 +263,29 @@ namespace TecWare.PPSn.UI
 				}
 			}
 		} // prop NavigatorState
+
+		private bool IsViewsDescriptionVisible
+		{
+			get
+			{
+				return (Visibility)GetValue(NavigatorViewsDescriptionVisibilityProperty) == Visibility.Visible;
+			}
+			set
+			{
+				if (IsViewsDescriptionVisible != value)
+				{
+					if (value)
+					{
+						SetValue(NavigatorViewsDescriptionVisibilityProperty, Visibility.Visible);
+					}
+					else
+					{
+						SetValue(NavigatorViewsDescriptionVisibilityProperty, Visibility.Collapsed);
+					}
+				}
+			}
+		} // prop IsViewsDescriptionVisible
+
 	} // class PpsMainWindow
 
 	#region -- enum PpsnSearchBoxState ------------------------------------------------

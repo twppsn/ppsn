@@ -229,4 +229,37 @@ namespace TecWare.PPSn.UI
 	} // class GrayColor
 
 	#endregion
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Binding ImageSourceName.</summary>
+	[MarkupExtensionReturnType(typeof(ImageSource))]
+	public class PpsImageStaticResourceBinding : System.Windows.StaticResourceExtension
+	{
+		public Binding binding { get; set; }
+		private static readonly System.Windows.DependencyProperty dummyProperty;
+
+		public PpsImageStaticResourceBinding(Binding binding)
+		{
+			this.binding = binding;
+		}
+
+		static PpsImageStaticResourceBinding()
+		{
+			dummyProperty = System.Windows.DependencyProperty.RegisterAttached("Dummy", typeof(Object), typeof(System.Windows.DependencyObject), new System.Windows.UIPropertyMetadata(null));
+		}
+
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			var target = (IProvideValueTarget)serviceProvider.GetService(typeof(IProvideValueTarget));
+			var targetObject = (System.Windows.FrameworkElement)target.TargetObject;
+
+			// simuliere Binding
+			binding.Source = targetObject.DataContext;
+			var dummyDO = new System.Windows.DependencyObject();
+			BindingOperations.SetBinding(dummyDO, dummyProperty, binding);
+			ResourceKey = dummyDO.GetValue(dummyProperty);
+			return base.ProvideValue(serviceProvider);
+		}
+	} // class PpsImageStaticResourceBinding
+
 }

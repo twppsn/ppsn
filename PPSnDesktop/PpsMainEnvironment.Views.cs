@@ -73,6 +73,7 @@ namespace TecWare.PPSn
 		
 		private string shortCut;
 		private string displayName;
+		private string displayImage;
 		private string listSource;
 
 		private PpsMainViewOrder[] sortOrders;
@@ -82,6 +83,7 @@ namespace TecWare.PPSn
 			: base(environment, source, xDefinition.GetAttribute("id", null))
 		{
 			this.displayName = xDefinition.GetAttribute("displayname", this.Name);
+			this.displayImage = xDefinition.GetAttribute("displayimage", this.Name);
 			this.shortCut = xDefinition.GetAttribute("shortcut", null);
 
 			// parse the data source
@@ -94,10 +96,11 @@ namespace TecWare.PPSn
 			this.filters = (from c in xDefinition.Elements(xnFilter) select new PpsMainViewFilter(c, ref priority)).OrderBy(c => c.Priority).ToArray();
 			// parse orders
 			priority = 0;
-      this.sortOrders = (from c in xDefinition.Elements(xnOrder) select new PpsMainViewOrder(c, ref priority)).OrderBy(c => c.Priority).ToArray();
+			this.sortOrders = (from c in xDefinition.Elements(xnOrder) select new PpsMainViewOrder(c, ref priority)).OrderBy(c => c.Priority).ToArray();
 		} // ctor
 
 		public string DisplayName => displayName;
+		public string DisplayImage => displayImage;
 		public IEnumerable<PpsMainViewFilter> Filters => filters;
 		public IEnumerable<PpsMainViewOrder> SortOrders => sortOrders;
 	} // class PpsMainViewDefinition
