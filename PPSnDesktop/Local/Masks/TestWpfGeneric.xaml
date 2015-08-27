@@ -39,4 +39,5 @@
     <x:Null />
     <ui:PpsUICommandButton DisplayText="Komando2" Description="Kommando2" Image="disks.png"/>
   </ui:PpsGenericWpfControl.Commands>
+	
 </ui:PpsGenericWpfControl>

@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <views>
-  <view id="Contacts" shortcut="KO" displayname="Kontakte">
+  <view id="Contacts" shortcut="KO" displayname="Kontakte" displayimage="usersImage">
     <source><![CDATA[?action=getlist&id=contacts]]></source>
     <filter name="liefonly" displayname="Lieferanten" />
     <filter name="kundonly" displayname="Kunden" />
@@ -11,25 +11,25 @@
     <order displayname="Debitorennummer">KONTDEBNR</order>
     <order displayname="Kreditorennummer">KONTKREDNR</order>
   </view>
-  <view id="Parts" shortcut="TE" displayname="Artikelstamm">
+  <view id="Parts" shortcut="TE" displayname="Artikelstamm" displayimage="object_coneImage">
     <source><![CDATA[?action=getlist&id=parts]]></source>
-    <filter name="active" displayname="Aktiv" />
-    <filter name="inactive" displayname="InAktiv" />
+    <filter name="active" displayname="Aktive" />
+    <filter name="inactive" displayname="InAktive" />
     <order displayname="Teilenummer">OBJKNR</order>
     <order displayname="Matchcode">OBJKMATCH</order>
     <order displayname="Teilenummer">OBJKNR</order>
     <order displayname="Artikelname">TEILNAME</order>
   </view>
-  <view id="Orders" shortcut="BE" displayname="Bestellungen">
+  <view id="Orders" shortcut="BE" displayname="Bestellungen" displayimage="purchase_orderImage">
     <source><![CDATA[?action=getlist&id=orders]]></source>
-    <filter name="active" displayname="Aktiv" />
-    <filter name="inactive" displayname="InAktiv" />
+    <filter name="active" displayname="Aktive" />
+    <filter name="inactive" displayname="InAktive" />
     <order displayname="Bestellnummer">OBJKNR</order>
     <order displayname="Matchcode">OBJKMATCH</order>
     <order displayname="Lieferantennummer">BEKOLNR</order>
     <order displayname="Lieferantenname">LIEFNAME</order>
   </view>
-  <view id="Receipts" shortcut="WE" displayname="Wareneingänge">
+  <view id="Receipts" shortcut="WE" displayname="Wareneingänge" displayimage="small_truckImage">
     <source><![CDATA[?action=getlist&id=receipts]]></source>
     <order displayname="Wareneingangsnummer">OBJKNR</order>
     <order displayname="Matchcode">OBJKMATCH</order>
@@ -38,37 +38,37 @@
     <order displayname="Artikelnummer">WENRTNR</order>
     <order displayname="Artikelname">TEILNAME</order>
   </view>
-  <view id="PurchaseOrders" shortcut="AU" displayname="Aufträge">
+  <view id="PurchaseOrders" shortcut="AU" displayname="Aufträge" displayimage="inbox_intoImage">
     <source><![CDATA[?action=getlist&id=purchaseorders]]></source>
-    <filter name="active" displayname="Aktiv" />
-    <filter name="inactive" displayname="InAktiv" />
+    <filter name="active" displayname="Aktive" />
+    <filter name="inactive" displayname="InAktive" />
     <order displayname="Auftragsnummer">OBJKNR</order>
     <order displayname="Matchcode">OBJKMATCH</order>
     <order displayname="Kundennummer">AUKOKNR</order>
     <order displayname="Kundenname">KUNDNAME</order>
   </view>
-  <view id="Jobs" shortcut="WA" displayname="Werkaufträge">
+  <view id="Jobs" shortcut="WA" displayname="Werkaufträge" displayimage="gearwheelImage">
     <source><![CDATA[?action=getlist&id=jobs]]></source>
-    <filter name="active" displayname="Offen" />
-    <filter name="inactive" displayname="Abgeschlossen" />
+    <filter name="active" displayname="Offene" />
+    <filter name="inactive" displayname="Abgeschlossene" />
     <order displayname="Werkauftragsnummer">OBJKNR</order>
     <order displayname="Matchcode">OBJKMATCH</order>
     <order displayname="Artikelnummer">WAKOTNR</order>
     <order displayname="Artikelname">TEILNAME</order>
   </view>
-  <view id="Offers" shortcut="AN" displayname="Angebote">
+  <view id="Offers" shortcut="AN" displayname="Angebote" displayimage="sales_quotationImage">
     <source><![CDATA[?action=getlist&id=offers]]></source>
-    <filter name="active" displayname="Aktiv" />
-    <filter name="inactive" displayname="InAktiv" />
+    <filter name="active" displayname="Aktive" />
+    <filter name="inactive" displayname="InAktive" />
     <order displayname="Auftragsnummer">OBJKNR</order>
     <order displayname="Matchcode">OBJKMATCH</order>
     <order displayname="Kundennummer">ANKOKNR</order>
     <order displayname="Kundenname">KUNDNAME</order>
   </view>
-  <view id="Enquiries" shortcut="AF" displayname="Anfragen">
+  <view id="Enquiries" shortcut="AF" displayname="Anfragen" displayimage="mail_forwardImage">
     <source><![CDATA[?action=getlist&id=enquiries]]></source>
-    <filter name="active" displayname="Aktiv" />
-    <filter name="inactive" displayname="InAktiv" />
+    <filter name="active" displayname="Aktive" />
+    <filter name="inactive" displayname="InAktive" />
     <order displayname="Auftragsnummer">OBJKNR</order>
     <order displayname="Matchcode">OBJKMATCH</order>
     <order displayname="Lieferantennummer">AFKOKNR</order>
