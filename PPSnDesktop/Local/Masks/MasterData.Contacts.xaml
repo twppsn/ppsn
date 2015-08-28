@@ -4,48 +4,169 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 						xmlns:sys="clr-namespace:System;assembly=mscorlib"
 						xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
-             mc:Ignorable="d"  Title="Test Maske"
-						 d:DesignHeight="600" d:DesignWidth="800">
+             mc:Ignorable="d"  Title="Kontakte"
+						 d:DesignHeight="600" d:DesignWidth="1000">	
 	<x:Code>
 		<![CDATA[
 		require 'MasterData.Contracts.lua';
 		]]>
 	</x:Code>
-  <ui:PpsGenericWpfControl.Resources>
-		<ResourceDictionary>
-		</ResourceDictionary>
-	</ui:PpsGenericWpfControl.Resources>
-	<Grid Width="400">
-		<Grid.RowDefinitions>
-			<RowDefinition Height="28" />
-			<RowDefinition Height="28" />
-			<RowDefinition />
-		</Grid.RowDefinitions>
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition />
-			<ColumnDefinition />
-		</Grid.ColumnDefinitions>
-        
-		<Label Grid.Column="0" Content="{Binding Data.KONT.KONTNAME.Caption, Mode=OneTime}"  />
-		<TextBox Grid.Column="1" Height="23" Text="{Binding Data.KONT/KONTNAME}" />
-        
-		<Label Grid.Column="0" Grid.Row="1" Content="{Binding Data.KONT.KONTVORNAME.Caption, Mode=OneTime}"  />
-		<TextBox Grid.Column="1" Grid.Row="1" Height="23" Text="{Binding Data.KONT/KONTVORNAME}" />
+	<ui:PpsGenericWpfControl.Resources>
+        <CollectionViewSource x:Key="ApartByAddress" Source="{Binding Path=Data.ANSP}">
+            <CollectionViewSource.GroupDescriptions>
+                <PropertyGroupDescription PropertyName="ANSPADREID"/>
+            </CollectionViewSource.GroupDescriptions>
+        </CollectionViewSource>
+    </ui:PpsGenericWpfControl.Resources>
 
-		<StackPanel Grid.Column="0" Grid.Row="2">
-			<Button Content="Test" Margin="0,0,0,12" Command="{Binding Add}" />
-			<Button Content="Show Stack" Margin="0,0,0,12" Command="{Binding ShowStackCommand}" />
-			<Button Content="Undo" Margin="0,0,0,12" Command="{Binding UndoCommand}" />
-			<Button Content="Redo" Margin="0,0,0,12" Command="{Binding RedoCommand}" />
-		</StackPanel>
-		<ListBox Grid.Column="1" Grid.Row="2" ItemsSource="{Binding Path=Data.ADDR}">
-			<ListBox.ItemTemplate>
-				<DataTemplate>
-					<TextBlock Text="{Binding ADDRTEXT}" />
-				</DataTemplate>
-			</ListBox.ItemTemplate>
-		</ListBox>
-	</Grid>
+	<Grid Width="1000">
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="120"/>
+			<ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="100"/>
+            <ColumnDefinition Width="100"/>
+            <ColumnDefinition Width="300"/>
+        </Grid.ColumnDefinitions>
+		<Grid.RowDefinitions>
+            <RowDefinition Height="64"/>
+            <RowDefinition Height="29"/>
+			<RowDefinition Height="29"/>
+			<RowDefinition Height="29"/>
+			<RowDefinition Height="29"/>
+			<RowDefinition Height="29"/>
+            <RowDefinition Height="29"/>
+            <RowDefinition Height="29"/>
+            <RowDefinition Height="64"/>
+            <RowDefinition />
+		</Grid.RowDefinitions>
+
+        <Border Grid.Column="1" Grid.Row="0" Height="28" VerticalAlignment="Bottom" Margin="0,8" BorderThickness="0,0,0,4" BorderBrush="{StaticResource PPSnSeparatorBrush}" SnapsToDevicePixels="True">
+            <TextBlock Text="Ident" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="0,0,0,2" FontSize="14.667" FontWeight="DemiBold" />
+        </Border>
+        <Border Grid.Column="4" Grid.Row="0" Height="28" VerticalAlignment="Bottom" Margin="0,8" BorderThickness="0,0,0,4" BorderBrush="{StaticResource PPSnSeparatorBrush}" SnapsToDevicePixels="True">
+            <TextBlock Text="Bank" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="0,0,0,2" FontSize="14.667" FontWeight="DemiBold" />
+        </Border>
+
+
+        <Label Grid.Column="0" Grid.Row="1" Content="{Binding Data.KONT.KONTNR.Caption, Mode=OneTime}" Height="23"/>
+		<TextBox Grid.Column="1" Grid.Row="1" Text="{Binding Data.KONT/KONTNR}" Width="100"/>
+		<Label Grid.Column="0" Grid.Row="2" Content="{Binding Data.KONT.KONTNAME.Caption, Mode=OneTime}" Height="23"/>
+        <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Data.KONT/KONTNAME}" Width="300"/>
+        <Label Grid.Column="0" Grid.Row="3" Content="{Binding Data.KONT.KONTEXTNR.Caption, Mode=OneTime}" Height="23"/>
+        <TextBox Grid.Column="1" Grid.Row="3" Text="{Binding Data.KONT/KONTEXTNR}" Width="100"/>
+        <Label Grid.Column="0" Grid.Row="4" Content="{Binding Data.KONT.KONTKREDNR.Caption, Mode=OneTime}" Height="23"/>
+        <TextBox Grid.Column="1" Grid.Row="4" Text="{Binding Data.KONT/KONTKREDNR}" Width="100"/>
+        <Label Grid.Column="0" Grid.Row="5" Content="{Binding Data.KONT.KONTDEBNR.Caption, Mode=OneTime}" Height="23"/>
+        <TextBox Grid.Column="1" Grid.Row="5" Text="{Binding Data.KONT/KONTDEBNR}" Width="100"/>
+        <Label Grid.Column="0" Grid.Row="6" Content="{Binding Data.KONT.KONTUSTID.Caption, Mode=OneTime}" Height="23"/>
+        <TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Data.KONT/KONTUSTID}" Width="100"/>
+        <Label Grid.Column="0" Grid.Row="7" Content="{Binding Data.KONT.KONTSTID.Caption, Mode=OneTime}" Height="23"/>
+        <TextBox Grid.Column="1" Grid.Row="7" Text="{Binding Data.KONT/KONTSTID}" Width="100"/>
+
+        <Label Grid.Column="3" Grid.Row="1" Content="{Binding Data.KONT.KONTWAEHID.Caption, Mode=OneTime}" Height="23"/>
+        <ComboBox Grid.Column="4" Grid.Row="1" SelectedValue="{Binding Data.KONT/KONTWAEHID}" Width="100" Height="23" HorizontalAlignment="Left"
+				  ItemsSource="{Binding Path=Data.WAEH}"
+				  SelectedValuePath="WAEHID"
+				  DisplayMemberPath="WAEHID">
+        </ComboBox>
+
+        <Label Grid.Column="3" Grid.Row="2" Content="{Binding Data.KONT.KONTBANK.Caption, Mode=OneTime}" Height="23"/>
+        <TextBox Grid.Column="4" Grid.Row="2" Text="{Binding Data.KONT/KONTBANK}" Width="300"/>
+
+        <Label Grid.Column="3" Grid.Row="3" Content="{Binding Data.KONT.KONTIBAN.Caption, Mode=OneTime}" Height="23"/>
+        <TextBox Grid.Column="4" Grid.Row="3" Text="{Binding Data.KONT/KONTIBAN}" Width="300"/>
+
+		<Label Grid.Column="3" Grid.Row="4" Content="{Binding Data.KONT.KONTBIC.Caption, Mode=OneTime}" Height="23"/>
+        <TextBox Grid.Column="4" Grid.Row="4" Text="{Binding Data.KONT/KONTBIC}" Width="300"/>
+
+        <Border Grid.Column="1" Grid.Row="8" Grid.ColumnSpan="4" Height="40" VerticalAlignment="Bottom" Margin="0,8" BorderThickness="0,0,0,4" BorderBrush="{StaticResource PPSnSeparatorBrush}" SnapsToDevicePixels="True">
+            <TextBlock Text="Adressen / Ansprechpartner" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="0,0,0,2" FontSize="14.667" FontWeight="DemiBold" />
+        </Border>
+
+        <ListBox x:Name="APART_ListBox" Grid.Column="1" Grid.Row="9" Background="Transparent" ItemsSource="{Binding Source={StaticResource ApartByAddress}}" BorderThickness="0" IsSynchronizedWithCurrentItem="true">
+            <ListBox.GroupStyle>
+                <GroupStyle>
+					<GroupStyle.ContainerStyle>
+						<Style TargetType="{x:Type GroupItem}">
+							<Setter Property="Template">
+								<Setter.Value>
+									<ControlTemplate TargetType="{x:Type GroupItem}">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition/>
+                                                <RowDefinition/>
+                                            </Grid.RowDefinitions>
+                                            <Label Grid.Row="0" Content="{Binding Name}" Height="23" FontWeight="Bold"/>
+                                            <ItemsPresenter Grid.Row="1"/>
+                                        </Grid>
+									</ControlTemplate>
+								</Setter.Value>
+							</Setter>
+						</Style>
+					</GroupStyle.ContainerStyle>
+                </GroupStyle>
+            </ListBox.GroupStyle>
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Padding" Value="0"/>
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Label Content="{Binding ANSPNAME}" Height="23" Margin="0"/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <Grid Grid.Column="3" Grid.Row="9" Grid.ColumnSpan="2" Margin="0,23">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="29"/>
+                <RowDefinition Height="29"/>
+                <RowDefinition Height="29"/>
+                <RowDefinition Height="29"/>
+                <RowDefinition Height="29"/>
+                <RowDefinition Height="29"/>
+            </Grid.RowDefinitions>
+            <Label Grid.Column="0" Grid.Row="0" Content="{Binding Data.ANSP.ANSPNAME.Caption, Mode=OneTime}" Height="23"/>
+            <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding ElementName=APART_ListBox, Path=SelectedValue.ANSPNAME}" Width="300"/>
+            <Label Grid.Column="0" Grid.Row="1" Content="{Binding Data.ANSP.ANSPANREDE.Caption, Mode=OneTime}" Height="23"/>
+            <TextBox Grid.Column="1" Grid.Row="1" Text="{Binding ElementName=APART_ListBox, Path=SelectedValue.ANSPANREDE}" Width="300"/>
+            <Label Grid.Column="0" Grid.Row="2" Content="{Binding Data.ANSP.ANSPTEL.Caption, Mode=OneTime}" Height="23"/>
+            <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding ElementName=APART_ListBox, Path=SelectedValue.ANSPTEL}" Width="300"/>
+            <Label Grid.Column="0" Grid.Row="3" Content="{Binding Data.ANSP.ANSPMOBIL.Caption, Mode=OneTime}" Height="23"/>
+            <TextBox Grid.Column="1" Grid.Row="3" Text="{Binding ElementName=APART_ListBox, Path=SelectedValue.ANSPMOBIL}" Width="300"/>
+            <Label Grid.Column="0" Grid.Row="4" Content="{Binding Data.ANSP.ANSPFAX.Caption, Mode=OneTime}" Height="23"/>
+            <TextBox Grid.Column="1" Grid.Row="4" Text="{Binding ElementName=APART_ListBox, Path=SelectedValue.ANSPFAX}" Width="300"/>
+            <Label Grid.Column="0" Grid.Row="5" Content="{Binding Data.ANSP.ANSPMAIL.Caption, Mode=OneTime}" Height="23"/>
+            <TextBox Grid.Column="1" Grid.Row="5" Text="{Binding ElementName=APART_ListBox, Path=SelectedValue.ANSPMAIL}" Width="300"/>
+        </Grid>
+
+        <!--<ContentControl Grid.Column="4" Grid.Row="7" Content="{Binding Source={StaticResource ApartByAddress}}" Margin="0,36">
+            <ContentControl.ContentTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+							<ColumnDefinition/>
+						</Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+							<RowDefinition Height="29"/>
+                            <RowDefinition Height="29"/>
+                            <RowDefinition Height="29"/>
+                            <RowDefinition Height="29"/>
+                        </Grid.RowDefinitions>
+                        <TextBox Grid.Row="0" Text="{Binding ANSPNAME}" Width="300"/>
+                        <TextBox Grid.Row="1" Text="{Binding ANSPANREDE}" Width="300"/>
+                        <TextBox Grid.Row="2" Text="{Binding ANSPTEL}" Width="300"/>
+                        <TextBox Grid.Row="3" Text="{Binding ANSPFAX}" Width="300"/>
+                    </Grid>
+                </DataTemplate>
+			</ContentControl.ContentTemplate>
+		</ContentControl>-->
+    </Grid>
 
     <ui:PpsGenericWpfControl.Commands>
         <ui:PpsUICommandButton Order="100,100" DisplayText="Speichern" Description="Testchen" Image="disks.png" Command="{Binding HalloCommand}" />

@@ -2,6 +2,10 @@
 <dataset>
 	<table name="KONT">
 		<column name="KONTID" datatype="long" />
+		<column name="KONTNR" datatype="string">
+			<MaxLength datatype="string">20</MaxLength>
+			<Caption datatype="string">Nummer</Caption>
+		</column>
     <column name="KONTNAME" datatype="string">
       <MaxLength datatype="string">1024</MaxLength>
       <Caption datatype="string">Name</Caption>
@@ -45,6 +49,17 @@
 		<column name="KONTHOMEPAGE" datatype="string">
 			<MaxLength datatype="string">1024</MaxLength>
 			<Caption datatype="string">Homepage</Caption>
+		</column>
+		<column name="KONTANMERK" datatype="string">
+			<MaxLength datatype="string">4096</MaxLength>
+			<Caption datatype="string">Anmerkung</Caption>
+		</column>
+		<column name="KONTSTID" datatype="string">
+			<MaxLength datatype="string">50</MaxLength>
+			<Caption datatype="string">Steuernummer</Caption>
+		</column>
+		<column name="KONTPERSID" datatype="long">
+			<Caption datatype="string">Sachbearbeiter</Caption>
 		</column>
   </table>
 	<table name="ADRE">
@@ -108,6 +123,13 @@
 		</column>
 		<column name="WAEHSYS" datatype="bool" >
 			<Caption datatype="string">Systemwährung</Caption>
+		</column>
+	</table>
+	<table name="PERS">
+		<column name="PERSID" datatype="long" />
+		<column name="PERSNAME" datatype="string">
+			<MaxLength datatype="string">200</MaxLength>
+			<Caption datatype="string">Name</Caption>
 		</column>
 	</table>
 	<meta>

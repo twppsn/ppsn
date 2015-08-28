@@ -224,6 +224,13 @@ namespace TecWare.PPSn.UI
 
 		private PPsUICommandCollection commands = new PPsUICommandCollection();
 
+		/// <summary></summary>
+		public PpsGenericWpfControl()
+			: base()
+		{
+			Focusable = false;
+		} // ctor
+
 		#region -- ILuaEventSink Member ---------------------------------------------------
 
 		void ILuaEventSink.CallMethod(string methodName, object[] args)
