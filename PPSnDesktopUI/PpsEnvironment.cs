@@ -17,6 +17,7 @@ using TecWare.DES.Networking;
 using System.Xml.Linq;
 using TecWare.PPSn.Controls;
 using System.IO;
+using System.Net.Mime;
 
 namespace TecWare.PPSn
 {
@@ -347,7 +348,7 @@ namespace TecWare.PPSn
 	/// <summary>Base class for application data. Holds information about view
 	/// classes, exception, connection, synchronisation and the script 
 	/// engine.</summary>
-	public class PpsEnvironment : LuaTable, IPpsShell, ICredentials, IDisposable
+	public class PpsEnvironment : LuaGlobalPortable, IPpsShell, ICredentials, IDisposable
 	{
 		public const string EnvironmentService = "PpsEnvironmentService";
 
@@ -412,11 +413,13 @@ namespace TecWare.PPSn
 		private Uri baseUri;									// internal uri for the environment
 		private NetworkCredential userInfo;   // currently credentials of the user
 
+		private BaseWebReqeust request;
 		private BaseWebReqeust localRequest;
 		private PpsLocalDataStore localStore;
 		private BaseWebReqeust remoteRequest;
 
-		private Lua lua;
+		private LuaCompileOptions luaOptions = LuaDeskop.StackTraceCompileOptions;
+
 		private Dispatcher currentDispatcher; // Synchronisation
 		private InputManager inputManager;
 		private SynchronizationContext synchronizationContext;
@@ -433,8 +436,8 @@ namespace TecWare.PPSn
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		public PpsEnvironment(Uri remoteUri, ResourceDictionary mainResources)
+			: base(new Lua())
 		{
-			this.lua = new Lua();
 			this.remoteUri = remoteUri;
 			this.mainResources = mainResources;
 			this.currentDispatcher = Dispatcher.CurrentDispatcher;
@@ -443,7 +446,7 @@ namespace TecWare.PPSn
 			this.Web = new WebIndex(this);
 			this.dataListTemplateSelector = new PpsDataListTemplateSelector(this);
 			this.datalistItems = new PpsEnvironmentCollection<PpsDataListItemDefinition>(this);
-			
+
 			// Start idle implementation
 			idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), currentDispatcher);
 			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer();
@@ -453,7 +456,8 @@ namespace TecWare.PPSn
 			localStore = CreateLocalDataStore();
 			WebRequest.RegisterPrefix(baseUri.ToString(), new PpsWebRequestCreate(this));
 
-			localRequest = new BaseWebReqeust(new Uri(baseUri, "local/"), Encoding.UTF8);
+			request = new BaseWebReqeust(baseUri, Encoding);
+			localRequest = new BaseWebReqeust(new Uri(baseUri, "local/"), Encoding);
 			remoteRequest = null;
 
 			// Register Service
@@ -475,7 +479,7 @@ namespace TecWare.PPSn
 
 				inputManager.PreProcessInput -= preProcessInputEventHandler;
 
-				Procs.FreeAndNil(ref lua);
+				Lua.Dispose();
 			}
 		} // proc Dispose
 
@@ -636,13 +640,96 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- Lua Compiler -----------------------------------------------------------
+
+		/// <summary>Load an compile the file from a remote source.</summary>
+		/// <param name="source">Source</param>
+		/// <param name="throwException">Throw an exception on fail</param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public async Task<LuaChunk> CompileAsync(Uri source, bool throwException, params KeyValuePair<string, Type>[] arguments)
+		{
+			try
+			{
+				using (var r = await request.GetResponseAsync(source.ToString()))
+				{
+					var contentDisposion = r.GetContentDisposition(true);
+					using (var sr = request.GetTextReaderAsync(r, MimeTypes.Lua))
+						return Lua.CompileChunk(sr, contentDisposion.FileName, luaOptions, arguments);
+				}
+			}
+			catch (LuaParseException e)
+			{
+				if (throwException)
+					throw;
+				else
+				{
+					await ShowExceptionAsync(ExceptionShowFlags.Background, e, $"Compile for {source} failed.");
+					return null;
+				}
+			}
+		} // func CompileAsync
+
+		/// <summary></summary>
+		/// <param name="chunk"></param>
+		/// <param name="env"></param>
+		/// <param name="throwException"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public LuaResult RunScript(LuaChunk chunk, LuaTable env, bool throwException, params object[] arguments)
+		{
+			try
+			{
+				return chunk.Run(env, arguments);
+			}
+			catch (LuaException e)
+			{
+				if (throwException)
+					throw;
+				else
+				{
+					Dispatcher.Invoke(() => ShowException(ExceptionShowFlags.Background, e));
+					return LuaResult.Empty;
+				}
+			}
+		} // func RunScript
+
+		#endregion
+
 		#region -- LuaHelper --------------------------------------------------------------
 
+		/// <summary>Show a simple message box.</summary>
+		/// <param name="text"></param>
+		/// <param name="caption"></param>
+		/// <param name="button"></param>
+		/// <param name="image"></param>
+		/// <param name="defaultResult"></param>
+		/// <returns></returns>
 		[LuaMember("msgbox")]
-		private void LuaMsgBox(string text, string caption)
+		private MessageBoxResult LuaMsgBox(string text, string caption, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
 		{
-			MessageBox.Show(text, caption ?? "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+			return MessageBox.Show(text, caption ?? "Information", button, image, defaultResult);
 		} // proc LuaMsgBox
+
+		[LuaMember("trace")]
+		private void LuaTrace(PpsTraceItemType type, params object[] args)
+		{
+			if (args == null || args.Length == 0)
+				return;
+
+			if (args[0] is string)
+				Traces.AppendText(type, String.Format((string)args[0], args.Skip(1).ToArray()));
+			else
+				Traces.AppendText(type, String.Join(", ", args));
+		} // proc LuaTrace
+		
+		/// <summary>Send a simple notification to the internal log</summary>
+		/// <param name="args"></param>
+		[LuaMember("print")]
+		private void LuaPrint(params object[] args)
+		{
+			LuaTrace(PpsTraceItemType.Information, args);
+		} // proc LuaPrint
 
 		#endregion
 
@@ -660,6 +747,8 @@ namespace TecWare.PPSn
 		public Uri BaseUri => baseUri;
 		/// <summary></summary>
 		public WebIndex Web { get; }
+		/// <summary></summary>
+		public BaseWebReqeust BaseRequest => request;
 		/// <summary>Default encodig for strings.</summary>
 		public Encoding Encoding => Encoding.Default;
 
@@ -681,8 +770,6 @@ namespace TecWare.PPSn
 		public Dispatcher Dispatcher { get { return currentDispatcher; } }
 		/// <summary>Synchronisation</summary>
 		SynchronizationContext IPpsShell.Context { get { return synchronizationContext; } }
-		/// <summary>Access to the current lua engine.</summary>
-		public Lua Lua { get { return lua; } }
 
 		/// <summary>Access to the current collected informations.</summary>
 		public PpsTraceLog Traces { get { return logData; } }
@@ -699,6 +786,31 @@ namespace TecWare.PPSn
 			return (PpsEnvironment)Application.Current.FindResource(EnvironmentService);
 		} // func GetEnvironment
 	} // class PpsEnvironment
+
+	#endregion
+
+	#region -- class LuaEnvironmentTable ------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Connects the current table with the Environment</summary>
+	public class LuaEnvironmentTable : LuaTable
+	{
+		private PpsEnvironment environment;
+
+		public LuaEnvironmentTable(PpsEnvironment environment)
+		{
+			this.environment = environment;
+		} // ctor
+
+		protected override object OnIndex(object key)
+		{
+			return base.OnIndex(key) ?? environment.GetValue(key);
+		} // func OnIndex
+
+		/// <summary>Access to the current environemnt.</summary>
+		[LuaMember("Environment")]
+		public PpsEnvironment Environment { get { return environment; } }
+	} // class LuaEnvironmentTable
 
 	#endregion
 }

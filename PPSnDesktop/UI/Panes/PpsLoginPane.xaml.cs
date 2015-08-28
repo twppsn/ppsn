@@ -36,13 +36,26 @@ namespace TecWare.PPSn.UI.Panes
 		{
 			return Task.Delay(0);
 		} // proc LoadAsync
-
-		public Task<bool> UnloadAsync()
+		
+		public Task<bool> UnloadAsync(bool? commit = default(bool?))
 		{
 			return Task.FromResult(true);
 		} // func UnloadAsync
 
+		public PpsWindowPaneCompareResult CompareArguments(LuaTable args)
+		{
+			throw new NotImplementedException();
+		}
+
 		public string Title { get { return "Login"; } }
 		public object Control { get { return this; } }
+
+		public bool IsDirty
+		{
+			get
+			{
+				throw new NotImplementedException();
+			}
+		}
 	} // class PpsLoginPane
 }

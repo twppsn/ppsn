@@ -19,7 +19,7 @@
   <action name="test" displayname="Test" priority="-110">
     <code><![CDATA[LoadPane({ template = "local/Masks/TestWpfGeneric.xaml"})]]></code>
   </action>
-  <action name="closeapp" displayname="Schließen" priority="-100">
+  <action name="closeapp" displayname="Schließen" priority="-1000">
     <code><![CDATA[ Window:Close(); ]]></code>
   </action>
 </actions>

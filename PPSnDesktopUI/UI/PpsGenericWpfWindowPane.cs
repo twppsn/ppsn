@@ -18,6 +18,7 @@ using System.Globalization;
 using System.Web;
 using TecWare.DES.Stuff;
 using TecWare.DES.Networking;
+using System.Xml;
 
 namespace TecWare.PPSn.UI
 {
@@ -25,21 +26,20 @@ namespace TecWare.PPSn.UI
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Pane that combines a xaml file with lua code.</summary>
-	public class PpsGenericWpfWindowPane : LuaTable, IPpsWindowPane
+	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane
 	{
 		private static readonly XName xnCode = XName.Get("Code", "http://schemas.microsoft.com/winfx/2006/xaml");
 
 		private BaseWebReqeust fileSource;
 		private FrameworkElement control;
 
-		private PpsEnvironment environment;
 		private LuaTable arguments; // arguments
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		public PpsGenericWpfWindowPane(PpsEnvironment environment)
+			: base(environment)
 		{
-			this.environment = environment;
 		} // ctor
 
 		~PpsGenericWpfWindowPane()
@@ -60,24 +60,11 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		#region -- Lua-Interface ----------------------------------------------------------
-
-		[LuaMember("print")]
-		private void LuaPrint(string text)
-		{
-			Trace.TraceInformation(text);
-		} // proc LuaPrint
-
-		[LuaMember("msgbox")]
-		private void LuaMsgBox(string text, string caption)
-		{
-			MessageBox.Show(text, caption ?? "Information", MessageBoxButton.OK, MessageBoxImage.Information);
-		} // proc LuaMsgBox
 	
 		[LuaMember("require")]
-		private void LuaRequire(string path)
+		private LuaResult LuaRequire(string path)
 		{
-			using (var tr = Task.Run<TextReader>(async () => await fileSource.GetTextReaderAsync(path, MimeTypes.Text)).Result)
-				Lua.CompileChunk(tr, path, null).Run(this);
+			return Task.Run(async () => Environment.RunScript(await Environment.CompileAsync(fileSource.GetFullUri(path), true), this, true)).Result;
 		} // proc LuaRequire
 
 		[LuaMember("command")]
@@ -93,9 +80,14 @@ namespace TecWare.PPSn.UI
 
 		#region -- Load/Unload ------------------------------------------------------------
 
+		public PpsWindowPaneCompareResult CompareArguments(LuaTable args)
+		{
+			return PpsWindowPaneCompareResult.Incompatible;
+		} // func CompareArguments
+
 		public virtual async Task LoadAsync(LuaTable arguments)
 		{
-			await Task.Yield();
+			await Task.Yield(); // move to background
 
 			// use the argument as base table
 			this.arguments = arguments;
@@ -103,18 +95,20 @@ namespace TecWare.PPSn.UI
 			// get the basic template
 			var xamlFile = arguments["template"].ToString();
 			if (String.IsNullOrEmpty(xamlFile))
-				throw new ArgumentException("template is missing."); // todo: exception
+				throw new ArgumentException("template is missing.");
 
-			// Loads the xaml file from the source
-			xamlFile = new Uri(environment.BaseUri, xamlFile).ToString();
-      var xaml = XDocument.Load(xamlFile, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);
-			fileSource = new BaseWebReqeust(new Uri(xamlFile), Encoding.Default);
+			// prepare the base
+			var xamlUri = Environment.BaseRequest.GetFullUri(xamlFile);
+			fileSource = new BaseWebReqeust(new Uri(xamlUri, "."), Environment.Encoding);
+
+			// Load the xaml file
+			var xaml = await LoadXamlAsync(arguments, xamlUri);
 
 			// Load the content of the code-tag, to initialize extend functionality
 			var xCode = xaml.Root.Element(xnCode);
 			var chunk = (LuaChunk)null;
 			if (xCode != null)
-      {
+			{
 				chunk = Lua.CompileChunk(xCode.Value, xamlFile.ToString(), null); // todo: compile via env
 				xCode.Remove();
 			}
@@ -122,48 +116,67 @@ namespace TecWare.PPSn.UI
 			// Create the Wpf-Control
 			var xamlReader = new XamlReader();
 			await Dispatcher.InvokeAsync(() =>
+			{
+				control = xamlReader.LoadAsync(xaml.CreateReader()) as FrameworkElement;
+				OnControlCreated();
+
+				// Initialize the control and run the code in UI-Thread
+				if (chunk != null)
+					chunk.Run(this);// todo: run via env
+
+				// init bindings
+				control.DataContext = this;
+
+				// notify if the title will be changed
+				if (control is PpsGenericWpfControl)
 				{
-					control = xamlReader.LoadAsync(xaml.CreateReader()) as FrameworkElement;
-					OnControlCreated();
+					var desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.TitleProperty, typeof(PpsGenericWpfControl));
+					desc.AddValueChanged(control, (sender, e) => OnPropertyChanged("Title"));
+				}
 
-					// Initialize the control and run the code in UI-Thread
-					if (chunk != null)
-						chunk.Run(this);// todo: run via env
+				foreach (PpsUICommand c in ((PpsGenericWpfControl)control).Commands)
+					((PpsGenericWpfControl)control).Test(c);
 
-					// init bindings
-					control.DataContext = this;
-					
-					// notify if the title will be changed
-					if (control is PpsGenericWpfControl)
-					{
-						var desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.TitleProperty, typeof(PpsGenericWpfControl));
-						desc.AddValueChanged(control, (sender, e) => OnPropertyChanged("Title"));
-					}
-
-					foreach (PpsUICommand c in ((PpsGenericWpfControl)control).Commands)
-						((PpsGenericWpfControl)control).Test(c);
-
-					// notify changes on control
-					OnPropertyChanged("Control");
-					OnPropertyChanged("Commands");
-					OnPropertyChanged("Title");
-				});
+				// notify changes on control
+				OnPropertyChanged("Control");
+				OnPropertyChanged("Commands");
+				OnPropertyChanged("Title");
+			});
 		} // proc LoadAsync
+
+		private async Task<XDocument> LoadXamlAsync(LuaTable arguments, Uri xamlUri)
+		{
+			try
+			{
+				using (var r = await fileSource.GetResponseAsync(xamlUri.ToString()))
+				{
+					// read the file name
+					arguments["_filename"] = r.GetContentDisposition().FileName;
+
+					using (var sr = fileSource.GetTextReaderAsync(r, MimeTypes.Xaml))
+					{
+						using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, xamlUri.ToString()))
+							return XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				throw new ArgumentException("Can not load xaml definition.\n" + xamlUri.ToString(), e);
+			}
+		} // func LoadXamlAsync
 
 		protected virtual void OnControlCreated()
 		{
 		} // proc OnControlCreated
-
-		public Task<bool> UnloadAsync()
+				
+		public Task<bool> UnloadAsync(bool? commit = default(bool?))
 		{
-			return Task.FromResult<bool>(true);
+			return Task.FromResult(true);
 		} // func UnloadAsync
 
 		#endregion
 
-		/// <summary>Access to the current environemnt.</summary>
-		[LuaMember("Environment")]
-		public PpsEnvironment Environment { get { return environment; } }
 		/// <summary>Arguments of the generic content.</summary>
 		[LuaMember("Arguments")]
 		public LuaTable Arguments { get { return arguments; } }
@@ -191,9 +204,11 @@ namespace TecWare.PPSn.UI
 		/// <summary>Synchronization to the UI.</summary>
 		public Dispatcher Dispatcher { get { return control == null ? Application.Current.Dispatcher : control.Dispatcher; } }
 		/// <summary>Access to the current lua compiler</summary>
-		public Lua Lua { get { return environment.Lua; } }
+		public Lua Lua => Environment.Lua;
 
 		public IEnumerable<object> Commands { get { return control == null ? null : ((PpsGenericWpfControl)control).Commands; } }
+
+		public bool IsDirty => false;
 	} // class PpsGenericWpfWindowContext
 
 	#endregion
