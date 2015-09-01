@@ -21,12 +21,12 @@ namespace TecWare.PPSn
 		{
 			// Load the environment
 			ReloadApplicationAsync()
-				.ContinueWith(t =>
+				.ContinueWith(async t =>
 					{
 						SetEnvironment(t.Result);
 
 						if (currentEnvironment != null)
-							currentEnvironment.CreateMainWindow();
+							await currentEnvironment.CreateMainWindowAsync();
 					});
 
 			base.OnStartup(e);

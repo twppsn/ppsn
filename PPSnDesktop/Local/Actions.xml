@@ -22,4 +22,7 @@
   <action name="closeapp" displayname="Schließen" priority="-1000">
     <code><![CDATA[ Window:Close(); ]]></code>
   </action>
+  <action name="testex" displayname="Exception" priority="-100">
+    <code><![CDATA[ error("Hallo Welt!"); ]]></code>
+  </action>
 </actions>

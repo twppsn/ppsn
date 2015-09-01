@@ -18,6 +18,8 @@ using System.Xml.Linq;
 using TecWare.PPSn.Controls;
 using System.IO;
 using System.Net.Mime;
+using TecWare.PPSn.UI;
+using System.Windows.Data;
 
 namespace TecWare.PPSn
 {
@@ -447,6 +449,11 @@ namespace TecWare.PPSn
 			this.dataListTemplateSelector = new PpsDataListTemplateSelector(this);
 			this.datalistItems = new PpsEnvironmentCollection<PpsDataListItemDefinition>(this);
 
+			// Enable Trace Access
+			BindingOperations.EnableCollectionSynchronization(logData, logData.SyncRoot,
+				(collection, context, accessMethod, writeAccess) => currentDispatcher.Invoke(accessMethod)
+			);
+			
 			// Start idle implementation
 			idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), currentDispatcher);
 			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer();
@@ -628,15 +635,51 @@ namespace TecWare.PPSn
 		async Task IPpsShell.InvokeAsync(Action action) => await Dispatcher.InvokeAsync(action);
 		async Task<T> IPpsShell.InvokeAsync<T>(Func<T> func) => await Dispatcher.InvokeAsync<T>(func);
 
-		public void ShowException(ExceptionShowFlags flags, Exception exception, object alternativeMessage = null)
+		public void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 		{
-			System.Windows.MessageBox.Show("todo: " + (alternativeMessage ?? exception.Message));
+			// always add the exception to the list
+			Traces.AppendException(exception, alternativeMessage);
+
+			// show the exception if it is not marked as background
+			if ((flags & ExceptionShowFlags.Background) != ExceptionShowFlags.Background)
+			{
+				var shutDown = (flags & ExceptionShowFlags.Shutown) != 0;
+
+				var dialog = new PpsExceptionDialog();
+				dialog.MessageType = shutDown ? PpsTraceItemType.Fail : PpsTraceItemType.Exception;
+				dialog.MessageText = alternativeMessage ?? exception.Message;
+				dialog.SkipVisible = !shutDown;
+
+				dialog.Owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
+
+				var r = dialog.ShowDialog(); // show the dialog
+				if (r ?? false)
+					ShowTrace(dialog.Owner);
+
+				if (shutDown) // close application
+					Application.Current.Shutdown(1);
+			}
 		} // proc ShowException
 
-		public async Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, object alternativeMessage = null)
+		public async Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 		{
 			await Dispatcher.InvokeAsync(() => ShowException(flags, exception, alternativeMessage));
 		} // proc ShowException
+
+		/// <summary></summary>
+		/// <param name="owner"></param>
+		public void ShowTrace(Window owner)
+		{
+			var dialog = new PpsTraceDialog();
+			var t = dialog.LoadAsync(this);
+			if (t.IsCompleted)
+				t.Wait();
+			dialog.Owner = owner;
+			dialog.ShowDialog();
+		} // proc ShowTrace
+
+		/// <summary>Returns the pane declaration for the trace pane.</summary>
+		public Type TracePane => typeof(PpsTracePane);
 
 		#endregion
 
@@ -708,7 +751,7 @@ namespace TecWare.PPSn
 					throw;
 				else
 				{
-					Dispatcher.Invoke(() => ShowException(ExceptionShowFlags.Background, e));
+					Dispatcher.Invoke(() => ShowException(ExceptionShowFlags.None, e));
 					return LuaResult.Empty;
 				}
 			}
@@ -779,7 +822,7 @@ namespace TecWare.PPSn
 		/// <summary>Current user the is logged in.</summary>
 		public string Username { get { return userInfo == null ? String.Empty : userInfo.UserName; } }
 		/// <summary>Display name for the user.</summary>
-		public string UsernameDisplay { get { return "No User"; } }
+		public string UsernameDisplay { get { return "Nicht angemeldet"; } }
 
 		/// <summary></summary>
 		public PpsEnvironmentCollection<PpsDataListItemDefinition> DataListItemTypes => datalistItems;

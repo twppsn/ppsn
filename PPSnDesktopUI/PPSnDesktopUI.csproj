@@ -72,6 +72,10 @@
     <Compile Include="Data\LocalDataStore.cs" />
     <Compile Include="Data\RemoteDataStore.cs" />
     <Compile Include="Stuff.cs" />
+    <Compile Include="UI\Converter.cs" />
+    <Compile Include="UI\PpsExceptionDialog.xaml.cs">
+      <DependentUpon>PpsExceptionDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="UI\LuaValueConverter.cs" />
     <Compile Include="PpsEnvironment.cs" />
     <Compile Include="PpsTraceLog.cs" />
@@ -85,6 +89,12 @@
     <Compile Include="UI\PpsDialogWindow.cs" />
     <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
     <Compile Include="UI\PpsGenericWpfWindowPane.cs" />
+    <Compile Include="UI\PpsTraceDialog.xaml.cs">
+      <DependentUpon>PpsTraceDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="UI\PpsTracePane.xaml.cs">
+      <DependentUpon>PpsTracePane.xaml</DependentUpon>
+    </Compile>
     <Compile Include="UI\PpsWindow.Chrome.cs" />
     <Compile Include="UI\PpsWindow.cs" />
     <Compile Include="UI\PpsWindowPane.cs" />
@@ -118,6 +128,18 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Page Include="UI\PpsExceptionDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\PpsTraceDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\PpsTracePane.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="UI\Styles\ControlStyles.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

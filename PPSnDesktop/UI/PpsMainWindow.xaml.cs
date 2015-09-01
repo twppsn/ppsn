@@ -20,6 +20,20 @@ using System.Reflection;
 
 namespace TecWare.PPSn.UI
 {
+	#region -- enum PpsNewWindowMode ----------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public enum PpsNewWindowMode
+	{
+		Default,
+		UseThisWindow,
+		NewMainWindow,
+		NewSingleWindow
+	} // enum PpsNewWindowMode
+
+	#endregion
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public partial class PpsMainWindow : PpsWindow
@@ -89,6 +103,15 @@ namespace TecWare.PPSn.UI
 				)
 			);
 
+			CommandBindings.Add(
+				new CommandBinding(PpsWindow.TraceLogCommand,
+				async	(sender, e) =>
+				{
+					e.Handled = true;
+					await LoadPaneAsync(Environment.TracePane, PpsNewWindowMode.NewSingleWindow, null);
+        }
+				)
+			);
 
 			CommandBindings.Add(
 				new CommandBinding(RunActionCommand,
@@ -117,9 +140,10 @@ namespace TecWare.PPSn.UI
 			var  tmp =  @"http://environment1/local/masks/TestWpfGeneric.xaml";
 			//await LoadPaneAsync(typeof(Panes.PpsLoginPane), null);
 			await LoadPaneAsync(typeof(PpsGenericWpfWindowPane),
-				Procs.CreateLuaTable(
-					new KeyValuePair<string, object>("template", tmp)
-				)
+				new LuaTable()
+				{
+					["template"] = tmp
+				}
 			);
 		} // proc StartLogin
 
@@ -166,19 +190,51 @@ namespace TecWare.PPSn.UI
 		/// <param name="paneType">Type of the pane to load.</param>
 		/// <param name="arguments">Argument set for the pane</param>
 		/// <returns></returns>
-		public async Task LoadPaneAsync(Type paneType, LuaTable arguments)
+		public Task LoadPaneAsync(Type paneType, LuaTable arguments)
+		{
+			return LoadPaneAsync(paneType, PpsNewWindowMode.Default, arguments);
+		} // func LoadPaneAsync
+
+		/// <summary>Loads a new current pane.</summary>
+		/// <param name="paneType">Type of the pane to load.</param>
+		/// <param name="newWindowMode"></param>
+		/// <param name="arguments">Argument set for the pane</param>
+		/// <returns></returns>
+		public async Task LoadPaneAsync(Type paneType, PpsNewWindowMode newWindowMode, LuaTable arguments)
+		{
+			if (newWindowMode == PpsNewWindowMode.Default)
+				newWindowMode = (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) ? PpsNewWindowMode.NewMainWindow : PpsNewWindowMode.UseThisWindow;
+
+			switch (newWindowMode)
+			{
+				case PpsNewWindowMode.NewMainWindow:
+				case PpsNewWindowMode.NewSingleWindow:
+					{
+						var newWindow = Environment.GetWindows().FirstOrDefault(c => ComparePane(c.CurrentPane, paneType, arguments) == PpsWindowPaneCompareResult.Same);
+						if (newWindow == null)
+						{
+							newWindow = await Environment.CreateMainWindowAsync();
+							await newWindow.LoadPaneInternAsync(paneType, arguments);
+						}
+						newWindow.Activate();
+					}
+					break;
+				default:
+					await LoadPaneInternAsync(paneType, arguments);
+					break;
+			}
+		} // proc StartPaneAsync
+
+		private async Task LoadPaneInternAsync(Type paneType, LuaTable arguments)
 		{
 			var currentPane = CurrentPane;
+			if (arguments == null)
+				arguments = new LuaTable();
 
 			try
 			{
 				// check, if we have to initialize a new pane
-				var loadMode = PpsWindowPaneCompareResult.Incompatible;
-				if (currentPane != null)
-				{
-					if (currentPane.GetType() == paneType)
-						loadMode = currentPane.CompareArguments(arguments);
-				}
+				PpsWindowPaneCompareResult loadMode = ComparePane(currentPane, paneType, arguments);
 
 				// do the load mode
 				switch (loadMode)
@@ -216,7 +272,18 @@ namespace TecWare.PPSn.UI
 			{
 				await Environment.ShowExceptionAsync(ExceptionShowFlags.None, e, "Die Ansicht konnte nicht geladen werden.");
 			}
-		} // proc StartPaneAsync
+		} // proc LoadPaneInternAsync
+
+		private static PpsWindowPaneCompareResult ComparePane(IPpsWindowPane currentPane, Type paneType, LuaTable arguments)
+		{
+			var loadMode = PpsWindowPaneCompareResult.Incompatible;
+			if (currentPane != null)
+			{
+				if (currentPane.GetType() == paneType)
+					loadMode = currentPane.CompareArguments(arguments);
+			}
+			return loadMode;
+		} // func ComparePane
 
 		/// <summary>Unloads the current pane, to a empty pane.</summary>
 		/// <returns></returns>

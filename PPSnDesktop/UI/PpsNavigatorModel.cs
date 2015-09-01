@@ -87,8 +87,8 @@ namespace TecWare.PPSn.UI
 
 		private PpsMainWindow windowModel;
 
-		private ICollectionView views;
-		private ICollectionView actions;
+		private CollectionViewSource views;
+		private CollectionViewSource actions;
 
 		private PpsFilterView[] currentFilters;
 		private PpsOrderView[] currentOrders;
@@ -106,14 +106,16 @@ namespace TecWare.PPSn.UI
 			this.windowModel = windowModel;
 
 			// Create a view for the actions
-			actions = CollectionViewSource.GetDefaultView(Environment.Actions);
+			actions = new CollectionViewSource();
+			actions.Source = Environment.Actions;
 			actions.SortDescriptions.Add(new SortDescription("Priority", ListSortDirection.Ascending));
-			actions.Filter += FilterAction;
+			actions.View.Filter += FilterAction;
 
 			// Create a view for the views
-			views = CollectionViewSource.GetDefaultView(Environment.Views);
+			views = new CollectionViewSource();
+			views.Source = Environment.Views;
 			views.SortDescriptions.Add(new SortDescription("DisplayName", ListSortDirection.Ascending));
-			views.CurrentChanged += (sender, e) => UpdateCurrentView((PpsMainViewDefinition)views.CurrentItem);
+			views.View.CurrentChanged += (sender, e) => UpdateCurrentView((PpsMainViewDefinition)views.View.CurrentItem);
 
 			// init data list
 			items = new PpsDataList(Environment);
@@ -121,8 +123,8 @@ namespace TecWare.PPSn.UI
 			itemsView.CurrentChanged += (sender, e) => RefreshActions();
 
 			// Update the view
-			if (!views.MoveCurrentToFirst())
-				UpdateCurrentView((PpsMainViewDefinition)views.CurrentItem);
+			if (!views.View.MoveCurrentToFirst())
+				UpdateCurrentView((PpsMainViewDefinition)views.View.CurrentItem);
 		} // ctor
 
 		private bool FilterAction(object item)
@@ -217,7 +219,7 @@ namespace TecWare.PPSn.UI
 
 		private void RefreshActions()
 		{
-			actions.Refresh();
+			actions.View.Refresh();
 		} // proc RefreshActions
 
 		[LuaMember(nameof(IsItemType))]
@@ -259,15 +261,15 @@ namespace TecWare.PPSn.UI
 		public object CurrentItem => itemsView?.CurrentItem;
 		/// <summary>Points to the current view</summary>
 		[LuaMember(nameof(CurrentView))]
-		public PpsMainViewDefinition CurrentView => views?.CurrentItem as PpsMainViewDefinition;
+		public PpsMainViewDefinition CurrentView => views?.View.CurrentItem as PpsMainViewDefinition;
 		/// <summary>Returns the current filters</summary>
 		public IEnumerable<PpsFilterView> CurrentFilters => currentFilters;
 		/// <summary>Returns the current orders</summary>
 		public IEnumerable<PpsOrderView> CurrentOrders => currentOrders;
 		/// <summary></summary>
-		public ICollectionView VisibleViews => views;
+		public ICollectionView VisibleViews => views.View;
 		/// <summary></summary>
-		public ICollectionView VisibleActions => actions;
+		public ICollectionView VisibleActions => actions.View;
 		/// <summary>Data Items</summary>
 		public ICollectionView Items => itemsView;
 
