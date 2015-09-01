@@ -64,7 +64,7 @@
   </table>
 	<table name="ADRE">
 		<column name="ADREID" datatype="long" />
-		<column name="ADREKONTID" datatype="long" />
+    <relation name="ADREKONTID" table="KONT" column="KONTID" />
 		<column name="ADRENAME" datatype="string">
 			<MaxLength datatype="string">50</MaxLength>
 			<Caption datatype="string">Name</Caption>
@@ -80,8 +80,8 @@
 	</table>
 	<table name="ANSP">
 		<column name="ANSPID" datatype="long" />
-		<column name="ANSPKONTID" datatype="long" />
-		<column name="ANSPADREID" datatype="long" />
+    <relation name="ANSPKONTID" table="KONT" column="KONTID" />
+    <relation name="ANSPADREID" table="ADRE" column="ADREID" />
 		<column name="ANSPNAME" datatype="string">
 			<MaxLength datatype="string">200</MaxLength>
 			<Caption datatype="string">Name</Caption>

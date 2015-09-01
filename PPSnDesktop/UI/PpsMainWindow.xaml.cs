@@ -16,6 +16,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using TecWare.DES.Stuff;
+using System.Reflection;
 
 namespace TecWare.PPSn.UI
 {
@@ -25,20 +26,24 @@ namespace TecWare.PPSn.UI
 	{
 		/// <summary>Toggles between DataPane and Navigator.</summary>
 		public readonly static RoutedCommand NavigatorToggleCommand = new RoutedCommand("NavigatorToggle", typeof(PpsMainWindow));
-		/// <summary></summary>
+		/// <summary>Toggles the description texts in the navigator panel.</summary>
 		public readonly static RoutedCommand NavigatorViewsToggleDescriptionCommand = new RoutedCommand("NavigatorViewsToggleDescription", typeof(PpsMainWindow));
-		/// <summary></summary>
+		/// <summary>Command to run a dynamic command in the navigator.</summary>
 		public readonly static RoutedCommand RunActionCommand = new RoutedCommand("RunAction", typeof(PpsNavigatorControl));
 
 		private readonly static DependencyProperty NavigatorVisibilityProperty = DependencyProperty.Register("NavigatorVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Visible));
 		private readonly static DependencyProperty NavigatorViewsDescriptionVisibilityProperty = DependencyProperty.Register("NavigatorViewsDescriptionVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Visible));
 		private readonly static DependencyProperty PaneVisibilityProperty = DependencyProperty.Register("PaneVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Collapsed));
+
+		/// <summary>Readonly property for the current pane.</summary>
 		private readonly static DependencyPropertyKey CurrentPaneKey = DependencyProperty.RegisterReadOnly("CurrentPane", typeof(IPpsWindowPane), typeof(PpsMainWindow), new PropertyMetadata(null));
 		private readonly static DependencyProperty CurrentPaneProperty = CurrentPaneKey.DependencyProperty;
 
-		private int windowIndex = -1;
-		private PpsWindowApplicationSettings settings;
-		private PpsNavigatorModel navigator;
+		private int windowIndex = -1;										// settings key
+		private PpsWindowApplicationSettings settings;	// current settings for the window
+		private PpsNavigatorModel navigator;						// base model for the navigator content
+
+		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		public PpsMainWindow(int windowIndex)
 		{
@@ -50,7 +55,7 @@ namespace TecWare.PPSn.UI
 			navigator = new PpsNavigatorModel(this);
 			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
 
-			// set basic command bindings
+			#region -- set basic command bindings --
 			CommandBindings.Add(
 				new CommandBinding(PpsWindow.LoginCommand,
 					async (sender, e) =>
@@ -95,11 +100,17 @@ namespace TecWare.PPSn.UI
 				)
 			);
 
+			#endregion
+
 			this.DataContext = this;
 
 			RefreshTitle();
 			Trace.TraceInformation("MainWindow[{0}] created.", windowIndex);
 		} // ctor
+
+		#endregion
+
+		#region -- LoadPaneAsync ----------------------------------------------------------
 
 		private async Task StartLoginAsync()
 		{
@@ -112,42 +123,122 @@ namespace TecWare.PPSn.UI
 			);
 		} // proc StartLogin
 
-		public async Task LoadPaneAsync(Type paneType, LuaTable arguments)
+		private IPpsWindowPane CreateEmptyPane(Type paneType)
 		{
-			// unload the current pane
-			if (!await UnloadPaneAsync())
-				return;
+			var ti = paneType.GetTypeInfo();
+			var ctorBest = (ConstructorInfo)null;
+			var ctoreBestParamLength = -1;
 
-			// set the new pane
-			var ci = paneType.GetConstructors().FirstOrDefault();
-			if (ci == null)
-				throw new ArgumentException("No ctor"); // todo: exception
+			// search for the longest constructor
+			foreach (var ci in ti.GetConstructors())
+			{
+				var pi = ci.GetParameters();
+				if (ctoreBestParamLength < pi.Length)
+				{
+					ctorBest = ci;
+					ctoreBestParamLength = pi.Length;
+				}
+			}
+			if (ctorBest == null)
+				throw new ArgumentException($"'{ti.Name}' has no constructor.");
 
-			var parameterInfo = ci.GetParameters();
+			// create the argument set
+			var parameterInfo = ctorBest.GetParameters();
 			var paneArguments = new object[parameterInfo.Length];
+
 			for (int i = 0; i < paneArguments.Length; i++)
 			{
 				var pi = parameterInfo[i];
-				if (pi.ParameterType.IsAssignableFrom(typeof(PpsMainEnvironment)))
+				var tiParam = pi.ParameterType.GetTypeInfo();
+				if (tiParam.IsAssignableFrom(typeof(PpsMainEnvironment)))
 					paneArguments[i] = Environment;
+				else if (pi.HasDefaultValue)
+					paneArguments[i] = pi.DefaultValue;
 				else
-					throw new ArgumentException("Unsupported argument."); // todo: Exception
+					throw new ArgumentException($"Unsupported argument '{pi.Name}' for type '{ti.Name}'.");
 			}
 
-			// Create pane
-			var currentPane = (IPpsWindowPane)Activator.CreateInstance(paneType, paneArguments);
-			SetValue(CurrentPaneKey, currentPane);
+			// activate the pane
+			return (IPpsWindowPane)Activator.CreateInstance(paneType, paneArguments);
+		} // func CreateEmptyPane
 
-			// load the pane
-			await currentPane.LoadAsync(arguments);
+		/// <summary>Loads a new current pane.</summary>
+		/// <param name="paneType">Type of the pane to load.</param>
+		/// <param name="arguments">Argument set for the pane</param>
+		/// <returns></returns>
+		public async Task LoadPaneAsync(Type paneType, LuaTable arguments)
+		{
+			var currentPane = CurrentPane;
 
-			// Hide Navigator
-			await Dispatcher.InvokeAsync(() =>
+			try
 			{
-				IsNavigatorVisible = false;
-				RefreshTitle();
-			});
+				// check, if we have to initialize a new pane
+				var loadMode = PpsWindowPaneCompareResult.Incompatible;
+				if (currentPane != null)
+				{
+					if (currentPane.GetType() == paneType)
+						loadMode = currentPane.CompareArguments(arguments);
+				}
+
+				// do the load mode
+				switch (loadMode)
+				{
+					case PpsWindowPaneCompareResult.Incompatible:
+
+						// unload the current pane
+						if (!await UnloadPaneAsync())
+							return;
+
+						// Build the new pane
+						currentPane = CreateEmptyPane(paneType);
+						SetValue(CurrentPaneKey, currentPane);
+
+						goto case PpsWindowPaneCompareResult.Reload;
+
+					case PpsWindowPaneCompareResult.Reload:
+
+						// load or reload data
+						await currentPane.LoadAsync(arguments);
+						goto case PpsWindowPaneCompareResult.Same;
+
+					case PpsWindowPaneCompareResult.Same:
+
+						// Hide Navigator
+						await Dispatcher.InvokeAsync(() =>
+						{
+							IsNavigatorVisible = false;
+							RefreshTitle();
+						});
+						break;
+				}
+			}
+			catch (Exception e)
+			{
+				await Environment.ShowExceptionAsync(ExceptionShowFlags.None, e, "Die Ansicht konnte nicht geladen werden.");
+			}
 		} // proc StartPaneAsync
+
+		/// <summary>Unloads the current pane, to a empty pane.</summary>
+		/// <returns></returns>
+		public async Task<bool> UnloadPaneAsync()
+		{
+			if (CurrentPane == null)
+				return true;
+			else
+			{
+				var currentPane = CurrentPane;
+				if (await currentPane.UnloadAsync())
+				{
+					Procs.FreeAndNil(ref currentPane);
+					SetValue(CurrentPaneKey, null);
+					return true;
+				}
+				else
+					return false;
+			}
+		} // proc UnloadPaneAsync
+
+		#endregion
 
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
@@ -205,24 +296,6 @@ namespace TecWare.PPSn.UI
 				};
 			InputManager.Current.ProcessInput(mouseDownEvent);
 		} // event PART_User_MouseLeftButtonUp
-
-		private async Task<bool> UnloadPaneAsync()
-		{
-			if (CurrentPane == null)
-				return true;
-			else
-			{
-				var currentPane = CurrentPane;
-				if (await currentPane.UnloadAsync())
-				{
-					Procs.FreeAndNil(ref currentPane);
-					SetValue(CurrentPaneKey, null);
-					return true;
-				}
-				else
-					return false;
-			}
-		} // proc UnloadPaneAsync
 				
 		public void RefreshTitle()
 		{

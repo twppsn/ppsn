@@ -28,6 +28,7 @@ namespace TecWare.PPSn.Data
 			private Func<WebResponse> procGetResponse; // async GetResonse
 
 			private string path;
+			private WebHeaderCollection headers;
 			private NameValueCollection arguments;
 
 			#region -- Ctor/Dtor ------------------------------------------------------------
@@ -38,7 +39,7 @@ namespace TecWare.PPSn.Data
 				this.uri = uri;
 				this.procGetResponse = GetResponse;
 				this.path = path;
-
+				
 				arguments = HttpUtility.ParseQueryString(uri.Query);
 			} // ctor
 
@@ -83,7 +84,8 @@ namespace TecWare.PPSn.Data
 			public NameValueCollection Arguments => arguments;
 			/// <summary>Relative path for the request.</summary>
 			public string Path => path;
-
+			/// <summary>Header</summary>
+			public override WebHeaderCollection Headers { get { return headers ?? (headers = new WebHeaderCollection()); } set { headers = value; } }
 
 
 
@@ -111,17 +113,6 @@ namespace TecWare.PPSn.Data
 				return base.GetRequestStream();
 			}
 
-			public override WebHeaderCollection Headers
-			{
-				get
-				{
-					return base.Headers;
-				}
-				set
-				{
-					base.Headers = value;
-				}
-			}
 
 			public override string ContentType
 			{

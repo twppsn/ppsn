@@ -12,24 +12,55 @@ using Neo.IronLua;
 
 namespace TecWare.PPSn.UI
 {
+	#region -- enum PpsWindowPaneCompareResult ------------------------------------------
+
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Wird von allen Elementen implementiert, die als Inhalt
-	/// angezeigt werden sollen.</summary>
+	/// <summary>Result for the compare of two panes</summary>
+	public enum PpsWindowPaneCompareResult
+	{
+		/// <summary>Panes are not compatible or reusable.</summary>
+		Incompatible,
+		/// <summary>Reload of data is necessary.</summary>
+		Reload,
+		/// <summary>The same pane, with the same data.</summary>
+    Same
+	} // enum PpsWindowPaneCompareResult
+
+	#endregion
+
+	#region -- interface IPpsWindowPane -------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Implements the basic function of a pane for the window client 
+	/// area.</summary>
 	public interface IPpsWindowPane : INotifyPropertyChanged, IDisposable
 	{
-		/// <summary>Lädt den Inhalt des Panes</summary>
-		/// <param name="args"></param>
+		/// <summary>Loads the content of a pane</summary>
+		/// <param name="args">Arguments for the pane.</param>
 		/// <returns></returns>
 		Task LoadAsync(LuaTable args);
-		/// <summary>Wird aufgerufen, wenn der Inhalt geschlossen werden soll.</summary>
+		/// <summary>Unloads the content of a pane.</summary>
+		/// <param name="commit"><c>null</c>, ask the user for a action.</param>
+		/// <returns>False, if the content can not be unloaded.</returns>
+		Task<bool> UnloadAsync(bool? commit = null);
+
+		/// <summary>Compare the pane with the given pane arguments.</summary>
+		/// <param name="args">Arguments for the pane.</param>
 		/// <returns></returns>
-		Task<bool> UnloadAsync();
+		PpsWindowPaneCompareResult CompareArguments(LuaTable args);
 
 		/// <summary>Title of the content.</summary>
+		/// <remarks>Can not be implemented hidden, because of the binding.</remarks>
 		string Title { get; }
 		/// <summary>Content control</summary>
+		/// <remarks>Can not be implemented hidden, because of the binding.</remarks>
 		object Control { get; }
+
+		/// <summary>If the pane contains changes, this flag is <c>true</c>.</summary>
+		bool IsDirty { get; }
 	} // interface IPpsWindowPane
+
+	#endregion
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
