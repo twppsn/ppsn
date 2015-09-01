@@ -137,14 +137,7 @@ namespace TecWare.PPSn.UI
 
 		private async Task StartLoginAsync()
 		{
-			var  tmp =  @"http://environment1/local/masks/TestWpfGeneric.xaml";
-			//await LoadPaneAsync(typeof(Panes.PpsLoginPane), null);
-			await LoadPaneAsync(typeof(PpsGenericWpfWindowPane),
-				new LuaTable()
-				{
-					["template"] = tmp
-				}
-			);
+			await LoadPaneAsync(typeof(Panes.PpsLoginPane), null);
 		} // proc StartLogin
 
 		private IPpsWindowPane CreateEmptyPane(Type paneType)
