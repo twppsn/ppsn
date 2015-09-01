@@ -19,13 +19,9 @@ namespace TecWare.PPSn
 	{
 		/// <summary>Keine näheren Angaben</summary>
 		None = 0,
-		/// <summary>Beenden soll angezeigt werden.</summary>
-		ExitButton = 1,
-		/// <summary>Shutdown der Anwendung soll gestartet werden.</summary>
-		Shutown = 2,
-		/// <summary>Schwere Meldung, Anwendung muss geschlossen werden</summary>
-		Fatal = ExitButton | Shutown,
-		/// <summary>Ohne Dialog anzeigen, nur sammeln.</summary>
+		/// <summary>Start the shutdown of the application.</summary>
+		Shutown = 1,
+		/// <summary>Do not show any user message.</summary>
 		Background = 4
 	} // enum ExceptionShowFlags
 
@@ -102,7 +98,7 @@ namespace TecWare.PPSn
 		/// <param name="exception"></param>
 		/// <param name="alternativeMessage"></param>
 		/// <returns></returns>
-		Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, object alternativeMessage = null);
+		Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null);
 
 		// todo: Trace
 
