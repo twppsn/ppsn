@@ -90,11 +90,16 @@
       <SubType>Code</SubType>
     </Compile>
     <Resource Include="Local\Templates.xml" />
-    <Resource Include="Local\Actions.xml" />
+    <Resource Include="Local\Actions.xml">
+      <SubType>Designer</SubType>
+    </Resource>
     <Content Include="Local\Masks\TestWpfGeneric.xaml">
       <SubType>Designer</SubType>
     </Content>
     <Content Include="Local\Masks\MasterData.Contacts.xaml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Local\Masks\PurchaseOrders.xaml">
       <SubType>Designer</SubType>
     </Content>
     <Page Include="Local\Templates.xaml">

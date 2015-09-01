@@ -16,6 +16,10 @@
     <condition><![CDATA[ return IsItemType(CurrentItem, 'KO') ]]></condition>
     <code><![CDATA[ LoadMask({ template = 'local/Masks/MasterData.Contacts.xaml', OBJKID = CurrentItem.OBJKID }); ]]></code>
   </action>
+  <action name="editorder" shortcut="edit" displayname="Bearbeiten">
+	<condition><![CDATA[ return IsItemType(CurrentItem, 'AU') ]]></condition>
+	<code><![CDATA[ LoadPane({ template = 'local/Masks/PurchaseOrders.xaml' }); ]]></code>
+  </action>
   <action name="test" displayname="Test" priority="-110">
     <code><![CDATA[LoadPane({ template = "local/Masks/TestWpfGeneric.xaml"})]]></code>
   </action>

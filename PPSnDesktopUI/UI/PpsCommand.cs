@@ -178,23 +178,24 @@ namespace TecWare.PPSn.UI
 	{
 		public static readonly DependencyProperty DisplayTextProperty = DependencyProperty.Register("DisplayText", typeof(string), typeof(PpsUICommandButton));
 		public static readonly DependencyProperty DescriptionProperty = DependencyProperty.Register("Description", typeof(string), typeof(PpsUICommandButton));
-		public static readonly DependencyProperty ImageProperty = DependencyProperty.Register("Image", typeof(object), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(ImagePropertyChanged));
+		public static readonly DependencyProperty ImageProperty = DependencyProperty.Register("Image", typeof(string), typeof(PpsUICommandButton));
 
-		private static void ImagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-		{
-			var value = e.NewValue;
+		//public static readonly DependencyProperty ImageProperty = DependencyProperty.Register("Image", typeof(object), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(ImagePropertyChanged));
+		//private static void ImagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		//{
+		//	var value = e.NewValue;
 
-			var uri = value as Uri;
-			if (uri == null && value is string)
-				uri = new Uri((string)value, UriKind.RelativeOrAbsolute);
+		//	var uri = value as Uri;
+		//	if (uri == null && value is string)
+		//		uri = new Uri((string)value, UriKind.RelativeOrAbsolute);
 
-			if (uri != null && !uri.IsAbsoluteUri)
-			{
-				var uriContext = d as IUriContext;
-				if (uriContext != null && uriContext.BaseUri != null)
-					d.SetValue(e.Property, new Uri(uriContext.BaseUri, uri));
-			}
-		} // proc ImagePropertyChanged
+		//	if (uri != null && !uri.IsAbsoluteUri)
+		//	{
+		//		var uriContext = d as IUriContext;
+		//		if (uriContext != null && uriContext.BaseUri != null)
+		//			d.SetValue(e.Property, new Uri(uriContext.BaseUri, uri));
+		//	}
+		//} // proc ImagePropertyChanged
 
 		public static readonly DependencyProperty CommandProperty = DependencyProperty.Register("Command", typeof(ICommand), typeof(PpsUICommandButton));
 
@@ -202,9 +203,9 @@ namespace TecWare.PPSn.UI
 
 		public string DisplayText { get { return (string)GetValue(DisplayTextProperty); } set { SetValue(DisplayTextProperty, value); } }
 		public string Description { get { return (string)GetValue(DescriptionProperty); } set { SetValue(DescriptionProperty, value); } }
-		public object Image { get { return GetValue(ImageProperty); } set { SetValue(ImageProperty, value); } }
+		public string Image { get { return (string)GetValue(ImageProperty); } set { SetValue(ImageProperty, value); } }
+		//public object Image { get { return GetValue(ImageProperty); } set { SetValue(ImageProperty, value); } }
 		public ICommand Command { get { return (ICommand)GetValue(CommandProperty); } set { SetValue(CommandProperty, value); } }
-
 		public Uri BaseUri { get { return baseUri; } set { baseUri = value; } }
 	} // class PpsUICommandButton
 

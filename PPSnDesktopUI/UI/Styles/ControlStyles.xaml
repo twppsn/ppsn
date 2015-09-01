@@ -15,4 +15,92 @@
 		<Setter Property="Height" Value="23"/>
     </Style>
 
+	<Style x:Key="PPSnScrollViewerStyle" TargetType="{x:Type ScrollViewer}">
+		<Setter Property="HorizontalScrollBarVisibility" Value="Hidden"/>
+		<Setter Property="VerticalScrollBarVisibility" Value="Hidden"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type ScrollViewer}">
+					<Grid x:Name="Grid" Background="{TemplateBinding Background}">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*"/>
+							<ColumnDefinition Width="Auto"/>
+						</Grid.ColumnDefinitions>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="*"/>
+							<RowDefinition Height="Auto"/>
+						</Grid.RowDefinitions>
+						<ScrollContentPresenter x:Name="PART_ScrollContentPresenter" Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2" Grid.RowSpan="2"
+												CanContentScroll="{TemplateBinding CanContentScroll}" 
+												CanHorizontallyScroll="False"
+												CanVerticallyScroll="False" 
+												ContentTemplate="{TemplateBinding ContentTemplate}" 
+												Content="{TemplateBinding Content}" 
+												Margin="{TemplateBinding Padding}"/>
+						<ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Grid.Row="0" Orientation="Vertical"
+								   AutomationProperties.AutomationId="VerticalScrollBar"
+								   IsTabStop="False"
+								   Cursor="Arrow"
+								   Minimum="0" 
+								   Maximum="{TemplateBinding ScrollableHeight}" 
+								   Opacity=".6"
+								   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" 
+								   Value="{Binding VerticalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" 
+								   ViewportSize="{TemplateBinding ViewportHeight}"/>
+						<ScrollBar x:Name="PART_HorizontalScrollBar" Grid.Column="0" Grid.Row="1" Orientation="Horizontal"
+								   AutomationProperties.AutomationId="HorizontalScrollBar"
+								   IsTabStop="False"
+								   Cursor="Arrow"
+								   Minimum="0"
+								   Maximum="{TemplateBinding ScrollableWidth}"
+								   Opacity=".6"
+								   Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" 
+								   Value="{Binding HorizontalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" 
+								   ViewportSize="{TemplateBinding ViewportWidth}"/>
+					</Grid>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsMouseOver" Value="true">
+							<Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+							<Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+						</Trigger>
+						<Trigger SourceName="PART_VerticalScrollBar" Property="Visibility" Value="Visible">
+							<Trigger.EnterActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="PART_VerticalScrollBar" Storyboard.TargetProperty="Opacity"  From="0.0" To="0.6" Duration="0:0:0.5"/>
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.EnterActions>
+						</Trigger>
+						<Trigger SourceName="PART_HorizontalScrollBar" Property="Visibility" Value="Visible">
+							<Trigger.EnterActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="PART_HorizontalScrollBar" Storyboard.TargetProperty="Opacity"  From="0.0" To="0.6" Duration="0:0:0.5"/>
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.EnterActions>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+	
+	<Style x:Key="PPSnListBoxStyle" TargetType="{x:Type ListBox}">
+		<Setter Property="Background" Value="Transparent"/>
+		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="Padding" Value="0"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type ListBox}">
+					<Border x:Name="Part_Border" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
+                        <ScrollViewer Focusable="false" Padding="{TemplateBinding Padding}" Style="{StaticResource PPSnScrollViewerStyle}">
+							<ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+						</ScrollViewer>
+					</Border>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
 </ResourceDictionary>
