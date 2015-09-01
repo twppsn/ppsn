@@ -456,12 +456,12 @@ namespace TecWare.PPSn
 
 		#region -- IList Member -----------------------------------------------------------
 
-		int IList.Add(object value) { return AppendItem((PpsTraceItem)value); }
+		int IList.Add(object value) { return AppendItem((PpsTraceItemBase)value); }
 		void IList.Insert(int index, object value) { throw new NotSupportedException(); }
 		void IList.Remove(object value) { throw new NotSupportedException(); }
 		void IList.RemoveAt(int index) { throw new NotSupportedException(); }
-		bool IList.Contains(object value) { return items.Contains((PpsTraceItem)value); }
-		int IList.IndexOf(object value) { return items.IndexOf((PpsTraceItem)value); }
+		bool IList.Contains(object value) { return items.Contains((PpsTraceItemBase)value); }
+		int IList.IndexOf(object value) { return items.IndexOf((PpsTraceItemBase)value); }
 
 		bool IList.IsFixedSize { get { return false; } }
 		bool IList.IsReadOnly { get { return true; } }
@@ -479,7 +479,7 @@ namespace TecWare.PPSn
 		} // proc ICollection.CopyTo
 
 		bool ICollection.IsSynchronized { get { return true; } }
-		object ICollection.SyncRoot { get { return items; } }
+		public object SyncRoot { get { return items; } }
 
 		#endregion
 

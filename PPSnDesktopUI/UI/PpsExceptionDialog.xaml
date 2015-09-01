@@ -1,0 +1,36 @@
+﻿<Window x:Class="TecWare.PPSn.UI.PpsExceptionDialog" x:ClassModifier="internal"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TecWare.PPSn.UI"
+        mc:Ignorable="d"
+				Height="200" Width="500" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+  <Window.Resources>
+		<local:VisibilityConverter x:Key="VisibilityConverter" />
+    <local:LuaValueConverter x:Key="CloseTextConverter">
+      <![CDATA[
+			if cast(int, value) == cast(int, clr.TecWare.PPSn.PpsTraceItemType.Fail) then
+				return 'Beenden';
+			else
+				return 'Schließen';
+			end;
+			]]>
+    </local:LuaValueConverter>
+  </Window.Resources>
+  <Grid>
+    <Grid.RowDefinitions>
+			<RowDefinition />
+			<RowDefinition Height="40" />
+		</Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+			<ColumnDefinition Width="70" />
+			<ColumnDefinition />
+		</Grid.ColumnDefinitions>
+    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding MessageText}" Margin="12" />
+		<Separator Grid.Row="0" Grid.ColumnSpan="2" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="0" />
+    <CheckBox Grid.Row="1" Grid.Column="2" Content="Weitere Meldung nicht mehr anzeigen." VerticalAlignment="Center" Margin="16,0" IsChecked="{Binding SkipChecked}" Visibility="{Binding SkipVisible,Converter={StaticResource VisibilityConverter}}" />
+    <Button Grid.Row="1" Grid.Column="2" Content="Details" Command="{x:Static ApplicationCommands.Properties}" Width="120" Height="23" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,150,0" Visibility="{Binding DetailsVisible,Converter={StaticResource VisibilityConverter}}" />
+    <Button Grid.Row="1" Grid.Column="2" Content="{Binding MessageType, Converter={StaticResource CloseTextConverter}}" Command="{x:Static ApplicationCommands.Close}" Width="120" Height="23" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,12,0"/>
+  </Grid>
+</Window>

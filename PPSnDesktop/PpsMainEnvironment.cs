@@ -53,7 +53,7 @@ namespace TecWare.PPSn
 		public void Execute(LuaTable environment)
 		{
 			if (code != null)
-				code.Run(environment);
+				Environment.RunScript(code, environment, false);
 		} // proc Execute
 				
     public string DisplayName => displayName;
@@ -126,9 +126,9 @@ namespace TecWare.PPSn
 				await RefreshViewsAsync(PpsEnvironmentDefinitionSource.Online);
 		} // proc RefreshAsync
 
-		public void CreateMainWindow()
+		public async Task<PpsMainWindow> CreateMainWindowAsync()
 		{
-			Dispatcher.Invoke(() =>
+			return await Dispatcher.InvokeAsync(() =>
 				{
 					// find a free window index
 					var freeIndex = 0;
@@ -137,6 +137,7 @@ namespace TecWare.PPSn
 
 					var window = new PpsMainWindow(freeIndex);
 					window.Show();
+					return window;
 				});
 		} // proc CreateMainWindow
 
@@ -175,6 +176,16 @@ namespace TecWare.PPSn
 			}
 			return null;
 		} // func GetWindow
+
+		public IEnumerable<PpsMainWindow> GetWindows()
+		{
+			foreach (var c in Application.Current.Windows)
+			{
+				var w = c as PpsMainWindow;
+				if (w != null)
+					yield return w;
+			}
+		} // func GetWindows
 
 		[LuaMember(nameof(Actions))]
 		public PpsEnvironmentCollection<PpsMainActionDefinition> Actions => actions;
