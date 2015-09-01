@@ -642,6 +642,26 @@ namespace TecWare.PPSn
 
 		#region -- Lua Compiler -----------------------------------------------------------
 
+		public async Task<LuaChunk> CompileAsync(XElement xSource, bool throwException, params KeyValuePair<string, Type>[] arguments)
+		{
+			try
+			{
+				var code = xSource.Value;
+				var fileName = "dummy.lua"; // todo: get position
+				return Lua.CompileChunk(code, fileName, luaOptions, arguments);
+			}
+			catch (LuaParseException e)
+			{
+				if (throwException)
+					throw;
+				else
+				{
+					await ShowExceptionAsync(ExceptionShowFlags.Background, e, "Compile failed.");
+					return null;
+				}
+			}
+		} // func CompileAsync
+
 		/// <summary>Load an compile the file from a remote source.</summary>
 		/// <param name="source">Source</param>
 		/// <param name="throwException">Throw an exception on fail</param>

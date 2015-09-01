@@ -80,8 +80,30 @@ namespace TecWare.PPSn.UI
 
 		#region -- Load/Unload ------------------------------------------------------------
 
-		public PpsWindowPaneCompareResult CompareArguments(LuaTable args)
+		private Uri GetTemplateUri(LuaTable arguments, bool throwException)
 		{
+			// get the basic template
+			var xamlFile = arguments.GetOptionalValue("template", String.Empty);
+			if (String.IsNullOrEmpty(xamlFile))
+			{
+				if (throwException)
+					throw new ArgumentException("template is missing.");
+				else
+					return null;
+			}
+
+			// prepare the base
+			return Environment.BaseRequest.GetFullUri(xamlFile);
+		} // func GetTemplateUri
+
+		public virtual PpsWindowPaneCompareResult CompareArguments(LuaTable otherArgumens)
+		{
+			var currentXamlUri = GetTemplateUri(arguments, false);
+			var otherXamlUri = GetTemplateUri(otherArgumens, false);
+
+			if (Uri.Compare(currentXamlUri, otherXamlUri, UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped, StringComparison.Ordinal) == 0)
+				return PpsWindowPaneCompareResult.Reload;
+			
 			return PpsWindowPaneCompareResult.Incompatible;
 		} // func CompareArguments
 
@@ -91,14 +113,9 @@ namespace TecWare.PPSn.UI
 
 			// use the argument as base table
 			this.arguments = arguments;
-
-			// get the basic template
-			var xamlFile = arguments["template"].ToString();
-			if (String.IsNullOrEmpty(xamlFile))
-				throw new ArgumentException("template is missing.");
-
+			
 			// prepare the base
-			var xamlUri = Environment.BaseRequest.GetFullUri(xamlFile);
+			var xamlUri = GetTemplateUri(arguments, true);
 			fileSource = new BaseWebReqeust(new Uri(xamlUri, "."), Environment.Encoding);
 
 			// Load the xaml file
@@ -109,7 +126,7 @@ namespace TecWare.PPSn.UI
 			var chunk = (LuaChunk)null;
 			if (xCode != null)
 			{
-				chunk = Lua.CompileChunk(xCode.Value, xamlFile.ToString(), null); // todo: compile via env
+				chunk = await Environment.CompileAsync(xCode, true);
 				xCode.Remove();
 			}
 
@@ -122,7 +139,7 @@ namespace TecWare.PPSn.UI
 
 				// Initialize the control and run the code in UI-Thread
 				if (chunk != null)
-					chunk.Run(this);// todo: run via env
+					Environment.RunScript(chunk, this, true);
 
 				// init bindings
 				control.DataContext = this;
@@ -208,7 +225,7 @@ namespace TecWare.PPSn.UI
 
 		public IEnumerable<object> Commands { get { return control == null ? null : ((PpsGenericWpfControl)control).Commands; } }
 
-		public bool IsDirty => false;
+		public virtual bool IsDirty => false;
 	} // class PpsGenericWpfWindowContext
 
 	#endregion

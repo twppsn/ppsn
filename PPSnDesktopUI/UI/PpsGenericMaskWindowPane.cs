@@ -54,4 +54,22 @@ namespace TecWare.PPSn.UI
 		[LuaMember("Data")]
 		public PpsDataSet Data { get { return dataSet; } }
 	} // class PpsGenericMaskWindowPane
+
+	//Q&D
+	public class PpsContentTemplateSelector : DataTemplateSelector
+	{
+		public override DataTemplate SelectTemplate(object item, DependencyObject container)
+		{
+			var row = item as PpsDataRow;
+			if (row == null)
+				return null;
+			
+			var control = container as ContentPresenter;
+			if (control == null)
+				return null;
+
+			var r = (DataTemplate)control.FindResource(row.Table.Name);
+			return r;
+		}
+	}
 }
