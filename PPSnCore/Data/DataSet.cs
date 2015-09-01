@@ -185,6 +185,8 @@ namespace TecWare.PPSn.Data
 
 		private IPpsUndoSink undoSink = null;
 
+		#region -- Ctor/Dtor --------------------------------------------------------------
+
 		public PpsDataSet(PpsDataSetDefinition datasetDefinition)
 		{
 			this.datasetDefinition = datasetDefinition;
@@ -196,6 +198,8 @@ namespace TecWare.PPSn.Data
 			this.tableCollection = new ReadOnlyCollection<PpsDataTable>(tables);
 		} // ctor
 
+		#endregion
+
 		public DynamicMetaObject GetMetaObject(Expression parameter)
 		{
 			return new PpsDataSetMetaObject(parameter, this);
@@ -205,6 +209,11 @@ namespace TecWare.PPSn.Data
 		{
 			this.undoSink = undoSink;
 		} // proc RegisterUndoSink
+
+		public PpsDataTable FindTableFromDefinition(PpsDataTableDefinition tableDefinition)
+		{
+			return Tables[FindTableIndex(tableDefinition.Name)];
+		} // func FindTableFromDefinition
 
 		private int FindTableIndex(string tableName)
 		{

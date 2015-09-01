@@ -7,6 +7,8 @@ using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DES.Stuff;
 
+using static TecWare.PPSn.Data.PpsDataHelperClient;
+
 namespace TecWare.PPSn.Data
 {
 	#region -- class PpsDataSetClientDefinition -----------------------------------------
@@ -36,9 +38,9 @@ namespace TecWare.PPSn.Data
 			// Lade die Tabellen
 			foreach (XElement c in xSchema.Elements())
 			{
-				if (c.Name == PpsDataHelperClient.xnTable)
+				if (c.Name == xnTable)
 					Add(new PpsDataTableDefinitionClient(this, c));
-				else if (c.Name == PpsDataHelperClient.xnMeta)
+				else if (c.Name == xnMeta)
 					metaInfo = new PpsDataSetMetaCollectionClient(c);
 			}
 

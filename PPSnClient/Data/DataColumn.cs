@@ -9,36 +9,55 @@ using TecWare.DES.Stuff;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- class PpsDataColumnClientDefinition --------------------------------------
+	#region -- class PpsDataColumnMetaCollectionClient ----------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsDataColumnClientDefinition : PpsDataColumnDefinition
+	internal sealed class PpsDataColumnMetaCollectionClient : PpsDataColumnDefinition.PpsDataColumnMetaCollection
 	{
-		#region -- class PpsDataColumnMetaCollectionClient --------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class PpsDataColumnMetaCollectionClient : PpsDataColumnMetaCollection
+		public PpsDataColumnMetaCollectionClient(XElement xMetaGroup)
 		{
-			public PpsDataColumnMetaCollectionClient(XElement xMetaGroup)
-			{
-				PpsDataHelperClient.AddMetaGroup(xMetaGroup, Add);
-			} // ctor
-		} // class PpsDataColumnMetaCollectionClient
+			PpsDataHelperClient.AddMetaGroup(xMetaGroup, Add);
+		} // ctor
+	} // class PpsDataColumnMetaCollectionClient
 
-		#endregion
+	#endregion
 
+	#region -- class PpsDataColumnDefinitionClient --------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class PpsDataColumnDefinitionClient : PpsDataColumnDefinition
+	{
 		private PpsDataColumnMetaCollectionClient metaInfo;
 
-		public PpsDataColumnClientDefinition(PpsDataTableDefinitionClient table, XElement xColumn)
-			: base(table, xColumn.GetAttribute("name", String.Empty), LuaType.GetType(xColumn.GetAttribute("datatype", "object"), lLateAllowed: false).Type)
+		public PpsDataColumnDefinitionClient(PpsDataTableDefinitionClient table, XElement xColumn)
+			: base(table, xColumn.GetAttribute("name", (string)null), LuaType.GetType(xColumn.GetAttribute("datatype", "object"), lLateAllowed: false).Type)
 		{
 			metaInfo = new PpsDataColumnMetaCollectionClient(xColumn);
 		} // ctor
 
-		public override PpsDataColumnMetaCollection Meta { get { return metaInfo; } }
-	} // class PpsDataColumnClientDefinition
+		public override PpsDataColumnMetaCollection Meta => metaInfo;
+	} // class PpsDataColumnDefinitionClient
+
+	#endregion
+
+	#region -- class PpsDataRelationColumnClientDefinition ------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class PpsDataRelationColumnClientDefinition : PpsDataRelationColumnDefinition
+	{
+		private PpsDataColumnMetaCollectionClient metaInfo;
+
+		public PpsDataRelationColumnClientDefinition(PpsDataTableDefinitionClient table, XElement xRelation)
+			:base(table, xRelation.GetAttribute("name", (string)null), xRelation.GetAttribute("relation", (string)null), table.ResolveColumn(xRelation))
+		{
+			metaInfo = new PpsDataColumnMetaCollectionClient(xRelation);
+		} // ctor
+
+		public override PpsDataColumnMetaCollection Meta => metaInfo;
+	} // class PpsDataRelationColumnClientDefinition
 
 	#endregion
 }

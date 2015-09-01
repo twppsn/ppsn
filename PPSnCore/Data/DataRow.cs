@@ -187,11 +187,23 @@ namespace TecWare.PPSn.Data
 				if (IsStandardMember(binder.Name))
 					return base.BindGetMember(binder);
 
+				// find a column
 				int iColumnIndex = Row.table.TableDefinition.FindColumnIndex(binder.Name);
 				if (iColumnIndex >= 0)
 					return new DynamicMetaObject(GetIndexExpression(iColumnIndex), GetRestriction());
-				else
-					return new DynamicMetaObject(Expression.Constant(null, typeof(object)), GetRestriction());
+				else 
+        {
+					PpsDataTableRelationDefinition relation;
+					if (ItemInfo.DeclaringType == typeof(PpsDataRow) && (relation = Row.table.TableDefinition.FindRelation(binder.Name)) != null)  // find a relation
+					{
+						return new DynamicMetaObject(
+							Expression.Call(Expression.Convert(Expression, typeof(PpsDataRow)), CreateRelationMethodInfo, Expression.Constant(relation)),
+							GetRestriction()
+						);
+					}
+					else
+						return new DynamicMetaObject(Expression.Constant(null, typeof(object)), GetRestriction());
+				}
 			} // func BindGetMember
 
 			public override DynamicMetaObject BindSetMember(SetMemberBinder binder, DynamicMetaObject value)
@@ -350,6 +362,44 @@ namespace TecWare.PPSn.Data
 				remove { Row.PropertyChanged -= value; }
 			} // prop PropertyChanged
 		} // class CurrentRowValues
+
+		#endregion
+
+		#region -- class PpsDataRelatedFilter ---------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class PpsDataRelatedFilter : PpsDataFilter
+		{
+			private PpsDataRow parentRow;
+			private int parentColumnIndex;
+			private int childColumnIndex;
+
+			public PpsDataRelatedFilter(PpsDataRow parentRow, int parentColumnIndex, PpsDataTable childTable, int childColumnIndex)
+				 : base(childTable)
+			{
+				if (parentRow == null)
+					throw new ArgumentNullException();
+				if (parentColumnIndex < 0 || parentColumnIndex >= parentRow.Table.Columns.Count)
+					throw new ArgumentOutOfRangeException("parentColumnIndex");
+				if (childColumnIndex < 0 || childColumnIndex >= childTable.Columns.Count)
+					throw new ArgumentOutOfRangeException("childColumnIndex");
+
+				this.parentRow = parentRow;
+				this.parentColumnIndex = parentColumnIndex;
+				this.childColumnIndex = childColumnIndex;
+
+				Refresh();
+			} // ctor
+
+			public override PpsDataRow Add(params object[] values)
+			{
+				values[childColumnIndex] = parentRow[parentColumnIndex];
+				return base.Add(values);
+			} // func Add
+			
+			protected override bool FilterRow(PpsDataRow row) => Object.Equals(parentRow[parentColumnIndex], row[childColumnIndex]);
+		} // class PpsDataRelatedFilter
 
 		#endregion
 
@@ -644,6 +694,15 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		#region -- CreateRelation -----------------------------------------------------------
+
+		public PpsDataFilter CreateRelation(PpsDataTableRelationDefinition relation)
+		{
+			return new PpsDataRelatedFilter(this, relation.ParentColumn.Index, table.DataSet.FindTableFromDefinition(relation.ChildColumn.Table), relation.ChildColumn.Index);
+		} // func CreateRelation
+
+		#endregion
+
 		/// <summary>Zugehörige Datentabelle</summary>
 		public PpsDataTable Table { get { return table; } internal set { table = value; } }
 
@@ -656,6 +715,7 @@ namespace TecWare.PPSn.Data
 		private static readonly FieldInfo TableFieldInfo;
 		private static readonly MethodInfo ResetMethodInfo;
 		private static readonly MethodInfo CommitMethodInfo;
+		private static readonly MethodInfo CreateRelationMethodInfo;
 
 		private static readonly PropertyInfo ValuesPropertyInfo;
 		private static readonly FieldInfo RowFieldInfo;
@@ -665,13 +725,14 @@ namespace TecWare.PPSn.Data
 		static PpsDataRow()
 		{
 			var typeRowInfo = typeof(PpsDataRow).GetTypeInfo();
-			RowStatePropertyInfo = typeRowInfo.GetDeclaredProperty("RowState");
+			RowStatePropertyInfo = typeRowInfo.GetDeclaredProperty(nameof(RowState));
 			ItemPropertyInfo = FindItemIndex(typeRowInfo);
-			CurrentPropertyInfo = typeRowInfo.GetDeclaredProperty("Current");
-			OriginalPropertyInfo = typeRowInfo.GetDeclaredProperty("Original");
-			TableFieldInfo = typeRowInfo.GetDeclaredField("table");
-			ResetMethodInfo = typeRowInfo.GetDeclaredMethod("Reset");
-			CommitMethodInfo = typeRowInfo.GetDeclaredMethod("Commit");
+			CurrentPropertyInfo = typeRowInfo.GetDeclaredProperty(nameof(Current));
+			OriginalPropertyInfo = typeRowInfo.GetDeclaredProperty(nameof(Original));
+			TableFieldInfo = typeRowInfo.GetDeclaredField(nameof(table));
+			ResetMethodInfo = typeRowInfo.GetDeclaredMethod(nameof(Reset));
+			CommitMethodInfo = typeRowInfo.GetDeclaredMethod(nameof(Commit));
+			CreateRelationMethodInfo = typeRowInfo.GetDeclaredMethod(nameof(CreateRelation));
 
 			var typeValueInfo = typeof(RowValues).GetTypeInfo();
 			ValuesPropertyInfo = FindItemIndex(typeValueInfo);
@@ -684,7 +745,8 @@ namespace TecWare.PPSn.Data
 					TableFieldInfo == null ||
 					ResetMethodInfo == null ||
 					CommitMethodInfo == null ||
-					ValuesPropertyInfo == null ||
+					CreateRelationMethodInfo == null ||
+          ValuesPropertyInfo == null ||
 					RowFieldInfo == null)
 				throw new InvalidOperationException("Reflection fehlgeschlagen (PpsDataRow)");
 		} // sctor

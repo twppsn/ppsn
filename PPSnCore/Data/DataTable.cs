@@ -42,6 +42,30 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
+	#region -- class PpsDataTableRelationDefinition -------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class PpsDataTableRelationDefinition
+	{
+		private readonly string name;
+		private readonly PpsDataColumnDefinition parentColumn;
+		private readonly PpsDataColumnDefinition childColumn;
+
+		internal PpsDataTableRelationDefinition(string name, PpsDataColumnDefinition parentColumn, PpsDataColumnDefinition childColumn)
+		{
+			this.name = name;
+			this.parentColumn = parentColumn;
+			this.childColumn = childColumn;
+		} // ctor
+
+		public string Name => name;
+		public PpsDataColumnDefinition ParentColumn => parentColumn;
+		public PpsDataColumnDefinition ChildColumn => childColumn;
+	} // class PpsDataTableRelationDefinition
+
+	#endregion
+
 	#region -- class PpsDataTableDefinition ---------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -72,16 +96,23 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		private readonly string name;
+		private readonly PpsDataSetDefinition dataset;
+
 		private List<PpsDataColumnDefinition> columns;
 		private ReadOnlyCollection<PpsDataColumnDefinition> columnCollection;
+		private List<PpsDataTableRelationDefinition> relations;
+		private ReadOnlyCollection<PpsDataTableRelationDefinition> relationCollection;
 
 		private bool lIsInitialized = false;
 
-		protected PpsDataTableDefinition(string tableName)
+		protected PpsDataTableDefinition(PpsDataSetDefinition dataset, string tableName)
 		{
 			this.name = tableName;
+			this.dataset = dataset;
 			this.columns = new List<PpsDataColumnDefinition>();
 			this.columnCollection = new ReadOnlyCollection<PpsDataColumnDefinition>(columns);
+			this.relations = new List<PpsDataTableRelationDefinition>();
+			this.relationCollection = new ReadOnlyCollection<PpsDataTableRelationDefinition>(relations);
 		} // ctor
 
 		public virtual void EndInit()
@@ -108,6 +139,25 @@ namespace TecWare.PPSn.Data
 				columns.Add(column);
 		} // proc AddColumn
 
+		/// <summary>Creates a new relation between two columns.</summary>
+		/// <param name="relationName">Name of the relation</param>
+		/// <param name="parentColumn">Parent column, that must belong to the current table definition.</param>
+		/// <param name="childColumn">Child column.</param>
+		public void AddRelation(string relationName, PpsDataColumnDefinition parentColumn, PpsDataColumnDefinition childColumn)
+		{
+			if (String.IsNullOrEmpty(relationName))
+				throw new ArgumentNullException("relationName");
+			if (parentColumn == null)
+				throw new ArgumentNullException("parentColumn");
+			if (childColumn == null)
+				throw new ArgumentNullException("childColumn");
+
+			if (parentColumn.Table != this)
+				throw new ArgumentException("parentColumn must belong to the current table.");
+
+			relations.Add(new PpsDataTableRelationDefinition(relationName, parentColumn, childColumn));
+		} // proc AddRelation
+
 		public PpsDataColumnDefinition FindColumn(string columnName)
 		{
 			return columns.Find(c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
@@ -126,15 +176,54 @@ namespace TecWare.PPSn.Data
 			return iIndex;
 		} // func FindColumnIndex
 
+		public PpsDataTableRelationDefinition FindRelation(string relationName)
+		{
+			return relations.Find(c => String.Compare(c.Name, relationName, StringComparison.OrdinalIgnoreCase) == 0);
+		} // func FindRelation
+
+		/// <summary></summary>
+		public PpsDataSetDefinition DataSet => dataset;
 		/// <summary>Bezeichnung der Tabelle</summary>
 		public string Name { get { return name; } }
 		/// <summary>Wurde die Tabelle entgültig geladen.</summary>
 		public bool IsInitialized { get { return lIsInitialized; } }
-		/// <summary>Spaltendefinitionen</summary>
-		public ReadOnlyCollection<PpsDataColumnDefinition> Columns { get { return columnCollection; } }
+		/// <summary>Column definition</summary>
+		public ReadOnlyCollection<PpsDataColumnDefinition> Columns => columnCollection; 
+		/// <summary>Attached relations</summary>
+		public ReadOnlyCollection<PpsDataTableRelationDefinition> Relations => relationCollection;
+
 		/// <summary>Zugriff auf die Meta-Daten</summary>
 		public abstract PpsDataTableMetaCollection Meta { get; }
 	} // class PpsDataTableDefinition
+
+	#endregion
+
+	#region -- event ColumnValueChangedEventHandler -------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class ColumnValueChangedEventArgs : EventArgs
+	{
+		public ColumnValueChangedEventArgs(PpsDataTable table, PpsDataRow row, int columnIndex, object oldValue, object newValue)
+		{
+			this.Table = table;
+			this.Row = row;
+			this.ColumnIndex = columnIndex;
+			this.OldValue = oldValue;
+			this.NewValue = newValue;
+		} // ctor
+
+		public PpsDataTable Table { get; }
+		public PpsDataRow Row { get; }
+		public int ColumnIndex { get; }
+		public object OldValue { get; }
+		public object NewValue { get; }
+	} // class ColumnValueChangedEventArgs
+
+	/// <summary></summary>
+	/// <param name="sender"></param>
+	/// <param name="e"></param>
+	public delegate void ColumnValueChangedEventHandler(object sender, ColumnValueChangedEventArgs e);
 
 	#endregion
 
@@ -182,9 +271,9 @@ namespace TecWare.PPSn.Data
 				}
 				else
 				{
-					PpsDataTable table = (PpsDataTable)Value;
-					int iColumnIndex = table.TableDefinition.FindColumnIndex(binder.Name);
-					if (iColumnIndex == -1)
+					var table = (PpsDataTable)Value;
+					var columnIndex = table.TableDefinition.FindColumnIndex(binder.Name);
+					if (columnIndex == -1)
 					{
 						if (table.TableDefinition.Meta == null)
 							return new DynamicMetaObject(Expression.Constant(null, typeof(object)), GetBindingRestrictions(table));
@@ -200,7 +289,7 @@ namespace TecWare.PPSn.Data
 									ColumnsPropertyInfo
 								),
 								ReadOnlyCollectionIndexPropertyInfo,
-								new Expression[] { Expression.Constant(iColumnIndex) }
+								new Expression[] { Expression.Constant(columnIndex) }
 							),
 							GetBindingRestrictions(table)
 						);
@@ -213,14 +302,16 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Gibt Auskunft über die Änderungen in der Liste</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
+		/// <summary></summary>
+		public event ColumnValueChangedEventHandler ColumnValueChanged;
 
 		private PpsDataTableDefinition tableDefinition;  // Zugehörige Definition dieser Tabelle
-		private PpsDataSet dataset;						 // Eigentümer dieser Tabelle
+		private PpsDataSet dataset;            // Eigentümer dieser Tabelle
 
 		private PpsDataRow emptyRow;
-		private List<PpsDataRow> rows = new List<PpsDataRow>();					// Alle Datenzeilen
-		private List<PpsDataRow> originalRows = new List<PpsDataRow>();	// Alle initial geladenen Datenzeilen
-		private List<PpsDataRow> currentRows = new List<PpsDataRow>();	// Alle aktiven nicht gelöschten Datenzeilen
+		private List<PpsDataRow> rows = new List<PpsDataRow>();         // Alle Datenzeilen
+		private List<PpsDataRow> originalRows = new List<PpsDataRow>(); // Alle initial geladenen Datenzeilen
+		private List<PpsDataRow> currentRows = new List<PpsDataRow>();  // Alle aktiven nicht gelöschten Datenzeilen
 
 		private ReadOnlyCollection<PpsDataRow> rowsView;
 		private ReadOnlyCollection<PpsDataRow> rowsOriginal;
@@ -249,22 +340,29 @@ namespace TecWare.PPSn.Data
 
 		#region -- Collection Changed -----------------------------------------------------
 
-		protected void OnRowAdded(PpsDataRow row)
+		/// <summary>Gets called if row is added.</summary>
+		/// <param name="row">The new row</param>
+		protected virtual void OnRowAdded(PpsDataRow row)
 		{
 			OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, row));
 		} // proc OnRowAdded
 
-		protected void OnRowRemoved(PpsDataRow row)
+		protected virtual void OnRowRemoved(PpsDataRow row)
 		{
 			OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, row));
 		} // proc OnRowRemoved
+
+		protected internal virtual void OnColumnValueChanged(PpsDataRow row, int columnIndex, object oldValue, object value)
+		{
+			dataset.OnTableColumnValueChanged(this, row, columnIndex, oldValue, value);
+			ColumnValueChanged?.Invoke(this, new ColumnValueChangedEventArgs(this, row, columnIndex, oldValue, value));
+		} // proc OnColumnValueChanged
 
 		/// <summary>Benachrichtigt über die Änderung der Tabelle</summary>
 		/// <param name="e"></param>
 		protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
 		{
-			if (CollectionChanged != null)
-				CollectionChanged(this, e);
+			CollectionChanged?.Invoke(this, e);
 		} // proc OnCollectionChanged
 
 		#endregion
@@ -486,11 +584,6 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		protected internal virtual void OnColumnValueChanged(PpsDataRow row, int columnIndex, object oldValue, object value)
-		{
-			dataset.OnTableColumnValueChanged(this, row, columnIndex, oldValue, value);
-		} // proc OnColumnValueChanged
-
 		/// <summary>Zugriff auf das dazugehörige DataSet</summary>
 		public PpsDataSet DataSet { get { return dataset; } }
 		/// <summary>Zugriff auf die Klasse</summary>
@@ -543,7 +636,7 @@ namespace TecWare.PPSn.Data
 
 		static PpsDataTable()
 		{
-			TypeInfo typeInfo = typeof(PpsDataTable).GetTypeInfo();
+			var typeInfo = typeof(PpsDataTable).GetTypeInfo();
 			ColumnsPropertyInfo = typeInfo.GetDeclaredProperty("Columns");
 			TableDefinitionPropertyInfo = typeInfo.GetDeclaredProperty("TableDefinition");
 
@@ -553,6 +646,215 @@ namespace TecWare.PPSn.Data
 				throw new InvalidOperationException("Reflection fehlgeschlagen (PpsDataTable)");
 		} // sctor
 	} // class PpsDataTable
+
+	#endregion
+
+	#region -- class PpsDataFilter ------------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public abstract class PpsDataFilter : IList, IEnumerable<PpsDataRow>, INotifyCollectionChanged, IDisposable
+	{
+		public event NotifyCollectionChangedEventHandler CollectionChanged;
+
+		private PpsDataTable table;
+		private List<PpsDataRow> rows;
+
+		private NotifyCollectionChangedEventHandler evCollectionListener;
+		private ColumnValueChangedEventHandler evColumnListener;
+
+		#region -- Ctor/Dtor --------------------------------------------------------------
+
+		protected PpsDataFilter(PpsDataTable table)
+		{
+			if (table == null)
+				throw new ArgumentNullException();
+
+			this.table = table;
+			this.rows = new List<PpsDataRow>();
+
+			evCollectionListener = TableNotifyCollectionChanged;
+			evColumnListener = TableColumnValueChanged;
+			table.CollectionChanged += evCollectionListener;
+			table.ColumnValueChanged += evColumnListener;
+		} // ctor
+
+		/// <summary>Unconnect the filter.</summary>
+		public void Dispose()
+		{
+			Dispose();
+		} // proc Dispose
+
+		/// <summary></summary>
+		/// <param name="disposing"></param>
+		protected virtual void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				table.CollectionChanged -= evCollectionListener;
+				table.ColumnValueChanged -= evColumnListener;
+			}
+		} // proc Dispose
+
+		#endregion
+
+		#region -- Refresh ----------------------------------------------------------------
+
+		/// <summary>Rebuilds the current row-index</summary>
+		public void Refresh()
+		{
+			lock (rows)
+			{
+				rows.Clear();
+				rows.AddRange(from row in table where FilterRow(row) select row);
+			}
+			OnCollectionReset();
+		} // proc Refresh
+
+		private void TableNotifyCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			switch (e.Action)
+			{
+				case NotifyCollectionChangedAction.Reset:
+					Refresh();
+					OnCollectionReset();
+					break;
+				case NotifyCollectionChangedAction.Add:
+					{
+						var row = (PpsDataRow)e.NewItems[0];
+						if (FilterRow(row))
+						{
+							lock (rows)
+							rows.Add(row);
+						}
+						OnCollectionAdd(row);
+					}
+					break;
+				case NotifyCollectionChangedAction.Remove:
+					{
+						var row = (PpsDataRow)e.OldItems[0];
+						lock (rows)
+						{
+							if (rows.Remove(row))
+								OnCollectionRemove(row);
+						}
+					}
+					break;
+			}
+		} // proc TableNotifyCollectionChanged
+
+		private void TableColumnValueChanged(object sender, ColumnValueChangedEventArgs e)
+		{
+			lock (rows)
+			{
+				if (FilterRow(e.Row))
+				{
+					if (!rows.Contains(e.Row)) // add row if not in list
+					{
+						rows.Add(e.Row);
+						OnCollectionAdd(e.Row);
+					}
+				}
+				else
+				{
+					if (rows.Remove(e.Row))
+						OnCollectionRemove(e.Row);
+				}
+			}
+		} // proc TableColumnValueChanged
+
+		private void OnCollectionReset()
+		{
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+		} // proc OnCollectionReset
+
+		private void OnCollectionRemove(PpsDataRow row)
+		{
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, row));
+		} // proc OnCollectionRemove
+
+		private void OnCollectionAdd(PpsDataRow row)
+		{
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, row));
+		} // proc OnCollectionAdd
+
+		/// <summary>Belongs the given row to the filter.</summary>
+		/// <param name="row">Row to check</param>
+		/// <returns><c>true</c>, it belongs to the filter.</returns>
+		protected abstract bool FilterRow(PpsDataRow row);
+
+		#endregion
+
+		#region -- IList members ----------------------------------------------------------
+
+		public virtual PpsDataRow Add(params object[] values)
+		{
+			return table.Add(values);
+		} // func Add
+
+		bool IList.Contains(object value)
+		{
+			lock (rows)
+				return rows.Contains((PpsDataRow)value);
+		} // func IList.Contains
+
+		int IList.IndexOf(object value)
+		{
+			lock (rows)
+				return rows.IndexOf((PpsDataRow)value);
+		} // func IList.IndexOf
+
+		void IList.Remove(object value) => table.Remove((PpsDataRow)value);
+
+		void IList.RemoveAt(int index)
+		{
+			PpsDataRow row;
+			lock (rows)
+				row = rows[index];
+			table.Remove(row);
+		} // proc IList.RemoveAt
+
+		void ICollection.CopyTo(Array array, int index)
+		{
+			lock (rows)
+			((IList)rows).CopyTo(array, index);
+		} // proc ICollection.CopyTo
+
+		// not supported
+		int IList.Add(object value) { throw new NotSupportedException(); }
+		void IList.Insert(int index, object value) { throw new NotSupportedException(); }
+		void IList.Clear() { throw new NotSupportedException(); }
+
+		// mapped
+		IEnumerator IEnumerable.GetEnumerator() => rows.GetEnumerator();
+		IEnumerator<PpsDataRow> IEnumerable<PpsDataRow>.GetEnumerator() => rows.GetEnumerator();
+
+		bool IList.IsFixedSize => false;
+		bool IList.IsReadOnly => false;
+		bool ICollection.IsSynchronized => true;
+		object ICollection.SyncRoot => rows;
+
+		public int Count
+		{
+			get
+			{
+				lock (rows)
+					return rows.Count;
+			}
+		} // prop Count
+
+		public object this[int index]
+		{
+			get
+			{
+				lock (rows)
+					return rows[index];
+			}
+			set { throw new NotSupportedException(); }
+		} // func this
+
+		#endregion
+	} // class PpsDataView
 
 	#endregion
 }

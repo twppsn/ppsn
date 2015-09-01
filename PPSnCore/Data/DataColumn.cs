@@ -71,17 +71,16 @@ namespace TecWare.PPSn.Data
 
 			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
 			{
-				// todo: (ms) Fest Namen sind schlecht, generischer Aufbauen
-				if (String.Compare(binder.Name, "Name", StringComparison.OrdinalIgnoreCase) == 0 ||
-					String.Compare(binder.Name, "DataType", StringComparison.OrdinalIgnoreCase) == 0 ||
-					String.Compare(binder.Name, "Index", StringComparison.OrdinalIgnoreCase) == 0 ||
-					String.Compare(binder.Name, "Table", StringComparison.OrdinalIgnoreCase) == 0)
+				if (String.Compare(binder.Name, nameof(PpsDataColumnDefinition.Name), StringComparison.OrdinalIgnoreCase) == 0 ||
+					String.Compare(binder.Name, nameof(PpsDataColumnDefinition.DataType), StringComparison.OrdinalIgnoreCase) == 0 ||
+					String.Compare(binder.Name, nameof(PpsDataColumnDefinition.Index), StringComparison.OrdinalIgnoreCase) == 0 ||
+					String.Compare(binder.Name, nameof(PpsDataColumnDefinition.Meta), StringComparison.OrdinalIgnoreCase) == 0)
 				{
 					return base.BindGetMember(binder);
 				}
 				else
 				{
-					PpsDataColumnDefinition column = (PpsDataColumnDefinition)Value;
+					var column = (PpsDataColumnDefinition)Value;
 
 					return new DynamicMetaObject(
 						column.Meta.GetMetaConstantExpression(binder.Name),
@@ -123,10 +122,35 @@ namespace TecWare.PPSn.Data
 		public Type DataType { get { return dataType; } protected set { dataType = value; } }
 		/// <summary>Index der Spalte innerhalb der Datentabelle</summary>
 		public int Index { get { return table.Columns.IndexOf(this); } }
+		/// <summary>Is the column value writeable</summary>
+		public virtual bool IsReadOnly => false;
 
 		/// <summary>Zugriff auf die zugeordneten Meta-Daten der Spalte.</summary>
 		public abstract PpsDataColumnMetaCollection Meta { get; }
 	} // class PpsDataColumnDefinition
 
 	#endregion
+
+	#region -- class PpsDataRelationColumnDefinition ------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public abstract class PpsDataRelationColumnDefinition : PpsDataColumnDefinition
+	{
+		private PpsDataColumnDefinition parentColumn;
+
+		public PpsDataRelationColumnDefinition(PpsDataTableDefinition table, string columnName, string relationName, PpsDataColumnDefinition parentColumn)
+			: base(table, columnName, parentColumn.DataType)
+		{
+			this.parentColumn = parentColumn;
+
+			// register the relation
+			parentColumn.Table.AddRelation(relationName ?? table.Name, parentColumn, this);
+		} // ctor
+
+		public PpsDataColumnDefinition ParentColumn => parentColumn;
+		public override bool IsReadOnly => false;
+	} // class PpsDataRelationColumnDefinition
+
+#endregion
 }
