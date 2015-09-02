@@ -18,7 +18,7 @@
 					<DataTemplate x:Key="{x:Type ui:PpsUICommandButton}" DataType="{x:Type ui:PpsUICommandButton}">
 						<Button Style="{StaticResource PpsToolBarButton}" ToolTip="{Binding Description}" Command="{Binding Command}" Padding="8,0">
 							<StackPanel Orientation="Horizontal" Margin="0">
-                                <Image Source="{ui:PpsImageStaticResourceBinding {Binding Image}}" Width="22" Height="22" Margin="6,0" HorizontalAlignment="Center"/>
+                                <Image Source="{ui:PpsImageStaticResourceBinding {Binding Image}}" Width="20" Height="20" Margin="6,0" HorizontalAlignment="Center"/>
                                 <TextBlock Text="{Binding DisplayText}" VerticalAlignment="Center" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
 							</StackPanel>
                         </Button>

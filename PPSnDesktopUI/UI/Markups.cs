@@ -261,5 +261,4 @@ namespace TecWare.PPSn.UI
 			return base.ProvideValue(serviceProvider);
 		}
 	} // class PpsImageStaticResourceBinding
-
 }
