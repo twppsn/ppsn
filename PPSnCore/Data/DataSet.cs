@@ -11,6 +11,8 @@ using System.Xml;
 using System.Xml.Linq;
 using TecWare.DES.Stuff;
 
+using static TecWare.PPSn.Data.PpsDataHelper;
+
 namespace TecWare.PPSn.Data
 {
 	#region -- enum PpsDataSetMetaData --------------------------------------------------
@@ -28,7 +30,7 @@ namespace TecWare.PPSn.Data
 	#region -- class PpsDataSetDefinition -----------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Schema für eine Datensammlung</summary>
+	/// <summary>Schema of the collection of data that is arrange in tables.</summary>
 	public abstract class PpsDataSetDefinition
 	{
 		#region -- WellKnownTypes ---------------------------------------------------------
@@ -56,6 +58,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		private bool isInitialized = false;
 		private List<PpsDataTableDefinition> tables;
 		private ReadOnlyCollection<PpsDataTableDefinition> tableDefinitions;
 
@@ -65,17 +68,21 @@ namespace TecWare.PPSn.Data
 			this.tableDefinitions = new ReadOnlyCollection<PpsDataTableDefinition>(tables);
 		} // ctor
 
-		/// <summary>Beendet die Initialisierung des DataSet's</summary>
+		/// <summary>Finish the initialization of the dataset.</summary>
 		public virtual void EndInit()
 		{
 			foreach (var t in TableDefinitions)
 				t.EndInit();
+
+			isInitialized = true;
 		} // proc EndInit
 
 		/// <summary>Durch die Logik, darf die Auflistung der Tabellen nicht geändert werden. Damit die dynamischen Zugriffe nicht gebrochen werden.</summary>
 		/// <param name="table"></param>
 		protected void Add(PpsDataTableDefinition table)
 		{
+			if (isInitialized)
+				throw new InvalidOperationException($"Can not add table '{table.Name}', because the dataset is initialized.");
 			if (table == null)
 				throw new ArgumentNullException();
 			if (FindTable(table.Name) != null)
@@ -88,6 +95,9 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public virtual PpsDataSet CreateDataSet()
 		{
+			if (!isInitialized)
+				throw new ArgumentException($"{nameof(EndInit)} from the dataset is not called.");
+
 			return new PpsDataSet(this);
 		} // func CreateDataSet
 
@@ -96,10 +106,12 @@ namespace TecWare.PPSn.Data
 			return tables.Find(c => String.Compare(c.Name, sName, StringComparison.OrdinalIgnoreCase) == 0);
 		} // func FindTable
 
-		/// <summary>Zugriff auf die Tabellendaten</summary>
+		/// <summary>Access to the table definitions.</summary>
 		public ReadOnlyCollection<PpsDataTableDefinition> TableDefinitions { get { return tableDefinitions; } }
 		/// <summary>Zugriff auf die MetaInformationen</summary>
 		public abstract PpsDataSetMetaCollection Meta { get; }
+		/// <summary>Is the dataset initialized.</summary>
+		public bool IsInitialized => isInitialized;
 	} // class PpsDataSetDefinition
 
 	#endregion
@@ -110,24 +122,6 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public class PpsDataSet : IDynamicMetaObjectProvider
 	{
-		#region -- Element/Atributenamen des Daten-XML --
-
-		internal static readonly XName xnData = "data";
-		internal static readonly XName xnTable = "t";
-		internal static readonly XName xnRow = "r";
-
-		internal static readonly XName xnRowValue = "v";
-		internal static readonly XName xnRowValueOriginal = "o";
-		internal static readonly XName xnRowValueCurrent = "c";
-
-		internal static readonly XName xnRowState = "s";
-		internal static readonly XName xnRowAdd = "a";
-		internal static readonly XName xnRowName = "n";
-
-		public static readonly XName xnCombine = "combine";
-
-		#endregion
-
 		#region -- class PpsDataSetMetaObject --------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
@@ -157,14 +151,21 @@ namespace TecWare.PPSn.Data
 				Expression expr;
 				PpsDataSet dataset = (PpsDataSet)Value;
 
-				// Suche die Entsprechende Tabelle
-				int iTableIndex = Array.FindIndex(dataset.tables, c => String.Compare(c.Name, binder.Name) == 0);
-				if (iTableIndex == -1) // Suche die Meta-Daten
-					expr = dataset.DataSetDefinition.Meta.GetMetaConstantExpression(binder.Name);
+				if (PpsDataHelper.IsStandardMember(LimitType, binder.Name))
+				{
+					return base.BindGetMember(binder);
+				}
 				else
-					expr = Expression.ArrayIndex(Expression.Field(Expression.Convert(Expression, typeof(PpsDataSet)), TableFieldInfo), Expression.Constant(iTableIndex));
+				{
+					// find the table
+					var tableIndex = Array.FindIndex(dataset.tables, c => String.Compare(c.Name, binder.Name) == 0);
+					if (tableIndex == -1) // find meta data
+						expr = dataset.DataSetDefinition.Meta.GetMetaConstantExpression(binder.Name);
+					else
+						expr = Expression.ArrayIndex(Expression.Field(Expression.Convert(Expression, typeof(PpsDataSet)), TableFieldInfo), Expression.Constant(tableIndex));
 
-				return new DynamicMetaObject(expr, GetRestrictions(dataset));
+					return new DynamicMetaObject(expr, GetRestrictions(dataset));
+				}
 			} // func BindGetMember
 
 			public override IEnumerable<string> GetDynamicMemberNames()
@@ -185,6 +186,9 @@ namespace TecWare.PPSn.Data
 
 		private IPpsUndoSink undoSink = null;
 
+		private long lastPrimaryId = -1;
+		private object nextPrimaryLock = new object();
+
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		public PpsDataSet(PpsDataSetDefinition datasetDefinition)
@@ -198,13 +202,15 @@ namespace TecWare.PPSn.Data
 			this.tableCollection = new ReadOnlyCollection<PpsDataTable>(tables);
 		} // ctor
 
-		#endregion
-
-		public DynamicMetaObject GetMetaObject(Expression parameter)
+		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
 		{
 			return new PpsDataSetMetaObject(parameter, this);
 		} // func GetMetaObject
 
+		#endregion
+
+		/// <summary>Registers an undo-manager.</summary>
+		/// <param name="undoSink"></param>
 		public void RegisterUndoSink(IPpsUndoSink undoSink)
 		{
 			this.undoSink = undoSink;
@@ -279,16 +285,35 @@ namespace TecWare.PPSn.Data
 				t.Reset();
 		} // proc Reset
 
-		protected internal virtual void OnTableColumnValueChanged(PpsDataTable table, PpsDataRow row, int iColumnIndex, object oldValue, object value)
+		/// <summary>Updates to next id.</summary>
+		/// <param name="value">Value for a primary column</param>
+		public void UpdateNextId(long value)
+		{
+			lock (nextPrimaryLock)
+			{
+				if (value < lastPrimaryId)
+					lastPrimaryId = value;
+			}
+		} // proc UpdateNextId
+
+		/// <summary>Returns a next id.</summary>
+		/// <returns></returns>
+		public long GetNextId()
+		{
+			lock (nextPrimaryLock)
+				return --lastPrimaryId;
+		} // func GetNextId
+
+		protected internal virtual void OnTableColumnValueChanged(PpsDataRow row, int iColumnIndex, object oldValue, object value)
 		{
 		} // proc OnTableColumnValueChanged
 
 		/// <summary>Zugriff auf die Definition der Datensammlung</summary>
-		public PpsDataSetDefinition DataSetDefinition { get { return datasetDefinition; } }
+		public PpsDataSetDefinition DataSetDefinition => datasetDefinition;
 		/// <summary>Zugriff auf die Tabellendaten.</summary>
-		public ReadOnlyCollection<PpsDataTable> Tables { get { return tableCollection; } }
+		public ReadOnlyCollection<PpsDataTable> Tables => tableCollection;
 		/// <summary></summary>
-		public IPpsUndoSink UndoSink { get { return undoSink; } }
+		public IPpsUndoSink UndoSink => undoSink;
 
 		// -- Static --------------------------------------------------------------
 

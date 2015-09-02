@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TecWare.PPSn.Data
 {
@@ -21,6 +19,22 @@ namespace TecWare.PPSn.Data
 		/// <summary>Beschreibungstext der Spalte</summary>
 		Description
 	} // enum PpsDataColumnMetaData
+
+	#endregion
+
+	#region -- enum PpsDataColumnValueChangingFlag --------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public enum PpsDataColumnValueChangingFlag
+	{
+		/// <summary>Notifies about a loaded value. The value is not changeabled</summary>
+		Notify,
+		/// <summary>Sets the initial value for a new row.</summary>
+		Initial,
+		/// <summary>Value gets changed</summary>
+		SetValue
+	} // enum PpsDataColumnValueChangingFlag
 
 	#endregion
 
@@ -71,10 +85,7 @@ namespace TecWare.PPSn.Data
 
 			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
 			{
-				if (String.Compare(binder.Name, nameof(PpsDataColumnDefinition.Name), StringComparison.OrdinalIgnoreCase) == 0 ||
-					String.Compare(binder.Name, nameof(PpsDataColumnDefinition.DataType), StringComparison.OrdinalIgnoreCase) == 0 ||
-					String.Compare(binder.Name, nameof(PpsDataColumnDefinition.Index), StringComparison.OrdinalIgnoreCase) == 0 ||
-					String.Compare(binder.Name, nameof(PpsDataColumnDefinition.Meta), StringComparison.OrdinalIgnoreCase) == 0)
+				if (PpsDataHelper.IsStandardMember(LimitType, binder.Name))
 				{
 					return base.BindGetMember(binder);
 				}
@@ -84,7 +95,7 @@ namespace TecWare.PPSn.Data
 
 					return new DynamicMetaObject(
 						column.Meta.GetMetaConstantExpression(binder.Name),
-						BindingRestrictions.GetInstanceRestriction(Expression, Value) // todo: (ms) Performt schlecht, Definition Restriction wäre wohl besser
+						BindingRestrictions.GetInstanceRestriction(Expression, Value)
 					);
 				}
 			} // func BindGetMemger
@@ -94,19 +105,27 @@ namespace TecWare.PPSn.Data
 
 		private PpsDataTableDefinition table;
 
-		private readonly string columnName;	// Interne Bezeichnung der Spalte
-		private Type dataType;								// Datentyp des des Wertes der Spalte innerhalb der Zeile
+		private readonly string columnName;	// Internal name of the column
 
 		/// <summary>Erzeugt eine neue Spaltendefinition.</summary>
 		/// <param name="table">Zugehörige Tabelle</param>
 		/// <param name="columnName">Name der Spalte</param>
-		/// <param name="dataType">Zugeordneter Datentyp.</param>
-		public PpsDataColumnDefinition(PpsDataTableDefinition table, string columnName, Type dataType)
+		public PpsDataColumnDefinition(PpsDataTableDefinition table, string columnName)
 		{
 			this.table = table;
 			this.columnName = columnName;
-			this.dataType = dataType;
 		} // ctor
+
+		/// <summary>Returns the initial value for a column.</summary>
+		/// <returns></returns>
+		public virtual object GetInitialValue(PpsDataTable table) => null;
+
+		/// <summary>Gets called if a value is changing.</summary>
+		/// <param name="row"></param>
+		/// <param name="flag"></param>
+		/// <param name="oldValue"></param>
+		/// <param name="value"></param>
+		protected internal virtual bool OnColumnValueChanging(PpsDataRow row, PpsDataColumnValueChangingFlag flag, object oldValue, ref object value) => true;
 
 		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
 		{
@@ -119,15 +138,71 @@ namespace TecWare.PPSn.Data
 		/// <summary>Name der Spalte</summary>
 		public string Name { get { return columnName; } }
 		/// <summary>Datentyp der Spalte</summary>
-		public Type DataType { get { return dataType; } protected set { dataType = value; } }
+		public abstract Type DataType { get; }
 		/// <summary>Index der Spalte innerhalb der Datentabelle</summary>
 		public int Index { get { return table.Columns.IndexOf(this); } }
-		/// <summary>Is the column value writeable</summary>
-		public virtual bool IsReadOnly => false;
 
 		/// <summary>Zugriff auf die zugeordneten Meta-Daten der Spalte.</summary>
 		public abstract PpsDataColumnMetaCollection Meta { get; }
 	} // class PpsDataColumnDefinition
+
+	#endregion
+
+	#region -- class PpsDataValueColumnDefinition ---------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public abstract class PpsDataValueColumnDefinition : PpsDataColumnDefinition
+	{
+		private readonly Type dataType;              // Datatype of the column
+
+		public PpsDataValueColumnDefinition(PpsDataTableDefinition table, string columnName, Type dataType)
+			: base(table, columnName)
+		{
+			this.dataType = dataType;
+		} // ctor
+
+		/// <summary>Datatype of the current column</summary>
+		public override Type DataType => dataType;
+	} // class PpsDataValueColumnDefinition
+
+	#endregion
+
+	#region -- class PpsDataPrimaryColumnDefinition -------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public abstract class PpsDataPrimaryColumnDefinition : PpsDataColumnDefinition
+	{
+		public PpsDataPrimaryColumnDefinition(PpsDataTableDefinition table, string columnName)
+			: base(table, columnName)
+		{
+		} // ctor
+
+		protected internal override bool OnColumnValueChanging(PpsDataRow row, PpsDataColumnValueChangingFlag flag, object oldValue, ref object value)
+		{
+			switch (flag)
+			{
+				case PpsDataColumnValueChangingFlag.SetValue:
+					throw new NotSupportedException($"{Name} is a readonly column.");
+
+				case PpsDataColumnValueChangingFlag.Notify:
+					row.Table.DataSet.UpdateNextId((long)value);
+					return true;
+
+				case PpsDataColumnValueChangingFlag.Initial:
+					if (value != null)
+						goto case PpsDataColumnValueChangingFlag.SetValue;
+
+					value = row.Table.DataSet.GetNextId();
+					return true;
+			}
+      return base.OnColumnValueChanging(row, flag, oldValue, ref value);
+		} // func OnColumnValueChanging
+
+		/// <summary>PrimaryKey is always a long</summary>
+		public override Type DataType => typeof(long);
+	} // class PpsDataPrimaryColumnDefinition
 
 	#endregion
 
@@ -137,10 +212,10 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public abstract class PpsDataRelationColumnDefinition : PpsDataColumnDefinition
 	{
-		private PpsDataColumnDefinition parentColumn;
+		private readonly PpsDataColumnDefinition parentColumn;   // parent column of the parent child relation
 
 		public PpsDataRelationColumnDefinition(PpsDataTableDefinition table, string columnName, string relationName, PpsDataColumnDefinition parentColumn)
-			: base(table, columnName, parentColumn.DataType)
+			: base(table, columnName)
 		{
 			this.parentColumn = parentColumn;
 
@@ -148,8 +223,37 @@ namespace TecWare.PPSn.Data
 			parentColumn.Table.AddRelation(relationName ?? table.Name, parentColumn, this);
 		} // ctor
 
+		private bool ExistsValueInParentTable(PpsDataRow row, object value)
+		{
+			var parentTable = row.Table.DataSet.FindTableFromDefinition(parentColumn.Table);
+			var parentColumnIndex = parentColumn.Index;
+
+			for (int i = 0; i < parentTable.Count; i++)
+			{
+				if (Object.Equals(parentTable[i][parentColumnIndex], value))
+					return true;
+			}
+
+			return false;
+		} // func ExistsValueInParentTable
+
+		protected internal override bool OnColumnValueChanging(PpsDataRow row, PpsDataColumnValueChangingFlag flag, object oldValue, ref object value)
+		{
+			switch (flag)
+			{
+				case PpsDataColumnValueChangingFlag.SetValue: // check if the values exists
+					if (!ExistsValueInParentTable(row, value))
+						throw new ArgumentOutOfRangeException($"Value '{value}' does not exist in '{parentColumn.Table.Name}.{parentColumn.Name}'.");
+          return true;
+			}
+
+			return base.OnColumnValueChanging(row, flag, oldValue, ref value);
+		} // func OnColumnValueChanging
+
+		/// <summary>Column that is the parent</summary>
 		public PpsDataColumnDefinition ParentColumn => parentColumn;
-		public override bool IsReadOnly => false;
+		/// <summary>Datatype of the parent</summary>
+		public override Type DataType => parentColumn.DataType;
 	} // class PpsDataRelationColumnDefinition
 
 #endregion

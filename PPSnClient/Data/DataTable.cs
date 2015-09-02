@@ -43,9 +43,11 @@ namespace TecWare.PPSn.Data
 			foreach (XElement c in xTable.Elements())
 			{
 				if (c.Name == xnColumn)
-					AddColumn(new PpsDataColumnDefinitionClient(this, c));
+					AddColumn(new PpsDataValueColumnDefinitionClient(this, c));
 				else if (c.Name == xnRelation)
 					AddColumn(new PpsDataRelationColumnClientDefinition(this, c));
+				else if (c.Name == xnPrimary)
+					AddColumn(new PpsDataPrimaryColumnDefinitionClient(this, c));
 				else if (c.Name == xnMeta)
 					metaInfo = new PpsDataTableMetaCollectionClient(c);
 				else // todo: warning

@@ -16,7 +16,8 @@ namespace TecWare.PPSn.Data
 		internal static readonly XName xnTable = "table";
 		internal static readonly XName xnColumn = "column";
 		internal static readonly XName xnRelation = "relation";
-    internal static readonly XName xnMeta = "meta";
+		internal static readonly XName xnPrimary = "primary";
+		internal static readonly XName xnMeta = "meta";
 
 		internal static void AddMetaGroup(XElement xMetaGroup, Action<string, Func<Type>, object> add)
 		{

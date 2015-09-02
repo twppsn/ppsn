@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DES.Stuff;
 
@@ -104,6 +106,57 @@ namespace TecWare.PPSn.Data
 
 		public int Count { get { return metaInfo.Count; } }
 	} // class PpsMetaCollection
+
+	#endregion
+
+	#region -- class PpsDataHelper ------------------------------------------------------
+
+	public static class PpsDataHelper
+	{
+		#region -- Element/Atributenamen des Daten-XML --
+
+		internal static readonly XName xnData = "data";
+		internal static readonly XName xnTable = "t";
+		internal static readonly XName xnDataRow = "r";
+
+		internal static readonly XName xnDataRowValue = "v";
+		internal static readonly XName xnDataRowValueOriginal = "o";
+		internal static readonly XName xnDataRowValueCurrent = "c";
+
+		internal static readonly XName xnDataRowState = "s";
+		internal static readonly XName xnDataRowAdd = "a";
+		internal static readonly XName xnRowName = "n";
+
+		public static readonly XName xnCombine = "combine";
+
+		#endregion
+
+		private static Dictionary<Type, string[]> publicMembers = new Dictionary<Type, string[]>();
+
+		private static string[] GetPublicMemberList(Type type)
+		{
+			var tmp = (string[])null;
+			if (publicMembers.TryGetValue(type, out tmp))
+				return tmp;
+
+			tmp =
+				type.GetRuntimeEvents().Select(c => c.Name).Concat(
+				type.GetRuntimeFields().Select(c => c.Name).Concat(
+				type.GetRuntimeMethods().Select(c => c.Name).Concat(
+				type.GetRuntimeProperties().Select(c => c.Name))).OrderBy(c => c)).ToArray();
+
+			publicMembers[type] = tmp;
+
+			return tmp;
+		} // func GetPublicMemberList
+
+		internal static bool IsStandardMember(Type type, string memberName)
+		{
+			var p = GetPublicMemberList(type);
+			return Array.BinarySearch(p, memberName) >= 0;
+		} // func IsStandardMember
+
+	} // class DataHelper
 
 	#endregion
 }
