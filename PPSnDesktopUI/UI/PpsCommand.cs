@@ -20,11 +20,13 @@ namespace TecWare.PPSn.UI
 	/// <summary></summary>
 	public class PpsCommand : ICommand, IPpsIdleAction
 	{
-		private Action<object> command;
+		private PpsEnvironment environment;
+    private Action<object> command;
 		private Func<object, bool> canExecute;
 
-		public PpsCommand(Action<object> command, Func<object, bool> canExecute)
+		public PpsCommand(PpsEnvironment environment, Action<object> command, Func<object, bool> canExecute)
 		{
+			this.environment = environment;
 			this.command = command;
 			this.canExecute = canExecute;
 		} // ctor
@@ -40,7 +42,14 @@ namespace TecWare.PPSn.UI
 
 		public virtual void Execute(object parameter)
 		{
-			command(parameter);
+			try
+			{
+				command(parameter);
+			}
+			catch (Exception e)
+			{
+				environment.ShowException(ExceptionShowFlags.None, e);
+			}
 		} // proc Execute
 
 		#endregion

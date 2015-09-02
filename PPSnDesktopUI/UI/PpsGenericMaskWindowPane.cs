@@ -35,6 +35,7 @@ namespace TecWare.PPSn.UI
 			// Lade die Definition
 			string sSchema = templateUri.ToString().Replace(".xaml", ".sxml");
 			var def = new PpsDataSetDefinitionClient(XDocument.Load(sSchema).Root);
+			def.EndInit();
 			dataSet = (PpsDataSetClient)def.CreateDataSet();
 
 			string sData = templateUri.ToString().Replace(".xaml", ".dxml");

@@ -70,8 +70,8 @@ namespace TecWare.PPSn.UI
 		[LuaMember("command")]
 		private object LuaCommand(Action<object> command, Func<object, bool> canExecute = null, bool idleCall = true)
 		{
-			var cmd = new PpsCommand(command, canExecute);
-			if (idleCall)
+			var cmd = new PpsCommand(Environment, command, canExecute);
+			if (canExecute != null && idleCall)
 				Environment.AddIdleAction(cmd);
 			return cmd;
 		} // func LuaCommand
@@ -193,6 +193,19 @@ namespace TecWare.PPSn.UI
 		} // func UnloadAsync
 
 		#endregion
+
+		private object GetXamlElement(object key)
+		{
+			if (key is string)
+				return Control.FindName((string)key);
+			else
+				return null;
+		} // func GetXamlElement
+
+		protected override object OnIndex(object key)
+		{
+			return base.OnIndex(key) ?? GetXamlElement(key);
+		} // func OnIndex
 
 		/// <summary>Arguments of the generic content.</summary>
 		[LuaMember("Arguments")]
