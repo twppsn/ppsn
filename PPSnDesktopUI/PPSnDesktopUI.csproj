@@ -67,6 +67,7 @@
   <ItemGroup>
     <Compile Include="Controls\DataListControl.cs" />
     <Compile Include="Controls\Toolbar.cs" />
+    <Compile Include="Controls\TreeListView.cs" />
     <Compile Include="Data\DataListItemDefinition.cs" />
     <Compile Include="Data\DataStore.cs" />
     <Compile Include="Data\LocalDataStore.cs" />

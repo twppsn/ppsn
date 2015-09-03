@@ -34,4 +34,5 @@ namespace TecWare.PPSn.UI
 	} // class VisibilityConverter
 
 	#endregion
+
 }
