@@ -116,6 +116,8 @@ namespace TecWare.PPSn.Data
 			this.columnName = columnName;
 		} // ctor
 
+		public override string ToString() => $"{table.Name}.{columnName}";
+
 		/// <summary>Returns the initial value for a column.</summary>
 		/// <returns></returns>
 		public virtual object GetInitialValue(PpsDataTable table) => null;

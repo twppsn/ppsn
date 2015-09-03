@@ -10,6 +10,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DES.Stuff;
 
 using static TecWare.PPSn.Data.PpsDataHelper;
@@ -58,6 +59,8 @@ namespace TecWare.PPSn.Data
 			this.parentColumn = parentColumn;
 			this.childColumn = childColumn;
 		} // ctor
+
+		public override string ToString() => $"{parentColumn} -> {name}";
 
 		public string Name => name;
 		public PpsDataColumnDefinition ParentColumn => parentColumn;
@@ -549,6 +552,19 @@ namespace TecWare.PPSn.Data
 			originalRows.Clear();
 		} // proc ClearInternal
 
+		public object[] GetDataRowValues(LuaTable table)
+		{
+			var values = new object[Columns.Count];
+			for (int i = 0; i < Columns.Count; i++)
+				values[i] = table.GetMemberValue(Columns[i].Name);
+			return values;
+		} // func GetDataRowValues
+
+		public PpsDataRow Add(LuaTable values)
+		{
+			return Add(GetDataRowValues(values));
+		} // func Add
+
 		/// <summary>Erzeugt eine neue Zeile.</summary>
 		/// <param name="values">Werte, die in der Zeile enthalten sein sollen.</param>
 		/// <returns>Neue Datenzeile</returns>
@@ -766,10 +782,12 @@ namespace TecWare.PPSn.Data
 	/// <summary>Base class for a bindable filter of rows in a table.</summary>
 	public abstract class PpsDataFilter : IList, IEnumerable<PpsDataRow>, INotifyCollectionChanged, IDisposable
 	{
+		/// <summary>Notifies about changes in this collection.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		private PpsDataTable table;
 		private List<PpsDataRow> rows;
+		private bool isDisposed = false;
 
 		private NotifyCollectionChangedEventHandler evCollectionListener;
 		private ColumnValueChangedEventHandler evColumnListener;
@@ -793,7 +811,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Unconnect the filter.</summary>
 		public void Dispose()
 		{
-			Dispose();
+			Dispose(true);
 		} // proc Dispose
 
 		/// <summary></summary>
@@ -802,6 +820,7 @@ namespace TecWare.PPSn.Data
 		{
 			if (disposing)
 			{
+				isDisposed = true;
 				table.CollectionChanged -= evCollectionListener;
 				table.ColumnValueChanged -= evColumnListener;
 			}
@@ -836,9 +855,10 @@ namespace TecWare.PPSn.Data
 						if (FilterRow(row))
 						{
 							lock (rows)
-							rows.Add(row);
+								rows.Add(row);
+
+							OnCollectionAdd(row);
 						}
-						OnCollectionAdd(row);
 					}
 					break;
 				case NotifyCollectionChangedAction.Remove:
@@ -897,6 +917,11 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		#region -- IList members ----------------------------------------------------------
+
+		public PpsDataRow Add(LuaTable values)
+		{
+			return Add(table.GetDataRowValues(values));
+		} // func Add
 
 		public virtual PpsDataRow Add(params object[] values)
 		{
@@ -968,6 +993,8 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Access to the child table.</summary>
 		public PpsDataTable Table => table;
+		/// <summary></summary>
+		public bool IsDisposed => isDisposed;
 	} // class PpsDataView
 
 	#endregion

@@ -188,7 +188,7 @@ namespace TecWare.PPSn.Data
 					if (ItemInfo.DeclaringType == typeof(PpsDataRow) && (relation = Row.table.TableDefinition.FindRelation(binder.Name)) != null)  // find a relation
 					{
 						return new DynamicMetaObject(
-							Expression.Call(Expression.Convert(Expression, typeof(PpsDataRow)), CreateRelationMethodInfo, Expression.Constant(relation)),
+							Expression.Call(Expression.Convert(Expression, typeof(PpsDataRow)), GetDefaultRelationMethodInfo, Expression.Constant(relation)),
 							GetRestriction()
 						);
 					}
@@ -362,23 +362,23 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		private sealed class PpsDataRelatedFilter : PpsDataFilter
 		{
+			private PpsDataTableRelationDefinition relation;
 			private PpsDataRow parentRow;
 			private int parentColumnIndex;
 			private int childColumnIndex;
 
-			public PpsDataRelatedFilter(PpsDataRow parentRow, int parentColumnIndex, PpsDataTable childTable, int childColumnIndex)
-				 : base(childTable)
+			public PpsDataRelatedFilter(PpsDataRow parentRow, PpsDataTableRelationDefinition relation)
+				 : base(parentRow.Table.DataSet.FindTableFromDefinition(relation.ChildColumn.Table))
 			{
-				if (parentRow == null)
-					throw new ArgumentNullException();
+				this.relation = relation;
+				this.parentRow = parentRow;
+				this.parentColumnIndex = relation.ParentColumn.Index;
+				this.childColumnIndex = relation.ChildColumn.Index;
+
 				if (parentColumnIndex < 0 || parentColumnIndex >= parentRow.Table.Columns.Count)
 					throw new ArgumentOutOfRangeException("parentColumnIndex");
-				if (childColumnIndex < 0 || childColumnIndex >= childTable.Columns.Count)
+				if (childColumnIndex < 0 || childColumnIndex >= Table.Columns.Count)
 					throw new ArgumentOutOfRangeException("childColumnIndex");
-
-				this.parentRow = parentRow;
-				this.parentColumnIndex = parentColumnIndex;
-				this.childColumnIndex = childColumnIndex;
 
 				Refresh();
 			} // ctor
@@ -393,6 +393,8 @@ namespace TecWare.PPSn.Data
 			} // func Add
 			
 			protected override bool FilterRow(PpsDataRow row) => Object.Equals(parentRow[parentColumnIndex], row[childColumnIndex]);
+
+			public PpsDataTableRelationDefinition Relation => relation;
 		} // class PpsDataRelatedFilter
 
 		#endregion
@@ -409,6 +411,9 @@ namespace TecWare.PPSn.Data
 		private CurrentRowValues currentValuesProxy;
 		private object[] originalValues;
 		private object[] currentValues;
+
+		private object relationFilterLock = new object();
+		private List<PpsDataRelatedFilter> relationFilter = null;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -753,8 +758,35 @@ namespace TecWare.PPSn.Data
 
 		public PpsDataFilter CreateRelation(PpsDataTableRelationDefinition relation)
 		{
-			return new PpsDataRelatedFilter(this, relation.ParentColumn.Index, table.DataSet.FindTableFromDefinition(relation.ChildColumn.Table), relation.ChildColumn.Index);
+			return new PpsDataRelatedFilter(this, relation);
 		} // func CreateRelation
+
+		public PpsDataFilter GetDefaultRelation(PpsDataTableRelationDefinition relation)
+		{
+			lock (relationFilterLock)
+			{
+				if (relationFilter == null)
+					relationFilter = new List<PpsDataRelatedFilter>();
+
+				// find a existing relation
+				var i = relationFilter.FindIndex(c => c.Relation == relation);
+				if (i >= 0 && relationFilter[i].IsDisposed)
+				{
+					i = -1;
+					relationFilter.RemoveAt(i);
+				}
+
+				// return the relation
+				if (i == -1)
+				{
+					var r = (PpsDataRelatedFilter)CreateRelation(relation);
+					relationFilter.Add(r);
+					return r;
+				}
+				else
+					return relationFilter[i];
+			}
+		} // func GetDefaultRelation
 
 		#endregion
 
@@ -770,7 +802,7 @@ namespace TecWare.PPSn.Data
 		private static readonly FieldInfo TableFieldInfo;
 		private static readonly MethodInfo ResetMethodInfo;
 		private static readonly MethodInfo CommitMethodInfo;
-		private static readonly MethodInfo CreateRelationMethodInfo;
+		private static readonly MethodInfo GetDefaultRelationMethodInfo;
 
 		private static readonly PropertyInfo ValuesPropertyInfo;
 		private static readonly FieldInfo RowFieldInfo;
@@ -787,7 +819,7 @@ namespace TecWare.PPSn.Data
 			TableFieldInfo = typeRowInfo.GetDeclaredField(nameof(table));
 			ResetMethodInfo = typeRowInfo.GetDeclaredMethod(nameof(Reset));
 			CommitMethodInfo = typeRowInfo.GetDeclaredMethod(nameof(Commit));
-			CreateRelationMethodInfo = typeRowInfo.GetDeclaredMethod(nameof(CreateRelation));
+			GetDefaultRelationMethodInfo = typeRowInfo.GetDeclaredMethod(nameof(GetDefaultRelation));
 
 			var typeValueInfo = typeof(RowValues).GetTypeInfo();
 			ValuesPropertyInfo = FindItemIndex(typeValueInfo);
@@ -800,7 +832,7 @@ namespace TecWare.PPSn.Data
 					TableFieldInfo == null ||
 					ResetMethodInfo == null ||
 					CommitMethodInfo == null ||
-					CreateRelationMethodInfo == null ||
+					GetDefaultRelationMethodInfo == null ||
           ValuesPropertyInfo == null ||
 					RowFieldInfo == null)
 				throw new InvalidOperationException("Reflection fehlgeschlagen (PpsDataRow)");
