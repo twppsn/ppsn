@@ -19,6 +19,7 @@ using System.Web;
 using TecWare.DES.Stuff;
 using TecWare.DES.Networking;
 using System.Xml;
+using System.Collections.Specialized;
 
 namespace TecWare.PPSn.UI
 {
@@ -60,11 +61,12 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		#region -- Lua-Interface ----------------------------------------------------------
-	
+
 		[LuaMember("require")]
 		private LuaResult LuaRequire(string path)
 		{
-			return Task.Run(async () => Environment.RunScript(await Environment.CompileAsync(fileSource.GetFullUri(path), true), this, true)).Result;
+			var chunk = Task.Run(async () => await Environment.CompileAsync(fileSource.GetFullUri(path), true)).Result;
+			return Environment.RunScript(chunk, this, true);
 		} // proc LuaRequire
 
 		[LuaMember("command")]
@@ -151,9 +153,6 @@ namespace TecWare.PPSn.UI
 					desc.AddValueChanged(control, (sender, e) => OnPropertyChanged("Title"));
 				}
 
-				foreach (PpsUICommand c in ((PpsGenericWpfControl)control).Commands)
-					((PpsGenericWpfControl)control).Test(c);
-
 				// notify changes on control
 				OnPropertyChanged("Control");
 				OnPropertyChanged("Commands");
@@ -223,7 +222,7 @@ namespace TecWare.PPSn.UI
 			}
 		} // prop Title
 		/// <summary>Wpf-Control</summary>
-		[LuaMember("Control")]
+		[LuaMember(nameof(Control))]
 		public FrameworkElement Control { get { return control; } }
 		/// <summary>This member is resolved dynamic, that is the reason the FrameworkElement Control is public.</summary>
 		object IPpsWindowPane.Control { get { return control; } }
@@ -232,11 +231,11 @@ namespace TecWare.PPSn.UI
 		public Uri BaseUri => fileSource?.BaseUri;
 
 		/// <summary>Synchronization to the UI.</summary>
-		public Dispatcher Dispatcher { get { return control == null ? Application.Current.Dispatcher : control.Dispatcher; } }
+		public Dispatcher Dispatcher => control == null ? Application.Current.Dispatcher : control.Dispatcher;
 		/// <summary>Access to the current lua compiler</summary>
 		public Lua Lua => Environment.Lua;
 
-		public IEnumerable<object> Commands { get { return control == null ? null : ((PpsGenericWpfControl)control).Commands; } }
+		public IEnumerable<object> Commands => control == null ? null : ((PpsGenericWpfControl)control).Commands;
 
 		public virtual bool IsDirty => false;
 	} // class PpsGenericWpfWindowContext
@@ -250,16 +249,21 @@ namespace TecWare.PPSn.UI
 	public class PpsGenericWpfControl : ContentControl, ILuaEventSink
 	{
 		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register("Title", typeof(string), typeof(PpsGenericWpfControl), new UIPropertyMetadata(String.Empty));
-		public static readonly DependencyProperty OrderProperty = DependencyProperty.RegisterAttached("Order", typeof(PpsCommandOrder), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(PpsCommandOrder.Empty));
 
-		private PPsUICommandCollection commands = new PPsUICommandCollection();
+		private PpsUICommandCollection commands;
+
+		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		/// <summary></summary>
 		public PpsGenericWpfControl()
 			: base()
 		{
-			Focusable = false;
+			commands = new PpsUICommandCollection();
+			commands.CollectionChanged += Commands_CollectionChanged;
+      Focusable = false;
 		} // ctor
+
+		#endregion
 
 		#region -- ILuaEventSink Member ---------------------------------------------------
 
@@ -270,34 +274,36 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		public void AppendButton(int group, int order, UIElement element)
+		#region -- Command Handling -------------------------------------------------------
+
+		private void Commands_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
-		} // proc AppendButton
+			switch (e.Action)
+			{
+				case NotifyCollectionChangedAction.Add:
+					AddLogicalChild(e.NewItems[0]);
+					break;
+				case NotifyCollectionChangedAction.Remove:
+					RemoveLogicalChild(e.OldItems[0]);
+					break;
+				default:
+					throw new InvalidOperationException();
+      }
+		} // proc Commands_CollectionChanged
+
+		#endregion
 
 		/// <summary>Access to the owning pane.</summary>
-		public PpsGenericWpfWindowPane Pane { get { return (PpsGenericWpfWindowPane)DataContext; } }
+		public PpsGenericWpfWindowPane Pane => (PpsGenericWpfWindowPane)DataContext;
 		/// <summary>Title of the window pane</summary>
-		public string Title { get { return (string)this.GetValue(TitleProperty); } set { SetValue(TitleProperty, value); } }
+		[
+		DesignerSerializationVisibility(DesignerSerializationVisibility.Visible),
+		Description("Sets the title of the pane")
+		]
+		public string Title { get { return (string)GetValue(TitleProperty); } set { SetValue(TitleProperty, value); } }
 		/// <summary>List of commands for the main toolbar.</summary>
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
-		public PPsUICommandCollection Commands { get { return commands; } }
-
-		// -- Static --------------------------------------------------------------
-
-		public static void SetOrder(UIElement element, PpsCommandOrder order)
-		{
-			element.SetValue(OrderProperty, order);
-		} // proc SetOrder
-
-		public static PpsCommandOrder GetOrder(UIElement element)
-		{
-			return (PpsCommandOrder)element.GetValue(OrderProperty);
-		} // func GetOrder
-
-		internal void Test(PpsUICommand c)
-		{
-			AddLogicalChild(c);
-		}
+		public PpsUICommandCollection Commands => commands;
 	} // class PpsGenericWpfWindowPane
 
 	#endregion

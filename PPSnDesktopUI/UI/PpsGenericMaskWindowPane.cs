@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Xml.Linq;
 using Neo.IronLua;
@@ -48,6 +49,13 @@ namespace TecWare.PPSn.UI
 
 			await Dispatcher.InvokeAsync(() => OnPropertyChanged("Data"));
 		} // proc LoadAsync
+
+		[LuaMember(nameof(CommitEdit))]
+		public void CommitEdit()
+		{
+			foreach (var expr in BindingOperations.GetSourceUpdatingBindings(Control))
+				expr.UpdateSource();
+		} // proc CommitEdit
 
 		[LuaMember("UndoManager")]
 		public PpsUndoManager LuaUndoManager { get { return undoManager; } }

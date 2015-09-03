@@ -11,6 +11,8 @@ SaveCommand = command(
 
 TestStackCommand = command(
 	function (arg) : void
+
+		CommitEdit();
 		
 		local sb = clr.System.Text.StringBuilder();
 		foreach c in UndoManager do
@@ -23,6 +25,7 @@ TestStackCommand = command(
 
 UndoCommand = command(
 	function (arg) : void
+		CommitEdit();
 		UndoManager:Undo();
 	end,
 	function (arg) : bool
@@ -32,6 +35,7 @@ UndoCommand = command(
 
 RedoCommand = command(
 	function (arg) : void
+		CommitEdit();
 		UndoManager:Redo();
 	end,
 	function (arg) : bool
@@ -43,8 +47,10 @@ RedoCommand = command(
 NewAddressCommand = command(
 	function (arg) : void
 
-		do (trans = UndoManager:BeginTransaction("Neue Addresse"))
-			Data.KONT.First.ADRE:Add();
+		CommitEdit();
+
+		do (trans = UndoManager:BeginTransaction("Neue Adresse"))
+			Data.KONT.First.ADRE:Add({ ADRENAME = "Neue Adresse"});
 			trans:Commit();
 		end;
 
@@ -53,12 +59,13 @@ NewAddressCommand = command(
 
 NewPartnerCommand = command(
 	function (arg) : void
-		do (trans = UndoManager:BeginTransaction("Neue Addresse"))
+		CommitEdit();
+
+		do (trans = UndoManager:BeginTransaction("Neuer Partner"))
 			local cur = APART_TreeView.SelectedValue;
 
-			msgbox(cur.Table.Name);
 			if cur.Table.Name == "ADRE" then
-				cur.ANSP:Add();
+				cur.ANSP:Add({ANSPNAME = "Neuer Partner"});
 			end;
 
 			trans:Commit();
@@ -68,11 +75,14 @@ NewPartnerCommand = command(
 
 RemovePosCommand = command(
 	function (arg) : void
-		msgbox("todo");
+		CommitEdit();
+
+		local cur = APART_TreeView.SelectedValue;
+		if cur ~= nil then
+			cur:Remove();
+		end;
 	end
 );
-
-
 
 --[[
 

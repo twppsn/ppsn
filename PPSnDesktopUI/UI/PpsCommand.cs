@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
@@ -17,11 +18,12 @@ namespace TecWare.PPSn.UI
 	#region -- class PpsCommand ---------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Implements a command that can call a delegate. This command
+	/// can also be added to the idle collection.</summary>
 	public class PpsCommand : ICommand, IPpsIdleAction
 	{
 		private PpsEnvironment environment;
-    private Action<object> command;
+		private Action<object> command;
 		private Func<object, bool> canExecute;
 
 		public PpsCommand(PpsEnvironment environment, Action<object> command, Func<object, bool> canExecute)
@@ -84,7 +86,9 @@ namespace TecWare.PPSn.UI
 
 		public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
 		{
-			if (value != null && value is string)
+			if (value == null)
+				return PpsCommandOrder.Empty;
+			else if (value is string)
 			{
 				var parts = ((string)value).Split(new char[] { ';', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
 				if (parts.Length == 0)
@@ -99,7 +103,7 @@ namespace TecWare.PPSn.UI
 				else
 					throw GetConvertFromException(value);
 			}
-			else
+			else 
 				throw GetConvertFromException(value);
 		} // func ConvertFrom
 
@@ -138,7 +142,7 @@ namespace TecWare.PPSn.UI
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	[TypeConverter(typeof(PpsCommandOrderConverter))]
-	public sealed class PpsCommandOrder
+	public sealed class PpsCommandOrder : IEquatable<PpsCommandOrder>, IComparable<PpsCommandOrder>
 	{
 		private readonly int group;
 		private readonly int order;
@@ -149,6 +153,22 @@ namespace TecWare.PPSn.UI
 			this.order = order;
 		} // ctor
 
+		public override bool Equals(object obj)
+		{
+			var other = obj as PpsCommandOrder;
+			if (other != null)
+				return Equals(other);
+			else
+				return false;
+		} // func Equals
+
+		public override int GetHashCode() => group.GetHashCode() ^ order.GetHashCode();
+
+		public override string ToString() => $"{group},{order}";
+
+		public bool Equals(PpsCommandOrder other) => group == other.group && order == other.order;
+		public int CompareTo(PpsCommandOrder other) => group == other.group ? order - other.order : group - other.group;
+
 		public int Group { get { return group; } }
 		public int Order { get { return order; } }
 
@@ -156,7 +176,52 @@ namespace TecWare.PPSn.UI
 
 		private static readonly PpsCommandOrder empty = new PpsCommandOrder(-1, -1);
 
+		// -- Static ----------------------------------------------------------------------
+
 		public static PpsCommandOrder Empty { get { return empty; } }
+
+		public static PpsCommandOrder Parse(string value)
+		{
+			PpsCommandOrder r;
+			if (TryParse(value, out r))
+				return r;
+			else
+				throw new FormatException();
+		} // func Parse
+
+		public static bool TryParse(string value, out PpsCommandOrder order)
+		{
+			return TryParse(value, CultureInfo.CurrentUICulture, out order);
+		} // func TryParse
+
+		public static bool TryParse(string value, CultureInfo culture, out PpsCommandOrder order)
+		{
+			if (value == null)
+			{
+				order = PpsCommandOrder.Empty;
+				return true;
+			}
+			else
+			{
+				var parts = ((string)value).Split(new char[] { ';', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+				if (parts.Length == 0)
+				{
+					order = Empty;
+					return true;
+				}
+				else if (parts.Length == 2)
+				{
+					order = new PpsCommandOrder(
+						int.Parse(parts[0], culture),
+						int.Parse(parts[1], culture)
+					);
+					return true;
+				}
+			}
+
+			order = Empty;
+			return false;
+		} //func TryParse
 	} // class PpsCommandOrder
 
 	#endregion
@@ -164,15 +229,31 @@ namespace TecWare.PPSn.UI
 	#region -- class PpsUICommand -------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Baseclass for a UI-Command implementation.</summary>
 	public abstract class PpsUICommand : FrameworkContentElement
 	{
-		public static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register("IsVisible", typeof(bool), typeof(PpsUICommandButton));
-
+		public static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register("IsVisible", typeof(bool), typeof(PpsUICommand));
+		
 		private PpsCommandOrder order;
-
+		
 		/// <summary>Position of the command.</summary>
-		public PpsCommandOrder Order { get { return order ?? PpsCommandOrder.Empty; } set { order = value; } }
+		public PpsCommandOrder Order
+		{
+			get { return order ?? PpsCommandOrder.Empty; }
+			set
+			{
+				order = value;
+				if (ParentCollection != null)
+				{
+					ParentCollection.Remove(this);
+					ParentCollection.Insert(0, this);
+				}
+			}
+		} // prop Order
+
+		/// <summary>Collection</summary>
+		public PpsUICommandCollection ParentCollection { get; internal set; }
+
 		/// <summary>Is the command currently visible.</summary>
 		public bool IsVisible { get { return (bool)GetValue(IsVisibleProperty); } set { SetValue(IsVisibleProperty, value); } }
 	} // class PpsUICommand
@@ -219,32 +300,119 @@ namespace TecWare.PPSn.UI
 	} // class PpsUICommandButton
 
 	#endregion
-
-	#region -- class PPsUICommandCollection ---------------------------------------------
+	
+	#region -- class PpsUICommandCollection ---------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class PPsUICommandCollection : Collection<PpsUICommand>
+	public class PpsUICommandCollection : Collection<PpsUICommand>, INotifyCollectionChanged
 	{
+		/// <summary></summary>
+		public event NotifyCollectionChangedEventHandler CollectionChanged;
+
+		public PpsUICommandButton AddButton(string order, string image, ICommand command, string displayText, string description)
+		{
+			var tmp = new PpsUICommandButton()
+			{
+				Order = PpsCommandOrder.Parse(order),
+				Image = image,
+				Command = command,
+				DisplayText = displayText,
+				Description = description
+			};
+
+			Add(tmp);
+			return tmp;
+		} // ctor
+
+		/// <summary></summary>
 		protected override void ClearItems()
 		{
-			base.ClearItems();
-		}
-
+			// remove item by item
+			while (Count > 0)
+				RemoveAt(Count - 1);
+		} // proc ClearItems
+		
+		/// <summary></summary>
+		/// <param name="index"></param>
 		protected override void RemoveItem(int index)
 		{
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, this[index], index));
 			base.RemoveItem(index);
-		}
+			if (index == Count && index > 0 && this[index - 1] == null) // remove group before
+					base.RemoveItem(index - 1);
+			else if (index < Count && this[index] == null) // remove group after
+				base.RemoveItem(index);
+		} // proc RemoveItem
 
+		private static bool IsDifferentGroup(PpsUICommand item, int group)
+		{
+			return item != null && item.Order.Group != group;
+		} // func IsDifferentGroup
+
+		/// <summary></summary>
+		/// <param name="index"></param>
+		/// <param name="item"></param>
 		protected override void InsertItem(int index, PpsUICommand item)
 		{
-			base.InsertItem(index, item);
-		}
+			if (item == null)
+				return; // ignore null values
 
+			item.ParentCollection = this; // update collection
+
+			// find the correct position
+			var group = item.Order.Group;
+			var order = item.Order.Order;
+
+			if (group == -1 && order == -1 && Count > 0)
+			{
+				index = Count - 1; // add at the end
+				group = Int32.MaxValue;
+			}
+			else
+				index = 0;
+
+			for (; index < Count; index++)
+			{
+				if (this[index] != null)
+				{
+					var currentGroup = this[index].Order.Group;
+					if (currentGroup == group) // first item in this group
+					{
+						for (; index < Count; index++)
+						{
+							var t = this[index];
+              if (t == null || (t.Order.Group == currentGroup && t.Order.Order > order))
+								break;
+						}
+						break;
+					}
+					else if (currentGroup > group) // a greater group, insert a new group
+					{
+						break;
+					}
+				}
+			}
+
+			// create a group before
+			if (index > 0 && IsDifferentGroup(this[index - 1], group))
+				base.InsertItem(index++, null);
+			if (index < Count && IsDifferentGroup(this[index], group))
+				base.InsertItem(index, null);
+
+			// insert the item
+			base.InsertItem(index, item);
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, this[index], index));
+		} // proc InsertItem
+
+		/// <summary></summary>
+		/// <param name="index"></param>
+		/// <param name="item"></param>
 		protected override void SetItem(int index, PpsUICommand item)
 		{
-			base.SetItem(index, item);
-		}
+			RemoveAt(index);
+			InsertItem(index, item);
+		} // proc SetItem
 	} //class PPsUICommandCollection
 
 	#endregion

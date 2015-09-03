@@ -13,6 +13,14 @@ HalloCommand = command(
 	end
 );
 
+Control.Commands:AddButton("100,120", "server_mail_uploadImage",
+	command(
+		function (args) : void
+			msgbox("Test");
+		end
+	), nil, "Test Button der dazwischen ersccheinen sollte."
+);
+
 function Button_Click(sender, e)
 	--Control.Title = "Geklickt";
 	Counter = Counter + 1000;

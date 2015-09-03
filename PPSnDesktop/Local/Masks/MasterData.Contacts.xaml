@@ -13,7 +13,6 @@
 	</x:Code>
 	<ui:PpsGenericWpfControl.Resources>
     </ui:PpsGenericWpfControl.Resources>
-
 	<Grid Width="1020">
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="120"/>
@@ -81,11 +80,11 @@
     <Button Grid.Column="0" Grid.Row="9" Grid.ColumnSpan="2" Content="Entfernen" Width="100" Height="23" Background="Transparent" Foreground="White" BorderBrush="White"
 				HorizontalAlignment="Left" VerticalAlignment="Top" Margin="216,12,0,0" Command="{Binding RemovePosCommand}">
     </Button>
-    <StackPanel Grid.Column="0" Grid.Row="9" Grid.ColumnSpan="2"  Margin="0,50">
+    <!--<StackPanel Grid.Column="0" Grid.Row="9" Grid.ColumnSpan="2"  Margin="0,50">
       <ListBox ItemsSource="{Binding Data.KONT/ADRE}" Height="100"  IsSynchronizedWithCurrentItem="True" />
       <ListBox ItemsSource="{Binding Data.KONT/ADRE/ANSP}" Height="100" Background="LightBlue" IsSynchronizedWithCurrentItem="True" />
-    </StackPanel>
-    <!--<TreeView  x:Name="APART_TreeView" Grid.Column="0" Grid.Row="9" Grid.ColumnSpan="2" Margin="0,50" Background="Transparent" ItemsSource="{Binding Data.KONT/ADRE}" BorderThickness="0">
+    </StackPanel>-->
+    <TreeView  x:Name="APART_TreeView" Grid.Column="0" Grid.Row="9" Grid.ColumnSpan="2" Margin="0,50" Background="Transparent" ItemsSource="{Binding Data.KONT/ADRE}" BorderThickness="0">
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding ANSP}" AlternationCount="2">
                     <Border BorderThickness="0" Height="23">
@@ -110,10 +109,10 @@
                         </Trigger>
                     </Style.Triggers>
                 </Style>
-            </TreeView.ItemContainerStyle>Content="{Binding ElementName=APART_TreeView,Path=SelectedValue}"
-        </TreeView>-->
+            </TreeView.ItemContainerStyle>
+        </TreeView>
 
-		<ContentControl Grid.Column="3" Grid.Row="9" Grid.ColumnSpan="2" Content="{Binding Data.KONT/ADRE/}">
+    <ContentControl Grid.Column="3" Grid.Row="9" Grid.ColumnSpan="2" Content="{Binding ElementName=APART_TreeView,Path=SelectedValue}">
 			<ContentControl.ContentTemplateSelector>
 				<ui:PpsContentTemplateSelector />
 			</ContentControl.ContentTemplateSelector>
@@ -147,7 +146,7 @@
 							<RowDefinition Height="29"/>
 						</Grid.RowDefinitions>
 						<Label Grid.Column="0" Grid.Row="0" Content="{Binding Table.ANSPNAME.Caption, Mode=OneTime}" Height="23"/>
-                        <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding ANSPNAME, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Stretch"/>
+                        <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding ANSPNAME}" HorizontalAlignment="Stretch"/>
 						<Label Grid.Column="0" Grid.Row="1" Content="{Binding Table.ANSPANREDE.Caption, Mode=OneTime}" Height="23"/>
                         <TextBox Grid.Column="1" Grid.Row="1" Text="{Binding ANSPANREDE}" HorizontalAlignment="Stretch"/>
 						<Label Grid.Column="0" Grid.Row="2" Content="{Binding Table.ANSPTEL.Caption, Mode=OneTime}" Height="23"/>
@@ -166,14 +165,14 @@
 	
     <ui:PpsGenericWpfControl.Commands>
         <ui:PpsUICommandButton Order="100,100" DisplayText="Speichern" Description="Speichern die Daten" Image="floppy_diskImage" Command="{Binding SaveCommand}" />
-        <x:Null />
-        <ui:PpsUICommandButton DisplayText="Anfügen" Description="Anfügen von..." Image="clipboard_pasteImage"/>
-        <ui:PpsUICommandButton DisplayText="Löschen" Description="Löschen" Image="deleteImage"/>
-        <ui:PpsUICommandButton DisplayText="Rückgängig" Description="Rückgängig" Image="undoImage" Command="{Binding UndoCommand}"/>
-				<ui:PpsUICommandButton DisplayText="Wiederholen" Description="Wiederholen" Image="undoImage" Command="{Binding RedoCommand}"/>
-				<x:Null />
-        <ui:PpsUICommandButton DisplayText="Drucken" Description="Drucken" Image="printerImage"/>
-        <ui:PpsUICommandButton DisplayText="Senden" Description="Als Email versenden" Image="server_mail_uploadImage" Command="{Binding TestStackCommand}"/>
+        
+    <ui:PpsUICommandButton  Order="200,100" DisplayText="Anfügen" Description="Anfügen von..." Image="clipboard_pasteImage"/>
+    <ui:PpsUICommandButton  Order="200,110" DisplayText="Löschen" Description="Löschen" Image="deleteImage"/>
+    <ui:PpsUICommandButton  Order="200,120" DisplayText="Rückgängig" Description="Rückgängig" Image="undoImage" Command="{Binding UndoCommand}"/>
+    <ui:PpsUICommandButton  Order="200,130" DisplayText="Wiederholen" Description="Wiederholen" Image="undoImage" Command="{Binding RedoCommand}"/>
+				
+    <ui:PpsUICommandButton  Order="300,100" DisplayText="Drucken" Description="Drucken" Image="printerImage"/>
+    <ui:PpsUICommandButton  Order="300,110" DisplayText="Senden" Description="Als Email versenden" Image="server_mail_uploadImage" Command="{Binding TestStackCommand}"/>
     </ui:PpsGenericWpfControl.Commands>
 
 </ui:PpsGenericWpfControl>

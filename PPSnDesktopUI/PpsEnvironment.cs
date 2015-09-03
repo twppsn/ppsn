@@ -751,7 +751,7 @@ namespace TecWare.PPSn
 					throw;
 				else
 				{
-					Dispatcher.Invoke(() => ShowException(ExceptionShowFlags.None, e));
+					ShowException(ExceptionShowFlags.None, e);
 					return LuaResult.Empty;
 				}
 			}
