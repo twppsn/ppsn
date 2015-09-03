@@ -424,7 +424,8 @@
                 </Style>
             </ToolBar.Style>
         </ToolBar>
-        <uiL:PpsNavigatorControl x:Name="PART_Navigator" Grid.Row="3" Grid.ColumnSpan="6" >
+
+		<uiL:PpsNavigatorControl x:Name="PART_Navigator" Grid.Row="3" Grid.ColumnSpan="6" >
             <uiL:PpsNavigatorControl.Style>
                 <Style TargetType="{x:Type UserControl}">
                     <Style.Triggers>

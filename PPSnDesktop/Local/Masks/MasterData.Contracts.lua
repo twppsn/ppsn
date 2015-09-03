@@ -61,14 +61,13 @@ NewPartnerCommand = command(
 	function (arg) : void
 		CommitEdit();
 
-		do (trans = UndoManager:BeginTransaction("Neuer Partner"))
-			local cur = APART_TreeView.SelectedValue;
+		local cur = APART_TreeView.SelectedValue;
 
-			if cur.Table.Name == "ADRE" then
-				cur.ANSP:Add({ANSPNAME = "Neuer Partner"});
+		if cur.Table.Name == "ADRE" then
+			do (trans = UndoManager:BeginTransaction("Neuer Partner"))
+					cur.ANSP:Add({ANSPNAME = "Neuer Partner"});
+				trans:Commit();
 			end;
-
-			trans:Commit();
 		end;
 	end
 );
@@ -79,7 +78,10 @@ RemovePosCommand = command(
 
 		local cur = APART_TreeView.SelectedValue;
 		if cur ~= nil then
-			cur:Remove();
+			do (trans = UndoManager:BeginTransaction("Lösche " .. (cur.ADRENAME or cur.ANSPNAME)))
+				cur:Remove();
+				trans:Commit();
+			end;
 		end;
 	end
 );

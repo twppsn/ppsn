@@ -57,10 +57,10 @@ namespace TecWare.PPSn.UI
 				expr.UpdateSource();
 		} // proc CommitEdit
 
-		[LuaMember("UndoManager")]
-		public PpsUndoManager LuaUndoManager { get { return undoManager; } }
+		[LuaMember(nameof(UndoManager))]
+		public PpsUndoManager UndoManager { get { return undoManager; } }
 
-		[LuaMember("Data")]
+		[LuaMember(nameof(Data))]
 		public PpsDataSet Data { get { return dataSet; } }
 	} // class PpsGenericMaskWindowPane
 

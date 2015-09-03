@@ -172,9 +172,9 @@ namespace TecWare.PPSn.UI
 		public int Group { get { return group; } }
 		public int Order { get { return order; } }
 
-		public bool IsEmpty { get { return order < 0 && group < 0; } }
+		public bool IsEmpty { get { return order == -1 && group == Int32.MaxValue; } }
 
-		private static readonly PpsCommandOrder empty = new PpsCommandOrder(-1, -1);
+		private static readonly PpsCommandOrder empty = new PpsCommandOrder(Int32.MaxValue, -1);
 
 		// -- Static ----------------------------------------------------------------------
 
@@ -364,11 +364,8 @@ namespace TecWare.PPSn.UI
 			var group = item.Order.Group;
 			var order = item.Order.Order;
 
-			if (group == -1 && order == -1 && Count > 0)
-			{
+			if (item.Order.IsEmpty && Count > 0)
 				index = Count - 1; // add at the end
-				group = Int32.MaxValue;
-			}
 			else
 				index = 0;
 
