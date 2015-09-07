@@ -4,44 +4,65 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:TecWare.PPSn.UI"
-             mc:Ignorable="d" 
+			 mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
-  <UserControl.Resources>
-    <local:TraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
-      <local:TraceItemTemplateSelector.NullTemplate>
-        <DataTemplate>
-					<TextBlock Text="Null?" />
-				</DataTemplate>
+	<UserControl.Resources>
+		<local:TraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
+			<local:TraceItemTemplateSelector.NullTemplate>
+				<DataTemplate>
+                    <TextBlock Text="{Binding Message}" />
+                </DataTemplate>
 			</local:TraceItemTemplateSelector.NullTemplate>
-      <local:TraceItemTemplateSelector.ExceptionTemplate>
-        <DataTemplate>
-          <TextBlock Text="Exception?" />
-        </DataTemplate>
-      </local:TraceItemTemplateSelector.ExceptionTemplate>
-      <local:TraceItemTemplateSelector.TraceItemTemplate>
-        <DataTemplate>
-          <TextBlock Text="Trace?" />
-        </DataTemplate>
-      </local:TraceItemTemplateSelector.TraceItemTemplate>
-    </local:TraceItemTemplateSelector>
+
+			<local:TraceItemTemplateSelector.ExceptionTemplate>
+				<DataTemplate>
+                    <StackPanel>
+                        <TextBlock Text="{Binding Message}" />
+                    </StackPanel>
+                </DataTemplate>
+			</local:TraceItemTemplateSelector.ExceptionTemplate>
+
+			<local:TraceItemTemplateSelector.TraceItemTemplate>
+				<DataTemplate>
+                    <StackPanel>
+                        <TextBlock Text="{Binding Message}" />
+                        <TextBlock Text="{Binding Id}" />
+                        <TextBlock Text="{Binding Source}" />
+                    </StackPanel>
+				</DataTemplate>
+			</local:TraceItemTemplateSelector.TraceItemTemplate>
+
+            <local:TraceItemTemplateSelector.TextItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Message}" />
+                </DataTemplate>
+            </local:TraceItemTemplateSelector.TextItemTemplate>
+
+		</local:TraceItemTemplateSelector>
 	</UserControl.Resources>
-  <Grid>
-    <ListBox Grid.Column="0" ItemsSource="{Binding Traces}">
-      <ListBox.ItemTemplate>
-        <DataTemplate>
-          <Grid>
-            <Grid.RowDefinitions>
-							<RowDefinition Height="23" />
-							<RowDefinition Height="100" />
+	
+	<Grid Margin="0">
+		<ListBox ItemsSource="{Binding Traces}"	 Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2"
+				 ItemContainerStyle="{StaticResource PpsAlternatingListBoxItemStyle}">
+			<ListBox.ItemTemplate>
+				<DataTemplate>
+					<Grid>
+                        <Grid.ColumnDefinitions>
+							<ColumnDefinition Width="90"/>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition/>
+						</Grid.ColumnDefinitions>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="32" />
+							<RowDefinition/>
 						</Grid.RowDefinitions>
 						<TextBlock Text="{Binding Type}" />
-            <TextBlock Text="{Binding Stamp}" />
-            <TextBlock Text="{Binding Message}" />
-            <ContentControl Content="{Binding}" Grid.Row="1" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}">
-						</ContentControl>
-          </Grid>
+						<TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=dd.mm.yyyy  hh:MM:ss}" Margin="8,0"/>
+						<ContentControl Content="{Binding}" Grid.Column="2" Margin="8,0" Grid.Row="0" Grid.RowSpan="2" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}" FocusVisualStyle="{x:Null}"/>
+					</Grid>
 				</DataTemplate>
 			</ListBox.ItemTemplate>
-    </ListBox>
-  </Grid>
+        </ListBox>
+	</Grid>
+
 </UserControl>

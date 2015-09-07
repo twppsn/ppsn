@@ -269,6 +269,8 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty DisplayTextProperty = DependencyProperty.Register("DisplayText", typeof(string), typeof(PpsUICommandButton));
 		public static readonly DependencyProperty DescriptionProperty = DependencyProperty.Register("Description", typeof(string), typeof(PpsUICommandButton));
 		public static readonly DependencyProperty ImageProperty = DependencyProperty.Register("Image", typeof(string), typeof(PpsUICommandButton));
+		public static readonly DependencyProperty CommandProperty = DependencyProperty.Register("Command", typeof(ICommand), typeof(PpsUICommandButton));
+		public static readonly DependencyProperty DropDownCommandProperty = DependencyProperty.Register("DropDownCommand", typeof(ICommand), typeof(PpsUICommandButton));
 
 		//public static readonly DependencyProperty ImageProperty = DependencyProperty.Register("Image", typeof(object), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(ImagePropertyChanged));
 		//private static void ImagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -287,20 +289,20 @@ namespace TecWare.PPSn.UI
 		//	}
 		//} // proc ImagePropertyChanged
 
-		public static readonly DependencyProperty CommandProperty = DependencyProperty.Register("Command", typeof(ICommand), typeof(PpsUICommandButton));
 
 		private Uri baseUri;
 
 		public string DisplayText { get { return (string)GetValue(DisplayTextProperty); } set { SetValue(DisplayTextProperty, value); } }
 		public string Description { get { return (string)GetValue(DescriptionProperty); } set { SetValue(DescriptionProperty, value); } }
 		public string Image { get { return (string)GetValue(ImageProperty); } set { SetValue(ImageProperty, value); } }
-		//public object Image { get { return GetValue(ImageProperty); } set { SetValue(ImageProperty, value); } }
 		public ICommand Command { get { return (ICommand)GetValue(CommandProperty); } set { SetValue(CommandProperty, value); } }
+		public ICommand DropDownCommand { get { return (ICommand)GetValue(DropDownCommandProperty); } set { SetValue(DropDownCommandProperty, value); } }
 		public Uri BaseUri { get { return baseUri; } set { baseUri = value; } }
+		//public object Image { get { return GetValue(ImageProperty); } set { SetValue(ImageProperty, value); } }
 	} // class PpsUICommandButton
 
 	#endregion
-	
+
 	#region -- class PpsUICommandCollection ---------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////

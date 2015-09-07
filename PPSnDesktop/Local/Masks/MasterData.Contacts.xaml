@@ -19,7 +19,8 @@
 			<Setter Property="Background" Value="{StaticResource PPSnAlternation0Brush}"/>
 			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
 			<Setter Property="AlternationCount" Value="2"/>
-			<Setter Property="Template">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
+            <Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type uiC:PpsTreeListViewItem}">
 						<StackPanel Orientation="Vertical">
@@ -58,152 +59,151 @@
 		</Style>
 	</ui:PpsGenericWpfControl.Resources>
 
-	<Grid Width="1020">
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="120"/>
-			<ColumnDefinition Width="350"/>
-            <ColumnDefinition Width="80"/>
-            <ColumnDefinition Width="120"/>
-            <ColumnDefinition Width="350"/>
-        </Grid.ColumnDefinitions>
-		<Grid.RowDefinitions>
-            <RowDefinition Height="64"/>
-            <RowDefinition Height="29"/>
-			<RowDefinition Height="29"/>
-			<RowDefinition Height="29"/>
-			<RowDefinition Height="29"/>
-			<RowDefinition Height="29"/>
-            <RowDefinition Height="29"/>
-            <RowDefinition Height="29"/>
-            <RowDefinition Height="64"/>
-            <RowDefinition />
-		</Grid.RowDefinitions>
-
-        <Border Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2" Height="28" VerticalAlignment="Bottom" Margin="0,8" BorderThickness="0,0,0,4" BorderBrush="{StaticResource PPSnSeparatorBrush}" SnapsToDevicePixels="True">
-            <TextBlock Text="Ident" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="0,0,0,2" FontSize="14.667" FontWeight="DemiBold" />
-        </Border>
-        <Border Grid.Column="3" Grid.Row="0" Grid.ColumnSpan="2" Height="28" VerticalAlignment="Bottom" Margin="0,8" BorderThickness="0,0,0,4" BorderBrush="{StaticResource PPSnSeparatorBrush}" SnapsToDevicePixels="True">
-            <TextBlock Text="Bank" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="0,0,0,2" FontSize="14.667" FontWeight="DemiBold" />
-        </Border>
-
-        <Label Grid.Column="0" Grid.Row="1" Content="{Binding Data.KONT.KONTNR.Caption, Mode=OneTime}" Height="23"/>
-		<TextBox Grid.Column="1" Grid.Row="1" Text="{Binding Data.KONT/KONTNR}" Width="100"/>
-		<Label Grid.Column="0" Grid.Row="2" Content="{Binding Data.KONT.KONTNAME.Caption, Mode=OneTime}" Height="23"/>
-        <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Data.KONT/KONTNAME}" HorizontalAlignment ="Stretch"/>
-        <Label Grid.Column="0" Grid.Row="3" Content="{Binding Data.KONT.KONTEXTNR.Caption, Mode=OneTime}" Height="23"/>
-        <TextBox Grid.Column="1" Grid.Row="3" Text="{Binding Data.KONT/KONTEXTNR}" Width="100"/>
-        <Label Grid.Column="0" Grid.Row="4" Content="{Binding Data.KONT.KONTKREDNR.Caption, Mode=OneTime}" Height="23"/>
-        <TextBox Grid.Column="1" Grid.Row="4" Text="{Binding Data.KONT/KONTKREDNR}" Width="100"/>
-        <Label Grid.Column="0" Grid.Row="5" Content="{Binding Data.KONT.KONTDEBNR.Caption, Mode=OneTime}" Height="23"/>
-        <TextBox Grid.Column="1" Grid.Row="5" Text="{Binding Data.KONT/KONTDEBNR}" Width="100"/>
-        <Label Grid.Column="0" Grid.Row="6" Content="{Binding Data.KONT.KONTUSTID.Caption, Mode=OneTime}" Height="23"/>
-        <TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Data.KONT/KONTUSTID}" Width="100"/>
-        <Label Grid.Column="0" Grid.Row="7" Content="{Binding Data.KONT.KONTSTID.Caption, Mode=OneTime}" Height="23"/>
-        <TextBox Grid.Column="1" Grid.Row="7" Text="{Binding Data.KONT/KONTSTID}" Width="100"/>
-        <Label Grid.Column="3" Grid.Row="1" Content="{Binding Data.KONT.KONTWAEHID.Caption, Mode=OneTime}" Height="23"/>
-        <ComboBox Grid.Column="4" Grid.Row="1" SelectedValue="{Binding Data.KONT/KONTWAEHID}" Width="100" Height="23" HorizontalAlignment="Left"
-				  ItemsSource="{Binding Path=Data.WAEH}"
-				  SelectedValuePath="WAEHID"
-				  DisplayMemberPath="WAEHID">
-        </ComboBox>
-        <Label Grid.Column="3" Grid.Row="2" Content="{Binding Data.KONT.KONTBANK.Caption, Mode=OneTime}" Height="23"/>
-        <TextBox Grid.Column="4" Grid.Row="2" Text="{Binding Data.KONT/KONTBANK}" HorizontalAlignment="Stretch"/>
-        <Label Grid.Column="3" Grid.Row="3" Content="{Binding Data.KONT.KONTIBAN.Caption, Mode=OneTime}" Height="23"/>
-        <TextBox Grid.Column="4" Grid.Row="3" Text="{Binding Data.KONT/KONTIBAN}" HorizontalAlignment="Stretch"/>
-		<Label Grid.Column="3" Grid.Row="4" Content="{Binding Data.KONT.KONTBIC.Caption, Mode=OneTime}" Height="23"/>
-        <TextBox Grid.Column="4" Grid.Row="4" Text="{Binding Data.KONT/KONTBIC}" HorizontalAlignment="Stretch"/>
-
-		<Border Grid.Column="0" Grid.Row="8" Grid.ColumnSpan="5" Height="40" VerticalAlignment="Bottom" BorderThickness="0,0,0,4" BorderBrush="{StaticResource PPSnSeparatorBrush}" SnapsToDevicePixels="True">
-            <TextBlock Text="Adressen / Ansprechpartner" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="0,0,0,2" FontSize="14.667" FontWeight="DemiBold" />
-        </Border>
-        <Button Grid.Column="0" Grid.Row="9" Content="Neue Adresse" Width="100" Height="23" Background="Transparent" Foreground="White" BorderBrush="White"
-				HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,12" Command="{Binding NewAddressCommand}">
-		</Button>
-        <Button Grid.Column="0" Grid.Row="9" Grid.ColumnSpan="2" Content="Neuer Partner" Width="100" Height="23" Background="Transparent" Foreground="White" BorderBrush="White"
-				HorizontalAlignment="Left" VerticalAlignment="Top" Margin="108,12,0,0" Command="{Binding NewPartnerCommand}">
-        </Button>
-    <Button Grid.Column="0" Grid.Row="9" Grid.ColumnSpan="2" Content="Löschen" Width="100" Height="23" Background="Transparent" Foreground="White" BorderBrush="White"
-				HorizontalAlignment="Left" VerticalAlignment="Top" Margin="216,12,0,0" Command="{Binding RemovePosCommand}">
-    </Button>
-    <uiC:PpsTreeListView x:Name="APART_TreeView" AlternationCount="2" Grid.Column="0" Grid.Row="9" Grid.ColumnSpan="2" Margin="0,50" Background="Transparent" ItemsSource="{Binding Data.KONT/ADRE}" BorderThickness="0"
-							 ItemContainerStyle="{StaticResource TreeListViewItemStyle}">
-            <TreeView.ItemTemplate>
-                <HierarchicalDataTemplate ItemsSource="{Binding ANSP}">
-                    <Border Height="27">
-                        <TextBlock Text="{Binding ADRENAME}" VerticalAlignment="Center" FontWeight="Bold"/>
-                    </Border>
-                    <HierarchicalDataTemplate.ItemTemplate>
-                        <DataTemplate>
+    <StackPanel MinWidth="1020" MaxWidth="1020">
+        <Expander Header="Ident" Style="{StaticResource PPSnExpanderStyle}" ExpandDirection="Down" IsExpanded="True">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="350"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="350"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="29"/>
+                    <RowDefinition Height="29"/>
+                    <RowDefinition Height="29"/>
+                    <RowDefinition Height="29"/>
+                    <RowDefinition Height="29"/>
+                    <RowDefinition Height="29"/>
+                    <RowDefinition Height="29"/>
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+                <Label Grid.Column="0" Grid.Row="0" Content="{Binding Data.KONT.KONTNR.Caption, Mode=OneTime}" Height="23"/>
+                <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Data.KONT/KONTNR}" Width="100"/>
+                <Label Grid.Column="0" Grid.Row="1" Content="{Binding Data.KONT.KONTNAME.Caption, Mode=OneTime}" Height="23"/>
+                <TextBox Grid.Column="1" Grid.Row="1" Text="{Binding Data.KONT/KONTNAME}" HorizontalAlignment ="Stretch"/>
+                <Label Grid.Column="0" Grid.Row="2" Content="{Binding Data.KONT.KONTEXTNR.Caption, Mode=OneTime}" Height="23"/>
+                <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Data.KONT/KONTEXTNR}" Width="100"/>
+                <Label Grid.Column="0" Grid.Row="3" Content="{Binding Data.KONT.KONTKREDNR.Caption, Mode=OneTime}" Height="23"/>
+                <TextBox Grid.Column="1" Grid.Row="3" Text="{Binding Data.KONT/KONTKREDNR}" Width="100"/>
+                <Label Grid.Column="0" Grid.Row="4" Content="{Binding Data.KONT.KONTDEBNR.Caption, Mode=OneTime}" Height="23"/>
+                <TextBox Grid.Column="1" Grid.Row="4" Text="{Binding Data.KONT/KONTDEBNR}" Width="100"/>
+                <Label Grid.Column="0" Grid.Row="5" Content="{Binding Data.KONT.KONTUSTID.Caption, Mode=OneTime}" Height="23"/>
+                <TextBox Grid.Column="1" Grid.Row="5" Text="{Binding Data.KONT/KONTUSTID}" Width="100"/>
+                <Label Grid.Column="0" Grid.Row="6" Content="{Binding Data.KONT.KONTSTID.Caption, Mode=OneTime}" Height="23"/>
+                <TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Data.KONT/KONTSTID}" Width="100"/>
+                <Label Grid.Column="3" Grid.Row="0" Content="{Binding Data.KONT.KONTWAEHID.Caption, Mode=OneTime}" Height="23"/>
+                <ComboBox Grid.Column="4" Grid.Row="0" SelectedValue="{Binding Data.KONT/KONTWAEHID}" Width="100" Height="23" HorizontalAlignment="Left"
+							ItemsSource="{Binding Path=Data.WAEH}"
+							SelectedValuePath="WAEHID"
+							DisplayMemberPath="WAEHID">
+				</ComboBox>
+                <Label Grid.Column="3" Grid.Row="1" Content="{Binding Data.KONT.KONTBANK.Caption, Mode=OneTime}" Height="23"/>
+                <TextBox Grid.Column="4" Grid.Row="1" Text="{Binding Data.KONT/KONTBANK}" HorizontalAlignment="Stretch"/>
+                <Label Grid.Column="3" Grid.Row="2" Content="{Binding Data.KONT.KONTIBAN.Caption, Mode=OneTime}" Height="23"/>
+                <TextBox Grid.Column="4" Grid.Row="2" Text="{Binding Data.KONT/KONTIBAN}" HorizontalAlignment="Stretch"/>
+                <Label Grid.Column="3" Grid.Row="3" Content="{Binding Data.KONT.KONTBIC.Caption, Mode=OneTime}" Height="23"/>
+                <TextBox Grid.Column="4" Grid.Row="3" Text="{Binding Data.KONT/KONTBIC}" HorizontalAlignment="Stretch"/>
+            </Grid>
+		</Expander>
+        <Expander Header="Adressen / Ansprechpartner" Style="{StaticResource PPSnExpanderStyle}" ExpandDirection="Down" IsExpanded="True">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="550"/>
+                    <ColumnDefinition Width="470"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="29"/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+				<Button Content="Neue Adresse" Width="100" Height="23" Style="{StaticResource PpsSimpleButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Command="{Binding NewAddressCommand}"/>
+				<Button Grid.ColumnSpan="2" Content="Neuer Partner" Width="100" Height="23" Style="{StaticResource PpsSimpleButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="108,0,0,0" Command="{Binding NewPartnerCommand}"/>
+				<Button Content="Löschen" Width="90" Height="23" Style="{StaticResource PpsSimpleButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="216,0,0,0" Command="{Binding RemovePosCommand}"/>
+                <uiC:PpsTreeListView x:Name="APART_TreeView" Grid.Row="1" Width="470" HorizontalAlignment="Left" AlternationCount="2" ItemsSource="{Binding Data.KONT/ADRE}" BorderThickness="0"
+										Style="{StaticResource PPSnTreeViewStyle}"
+										ItemContainerStyle="{StaticResource TreeListViewItemStyle}">
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding ANSP}">
                             <Border Height="27">
-                                <TextBlock Text="{Binding ANSPNAME}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding ADRENAME}" VerticalAlignment="Center" FontWeight="Bold"/>
                             </Border>
+                            <HierarchicalDataTemplate.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Height="27">
+                                        <TextBlock Text="{Binding ANSPNAME}" VerticalAlignment="Center"/>
+                                    </Border>
+                                </DataTemplate>
+                            </HierarchicalDataTemplate.ItemTemplate>
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                </uiC:PpsTreeListView>
+                <ContentControl Grid.Column="1" Grid.Row="1" Content="{Binding ElementName=APART_TreeView,Path=SelectedValue}" Focusable="False">
+                    <ContentControl.ContentTemplateSelector>
+                        <ui:PpsContentTemplateSelector />
+                    </ContentControl.ContentTemplateSelector>
+                    <ContentControl.Resources>
+                        <DataTemplate x:Key="ADRE">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                </Grid.RowDefinitions>
+                                <Label Grid.Column="0" Grid.Row="0" Content="{Binding Table.ADRENAME.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding ADRENAME}" HorizontalAlignment="Stretch"/>
+                                <Label Grid.Column="0" Grid.Row="1" Content="{Binding Table.ADRESSE.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="1" Grid.RowSpan="3" Text="{Binding ADRESSE}" Height="81" VerticalContentAlignment="Top" HorizontalAlignment="Stretch" AcceptsReturn="True" MaxLines="5"/>
+                            </Grid>
                         </DataTemplate>
-                    </HierarchicalDataTemplate.ItemTemplate>
-                </HierarchicalDataTemplate>
-            </TreeView.ItemTemplate>
-        </uiC:PpsTreeListView>
+                        <DataTemplate x:Key="ANSP">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                </Grid.RowDefinitions>
+                                <Label Grid.Column="0" Grid.Row="0" Content="{Binding Table.ANSPNAME.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding ANSPNAME}" HorizontalAlignment="Stretch"/>
+                                <Label Grid.Column="0" Grid.Row="1" Content="{Binding Table.ANSPANREDE.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="1" Text="{Binding ANSPANREDE}" HorizontalAlignment="Stretch"/>
+                                <Label Grid.Column="0" Grid.Row="2" Content="{Binding Table.ANSPTEL.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding ANSPTEL}" HorizontalAlignment="Stretch"/>
+                                <Label Grid.Column="0" Grid.Row="3" Content="{Binding Table.ANSPMOBIL.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="3" Text="{Binding ANSPMOBIL}" HorizontalAlignment="Stretch"/>
+                                <Label Grid.Column="0" Grid.Row="4" Content="{Binding Table.ANSPFAX.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="4" Text="{Binding ANSPFAX}" HorizontalAlignment="Stretch"/>
+                                <Label Grid.Column="0" Grid.Row="5" Content="{Binding Table.ANSPMAIL.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="5" Text="{Binding ANSPMAIL}" HorizontalAlignment="Stretch"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ContentControl.Resources>
+                </ContentControl>
+            </Grid>
+		</Expander>
+    </StackPanel>
 
-		<ContentControl Grid.Column="3" Grid.Row="9" Grid.ColumnSpan="2" Content="{Binding ElementName=APART_TreeView,Path=SelectedValue}">
-			<ContentControl.ContentTemplateSelector>
-				<ui:PpsContentTemplateSelector />
-			</ContentControl.ContentTemplateSelector>
-			<ContentControl.Resources>
-				<DataTemplate x:Key="ADRE">
-					<Grid Margin="0,23">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="29"/>
-                        </Grid.RowDefinitions>
-						<Label Grid.Column="0" Grid.Row="0" Content="{Binding Table.ADRENAME.Caption, Mode=OneTime}" Height="23"/>
-						<TextBox Grid.Column="1" Grid.Row="0" Text="{Binding ADRENAME}" HorizontalAlignment="Stretch"/>
-					</Grid>
-				</DataTemplate>
-				<DataTemplate x:Key="ANSP">
-					<Grid  Margin="0,23">
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="120"/>
-							<ColumnDefinition/>
-						</Grid.ColumnDefinitions>
-						<Grid.RowDefinitions>
-							<RowDefinition Height="29"/>
-							<RowDefinition Height="29"/>
-							<RowDefinition Height="29"/>
-							<RowDefinition Height="29"/>
-							<RowDefinition Height="29"/>
-							<RowDefinition Height="29"/>
-							<RowDefinition Height="29"/>
-						</Grid.RowDefinitions>
-						<Label Grid.Column="0" Grid.Row="0" Content="{Binding Table.ANSPNAME.Caption, Mode=OneTime}" Height="23"/>
-                        <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding ANSPNAME}" HorizontalAlignment="Stretch"/>
-						<Label Grid.Column="0" Grid.Row="1" Content="{Binding Table.ANSPANREDE.Caption, Mode=OneTime}" Height="23"/>
-                        <TextBox Grid.Column="1" Grid.Row="1" Text="{Binding ANSPANREDE}" HorizontalAlignment="Stretch"/>
-						<Label Grid.Column="0" Grid.Row="2" Content="{Binding Table.ANSPTEL.Caption, Mode=OneTime}" Height="23"/>
-                        <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding ANSPTEL}" HorizontalAlignment="Stretch"/>
-						<Label Grid.Column="0" Grid.Row="3" Content="{Binding Table.ANSPMOBIL.Caption, Mode=OneTime}" Height="23"/>
-                        <TextBox Grid.Column="1" Grid.Row="3" Text="{Binding ANSPMOBIL}" HorizontalAlignment="Stretch"/>
-						<Label Grid.Column="0" Grid.Row="4" Content="{Binding Table.ANSPFAX.Caption, Mode=OneTime}" Height="23"/>
-                        <TextBox Grid.Column="1" Grid.Row="4" Text="{Binding ANSPFAX}" HorizontalAlignment="Stretch"/>
-						<Label Grid.Column="0" Grid.Row="5" Content="{Binding Table.ANSPMAIL.Caption, Mode=OneTime}" Height="23"/>
-                        <TextBox Grid.Column="1" Grid.Row="5" Text="{Binding ANSPMAIL}" HorizontalAlignment="Stretch"/>
-					</Grid>
-				</DataTemplate>
-			</ContentControl.Resources>
-		</ContentControl>
-    </Grid>
-	
     <ui:PpsGenericWpfControl.Commands>
-			<ui:PpsUICommandButton Order="100,100" DisplayText="Speichern" Description="Speichern" Image="floppy_diskImage" Command="{Binding SaveCommand}" />
-
-				<ui:PpsUICommandButton Order="200,110" DisplayText="Anfügen" Description="Anfügen von..." Image="clipboard_pasteImage"/>
-				<ui:PpsUICommandButton Order="200,120" DisplayText="Löschen" Description="Löschen" Image="deleteImage"/>
-				<ui:PpsUICommandButton Order="200,130" DisplayText="Rückgängig" Description="Rückgängig" Image="undoImage" Command="{Binding UndoCommand}"/>
-				<ui:PpsUICommandButton Order="200,130" DisplayText="Wiederherstellen" Description="Wiederherstellen" Image="undoImage" Command="{Binding RedoCommand}"/>
-			
-				<ui:PpsUICommandButton Order="300,110" DisplayText="Drucken" Description="Drucken" Image="printerImage"/>
-				<ui:PpsUICommandButton Order="300,120" DisplayText="Senden" Description="Als Email versenden" Image="server_mail_uploadImage" Command="{Binding TestStackCommand}" />
+		<ui:PpsUICommandButton Order="100,100" DisplayText="Speichern" Description="Speichern" Image="floppy_diskImage" Command="{Binding SaveCommand}" />
+		<ui:PpsUICommandButton Order="200,110" DisplayText="Anfügen" Description="Anfügen von..." Image="clipboard_pasteImage"/>
+		<ui:PpsUICommandButton Order="200,120" DisplayText="Löschen" Description="Löschen" Image="deleteImage"/>
+        <ui:PpsUICommandButton Order="200,130" DisplayText="Rückgängig" Description="Rückgängig" Image="undoImage" Command="{Binding UndoCommand}" DropDownCommand="{Binding TestStackCommand}"/>
+        <ui:PpsUICommandButton Order="200,130" DisplayText="Wiederherstellen" Description="Wiederherstellen" Image="redoImage" Command="{Binding RedoCommand}" DropDownCommand="{Binding TestStackCommand}"/>
+		<ui:PpsUICommandButton Order="300,110" DisplayText="Drucken" Description="Drucken" Image="printerImage"/>
+		<ui:PpsUICommandButton Order="300,120" DisplayText="Senden" Description="Als Email versenden" Image="server_mail_uploadImage" Command="{Binding TestStackCommand}" />
     </ui:PpsGenericWpfControl.Commands>
 
 </ui:PpsGenericWpfControl>

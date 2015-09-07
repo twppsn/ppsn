@@ -16,11 +16,11 @@
 			<Style x:Key="PanePresenterToolBarStyle" TargetType="{x:Type ToolBar}">
 				<Style.Resources>
 					<DataTemplate x:Key="{x:Type ui:PpsUICommandButton}" DataType="{x:Type ui:PpsUICommandButton}">
-						<Button Style="{StaticResource PpsToolBarButton}" ToolTip="{Binding Description}" Command="{Binding Command}" Padding="8,0">
+                        <Button Style="{StaticResource PpsToolBarButtonStyle}" ToolTip="{Binding Description}" Command="{Binding Command}">
 							<StackPanel Orientation="Horizontal" Margin="0">
-                                <Image Source="{ui:PpsImageStaticResourceBinding {Binding Image}}" Width="20" Height="20" Margin="6,0" HorizontalAlignment="Center"/>
+                                <Image Source="{ui:PpsImageStaticResourceBinding {Binding Image}}" Width="20" Height="20" Margin="0,0,6,0" HorizontalAlignment="Center"/>
                                 <TextBlock Text="{Binding DisplayText}" VerticalAlignment="Center" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
-							</StackPanel>
+                            </StackPanel>
                         </Button>
 					</DataTemplate>
 					<DataTemplate x:Key="Seperator" DataType="{x:Type FrameworkContentElement}">
@@ -29,7 +29,7 @@
 				</Style.Resources>
 				<Setter Property="ItemTemplateSelector">
 					<Setter.Value>
-						<ctrls:PpsToolbarDataTemplateSelector />
+						<ctrls:PpsToolbarDataTemplateSelector/>
 					</Setter.Value>
 				</Setter>
 				<Setter Property="Background" Value="Transparent"/>
@@ -48,7 +48,6 @@
 						</ControlTemplate>
 					</Setter.Value>
 				</Setter>
-				
 			</Style>
         </ResourceDictionary>
 	</Application.Resources>
