@@ -45,26 +45,6 @@
             </Setter.Value>
         </Setter>
     </Style>
-
-    <Style x:Key="PpsToolBarSplitButtonStyle" TargetType="{x:Type Button}">
-        <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Focusable" Value="False" />
-		<Setter Property="Width" Value="18"/>
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="BorderBrush" Value="Transparent" />
-		<Setter Property="Margin" Value="-5,0,0,0"/>
-		<Setter Property="ClickMode" Value="Press"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type Button}">
-                    <Border x:Name="PART_Border" Grid.Column="0" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}">
-                        <Path x:Name="PART_Arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{TemplateBinding Foreground}" Data="M 0 3 L 5 10 L 10 3 Z"/>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
 	
 	<Style x:Key="PpsToolBarButtonStyle" TargetType="{x:Type Button}">
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
@@ -73,40 +53,70 @@
 		<Setter Property="BorderThickness" Value="0" />
 		<Setter Property="BorderBrush" Value="Transparent" />
 		<Setter Property="Padding" Value="8,0"/>
+		<Setter Property="VerticalContentAlignment" Value="Center"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type Button}">
-                    <Grid x:Name="PART_LayoutGrid">
-                        <Grid.ColumnDefinitions>
-							<ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Border x:Name="PART_Border" Grid.Column="0" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}"
+					<Border x:Name="PART_Border" Grid.Column="0" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}"
 							Padding="{TemplateBinding Padding}"
 							SnapsToDevicePixels="true">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                        </Border>
-                        <Button x:Name="PART_SplitButton" Grid.Column="1" Style="{StaticResource PpsToolBarSplitButtonStyle}" Command="{Binding DropDownCommand}"/>
-                    </Grid>
+						<ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+					</Border>
 					<ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="true" SourceName="PART_LayoutGrid">
-                            <Setter Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" TargetName="PART_LayoutGrid"/>
+                        <Trigger Property="IsMouseOver" Value="true">
+                            <Setter Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" TargetName="PART_Border"/>
 						</Trigger>
 						<Trigger Property="IsPressed" Value="true">
                             <Setter Property="Background" TargetName="PART_Border" Value="{StaticResource PPSnButtonPressedBrush}"/>
-                            <Setter Property="Background" TargetName="PART_SplitButton" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
                         </Trigger>
 						<Trigger Property="IsEnabled" Value="False">
-							<Setter Property="Opacity" Value="0.4"/>
+							<Setter Property="Opacity" Value="0.35"/>
 						</Trigger>
-                        <Trigger SourceName="PART_SplitButton" Property="Command" Value="{x:Null}">
-                            <Setter TargetName="PART_SplitButton" Property="Visibility" Value="Collapsed"/>
-                        </Trigger>
                     </ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+    <ControlTemplate x:Key="PpsToolBarSplitButtonSplitterTemplate" TargetType="{x:Type Button}">
+        <Border x:Name="PART_Border" Grid.Column="0" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}">
+            <Path x:Name="PART_Arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{TemplateBinding Foreground}" Data="M 0 3 L 5 10 L 10 3 Z"/>
+        </Border>
+    </ControlTemplate>
+
+    <Style x:Key="PpsToolBarSplitButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource PpsToolBarButtonStyle}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid x:Name="PART_LayoutGrid">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="PART_Border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}"
+							Padding="8,0,0,0"
+							SnapsToDevicePixels="true">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Border>
+                        <Button x:Name="PART_Dropdown" Grid.Column="1" Width="18" Margin="0,0,2,0" Focusable="False" BorderThickness="0" ClickMode="Press" Foreground="{StaticResource PPSnWindowForegroundBrush}" Background="Transparent"
+								Template="{StaticResource PpsToolBarSplitButtonSplitterTemplate}" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="true" SourceName="PART_LayoutGrid">
+                            <Setter Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" TargetName="PART_LayoutGrid"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="true">
+                            <Setter Property="Background" TargetName="PART_Border" Value="{StaticResource PPSnButtonPressedBrush}"/>
+                            <Setter Property="Background" TargetName="PART_Dropdown" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.35"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 
     <Style x:Key="PpsSimpleButtonStyle" TargetType="{x:Type Button}">
         <Setter Property="Background" Value="Transparent"/>

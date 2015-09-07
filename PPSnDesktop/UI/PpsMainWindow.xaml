@@ -423,7 +423,7 @@
         </HeaderedItemsControl>
         <ToolBar x:Name="PART_PanePresenterToolBar" Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="6" Grid.RowSpan="2" VerticalAlignment="Bottom" Margin="90,0" Height="36" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" FontSize="14.667" >
             <ToolBar.Style>
-                <Style TargetType="ToolBar" BasedOn="{StaticResource PanePresenterToolBarStyle}" >
+                <Style TargetType="ToolBar" BasedOn="{StaticResource PanePresenterToolBarStyle}">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding Path=PaneVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="Collapsed">
                             <DataTrigger.EnterActions>
@@ -454,8 +454,7 @@
 			</uiL:PpsNavigatorControl.Style>
         </uiL:PpsNavigatorControl>
 		
-		
-		<!--<ContentPresenter x:Name="PART_PanePresenter" Margin="32, 24" Grid.Row="3" Grid.ColumnSpan="6" Content="{Binding CurrentPane.Control, Mode=OneWay}" >
+		<ContentPresenter x:Name="PART_PanePresenter" Grid.Row="3" Grid.ColumnSpan="6" Content="{Binding CurrentPane.Control, Mode=OneWay}" >
             <ContentPresenter.Style>
                 <Style TargetType="ContentPresenter">
                     <Style.Triggers>
@@ -470,33 +469,7 @@
                     </Style.Triggers>
                 </Style>
 			</ContentPresenter.Style>
-        </ContentPresenter>-->
-
-        <ScrollViewer x:Name="PART_PanePresenter" Grid.Row="3" Grid.ColumnSpan="6" Padding="24">
-            <ContentPresenter Content="{Binding CurrentPane.Control, Mode=OneWay}"/>
-            <ScrollViewer.Style>
-                <Style TargetType="{x:Type ScrollViewer}" BasedOn="{StaticResource PPSnScrollViewerStyle}">
-					<Style.Triggers>
-						<DataTrigger Binding="{Binding Path=PaneVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="Collapsed">
-							<DataTrigger.EnterActions>
-								<BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}" />
-							</DataTrigger.EnterActions>
-							<DataTrigger.ExitActions>
-								<BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}" />
-							</DataTrigger.ExitActions>
-						</DataTrigger>
-					</Style.Triggers>
-				</Style>
-			</ScrollViewer.Style>
-		</ScrollViewer>
-
-		
-		
-		
-		
-		
-		
-		
+        </ContentPresenter>
 		
         <DockPanel x:Name="PART_StatusBar" Grid.Row="4" Grid.ColumnSpan="6"  Background="{StaticResource PPSnWindowFooterBrush}" LastChildFill="False">
             <Label Content="CurrentPane:" Margin="8,0,0,0" Padding="0" VerticalContentAlignment="Center" Foreground="{StaticResource PPSnWindowForegroundBrush}" Opacity="0.7"></Label>

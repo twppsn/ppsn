@@ -35,172 +35,174 @@
         </XmlDataProvider>
     </ui:PpsGenericWpfControl.Resources>
 
-	<StackPanel MinWidth="1020" MaxWidth="1020">
-		<Expander Header="Ident" Style="{StaticResource PPSnExpanderStyle}" ExpandDirection="Down" IsExpanded="True">
-			<Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="120"/>
-                    <ColumnDefinition Width="350"/>
-                    <ColumnDefinition Width="80"/>
-                    <ColumnDefinition Width="120"/>
-                    <ColumnDefinition Width="350"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="29"/>
-                    <RowDefinition Height="29"/>
-                    <RowDefinition Height="29"/>
-                </Grid.RowDefinitions>
-                <Label Grid.Column="0" Grid.Row="0" Content="Auftragsnummer:" Height="23"/>
-                <TextBox Grid.Column="1" Grid.Row="0" Width="100"/>
-                <Label Grid.Column="0" Grid.Row="1" Content="Kundennummer:" Height="23"/>
-                <TextBox Grid.Column="1" Grid.Row="1" Width="100"/>
-                <Label Grid.Column="0" Grid.Row="2" Content="Rechnung:" Height="23"/>
-                <TextBox Grid.Column="1" Grid.Row="2" Width="100"/>
-                <Label Grid.Column="3" Grid.Row="0" Content="Auftragsdatum:" Height="23"/>
-                <TextBox Grid.Column="4" Grid.Row="0" Width="100"/>
-                <Label Grid.Column="4" Grid.Row="0" Content="Bestelldatum:" Height="23" Width="100" Margin="150,0,0,0" HorizontalAlignment="Left"/>
-                <TextBox Grid.Column="4" Grid.Row="0" Width="100" Margin="250,0,0,0"/>
-                <Label Grid.Column="3" Grid.Row="1" Content="BestNr./Zeichen:" Height="23"/>
-                <TextBox Grid.Column="4" Grid.Row="1" Width="350"/>
-                <Label Grid.Column="3" Grid.Row="2" Content="Zusatzinfo:" Height="23"/>
-                <TextBox Grid.Column="4" Grid.Row="2" Width="350"/>
-            </Grid>
-        </Expander>
-        <Expander Header="Kopfdaten" ExpandDirection="Down" IsExpanded="True" Style="{StaticResource PPSnExpanderStyle}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="120"/>
-                    <ColumnDefinition Width="350"/>
-                    <ColumnDefinition Width="80"/>
-                    <ColumnDefinition Width="120"/>
-                    <ColumnDefinition Width="350"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="29"/>
-                    <RowDefinition Height="29"/>
-                    <RowDefinition Height="29"/>
-                    <RowDefinition Height="29"/>
-                    <RowDefinition Height="29"/>
-                    <RowDefinition Height="29"/>
-                    <RowDefinition Height="29"/>
-                    <RowDefinition Height="29"/>
-                </Grid.RowDefinitions>
-                <Label Grid.Column="0" Grid.Row="0" Content="Rechnungsempf:" Height="23"/>
-                <TextBox Grid.Column="1" Grid.Row="0" Width="100"/>
-                <Label Grid.Column="0" Grid.Row="1" Content="Vertreter:" Height="23"/>
-                <TextBox Grid.Column="1" Grid.Row="1" Width="100"/>
-                <Label Grid.Column="0" Grid.Row="2" Content="Provision:" Height="23"/>
-                <TextBox Grid.Column="1" Grid.Row="2" Width="100"/>
-                <Label Grid.Column="0" Grid.Row="3" Content="Sprachcode:" Height="23"/>
-                <TextBox Grid.Column="1" Grid.Row="3" Width="350"/>
-                <Label Grid.Column="0" Grid.Row="4" Content="Zahlungsziel:" Height="23"/>
-                <TextBox Grid.Column="1" Grid.Row="4" Width="350"/>
-                <Label Grid.Column="0" Grid.Row="5" Content="Preisstellung:" Height="23"/>
-                <TextBox Grid.Column="1" Grid.Row="5" Width="350"/>
-                <Label Grid.Column="0" Grid.Row="6" Content="Mehrwertsteuer:" Height="23"/>
-                <TextBox Grid.Column="1" Grid.Row="6" Width="350"/>
-                <Label Grid.Column="0" Grid.Row="7" Content="Versandart:" Height="23"/>
-                <TextBox Grid.Column="1" Grid.Row="7" Width="350"/>
+    <ScrollViewer Style="{StaticResource PPSnScrollViewerStyle}" Padding="24">
+        <StackPanel MinWidth="1020" MaxWidth="1020">
+			<Expander Header="Ident" Style="{StaticResource PPSnExpanderStyle}" ExpandDirection="Down" IsExpanded="True">
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="120"/>
+						<ColumnDefinition Width="350"/>
+						<ColumnDefinition Width="80"/>
+						<ColumnDefinition Width="120"/>
+						<ColumnDefinition Width="350"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+					</Grid.RowDefinitions>
+					<Label Grid.Column="0" Grid.Row="0" Content="Auftragsnummer:" Height="23"/>
+					<TextBox Grid.Column="1" Grid.Row="0" Width="100"/>
+					<Label Grid.Column="0" Grid.Row="1" Content="Kundennummer:" Height="23"/>
+					<TextBox Grid.Column="1" Grid.Row="1" Width="100"/>
+					<Label Grid.Column="0" Grid.Row="2" Content="Rechnung:" Height="23"/>
+					<TextBox Grid.Column="1" Grid.Row="2" Width="100"/>
+					<Label Grid.Column="3" Grid.Row="0" Content="Auftragsdatum:" Height="23"/>
+					<TextBox Grid.Column="4" Grid.Row="0" Width="100"/>
+					<Label Grid.Column="4" Grid.Row="0" Content="Bestelldatum:" Height="23" Width="100" Margin="150,0,0,0" HorizontalAlignment="Left"/>
+					<TextBox Grid.Column="4" Grid.Row="0" Width="100" Margin="250,0,0,0"/>
+					<Label Grid.Column="3" Grid.Row="1" Content="BestNr./Zeichen:" Height="23"/>
+					<TextBox Grid.Column="4" Grid.Row="1" Width="350"/>
+					<Label Grid.Column="3" Grid.Row="2" Content="Zusatzinfo:" Height="23"/>
+					<TextBox Grid.Column="4" Grid.Row="2" Width="350"/>
+				</Grid>
+			</Expander>
+			<Expander Header="Kopfdaten" ExpandDirection="Down" IsExpanded="True" Style="{StaticResource PPSnExpanderStyle}">
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="120"/>
+						<ColumnDefinition Width="350"/>
+						<ColumnDefinition Width="80"/>
+						<ColumnDefinition Width="120"/>
+						<ColumnDefinition Width="350"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+					</Grid.RowDefinitions>
+					<Label Grid.Column="0" Grid.Row="0" Content="Rechnungsempf:" Height="23"/>
+					<TextBox Grid.Column="1" Grid.Row="0" Width="100"/>
+					<Label Grid.Column="0" Grid.Row="1" Content="Vertreter:" Height="23"/>
+					<TextBox Grid.Column="1" Grid.Row="1" Width="100"/>
+					<Label Grid.Column="0" Grid.Row="2" Content="Provision:" Height="23"/>
+					<TextBox Grid.Column="1" Grid.Row="2" Width="100"/>
+					<Label Grid.Column="0" Grid.Row="3" Content="Sprachcode:" Height="23"/>
+					<TextBox Grid.Column="1" Grid.Row="3" Width="350"/>
+					<Label Grid.Column="0" Grid.Row="4" Content="Zahlungsziel:" Height="23"/>
+					<TextBox Grid.Column="1" Grid.Row="4" Width="350"/>
+					<Label Grid.Column="0" Grid.Row="5" Content="Preisstellung:" Height="23"/>
+					<TextBox Grid.Column="1" Grid.Row="5" Width="350"/>
+					<Label Grid.Column="0" Grid.Row="6" Content="Mehrwertsteuer:" Height="23"/>
+					<TextBox Grid.Column="1" Grid.Row="6" Width="350"/>
+					<Label Grid.Column="0" Grid.Row="7" Content="Versandart:" Height="23"/>
+					<TextBox Grid.Column="1" Grid.Row="7" Width="350"/>
 
-                <Label Grid.Column="3" Grid.Row="0" Content="Ab-Anschrift:" Height="23"/>
-                <TextBox Grid.Column="4" Grid.Row="0" Width="350" Grid.RowSpan="3" Height="81" VerticalContentAlignment="Top" AcceptsReturn="True" MaxLines="5"/>
-                <Label Grid.Column="3" Grid.Row="3" Content="Matchcode:" Height="23"/>
-                <TextBox Grid.Column="4" Grid.Row="3" Width="350"/>
-                <Label Grid.Column="3" Grid.Row="4" Content="Sachbearbeiter:" Height="23"/>
-                <TextBox Grid.Column="4" Grid.Row="4" Width="350"/>
-                <Label Grid.Column="3" Grid.Row="5" Content="Ansprechpartner:" Height="23"/>
-                <TextBox Grid.Column="4" Grid.Row="5" Width="350"/>
-                <Label Grid.Column="3" Grid.Row="6" Content="Telefon/Fax:" Height="23"/>
-                <TextBox Grid.Column="4" Grid.Row="6" Width="172"/>
-                <TextBox Grid.Column="4" Grid.Row="6" Width="172" Margin="180,0,0,0"/>
-                <Label Grid.Column="3" Grid.Row="7" Content="E-Mail:" Height="23"/>
-                <TextBox Grid.Column="4" Grid.Row="7" Width="350"/>
+					<Label Grid.Column="3" Grid.Row="0" Content="Ab-Anschrift:" Height="23"/>
+					<TextBox Grid.Column="4" Grid.Row="0" Width="350" Grid.RowSpan="3" Height="81" VerticalContentAlignment="Top" AcceptsReturn="True" MaxLines="5"/>
+					<Label Grid.Column="3" Grid.Row="3" Content="Matchcode:" Height="23"/>
+					<TextBox Grid.Column="4" Grid.Row="3" Width="350"/>
+					<Label Grid.Column="3" Grid.Row="4" Content="Sachbearbeiter:" Height="23"/>
+					<TextBox Grid.Column="4" Grid.Row="4" Width="350"/>
+					<Label Grid.Column="3" Grid.Row="5" Content="Ansprechpartner:" Height="23"/>
+					<TextBox Grid.Column="4" Grid.Row="5" Width="350"/>
+					<Label Grid.Column="3" Grid.Row="6" Content="Telefon/Fax:" Height="23"/>
+					<TextBox Grid.Column="4" Grid.Row="6" Width="172"/>
+					<TextBox Grid.Column="4" Grid.Row="6" Width="172" Margin="180,0,0,0"/>
+					<Label Grid.Column="3" Grid.Row="7" Content="E-Mail:" Height="23"/>
+					<TextBox Grid.Column="4" Grid.Row="7" Width="350"/>
 
-            </Grid>
-        </Expander>
-        <Expander Header="Positionen" ExpandDirection="Down" Style="{StaticResource PPSnExpanderStyle}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="550"/>
-                    <ColumnDefinition Width="470"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="29"/>
-                    <RowDefinition/>
-                </Grid.RowDefinitions>
-                <Button Grid.Column="0" Grid.Row="0" Content="Neue Position" Width="100" Height="23" Style="{StaticResource PpsSimpleButtonStyle}"
-							HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                <ListBox x:Name="OrderPositions_Listbox" Grid.Column="0" Grid.Row="1" Width="470" HorizontalAlignment="Left" ItemsSource="{Binding Source={StaticResource OrderItems},XPath=*}"
-							 AlternationCount="2"
-							 IsSynchronizedWithCurrentItem="True"
-							 Style="{StaticResource PPSnListBoxStyle}"
-							 ItemContainerStyle="{StaticResource PpsAlternatingListBoxItemStyle}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="60"/>
-                                    <ColumnDefinition/>
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="32"/>
-                                </Grid.RowDefinitions>
-                                <Border>
-                                    <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center" Text="{Binding XPath=@Pos}"/>
-                                </Border>
-                                <Border Grid.Column="1">
-                                    <TextBlock VerticalAlignment="Center" Text="{Binding XPath=@Tnr}"/>
-                                </Border>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-                <ContentControl Focusable="False" Grid.Column="1" Grid.Row="1" Content="{Binding ElementName=OrderPositions_Listbox,Path=SelectedItem}">
-                    <ContentControl.ContentTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="120"/>
-                                    <ColumnDefinition Width="350"/>
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="29"/>
-                                    <RowDefinition Height="29"/>
-                                    <RowDefinition Height="29"/>
-                                    <RowDefinition Height="29"/>
-                                    <RowDefinition Height="29"/>
-                                    <RowDefinition Height="29"/>
-                                    <RowDefinition Height="29"/>
-                                    <RowDefinition Height="103"/>
-                                </Grid.RowDefinitions>
-                                <Label Grid.Column="0" Grid.Row="0" Content="Teilenummer:" Height="23"/>
-                                <TextBox Grid.Column="1" Grid.Row="0" Width="100" Text="{Binding XPath=@Tnr}"/>
-                                <Label Grid.Column="0" Grid.Row="1" Content="Auftragsmenge:" Height="23"/>
-                                <TextBox Grid.Column="1" Grid.Row="1" Width="100"/>
-                                <ComboBox Grid.Column="1" Grid.Row="1" Width="100" Height="23" HorizontalAlignment="Left" Margin="106,0,0,0">
-                                    <ComboBoxItem Content="Stück"/>
-                                    <ComboBoxItem Content="Meter"/>
-                                </ComboBox>
-                                <Label Grid.Column="0" Grid.Row="2" Content="Kundentermin:" Height="23"/>
-                                <TextBox Grid.Column="1" Grid.Row="2" Width="100" />
-                                <Label Grid.Column="0" Grid.Row="3" Content="Interner Termin:" Height="23"/>
-                                <TextBox Grid.Column="1" Grid.Row="3" Width="100" />
-                                <Label Grid.Column="0" Grid.Row="4" Content="PREISCONTROL:" Height="23"/>
-                                <TextBox Grid.Column="1" Grid.Row="4" Width="100" />
-                                <Label Grid.Column="0" Grid.Row="5" Content="Teilenummer Kunde:" Height="23"/>
-                                <TextBox Grid.Column="1" Grid.Row="5" Width="206"/>
-                                <Label Grid.Column="0" Grid.Row="6" Content="Zeichnung / Idx:" Height="23"/>
-                                <TextBox Grid.Column="1" Grid.Row="6" Width="160"/>
-                                <TextBox Grid.Column="1" Grid.Row="6" Width="40" Margin="166,0,0,0"/>
-                                <Label Grid.Column="0" Grid.Row="7" Content="Auftragstext:" Height="23" VerticalAlignment="Top" Margin="0,3,0,0"/>
-                                <TextBox Grid.Column="1" Grid.Row="7"  Height="100" HorizontalAlignment="Stretch" VerticalAlignment="Top" Margin="0,3,0,0" VerticalContentAlignment ="Top" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ContentControl.ContentTemplate>
-                </ContentControl>
-            </Grid>
-        </Expander>
-    </StackPanel>
+				</Grid>
+			</Expander>
+			<Expander Header="Positionen" ExpandDirection="Down" Style="{StaticResource PPSnExpanderStyle}">
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="550"/>
+						<ColumnDefinition Width="470"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="29"/>
+						<RowDefinition/>
+					</Grid.RowDefinitions>
+					<Button Grid.Column="0" Grid.Row="0" Content="Neue Position" Width="100" Height="23" Style="{StaticResource PpsSimpleButtonStyle}"
+								HorizontalAlignment="Left" VerticalAlignment="Top"/>
+					<ListBox x:Name="OrderPositions_Listbox" Grid.Column="0" Grid.Row="1" Width="470" HorizontalAlignment="Left" ItemsSource="{Binding Source={StaticResource OrderItems},XPath=*}"
+								 AlternationCount="2"
+								 IsSynchronizedWithCurrentItem="True"
+								 Style="{StaticResource PPSnListBoxStyle}"
+								 ItemContainerStyle="{StaticResource PpsAlternatingListBoxItemStyle}">
+						<ListBox.ItemTemplate>
+							<DataTemplate>
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="60"/>
+										<ColumnDefinition/>
+									</Grid.ColumnDefinitions>
+									<Grid.RowDefinitions>
+										<RowDefinition Height="32"/>
+									</Grid.RowDefinitions>
+									<Border>
+										<TextBlock VerticalAlignment="Center" HorizontalAlignment="Center" Text="{Binding XPath=@Pos}"/>
+									</Border>
+									<Border Grid.Column="1">
+										<TextBlock VerticalAlignment="Center" Text="{Binding XPath=@Tnr}"/>
+									</Border>
+								</Grid>
+							</DataTemplate>
+						</ListBox.ItemTemplate>
+					</ListBox>
+					<ContentControl Focusable="False" Grid.Column="1" Grid.Row="1" Content="{Binding ElementName=OrderPositions_Listbox,Path=SelectedItem}">
+						<ContentControl.ContentTemplate>
+							<DataTemplate>
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="120"/>
+										<ColumnDefinition Width="350"/>
+									</Grid.ColumnDefinitions>
+									<Grid.RowDefinitions>
+										<RowDefinition Height="29"/>
+										<RowDefinition Height="29"/>
+										<RowDefinition Height="29"/>
+										<RowDefinition Height="29"/>
+										<RowDefinition Height="29"/>
+										<RowDefinition Height="29"/>
+										<RowDefinition Height="29"/>
+										<RowDefinition Height="103"/>
+									</Grid.RowDefinitions>
+									<Label Grid.Column="0" Grid.Row="0" Content="Teilenummer:" Height="23"/>
+									<TextBox Grid.Column="1" Grid.Row="0" Width="100" Text="{Binding XPath=@Tnr}"/>
+									<Label Grid.Column="0" Grid.Row="1" Content="Auftragsmenge:" Height="23"/>
+									<TextBox Grid.Column="1" Grid.Row="1" Width="100"/>
+									<ComboBox Grid.Column="1" Grid.Row="1" Width="100" Height="23" HorizontalAlignment="Left" Margin="106,0,0,0">
+										<ComboBoxItem Content="Stück"/>
+										<ComboBoxItem Content="Meter"/>
+									</ComboBox>
+									<Label Grid.Column="0" Grid.Row="2" Content="Kundentermin:" Height="23"/>
+									<TextBox Grid.Column="1" Grid.Row="2" Width="100" />
+									<Label Grid.Column="0" Grid.Row="3" Content="Interner Termin:" Height="23"/>
+									<TextBox Grid.Column="1" Grid.Row="3" Width="100" />
+									<Label Grid.Column="0" Grid.Row="4" Content="PREISCONTROL:" Height="23"/>
+									<TextBox Grid.Column="1" Grid.Row="4" Width="100" />
+									<Label Grid.Column="0" Grid.Row="5" Content="Teilenummer Kunde:" Height="23"/>
+									<TextBox Grid.Column="1" Grid.Row="5" Width="206"/>
+									<Label Grid.Column="0" Grid.Row="6" Content="Zeichnung / Idx:" Height="23"/>
+									<TextBox Grid.Column="1" Grid.Row="6" Width="160"/>
+									<TextBox Grid.Column="1" Grid.Row="6" Width="40" Margin="166,0,0,0"/>
+									<Label Grid.Column="0" Grid.Row="7" Content="Auftragstext:" Height="23" VerticalAlignment="Top" Margin="0,3,0,0"/>
+									<TextBox Grid.Column="1" Grid.Row="7"  Height="100" HorizontalAlignment="Stretch" VerticalAlignment="Top" Margin="0,3,0,0" VerticalContentAlignment ="Top" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+								</Grid>
+							</DataTemplate>
+						</ContentControl.ContentTemplate>
+					</ContentControl>
+				</Grid>
+			</Expander>
+		</StackPanel>
+    </ScrollViewer>
 
     <ui:PpsGenericWpfControl.Commands>
         <ui:PpsUICommandButton Order="100,100" DisplayText="Speichern" Description="Speichern" Image="floppy_diskImage" Command="{Binding HalloCommand}" />

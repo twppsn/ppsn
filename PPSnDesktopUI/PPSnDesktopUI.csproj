@@ -66,6 +66,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Controls\DataListControl.cs" />
+    <Compile Include="Controls\SplitButton.cs" />
     <Compile Include="Controls\Toolbar.cs" />
     <Compile Include="Controls\TreeListView.cs" />
     <Compile Include="Data\DataListItemDefinition.cs" />
@@ -129,6 +130,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Page Include="Themes\Generic.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="UI\PpsExceptionDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

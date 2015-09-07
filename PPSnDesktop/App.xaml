@@ -4,6 +4,7 @@
 			 xmlns:ctrls="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
 			 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
 			 xmlns:uim="clr-namespace:TecWare.PPSn.UI"
+			 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
 			 xmlns:env="clr-namespace:TecWare.PPSn"
              ShutdownMode="OnLastWindowClose">
 	<Application.Resources>
@@ -23,7 +24,15 @@
                             </StackPanel>
                         </Button>
 					</DataTemplate>
-					<DataTemplate x:Key="Seperator" DataType="{x:Type FrameworkContentElement}">
+                    <DataTemplate x:Key="{x:Type ui:PpsUISplitCommandButton}" DataType="{x:Type ui:PpsUISplitCommandButton}">
+                        <uiC:SplitButton Style="{StaticResource PpsToolBarSplitButtonStyle}" ToolTip="{Binding Description}" Command="{Binding Command}">
+                            <StackPanel Orientation="Horizontal" Margin="0">
+                                <Image Source="{ui:PpsImageStaticResourceBinding {Binding Image}}" Width="20" Height="20" Margin="0,0,6,0" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding DisplayText}" VerticalAlignment="Center" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
+                            </StackPanel>
+                        </uiC:SplitButton>
+                    </DataTemplate>
+                    <DataTemplate x:Key="Seperator" DataType="{x:Type FrameworkContentElement}">
                         <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Background="{StaticResource PPSnSeparatorBrush}" Margin="6" />
 					</DataTemplate>
 				</Style.Resources>
