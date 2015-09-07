@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -58,6 +59,13 @@ namespace TecWare.PPSn.Controls
 			Test();
 		}
 
+		protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
+		{
+			base.OnItemsChanged(e);
+			if (e.Action == NotifyCollectionChangedAction.Remove)
+				Test();
+		}
+
 		private void OnLoaded(object sender, RoutedEventArgs e)
 		{
 			Test();
@@ -65,8 +73,8 @@ namespace TecWare.PPSn.Controls
 
 		private void Test()
 		{
-			//var parent = Parent as DependencyObject;
 			var parent = VisualTreeHelper.GetParent(this);
+			// search from Treeview
 			while (!(parent is PpsTreeListView) && (parent != null))
 			{
 				parent = VisualTreeHelper.GetParent(parent);
@@ -82,7 +90,7 @@ namespace TecWare.PPSn.Controls
 			private static readonly MethodInfo SetAlternationIndexMethod;
 
 			static AlternationExtensions()
-			{
+				{
 				SetAlternationIndexMethod = typeof(ItemsControl).GetMethod("SetAlternationIndex", BindingFlags.Static | BindingFlags.NonPublic);
 			}
 
