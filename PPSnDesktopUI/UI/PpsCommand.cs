@@ -9,9 +9,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
+using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn.UI
 {
@@ -300,7 +303,19 @@ namespace TecWare.PPSn.UI
 	} // class PpsUICommandButton
 
 	#endregion
-	
+
+	#region -- class PpsUISplitCommandButton --------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class PpsUISplitCommandButton : PpsUICommandButton
+	{
+		public SplitButtonType Mode { get; set; }
+		public Popup Popup { get; set; }
+	} // class PpsUISplitCommandButton
+
+	#endregion
+
 	#region -- class PpsUICommandCollection ---------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////

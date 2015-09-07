@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 						xmlns:sys="clr-namespace:System;assembly=mscorlib"
 						xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
+						xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
              mc:Ignorable="d" Title="Hallo Welt"
              d:DesignHeight="300" d:DesignWidth="300">
   <x:Code>
@@ -32,6 +33,25 @@
     <CheckBox Content="Enabled" IsChecked="{Binding HalloEnabled}" />
     <Button Content="Zähl" Click="{ui:LuaEvent Button_Click}" />
     <Label Content="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" />
+    <uiC:SplitButton Content="Test">
+      <uiC:SplitButton.Popup>
+        <Popup PopupAnimation="Slide">
+          <TextBox Width="100" Height="50" />
+        </Popup>
+      </uiC:SplitButton.Popup>
+		</uiC:SplitButton>
+    <uiC:SplitButton Content="Test2">
+      <uiC:SplitButton.ContextMenu>
+      <ContextMenu>
+          <MenuItem>
+						Hallo
+					</MenuItem>
+          <MenuItem>
+            Hallo 2
+          </MenuItem>
+        </ContextMenu>
+      </uiC:SplitButton.ContextMenu>
+    </uiC:SplitButton>
   </StackPanel>
 
   <ui:PpsGenericWpfControl.Commands>

@@ -51,6 +51,7 @@ NewAddressCommand = command(
 
 		do (trans = UndoManager:BeginTransaction("Neue Adresse"))
 			Data.KONT.First.ADRE:Add({ ADRENAME = "Neue Adresse"});
+			error("test");
 			trans:Commit();
 		end;
 
@@ -65,7 +66,7 @@ NewPartnerCommand = command(
 
 		if cur.Table.Name == "ADRE" then
 			do (trans = UndoManager:BeginTransaction("Neuer Partner"))
-					cur.ANSP:Add({ANSPNAME = "Neuer Partner"});
+				cur.ANSP:Add({ANSPNAME = "Neuer Partner"});
 				trans:Commit();
 			end;
 		end;
