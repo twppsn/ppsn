@@ -51,7 +51,7 @@ NewAddressCommand = command(
 
 		do (trans = UndoManager:BeginTransaction("Neue Adresse"))
 			Data.KONT.First.ADRE:Add({ ADRENAME = "Neue Adresse"});
-			error("test");
+			--error("test");
 			trans:Commit();
 		end;
 
