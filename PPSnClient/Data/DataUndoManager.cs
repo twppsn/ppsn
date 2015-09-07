@@ -202,8 +202,16 @@ namespace TecWare.PPSn.Data
 
 			internal override void RollbackToIndex(int iRollbackIndex)
 			{
-				for (int i = items.Count - 1; i >= iRollbackIndex; i--)
-					items[i].Undo();
+				manager.SuspendAppend();
+				try
+				{
+					for (int i = items.Count - 1; i >= iRollbackIndex; i--)
+						items[i].Undo();
+				}
+				finally
+				{
+					manager.ResumeAppend();
+				}
 			} // proc RollbackToIndex
 
 			internal override void UpdateCurrentTransaction(PpsUndoTransaction trans)
