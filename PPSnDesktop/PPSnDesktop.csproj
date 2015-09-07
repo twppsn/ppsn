@@ -102,6 +102,9 @@
     <Content Include="Local\Masks\PurchaseOrders.xaml">
       <SubType>Designer</SubType>
     </Content>
+    <Content Include="Local\Masks\InfoCenterTest.xaml">
+      <SubType>Designer</SubType>
+    </Content>
     <Page Include="Local\Templates.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

@@ -29,4 +29,7 @@
   <action name="testex" displayname="Exception" priority="-100">
     <code><![CDATA[ error("Hallo Welt!"); ]]></code>
   </action>
+	<action name="testic" displayname="Dashboard" priority="-90">
+		<code><![CDATA[ LoadPane({ template = 'local/Masks/InfoCenterTest.xaml' }); ]]></code>
+	</action>
 </actions>
