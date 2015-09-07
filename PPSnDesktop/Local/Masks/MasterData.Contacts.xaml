@@ -195,15 +195,23 @@
 					</ContentControl>
 				</Grid>
 			</Expander>
-		</StackPanel>
-    </ScrollViewer>
+    </StackPanel>
+		</ScrollViewer>
 
     <ui:PpsGenericWpfControl.Commands>
 		<ui:PpsUICommandButton Order="100,100" DisplayText="Speichern" Description="Speichern" Image="floppy_diskImage" Command="{Binding SaveCommand}" />
         <ui:PpsUICommandButton Order="200,110" DisplayText="Anfügen" Description="Anfügen von..." Image="clipboard_pasteImage"/>
 		<ui:PpsUICommandButton Order="200,120" DisplayText="Löschen" Description="Löschen" Image="deleteImage"/>
-        <ui:PpsUISplitCommandButton Order="200,130" DisplayText="Rückgängig" Description="Rückgängig" Image="undoImage" Command="{Binding UndoCommand}"/>
-        <ui:PpsUISplitCommandButton Order="200,130" DisplayText="Wiederherstellen" Description="Wiederherstellen" Image="redoImage" Command="{Binding RedoCommand}"/>
+    <ui:PpsUISplitCommandButton Order="200,130" DisplayText="Rückgängig" Description="Rückgängig" Image="undoImage" Command="{Binding UndoCommand}">
+      <ui:PpsUISplitCommandButton.Popup>
+        <Popup>
+          <ListBox Width="200" Height="200" ItemsSource="{Binding Path=DataContext.UndoManager}">
+
+          </ListBox>
+        </Popup>
+      </ui:PpsUISplitCommandButton.Popup>
+    </ui:PpsUISplitCommandButton>
+    <ui:PpsUISplitCommandButton Order="200,130" DisplayText="Wiederherstellen" Description="Wiederherstellen" Image="redoImage" Command="{Binding RedoCommand}"/>
 		<ui:PpsUICommandButton Order="300,110" DisplayText="Drucken" Description="Drucken" Image="printerImage"/>
 		<ui:PpsUICommandButton Order="300,120" DisplayText="Senden" Description="Als Email versenden" Image="server_mail_uploadImage" Command="{Binding TestStackCommand}" />
     </ui:PpsGenericWpfControl.Commands>

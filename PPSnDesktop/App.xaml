@@ -25,7 +25,7 @@
                         </Button>
 					</DataTemplate>
                     <DataTemplate x:Key="{x:Type ui:PpsUISplitCommandButton}" DataType="{x:Type ui:PpsUISplitCommandButton}">
-                        <uiC:SplitButton Style="{StaticResource PpsToolBarSplitButtonStyle}" ToolTip="{Binding Description}" Command="{Binding Command}">
+                        <uiC:SplitButton Style="{StaticResource PpsToolBarSplitButtonStyle}" ToolTip="{Binding Description}" Command="{Binding Command}" Popup="{Binding Popup}" ContextMenu="{Binding ContextMenu}">
                             <StackPanel Orientation="Horizontal" Margin="0">
                                 <Image Source="{ui:PpsImageStaticResourceBinding {Binding Image}}" Width="20" Height="20" Margin="0,0,6,0" HorizontalAlignment="Center"/>
                                 <TextBlock Text="{Binding DisplayText}" VerticalAlignment="Center" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
