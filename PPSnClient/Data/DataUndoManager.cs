@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -43,7 +44,7 @@ namespace TecWare.PPSn.Data
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Manages the undo/redo elements. The undo operations are collected in transactions.</summary>
 	/// ~todo: Reset,Commit,Rollback müssen UndoManager ändern können, sonst ist er invalid
-	public sealed class PpsUndoManager : IPpsUndoSink, IEnumerable<IPpsUndoStep>
+	public sealed class PpsUndoManager : IPpsUndoSink, IEnumerable<IPpsUndoStep>, INotifyCollectionChanged
 	{
 		#region -- class PpsUndoGroup -------------------------------------------------------
 
@@ -275,6 +276,8 @@ namespace TecWare.PPSn.Data
 		public event EventHandler CanUndoChanged;
 		public event EventHandler CanRedoChanged;
 
+		public event NotifyCollectionChangedEventHandler CollectionChanged;
+
 		private List<PpsUndoGroup> items = new List<PpsUndoGroup>();
 		private int undoBorder = 0;
 
@@ -322,6 +325,7 @@ namespace TecWare.PPSn.Data
 
 			RaiseCanUndo();
 			RaiseCanRedo();
+			RaiseCollectionReset();
 		} // proc AppendUndoGroup
 
 		#endregion
@@ -388,15 +392,18 @@ namespace TecWare.PPSn.Data
 
 		private void RaiseCanUndo()
 		{
-			if (CanUndoChanged != null)
-				CanUndoChanged(this, EventArgs.Empty);
+			CanUndoChanged?.Invoke(this, EventArgs.Empty);
 		} // proc RaiseCanUndo
 
 		private void RaiseCanRedo()
 		{
-			if (CanRedoChanged != null)
-				CanRedoChanged(this, EventArgs.Empty);
+			CanRedoChanged?.Invoke(this, EventArgs.Empty);
 		} // proc RaiseCanRedo
+
+		private void RaiseCollectionReset()
+		{
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+		} // proc RaiseCollectionReset
 
 		#endregion
 
