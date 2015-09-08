@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -20,11 +21,28 @@ namespace TecWare.PPSn.UI
 	public class PpsGenericMaskWindowPane : PpsGenericWpfWindowPane
 	{
 		private PpsUndoManager undoManager = new PpsUndoManager();
+		private CollectionViewSource undoView;
+		private CollectionViewSource redoView;
 		private PpsDataSetClient dataSet; // DataSet which is controlled by the mask
 
 		public PpsGenericMaskWindowPane(PpsEnvironment environment)
 			: base(environment)
 		{
+			// create the views on the undo manager
+			undoView = new CollectionViewSource();
+			using (undoView.DeferRefresh())
+			{
+				undoView.Source = undoManager;
+				undoView.SortDescriptions.Add(new SortDescription("Index", ListSortDirection.Descending));
+				undoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Undo;
+			}
+
+			redoView = new CollectionViewSource();
+			using (redoView.DeferRefresh())
+			{
+				redoView.Source = undoManager;
+				redoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Redo;
+			}
 		} // ctor
 
 		public override async Task LoadAsync(LuaTable arguments)
@@ -58,7 +76,12 @@ namespace TecWare.PPSn.UI
 		} // proc CommitEdit
 
 		[LuaMember(nameof(UndoManager))]
-		public PpsUndoManager UndoManager { get { return undoManager; } }
+		public PpsUndoManager UndoManager => undoManager;
+
+		/// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
+		public ICollectionView UndoView => undoView.View;
+		/// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
+		public ICollectionView RedoView => redoView.View;
 
 		[LuaMember(nameof(Data))]
 		public PpsDataSet Data { get { return dataSet; } }

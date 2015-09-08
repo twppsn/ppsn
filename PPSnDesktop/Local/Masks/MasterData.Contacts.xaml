@@ -205,14 +205,30 @@
     <ui:PpsUISplitCommandButton Order="200,130" DisplayText="Rückgängig" Description="Rückgängig" Image="undoImage" Command="{Binding UndoCommand}">
       <ui:PpsUISplitCommandButton.Popup>
         <Popup>
-          <ListBox Width="200" Height="200" ItemsSource="{Binding Path=DataContext.UndoManager}">
-
+          <ListBox Width="200" Height="200" ItemsSource="{Binding Path=DataContext.UndoView}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding Description}" />
+              </DataTemplate>
+            </ListBox.ItemTemplate>
           </ListBox>
         </Popup>
       </ui:PpsUISplitCommandButton.Popup>
     </ui:PpsUISplitCommandButton>
-    <ui:PpsUISplitCommandButton Order="200,130" DisplayText="Wiederherstellen" Description="Wiederherstellen" Image="redoImage" Command="{Binding RedoCommand}"/>
-		<ui:PpsUICommandButton Order="300,110" DisplayText="Drucken" Description="Drucken" Image="printerImage"/>
+    <ui:PpsUISplitCommandButton Order="200,130" DisplayText="Wiederherstellen" Description="Wiederherstellen" Image="redoImage" Command="{Binding RedoCommand}">
+      <ui:PpsUISplitCommandButton.Popup>
+        <Popup>
+          <ListBox Width="200" Height="200" ItemsSource="{Binding Path=DataContext.RedoView}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+								<TextBlock Text="{Binding Description}" />
+							</DataTemplate>
+						</ListBox.ItemTemplate>
+          </ListBox>
+        </Popup>
+      </ui:PpsUISplitCommandButton.Popup>
+    </ui:PpsUISplitCommandButton>
+    <ui:PpsUICommandButton Order="300,110" DisplayText="Drucken" Description="Drucken" Image="printerImage"/>
 		<ui:PpsUICommandButton Order="300,120" DisplayText="Senden" Description="Als Email versenden" Image="server_mail_uploadImage" Command="{Binding TestStackCommand}" />
     </ui:PpsGenericWpfControl.Commands>
 </ui:PpsGenericWpfControl>
