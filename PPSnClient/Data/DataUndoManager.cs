@@ -35,6 +35,8 @@ namespace TecWare.PPSn.Data
 		PpsUndoStepType Type { get; }
 		/// <summary></summary>
 		string Description { get; }
+		/// <summary></summary>
+		int Index { get; }
 	} // interface IPpsUndoStep
 
 	#endregion
@@ -98,7 +100,8 @@ namespace TecWare.PPSn.Data
 				}
 			} // prop Type
 
-			public string Description { get { return description; } }
+			public int Index => manager.items.IndexOf(this);
+			public string Description => description;
 		} // class PpsUndoGroup
 
 		#endregion
@@ -366,7 +369,8 @@ namespace TecWare.PPSn.Data
 
 			RaiseCanRedo();
 			RaiseCanUndo();
-		} // proc Undo
+			RaiseCollectionReset();
+    } // proc Undo
 
 		public void Redo(int count = 1)
 		{
@@ -388,7 +392,8 @@ namespace TecWare.PPSn.Data
 
 			RaiseCanRedo();
 			RaiseCanUndo();
-		} // proc Redo
+			RaiseCollectionReset();
+    } // proc Redo
 
 		private void RaiseCanUndo()
 		{
