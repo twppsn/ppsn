@@ -74,8 +74,8 @@ namespace TecWare.PPSn.Controls
 			{
 				Popup.PlacementTarget = this;
 				Popup.Placement = PlacementMode.Bottom;
+				Popup.VerticalOffset = 2;
 				Popup.StaysOpen = false;
-
 				IsOpen = true;
 			}
 			else if (ContextMenu != null)
@@ -83,7 +83,6 @@ namespace TecWare.PPSn.Controls
 				ContextMenu.Placement = PlacementMode.Bottom;
 				ContextMenu.PlacementTarget = this;
 				ContextMenu.StaysOpen = false;
-
 				IsOpen = true;
 			}
 		} // porc OnDropdown

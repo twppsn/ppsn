@@ -206,7 +206,6 @@
       <ui:PpsUISplitCommandButton.Popup>
         <Popup>
           <ListBox Width="200" Height="200" ItemsSource="{Binding Path=DataContext.UndoManager}">
-
           </ListBox>
         </Popup>
       </ui:PpsUISplitCommandButton.Popup>
