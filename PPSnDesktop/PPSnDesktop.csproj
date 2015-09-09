@@ -75,6 +75,9 @@
     <Compile Include="UI\Panes\PpsLoginPane.xaml.cs">
       <DependentUpon>PpsLoginPane.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UI\PpsCharmbarControl.xaml.cs">
+      <DependentUpon>PpsCharmbarControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="UI\PpsMainWindow.xaml.cs">
       <DependentUpon>PpsMainWindow.xaml</DependentUpon>
     </Compile>
@@ -112,6 +115,10 @@
     <Page Include="UI\Panes\PpsLoginPane.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="UI\PpsCharmbarControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="UI\PpsMainWindow.xaml">
       <SubType>Designer</SubType>
