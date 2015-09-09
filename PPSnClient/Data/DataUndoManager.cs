@@ -353,14 +353,15 @@ namespace TecWare.PPSn.Data
 		{
 			if (!CanUndo)
 				return;
-			if (count != 1) //~todo: für mehrere
-				throw new ArgumentOutOfRangeException("count");
 
 			SuspendAppend();
 			try
 			{
-				items[undoBorder - 1].Undo();
-				undoBorder--;
+				while (CanUndo && count-- > 0)
+				{
+					items[undoBorder - 1].Undo();
+					undoBorder--;
+				}
 			}
 			finally
 			{
@@ -376,14 +377,15 @@ namespace TecWare.PPSn.Data
 		{
 			if (!CanRedo)
 				return;
-			if (count != 1) //~todo: für mehrere
-				throw new ArgumentOutOfRangeException("count");
-
+			
 			SuspendAppend();
 			try
 			{
-				items[undoBorder].Redo();
-				undoBorder++;
+				while (CanRedo && count-- > 0)
+				{
+					items[undoBorder].Redo();
+					undoBorder++;
+				}
 			}
 			finally
 			{
