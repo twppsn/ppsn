@@ -84,7 +84,7 @@
       </DrawingImage.Drawing>
     </DrawingImage>
   </ui:PpsGenericWpfControl.Resources>
-  <Grid>
+  <Grid Margin="16">
     <Grid.ColumnDefinitions>
 			<ColumnDefinition />
 			<ColumnDefinition />
