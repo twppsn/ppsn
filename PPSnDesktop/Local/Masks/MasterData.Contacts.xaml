@@ -59,8 +59,8 @@
 		</Style>
 	</ui:PpsGenericWpfControl.Resources>
 
-    <ScrollViewer Style="{StaticResource PPSnScrollViewerStyle}" Padding="24">
-		<StackPanel MinWidth="1020" MaxWidth="1020">
+    <ScrollViewer Style="{StaticResource PPSnScrollViewerStyle}" Padding="24,24,200,24" Focusable="False">
+		<StackPanel MinWidth="1020" MaxWidth="1020" Background="Brown">
 			<Expander Header="Ident" Style="{StaticResource PPSnExpanderStyle}" ExpandDirection="Down" IsExpanded="True">
 				<Grid>
 					<Grid.ColumnDefinitions>
@@ -195,40 +195,30 @@
 					</ContentControl>
 				</Grid>
 			</Expander>
-    </StackPanel>
-		</ScrollViewer>
+		</StackPanel>
+	</ScrollViewer>
 
     <ui:PpsGenericWpfControl.Commands>
 		<ui:PpsUICommandButton Order="100,100" DisplayText="Speichern" Description="Speichern" Image="floppy_diskImage" Command="{Binding SaveCommand}" />
         <ui:PpsUICommandButton Order="200,110" DisplayText="Anfügen" Description="Anfügen von..." Image="clipboard_pasteImage"/>
 		<ui:PpsUICommandButton Order="200,120" DisplayText="Löschen" Description="Löschen" Image="deleteImage"/>
-    <ui:PpsUISplitCommandButton Order="200,130" DisplayText="Rückgängig" Description="Rückgängig" Image="undoImage" Command="{Binding UndoCommand}">
-      <ui:PpsUISplitCommandButton.Popup>
-        <Popup>
-          <ListBox Width="200" Height="200" ItemsSource="{Binding Path=DataContext.UndoView}">
-            <ListBox.ItemTemplate>
-              <DataTemplate>
-                <TextBlock Text="{Binding Description}" />
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
-        </Popup>
-      </ui:PpsUISplitCommandButton.Popup>
-    </ui:PpsUISplitCommandButton>
-    <ui:PpsUISplitCommandButton Order="200,130" DisplayText="Wiederherstellen" Description="Wiederherstellen" Image="redoImage" Command="{Binding RedoCommand}">
-      <ui:PpsUISplitCommandButton.Popup>
-        <Popup>
-          <ListBox Width="200" Height="200" ItemsSource="{Binding Path=DataContext.RedoView}">
-            <ListBox.ItemTemplate>
-              <DataTemplate>
-								<TextBlock Text="{Binding Description}" />
-							</DataTemplate>
-						</ListBox.ItemTemplate>
-          </ListBox>
-        </Popup>
-      </ui:PpsUISplitCommandButton.Popup>
-    </ui:PpsUISplitCommandButton>
-    <ui:PpsUICommandButton Order="300,110" DisplayText="Drucken" Description="Drucken" Image="printerImage"/>
+
+		<ui:PpsUISplitCommandButton Order="200,130" DisplayText="Rückgängig" Description="Rückgängig" Image="undoImage" Command="{Binding UndoCommand}">
+			<ui:PpsUISplitCommandButton.Popup>
+				<Popup>
+                    <uiC:UndoManagerListBox Style="{StaticResource PPSnUndoManagerListBoxStyle}" DataContext="{Binding Path=DataContext.UndoView}"/>
+                </Popup>
+			</ui:PpsUISplitCommandButton.Popup>
+		</ui:PpsUISplitCommandButton>
+
+        <ui:PpsUISplitCommandButton Order="200,140" DisplayText="Wiederholen" Description="Wiederholen" Image="redoImage" Command="{Binding RedoCommand}">
+			<ui:PpsUISplitCommandButton.Popup>
+                <Popup>
+                    <uiC:UndoManagerListBox Style="{StaticResource PPSnUndoManagerListBoxStyle}" DataContext="{Binding Path=DataContext.RedoView}" IsRedoList="True"/>
+                </Popup>
+			</ui:PpsUISplitCommandButton.Popup>
+		</ui:PpsUISplitCommandButton>
+		<ui:PpsUICommandButton Order="300,110" DisplayText="Drucken" Description="Drucken" Image="printerImage"/>
 		<ui:PpsUICommandButton Order="300,120" DisplayText="Senden" Description="Als Email versenden" Image="server_mail_uploadImage" Command="{Binding TestStackCommand}" />
-    </ui:PpsGenericWpfControl.Commands>
+	</ui:PpsGenericWpfControl.Commands>
 </ui:PpsGenericWpfControl>

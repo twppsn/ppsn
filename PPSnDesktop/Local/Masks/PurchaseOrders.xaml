@@ -35,7 +35,7 @@
         </XmlDataProvider>
     </ui:PpsGenericWpfControl.Resources>
 
-    <ScrollViewer Style="{StaticResource PPSnScrollViewerStyle}" Padding="24">
+    <ScrollViewer Style="{StaticResource PPSnScrollViewerStyle}" Padding="24" Focusable="False">
         <StackPanel MinWidth="1020" MaxWidth="1020">
 			<Expander Header="Ident" Style="{StaticResource PPSnExpanderStyle}" ExpandDirection="Down" IsExpanded="True">
 				<Grid>

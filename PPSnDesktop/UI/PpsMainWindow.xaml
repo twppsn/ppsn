@@ -453,7 +453,10 @@
 				</Style>
 			</uiL:PpsNavigatorControl.Style>
         </uiL:PpsNavigatorControl>
-		
+
+		<uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Row="3" Grid.Column="2" Grid.ColumnSpan="4" Width="100" HorizontalAlignment="Right" Margin="24">
+			
+		</uiL:PpsCharmbarControl>	
 		<ContentPresenter x:Name="PART_PanePresenter" Grid.Row="3" Grid.ColumnSpan="6" Content="{Binding CurrentPane.Control, Mode=OneWay}" >
             <ContentPresenter.Style>
                 <Style TargetType="ContentPresenter">

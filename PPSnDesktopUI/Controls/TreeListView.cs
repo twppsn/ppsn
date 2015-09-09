@@ -41,7 +41,6 @@ namespace TecWare.PPSn.Controls
 		{
 			return new PpsTreeListViewItem();
 		}
-
 		protected override bool IsItemItsOwnContainerOverride(object item)
 		{
 			return item is PpsTreeListViewItem;
