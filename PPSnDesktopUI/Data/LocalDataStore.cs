@@ -137,9 +137,9 @@ namespace TecWare.PPSn.Data
 					case "contacts":
 						if (!String.IsNullOrEmpty(filterId))
 							if (filterId == "liefonly")
-								filterExpression = "KONTDEBNR is null";
+								filterExpression = "DEBNR is null";
 							else if (filterId == "kundonly")
-								filterExpression = "KONTKREDNR is null";
+								filterExpression = "KREDNR is null";
 							else if (filterId == "intonly")
 								filterExpression = "1 = 0";
 						break;

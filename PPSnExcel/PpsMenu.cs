@@ -23,11 +23,17 @@ namespace PPSnExcel
 			application = Globals.ThisAddIn.Application;
 			cmdExtended.Visible = Globals.ThisAddIn.Application.ShowDevTools;
 
+			if (environment != null)
+				InitMenu();
+
 			Refresh();
 		} // event PpsMenu_Load
 
 		private void InitMenu()
 		{
+			if (application == null)
+				return;
+
 			application.WorkbookActivate += wb => WorkbookStateChanged(wb, true);
 			application.WorkbookDeactivate += wb => WorkbookStateChanged(wb, false);
 

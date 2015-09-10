@@ -328,9 +328,9 @@ namespace TecWare.PPSn.UI
 
 		private bool ExpandSearchBox(string input)
 		{
-			if (PART_SearchBox.Visibility != Visibility.Visible || (PpsnSearchBoxState)PART_SearchBox.Tag == PpsnSearchBoxState.Expanded)
+			if (String.IsNullOrEmpty(input) || PART_SearchBox.Visibility != Visibility.Visible || (PpsnSearchBoxState)PART_SearchBox.Tag == PpsnSearchBoxState.Expanded)
 				return false;
-			if (!char.IsLetterOrDigit(input, 0))
+			if (!Char.IsLetterOrDigit(input, 0))
 				return false;
 			PART_SearchBox.Text += input;
 			PART_SearchBox.Select(PART_SearchBox.Text.Length, 0);

@@ -455,7 +455,7 @@ namespace TecWare.PPSn
 			);
 			
 			// Start idle implementation
-			idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), currentDispatcher);
+			idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), currentDispatcher);
 			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer();
 
 			// Register internal uri

@@ -5,6 +5,7 @@ using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using TecWare.DES.Stuff;
 using TecWare.PPSn.Properties;
 
 namespace TecWare.PPSn
@@ -23,10 +24,23 @@ namespace TecWare.PPSn
 			ReloadApplicationAsync()
 				.ContinueWith(async t =>
 					{
-						SetEnvironment(t.Result);
+						try
+						{
+							SetEnvironment(t.Result);
 
-						if (currentEnvironment != null)
-							await currentEnvironment.CreateMainWindowAsync();
+							if (currentEnvironment != null)
+								await currentEnvironment.CreateMainWindowAsync();
+							else
+							{
+								MessageBox.Show("Environment konnte nicht initialisiert werden.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+								Dispatcher.Invoke(() => Shutdown(1));
+							}
+						}
+						catch (Exception ex)
+						{
+							MessageBox.Show(ex.GetMessageString(), "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+							Dispatcher.Invoke(() => Shutdown(1));
+						}
 					});
 
 			base.OnStartup(e);
