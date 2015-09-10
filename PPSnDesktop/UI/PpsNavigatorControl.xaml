@@ -162,11 +162,11 @@
 			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
 			<Setter Property="BorderThickness" Value="0"/>
 			<Setter Property="Height" Value="60"/>
-			<Setter Property="Margin" Value="0,0,12,0"/>
+			<Setter Property="Margin" Value="0,0,24,0"/>
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="Button">
-						<Grid>
+						<Grid Background="Transparent">
 							<Grid.RowDefinitions>
 								<RowDefinition Height="38"/>
 								<RowDefinition/>
@@ -265,7 +265,7 @@
 							 AlternationCount="2" IsSynchronizedWithCurrentItem="True"
 							 DataContext="{Binding Navigator}"
 							 ItemsSource="{Binding Items}"
-							 ScrollViewer.PanningMode="None"
+							 ScrollViewer.PanningMode="VerticalFirst"
 							 ItemContainerStyle="{StaticResource PpsAlternatingListBoxItemStyle}"/>
 
 		<ItemsControl x:Name="PART_Actions" Grid.Row="2" Grid.Column="2"  DataContext="{Binding Navigator}" ItemsSource="{Binding VisibleActions}" IsTabStop="False" >
@@ -285,7 +285,7 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Button Content="{Binding DisplayName}" Command="{x:Static uiL:PpsMainWindow.RunActionCommand}"
-							Style="{StaticResource NavigatorActionButtonStyle}" FontSize="14.667" Tag="&#xE113;">
+							Style="{StaticResource NavigatorActionButtonStyle}" FontSize="14.667" Tag="{Binding DisplayGlyph}">
                     </Button>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
