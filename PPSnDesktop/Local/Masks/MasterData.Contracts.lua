@@ -62,7 +62,8 @@ NewPartnerCommand = command(
 	function (arg) : void
 		CommitEdit();
 
-		local cur = APART_TreeView.SelectedValue;
+		--local cur = APART_TreeView.SelectedValue;
+		local cur = APART.GetTemplateChild("APART_TreeView").SelectedValue;
 
 		if cur.Table.Name == "ADRE" then
 			do (trans = UndoManager:BeginTransaction("Neuer Partner"))
@@ -77,7 +78,8 @@ RemovePosCommand = command(
 	function (arg) : void
 		CommitEdit();
 
-		local cur = APART_TreeView.SelectedValue;
+		--local cur = APART_TreeView.SelectedValue;
+		local cur = APART.GetTemplateChild("APART_TreeView").SelectedValue;
 		if cur ~= nil then
 			do (trans = UndoManager:BeginTransaction("Lösche " .. (cur.ADRENAME or cur.ANSPNAME)))
 				cur:Remove();

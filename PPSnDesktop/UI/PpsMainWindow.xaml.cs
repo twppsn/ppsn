@@ -48,6 +48,8 @@ namespace TecWare.PPSn.UI
 		private readonly static DependencyProperty NavigatorVisibilityProperty = DependencyProperty.Register("NavigatorVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Visible));
 		private readonly static DependencyProperty NavigatorViewsDescriptionVisibilityProperty = DependencyProperty.Register("NavigatorViewsDescriptionVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Visible));
 		private readonly static DependencyProperty PaneVisibilityProperty = DependencyProperty.Register("PaneVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Collapsed));
+		private readonly static DependencyProperty CharmbarVisibilityProperty = DependencyProperty.Register("CharmbarVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Collapsed));
+		private readonly static DependencyProperty CharmbarActualWidthProperty = DependencyProperty.Register("CharmbarActualWidth", typeof(double), typeof(PpsMainWindow));
 
 		/// <summary>Readonly property for the current pane.</summary>
 		private readonly static DependencyPropertyKey CurrentPaneKey = DependencyProperty.RegisterReadOnly("CurrentPane", typeof(IPpsWindowPane), typeof(PpsMainWindow), new PropertyMetadata(null));
@@ -105,11 +107,11 @@ namespace TecWare.PPSn.UI
 
 			CommandBindings.Add(
 				new CommandBinding(PpsWindow.TraceLogCommand,
-				async	(sender, e) =>
-				{
-					e.Handled = true;
-					await LoadPaneAsync(Environment.TracePane, PpsNewWindowMode.NewSingleWindow, null);
-        }
+					async	(sender, e) =>
+					{
+						e.Handled = true;
+						await LoadPaneAsync(Environment.TracePane, PpsNewWindowMode.NewSingleWindow, null);
+					}
 				)
 			);
 
@@ -129,6 +131,9 @@ namespace TecWare.PPSn.UI
 
 			RefreshTitle();
 			Trace.TraceInformation("MainWindow[{0}] created.", windowIndex);
+
+			var descriptor = DependencyPropertyDescriptor.FromProperty(PpsCharmbarControl.ActualWidthProperty, typeof(PpsCharmbarControl));
+			descriptor.AddValueChanged(PART_Charmbar, OnCharmbarActualWidthChanged);
 		} // ctor
 
 		#endregion
@@ -344,6 +349,20 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- charmbar -----------------------------------------------------------------
+
+		private void OnCharmbarActualWidthChanged(object sender, EventArgs e)
+		{
+			SetActualWidth(PART_Charmbar.ActualWidth);
+		}
+
+		private void SetActualWidth(double value)
+		{
+			SetValue(CharmbarActualWidthProperty, value);
+		}
+
+		#endregion
+
 		// TEST Schmidt open ContextMenu CurrentUser with MouseButtonLeft
 		private void PART_User_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
 		{
@@ -372,6 +391,8 @@ namespace TecWare.PPSn.UI
 		public int WindowIndex => windowIndex; 
 		/// <summary>Access to the current environment,</summary>
 		public new PpsMainEnvironment Environment => (PpsMainEnvironment)base.Environment;
+		/// <summary>Access to current charmbar width</summary>
+		public double CharmbarActualWidth { get { return (double)GetValue(CharmbarActualWidthProperty); } }
 
 		public bool IsNavigatorVisible
 		{
@@ -387,11 +408,13 @@ namespace TecWare.PPSn.UI
 					{
 						SetValue(NavigatorVisibilityProperty, Visibility.Visible);
 						SetValue(PaneVisibilityProperty, Visibility.Collapsed);
+						SetValue(CharmbarVisibilityProperty, Visibility.Collapsed);
 					}
 					else
 					{
 						SetValue(NavigatorVisibilityProperty, Visibility.Collapsed);
 						SetValue(PaneVisibilityProperty, Visibility.Visible);
+						SetValue(CharmbarVisibilityProperty, Visibility.Visible);
 					}
 				}
 			}

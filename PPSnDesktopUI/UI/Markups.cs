@@ -258,6 +258,11 @@ namespace TecWare.PPSn.UI
 			var dummyDO = new System.Windows.DependencyObject();
 			BindingOperations.SetBinding(dummyDO, dummyProperty, binding);
 			ResourceKey = dummyDO.GetValue(dummyProperty);
+			// Q+D
+			if(ResourceKey.GetType() == typeof(System.Xml.XmlAttribute))
+			{
+				ResourceKey = ((System.Xml.XmlAttribute)ResourceKey).Value;
+			}
 			return base.ProvideValue(serviceProvider);
 		}
 	} // class PpsImageStaticResourceBinding
