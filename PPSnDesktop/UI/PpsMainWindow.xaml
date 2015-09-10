@@ -212,16 +212,16 @@
         <Geometry x:Key="PpsWindowRestoreButton">M 0.5,9.5L 0.5,4.5L 0.5,9.5L 7.5,9.5L 7.5,3.5L 0.5,3.5L 0.5,4.5L 7.5,4.5L 7.5,9.5L 0.5,9.5M 3.5,1.5L 9.5,1.5L 9.5,7.5L 9.5,1.5L 3.5,1.5</Geometry>
 
         <Storyboard x:Key="FadeOutStoryboard" FillBehavior="HoldEnd">
-            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.3" />
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:.3"/>
             <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                <DiscreteObjectKeyFrame KeyTime="0:0:0.3" Value="{x:Static Visibility.Collapsed}"/>
+                <DiscreteObjectKeyFrame KeyTime="0:0:.3" Value="{x:Static Visibility.Collapsed}"/>
             </ObjectAnimationUsingKeyFrames>
         </Storyboard>
         <Storyboard x:Key="FadeInStoryboard" FillBehavior="HoldEnd">
             <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
                 <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
             </ObjectAnimationUsingKeyFrames>
-            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.3" />
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:.3" />
         </Storyboard>
     </ui:PpsWindow.Resources>
 
@@ -421,7 +421,7 @@
                 </DataTemplate>
             </HeaderedItemsControl.ItemTemplate>
         </HeaderedItemsControl>
-        <ToolBar x:Name="PART_PanePresenterToolBar" Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="6" Grid.RowSpan="2" VerticalAlignment="Bottom" Margin="90,0" Height="36" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" FontSize="14.667" >
+        <ToolBar x:Name="PART_PanePresenterToolBar" Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="6" Grid.RowSpan="2" VerticalAlignment="Bottom" Margin="78,0" Height="36" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" FontSize="14.667" >
             <ToolBar.Style>
                 <Style TargetType="ToolBar" BasedOn="{StaticResource PanePresenterToolBarStyle}">
                     <Style.Triggers>
@@ -453,10 +453,7 @@
 				</Style>
 			</uiL:PpsNavigatorControl.Style>
         </uiL:PpsNavigatorControl>
-
-		<uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Row="3" Grid.Column="2" Grid.ColumnSpan="4" Width="100" HorizontalAlignment="Right" Margin="24">
-			
-		</uiL:PpsCharmbarControl>	
+		
 		<ContentPresenter x:Name="PART_PanePresenter" Grid.Row="3" Grid.ColumnSpan="6" Content="{Binding CurrentPane.Control, Mode=OneWay}" >
             <ContentPresenter.Style>
                 <Style TargetType="ContentPresenter">
@@ -473,7 +470,25 @@
                 </Style>
 			</ContentPresenter.Style>
         </ContentPresenter>
-		
+
+        <uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="5" HorizontalAlignment="Right" Margin="24,24,0,16" Visibility="Collapsed">
+            <uiL:PpsCharmbarControl.Style>
+                <Style TargetType="{x:Type UserControl}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=CharmbarVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="Collapsed">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}" />
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}" />
+                            </DataTrigger.ExitActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </uiL:PpsCharmbarControl.Style>
+        </uiL:PpsCharmbarControl>
+
+
         <DockPanel x:Name="PART_StatusBar" Grid.Row="4" Grid.ColumnSpan="6"  Background="{StaticResource PPSnWindowFooterBrush}" LastChildFill="False">
             <Label Content="CurrentPane:" Margin="8,0,0,0" Padding="0" VerticalContentAlignment="Center" Foreground="{StaticResource PPSnWindowForegroundBrush}" Opacity="0.7"></Label>
             <Button Content="Trace" Command="{x:Static ui:PpsWindow.TraceLogCommand}" Focusable="False" />

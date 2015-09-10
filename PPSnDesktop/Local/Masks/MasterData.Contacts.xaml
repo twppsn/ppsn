@@ -5,6 +5,7 @@
 						 xmlns:sys="clr-namespace:System;assembly=mscorlib"
 						 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
 						 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
+						 xmlns:uiL="clr-namespace:TecWare.PPSn.UI;assembly=PPSnDesktop"
 						 mc:Ignorable="d"  Title="Kontakte"	 d:DesignHeight="600" d:DesignWidth="1020">	
 	<x:Code>
 		<![CDATA[
@@ -12,9 +13,9 @@
 		]]>
 	</x:Code>
 
-	<ui:PpsGenericWpfControl.Resources>
+    <ui:PpsGenericWpfControl.Resources>
         <uiC:PpsTreeViewLevelToIndentConverter x:Key="LevelToIndentConverter" />
-
+        <uiL:PpsCharmbarWidthToPaddingConverter x:Key="CharmbarWidthToPaddingConverter"/>
 		<Style x:Key="TreeListViewItemStyle" TargetType="{x:Type uiC:PpsTreeListViewItem}">
 			<Setter Property="Background" Value="{StaticResource PPSnAlternation0Brush}"/>
 			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
@@ -31,7 +32,7 @@
 										<ColumnDefinition Width="*" />
 									</Grid.ColumnDefinitions>
                                     <ToggleButton x:Name="PART_Expander" Grid.Column="0" Style="{StaticResource PpsTreeExpanderButtonStyle}"
-												  Margin="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type uiC:PpsTreeListViewItem}}, Converter={StaticResource LevelToIndentConverter}}"
+												  Margin="{Binding  RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type uiC:PpsTreeListViewItem}}, Converter={StaticResource LevelToIndentConverter}}"
 												  IsChecked="{Binding Path=IsExpanded, RelativeSource={RelativeSource AncestorType={x:Type uiC:PpsTreeListViewItem}}}"
 												  ClickMode="Press"/>
                                     <ContentPresenter Grid.Column="1" x:Name="PART_Header" ContentSource="Header"/>
@@ -57,10 +58,106 @@
 				</Setter.Value>
 			</Setter>
 		</Style>
+        <ControlTemplate x:Key="ApartTemplate">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="470"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="470"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="29"/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+                <ToggleButton x:Name="PART_Expander" Width="24" Height="24" Margin="0,1" Style="{StaticResource PPSnShrinkButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                <Button Content="Neue Adresse" Width="100" Height="23" Style="{StaticResource PpsSimpleButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,0,0,0" Command="{Binding NewAddressCommand}"/>
+                <Button Content="Neuer Partner" Width="100" Height="23" Style="{StaticResource PpsSimpleButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="138,0,0,0" Command="{Binding NewPartnerCommand}"/>
+                <Button Content="Löschen" Width="90" Height="23" Style="{StaticResource PpsSimpleButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="246,0,0,0" Command="{Binding RemovePosCommand}"/>
+                <uiC:PpsTreeListView x:Name="APART_TreeView" Grid.Row="1" HorizontalAlignment="Stretch" AlternationCount="2" ItemsSource="{Binding Data.KONT/ADRE}" BorderThickness="0"
+											Style="{StaticResource PPSnTreeViewStyle}"
+											ItemContainerStyle="{StaticResource TreeListViewItemStyle}">
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding ANSP}">
+                            <Border Height="27">
+                                <TextBlock Text="{Binding ADRENAME}" VerticalAlignment="Center" FontWeight="Bold"/>
+                            </Border>
+                            <HierarchicalDataTemplate.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Height="27">
+                                        <TextBlock Text="{Binding ANSPNAME}" VerticalAlignment="Center"/>
+                                    </Border>
+                                </DataTemplate>
+                            </HierarchicalDataTemplate.ItemTemplate>
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                </uiC:PpsTreeListView>
+                <ContentControl x:Name="PART_Data" Grid.Column="2" Grid.Row="1" Content="{Binding ElementName=APART_TreeView,Path=SelectedValue}" Focusable="False">
+                    <ContentControl.ContentTemplateSelector>
+                        <ui:PpsContentTemplateSelector />
+                    </ContentControl.ContentTemplateSelector>
+                    <ContentControl.Resources>
+                        <DataTemplate x:Key="ADRE">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                </Grid.RowDefinitions>
+                                <Label Grid.Column="0" Grid.Row="0" Content="{Binding Table.ADRENAME.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding ADRENAME}" HorizontalAlignment="Stretch"/>
+                                <Label Grid.Column="0" Grid.Row="1" Content="{Binding Table.ADRESSE.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="1" Grid.RowSpan="3" Text="{Binding ADRESSE}" Height="81" VerticalContentAlignment="Top" HorizontalAlignment="Stretch" AcceptsReturn="True" MaxLines="5"/>
+                            </Grid>
+                        </DataTemplate>
+                        <DataTemplate x:Key="ANSP">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                    <RowDefinition Height="29"/>
+                                </Grid.RowDefinitions>
+                                <Label Grid.Column="0" Grid.Row="0" Content="{Binding Table.ANSPNAME.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding ANSPNAME}" HorizontalAlignment="Stretch"/>
+                                <Label Grid.Column="0" Grid.Row="1" Content="{Binding Table.ANSPANREDE.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="1" Text="{Binding ANSPANREDE}" HorizontalAlignment="Stretch"/>
+                                <Label Grid.Column="0" Grid.Row="2" Content="{Binding Table.ANSPTEL.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding ANSPTEL}" HorizontalAlignment="Stretch"/>
+                                <Label Grid.Column="0" Grid.Row="3" Content="{Binding Table.ANSPMOBIL.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="3" Text="{Binding ANSPMOBIL}" HorizontalAlignment="Stretch"/>
+                                <Label Grid.Column="0" Grid.Row="4" Content="{Binding Table.ANSPFAX.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="4" Text="{Binding ANSPFAX}" HorizontalAlignment="Stretch"/>
+                                <Label Grid.Column="0" Grid.Row="5" Content="{Binding Table.ANSPMAIL.Caption, Mode=OneTime}" Height="23"/>
+                                <TextBox Grid.Column="1" Grid.Row="5" Text="{Binding ANSPMAIL}" HorizontalAlignment="Stretch"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ContentControl.Resources>
+                </ContentControl>
+            </Grid>
+            <ControlTemplate.Triggers>
+                <Trigger SourceName="PART_Expander" Property="IsChecked" Value="True">
+					<Setter TargetName="APART_TreeView" Property="Grid.ColumnSpan" Value="3"/>
+					<Setter TargetName="PART_Data" Property="Visibility" Value="Collapsed"/>
+				</Trigger>
+			</ControlTemplate.Triggers>
+        </ControlTemplate>
 	</ui:PpsGenericWpfControl.Resources>
 
-    <ScrollViewer Style="{StaticResource PPSnScrollViewerStyle}" Padding="24,24,200,24" Focusable="False">
-		<StackPanel MinWidth="1020" MaxWidth="1020" Background="Brown">
+	<ScrollViewer Style="{StaticResource PPSnScrollViewerStyle}" Padding="24"
+				  Margin="{Binding Path=CharmbarActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ui:PpsWindow}}, Converter={StaticResource CharmbarWidthToPaddingConverter}}">
+		<StackPanel MinWidth="1020" MaxWidth="1020">
 			<Expander Header="Ident" Style="{StaticResource PPSnExpanderStyle}" ExpandDirection="Down" IsExpanded="True">
 				<Grid>
 					<Grid.ColumnDefinitions>
@@ -80,8 +177,8 @@
 						<RowDefinition Height="29"/>
 						<RowDefinition />
 					</Grid.RowDefinitions>
-					<Label Grid.Column="0" Grid.Row="0" Content="{Binding Data.KONT.KONTNR.Caption, Mode=OneTime}" Height="23"/>
-					<TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Data.KONT/KONTNR}" Width="100"/>
+                    <Label Grid.Column="0" Grid.Row="0" Content="{Binding Data.KONT.KONTNR.Caption, Mode=OneTime}" Height="23"/>
+                    <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Data.KONT/KONTNR}" Width="100"/>
 					<Label Grid.Column="0" Grid.Row="1" Content="{Binding Data.KONT.KONTNAME.Caption, Mode=OneTime}" Height="23"/>
 					<TextBox Grid.Column="1" Grid.Row="1" Text="{Binding Data.KONT/KONTNAME}" HorizontalAlignment ="Stretch"/>
 					<Label Grid.Column="0" Grid.Row="2" Content="{Binding Data.KONT.KONTEXTNR.Caption, Mode=OneTime}" Height="23"/>
@@ -109,93 +206,9 @@
 				</Grid>
 			</Expander>
 			<Expander Header="Adressen / Ansprechpartner" Style="{StaticResource PPSnExpanderStyle}" ExpandDirection="Down" IsExpanded="True">
-				<Grid>
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="550"/>
-						<ColumnDefinition Width="470"/>
-					</Grid.ColumnDefinitions>
-					<Grid.RowDefinitions>
-						<RowDefinition Height="29"/>
-						<RowDefinition/>
-					</Grid.RowDefinitions>
-					<Button Content="Neue Adresse" Width="100" Height="23" Style="{StaticResource PpsSimpleButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Command="{Binding NewAddressCommand}"/>
-					<Button Grid.ColumnSpan="2" Content="Neuer Partner" Width="100" Height="23" Style="{StaticResource PpsSimpleButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="108,0,0,0" Command="{Binding NewPartnerCommand}"/>
-					<Button Content="Löschen" Width="90" Height="23" Style="{StaticResource PpsSimpleButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="216,0,0,0" Command="{Binding RemovePosCommand}"/>
-					<uiC:PpsTreeListView x:Name="APART_TreeView" Grid.Row="1" Width="470" HorizontalAlignment="Left" AlternationCount="2" ItemsSource="{Binding Data.KONT/ADRE}" BorderThickness="0"
-											Style="{StaticResource PPSnTreeViewStyle}"
-											ItemContainerStyle="{StaticResource TreeListViewItemStyle}">
-						<TreeView.ItemTemplate>
-							<HierarchicalDataTemplate ItemsSource="{Binding ANSP}">
-								<Border Height="27">
-									<TextBlock Text="{Binding ADRENAME}" VerticalAlignment="Center" FontWeight="Bold"/>
-								</Border>
-								<HierarchicalDataTemplate.ItemTemplate>
-									<DataTemplate>
-										<Border Height="27">
-											<TextBlock Text="{Binding ANSPNAME}" VerticalAlignment="Center"/>
-										</Border>
-									</DataTemplate>
-								</HierarchicalDataTemplate.ItemTemplate>
-							</HierarchicalDataTemplate>
-						</TreeView.ItemTemplate>
-					</uiC:PpsTreeListView>
-					<ContentControl Grid.Column="1" Grid.Row="1" Content="{Binding ElementName=APART_TreeView,Path=SelectedValue}" Focusable="False">
-						<ContentControl.ContentTemplateSelector>
-							<ui:PpsContentTemplateSelector />
-						</ContentControl.ContentTemplateSelector>
-						<ContentControl.Resources>
-							<DataTemplate x:Key="ADRE">
-								<Grid>
-									<Grid.ColumnDefinitions>
-										<ColumnDefinition Width="120"/>
-										<ColumnDefinition/>
-									</Grid.ColumnDefinitions>
-									<Grid.RowDefinitions>
-										<RowDefinition Height="29"/>
-										<RowDefinition Height="29"/>
-										<RowDefinition Height="29"/>
-										<RowDefinition Height="29"/>
-									</Grid.RowDefinitions>
-									<Label Grid.Column="0" Grid.Row="0" Content="{Binding Table.ADRENAME.Caption, Mode=OneTime}" Height="23"/>
-									<TextBox Grid.Column="1" Grid.Row="0" Text="{Binding ADRENAME}" HorizontalAlignment="Stretch"/>
-									<Label Grid.Column="0" Grid.Row="1" Content="{Binding Table.ADRESSE.Caption, Mode=OneTime}" Height="23"/>
-									<TextBox Grid.Column="1" Grid.Row="1" Grid.RowSpan="3" Text="{Binding ADRESSE}" Height="81" VerticalContentAlignment="Top" HorizontalAlignment="Stretch" AcceptsReturn="True" MaxLines="5"/>
-								</Grid>
-							</DataTemplate>
-							<DataTemplate x:Key="ANSP">
-								<Grid>
-									<Grid.ColumnDefinitions>
-										<ColumnDefinition Width="120"/>
-										<ColumnDefinition/>
-									</Grid.ColumnDefinitions>
-									<Grid.RowDefinitions>
-										<RowDefinition Height="29"/>
-										<RowDefinition Height="29"/>
-										<RowDefinition Height="29"/>
-										<RowDefinition Height="29"/>
-										<RowDefinition Height="29"/>
-										<RowDefinition Height="29"/>
-										<RowDefinition Height="29"/>
-									</Grid.RowDefinitions>
-									<Label Grid.Column="0" Grid.Row="0" Content="{Binding Table.ANSPNAME.Caption, Mode=OneTime}" Height="23"/>
-									<TextBox Grid.Column="1" Grid.Row="0" Text="{Binding ANSPNAME}" HorizontalAlignment="Stretch"/>
-									<Label Grid.Column="0" Grid.Row="1" Content="{Binding Table.ANSPANREDE.Caption, Mode=OneTime}" Height="23"/>
-									<TextBox Grid.Column="1" Grid.Row="1" Text="{Binding ANSPANREDE}" HorizontalAlignment="Stretch"/>
-									<Label Grid.Column="0" Grid.Row="2" Content="{Binding Table.ANSPTEL.Caption, Mode=OneTime}" Height="23"/>
-									<TextBox Grid.Column="1" Grid.Row="2" Text="{Binding ANSPTEL}" HorizontalAlignment="Stretch"/>
-									<Label Grid.Column="0" Grid.Row="3" Content="{Binding Table.ANSPMOBIL.Caption, Mode=OneTime}" Height="23"/>
-									<TextBox Grid.Column="1" Grid.Row="3" Text="{Binding ANSPMOBIL}" HorizontalAlignment="Stretch"/>
-									<Label Grid.Column="0" Grid.Row="4" Content="{Binding Table.ANSPFAX.Caption, Mode=OneTime}" Height="23"/>
-									<TextBox Grid.Column="1" Grid.Row="4" Text="{Binding ANSPFAX}" HorizontalAlignment="Stretch"/>
-									<Label Grid.Column="0" Grid.Row="5" Content="{Binding Table.ANSPMAIL.Caption, Mode=OneTime}" Height="23"/>
-									<TextBox Grid.Column="1" Grid.Row="5" Text="{Binding ANSPMAIL}" HorizontalAlignment="Stretch"/>
-								</Grid>
-							</DataTemplate>
-						</ContentControl.Resources>
-					</ContentControl>
-				</Grid>
-			</Expander>
-		</StackPanel>
+                <ContentControl x:Name="APART" Template="{StaticResource ApartTemplate}"/>
+            </Expander>
+        </StackPanel>
 	</ScrollViewer>
 
     <ui:PpsGenericWpfControl.Commands>

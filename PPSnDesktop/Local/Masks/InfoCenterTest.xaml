@@ -11,18 +11,18 @@
     <XmlDataProvider x:Key="Hinweise" XPath="data">
       <x:XData>
         <data xmlns="">
-          <item text="Wareneingang überfällig" subtext="Bestellung B0012123, B0012124, B0012523,..." />
-          <item text="Angebot abgelaufen" subtext="Angebot A0012123, A0012124, A0012523,..." />
-          <item text="Umsatzauswertung" subtext="Wiedervorlage der Auswerung Umsätze" />
+                    <item text="Wareneingang überfällig" subtext="Bestellung B0012123, B0012124, B0012523,..." image="small_truckImage" />
+                    <item text="Angebot abgelaufen" subtext="Angebot A0012123, A0012124, A0012523,..." image="sales_quotationImage" />
+                    <item text="Umsatzauswertung" subtext="Wiedervorlage der Auswertung Umsätze" image="chart_barImage" />
         </data>
 			</x:XData>
 		</XmlDataProvider>
     <XmlDataProvider x:Key="Befehle" XPath="data">
       <x:XData>
         <data xmlns="">
-          <item text="Bestellung erstellen" subtext="Erzeugt eine neu leere Bestellung" />
-          <item text="Bestellung zusammenstellen" subtext="Bestellung aus Vorschläge erstellen" />
-          <item text="Angebot erstellen" subtext="Neues Angebot erstellen" />
+                    <item text="Bestellung erstellen" subtext="Erzeugt eine neue, leere Bestellung" image="purchase_orderImage" />
+                    <item text="Bestellung zusammenstellen" subtext="Bestellung aus Vorschlägen erstellen" image="purchase_orderImage" />
+                    <item text="Angebot erstellen" subtext="Neues Angebot erstellen" image="sales_quotationImage" />
         </data>
       </x:XData>
     </XmlDataProvider>
@@ -32,7 +32,7 @@
           <item text="Auftragseingang" zj="4,3" zq="0,6" zm="0,3 T€" />
           <item text="Umsatzentwicklung" zj="4,3" zq="0,6" zm="0,3 T€" />
           <item text="Bestellwerte" zj="4,3" zq="0,6" zm="0,3 T€" />
-          <item text="Auftragseingang" zj="4,3" zq="0,6" zm="0,3 T€" />
+          <item text="Auftragbestand" zj="4,3" zq="0,6" zm="0,3 T€" />
         </data>
 			</x:XData>
 		</XmlDataProvider>
@@ -58,7 +58,7 @@
     </XmlDataProvider>
     <DrawingImage x:Key="Up">
       <DrawingImage.Drawing>
-        <GeometryDrawing Brush="Green">
+                <GeometryDrawing Brush="Green">
           <GeometryDrawing.Geometry>
 						<PathGeometry Figures="M 0.3,0.7 L 0.7,0.7 L 0.5,0.3 Z" />
 					</GeometryDrawing.Geometry>
@@ -84,7 +84,7 @@
       </DrawingImage.Drawing>
     </DrawingImage>
   </ui:PpsGenericWpfControl.Resources>
-  <Grid Margin="16">
+  <Grid Margin="48,32">
     <Grid.ColumnDefinitions>
 			<ColumnDefinition />
 			<ColumnDefinition />
@@ -101,16 +101,16 @@
         <DataTemplate>
           <Grid>
             <Grid.ColumnDefinitions>
-							<ColumnDefinition Width="38" />
-							<ColumnDefinition />
-						</Grid.ColumnDefinitions>
+				<ColumnDefinition Width="35" />
+				<ColumnDefinition />
+			</Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
-							<RowDefinition Height="20" />
-              <RowDefinition Height="16" />
+				<RowDefinition Height="18" />
+				<RowDefinition Height="20" />
             </Grid.RowDefinitions>
-						<Border BorderThickness="1" Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" BorderBrush="Wheat" Width="32" Height="32" VerticalAlignment="Center" HorizontalAlignment="Left" />
-            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding XPath=@text}" FontWeight="Bold" FontSize="14" Foreground="#80FFFFFF" Margin="0" Padding="0" />
-            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding XPath=@subtext}" Foreground="White" Margin="0" Padding="0" VerticalAlignment="Top"  />
+			  <Image Source="{ui:PpsImageStaticResourceBinding {Binding XPath=@image}}" Grid.RowSpan="2" Width="27" Height="27" Opacity="0.8" HorizontalAlignment="Left" VerticalAlignment="Center" />
+			  <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding XPath=@text}" FontWeight="Medium" FontSize="14.667" Foreground="#80FFFFFF" Margin="0" Padding="0" />
+			  <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding XPath=@subtext}" Foreground="White" Margin="0" Padding="0"/>
           </Grid>
         </DataTemplate>
       </ItemsControl.ItemTemplate>
@@ -121,16 +121,16 @@
         <DataTemplate>
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="38" />
+              <ColumnDefinition Width="35" />
               <ColumnDefinition />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
+              <RowDefinition Height="18" />
               <RowDefinition Height="20" />
-              <RowDefinition Height="16" />
             </Grid.RowDefinitions>
-            <Border BorderThickness="1" Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" BorderBrush="Wheat" Width="32" Height="32" VerticalAlignment="Center" HorizontalAlignment="Left" />
-            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding XPath=@text}" FontWeight="Bold" FontSize="14" Foreground="#80FFFFFF" Margin="0" Padding="0" />
-            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding XPath=@subtext}" Foreground="White" Margin="0" Padding="0" VerticalAlignment="Top"  />
+			  <Image Source="{ui:PpsImageStaticResourceBinding {Binding XPath=@image}}" Grid.RowSpan="2" Width="27" Height="27" Opacity="0.8" HorizontalAlignment="Left" VerticalAlignment="Center" />
+			  <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding XPath=@text}" FontWeight="Medium" FontSize="14.667" Foreground="#80FFFFFF" Margin="0" Padding="0" />
+			  <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding XPath=@subtext}" Foreground="White" Margin="0" Padding="0"/>
           </Grid>
         </DataTemplate>
       </ItemsControl.ItemTemplate>
@@ -140,32 +140,30 @@
       <ItemsControl.ItemTemplate>
         <DataTemplate>
           <Grid>
-            <Grid.ColumnDefinitions>
-							<ColumnDefinition Width="50" />
-              <ColumnDefinition Width="50" />
-              <ColumnDefinition Width="70" />
-              <ColumnDefinition />
+			  <Grid.ColumnDefinitions>
+				  <ColumnDefinition Width="50" />
+				  <ColumnDefinition Width="50" />
+				  <ColumnDefinition Width="70" />
+				  <ColumnDefinition />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
-							<RowDefinition />
-              <RowDefinition />
-            </Grid.RowDefinitions>
-						<TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Text="{Binding XPath=@text}" FontWeight="Bold" FontSize="18" Foreground="#80FFFFFF" />
-						
-            <Image Grid.Row="1" Grid.Column="0" Source="{StaticResource Up}" Width="8" Height="8" VerticalAlignment="Center" HorizontalAlignment="Left" />
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding XPath=@zj}" Foreground="White" Margin="12,0,0,0" ToolTip="Jahr 2016" />
-            <Image Grid.Row="1" Grid.Column="1" Source="{StaticResource Equal}" Width="8" Height="8"  VerticalAlignment="Center" HorizontalAlignment="Left" />
-            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding XPath=@zq}" Foreground="White" Margin="12,0,0,0" ToolTip="September" />
-            <Image Grid.Row="1" Grid.Column="2" Source="{StaticResource Down}" Width="8" Height="8" VerticalAlignment="Center" HorizontalAlignment="Left" />
-            <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding XPath=@zm}" Foreground="White" Margin="12,0,0,0" ToolTip="KW 37" />
-
-            <Image Grid.Row="0" Grid.RowSpan="2" Grid.Column="3" Height="32" Width="100" Source="Spark.png" VerticalAlignment="Center" HorizontalAlignment="Left" />
-						
-          </Grid>
-				</DataTemplate>
-			</ItemsControl.ItemTemplate>
-    </ItemsControl>
-    <ItemsControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="6" ItemsSource="{Binding Source={StaticResource Maschine}, XPath=/data/item}">
+				<RowDefinition />
+				<RowDefinition />
+			</Grid.RowDefinitions>
+			  <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Text="{Binding XPath=@text}" FontWeight="Medium" FontSize="18" Foreground="#80FFFFFF" />
+			  <Image Grid.Row="1" Grid.Column="0" Source="{StaticResource Up}" Width="8" Height="8" VerticalAlignment="Center" HorizontalAlignment="Left" />
+			  <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding XPath=@zj}" Foreground="White" Margin="12,0,0,0" ToolTip="Jahr 2016" />
+			  <Image Grid.Row="1" Grid.Column="1" Source="{StaticResource Equal}" Width="8" Height="8"  VerticalAlignment="Center" HorizontalAlignment="Left" />
+			  <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding XPath=@zq}" Foreground="White" Margin="12,0,0,0" ToolTip="September" />
+			  <Image Grid.Row="1" Grid.Column="2" Source="{StaticResource Down}" Width="8" Height="8" VerticalAlignment="Center" HorizontalAlignment="Left" />
+			  <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding XPath=@zm}" Foreground="White" Margin="12,0,0,0" ToolTip="KW 37" />
+			  <Image Grid.Row="0" Grid.RowSpan="2" Grid.Column="3" Height="32" Width="100" Source="Spark.png" VerticalAlignment="Center" HorizontalAlignment="Left" />
+		  </Grid>
+		</DataTemplate>
+	  </ItemsControl.ItemTemplate>
+	</ItemsControl>
+    
+	  <ItemsControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="6" ItemsSource="{Binding Source={StaticResource Maschine}, XPath=/data/item}">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
           <WrapPanel Orientation="Horizontal" />
@@ -176,7 +174,7 @@
           <Border Width="200" Margin="6">
             <StackPanel>
               <TextBlock >
-								<Run Text="{Binding XPath=@id}" FontWeight="Bold" FontSize="18" Foreground="#80FFFFFF" />
+								<Run Text="{Binding XPath=@id}" FontWeight="Medium" FontSize="18" Foreground="#80FFFFFF" />
 								<Run Text=" " />
 								<Run Text="{Binding XPath=@text}" Foreground="#80FFFFFF" />
               </TextBlock>
@@ -200,7 +198,7 @@
           <Border Width="200" Margin="6">
             <StackPanel>
               <TextBlock >
-								<Run Text="{Binding XPath=@id}" FontWeight="Bold" FontSize="18" Foreground="#80FFFFFF" />
+								<Run Text="{Binding XPath=@id}" FontWeight="Medium" FontSize="18" Foreground="#80FFFFFF" />
 								<Run Text=" " />
 								<Run Text="{Binding XPath=@text}" Foreground="#80FFFFFF" />
               </TextBlock>

@@ -41,7 +41,7 @@
 		</local:TraceItemTemplateSelector>
 	</UserControl.Resources>
 	
-	<Grid Margin="0">
+	<Grid Margin="32,24">
 		<ListBox ItemsSource="{Binding Traces}"	 Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2"
 				 ItemContainerStyle="{StaticResource PpsAlternatingListBoxItemStyle}">
 			<ListBox.ItemTemplate>
