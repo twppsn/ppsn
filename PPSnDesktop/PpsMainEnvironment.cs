@@ -29,6 +29,7 @@ namespace TecWare.PPSn
 		public static readonly XName xnCode = "code";
 
 		private readonly string displayName;
+		private readonly int displayGlyph;
 		private readonly LuaChunk condition;
 		private readonly LuaChunk code;
 
@@ -36,6 +37,7 @@ namespace TecWare.PPSn
 			: base(environment, source, xCur.GetAttribute("name", String.Empty))
 		{
 			this.displayName = xCur.GetAttribute("displayname", this.Name);
+			this.displayGlyph = xCur.GetAttribute("displayglyph", 57807);
 			this.Priority = priority = xCur.GetAttribute("priority", priority + 1);
 
 			condition = environment.CreateLuaChunk(xCur.Element(xnCondition)); // , new KeyValuePair<string, Type>("contextMenu", typeof(bool))
@@ -55,8 +57,9 @@ namespace TecWare.PPSn
 			if (code != null)
 				Environment.RunScript(code, environment, false);
 		} // proc Execute
-				
-    public string DisplayName => displayName;
+
+		public string DisplayName => displayName;
+		public string DisplayGlyph => char.ConvertFromUtf32(displayGlyph);
 		public int Priority { get; }
 	} // class PpsMainActionDefinition
 
