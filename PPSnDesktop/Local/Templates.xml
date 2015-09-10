@@ -1,20 +1,20 @@
 ﻿<templates>
-  <template key="KO" datatemplate="PartsTemplate">
+  <template key="KO" datatemplate="ContactsTemplate">
     <!--<Condition></Condition>
     <Code></Code>-->
   </template>
   <template key="TL" datatemplate="PartsTemplate">
   </template>
-  <template key="BE" datatemplate="PartsTemplate">
+  <template key="BE" datatemplate="OrdersTemplate">
   </template>
-  <template key="WE" datatemplate="PartsTemplate">
+  <template key="WE" datatemplate="ReceiptsTemplate">
   </template>
-  <template key="AU" datatemplate="PartsTemplate">
+  <template key="AU" datatemplate="AukoTemplate">
   </template>
   <template key="WA" datatemplate="JobsTemplate">
   </template>
-  <template key="AN" datatemplate="PartsTemplate">
+  <template key="AN" datatemplate="AnkoTemplate">
   </template>
-  <template key="AF" datatemplate="PartsTemplate">
+  <template key="AF" datatemplate="AfkoTemplate">
   </template>
 </templates>

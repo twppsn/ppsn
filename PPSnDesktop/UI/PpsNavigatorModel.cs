@@ -198,6 +198,12 @@ namespace TecWare.PPSn.UI
 				newOrder.FireIsCheckedChanged();
     } // proc UpdateCurrentOrder
 
+		private void UpdateCurrentExtentedSearch()
+		{
+
+			RefreshData();
+		} // proc ReUpdateCurrentExtentedSearch
+
 		private async void RefreshData()
 		{
 			// build neu data source
@@ -211,7 +217,7 @@ namespace TecWare.PPSn.UI
 					dataSource.PreFilterId = currentFilter.FilterName;
 				if (currentOrder != null)
 					dataSource.OrderId = currentOrder.ColumnName + (sortAscending ? "+" : "-");
-				dataSource.CustomFilter = null;
+				dataSource.CustomFilter = currentSearchText;
 
 				await items.Reset(dataSource);
 			}
@@ -273,6 +279,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Data Items</summary>
 		public ICollectionView Items => itemsView;
 
-		public string CurrentSearchText { get { return currentSearchText; } set { currentSearchText = value; } }
+		/// <summary>Current SearchText</summary>
+		public string CurrentSearchText { get { return currentSearchText; } set { currentSearchText = value; UpdateCurrentExtentedSearch(); } }
 	} // class PpsNavigatorModel
 }

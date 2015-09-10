@@ -147,11 +147,19 @@ namespace TecWare.PPSn.Data
 			}
 			#endregion
 
+			if (!String.IsNullOrEmpty(arguments.CustomFilter))
+			{
+				if (filterExpression.Length > 0)
+					filterExpression += " and OBJKMATCH like '%" + arguments.CustomFilter + "%'";
+				else
+					filterExpression += "OBJKMATCH like '%" + arguments.CustomFilter + "%'";
+			}
+
 			// filter data
 			var orderDef = arguments.OrderId;
 			if (orderDef != null)
 				orderDef = orderDef.Replace("+", " asc").Replace("-", " desc");
-				
+
 			// enumerate lines
 			using (var dv = new System.Data.DataView(dt, filterExpression, orderDef, System.Data.DataViewRowState.CurrentRows))
 				for (int i = 0; i < arguments.Count; i++)

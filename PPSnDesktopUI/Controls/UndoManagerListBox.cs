@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,15 +10,17 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Controls
 {
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Special list box to show the undo/redo-stack</summary>
 	public class UndoManagerListBox : ListBox
 	{
 		private static readonly DependencyProperty FooterTextProperty = DependencyProperty.Register("FooterText", typeof(string), typeof(UndoManagerListBox));
 		private static readonly DependencyProperty IsRedoListProperty = DependencyProperty.Register("IsRedoList", typeof(bool), typeof(UndoManagerListBox), new PropertyMetadata(false));
+
 		private int curStackPosition = -1;
 
 		protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
@@ -32,7 +35,7 @@ namespace TecWare.PPSn.Controls
 					ItemContainerGenerator.StatusChanged += OnItemContainerGeneratorStatusChanged;
 				}
 			}
-		}
+		} // proc OnItemsChanged
 
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
@@ -60,15 +63,15 @@ namespace TecWare.PPSn.Controls
 		private void StartUndoRedoAction()
 		{
 			ClosePopUp();
-			DoUndoRedoAction();
-		}
 
-		private void DoUndoRedoAction()
-		{
-			// from  0 to curStackPosition
-			MessageBox.Show("ToDo");
-		}
-		
+			// Goto item
+			var step = ItemContainerGenerator.Items[curStackPosition] as IPpsUndoStep;
+			if (step != null)
+				step.Goto();
+			else
+				Trace.TraceWarning("Undo-Stack is invalid. Step is missing.");
+		} // proc StartUndoRedoAction
+
 		private void ClosePopUp()
 		{
 			var parent = LogicalTreeHelper.GetParent(this);
@@ -85,7 +88,7 @@ namespace TecWare.PPSn.Controls
 			{
 				throw new ArgumentException("Parent (popup) not found!");
 			}
-		}
+		} // proc ClosePopUp
 
 		private void ChangeSelectionFromMouse(MouseEventArgs e)
 		{
@@ -114,7 +117,7 @@ namespace TecWare.PPSn.Controls
 			curStackPosition = itemIndex;
 			// finally update footer
 			FooterText = CalcFooterText();
-        } // proc ChangeSelectionFromIndex
+		} // proc ChangeSelectionFromIndex
 
 		private string CalcFooterText()
 		{
@@ -131,7 +134,7 @@ namespace TecWare.PPSn.Controls
 				if (dependencyObject is ListBoxItem)
 				{
 					return ItemContainerGenerator.IndexFromContainer(dependencyObject);
-                }
+				}
 				dependencyObject = VisualTreeHelper.GetParent(dependencyObject) as DependencyObject;
 			}
 			return -1;
