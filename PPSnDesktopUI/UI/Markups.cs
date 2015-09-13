@@ -122,14 +122,13 @@ namespace TecWare.PPSn.UI
 				return ProvideColorValue(serviceProvider, Color.FromScRgb(Alpha, Source.ScR, Source.ScG, Source.ScB));
 			else if (SourcePart > 1.0f)
 				return ProvideColorValue(serviceProvider, Color.FromScRgb(Alpha, Destination.ScR, Destination.ScG, Destination.ScB));
-
+			// the scale 0.0 - 1.0 does not map linearly to 0 - 255
 			var color = Color.FromScRgb(
 				Alpha,
 				Source.ScR * SourcePart + Destination.ScR * destinationPart,
 				Source.ScG * SourcePart + Destination.ScG * destinationPart,
 				Source.ScB * SourcePart + Destination.ScB * destinationPart
 			);
-
 			return ProvideColorValue(serviceProvider, color);
 		} // func ProvideValue
 
@@ -151,6 +150,37 @@ namespace TecWare.PPSn.UI
 	} // class AlphaBlendColor
 
 	#endregion
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Mixes two colors to one color.</summary>
+	public class TransparencyResultColor : MarkupExtension
+	{
+		public TransparencyResultColor()
+		{
+		} // ctor
+
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			var backgroundPart = 1.0f - Transpareny;
+
+			if (Transpareny < 0.0f)
+				return AlphaBlendColor.ProvideColorValue(serviceProvider, Color.FromScRgb(1f, BackColor.ScR, BackColor.ScG, BackColor.ScB));
+			else if (Transpareny > 1.0f)
+				return AlphaBlendColor.ProvideColorValue(serviceProvider, Color.FromScRgb(1f, TransparentColor.ScR, TransparentColor.ScG, TransparentColor.ScB));
+			var color = Color.FromArgb(
+				255,
+				(byte)(BackColor.R * backgroundPart + TransparentColor.R * Transpareny),
+				(byte)(BackColor.G * backgroundPart + TransparentColor.G * Transpareny),
+				(byte)(BackColor.B * backgroundPart + TransparentColor.B * Transpareny)
+			);
+			return AlphaBlendColor.ProvideColorValue(serviceProvider, color);
+		} // func ProvideValue
+
+		public Color BackColor { get; set; } = Colors.Black;
+		public Color TransparentColor { get; set; } = Colors.White;
+		public float Transpareny { get; set; } = 1.0f;
+
+	} // class TransparencyResultColor
 
 	#region -- class WeightColor --------------------------------------------------------
 
@@ -188,7 +218,6 @@ namespace TecWare.PPSn.UI
 					b += Factor * (1 - b);
 				}
 			}
-
 			return AlphaBlendColor.ProvideColorValue(serviceProvider, Color.FromScRgb(a, r, g, b));
 		} // func ProvideValue
 

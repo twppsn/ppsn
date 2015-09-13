@@ -1,9 +1,9 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <SolidColorBrush x:Key="PPSnImageBrush" Color="#CCFFFFFF"/>
+    <SolidColorBrush x:Key="PPSnImageBrush" Color="{StaticResource PPSnAccentColor}" Opacity=".8"/>
 
-    <DrawingImage x:Key="usersImage">
+	<DrawingImage x:Key="usersImage">
 		<DrawingImage.Drawing>
             <GeometryDrawing Brush="{StaticResource PPSnImageBrush}"
 							 Geometry="M9600 6456c0,648 -1536,904 -2560,904 -384,0 -841,-36 -1261,-115 -42,-73 -90,-145 -144,-214 -220,-280 -520,-496 -807,-706 379,-399 612,-938 612,-1533 0,-107 -8,-211 -22,-314 74,-56 153,-113 236,-174 381,300 863,478 1386,478 523,0 1005,-179 1386,-478 765,561 1173,831 1174,2151z
