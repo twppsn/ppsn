@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
-using TecWare.DES.Stuff;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {

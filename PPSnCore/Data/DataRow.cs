@@ -7,8 +7,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
-using TecWare.DES.Stuff;
-
+using TecWare.DE.Stuff;
 using static TecWare.PPSn.Data.PpsDataHelper;
 
 namespace TecWare.PPSn.Data
