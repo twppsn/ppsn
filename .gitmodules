@@ -1,0 +1,3 @@
+[submodule "Extern/PPSnCore"]
+	path = Extern/PPSnCore
+	url = https://github.com/twppsn/PPSnCore.git

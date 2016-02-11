@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="DEMppsn"
+           targetNamespace="http://tecware-gmbh.de/dev/des/2015/ppsn"
+           elementFormDefault="qualified"
+           xmlns="http://tecware-gmbh.de/dev/des/2014"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+					 xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+
+	<xs:import namespace="http://tecware-gmbh.de/dev/des/2014" />
+
+	<xs:complexType name="dataSourceType">
+		<xs:complexContent>
+			<xs:extension base="ConfigItemType">
+				
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+
+	<xs:element name="dataSource" abstract="true" type="pps:dataSourceType">
+		<xs:annotation>
+			<xs:documentation>Abstract base node, for all data source implementations.</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+
+	<xs:element name="sqlExDataSource" substitutionGroup="pps:dataSource">
+		<xs:annotation>
+			<xs:documentation>Implementation for a Sql-Server data source.</xs:documentation>
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.Sql.PpsSqlExDataSource</class>
+			</xs:appinfo>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="pps:dataSourceType">
+					<xs:sequence>
+						<xs:element name="connectionString" type="xs:string" minOccurs="1" maxOccurs="1">
+							<xs:annotation>
+								<xs:documentation>Connection string to the database, this string is used for system connection.</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+					</xs:sequence>
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="package" substitutionGroup="configItem">
+		<xs:annotation>
+			<xs:documentation>Defines a pps functionality.</xs:documentation>
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.PpsPackage</class>
+			</xs:appinfo>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="ConfigLogItemType">
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="ppsn" substitutionGroup="configItem">
+		<xs:annotation>
+			<xs:documentation>Basic environment for the ERP services.</xs:documentation>
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.PpsApplication</class>
+			</xs:appinfo>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="ConfigLogItemType">
+					<xs:sequence>
+						<xs:element ref="pps:dataSource" minOccurs="0" maxOccurs="unbounded" />
+					</xs:sequence>
+					<xs:attribute name="mainDataSource" type="xs:string" use="required">
+						<xs:annotation>
+							<xs:documentation>Name of the main datasource, for the initial user list.</xs:documentation>
+						</xs:annotation>
+					</xs:attribute>
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+</xs:schema>
