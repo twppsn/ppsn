@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DESCore", "Extern\PPSnCore\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerLib", "..\..\twdes\des\ServerLib\ServerLib.csproj", "{6A13EE24-AE1A-4242-8F61-0E32F1E9E37D}"
 EndProject
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "PPSnMaster", "PPSnMaster\PPSnMaster.sqlproj", "{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -35,6 +37,12 @@ Global
 		{6A13EE24-AE1A-4242-8F61-0E32F1E9E37D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6A13EE24-AE1A-4242-8F61-0E32F1E9E37D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6A13EE24-AE1A-4242-8F61-0E32F1E9E37D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -352,7 +352,7 @@ namespace TecWare.PPSn.Server.Sql
 
 					string name;
 					if ((name = (string)table["execute"]) != null)
-						BindSqlExecute(table, cmd, name);
+						BindSqlExecute(table, cmd, name, resultInfo);
 					else if ((name = (string)table["insert"]) != null)
 						BindSqlInsert(table, cmd, (string)table["insert"], resultInfo);
 					else if ((name = (string)table["delete"]) != null)
@@ -361,8 +361,7 @@ namespace TecWare.PPSn.Server.Sql
 						throw new NotImplementedException();
 					else // name = "sql"
 						throw new NotImplementedException();
-
-
+					
 					return cmd;
 				}
 				catch
@@ -372,7 +371,7 @@ namespace TecWare.PPSn.Server.Sql
 				}
 			} // func PrepareCommand
 
-			private static void BindSqlExecute(LuaTable table, SqlCommand cmd, string name)
+			private static void BindSqlExecute(LuaTable table, SqlCommand cmd, string name, SqlResultInfo resultInfo)
 			{
 				cmd.CommandType = CommandType.StoredProcedure;
 				cmd.CommandText = name;
@@ -500,6 +499,13 @@ namespace TecWare.PPSn.Server.Sql
 								r.NextResult();
 							}
 						}
+					}
+
+					// update parameter
+					foreach (SqlParameter p in cmd.Parameters)
+					{
+						if ((p.Direction & ParameterDirection.Output) != 0)
+							parameter[p.ParameterName.Substring(1)] = p.Value;
 					}
 				}  // using cmd
 			} // ExecuteMultipleResult
