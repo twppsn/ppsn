@@ -319,7 +319,10 @@ namespace TecWare.PPSn.Server.Sql
 				base.Dispose(disposing); // commit/rollback
 
 				if (disposing)
+				{
 					transaction.Dispose();
+					connection.Dispose();
+				}
 			} // proc Dispose
 
 			public override void Commit()
@@ -748,7 +751,7 @@ namespace TecWare.PPSn.Server.Sql
 
 					// finish the connection
 					Procs.FreeAndNil(ref databaseMainThread);
-					masterConnection.Close();
+					masterConnection.Dispose();
 				}
 			}
 			finally

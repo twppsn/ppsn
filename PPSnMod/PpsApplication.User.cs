@@ -312,7 +312,10 @@ namespace TecWare.PPSn.Server
 
 							// ensure the database connection to the main database
 							if (newConnection.EnsureConnection())
+							{
+								UpdateConnectionHandle(application.MainDataSource, newConnection);
 								return context;
+							}
 							else
 								throw new Exception("Connection lost.");
 						}
