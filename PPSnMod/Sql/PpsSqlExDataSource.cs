@@ -351,7 +351,7 @@ namespace TecWare.PPSn.Server.Sql
 				try
 				{
 					cmd.Connection = connection;
-					cmd.Transaction = transaction;
+					cmd.Transaction = table.GetOptionalValue("__notrans", false) ? null : transaction;
 
 					string name;
 					if ((name = (string)table["execute"]) != null)
