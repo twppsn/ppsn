@@ -33,11 +33,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Neo.Lua, Version=5.3.0.0, Culture=neutral, PublicKeyToken=fdb0cd4fe8a6e3b2, processorArchitecture=MSIL">
-      <HintPath>..\packages\NeoLua.1.2.2\lib\net45\Neo.Lua.dll</HintPath>
+      <HintPath>..\packages\NeoLua.1.2.4\lib\net45\Neo.Lua.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Neo.Lua.Desktop, Version=5.3.0.0, Culture=neutral, PublicKeyToken=fdb0cd4fe8a6e3b2, processorArchitecture=MSIL">
-      <HintPath>..\packages\NeoLua.1.2.2\lib\net45\Neo.Lua.Desktop.dll</HintPath>
+      <HintPath>..\packages\NeoLua.1.2.4\lib\net45\Neo.Lua.Desktop.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -64,13 +64,13 @@
     <Compile Include="Stuff.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\twdes\des\Extern\Core\DESCore\DESCore.csproj">
+      <Project>{67528843-e631-4c05-b6e8-514cc8bec7b6}</Project>
+      <Name>DESCore</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\..\twdes\des\ServerLib\ServerLib.csproj">
       <Project>{6a13ee24-ae1a-4242-8f61-0e32f1e9e37d}</Project>
       <Name>ServerLib</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Extern\PPSnCore\Extern\DESCore\DESCore\DESCore.csproj">
-      <Project>{67528843-e631-4c05-b6e8-514cc8bec7b6}</Project>
-      <Name>DESCore</Name>
     </ProjectReference>
     <ProjectReference Include="..\Extern\PPSnCore\PPSnCore\PPSnCore.csproj">
       <Project>{f4609545-6d91-4b2d-a811-3201f4934505}</Project>
