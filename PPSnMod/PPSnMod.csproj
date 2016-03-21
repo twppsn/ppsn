@@ -85,6 +85,7 @@
     <EmbeddedResource Include="Xsd\PPSn.xsd">
       <SubType>Designer</SubType>
     </EmbeddedResource>
+    <None Include="doc\StyleGuideSQL.md" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
