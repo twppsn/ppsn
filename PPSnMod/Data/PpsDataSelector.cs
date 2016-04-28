@@ -13,7 +13,7 @@ namespace TecWare.PPSn.Server.Data
 {
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public abstract class PpsDataSelector : IDERangeEnumerable2<IDataRow>, IEnumerable<IDataRow>
+	public abstract class PpsDataSelector : IDERangeEnumerable<IDataRow>, IEnumerable<IDataRow>
 	{
 		private readonly PpsDataSource source;
 
@@ -22,19 +22,27 @@ namespace TecWare.PPSn.Server.Data
 			this.source = source;
 		} // ctor
 
-		public virtual int Count => -1;
-
 		public virtual IEnumerator GetEnumerator()
 			=> GetEnumerator(0, Int32.MaxValue);
 
 		IEnumerator<IDataRow> IEnumerable<IDataRow>.GetEnumerator()
-			=> GetEnumerator(0, Int32.MaxValue, PropertyDictionary.EmptyReadOnly);
+			=> GetEnumerator(0, Int32.MaxValue);
 
-		public virtual IEnumerator<IDataRow> GetEnumerator(int start, int count)
-			=> GetEnumerator(start, count, PropertyDictionary.EmptyReadOnly);
+		/// <summary>Returns a enumerator for the range.</summary>
+		/// <param name="start">Start of the enumerator</param>
+		/// <param name="count">Number of elements that should be returned,</param>
+		/// <returns></returns>
+		public abstract IEnumerator<IDataRow> GetEnumerator(int start, int count);
 
-		public abstract IEnumerator<IDataRow> GetEnumerator(int start, int count, IPropertyReadOnlyDictionary selector);
+		/// <summary>Returns the field description for the name in the resultset</summary>
+		/// <param name="nativeColumnName"></param>
+		/// <returns></returns>
+		public abstract IPpsColumnDescription GetFieldDescription(string nativeColumnName);
 
+		/// <summary>by default we do not know the number of items</summary>
+		public virtual int Count => -1;
+
+		/// <summary></summary>
 		public PpsDataSource DataSource => source;
 	} // class PpsDataView
 }

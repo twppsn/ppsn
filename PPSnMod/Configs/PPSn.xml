@@ -11,6 +11,7 @@
 
 	<http threads="1">
 		<prefix>http://localhost:8080/</prefix>
+		<access scheme="ntlm">http://localhost:8080/ppsn/</access>
 	</http>
 
 	<cron />
@@ -19,7 +20,8 @@
 
 	<pps:ppsn name="ppsn" mainDataSource="main">
 		<pps:sqlExDataSource name="main">
-			<pps:connectionString>Data Source=Gurke,6444;Initial Catalog=PPSn01;Integrated Security=True</pps:connectionString>
+			<pps:connectionString>Data Source=(localdb)\mssqllocaldb;Initial Catalog=PPSn01;Integrated Security=True</pps:connectionString>
 		</pps:sqlExDataSource>
 	</pps:ppsn>
+	<?des-merge C:\Projects\PPSnOS\Kunden\TecWare\vGarten-config\Garten\ppsn\Contacts.xml?>
 </des>

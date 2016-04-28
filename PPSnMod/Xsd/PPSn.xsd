@@ -44,6 +44,133 @@
 		</xs:complexType>
 	</xs:element>
 
+	<xs:simpleType name="fieldAttributeNames">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="displayName" />
+			<xs:enumeration value="maxLength" />
+			<xs:enumeration value="dataType" />
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:element name="register">
+		<xs:annotation>
+			<xs:documentation>Expands the definition of a specific datasource.</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence minOccurs="0" maxOccurs="unbounded">
+				<xs:element name="field" minOccurs="0" maxOccurs="unbounded">
+					<xs:annotation>
+						<xs:documentation>Registers a field definition in the system.</xs:documentation>
+					</xs:annotation>
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="attribute" minOccurs="0" maxOccurs="unbounded">
+								<xs:complexType>
+									<xs:simpleContent>
+										<xs:extension base="xs:string">
+											<xs:attribute name="name" use="required">
+												<xs:annotation>
+													<xs:documentation>Name of the attribute.</xs:documentation>
+												</xs:annotation>
+												<xs:simpleType>
+													<xs:union memberTypes="pps:fieldAttributeNames xs:string" />
+												</xs:simpleType>
+											</xs:attribute>
+											<xs:attribute name="displayName" type="xs:string" use="optional">
+											</xs:attribute>
+											<xs:attribute name="dataType" type="LuaType" use="optional">
+											</xs:attribute>
+										</xs:extension>
+									</xs:simpleContent>
+								</xs:complexType>
+							</xs:element>
+						</xs:sequence>
+						<xs:attribute name="name" type="xs:string" use="required">
+							<xs:annotation>
+								<xs:documentation>Full qualified name of the column.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="view" minOccurs="0" maxOccurs="unbounded">
+					<xs:annotation>
+						<xs:documentation>Registers accessable view.</xs:documentation>
+					</xs:annotation>
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="source" minOccurs="1" maxOccurs="1">
+								<xs:annotation>
+									<xs:documentation>Description of the view.</xs:documentation>
+								</xs:annotation>
+								<xs:complexType>
+									<xs:simpleContent>
+										<xs:extension base="xs:string">
+											<xs:anyAttribute processContents="lax" />
+										</xs:extension>
+									</xs:simpleContent>
+								</xs:complexType>
+							</xs:element>
+							
+							<xs:sequence minOccurs="0" maxOccurs="unbounded">
+								<xs:element name="filter" minOccurs="0" maxOccurs="unbounded">
+									<xs:complexType>
+										<xs:simpleContent>
+											<xs:extension base="xs:string">
+												<xs:attribute name="name" use="required" type="xs:string">
+													<xs:annotation>
+														<xs:documentation>Id of this filter</xs:documentation>
+													</xs:annotation>
+												</xs:attribute>
+												<xs:attribute name="displayName" use="optional" type="xs:string">
+													<xs:annotation>
+														<xs:documentation>Filter name</xs:documentation>
+													</xs:annotation>
+												</xs:attribute>
+											</xs:extension>
+										</xs:simpleContent>
+									</xs:complexType>
+								</xs:element>
+								<xs:element name="sort" minOccurs="0" maxOccurs="unbounded">
+									<xs:complexType>
+										<xs:simpleContent>
+											<xs:extension base="xs:string">
+												<xs:attribute name="name" use="required" type="xs:string">
+													<xs:annotation>
+														<xs:documentation>Id of this sort description</xs:documentation>
+													</xs:annotation>
+												</xs:attribute>
+												<xs:attribute name="displayName" use="optional" type="xs:string">
+													<xs:annotation>
+														<xs:documentation>Sort display name</xs:documentation>
+													</xs:annotation>
+												</xs:attribute>
+											</xs:extension>
+										</xs:simpleContent>
+									</xs:complexType>
+								</xs:element>
+							</xs:sequence>
+						</xs:sequence>
+						<xs:attribute name="name" use="required" type="xs:string">
+							<xs:annotation>
+								<xs:documentation>Id or name of the view.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="displayName" use="optional" type="xs:string">
+							<xs:annotation>
+								<xs:documentation>Name for the view.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+					</xs:complexType>
+				</xs:element>
+			</xs:sequence>
+			<xs:attribute name="source" type="xs:string" use="required">
+				<xs:annotation>
+					<xs:documentation>Datasource, that will be expanded.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+
 	<xs:element name="package" substitutionGroup="configItem">
 		<xs:annotation>
 			<xs:documentation>Defines a pps functionality.</xs:documentation>
@@ -69,10 +196,11 @@
 		<xs:complexType>
 			<xs:complexContent>
 				<xs:extension base="ConfigLogItemType">
-					<xs:sequence>
+					<xs:sequence minOccurs="0" maxOccurs="unbounded">
 						<xs:element ref="pps:dataSource" minOccurs="0" maxOccurs="unbounded" />
+						<xs:element ref="pps:register" minOccurs="0" maxOccurs="unbounded" />
 					</xs:sequence>
-					<xs:attribute name="mainDataSource" type="xs:string" use="required">
+					<xs:attribute name="mainDataSource" type="xs:string" use="optional">
 						<xs:annotation>
 							<xs:documentation>Name of the main datasource, for the initial user list.</xs:documentation>
 						</xs:annotation>

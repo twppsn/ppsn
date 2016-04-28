@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -163,8 +178,6 @@ namespace TecWare.PPSn.Server
 			{
 				if (user == testIdentity)
 					return true;
-				if (user.GetType() != testIdentity.GetType())
-					return false;
 
 				if (testIdentity is HttpListenerBasicIdentity)
 					return TestIdentity((HttpListenerBasicIdentity)testIdentity);
@@ -307,6 +320,10 @@ namespace TecWare.PPSn.Server
 						var context = CreateContextIntern(null);
 						try
 						{
+							// update the system identity
+							if (systemIdentity == null && identity is WindowsIdentity)
+								systemIdentity = (WindowsIdentity)identity;
+
 							// check the user information agains the main user
 							newConnection = application.MainDataSource.CreateConnection(context);
 
@@ -437,32 +454,35 @@ namespace TecWare.PPSn.Server
 				return c != null && c.EnsureConnection(throwException) ? c : null;
 			} // func EnsureConnection
 
-			public PpsDataSelector CreateSelector(PpsDataSource source = null, string name = null, bool throwException = true)
+			public PpsDataSelector CreateSelector(string name, string customFilter = null, string customSort = null, bool throwException = true)
 			{
 				if (String.IsNullOrEmpty(name))
 					throw new ArgumentNullException("name");
 
-				source = source ?? MainDataSource;
-
-				// ensure the connection
-				var c = EnsureConnection(source, throwException);
-				if (c == null)
+				// todo: build a joined selector, doppelte spalten müssten entfernt werden, wenn man es machen will
+				var viewInfo = Application.GetViewDefinition(name, throwException);
+				if (viewInfo == null)
 					return null;
+				// ensure the connection
+				var c = EnsureConnection(viewInfo.SelectorToken.DataSource, throwException);
+				if (c == null)
+				{
+					if (throwException)
+						throw new ArgumentException(); // todo;
+					else
+						return null;
+				}
+
+				// apply filter rules
+
+				// apply order
 
 				// create the selector
-				return source.CreateSelector(c, name, throwException);
+				return viewInfo.SelectorToken.CreateSelector(c, throwException);
 			} // func CreateSelector
 
-			public PpsDataSelector CreateSelector(IPpsSelectorToken selectorToken, bool throwException = true)
-			{
-				// ensure the connection
-				var c = EnsureConnection(selectorToken.DataSource, throwException);
-				if (c == null)
-					return null;
-
-				// create the selector, from a token
-				return selectorToken.CreateSelector(c, throwException);
-			} // func CreateSelector
+			public PpsDataSelector CreateSelector(LuaTable table)
+				=> CreateSelector(table.GetOptionalValue("name", (string)null), table.GetOptionalValue("filter", (string)null), table.GetOptionalValue("order", (string)null), table.GetOptionalValue("throwException", true));
 
 			public PpsDataTransaction CreateTransaction(PpsDataSource source = null, bool throwException = true)
 			{
@@ -499,7 +519,8 @@ namespace TecWare.PPSn.Server
 			public NetworkCredential AlternativeCredential => privateUser.AlternativeCredential;
 			public WindowsIdentity SystemIdentity => privateUser.SystemIdentity;
 
-			public PpsDataSource MainDataSource => privateUser.Application.MainDataSource;
+			public PpsApplication Application => privateUser.Application;
+			public PpsDataSource MainDataSource => Application.MainDataSource;
 		} // class PrivateUserDataContext
 
 		#endregion
@@ -522,17 +543,17 @@ namespace TecWare.PPSn.Server
 		private void BeginEndConfigurationUser(IDEConfigLoading config)
 		{
 			// read system identity
-			systemUser.UpdateData(Config.Element(PpsStuff.xnPps + "systemUser"));
+			systemUser.UpdateData(Config.Element(PpsStuff.PpsNamespace + "systemUser"));
 
 			// read the user data
-			RefreshUserData();
+			RegisterInitializationTask(11000, "Register users", () => Task.Run(new Action(RefreshUserData)));
 		} // proc BeginEndConfigurationUser
 
 		private void RefreshUserData()
 		{
 			using (var ctx = CreateSysContext())
 			{
-				var users = ctx?.CreateSelector(MainDataSource, "ServerLogins", false);
+				var users = ctx?.CreateSelector("ServerLogins", throwException: false);
 				if (users != null)
 				{
 					// fetch user list
@@ -548,7 +569,7 @@ namespace TecWare.PPSn.Server
 									userList[idx].UpdateData(u);
 								else
 								{
-									var user = new PrivateUserData(this, persId, new PpsUserIdentity((string)u["Name"]), "User");
+									var user = new PrivateUserData(this, persId, new PpsUserIdentity((string)u["LOGIN"]), "User");
 									userList.Add(user);
 									user.UpdateData(u);
 								}

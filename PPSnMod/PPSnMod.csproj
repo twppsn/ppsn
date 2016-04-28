@@ -86,9 +86,14 @@
       <SubType>Designer</SubType>
     </EmbeddedResource>
     <None Include="packages.config" />
+    <None Include="ppsn.licenseheader" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Configs\PPSn.xml" />
+    <Content Include="Configs\PPSn.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <EmbeddedResource Include="Sql\tsql\ServerLogins.sql" />
+    <EmbeddedResource Include="Sql\tsql\ConnectionInitScript.sql" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

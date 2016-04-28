@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -38,13 +53,16 @@ namespace TecWare.PPSn.Server.Data
 	public interface IPpsPrivateDataContext : IDisposable
 	{
 		/// <summary></summary>
-		/// <param name="source"></param>
 		/// <param name="name"></param>
+		/// <param name="customFilter"></param>
+		/// <param name="customOrder"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		PpsDataSelector CreateSelector(PpsDataSource source, string name, bool throwException = true);
-
-		PpsDataSelector CreateSelector(IPpsSelectorToken selectorToken, bool throwException = true);
+		PpsDataSelector CreateSelector(string name, string customFilter = null, string customOrder = null, bool throwException = true);
+		/// <summary></summary>
+		/// <param name="table"></param>
+		/// <returns></returns>
+		PpsDataSelector CreateSelector(LuaTable table);
 
 		/// <summary>Name of the current user.</summary>
 		string UserName { get; }
@@ -95,13 +113,27 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
+	public interface IPpsColumnDescription
+	{
+		string Name { get; }
+		int MaxLength { get; }
+		Type DataType { get; }
+	} // interface IPpsProviderColumnDescription
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface IPpsSelectorToken
 	{
 		PpsDataSelector CreateSelector(IPpsConnectionHandle connection, bool throwException = true);
 
-		PpsDataSource DataSource { get; }
-	} // interface IPpsSelectorToken
+		/// <summary>Get the defintion for a column from the native column name.</summary>
+		/// <param name="selectorColumn"></param>
+		/// <returns></returns>
+		IPpsColumnDescription GetFieldDescription(string selectorColumn);
 
+		string Name { get; }
+		PpsDataSource DataSource { get; }
+
+		IEnumerable<IPpsColumnDescription> Columns { get; }
+	} // interface IPpsSelectorToken
 }

@@ -1,7 +1,23 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Principal;
@@ -69,7 +85,7 @@ namespace TecWare.PPSn.Server.Sql
 						connectionString.IntegratedSecurity = true;
 						connection.ConnectionString = connectionString.ToString();
 
-						using (identity.SystemIdentity.Impersonate())
+						//using (identity.SystemIdentity.Impersonate()) todo: Funktioniert nur als ADMIN?
 							connection.Open();
 					}
 					return true;
@@ -109,6 +125,181 @@ namespace TecWare.PPSn.Server.Sql
 
 			public bool IsConnected => IsConnectionOpen(connection);
 		} // class SqlConnectionHandle
+
+		#endregion
+
+		#region -- PpsDataResultColumnDescription -----------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary>Simple column description implementation.</summary>
+		private sealed class PpsDataResultColumnDescription : IPpsColumnDescription
+		{
+			private readonly DataRow row;
+
+			private readonly string name;
+			private readonly Type fieldType;
+
+			public PpsDataResultColumnDescription(DataRow row, string name, Type fieldType)
+			{
+				this.row = row;
+
+				this.name = name;
+				this.fieldType = fieldType;
+			} // ctor
+
+			public string Name => name;
+			public Type DataType => fieldType;
+			public int MaxLength => GetDataRowValue(row, "ColumnSize", Int32.MaxValue);
+		} // class PpsDataResultColumnDescription
+
+		#endregion
+
+		#region -- class SqlDataSelectorToken ---------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary>Representation of a data view for the system.</summary>
+		private sealed class SqlDataSelectorToken : IPpsSelectorToken
+		{
+			private readonly PpsSqlExDataSource source;
+			private readonly string name;
+
+			private readonly string[] columnNames;
+			private readonly IPpsColumnDescription[] columnDescriptions;
+
+			private SqlDataSelectorToken(PpsSqlExDataSource source, string name, string[] columnNames, IPpsColumnDescription[] columnDescriptions)
+			{
+				this.source = source;
+				this.name = name;
+				this.columnNames = columnNames;
+				this.columnDescriptions = columnDescriptions;
+			} // ctor
+
+			public PpsDataSelector CreateSelector(IPpsConnectionHandle connection, bool throwException = true)
+				=> new SqlDataSelector((SqlConnectionHandle)connection, this, null, null, null);
+
+			public IPpsColumnDescription GetFieldDescription(string selectorColumn)
+			{
+				var index = Array.IndexOf(columnNames, selectorColumn);
+				return index == -1 ? null : columnDescriptions[index];
+			} // func GetFieldDefinition
+
+			public string Name => name;
+			public PpsSqlExDataSource DataSource => source;
+
+			PpsDataSource IPpsSelectorToken.DataSource => DataSource;
+
+			public IEnumerable<IPpsColumnDescription> Columns => columnDescriptions;
+
+			// -- Static  -----------------------------------------------------------
+
+			private static void ExecuteForResultSet(SqlConnection connection, PpsSqlExDataSource source, string name, out string[] columnNames, out IPpsColumnDescription[] columnDescriptions)
+			{
+				// execute the view once to determine the resultset
+				using (var cmd = connection.CreateCommand())
+				{
+					cmd.CommandType = CommandType.Text;
+					cmd.CommandText = "select * from " + name;
+					using (var r = cmd.ExecuteReader(CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo))
+					{
+						columnNames = new string[r.FieldCount];
+						columnDescriptions = new IPpsColumnDescription[r.FieldCount];
+
+						var dt = r.GetSchemaTable();
+						var i = 0;
+						foreach (DataRow c in dt.Rows)
+						{
+							IPpsColumnDescription columnDescription;
+							var nativeColumnName = r.GetName(i);
+
+							// try to find the view base description
+							columnDescription = source.application.GetFieldDescription(name + "." + nativeColumnName, false);
+
+							// try to find the table based field name
+							if (columnDescription == null)
+							{
+								var schemaName = GetDataRowValue<string>(c, "BaseSchemaName", null) ?? "dbo";
+								var tableName = GetDataRowValue<string>(c, "BaseTableName", null);
+								var columnName = GetDataRowValue<string>(c, "BaseColumnName", null);
+
+								if (tableName != null && columnName != null)
+								{
+									var fieldName = schemaName + "." + tableName + "." + columnName;
+									columnDescription = source.application.GetFieldDescription(fieldName, false);
+								}
+							}
+
+							// create a generic description
+							if (columnDescription == null)
+								columnDescription = new PpsDataResultColumnDescription(c, nativeColumnName, r.GetFieldType(i));
+
+							columnNames[i] = nativeColumnName;
+							columnDescriptions[i++] = columnDescription;
+						}
+					}
+				} // using cmd
+			} // pro ExecuteForResultSet
+
+			private static string CreateOrReplaceView(SqlConnection connection, string name, string selectStatement)
+			{
+				// execute the new view
+				using (var cmd = connection.CreateCommand())
+				{
+					cmd.CommandType = CommandType.Text;
+
+					// drop
+					cmd.CommandText = $"IF object_id('{name}', 'V') IS NOT NULL DROP VIEW {name}";
+					cmd.ExecuteNonQuery();
+
+					// create
+					cmd.CommandText = $"CREATE VIEW {name} AS {selectStatement}";
+					cmd.ExecuteNonQuery();
+				} // using cmd
+
+				return name;
+			} // proc CreateOrReplaceView
+
+			private static IPpsSelectorToken CreateCore(PpsSqlExDataSource source, string name, Func<SqlConnection, string> viewName)
+			{
+				string[] columnNames;
+				IPpsColumnDescription[] columnDescriptions;
+				SqlConnection connection;
+
+				using (source.UseMasterConnection(out connection))
+					ExecuteForResultSet(connection, source, viewName(connection), out columnNames, out columnDescriptions);
+
+				return new SqlDataSelectorToken(source, name, columnNames, columnDescriptions);
+			} // func CreateCore
+
+			public static IPpsSelectorToken CreateFromStatement(PpsSqlExDataSource source, string name, string selectStatement)
+				=> CreateCore(source, name, (connection) => CreateOrReplaceView(connection, name, selectStatement));
+
+			public static IPpsSelectorToken CreateFromFile(PpsSqlExDataSource source, string name, string fileName)
+				=> CreateCore(source, name, (connection) => CreateOrReplaceView(connection, name, File.ReadAllText(fileName)));
+
+			public static IPpsSelectorToken CreateFromResource(PpsSqlExDataSource source, string name, string resourceName)
+				=> CreateCore(source, name, (connection) => CreateOrReplaceView(connection, name, source.GetResourceScript(resourceName)));
+
+			public static IPpsSelectorToken CreateFromPredefinedView(PpsSqlExDataSource source, string name, string viewName = null)
+				=> CreateCore(source, name, (connection) => viewName ?? name);
+
+			public static IPpsSelectorToken CreateFromXml(PpsSqlExDataSource source, string name, XElement sourceDescription)
+			{
+				// file => init by file
+				// select => inline sql select
+				// view => name of existing view
+				var sourceType = sourceDescription.GetAttribute("type", "file");
+				if (sourceType == "select") // create view from sql
+					return CreateFromStatement(source, name, sourceDescription.Value);
+				else if (sourceType == "file")
+					return CreateFromFile(source, name, ProcsDE.GetFileName(sourceDescription, sourceDescription.Value));
+				else if (sourceType == "resource")
+					return CreateFromResource(source, name, sourceDescription.Value);
+				else if (sourceType == "view")
+					return CreateFromPredefinedView(source, name, sourceDescription?.Value);
+				else
+					throw new ArgumentOutOfRangeException(); // todo:
+			} // func CreateFromXml
+		} // class SqlDataSelectorToken
 
 		#endregion
 
@@ -167,52 +358,75 @@ namespace TecWare.PPSn.Server.Sql
 
 		private sealed class SqlDataSelector : PpsDataSelector
 		{
-			//private readonly List<string> columns = new List<string>();
 			private readonly SqlConnectionHandle connection;
 
-			private readonly string viewName;
+			private readonly SqlDataSelectorToken selectorToken;
 			private readonly string selectList;
 			private readonly string whereCondition;
 			private readonly string orderBy;
 
-			public SqlDataSelector(SqlConnectionHandle connection, string viewName, string selectList, string whereCondition, string orderBy)
+			public SqlDataSelector(SqlConnectionHandle connection, SqlDataSelectorToken selectorToken, string selectList, string whereCondition, string orderBy)
 				: base(connection.DataSource)
 			{
 				this.connection = connection;
-				this.viewName = viewName;
+				this.selectorToken = selectorToken;
 				this.selectList = selectList;
 				this.whereCondition = whereCondition;
 				this.orderBy = orderBy;
 			} // ctor
+
+			private string AddSelectList(string addSelectList)
+			{
+				if (String.IsNullOrEmpty(addSelectList))
+					return selectList;
+
+				return String.IsNullOrEmpty(selectList) ? addSelectList : selectList + ", " + addSelectList;
+			} // func AddSelectList
 
 			public SqlDataSelector SqlSelect(string addSelectList)
 			{
 				if (String.IsNullOrEmpty(addSelectList))
 					return this;
 
-				var newSelectList = String.IsNullOrEmpty(selectList) ? addSelectList : selectList + ", " + addSelectList;
-				return new SqlDataSelector(connection, viewName, newSelectList, whereCondition, orderBy);
+				string newSelectList = AddSelectList(addSelectList);
+				return new SqlDataSelector(connection, selectorToken, newSelectList, whereCondition, orderBy);
 			} // func SqlSelect
+
+			private string AddWhereCondition(string addWhereCondition)
+			{
+				if (String.IsNullOrEmpty(addWhereCondition))
+					return whereCondition;
+
+				return String.IsNullOrEmpty(selectList) ? addWhereCondition : "(" + whereCondition + ") and (" + addWhereCondition + ")";
+			} // func AddWhereCondition
 
 			public SqlDataSelector SqlWhere(string addWhereCondition)
 			{
 				if (String.IsNullOrEmpty(addWhereCondition))
 					return this;
 
-				var newWhereCondition = String.IsNullOrEmpty(selectList) ? addWhereCondition : "(" + whereCondition + ") and (" + addWhereCondition + ")";
-				return new SqlDataSelector(connection, viewName, selectList, newWhereCondition, orderBy);
+				string newWhereCondition = AddWhereCondition(addWhereCondition);
+				return new SqlDataSelector(connection, selectorToken, selectList, newWhereCondition, orderBy);
 			} // func SqlWhere
+
+			private string AddOrderBy(string addOrderBy)
+			{
+				if (String.IsNullOrEmpty(addOrderBy))
+					return orderBy;
+
+				return String.IsNullOrEmpty(addOrderBy) ? addOrderBy : orderBy + ", " + addOrderBy;
+			} // func AddOrderBy
 
 			public SqlDataSelector SqlOrderBy(string addOrderBy)
 			{
 				if (String.IsNullOrEmpty(addOrderBy))
 					return this;
 
-				var newOrderBy = String.IsNullOrEmpty(addOrderBy) ? addOrderBy : orderBy + ", " + addOrderBy;
-				return new SqlDataSelector(connection, viewName, selectList, whereCondition, newOrderBy);
+				string newOrderBy = AddOrderBy(addOrderBy);
+				return new SqlDataSelector(connection, selectorToken, selectList, whereCondition, newOrderBy);
 			} // func SqlOrderBy
 
-			public override IEnumerator<IDataRow> GetEnumerator(int start, int count, IPropertyReadOnlyDictionary selector)
+			public override IEnumerator<IDataRow> GetEnumerator(int start, int count)
 			{
 				using (var cmd = new SqlCommand())
 				{
@@ -228,7 +442,7 @@ namespace TecWare.PPSn.Server.Sql
 						sb.Append(selectList).Append(' ');
 
 					// add the view
-					sb.Append("from ").Append(viewName).Append(" ");
+					sb.Append("from ").Append(selectorToken.Name).Append(" ");
 
 					// add the where
 					if(!String.IsNullOrEmpty(whereCondition))
@@ -261,28 +475,10 @@ namespace TecWare.PPSn.Server.Sql
 					}
 				}
 			} // func GetEnumerator
+
+			public override IPpsColumnDescription GetFieldDescription(string nativeColumnName)
+				=> selectorToken.GetFieldDescription(nativeColumnName);
 		} // class SqlDataSelector
-
-		#endregion
-
-		#region -- class SqlCodeBasedDataSelectorToken ------------------------------------
-
-		private class SqlCodeBasedDataSelector : IPpsSelectorToken
-		{
-			//private string sourceCode;
-			public PpsDataSource DataSource
-			{
-				get
-				{
-					throw new NotImplementedException();
-				}
-			}
-
-			public PpsDataSelector CreateSelector(IPpsConnectionHandle connection, bool throwException = true)
-			{
-				throw new NotImplementedException();
-			}
-		} // class SqlCodeBasedDataSelector
 
 		#endregion
 
@@ -516,7 +712,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- class SqlColumnInfo ----------------------------------------------------
+		#region -- class SqlTableInfo -----------------------------------------------------
 
 		private sealed class SqlTableInfo
 		{
@@ -547,7 +743,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- class SqlColumnInfo ----------------------------------------------------
 
-		private sealed class SqlColumnInfo
+		private sealed class SqlColumnInfo : IPpsColumnDescription
 		{
 			private readonly SqlTableInfo table;
 			private readonly int columnId;
@@ -564,7 +760,7 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				this.table = resolveObjectId(r.GetInt32(0));
 				this.columnId = r.GetInt32(1);
-				this.name = r.GetString(2);
+				this.name = table.Schema + "." + table.Name + "." + r.GetString(2);
 				this.fieldType = GetFieldType(r.GetByte(3));
 				this.sqlType = GetSqlType(r.GetByte(3));
 				this.maxLength = r.GetInt16(4);
@@ -719,17 +915,21 @@ namespace TecWare.PPSn.Server.Sql
 			public Type FieldType => fieldType;
 			public bool IsNull => isNull;
 			public bool IsIdentity => isIdentity;
+
+			int IPpsColumnDescription.MaxLength => maxLength;
+			Type IPpsColumnDescription.DataType => fieldType;
 		} // class SqlColumnInfo
 
 		#endregion
 
+		private readonly PpsApplication application;
 		private readonly SqlConnection masterConnection;
 		private string lastReadedConnectionString = String.Empty;
+		private readonly ManualResetEventSlim schemInfoInitialized = new ManualResetEventSlim(false);
 		private DEThread databaseMainThread = null;
 
 		private readonly List<SqlConnectionHandle> currentConnections = new List<SqlConnectionHandle>();
 
-		private readonly ManualResetEventSlim schemInfoInitialized = new ManualResetEventSlim(false);
 		private readonly Dictionary<string, SqlTableInfo> tableStore = new Dictionary<string, SqlTableInfo>(StringComparer.OrdinalIgnoreCase);
 		private readonly Dictionary<string, SqlColumnInfo> columnStore = new Dictionary<string, SqlColumnInfo>(StringComparer.OrdinalIgnoreCase);
 
@@ -738,6 +938,9 @@ namespace TecWare.PPSn.Server.Sql
 		public PpsSqlExDataSource(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
+			// must be in a ppsn element
+			application = sp.GetService<PpsApplication>(true);
+
 			masterConnection = new SqlConnection();
 		} // ctor
 
@@ -765,7 +968,7 @@ namespace TecWare.PPSn.Server.Sql
 			base.OnBeginReadConfiguration(config);
 
 			// read the connection string
-			var connectionString = config.ConfigNew.Element(PpsStuff.xnPps + "connectionString")?.Value;
+			var connectionString = config.ConfigNew.Element(PpsStuff.PpsNamespace + "connectionString")?.Value;
 			if (String.IsNullOrEmpty(connectionString))
 				throw new DEConfigurationException(config.ConfigNew, "<connectionString> is empty.");
 
@@ -800,12 +1003,27 @@ namespace TecWare.PPSn.Server.Sql
 					lastReadedConnectionString = config.Tags.GetProperty("LastConStr", String.Empty);
 
 					// start background thread
+					application.RegisterInitializationTask(10000, "Database", async () => await Task.Run(new Action(schemInfoInitialized.Wait))); // block all other tasks
 					databaseMainThread = new DEThread(this, "Database", ExecuteDatabase);
 				}
 			}
 		} // proc OnEndReadConfiguration
 
 		#endregion
+
+		private string GetResourceScript(string resourceName)
+		{
+			// todo: namespace beachten und assembly
+
+			using (var src = typeof(PpsSqlExDataSource).Assembly.GetManifestResourceStream(typeof(PpsSqlExDataSource), "tsql." + resourceName))
+			{
+				if (src == null)
+					throw new ArgumentException($"{resourceName} not found.");
+
+				using (var sr = new StreamReader(src, Encoding.UTF8, true))
+					return sr.ReadToEnd();
+			}
+		} // func GetResourceScript
 
 		#region -- Initialize Schema ------------------------------------------------------
 
@@ -816,20 +1034,7 @@ namespace TecWare.PPSn.Server.Sql
 				using (SqlCommand cmd = masterConnection.CreateCommand())
 				{
 					cmd.CommandType = CommandType.Text;
-					cmd.CommandText = String.Join(Environment.NewLine,
-						// user tables
-						"select u.object_id, s.name, u.name, ic.column_id",
-							"from sys.objects u",
-								"inner join sys.schemas s on (u.schema_id = s.schema_id)",
-								"inner join sys.indexes pk on (u.object_id = pk.object_id and pk.is_primary_key = 1)",
-								"inner join sys.index_columns ic on(pk.object_id = ic.object_id and pk.index_id = ic.index_id)",
-							"where u.type = 'U';",
-							// user columns
-							"select c.object_id, c.column_id, c.name, c.system_type_id, c.max_length, c.precision, c.scale, c.is_nullable, c.is_identity",
-								"from sys.columns c",
-									"inner join sys.objects t on (c.object_id = t.object_id)",
-							"where t.type = 'U' and c.is_computed = 0"
-						);
+					cmd.CommandText = GetResourceScript("ConnectionInitScript.sql");
 
 					using (SqlDataReader r = cmd.ExecuteReader(CommandBehavior.Default))
 					{
@@ -863,6 +1068,10 @@ namespace TecWare.PPSn.Server.Sql
 						}
 					}
 				}
+
+				// Register Server logins
+				application.RegisterView(SqlDataSelectorToken.CreateFromResource(this, "ServerLogins", "ServerLogins.sql"));
+
 
 				// done
 				schemInfoInitialized.Set();
@@ -951,15 +1160,27 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		public IPpsSelectorToken RegisterAndUpdateViewCode(string name, string sqlCode)
-		{
-			return null;
-		} // proc RegisterAndUpdateViewCode
+		#region -- Master Connection Service ----------------------------------------------
 
-		public IPpsSelectorToken RegisterAndUpdateViewFile(string name, string sqlFile)
+		internal IDisposable UseMasterConnection(out SqlConnection connection)
 		{
+			connection = masterConnection;
 			return null;
-		} // proc RegisterAndUpdateViewFile
+		} // func UseMasterConnection
+
+		#endregion
+
+		public override Task<IPpsSelectorToken> CreateSelectorToken(string name, XElement sourceDescription)
+		{
+			var selectorToken = Task.Run(new Func<IPpsSelectorToken>(() => SqlDataSelectorToken.CreateFromXml(this, name, sourceDescription)));
+			return selectorToken;
+		} // func CreateSelectorToken
+
+		public override IPpsColumnDescription GetColumnDescription(string columnName)
+		{
+			SqlColumnInfo column;
+			return columnStore.TryGetValue(columnName, out column) ? column : null;
+		} // func GetColumnDescription
 
 		private SqlConnectionHandle GetSqlConnection(IPpsConnectionHandle connection, bool throwException)
 		{
@@ -978,9 +1199,6 @@ namespace TecWare.PPSn.Server.Sql
 				return c;
 			}
 		} // func IPpsConnectionHandle
-
-		public override PpsDataSelector CreateSelector(IPpsConnectionHandle connection, string name, bool throwException = true)
-			=> new SqlDataSelector(GetSqlConnection(connection, throwException), name, null, null, null);
 
 		public override PpsDataTransaction CreateTransaction(IPpsConnectionHandle connection)
 		{
@@ -1016,5 +1234,25 @@ namespace TecWare.PPSn.Server.Sql
 
 		private static bool IsConnectionOpen(SqlConnection connection)
 			=> connection.State != System.Data.ConnectionState.Closed;
+
+		#region -- DataTable - Helper -----------------------------------------------------
+
+		private static T GetDataRowValue<T>(DataRow row, string columnName, T @default)
+		{
+			var r = row[columnName];
+			if (r == DBNull.Value)
+				return @default;
+
+			try
+			{
+				return r.ChangeType<T>();
+			}
+			catch 
+			{
+				return @default;
+			}
+		} // func GetDataRowValue
+		
+		#endregion
 	} // PpsSqlExDataSource
 }
