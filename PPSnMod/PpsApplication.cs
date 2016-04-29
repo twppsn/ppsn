@@ -203,7 +203,20 @@ namespace TecWare.PPSn.Server
 			if (status == null)
 				status = String.Empty;
 
-			initializationTasks.Add(new InitializationTask() { Order = order, Status = status, Task = task });
+			lock (initializationTasks)
+			{
+				var initTask = new InitializationTask() { Order = order, Status = status, Task = task };
+
+				var index = initializationTasks.BinarySearch(initTask);
+				if (index < 0)
+					initializationTasks.Insert(~index, initTask);
+				else
+				{
+					while (index < initializationTasks.Count && initializationTasks[index].Order == initTask.Order)
+						index++;
+					initializationTasks.Insert(index, initTask);
+				}
+			}
 		} // proc RegisterInitializationTask
 
 		public bool IsInitializedSuccessful => isInitializedSuccessful;

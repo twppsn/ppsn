@@ -55,6 +55,9 @@ namespace TecWare.PPSn.Server.Data
 			throw new NotImplementedException();
 		}// func CreateTransaction
 
+		/// <summary>Returns a native column description.</summary>
+		/// <param name="columnName"></param>
+		/// <returns></returns>
 		public virtual IPpsColumnDescription GetColumnDescription(string columnName)
 		{
 			return null;

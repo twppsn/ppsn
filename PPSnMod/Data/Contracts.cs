@@ -52,17 +52,25 @@ namespace TecWare.PPSn.Server.Data
 	/// <summary>Hold's the connection and context data for one user.</summary>
 	public interface IPpsPrivateDataContext : IDisposable
 	{
-		/// <summary></summary>
-		/// <param name="name"></param>
-		/// <param name="customFilter"></param>
-		/// <param name="customOrder"></param>
-		/// <param name="throwException"></param>
+		/// <summary>Creates a selector for a view.</summary>
+		/// <param name="name">Name of the view</param>
+		/// <param name="filter">Filter rules</param>
+		/// <param name="order">Order rules</param>
+		/// <param name="throwException">Should the method throw on an exception on failure.</param>
 		/// <returns></returns>
-		PpsDataSelector CreateSelector(string name, string customFilter = null, string customOrder = null, bool throwException = true);
-		/// <summary></summary>
-		/// <param name="table"></param>
+		PpsDataSelector CreateSelector(string name, string filter = null, string order = null, bool throwException = true);
+		/// <summary>Create selector for a view (lua tables based).</summary>
+		/// <param name="table">Same arguments, like the c# version.</param>
 		/// <returns></returns>
 		PpsDataSelector CreateSelector(LuaTable table);
+
+		///// <summary>Creates a transaction to manipulate data.</summary>
+		///// <param name="dataSource"></param>
+		///// <param name="throwException"></param>
+		///// <returns></returns>
+		//PpsDataTransaction CreateTransaction(string dataSource, bool throwException = true);
+
+		//PpsDataTransaction CreateTransaction(PpsDataSource dataSource);
 
 		/// <summary>Name of the current user.</summary>
 		string UserName { get; }

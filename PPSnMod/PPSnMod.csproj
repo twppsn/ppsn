@@ -53,6 +53,7 @@
     <Compile Include="Data\Contracts.cs" />
     <Compile Include="Data\PpsDataTransaction.cs" />
     <Compile Include="PpsApplication.cs" />
+    <Compile Include="PpsApplication.Documents.cs" />
     <Compile Include="PpsApplication.User.cs" />
     <Compile Include="PpsApplication.Data.cs" />
     <Compile Include="Data\PpsDataSource.cs" />

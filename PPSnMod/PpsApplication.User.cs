@@ -41,7 +41,7 @@ namespace TecWare.PPSn.Server
 		#region -- class PrivateUserData --------------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
+		/// <summary>This class holds all information for a currently inactive user.</summary>
 		private sealed class PrivateUserData : LuaTable, IDEUser, IDisposable
 		{
 			private readonly PpsApplication application;
@@ -415,14 +415,15 @@ namespace TecWare.PPSn.Server
 					}
 				}
 			} // prop IsActive
-		} // class PrivateDataContext
+		} // class PrivateUserData
 
 		#endregion
 
 		#region -- class PrivateUserDataContext -------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
+		/// <summary>This class holds a active context for a user. It is possible to
+		/// attach objects, that will be disposed on the end of the active process.</summary>
 		private sealed class PrivateUserDataContext : IPpsPrivateDataContext, IDEAuthentificatedUser
 		{
 			private readonly PrivateUserData privateUser;
@@ -474,8 +475,10 @@ namespace TecWare.PPSn.Server
 				}
 
 				// apply filter rules
+				// todo:
 
 				// apply order
+				// todo:
 
 				// create the selector
 				return viewInfo.SelectorToken.CreateSelector(c, throwException);

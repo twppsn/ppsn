@@ -60,7 +60,7 @@
 			<xs:sequence minOccurs="0" maxOccurs="unbounded">
 				<xs:element name="field" minOccurs="0" maxOccurs="unbounded">
 					<xs:annotation>
-						<xs:documentation>Registers a field definition in the system.</xs:documentation>
+						<xs:documentation>Registers a field description in the system.</xs:documentation>
 					</xs:annotation>
 					<xs:complexType>
 						<xs:sequence>
@@ -90,6 +90,14 @@
 								<xs:documentation>Full qualified name of the column.</xs:documentation>
 							</xs:annotation>
 						</xs:attribute>
+						<xs:attribute name="inherited" use="optional">
+							<xs:annotation>
+								<xs:documentation>Base description.</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:list itemType="xs:string" />
+							</xs:simpleType>
+						</xs:attribute>
 					</xs:complexType>
 				</xs:element>
 				<xs:element name="view" minOccurs="0" maxOccurs="unbounded">
@@ -105,6 +113,19 @@
 								<xs:complexType>
 									<xs:simpleContent>
 										<xs:extension base="xs:string">
+											<xs:attribute name="type" use="required">
+												<xs:annotation>
+													<xs:documentation>How is the code parsed. The actual content depends on the datasource.</xs:documentation>
+												</xs:annotation>
+												<xs:simpleType>
+													<xs:restriction base="xs:string"><!-- todo: union with string -->
+														<xs:enumeration value="select" />
+														<xs:enumeration value="file" />
+														<xs:enumeration value="resource" />
+														<xs:enumeration value="view" />
+													</xs:restriction>
+												</xs:simpleType>
+											</xs:attribute>
 											<xs:anyAttribute processContents="lax" />
 										</xs:extension>
 									</xs:simpleContent>
@@ -130,7 +151,7 @@
 										</xs:simpleContent>
 									</xs:complexType>
 								</xs:element>
-								<xs:element name="sort" minOccurs="0" maxOccurs="unbounded">
+								<xs:element name="order" minOccurs="0" maxOccurs="unbounded">
 									<xs:complexType>
 										<xs:simpleContent>
 											<xs:extension base="xs:string">
@@ -160,6 +181,14 @@
 								<xs:documentation>Name for the view.</xs:documentation>
 							</xs:annotation>
 						</xs:attribute>
+						<xs:attribute name="inherited" use="optional">
+							<xs:annotation>
+								<xs:documentation>Base description.</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:list itemType="xs:string" />
+							</xs:simpleType>
+						</xs:attribute>
 					</xs:complexType>
 				</xs:element>
 			</xs:sequence>
@@ -169,6 +198,56 @@
 				</xs:annotation>
 			</xs:attribute>
 		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="document">
+		<xs:annotation>
+			<xs:appinfo>TecWare.PPSn.Server.PpsDocument</xs:appinfo>
+			<xs:documentation></xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="ConfigItemType">
+					<xs:sequence minOccurs="0" maxOccurs="unbounded">
+						<xs:element name="table" minOccurs="0" maxOccurs="unbounded">
+							<xs:complexType>
+								<xs:sequence minOccurs="0" maxOccurs="unbounded">
+									<xs:element name="column" minOccurs="0" maxOccurs="unbounded">
+										<xs:complexType>
+											<xs:attribute name="name" type="xs:string" use="required">
+											</xs:attribute>
+											<xs:attribute name="fieldName" type="xs:string" use="required">
+											</xs:attribute>
+											<xs:attribute name="primary" type="xs:string" use="optional" default="false">
+											</xs:attribute>
+										</xs:complexType>
+									</xs:element>
+								</xs:sequence>
+								<xs:attribute name="name" type="xs:string" use="required">
+									<xs:annotation>
+										<xs:documentation>Name of the table</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+					<xs:attribute name="abstract" use="optional" default="false">
+						<xs:annotation>
+							<xs:documentation>Is this document useable or only abstract definition.</xs:documentation>
+						</xs:annotation>
+					</xs:attribute>
+					<xs:attribute name="inherited" use="optional">
+						<xs:annotation>
+							<xs:documentation>Base description.</xs:documentation>
+						</xs:annotation>
+						<xs:simpleType>
+							<xs:list itemType="xs:string" />
+						</xs:simpleType>
+					</xs:attribute>
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	
 	</xs:element>
 
 	<xs:element name="package" substitutionGroup="configItem">
@@ -181,6 +260,9 @@
 		<xs:complexType>
 			<xs:complexContent>
 				<xs:extension base="ConfigLogItemType">
+					<xs:sequence minOccurs="0" maxOccurs="unbounded">
+						<xs:element ref="pps:document" minOccurs="0" maxOccurs="unbounded" />
+					</xs:sequence>
 				</xs:extension>
 			</xs:complexContent>
 		</xs:complexType>
@@ -199,6 +281,7 @@
 					<xs:sequence minOccurs="0" maxOccurs="unbounded">
 						<xs:element ref="pps:dataSource" minOccurs="0" maxOccurs="unbounded" />
 						<xs:element ref="pps:register" minOccurs="0" maxOccurs="unbounded" />
+						<xs:element ref="pps:document" minOccurs="0" maxOccurs="unbounded" />
 					</xs:sequence>
 					<xs:attribute name="mainDataSource" type="xs:string" use="optional">
 						<xs:annotation>

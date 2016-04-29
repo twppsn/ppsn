@@ -230,6 +230,8 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		#region -- Register ---------------------------------------------------------------
+
 		private static string GetRegisterName(XElement x)
 		{
 			var name = x.GetAttribute("name", String.Empty);
@@ -245,7 +247,6 @@ namespace TecWare.PPSn.Server
 			fieldDescription[name] = fieldInfo;
 			if (source != null) // create a provider specific field
 			{
-
 				RegisterInitializationTask(10001, "Resolve columns", () =>
 				{
 					fieldInfo.SetColumnDescription(source.GetColumnDescription(name));
@@ -271,6 +272,8 @@ namespace TecWare.PPSn.Server
 			lock (viewController)
 				viewController[view.Name] = view;
 		} // func RegisterView
+
+		#endregion
 
 		public PpsDataSource GetDataSource(string name, bool throwException)
 		{
@@ -321,8 +324,10 @@ namespace TecWare.PPSn.Server
 		[DEConfigHttpAction("viewget", IsSafeCall = false)]
 		private void HttpViewGetAction(IDEContext r)
 		{
-			// v=views,...&filter=list&sort=list&customFilter=?&customSort=&start&count
-			// views => view,view2(c1+c2),view3(c3+c4)
+			// v=views,...&filter=list&sort=list=&start&count
+			// ???views => view,view2(c1+c2),view3(c3+c4)
+			// sort: +FIELD,-FIELD,:DEF
+			// ???filter: :DEF-and-not-or-xor-contains-
 			
 			var startAt = 0;
 			var count = Int32.MaxValue;
