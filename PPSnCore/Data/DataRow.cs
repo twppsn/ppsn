@@ -23,6 +23,7 @@ using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
 using TecWare.DE.Stuff;
+using TecWare.DE.Data;
 using static TecWare.PPSn.Data.PpsDataHelper;
 
 namespace TecWare.PPSn.Data
@@ -49,7 +50,7 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class PpsDataRow : IDynamicMetaObjectProvider, INotifyPropertyChanged
+	public class PpsDataRow : IDynamicMetaObjectProvider, IDataRow, INotifyPropertyChanged
 	{
 		#region -- class NotSetValue ------------------------------------------------------
 
@@ -807,6 +808,10 @@ namespace TecWare.PPSn.Data
 		/// <summary>Zugehörige Datentabelle</summary>
 		public PpsDataTable Table { get { return table; } internal set { table = value; } }
 
+		string[] IDataColumns.ColumnNames => (from c in table.Columns select c.Name).ToArray();
+		Type[] IDataColumns.ColumnTypes => (from c in table.Columns select c.DataType).ToArray();
+		int IDataColumns.ColumnCount => table.Columns.Count;
+
 		// -- Static --------------------------------------------------------------
 
 		private static readonly PropertyInfo RowStatePropertyInfo;
@@ -856,6 +861,11 @@ namespace TecWare.PPSn.Data
 		{
 			return (from pi in typeInfo.DeclaredProperties where pi.Name == "Item" && pi.GetIndexParameters()[0].ParameterType == typeof(int) select pi).FirstOrDefault();
 		} // func FindItemIndex
+
+		public bool TryGetProperty(string name, out object value)
+		{
+			throw new NotImplementedException();
+		}
 
 		#endregion
 	} // class PpsDataRow

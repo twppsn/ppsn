@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -10,7 +25,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Neo.IronLua;
-using TecWare.DES.Networking;
+using TecWare.DE.Networking;
 
 namespace TecWare.PPSn.Data
 {
@@ -221,16 +236,16 @@ namespace TecWare.PPSn.Data
 			// Fetch the lines
 			var currentIndex = loadedCount;
 			var fetchedRows = 0;
-			foreach (var c in shell.GetListData(fetchSource))
+			foreach (var c in shell.GetViewData(fetchSource))
 			{
 				// All lines are simple lua tables
 				var t = new LuaTable();
 
 				// copy the columns
-				for (int i = 0; i < c.FieldCount; i++)
+				for (int i = 0; i < c.ColumnCount; i++)
 				{
-					if (!c.IsNull(i))
-						t[c.GetName(i)] = c[i];
+					if (c[i] != null)
+						t[c.ColumnNames[i]] = c[i];
 				}
 
 				// are more data available
