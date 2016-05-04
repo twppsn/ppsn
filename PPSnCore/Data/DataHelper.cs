@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -17,41 +32,46 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public abstract class PpsMetaCollection : IReadOnlyDictionary<string, object>
 	{
-		private Dictionary<string, object> metaInfo = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, object> metaInfo = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
-		protected void Add(string sKey, Func<Type> getDataType, object value)
+		protected void Add(string key, Func<Type> getDataType, object value)
 		{
-			if (String.IsNullOrEmpty(sKey))
+			if (String.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
 			if (value == null)
-				metaInfo.Remove(sKey);
+				metaInfo.Remove(key);
 			else
 			{
-				// Umwandlung der Daten
+				// change the type
 				Type dataType;
-				if (WellknownMetaTypes.TryGetValue(sKey, out dataType))
+				if (WellknownMetaTypes.TryGetValue(key, out dataType))
 					value = Procs.ChangeType(value, dataType);
-				else
+				else if (getDataType != null)
 					value = Procs.ChangeType(value, getDataType());
 
-				// Füge die Daten hinzu
+				// add the key
 				if (value == null)
-					metaInfo.Remove(sKey);
+					metaInfo.Remove(key);
 				else
-					metaInfo[sKey] = value;
+					metaInfo[key] = value;
 			}
 		} // proc Add
 
-		public bool ContainsKey(string key)
+		public void Merge(PpsMetaCollection otherMeta)
 		{
-			return metaInfo.ContainsKey(key);
-		} // func ContainsKey
+			foreach (var c in otherMeta)
+			{
+				if (!ContainsKey(c.Key))
+					Add(c.Key, null, c.Value);
+			}
+		} // func Merge
+
+		public bool ContainsKey(string key)
+			=> metaInfo.ContainsKey(key);
 
 		public bool TryGetValue(string key, out object value)
-		{
-			return metaInfo.TryGetValue(key, out value);
-		} // func TryGetValue
+			=> metaInfo.TryGetValue(key, out value);
 
 		public T Get<T>(string sKey, T @default)
 		{
@@ -91,8 +111,8 @@ namespace TecWare.PPSn.Data
 			return metaInfo.GetEnumerator();
 		} // func GetEnumerator
 
-		public IEnumerable<string> Keys { get { return metaInfo.Keys; } }
-		public IEnumerable<object> Values { get { return metaInfo.Values; } }
+		public IEnumerable<string> Keys => metaInfo.Keys;
+		public IEnumerable<object> Values => metaInfo.Values;
 		public abstract IReadOnlyDictionary<string, Type> WellknownMetaTypes { get; }
 
 		public object this[string key]
@@ -104,7 +124,7 @@ namespace TecWare.PPSn.Data
 			}
 		} // prop this
 
-		public int Count { get { return metaInfo.Count; } }
+		public int Count => metaInfo.Count;
 	} // class PpsMetaCollection
 
 	#endregion
