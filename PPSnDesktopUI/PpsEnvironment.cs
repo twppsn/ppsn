@@ -1,25 +1,41 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
-using Neo.IronLua;
-using TecWare.DES.Stuff;
-using System.Collections;
-using System.Collections.Specialized;
-using TecWare.PPSn.Data;
-using TecWare.DES.Networking;
 using System.Xml.Linq;
+using Neo.IronLua;
+using TecWare.DE.Networking;
+using TecWare.DE.Stuff;
+using TecWare.DE.Data;
 using TecWare.PPSn.Controls;
-using System.IO;
-using System.Net.Mime;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
-using System.Windows.Data;
 
 namespace TecWare.PPSn
 {
@@ -392,7 +408,7 @@ namespace TecWare.PPSn
 				this.environment = environment;
 			} // ctor
 
-			public BaseWebReqeust this[PpsEnvironmentDefinitionSource source]
+			public BaseWebRequest this[PpsEnvironmentDefinitionSource source]
 			{
 				get
 				{
@@ -415,10 +431,10 @@ namespace TecWare.PPSn
 		private Uri baseUri;									// internal uri for the environment
 		private NetworkCredential userInfo;   // currently credentials of the user
 
-		private BaseWebReqeust request;
-		private BaseWebReqeust localRequest;
+		private BaseWebRequest request;
+		private BaseWebRequest localRequest;
 		private PpsLocalDataStore localStore;
-		private BaseWebReqeust remoteRequest;
+		private BaseWebRequest remoteRequest;
 
 		private LuaCompileOptions luaOptions = LuaDeskop.StackTraceCompileOptions;
 
@@ -463,8 +479,8 @@ namespace TecWare.PPSn
 			localStore = CreateLocalDataStore();
 			WebRequest.RegisterPrefix(baseUri.ToString(), new PpsWebRequestCreate(this));
 
-			request = new BaseWebReqeust(baseUri, Encoding);
-			localRequest = new BaseWebReqeust(new Uri(baseUri, "local/"), Encoding);
+			request = new BaseWebRequest(baseUri, Encoding);
+			localRequest = new BaseWebRequest(new Uri(baseUri, "local/"), Encoding);
 			remoteRequest = null;
 
 			// Register Service
@@ -622,11 +638,12 @@ namespace TecWare.PPSn
 				throw new NotImplementedException();
 		} // func CreateWebRequest
 
-		public IEnumerable<IDataRecord> GetListData(PpsShellGetList arguments)
+		public IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
 		{
-			return localStore.GetListData(arguments);
-		} // func GetListData
-		
+			throw new NotImplementedException();
+			//return localStore.GetListData(arguments);
+		} // func GetViewaDta
+
 		#endregion
 
 		#region -- UI - Helper ------------------------------------------------------------
@@ -717,7 +734,7 @@ namespace TecWare.PPSn
 				using (var r = await request.GetResponseAsync(source.ToString()))
 				{
 					var contentDisposion = r.GetContentDisposition(true);
-					using (var sr = request.GetTextReaderAsync(r, MimeTypes.Lua))
+					using (var sr = request.GetTextReaderAsync(r, MimeTypes.Text.Lua))
 						return Lua.CompileChunk(sr, contentDisposion.FileName, luaOptions, arguments);
 				}
 			}
@@ -811,7 +828,7 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		public WebIndex Web { get; }
 		/// <summary></summary>
-		public BaseWebReqeust BaseRequest => request;
+		public BaseWebRequest BaseRequest => request;
 		/// <summary>Default encodig for strings.</summary>
 		public Encoding Encoding => Encoding.Default;
 

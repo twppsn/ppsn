@@ -104,6 +104,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Controls\text.fx" />
+    <None Include="ppsn.licenseheader" />
     <Resource Include="Images\SizeGrip.png" />
     <Resource Include="Images\EastBottom.png" />
     <Resource Include="Images\EastMiddle.png" />
@@ -117,7 +118,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\PPSnCore\Extern\DESCore\DESCore\DESCore.csproj">
+    <ProjectReference Include="..\..\..\twdes\des\Extern\Core\DESCore\DESCore.csproj">
       <Project>{67528843-e631-4c05-b6e8-514cc8bec7b6}</Project>
       <Name>DESCore</Name>
     </ProjectReference>

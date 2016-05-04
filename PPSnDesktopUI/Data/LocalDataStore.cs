@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
@@ -10,8 +25,8 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Xml.Linq;
 using Neo.IronLua;
-using TecWare.DES.Networking;
-using TecWare.DES.Stuff;
+using TecWare.DE.Networking;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {
@@ -98,9 +113,9 @@ namespace TecWare.PPSn.Data
 
 			var contentType = String.Empty;
 			if (fi.Extension == ".xaml")
-				contentType = MimeTypes.Xaml;
+				contentType = MimeTypes.Application.Xaml;
 			else if (fi.Extension == ".lua")
-				contentType = MimeTypes.Text;
+				contentType = MimeTypes.Text.Plain;
 
 			r.SetResponseData(fi.OpenRead(), contentType);
 		} // func GetResponseDataStream
@@ -115,17 +130,17 @@ namespace TecWare.PPSn.Data
 			System.Data.DataTable dt = null;
 
 			// get the datatable
-			if (!localData.TryGetValue(arguments.ListId, out dt))
+			if (!localData.TryGetValue(arguments.ViewId, out dt))
 			{
-				LoadTestData(@"..\..\..\PPSnDesktop\Local\Data\" + arguments.ListId + ".xml", ref dt);
-				localData[arguments.ListId] = dt;
+				LoadTestData(@"..\..\..\PPSnDesktop\Local\Data\" + arguments.ViewId + ".xml", ref dt);
+				localData[arguments.ViewId] = dt;
 			}
 
 			#region Q&D
-			var filterId = arguments.PreFilterId;
+			var filterId = arguments.Filter;
 			if (!String.IsNullOrEmpty(filterId))
 			{
-				switch (arguments.ListId.ToLower())
+				switch (arguments.ViewId.ToLower())
 				{
 					case "parts":
 						if (filterId == "active")
@@ -147,16 +162,16 @@ namespace TecWare.PPSn.Data
 			}
 			#endregion
 
-			if (!String.IsNullOrEmpty(arguments.CustomFilter))
+			if (!String.IsNullOrEmpty(arguments.Filter))
 			{
 				if (filterExpression.Length > 0)
-					filterExpression += " and OBJKMATCH like '%" + arguments.CustomFilter + "%'";
+					filterExpression += " and OBJKMATCH like '%" + arguments.Filter + "%'";
 				else
-					filterExpression += "OBJKMATCH like '%" + arguments.CustomFilter + "%'";
+					filterExpression += "OBJKMATCH like '%" + arguments.Filter + "%'";
 			}
 
 			// filter data
-			var orderDef = arguments.OrderId;
+			var orderDef = arguments.Order;
 			if (orderDef != null)
 				orderDef = orderDef.Replace("+", " asc").Replace("-", " desc");
 

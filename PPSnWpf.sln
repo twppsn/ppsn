@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnDesktop", "PPSnDesktop\PPSnDesktop.csproj", "{399842B7-9C2D-4C1F-8B39-5D479D9C66A7}"
 EndProject
@@ -13,9 +13,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnClient", "..\PPSnCore\P
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnCore", "..\PPSnCore\PPSnCore\PPSnCore.csproj", "{F4609545-6D91-4B2D-A811-3201F4934505}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DESCore", "..\PPSnCore\Extern\DESCore\DESCore\DESCore.csproj", "{67528843-E631-4C05-B6E8-514CC8BEC7B6}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnExcel", "PPSnExcel\PPSnExcel.csproj", "{D4900AD1-E946-470E-BC3F-4F041EB2A89D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DESCore", "..\..\twdes\des\Extern\Core\DESCore\DESCore.csproj", "{67528843-E631-4C05-B6E8-514CC8BEC7B6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,14 +39,14 @@ Global
 		{F4609545-6D91-4B2D-A811-3201F4934505}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F4609545-6D91-4B2D-A811-3201F4934505}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F4609545-6D91-4B2D-A811-3201F4934505}.Release|Any CPU.Build.0 = Release|Any CPU
-		{67528843-E631-4C05-B6E8-514CC8BEC7B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{67528843-E631-4C05-B6E8-514CC8BEC7B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{67528843-E631-4C05-B6E8-514CC8BEC7B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{67528843-E631-4C05-B6E8-514CC8BEC7B6}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D4900AD1-E946-470E-BC3F-4F041EB2A89D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D4900AD1-E946-470E-BC3F-4F041EB2A89D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D4900AD1-E946-470E-BC3F-4F041EB2A89D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D4900AD1-E946-470E-BC3F-4F041EB2A89D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67528843-E631-4C05-B6E8-514CC8BEC7B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67528843-E631-4C05-B6E8-514CC8BEC7B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67528843-E631-4C05-B6E8-514CC8BEC7B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67528843-E631-4C05-B6E8-514CC8BEC7B6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

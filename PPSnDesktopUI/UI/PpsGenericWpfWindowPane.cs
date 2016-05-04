@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,8 +31,8 @@ using System.ComponentModel;
 using System.ComponentModel.Design.Serialization;
 using System.Globalization;
 using System.Web;
-using TecWare.DES.Stuff;
-using TecWare.DES.Networking;
+using TecWare.DE.Stuff;
+using TecWare.DE.Networking;
 using System.Xml;
 using System.Collections.Specialized;
 
@@ -31,7 +46,7 @@ namespace TecWare.PPSn.UI
 	{
 		private static readonly XName xnCode = XName.Get("Code", "http://schemas.microsoft.com/winfx/2006/xaml");
 
-		private BaseWebReqeust fileSource;
+		private BaseWebRequest fileSource;
 		private FrameworkElement control;
 
 		private LuaTable arguments; // arguments
@@ -118,7 +133,7 @@ namespace TecWare.PPSn.UI
 			
 			// prepare the base
 			var xamlUri = GetTemplateUri(arguments, true);
-			fileSource = new BaseWebReqeust(new Uri(xamlUri, "."), Environment.Encoding);
+			fileSource = new BaseWebRequest(new Uri(xamlUri, "."), Environment.Encoding);
 
 			// Load the xaml file
 			var xaml = await LoadXamlAsync(arguments, xamlUri);
@@ -169,7 +184,7 @@ namespace TecWare.PPSn.UI
 					// read the file name
 					arguments["_filename"] = r.GetContentDisposition().FileName;
 
-					using (var sr = fileSource.GetTextReaderAsync(r, MimeTypes.Xaml))
+					using (var sr = fileSource.GetTextReaderAsync(r, MimeTypes.Application.Xaml))
 					{
 						using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, xamlUri.ToString()))
 							return XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);

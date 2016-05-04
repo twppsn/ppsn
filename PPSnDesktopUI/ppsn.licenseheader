@@ -1,4 +1,6 @@
-﻿#region -- copyright --
+﻿extensions: designer.cs generated.cs
+extensions: .cs
+#region -- copyright --
 //
 // Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
 // European Commission - subsequent versions of the EUPL(the "Licence"); You may
@@ -13,17 +15,3 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace TecWare.PPSn.UI
-{
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Dialog window</summary>
-	public class PpsDialogWindow : PpsWindow
-	{
-	} // class PpsDialogWindow
-}
