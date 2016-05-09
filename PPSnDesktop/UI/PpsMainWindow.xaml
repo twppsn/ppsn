@@ -102,7 +102,7 @@
         </Style>
 
         <SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />
-        <SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnAccentColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.5}" />
+        <SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnAccentColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
 
 		<Style x:Key="NavigatorToggleButtonStyle" TargetType="{x:Type Button}">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -274,7 +274,7 @@
                 </Style>
             </TextBlock.Style>
         </TextBlock>
-    <TextBox x:Name="PART_SearchBox" Grid.Column="1" Grid.ColumnSpan="3" Grid.RowSpan="2" HorizontalAlignment="Right" VerticalAlignment="Top" Width="320" Margin="0,13,170,0" FontSize="14.667" Text="{Binding Path=Navigator.CurrentSearchText,Delay=300,UpdateSourceTrigger=PropertyChanged}">
+		<TextBox x:Name="PART_SearchBox" Grid.Column="1" Grid.ColumnSpan="3" Grid.RowSpan="2" HorizontalAlignment="Right" VerticalAlignment="Top" Width="320" Margin="0,13,170,0" FontSize="14.667" Text="{Binding Path=Navigator.CurrentSearchText,Delay=300,UpdateSourceTrigger=PropertyChanged}">
 			<TextBox.Style>
 				<Style TargetType="TextBox" BasedOn="{StaticResource PPSnSearchBoxStyle}" >
                     <Style.Triggers>
@@ -471,7 +471,7 @@
 			</ContentPresenter.Style>
         </ContentPresenter>
 
-        <uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="5" HorizontalAlignment="Right" Margin="24,24,0,16" Visibility="Collapsed">
+        <uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="5" HorizontalAlignment="Right" Margin="24,24,0,24" Visibility="Collapsed">
             <uiL:PpsCharmbarControl.Style>
                 <Style TargetType="{x:Type UserControl}">
                     <Style.Triggers>

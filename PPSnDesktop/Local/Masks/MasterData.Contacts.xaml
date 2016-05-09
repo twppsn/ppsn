@@ -38,7 +38,7 @@
                                     <ContentPresenter Grid.Column="1" x:Name="PART_Header" ContentSource="Header"/>
                                 </Grid>
 							</Border>
-							<ItemsPresenter x:Name="PART_ItemsHost" />
+							<ItemsPresenter x:Name="PART_ItemsHost"/>
 						</StackPanel>
 						<ControlTemplate.Triggers>
 							<Trigger Property="IsExpanded" Value="false">
@@ -155,7 +155,7 @@
         </ControlTemplate>
 	</ui:PpsGenericWpfControl.Resources>
 
-	<ScrollViewer Style="{StaticResource PPSnScrollViewerStyle}" Padding="24"
+	<ScrollViewer Style="{StaticResource PPSnScrollViewerStyle}" Padding="24" Focusable="False"
 				  Margin="{Binding Path=CharmbarActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ui:PpsWindow}}, Converter={StaticResource CharmbarWidthToPaddingConverter}}">
 		<StackPanel MinWidth="1020" MaxWidth="1020">
 			<Expander Header="Ident" Style="{StaticResource PPSnExpanderStyle}" ExpandDirection="Down" IsExpanded="True">
@@ -206,7 +206,7 @@
 				</Grid>
 			</Expander>
 			<Expander Header="Adressen / Ansprechpartner" Style="{StaticResource PPSnExpanderStyle}" ExpandDirection="Down" IsExpanded="True">
-                <ContentControl x:Name="APART" Template="{StaticResource ApartTemplate}"/>
+                <ContentControl x:Name="APART" Template="{StaticResource ApartTemplate}" Focusable="False"/>
             </Expander>
         </StackPanel>
 	</ScrollViewer>

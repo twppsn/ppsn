@@ -10,7 +10,6 @@
              d:DesignHeight="300" d:DesignWidth="600">
 
     <UserControl.Resources>
-		
 		<Storyboard x:Key="ViewsIncreaseStoryboard" FillBehavior="HoldEnd">
             <DoubleAnimation Storyboard.TargetProperty="Width" To="200" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
         </Storyboard>
@@ -30,7 +29,7 @@
             </ObjectAnimationUsingKeyFrames>
         </Storyboard>
 
-        <Style x:Key="NavigatorViewsButtonStyle" TargetType="{x:Type ToggleButton}">
+		<Style x:Key="NavigatorViewsButtonStyle" TargetType="{x:Type ToggleButton}">
             <Setter Property="Height" Value="32"/>
             <Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
             <Setter Property="Background" Value="Transparent"/>

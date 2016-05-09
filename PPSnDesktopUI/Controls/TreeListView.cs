@@ -41,6 +41,16 @@ namespace TecWare.PPSn.Controls
 		{
 			return item is PpsTreeListViewItem;
 		}
+
+		protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
+		{
+			base.OnItemsChanged(e);
+			if (e.Action == NotifyCollectionChangedAction.Remove)
+			{
+				AlternationExtensions.SetAlternationIndexRecursively((ItemsControl)this, 0);
+			}
+		}
+
 	} // class PpsTreeListView
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -77,7 +87,9 @@ namespace TecWare.PPSn.Controls
 		{
 			base.OnItemsChanged(e);
 			if (e.Action == NotifyCollectionChangedAction.Remove)
+			{
 				Test();
+			}
 		}
 
 		private void OnLoaded(object sender, RoutedEventArgs e)
@@ -99,40 +111,41 @@ namespace TecWare.PPSn.Controls
 			}
 		}
 
-		private static class AlternationExtensions
-		{
-			private static readonly MethodInfo SetAlternationIndexMethod;
+	} // class PpsTreeListViewItem
 
-			static AlternationExtensions()
-				{
-				SetAlternationIndexMethod = typeof(ItemsControl).GetMethod("SetAlternationIndex", BindingFlags.Static | BindingFlags.NonPublic);
+	internal static class AlternationExtensions
+	{
+		private static readonly MethodInfo SetAlternationIndexMethod;
+
+		static AlternationExtensions()
+		{
+			SetAlternationIndexMethod = typeof(ItemsControl).GetMethod("SetAlternationIndex", BindingFlags.Static | BindingFlags.NonPublic);
+		}
+
+		public static int SetAlternationIndexRecursively(ItemsControl control, int firstAlternationIndex)
+		{
+			var alternationCount = control.AlternationCount;
+			if (alternationCount == 0)
+			{
+				return 0;
 			}
 
-			public static int SetAlternationIndexRecursively(ItemsControl control, int firstAlternationIndex)
+			foreach (var item in control.Items)
 			{
-				var alternationCount = control.AlternationCount;
-				if (alternationCount == 0)
+				var container = control.ItemContainerGenerator.ContainerFromItem(item) as TreeViewItem;
+				if (container != null)
 				{
-					return 0;
-				}
-
-				foreach (var item in control.Items)
-				{
-					var container = control.ItemContainerGenerator.ContainerFromItem(item) as TreeViewItem;
-					if (container != null)
+					var nextAlternation = firstAlternationIndex++ % alternationCount;
+					SetAlternationIndexMethod.Invoke(null, new object[] { container, nextAlternation });
+					if (container.IsExpanded)
 					{
-						var nextAlternation = firstAlternationIndex++ % alternationCount;
-						SetAlternationIndexMethod.Invoke(null, new object[] { container, nextAlternation });
-						if (container.IsExpanded)
-						{
-							firstAlternationIndex = SetAlternationIndexRecursively(container, firstAlternationIndex);
-						}
+						firstAlternationIndex = SetAlternationIndexRecursively(container, firstAlternationIndex);
 					}
 				}
-				return firstAlternationIndex;
 			}
+			return firstAlternationIndex;
 		}
-	} // class PpsTreeListViewItem
+	}
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
