@@ -20,8 +20,20 @@
 
 	<pps:ppsn name="ppsn" mainDataSource="main">
 		<pps:sqlExDataSource name="main">
-			<pps:connectionString>Data Source=(localdb)\mssqllocaldb;Initial Catalog=PPSn01;Integrated Security=True</pps:connectionString>
+			<pps:connectionString>Data Source=(localdb)\mssqllocaldb;Initial Catalog=PPSn02;Integrated Security=True</pps:connectionString>
 		</pps:sqlExDataSource>
+		
+		<pps:register source="main">
+			<pps:field name="dbo.Objk.Id" />
+			<pps:field name="dbo.Objk.Guid" />
+			<pps:field name="dbo.Objk.Typ" />
+			<pps:field name="dbo.Objk.Nr" />
+			
+			<pps:view name="test">
+				<pps:source type="select"><![CDATA[SELECT [Id],[Guid],[Typ],[Nr] FROM [dbo].[Objk]]]></pps:source>
+			</pps:view>
+		</pps:register>
+		
 	</pps:ppsn>
-	<?des-merge C:\Projects\PPSnOS\Kunden\TecWare\vGarten-config\Garten\ppsn\Contacts.xml?>
+	<!--<?des-merge C:\Projects\PPSnOS\Kunden\TecWare\vGarten-config\Garten\ppsn\Contacts.xml?>-->
 </des>

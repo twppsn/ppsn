@@ -1,10 +1,10 @@
 ﻿SELECT 
-		p.PERSID		AS ID,
-		p.PERSNAME		AS NAME,
-		p.PERSSECURITY	AS [SECURITY],
-		s.name			AS [LOGIN],
-		s.type			AS PERSLOGINTYPE,
-		p.PERSLOGINVERSION as LOGINVERSION,
-		CASE type WHEN 'S' THEN loginproperty(s.name, 'PasswordHash') ELSE NULL END AS LOGINHASH
-	FROM dbo.PERS AS p INNER JOIN
-		sys.server_principals AS s ON s.name COLLATE database_default = p.PERSLOGIN COLLATE database_default AND s.type IN ('S', 'U') AND s.is_disabled = 0
+		p.Id			AS Id,
+		p.Name			AS Name,
+		p.[Security]	AS [Security],
+		s.name			AS [Login],
+		s.[type]		AS PersLoginType,
+		p.LoginVersion	AS LoginVersion,
+		CASE type WHEN 'S' THEN loginproperty(s.name, 'PasswordHash') ELSE NULL END AS LoginHash
+	FROM hrs.Pers AS p INNER JOIN
+		sys.server_principals AS s ON s.name COLLATE database_default = p.[Login] COLLATE database_default AND s.[type] IN ('S', 'U') AND s.is_disabled = 0
