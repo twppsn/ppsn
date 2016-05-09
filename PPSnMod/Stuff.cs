@@ -34,5 +34,11 @@ namespace TecWare.PPSn.Server
 		public readonly static XName xnSource = PpsNamespace + "source";
 		public readonly static XName xnFilter = PpsNamespace + "filter";
 		public readonly static XName xnOrder = PpsNamespace + "order";
+
+		public readonly static XName xnDataSet = PpsNamespace + "dataset";
+		public readonly static XName xnTable = PpsNamespace + "table";
+		public readonly static XName xnColumn = PpsNamespace + "column";
+		public readonly static XName xnRelation = PpsNamespace + "relation";
+		public readonly static XName xnMeta = PpsNamespace + "meta";
 	} // class PpsStuff
 }

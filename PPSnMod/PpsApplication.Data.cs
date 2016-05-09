@@ -27,23 +27,24 @@ using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
-using TecWare.DES.Data;
+using TecWare.DE.Data;
 using TecWare.PPSn.Server.Data;
 using TecWare.PPSn.Server.Sql;
 using static TecWare.PPSn.Server.PpsStuff;
 
 namespace TecWare.PPSn.Server
 {
-	#region -- class PpsFieldInfo -------------------------------------------------------
+	#region -- class PpsFieldDescription --------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsFieldDescription : IPpsColumnDescription
+	public sealed class PpsFieldDescription : IPpsColumnDescription, IPropertyReadOnlyDictionary, IEnumerable<PropertyValue>
 	{
 		private const string DisplayNameAttributeString = "displayName";
 		private const string MaxLengthAttributeString = "maxLength";
 		private const string DataTypeAttributeString = "dataType";
 
+		private readonly PpsDataSource source;
 		private readonly string name;
 		private readonly XElement xDefinition;
 		private IPpsColumnDescription columnDescription = null;
@@ -52,8 +53,9 @@ namespace TecWare.PPSn.Server
 		private readonly Lazy<int> maxLength;
 		private readonly Lazy<Type> dataType;
 
-		public PpsFieldDescription(string name, XElement xDefinition)
+		public PpsFieldDescription(PpsDataSource source, string name, XElement xDefinition)
 		{
+			this.source = source;
 			this.name = name;
 			this.xDefinition = xDefinition;
 
@@ -101,14 +103,32 @@ namespace TecWare.PPSn.Server
 				return @default;
 			}
 		} // func GetFieldAttribute
-		
+
+		public bool TryGetProperty(string name, out object value)
+		{
+			value = null;
+			return false;
+		} // func TryGetProperty
+
+		public IEnumerator<PropertyValue> GetEnumerator()
+		{
+			yield break;
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+			=> GetEnumerator();
+
+		public PpsDataSource DataSource => source;
 		public string Name => name;
+
+		public IPpsColumnDescription NativeColumnDescription => columnDescription;
 
 		public string DisplayName => displayName.Value;
 
 		public int MaxLength => columnDescription?.MaxLength ?? maxLength.Value;
 		public Type DataType => columnDescription?.DataType ?? dataType.Value;
-	} // class PpsColumnInfo
+		public bool IsIdentity => columnDescription?.IsIdentity ?? false;
+	} // class PpsFieldDescription
 
 	#endregion
 
@@ -140,7 +160,7 @@ namespace TecWare.PPSn.Server
 	/// <summary></summary>
 	public partial class PpsApplication
 	{
-		#region -- class PpsViewDefinitionInit ----------------------------------------------
+		#region -- class PpsViewDefinitionInit --------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
@@ -172,10 +192,96 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		#region -- class DependencyElement ------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class DependencyElement
+		{
+			private readonly PpsDataSource source;
+			private readonly string name;
+			private readonly string[] inherited;
+			private readonly XElement element;
+
+			public DependencyElement(PpsDataSource source, XElement element)
+			{
+				this.source = source;
+
+				this.name = element.GetAttribute("name", String.Empty);
+				if (String.IsNullOrEmpty(this.name))
+					throw new DEConfigurationException(element, "@name is empty.");
+
+				var inheritedStrings = element.GetAttribute("inherited", String.Empty);
+				if (String.IsNullOrEmpty(inheritedStrings))
+					this.inherited = null;
+				else
+				{
+					var tmp = inheritedStrings.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+					inherited = tmp.Length == 0 ? null : tmp;
+				}
+
+				this.element = element;
+			} // ctor
+
+			public override string ToString()
+				=> $"{GetType().Name}: {name}";
+
+			public PpsDataSource Source => source;
+			public string Name => name;
+			public string[] Inherited => inherited;
+			public XElement Element => element;
+
+			private bool IsRegistered { get; set; } = false;
+
+			private static void RegisterDependencyItem(Stack<string> stack, List<DependencyElement> list, DependencyElement dependencyElement, Action<PpsDataSource, string, XElement> registerMethod)
+			{
+				if (dependencyElement.inherited != null)
+				{
+					foreach (var cur in dependencyElement.inherited)
+					{
+						// find the current dependency - lax
+						var index = list.FindIndex(c => String.Compare(c.Name, cur, StringComparison.OrdinalIgnoreCase) == 0);
+						if (index >= 0 && !list[index].IsRegistered)
+						{
+							// check recursion
+							if (stack.FirstOrDefault(c => String.Compare(c, cur, StringComparison.OrdinalIgnoreCase) == 0) != null)
+								throw new ArgumentOutOfRangeException("todo: rek");
+
+							// register the dependency
+							stack.Push(cur);
+							RegisterDependencyItem(stack, list, list[index], registerMethod);
+							list[index].IsRegistered = true;
+						}
+					}
+				}
+
+				registerMethod(dependencyElement.Source, dependencyElement.Name, dependencyElement.Element);
+			} // proc RegisterDependencyItem
+
+			public static void RegisterList(List<DependencyElement> list, Action<PpsDataSource, string, XElement> registerMethod)
+			{
+				var stack = new Stack<string>();
+
+				// resolve dependencies
+				for (var i = 0; i < list.Count; i++)
+				{
+					if (list[i] != null)
+					{
+						stack.Clear();
+						RegisterDependencyItem(stack, list, list[i], registerMethod);
+						list[i].IsRegistered = true;
+					}
+				}
+			} // proc RegisterList
+		} // class DependencyElement
+
+		#endregion
+
 		private PpsSqlExDataSource mainDataSource;
 
 		private Dictionary<string, PpsFieldDescription> fieldDescription = new Dictionary<string, PpsFieldDescription>(StringComparer.OrdinalIgnoreCase);
 		private Dictionary<string, PpsViewDescription> viewController = new Dictionary<string, PpsViewDescription>(StringComparer.OrdinalIgnoreCase);
+		private Dictionary<string, PpsDataSetServerDefinition> datasetDefinitions = new Dictionary<string, PpsDataSetServerDefinition>(StringComparer.OrdinalIgnoreCase);
 
 		#region -- Init/Done --------------------------------------------------------------
 
@@ -202,6 +308,10 @@ namespace TecWare.PPSn.Server
 
 		private void BeginEndConfigurationData(IDEConfigLoading config)
 		{
+			var fieldDeclarationList = new List<DependencyElement>();
+			var viewDeclarationList = new List<DependencyElement>();
+			var datasetDeclarationList = new List<DependencyElement>();
+
 			// register views, columns, ...
 			// we add or overide elements, but there is no deletion -> reboot
 			foreach (var xRegister in config.ConfigNew.Elements(xnRegister))
@@ -213,15 +323,19 @@ namespace TecWare.PPSn.Server
 				foreach (var xNode in xRegister.Elements())
 				{
 					if (xNode.Name == xnField)
-						RegisterField(source, xNode);
+						fieldDeclarationList.Add(new DependencyElement(source, xNode));
 					else if (xNode.Name == xnView)
-						RegisterView(source, xNode);
-					else if (xNode.Name == "selector")
-						throw new NotImplementedException();
+						viewDeclarationList.Add(new DependencyElement(source, xNode));
+					else if (xNode.Name == xnDataSet)
+						datasetDeclarationList.Add(new DependencyElement(source, xNode));
 					else
 						throw new NotImplementedException();
 				}
 			}
+
+			DependencyElement.RegisterList(fieldDeclarationList, RegisterField); // register all fields
+			DependencyElement.RegisterList(viewDeclarationList, RegisterView); // register all views
+			DependencyElement.RegisterList(datasetDeclarationList, RegisterDataSet); // register all datasets
 		} // proc BeginEndConfigurationData
 
 		private void DoneData()
@@ -232,18 +346,9 @@ namespace TecWare.PPSn.Server
 
 		#region -- Register ---------------------------------------------------------------
 
-		private static string GetRegisterName(XElement x)
+		private void RegisterField(PpsDataSource source, string name, XElement x)
 		{
-			var name = x.GetAttribute("name", String.Empty);
-			if (String.IsNullOrEmpty(name))
-				throw new DEConfigurationException(x, "@name is empty.");
-			return name;
-		} // func GetRegisterName
-
-		private void RegisterField(PpsDataSource source, XElement x)
-		{
-			var name = GetRegisterName(x);
-			var fieldInfo = new PpsFieldDescription(name, x); // create generic field definition
+			var fieldInfo = new PpsFieldDescription(source, name, x); // create generic field definition
 			fieldDescription[name] = fieldInfo;
 			if (source != null) // create a provider specific field
 			{
@@ -260,9 +365,8 @@ namespace TecWare.PPSn.Server
 			RegisterView(new PpsViewDescription(selectorToken, displayName ?? selectorToken.Name));
 		} // func RegisterView
 
-		private void RegisterView(PpsDataSource source, XElement x)
+		private void RegisterView(PpsDataSource source, string name, XElement x)
 		{
-			var name = GetRegisterName(x);
 			var cur = new PpsViewDescriptionInit(source, name, x);
 			RegisterInitializationTask(10002, "Build views", async () => RegisterView(await cur.InitializeAsync()));
 		} // func RegisterView
@@ -272,6 +376,13 @@ namespace TecWare.PPSn.Server
 			lock (viewController)
 				viewController[view.Name] = view;
 		} // func RegisterView
+
+		private void RegisterDataSet(PpsDataSource source, string name, XElement x)
+		{
+			var datasetDefinition = source == null ? new PpsDataSetServerDefinition(this, name, x) : source.CreateDocumentDescription(this, name, x);
+			lock (datasetDefinitions)
+				datasetDefinitions.Add(datasetDefinition.Name, datasetDefinition);
+		} // void RegisterDataSet
 
 		#endregion
 
@@ -306,6 +417,20 @@ namespace TecWare.PPSn.Server
 			}
 		} // func GetViewDefinition
 
+		public PpsDataSetServerDefinition GetDataSetDefinition(string name, bool throwException = true)
+		{
+			lock (datasetDefinitions)
+			{
+				PpsDataSetServerDefinition datasetDefinition;
+				if (datasetDefinitions.TryGetValue(name, out datasetDefinition))
+					return datasetDefinition;
+				else if (throwException)
+					throw new ArgumentOutOfRangeException(); // todo:
+				else
+					return null;
+			}
+		} // func GetDataSetDefinition
+
 		private void WriteDataRow(XmlWriter xml, IDataValues row, string[] columnNames)
 		{
 			xml.WriteStartElement("r");
@@ -328,9 +453,9 @@ namespace TecWare.PPSn.Server
 			// ???views => view,view2(c1+c2),view3(c3+c4)
 			// sort: +FIELD,-FIELD,:DEF
 			// ???filter: :DEF-and-not-or-xor-contains-
-			
-			var startAt = 0;
-			var count = Int32.MaxValue;
+
+			var startAt = r.GetProperty("s", 0);
+			var count = r.GetProperty("c", Int32.MaxValue);
 
 			var ctx = r.GetUser<IPpsPrivateDataContext>();
 

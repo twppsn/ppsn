@@ -33,11 +33,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Neo.Lua, Version=5.3.0.0, Culture=neutral, PublicKeyToken=fdb0cd4fe8a6e3b2, processorArchitecture=MSIL">
-      <HintPath>..\packages\NeoLua.1.2.4\lib\net45\Neo.Lua.dll</HintPath>
+      <HintPath>..\packages\NeoLua.1.2.5\lib\net45\Neo.Lua.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Neo.Lua.Desktop, Version=5.3.0.0, Culture=neutral, PublicKeyToken=fdb0cd4fe8a6e3b2, processorArchitecture=MSIL">
-      <HintPath>..\packages\NeoLua.1.2.4\lib\net45\Neo.Lua.Desktop.dll</HintPath>
+      <HintPath>..\packages\NeoLua.1.2.5\lib\net45\Neo.Lua.Desktop.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -51,6 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\Contracts.cs" />
+    <Compile Include="Data\PpsDataSetServer.cs" />
     <Compile Include="Data\PpsDataTransaction.cs" />
     <Compile Include="PpsApplication.cs" />
     <Compile Include="PpsApplication.Documents.cs" />
@@ -73,7 +74,7 @@
       <Project>{6a13ee24-ae1a-4242-8f61-0e32f1e9e37d}</Project>
       <Name>ServerLib</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Extern\PPSnCore\PPSnCore\PPSnCore.csproj">
+    <ProjectReference Include="..\..\PPSnCore\PPSnCore\PPSnCore.csproj">
       <Project>{f4609545-6d91-4b2d-a811-3201f4934505}</Project>
       <Name>PPSnCore</Name>
     </ProjectReference>

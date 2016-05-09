@@ -28,8 +28,9 @@ using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
-using TecWare.DES.Data;
+using TecWare.DE.Data;
 using TecWare.PPSn.Server.Data;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Server.Sql
 {
@@ -150,6 +151,7 @@ namespace TecWare.PPSn.Server.Sql
 			public string Name => name;
 			public Type DataType => fieldType;
 			public int MaxLength => GetDataRowValue(row, "ColumnSize", Int32.MaxValue);
+			public bool IsIdentity => false;
 		} // class PpsDataResultColumnDescription
 
 		#endregion
@@ -712,6 +714,15 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
+		#region -- interface ISqlColumnInfo -------------------------------------------------
+
+		private interface ISqlColumnInfo : IPpsColumnDescription
+		{
+			SqlTableInfo Table { get; }
+		} // interface ISqlColumnInfo
+
+		#endregion
+
 		#region -- class SqlTableInfo -----------------------------------------------------
 
 		private sealed class SqlTableInfo
@@ -743,7 +754,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- class SqlColumnInfo ----------------------------------------------------
 
-		private sealed class SqlColumnInfo : IPpsColumnDescription
+		private sealed class SqlColumnInfo : ISqlColumnInfo
 		{
 			private readonly SqlTableInfo table;
 			private readonly int columnId;
@@ -772,6 +783,8 @@ namespace TecWare.PPSn.Server.Sql
 
 			public SqlParameter CreateSqlParameter(string parameterName, object value)
 				=> new SqlParameter(parameterName, sqlType, maxLength, ParameterDirection.Input, isNull, precision, scale, name, DataRowVersion.Current, value);
+
+			#region -- GetFieldType, GetSqlType -----------------------------------------------
 
 			private static Type GetFieldType(byte systemTypeId)
 			{
@@ -909,6 +922,8 @@ namespace TecWare.PPSn.Server.Sql
 				}
 			} // func GetSqlType
 
+			#endregion
+
 			public SqlTableInfo Table => table;
 			public int ColumnId => columnId;
 			public string Name => name;
@@ -920,6 +935,104 @@ namespace TecWare.PPSn.Server.Sql
 			Type IPpsColumnDescription.DataType => fieldType;
 		} // class SqlColumnInfo
 
+		#endregion
+
+		#region -- SqlDataSetDefinition -----------------------------------------------------
+
+		private sealed class SqlDataSetDefinition : PpsDataSetServerDefinition
+		{
+			#region -- class SqlFieldBinding---------------------------------------------------
+
+			///////////////////////////////////////////////////////////////////////////////
+			/// <summary></summary>
+			private class SqlFieldBinding
+			{
+				private readonly PpsDataColumnDefinition field;
+				private readonly ISqlColumnInfo fieldSource;
+				
+				public SqlFieldBinding(PpsDataColumnDefinition field, ISqlColumnInfo fieldSource)
+				{
+					this.field = field;
+					this.fieldSource = fieldSource;
+				} // ctor
+			} // class SqlFieldBinding
+
+			#endregion
+
+			#region -- class SqlFieldBinding---------------------------------------------------
+
+			///////////////////////////////////////////////////////////////////////////////
+			/// <summary></summary>
+			private class SqlTableBinding
+			{
+				private readonly SqlDataSetDefinition dataSetDefinition;
+				private readonly PpsDataTableDefinition table;
+
+				private readonly List<SqlTableInfo> tableBindings = new List<SqlTableInfo>();
+				private readonly List<SqlFieldBinding> fieldBindings = new List<SqlFieldBinding>();
+
+				public SqlTableBinding(SqlDataSetDefinition dataSetDefinition, PpsDataTableDefinition table)
+				{
+					this.table = table;
+
+					// collect the columns to the table binding
+					foreach (PpsDataColumnDefinitionServer c in table.Columns)
+					{
+						if (c.FieldDescription == null || c.FieldDescription.DataSource != dataSetDefinition) // emit null field
+						{
+							fieldBindings.Add(new SqlFieldBinding(c, null));
+						}
+						else // emit bind field
+						{
+							var columnInfo = c.FieldDescription?.NativeColumnDescription as ISqlColumnInfo;
+							if (columnInfo == null)
+								throw new ArgumentNullException(); // todo: dürfte nicht passieren
+
+							fieldBindings.Add(new SqlFieldBinding(c, columnInfo));
+
+							// bind table
+							if (tableBindings.IndexOf(columnInfo.Table) == -1)
+								tableBindings.Add(columnInfo.Table);
+						}
+					}
+
+					// find relations between the tables
+					if (tableBindings.Count > 1)
+					{
+						throw new NotImplementedException("todo: multi select");
+					}
+				} // ctor
+
+				public void GenerateLoadCommand()
+				{
+				} // proc GenerateLoadCommand
+
+			} // class SqlTableBinding
+
+			#endregion
+
+			private readonly PpsSqlExDataSource dataSource;
+			private readonly List<SqlTableBinding> tableBindings = new List<SqlTableBinding>();
+			
+			public SqlDataSetDefinition(IServiceProvider sp, PpsSqlExDataSource dataSource, string name, XElement config)
+				: base(sp, name, config)
+			{
+				this.dataSource = dataSource;
+			} // ctor
+
+			public override void EndInit()
+			{
+				base.EndInit(); // initialize columns
+
+				// collect the schema of the document
+				foreach (var table in TableDefinitions)
+					tableBindings.Add(new SqlTableBinding(this, table)); // create table binding (it depends on a equal index)
+
+
+
+			} // proc EndInit
+		} // class SqlDataSetDefinition
+		
 		#endregion
 
 		private readonly PpsApplication application;

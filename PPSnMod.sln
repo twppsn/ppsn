@@ -1,19 +1,19 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnMod", "PPSnMod\PPSnMod.csproj", "{56F95A2C-ABDB-49CF-91D9-E01D7E3A23A1}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{54BD090E-1A47-4CA8-BE9B-0D108FF3CD0E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnCore", "Extern\PPSnCore\PPSnCore\PPSnCore.csproj", "{F4609545-6D91-4B2D-A811-3201F4934505}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerLib", "..\..\twdes\des\ServerLib\ServerLib.csproj", "{6A13EE24-AE1A-4242-8F61-0E32F1E9E37D}"
 EndProject
 Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "PPSnMaster", "PPSnMaster\PPSnMaster.sqlproj", "{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DESCore", "..\..\twdes\des\Extern\Core\DESCore\DESCore.csproj", "{67528843-E631-4C05-B6E8-514CC8BEC7B6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnCore", "..\PPSnCore\PPSnCore\PPSnCore.csproj", "{F4609545-6D91-4B2D-A811-3201F4934505}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,10 +25,6 @@ Global
 		{56F95A2C-ABDB-49CF-91D9-E01D7E3A23A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{56F95A2C-ABDB-49CF-91D9-E01D7E3A23A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{56F95A2C-ABDB-49CF-91D9-E01D7E3A23A1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F4609545-6D91-4B2D-A811-3201F4934505}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F4609545-6D91-4B2D-A811-3201F4934505}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F4609545-6D91-4B2D-A811-3201F4934505}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F4609545-6D91-4B2D-A811-3201F4934505}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6A13EE24-AE1A-4242-8F61-0E32F1E9E37D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6A13EE24-AE1A-4242-8F61-0E32F1E9E37D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6A13EE24-AE1A-4242-8F61-0E32F1E9E37D}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -43,13 +39,17 @@ Global
 		{67528843-E631-4C05-B6E8-514CC8BEC7B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{67528843-E631-4C05-B6E8-514CC8BEC7B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{67528843-E631-4C05-B6E8-514CC8BEC7B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F4609545-6D91-4B2D-A811-3201F4934505}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4609545-6D91-4B2D-A811-3201F4934505}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4609545-6D91-4B2D-A811-3201F4934505}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4609545-6D91-4B2D-A811-3201F4934505}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{F4609545-6D91-4B2D-A811-3201F4934505} = {54BD090E-1A47-4CA8-BE9B-0D108FF3CD0E}
 		{6A13EE24-AE1A-4242-8F61-0E32F1E9E37D} = {54BD090E-1A47-4CA8-BE9B-0D108FF3CD0E}
 		{67528843-E631-4C05-B6E8-514CC8BEC7B6} = {54BD090E-1A47-4CA8-BE9B-0D108FF3CD0E}
+		{F4609545-6D91-4B2D-A811-3201F4934505} = {54BD090E-1A47-4CA8-BE9B-0D108FF3CD0E}
 	EndGlobalSection
 EndGlobal

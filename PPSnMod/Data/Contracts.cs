@@ -126,6 +126,7 @@ namespace TecWare.PPSn.Server.Data
 		string Name { get; }
 		int MaxLength { get; }
 		Type DataType { get; }
+		bool IsIdentity { get; }
 	} // interface IPpsProviderColumnDescription
 
 	///////////////////////////////////////////////////////////////////////////////

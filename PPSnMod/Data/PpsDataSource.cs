@@ -20,7 +20,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using TecWare.DE.Server;
-using TecWare.DES.Data;
+using TecWare.DE.Data;
 using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server.Data
@@ -62,5 +62,10 @@ namespace TecWare.PPSn.Server.Data
 		{
 			return null;
 		} // func GetColumnDescription
+
+		public virtual PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config)
+		{
+			return new PpsDataSetServerDefinition(sp, documentName, config);
+		} // func CreateDocumentDescription
 	} // class PpsDataSource
 }
