@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Xml.Linq;
 using Microsoft.Office.Tools.Excel;
-using TecWare.DES.Stuff;
+using TecWare.DE.Stuff;
 using TecWare.PPSn;
 using TecWare.PPSn.Data;
 using Excel = Microsoft.Office.Interop.Excel;
