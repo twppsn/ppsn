@@ -425,7 +425,7 @@ namespace TecWare.PPSn.Server
 				if (datasetDefinitions.TryGetValue(name, out datasetDefinition))
 					return datasetDefinition;
 				else if (throwException)
-					throw new ArgumentOutOfRangeException(); // todo:
+					throw new ArgumentOutOfRangeException($"Dataset definition '{name}' not found.");
 				else
 					return null;
 			}

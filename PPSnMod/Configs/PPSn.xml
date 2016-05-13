@@ -35,5 +35,5 @@
 		</pps:register>
 		
 	</pps:ppsn>
-	<!--<?des-merge C:\Projects\PPSnOS\Kunden\TecWare\vGarten-config\Garten\ppsn\Contacts.xml?>-->
+	<?des-merge C:\Projects\PPSnOS\Kunden\TecWare\vGarten-config\Garten\ppsn\Contacts.xml?>
 </des>

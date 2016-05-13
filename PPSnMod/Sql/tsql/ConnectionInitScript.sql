@@ -24,3 +24,14 @@ SELECT
 	FROM sys.columns c
 		INNER JOIN sys.objects t ON (c.object_id = t.object_id)
 	WHERE t.type = 'U' and c.is_computed = 0;
+-- foreign keys
+SELECT 
+		o.object_id,
+		o.name, 
+		f.parent_object_id,
+		f.parent_column_id,
+		f.referenced_object_id,
+		f.referenced_column_id
+	FROM sys.objects o 
+		INNER JOIN sys.foreign_key_columns f ON (o.object_id = f.constraint_object_id) 
+;	

@@ -61,6 +61,7 @@
     <Compile Include="Data\PpsDataSelector.cs" />
     <Compile Include="PpsPackage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Sql\PpsSqlDataSetDefinition.cs" />
     <Compile Include="Sql\PpsSqlExDataSource.cs" />
     <Compile Include="Sql\PpsSqlDataSource.cs" />
     <Compile Include="Stuff.cs" />

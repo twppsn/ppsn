@@ -714,23 +714,42 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- interface ISqlColumnInfo -------------------------------------------------
+		#region -- class SqlRelationInfo --------------------------------------------------
 
-		private interface ISqlColumnInfo : IPpsColumnDescription
+		// todo: new name, new position
+		internal sealed class SqlRelationInfo
 		{
-			SqlTableInfo Table { get; }
-		} // interface ISqlColumnInfo
+			private readonly int objectId;
+			private readonly string name;
+			private readonly SqlColumnInfo parentColumn;
+			private readonly SqlColumnInfo referencedColumn;
+
+			public SqlRelationInfo(int objectId, string name, SqlColumnInfo parentColumn, SqlColumnInfo referencedColumn)
+			{
+				this.objectId = objectId;
+				this.name = name;
+				this.parentColumn = parentColumn;
+				this.referencedColumn = referencedColumn;
+			} // ctor
+
+			public int RelationId => objectId;
+			public string Name => name;
+			public SqlColumnInfo ParentColumn => parentColumn;
+			public SqlColumnInfo ReferncedColumn => referencedColumn;
+		} // class SqlRelationInfo
 
 		#endregion
 
 		#region -- class SqlTableInfo -----------------------------------------------------
 
-		private sealed class SqlTableInfo
+		// todo: new name, new position
+		internal sealed class SqlTableInfo
 		{
 			private readonly int objectId;
 			private readonly string schema;
 			private readonly string name;
 			private readonly int primaryColumnId;
+			private readonly List<SqlRelationInfo> relationInfo = new List<SqlRelationInfo>();
 			private readonly Lazy<SqlColumnInfo> primaryColumn;
 
 			public SqlTableInfo(Func<int, int, SqlColumnInfo> resolveColumn, SqlDataReader r)
@@ -743,18 +762,26 @@ namespace TecWare.PPSn.Server.Sql
 				this.primaryColumn = new Lazy<SqlColumnInfo>(() => resolveColumn(objectId, primaryColumnId));
 			} // ctor
 
+			internal void AddRelation(SqlRelationInfo sqlRelationInfo)
+			{
+				relationInfo.Add(sqlRelationInfo);
+			} // proc AddRelation
+
 			public int TableId => objectId;
 			public string Schema => schema;
 			public string Name => name;
 			public string FullName => schema + "." + name;
 			public SqlColumnInfo PrimaryKey => primaryColumn.Value;
+
+			public IEnumerable<SqlRelationInfo> RelationInfo => relationInfo;
 		} // class SqlTableInfo
 
 		#endregion
 
 		#region -- class SqlColumnInfo ----------------------------------------------------
 
-		private sealed class SqlColumnInfo : ISqlColumnInfo
+		// todo: new name, new position
+		internal sealed class SqlColumnInfo : IPpsColumnDescription
 		{
 			private readonly SqlTableInfo table;
 			private readonly int columnId;
@@ -927,6 +954,7 @@ namespace TecWare.PPSn.Server.Sql
 			public SqlTableInfo Table => table;
 			public int ColumnId => columnId;
 			public string Name => name;
+			public string NativeName => name;
 			public Type FieldType => fieldType;
 			public bool IsNull => isNull;
 			public bool IsIdentity => isIdentity;
@@ -935,104 +963,6 @@ namespace TecWare.PPSn.Server.Sql
 			Type IPpsColumnDescription.DataType => fieldType;
 		} // class SqlColumnInfo
 
-		#endregion
-
-		#region -- SqlDataSetDefinition -----------------------------------------------------
-
-		private sealed class SqlDataSetDefinition : PpsDataSetServerDefinition
-		{
-			#region -- class SqlFieldBinding---------------------------------------------------
-
-			///////////////////////////////////////////////////////////////////////////////
-			/// <summary></summary>
-			private class SqlFieldBinding
-			{
-				private readonly PpsDataColumnDefinition field;
-				private readonly ISqlColumnInfo fieldSource;
-				
-				public SqlFieldBinding(PpsDataColumnDefinition field, ISqlColumnInfo fieldSource)
-				{
-					this.field = field;
-					this.fieldSource = fieldSource;
-				} // ctor
-			} // class SqlFieldBinding
-
-			#endregion
-
-			#region -- class SqlFieldBinding---------------------------------------------------
-
-			///////////////////////////////////////////////////////////////////////////////
-			/// <summary></summary>
-			private class SqlTableBinding
-			{
-				private readonly SqlDataSetDefinition dataSetDefinition;
-				private readonly PpsDataTableDefinition table;
-
-				private readonly List<SqlTableInfo> tableBindings = new List<SqlTableInfo>();
-				private readonly List<SqlFieldBinding> fieldBindings = new List<SqlFieldBinding>();
-
-				public SqlTableBinding(SqlDataSetDefinition dataSetDefinition, PpsDataTableDefinition table)
-				{
-					this.table = table;
-
-					// collect the columns to the table binding
-					foreach (PpsDataColumnDefinitionServer c in table.Columns)
-					{
-						if (c.FieldDescription == null || c.FieldDescription.DataSource != dataSetDefinition) // emit null field
-						{
-							fieldBindings.Add(new SqlFieldBinding(c, null));
-						}
-						else // emit bind field
-						{
-							var columnInfo = c.FieldDescription?.NativeColumnDescription as ISqlColumnInfo;
-							if (columnInfo == null)
-								throw new ArgumentNullException(); // todo: dürfte nicht passieren
-
-							fieldBindings.Add(new SqlFieldBinding(c, columnInfo));
-
-							// bind table
-							if (tableBindings.IndexOf(columnInfo.Table) == -1)
-								tableBindings.Add(columnInfo.Table);
-						}
-					}
-
-					// find relations between the tables
-					if (tableBindings.Count > 1)
-					{
-						throw new NotImplementedException("todo: multi select");
-					}
-				} // ctor
-
-				public void GenerateLoadCommand()
-				{
-				} // proc GenerateLoadCommand
-
-			} // class SqlTableBinding
-
-			#endregion
-
-			private readonly PpsSqlExDataSource dataSource;
-			private readonly List<SqlTableBinding> tableBindings = new List<SqlTableBinding>();
-			
-			public SqlDataSetDefinition(IServiceProvider sp, PpsSqlExDataSource dataSource, string name, XElement config)
-				: base(sp, name, config)
-			{
-				this.dataSource = dataSource;
-			} // ctor
-
-			public override void EndInit()
-			{
-				base.EndInit(); // initialize columns
-
-				// collect the schema of the document
-				foreach (var table in TableDefinitions)
-					tableBindings.Add(new SqlTableBinding(this, table)); // create table binding (it depends on a equal index)
-
-
-
-			} // proc EndInit
-		} // class SqlDataSetDefinition
-		
 		#endregion
 
 		private readonly PpsApplication application;
@@ -1149,6 +1079,7 @@ namespace TecWare.PPSn.Server.Sql
 					cmd.CommandType = CommandType.Text;
 					cmd.CommandText = GetResourceScript("ConnectionInitScript.sql");
 
+					// read all tables
 					using (SqlDataReader r = cmd.ExecuteReader(CommandBehavior.Default))
 					{
 						while (r.Read())
@@ -1167,6 +1098,7 @@ namespace TecWare.PPSn.Server.Sql
 						if (!r.NextResult())
 							throw new InvalidOperationException();
 
+						// read all columns of the tables
 						while (r.Read())
 						{
 							try
@@ -1177,6 +1109,22 @@ namespace TecWare.PPSn.Server.Sql
 							catch (Exception e)
 							{
 								Log.Except($"Column initialization failed: {r.GetValue(2)}", e);
+							}
+						}
+
+						if (!r.NextResult())
+							throw new InvalidOperationException();
+
+						// read all relations between the tables
+						while (r.Read())
+						{
+							var tableInfo = ResolveTableById( r.GetInt32(2)); // table
+							if (tableInfo != null)
+							{
+								var parentColumn = ResolveColumnById(tableInfo.TableId, r.GetInt32(3));
+								var referencedColumn = ResolveColumnById(r.GetInt32(4), r.GetInt32(5));
+
+								tableInfo.AddRelation(new SqlRelationInfo(r.GetInt32(0), r.GetString(1), parentColumn, referencedColumn));
 							}
 						}
 					}
@@ -1318,6 +1266,9 @@ namespace TecWare.PPSn.Server.Sql
 			var c = GetSqlConnection(connection, true);
 			return new SqlDataTransaction(this, c.ForkConnection());
 		} // func CreateTransaction
+
+		public override PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config)
+			=> new PpsSqlDataSetDefinition(sp, this, documentName, config);
 
 		public bool IsConnected
 		{

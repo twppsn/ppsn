@@ -28,11 +28,22 @@ using static TecWare.PPSn.Server.PpsStuff;
 
 namespace TecWare.PPSn.Server.Data
 {
-	#region -- class PpsDataColumnDefinitionServer --------------------------------------
+	#region -- enum PpsDataColumnParentRelationType -------------------------------------
+
+	public enum PpsDataColumnParentRelationType
+	{
+		None,
+		Root,
+		Relation
+	} // enum PpsDataColumnParentRelationType
+
+	#endregion
+
+	#region -- class PpsDataValueColumnServerDefinition ---------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class PpsDataColumnDefinitionServer : PpsDataColumnDefinition
+	public sealed class PpsDataColumnServerDefinition : PpsDataColumnDefinition
 	{
 		#region -- class PpsDataColumnMetaCollectionServer --------------------------------
 
@@ -42,7 +53,12 @@ namespace TecWare.PPSn.Server.Data
 		{
 			public PpsDataColumnMetaCollectionServer(XElement xColumnDefinition)
 			{
-				//PPSnDataSetServerClass.LoadMetaFromConfiguration(xColumnDefinition, WellknownMetaTypes, Add);
+				PpsDataSetServerDefinition.AddMetaFromElement(xColumnDefinition, WellknownMetaTypes, Add);
+			} // ctor
+
+			public PpsDataColumnMetaCollectionServer(PpsDataColumnMetaCollectionServer clone)
+				: base(clone)
+			{
 			} // ctor
 
 			public void Update(string key, Type type, object value)
@@ -55,23 +71,88 @@ namespace TecWare.PPSn.Server.Data
 
 		private readonly string fieldName;
 		private readonly PpsDataColumnMetaCollectionServer metaInfo;
+		private readonly PpsDataSetParameterServerDefinition relatedParameter;
 		private PpsFieldDescription fieldDescription = null;
-		
-		public PpsDataColumnDefinitionServer(PpsDataTableDefinition tableDefinition, XElement xColumn)
-			: base(tableDefinition, xColumn.GetAttribute("name", String.Empty))
-		{
-			this.fieldName = xColumn.GetAttribute("fieldName", (string)null);
-			if (String.IsNullOrEmpty(fieldName))
-				throw new DEConfigurationException(xColumn, "@fieldName is empty.");
 
-			this.metaInfo = new PpsDataColumnMetaCollectionServer(xColumn);
+		private readonly PpsDataColumnParentRelationType parentType = PpsDataColumnParentRelationType.None;
+		private readonly string parentTableName;
+		private readonly string parentColumnName;
+
+		private PpsDataColumnServerDefinition(PpsDataTableDefinition tableDefinition, PpsDataColumnServerDefinition clone)
+			: base(tableDefinition, clone)
+		{
+			this.fieldName = clone.fieldName;
+			this.metaInfo = new PpsDataColumnMetaCollectionServer(clone.metaInfo);
+			this.relatedParameter = clone.relatedParameter;
+			this.fieldDescription = clone.fieldDescription;
+			this.parentTableName = clone.parentTableName;
+			this.parentColumnName = clone.parentColumnName;
 		} // ctor
+
+		private PpsDataColumnServerDefinition(PpsDataTableDefinition tableDefinition, string fieldName, string columnName, bool isPrimaryKey, bool createRelationColumn, XElement config)
+			: base(tableDefinition, columnName, isPrimaryKey)
+		{
+			this.fieldName = fieldName;
+
+			// relation
+			if (createRelationColumn)
+			{
+				SetRelationName(config.GetAttribute("relationName", (string)null));
+				this.parentType = config.GetAttribute("parentType", PpsDataColumnParentRelationType.None);
+				this.parentTableName = config.GetAttribute("parentTable", (string)null);
+				this.parentColumnName = config.GetAttribute("parentColumn", (string)null);
+			}
+			else
+			{
+				this.parentType = PpsDataColumnParentRelationType.None;
+				this.parentTableName = null;
+				this.parentColumnName = null;
+			}
+
+			// find related parameter
+			var parameterName = config.GetAttribute("parameter", String.Empty);
+			if (!String.IsNullOrEmpty(parameterName))
+			{
+				this.relatedParameter = ((PpsDataSetServerDefinition)tableDefinition.DataSet).FindParameter(parameterName);
+				if (relatedParameter == null)
+					throw new DEConfigurationException(config, $"Parameter '{parameterName}' not found.");
+			}
+			else
+				this.relatedParameter = null;
+
+			this.metaInfo = new PpsDataColumnMetaCollectionServer(config);
+		} // ctor
+
+		public static PpsDataColumnServerDefinition Create(PpsDataTableDefinition tableDefinition, bool createRelationColumn, XElement config)
+		{
+			var columnName = config.GetAttribute("name", (string)null);
+			var isPrimary = config.GetAttribute("isPrimary", false);
+
+			if (String.IsNullOrEmpty(columnName))
+				throw new DEConfigurationException(config, $"@name is empty.");
+
+			var fieldName = config.GetAttribute("fieldName", (string)null);
+			if (String.IsNullOrEmpty(fieldName))
+				throw new DEConfigurationException(config, "@fieldName is empty.");
+
+			if (createRelationColumn)
+				return new PpsDataColumnServerDefinition(tableDefinition, fieldName, columnName, isPrimary, true, config);
+			else
+				return new PpsDataColumnServerDefinition(tableDefinition, fieldName, columnName, isPrimary, false, config);
+		} // func Create
+
+		public override PpsDataColumnDefinition Clone(PpsDataTableDefinition tableOwner)
+			=> new PpsDataColumnServerDefinition(tableOwner, this);
 
 		public override void EndInit()
 		{
+			// update the relation
+			if (parentColumnName != null)
+				SetParentColumn(null, parentTableName, parentColumnName);
+
 			// resolve the correct field
 			var application = ((PpsDataSetServerDefinition)Table.DataSet).Application;
-			fieldDescription = application.GetFieldDescription(fieldName, true);
+			fieldDescription = application.GetFieldDescription(FieldName, true);
 
 			// update the meta information
 			foreach (var c in fieldDescription)
@@ -101,7 +182,7 @@ namespace TecWare.PPSn.Server.Data
 			WriteColumnSchema(xColumn);
 		} // proc WriteScheam
 
-		protected virtual void WriteColumnSchema(XElement xColumn)
+		public void WriteColumnSchema(XElement xColumn)
 		{
 			//// Setze die Meta-Daten
 			//foreach (var m in metaInfo)
@@ -112,104 +193,21 @@ namespace TecWare.PPSn.Server.Data
 			//}
 		} // proc WriteColumnSchema
 
-		public override Type DataType => fieldDescription?.DataType ?? typeof(object);
+		protected override Type GetDataType()
+			=> fieldDescription?.DataType ?? typeof(object);
+
 		public override PpsDataColumnMetaCollection Meta => metaInfo;
+		
+		public PpsDataSetParameterServerDefinition RelatedParameter
+			=> relatedParameter;
+
+		private string FieldName => fieldName;
 
 		public PpsFieldDescription FieldDescription => fieldDescription;
+		public PpsDataColumnParentRelationType ParentType => parentType;
 
 		public override bool IsInitialized => fieldDescription != null;
-	} // class PpsDataColumnDefinitionServer
-
-	#endregion
-
-	#region -- class PpsDataSqlColumnServer ---------------------------------------------
-
-	/////////////////////////////////////////////////////////////////////////////////
-	///// <summary></summary>
-	//public class PpsDataSqlColumnServer : PpsDataColumnServer
-	//{
-	//	//private string sTableName;
-	//	//private string sColumnName;
-	//	//private SqlDbType sqlType = (SqlDbType)(-1);
-	//	//private int iLength = -1;
-
-	//	public PpsDataSqlColumnServer(PpsDataTableDefinition tableDefinition, XElement xColumn)
-	//		: base(tableDefinition, xColumn)
-	//	{
-	//		//string sFieldDefinition = xColumn.GetAttribute("fieldname", String.Empty);
-	//		//if (String.IsNullOrEmpty(sFieldDefinition))
-	//		//	throw new DEConfigException(xColumn, "Kein Sql-Mapping angegeben.");
-
-	//		//string[] fieldNameParts = sFieldDefinition.Split('.');
-	//		//if (fieldNameParts.Length >= 2 && fieldNameParts.Length <= 3)
-	//		//{
-	//		//	// Parse den Namen
-	//		//	sTableName = fieldNameParts.Length == 2 ? fieldNameParts[0] : fieldNameParts[0] + '.' + fieldNameParts[1];
-	//		//	sColumnName = fieldNameParts[fieldNameParts.Length - 1];
-	//		//}
-	//		//else
-	//		//	throw new DEConfigException(xColumn, "Mapping konnte nicht geparst werden.");
-	//	} // ctor
-
-	//	//internal void InitSql(SqlDataReader r, int i, DataTable dtSchema)
-	//	//{
-	//	//	//// Setze den Typ
-	//	//	//DataType = r.GetFieldType(i);
-
-	//	//	//// Hole die weiteren Eigenschaften ab
-	//	//	//DataRow rowSchema = dtSchema.Rows[i];
-	//	//	//sqlType = (SqlDbType)(int)rowSchema["ProviderType"];
-	//	//	//if (sqlType == SqlDbType.NVarChar ||
-	//	//	//	sqlType == SqlDbType.NChar ||
-	//	//	//	sqlType == SqlDbType.Char ||
-	//	//	//	sqlType == SqlDbType.VarChar ||
-	//	//	//	sqlType == SqlDbType.Binary ||
-	//	//	//	sqlType == SqlDbType.VarBinary)
-	//	//	//{
-	//	//	//	iLength = (int)rowSchema["ColumnSize"];
-
-	//	//	//	// Aktualisiere die Meta Daten
-	//	//	//	UpdateMetaData("MaxLength", typeof(int), iLength.ToString());
-	//	//	//}
-	//	//} // proc InitSql
-
-	//	//public bool IsPrimary { get { return Definition.GetAttribute("primary", false); } }
-	//	//public bool IsNullable { get { return Definition.GetAttribute("nullable", true); } }
-
-	//	//public SqlDbType SqlType { get { return sqlType; } }
-	//	//public int SqlColumnSize { get { return iLength; } }
-
-	//	//public string SqlTableName { get { return sTableName; } }
-	//	//public string SqlColumnName { get { return sColumnName; } }
-	//} // class PpsDataSqlColumnServer
-
-	#endregion
-
-	#region -- class PpsDataSqlRelationColumnServer -------------------------------------
-
-	//public class PpsDataSqlRelationColumnServer : PpsDataSqlColumnServer
-	//{
-	//	//private string sParentTable;
-	//	//private string sParentColumn;
-
-	//	public PpsDataSqlRelationColumnServer(PpsDataTableDefinition tableDefinition, XElement xColumn)
-	//		: base(tableDefinition, xColumn)
-	//	{
-	//		//this.sParentTable = xColumn.GetAttribute("parentTable", String.Empty);
-	//		//this.sParentColumn = xColumn.GetAttribute("parentColumn", String.Empty);
-	//	} // ctor
-
-	//	protected override void WriteColumnSchema(XElement xColumn)
-	//	{
-	//		base.WriteColumnSchema(xColumn);
-
-	//		//xColumn.SetAttributeValue("parentTable", sParentTable);
-	//		//xColumn.SetAttributeValue("parentColumn", sParentColumn);
-	//	} // proc WriteWriteColumnSchema
-
-	//	//public string ParentTable { get { return sParentTable; } }
-	//	//public string ParentColumn { get { return sParentColumn; } }
-	//} // class PpsDataSqlRelationColumnServer
+	} // class PpsDataColumnServerDefinition
 
 	#endregion
 
@@ -217,7 +215,7 @@ namespace TecWare.PPSn.Server.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsDataTableServerDefinition : PpsDataTableDefinition
+	public class PpsDataTableServerDefinition : PpsDataTableDefinition
 	{
 		private static readonly Dictionary<string, Type> wellknownMetaTypes = new Dictionary<string, Type>();
 
@@ -243,9 +241,9 @@ namespace TecWare.PPSn.Server.Data
 			foreach (var c in xTable.Elements())
 			{
 				if (c.Name == xnColumn)
-					AddColumn(new PpsDataColumnDefinitionServer(this, c));
-				//else if (c.Name == xnRelation)
-				//	AddColumn(new PpsDataSqlRelationColumnServer(this, c));
+					AddColumn(PpsDataColumnServerDefinition.Create(this, false, c));
+				else if (c.Name == xnRelation)
+					AddColumn(PpsDataColumnServerDefinition.Create(this, true, c));
 				else if (c.Name == xnMeta)
 					metaInfo.Add(c);
 				//else
@@ -253,86 +251,27 @@ namespace TecWare.PPSn.Server.Data
 			}
 		} // ctor
 
-		//public void PrepareInit(SqlCommand cmd, StringBuilder sbCommand)
-		//{
-		//	sqlSchemas = new List<SqlSchema>();
-
-		//	// Suche das Sql-Shema zusammen
-		//	for (int i = 0; i < Columns.Count; i++)
-		//	{
-		//		var sqlColumn = Columns[i] as PPSnDataSqlColumnServer;
-		//		if (sqlColumn != null)
-		//		{
-		//			// Suche das Schema, oder lege es an
-		//			SqlSchema cur = sqlSchemas.Find(c => String.Compare(c.sTableName, sqlColumn.SqlTableName, true) == 0);
-		//			if (cur == null)
-		//				sqlSchemas.Add(cur = new SqlSchema() { sTableName = sqlColumn.SqlTableName });
-
-		//			// Spalte zuordnen
-		//			cur.columns.Add(sqlColumn);
-
-		//			// Primarykey
-		//			if (sqlColumn.IsPrimary)
-		//				cur.primaryKeys.Add(sqlColumn);
-		//		}
-		//	}
-
-		//	// Erzeuge den Befehl (top 0)
-		//	foreach (SqlSchema c in sqlSchemas)
-		//	{
-		//		sbCommand.Append("select top 0 ");
-		//		c.AppendColumnList(sbCommand);
-		//		sbCommand.Append(" from ").Append(c.sTableName);
-		//		sbCommand.AppendLine(";");
-		//	}
-		//} // proc PrepareInit
-
-		//public void FinishInit(SqlDataReader r)
-		//{
-		//	// Hole die Daten aus dem Resultset
-		//	foreach (SqlSchema c in sqlSchemas)
-		//	{
-		//		if (r.FieldCount != c.columns.Count)
-		//			throw new ArgumentException(String.Format("field count missmatch bei {0}.", c.sTableName));
-
-		//		DataTable dtSchema = r.GetSchemaTable();
-		//		for (int i = 0; i < r.FieldCount; i++)
-		//			c.columns[i].InitSql(r, i, dtSchema);
-
-		//		r.NextResult();
-		//	}
-
-		//	EndInit();
-		//} // proc FinishInit
-
 		protected override void EndInit()
 		{
-			//PpsDataSource commonSource = null;
-
 			// fetch column information
-			foreach (PpsDataColumnDefinitionServer c in Columns)
-			{
+			foreach (PpsDataColumnServerDefinition c in Columns)
 				c.EndInit();
-
-				//if (!c.IsInitialized)
-				//	throw new ArgumentException("column not initialized."); // todo:
-
-				//var tmp = c.FieldDescription.DataSource;
-				//if (tmp != null)
-				//{
-				//	if (commonSource == null)
-				//		commonSource = tmp;
-				//	else if (commonSource != tmp)
-				//		throw new ArgumentException("mixing is not allowed."); // todo:
-				//}
-			}
-
-			// generate the load connector
-			
-
 
 			base.EndInit();
 		} // proc EndInit
+
+		public void Merge(PpsDataTableDefinition t)
+		{
+			if (IsInitialized)
+				throw new ArgumentException($"table '{Name}' is initialized.");
+
+			// merge meta info
+			metaInfo.Merge(t.Meta);
+
+			// merge columns
+			foreach (var cur in t.Columns)
+				AddColumn(cur.Clone(this));
+		} // proc Merge
 
 		public override PpsDataTable CreateDataTable(PpsDataSet dataset)
 			=> new PpsDataTableServer(this, dataset);
@@ -346,91 +285,11 @@ namespace TecWare.PPSn.Server.Data
 			PpsDataSetServerDefinition.WriteSchemaMetaInfo(xTable, metaInfo);
 
 			// write the columns
-			foreach (PpsDataColumnDefinitionServer column in Columns)
+			foreach (PpsDataColumnServerDefinition column in Columns)
 				column.WriteSchema(xTable);
 
 			xSchema.Add(xTable);
 		} // proc WriteSchema
-
-		//public void PrepareLoad(SqlCommand cmd, StringBuilder sbCommand, LuaTable args)
-		//{
-		//	foreach (SqlSchema c in sqlSchemas)
-		//	{
-		//		sbCommand.Append("select ");
-		//		c.AppendColumnList(sbCommand);
-		//		sbCommand.Append(" from ").Append(c.sTableName);
-		//		sbCommand.Append(" where ");
-		//		bool lConditionAdded = false;
-
-		//		foreach (PPSnDataSqlColumnServer col in c.columns)
-		//		{
-		//			object parameterValue = args.GetMemberValue(col.Name);
-		//			if (parameterValue != null)
-		//			{
-		//				string sParameterName = "@" + col.Name;
-		//				if (lConditionAdded)
-		//					sbCommand.Append(" and ");
-
-		//				sbCommand.Append(col.SqlColumnName);
-		//				sbCommand.Append("=");
-		//				sbCommand.Append(sParameterName);
-
-		//				if (cmd.Parameters.IndexOf(sParameterName) == -1)
-		//					cmd.Parameters.Add(sParameterName, col.SqlType, col.SqlColumnSize).Value = parameterValue ?? DBNull.Value;
-		//			}
-		//			else
-		//			{
-		//				PPSnDataSqlRelationColumnServer relColumn = col as PPSnDataSqlRelationColumnServer;
-		//				if (relColumn != null)
-		//				{
-		//					// todo: besser!
-		//					string sParameterName = "@" + relColumn.ParentColumn;
-		//					if (lConditionAdded)
-		//						sbCommand.Append(" and ");
-
-		//					sbCommand.Append(relColumn.SqlColumnName);
-		//					sbCommand.Append("=");
-		//					sbCommand.Append(sParameterName);
-
-		//					if (cmd.Parameters.IndexOf(sParameterName) == -1)
-		//						cmd.Parameters.Add(sParameterName, col.SqlType, col.SqlColumnSize).Value = parameterValue ?? DBNull.Value;
-		//				}
-		//			}
-		//		}
-
-		//		if (lConditionAdded)
-		//		{
-		//			// todo: zur Sicherheit ne prüfung needs primary key oder so
-		//			sbCommand.Append("1=1");
-		//		}
-
-		//		sbCommand.AppendLine(";");
-		//	}
-		//} // proc PrepareLoad
-
-		//public void FinishLoad(SqlDataReader r, PPSnDataTable table)
-		//{
-		//	// Hole die Daten aus dem Resultset
-		//	foreach (SqlSchema c in sqlSchemas)
-		//	{
-		//		if (r.FieldCount != c.columns.Count)
-		//			throw new ArgumentException(String.Format("field count missmatch bei {0}.", c.sTableName));
-
-		//		if (r.HasRows)
-		//		{
-		//			object[] values = new object[r.FieldCount];
-		//			while (r.Read())
-		//			{
-		//				r.GetValues(values);
-		//				for (int i = 0; i < values.Length; i++)
-		//					if (values[i] == DBNull.Value)
-		//						values[i] = null;
-		//				table.Add(values);
-		//			}
-		//		}
-		//		r.NextResult();
-		//	}
-		//} // proc FinishLoad
 
 		public override PpsDataTableMetaCollection Meta => metaInfo;
 	} // class PpsDataTableServerDefinition
@@ -446,6 +305,40 @@ namespace TecWare.PPSn.Server.Data
 		{
 		} // ctor
 	} // class PpsDataTableServer
+
+	#endregion
+
+	#region -- class PpsDataSetParameterServerDefinition --------------------------------
+
+	public class PpsDataSetParameterServerDefinition
+	{
+		private readonly PpsDataSetServerDefinition dataset;
+		private readonly string name;
+		private readonly string fieldName;
+		private readonly bool isNullable;
+		private PpsFieldDescription field = null;
+
+		public PpsDataSetParameterServerDefinition(PpsDataSetServerDefinition dataset, string name, string fieldName, bool isNullable)
+		{
+			this.dataset = dataset;
+			this.name = name;
+			this.fieldName = fieldName;
+			this.isNullable = isNullable;
+		} // ctor
+
+		public void EndInit()
+		{
+			field = dataset.Application.GetFieldDescription(fieldName);
+		} // proc EndInit
+
+		public string Name => name;
+		public string VariableName => "@" + name;
+		public PpsFieldDescription FieldDescription => field;
+
+		public bool IsInitialized => field != null;
+
+		public bool IsNullable => isNullable;
+	} // class PpsDataSetParameterServerDefinition
 
 	#endregion
 
@@ -478,6 +371,8 @@ namespace TecWare.PPSn.Server.Data
 		private string[] scripts;
 		private PpsDataSetMetaCollectionServerDefinition metaInfo = new PpsDataSetMetaCollectionServerDefinition();
 
+		private readonly List<PpsDataSetParameterServerDefinition> parameters = new List<PpsDataSetParameterServerDefinition>();
+
 		public PpsDataSetServerDefinition(IServiceProvider sp, string name, XElement config)
 		{
 			this.application = sp.GetService<PpsApplication>(true);
@@ -490,24 +385,41 @@ namespace TecWare.PPSn.Server.Data
 			this.scripts = config.GetStrings("scripts", true);
 			
 			// parse data table schema
-			foreach (var c in config.Elements())
+			foreach (var cur in config.Elements())
 			{
-				if (c.Name == xnTable)
+				if (cur.Name == xnTable)
 				{
-					var tableName = c.GetAttribute("name", String.Empty);
+					var tableName = cur.GetAttribute("name", String.Empty);
 					if (String.IsNullOrEmpty(tableName))
-						throw new DEConfigurationException(c, "table needs a name.");
+						throw new DEConfigurationException(cur, "table needs a name.");
 
 					// create a table
 					var table = FindTable(tableName);
 					if (table != null)
-						throw new DEConfigurationException(c, $"table is not unique ('{tableName}')");
+						throw new DEConfigurationException(cur, $"table is not unique ('{tableName}')");
 
-					Add(new PpsDataTableServerDefinition(this, tableName, c));
+					Add(CreateTableDefinition(tableName, cur));
 				}
-				else if (c.Name == xnMeta)
+				else if (cur.Name == xnMeta)
 				{
-					metaInfo.Add(c);
+					metaInfo.Add(cur);
+				}
+				else if (cur.Name == xnParameter)
+				{
+					var parameterName = cur.GetAttribute("name", String.Empty);
+					var fieldName = cur.GetAttribute("fieldName", String.Empty);
+
+					if (String.IsNullOrEmpty(parameterName))
+						throw new DEConfigurationException(cur, "parameter needs a name.");
+					if (String.IsNullOrEmpty(fieldName))
+						throw new DEConfigurationException(cur, "parameter needs a name.");
+
+					// check unique
+					if (ExistParameterByName(parameterName))
+						throw new DEConfigurationException(cur, "parameter is not unique.");
+
+					// add parameter
+					parameters.Add(new PpsDataSetParameterServerDefinition(this, parameterName, fieldName, cur.GetAttribute("isNullable", false)));
 				}
 			} // foreach c
 		} // ctor
@@ -532,7 +444,7 @@ namespace TecWare.PPSn.Server.Data
 						throw new ArgumentNullException($"DataSet '{c}' not found.");
 
 					// check compatiblity
-					if (GetType().IsAssignableFrom(datasetDefinition.GetType()))
+					if (!GetType().IsAssignableFrom(datasetDefinition.GetType()))
 						throw new ArgumentException("Incompatible datasources"); // todo:
 
 					// combine scripts
@@ -542,9 +454,20 @@ namespace TecWare.PPSn.Server.Data
 					// combine meta information
 					metaInfo.Merge(datasetDefinition.Meta);
 
+					// combine parameter
+					foreach (var cur in datasetDefinition.parameters)
+						if (!ExistParameterByName(cur.Name))
+							parameters.Add(cur);
+
 					// combine dataset
 					foreach (var t in datasetDefinition.TableDefinitions)
-						Add(t);
+					{
+						var mergeTable = FindTable(t.Name);
+						if (mergeTable == null)
+							Add(t);
+						else
+							((PpsDataTableServerDefinition)mergeTable).Merge(t);
+					}
 				}
 			}
 
@@ -553,8 +476,22 @@ namespace TecWare.PPSn.Server.Data
 				scriptList.AddRange(scripts);
 			scripts = scriptList.ToArray();
 
+			// resolve parameters
+			foreach (var cur in parameters)
+			{
+				if (!cur.IsInitialized)
+					cur.EndInit();
+			}
+
+			// resolve tables
 			 base.EndInit();
 		} // proc EndInit
+
+		private bool ExistParameterByName(string parameterName)
+			=>  FindParameter(parameterName) != null;
+
+		public PpsDataSetParameterServerDefinition FindParameter(string parameterName)
+			=> parameters.Find(c => String.Compare(c.Name, parameterName, StringComparison.OrdinalIgnoreCase) == 0);
 
 		public object GetService(Type serviceType)
 			=> application.GetService(serviceType);
@@ -580,18 +517,16 @@ namespace TecWare.PPSn.Server.Data
 
 		public string Name => name;
 		public override PpsDataSetMetaCollection Meta => metaInfo;
+		public IReadOnlyList<PpsDataSetParameterServerDefinition> Parameters => parameters;
 		public PpsApplication Application => application;
 
 		// -- Static --------------------------------------------------------------
 
-		//public static void LoadMetaFromConfiguration(XElement xMetaContainer, IReadOnlyDictionary<string, Type> wellknownTypes, Action<string, Func<Type>, object> add)
-		//{
-		//	foreach (XElement m in xMetaContainer.Elements(xnMeta))
-		//		AddMetaFromElement(m, wellknownTypes, add);
-		//} // LoadMetaFromConfiguration
-
 		public static void AddMetaFromElement(XElement xMeta, IReadOnlyDictionary<string, Type> wellknownTypes, Action<string, Func<Type>, object> add)
 		{
+			if (xMeta == null)
+				return;
+
 			var name = xMeta.GetAttribute("name", String.Empty);
 			if (String.IsNullOrEmpty(name))
 				throw new DEConfigurationException(xMeta, "@name is empty.");
