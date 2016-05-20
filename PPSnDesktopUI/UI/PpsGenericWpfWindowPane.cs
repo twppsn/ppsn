@@ -138,7 +138,7 @@ namespace TecWare.PPSn.UI
 			// Load the xaml file
 			var xaml = await LoadXamlAsync(arguments, xamlUri);
 
-			// Load the content of the code-tag, to initialize extend functionality
+			// Load the content of the code-tag, to initialize extended functionality
 			var xCode = xaml.Root.Element(xnCode);
 			var chunk = (LuaChunk)null;
 			if (xCode != null)

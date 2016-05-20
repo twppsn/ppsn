@@ -492,7 +492,8 @@ namespace TecWare.PPSn
 			Dispose(true);
 		} // proc Dispose
 
-		protected virtual PpsLocalDataStore CreateLocalDataStore() => new PpsLocalDataStore(this);
+		protected virtual PpsLocalDataStore CreateLocalDataStore()
+            => new PpsLocalDataStore(this);
 
 		protected virtual void Dispose(bool disposing)
 		{
@@ -887,7 +888,7 @@ namespace TecWare.PPSn
 			return base.OnIndex(key) ?? environment.GetValue(key);
 		} // func OnIndex
 
-		/// <summary>Access to the current environemnt.</summary>
+		/// <summary>Access to the current environment.</summary>
 		[LuaMember("Environment")]
 		public PpsEnvironment Environment { get { return environment; } }
 	} // class LuaEnvironmentTable

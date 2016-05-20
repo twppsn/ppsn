@@ -20,24 +20,24 @@ namespace PPSnExcel
 
 		private async void ThisAddIn_Startup(object sender, System.EventArgs e)
 		{
-			this.app = new App();
+			app = new App();
 
-			// Start the environment
-			environment = new PpsEnvironment(new Uri("http://localhost:8080/"), app.Resources);
+            // Start the environment
+            environment = new PpsEnvironment(new Uri("http://localhost:8080/"), app.Resources);
 			Globals.Ribbons.PpsMenu.Environment = environment;
 			await environment.RefreshAsync();
 			Globals.Ribbons.PpsMenu.Refresh();
-		} // ctor
+        } // event ThisAddIn_Startup
 
-		private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
+        private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
 		{
 			app.Shutdown();
 			Procs.FreeAndNil(ref environment);
-		} // event ThisAddIn_Shutdown
+        } // event ThisAddIn_Shutdown
 
-		#region -- ImportTable ------------------------------------------------------------
+        #region -- ImportTable --------------------------------------------------------------
 
-		internal void ImportTable(object tableName, object tableSourceId)
+        internal void ImportTable(object tableName, object tableSourceId)
 		{
 			// get the active sheet and selection
 			var workSheet = Globals.Factory.GetVstoObject((Excel._Worksheet)Globals.ThisAddIn.Application.ActiveSheet);
@@ -80,15 +80,15 @@ namespace PPSnExcel
 			map.ImportXml(xDoc.ToString(SaveOptions.None), true);
 		} // proc ImportTable
 
-		#endregion
+        #endregion
 
-		#region Von VSTO generierter Code
+        #region Von VSTO generierter Code
 
-		/// <summary>
-		/// Erforderliche Methode für die Designerunterstützung.
-		/// Der Inhalt der Methode darf nicht mit dem Code-Editor geändert werden.
-		/// </summary>
-		private void InternalStartup()
+        /// <summary>
+        /// Erforderliche Methode für die Designerunterstützung.
+        /// Der Inhalt der Methode darf nicht mit dem Code-Editor geändert werden.
+        /// </summary>
+        private void InternalStartup()
 		{
 			this.Startup += new System.EventHandler(ThisAddIn_Startup);
 			this.Shutdown += new System.EventHandler(ThisAddIn_Shutdown);

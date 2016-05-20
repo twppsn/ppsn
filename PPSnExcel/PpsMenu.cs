@@ -57,7 +57,6 @@ namespace PPSnExcel
 		{
 			cmdTable.Enabled = activate;
 		} // proc WorkbookStateChanged
-		
 
 		//private void cmdDataImport_Click(object sender, RibbonControlEventArgs e)
 		//{
@@ -94,9 +93,9 @@ namespace PPSnExcel
 			var wh = new WindowInteropHelper(w);
 			wh.Owner = new IntPtr(application.Hwnd);
 			w.ShowDialog();
-    }
+        } // event cmdReport_Click
 
-		private void cmdTable_Click(object sender, RibbonControlEventArgs e)
+        private void cmdTable_Click(object sender, RibbonControlEventArgs e)
 		{
 			var w = new Wpf.PpsTableImportWindow();
 			var wh = new WindowInteropHelper(w);
@@ -107,16 +106,16 @@ namespace PPSnExcel
 
 		private void cmdStyles_Click(object sender, RibbonControlEventArgs e)
 		{
+            throw new NotImplementedException();
+        } // event cmdStyles_Click
 
-		}
-
-		private void cmdRefresh_Click(object sender, RibbonControlEventArgs e)
+        private void cmdRefresh_Click(object sender, RibbonControlEventArgs e)
 		{
 			var xDoc = XDocument.Load(@"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktop\Local\Data\contacts.xml");
 			xDoc.Root.Element("columns").Remove();
 
 			var map = Globals.ThisAddIn.Application.ActiveWorkbook.XmlMaps.Item[1];
 			map.ImportXml(xDoc.ToString(SaveOptions.None), true);
-		}
-	} // class PpsMenu
+        } // event cmdRefresh_Click
+    } // class PpsMenu
 }

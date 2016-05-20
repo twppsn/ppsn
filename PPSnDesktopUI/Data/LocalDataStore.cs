@@ -27,6 +27,7 @@ using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.DE.Data;
 
 namespace TecWare.PPSn.Data
 {
@@ -35,6 +36,7 @@ namespace TecWare.PPSn.Data
 	public class PpsLocalDataStore : PpsDataStore
 	{
 		#region Q&D
+
 		private class QDRowDataRecord : IDataRecord
 		{
 			private System.Data.DataRowView row;
@@ -57,15 +59,16 @@ namespace TecWare.PPSn.Data
 			public bool IsNull(int fieldIndex) => row[fieldIndex] == DBNull.Value || row[fieldIndex] == null;
 		}
 
-		private Dictionary<string, System.Data.DataTable> localData = new Dictionary<string, System.Data.DataTable>(StringComparer.OrdinalIgnoreCase);
-		#endregion
+        #endregion
 
-		public PpsLocalDataStore(PpsEnvironment environment)
-			: base(environment)
-		{
-		} // ctor
+        private Dictionary<string, System.Data.DataTable> localData = new Dictionary<string, System.Data.DataTable>(StringComparer.OrdinalIgnoreCase);
 
-		private void LoadTestData(string fileName, ref System.Data.DataTable dt)
+        public PpsLocalDataStore(PpsEnvironment environment)
+            : base(environment)
+        {
+        } // ctor
+
+        private void LoadTestData(string fileName, ref System.Data.DataTable dt)
 		{
 			if (dt != null)
 				return;
@@ -123,7 +126,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Override to support a better stream of the locally stored data.</summary>
 		/// <param name="arguments"></param>
 		/// <returns></returns>
-		public override IEnumerable<IDataRecord> GetListData(PpsShellGetList arguments)
+		public override IEnumerable<IDataRow> GetListData(PpsShellGetList arguments)
 		{
 			// get the table
 			string filterExpression = String.Empty;
@@ -185,7 +188,7 @@ namespace TecWare.PPSn.Data
 				}
 		} // func GetListData
 
-		public override IDataRecord GetDetailedData(long objectId, string typ)
+		public override IDataRow GetDetailedData(long objectId, string typ)
 		{
 			return null;
 		} // func GetDetailedData

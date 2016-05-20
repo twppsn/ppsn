@@ -22,8 +22,8 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
-using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.DE.Data;
 
 namespace TecWare.PPSn.Data
 {
@@ -31,69 +31,65 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public abstract class PpsDataStore
 	{
-		#region -- class PpsStoreRequest --------------------------------------------------
+        #region -- class PpsStoreRequest ----------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		protected sealed class PpsStoreRequest : WebRequest
+        ///////////////////////////////////////////////////////////////////////////////
+        /// <summary></summary>
+        protected sealed class PpsStoreRequest : WebRequest
 		{
 			private PpsDataStore store; // owner, that retrieves a resource
 			private Uri uri; // resource
-			private bool aborted = false; // is the request canceled
-			private Func<WebResponse> procGetResponse; // async GetResonse
+			private bool aborted = false; // is the request cancelled
+			private Func<WebResponse> procGetResponse; // async GetResponse
 
 			private string path;
 			private WebHeaderCollection headers;
 			private NameValueCollection arguments;
 
-			#region -- Ctor/Dtor ------------------------------------------------------------
+            public PpsStoreRequest(PpsDataStore store, Uri uri, string path)
+            {
+                this.store = store;
+                this.uri = uri;
+                this.procGetResponse = GetResponse;
+                this.path = path;
 
-			public PpsStoreRequest(PpsDataStore store, Uri uri, string path)
-			{
-				this.store = store;
-				this.uri = uri;
-				this.procGetResponse = GetResponse;
-				this.path = path;
-				
-				arguments = HttpUtility.ParseQueryString(uri.Query);
-			} // ctor
+                arguments = HttpUtility.ParseQueryString(uri.Query);
+            } // ctor
 
-			#endregion
+            #region -- GetResponse --------------------------------------------------------------
 
-			#region -- GetResponse ----------------------------------------------------------
-
-			/// <summary>Handles the request async</summary>
-			/// <param name="callback"></param>
-			/// <param name="state"></param>
-			/// <returns></returns>
-			public override IAsyncResult BeginGetResponse(AsyncCallback callback, object state)
+            /// <summary>Handles the request async</summary>
+            /// <param name="callback"></param>
+            /// <param name="state"></param>
+            /// <returns></returns>
+            public override IAsyncResult BeginGetResponse(AsyncCallback callback, object state)
 			{
 				if (aborted)
 					throw new WebException("Canceled", WebExceptionStatus.RequestCanceled);
 
 				return procGetResponse.BeginInvoke(callback, state);
-			} // func BeginGetResponse
+            } // func BeginGetResponse
 
-			/// <summary></summary>
-			/// <param name="asyncResult"></param>
-			/// <returns></returns>
-			public override WebResponse EndGetResponse(IAsyncResult asyncResult)
+            /// <summary></summary>
+            /// <param name="asyncResult"></param>
+            /// <returns></returns>
+            public override WebResponse EndGetResponse(IAsyncResult asyncResult)
 			{
 				return procGetResponse.EndInvoke(asyncResult);
-			} // func EndGetResponse
+            } // func EndGetResponse
 
-			/// <summary></summary>
-			/// <returns></returns>
-			public override WebResponse GetResponse()
+            /// <summary></summary>
+            /// <returns></returns>
+            public override WebResponse GetResponse()
 			{
 				var response = new PpsStoreResponse(this);
 				store.GetResponseDataStream(response);
 				return response;
-			} // func GetRepsonse
+            } // func GetResponse
 
-			#endregion
+            #endregion
 
-			public override Uri RequestUri => uri;
+            public override Uri RequestUri => uri;
 
 			/// <summary>Arguments of the request</summary>
 			public NameValueCollection Arguments => arguments;
@@ -155,13 +151,13 @@ namespace TecWare.PPSn.Data
 			}
 		} // class PpsStoreRequest
 
-		#endregion
+        #endregion
 
-		#region -- class PpsStoreResponse ----------------------------------------------
+        #region -- class PpsStoreResponse ---------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		protected sealed class PpsStoreResponse : WebResponse
+        ///////////////////////////////////////////////////////////////////////////////
+        /// <summary></summary>
+        protected sealed class PpsStoreResponse : WebResponse
 		{
 			private PpsStoreRequest request;
 
@@ -196,7 +192,8 @@ namespace TecWare.PPSn.Data
 				this.contentType = contentType;
 			} // proc SetResponseData
 
-			public override Stream GetResponseStream() => src;
+			public override Stream GetResponseStream()
+                => src;
 
 			/// <summary></summary>
 			public override long ContentLength
@@ -225,7 +222,6 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-
 		private PpsEnvironment environment;
 
 		public PpsDataStore(PpsEnvironment environment)
@@ -239,19 +235,19 @@ namespace TecWare.PPSn.Data
 		public WebRequest GetRequest(Uri uri, string path)
 		{
 			return new PpsStoreRequest(this, uri, path);
-		} // func GetRequet
+		} // func GetRequest
 
 		/// <summary>Gets the data for the current request.</summary>
 		/// <param name="r">Response that will be returned.</param>
 		protected abstract void GetResponseDataStream(PpsStoreResponse r);
 
-		public virtual IEnumerable<IDataRecord> GetListData(PpsShellGetList arguments)
+		public virtual IEnumerable<IDataRow> GetListData(PpsShellGetList arguments)
 		{
 			// todo: redirect to a http request
 			throw new NotImplementedException();
 		} // func GetListData
 
-		public virtual IDataRecord GetDetailedData(long objectId, string typ)
+		public virtual IDataRow GetDetailedData(long objectId, string typ)
 		{
 			// todo: redirect to a http request
 			throw new NotImplementedException();
