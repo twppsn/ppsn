@@ -63,6 +63,22 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- enum PpsClientAuthentificationType ---------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public enum PpsClientAuthentificationType
+	{
+		/// <summary>Unkown type.</summary>
+		Unknown = 0,
+		/// <summary>Normal unsecure web authentification.</summary>
+		Basic,
+		/// <summary>Windows/Kerberos authentification.</summary>
+		Ntlm
+	} // enum PpsClientAuthentificationType
+
+	#endregion
+
 	#region -- class PpsEnvironmentDefinition -------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -515,20 +531,104 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		protected virtual bool ShowLoginDialog(PpsClientLogin clientLogin)
+			=> false;
+
+		/// <summary>Gets called to request the user information.</summary>
+		/// <param name="type">Authentification type</param>
+		/// <param name="realm">Realm of the server.</param>
+		/// <param name="count">Counts the login requests.</param>
+		/// <returns>User information or <c>null</c> for cancel.</returns>
+		protected virtual ICredentials GetCredentials(PpsClientAuthentificationType type, string realm, int count)
+		{
+			if (type == PpsClientAuthentificationType.Ntlm && count == 0)
+				return CredentialCache.DefaultCredentials;
+			else
+			{
+				using (PpsClientLogin loginCache = new PpsClientLogin("twppsn:" + info.Uri.AbsoluteUri, realm, count > 1))
+				{
+					if (ShowLoginDialog(loginCache))
+					{
+						loginCache.Commit();
+						return loginCache.GetCredentials();
+					}
+					else
+						return null;
+				}
+			}
+		} // func GetCredentials
+
 		public async Task LoginUserAsync()
 		{
+			const string integratedSecurity = "Integrated Security";
+			var count = 0;
+			var realm = integratedSecurity;
+			var type = PpsClientAuthentificationType.Basic;
 			try
 			{
-				userInfo = CredentialCache.DefaultCredentials;
-				var xLogin = await request.GetXmlAsync("remote/login.xml", MimeTypes.Text.Xml, "user");
+				XElement xLogin = null;
+
+				while (xLogin == null)
+				{
+					// get the user information
+					userInfo = GetCredentials(type, realm, count);
+					if (userInfo == null)
+					{
+						ResetLogin();
+						return;
+					}
+
+					try
+					{
+						// try to login with this user
+						xLogin = await request.GetXmlAsync("remote/login.xml", MimeTypes.Text.Xml, "user");
+					}
+					catch (WebException e)
+					{
+						if (e.Response == null)
+							throw;
+
+						// get the response
+						using (var r = (HttpWebResponse)e.Response)
+						{
+							var code = r.StatusCode;
+
+							if (code == HttpStatusCode.Unauthorized)
+							{
+								// Lese die Authentifizierung aus
+								var authenticate = r.Headers["WWW-Authenticate"];
+
+								if (authenticate.StartsWith("Basic realm=", StringComparison.OrdinalIgnoreCase)) // basic network authentification
+								{
+									type = PpsClientAuthentificationType.Basic;
+									realm = authenticate.Substring(12);
+									if (!String.IsNullOrEmpty(realm) && realm[0] == '"')
+										realm = realm.Substring(1, realm.Length - 2);
+								}
+								else if (authenticate.IndexOf("NTLM", StringComparison.OrdinalIgnoreCase) >= 0) // Windows authentification
+								{
+									type = PpsClientAuthentificationType.Ntlm;
+									realm = integratedSecurity;
+								}
+								else
+								{
+									type = PpsClientAuthentificationType.Unknown;
+									realm = "Unknown";
+								}
+							}
+							else
+								throw;
+						}
+					}
+				} // while xLogin
+
 				userName = xLogin.GetAttribute("displayName", userInfo.ToString());
 
 				OnUsernameChanged();
 			}
 			catch
 			{
-				userName = null;
-				userInfo = null;
+				ResetLogin();
 				throw;
 			}
 		} // proc LoginUser
@@ -536,10 +636,15 @@ namespace TecWare.PPSn
 		public async Task LogoutUserAsync()
 		{
 			await Task.Yield();
+			ResetLogin();
+		} // proc LogoutUser
+
+		private void ResetLogin()
+		{
 			userName = null;
 			userInfo = null;
 			OnUsernameChanged();
-		} // proc LogoutUser
+		} // proc ResetLogin
 
 		protected virtual void OnUsernameChanged()
 			=> UsernameChanged?.Invoke(this, EventArgs.Empty);
@@ -557,7 +662,11 @@ namespace TecWare.PPSn
 			// refresh data
 			await RefreshAsync();
 
-			isOnline = true;
+			if (!isOnline)
+			{
+				isOnline = true;
+				OnIsOnlineChanged();
+			}
 		} // func StartOnlineMode
 
 		/// <summary>Loads basic data for the environment.</summary>

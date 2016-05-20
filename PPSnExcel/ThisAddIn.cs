@@ -40,7 +40,7 @@ namespace PPSnExcel
 			}
 			else
 			{
-				environment = new PpsEnvironment(ppsLocalEnvironment, app.Resources);
+				environment = new PpsExcelEnvironment(ppsLocalEnvironment, this);
 				try
 				{
 					// Start the environment
@@ -128,5 +128,7 @@ namespace PPSnExcel
 		}
 
 		#endregion
+
+		public App App => app;
 	} // class ThisAddIn
 }

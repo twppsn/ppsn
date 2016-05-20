@@ -193,6 +193,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="PpsExcelEnvironment.cs" />
     <Compile Include="PpsMenu.cs">
       <SubType>Component</SubType>
     </Compile>
