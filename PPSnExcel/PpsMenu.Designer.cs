@@ -43,14 +43,14 @@
 			this.cmdEditTable = this.Factory.CreateRibbonButton();
 			this.button1 = this.Factory.CreateRibbonButton();
 			this.group1 = this.Factory.CreateRibbonGroup();
+			this.loginMenu = this.Factory.CreateRibbonMenu();
 			this.loginGalery = this.Factory.CreateRibbonGallery();
+			this.separator2 = this.Factory.CreateRibbonSeparator();
+			this.loginButton = this.Factory.CreateRibbonButton();
 			this.cmdExtended = this.Factory.CreateRibbonMenu();
 			this.cmdStyles = this.Factory.CreateRibbonButton();
 			this.separator1 = this.Factory.CreateRibbonSeparator();
 			this.cmdOptions = this.Factory.CreateRibbonButton();
-			this.loginMenu = this.Factory.CreateRibbonMenu();
-			this.separator2 = this.Factory.CreateRibbonSeparator();
-			this.loginButton = this.Factory.CreateRibbonButton();
 			this.tabPPSn.SuspendLayout();
 			this.groupData.SuspendLayout();
 			this.group2.SuspendLayout();
@@ -130,6 +130,14 @@
 			this.group1.Label = "Verbindung";
 			this.group1.Name = "group1";
 			// 
+			// loginMenu
+			// 
+			this.loginMenu.Items.Add(this.loginGalery);
+			this.loginMenu.Items.Add(this.separator2);
+			this.loginMenu.Items.Add(this.loginButton);
+			this.loginMenu.Label = "menu1";
+			this.loginMenu.Name = "loginMenu";
+			// 
 			// loginGalery
 			// 
 			this.loginGalery.Label = "Anmelden";
@@ -137,6 +145,17 @@
 			this.loginGalery.ShowImage = true;
 			this.loginGalery.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.loginGalery_Click);
 			this.loginGalery.ItemsLoading += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.loginGalery_ItemsLoading);
+			// 
+			// separator2
+			// 
+			this.separator2.Name = "separator2";
+			// 
+			// loginButton
+			// 
+			this.loginButton.Label = "button2";
+			this.loginButton.Name = "loginButton";
+			this.loginButton.ShowImage = true;
+			this.loginButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.loginButton_Click);
 			// 
 			// cmdExtended
 			// 
@@ -165,24 +184,6 @@
 			this.cmdOptions.Label = "Optionen";
 			this.cmdOptions.Name = "cmdOptions";
 			this.cmdOptions.ShowImage = true;
-			// 
-			// loginMenu
-			// 
-			this.loginMenu.Items.Add(this.loginGalery);
-			this.loginMenu.Items.Add(this.separator2);
-			this.loginMenu.Items.Add(this.loginButton);
-			this.loginMenu.Label = "menu1";
-			this.loginMenu.Name = "loginMenu";
-			// 
-			// separator2
-			// 
-			this.separator2.Name = "separator2";
-			// 
-			// loginButton
-			// 
-			this.loginButton.Label = "button2";
-			this.loginButton.Name = "loginButton";
-			this.loginButton.ShowImage = true;
 			// 
 			// PpsMenu
 			// 

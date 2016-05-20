@@ -32,7 +32,7 @@ namespace PPSnExcel
 			cmdExtended.Visible = Globals.ThisAddIn.Application.ShowDevTools;
 
 			// init events
-			usernameChanged = (s1, e1) => RefreshUsername();
+			usernameChanged = (s1, e1) => App.Current.Dispatcher.BeginInvoke(new Action(RefreshUsername));
 
 			// connection to the excel application
 			application.WorkbookActivate += wb => WorkbookStateChanged(wb, true);
@@ -43,7 +43,7 @@ namespace PPSnExcel
 			// initialize environment
 			if (!isEnvironmentInitialized)
 				InitEnvironment();
-			
+
 			RefreshUsername();
 			RefreshEnvironments();
 			Refresh();
@@ -57,11 +57,11 @@ namespace PPSnExcel
 				return;
 
 			environment.UsernameChanged += usernameChanged;
-			
+
 			RefreshUsername();
 
 			isEnvironmentInitialized = true;
-    } // proc InitMenu
+		} // proc InitMenu
 
 		private void DoneEnvironment(PpsEnvironment oldEnvironment)
 		{
@@ -79,7 +79,7 @@ namespace PPSnExcel
 			loginMenu.Label = environment == null ? "Keine Umgebung" : environment.UsernameDisplay;
 			loginGalery.Label = environment?.Info?.DisplayName ?? "Keine Umgebung";
 			loginButton.Enabled = environment != null;
-			loginButton.Label = environment == null || environment.IsAuthentificated?  "Abmelden": "Anmelden";
+			loginButton.Label = environment != null && environment.IsAuthentificated ? "Abmelden" : "Anmelden";
 		} // proc RefreshUsername
 
 		private void RefreshEnvironments()
@@ -103,7 +103,7 @@ namespace PPSnExcel
 		{
 			cmdTable.Enabled = activate;
 		} // proc WorkbookStateChanged
-		
+
 		//private void cmdDataImport_Click(object sender, RibbonControlEventArgs e)
 		//{
 		//	var w = new Wpf.PpsReportSelectWindow();
@@ -145,7 +145,7 @@ namespace PPSnExcel
 			var wh = new WindowInteropHelper(w);
 			wh.Owner = new IntPtr(application.Hwnd);
 			w.ShowDialog();
-    }
+		}
 
 		private void cmdTable_Click(object sender, RibbonControlEventArgs e)
 		{
@@ -158,9 +158,6 @@ namespace PPSnExcel
 
 		private void cmdStyles_Click(object sender, RibbonControlEventArgs e)
 		{
-
-		Globals.ThisAddIn.RunUISynchron(environment.BaseRequest.GetXmlAsync("/remote/login.xml?action=test&t=1"));
-
 		}
 
 		private void cmdRefresh_Click(object sender, RibbonControlEventArgs e)
@@ -183,5 +180,16 @@ namespace PPSnExcel
 				return;
 			Globals.ThisAddIn.LoginEnvironment(loginGalery.SelectedItem.Tag as PpsEnvironmentInfo);
 		} // event loginGalery_Click
+
+		private void loginButton_Click(object sender, RibbonControlEventArgs e)
+		{
+			if (environment == null)
+				return;
+
+			if (environment.IsAuthentificated)
+				Globals.ThisAddIn.RunUISynchron(environment.LogoutUserAsync());
+			else
+				Globals.ThisAddIn.RunUISynchron(environment.LoginUserAsync());
+		} // event loginButton_Click
 	} // class PpsMenu
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.Office.Tools.Excel;
@@ -43,11 +44,11 @@ namespace PPSnExcel
 				try
 				{
 					// Start the environment
-					RunUISynchron(environment.RefreshAsync());
+					RunUISynchron(environment.StartOnlineMode(CancellationToken.None));
 					Globals.Ribbons.PpsMenu.Environment = environment;
 
 					// Try login
-					environment.LoginUser();
+					RunUISynchron(environment.LoginUserAsync());
 				}
 				catch (Exception ex)
 				{

@@ -366,7 +366,7 @@ namespace TecWare.PPSn
 	/// <summary>Base class for application data. Holds information about view
 	/// classes, exception, connection, synchronisation and the script 
 	/// engine.</summary>
-	public class PpsEnvironment : LuaGlobalPortable, IPpsShell, ICredentials, IDisposable
+	public class PpsEnvironment : LuaGlobalPortable, IPpsShell, IDisposable
 	{
 		public const string EnvironmentService = "PpsEnvironmentService";
 
@@ -431,7 +431,8 @@ namespace TecWare.PPSn
 		private readonly PpsEnvironmentInfo info;     // source information of the environment
 		private readonly Uri baseUri;                 // internal uri for the environment
 
-		private NetworkCredential userInfo;   // currently credentials of the user
+		private ICredentials userInfo;  // currently credentials of the user
+		private string userName;				// display name of the user
 
 		private readonly BaseWebRequest request;
 		private readonly BaseWebRequest localRequest;
@@ -514,28 +515,49 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		public void LoginUser()
+		public async Task LoginUserAsync()
 		{
-			userInfo = CredentialCache.DefaultNetworkCredentials;
+			try
+			{
+				userInfo = CredentialCache.DefaultCredentials;
+				var xLogin = await request.GetXmlAsync("remote/login.xml", MimeTypes.Text.Xml, "user");
+				userName = xLogin.GetAttribute("displayName", userInfo.ToString());
+
+				OnUsernameChanged();
+			}
+			catch
+			{
+				userName = null;
+				userInfo = null;
+				throw;
+			}
 		} // proc LoginUser
 
-		public void LogoutUser()
+		public async Task LogoutUserAsync()
 		{
+			await Task.Yield();
+			userName = null;
+			userInfo = null;
+			OnUsernameChanged();
 		} // proc LogoutUser
 
 		protected virtual void OnUsernameChanged()
-		{
-			var tmp = UsernameChanged;
-			if (tmp != null)
-				tmp(this, EventArgs.Empty);
-		} // proc OnUsernameChanged
+			=> UsernameChanged?.Invoke(this, EventArgs.Empty);
 
 		/// <summary>Queues a request, to check if the server is available. After this the environment and the cache will be updated.</summary>
 		/// <param name="timeout">wait timeout for the server</param>
 		/// <returns></returns>
-		public Task StartOnlineMode(int timeout)
+		public async Task StartOnlineMode(CancellationToken token)
 		{
-			return Task.Delay(1);
+			var xInfo = await request.GetXmlAsync("remote/info.xml", MimeTypes.Text.Xml, "ppsn");
+
+			// update the current info data
+			info.Update(xInfo);
+
+			// refresh data
+			await RefreshAsync();
+
+			isOnline = true;
 		} // func StartOnlineMode
 
 		/// <summary>Loads basic data for the environment.</summary>
@@ -621,15 +643,6 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- ICredentials members ---------------------------------------------------
-
-		NetworkCredential ICredentials.GetCredential(Uri uri, string authType)
-		{
-			return userInfo;
-		} // func ICredentials.GetCredential
-
-		#endregion
-
 		#region -- Data Request -----------------------------------------------------------
 
 		private WebRequest CreateWebRequest(Uri uri)
@@ -659,7 +672,9 @@ namespace TecWare.PPSn
 				if (useCache)
 				{
 				}
-				return WebRequest.Create(info.Uri.ToString() + absolutePath + uri.Query); // todo:
+				var request = WebRequest.Create(info.Uri.ToString() + absolutePath + uri.Query); // todo:
+				request.Credentials = userInfo;
+				return request;
 			}
 		} // func CreateWebRequest
 
@@ -863,13 +878,13 @@ namespace TecWare.PPSn
 		public PpsEnvironmentInfo Info => info;
 
 		/// <summary>Has the application login data.</summary>
-		public bool IsAuthentificated { get { return userInfo != null; } }
+		public bool IsAuthentificated => userInfo != null;
 		/// <summary>Is <c>true</c>, if the application is online.</summary>
 		public bool IsOnline => isOnline;
 		/// <summary>Current user the is logged in.</summary>
-		public string Username => userInfo?.UserName ?? String.Empty;
+		public string Username => userName ?? String.Empty;
 		/// <summary>Display name for the user.</summary>
-		public string UsernameDisplay => IsAuthentificated ? userInfo.UserName : "Nicht angemeldet";
+		public string UsernameDisplay => IsAuthentificated ? userName : "Nicht angemeldet";
 
 		/// <summary></summary>
 		public PpsEnvironmentCollection<PpsDataListItemDefinition> DataListItemTypes => datalistItems;
