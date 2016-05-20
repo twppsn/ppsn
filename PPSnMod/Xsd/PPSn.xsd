@@ -273,10 +273,18 @@
 								<xs:list itemType="xs:string" />
 							</xs:simpleType>
 						</xs:attribute>
-						<xs:attribute name="scripts" type="ScriptList" use="optional">
+						<xs:attribute name="serverScripts" type="ScriptList" use="optional">
 							<xs:annotation>
 								<xs:documentation>Extension for the document.</xs:documentation>
 							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="localScripts" use="optional">
+							<xs:annotation>
+								<xs:documentation>Script files for the local site.</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:list itemType="PathType" />
+							</xs:simpleType>
 						</xs:attribute>
 					</xs:complexType>
 				</xs:element>

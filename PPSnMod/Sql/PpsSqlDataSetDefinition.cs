@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server.Sql
@@ -356,6 +357,18 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
+		#region -- class PpsSqlDataSetServer ----------------------------------------------
+
+		private sealed class PpsSqlDataSetServer : PpsDataSetServer, IPpsLoadableDataSet
+		{
+			public PpsSqlDataSetServer(PpsSqlDataSetDefinition datasetDefinition)
+				: base(datasetDefinition)
+			{
+			} // ctor
+		} // class PpsSqlDataSetServer
+
+		#endregion
+
 		private readonly PpsSqlExDataSource dataSource;
 		private readonly List<PpsSqlDataTableServerDefinition> tableOrder = new List<PpsSqlDataTableServerDefinition>(); // order to load tables
 
@@ -366,6 +379,11 @@ namespace TecWare.PPSn.Server.Sql
 		{
 			this.dataSource = dataSource;
 		} // ctor
+
+		public override PpsDataSet CreateDataSet()
+		{
+			return base.CreateDataSet();
+		} // fu
 
 		protected override PpsDataTableServerDefinition CreateTableDefinition(string tableName, XElement config)
 			=> new PpsSqlDataTableServerDefinition(this, tableName, config);

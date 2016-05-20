@@ -553,11 +553,31 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
+	#region -- interface IPpsLoadableDataSet --------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public interface IPpsLoadableDataSet
+	{
+		/// <summary></summary>
+		/// <param name="properties"></param>
+		void OnBeforeLoad(IPropertyReadOnlyDictionary properties);
+		/// <summary></summary>
+		/// <param name="properties"></param>
+		void OnLoad(IPropertyReadOnlyDictionary properties);
+		/// <summary></summary>
+		/// <param name="properties"></param>
+		void OnAfterLoad(IPropertyReadOnlyDictionary properties);
+	} // interface IPpsLoadableDataSet
+
+	#endregion
+
+
 	#region -- class PpsDataSetServer ---------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Serverseitige Implementierung des DataSets</summary>
-	public sealed class PpsDataSetServer : PpsDataSet
+	public class PpsDataSetServer : PpsDataSet
 	{
 		#region -- enum PpsDataTrigger ----------------------------------------------------
 

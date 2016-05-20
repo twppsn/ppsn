@@ -18,8 +18,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
+using TecWare.DE.Networking;
 using TecWare.DE.Server;
+using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Server.Data;
 
@@ -72,17 +75,52 @@ namespace TecWare.PPSn.Server
 		private XElement HttpShemaAction()
 			=> datasetDefinition.WriteSchema(new XElement("schema"));
 
-		public void HttpLoadAction()
+		[
+		DEConfigHttpAction("load", IsSafeCall = true)
+		]
+		public void HttpLoadAction(IDEContext ctx)
 		{
+			// prepare load
+			var dataset = datasetDefinition.CreateDataSet();
+
+			// create the arguments and call the lua load function
+			var args = new object[] { dataset, new LuaPropertiesTable(ctx) };
+
+			var loadableDataset = dataset as IPpsLoadableDataSet;
+
+			loadableDataset?.OnBeforeLoad(ctx);
+			CallTableMethods("BeforeLoad", args);
+			loadableDataset?.OnLoad(ctx);
+			CallTableMethods("Load", args);
+			loadableDataset?.OnAfterLoad(ctx);
+			CallTableMethods("AfterLoad", args);
+
+			// send a clean document
+			dataset.Commit();
+
+			using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
+			using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
+			{
+				xml.WriteStartDocument();
+				dataset.Write(xml);
+				xml.WriteEndDocument();
+			}
 		} // proc HttpLoadAction
 
-		public void HttpPartialLoadAction()
-		{
-		} // proc HttpPartialLoadAction
-
+		[
+		DEConfigHttpAction("save", IsSafeCall = true)
+		]
 		public void HttpSaveAction()
 		{
-		} // proc HttpLoadAction
+		} // proc HttpSaveAction
+
+		[
+		DEConfigHttpAction("execute", IsSafeCall = true)
+		]
+		public void HttpExecuteAction()
+		{
+		} // proc HttpExecuteAction
+
 	} // class PpsDocument
 
 	#endregion
