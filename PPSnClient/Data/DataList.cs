@@ -25,7 +25,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Neo.IronLua;
-using TecWare.DE.Networking;
+using TecWare.DE.Data;
 
 namespace TecWare.PPSn.Data
 {
@@ -334,22 +334,22 @@ namespace TecWare.PPSn.Data
 			return item;
 		} // proc FetchDetailData
 
-		private void UpdateTableWithRecord(dynamic item, IDataRecord r)
-		{
-			// Update the table, and finish loading
-			if (r != null)
-			{
-				for (int i = 0; i < r.FieldCount; i++)
-					item[r.GetName(i)] = r[i];
-			}
-			item.isLoading = false;
+        private void UpdateTableWithRow(dynamic item, IDataRow r)
+        {
+            // Update the table, and finish loading
+            if (r != null)
+            {
+                for (int i = 0; i < r.ColumnCount; i++)
+                    item[r.ColumnNames[i]] = r[i];
+            }
+            item.isLoading = false;
 
-			// todo: execute a extented function
-		} // proc UpdateTableWithRecord
+            // todo: execute a extented function
+        } // proc UpdateTableWithRow
 
-		#endregion
+        #endregion
 
-		private void OnPropertyChanged([CallerMemberName] string sPropertyName = null)
+        private void OnPropertyChanged([CallerMemberName] string sPropertyName = null)
 		{
 #if LDEBUG
 			DebugPrint("{0} changed.", sPropertyName);
