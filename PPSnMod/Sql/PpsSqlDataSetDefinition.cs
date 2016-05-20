@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
 
@@ -365,6 +366,18 @@ namespace TecWare.PPSn.Server.Sql
 				: base(datasetDefinition)
 			{
 			} // ctor
+
+			public void OnAfterLoad(IPropertyReadOnlyDictionary properties)
+			{
+			}
+
+			public void OnBeforeLoad(IPropertyReadOnlyDictionary properties)
+			{
+			}
+
+			public void OnLoad(IPropertyReadOnlyDictionary properties)
+			{
+			}
 		} // class PpsSqlDataSetServer
 
 		#endregion

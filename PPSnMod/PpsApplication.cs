@@ -19,8 +19,12 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
+using TecWare.DE.Networking;
 using TecWare.DE.Server;
+using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Server.Data;
 using TecWare.PPSn.Server.Sql;
 
 namespace TecWare.PPSn.Server
@@ -222,5 +226,33 @@ namespace TecWare.PPSn.Server
 		public bool IsInitializedSuccessful => isInitializedSuccessful;
 
 		#endregion
+
+		protected override bool OnProcessRequest(IDEContext r)
+		{
+			if (r.RelativeSubPath == "info.xml")
+			{
+				r.WriteObject(
+					new XElement("ppsn",
+						new XAttribute("displayName", DisplayName),
+						new XAttribute("version", "1.0.0.0")
+					)
+				);
+				return true;
+			}
+			else if (r.RelativeSubPath == "login.xml")
+			{
+				// todo: r.DemandToken("USER");
+
+				var ctx = r.GetUser<IPpsPrivateDataContext>();
+				r.WriteObject(
+					new XElement("user",
+						new XAttribute("displayName", ctx.UserName)
+					)
+				);
+				return true;
+			}
+			else
+				return base.OnProcessRequest(r);
+		} // proc OnProcessRequest
 	} // class PpsApplication
 }

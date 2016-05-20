@@ -18,7 +18,7 @@
 	<luaengine>
 	</luaengine>
 
-	<pps:ppsn name="ppsn" mainDataSource="main">
+	<pps:ppsn name="ppsn" mainDataSource="main" displayname="PPSN Demo">
 		<pps:sqlExDataSource name="main">
 			<pps:connectionString>Data Source=(localdb)\mssqllocaldb;Initial Catalog=PPSn02;Integrated Security=True</pps:connectionString>
 		</pps:sqlExDataSource>
