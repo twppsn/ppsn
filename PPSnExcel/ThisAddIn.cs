@@ -57,7 +57,12 @@ namespace PPSnExcel
 			}
 		} // proc LoginEnvironment
 
-		private void RunUISynchron(Task task)
+		public T RunUISynchron<T>(Task<T> task)
+		{
+			return task.Result;
+		} // proc RunUISynchron
+
+		public void RunUISynchron(Task task)
 		{
 			task.Wait();
 		} // proc RunUISynchron

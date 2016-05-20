@@ -159,6 +159,8 @@ namespace PPSnExcel
 		private void cmdStyles_Click(object sender, RibbonControlEventArgs e)
 		{
 
+		Globals.ThisAddIn.RunUISynchron(environment.BaseRequest.GetXmlAsync("/remote/login.xml?action=test&t=1"));
+
 		}
 
 		private void cmdRefresh_Click(object sender, RibbonControlEventArgs e)

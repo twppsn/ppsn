@@ -376,7 +376,7 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		private class PpsWebRequestCreate : IWebRequestCreate
 		{
-			private readonly WeakReference< PpsEnvironment> environment;
+			private readonly WeakReference<PpsEnvironment> environment;
 
 			public PpsWebRequestCreate(PpsEnvironment environment)
 			{
@@ -421,20 +421,23 @@ namespace TecWare.PPSn
 		} // class WebIndex
 
 		#endregion
-		
+
 		/// <summary></summary>
 		public event EventHandler IsOnlineChanged;
 		/// <summary></summary>
 		public event EventHandler UsernameChanged;
 
-		private PpsEnvironmentInfo info;     // remote source
-		private Uri baseUri;									// internal uri for the environment
+		private readonly int environmentId;            // unique id of the environment
+		private readonly PpsEnvironmentInfo info;     // source information of the environment
+		private readonly Uri baseUri;                 // internal uri for the environment
+
 		private NetworkCredential userInfo;   // currently credentials of the user
 
-		private BaseWebRequest request;
-		private BaseWebRequest localRequest;
-		private PpsLocalDataStore localStore;
-		private BaseWebRequest remoteRequest;
+		private readonly BaseWebRequest request;
+		private readonly BaseWebRequest localRequest;
+		private readonly PpsLocalDataStore localStore;
+		private readonly BaseWebRequest remoteRequest;
+		private bool isOnline = false;
 
 		private LuaCompileOptions luaOptions = LuaDeskop.StackTraceCompileOptions;
 
@@ -469,19 +472,21 @@ namespace TecWare.PPSn
 			BindingOperations.EnableCollectionSynchronization(logData, logData.SyncRoot,
 				(collection, context, accessMethod, writeAccess) => currentDispatcher.Invoke(accessMethod)
 			);
-			
+
 			// Start idle implementation
 			idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), currentDispatcher);
 			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer();
 
 			// Register internal uri
-			baseUri = new Uri("http://environment1");
+			lock (environmentCounterLock)
+				this.environmentId = environmentCounter++;
+			baseUri = new Uri($"http://environment{environmentId}.local");
 			localStore = CreateLocalDataStore();
 			WebRequest.RegisterPrefix(baseUri.ToString(), new PpsWebRequestCreate(this));
 
 			request = new BaseWebRequest(baseUri, Encoding);
 			localRequest = new BaseWebRequest(new Uri(baseUri, "local/"), Encoding);
-			remoteRequest = null;
+			remoteRequest = new BaseWebRequest(new Uri(baseUri, "/"), Encoding);
 
 			// Register Service
 			mainResources[EnvironmentService] = this;
@@ -517,7 +522,7 @@ namespace TecWare.PPSn
 		public void LogoutUser()
 		{
 		} // proc LogoutUser
-		
+
 		protected virtual void OnUsernameChanged()
 		{
 			var tmp = UsernameChanged;
@@ -562,11 +567,7 @@ namespace TecWare.PPSn
 		} // proc RefreshAsync
 
 		protected virtual void OnIsOnlineChanged()
-		{
-			var tmp = IsOnlineChanged;
-			if (tmp != null)
-				tmp(this, EventArgs.Empty);
-		} // proc OnIsOnlineChanged
+			=> IsOnlineChanged?.Invoke(this, EventArgs.Empty);
 
 		#region -- Idle service -----------------------------------------------------------
 
@@ -633,10 +634,33 @@ namespace TecWare.PPSn
 
 		private WebRequest CreateWebRequest(Uri uri)
 		{
-			if (uri.AbsolutePath.StartsWith("/local")) // local request
-				return localStore.GetRequest(uri, uri.AbsolutePath.Substring(6));
-			else // todo: wenn nicht /local /remote, dann wähle erste remote dann local
-				throw new NotImplementedException();
+			var useOfflineRequest = !isOnline;
+			var useCache = true;
+			var absolutePath = uri.AbsolutePath;
+
+			// is the local data prefered
+			if (uri.AbsolutePath.StartsWith("/local/"))
+			{
+				absolutePath = absolutePath.Substring(6);
+				useOfflineRequest = true;
+			}
+			else if (uri.AbsolutePath.StartsWith("/remote/"))
+			{
+				absolutePath = absolutePath.Substring(7);
+				useOfflineRequest = false;
+				useCache = false;
+			}
+
+			// create the request
+			if (useOfflineRequest)
+				return localStore.GetRequest(uri, absolutePath);
+			else
+			{
+				if (useCache)
+				{
+				}
+				return WebRequest.Create(info.Uri.ToString() + absolutePath + uri.Query); // todo:
+			}
 		} // func CreateWebRequest
 
 		public IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
@@ -807,7 +831,7 @@ namespace TecWare.PPSn
 			else
 				Traces.AppendText(type, String.Join(", ", args));
 		} // proc LuaTrace
-		
+
 		/// <summary>Send a simple notification to the internal log</summary>
 		/// <param name="args"></param>
 		[LuaMember("print")]
@@ -822,9 +846,7 @@ namespace TecWare.PPSn
 
 		public T FindResource<T>(object resourceKey)
 			where T : class
-		{
-			return mainResources[resourceKey] as T;
-		} // func FindResource 
+			=> mainResources[resourceKey] as T;
 
 		#endregion
 
@@ -843,11 +865,11 @@ namespace TecWare.PPSn
 		/// <summary>Has the application login data.</summary>
 		public bool IsAuthentificated { get { return userInfo != null; } }
 		/// <summary>Is <c>true</c>, if the application is online.</summary>
-		public bool IsOnline => remoteRequest != null;
+		public bool IsOnline => isOnline;
 		/// <summary>Current user the is logged in.</summary>
-		public string Username { get { return userInfo == null ? String.Empty : userInfo.UserName; } }
+		public string Username => userInfo?.UserName ?? String.Empty;
 		/// <summary>Display name for the user.</summary>
-		public string UsernameDisplay { get { return "Nicht angemeldet"; } }
+		public string UsernameDisplay => IsAuthentificated ? userInfo.UserName : "Nicht angemeldet";
 
 		/// <summary></summary>
 		public PpsEnvironmentCollection<PpsDataListItemDefinition> DataListItemTypes => datalistItems;
@@ -855,24 +877,23 @@ namespace TecWare.PPSn
 		public PpsDataListTemplateSelector DataListTemplateSelector => dataListTemplateSelector;
 
 		/// <summary>Dispatcher of the ui-thread.</summary>
-		public Dispatcher Dispatcher { get { return currentDispatcher; } }
+		public Dispatcher Dispatcher => currentDispatcher;
 		/// <summary>Synchronisation</summary>
-		SynchronizationContext IPpsShell.Context { get { return synchronizationContext; } }
+		SynchronizationContext IPpsShell.Context => synchronizationContext;
 
 		/// <summary>Access to the current collected informations.</summary>
-		public PpsTraceLog Traces { get { return logData; } }
+		public PpsTraceLog Traces => logData;
 
 		// -- Static --------------------------------------------------------------
 
+		private static object environmentCounterLock = new object();
+		private static int environmentCounter = 1;
+
 		public static PpsEnvironment GetEnvironment(FrameworkElement ui)
-		{
-			return (PpsEnvironment)ui.FindResource(EnvironmentService);
-		} // func GetEnvironment
+			=> (PpsEnvironment)ui.FindResource(EnvironmentService);
 
 		public static PpsEnvironment GetEnvironment()
-		{
-			return (PpsEnvironment)Application.Current.FindResource(EnvironmentService);
-		} // func GetEnvironment
+			=> (PpsEnvironment)Application.Current.FindResource(EnvironmentService);
 	} // class PpsEnvironment
 
 	#endregion
