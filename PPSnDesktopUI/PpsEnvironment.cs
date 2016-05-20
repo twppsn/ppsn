@@ -563,7 +563,7 @@ namespace TecWare.PPSn
 			const string integratedSecurity = "Integrated Security";
 			var count = 0;
 			var realm = integratedSecurity;
-			var type = PpsClientAuthentificationType.Basic;
+			var type = PpsClientAuthentificationType.Ntlm;
 			try
 			{
 				XElement xLogin = null;
