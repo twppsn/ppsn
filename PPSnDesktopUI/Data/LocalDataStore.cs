@@ -35,40 +35,14 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public class PpsLocalDataStore : PpsDataStore
 	{
-		#region Q&D
+		private Dictionary<string, System.Data.DataTable> localData = new Dictionary<string, System.Data.DataTable>(StringComparer.OrdinalIgnoreCase);
 
-		private class QDRowDataRecord : IDataRecord
+		public PpsLocalDataStore(PpsEnvironment environment)
+				: base(environment)
 		{
-			private System.Data.DataRowView row;
+		} // ctor
 
-			public QDRowDataRecord(System.Data.DataRowView row)
-			{
-				this.row = row;
-			}
-
-			public object this[string fieldName] => row[fieldName];
-
-			public object this[int fieldIndex] => row[fieldIndex];
-
-			public int FieldCount => row.DataView.Table.Columns.Count;
-
-			public Type GetFieldType(int fieldIndex) => row.DataView.Table.Columns[fieldIndex].DataType;
-
-			public string GetName(int fieldIndex) => row.DataView.Table.Columns[fieldIndex].ColumnName;
-
-			public bool IsNull(int fieldIndex) => row[fieldIndex] == DBNull.Value || row[fieldIndex] == null;
-		}
-
-        #endregion
-
-        private Dictionary<string, System.Data.DataTable> localData = new Dictionary<string, System.Data.DataTable>(StringComparer.OrdinalIgnoreCase);
-
-        public PpsLocalDataStore(PpsEnvironment environment)
-            : base(environment)
-        {
-        } // ctor
-
-        private void LoadTestData(string fileName, ref System.Data.DataTable dt)
+		private void LoadTestData(string fileName, ref System.Data.DataTable dt)
 		{
 			if (dt != null)
 				return;
@@ -100,7 +74,7 @@ namespace TecWare.PPSn.Data
 
 			dt.AcceptChanges();
 		} // proc LoadTestData
-				
+
 		protected override void GetResponseDataStream(PpsStoreResponse r)
 		{
 			var actionName = r.Request.Arguments.Get("action");
@@ -184,8 +158,9 @@ namespace TecWare.PPSn.Data
 				{
 					var index = arguments.Start + i;
 					if (index < dv.Count)
-						yield return new QDRowDataRecord(dv[index]);
+						throw new NotImplementedException();
 				}
+			yield break;
 		} // func GetListData
 
 		public override IDataRow GetDetailedData(long objectId, string typ)

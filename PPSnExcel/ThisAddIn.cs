@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.Office.Tools.Excel;
 using TecWare.DE.Stuff;
@@ -15,29 +16,55 @@ namespace PPSnExcel
 {
 	public partial class ThisAddIn
 	{
-		private PpsEnvironment environment;
-		private App app;
+		private PpsEnvironment environment = null;
+		private App app = null;
 
-		private async void ThisAddIn_Startup(object sender, System.EventArgs e)
+		private void ThisAddIn_Startup(object sender, System.EventArgs e)
 		{
-			app = new App();
+			this.app = new App();
+		} // ctor
 
-            // Start the environment
-            environment = new PpsEnvironment(new Uri("http://localhost:8080/"), app.Resources);
-			Globals.Ribbons.PpsMenu.Environment = environment;
-			await environment.RefreshAsync();
-			Globals.Ribbons.PpsMenu.Refresh();
-        } // event ThisAddIn_Startup
-
-        private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
+		private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
 		{
 			app.Shutdown();
-			Procs.FreeAndNil(ref environment);
-        } // event ThisAddIn_Shutdown
+			LoginEnvironment(null);
+		} // event ThisAddIn_Shutdown
 
-        #region -- ImportTable --------------------------------------------------------------
+		public void LoginEnvironment(PpsEnvironmentInfo ppsLocalEnvironment)
+		{
+			if (ppsLocalEnvironment == null) // clear the current environment
+			{
+				Globals.Ribbons.PpsMenu.Environment = null;
+				Procs.FreeAndNil(ref environment);
+			}
+			else
+			{
+				environment = new PpsEnvironment(ppsLocalEnvironment, app.Resources);
+				try
+				{
+					// Start the environment
+					RunUISynchron(environment.RefreshAsync());
+					Globals.Ribbons.PpsMenu.Environment = environment;
 
-        internal void ImportTable(object tableName, object tableSourceId)
+					// Try login
+					environment.LoginUser();
+				}
+				catch (Exception ex)
+				{
+					Globals.Ribbons.PpsMenu.Environment = null;
+					environment.ShowException(ExceptionShowFlags.None, ex, "Excel Addin für PPSn konnte nicht geladen werden.");
+				}
+			}
+		} // proc LoginEnvironment
+
+		private void RunUISynchron(Task task)
+		{
+			task.Wait();
+		} // proc RunUISynchron
+
+		#region -- ImportTable ------------------------------------------------------------
+
+		internal void ImportTable(object tableName, object tableSourceId)
 		{
 			// get the active sheet and selection
 			var workSheet = Globals.Factory.GetVstoObject((Excel._Worksheet)Globals.ThisAddIn.Application.ActiveSheet);
@@ -80,15 +107,15 @@ namespace PPSnExcel
 			map.ImportXml(xDoc.ToString(SaveOptions.None), true);
 		} // proc ImportTable
 
-        #endregion
+		#endregion
 
-        #region Von VSTO generierter Code
+		#region Von VSTO generierter Code
 
-        /// <summary>
-        /// Erforderliche Methode für die Designerunterstützung.
-        /// Der Inhalt der Methode darf nicht mit dem Code-Editor geändert werden.
-        /// </summary>
-        private void InternalStartup()
+		/// <summary>
+		/// Erforderliche Methode für die Designerunterstützung.
+		/// Der Inhalt der Methode darf nicht mit dem Code-Editor geändert werden.
+		/// </summary>
+		private void InternalStartup()
 		{
 			this.Startup += new System.EventHandler(ThisAddIn_Startup);
 			this.Shutdown += new System.EventHandler(ThisAddIn_Shutdown);

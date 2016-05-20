@@ -74,6 +74,7 @@
     <Compile Include="Data\DataStore.cs" />
     <Compile Include="Data\LocalDataStore.cs" />
     <Compile Include="Data\RemoteDataStore.cs" />
+    <Compile Include="PpsEnvironmentInfo.cs" />
     <Compile Include="Stuff.cs" />
     <Compile Include="UI\Converter.cs" />
     <Compile Include="UI\PpsExceptionDialog.xaml.cs">

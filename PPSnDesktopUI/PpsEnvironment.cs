@@ -427,7 +427,7 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		public event EventHandler UsernameChanged;
 
-		private Uri remoteUri;                // remote source
+		private PpsEnvironmentInfo info;     // remote source
 		private Uri baseUri;									// internal uri for the environment
 		private NetworkCredential userInfo;   // currently credentials of the user
 
@@ -453,10 +453,10 @@ namespace TecWare.PPSn
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		public PpsEnvironment(Uri remoteUri, ResourceDictionary mainResources)
+		public PpsEnvironment(PpsEnvironmentInfo info, ResourceDictionary mainResources)
 			: base(new Lua())
 		{
-			this.remoteUri = remoteUri;
+			this.info = info;
 			this.mainResources = mainResources;
 			this.currentDispatcher = Dispatcher.CurrentDispatcher;
 			this.inputManager = InputManager.Current;
@@ -493,7 +493,7 @@ namespace TecWare.PPSn
 		} // proc Dispose
 
 		protected virtual PpsLocalDataStore CreateLocalDataStore()
-            => new PpsLocalDataStore(this);
+			=> new PpsLocalDataStore(this);
 
 		protected virtual void Dispose(bool disposing)
 		{
@@ -539,26 +539,26 @@ namespace TecWare.PPSn
 		{
 			await Task.Yield();
 
-			string p = @"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktop\Local\Templates.xml";
-			if (!File.Exists(p))
-				p = @"..\..\..\PPSnDesktop\Local\Templates.xml";
+			//string p = @"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktop\Local\Templatesa.xml";
+			//if (!File.Exists(p))
+			//	p = @"..\..\..\PPSnDesktop\Local\Templates.xml";
 
-			var xTemplates = XDocument.Load(p);
-			foreach (var xTemplate in xTemplates.Root.Elements("template"))
-			{
-				var key = xTemplate.GetAttribute("key", String.Empty);
-				if (String.IsNullOrEmpty(key))
-					continue;
+			//var xTemplates = XDocument.Load(p);
+			//foreach (var xTemplate in xTemplates.Root.Elements("template"))
+			//{
+			//	var key = xTemplate.GetAttribute("key", String.Empty);
+			//	if (String.IsNullOrEmpty(key))
+			//		continue;
 
-				var typeDef = datalistItems[key];
-				if (typeDef == null)
-				{
-					typeDef = new PpsDataListItemDefinition(this, PpsEnvironmentDefinitionSource.Offline, key);
-					datalistItems.AppendItem(typeDef);
-				}
+			//	var typeDef = datalistItems[key];
+			//	if (typeDef == null)
+			//	{
+			//		typeDef = new PpsDataListItemDefinition(this, PpsEnvironmentDefinitionSource.Offline, key);
+			//		datalistItems.AppendItem(typeDef);
+			//	}
 
-				typeDef.AppendTemplate(xTemplate);
-			}
+			//	typeDef.AppendTemplate(xTemplate);
+			//}
 		} // proc RefreshAsync
 
 		protected virtual void OnIsOnlineChanged()
@@ -649,9 +649,14 @@ namespace TecWare.PPSn
 
 		#region -- UI - Helper ------------------------------------------------------------
 
-		void IPpsShell.BeginInvoke(Action action) => Dispatcher.BeginInvoke(action, DispatcherPriority.ApplicationIdle); // must be idle, that method is invoked after the current changes
-		async Task IPpsShell.InvokeAsync(Action action) => await Dispatcher.InvokeAsync(action);
-		async Task<T> IPpsShell.InvokeAsync<T>(Func<T> func) => await Dispatcher.InvokeAsync<T>(func);
+		void IPpsShell.BeginInvoke(Action action)
+			=> Dispatcher.BeginInvoke(action, DispatcherPriority.ApplicationIdle); // must be idle, that method is invoked after the current changes
+
+		async Task IPpsShell.InvokeAsync(Action action)
+			=> await Dispatcher.InvokeAsync(action);
+
+		async Task<T> IPpsShell.InvokeAsync<T>(Func<T> func)
+			=> await Dispatcher.InvokeAsync<T>(func);
 
 		public void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 		{
@@ -680,9 +685,7 @@ namespace TecWare.PPSn
 		} // proc ShowException
 
 		public async Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
-		{
-			await Dispatcher.InvokeAsync(() => ShowException(flags, exception, alternativeMessage));
-		} // proc ShowException
+			=> await Dispatcher.InvokeAsync(() => ShowException(flags, exception, alternativeMessage));
 
 		/// <summary></summary>
 		/// <param name="owner"></param>
@@ -697,7 +700,8 @@ namespace TecWare.PPSn
 		} // proc ShowTrace
 
 		/// <summary>Returns the pane declaration for the trace pane.</summary>
-		public Type TracePane => typeof(PpsTracePane);
+		public Type TracePane
+			=> typeof(PpsTracePane);
 
 		#endregion
 
@@ -833,6 +837,9 @@ namespace TecWare.PPSn
 		/// <summary>Default encodig for strings.</summary>
 		public Encoding Encoding => Encoding.Default;
 
+		/// <summary>Local description of the environment.</summary>
+		public PpsEnvironmentInfo Info => info;
+
 		/// <summary>Has the application login data.</summary>
 		public bool IsAuthentificated { get { return userInfo != null; } }
 		/// <summary>Is <c>true</c>, if the application is online.</summary>
@@ -888,7 +895,7 @@ namespace TecWare.PPSn
 			return base.OnIndex(key) ?? environment.GetValue(key);
 		} // func OnIndex
 
-		/// <summary>Access to the current environment.</summary>
+		/// <summary>Access to the current environemnt.</summary>
 		[LuaMember("Environment")]
 		public PpsEnvironment Environment { get { return environment; } }
 	} // class LuaEnvironmentTable
