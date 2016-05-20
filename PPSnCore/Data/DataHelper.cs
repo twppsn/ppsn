@@ -32,7 +32,17 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public abstract class PpsMetaCollection : IReadOnlyDictionary<string, object>
 	{
-		private readonly Dictionary<string, object> metaInfo = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, object> metaInfo;
+
+		public PpsMetaCollection()
+		{
+			this.metaInfo = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+		} // ctor
+
+		protected PpsMetaCollection(PpsMetaCollection clone)
+		{
+			this.metaInfo = new Dictionary<string, object>(clone.metaInfo);
+		} // ctor
 
 		protected void Add(string key, Func<Type> getDataType, object value)
 		{

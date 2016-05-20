@@ -42,56 +42,27 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsDataValueColumnDefinitionClient : PpsDataValueColumnDefinition
+	public sealed class PpsDataColumnDefinitionClient : PpsDataColumnDefinition
 	{
 		private PpsDataColumnMetaCollectionClient metaInfo;
 
-		public PpsDataValueColumnDefinitionClient(PpsDataTableDefinitionClient table, XElement xColumn)
-			: base(table, xColumn.GetAttribute("name", (string)null), LuaType.GetType(xColumn.GetAttribute("datatype", "object"), lateAllowed: false).Type)
+		private PpsDataColumnDefinitionClient(PpsDataTableDefinition table, PpsDataColumnDefinitionClient clone)
+			: base(table, clone)
 		{
+		} // ctor
+
+		public PpsDataColumnDefinitionClient(PpsDataTableDefinitionClient table, XElement xColumn)
+			: base(table, xColumn.GetAttribute("name", (string)null), false)
+		{
+			//LuaType.GetType(xColumn.GetAttribute("datatype", "object"), lateAllowed: false).Type, 
 			metaInfo = new PpsDataColumnMetaCollectionClient(xColumn);
 		} // ctor
+
+		public override PpsDataColumnDefinition Clone(PpsDataTableDefinition tableOwner)
+			=> new PpsDataColumnDefinitionClient(tableOwner, this);
 
 		public override PpsDataColumnMetaCollection Meta => metaInfo;
 	} // class PpsDataColumnDefinitionClient
-
-	#endregion
-
-	#region -- class PpsDataPrimaryColumnDefinitionClient -------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public sealed class PpsDataPrimaryColumnDefinitionClient : PpsDataPrimaryColumnDefinition
-	{
-		private PpsDataColumnMetaCollectionClient metaInfo;
-
-		public PpsDataPrimaryColumnDefinitionClient(PpsDataTableDefinitionClient table, XElement xColumn)
-			: base(table, xColumn.GetAttribute("name", (string)null))
-		{
-			metaInfo = new PpsDataColumnMetaCollectionClient(xColumn);
-		} // ctor
-
-		public override PpsDataColumnMetaCollection Meta => metaInfo;
-	} // class PpsDataPrimaryColumnDefinitionClient
-
-	#endregion
-
-	#region -- class PpsDataRelationColumnClientDefinition ------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public sealed class PpsDataRelationColumnClientDefinition : PpsDataRelationColumnDefinition
-	{
-		private PpsDataColumnMetaCollectionClient metaInfo;
-
-		public PpsDataRelationColumnClientDefinition(PpsDataTableDefinitionClient table, XElement xRelation)
-			: base(table, xRelation.GetAttribute("name", (string)null), xRelation.GetAttribute("relation", (string)null), table.ResolveColumn(xRelation))
-		{
-			metaInfo = new PpsDataColumnMetaCollectionClient(xRelation);
-		} // ctor
-
-		public override PpsDataColumnMetaCollection Meta => metaInfo;
-	} // class PpsDataRelationColumnClientDefinition
 
 	#endregion
 }

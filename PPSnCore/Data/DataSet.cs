@@ -100,7 +100,7 @@ namespace TecWare.PPSn.Data
 			if (table == null)
 				throw new ArgumentNullException();
 			if (FindTable(table.Name) != null)
-				throw new ArgumentOutOfRangeException();
+				throw new ArgumentOutOfRangeException("table already exists.");
 
 			tables.Add(table);
 		} // proc Add
