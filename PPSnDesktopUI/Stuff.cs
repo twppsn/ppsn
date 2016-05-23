@@ -22,11 +22,17 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using System.Xml.Linq;
 
 namespace TecWare.PPSn
 {
 	internal static class Stuff
 	{
+		public static readonly XNamespace PresentationNamespace ="http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+		public static readonly XNamespace XamlNamespace = "http://schemas.microsoft.com/winfx/2006/xaml";
+		public static readonly XName xnResourceDictionary = PresentationNamespace + "ResourceDictionary";
+		public static readonly XName xnKey = XamlNamespace + "key";
+		
 		public static T GetVisualChild<T>(this DependencyObject current)
 			where T : DependencyObject
 		{
@@ -47,12 +53,15 @@ namespace TecWare.PPSn
 			return default(T);
     } // func GetVisualChild
 	}
+
 	#region -- class WebRequestHelper ---------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
+	[Obsolete]
 	internal static class WebRequestHelper
 	{
+		[Obsolete]
 		public static ContentDisposition GetContentDisposition(this WebResponse r, bool createDummy = true)
 		{
 			var tmp = r.Headers["Content-Disposition"];
@@ -84,6 +93,7 @@ namespace TecWare.PPSn
 				return new ContentDisposition(tmp);
 		} // func GetContentDisposition
 
+		[Obsolete]
 		private static DateTime GetLastModified(WebResponse r)
 		{
 			DateTime lastModified;
@@ -92,6 +102,7 @@ namespace TecWare.PPSn
 			return lastModified;
 		} // func GetLastModified
 
+		[Obsolete]
 		public static ContentType GetContentType(this WebResponse r)
 		{
 			return new ContentType(r.ContentType);

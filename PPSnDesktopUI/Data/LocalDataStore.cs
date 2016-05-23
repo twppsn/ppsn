@@ -28,19 +28,62 @@ using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.DE.Data;
+using System.Data.SQLite;
 
 namespace TecWare.PPSn.Data
 {
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class PpsLocalDataStore : PpsDataStore
+	public class PpsLocalDataStore : PpsDataStore, IDisposable
 	{
-		private Dictionary<string, System.Data.DataTable> localData = new Dictionary<string, System.Data.DataTable>(StringComparer.OrdinalIgnoreCase);
+		private readonly SQLiteConnection localStore;
 
 		public PpsLocalDataStore(PpsEnvironment environment)
-				: base(environment)
+			: base(environment)
 		{
+			// open the 
+			var datapath = Path.Combine(environment.Info.LocalPath.FullName, "localStore.db");
+			localStore = new SQLiteConnection($"Data Source={datapath};Version=3");
+			localStore.Open();
 		} // ctor
+
+		public void Dispose()
+		{
+			Dispose(true);
+		} // proc Dispose
+
+		protected virtual void Dispose(bool disposing)
+		{
+			localStore.Close();
+		} // proc Dispose
+
+		public WebRequest GetCacheRequest(Uri uri, string absolutePath)
+		{
+			return Environment.CreateWebRequestNative(uri, absolutePath); // todo:
+
+			// is the current uri cachable
+			
+			// check the cache entry
+
+			// is this a static cache item
+
+			// dynamic cache item
+			
+		} // func GetCacheRequest
+
+		protected override void GetResponseDataStream(PpsStoreResponse r)
+		{
+			// ask the file from the cache
+			throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, r);
+		} // proc GetResponseDataStream
+
+
+
+
+
+
+		[Obsolete("test")]
+		private Dictionary<string, System.Data.DataTable> localData = new Dictionary<string, System.Data.DataTable>(StringComparer.OrdinalIgnoreCase);
 
 		private void LoadTestData(string fileName, ref System.Data.DataTable dt)
 		{
@@ -75,27 +118,28 @@ namespace TecWare.PPSn.Data
 			dt.AcceptChanges();
 		} // proc LoadTestData
 
-		protected override void GetResponseDataStream(PpsStoreResponse r)
-		{
-			var actionName = r.Request.Arguments.Get("action");
-			//if (actionName == "getlist") // todo support getlist
-			//{
-			//	GetLocalList(r);
-			//	return;
-			//}
+		//protected override void GetResponseDataStream(PpsStoreResponse r)
+		//{
+		//	var actionName = r.Request.Arguments.Get("action");
+		//	//if (actionName == "getlist") // todo support getlist
+		//	//{
+		//	//	GetLocalList(r);
+		//	//	return;
+		//	//}
+			
+		//	// todo:
+		//	var fi = new FileInfo(Path.Combine(Environment.Info.LocalPath.FullName, "cache", r.Request.Path.Substring(1).Replace('/', '\\')));
+		//	if (!fi.Exists)
+		//		throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, r);
+			
+		//	var contentType = String.Empty;
+		//	if (fi.Extension == ".xaml")
+		//		contentType = MimeTypes.Application.Xaml;
+		//	else if (fi.Extension == ".lua")
+		//		contentType = MimeTypes.Text.Plain;
 
-			var fi = new FileInfo(Path.Combine(@"..\..\..\PPSnDesktop\Local", r.Request.Path.Substring(1).Replace('/', '\\')));
-			if (!fi.Exists)
-				throw new WebException("File not found.", WebExceptionStatus.ProtocolError);
-
-			var contentType = String.Empty;
-			if (fi.Extension == ".xaml")
-				contentType = MimeTypes.Application.Xaml;
-			else if (fi.Extension == ".lua")
-				contentType = MimeTypes.Text.Plain;
-
-			r.SetResponseData(fi.OpenRead(), contentType);
-		} // func GetResponseDataStream
+		//	r.SetResponseData(fi.OpenRead(), contentType);
+		//} // func GetResponseDataStream
 
 		/// <summary>Override to support a better stream of the locally stored data.</summary>
 		/// <param name="arguments"></param>

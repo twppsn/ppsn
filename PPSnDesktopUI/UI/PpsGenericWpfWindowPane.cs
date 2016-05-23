@@ -110,7 +110,7 @@ namespace TecWare.PPSn.UI
 			}
 
 			// prepare the base
-			return Environment.BaseRequest.GetFullUri(xamlFile);
+			return Environment.Request.GetFullUri(xamlFile);
 		} // func GetTemplateUri
 
 		public virtual PpsWindowPaneCompareResult CompareArguments(LuaTable otherArgumens)

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using TecWare.DES.Stuff;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn
 {

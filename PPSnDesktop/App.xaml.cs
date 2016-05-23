@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using TecWare.DES.Stuff;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Properties;
 
 namespace TecWare.PPSn
@@ -61,18 +62,25 @@ namespace TecWare.PPSn
 		private async Task<PpsMainEnvironment> ReloadApplicationAsync()
 		{
 			// create an new environment in the ui-thread
-			var env = Dispatcher.Invoke(new Func<PpsMainEnvironment>(() => new PpsMainEnvironment(new Uri(Settings.Default.ServerUri, UriKind.Absolute), Resources)));
+			var env = Dispatcher.Invoke(new Func<PpsMainEnvironment>(() => new PpsMainEnvironment(
+				PpsEnvironmentInfo.CreateEnvironment(Settings.Default.ServerName, new Uri(Settings.Default.ServerUri, UriKind.Absolute)),
+				this
+			)));
+
+			// load the offline part from the cache, if it is possible
+			await env.RefreshAsync();
 
 			// go online and sync data from the server to client
 			if (Settings.Default.AutoOnlineMode)
-				await env.StartOnlineMode(30000);
-
-			// load the offline part
-			await env.RefreshAsync();
+			{
+				var cancellationSource = new CancellationTokenSource(30000);
+				await env.StartOnlineMode(cancellationSource.Token); // does the online refresh
+				await env.LoginUserAsync();
+			}
 
 			return env;
 		} // proc ReloadApplicationAsync
 
-		public PpsMainEnvironment Environment { get { return currentEnvironment; } }
+		public PpsMainEnvironment Environment => currentEnvironment;
 	} // class App
 }

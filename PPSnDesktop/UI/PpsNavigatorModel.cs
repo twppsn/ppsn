@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Input;
-using TecWare.DES.Data;
+using TecWare.DE.Data;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
@@ -213,11 +213,11 @@ namespace TecWare.PPSn.UI
 			{
 				var dataSource = new PpsShellGetList(CurrentView.Name) { Detailed = false };
 
-				if (currentFilter != null)
-					dataSource.PreFilterId = currentFilter.FilterName;
-				if (currentOrder != null)
-					dataSource.OrderId = currentOrder.ColumnName + (sortAscending ? "+" : "-");
-				dataSource.CustomFilter = currentSearchText;
+				//if (currentFilter != null)
+				//	dataSource.PreFilterId = currentFilter.FilterName;
+				//if (currentOrder != null)
+				//	dataSource.OrderId = currentOrder.ColumnName + (sortAscending ? "+" : "-");
+				//dataSource.CustomFilter = currentSearchText;
 
 				await items.Reset(dataSource);
 			}

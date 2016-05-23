@@ -10,8 +10,8 @@ using System.Windows;
 using System.Windows.Input;
 using System.Xml.Linq;
 using Neo.IronLua;
-using TecWare.DES.Networking;
-using TecWare.DES.Stuff;
+using TecWare.DE.Networking;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
 
@@ -85,11 +85,11 @@ namespace TecWare.PPSn
 				var actionName = r.Request.Arguments.Get("action");
 				if (r.Request.Path == "/" && String.Compare(actionName, "getviews", StringComparison.OrdinalIgnoreCase) == 0) // get all local views
 				{
-					r.SetResponseData(CollectLocalViews(), MimeTypes.Xml);
+					r.SetResponseData(CollectLocalViews(), MimeTypes.Text.Xml);
 				}
 				else if (r.Request.Path == "/" && String.Compare(actionName, "getactions", StringComparison.OrdinalIgnoreCase) == 0) // get all local actions
 				{
-					r.SetResponseData(CollectLocalActions(), MimeTypes.Xml);
+					r.SetResponseData(CollectLocalActions(), MimeTypes.Text.Xml);
 				}
 				else
 					base.GetResponseDataStream(r);
@@ -108,25 +108,38 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		private readonly App app;
 		private PpsEnvironmentCollection<PpsMainActionDefinition> actions;
 		private PpsEnvironmentCollection<PpsMainViewDefinition> views;
 
-		public PpsMainEnvironment(Uri remoteUri, ResourceDictionary mainResources)
-			: base(remoteUri, mainResources)
+		public PpsMainEnvironment(PpsEnvironmentInfo info, App app)
+			: base(info, app.Resources)
 		{
+			this.app = app;
+
 			this.actions = new PpsEnvironmentCollection<PpsMainActionDefinition>(this);
 			this.views = new PpsEnvironmentCollection<PpsMainViewDefinition>(this);
 		} // ctor
 
 		protected override PpsLocalDataStore CreateLocalDataStore() => new PpsMainLocalStore(this);
 
+		protected override bool ShowLoginDialog(PpsClientLogin clientLogin)
+		{
+			return app.Dispatcher.Invoke(
+				() =>
+				{
+					var wih = new System.Windows.Interop.WindowInteropHelper(app.MainWindow);
+					return clientLogin.ShowWindowsLogin(wih.EnsureHandle());
+				});
+		} // func ShowLoginDialog
+
 		public async override Task RefreshAsync()
 		{
 			await base.RefreshAsync();
 
-			await RefreshViewsAsync(PpsEnvironmentDefinitionSource.Offline);
-			if (IsOnline)
-				await RefreshViewsAsync(PpsEnvironmentDefinitionSource.Online);
+			//await RefreshViewsAsync(PpsEnvironmentDefinitionSource.Offline);
+			//if (IsOnline)
+			//	await RefreshViewsAsync(PpsEnvironmentDefinitionSource.Online);
 		} // proc RefreshAsync
 
 		public async Task<PpsMainWindow> CreateMainWindowAsync()

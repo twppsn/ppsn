@@ -91,6 +91,14 @@ namespace TecWare.PPSn
 
 		private static string localEnvironmentsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ppsn", "env");
 
+		public static PpsEnvironmentInfo CreateEnvironment(string serverName, Uri serverUri)
+		{
+			var info = new PpsEnvironmentInfo(serverName);
+			if (info.Uri == null) // update server uri
+				info.Uri = serverUri;
+			return info;
+		} // func CreateEnvironment
+
 		public static IEnumerable<PpsEnvironmentInfo> GetLocalEnvironments()
 		{
 			var localEnvironmentsDirectory = new DirectoryInfo(localEnvironmentsPath);

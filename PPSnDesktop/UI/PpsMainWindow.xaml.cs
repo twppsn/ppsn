@@ -15,7 +15,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using TecWare.DES.Stuff;
+using TecWare.DE.Stuff;
 using System.Reflection;
 
 namespace TecWare.PPSn.UI

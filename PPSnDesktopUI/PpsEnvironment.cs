@@ -36,6 +36,7 @@ using TecWare.DE.Data;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
+using System.Windows.Markup;
 
 namespace TecWare.PPSn
 {
@@ -476,6 +477,11 @@ namespace TecWare.PPSn
 		public PpsEnvironment(PpsEnvironmentInfo info, ResourceDictionary mainResources)
 			: base(new Lua())
 		{
+			if (info == null)
+				throw new ArgumentNullException("info");
+			if (mainResources == null)
+				throw new ArgumentNullException("mainResources");
+
 			this.info = info;
 			this.mainResources = mainResources;
 			this.currentDispatcher = Dispatcher.CurrentDispatcher;
@@ -522,14 +528,18 @@ namespace TecWare.PPSn
 			if (disposing)
 			{
 				mainResources.Remove(EnvironmentService);
-
+				
 				inputManager.PreProcessInput -= preProcessInputEventHandler;
 
+				// close handles
+				localStore.Dispose();
 				Lua.Dispose();
 			}
 		} // proc Dispose
 
 		#endregion
+
+		#region -- Login/Logout -----------------------------------------------------------
 
 		protected virtual bool ShowLoginDialog(PpsClientLogin clientLogin)
 			=> false;
@@ -659,21 +669,57 @@ namespace TecWare.PPSn
 			// update the current info data
 			info.Update(xInfo);
 
-			// refresh data
-			await RefreshAsync();
-
 			if (!isOnline)
 			{
 				isOnline = true;
 				OnIsOnlineChanged();
 			}
+
+			// refresh data
+			await RefreshAsync();
 		} // func StartOnlineMode
+
+		#endregion
+
+		private async Task<Tuple< XDocument,DateTime>> GetXmlDocumentAsync(string path, bool isXaml, bool isOptional)
+		{
+			try
+			{
+				using (var r = await Request.GetResponseAsync(path))
+				using (var xml = Request.GetXmlStreamAsync(r, isXaml ? MimeTypes.Application.Xaml : MimeTypes.Text.Xml))
+				{
+					var dt = DateTime.MinValue;
+					return new Tuple<XDocument, DateTime>(XDocument.Load(xml), dt);
+				}
+			}
+			catch (WebException e)
+			{
+				if (e.Status == WebExceptionStatus.ProtocolError)
+					return null;
+				throw;
+			}
+		} // func GetXmlDocumentAsync
 
 		/// <summary>Loads basic data for the environment.</summary>
 		/// <returns></returns>
 		public async virtual Task RefreshAsync()
 		{
 			await Task.Yield();
+
+			// update the resources, load a server site resource dictionary
+			var t = await GetXmlDocumentAsync("desktop/layout.xaml", true, true);
+			if (t != null)
+			{
+				var basicTemplates = t.Item1;
+				var lastTimeStamp = t.Item2;
+
+				foreach (var cur in basicTemplates.Elements())
+				{
+					var key = cur.GetAttribute(Stuff.xnKey, String.Empty);
+					if (key != null)
+						Dispatcher.Invoke(() => UpdateResource(key, cur));
+				}
+			}
 
 			//string p = @"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktop\Local\Templatesa.xml";
 			//if (!File.Exists(p))
@@ -754,6 +800,13 @@ namespace TecWare.PPSn
 
 		#region -- Data Request -----------------------------------------------------------
 
+		internal WebRequest CreateWebRequestNative(Uri uri, string absolutePath)
+		{
+			var request = WebRequest.Create(info.Uri.ToString() + absolutePath + uri.Query); // todo:
+			request.Credentials = userInfo; // override the current credentials
+			return request;
+		} // func CreateWebRequestNative
+
 		private WebRequest CreateWebRequest(Uri uri)
 		{
 			var useOfflineRequest = !isOnline;
@@ -778,15 +831,11 @@ namespace TecWare.PPSn
 				return localStore.GetRequest(uri, absolutePath);
 			else
 			{
-				if (useCache)
-				{
-				}
-				var request = WebRequest.Create(info.Uri.ToString() + absolutePath + uri.Query); // todo:
-				request.Credentials = userInfo;
-				return request;
+				return useCache ?
+					localStore.GetCacheRequest(uri, absolutePath) :
+					CreateWebRequestNative(uri, absolutePath);
 			}
 		} // func CreateWebRequest
-
 		public IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
 		{
 			throw new NotImplementedException();
@@ -972,6 +1021,15 @@ namespace TecWare.PPSn
 			where T : class
 			=> mainResources[resourceKey] as T;
 
+		private void UpdateResource(string keyString, XElement xSource)
+		{
+			using (var xml = xSource.CreateReader())
+			{
+				var resource = XamlReader.Load(xml);
+				mainResources[keyString] = resource;
+			}
+		} // func UpdateResource
+
 		#endregion
 
 		/// <summary>Internal Uri of the environment.</summary>
@@ -979,7 +1037,7 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		public WebIndex Web { get; }
 		/// <summary></summary>
-		public BaseWebRequest BaseRequest => request;
+		public BaseWebRequest Request => request;
 		/// <summary>Default encodig for strings.</summary>
 		public Encoding Encoding => Encoding.Default;
 

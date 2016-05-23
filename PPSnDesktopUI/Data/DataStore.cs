@@ -37,8 +37,8 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		protected sealed class PpsStoreRequest : WebRequest
 		{
-			private PpsDataStore store; // owner, that retrieves a resource
-			private Uri uri; // resource
+			private readonly PpsDataStore store; // owner, that retrieves a resource
+			private readonly Uri uri; // resource
 			private bool aborted = false; // is the request cancelled
 			private Func<WebResponse> procGetResponse; // async GetResponse
 
@@ -88,6 +88,8 @@ namespace TecWare.PPSn.Data
 			} // func GetResponse
 
 			#endregion
+
+			public PpsDataStore DataStore => store;
 
 			public override Uri RequestUri => uri;
 
@@ -193,7 +195,7 @@ namespace TecWare.PPSn.Data
 			} // proc SetResponseData
 
 			public override Stream GetResponseStream()
-								=> src;
+				=> src;
 
 			/// <summary></summary>
 			public override long ContentLength
@@ -253,5 +255,7 @@ namespace TecWare.PPSn.Data
 			// todo: redirect to a http request
 			throw new NotImplementedException();
 		} // func GetDetailedData
+
+		public PpsEnvironment Environment => environment;
 	} // class PpsDataStore
 }
