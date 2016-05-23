@@ -36,7 +36,46 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public class PpsLocalDataStore : PpsDataStore, IDisposable
 	{
+		#region -- class PpsStoreCacheRequest ---------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class PpsStoreCacheRequest : PpsStoreRequest
+		{
+			public PpsStoreCacheRequest(PpsLocalDataStore store, Uri uri, string absolutePath)
+				: base(store, uri, absolutePath)
+			{
+			} // ctor
+
+			public override WebResponse GetResponse()
+			{
+				string contentType;
+				Stream source;
+
+				// is this a static item
+				if (DataStore.TryGetStaticCache(Path, out contentType, out source))
+				{
+					var r = new PpsStoreResponse(this);
+					r.SetResponseData(source, contentType);
+					return r;
+				}
+				else if (DataStore.Environment.IsOnline)
+				{
+					// todo: dynamic cache, copy of properties and headers
+					return DataStore.Environment.CreateWebRequestNative(RequestUri, Path).GetResponse();
+				}
+				else
+					throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, null);
+			} // func GetResponse
+
+			public new PpsLocalDataStore DataStore => (PpsLocalDataStore)base.DataStore;
+		} // class PpsStoreCacheRequest
+
+		#endregion
+
 		private readonly SQLiteConnection localStore;
+
+		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		public PpsLocalDataStore(PpsEnvironment environment)
 			: base(environment)
@@ -57,153 +96,117 @@ namespace TecWare.PPSn.Data
 			localStore.Close();
 		} // proc Dispose
 
-		public WebRequest GetCacheRequest(Uri uri, string absolutePath)
+		#endregion
+
+		#region -- GetRequest -------------------------------------------------------------
+
+		public WebRequest GetCachedRequest(Uri uri, string absolutePath)
 		{
-			return Environment.CreateWebRequestNative(uri, absolutePath); // todo:
-
-			// is the current uri cachable
-			
-			// check the cache entry
-
-			// is this a static cache item
-
-			// dynamic cache item
-			
+			return new PpsStoreCacheRequest(this, uri, absolutePath);
 		} // func GetCacheRequest
 
 		protected override void GetResponseDataStream(PpsStoreResponse r)
 		{
+			Stream src;
+			string contentType;
+
 			// ask the file from the cache
-			throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, r);
+			if (TryGetStaticCache(r.Request.Path, out contentType, out src))
+				r.SetResponseData(src, contentType);
+			else
+				throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, r);
 		} // proc GetResponseDataStream
 
-
-
-
-
-
-		[Obsolete("test")]
-		private Dictionary<string, System.Data.DataTable> localData = new Dictionary<string, System.Data.DataTable>(StringComparer.OrdinalIgnoreCase);
-
-		private void LoadTestData(string fileName, ref System.Data.DataTable dt)
+		public bool TryGetStaticCache(string path, out string contentType, out Stream data)
 		{
-			if (dt != null)
-				return;
+			contentType = null;
+			data = null;
+			return false;
+		} // func TryGetStaticCache
 
-			dt = new System.Data.DataTable();
+		#endregion
 
-			var xDoc = XDocument.Load(fileName);
-			var xColumns = xDoc.Root.Element("columns");
-			if (xColumns != null && dt.Columns.Count == 0)
-			{
-				foreach (var c in xColumns.Elements())
-					dt.Columns.Add(c.GetAttribute("name", String.Empty), LuaType.GetType(c.GetAttribute("type", "string")));
-			}
+		#region -- Static Cache -----------------------------------------------------------
 
-			var xElements = xDoc.Root.Element("items");
-			var values = new object[dt.Columns.Count];
-			foreach (var cur in xElements.Elements())
-			{
-				for (int i = 0; i < values.Length; i++)
-				{
-					var v = cur.Element(dt.Columns[i].ColumnName)?.Value;
-					if (v == null)
-						values[i] = null;
-					else
-						values[i] = Lua.RtConvertValue(v, dt.Columns[i].DataType);
-				}
-				dt.Rows.Add(values);
-			}
+		public void UpdateStaticCache(string path, string contentType, Stream data)
+		{
+		} // proc UpdateStaticCache
 
-			dt.AcceptChanges();
-		} // proc LoadTestData
+		public IEnumerable<IDataRow> GetStaticCacheState()
+		{
+			yield break;
+		} // func GetStaticCacheState
 
-		//protected override void GetResponseDataStream(PpsStoreResponse r)
-		//{
-		//	var actionName = r.Request.Arguments.Get("action");
-		//	//if (actionName == "getlist") // todo support getlist
-		//	//{
-		//	//	GetLocalList(r);
-		//	//	return;
-		//	//}
-			
-		//	// todo:
-		//	var fi = new FileInfo(Path.Combine(Environment.Info.LocalPath.FullName, "cache", r.Request.Path.Substring(1).Replace('/', '\\')));
-		//	if (!fi.Exists)
-		//		throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, r);
-			
-		//	var contentType = String.Empty;
-		//	if (fi.Extension == ".xaml")
-		//		contentType = MimeTypes.Application.Xaml;
-		//	else if (fi.Extension == ".lua")
-		//		contentType = MimeTypes.Text.Plain;
+		#endregion
 
-		//	r.SetResponseData(fi.OpenRead(), contentType);
-		//} // func GetResponseDataStream
+
+
+
+
 
 		/// <summary>Override to support a better stream of the locally stored data.</summary>
 		/// <param name="arguments"></param>
 		/// <returns></returns>
 		public override IEnumerable<IDataRow> GetListData(PpsShellGetList arguments)
 		{
-			// get the table
-			string filterExpression = String.Empty;
-			System.Data.DataTable dt = null;
+			//// get the table
+			//string filterExpression = String.Empty;
+			//System.Data.DataTable dt = null;
 
-			// get the datatable
-			if (!localData.TryGetValue(arguments.ViewId, out dt))
-			{
-				LoadTestData(@"..\..\..\PPSnDesktop\Local\Data\" + arguments.ViewId + ".xml", ref dt);
-				localData[arguments.ViewId] = dt;
-			}
+			//// get the datatable
+			//if (!localData.TryGetValue(arguments.ViewId, out dt))
+			//{
+			//	LoadTestData(@"..\..\..\PPSnDesktop\Local\Data\" + arguments.ViewId + ".xml", ref dt);
+			//	localData[arguments.ViewId] = dt;
+			//}
 
-			#region Q&D
-			var filterId = arguments.Filter;
-			if (!String.IsNullOrEmpty(filterId))
-			{
-				switch (arguments.ViewId.ToLower())
-				{
-					case "parts":
-						if (filterId == "active")
-							filterExpression = "TEILSTATUS = '10'";
-						else if (filterId == "inactive")
-							filterExpression = "TEILSTATUS = '90'";
-						break;
+			//#region Q&D
+			//var filterId = arguments.Filter;
+			//if (!String.IsNullOrEmpty(filterId))
+			//{
+			//	switch (arguments.ViewId.ToLower())
+			//	{
+			//		case "parts":
+			//			if (filterId == "active")
+			//				filterExpression = "TEILSTATUS = '10'";
+			//			else if (filterId == "inactive")
+			//				filterExpression = "TEILSTATUS = '90'";
+			//			break;
 
-					case "contacts":
-						if (!String.IsNullOrEmpty(filterId))
-							if (filterId == "liefonly")
-								filterExpression = "DEBNR is null";
-							else if (filterId == "kundonly")
-								filterExpression = "KREDNR is null";
-							else if (filterId == "intonly")
-								filterExpression = "1 = 0";
-						break;
-				}
-			}
-			#endregion
+			//		case "contacts":
+			//			if (!String.IsNullOrEmpty(filterId))
+			//				if (filterId == "liefonly")
+			//					filterExpression = "DEBNR is null";
+			//				else if (filterId == "kundonly")
+			//					filterExpression = "KREDNR is null";
+			//				else if (filterId == "intonly")
+			//					filterExpression = "1 = 0";
+			//			break;
+			//	}
+			//}
+			//#endregion
 
-			if (!String.IsNullOrEmpty(arguments.Filter))
-			{
-				if (filterExpression.Length > 0)
-					filterExpression += " and OBJKMATCH like '%" + arguments.Filter + "%'";
-				else
-					filterExpression += "OBJKMATCH like '%" + arguments.Filter + "%'";
-			}
+			//if (!String.IsNullOrEmpty(arguments.Filter))
+			//{
+			//	if (filterExpression.Length > 0)
+			//		filterExpression += " and OBJKMATCH like '%" + arguments.Filter + "%'";
+			//	else
+			//		filterExpression += "OBJKMATCH like '%" + arguments.Filter + "%'";
+			//}
 
-			// filter data
-			var orderDef = arguments.Order;
-			if (orderDef != null)
-				orderDef = orderDef.Replace("+", " asc").Replace("-", " desc");
+			//// filter data
+			//var orderDef = arguments.Order;
+			//if (orderDef != null)
+			//	orderDef = orderDef.Replace("+", " asc").Replace("-", " desc");
 
-			// enumerate lines
-			using (var dv = new System.Data.DataView(dt, filterExpression, orderDef, System.Data.DataViewRowState.CurrentRows))
-				for (int i = 0; i < arguments.Count; i++)
-				{
-					var index = arguments.Start + i;
-					if (index < dv.Count)
-						throw new NotImplementedException();
-				}
+			//// enumerate lines
+			//using (var dv = new System.Data.DataView(dt, filterExpression, orderDef, System.Data.DataViewRowState.CurrentRows))
+			//	for (int i = 0; i < arguments.Count; i++)
+			//	{
+			//		var index = arguments.Start + i;
+			//		if (index < dv.Count)
+			//			throw new NotImplementedException();
+			//	}
 			yield break;
 		} // func GetListData
 

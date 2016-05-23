@@ -35,7 +35,7 @@ namespace TecWare.PPSn.Data
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
-		protected sealed class PpsStoreRequest : WebRequest
+		protected class PpsStoreRequest : WebRequest
 		{
 			private readonly PpsDataStore store; // owner, that retrieves a resource
 			private readonly Uri uri; // resource

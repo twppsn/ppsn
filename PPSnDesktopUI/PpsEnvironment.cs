@@ -827,12 +827,12 @@ namespace TecWare.PPSn
 			}
 
 			// create the request
-			if (useOfflineRequest)
+			if (useOfflineRequest )
 				return localStore.GetRequest(uri, absolutePath);
 			else
 			{
 				return useCache ?
-					localStore.GetCacheRequest(uri, absolutePath) :
+					localStore.GetCachedRequest(uri, absolutePath) :
 					CreateWebRequestNative(uri, absolutePath);
 			}
 		} // func CreateWebRequest
