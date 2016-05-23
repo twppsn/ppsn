@@ -53,7 +53,7 @@ namespace TecWare.PPSn.Data
 				Stream source;
 
 				// is this a static item
-				if (DataStore.TryGetStaticCache(Path, out contentType, out source))
+				if (DataStore.TryGetOfflineItem(Path, true, out contentType, out source))
 				{
 					var r = new PpsStoreResponse(this);
 					r.SetResponseData(source, contentType);
@@ -109,33 +109,45 @@ namespace TecWare.PPSn.Data
 		{
 			Stream src;
 			string contentType;
-
-			// ask the file from the cache
-			if (TryGetStaticCache(r.Request.Path, out contentType, out src))
+			
+			if (TryGetOfflineItem(r.Request.Path, false, out contentType, out src)) // ask the file from the cache
 				r.SetResponseData(src, contentType);
 			else
 				throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, r);
 		} // proc GetResponseDataStream
 
-		public bool TryGetStaticCache(string path, out string contentType, out Stream data)
+		#endregion
+
+		#region -- Offline Data -----------------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <param name="onlineMode"></param>
+		/// <param name="contentType"></param>
+		/// <param name="data"></param>
+		public void UpdateOfflineItem(string path, bool onlineMode, string contentType, Stream data)
 		{
+		} // proc UpdateOfflineItem
+
+		/// <summary></summary>
+		/// <param name="path"></param>
+		/// <param name="onlineMode"></param>
+		/// <param name="contentType"></param>
+		/// <param name="data"></param>
+		/// <returns></returns>
+		public bool TryGetOfflineItem(string path, bool onlineMode, out string contentType, out Stream data)
+		{
+			// check if this item is for online&offline mode
+
 			contentType = null;
 			data = null;
 			return false;
-		} // func TryGetStaticCache
+		} // func TryGetOfflineItem
 
-		#endregion
-
-		#region -- Static Cache -----------------------------------------------------------
-
-		public void UpdateStaticCache(string path, string contentType, Stream data)
-		{
-		} // proc UpdateStaticCache
-
-		public IEnumerable<IDataRow> GetStaticCacheState()
+		public IEnumerable<IDataRow> GetOfflineItems()
 		{
 			yield break;
-		} // func GetStaticCacheState
+		} // func GetOfflineItems
 
 		#endregion
 
