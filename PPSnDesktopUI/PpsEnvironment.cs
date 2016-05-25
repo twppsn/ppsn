@@ -37,6 +37,7 @@ using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
 using System.Windows.Markup;
+using System.Xml;
 
 namespace TecWare.PPSn
 {
@@ -707,17 +708,27 @@ namespace TecWare.PPSn
 			await Task.Yield();
 
 			// update the resources, load a server site resource dictionary
-			var t = await GetXmlDocumentAsync("desktop/layout.xaml", true, true);
+			var t = await GetXmlDocumentAsync("wpf/default.xaml", true, true);
 			if (t != null)
 			{
 				var basicTemplates = t.Item1;
 				var lastTimeStamp = t.Item2;
 
-				foreach (var cur in basicTemplates.Elements())
+				// theme/resources
+				var xTheme = basicTemplates.Root;
+
+				var parserContext = new ParserContext();
+				parserContext.AddNamespaces(xTheme);
+
+				var xResources = xTheme.Element(StuffUI.PresentationNamespace + "resources");
+				if (xResources != null)
 				{
-					var key = cur.GetAttribute(Stuff.xnKey, String.Empty);
-					if (key != null)
-						Dispatcher.Invoke(() => UpdateResource(key, cur));
+					foreach (var cur in xResources.Elements())
+					{
+						var key = cur.GetAttribute(StuffUI.xnKey, String.Empty);
+						if (key != null)
+							Dispatcher.Invoke(() => UpdateResource(key, cur.ToString(), parserContext));
+					}
 				}
 			}
 
@@ -1021,13 +1032,10 @@ namespace TecWare.PPSn
 			where T : class
 			=> mainResources[resourceKey] as T;
 
-		private void UpdateResource(string keyString, XElement xSource)
+		private void UpdateResource(string keyString, string xamlSource, ParserContext parserContext)
 		{
-			using (var xml = xSource.CreateReader())
-			{
-				var resource = XamlReader.Load(xml);
-				mainResources[keyString] = resource;
-			}
+			var resource = XamlReader.Parse(xamlSource, parserContext); // todo: Exception handling
+			mainResources[keyString] = resource;
 		} // func UpdateResource
 
 		#endregion

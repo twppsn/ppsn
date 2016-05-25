@@ -21,18 +21,50 @@ using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Markup;
 using System.Windows.Media;
+using System.Xml;
 using System.Xml.Linq;
+using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn
 {
-	internal static class Stuff
+	internal static class StuffUI
 	{
 		public static readonly XNamespace PresentationNamespace ="http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 		public static readonly XNamespace XamlNamespace = "http://schemas.microsoft.com/winfx/2006/xaml";
 		public static readonly XName xnResourceDictionary = PresentationNamespace + "ResourceDictionary";
-		public static readonly XName xnKey = XamlNamespace + "key";
-		
+		public static readonly XName xnKey = XamlNamespace + "Key";
+
+		public static void AddNamespace(this ParserContext context, string namespacePrefix, string namepsaceName)
+		{
+			if (namepsaceName != PpsXmlPosition.XmlPositionNamespace.NamespaceName)
+			{
+				if (namespacePrefix == "xmlns")
+					namespacePrefix = String.Empty; // must be empty
+				context.XmlnsDictionary.Add(namespacePrefix, namepsaceName);
+			}
+		} // proc AddNamespace
+
+		public static void AddNamespaces(this ParserContext context, XmlReader xr)
+		{
+			if (xr.HasAttributes)
+			{
+				while (xr.MoveToNextAttribute())
+					AddNamespace(context, xr.LocalName, xr.Value);
+			}
+			xr.MoveToElement();
+		} // proc CollectNameSpaces
+
+		public static void AddNamespaces(this ParserContext context, XElement x)
+		{
+			foreach (XAttribute xAttr in x.Attributes())
+			{
+				if (xAttr.IsNamespaceDeclaration)
+					AddNamespace(context, xAttr.Name.LocalName, xAttr.Value);
+			}
+		} // proc CollectNameSpaces
+
 		public static T GetVisualChild<T>(this DependencyObject current)
 			where T : DependencyObject
 		{
