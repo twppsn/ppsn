@@ -22,6 +22,8 @@
 		<pps:sqlExDataSource name="main">
 			<pps:connectionString>Data Source=(localdb)\mssqllocaldb;Initial Catalog=PPSn02;Integrated Security=True</pps:connectionString>
 		</pps:sqlExDataSource>
+
+		<pps:wpf name="wpf" xamlSource="C:\Projects\PPSnOS-git\Configs\Demo\Config\ClientWpf" />
 		
 		<pps:register source="main">
 			<pps:field name="dbo.Objk.Id" />

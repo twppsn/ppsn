@@ -65,6 +65,7 @@
     <Compile Include="Sql\PpsSqlExDataSource.cs" />
     <Compile Include="Sql\PpsSqlDataSource.cs" />
     <Compile Include="Stuff.cs" />
+    <Compile Include="Wpf\WpfClientItem.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\twdes\des\Extern\Core\DESCore\DESCore.csproj">

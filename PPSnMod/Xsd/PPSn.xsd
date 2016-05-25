@@ -337,6 +337,26 @@
 			</xs:complexContent>
 		</xs:complexType>
 	</xs:element>
+	
+	<xs:element name="wpf">
+		<xs:annotation>
+			<xs:documentation></xs:documentation>		
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.Wpf.WpfClientItem</class>
+			</xs:appinfo>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="ConfigItemType">
+					<xs:attribute name="xamlSource" type="PathType" use="required">
+						<xs:annotation>
+							<xs:documentation></xs:documentation>
+						</xs:annotation>
+					</xs:attribute>
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
 
 	<xs:element name="ppsn" substitutionGroup="configItem">
 		<xs:annotation>
@@ -350,6 +370,7 @@
 				<xs:extension base="ConfigLogItemType">
 					<xs:sequence minOccurs="0" maxOccurs="unbounded">
 						<xs:element ref="pps:dataSource" minOccurs="0" maxOccurs="unbounded" />
+						<xs:element ref="pps:wpf" minOccurs="0" maxOccurs="1" />
 						<xs:element ref="pps:register" minOccurs="0" maxOccurs="unbounded" />
 						<xs:element ref="pps:document" minOccurs="0" maxOccurs="unbounded" />
 					</xs:sequence>
