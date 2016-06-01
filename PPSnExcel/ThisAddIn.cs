@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.Office.Tools.Excel;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn;
 using TecWare.PPSn.Data;
@@ -72,45 +73,114 @@ namespace PPSnExcel
 
 		internal void ImportTable(object tableName, object tableSourceId)
 		{
-			// get the active sheet and selection
-			var workSheet = Globals.Factory.GetVstoObject((Excel._Worksheet)Globals.ThisAddIn.Application.ActiveSheet);
-			var workBook = Globals.Factory.GetVstoObject((Excel._Workbook)workSheet.Parent);
-			var selection = Globals.ThisAddIn.Application.Selection;
+			// todo: use the parameters
+			// todo: feedback for the user
+			// todo: exception handling
 
-			// create the xml map
-			var schema = File.ReadAllText(@"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktop\Local\Data\contact.xsd");
+			if (environment == null)
+				return;
 
-			var map = workBook.XmlMaps.Add(schema, "datareader");
+			if (!environment.IsAuthentificated)
+				return;
 
-			// create the list object
-			var list = Globals.Factory.GetVstoObject((Excel.ListObject)workSheet.ListObjects.Add());
-
-			var xDoc = XDocument.Load(@"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktop\Local\Data\contacts.xml");
-			var f = true;
-			foreach (var x in xDoc.Root.Element("columns").Elements())
+			var columns = new List<KeyValuePair<string, Type>>();
+			var rows = new List<XElement>();
+			#region -- get columns and rows --
+			using (var e = environment.BaseRequest.CreateViewDataReader("remote/?action=viewget&v=test").GetEnumerator())
 			{
-				var columnName = x.Attribute("name")?.Value;
-
-				var col = f ? list.ListColumns[1] : list.ListColumns.Add();
-				f = false;
-				col.Name = columnName.ToLower();
-				col.XPath.SetValue(map, "/datareader/items/item/" + columnName);
-
-				if (columnName == "OBJKTYP")
+				if (e.MoveNext())
 				{
-					col.Range.HorizontalAlignment = Excel.Constants.xlCenter;
-				}
-				else
-				{
-					col.Range.HorizontalAlignment = Excel.Constants.xlLeft;
-				}
-				if (columnName == "ADRESSE")
-					col.Range.EntireColumn.ColumnWidth = 50.0;
+					for (var i = 0; i < e.Current.ColumnCount; i++)
+						columns.Add(new KeyValuePair<string, Type>(e.Current.Columns[i].Name, e.Current.Columns[i].DataType));
+
+					do
+					{
+						var row = new XElement("r");
+						for (var i = 0; i < e.Current.ColumnCount; i++)
+						{
+							if (e.Current[i] != null)
+							{
+								row.Add(new XElement(e.Current.Columns[i].Name,
+									Procs.ChangeType<string>(e.Current[i])
+								));
+							}
+						}
+						rows.Add(row);
+					} while (e.MoveNext());
+				} // if e.MoveNext
+			} // using e
+			#endregion
+
+			if (columns.Count < 1)
+				return;
+
+			var schema = string.Empty;
+			#region -- create schema for XML mapping --
+			var xsdNamespace = XNamespace.Get("http://www.w3.org/2001/XMLSchema");
+			var xsdNamespaceShortcut = "xs";
+			schema = new XElement(xsdNamespace + "schema",
+				new XAttribute("elementFormDefault", "qualified"),
+				new XAttribute(XNamespace.Xmlns + xsdNamespaceShortcut, xsdNamespace),
+				new XElement(xsdNamespace + "element",
+					new XAttribute("name", "view"),
+					new XElement(xsdNamespace + "complexType",
+						new XElement(xsdNamespace + "sequence",
+							new XElement(xsdNamespace + "element",
+								new XAttribute("name", "rows"),
+								new XElement(xsdNamespace + "complexType",
+									new XElement(xsdNamespace + "sequence",
+										new XElement(xsdNamespace + "element",
+											new XAttribute("name", "r"),
+											new XAttribute("minOccurs", "0"),
+											new XAttribute("maxOccurs", "unbounded"),
+											new XElement(xsdNamespace + "complexType",
+												new XElement(xsdNamespace + "sequence",
+													from c in columns select new XElement(xsdNamespace + "element",
+														new XAttribute("name", c.Key),
+														new XAttribute("type", String.Format("{0}:{1}", xsdNamespaceShortcut, typeToXsdType[c.Value]))
+													)
+												)
+											)
+										)
+									)
+								)
+							)
+						)
+					)
+				)
+			).ToString();
+			#endregion
+
+			var data = new XElement("view",
+				new XElement("rows",
+					rows
+				)
+			).ToString();
+
+			// get active workbook and worksheet
+			var worksheet = Globals.Factory.GetVstoObject((Excel._Worksheet)Globals.ThisAddIn.Application.ActiveSheet);
+			var workbook = Globals.Factory.GetVstoObject((Excel._Workbook)worksheet.Parent);
+
+			// add created schema for XML mapping
+			// todo: check for schema existence (duplicates!)
+			var map = workbook.XmlMaps.Add(schema, "view");
+
+			// create list object and add header
+			// todo: exception occurs if the selected cell is already part of a table
+			var list = Globals.Factory.GetVstoObject((Excel.ListObject)worksheet.ListObjects.Add());
+			var flag = true;
+			foreach (var column in columns)
+			{
+				var columnName = column.Key;
+				var listColumn = flag ? list.ListColumns[1] : list.ListColumns.Add();
+				flag = false;
+				listColumn.Name = columnName;
+				listColumn.XPath.SetValue(map, "/view/rows/r/" + columnName);
 			}
 
-			xDoc.Root.Element("columns").Remove();
-
-			map.ImportXml(xDoc.ToString(SaveOptions.None), true);
+			// import data
+			var result = map.ImportXml(data, true);
+			// todo: check result
 		} // proc ImportTable
 
 		#endregion
@@ -130,5 +200,37 @@ namespace PPSnExcel
 		#endregion
 
 		public App App => app;
+
+		// -- Static --------------------------------------------------------------
+
+		private static readonly Dictionary<Type, string> typeToXsdType = new Dictionary<Type, string>
+		{
+			{ typeof(byte), "unsignedByte" },
+			{ typeof(sbyte), "byte" },
+			{ typeof(ushort), "unsignedShort" },
+			{ typeof(short), "short" },
+			{ typeof(uint), "unsignedInt" },
+			{ typeof(int), "int" },
+			{ typeof(ulong), "unsignedLong" },
+			{ typeof(long), "long" },
+			// todo: Check functionality.
+			{ typeof(float), "float" },
+			// todo: Check functionality.
+			{ typeof(double), "double" },
+			// todo: Check functionality.
+			{ typeof(decimal), "decimal" },
+			// todo: Check functionality. Try to find better type match.
+			{ typeof(DateTime), "string" },
+			// todo: Check functionality. Try to find better type match.
+			{ typeof(char), "string" },
+			{ typeof(string), "string" },
+			{ typeof(bool), "boolean" },
+			// todo: Check functionality. Try to find better type match.
+			{ typeof(Guid), "string" },
+			// todo: Check functionality. Try to find better type match.
+			{ typeof(XDocument), "string" },
+			// todo: Check functionality. Try to find better type match.
+			{ typeof(byte[]), "string" }
+		};
 	} // class ThisAddIn
 }
