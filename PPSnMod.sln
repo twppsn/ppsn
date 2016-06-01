@@ -5,7 +5,7 @@ VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnMod", "PPSnMod\PPSnMod.csproj", "{56F95A2C-ABDB-49CF-91D9-E01D7E3A23A1}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{54BD090E-1A47-4CA8-BE9B-0D108FF3CD0E}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Extern", "Extern", "{54BD090E-1A47-4CA8-BE9B-0D108FF3CD0E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerLib", "..\..\twdes\des\ServerLib\ServerLib.csproj", "{6A13EE24-AE1A-4242-8F61-0E32F1E9E37D}"
 EndProject
