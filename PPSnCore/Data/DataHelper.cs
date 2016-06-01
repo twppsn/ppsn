@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -22,6 +23,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
@@ -30,7 +32,7 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public abstract class PpsMetaCollection : IReadOnlyDictionary<string, object>
+	public abstract class PpsMetaCollection : IDataColumnAttributes
 	{
 		private readonly Dictionary<string, object> metaInfo;
 
@@ -72,57 +74,36 @@ namespace TecWare.PPSn.Data
 		{
 			foreach (var c in otherMeta)
 			{
-				if (!ContainsKey(c.Key))
-					Add(c.Key, null, c.Value);
+				if (!ContainsKey(c.Name))
+					Add(c.Name, null, c.Value);
 			}
 		} // func Merge
 
 		public bool ContainsKey(string key)
 			=> metaInfo.ContainsKey(key);
 
-		public bool TryGetValue(string key, out object value)
-			=> metaInfo.TryGetValue(key, out value);
+		public bool TryGetProperty(string name, out object value)
+			=> metaInfo.TryGetValue(name, out value);
 
-		public T Get<T>(string sKey, T @default)
-		{
-			object v;
-			try
-			{
-				if (TryGetValue(sKey, out v))
-					return v.ChangeType<T>();
-				else
-					return @default;
-			}
-			catch
-			{
-				return @default;
-			}
-		} // func Get
-
-		internal Expression GetMetaConstantExpression(string sKey)
+		internal Expression GetMetaConstantExpression(string key)
 		{
 			object value;
 			Type type;
-			if (TryGetValue(sKey, out value))
+			if (TryGetProperty(key, out value))
 				return Expression.Constant(value, typeof(object));
-			else if (WellknownMetaTypes.TryGetValue(sKey, out type))
+			else if (WellknownMetaTypes.TryGetValue(key, out type))
 				return Expression.Convert(Expression.Default(type), typeof(object));
 			else
 				return Expression.Constant(null, typeof(object));
 		} // func GetMetaConstantExpression
 
-		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-		{
-			return ((System.Collections.IEnumerable)this).GetEnumerator();
-		} // func System.Collections.IEnumerable.GetEnumerator
+		IEnumerator IEnumerable.GetEnumerator()
+			=> GetEnumerator();
 
-		public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
-		{
-			return metaInfo.GetEnumerator();
-		} // func GetEnumerator
+		public IEnumerator<PropertyValue> GetEnumerator()
+			=> (from c in metaInfo select new PropertyValue(c.Key, c.Value)).GetEnumerator();
 
 		public IEnumerable<string> Keys => metaInfo.Keys;
-		public IEnumerable<object> Values => metaInfo.Values;
 		public abstract IReadOnlyDictionary<string, Type> WellknownMetaTypes { get; }
 
 		public object this[string key]
@@ -130,7 +111,7 @@ namespace TecWare.PPSn.Data
 			get
 			{
 				object v;
-				return TryGetValue(key, out v) ? v : null;
+				return TryGetProperty(key, out v) ? v : null;
 			}
 		} // prop this
 
