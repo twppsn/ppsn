@@ -69,6 +69,7 @@ namespace TecWare.PPSn.Server.Wpf
 			public ParsedXamlFile(WpfClientItem owner, ParsedXamlFile parentFile, XDocument xBasicFile, XElement xResources, bool emitSourceInformationAsAttributes)
 			{
 				this.owner = owner;
+				this.parentFile = parentFile;
 				this.emitSourceInformationAsAttributes = emitSourceInformationAsAttributes;
 				this.cachedDocument = xBasicFile;
 				this.xResources = xResources;
@@ -322,11 +323,14 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#endregion
 
+		private readonly PpsApplication application;
+
 		private ParsedXamlFile defaultTheme = null;
 
 		public WpfClientItem(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
+			this.application = sp.GetService<PpsApplication>(true);
 		} // ctor
 
 		#region -- LoadDocument -----------------------------------------------------------
@@ -463,12 +467,52 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#endregion
 
+		private void ParseViews(IDEContext r)
+		{
+			using (XmlWriter xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml), Procs.XmlWriterSettings))
+			{
+				xml.WriteStartElement("views");
+
+				foreach (var v in application.GetViewDefinitions())
+				{
+					if (!v.IsVisible) // export only views with a name
+						continue;
+
+					// write the attributes
+					xml.WriteStartElement("view");
+					xml.WriteAttributeString("id", v.Name);
+					xml.WriteProperty(v.Attributes, "shortcut");
+					xml.WriteProperty(v.Attributes, "displayName");
+					xml.WriteProperty(v.Attributes, "displayImage");
+
+					// write filters and orders
+					foreach (var f in v.Filter)
+					{
+						if (f.IsVisible)
+							f.WriteElement(xml, "filter");
+					}
+					foreach (var o in v.Order)
+					{
+						if (o.IsVisible)
+							o.WriteElement(xml, "order");
+					}
+
+					xml.WriteEndElement();
+				} // foreach v
+				xml.WriteEndElement();
+			}
+		} // func ParseViews
+
 		protected override bool OnProcessRequest(IDEContext r)
 		{
 			if (r.RelativeSubPath == "default.xaml")
 			{
 				r.WriteXml(ParseXamlTheme(r.RelativeSubPath), MimeTypes.Application.Xaml);
 				return true;
+			}
+			else if (r.RelativeSubPath == "views.xml")
+			{
+				ParseViews(r);
 			}
 			return base.OnProcessRequest(r);
 		} // func OnProcessRequest

@@ -34,7 +34,7 @@ using static TecWare.PPSn.Server.PpsStuff;
 
 namespace TecWare.PPSn.Server
 {
-	#region -- class PpsFieldDescription --------------------------------------------------
+	#region -- class PpsFieldDescription ------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -132,26 +132,88 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
+	#region -- class PpsViewParameterDefinition -----------------------------------------
+
+	public sealed class PpsViewParameterDefinition
+	{
+		private readonly string name;
+		private readonly string displayName;
+		private readonly string parameter;
+
+		public PpsViewParameterDefinition(string name, string displayName, string parameter)
+		{
+			if (String.IsNullOrEmpty(name))
+				throw new ArgumentNullException("name");
+			
+			this.name = name;
+			this.displayName = displayName;
+			this.parameter = parameter;
+		} // ctor
+
+		public PpsViewParameterDefinition(XElement x)
+		{
+			this.name = x.GetAttribute<string>("name", null);
+			if (String.IsNullOrEmpty(name))
+				throw new DEConfigurationException(x, "@name is missing.");
+
+			this.displayName = x.GetAttribute<string>("displayName", null);
+			this.parameter = x.Value;
+		} // ctor
+
+		internal void WriteElement(XmlWriter xml, string tagName)
+		{
+			xml.WriteStartElement(tagName);
+			xml.WriteAttributeString("name", Name);
+			xml.WriteAttributeString("displayName", DisplayName);
+			xml.WriteEndElement();
+		} // proc WriteElement
+
+		public string Name => name;
+		public string DisplayName => displayName ?? name;
+		public string Parameter => parameter;
+
+		public bool IsVisible => displayName != null;
+
+		public static PpsViewParameterDefinition[] EmptyArray { get; } = new PpsViewParameterDefinition[0];
+	} // class PpsViewParameterDefinition
+
+	#endregion
+
 	#region -- class PpsViewDefinition --------------------------------------------------
 
 	public sealed class PpsViewDescription
 	{
 		private readonly IPpsSelectorToken selectorToken;
 		private readonly string displayName;
-		
-		// filter, sort
 
-		public PpsViewDescription(IPpsSelectorToken selectorToken, string displayName)
+		private readonly PpsViewParameterDefinition[] filter;
+		private readonly PpsViewParameterDefinition[] order;
+
+		private readonly IPropertyReadOnlyDictionary attributes;
+
+		public PpsViewDescription(IPpsSelectorToken selectorToken, string displayName, PpsViewParameterDefinition[] filter, PpsViewParameterDefinition[] order, IPropertyReadOnlyDictionary attributes)
 		{
 			this.selectorToken = selectorToken;
 			this.displayName = displayName;
+
+			this.filter = filter ?? PpsViewParameterDefinition.EmptyArray;
+			this.order = order ?? PpsViewParameterDefinition.EmptyArray;
+
+			this.attributes = attributes ?? new PropertyDictionary();
 		} // ctor
 				
 		public string Name => selectorToken.Name;
-		public string DisplayName => displayName;
+		public string DisplayName => displayName ?? selectorToken.Name;
 		//public string SecurityToken => DEConfigItem.SecuritySys;
 
+		public PpsViewParameterDefinition[] Filter => filter;
+		public PpsViewParameterDefinition[] Order => order;
+
+		public IPropertyReadOnlyDictionary Attributes => attributes;
+
 		public IPpsSelectorToken SelectorToken => selectorToken;
+
+		public bool IsVisible => displayName != null;
 	} // class PpsViewDefinition
 
 	#endregion
@@ -179,12 +241,21 @@ namespace TecWare.PPSn.Server
 
 			public async Task<PpsViewDescription> InitializeAsync()
 			{
+				// create the selector source
 				var sourceDescription = xDefinition.Element(xnSource);
 				if (sourceDescription == null)
 					throw new DEConfigurationException(xDefinition, "source definition is missing.");
 
 				var selectorToken = await source.CreateSelectorToken(name, sourceDescription);
-				var view = new PpsViewDescription(selectorToken, xDefinition.GetAttribute("displayName", name));
+
+
+				var view = new PpsViewDescription(
+					selectorToken,
+					xDefinition.GetAttribute("displayName", (string)null),
+					xDefinition.Elements(xnFilter).Select(x => new PpsViewParameterDefinition(x)).ToArray(),
+					xDefinition.Elements(xnOrder).Select(x => new PpsViewParameterDefinition(x)).ToArray(),
+					xDefinition.Elements(xnAttribute).ToPropertyDictionary()
+				);
 
 				return view;
 			} // proc InitializeAsync
@@ -362,7 +433,7 @@ namespace TecWare.PPSn.Server
 
 		public void RegisterView(IPpsSelectorToken selectorToken, string displayName = null)
 		{
-			RegisterView(new PpsViewDescription(selectorToken, displayName ?? selectorToken.Name));
+			RegisterView(new PpsViewDescription(selectorToken, displayName, null, null, null));
 		} // func RegisterView
 
 		private void RegisterView(PpsDataSource source, string name, XElement x)
@@ -416,6 +487,15 @@ namespace TecWare.PPSn.Server
 					return null;
 			}
 		} // func GetViewDefinition
+
+		public IEnumerable<PpsViewDescription> GetViewDefinitions()
+		{
+			lock (viewController)
+			{
+				foreach (var c in viewController.Values)
+					yield return c;
+			}
+		} // func GetViewDefinitions
 
 		public PpsDataSetServerDefinition GetDataSetDefinition(string name, bool throwException = true)
 		{

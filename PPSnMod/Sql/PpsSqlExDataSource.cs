@@ -164,14 +164,16 @@ namespace TecWare.PPSn.Server.Sql
 		{
 			private readonly PpsSqlExDataSource source;
 			private readonly string name;
+			private readonly string viewName;
 
 			private readonly string[] columnNames;
 			private readonly IPpsColumnDescription[] columnDescriptions;
 
-			private SqlDataSelectorToken(PpsSqlExDataSource source, string name, string[] columnNames, IPpsColumnDescription[] columnDescriptions)
+			private SqlDataSelectorToken(PpsSqlExDataSource source, string name, string viewName, string[] columnNames, IPpsColumnDescription[] columnDescriptions)
 			{
 				this.source = source;
 				this.name = name;
+				this.viewName = viewName;
 				this.columnNames = columnNames;
 				this.columnDescriptions = columnDescriptions;
 			} // ctor
@@ -186,6 +188,7 @@ namespace TecWare.PPSn.Server.Sql
 			} // func GetFieldDefinition
 
 			public string Name => name;
+			public string ViewName => viewName;
 			public PpsSqlExDataSource DataSource => source;
 
 			PpsDataSource IPpsSelectorToken.DataSource => DataSource;
@@ -260,16 +263,20 @@ namespace TecWare.PPSn.Server.Sql
 				return name;
 			} // proc CreateOrReplaceView
 
-			private static IPpsSelectorToken CreateCore(PpsSqlExDataSource source, string name, Func<SqlConnection, string> viewName)
+			private static IPpsSelectorToken CreateCore(PpsSqlExDataSource source, string name, Func<SqlConnection, string> getViewName)
 			{
 				string[] columnNames;
 				IPpsColumnDescription[] columnDescriptions;
 				SqlConnection connection;
 
+				string viewName = null;
 				using (source.UseMasterConnection(out connection))
-					ExecuteForResultSet(connection, source, viewName(connection), out columnNames, out columnDescriptions);
+				{
+					viewName = getViewName(connection);
+					ExecuteForResultSet(connection, source, viewName, out columnNames, out columnDescriptions);
+				}
 
-				return new SqlDataSelectorToken(source, name, columnNames, columnDescriptions);
+				return new SqlDataSelectorToken(source, name, viewName, columnNames, columnDescriptions);
 			} // func CreateCore
 
 			public static IPpsSelectorToken CreateFromStatement(PpsSqlExDataSource source, string name, string selectStatement)
@@ -444,7 +451,7 @@ namespace TecWare.PPSn.Server.Sql
 						sb.Append(selectList).Append(' ');
 
 					// add the view
-					sb.Append("from ").Append(selectorToken.Name).Append(" ");
+					sb.Append("from ").Append(selectorToken.ViewName).Append(" ");
 
 					// add the where
 					if(!String.IsNullOrEmpty(whereCondition))
@@ -616,7 +623,8 @@ namespace TecWare.PPSn.Server.Sql
 				{
 					if (first)
 						first = false;
-					else {
+					else
+					{
 						commandText.Append(", ");
 						variableList.Append(", ");
 					}
@@ -624,7 +632,7 @@ namespace TecWare.PPSn.Server.Sql
 					commandText.Append("[").Append(kv.Key).Append("]");
 
 					var parameterName = "@" + kv.Key;
-					var column = ((PpsSqlExDataSource)DataSource).ResolveColumnByName(kv.Key);
+					var column = ((PpsSqlExDataSource)DataSource).ResolveColumnByName(tableInfo.FullName + "." + kv.Key);
 					cmd.Parameters.Add(column?.CreateSqlParameter(parameterName, kv.Value ?? DBNull.Value) ?? new SqlParameter(parameterName, kv.Value != null ? Procs.ChangeType(kv.Value, column.FieldType) : DBNull.Value));
 					variableList.Append(parameterName);
 				}
@@ -632,6 +640,9 @@ namespace TecWare.PPSn.Server.Sql
 
 				// generate output clause
 				var primaryKeyName = tableInfo.PrimaryKey.Name;
+				var p = primaryKeyName.LastIndexOf('.');
+				if (p >= 0)
+					primaryKeyName = primaryKeyName.Substring(p + 1);
 				commandText.Append("output inserted.").Append(primaryKeyName);
 				resultInfo.Add(r =>
 				{
@@ -757,9 +768,9 @@ namespace TecWare.PPSn.Server.Sql
 				this.objectId = r.GetInt32(0);
 				this.schema = r.GetString(1);
 				this.name = r.GetString(2);
-				this.primaryColumnId = r.GetInt32(3);
+				this.primaryColumnId = r.IsDBNull(3) ? -1 : r.GetInt32(3);
 
-				this.primaryColumn = new Lazy<SqlColumnInfo>(() => resolveColumn(objectId, primaryColumnId));
+				this.primaryColumn = primaryColumnId == -1 ? null : new Lazy<SqlColumnInfo>(() => resolveColumn(objectId, primaryColumnId));
 			} // ctor
 
 			internal void AddRelation(SqlRelationInfo sqlRelationInfo)
@@ -771,7 +782,7 @@ namespace TecWare.PPSn.Server.Sql
 			public string Schema => schema;
 			public string Name => name;
 			public string FullName => schema + "." + name;
-			public SqlColumnInfo PrimaryKey => primaryColumn.Value;
+			public SqlColumnInfo PrimaryKey => primaryColumn?.Value;
 
 			public IEnumerable<SqlRelationInfo> RelationInfo => relationInfo;
 		} // class SqlTableInfo

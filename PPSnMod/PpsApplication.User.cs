@@ -485,7 +485,12 @@ namespace TecWare.PPSn.Server
 			} // func CreateSelector
 
 			public PpsDataSelector CreateSelector(LuaTable table)
-				=> CreateSelector(table.GetOptionalValue("name", (string)null), table.GetOptionalValue("filter", (string)null), table.GetOptionalValue("order", (string)null), table.GetOptionalValue("throwException", true));
+			{
+				if (table == null)
+					throw new ArgumentNullException("table");
+
+				return CreateSelector(table.GetOptionalValue("name", (string)null), table.GetOptionalValue("filter", (string)null), table.GetOptionalValue("order", (string)null), table.GetOptionalValue("throwException", true));
+			} // func CreateSelector
 
 			public PpsDataTransaction CreateTransaction(PpsDataSource source = null, bool throwException = true)
 			{

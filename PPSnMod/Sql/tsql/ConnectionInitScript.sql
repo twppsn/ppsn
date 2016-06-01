@@ -6,8 +6,8 @@ SELECT
 		ic.column_id
 	FROM sys.objects u
 		INNER JOIN sys.schemas s ON (u.schema_id = s.schema_id)
-		INNER JOIN sys.indexes pk ON (u.object_id = pk.object_id and pk.is_primary_key = 1)
-		INNER JOIN sys.index_columns ic ON (pk.object_id = ic.object_id and pk.index_id = ic.index_id)
+		LEFT OUTER JOIN sys.indexes pk ON (u.object_id = pk.object_id and pk.is_primary_key = 1)
+		LEFT OUTER JOIN sys.index_columns ic ON (pk.object_id = ic.object_id and pk.index_id = ic.index_id)
 	WHERE u.type = 'U';
 
 -- user columns
