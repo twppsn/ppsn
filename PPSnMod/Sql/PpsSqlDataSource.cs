@@ -1,12 +1,27 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using TecWare.DE.Stuff;
 using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server.Sql
@@ -17,7 +32,7 @@ namespace TecWare.PPSn.Server.Sql
 	{
 		public virtual bool TryGetProperty(string name, out object value)
 		{
-			var idx = Array.FindIndex(ColumnNames, c => String.Compare(c, name, StringComparison.OrdinalIgnoreCase) == 0);
+			var idx = Array.FindIndex(Columns, c => String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
 			if (idx >= 0 && idx < ColumnCount)
 			{
 				value = this[idx];
@@ -37,13 +52,12 @@ namespace TecWare.PPSn.Server.Sql
 				object tmp;
 				return TryGetProperty(columnName, out tmp) ? tmp : null;
 			}
-		} // func this
+		} // prop this
 
 		public abstract object this[int index] { get; }
 
 		public abstract int ColumnCount { get; }
-		public abstract string[] ColumnNames { get; }
-		public abstract Type[] ColumnTypes { get; }
+		public abstract IDataColumn[] Columns { get; }
 	} // class DynamicDataRow
 
 	#endregion

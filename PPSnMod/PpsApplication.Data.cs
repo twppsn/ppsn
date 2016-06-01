@@ -59,64 +59,98 @@ namespace TecWare.PPSn.Server
 			this.name = name;
 			this.xDefinition = xDefinition;
 
-			displayName = new Lazy<string>(() => xDefinition.GetAttribute(DisplayNameAttributeString, null) ?? GetFieldAttribute(DisplayNameAttributeString, name));
-			maxLength = new Lazy<int>(() => GetFieldAttribute(MaxLengthAttributeString, Int32.MaxValue));
-			dataType = new Lazy<Type>(() => GetDataTypeFromAttribute() ?? GetFieldAttribute(DataTypeAttributeString, typeof(string)));
+			displayName = new Lazy<string>(() => this.GetProperty(DisplayNameAttributeString, name));
+			maxLength = new Lazy<int>(() => this.GetProperty(MaxLengthAttributeString, Int32.MaxValue));
+			dataType = new Lazy<Type>(() => this.GetProperty(DataTypeAttributeString, typeof(string)));
 		} // ctor
 
 		internal void SetColumnDescription(IPpsColumnDescription columnDescription)
-		{
-			this.columnDescription = columnDescription;
-		} // ResolveColumnDescription
+			=> this.columnDescription = columnDescription;
 
-		private Type GetDataTypeFromAttribute()
+		private PropertyValue GetProperty(XElement attribute)
 		{
-			var typeString = xDefinition.GetAttribute(DataTypeAttributeString, null);
-			if (String.IsNullOrEmpty(typeString))
+			if (attribute?.Value == null)
 				return null;
 
 			try
 			{
-				return LuaType.GetType(typeString, lateAllowed: false).Type;
-			}
-			catch
-			{
-				return typeof(string);
-			}
-		} // func GetDataTypeFromAttribute
+				var name = attribute.GetAttribute<string>("name", null);
+				if (String.IsNullOrEmpty(name))
+					throw new ArgumentNullException("name");
 
-		public T GetFieldAttribute<T>(string attributeName, T @default)
-		{
-			var f = xDefinition.Elements(xnFieldAttribute).FirstOrDefault(x => String.Compare(x.GetAttribute("name", String.Empty), attributeName, StringComparison.OrdinalIgnoreCase) == 0);
-			if (f?.Value== null)
-				return @default;
-
-			try
-			{
-				if (typeof(T) == typeof(Type))
-					return (T)(object)LuaType.GetType(f.Value, lateAllowed: false).Type;
+				object value;
+				var dataType = LuaType.GetType(attribute.GetAttribute("dataType", typeof(string))).Type;
+				if (dataType == typeof(Type))
+					value = (object)LuaType.GetType(attribute.Value, lateAllowed: false).Type;
 				else
-					return f.Value.ChangeType<T>();
+					value = Procs.ChangeType(attribute.Value, dataType);
+
+				return new PropertyValue(name, dataType, value);
 			}
 			catch
 			{
-				return @default;
+				return null;
 			}
-		} // func GetFieldAttribute
+		} // func GetProperty
+
+		public PropertyValue GetProperty(string name)
+		{
+			var ret = GetProperty(xDefinition.Elements(xnFieldAttribute).FirstOrDefault(c => String.Compare(c.GetAttribute<string>("name", null), name, StringComparison.OrdinalIgnoreCase) == 0));
+
+			if (ret == null)
+			{
+				if (String.Compare(name, DisplayNameAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
+					return new PropertyValue(DisplayNameAttributeString, typeof(string), xDefinition.GetAttribute<string>(DisplayNameAttributeString, name));
+				else if (String.Compare(name, DataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
+					return new PropertyValue(DataTypeAttributeString, typeof(Type), LuaType.GetType(xDefinition.GetAttribute<string>(DataTypeAttributeString, "string"), lateAllowed: false).Type);
+			}
+
+			return ret;
+		} // func GetProperty
+
+		#region -- IPropertyReadOnlyDictionary --------------------------------------------
 
 		public bool TryGetProperty(string name, out object value)
 		{
-			value = null;
-			return false;
+			value = GetProperty(name)?.Value;
+			return (value != null);
 		} // func TryGetProperty
+
+		#endregion
+
+		#region -- IEnumerable ------------------------------------------------------------
 
 		public IEnumerator<PropertyValue> GetEnumerator()
 		{
-			yield break;
-		}
+			var displayNameEmitted = false;
+			var dataTypeEmitted = false;
+
+			foreach (var cur in xDefinition.Elements(xnFieldAttribute))
+			{
+				var p = GetProperty(cur);
+
+				if (p == null)
+					continue;
+
+				if (String.Compare(p.Name, DisplayNameAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
+					displayNameEmitted = true;
+				else if (String.Compare(p.Name, DataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
+					dataTypeEmitted = true;
+
+				yield return p;
+			}
+
+			if (!displayNameEmitted)
+				yield return new PropertyValue(DisplayNameAttributeString, typeof(string), DisplayName);
+
+			if (!dataTypeEmitted)
+				yield return new PropertyValue(DataTypeAttributeString, typeof(Type), DataType);
+		} // func GetEnumerator
 
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
+
+		#endregion
 
 		public PpsDataSource DataSource => source;
 		public string Name => name;
@@ -580,7 +614,7 @@ namespace TecWare.PPSn.Server
 						xml.WriteStartElement("fields");
 						for (var i = 0; i < columnNames.Length; i++)
 						{
-							var nativeColumnName = columnDefinition.ColumnNames[i];
+							var nativeColumnName = columnDefinition.Columns[i].Name;
 							var fieldDefinition = selector.GetFieldDescription(nativeColumnName);
 
 							if (fieldDefinition == null)
@@ -592,9 +626,16 @@ namespace TecWare.PPSn.Server
 							{
 								columnNames[i] = nativeColumnName;
 
+								var fieldDescription = this.GetFieldDescription(fieldDefinition.Name, false);
+
 								new XElement(nativeColumnName,
 									new XAttribute("type", LuaType.GetType(fieldDefinition.DataType).AliasOrFullName),
-									new XAttribute("field", fieldDefinition.Name)
+									new XAttribute("field", fieldDefinition.Name),
+									fieldDescription == null ? null : from c in fieldDescription select new XElement("attribute",
+										new XAttribute("name", c.Name),
+										new XAttribute("dataType", LuaType.GetType(c.Type).AliasOrFullName),
+										c.Type == typeof(Type) && c.Value is Type ? LuaType.GetType((Type)c.Value).AliasOrFullName : c.Value
+									)
 								).WriteTo(xml);
 							}
 						}

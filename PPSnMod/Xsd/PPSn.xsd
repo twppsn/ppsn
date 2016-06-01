@@ -94,10 +94,6 @@
 													<xs:union memberTypes="pps:fieldAttributeNames KeyType" />
 												</xs:simpleType>
 											</xs:attribute>
-											<xs:attribute name="displayName" type="xs:string" use="optional">
-											</xs:attribute>
-											<xs:attribute name="dataType" type="LuaType" use="optional">
-											</xs:attribute>
 										</xs:extension>
 									</xs:simpleContent>
 								</xs:complexType>
@@ -107,6 +103,10 @@
 							<xs:annotation>
 								<xs:documentation>Full qualified name of the column.</xs:documentation>
 							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="displayName" type="xs:string" use="optional">
+						</xs:attribute>
+						<xs:attribute name="dataType" type="LuaType" use="optional">
 						</xs:attribute>
 						<xs:attribute name="inherited" use="optional">
 							<xs:annotation>

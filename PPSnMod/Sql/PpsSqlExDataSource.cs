@@ -26,11 +26,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
-using TecWare.DE.Data;
-using TecWare.PPSn.Server.Data;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server.Sql
 {
@@ -312,37 +312,58 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
+		#region -- class SqlDataColumn ----------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class SqlDataColumn : IDataColumn
+		{
+			private readonly string name;
+			private readonly Type dataType;
+			private readonly IDataColumnAttributes attributes;
+
+			#region -- Ctor/Dtor --------------------------------------------------------------
+
+			public SqlDataColumn(string name, Type dataType, IDataColumnAttributes attributes)
+			{
+				this.name = name;
+				this.dataType = dataType;
+				this.attributes = attributes;
+			} // ctor
+
+			#endregion
+
+			#region -- IDataColumn ------------------------------------------------------------
+
+			public string Name => name;
+			public Type DataType => dataType;
+			public IDataColumnAttributes Attributes => attributes;
+
+			#endregion
+		} // class SqlDataColumn
+
+		#endregion
+
 		#region -- class SqlDataRow -------------------------------------------------------
 
 		private sealed class SqlDataRow : DynamicDataRow
 		{
 			private readonly SqlDataReader r;
-			private readonly Lazy<Type[]> columnTypes;
-			private readonly Lazy<string[]> columnNames;
+			private readonly Lazy<IDataColumn[]> columns;
 
 			public SqlDataRow(SqlDataReader r)
 			{
 				this.r = r;
 
-				this.columnTypes = new Lazy<Type[]>(
+				columns = new Lazy<IDataColumn[]>(
 					() =>
 					{
-						var t = new Type[r.FieldCount];
+						var t = new SqlDataColumn[r.FieldCount];
 						for (var i = 0; i < r.FieldCount; i++)
-							t[i] = r.GetFieldType(i);
+							t[i] = new SqlDataColumn(r.GetName(i), r.GetFieldType(i), null);
 						return t;
 					});
-
-				this.columnNames = new Lazy<string[]>(
-					() =>
-					{
-						var t = new string[r.FieldCount];
-						for (var i = 0; i < r.FieldCount; i++)
-							t[i] = r.GetName(i);
-						return t;
-					});
-
-			} // ctor
+			}
 
 			public override object this[int index]
 			{
@@ -353,12 +374,10 @@ namespace TecWare.PPSn.Server.Sql
 						v = null;
 					return v;
 				}
-			} // func this
+			} // prop this
 
 			public override int ColumnCount => r.FieldCount;
-
-			public override string[] ColumnNames => columnNames.Value;
-			public override Type[] ColumnTypes => columnTypes.Value;
+			public override IDataColumn[] Columns => columns.Value;
 		} // class SqlDataRow
 
 		#endregion
