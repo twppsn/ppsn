@@ -274,7 +274,7 @@
                 </Style>
             </TextBlock.Style>
         </TextBlock>
-		<TextBox x:Name="PART_SearchBox" Grid.Column="1" Grid.ColumnSpan="3" Grid.RowSpan="2" HorizontalAlignment="Right" VerticalAlignment="Top" Width="320" Margin="0,13,170,0" FontSize="14.667" Text="{Binding Path=Navigator.CurrentSearchText,Delay=300,UpdateSourceTrigger=PropertyChanged}">
+		<TextBox x:Name="PART_SearchBox" Grid.Column="1" Grid.ColumnSpan="3" Grid.RowSpan="2" HorizontalAlignment="Right" VerticalAlignment="Top" Width="320" Margin="0,13,170,0" FontSize="14.667" Text="{Binding Path=Navigator.CurrentSearchText,Delay=300,UpdateSourceTrigger=PropertyChanged}" KeyDown="PART_SearchBox_KeyDown">
 			<TextBox.Style>
 				<Style TargetType="TextBox" BasedOn="{StaticResource PPSnSearchBoxStyle}" >
                     <Style.Triggers>

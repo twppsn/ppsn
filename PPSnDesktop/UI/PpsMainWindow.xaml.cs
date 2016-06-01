@@ -444,6 +444,13 @@ namespace TecWare.PPSn.UI
 			}
 		} // prop IsViewsDescriptionVisible
 
+		private void PART_SearchBox_KeyDown(object sender, KeyEventArgs e)
+		{
+			if (e.Key == Key.Enter)
+			{
+				navigator.ExecuteCurrentSearchText();
+			}
+		}
 	} // class PpsMainWindow
 
 	#region -- enum PpsnSearchBoxState ------------------------------------------------

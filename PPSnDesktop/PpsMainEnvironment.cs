@@ -157,6 +157,11 @@ namespace TecWare.PPSn
 				});
 		} // proc CreateMainWindow
 
+		public LuaChunk CreateLuaChunk(string line, params KeyValuePair<string, Type>[] args)
+		{
+			return Lua.CompileChunk(line, "line.lua", null, args);
+		} // func CreateLuaChunk
+
 		public LuaChunk CreateLuaChunk(XElement xCode, params KeyValuePair<string, Type>[] args)
 		{
 			var code = xCode?.Value;

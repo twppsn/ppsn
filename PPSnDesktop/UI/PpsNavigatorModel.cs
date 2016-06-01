@@ -9,6 +9,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using TecWare.DE.Data;
 using TecWare.PPSn.Data;
+using System.Diagnostics;
 
 namespace TecWare.PPSn.UI
 {
@@ -16,6 +17,138 @@ namespace TecWare.PPSn.UI
 	/// <summary></summary>
 	public class PpsNavigatorModel : LuaTable
 	{
+		#region -- class CurrentSearchTextExpression --------------------------------------
+
+		private abstract class CurrentSearchTextExpression
+		{
+			private readonly PpsNavigatorModel navigator;
+			private readonly int searchTextOffset;
+			private readonly string originalSearchText;
+
+			public CurrentSearchTextExpression(PpsNavigatorModel navigator, string searchText, int searchTextOffset)
+			{
+				this.navigator = navigator;
+				this.searchTextOffset = searchTextOffset;
+				this.originalSearchText = searchText;
+			} // ctor
+
+			/// <summary></summary>
+			/// <param name="currentSearchTextExpression"></param>
+			/// <returns></returns>
+			public virtual int CompareTo(CurrentSearchTextExpression other)
+			{
+				if (Object.ReferenceEquals(this, other))
+					return 0;
+				else
+				{
+					if (this.GetType() == other.GetType())
+					{
+						if (SearchText == other.SearchText)
+							return 0;
+						else
+							return 1; // change text only
+					}
+					else
+						return -1; //change + refresh
+				}
+			} // func CompareTo
+
+			public virtual void Execute()
+			{
+			} // proc Execute
+
+			public virtual bool IsExecutable => false;
+			public string Data => originalSearchText.Substring(searchTextOffset);
+			public string SearchText => originalSearchText;
+
+			public PpsNavigatorModel Navigator => navigator;
+		} // class CurrentSearchTextExpression
+
+		#endregion
+
+		#region -- class EmptyExpression --------------------------------------------------
+
+		private sealed class EmptyExpression : CurrentSearchTextExpression
+		{
+			public EmptyExpression(PpsNavigatorModel navigator, string searchText, int searchTextOffset)
+				:base(navigator, searchText, searchTextOffset)
+			{
+			} // ctor
+
+			public static EmptyExpression Instance { get; } = new EmptyExpression(null, String.Empty, 0);
+		} // class EmptyExpression
+
+		#endregion
+
+		#region -- class SearchExpression -------------------------------------------------
+
+		private sealed class SearchExpression : CurrentSearchTextExpression
+		{
+			public SearchExpression(PpsNavigatorModel navigator, string searchText, int searchTextOffset)
+				:base(navigator, searchText, searchTextOffset)
+			{
+			} // ctor
+		} // class SearchExpression
+
+		#endregion
+
+		#region -- class MacroExpression --------------------------------------------------
+
+		private sealed class MacroExpression : CurrentSearchTextExpression
+		{
+			public MacroExpression(PpsNavigatorModel navigator, string searchText, int searchTextOffset)
+				:base(navigator, searchText, searchTextOffset)
+			{
+			} // ctor
+		} // class MacroExpression
+
+		#endregion
+
+		#region -- class LuaExpression ----------------------------------------------------
+
+		private sealed class LuaExpression : CurrentSearchTextExpression
+		{
+			private readonly bool isExecutable;
+			private readonly LuaChunk chunk;
+
+			public LuaExpression(PpsNavigatorModel navigator, string searchText, int searchTextOffset)
+				: base(navigator, searchText, searchTextOffset)
+			{
+				if (navigator == null)
+					throw new ArgumentNullException("navigator");
+
+				if (String.IsNullOrWhiteSpace(Data))
+					isExecutable = false;
+				else // compile to check for syntax
+				{
+					try
+					{
+						chunk = navigator.Environment.CreateLuaChunk(Data);
+					}
+					catch (Exception e)
+					{
+						Debug.Print(e.ToString());
+					}
+				}
+			} // ctor
+
+			public override void Execute()
+			{
+				try
+				{
+					chunk.Run(Navigator);
+				}
+				catch (Exception e)
+				{
+					Navigator.Environment.ShowException(ExceptionShowFlags.None, e, "Execution failed.");
+				}
+			} // proc Execute
+
+			public override bool IsExecutable => isExecutable;
+		} // class LuaExpression
+
+		#endregion
+
 		#region -- class PpsFilterView ----------------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
@@ -99,7 +232,7 @@ namespace TecWare.PPSn.UI
 		private PpsDataList items;
 		private ICollectionView itemsView;
 		
-		private string currentSearchText = String.Empty;
+		private CurrentSearchTextExpression currentSearchTextExpression = EmptyExpression.Instance;		
 		
 		public PpsNavigatorModel(PpsMainWindow windowModel)
 		{
@@ -198,11 +331,43 @@ namespace TecWare.PPSn.UI
 				newOrder.FireIsCheckedChanged();
     } // proc UpdateCurrentOrder
 
-		private void UpdateCurrentExtentedSearch()
+		private void UpdateCurrentExtentedSearch(string searchText)
 		{
+			// parses the current search text
+			// "." -> ui shortcut/macro
+			//  ".:" -> results in a lua commant
 
-			RefreshData();
+			CurrentSearchTextExpression newSearchExpression;
+			if (String.IsNullOrEmpty(searchText))
+				newSearchExpression = EmptyExpression.Instance;
+			else if (searchText[0] == '.') // special expression
+			{
+				if (searchText.Length == 1)
+					newSearchExpression = new EmptyExpression(this, searchText, 1);
+				else if (searchText[1] == ':') // lua
+					newSearchExpression = new LuaExpression(this, searchText, 2);
+				else if (Char.IsLetter(searchText[1])) // macro
+					newSearchExpression = new MacroExpression(this, searchText, 1);
+				else
+					newSearchExpression = new SearchExpression(this, searchText, 0);
+			}
+			else
+				newSearchExpression = new SearchExpression(this, searchText, 0);
+
+			var cmp = newSearchExpression.CompareTo(currentSearchTextExpression);
+			if (cmp < 0)
+				currentSearchTextExpression = newSearchExpression;
+			else if (cmp > 0)
+			{
+				currentSearchTextExpression = newSearchExpression;
+				RefreshData();
+			}
 		} // proc ReUpdateCurrentExtentedSearch
+
+		public void ExecuteCurrentSearchText()
+		{
+			currentSearchTextExpression.Execute();
+		} // proc ExecuteCurrentSearchText
 
 		private async void RefreshData()
 		{
@@ -280,6 +445,8 @@ namespace TecWare.PPSn.UI
 		public ICollectionView Items => itemsView;
 
 		/// <summary>Current SearchText</summary>
-		public string CurrentSearchText { get { return currentSearchText; } set { currentSearchText = value; UpdateCurrentExtentedSearch(); } }
+		public string CurrentSearchText { get { return currentSearchTextExpression?.SearchText; } set { UpdateCurrentExtentedSearch(value); } }
+		/// <summary>Is the current search content executable.</summary>
+		public bool CanExecuteSearchText => currentSearchTextExpression.IsExecutable;
 	} // class PpsNavigatorModel
 }

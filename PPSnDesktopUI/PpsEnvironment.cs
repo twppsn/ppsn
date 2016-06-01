@@ -707,34 +707,49 @@ namespace TecWare.PPSn
 		{
 			await Task.Yield();
 
+			await RefreshDefaultResourcesAsync();
+			await RefreshTemplatesAsync();
+		} // proc RefreshAsync
+
+		private async Task RefreshDefaultResourcesAsync()
+		{
 			// update the resources, load a server site resource dictionary
 			var t = await GetXmlDocumentAsync("wpf/default.xaml", true, true);
-			if (t != null)
+			if (t == null)
+				return;
+
+			var basicTemplates = t.Item1;
+			var lastTimeStamp = t.Item2;
+
+			// theme/resources
+			var xTheme = basicTemplates.Root;
+
+			var parserContext = new ParserContext();
+			parserContext.AddNamespaces(xTheme);
+
+			var xResources = xTheme.Element(StuffUI.PresentationNamespace + "resources");
+			if (xResources != null)
 			{
-				var basicTemplates = t.Item1;
-				var lastTimeStamp = t.Item2;
-
-				// theme/resources
-				var xTheme = basicTemplates.Root;
-
-				var parserContext = new ParserContext();
-				parserContext.AddNamespaces(xTheme);
-
-				var xResources = xTheme.Element(StuffUI.PresentationNamespace + "resources");
-				if (xResources != null)
+				foreach (var cur in xResources.Elements())
 				{
-					foreach (var cur in xResources.Elements())
-					{
-						var key = cur.GetAttribute(StuffUI.xnKey, String.Empty);
-						if (key != null)
-							Dispatcher.Invoke(() => UpdateResource(key, cur.ToString(), parserContext));
-					}
+					var key = cur.GetAttribute(StuffUI.xnKey, String.Empty);
+					if (key != null)
+						Dispatcher.Invoke(() => UpdateResource(key, cur.ToString(), parserContext));
 				}
 			}
+		} // proc RefreshDefaultResourcesAsync
 
-			//string p = @"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktop\Local\Templatesa.xml";
-			//if (!File.Exists(p))
-			//	p = @"..\..\..\PPSnDesktop\Local\Templates.xml";
+		private async Task RefreshTemplatesAsync()
+		{
+			var t = await GetXmlDocumentAsync("wpf/templates.xaml", true, true);
+			if (t == null)
+				return;
+
+			// check for a global resource dictionary, and update the main resources
+
+			// load the templates
+
+			// remove unused templates
 
 			//var xTemplates = XDocument.Load(p);
 			//foreach (var xTemplate in xTemplates.Root.Elements("template"))
@@ -752,7 +767,7 @@ namespace TecWare.PPSn
 
 			//	typeDef.AppendTemplate(xTemplate);
 			//}
-		} // proc RefreshAsync
+		} // proc RefreshTemplatesAsync
 
 		protected virtual void OnIsOnlineChanged()
 			=> IsOnlineChanged?.Invoke(this, EventArgs.Empty);
