@@ -245,7 +245,7 @@ namespace TecWare.PPSn.Data
 				for (int i = 0; i < c.ColumnCount; i++)
 				{
 					if (c[i] != null)
-						t[c.ColumnNames[i]] = c[i];
+						t[c.Columns[i].Name] = c[i];
 				}
 
 				// are more data available
@@ -340,8 +340,8 @@ namespace TecWare.PPSn.Data
             if (r != null)
             {
                 for (int i = 0; i < r.ColumnCount; i++)
-                    item[r.ColumnNames[i]] = r[i];
-            }
+					item[r.Columns[i].Name] = r[i];
+			}
             item.isLoading = false;
 
             // todo: execute a extented function
@@ -440,7 +440,7 @@ namespace TecWare.PPSn.Data
 				}
 			}
 			set { throw new NotSupportedException(); }
-		} // prop Index
+		} // prop this
 
 		/// <summary>Anzahl der Elemente in der Liste</summary>
 		public int Count { get { return visibleCount; } }

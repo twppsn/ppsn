@@ -808,8 +808,8 @@ namespace TecWare.PPSn.Data
 		/// <summary>Zugehörige Datentabelle</summary>
 		public PpsDataTable Table { get { return table; } internal set { table = value; } }
 
-		string[] IDataColumns.ColumnNames => (from c in table.Columns select c.Name).ToArray();
-		Type[] IDataColumns.ColumnTypes => (from c in table.Columns select c.DataType).ToArray();
+		// todo: Implement missing functionality. Change PpsDataTable > PpsDataTableDefinition > PpsDataTableMetaCollection > PpsMetaCollection implementation. ?Expectation: "IDataColumn[] IDataColumns.Columns = table.Columns;"?
+		IDataColumn[] IDataColumns.Columns => null;
 		int IDataColumns.ColumnCount => table.Columns.Count;
 
 		// -- Static --------------------------------------------------------------

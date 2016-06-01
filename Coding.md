@@ -121,7 +121,7 @@ Attribute()
 
 ### Static
 
-* Statics always defined at the end of type (and might be separated with // -- Statics --------------------------------)
+* Statics always defined at the end of type (and might be separated with // -- Static --------------------------------------------------------------)
 * Follow basic layout
 
 ### Comments
