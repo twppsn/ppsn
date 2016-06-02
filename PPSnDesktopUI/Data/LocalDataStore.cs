@@ -135,7 +135,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="contentType"></param>
 		/// <param name="data"></param>
 		/// <returns></returns>
-		public bool TryGetOfflineItem(string path, bool onlineMode, out string contentType, out Stream data)
+		public virtual bool TryGetOfflineItem(string path, bool onlineMode, out string contentType, out Stream data)
 		{
 			// check if this item is for online&offline mode
 

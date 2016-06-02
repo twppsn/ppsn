@@ -68,8 +68,8 @@ namespace TecWare.PPSn.Data
 
 		private List<TemplateItem> templates = new List<TemplateItem>();
 
-		internal PpsDataListItemDefinition(PpsEnvironment environment, PpsEnvironmentDefinitionSource source, string key)
-			: base(environment, source, key)
+		internal PpsDataListItemDefinition(PpsEnvironment environment, string key)
+			: base(environment, key)
 		{
 		} // ctor
 

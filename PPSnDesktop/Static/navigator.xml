@@ -1,0 +1,6 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<navigator>
+	<action name="closeapp" displayName="Schließen" priority="-1000" displayGlyph="57639">
+		<code><![CDATA[ Window:Close(); ]]></code>
+	</action>
+</navigator>

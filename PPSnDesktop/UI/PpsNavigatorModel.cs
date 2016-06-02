@@ -108,7 +108,6 @@ namespace TecWare.PPSn.UI
 
 		private sealed class LuaExpression : CurrentSearchTextExpression
 		{
-			private readonly bool isExecutable;
 			private readonly LuaChunk chunk;
 
 			public LuaExpression(PpsNavigatorModel navigator, string searchText, int searchTextOffset)
@@ -118,25 +117,33 @@ namespace TecWare.PPSn.UI
 					throw new ArgumentNullException("navigator");
 
 				if (String.IsNullOrWhiteSpace(Data))
-					isExecutable = false;
+					chunk = null;
 				else // compile to check for syntax
 				{
 					try
 					{
 						chunk = navigator.Environment.CreateLuaChunk(Data);
 					}
-					catch (Exception e)
+					catch (LuaParseException e)
 					{
-						Debug.Print(e.ToString());
+						navigator.Environment.Traces.AppendText(PpsTraceItemType.Debug, String.Format("Syntax: {0} at {1}", e.Message, e.Index));
+						chunk = null;
 					}
 				}
 			} // ctor
 
 			public override void Execute()
 			{
+				if (chunk == null)
+					return;
+
 				try
 				{
-					chunk.Run(Navigator);
+					var r = chunk.Run(Navigator);
+					// write the return in the log
+					if (r.Count > 0)
+						Navigator.Environment.Traces.AppendText(PpsTraceItemType.Information, String.Format("Executed: {0}", r.ToString()));
+					Navigator.ClearCurrentSearchText();
 				}
 				catch (Exception e)
 				{
@@ -144,7 +151,7 @@ namespace TecWare.PPSn.UI
 				}
 			} // proc Execute
 
-			public override bool IsExecutable => isExecutable;
+			public override bool IsExecutable => chunk != null;
 		} // class LuaExpression
 
 		#endregion
@@ -211,8 +218,8 @@ namespace TecWare.PPSn.UI
 			internal void FireIsCheckedChanged() => OnPropertyChanged(nameof(IsChecked));
 
 
+			public string Name => order.Name;
 			public string DisplayName => order.DisplayName;
-			public string ColumnName => order.ColumnName;
 			public bool? IsChecked => model.currentOrder == this ? (bool?)model.sortAscending : null;
     } // class PpsOrderView
 
@@ -364,6 +371,12 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc ReUpdateCurrentExtentedSearch
 
+		public void ClearCurrentSearchText()
+		{
+			currentSearchTextExpression = EmptyExpression.Instance;
+			OnPropertyChanged(nameof(CurrentSearchText));
+		} // proc ClearCurrentSearchText
+
 		public void ExecuteCurrentSearchText()
 		{
 			currentSearchTextExpression.Execute();
@@ -376,7 +389,7 @@ namespace TecWare.PPSn.UI
 				await items.ClearAsync();
 			else
 			{
-				var dataSource = new PpsShellGetList(CurrentView.Name) { Detailed = false };
+			//var dataSource = new PpsShellGetList(CurrentView.Name) { Detailed = false };
 
 				//if (currentFilter != null)
 				//	dataSource.PreFilterId = currentFilter.FilterName;
@@ -384,7 +397,7 @@ namespace TecWare.PPSn.UI
 				//	dataSource.OrderId = currentOrder.ColumnName + (sortAscending ? "+" : "-");
 				//dataSource.CustomFilter = currentSearchText;
 
-				await items.Reset(dataSource);
+				//await items.Reset(dataSource);
 			}
 		} // proc RefreshData
 
@@ -419,10 +432,9 @@ namespace TecWare.PPSn.UI
 		} // proc LoadGenericMask
 
 		protected override object OnIndex(object key)
-		{
-			return base.OnIndex(key) ?? Environment.GetValue(key); // inherit from the environment
-		} // func OnIndex
+			=> base.OnIndex(key) ?? Environment.GetValue(key); // inherit from the environment
 
+		/// <summary>The environment, that is the owenr of this window.</summary>
 		public PpsMainEnvironment Environment => windowModel.Environment;
 
 		[LuaMember(nameof(Window))]

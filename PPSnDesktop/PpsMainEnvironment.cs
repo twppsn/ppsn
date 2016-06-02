@@ -33,11 +33,11 @@ namespace TecWare.PPSn
 		private readonly LuaChunk condition;
 		private readonly LuaChunk code;
 
-		internal PpsMainActionDefinition(PpsMainEnvironment environment, PpsEnvironmentDefinitionSource source, XElement xCur, ref int priority)
-			: base(environment, source, xCur.GetAttribute("name", String.Empty))
+		internal PpsMainActionDefinition(PpsMainEnvironment environment, XElement xCur, ref int priority)
+			: base(environment, xCur.GetAttribute("name", String.Empty))
 		{
-			this.displayName = xCur.GetAttribute("displayname", this.Name);
-			this.displayGlyph = xCur.GetAttribute("displayglyph", 57807);
+			this.displayName = xCur.GetAttribute("displayName", this.Name);
+			this.displayGlyph = xCur.GetAttribute("displayGlyph", 57807);
 			this.Priority = priority = xCur.GetAttribute("priority", priority + 1);
 
 			condition = environment.CreateLuaChunk(xCur.Element(xnCondition)); // , new KeyValuePair<string, Type>("contextMenu", typeof(bool))
@@ -79,31 +79,26 @@ namespace TecWare.PPSn
 				: base(environment)
 			{
 			} // ctor
-			
-			protected override void GetResponseDataStream(PpsStoreResponse r)
-			{
-				var actionName = r.Request.Arguments.Get("action");
-				if (r.Request.Path == "/" && String.Compare(actionName, "getviews", StringComparison.OrdinalIgnoreCase) == 0) // get all local views
-				{
-					r.SetResponseData(CollectLocalViews(), MimeTypes.Text.Xml);
-				}
-				else if (r.Request.Path == "/" && String.Compare(actionName, "getactions", StringComparison.OrdinalIgnoreCase) == 0) // get all local actions
-				{
-					r.SetResponseData(CollectLocalActions(), MimeTypes.Text.Xml);
-				}
-				else
-					base.GetResponseDataStream(r);
-			} // func GetResponseDataStream
-			
-			private Stream CollectLocalViews()
-			{
-				return new FileStream(Path.GetFullPath(@"..\..\..\PPSnDesktop\Local\Views.xml"), FileMode.Open);
-			} // func CollectLocalView
 
-			private Stream CollectLocalActions()
+			private bool TryGetStaticItem(string path, out string contentType, out Stream data)
 			{
-				return new FileStream(Path.GetFullPath(@"..\..\..\PPSnDesktop\Local\Actions.xml"), FileMode.Open);
-			} // func CollectLocalActions
+				// check for a resource file
+				var baseType = typeof(PpsMainEnvironment);
+				data = baseType.Assembly.GetManifestResourceStream(baseType, "Static." + path.Replace('/', '.'));
+				contentType = MimeTypes.Text.Xml;
+				return data != null;
+			} // func TryGetStaticItem
+
+			public override bool TryGetOfflineItem(string path, bool onlineMode, out string contentType, out Stream data)
+			{
+				var r = base.TryGetOfflineItem(path, onlineMode, out contentType, out data);
+				if (r)
+					return r;
+				else if (path.StartsWith("/wpf/") && !onlineMode) // request could not resolved for the offline item
+					return TryGetStaticItem(path.Substring(5), out contentType, out data);
+
+				return r;
+			} // func TryGetOfflineItem
 		} // class PpsMainLocalStore
 
 		#endregion
@@ -136,10 +131,7 @@ namespace TecWare.PPSn
 		public async override Task RefreshAsync()
 		{
 			await base.RefreshAsync();
-
-			//await RefreshViewsAsync(PpsEnvironmentDefinitionSource.Offline);
-			//if (IsOnline)
-			//	await RefreshViewsAsync(PpsEnvironmentDefinitionSource.Online);
+			await RefreshNavigatorAsync();
 		} // proc RefreshAsync
 
 		public async Task<PpsMainWindow> CreateMainWindowAsync()
@@ -168,24 +160,34 @@ namespace TecWare.PPSn
 			return code != null ? Lua.CompileChunk(code, "dummy", null, args) : null;
 		} // proc CreateLuaChunk
 
-		private async Task RefreshViewsAsync(PpsEnvironmentDefinitionSource source)
+		private async Task RefreshNavigatorAsync()
 		{
-			// Lade die Views
-			var xViews = await this.Web[source].GetXmlAsync("?action=getviews", rootName: PpsMainViewDefinition.xnViews);
-			var xActions = await this.Web[source].GetXmlAsync("?action=getactions", rootName: PpsMainActionDefinition.xnActions);
+			// clear the views
+			views.Clear();
+			actions.Clear();
 
-			// Remove all views, actions
-			views.Clear((PpsEnvironmentClearFlags)source);
-			actions.Clear((PpsEnvironmentClearFlags)source);
-			
-			foreach (var cur in xViews.Elements(PpsMainViewDefinition.xnView))
-				views.AppendItem(new PpsMainViewDefinition(this, source, cur));
+			try
+			{
+				// get the views from storage
+				var xNavigator = await Request.GetXmlAsync("wpf/navigator.xml", rootName: "navigator");
 
-			var priority = 0;
-			foreach (var cur in xActions.Elements(PpsMainActionDefinition.xnAction))
-				actions.AppendItem(new PpsMainActionDefinition(this, source, cur, ref priority));
-		} // proc RefreshViewsAsync
-		
+				// append the new views
+				foreach (var cur in xNavigator.Elements(PpsMainViewDefinition.xnView))
+					views.AppendItem(new PpsMainViewDefinition(this, cur));
+
+				// append the new actions
+				var priority = 0;
+				foreach (var cur in xNavigator.Elements(PpsMainActionDefinition.xnAction))
+					actions.AppendItem(new PpsMainActionDefinition(this, cur, ref priority));
+			}
+			catch (WebException ex)
+			{
+				if (ex.Status == WebExceptionStatus.ProtocolError) // e.g. file not found
+					await ShowExceptionAsync(ExceptionShowFlags.Background, ex);
+				else
+					throw;
+			}
+		} // proc RefreshNavigatorAsync
 
 		public PpsMainWindow GetWindow(int index)
 		{
