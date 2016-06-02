@@ -46,6 +46,11 @@ namespace TecWare.PPSn.Server
 		public readonly static XName xnParameter = PpsNamespace + "parameter";
 		public readonly static XName xnMeta = PpsNamespace + "meta";
 
+		public readonly static XName xnWpf = PpsNamespace + "wpf";
+		public readonly static XName xnWpfAction = PpsNamespace + "action";
+		public readonly static XName xnWpfCode = PpsNamespace + "code";
+		public readonly static XName xnWpfCondition = PpsNamespace + "condition";
+
 		#region -- WriteProperty ----------------------------------------------------------
 
 		public static void WriteProperty(this XmlWriter xml, IPropertyReadOnlyDictionary attributes, string propertyName, string targetPropertyName = null)

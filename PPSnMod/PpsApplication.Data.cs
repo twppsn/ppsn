@@ -238,7 +238,7 @@ namespace TecWare.PPSn.Server
 				
 		public string Name => selectorToken.Name;
 		public string DisplayName => displayName ?? selectorToken.Name;
-		//public string SecurityToken => DEConfigItem.SecuritySys;
+		public string SecurityToken => null;
 
 		public PpsViewParameterDefinition[] Filter => filter;
 		public PpsViewParameterDefinition[] Order => order;

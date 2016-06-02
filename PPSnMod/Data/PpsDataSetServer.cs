@@ -542,7 +542,7 @@ namespace TecWare.PPSn.Server.Data
 				xParent.Add(xMeta);
 				foreach (var m in metaInfo)
 				{
-					xMeta.Add(new XElement(m.Key,
+					xMeta.Add(new XElement(m.Name,
 						new XAttribute("datatype", LuaType.GetType(m.Value.GetType()).AliasOrFullName),
 						m.Value.ChangeType<string>()
 					));

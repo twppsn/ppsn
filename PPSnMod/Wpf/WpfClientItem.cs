@@ -25,6 +25,7 @@ using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Server.Data;
 using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn.Server.Wpf
@@ -467,22 +468,22 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#endregion
 
-		private void ParseViews(IDEContext r)
+		private void ParseNavigator(IDEContext r)
 		{
 			using (XmlWriter xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml), Procs.XmlWriterSettings))
 			{
-				xml.WriteStartElement("views");
-
+				xml.WriteStartElement("navigator");
+				
 				foreach (var v in application.GetViewDefinitions())
 				{
-					if (!v.IsVisible) // export only views with a name
+					if (!v.IsVisible || !r.TryDemandToken(v.SecurityToken)) // export only views with a name and the correct security token
 						continue;
-
+					
 					// write the attributes
 					xml.WriteStartElement("view");
 					xml.WriteAttributeString("id", v.Name);
+					xml.WriteAttributeString("displayName", v.DisplayName);
 					xml.WriteProperty(v.Attributes, "shortcut");
-					xml.WriteProperty(v.Attributes, "displayName");
 					xml.WriteProperty(v.Attributes, "displayImage");
 
 					// write filters and orders
@@ -499,9 +500,56 @@ namespace TecWare.PPSn.Server.Wpf
 
 					xml.WriteEndElement();
 				} // foreach v
+
+				// parse all action attributes
+				var posPriority = 1;
+				
+				foreach (var x in Config.Elements(PpsStuff.xnWpfAction))
+				{
+					var displayName = x.GetAttribute<string>("displayName", null);
+					var securityToken = x.GetAttribute<string>("securityToken", null);
+
+					if (String.IsNullOrEmpty(displayName) || !r.TryDemandToken(securityToken))
+						continue;
+
+
+					xml.WriteStartElement("action");
+
+					var name = x.GetAttribute<string>("name", displayName);
+					var displayGlyph = x.GetAttribute<string>("displayGlyph", displayName);
+					var priority = x.GetAttribute<int>("priority", posPriority);
+
+					var code = x.Element(PpsStuff.xnWpfCode)?.Value;
+					var condition = x.Element(PpsStuff.xnWpfCondition)?.Value;
+					
+					xml.WriteAttributeString("name", name);
+					xml.WriteAttributeString("displayName", displayName);
+					if (!String.IsNullOrEmpty(displayGlyph))
+						xml.WriteAttributeString("displayGlyph", displayGlyph);
+
+					posPriority = priority +1;
+					xml.WriteAttributeString("priority", priority.ToString());
+
+					if (!String.IsNullOrEmpty(code))
+					{
+						xml.WriteStartElement("code");
+						xml.WriteCData(code);
+						xml.WriteEndElement();
+					}
+
+					if (!String.IsNullOrEmpty(condition))
+					{
+						xml.WriteStartElement("condition");
+						xml.WriteCData(condition);
+						xml.WriteEndElement();
+					}
+
+					xml.WriteEndElement();
+				}
+
 				xml.WriteEndElement();
 			}
-		} // func ParseViews
+		} // func ParseNavigator
 
 		protected override bool OnProcessRequest(IDEContext r)
 		{
@@ -510,9 +558,10 @@ namespace TecWare.PPSn.Server.Wpf
 				r.WriteXml(ParseXamlTheme(r.RelativeSubPath), MimeTypes.Application.Xaml);
 				return true;
 			}
-			else if (r.RelativeSubPath == "views.xml")
+			else if (r.RelativeSubPath == "navigator.xml")
 			{
-				ParseViews(r);
+				ParseNavigator(r);
+				return true;
 			}
 			return base.OnProcessRequest(r);
 		} // func OnProcessRequest

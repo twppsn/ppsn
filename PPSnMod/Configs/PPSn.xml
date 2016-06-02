@@ -22,7 +22,14 @@
 			<pps:connectionString>Data Source=(localdb)\mssqllocaldb;Initial Catalog=PPSn02;Integrated Security=True</pps:connectionString>
 		</pps:sqlExDataSource>
 
-		<pps:wpf name="wpf" xamlSource="C:\Projects\PPSnOS-git\Configs\Demo\Config\ClientWpf" />
+		<pps:wpf name="wpf" xamlSource="C:\Projects\PPSnOS-git\Configs\Demo\Config\ClientWpf">
+			<pps:action name="close" displayName="Schließen" priority="-1000" displayGlyph="57639">
+				<pps:code><![CDATA[ Window:Close() ]]></pps:code>
+			</pps:action>
+			<pps:action name="hello" displayName="Hallo" priority="1000">
+				<pps:code><![CDATA[ msgbox('Hallo Welt', 'Info'); ]]></pps:code>
+			</pps:action>
+		</pps:wpf>
 		
 		<pps:register source="main">
 			<pps:field name="dbo.Objk.Id" />
@@ -53,7 +60,7 @@
 		</pps:register>
 
 	</pps:ppsn>
-<!--
+
 <?des-merge C:\Projects\PPSnOS\Kunden\TecWare\vGarten-config\Garten\ppsn\Contacts.xml?>
--->
+
 </des>
