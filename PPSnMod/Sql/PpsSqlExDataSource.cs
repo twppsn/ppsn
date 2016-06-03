@@ -403,6 +403,76 @@ namespace TecWare.PPSn.Server.Sql
 				this.orderBy = orderBy;
 			} // ctor
 
+			private string FormatOrderExpression(PpsDataOrderExpression o)
+			{
+				if (o.IsNative)
+				{
+					if (o.Negate)
+					{
+						throw new NotImplementedException("todo: replace asc <-> desc");
+					}
+					else
+						return o.Expression;
+				}
+				else
+				{
+					// todo: check the column
+
+					return o.Expression + (o.Negate ? " desc" : " asc");
+				}
+			} // proc FormatOrderExpression
+
+			public override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions)
+				=> SqlOrderBy(String.Join(", ", from o in expressions select FormatOrderExpression(o)));
+
+			#region -- class SqlDataFilterVisitor -------------------------------------------
+
+			///////////////////////////////////////////////////////////////////////////////
+			/// <summary></summary>
+			private sealed class SqlDataFilterVisitor : PpsDataFilterVisitor<string>
+			{
+				public SqlDataFilterVisitor()
+				{
+				} // ctor
+
+				public override string CreateFilter(PpsDataFilterExpressionType method, string expression)
+				{
+					switch (method)
+					{
+						case PpsDataFilterExpressionType.Native:
+							return "(" + expression.Trim() + ")";
+						case PpsDataFilterExpressionType.Constant:
+							throw new NotImplementedException();
+						default:
+							throw new InvalidOperationException();
+					}
+				} // func CreateFilter
+
+				public override string CreateFilter(PpsDataFilterExpressionType method, IEnumerable<string> arguments)
+				{
+					switch (method)
+					{
+						case PpsDataFilterExpressionType.And:
+							return "(" + String.Join(" AND ", arguments.Where(c => !String.IsNullOrEmpty(c))) + ")";
+						case PpsDataFilterExpressionType.Or:
+							return "(" + String.Join(" OR ", arguments.Where(c => !String.IsNullOrEmpty(c))) + ")";
+						case PpsDataFilterExpressionType.NAnd:
+							return "not " + CreateFilter(PpsDataFilterExpressionType.And, arguments);
+
+						case PpsDataFilterExpressionType.NOr:
+							return "not " + CreateFilter(PpsDataFilterExpressionType.Or, arguments);
+
+						default:
+							throw new InvalidOperationException();
+					}
+				} // func CreateFilter
+			} // class SqlDataFilterVisitor
+
+			#endregion
+
+			public override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression)
+				=> SqlWhere(new SqlDataFilterVisitor().CreateFilter(expression));
+
 			private string AddSelectList(string addSelectList)
 			{
 				if (String.IsNullOrEmpty(addSelectList))
@@ -425,7 +495,7 @@ namespace TecWare.PPSn.Server.Sql
 				if (String.IsNullOrEmpty(addWhereCondition))
 					return whereCondition;
 
-				return String.IsNullOrEmpty(selectList) ? addWhereCondition : "(" + whereCondition + ") and (" + addWhereCondition + ")";
+				return String.IsNullOrEmpty(whereCondition) ? addWhereCondition : "(" + whereCondition + ") and (" + addWhereCondition + ")";
 			} // func AddWhereCondition
 
 			public SqlDataSelector SqlWhere(string addWhereCondition)
@@ -442,7 +512,7 @@ namespace TecWare.PPSn.Server.Sql
 				if (String.IsNullOrEmpty(addOrderBy))
 					return orderBy;
 
-				return String.IsNullOrEmpty(addOrderBy) ? addOrderBy : orderBy + ", " + addOrderBy;
+				return String.IsNullOrEmpty(orderBy) ? addOrderBy : orderBy + ", " + addOrderBy;
 			} // func AddOrderBy
 
 			public SqlDataSelector SqlOrderBy(string addOrderBy)
@@ -480,7 +550,7 @@ namespace TecWare.PPSn.Server.Sql
 					if (!String.IsNullOrEmpty(orderBy))
 					{
 						sb.Append("order by ")
-							.Append(orderBy);
+							.Append(orderBy).Append(' ');
 
 						// build the range, without order fetch is not possible
 						if (count >= 0 && start < 0)

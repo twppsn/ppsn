@@ -120,6 +120,23 @@ namespace TecWare.PPSn.Server
 
 		#region -- IEnumerable ------------------------------------------------------------
 
+		private IEnumerable<PropertyValue> GetAttributesConverted(string attributeSelector)
+		{
+			foreach (var c in this)
+			{
+				if (c.Name.StartsWith(attributeSelector)) // todo: convert standard attribute
+					yield return c;
+			}
+		} // proc GetAttributesConverted
+
+		public IEnumerable<PropertyValue> GetAttributes(string attributeSelector)
+		{
+			if (attributeSelector == "*")
+				return this;
+			else
+				return GetAttributesConverted(attributeSelector);
+		} // func GetAttributes
+
 		public IEnumerator<PropertyValue> GetEnumerator()
 		{
 			var displayNameEmitted = false;
@@ -563,22 +580,24 @@ namespace TecWare.PPSn.Server
 		[DEConfigHttpAction("viewget", IsSafeCall = false)]
 		private void HttpViewGetAction(IDEContext r)
 		{
-			// v=views,...&filter=list&sort=list=&start&count
+			// v=views,...&f={filterList}&o={orderList}&s={startAt]&c={count}&a={attributeSelector}
 			// ???views => view,view2(c1+c2),view3(c3+c4)
 			// sort: +FIELD,-FIELD,:DEF
 			// ???filter: :DEF-and-not-or-xor-contains-
 
 			var startAt = r.GetProperty("s", 0);
 			var count = r.GetProperty("c", Int32.MaxValue);
-
+			
 			var ctx = r.GetUser<IPpsPrivateDataContext>();
-
+			
 			var selector = ctx.CreateSelector(
 				r.GetProperty<string>("v", null),
 				r.GetProperty<string>("f", null),
 				r.GetProperty<string>("o", null),
 				true
 			);
+
+			var attributeSelector = r.GetProperty("a", String.Empty);
 
 			// emit the selector
 			using (var tw = r.GetOutputTextWriter(MimeTypes.Text.Xml))
@@ -615,7 +634,7 @@ namespace TecWare.PPSn.Server
 						for (var i = 0; i < columnNames.Length; i++)
 						{
 							var nativeColumnName = columnDefinition.Columns[i].Name;
-							var fieldDefinition = selector.GetFieldDescription(nativeColumnName);
+							var fieldDefinition = selector.GetFieldDescription(nativeColumnName); // get the field description for the native column
 
 							if (fieldDefinition == null)
 							{
@@ -626,17 +645,32 @@ namespace TecWare.PPSn.Server
 							{
 								columnNames[i] = nativeColumnName;
 
-								var fieldDescription = this.GetFieldDescription(fieldDefinition.Name, false);
+								var fieldDescription =String.IsNullOrEmpty( attributeSelector ) ? null : this.GetFieldDescription(fieldDefinition.Name, false); // get the global description of the field
 
-								new XElement(nativeColumnName,
-									new XAttribute("type", LuaType.GetType(fieldDefinition.DataType).AliasOrFullName),
-									new XAttribute("field", fieldDefinition.Name),
-									fieldDescription == null ? null : from c in fieldDescription select new XElement("attribute",
-										new XAttribute("name", c.Name),
-										new XAttribute("dataType", LuaType.GetType(c.Type).AliasOrFullName),
-										c.Type == typeof(Type) && c.Value is Type ? LuaType.GetType((Type)c.Value).AliasOrFullName : c.Value
-									)
-								).WriteTo(xml);
+								xml.WriteStartElement(nativeColumnName);
+
+								if (fieldDescription == null)
+								{
+									xml.WriteAttributeString("type", LuaType.GetType(fieldDefinition.DataType).AliasOrFullName);
+									xml.WriteAttributeString("field", fieldDefinition.Name);
+								}
+								else
+								{
+									xml.WriteAttributeString("type", LuaType.GetType(fieldDefinition.DataType).AliasOrFullName);
+
+									foreach (var c in fieldDescription.GetAttributes(attributeSelector))
+									{
+										xml.WriteStartElement("attribute");
+										
+										xml.WriteAttributeString("name", c.Name);
+										xml.WriteAttributeString("dataType", LuaType.GetType(c.Type).AliasOrFullName);
+										if (c.Value != null)
+											xml.WriteValue(Procs.ChangeType<string>(c.Value));
+
+										xml.WriteEndElement();
+									}
+								}
+								xml.WriteEndElement();
 							}
 						}
 						xml.WriteEndElement();

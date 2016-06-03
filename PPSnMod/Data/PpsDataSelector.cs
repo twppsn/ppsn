@@ -23,6 +23,8 @@ using System.Threading.Tasks;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
 using TecWare.DE.Data;
+using System.Reflection;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Server.Data
 {
@@ -49,6 +51,12 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		public abstract IEnumerator<IDataRow> GetEnumerator(int start, int count);
 
+		public virtual PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions)
+			=> this;
+
+		public virtual PpsDataSelector ApplyFilter(PpsDataFilterExpression expression)
+			=> this;
+
 		/// <summary>Returns the field description for the name in the resultset</summary>
 		/// <param name="nativeColumnName"></param>
 		/// <returns></returns>
@@ -59,5 +67,5 @@ namespace TecWare.PPSn.Server.Data
 
 		/// <summary></summary>
 		public PpsDataSource DataSource => source;
-	} // class PpsDataView
+	} // class PpsDataSelector
 }

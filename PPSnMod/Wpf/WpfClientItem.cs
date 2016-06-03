@@ -421,11 +421,11 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#endregion
 
+		#region -- Wpf Xaml Parser --------------------------------------------------------
+
 		private void ClearXamlCache()
 		{
 		} // proc ClearXamlCache
-		
-		#region -- Wpf Xaml Parser --------------------------------------------------------
 
 		private XDocument ParseXamlTheme(string themeFile)
 		{
@@ -467,6 +467,8 @@ namespace TecWare.PPSn.Server.Wpf
 			=> new XElement(PresentationNamespace + "resources"); // change default namespace
 
 		#endregion
+
+		#region -- ParseNavigator ---------------------------------------------------------
 
 		private void ParseNavigator(IDEContext r)
 		{
@@ -550,6 +552,8 @@ namespace TecWare.PPSn.Server.Wpf
 				xml.WriteEndElement();
 			}
 		} // func ParseNavigator
+
+		#endregion
 
 		protected override bool OnProcessRequest(IDEContext r)
 		{

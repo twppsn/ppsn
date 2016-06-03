@@ -30,6 +30,7 @@ using TecWare.DE.Server;
 using TecWare.DE.Stuff;
 using TecWare.DE.Data;
 using TecWare.PPSn.Server.Data;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Server
 {
@@ -455,7 +456,7 @@ namespace TecWare.PPSn.Server
 				return c != null && c.EnsureConnection(throwException) ? c : null;
 			} // func EnsureConnection
 
-			public PpsDataSelector CreateSelector(string name, string customFilter = null, string customSort = null, bool throwException = true)
+			public PpsDataSelector CreateSelector(string name, string filter = null, string order = null, bool throwException = true)
 			{
 				if (String.IsNullOrEmpty(name))
 					throw new ArgumentNullException("name");
@@ -464,9 +465,10 @@ namespace TecWare.PPSn.Server
 				var viewInfo = Application.GetViewDefinition(name, throwException);
 				if (viewInfo == null)
 					return null;
+
 				// ensure the connection
-				var c = EnsureConnection(viewInfo.SelectorToken.DataSource, throwException);
-				if (c == null)
+				var connectionHandle = EnsureConnection(viewInfo.SelectorToken.DataSource, throwException);
+				if (connectionHandle == null)
 				{
 					if (throwException)
 						throw new ArgumentException(); // todo;
@@ -474,14 +476,18 @@ namespace TecWare.PPSn.Server
 						return null;
 				}
 
+				// create the selector
+				var selector = viewInfo.SelectorToken.CreateSelector(connectionHandle, throwException);
+
 				// apply filter rules
-				// todo:
+				if (!String.IsNullOrWhiteSpace(filter))
+					selector = selector.ApplyFilter(PpsDataFilterExpression.Parse(filter, 0, tok => viewInfo.Filter.FirstOrDefault(c => String.Compare(c.Name, tok, StringComparison.OrdinalIgnoreCase) == 0)?.Parameter));
 
 				// apply order
-				// todo:
+				if (!String.IsNullOrWhiteSpace(order))
+					selector = selector.ApplyOrder(PpsDataOrderExpression.Parse(order, 0, tok => viewInfo.Order.FirstOrDefault(c => String.Compare(c.Name, tok, StringComparison.OrdinalIgnoreCase) == 0)?.Parameter));
 
-				// create the selector
-				return viewInfo.SelectorToken.CreateSelector(c, throwException);
+				return selector;
 			} // func CreateSelector
 
 			public PpsDataSelector CreateSelector(LuaTable table)
