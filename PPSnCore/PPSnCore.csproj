@@ -35,6 +35,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Data\DataColumn.cs" />
+    <Compile Include="Data\DataFilterOrderExpressions.cs" />
     <Compile Include="Data\DataHelper.cs" />
     <Compile Include="Data\DataRow.cs" />
     <Compile Include="Data\DataSet.cs" />

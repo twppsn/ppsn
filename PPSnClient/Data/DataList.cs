@@ -180,7 +180,7 @@ namespace TecWare.PPSn.Data
 		{
 			lock (this)
 			{
-				bool lSilent = ar != currentFetchResult;
+				var doSilent = ar != currentFetchResult;
 				try
 				{
 					procFetchNextWindow.EndInvoke(ar);
@@ -192,7 +192,7 @@ namespace TecWare.PPSn.Data
 				}
 				finally
 				{
-					if (!lSilent)
+					if (!doSilent)
 					{
 						lock (this)
 							currentFetchResult = null;
