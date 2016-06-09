@@ -33,14 +33,23 @@ namespace TecWare.PPSn
 								await currentEnvironment.CreateMainWindowAsync();
 							else
 							{
-								MessageBox.Show("Environment konnte nicht initialisiert werden.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
-								Dispatcher.Invoke(() => Shutdown(1));
+								Dispatcher.Invoke(() =>
+									{
+										MessageBox.Show("Environment konnte nicht initialisiert werden.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+										Shutdown(1);
+									}
+								);
 							}
 						}
 						catch (Exception ex)
 						{
-							MessageBox.Show(ex.GetMessageString(), "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
-							Dispatcher.Invoke(() => Shutdown(1));
+							Dispatcher.Invoke(() =>
+								{
+									if (PpsEnvironment.ShowExceptionDialog(null, ExceptionShowFlags.Shutown, ex, "Environment wurde nicht initializiert."))
+										MessageBox.Show(ex.GetMessageString(), "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+									Shutdown(1);
+								}
+							);
 						}
 					});
 
@@ -74,8 +83,8 @@ namespace TecWare.PPSn
 			if (Settings.Default.AutoOnlineMode)
 			{
 				var cancellationSource = new CancellationTokenSource(30000);
-				await env.StartOnlineMode(cancellationSource.Token); // does the online refresh
-				await env.LoginUserAsync();
+				if (await env.StartOnlineMode(cancellationSource.Token)) // does the online refresh
+					await env.LoginUserAsync();
 			}
 
 			return env;

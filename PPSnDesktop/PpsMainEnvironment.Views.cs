@@ -16,17 +16,17 @@ namespace TecWare.PPSn
 	{
 		internal PpsMainViewOrder(XElement x, ref int priority)
 		{
-			this.ColumnName = x.Value;
-			if (String.IsNullOrEmpty(this.ColumnName))
+			this.Name = x.GetAttribute("name", String.Empty);
+			if (String.IsNullOrEmpty(this.Name))
 				throw new ArgumentNullException("@name");
 
-			this.DisplayName = x.GetAttribute("displayname", ColumnName);
+			this.DisplayName = x.GetAttribute("displayName", Name);
 
 			this.Priority = priority = x.GetAttribute("priority", priority + 1);
 		} // ctor
 
+		public string Name { get; }
 		public string DisplayName { get; }
-		public string ColumnName { get; }
 		public int Priority { get; }
 	} // class PpsMainViewSort
 
@@ -44,7 +44,7 @@ namespace TecWare.PPSn
 			if (String.IsNullOrEmpty(this.Name))
         throw new ArgumentNullException("@name");
 
-      this.DisplayName = x.GetAttribute("displayname", this.Name);
+      this.DisplayName = x.GetAttribute("displayName", this.Name);
 			this.ShortCut = x.GetAttribute("shortcut", String.Empty);
 
 			this.Priority = priority = x.GetAttribute("priority", priority + 1);
@@ -70,26 +70,25 @@ namespace TecWare.PPSn
 		public static readonly XName xnSource = "source";
 		public static readonly XName xnFilter = "filter";
 		public static readonly XName xnOrder = "order";
-		
-		private string shortCut;
-		private string displayName;
-		private string displayImage;
-		private string listSource;
+
+		private readonly string id;
+		private readonly string shortCut;
+		private readonly string displayName;
+		private readonly string displayImage;
 
 		private PpsMainViewOrder[] sortOrders;
 		private PpsMainViewFilter[] filters;
 
-		internal PpsMainViewDefinition(PpsEnvironment environment, PpsEnvironmentDefinitionSource source, XElement xDefinition)
-			: base(environment, source, xDefinition.GetAttribute("id", null))
+		internal PpsMainViewDefinition(PpsEnvironment environment, XElement xDefinition)
+			: base(environment, xDefinition.GetAttribute("id", null))
 		{
-			this.displayName = xDefinition.GetAttribute("displayname", this.Name);
-			this.displayImage = xDefinition.GetAttribute("displayimage", this.Name);
-			this.shortCut = xDefinition.GetAttribute("shortcut", null);
+			this.id = xDefinition.GetAttribute("id", String.Empty);
+			if (String.IsNullOrEmpty(id))
+				throw new ArgumentException("List id is missing.");
 
-			// parse the data source
-			this.listSource = xDefinition.Element(xnSource)?.Value;
-			if (String.IsNullOrEmpty(listSource))
-				throw new ArgumentException("List source missing."); // todo: exception
+			this.displayName = xDefinition.GetAttribute("displayName", this.Name);
+			this.displayImage = xDefinition.GetAttribute("displayImage", this.Name);
+			this.shortCut = xDefinition.GetAttribute("shortcut", null);
 
 			// parse the filters
 			var priority = 0;

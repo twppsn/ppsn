@@ -98,6 +98,9 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <EmbeddedResource Include="Static\navigator.xml">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
     <Resource Include="Local\Templates.xml" />
     <Resource Include="Local\Actions.xml">
       <SubType>Designer</SubType>

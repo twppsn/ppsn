@@ -27,17 +27,17 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Markup;
 using System.Windows.Threading;
+using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
-using TecWare.DE.Data;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
-using System.Windows.Markup;
-using System.Xml;
 
 namespace TecWare.PPSn
 {
@@ -50,18 +50,6 @@ namespace TecWare.PPSn
 		/// <summary>Gets called on application idle start.</summary>
 		void OnIdle();
 	} // interface IPpsIdleAction
-
-	#endregion
-
-	#region -- enum PpsEnvironmentDefinitionSource --------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public enum PpsEnvironmentDefinitionSource
-	{
-		Offline = 1,
-		Online = 2
-	} // enum PpsEnvironmentDefinitionSource
 
 	#endregion
 
@@ -87,15 +75,12 @@ namespace TecWare.PPSn
 	/// <summary>Base class of sort and accessable environment items.</summary>
 	public abstract class PpsEnvironmentDefinition
 	{
-		private PpsEnvironment environment;
-
+		private readonly PpsEnvironment environment;
 		private readonly string name;           // internal name of the item
-		private readonly PpsEnvironmentDefinitionSource source; // is this item offline available
 
-		protected PpsEnvironmentDefinition(PpsEnvironment environment, PpsEnvironmentDefinitionSource source, string name)
+		protected PpsEnvironmentDefinition(PpsEnvironment environment, string name)
 		{
 			this.environment = environment;
-			this.source = source;
 			this.name = name;
 		} // ctor
 		
@@ -103,24 +88,7 @@ namespace TecWare.PPSn
 		public PpsEnvironment Environment => environment;
 		/// <summary>Name of the property.</summary>
 		public string Name => name;
-		/// <summary>Is the item offline available.</summary>
-		public PpsEnvironmentDefinitionSource Source => source;
 	} // class PpsEnvironmentDefinition
-
-	#endregion
-
-	#region -- enum PpsEnvironmentClearFlags --------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	[Flags]
-	public enum PpsEnvironmentClearFlags
-	{
-		None = 0,
-		Offline = 1,
-		Online = 2,
-		All = 3
-	} // enum PpsEnvironmentClearFlags
 
 	#endregion
 
@@ -210,54 +178,15 @@ namespace TecWare.PPSn
 				OnAddCollection(item);
 		} // proc AppendItem
 
-		public void Clear(PpsEnvironmentClearFlags flags = PpsEnvironmentClearFlags.All)
+		public void Clear()
 		{
-			var resetCollection = false;
 			lock (items)
 			{
-				if ((flags & PpsEnvironmentClearFlags.All) == PpsEnvironmentClearFlags.All)
-				{
 					items.Clear();
 					keys.Clear();
 					currentVersion++;
-					resetCollection = true;
-				}
-				else
-				{
-					var itemsRemoved = false;
-
-					for (int i = items.Count - 1; i >= 0; i--)
-					{
-						if (((flags & PpsEnvironmentClearFlags.Online) != 0 && items[i].Source == PpsEnvironmentDefinitionSource.Online) ||
-							((flags & PpsEnvironmentClearFlags.Offline) != 0 && items[i].Source == PpsEnvironmentDefinitionSource.Online))
-						{
-							// update keys
-							var current = items[i];
-							if (keys[current.Name] == i)
-							{
-								var replaceIndex = -1;
-								if (current.Source == PpsEnvironmentDefinitionSource.Online)
-									replaceIndex = items.FindIndex(c => current.Name == c.Name && c.Source == PpsEnvironmentDefinitionSource.Offline);
-								if (replaceIndex == -1)
-									keys.Remove(current.Name);
-								else
-									keys[current.Name] = replaceIndex;
-							}
-
-							items.RemoveAt(i);
-							itemsRemoved |= true;
-						}
-					}
-
-					if (itemsRemoved)
-					{
-						currentVersion++;
-						resetCollection = true;
-					}
-				}
 			}
-			if (resetCollection)
-				OnResetCollection();
+			OnResetCollection();
 		} // proc Clear
 
 		private int FindIndexByKey(string name)
@@ -270,16 +199,10 @@ namespace TecWare.PPSn
 		} // func FindIndexByKey
 
 		private void OnResetCollection()
-		{
-			if (CollectionChanged != null)
-				CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-		} // proc OnResetCollection
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
 		private void OnAddCollection(object added)
-		{
-			if (CollectionChanged != null)
-				CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, added));
-		} // proc OnAddCollection
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, added));
 
 		#region -- IDictionary, IList, ... ------------------------------------------------
 
@@ -350,7 +273,6 @@ namespace TecWare.PPSn
 		void ICollection<KeyValuePair<string, T>>.Add(KeyValuePair<string, T> item) { throw new NotSupportedException(); }
 		bool ICollection<KeyValuePair<string, T>>.Contains(KeyValuePair<string, T> item) { throw new NotSupportedException(); }
 		bool ICollection<KeyValuePair<string, T>>.Remove(KeyValuePair<string, T> item) { throw new NotSupportedException(); }
-		void ICollection<KeyValuePair<string, T>>.Clear() { Clear(PpsEnvironmentClearFlags.All); }
 
 		bool ICollection.IsSynchronized => true;
 		object ICollection.SyncRoot => items;
@@ -413,33 +335,6 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class WebIndex ---------------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		public class WebIndex
-		{
-			private readonly PpsEnvironment environment;
-
-			internal WebIndex(PpsEnvironment environment)
-			{
-				this.environment = environment;
-			} // ctor
-
-			public BaseWebRequest this[PpsEnvironmentDefinitionSource source]
-			{
-				get
-				{
-					if (source == PpsEnvironmentDefinitionSource.Offline)
-						return environment.localRequest;
-					else
-						return environment.remoteRequest;
-				}
-			} // prop this
-		} // class WebIndex
-
-		#endregion
-
 		/// <summary></summary>
 		public event EventHandler IsOnlineChanged;
 		/// <summary></summary>
@@ -453,9 +348,7 @@ namespace TecWare.PPSn
 		private string userName;				// display name of the user
 
 		private readonly BaseWebRequest request;
-		private readonly BaseWebRequest localRequest;
 		private readonly PpsLocalDataStore localStore;
-		private readonly BaseWebRequest remoteRequest;
 		private bool isOnline = false;
 
 		private LuaCompileOptions luaOptions = LuaDeskop.StackTraceCompileOptions;
@@ -488,7 +381,6 @@ namespace TecWare.PPSn
 			this.currentDispatcher = Dispatcher.CurrentDispatcher;
 			this.inputManager = InputManager.Current;
 			this.synchronizationContext = new DispatcherSynchronizationContext(currentDispatcher);
-			this.Web = new WebIndex(this);
 			this.dataListTemplateSelector = new PpsDataListTemplateSelector(this);
 			this.datalistItems = new PpsEnvironmentCollection<PpsDataListItemDefinition>(this);
 
@@ -509,8 +401,6 @@ namespace TecWare.PPSn
 			WebRequest.RegisterPrefix(baseUri.ToString(), new PpsWebRequestCreate(this));
 
 			request = new BaseWebRequest(baseUri, Encoding);
-			localRequest = new BaseWebRequest(new Uri(baseUri, "local/"), Encoding);
-			remoteRequest = new BaseWebRequest(new Uri(baseUri, "/"), Encoding);
 
 			// Register Service
 			mainResources[EnvironmentService] = this;
@@ -636,6 +526,7 @@ namespace TecWare.PPSn
 				userName = xLogin.GetAttribute("displayName", userInfo.ToString());
 
 				OnUsernameChanged();
+				await RefreshAsync();
 			}
 			catch
 			{
@@ -663,9 +554,20 @@ namespace TecWare.PPSn
 		/// <summary>Queues a request, to check if the server is available. After this the environment and the cache will be updated.</summary>
 		/// <param name="timeout">wait timeout for the server</param>
 		/// <returns></returns>
-		public async Task StartOnlineMode(CancellationToken token)
+		public async Task<bool> StartOnlineMode(CancellationToken token)
 		{
-			var xInfo = await request.GetXmlAsync("remote/info.xml", MimeTypes.Text.Xml, "ppsn");
+			XElement xInfo;
+			try
+			{
+				xInfo = await request.GetXmlAsync("remote/info.xml", MimeTypes.Text.Xml, "ppsn");
+			}
+			catch (WebException ex)
+			{
+				if (ex.Status == WebExceptionStatus.ConnectFailure) // remote host does not respond
+					return false;
+				else
+					throw;
+			}
 
 			// update the current info data
 			info.Update(xInfo);
@@ -678,6 +580,8 @@ namespace TecWare.PPSn
 
 			// refresh data
 			await RefreshAsync();
+
+			return true;
 		} // func StartOnlineMode
 
 		#endregion
@@ -889,23 +793,28 @@ namespace TecWare.PPSn
 			// show the exception if it is not marked as background
 			if ((flags & ExceptionShowFlags.Background) != ExceptionShowFlags.Background)
 			{
-				var shutDown = (flags & ExceptionShowFlags.Shutown) != 0;
+				var dialogOwner = Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
 
-				var dialog = new PpsExceptionDialog();
-				dialog.MessageType = shutDown ? PpsTraceItemType.Fail : PpsTraceItemType.Exception;
-				dialog.MessageText = alternativeMessage ?? exception.Message;
-				dialog.SkipVisible = !shutDown;
+				if (ShowExceptionDialog(dialogOwner, flags, exception, alternativeMessage)) // should follow a detailed dialog
+					ShowTrace(dialogOwner);
 
-				dialog.Owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
-
-				var r = dialog.ShowDialog(); // show the dialog
-				if (r ?? false)
-					ShowTrace(dialog.Owner);
-
-				if (shutDown) // close application
+				if ((flags & ExceptionShowFlags.Shutown) != 0) // close application
 					Application.Current.Shutdown(1);
 			}
 		} // proc ShowException
+
+		public static bool ShowExceptionDialog(Window dialogOwner, ExceptionShowFlags flags, Exception exception, string alternativeMessage)
+		{
+			var shutDown = (flags & ExceptionShowFlags.Shutown) != 0;
+
+			var dialog = new PpsExceptionDialog();
+			dialog.MessageType = shutDown ? PpsTraceItemType.Fail : PpsTraceItemType.Exception;
+			dialog.MessageText = alternativeMessage ?? exception.Message;
+			dialog.SkipVisible = !shutDown;
+
+			dialog.Owner = dialogOwner;
+			return dialog.ShowDialog() ?? false; // show the dialog
+		} // func ShowExceptionDialog
 
 		public async Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 			=> await Dispatcher.InvokeAsync(() => ShowException(flags, exception, alternativeMessage));
@@ -1057,8 +966,6 @@ namespace TecWare.PPSn
 
 		/// <summary>Internal Uri of the environment.</summary>
 		public Uri BaseUri => baseUri;
-		/// <summary></summary>
-		public WebIndex Web { get; }
 		/// <summary></summary>
 		public BaseWebRequest Request => request;
 		/// <summary>Default encodig for strings.</summary>

@@ -399,7 +399,7 @@ namespace TecWare.PPSn.Data
 			} // using transaction
 		} // proc UpdateOfflineItem
 
-		public bool TryGetOfflineItem(string path, bool onlineMode, out string contentType, out Stream data)
+		public virtual bool TryGetOfflineItem(string path, bool onlineMode, out string contentType, out Stream data)
 		{
 			contentType = null;
 			data = null;
@@ -605,7 +605,6 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		#endregion
-
 
 
 
