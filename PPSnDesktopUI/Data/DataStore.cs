@@ -236,7 +236,6 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public WebRequest GetRequest(Uri uri, string path)
 		{
-
 			return new PpsStoreRequest(this, uri, path);
 		} // func GetRequest
 

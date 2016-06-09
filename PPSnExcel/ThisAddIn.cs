@@ -86,7 +86,7 @@ namespace PPSnExcel
 			var columns = new List<KeyValuePair<string, Type>>();
 			var rows = new List<XElement>();
 			#region -- get columns and rows --
-			using (var e = environment.BaseRequest.CreateViewDataReader("remote/?action=viewget&v=test").GetEnumerator())
+			using (var e = environment.Request.CreateViewDataReader("remote/?action=viewget&v=test").GetEnumerator())
 			{
 				if (e.MoveNext())
 				{
