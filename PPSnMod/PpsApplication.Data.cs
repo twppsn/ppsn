@@ -599,6 +599,9 @@ namespace TecWare.PPSn.Server
 
 			var attributeSelector = r.GetProperty("a", String.Empty);
 
+			r.OutputHeaders["x-ppsn-source"] = selector.DataSource.Name;
+			r.OutputHeaders["x-ppsn-native"] = selector.DataSource.Type;
+
 			// emit the selector
 			using (var tw = r.GetOutputTextWriter(MimeTypes.Text.Xml))
 			using (var xml = XmlWriter.Create(tw, GetSettings(tw)))

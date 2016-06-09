@@ -22,6 +22,7 @@ using System.Linq;
 using System.Net;
 using System.Security.Principal;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -407,13 +408,10 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				if (o.IsNative)
 				{
-					if (o.Negate)
-					{
-						throw new NotImplementedException("todo: replace asc <-> desc");
-					}
-					else
-						return o.Expression;
-				}
+					// todo: replace asc with desc and desc with asc
+
+					return o.Expression.Replace(" asc", " desc") ;
+			}
 				else
 				{
 					// todo: check the column
@@ -441,7 +439,8 @@ namespace TecWare.PPSn.Server.Sql
 					{
 						case PpsDataFilterExpressionType.Native:
 							return "(" + expression.Trim() + ")";
-						case PpsDataFilterExpressionType.Constant:
+						case PpsDataFilterExpressionType.Number:
+						case PpsDataFilterExpressionType.Fulltext:
 							throw new NotImplementedException();
 						default:
 							throw new InvalidOperationException();
@@ -1378,6 +1377,8 @@ namespace TecWare.PPSn.Server.Sql
 					return IsConnectionOpen(masterConnection);
 			}
 		} // prop IsConnected
+
+		public override string Type => "mssql";
 
 		// -- Static --------------------------------------------------------------
 

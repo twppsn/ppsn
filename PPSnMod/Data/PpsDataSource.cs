@@ -27,7 +27,6 @@ namespace TecWare.PPSn.Server.Data
 {
 	public abstract class PpsDataSource : DEConfigItem
 	{
-
 		public PpsDataSource(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
@@ -67,5 +66,7 @@ namespace TecWare.PPSn.Server.Data
 		{
 			return new PpsDataSetServerDefinition(sp, documentName, config);
 		} // func CreateDocumentDescription
+
+		public abstract string Type { get; }
 	} // class PpsDataSource
 }
