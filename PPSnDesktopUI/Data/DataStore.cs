@@ -244,7 +244,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="r">Response that will be returned.</param>
 		protected abstract void GetResponseDataStream(PpsStoreResponse r);
 
-		public virtual IEnumerable<IDataRow> GetListData(PpsShellGetList arguments)
+		public virtual IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
 		{
 			// todo: redirect to a http request
 			throw new NotImplementedException();

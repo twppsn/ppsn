@@ -389,15 +389,17 @@ namespace TecWare.PPSn.UI
 				await items.ClearAsync();
 			else
 			{
-			//var dataSource = new PpsShellGetList(CurrentView.Name) { Detailed = false };
+				var dataSource = new PpsShellGetList(CurrentView.Name) { Detailed = false };
 
-				//if (currentFilter != null)
-				//	dataSource.PreFilterId = currentFilter.FilterName;
-				//if (currentOrder != null)
-				//	dataSource.OrderId = currentOrder.ColumnName + (sortAscending ? "+" : "-");
-				//dataSource.CustomFilter = currentSearchText;
+				if (currentFilter != null)
+				{
+					// todo: currentSearchTextExpression --> PpsDataFilterExpression + filterName -> toString
+					dataSource.Filter = currentFilter.FilterName;
+				}
+				if (currentOrder != null)
+					dataSource.Order = (sortAscending ? "+" : "-") + currentOrder.Name;
 
-				//await items.Reset(dataSource);
+				await items.Reset(dataSource);
 			}
 		} // proc RefreshData
 

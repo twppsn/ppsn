@@ -159,8 +159,22 @@ namespace TecWare.PPSn.Data
 		/// <summary>Override to support a better stream of the locally stored data.</summary>
 		/// <param name="arguments"></param>
 		/// <returns></returns>
-		public override IEnumerable<IDataRow> GetListData(PpsShellGetList arguments)
+		public override IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
 		{
+			var sb = new StringBuilder("remote/?action=viewget&v=");
+			sb.Append(arguments.ViewId);
+
+			if (!String.IsNullOrEmpty(arguments.Filter))
+				sb.Append("&f=").Append(Uri.EscapeDataString(arguments.Filter));
+			if (!String.IsNullOrEmpty(arguments.Order))
+				sb.Append("&o=").Append(Uri.EscapeDataString(arguments.Order));
+			if (arguments.Start != -1)
+				sb.Append("&s=").Append(arguments.Start);
+			if (arguments.Count != -1)
+				sb.Append("&c=").Append(arguments.Count);
+
+			return Environment.Request.CreateViewDataReader(sb.ToString());
+
 			//// get the table
 			//string filterExpression = String.Empty;
 			//System.Data.DataTable dt = null;
@@ -219,7 +233,7 @@ namespace TecWare.PPSn.Data
 			//		if (index < dv.Count)
 			//			throw new NotImplementedException();
 			//	}
-			yield break;
+			//yield break;
 		} // func GetListData
 
 		public override IDataRow GetDetailedData(long objectId, string typ)

@@ -767,10 +767,7 @@ namespace TecWare.PPSn
 			}
 		} // func CreateWebRequest
 		public IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
-		{
-			throw new NotImplementedException();
-			//return localStore.GetListData(arguments);
-		} // func GetViewaDta
+			=> localStore.GetViewData(arguments);
 
 		#endregion
 
