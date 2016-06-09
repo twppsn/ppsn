@@ -86,7 +86,7 @@ namespace TecWare.PPSn.Data
 		{
 			// open the local database
 			var dataPath = Path.Combine(environment.Info.LocalPath.FullName, "localStore.db");
-			localStore = new SQLiteConnection($"Data Source={dataPath}");
+			localStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc");
 			localStore.Open();
 			VerifyLocalStore();
 		} // ctor
@@ -373,7 +373,7 @@ namespace TecWare.PPSn.Data
 						command.Parameters.Add("@path", DbType.String).Value = path;
 						command.Parameters.Add("@onlineMode", DbType.Boolean).Value = onlineMode;
 						command.Parameters.Add("@contentType", DbType.String).Value = contentType;
-						command.Parameters.Add("@contentSize", DbType.Int64).Value = (long)buffer.Length;
+						command.Parameters.Add("@contentSize", DbType.Int32).Value = buffer.Length;
 						command.Parameters.Add("@content", DbType.Binary).Value = buffer;
 						var affectedRows = command.ExecuteNonQuery();
 						if (affectedRows != 1)
@@ -386,7 +386,7 @@ namespace TecWare.PPSn.Data
 					{
 						command.Parameters.Add("@onlineMode", DbType.Boolean).Value = onlineMode;
 						command.Parameters.Add("@contentType", DbType.String).Value = contentType;
-						command.Parameters.Add("@contentSize", DbType.String).Value = (long)buffer.Length;
+						command.Parameters.Add("@contentSize", DbType.Int32).Value = buffer.Length;
 						command.Parameters.Add("@content", DbType.Binary).Value = buffer;
 						command.Parameters.Add("@id", DbType.Int64).Value = id;
 						var affectedRows = command.ExecuteNonQuery();
@@ -577,7 +577,7 @@ namespace TecWare.PPSn.Data
 				new LocalStoreColumn("OnlineMode", typeof(bool)),
 				new LocalStoreColumn("ContentType", typeof(string)),
 				new LocalStoreColumn("ContentEncoding", typeof(string)),
-				new LocalStoreColumn("ContentSize", typeof(long)),
+				new LocalStoreColumn("ContentSize", typeof(int)),
 				new LocalStoreColumn("ContentLastModification", typeof(DateTime))
 			};
 
@@ -593,7 +593,7 @@ namespace TecWare.PPSn.Data
 						reader.GetBoolean(1),
 						reader.GetString(2),
 						reader.IsDBNull(3) ? null : reader.GetString(3),
-						reader.GetInt64(4),
+						reader.GetInt32(4),
 						reader.GetDateTime(5)
 					};
 					list.Add(new LocalStoreRow(columns, columnValues));
