@@ -46,7 +46,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Notifies if a property of the datalist is changed.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		private IPpsShell shell;            // shell for the data list, to retrieve data and synchronize the events
+		private readonly IPpsShell shell;            // shell for the data list, to retrieve data and synchronize the events
 		private PpsShellGetList dataSource = PpsShellGetList.Empty; // List, that will be fetched
 		private int windowSize;             // Size of the window, that will be fetched
 
@@ -126,8 +126,7 @@ namespace TecWare.PPSn.Data
 						rows = emptyList;
 
 						DebugPrint("Collection reset.");
-						if (CollectionChanged != null)
-							CollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 					}
 				});
 		} // proc ClearAsync
@@ -334,22 +333,24 @@ namespace TecWare.PPSn.Data
 			return item;
 		} // proc FetchDetailData
 
-        private void UpdateTableWithRow(dynamic item, IDataRow r)
-        {
-            // Update the table, and finish loading
-            if (r != null)
-            {
-                for (int i = 0; i < r.ColumnCount; i++)
+		private void UpdateTableWithRow(dynamic item, IDataRow r)
+		{
+			// Update the table, and finish loading
+			if (r != null)
+			{
+				for (int i = 0; i < r.ColumnCount; i++)
 					item[r.Columns[i].Name] = r[i];
 			}
-            item.isLoading = false;
+			item.isLoading = false;
 
-            // todo: execute a extented function
-        } // proc UpdateTableWithRow
+			// todo: execute a extented function
+		} // proc UpdateTableWithRow
 
-        #endregion
+		#endregion
 
-        private void OnPropertyChanged([CallerMemberName] string sPropertyName = null)
+		#region -- IList, OnPropertyChanged -----------------------------------------------
+
+		private void OnPropertyChanged([CallerMemberName] string propertyName = null)
 		{
 #if LDEBUG
 			DebugPrint("{0} changed.", sPropertyName);
@@ -358,8 +359,7 @@ namespace TecWare.PPSn.Data
 			shell.BeginInvoke(new Action(
 				() =>
 				{
-					if (PropertyChanged != null)
-						PropertyChanged(this, new PropertyChangedEventArgs(sPropertyName));
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 				})
 			);
 		} // prop OnPropertyChanged
@@ -417,6 +417,8 @@ namespace TecWare.PPSn.Data
 		bool ICollection.IsSynchronized => true;
 		object ICollection.SyncRoot => rowLock;
 
+		#endregion
+
 		public IPpsShell Shell => shell;
 
 		/// <summary>Zugriff auf das angegebene Element</summary>
@@ -443,7 +445,7 @@ namespace TecWare.PPSn.Data
 		} // prop this
 
 		/// <summary>Anzahl der Elemente in der Liste</summary>
-		public int Count { get { return visibleCount; } }
+		public int Count => visibleCount;
 
 		/// <summary>Wird die Liste gerade geladen</summary>
 		public bool IsLoading
@@ -563,9 +565,9 @@ namespace TecWare.PPSn.Data
 		} // proc PushFetchDetail
 
 		[Conditional("DEBUG")]
-		private static void DebugPrint(string sMessage, params object[] args)
+		private static void DebugPrint(string message, params object[] args)
 		{
-			Debug.WriteLine(String.Format("[PpsDataList] " + sMessage, args));
+			Debug.WriteLine(String.Format("[PpsDataList] " + message, args));
 		} // proc DebugPrint
 	} // class PpsDataList
 }

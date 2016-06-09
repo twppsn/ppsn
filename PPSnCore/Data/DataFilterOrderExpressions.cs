@@ -37,10 +37,14 @@ namespace TecWare.PPSn.Data
 		NAnd,
 		/// <summary>nor(a) - invert result</summary>
 		NOr,
+
+		/// <summary>#</summary>
+		Number,
+		/// <summary>"" or base64</summary>
+		Fulltext,
+
 		/// <summary>The value contains a native expression.</summary>
-		Native,
-		/// <summary>The value contains a unknown string</summary>
-		Constant
+		Native
 	} // enum PpsDataFilterExpressionType
 
 	#endregion
@@ -134,7 +138,7 @@ namespace TecWare.PPSn.Data
 
 			if (filterExpression[offset] == '"') // constant
 			{
-				return new PpsDataFilterConstantExpression(PpsDataFilterExpressionType.Constant, ParseConstant(filterExpression, ref offset));
+				return new PpsDataFilterConstantExpression(PpsDataFilterExpressionType.Fulltext, ParseConstant(filterExpression, ref offset));
 			}
 			else if (filterExpression[offset] == '\'') // base64 constant
 			{
@@ -144,7 +148,7 @@ namespace TecWare.PPSn.Data
 				var endAt = offset;
 				offset++;
 
-				return new PpsDataFilterConstantExpression(PpsDataFilterExpressionType.Constant, EncodeBase64(filterExpression, startAt, endAt - startAt));
+				return new PpsDataFilterConstantExpression(PpsDataFilterExpressionType.Native, EncodeBase64(filterExpression, startAt, endAt - startAt));
 			}
 			else if (Char.IsLetter(filterExpression[offset])) // identifier
 			{
@@ -187,7 +191,7 @@ namespace TecWare.PPSn.Data
 					var tok = filterExpression.Substring(startAt, endAt - startAt);
 					var nativeExpression = lookupToken(tok);
 					if (nativeExpression == null)
-						return new PpsDataFilterConstantExpression(PpsDataFilterExpressionType.Constant, tok);
+						return new PpsDataFilterConstantExpression(PpsDataFilterExpressionType.Fulltext, tok);
 					else
 						return new PpsDataFilterConstantExpression(PpsDataFilterExpressionType.Native, nativeExpression);
 				}
@@ -216,7 +220,8 @@ namespace TecWare.PPSn.Data
 			switch (method)
 			{
 				case PpsDataFilterExpressionType.Native:
-				case PpsDataFilterExpressionType.Constant:
+				case PpsDataFilterExpressionType.Number:
+				case PpsDataFilterExpressionType.Fulltext:
 					break;
 				default:
 					throw new ArgumentException("method is wrong.");
