@@ -102,12 +102,10 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		public class PpsDataTableMetaCollection : PpsMetaCollection
 		{
-			public T Get<T>(PpsDataTableMetaData key, T @default)
-			{
-				return Get<T>(key.ToString(), @default);
-			} // func Get
+			public T GetProperty<T>(PpsDataTableMetaData key, T @default)
+				=> PropertyDictionaryExtensions.GetProperty<T>(this, key.ToString(), @default);
 
-			public override IReadOnlyDictionary<string, Type> WellknownMetaTypes { get { return wellknownMetaTypes; } }
+			public override IReadOnlyDictionary<string, Type> WellknownMetaTypes => wellknownMetaTypes;
 		} // class PpsDataTableMetaCollection
 
 		#endregion

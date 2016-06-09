@@ -18,6 +18,8 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
+using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {
@@ -57,7 +59,7 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Basisklasse für die Spaltendefinitionen.</summary>
-	public abstract class PpsDataColumnDefinition : IDynamicMetaObjectProvider
+	public abstract class PpsDataColumnDefinition : IDataColumn, IDynamicMetaObjectProvider
 	{
 		#region -- WellKnownTypes ---------------------------------------------------------
 
@@ -86,12 +88,10 @@ namespace TecWare.PPSn.Data
 			{
 			} // ctor
 
-			public T Get<T>(PpsDataColumnMetaData key, T @default)
-			{
-				return Get<T>(key.ToString(), @default);
-			} // func Get
+			public T GetProperty<T>(PpsDataColumnMetaData key, T @default)
+				=> PropertyDictionaryExtensions.GetProperty<T>(this, key.ToString(), @default);
 
-			public override IReadOnlyDictionary<string, Type> WellknownMetaTypes { get { return wellknownMetaTypes; } }
+			public override IReadOnlyDictionary<string, Type> WellknownMetaTypes => wellknownMetaTypes;
 		} // class PpsDataColumnMetaCollection
 
 		#endregion
@@ -300,6 +300,8 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Zugriff auf die zugeordneten Meta-Daten der Spalte.</summary>
 		public abstract PpsDataColumnMetaCollection Meta { get; }
+
+		IDataColumnAttributes IDataColumn.Attributes => Meta;
 	} // class PpsDataColumnDefinition
 
 	#endregion

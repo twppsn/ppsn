@@ -62,12 +62,10 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		public class PpsDataSetMetaCollection : PpsMetaCollection
 		{
-			public T Get<T>(PpsDataSetMetaData key, T @default)
-			{
-				return Get<T>(key.ToString(), @default);
-			} // func Get<T>
+			public T GetProperty<T>(PpsDataSetMetaData key, T @default)
+				=> PropertyDictionaryExtensions.GetProperty<T>(this, key.ToString(), @default);
 
-			public override IReadOnlyDictionary<string, Type> WellknownMetaTypes { get { return wellKnownMetaTypes; } }
+			public override IReadOnlyDictionary<string, Type> WellknownMetaTypes => wellKnownMetaTypes;
 		} // class PpsDataSetMetaCollection
 
 		#endregion
@@ -188,7 +186,7 @@ namespace TecWare.PPSn.Data
 
 				return
 					(from t in dataset.Tables select t.Name)
-					.Concat(from m in dataset.DataSetDefinition.Meta select m.Key);
+					.Concat(from key in dataset.DataSetDefinition.Meta.Keys select key);
 			} // func GetDynamicMemberNames
 		} // class PpsDataSetMetaObject
 

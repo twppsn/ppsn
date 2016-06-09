@@ -420,6 +420,7 @@ namespace TecWare.PPSn.Data
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private PpsDataTable table;
+		private Lazy<IDataColumn[]> columnsArray;
 
 		private PpsDataRowState rowState;
 		private OriginalRowValues orignalValuesProxy;
@@ -437,6 +438,7 @@ namespace TecWare.PPSn.Data
 			this.rowState = PpsDataRowState.Unchanged;
 
 			this.table = table;
+			this.columnsArray = new Lazy<IDataColumn[]>(() => this.table.TableDefinition.Columns.ToArray());
 			this.orignalValuesProxy = new OriginalRowValues(this);
 			this.currentValuesProxy = new CurrentRowValues(this);
 
@@ -690,7 +692,7 @@ namespace TecWare.PPSn.Data
 			{
 				// calculate caption and define the transaction
 				var column = table.Columns[columnIndex];
-				using (var trans = undo.BeginTransaction(String.Format(">{0}< geändert.", column.Meta.Get(PpsDataColumnMetaData.Caption, column.Name))))
+				using (var trans = undo.BeginTransaction(String.Format(">{0}< geändert.", column.Meta.GetProperty(PpsDataColumnMetaData.Caption, column.Name))))
 				{
 					UpdateRelatedValues(columnIndex, oldValue, value);
 					undo.Append(new PpsDataRowValueChangedItem(this, columnIndex, realCurrentValue, value));
@@ -809,7 +811,7 @@ namespace TecWare.PPSn.Data
 		public PpsDataTable Table { get { return table; } internal set { table = value; } }
 
 		// todo: Implement missing functionality. Change PpsDataTable > PpsDataTableDefinition > PpsDataTableMetaCollection > PpsMetaCollection implementation. ?Expectation: "IDataColumn[] IDataColumns.Columns = table.Columns;"?
-		IDataColumn[] IDataColumns.Columns => null;
+		IDataColumn[] IDataColumns.Columns => columnsArray.Value;
 		int IDataColumns.ColumnCount => table.Columns.Count;
 
 		// -- Static --------------------------------------------------------------
