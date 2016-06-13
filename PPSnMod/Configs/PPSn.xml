@@ -19,7 +19,7 @@
 
 	<pps:ppsn name="ppsn" mainDataSource="main" displayname="PPSN Demo">
 		<pps:sqlExDataSource name="main">
-			<pps:connectionString>Data Source=(localdb)\mssqllocaldb;Initial Catalog=PPSn02;Integrated Security=True</pps:connectionString>
+			<pps:connectionString>Data Source=(localdb)\mssqllocaldb;Initial Catalog=PPSn;Integrated Security=True</pps:connectionString>
 		</pps:sqlExDataSource>
 
 		<pps:wpf name="wpf" xamlSource="C:\Projects\PPSnOS-git\Configs\Demo\Config\ClientWpf">
@@ -60,7 +60,7 @@
 		</pps:register>
 
 	</pps:ppsn>
-
+<!--
 <?des-merge C:\Projects\PPSnOS\Kunden\TecWare\vGarten-config\Garten\ppsn\Contacts.xml?>
-
+-->
 </des>
