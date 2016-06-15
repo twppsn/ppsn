@@ -14,11 +14,13 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Data;
 using System.Data.SQLite;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -84,21 +86,28 @@ namespace TecWare.PPSn.Data
 		public PpsLocalDataStore(PpsEnvironment environment)
 			: base(environment)
 		{
-			// open the local database
-			var dataPath = Path.Combine(environment.Info.LocalPath.FullName, "localStore.db");
-			localStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc");
-			localStore.Open();
-			VerifyLocalStore();
+			try
+			{
+				// open the local database
+				var dataPath = Path.Combine(environment.Info.LocalPath.FullName, "localStore.db");
+				localStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc");
+				localStore.Open();
+				VerifyLocalStore();
+			}
+			catch
+			{
+				localStore?.Dispose();
+				throw;
+			}
 		} // ctor
 
 		public void Dispose()
-		{
-			Dispose(true);
-		} // proc Dispose
+			=> Dispose(true);
 
 		protected virtual void Dispose(bool disposing)
 		{
-			localStore?.Dispose();
+			if (disposing)
+				localStore?.Dispose();
 		} // proc Dispose
 
 		#endregion
@@ -341,7 +350,7 @@ namespace TecWare.PPSn.Data
 
 		#region -- Offline Data -----------------------------------------------------------
 
-		public void UpdateOfflineItem(string path, bool onlineMode, string contentType, Stream data)
+		public void UpdateOfflineItem(string path, bool onlineMode, string contentType, string contentEncoding, Stream data)
 		{
 			if (String.IsNullOrEmpty(path))
 				throw new ArgumentException("Parameter \"path\" is null or empty.");
@@ -349,8 +358,10 @@ namespace TecWare.PPSn.Data
 			if (String.IsNullOrEmpty(contentType))
 				throw new ArgumentException("Parameter \"contentType\" is null or empty.");
 
+			// The usage of contentEncoding null or "" is allowed. Null will be handle as System.DBNull.
+
 			var buffer = data?.ReadInArray();
-			if (buffer == null || buffer.Length < 1)
+			if (buffer == null)
 				throw new ArgumentException("Parameter \"data\" is null or empty.");
 
 			using (var transaction = localStore.BeginTransaction())
@@ -368,11 +379,12 @@ namespace TecWare.PPSn.Data
 
 				if (id == null)
 				{
-					using (var command = new SQLiteCommand("INSERT INTO [main].[OfflineCache] ([Path], [OnlineMode], [ContentType], [ContentSize], [Content]) VALUES(@path, @onlineMode, @contentType, @contentSize, @content);", localStore, transaction))
+					using (var command = new SQLiteCommand("INSERT INTO [main].[OfflineCache] ([Path], [OnlineMode], [ContentType], [ContentEncoding], [ContentSize], [Content]) VALUES(@path, @onlineMode, @contentType, @contentEncoding, @contentSize, @content);", localStore, transaction))
 					{
 						command.Parameters.Add("@path", DbType.String).Value = path;
 						command.Parameters.Add("@onlineMode", DbType.Boolean).Value = onlineMode;
 						command.Parameters.Add("@contentType", DbType.String).Value = contentType;
+						command.Parameters.Add("@contentEncoding", DbType.String).Value = contentEncoding;
 						command.Parameters.Add("@contentSize", DbType.Int32).Value = buffer.Length;
 						command.Parameters.Add("@content", DbType.Binary).Value = buffer;
 						var affectedRows = command.ExecuteNonQuery();
@@ -382,10 +394,11 @@ namespace TecWare.PPSn.Data
 				} // if id == null
 				else
 				{
-					using (var command = new SQLiteCommand("UPDATE [main].[OfflineCache] SET [OnlineMode] = @onlineMode, [ContentType] = @contentType, [ContentSize] = @contentSize, [ContentLastModification] = DATETIME('now'), [Content] = @content WHERE [Id] = @id;", localStore, transaction))
+					using (var command = new SQLiteCommand("UPDATE [main].[OfflineCache] SET [OnlineMode] = @onlineMode, [ContentType] = @contentType, [ContentEncoding] = @contentEncoding, [ContentSize] = @contentSize, [ContentLastModification] = DATETIME('now'), [Content] = @content WHERE [Id] = @id;", localStore, transaction))
 					{
 						command.Parameters.Add("@onlineMode", DbType.Boolean).Value = onlineMode;
 						command.Parameters.Add("@contentType", DbType.String).Value = contentType;
+						command.Parameters.Add("@contentEncoding", DbType.String).Value = contentEncoding;
 						command.Parameters.Add("@contentSize", DbType.Int32).Value = buffer.Length;
 						command.Parameters.Add("@content", DbType.Binary).Value = buffer;
 						command.Parameters.Add("@id", DbType.Int64).Value = id;
@@ -421,10 +434,10 @@ namespace TecWare.PPSn.Data
 			MemoryStream resultData = null;
 			try
 			{
-				using (var command = new SQLiteCommand("SELECT [OnlineMode], [ContentType], [Content] FROM [main].[OfflineCache] WHERE [Path] = @path;", localStore))
+				using (var command = new SQLiteCommand("SELECT [OnlineMode], [ContentType], [ContentEncoding], [Content] FROM [main].[OfflineCache] WHERE [Path] = @path;", localStore))
 				{
 					command.Parameters.Add("@path", DbType.String).Value = path;
-					using (var reader = command.ExecuteReader())
+					using (var reader = command.ExecuteReader(CommandBehavior.SingleRow))
 					{
 						if (!reader.Read())
 							return false;
@@ -437,18 +450,33 @@ namespace TecWare.PPSn.Data
 						if (String.IsNullOrEmpty(resultContentType))
 							return false;
 
+						var readContentEncoding = reader.IsDBNull(2) ? null : reader.GetString(2);
+						var isCompressedContent = (readContentEncoding != null && readContentEncoding.IndexOf("gzip", StringComparison.OrdinalIgnoreCase) != -1);
+
 						Stream readerData = null;
 						try
 						{
-							readerData = reader.GetStream(2); // This method returns a newly created MemoryStream object.
+							readerData = reader.GetStream(3); // This method returns a newly created MemoryStream object.
 							if (readerData is MemoryStream)
-								resultData = (MemoryStream)readerData;
+							{
+								if (isCompressedContent)
+								{
+									resultData = new MemoryStream();
+									using (var decompressionData = new GZipStream(readerData, CompressionMode.Decompress)) // The underlying stream gets automatically closed.
+										decompressionData.CopyTo(resultData);
+								}
+								else
+									resultData = (MemoryStream)readerData;
+							}
 							else
 							{
 								resultData = new MemoryStream();
-								readerData.CopyTo(resultData);
-								readerData.Dispose();
-								readerData = null;
+								if (isCompressedContent)
+									using (var decompressionData = new GZipStream(readerData, CompressionMode.Decompress)) // The underlying stream gets automatically closed.
+										decompressionData.CopyTo(resultData);
+								else
+									using (readerData)
+										readerData.CopyTo(resultData);
 							}
 						} // try
 						catch
@@ -477,17 +505,19 @@ namespace TecWare.PPSn.Data
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
-		private class LocalStoreColumn : IDataColumn
+		private sealed class LocalStoreColumn : IDataColumn
 		{
 			private readonly string name;
 			private readonly Type dataType;
+			private readonly IDataColumnAttributes attributes;
 
 			#region -- Ctor/Dtor --------------------------------------------------------------
 
-			public LocalStoreColumn(string name, Type dataType)
+			public LocalStoreColumn(string name, Type dataType, IDataColumnAttributes attributes)
 			{
 				this.name = name;
 				this.dataType = dataType;
+				this.attributes = attributes;
 			} // ctor
 
 			#endregion
@@ -496,7 +526,7 @@ namespace TecWare.PPSn.Data
 
 			public string Name => name;
 			public Type DataType => dataType;
-			public IDataColumnAttributes Attributes => null;
+			public IDataColumnAttributes Attributes => attributes;
 
 			#endregion
 		} // class LocalStoreColumn
@@ -507,17 +537,17 @@ namespace TecWare.PPSn.Data
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
-		private class LocalStoreRow : IDataRow
+		private sealed class LocalStoreRow : IDataRow
 		{
-			private readonly LocalStoreColumn[] columns;
-			private readonly object[] columnValues;
+			private readonly LocalStoreEnumerator enumerator;
+			private readonly object[] values;
 
 			#region -- Ctor/Dtor --------------------------------------------------------------
 
-			public LocalStoreRow(LocalStoreColumn[] columns, object[] columnValues)
+			public LocalStoreRow(LocalStoreEnumerator enumerator, object[] values)
 			{
-				this.columns = columns;
-				this.columnValues = columnValues;
+				this.enumerator = enumerator;
+				this.values = values;
 			} // ctor
 
 			#endregion
@@ -528,30 +558,34 @@ namespace TecWare.PPSn.Data
 			{
 				value = null;
 
-				if (String.IsNullOrEmpty(columnName))
-					return false;
+				try
+				{
+					if (String.IsNullOrEmpty(columnName))
+						return false;
 
-				if (columns == null)
-					return false;
+					if (Columns == null || Columns.Length < 1)
+						return false;
 
-				if (columnValues == null)
-					return false;
+					if (Columns.Length != ColumnCount)
+						return false;
 
-				if (columns.Length != columnValues.Length)
-					return false;
+					var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
+					if (index == -1)
+						return false;
 
-				var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
-				if (index == -1)
+					value = this[index];
+					return true;
+				}
+				catch
+				{
 					return false;
-
-				value = columnValues[index];
-				return true;
+				}
 			} // func TryGetProperty
 
-			public object this[int index] => columnValues[index];
+			public object this[int index] => values[index];
 
-			public IDataColumn[] Columns => columns;
-			public int ColumnCount => columns.Length;
+			public IDataColumn[] Columns => enumerator.Columns;
+			public int ColumnCount => enumerator.ColumnCount;
 
 			public object this[string columnName]
 			{
@@ -560,7 +594,7 @@ namespace TecWare.PPSn.Data
 					var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
 					if (index == -1)
 						throw new ArgumentException(String.Format("Column with name \"{0}\" not found.", columnName ?? "null"));
-					return columnValues[index];
+					return values[index];
 				}
 			} // prop this
 
@@ -569,38 +603,213 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		public IEnumerable<IDataRow> GetOfflineItems()
+		#region -- class LocalStoreEnumerator ---------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class LocalStoreEnumerator : IEnumerator<IDataRow>, IDataColumns
 		{
-			var columns = new LocalStoreColumn[]
+			#region -- enum ReadingState ------------------------------------------------------
+
+			///////////////////////////////////////////////////////////////////////////////
+			/// <summary></summary>
+			private enum ReadingState
 			{
-				new LocalStoreColumn("Path", typeof(string)),
-				new LocalStoreColumn("OnlineMode", typeof(bool)),
-				new LocalStoreColumn("ContentType", typeof(string)),
-				new LocalStoreColumn("ContentEncoding", typeof(string)),
-				new LocalStoreColumn("ContentSize", typeof(int)),
-				new LocalStoreColumn("ContentLastModification", typeof(DateTime))
-			};
+				Unread,
+				Partly,
+				Complete,
+			} // enum ReadingState
 
-			var list = new List<LocalStoreRow>();
+			#endregion
 
-			using (var command = new SQLiteCommand("SELECT [Path], [OnlineMode], [ContentType], [ContentEncoding], [ContentSize], [ContentLastModification] FROM [main].[OfflineCache];", localStore))
-			using (var reader = command.ExecuteReader())
-				while (reader.Read())
+			private bool disposed;
+			private readonly SQLiteCommand command;
+			private SQLiteDataReader reader;
+			private ReadingState state;
+			private IDataRow currentRow;
+			private Lazy<IDataColumn[]> columns;
+
+			#region -- Ctor/Dtor --------------------------------------------------------------
+
+			public LocalStoreEnumerator(SQLiteCommand command)
+			{
+				this.command = command;
+
+				columns = new Lazy<IDataColumn[]>(() =>
 				{
-					var columnValues = new object[]
-					{
-						reader.GetString(0),
-						reader.GetBoolean(1),
-						reader.GetString(2),
-						reader.IsDBNull(3) ? null : reader.GetString(3),
-						reader.GetInt32(4),
-						reader.GetDateTime(5)
-					};
-					list.Add(new LocalStoreRow(columns, columnValues));
+					CheckDisposed();
+
+					if (state == ReadingState.Unread && !MoveNext())
+						return null;
+
+					if (state != ReadingState.Partly)
+						return null;
+
+					var tmp = new LocalStoreColumn[reader.FieldCount];
+					for (var i = 0; i < reader.FieldCount; i++)
+						tmp[i] = new LocalStoreColumn(reader.GetName(i), reader.GetFieldType(i), null);
+					return tmp;
+				});
+			} // ctor
+
+			public void Dispose()
+				=> Dispose(true);
+
+			private void Dispose(bool disposing)
+			{
+				if (disposed)
+					return;
+
+				if (disposing)
+				{
+					command?.Dispose();
+					reader?.Dispose();
 				}
 
-			return list;
-		} // func GetOfflineItems
+				disposed = true;
+			} // proc Dispose
+
+			#endregion
+
+			private void CheckDisposed()
+			{
+				if (disposed)
+					throw new ObjectDisposedException(typeof(LocalStoreEnumerator).FullName);
+			} // proc CheckDisposed
+
+			#region -- IEnumerator<T> ---------------------------------------------------------
+
+			public bool MoveNext()
+			{
+				CheckDisposed();
+
+				switch (state)
+				{
+					case ReadingState.Unread:
+						if (reader == null)
+							reader = command.ExecuteReader(CommandBehavior.SingleResult);
+
+						if (!reader.Read())
+							goto case ReadingState.Complete;
+
+						goto case ReadingState.Partly;
+					case ReadingState.Partly:
+						if (state == ReadingState.Partly)
+						{
+							if (!reader.Read())
+								goto case ReadingState.Complete;
+						}
+						else
+							state = ReadingState.Partly;
+
+						var values = new object[reader.FieldCount];
+						for (var i = 0; i < reader.FieldCount; i++)
+							values[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+						currentRow = new LocalStoreRow(this, values);
+						return true;
+					case ReadingState.Complete:
+						state = ReadingState.Complete;
+						// todo: Dispose command and reader?
+						currentRow = null;
+						return false;
+					default:
+						throw new InvalidOperationException("The state of the object is invalid.");
+				} // switch state
+			} // func MoveNext
+
+			void IEnumerator.Reset()
+			{
+				CheckDisposed();
+				if (state != ReadingState.Unread)
+					throw new InvalidOperationException("The state of the object forbids the calling of this method.");
+			} // proc Reset
+
+			public IDataRow Current
+			{
+				get
+				{
+					CheckDisposed();
+					if (state != ReadingState.Partly)
+						throw new InvalidOperationException("The state of the object forbids the retrieval of this property.");
+					return currentRow;
+				}
+			} // prop Current
+
+			object IEnumerator.Current => Current;
+
+			#endregion
+
+			#region -- IDataColumns -----------------------------------------------------------
+
+			public IDataColumn[] Columns
+			{
+				get
+				{
+					CheckDisposed();
+					return columns.Value;
+				}
+			} // prop Columns
+
+			public int ColumnCount
+			{
+				get
+				{
+					CheckDisposed();
+					return Columns?.Length ?? 0;
+				}
+			} // prop ColumnCount
+
+			#endregion
+		} // class LocalStoreEnumerator
+
+		#endregion
+
+		#region -- class LocalStoreReader -------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class LocalStoreReader : IEnumerable<IDataRow>
+		{
+			private readonly string commandText;
+			private readonly SQLiteConnection connection;
+
+			#region -- Ctor/Dtor --------------------------------------------------------------
+
+			public LocalStoreReader(string commandText, SQLiteConnection connection)
+			{
+				this.commandText = commandText;
+				this.connection = connection;
+			} // ctor
+
+			#endregion
+
+			#region -- IEnumerable<T> ---------------------------------------------------------
+
+			public IEnumerator<IDataRow> GetEnumerator()
+			{
+				SQLiteCommand command = null;
+				try
+				{
+					command = new SQLiteCommand(commandText, connection);
+					return new LocalStoreEnumerator(command);
+				}
+				catch
+				{
+					command?.Dispose();
+					throw;
+				}
+			} // func GetEnumerator
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> GetEnumerator();
+
+			#endregion
+		} // class LocalStoreReader
+
+		#endregion
+
+		public IEnumerable<IDataRow> GetOfflineItems()
+			=> new LocalStoreReader("SELECT [Path], [OnlineMode], [ContentType], [ContentEncoding], [ContentSize], [ContentLastModification] FROM [main].[OfflineCache];", localStore);
 
 		#endregion
 
@@ -688,7 +897,7 @@ namespace TecWare.PPSn.Data
 			//			throw new NotImplementedException();
 			//	}
 			//yield break;
-		} // func GetListData
+		} // func GetViewData
 
 		public override IDataRow GetDetailedData(long objectId, string typ)
 		{

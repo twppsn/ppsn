@@ -247,7 +247,7 @@ namespace TecWare.PPSn.Data
 		{
 			// todo: redirect to a http request
 			throw new NotImplementedException();
-		} // func GetListData
+		} // func GetViewData
 
 		public virtual IDataRow GetDetailedData(long objectId, string typ)
 		{
