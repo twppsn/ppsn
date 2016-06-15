@@ -354,10 +354,8 @@ namespace TecWare.PPSn.Server.Sql
 							return "(" + String.Join(" OR ", arguments.Where(c => !String.IsNullOrEmpty(c))) + ")";
 						case PpsDataFilterExpressionType.NAnd:
 							return "not " + CreateFilter(PpsDataFilterExpressionType.And, arguments);
-
 						case PpsDataFilterExpressionType.NOr:
 							return "not " + CreateFilter(PpsDataFilterExpressionType.Or, arguments);
-
 						default:
 							throw new InvalidOperationException();
 					}
@@ -397,7 +395,7 @@ namespace TecWare.PPSn.Server.Sql
 
 					return o.Expression + (o.Negate ? " desc" : " asc");
 				}
-			} // proc FormatOrderExpression
+			} // func FormatOrderExpression
 
 			public override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions)
 				=> SqlOrderBy(String.Join(", ", from o in expressions select FormatOrderExpression(o)));

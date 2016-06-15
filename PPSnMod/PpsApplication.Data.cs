@@ -648,7 +648,7 @@ namespace TecWare.PPSn.Server
 							{
 								columnNames[i] = nativeColumnName;
 
-								var fieldDescription =String.IsNullOrEmpty( attributeSelector ) ? null : this.GetFieldDescription(fieldDefinition.Name, false); // get the global description of the field
+								var fieldDescription = String.IsNullOrEmpty(attributeSelector) ? null : this.GetFieldDescription(fieldDefinition.Name, false); // get the global description of the field
 
 								xml.WriteStartElement(nativeColumnName);
 

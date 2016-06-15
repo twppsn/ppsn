@@ -134,9 +134,7 @@ namespace TecWare.PPSn.Server.Data
 		} // ctor
 
 		public void Dispose()
-		{
-			Dispose(true);
-		} // proc Dispose
+			=> Dispose(true);
 
 		private void Dispose(bool disposing)
 		{
@@ -160,7 +158,7 @@ namespace TecWare.PPSn.Server.Data
 				throw new ObjectDisposedException(typeof(DbRowEnumerator).FullName);
 		} // proc CheckDisposed
 
-		#region -- IEnumerator ------------------------------------------------------------
+		#region -- IEnumerator<T> ---------------------------------------------------------
 
 		public bool MoveNext()
 		{
@@ -224,8 +222,23 @@ namespace TecWare.PPSn.Server.Data
 
 		#region -- IDataColumns -----------------------------------------------------------
 
-		public IDataColumn[] Columns => columns.Value;
-		public int ColumnCount => Columns.Length;
+		public IDataColumn[] Columns
+		{
+			get
+			{
+				CheckDisposed();
+				return columns.Value;
+			}
+		} // prop Columns
+
+		public int ColumnCount
+		{
+			get
+			{
+				CheckDisposed();
+				return Columns?.Length ?? 0;
+			}
+		} // prop ColumnCount
 
 		#endregion
 	} // class DbRowEnumerator

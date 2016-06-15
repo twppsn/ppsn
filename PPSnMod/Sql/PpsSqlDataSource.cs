@@ -51,11 +51,11 @@ namespace TecWare.PPSn.Server.Sql
 
 				value = this[index];
 				return true;
-			}
+			} // try
 			catch
 			{
 				return false;
-			}
+			} // catch
 		} // func TryGetProperty
 
 		public virtual object this[string columnName]
