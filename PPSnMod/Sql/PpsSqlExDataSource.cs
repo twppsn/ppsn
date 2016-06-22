@@ -297,17 +297,24 @@ namespace TecWare.PPSn.Server.Sql
 				// file => init by file
 				// select => inline sql select
 				// view => name of existing view
-				var sourceType = sourceDescription.GetAttribute("type", "file");
-				if (sourceType == "select") // create view from sql
-					return CreateFromStatement(source, name, sourceDescription.Value);
-				else if (sourceType == "file")
-					return CreateFromFile(source, name, ProcsDE.GetFileName(sourceDescription, sourceDescription.Value));
-				else if (sourceType == "resource")
-					return CreateFromResource(source, name, sourceDescription.Value);
-				else if (sourceType == "view")
-					return CreateFromPredefinedView(source, name, sourceDescription?.Value);
-				else
-					throw new ArgumentOutOfRangeException(); // todo:
+				try
+				{
+					var sourceType = sourceDescription.GetAttribute("type", "file");
+					if (sourceType == "select") // create view from sql
+						return CreateFromStatement(source, name, sourceDescription.Value);
+					else if (sourceType == "file")
+						return CreateFromFile(source, name, ProcsDE.GetFileName(sourceDescription, sourceDescription.Value));
+					else if (sourceType == "resource")
+						return CreateFromResource(source, name, sourceDescription.Value);
+					else if (sourceType == "view")
+						return CreateFromPredefinedView(source, name, sourceDescription?.Value);
+					else
+						throw new ArgumentOutOfRangeException(); // todo:
+				}
+				catch (Exception e)
+				{
+					throw new DEConfigurationException(sourceDescription, String.Format("Can not create selector for '{0}'.", name), e);
+				}
 			} // func CreateFromXml
 		} // class SqlDataSelectorToken
 
@@ -1330,11 +1337,11 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		public override Task<IPpsSelectorToken> CreateSelectorToken(string name, XElement sourceDescription)
+		public override Task<IPpsSelectorToken> CreateSelectorTokenAsync(string name, XElement sourceDescription)
 		{
 			var selectorToken = Task.Run(new Func<IPpsSelectorToken>(() => SqlDataSelectorToken.CreateFromXml(this, name, sourceDescription)));
 			return selectorToken;
-		} // func CreateSelectorToken
+		} // func CreateSelectorTokenAsync
 
 		public override IPpsColumnDescription GetColumnDescription(string columnName)
 		{

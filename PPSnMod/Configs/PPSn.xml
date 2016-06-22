@@ -19,31 +19,27 @@
 
 	<pps:ppsn name="ppsn" mainDataSource="main" displayname="PPSN Demo">
 		<pps:sqlExDataSource name="main">
-			<pps:connectionString>Data Source=(localdb)\mssqllocaldb;Initial Catalog=PPSn02;Integrated Security=True</pps:connectionString>
+			<pps:connectionString>Data Source=(localdb)\mssqllocaldb;Initial Catalog=PPSn03;Integrated Security=True</pps:connectionString>
 		</pps:sqlExDataSource>
 
-		<pps:wpf name="wpf" xamlSource="C:\Projects\PPSnOS-git\Configs\Demo\Config\ClientWpf">
-			<pps:action name="close" displayName="Schließen" priority="-1000" displayGlyph="57639">
-				<pps:code><![CDATA[ Window:Close() ]]></pps:code>
-			</pps:action>
+		<pps:wpf name="wpf">
+			<!-- test -->
 			<pps:action name="hello" displayName="Hallo" priority="1000">
-				<pps:code><![CDATA[ msgbox('Hallo Welt', 'Info'); ]]></pps:code>
+				<pps:code><![CDATA[ LoadPane{ pane = '/wpf/panes/hello.xaml' }; ]]></pps:code>
 			</pps:action>
 		</pps:wpf>
-		
+
+		<!-- test -->
 		<pps:register source="main">
-			<pps:field name="dbo.Objk.Id" />
-			<pps:field name="dbo.Objk.Guid" />
-<!--
-			<pps:field name="dbo.Objk.Typ" />
--->
 			<pps:field name="dbo.Objk.Typ">
 				<pps:attribute name="HorizontalAlignment">Far</pps:attribute>
 				<pps:attribute name="Excel.HorizontalAlignment">Right</pps:attribute>
 				<pps:attribute name="Excel.VerticalAlignment">Center</pps:attribute>
 			</pps:field>
-			<pps:field name="dbo.Objk.Nr" />
-
+		</pps:register>
+			<!--
+		
+		<pps:register source="main">
 			<pps:view name="test">
 				<pps:source type="select"><![CDATA[SELECT [Id],[Guid],[Typ],[Nr] FROM [dbo].[Objk]]]></pps:source>
 			</pps:view>
@@ -57,10 +53,9 @@
 			<pps:view name="testdata">
 				<pps:source type="select"><![CDATA[SELECT [Id],[Data],[Rev] FROM [sds].[Kont]]]></pps:source>
 			</pps:view>
-		</pps:register>
+		</pps:register>-->
 
 	</pps:ppsn>
-
-<?des-merge C:\Projects\PPSnOS\Kunden\TecWare\vGarten-config\Garten\ppsn\Contacts.xml?>
-
+	<?des-merge System.xml?>
+	<?des-merge Contacts.xml?>
 </des>

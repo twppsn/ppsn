@@ -48,6 +48,9 @@ namespace TecWare.PPSn.Server
 
 		public readonly static XName xnWpf = PpsNamespace + "wpf";
 		public readonly static XName xnWpfAction = PpsNamespace + "action";
+		public readonly static XName xnWpfTheme = PpsNamespace + "theme";
+		public readonly static XName xnWpfTemplate = PpsNamespace + "template";
+		public readonly static XName xnWpfXamlSource = PpsNamespace + "xamlSource";
 		public readonly static XName xnWpfCode = PpsNamespace + "code";
 		public readonly static XName xnWpfCondition = PpsNamespace + "condition";
 
@@ -62,7 +65,7 @@ namespace TecWare.PPSn.Server
 			xml.WriteAttributeString(targetPropertyName ?? propertyName, value);
 		} // proc WriteProperty
 
-		public static IPropertyReadOnlyDictionary ToPropertyDictionary(this IEnumerable<XElement> attributes)
+		public static IPropertyReadOnlyDictionary ToPropertyDictionary(this IEnumerable<XElement> attributes, params KeyValuePair<string, Type>[] wellKnownProperties)
 		{
 			var props = new PropertyDictionary();
 			foreach (var x in attributes)
@@ -71,7 +74,13 @@ namespace TecWare.PPSn.Server
 				if (String.IsNullOrEmpty(propertyName))
 					throw new ArgumentException("@name is missing.");
 
-				var dataType = LuaType.GetType(x.GetAttribute("dataType", "string"));
+				Type dataType;
+				var wellKnownPropertyIndex = Array.FindIndex(wellKnownProperties, c => String.Compare(c.Key, propertyName, StringComparison.OrdinalIgnoreCase) == 0);
+				if (wellKnownPropertyIndex == -1)
+					dataType = LuaType.GetType(x.GetAttribute("dataType", "string"));
+				else
+					dataType = wellKnownProperties[wellKnownPropertyIndex].Value;
+
 				props.SetProperty(propertyName, dataType, x.Value);
 			}
 			return props;

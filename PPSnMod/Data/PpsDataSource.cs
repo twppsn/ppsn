@@ -44,10 +44,10 @@ namespace TecWare.PPSn.Server.Data
 
 		public abstract IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext privateUserData, bool throwException = true);
 
-		public virtual Task<IPpsSelectorToken> CreateSelectorToken(string name, XElement sourceDescription)
+		public virtual Task<IPpsSelectorToken> CreateSelectorTokenAsync(string name, XElement sourceDescription)
 		{
 			throw new NotImplementedException();
-		} // func CreateSelectorToken
+		} // func CreateSelectorTokenAsync
 
 		public virtual PpsDataTransaction CreateTransaction(IPpsConnectionHandle connection)
 		{

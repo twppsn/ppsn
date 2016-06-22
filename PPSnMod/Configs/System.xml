@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
+		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+
+	<pps:ppsn name="ppsn">
+		<pps:wpf name="wpf">
+			<pps:xamlSource id="core" directory="ClientWpf" />
+			<pps:theme id="default" file="ClientWpf/default.xaml"/>
+			
+			<pps:action name="close" displayName="Schließen" priority="-1000" displayGlyph="57639">
+				<pps:code><![CDATA[ Window:Close() ]]></pps:code>
+			</pps:action>
+			<pps:theme id="default" file="ClientWpf\Default.xaml"/>
+			<!--<pps:template id="templates" file="ClientWpf\Templates\MasterData.Contacts.xaml"/>-->
+		</pps:wpf>
+
+		<pps:register source="main">
+
+			<!-- object fields -->
+			<pps:field name="dbo.Objk.Id" />
+			<pps:field name="dbo.Objk.Guid" />
+			<pps:field name="dbo.Objk.Typ" />
+			<pps:field name="dbo.Objk.Nr" />
+			<pps:field name="dbo.Objk.HeadRevId" />
+			<pps:field name="dbo.Objk.CurRevId" />
+
+			<!-- revision fields -->
+			<pps:field name="dbo.Objr.Id" />
+			<pps:field name="dbo.Objr.ParentId" />
+			<pps:field name="dbo.Objr.ObjkId" />
+			<pps:field name="dbo.Objr.Data" />
+			<pps:field name="dbo.Objr.CreateDate" />
+			<pps:field name="dbo.Objr.CreateUserId" />
+			
+			<!-- address fields -->
+			<pps:field name="dbo.Adre.Id" />
+			<pps:field name="dbo.Adre.ObjkId" />
+			<pps:field name="dbo.Adre.Name" />
+			<pps:field name="dbo.Adre.Adresse" />
+
+			<!-- base dataset -->
+			<pps:dataset name="coreDataSet">
+				<pps:parameter name="Id" fieldName="dbo.Objk.Id" isNullable="true"/>
+				<pps:parameter name="Rev" fieldName="dbo.Objr.Id" isNullable="true"/>
+
+				<!-- define the base table -->
+				<pps:table name="Head">
+					<pps:column name="Id" fieldName="dbo.Objk.Id" isPrimary="true" parameter="Id" />
+					<pps:column name="RevId" fieldName="dbo.Objk.CurRevId" />
+					<pps:column name="HeadId" fieldName="dbo.Objk.HeadRevId" />
+					<pps:column name="Nr" fieldName="dbo.Objk.Nr" />
+					<pps:column name="Typ" fieldName="dbo.Objk.Typ" />
+					<pps:column name="Guid" fieldName="dbo.Objk.Guid" />
+				</pps:table>
+
+				<pps:table name="Revision">
+					<pps:column name="Id" fieldName="dbo.Objr.Id" isPrimary="true" />
+					<pps:relation name="ObjkId" fieldName="dbo.Objr.ObjkId" parentTable="Head" parentColumn="Id" parentType="Root" relationName="ObjrObjk" />
+				</pps:table>
+				
+			</pps:dataset>
+		</pps:register>
+	</pps:ppsn>
+</fragment>

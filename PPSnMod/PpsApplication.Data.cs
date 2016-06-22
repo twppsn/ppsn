@@ -297,15 +297,17 @@ namespace TecWare.PPSn.Server
 				if (sourceDescription == null)
 					throw new DEConfigurationException(xDefinition, "source definition is missing.");
 
-				var selectorToken = await source.CreateSelectorToken(name, sourceDescription);
-
-
+				var selectorToken = await source.CreateSelectorTokenAsync(name, sourceDescription);
+				
 				var view = new PpsViewDescription(
 					selectorToken,
 					xDefinition.GetAttribute("displayName", (string)null),
 					xDefinition.Elements(xnFilter).Select(x => new PpsViewParameterDefinition(x)).ToArray(),
 					xDefinition.Elements(xnOrder).Select(x => new PpsViewParameterDefinition(x)).ToArray(),
-					xDefinition.Elements(xnAttribute).ToPropertyDictionary()
+					xDefinition.Elements(xnAttribute).ToPropertyDictionary(
+						new KeyValuePair<string, Type>("displayImage", typeof(string)),
+						new KeyValuePair<string, Type>("WpfMenuItem", typeof(bool))
+					)
 				);
 
 				return view;
@@ -520,7 +522,7 @@ namespace TecWare.PPSn.Server
 			if (fieldDescription.TryGetValue(name, out fieldInfo))
 				return fieldInfo;
 			else if (throwException)
-				throw new ArgumentOutOfRangeException(); // todo:
+				throw new ArgumentOutOfRangeException("fieldName", String.Format("Field is not defined ({0}).", name));
 			else
 				return null;
 		} // func GetFieldDescription

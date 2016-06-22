@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
+		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+
+	<pps:ppsn name="ppsn">
+		<pps:register source="main">
+			<!-- contact fields -->
+			<pps:field name="sds.Kont.Id" />
+			<pps:field name="sds.Kont.Name" />
+			
+			<!-- menü eintrag -->
+			<pps:view name="contacts" displayName="Kontakte">
+				<pps:source type="select">
+					<![CDATA[
+						select 
+								o.Id
+								,o.[Guid]
+								,o.Typ
+								,o.Nr
+								,o.HeadRevId
+								,k.Name
+							from dbo.Objk o
+								inner join sds.Kont k on (o.Id = k.ObjkId)
+							where Typ = 'KO']]>
+				</pps:source>
+
+				<pps:attribute name="WpfMenuItem">true</pps:attribute>
+			</pps:view>
+
+			<!-- contacts mask -->
+			<pps:dataset name="contactsDataSet" inherited="coreDataSet">
+				<pps:table name="Head">
+					<pps:column name="Name" fieldName="sds.Kont.Name" />
+				</pps:table>
+				
+				<pps:table name="Adre">
+					<pps:column name="Id" fieldName="dbo.Adre.Id" isPrimary="true" />
+					<pps:relation name="ObjkId" fieldName="dbo.Adre.ObjkId" parentTable="Head" parentColumn="Id" parentType="Root" />
+					<pps:column name="Name" fieldName="dbo.Adre.Name" />
+					<pps:column name="Adresse" fieldName="dbo.Adre.Adresse" />
+				</pps:table>
+			</pps:dataset>
+		</pps:register>
+
+		<pps:wpf name="wpf">
+			<pps:action name="contactNew" displayName="Neue Kontakt" priority="100">
+				<pps:condition><![CDATA[ return CurrentView == Views["contacts"]; ]]></pps:condition>
+				<pps:code><![CDATA[ LoadMask{ document = '/contacts' }; ]]></pps:code>
+			</pps:action>
+		</pps:wpf>
+
+		<pps:document name="contacts" dataset="contactsDataSet">
+		</pps:document>
+	</pps:ppsn>
+</fragment>

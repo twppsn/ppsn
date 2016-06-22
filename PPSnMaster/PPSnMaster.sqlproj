@@ -60,6 +60,10 @@
   <ItemGroup>
     <Folder Include="Properties" />
     <Folder Include="Tables" />
+    <Folder Include="Database" />
+    <Folder Include="Tables\dbo" />
+    <Folder Include="Tables\hrs" />
+    <Folder Include="Tables\sds" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\120\SqlSchemas\master.dacpac">
@@ -70,7 +74,16 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="PpsMaster.sql" />
-    <Build Include="Tables\OBJK.sql" />
-    <Build Include="Tables\PERS.sql" />
+    <Build Include="Tables\Schemas.sql" />
+    <Build Include="Tables\dbo\Objk.sql" />
+    <Build Include="Tables\dbo\Objr.sql" />
+    <Build Include="Tables\hrs\Pers.sql" />
+    <Build Include="Tables\sds\Kont.sql" />
+    <Build Include="Tables\dbo\Adre.sql" />
+    <Build Include="Tables\dbo\Ansp.sql" />
+    <Build Include="Tables\dbo\User.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="PPSn03.publish.xml" />
   </ItemGroup>
 </Project>

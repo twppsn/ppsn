@@ -134,100 +134,100 @@ namespace TecWare.PPSn.Server.Sql
 			{
 			} // ctor
 
-			public PpsSqlDataTableServerDefinition GenerateSchemaBindings(PpsSqlDataSetDefinition dataset, List<PpsSqlDataTableServerDefinition> dataTableStack)
-			{
-				// bind to database schema
-				foreach (PpsDataColumnServerDefinition col in Columns)
-				{
-					var nativeColumn = col.FieldDescription.NativeColumnDescription as PpsSqlExDataSource.SqlColumnInfo;
-					if (nativeColumn == null)
-						continue; // skip unknown column type
+			//public PpsSqlDataTableServerDefinition GenerateSchemaBindings(PpsSqlDataSetDefinition dataset, List<PpsSqlDataTableServerDefinition> dataTableStack)
+			//{
+			//	// bind to database schema
+			//	foreach (PpsDataColumnServerDefinition col in Columns)
+			//	{
+			//		var nativeColumn = col.FieldDescription.NativeColumnDescription as PpsSqlExDataSource.SqlColumnInfo;
+			//		if (nativeColumn == null)
+			//			continue; // skip unknown column type
 
-					var tmp = GenerateTableBinding(dataset, nativeColumn.Table, new List<PpsSqlExDataSource.SqlTableInfo>(), dataTableStack);
-					if (GetTableBinding(c => c == tmp) == null)
-						rootTableBindings.Add(tmp);
-				}
+			//		var tmp = GenerateTableBinding(dataset, nativeColumn.Table, new List<PpsSqlExDataSource.SqlTableInfo>(), dataTableStack);
+			//		if (GetTableBinding(c => c == tmp) == null)
+			//			rootTableBindings.Add(tmp);
+			//	}
 
-				return this;
-			} // proc GenerateSchemaBindings
+			//	return this;
+			//} // proc GenerateSchemaBindings
 
-			private SqlTableBinding GenerateTableBinding(PpsSqlDataSetDefinition dataset, PpsSqlExDataSource.SqlTableInfo sqlTable, List<PpsSqlExDataSource.SqlTableInfo> sqlTableStack, List<PpsSqlDataTableServerDefinition> dataTableStack)
-			{
-				// is the table generated?
-				var tmp = GetTableBinding(c => c.SqlTable == sqlTable);
-				if (tmp != null)
-					return tmp;
+			//private SqlTableBinding GenerateTableBinding(PpsSqlDataSetDefinition dataset, PpsSqlExDataSource.SqlTableInfo sqlTable, List<PpsSqlExDataSource.SqlTableInfo> sqlTableStack, List<PpsSqlDataTableServerDefinition> dataTableStack)
+			//{
+			//	// is the table generated?
+			//	var tmp = GetTableBinding(c => c.SqlTable == sqlTable);
+			//	if (tmp != null)
+			//		return tmp;
 
-				// check for recursion
-				if (sqlTableStack.Contains(sqlTable))
-					throw new InvalidOperationException("Recursion!"); // todo:
-				sqlTableStack.Add(sqlTable);
+			//	// check for recursion
+			//	if (sqlTableStack.Contains(sqlTable))
+			//		throw new InvalidOperationException("Recursion!"); // todo:
+			//	sqlTableStack.Add(sqlTable);
 
-				var columnBindings = new List<SqlColumnBinding>();
+			//	var columnBindings = new List<SqlColumnBinding>();
 
-				// collect all columns to the current table
-				var rootTableConnection = false;
-				var hasParameterBdindings = false;
-				foreach (PpsDataColumnServerDefinition col in Columns)
-				{
-					var nativeColumn = col.FieldDescription.NativeColumnDescription as PpsSqlExDataSource.SqlColumnInfo;
-					if (nativeColumn != null && nativeColumn.Table == sqlTable)
-					{
-						var currentBinding = new SqlColumnBinding(col, nativeColumn);
-						columnBindings.Add(currentBinding);
+			//	// collect all columns to the current table
+			//	var rootTableConnection = false;
+			//	var hasParameterBdindings = false;
+			//	foreach (PpsDataColumnServerDefinition col in Columns)
+			//	{
+			//		var nativeColumn = col.FieldDescription.NativeColumnDescription as PpsSqlExDataSource.SqlColumnInfo;
+			//		if (nativeColumn != null && nativeColumn.Table == sqlTable)
+			//		{
+			//			var currentBinding = new SqlColumnBinding(col, nativeColumn);
+			//			columnBindings.Add(currentBinding);
 
-						// check for parameter columns
-						if (col.RelatedParameter != null)
-						{
-							hasParameterBdindings = true;
-							parameterBindings.Add(new SqlParameterBinding(col.RelatedParameter, currentBinding.SqlColumn));
-						}
+			//			// check for parameter columns
+			//			if (col.RelatedParameter != null)
+			//			{
+			//				hasParameterBdindings = true;
+			//				parameterBindings.Add(new SqlParameterBinding(col.RelatedParameter, currentBinding.SqlColumn));
+			//			}
 
-						// check for a declared relation
-						if (col.ParentColumn != null)
-						{
-							// set update the process order of the data tables
-							var parentRelationTable = (PpsSqlDataTableServerDefinition)col.ParentColumn.Table;
-							if (parentRelationTable != this)
-							{
-								dataset.AddToProcessOrder(parentRelationTable, dataTableStack);
+			//			// check for a declared relation
+			//			if (col.ParentColumn != null)
+			//			{
+			//				// set update the process order of the data tables
+			//				var parentRelationTable = (PpsSqlDataTableServerDefinition)col.ParentColumn.Table;
+			//				if (parentRelationTable != this)
+			//				{
+			//					dataset.AddToProcessOrder(parentRelationTable, dataTableStack);
 
-								// set relation to the root
-								if (col.ParentType == PpsDataColumnParentRelationType.Root)
-								{
-									if (parentRelationColumn != null)
-										throw new ArgumentException("only one way to root is allowed."); // todo:
+			//					// set relation to the root
+			//					if (col.ParentType == PpsDataColumnParentRelationType.Root)
+			//					{
+			//						if (parentRelationColumn != null)
+			//							throw new ArgumentException("only one way to root is allowed."); // todo:
 
-									this.parentRelationColumn = currentBinding;
-									CollectParameters(AddParameter);
+			//						this.parentRelationColumn = currentBinding;
+			//						CollectParameters(AddParameter);
 
-									rootTableConnection = true;
-								}
-							}
-						}
-					}
-				}
+			//						rootTableConnection = true;
+			//					}
+			//				}
+			//			}
+			//		}
+			//	}
 
-				// is there a way to a root table
-				if (rootTableConnection || hasParameterBdindings)
-				{
-					return new SqlTableBinding(this, sqlTable, columnBindings.ToArray());
-				}
-				else // is this a left outer table
-				{
-					foreach (var rel in sqlTable.RelationInfo)
-					{
-						if (rel.ReferncedColumn.Table == sqlTable)
-							continue; // ignore self relations
+			//	// is there a way to a root table
+			//	if (rootTableConnection || hasParameterBdindings)
+			//	{
+			//		return new SqlTableBinding(this, sqlTable, columnBindings.ToArray());
+			//	}
+			//	else // is this a left outer table
+			//	{
+			//		foreach (var rel in sqlTable.RelationInfo)
+			//		{
+			//			if (rel.ReferncedColumn.Table == sqlTable)
+			//				continue; // ignore self relations
 
-						var parentTableBinding = GenerateTableBinding(dataset, rel.ReferncedColumn.Table, sqlTableStack, dataTableStack);
-						parentTableBinding.AddChild(new SqlTableBinding(this, sqlTable, columnBindings.ToArray(), parentTableBinding, rel));
-						return parentTableBinding;
-					}
+			//			var parentTableBinding = GenerateTableBinding(dataset, rel.ReferncedColumn.Table, sqlTableStack, dataTableStack);
+			//			parentTableBinding.AddChild(new SqlTableBinding(this, sqlTable, columnBindings.ToArray(), parentTableBinding, rel));
+			//			return parentTableBinding;
+			//		}
 
-					throw new ArgumentException("no parameter, no root table, no inner relation."); // todo:
-				}
-			} // func GenerateTableBinding
+			//		throw new ArgumentException("no parameter, no root table, no inner relation."); // todo:
+			//	}
+			//} // func GenerateTableBinding
 
 			private void AddParameter(SqlParameterBinding parameterBinding)
 			{
@@ -383,9 +383,9 @@ namespace TecWare.PPSn.Server.Sql
 		#endregion
 
 		private readonly PpsSqlExDataSource dataSource;
-		private readonly List<PpsSqlDataTableServerDefinition> tableOrder = new List<PpsSqlDataTableServerDefinition>(); // order to load tables
+		//private readonly List<PpsSqlDataTableServerDefinition> tableOrder = new List<PpsSqlDataTableServerDefinition>(); // order to load tables
 
-		private string loadCommandBatch = null;
+		//private string loadCommandBatch = null;
 
 		public PpsSqlDataSetDefinition(IServiceProvider sp, PpsSqlExDataSource dataSource, string name, XElement config)
 				: base(sp, name, config)
@@ -401,32 +401,32 @@ namespace TecWare.PPSn.Server.Sql
 		protected override PpsDataTableServerDefinition CreateTableDefinition(string tableName, XElement config)
 			=> new PpsSqlDataTableServerDefinition(this, tableName, config);
 
-		private void AddToProcessOrder(PpsSqlDataTableServerDefinition table, List<PpsSqlDataTableServerDefinition> tableStack)
-		{
-			if (table == null || tableOrder.Contains(table)) // already processed
-				return;
+		//private void AddToProcessOrder(PpsSqlDataTableServerDefinition table, List<PpsSqlDataTableServerDefinition> tableStack)
+		//{
+		//	if (table == null || tableOrder.Contains(table)) // already processed
+		//		return;
 
-			if (tableStack.Contains(table))
-				throw new ArgumentException("Recursion!"); // todo:
-			tableStack.Add(table);
+		//	if (tableStack.Contains(table))
+		//		throw new ArgumentException("Recursion!"); // todo:
+		//	tableStack.Add(table);
 
-			tableOrder.Add(table.GenerateSchemaBindings(this, tableStack)); // will call AddToProcessOrder
-		} // proc AddToProcessOrder
+		//	tableOrder.Add(table.GenerateSchemaBindings(this, tableStack)); // will call AddToProcessOrder
+		//} // proc AddToProcessOrder
 
 		public override void EndInit()
 		{
 			base.EndInit(); // initialize columns
 
-			// generate schema
-			foreach (var table in TableDefinitions)
-				AddToProcessOrder(table as PpsSqlDataTableServerDefinition, new List<PpsSqlDataTableServerDefinition>());
+			//// generate schema
+			//foreach (var table in TableDefinitions)
+			//	AddToProcessOrder(table as PpsSqlDataTableServerDefinition, new List<PpsSqlDataTableServerDefinition>());
 
-			// generate load command block
-			var loadCommand = new StringBuilder();
-			foreach (var table in tableOrder)
-				table.AppenddLoadCommand(loadCommand);
+			//// generate load command block
+			//var loadCommand = new StringBuilder();
+			//foreach (var table in tableOrder)
+			//	table.AppenddLoadCommand(loadCommand);
 
-			loadCommandBatch = loadCommand.ToString();
+			//loadCommandBatch = loadCommand.ToString();
 		} // proc EndInit
 	} // class PpsSqlDataSetDefinition
 }

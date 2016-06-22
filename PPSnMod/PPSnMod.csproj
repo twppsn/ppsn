@@ -40,14 +40,18 @@
       <HintPath>..\packages\NeoLua.1.2.7-beta\lib\net45\Neo.Lua.Desktop.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Xaml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\Contracts.cs" />
@@ -94,11 +98,41 @@
     <None Include="ppsn.licenseheader" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Configs\Contacts.xml" />
     <Content Include="Configs\PPSn.xml">
       <SubType>Designer</SubType>
     </Content>
+    <Content Include="Configs\System.xml" />
     <EmbeddedResource Include="Sql\tsql\ServerLogins.sql" />
     <EmbeddedResource Include="Sql\tsql\ConnectionInitScript.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Configs\ClientWpf\Templates\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="Configs\ClientWpf\Default.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Content Include="Configs\ClientWpf\Panes\hello.xaml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Page Include="Configs\ClientWpf\Resources\Colors.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Configs\ClientWpf\Resources\Icons\MasterData.Contacts.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Configs\ClientWpf\Resources\Styles\Button.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Configs\ClientWpf\Resources\Styles\Label.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
