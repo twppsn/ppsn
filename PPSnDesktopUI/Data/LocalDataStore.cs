@@ -147,13 +147,13 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		private XElement ParseSQLiteCreateTableCommands(string resourceName)
+		private XElement ParseSQLiteCreateTableCommands(Type type, string resourceName)
 		{
-			var assembly = Assembly.GetExecutingAssembly();
-			var resolvedResourceName = assembly.GetManifestResourceNames().First(c => c.EndsWith(String.Format(".{0}", resourceName), StringComparison.Ordinal));
-			var command = new XElement(resourceName);
+			var command = new XElement("command",
+				new XAttribute("name", type.AssemblyQualifiedName + ", " + resourceName)
+			);
 
-			using (var source = assembly.GetManifestResourceStream(resolvedResourceName))
+			using (var source = type.Assembly.GetManifestResourceStream(type, resourceName))
 			using (var reader = new StreamReader(source, Encoding.UTF8))
 			{
 				var state = ParsingState.Default;
@@ -209,15 +209,29 @@ namespace TecWare.PPSn.Data
 			} // using reader source
 		} // func ParseSQLiteCreateTableCommands
 
+		protected IEnumerable<Tuple<Type, string>> GetStoreTablesFromAssembly(Type type, string resourceBase)
+		{
+			var resourcePath = type.Namespace + "." +resourceBase +  ".";
+
+			foreach (var resourceName in type.Assembly.GetManifestResourceNames())
+			{
+				if (resourceName.StartsWith(resourcePath) && resourceName.EndsWith(".sql", StringComparison.OrdinalIgnoreCase))
+					yield return new Tuple<Type, string>(type, resourceName.Substring(type.Namespace.Length + 1));
+			}
+		} // func 
+
+		protected virtual IEnumerable<Tuple<Type, string>> GetStoreTables()
+			=> GetStoreTablesFromAssembly(typeof(PpsEnvironment), "Scripts").Where(c => !c.Item2.EndsWith("Meta.sql", StringComparison.OrdinalIgnoreCase));
+
 		private void VerifyLocalStore()
 		{
-			// todo: use "*.scripts.*" resources, not a static string array
-
 			using (var transaction = localStore.BeginTransaction())
 			{
-				var existsMetaTable = false;
+				var existsMetaTable = false; // is the meta table existing
 
-				var metaTableCommands = ParseSQLiteCreateTableCommands("Meta.sql");
+				#region -- validate meta table --
+
+				var metaTableCommands = ParseSQLiteCreateTableCommands(typeof(PpsEnvironment), "Scripts.Meta.sql");
 
 				var metaTableInfo = metaTableCommands.Element("info");
 				var metaTableSchema = metaTableInfo.Attribute("schema").Value;
@@ -240,14 +254,16 @@ namespace TecWare.PPSn.Data
 					using (var command = new SQLiteCommand(metaTableCreate, localStore, transaction))
 						command.ExecuteNonQuery();
 				}
+				#endregion
 
 				#region -- *.sql --
-				foreach (var script in new string[] { "OfflineCache.sql" })
+				foreach (var scriptSource in GetStoreTables())
 				{
 					var existsTable = false;
 
-					var tableCommands = ParseSQLiteCreateTableCommands(script);
+					var tableCommands = ParseSQLiteCreateTableCommands(scriptSource.Item1, scriptSource.Item2);
 
+					var tableResourceName = tableCommands.Attribute("name").Value;
 					var tableInfo = tableCommands.Element("info");
 					var tableSchema = tableInfo.Attribute("schema").Value;
 					var tableName = tableInfo.Attribute("name").Value;
@@ -276,16 +292,16 @@ namespace TecWare.PPSn.Data
 					}
 					else
 					{
-						long readRev = -1;
+						var readRev = -1L;
 
-						using (var command = new SQLiteCommand($"SELECT [Rev] FROM [{metaTableSchema}].[{metaTableName}] WHERE [Res] = @resourceName;", localStore, transaction))
+						using (var command = new SQLiteCommand($"SELECT [Revision] FROM [{metaTableSchema}].[{metaTableName}] WHERE [ResourceName] = @resourceName;", localStore, transaction))
 						{
-							command.Parameters.Add("@resourceName", DbType.String).Value = script;
+							command.Parameters.Add("@resourceName", DbType.String).Value = tableResourceName;
 							using (var reader = command.ExecuteReader())
 							{
 								var enumerator = reader.GetEnumerator();
 								if (!enumerator.MoveNext())
-									throw new InvalidDataException(String.Format("There is no entry in the revision table \"{0}\".\"{1}\" for resource \"{2}\".", metaTableSchema, metaTableName, script));
+									throw new InvalidDataException(String.Format("There is no entry in the revision table \"{0}\".\"{1}\" for resource \"{2}\".", metaTableSchema, metaTableName, tableResourceName));
 
 								readRev = reader.GetInt64(0);
 							}
@@ -299,7 +315,7 @@ namespace TecWare.PPSn.Data
 						else
 						{
 							if (readRev > tableRev)
-								throw new InvalidDataException(String.Format("The table \"{0}\".\"{1}\" can not be verified, because the revision number in the revision table \"{2}\".\"{3}\" is greater than the revision number for resource \"{4}\".", tableSchema, tableName, metaTableSchema, metaTableName, script));
+								throw new InvalidDataException(String.Format("The table \"{0}\".\"{1}\" can not be verified, because the revision number in the revision table \"{2}\".\"{3}\" is greater than the revision number for resource \"{4}\".", tableSchema, tableName, metaTableSchema, metaTableName, tableResourceName));
 							else if (readRev == tableRev)
 								continue; // Matching revision. Skip revision table update.
 							else if (readRev < tableRev)
@@ -322,10 +338,12 @@ namespace TecWare.PPSn.Data
 						} // else
 					} // else
 
-					using (var command = new SQLiteCommand($"UPDATE [{metaTableSchema}].[{metaTableName}] SET [Rev] = @tableRev, [ResLastModification] = DATETIME('now') WHERE [Res] = @resourceName;", localStore, transaction))
+					using (var command = new SQLiteCommand(existsMetaTable ?
+						$"UPDATE [{metaTableSchema}].[{metaTableName}] SET [Revision] = @tableRev, [LastModification] = DATETIME('now') WHERE [ResourceName] = @resourceName;" :
+						$"INSERT INTO [{metaTableSchema}].[{metaTableName}] ([Revision], [LastModification], [ResourceName]) values (@tableRev, DATETIME('now'), @resourceName);", localStore, transaction))
 					{
 						command.Parameters.Add("@tableRev", DbType.Int64).Value = tableRev;
-						command.Parameters.Add("@resourceName", DbType.String).Value = script;
+						command.Parameters.Add("@resourceName", DbType.String).Value = tableResourceName;
 						var affectedRows = command.ExecuteNonQuery();
 
 						string errorText = null;
@@ -337,7 +355,7 @@ namespace TecWare.PPSn.Data
 							errorText = "multiple entries";
 
 						if (errorText != null)
-							throw new Exception(String.Format("The update in the revision table \"{0}\".\"{1}\" for resource \"{2}\" failed. Reason: {3}", metaTableSchema, metaTableName, script, errorText));
+							throw new Exception(String.Format("The update in the revision table \"{0}\".\"{1}\" for resource \"{2}\" failed. Reason: {3}", metaTableSchema, metaTableName, tableResourceName, errorText));
 					} // using command
 				} // foreach script
 				#endregion

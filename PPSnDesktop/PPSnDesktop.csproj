@@ -98,6 +98,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <EmbeddedResource Include="Static\SQLite\Objects.sql" />
     <EmbeddedResource Include="Static\navigator.xml">
       <SubType>Designer</SubType>
     </EmbeddedResource>
