@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -130,7 +131,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- PpsDataResultColumnDescription -----------------------------------------
+		#region -- class PpsDataResultColumnDescription -----------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary>Simple column description implementation.</summary>
@@ -320,117 +321,13 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- class SqlDataColumn ----------------------------------------------------
+		#region -- class SqlDataSelector --------------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
-		private sealed class SqlDataColumn : IDataColumn
-		{
-			private readonly string name;
-			private readonly Type dataType;
-			private readonly IDataColumnAttributes attributes;
-
-			#region -- Ctor/Dtor --------------------------------------------------------------
-
-			public SqlDataColumn(string name, Type dataType, IDataColumnAttributes attributes)
-			{
-				this.name = name;
-				this.dataType = dataType;
-				this.attributes = attributes;
-			} // ctor
-
-			#endregion
-
-			#region -- IDataColumn ------------------------------------------------------------
-
-			public string Name => name;
-			public Type DataType => dataType;
-			public IDataColumnAttributes Attributes => attributes;
-
-			#endregion
-		} // class SqlDataColumn
-
-		#endregion
-
-		#region -- class SqlDataRow -------------------------------------------------------
-
-		private sealed class SqlDataRow : DynamicDataRow
-		{
-			private readonly SqlDataReader r;
-			private readonly Lazy<IDataColumn[]> columns;
-
-			public SqlDataRow(SqlDataReader r)
-			{
-				this.r = r;
-
-				columns = new Lazy<IDataColumn[]>(
-					() =>
-					{
-						var t = new SqlDataColumn[r.FieldCount];
-						for (var i = 0; i < r.FieldCount; i++)
-							t[i] = new SqlDataColumn(r.GetName(i), r.GetFieldType(i), null);
-						return t;
-					});
-			}
-
-			public override object this[int index]
-			{
-				get
-				{
-					var v = r.GetValue(index);
-					if (v == DBNull.Value)
-						v = null;
-					return v;
-				}
-			} // prop this
-
-			public override int ColumnCount => r.FieldCount;
-			public override IDataColumn[] Columns => columns.Value;
-		} // class SqlDataRow
-
-		#endregion
-
-		#region -- class SqlDataSelector --------------------------------------------------
-
 		private sealed class SqlDataSelector : PpsDataSelector
 		{
-			private readonly SqlConnectionHandle connection;
-
-			private readonly SqlDataSelectorToken selectorToken;
-			private readonly string selectList;
-			private readonly string whereCondition;
-			private readonly string orderBy;
-
-			public SqlDataSelector(SqlConnectionHandle connection, SqlDataSelectorToken selectorToken, string selectList, string whereCondition, string orderBy)
-				: base(connection.DataSource)
-			{
-				this.connection = connection;
-				this.selectorToken = selectorToken;
-				this.selectList = selectList;
-				this.whereCondition = whereCondition;
-				this.orderBy = orderBy;
-			} // ctor
-
-			private string FormatOrderExpression(PpsDataOrderExpression o)
-			{
-				if (o.IsNative)
-				{
-					// todo: replace asc with desc and desc with asc
-
-					return o.Expression.Replace(" asc", " desc") ;
-			}
-				else
-				{
-					// todo: check the column
-
-					return o.Expression + (o.Negate ? " desc" : " asc");
-				}
-			} // proc FormatOrderExpression
-
-			public override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions)
-				=> SqlOrderBy(String.Join(", ", from o in expressions select FormatOrderExpression(o)));
-
-			#region -- class SqlDataFilterVisitor -------------------------------------------
+			#region -- class SqlDataFilterVisitor ---------------------------------------------
 
 			///////////////////////////////////////////////////////////////////////////////
 			/// <summary></summary>
@@ -464,10 +361,8 @@ namespace TecWare.PPSn.Server.Sql
 							return "(" + String.Join(" OR ", arguments.Where(c => !String.IsNullOrEmpty(c))) + ")";
 						case PpsDataFilterExpressionType.NAnd:
 							return "not " + CreateFilter(PpsDataFilterExpressionType.And, arguments);
-
 						case PpsDataFilterExpressionType.NOr:
 							return "not " + CreateFilter(PpsDataFilterExpressionType.Or, arguments);
-
 						default:
 							throw new InvalidOperationException();
 					}
@@ -475,6 +370,42 @@ namespace TecWare.PPSn.Server.Sql
 			} // class SqlDataFilterVisitor
 
 			#endregion
+
+			private readonly SqlConnectionHandle connection;
+
+			private readonly SqlDataSelectorToken selectorToken;
+			private readonly string selectList;
+			private readonly string whereCondition;
+			private readonly string orderBy;
+
+			public SqlDataSelector(SqlConnectionHandle connection, SqlDataSelectorToken selectorToken, string selectList, string whereCondition, string orderBy)
+				: base(connection.DataSource)
+			{
+				this.connection = connection;
+				this.selectorToken = selectorToken;
+				this.selectList = selectList;
+				this.whereCondition = whereCondition;
+				this.orderBy = orderBy;
+			} // ctor
+
+			private string FormatOrderExpression(PpsDataOrderExpression o)
+			{
+				if (o.IsNative)
+				{
+					// todo: replace asc with desc and desc with asc
+
+					return o.Expression.Replace(" asc", " desc") ;
+				}
+				else
+				{
+					// todo: check the column
+
+					return o.Expression + (o.Negate ? " desc" : " asc");
+				}
+			} // func FormatOrderExpression
+
+			public override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions)
+				=> SqlOrderBy(String.Join(", ", from o in expressions select FormatOrderExpression(o)));
 
 			public override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression)
 				=> SqlWhere(new SqlDataFilterVisitor().CreateFilter(expression));
@@ -532,8 +463,10 @@ namespace TecWare.PPSn.Server.Sql
 
 			public override IEnumerator<IDataRow> GetEnumerator(int start, int count)
 			{
-				using (var cmd = new SqlCommand())
+				SqlCommand cmd = null;
+				try
 				{
+					cmd = new SqlCommand();
 					cmd.Connection = connection.Connection;
 					cmd.CommandType = CommandType.Text;
 
@@ -546,17 +479,16 @@ namespace TecWare.PPSn.Server.Sql
 						sb.Append(selectList).Append(' ');
 
 					// add the view
-					sb.Append("from ").Append(selectorToken.ViewName).Append(" ");
+					sb.Append("from ").Append(selectorToken.ViewName).Append(' ');
 
 					// add the where
-					if(!String.IsNullOrEmpty(whereCondition))
+					if (!String.IsNullOrEmpty(whereCondition))
 						sb.Append("where ").Append(whereCondition).Append(' ');
 
 					// add the orderBy
 					if (!String.IsNullOrEmpty(orderBy))
 					{
-						sb.Append("order by ")
-							.Append(orderBy).Append(' ');
+						sb.Append("order by ").Append(orderBy).Append(' ');
 
 						// build the range, without order fetch is not possible
 						if (count >= 0 && start < 0)
@@ -570,13 +502,12 @@ namespace TecWare.PPSn.Server.Sql
 					}
 
 					cmd.CommandText = sb.ToString();
-					
-					using (var r = cmd.ExecuteReader(CommandBehavior.SingleResult))
-					{
-						var c = new SqlDataRow(r);
-						while (r.Read())
-							yield return c;
-					}
+					return new DbRowEnumerator(cmd);
+				}
+				catch
+				{
+					cmd?.Dispose();
+					throw;
 				}
 			} // func GetEnumerator
 
