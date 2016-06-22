@@ -360,7 +360,7 @@ namespace TecWare.PPSn
 
 		private PpsTraceLog logData = new PpsTraceLog();
 		private PpsDataListTemplateSelector dataListTemplateSelector;
-		private PpsEnvironmentCollection<PpsDataListItemDefinition> datalistItems;
+		private PpsEnvironmentCollection<PpsDataListItemDefinition> templateDefinitions;
 
 		private DispatcherTimer idleTimer;
 		private List<WeakReference<IPpsIdleAction>> idleActions = new List<WeakReference<IPpsIdleAction>>();
@@ -382,7 +382,7 @@ namespace TecWare.PPSn
 			this.inputManager = InputManager.Current;
 			this.synchronizationContext = new DispatcherSynchronizationContext(currentDispatcher);
 			this.dataListTemplateSelector = new PpsDataListTemplateSelector(this);
-			this.datalistItems = new PpsEnvironmentCollection<PpsDataListItemDefinition>(this);
+			this.templateDefinitions = new PpsEnvironmentCollection<PpsDataListItemDefinition>(this);
 
 			// Enable Trace Access
 			BindingOperations.EnableCollectionSynchronization(logData, logData.SyncRoot,
@@ -628,10 +628,51 @@ namespace TecWare.PPSn
 			// theme/resources
 			var xTheme = basicTemplates.Root;
 
+			// build context
 			var parserContext = new ParserContext();
 			parserContext.AddNamespaces(xTheme);
 
-			var xResources = xTheme.Element(StuffUI.PresentationNamespace + "resources");
+			UpdateResources(xTheme, parserContext);
+		} // proc RefreshDefaultResourcesAsync
+
+		private async Task RefreshTemplatesAsync()
+		{
+			var t = await GetXmlDocumentAsync("wpf/templates.xaml", true, true);
+			if (t == null)
+				return;
+
+			var xTemplates = t.Item1.Root;
+
+			// build context
+			var parserContext = new ParserContext();
+			parserContext.AddNamespaces(xTemplates);
+
+			// check for a global resource dictionary, and update the main resources
+			UpdateResources(xTemplates, parserContext);
+
+			// load the templates
+			foreach (var x in xTemplates.Elements("template"))
+			{
+				var key = x.GetAttribute("key", String.Empty);
+				if (String.IsNullOrEmpty(key))
+					continue;
+
+				var templateDefinition = templateDefinitions[key];
+				if (templateDefinition == null)
+				{
+					templateDefinition = new PpsDataListItemDefinition(this, key);
+					templateDefinitions.AppendItem(templateDefinition);
+				}
+				templateDefinition.AppendTemplate(x);
+			}
+
+			// remove unused templates
+			// todo:
+		} // proc RefreshTemplatesAsync
+
+		private void UpdateResources(XElement xRoot, ParserContext parserContext)
+		{
+			var xResources = xRoot.Element(StuffUI.PresentationNamespace + "resources");
 			if (xResources != null)
 			{
 				foreach (var cur in xResources.Elements())
@@ -641,37 +682,7 @@ namespace TecWare.PPSn
 						Dispatcher.Invoke(() => UpdateResource(key, cur.ToString(), parserContext));
 				}
 			}
-		} // proc RefreshDefaultResourcesAsync
-
-		private async Task RefreshTemplatesAsync()
-		{
-			var t = await GetXmlDocumentAsync("wpf/templates.xaml", true, true);
-			if (t == null)
-				return;
-
-			// check for a global resource dictionary, and update the main resources
-
-			// load the templates
-
-			// remove unused templates
-
-			//var xTemplates = XDocument.Load(p);
-			//foreach (var xTemplate in xTemplates.Root.Elements("template"))
-			//{
-			//	var key = xTemplate.GetAttribute("key", String.Empty);
-			//	if (String.IsNullOrEmpty(key))
-			//		continue;
-
-			//	var typeDef = datalistItems[key];
-			//	if (typeDef == null)
-			//	{
-			//		typeDef = new PpsDataListItemDefinition(this, PpsEnvironmentDefinitionSource.Offline, key);
-			//		datalistItems.AppendItem(typeDef);
-			//	}
-
-			//	typeDef.AppendTemplate(xTemplate);
-			//}
-		} // proc RefreshTemplatesAsync
+		} // proc UpdateResources
 
 		protected virtual void OnIsOnlineChanged()
 			=> IsOnlineChanged?.Invoke(this, EventArgs.Empty);
@@ -981,7 +992,7 @@ namespace TecWare.PPSn
 		public string UsernameDisplay => IsAuthentificated ? userName : "Nicht angemeldet";
 
 		/// <summary></summary>
-		public PpsEnvironmentCollection<PpsDataListItemDefinition> DataListItemTypes => datalistItems;
+		public PpsEnvironmentCollection<PpsDataListItemDefinition> DataListItemTypes => templateDefinitions;
 		/// <summary></summary>
 		public PpsDataListTemplateSelector DataListTemplateSelector => dataListTemplateSelector;
 

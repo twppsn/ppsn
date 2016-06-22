@@ -442,9 +442,10 @@ namespace TecWare.PPSn.UI
 		[LuaMember(nameof(Window))]
 		public PpsMainWindow Window => windowModel;
 
+		/// <summary>Selected item</summary>
 		[LuaMember(nameof(CurrentItem))]
 		public object CurrentItem => itemsView?.CurrentItem;
-		/// <summary>Points to the current view</summary>
+		/// <summary>Points to the current special view, that is selected.</summary>
 		[LuaMember(nameof(CurrentView))]
 		public PpsMainViewDefinition CurrentView => views?.View.CurrentItem as PpsMainViewDefinition;
 		/// <summary>Returns the current filters</summary>

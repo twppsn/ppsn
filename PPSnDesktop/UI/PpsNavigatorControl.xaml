@@ -9,153 +9,153 @@
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="600">
 
-    <UserControl.Resources>
+	<UserControl.Resources>
 		<Storyboard x:Key="ViewsIncreaseStoryboard" FillBehavior="HoldEnd">
-            <DoubleAnimation Storyboard.TargetProperty="Width" To="200" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
-        </Storyboard>
+			<DoubleAnimation Storyboard.TargetProperty="Width" To="200" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
+		</Storyboard>
 		<Storyboard x:Key="ViewsShrinkStoryboard" FillBehavior="HoldEnd">
-            <DoubleAnimation Storyboard.TargetProperty="Width" To="32" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
-        </Storyboard>
+			<DoubleAnimation Storyboard.TargetProperty="Width" To="32" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
+		</Storyboard>
 		<Storyboard x:Key="ViewsHeaderIncreaseStoryboard" FillBehavior="HoldEnd">
-            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
-            </ObjectAnimationUsingKeyFrames>
-            <DoubleAnimation Storyboard.TargetProperty="Width" To="200" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
-        </Storyboard>
-        <Storyboard x:Key="ViewsHeaderShrinkStoryboard" FillBehavior="HoldEnd">
-            <DoubleAnimation Storyboard.TargetProperty="Width" To="32" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
-            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                <DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{x:Static Visibility.Collapsed}"/>
-            </ObjectAnimationUsingKeyFrames>
-        </Storyboard>
+			<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+				<DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+			</ObjectAnimationUsingKeyFrames>
+			<DoubleAnimation Storyboard.TargetProperty="Width" To="200" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
+		</Storyboard>
+		<Storyboard x:Key="ViewsHeaderShrinkStoryboard" FillBehavior="HoldEnd">
+			<DoubleAnimation Storyboard.TargetProperty="Width" To="32" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
+			<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+				<DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{x:Static Visibility.Collapsed}"/>
+			</ObjectAnimationUsingKeyFrames>
+		</Storyboard>
 
 		<Style x:Key="NavigatorViewsButtonStyle" TargetType="{x:Type ToggleButton}">
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type ToggleButton}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
+			<Setter Property="Height" Value="32"/>
+			<Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ToggleButton}">
+						<Grid>
+							<Grid.ColumnDefinitions>
 								<ColumnDefinition Width="32" />
 								<ColumnDefinition/>
 							</Grid.ColumnDefinitions>
-                            <Border x:Name="PART_ImageBorder" Grid.Column="0" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
-                                <Image x:Name="PART_Image" Source="{ui:PpsImageStaticResourceBinding {Binding DisplayImage}}" Width="24" Height="24" Margin="4,0" HorizontalAlignment="Left" ToolTip="{x:Null}" />
-                            </Border>
-                            <Border x:Name="PART_DescriptionBorder" Grid.Column="1" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
-                                <TextBlock x:Name="PART_Description" Text="{Binding DisplayName}" Margin="6,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" Foreground="{TemplateBinding Foreground}" />
-                            </Border>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <DataTrigger Binding="{Binding Path=NavigatorViewsDescriptionVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="Collapsed">
-                                <DataTrigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard Storyboard.TargetName="PART_DescriptionBorder" FillBehavior="HoldEnd">
-                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                                <DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{x:Static Visibility.Collapsed}"/>
-                                            </ObjectAnimationUsingKeyFrames>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </DataTrigger.EnterActions>
-                                <DataTrigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard Storyboard.TargetName="PART_DescriptionBorder" FillBehavior="HoldEnd">
-                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
-                                            </ObjectAnimationUsingKeyFrames>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </DataTrigger.ExitActions>
-                            </DataTrigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
-                            </Trigger>
-							<Trigger Property="IsChecked" Value="True">
-                                <Setter Property="Foreground" Value="{StaticResource PPSnMarkerBrush}"/>
+							<Border x:Name="PART_ImageBorder" Grid.Column="0" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+								<!--<Image x:Name="PART_Image" Source="{ui:PpsImageStaticResourceBinding {Binding DisplayImage}}" Width="24" Height="24" Margin="4,0" HorizontalAlignment="Left" ToolTip="{x:Null}" />-->
+							</Border>
+							<Border x:Name="PART_DescriptionBorder" Grid.Column="1" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+								<TextBlock x:Name="PART_Description" Text="{Binding DisplayName}" Margin="6,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" Foreground="{TemplateBinding Foreground}" />
+							</Border>
+						</Grid>
+						<ControlTemplate.Triggers>
+							<DataTrigger Binding="{Binding Path=NavigatorViewsDescriptionVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="Collapsed">
+								<DataTrigger.EnterActions>
+									<BeginStoryboard>
+										<Storyboard Storyboard.TargetName="PART_DescriptionBorder" FillBehavior="HoldEnd">
+											<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+												<DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{x:Static Visibility.Collapsed}"/>
+											</ObjectAnimationUsingKeyFrames>
+										</Storyboard>
+									</BeginStoryboard>
+								</DataTrigger.EnterActions>
+								<DataTrigger.ExitActions>
+									<BeginStoryboard>
+										<Storyboard Storyboard.TargetName="PART_DescriptionBorder" FillBehavior="HoldEnd">
+											<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+												<DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+											</ObjectAnimationUsingKeyFrames>
+										</Storyboard>
+									</BeginStoryboard>
+								</DataTrigger.ExitActions>
+							</DataTrigger>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" />
+							</Trigger>
+							<Trigger Property="IsPressed" Value="True">
+								<Setter Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+							</Trigger>
+							<!--<Trigger Property="IsChecked" Value="True">
+								<Setter Property="Foreground" Value="{StaticResource PPSnMarkerBrush}"/>
 								<Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ObjectAnimationUsingKeyFrames  Storyboard.TargetName="PART_Image" Storyboard.TargetProperty="(Image.Source).(DrawingImage.Drawing).(GeometryDrawing.Brush)">
-                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnMarkerBrush}"/>
-                                            </ObjectAnimationUsingKeyFrames>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_Image" Storyboard.TargetProperty="(Image.Source).(DrawingImage.Drawing).(GeometryDrawing.Brush)">
-                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnImageBrush}"/>
-                                            </ObjectAnimationUsingKeyFrames>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                            <DataTrigger Binding="{Binding Path=NavigatorViewsDescriptionVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="Collapsed">
-                                <Setter TargetName="PART_Image" Property="ToolTip" Value="{Binding DisplayName}"/>
-                            </DataTrigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+									<BeginStoryboard>
+										<Storyboard>
+											<ObjectAnimationUsingKeyFrames  Storyboard.TargetName="PART_Image" Storyboard.TargetProperty="(Image.Source).(DrawingImage.Drawing).(GeometryDrawing.Brush)">
+												<DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnMarkerBrush}"/>
+											</ObjectAnimationUsingKeyFrames>
+										</Storyboard>
+									</BeginStoryboard>
+								</Trigger.EnterActions>
+								<Trigger.ExitActions>
+									<BeginStoryboard>
+										<Storyboard>
+											<ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_Image" Storyboard.TargetProperty="(Image.Source).(DrawingImage.Drawing).(GeometryDrawing.Brush)">
+												<DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnImageBrush}"/>
+											</ObjectAnimationUsingKeyFrames>
+										</Storyboard>
+									</BeginStoryboard>
+								</Trigger.ExitActions>
+							</Trigger>-->
+							<!--<DataTrigger Binding="{Binding Path=NavigatorViewsDescriptionVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="Collapsed">
+								<Setter TargetName="PART_Image" Property="ToolTip" Value="{Binding DisplayName}"/>
+							</DataTrigger>-->
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
 
-        <Style x:Key="NavigatorViewsContainerStyle" TargetType="{x:Type ListBoxItem}">
-            <!--Focus Button in Container!-->
-            <Setter Property="Focusable" Value="False"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+		<Style x:Key="NavigatorViewsContainerStyle" TargetType="{x:Type ListBoxItem}">
+			<!--Focus Button in Container!-->
+			<Setter Property="Focusable" Value="False"/>
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
 			<Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                        <StackPanel SnapsToDevicePixels="True">
-                            <Separator x:Name="PART_Separator" Background="{StaticResource PPSnSeparatorBrush}" Margin="0,2"/>
-                            <ToggleButton x:Name="PART_Button"
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ListBoxItem}">
+						<StackPanel SnapsToDevicePixels="True">
+							<Separator x:Name="PART_Separator" Background="{StaticResource PPSnSeparatorBrush}" Margin="0,2"/>
+							<ToggleButton x:Name="PART_Button"
 										  Style="{StaticResource NavigatorViewsButtonStyle}"
 										  IsChecked="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}"
 										  Margin="0">
-                            </ToggleButton>
-                        </StackPanel>
-                        <ControlTemplate.Triggers>
-                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
-                                <Setter TargetName="PART_Separator" Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding Path=NavigatorViewsDescriptionVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="Collapsed">
-                                <DataTrigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard Storyboard.TargetName="PART_Separator" Storyboard.TargetProperty="Background" FillBehavior="HoldEnd">
-                                            <ObjectAnimationUsingKeyFrames>
-                                                <DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{StaticResource PPSnWindowBackgroundBrush}"/>
-                                            </ObjectAnimationUsingKeyFrames>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </DataTrigger.EnterActions>
-                                <DataTrigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard Storyboard.TargetName="PART_Separator" Storyboard.TargetProperty="Background" FillBehavior="HoldEnd">
-                                            <ObjectAnimationUsingKeyFrames>
-                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnSeparatorBrush}"/>
-                                            </ObjectAnimationUsingKeyFrames>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </DataTrigger.ExitActions>
-                            </DataTrigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="FocusManager.FocusedElement" Value="{Binding ElementName=PART_Button}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-		
-        <Style x:Key="NavigatorActionButtonStyle" TargetType="{x:Type Button}">
+							</ToggleButton>
+						</StackPanel>
+						<ControlTemplate.Triggers>
+							<DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
+								<Setter TargetName="PART_Separator" Property="Visibility" Value="Collapsed"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding Path=NavigatorViewsDescriptionVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="Collapsed">
+								<DataTrigger.EnterActions>
+									<BeginStoryboard>
+										<Storyboard Storyboard.TargetName="PART_Separator" Storyboard.TargetProperty="Background" FillBehavior="HoldEnd">
+											<ObjectAnimationUsingKeyFrames>
+												<DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{StaticResource PPSnWindowBackgroundBrush}"/>
+											</ObjectAnimationUsingKeyFrames>
+										</Storyboard>
+									</BeginStoryboard>
+								</DataTrigger.EnterActions>
+								<DataTrigger.ExitActions>
+									<BeginStoryboard>
+										<Storyboard Storyboard.TargetName="PART_Separator" Storyboard.TargetProperty="Background" FillBehavior="HoldEnd">
+											<ObjectAnimationUsingKeyFrames>
+												<DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnSeparatorBrush}"/>
+											</ObjectAnimationUsingKeyFrames>
+										</Storyboard>
+									</BeginStoryboard>
+								</DataTrigger.ExitActions>
+							</DataTrigger>
+							<Trigger Property="IsSelected" Value="True">
+								<Setter Property="FocusManager.FocusedElement" Value="{Binding ElementName=PART_Button}" />
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<Style x:Key="NavigatorActionButtonStyle" TargetType="{x:Type Button}">
 			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
 			<Setter Property="IsTabStop" Value="False"/>
 			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
@@ -178,88 +178,88 @@
 							<TextBlock x:Name="PART_Glyph" Text="{TemplateBinding Tag}" FontFamily="Segoe UI Symbol" FontSize="18.667" Margin="0,5,0,0" HorizontalAlignment="Center"  Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
 							<Border x:Name="PART_Content" Grid.Row="1" BorderThickness="0" SnapsToDevicePixels="true" IsHitTestVisible="True">
 								<ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Top"></ContentPresenter>
-                            </Border>
-                            <VisualStateManager.VisualStateGroups>
-                                <VisualStateGroup x:Name="CommonStates">
-                                    <VisualState x:Name="Normal"/>
-                                    <VisualState x:Name="MouseOver">
-                                        <Storyboard>
-                                            <ObjectAnimationUsingKeyFrames  Storyboard.TargetName="PART_Circle" Storyboard.TargetProperty="Fill">
-                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
-                                            </ObjectAnimationUsingKeyFrames>
-                                        </Storyboard>
-                                    </VisualState>
-                                    <VisualState x:Name="Pressed">
-                                        <Storyboard>
-                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_Circle" Storyboard.TargetProperty="Fill">
-                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnButtonPressedBrush}"/>
-                                            </ObjectAnimationUsingKeyFrames>
-                                        </Storyboard>
-                                    </VisualState>
-                                </VisualStateGroup>
-                            </VisualStateManager.VisualStateGroups>
-                        </Grid>
+							</Border>
+							<VisualStateManager.VisualStateGroups>
+								<VisualStateGroup x:Name="CommonStates">
+									<VisualState x:Name="Normal"/>
+									<VisualState x:Name="MouseOver">
+										<Storyboard>
+											<ObjectAnimationUsingKeyFrames  Storyboard.TargetName="PART_Circle" Storyboard.TargetProperty="Fill">
+												<DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+											</ObjectAnimationUsingKeyFrames>
+										</Storyboard>
+									</VisualState>
+									<VisualState x:Name="Pressed">
+										<Storyboard>
+											<ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_Circle" Storyboard.TargetProperty="Fill">
+												<DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnButtonPressedBrush}"/>
+											</ObjectAnimationUsingKeyFrames>
+										</Storyboard>
+									</VisualState>
+								</VisualStateGroup>
+							</VisualStateManager.VisualStateGroups>
+						</Grid>
 					</ControlTemplate>
 				</Setter.Value>
 			</Setter>
 		</Style>
-    </UserControl.Resources>
+	</UserControl.Resources>
 
-    <Grid x:Name="PART_NavigatorGrid">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="32"/>
+	<Grid x:Name="PART_NavigatorGrid">
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="32"/>
 			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition/>
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
+		</Grid.ColumnDefinitions>
+		<Grid.RowDefinitions>
 			<RowDefinition Height="28" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+			<RowDefinition Height="*" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
 
-        <ToggleButton x:Name="PART_ViewsToggleButton" Grid.Column="1" Style="{StaticResource PPSnShrinkButtonStyle}" Command="{x:Static uiL:PpsMainWindow.NavigatorViewsToggleDescriptionCommand}"
+		<ToggleButton x:Name="PART_ViewsToggleButton" Grid.Column="1" Style="{StaticResource PPSnShrinkButtonStyle}" Command="{x:Static uiL:PpsMainWindow.NavigatorViewsToggleDescriptionCommand}"
 				Width="24" Height="24" Margin="4,0" HorizontalAlignment="Left" ClickMode="Press"/>
 
-        <Border x:Name="PART_ViewsHeader" Grid.Column="1" Height="28" Width="200" VerticalAlignment="Bottom" BorderThickness="0,0,0,4" BorderBrush="{StaticResource PPSnWindowForegroundBrush}" SnapsToDevicePixels="True">
-            <TextBlock Text="DATEN" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="38,0,0,2" FontSize="14.667" FontWeight="DemiBold" />
-            <Border.Style>
-                <Style TargetType="{x:Type Border}">
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding Path=NavigatorViewsDescriptionVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="Collapsed">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard Storyboard="{StaticResource ViewsHeaderShrinkStoryboard}" />
-                            </DataTrigger.EnterActions>
-                            <DataTrigger.ExitActions>
-                                <BeginStoryboard Storyboard="{StaticResource ViewsHeaderIncreaseStoryboard}" />
-                            </DataTrigger.ExitActions>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
+		<Border x:Name="PART_ViewsHeader" Grid.Column="1" Height="28" Width="200" VerticalAlignment="Bottom" BorderThickness="0,0,0,4" BorderBrush="{StaticResource PPSnWindowForegroundBrush}" SnapsToDevicePixels="True">
+			<TextBlock Text="DATEN" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="38,0,0,2" FontSize="14.667" FontWeight="DemiBold" />
+			<Border.Style>
+				<Style TargetType="{x:Type Border}">
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding Path=NavigatorViewsDescriptionVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="Collapsed">
+							<DataTrigger.EnterActions>
+								<BeginStoryboard Storyboard="{StaticResource ViewsHeaderShrinkStoryboard}" />
+							</DataTrigger.EnterActions>
+							<DataTrigger.ExitActions>
+								<BeginStoryboard Storyboard="{StaticResource ViewsHeaderIncreaseStoryboard}" />
+							</DataTrigger.ExitActions>
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
 			</Border.Style>
 		</Border>
 
-        <ListBox x:Name="PART_Views" Grid.Column="1" Grid.Row="1" Margin="0,2,0,0" FontSize="14.667" SnapsToDevicePixels="True"
+		<ListBox x:Name="PART_Views" Grid.Column="1" Grid.Row="1" Margin="0,2,0,0" FontSize="14.667" SnapsToDevicePixels="True"
 				 DataContext="{Binding Navigator}"
 				 ItemsSource="{Binding VisibleViews}"
 				 IsSynchronizedWithCurrentItem="True"
 				 ItemContainerStyle="{StaticResource NavigatorViewsContainerStyle}">
-            <ListBox.Style>
-                <Style TargetType="{x:Type ListBox}" BasedOn="{StaticResource PPSnListBoxStyle}">
-                    <Setter Property="Width" Value="200"/>
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding Path=NavigatorViewsDescriptionVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="Collapsed">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard Storyboard="{StaticResource ViewsShrinkStoryboard}" />
-                            </DataTrigger.EnterActions>
-                            <DataTrigger.ExitActions>
-                                <BeginStoryboard Storyboard="{StaticResource ViewsIncreaseStoryboard}" />
-                            </DataTrigger.ExitActions>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </ListBox.Style>
-        </ListBox>
-		
+			<ListBox.Style>
+				<Style TargetType="{x:Type ListBox}" BasedOn="{StaticResource PPSnListBoxStyle}">
+					<Setter Property="Width" Value="200"/>
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding Path=NavigatorViewsDescriptionVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="Collapsed">
+							<DataTrigger.EnterActions>
+								<BeginStoryboard Storyboard="{StaticResource ViewsShrinkStoryboard}" />
+							</DataTrigger.EnterActions>
+							<DataTrigger.ExitActions>
+								<BeginStoryboard Storyboard="{StaticResource ViewsIncreaseStoryboard}" />
+							</DataTrigger.ExitActions>
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</ListBox.Style>
+		</ListBox>
+
 		<uiC:DataListControl x:Name="PART_Items" Grid.Column="2" Grid.RowSpan="2" Style="{StaticResource PPSnListBoxStyle}" Margin="50,24,32,0" FontSize="14.667" SnapsToDevicePixels="True"
 							 AlternationCount="2" IsSynchronizedWithCurrentItem="True"
 							 DataContext="{Binding Navigator}"
@@ -268,26 +268,26 @@
 							 ItemContainerStyle="{StaticResource PpsAlternatingListBoxItemStyle}"/>
 
 		<ItemsControl x:Name="PART_Actions" Grid.Row="2" Grid.Column="2"  DataContext="{Binding Navigator}" ItemsSource="{Binding VisibleActions}" IsTabStop="False" >
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <DockPanel LastChildFill="False" Margin="50,16,32,10" IsItemsHost="True"/>
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemContainerStyle>
-                <Style TargetType="ContentPresenter">
-                    <Style.Resources>
-                        <uiL:PpsNavigatorPriorityToDockPosition x:Key="PriorityToPositionConverter"/>
-                    </Style.Resources>
-                    <Setter Property="DockPanel.Dock" Value="{Binding Priority, Converter={StaticResource PriorityToPositionConverter}}"/>
-                </Style>
-            </ItemsControl.ItemContainerStyle>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Button Content="{Binding DisplayName}" Command="{x:Static uiL:PpsMainWindow.RunActionCommand}"
+			<ItemsControl.ItemsPanel>
+				<ItemsPanelTemplate>
+					<DockPanel LastChildFill="False" Margin="50,16,32,10" IsItemsHost="True"/>
+				</ItemsPanelTemplate>
+			</ItemsControl.ItemsPanel>
+			<ItemsControl.ItemContainerStyle>
+				<Style TargetType="ContentPresenter">
+					<Style.Resources>
+						<uiL:PpsNavigatorPriorityToDockPosition x:Key="PriorityToPositionConverter"/>
+					</Style.Resources>
+					<Setter Property="DockPanel.Dock" Value="{Binding Priority, Converter={StaticResource PriorityToPositionConverter}}"/>
+				</Style>
+			</ItemsControl.ItemContainerStyle>
+			<ItemsControl.ItemTemplate>
+				<DataTemplate>
+					<Button Content="{Binding DisplayName}" Command="{x:Static uiL:PpsMainWindow.RunActionCommand}"
 							Style="{StaticResource NavigatorActionButtonStyle}" FontSize="14.667" Tag="{Binding DisplayGlyph}">
-                    </Button>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
-    </Grid>
+					</Button>
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+		</ItemsControl>
+	</Grid>
 </UserControl>

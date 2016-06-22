@@ -15,26 +15,22 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Threading;
+using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
-using System.Windows.Controls;
-using System.Diagnostics;
-using System.Windows.Input;
-using System.ComponentModel;
-using System.ComponentModel.Design.Serialization;
-using System.Globalization;
-using System.Web;
-using TecWare.DE.Stuff;
 using TecWare.DE.Networking;
-using System.Xml;
-using System.Collections.Specialized;
+using TecWare.DE.Stuff;
+using static TecWare.PPSn.StuffUI;
 
 namespace TecWare.PPSn.UI
 {
@@ -44,8 +40,6 @@ namespace TecWare.PPSn.UI
 	/// <summary>Pane that combines a xaml file with lua code.</summary>
 	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane
 	{
-		private static readonly XName xnCode = XName.Get("Code", "http://schemas.microsoft.com/winfx/2006/xaml");
-
 		private BaseWebRequest fileSource;
 		private FrameworkElement control;
 
@@ -100,11 +94,11 @@ namespace TecWare.PPSn.UI
 		private Uri GetTemplateUri(LuaTable arguments, bool throwException)
 		{
 			// get the basic template
-			var xamlFile = arguments.GetOptionalValue("template", String.Empty);
+			var xamlFile = arguments.GetOptionalValue("pane", String.Empty);
 			if (String.IsNullOrEmpty(xamlFile))
 			{
 				if (throwException)
-					throw new ArgumentException("template is missing.");
+					throw new ArgumentException("pane is missing.");
 				else
 					return null;
 			}
@@ -128,7 +122,7 @@ namespace TecWare.PPSn.UI
 		{
 			await Task.Yield(); // move to background
 
-			// use the argument as base table
+			// save the arguments
 			this.arguments = arguments;
 			
 			// prepare the base
@@ -184,6 +178,7 @@ namespace TecWare.PPSn.UI
 					// read the file name
 					arguments["_filename"] = r.GetContentDisposition().FileName;
 
+					// parse the xaml as xml document
 					using (var sr = fileSource.GetTextReaderAsync(r, MimeTypes.Application.Xaml))
 					{
 						using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, xamlUri.ToString()))
@@ -200,13 +195,13 @@ namespace TecWare.PPSn.UI
 		protected virtual void OnControlCreated()
 		{
 		} // proc OnControlCreated
-				
-		public Task<bool> UnloadAsync(bool? commit = default(bool?))
-		{
-			return Task.FromResult(true);
-		} // func UnloadAsync
+
+		public virtual Task<bool> UnloadAsync(bool? commit = default(bool?))
+			=> Task.FromResult(true);
 
 		#endregion
+
+		#region -- LuaTable, OnIndex ------------------------------------------------------
 
 		private object GetXamlElement(object key)
 		{
@@ -220,6 +215,8 @@ namespace TecWare.PPSn.UI
 		{
 			return base.OnIndex(key) ?? GetXamlElement(key);
 		} // func OnIndex
+
+		#endregion
 
 		/// <summary>Arguments of the generic content.</summary>
 		[LuaMember("Arguments")]
@@ -236,6 +233,7 @@ namespace TecWare.PPSn.UI
 				return (string)control.GetValue(PpsGenericWpfControl.TitleProperty);
 			}
 		} // prop Title
+
 		/// <summary>Wpf-Control</summary>
 		[LuaMember(nameof(Control))]
 		public FrameworkElement Control { get { return control; } }

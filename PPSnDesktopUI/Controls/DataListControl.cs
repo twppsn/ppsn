@@ -46,7 +46,7 @@ namespace TecWare.PPSn.Controls
 		public override DataTemplate SelectTemplate(object item, DependencyObject container)
 		{
 			var table = item as LuaTable;
-			var key = table != null ? table.GetMemberValue("OBJKTYP") : ((dynamic)item).OBJKTYP;
+			var key = table != null ? table.GetMemberValue("Typ") : ((dynamic)item).Typ;
 			if (key == null)
 				return null;
 

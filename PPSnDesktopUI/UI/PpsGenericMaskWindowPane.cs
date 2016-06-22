@@ -40,42 +40,52 @@ namespace TecWare.PPSn.UI
 		private CollectionViewSource redoView;
 		private PpsDataSetClient dataSet; // DataSet which is controlled by the mask
 
+		private string documentPath;
+
 		public PpsGenericMaskWindowPane(PpsEnvironment environment)
 			: base(environment)
 		{
-			// create the views on the undo manager
-			undoView = new CollectionViewSource();
-			using (undoView.DeferRefresh())
-			{
-				undoView.Source = undoManager;
-				undoView.SortDescriptions.Add(new SortDescription("Index", ListSortDirection.Descending));
-				undoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Undo;
-			}
+			//// create the views on the undo manager
+			//undoView = new CollectionViewSource();
+			//using (undoView.DeferRefresh())
+			//{
+			//	undoView.Source = undoManager;
+			//	undoView.SortDescriptions.Add(new SortDescription("Index", ListSortDirection.Descending));
+			//	undoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Undo;
+			//}
 
-			redoView = new CollectionViewSource();
-			using (redoView.DeferRefresh())
-			{
-				redoView.Source = undoManager;
-				redoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Redo;
-			}
+			//redoView = new CollectionViewSource();
+			//using (redoView.DeferRefresh())
+			//{
+			//	redoView.Source = undoManager;
+			//	redoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Redo;
+			//}
 		} // ctor
 
 		public override async Task LoadAsync(LuaTable arguments)
 		{
+			// get the document path
+			this.documentPath = arguments.GetOptionalValue("document", String.Empty);
+			if (String.IsNullOrEmpty(documentPath))
+				throw new ArgumentNullException("document", "Parameter is missing.");
+			if (documentPath[documentPath.Length - 1] == '/')
+				documentPath = documentPath.Substring(0, documentPath.Length - 1);
+
 			await Task.Yield();
 
-			var templateUri = new Uri(Environment.BaseUri, (string)arguments.GetMemberValue("template"));
+			// get the schema
+			var schemaDefinition = new PpsDataSetDefinitionClient(XDocument.Load(documentPath + "schema.xml").Root);
+			schemaDefinition.EndInit();
+			dataSet = (PpsDataSetClient)schemaDefinition.CreateDataSet();
 
-			// Lade die Definition
-			string sSchema = templateUri.ToString().Replace(".xaml", ".sxml");
-			var def = new PpsDataSetDefinitionClient(XDocument.Load(sSchema).Root);
-			def.EndInit();
-			dataSet = (PpsDataSetClient)def.CreateDataSet();
+			// get data
+			var id = arguments.GetMemberValue("id");
 
-			string sData = templateUri.ToString().Replace(".xaml", ".dxml");
-			dataSet.Read(XDocument.Load(sData).Root);
+			// get the pane to view, if it is not given
+			if (!arguments.ContainsKey("pane"))
+				arguments.SetMemberValue("pane", "wpf/panes/" + documentPath + ".xaml");
 
-			dataSet.RegisterUndoSink(undoManager);
+			//dataSet.RegisterUndoSink(undoManager);
 
 			// Lade die Maske
 			await base.LoadAsync(arguments);
@@ -86,8 +96,8 @@ namespace TecWare.PPSn.UI
 		[LuaMember(nameof(CommitEdit))]
 		public void CommitEdit()
 		{
-			foreach (var expr in BindingOperations.GetSourceUpdatingBindings(Control))
-				expr.UpdateSource();
+			//foreach (var expr in BindingOperations.GetSourceUpdatingBindings(Control))
+			//	expr.UpdateSource();
 		} // proc CommitEdit
 
 		[LuaMember(nameof(UndoManager))]
@@ -99,7 +109,7 @@ namespace TecWare.PPSn.UI
 		public ICollectionView RedoView => redoView.View;
 
 		[LuaMember(nameof(Data))]
-		public PpsDataSet Data { get { return dataSet; } }
+		public PpsDataSet Data => dataSet;
 	} // class PpsGenericMaskWindowPane
 
 	//Q&D

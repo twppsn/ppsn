@@ -31,10 +31,11 @@ namespace TecWare.PPSn
 {
 	internal static class StuffUI
 	{
-		public static readonly XNamespace PresentationNamespace ="http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+		public static readonly XNamespace PresentationNamespace = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 		public static readonly XNamespace XamlNamespace = "http://schemas.microsoft.com/winfx/2006/xaml";
 		public static readonly XName xnResourceDictionary = PresentationNamespace + "ResourceDictionary";
 		public static readonly XName xnKey = XamlNamespace + "Key";
+		public static readonly XName xnCode = XamlNamespace + "Code";
 
 		public static void AddNamespace(this ParserContext context, string namespacePrefix, string namepsaceName)
 		{
@@ -83,17 +84,15 @@ namespace TecWare.PPSn
 				}
 			}
 			return default(T);
-    } // func GetVisualChild
-	}
+		} // func GetVisualChild
+	} // class StuffUI
 
 	#region -- class WebRequestHelper ---------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	[Obsolete]
-	internal static class WebRequestHelper
+	public static class WebRequestHelper
 	{
-		[Obsolete]
 		public static ContentDisposition GetContentDisposition(this WebResponse r, bool createDummy = true)
 		{
 			var tmp = r.Headers["Content-Disposition"];
@@ -125,7 +124,6 @@ namespace TecWare.PPSn
 				return new ContentDisposition(tmp);
 		} // func GetContentDisposition
 
-		[Obsolete]
 		private static DateTime GetLastModified(WebResponse r)
 		{
 			DateTime lastModified;
@@ -134,13 +132,9 @@ namespace TecWare.PPSn
 			return lastModified;
 		} // func GetLastModified
 
-		[Obsolete]
 		public static ContentType GetContentType(this WebResponse r)
-		{
-			return new ContentType(r.ContentType);
-		} // func GetContentType
+			=> new ContentType(r.ContentType);
 	} // class WebRequestHelper
 
 	#endregion
-
 }
