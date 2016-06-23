@@ -96,6 +96,7 @@
     </EmbeddedResource>
     <None Include="doc\StyleGuideSQL.md" />
     <None Include="packages.config" />
+    <Compile Include="PpsApplication.DataSource.cs" />
     <None Include="ppsn.licenseheader" />
   </ItemGroup>
   <ItemGroup>

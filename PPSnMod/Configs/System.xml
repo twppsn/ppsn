@@ -3,6 +3,8 @@
 		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
 
 	<pps:ppsn name="ppsn">
+		<pps:sysDataSource name="sys" />
+		
 		<pps:wpf name="wpf">
 			<pps:xamlSource id="core" directory="ClientWpf" />
 			<pps:theme id="default" file="ClientWpf/default.xaml"/>

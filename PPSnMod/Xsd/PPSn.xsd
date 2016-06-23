@@ -44,6 +44,21 @@
 		</xs:complexType>
 	</xs:element>
 
+	<xs:element name="sysDataSource" substitutionGroup="pps:dataSource">
+		<xs:annotation>
+			<xs:documentation>Implementation for a Sys data source.</xs:documentation>
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.PpsSysDataSource</class>
+			</xs:appinfo>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="pps:dataSourceType">
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
 	<xs:simpleType name="fieldAttributeNames">
 		<xs:restriction base="xs:string">
 			<xs:enumeration value="displayName" />
