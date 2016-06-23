@@ -1,4 +1,4 @@
-﻿# Styleguide Datenabank (MSSQL)
+﻿# Styleguide Datenbank (MSSQL)
 
 ## allg. Regeln
 
@@ -40,6 +40,8 @@
 * bit für Flags
 * int für Bitmasken
 * decimal(?,?) für Mengen
+* geography für Erdkugel-Koordinaten
+* geometry für räumliche Daten 
 
 ## Namenskonvention
 
@@ -114,6 +116,11 @@
 |-------------|-----------------------------------------|
 | pps         | Produktionsplanungsystem                |
 | hrs         | Human Ressourses (Personalsystem)       |
-| fas					| Financial Accounting (Finanzsystem)     |
+| fas         | Financial Accounting (Finanzsystem)     |
 | qms         | Quality Management (Qualitätmanagement) |
 | sds         | Sales & Distribution (Einkauf/Verkauf)  |
+| cos         | Controlling															|
+| pss         | Project System													|
+| pms         | Plant Management (Anlagenmanagement)		|
+| mms         | Material Management (Materialwirtschaft)|
+
