@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <des xmlns="http://tecware-gmbh.de/dev/des/2014"
-		 xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn"
-     version="330"
-     displayname="PPSn">
+		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn"
+		version="330"
+		displayname="PPSn">
 
-	<server logpath="D:\Temp\Log">
+	<server logpath="C:\Temp\Log">
 		<resolve>..\bin\Debug</resolve>
 		<load>DEM.PPSn</load>
 	</server>
@@ -15,13 +15,47 @@
 	</http>
 
 	<cron />
-	<luaengine>
-	</luaengine>
+	<luaengine />
 
-	<pps:ppsn name="ppsn" mainDataSource="main">
+	<pps:ppsn name="ppsn" mainDataSource="main" displayname="PPSN Demo">
 		<pps:sqlExDataSource name="main">
-			<pps:connectionString>Data Source=(localdb)\mssqllocaldb;Initial Catalog=PPSn01;Integrated Security=True</pps:connectionString>
+			<pps:connectionString>Data Source=(localdb)\mssqllocaldb;Initial Catalog=PPSn03;Integrated Security=True</pps:connectionString>
 		</pps:sqlExDataSource>
+
+		<pps:wpf name="wpf">
+			<!-- test -->
+			<pps:action name="hello" displayName="Hallo" priority="1000">
+				<pps:code><![CDATA[ LoadPane{ pane = '/wpf/panes/hello.xaml' }; ]]></pps:code>
+			</pps:action>
+		</pps:wpf>
+
+		<!-- test -->
+		<pps:register source="main">
+			<pps:field name="dbo.Objk.Typ">
+				<pps:attribute name="HorizontalAlignment">Far</pps:attribute>
+				<pps:attribute name="Excel.HorizontalAlignment">Right</pps:attribute>
+				<pps:attribute name="Excel.VerticalAlignment">Center</pps:attribute>
+			</pps:field>
+		</pps:register>
+			<!--
+		
+		<pps:register source="main">
+			<pps:view name="test">
+				<pps:source type="select"><![CDATA[SELECT [Id],[Guid],[Typ],[Nr] FROM [dbo].[Objk]]]></pps:source>
+			</pps:view>
+		</pps:register>
+
+		<pps:register source="main">
+			<pps:field name="sds.Kont.Id" displayName="Id"/>
+			<pps:field name="sds.Kont.Data" displayName="Revisionsnummer"/>
+			<pps:field name="sds.Kont.Rev" displayName="XML-Datei"/>
+
+			<pps:view name="testdata">
+				<pps:source type="select"><![CDATA[SELECT [Id],[Data],[Rev] FROM [sds].[Kont]]]></pps:source>
+			</pps:view>
+		</pps:register>-->
+
 	</pps:ppsn>
-	<?des-merge C:\Projects\PPSnOS\Kunden\TecWare\vGarten-config\Garten\ppsn\Contacts.xml?>
+	<?des-merge System.xml?>
+	<?des-merge Contacts.xml?>
 </des>

@@ -6,8 +6,8 @@ SELECT
 		ic.column_id
 	FROM sys.objects u
 		INNER JOIN sys.schemas s ON (u.schema_id = s.schema_id)
-		INNER JOIN sys.indexes pk ON (u.object_id = pk.object_id and pk.is_primary_key = 1)
-		INNER JOIN sys.index_columns ic ON (pk.object_id = ic.object_id and pk.index_id = ic.index_id)
+		LEFT OUTER JOIN sys.indexes pk ON (u.object_id = pk.object_id and pk.is_primary_key = 1)
+		LEFT OUTER JOIN sys.index_columns ic ON (pk.object_id = ic.object_id and pk.index_id = ic.index_id)
 	WHERE u.type = 'U';
 
 -- user columns
@@ -24,3 +24,14 @@ SELECT
 	FROM sys.columns c
 		INNER JOIN sys.objects t ON (c.object_id = t.object_id)
 	WHERE t.type = 'U' and c.is_computed = 0;
+-- foreign keys
+SELECT 
+		o.object_id,
+		o.name, 
+		f.parent_object_id,
+		f.parent_column_id,
+		f.referenced_object_id,
+		f.referenced_column_id
+	FROM sys.objects o 
+		INNER JOIN sys.foreign_key_columns f ON (o.object_id = f.constraint_object_id) 
+;	

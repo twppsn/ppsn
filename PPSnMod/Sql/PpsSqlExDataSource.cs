@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -22,13 +23,15 @@ using System.Linq;
 using System.Net;
 using System.Security.Principal;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
-using TecWare.DES.Data;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server.Sql
@@ -128,7 +131,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- PpsDataResultColumnDescription -----------------------------------------
+		#region -- class PpsDataResultColumnDescription -----------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary>Simple column description implementation.</summary>
@@ -150,6 +153,7 @@ namespace TecWare.PPSn.Server.Sql
 			public string Name => name;
 			public Type DataType => fieldType;
 			public int MaxLength => GetDataRowValue(row, "ColumnSize", Int32.MaxValue);
+			public bool IsIdentity => false;
 		} // class PpsDataResultColumnDescription
 
 		#endregion
@@ -162,14 +166,16 @@ namespace TecWare.PPSn.Server.Sql
 		{
 			private readonly PpsSqlExDataSource source;
 			private readonly string name;
+			private readonly string viewName;
 
 			private readonly string[] columnNames;
 			private readonly IPpsColumnDescription[] columnDescriptions;
 
-			private SqlDataSelectorToken(PpsSqlExDataSource source, string name, string[] columnNames, IPpsColumnDescription[] columnDescriptions)
+			private SqlDataSelectorToken(PpsSqlExDataSource source, string name, string viewName, string[] columnNames, IPpsColumnDescription[] columnDescriptions)
 			{
 				this.source = source;
 				this.name = name;
+				this.viewName = viewName;
 				this.columnNames = columnNames;
 				this.columnDescriptions = columnDescriptions;
 			} // ctor
@@ -184,6 +190,7 @@ namespace TecWare.PPSn.Server.Sql
 			} // func GetFieldDefinition
 
 			public string Name => name;
+			public string ViewName => viewName;
 			public PpsSqlExDataSource DataSource => source;
 
 			PpsDataSource IPpsSelectorToken.DataSource => DataSource;
@@ -258,16 +265,20 @@ namespace TecWare.PPSn.Server.Sql
 				return name;
 			} // proc CreateOrReplaceView
 
-			private static IPpsSelectorToken CreateCore(PpsSqlExDataSource source, string name, Func<SqlConnection, string> viewName)
+			private static IPpsSelectorToken CreateCore(PpsSqlExDataSource source, string name, Func<SqlConnection, string> getViewName)
 			{
 				string[] columnNames;
 				IPpsColumnDescription[] columnDescriptions;
 				SqlConnection connection;
 
+				string viewName = null;
 				using (source.UseMasterConnection(out connection))
-					ExecuteForResultSet(connection, source, viewName(connection), out columnNames, out columnDescriptions);
+				{
+					viewName = getViewName(connection);
+					ExecuteForResultSet(connection, source, viewName, out columnNames, out columnDescriptions);
+				}
 
-				return new SqlDataSelectorToken(source, name, columnNames, columnDescriptions);
+				return new SqlDataSelectorToken(source, name, viewName, columnNames, columnDescriptions);
 			} // func CreateCore
 
 			public static IPpsSelectorToken CreateFromStatement(PpsSqlExDataSource source, string name, string selectStatement)
@@ -287,77 +298,79 @@ namespace TecWare.PPSn.Server.Sql
 				// file => init by file
 				// select => inline sql select
 				// view => name of existing view
-				var sourceType = sourceDescription.GetAttribute("type", "file");
-				if (sourceType == "select") // create view from sql
-					return CreateFromStatement(source, name, sourceDescription.Value);
-				else if (sourceType == "file")
-					return CreateFromFile(source, name, ProcsDE.GetFileName(sourceDescription, sourceDescription.Value));
-				else if (sourceType == "resource")
-					return CreateFromResource(source, name, sourceDescription.Value);
-				else if (sourceType == "view")
-					return CreateFromPredefinedView(source, name, sourceDescription?.Value);
-				else
-					throw new ArgumentOutOfRangeException(); // todo:
+				try
+				{
+					var sourceType = sourceDescription.GetAttribute("type", "file");
+					if (sourceType == "select") // create view from sql
+						return CreateFromStatement(source, name, sourceDescription.Value);
+					else if (sourceType == "file")
+						return CreateFromFile(source, name, ProcsDE.GetFileName(sourceDescription, sourceDescription.Value));
+					else if (sourceType == "resource")
+						return CreateFromResource(source, name, sourceDescription.Value);
+					else if (sourceType == "view")
+						return CreateFromPredefinedView(source, name, sourceDescription?.Value);
+					else
+						throw new ArgumentOutOfRangeException(); // todo:
+				}
+				catch (Exception e)
+				{
+					throw new DEConfigurationException(sourceDescription, String.Format("Can not create selector for '{0}'.", name), e);
+				}
 			} // func CreateFromXml
 		} // class SqlDataSelectorToken
 
 		#endregion
 
-		#region -- class SqlDataRow -------------------------------------------------------
-
-		private sealed class SqlDataRow : DynamicDataRow
-		{
-			private readonly SqlDataReader r;
-			private readonly Lazy<Type[]> columnTypes;
-			private readonly Lazy<string[]> columnNames;
-
-			public SqlDataRow(SqlDataReader r)
-			{
-				this.r = r;
-
-				this.columnTypes = new Lazy<Type[]>(
-					() =>
-					{
-						var t = new Type[r.FieldCount];
-						for (var i = 0; i < r.FieldCount; i++)
-							t[i] = r.GetFieldType(i);
-						return t;
-					});
-
-				this.columnNames = new Lazy<string[]>(
-					() =>
-					{
-						var t = new string[r.FieldCount];
-						for (var i = 0; i < r.FieldCount; i++)
-							t[i] = r.GetName(i);
-						return t;
-					});
-
-			} // ctor
-
-			public override object this[int index]
-			{
-				get
-				{
-					var v = r.GetValue(index);
-					if (v == DBNull.Value)
-						v = null;
-					return v;
-				}
-			} // func this
-
-			public override int ColumnCount => r.FieldCount;
-
-			public override string[] ColumnNames => columnNames.Value;
-			public override Type[] ColumnTypes => columnTypes.Value;
-		} // class SqlDataRow
-
-		#endregion
-
 		#region -- class SqlDataSelector --------------------------------------------------
 
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
 		private sealed class SqlDataSelector : PpsDataSelector
 		{
+			#region -- class SqlDataFilterVisitor ---------------------------------------------
+
+			///////////////////////////////////////////////////////////////////////////////
+			/// <summary></summary>
+			private sealed class SqlDataFilterVisitor : PpsDataFilterVisitor<string>
+			{
+				public SqlDataFilterVisitor()
+				{
+				} // ctor
+
+				public override string CreateFilter(PpsDataFilterExpressionType method, string expression)
+				{
+					switch (method)
+					{
+						case PpsDataFilterExpressionType.Native:
+							return "(" + expression.Trim() + ")";
+						case PpsDataFilterExpressionType.Number:
+						case PpsDataFilterExpressionType.Fulltext:
+							throw new NotImplementedException();
+						default:
+							throw new InvalidOperationException();
+					}
+				} // func CreateFilter
+
+				public override string CreateFilter(PpsDataFilterExpressionType method, IEnumerable<string> arguments)
+				{
+					switch (method)
+					{
+						case PpsDataFilterExpressionType.And:
+							return "(" + String.Join(" AND ", arguments.Where(c => !String.IsNullOrEmpty(c))) + ")";
+						case PpsDataFilterExpressionType.Or:
+							return "(" + String.Join(" OR ", arguments.Where(c => !String.IsNullOrEmpty(c))) + ")";
+						case PpsDataFilterExpressionType.NAnd:
+							return "not " + CreateFilter(PpsDataFilterExpressionType.And, arguments);
+						case PpsDataFilterExpressionType.NOr:
+							return "not " + CreateFilter(PpsDataFilterExpressionType.Or, arguments);
+						default:
+							throw new InvalidOperationException();
+					}
+				} // func CreateFilter
+			} // class SqlDataFilterVisitor
+
+			#endregion
+
 			private readonly SqlConnectionHandle connection;
 
 			private readonly SqlDataSelectorToken selectorToken;
@@ -374,6 +387,28 @@ namespace TecWare.PPSn.Server.Sql
 				this.whereCondition = whereCondition;
 				this.orderBy = orderBy;
 			} // ctor
+
+			private string FormatOrderExpression(PpsDataOrderExpression o)
+			{
+				if (o.IsNative)
+				{
+					// todo: replace asc with desc and desc with asc
+
+					return o.Expression.Replace(" asc", " desc") ;
+				}
+				else
+				{
+					// todo: check the column
+
+					return o.Expression + (o.Negate ? " desc" : " asc");
+				}
+			} // func FormatOrderExpression
+
+			public override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions)
+				=> SqlOrderBy(String.Join(", ", from o in expressions select FormatOrderExpression(o)));
+
+			public override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression)
+				=> SqlWhere(new SqlDataFilterVisitor().CreateFilter(expression));
 
 			private string AddSelectList(string addSelectList)
 			{
@@ -397,7 +432,7 @@ namespace TecWare.PPSn.Server.Sql
 				if (String.IsNullOrEmpty(addWhereCondition))
 					return whereCondition;
 
-				return String.IsNullOrEmpty(selectList) ? addWhereCondition : "(" + whereCondition + ") and (" + addWhereCondition + ")";
+				return String.IsNullOrEmpty(whereCondition) ? addWhereCondition : "(" + whereCondition + ") and (" + addWhereCondition + ")";
 			} // func AddWhereCondition
 
 			public SqlDataSelector SqlWhere(string addWhereCondition)
@@ -414,7 +449,7 @@ namespace TecWare.PPSn.Server.Sql
 				if (String.IsNullOrEmpty(addOrderBy))
 					return orderBy;
 
-				return String.IsNullOrEmpty(addOrderBy) ? addOrderBy : orderBy + ", " + addOrderBy;
+				return String.IsNullOrEmpty(orderBy) ? addOrderBy : orderBy + ", " + addOrderBy;
 			} // func AddOrderBy
 
 			public SqlDataSelector SqlOrderBy(string addOrderBy)
@@ -428,8 +463,10 @@ namespace TecWare.PPSn.Server.Sql
 
 			public override IEnumerator<IDataRow> GetEnumerator(int start, int count)
 			{
-				using (var cmd = new SqlCommand())
+				SqlCommand cmd = null;
+				try
 				{
+					cmd = new SqlCommand();
 					cmd.Connection = connection.Connection;
 					cmd.CommandType = CommandType.Text;
 
@@ -442,17 +479,16 @@ namespace TecWare.PPSn.Server.Sql
 						sb.Append(selectList).Append(' ');
 
 					// add the view
-					sb.Append("from ").Append(selectorToken.Name).Append(" ");
+					sb.Append("from ").Append(selectorToken.ViewName).Append(' ');
 
 					// add the where
-					if(!String.IsNullOrEmpty(whereCondition))
+					if (!String.IsNullOrEmpty(whereCondition))
 						sb.Append("where ").Append(whereCondition).Append(' ');
 
 					// add the orderBy
 					if (!String.IsNullOrEmpty(orderBy))
 					{
-						sb.Append("order by ")
-							.Append(orderBy);
+						sb.Append("order by ").Append(orderBy).Append(' ');
 
 						// build the range, without order fetch is not possible
 						if (count >= 0 && start < 0)
@@ -466,13 +502,12 @@ namespace TecWare.PPSn.Server.Sql
 					}
 
 					cmd.CommandText = sb.ToString();
-					
-					using (var r = cmd.ExecuteReader(CommandBehavior.SingleResult))
-					{
-						var c = new SqlDataRow(r);
-						while (r.Read())
-							yield return c;
-					}
+					return new DbRowEnumerator(cmd);
+				}
+				catch
+				{
+					cmd?.Dispose();
+					throw;
 				}
 			} // func GetEnumerator
 
@@ -614,7 +649,8 @@ namespace TecWare.PPSn.Server.Sql
 				{
 					if (first)
 						first = false;
-					else {
+					else
+					{
 						commandText.Append(", ");
 						variableList.Append(", ");
 					}
@@ -622,7 +658,7 @@ namespace TecWare.PPSn.Server.Sql
 					commandText.Append("[").Append(kv.Key).Append("]");
 
 					var parameterName = "@" + kv.Key;
-					var column = ((PpsSqlExDataSource)DataSource).ResolveColumnByName(kv.Key);
+					var column = ((PpsSqlExDataSource)DataSource).ResolveColumnByName(tableInfo.FullName + "." + kv.Key);
 					cmd.Parameters.Add(column?.CreateSqlParameter(parameterName, kv.Value ?? DBNull.Value) ?? new SqlParameter(parameterName, kv.Value != null ? Procs.ChangeType(kv.Value, column.FieldType) : DBNull.Value));
 					variableList.Append(parameterName);
 				}
@@ -630,6 +666,9 @@ namespace TecWare.PPSn.Server.Sql
 
 				// generate output clause
 				var primaryKeyName = tableInfo.PrimaryKey.Name;
+				var p = primaryKeyName.LastIndexOf('.');
+				if (p >= 0)
+					primaryKeyName = primaryKeyName.Substring(p + 1);
 				commandText.Append("output inserted.").Append(primaryKeyName);
 				resultInfo.Add(r =>
 				{
@@ -712,14 +751,42 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
+		#region -- class SqlRelationInfo --------------------------------------------------
+
+		// todo: new name, new position
+		internal sealed class SqlRelationInfo
+		{
+			private readonly int objectId;
+			private readonly string name;
+			private readonly SqlColumnInfo parentColumn;
+			private readonly SqlColumnInfo referencedColumn;
+
+			public SqlRelationInfo(int objectId, string name, SqlColumnInfo parentColumn, SqlColumnInfo referencedColumn)
+			{
+				this.objectId = objectId;
+				this.name = name;
+				this.parentColumn = parentColumn;
+				this.referencedColumn = referencedColumn;
+			} // ctor
+
+			public int RelationId => objectId;
+			public string Name => name;
+			public SqlColumnInfo ParentColumn => parentColumn;
+			public SqlColumnInfo ReferncedColumn => referencedColumn;
+		} // class SqlRelationInfo
+
+		#endregion
+
 		#region -- class SqlTableInfo -----------------------------------------------------
 
-		private sealed class SqlTableInfo
+		// todo: new name, new position
+		internal sealed class SqlTableInfo
 		{
 			private readonly int objectId;
 			private readonly string schema;
 			private readonly string name;
 			private readonly int primaryColumnId;
+			private readonly List<SqlRelationInfo> relationInfo = new List<SqlRelationInfo>();
 			private readonly Lazy<SqlColumnInfo> primaryColumn;
 
 			public SqlTableInfo(Func<int, int, SqlColumnInfo> resolveColumn, SqlDataReader r)
@@ -727,23 +794,31 @@ namespace TecWare.PPSn.Server.Sql
 				this.objectId = r.GetInt32(0);
 				this.schema = r.GetString(1);
 				this.name = r.GetString(2);
-				this.primaryColumnId = r.GetInt32(3);
+				this.primaryColumnId = r.IsDBNull(3) ? -1 : r.GetInt32(3);
 
-				this.primaryColumn = new Lazy<SqlColumnInfo>(() => resolveColumn(objectId, primaryColumnId));
+				this.primaryColumn = primaryColumnId == -1 ? null : new Lazy<SqlColumnInfo>(() => resolveColumn(objectId, primaryColumnId));
 			} // ctor
+
+			internal void AddRelation(SqlRelationInfo sqlRelationInfo)
+			{
+				relationInfo.Add(sqlRelationInfo);
+			} // proc AddRelation
 
 			public int TableId => objectId;
 			public string Schema => schema;
 			public string Name => name;
 			public string FullName => schema + "." + name;
-			public SqlColumnInfo PrimaryKey => primaryColumn.Value;
+			public SqlColumnInfo PrimaryKey => primaryColumn?.Value;
+
+			public IEnumerable<SqlRelationInfo> RelationInfo => relationInfo;
 		} // class SqlTableInfo
 
 		#endregion
 
 		#region -- class SqlColumnInfo ----------------------------------------------------
 
-		private sealed class SqlColumnInfo : IPpsColumnDescription
+		// todo: new name, new position
+		internal sealed class SqlColumnInfo : IPpsColumnDescription
 		{
 			private readonly SqlTableInfo table;
 			private readonly int columnId;
@@ -772,6 +847,8 @@ namespace TecWare.PPSn.Server.Sql
 
 			public SqlParameter CreateSqlParameter(string parameterName, object value)
 				=> new SqlParameter(parameterName, sqlType, maxLength, ParameterDirection.Input, isNull, precision, scale, name, DataRowVersion.Current, value);
+
+			#region -- GetFieldType, GetSqlType -----------------------------------------------
 
 			private static Type GetFieldType(byte systemTypeId)
 			{
@@ -909,9 +986,12 @@ namespace TecWare.PPSn.Server.Sql
 				}
 			} // func GetSqlType
 
+			#endregion
+
 			public SqlTableInfo Table => table;
 			public int ColumnId => columnId;
 			public string Name => name;
+			public string NativeName => name;
 			public Type FieldType => fieldType;
 			public bool IsNull => isNull;
 			public bool IsIdentity => isIdentity;
@@ -1036,6 +1116,7 @@ namespace TecWare.PPSn.Server.Sql
 					cmd.CommandType = CommandType.Text;
 					cmd.CommandText = GetResourceScript("ConnectionInitScript.sql");
 
+					// read all tables
 					using (SqlDataReader r = cmd.ExecuteReader(CommandBehavior.Default))
 					{
 						while (r.Read())
@@ -1054,6 +1135,7 @@ namespace TecWare.PPSn.Server.Sql
 						if (!r.NextResult())
 							throw new InvalidOperationException();
 
+						// read all columns of the tables
 						while (r.Read())
 						{
 							try
@@ -1064,6 +1146,22 @@ namespace TecWare.PPSn.Server.Sql
 							catch (Exception e)
 							{
 								Log.Except($"Column initialization failed: {r.GetValue(2)}", e);
+							}
+						}
+
+						if (!r.NextResult())
+							throw new InvalidOperationException();
+
+						// read all relations between the tables
+						while (r.Read())
+						{
+							var tableInfo = ResolveTableById( r.GetInt32(2)); // table
+							if (tableInfo != null)
+							{
+								var parentColumn = ResolveColumnById(tableInfo.TableId, r.GetInt32(3));
+								var referencedColumn = ResolveColumnById(r.GetInt32(4), r.GetInt32(5));
+
+								tableInfo.AddRelation(new SqlRelationInfo(r.GetInt32(0), r.GetString(1), parentColumn, referencedColumn));
 							}
 						}
 					}
@@ -1170,11 +1268,11 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		public override Task<IPpsSelectorToken> CreateSelectorToken(string name, XElement sourceDescription)
+		public override Task<IPpsSelectorToken> CreateSelectorTokenAsync(string name, XElement sourceDescription)
 		{
 			var selectorToken = Task.Run(new Func<IPpsSelectorToken>(() => SqlDataSelectorToken.CreateFromXml(this, name, sourceDescription)));
 			return selectorToken;
-		} // func CreateSelectorToken
+		} // func CreateSelectorTokenAsync
 
 		public override IPpsColumnDescription GetColumnDescription(string columnName)
 		{
@@ -1206,6 +1304,9 @@ namespace TecWare.PPSn.Server.Sql
 			return new SqlDataTransaction(this, c.ForkConnection());
 		} // func CreateTransaction
 
+		public override PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config)
+			=> new PpsSqlDataSetDefinition(sp, this, documentName, config);
+
 		public bool IsConnected
 		{
 			get
@@ -1214,6 +1315,8 @@ namespace TecWare.PPSn.Server.Sql
 					return IsConnectionOpen(masterConnection);
 			}
 		} // prop IsConnected
+
+		public override string Type => "mssql";
 
 		// -- Static --------------------------------------------------------------
 

@@ -20,14 +20,13 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using TecWare.DE.Server;
-using TecWare.DES.Data;
+using TecWare.DE.Data;
 using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server.Data
 {
 	public abstract class PpsDataSource : DEConfigItem
 	{
-
 		public PpsDataSource(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
@@ -45,10 +44,10 @@ namespace TecWare.PPSn.Server.Data
 
 		public abstract IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext privateUserData, bool throwException = true);
 
-		public virtual Task<IPpsSelectorToken> CreateSelectorToken(string name, XElement sourceDescription)
+		public virtual Task<IPpsSelectorToken> CreateSelectorTokenAsync(string name, XElement sourceDescription)
 		{
 			throw new NotImplementedException();
-		} // func CreateSelectorToken
+		} // func CreateSelectorTokenAsync
 
 		public virtual PpsDataTransaction CreateTransaction(IPpsConnectionHandle connection)
 		{
@@ -62,5 +61,12 @@ namespace TecWare.PPSn.Server.Data
 		{
 			return null;
 		} // func GetColumnDescription
+
+		public virtual PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config)
+		{
+			return new PpsDataSetServerDefinition(sp, documentName, config);
+		} // func CreateDocumentDescription
+
+		public abstract string Type { get; }
 	} // class PpsDataSource
 }

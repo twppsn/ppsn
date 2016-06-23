@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -7,7 +22,9 @@ using System.Text;
 using System.Threading.Tasks;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
-using TecWare.DES.Data;
+using TecWare.DE.Data;
+using System.Reflection;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Server.Data
 {
@@ -34,6 +51,12 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		public abstract IEnumerator<IDataRow> GetEnumerator(int start, int count);
 
+		public virtual PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions)
+			=> this;
+
+		public virtual PpsDataSelector ApplyFilter(PpsDataFilterExpression expression)
+			=> this;
+
 		/// <summary>Returns the field description for the name in the resultset</summary>
 		/// <param name="nativeColumnName"></param>
 		/// <returns></returns>
@@ -44,5 +67,5 @@ namespace TecWare.PPSn.Server.Data
 
 		/// <summary></summary>
 		public PpsDataSource DataSource => source;
-	} // class PpsDataView
+	} // class PpsDataSelector
 }

@@ -18,7 +18,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
+using Neo.IronLua;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server
 {
@@ -34,5 +37,55 @@ namespace TecWare.PPSn.Server
 		public readonly static XName xnSource = PpsNamespace + "source";
 		public readonly static XName xnFilter = PpsNamespace + "filter";
 		public readonly static XName xnOrder = PpsNamespace + "order";
+		public readonly static XName xnAttribute = PpsNamespace + "attribute";
+
+		public readonly static XName xnDataSet = PpsNamespace + "dataset";
+		public readonly static XName xnTable = PpsNamespace + "table";
+		public readonly static XName xnColumn = PpsNamespace + "column";
+		public readonly static XName xnRelation = PpsNamespace + "relation";
+		public readonly static XName xnParameter = PpsNamespace + "parameter";
+		public readonly static XName xnMeta = PpsNamespace + "meta";
+
+		public readonly static XName xnWpf = PpsNamespace + "wpf";
+		public readonly static XName xnWpfAction = PpsNamespace + "action";
+		public readonly static XName xnWpfTheme = PpsNamespace + "theme";
+		public readonly static XName xnWpfTemplate = PpsNamespace + "template";
+		public readonly static XName xnWpfXamlSource = PpsNamespace + "xamlSource";
+		public readonly static XName xnWpfCode = PpsNamespace + "code";
+		public readonly static XName xnWpfCondition = PpsNamespace + "condition";
+
+		#region -- WriteProperty ----------------------------------------------------------
+
+		public static void WriteProperty(this XmlWriter xml, IPropertyReadOnlyDictionary attributes, string propertyName, string targetPropertyName = null)
+		{
+			var value = attributes.GetProperty<string>(propertyName, null);
+			if (value == null)
+				return;
+
+			xml.WriteAttributeString(targetPropertyName ?? propertyName, value);
+		} // proc WriteProperty
+
+		public static IPropertyReadOnlyDictionary ToPropertyDictionary(this IEnumerable<XElement> attributes, params KeyValuePair<string, Type>[] wellKnownProperties)
+		{
+			var props = new PropertyDictionary();
+			foreach (var x in attributes)
+			{
+				var propertyName = x.GetAttribute<string>("name", null);
+				if (String.IsNullOrEmpty(propertyName))
+					throw new ArgumentException("@name is missing.");
+
+				Type dataType;
+				var wellKnownPropertyIndex = Array.FindIndex(wellKnownProperties, c => String.Compare(c.Key, propertyName, StringComparison.OrdinalIgnoreCase) == 0);
+				if (wellKnownPropertyIndex == -1)
+					dataType = LuaType.GetType(x.GetAttribute("dataType", "string"));
+				else
+					dataType = wellKnownProperties[wellKnownPropertyIndex].Value;
+
+				props.SetProperty(propertyName, dataType, x.Value);
+			}
+			return props;
+		} // func IPropertyReadOnlyDictionary 
+
+		#endregion
 	} // class PpsStuff
 }
