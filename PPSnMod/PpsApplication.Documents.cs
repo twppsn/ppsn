@@ -70,13 +70,7 @@ namespace TecWare.PPSn.Server
 		#endregion
 
 		[
-		DEConfigHttpAction("schema", IsSafeCall = true)
-		]
-		private XElement HttpShemaAction()
-			=> datasetDefinition.WriteSchema(new XElement("schema"));
-
-		[
-		DEConfigHttpAction("load", IsSafeCall = true)
+		DEConfigHttpAction("pull", IsSafeCall = true)
 		]
 		public void HttpLoadAction(IDEContext ctx)
 		{
@@ -108,7 +102,7 @@ namespace TecWare.PPSn.Server
 		} // proc HttpLoadAction
 
 		[
-		DEConfigHttpAction("save", IsSafeCall = true)
+		DEConfigHttpAction("push", IsSafeCall = true)
 		]
 		public void HttpSaveAction()
 		{
@@ -121,6 +115,15 @@ namespace TecWare.PPSn.Server
 		{
 		} // proc HttpExecuteAction
 
+		protected override bool OnProcessRequest(IDEContext r)
+		{
+			if (r.RelativeSubPath == "schema.xml")
+			{
+				r.WriteObject(datasetDefinition.WriteSchema(new XElement("schema")), MimeTypes.Text.Xml);
+				return true;
+			}
+			return base.OnProcessRequest(r);
+		} // proc OnProcessRequest
 	} // class PpsDocument
 
 	#endregion

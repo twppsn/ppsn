@@ -469,7 +469,7 @@
 								</xs:attribute>
 							</xs:complexType>
 						</xs:element>
-						<xs:element name="xamlSource" minOccurs="0" maxOccurs="unbounded">
+						<xs:element name="wpfSource" minOccurs="0" maxOccurs="unbounded">
 							<xs:annotation>
 								<xs:documentation>Defines a directory that holds xaml-files and lua files.</xs:documentation>
 							</xs:annotation>
@@ -481,7 +481,12 @@
 								</xs:attribute>
 								<xs:attribute name="directory" type="PathType" use="required">
 									<xs:annotation>
-										<xs:documentation>Xaml-file that contains the theme.</xs:documentation>
+										<xs:documentation>Directory with client related files.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="virtualPath" type="xs:string" use="optional" default="/">
+									<xs:annotation>
+										<xs:documentation>Virtual request path.</xs:documentation>
 									</xs:annotation>
 								</xs:attribute>
 							</xs:complexType>

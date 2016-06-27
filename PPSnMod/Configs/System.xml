@@ -6,15 +6,24 @@
 		<pps:sysDataSource name="sys" />
 		
 		<pps:wpf name="wpf">
-			<pps:xamlSource id="core" directory="ClientWpf" />
+			<pps:wpfSource id="core" directory="ClientWpf/Panes" virtualPath="panes" />
 			<pps:theme id="default" file="ClientWpf/default.xaml"/>
 			
 			<pps:action name="close" displayName="Schließen" priority="-1000" displayGlyph="57639">
 				<pps:code><![CDATA[ Window:Close() ]]></pps:code>
 			</pps:action>
-			<pps:theme id="default" file="ClientWpf\Default.xaml"/>
 			<!--<pps:template id="templates" file="ClientWpf\Templates\MasterData.Contacts.xaml"/>-->
 		</pps:wpf>
+
+		<pps:register source="sys">
+			<pps:field name="wpf.sync.Path" dataType="string" />
+			<pps:field name="wpf.sync.Length" dataType="long" />
+			<pps:field name="wpf.sync.LastWriteTime" dataType="datetime" />
+			
+			<pps:view name="wpf.sync">
+				<pps:source type="view">wpf/GetApplicationFilesSelector</pps:source>
+			</pps:view>
+		</pps:register>
 
 		<pps:register source="main">
 
@@ -30,7 +39,8 @@
 			<pps:field name="dbo.Objr.Id" />
 			<pps:field name="dbo.Objr.ParentId" />
 			<pps:field name="dbo.Objr.ObjkId" />
-			<pps:field name="dbo.Objr.Data" />
+			<pps:field name="dbo.Objr.Tags" />
+			<pps:field name="dbo.Objr.Document" />
 			<pps:field name="dbo.Objr.CreateDate" />
 			<pps:field name="dbo.Objr.CreateUserId" />
 			
@@ -39,6 +49,23 @@
 			<pps:field name="dbo.Adre.ObjkId" />
 			<pps:field name="dbo.Adre.Name" />
 			<pps:field name="dbo.Adre.Adresse" />
+			
+			<!-- objects -->
+			<pps:view name="dbo.objects">
+				<pps:source type="select">
+					<![CDATA[
+						SELECT
+								o.Id
+								, o.Guid
+								, o.Typ
+								, o.Nr
+								, r.Id as RevId
+								, r.Tags as Tags
+							FROM dbo.Objk o
+								inner join dbo.Objr r on (o.HeadRevId = r.Id)
+					]]>
+				</pps:source>
+			</pps:view>
 
 			<!-- base dataset -->
 			<pps:dataset name="coreDataSet">

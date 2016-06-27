@@ -3,19 +3,20 @@
 	[Id] BIGINT NOT NULL CONSTRAINT pkObjrId PRIMARY KEY IDENTITY (1, 1),
 	[ParentId] BIGINT NOT NULL CONSTRAINT fkObjrObjrId REFERENCES dbo.Objr (Id),
 	[ObjkId] BIGINT NOT NULL CONSTRAINT fkObjrObjkId REFERENCES dbo.Objk (Id), 
-    [Data] XML NULL, 
+	[Tags] XML NULL,
+    [Document] XML NOT NULL, 
 	[CreateDate] DATETIME NOT NULL DEFAULT getdate(),
 	[CreateUserId] BIGINT NOT NULL CONSTRAINT fkObjrUserId REFERENCES dbo.[User] (Id)
 )
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Extended data store',
+    @value = N'Document data',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
     @level1name = N'Objr',
     @level2type = N'COLUMN',
-    @level2name = N'Data'
+    @level2name = 'Document'
 GO
 
 EXEC sp_addextendedproperty @name = N'MS_Description',
@@ -53,3 +54,12 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Objr',
     @level2type = N'COLUMN',
     @level2name = N'ParentId'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Simple view data for search proposes (todo: ggf. eigene Tabelle)',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Objr',
+    @level2type = N'COLUMN',
+    @level2name = N'Tags'

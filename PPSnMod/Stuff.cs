@@ -50,7 +50,7 @@ namespace TecWare.PPSn.Server
 		public readonly static XName xnWpfAction = PpsNamespace + "action";
 		public readonly static XName xnWpfTheme = PpsNamespace + "theme";
 		public readonly static XName xnWpfTemplate = PpsNamespace + "template";
-		public readonly static XName xnWpfXamlSource = PpsNamespace + "xamlSource";
+		public readonly static XName xnWpfWpfSource = PpsNamespace + "wpfSource";
 		public readonly static XName xnWpfCode = PpsNamespace + "code";
 		public readonly static XName xnWpfCondition = PpsNamespace + "condition";
 

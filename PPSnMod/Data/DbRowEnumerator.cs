@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Server.Sql;
 
 namespace TecWare.PPSn.Server.Data
@@ -34,7 +35,7 @@ namespace TecWare.PPSn.Server.Data
 		private enum ReadingState
 		{
 			Unread,
-			Partly,
+			FetchRows,
 			Complete,
 		} // enum ReadingState
 
@@ -48,11 +49,11 @@ namespace TecWare.PPSn.Server.Data
 		{
 			private readonly string name;
 			private readonly Type dataType;
-			private readonly IDataColumnAttributes attributes;
+			private readonly IPropertyEnumerableDictionary attributes;
 
 			#region -- Ctor/Dtor --------------------------------------------------------------
 
-			public DbDataColumn(string name, Type dataType, IDataColumnAttributes attributes)
+			public DbDataColumn(string name, Type dataType, IPropertyEnumerableDictionary attributes)
 			{
 				this.name = name;
 				this.dataType = dataType;
@@ -65,7 +66,7 @@ namespace TecWare.PPSn.Server.Data
 
 			public string Name => name;
 			public Type DataType => dataType;
-			public IDataColumnAttributes Attributes => attributes;
+			public IPropertyEnumerableDictionary Attributes => attributes;
 
 			#endregion
 		} // class DbDataColumn
@@ -103,7 +104,7 @@ namespace TecWare.PPSn.Server.Data
 
 		#endregion
 
-		private bool disposed;
+		private bool isDisposed;
 		private readonly DbCommand command;
 		private DbDataReader reader;
 		private ReadingState state;
@@ -120,15 +121,15 @@ namespace TecWare.PPSn.Server.Data
 			{
 				CheckDisposed();
 
-				if (state == ReadingState.Unread && !MoveNext())
+				if (state == ReadingState.Unread && !MoveNext(true))
 					return null;
 
-				if (state != ReadingState.Partly)
+				if (state == ReadingState.Complete)
 					return null;
-
+				
 				var tmp = new DbDataColumn[reader.FieldCount];
 				for (var i = 0; i < reader.FieldCount; i++)
-					tmp[i] = new DbDataColumn(reader.GetName(i), reader.GetFieldType(i), null);
+					tmp[i] = new DbDataColumn(reader.GetName(i), reader.GetFieldType(i), PropertyDictionary.EmptyReadOnly);
 				return tmp;
 			});
 		} // ctor
@@ -138,7 +139,7 @@ namespace TecWare.PPSn.Server.Data
 
 		private void Dispose(bool disposing)
 		{
-			if (disposed)
+			if (isDisposed)
 				return;
 
 			if (disposing)
@@ -147,20 +148,20 @@ namespace TecWare.PPSn.Server.Data
 				reader?.Dispose();
 			}
 
-			disposed = true;
+			isDisposed = true;
 		} // proc Dispose
 
 		#endregion
 
 		private void CheckDisposed()
 		{
-			if (disposed)
+			if (isDisposed)
 				throw new ObjectDisposedException(typeof(DbRowEnumerator).FullName);
 		} // proc CheckDisposed
 
 		#region -- IEnumerator<T> ---------------------------------------------------------
-
-		public bool MoveNext()
+		
+		private bool MoveNext(bool headerOnly)
 		{
 			CheckDisposed();
 
@@ -170,33 +171,34 @@ namespace TecWare.PPSn.Server.Data
 					if (reader == null)
 						reader = command.ExecuteReader(CommandBehavior.SingleResult);
 
+					state = ReadingState.FetchRows;
+					if (headerOnly)
+						return true;
+					else
+						goto case ReadingState.FetchRows;
+
+				case ReadingState.FetchRows:
 					if (!reader.Read())
 						goto case ReadingState.Complete;
-
-					goto case ReadingState.Partly;
-				case ReadingState.Partly:
-					if (state == ReadingState.Partly)
-					{
-						if (!reader.Read())
-							goto case ReadingState.Complete;
-					}
-					else
-						state = ReadingState.Partly;
 
 					var values = new object[reader.FieldCount];
 					for (var i = 0; i < reader.FieldCount; i++)
 						values[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
 					currentRow = new DbDataRow(this, values);
+
 					return true;
+
 				case ReadingState.Complete:
 					state = ReadingState.Complete;
-					// todo: Dispose command and reader?
 					currentRow = null;
 					return false;
 				default:
 					throw new InvalidOperationException("The state of the object is invalid.");
 			} // switch state
 		} // func MoveNext
+
+		public bool MoveNext()
+			=> MoveNext(false);
 
 		void IEnumerator.Reset()
 		{
@@ -210,7 +212,7 @@ namespace TecWare.PPSn.Server.Data
 			get
 			{
 				CheckDisposed();
-				if (state != ReadingState.Partly)
+				if (state != ReadingState.FetchRows)
 					throw new InvalidOperationException("The state of the object forbids the retrieval of this property.");
 				return currentRow;
 			}
@@ -231,14 +233,7 @@ namespace TecWare.PPSn.Server.Data
 			}
 		} // prop Columns
 
-		public int ColumnCount
-		{
-			get
-			{
-				CheckDisposed();
-				return Columns?.Length ?? 0;
-			}
-		} // prop ColumnCount
+		public int ColumnCount => Columns?.Length ?? 0;
 
 		#endregion
 	} // class DbRowEnumerator

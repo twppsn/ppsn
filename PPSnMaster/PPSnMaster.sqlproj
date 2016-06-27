@@ -86,4 +86,7 @@
   <ItemGroup>
     <None Include="PPSn03.publish.xml" />
   </ItemGroup>
+  <ItemGroup>
+    <RefactorLog Include="PPSnMaster.refactorlog" />
+  </ItemGroup>
 </Project>

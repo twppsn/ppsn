@@ -8,7 +8,7 @@
 			<pps:field name="sds.Kont.Id" />
 			<pps:field name="sds.Kont.Name" />
 			
-			<!-- menü eintrag -->
+			<!-- menü eintrag
 			<pps:view name="contacts" displayName="Kontakte">
 				<pps:source type="select">
 					<![CDATA[
@@ -25,7 +25,7 @@
 				</pps:source>
 
 				<pps:attribute name="WpfMenuItem">true</pps:attribute>
-			</pps:view>
+			</pps:view> -->
 
 			<!-- contacts mask -->
 			<pps:dataset name="contactsDataSet" inherited="coreDataSet">
@@ -49,7 +49,7 @@
 			</pps:action>
 		</pps:wpf>
 
-		<pps:document name="contacts" dataset="contactsDataSet">
+		<pps:document name="ko" dataset="contactsDataSet" displayname="Contacts">
 		</pps:document>
 	</pps:ppsn>
 </fragment>

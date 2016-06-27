@@ -129,6 +129,31 @@ namespace TecWare.PPSn.Server.Data
 		bool IsIdentity { get; }
 	} // interface IPpsProviderColumnDescription
 
+	#region -- class PpsColumnDescription -----------------------------------------------
+
+	public class PpsColumnDescription : IPpsColumnDescription
+	{
+		private readonly string name;
+		private readonly int maxLength;
+		private readonly Type dataType;
+		private readonly bool isIdentity;
+
+		public PpsColumnDescription(string name, int maxLength, Type dataType, bool isIdentity)
+		{
+			this.name = name;
+			this.maxLength = maxLength;
+			this.dataType = dataType;
+			this.isIdentity = isIdentity;
+		} // ctor
+
+		public string Name => name;
+		public int MaxLength => maxLength;
+		public Type DataType => dataType;
+		public bool IsIdentity => isIdentity;
+	} // class PpsColumnDescription
+
+	#endregion
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface IPpsSelectorToken
