@@ -186,7 +186,7 @@ namespace TecWare.PPSn.Data
 
 					return new PpsDataFilterMultiExpression(method, exprList.ToArray());
 				}
-				else // native expression
+				else // native expression by keyword
 				{
 					var tok = filterExpression.Substring(startAt, endAt - startAt);
 					var nativeExpression = lookupToken(tok);

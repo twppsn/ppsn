@@ -301,7 +301,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Zugriff auf die zugeordneten Meta-Daten der Spalte.</summary>
 		public abstract PpsDataColumnMetaCollection Meta { get; }
 
-		IDataColumnAttributes IDataColumn.Attributes => Meta;
+		IPropertyEnumerableDictionary IDataColumn.Attributes => Meta;
 	} // class PpsDataColumnDefinition
 
 	#endregion

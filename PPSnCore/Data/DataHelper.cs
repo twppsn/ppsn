@@ -32,7 +32,7 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public abstract class PpsMetaCollection : IDataColumnAttributes
+	public abstract class PpsMetaCollection : IPropertyEnumerableDictionary
 	{
 		private readonly Dictionary<string, object> metaInfo;
 
