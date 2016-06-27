@@ -64,6 +64,8 @@ namespace TecWare.PPSn.Data
 
 		public PpsDataFilterExpressionType Type => method;
 
+		// -- Static --------------------------------------------------------------
+
 		private static void SkipWhiteSpaces(string filterExpression, ref int offset)
 		{
 			while (offset < filterExpression.Length && Char.IsWhiteSpace(filterExpression[offset]))
@@ -80,7 +82,7 @@ namespace TecWare.PPSn.Data
 		{
 			while (offset < filterExpression.Length && filterExpression[offset] != eof)
 				offset++;
-		} // func ParseIdentifier
+		} // func ParseToUnescaped
 
 		private static string ParseConstant(string filterExpression, ref int offset)
 		{
@@ -109,13 +111,13 @@ namespace TecWare.PPSn.Data
 			}
 
 			return sb.ToString();
-		} // func ParseIdentifier
+		} // func ParseConstant
 
-		private static string EncodeBase64(string filterExpression, int startAt, int count)
+		private static string DecodeBase64(string filterExpression, int startAt, int count)
 		{
 			var b = Convert.FromBase64String(filterExpression.Substring(startAt, count));
 			return Encoding.UTF8.GetString(b, 0, b.Length);
-		} // func EncodeBase64
+		} // func DecodeBase64
 
 		private static PpsDataFilterExpressionType GetFilterType(string filterExpression, int startAt, int count)
 		{
@@ -130,7 +132,7 @@ namespace TecWare.PPSn.Data
 		private static PpsDataFilterExpression Parse(string filterExpression, ref int offset, Func<string, string> lookupToken)
 		{
 			// use a simple syntax
-			//   expr = identifier | command '(' expr ',' ... ')' | '''base64''' | '"' chars '"'
+			//   expr = identifier | command '(' expr ',' ... ')' | '\'base64'\' | '"' chars '"'
 
 			SkipWhiteSpaces(filterExpression, ref offset);
 			if (offset >= filterExpression.Length)
@@ -148,7 +150,7 @@ namespace TecWare.PPSn.Data
 				var endAt = offset;
 				offset++;
 
-				return new PpsDataFilterConstantExpression(PpsDataFilterExpressionType.Native, EncodeBase64(filterExpression, startAt, endAt - startAt));
+				return new PpsDataFilterConstantExpression(PpsDataFilterExpressionType.Native, DecodeBase64(filterExpression, startAt, endAt - startAt));
 			}
 			else if (Char.IsLetter(filterExpression[offset])) // identifier
 			{
@@ -309,6 +311,8 @@ namespace TecWare.PPSn.Data
 		public bool IsNative => isNative;
 		public string Expression => expression;
 
+		// -- Static --------------------------------------------------------------
+
 		public static IEnumerable<PpsDataOrderExpression> Parse(string order, int v, Func<string, string> findNativeOrder)
 		{
 			var orderTokens = order.Split(',');
@@ -329,7 +333,7 @@ namespace TecWare.PPSn.Data
 					tok = tok.Substring(1);
 				}
 
-				// try find predefined filter
+				// try find predefined order
 				var nativeOrder = findNativeOrder(tok);
 				yield return new PpsDataOrderExpression(neg, nativeOrder != null, nativeOrder ?? tok);
 			}
