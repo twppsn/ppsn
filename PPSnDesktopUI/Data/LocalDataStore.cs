@@ -201,7 +201,13 @@ namespace TecWare.PPSn.Data
 								goto case ParsingState.Default;
 							}
 							else if (!line.StartsWith("--", StringComparison.Ordinal))
+							{
+								var tmp = line.IndexOf("--", StringComparison.Ordinal);
+								if (tmp != -1)
+									line = line.Substring(0, tmp);
+								line = line.TrimEnd();
 								lineData.AppendLine(line);
+							}
 							break;
 							#endregion
 					} // switch state
