@@ -124,7 +124,7 @@ namespace TecWare.PPSn
 				return new ContentDisposition(tmp);
 		} // func GetContentDisposition
 
-		private static DateTime GetLastModified(WebResponse r)
+		public static DateTime GetLastModified(this WebResponse r)
 		{
 			DateTime lastModified;
 			if (!DateTime.TryParse(r.Headers[HttpResponseHeader.LastModified], out lastModified)) // todo: format?

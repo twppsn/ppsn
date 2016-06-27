@@ -80,6 +80,9 @@ namespace TecWare.PPSn
 			{
 			} // ctor
 
+			protected override IEnumerable<Tuple<Type, string>> GetStoreTables()
+				=> base.GetStoreTables().Union(GetStoreTablesFromAssembly(typeof(PpsMainEnvironment), "Static.SQLite"));
+
 			private bool TryGetStaticItem(string path, out string contentType, out Stream data)
 			{
 				// check for a resource file
@@ -116,7 +119,8 @@ namespace TecWare.PPSn
 			this.views = new PpsEnvironmentCollection<PpsMainViewDefinition>(this);
 		} // ctor
 
-		protected override PpsLocalDataStore CreateLocalDataStore() => new PpsMainLocalStore(this);
+		protected override PpsLocalDataStore CreateLocalDataStore()
+			=> new PpsMainLocalStore(this);
 
 		protected override bool ShowLoginDialog(PpsClientLogin clientLogin)
 		{

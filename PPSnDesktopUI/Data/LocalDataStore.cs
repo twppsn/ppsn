@@ -123,7 +123,7 @@ namespace TecWare.PPSn.Data
 		{
 			Stream src;
 			string contentType;
-			
+
 			if (TryGetOfflineItem(r.Request.Path, false, out contentType, out src)) // ask the file from the cache
 				r.SetResponseData(src, contentType);
 			else
@@ -211,7 +211,7 @@ namespace TecWare.PPSn.Data
 
 		protected IEnumerable<Tuple<Type, string>> GetStoreTablesFromAssembly(Type type, string resourceBase)
 		{
-			var resourcePath = type.Namespace + "." +resourceBase +  ".";
+			var resourcePath = type.Namespace + "." + resourceBase + ".";
 
 			foreach (var resourceName in type.Assembly.GetManifestResourceNames())
 			{
@@ -290,6 +290,11 @@ namespace TecWare.PPSn.Data
 						using (var command = new SQLiteCommand(tableCreate, localStore, transaction))
 							command.ExecuteNonQuery();
 					}
+					else if (!existsTable)
+					{
+						using (var command = new SQLiteCommand(tableCreate, localStore, transaction))
+							command.ExecuteNonQuery();
+					}
 					else
 					{
 						var readRev = -1L;
@@ -307,38 +312,30 @@ namespace TecWare.PPSn.Data
 							}
 						} // using command
 
-						if (!existsTable)
+						if (readRev > tableRev)
+							throw new InvalidDataException(String.Format("The table \"{0}\".\"{1}\" can not be verified, because the revision number in the revision table \"{2}\".\"{3}\" is greater than the revision number for resource \"{4}\".", tableSchema, tableName, metaTableSchema, metaTableName, tableResourceName));
+						else if (readRev == tableRev)
+							continue; // Matching revision. Skip revision table update.
+						else if (readRev < tableRev)
 						{
+							using (var command = new SQLiteCommand($"DROP TABLE IF EXISTS [{tableSchema}].[{TemporaryTablePrefix}{tableName}];", localStore, transaction))
+								command.ExecuteNonQuery();
+
+							using (var command = new SQLiteCommand($"ALTER TABLE [{tableSchema}].[{tableName}] RENAME TO [{TemporaryTablePrefix}{tableName}];", localStore, transaction))
+								command.ExecuteNonQuery();
+
 							using (var command = new SQLiteCommand(tableCreate, localStore, transaction))
 								command.ExecuteNonQuery();
-						}
-						else
-						{
-							if (readRev > tableRev)
-								throw new InvalidDataException(String.Format("The table \"{0}\".\"{1}\" can not be verified, because the revision number in the revision table \"{2}\".\"{3}\" is greater than the revision number for resource \"{4}\".", tableSchema, tableName, metaTableSchema, metaTableName, tableResourceName));
-							else if (readRev == tableRev)
-								continue; // Matching revision. Skip revision table update.
-							else if (readRev < tableRev)
-							{
-								using (var command = new SQLiteCommand($"DROP TABLE IF EXISTS [{tableSchema}].[{TemporaryTablePrefix}{tableName}];", localStore, transaction))
-									command.ExecuteNonQuery();
 
-								using (var command = new SQLiteCommand($"ALTER TABLE [{tableSchema}].[{tableName}] RENAME TO [{TemporaryTablePrefix}{tableName}];", localStore, transaction))
-									command.ExecuteNonQuery();
+							using (var command = new SQLiteCommand(tableConvert, localStore, transaction))
+								command.ExecuteNonQuery();
 
-								using (var command = new SQLiteCommand(tableCreate, localStore, transaction))
-									command.ExecuteNonQuery();
+							using (var command = new SQLiteCommand($"DROP TABLE IF EXISTS [{tableSchema}].[{TemporaryTablePrefix}{tableName}];", localStore, transaction))
+								command.ExecuteNonQuery();
+						} // if readRev < tableRev
+					}
 
-								using (var command = new SQLiteCommand(tableConvert, localStore, transaction))
-									command.ExecuteNonQuery();
-
-								using (var command = new SQLiteCommand($"DROP TABLE IF EXISTS [{tableSchema}].[{TemporaryTablePrefix}{tableName}];", localStore, transaction))
-									command.ExecuteNonQuery();
-							} // if readRev < tableRev
-						} // else
-					} // else
-
-					using (var command = new SQLiteCommand(existsMetaTable ?
+					using (var command = new SQLiteCommand(existsTable ?
 						$"UPDATE [{metaTableSchema}].[{metaTableName}] SET [Revision] = @tableRev, [LastModification] = DATETIME('now') WHERE [ResourceName] = @resourceName;" :
 						$"INSERT INTO [{metaTableSchema}].[{metaTableName}] ([Revision], [LastModification], [ResourceName]) values (@tableRev, DATETIME('now'), @resourceName);", localStore, transaction))
 					{
@@ -368,66 +365,147 @@ namespace TecWare.PPSn.Data
 
 		#region -- Offline Data -----------------------------------------------------------
 
-		public void UpdateOfflineItem(string path, bool onlineMode, string contentType, string contentEncoding, Stream data)
+		#region -- class OfflineItemResult ------------------------------------------------
+
+		private sealed class OfflineItemResult : Tuple<WebResponse, string, Encoding, DateTime, long>
+		{
+			public OfflineItemResult(WebResponse response, string contentType, Encoding encoding, DateTime lastModified, long length)
+				: base(response, contentType, encoding, lastModified, length)
+			{
+			} // ctor
+
+			public WebResponse Response => Item1;
+			public string ContentType => Item2;
+			public Encoding Encoding => Item3;
+			public DateTime LastModified => Item4;
+			public long ContentLength => Item5;
+		} // OfflineItemResult
+
+		#endregion
+
+		public void UpdateOfflineItems()
+		{
+			using (var items = Environment.GetViewData(new PpsShellGetList("wpf.sync")).GetEnumerator())
+			{
+				// find the columns
+				var indexPath = items.FindColumnIndex("Path", true);
+				var indexLength = items.FindColumnIndex("Length");
+				var indexLastWriteTime = items.FindColumnIndex("LastWriteTime");
+
+				while (items.MoveNext())
+				{
+					// get the item
+					var path = items.GetValue(indexPath, String.Empty);
+					var length = items.GetValue(indexLength, -1L);
+					var lastWriteTime = items.GetValue(indexLastWriteTime, DateTime.MinValue);
+
+					// update the item
+					UpdateOfflineItem(path, true,
+						() =>
+						{
+							var response = Environment.Request.GetResponseAsync("/remote/" + path).Result;
+							var contentType = response.GetContentType();
+							return new OfflineItemResult(
+								response,
+								contentType.MediaType,
+								Encoding.GetEncoding(contentType.CharSet),
+								response.GetLastModified(),
+								response.ContentLength
+							);
+						}, length, lastWriteTime
+					);
+				}
+			}
+		} // proc UpdateOfflineItems
+
+		private void UpdateOfflineItem(string path, bool onlineMode, Func<OfflineItemResult> getContent, long length = -1, DateTime? lastWriteTime = null)
 		{
 			if (String.IsNullOrEmpty(path))
 				throw new ArgumentException("Parameter \"path\" is null or empty.");
 
-			if (String.IsNullOrEmpty(contentType))
-				throw new ArgumentException("Parameter \"contentType\" is null or empty.");
-
-			// The usage of contentEncoding null or "" is allowed. Null will be handle as System.DBNull.
-
-			var buffer = data?.ReadInArray();
-			if (buffer == null)
-				throw new ArgumentException("Parameter \"data\" is null or empty.");
-
+			// create a transaction for the sync
 			using (var transaction = localStore.BeginTransaction())
 			{
-				long? id = null;
-				using (var command = new SQLiteCommand("SELECT [Id] FROM [main].[OfflineCache] WHERE [Path] = @path;", localStore))
+				// find the current cached item
+				long? currentRowId;
+				bool updateItem;
+				using (var command = new SQLiteCommand("SELECT [Id], [ContentSize], [ContentLastModification] FROM [main].[OfflineCache] WHERE [Path] = @path;", localStore, transaction))
 				{
 					command.Parameters.Add("@path", DbType.String).Value = path;
 					using (var reader = command.ExecuteReader(CommandBehavior.SingleRow))
 					{
 						if (reader.Read())
-							id = reader.GetInt64(0);
+						{
+							currentRowId = reader.GetInt64(0);
+							var currentLength = reader.GetInt64(1);
+							var currentLastWriteTime = reader.GetDateTime(2);
+
+							if (length == -1 || (lastWriteTime ?? DateTime.MinValue) == DateTime.MinValue) // new update
+								updateItem = true;
+							else
+								updateItem = length != currentLength && lastWriteTime != currentLastWriteTime;
+						}
+						else
+						{
+							currentRowId = null;
+							updateItem = true;
+						}
 					}
 				}
 
-				if (id == null)
+				// do we need to update the item
+				if (!updateItem)
+					return; // RETURN
+
+				// get the content
+				var content = getContent();
+				try
 				{
-					using (var command = new SQLiteCommand("INSERT INTO [main].[OfflineCache] ([Path], [OnlineMode], [ContentType], [ContentEncoding], [ContentSize], [Content]) VALUES(@path, @onlineMode, @contentType, @contentEncoding, @contentSize, @content);", localStore, transaction))
+					if (String.IsNullOrEmpty(content.ContentType))
+						throw new ArgumentException("Parameter \"contentType\" is null or empty.");
+
+					if (content.ContentLength > 5 << 20)
+						throw new InvalidOperationException("links are not implemented yet.");
+
+					byte[] contentBytes;
+					using (var src = Environment.Request.GetStreamAsync(content.Response, null))
+						contentBytes = src.ReadInArray(); // simple data into an byte array
+
+					if (content.ContentLength > 0 && content.ContentLength != contentBytes.Length)
+						throw new ArgumentOutOfRangeException("content", String.Format("Expected {0:N0} bytes, but received {1:N0} bytes.", content.ContentLength, contentBytes.Length));
+
+					// update data base
+					using (var command = new SQLiteCommand(
+						currentRowId == null ?
+							"INSERT INTO [main].[OfflineCache] ([Path], [OnlineMode], [ContentType], [ContentEncoding], [ContentSize], [ContentLastModification], [Content]) VALUES (@path, @onlineMode, @contentType, @contentEncoding, @contentSize, @lastModified, @content);" :
+							"UPDATE [main].[OfflineCache] SET [OnlineMode] = @onlineMode, [ContentType] = @contentType, [ContentEncoding] = @contentEncoding, [ContentSize] = @contentSize, [ContentLastModification] = @lastModified, [Content] = @content WHERE [Id] = @id;",
+						localStore, transaction
+					))
 					{
-						command.Parameters.Add("@path", DbType.String).Value = path;
+						if (currentRowId == null)
+							command.Parameters.Add("@path", DbType.String).Value = path;
+						else
+							command.Parameters.Add("@id", DbType.Int64).Value = currentRowId;
+
 						command.Parameters.Add("@onlineMode", DbType.Boolean).Value = onlineMode;
-						command.Parameters.Add("@contentType", DbType.String).Value = contentType;
-						command.Parameters.Add("@contentEncoding", DbType.String).Value = contentEncoding;
-						command.Parameters.Add("@contentSize", DbType.Int32).Value = buffer.Length;
-						command.Parameters.Add("@content", DbType.Binary).Value = buffer;
+						command.Parameters.Add("@contentType", DbType.String).Value = content.ContentType;
+						command.Parameters.Add("@contentEncoding", DbType.String).Value = content.Encoding.BodyName;
+						command.Parameters.Add("@contentSize", DbType.Int32).Value = content.ContentLength;
+						command.Parameters.Add("@lastModified", DbType.DateTime).Value = content.LastModified;
+						command.Parameters.Add("@content", DbType.Binary).Value = contentBytes;
+
 						var affectedRows = command.ExecuteNonQuery();
 						if (affectedRows != 1)
 							throw new Exception(String.Format("The insert of item \"{0}\" affected an unexpected number ({1}) of rows.", path, affectedRows));
 					}
-				} // if id == null
-				else
+				}
+				finally
 				{
-					using (var command = new SQLiteCommand("UPDATE [main].[OfflineCache] SET [OnlineMode] = @onlineMode, [ContentType] = @contentType, [ContentEncoding] = @contentEncoding, [ContentSize] = @contentSize, [ContentLastModification] = DATETIME('now'), [Content] = @content WHERE [Id] = @id;", localStore, transaction))
-					{
-						command.Parameters.Add("@onlineMode", DbType.Boolean).Value = onlineMode;
-						command.Parameters.Add("@contentType", DbType.String).Value = contentType;
-						command.Parameters.Add("@contentEncoding", DbType.String).Value = contentEncoding;
-						command.Parameters.Add("@contentSize", DbType.Int32).Value = buffer.Length;
-						command.Parameters.Add("@content", DbType.Binary).Value = buffer;
-						command.Parameters.Add("@id", DbType.Int64).Value = id;
-						var affectedRows = command.ExecuteNonQuery();
-						if (affectedRows != 1)
-							throw new Exception(String.Format("The update of item \"{0}\" affected an unexpected number ({1}) of rows.", path, affectedRows));
-					}
-				} // else
+					content.Response?.Dispose();
+				}
 
 				transaction.Commit();
-			} // using transaction
+			} // transaction
 		} // proc UpdateOfflineItem
 
 		public virtual bool TryGetOfflineItem(string path, bool onlineMode, out string contentType, out Stream data)
@@ -435,6 +513,10 @@ namespace TecWare.PPSn.Data
 			contentType = null;
 			data = null;
 
+			if (String.IsNullOrEmpty(path))
+				return false;
+			if (path[0] == '/')
+				path = path.Substring(1);
 			if (String.IsNullOrEmpty(path))
 				return false;
 
@@ -516,320 +598,6 @@ namespace TecWare.PPSn.Data
 			data = resultData;
 			return true;
 		} // func TryGetOfflineItem
-
-		#region -- GetOfflineItems --------------------------------------------------------
-
-		#region -- class LocalStoreColumn -------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class LocalStoreColumn : IDataColumn
-		{
-			private readonly string name;
-			private readonly Type dataType;
-			private readonly IDataColumnAttributes attributes;
-
-			#region -- Ctor/Dtor --------------------------------------------------------------
-
-			public LocalStoreColumn(string name, Type dataType, IDataColumnAttributes attributes)
-			{
-				this.name = name;
-				this.dataType = dataType;
-				this.attributes = attributes;
-			} // ctor
-
-			#endregion
-
-			#region -- IDataColumn ------------------------------------------------------------
-
-			public string Name => name;
-			public Type DataType => dataType;
-			public IDataColumnAttributes Attributes => attributes;
-
-			#endregion
-		} // class LocalStoreColumn
-
-		#endregion
-
-		#region -- class LocalStoreRow ----------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class LocalStoreRow : IDataRow
-		{
-			private readonly LocalStoreEnumerator enumerator;
-			private readonly object[] values;
-
-			#region -- Ctor/Dtor --------------------------------------------------------------
-
-			public LocalStoreRow(LocalStoreEnumerator enumerator, object[] values)
-			{
-				this.enumerator = enumerator;
-				this.values = values;
-			} // ctor
-
-			#endregion
-
-			#region -- IDataRow ---------------------------------------------------------------
-
-			public bool TryGetProperty(string columnName, out object value)
-			{
-				value = null;
-
-				try
-				{
-					if (String.IsNullOrEmpty(columnName))
-						return false;
-
-					if (Columns == null || Columns.Length < 1)
-						return false;
-
-					if (Columns.Length != ColumnCount)
-						return false;
-
-					var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
-					if (index == -1)
-						return false;
-
-					value = this[index];
-					return true;
-				}
-				catch
-				{
-					return false;
-				}
-			} // func TryGetProperty
-
-			public object this[int index] => values[index];
-
-			public IDataColumn[] Columns => enumerator.Columns;
-			public int ColumnCount => enumerator.ColumnCount;
-
-			public object this[string columnName]
-			{
-				get
-				{
-					var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
-					if (index == -1)
-						throw new ArgumentException(String.Format("Column with name \"{0}\" not found.", columnName ?? "null"));
-					return values[index];
-				}
-			} // prop this
-
-			#endregion
-		} // class LocalStoreRow
-
-		#endregion
-
-		#region -- class LocalStoreEnumerator ---------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class LocalStoreEnumerator : IEnumerator<IDataRow>, IDataColumns
-		{
-			#region -- enum ReadingState ------------------------------------------------------
-
-			///////////////////////////////////////////////////////////////////////////////
-			/// <summary></summary>
-			private enum ReadingState
-			{
-				Unread,
-				Partly,
-				Complete,
-			} // enum ReadingState
-
-			#endregion
-
-			private bool disposed;
-			private readonly SQLiteCommand command;
-			private SQLiteDataReader reader;
-			private ReadingState state;
-			private IDataRow currentRow;
-			private Lazy<IDataColumn[]> columns;
-
-			#region -- Ctor/Dtor --------------------------------------------------------------
-
-			public LocalStoreEnumerator(SQLiteCommand command)
-			{
-				this.command = command;
-
-				columns = new Lazy<IDataColumn[]>(() =>
-				{
-					CheckDisposed();
-
-					if (state == ReadingState.Unread && !MoveNext())
-						return null;
-
-					if (state != ReadingState.Partly)
-						return null;
-
-					var tmp = new LocalStoreColumn[reader.FieldCount];
-					for (var i = 0; i < reader.FieldCount; i++)
-						tmp[i] = new LocalStoreColumn(reader.GetName(i), reader.GetFieldType(i), null);
-					return tmp;
-				});
-			} // ctor
-
-			public void Dispose()
-				=> Dispose(true);
-
-			private void Dispose(bool disposing)
-			{
-				if (disposed)
-					return;
-
-				if (disposing)
-				{
-					command?.Dispose();
-					reader?.Dispose();
-				}
-
-				disposed = true;
-			} // proc Dispose
-
-			#endregion
-
-			private void CheckDisposed()
-			{
-				if (disposed)
-					throw new ObjectDisposedException(typeof(LocalStoreEnumerator).FullName);
-			} // proc CheckDisposed
-
-			#region -- IEnumerator<T> ---------------------------------------------------------
-
-			public bool MoveNext()
-			{
-				CheckDisposed();
-
-				switch (state)
-				{
-					case ReadingState.Unread:
-						if (reader == null)
-							reader = command.ExecuteReader(CommandBehavior.SingleResult);
-
-						if (!reader.Read())
-							goto case ReadingState.Complete;
-
-						goto case ReadingState.Partly;
-					case ReadingState.Partly:
-						if (state == ReadingState.Partly)
-						{
-							if (!reader.Read())
-								goto case ReadingState.Complete;
-						}
-						else
-							state = ReadingState.Partly;
-
-						var values = new object[reader.FieldCount];
-						for (var i = 0; i < reader.FieldCount; i++)
-							values[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
-						currentRow = new LocalStoreRow(this, values);
-						return true;
-					case ReadingState.Complete:
-						state = ReadingState.Complete;
-						// todo: Dispose command and reader?
-						currentRow = null;
-						return false;
-					default:
-						throw new InvalidOperationException("The state of the object is invalid.");
-				} // switch state
-			} // func MoveNext
-
-			void IEnumerator.Reset()
-			{
-				CheckDisposed();
-				if (state != ReadingState.Unread)
-					throw new InvalidOperationException("The state of the object forbids the calling of this method.");
-			} // proc Reset
-
-			public IDataRow Current
-			{
-				get
-				{
-					CheckDisposed();
-					if (state != ReadingState.Partly)
-						throw new InvalidOperationException("The state of the object forbids the retrieval of this property.");
-					return currentRow;
-				}
-			} // prop Current
-
-			object IEnumerator.Current => Current;
-
-			#endregion
-
-			#region -- IDataColumns -----------------------------------------------------------
-
-			public IDataColumn[] Columns
-			{
-				get
-				{
-					CheckDisposed();
-					return columns.Value;
-				}
-			} // prop Columns
-
-			public int ColumnCount
-			{
-				get
-				{
-					CheckDisposed();
-					return Columns?.Length ?? 0;
-				}
-			} // prop ColumnCount
-
-			#endregion
-		} // class LocalStoreEnumerator
-
-		#endregion
-
-		#region -- class LocalStoreReader -------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class LocalStoreReader : IEnumerable<IDataRow>
-		{
-			private readonly string commandText;
-			private readonly SQLiteConnection connection;
-
-			#region -- Ctor/Dtor --------------------------------------------------------------
-
-			public LocalStoreReader(string commandText, SQLiteConnection connection)
-			{
-				this.commandText = commandText;
-				this.connection = connection;
-			} // ctor
-
-			#endregion
-
-			#region -- IEnumerable<T> ---------------------------------------------------------
-
-			public IEnumerator<IDataRow> GetEnumerator()
-			{
-				SQLiteCommand command = null;
-				try
-				{
-					command = new SQLiteCommand(commandText, connection);
-					return new LocalStoreEnumerator(command);
-				}
-				catch
-				{
-					command?.Dispose();
-					throw;
-				}
-			} // func GetEnumerator
-
-			IEnumerator IEnumerable.GetEnumerator()
-				=> GetEnumerator();
-
-			#endregion
-		} // class LocalStoreReader
-
-		#endregion
-
-		public IEnumerable<IDataRow> GetOfflineItems()
-			=> new LocalStoreReader("SELECT [Path], [OnlineMode], [ContentType], [ContentEncoding], [ContentSize], [ContentLastModification] FROM [main].[OfflineCache];", localStore);
-
-		#endregion
 
 		#endregion
 
@@ -916,6 +684,321 @@ namespace TecWare.PPSn.Data
 			//	}
 			//yield break;
 		} // func GetViewData
+
+
+		//#region -- GetOfflineItems --------------------------------------------------------
+
+		//#region -- class LocalStoreColumn -------------------------------------------------
+
+		/////////////////////////////////////////////////////////////////////////////////
+		///// <summary></summary>
+		//private sealed class LocalStoreColumn : IDataColumn
+		//{
+		//	private readonly string name;
+		//	private readonly Type dataType;
+		//	private readonly IPropertyEnumerableDictionary attributes;
+
+		//	#region -- Ctor/Dtor --------------------------------------------------------------
+
+		//	public LocalStoreColumn(string name, Type dataType, IPropertyEnumerableDictionary attributes)
+		//	{
+		//		this.name = name;
+		//		this.dataType = dataType;
+		//		this.attributes = attributes;
+		//	} // ctor
+
+		//	#endregion
+
+		//	#region -- IDataColumn ------------------------------------------------------------
+
+		//	public string Name => name;
+		//	public Type DataType => dataType;
+		//	public IPropertyEnumerableDictionary Attributes => attributes;
+
+		//	#endregion
+		//} // class LocalStoreColumn
+
+		//#endregion
+
+		//#region -- class LocalStoreRow ----------------------------------------------------
+
+		/////////////////////////////////////////////////////////////////////////////////
+		///// <summary></summary>
+		//private sealed class LocalStoreRow : IDataRow
+		//{
+		//	private readonly LocalStoreEnumerator enumerator;
+		//	private readonly object[] values;
+
+		//	#region -- Ctor/Dtor --------------------------------------------------------------
+
+		//	public LocalStoreRow(LocalStoreEnumerator enumerator, object[] values)
+		//	{
+		//		this.enumerator = enumerator;
+		//		this.values = values;
+		//	} // ctor
+
+		//	#endregion
+
+		//	#region -- IDataRow ---------------------------------------------------------------
+
+		//	public bool TryGetProperty(string columnName, out object value)
+		//	{
+		//		value = null;
+
+		//		try
+		//		{
+		//			if (String.IsNullOrEmpty(columnName))
+		//				return false;
+
+		//			if (Columns == null || Columns.Length < 1)
+		//				return false;
+
+		//			if (Columns.Length != ColumnCount)
+		//				return false;
+
+		//			var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
+		//			if (index == -1)
+		//				return false;
+
+		//			value = this[index];
+		//			return true;
+		//		}
+		//		catch
+		//		{
+		//			return false;
+		//		}
+		//	} // func TryGetProperty
+
+		//	public object this[int index] => values[index];
+
+		//	public IDataColumn[] Columns => enumerator.Columns;
+		//	public int ColumnCount => enumerator.ColumnCount;
+
+		//	public object this[string columnName]
+		//	{
+		//		get
+		//		{
+		//			var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
+		//			if (index == -1)
+		//				throw new ArgumentException(String.Format("Column with name \"{0}\" not found.", columnName ?? "null"));
+		//			return values[index];
+		//		}
+		//	} // prop this
+
+		//	#endregion
+		//} // class LocalStoreRow
+
+		//#endregion
+
+		//#region -- class LocalStoreEnumerator ---------------------------------------------
+
+		/////////////////////////////////////////////////////////////////////////////////
+		///// <summary></summary>
+		//private sealed class LocalStoreEnumerator : IEnumerator<IDataRow>, IDataColumns
+		//{
+		//	#region -- enum ReadingState ------------------------------------------------------
+
+		//	///////////////////////////////////////////////////////////////////////////////
+		//	/// <summary></summary>
+		//	private enum ReadingState
+		//	{
+		//		Unread,
+		//		Partly,
+		//		Complete,
+		//	} // enum ReadingState
+
+		//	#endregion
+
+		//	private bool disposed;
+		//	private readonly SQLiteCommand command;
+		//	private SQLiteDataReader reader;
+		//	private ReadingState state;
+		//	private IDataRow currentRow;
+		//	private Lazy<IDataColumn[]> columns;
+
+		//	#region -- Ctor/Dtor --------------------------------------------------------------
+
+		//	public LocalStoreEnumerator(SQLiteCommand command)
+		//	{
+		//		this.command = command;
+
+		//		columns = new Lazy<IDataColumn[]>(() =>
+		//		{
+		//			CheckDisposed();
+
+		//			if (state == ReadingState.Unread && !MoveNext())
+		//				return null;
+
+		//			if (state != ReadingState.Partly)
+		//				return null;
+
+		//			var tmp = new LocalStoreColumn[reader.FieldCount];
+		//			for (var i = 0; i < reader.FieldCount; i++)
+		//				tmp[i] = new LocalStoreColumn(reader.GetName(i), reader.GetFieldType(i), null);
+		//			return tmp;
+		//		});
+		//	} // ctor
+
+		//	public void Dispose()
+		//		=> Dispose(true);
+
+		//	private void Dispose(bool disposing)
+		//	{
+		//		if (disposed)
+		//			return;
+
+		//		if (disposing)
+		//		{
+		//			command?.Dispose();
+		//			reader?.Dispose();
+		//		}
+
+		//		disposed = true;
+		//	} // proc Dispose
+
+		//	#endregion
+
+		//	private void CheckDisposed()
+		//	{
+		//		if (disposed)
+		//			throw new ObjectDisposedException(typeof(LocalStoreEnumerator).FullName);
+		//	} // proc CheckDisposed
+
+		//	#region -- IEnumerator<T> ---------------------------------------------------------
+
+		//	public bool MoveNext()
+		//	{
+		//		CheckDisposed();
+
+		//		switch (state)
+		//		{
+		//			case ReadingState.Unread:
+		//				if (reader == null)
+		//					reader = command.ExecuteReader(CommandBehavior.SingleResult);
+
+		//				if (!reader.Read())
+		//					goto case ReadingState.Complete;
+
+		//				goto case ReadingState.Partly;
+		//			case ReadingState.Partly:
+		//				if (state == ReadingState.Partly)
+		//				{
+		//					if (!reader.Read())
+		//						goto case ReadingState.Complete;
+		//				}
+		//				else
+		//					state = ReadingState.Partly;
+
+		//				var values = new object[reader.FieldCount];
+		//				for (var i = 0; i < reader.FieldCount; i++)
+		//					values[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+		//				currentRow = new LocalStoreRow(this, values);
+		//				return true;
+		//			case ReadingState.Complete:
+		//				state = ReadingState.Complete;
+		//				// todo: Dispose command and reader?
+		//				currentRow = null;
+		//				return false;
+		//			default:
+		//				throw new InvalidOperationException("The state of the object is invalid.");
+		//		} // switch state
+		//	} // func MoveNext
+
+		//	void IEnumerator.Reset()
+		//	{
+		//		CheckDisposed();
+		//		if (state != ReadingState.Unread)
+		//			throw new InvalidOperationException("The state of the object forbids the calling of this method.");
+		//	} // proc Reset
+
+		//	public IDataRow Current
+		//	{
+		//		get
+		//		{
+		//			CheckDisposed();
+		//			if (state != ReadingState.Partly)
+		//				throw new InvalidOperationException("The state of the object forbids the retrieval of this property.");
+		//			return currentRow;
+		//		}
+		//	} // prop Current
+
+		//	object IEnumerator.Current => Current;
+
+		//	#endregion
+
+		//	#region -- IDataColumns -----------------------------------------------------------
+
+		//	public IDataColumn[] Columns
+		//	{
+		//		get
+		//		{
+		//			CheckDisposed();
+		//			return columns.Value;
+		//		}
+		//	} // prop Columns
+
+		//	public int ColumnCount
+		//	{
+		//		get
+		//		{
+		//			CheckDisposed();
+		//			return Columns?.Length ?? 0;
+		//		}
+		//	} // prop ColumnCount
+
+		//	#endregion
+		//} // class LocalStoreEnumerator
+
+		//#endregion
+
+		//#region -- class LocalStoreReader -------------------------------------------------
+
+		/////////////////////////////////////////////////////////////////////////////////
+		///// <summary></summary>
+		//private sealed class LocalStoreReader : IEnumerable<IDataRow>
+		//{
+		//	private readonly string commandText;
+		//	private readonly SQLiteConnection connection;
+
+		//	#region -- Ctor/Dtor --------------------------------------------------------------
+
+		//	public LocalStoreReader(string commandText, SQLiteConnection connection)
+		//	{
+		//		this.commandText = commandText;
+		//		this.connection = connection;
+		//	} // ctor
+
+		//	#endregion
+
+		//	#region -- IEnumerable<T> ---------------------------------------------------------
+
+		//	public IEnumerator<IDataRow> GetEnumerator()
+		//	{
+		//		SQLiteCommand command = null;
+		//		try
+		//		{
+		//			command = new SQLiteCommand(commandText, connection);
+		//			return new LocalStoreEnumerator(command);
+		//		}
+		//		catch
+		//		{
+		//			command?.Dispose();
+		//			throw;
+		//		}
+		//	} // func GetEnumerator
+
+		//	IEnumerator IEnumerable.GetEnumerator()
+		//		=> GetEnumerator();
+
+		//	#endregion
+		//} // class LocalStoreReader
+
+		//#endregion
+
+		//public IEnumerable<IDataRow> GetOfflineItems()
+		//	=> new LocalStoreReader("SELECT [Path], [OnlineMode], [ContentType], [ContentEncoding], [ContentSize], [ContentLastModification] FROM [main].[OfflineCache];", localStore);
+
+		//#endregion
 
 		public override IDataRow GetDetailedData(long objectId, string typ)
 		{

@@ -4,13 +4,14 @@
 CREATE TABLE main.OfflineCache
 (
 	Id INTEGER PRIMARY KEY NOT NULL UNIQUE,
-	Path TEXT NOT NULL UNIQUE,
-	OnlineMode INTEGER NOT NULL,
-	ContentType TEXT NOT NULL,
-	ContentEncoding TEXT,
-	ContentSize INTEGER NOT NULL,
-	ContentLastModification TEXT NOT NULL DEFAULT (DATETIME('now')),
-	Content BLOB NOT NULL
+	Path TEXT NOT NULL UNIQUE,		-- Path for the request
+	OnlineMode INTEGER NOT NULL,	-- Is the file also in the online mode availabel
+	ContentType TEXT NOT NULL,		-- MimeType of the file
+	ContentEncoding TEXT NULL,		-- Encoding of the file
+	ContentSize INTEGER NOT NULL,	-- Size of the file
+	ContentLastModification TEXT NOT NULL, -- Last Modification
+	ContentLink BIT NOT NULL DEFAULT 0, -- Is this file persisted on the disk
+	Content BLOB NOT NULL			-- Link/Data
 );
 
 --<convert />

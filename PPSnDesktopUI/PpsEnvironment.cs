@@ -611,9 +611,16 @@ namespace TecWare.PPSn
 		{
 			await Task.Yield();
 
+			await RefreshOfflineCacheAsync();
 			await RefreshDefaultResourcesAsync();
 			await RefreshTemplatesAsync();
 		} // proc RefreshAsync
+
+		private async Task RefreshOfflineCacheAsync()
+		{
+			if (IsOnline && IsAuthentificated)
+				await Task.Run(new Action(localStore.UpdateOfflineItems));
+		} // RefreshOfflineCacheAsync
 
 		private async Task RefreshDefaultResourcesAsync()
 		{
