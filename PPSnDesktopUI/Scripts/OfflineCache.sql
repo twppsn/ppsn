@@ -5,7 +5,7 @@ CREATE TABLE main.OfflineCache
 (
 	Id INTEGER PRIMARY KEY NOT NULL UNIQUE,
 	Path TEXT NOT NULL UNIQUE,		-- Path for the request
-	OnlineMode INTEGER NOT NULL,	-- Is the file also in the online mode availabel
+	OnlineMode INTEGER NOT NULL,	-- Is the file also in the online mode available
 	ContentType TEXT NOT NULL,		-- MimeType of the file
 	ContentEncoding TEXT NULL,		-- Encoding of the file
 	ContentSize INTEGER NOT NULL,	-- Size of the file

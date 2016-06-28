@@ -619,7 +619,10 @@ namespace TecWare.PPSn
 		private async Task RefreshOfflineCacheAsync()
 		{
 			if (IsOnline && IsAuthentificated)
+			{
 				await Task.Run(new Action(localStore.UpdateOfflineItems));
+				await Task.Run(new Action(localStore.UpdateDocumentStore));
+			}
 		} // RefreshOfflineCacheAsync
 
 		private async Task RefreshDefaultResourcesAsync()

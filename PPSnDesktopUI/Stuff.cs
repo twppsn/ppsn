@@ -87,6 +87,19 @@ namespace TecWare.PPSn
 		} // func GetVisualChild
 	} // class StuffUI
 
+	#region -- class StuffDB ------------------------------------------------------------
+
+	public static class StuffDB
+	{
+		public static object DbNullIfString(this string value)
+			=> String.IsNullOrEmpty(value) ? (object)DBNull.Value : value;
+
+		public static object DbNullIf<T>(this T value, T @null)
+			=> Object.Equals(value, @null) ? (object)DBNull.Value : value;
+	} // class StuffDB
+
+	#endregion
+
 	#region -- class WebRequestHelper ---------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
