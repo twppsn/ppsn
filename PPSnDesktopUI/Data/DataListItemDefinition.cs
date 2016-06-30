@@ -39,8 +39,8 @@ namespace TecWare.PPSn.Data
 		private sealed class TemplateItem : IComparable<TemplateItem>
 		{
 			private Func<object, bool> condition; // condiition if the template is for this item
-			//private LuaChunk templateFunctions;		// Definition of functions for the item
-			//private string updateItemDataSource;	// uri, for a command that will update the item properties
+																						//private LuaChunk templateFunctions;		// Definition of functions for the item
+																						//private string updateItemDataSource;	// uri, for a command that will update the item properties
 			private DataTemplate template;
 
 			public TemplateItem(PpsDataListItemDefinition owner, XElement xCur, ref int priority)
@@ -49,7 +49,7 @@ namespace TecWare.PPSn.Data
 
 				this.condition = null;
 				this.template = String.IsNullOrEmpty(templateKey) ? null : owner.Environment.FindResource<DataTemplate>(templateKey);
-				
+
 				this.Priority = priority = xCur.GetAttribute("priority", priority + 1);
 			} // ctor
 
@@ -105,7 +105,7 @@ namespace TecWare.PPSn.Data
 				return template.Template;
 			}
 			else
-			return null;
+				return null;
 		} // func FindTemplate
 	} // class PpsDataListItemType
 }

@@ -71,6 +71,9 @@
     <Reference Include="PresentationFramework" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\PPSnCore\PPSnCore\Data\DbRowEnumerator.cs">
+      <Link>Data\DbRowEnumerator.cs</Link>
+    </Compile>
     <Compile Include="Controls\DataListControl.cs" />
     <Compile Include="Controls\SplitButton.cs" />
     <Compile Include="Controls\Toolbar.cs" />
@@ -80,7 +83,6 @@
     <Compile Include="Data\DataStore.cs" />
     <Compile Include="Data\LocalDataStore.cs" />
     <Compile Include="Data\PpsClientLogin.cs" />
-    <Compile Include="Data\RemoteDataStore.cs" />
     <Compile Include="NativeMethods.Credential.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="PpsEnvironmentInfo.cs" />

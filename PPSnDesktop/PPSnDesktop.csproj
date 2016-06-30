@@ -76,6 +76,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Data\PpsMainLocalStore.cs" />
     <Compile Include="PpsMainEnvironment.cs" />
     <Compile Include="PpsMainEnvironment.Views.cs" />
     <Compile Include="UI\Panes\PpsLoginPane.xaml.cs">

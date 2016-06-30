@@ -69,43 +69,6 @@ namespace TecWare.PPSn
   /// <summary></summary>
   public class PpsMainEnvironment : PpsEnvironment
 	{
-		#region -- class PpsMainLocalStore ------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class PpsMainLocalStore : PpsLocalDataStore
-		{
-			public PpsMainLocalStore(PpsEnvironment environment) 
-				: base(environment)
-			{
-			} // ctor
-
-			protected override IEnumerable<Tuple<Type, string>> GetStoreTables()
-				=> base.GetStoreTables().Union(GetStoreTablesFromAssembly(typeof(PpsMainEnvironment), "Static.SQLite"));
-
-			private bool TryGetStaticItem(string path, out string contentType, out Stream data)
-			{
-				// check for a resource file
-				var baseType = typeof(PpsMainEnvironment);
-				data = baseType.Assembly.GetManifestResourceStream(baseType, "Static." + path.Replace('/', '.'));
-				contentType = MimeTypes.Text.Xml;
-				return data != null;
-			} // func TryGetStaticItem
-
-			public override bool TryGetOfflineItem(string path, bool onlineMode, out string contentType, out Stream data)
-			{
-				var r = base.TryGetOfflineItem(path, onlineMode, out contentType, out data);
-				if (r)
-					return r;
-				else if (path.StartsWith("/wpf/") && !onlineMode) // request could not resolved for the offline item
-					return TryGetStaticItem(path.Substring(5), out contentType, out data);
-
-				return r;
-			} // func TryGetOfflineItem
-		} // class PpsMainLocalStore
-
-		#endregion
-
 		private readonly App app;
 		private PpsEnvironmentCollection<PpsMainActionDefinition> actions;
 		private PpsEnvironmentCollection<PpsMainViewDefinition> views;
@@ -135,6 +98,9 @@ namespace TecWare.PPSn
 		public async override Task RefreshAsync()
 		{
 			await base.RefreshAsync();
+			if (IsOnline && IsAuthentificated)
+				await Task.Run(new Action(((PpsMainLocalStore)LocalStore).UpdateDocumentStore));
+
 			await RefreshNavigatorAsync();
 		} // proc RefreshAsync
 

@@ -20,7 +20,9 @@ CREATE TABLE main.[ObjectTags]
 	[ObjectId] INTEGER NOT NULL CONSTRAINT fkObjectsId REFERENCES [Objects] ([Id]) ON DELETE CASCADE,
 	[Key] TEXT NOT NULL,						-- keyword
 	[Class] INTEGER NOT NULL DEFAULT 0,			-- 0 => normal string field, 1 => Number fields
-	[Value] TEXT NOT NULL						-- value of the keyword
+	[Value] TEXT NOT NULL,						-- value of the keyword
+
+	CONSTRAINT idxObjectIdKey UNIQUE ([ObjectId], [Key])
 );
 
 --<convert />

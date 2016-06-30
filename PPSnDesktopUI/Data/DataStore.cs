@@ -249,12 +249,6 @@ namespace TecWare.PPSn.Data
 			throw new NotImplementedException();
 		} // func GetViewData
 
-		public virtual IDataRow GetDetailedData(long objectId, string typ)
-		{
-			// todo: redirect to a http request
-			throw new NotImplementedException();
-		} // func GetDetailedData
-
 		public PpsEnvironment Environment => environment;
 	} // class PpsDataStore
 }

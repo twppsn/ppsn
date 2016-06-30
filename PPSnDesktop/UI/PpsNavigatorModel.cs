@@ -185,7 +185,6 @@ namespace TecWare.PPSn.UI
 
 			public string DisplayName => filter.DisplayName;
 			public string FilterName => filter.Name;
-			public string ShortCut => filter.ShortCut;
 			public bool IsSelected => model.currentFilter == this;
 		} // class PpsNavigatorFilter
 
@@ -389,7 +388,7 @@ namespace TecWare.PPSn.UI
 				await items.ClearAsync();
 			else
 			{
-				var dataSource = new PpsShellGetList(CurrentView.Name) { Detailed = false };
+				var dataSource = new PpsShellGetList(CurrentView.ViewId);
 
 				if (currentFilter != null)
 				{

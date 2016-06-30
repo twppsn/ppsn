@@ -80,6 +80,8 @@ namespace TecWare.PPSn
 
 		protected PpsEnvironmentDefinition(PpsEnvironment environment, string name)
 		{
+			if (String.IsNullOrEmpty(name))
+				throw new ArgumentNullException("name");
 			this.environment = environment;
 			this.name = name;
 		} // ctor
@@ -306,7 +308,7 @@ namespace TecWare.PPSn
 	/// <summary>Base class for application data. Holds information about view
 	/// classes, exception, connection, synchronisation and the script 
 	/// engine.</summary>
-	public class PpsEnvironment : LuaGlobalPortable, IPpsShell, IDisposable
+	public partial class PpsEnvironment : LuaGlobalPortable, IPpsShell, IDisposable
 	{
 		public const string EnvironmentService = "PpsEnvironmentService";
 
@@ -619,10 +621,7 @@ namespace TecWare.PPSn
 		private async Task RefreshOfflineCacheAsync()
 		{
 			if (IsOnline && IsAuthentificated)
-			{
 				await Task.Run(new Action(localStore.UpdateOfflineItems));
-				await Task.Run(new Action(localStore.UpdateDocumentStore));
-			}
 		} // RefreshOfflineCacheAsync
 
 		private async Task RefreshDefaultResourcesAsync()
@@ -1013,6 +1012,8 @@ namespace TecWare.PPSn
 
 		/// <summary>Access to the current collected informations.</summary>
 		public PpsTraceLog Traces => logData;
+
+		protected PpsLocalDataStore LocalStore => localStore;
 
 		// -- Static --------------------------------------------------------------
 

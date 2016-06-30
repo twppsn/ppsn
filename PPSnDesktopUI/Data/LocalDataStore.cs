@@ -18,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Data;
+using System.Data.Common;
 using System.Data.SQLite;
 using System.IO;
 using System.IO.Compression;
@@ -615,221 +616,12 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		public void UpdateDocumentStore()
-		{
-			// todo: lock
-			// todo: RevId
-			// todo: user rights
-			using (var enumerator = Environment.GetViewData(new PpsShellGetList("dbo.objects")).GetEnumerator())
-			{
-				var indexId = enumerator.FindColumnIndex("Id", true);
-				var indexGuid = enumerator.FindColumnIndex("Guid", true);
-				var indexTyp = enumerator.FindColumnIndex("Typ", true);
-				var indexNr = enumerator.FindColumnIndex("Nr", true);
-				var indexRevId = enumerator.FindColumnIndex("RevId", true);
-				var indexTags = enumerator.FindColumnIndex("Tags");
-
-				using (SQLiteCommand
-					selectCommand = new SQLiteCommand("SELECT [Id] FROM main.[Objects] WHERE [Guid] = @Guid", localStore),
-					insertCommand = new SQLiteCommand("INSERT INTO main.[Objects] ([ServerId], [Guid], [Typ], [Nr], [RemoteRevId]) VALUES (@ServerId, @Guid, @Typ, @Nr, @RevId);", localStore),
-					updateCommand = new SQLiteCommand("UPDATE main.[Objects] SET [ServerId] = @ServerId, [Nr] = @Nr, [RemoteRevId] = @RevId where [Id] = @Id;", localStore),
-
-					selectTagsCommand = new SQLiteCommand("SELECT [Id], [Key], [Class], [Value] FROM main.[ObjectTags] WHERE [ObjectId] = @ObjectId;", localStore),
-					insertTagsCommand = new SQLiteCommand("INSERT INTO main.[ObjectTags] ([ObjectId], [Key], [Class], [Value]) values (@ObjectId, @Key, @Class, @Value);", localStore),
-					updateTagsCommand = new SQLiteCommand("UPDATE main.[ObjectTags] SET [Class] = @Class, [Value] = @Value where [Id] = @Id;", localStore),
-					deleteTagsCommand = new SQLiteCommand("DELETE FROM main.[ObjectTags] WHERE [Id] = @Id;", localStore)
-				)
-				{
-					#region -- prepare upsert --
-
-					var selectGuid = selectCommand.Parameters.Add("@Guid", DbType.Guid);
-
-					var insertServerId = insertCommand.Parameters.Add("@ServerId", DbType.Int64);
-					var insertGuid = insertCommand.Parameters.Add("@Guid", DbType.Guid);
-					var insertTyp = insertCommand.Parameters.Add("@Typ", DbType.String);
-					var insertNr = insertCommand.Parameters.Add("@Nr", DbType.String);
-					var insertRevId = insertCommand.Parameters.Add("@RevId", DbType.Int64);
-
-					var updateServerId = updateCommand.Parameters.Add("@ServerId", DbType.Int64);
-					var updateNr = updateCommand.Parameters.Add("@Nr", DbType.String);
-					var updateRevId = updateCommand.Parameters.Add("@RevId", DbType.Int64);
-					var updateId = updateCommand.Parameters.Add("@Id", DbType.Int64);
-
-					var selectTagsObjectId = selectTagsCommand.Parameters.Add("@ObjectId", DbType.Int64);
-
-					var insertTagsObjectId = insertTagsCommand.Parameters.Add("@ObjectId", DbType.Int64);
-					var insertTagsKey = insertTagsCommand.Parameters.Add("@Key", DbType.String);
-					var insertTagsClass = insertTagsCommand.Parameters.Add("@Class", DbType.Int64);
-					var insertTagsValue = insertTagsCommand.Parameters.Add("@Value", DbType.String);
-
-					var updateTagsId = updateTagsCommand.Parameters.Add("@Id", DbType.Int64);
-					var updateTagsClass = updateTagsCommand.Parameters.Add("@Class", DbType.Int64);
-					var updateTagsValue = updateTagsCommand.Parameters.Add("@Value", DbType.String);
-
-					var deleteTagsId = deleteTagsCommand.Parameters.Add("@Id", DbType.Int64);
-
-					#endregion
-					
-					selectCommand.Prepare();
-					insertCommand.Prepare();
-					updateCommand.Prepare();
-
-					selectTagsCommand.Prepare();
-					insertTagsCommand.Prepare();
-					updateTagsCommand.Prepare();
-					deleteTagsCommand.Prepare();
-
-					var procValidateId = new Action<long>(c =>
-					{
-						if (c <= 0)
-							throw new ArgumentException($"Invalid ServerId '{c}'.");
-					});
-					var procValidateNr = new Action<string>(c =>
-					{
-						if (String.IsNullOrEmpty(c))
-							throw new ArgumentException($"Invalid Nr '{c}'.");
-					});
-
-					while (enumerator.MoveNext())
-					{
-						using (var transaction = localStore.BeginTransaction(IsolationLevel.ReadCommitted))
-						{
-							// update the transaction
-							selectCommand.Transaction =
-								insertCommand.Transaction =
-								updateCommand.Transaction =
-								selectTagsCommand.Transaction =
-								 insertTagsCommand.Transaction =
-								 updateTagsCommand.Transaction =
-								 deleteTagsCommand.Transaction = transaction;
-
-							selectTagsObjectId.Value = DBNull.Value;
-
-							#region -- upsert on objects -> selectTagsObjectId get filled --
-
-							// find the current element
-							selectGuid.Value = enumerator.GetValue(indexGuid, Guid.Empty, c =>
-								{
-									if (c == Guid.Empty)
-										throw new ArgumentNullException("Invalid empty guid.");
-								}
-							);
-
-							bool objectExists;
-							using (var r = selectCommand.ExecuteReader(CommandBehavior.SingleRow))
-							{
-								if (r.Read())
-								{
-									selectTagsObjectId.Value =
-										updateId.Value = r.GetInt64(0);
-									objectExists = true;
-								}
-								else
-									objectExists = false;
-							}
-
-							// upsert
-							if (objectExists)
-							{
-								updateServerId.Value = enumerator.GetValue(indexId, -1, procValidateId);
-								updateNr.Value = enumerator.GetValue(indexNr, String.Empty, procValidateNr);
-								updateRevId.Value = enumerator.GetValue(indexRevId, -1).DbNullIf(-1);
-
-								updateCommand.ExecuteNonQuery();
-							}
-							else
-							{
-								insertServerId.Value = enumerator.GetValue(indexId, -1, procValidateId);
-								insertGuid.Value = selectGuid.Value;
-								insertNr.Value = enumerator.GetValue(indexNr, String.Empty, procValidateNr);
-								insertTyp.Value = enumerator.GetValue(indexTyp, String.Empty).DbNullIfString();
-								insertRevId.Value = enumerator.GetValue(indexRevId, -1).DbNullIf(-1);
-
-								insertCommand.ExecuteNonQuery();
-
-								selectTagsObjectId.Value = localStore.LastInsertRowId;
-							}
-							#endregion
-
-							#region -- upsert tabs --
-
-							var tagDataString = enumerator.GetValue<string>(indexTags, null);
-							if (tagDataString != null)
-							{
-								var tagData = XDocument.Parse(tagDataString);
-
-								// update tags
-								using (var r = selectTagsCommand.ExecuteReader(CommandBehavior.SingleResult))
-								{
-									var updatedTags = new List<string>();
-
-									while (r.Read())
-									{
-										var tagKey = r.GetString(1);
-										var tagClass = r.GetInt64(2);
-										var tagValue = r.GetString(3);
-
-										var xSource = tagData.Root.Element(tagKey);
-										if (xSource != null) // source exists, compare the value
-										{
-											var otherClass = xSource.GetAttribute("c", 0);
-											var otherValue = xSource.Value;
-											if (!String.IsNullOrEmpty(otherValue))
-											{
-												if (otherClass != tagClass && tagValue != otherValue) // -> update
-												{
-													updateTagsId.Value = r.GetInt64(0);
-													updateTagsClass.Value = otherClass;
-													updateTagsValue.Value = otherValue;
-												}
-
-												updatedTags.Add(tagKey);
-											}
-											else
-											{
-												deleteTagsId.Value = r.GetInt64(0);
-												deleteTagsCommand.ExecuteNonQuery();
-											}
-										} // if xSource
-										else
-										{
-											deleteTagsId.Value = r.GetInt64(0);
-											deleteTagsCommand.ExecuteNonQuery();
-										}
-									} // while r
-								} // using r
-
-								// insert all tags, they are not touched
-								foreach (var xSource in tagData.Root.Elements())
-								{
-									var tagValue = xSource.Value;
-									if (!String.IsNullOrEmpty(tagValue))
-									{
-										insertTagsObjectId.Value = selectTagsObjectId.Value;
-										insertTagsKey.Value = xSource.Name.LocalName;
-										insertTagsClass.Value = xSource.GetAttribute("c", 0);
-										insertTagsValue.Value = tagValue;
-										insertTagsCommand.ExecuteNonQuery();
-									}
-								}
-							} // if tagData
-
-							#endregion
-							
-							transaction.Commit();
-						} // while enumerator
-					}
-				}
-			} // using prepare
-		} // proc UpdateDocumentStore
-
-
-
 		/// <summary>Override to support a better stream of the locally stored data.</summary>
 		/// <param name="arguments"></param>
 		/// <returns></returns>
 		public override IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
 		{
+
 			var sb = new StringBuilder("remote/?action=viewget&v=");
 			sb.Append(arguments.ViewId);
 
@@ -1220,9 +1012,6 @@ namespace TecWare.PPSn.Data
 
 		//#endregion
 
-		public override IDataRow GetDetailedData(long objectId, string typ)
-		{
-			return null;
-		} // func GetDetailedData
+		public SQLiteConnection LocalConnection => localStore;
 	} // class PpsLocalDataStore
 }
