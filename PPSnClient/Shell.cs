@@ -63,7 +63,6 @@ namespace TecWare.PPSn
       this.ViewId = copy.ViewId;
 			this.Filter = copy.Filter;
 			this.Order = copy.Order;
-			this.Detailed = copy.Detailed;
 			this.Start = copy.Start;
 			this.Count = copy.Count;
 		} // ctor
@@ -71,7 +70,6 @@ namespace TecWare.PPSn
 		public string ViewId { get; }
 		public string Filter { get; set; }
 		public string Order { get; set; }
-		public bool Detailed { get; set; } = false;
 		public int Start { get; set; } = -1;
 		public int Count { get; set; } = -1;
 

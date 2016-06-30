@@ -38,14 +38,33 @@ namespace TecWare.PPSn.Data
 		/// <summary>nor(a) - invert result</summary>
 		NOr,
 
-		/// <summary>#</summary>
-		Number,
-		/// <summary>"" or base64</summary>
-		Fulltext,
+		/// <summary>compare expression with his own, user friendly syntax</summary>
+		Compare,
 
 		/// <summary>The value contains a native expression.</summary>
-		Native
+		Native,
+
+		/// <summary>Neutral</summary>
+		True
 	} // enum PpsDataFilterExpressionType
+
+	#endregion
+
+	#region -- enum PpsDataFilterCompareOperator ----------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public enum PpsDataFilterCompareOperator
+	{
+		Contains,
+		NotContains,
+		Equal,
+		NotEqual,
+		Greater,
+		GreaterOrEqual,
+		Lower,
+		LowerOrEqual
+	} // enum PpsDataFilterCompareOperator
 
 	#endregion
 
@@ -62,9 +81,24 @@ namespace TecWare.PPSn.Data
 			this.method = method;
 		} // ctor
 
+		public abstract void ToString(StringBuilder sb);
+
+		public override string ToString()
+		{
+			var sb = new StringBuilder();
+			ToString(sb);
+			return sb.ToString();
+		} // func ToString
+
 		public PpsDataFilterExpressionType Type => method;
 
 		// -- Static --------------------------------------------------------------
+
+		private static bool IsLetterOrDigit(char c)
+			=> c == '_' || Char.IsLetterOrDigit(c);
+
+		private static bool TestExpressionCharacter(string expression, int offset, char c)
+			=> offset < expression.Length && expression[offset] == c;
 
 		private static void SkipWhiteSpaces(string filterExpression, ref int offset)
 		{
@@ -74,17 +108,11 @@ namespace TecWare.PPSn.Data
 
 		private static void ParseIdentifier(string filterExpression, ref int offset)
 		{
-			while (offset < filterExpression.Length && Char.IsLetterOrDigit(filterExpression[offset]))
+			while (offset < filterExpression.Length && IsLetterOrDigit(filterExpression[offset]))
 				offset++;
 		} // func ParseIdentifier
 
-		private static void ParseToUnescaped(string filterExpression, char eof, ref int offset)
-		{
-			while (offset < filterExpression.Length && filterExpression[offset] != eof)
-				offset++;
-		} // func ParseToUnescaped
-
-		private static string ParseConstant(string filterExpression, ref int offset)
+		private static string ParseEscaped(string filterExpression, char quote, ref int offset)
 		{
 			var sb = new StringBuilder();
 			var escape = false;
@@ -94,7 +122,7 @@ namespace TecWare.PPSn.Data
 				var c = filterExpression[offset];
 				if (escape)
 				{
-					if (c == '"')
+					if (c == quote)
 						sb.Append(c);
 					else
 					{
@@ -102,7 +130,7 @@ namespace TecWare.PPSn.Data
 						return sb.ToString();
 					}
 				}
-				else if (c == '"')
+				else if (c == quote)
 					escape = true;
 				else
 					sb.Append(c);
@@ -113,138 +141,515 @@ namespace TecWare.PPSn.Data
 			return sb.ToString();
 		} // func ParseConstant
 
-		private static string DecodeBase64(string filterExpression, int startAt, int count)
+		private static PpsDataFilterCompareValue ParseCompareValue(string expression, ref int offset)
 		{
-			var b = Convert.FromBase64String(filterExpression.Substring(startAt, count));
-			return Encoding.UTF8.GetString(b, 0, b.Length);
-		} // func DecodeBase64
+			PpsDataFilterCompareValue value;
 
-		private static PpsDataFilterExpressionType GetFilterType(string filterExpression, int startAt, int count)
-		{
-			foreach (var c in typeof(PpsDataFilterExpressionType).GetTypeInfo().DeclaredFields)
+			if (offset >= expression.Length || Char.IsWhiteSpace(expression[offset]))
 			{
-				if (c.IsStatic && c.IsPublic && String.Compare(filterExpression, startAt, c.Name, 0, count, StringComparison.OrdinalIgnoreCase) == 0)
-					return (PpsDataFilterExpressionType)c.GetValue(null);
+				value = PpsDataFilterCompareNullValue.Default;
 			}
-			return PpsDataFilterExpressionType.None;
-		} // func GetFilterType
-
-		private static PpsDataFilterExpression Parse(string filterExpression, ref int offset, Func<string, string> lookupToken)
-		{
-			// use a simple syntax
-			//   expr = identifier | command '(' expr ',' ... ')' | '\'base64'\' | '"' chars '"'
-
-			SkipWhiteSpaces(filterExpression, ref offset);
-			if (offset >= filterExpression.Length)
-				return null;
-
-			if (filterExpression[offset] == '"') // constant
+			else if (expression[offset] == '"' || expression[offset] == '\'')
 			{
-				return new PpsDataFilterConstantExpression(PpsDataFilterExpressionType.Fulltext, ParseConstant(filterExpression, ref offset));
+				var text = ParseEscaped(expression, expression[offset], ref offset);
+				value = String.IsNullOrEmpty(text) ? PpsDataFilterCompareNullValue.Default : new PpsDataFilterCompareTextValue(text);
 			}
-			else if (filterExpression[offset] == '\'') // base64 constant
+			else if (expression[offset] == '#')
 			{
 				offset++;
-				var startAt = offset;
-				ParseToUnescaped(filterExpression, '\'', ref offset);
-				var endAt = offset;
-				offset++;
-
-				return new PpsDataFilterConstantExpression(PpsDataFilterExpressionType.Native, DecodeBase64(filterExpression, startAt, endAt - startAt));
-			}
-			else if (Char.IsLetter(filterExpression[offset])) // identifier
-			{
-				var startAt = offset;
-				ParseIdentifier(filterExpression, ref offset);
-				var endAt = offset;
-
-
-				SkipWhiteSpaces(filterExpression, ref offset);
-
-				if (offset < filterExpression.Length && filterExpression[offset] == '(') // command
-				{
-					var method = GetFilterType(filterExpression, startAt, endAt - startAt);
-					if (method == PpsDataFilterExpressionType.None)
-						throw new Exception("parse??"); // todo: parse at error
-
+				var startAt2 = offset;
+				while (offset < expression.Length && (!Char.IsWhiteSpace(expression[offset]) && expression[offset] != '#'))
 					offset++;
-					var exprList = new List<PpsDataFilterExpression>();
-					while (true)
-					{
-						exprList.Add(Parse(filterExpression, ref offset, lookupToken));
-						SkipWhiteSpaces(filterExpression, ref offset);
-						if (offset >= filterExpression.Length)
-							break;
-						else if (filterExpression[offset] == ')')
-						{
-							offset++;
-							break;
-						}
-						else if (filterExpression[offset] == ',')
-							offset++;
-						else
-							throw new Exception("parse??"); // todo: parse at error
-					}
 
-					return new PpsDataFilterMultiExpression(method, exprList.ToArray());
-				}
-				else // native expression by keyword
+				if (TestExpressionCharacter(expression, offset, '#')) // date filter
 				{
-					var tok = filterExpression.Substring(startAt, endAt - startAt);
-					var nativeExpression = lookupToken(tok);
-					if (nativeExpression == null)
-						return new PpsDataFilterConstantExpression(PpsDataFilterExpressionType.Fulltext, tok);
-					else
-						return new PpsDataFilterConstantExpression(PpsDataFilterExpressionType.Native, nativeExpression);
+					offset++;
+					value = PpsDataFilterCompareDateValue.Create(expression, startAt2, offset - startAt2 - 1);
 				}
+				else if (startAt2 < offset) // Number filter
+					value = new PpsDataFilterCompareNumberValue(expression.Substring(startAt2, offset - startAt2));
+				else // null
+					value = PpsDataFilterCompareNullValue.Default;
 			}
 			else
-				throw new Exception("parse??"); // todo: parse at error
-		} // func Parse
+			{
+				var startAt2 = offset;
+				while (offset < expression.Length && !Char.IsWhiteSpace(expression[offset]))
+					offset++;
+				value = startAt2 < offset ? new PpsDataFilterCompareTextValue(expression.Substring(startAt2, offset - startAt2)) : PpsDataFilterCompareNullValue.Default;
+			}
 
-		public static PpsDataFilterExpression Parse(string filterExpression, int offset, Func<string, string> lookupToken)
-			=> Parse(filterExpression, ref offset, lookupToken);
+			return value;
+		} // func PareCompareValue
+
+		private static PpsDataFilterCompareOperator ParseCompareOperator(string expression, ref int offset)
+		{
+			var op = PpsDataFilterCompareOperator.Contains;
+
+			if (offset < expression.Length)
+			{
+				if (expression[offset] == '<')
+				{
+					offset++;
+					if (TestExpressionCharacter(expression, offset, '='))
+					{
+						offset++;
+						op = PpsDataFilterCompareOperator.LowerOrEqual;
+					}
+					else
+						op = PpsDataFilterCompareOperator.Lower;
+				}
+				else if (expression[offset] == '>')
+				{
+					offset++;
+					if (TestExpressionCharacter(expression, offset, '='))
+					{
+						offset++;
+						op = PpsDataFilterCompareOperator.GreaterOrEqual;
+					}
+					else
+						op = PpsDataFilterCompareOperator.Greater;
+				}
+				else if (expression[offset] == '=')
+				{
+					offset++;
+					op = PpsDataFilterCompareOperator.Equal;
+				}
+				else if (expression[offset] == '!')
+				{
+					offset++;
+					if (TestExpressionCharacter(expression, offset, '='))
+					{
+						offset++;
+						op = PpsDataFilterCompareOperator.NotEqual;
+					}
+					else
+						op = PpsDataFilterCompareOperator.NotContains;
+				}
+			}
+
+			return op;
+		} // func ParseCompareOperator
+
+		private static bool IsStartCompareOperation(string expression, int startAt, int offset, Func<string, string> lookupToken, out string identifier)
+		{
+			if (offset > startAt && TestExpressionCharacter(expression, offset, ':'))
+			{
+				identifier = expression.Substring(startAt, offset - startAt - 1);
+				if (lookupToken != null)
+					identifier = lookupToken(identifier);
+				return !String.IsNullOrEmpty(identifier);
+			}
+			else
+			{
+				identifier = null;
+				return false;
+			}
+		} // func IsStartCompareOperation
+
+		private static bool IsStartLogicOperation(string expression, int startAt, int offset, out PpsDataFilterExpressionType type)
+		{
+			var count = offset - startAt;
+
+			if (count <= 0 || !TestExpressionCharacter(expression, offset, '('))
+				count = 0;
+
+			switch (count)
+			{
+				case 2:
+					if (String.Compare(expression, startAt, "OR", 0, count, StringComparison.OrdinalIgnoreCase) == 0)
+					{
+						type = PpsDataFilterExpressionType.Or;
+						return true;
+					}
+					goto default;
+				case 3:
+					if (String.Compare(expression, startAt, "AND", 0, count, StringComparison.OrdinalIgnoreCase) == 0)
+					{
+						type = PpsDataFilterExpressionType.And;
+						return true;
+					}
+					else if (String.Compare(expression, startAt, "NOR", 0, count, StringComparison.OrdinalIgnoreCase) == 0)
+					{
+						type = PpsDataFilterExpressionType.NOr;
+						return true;
+					}
+					goto default;
+				case 4:
+					if (String.Compare(expression, startAt, "NAND", 0, count, StringComparison.OrdinalIgnoreCase) == 0)
+					{
+						type = PpsDataFilterExpressionType.NAnd;
+						return true;
+					}
+					goto default;
+				default:
+					type = PpsDataFilterExpressionType.None;
+					return false;
+			}
+		} // func IsStartLogicOperation
+
+		private static bool IsStartNativeReference(string expression, int startAt, int offset, Func<string, string> lookupNative, out string identifier, out string nativeExpression)
+		{
+			if (offset > startAt && TestExpressionCharacter(expression, offset, ':'))
+			{
+				identifier = expression.Substring(startAt, offset - startAt - 1);
+				nativeExpression = lookupNative(identifier);
+				return true;
+			}
+			else
+			{
+				identifier = null;
+				nativeExpression = null;
+				return false;
+			}
+		} // func IsStartNativeReference
+
+		private static PpsDataFilterExpression ParseExpression(string expression, PpsDataFilterExpressionType inLogic, ref int offset, Func<string, string> lookupNative,  Func<string, string> lookupToken)
+		{
+			/*  expr ::=
+			 *		identifier ( ':' [ '<' | '>' | '<=' | '>=' | '!' | '!=' ) value
+			 *		[ 'and' | 'or' | 'nand' | 'nor' ] '(' expr { SP ... } [ ')' ]
+			 *		':' native ':'
+			 *		value
+			 *	
+			 *	base is always an AND concation
+			 */
+			if (expression == null)
+				return PpsDataFilterTrueExpression.True;
+
+			var returnLogic = inLogic == PpsDataFilterExpressionType.None ? PpsDataFilterExpressionType.And : inLogic;
+			var compareExpressions = new List<PpsDataFilterExpression>();
+			while (offset < expression.Length)
+			{
+				SkipWhiteSpaces(expression, ref offset);
+
+				if (TestExpressionCharacter(expression, offset, ')'))
+				{
+					offset++;
+					if (inLogic != PpsDataFilterExpressionType.None)
+						break;
+				}
+
+				var startAt = offset;
+				string identifier;
+				string nativeExpression;
+				PpsDataFilterExpressionType newLogic;
+
+				// check for native reference
+				var nativeRef = TestExpressionCharacter(expression, offset, ':');
+				if (nativeRef)
+					offset++;
+				
+				// check for an identifier
+				ParseIdentifier(expression, ref offset);
+				if (IsStartLogicOperation(expression, startAt, offset, out newLogic))
+				{
+					offset++;
+					var expr = ParseExpression(expression, newLogic, ref offset, lookupNative, lookupToken);
+
+					// optimize: concat same sub expression
+					if (expr.Type == returnLogic)
+						compareExpressions.AddRange(((PpsDataFilterLogicExpression)expr).Arguments);
+					else if (expr != PpsDataFilterTrueExpression.True)
+						compareExpressions.Add(expr);
+				}
+				else if (!nativeRef && IsStartCompareOperation(expression, startAt, offset, lookupToken, out identifier)) // compare operation
+				{
+					offset++; // step over the colon
+
+					// check for operator, nothing means contains
+					if (offset < expression.Length && !Char.IsWhiteSpace(expression[offset]))
+					{
+						var op = ParseCompareOperator(expression, ref offset); // parse the operator
+						var value = ParseCompareValue(expression, ref offset); // parse the value
+
+						// create expression
+						compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, op, value));
+					}
+					else // is nothing
+						compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, PpsDataFilterCompareOperator.Equal, null));
+				}
+				else if (nativeRef && IsStartNativeReference(expression, startAt, offset, lookupNative, out identifier, out nativeExpression)) // native reference
+				{
+					offset++;
+					compareExpressions.Add(new PpsDataFilterNativeExpression(identifier, nativeExpression));
+				}
+				else
+				{
+					var value = ParseCompareValue(expression, ref offset);
+					if (value != PpsDataFilterCompareNullValue.Default)
+						compareExpressions.Add(new PpsDataFilterCompareExpression(null, PpsDataFilterCompareOperator.Contains, value));
+				}
+			}
+
+			// generate expression
+			if (compareExpressions.Count == 0)
+			{
+				if (inLogic != PpsDataFilterExpressionType.NAnd && inLogic != PpsDataFilterExpressionType.NOr)
+					return new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.NAnd, PpsDataFilterTrueExpression.True);
+				else
+					return PpsDataFilterTrueExpression.True;
+			}
+			else if (compareExpressions.Count == 1 && (inLogic != PpsDataFilterExpressionType.NAnd && inLogic != PpsDataFilterExpressionType.NOr))
+				return compareExpressions[0];
+			else
+				return new PpsDataFilterLogicExpression(returnLogic, compareExpressions.ToArray());
+		} // func ParseExpression
+
+		public static PpsDataFilterExpression Parse(string filterExpression, int offset, Func<string, string> lookupNative, Func<string, string> lookupAttribute)
+			=> ParseExpression(filterExpression, PpsDataFilterExpressionType.None, ref offset, lookupNative, lookupAttribute);
 	} // class PpsDataFilterExpression
 
 	#endregion
 
-	#region -- class PpsDataFilterConstantExpression ------------------------------------
+	#region -- class PpsDataFilterNativeExpression --------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsDataFilterConstantExpression : PpsDataFilterExpression
+	public sealed class PpsDataFilterNativeExpression : PpsDataFilterExpression
 	{
+		private readonly string key;
 		private readonly string expression;
 
-		public PpsDataFilterConstantExpression(PpsDataFilterExpressionType method, string expression)
+		public PpsDataFilterNativeExpression(string key, string expression)
 			: base(PpsDataFilterExpressionType.Native)
 		{
-			switch (method)
-			{
-				case PpsDataFilterExpressionType.Native:
-				case PpsDataFilterExpressionType.Number:
-				case PpsDataFilterExpressionType.Fulltext:
-					break;
-				default:
-					throw new ArgumentException("method is wrong.");
-			}
+			this.key = key;
 			this.expression = expression;
 		} // ctor
 
+		public override void ToString(StringBuilder sb)
+		{
+			sb.Append(key);
+		} // func ToString
+
+		public string Key => key;
 		public string Expression => expression;
-	} // class PpsDataFilterConstantExpression
+	} // class PpsDataFilterNativeExpression
 
 	#endregion
 
-	#region -- class PpsDataFilterMultiExpression ---------------------------------------
+	#region -- class PpsDataFilterTrueExpression ----------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsDataFilterMultiExpression : PpsDataFilterExpression
+	public sealed class PpsDataFilterTrueExpression : PpsDataFilterExpression
+	{
+		private PpsDataFilterTrueExpression()
+			: base(PpsDataFilterExpressionType.True)
+		{
+		} // ctor
+
+		public override void ToString(StringBuilder sb) { }
+
+		public static PpsDataFilterExpression True => new PpsDataFilterTrueExpression();
+	} // class PpsDataFilterTrueExpression
+
+	#endregion
+
+	#region -- class PpsDataFilterCompareValue ------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public abstract class PpsDataFilterCompareValue
+	{
+		public abstract void ToString(StringBuilder sb);
+
+		public override string ToString()
+		{
+			var sb = new StringBuilder();
+			ToString(sb);
+			return sb.ToString();
+		} // func ToString
+	} // class PpsDataFilterCompareValue
+
+	#endregion
+
+	#region -- class PpsDataFilterCompareNullValue --------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class PpsDataFilterCompareNullValue : PpsDataFilterCompareValue
+	{
+		private PpsDataFilterCompareNullValue()
+		{
+		} // ctor
+
+		public override void ToString(StringBuilder sb) { }
+
+		public static PpsDataFilterCompareValue Default { get; } = new PpsDataFilterCompareNullValue();
+	} // class PpsDataFilterCompareNullValue
+
+	#endregion
+
+	#region -- class PpsDataFilterCompareTextValue --------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class PpsDataFilterCompareTextValue : PpsDataFilterCompareValue
+	{
+		private readonly string text;
+
+		public PpsDataFilterCompareTextValue(string text)
+		{
+			this.text = text;
+		} // ctor
+
+		public override void ToString(StringBuilder sb)
+		{
+			var offset = 0;
+			while (offset < text.Length && (!Char.IsWhiteSpace(text[offset]) && text[offset] != '"'))
+				offset++;
+
+			if (offset == text.Length)
+				sb.Append(text);
+			else
+			{
+				sb.Append('"');
+				sb.Append(text, 0, offset);
+				for (; offset < text.Length; offset++)
+					if (text[offset] == '"')
+						sb.Append("\"\"");
+					else
+						sb.Append(text[offset]);
+				sb.Append('"');
+			}
+		} // proc ToString
+
+		public string Text => text;
+	} // class PpsDataFilterCompareTextValue
+
+	#endregion
+
+	#region -- class PpsDataFilterCompareDateValue --------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class PpsDataFilterCompareDateValue : PpsDataFilterCompareValue
+	{
+		private readonly DateTime from;
+		private readonly DateTime to;
+
+		public PpsDataFilterCompareDateValue(DateTime from, DateTime to)
+		{
+			this.from = from;
+			this.to = to;
+		} // ctor
+
+		public override void ToString(StringBuilder sb)
+		{
+			throw new NotImplementedException();
+		}
+
+		public DateTime From => from;
+		public DateTime To => to;
+
+		// -- Static ----------------------------------------------------------------------
+
+		internal static PpsDataFilterCompareValue Create(string expression, int startAt2, int v)
+		{
+			throw new NotImplementedException();
+		}
+	} // class PpsDataFilterCompareDateValue
+
+	#endregion
+
+	#region -- class PpsDataFilterCompareNumberValue ------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class PpsDataFilterCompareNumberValue : PpsDataFilterCompareValue
+	{
+		private readonly string text;
+
+		public PpsDataFilterCompareNumberValue(string text)
+		{
+			this.text = text;
+		} // ctor
+
+		public override void ToString(StringBuilder sb)
+		{
+			sb.Append('#')
+				.Append(text);
+		} // proc ToString
+
+		public string Text => text;
+	} // class PpsDataFilterCompareNumberValue
+
+	#endregion
+
+	#region -- class PpsDataFilterCompareExpression -------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class PpsDataFilterCompareExpression : PpsDataFilterExpression
+	{
+		private readonly string operand;
+		private readonly PpsDataFilterCompareOperator op;
+		private readonly PpsDataFilterCompareValue value; // String, DateTime
+
+		public PpsDataFilterCompareExpression(string operand, PpsDataFilterCompareOperator op, PpsDataFilterCompareValue value)
+			:base (PpsDataFilterExpressionType.Compare)
+		{
+			if (value == null)
+				throw new ArgumentNullException("value");
+
+			this.operand = operand;
+			this.op = op;
+			this.value = value;
+		} // ctor
+
+		public override void ToString(StringBuilder sb)
+		{
+			if (String.IsNullOrEmpty(operand))
+			{
+				value.ToString(sb);
+			}
+			else
+			{
+				sb.Append(operand)
+					.Append(':');
+				switch (op)
+				{
+					case PpsDataFilterCompareOperator.Equal:
+						sb.Append('=');
+						break;
+					case PpsDataFilterCompareOperator.NotEqual:
+						sb.Append('!');
+						break;
+					case PpsDataFilterCompareOperator.Greater:
+						sb.Append('>');
+						break;
+					case PpsDataFilterCompareOperator.GreaterOrEqual:
+						sb.Append(">=");
+						break;
+					case PpsDataFilterCompareOperator.Lower:
+						sb.Append('<');
+						break;
+					case PpsDataFilterCompareOperator.LowerOrEqual:
+						sb.Append("<=");
+						break;
+				}
+				value.ToString(sb);
+			}
+		} // func ToString
+
+		public string Operand => operand;
+		public PpsDataFilterCompareOperator Operator => op;
+		public object Value => value;
+	} // class PpsDataFilterCompareExpression
+
+	#endregion
+	
+	#region -- class PpsDataFilterLogicExpression ---------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class PpsDataFilterLogicExpression : PpsDataFilterExpression
 	{
 		private readonly PpsDataFilterExpression[] arguments;
 
-		public PpsDataFilterMultiExpression(PpsDataFilterExpressionType method, PpsDataFilterExpression[] arguments)
+		public PpsDataFilterLogicExpression(PpsDataFilterExpressionType method, params PpsDataFilterExpression[] arguments)
 			: base(method)
 		{
 			switch (method)
@@ -257,12 +662,47 @@ namespace TecWare.PPSn.Data
 				default:
 					throw new ArgumentException("method is wrong.");
 			}
+			if (arguments == null || arguments.Length < 1)
+				throw new ArgumentNullException("arguments");
 
 			this.arguments = arguments;
 		} // ctor
 
+		public override void ToString(StringBuilder sb)
+		{
+			switch (Type)
+			{
+				case PpsDataFilterExpressionType.And:
+					sb.Append("and");
+					break;
+				case PpsDataFilterExpressionType.Or:
+					sb.Append("or");
+					break;
+				case PpsDataFilterExpressionType.NAnd:
+					sb.Append("nand");
+					break;
+				case PpsDataFilterExpressionType.NOr:
+					sb.Append("nor");
+					break;
+				default:
+					throw new ArgumentException("method is wrong.");
+			}
+			sb.Append('(');
+
+			arguments[0].ToString(sb);
+
+			for (var i = 1; i < arguments.Length; i++)
+			{
+				sb.Append(',');
+				arguments[0].ToString(sb);
+			}
+
+			sb.Append(')');
+
+		} // func ToString
+
 		public PpsDataFilterExpression[] Arguments => arguments;
-	} // class PpsDataFilterMultiExpression
+	} // class PpsDataFilterLogicExpression
 
 	#endregion
 
@@ -273,16 +713,24 @@ namespace TecWare.PPSn.Data
 	public abstract class PpsDataFilterVisitor<T>
 		where T : class
 	{
-		public abstract T CreateFilter(PpsDataFilterExpressionType method, string expression);
+		public abstract T CreateTrueFilter();
 
-		public abstract T CreateFilter(PpsDataFilterExpressionType method, IEnumerable<T> arguments);
+		public abstract T CreateNativeFilter(PpsDataFilterNativeExpression expression);
+
+		public abstract T CreateCompareFilter(PpsDataFilterCompareExpression expression);
+
+		public abstract T CreateLogicFilter(PpsDataFilterExpressionType method, IEnumerable<T> arguments);
 
 		public virtual T CreateFilter(PpsDataFilterExpression expression)
 		{
-			if (expression is PpsDataFilterConstantExpression)
-				return CreateFilter(expression.Type, ((PpsDataFilterConstantExpression)expression).Expression);
-			else if (expression is PpsDataFilterMultiExpression)
-				return CreateFilter(expression.Type, from c in ((PpsDataFilterMultiExpression)expression).Arguments select CreateFilter(c));
+			if (expression is PpsDataFilterNativeExpression)
+				return CreateNativeFilter((PpsDataFilterNativeExpression)expression);
+			else if (expression is PpsDataFilterLogicExpression)
+				return CreateLogicFilter(expression.Type, from c in ((PpsDataFilterLogicExpression)expression).Arguments select CreateFilter(c));
+			else if (expression is PpsDataFilterCompareExpression)
+				return CreateCompareFilter((PpsDataFilterCompareExpression)expression);
+			else if (expression is PpsDataFilterTrueExpression)
+				return CreateTrueFilter();
 			else
 				throw new NotImplementedException();
 		} // func CreateFilter
@@ -313,7 +761,7 @@ namespace TecWare.PPSn.Data
 
 		// -- Static --------------------------------------------------------------
 
-		public static IEnumerable<PpsDataOrderExpression> Parse(string order, int v, Func<string, string> findNativeOrder)
+		public static IEnumerable<PpsDataOrderExpression> Parse(string order, Func<string, string> findNativeOrder)
 		{
 			var orderTokens = order.Split(',');
 			foreach (var _tok in orderTokens)
@@ -321,7 +769,7 @@ namespace TecWare.PPSn.Data
 				if (String.IsNullOrEmpty(_tok))
 					continue;
 
-				var tok = _tok;
+				var tok = _tok.Trim();
 				var neg = false;
 				if (tok[0] == '+')
 				{

@@ -811,8 +811,7 @@ namespace TecWare.PPSn.Data
 		public PpsDataTable Table { get { return table; } internal set { table = value; } }
 
 		// todo: Implement missing functionality. Change PpsDataTable > PpsDataTableDefinition > PpsDataTableMetaCollection > PpsMetaCollection implementation. ?Expectation: "IDataColumn[] IDataColumns.Columns = table.Columns;"?
-		IDataColumn[] IDataColumns.Columns => columnsArray.Value;
-		int IDataColumns.ColumnCount => table.Columns.Count;
+		IReadOnlyList<IDataColumn> IDataColumns.Columns => columnsArray.Value;
 
 		// -- Static --------------------------------------------------------------
 

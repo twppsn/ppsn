@@ -235,21 +235,23 @@ namespace TecWare.PPSn.Data
 			// Fetch the lines
 			var currentIndex = loadedCount;
 			var fetchedRows = 0;
-			foreach (var c in shell.GetViewData(fetchSource))
+			foreach (var row in shell.GetViewData(fetchSource))
 			{
 				// All lines are simple lua tables
 				var t = new LuaTable();
 
 				// copy the columns
-				for (int i = 0; i < c.ColumnCount; i++)
+				var i = 0;
+				foreach (var c in row.Columns)
 				{
-					if (c[i] != null)
-						t[c.Columns[i].Name] = c[i];
+					if (c != null)
+						t[c.Name] = row[i];
+					i++;
 				}
 
-				// are more data available
-				if (fetchSource.Detailed)
-					t["isLoading"] = false;
+				// todo: are more data available
+				//if (shell.IsOnline)
+				//	t["isLoading"] = false;
 
 
 				// update the data
@@ -338,8 +340,13 @@ namespace TecWare.PPSn.Data
 			// Update the table, and finish loading
 			if (r != null)
 			{
-				for (int i = 0; i < r.ColumnCount; i++)
-					item[r.Columns[i].Name] = r[i];
+				var i = 0;
+				foreach (var c in r.Columns)
+				{
+					if (c != null)
+						item[c.Name] = r[i];
+					i++;
+				}
 			}
 			item.isLoading = false;
 
