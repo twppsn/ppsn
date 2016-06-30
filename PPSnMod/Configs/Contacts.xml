@@ -8,7 +8,7 @@
 			<pps:field name="sds.Kont.Id" />
 			<pps:field name="sds.Kont.Name" />
 			
-			<!-- menü eintrag
+			<!-- menü eintrag für online daten praktisch?
 			<pps:view name="contacts" displayName="Kontakte">
 				<pps:source type="select">
 					<![CDATA[
@@ -23,8 +23,6 @@
 								inner join sds.Kont k on (o.Id = k.ObjkId)
 							where Typ = 'KO']]>
 				</pps:source>
-
-				<pps:attribute name="WpfMenuItem">true</pps:attribute>
 			</pps:view> -->
 
 			<!-- contacts mask -->
@@ -43,6 +41,24 @@
 		</pps:register>
 
 		<pps:wpf name="wpf">
+			<pps:view name="ko" displayName="Kontakt" view="local.objects" filter="Typ:=KO">
+				<pps:filter name="lief" displayName="Lieferanten">
+					<![CDATA[ KundNr:! ]]>
+				</pps:filter>
+				<pps:filter name="kund" displayName="Kunden">
+					<![CDATA[ LiefNr:! ]]>
+				</pps:filter>
+				<pps:filter name="rest" displayName="Sonstige">
+					<![CDATA[ LiefNr:!, KundNr:! ]]>
+				</pps:filter>
+				<pps:order name="nr" displayName="Nummer">
+					<![CDATA[ +Nr ]]>
+				</pps:order>
+				<pps:order name="nr" displayName="LiefNummer">
+					<![CDATA[ +LIEFNR ]]>
+				</pps:order>
+			</pps:view>
+			
 			<pps:action name="contactNew" displayName="Neue Kontakt" priority="100">
 				<pps:condition><![CDATA[ return CurrentView == Views["contacts"]; ]]></pps:condition>
 				<pps:code><![CDATA[ LoadMask{ document = '/contacts' }; ]]></pps:code>
@@ -50,6 +66,7 @@
 		</pps:wpf>
 
 		<pps:document name="ko" dataset="contactsDataSet" displayname="Contacts">
+			
 		</pps:document>
 	</pps:ppsn>
 </fragment>

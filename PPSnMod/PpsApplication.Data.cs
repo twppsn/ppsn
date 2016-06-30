@@ -304,10 +304,7 @@ namespace TecWare.PPSn.Server
 					xDefinition.GetAttribute("displayName", (string)null),
 					xDefinition.Elements(xnFilter).Select(x => new PpsViewParameterDefinition(x)).ToArray(),
 					xDefinition.Elements(xnOrder).Select(x => new PpsViewParameterDefinition(x)).ToArray(),
-					xDefinition.Elements(xnAttribute).ToPropertyDictionary(
-						new KeyValuePair<string, Type>("displayImage", typeof(string)),
-						new KeyValuePair<string, Type>("WpfMenuItem", typeof(bool))
-					)
+					xDefinition.Elements(xnAttribute).ToPropertyDictionary()
 				);
 
 				return view;
@@ -633,7 +630,7 @@ namespace TecWare.PPSn.Server
 					string[] columnNames = null;
 					if (columnDefinition != null)
 					{
-						columnNames = new string[columnDefinition.ColumnCount];
+						columnNames = new string[columnDefinition.Columns.Count];
 
 						xml.WriteStartElement("fields");
 						for (var i = 0; i < columnNames.Length; i++)

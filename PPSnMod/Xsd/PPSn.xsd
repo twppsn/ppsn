@@ -394,6 +394,98 @@
 			<xs:complexContent>
 				<xs:extension base="ConfigItemType">
 					<xs:sequence minOccurs="0" maxOccurs="unbounded">
+						<xs:element name="view" minOccurs="0" maxOccurs="unbounded">
+							<xs:annotation>
+								<xs:documentation>Creates a view for the wpf navigator</xs:documentation>
+							</xs:annotation>
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="condition" minOccurs="0" maxOccurs="1" type="xs:string">
+										<xs:annotation>
+											<xs:documentation>Visible Condition for the command.</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:sequence  minOccurs="0" maxOccurs="unbounded">
+										<xs:element name="filter" minOccurs="0" maxOccurs="unbounded">
+											<xs:complexType>
+												<xs:simpleContent>
+													<xs:extension base="xs:string">
+														<xs:attribute name="name" type="KeyType" use="required">
+															<xs:annotation>
+																<xs:documentation></xs:documentation>
+															</xs:annotation>
+														</xs:attribute>
+														<xs:attribute name="displayName" type="xs:string" use="optional">
+															<xs:annotation>
+																<xs:documentation></xs:documentation>
+															</xs:annotation>
+														</xs:attribute>
+														<xs:attribute name="priority" type="xs:int" use="optional">
+															<xs:annotation>
+																<xs:documentation></xs:documentation>
+															</xs:annotation>
+														</xs:attribute>
+													</xs:extension>
+												</xs:simpleContent>
+											</xs:complexType>
+										</xs:element>
+										<xs:element name="order" minOccurs="0" maxOccurs="unbounded">
+											<xs:complexType>
+												<xs:simpleContent>
+													<xs:extension base="xs:string">
+														<xs:attribute name="name" type="KeyType" use="required">
+															<xs:annotation>
+																<xs:documentation></xs:documentation>
+															</xs:annotation>
+														</xs:attribute>
+														<xs:attribute name="displayName" type="xs:string" use="optional">
+															<xs:annotation>
+																<xs:documentation></xs:documentation>
+															</xs:annotation>
+														</xs:attribute>
+														<xs:attribute name="priority" type="xs:int" use="optional">
+															<xs:annotation>
+																<xs:documentation></xs:documentation>
+															</xs:annotation>
+														</xs:attribute>
+													</xs:extension>
+												</xs:simpleContent>
+											</xs:complexType>
+										</xs:element>
+									</xs:sequence>
+								</xs:sequence>
+								<xs:attribute name="name" type="KeyType" use="required">
+									<xs:annotation>
+										<xs:documentation>Name for command mode + shortcut.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="displayName" type="xs:string" use="required">
+									<xs:annotation>
+										<xs:documentation>Displayname of the view.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="displayGlyph" type="xs:string" use="optional">
+									<xs:annotation>
+										<xs:documentation>Displayimage of the view.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="view" type="xs:string" use="required">
+									<xs:annotation>
+										<xs:documentation>View for the data list</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="filter" type="xs:string" use="optional">
+									<xs:annotation>
+										<xs:documentation>Prefilter of the view.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="securityToken" type="xs:string" use="optional">
+									<xs:annotation>
+										<xs:documentation>Security</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+							</xs:complexType>
+						</xs:element>
 						<xs:element name="action" minOccurs="0" maxOccurs="unbounded">
 							<xs:complexType>
 								<xs:sequence>

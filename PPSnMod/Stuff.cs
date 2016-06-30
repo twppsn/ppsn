@@ -65,6 +65,13 @@ namespace TecWare.PPSn.Server
 			xml.WriteAttributeString(targetPropertyName ?? propertyName, value);
 		} // proc WriteProperty
 
+		public static void WriteAttributeString(this XmlWriter xml, XElement x, XName attributeName, string targetAttributeName = null)
+		{
+			var attr = x?.Attribute(attributeName);
+			if (attr != null)
+				xml.WriteAttributeString(targetAttributeName ?? attributeName.LocalName, attr.Value);
+		} // proc WriteAttributeString
+
 		public static IPropertyReadOnlyDictionary ToPropertyDictionary(this IEnumerable<XElement> attributes, params KeyValuePair<string, Type>[] wellKnownProperties)
 		{
 			var props = new PropertyDictionary();
@@ -84,7 +91,7 @@ namespace TecWare.PPSn.Server
 				props.SetProperty(propertyName, dataType, x.Value);
 			}
 			return props;
-		} // func IPropertyReadOnlyDictionary 
+		} // func IPropertyReadOnlyDictionary
 
 		#endregion
 	} // class PpsStuff

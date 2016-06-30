@@ -26,57 +26,6 @@ using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server.Sql
 {
-	#region -- class DynamicDataRow -----------------------------------------------------
-
-	public abstract class DynamicDataRow : IDataRow
-	{
-		public virtual bool TryGetProperty(string columnName, out object value)
-		{
-			value = null;
-
-			try
-			{
-				if (String.IsNullOrEmpty(columnName))
-					return false;
-
-				if (Columns == null || Columns.Length < 1)
-					return false;
-
-				if (Columns.Length != ColumnCount)
-					return false;
-
-				var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
-				if (index == -1)
-					return false;
-
-				value = this[index];
-				return true;
-			} // try
-			catch
-			{
-				return false;
-			} // catch
-		} // func TryGetProperty
-
-		public virtual object this[string columnName]
-		{
-			get
-			{
-				var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
-				if (index == -1)
-					throw new ArgumentException(String.Format("Column with name \"{0}\" not found.", columnName ?? "null"));
-				return this[index];
-			}
-		} // prop this
-
-		public abstract object this[int index] { get; }
-
-		public abstract int ColumnCount { get; }
-		public abstract IDataColumn[] Columns { get; }
-	} // class DynamicDataRow
-
-	#endregion
-
 	#region -- class PpsSqlDataSource ---------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////

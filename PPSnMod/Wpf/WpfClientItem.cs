@@ -663,38 +663,57 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#region -- ParseNavigator ---------------------------------------------------------
 
+		private void WriteSubItem(XmlWriter xml, string name, XElement x,ref int priority)
+		{
+			var displayName = x.GetAttribute("displayName", String.Empty);
+			if (String.IsNullOrEmpty(displayName))
+				return;
+
+			xml.WriteStartElement(name);
+			xml.WriteAttributeString("name", x.GetAttribute("name", displayName));
+			xml.WriteAttributeString("displayName", displayName);
+
+			var tmp = x.GetAttribute("priority", 0);
+			if (tmp != 0)
+				priority = tmp;
+			xml.WriteAttributeString("priority", priority.ToString());
+
+			xml.WriteCData(x.Value);
+			xml.WriteEndElement();
+		} // proc WriteSubItem
+
 		private void ParseNavigator(IDEContext r)
 		{
 			using (XmlWriter xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml), Procs.XmlWriterSettings))
 			{
 				xml.WriteStartElement("navigator");
-				
-				foreach (var v in application.GetViewDefinitions())
+								
+				foreach (var view in Config.Elements(PpsStuff.xnView))
 				{
-					// export only views
-					if (!v.IsVisible || // they are visible
-							!v.Attributes.GetProperty("WpfMenuItem", false) || // have a menu selector
-							!r.TryDemandToken(v.SecurityToken)) // and are accessable
+					var viewId = view.GetAttribute("view", String.Empty);
+					var displayName = view.GetAttribute("displayName", String.Empty);
+
+					if (String.IsNullOrEmpty(viewId) ||  // viewId exists
+							String.IsNullOrEmpty(displayName) || // displayName exists
+							!r.TryDemandToken(view.GetAttribute("securityToken", String.Empty))) // and is accessable
 						continue;
 					
 					// write the attributes
 					xml.WriteStartElement("view");
-					xml.WriteAttributeString("id", v.Name);
-					xml.WriteAttributeString("displayName", v.DisplayName);
-					xml.WriteProperty(v.Attributes, "shortcut");
-					xml.WriteProperty(v.Attributes, "displayImage");
+					xml.WriteAttributeString("name", view.GetAttribute("name", String.Empty));
+					xml.WriteAttributeString("displayName", displayName);
+					xml.WriteAttributeString("view", viewId);
+
+					xml.WriteAttributeString(view, "filter");
+					xml.WriteAttributeString(view, "displayGlyph");
 
 					// write filters and orders
-					foreach (var f in v.Filter)
-					{
-						if (f.IsVisible)
-							f.WriteElement(xml, "filter");
-					}
-					foreach (var o in v.Order)
-					{
-						if (o.IsVisible)
-							o.WriteElement(xml, "order");
-					}
+					var priority = 1;
+					foreach (var f in view.Elements(PpsStuff.xnFilter))
+						WriteSubItem(xml, "filter", f, ref priority);
+					priority = 1;
+					foreach (var f in view.Elements(PpsStuff.xnOrder))
+						WriteSubItem(xml, "order", f, ref priority);
 
 					xml.WriteEndElement();
 				} // foreach v
@@ -707,22 +726,20 @@ namespace TecWare.PPSn.Server.Wpf
 					var displayName = x.GetAttribute<string>("displayName", null);
 					var securityToken = x.GetAttribute<string>("securityToken", null);
 
-					if (String.IsNullOrEmpty(displayName) || !r.TryDemandToken(securityToken))
+					if (String.IsNullOrEmpty(displayName) || 
+							!r.TryDemandToken(securityToken))
 						continue;
 					
 					xml.WriteStartElement("action");
 
-					var name = x.GetAttribute<string>("name", displayName);
-					var displayGlyph = x.GetAttribute<string>("displayGlyph", displayName);
 					var priority = x.GetAttribute<int>("priority", posPriority);
 
 					var code = x.Element(PpsStuff.xnWpfCode)?.Value;
 					var condition = x.Element(PpsStuff.xnWpfCondition)?.Value;
 					
-					xml.WriteAttributeString("name", name);
+					xml.WriteAttributeString("name", x.GetAttribute<string>("name", displayName));
 					xml.WriteAttributeString("displayName", displayName);
-					if (!String.IsNullOrEmpty(displayGlyph))
-						xml.WriteAttributeString("displayGlyph", displayGlyph);
+					xml.WriteAttributeString(x, "displayGlyph");
 
 					posPriority = priority +1;
 					xml.WriteAttributeString("priority", priority.ToString());

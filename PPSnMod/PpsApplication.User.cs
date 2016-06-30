@@ -481,11 +481,11 @@ namespace TecWare.PPSn.Server
 
 				// apply filter rules
 				if (!String.IsNullOrWhiteSpace(filter))
-					selector = selector.ApplyFilter(PpsDataFilterExpression.Parse(filter, 0, tok => viewInfo.Filter.FirstOrDefault(c => String.Compare(c.Name, tok, StringComparison.OrdinalIgnoreCase) == 0)?.Parameter));
+					selector = selector.ApplyFilter(PpsDataFilterExpression.Parse(filter, 0, tok => viewInfo.Filter.FirstOrDefault(c => String.Compare(c.Name, tok, StringComparison.OrdinalIgnoreCase) == 0)?.Parameter, null));
 
 				// apply order
 				if (!String.IsNullOrWhiteSpace(order))
-					selector = selector.ApplyOrder(PpsDataOrderExpression.Parse(order, 0, tok => viewInfo.Order.FirstOrDefault(c => String.Compare(c.Name, tok, StringComparison.OrdinalIgnoreCase) == 0)?.Parameter));
+					selector = selector.ApplyOrder(PpsDataOrderExpression.Parse(order, tok => viewInfo.Order.FirstOrDefault(c => String.Compare(c.Name, tok, StringComparison.OrdinalIgnoreCase) == 0)?.Parameter));
 
 				return selector;
 			} // func CreateSelector

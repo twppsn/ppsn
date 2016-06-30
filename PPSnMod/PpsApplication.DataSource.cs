@@ -71,7 +71,7 @@ namespace TecWare.PPSn.Server
 				var columns = selector as IDataColumns;
 				if (columns != null)
 				{
-					columnDescriptions = new IPpsColumnDescription[columns.ColumnCount];
+					columnDescriptions = new IPpsColumnDescription[columns.Columns.Count];
 					for (var i = 0; i < columnDescriptions.Length; i++)
 						columnDescriptions[i] = selector.GetFieldDescription(columns.Columns[i].Name);;
 				}

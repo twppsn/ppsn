@@ -54,10 +54,12 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\PPSnCore\PPSnCore\Data\DbRowEnumerator.cs">
+      <Link>Data\DbRowEnumerator.cs</Link>
+    </Compile>
     <Compile Include="Data\Contracts.cs" />
     <Compile Include="Data\PpsDataSetServer.cs" />
     <Compile Include="Data\PpsDataTransaction.cs" />
-    <Compile Include="Data\DbRowEnumerator.cs" />
     <Compile Include="PpsApplication.cs" />
     <Compile Include="PpsApplication.Documents.cs" />
     <Compile Include="PpsApplication.User.cs" />

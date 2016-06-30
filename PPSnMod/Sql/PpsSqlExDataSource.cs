@@ -337,21 +337,12 @@ namespace TecWare.PPSn.Server.Sql
 				{
 				} // ctor
 
-				public override string CreateFilter(PpsDataFilterExpressionType method, string expression)
+				public override string CreateCompareFilter(PpsDataFilterCompareExpression expression)
 				{
-					switch (method)
-					{
-						case PpsDataFilterExpressionType.Native:
-							return "(" + expression.Trim() + ")";
-						case PpsDataFilterExpressionType.Number:
-						case PpsDataFilterExpressionType.Fulltext:
-							throw new NotImplementedException();
-						default:
-							throw new InvalidOperationException();
-					}
-				} // func CreateFilter
+					throw new NotImplementedException();
+				} // func CreateCompareFilter
 
-				public override string CreateFilter(PpsDataFilterExpressionType method, IEnumerable<string> arguments)
+				public override string CreateLogicFilter(PpsDataFilterExpressionType method, IEnumerable<string> arguments)
 				{
 					switch (method)
 					{
@@ -360,13 +351,19 @@ namespace TecWare.PPSn.Server.Sql
 						case PpsDataFilterExpressionType.Or:
 							return "(" + String.Join(" OR ", arguments.Where(c => !String.IsNullOrEmpty(c))) + ")";
 						case PpsDataFilterExpressionType.NAnd:
-							return "not " + CreateFilter(PpsDataFilterExpressionType.And, arguments);
+							return "not " + CreateLogicFilter(PpsDataFilterExpressionType.And, arguments);
 						case PpsDataFilterExpressionType.NOr:
-							return "not " + CreateFilter(PpsDataFilterExpressionType.Or, arguments);
+							return "not " + CreateLogicFilter(PpsDataFilterExpressionType.Or, arguments);
 						default:
 							throw new InvalidOperationException();
 					}
-				} // func CreateFilter
+				} // func CreateLogicFilter
+
+				public override string CreateNativeFilter(PpsDataFilterNativeExpression expression)
+					=> "(" + expression.Expression.Trim() + ")";
+
+				public override string CreateTrueFilter()
+					=> "(1=1)";
 			} // class SqlDataFilterVisitor
 
 			#endregion
