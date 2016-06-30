@@ -67,7 +67,7 @@ namespace TecWare.PPSn
 
   ///////////////////////////////////////////////////////////////////////////////
   /// <summary></summary>
-  public class PpsMainEnvironment : PpsEnvironment
+  public partial class PpsMainEnvironment : PpsEnvironment
 	{
 		private readonly App app;
 		private PpsEnvironmentCollection<PpsMainActionDefinition> actions;
@@ -81,9 +81,6 @@ namespace TecWare.PPSn
 			this.actions = new PpsEnvironmentCollection<PpsMainActionDefinition>(this);
 			this.views = new PpsEnvironmentCollection<PpsMainViewDefinition>(this);
 		} // ctor
-
-		protected override PpsLocalDataStore CreateLocalDataStore()
-			=> new PpsMainLocalStore(this);
 
 		protected override bool ShowLoginDialog(PpsClientLogin clientLogin)
 		{
@@ -99,7 +96,7 @@ namespace TecWare.PPSn
 		{
 			await base.RefreshAsync();
 			if (IsOnline && IsAuthentificated)
-				await Task.Run(new Action(((PpsMainLocalStore)LocalStore).UpdateDocumentStore));
+				await Task.Run(new Action(UpdateDocumentStore));
 
 			await RefreshNavigatorAsync();
 		} // proc RefreshAsync

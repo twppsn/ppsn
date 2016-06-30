@@ -11,20 +11,12 @@ using System.Xml.Linq;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 
-namespace TecWare.PPSn.Data
+namespace TecWare.PPSn
 {
-	#region -- class PpsMainLocalStore ------------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	internal sealed class PpsMainLocalStore : PpsLocalDataStore
+	public partial class PpsMainEnvironment
 	{
-		public PpsMainLocalStore(PpsEnvironment environment)
-			: base(environment)
-		{
-		} // ctor
-
 		#region -- UpdateDocumentStore ----------------------------------------------------
 
 		public void UpdateDocumentStore()
@@ -35,7 +27,7 @@ namespace TecWare.PPSn.Data
 			// get last rev id
 			//"RevId:>0"
 
-			using (var enumerator = Environment.GetViewData(new PpsShellGetList("dbo.objects") { Filter = null }).GetEnumerator())
+			using (var enumerator = GetViewData(new PpsShellGetList("dbo.objects") { Filter = null }).GetEnumerator())
 			{
 				var indexId = enumerator.FindColumnIndex("Id", true);
 				var indexGuid = enumerator.FindColumnIndex("Guid", true);
@@ -168,6 +160,7 @@ namespace TecWare.PPSn.Data
 
 							#region -- upsert tabs --
 
+							var updatedTags = new List<string>();
 							var tagDataString = enumerator.GetValue<string>(indexTags, null);
 							if (tagDataString != null)
 							{
@@ -176,8 +169,6 @@ namespace TecWare.PPSn.Data
 								// update tags
 								using (var r = selectTagsCommand.ExecuteReader(CommandBehavior.SingleResult))
 								{
-									var updatedTags = new List<string>();
-
 									while (r.Read())
 									{
 										var tagKey = r.GetString(1);
@@ -217,11 +208,12 @@ namespace TecWare.PPSn.Data
 								// insert all tags, they are not touched
 								foreach (var xSource in tagData.Root.Elements())
 								{
+									var tagKey = xSource.Name.LocalName;
 									var tagValue = xSource.Value;
-									if (!String.IsNullOrEmpty(tagValue))
+									if (!String.IsNullOrEmpty(tagValue) && !updatedTags.Exists(c => String.Compare(c, tagKey, StringComparison.OrdinalIgnoreCase) == 0))
 									{
 										insertTagsObjectId.Value = selectTagsObjectId.Value;
-										insertTagsKey.Value = xSource.Name.LocalName;
+										insertTagsKey.Value = tagKey;
 										insertTagsClass.Value = xSource.GetAttribute("c", 0);
 										insertTagsValue.Value = tagValue;
 										insertTagsCommand.ExecuteNonQuery();
@@ -531,7 +523,7 @@ order by t_liefnr.value desc
 			return data != null;
 		} // func TryGetStaticItem
 
-		public override bool TryGetOfflineItem(string path, bool onlineMode, out string contentType, out Stream data)
+		protected override bool TryGetOfflineItem(string path, bool onlineMode, out string contentType, out Stream data)
 		{
 			var r = base.TryGetOfflineItem(path, onlineMode, out contentType, out data);
 			if (r)
@@ -554,7 +546,5 @@ order by t_liefnr.value desc
 			else
 				return base.GetViewData(arguments);
 		} // func GetViewData
-	} // class PpsMainLocalStore
-
-	#endregion
-}
+	} // class PpsMainEnvironment
+	}

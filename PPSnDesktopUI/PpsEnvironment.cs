@@ -41,18 +41,6 @@ using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
-	#region -- interface IPpsIdleAction -------------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Implementation for a idle action.</summary>
-	public interface IPpsIdleAction
-	{
-		/// <summary>Gets called on application idle start.</summary>
-		void OnIdle();
-	} // interface IPpsIdleAction
-
-	#endregion
-
 	#region -- enum PpsClientAuthentificationType ---------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -308,65 +296,22 @@ namespace TecWare.PPSn
 	/// <summary>Base class for application data. Holds information about view
 	/// classes, exception, connection, synchronisation and the script 
 	/// engine.</summary>
-	public partial class PpsEnvironment : LuaGlobalPortable, IPpsShell, IDisposable
+	public partial class PpsEnvironment : LuaGlobalPortable, IPpsShell, IServiceProvider, IDisposable
 	{
-		public const string EnvironmentService = "PpsEnvironmentService";
-
-		#region -- class PpsWebRequestCreate ----------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private class PpsWebRequestCreate : IWebRequestCreate
-		{
-			private readonly WeakReference<PpsEnvironment> environment;
-
-			public PpsWebRequestCreate(PpsEnvironment environment)
-			{
-				this.environment = new WeakReference<PpsEnvironment>(environment);
-			} // ctor
-
-			public WebRequest Create(Uri uri)
-			{
-				PpsEnvironment env;
-				if (environment.TryGetTarget(out env))
-					return env.CreateWebRequest(uri);
-				else
-					throw new ObjectDisposedException("Environment does not exists anymore.");
-			}
-		} // class PpsWebRequestCreate
-
-		#endregion
-
-		/// <summary></summary>
-		public event EventHandler IsOnlineChanged;
 		/// <summary></summary>
 		public event EventHandler UsernameChanged;
 
-		private readonly int environmentId;            // unique id of the environment
+		private readonly int environmentId;						// unique id of the environment
 		private readonly PpsEnvironmentInfo info;     // source information of the environment
-		private readonly Uri baseUri;                 // internal uri for the environment
 
 		private ICredentials userInfo;  // currently credentials of the user
 		private string userName;				// display name of the user
-
-		private readonly BaseWebRequest request;
-		private readonly PpsLocalDataStore localStore;
-		private bool isOnline = false;
-
-		private LuaCompileOptions luaOptions = LuaDeskop.StackTraceCompileOptions;
-
-		private Dispatcher currentDispatcher; // Synchronisation
-		private InputManager inputManager;
-		private SynchronizationContext synchronizationContext;
-		private ResourceDictionary mainResources;
 
 		private PpsTraceLog logData = new PpsTraceLog();
 		private PpsDataListTemplateSelector dataListTemplateSelector;
 		private PpsEnvironmentCollection<PpsDataListItemDefinition> templateDefinitions;
 
-		private DispatcherTimer idleTimer;
-		private List<WeakReference<IPpsIdleAction>> idleActions = new List<WeakReference<IPpsIdleAction>>();
-		private PreProcessInputEventHandler preProcessInputEventHandler;
+		private readonly List<object> services = new List<object>();
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -379,6 +324,8 @@ namespace TecWare.PPSn
 				throw new ArgumentNullException("mainResources");
 
 			this.info = info;
+
+			// create ui stuff
 			this.mainResources = mainResources;
 			this.currentDispatcher = Dispatcher.CurrentDispatcher;
 			this.inputManager = InputManager.Current;
@@ -386,22 +333,22 @@ namespace TecWare.PPSn
 			this.dataListTemplateSelector = new PpsDataListTemplateSelector(this);
 			this.templateDefinitions = new PpsEnvironmentCollection<PpsDataListItemDefinition>(this);
 
-			// Enable Trace Access
+			// enable trace access
 			BindingOperations.EnableCollectionSynchronization(logData, logData.SyncRoot,
 				(collection, context, accessMethod, writeAccess) => currentDispatcher.Invoke(accessMethod)
 			);
 
 			// Start idle implementation
-			idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), currentDispatcher);
+			this.idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), currentDispatcher);
 			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer();
 
 			// Register internal uri
 			lock (environmentCounterLock)
 				this.environmentId = environmentCounter++;
-			baseUri = new Uri($"http://environment{environmentId}.local");
-			localStore = CreateLocalDataStore();
-			WebRequest.RegisterPrefix(baseUri.ToString(), new PpsWebRequestCreate(this));
 
+			// initialize local store
+			this.baseUri = InitProxy();
+			this.localStore = InitLocalStore();
 			request = new BaseWebRequest(baseUri, Encoding);
 
 			// Register Service
@@ -413,25 +360,58 @@ namespace TecWare.PPSn
 			Dispose(true);
 		} // proc Dispose
 
-		protected virtual PpsLocalDataStore CreateLocalDataStore()
-			=> new PpsLocalDataStore(this);
-
 		protected virtual void Dispose(bool disposing)
 		{
 			if (disposing)
 			{
+				services.ForEach(serv => (serv as IDisposable)?.Dispose());
+
 				mainResources.Remove(EnvironmentService);
 				
 				inputManager.PreProcessInput -= preProcessInputEventHandler;
 
 				// close handles
-				localStore.Dispose();
 				Lua.Dispose();
+				// dispose local store
+				localStore?.Dispose();
 			}
 		} // proc Dispose
 
 		#endregion
 
+		#region -- Services ---------------------------------------------------------------
+
+		public void RegisterService(string key, object service)
+		{
+			if (services.Exists(c => c.GetType() == service.GetType()))
+				throw new InvalidOperationException("service");
+			if (this.ContainsKey(key))
+				throw new InvalidOperationException("key");
+
+			// dynamic interface
+			this[key] = service;
+
+			// static interface
+			services.Add(service);
+		} // proc RegisterService
+
+		public object GetService(Type serviceType)
+		{
+			foreach (var service in services)
+			{
+				var r = (service as IServiceProvider)?.GetService(serviceType);
+				if (r != null)
+					return r;
+			}
+
+			if (serviceType.IsAssignableFrom(GetType()))
+				return this;
+
+			return null;
+		} // func GetService
+
+		#endregion
+		
 		#region -- Login/Logout -----------------------------------------------------------
 
 		protected virtual bool ShowLoginDialog(PpsClientLogin clientLogin)
@@ -588,25 +568,6 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		private async Task<Tuple< XDocument,DateTime>> GetXmlDocumentAsync(string path, bool isXaml, bool isOptional)
-		{
-			try
-			{
-				using (var r = await Request.GetResponseAsync(path))
-				using (var xml = Request.GetXmlStreamAsync(r, isXaml ? MimeTypes.Application.Xaml : MimeTypes.Text.Xml))
-				{
-					var dt = DateTime.MinValue;
-					return new Tuple<XDocument, DateTime>(XDocument.Load(xml), dt);
-				}
-			}
-			catch (WebException e)
-			{
-				if (e.Status == WebExceptionStatus.ProtocolError)
-					return null;
-				throw;
-			}
-		} // func GetXmlDocumentAsync
-
 		/// <summary>Loads basic data for the environment.</summary>
 		/// <returns></returns>
 		public async virtual Task RefreshAsync()
@@ -618,383 +579,13 @@ namespace TecWare.PPSn
 			await RefreshTemplatesAsync();
 		} // proc RefreshAsync
 
-		private async Task RefreshOfflineCacheAsync()
-		{
-			if (IsOnline && IsAuthentificated)
-				await Task.Run(new Action(localStore.UpdateOfflineItems));
-		} // RefreshOfflineCacheAsync
-
-		private async Task RefreshDefaultResourcesAsync()
-		{
-			// update the resources, load a server site resource dictionary
-			var t = await GetXmlDocumentAsync("wpf/default.xaml", true, true);
-			if (t == null)
-				return;
-
-			var basicTemplates = t.Item1;
-			var lastTimeStamp = t.Item2;
-
-			// theme/resources
-			var xTheme = basicTemplates.Root;
-
-			// build context
-			var parserContext = new ParserContext();
-			parserContext.AddNamespaces(xTheme);
-
-			UpdateResources(xTheme, parserContext);
-		} // proc RefreshDefaultResourcesAsync
-
-		private async Task RefreshTemplatesAsync()
-		{
-			var t = await GetXmlDocumentAsync("wpf/templates.xaml", true, true);
-			if (t == null)
-				return;
-
-			var xTemplates = t.Item1.Root;
-
-			// build context
-			var parserContext = new ParserContext();
-			parserContext.AddNamespaces(xTemplates);
-
-			// check for a global resource dictionary, and update the main resources
-			UpdateResources(xTemplates, parserContext);
-
-			// load the templates
-			foreach (var x in xTemplates.Elements("template"))
-			{
-				var key = x.GetAttribute("key", String.Empty);
-				if (String.IsNullOrEmpty(key))
-					continue;
-
-				var templateDefinition = templateDefinitions[key];
-				if (templateDefinition == null)
-				{
-					templateDefinition = new PpsDataListItemDefinition(this, key);
-					templateDefinitions.AppendItem(templateDefinition);
-				}
-				templateDefinition.AppendTemplate(x);
-			}
-
-			// remove unused templates
-			// todo:
-		} // proc RefreshTemplatesAsync
-
-		private void UpdateResources(XElement xRoot, ParserContext parserContext)
-		{
-			var xResources = xRoot.Element(StuffUI.PresentationNamespace + "resources");
-			if (xResources != null)
-			{
-				foreach (var cur in xResources.Elements())
-				{
-					var key = cur.GetAttribute(StuffUI.xnKey, String.Empty);
-					if (key != null)
-						Dispatcher.Invoke(() => UpdateResource(key, cur.ToString(), parserContext));
-				}
-			}
-		} // proc UpdateResources
-
-		protected virtual void OnIsOnlineChanged()
-			=> IsOnlineChanged?.Invoke(this, EventArgs.Empty);
-
-		#region -- Idle service -----------------------------------------------------------
-
-		private int IndexOfIdleAction(IPpsIdleAction idleAction)
-		{
-			for (int i = 0; i < idleActions.Count; i++)
-			{
-				IPpsIdleAction t;
-				if (idleActions[i].TryGetTarget(out t) && t == idleAction)
-					return i;
-			}
-			return -1;
-		} // func IndexOfIdleAction
-
-		public void AddIdleAction(IPpsIdleAction idleAction)
-		{
-			if (IndexOfIdleAction(idleAction) == -1)
-				idleActions.Add(new WeakReference<IPpsIdleAction>(idleAction));
-		} // proc AddIdleAction
-
-		public void RemoveIdleAction(IPpsIdleAction idleAction)
-		{
-			var i = IndexOfIdleAction(idleAction);
-			if (i >= 0)
-				idleActions.RemoveAt(i);
-		} // proc RemoveIdleAction
-
-		private void OnIdle()
-		{
-			for (var i = idleActions.Count - 1; i >= 0; i--)
-			{
-				IPpsIdleAction t;
-				if (idleActions[i].TryGetTarget(out t))
-					t.OnIdle();
-				else
-					idleActions.RemoveAt(i);
-			}
-
-			// stop the timer, this function should only called once
-			idleTimer.Stop();
-		} // proc OnIdle
-
-		private void RestartIdleTimer()
-		{
-			if (idleActions.Count > 0)
-			{
-				idleTimer.Stop();
-				idleTimer.Start();
-			}
-		} // proc RestartIdleTimer
-
-		#endregion
-
-		#region -- Data Request -----------------------------------------------------------
-
-		internal WebRequest CreateWebRequestNative(Uri uri, string absolutePath)
-		{
-			var request = WebRequest.Create(info.Uri.ToString() + absolutePath + uri.Query); // todo:
-			request.Credentials = userInfo; // override the current credentials
-			return request;
-		} // func CreateWebRequestNative
-
-		private WebRequest CreateWebRequest(Uri uri)
-		{
-			var useOfflineRequest = !isOnline;
-			var useCache = true;
-			var absolutePath = uri.AbsolutePath;
-
-			// is the local data prefered
-			if (uri.AbsolutePath.StartsWith("/local/"))
-			{
-				absolutePath = absolutePath.Substring(6);
-				useOfflineRequest = true;
-			}
-			else if (uri.AbsolutePath.StartsWith("/remote/"))
-			{
-				absolutePath = absolutePath.Substring(7);
-				useOfflineRequest = false;
-				useCache = false;
-			}
-
-			// create the request
-			if (useOfflineRequest )
-				return localStore.GetRequest(uri, absolutePath);
-			else
-			{
-				return useCache ?
-					localStore.GetCachedRequest(uri, absolutePath) :
-					CreateWebRequestNative(uri, absolutePath);
-			}
-		} // func CreateWebRequest
-		public IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
-			=> localStore.GetViewData(arguments);
-
-		#endregion
-
-		#region -- UI - Helper ------------------------------------------------------------
-
-		void IPpsShell.BeginInvoke(Action action)
-			=> Dispatcher.BeginInvoke(action, DispatcherPriority.ApplicationIdle); // must be idle, that method is invoked after the current changes
-
-		async Task IPpsShell.InvokeAsync(Action action)
-			=> await Dispatcher.InvokeAsync(action);
-
-		async Task<T> IPpsShell.InvokeAsync<T>(Func<T> func)
-			=> await Dispatcher.InvokeAsync<T>(func);
-
-		public void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
-		{
-			// always add the exception to the list
-			Traces.AppendException(exception, alternativeMessage);
-
-			// show the exception if it is not marked as background
-			if ((flags & ExceptionShowFlags.Background) != ExceptionShowFlags.Background)
-			{
-				var dialogOwner = Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
-
-				if (ShowExceptionDialog(dialogOwner, flags, exception, alternativeMessage)) // should follow a detailed dialog
-					ShowTrace(dialogOwner);
-
-				if ((flags & ExceptionShowFlags.Shutown) != 0) // close application
-					Application.Current.Shutdown(1);
-			}
-		} // proc ShowException
-
-		public static bool ShowExceptionDialog(Window dialogOwner, ExceptionShowFlags flags, Exception exception, string alternativeMessage)
-		{
-			var shutDown = (flags & ExceptionShowFlags.Shutown) != 0;
-
-			var dialog = new PpsExceptionDialog();
-			dialog.MessageType = shutDown ? PpsTraceItemType.Fail : PpsTraceItemType.Exception;
-			dialog.MessageText = alternativeMessage ?? exception.Message;
-			dialog.SkipVisible = !shutDown;
-
-			dialog.Owner = dialogOwner;
-			return dialog.ShowDialog() ?? false; // show the dialog
-		} // func ShowExceptionDialog
-
-		public async Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
-			=> await Dispatcher.InvokeAsync(() => ShowException(flags, exception, alternativeMessage));
-
-		/// <summary></summary>
-		/// <param name="owner"></param>
-		public void ShowTrace(Window owner)
-		{
-			var dialog = new PpsTraceDialog();
-			var t = dialog.LoadAsync(this);
-			if (t.IsCompleted)
-				t.Wait();
-			dialog.Owner = owner;
-			dialog.ShowDialog();
-		} // proc ShowTrace
-
-		/// <summary>Returns the pane declaration for the trace pane.</summary>
-		public Type TracePane
-			=> typeof(PpsTracePane);
-
-		#endregion
-
-		#region -- Lua Compiler -----------------------------------------------------------
-
-		public async Task<LuaChunk> CompileAsync(XElement xSource, bool throwException, params KeyValuePair<string, Type>[] arguments)
-		{
-			try
-			{
-				var code = xSource.Value;
-				var fileName = "dummy.lua"; // todo: get position
-				return Lua.CompileChunk(code, fileName, luaOptions, arguments);
-			}
-			catch (LuaParseException e)
-			{
-				if (throwException)
-					throw;
-				else
-				{
-					await ShowExceptionAsync(ExceptionShowFlags.Background, e, "Compile failed.");
-					return null;
-				}
-			}
-		} // func CompileAsync
-
-		/// <summary>Load an compile the file from a remote source.</summary>
-		/// <param name="source">Source</param>
-		/// <param name="throwException">Throw an exception on fail</param>
-		/// <param name="arguments"></param>
-		/// <returns></returns>
-		public async Task<LuaChunk> CompileAsync(Uri source, bool throwException, params KeyValuePair<string, Type>[] arguments)
-		{
-			try
-			{
-				using (var r = await request.GetResponseAsync(source.ToString()))
-				{
-					var contentDisposion = r.GetContentDisposition(true);
-					using (var sr = request.GetTextReaderAsync(r, MimeTypes.Text.Lua))
-						return Lua.CompileChunk(sr, contentDisposion.FileName, luaOptions, arguments);
-				}
-			}
-			catch (LuaParseException e)
-			{
-				if (throwException)
-					throw;
-				else
-				{
-					await ShowExceptionAsync(ExceptionShowFlags.Background, e, $"Compile for {source} failed.");
-					return null;
-				}
-			}
-		} // func CompileAsync
-
-		/// <summary></summary>
-		/// <param name="chunk"></param>
-		/// <param name="env"></param>
-		/// <param name="throwException"></param>
-		/// <param name="arguments"></param>
-		/// <returns></returns>
-		public LuaResult RunScript(LuaChunk chunk, LuaTable env, bool throwException, params object[] arguments)
-		{
-			try
-			{
-				return chunk.Run(env, arguments);
-			}
-			catch (LuaException e)
-			{
-				if (throwException)
-					throw;
-				else
-				{
-					ShowException(ExceptionShowFlags.None, e);
-					return LuaResult.Empty;
-				}
-			}
-		} // func RunScript
-
-		#endregion
-
-		#region -- LuaHelper --------------------------------------------------------------
-
-		/// <summary>Show a simple message box.</summary>
-		/// <param name="text"></param>
-		/// <param name="caption"></param>
-		/// <param name="button"></param>
-		/// <param name="image"></param>
-		/// <param name="defaultResult"></param>
-		/// <returns></returns>
-		[LuaMember("msgbox")]
-		private MessageBoxResult LuaMsgBox(string text, string caption, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
-		{
-			return MessageBox.Show(text, caption ?? "Information", button, image, defaultResult);
-		} // proc LuaMsgBox
-
-		[LuaMember("trace")]
-		private void LuaTrace(PpsTraceItemType type, params object[] args)
-		{
-			if (args == null || args.Length == 0)
-				return;
-
-			if (args[0] is string)
-				Traces.AppendText(type, String.Format((string)args[0], args.Skip(1).ToArray()));
-			else
-				Traces.AppendText(type, String.Join(", ", args));
-		} // proc LuaTrace
-
-		/// <summary>Send a simple notification to the internal log</summary>
-		/// <param name="args"></param>
-		[LuaMember("print")]
-		private void LuaPrint(params object[] args)
-		{
-			LuaTrace(PpsTraceItemType.Information, args);
-		} // proc LuaPrint
-
-		#endregion
-
-		#region -- Resources --------------------------------------------------------------
-
-		public T FindResource<T>(object resourceKey)
-			where T : class
-			=> mainResources[resourceKey] as T;
-
-		private void UpdateResource(string keyString, string xamlSource, ParserContext parserContext)
-		{
-			var resource = XamlReader.Parse(xamlSource, parserContext); // todo: Exception handling
-			mainResources[keyString] = resource;
-		} // func UpdateResource
-
-		#endregion
-
-		/// <summary>Internal Uri of the environment.</summary>
-		public Uri BaseUri => baseUri;
-		/// <summary></summary>
-		public BaseWebRequest Request => request;
-		/// <summary>Default encodig for strings.</summary>
-		public Encoding Encoding => Encoding.Default;
+		public int EnvironmentId => environmentId;
 
 		/// <summary>Local description of the environment.</summary>
 		public PpsEnvironmentInfo Info => info;
 
 		/// <summary>Has the application login data.</summary>
 		public bool IsAuthentificated => userInfo != null;
-		/// <summary>Is <c>true</c>, if the application is online.</summary>
-		public bool IsOnline => isOnline;
 		/// <summary>Current user the is logged in.</summary>
 		public string Username => userName ?? String.Empty;
 		/// <summary>Display name for the user.</summary>
@@ -1012,8 +603,6 @@ namespace TecWare.PPSn
 
 		/// <summary>Access to the current collected informations.</summary>
 		public PpsTraceLog Traces => logData;
-
-		protected PpsLocalDataStore LocalStore => localStore;
 
 		// -- Static --------------------------------------------------------------
 
@@ -1035,7 +624,7 @@ namespace TecWare.PPSn
 	/// <summary>Connects the current table with the Environment</summary>
 	public class LuaEnvironmentTable : LuaTable
 	{
-		private PpsEnvironment environment;
+		private readonly PpsEnvironment environment;
 
 		public LuaEnvironmentTable(PpsEnvironment environment)
 		{

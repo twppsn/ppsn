@@ -1,137 +1,97 @@
-﻿#region -- copyright --
-//
-// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
-// European Commission - subsequent versions of the EUPL(the "Licence"); You may
-// not use this work except in compliance with the Licence.
-//
-// You may obtain a copy of the Licence at:
-// http://ec.europa.eu/idabc/eupl
-//
-// Unless required by applicable law or agreed to in writing, software distributed
-// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
-// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
-// specific language governing permissions and limitations under the Licence.
-//
-#endregion
-using System;
-using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Data;
-using System.Data.Common;
 using System.Data.SQLite;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Xml.Linq;
-using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 
-namespace TecWare.PPSn.Data
+namespace TecWare.PPSn
 {
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public class PpsLocalDataStore : PpsDataStore, IDisposable
+	public partial class PpsEnvironment
 	{
 		private const string TemporaryTablePrefix = "old_";
 
-		#region -- class PpsStoreCacheRequest ---------------------------------------------
+		#region -- class PpsWebRequestCreate ----------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
-		private sealed class PpsStoreCacheRequest : PpsStoreRequest
+		private class PpsWebRequestCreate : IWebRequestCreate
 		{
-			public PpsStoreCacheRequest(PpsLocalDataStore store, Uri uri, string absolutePath)
-				: base(store, uri, absolutePath)
+			private readonly WeakReference<PpsEnvironment> environmentReference;
+
+			public PpsWebRequestCreate(PpsEnvironment environment)
 			{
+				this.environmentReference = new WeakReference<PpsEnvironment>(environment);
 			} // ctor
 
-			public override WebResponse GetResponse()
+			public WebRequest Create(Uri uri)
 			{
-				string contentType;
-				Stream source;
-
-				// is this a static item
-				if (DataStore.TryGetOfflineItem(Path, true, out contentType, out source))
-				{
-					var r = new PpsStoreResponse(this);
-					r.SetResponseData(source, contentType);
-					return r;
-				}
-				else if (DataStore.Environment.IsOnline)
-				{
-					// todo: dynamic cache, copy of properties and headers
-					return DataStore.Environment.CreateWebRequestNative(RequestUri, Path).GetResponse();
-				}
+				PpsEnvironment environment;
+				if (environmentReference.TryGetTarget(out environment))
+					return environment.CreateProxyRequest(uri);
 				else
-					throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, null);
-			} // func GetResponse
-
-			public new PpsLocalDataStore DataStore => (PpsLocalDataStore)base.DataStore;
-		} // class PpsStoreCacheRequest
+					throw new ObjectDisposedException("Environment does not exists anymore.");
+			}
+		} // class PpsWebRequestCreate
 
 		#endregion
 
-		private readonly SQLiteConnection localStore;
+		/// <summary></summary>
+		public event EventHandler IsOnlineChanged;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		private readonly SQLiteConnection localStore;   // local datastore
+		private readonly Uri baseUri;                   // internal uri for this datastore
+		private bool isOnline = false;                  // is there a only connection
 
-		public PpsLocalDataStore(PpsEnvironment environment)
-			: base(environment)
+		private readonly BaseWebRequest request;
+
+		#region -- Init -------------------------------------------------------------------
+
+		private SQLiteConnection InitLocalStore()
 		{
+			SQLiteConnection newLocalStore = null;
+			// open local data store
 			try
 			{
 				// open the local database
-				var dataPath = Path.Combine(environment.Info.LocalPath.FullName, "localStore.db");
-				localStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc");
-				localStore.Open();
-				VerifyLocalStore();
+				var dataPath = Path.Combine(info.LocalPath.FullName, "localStore.db");
+				newLocalStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc");
+				newLocalStore.Open();
+				VerifyLocalStore(newLocalStore);
 			}
 			catch
 			{
-				localStore?.Dispose();
+				newLocalStore?.Dispose();
 				throw;
 			}
-		} // ctor
+			return newLocalStore;
+		} // proc InitLocalStore
 
-		public void Dispose()
-			=> Dispose(true);
-
-		protected virtual void Dispose(bool disposing)
+		private Uri InitProxy()
 		{
-			if (disposing)
-				localStore?.Dispose();
-		} // proc Dispose
+			// register proxy for the web requests
+			var baseUri = new Uri($"http://ppsn{environmentId}.local");
+			WebRequest.RegisterPrefix(baseUri.ToString(), new PpsWebRequestCreate(this));
+			return baseUri;
+		} // func InitProxy
 
 		#endregion
 
-		#region -- GetRequest -------------------------------------------------------------
-
-		public WebRequest GetCachedRequest(Uri uri, string absolutePath)
+		private async Task RefreshOfflineCacheAsync()
 		{
-			return new PpsStoreCacheRequest(this, uri, absolutePath);
-		} // func GetCacheRequest
-
-		protected override void GetResponseDataStream(PpsStoreResponse r)
-		{
-			Stream src;
-			string contentType;
-
-			if (TryGetOfflineItem(r.Request.Path, false, out contentType, out src)) // ask the file from the cache
-				r.SetResponseData(src, contentType);
-			else
-				throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, r);
-		} // proc GetResponseDataStream
-
-		#endregion
+			if (IsOnline && IsAuthentificated)
+				await Task.Run(new Action(UpdateOfflineItems));
+		} // RefreshOfflineCacheAsync
 
 		#region -- VerifyLocalStore -------------------------------------------------------
 
@@ -147,6 +107,8 @@ namespace TecWare.PPSn.Data
 		} // enum ParsingState
 
 		#endregion
+
+		#region -- ParseSQLiteCreateTableCommands -----------------------------------------
 
 		private XElement ParseSQLiteCreateTableCommands(Type type, string resourceName)
 		{
@@ -216,6 +178,10 @@ namespace TecWare.PPSn.Data
 			} // using reader source
 		} // func ParseSQLiteCreateTableCommands
 
+		#endregion
+
+		#region -- VerifyLocalStore -------------------------------------------------------
+
 		protected IEnumerable<Tuple<Type, string>> GetStoreTablesFromAssembly(Type type, string resourceBase)
 		{
 			var resourcePath = type.Namespace + "." + resourceBase + ".";
@@ -230,7 +196,7 @@ namespace TecWare.PPSn.Data
 		protected virtual IEnumerable<Tuple<Type, string>> GetStoreTables()
 			=> GetStoreTablesFromAssembly(typeof(PpsEnvironment), "Scripts").Where(c => !c.Item2.EndsWith("Meta.sql", StringComparison.OrdinalIgnoreCase));
 
-		private void VerifyLocalStore()
+		private void VerifyLocalStore(SQLiteConnection localStore)
 		{
 			using (var transaction = localStore.BeginTransaction())
 			{
@@ -378,6 +344,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		#endregion
+
 		#region -- Offline Data -----------------------------------------------------------
 
 		#region -- class OfflineItemResult ------------------------------------------------
@@ -398,9 +366,9 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		public void UpdateOfflineItems()
+		private void UpdateOfflineItems()
 		{
-			using (var items = Environment.GetViewData(new PpsShellGetList("wpf.sync")).GetEnumerator())
+			using (var items = GetViewData(new PpsShellGetList("wpf.sync")).GetEnumerator())
 			{
 				// find the columns
 				var indexPath = items.FindColumnIndex("Path", true);
@@ -418,7 +386,7 @@ namespace TecWare.PPSn.Data
 					UpdateOfflineItem(path, true,
 						() =>
 						{
-							var response = Environment.Request.GetResponseAsync("/remote/" + path).Result;
+							var response = Request.GetResponseAsync("/remote/" + path).Result;
 							var contentType = response.GetContentType();
 							return new OfflineItemResult(
 								response,
@@ -483,7 +451,7 @@ namespace TecWare.PPSn.Data
 						throw new InvalidOperationException("links are not implemented yet.");
 
 					byte[] contentBytes;
-					using (var src = Environment.Request.GetStreamAsync(content.Response, null))
+					using (var src = Request.GetStreamAsync(content.Response, null))
 						contentBytes = src.ReadInArray(); // simple data into an byte array
 
 					if (content.ContentLength > 0 && content.ContentLength != contentBytes.Length)
@@ -523,7 +491,7 @@ namespace TecWare.PPSn.Data
 			} // transaction
 		} // proc UpdateOfflineItem
 
-		public virtual bool TryGetOfflineItem(string path, bool onlineMode, out string contentType, out Stream data)
+		protected virtual bool TryGetOfflineItem(string path, bool onlineMode, out string contentType, out Stream data)
 		{
 			contentType = null;
 			data = null;
@@ -604,7 +572,7 @@ namespace TecWare.PPSn.Data
 			} // try
 			catch (Exception e)
 			{
-				Environment.Traces.AppendException(e, String.Format("Failed to resolve offline item with path \"{0}\".", path));
+				Traces.AppendException(e, String.Format("Failed to resolve offline item with path \"{0}\".", path));
 				resultData?.Dispose();
 				return false;
 			} // catch e
@@ -616,12 +584,302 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		/// <summary>Override to support a better stream of the locally stored data.</summary>
+		#region -- Web Request ------------------------------------------------------------
+
+		#region -- class PpsStoreRequest --------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		protected class PpsStoreRequest : WebRequest
+		{
+			private readonly PpsEnvironment environment; // owner, that retrieves a resource
+			private readonly Uri uri; // resource
+			private bool aborted = false; // is the request cancelled
+			private Func<WebResponse> procGetResponse; // async GetResponse
+
+			private string path;
+			private WebHeaderCollection headers;
+			private NameValueCollection arguments;
+
+			public PpsStoreRequest(PpsEnvironment environment, Uri uri, string path)
+			{
+				this.environment = environment;
+				this.uri = uri;
+				this.procGetResponse = GetResponse;
+				this.path = path;
+
+				arguments = HttpUtility.ParseQueryString(uri.Query);
+			} // ctor
+
+			#region -- GetResponse --------------------------------------------------------------
+
+			/// <summary>Handles the request async</summary>
+			/// <param name="callback"></param>
+			/// <param name="state"></param>
+			/// <returns></returns>
+			public override IAsyncResult BeginGetResponse(AsyncCallback callback, object state)
+			{
+				if (aborted)
+					throw new WebException("Canceled", WebExceptionStatus.RequestCanceled);
+
+				return procGetResponse.BeginInvoke(callback, state);
+			} // func BeginGetResponse
+
+			/// <summary></summary>
+			/// <param name="asyncResult"></param>
+			/// <returns></returns>
+			public override WebResponse EndGetResponse(IAsyncResult asyncResult)
+			{
+				return procGetResponse.EndInvoke(asyncResult);
+			} // func EndGetResponse
+
+			/// <summary></summary>
+			/// <returns></returns>
+			public override WebResponse GetResponse()
+			{
+				var response = new PpsStoreResponse(this);
+				environment.GetResponseDataStream(response);
+				return response;
+			} // func GetResponse
+
+			#endregion
+
+			public PpsEnvironment Environment => environment;
+
+			public override Uri RequestUri => uri;
+
+			/// <summary>Arguments of the request</summary>
+			public NameValueCollection Arguments => arguments;
+			/// <summary>Relative path for the request.</summary>
+			public string Path => path;
+			/// <summary>Header</summary>
+			public override WebHeaderCollection Headers { get { return headers ?? (headers = new WebHeaderCollection()); } set { headers = value; } }
+
+
+
+
+
+
+
+			public override void Abort()
+			{
+				base.Abort();
+			}
+
+			public override IAsyncResult BeginGetRequestStream(AsyncCallback callback, object state)
+			{
+				return base.BeginGetRequestStream(callback, state);
+			}
+
+			public override Stream EndGetRequestStream(IAsyncResult asyncResult)
+			{
+				return base.EndGetRequestStream(asyncResult);
+			}
+
+			public override Stream GetRequestStream()
+			{
+				return base.GetRequestStream();
+			}
+
+
+			public override string ContentType
+			{
+				get
+				{
+					return base.ContentType;
+				}
+
+				set
+				{
+					base.ContentType = value;
+				}
+			}
+
+			public override long ContentLength
+			{
+				get
+				{
+					return base.ContentLength;
+				}
+				set
+				{
+					base.ContentLength = value;
+				}
+			}
+		} // class PpsStoreRequest
+
+		#endregion
+
+		#region -- class PpsStoreCacheRequest ---------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class PpsStoreCacheRequest : PpsStoreRequest
+		{
+			public PpsStoreCacheRequest(PpsEnvironment environment, Uri uri, string absolutePath)
+				: base(environment, uri, absolutePath)
+			{
+			} // ctor
+
+			public override WebResponse GetResponse()
+			{
+				string contentType;
+				Stream source;
+
+				// is this a static item
+				if (Environment.TryGetOfflineItem(Path, true, out contentType, out source))
+				{
+					var r = new PpsStoreResponse(this);
+					r.SetResponseData(source, contentType);
+					return r;
+				}
+				else if (Environment.IsOnline)
+				{
+					// todo: dynamic cache, copy of properties and headers
+					return Environment.GetOnlineRequest(RequestUri, Path).GetResponse();
+				}
+				else
+					throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, null);
+			} // func GetResponse
+		} // class PpsStoreCacheRequest
+
+		#endregion
+
+		#region -- class PpsStoreResponse ---------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		protected sealed class PpsStoreResponse : WebResponse
+		{
+			private PpsStoreRequest request;
+
+			private Stream src;
+			private string contentType;
+			private long? contentLength = null;
+
+			private WebHeaderCollection headers;
+
+			public PpsStoreResponse(PpsStoreRequest request)
+			{
+				this.request = request;
+				this.headers = new WebHeaderCollection();
+
+				this.src = null;
+				this.contentType = null;
+			} // ctor
+
+			public override void Close()
+			{
+				Procs.FreeAndNil(ref src);
+				contentLength = null;
+				contentType = null;
+				base.Close();
+			} // proc Close
+
+			public void SetResponseData(Stream src, string contentType)
+			{
+				Procs.FreeAndNil(ref this.src);
+
+				this.src = src;
+				this.contentType = contentType;
+			} // proc SetResponseData
+
+			public override Stream GetResponseStream()
+				=> src;
+
+			/// <summary></summary>
+			public override long ContentLength
+			{
+				get { return contentLength ?? (src == null ? -1 : src.Length); }
+				set { contentLength = value; }
+			} // func ContentLength
+
+			/// <summary></summary>
+			public override string ContentType
+			{
+				get { return contentType; }
+				set { contentType = value; }
+			} // prop ContentType
+
+			/// <summary>Headers will be exists</summary>
+			public override bool SupportsHeaders => true;
+			/// <summary>Header</summary>
+			public override WebHeaderCollection Headers => headers;
+
+			/// <summary>Request uri</summary>
+			public override Uri ResponseUri => request.RequestUri;
+			/// <summary>Access to the original request.</summary>
+			public PpsStoreRequest Request => request;
+		} // class PpsStoreResponse
+
+		#endregion
+
+		private WebRequest CreateProxyRequest(Uri uri)
+		{
+			var useOfflineRequest = !isOnline;
+			var useCache = true;
+			var absolutePath = uri.AbsolutePath;
+
+			// is the local data prefered
+			if (uri.AbsolutePath.StartsWith("/local/"))
+			{
+				absolutePath = absolutePath.Substring(6);
+				useOfflineRequest = true;
+			}
+			else if (uri.AbsolutePath.StartsWith("/remote/"))
+			{
+				absolutePath = absolutePath.Substring(7);
+				useOfflineRequest = false;
+				useCache = false;
+			}
+
+			// create the request
+			if (useOfflineRequest)
+				return GetOfflineRequest(uri, absolutePath);
+			else
+			{
+				return useCache ?
+					GetCachedRequest(uri, absolutePath) :
+					GetOnlineRequest(uri, absolutePath);
+			}
+		} // func CreateWebRequest
+
+		private WebRequest GetOfflineRequest(Uri uri, string absolutePath)
+			=> new PpsStoreRequest(this, uri, absolutePath);
+
+		private WebRequest GetCachedRequest(Uri uri, string absolutePath)
+			=> new PpsStoreCacheRequest(this, uri, absolutePath);
+
+		private WebRequest GetOnlineRequest(Uri uri, string absolutePath)
+		{
+			var request = WebRequest.Create(info.Uri.ToString() + absolutePath + uri.Query); // todo:
+			request.Credentials = userInfo; // override the current credentials
+			return request;
+		} // func GetOnlineRequest
+
+		protected virtual void GetResponseDataStream(PpsStoreResponse r)
+		{
+			Stream src;
+			string contentType;
+
+			if (TryGetOfflineItem(r.Request.Path, false, out contentType, out src)) // ask the file from the cache
+				r.SetResponseData(src, contentType);
+			else
+				throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, r);
+		} // proc GetResponseDataStream
+
+		#endregion
+
+		#region -- GetViewData ------------------------------------------------------------
+
+		/// <summary></summary>
 		/// <param name="arguments"></param>
 		/// <returns></returns>
-		public override IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
-		{
+		public virtual IEnumerable<IDataRow> GetViewData(PpsShellGetList arguments)
+			=> GetRemoteViewData(arguments);
 
+		protected IEnumerable<IDataRow> GetRemoteViewData(PpsShellGetList arguments)
+		{
 			var sb = new StringBuilder("remote/?action=viewget&v=");
 			sb.Append(arguments.ViewId);
 
@@ -634,384 +892,35 @@ namespace TecWare.PPSn.Data
 			if (arguments.Count != -1)
 				sb.Append("&c=").Append(arguments.Count);
 
-			return Environment.Request.CreateViewDataReader(sb.ToString());
-
-			//// get the table
-			//string filterExpression = String.Empty;
-			//System.Data.DataTable dt = null;
-
-			//// get the datatable
-			//if (!localData.TryGetValue(arguments.ViewId, out dt))
-			//{
-			//	LoadTestData(@"..\..\..\PPSnDesktop\Local\Data\" + arguments.ViewId + ".xml", ref dt);
-			//	localData[arguments.ViewId] = dt;
-			//}
-
-			//#region Q&D
-			//var filterId = arguments.Filter;
-			//if (!String.IsNullOrEmpty(filterId))
-			//{
-			//	switch (arguments.ViewId.ToLower())
-			//	{
-			//		case "parts":
-			//			if (filterId == "active")
-			//				filterExpression = "TEILSTATUS = '10'";
-			//			else if (filterId == "inactive")
-			//				filterExpression = "TEILSTATUS = '90'";
-			//			break;
-
-			//		case "contacts":
-			//			if (!String.IsNullOrEmpty(filterId))
-			//				if (filterId == "liefonly")
-			//					filterExpression = "DEBNR is null";
-			//				else if (filterId == "kundonly")
-			//					filterExpression = "KREDNR is null";
-			//				else if (filterId == "intonly")
-			//					filterExpression = "1 = 0";
-			//			break;
-			//	}
-			//}
-			//#endregion
-
-			//if (!String.IsNullOrEmpty(arguments.Filter))
-			//{
-			//	if (filterExpression.Length > 0)
-			//		filterExpression += " and OBJKMATCH like '%" + arguments.Filter + "%'";
-			//	else
-			//		filterExpression += "OBJKMATCH like '%" + arguments.Filter + "%'";
-			//}
-
-			//// filter data
-			//var orderDef = arguments.Order;
-			//if (orderDef != null)
-			//	orderDef = orderDef.Replace("+", " asc").Replace("-", " desc");
-
-			//// enumerate lines
-			//using (var dv = new System.Data.DataView(dt, filterExpression, orderDef, System.Data.DataViewRowState.CurrentRows))
-			//	for (int i = 0; i < arguments.Count; i++)
-			//	{
-			//		var index = arguments.Start + i;
-			//		if (index < dv.Count)
-			//			throw new NotImplementedException();
-			//	}
-			//yield break;
-		} // func GetViewData
-
-
-		//#region -- GetOfflineItems --------------------------------------------------------
-
-		//#region -- class LocalStoreColumn -------------------------------------------------
-
-		/////////////////////////////////////////////////////////////////////////////////
-		///// <summary></summary>
-		//private sealed class LocalStoreColumn : IDataColumn
-		//{
-		//	private readonly string name;
-		//	private readonly Type dataType;
-		//	private readonly IPropertyEnumerableDictionary attributes;
-
-		//	#region -- Ctor/Dtor --------------------------------------------------------------
-
-		//	public LocalStoreColumn(string name, Type dataType, IPropertyEnumerableDictionary attributes)
-		//	{
-		//		this.name = name;
-		//		this.dataType = dataType;
-		//		this.attributes = attributes;
-		//	} // ctor
-
-		//	#endregion
-
-		//	#region -- IDataColumn ------------------------------------------------------------
-
-		//	public string Name => name;
-		//	public Type DataType => dataType;
-		//	public IPropertyEnumerableDictionary Attributes => attributes;
-
-		//	#endregion
-		//} // class LocalStoreColumn
-
-		//#endregion
-
-		//#region -- class LocalStoreRow ----------------------------------------------------
-
-		/////////////////////////////////////////////////////////////////////////////////
-		///// <summary></summary>
-		//private sealed class LocalStoreRow : IDataRow
-		//{
-		//	private readonly LocalStoreEnumerator enumerator;
-		//	private readonly object[] values;
-
-		//	#region -- Ctor/Dtor --------------------------------------------------------------
-
-		//	public LocalStoreRow(LocalStoreEnumerator enumerator, object[] values)
-		//	{
-		//		this.enumerator = enumerator;
-		//		this.values = values;
-		//	} // ctor
-
-		//	#endregion
-
-		//	#region -- IDataRow ---------------------------------------------------------------
-
-		//	public bool TryGetProperty(string columnName, out object value)
-		//	{
-		//		value = null;
-
-		//		try
-		//		{
-		//			if (String.IsNullOrEmpty(columnName))
-		//				return false;
-
-		//			if (Columns == null || Columns.Length < 1)
-		//				return false;
-
-		//			if (Columns.Length != ColumnCount)
-		//				return false;
-
-		//			var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
-		//			if (index == -1)
-		//				return false;
-
-		//			value = this[index];
-		//			return true;
-		//		}
-		//		catch
-		//		{
-		//			return false;
-		//		}
-		//	} // func TryGetProperty
-
-		//	public object this[int index] => values[index];
-
-		//	public IDataColumn[] Columns => enumerator.Columns;
-		//	public int ColumnCount => enumerator.ColumnCount;
-
-		//	public object this[string columnName]
-		//	{
-		//		get
-		//		{
-		//			var index = Array.FindIndex(Columns, c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
-		//			if (index == -1)
-		//				throw new ArgumentException(String.Format("Column with name \"{0}\" not found.", columnName ?? "null"));
-		//			return values[index];
-		//		}
-		//	} // prop this
-
-		//	#endregion
-		//} // class LocalStoreRow
-
-		//#endregion
-
-		//#region -- class LocalStoreEnumerator ---------------------------------------------
-
-		/////////////////////////////////////////////////////////////////////////////////
-		///// <summary></summary>
-		//private sealed class LocalStoreEnumerator : IEnumerator<IDataRow>, IDataColumns
-		//{
-		//	#region -- enum ReadingState ------------------------------------------------------
-
-		//	///////////////////////////////////////////////////////////////////////////////
-		//	/// <summary></summary>
-		//	private enum ReadingState
-		//	{
-		//		Unread,
-		//		Partly,
-		//		Complete,
-		//	} // enum ReadingState
-
-		//	#endregion
-
-		//	private bool disposed;
-		//	private readonly SQLiteCommand command;
-		//	private SQLiteDataReader reader;
-		//	private ReadingState state;
-		//	private IDataRow currentRow;
-		//	private Lazy<IDataColumn[]> columns;
-
-		//	#region -- Ctor/Dtor --------------------------------------------------------------
-
-		//	public LocalStoreEnumerator(SQLiteCommand command)
-		//	{
-		//		this.command = command;
-
-		//		columns = new Lazy<IDataColumn[]>(() =>
-		//		{
-		//			CheckDisposed();
-
-		//			if (state == ReadingState.Unread && !MoveNext())
-		//				return null;
-
-		//			if (state != ReadingState.Partly)
-		//				return null;
-
-		//			var tmp = new LocalStoreColumn[reader.FieldCount];
-		//			for (var i = 0; i < reader.FieldCount; i++)
-		//				tmp[i] = new LocalStoreColumn(reader.GetName(i), reader.GetFieldType(i), null);
-		//			return tmp;
-		//		});
-		//	} // ctor
-
-		//	public void Dispose()
-		//		=> Dispose(true);
-
-		//	private void Dispose(bool disposing)
-		//	{
-		//		if (disposed)
-		//			return;
-
-		//		if (disposing)
-		//		{
-		//			command?.Dispose();
-		//			reader?.Dispose();
-		//		}
-
-		//		disposed = true;
-		//	} // proc Dispose
-
-		//	#endregion
-
-		//	private void CheckDisposed()
-		//	{
-		//		if (disposed)
-		//			throw new ObjectDisposedException(typeof(LocalStoreEnumerator).FullName);
-		//	} // proc CheckDisposed
-
-		//	#region -- IEnumerator<T> ---------------------------------------------------------
-
-		//	public bool MoveNext()
-		//	{
-		//		CheckDisposed();
-
-		//		switch (state)
-		//		{
-		//			case ReadingState.Unread:
-		//				if (reader == null)
-		//					reader = command.ExecuteReader(CommandBehavior.SingleResult);
-
-		//				if (!reader.Read())
-		//					goto case ReadingState.Complete;
-
-		//				goto case ReadingState.Partly;
-		//			case ReadingState.Partly:
-		//				if (state == ReadingState.Partly)
-		//				{
-		//					if (!reader.Read())
-		//						goto case ReadingState.Complete;
-		//				}
-		//				else
-		//					state = ReadingState.Partly;
-
-		//				var values = new object[reader.FieldCount];
-		//				for (var i = 0; i < reader.FieldCount; i++)
-		//					values[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
-		//				currentRow = new LocalStoreRow(this, values);
-		//				return true;
-		//			case ReadingState.Complete:
-		//				state = ReadingState.Complete;
-		//				// todo: Dispose command and reader?
-		//				currentRow = null;
-		//				return false;
-		//			default:
-		//				throw new InvalidOperationException("The state of the object is invalid.");
-		//		} // switch state
-		//	} // func MoveNext
-
-		//	void IEnumerator.Reset()
-		//	{
-		//		CheckDisposed();
-		//		if (state != ReadingState.Unread)
-		//			throw new InvalidOperationException("The state of the object forbids the calling of this method.");
-		//	} // proc Reset
-
-		//	public IDataRow Current
-		//	{
-		//		get
-		//		{
-		//			CheckDisposed();
-		//			if (state != ReadingState.Partly)
-		//				throw new InvalidOperationException("The state of the object forbids the retrieval of this property.");
-		//			return currentRow;
-		//		}
-		//	} // prop Current
-
-		//	object IEnumerator.Current => Current;
-
-		//	#endregion
-
-		//	#region -- IDataColumns -----------------------------------------------------------
-
-		//	public IDataColumn[] Columns
-		//	{
-		//		get
-		//		{
-		//			CheckDisposed();
-		//			return columns.Value;
-		//		}
-		//	} // prop Columns
-
-		//	public int ColumnCount
-		//	{
-		//		get
-		//		{
-		//			CheckDisposed();
-		//			return Columns?.Length ?? 0;
-		//		}
-		//	} // prop ColumnCount
-
-		//	#endregion
-		//} // class LocalStoreEnumerator
-
-		//#endregion
-
-		//#region -- class LocalStoreReader -------------------------------------------------
-
-		/////////////////////////////////////////////////////////////////////////////////
-		///// <summary></summary>
-		//private sealed class LocalStoreReader : IEnumerable<IDataRow>
-		//{
-		//	private readonly string commandText;
-		//	private readonly SQLiteConnection connection;
-
-		//	#region -- Ctor/Dtor --------------------------------------------------------------
-
-		//	public LocalStoreReader(string commandText, SQLiteConnection connection)
-		//	{
-		//		this.commandText = commandText;
-		//		this.connection = connection;
-		//	} // ctor
-
-		//	#endregion
-
-		//	#region -- IEnumerable<T> ---------------------------------------------------------
-
-		//	public IEnumerator<IDataRow> GetEnumerator()
-		//	{
-		//		SQLiteCommand command = null;
-		//		try
-		//		{
-		//			command = new SQLiteCommand(commandText, connection);
-		//			return new LocalStoreEnumerator(command);
-		//		}
-		//		catch
-		//		{
-		//			command?.Dispose();
-		//			throw;
-		//		}
-		//	} // func GetEnumerator
-
-		//	IEnumerator IEnumerable.GetEnumerator()
-		//		=> GetEnumerator();
-
-		//	#endregion
-		//} // class LocalStoreReader
-
-		//#endregion
-
-		//public IEnumerable<IDataRow> GetOfflineItems()
-		//	=> new LocalStoreReader("SELECT [Path], [OnlineMode], [ContentType], [ContentEncoding], [ContentSize], [ContentLastModification] FROM [main].[OfflineCache];", localStore);
-
-		//#endregion
-
+			return Request.CreateViewDataReader(sb.ToString());
+		} // func GetRemoteViewData
+
+		#endregion
+
+		protected virtual void OnIsOnlineChanged()
+		{
+			IsOnlineChanged?.Invoke(this, EventArgs.Empty);
+			OnPropertyChanged(nameof(IsOnline));
+		} // proc OnIsOnlineChanged
+
+		/// <summary></summary>
+		public BaseWebRequest Request => request;
+		/// <summary>Default encodig for strings.</summary>
+		public Encoding Encoding => Encoding.Default;
+		/// <summary>Internal Uri of the environment.</summary>
+		public Uri BaseUri => baseUri;
+		/// <summary>Is <c>true</c>, if the application is online.</summary>
+		public bool IsOnline
+		{
+			get { return isOnline; }
+			private set
+			{
+				if (isOnline != value)
+					OnIsOnlineChanged();
+			}
+		} // prop IsOnline
+
+		/// <summary>Connection to the local datastore</summary>
 		public SQLiteConnection LocalConnection => localStore;
-	} // class PpsLocalDataStore
+	} // class PpsEnvironment
 }

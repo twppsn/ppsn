@@ -80,11 +80,13 @@
     <Compile Include="Controls\TreeListView.cs" />
     <Compile Include="Controls\UndoManagerListBox.cs" />
     <Compile Include="Data\DataListItemDefinition.cs" />
-    <Compile Include="Data\DataStore.cs" />
-    <Compile Include="Data\LocalDataStore.cs" />
     <Compile Include="Data\PpsClientLogin.cs" />
     <Compile Include="NativeMethods.Credential.cs" />
     <Compile Include="NativeMethods.cs" />
+    <Compile Include="PpsEnvironment.Data.cs" />
+    <Compile Include="PpsEnvironment.Lua.cs" />
+    <Compile Include="PpsEnvironment.Trace.cs" />
+    <Compile Include="PpsEnvironment.UI.cs" />
     <Compile Include="PpsEnvironmentInfo.cs" />
     <Compile Include="Stuff.cs" />
     <Compile Include="UI\Converter.cs" />
