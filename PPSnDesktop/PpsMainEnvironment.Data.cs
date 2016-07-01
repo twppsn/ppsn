@@ -21,13 +21,19 @@ namespace TecWare.PPSn
 
 		public void UpdateDocumentStore()
 		{
-			// todo: lock
-			// todo: user rights
+			// todo: lock -> mutex
+			// todo: user rights -> server
 
 			// get last rev id
-			//"RevId:>0"
+			var maxRevId = 0L;
+			using (var cmd = new SQLiteCommand("SELECT max([RemoteRevId]) FROM main.[Objects]", LocalConnection))
+			{
+				using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
+					maxRevId = r.Read() ? r.GetInt64(0) : 0;
+			}
 
-			using (var enumerator = GetViewData(new PpsShellGetList("dbo.objects") { Filter = null }).GetEnumerator())
+			// get the new objects, todo: not via RevId -> change id
+			using (var enumerator = GetViewData(new PpsShellGetList("dbo.objects") { Filter =new PpsDataFilterCompareExpression("RevId", PpsDataFilterCompareOperator.Greater, new PpsDataFilterCompareTextValue(maxRevId.ToString())) }).GetEnumerator())
 			{
 				var indexId = enumerator.FindColumnIndex("Id", true);
 				var indexGuid = enumerator.FindColumnIndex("Guid", true);
@@ -502,8 +508,8 @@ order by t_liefnr.value desc
 		{
 			var gn = new ObjectViewGenerator(LocalConnection);
 
-			gn.ApplyFilter(PpsDataFilterExpression.Parse(arguments.Filter, 0, null, gn.LookupFieldForFilter));
-			gn.ApplyOrder(PpsDataOrderExpression.Parse(arguments.Order, gn.LookupFieldForFOrder));
+			//gn.ApplyFilter(PpsDataFilterExpression.Parse(arguments.Filter, 0));
+			//gn.ApplyOrder(PpsDataOrderExpression.Parse(arguments.Order));
 			gn.ApplyLimit(arguments.Start, arguments.Count);
 
 			return gn;

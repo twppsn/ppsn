@@ -39,23 +39,28 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public sealed class PpsMainViewFilter
 	{
-		internal PpsMainViewFilter(XElement x, string globalFilter, ref int priority)
+		private readonly string name;
+		private readonly string displayName;
+		private readonly PpsDataFilterExpression filterExpression;
+		private readonly int priority;
+
+		internal PpsMainViewFilter(XElement x, ref int priority)
 		{
-			this.Name = x.GetAttribute("name", String.Empty);
-			if (String.IsNullOrEmpty(this.Name))
+			this.name = x.GetAttribute("name", String.Empty);
+			if (String.IsNullOrEmpty(name))
         throw new ArgumentNullException("@name");
 
-      this.DisplayName = x.GetAttribute("displayName", this.Name);
+      this.displayName = x.GetAttribute("displayName", name);
+			this.priority = priority = x.GetAttribute("priority", priority + 1);
 
-			this.Priority = priority = x.GetAttribute("priority", priority + 1);
-
-			//this.Filter = String.IsNullOrEmpty(globalFilter) ? x.Value : "and(" + globalFilter + "," + x.Value + ")";
+			var expr = x.Value;
+			this.filterExpression = String.IsNullOrEmpty(expr) ? new PpsDataFilterNativeExpression(name) : PpsDataFilterExpression.Parse(expr);
 		} // ctor
 
-		public string Name { get; }
-		public string DisplayName { get; }
-		public string Filter { get; }
-		public int Priority { get; }
+		public string Name => name;
+		public string DisplayName => displayName;
+		public PpsDataFilterExpression FilterExpression => filterExpression;
+		public int Priority => priority;
 	} // class PpsMainViewFilter
 
 	#endregion
@@ -73,6 +78,7 @@ namespace TecWare.PPSn
 		public static readonly XName xnOrder = "order";
 
 		private readonly string viewId;
+		private readonly PpsDataFilterExpression viewBaseFilter;
 		private readonly string displayName;
 		private readonly string displayImage;
 
@@ -86,19 +92,20 @@ namespace TecWare.PPSn
 			if (String.IsNullOrEmpty(viewId))
 				throw new ArgumentException("List viewId is missing.");
 
-			var globalFilter = xDefinition.GetAttribute("filter", String.Empty);
+			this.viewBaseFilter = PpsDataFilterExpression.Parse(xDefinition.GetAttribute("filter", String.Empty));
 			this.displayName = xDefinition.GetAttribute("displayName", this.Name);
 			this.displayImage = xDefinition.GetAttribute("displayGlyph", this.Name);
 
 			// parse the filters
 			var priority = 0;
-			this.filters = (from c in xDefinition.Elements(xnFilter) select new PpsMainViewFilter(c, globalFilter, ref priority)).OrderBy(c => c.Priority).ToArray();
+			this.filters = (from c in xDefinition.Elements(xnFilter) select new PpsMainViewFilter(c, ref priority)).OrderBy(c => c.Priority).ToArray();
 			// parse orders
 			priority = 0;
 			this.sortOrders = (from c in xDefinition.Elements(xnOrder) select new PpsMainViewOrder(c, ref priority)).OrderBy(c => c.Priority).ToArray();
 		} // ctor
 
 		public string ViewId => viewId;
+		public PpsDataFilterExpression ViewFilterExpression => viewBaseFilter;
 		public string DisplayName => displayName;
 		public string DisplayImage => displayImage;
 		public IEnumerable<PpsMainViewFilter> Filters => filters;

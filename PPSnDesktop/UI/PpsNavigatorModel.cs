@@ -176,7 +176,7 @@ namespace TecWare.PPSn.UI
 			public void Execute(object parameter)
 			{
 				model.UpdateCurrentFilter(IsSelected ? null : this);
-				model.RefreshData(); // reload data
+				model.RefreshDataAsync(); // reload data
 			} // proc Execute
 
 			public bool CanExecute(object parameter) => true;
@@ -185,6 +185,7 @@ namespace TecWare.PPSn.UI
 
 			public string DisplayName => filter.DisplayName;
 			public string FilterName => filter.Name;
+			public PpsDataFilterExpression FilterExpression => filter.FilterExpression;
 			public bool IsSelected => model.currentFilter == this;
 		} // class PpsNavigatorFilter
 
@@ -210,7 +211,7 @@ namespace TecWare.PPSn.UI
 			public void Execute(object parameter)
 			{
 				model.UpdateCurrentOrder(this);
-				model.RefreshData();
+				model.RefreshDataAsync();
 			}
 			public bool CanExecute(object parameter) => true;
 
@@ -296,8 +297,8 @@ namespace TecWare.PPSn.UI
 
 			// Update States
 			UpdateCurrentFilter(null);
-			
-			RefreshData();
+
+			RefreshDataAsync();
 			RefreshActions();
 		} // proc UpdateCurrentView
 
@@ -340,7 +341,7 @@ namespace TecWare.PPSn.UI
 		private void UpdateCurrentExtentedSearch(string searchText)
 		{
 			// parses the current search text
-			// "." -> ui shortcut/macro
+			// "." -> ui action/macro
 			//  ".:" -> results in a lua commant
 
 			CurrentSearchTextExpression newSearchExpression;
@@ -366,7 +367,7 @@ namespace TecWare.PPSn.UI
 			else if (cmp > 0)
 			{
 				currentSearchTextExpression = newSearchExpression;
-				RefreshData();
+				RefreshDataAsync();
 			}
 		} // proc ReUpdateCurrentExtentedSearch
 
@@ -381,26 +382,39 @@ namespace TecWare.PPSn.UI
 			currentSearchTextExpression.Execute();
 		} // proc ExecuteCurrentSearchText
 
-		private async void RefreshData()
+		private async void RefreshDataAsync()
 		{
+			PpsShellGetList dataSource;
+			PpsDataFilterExpression exprView;
+			PpsDataFilterExpression exprFilter;
+			PpsDataFilterExpression exprSearch;
+
+
 			// build neu data source
-			if (CurrentView == null)
-				await items.ClearAsync();
-			else
+			if (CurrentView == null) // create view from local view
 			{
-				var dataSource = new PpsShellGetList(CurrentView.ViewId);
-
-				if (currentFilter != null)
-				{
-					// todo: currentSearchTextExpression --> PpsDataFilterExpression + filterName -> toString
-					dataSource.Filter = currentFilter.FilterName;
-				}
-				if (currentOrder != null)
-					dataSource.Order = (sortAscending ? "+" : "-") + currentOrder.Name;
-
-				await items.Reset(dataSource);
+				dataSource = new PpsShellGetList("local.objects");
+				exprView = PpsDataFilterTrueExpression.True;
+				exprFilter = PpsDataFilterTrueExpression.True;
 			}
-		} // proc RefreshData
+			else // create a different view
+			{
+				dataSource = new PpsShellGetList(CurrentView.ViewId);
+				exprView = CurrentView.ViewFilterExpression;
+				exprFilter = currentFilter?.FilterExpression ?? PpsDataFilterTrueExpression.True;
+
+				if (currentOrder != null)
+					dataSource.Order = PpsDataOrderExpression.Parse((sortAscending ? "+" : "-") + currentOrder.Name).ToArray();
+			}
+
+			// todo: add search expression
+			//var currentSearchExpression = currentSearchTextExpression as SearchExpression;
+			exprSearch = PpsDataFilterTrueExpression.True;
+
+			dataSource.Filter = PpsDataFilterExpression.Combine(exprView, exprFilter, exprSearch);
+
+			await items.Reset(dataSource);
+		} // proc RefreshDataAsync
 
 		private void RefreshActions()
 		{

@@ -14,6 +14,7 @@ using System.Xml.Linq;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {
@@ -883,10 +884,10 @@ namespace TecWare.PPSn
 			var sb = new StringBuilder("remote/?action=viewget&v=");
 			sb.Append(arguments.ViewId);
 
-			if (!String.IsNullOrEmpty(arguments.Filter))
-				sb.Append("&f=").Append(Uri.EscapeDataString(arguments.Filter));
-			if (!String.IsNullOrEmpty(arguments.Order))
-				sb.Append("&o=").Append(Uri.EscapeDataString(arguments.Order));
+			if (arguments.Filter != null && arguments.Filter != PpsDataFilterTrueExpression.True)
+				sb.Append("&f=").Append(Uri.EscapeDataString(arguments.Filter.ToString()));
+			if (arguments.Order != null && arguments.Order.Length > 0)
+				sb.Append("&o=").Append(Uri.EscapeDataString(PpsDataOrderExpression.ToString(arguments.Order)));
 			if (arguments.Start != -1)
 				sb.Append("&s=").Append(arguments.Start);
 			if (arguments.Count != -1)

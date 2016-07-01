@@ -109,7 +109,7 @@ namespace TecWare.PPSn
 					templateDefinition = new PpsDataListItemDefinition(this, key);
 					templateDefinitions.AppendItem(templateDefinition);
 				}
-				templateDefinition.AppendTemplate(x);
+				templateDefinition.AppendTemplate(x, parserContext);
 			}
 
 			// remove unused templates
@@ -253,9 +253,14 @@ namespace TecWare.PPSn
 
 		private void UpdateResource(string keyString, string xamlSource, ParserContext parserContext)
 		{
-			var resource = XamlReader.Parse(xamlSource, parserContext); // todo: Exception handling
+			object resource = CreateResource(xamlSource, parserContext);
 			mainResources[keyString] = resource;
 		} // func UpdateResource
+
+		public object CreateResource(string xamlSource, ParserContext parserContext)
+		{
+			return XamlReader.Parse(xamlSource, parserContext); // todo: Exception handling
+		} // func CreateResource
 
 		#endregion
 	} // class PpsEnvironment
