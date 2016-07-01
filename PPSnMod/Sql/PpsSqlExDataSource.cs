@@ -18,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -135,25 +136,63 @@ namespace TecWare.PPSn.Server.Sql
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary>Simple column description implementation.</summary>
-		private sealed class PpsDataResultColumnDescription : IPpsColumnDescription
+		private sealed class PpsDataResultColumnDescription : PpsColumnDescription
 		{
+			#region -- class PpsDataResultColumnAttributes ----------------------------------
+
+			private sealed class PpsDataResultColumnAttributes : PpsColumnDescriptionAttributes<PpsDataResultColumnDescription>
+			{
+				public PpsDataResultColumnAttributes(PpsDataResultColumnDescription owner)
+					: base(owner)
+				{
+				} // ctor
+
+				public override bool TryGetProperty(string name, out object value)
+				{
+					if (String.Compare(name, "MaxLength", StringComparison.OrdinalIgnoreCase) == 0)
+					{
+						value = GetDataRowValue(Owner.row, "ColumnSize", 0);
+						return true;
+					}
+					else
+					{
+						foreach (DataColumn c in Owner.row.Table.Columns)
+						{
+							if (String.Compare(c.ColumnName, name, StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.row[c];
+								return value != DBNull.Value;
+							}
+						}
+					}
+					return base.TryGetProperty(name, out value);
+				} // func TryGetProperty
+
+				public override IEnumerator<PropertyValue> GetEnumerator()
+				{
+					foreach (DataColumn c in Owner.row.Table.Columns)
+						yield return new PropertyValue(c.ColumnName, Owner.row[c]);
+
+					using (var e = base.GetEnumerator())
+					{
+						while (e.MoveNext())
+							yield return e.Current;
+					}
+				} // func GetEnumerator
+			} // class PpsDataResultColumnAttributes
+
+			#endregion
+
 			private readonly DataRow row;
 
-			private readonly string name;
-			private readonly Type fieldType;
-
-			public PpsDataResultColumnDescription(DataRow row, string name, Type fieldType)
+			public PpsDataResultColumnDescription(IPpsColumnDescription parent, DataRow row, string name, Type dataType)
+				: base(parent, name, dataType)
 			{
 				this.row = row;
-
-				this.name = name;
-				this.fieldType = fieldType;
 			} // ctor
 
-			public string Name => name;
-			public Type DataType => fieldType;
-			public int MaxLength => GetDataRowValue(row, "ColumnSize", Int32.MaxValue);
-			public bool IsIdentity => false;
+			protected override IPropertyEnumerableDictionary CreateAttributes()
+				=> new PpsDataResultColumnAttributes(this);
 		} // class PpsDataResultColumnDescription
 
 		#endregion
@@ -168,15 +207,13 @@ namespace TecWare.PPSn.Server.Sql
 			private readonly string name;
 			private readonly string viewName;
 
-			private readonly string[] columnNames;
 			private readonly IPpsColumnDescription[] columnDescriptions;
 
-			private SqlDataSelectorToken(PpsSqlExDataSource source, string name, string viewName, string[] columnNames, IPpsColumnDescription[] columnDescriptions)
+			private SqlDataSelectorToken(PpsSqlExDataSource source, string name, string viewName, IPpsColumnDescription[] columnDescriptions)
 			{
 				this.source = source;
 				this.name = name;
 				this.viewName = viewName;
-				this.columnNames = columnNames;
 				this.columnDescriptions = columnDescriptions;
 			} // ctor
 
@@ -184,10 +221,7 @@ namespace TecWare.PPSn.Server.Sql
 				=> new SqlDataSelector((SqlConnectionHandle)connection, this, null, null, null);
 
 			public IPpsColumnDescription GetFieldDescription(string selectorColumn)
-			{
-				var index = Array.IndexOf(columnNames, selectorColumn);
-				return index == -1 ? null : columnDescriptions[index];
-			} // func GetFieldDefinition
+				=> columnDescriptions.FirstOrDefault(c => String.Compare(selectorColumn, c.Name, StringComparison.OrdinalIgnoreCase) == 0);
 
 			public string Name => name;
 			public string ViewName => viewName;
@@ -199,30 +233,28 @@ namespace TecWare.PPSn.Server.Sql
 
 			// -- Static  -----------------------------------------------------------
 
-			private static void ExecuteForResultSet(SqlConnection connection, PpsSqlExDataSource source, string name, out string[] columnNames, out IPpsColumnDescription[] columnDescriptions)
+			private static void ExecuteForResultSet(SqlConnection connection, PpsSqlExDataSource source, string name, out IPpsColumnDescription[] columnDescriptions)
 			{
 				// execute the view once to determine the resultset
 				using (var cmd = connection.CreateCommand())
 				{
-					cmd.CommandType = CommandType.Text;
 					cmd.CommandText = "select * from " + name;
 					using (var r = cmd.ExecuteReader(CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo))
 					{
-						columnNames = new string[r.FieldCount];
 						columnDescriptions = new IPpsColumnDescription[r.FieldCount];
 
 						var dt = r.GetSchemaTable();
 						var i = 0;
 						foreach (DataRow c in dt.Rows)
 						{
-							IPpsColumnDescription columnDescription;
+							IPpsColumnDescription parentColumnDescription;
 							var nativeColumnName = r.GetName(i);
 
 							// try to find the view base description
-							columnDescription = source.application.GetFieldDescription(name + "." + nativeColumnName, false);
+							parentColumnDescription = source.application.GetFieldDescription(name + "." + nativeColumnName, false);
 
 							// try to find the table based field name
-							if (columnDescription == null)
+							if (parentColumnDescription == null)
 							{
 								var schemaName = GetDataRowValue<string>(c, "BaseSchemaName", null) ?? "dbo";
 								var tableName = GetDataRowValue<string>(c, "BaseTableName", null);
@@ -231,16 +263,12 @@ namespace TecWare.PPSn.Server.Sql
 								if (tableName != null && columnName != null)
 								{
 									var fieldName = schemaName + "." + tableName + "." + columnName;
-									columnDescription = source.application.GetFieldDescription(fieldName, false);
+									parentColumnDescription = source.application.GetFieldDescription(fieldName, false);
 								}
 							}
 
-							// create a generic description
-							if (columnDescription == null)
-								columnDescription = new PpsDataResultColumnDescription(c, nativeColumnName, r.GetFieldType(i));
-
-							columnNames[i] = nativeColumnName;
-							columnDescriptions[i++] = columnDescription;
+							columnDescriptions[i] = new PpsDataResultColumnDescription(parentColumnDescription, c, nativeColumnName, r.GetFieldType(i));
+							i++;
 						}
 					}
 				} // using cmd
@@ -267,7 +295,6 @@ namespace TecWare.PPSn.Server.Sql
 
 			private static IPpsSelectorToken CreateCore(PpsSqlExDataSource source, string name, Func<SqlConnection, string> getViewName)
 			{
-				string[] columnNames;
 				IPpsColumnDescription[] columnDescriptions;
 				SqlConnection connection;
 
@@ -275,10 +302,10 @@ namespace TecWare.PPSn.Server.Sql
 				using (source.UseMasterConnection(out connection))
 				{
 					viewName = getViewName(connection);
-					ExecuteForResultSet(connection, source, viewName, out columnNames, out columnDescriptions);
+					ExecuteForResultSet(connection, source, viewName, out columnDescriptions);
 				}
 
-				return new SqlDataSelectorToken(source, name, viewName, columnNames, columnDescriptions);
+				return new SqlDataSelectorToken(source, name, viewName, columnDescriptions);
 			} // func CreateCore
 
 			public static IPpsSelectorToken CreateFromStatement(PpsSqlExDataSource source, string name, string selectStatement)
@@ -333,14 +360,164 @@ namespace TecWare.PPSn.Server.Sql
 			/// <summary></summary>
 			private sealed class SqlDataFilterVisitor : PpsDataFilterVisitor<string>
 			{
-				public SqlDataFilterVisitor()
+				private readonly Func<string, string> lookupNative;
+				private readonly Func<string, IPpsColumnDescription> lookupColumn;
+
+				public SqlDataFilterVisitor(Func<string, string> lookupNative, Func<string, IPpsColumnDescription> lookupColumn)
 				{
+					this.lookupNative = lookupNative;
+					this.lookupColumn = lookupColumn;
 				} // ctor
 
 				public override string CreateCompareFilter(PpsDataFilterCompareExpression expression)
 				{
-					throw new NotImplementedException();
+					var column = lookupColumn(expression.Operand);
+					if (column == null)
+						throw new ArgumentNullException("operand", $"Could not resolve column '{expression.Operand}'.");
+					else
+					{
+						switch (expression.Value.Type)
+						{
+							case PpsDataFilterCompareValueType.Text:
+								return CreateCompareFilterStandard(column, expression.Operator, ((PpsDataFilterCompareTextValue)expression.Value).Text);
+							case PpsDataFilterCompareValueType.Null:
+								return CreateCompareFilterNull(column, expression.Operator);
+							case PpsDataFilterCompareValueType.Date:
+								throw new NotImplementedException("todo");
+							case PpsDataFilterCompareValueType.Number:
+								throw new NotImplementedException("todo");
+							default:
+								throw new NotImplementedException();
+						}
+					}
 				} // func CreateCompareFilter
+
+				private string CreateCompareFilterNull(IPpsColumnDescription column, PpsDataFilterCompareOperator op)
+				{
+					switch (op)
+					{
+						case PpsDataFilterCompareOperator.Contains:
+						case PpsDataFilterCompareOperator.Equal:
+							return column.Name + " is null";
+						case PpsDataFilterCompareOperator.NotContains:
+						case PpsDataFilterCompareOperator.NotEqual:
+							return column.Name + " is not null";
+						case PpsDataFilterCompareOperator.Greater:
+						case PpsDataFilterCompareOperator.GreaterOrEqual:
+						case PpsDataFilterCompareOperator.Lower:
+						case PpsDataFilterCompareOperator.LowerOrEqual:
+							return "1=0";
+						default:
+							throw new NotImplementedException();
+					}
+				} // func CreateCompareFilterNull
+
+				private string CreateCompareFilterStandard(IPpsColumnDescription column, PpsDataFilterCompareOperator op, string text)
+				{
+					var value = CreateParsableValue(text, column.DataType);
+					switch (op)
+					{
+						case PpsDataFilterCompareOperator.Contains:
+							if (column.DataType == typeof(string))
+								return column.Name + " LIKE " + CreateLikeString(value, 3);
+							else
+								goto case PpsDataFilterCompareOperator.Equal;
+						case PpsDataFilterCompareOperator.NotContains:
+							if (column.DataType == typeof(string))
+								return "NOT " + column.Name + " LIKE " + CreateLikeString(value, 3);
+							else
+								goto case PpsDataFilterCompareOperator.Equal;
+
+						case PpsDataFilterCompareOperator.Equal:
+							return column.Name + " = " + value;
+						case PpsDataFilterCompareOperator.NotEqual:
+							return column.Name + " <> " + value;
+						case PpsDataFilterCompareOperator.Greater:
+							return column.Name + " > " + value;
+						case PpsDataFilterCompareOperator.GreaterOrEqual:
+							return column.Name + " >= " + value;
+						case PpsDataFilterCompareOperator.Lower:
+							return column.Name + " < " + value;
+						case PpsDataFilterCompareOperator.LowerOrEqual:
+							return column.Name + " <= " + value;
+
+						default:
+							throw new NotImplementedException();
+					}
+				} // func CreateCompareFilterStandard
+
+				private string CreateParsableValue(string text, Type dataType)
+				{
+					switch (System.Type.GetTypeCode(dataType))
+					{
+						case TypeCode.Boolean:
+							return text == "1" || String.Compare(text, Boolean.TrueString, StringComparison.OrdinalIgnoreCase) == 0 ? "1" : "0";
+						case TypeCode.Byte:
+							return Byte.Parse(text).ToString(CultureInfo.InvariantCulture);
+						case TypeCode.SByte:
+							return SByte.Parse(text).ToString(CultureInfo.InvariantCulture);
+						case TypeCode.Int16:
+							return Int16.Parse(text).ToString(CultureInfo.InvariantCulture);
+						case TypeCode.UInt16:
+							return UInt16.Parse(text).ToString(CultureInfo.InvariantCulture);
+						case TypeCode.Int32:
+							return Int32.Parse(text).ToString(CultureInfo.InvariantCulture);
+						case TypeCode.UInt32:
+							return UInt32.Parse(text).ToString(CultureInfo.InvariantCulture);
+						case TypeCode.Int64:
+							return Int64.Parse(text).ToString(CultureInfo.InvariantCulture);
+						case TypeCode.UInt64:
+							return UInt64.Parse(text).ToString(CultureInfo.InvariantCulture);
+						case TypeCode.Single:
+							return Single.Parse(text).ToString(CultureInfo.InvariantCulture);
+						case TypeCode.Double:
+							return Double.Parse(text).ToString(CultureInfo.InvariantCulture);
+						case TypeCode.Decimal:
+							return Decimal.Parse(text).ToString(CultureInfo.InvariantCulture);
+						case TypeCode.Char:
+							return String.IsNullOrEmpty(text) ? "char(0)" : "'" + text[0] + "'";
+						case TypeCode.DateTime:
+							throw new NotImplementedException();
+						case TypeCode.String:
+							var sb = new StringBuilder(text.Length + 2);
+							var pos = 0;
+							var startAt = 0;
+							sb.Append('\'');
+							while (pos < text.Length)
+							{
+								pos = text.IndexOf('\'', pos);
+								if (pos == -1)
+									pos = text.Length;
+								else
+								{
+									sb.Append(text, startAt, pos - startAt);
+									startAt = ++pos;
+									sb.Append("''");
+								}
+							}
+							if (startAt < pos)
+								sb.Append(text, startAt, pos - startAt);
+							sb.Append('\'');
+							return sb.ToString();
+
+						default:
+							throw new NotImplementedException();
+					}
+				} // func CreateParsableValue
+
+				private string CreateLikeString(string value, int flag)
+				{
+					value = value.Replace("%", "[%]");
+
+					if ((flag & 3) == 3)
+						value = "'%" + value.Substring(1, value.Length - 2) + "%'";
+					else if ((flag & 1) == 1)
+						value = "'%" + value.Substring(1, value.Length - 1);
+					else if ((flag & 2) == 2)
+						value = value.Substring(0, value.Length - 1) + "%'";
+
+					return value;
+				} // func CreateLikeString
 
 				public override string CreateLogicFilter(PpsDataFilterExpressionType method, IEnumerable<string> arguments)
 				{
@@ -360,10 +537,16 @@ namespace TecWare.PPSn.Server.Sql
 				} // func CreateLogicFilter
 
 				public override string CreateNativeFilter(PpsDataFilterNativeExpression expression)
-					=> "(" + expression.Expression.Trim() + ")";
+				{
+					var expr= lookupNative(expression.Key);
+					if (String.IsNullOrEmpty(expr))
+						throw new ArgumentNullException("nativeExpression", $"Could not resolve native expression '{expression.Key}'.");
+
+					return "(" + expr + ")";
+				} // func CreateNativeFilter
 
 				public override string CreateTrueFilter()
-					=> "(1=1)";
+					=> "1=1";
 			} // class SqlDataFilterVisitor
 
 			#endregion
@@ -385,27 +568,37 @@ namespace TecWare.PPSn.Server.Sql
 				this.orderBy = orderBy;
 			} // ctor
 
-			private string FormatOrderExpression(PpsDataOrderExpression o)
+			private string FormatOrderExpression(PpsDataOrderExpression o, Func<string, string> lookupNative, Func<string, IPpsColumnDescription> lookupColumn)
 			{
-				if (o.IsNative)
+				// check for native expression
+				if (lookupNative != null)
 				{
-					// todo: replace asc with desc and desc with asc
-
-					return o.Expression.Replace(" asc", " desc") ;
+					var expr = lookupNative(o.Identifier);
+					if (expr != null)
+					{
+						if (o.Negate)
+						{
+							// todo: replace asc with desc and desc with asc
+							expr = expr.Replace(" asc", " desc");
+						}
+						return expr;
+					}
 				}
+
+				// checkt the column
+				var column = lookupColumn(o.Identifier);
+
+				if (o.Negate)
+					return column.Name + " DESC";
 				else
-				{
-					// todo: check the column
-
-					return o.Expression + (o.Negate ? " desc" : " asc");
-				}
+					return column.Name;
 			} // func FormatOrderExpression
 
-			public override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions)
-				=> SqlOrderBy(String.Join(", ", from o in expressions select FormatOrderExpression(o)));
+			public override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative)
+				=> SqlOrderBy(String.Join(", ", from o in expressions select FormatOrderExpression(o, lookupNative, selectorToken.GetFieldDescription)));
 
-			public override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression)
-				=> SqlWhere(new SqlDataFilterVisitor().CreateFilter(expression));
+			public override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative)
+				=> SqlWhere(new SqlDataFilterVisitor(lookupNative, selectorToken.GetFieldDescription).CreateFilter(expression));
 
 			private string AddSelectList(string addSelectList)
 			{
@@ -656,7 +849,7 @@ namespace TecWare.PPSn.Server.Sql
 
 					var parameterName = "@" + kv.Key;
 					var column = ((PpsSqlExDataSource)DataSource).ResolveColumnByName(tableInfo.FullName + "." + kv.Key);
-					cmd.Parameters.Add(column?.CreateSqlParameter(parameterName, kv.Value ?? DBNull.Value) ?? new SqlParameter(parameterName, kv.Value != null ? Procs.ChangeType(kv.Value, column.FieldType) : DBNull.Value));
+					cmd.Parameters.Add(column?.CreateSqlParameter(parameterName, kv.Value ?? DBNull.Value) ?? new SqlParameter(parameterName, kv.Value != null ? Procs.ChangeType(kv.Value, column.DataType) : DBNull.Value));
 					variableList.Append(parameterName);
 				}
 				commandText.Append(") ");
@@ -815,12 +1008,89 @@ namespace TecWare.PPSn.Server.Sql
 		#region -- class SqlColumnInfo ----------------------------------------------------
 
 		// todo: new name, new position
-		internal sealed class SqlColumnInfo : IPpsColumnDescription
+		internal sealed class SqlColumnInfo : PpsColumnDescription
 		{
+			#region -- class PpsColumnAttributes --------------------------------------------
+
+			private sealed class PpsColumnAttributes : PpsColumnDescriptionAttributes<SqlColumnInfo>
+			{
+				public PpsColumnAttributes(SqlColumnInfo owner) 
+					: base(owner)
+				{
+				} // ctor
+
+				public override bool TryGetProperty(string name, out object value)
+				{
+					switch (name[0])
+					{
+						case 'S':
+						case 's':
+							if (String.Compare(name, nameof(Owner.SqlType), StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.SqlType;
+								return true;
+							}
+							else if (String.Compare(name, nameof(Owner.SqlType), StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.Scale;
+								return true;
+							}
+							break;
+						case 'M':
+						case 'm':
+							if (String.Compare(name, nameof(Owner.MaxLength), StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.MaxLength;
+								return true;
+							}
+							break;
+						case 'P':
+						case 'p':
+							if (String.Compare(name, nameof(Owner.Precision), StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.Precision;
+								return true;
+							}
+							break;
+						case 'I':
+						case 'i':
+							if (String.Compare(name, nameof(Owner.IsIdentity), StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.IsIdentity;
+								return true;
+							}
+							else if (String.Compare(name, nameof(Owner.IsNull), StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.IsNull;
+								return true;
+							}
+							break;
+					}
+					return base.TryGetProperty(name, out value);
+				} // func TryGetProperty
+
+				public override IEnumerator<PropertyValue> GetEnumerator()
+				{
+					yield return new PropertyValue(nameof(Owner.SqlType), Owner.SqlType);
+					yield return new PropertyValue(nameof(Owner.MaxLength), Owner.MaxLength);
+					yield return new PropertyValue(nameof(Owner.Precision), Owner.Precision);
+					yield return new PropertyValue(nameof(Owner.Scale), Owner.Scale);
+					yield return new PropertyValue(nameof(Owner.IsNull), Owner.IsNull);
+					yield return new PropertyValue(nameof(Owner.IsIdentity), Owner.IsIdentity);
+
+					using (var e = base.GetEnumerator())
+					{
+						while (e.MoveNext())
+							yield return e.Current;
+					}
+				} // func GetEnumerator
+			} // class PpsColumnAttributes
+
+			#endregion
+
 			private readonly SqlTableInfo table;
 			private readonly int columnId;
-			private readonly string name;
-			private readonly Type fieldType;
+			private readonly string columnName;
 			private readonly SqlDbType sqlType;
 			private readonly int maxLength;
 			private readonly byte precision;
@@ -828,12 +1098,12 @@ namespace TecWare.PPSn.Server.Sql
 			private readonly bool isNull;
 			private readonly bool isIdentity;
 
-			public SqlColumnInfo(Func<int, SqlTableInfo> resolveObjectId, SqlDataReader r)
+			public SqlColumnInfo(SqlTableInfo table, SqlDataReader r)
+				:base(null, table.Schema + "." + table.Name + "." + r.GetString(2), GetFieldType(r.GetByte(3)))
 			{
-				this.table = resolveObjectId(r.GetInt32(0));
+				this.table = table;
 				this.columnId = r.GetInt32(1);
-				this.name = table.Schema + "." + table.Name + "." + r.GetString(2);
-				this.fieldType = GetFieldType(r.GetByte(3));
+				this.columnName = r.GetString(2);
 				this.sqlType = GetSqlType(r.GetByte(3));
 				this.maxLength = r.GetInt16(4);
 				this.precision = r.GetByte(5);
@@ -842,8 +1112,11 @@ namespace TecWare.PPSn.Server.Sql
 				this.isIdentity = r.GetBoolean(8);
 			} // ctor
 
+			protected override IPropertyEnumerableDictionary CreateAttributes()
+				=> new PpsColumnAttributes(this);
+
 			public SqlParameter CreateSqlParameter(string parameterName, object value)
-				=> new SqlParameter(parameterName, sqlType, maxLength, ParameterDirection.Input, isNull, precision, scale, name, DataRowVersion.Current, value);
+				=> new SqlParameter(parameterName, sqlType, maxLength, ParameterDirection.Input, isNull, precision, scale, Name, DataRowVersion.Current, value);
 
 			#region -- GetFieldType, GetSqlType -----------------------------------------------
 
@@ -987,14 +1260,14 @@ namespace TecWare.PPSn.Server.Sql
 
 			public SqlTableInfo Table => table;
 			public int ColumnId => columnId;
-			public string Name => name;
-			public string NativeName => name;
-			public Type FieldType => fieldType;
+			public string ColumnName => ColumnName;
+			public string TableColumnName => table.Name + "." + ColumnName;
+			public SqlDbType SqlType => sqlType;
+			public int MaxLength => maxLength;
+			public int Precision => precision;
+			public int Scale => scale;
 			public bool IsNull => isNull;
 			public bool IsIdentity => isIdentity;
-
-			int IPpsColumnDescription.MaxLength => maxLength;
-			Type IPpsColumnDescription.DataType => fieldType;
 		} // class SqlColumnInfo
 
 		#endregion
@@ -1137,7 +1410,7 @@ namespace TecWare.PPSn.Server.Sql
 						{
 							try
 							{
-								var c = new SqlColumnInfo(ResolveTableById, r);
+								var c = new SqlColumnInfo(ResolveTableById(r.GetInt32(0)), r);
 								columnStore.Add(c.Name, c);
 							}
 							catch (Exception e)

@@ -51,10 +51,10 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		public abstract IEnumerator<IDataRow> GetEnumerator(int start, int count);
 
-		public virtual PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions)
+		public virtual PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
 			=> this;
 
-		public virtual PpsDataSelector ApplyFilter(PpsDataFilterExpression expression)
+		public virtual PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 			=> this;
 
 		/// <summary>Returns the field description for the name in the resultset</summary>

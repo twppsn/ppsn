@@ -110,9 +110,7 @@
     <EmbeddedResource Include="Sql\tsql\ServerLogins.sql" />
     <EmbeddedResource Include="Sql\tsql\ConnectionInitScript.sql" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Configs\ClientWpf\Templates\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Page Include="Configs\ClientWpf\Default.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -134,6 +132,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Configs\ClientWpf\Resources\Styles\Label.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Configs\ClientWpf\Templates\Contacts.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

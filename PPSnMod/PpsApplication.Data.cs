@@ -38,34 +38,98 @@ namespace TecWare.PPSn.Server
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsFieldDescription : IPpsColumnDescription, IPropertyReadOnlyDictionary, IEnumerable<PropertyValue>
+	public sealed class PpsFieldDescription : IPpsColumnDescription
 	{
 		private const string DisplayNameAttributeString = "displayName";
 		private const string MaxLengthAttributeString = "maxLength";
 		private const string DataTypeAttributeString = "dataType";
 
+		#region -- class PpsFieldAttributes -----------------------------------------------
+
+		private sealed class PpsFieldAttributes : PpsColumnDescriptionAttributes<PpsFieldDescription>
+		{
+			public PpsFieldAttributes(PpsFieldDescription owner)
+				: base(owner)
+			{
+			} // ctor
+
+			public override bool TryGetProperty(string name, out object value)
+			{
+				var p = Owner.GetProperty(name);
+				if (p != null)
+				{
+					value = p.Value;
+					return true;
+				}
+				return base.TryGetProperty(name, out value);
+			} // func TryGetProperty
+
+			public override IEnumerator<PropertyValue> GetEnumerator()
+			{
+				var displayNameEmitted = false;
+				var dataTypeEmitted = false;
+
+				foreach (var cur in Owner.xDefinition.Elements(xnFieldAttribute))
+				{
+					var p = Owner.GetProperty(cur);
+
+					if (p == null)
+						continue;
+
+					if (String.Compare(p.Name, DisplayNameAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
+						displayNameEmitted = true;
+					else if (String.Compare(p.Name, DataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
+						dataTypeEmitted = true;
+
+					yield return p;
+				}
+
+				if (!displayNameEmitted)
+					yield return new PropertyValue(DisplayNameAttributeString, typeof(string), Owner.DisplayName);
+
+				if (!dataTypeEmitted)
+					yield return new PropertyValue(DataTypeAttributeString, typeof(Type), Owner.DataType);
+
+				using (var e = base.GetEnumerator())
+				{
+					while (e.MoveNext())
+						yield return e.Current;
+				}
+			}
+		} // class PpsFieldAttributes
+
+		#endregion
+
 		private readonly PpsDataSource source;
 		private readonly string name;
+		private readonly IPropertyEnumerableDictionary attributes;
 		private readonly XElement xDefinition;
-		private IPpsColumnDescription columnDescription = null;
+		private IPpsColumnDescription parentColumnDescription = null;
 
 		private readonly Lazy<string> displayName;
 		private readonly Lazy<int> maxLength;
 		private readonly Lazy<Type> dataType;
 
+		#region -- Ctor/Dtor --------------------------------------------------------------
+
 		public PpsFieldDescription(PpsDataSource source, string name, XElement xDefinition)
 		{
 			this.source = source;
 			this.name = name;
+			this.attributes = new PpsFieldAttributes(this);
 			this.xDefinition = xDefinition;
 
-			displayName = new Lazy<string>(() => this.GetProperty(DisplayNameAttributeString, name));
-			maxLength = new Lazy<int>(() => this.GetProperty(MaxLengthAttributeString, Int32.MaxValue));
-			dataType = new Lazy<Type>(() => this.GetProperty(DataTypeAttributeString, typeof(string)));
+			displayName = new Lazy<string>(() => this.Attributes.GetProperty(DisplayNameAttributeString, name));
+			maxLength = new Lazy<int>(() => this.Attributes.GetProperty(MaxLengthAttributeString, Int32.MaxValue));
+			dataType = new Lazy<Type>(() => this.Attributes.GetProperty(DataTypeAttributeString, typeof(string)));
 		} // ctor
 
 		internal void SetColumnDescription(IPpsColumnDescription columnDescription)
-			=> this.columnDescription = columnDescription;
+			=> this.parentColumnDescription = columnDescription;
+
+		#endregion
+
+		#region -- GetProperty ------------------------------------------------------------
 
 		private PropertyValue GetProperty(XElement attribute)
 		{
@@ -93,7 +157,7 @@ namespace TecWare.PPSn.Server
 			}
 		} // func GetProperty
 
-		public PropertyValue GetProperty(string name)
+		private PropertyValue GetProperty(string name)
 		{
 			var ret = GetProperty(xDefinition.Elements(xnFieldAttribute).FirstOrDefault(c => String.Compare(c.GetAttribute<string>("name", null), name, StringComparison.OrdinalIgnoreCase) == 0));
 
@@ -108,21 +172,13 @@ namespace TecWare.PPSn.Server
 			return ret;
 		} // func GetProperty
 
-		#region -- IPropertyReadOnlyDictionary --------------------------------------------
-
-		public bool TryGetProperty(string name, out object value)
-		{
-			value = GetProperty(name)?.Value;
-			return (value != null);
-		} // func TryGetProperty
-
 		#endregion
 
 		#region -- IEnumerable ------------------------------------------------------------
 
 		private IEnumerable<PropertyValue> GetAttributesConverted(string attributeSelector)
 		{
-			foreach (var c in this)
+			foreach (var c in Attributes)
 			{
 				if (c.Name.StartsWith(attributeSelector)) // todo: convert standard attribute
 					yield return c;
@@ -132,53 +188,22 @@ namespace TecWare.PPSn.Server
 		public IEnumerable<PropertyValue> GetAttributes(string attributeSelector)
 		{
 			if (attributeSelector == "*")
-				return this;
+				return Attributes;
 			else
 				return GetAttributesConverted(attributeSelector);
 		} // func GetAttributes
-
-		public IEnumerator<PropertyValue> GetEnumerator()
-		{
-			var displayNameEmitted = false;
-			var dataTypeEmitted = false;
-
-			foreach (var cur in xDefinition.Elements(xnFieldAttribute))
-			{
-				var p = GetProperty(cur);
-
-				if (p == null)
-					continue;
-
-				if (String.Compare(p.Name, DisplayNameAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
-					displayNameEmitted = true;
-				else if (String.Compare(p.Name, DataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
-					dataTypeEmitted = true;
-
-				yield return p;
-			}
-
-			if (!displayNameEmitted)
-				yield return new PropertyValue(DisplayNameAttributeString, typeof(string), DisplayName);
-
-			if (!dataTypeEmitted)
-				yield return new PropertyValue(DataTypeAttributeString, typeof(Type), DataType);
-		} // func GetEnumerator
-
-		IEnumerator IEnumerable.GetEnumerator()
-			=> GetEnumerator();
 
 		#endregion
 
 		public PpsDataSource DataSource => source;
 		public string Name => name;
-
-		public IPpsColumnDescription NativeColumnDescription => columnDescription;
-
 		public string DisplayName => displayName.Value;
 
-		public int MaxLength => columnDescription?.MaxLength ?? maxLength.Value;
-		public Type DataType => columnDescription?.DataType ?? dataType.Value;
-		public bool IsIdentity => columnDescription?.IsIdentity ?? false;
+		public int MaxLength => Attributes.GetPropertyLate("MaxLength", () => maxLength.Value);
+		public Type DataType => parentColumnDescription?.DataType ?? dataType.Value;
+
+		public IPropertyEnumerableDictionary Attributes => attributes;
+		public IPpsColumnDescription Parent => parentColumnDescription;
 	} // class PpsFieldDescription
 
 	#endregion
@@ -252,7 +277,13 @@ namespace TecWare.PPSn.Server
 
 			this.attributes = attributes ?? new PropertyDictionary();
 		} // ctor
-				
+
+		public string LookupOrder(string orderName)
+			=> order.FirstOrDefault(c => String.Compare(orderName, c.Name, StringComparison.OrdinalIgnoreCase) == 0)?.Parameter;
+
+		public string LookupFilter(string filterName)
+			=> filter.FirstOrDefault(c => String.Compare(filterName, c.Name, StringComparison.OrdinalIgnoreCase) == 0)?.Parameter;
+
 		public string Name => selectorToken.Name;
 		public string DisplayName => displayName ?? selectorToken.Name;
 		public string SecurityToken => null;

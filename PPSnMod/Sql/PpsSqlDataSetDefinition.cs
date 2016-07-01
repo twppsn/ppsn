@@ -263,7 +263,7 @@ namespace TecWare.PPSn.Server.Sql
 						first = false;
 					else
 						loadCommand.Append(", ");
-					loadCommand.Append(columnBinding.SqlColumn.NativeName)
+					loadCommand.Append(columnBinding.SqlColumn.TableColumnName)
 						.Append(" AS ")
 						.Append('[').Append(columnBinding.DataColumn.Name).Append(']');
 				}
@@ -274,12 +274,12 @@ namespace TecWare.PPSn.Server.Sql
 
 			private void AppendLoadParentJoin(StringBuilder loadCommand, bool first)
 			{
-				var nativeColumn = (PpsSqlExDataSource.SqlColumnInfo)(((PpsDataColumnServerDefinition)parentRelationColumn.DataColumn.ParentColumn).FieldDescription.NativeColumnDescription);
+				var nativeColumn = (PpsSqlExDataSource.SqlColumnInfo)(((PpsDataColumnServerDefinition)parentRelationColumn.DataColumn.ParentColumn).FieldDescription.Parent);
 				loadCommand.Append("INNER JOIN ")
 					.Append(nativeColumn.Table.FullName).Append(" ON (")
-					.Append(parentRelationColumn.SqlColumn.NativeName)
+					.Append(parentRelationColumn.SqlColumn.TableColumnName)
 					.Append(" = ")
-					.Append(nativeColumn.NativeName)
+					.Append(nativeColumn.TableColumnName)
 					.Append(") ");
 				
 
@@ -294,9 +294,9 @@ namespace TecWare.PPSn.Server.Sql
 				{
 					loadCommand.Append("LEFT OUTER JOIN ")
 						.Append(cur.SqlParentRelation.ParentColumn.Table.FullName).Append(" ON (")
-						.Append(cur.SqlParentRelation.ParentColumn.NativeName)
+						.Append(cur.SqlParentRelation.ParentColumn.TableColumnName)
 						.Append(" = ")
-						.Append(cur.SqlParentRelation.ReferncedColumn.NativeName)
+						.Append(cur.SqlParentRelation.ReferncedColumn.TableColumnName)
 						.Append(") ");
 
 					AppendLoadOuterJoin(loadCommand, cur);
@@ -348,7 +348,7 @@ namespace TecWare.PPSn.Server.Sql
 					loadCommand.Append('(');
 					if (cur.DataParameter.IsNullable)
 						loadCommand.Append(cur.DataParameter.VariableName).Append(" IS null OR ");
-					loadCommand.Append(cur.SqlParameterColumn.NativeName).Append(" = ").Append(cur.DataParameter.VariableName)
+					loadCommand.Append(cur.SqlParameterColumn.TableColumnName).Append(" = ").Append(cur.DataParameter.VariableName)
 					.Append(')');
 				}
 

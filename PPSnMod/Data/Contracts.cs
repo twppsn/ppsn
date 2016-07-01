@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -22,6 +23,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
 using Neo.IronLua;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server.Data
 {
@@ -121,36 +123,105 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
+	#region -- interface IPpsColumnDescription ------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Description for a column.</summary>
 	public interface IPpsColumnDescription
 	{
+		/// <summary>Name of the column in the current context.</summary>
 		string Name { get; }
-		int MaxLength { get; }
+		/// <summary>Data type of the column.</summary>
 		Type DataType { get; }
-		bool IsIdentity { get; }
+
+		/// <summary>Inherited properties.</summary>
+		IPpsColumnDescription Parent { get; }
+		/// <summary>Extented attributes for the column.</summary>
+		IPropertyEnumerableDictionary Attributes { get; }
 	} // interface IPpsProviderColumnDescription
+
+	#endregion
+
+	#region -- class PpsColumnDescriptionAttributes -------------------------------------
+
+	public class PpsColumnDescriptionAttributes<T> : IPropertyEnumerableDictionary
+		where T : IPpsColumnDescription
+	{
+		private readonly T owner;
+
+		public PpsColumnDescriptionAttributes(T owner)
+		{
+			this.owner = owner;
+		} // ctor
+
+		public virtual IEnumerator<PropertyValue> GetEnumerator()
+		{
+			if (owner.Parent != null)
+			{
+				foreach (var p in owner.Parent.Attributes)
+					yield return p;
+			}
+		} // func GetEnumerator
+
+		public virtual bool TryGetProperty(string name, out object value)
+		{
+			if (owner.Parent != null)
+				return owner.Parent.Attributes.TryGetProperty(name, out value);
+
+			value = null;
+			return false;
+		} // func TryGetProperty
+
+		IEnumerator IEnumerable.GetEnumerator()
+			=> GetEnumerator();
+
+		public T Owner => owner;
+	} // class PpsColumnDescriptionAttributes
+
+	#endregion
 
 	#region -- class PpsColumnDescription -----------------------------------------------
 
 	public class PpsColumnDescription : IPpsColumnDescription
 	{
-		private readonly string name;
-		private readonly int maxLength;
-		private readonly Type dataType;
-		private readonly bool isIdentity;
+		private readonly IPpsColumnDescription parent;
+		private readonly IPropertyEnumerableDictionary attributes;
 
-		public PpsColumnDescription(string name, int maxLength, Type dataType, bool isIdentity)
+		private readonly string name;
+		private readonly Type dataType;
+
+		public PpsColumnDescription(IPpsColumnDescription parent, string name, Type dataType)
 		{
+			this.parent = parent;
+			this.attributes = CreateAttributes();
+
 			this.name = name;
-			this.maxLength = maxLength;
 			this.dataType = dataType;
-			this.isIdentity = isIdentity;
 		} // ctor
 
+		protected virtual IPropertyEnumerableDictionary CreateAttributes()
+			=> new PpsColumnDescriptionAttributes<IPpsColumnDescription>(this);
+
 		public string Name => name;
-		public int MaxLength => maxLength;
 		public Type DataType => dataType;
-		public bool IsIdentity => isIdentity;
+
+		public IPpsColumnDescription Parent => parent;
+		public IPropertyEnumerableDictionary Attributes => attributes;
 	} // class PpsColumnDescription
+
+	public static class PpsColumnDescriptionHelper
+	{
+		public static T GetColumnDescriptionImplementation<T>(this IPpsColumnDescription columnDescription)
+			where T : class
+		{
+			var t = columnDescription as T;
+
+			if (t == null && columnDescription.Parent != null)
+				return GetColumnDescriptionImplementation<T>(columnDescription.Parent);
+
+			return t;
+		} // func GetColumnDescriptionImplementation
+	} // class PpsColumnDescriptionHelper
 
 	#endregion
 

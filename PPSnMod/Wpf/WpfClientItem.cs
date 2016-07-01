@@ -238,29 +238,35 @@ namespace TecWare.PPSn.Server.Wpf
 							CombineMergedResourceDictionaries(x, null, false);
 						else // parse template
 						{
+							string onlineViewId = null;
+
 							// get the key
 							var keyString = x.GetAttribute(xnXamlKey, String.Empty);
 							if (String.IsNullOrEmpty(keyString))
 								continue;
 
 							// split the key
-							var pos = keyString.IndexOf(',');
-							if (pos == -1)
-								currentTemplatePriority++;
-							else
+							var keyElements = keyString.Split(',',';');
+							if (keyElements.Length >= 1)
+								keyString = keyElements[0].Trim();
+							if (keyElements.Length >= 2)
+								onlineViewId = keyElements[1].Trim();
+							if (keyElements.Length >= 3)
 							{
 								int t;
-								if (Int32.TryParse(keyString.Substring(pos + 1).Trim(), out t))
+								if (Int32.TryParse(keyElements[2].Trim(), out t))
 									currentTemplatePriority = t;
 								else
 									currentTemplatePriority++;
-								keyString = keyString.Substring(0, pos);
 							}
+							else
+								currentTemplatePriority++;
 
 							// create the new template
 							var xTemplate = new XElement("template",
 								new XAttribute("key", keyString),
-								new XAttribute("priority", currentTemplatePriority)
+								new XAttribute("priority", currentTemplatePriority),
+								new XAttribute("viewId", onlineViewId)
 							);
 
 							// append the code item

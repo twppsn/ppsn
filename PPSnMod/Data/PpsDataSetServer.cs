@@ -155,7 +155,7 @@ namespace TecWare.PPSn.Server.Data
 			fieldDescription = application.GetFieldDescription(FieldName, true);
 
 			// update the meta information
-			foreach (var c in fieldDescription)
+			foreach (var c in fieldDescription.Attributes)
 			{
 				if (metaInfo.ContainsKey(c.Name))
 					metaInfo.Update(c.Name, c.Type, c.Value);
