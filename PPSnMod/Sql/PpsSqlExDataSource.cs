@@ -1438,7 +1438,7 @@ namespace TecWare.PPSn.Server.Sql
 				}
 
 				// Register Server logins
-				application.RegisterView(SqlDataSelectorToken.CreateFromResource(this, "ServerLogins", "ServerLogins.sql"));
+				application.RegisterView(SqlDataSelectorToken.CreateFromResource(this, "dbo.serverLogins", "ServerLogins.sql"));
 
 
 				// done

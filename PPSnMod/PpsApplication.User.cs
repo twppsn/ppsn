@@ -567,7 +567,7 @@ namespace TecWare.PPSn.Server
 		{
 			using (var ctx = CreateSysContext())
 			{
-				var users = ctx?.CreateSelector("ServerLogins", throwException: false);
+				var users = ctx?.CreateSelector("dbo.serverLogins", throwException: false);
 				if (users != null)
 				{
 					// fetch user list

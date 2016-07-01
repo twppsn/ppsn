@@ -797,72 +797,49 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#endregion
 
-		#region -- class PpsApplicationDataSelector ---------------------------------------
-
-		private class PpsApplicationDataSelector : PpsDataSelector
+		private IEnumerable<PpsApplicationFileItem> GetApplicationFileList(IPpsPrivateDataContext privateUserData)
 		{
-			private readonly WpfClientItem owner;
-			private readonly IPpsPrivateDataContext privateUserData;
+			var basePath = this.Name;
 
-			public PpsApplicationDataSelector(PpsDataSource dataSource, WpfClientItem owner, IPpsPrivateDataContext privateUserData) 
-				: base(dataSource)
-			{
-				this.owner = owner;
-				this.privateUserData = privateUserData;
-			} // ctor
+			// navigator.xml
+			yield return new PpsApplicationFileItem(basePath + "/navigator.xml", -1, DateTime.MinValue);
 
-			public override IEnumerator<IDataRow> GetEnumerator(int start, int count)
-				=> new GenericDataRowEnumerator<PpsApplicationFileItem>(GetInternEnumerator(start, count));
+			// templates.xml
+			yield return new PpsApplicationFileItem(basePath + "/templates.xaml", -1, DateTime.MinValue);
 
-			private IEnumerator<PpsApplicationFileItem> GetInternEnumerator(int start, int count)
-			{
-				var basePath = owner.Name;
-
-				// navigator.xml
-				yield return new PpsApplicationFileItem(basePath + "/navigator.xml", -1, DateTime.MinValue);
-
-				// templates.xml
-				yield return new PpsApplicationFileItem(basePath + "/templates.xaml", -1, DateTime.MinValue);
-
-				// schemas from application/documents
-				var collectedSchema = new List<PpsApplicationFileItem>();
-				owner.application.WalkChildren<PpsDocument>(
-					c =>
-					{
-						collectedSchema.Add(new PpsApplicationFileItem(c.Name + "/schema.xml", -1, DateTime.MinValue));
-					}, true);
-
-				foreach (var c in collectedSchema)
-					yield return c;
-
-				// theme, wpfWpfSource
-				foreach (var x in owner.Config.Elements())
+			// schemas from application/documents
+			var collectedSchema = new List<PpsApplicationFileItem>();
+			application.WalkChildren<PpsDocument>(
+				c =>
 				{
-					if (x.Name == PpsStuff.xnWpfWpfSource)
-					{
-						var directoryPath = x.GetAttribute("directory", String.Empty);
-						var virtualPath = x.GetAttribute("virtualPath", String.Empty);
+					collectedSchema.Add(new PpsApplicationFileItem(c.Name + "/schema.xml", -1, DateTime.MinValue));
+				}, true);
 
-						foreach (var fi in new DirectoryInfo(directoryPath).GetFiles("*", SearchOption.TopDirectoryOnly))
-							yield return new PpsApplicationFileItem(basePath + "/" + virtualPath + "/" + fi.Name, -1, DateTime.MinValue);
-					}
-					else if (x.Name == PpsStuff.xnWpfTheme)
-					{
-						var fileName = x.GetAttribute("file", String.Empty);
-						var name = Path.GetFileName(fileName);
-						yield return new PpsApplicationFileItem(basePath + "/" + name, -1, DateTime.MinValue);
-					}
+			foreach (var c in collectedSchema)
+				yield return c;
+
+			// theme, wpfWpfSource
+			foreach (var x in Config.Elements())
+			{
+				if (x.Name == PpsStuff.xnWpfWpfSource)
+				{
+					var directoryPath = x.GetAttribute("directory", String.Empty);
+					var virtualPath = x.GetAttribute("virtualPath", String.Empty);
+
+					foreach (var fi in new DirectoryInfo(directoryPath).GetFiles("*", SearchOption.TopDirectoryOnly))
+						yield return new PpsApplicationFileItem(basePath + "/" + virtualPath + "/" + fi.Name, -1, DateTime.MinValue);
 				}
-			} // func GetInternEnumerator
-
-			public override IPpsColumnDescription GetFieldDescription(string nativeColumnName)
-				=> owner.application.GetFieldDescription("wpf.sync." + nativeColumnName);
-		} // class PpsApplicationDataSelector
-
-		#endregion
+				else if (x.Name == PpsStuff.xnWpfTheme)
+				{
+					var fileName = x.GetAttribute("file", String.Empty);
+					var name = Path.GetFileName(fileName);
+					yield return new PpsApplicationFileItem(basePath + "/" + name, -1, DateTime.MinValue);
+				}
+			}
+		} // func GetApplicationFileList
 
 		public PpsDataSelector GetApplicationFilesSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
-			=> new PpsApplicationDataSelector(dataSource, this, privateUserData);
+			=> new PpsGenericSelector<PpsApplicationFileItem>(dataSource, "wpf.sync", GetApplicationFileList(privateUserData));
 
 		#endregion
 

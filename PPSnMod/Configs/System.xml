@@ -23,6 +23,15 @@
 			<pps:view name="wpf.sync">
 				<pps:source type="view">wpf/GetApplicationFilesSelector</pps:source>
 			</pps:view>
+
+			<pps:field name="sys.views.Name" dataType="string" />
+			<pps:field name="sys.views.DisplayName" dataType="string" />
+			<pps:field name="sys.views.SecurityToken" dataType="string" />
+			<pps:field name="sys.views.IsVisible" dataType="bool" />
+
+			<pps:view name="sys.views">
+				<pps:source type="view">GetViewDefinitionSelector</pps:source>
+			</pps:view>
 		</pps:register>
 
 		<pps:register source="main">

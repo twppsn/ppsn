@@ -82,14 +82,19 @@ namespace TecWare.PPSn.Server
 			public PpsDataSelector CreateSelector(IPpsConnectionHandle connection, bool throwException = true)
 			{
 				PpsDataSelector ret = null;
-				if (!dataSource.application.FirstChildren<DEConfigItem>(
-					c => String.Compare(c.Name, path, StringComparison.OrdinalIgnoreCase) == 0,
-					c => ret = InvokeCreateSelector((PpsSysConnectionHandle)connection, c, throwException)
-				))
+				if (String.IsNullOrEmpty(path))
+					ret = InvokeCreateSelector((PpsSysConnectionHandle)connection, dataSource.application, throwException);
+				else
 				{
-					if (throwException)
-						throw new ArgumentOutOfRangeException($"Path '{path}' not found.");
-					return null;
+					if (!dataSource.application.FirstChildren<DEConfigItem>(
+						c => String.Compare(c.Name, path, StringComparison.OrdinalIgnoreCase) == 0,
+						c => ret = InvokeCreateSelector((PpsSysConnectionHandle)connection, c, throwException)
+					))
+					{
+						if (throwException)
+							throw new ArgumentOutOfRangeException($"Path '{path}' not found.");
+						return null;
+					}
 				}
 				return ret;
 			} // func CreateSelector
@@ -160,19 +165,20 @@ namespace TecWare.PPSn.Server
 			var viewDescription = sourceDescription.Value;
 
 			var sep = viewDescription.LastIndexOf('/');
-			if (sep == -1)
-				throw new FormatException("Sys view format is wrong.");
-
-			var path = viewDescription.Substring(0, sep);
-			var methodName = viewDescription.Substring(sep + 1);
+			var path = sep == -1 ? String.Empty : viewDescription.Substring(0, sep);
+			var methodName = sep == -1 ? viewDescription : viewDescription.Substring(sep + 1);
 			MethodInfo method = null;
-			application.FirstChildren<DEConfigItem>(
-				c => String.Compare(c.Name, path, StringComparison.OrdinalIgnoreCase) == 0,
-				c =>
-				{
-					method = c.GetType().GetMethod(methodName);
-				});
-
+			if (path.Length == 0)
+				method = application.GetType().GetMethod(methodName);
+			else
+			{
+				application.FirstChildren<DEConfigItem>(
+					c => String.Compare(c.Name, path, StringComparison.OrdinalIgnoreCase) == 0,
+					c =>
+					{
+						method = c.GetType().GetMethod(methodName);
+					});
+			}
 			if (method == null)
 				throw new FormatException($"Sys view format '{viewDescription}' not resolved.");
 
