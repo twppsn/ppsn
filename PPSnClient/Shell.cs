@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {
@@ -68,8 +69,8 @@ namespace TecWare.PPSn
 		} // ctor
 
 		public string ViewId { get; }
-		public string Filter { get; set; }
-		public string Order { get; set; }
+		public PpsDataFilterExpression Filter { get; set; }
+		public PpsDataOrderExpression[] Order { get; set; }
 		public int Start { get; set; } = -1;
 		public int Count { get; set; } = -1;
 

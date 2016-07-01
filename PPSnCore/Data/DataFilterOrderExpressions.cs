@@ -49,7 +49,7 @@ namespace TecWare.PPSn.Data
 	} // enum PpsDataFilterExpressionType
 
 	#endregion
-
+	
 	#region -- enum PpsDataFilterCompareOperator ----------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -80,6 +80,9 @@ namespace TecWare.PPSn.Data
 		{
 			this.method = method;
 		} // ctor
+
+		public virtual PpsDataFilterExpression Reduce()
+			=> this;
 
 		public abstract void ToString(StringBuilder sb);
 
@@ -231,13 +234,11 @@ namespace TecWare.PPSn.Data
 			return op;
 		} // func ParseCompareOperator
 
-		private static bool IsStartCompareOperation(string expression, int startAt, int offset, Func<string, string> lookupToken, out string identifier)
+		private static bool IsStartCompareOperation(string expression, int startAt, int offset, out string identifier)
 		{
 			if (offset > startAt && TestExpressionCharacter(expression, offset, ':'))
 			{
-				identifier = expression.Substring(startAt, offset - startAt - 1);
-				if (lookupToken != null)
-					identifier = lookupToken(identifier);
+				identifier = expression.Substring(startAt, offset - startAt);
 				return !String.IsNullOrEmpty(identifier);
 			}
 			else
@@ -288,23 +289,21 @@ namespace TecWare.PPSn.Data
 			}
 		} // func IsStartLogicOperation
 
-		private static bool IsStartNativeReference(string expression, int startAt, int offset, Func<string, string> lookupNative, out string identifier, out string nativeExpression)
+		private static bool IsStartNativeReference(string expression, int startAt, int offset, out string identifier)
 		{
 			if (offset > startAt && TestExpressionCharacter(expression, offset, ':'))
 			{
-				identifier = expression.Substring(startAt, offset - startAt - 1);
-				nativeExpression = lookupNative(identifier);
+				identifier = expression.Substring(startAt, offset - startAt);
 				return true;
 			}
 			else
 			{
 				identifier = null;
-				nativeExpression = null;
 				return false;
 			}
 		} // func IsStartNativeReference
 
-		private static PpsDataFilterExpression ParseExpression(string expression, PpsDataFilterExpressionType inLogic, ref int offset, Func<string, string> lookupNative,  Func<string, string> lookupToken)
+		private static PpsDataFilterExpression ParseExpression(string expression, PpsDataFilterExpressionType inLogic, ref int offset)
 		{
 			/*  expr ::=
 			 *		identifier ( ':' [ '<' | '>' | '<=' | '>=' | '!' | '!=' ) value
@@ -332,7 +331,6 @@ namespace TecWare.PPSn.Data
 
 				var startAt = offset;
 				string identifier;
-				string nativeExpression;
 				PpsDataFilterExpressionType newLogic;
 
 				// check for native reference
@@ -345,7 +343,7 @@ namespace TecWare.PPSn.Data
 				if (IsStartLogicOperation(expression, startAt, offset, out newLogic))
 				{
 					offset++;
-					var expr = ParseExpression(expression, newLogic, ref offset, lookupNative, lookupToken);
+					var expr = ParseExpression(expression, newLogic, ref offset);
 
 					// optimize: concat same sub expression
 					if (expr.Type == returnLogic)
@@ -353,7 +351,7 @@ namespace TecWare.PPSn.Data
 					else if (expr != PpsDataFilterTrueExpression.True)
 						compareExpressions.Add(expr);
 				}
-				else if (!nativeRef && IsStartCompareOperation(expression, startAt, offset, lookupToken, out identifier)) // compare operation
+				else if (!nativeRef && IsStartCompareOperation(expression, startAt, offset, out identifier)) // compare operation
 				{
 					offset++; // step over the colon
 
@@ -369,10 +367,10 @@ namespace TecWare.PPSn.Data
 					else // is nothing
 						compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, PpsDataFilterCompareOperator.Equal, null));
 				}
-				else if (nativeRef && IsStartNativeReference(expression, startAt, offset, lookupNative, out identifier, out nativeExpression)) // native reference
+				else if (nativeRef && IsStartNativeReference(expression, startAt, offset, out identifier)) // native reference
 				{
 					offset++;
-					compareExpressions.Add(new PpsDataFilterNativeExpression(identifier, nativeExpression));
+					compareExpressions.Add(new PpsDataFilterNativeExpression(identifier));
 				}
 				else
 				{
@@ -396,8 +394,11 @@ namespace TecWare.PPSn.Data
 				return new PpsDataFilterLogicExpression(returnLogic, compareExpressions.ToArray());
 		} // func ParseExpression
 
-		public static PpsDataFilterExpression Parse(string filterExpression, int offset, Func<string, string> lookupNative, Func<string, string> lookupAttribute)
-			=> ParseExpression(filterExpression, PpsDataFilterExpressionType.None, ref offset, lookupNative, lookupAttribute);
+		public static PpsDataFilterExpression Parse(string filterExpression, int offset = 0)
+			=> ParseExpression(filterExpression, PpsDataFilterExpressionType.None, ref offset);
+
+		public static PpsDataFilterExpression Combine(params PpsDataFilterExpression[] expr)
+			=> new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.And, expr).Reduce();
 	} // class PpsDataFilterExpression
 
 	#endregion
@@ -409,22 +410,19 @@ namespace TecWare.PPSn.Data
 	public sealed class PpsDataFilterNativeExpression : PpsDataFilterExpression
 	{
 		private readonly string key;
-		private readonly string expression;
-
-		public PpsDataFilterNativeExpression(string key, string expression)
+		
+		public PpsDataFilterNativeExpression(string key)
 			: base(PpsDataFilterExpressionType.Native)
 		{
 			this.key = key;
-			this.expression = expression;
 		} // ctor
 
 		public override void ToString(StringBuilder sb)
 		{
-			sb.Append(key);
+			sb.Append(':').Append(key).Append(':');
 		} // func ToString
 
 		public string Key => key;
-		public string Expression => expression;
 	} // class PpsDataFilterNativeExpression
 
 	#endregion
@@ -447,6 +445,18 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
+	#region -- enum PpsDataFilterCompareValueType ---------------------------------------
+
+	public enum PpsDataFilterCompareValueType
+	{
+		Null,
+		Text,
+		Date,
+		Number,
+	} // enum PpsDataFilterCompareValueType
+
+	#endregion
+
 	#region -- class PpsDataFilterCompareValue ------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -461,6 +471,8 @@ namespace TecWare.PPSn.Data
 			ToString(sb);
 			return sb.ToString();
 		} // func ToString
+
+		public abstract PpsDataFilterCompareValueType Type { get; }
 	} // class PpsDataFilterCompareValue
 
 	#endregion
@@ -476,6 +488,7 @@ namespace TecWare.PPSn.Data
 		} // ctor
 
 		public override void ToString(StringBuilder sb) { }
+		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Null;
 
 		public static PpsDataFilterCompareValue Default { get; } = new PpsDataFilterCompareNullValue();
 	} // class PpsDataFilterCompareNullValue
@@ -517,6 +530,7 @@ namespace TecWare.PPSn.Data
 		} // proc ToString
 
 		public string Text => text;
+		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Text;
 	} // class PpsDataFilterCompareTextValue
 
 	#endregion
@@ -543,6 +557,7 @@ namespace TecWare.PPSn.Data
 
 		public DateTime From => from;
 		public DateTime To => to;
+		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Date;
 
 		// -- Static ----------------------------------------------------------------------
 
@@ -574,6 +589,7 @@ namespace TecWare.PPSn.Data
 		} // proc ToString
 
 		public string Text => text;
+		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Number;
 	} // class PpsDataFilterCompareNumberValue
 
 	#endregion
@@ -629,6 +645,13 @@ namespace TecWare.PPSn.Data
 					case PpsDataFilterCompareOperator.LowerOrEqual:
 						sb.Append("<=");
 						break;
+					case PpsDataFilterCompareOperator.NotContains:
+						sb.Append("!");
+						break;
+					case PpsDataFilterCompareOperator.Contains:
+						break;
+					default:
+						throw new InvalidOperationException();
 				}
 				value.ToString(sb);
 			}
@@ -636,7 +659,7 @@ namespace TecWare.PPSn.Data
 
 		public string Operand => operand;
 		public PpsDataFilterCompareOperator Operator => op;
-		public object Value => value;
+		public PpsDataFilterCompareValue Value => value;
 	} // class PpsDataFilterCompareExpression
 
 	#endregion
@@ -668,6 +691,27 @@ namespace TecWare.PPSn.Data
 			this.arguments = arguments;
 		} // ctor
 
+		public override PpsDataFilterExpression Reduce()
+		{
+			var args = new List<PpsDataFilterExpression>(arguments.Length);
+			foreach (var arg in arguments)
+			{
+				var c = arg.Reduce();
+
+				if (c.Type == this.Type)
+					args.AddRange(((PpsDataFilterLogicExpression)c).Arguments);
+				else if (c.Type != PpsDataFilterExpressionType.True)
+					args.Add(c);
+			}
+
+			if (args.Count > 1)
+				return new PpsDataFilterLogicExpression(Type, args.ToArray());
+			else if (args.Count == 1)
+				return args[0];
+			else
+				return PpsDataFilterTrueExpression.True;
+		} // proc Reduce
+
 		public override void ToString(StringBuilder sb)
 		{
 			switch (Type)
@@ -693,8 +737,8 @@ namespace TecWare.PPSn.Data
 
 			for (var i = 1; i < arguments.Length; i++)
 			{
-				sb.Append(',');
-				arguments[0].ToString(sb);
+				sb.Append(' ');
+				arguments[i].ToString(sb);
 			}
 
 			sb.Append(')');
@@ -745,23 +789,20 @@ namespace TecWare.PPSn.Data
 	public sealed class PpsDataOrderExpression
 	{
 		private readonly bool negate;
-		private readonly bool isNative;
-		private readonly string expression;
+		private readonly string identifier;
 
-		public PpsDataOrderExpression(bool negate, bool isNative, string expression)
+		public PpsDataOrderExpression(bool negate, string identifier)
 		{
 			this.negate = negate;
-			this.isNative = isNative;
-			this.expression = expression;
+			this.identifier = identifier;
 		} // ctor
 
 		public bool Negate => negate;
-		public bool IsNative => isNative;
-		public string Expression => expression;
+		public string Identifier => identifier;
 
 		// -- Static --------------------------------------------------------------
 
-		public static IEnumerable<PpsDataOrderExpression> Parse(string order, Func<string, string> findNativeOrder)
+		public static IEnumerable<PpsDataOrderExpression> Parse(string order)
 		{
 			var orderTokens = order.Split(',');
 			foreach (var _tok in orderTokens)
@@ -782,10 +823,14 @@ namespace TecWare.PPSn.Data
 				}
 
 				// try find predefined order
-				var nativeOrder = findNativeOrder(tok);
-				yield return new PpsDataOrderExpression(neg, nativeOrder != null, nativeOrder ?? tok);
+				yield return new PpsDataOrderExpression(neg, tok);
 			}
 		} // func Parse
+
+		public static string ToString(PpsDataOrderExpression[] order)
+		{
+			throw new NotImplementedException();
+		}
 	} // class PpsDataOrderExpression
 
 	#endregion
