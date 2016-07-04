@@ -30,7 +30,7 @@ namespace TecWare.PPSn.Server
 			this.privateUserData = privateUserData;
 		} // ctor
 
-		public void Dispose()		{		}
+		public void Dispose() { }
 
 		public bool EnsureConnection(bool throwException = true)
 			=> true;
@@ -67,7 +67,7 @@ namespace TecWare.PPSn.Server
 
 			public void InitializeColumns()
 			{
-				var selector = CreateSelector(null, false); // call head
+				var selector = CreateSelector(dataSource.systemConnection, false); // call head
 				var columns = selector as IDataColumns;
 				if (columns != null)
 				{
@@ -145,11 +145,13 @@ namespace TecWare.PPSn.Server
 		#endregion
 
 		private readonly PpsApplication application;
+		private readonly PpsSysConnectionHandle systemConnection;
 
 		public PpsSysDataSource(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
 			this.application = sp.GetService<PpsApplication>(true);
+			this.systemConnection = new PpsSysConnectionHandle(this, null);
 		} // ctor
 
 		public override IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext privateUserData, bool throwException = true)

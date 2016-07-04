@@ -45,13 +45,13 @@
 			
 			<pps:view name="ko" displayName="Kontakt" view="local.objects" filter="Typ:=KO">
 				<pps:filter name="lief" displayName="Lieferanten">
-					<![CDATA[ KundNr:! ]]>
-				</pps:filter>
-				<pps:filter name="kund" displayName="Kunden">
 					<![CDATA[ LiefNr:! ]]>
 				</pps:filter>
+				<pps:filter name="kund" displayName="Kunden">
+					<![CDATA[ KundNr:! ]]>
+				</pps:filter>
 				<pps:filter name="rest" displayName="Sonstige">
-					<![CDATA[ LiefNr:! KundNr:! ]]>
+					<![CDATA[ LiefNr: KundNr: ]]>
 				</pps:filter>
 				<pps:order name="nr" displayName="Nummer">
 					<![CDATA[ +Nr ]]>

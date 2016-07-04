@@ -358,7 +358,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			///////////////////////////////////////////////////////////////////////////////
 			/// <summary></summary>
-			private sealed class SqlDataFilterVisitor : PpsDataFilterVisitor<string>
+			private sealed class SqlDataFilterVisitor : PpsDataFilterVisitorSql
 			{
 				private readonly Func<string, string> lookupNative;
 				private readonly Func<string, IPpsColumnDescription> lookupColumn;
@@ -368,185 +368,23 @@ namespace TecWare.PPSn.Server.Sql
 					this.lookupNative = lookupNative;
 					this.lookupColumn = lookupColumn;
 				} // ctor
-
-				public override string CreateCompareFilter(PpsDataFilterCompareExpression expression)
+				
+				protected override Tuple<string, Type> LookupColumn(string columnToken)
 				{
-					var column = lookupColumn(expression.Operand);
+					var column = lookupColumn(columnToken);
 					if (column == null)
-						throw new ArgumentNullException("operand", $"Could not resolve column '{expression.Operand}'.");
-					else
-					{
-						switch (expression.Value.Type)
-						{
-							case PpsDataFilterCompareValueType.Text:
-								return CreateCompareFilterStandard(column, expression.Operator, ((PpsDataFilterCompareTextValue)expression.Value).Text);
-							case PpsDataFilterCompareValueType.Null:
-								return CreateCompareFilterNull(column, expression.Operator);
-							case PpsDataFilterCompareValueType.Date:
-								throw new NotImplementedException("todo");
-							case PpsDataFilterCompareValueType.Number:
-								throw new NotImplementedException("todo");
-							default:
-								throw new NotImplementedException();
-						}
-					}
-				} // func CreateCompareFilter
+						throw new ArgumentNullException("operand", $"Could not resolve column '{columnToken}'.");
 
-				private string CreateCompareFilterNull(IPpsColumnDescription column, PpsDataFilterCompareOperator op)
+					return new Tuple<string, Type>(column.Name, column.DataType);
+				} // func LookupColumn
+
+				protected override string LookupNativeExpression(string key)
 				{
-					switch (op)
-					{
-						case PpsDataFilterCompareOperator.Contains:
-						case PpsDataFilterCompareOperator.Equal:
-							return column.Name + " is null";
-						case PpsDataFilterCompareOperator.NotContains:
-						case PpsDataFilterCompareOperator.NotEqual:
-							return column.Name + " is not null";
-						case PpsDataFilterCompareOperator.Greater:
-						case PpsDataFilterCompareOperator.GreaterOrEqual:
-						case PpsDataFilterCompareOperator.Lower:
-						case PpsDataFilterCompareOperator.LowerOrEqual:
-							return "1=0";
-						default:
-							throw new NotImplementedException();
-					}
-				} // func CreateCompareFilterNull
-
-				private string CreateCompareFilterStandard(IPpsColumnDescription column, PpsDataFilterCompareOperator op, string text)
-				{
-					var value = CreateParsableValue(text, column.DataType);
-					switch (op)
-					{
-						case PpsDataFilterCompareOperator.Contains:
-							if (column.DataType == typeof(string))
-								return column.Name + " LIKE " + CreateLikeString(value, 3);
-							else
-								goto case PpsDataFilterCompareOperator.Equal;
-						case PpsDataFilterCompareOperator.NotContains:
-							if (column.DataType == typeof(string))
-								return "NOT " + column.Name + " LIKE " + CreateLikeString(value, 3);
-							else
-								goto case PpsDataFilterCompareOperator.Equal;
-
-						case PpsDataFilterCompareOperator.Equal:
-							return column.Name + " = " + value;
-						case PpsDataFilterCompareOperator.NotEqual:
-							return column.Name + " <> " + value;
-						case PpsDataFilterCompareOperator.Greater:
-							return column.Name + " > " + value;
-						case PpsDataFilterCompareOperator.GreaterOrEqual:
-							return column.Name + " >= " + value;
-						case PpsDataFilterCompareOperator.Lower:
-							return column.Name + " < " + value;
-						case PpsDataFilterCompareOperator.LowerOrEqual:
-							return column.Name + " <= " + value;
-
-						default:
-							throw new NotImplementedException();
-					}
-				} // func CreateCompareFilterStandard
-
-				private string CreateParsableValue(string text, Type dataType)
-				{
-					switch (System.Type.GetTypeCode(dataType))
-					{
-						case TypeCode.Boolean:
-							return text == "1" || String.Compare(text, Boolean.TrueString, StringComparison.OrdinalIgnoreCase) == 0 ? "1" : "0";
-						case TypeCode.Byte:
-							return Byte.Parse(text).ToString(CultureInfo.InvariantCulture);
-						case TypeCode.SByte:
-							return SByte.Parse(text).ToString(CultureInfo.InvariantCulture);
-						case TypeCode.Int16:
-							return Int16.Parse(text).ToString(CultureInfo.InvariantCulture);
-						case TypeCode.UInt16:
-							return UInt16.Parse(text).ToString(CultureInfo.InvariantCulture);
-						case TypeCode.Int32:
-							return Int32.Parse(text).ToString(CultureInfo.InvariantCulture);
-						case TypeCode.UInt32:
-							return UInt32.Parse(text).ToString(CultureInfo.InvariantCulture);
-						case TypeCode.Int64:
-							return Int64.Parse(text).ToString(CultureInfo.InvariantCulture);
-						case TypeCode.UInt64:
-							return UInt64.Parse(text).ToString(CultureInfo.InvariantCulture);
-						case TypeCode.Single:
-							return Single.Parse(text).ToString(CultureInfo.InvariantCulture);
-						case TypeCode.Double:
-							return Double.Parse(text).ToString(CultureInfo.InvariantCulture);
-						case TypeCode.Decimal:
-							return Decimal.Parse(text).ToString(CultureInfo.InvariantCulture);
-						case TypeCode.Char:
-							return String.IsNullOrEmpty(text) ? "char(0)" : "'" + text[0] + "'";
-						case TypeCode.DateTime:
-							throw new NotImplementedException();
-						case TypeCode.String:
-							var sb = new StringBuilder(text.Length + 2);
-							var pos = 0;
-							var startAt = 0;
-							sb.Append('\'');
-							while (pos < text.Length)
-							{
-								pos = text.IndexOf('\'', pos);
-								if (pos == -1)
-									pos = text.Length;
-								else
-								{
-									sb.Append(text, startAt, pos - startAt);
-									startAt = ++pos;
-									sb.Append("''");
-								}
-							}
-							if (startAt < pos)
-								sb.Append(text, startAt, pos - startAt);
-							sb.Append('\'');
-							return sb.ToString();
-
-						default:
-							throw new NotImplementedException();
-					}
-				} // func CreateParsableValue
-
-				private string CreateLikeString(string value, int flag)
-				{
-					value = value.Replace("%", "[%]");
-
-					if ((flag & 3) == 3)
-						value = "'%" + value.Substring(1, value.Length - 2) + "%'";
-					else if ((flag & 1) == 1)
-						value = "'%" + value.Substring(1, value.Length - 1);
-					else if ((flag & 2) == 2)
-						value = value.Substring(0, value.Length - 1) + "%'";
-
-					return value;
-				} // func CreateLikeString
-
-				public override string CreateLogicFilter(PpsDataFilterExpressionType method, IEnumerable<string> arguments)
-				{
-					switch (method)
-					{
-						case PpsDataFilterExpressionType.And:
-							return "(" + String.Join(" AND ", arguments.Where(c => !String.IsNullOrEmpty(c))) + ")";
-						case PpsDataFilterExpressionType.Or:
-							return "(" + String.Join(" OR ", arguments.Where(c => !String.IsNullOrEmpty(c))) + ")";
-						case PpsDataFilterExpressionType.NAnd:
-							return "not " + CreateLogicFilter(PpsDataFilterExpressionType.And, arguments);
-						case PpsDataFilterExpressionType.NOr:
-							return "not " + CreateLogicFilter(PpsDataFilterExpressionType.Or, arguments);
-						default:
-							throw new InvalidOperationException();
-					}
-				} // func CreateLogicFilter
-
-				public override string CreateNativeFilter(PpsDataFilterNativeExpression expression)
-				{
-					var expr= lookupNative(expression.Key);
+					var expr = lookupNative(key);
 					if (String.IsNullOrEmpty(expr))
-						throw new ArgumentNullException("nativeExpression", $"Could not resolve native expression '{expression.Key}'.");
-
-					return "(" + expr + ")";
-				} // func CreateNativeFilter
-
-				public override string CreateTrueFilter()
-					=> "1=1";
+						throw new ArgumentNullException("nativeExpression", $"Could not resolve native expression '{key}'.");
+					return expr;
+				} // func LookupNativeExpression
 			} // class SqlDataFilterVisitor
 
 			#endregion
