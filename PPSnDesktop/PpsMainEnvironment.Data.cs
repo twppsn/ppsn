@@ -254,6 +254,8 @@ namespace TecWare.PPSn
 			{
 				#region -- class ObjectViewColumns --------------------------------------------
 
+				///////////////////////////////////////////////////////////////////////////////
+				/// <summary></summary>
 				private sealed class ObjectViewColumns : IReadOnlyList<IDataColumn>
 				{
 					private readonly ObjectViewRow row;
@@ -298,6 +300,8 @@ namespace TecWare.PPSn
 				private readonly object[] staticValues;
 				private readonly PropertyValue[] dynamicKeys;
 				private readonly ObjectViewColumns columns;
+
+				#region -- Ctor/Dtor ----------------------------------------------------------
 
 				public ObjectViewRow(IDataRecord r)
 				{
@@ -346,6 +350,7 @@ namespace TecWare.PPSn
 					object value = Procs.UnescapeSpecialChars(attributeLine.Substring(indexEqual + 1));
 					if (value != null)
 						value = Procs.ChangeType(value, dataType);
+
 					return new PropertyValue(attributeName, dataType, value);
 				} // func CreateKeyValue
 
@@ -353,7 +358,9 @@ namespace TecWare.PPSn
 				{
 					// todo:
 					return typeof(string);
-				}
+				} // func TypeFromClassHint
+
+				#endregion
 
 				public override IReadOnlyList<IDataColumn> Columns => columns;
 
@@ -424,7 +431,8 @@ namespace TecWare.PPSn
 
 			// -- Static ------------------------------------------------------------
 
-			private static readonly IDataColumn[] staticColumns;
+			internal static readonly IDataColumn[] staticColumns;
+			internal static readonly string[] staticColumnExpr;
 
 			static ObjectViewEnumerator()
 			{
@@ -435,8 +443,27 @@ namespace TecWare.PPSn
 						new SimpleDataColumn("Guid", typeof(Guid)),
 						new SimpleDataColumn("Typ", typeof(string)),
 						new SimpleDataColumn("Nr", typeof(string)),
-						new SimpleDataColumn("RemoteRevId", typeof(long))
+						new SimpleDataColumn("RemoteRevId", typeof(long)),
+						new SimpleDataColumn("PulledRevId", typeof(long)),
+						new SimpleDataColumn("IsLocalModified", typeof(bool))
 					};
+
+				staticColumnExpr = new string[]
+					{
+						"o.Id",
+						"o.ServerId",
+						"o.Guid",
+						"o.Typ",
+						"o.Nr",
+						"o.RemoteRevId",
+						"o.PulledRevId",
+						"o.DocumentIsChanged"
+					};
+
+#if DEBUG
+				if (staticColumnExpr.Length != staticColumns.Length)
+					throw new ArgumentException();
+#endif
 			} // sctor
 		} // class ObjectViewEnumerator
 
@@ -448,39 +475,326 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		private sealed class ObjectViewGenerator : IEnumerable<IDataRow>
 		{
+			private const string AllColumns = "s_all";
+			private const string NumberColumns = "s_number";
+			private const int NumberClass = 1;
+			private const string DateColumns = "s_date";
+			private const int DateClass = 2;
+			private const string ColumnAliasPrefix = "a_";
+			private const string ColumnStaticPrefix = "s_";
+			private const string ColumnJoinPrefix = "t_";
+
+			private const string StaticNr = "NR";
+			private const string StaticTyp = "TYP";
+
+			#region -- class ObjectViewFilterVisitor ----------------------------------------
+
+			///////////////////////////////////////////////////////////////////////////////
+			/// <summary></summary>
+			private sealed class ObjectViewFilterVisitor : PpsDataFilterVisitorSql
+			{
+				private readonly ObjectViewGenerator owner;
+
+				public ObjectViewFilterVisitor(ObjectViewGenerator owner)
+				{
+					this.owner = owner;
+				} // ctor
+
+				private string RegisterColumn(string columnToken, string nullToken, int @class)
+					=> owner.RegisterColumn(String.IsNullOrEmpty(columnToken) ? nullToken : columnToken, @class);
+
+				protected override Tuple<string, Type> LookupDateColumn(string columnToken)
+					=> new Tuple<string, Type>(RegisterColumn(columnToken, DateColumns, DateClass), typeof(DateTime));
+
+				protected override Tuple<string, Type> LookupNumberColumn(string columnToken)
+					=> new Tuple<string, Type>(RegisterColumn(columnToken, NumberColumns, NumberClass), typeof(string));
+
+				protected override Tuple<string, Type> LookupColumn(string columnToken)
+					=> new Tuple<string, Type>(RegisterColumn(columnToken, AllColumns, 0), typeof(string));
+
+				protected override string LookupNativeExpression(string key)
+					=> "1=1"; // not supported
+			} // class ObjectViewFilterVisitor
+
+			#endregion
+
+			#region -- class ObjectViewColumn -----------------------------------------------
+
+			private enum ObjectViewColumnType
+			{
+				All,
+				Number,
+				Date,
+				Key,
+				Static
+			} // enum ObjectViewColumnType
+
+			private sealed class ObjectViewColumn
+			{
+				private readonly ObjectViewColumnType type;
+				private readonly string keyName; // tag name for the column (meta key)
+				private readonly int classification; // the forced classification for the tag (0 for not present)
+
+				private readonly string columnAlias;  // alias for the where expression (used in where/orderby)
+				private readonly string joinAlias;
+
+				public ObjectViewColumn(string virtualColumn, int classification)
+				{
+					switch (virtualColumn)
+					{
+						case AllColumns:
+							type = ObjectViewColumnType.All;
+							joinAlias = AllColumns;
+							goto case "\0";
+						case DateColumns:
+							type = ObjectViewColumnType.Date;
+							joinAlias = DateColumns;
+							goto case "\0";
+						case NumberColumns:
+							type = ObjectViewColumnType.Number;
+							joinAlias = NumberColumns;
+							goto case "\0";
+						case "\0":
+							this.keyName = null;
+							this.columnAlias = null;
+
+							switch (classification)
+							{
+								case DateClass:
+									columnAlias = CastToDateExpression(virtualColumn + ".value");
+									break;
+								case NumberClass:
+								default:
+									columnAlias = virtualColumn + ".value";
+									break;
+							}
+							break;
+						default:
+							if (String.Compare(virtualColumn, StaticNr, StringComparison.OrdinalIgnoreCase) == 0 ||
+								String.Compare(virtualColumn, StaticTyp, StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								type = ObjectViewColumnType.Static;
+								if (classification != 0)
+									classification = 0; // ignore classification
+								this.columnAlias = ColumnStaticPrefix + virtualColumn;
+							}
+							else
+							{
+								type = ObjectViewColumnType.Key;
+
+								this.keyName = virtualColumn;
+								this.joinAlias = ColumnJoinPrefix + virtualColumn;
+
+								if (classification != 0)
+									this.columnAlias = ColumnAliasPrefix + virtualColumn + classification.ToString();
+								else
+									this.columnAlias = ColumnAliasPrefix + virtualColumn;
+							}
+							break;
+					}
+
+					this.classification = classification;
+				} // ctor
+
+				public override string ToString()
+				=> $"{type}Column: {columnAlias} -> {joinAlias} from {keyName}, {classification}";
+
+				public bool Equals(string virtualColumn, int classification)
+				{
+					if (classification == this.classification)
+					{
+						switch (virtualColumn)
+						{
+							case AllColumns:
+								return virtualColumn == AllColumns;
+							case DateColumns:
+								return virtualColumn == DateColumns;
+							case NumberColumns:
+								return virtualColumn == NumberColumns;
+							default:
+								return String.Compare(this.keyName, virtualColumn, StringComparison.OrdinalIgnoreCase) == 0;
+						}
+					}
+					else
+						return false;
+				} // func Equals
+
+				private string CastToDateExpression(string columnExpr)
+					=> "cast(" + columnExpr + " AS datetime)";
+				
+				public string CreateWhereExpression()
+				{
+					if (type != ObjectViewColumnType.Key)
+						throw new NotSupportedException();
+
+					switch (classification)
+					{
+						case DateClass:
+							return CastToDateExpression(joinAlias + ".value") + " AS " + columnAlias;
+						case NumberClass:
+						default:
+							return joinAlias + ".value AS " + columnAlias;
+					}
+				} // func CreateWhereExpression
+
+				public string CreateLeftOuterJoinExpression()
+				{
+					switch (type)
+					{
+						case ObjectViewColumnType.All:
+							return "LEFT OUTER JOIN ObjectTags AS " + AllColumns + " ON (o.Id = " + AllColumns + ".ObjectId)";
+						case ObjectViewColumnType.Date:
+							return "LEFT OUTER JOIN ObjectTags AS " + DateColumns + " ON (o.Id = " + DateColumns + ".ObjectId AND " + DateColumns + ".class = " + DateClass + ")";
+						case ObjectViewColumnType.Number:
+							return "LEFT OUTER JOIN ObjectTags AS " + NumberColumns + " ON (o.Id = " + NumberColumns + ".ObjectId AND " + NumberColumns + ".class = " + NumberClass + ")";
+
+						case ObjectViewColumnType.Key:
+							if (classification == 0)
+								return "LEFT OUTER JOIN ObjectTags AS " + joinAlias + " ON (o.Id = " + joinAlias + ".ObjectId AND " + joinAlias + ".Key = '" + keyName + "' COLLATE NOCASE)";
+							else
+								return "LEFT OUTER JOIN ObjectTags AS " + joinAlias + " ON (o.Id = " + joinAlias + ".ObjectId AND " + joinAlias + ".Class = " + classification + " AND " + joinAlias + ".Key = '" + keyName + "' COLLATE NOCASE)";
+						default:
+							throw new NotSupportedException();
+					}
+				} //func CreateLeftOuterJoinExpression
+
+				public string KeyName => keyName;
+				public int Classification => classification;
+				public string ColumnAlias => columnAlias;
+
+				public ObjectViewColumnType Type => type;
+			} // ObjectViewColumn
+
+			#endregion
+
 			private readonly SQLiteConnection localStoreConnection;
+
+			private List<ObjectViewColumn> columnInfos = new List<ObjectViewColumn>();
+			private string whereCondition = null;
+			private string orderCondition = null;
+			private long limitStart = -1;
+			private long limitCount = -1;
 
 			public ObjectViewGenerator(SQLiteConnection localStoreConnection)
 			{
 				this.localStoreConnection = localStoreConnection;
+
+				RegisterColumn(AllColumns, 0); // register always "s_all"
 			} // ctor
 
-			public string LookupField(string fieldName, bool order)
+			private string RegisterColumn(string virtualColumn, int classification)
 			{
-				return fieldName;
-			} // func LookupField
+				// find the column definiton
+				var columnInfo = columnInfos.FirstOrDefault(c => c.Equals(virtualColumn, classification));
+				if (columnInfo == null) // create new column info
+					columnInfos.Add(columnInfo = new ObjectViewColumn(virtualColumn, classification));
 
-			public string LookupFieldForFilter(string fieldName)
-				=> LookupField(fieldName, false);
+				return columnInfo.ColumnAlias;
+			} // func RegisterColumn
 
-			public string LookupFieldForFOrder(string fieldName)
-				=> LookupField(fieldName, false);
+			private string CreateSqlOrder(string identifier, bool negate)
+				=> RegisterColumn(identifier, 0) + (negate ? " DESC" : " ASC");
 
 			public void ApplyFilter(PpsDataFilterExpression filter)
 			{
+				if (filter is PpsDataFilterTrueExpression)
+					whereCondition = null;
+				else
+					whereCondition = new ObjectViewFilterVisitor(this).CreateFilter(filter);
 			} // proc ApplyFilter
 
 			public void ApplyOrder(IEnumerable<PpsDataOrderExpression> orders)
 			{
+				if (orders == null)
+					orderCondition = null;
+				else
+					orderCondition = String.Join(",", from o in orders where !String.IsNullOrEmpty(o.Identifier) select CreateSqlOrder(o.Identifier, o.Negate));
 			} // proc ApplyOrder
 
 			public void ApplyLimit(long startAt, long count)
 			{
+				this.limitStart = startAt;
+				this.limitCount = count;
 			} // proc ApplyLimit
+
+			private IEnumerable<ObjectViewColumn> GetAllKeyColumns()
+				=> columnInfos.Where(c => c.Type == ObjectViewColumnType.Key);
 
 			private SQLiteCommand CreateCommand()
 			{
-				return new SQLiteCommand("select o.Id, o.ServerId, o.Guid, o.Typ, o.Nr, o.RemoteRevId, group_concat(t.Key || ':' || t.Class || '='  || t.Value, char(10)) as [Values] from Objects o left outer join ObjectTags t on (o.Id = t.ObjectId) group by o.Id, o.ServerId, o.Guid, o.Typ, o.Nr, o.RemoteRevId", localStoreConnection);
+				// build complete sql expression
+				var cmd = new StringBuilder();
+
+				cmd.Append("SELECT ");
+
+				// generate static columns
+				for (var i = 0; i < ObjectViewEnumerator.staticColumns.Length; i++)
+				{
+					cmd.Append(ObjectViewEnumerator.staticColumnExpr[i])
+						.Append(" AS ")
+						.Append(ColumnStaticPrefix).Append(ObjectViewEnumerator.staticColumns[i].Name)
+						.Append(',');
+				}
+
+				// append multi-value column
+				cmd.Append("group_concat(s_all.Key || ':' || s_all.Class || '=' || s_all.Value, char(10)) as [Values]");
+
+				// generate dynamic columns
+				foreach (var c in GetAllKeyColumns())
+				{
+					cmd.Append(',')
+						.Append(c.CreateWhereExpression());
+				}
+
+				cmd.AppendLine().Append("FROM main.[Objects] o");
+
+				// create left outer joins
+				foreach (var c in columnInfos)
+				{
+					if (c.Type != ObjectViewColumnType.Static)
+						cmd.AppendLine().Append(c.CreateLeftOuterJoinExpression());
+				}
+
+				// add the where condition
+				if (!String.IsNullOrEmpty(whereCondition))
+					cmd.AppendLine().Append("WHERE ").Append(whereCondition);
+
+				// create the group by
+				cmd.AppendLine().Append("GROUP BY ");
+				var first = true;
+				foreach (var c in ObjectViewEnumerator.staticColumns)
+				{
+					if (first)
+						first = false;
+					else
+						cmd.Append(',');
+					cmd.Append(ColumnStaticPrefix).Append(c.Name);
+				}
+				foreach (var c in GetAllKeyColumns())
+				{
+					cmd.Append(',');
+					cmd.Append(c.ColumnAlias);
+				}
+
+				// order by condition
+				cmd.AppendLine();
+				if (String.IsNullOrEmpty(orderCondition))
+					orderCondition = ColumnStaticPrefix + "Id DESC";
+				cmd.Append("ORDER BY ").Append(orderCondition);
+
+				// add limit
+				if (limitStart  != -1 || limitCount != -1)
+				{
+					if (limitCount < 0)
+						limitCount = 0;
+
+					cmd.Append(" LIMIT ").Append(limitCount);
+					if (limitStart > 0)
+						cmd.Append(" OFFSET ").Append(limitStart);
+				}
+
+				var sqlCommand = cmd.ToString();
+				return new SQLiteCommand(sqlCommand, localStoreConnection);
 				/*
 select o.Id, o.ServerId, o.Guid, Typ, o.Nr, o.RemoteRevId, group_concat(t.Key || ':' || t.Class || '='  || t.Value, char(10)) as [Values]
 from Objects o 
@@ -508,8 +822,8 @@ order by t_liefnr.value desc
 		{
 			var gn = new ObjectViewGenerator(LocalConnection);
 
-			//gn.ApplyFilter(PpsDataFilterExpression.Parse(arguments.Filter, 0));
-			//gn.ApplyOrder(PpsDataOrderExpression.Parse(arguments.Order));
+			gn.ApplyFilter(arguments.Filter);
+			gn.ApplyOrder(arguments.Order);
 			gn.ApplyLimit(arguments.Start, arguments.Count);
 
 			return gn;
