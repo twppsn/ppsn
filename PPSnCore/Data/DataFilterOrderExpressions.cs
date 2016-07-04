@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -65,6 +66,18 @@ namespace TecWare.PPSn.Data
 		Lower,
 		LowerOrEqual
 	} // enum PpsDataFilterCompareOperator
+
+	#endregion
+
+	#region -- enum PpsSqlLikeStringEscapeFlag ------------------------------------------
+
+	[Flags]
+	public enum PpsSqlLikeStringEscapeFlag
+	{
+		Leading = 1,
+		Trailing = 2,
+		Both = Leading | Trailing
+	} // enum PpsSqlLikeStringEscapeFlag
 
 	#endregion
 
@@ -239,7 +252,7 @@ namespace TecWare.PPSn.Data
 			if (offset > startAt && TestExpressionCharacter(expression, offset, ':'))
 			{
 				identifier = expression.Substring(startAt, offset - startAt);
-				return !String.IsNullOrEmpty(identifier);
+				return true;
 			}
 			else
 			{
@@ -306,7 +319,7 @@ namespace TecWare.PPSn.Data
 		private static PpsDataFilterExpression ParseExpression(string expression, PpsDataFilterExpressionType inLogic, ref int offset)
 		{
 			/*  expr ::=
-			 *		identifier ( ':' [ '<' | '>' | '<=' | '>=' | '!' | '!=' ) value
+			 *		[ identifier ] ( ':' [ '<' | '>' | '<=' | '>=' | '!' | '!=' ) value
 			 *		[ 'and' | 'or' | 'nand' | 'nor' ] '(' expr { SP ... } [ ')' ]
 			 *		':' native ':'
 			 *		value
@@ -365,7 +378,7 @@ namespace TecWare.PPSn.Data
 						compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, op, value));
 					}
 					else // is nothing
-						compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, PpsDataFilterCompareOperator.Equal, null));
+						compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, PpsDataFilterCompareOperator.Equal, PpsDataFilterCompareNullValue.Default));
 				}
 				else if (nativeRef && IsStartNativeReference(expression, startAt, offset, out identifier)) // native reference
 				{
@@ -778,7 +791,305 @@ namespace TecWare.PPSn.Data
 			else
 				throw new NotImplementedException();
 		} // func CreateFilter
-	} // class PpsDataFilterExpressionVisitor
+	} // class PpsDataFilterVisitor
+
+	#endregion
+
+	#region -- class PpsDataFilterVisitorSql --------------------------------------------
+
+	public abstract class PpsDataFilterVisitorSql : PpsDataFilterVisitor<string>
+	{
+		#region -- CreateTrueFilter--------------------------------------------------------
+
+		public override string CreateTrueFilter()
+			=> "1=1";
+
+		#endregion
+
+		#region -- CreateCompareFilter ----------------------------------------------------
+
+		public override string CreateCompareFilter(PpsDataFilterCompareExpression expression)
+		{
+			switch (expression.Value.Type)
+			{
+				case PpsDataFilterCompareValueType.Text:
+					return CreateCompareFilterText(expression.Operand, expression.Operator, ((PpsDataFilterCompareTextValue)expression.Value).Text);
+				case PpsDataFilterCompareValueType.Date:
+					return CreateCompareFilterDate(expression.Operand, expression.Operator, ((PpsDataFilterCompareDateValue)expression.Value).From, ((PpsDataFilterCompareDateValue)expression.Value).To);
+				case PpsDataFilterCompareValueType.Number:
+					return CreateCompareFilterNumber(expression.Operand, expression.Operator, ((PpsDataFilterCompareNumberValue)expression.Value).Text);
+				case PpsDataFilterCompareValueType.Null:
+					return CreateCompareFilterNull(expression.Operand, expression.Operator);
+				default:
+					throw new NotImplementedException();
+			}
+		} // func CreateCompareFilter
+
+		private string CreateCompareFilterText(string columnToken, PpsDataFilterCompareOperator op, string text)
+		{
+			var column = LookupColumn(columnToken);
+
+			var value = CreateParsableValue(text, column.Item2);
+			switch (op)
+			{
+				case PpsDataFilterCompareOperator.Contains:
+					if (column.Item2 == typeof(string))
+						return column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Both);
+					else
+						goto case PpsDataFilterCompareOperator.Equal;
+				case PpsDataFilterCompareOperator.NotContains:
+					if (column.Item2 == typeof(string))
+						return "NOT " + column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Both);
+					else
+						goto case PpsDataFilterCompareOperator.Equal;
+
+				case PpsDataFilterCompareOperator.Equal:
+					return column.Item1 + " = " + value;
+				case PpsDataFilterCompareOperator.NotEqual:
+					return column.Item1 + " <> " + value;
+				case PpsDataFilterCompareOperator.Greater:
+					return column.Item1 + " > " + value;
+				case PpsDataFilterCompareOperator.GreaterOrEqual:
+					return column.Item1 + " >= " + value;
+				case PpsDataFilterCompareOperator.Lower:
+					return column.Item1 + " < " + value;
+				case PpsDataFilterCompareOperator.LowerOrEqual:
+					return column.Item1 + " <= " + value;
+
+				default:
+					throw new NotImplementedException();
+			}
+		} // func CreateCompareFilterText
+
+		private string CreateCompareFilterNumber(string columnToken, PpsDataFilterCompareOperator op, string text)
+		{
+			var column = LookupNumberColumn(columnToken);
+			if (column.Item2 != typeof(string))
+				return "1=0"; // invalid filter for this column -> todo: exception
+
+			switch (op)
+			{
+				case PpsDataFilterCompareOperator.Contains:
+					return CreateLikeString(column.Item1, PpsSqlLikeStringEscapeFlag.Leading);
+				case PpsDataFilterCompareOperator.NotContains:
+					return "NOT " + CreateLikeString(column.Item1, PpsSqlLikeStringEscapeFlag.Leading);
+
+				case PpsDataFilterCompareOperator.Equal:
+				case PpsDataFilterCompareOperator.NotEqual:
+				case PpsDataFilterCompareOperator.Greater:
+				case PpsDataFilterCompareOperator.GreaterOrEqual:
+				case PpsDataFilterCompareOperator.Lower:
+				case PpsDataFilterCompareOperator.LowerOrEqual:
+					return "1=0"; // todo:
+				default:
+					throw new NotImplementedException();
+			}
+		} // func CreateCompareFilterNumber
+
+		private string CreateCompareFilterDate(string columnToken, PpsDataFilterCompareOperator op, DateTime from, DateTime to)
+		{
+			var column = LookupDateColumn(columnToken);
+			if (column.Item2 != typeof(DateTime))
+				return "1=0"; // invalid filter for this column -> todo: exception
+
+			switch (op)
+			{
+				case PpsDataFilterCompareOperator.Contains:
+				case PpsDataFilterCompareOperator.Equal:
+					return column.Item1 + " BETWEEN " + CreateDateString(from) + " TO " + CreateDateString(to);
+				case PpsDataFilterCompareOperator.NotContains:
+				case PpsDataFilterCompareOperator.NotEqual:
+					return "NOT " + column.Item1 + " BETWEEN " + CreateDateString(from) + " TO " + CreateDateString(to);
+
+				case PpsDataFilterCompareOperator.Greater:
+					return column.Item1 + " > " + CreateDateString(to);
+				case PpsDataFilterCompareOperator.GreaterOrEqual:
+					return column.Item1 + " >= " + CreateDateString(from);
+				case PpsDataFilterCompareOperator.Lower:
+					return column.Item1 + " < " + CreateDateString(from);
+				case PpsDataFilterCompareOperator.LowerOrEqual:
+					return column.Item1 + " <= " + CreateDateString(to);
+
+				default:
+					throw new NotImplementedException();
+			}
+		} // func CreateCompareFilterDate
+
+		protected virtual string CreateDateString(DateTime value)
+			=> "'" + value.ToString("G") + "'";
+
+		private string CreateCompareFilterNull(string columnToken, PpsDataFilterCompareOperator op)
+		{
+			switch (op)
+			{
+				case PpsDataFilterCompareOperator.Contains:
+				case PpsDataFilterCompareOperator.Equal:
+					return LookupColumn(columnToken).Item1 + " is null";
+				case PpsDataFilterCompareOperator.NotContains:
+				case PpsDataFilterCompareOperator.NotEqual:
+					return LookupColumn(columnToken).Item1 + " is not null";
+				case PpsDataFilterCompareOperator.Greater:
+				case PpsDataFilterCompareOperator.GreaterOrEqual:
+				case PpsDataFilterCompareOperator.Lower:
+				case PpsDataFilterCompareOperator.LowerOrEqual:
+					return "1=0";
+				default:
+					throw new NotImplementedException();
+			}
+		} // func CreateCompareFilterNull
+
+		protected virtual string CreateParsableValue(string text, Type dataType)
+		{
+			var dataTypeName = dataType.Name;
+			switch (dataTypeName)
+			{
+				case nameof(Boolean):
+					return text == "1" || String.Compare(text, Boolean.TrueString, StringComparison.OrdinalIgnoreCase) == 0 ? "1" : "0";
+				case nameof(Byte):
+					return Byte.Parse(text).ToString(CultureInfo.InvariantCulture);
+				case nameof(SByte):
+					return SByte.Parse(text).ToString(CultureInfo.InvariantCulture);
+				case nameof(Int16):
+					return Int16.Parse(text).ToString(CultureInfo.InvariantCulture);
+				case nameof(UInt16):
+					return UInt16.Parse(text).ToString(CultureInfo.InvariantCulture);
+				case nameof(Int32):
+					return Int32.Parse(text).ToString(CultureInfo.InvariantCulture);
+				case nameof(UInt32):
+					return UInt32.Parse(text).ToString(CultureInfo.InvariantCulture);
+				case nameof(Int64):
+					return Int64.Parse(text).ToString(CultureInfo.InvariantCulture);
+				case nameof(UInt64):
+					return UInt64.Parse(text).ToString(CultureInfo.InvariantCulture);
+				case nameof(Single):
+					return Single.Parse(text).ToString(CultureInfo.InvariantCulture);
+				case nameof(Double):
+					return Double.Parse(text).ToString(CultureInfo.InvariantCulture);
+				case nameof(Decimal):
+					return Decimal.Parse(text).ToString(CultureInfo.InvariantCulture);
+				case nameof(Char):
+					return String.IsNullOrEmpty(text) ? "char(0)" : "'" + text[0] + "'";
+				case nameof(DateTime):
+					throw new NotImplementedException();
+				case nameof(String):
+					var sb = new StringBuilder(text.Length + 2);
+					var pos = 0;
+					var startAt = 0;
+					sb.Append('\'');
+					while (pos < text.Length)
+					{
+						pos = text.IndexOf('\'', pos);
+						if (pos == -1)
+							pos = text.Length;
+						else
+						{
+							sb.Append(text, startAt, pos - startAt);
+							startAt = ++pos;
+							sb.Append("''");
+						}
+					}
+					if (startAt < pos)
+						sb.Append(text, startAt, pos - startAt);
+					sb.Append('\'');
+					return sb.ToString();
+
+				default:
+					throw new NotImplementedException();
+			}
+		} // func CreateParsableValue
+
+		private string CreateLikeString(string value, PpsSqlLikeStringEscapeFlag flag)
+		{
+			value = value.Replace("%", "[%]");
+
+			if ((flag & PpsSqlLikeStringEscapeFlag.Both) == PpsSqlLikeStringEscapeFlag.Both)
+				value = "'%" + value.Substring(1, value.Length - 2) + "%'";
+			else if ((flag & PpsSqlLikeStringEscapeFlag.Leading) == PpsSqlLikeStringEscapeFlag.Leading)
+				value = "'%" + value.Substring(1, value.Length - 1);
+			else if ((flag & PpsSqlLikeStringEscapeFlag.Trailing) == PpsSqlLikeStringEscapeFlag.Trailing)
+				value = value.Substring(0, value.Length - 1) + "%'";
+
+			return value;
+		} // func CreateLikeString
+
+		protected virtual Tuple<string, Type> LookupDateColumn(string columnToken)
+			=> LookupColumn(columnToken);
+
+		protected virtual Tuple<string, Type> LookupNumberColumn(string columnToken)
+			=> LookupColumn(columnToken);
+
+		protected abstract Tuple<string, Type> LookupColumn(string columnToken);
+
+		#endregion
+
+		#region -- CreateLogicFilter ------------------------------------------------------
+
+		public override string CreateLogicFilter(PpsDataFilterExpressionType method, IEnumerable<string> arguments)
+		{
+			var sb = new StringBuilder();
+
+			// initialize
+			string op;
+			switch (method)
+			{
+				case PpsDataFilterExpressionType.NAnd:
+					sb.Append("NOT (");
+					goto case PpsDataFilterExpressionType.And;
+				case PpsDataFilterExpressionType.And:
+					op = " AND ";
+					break;
+				case PpsDataFilterExpressionType.NOr:
+					sb.Append("NOT (");
+					goto case PpsDataFilterExpressionType.Or;
+				case PpsDataFilterExpressionType.Or:
+					op = " OR ";
+					break;
+				default:
+					throw new InvalidOperationException();
+			}
+
+			// add arguments
+			var first = true;
+			foreach (var a in arguments)
+			{
+				if (first)
+					first = false;
+				else
+					sb.Append(op);
+				sb.Append('(').Append(a).Append(')');
+			}
+
+			if (first) // no arguments -> return a neutral expression
+				return "1=1";
+
+			switch (method)
+			{
+				case PpsDataFilterExpressionType.NAnd:
+				case PpsDataFilterExpressionType.NOr:
+					sb.Append(')');
+					break;
+			}
+
+			return sb.ToString();
+		} // func CreateLogicFilter
+
+		#endregion
+
+		#region -- CreateNativeFilter -----------------------------------------------------
+
+		public override string CreateNativeFilter(PpsDataFilterNativeExpression expression)
+		{
+			var nativeExpression = LookupNativeExpression(expression.Key);
+			if (String.IsNullOrEmpty(nativeExpression))
+				return CreateTrueFilter();
+			else
+				return "(" + nativeExpression + ")";
+		} // func CreateNativeFilter
+
+		protected abstract string LookupNativeExpression(string key);
+
+		#endregion
+	} // class PpsDataFilterVisitorSql
 
 	#endregion
 
