@@ -78,12 +78,9 @@
 
 			<!-- base dataset -->
 			<pps:dataset name="coreDataSet">
-				<pps:parameter name="Id" fieldName="dbo.Objk.Id" isNullable="true"/>
-				<pps:parameter name="Rev" fieldName="dbo.Objr.Id" isNullable="true"/>
-
 				<!-- define the base table -->
 				<pps:table name="Head">
-					<pps:column name="Id" fieldName="dbo.Objk.Id" isPrimary="true" parameter="Id" />
+					<pps:column name="Id" fieldName="dbo.Objk.Id" isPrimary="true" />
 					<pps:column name="RevId" fieldName="dbo.Objk.CurRevId" />
 					<pps:column name="HeadId" fieldName="dbo.Objk.HeadRevId" />
 					<pps:column name="Nr" fieldName="dbo.Objk.Nr" />

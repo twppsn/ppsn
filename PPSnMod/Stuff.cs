@@ -43,7 +43,7 @@ namespace TecWare.PPSn.Server
 		public readonly static XName xnTable = PpsNamespace + "table";
 		public readonly static XName xnColumn = PpsNamespace + "column";
 		public readonly static XName xnRelation = PpsNamespace + "relation";
-		public readonly static XName xnParameter = PpsNamespace + "parameter";
+		public readonly static XName xnAutoTag = PpsNamespace + "autoTag";
 		public readonly static XName xnMeta = PpsNamespace + "meta";
 
 		public readonly static XName xnWpf = PpsNamespace + "wpf";

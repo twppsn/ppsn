@@ -15,6 +15,8 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -70,56 +72,113 @@ namespace TecWare.PPSn.Server
 		#endregion
 
 		[
-		DEConfigHttpAction("pull", IsSafeCall = true)
+			DEConfigHttpAction("pull", IsSafeCall = true),
+			Description("Reads the revision from the server.")
 		]
-		public void HttpLoadAction(IDEContext ctx)
+		public void HttpLoadAction(IDEContext ctx, long id, long rev = -1)
 		{
-			// prepare load
-			var dataset = datasetDefinition.CreateDataSet();
+			// lädt revision aus object tabelle
+			throw new NotImplementedException();
 
-			// create the arguments and call the lua load function
-			var args = new object[] { dataset, new LuaPropertiesTable(ctx) };
 
-			var loadableDataset = dataset as IPpsLoadableDataSet;
+			//// prepare load
+			//var dataset = datasetDefinition.CreateDataSet();
 
-			loadableDataset?.OnBeforeLoad(ctx);
-			CallTableMethods("BeforeLoad", args);
-			loadableDataset?.OnLoad(ctx);
-			CallTableMethods("Load", args);
-			loadableDataset?.OnAfterLoad(ctx);
-			CallTableMethods("AfterLoad", args);
+			//// create the arguments and call the lua load function
+			//var args = new object[] { dataset, new LuaPropertiesTable(ctx) };
 
-			// send a clean document
-			dataset.Commit();
+			//var loadableDataset = dataset as IPpsLoadableDataSet;
 
-			using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
-			using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
-			{
-				xml.WriteStartDocument();
-				dataset.Write(xml);
-				xml.WriteEndDocument();
-			}
+			//loadableDataset?.OnBeforeLoad(ctx);
+			//CallTableMethods("BeforeLoad", args);
+			//loadableDataset?.OnLoad(ctx);
+			//CallTableMethods("Load", args);
+			//loadableDataset?.OnAfterLoad(ctx);
+			//CallTableMethods("AfterLoad", args);
+
+			//// send a clean document
+			//dataset.Commit();
+
+			//using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
+			//using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
+			//{
+			//	xml.WriteStartDocument();
+			//	dataset.Write(xml);
+			//	xml.WriteEndDocument();
+			//}
 		} // proc HttpLoadAction
 
 		[
 		DEConfigHttpAction("push", IsSafeCall = true)
 		]
-		public void HttpSaveAction()
+		public void HttpSaveAction(IDEContext ctx, long id)
 		{
+			throw new NotImplementedException();
 		} // proc HttpSaveAction
 
 		[
 		DEConfigHttpAction("execute", IsSafeCall = true)
 		]
-		public void HttpExecuteAction()
+		public void HttpExecuteAction(IDEContext ctx, long id)
 		{
+			throw new NotImplementedException();
 		} // proc HttpExecuteAction
+
+		public IEnumerable<PpsApplicationFileItem> GetClientFiles()
+		{
+			// schema
+			yield return new PpsApplicationFileItem("schema.xml", -1, datasetDefinition.ConfigurationStamp);
+
+			// related client scripts
+			foreach (var c in datasetDefinition.ClientScripts)
+			{
+				var fi = new FileInfo(c);
+				if (fi.Exists)
+					yield return new PpsApplicationFileItem(fi.Name, fi.Length, fi.LastWriteTime);
+			}
+		} // func GetClientFiles
+
+		private bool GetDatasetResourceFile(string relativeSubPath, out FileInfo fi)
+		{
+			foreach (var c in datasetDefinition.ClientScripts)
+			{
+				if (String.Compare(relativeSubPath, Path.GetFileName(c), StringComparison.OrdinalIgnoreCase) == 0)
+				{
+					fi = new FileInfo(c);
+					return true;
+				}
+			}
+			fi = null;
+			return false;
+		} // func GetDatasetResourceFile
 
 		protected override bool OnProcessRequest(IDEContext r)
 		{
+			FileInfo fi;
 			if (r.RelativeSubPath == "schema.xml")
 			{
-				r.WriteObject(datasetDefinition.WriteSchema(new XElement("schema")), MimeTypes.Text.Xml);
+				r.SetLastModified(datasetDefinition.ConfigurationStamp);
+
+				r.WriteContent(() =>
+					{
+						var xSchema = new XElement("schema");
+						datasetDefinition.WriteSchema(xSchema);
+
+						var dst = new MemoryStream();
+						var xmlSettings = Procs.XmlWriterSettings;
+						xmlSettings.CloseOutput = false;
+						using (var xml = XmlWriter.Create(dst, xmlSettings))
+							xSchema.WriteTo(xml);
+
+						dst.Position = 0;
+						return dst;
+					}, ConfigPath + "/schema.xml", MimeTypes.Text.Xml
+				);
+				return true;
+			}
+			else if (GetDatasetResourceFile(r.RelativeSubPath, out fi))
+			{
+				r.WriteFile(fi.FullName);
 				return true;
 			}
 			return base.OnProcessRequest(r);

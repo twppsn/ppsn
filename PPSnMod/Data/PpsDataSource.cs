@@ -62,10 +62,8 @@ namespace TecWare.PPSn.Server.Data
 			return null;
 		} // func GetColumnDescription
 
-		public virtual PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config)
-		{
-			return new PpsDataSetServerDefinition(sp, documentName, config);
-		} // func CreateDocumentDescription
+		public virtual PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config, DateTime configurationStamp)
+			=> new PpsDataSetServerDefinition(sp, documentName, config, configurationStamp);
 
 		public abstract string Type { get; }
 	} // class PpsDataSource

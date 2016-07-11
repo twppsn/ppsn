@@ -75,14 +75,20 @@
 		</xs:restriction>
 	</xs:simpleType>
 
+	<xs:simpleType name="autoTagModes">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="First" />
+			<xs:enumeration value="Number" />
+			<xs:enumeration value="Concat" />
+		</xs:restriction>
+	</xs:simpleType>
+
 	<xs:attributeGroup name="columnBasicAttributes">
 		<xs:attribute name="name" type="KeyType" use="required">
 		</xs:attribute>
 		<xs:attribute name="fieldName" type="xs:string" use="required">
 		</xs:attribute>
 		<xs:attribute name="isPrimary" type="xs:boolean" use="optional" default="false">
-		</xs:attribute>
-		<xs:attribute name="parameter" type="xs:string" use="optional">
 		</xs:attribute>
 	</xs:attributeGroup>
 	
@@ -253,16 +259,27 @@
 					</xs:annotation>
 					<xs:complexType>
 						<xs:sequence minOccurs="0" maxOccurs="unbounded">
-							<xs:element name="parameter" minOccurs="0" maxOccurs="unbounded">
+							<xs:element name="autoTag" minOccurs="0" maxOccurs="unbounded">
 								<xs:complexType>
 									<xs:attribute name="name" type="KeyType" use="required">
 										<xs:annotation>
-											<xs:documentation>Name of the parameter</xs:documentation>
+											<xs:documentation>Name of the tag</xs:documentation>
 										</xs:annotation>
 									</xs:attribute>
-									<xs:attribute name="fieldName" type="xs:string" use="required">
+									<xs:attribute name="tableName" type="xs:string" use="required">
+										<xs:annotation>
+											<xs:documentation></xs:documentation>
+										</xs:annotation>
 									</xs:attribute>
-									<xs:attribute name="isNullable" type="xs:boolean" use="required">
+									<xs:attribute name="columnName" type="xs:string" use="required">
+										<xs:annotation>
+											<xs:documentation></xs:documentation>
+										</xs:annotation>
+									</xs:attribute>
+									<xs:attribute name="mode" type="pps:autoTagModes" use="required">
+										<xs:annotation>
+											<xs:documentation></xs:documentation>
+										</xs:annotation>
 									</xs:attribute>
 								</xs:complexType>
 							</xs:element>
@@ -323,13 +340,10 @@
 								<xs:documentation>Extension for the document.</xs:documentation>
 							</xs:annotation>
 						</xs:attribute>
-						<xs:attribute name="localScripts" use="optional">
+						<xs:attribute name="clientScripts" type="PathArray" use="optional">
 							<xs:annotation>
 								<xs:documentation>Script files for the local site.</xs:documentation>
 							</xs:annotation>
-							<xs:simpleType>
-								<xs:list itemType="PathType" />
-							</xs:simpleType>
 						</xs:attribute>
 					</xs:complexType>
 				</xs:element>

@@ -7,7 +7,14 @@
 			<!-- contact fields -->
 			<pps:field name="sds.Kont.Id" />
 			<pps:field name="sds.Kont.Name" />
-			
+
+			<pps:field name="sds.Kont.LiefNr" dataType="string">
+				<pps:attribute name="maxLength">5</pps:attribute>
+			</pps:field>
+			<pps:field name="sds.Kont.KundNr" dataType="string">
+				<pps:attribute name="maxLength">5</pps:attribute>
+			</pps:field>
+
 			<!-- menü eintrag für online daten praktisch?
 			<pps:view name="contacts" displayName="Kontakte">
 				<pps:source type="select">
@@ -26,9 +33,15 @@
 			</pps:view> -->
 
 			<!-- contacts mask -->
-			<pps:dataset name="contactsDataSet" inherited="coreDataSet">
+			<pps:dataset name="contactsDataSet" inherited="coreDataSet" clientScripts="contacts\contactsLocal.lua">
+				<pps:autoTag name="Name" tableName="Head" columnName="Name" mode="First" />
+				<pps:autoTag name="LiefNr" tableName="Head" columnName="LiefNr" mode="Number" />
+				<pps:autoTag name="KundNr" tableName="Head" columnName="KundNr" mode="Number" />
+
 				<pps:table name="Head">
 					<pps:column name="Name" fieldName="sds.Kont.Name" />
+					<pps:column name="LiefNr" fieldName="sds.Kont.LiefNr" />
+					<pps:column name="KundNr" fieldName="sds.Kont.KundNr" />
 				</pps:table>
 				
 				<pps:table name="Adre">
@@ -63,7 +76,7 @@
 			
 			<pps:action name="contactNew" displayName="Neue Kontakt" priority="100">
 				<pps:condition><![CDATA[ return CurrentView == Views["contacts"]; ]]></pps:condition>
-				<pps:code><![CDATA[ LoadMask{ document = '/contacts' }; ]]></pps:code>
+				<pps:code><![CDATA[ LoadMask{ document = 'ko', pane = 'wpf/panes/contacts.xaml' }; ]]></pps:code>
 			</pps:action>
 		</pps:wpf>
 

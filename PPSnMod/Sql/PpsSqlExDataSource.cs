@@ -1412,8 +1412,8 @@ namespace TecWare.PPSn.Server.Sql
 			return new SqlDataTransaction(this, c.ForkConnection());
 		} // func CreateTransaction
 
-		public override PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config)
-			=> new PpsSqlDataSetDefinition(sp, this, documentName, config);
+		public override PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config, DateTime configurationStamp)
+			=> new PpsSqlDataSetDefinition(sp, this, documentName, config, configurationStamp);
 
 		public bool IsConnected
 		{

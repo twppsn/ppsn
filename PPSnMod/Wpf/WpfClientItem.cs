@@ -693,7 +693,7 @@ namespace TecWare.PPSn.Server.Wpf
 			using (XmlWriter xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml), Procs.XmlWriterSettings))
 			{
 				xml.WriteStartElement("navigator");
-								
+
 				foreach (var view in Config.Elements(PpsStuff.xnView))
 				{
 					var viewId = view.GetAttribute("view", String.Empty);
@@ -703,7 +703,7 @@ namespace TecWare.PPSn.Server.Wpf
 							String.IsNullOrEmpty(displayName) || // displayName exists
 							!r.TryDemandToken(view.GetAttribute("securityToken", String.Empty))) // and is accessable
 						continue;
-					
+
 					// write the attributes
 					xml.WriteStartElement("view");
 					xml.WriteAttributeString("name", view.GetAttribute("name", String.Empty));
@@ -726,28 +726,28 @@ namespace TecWare.PPSn.Server.Wpf
 
 				// parse all action attributes
 				var posPriority = 1;
-				
+
 				foreach (var x in Config.Elements(PpsStuff.xnWpfAction))
 				{
 					var displayName = x.GetAttribute<string>("displayName", null);
 					var securityToken = x.GetAttribute<string>("securityToken", null);
 
-					if (String.IsNullOrEmpty(displayName) || 
+					if (String.IsNullOrEmpty(displayName) ||
 							!r.TryDemandToken(securityToken))
 						continue;
-					
+
 					xml.WriteStartElement("action");
 
 					var priority = x.GetAttribute<int>("priority", posPriority);
 
 					var code = x.Element(PpsStuff.xnWpfCode)?.Value;
 					var condition = x.Element(PpsStuff.xnWpfCondition)?.Value;
-					
+
 					xml.WriteAttributeString("name", x.GetAttribute<string>("name", displayName));
 					xml.WriteAttributeString("displayName", displayName);
 					xml.WriteAttributeString(x, "displayGlyph");
 
-					posPriority = priority +1;
+					posPriority = priority + 1;
 					xml.WriteAttributeString("priority", priority.ToString());
 
 					if (!String.IsNullOrEmpty(code))
@@ -767,6 +767,15 @@ namespace TecWare.PPSn.Server.Wpf
 					xml.WriteEndElement();
 				}
 
+				// Parse all documents
+				foreach (var c in application.CollectChildren<PpsDocument>())
+				{
+					xml.WriteStartElement("document");
+					xml.WriteAttributeString("name", c.Name);
+					xml.WriteAttributeString("source", c.Name + "/schema.xml");
+					xml.WriteEndElement();
+				}
+
 				xml.WriteEndElement();
 			}
 		} // func ParseNavigator
@@ -774,28 +783,6 @@ namespace TecWare.PPSn.Server.Wpf
 		#endregion
 
 		#region -- Client synchronisation -------------------------------------------------
-
-		#region -- class PpsApplicationFileItem -------------------------------------------
-
-		private sealed class PpsApplicationFileItem
-		{
-			private readonly string path;
-			private readonly long length;
-			private readonly DateTime lastWriteTime;
-
-			public PpsApplicationFileItem(string path, long length, DateTime lastWriteTime)
-			{
-				this.path = path;
-				this.length = length;
-				this.lastWriteTime = lastWriteTime;
-			} // ctor
-
-			public string Path => path;
-			public long Length => length;
-			public DateTime LastWriteTime => lastWriteTime;
-		} // class PpsApplicationFileItem
-
-		#endregion
 
 		private IEnumerable<PpsApplicationFileItem> GetApplicationFileList(IPpsPrivateDataContext privateUserData)
 		{
@@ -808,15 +795,10 @@ namespace TecWare.PPSn.Server.Wpf
 			yield return new PpsApplicationFileItem(basePath + "/templates.xaml", -1, DateTime.MinValue);
 
 			// schemas from application/documents
-			var collectedSchema = new List<PpsApplicationFileItem>();
-			application.WalkChildren<PpsDocument>(
-				c =>
-				{
-					collectedSchema.Add(new PpsApplicationFileItem(c.Name + "/schema.xml", -1, DateTime.MinValue));
-				}, true);
-
-			foreach (var c in collectedSchema)
-				yield return c;
+			foreach (var c in application.CollectChildren<PpsDocument>())
+			{
+				yield return new PpsApplicationFileItem(c.Name + "/schema.xml", -1, DateTime.MinValue);
+			}
 
 			// theme, wpfWpfSource
 			foreach (var x in Config.Elements())
