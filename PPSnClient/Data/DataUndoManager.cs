@@ -310,7 +310,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- Append -----------------------------------------------------------------
+		#region -- Append, Clear ----------------------------------------------------------
 
 		public void Append(IPpsUndoItem item)
 		{
@@ -321,6 +321,21 @@ namespace TecWare.PPSn.Data
 
 			currentUndoTransaction.Append(item); // append new item to current undo transaction
 		} // proc Append
+
+		public void Clear()
+		{
+			if (currentUndoTransaction != null)
+				throw new InvalidOperationException("There is an active transaction.");
+
+			// clear stack
+			items.Clear();
+			undoBorder = 0;
+
+			// raise the events
+			RaiseCanUndo();
+			RaiseCanRedo();
+			RaiseCollectionReset();
+		} // proc Clear
 
 		private void SuspendAppend()
 		{

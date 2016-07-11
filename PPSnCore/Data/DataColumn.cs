@@ -129,7 +129,8 @@ namespace TecWare.PPSn.Data
 
 		private PpsDataTableDefinition table;
 
-		private readonly string columnName;		// Internal name of the column
+		private readonly string columnName;   // Internal name of the column
+		private readonly Type dataType;
 		private readonly bool isPrimaryKey;   // is this a primary column
 
 		private string relationName;
@@ -139,6 +140,7 @@ namespace TecWare.PPSn.Data
 		{
 			this.table = table;
 			this.columnName = clone.columnName;
+			this.dataType = clone.dataType;
 			this.isPrimaryKey = clone.isPrimaryKey;
 
 			if (clone.parentColumn != null)
@@ -156,13 +158,14 @@ namespace TecWare.PPSn.Data
 		/// <summary>Erzeugt eine neue Spaltendefinition.</summary>
 		/// <param name="table">Zugehörige Tabelle</param>
 		/// <param name="columnName">Name der Spalte</param>
-		public PpsDataColumnDefinition(PpsDataTableDefinition table, string columnName, bool isPrimaryKey)
+		public PpsDataColumnDefinition(PpsDataTableDefinition table, string columnName, Type dataType, bool isPrimaryKey)
 		{
 			if (String.IsNullOrEmpty(columnName))
 				throw new ArgumentNullException();
 
 			this.table = table;
 			this.columnName = columnName;
+			this.dataType = dataType;
 			this.isPrimaryKey = isPrimaryKey;
 
 			this.relationName = null;
@@ -261,13 +264,11 @@ namespace TecWare.PPSn.Data
 			return false;
 		} // func ExistsValueInParentTable
 
+		protected virtual Type GetDataType()
+			=> dataType; // todo: client impl.
+
 		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
 			=> new PpsDataColumnMetaObject(parameter, this);
-
-		protected virtual Type GetDataType()
-		{
-			throw new NotImplementedException();
-		} // func GetDataType
 		
 		/// <summary>Zugehörige Tabelle</summary>
 		public PpsDataTableDefinition Table { get { return table; } }

@@ -26,11 +26,11 @@ using static TecWare.PPSn.Data.PpsDataHelperClient;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- class PpsDataSetClientDefinition -----------------------------------------
+	#region -- class PpsDataSetDefinitionClient -----------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsDataSetDefinitionClient : PpsDataSetDefinition
+	public class PpsDataSetDefinitionClient : PpsDataSetDefinition
 	{
 		#region -- class PpsDataSetMetaCollectionClient -----------------------------------
 
@@ -46,10 +46,15 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		private readonly IPpsShell shell;
+		private readonly string type;
 		private PpsDataSetMetaCollectionClient metaInfo;
 
-		public PpsDataSetDefinitionClient(XElement xSchema)
+		public PpsDataSetDefinitionClient(IPpsShell shell, string type, XElement xSchema)
 		{
+			this.shell = shell;
+			this.type = type;
+
 			// Lade die Tabellen
 			foreach (XElement c in xSchema.Elements())
 			{
@@ -66,21 +71,142 @@ namespace TecWare.PPSn.Data
 
 		public override PpsDataSet CreateDataSet()
 		{
-			return new PpsDataSetClient(this);
+			throw new NotSupportedException("use overload");
 		} // func CreateDataSet
 
+		public virtual PpsDataSetClient CreateDataSet(LuaTable arguments)
+			=> new PpsDataSetClient(this, shell, arguments);
+
+		public string ObjectType => type;
+
 		public override PpsDataSetMetaCollection Meta { get { return metaInfo; } }
-	} // class PpsDataSetClientDefinition
+	} // class PpsDataSetDefinitionClient
 
 	#endregion
 
+	#region -- class PpsDataSetClient ---------------------------------------------------
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsDataSetClient : PpsDataSet
+	public class PpsDataSetClient : PpsDataSet
 	{
-		internal PpsDataSetClient(PpsDataSetDefinition datasetDefinition)
+		#region -- class PpsDataSetTable --------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class PpsDataSetTable : LuaTable
+		{
+			private readonly PpsDataSetClient document;
+
+			public PpsDataSetTable(PpsDataSetClient document)
+			{
+				this.document = document;
+			} // ctor
+
+			private object GetDocumentTable(string key)
+			{
+				return null;
+			} // func GetDocumentTable
+
+			protected override object OnIndex(object key)
+			{
+				return base.OnIndex(key) ??
+					GetDocumentTable(key as string) ??
+					document.shell.LuaLibrary.GetValue(key);
+			} // func OnIndex
+
+			[LuaMember(nameof(Arguments))]
+			public LuaTable Arguments => document.arguments;
+		} // class PpsDocumentTable
+
+		#endregion
+
+		private readonly IPpsShell shell;
+		private readonly LuaTable clientScript;
+		private readonly List<LuaTable> eventSinks;
+		private readonly LuaTable arguments;
+
+		protected internal PpsDataSetClient(PpsDataSetDefinition datasetDefinition, IPpsShell shell, LuaTable arguments)
 			: base(datasetDefinition)
 		{
+			this.shell = shell;
+			this.clientScript = new LuaTable();
+			this.eventSinks = new List<LuaTable>();
+			this.arguments = arguments;
 		} // ctor
+
+		public void RegisterEventSink(LuaTable eventSink)
+		{
+			eventSinks.Add(eventSink);
+		} // proc RegisterEventSink
+
+		public void UnregisterEventSink(LuaTable eventSink)
+		{
+			eventSinks.Remove(eventSink);
+		} // proc UnregisterEventSink
+
+		private LuaTable[] GetEventSinks()
+			=> eventSinks.ToArray();
+		
+		private LuaResult InvokeLuaFunction(LuaTable t, string methodName, params object[] args)
+		{
+			var handler = t.GetMemberValue(methodName, lRawGet: true);
+			if (Lua.RtInvokeable(handler))
+				return new LuaResult(Lua.RtInvoke(handler, args));
+			return LuaResult.Empty;
+		} // func InvokeClientFunction
+		
+		private Task AsyncLua(LuaResult r)
+			=> r[0] as Task ?? Task.FromResult<int>(0);
+
+		private void InvokeEventHandler(string methodName, params object[] args)
+		{
+			// call the local function
+			InvokeLuaFunction(clientScript, methodName, args);
+
+			// call connected events
+			foreach (var s in eventSinks)
+				InvokeLuaFunction(s, methodName, args);
+		} // proc InvokeEventHandler
+
+		private async Task InvokeEventHandlerAsync(string methodName, params object[] args)
+		{
+			// call the local function
+			await AsyncLua(InvokeLuaFunction(clientScript, methodName, args));
+
+			// call connected events
+			foreach (var s in GetEventSinks())
+				await AsyncLua(InvokeLuaFunction(s, methodName, args));
+		} // proc InvokeEventHandler
+
+		/// <summary>Initialize a new dataset</summary>
+		public virtual async Task OnNewAsync()
+		{
+			// call initalization hook
+			using (var trans = UndoSink?.BeginTransaction("Init"))
+			{
+				// create head
+				var head = GetTable("Head");
+				var row = head.Add(-1L);
+				row["Typ"] = ((PpsDataSetDefinitionClient)DataSetDefinition).ObjectType;
+				row["Guid"] = Guid.NewGuid();
+
+				await InvokeEventHandlerAsync("OnNewAsync");
+				trans?.Commit();
+			}
+		} // proc OnNewAsync
+
+		public virtual async Task OnLoadedAsync()
+		{
+			// call initalization hook
+			using (var trans = UndoSink?.BeginTransaction("Init"))
+			{
+				await InvokeEventHandlerAsync("OnLoadedAsync");
+				trans?.Commit();
+			}
+		} // proc OnLoadedAsync
+
 	} // class PpsDataSetClient
+
+	#endregion
 }

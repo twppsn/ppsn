@@ -41,6 +41,90 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
+	#region -- enum PpsDataSetAutoTagMode -----------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public enum PpsDataSetAutoTagMode
+	{
+		First,
+		Number,
+		Conact
+	} // enum PpsDataSetAutoTagMode
+
+	#endregion
+
+	#region -- class PpsDataSetAutoTag --------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class PpsDataSetAutoTagDefinition
+	{
+		private readonly PpsDataSetDefinition datasetDefinition;
+		private readonly string tagName;
+		private readonly string tableName;
+		private readonly string columnName;
+		private readonly PpsDataSetAutoTagMode mode;
+		private PpsDataColumnDefinition column;
+
+		public PpsDataSetAutoTagDefinition(PpsDataSetDefinition datasetDefinition, string tagName, string tableName, string columnName, PpsDataSetAutoTagMode mode)
+		{
+			if (datasetDefinition == null)
+				throw new ArgumentNullException("datasetDefinition");
+			if (String.IsNullOrEmpty( tagName ))
+				throw new ArgumentNullException("tagName");
+			if (String.IsNullOrEmpty(tableName ))
+				throw new ArgumentNullException("tableName");
+			if (String.IsNullOrEmpty(columnName))
+				throw new ArgumentNullException("columnName");
+
+			this.datasetDefinition = datasetDefinition;
+			this.tagName = tagName;
+			this.tableName = tableName;
+			this.columnName = columnName;
+			this.mode = mode;
+		} // ctor
+
+		public virtual void EndInit()
+		{
+			var tableDef = datasetDefinition.FindTable(tableName);
+			if (tableDef == null)
+				throw new ArgumentException($"Tag '{tagName}' could not initalized. Table '{tableName}' not found.");
+
+			column = tableDef.FindColumn(columnName);
+			if (column == null)
+				throw new ArgumentException($"Tag '{tagName}' could not initalized. Column '{tableName}.{columnName}' not found.");
+		} // proc EndInit
+
+		public object GenerateTagValue(PpsDataSet dataset)
+		{
+			if (column == null)
+				throw new ArgumentNullException("column", $"Tag {tagName} not initalized.");
+
+			var table = dataset.Tables[column.Table];
+			switch (mode)
+			{
+				case PpsDataSetAutoTagMode.First:
+					return table.Count > 0 ? table[0][column.Index] : null;
+				case PpsDataSetAutoTagMode.Conact:
+					return table.Count == 0 ? null : String.Join(" ", from c in table select c[column.Index].ToString());
+				case PpsDataSetAutoTagMode.Number:
+					goto case PpsDataSetAutoTagMode.First;
+				default:
+					return null;
+			}
+		} // func GenerateTagValue
+
+		public PpsDataSetDefinition DataSet => datasetDefinition;
+
+		public string Name => tagName;
+		public string TableName => tableName;
+		public string ColumnName => columnName;
+		public PpsDataSetAutoTagMode Mode => mode;
+	} // class PpsDataSetAutoTag
+
+	#endregion
+
 	#region -- class PpsDataSetDefinition -----------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -73,17 +157,25 @@ namespace TecWare.PPSn.Data
 		private bool isInitialized = false;
 		private List<PpsDataTableDefinition> tables;
 		private ReadOnlyCollection<PpsDataTableDefinition> tableDefinitions;
+		private List<PpsDataSetAutoTagDefinition> tags;
+		private ReadOnlyCollection<PpsDataSetAutoTagDefinition> tagDefinitions;
 
 		protected PpsDataSetDefinition()
 		{
 			this.tables = new List<PpsDataTableDefinition>();
 			this.tableDefinitions = new ReadOnlyCollection<PpsDataTableDefinition>(tables);
+
+			this.tags = new List<PpsDataSetAutoTagDefinition>();
+			this.tagDefinitions = new ReadOnlyCollection<PpsDataSetAutoTagDefinition>(this.tags);
 		} // ctor
 
 		/// <summary>Finish the initialization of the dataset.</summary>
 		public virtual void EndInit()
 		{
 			foreach (var t in TableDefinitions)
+				t.EndInit();
+
+			foreach (var t in TagDefinitions)
 				t.EndInit();
 
 			isInitialized = true;
@@ -98,10 +190,22 @@ namespace TecWare.PPSn.Data
 			if (table == null)
 				throw new ArgumentNullException();
 			if (FindTable(table.Name) != null)
-				throw new ArgumentOutOfRangeException("table already exists.");
+				throw new ArgumentOutOfRangeException($"table '{table.Name}' already exists.");
 
 			tables.Add(table);
 		} // proc Add
+
+		protected void Add(PpsDataSetAutoTagDefinition tag)
+		{
+			if (isInitialized)
+				throw new InvalidOperationException($"Can not add tag '{tag.Name}', because the dataset is initialized.");
+			if (tag == null)
+				throw new ArgumentNullException();
+			if (FindTag(tag.Name) != null)
+				throw new ArgumentOutOfRangeException($"tag '{tag.Name}' already exists.");
+
+			tags.Add(tag);
+		} // func Add
 
 		/// <summary>Erzeugt eine Datensammlung aus der Definition</summary>
 		/// <returns></returns>
@@ -113,13 +217,16 @@ namespace TecWare.PPSn.Data
 			return new PpsDataSet(this);
 		} // func CreateDataSet
 
-		public PpsDataTableDefinition FindTable(string sName)
-		{
-			return tables.Find(c => String.Compare(c.Name, sName, StringComparison.OrdinalIgnoreCase) == 0);
-		} // func FindTable
+		public PpsDataTableDefinition FindTable(string name)
+			=> tables.Find(c => String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
 
+		public PpsDataSetAutoTagDefinition FindTag(string name)
+			=> tags.Find(c => String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
+
+		/// <summary></summary>
+		public ReadOnlyCollection<PpsDataSetAutoTagDefinition> TagDefinitions => tagDefinitions;
 		/// <summary>Access to the table definitions.</summary>
-		public ReadOnlyCollection<PpsDataTableDefinition> TableDefinitions { get { return tableDefinitions; } }
+		public ReadOnlyCollection<PpsDataTableDefinition> TableDefinitions => tableDefinitions;
 		/// <summary>Zugriff auf die MetaInformationen</summary>
 		public abstract PpsDataSetMetaCollection Meta { get; }
 		/// <summary>Is the dataset initialized.</summary>
@@ -192,9 +299,24 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		#region -- class TableCollection --------------------------------------------------
+
+		public class TableCollection : ReadOnlyCollection<PpsDataTable>
+		{
+			internal TableCollection(PpsDataTable[] tables)
+				: base(tables)
+			{
+			} // ctor
+
+			public PpsDataTable this[string tableName] => this.FirstOrDefault(c => String.Compare(c.Name, tableName, StringComparison.OrdinalIgnoreCase) == 0);
+			public PpsDataTable this[PpsDataTableDefinition tableDefinition] => this.FirstOrDefault(c => c.TableDefinition == tableDefinition);
+		} // class TableCollection
+
+		#endregion
+
 		private PpsDataSetDefinition datasetDefinition;
 		private PpsDataTable[] tables;
-		private ReadOnlyCollection<PpsDataTable> tableCollection;
+		private TableCollection tableCollection;
 
 		private IPpsUndoSink undoSink = null;
 
@@ -211,7 +333,7 @@ namespace TecWare.PPSn.Data
 			for (int i = 0; i < tables.Length; i++)
 				tables[i] = datasetDefinition.TableDefinitions[i].CreateDataTable(this);
 
-			this.tableCollection = new ReadOnlyCollection<PpsDataTable>(tables);
+			this.tableCollection = new TableCollection(tables);
 		} // ctor
 
 		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
@@ -316,6 +438,9 @@ namespace TecWare.PPSn.Data
 				return --lastPrimaryId;
 		} // func GetNextId
 
+		public PpsDataTable GetTable(string tableName)
+			=> Tables.FirstOrDefault(c => String.Compare(c.Name, tableName, StringComparison.OrdinalIgnoreCase) == 0);
+
 		protected internal virtual void OnTableColumnValueChanged(PpsDataRow row, int iColumnIndex, object oldValue, object value)
 		{
 		} // proc OnTableColumnValueChanged
@@ -323,7 +448,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Zugriff auf die Definition der Datensammlung</summary>
 		public PpsDataSetDefinition DataSetDefinition => datasetDefinition;
 		/// <summary>Zugriff auf die Tabellendaten.</summary>
-		public ReadOnlyCollection<PpsDataTable> Tables => tableCollection;
+		public TableCollection Tables => tableCollection;
 		/// <summary></summary>
 		public IPpsUndoSink UndoSink => undoSink;
 

@@ -119,6 +119,8 @@ namespace TecWare.PPSn
 
 		/// <summary>Access to the current lua engine.</summary>
 		Lua Lua { get; }
+		/// <summary>Interface to the basic functionality of the current system.</summary>
+		LuaTable LuaLibrary { get; }
 		/// <summary>Base uri for request of complex data.</summary>
 		Uri BaseUri { get; }
 		/// <summary>Returns the default Encoding for the Application.</summary>
