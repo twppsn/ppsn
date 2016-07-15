@@ -157,15 +157,15 @@ namespace TecWare.PPSn.Server
 			}
 		} // func GetProperty
 
-		private PropertyValue GetProperty(string name)
+		private PropertyValue GetProperty(string propertyName)
 		{
-			var ret = GetProperty(xDefinition.Elements(xnFieldAttribute).FirstOrDefault(c => String.Compare(c.GetAttribute<string>("name", null), name, StringComparison.OrdinalIgnoreCase) == 0));
+			var ret = GetProperty(xDefinition.Elements(xnFieldAttribute).FirstOrDefault(c => String.Compare(c.GetAttribute<string>("name", null), propertyName, StringComparison.OrdinalIgnoreCase) == 0));
 
 			if (ret == null)
 			{
-				if (String.Compare(name, DisplayNameAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
-					return new PropertyValue(DisplayNameAttributeString, typeof(string), xDefinition.GetAttribute<string>(DisplayNameAttributeString, name));
-				else if (String.Compare(name, DataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
+				if (String.Compare(propertyName, DisplayNameAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
+					return new PropertyValue(DisplayNameAttributeString, typeof(string), xDefinition.GetAttribute<string>(DisplayNameAttributeString, this.name));
+				else if (String.Compare(propertyName, DataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
 					return new PropertyValue(DataTypeAttributeString, typeof(Type), LuaType.GetType(xDefinition.GetAttribute<string>(DataTypeAttributeString, "string"), lateAllowed: false).Type);
 			}
 

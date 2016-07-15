@@ -10,9 +10,11 @@
 
 			<pps:field name="sds.Kont.LiefNr" dataType="string">
 				<pps:attribute name="maxLength">5</pps:attribute>
+				<pps:attribute name="displayName">Lieferanten-Nummer</pps:attribute>
 			</pps:field>
 			<pps:field name="sds.Kont.KundNr" dataType="string">
 				<pps:attribute name="maxLength">5</pps:attribute>
+				<pps:attribute name="displayName">Lieferanten-Nummer</pps:attribute>
 			</pps:field>
 
 			<!-- menü eintrag für online daten praktisch?

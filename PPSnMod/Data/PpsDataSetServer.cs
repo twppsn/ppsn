@@ -44,7 +44,7 @@ namespace TecWare.PPSn.Server.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsDataColumnServerDefinition : PpsDataColumnDefinition
+	public sealed class PpsDataColumnServerDefinition : PpsDataColumnDefinition, IPpsColumnDescription
 	{
 		#region -- class PpsDataColumnMetaCollectionServer --------------------------------
 
@@ -54,7 +54,8 @@ namespace TecWare.PPSn.Server.Data
 		{
 			public PpsDataColumnMetaCollectionServer(XElement xColumnDefinition)
 			{
-				PpsDataSetServerDefinition.AddMetaFromElement(xColumnDefinition, WellknownMetaTypes, Add);
+				foreach (var x in xColumnDefinition.Elements(xnMeta))
+					PpsDataSetServerDefinition.AddMetaFromElement(xColumnDefinition, WellknownMetaTypes, Add);
 			} // ctor
 
 			public PpsDataColumnMetaCollectionServer(PpsDataColumnMetaCollectionServer clone)
@@ -75,6 +76,7 @@ namespace TecWare.PPSn.Server.Data
 		private PpsFieldDescription fieldDescription = null;
 
 		private readonly PpsDataColumnParentRelationType parentType = PpsDataColumnParentRelationType.None;
+		private readonly string parentRelationName;
 		private readonly string parentTableName;
 		private readonly string parentColumnName;
 
@@ -89,20 +91,21 @@ namespace TecWare.PPSn.Server.Data
 		} // ctor
 
 		private PpsDataColumnServerDefinition(PpsDataTableDefinition tableDefinition, string fieldName, string columnName, bool isPrimaryKey, bool createRelationColumn, XElement config)
-			: base(tableDefinition, columnName, null, isPrimaryKey) // todo: impl
+			: base(tableDefinition, columnName, isPrimaryKey, isPrimaryKey)
 		{
 			this.fieldName = fieldName;
 
 			// relation
 			if (createRelationColumn)
 			{
-				SetRelationName(config.GetAttribute("relationName", (string)null));
+				this.parentRelationName = config.GetAttribute("relationName", (string)null);
 				this.parentType = config.GetAttribute("parentType", PpsDataColumnParentRelationType.None);
 				this.parentTableName = config.GetAttribute("parentTable", (string)null);
 				this.parentColumnName = config.GetAttribute("parentColumn", (string)null);
 			}
 			else
 			{
+				this.parentRelationName = null;
 				this.parentType = PpsDataColumnParentRelationType.None;
 				this.parentTableName = null;
 				this.parentColumnName = null;
@@ -135,8 +138,8 @@ namespace TecWare.PPSn.Server.Data
 		public override void EndInit()
 		{
 			// update the relation
-			if (parentColumnName != null)
-				SetParentColumn(null, parentTableName, parentColumnName);
+			if (parentRelationName != null)
+				Table.AddRelation(parentRelationName, Table.Columns[parentColumnName, true], this);
 
 			// resolve the correct field
 			var application = ((PpsDataSetServerDefinition)Table.DataSet).Application;
@@ -145,7 +148,7 @@ namespace TecWare.PPSn.Server.Data
 			// update the meta information
 			foreach (var c in fieldDescription.Attributes)
 			{
-				if (metaInfo.ContainsKey(c.Name))
+				if (!metaInfo.ContainsKey(c.Name))
 					metaInfo.Update(c.Name, c.Type, c.Value);
 			}
 
@@ -154,32 +157,27 @@ namespace TecWare.PPSn.Server.Data
 
 		public void WriteSchema(XElement xTable)
 		{
-			var xColumn = new XElement("column");
+			var xColumn = new XElement("column",
+				new XAttribute("name", Name),
+				new XAttribute("dataType", LuaType.GetType(DataType).AliasOrFullName)
+			);
+
+			if (IsPrimaryKey)
+				xColumn.Add(new XAttribute("isPrimary", IsPrimaryKey));
+			if (IsIdentity)
+				xColumn.Add(new XAttribute("isIdentity", IsIdentity));
+
+			if (IsRelationColumn)
+			{
+				xColumn.Add(new XAttribute("parentRelationName", parentRelationName));
+				xColumn.Add(new XAttribute("parentTable", ParentColumn.Table.Name));
+				xColumn.Add(new XAttribute("parentColumn", ParentColumn.Name));
+			}
+			xTable.Add(xColumn);
 
 			// meta data
 			PpsDataSetServerDefinition.WriteSchemaMetaInfo(xColumn, metaInfo);
-
-			// information
-			xTable.Add(
-				xColumn = new XElement("column",
-					new XAttribute("name", Name),
-					new XAttribute("datatype", LuaType.GetType(DataType).AliasOrFullName)
-				)
-			);
-
-			WriteColumnSchema(xColumn);
-		} // proc WriteScheam
-
-		public void WriteColumnSchema(XElement xColumn)
-		{
-			//// Setze die Meta-Daten
-			//foreach (var m in metaInfo)
-			//{
-			//	xColumn.Add(new XElement(m.Key,
-			//		new XAttribute("datatype", LuaType.GetType(m.Value.GetType()).AliasOrFullName),
-			//		m.Value.ChangeType<string>()));
-			//}
-		} // proc WriteColumnSchema
+		} // proc WriteSchema
 
 		protected override Type GetDataType()
 			=> fieldDescription?.DataType ?? typeof(object);
@@ -192,6 +190,8 @@ namespace TecWare.PPSn.Server.Data
 		public PpsDataColumnParentRelationType ParentType => parentType;
 
 		public override bool IsInitialized => fieldDescription != null;
+
+		IPpsColumnDescription IPpsColumnDescription.Parent => fieldDescription;
 	} // class PpsDataColumnServerDefinition
 
 	#endregion
@@ -210,6 +210,15 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary></summary>
 		private sealed class PpsDataTableMetaCollectionServer : PpsDataTableMetaCollection
 		{
+			public PpsDataTableMetaCollectionServer()
+			{
+			} // ctor
+
+			public PpsDataTableMetaCollectionServer(PpsDataTableMetaCollectionServer clone)
+				: base(clone)
+			{
+			} // ctor
+
 			public void Add(XElement xMeta)
 			{
 				PpsDataSetServerDefinition.AddMetaFromElement(xMeta, WellknownMetaTypes, Add);
@@ -219,6 +228,14 @@ namespace TecWare.PPSn.Server.Data
 		#endregion
 
 		private readonly PpsDataTableMetaCollectionServer metaInfo = new PpsDataTableMetaCollectionServer();
+
+		#region -- Ctor/Dtor --------------------------------------------------------------
+
+		protected PpsDataTableServerDefinition(PpsDataSetServerDefinition dataset, PpsDataTableServerDefinition clone)
+			: base(dataset, clone)
+		{
+			this.metaInfo = new PpsDataTableMetaCollectionServer(clone.metaInfo);
+		} // ctor
 
 		public PpsDataTableServerDefinition(PpsDataSetServerDefinition dataset, string tableName, XElement xTable)
 			: base(dataset, tableName)
@@ -235,6 +252,9 @@ namespace TecWare.PPSn.Server.Data
 				//	throw new InvalidCo
 			}
 		} // ctor
+
+		public override PpsDataTableDefinition Clone(PpsDataSetDefinition dataset)
+			=> new PpsDataTableServerDefinition((PpsDataSetServerDefinition)dataset, this);
 
 		protected override void EndInit()
 		{
@@ -257,6 +277,8 @@ namespace TecWare.PPSn.Server.Data
 			foreach (var cur in t.Columns)
 				AddColumn(cur.Clone(this));
 		} // proc Merge
+
+		#endregion
 
 		public override PpsDataTable CreateDataTable(PpsDataSet dataset)
 			=> new PpsDataTableServer(this, dataset);
@@ -418,7 +440,7 @@ namespace TecWare.PPSn.Server.Data
 					{
 						var mergeTable = FindTable(t.Name);
 						if (mergeTable == null)
-							Add(t);
+							Add(t.Clone(this));
 						else
 							((PpsDataTableServerDefinition)mergeTable).Merge(t);
 					}
@@ -510,8 +532,11 @@ namespace TecWare.PPSn.Server.Data
 				xParent.Add(xMeta);
 				foreach (var m in metaInfo)
 				{
+					if (m.Name == "dataType" || m.Value == null)
+						continue;
+
 					xMeta.Add(new XElement(m.Name,
-						new XAttribute("datatype", LuaType.GetType(m.Value.GetType()).AliasOrFullName),
+						new XAttribute("dataType", LuaType.GetType(m.Value.GetType()).AliasOrFullName),
 						m.Value.ChangeType<string>()
 					));
 				}
@@ -610,6 +635,24 @@ namespace TecWare.PPSn.Server.Data
 			//	ExecuteTrigger(PPSnDataTrigger.OnAfterLoad, this, args);
 			//}
 		} // proc Load
+
+		public virtual IEnumerable<PpsObjectTag> GetAutoTags()
+		{
+			foreach (var tag in DataSetDefinition.TagDefinitions)
+			{
+				var value = tag.GenerateTagValue(this);
+				if (value != null)
+					yield return value;
+			}
+		} // func GetAutoTags
+
+		public virtual void OnAfterPull()
+		{
+		} // proc OnAfterPull
+
+		public virtual void OnBeforePush()
+		{
+		} // proc OnBeforePush
 
 		public new PpsDataSetServerDefinition DataSetDefinition => (PpsDataSetServerDefinition)base.DataSetDefinition;
 	} // class PpsDataSetServer

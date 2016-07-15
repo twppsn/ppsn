@@ -81,8 +81,8 @@
 				<!-- define the base table -->
 				<pps:table name="Head">
 					<pps:column name="Id" fieldName="dbo.Objk.Id" isPrimary="true" />
-					<pps:column name="RevId" fieldName="dbo.Objk.CurRevId" />
-					<pps:column name="HeadId" fieldName="dbo.Objk.HeadRevId" />
+					<pps:column name="CurRevId" fieldName="dbo.Objk.CurRevId" />
+					<pps:column name="HeadRevId" fieldName="dbo.Objk.HeadRevId" />
 					<pps:column name="Nr" fieldName="dbo.Objk.Nr" />
 					<pps:column name="Typ" fieldName="dbo.Objk.Typ" />
 					<pps:column name="Guid" fieldName="dbo.Objk.Guid" />

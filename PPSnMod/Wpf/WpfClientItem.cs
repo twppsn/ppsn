@@ -797,7 +797,8 @@ namespace TecWare.PPSn.Server.Wpf
 			// schemas from application/documents
 			foreach (var c in application.CollectChildren<PpsDocument>())
 			{
-				yield return new PpsApplicationFileItem(c.Name + "/schema.xml", -1, DateTime.MinValue);
+				foreach (var f in c.GetClientFiles(c.Name))
+					yield return f;
 			}
 
 			// theme, wpfWpfSource

@@ -23,6 +23,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server.Data
@@ -66,13 +67,16 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		PpsDataSelector CreateSelector(LuaTable table);
 
-		///// <summary>Creates a transaction to manipulate data.</summary>
-		///// <param name="dataSource"></param>
-		///// <param name="throwException"></param>
-		///// <returns></returns>
-		//PpsDataTransaction CreateTransaction(string dataSource, bool throwException = true);
-
-		//PpsDataTransaction CreateTransaction(PpsDataSource dataSource);
+		/// <summary>Creates a transaction to manipulate data.</summary>
+		/// <param name="dataSource"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		PpsDataTransaction CreateTransaction(string dataSourceName, bool throwException = true);
+		/// <summary></summary>
+		/// <param name="dataSource"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		PpsDataTransaction CreateTransaction(PpsDataSource dataSource, bool throwException = true);
 
 		/// <summary>Name of the current user.</summary>
 		string UserName { get; }
@@ -127,17 +131,10 @@ namespace TecWare.PPSn.Server.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Description for a column.</summary>
-	public interface IPpsColumnDescription
+	public interface IPpsColumnDescription : IDataColumn
 	{
-		/// <summary>Name of the column in the current context.</summary>
-		string Name { get; }
-		/// <summary>Data type of the column.</summary>
-		Type DataType { get; }
-
 		/// <summary>Inherited properties.</summary>
 		IPpsColumnDescription Parent { get; }
-		/// <summary>Extented attributes for the column.</summary>
-		IPropertyEnumerableDictionary Attributes { get; }
 	} // interface IPpsProviderColumnDescription
 
 	#endregion
