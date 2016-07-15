@@ -127,18 +127,13 @@ namespace TecWare.PPSn.Data
 		#region -- Element/Atributenamen des Daten-XML --
 
 		internal static readonly XName xnData = "data";
-		internal static readonly XName xnTable = "t";
 		internal static readonly XName xnDataRow = "r";
 
-		internal static readonly XName xnDataRowValue = "v";
 		internal static readonly XName xnDataRowValueOriginal = "o";
 		internal static readonly XName xnDataRowValueCurrent = "c";
 
 		internal static readonly XName xnDataRowState = "s";
 		internal static readonly XName xnDataRowAdd = "a";
-		internal static readonly XName xnRowName = "n";
-
-		public static readonly XName xnCombine = "combine";
 
 		#endregion
 

@@ -30,6 +30,11 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	internal sealed class PpsDataColumnMetaCollectionClient : PpsDataColumnDefinition.PpsDataColumnMetaCollection
 	{
+		public PpsDataColumnMetaCollectionClient(PpsDataColumnMetaCollectionClient clone)
+			: base(clone)
+		{
+		} // ctor
+
 		public PpsDataColumnMetaCollectionClient(XElement xMetaGroup)
 		{
 			PpsDataHelperClient.AddMetaGroup(xMetaGroup, Add);
@@ -44,22 +49,50 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public sealed class PpsDataColumnDefinitionClient : PpsDataColumnDefinition
 	{
-		private PpsDataColumnMetaCollectionClient metaInfo;
+		private readonly PpsDataColumnMetaCollectionClient metaInfo;
+		private readonly Type dataType;
+
+		private readonly string parentRelationName;
+		private readonly string parentTable;
+		private readonly string parentColumn;
 
 		private PpsDataColumnDefinitionClient(PpsDataTableDefinition table, PpsDataColumnDefinitionClient clone)
 			: base(table, clone)
 		{
+			this.dataType = clone.dataType;
+			this.metaInfo = new PpsDataColumnMetaCollectionClient(clone.metaInfo);
+
+			this.parentRelationName = clone.parentRelationName;
+			this.parentTable = clone.parentTable;
+			this.parentColumn = clone.parentColumn;
 		} // ctor
 
 		public PpsDataColumnDefinitionClient(PpsDataTableDefinitionClient table, XElement xColumn)
-			: base(table, xColumn.GetAttribute("name", (string)null), LuaType.GetType(xColumn.GetAttribute("dataType", "object"), lateAllowed: false).Type, false)
+			: base(table, xColumn.GetAttribute("name", (string)null), xColumn.GetAttribute("isPrimary", false), xColumn.GetAttribute("isIdentity", false))
 		{
-			//LuaType.GetType(xColumn.GetAttribute("datatype", "object"), lateAllowed: false).Type, 
-			metaInfo = new PpsDataColumnMetaCollectionClient(xColumn);
-		} // ctor
+			this.metaInfo = new PpsDataColumnMetaCollectionClient(xColumn);
+			this.dataType = LuaType.GetType(xColumn.GetAttribute("dataType", "object"), lateAllowed: false).Type;
 
+			this.parentRelationName = xColumn.GetAttribute<string>("parentRelationName", null);
+			this.parentTable = xColumn.GetAttribute<string>("parentTable", null);
+			this.parentColumn = xColumn.GetAttribute<string>("parentColumn", null);
+		} // ctor
+		
 		public override PpsDataColumnDefinition Clone(PpsDataTableDefinition tableOwner)
 			=> new PpsDataColumnDefinitionClient(tableOwner, this);
+
+		protected override Type GetDataType()
+			=> dataType;
+
+		public override void EndInit()
+		{
+			if (parentRelationName != null)
+			{
+				var table = Table.DataSet.FindTable(parentTable);
+				Table.AddRelation(parentRelationName, table.Columns[parentColumn, true], this);
+			}
+			base.EndInit();
+		} // proc EndInit
 
 		public override PpsDataColumnMetaCollection Meta => metaInfo;
 	} // class PpsDataColumnDefinitionClient

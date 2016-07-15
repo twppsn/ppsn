@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -54,7 +55,74 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataSetAutoTag --------------------------------------------------
+	#region -- enum PpsObjectTagClass ---------------------------------------------------
+
+	public enum PpsObjectTagClass : int
+	{
+		Text = 0,
+		Number = 1,
+		Date = 2
+	} // enum PpsObjectTagClass
+
+	#endregion
+
+	#region -- class PpsObjectTag -------------------------------------------------------
+
+	public sealed class PpsObjectTag
+	{
+		private readonly string tagName;
+		private readonly PpsObjectTagClass cls;
+		private readonly object value;
+
+		private PpsObjectTag(XElement tag)
+		{
+			this.tagName = tag.Name.LocalName;
+			this.cls = (PpsObjectTagClass)tag.GetAttribute("c", 0);
+			this.value = tag.Value == null ? null : Procs.ChangeType(tag.Value, GetTypeFromClass(cls));
+		} // ctor
+
+		public PpsObjectTag(string tagName, PpsObjectTagClass cls, object value)
+		{
+			this.tagName = tagName;
+			this.cls = cls;
+			this.value = value;
+		} // ctor
+
+		private XElement GetXTag()
+			=> new XElement(tagName,
+					new XAttribute("c", (int)cls),
+					new XText(value.ChangeType<string>())
+				);
+
+		public string Name => tagName;
+		public PpsObjectTagClass Class => cls;
+		public object Value => value;
+
+		// -- Static ----------------------------------------------------------------------
+
+		public static string FormatTagFields(IEnumerable<PpsObjectTag> tags)
+		{
+			var xDoc = new XDocument(
+				new XElement("tags", from t in tags where t.Value != null select t.GetXTag())
+			);
+			return xDoc.ToString();
+		} // func CreateTagField
+
+		public static IEnumerable<PpsObjectTag> ParseTagFields(string tags)
+		{
+			var xDoc = XDocument.Parse(tags);
+			return from x in xDoc.Root.Elements() select new PpsObjectTag(x);
+		} // func ParseTagFields
+
+		public static Type GetTypeFromClass(PpsObjectTagClass cls)
+		{
+			return typeof(string);
+		} // func GetTypeFromClass
+	} // class PpsObjectTag
+
+	#endregion
+
+	#region -- class PpsDataSetAutoTagDefinition ----------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -91,12 +159,12 @@ namespace TecWare.PPSn.Data
 			if (tableDef == null)
 				throw new ArgumentException($"Tag '{tagName}' could not initalized. Table '{tableName}' not found.");
 
-			column = tableDef.FindColumn(columnName);
+			column = tableDef.Columns[columnName];
 			if (column == null)
 				throw new ArgumentException($"Tag '{tagName}' could not initalized. Column '{tableName}.{columnName}' not found.");
 		} // proc EndInit
 
-		public object GenerateTagValue(PpsDataSet dataset)
+		public PpsObjectTag GenerateTagValue(PpsDataSet dataset)
 		{
 			if (column == null)
 				throw new ArgumentNullException("column", $"Tag {tagName} not initalized.");
@@ -105,9 +173,9 @@ namespace TecWare.PPSn.Data
 			switch (mode)
 			{
 				case PpsDataSetAutoTagMode.First:
-					return table.Count > 0 ? table[0][column.Index] : null;
+					return new PpsObjectTag(Name, PpsObjectTagClass.Text, table.Count > 0 ? table[0][column.Index] : null);
 				case PpsDataSetAutoTagMode.Conact:
-					return table.Count == 0 ? null : String.Join(" ", from c in table select c[column.Index].ToString());
+					return new PpsObjectTag(Name, PpsObjectTagClass.Text, table.Count == 0 ? null : String.Join(" ", from c in table select c[column.Index].ToString()));
 				case PpsDataSetAutoTagMode.Number:
 					goto case PpsDataSetAutoTagMode.First;
 				default:
@@ -121,10 +189,10 @@ namespace TecWare.PPSn.Data
 		public string TableName => tableName;
 		public string ColumnName => columnName;
 		public PpsDataSetAutoTagMode Mode => mode;
-	} // class PpsDataSetAutoTag
+	} // class PpsDataSetAutoTagDefinition
 
 	#endregion
-
+		
 	#region -- class PpsDataSetDefinition -----------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -308,8 +376,18 @@ namespace TecWare.PPSn.Data
 			{
 			} // ctor
 
-			public PpsDataTable this[string tableName] => this.FirstOrDefault(c => String.Compare(c.Name, tableName, StringComparison.OrdinalIgnoreCase) == 0);
-			public PpsDataTable this[PpsDataTableDefinition tableDefinition] => this.FirstOrDefault(c => c.TableDefinition == tableDefinition);
+			public PpsDataTable this[string tableName, bool throwException = false]
+			{
+				get
+				{
+					var table = this.FirstOrDefault(c => String.Compare(c.Name, tableName, StringComparison.OrdinalIgnoreCase) == 0);
+					if (table == null && throwException)
+						throw new ArgumentOutOfRangeException("tableName", $"Table '{tableName}' not found.");
+					return table;
+				}
+			} // func this
+
+			public PpsDataTable this[PpsDataTableDefinition tableDefinition] => this.First(c => c.TableDefinition == tableDefinition);
 		} // class TableCollection
 
 		#endregion
@@ -350,11 +428,6 @@ namespace TecWare.PPSn.Data
 			this.undoSink = undoSink;
 		} // proc RegisterUndoSink
 
-		public PpsDataTable FindTableFromDefinition(PpsDataTableDefinition tableDefinition)
-		{
-			return Tables[FindTableIndex(tableDefinition.Name)];
-		} // func FindTableFromDefinition
-
 		private int FindTableIndex(string tableName)
 		{
 			return Array.FindIndex(tables, dt => String.Compare(dt.Name, tableName, StringComparison.OrdinalIgnoreCase) == 0);
@@ -367,43 +440,30 @@ namespace TecWare.PPSn.Data
 				tables[i].ClearInternal();
 		} // proc ClearInternal
 
-		public void Read(XElement x)
+		public void Read(XElement x, bool combineData = false)
 		{
 			if (x.Name != xnData)
 				throw new ArgumentException();
 
-			bool lReadCombine = x.GetAttribute(xnCombine, false);
-
-			// Lösche die vorhanden Daten
-			if (!lReadCombine)
+			// clear current data, for a fresh load
+			if (!combineData)
 				ClearInternal();
 
-			// Lade die entsprechenden Tabellen
-			int iTableIndex = 0;
-			foreach (XElement xTable in x.Elements(xnTable)) // lese die Tabellen
-			{
-				if (lReadCombine) // suche die Tabelle
-				{
-					string sTableName = xTable.GetAttribute(xnRowName, String.Empty);
-					if (String.IsNullOrEmpty(sTableName) || (iTableIndex = FindTableIndex(sTableName)) == -1)
-						throw new ArgumentException();
-				}
-
-				PpsDataTable t = tables[iTableIndex]; // Voraussetzung: Schema-Datei und Daten-Datei haben identische Tabellensequenz, bezogen auf Tabellentypen
-				if (!lReadCombine)
-					t.ClearInternal();
-				t.Read(xTable);
-
-				if (!lReadCombine) // nächste Tabelles
-					iTableIndex++;
-			}
+			// fetch the tables
+			foreach (var xTable in x.Elements().Where(c => c.Name.NamespaceName == "table"))
+				this.Tables[xTable.Name.LocalName, true].Read(xTable, combineData);
 		} // proc Read
 
 		public void Write(XmlWriter x)
 		{
 			x.WriteStartElement(xnData.LocalName);
+			x.WriteAttributeString("xmlns", "t", null, "table");
 			foreach (var table in tables)
+			{
+				x.WriteStartElement(table.Name, "table");
 				table.Write(x);
+				x.WriteEndElement();
+			}
 			x.WriteEndElement();
 		} // proc Write
 
@@ -437,9 +497,6 @@ namespace TecWare.PPSn.Data
 			lock (nextPrimaryLock)
 				return --lastPrimaryId;
 		} // func GetNextId
-
-		public PpsDataTable GetTable(string tableName)
-			=> Tables.FirstOrDefault(c => String.Compare(c.Name, tableName, StringComparison.OrdinalIgnoreCase) == 0);
 
 		protected internal virtual void OnTableColumnValueChanged(PpsDataRow row, int iColumnIndex, object oldValue, object value)
 		{

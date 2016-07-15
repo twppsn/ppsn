@@ -70,10 +70,10 @@ namespace TecWare.PPSn.Data
 
 		private class PpsDataRowValueChangedItem : IPpsUndoItem
 		{
-			private PpsDataRow row;
-			private int columnIndex;
-			private object oldValue;
-			private object newValue;
+			private readonly PpsDataRow row;
+			private readonly int columnIndex;
+			private readonly object oldValue;
+			private readonly object newValue;
 
 			public PpsDataRowValueChangedItem(PpsDataRow row, int columnIndex, object oldValue, object newValue)
 			{
@@ -84,14 +84,10 @@ namespace TecWare.PPSn.Data
 			} // ctor
 
 			public override string ToString()
-			{
-				return String.Format("Undo ColumnChanged: {0}", columnIndex);
-			} // func ToString
+				=> $"Undo ColumnChanged: {columnIndex}";
 
 			private object GetOldValue()
-			{
-				return oldValue == NotSet ? row.originalValues[columnIndex] : oldValue;
-			} // func GetOldValue
+				=> oldValue == NotSet ? row.originalValues[columnIndex] : oldValue;
 
 			public void Undo()
 			{
@@ -112,9 +108,9 @@ namespace TecWare.PPSn.Data
 
 		private class PpsDataRowStateChangedItem : IPpsUndoItem
 		{
-			private PpsDataRow row;
-			private PpsDataRowState oldValue;
-			private PpsDataRowState newValue;
+			private readonly PpsDataRow row;
+			private readonly PpsDataRowState oldValue;
+			private readonly PpsDataRowState newValue;
 
 			public PpsDataRowStateChangedItem(PpsDataRow row, PpsDataRowState oldValue, PpsDataRowState newValue)
 			{
@@ -124,9 +120,7 @@ namespace TecWare.PPSn.Data
 			} // ctor
 
 			public override string ToString()
-			{
-				return String.Format("Undo RowState: {0} -> {1}", oldValue, newValue);
-			} // func ToString
+				=> $"Undo RowState: {oldValue} -> {newValue}";
 
 			public void Undo()
 			{
@@ -179,15 +173,15 @@ namespace TecWare.PPSn.Data
 				return BindingRestrictions.GetExpressionRestriction(expr);
 			} // func GetRestriction
 
-			private Expression GetIndexExpression(int iColumnIndex)
+			private Expression GetIndexExpression(int columnIndex)
 			{
 				return Expression.MakeIndex(
 					Expression.Convert(Expression, ItemInfo.DeclaringType),
 					ItemInfo,
-					new Expression[] { Expression.Constant(iColumnIndex) }
+					new Expression[] { Expression.Constant(columnIndex) }
 				);
 			} // func GetIndexExpression
-			
+
 			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
 			{
 				if (PpsDataHelper.IsStandardMember(LimitType, binder.Name))
@@ -197,10 +191,10 @@ namespace TecWare.PPSn.Data
 				var columnIndex = Row.table.TableDefinition.FindColumnIndex(binder.Name);
 				if (columnIndex >= 0)
 					return new DynamicMetaObject(GetIndexExpression(columnIndex), GetRestriction());
-				else 
-        {
+				else
+				{
 					PpsDataTableRelationDefinition relation;
-					if (ItemInfo.DeclaringType == typeof(PpsDataRow) && (relation = Row.table.TableDefinition.FindRelation(binder.Name)) != null)  // find a relation
+					if (ItemInfo.DeclaringType == typeof(PpsDataRow) && (relation = Row.table.TableDefinition.Relations[binder.Name]) != null)  // find a relation
 					{
 						return new DynamicMetaObject(
 							Expression.Call(Expression.Convert(Expression, typeof(PpsDataRow)), GetDefaultRelationMethodInfo, Expression.Constant(relation)),
@@ -273,7 +267,7 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		public abstract class RowValues : IDynamicMetaObjectProvider
 		{
-			private PpsDataRow row;
+			private readonly PpsDataRow row;
 
 			#region -- Ctor/Dtor ------------------------------------------------------------
 
@@ -286,28 +280,26 @@ namespace TecWare.PPSn.Data
 			/// <param name="parameter"></param>
 			/// <returns></returns>
 			public DynamicMetaObject GetMetaObject(Expression parameter)
-			{
-				return new PpsDataRowValuesMetaObject(parameter, this);
-			} // func GetMetaObject
+				=> new PpsDataRowValuesMetaObject(parameter, this);
 
 			#endregion
 
 			/// <summary>Ermöglicht den Zugriff auf die Spalte.</summary>
 			/// <param name="columnIndex">Index der Spalte</param>
 			/// <returns>Wert in der Spalte</returns>
-			public abstract object this[int iColumnIndex] { get; set; }
+			public abstract object this[int columnIndex] { get; set; }
 
 			/// <summary>Ermöglicht den Zugriff auf die Spalte.</summary>
 			/// <param name="columnName">Name der Spalte</param>
 			/// <returns>Wert in der Spalte</returns>
-			public object this[string sColumnName]
+			public object this[string columnName]
 			{
-				get { return this[Row.table.TableDefinition.FindColumnIndex(sColumnName, true)]; }
-				set { this[Row.table.TableDefinition.FindColumnIndex(sColumnName, true)] = value; }
+				get { return this[Row.table.TableDefinition.FindColumnIndex(columnName, true)]; }
+				set { this[Row.table.TableDefinition.FindColumnIndex(columnName, true)] = value; }
 			} // prop this
 
 			/// <summary>Zugriff auf die Datenzeile.</summary>
-			protected internal PpsDataRow Row { get { return row; } }
+			protected internal PpsDataRow Row => row;
 		} // class RowValues
 
 		#endregion
@@ -377,13 +369,13 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		private sealed class PpsDataRelatedFilter : PpsDataFilter
 		{
-			private PpsDataTableRelationDefinition relation;
-			private PpsDataRow parentRow;
-			private int parentColumnIndex;
-			private int childColumnIndex;
+			private readonly PpsDataTableRelationDefinition relation;
+			private readonly PpsDataRow parentRow;
+			private readonly int parentColumnIndex;
+			private readonly int childColumnIndex;
 
 			public PpsDataRelatedFilter(PpsDataRow parentRow, PpsDataTableRelationDefinition relation)
-				 : base(parentRow.Table.DataSet.FindTableFromDefinition(relation.ChildColumn.Table))
+				 : base(parentRow.Table.DataSet.Tables[relation.ChildColumn.Table])
 			{
 				this.relation = relation;
 				this.parentRow = parentRow;
@@ -406,8 +398,9 @@ namespace TecWare.PPSn.Data
 				values[childColumnIndex] = parentRow[parentColumnIndex];
 				return base.Add(values);
 			} // func Add
-			
-			protected override bool FilterRow(PpsDataRow row) => Object.Equals(parentRow[parentColumnIndex], row[childColumnIndex]);
+
+			protected override bool FilterRow(PpsDataRow row)
+				=> Object.Equals(parentRow[parentColumnIndex], row[childColumnIndex]);
 
 			public PpsDataTableRelationDefinition Relation => relation;
 		} // class PpsDataRelatedFilter
@@ -419,12 +412,12 @@ namespace TecWare.PPSn.Data
 		/// <summary>Wird ausgelöst, wenn sich eine Eigenschaft geändert hat</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		private PpsDataTable table;
-		private Lazy<IDataColumn[]> columnsArray;
+		private readonly PpsDataTable table;
+		private readonly Lazy<IDataColumn[]> columnsArray;
 
 		private PpsDataRowState rowState;
-		private OriginalRowValues orignalValuesProxy;
-		private CurrentRowValues currentValuesProxy;
+		private readonly OriginalRowValues orignalValuesProxy;
+		private readonly CurrentRowValues currentValuesProxy;
 		private object[] originalValues;
 		private object[] currentValues;
 
@@ -457,16 +450,17 @@ namespace TecWare.PPSn.Data
 		{
 			this.rowState = rowState;
 
-			int length = table.Columns.Count;
+			var length = table.Columns.Count;
 
 			if (originalValues == null || originalValues.Length != length)
-				throw new ArgumentException("Nicht genug Werte für die Initialisierung.");
+				throw new ArgumentOutOfRangeException("originalValues", "Not enough values for initialization.");
+
 			if (currentValues == null)
 				currentValues = new object[length];
 			else if (currentValues.Length != length)
-				throw new ArgumentException("Nicht genug Werte für die Initialisierung.");
+				throw new ArgumentOutOfRangeException("currentValues", "Not enough values for initialization.");
 
-			for (int i = 0; i < length; i++)
+			for (var i = 0; i < length; i++)
 			{
 				var typeTo = table.Columns[i].DataType;
 
@@ -488,46 +482,63 @@ namespace TecWare.PPSn.Data
 		internal PpsDataRow(PpsDataTable table, XElement xRow)
 			: this(table)
 		{
-			int rowState = xRow.GetAttribute(xnDataRowState, 0); // optional state of the row
+			// update row state
+			this.rowState = ReadRowState(xRow);
+
+			UpdateRowValues(xRow);
+		} // ctor
+
+		private static PpsDataRowState ReadRowState(XElement xRow)
+		{
+			var rowState = xRow.GetAttribute(xnDataRowState, 0); // optional state of the row
+
 			if (!Enum.IsDefined(typeof(PpsDataRowState), rowState))
 				throw new ArgumentException($"Unexpected value '{rowState}' for <{xnDataRow.LocalName} @{xnDataRowState}>.");
 
-			this.rowState = (PpsDataRowState)rowState;
+			return (PpsDataRowState)rowState;
+		} // func ReadRowState
 
-			var i = 0;
-			foreach (XElement xValue in xRow.Elements(xnDataRowValue)) // values
+		internal void UpdateRow(XElement xRow)
+		{
+			// update row state
+			var t = ReadRowState(xRow);
+			if (RowState == PpsDataRowState.Deleted)
+				this.RowState = t;
+			else if (t != PpsDataRowState.Deleted && t != PpsDataRowState.Unknown)
+				this.RowState = t;
+
+			// update values
+			UpdateRowValues(xRow);
+		} // func UpdateRow
+
+		private void UpdateRowValues(XElement xRow)
+		{
+			foreach (var xValue in xRow.Elements())
 			{
-				if (i >= table.Columns.Count)
-					throw new ArgumentException("Mehr Datenwerte als Spaltendefinitionen gefunden");
+				var column = Table.TableDefinition.Columns[xValue.Name.LocalName];
+				if (column == null)
+					continue; // ignore unknown rows
 
 				var xOriginal = xValue.Element(xnDataRowValueOriginal);
 				var xCurrent = xValue.Element(xnDataRowValueCurrent);
 
 				// load the values
-				Type valueType = table.Columns[i].DataType;
-				originalValues[i] = xOriginal == null || xOriginal.IsEmpty ? null : Procs.ChangeType(xOriginal.Value, valueType);
-				currentValues[i] = xCurrent == null ? NotSet : xCurrent.IsEmpty ? null : Procs.ChangeType(xCurrent.Value, valueType);
+				var index = column.Index;
+				var valueType = column.DataType;
+				originalValues[index] = xOriginal == null || xOriginal.IsEmpty ? null : Procs.ChangeType(xOriginal.Value, valueType);
+				currentValues[index] = xCurrent == null ? NotSet : xCurrent.IsEmpty ? null : Procs.ChangeType(xCurrent.Value, valueType);
 
 				// notify
-				var newValue = this[i];
-				Table.Columns[i].OnColumnValueChanging(this, PpsDataColumnValueChangingFlag.Notify, null, ref newValue);
-
-				i++;
+				var newValue = this[index];
+				Table.Columns[index].OnColumnValueChanged(this, null, newValue);
 			}
-
-			if (i != originalValues.Length)
-				throw new ArgumentOutOfRangeException("columns");
-		} // ctor
+		} // func UpdateRowValues
 
 		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
-		{
-			return new PpsDataRowMetaObject(parameter, this);
-		} // func IDynamicMetaObjectProvider.GetMetaObject
+			=> new PpsDataRowMetaObject(parameter, this);
 
 		public override string ToString()
-		{
-			return $"PpsDataRow: {table.Name}";
-    } // func ToString
+			=> $"PpsDataRow: {table.Name}";
 
 		#endregion
 
@@ -546,7 +557,7 @@ namespace TecWare.PPSn.Data
 
 			// Reset all values
 			var undo = GetUndoSink();
-      using (var trans = undo?.BeginTransaction("Reset row"))
+			using (var trans = undo?.BeginTransaction("Reset row"))
 			{
 				for (int i = 0; i < originalValues.Length; i++)
 				{
@@ -565,7 +576,7 @@ namespace TecWare.PPSn.Data
 
 				undo?.Append(new PpsDataRowStateChangedItem(this, rowState, PpsDataRowState.Unchanged));
 				RowState = PpsDataRowState.Unchanged;
-				
+
 				trans?.Commit();
 			}
 		} // proc Reset
@@ -587,7 +598,7 @@ namespace TecWare.PPSn.Data
 					{
 						originalValues[i] = currentValues[i];
 						currentValues[i] = NotSet;
-						
+
 					}
 				}
 
@@ -631,7 +642,7 @@ namespace TecWare.PPSn.Data
 			// Werte
 			for (int i = 0; i < originalValues.Length; i++)
 			{
-				x.WriteStartElement(xnDataRowValue.LocalName);
+				x.WriteStartElement(Table.TableDefinition.Columns[i].Name);
 
 				if (!IsAdded && originalValues[i] != null)
 					WriteValue(x, xnDataRowValueOriginal, originalValues[i]);
@@ -660,50 +671,30 @@ namespace TecWare.PPSn.Data
 			return sink != null && !sink.InUndoRedoOperation ? sink : null;
 		} // func GetUndoSink
 
-		private void UpdateRelatedValues(int columnIndex, object oldValue, object value)
-		{
-			// change related values
-			foreach (var r in table.TableDefinition.Relations)
-			{
-				if (r.ParentColumn.Table == table.TableDefinition && r.ParentColumn.Index == columnIndex)
-				{
-					var childTable = table.DataSet.FindTableFromDefinition(r.ChildColumn.Table);
-					var childColumnIndex = r.ChildColumn.Index;
-					for (int i = 0; i < childTable.Count; i++)
-					{
-						if (Object.Equals(childTable[i][childColumnIndex], oldValue))
-							childTable[i][childColumnIndex] = value;
-					}
-				}
-			}
-		} // proc UpdateRelatedValues
-
 		private void SetCurrentValue(int columnIndex, object oldValue, object value)
 		{
-			if (!table.Columns[columnIndex].OnColumnValueChanging(this, PpsDataColumnValueChangingFlag.SetValue, oldValue, ref value))
-				return;
+			var column = table.Columns[columnIndex];
 
-			var realCurrentValue = currentValues[columnIndex];
-			currentValues[columnIndex] = value; // change the value
-
-			// fill undo stack
+			// calculate caption and define the transaction
 			var undo = GetUndoSink();
-			if (undo != null)
+			using (var trans = undo?.BeginTransaction(String.Format(">{0}< geändert.", column.Meta.GetProperty(PpsDataColumnMetaData.Caption, column.Name))))
 			{
-				// calculate caption and define the transaction
-				var column = table.Columns[columnIndex];
-				using (var trans = undo.BeginTransaction(String.Format(">{0}< geändert.", column.Meta.GetProperty(PpsDataColumnMetaData.Caption, column.Name))))
+				if (column.OnColumnValueChanging(this, PpsDataColumnValueChangingFlag.SetValue, oldValue, ref value)) // notify the value set, e.g. to child tables, or unique indizes
 				{
-					UpdateRelatedValues(columnIndex, oldValue, value);
-					undo.Append(new PpsDataRowValueChangedItem(this, columnIndex, realCurrentValue, value));
+					// change the value
+					var realCurrentValue = currentValues[columnIndex];
+					currentValues[columnIndex] = value;
+
+					// update the undo stack
+					column.OnColumnValueChanged(this, oldValue, value);
+					undo?.Append(new PpsDataRowValueChangedItem(this, columnIndex, realCurrentValue, value));
+
+					// notify the value change
 					OnValueChanged(columnIndex, oldValue, value); // Notify the value change 
-					trans.Commit();
+					trans?.Commit();
 				}
-			}
-			else
-			{
-				UpdateRelatedValues(columnIndex, oldValue, value);
-				OnValueChanged(columnIndex, oldValue, value); // Notify the value change 
+				else
+					trans?.Rollback();
 			}
 		} // proc SetCurrentValue
 
@@ -724,10 +715,22 @@ namespace TecWare.PPSn.Data
 		} // proc OnValueChanged
 
 		protected virtual void OnPropertyChanged(string sPropertyName)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(sPropertyName));
+
+		public bool TryGetProperty(string name, out object value)
 		{
-			if (PropertyChanged != null)
-				PropertyChanged(this, new PropertyChangedEventArgs(sPropertyName));
-		} // proc OnPropertyChanged
+			var idx = table.TableDefinition.FindColumnIndex(name);
+			if (idx == -1)
+			{
+				value = null;
+				return false;
+			}
+			else
+			{
+				value = currentValuesProxy[idx];
+				return true;
+			}
+		} // func TryGetProperty
 
 		/// <summary>Zugriff auf den aktuellen Wert.</summary>
 		/// <param name="columnIndex">Spalte</param>
@@ -748,9 +751,9 @@ namespace TecWare.PPSn.Data
 		} // prop this
 
 		/// <summary>Zugriff auf die aktuellen Werte</summary>
-		public RowValues Current { get { return currentValuesProxy; } }
+		public RowValues Current => currentValuesProxy;
 		/// <summary>Originale Werte, mit der diese Zeile initialisiert wurde</summary>
-		public RowValues Original { get { return orignalValuesProxy; } }
+		public RowValues Original => orignalValuesProxy;
 
 		/// <summary>Status der Zeile</summary>
 		public PpsDataRowState RowState
@@ -767,16 +770,17 @@ namespace TecWare.PPSn.Data
 		} // prop RowState
 
 		/// <summary>Wurde die Datenzeile neu angefügt.</summary>
-		public bool IsAdded { get { return table == null ? false : table.OriginalRows.Contains(this); } }
+		public bool IsAdded => table == null ? false : !table.OriginalRows.Contains(this);
 
 		#endregion
 
 		#region -- CreateRelation ---------------------------------------------------------
 
+		/// <summary>Creates a new view on data over an relation (parent/child relation)</summary>
+		/// <param name="relation"></param>
+		/// <returns></returns>
 		public PpsDataFilter CreateRelation(PpsDataTableRelationDefinition relation)
-		{
-			return new PpsDataRelatedFilter(this, relation);
-		} // func CreateRelation
+			=> new PpsDataRelatedFilter(this, relation);
 
 		public PpsDataFilter GetDefaultRelation(PpsDataTableRelationDefinition relation)
 		{
@@ -808,7 +812,7 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		/// <summary>Zugehörige Datentabelle</summary>
-		public PpsDataTable Table { get { return table; } internal set { table = value; } }
+		public PpsDataTable Table => table;
 
 		// todo: Implement missing functionality. Change PpsDataTable > PpsDataTableDefinition > PpsDataTableMetaCollection > PpsMetaCollection implementation. ?Expectation: "IDataColumn[] IDataColumns.Columns = table.Columns;"?
 		IReadOnlyList<IDataColumn> IDataColumns.Columns => columnsArray.Value;
@@ -853,7 +857,7 @@ namespace TecWare.PPSn.Data
 					ResetMethodInfo == null ||
 					CommitMethodInfo == null ||
 					GetDefaultRelationMethodInfo == null ||
-          ValuesPropertyInfo == null ||
+					ValuesPropertyInfo == null ||
 					RowFieldInfo == null)
 				throw new InvalidOperationException("Reflection fehlgeschlagen (PpsDataRow)");
 		} // sctor
@@ -862,11 +866,6 @@ namespace TecWare.PPSn.Data
 		{
 			return (from pi in typeInfo.DeclaredProperties where pi.Name == "Item" && pi.GetIndexParameters()[0].ParameterType == typeof(int) select pi).FirstOrDefault();
 		} // func FindItemIndex
-
-		public bool TryGetProperty(string name, out object value)
-		{
-			throw new NotImplementedException();
-		}
 
 		#endregion
 	} // class PpsDataRow

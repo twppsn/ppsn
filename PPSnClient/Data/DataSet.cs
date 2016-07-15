@@ -186,7 +186,7 @@ namespace TecWare.PPSn.Data
 			using (var trans = UndoSink?.BeginTransaction("Init"))
 			{
 				// create head
-				var head = GetTable("Head");
+				var head = Tables["Head", true];
 				var row = head.Add(-1L);
 				row["Typ"] = ((PpsDataSetDefinitionClient)DataSetDefinition).ObjectType;
 				row["Guid"] = Guid.NewGuid();

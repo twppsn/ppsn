@@ -37,6 +37,11 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		private sealed class PpsDataTableMetaCollectionClient : PpsDataTableMetaCollection
 		{
+			public PpsDataTableMetaCollectionClient(PpsDataTableMetaCollectionClient clone)
+				: base(clone)
+			{
+			} // ctor
+
 			public PpsDataTableMetaCollectionClient(XElement xMetaGroup)
 			{
 				PpsDataHelperClient.AddMetaGroup(xMetaGroup, Add);
@@ -47,43 +52,31 @@ namespace TecWare.PPSn.Data
 
 		private PpsDataTableMetaCollectionClient metaInfo;
 
+		private PpsDataTableDefinitionClient(PpsDataSetDefinitionClient dataset, PpsDataTableDefinitionClient clone)
+			: base(dataset, clone)
+		{
+			this.metaInfo = new Data.PpsDataTableDefinitionClient.PpsDataTableMetaCollectionClient(clone.metaInfo);
+		} // ctor
+
 		public PpsDataTableDefinitionClient(PpsDataSetDefinitionClient dataset, XElement xTable)
 			: base(dataset, xTable.GetAttribute("name", String.Empty))
 		{
-			ParseTable(xTable);
-		} // ctor
-
-		internal void ParseTable(XElement xTable)
-		{
-			foreach (XElement c in xTable.Elements())
+			foreach (var c in xTable.Elements())
 			{
 				if (c.Name == xnColumn)
 					AddColumn(new PpsDataColumnDefinitionClient(this, c));
 				else if (c.Name == xnMeta)
 					metaInfo = new PpsDataTableMetaCollectionClient(c);
 				else // todo: warning
-					throw new NotSupportedException(string.Format("Nicht unterstütztes Element, Name: '{0}', in der Datendefinition. \nBitte Definitionsdatei '*.sxml' korrigieren.", c.Name.LocalName));
+					throw new NotSupportedException($"Not supported element: {c.Name.LocalName}");
 			}
-		} // func ParseTable
+		} // ctor
 
-		internal PpsDataColumnDefinition ResolveColumn(XElement xColumn)
-		{
-			var tableName = xColumn.GetAttribute("table", (string)null);
-			var columnName = xColumn.GetAttribute("column", (string)null);
+		public override PpsDataTableDefinition Clone(PpsDataSetDefinition dataset)
+			=> new PpsDataTableDefinitionClient((PpsDataSetDefinitionClient)dataset, this);
 
-			var table = DataSet.FindTable(tableName);
-			if (table == null)
-				throw new ArgumentException($"Table '{tableName}' not found.");
-
-			var column = table.FindColumn(columnName);
-			if (column == null)
-				throw new ArgumentException($"Column '{columnName}' in '{tableName}' not found.");
-
-			return column;
-		} // func FindColumn
-
-		public override PpsDataTableMetaCollection Meta { get { return metaInfo; } }
-	} // class PpsDataTableClientClass
+		public override PpsDataTableMetaCollection Meta => metaInfo;
+	} // class PpsDataTableDefinitionClient
 
 	#endregion
 }

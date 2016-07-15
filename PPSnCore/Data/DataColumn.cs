@@ -45,8 +45,6 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public enum PpsDataColumnValueChangingFlag
 	{
-		/// <summary>Notifies about a loaded value. The value is not changeabled</summary>
-		Notify,
 		/// <summary>Sets the initial value for a new row.</summary>
 		Initial,
 		/// <summary>Value gets changed</summary>
@@ -54,7 +52,7 @@ namespace TecWare.PPSn.Data
 	} // enum PpsDataColumnValueChangingFlag
 
 	#endregion
-	
+
 	#region -- class PpsDataColumnDefinition --------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -127,90 +125,55 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		private PpsDataTableDefinition table;
+		private readonly PpsDataTableDefinition table;  // table
+		private readonly string columnName;             // Internal name of the column
+		private readonly bool isIdentity;
 
-		private readonly string columnName;   // Internal name of the column
-		private readonly Type dataType;
-		private readonly bool isPrimaryKey;   // is this a primary column
-
-		private string relationName;
-		private PpsDataColumnDefinition parentColumn = null;   // parent column of the parent child relation
+		private PpsDataTableRelationDefinition parentRelation; // relation to the parent column, the current column has a value from the parent column
 
 		protected PpsDataColumnDefinition(PpsDataTableDefinition table, PpsDataColumnDefinition clone)
 		{
 			this.table = table;
 			this.columnName = clone.columnName;
-			this.dataType = clone.dataType;
-			this.isPrimaryKey = clone.isPrimaryKey;
+			this.isIdentity = clone.isIdentity;
 
-			if (clone.parentColumn != null)
-			{
-				this.relationName = clone.relationName;
-
-				var parentTable = table.DataSet.FindTable(clone.parentColumn.Table.Name);
-				this.parentColumn = parentTable.FindColumn(clone.parentColumn.Name);
-
-				// register the relation
-				parentColumn.Table.AddRelation(relationName, parentColumn, this);
-			}
+			if (clone.IsPrimaryKey)
+				table.SetPrimaryKey(this);
 		} // ctor
 
-		/// <summary>Erzeugt eine neue Spaltendefinition.</summary>
-		/// <param name="table">Zugehörige Tabelle</param>
-		/// <param name="columnName">Name der Spalte</param>
-		public PpsDataColumnDefinition(PpsDataTableDefinition table, string columnName, Type dataType, bool isPrimaryKey)
+		/// <summary>Create a new column.</summary>
+		/// <param name="table">Table of the column</param>
+		/// <param name="columnName">Name of the column</param>
+		/// <param name="isPrimaryKey">Is this a primary key column.</param>
+		/// <param name="isIdentity">Is this a identity</param>
+		public PpsDataColumnDefinition(PpsDataTableDefinition table, string columnName, bool isPrimaryKey, bool isIdentity)
 		{
 			if (String.IsNullOrEmpty(columnName))
 				throw new ArgumentNullException();
 
 			this.table = table;
 			this.columnName = columnName;
-			this.dataType = dataType;
-			this.isPrimaryKey = isPrimaryKey;
+			this.parentRelation = null;
 
-			this.relationName = null;
-			this.parentColumn = null;
+			if (isPrimaryKey)
+				table.SetPrimaryKey(this);
 		} // ctor
 
-		protected void SetRelationName(string relationName)
+		internal void SetParentRelation(PpsDataTableRelationDefinition parentRelation)
 		{
-			if (IsInitialized)
-				throw new InvalidOperationException("Can not change a relation after initialization.");
-
-			this.relationName = relationName ?? table.Name;
-		} // proc SetRelationName
-
-		protected void SetParentColumn(string relationName, string parentTableName, string parentColumnName)
-		{
-			SetRelationName(relationName ?? this.relationName);
-
-			// register the relation
-			var parentTable = table.DataSet.FindTable(parentTableName);
-			if (parentTable == null)
-				throw new ArgumentOutOfRangeException("parentTableName", $"'{parentTableName}' not found.");
-
-			var parentColumn = parentTable.FindColumn(parentColumnName);
-			if (parentColumn == null)
-				throw new ArgumentOutOfRangeException("parentColumnName", $"'{parentTableName}.{parentColumnName}' not found.");
-
-			parentColumn.Table.AddRelation(this.relationName, parentColumn, this);
-
-			this.parentColumn = parentColumn;
-		} //  proc SetParentColumn
+			if (parentRelation != null)
+				throw new InvalidOperationException("Only one parent relation per column is allowed.");
+			this.parentRelation = parentRelation;
+		} // proc SetParentRelation
 
 		public abstract PpsDataColumnDefinition Clone(PpsDataTableDefinition tableOwner);
-		
+
 		public override string ToString()
 			=> $"{table.Name}.{columnName}";
 
 		public virtual void EndInit()
 		{
 		} // proc EndInit
-
-		/// <summary>Returns the initial value for a column.</summary>
-		/// <returns></returns>
-		public virtual object GetInitialValue(PpsDataTable table)
-			=> null;
 
 		/// <summary>Gets called if a value is changing.</summary>
 		/// <param name="row"></param>
@@ -222,26 +185,25 @@ namespace TecWare.PPSn.Data
 			switch (flag)
 			{
 				case PpsDataColumnValueChangingFlag.SetValue:
-					if (IsRelationColumn)
+					if (parentRelation != null) // check value contraint
 					{
 						if (!ExistsValueInParentTable(row, value))
-							throw new ArgumentOutOfRangeException($"Value '{value}' does not exist in '{parentColumn.Table.Name}.{parentColumn.Name}'.");
+							throw new ArgumentOutOfRangeException($"Value '{value}' does not exist in '{parentRelation.ParentColumn.Table.Name}.{parentRelation.ParentColumn.Name}'.");
 					}
-					else if (IsPrimaryKey)
-						throw new NotSupportedException($"{Name} is a readonly column.");
-					return true;
-
-				case PpsDataColumnValueChangingFlag.Notify:
-					if (IsPrimaryKey)
-						row.Table.DataSet.UpdateNextId((long)value);
+					else if (IsPrimaryKey) // check unique
+					{
+						if (row.Table.FindRows(this, value).FirstOrDefault() != null)
+							throw new ArgumentOutOfRangeException($"Value '{value}' is not unique for column '{Table.Name}.{Name}'.");
+					}
 					return true;
 
 				case PpsDataColumnValueChangingFlag.Initial:
+
+					if (isIdentity) // automatic value
+						value = row.Table.DataSet.GetNextId();
+
 					if (value != null)
 						goto case PpsDataColumnValueChangingFlag.SetValue;
-
-					if (IsPrimaryKey)
-						value = row.Table.DataSet.GetNextId();
 
 					return true;
 
@@ -250,52 +212,52 @@ namespace TecWare.PPSn.Data
 			}
 		} // func OnColumnValueChanging
 
+		protected internal virtual void OnColumnValueChanged(PpsDataRow row, object oldValue, object value)
+		{
+			if (isIdentity)
+				row.Table.DataSet.UpdateNextId((long)value);
+
+			// update child relations
+			foreach (var relation in table.Relations.Where(r => r.ParentColumn == this))
+			{
+				var table = row.Table.DataSet.Tables[relation.ChildColumn.Table];
+				var columnIndex = relation.ChildColumn.Index;
+
+				foreach (var childRow in table.FindRows(relation.ChildColumn, oldValue))
+					childRow[columnIndex] = value;
+			}
+		} // proc OnColumnValueChanged
+
 		private bool ExistsValueInParentTable(PpsDataRow row, object value)
 		{
-			var parentTable = row.Table.DataSet.FindTableFromDefinition(parentColumn.Table);
-			var parentColumnIndex = parentColumn.Index;
-
-			for (int i = 0; i < parentTable.Count; i++)
-			{
-				if (Object.Equals(parentTable[i][parentColumnIndex], value))
-					return true;
-			}
-
-			return false;
+			var parentTable = row.Table.DataSet.Tables[parentRelation.ParentColumn.Table];
+			return parentTable.FindRows(parentRelation.ParentColumn, value).FirstOrDefault() != null;
 		} // func ExistsValueInParentTable
 
-		protected virtual Type GetDataType()
-			=> dataType; // todo: client impl.
+		protected abstract Type GetDataType();
 
 		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
 			=> new PpsDataColumnMetaObject(parameter, this);
-		
+
 		/// <summary>Zugehörige Tabelle</summary>
 		public PpsDataTableDefinition Table { get { return table; } }
 
 		/// <summary>Name der Spalte</summary>
 		public string Name => columnName;
 		/// <summary>Datentyp der Spalte</summary>
-		public Type DataType
-		{
-			get
-			{
-				if (IsRelationColumn)
-					return parentColumn.DataType;
-				else
-					return GetDataType();
-			}
-		} // prop DataType
-		
+		public Type DataType => IsRelationColumn ? parentRelation.ParentColumn.DataType : GetDataType();
+
 		/// <summary>Index der Spalte innerhalb der Datentabelle</summary>
 		public int Index => table.Columns.IndexOf(this);
 
+		/// <summary>Is this column a primary key.</summary>
+		public bool IsPrimaryKey => table.PrimaryKey == this;
 		/// <summary></summary>
-		public bool IsPrimaryKey => isPrimaryKey;
-		/// <summary></summary>
-		public bool IsRelationColumn => parentColumn != null;
-		/// <summary></summary>
-		public PpsDataColumnDefinition ParentColumn => parentColumn;
+		public bool IsIdentity => isIdentity;
+		/// <summary>Has this column a parent/child relation.</summary>
+		public bool IsRelationColumn => parentRelation != null;
+		/// <summary>Parent column for the parent child relation.</summary>
+		public PpsDataColumnDefinition ParentColumn => parentRelation.ParentColumn;
 
 		public virtual bool IsInitialized => true;
 

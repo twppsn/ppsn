@@ -37,7 +37,7 @@ namespace TecWare.PPSn.Data
 		internal static void AddMetaGroup(XElement xMetaGroup, Action<string, Func<Type>, object> add)
 		{
 			foreach (XElement c in xMetaGroup.Elements())
-				add(c.Name.LocalName, () => LuaType.GetType(c.GetAttribute("datatype", "object"), lateAllowed: false), c.Value);
+				add(c.Name.LocalName, () => LuaType.GetType(c.GetAttribute("dataType", "object"), lateAllowed: false), c.Value);
 		} // proc AddMetaGroup
 	} // class PpsDataHelperClient
 }

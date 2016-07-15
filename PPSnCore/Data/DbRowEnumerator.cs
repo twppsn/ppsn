@@ -107,31 +107,46 @@ namespace TecWare.PPSn.Data
 		private bool isDisposed;
 		private readonly DbCommand command;
 		private DbDataReader reader;
+		private readonly bool leaveOpen;
 		private ReadingState state;
 		private IDataRow currentRow;
-		private Lazy<IDataColumn[]> columns;
+		private readonly Lazy<IDataColumn[]> columns;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		public DbRowEnumerator(DbCommand command)
+		private DbRowEnumerator(DbCommand command, DbDataReader reader, bool leaveOpen)
 		{
 			this.command = command;
+			this.reader = reader;
+			this.leaveOpen = leaveOpen;
 
-			columns = new Lazy<IDataColumn[]>(() =>
-			{
-				CheckDisposed();
+			this.columns = new Lazy<IDataColumn[]>(RetrieveColumnDescriptions);
+		} // ctor
 
-				if (state == ReadingState.Unread && !MoveNext(true))
-					return null;
+		private IDataColumn[] RetrieveColumnDescriptions()
+		{
+			CheckDisposed();
 
-				if (state == ReadingState.Complete)
-					return null;
+			if (state == ReadingState.Unread && !MoveNext(true))
+				return null;
 
-				var tmp = new DbDataColumn[reader.FieldCount];
-				for (var i = 0; i < reader.FieldCount; i++)
-					tmp[i] = new DbDataColumn(reader.GetName(i), reader.GetFieldType(i), PropertyDictionary.EmptyReadOnly);
-				return tmp;
-			});
+			if (state == ReadingState.Complete)
+				return null;
+
+			var tmp = new DbDataColumn[reader.FieldCount];
+			for (var i = 0; i < reader.FieldCount; i++)
+				tmp[i] = new DbDataColumn(reader.GetName(i), reader.GetFieldType(i), PropertyDictionary.EmptyReadOnly);
+			return tmp;
+		} // func RetrieveColumnDescriptions
+
+		public DbRowEnumerator(DbCommand command)
+			: this(command, null, false)
+		{
+		} // ctor
+
+		public DbRowEnumerator(DbDataReader reader, bool leaveOpen)
+			: this(null, reader, leaveOpen)
+		{
 		} // ctor
 
 		public void Dispose()
@@ -142,7 +157,7 @@ namespace TecWare.PPSn.Data
 			if (isDisposed)
 				return;
 
-			if (disposing)
+			if (disposing && !leaveOpen)
 			{
 				command?.Dispose();
 				reader?.Dispose();
@@ -151,13 +166,13 @@ namespace TecWare.PPSn.Data
 			isDisposed = true;
 		} // proc Dispose
 
-		#endregion
-
 		private void CheckDisposed()
 		{
 			if (isDisposed)
 				throw new ObjectDisposedException(typeof(DbRowEnumerator).FullName);
 		} // proc CheckDisposed
+
+		#endregion
 
 		#region -- IEnumerator<T> ---------------------------------------------------------
 
@@ -255,6 +270,26 @@ namespace TecWare.PPSn.Data
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
 	} // class DbRowEnumerable
+
+	#endregion
+
+	#region -- class DbRowReaderEnumerable ----------------------------------------------
+
+	public sealed class DbRowReaderEnumerable : IEnumerable<IDataRow>
+	{
+		private readonly DbDataReader reader;
+
+		public DbRowReaderEnumerable(DbDataReader reader)
+		{
+			this.reader = reader;
+		} // ctor
+
+		public IEnumerator<IDataRow> GetEnumerator()
+			=> new DbRowEnumerator(reader, true);
+
+		IEnumerator IEnumerable.GetEnumerator()
+			=> GetEnumerator();
+	} // class DbRowReaderEnumerable
 
 	#endregion
 }
