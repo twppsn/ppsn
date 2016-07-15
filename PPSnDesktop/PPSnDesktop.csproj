@@ -78,6 +78,7 @@
     </ApplicationDefinition>
     <Compile Include="PpsMainEnvironment.cs" />
     <Compile Include="PpsMainEnvironment.Data.cs" />
+    <Compile Include="PpsMainEnvironment.Documents.cs" />
     <Compile Include="PpsMainEnvironment.Views.cs" />
     <Compile Include="UI\Panes\PpsLoginPane.xaml.cs">
       <DependentUpon>PpsLoginPane.xaml</DependentUpon>
@@ -85,6 +86,7 @@
     <Compile Include="UI\PpsCharmbarControl.xaml.cs">
       <DependentUpon>PpsCharmbarControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
     <Compile Include="UI\PpsMainWindow.xaml.cs">
       <DependentUpon>PpsMainWindow.xaml</DependentUpon>
     </Compile>

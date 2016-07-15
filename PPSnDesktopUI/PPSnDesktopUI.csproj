@@ -104,7 +104,6 @@
     <Compile Include="UI\NatveMethods.cs" />
     <Compile Include="UI\PpsCommand.cs" />
     <Compile Include="UI\PpsDialogWindow.cs" />
-    <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
     <Compile Include="UI\PpsGenericWpfWindowPane.cs" />
     <Compile Include="UI\PpsTraceDialog.xaml.cs">
       <DependentUpon>PpsTraceDialog.xaml</DependentUpon>

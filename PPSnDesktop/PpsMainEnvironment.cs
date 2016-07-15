@@ -24,7 +24,7 @@ namespace TecWare.PPSn
   public class PpsMainActionDefinition : PpsEnvironmentDefinition
 	{
 		public static readonly XName xnActions = "actions";
-		public static readonly XName xnAction="action";
+		public static readonly XName xnAction = "action";
 		public static readonly XName xnCondition = "condition";
 		public static readonly XName xnCode = "code";
 
@@ -146,6 +146,12 @@ namespace TecWare.PPSn
 				var priority = 0;
 				foreach (var cur in xNavigator.Elements(PpsMainActionDefinition.xnAction))
 					actions.AppendItem(new PpsMainActionDefinition(this, cur, ref priority));
+
+				// update document info
+				var updateList = new List<string>();
+				foreach (var cur in xNavigator.Elements(XName.Get("document")))
+					UpdateDocumentDefinitionInfo(cur, updateList);
+				ClearDocumentDefinitionInfo(updateList);
 			}
 			catch (WebException ex)
 			{

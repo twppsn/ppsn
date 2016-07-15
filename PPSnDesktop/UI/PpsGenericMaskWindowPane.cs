@@ -35,16 +35,19 @@ namespace TecWare.PPSn.UI
 	/// und einer Dataset</summary>
 	public class PpsGenericMaskWindowPane : PpsGenericWpfWindowPane
 	{
-		private PpsUndoManager undoManager = new PpsUndoManager();
-		private CollectionViewSource undoView;
-		private CollectionViewSource redoView;
-		private PpsDataSetClient dataSet; // DataSet which is controlled by the mask
+		private readonly IPpsDocuments rdt;
+		//private PpsUndoManager undoManager = new PpsUndoManager();
+		//private CollectionViewSource undoView;
+		//private CollectionViewSource redoView;
 
-		private string documentPath;
+		private PpsDataSetClient dataSet; // current DataSet which is controlled by the mask
+		private string documentType = null;
 
 		public PpsGenericMaskWindowPane(PpsEnvironment environment)
 			: base(environment)
 		{
+			this.rdt = (IPpsDocuments)environment.GetService(typeof(IPpsDocuments));
+
 			//// create the views on the undo manager
 			//undoView = new CollectionViewSource();
 			//using (undoView.DeferRefresh())
@@ -65,27 +68,22 @@ namespace TecWare.PPSn.UI
 		public override async Task LoadAsync(LuaTable arguments)
 		{
 			// get the document path
-			this.documentPath = arguments.GetOptionalValue("document", String.Empty);
-			if (String.IsNullOrEmpty(documentPath))
+			this.documentType = arguments.GetOptionalValue("document", String.Empty);
+			if (String.IsNullOrEmpty(documentType))
 				throw new ArgumentNullException("document", "Parameter is missing.");
-			if (documentPath[documentPath.Length - 1] == '/')
-				documentPath = documentPath.Substring(0, documentPath.Length - 1);
 
-			await Task.Yield();
+			await Task.Yield(); // spawn new thread
 
-			// get the schema
-			var schemaDefinition = new PpsDataSetDefinitionClient(XDocument.Load(documentPath + "schema.xml").Root);
-			schemaDefinition.EndInit();
-			dataSet = (PpsDataSetClient)schemaDefinition.CreateDataSet();
-
-			// get data
+			// new document or load one
 			var id = arguments.GetMemberValue("id");
-
+			var revId = arguments.GetMemberValue("revId");
+			this.dataSet = id == null ?
+				await rdt.CreateDocumentAsync(documentType, arguments) :
+				await rdt.OpenDocumentAsync(new PpsDocumentId(Convert.ToInt64(id), Convert.ToInt64(revId ?? -1)), arguments);
+						
 			// get the pane to view, if it is not given
 			if (!arguments.ContainsKey("pane"))
-				arguments.SetMemberValue("pane", "wpf/panes/" + documentPath + ".xaml");
-
-			//dataSet.RegisterUndoSink(undoManager);
+				arguments.SetMemberValue("pane", rdt.GetDocumentDefaultPane(documentType));
 
 			// Lade die Maske
 			await base.LoadAsync(arguments);
@@ -100,33 +98,33 @@ namespace TecWare.PPSn.UI
 			//	expr.UpdateSource();
 		} // proc CommitEdit
 
-		[LuaMember(nameof(UndoManager))]
-		public PpsUndoManager UndoManager => undoManager;
+		//[LuaMember(nameof(UndoManager))]
+		//public PpsUndoManager UndoManager => undoManager;
 
-		/// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
-		public ICollectionView UndoView => undoView.View;
-		/// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
-		public ICollectionView RedoView => redoView.View;
+		///// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
+		//public ICollectionView UndoView => undoView.View;
+		///// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
+		//public ICollectionView RedoView => redoView.View;
 
 		[LuaMember(nameof(Data))]
 		public PpsDataSet Data => dataSet;
 	} // class PpsGenericMaskWindowPane
 
-	//Q&D
-	public class PpsContentTemplateSelector : DataTemplateSelector
-	{
-		public override DataTemplate SelectTemplate(object item, DependencyObject container)
-		{
-			var row = item as PpsDataRow;
-			if (row == null)
-				return null;
+	////Q&D
+	//public class PpsContentTemplateSelector : DataTemplateSelector
+	//{
+	//	public override DataTemplate SelectTemplate(object item, DependencyObject container)
+	//	{
+	//		var row = item as PpsDataRow;
+	//		if (row == null)
+	//			return null;
 			
-			var control = container as ContentPresenter;
-			if (control == null)
-				return null;
+	//		var control = container as ContentPresenter;
+	//		if (control == null)
+	//			return null;
 
-			var r = (DataTemplate)control.FindResource(row.Table.Name);
-			return r;
-		}
-	}
+	//		var r = (DataTemplate)control.FindResource(row.Table.Name);
+	//		return r;
+	//	}
+	//}
 }
