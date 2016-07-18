@@ -66,11 +66,11 @@
 
 * Camel Case - Schreibweise
 * sprechende Bezeichner mit führendem Tabellenamen
-* Bsp.: KontName, BekoId
-* feste Spaltennamen (Tabellename + Spaltenname):
+* Bsp.: Name, Id
+* feste Spaltennamen (Spaltenname):
 	- Id - Primärschlüssel
 	- Status - Statusfelder
-	- Datum - Datumsfeld (Bsp.: BekoDatum, AukoDatum)
+	- Datum - Datumsfeld (Bsp.: Datum, Datum)
 	- Nr - externe Nummer
 	- Name?? - Namesfelder
 	- Text?? - freie Textfelder
