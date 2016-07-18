@@ -43,14 +43,14 @@ namespace TecWare.PPSn.Server
 		public readonly static XName xnTable = PpsNamespace + "table";
 		public readonly static XName xnColumn = PpsNamespace + "column";
 		public readonly static XName xnRelation = PpsNamespace + "relation";
-		public readonly static XName xnParameter = PpsNamespace + "parameter";
+		public readonly static XName xnAutoTag = PpsNamespace + "autoTag";
 		public readonly static XName xnMeta = PpsNamespace + "meta";
 
 		public readonly static XName xnWpf = PpsNamespace + "wpf";
 		public readonly static XName xnWpfAction = PpsNamespace + "action";
 		public readonly static XName xnWpfTheme = PpsNamespace + "theme";
 		public readonly static XName xnWpfTemplate = PpsNamespace + "template";
-		public readonly static XName xnWpfXamlSource = PpsNamespace + "xamlSource";
+		public readonly static XName xnWpfWpfSource = PpsNamespace + "wpfSource";
 		public readonly static XName xnWpfCode = PpsNamespace + "code";
 		public readonly static XName xnWpfCondition = PpsNamespace + "condition";
 
@@ -64,6 +64,13 @@ namespace TecWare.PPSn.Server
 
 			xml.WriteAttributeString(targetPropertyName ?? propertyName, value);
 		} // proc WriteProperty
+
+		public static void WriteAttributeString(this XmlWriter xml, XElement x, XName attributeName, string targetAttributeName = null)
+		{
+			var attr = x?.Attribute(attributeName);
+			if (attr != null)
+				xml.WriteAttributeString(targetAttributeName ?? attributeName.LocalName, attr.Value);
+		} // proc WriteAttributeString
 
 		public static IPropertyReadOnlyDictionary ToPropertyDictionary(this IEnumerable<XElement> attributes, params KeyValuePair<string, Type>[] wellKnownProperties)
 		{
@@ -84,7 +91,7 @@ namespace TecWare.PPSn.Server
 				props.SetProperty(propertyName, dataType, x.Value);
 			}
 			return props;
-		} // func IPropertyReadOnlyDictionary 
+		} // func IPropertyReadOnlyDictionary
 
 		#endregion
 	} // class PpsStuff

@@ -15,30 +15,32 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using TecWare.DE.Data;
-using TecWare.DE.Stuff;
-using TecWare.PPSn.Server.Data;
 
-namespace TecWare.PPSn.Server.Sql
+namespace TecWare.PPSn.Server
 {
-	#region -- class PpsSqlDataSource ---------------------------------------------------
+	#region -- class PpsApplicationFileItem -------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public abstract class PpsSqlDataSource : PpsDataSource
+	public sealed class PpsApplicationFileItem
 	{
-		//private DbConnection connection = null;
+		private readonly string path;
+		private readonly long length;
+		private readonly DateTime lastWriteTime;
 
-		public PpsSqlDataSource(IServiceProvider sp, string name)
-			: base(sp, name)
+		public PpsApplicationFileItem(string path, long length, DateTime lastWriteTime)
 		{
+			this.path = path;
+			this.length = length;
+			this.lastWriteTime = lastWriteTime;
 		} // ctor
-	} // class PpsSqlDataSource
+
+		public string Path => path;
+		public long Length => length;
+		public DateTime LastWriteTime => lastWriteTime;
+	} // class PpsApplicationFileItem
 
 	#endregion
+
 }

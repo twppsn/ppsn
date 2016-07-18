@@ -28,6 +28,8 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Server.Data
 {
+	#region -- class PpsDataSelector ----------------------------------------------------
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public abstract class PpsDataSelector : IDERangeEnumerable<IDataRow>, IEnumerable<IDataRow>
@@ -51,10 +53,10 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		public abstract IEnumerator<IDataRow> GetEnumerator(int start, int count);
 
-		public virtual PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions)
+		public virtual PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
 			=> this;
 
-		public virtual PpsDataSelector ApplyFilter(PpsDataFilterExpression expression)
+		public virtual PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 			=> this;
 
 		/// <summary>Returns the field description for the name in the resultset</summary>
@@ -68,4 +70,33 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary></summary>
 		public PpsDataSource DataSource => source;
 	} // class PpsDataSelector
+
+	#endregion
+
+	#region -- class PpsGenericSelector<T> ----------------------------------------------
+
+	public sealed class PpsGenericSelector<T> : PpsDataSelector
+	{
+		private readonly string viewId;
+		private readonly IEnumerable<T> enumerable;
+		private readonly PpsApplication application;
+
+		public PpsGenericSelector(PpsDataSource source, string viewId, IEnumerable<T> enumerable) 
+			: base(source)
+		{
+			this.viewId = viewId;
+			this.enumerable = enumerable;
+			this.application = source.GetService<PpsApplication>(true);
+		} // ctor
+
+		public override IEnumerator<IDataRow> GetEnumerator(int start, int count)
+		{
+			return new GenericDataRowEnumerator<T>(enumerable.GetEnumerator());
+		} // func GetEnumerator
+
+		public override IPpsColumnDescription GetFieldDescription(string nativeColumnName)
+				=> application.GetFieldDescription(viewId + "." + nativeColumnName, false);
+	} // class PpsGenericSelector
+
+	#endregion
 }

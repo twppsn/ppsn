@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -21,6 +22,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Server.Http;
@@ -236,29 +238,35 @@ namespace TecWare.PPSn.Server.Wpf
 							CombineMergedResourceDictionaries(x, null, false);
 						else // parse template
 						{
+							string onlineViewId = null;
+
 							// get the key
 							var keyString = x.GetAttribute(xnXamlKey, String.Empty);
 							if (String.IsNullOrEmpty(keyString))
 								continue;
 
 							// split the key
-							var pos = keyString.IndexOf(',');
-							if (pos == -1)
-								currentTemplatePriority++;
-							else
+							var keyElements = keyString.Split(',',';');
+							if (keyElements.Length >= 1)
+								keyString = keyElements[0].Trim();
+							if (keyElements.Length >= 2)
+								onlineViewId = keyElements[1].Trim();
+							if (keyElements.Length >= 3)
 							{
 								int t;
-								if (Int32.TryParse(keyString.Substring(pos + 1).Trim(), out t))
+								if (Int32.TryParse(keyElements[2].Trim(), out t))
 									currentTemplatePriority = t;
 								else
 									currentTemplatePriority++;
-								keyString = keyString.Substring(0, pos);
 							}
+							else
+								currentTemplatePriority++;
 
 							// create the new template
 							var xTemplate = new XElement("template",
 								new XAttribute("key", keyString),
-								new XAttribute("priority", currentTemplatePriority)
+								new XAttribute("priority", currentTemplatePriority),
+								new XAttribute("viewId", onlineViewId)
 							);
 
 							// append the code item
@@ -576,21 +584,25 @@ namespace TecWare.PPSn.Server.Wpf
 			if (relativePath.IndexOf("..") >= 0)
 				throw new ArgumentException(String.Format("Relative file names are not allowed ('{0}').", relativePath));
 
-			// replate the slashes
-			relativePath = relativePath.Replace('/', '\\');
-
 			// find the file
-			foreach (var x in Config.Elements(PpsStuff.xnWpfXamlSource))
+			foreach (var x in Config.Elements(PpsStuff.xnWpfWpfSource))
 			{
 				var directoryPath = x.GetAttribute("directory", String.Empty);
 				if (String.IsNullOrEmpty(directoryPath))
 					continue;
+				var virtualPath = x.GetAttribute("virtualPath", String.Empty) + "/";
 
-				var tmp = Path.Combine(directoryPath, relativePath);
-				if (File.Exists(tmp))
+				if (relativePath.StartsWith(virtualPath))
 				{
-					fullPath = tmp;
-					return true;
+					// replate the slashes
+					relativePath = relativePath.Substring(virtualPath.Length).Replace('/', '\\');
+
+					var tmp = Path.Combine(directoryPath, relativePath);
+					if (File.Exists(tmp))
+					{
+						fullPath = tmp;
+						return true;
+					}
 				}
 			}
 
@@ -657,68 +669,85 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#region -- ParseNavigator ---------------------------------------------------------
 
+		private void WriteSubItem(XmlWriter xml, string name, XElement x,ref int priority)
+		{
+			var displayName = x.GetAttribute("displayName", String.Empty);
+			if (String.IsNullOrEmpty(displayName))
+				return;
+
+			xml.WriteStartElement(name);
+			xml.WriteAttributeString("name", x.GetAttribute("name", displayName));
+			xml.WriteAttributeString("displayName", displayName);
+
+			var tmp = x.GetAttribute("priority", 0);
+			if (tmp != 0)
+				priority = tmp;
+			xml.WriteAttributeString("priority", priority.ToString());
+
+			xml.WriteCData(x.Value);
+			xml.WriteEndElement();
+		} // proc WriteSubItem
+
 		private void ParseNavigator(IDEContext r)
 		{
 			using (XmlWriter xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml), Procs.XmlWriterSettings))
 			{
 				xml.WriteStartElement("navigator");
-				
-				foreach (var v in application.GetViewDefinitions())
+
+				foreach (var view in Config.Elements(PpsStuff.xnView))
 				{
-					// export only views
-					if (!v.IsVisible || // they are visible
-							!v.Attributes.GetProperty("WpfMenuItem", false) || // have a menu selector
-							!r.TryDemandToken(v.SecurityToken)) // and are accessable
+					var viewId = view.GetAttribute("view", String.Empty);
+					var displayName = view.GetAttribute("displayName", String.Empty);
+
+					if (String.IsNullOrEmpty(viewId) ||  // viewId exists
+							String.IsNullOrEmpty(displayName) || // displayName exists
+							!r.TryDemandToken(view.GetAttribute("securityToken", String.Empty))) // and is accessable
 						continue;
-					
+
 					// write the attributes
 					xml.WriteStartElement("view");
-					xml.WriteAttributeString("id", v.Name);
-					xml.WriteAttributeString("displayName", v.DisplayName);
-					xml.WriteProperty(v.Attributes, "shortcut");
-					xml.WriteProperty(v.Attributes, "displayImage");
+					xml.WriteAttributeString("name", view.GetAttribute("name", String.Empty));
+					xml.WriteAttributeString("displayName", displayName);
+					xml.WriteAttributeString("view", viewId);
+
+					xml.WriteAttributeString(view, "filter");
+					xml.WriteAttributeString(view, "displayGlyph");
 
 					// write filters and orders
-					foreach (var f in v.Filter)
-					{
-						if (f.IsVisible)
-							f.WriteElement(xml, "filter");
-					}
-					foreach (var o in v.Order)
-					{
-						if (o.IsVisible)
-							o.WriteElement(xml, "order");
-					}
+					var priority = 1;
+					foreach (var f in view.Elements(PpsStuff.xnFilter))
+						WriteSubItem(xml, "filter", f, ref priority);
+					priority = 1;
+					foreach (var f in view.Elements(PpsStuff.xnOrder))
+						WriteSubItem(xml, "order", f, ref priority);
 
 					xml.WriteEndElement();
 				} // foreach v
 
 				// parse all action attributes
 				var posPriority = 1;
-				
+
 				foreach (var x in Config.Elements(PpsStuff.xnWpfAction))
 				{
 					var displayName = x.GetAttribute<string>("displayName", null);
 					var securityToken = x.GetAttribute<string>("securityToken", null);
 
-					if (String.IsNullOrEmpty(displayName) || !r.TryDemandToken(securityToken))
+					if (String.IsNullOrEmpty(displayName) ||
+							!r.TryDemandToken(securityToken))
 						continue;
-					
+
 					xml.WriteStartElement("action");
 
-					var name = x.GetAttribute<string>("name", displayName);
-					var displayGlyph = x.GetAttribute<string>("displayGlyph", displayName);
 					var priority = x.GetAttribute<int>("priority", posPriority);
 
 					var code = x.Element(PpsStuff.xnWpfCode)?.Value;
 					var condition = x.Element(PpsStuff.xnWpfCondition)?.Value;
-					
-					xml.WriteAttributeString("name", name);
-					xml.WriteAttributeString("displayName", displayName);
-					if (!String.IsNullOrEmpty(displayGlyph))
-						xml.WriteAttributeString("displayGlyph", displayGlyph);
 
-					posPriority = priority +1;
+					xml.WriteAttributeString("name", x.GetAttribute<string>("name", displayName));
+					xml.WriteAttributeString("displayName", displayName);
+					xml.WriteAttributeString(x, "displayGlyph");
+
+					posPriority = priority + 1;
 					xml.WriteAttributeString("priority", priority.ToString());
 
 					if (!String.IsNullOrEmpty(code))
@@ -738,9 +767,62 @@ namespace TecWare.PPSn.Server.Wpf
 					xml.WriteEndElement();
 				}
 
+				// Parse all documents
+				foreach (var c in application.CollectChildren<PpsDocument>())
+				{
+					xml.WriteStartElement("document");
+					xml.WriteAttributeString("name", c.Name);
+					xml.WriteAttributeString("source", c.Name + "/schema.xml");
+					xml.WriteEndElement();
+				}
+
 				xml.WriteEndElement();
 			}
 		} // func ParseNavigator
+
+		#endregion
+
+		#region -- Client synchronisation -------------------------------------------------
+
+		private IEnumerable<PpsApplicationFileItem> GetApplicationFileList(IPpsPrivateDataContext privateUserData)
+		{
+			var basePath = this.Name;
+
+			// navigator.xml
+			yield return new PpsApplicationFileItem(basePath + "/navigator.xml", -1, DateTime.MinValue);
+
+			// templates.xml
+			yield return new PpsApplicationFileItem(basePath + "/templates.xaml", -1, DateTime.MinValue);
+
+			// schemas from application/documents
+			foreach (var c in application.CollectChildren<PpsDocument>())
+			{
+				foreach (var f in c.GetClientFiles(c.Name))
+					yield return f;
+			}
+
+			// theme, wpfWpfSource
+			foreach (var x in Config.Elements())
+			{
+				if (x.Name == PpsStuff.xnWpfWpfSource)
+				{
+					var directoryPath = x.GetAttribute("directory", String.Empty);
+					var virtualPath = x.GetAttribute("virtualPath", String.Empty);
+
+					foreach (var fi in new DirectoryInfo(directoryPath).GetFiles("*", SearchOption.TopDirectoryOnly))
+						yield return new PpsApplicationFileItem(basePath + "/" + virtualPath + "/" + fi.Name, -1, DateTime.MinValue);
+				}
+				else if (x.Name == PpsStuff.xnWpfTheme)
+				{
+					var fileName = x.GetAttribute("file", String.Empty);
+					var name = Path.GetFileName(fileName);
+					yield return new PpsApplicationFileItem(basePath + "/" + name, -1, DateTime.MinValue);
+				}
+			}
+		} // func GetApplicationFileList
+
+		public PpsDataSelector GetApplicationFilesSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
+			=> new PpsGenericSelector<PpsApplicationFileItem>(dataSource, "wpf.sync", GetApplicationFileList(privateUserData));
 
 		#endregion
 

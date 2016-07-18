@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -43,7 +44,7 @@ namespace TecWare.PPSn.Server.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsDataColumnServerDefinition : PpsDataColumnDefinition
+	public sealed class PpsDataColumnServerDefinition : PpsDataColumnDefinition, IPpsColumnDescription
 	{
 		#region -- class PpsDataColumnMetaCollectionServer --------------------------------
 
@@ -53,7 +54,8 @@ namespace TecWare.PPSn.Server.Data
 		{
 			public PpsDataColumnMetaCollectionServer(XElement xColumnDefinition)
 			{
-				PpsDataSetServerDefinition.AddMetaFromElement(xColumnDefinition, WellknownMetaTypes, Add);
+				foreach (var x in xColumnDefinition.Elements(xnMeta))
+					PpsDataSetServerDefinition.AddMetaFromElement(xColumnDefinition, WellknownMetaTypes, Add);
 			} // ctor
 
 			public PpsDataColumnMetaCollectionServer(PpsDataColumnMetaCollectionServer clone)
@@ -71,10 +73,10 @@ namespace TecWare.PPSn.Server.Data
 
 		private readonly string fieldName;
 		private readonly PpsDataColumnMetaCollectionServer metaInfo;
-		private readonly PpsDataSetParameterServerDefinition relatedParameter;
 		private PpsFieldDescription fieldDescription = null;
 
 		private readonly PpsDataColumnParentRelationType parentType = PpsDataColumnParentRelationType.None;
+		private readonly string parentRelationName;
 		private readonly string parentTableName;
 		private readonly string parentColumnName;
 
@@ -83,42 +85,31 @@ namespace TecWare.PPSn.Server.Data
 		{
 			this.fieldName = clone.fieldName;
 			this.metaInfo = new PpsDataColumnMetaCollectionServer(clone.metaInfo);
-			this.relatedParameter = clone.relatedParameter;
 			this.fieldDescription = clone.fieldDescription;
 			this.parentTableName = clone.parentTableName;
 			this.parentColumnName = clone.parentColumnName;
 		} // ctor
 
 		private PpsDataColumnServerDefinition(PpsDataTableDefinition tableDefinition, string fieldName, string columnName, bool isPrimaryKey, bool createRelationColumn, XElement config)
-			: base(tableDefinition, columnName, isPrimaryKey)
+			: base(tableDefinition, columnName, isPrimaryKey, isPrimaryKey)
 		{
 			this.fieldName = fieldName;
 
 			// relation
 			if (createRelationColumn)
 			{
-				SetRelationName(config.GetAttribute("relationName", (string)null));
+				this.parentRelationName = config.GetAttribute("relationName", (string)null);
 				this.parentType = config.GetAttribute("parentType", PpsDataColumnParentRelationType.None);
 				this.parentTableName = config.GetAttribute("parentTable", (string)null);
 				this.parentColumnName = config.GetAttribute("parentColumn", (string)null);
 			}
 			else
 			{
+				this.parentRelationName = null;
 				this.parentType = PpsDataColumnParentRelationType.None;
 				this.parentTableName = null;
 				this.parentColumnName = null;
 			}
-
-			// find related parameter
-			var parameterName = config.GetAttribute("parameter", String.Empty);
-			if (!String.IsNullOrEmpty(parameterName))
-			{
-				this.relatedParameter = ((PpsDataSetServerDefinition)tableDefinition.DataSet).FindParameter(parameterName);
-				if (relatedParameter == null)
-					throw new DEConfigurationException(config, $"Parameter '{parameterName}' not found.");
-			}
-			else
-				this.relatedParameter = null;
 
 			this.metaInfo = new PpsDataColumnMetaCollectionServer(config);
 		} // ctor
@@ -147,17 +138,17 @@ namespace TecWare.PPSn.Server.Data
 		public override void EndInit()
 		{
 			// update the relation
-			if (parentColumnName != null)
-				SetParentColumn(null, parentTableName, parentColumnName);
+			if (parentRelationName != null)
+				Table.AddRelation(parentRelationName, Table.Columns[parentColumnName, true], this);
 
 			// resolve the correct field
 			var application = ((PpsDataSetServerDefinition)Table.DataSet).Application;
 			fieldDescription = application.GetFieldDescription(FieldName, true);
 
 			// update the meta information
-			foreach (var c in fieldDescription)
+			foreach (var c in fieldDescription.Attributes)
 			{
-				if (metaInfo.ContainsKey(c.Name))
+				if (!metaInfo.ContainsKey(c.Name))
 					metaInfo.Update(c.Name, c.Type, c.Value);
 			}
 
@@ -166,47 +157,41 @@ namespace TecWare.PPSn.Server.Data
 
 		public void WriteSchema(XElement xTable)
 		{
-			var xColumn = new XElement("column");
+			var xColumn = new XElement("column",
+				new XAttribute("name", Name),
+				new XAttribute("dataType", LuaType.GetType(DataType).AliasOrFullName)
+			);
+
+			if (IsPrimaryKey)
+				xColumn.Add(new XAttribute("isPrimary", IsPrimaryKey));
+			if (IsIdentity)
+				xColumn.Add(new XAttribute("isIdentity", IsIdentity));
+
+			if (IsRelationColumn)
+			{
+				xColumn.Add(new XAttribute("parentRelationName", parentRelationName));
+				xColumn.Add(new XAttribute("parentTable", ParentColumn.Table.Name));
+				xColumn.Add(new XAttribute("parentColumn", ParentColumn.Name));
+			}
+			xTable.Add(xColumn);
 
 			// meta data
 			PpsDataSetServerDefinition.WriteSchemaMetaInfo(xColumn, metaInfo);
-
-			// information
-			xTable.Add(
-				xColumn = new XElement("column",
-					new XAttribute("name", Name),
-					new XAttribute("datatype", LuaType.GetType(DataType).AliasOrFullName)
-				)
-			);
-
-			WriteColumnSchema(xColumn);
-		} // proc WriteScheam
-
-		public void WriteColumnSchema(XElement xColumn)
-		{
-			//// Setze die Meta-Daten
-			//foreach (var m in metaInfo)
-			//{
-			//	xColumn.Add(new XElement(m.Key,
-			//		new XAttribute("datatype", LuaType.GetType(m.Value.GetType()).AliasOrFullName),
-			//		m.Value.ChangeType<string>()));
-			//}
-		} // proc WriteColumnSchema
+		} // proc WriteSchema
 
 		protected override Type GetDataType()
 			=> fieldDescription?.DataType ?? typeof(object);
 
 		public override PpsDataColumnMetaCollection Meta => metaInfo;
 		
-		public PpsDataSetParameterServerDefinition RelatedParameter
-			=> relatedParameter;
-
 		private string FieldName => fieldName;
 
 		public PpsFieldDescription FieldDescription => fieldDescription;
 		public PpsDataColumnParentRelationType ParentType => parentType;
 
 		public override bool IsInitialized => fieldDescription != null;
+
+		IPpsColumnDescription IPpsColumnDescription.Parent => fieldDescription;
 	} // class PpsDataColumnServerDefinition
 
 	#endregion
@@ -225,6 +210,15 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary></summary>
 		private sealed class PpsDataTableMetaCollectionServer : PpsDataTableMetaCollection
 		{
+			public PpsDataTableMetaCollectionServer()
+			{
+			} // ctor
+
+			public PpsDataTableMetaCollectionServer(PpsDataTableMetaCollectionServer clone)
+				: base(clone)
+			{
+			} // ctor
+
 			public void Add(XElement xMeta)
 			{
 				PpsDataSetServerDefinition.AddMetaFromElement(xMeta, WellknownMetaTypes, Add);
@@ -234,6 +228,14 @@ namespace TecWare.PPSn.Server.Data
 		#endregion
 
 		private readonly PpsDataTableMetaCollectionServer metaInfo = new PpsDataTableMetaCollectionServer();
+
+		#region -- Ctor/Dtor --------------------------------------------------------------
+
+		protected PpsDataTableServerDefinition(PpsDataSetServerDefinition dataset, PpsDataTableServerDefinition clone)
+			: base(dataset, clone)
+		{
+			this.metaInfo = new PpsDataTableMetaCollectionServer(clone.metaInfo);
+		} // ctor
 
 		public PpsDataTableServerDefinition(PpsDataSetServerDefinition dataset, string tableName, XElement xTable)
 			: base(dataset, tableName)
@@ -250,6 +252,9 @@ namespace TecWare.PPSn.Server.Data
 				//	throw new InvalidCo
 			}
 		} // ctor
+
+		public override PpsDataTableDefinition Clone(PpsDataSetDefinition dataset)
+			=> new PpsDataTableServerDefinition((PpsDataSetServerDefinition)dataset, this);
 
 		protected override void EndInit()
 		{
@@ -272,6 +277,8 @@ namespace TecWare.PPSn.Server.Data
 			foreach (var cur in t.Columns)
 				AddColumn(cur.Clone(this));
 		} // proc Merge
+
+		#endregion
 
 		public override PpsDataTable CreateDataTable(PpsDataSet dataset)
 			=> new PpsDataTableServer(this, dataset);
@@ -308,40 +315,6 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
-	#region -- class PpsDataSetParameterServerDefinition --------------------------------
-
-	public class PpsDataSetParameterServerDefinition
-	{
-		private readonly PpsDataSetServerDefinition dataset;
-		private readonly string name;
-		private readonly string fieldName;
-		private readonly bool isNullable;
-		private PpsFieldDescription field = null;
-
-		public PpsDataSetParameterServerDefinition(PpsDataSetServerDefinition dataset, string name, string fieldName, bool isNullable)
-		{
-			this.dataset = dataset;
-			this.name = name;
-			this.fieldName = fieldName;
-			this.isNullable = isNullable;
-		} // ctor
-
-		public void EndInit()
-		{
-			field = dataset.Application.GetFieldDescription(fieldName);
-		} // proc EndInit
-
-		public string Name => name;
-		public string VariableName => "@" + name;
-		public PpsFieldDescription FieldDescription => field;
-
-		public bool IsInitialized => field != null;
-
-		public bool IsNullable => isNullable;
-	} // class PpsDataSetParameterServerDefinition
-
-	#endregion
-
 	#region -- class PpsDataSetServerDefinition -----------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -367,23 +340,29 @@ namespace TecWare.PPSn.Server.Data
 
 		private readonly PpsApplication application;
 		private readonly string name;
+		private readonly DateTime configurationStamp;
 		private readonly string[] inheritedFrom;
-		private string[] scripts;
+
+		private string[] clientScripts;
+		private string[] serverScripts;
+
 		private PpsDataSetMetaCollectionServerDefinition metaInfo = new PpsDataSetMetaCollectionServerDefinition();
 
-		private readonly List<PpsDataSetParameterServerDefinition> parameters = new List<PpsDataSetParameterServerDefinition>();
+		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		public PpsDataSetServerDefinition(IServiceProvider sp, string name, XElement config)
+		public PpsDataSetServerDefinition(IServiceProvider sp, string name, XElement config, DateTime configurationStamp)
 		{
 			this.application = sp.GetService<PpsApplication>(true);
 			this.name = name;
+			this.configurationStamp = configurationStamp;
 
 			// get inherited list
 			this.inheritedFrom = config.GetStrings("inherited", true);
 
 			// get script list
-			this.scripts = config.GetStrings("scripts", true);
-			
+			this.serverScripts = config.GetStrings("serverScripts", true);
+			this.clientScripts = config.GetPaths("clientScripts", true);
+
 			// parse data table schema
 			foreach (var cur in config.Elements())
 			{
@@ -404,22 +383,14 @@ namespace TecWare.PPSn.Server.Data
 				{
 					metaInfo.Add(cur);
 				}
-				else if (cur.Name == xnParameter)
+				else if (cur.Name == xnAutoTag)
 				{
-					var parameterName = cur.GetAttribute("name", String.Empty);
-					var fieldName = cur.GetAttribute("fieldName", String.Empty);
-
-					if (String.IsNullOrEmpty(parameterName))
-						throw new DEConfigurationException(cur, "parameter needs a name.");
-					if (String.IsNullOrEmpty(fieldName))
-						throw new DEConfigurationException(cur, "parameter needs a name.");
-
-					// check unique
-					if (ExistParameterByName(parameterName))
-						throw new DEConfigurationException(cur, "parameter is not unique.");
-
-					// add parameter
-					parameters.Add(new PpsDataSetParameterServerDefinition(this, parameterName, fieldName, cur.GetAttribute("isNullable", false)));
+					Add(new PpsDataSetAutoTagDefinition(this,
+						cur.GetAttribute("name", String.Empty),
+						cur.GetAttribute("tableName", String.Empty),
+						cur.GetAttribute("columnName", String.Empty),
+						cur.GetAttribute<PpsDataSetAutoTagMode>("mode", PpsDataSetAutoTagMode.First))
+					);
 				}
 			} // foreach c
 		} // ctor
@@ -433,7 +404,9 @@ namespace TecWare.PPSn.Server.Data
 		public override void EndInit()
 		{
 			// embed inherited
-			var scriptList = new List<string>();
+			var collectedServerScripts = new List<string>();
+			var collectedClientScripts = new List<string>();
+
 			if (inheritedFrom != null)
 			{
 				foreach (var c in inheritedFrom)
@@ -447,24 +420,27 @@ namespace TecWare.PPSn.Server.Data
 					if (!GetType().IsAssignableFrom(datasetDefinition.GetType()))
 						throw new ArgumentException("Incompatible datasources"); // todo:
 
-					// combine scripts
-					if (datasetDefinition.scripts != null && datasetDefinition.scripts.Length > 0)
-						scriptList.AddRange(datasetDefinition.scripts);
-
+					// combine scripts, server
+					if (datasetDefinition.serverScripts != null && datasetDefinition.serverScripts.Length > 0)
+						collectedServerScripts.AddRange(datasetDefinition.serverScripts);
+					// combine scripts, server
+					if (datasetDefinition.clientScripts != null && datasetDefinition.clientScripts.Length > 0)
+						collectedClientScripts.AddRange(datasetDefinition.clientScripts);
+					
 					// combine meta information
 					metaInfo.Merge(datasetDefinition.Meta);
 
-					// combine parameter
-					foreach (var cur in datasetDefinition.parameters)
-						if (!ExistParameterByName(cur.Name))
-							parameters.Add(cur);
+					// combine tags
+					foreach (var cur in datasetDefinition.TagDefinitions)
+						if (FindTag(cur.Name) != null)
+							Add(cur);
 
 					// combine dataset
 					foreach (var t in datasetDefinition.TableDefinitions)
 					{
 						var mergeTable = FindTable(t.Name);
 						if (mergeTable == null)
-							Add(t);
+							Add(t.Clone(this));
 						else
 							((PpsDataTableServerDefinition)mergeTable).Merge(t);
 					}
@@ -472,26 +448,20 @@ namespace TecWare.PPSn.Server.Data
 			}
 
 			// add own scripts
-			if (scripts != null && scripts.Length > 0)
-				scriptList.AddRange(scripts);
-			scripts = scriptList.ToArray();
+			if (serverScripts != null && serverScripts.Length > 0)
+				collectedServerScripts.AddRange(serverScripts);
+			serverScripts = collectedServerScripts.ToArray();
 
-			// resolve parameters
-			foreach (var cur in parameters)
-			{
-				if (!cur.IsInitialized)
-					cur.EndInit();
-			}
+			// add own scripts
+			if (clientScripts != null && clientScripts.Length > 0)
+				collectedClientScripts.AddRange(clientScripts);
+			clientScripts = clientScripts.ToArray();
 
 			// resolve tables
 			 base.EndInit();
 		} // proc EndInit
 
-		private bool ExistParameterByName(string parameterName)
-			=>  FindParameter(parameterName) != null;
-
-		public PpsDataSetParameterServerDefinition FindParameter(string parameterName)
-			=> parameters.Find(c => String.Compare(c.Name, parameterName, StringComparison.OrdinalIgnoreCase) == 0);
+		#endregion
 
 		public object GetService(Type serviceType)
 			=> application.GetService(serviceType);
@@ -499,26 +469,46 @@ namespace TecWare.PPSn.Server.Data
 		public override PpsDataSet CreateDataSet()
 			=> new PpsDataSetServer(this);
 
-		public XElement WriteSchema(XElement xSchema)
+		private static XElement CreateTagSchema(PpsDataSetAutoTagDefinition def)
 		{
+			return new XElement("tag",
+				new XAttribute("name", def.Name),
+				new XAttribute("tableName", def.TableName),
+				new XAttribute("columnName", def.ColumnName),
+				new XAttribute("mode", def.Mode)
+			);
+		} // func CreateTagSchema
 
-			//// Wann wurde das Schema geladen
-			//// todo
-
+		public void WriteSchema(XElement xSchema)
+		{
 			// write the meta data for the dataset
 			WriteSchemaMetaInfo(xSchema, metaInfo);
+
+			// script list
+			xSchema.Add(
+				from s in clientScripts
+				select new XElement("script",
+					new XAttribute("uri", Path.GetFileName(s))
+				)
+			);
+
+			// write tagging
+			xSchema.Add(
+				from t in TagDefinitions
+				select CreateTagSchema(t)
+			);
 
 			// write the tables
 			foreach (PpsDataTableServerDefinition t in TableDefinitions)
 				t.WriteSchema(xSchema);
-
-			return xSchema;
 		} // func WriteSchema
 
 		public string Name => name;
 		public override PpsDataSetMetaCollection Meta => metaInfo;
-		public IReadOnlyList<PpsDataSetParameterServerDefinition> Parameters => parameters;
 		public PpsApplication Application => application;
+
+		public DateTime ConfigurationStamp => configurationStamp;
+		public string[] ClientScripts => clientScripts;
 
 		// -- Static --------------------------------------------------------------
 
@@ -542,8 +532,11 @@ namespace TecWare.PPSn.Server.Data
 				xParent.Add(xMeta);
 				foreach (var m in metaInfo)
 				{
+					if (m.Name == "dataType" || m.Value == null)
+						continue;
+
 					xMeta.Add(new XElement(m.Name,
-						new XAttribute("datatype", LuaType.GetType(m.Value.GetType()).AliasOrFullName),
+						new XAttribute("dataType", LuaType.GetType(m.Value.GetType()).AliasOrFullName),
 						m.Value.ChangeType<string>()
 					));
 				}
@@ -571,7 +564,6 @@ namespace TecWare.PPSn.Server.Data
 	} // interface IPpsLoadableDataSet
 
 	#endregion
-
 
 	#region -- class PpsDataSetServer ---------------------------------------------------
 
@@ -643,6 +635,24 @@ namespace TecWare.PPSn.Server.Data
 			//	ExecuteTrigger(PPSnDataTrigger.OnAfterLoad, this, args);
 			//}
 		} // proc Load
+
+		public virtual IEnumerable<PpsObjectTag> GetAutoTags()
+		{
+			foreach (var tag in DataSetDefinition.TagDefinitions)
+			{
+				var value = tag.GenerateTagValue(this);
+				if (value != null)
+					yield return value;
+			}
+		} // func GetAutoTags
+
+		public virtual void OnAfterPull()
+		{
+		} // proc OnAfterPull
+
+		public virtual void OnBeforePush()
+		{
+		} // proc OnBeforePush
 
 		public new PpsDataSetServerDefinition DataSetDefinition => (PpsDataSetServerDefinition)base.DataSetDefinition;
 	} // class PpsDataSetServer

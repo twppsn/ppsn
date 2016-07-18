@@ -481,11 +481,11 @@ namespace TecWare.PPSn.Server
 
 				// apply filter rules
 				if (!String.IsNullOrWhiteSpace(filter))
-					selector = selector.ApplyFilter(PpsDataFilterExpression.Parse(filter, 0, tok => viewInfo.Filter.FirstOrDefault(c => String.Compare(c.Name, tok, StringComparison.OrdinalIgnoreCase) == 0)?.Parameter));
+					selector = selector.ApplyFilter(PpsDataFilterExpression.Parse(filter), viewInfo.LookupFilter);
 
 				// apply order
 				if (!String.IsNullOrWhiteSpace(order))
-					selector = selector.ApplyOrder(PpsDataOrderExpression.Parse(order, 0, tok => viewInfo.Order.FirstOrDefault(c => String.Compare(c.Name, tok, StringComparison.OrdinalIgnoreCase) == 0)?.Parameter));
+					selector = selector.ApplyOrder(PpsDataOrderExpression.Parse(order), viewInfo.LookupOrder);
 
 				return selector;
 			} // func CreateSelector
@@ -498,16 +498,28 @@ namespace TecWare.PPSn.Server
 				return CreateSelector(table.GetOptionalValue("name", (string)null), table.GetOptionalValue("filter", (string)null), table.GetOptionalValue("order", (string)null), table.GetOptionalValue("throwException", true));
 			} // func CreateSelector
 
-			public PpsDataTransaction CreateTransaction(PpsDataSource source = null, bool throwException = true)
+			public PpsDataTransaction CreateTransaction(string dataSourceName = null, bool throwException = true)
 			{
-				source = source ?? MainDataSource;
+				if (String.IsNullOrEmpty(dataSourceName))
+					return CreateTransaction((PpsDataSource)null, throwException);
 
-				// ensure the connection
-				var c = EnsureConnection(source, throwException);
-				if (c == null)
+				var dataSource = Application.GetDataSource(dataSourceName, throwException);
+				if (dataSource == null)
 					return null;
 
-				return source.CreateTransaction(c);
+				return CreateTransaction(dataSource, throwException);
+			} // func CreateTransaction
+
+			public PpsDataTransaction CreateTransaction(PpsDataSource dataSource =null, bool throwException = true)
+			{
+				dataSource = dataSource ?? MainDataSource;
+
+				// create the connection
+				var c = EnsureConnection(dataSource, throwException);
+					if (c == null)
+					return null;
+
+				return dataSource.CreateTransaction(c);
 			} // func CreateTransaction
 
 			#endregion
@@ -567,7 +579,7 @@ namespace TecWare.PPSn.Server
 		{
 			using (var ctx = CreateSysContext())
 			{
-				var users = ctx?.CreateSelector("ServerLogins", throwException: false);
+				var users = ctx?.CreateSelector("dbo.serverLogins", throwException: false);
 				if (users != null)
 				{
 					// fetch user list

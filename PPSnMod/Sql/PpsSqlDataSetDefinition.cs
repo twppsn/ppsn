@@ -37,22 +37,22 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- class SqlParameterBinding ----------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class SqlParameterBinding
-		{
-			private readonly PpsDataSetParameterServerDefinition dataParameter;
-			private readonly PpsSqlExDataSource.SqlColumnInfo sqlParameterColumn;
+		/////////////////////////////////////////////////////////////////////////////////
+		///// <summary></summary>
+		//private sealed class SqlParameterBinding
+		//{
+		//	private readonly PpsDataSetParameterServerDefinition dataParameter;
+		//	private readonly PpsSqlExDataSource.SqlColumnInfo sqlParameterColumn;
 
-			public SqlParameterBinding(PpsDataSetParameterServerDefinition dataParameter, PpsSqlExDataSource.SqlColumnInfo sqlParameterColumn)
-			{
-				this.dataParameter = dataParameter;
-				this.sqlParameterColumn = sqlParameterColumn;
-			} // ctor
+		//	public SqlParameterBinding(PpsDataSetParameterServerDefinition dataParameter, PpsSqlExDataSource.SqlColumnInfo sqlParameterColumn)
+		//	{
+		//		this.dataParameter = dataParameter;
+		//		this.sqlParameterColumn = sqlParameterColumn;
+		//	} // ctor
 
-			public PpsDataSetParameterServerDefinition DataParameter => dataParameter;
-			public PpsSqlExDataSource.SqlColumnInfo SqlParameterColumn => sqlParameterColumn;
-		} // class SqlParameterBinding
+		//	public PpsDataSetParameterServerDefinition DataParameter => dataParameter;
+		//	public PpsSqlExDataSource.SqlColumnInfo SqlParameterColumn => sqlParameterColumn;
+		//} // class SqlParameterBinding
 
 		#endregion
 
@@ -126,7 +126,7 @@ namespace TecWare.PPSn.Server.Sql
 		{
 			private readonly List<SqlTableBinding> rootTableBindings = new List<SqlTableBinding>();
 
-			private List<SqlParameterBinding> parameterBindings = new List<SqlParameterBinding>();
+			//private List<SqlParameterBinding> parameterBindings = new List<SqlParameterBinding>();
 			private SqlColumnBinding parentRelationColumn = null;
 
 			public PpsSqlDataTableServerDefinition(PpsDataSetServerDefinition dataset, string tableName, XElement xTable)
@@ -229,20 +229,20 @@ namespace TecWare.PPSn.Server.Sql
 			//	}
 			//} // func GenerateTableBinding
 
-			private void AddParameter(SqlParameterBinding parameterBinding)
-			{
-				if (!parameterBindings.Contains(parameterBinding))
-					parameterBindings.Add(parameterBinding);
-			} // proc AddParameter
+			//private void AddParameter(SqlParameterBinding parameterBinding)
+			//{
+			//	if (!parameterBindings.Contains(parameterBinding))
+			//		parameterBindings.Add(parameterBinding);
+			//} // proc AddParameter
 
-			private void CollectParameters(Action<SqlParameterBinding> add)
-			{
-				foreach (var cur in parameterBindings)
-					add(cur);
+			//private void CollectParameters(Action<SqlParameterBinding> add)
+			//{
+			//	foreach (var cur in parameterBindings)
+			//		add(cur);
 
-				if (this.parentRelationColumn != null)
-					((PpsSqlDataTableServerDefinition)this.parentRelationColumn.DataColumn.ParentColumn.Table).CollectParameters(add);
-			} // proc CollectParameters
+			//	if (this.parentRelationColumn != null)
+			//		((PpsSqlDataTableServerDefinition)this.parentRelationColumn.DataColumn.ParentColumn.Table).CollectParameters(add);
+			//} // proc CollectParameters
 
 			private SqlTableBinding GetTableBinding(Predicate<SqlTableBinding> predicate)
 			{
@@ -263,7 +263,7 @@ namespace TecWare.PPSn.Server.Sql
 						first = false;
 					else
 						loadCommand.Append(", ");
-					loadCommand.Append(columnBinding.SqlColumn.NativeName)
+					loadCommand.Append(columnBinding.SqlColumn.TableColumnName)
 						.Append(" AS ")
 						.Append('[').Append(columnBinding.DataColumn.Name).Append(']');
 				}
@@ -274,12 +274,12 @@ namespace TecWare.PPSn.Server.Sql
 
 			private void AppendLoadParentJoin(StringBuilder loadCommand, bool first)
 			{
-				var nativeColumn = (PpsSqlExDataSource.SqlColumnInfo)(((PpsDataColumnServerDefinition)parentRelationColumn.DataColumn.ParentColumn).FieldDescription.NativeColumnDescription);
+				var nativeColumn = (PpsSqlExDataSource.SqlColumnInfo)(((PpsDataColumnServerDefinition)parentRelationColumn.DataColumn.ParentColumn).FieldDescription.Parent);
 				loadCommand.Append("INNER JOIN ")
 					.Append(nativeColumn.Table.FullName).Append(" ON (")
-					.Append(parentRelationColumn.SqlColumn.NativeName)
+					.Append(parentRelationColumn.SqlColumn.TableColumnName)
 					.Append(" = ")
-					.Append(nativeColumn.NativeName)
+					.Append(nativeColumn.TableColumnName)
 					.Append(") ");
 				
 
@@ -294,9 +294,9 @@ namespace TecWare.PPSn.Server.Sql
 				{
 					loadCommand.Append("LEFT OUTER JOIN ")
 						.Append(cur.SqlParentRelation.ParentColumn.Table.FullName).Append(" ON (")
-						.Append(cur.SqlParentRelation.ParentColumn.NativeName)
+						.Append(cur.SqlParentRelation.ParentColumn.TableColumnName)
 						.Append(" = ")
-						.Append(cur.SqlParentRelation.ReferncedColumn.NativeName)
+						.Append(cur.SqlParentRelation.ReferncedColumn.TableColumnName)
 						.Append(") ");
 
 					AppendLoadOuterJoin(loadCommand, cur);
@@ -335,22 +335,22 @@ namespace TecWare.PPSn.Server.Sql
 				}
 
 				first = true;
-				foreach (var cur in parameterBindings)
-				{
-					if (first)
-					{
-						loadCommand.Append(" WHERE ");
-						first = false;
-					}
-					else
-						loadCommand.Append(" AND ");
+				//foreach (var cur in parameterBindings)
+				//{
+				//	if (first)
+				//	{
+				//		loadCommand.Append(" WHERE ");
+				//		first = false;
+				//	}
+				//	else
+				//		loadCommand.Append(" AND ");
 
-					loadCommand.Append('(');
-					if (cur.DataParameter.IsNullable)
-						loadCommand.Append(cur.DataParameter.VariableName).Append(" IS null OR ");
-					loadCommand.Append(cur.SqlParameterColumn.NativeName).Append(" = ").Append(cur.DataParameter.VariableName)
-					.Append(')');
-				}
+				//	loadCommand.Append('(');
+				//	if (cur.DataParameter.IsNullable)
+				//		loadCommand.Append(cur.DataParameter.VariableName).Append(" IS null OR ");
+				//	loadCommand.Append(cur.SqlParameterColumn.TableColumnName).Append(" = ").Append(cur.DataParameter.VariableName)
+				//	.Append(')');
+				//}
 
 				loadCommand.Append(';').AppendLine();
 			} // proc AppenddLoadCommand
@@ -387,8 +387,8 @@ namespace TecWare.PPSn.Server.Sql
 
 		//private string loadCommandBatch = null;
 
-		public PpsSqlDataSetDefinition(IServiceProvider sp, PpsSqlExDataSource dataSource, string name, XElement config)
-				: base(sp, name, config)
+		public PpsSqlDataSetDefinition(IServiceProvider sp, PpsSqlExDataSource dataSource, string name, XElement config, DateTime configurationStamp)
+				: base(sp, name, config, configurationStamp)
 		{
 			this.dataSource = dataSource;
 		} // ctor

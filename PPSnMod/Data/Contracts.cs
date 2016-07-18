@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -22,6 +23,8 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
 using Neo.IronLua;
+using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server.Data
 {
@@ -64,13 +67,16 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		PpsDataSelector CreateSelector(LuaTable table);
 
-		///// <summary>Creates a transaction to manipulate data.</summary>
-		///// <param name="dataSource"></param>
-		///// <param name="throwException"></param>
-		///// <returns></returns>
-		//PpsDataTransaction CreateTransaction(string dataSource, bool throwException = true);
-
-		//PpsDataTransaction CreateTransaction(PpsDataSource dataSource);
+		/// <summary>Creates a transaction to manipulate data.</summary>
+		/// <param name="dataSource"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		PpsDataTransaction CreateTransaction(string dataSourceName, bool throwException = true);
+		/// <summary></summary>
+		/// <param name="dataSource"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		PpsDataTransaction CreateTransaction(PpsDataSource dataSource, bool throwException = true);
 
 		/// <summary>Name of the current user.</summary>
 		string UserName { get; }
@@ -121,13 +127,100 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
-	public interface IPpsColumnDescription
+	#region -- interface IPpsColumnDescription ------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Description for a column.</summary>
+	public interface IPpsColumnDescription : IDataColumn
 	{
-		string Name { get; }
-		int MaxLength { get; }
-		Type DataType { get; }
-		bool IsIdentity { get; }
+		/// <summary>Inherited properties.</summary>
+		IPpsColumnDescription Parent { get; }
 	} // interface IPpsProviderColumnDescription
+
+	#endregion
+
+	#region -- class PpsColumnDescriptionAttributes -------------------------------------
+
+	public class PpsColumnDescriptionAttributes<T> : IPropertyEnumerableDictionary
+		where T : IPpsColumnDescription
+	{
+		private readonly T owner;
+
+		public PpsColumnDescriptionAttributes(T owner)
+		{
+			this.owner = owner;
+		} // ctor
+
+		public virtual IEnumerator<PropertyValue> GetEnumerator()
+		{
+			if (owner.Parent != null)
+			{
+				foreach (var p in owner.Parent.Attributes)
+					yield return p;
+			}
+		} // func GetEnumerator
+
+		public virtual bool TryGetProperty(string name, out object value)
+		{
+			if (owner.Parent != null)
+				return owner.Parent.Attributes.TryGetProperty(name, out value);
+
+			value = null;
+			return false;
+		} // func TryGetProperty
+
+		IEnumerator IEnumerable.GetEnumerator()
+			=> GetEnumerator();
+
+		public T Owner => owner;
+	} // class PpsColumnDescriptionAttributes
+
+	#endregion
+
+	#region -- class PpsColumnDescription -----------------------------------------------
+
+	public class PpsColumnDescription : IPpsColumnDescription
+	{
+		private readonly IPpsColumnDescription parent;
+		private readonly IPropertyEnumerableDictionary attributes;
+
+		private readonly string name;
+		private readonly Type dataType;
+
+		public PpsColumnDescription(IPpsColumnDescription parent, string name, Type dataType)
+		{
+			this.parent = parent;
+			this.attributes = CreateAttributes();
+
+			this.name = name;
+			this.dataType = dataType;
+		} // ctor
+
+		protected virtual IPropertyEnumerableDictionary CreateAttributes()
+			=> new PpsColumnDescriptionAttributes<IPpsColumnDescription>(this);
+
+		public string Name => name;
+		public Type DataType => dataType;
+
+		public IPpsColumnDescription Parent => parent;
+		public IPropertyEnumerableDictionary Attributes => attributes;
+	} // class PpsColumnDescription
+
+	public static class PpsColumnDescriptionHelper
+	{
+		public static T GetColumnDescriptionImplementation<T>(this IPpsColumnDescription columnDescription)
+			where T : class
+		{
+			var t = columnDescription as T;
+
+			if (t == null && columnDescription.Parent != null)
+				return GetColumnDescriptionImplementation<T>(columnDescription.Parent);
+
+			return t;
+		} // func GetColumnDescriptionImplementation
+	} // class PpsColumnDescriptionHelper
+
+	#endregion
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>

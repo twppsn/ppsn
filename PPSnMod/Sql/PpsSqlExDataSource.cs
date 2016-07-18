@@ -18,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -135,25 +136,63 @@ namespace TecWare.PPSn.Server.Sql
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary>Simple column description implementation.</summary>
-		private sealed class PpsDataResultColumnDescription : IPpsColumnDescription
+		private sealed class PpsDataResultColumnDescription : PpsColumnDescription
 		{
+			#region -- class PpsDataResultColumnAttributes ----------------------------------
+
+			private sealed class PpsDataResultColumnAttributes : PpsColumnDescriptionAttributes<PpsDataResultColumnDescription>
+			{
+				public PpsDataResultColumnAttributes(PpsDataResultColumnDescription owner)
+					: base(owner)
+				{
+				} // ctor
+
+				public override bool TryGetProperty(string name, out object value)
+				{
+					if (String.Compare(name, "MaxLength", StringComparison.OrdinalIgnoreCase) == 0)
+					{
+						value = GetDataRowValue(Owner.row, "ColumnSize", 0);
+						return true;
+					}
+					else
+					{
+						foreach (DataColumn c in Owner.row.Table.Columns)
+						{
+							if (String.Compare(c.ColumnName, name, StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.row[c];
+								return value != DBNull.Value;
+							}
+						}
+					}
+					return base.TryGetProperty(name, out value);
+				} // func TryGetProperty
+
+				public override IEnumerator<PropertyValue> GetEnumerator()
+				{
+					foreach (DataColumn c in Owner.row.Table.Columns)
+						yield return new PropertyValue(c.ColumnName, Owner.row[c]);
+
+					using (var e = base.GetEnumerator())
+					{
+						while (e.MoveNext())
+							yield return e.Current;
+					}
+				} // func GetEnumerator
+			} // class PpsDataResultColumnAttributes
+
+			#endregion
+
 			private readonly DataRow row;
 
-			private readonly string name;
-			private readonly Type fieldType;
-
-			public PpsDataResultColumnDescription(DataRow row, string name, Type fieldType)
+			public PpsDataResultColumnDescription(IPpsColumnDescription parent, DataRow row, string name, Type dataType)
+				: base(parent, name, dataType)
 			{
 				this.row = row;
-
-				this.name = name;
-				this.fieldType = fieldType;
 			} // ctor
 
-			public string Name => name;
-			public Type DataType => fieldType;
-			public int MaxLength => GetDataRowValue(row, "ColumnSize", Int32.MaxValue);
-			public bool IsIdentity => false;
+			protected override IPropertyEnumerableDictionary CreateAttributes()
+				=> new PpsDataResultColumnAttributes(this);
 		} // class PpsDataResultColumnDescription
 
 		#endregion
@@ -168,15 +207,13 @@ namespace TecWare.PPSn.Server.Sql
 			private readonly string name;
 			private readonly string viewName;
 
-			private readonly string[] columnNames;
 			private readonly IPpsColumnDescription[] columnDescriptions;
 
-			private SqlDataSelectorToken(PpsSqlExDataSource source, string name, string viewName, string[] columnNames, IPpsColumnDescription[] columnDescriptions)
+			private SqlDataSelectorToken(PpsSqlExDataSource source, string name, string viewName, IPpsColumnDescription[] columnDescriptions)
 			{
 				this.source = source;
 				this.name = name;
 				this.viewName = viewName;
-				this.columnNames = columnNames;
 				this.columnDescriptions = columnDescriptions;
 			} // ctor
 
@@ -184,10 +221,7 @@ namespace TecWare.PPSn.Server.Sql
 				=> new SqlDataSelector((SqlConnectionHandle)connection, this, null, null, null);
 
 			public IPpsColumnDescription GetFieldDescription(string selectorColumn)
-			{
-				var index = Array.IndexOf(columnNames, selectorColumn);
-				return index == -1 ? null : columnDescriptions[index];
-			} // func GetFieldDefinition
+				=> columnDescriptions.FirstOrDefault(c => String.Compare(selectorColumn, c.Name, StringComparison.OrdinalIgnoreCase) == 0);
 
 			public string Name => name;
 			public string ViewName => viewName;
@@ -199,30 +233,28 @@ namespace TecWare.PPSn.Server.Sql
 
 			// -- Static  -----------------------------------------------------------
 
-			private static void ExecuteForResultSet(SqlConnection connection, PpsSqlExDataSource source, string name, out string[] columnNames, out IPpsColumnDescription[] columnDescriptions)
+			private static void ExecuteForResultSet(SqlConnection connection, PpsSqlExDataSource source, string name, out IPpsColumnDescription[] columnDescriptions)
 			{
 				// execute the view once to determine the resultset
 				using (var cmd = connection.CreateCommand())
 				{
-					cmd.CommandType = CommandType.Text;
 					cmd.CommandText = "select * from " + name;
 					using (var r = cmd.ExecuteReader(CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo))
 					{
-						columnNames = new string[r.FieldCount];
 						columnDescriptions = new IPpsColumnDescription[r.FieldCount];
 
 						var dt = r.GetSchemaTable();
 						var i = 0;
 						foreach (DataRow c in dt.Rows)
 						{
-							IPpsColumnDescription columnDescription;
+							IPpsColumnDescription parentColumnDescription;
 							var nativeColumnName = r.GetName(i);
 
 							// try to find the view base description
-							columnDescription = source.application.GetFieldDescription(name + "." + nativeColumnName, false);
+							parentColumnDescription = source.application.GetFieldDescription(name + "." + nativeColumnName, false);
 
 							// try to find the table based field name
-							if (columnDescription == null)
+							if (parentColumnDescription == null)
 							{
 								var schemaName = GetDataRowValue<string>(c, "BaseSchemaName", null) ?? "dbo";
 								var tableName = GetDataRowValue<string>(c, "BaseTableName", null);
@@ -231,16 +263,12 @@ namespace TecWare.PPSn.Server.Sql
 								if (tableName != null && columnName != null)
 								{
 									var fieldName = schemaName + "." + tableName + "." + columnName;
-									columnDescription = source.application.GetFieldDescription(fieldName, false);
+									parentColumnDescription = source.application.GetFieldDescription(fieldName, false);
 								}
 							}
 
-							// create a generic description
-							if (columnDescription == null)
-								columnDescription = new PpsDataResultColumnDescription(c, nativeColumnName, r.GetFieldType(i));
-
-							columnNames[i] = nativeColumnName;
-							columnDescriptions[i++] = columnDescription;
+							columnDescriptions[i] = new PpsDataResultColumnDescription(parentColumnDescription, c, nativeColumnName, r.GetFieldType(i));
+							i++;
 						}
 					}
 				} // using cmd
@@ -267,7 +295,6 @@ namespace TecWare.PPSn.Server.Sql
 
 			private static IPpsSelectorToken CreateCore(PpsSqlExDataSource source, string name, Func<SqlConnection, string> getViewName)
 			{
-				string[] columnNames;
 				IPpsColumnDescription[] columnDescriptions;
 				SqlConnection connection;
 
@@ -275,10 +302,10 @@ namespace TecWare.PPSn.Server.Sql
 				using (source.UseMasterConnection(out connection))
 				{
 					viewName = getViewName(connection);
-					ExecuteForResultSet(connection, source, viewName, out columnNames, out columnDescriptions);
+					ExecuteForResultSet(connection, source, viewName, out columnDescriptions);
 				}
 
-				return new SqlDataSelectorToken(source, name, viewName, columnNames, columnDescriptions);
+				return new SqlDataSelectorToken(source, name, viewName, columnDescriptions);
 			} // func CreateCore
 
 			public static IPpsSelectorToken CreateFromStatement(PpsSqlExDataSource source, string name, string selectStatement)
@@ -331,42 +358,33 @@ namespace TecWare.PPSn.Server.Sql
 
 			///////////////////////////////////////////////////////////////////////////////
 			/// <summary></summary>
-			private sealed class SqlDataFilterVisitor : PpsDataFilterVisitor<string>
+			private sealed class SqlDataFilterVisitor : PpsDataFilterVisitorSql
 			{
-				public SqlDataFilterVisitor()
+				private readonly Func<string, string> lookupNative;
+				private readonly Func<string, IPpsColumnDescription> lookupColumn;
+
+				public SqlDataFilterVisitor(Func<string, string> lookupNative, Func<string, IPpsColumnDescription> lookupColumn)
 				{
+					this.lookupNative = lookupNative;
+					this.lookupColumn = lookupColumn;
 				} // ctor
-
-				public override string CreateFilter(PpsDataFilterExpressionType method, string expression)
+				
+				protected override Tuple<string, Type> LookupColumn(string columnToken)
 				{
-					switch (method)
-					{
-						case PpsDataFilterExpressionType.Native:
-							return "(" + expression.Trim() + ")";
-						case PpsDataFilterExpressionType.Number:
-						case PpsDataFilterExpressionType.Fulltext:
-							throw new NotImplementedException();
-						default:
-							throw new InvalidOperationException();
-					}
-				} // func CreateFilter
+					var column = lookupColumn(columnToken);
+					if (column == null)
+						throw new ArgumentNullException("operand", $"Could not resolve column '{columnToken}'.");
 
-				public override string CreateFilter(PpsDataFilterExpressionType method, IEnumerable<string> arguments)
+					return new Tuple<string, Type>(column.Name, column.DataType);
+				} // func LookupColumn
+
+				protected override string LookupNativeExpression(string key)
 				{
-					switch (method)
-					{
-						case PpsDataFilterExpressionType.And:
-							return "(" + String.Join(" AND ", arguments.Where(c => !String.IsNullOrEmpty(c))) + ")";
-						case PpsDataFilterExpressionType.Or:
-							return "(" + String.Join(" OR ", arguments.Where(c => !String.IsNullOrEmpty(c))) + ")";
-						case PpsDataFilterExpressionType.NAnd:
-							return "not " + CreateFilter(PpsDataFilterExpressionType.And, arguments);
-						case PpsDataFilterExpressionType.NOr:
-							return "not " + CreateFilter(PpsDataFilterExpressionType.Or, arguments);
-						default:
-							throw new InvalidOperationException();
-					}
-				} // func CreateFilter
+					var expr = lookupNative(key);
+					if (String.IsNullOrEmpty(expr))
+						throw new ArgumentNullException("nativeExpression", $"Could not resolve native expression '{key}'.");
+					return expr;
+				} // func LookupNativeExpression
 			} // class SqlDataFilterVisitor
 
 			#endregion
@@ -388,27 +406,37 @@ namespace TecWare.PPSn.Server.Sql
 				this.orderBy = orderBy;
 			} // ctor
 
-			private string FormatOrderExpression(PpsDataOrderExpression o)
+			private string FormatOrderExpression(PpsDataOrderExpression o, Func<string, string> lookupNative, Func<string, IPpsColumnDescription> lookupColumn)
 			{
-				if (o.IsNative)
+				// check for native expression
+				if (lookupNative != null)
 				{
-					// todo: replace asc with desc and desc with asc
-
-					return o.Expression.Replace(" asc", " desc") ;
+					var expr = lookupNative(o.Identifier);
+					if (expr != null)
+					{
+						if (o.Negate)
+						{
+							// todo: replace asc with desc and desc with asc
+							expr = expr.Replace(" asc", " desc");
+						}
+						return expr;
+					}
 				}
+
+				// checkt the column
+				var column = lookupColumn(o.Identifier);
+
+				if (o.Negate)
+					return column.Name + " DESC";
 				else
-				{
-					// todo: check the column
-
-					return o.Expression + (o.Negate ? " desc" : " asc");
-				}
+					return column.Name;
 			} // func FormatOrderExpression
 
-			public override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions)
-				=> SqlOrderBy(String.Join(", ", from o in expressions select FormatOrderExpression(o)));
+			public override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative)
+				=> SqlOrderBy(String.Join(", ", from o in expressions select FormatOrderExpression(o, lookupNative, selectorToken.GetFieldDescription)));
 
-			public override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression)
-				=> SqlWhere(new SqlDataFilterVisitor().CreateFilter(expression));
+			public override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative)
+				=> SqlWhere(new SqlDataFilterVisitor(lookupNative, selectorToken.GetFieldDescription).CreateFilter(expression));
 
 			private string AddSelectList(string addSelectList)
 			{
@@ -576,177 +604,347 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
-			private SqlCommand PrepareCommand(LuaTable table, SqlResultInfo resultInfo)
+			#region -- Execute Result -------------------------------------------------------
+
+			private SqlCommand CreateCommand(LuaTable parameter, CommandType commandType)
 			{
-				var cmd = new SqlCommand();
-				try
-				{
-					cmd.Connection = connection;
-					cmd.Transaction = table.GetOptionalValue("__notrans", false) ? null : transaction;
+				var cmd = connection.CreateCommand();
+				cmd.Connection = connection;
+				cmd.Transaction = parameter.GetOptionalValue("__notrans", false) ? null : transaction;
+				return cmd;
+			} // func CreateCommand
 
-					string name;
-					if ((name = (string)table["execute"]) != null)
-						BindSqlExecute(table, cmd, name, resultInfo);
-					else if ((name = (string)table["insert"]) != null)
-						BindSqlInsert(table, cmd, (string)table["insert"], resultInfo);
-					else if ((name = (string)table["delete"]) != null)
-						throw new NotImplementedException();
-					else if ((name = (string)table["merge"]) != null)
-						throw new NotImplementedException();
-					else // name = "sql"
-						throw new NotImplementedException();
-					
-					return cmd;
-				}
-				catch
-				{
-					cmd.Dispose();
-					throw;
-				}
-			} // func PrepareCommand
-
-			private static void BindSqlExecute(LuaTable table, SqlCommand cmd, string name, SqlResultInfo resultInfo)
+			private SqlDataReader ExecuteReaderCommand(SqlCommand cmd, PpsDataTransactionExecuteBehavior behavior)
 			{
-				cmd.CommandType = CommandType.StoredProcedure;
-				cmd.CommandText = name;
-
-				// build argument list
-				SqlCommandBuilder.DeriveParameters(cmd);
-
-				// map arguments
-				foreach (SqlParameter p in cmd.Parameters)
+				switch (behavior)
 				{
-					var parameterName = p.ParameterName;
-					if (parameterName.StartsWith("@"))
-						parameterName = parameterName.Substring(1);
-
-					var value = table[parameterName];
-					if (value == null)
-						p.Value = DBNull.Value;
-					else
-						p.Value = value;
-				}
-			} // proc BindSqlExecute
-
-			private void BindSqlInsert(LuaTable table, SqlCommand cmd, string name, SqlResultInfo resultInfo)
-			{
-				var commandText = new StringBuilder();
-				var variableList = new StringBuilder();
-				cmd.CommandType = CommandType.Text;
-
-				var tableInfo = ((PpsSqlExDataSource)DataSource).ResolveTableByName(name);
-
-				commandText.Append("insert into ")
-					.Append(tableInfo.FullName);
-				
-				var values = table[1] as LuaTable;
-				if (values == null)
-					throw new ArgumentNullException("values missing");
-
-				commandText.Append(" (");
-				var first = true;
-				foreach (var kv in values.Members)
-				{
-					if (first)
-						first = false;
-					else
-					{
-						commandText.Append(", ");
-						variableList.Append(", ");
-					}
-
-					commandText.Append("[").Append(kv.Key).Append("]");
-
-					var parameterName = "@" + kv.Key;
-					var column = ((PpsSqlExDataSource)DataSource).ResolveColumnByName(tableInfo.FullName + "." + kv.Key);
-					cmd.Parameters.Add(column?.CreateSqlParameter(parameterName, kv.Value ?? DBNull.Value) ?? new SqlParameter(parameterName, kv.Value != null ? Procs.ChangeType(kv.Value, column.FieldType) : DBNull.Value));
-					variableList.Append(parameterName);
-				}
-				commandText.Append(") ");
-
-				// generate output clause
-				var primaryKeyName = tableInfo.PrimaryKey.Name;
-				var p = primaryKeyName.LastIndexOf('.');
-				if (p >= 0)
-					primaryKeyName = primaryKeyName.Substring(p + 1);
-				commandText.Append("output inserted.").Append(primaryKeyName);
-				resultInfo.Add(r =>
-				{
-					var index = 1;
-					while (r.Read())
-					{
-						//table[index, primaryKeyName] = r.GetValue(0); gibt StackOverflowException?
-						dynamic t = table[index];
-						t[primaryKeyName] = r.GetValue(0);
-						index++;
-					}
-					return null; // do not emit this result
-				});
-				commandText.Append(" values (");
-				commandText.Append(variableList);
-				commandText.Append(")");
-
-				cmd.CommandText = commandText.ToString();
-			} // proc BindSqlInsert
-
-			public override void ExecuteNoneResult(LuaTable parameter)
-			{
-				foreach (var rs in ExecuteMultipleResult(parameter)) { }
-			} // proc ExecuteNoneResult
-
-			public override IEnumerable<IDataRow> ExecuteSingleResult(LuaTable parameter)
-			{
-				var first = true;
-				foreach (var rs in ExecuteMultipleResult(parameter))
-				{
-					if (first)
-					{
-						first = false;
-						return rs;
-					}
-				}
-				throw new ArgumentException("No resultset."); // todo:
-			} // func ExecuteSingleResult
-
-			public override IEnumerable<IEnumerable<IDataRow>> ExecuteMultipleResult(LuaTable parameter)
-			{
-				var resultInfo = new SqlResultInfo();
-
-				using (var cmd = PrepareCommand(parameter, resultInfo))
-				{
-					if (resultInfo.Count == 0)
+					case PpsDataTransactionExecuteBehavior.NoResult:
 						cmd.ExecuteNonQuery();
-					else
+						return null;
+					case PpsDataTransactionExecuteBehavior.SingleRow:
+						return cmd.ExecuteReader(CommandBehavior.SingleRow);
+					case PpsDataTransactionExecuteBehavior.SingleResult:
+						return cmd.ExecuteReader(CommandBehavior.SingleResult);
+					default:
+						return cmd.ExecuteReader(CommandBehavior.Default);
+				}
+			} // func ExecuteReaderCommand
+
+			#region -- ExecuteCall ----------------------------------------------------------
+
+			private IEnumerable<IEnumerable<IDataRow>> ExecuteCall(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
+			{
+				using (var cmd = CreateCommand(parameter, CommandType.StoredProcedure))
+				{
+					cmd.CommandText = name;
+
+					// build argument list
+					SqlCommandBuilder.DeriveParameters(cmd);
+
+					// build parameter mapping
+					var parameterMapping = new Tuple<string, SqlParameter>[cmd.Parameters.Count];
+					var j = 0;
+					foreach (SqlParameter p in cmd.Parameters)
 					{
-						using (SqlDataReader r = cmd.ExecuteReader(resultInfo.Count == 1 ? CommandBehavior.SingleResult : CommandBehavior.Default))
+						var parameterName = p.ParameterName;
+						if ((p.Direction & ParameterDirection.ReturnValue) == ParameterDirection.ReturnValue)
+							parameterName = null;
+						else if (parameterName.StartsWith("@"))
+							parameterName = parameterName.Substring(1);
+
+						parameterMapping[j++] = new Tuple<string, SqlParameter>(parameterName, p);
+					}
+
+					// copy arguments
+					for (var i = 1; i <= parameter.ArrayList.Count; i++)
+					{
+						var args = parameter[1] as LuaTable;
+						if (args == null)
+							yield break;
+
+						// fill arguments
+						foreach (var p in parameterMapping)
 						{
-							foreach (var c in resultInfo)
+							var value = args?.GetMemberValue(p.Item1);
+							p.Item2.Value = value == null ? (object)DBNull.Value : value;
+						}
+
+						using (var r = ExecuteReaderCommand(cmd, behavior))
+						{
+							// copy arguments back
+							foreach (var p in parameterMapping)
 							{
-								if (r.FieldCount < 0)
-									throw new ArgumentException("Missmatch, result vs. result info."); // todo: besser meldung
-
-								// enumerate result
-								if (c != null)
-								{
-									var rs = c(r);
-									if (rs != null)
-										yield return rs;
-								}
-
-								// fetch next result
-								r.NextResult();
+								if (p.Item1 == null)
+									args[1] = p.Item2.Value.NullIfDBNull();
+								else if ((p.Item2.Direction & ParameterDirection.Output) == ParameterDirection.Output)
+									args[p.Item1] = p.Item2.Value.NullIfDBNull();
 							}
+
+							// return results
+							if (r != null)
+							{
+								do
+								{
+									yield return new DbRowReaderEnumerable(r);
+									if (behavior == PpsDataTransactionExecuteBehavior.SingleResult)
+										break;
+								} while (r.NextResult());
+							}
+						} // using r
+					} // for (args)
+				} // using cmd
+			} // func ExecuteInsertResult
+
+			#endregion
+
+			#region -- ExecuteInsert --------------------------------------------------------
+
+			private IEnumerable<IEnumerable<IDataRow>> ExecuteInsert(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
+			{
+				/*
+				 * insert into {name} ({columnList})
+				 * output inserted.{column}, inserted.{column}
+				 * values ({variableList}
+				 */
+				 
+				// find the connected table
+				var tableInfo = SqlDataSource.ResolveTableByName(name);
+				if (tableInfo == null)
+					throw new ArgumentNullException("insert", $"Table '{name}' is not defined.");
+				
+				using (var cmd = CreateCommand(parameter, CommandType.Text))
+				{
+					var commandText = new StringBuilder();
+					var variableList = new StringBuilder();
+					var insertedList = new StringBuilder();
+
+					commandText.Append("INSERT INTO ")
+						.Append(tableInfo.FullName);
+
+					// default is that only one row is done
+					var args = parameter[1] as LuaTable;
+					if (args == null)
+						throw new ArgumentNullException("parameter[1]", "No arguments defined.");
+
+					commandText.Append(" (");
+
+					// create the column list
+					var first = true;
+					foreach (var column in tableInfo.Columns)
+					{
+						var columnName = column.ColumnName;
+
+						var value = args[columnName];
+						if (value != null)
+						{
+							if (first)
+								first = false;
+							else
+							{
+								commandText.Append(',');
+								variableList.Append(',');
+							}
+
+							var parameterName = '@' + columnName;
+							commandText.Append(columnName);
+							variableList.Append(parameterName);
+							cmd.Parameters.Add(column.CreateSqlParameter(parameterName, value));
+						}
+
+						if (insertedList.Length > 0)
+							insertedList.Append(',');
+						insertedList.Append("inserted.").Append(columnName);
+					}
+
+					commandText.Append(") ");
+
+					// generate output clause
+					commandText.Append("OUTPUT ").Append(insertedList);
+					
+					// values
+					commandText.Append(" VALUES (")
+						.Append(variableList)
+						.Append(");");
+
+					cmd.CommandText = commandText.ToString();
+
+					// execute insert
+					using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
+					{
+						if (!r.Read())
+							throw new InvalidDataException("Invalid return data from sql command.");
+
+						for (var i = 0; i < r.FieldCount; i++)
+							args[r.GetName(i)] = r.GetValue(i).NullIfDBNull();
+					}
+				}
+				yield break; // empty enumeration
+			} // func ExecuteInsert
+
+			#endregion
+
+			#region -- ExecuteUpdate --------------------------------------------------------
+
+			private IEnumerable<IEnumerable<IDataRow>> ExecuteUpdate(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
+			{
+				/*
+				 * update {name} set {column} = {arg},
+				 * output inserted.{column}, inserted.{column}
+				 * where {PrimaryKey} = @arg
+				 */
+
+				// find the connected table
+				var tableInfo = SqlDataSource.ResolveTableByName(name);
+				if (tableInfo == null)
+					throw new ArgumentNullException("update", $"Table '{name}' is not defined.");
+
+				using (var cmd = CreateCommand(parameter, CommandType.Text))
+				{
+					var commandText = new StringBuilder();
+					var insertedList = new StringBuilder();
+
+					commandText.Append("UPDATE ")
+						.Append(tableInfo.FullName);
+
+					// default is that only one row is done
+					var args = parameter[1] as LuaTable;
+					if (args == null)
+						throw new ArgumentNullException("parameter[1]", "No arguments defined.");
+
+					commandText.Append(" SET ");
+
+					// create the column list
+					var first = true;
+					foreach (var column in tableInfo.Columns)
+					{
+						var columnName = column.ColumnName;
+						var value = args[columnName];
+						if (value == null || column == tableInfo.PrimaryKey)
+							continue;
+
+						if (first)
+							first = false;
+						else
+						{
+							commandText.Append(',');
+							insertedList.Append(',');
+						}
+						
+						var parameterName = '@' + columnName;
+						commandText.Append(columnName)
+							.Append(" = ")
+							.Append(parameterName);
+
+						cmd.Parameters.Add(column.CreateSqlParameter(parameterName, value));
+
+						insertedList.Append("inserted.").Append(columnName);
+					}
+
+					// generate output clause
+					commandText.Append(" output ").Append(insertedList);
+
+					// where
+					var primaryKeyName = tableInfo.PrimaryKey.ColumnName;
+					var primaryKeyValue = args[primaryKeyName];
+					if (primaryKeyValue == null)
+						throw new ArgumentException("Invalid primary key.");
+
+					commandText.Append(" WHERE ")
+						.Append(primaryKeyName)
+						.Append(" = ")
+						.Append("@").Append(primaryKeyName);
+					cmd.Parameters.Add(tableInfo.PrimaryKey.CreateSqlParameter("@" + primaryKeyName, primaryKeyValue));
+					
+					cmd.CommandText = commandText.ToString();
+
+					// execute insert
+					using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
+					{
+						if (!r.Read())
+							throw new InvalidDataException("Invalid return data from sql command.");
+
+						for (var i = 0; i < r.FieldCount; i++)
+							args[r.GetName(i)] = r.GetValue(i).NullIfDBNull();
+					}
+				}
+				yield break; // empty enumeration
+			} // func ExecuteUpdate
+
+			#endregion
+
+			#region -- ExecuteUpsert --------------------------------------------------------
+
+			private IEnumerable<IEnumerable<IDataRow>> ExecuteUpsert(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
+			{
+				throw new NotImplementedException();
+			} // func ExecuteUpsert
+
+			#endregion
+
+			#region -- ExecuteSql -----------------------------------------------------------
+
+			private IEnumerable<IEnumerable<IDataRow>> ExecuteSql(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
+			{
+				/*
+				 * sql is execute and the args are created as a parameter
+				 */
+
+				using (var cmd = CreateCommand(parameter, CommandType.Text))
+				{
+					cmd.CommandText = name;
+
+					var args = parameter[1] as LuaTable;
+					if (args != null)
+					{
+						foreach (var kv in args.Members)
+						{
+							var parameterName = "@" + kv.Key;
+							cmd.Parameters.Add(new SqlParameter(parameterName, kv.Value));
 						}
 					}
 
-					// update parameter
-					foreach (SqlParameter p in cmd.Parameters)
+					// execute
+					using (var r = ExecuteReaderCommand(cmd, behavior))
 					{
-						if ((p.Direction & ParameterDirection.Output) != 0)
-							parameter[p.ParameterName.Substring(1)] = p.Value;
-					}
-				}  // using cmd
-			} // ExecuteMultipleResult
+						do
+						{
+							yield return new DbRowReaderEnumerable(r);
+						} while (r.NextResult());
+					}	
+				}
+			} // func ExecuteSql
+
+			#endregion
+
+			#region -- ExecuteDelete --------------------------------------------------------
+
+			private IEnumerable<IEnumerable<IDataRow>> ExecuteDelete(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
+			{
+				throw new NotImplementedException();
+			} // func ExecuteDelete
+
+			#endregion
+			
+			protected override IEnumerable<IEnumerable<IDataRow>> ExecuteResult(LuaTable parameter, PpsDataTransactionExecuteBehavior behavior)
+			{
+				string name;
+				if ((name = (string)parameter["execute"]) != null)
+					return ExecuteCall(parameter, name, behavior);
+				else if ((name = (string)parameter["insert"]) != null)
+					return ExecuteInsert(parameter, name, behavior);
+				else if ((name = (string)parameter["update"]) != null)
+					return ExecuteUpdate(parameter, name, behavior);
+				else if ((name = (string)parameter["delete"]) != null)
+					return ExecuteDelete(parameter, name, behavior);
+				else if ((name = (string)parameter["sql"]) != null)
+					return ExecuteSql(parameter, name, behavior);
+				else
+					throw new NotImplementedException();
+			} // func ExecuteResult
+
+			#endregion
+
+			public PpsSqlExDataSource SqlDataSource => (PpsSqlExDataSource)base.DataSource;
 		} // class SqlDataTransaction
 
 		#endregion
@@ -786,6 +984,7 @@ namespace TecWare.PPSn.Server.Sql
 			private readonly string schema;
 			private readonly string name;
 			private readonly int primaryColumnId;
+			private readonly List<SqlColumnInfo> columns = new List<SqlColumnInfo>();
 			private readonly List<SqlRelationInfo> relationInfo = new List<SqlRelationInfo>();
 			private readonly Lazy<SqlColumnInfo> primaryColumn;
 
@@ -799,16 +998,23 @@ namespace TecWare.PPSn.Server.Sql
 				this.primaryColumn = primaryColumnId == -1 ? null : new Lazy<SqlColumnInfo>(() => resolveColumn(objectId, primaryColumnId));
 			} // ctor
 
+			internal void AddColumn(SqlColumnInfo column)
+			{
+				columns.Add(column);
+			} // proc AddColumn
+
 			internal void AddRelation(SqlRelationInfo sqlRelationInfo)
 			{
 				relationInfo.Add(sqlRelationInfo);
 			} // proc AddRelation
-
+			
 			public int TableId => objectId;
 			public string Schema => schema;
 			public string Name => name;
 			public string FullName => schema + "." + name;
+
 			public SqlColumnInfo PrimaryKey => primaryColumn?.Value;
+			public IEnumerable<SqlColumnInfo> Columns => columns;
 
 			public IEnumerable<SqlRelationInfo> RelationInfo => relationInfo;
 		} // class SqlTableInfo
@@ -818,12 +1024,89 @@ namespace TecWare.PPSn.Server.Sql
 		#region -- class SqlColumnInfo ----------------------------------------------------
 
 		// todo: new name, new position
-		internal sealed class SqlColumnInfo : IPpsColumnDescription
+		internal sealed class SqlColumnInfo : PpsColumnDescription
 		{
+			#region -- class PpsColumnAttributes --------------------------------------------
+
+			private sealed class PpsColumnAttributes : PpsColumnDescriptionAttributes<SqlColumnInfo>
+			{
+				public PpsColumnAttributes(SqlColumnInfo owner) 
+					: base(owner)
+				{
+				} // ctor
+
+				public override bool TryGetProperty(string name, out object value)
+				{
+					switch (name[0])
+					{
+						case 'S':
+						case 's':
+							if (String.Compare(name, nameof(Owner.SqlType), StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.SqlType;
+								return true;
+							}
+							else if (String.Compare(name, nameof(Owner.SqlType), StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.Scale;
+								return true;
+							}
+							break;
+						case 'M':
+						case 'm':
+							if (String.Compare(name, nameof(Owner.MaxLength), StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.MaxLength;
+								return true;
+							}
+							break;
+						case 'P':
+						case 'p':
+							if (String.Compare(name, nameof(Owner.Precision), StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.Precision;
+								return true;
+							}
+							break;
+						case 'I':
+						case 'i':
+							if (String.Compare(name, nameof(Owner.IsIdentity), StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.IsIdentity;
+								return true;
+							}
+							else if (String.Compare(name, nameof(Owner.IsNull), StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.IsNull;
+								return true;
+							}
+							break;
+					}
+					return base.TryGetProperty(name, out value);
+				} // func TryGetProperty
+
+				public override IEnumerator<PropertyValue> GetEnumerator()
+				{
+					yield return new PropertyValue(nameof(Owner.SqlType), Owner.SqlType);
+					yield return new PropertyValue(nameof(Owner.MaxLength), Owner.MaxLength);
+					yield return new PropertyValue(nameof(Owner.Precision), Owner.Precision);
+					yield return new PropertyValue(nameof(Owner.Scale), Owner.Scale);
+					yield return new PropertyValue(nameof(Owner.IsNull), Owner.IsNull);
+					yield return new PropertyValue(nameof(Owner.IsIdentity), Owner.IsIdentity);
+
+					using (var e = base.GetEnumerator())
+					{
+						while (e.MoveNext())
+							yield return e.Current;
+					}
+				} // func GetEnumerator
+			} // class PpsColumnAttributes
+
+			#endregion
+
 			private readonly SqlTableInfo table;
 			private readonly int columnId;
-			private readonly string name;
-			private readonly Type fieldType;
+			private readonly string columnName;
 			private readonly SqlDbType sqlType;
 			private readonly int maxLength;
 			private readonly byte precision;
@@ -831,22 +1114,27 @@ namespace TecWare.PPSn.Server.Sql
 			private readonly bool isNull;
 			private readonly bool isIdentity;
 
-			public SqlColumnInfo(Func<int, SqlTableInfo> resolveObjectId, SqlDataReader r)
+			public SqlColumnInfo(SqlTableInfo table, SqlDataReader r)
+				:base(null, table.Schema + "." + table.Name + "." + r.GetString(2), GetFieldType(r.GetByte(3)))
 			{
-				this.table = resolveObjectId(r.GetInt32(0));
+				this.table = table;
 				this.columnId = r.GetInt32(1);
-				this.name = table.Schema + "." + table.Name + "." + r.GetString(2);
-				this.fieldType = GetFieldType(r.GetByte(3));
+				this.columnName = r.GetString(2);
 				this.sqlType = GetSqlType(r.GetByte(3));
 				this.maxLength = r.GetInt16(4);
 				this.precision = r.GetByte(5);
 				this.scale = r.GetByte(6);
 				this.isNull = r.GetBoolean(7);
 				this.isIdentity = r.GetBoolean(8);
+
+				this.table.AddColumn(this);
 			} // ctor
 
+			protected override IPropertyEnumerableDictionary CreateAttributes()
+				=> new PpsColumnAttributes(this);
+
 			public SqlParameter CreateSqlParameter(string parameterName, object value)
-				=> new SqlParameter(parameterName, sqlType, maxLength, ParameterDirection.Input, isNull, precision, scale, name, DataRowVersion.Current, value);
+				=> new SqlParameter(parameterName, sqlType, maxLength, ParameterDirection.Input, isNull, precision, scale, Name, DataRowVersion.Current, Procs.ChangeType(value, DataType));
 
 			#region -- GetFieldType, GetSqlType -----------------------------------------------
 
@@ -904,7 +1192,7 @@ namespace TecWare.PPSn.Server.Sql
 						return typeof(string);
 
 					case 241: // xml
-						return typeof(XDocument);
+						return typeof(string);
 
 					default:
 						throw new IndexOutOfRangeException($"Unexpected sql server system type: {systemTypeId}");
@@ -990,14 +1278,14 @@ namespace TecWare.PPSn.Server.Sql
 
 			public SqlTableInfo Table => table;
 			public int ColumnId => columnId;
-			public string Name => name;
-			public string NativeName => name;
-			public Type FieldType => fieldType;
+			public string ColumnName => columnName;
+			public string TableColumnName => table.Name + "." + columnName;
+			public SqlDbType SqlType => sqlType;
+			public int MaxLength => maxLength;
+			public int Precision => precision;
+			public int Scale => scale;
 			public bool IsNull => isNull;
 			public bool IsIdentity => isIdentity;
-
-			int IPpsColumnDescription.MaxLength => maxLength;
-			Type IPpsColumnDescription.DataType => fieldType;
 		} // class SqlColumnInfo
 
 		#endregion
@@ -1111,13 +1399,13 @@ namespace TecWare.PPSn.Server.Sql
 		{
 			lock (schemInfoInitialized)
 			{
-				using (SqlCommand cmd = masterConnection.CreateCommand())
+				using (var cmd = masterConnection.CreateCommand())
 				{
 					cmd.CommandType = CommandType.Text;
 					cmd.CommandText = GetResourceScript("ConnectionInitScript.sql");
 
 					// read all tables
-					using (SqlDataReader r = cmd.ExecuteReader(CommandBehavior.Default))
+					using (var r = cmd.ExecuteReader(CommandBehavior.Default))
 					{
 						while (r.Read())
 						{
@@ -1140,7 +1428,7 @@ namespace TecWare.PPSn.Server.Sql
 						{
 							try
 							{
-								var c = new SqlColumnInfo(ResolveTableById, r);
+								var c = new SqlColumnInfo(ResolveTableById(r.GetInt32(0)), r);
 								columnStore.Add(c.Name, c);
 							}
 							catch (Exception e)
@@ -1168,7 +1456,7 @@ namespace TecWare.PPSn.Server.Sql
 				}
 
 				// Register Server logins
-				application.RegisterView(SqlDataSelectorToken.CreateFromResource(this, "ServerLogins", "ServerLogins.sql"));
+				application.RegisterView(SqlDataSelectorToken.CreateFromResource(this, "dbo.serverLogins", "ServerLogins.sql"));
 
 
 				// done
@@ -1304,8 +1592,8 @@ namespace TecWare.PPSn.Server.Sql
 			return new SqlDataTransaction(this, c.ForkConnection());
 		} // func CreateTransaction
 
-		public override PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config)
-			=> new PpsSqlDataSetDefinition(sp, this, documentName, config);
+		public override PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config, DateTime configurationStamp)
+			=> new PpsSqlDataSetDefinition(sp, this, documentName, config, configurationStamp);
 
 		public bool IsConnected
 		{

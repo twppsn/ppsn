@@ -7,8 +7,17 @@
 			<!-- contact fields -->
 			<pps:field name="sds.Kont.Id" />
 			<pps:field name="sds.Kont.Name" />
-			
-			<!-- menü eintrag -->
+
+			<pps:field name="sds.Kont.LiefNr" dataType="string">
+				<pps:attribute name="maxLength">5</pps:attribute>
+				<pps:attribute name="displayName">Lieferanten-Nummer</pps:attribute>
+			</pps:field>
+			<pps:field name="sds.Kont.KundNr" dataType="string">
+				<pps:attribute name="maxLength">5</pps:attribute>
+				<pps:attribute name="displayName">Lieferanten-Nummer</pps:attribute>
+			</pps:field>
+
+			<!-- menü eintrag für online daten praktisch?
 			<pps:view name="contacts" displayName="Kontakte">
 				<pps:source type="select">
 					<![CDATA[
@@ -23,14 +32,18 @@
 								inner join sds.Kont k on (o.Id = k.ObjkId)
 							where Typ = 'KO']]>
 				</pps:source>
-
-				<pps:attribute name="WpfMenuItem">true</pps:attribute>
-			</pps:view>
+			</pps:view> -->
 
 			<!-- contacts mask -->
-			<pps:dataset name="contactsDataSet" inherited="coreDataSet">
+			<pps:dataset name="contactsDataSet" inherited="coreDataSet" clientScripts="contacts\contactsLocal.lua">
+				<pps:autoTag name="Name" tableName="Head" columnName="Name" mode="First" />
+				<pps:autoTag name="LiefNr" tableName="Head" columnName="LiefNr" mode="Number" />
+				<pps:autoTag name="KundNr" tableName="Head" columnName="KundNr" mode="Number" />
+
 				<pps:table name="Head">
 					<pps:column name="Name" fieldName="sds.Kont.Name" />
+					<pps:column name="LiefNr" fieldName="sds.Kont.LiefNr" />
+					<pps:column name="KundNr" fieldName="sds.Kont.KundNr" />
 				</pps:table>
 				
 				<pps:table name="Adre">
@@ -43,13 +56,34 @@
 		</pps:register>
 
 		<pps:wpf name="wpf">
+			<pps:template id="contacts" file="ClientWpf\Templates\Contacts.xaml" />
+			
+			<pps:view name="ko" displayName="Kontakt" view="local.objects" filter="Typ:=KO">
+				<pps:filter name="lief" displayName="Lieferanten">
+					<![CDATA[ LiefNr:! ]]>
+				</pps:filter>
+				<pps:filter name="kund" displayName="Kunden">
+					<![CDATA[ KundNr:! ]]>
+				</pps:filter>
+				<pps:filter name="rest" displayName="Sonstige">
+					<![CDATA[ LiefNr: KundNr: ]]>
+				</pps:filter>
+				<pps:order name="nr" displayName="Nummer">
+					<![CDATA[ +Nr ]]>
+				</pps:order>
+				<pps:order name="nr" displayName="LiefNummer">
+					<![CDATA[ +LIEFNR ]]>
+				</pps:order>
+			</pps:view>
+			
 			<pps:action name="contactNew" displayName="Neue Kontakt" priority="100">
 				<pps:condition><![CDATA[ return CurrentView == Views["contacts"]; ]]></pps:condition>
-				<pps:code><![CDATA[ LoadMask{ document = '/contacts' }; ]]></pps:code>
+				<pps:code><![CDATA[ LoadMask{ document = 'ko', pane = 'wpf/panes/contacts.xaml' }; ]]></pps:code>
 			</pps:action>
 		</pps:wpf>
 
-		<pps:document name="contacts" dataset="contactsDataSet">
+		<pps:document name="ko" dataset="contactsDataSet" displayname="Contacts">
+			
 		</pps:document>
 	</pps:ppsn>
 </fragment>
