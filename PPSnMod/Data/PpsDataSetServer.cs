@@ -86,6 +86,9 @@ namespace TecWare.PPSn.Server.Data
 			this.fieldName = clone.fieldName;
 			this.metaInfo = new PpsDataColumnMetaCollectionServer(clone.metaInfo);
 			this.fieldDescription = clone.fieldDescription;
+
+			this.parentType = clone.parentType;
+			this.parentRelationName = clone.parentRelationName;
 			this.parentTableName = clone.parentTableName;
 			this.parentColumnName = clone.parentColumnName;
 		} // ctor
@@ -139,7 +142,12 @@ namespace TecWare.PPSn.Server.Data
 		{
 			// update the relation
 			if (parentRelationName != null)
-				Table.AddRelation(parentRelationName, Table.Columns[parentColumnName, true], this);
+			{
+				var parentTable = Table.DataSet.FindTable(parentTableName);
+				if (parentTable == null)
+					throw new ArgumentException($"Table {parentTableName} for relation {parentRelationName} not found.");
+				parentTable.AddRelation(parentRelationName, parentTable.Columns[parentColumnName, true], this);
+			}
 
 			// resolve the correct field
 			var application = ((PpsDataSetServerDefinition)Table.DataSet).Application;
@@ -635,16 +643,6 @@ namespace TecWare.PPSn.Server.Data
 			//	ExecuteTrigger(PPSnDataTrigger.OnAfterLoad, this, args);
 			//}
 		} // proc Load
-
-		public virtual IEnumerable<PpsObjectTag> GetAutoTags()
-		{
-			foreach (var tag in DataSetDefinition.TagDefinitions)
-			{
-				var value = tag.GenerateTagValue(this);
-				if (value != null)
-					yield return value;
-			}
-		} // func GetAutoTags
 
 		public virtual void OnAfterPull()
 		{

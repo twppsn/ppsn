@@ -48,7 +48,7 @@
 				
 				<pps:table name="Adre">
 					<pps:column name="Id" fieldName="dbo.Adre.Id" isPrimary="true" />
-					<pps:relation name="ObjkId" fieldName="dbo.Adre.ObjkId" parentTable="Head" parentColumn="Id" parentType="Root" />
+					<pps:relation name="ObjkId" fieldName="dbo.Adre.ObjkId" relationName="HeadAdre" parentTable="Head" parentColumn="Id" parentType="Root" />
 					<pps:column name="Name" fieldName="dbo.Adre.Name" />
 					<pps:column name="Adresse" fieldName="dbo.Adre.Adresse" />
 				</pps:table>

@@ -303,7 +303,7 @@
 													<xs:element name="meta" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType" />
 												</xs:sequence>
 												<xs:attributeGroup ref="pps:columnBasicAttributes" />
-												<xs:attribute name="relationName" type="xs:string" use="optional">
+												<xs:attribute name="relationName" type="xs:string" use="required">
 												</xs:attribute>
 												<xs:attribute name="parentTable" type="xs:string" use="required">
 												</xs:attribute>
