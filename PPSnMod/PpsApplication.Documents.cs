@@ -127,7 +127,7 @@ namespace TecWare.PPSn.Server
 				var headTable = dataset.Tables["Head"];
 				headTable.First["Id"] = row["Id"];
 				headTable.First["Guid"] = row["Guid"];
-				headTable.First["Typ"] = documentData;
+				headTable.First["Typ"] = Name;
 				headTable.First["HeadRevId"] = row["HeadRevId"];
 				headTable.First["CurRevId"] = row["CurRevId"];
 
