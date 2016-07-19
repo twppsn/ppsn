@@ -15,6 +15,140 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {
+	#region -- class TagDatabaseCommands ----------------------------------------------
+
+	public sealed class TagDatabaseCommands : IDisposable
+	{
+		private readonly SQLiteCommand selectCommand;
+		private readonly SQLiteParameter selectObjectId;
+
+		private readonly SQLiteCommand insertCommand;
+		private readonly SQLiteParameter insertObjectId;
+		private readonly SQLiteParameter insertKey;
+		private readonly SQLiteParameter insertClass;
+		private readonly SQLiteParameter insertValue;
+
+		private readonly SQLiteCommand updateCommand;
+		private readonly SQLiteParameter updateId;
+		private readonly SQLiteParameter updateClass;
+		private readonly SQLiteParameter updateValue;
+
+		private readonly SQLiteCommand deleteCommand;
+		private readonly SQLiteParameter deleteId;
+
+		public TagDatabaseCommands(SQLiteConnection localConnection)
+		{
+			this.selectCommand = new SQLiteCommand("SELECT [Id], [Key], [Class], [Value] FROM main.[ObjectTags] WHERE [ObjectId] = @ObjectId;", localConnection);
+			this.selectObjectId = selectCommand.Parameters.Add("@ObjectId", DbType.Int64);
+
+			this.insertCommand = new SQLiteCommand("INSERT INTO main.[ObjectTags] ([ObjectId], [Key], [Class], [Value]) values (@ObjectId, @Key, @Class, @Value);", localConnection);
+			this.insertObjectId = insertCommand.Parameters.Add("@ObjectId", DbType.Int64);
+			this.insertKey = insertCommand.Parameters.Add("@Key", DbType.String);
+			this.insertClass = insertCommand.Parameters.Add("@Class", DbType.Int64);
+			this.insertValue = insertCommand.Parameters.Add("@Value", DbType.String);
+
+			this.updateCommand = new SQLiteCommand("UPDATE main.[ObjectTags] SET [Class] = @Class, [Value] = @Value where [Id] = @Id;", localConnection);
+			this.updateId = updateCommand.Parameters.Add("@Id", DbType.Int64);
+			this.updateClass = updateCommand.Parameters.Add("@Class", DbType.Int64);
+			this.updateValue = updateCommand.Parameters.Add("@Value", DbType.String);
+
+			this.deleteCommand = new SQLiteCommand("DELETE FROM main.[ObjectTags] WHERE [Id] = @Id;", localConnection);
+			this.deleteId = deleteCommand.Parameters.Add("@Id", DbType.Int64);
+
+			selectCommand.Prepare();
+			insertCommand.Prepare();
+			updateCommand.Prepare();
+			deleteCommand.Prepare();
+		} // ctor
+
+		public void Dispose()
+		{
+			selectCommand.Dispose();
+			insertCommand.Dispose();
+			updateCommand.Dispose();
+			deleteCommand.Dispose();
+		} // proc Dispose
+
+		public void UpdateTags(PpsObjectTag[] tags)
+		{
+			var updatedTags = new List<string>();
+
+			// update tags
+			using (var r = selectCommand.ExecuteReader(CommandBehavior.SingleResult))
+			{
+				while (r.Read())
+				{
+					var tagKey = r.GetString(1);
+					var tagClass = r.GetInt64(2);
+					var tagValue = r.GetString(3);
+
+					var sourceTag = tags.FirstOrDefault(c => String.Compare(c.Name, tagKey, StringComparison.OrdinalIgnoreCase) == 0);
+
+					if (sourceTag != null) // source exists, compare the value
+					{
+						if (sourceTag.Value != null)
+						{
+							if ((long)sourceTag.Class != tagClass && !sourceTag.IsValueEqual(tagValue)) // -> update
+							{
+								updateId.Value = r.GetInt64(0);
+								updateClass.Value = sourceTag.Class;
+								updateValue.Value = sourceTag.Value;
+							}
+
+							updatedTags.Add(tagKey);
+						}
+						else
+						{
+							deleteId.Value = r.GetInt64(0);
+							deleteCommand.ExecuteNonQuery();
+						}
+					} // if xSource
+					else
+					{
+						deleteId.Value = r.GetInt64(0);
+						deleteCommand.ExecuteNonQuery();
+					}
+				} // while r
+			} // using r
+
+			// insert all tags, they are not touched
+			foreach (var sourceTag in tags)
+			{
+				if (sourceTag.Value != null && !updatedTags.Exists(c => String.Compare(c, sourceTag.Name, StringComparison.OrdinalIgnoreCase) == 0))
+				{
+					insertKey.Value = sourceTag.Name;
+					insertClass.Value = (long)sourceTag.Class;
+					insertValue.Value = sourceTag.Value;
+					insertCommand.ExecuteNonQuery();
+				}
+			}
+		} // func UpdateTags
+
+		public object ObjectId
+		{
+			get { return selectObjectId.Value; }
+			set
+			{
+				selectObjectId.Value =
+					insertObjectId.Value = value;
+			}
+		} // prop ObjectId
+
+		public SQLiteTransaction Transaction
+		{
+			get { return selectCommand.Transaction; }
+			set
+			{
+				selectCommand.Transaction =
+					insertCommand.Transaction =
+					updateCommand.Transaction =
+					deleteCommand.Transaction = value;
+			}
+		} // prop Transaction
+	} // class TagDatabaseCommands
+
+	#endregion
+
 	public partial class PpsMainEnvironment
 	{
 		#region -- UpdateDocumentStore ----------------------------------------------------
@@ -45,13 +179,9 @@ namespace TecWare.PPSn
 				using (SQLiteCommand
 					selectCommand = new SQLiteCommand("SELECT [Id] FROM main.[Objects] WHERE [Guid] = @Guid", LocalConnection),
 					insertCommand = new SQLiteCommand("INSERT INTO main.[Objects] ([ServerId], [Guid], [Typ], [Nr], [RemoteRevId]) VALUES (@ServerId, @Guid, @Typ, @Nr, @RevId);", LocalConnection),
-					updateCommand = new SQLiteCommand("UPDATE main.[Objects] SET [ServerId] = @ServerId, [Nr] = @Nr, [RemoteRevId] = @RevId where [Id] = @Id;", LocalConnection),
-
-					selectTagsCommand = new SQLiteCommand("SELECT [Id], [Key], [Class], [Value] FROM main.[ObjectTags] WHERE [ObjectId] = @ObjectId;", LocalConnection),
-					insertTagsCommand = new SQLiteCommand("INSERT INTO main.[ObjectTags] ([ObjectId], [Key], [Class], [Value]) values (@ObjectId, @Key, @Class, @Value);", LocalConnection),
-					updateTagsCommand = new SQLiteCommand("UPDATE main.[ObjectTags] SET [Class] = @Class, [Value] = @Value where [Id] = @Id;", LocalConnection),
-					deleteTagsCommand = new SQLiteCommand("DELETE FROM main.[ObjectTags] WHERE [Id] = @Id;", LocalConnection)
+					updateCommand = new SQLiteCommand("UPDATE main.[Objects] SET [ServerId] = @ServerId, [Nr] = @Nr, [RemoteRevId] = @RevId where [Id] = @Id;", LocalConnection)
 				)
+				using (var updateTags = new TagDatabaseCommands(LocalConnection))
 				{
 					#region -- prepare upsert --
 
@@ -68,29 +198,11 @@ namespace TecWare.PPSn
 					var updateRevId = updateCommand.Parameters.Add("@RevId", DbType.Int64);
 					var updateId = updateCommand.Parameters.Add("@Id", DbType.Int64);
 
-					var selectTagsObjectId = selectTagsCommand.Parameters.Add("@ObjectId", DbType.Int64);
-
-					var insertTagsObjectId = insertTagsCommand.Parameters.Add("@ObjectId", DbType.Int64);
-					var insertTagsKey = insertTagsCommand.Parameters.Add("@Key", DbType.String);
-					var insertTagsClass = insertTagsCommand.Parameters.Add("@Class", DbType.Int64);
-					var insertTagsValue = insertTagsCommand.Parameters.Add("@Value", DbType.String);
-
-					var updateTagsId = updateTagsCommand.Parameters.Add("@Id", DbType.Int64);
-					var updateTagsClass = updateTagsCommand.Parameters.Add("@Class", DbType.Int64);
-					var updateTagsValue = updateTagsCommand.Parameters.Add("@Value", DbType.String);
-
-					var deleteTagsId = deleteTagsCommand.Parameters.Add("@Id", DbType.Int64);
-
 					#endregion
 
 					selectCommand.Prepare();
 					insertCommand.Prepare();
 					updateCommand.Prepare();
-
-					selectTagsCommand.Prepare();
-					insertTagsCommand.Prepare();
-					updateTagsCommand.Prepare();
-					deleteTagsCommand.Prepare();
 
 					var procValidateId = new Action<long>(c =>
 					{
@@ -111,12 +223,9 @@ namespace TecWare.PPSn
 							selectCommand.Transaction =
 								insertCommand.Transaction =
 								updateCommand.Transaction =
-								selectTagsCommand.Transaction =
-								 insertTagsCommand.Transaction =
-								 updateTagsCommand.Transaction =
-								 deleteTagsCommand.Transaction = transaction;
+								updateTags.Transaction = transaction;
 
-							selectTagsObjectId.Value = DBNull.Value;
+							updateTags.ObjectId = DBNull.Value;
 
 							#region -- upsert on objects -> selectTagsObjectId get filled --
 
@@ -133,7 +242,7 @@ namespace TecWare.PPSn
 							{
 								if (r.Read())
 								{
-									selectTagsObjectId.Value =
+									updateTags.ObjectId =
 										updateId.Value = r.GetInt64(0);
 									objectExists = true;
 								}
@@ -160,72 +269,15 @@ namespace TecWare.PPSn
 
 								insertCommand.ExecuteNonQuery();
 
-								selectTagsObjectId.Value = LocalConnection.LastInsertRowId;
+								updateTags.ObjectId = LocalConnection.LastInsertRowId;
 							}
 							#endregion
 
-							#region -- upsert tabs --
+							#region -- upsert tags --
 
-							var updatedTags = new List<string>();
 							var tagDataString = enumerator.GetValue<string>(indexTags, null);
 							if (tagDataString != null)
-							{
-								var tagData = XDocument.Parse(tagDataString);
-
-								// update tags
-								using (var r = selectTagsCommand.ExecuteReader(CommandBehavior.SingleResult))
-								{
-									while (r.Read())
-									{
-										var tagKey = r.GetString(1);
-										var tagClass = r.GetInt64(2);
-										var tagValue = r.GetString(3);
-
-										var xSource = tagData.Root.Element(tagKey);
-										if (xSource != null) // source exists, compare the value
-										{
-											var otherClass = xSource.GetAttribute("c", 0);
-											var otherValue = Procs.EscapeSpecialChars(xSource.Value);
-											if (!String.IsNullOrEmpty(otherValue))
-											{
-												if (otherClass != tagClass && tagValue != otherValue) // -> update
-												{
-													updateTagsId.Value = r.GetInt64(0);
-													updateTagsClass.Value = otherClass;
-													updateTagsValue.Value = otherValue;
-												}
-
-												updatedTags.Add(tagKey);
-											}
-											else
-											{
-												deleteTagsId.Value = r.GetInt64(0);
-												deleteTagsCommand.ExecuteNonQuery();
-											}
-										} // if xSource
-										else
-										{
-											deleteTagsId.Value = r.GetInt64(0);
-											deleteTagsCommand.ExecuteNonQuery();
-										}
-									} // while r
-								} // using r
-
-								// insert all tags, they are not touched
-								foreach (var xSource in tagData.Root.Elements())
-								{
-									var tagKey = xSource.Name.LocalName;
-									var tagValue = xSource.Value;
-									if (!String.IsNullOrEmpty(tagValue) && !updatedTags.Exists(c => String.Compare(c, tagKey, StringComparison.OrdinalIgnoreCase) == 0))
-									{
-										insertTagsObjectId.Value = selectTagsObjectId.Value;
-										insertTagsKey.Value = tagKey;
-										insertTagsClass.Value = xSource.GetAttribute("c", 0);
-										insertTagsValue.Value = tagValue;
-										insertTagsCommand.ExecuteNonQuery();
-									}
-								}
-							} // if tagData
+								updateTags.UpdateTags(PpsObjectTag.ParseTagFields(tagDataString).ToArray());
 
 							#endregion
 

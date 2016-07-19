@@ -33,36 +33,19 @@ namespace TecWare.PPSn.UI
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Inhalt, welcher aus einem dynamisch geladenen Xaml besteht
 	/// und einer Dataset</summary>
-	public class PpsGenericMaskWindowPane : PpsGenericWpfWindowPane
+	public class PpsGenericMaskWindowPane : PpsGenericWpfWindowPane, IPpsDocumentOwner
 	{
 		private readonly IPpsDocuments rdt;
-		//private PpsUndoManager undoManager = new PpsUndoManager();
-		//private CollectionViewSource undoView;
-		//private CollectionViewSource redoView;
+		private CollectionViewSource undoView;
+		private CollectionViewSource redoView;
 
-		private PpsDataSetClient dataSet; // current DataSet which is controlled by the mask
+		private PpsDocument document; // current DataSet which is controlled by the mask
 		private string documentType = null;
 
 		public PpsGenericMaskWindowPane(PpsEnvironment environment)
 			: base(environment)
 		{
 			this.rdt = (IPpsDocuments)environment.GetService(typeof(IPpsDocuments));
-
-			//// create the views on the undo manager
-			//undoView = new CollectionViewSource();
-			//using (undoView.DeferRefresh())
-			//{
-			//	undoView.Source = undoManager;
-			//	undoView.SortDescriptions.Add(new SortDescription("Index", ListSortDirection.Descending));
-			//	undoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Undo;
-			//}
-
-			//redoView = new CollectionViewSource();
-			//using (redoView.DeferRefresh())
-			//{
-			//	redoView.Source = undoManager;
-			//	redoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Redo;
-			//}
 		} // ctor
 
 		public override async Task LoadAsync(LuaTable arguments)
@@ -75,11 +58,11 @@ namespace TecWare.PPSn.UI
 			await Task.Yield(); // spawn new thread
 
 			// new document or load one
-			var id = arguments.GetMemberValue("id");
+			var id = arguments.GetMemberValue("guid");
 			var revId = arguments.GetMemberValue("revId");
-			this.dataSet = id == null ?
-				await rdt.CreateDocumentAsync(documentType, arguments) :
-				await rdt.OpenDocumentAsync(new PpsDocumentId(Convert.ToInt64(id), Convert.ToInt64(revId ?? -1)), arguments);
+			this.document = id == null ?
+				await rdt.CreateDocumentAsync(this, documentType, arguments) :
+				await rdt.OpenDocumentAsync(this, new PpsDocumentId((Guid)id, Convert.ToInt64(revId ?? -1)), arguments);
 						
 			// get the pane to view, if it is not given
 			if (!arguments.ContainsKey("pane"))
@@ -88,43 +71,53 @@ namespace TecWare.PPSn.UI
 			// Lade die Maske
 			await base.LoadAsync(arguments);
 
-			await Dispatcher.InvokeAsync(() => OnPropertyChanged("Data"));
+			await Dispatcher.InvokeAsync(InitializeData);
 		} // proc LoadAsync
+
+		private void InitializeData()
+		{
+			// create the views on the undo manager
+			undoView = new CollectionViewSource();
+			using (undoView.DeferRefresh())
+			{
+				undoView.Source = document.UndoManager;
+				undoView.SortDescriptions.Add(new SortDescription("Index", ListSortDirection.Descending));
+				undoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Undo;
+			}
+
+			redoView = new CollectionViewSource();
+			using (redoView.DeferRefresh())
+			{
+				redoView.Source = document.UndoManager;
+				redoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Redo;
+			}
+
+			OnPropertyChanged("UndoManager");
+			OnPropertyChanged("UndoView");
+			OnPropertyChanged("RedoView");
+			OnPropertyChanged("Data");
+		} // porc InitializeData
 
 		[LuaMember(nameof(CommitEdit))]
 		public void CommitEdit()
 		{
-			//foreach (var expr in BindingOperations.GetSourceUpdatingBindings(Control))
-			//	expr.UpdateSource();
+			foreach (var expr in BindingOperations.GetSourceUpdatingBindings(Control))
+				expr.UpdateSource();
+
+			document.CommitWork();
 		} // proc CommitEdit
 
-		//[LuaMember(nameof(UndoManager))]
-		//public PpsUndoManager UndoManager => undoManager;
+		[LuaMember(nameof(UndoManager))]
+		public PpsUndoManager UndoManager => document.UndoManager;
 
-		///// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
-		//public ICollectionView UndoView => undoView.View;
-		///// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
-		//public ICollectionView RedoView => redoView.View;
+		/// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
+		public ICollectionView UndoView => undoView.View;
+		/// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
+		public ICollectionView RedoView => redoView.View;
 
 		[LuaMember(nameof(Data))]
-		public PpsDataSet Data => dataSet;
+		public PpsDataSet Data => document;
+
+		LuaTable IPpsDocumentOwner.DocumentEvents => this;
 	} // class PpsGenericMaskWindowPane
-
-	////Q&D
-	//public class PpsContentTemplateSelector : DataTemplateSelector
-	//{
-	//	public override DataTemplate SelectTemplate(object item, DependencyObject container)
-	//	{
-	//		var row = item as PpsDataRow;
-	//		if (row == null)
-	//			return null;
-			
-	//		var control = container as ContentPresenter;
-	//		if (control == null)
-	//			return null;
-
-	//		var r = (DataTemplate)control.FindResource(row.Table.Name);
-	//		return r;
-	//	}
-	//}
 }
