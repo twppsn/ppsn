@@ -77,15 +77,15 @@
 
 ### Primär- / Fremdschlüssel
 
-* Syntax: `<Typ>_<Spaltenname>[_<NameFKSpalte>]`
+* Syntax: `<Typ><Spaltenname>[<NameFKSpalte>]`
 * `<Typ>` -> pk (Primary Key), fk (Foreign Key)
-* Bsp.: pk_KontId, fk_KontWaehId_WaehId
+* Bsp.: pkKontId, fkKontWaehIdWaehId
 
 ### Indizes / Checks 
 
-* Syntax: `<Typ>_<Spaltenname>[_<Spaltennname>]`
+* Syntax: `<Typ><Spaltenname>[<Spaltennname>]`
 * `<Typ>` -> idx - Index, chk - Check, 
-* Bsp.: idx_KontId_KontName, chk_KontName
+* Bsp.: idxKontIdKontName, chkKontName
 
 ### Views
 

@@ -78,10 +78,10 @@
     <Build Include="Tables\dbo\Objk.sql" />
     <Build Include="Tables\dbo\Objr.sql" />
     <Build Include="Tables\hrs\Pers.sql" />
-    <Build Include="Tables\sds\Kont.sql" />
     <Build Include="Tables\dbo\Adre.sql" />
     <Build Include="Tables\dbo\Ansp.sql" />
     <Build Include="Tables\dbo\User.sql" />
+    <Build Include="Tables\dbo\Kont.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="PPSn03.publish.xml" />
