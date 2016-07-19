@@ -53,17 +53,17 @@ namespace TecWare.PPSn.Data
 		private readonly Type dataType;
 
 		private readonly string parentRelationName;
-		private readonly string parentTable;
+		private readonly string parentTableName;
 		private readonly string parentColumn;
 
 		private PpsDataColumnDefinitionClient(PpsDataTableDefinition table, PpsDataColumnDefinitionClient clone)
 			: base(table, clone)
 		{
-			this.dataType = clone.dataType;
 			this.metaInfo = new PpsDataColumnMetaCollectionClient(clone.metaInfo);
+			this.dataType = clone.dataType;
 
 			this.parentRelationName = clone.parentRelationName;
-			this.parentTable = clone.parentTable;
+			this.parentTableName = clone.parentTableName;
 			this.parentColumn = clone.parentColumn;
 		} // ctor
 
@@ -74,7 +74,7 @@ namespace TecWare.PPSn.Data
 			this.dataType = LuaType.GetType(xColumn.GetAttribute("dataType", "object"), lateAllowed: false).Type;
 
 			this.parentRelationName = xColumn.GetAttribute<string>("parentRelationName", null);
-			this.parentTable = xColumn.GetAttribute<string>("parentTable", null);
+			this.parentTableName = xColumn.GetAttribute<string>("parentTable", null);
 			this.parentColumn = xColumn.GetAttribute<string>("parentColumn", null);
 		} // ctor
 		
@@ -88,8 +88,8 @@ namespace TecWare.PPSn.Data
 		{
 			if (parentRelationName != null)
 			{
-				var table = Table.DataSet.FindTable(parentTable);
-				Table.AddRelation(parentRelationName, table.Columns[parentColumn, true], this);
+				var parentTable = Table.DataSet.FindTable(this.parentTableName);
+				parentTable.AddRelation(parentRelationName, parentTable.Columns[parentColumn, true], this);
 			}
 			base.EndInit();
 		} // proc EndInit

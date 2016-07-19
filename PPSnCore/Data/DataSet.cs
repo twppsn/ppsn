@@ -88,6 +88,9 @@ namespace TecWare.PPSn.Data
 			this.value = value;
 		} // ctor
 
+		public bool IsValueEqual(object otherValue)
+			=> Object.Equals(value, Procs.ChangeType(otherValue, GetTypeFromClass(cls)));
+
 		private XElement GetXTag()
 			=> new XElement(tagName,
 					new XAttribute("c", (int)cls),
@@ -501,6 +504,16 @@ namespace TecWare.PPSn.Data
 		protected internal virtual void OnTableColumnValueChanged(PpsDataRow row, int iColumnIndex, object oldValue, object value)
 		{
 		} // proc OnTableColumnValueChanged
+
+		public virtual IEnumerable<PpsObjectTag> GetAutoTags()
+		{
+			foreach (var tag in DataSetDefinition.TagDefinitions)
+			{
+				var value = tag.GenerateTagValue(this);
+				if (value != null)
+					yield return value;
+			}
+		} // func GetAutoTags
 
 		/// <summary>Zugriff auf die Definition der Datensammlung</summary>
 		public PpsDataSetDefinition DataSetDefinition => datasetDefinition;

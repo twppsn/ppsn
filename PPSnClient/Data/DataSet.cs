@@ -70,12 +70,7 @@ namespace TecWare.PPSn.Data
 		} // ctor
 
 		public override PpsDataSet CreateDataSet()
-		{
-			throw new NotSupportedException("use overload");
-		} // func CreateDataSet
-
-		public virtual PpsDataSetClient CreateDataSet(LuaTable arguments)
-			=> new PpsDataSetClient(this, shell, arguments);
+			=> new PpsDataSetClient(this, shell);
 
 		public string ObjectType => type;
 
@@ -124,15 +119,15 @@ namespace TecWare.PPSn.Data
 		private readonly IPpsShell shell;
 		private readonly LuaTable clientScript;
 		private readonly List<LuaTable> eventSinks;
-		private readonly LuaTable arguments;
 
-		protected internal PpsDataSetClient(PpsDataSetDefinition datasetDefinition, IPpsShell shell, LuaTable arguments)
+		private LuaTable arguments;
+
+		protected internal PpsDataSetClient(PpsDataSetDefinition datasetDefinition, IPpsShell shell)
 			: base(datasetDefinition)
 		{
 			this.shell = shell;
 			this.clientScript = new LuaTable();
 			this.eventSinks = new List<LuaTable>();
-			this.arguments = arguments;
 		} // ctor
 
 		public void RegisterEventSink(LuaTable eventSink)
@@ -180,8 +175,10 @@ namespace TecWare.PPSn.Data
 		} // proc InvokeEventHandler
 
 		/// <summary>Initialize a new dataset</summary>
-		public virtual async Task OnNewAsync()
+		public virtual async Task OnNewAsync(LuaTable arguments)
 		{
+			this.arguments = arguments;
+
 			// call initalization hook
 			using (var trans = UndoSink?.BeginTransaction("Init"))
 			{
@@ -196,8 +193,10 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc OnNewAsync
 
-		public virtual async Task OnLoadedAsync()
+		public virtual async Task OnLoadedAsync(LuaTable arguments)
 		{
+			this.arguments = arguments;
+
 			// call initalization hook
 			using (var trans = UndoSink?.BeginTransaction("Init"))
 			{
@@ -206,6 +205,7 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc OnLoadedAsync
 
+		public bool IsInitialized => arguments != null;
 	} // class PpsDataSetClient
 
 	#endregion

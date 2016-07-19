@@ -161,7 +161,7 @@ namespace TecWare.PPSn.Data
 
 		internal void SetParentRelation(PpsDataTableRelationDefinition parentRelation)
 		{
-			if (parentRelation != null)
+			if (this.parentRelation != null)
 				throw new InvalidOperationException("Only one parent relation per column is allowed.");
 			this.parentRelation = parentRelation;
 		} // proc SetParentRelation
