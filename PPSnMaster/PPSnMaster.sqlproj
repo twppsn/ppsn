@@ -82,6 +82,9 @@
     <Build Include="Tables\dbo\Ansp.sql" />
     <Build Include="Tables\dbo\User.sql" />
     <Build Include="Tables\dbo\Kont.sql" />
+    <Build Include="Tables\dbo\Knst.sql" />
+    <Build Include="Tables\dbo\Land.sql" />
+    <Build Include="Tables\dbo\Waeh.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="PPSn03.publish.xml" />

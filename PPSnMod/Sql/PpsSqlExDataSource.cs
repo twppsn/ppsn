@@ -39,6 +39,98 @@ namespace TecWare.PPSn.Server.Sql
 {
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
+	public sealed class SqlConstantDefinition : PpsConstantDefintion
+	{
+		private readonly PpsFieldDescription[] columns;
+
+		private string selectCommand;
+
+		public SqlConstantDefinition(PpsDataSource dataSource, string name, PpsFieldDescription[] columns)
+			: base(dataSource, name)
+		{
+			this.columns = columns;
+		} // ctor
+
+		internal Task InitializeAsync()
+		{
+			// Q&D: Initialization, needs improvement
+			PpsSqlExDataSource.SqlColumnInfo columnInfo = null;
+			var sb = new StringBuilder();
+			sb.Append("SELECT k.Id, k.Typ, k.IsActive");
+			foreach (var c in columns)
+			{
+				columnInfo = c.GetColumnDescriptionImplementation<PpsSqlExDataSource.SqlColumnInfo>();
+				sb.Append(", c.")
+					.Append(columnInfo.ColumnName);
+			}
+
+			sb.AppendFormat(" FROM dbo.Knst k INNER JOIN {0} c on (k.Id = c.KnstId)", columnInfo.Table.FullName);
+			sb.Append(" WHERE k.Sync > @SYNC");
+
+			selectCommand = sb.ToString();
+
+			return Task.CompletedTask;
+		} // func InitializeAsync
+
+		public override IEnumerable<IDataRow> GetValues(long lastSync)
+		{
+			// Id, Typ, IsActive, Name, Meta
+			SqlConnection con;
+			using (SqlDataSource.UseMasterConnection(out con))
+			using (var cmd = con.CreateCommand())
+			{
+				cmd.CommandText = selectCommand;
+
+				cmd.Parameters.Add("@SYNC", SqlDbType.DateTime2, 0).Value = DateTime.FromFileTime(lastSync);
+
+				using (var r = cmd.ExecuteReader(CommandBehavior.SingleResult))
+				{
+					var values = new object[5];
+					while (r.Read())
+					{
+						values[0] = r.GetInt64(0);
+						values[1] = r.GetString(1);
+						values[2] = r.GetBoolean(2);
+						values[3] = null;
+
+						var xMeta = new XElement("attr");
+						for (var i = 0; i < columns.Length; i++)
+						{
+							var v = r.GetValue(i + 3).NullIfDBNull();
+							if (v != null)
+							{
+								var n = r.GetName(i + 3);
+								if (String.Compare(n, "Name", StringComparison.OrdinalIgnoreCase) == 0)
+									values[3] = v;
+								else
+									xMeta.Add(new XElement(n, v.ChangeType<string>()));
+							}
+						}
+
+						values[4] = xMeta.ToString();
+
+						yield return new SimpleDataRow(values, simpleDataColumns);
+					}
+				}
+			}
+		} // func GetValues
+
+		private PpsSqlExDataSource SqlDataSource => (PpsSqlExDataSource)base.DataSource;
+
+		private static readonly SimpleDataColumn[] simpleDataColumns = new SimpleDataColumn[]
+			{
+				new SimpleDataColumn("Id", typeof(long)),
+				new SimpleDataColumn("Typ", typeof(string)),
+				new SimpleDataColumn("IsActive", typeof(bool)),
+				new SimpleDataColumn("Name", typeof(string)),
+				new SimpleDataColumn("Attr", typeof(string))
+			};
+
+		public static IDataColumn[] DefaultDataColumns => simpleDataColumns;
+	} // class SqlConstantDefinition
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
 	public class PpsSqlExDataSource : PpsSqlDataSource
 	{
 		#region -- class SqlConnectionHandle ----------------------------------------------
@@ -1457,8 +1549,7 @@ namespace TecWare.PPSn.Server.Sql
 
 				// Register Server logins
 				application.RegisterView(SqlDataSelectorToken.CreateFromResource(this, "dbo.serverLogins", "ServerLogins.sql"));
-
-
+				
 				// done
 				schemInfoInitialized.Set();
 			}
@@ -1591,6 +1682,31 @@ namespace TecWare.PPSn.Server.Sql
 			var c = GetSqlConnection(connection, true);
 			return new SqlDataTransaction(this, c.ForkConnection());
 		} // func CreateTransaction
+
+		public async override Task<PpsConstantDefintion> CreateConstantDefinitionAsync(string name, XElement xDefinition)
+		{
+			var columns = new List<PpsFieldDescription>();
+
+			// collect all "columns"
+			foreach (var x in xDefinition.Elements(PpsStuff.xnColumn))
+			{
+				var columnName = x.GetAttribute("name", String.Empty);
+				var fieldName = x.GetAttribute("fieldName", String.Empty);
+
+				if (String.IsNullOrEmpty(columnName))
+					throw new DEConfigurationException(x, "@name is empty.");
+
+				var fieldDescription = application.GetFieldDescription(fieldName);
+				if (fieldDescription.DataSource != this)
+					throw new DEConfigurationException(x, "Field is defined in a different datasource.");
+
+				columns.Add(fieldDescription);
+			}
+
+			var constantDef = new SqlConstantDefinition(this, name, columns.ToArray());
+			await constantDef.InitializeAsync();
+			return constantDef;
+		} // func CreateConstantDefinitionAsync
 
 		public override PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config, DateTime configurationStamp)
 			=> new PpsSqlDataSetDefinition(sp, this, documentName, config, configurationStamp);

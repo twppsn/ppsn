@@ -1,0 +1,7 @@
+﻿CREATE TABLE [dbo].[Waeh]
+(
+	[KnstId] BIGINT NOT NULL CONSTRAINT pkWaehId PRIMARY KEY CONSTRAINT fkWaehKons REFERENCES dbo.Knst (Id),
+	[Iso] CHAR(3) NOT NULL,
+	[Symbol] NCHAR(4) NULL,
+	[Name] NVARCHAR(40) NOT NULL
+)

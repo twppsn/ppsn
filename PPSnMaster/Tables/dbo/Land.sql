@@ -1,0 +1,7 @@
+﻿CREATE TABLE [dbo].[Land]
+(
+	[KnstId] BIGINT NOT NULL CONSTRAINT pkLandId PRIMARY KEY CONSTRAINT fkLandKons REFERENCES dbo.Knst (Id),
+	[Iso] CHAR(2) NOT NULL,
+	[Name] NVARCHAR(40) NOT NULL,
+	[EnglishName] NVARCHAR(40) NOT NULL
+)
