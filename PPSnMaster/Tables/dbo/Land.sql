@@ -1,8 +1,9 @@
 ﻿CREATE TABLE [dbo].[Land]
 (
-	[Id] BIGINT NOT NULL CONSTRAINT pkLandId PRIMARY KEY, 
+	[KnstId] BIGINT NOT NULL CONSTRAINT pkLandId PRIMARY KEY CONSTRAINT fkLandKons REFERENCES dbo.Knst (Id), 
     [Name] NVARCHAR(50) NOT NULL, 
-    [Iso2] CHAR(2) NULL, 
+	[EnglishName] NVARCHAR(40) NOT NULL
+    [Iso] CHAR(2) NULL, 
     [Iso3] CHAR(3) NULL, 
     [Tld] VARCHAR(63) NULL, 
     [Vorwahl] INT NULL

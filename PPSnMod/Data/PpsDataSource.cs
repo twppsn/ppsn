@@ -54,6 +54,11 @@ namespace TecWare.PPSn.Server.Data
 			throw new NotImplementedException();
 		}// func CreateTransaction
 
+		public virtual Task<PpsConstantDefintion> CreateConstantDefinitionAsync(string name, XElement xDefinition)
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>Returns a native column description.</summary>
 		/// <param name="columnName"></param>
 		/// <returns></returns>

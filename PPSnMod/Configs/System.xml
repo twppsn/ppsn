@@ -32,6 +32,9 @@
 			<pps:view name="sys.views">
 				<pps:source type="view">GetViewDefinitionSelector</pps:source>
 			</pps:view>
+			<pps:view name="sys.constants">
+				<pps:source type="view">GetConstantSelector</pps:source>
+			</pps:view>
 		</pps:register>
 
 		<pps:register source="main">
@@ -94,6 +97,28 @@
 				</pps:table>
 				
 			</pps:dataset>
+
+			<!-- definition for currencies -->
+			<pps:field name="dbo.Waeh.Iso" />
+			<pps:field name="dbo.Waeh.Symbol" />
+			<pps:field name="dbo.Waeh.Name" />
+
+			<pps:constant name="Waeh">
+				<pps:column name="ISO" fieldName="dbo.Waeh.Iso"/>
+				<pps:column name="Symbol" fieldName="dbo.Waeh.Symbol"/>
+				<pps:column name="Name" fieldName="dbo.Waeh.Name"/>
+			</pps:constant>
+
+			<!-- definition for countries -->
+			<pps:field name="dbo.Land.Iso" />
+			<pps:field name="dbo.Land.Name" />
+			<pps:field name="dbo.Land.EnglishName" />
+
+			<pps:constant name="Land">
+				<pps:column name="ISO" fieldName="dbo.Land.Iso"/>
+				<pps:column name="Name" fieldName="dbo.Land.Name"/>
+				<pps:column name="EnglishName" fieldName="dbo.Land.EnglishName"/>
+			</pps:constant>
 		</pps:register>
 	</pps:ppsn>
 </fragment>

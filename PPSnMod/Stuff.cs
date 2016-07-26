@@ -39,9 +39,11 @@ namespace TecWare.PPSn.Server
 		public readonly static XName xnOrder = PpsNamespace + "order";
 		public readonly static XName xnAttribute = PpsNamespace + "attribute";
 
+		public readonly static XName xnConstant = PpsNamespace + "constant";
+		public readonly static XName xnColumn = PpsNamespace + "column";
+
 		public readonly static XName xnDataSet = PpsNamespace + "dataset";
 		public readonly static XName xnTable = PpsNamespace + "table";
-		public readonly static XName xnColumn = PpsNamespace + "column";
 		public readonly static XName xnRelation = PpsNamespace + "relation";
 		public readonly static XName xnAutoTag = PpsNamespace + "autoTag";
 		public readonly static XName xnMeta = PpsNamespace + "meta";

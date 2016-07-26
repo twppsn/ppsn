@@ -208,6 +208,24 @@ namespace TecWare.PPSn.Server.Data
 
 	public static class PpsColumnDescriptionHelper
 	{
+		private sealed class PpsDataColumnDescription : IPpsColumnDescription
+		{
+			private readonly IPpsColumnDescription parent;
+			private readonly IDataColumn column;
+
+			public PpsDataColumnDescription(IPpsColumnDescription parent, IDataColumn column)
+			{
+				this.parent = parent;
+				this.column = column;
+			} // ctor
+
+			public string Name => column.Name;
+			public Type DataType => column.DataType;
+
+			public IPpsColumnDescription Parent => parent;
+			public IPropertyEnumerableDictionary Attributes => column.Attributes;
+		} // class PpsDataColumnDescription
+
 		public static T GetColumnDescriptionImplementation<T>(this IPpsColumnDescription columnDescription)
 			where T : class
 		{
@@ -218,6 +236,9 @@ namespace TecWare.PPSn.Server.Data
 
 			return t;
 		} // func GetColumnDescriptionImplementation
+
+		public static IPpsColumnDescription ToColumnDescription(this IDataColumn column, IPpsColumnDescription parent = null)
+			=> new PpsDataColumnDescription(parent, column);
 	} // class PpsColumnDescriptionHelper
 
 	#endregion

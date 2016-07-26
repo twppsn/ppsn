@@ -2,7 +2,7 @@
 (
 	[Id] BIGINT NOT NULL PRIMARY KEY, 
     [Name] NVARCHAR(30) NULL, 
-    [Symbol] NVARCHAR(5) NULL, 
+    [Symbol] NCHAR(5) NULL, 
     [Kurs] DECIMAL(18, 4) NULL, 
     [Iso] CHAR(3) NOT NULL,
     [System] BIT NOT NULL
