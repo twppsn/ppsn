@@ -1,15 +1,15 @@
 ﻿CREATE TABLE [dbo].[Adre]
 (
 	[Id] BIGINT NOT NULL CONSTRAINT pkAdreId PRIMARY KEY IDENTITY (1,1), 
-    [ObjkId] BIGINT NOT NULL CONSTRAINT fkAdreObjkId REFERENCES dbo.Objk (Id), 
-    [Name] NVARCHAR(100) NOT NULL, 
-    [Postfach] NVARCHAR(20) NULL, 
-    [Zusatz] NVARCHAR(20) NULL, 
-    [Strasse] NVARCHAR(50) NULL, 
-    [Ort] NVARCHAR(50) NULL, 
-    [Region] NVARCHAR(50) NULL, 
-    [PLZ] NVARCHAR(10) NULL, 
-    [LandId] BIGINT NOT NULL,
+	[ObjkId] BIGINT NOT NULL CONSTRAINT fkAdreObjkId REFERENCES dbo.Objk (Id), 
+	[Name] NVARCHAR(100) NOT NULL, 
+	[Postfach] NVARCHAR(20) NULL, 
+	[Zusatz] NVARCHAR(20) NULL, 
+	[Strasse] NVARCHAR(50) NULL, 
+	[Ort] NVARCHAR(50) NULL, 
+	[Region] NVARCHAR(50) NULL, 
+	[Plz] NVARCHAR(10) NULL, 
+	[LandId] BIGINT NOT NULL CONSTRAINT fkAdreLandId REFERENCES dbo.Land (KnstId)
 )
 
 GO
@@ -102,4 +102,4 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1type = N'TABLE',
     @level1name = N'Adre',
     @level2type = N'COLUMN',
-    @level2name = N'PLZ'
+    @level2name = 'Plz'

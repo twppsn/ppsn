@@ -4,7 +4,15 @@
 	[ObjkId] BIGINT NOT NULL CONSTRAINT fkKontObjkId REFERENCES dbo.Objk (Id), 
 	[Name] NVARCHAR(100) NOT NULL,
 	[LiefNr] NVARCHAR(50) NULL,
-	[KundNr] NVARCHAR(50) NULL
+	[KundNr] NVARCHAR(50) NULL, 
+	[StIdentNr] VARCHAR(25) NULL, 
+	[SteuerNr] VARCHAR(25) NULL, 
+	[UstIdNr] CHAR(16) NULL, 
+	[Inaktiv] SMALLDATETIME NULL, 
+	[Abc] CHAR NULL, 
+	[KgrpId] BIGINT NULL CONSTRAINT fkKontKgrpId REFERENCES dbo.Kgrp (KnstId), 
+    [Iban] CHAR(34) NULL, 
+    [Bic] CHAR(11) NULL
 )
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
@@ -51,3 +59,75 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Kont',
     @level2type = N'COLUMN',
     @level2name = N'KundNr'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Steuerliche Identifikationsnummer',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Kont',
+    @level2type = N'COLUMN',
+    @level2name = 'StIdentNr'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Steuernummer',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Kont',
+    @level2type = N'COLUMN',
+    @level2name = N'SteuerNr'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Mehrwertsteuer-Identifikationsnummer',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Kont',
+    @level2type = N'COLUMN',
+    @level2name = 'UstIdNr'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Inaktiv seit',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Kont',
+    @level2type = N'COLUMN',
+    @level2name = N'Inaktiv'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Abc-Einteilung',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Kont',
+    @level2type = N'COLUMN',
+    @level2name = N'Abc'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'FK zu Kontaktgruppe',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Kont',
+    @level2type = N'COLUMN',
+    @level2name = N'KgrpId'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Iban-Nummer',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Kont',
+    @level2type = N'COLUMN',
+    @level2name = N'Iban'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Bic-Nummer',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Kont',
+    @level2type = N'COLUMN',
+    @level2name = N'Bic'
