@@ -80,11 +80,6 @@
 			<pps:field name="dbo.Ansp.Mobil" />
 			<pps:field name="dbo.Ansp.Std" />
 
-			<pps:field name="dbo.Adre.Id" />
-			<pps:field name="dbo.Adre.ObjkId" />
-			<pps:field name="dbo.Adre.Name" />
-			<pps:field name="dbo.Adre.Adresse" />
-
 			<!-- menü eintrag für online daten praktisch?
 			<pps:view name="contacts" displayName="Kontakte">
 				<pps:source type="select">

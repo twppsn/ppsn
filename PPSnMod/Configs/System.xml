@@ -60,7 +60,13 @@
 			<pps:field name="dbo.Adre.Id" />
 			<pps:field name="dbo.Adre.ObjkId" />
 			<pps:field name="dbo.Adre.Name" />
-			<pps:field name="dbo.Adre.Adresse" />
+			<pps:field name="dbo.Adre.Postfach" />
+			<pps:field name="dbo.Adre.Zusatz" />
+			<pps:field name="dbo.Adre.Strasse" />
+			<pps:field name="dbo.Adre.Ort" />
+			<pps:field name="dbo.Adre.Region" />
+			<pps:field name="dbo.Adre.PLZ" />
+			<pps:field name="dbo.Adre.LandId" />
 			
 			<!-- objects -->
 			<pps:view name="dbo.objects">
@@ -102,22 +108,36 @@
 			<pps:field name="dbo.Waeh.Iso" />
 			<pps:field name="dbo.Waeh.Symbol" />
 			<pps:field name="dbo.Waeh.Name" />
+			<pps:field name="dbo.Waeh.Kurs" />
+			<pps:field name="dbo.Waeh.System" />
 
 			<pps:constant name="Waeh">
 				<pps:column name="ISO" fieldName="dbo.Waeh.Iso"/>
 				<pps:column name="Symbol" fieldName="dbo.Waeh.Symbol"/>
 				<pps:column name="Name" fieldName="dbo.Waeh.Name"/>
+				<pps:column name="Kurs" fieldName="dbo.Waeh.Kurs"/>
+				<pps:column name="System" fieldName="dbo.Waeh.System"/>
 			</pps:constant>
 
 			<!-- definition for countries -->
 			<pps:field name="dbo.Land.Iso" />
 			<pps:field name="dbo.Land.Name" />
 			<pps:field name="dbo.Land.EnglishName" />
+			<pps:field name="dbo.Land.Iso3" />
+			<pps:field name="dbo.Land.Tld" />
+			<pps:field name="dbo.Land.Vorwahl" />
+			<pps:field name="dbo.Land.EuroZone" />
+			<pps:field name="dbo.Land.PostAdr" />
 
 			<pps:constant name="Land">
 				<pps:column name="ISO" fieldName="dbo.Land.Iso"/>
 				<pps:column name="Name" fieldName="dbo.Land.Name"/>
 				<pps:column name="EnglishName" fieldName="dbo.Land.EnglishName"/>
+				<pps:column name="ISO3" fieldName="dbo.Land.Iso3"/>
+				<pps:column name="Tld" fieldName="dbo.Land.Tld"/>
+				<pps:column name="Vorwahl" fieldName="dbo.Land.Vorwahl"/>
+				<pps:column name="EuroZone" fieldName="dbo.Land.EuroZone"/>
+				<pps:column name="PostAdr" fieldName="dbo.Land.PostAdr"/>
 			</pps:constant>
 		</pps:register>
 	</pps:ppsn>

@@ -7,4 +7,25 @@
     <Property Name="ParentElementType" Value="SqlTable" />
     <Property Name="NewName" Value="Document" />
   </Operation>
+  <Operation Name="Rename Refactor" Key="03c15359-ba0d-47fb-9440-ced1ab85cf2b" ChangeDateTime="07/25/2016 07:45:39">
+    <Property Name="ElementName" Value="[dbo].[Adre].[Adresse]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[Adre]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="Postfach" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="d0236c62-7595-4fe7-91e3-2bc107fbd373" ChangeDateTime="07/26/2016 07:20:57">
+    <Property Name="ElementName" Value="[dbo].[Waeh].[Standard]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[Waeh]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="System" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="c62ebeb9-cdbf-4f46-b062-3ae42b2a4cd5" ChangeDateTime="07/26/2016 13:05:33">
+    <Property Name="ElementName" Value="[dbo].[Land].[EuZone]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[Land]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="EuroZone" />
+  </Operation>
 </Operations>

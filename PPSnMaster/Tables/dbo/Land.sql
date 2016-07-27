@@ -1,7 +1,93 @@
 ﻿CREATE TABLE [dbo].[Land]
 (
-	[KnstId] BIGINT NOT NULL CONSTRAINT pkLandId PRIMARY KEY CONSTRAINT fkLandKons REFERENCES dbo.Knst (Id),
-	[Iso] CHAR(2) NOT NULL,
-	[Name] NVARCHAR(40) NOT NULL,
-	[EnglishName] NVARCHAR(40) NOT NULL
+	[KnstId] BIGINT NOT NULL CONSTRAINT pkLandId PRIMARY KEY CONSTRAINT fkLandKons REFERENCES dbo.Knst (Id), 
+    [Name] NVARCHAR(50) NOT NULL, 
+	[EnglishName] NVARCHAR(40) NOT NULL,
+    [Iso] CHAR(2) NULL, 
+    [Iso3] CHAR(3) NULL, 
+    [Tld] VARCHAR(63) NULL, 
+    [Vorwahl] INT NULL, 
+    [EuroZone] BIT NOT NULL DEFAULT 0, 
+    [PostAdr] NVARCHAR(50) NULL
 )
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Primary key, FK zu Knst',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Land',
+    @level2type = N'COLUMN',
+    @level2name = N'KnstId'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Name des Landes',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Land',
+    @level2type = N'COLUMN',
+    @level2name = N'Name'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Iso 3166 Alpha 2 Code',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Land',
+    @level2type = N'COLUMN',
+    @level2name = N'Iso'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Iso 3166 Alpha 3 Code',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Land',
+    @level2type = N'COLUMN',
+    @level2name = N'Iso3'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Tol Level Domain',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Land',
+    @level2type = N'COLUMN',
+    @level2name = N'Tld'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Vorwahl des Landes',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Land',
+    @level2type = N'COLUMN',
+    @level2name = N'Vorwahl'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'engl. Name für Postanschrift',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Land',
+    @level2type = N'COLUMN',
+    @level2name = N'EnglishName'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Europäische Gemeinschaft',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Land',
+    @level2type = N'COLUMN',
+    @level2name = N'EuroZone'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Vorlage Postanschrift',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Land',
+    @level2type = N'COLUMN',
+    @level2name = N'PostAdr'
