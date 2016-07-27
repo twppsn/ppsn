@@ -66,7 +66,7 @@ namespace TecWare.PPSn
 			{
 				// open the local database
 				var dataPath = Path.Combine(info.LocalPath.FullName, "localStore.db");
-				newLocalStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc");
+				newLocalStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc;foreign keys=true");
 				newLocalStore.Open();
 				VerifyLocalStore(newLocalStore);
 			}
