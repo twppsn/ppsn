@@ -7,49 +7,20 @@
 			<!-- contact fields -->
 			<pps:field name="dbo.Kont.Id" />
 			<pps:field name="dbo.Kont.Name" />
-			
-			<pps:field name="dbo.Kont.LiefNr" dataType="string">
-				<pps:attribute name="maxLength">50</pps:attribute>
-				<pps:attribute name="displayName">Lieferanten-Nummer</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Kont.KundNr" dataType="string">
-				<pps:attribute name="maxLength">50</pps:attribute>
-				<pps:attribute name="displayName">Lieferanten-Nummer</pps:attribute>
-			</pps:field>
+			<pps:field name="dbo.Kont.LiefNr" />
+			<pps:field name="dbo.Kont.KundNr" />
+			<pps:field name="dbo.Kont.Iban" />
+			<pps:field name="dbo.Kont.Bic" />
+			<pps:field name="dbo.Kont.Abc" />
+			<pps:field name="dbo.Kont.SteuerNr" />
+			<pps:field name="dbo.Kont.StIdentNr" />
+			<pps:field name="dbo.Kont.UstIdNr" />
+			<pps:field name="dbo.Kont.Inaktiv" />
+			<pps:field name="dbo.Kont.KgrpId" />
+
 			<pps:field name="dbo.Kont.Match" dataType="string">
 				<pps:attribute name="maxLength">50</pps:attribute>
 				<pps:attribute name="displayName">Match-Code</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Kont.UstId" dataType="string">
-				<pps:attribute name="maxLength">20</pps:attribute>
-				<pps:attribute name="displayName">Ust-ID</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Kont.Iban" dataType="string">
-				<pps:attribute name="maxLength">34</pps:attribute>
-				<pps:attribute name="displayName">IBAN</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Kont.Bic" dataType="string">
-				<pps:attribute name="maxLength">11</pps:attribute>
-				<pps:attribute name="displayName">Bic</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Kont.Abc" dataType="string">
-				<pps:attribute name="maxLength">1</pps:attribute>
-				<pps:attribute name="displayName">ABC-Einteilung</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Kont.ZielId" dataType="int">
-				<pps:attribute name="displayName">Zahlungsziel</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Kont.VartId" dataType="int">
-				<pps:attribute name="displayName">Versandart</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Kont.PstellId" dataType="int">
-				<pps:attribute name="displayName">Preisstellung</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Kont.WaehrId" dataType="int">
-				<pps:attribute name="displayName">Währung</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Kont.MwstId" dataType="int">
-				<pps:attribute name="displayName">Umsatzsteuer</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Kont.LandId" dataType="int">
 				<pps:attribute name="displayName">Land</pps:attribute>
@@ -58,16 +29,9 @@
 				<pps:attribute name="maxLength">20</pps:attribute>
 				<pps:attribute name="displayName">Fibu-Nr</pps:attribute>
 			</pps:field>
-			<pps:field name="dbo.Kont.StId" dataType="string">
-				<pps:attribute name="maxLength">30</pps:attribute>
-				<pps:attribute name="displayName">Steuer-ID</pps:attribute>
-			</pps:field>
 			<pps:field name="dbo.Kont.Anmerk" dataType="string">
 				<pps:attribute name="maxLength">2048</pps:attribute>
 				<pps:attribute name="displayName">Anmerkung</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Kont.Inaktiv" dataType="datetime">
-				<pps:attribute name="displayName">Inaktiv</pps:attribute>
 			</pps:field>
 
 			<pps:field name="dbo.Ansp.Id" />
@@ -79,6 +43,9 @@
 			<pps:field name="dbo.Ansp.Mail" />
 			<pps:field name="dbo.Ansp.Mobil" />
 			<pps:field name="dbo.Ansp.Std" />
+			<pps:field name="dbo.Ansp.Geschl" />
+			<pps:field name="dbo.Ansp.Funktion" />
+			<pps:field name="dbo.Ansp.Brief" />
 
 			<!-- menü eintrag für online daten praktisch?
 			<pps:view name="contacts" displayName="Kontakte">
@@ -108,17 +75,14 @@
 					<pps:column name="LiefNr" fieldName="dbo.Kont.LiefNr" />
 					<pps:column name="KundNr" fieldName="dbo.Kont.KundNr" />
 					<pps:column name="Match" fieldName="dbo.Kont.Match" />
-					<pps:column name="UstId" fieldName="dbo.Kont.UstId" />
+					<pps:column name="UstIdNr" fieldName="dbo.Kont.UstIdNr" />
 					<pps:column name="Iban" fieldName="dbo.Kont.Iban" />
 					<pps:column name="Bic" fieldName="dbo.Kont.Bic" />
 					<pps:column name="Abc" fieldName="dbo.Kont.Abc" />
-					<pps:column name="ZielId" fieldName="dbo.Kont.ZielId" />
-					<pps:column name="VartId" fieldName="dbo.Kont.VartId" />
-					<pps:column name="PstellId" fieldName="dbo.Kont.PstellId" />
-					<pps:column name="WaehrId" fieldName="dbo.Kont.WaehrId" />
-					<pps:column name="MwstId" fieldName="dbo.Kont.MwstId" />
 					<pps:column name="LandId" fieldName="dbo.Kont.LandId" />
-					<pps:column name="StId" fieldName="dbo.Kont.StId" />
+					<pps:column name="KgrpId" fieldName="dbo.Kont.KgrpId" />
+					<pps:column name="StIdentNr" fieldName="dbo.Kont.StIdentNr" />
+					<pps:column name="SteuerNr" fieldName="dbo.Kont.SteuerNr" />
 					<pps:column name="FibuNr" fieldName="dbo.Kont.FibuNr" />
 					<pps:column name="Anmerk" fieldName="dbo.Kont.Anmerk" />
 					<pps:column name="Inaktiv" fieldName="dbo.Kont.Inaktiv" />
@@ -134,13 +98,22 @@
 					<pps:column name="Mail" fieldName="dbo.Ansp.Mail" />
 					<pps:column name="Mobil" fieldName="dbo.Ansp.Mobil" />
 					<pps:column name="Std" fieldName="dbo.Ansp.Std" />
+					<pps:column name="Geschl" fieldName="dbo.Ansp.Geschl" />
+					<pps:column name="Funktion" fieldName="dbo.Ansp.Funktion" />
+					<pps:column name="Brief" fieldName="dbo.Ansp.Brief" />
 				</pps:table>
 
 				<pps:table name="Adre">
 					<pps:column name="Id" fieldName="dbo.Adre.Id" isPrimary="true" />
 					<pps:relation name="ObjkId" fieldName="dbo.Adre.ObjkId" relationName="AdreHead" parentTable="Head" parentColumn="Id" parentType="Root" />
 					<pps:column name="Name" fieldName="dbo.Adre.Name" />
-					<pps:column name="Adresse" fieldName="dbo.Adre.Adresse" />
+					<pps:column name="Postfach" fieldName="dbo.Adre.Postfach" />
+					<pps:column name="Zusatz" fieldName="dbo.Adre.Zusatz" />
+					<pps:column name="Strasse" fieldName="dbo.Adre.Strasse" />
+					<pps:column name="Ort" fieldName="dbo.Adre.Ort" />
+					<pps:column name="Region" fieldName="dbo.Adre.Region" />
+					<pps:column name="Plz" fieldName="dbo.Adre.Plz" />
+					<pps:column name="LandId" fieldName="dbo.Adre.LandId" />
 				</pps:table>
 			</pps:dataset>
 		</pps:register>
