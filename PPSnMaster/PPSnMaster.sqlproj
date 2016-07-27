@@ -23,7 +23,7 @@
     <SqlServerVerification>False</SqlServerVerification>
     <IncludeCompositeObjects>True</IncludeCompositeObjects>
     <TargetDatabaseSet>True</TargetDatabaseSet>
-    <DefaultSchema>pm</DefaultSchema>
+    <DefaultSchema>dbo</DefaultSchema>
     <Trustworthy>True</Trustworthy>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -77,7 +77,6 @@
     <Build Include="Tables\Schemas.sql" />
     <Build Include="Tables\dbo\Objk.sql" />
     <Build Include="Tables\dbo\Objr.sql" />
-    <Build Include="Tables\hrs\Pers.sql" />
     <Build Include="Tables\dbo\Adre.sql" />
     <Build Include="Tables\dbo\Ansp.sql" />
     <Build Include="Tables\dbo\User.sql" />
@@ -85,11 +84,16 @@
     <Build Include="Tables\dbo\Knst.sql" />
     <Build Include="Tables\dbo\Waeh.sql" />
     <Build Include="Tables\dbo\Land.sql" />
+    <Build Include="Tables\dbo\Plzd.sql" />
+    <Build Include="Tables\dbo\Kgrp.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="PPSn03.publish.xml" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="PPSnMaster.refactorlog" />
+  </ItemGroup>
+  <ItemGroup>
+    <PostDeploy Include="Database\Data.sql" />
   </ItemGroup>
 </Project>

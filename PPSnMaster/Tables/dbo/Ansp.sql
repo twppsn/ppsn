@@ -8,7 +8,11 @@
     [Fax] VARCHAR(30) NULL, 
     [Mobil] VARCHAR(30) NULL, 
     [Mail] NVARCHAR(100) NULL, 
-    [Std] BIT NOT NULL DEFAULT 0
+    [Std] BIT NOT NULL DEFAULT 0, 
+    [Geschl] CHAR NULL, 
+    [Funktion] NVARCHAR(50) NULL, 
+    [Brief] NVARCHAR(50) NULL, 
+    [Anmerk] NVARCHAR(2048) NULL
 )
 
 GO
@@ -93,3 +97,39 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Ansp',
     @level2type = N'COLUMN',
     @level2name = N'Std'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Geschlecht (m=männlich, w=weiblich)',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = N'Geschl'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Funktion/Abteilung in der Firma',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = N'Funktion'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Briefanrede (z.B. Sehr geehrter Herr, Liebe Frau)',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = N'Brief'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Anmerkungen',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = N'Anmerk'

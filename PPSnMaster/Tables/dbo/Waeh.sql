@@ -1,11 +1,11 @@
 ﻿CREATE TABLE [dbo].[Waeh]
 (
-	[Id] BIGINT NOT NULL PRIMARY KEY, 
-    [Name] NVARCHAR(30) NULL, 
-    [Symbol] NCHAR(5) NULL, 
-    [Kurs] DECIMAL(18, 4) NULL, 
-    [Iso] CHAR(3) NOT NULL,
-    [System] BIT NOT NULL
+	[KnstId] BIGINT NOT NULL CONSTRAINT pkWaehId PRIMARY KEY CONSTRAINT fkWaehKnst REFERENCES dbo.Knst (Id), 
+	[Name] NVARCHAR(30) NULL, 
+	[Symbol] NCHAR(5) NULL, 
+	[Kurs] DECIMAL(18, 4) NULL, 
+	[Iso] CHAR(3) NOT NULL,
+	[System] BIT NOT NULL
 )
 
 GO
@@ -16,7 +16,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1type = N'TABLE',
     @level1name = N'Waeh',
     @level2type = N'COLUMN',
-    @level2name = N'Id'
+    @level2name = 'KnstId'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Systemwährung',

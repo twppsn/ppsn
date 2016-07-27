@@ -126,7 +126,7 @@
 			<pps:field name="dbo.Land.Iso3" />
 			<pps:field name="dbo.Land.Tld" />
 			<pps:field name="dbo.Land.Vorwahl" />
-			<pps:field name="dbo.Land.EuroZone" />
+			<pps:field name="dbo.Land.Zone" />
 			<pps:field name="dbo.Land.PostAdr" />
 
 			<pps:constant name="Land">
@@ -136,8 +136,36 @@
 				<pps:column name="ISO3" fieldName="dbo.Land.Iso3"/>
 				<pps:column name="Tld" fieldName="dbo.Land.Tld"/>
 				<pps:column name="Vorwahl" fieldName="dbo.Land.Vorwahl"/>
-				<pps:column name="EuroZone" fieldName="dbo.Land.EuroZone"/>
+				<pps:column name="EuroZone" fieldName="dbo.Land.Zone"/>
 				<pps:column name="PostAdr" fieldName="dbo.Land.PostAdr"/>
+			</pps:constant>
+		
+			<!-- definition for contact groups -->
+			<pps:field name="dbo.Kgrp.Name" />
+
+			<pps:constant name="Kgrp">
+				<pps:column name="Name" fieldName="dbo.Kgrp.Name"/>
+			</pps:constant>
+		
+			<!-- definition for postal codes -->
+			<pps:field name="dbo.Plzd.Plz" />
+			<pps:field name="dbo.Plzd.Ort" />
+			<pps:field name="dbo.Plzd.LandId" />
+			<pps:field name="dbo.Plzd.Vorwahl" />
+			<pps:field name="dbo.Plzd.Kfz" />
+			<pps:field name="dbo.Plzd.AmtSchl" />
+			<pps:field name="dbo.Plzd.RegSchl" />
+			<pps:field name="dbo.Plzd.Region" />
+
+			<pps:constant name="Plzd">
+				<pps:column name="Plz" fieldName="dbo.Plzd.Plz"/>
+				<pps:column name="Ort" fieldName="dbo.Plzd.Ort"/>
+				<pps:column name="LandId" fieldName="dbo.Plzd.LandId"/>
+				<pps:column name="Vorwahl" fieldName="dbo.Plzd.Vorwahl"/>
+				<pps:column name="Kfz" fieldName="dbo.Plzd.Kfz"/>
+				<pps:column name="AmtSchl" fieldName="dbo.Plzd.AmtSchl"/>
+				<pps:column name="RegSchl" fieldName="dbo.Plzd.RegSchl"/>
+				<pps:column name="Region" fieldName="dbo.Plzd.Region"/>
 			</pps:constant>
 		</pps:register>
 	</pps:ppsn>

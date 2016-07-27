@@ -1,14 +1,14 @@
 ﻿CREATE TABLE [dbo].[Land]
 (
-	[KnstId] BIGINT NOT NULL CONSTRAINT pkLandId PRIMARY KEY CONSTRAINT fkLandKons REFERENCES dbo.Knst (Id), 
-    [Name] NVARCHAR(50) NOT NULL, 
+	[KnstId] BIGINT NOT NULL CONSTRAINT pkLandId PRIMARY KEY CONSTRAINT fkLandKnst REFERENCES dbo.Knst (Id), 
+	[Name] NVARCHAR(50) NOT NULL, 
 	[EnglishName] NVARCHAR(40) NOT NULL,
-    [Iso] CHAR(2) NULL, 
-    [Iso3] CHAR(3) NULL, 
-    [Tld] VARCHAR(63) NULL, 
-    [Vorwahl] INT NULL, 
-    [EuroZone] BIT NOT NULL DEFAULT 0, 
-    [PostAdr] NVARCHAR(50) NULL
+	[Iso] CHAR(2) NULL, 
+	[Iso3] CHAR(3) NULL, 
+	[Tld] VARCHAR(63) NULL, 
+	[Vorwahl] INT NULL, 
+	[Zone] NVARCHAR(50) NULL , 
+	[PostAdr] NVARCHAR(50) NULL
 )
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
@@ -75,13 +75,13 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level2name = N'EnglishName'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Europäische Gemeinschaft',
+    @value = N'Währungszone z.B. Europäische Gemeinschaft (EU)',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
     @level1name = N'Land',
     @level2type = N'COLUMN',
-    @level2name = N'EuroZone'
+    @level2name = 'Zone'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Vorlage Postanschrift',
