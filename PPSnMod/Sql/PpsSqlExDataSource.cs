@@ -41,14 +41,15 @@ namespace TecWare.PPSn.Server.Sql
 	/// <summary></summary>
 	public sealed class SqlConstantDefinition : PpsConstantDefintion
 	{
-		private readonly PpsFieldDescription[] columns;
-
+		private readonly PpsFieldDescription[] fields;
+		private IPpsColumnDescription[] columns;
+		
 		private string selectCommand;
 
-		public SqlConstantDefinition(PpsDataSource dataSource, string name, PpsFieldDescription[] columns)
+		public SqlConstantDefinition(PpsDataSource dataSource, string name, PpsFieldDescription[] fields)
 			: base(dataSource, name)
 		{
-			this.columns = columns;
+			this.fields = fields;
 		} // ctor
 
 		internal Task InitializeAsync()
@@ -56,12 +57,16 @@ namespace TecWare.PPSn.Server.Sql
 			// Q&D: Initialization, needs improvement
 			PpsSqlExDataSource.SqlColumnInfo columnInfo = null;
 			var sb = new StringBuilder();
-			sb.Append("SELECT k.Id, k.Typ, k.IsActive");
-			foreach (var c in columns)
+			sb.Append("SELECT k.Id, k.Typ, k.IsActive, k.Sync");
+
+			columns = new IPpsColumnDescription[fields.Length];
+			for (var i = 0; i < columns.Length; i++) 
 			{
-				columnInfo = c.GetColumnDescriptionImplementation<PpsSqlExDataSource.SqlColumnInfo>();
+				columnInfo = fields[i].GetColumnDescriptionImplementation<PpsSqlExDataSource.SqlColumnInfo>();
+				columns[i] = new PpsColumnDescription(fields[i], columnInfo.ColumnName, fields[i].DataType); // translate column
+
 				sb.Append(", c.")
-					.Append(columnInfo.ColumnName);
+					.Append(columns[i].Name);
 			}
 
 			sb.AppendFormat(" FROM dbo.Knst k INNER JOIN {0} c on (k.Id = c.KnstId)", columnInfo.Table.FullName);
@@ -85,29 +90,30 @@ namespace TecWare.PPSn.Server.Sql
 
 				using (var r = cmd.ExecuteReader(CommandBehavior.SingleResult))
 				{
-					var values = new object[5];
+					var values = new object[6];
 					while (r.Read())
 					{
 						values[0] = r.GetInt64(0);
 						values[1] = r.GetString(1);
 						values[2] = r.GetBoolean(2);
-						values[3] = null;
+						values[3] =  r.GetDateTime(3).ToFileTime();
+						values[4] = null;
 
 						var xMeta = new XElement("attr");
 						for (var i = 0; i < columns.Length; i++)
 						{
-							var v = r.GetValue(i + 3).NullIfDBNull();
+							var v = r.GetValue(i + 4).NullIfDBNull();
 							if (v != null)
 							{
-								var n = r.GetName(i + 3);
+								var n = r.GetName(i + 4);
 								if (String.Compare(n, "Name", StringComparison.OrdinalIgnoreCase) == 0)
-									values[3] = v;
+									values[4] = v;
 								else
 									xMeta.Add(new XElement(n, v.ChangeType<string>()));
 							}
 						}
 
-						values[4] = xMeta.ToString();
+						values[5] = xMeta.ToString();
 
 						yield return new SimpleDataRow(values, simpleDataColumns);
 					}
@@ -117,11 +123,14 @@ namespace TecWare.PPSn.Server.Sql
 
 		private PpsSqlExDataSource SqlDataSource => (PpsSqlExDataSource)base.DataSource;
 
+		public override IEnumerable<IDataColumn> Columns => columns;
+
 		private static readonly SimpleDataColumn[] simpleDataColumns = new SimpleDataColumn[]
 			{
 				new SimpleDataColumn("Id", typeof(long)),
 				new SimpleDataColumn("Typ", typeof(string)),
 				new SimpleDataColumn("IsActive", typeof(bool)),
+				new SimpleDataColumn("Sync", typeof(long)),
 				new SimpleDataColumn("Name", typeof(string)),
 				new SimpleDataColumn("Attr", typeof(string))
 			};

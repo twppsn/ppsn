@@ -792,6 +792,9 @@ namespace TecWare.PPSn.Server.Wpf
 			yield return new PpsApplicationFileItem(basePath + "/navigator.xml", -1, DateTime.MinValue);
 
 			// templates.xml
+			yield return new PpsApplicationFileItem("/constants.xml", -1, DateTime.MinValue);
+
+			// templates.xml
 			yield return new PpsApplicationFileItem(basePath + "/templates.xaml", -1, DateTime.MinValue);
 
 			// schemas from application/documents
