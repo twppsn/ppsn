@@ -1,26 +1,26 @@
-﻿CREATE TABLE [dbo].[Ansp]
+﻿CREATE TABLE [dbo].[Kont]
 (
-	[Id] BIGINT NOT NULL CONSTRAINT pkAnspId PRIMARY KEY IDENTITY (1,1), 
-    [ObjkId] BIGINT NOT NULL CONSTRAINT fkAnspObjkId REFERENCES dbo.Objk (Id), 
-    [Name] NVARCHAR(100) NOT NULL, 
-    [Titel] NVARCHAR(30) NULL, 
-    [Tel] VARCHAR(30) NULL, 
-    [Fax] VARCHAR(30) NULL, 
-    [Mobil] VARCHAR(30) NULL, 
-    [Mail] NVARCHAR(100) NULL, 
-    [Std] BIT NOT NULL DEFAULT 0, 
-    [Geschl] CHAR NULL, 
-    [Funktion] NVARCHAR(50) NULL, 
-    [Brief] NVARCHAR(50) NULL
+	[Id] BIGINT NOT NULL CONSTRAINT pkKontId PRIMARY KEY IDENTITY (1,1), 
+	[ObjkId] BIGINT NOT NULL CONSTRAINT fkKontObjkId REFERENCES dbo.Objk (Id), 
+	[Name] NVARCHAR(100) NOT NULL,
+	[LiefNr] NVARCHAR(50) NULL,
+	[KundNr] NVARCHAR(50) NULL, 
+	[StIdentNr] VARCHAR(25) NULL, 
+	[SteuerNr] VARCHAR(25) NULL, 
+	[UstIdNr] CHAR(16) NULL, 
+	[Inaktiv] SMALLDATETIME NULL, 
+	[Abc] CHAR NULL, 
+	[KgrpId] BIGINT NULL CONSTRAINT fkKontKgrpId REFERENCES dbo.Kgrp (KnstId), 
+    [Iban] CHAR(34) NULL, 
+    [Bic] CHAR(11) NULL
 )
-
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'PK',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Ansp',
+    @level1name = N'Kont',
     @level2type = N'COLUMN',
     @level2name = N'Id'
 GO
@@ -29,97 +29,105 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Ansp',
+    @level1name = N'Kont',
     @level2type = N'COLUMN',
     @level2name = N'ObjkId'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Name des Ansprechpartners',
+    @value = N'Name des Kontakts',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Ansp',
+    @level1name = N'Kont',
     @level2type = N'COLUMN',
     @level2name = N'Name'
 GO
-
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'akademischer Titel',
+    @value = N'ext. Lieferantennummer',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Ansp',
+    @level1name = N'Kont',
     @level2type = N'COLUMN',
-    @level2name = N'Titel'
+    @level2name = N'LiefNr'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Telefonnummer',
+    @value = N'ext. Kundennummer',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Ansp',
+    @level1name = N'Kont',
     @level2type = N'COLUMN',
-    @level2name = N'Tel'
+    @level2name = N'KundNr'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Faxnummer',
+    @value = N'Steuerliche Identifikationsnummer',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Ansp',
+    @level1name = N'Kont',
     @level2type = N'COLUMN',
-    @level2name = N'Fax'
+    @level2name = 'StIdentNr'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Mobilnummer (Handy)',
+    @value = N'Steuernummer',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Ansp',
+    @level1name = N'Kont',
     @level2type = N'COLUMN',
-    @level2name = N'Mobil'
+    @level2name = N'SteuerNr'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Mailadresse',
+    @value = N'Mehrwertsteuer-Identifikationsnummer',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Ansp',
+    @level1name = N'Kont',
     @level2type = N'COLUMN',
-    @level2name = N'Mail'
+    @level2name = 'UstIdNr'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Standardansprechpartner',
+    @value = N'Inaktiv seit',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Ansp',
+    @level1name = N'Kont',
     @level2type = N'COLUMN',
-    @level2name = N'Std'
+    @level2name = N'Inaktiv'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Geschlecht (m=männlich, w=weiblich)',
+    @value = N'Abc-Einteilung',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Ansp',
+    @level1name = N'Kont',
     @level2type = N'COLUMN',
-    @level2name = N'Geschl'
+    @level2name = N'Abc'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Funktion/Abteilung in der Firma',
+    @value = N'FK zu Kontaktgruppe',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Ansp',
+    @level1name = N'Kont',
     @level2type = N'COLUMN',
-    @level2name = N'Funktion'
+    @level2name = N'KgrpId'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Briefanrede (z.B. Sehr geehrter Herr, Liebe Frau)',
+    @value = N'Iban-Nummer',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Ansp',
+    @level1name = N'Kont',
     @level2type = N'COLUMN',
-    @level2name = N'Brief'
+    @level2name = N'Iban'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Bic-Nummer',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Kont',
+    @level2type = N'COLUMN',
+    @level2name = N'Bic'

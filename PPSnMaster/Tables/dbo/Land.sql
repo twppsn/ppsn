@@ -1,105 +1,93 @@
-﻿CREATE TABLE [dbo].[Adre]
+﻿CREATE TABLE [dbo].[Land]
 (
-	[Id] BIGINT NOT NULL CONSTRAINT pkAdreId PRIMARY KEY IDENTITY (1,1), 
-	[ObjkId] BIGINT NOT NULL CONSTRAINT fkAdreObjkId REFERENCES dbo.Objk (Id), 
-	[Name] NVARCHAR(100) NOT NULL, 
-	[Postfach] NVARCHAR(20) NULL, 
-	[Zusatz] NVARCHAR(20) NULL, 
-	[Strasse] NVARCHAR(50) NULL, 
-	[Ort] NVARCHAR(50) NULL, 
-	[Region] NVARCHAR(50) NULL, 
-	[Plz] NVARCHAR(10) NULL, 
-	[LandId] BIGINT NOT NULL CONSTRAINT fkAdreLandId REFERENCES dbo.Land (KnstId)
+	[KnstId] BIGINT NOT NULL CONSTRAINT pkLandId PRIMARY KEY CONSTRAINT fkLandKnst REFERENCES dbo.Knst (Id), 
+	[Name] NVARCHAR(50) NOT NULL, 
+	[EnglishName] NVARCHAR(40) NOT NULL,
+	[Iso] CHAR(2) NULL, 
+	[Iso3] CHAR(3) NULL, 
+	[Tld] VARCHAR(63) NULL, 
+	[Vorwahl] INT NULL, 
+	[EuroZone] BIT NOT NULL DEFAULT 0, 
+	[PostAdr] NVARCHAR(50) NULL
 )
-
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'PK',
+    @value = N'Primary key, FK zu Knst',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Adre',
+    @level1name = N'Land',
     @level2type = N'COLUMN',
-    @level2name = N'Id'
+    @level2name = N'KnstId'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'FK zu Objk',
+    @value = N'Name des Landes',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Adre',
-    @level2type = N'COLUMN',
-    @level2name = N'ObjkId'
-GO
-EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Adressname',
-    @level0type = N'SCHEMA',
-    @level0name = N'dbo',
-    @level1type = N'TABLE',
-    @level1name = N'Adre',
+    @level1name = N'Land',
     @level2type = N'COLUMN',
     @level2name = N'Name'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Postfach',
+    @value = N'Iso 3166 Alpha 2 Code',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Adre',
+    @level1name = N'Land',
     @level2type = N'COLUMN',
-    @level2name = 'Postfach'
-GO
-
-EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'FK zu Land (bei Postanschrift immer engl. Namen anzeigen)',
-    @level0type = N'SCHEMA',
-    @level0name = N'dbo',
-    @level1type = N'TABLE',
-    @level1name = N'Adre',
-    @level2type = N'COLUMN',
-    @level2name = N'LandId'
+    @level2name = N'Iso'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Adresszusatz (z.B. Wohnungsnummer)',
+    @value = N'Iso 3166 Alpha 3 Code',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Adre',
+    @level1name = N'Land',
     @level2type = N'COLUMN',
-    @level2name = N'Zusatz'
+    @level2name = N'Iso3'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Straße',
+    @value = N'Tol Level Domain',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Adre',
+    @level1name = N'Land',
     @level2type = N'COLUMN',
-    @level2name = N'Strasse'
+    @level2name = N'Tld'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Stadt',
+    @value = N'Vorwahl des Landes',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Adre',
+    @level1name = N'Land',
     @level2type = N'COLUMN',
-    @level2name = N'Ort'
+    @level2name = N'Vorwahl'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Region (z.B. Bundesstaat)',
+    @value = N'engl. Name für Postanschrift',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Adre',
+    @level1name = N'Land',
     @level2type = N'COLUMN',
-    @level2name = N'Region'
+    @level2name = N'EnglishName'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Postleitzahl',
+    @value = N'Europäische Gemeinschaft',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Adre',
+    @level1name = N'Land',
     @level2type = N'COLUMN',
-    @level2name = 'Plz'
+    @level2name = N'EuroZone'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Vorlage Postanschrift',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Land',
+    @level2type = N'COLUMN',
+    @level2name = N'PostAdr'

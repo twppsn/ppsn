@@ -1,4 +1,4 @@
-﻿# Styleguide Datenabank (MSSQL)
+﻿# Styleguide Datenbank (MSSQL)
 
 ## allg. Regeln
 
@@ -40,6 +40,8 @@
 * bit für Flags
 * int für Bitmasken
 * decimal(?,?) für Mengen
+* geography für Erdkugel-Koordinaten
+* geometry für räumliche Daten 
 
 ## Namenskonvention
 
@@ -64,26 +66,26 @@
 
 * Camel Case - Schreibweise
 * sprechende Bezeichner mit führendem Tabellenamen
-* Bsp.: KontName, BekoId
-* feste Spaltennamen (Tabellename + Spaltenname):
+* Bsp.: Name, Id
+* feste Spaltennamen (Spaltenname):
 	- Id - Primärschlüssel
 	- Status - Statusfelder
-	- Datum - Datumsfeld (Bsp.: BekoDatum, AukoDatum)
+	- Datum - Datumsfeld (Bsp.: Datum, Datum)
 	- Nr - externe Nummer
 	- Name?? - Namesfelder
 	- Text?? - freie Textfelder
 
 ### Primär- / Fremdschlüssel
 
-* Syntax: `<Typ>_<Spaltenname>[_<NameFKSpalte>]`
+* Syntax: `<Typ><Spaltenname>[<NameFKSpalte>]`
 * `<Typ>` -> pk (Primary Key), fk (Foreign Key)
-* Bsp.: pk_KontId, fk_KontWaehId_WaehId
+* Bsp.: pkKontId, fkKontWaehIdWaehId
 
 ### Indizes / Checks 
 
-* Syntax: `<Typ>_<Spaltenname>[_<Spaltennname>]`
+* Syntax: `<Typ><Spaltenname>[<Spaltennname>]`
 * `<Typ>` -> idx - Index, chk - Check, 
-* Bsp.: idx_KontId_KontName, chk_KontName
+* Bsp.: idxKontIdKontName, chkKontName
 
 ### Views
 
@@ -114,6 +116,11 @@
 |-------------|-----------------------------------------|
 | pps         | Produktionsplanungsystem                |
 | hrs         | Human Ressourses (Personalsystem)       |
-| fas					| Financial Accounting (Finanzsystem)     |
+| fas         | Financial Accounting (Finanzsystem)     |
 | qms         | Quality Management (Qualitätmanagement) |
 | sds         | Sales & Distribution (Einkauf/Verkauf)  |
+| cos         | Controlling															|
+| pss         | Project System													|
+| pms         | Plant Management (Anlagenmanagement)		|
+| mms         | Material Management (Materialwirtschaft)|
+

@@ -32,6 +32,9 @@
 			<pps:view name="sys.views">
 				<pps:source type="view">GetViewDefinitionSelector</pps:source>
 			</pps:view>
+			<pps:view name="sys.constants">
+				<pps:source type="view">GetConstantSelector</pps:source>
+			</pps:view>
 		</pps:register>
 
 		<pps:register source="main">
@@ -57,7 +60,13 @@
 			<pps:field name="dbo.Adre.Id" />
 			<pps:field name="dbo.Adre.ObjkId" />
 			<pps:field name="dbo.Adre.Name" />
-			<pps:field name="dbo.Adre.Adresse" />
+			<pps:field name="dbo.Adre.Postfach" />
+			<pps:field name="dbo.Adre.Zusatz" />
+			<pps:field name="dbo.Adre.Strasse" />
+			<pps:field name="dbo.Adre.Ort" />
+			<pps:field name="dbo.Adre.Region" />
+			<pps:field name="dbo.Adre.PLZ" />
+			<pps:field name="dbo.Adre.LandId" />
 			
 			<!-- objects -->
 			<pps:view name="dbo.objects">
@@ -78,14 +87,11 @@
 
 			<!-- base dataset -->
 			<pps:dataset name="coreDataSet">
-				<pps:parameter name="Id" fieldName="dbo.Objk.Id" isNullable="true"/>
-				<pps:parameter name="Rev" fieldName="dbo.Objr.Id" isNullable="true"/>
-
 				<!-- define the base table -->
 				<pps:table name="Head">
-					<pps:column name="Id" fieldName="dbo.Objk.Id" isPrimary="true" parameter="Id" />
-					<pps:column name="RevId" fieldName="dbo.Objk.CurRevId" />
-					<pps:column name="HeadId" fieldName="dbo.Objk.HeadRevId" />
+					<pps:column name="Id" fieldName="dbo.Objk.Id" isPrimary="true" />
+					<pps:column name="CurRevId" fieldName="dbo.Objk.CurRevId" />
+					<pps:column name="HeadRevId" fieldName="dbo.Objk.HeadRevId" />
 					<pps:column name="Nr" fieldName="dbo.Objk.Nr" />
 					<pps:column name="Typ" fieldName="dbo.Objk.Typ" />
 					<pps:column name="Guid" fieldName="dbo.Objk.Guid" />
@@ -97,6 +103,70 @@
 				</pps:table>
 				
 			</pps:dataset>
+
+			<!-- definition for currencies -->
+			<pps:field name="dbo.Waeh.Iso" />
+			<pps:field name="dbo.Waeh.Symbol" />
+			<pps:field name="dbo.Waeh.Name" />
+			<pps:field name="dbo.Waeh.Kurs" />
+			<pps:field name="dbo.Waeh.System" />
+
+			<pps:constant name="Waeh">
+				<pps:column name="ISO" fieldName="dbo.Waeh.Iso"/>
+				<pps:column name="Symbol" fieldName="dbo.Waeh.Symbol"/>
+				<pps:column name="Name" fieldName="dbo.Waeh.Name"/>
+				<pps:column name="Kurs" fieldName="dbo.Waeh.Kurs"/>
+				<pps:column name="System" fieldName="dbo.Waeh.System"/>
+			</pps:constant>
+
+			<!-- definition for countries -->
+			<pps:field name="dbo.Land.Iso" />
+			<pps:field name="dbo.Land.Name" />
+			<pps:field name="dbo.Land.EnglishName" />
+			<pps:field name="dbo.Land.Iso3" />
+			<pps:field name="dbo.Land.Tld" />
+			<pps:field name="dbo.Land.Vorwahl" />
+			<pps:field name="dbo.Land.EuroZone" />
+			<pps:field name="dbo.Land.PostAdr" />
+
+			<pps:constant name="Land">
+				<pps:column name="ISO" fieldName="dbo.Land.Iso"/>
+				<pps:column name="Name" fieldName="dbo.Land.Name"/>
+				<pps:column name="EnglishName" fieldName="dbo.Land.EnglishName"/>
+				<pps:column name="ISO3" fieldName="dbo.Land.Iso3"/>
+				<pps:column name="Tld" fieldName="dbo.Land.Tld"/>
+				<pps:column name="Vorwahl" fieldName="dbo.Land.Vorwahl"/>
+				<pps:column name="EuroZone" fieldName="dbo.Land.EuroZone"/>
+				<pps:column name="PostAdr" fieldName="dbo.Land.PostAdr"/>
+			</pps:constant>
+		
+			<!-- definition for contact groups -->
+			<pps:field name="dbo.Kgrp.Name" />
+
+			<pps:constant name="Kgrp">
+				<pps:column name="Name" fieldName="dbo.Kgrp.Name"/>
+			</pps:constant>
+		
+			<!-- definition for postal codes -->
+			<pps:field name="dbo.Plzd.Plz" />
+			<pps:field name="dbo.Plzd.Ort" />
+			<pps:field name="dbo.Plzd.LandId" />
+			<pps:field name="dbo.Plzd.Vorwahl" />
+			<pps:field name="dbo.Plzd.Kfz" />
+			<pps:field name="dbo.Plzd.AmtSchl" />
+			<pps:field name="dbo.Plzd.RegSchl" />
+			<pps:field name="dbo.Plzd.Region" />
+
+			<pps:constant name="Plzd">
+				<pps:column name="Plz" fieldName="dbo.Plzd.Plz"/>
+				<pps:column name="Ort" fieldName="dbo.Plzd.Ort"/>
+				<pps:column name="LandId" fieldName="dbo.Plzd.LandId"/>
+				<pps:column name="Vorwahl" fieldName="dbo.Plzd.Vorwahl"/>
+				<pps:column name="Kfz" fieldName="dbo.Plzd.Kfz"/>
+				<pps:column name="AmtSchl" fieldName="dbo.Plzd.AmtSchl"/>
+				<pps:column name="RegSchl" fieldName="dbo.Plzd.RegSchl"/>
+				<pps:column name="Region" fieldName="dbo.Plzd.Region"/>
+			</pps:constant>
 		</pps:register>
 	</pps:ppsn>
 </fragment>

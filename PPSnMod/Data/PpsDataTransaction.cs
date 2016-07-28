@@ -6,9 +6,18 @@ using System.Text;
 using System.Threading.Tasks;
 using Neo.IronLua;
 using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server.Data
 {
+	public enum PpsDataTransactionExecuteBehavior
+	{
+		NoResult,
+		SingleRow,
+		SingleResult,
+		MutliResult
+	} // enum PpsDataTransactionExecuteBehavior
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class PpsDataTransaction : IDisposable
@@ -50,20 +59,58 @@ namespace TecWare.PPSn.Server.Data
 			commited = false;
 		} // proc Rollback
 
-		public virtual void ExecuteNoneResult(LuaTable parameter)
+		public void ExecuteNoneResult(LuaTable parameter)
 		{
-			throw new NotImplementedException();
+			foreach (var c in ExecuteResult(parameter, PpsDataTransactionExecuteBehavior.NoResult))
+				c.GetEnumerator()?.Dispose();
 		} // proc ExecuteNoneResult
 
-		public virtual IEnumerable<IDataRow> ExecuteSingleResult(LuaTable parameter)
+		public IDataRow ExecuteSingleRow(LuaTable parameter)
 		{
-			throw new NotImplementedException();
+			var first = true;
+			IDataRow result = null;
+			foreach (var c in ExecuteResult(parameter, PpsDataTransactionExecuteBehavior.SingleRow))
+			{
+				if (first)
+				{
+					using (var r = c.GetEnumerator())
+					{
+						if (r.MoveNext())
+							result = new SimpleDataRow(r.Current);
+					}
+					first = false;
+				}
+				else
+					c.GetEnumerator()?.Dispose();
+			}
+			return result;
+		} // proc ExecuteSingleRow
+		
+		public IEnumerable<IDataRow> ExecuteSingleResult(LuaTable parameter)
+		{
+			var first = true;
+			foreach (var c in ExecuteResult(parameter, PpsDataTransactionExecuteBehavior.SingleResult))
+			{
+				if (first)
+				{
+					foreach (var r in c)
+						yield return r;
+
+					first = false;
+				}
+				else
+					c.GetEnumerator()?.Dispose();
+			}
 		} // proc ExecuteSingleResult
 
-		public virtual IEnumerable<IEnumerable<IDataRow>> ExecuteMultipleResult(LuaTable parameter)
+		public IEnumerable<IEnumerable<IDataRow>> ExecuteMultipleResult(LuaTable parameter)
+			=> ExecuteResult(parameter, PpsDataTransactionExecuteBehavior.MutliResult);
+
+		protected virtual IEnumerable<IEnumerable<IDataRow>> ExecuteResult(LuaTable parameter, PpsDataTransactionExecuteBehavior behavior)
 		{
 			throw new NotImplementedException();
-		} // proc ExecuteMultipleResult
+		} // func ExecuteResult
+
 
 		/// <summary></summary>
 		public PpsDataSource DataSource => dataSource;

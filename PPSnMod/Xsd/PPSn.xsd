@@ -75,6 +75,14 @@
 		</xs:restriction>
 	</xs:simpleType>
 
+	<xs:simpleType name="autoTagModes">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="First" />
+			<xs:enumeration value="Number" />
+			<xs:enumeration value="Concat" />
+		</xs:restriction>
+	</xs:simpleType>
+
 	<xs:attributeGroup name="columnBasicAttributes">
 		<xs:attribute name="name" type="KeyType" use="required">
 		</xs:attribute>
@@ -82,10 +90,22 @@
 		</xs:attribute>
 		<xs:attribute name="isPrimary" type="xs:boolean" use="optional" default="false">
 		</xs:attribute>
-		<xs:attribute name="parameter" type="xs:string" use="optional">
-		</xs:attribute>
 	</xs:attributeGroup>
-	
+
+	<xs:complexType name="fieldAttributeType">
+		<xs:simpleContent>
+			<xs:extension base="xs:string">
+				<xs:attribute name="name" use="required">
+					<xs:simpleType>
+						<xs:union memberTypes="pps:fieldAttributeNames KeyType" />
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="dataType" type="LuaType" use="optional">
+				</xs:attribute>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+
 	<xs:element name="register">
 		<xs:annotation>
 			<xs:documentation>Expands the definition of a specific datasource.</xs:documentation>
@@ -98,21 +118,7 @@
 					</xs:annotation>
 					<xs:complexType>
 						<xs:sequence>
-							<xs:element name="attribute" minOccurs="0" maxOccurs="unbounded">
-								<xs:complexType>
-									<xs:simpleContent>
-										<xs:extension base="xs:string">
-											<xs:attribute name="name" use="required">
-												<xs:annotation>
-													<xs:documentation>Name of the attribute.</xs:documentation>
-												</xs:annotation>
-												<xs:simpleType>
-													<xs:union memberTypes="pps:fieldAttributeNames KeyType" />
-												</xs:simpleType>
-											</xs:attribute>
-										</xs:extension>
-									</xs:simpleContent>
-								</xs:complexType>
+							<xs:element name="attribute" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType">
 							</xs:element>
 						</xs:sequence>
 						<xs:attribute name="name" type="KeyType" use="required">
@@ -253,16 +259,28 @@
 					</xs:annotation>
 					<xs:complexType>
 						<xs:sequence minOccurs="0" maxOccurs="unbounded">
-							<xs:element name="parameter" minOccurs="0" maxOccurs="unbounded">
+							<xs:element name="meta" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType" />
+							<xs:element name="autoTag" minOccurs="0" maxOccurs="unbounded">
 								<xs:complexType>
 									<xs:attribute name="name" type="KeyType" use="required">
 										<xs:annotation>
-											<xs:documentation>Name of the parameter</xs:documentation>
+											<xs:documentation>Name of the tag</xs:documentation>
 										</xs:annotation>
 									</xs:attribute>
-									<xs:attribute name="fieldName" type="xs:string" use="required">
+									<xs:attribute name="tableName" type="xs:string" use="required">
+										<xs:annotation>
+											<xs:documentation></xs:documentation>
+										</xs:annotation>
 									</xs:attribute>
-									<xs:attribute name="isNullable" type="xs:boolean" use="required">
+									<xs:attribute name="columnName" type="xs:string" use="required">
+										<xs:annotation>
+											<xs:documentation></xs:documentation>
+										</xs:annotation>
+									</xs:attribute>
+									<xs:attribute name="mode" type="pps:autoTagModes" use="required">
+										<xs:annotation>
+											<xs:documentation></xs:documentation>
+										</xs:annotation>
 									</xs:attribute>
 								</xs:complexType>
 							</xs:element>
@@ -270,32 +288,37 @@
 							<xs:element name="table" minOccurs="0" maxOccurs="unbounded">
 								<xs:complexType>
 									<xs:sequence minOccurs="0" maxOccurs="unbounded">
+										<xs:element name="meta" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType" />
 										<xs:element name="column" minOccurs="0" maxOccurs="unbounded">
 											<xs:complexType>
+												<xs:sequence minOccurs="0" maxOccurs="unbounded">
+													<xs:element name="meta" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType" />
+												</xs:sequence>
 												<xs:attributeGroup ref="pps:columnBasicAttributes" />
 											</xs:complexType>
 										</xs:element>
-										<xs:sequence>
-											<xs:element name="relation" minOccurs="0" maxOccurs="unbounded">
-												<xs:complexType>
-													<xs:attributeGroup ref="pps:columnBasicAttributes" />
-													<xs:attribute name="relationName" type="xs:string" use="optional">
-													</xs:attribute>
-													<xs:attribute name="parentTable" type="xs:string" use="required">
-													</xs:attribute>
-													<xs:attribute name="parentColumn" type="xs:string" use="required">
-													</xs:attribute>
-													<xs:attribute name="parentType" use="required">
-														<xs:simpleType>
-															<xs:restriction base="xs:string">
-																<xs:enumeration value="Root" />
-																<xs:enumeration value="Relation" />
-															</xs:restriction>
-														</xs:simpleType>
-													</xs:attribute>
-												</xs:complexType>
-											</xs:element>
-										</xs:sequence>
+										<xs:element name="relation" minOccurs="0" maxOccurs="unbounded">
+											<xs:complexType>
+												<xs:sequence minOccurs="0" maxOccurs="unbounded">
+													<xs:element name="meta" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType" />
+												</xs:sequence>
+												<xs:attributeGroup ref="pps:columnBasicAttributes" />
+												<xs:attribute name="relationName" type="xs:string" use="required">
+												</xs:attribute>
+												<xs:attribute name="parentTable" type="xs:string" use="required">
+												</xs:attribute>
+												<xs:attribute name="parentColumn" type="xs:string" use="required">
+												</xs:attribute>
+												<xs:attribute name="parentType" use="required">
+													<xs:simpleType>
+														<xs:restriction base="xs:string">
+															<xs:enumeration value="Root" />
+															<xs:enumeration value="Relation" />
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:attribute>
+											</xs:complexType>
+										</xs:element>
 									</xs:sequence>
 									<xs:attribute name="name" type="KeyType" use="required">
 										<xs:annotation>
@@ -323,13 +346,35 @@
 								<xs:documentation>Extension for the document.</xs:documentation>
 							</xs:annotation>
 						</xs:attribute>
-						<xs:attribute name="localScripts" use="optional">
+						<xs:attribute name="clientScripts" type="PathArray" use="optional">
 							<xs:annotation>
 								<xs:documentation>Script files for the local site.</xs:documentation>
 							</xs:annotation>
-							<xs:simpleType>
-								<xs:list itemType="PathType" />
-							</xs:simpleType>
+						</xs:attribute>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="constant" minOccurs="0" maxOccurs="unbounded">
+					<xs:annotation>
+						<xs:documentation>Registers a constant table.</xs:documentation>
+					</xs:annotation>
+					<xs:complexType>
+						<xs:sequence minOccurs="0" maxOccurs="unbounded">
+							<xs:element name="attribute" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType">
+							</xs:element>
+							<xs:element name="column" minOccurs="0" maxOccurs="unbounded">
+								<xs:complexType>
+									<xs:sequence>
+										<xs:element name="attribute" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType">
+										</xs:element>
+									</xs:sequence>
+									<xs:attribute name="name" type="KeyType" use="required">
+									</xs:attribute>
+									<xs:attribute name="fieldName" type="xs:string" use="optional">
+									</xs:attribute>
+								</xs:complexType>
+							</xs:element>
+						</xs:sequence>
+						<xs:attribute name="name" type="KeyType" use="required">
 						</xs:attribute>
 					</xs:complexType>
 				</xs:element>

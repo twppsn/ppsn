@@ -54,6 +54,11 @@ namespace TecWare.PPSn.Server.Data
 			throw new NotImplementedException();
 		}// func CreateTransaction
 
+		public virtual Task<PpsConstantDefintion> CreateConstantDefinitionAsync(string name, XElement xDefinition)
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>Returns a native column description.</summary>
 		/// <param name="columnName"></param>
 		/// <returns></returns>
@@ -62,10 +67,8 @@ namespace TecWare.PPSn.Server.Data
 			return null;
 		} // func GetColumnDescription
 
-		public virtual PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config)
-		{
-			return new PpsDataSetServerDefinition(sp, documentName, config);
-		} // func CreateDocumentDescription
+		public virtual PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config, DateTime configurationStamp)
+			=> new PpsDataSetServerDefinition(sp, documentName, config, configurationStamp);
 
 		public abstract string Type { get; }
 	} // class PpsDataSource
