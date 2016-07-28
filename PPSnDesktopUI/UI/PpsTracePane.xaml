@@ -6,31 +6,40 @@
              xmlns:local="clr-namespace:TecWare.PPSn.UI"
 			 mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
-	<UserControl.Resources>
-		<local:TraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
-			<local:TraceItemTemplateSelector.NullTemplate>
-				<DataTemplate>
+    <UserControl.Resources>
+        <local:TraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
+            <local:TraceItemTemplateSelector.NullTemplate>
+                <DataTemplate>
                     <TextBlock Text="{Binding Message}" />
                 </DataTemplate>
-			</local:TraceItemTemplateSelector.NullTemplate>
+            </local:TraceItemTemplateSelector.NullTemplate>
 
-			<local:TraceItemTemplateSelector.ExceptionTemplate>
-				<DataTemplate>
-                    <StackPanel>
-                        <TextBlock Text="{Binding Message}" />
+            <local:TraceItemTemplateSelector.ExceptionTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock>
+							<Run Text="message:  "/>
+							<Run Text="{Binding Message, Mode=OneWay}"/>
+                        </TextBlock>
+                        <TextBlock>
+							<Run Text="source:  "/>
+							<Run Text="{Binding Exception.Source, Mode=OneWay}" />
+                        </TextBlock>
+						<TextBlock Text="stacktrace:"/>
+                        <TextBlock Text="{Binding Exception.StackTrace}"/>
                     </StackPanel>
                 </DataTemplate>
-			</local:TraceItemTemplateSelector.ExceptionTemplate>
+            </local:TraceItemTemplateSelector.ExceptionTemplate>
 
-			<local:TraceItemTemplateSelector.TraceItemTemplate>
-				<DataTemplate>
+            <local:TraceItemTemplateSelector.TraceItemTemplate>
+                <DataTemplate>
                     <StackPanel>
                         <TextBlock Text="{Binding Message}" />
                         <TextBlock Text="{Binding Id}" />
                         <TextBlock Text="{Binding Source}" />
                     </StackPanel>
-				</DataTemplate>
-			</local:TraceItemTemplateSelector.TraceItemTemplate>
+                </DataTemplate>
+            </local:TraceItemTemplateSelector.TraceItemTemplate>
 
             <local:TraceItemTemplateSelector.TextItemTemplate>
                 <DataTemplate>
@@ -38,31 +47,32 @@
                 </DataTemplate>
             </local:TraceItemTemplateSelector.TextItemTemplate>
 
-		</local:TraceItemTemplateSelector>
-	</UserControl.Resources>
-	
-	<Grid Margin="32,24">
-		<ListBox ItemsSource="{Binding Traces}"	 Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2"
-				 ItemContainerStyle="{StaticResource PpsAlternatingListBoxItemStyle}">
-			<ListBox.ItemTemplate>
-				<DataTemplate>
-					<Grid>
+        </local:TraceItemTemplateSelector>
+    </UserControl.Resources>
+
+    <Grid Margin="32,24">
+        <ListBox ItemsSource="{Binding Traces}"	Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
+				 ItemContainerStyle="{StaticResource PpsAlternatingListBoxItemStyle}" >
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
                         <Grid.ColumnDefinitions>
-							<ColumnDefinition Width="90"/>
-							<ColumnDefinition Width="Auto"/>
-							<ColumnDefinition/>
-						</Grid.ColumnDefinitions>
-						<Grid.RowDefinitions>
-							<RowDefinition Height="32" />
-							<RowDefinition/>
-						</Grid.RowDefinitions>
-						<TextBlock Text="{Binding Type}" />
-						<TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=dd.mm.yyyy  hh:MM:ss}" Margin="8,0"/>
-						<ContentControl Content="{Binding}" Grid.Column="2" Margin="8,0" Grid.Row="0" Grid.RowSpan="2" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}" FocusVisualStyle="{x:Null}"/>
-					</Grid>
-				</DataTemplate>
-			</ListBox.ItemTemplate>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="22" />
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="{Binding Type}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=dd.mm.yyyy  hh:MM:ss}" Margin="8,0"/>
+                        <ContentControl Grid.Column="2" Margin="8,0" Grid.Row="0" Grid.RowSpan="2" FocusVisualStyle="{x:Null}"
+										Content="{Binding}" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}"/>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
         </ListBox>
-	</Grid>
+    </Grid>
 
 </UserControl>
