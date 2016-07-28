@@ -6,7 +6,7 @@
 	</ResourceDictionary.MergedDictionaries>
 
 	<DataTemplate x:Key="KO,,100">
-		<!--  ko,dbo.contacts,100 -->
+		 <!--  ko,dbo.contacts,100 -->
 		<StackPanel Orientation="Horizontal">
 			<Label Content="Kontakt: " />
 			<Label Content="{Binding Nr}" />

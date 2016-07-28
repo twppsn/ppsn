@@ -43,7 +43,7 @@
 		<pps:wpf name="wpf">
 			<pps:template id="contacts" file="ClientWpf\Templates\Contacts.xaml" />
 			
-			<pps:view name="ko" displayName="Kontakt" view="local.objects" filter="Typ:=KO">
+			<pps:view name="ko" displayName="Kontakte" view="local.objects" filter="Typ:=KO">
 				<pps:filter name="lief" displayName="Lieferanten">
 					<![CDATA[ LiefNr:! ]]>
 				</pps:filter>
@@ -62,7 +62,7 @@
 			</pps:view>
 			
 			<pps:action name="contactNew" displayName="Neue Kontakt" priority="100">
-				<pps:condition><![CDATA[ return CurrentView == Views["contacts"]; ]]></pps:condition>
+				<pps:condition><![CDATA[ return CurrentView == Views["ko"]; ]]></pps:condition>
 				<pps:code><![CDATA[ LoadMask{ document = '/contacts' }; ]]></pps:code>
 			</pps:action>
 		</pps:wpf>
