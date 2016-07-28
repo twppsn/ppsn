@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Networking;
@@ -124,6 +125,16 @@ namespace TecWare.PPSn
 		{
 			LuaTrace(PpsTraceItemType.Information, args);
 		} // proc LuaPrint
+
+		[LuaMember("syncUI")]
+		private LuaResult LuaUI(object invoke, params object[] args)
+			=> Dispatcher.Invoke<LuaResult>(() => new LuaResult(Lua.RtInvoke(invoke, args)), DispatcherPriority.Normal);
+
+		[LuaMember("spawnThread")]
+		private Task LuaSpawn(object invoke, params object[] args)
+		{
+			return Task.CompletedTask; // todo:
+		} // func LuaSpawn
 
 		#endregion
 	} // class PpsEnvironment

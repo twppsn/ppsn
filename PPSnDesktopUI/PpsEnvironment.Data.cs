@@ -66,7 +66,7 @@ namespace TecWare.PPSn
 			{
 				// open the local database
 				var dataPath = Path.Combine(info.LocalPath.FullName, "localStore.db");
-				newLocalStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc");
+				newLocalStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc;foreign keys=true");
 				newLocalStore.Open();
 				VerifyLocalStore(newLocalStore);
 			}
@@ -392,7 +392,7 @@ namespace TecWare.PPSn
 							return new OfflineItemResult(
 								response,
 								contentType.MediaType,
-								Encoding.GetEncoding(contentType.CharSet),
+								contentType.CharSet == null ?  Encoding.UTF8 : Encoding.GetEncoding(contentType.CharSet),
 								response.GetLastModified(),
 								response.ContentLength
 							);
@@ -515,7 +515,7 @@ namespace TecWare.PPSn
 			}
 
 			string resultContentType = null;
-			MemoryStream resultData = null;
+			Stream resultData = null;
 			try
 			{
 				using (var command = new SQLiteCommand("SELECT [OnlineMode], [ContentType], [ContentEncoding], [Content] FROM [main].[OfflineCache] WHERE [Path] = @path;", localStore))
@@ -534,40 +534,19 @@ namespace TecWare.PPSn
 						if (String.IsNullOrEmpty(resultContentType))
 							return false;
 
-						var readContentEncoding = reader.IsDBNull(2) ? null : reader.GetString(2);
-						var isCompressedContent = (readContentEncoding != null && readContentEncoding.IndexOf("gzip", StringComparison.OrdinalIgnoreCase) != -1);
+						var readContentEncoding = reader.IsDBNull(2) ? 
+							new string[0] : 
+							reader.GetString(2).Split(';');
 
-						Stream readerData = null;
-						try
-						{
-							readerData = reader.GetStream(3); // This method returns a newly created MemoryStream object.
-							if (readerData is MemoryStream)
-							{
-								if (isCompressedContent)
-								{
-									resultData = new MemoryStream();
-									using (var decompressionData = new GZipStream(readerData, CompressionMode.Decompress)) // The underlying stream gets automatically closed.
-										decompressionData.CopyTo(resultData);
-								}
-								else
-									resultData = (MemoryStream)readerData;
-							}
-							else
-							{
-								resultData = new MemoryStream();
-								if (isCompressedContent)
-									using (var decompressionData = new GZipStream(readerData, CompressionMode.Decompress)) // The underlying stream gets automatically closed.
-										decompressionData.CopyTo(resultData);
-								else
-									using (readerData)
-										readerData.CopyTo(resultData);
-							}
-						} // try
-						catch
-						{
-							readerData?.Dispose();
-							throw;
-						} // catch
+						if (readContentEncoding.Length > 0 && !String.IsNullOrEmpty(readContentEncoding[0]))
+							resultContentType = resultContentType + ";charset=" + readContentEncoding[0];
+
+						var isCompressedContent = readContentEncoding.Length > 1 && readContentEncoding[1] == "gzip"; // compression is marked on index 1
+
+						var src = reader.GetStream(3); // This method returns a newly created MemoryStream object.
+						resultData = isCompressedContent ?
+							new GZipStream(src, CompressionMode.Decompress, false) :
+							src;
 					} // using reader
 				} // using command
 			} // try

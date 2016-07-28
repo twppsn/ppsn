@@ -604,6 +604,8 @@ namespace TecWare.PPSn
 		/// <summary>Access to the current collected informations.</summary>
 		public PpsTraceLog Traces => logData;
 
+		LuaTable IPpsShell.LuaLibrary => this;
+		
 		// -- Static --------------------------------------------------------------
 
 		private static object environmentCounterLock = new object();

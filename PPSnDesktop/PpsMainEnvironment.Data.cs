@@ -1,13 +1,29 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Data;
 using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
@@ -15,6 +31,228 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {
+	#region -- class TagDatabaseCommands ------------------------------------------------
+
+	public sealed class TagDatabaseCommands : IDisposable
+	{
+		private readonly SQLiteCommand selectCommand;
+		private readonly SQLiteParameter selectObjectId;
+
+		private readonly SQLiteCommand insertCommand;
+		private readonly SQLiteParameter insertObjectId;
+		private readonly SQLiteParameter insertKey;
+		private readonly SQLiteParameter insertClass;
+		private readonly SQLiteParameter insertValue;
+
+		private readonly SQLiteCommand updateCommand;
+		private readonly SQLiteParameter updateId;
+		private readonly SQLiteParameter updateClass;
+		private readonly SQLiteParameter updateValue;
+
+		private readonly SQLiteCommand deleteCommand;
+		private readonly SQLiteParameter deleteId;
+
+		public TagDatabaseCommands(SQLiteConnection localConnection)
+		{
+			this.selectCommand = new SQLiteCommand("SELECT [Id], [Key], [Class], [Value] FROM main.[ObjectTags] WHERE [ObjectId] = @ObjectId;", localConnection);
+			this.selectObjectId = selectCommand.Parameters.Add("@ObjectId", DbType.Int64);
+
+			this.insertCommand = new SQLiteCommand("INSERT INTO main.[ObjectTags] ([ObjectId], [Key], [Class], [Value]) values (@ObjectId, @Key, @Class, @Value);", localConnection);
+			this.insertObjectId = insertCommand.Parameters.Add("@ObjectId", DbType.Int64);
+			this.insertKey = insertCommand.Parameters.Add("@Key", DbType.String);
+			this.insertClass = insertCommand.Parameters.Add("@Class", DbType.Int64);
+			this.insertValue = insertCommand.Parameters.Add("@Value", DbType.String);
+
+			this.updateCommand = new SQLiteCommand("UPDATE main.[ObjectTags] SET [Class] = @Class, [Value] = @Value where [Id] = @Id;", localConnection);
+			this.updateId = updateCommand.Parameters.Add("@Id", DbType.Int64);
+			this.updateClass = updateCommand.Parameters.Add("@Class", DbType.Int64);
+			this.updateValue = updateCommand.Parameters.Add("@Value", DbType.String);
+
+			this.deleteCommand = new SQLiteCommand("DELETE FROM main.[ObjectTags] WHERE [Id] = @Id;", localConnection);
+			this.deleteId = deleteCommand.Parameters.Add("@Id", DbType.Int64);
+
+			selectCommand.Prepare();
+			insertCommand.Prepare();
+			updateCommand.Prepare();
+			deleteCommand.Prepare();
+		} // ctor
+
+		public void Dispose()
+		{
+			selectCommand.Dispose();
+			insertCommand.Dispose();
+			updateCommand.Dispose();
+			deleteCommand.Dispose();
+		} // proc Dispose
+
+		public void UpdateTags(PpsObjectTag[] tags)
+		{
+			var updatedTags = new List<string>();
+
+			// update tags
+			using (var r = selectCommand.ExecuteReader(CommandBehavior.SingleResult))
+			{
+				while (r.Read())
+				{
+					var tagKey = r.GetString(1);
+					var tagClass = r.GetInt64(2);
+					var tagValue = r.GetString(3);
+
+					var sourceTag = tags.FirstOrDefault(c => String.Compare(c.Name, tagKey, StringComparison.OrdinalIgnoreCase) == 0);
+
+					if (sourceTag != null) // source exists, compare the value
+					{
+						if (sourceTag.Value != null)
+						{
+							if ((long)sourceTag.Class != tagClass && !sourceTag.IsValueEqual(tagValue)) // -> update
+							{
+								updateId.Value = r.GetInt64(0);
+								updateClass.Value = sourceTag.Class;
+								updateValue.Value = sourceTag.Value;
+							}
+
+							updatedTags.Add(tagKey);
+						}
+						else
+						{
+							deleteId.Value = r.GetInt64(0);
+							deleteCommand.ExecuteNonQuery();
+						}
+					} // if xSource
+					else
+					{
+						deleteId.Value = r.GetInt64(0);
+						deleteCommand.ExecuteNonQuery();
+					}
+				} // while r
+			} // using r
+
+			// insert all tags, they are not touched
+			foreach (var sourceTag in tags)
+			{
+				if (sourceTag.Value != null && !updatedTags.Exists(c => String.Compare(c, sourceTag.Name, StringComparison.OrdinalIgnoreCase) == 0))
+				{
+					insertKey.Value = sourceTag.Name;
+					insertClass.Value = (long)sourceTag.Class;
+					insertValue.Value = sourceTag.Value;
+					insertCommand.ExecuteNonQuery();
+				}
+			}
+		} // func UpdateTags
+
+		public object ObjectId
+		{
+			get { return selectObjectId.Value; }
+			set
+			{
+				selectObjectId.Value =
+					insertObjectId.Value = value;
+			}
+		} // prop ObjectId
+
+		public SQLiteTransaction Transaction
+		{
+			get { return selectCommand.Transaction; }
+			set
+			{
+				selectCommand.Transaction =
+					insertCommand.Transaction =
+					updateCommand.Transaction =
+					deleteCommand.Transaction = value;
+			}
+		} // prop Transaction
+	} // class TagDatabaseCommands
+
+	#endregion
+
+	#region -- class PpsConstant --------------------------------------------------------
+
+	public abstract class PpsConstant : PpsEnvironmentDefinition, IEnumerable, IEnumerable<IDataRow>, IDataColumns, INotifyCollectionChanged
+	{
+		public event NotifyCollectionChangedEventHandler CollectionChanged;
+
+		private readonly IDataColumn[] columns;
+
+		public PpsConstant(PpsEnvironment environment, string name, IDataColumn[] columns)
+			: base(environment, name)
+		{
+			this.columns = columns;
+		} // ctor
+
+		IEnumerator IEnumerable.GetEnumerator()
+			=> GetEnumerator();
+
+		public abstract IEnumerator<IDataRow> GetEnumerator();
+
+		public IReadOnlyList<IDataColumn> Columns => columns;
+	} // class PpsConstantList
+
+	#endregion
+
+	#region -- class PpsConstantData ----------------------------------------------------
+
+	//public sealed class PpsConstantList//: IList
+	//{
+	//} // class PpsConstantList
+
+	public sealed class PpsConstantData : PpsConstant
+	{
+		private readonly SQLiteConnection connection;
+		private readonly string selectCommand;
+
+		public PpsConstantData(PpsMainEnvironment environment, string name, IDataColumn[] columns)
+			: base(environment, name, columns)
+		{
+			this.connection = environment.LocalConnection;
+			this.selectCommand = BuidSqlCommand();
+		} // ctor
+
+		private string BuidSqlCommand()
+		{
+			var sql = new StringBuilder();
+
+			sql.Append("SELECT ")
+				.Append("k.ServerId")
+				.Append(",k.IsActive")
+				.Append(",k.Name");
+
+			// add columns for the meta
+			for (var i = 0; i < Columns.Count; i++)
+			{
+				var columnName = Columns[i].Name;
+				if (string.Compare(columnName, "Name", StringComparison.OrdinalIgnoreCase) != 0)
+					sql.Append(", a_").Append(columnName).Append(".Value AS [").Append(columnName).Append("]");
+			}
+
+			// build FROM
+			sql.Append(" FROM main.Constants k");
+			for (var i = 0; i < Columns.Count; i++)
+			{
+				var columnName = Columns[i].Name;
+				if (string.Compare(columnName, "Name", StringComparison.OrdinalIgnoreCase) != 0)
+				{
+					sql.Append(" LEFT OUTER JOIN main.ConstantTags AS a_").Append(columnName)
+						.Append(" ON k.Id = a_").Append(columnName).Append(".ConstantId AND ")
+						.Append("a_").Append(columnName).Append(".Key = '").Append(columnName).Append("'");
+				}
+			}
+
+			sql.Append(" WHERE k.Typ = '").Append(Name).Append("'");
+
+			return sql.ToString();
+		} // func BuildSqlCommand
+
+		public override IEnumerator<IDataRow> GetEnumerator()
+		{
+			var cmd = connection.CreateCommand();
+			cmd.CommandText = selectCommand;
+
+			return new DbRowEnumerator(cmd);
+		} // func GetEnumerator
+	} // class PpsConstantData
+
+	#endregion
+
 	public partial class PpsMainEnvironment
 	{
 		#region -- UpdateDocumentStore ----------------------------------------------------
@@ -29,11 +267,11 @@ namespace TecWare.PPSn
 			using (var cmd = new SQLiteCommand("SELECT max([RemoteRevId]) FROM main.[Objects]", LocalConnection))
 			{
 				using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
-					maxRevId = r.Read() ? r.GetInt64(0) : 0;
+					maxRevId = r.Read() && !r.IsDBNull(0) ? r.GetInt64(0) : 0;
 			}
 
 			// get the new objects, todo: not via RevId -> change id
-			using (var enumerator = GetViewData(new PpsShellGetList("dbo.objects") { Filter =new PpsDataFilterCompareExpression("RevId", PpsDataFilterCompareOperator.Greater, new PpsDataFilterCompareTextValue(maxRevId.ToString())) }).GetEnumerator())
+			using (var enumerator = GetViewData(new PpsShellGetList("dbo.objects") { Filter = new PpsDataFilterCompareExpression("RevId", PpsDataFilterCompareOperator.Greater, new PpsDataFilterCompareTextValue(maxRevId.ToString())) }).GetEnumerator())
 			{
 				var indexId = enumerator.FindColumnIndex("Id", true);
 				var indexGuid = enumerator.FindColumnIndex("Guid", true);
@@ -45,13 +283,9 @@ namespace TecWare.PPSn
 				using (SQLiteCommand
 					selectCommand = new SQLiteCommand("SELECT [Id] FROM main.[Objects] WHERE [Guid] = @Guid", LocalConnection),
 					insertCommand = new SQLiteCommand("INSERT INTO main.[Objects] ([ServerId], [Guid], [Typ], [Nr], [RemoteRevId]) VALUES (@ServerId, @Guid, @Typ, @Nr, @RevId);", LocalConnection),
-					updateCommand = new SQLiteCommand("UPDATE main.[Objects] SET [ServerId] = @ServerId, [Nr] = @Nr, [RemoteRevId] = @RevId where [Id] = @Id;", LocalConnection),
-
-					selectTagsCommand = new SQLiteCommand("SELECT [Id], [Key], [Class], [Value] FROM main.[ObjectTags] WHERE [ObjectId] = @ObjectId;", LocalConnection),
-					insertTagsCommand = new SQLiteCommand("INSERT INTO main.[ObjectTags] ([ObjectId], [Key], [Class], [Value]) values (@ObjectId, @Key, @Class, @Value);", LocalConnection),
-					updateTagsCommand = new SQLiteCommand("UPDATE main.[ObjectTags] SET [Class] = @Class, [Value] = @Value where [Id] = @Id;", LocalConnection),
-					deleteTagsCommand = new SQLiteCommand("DELETE FROM main.[ObjectTags] WHERE [Id] = @Id;", LocalConnection)
+					updateCommand = new SQLiteCommand("UPDATE main.[Objects] SET [ServerId] = @ServerId, [Nr] = @Nr, [RemoteRevId] = @RevId where [Id] = @Id;", LocalConnection)
 				)
+				using (var updateTags = new TagDatabaseCommands(LocalConnection))
 				{
 					#region -- prepare upsert --
 
@@ -68,29 +302,11 @@ namespace TecWare.PPSn
 					var updateRevId = updateCommand.Parameters.Add("@RevId", DbType.Int64);
 					var updateId = updateCommand.Parameters.Add("@Id", DbType.Int64);
 
-					var selectTagsObjectId = selectTagsCommand.Parameters.Add("@ObjectId", DbType.Int64);
-
-					var insertTagsObjectId = insertTagsCommand.Parameters.Add("@ObjectId", DbType.Int64);
-					var insertTagsKey = insertTagsCommand.Parameters.Add("@Key", DbType.String);
-					var insertTagsClass = insertTagsCommand.Parameters.Add("@Class", DbType.Int64);
-					var insertTagsValue = insertTagsCommand.Parameters.Add("@Value", DbType.String);
-
-					var updateTagsId = updateTagsCommand.Parameters.Add("@Id", DbType.Int64);
-					var updateTagsClass = updateTagsCommand.Parameters.Add("@Class", DbType.Int64);
-					var updateTagsValue = updateTagsCommand.Parameters.Add("@Value", DbType.String);
-
-					var deleteTagsId = deleteTagsCommand.Parameters.Add("@Id", DbType.Int64);
-
 					#endregion
 
 					selectCommand.Prepare();
 					insertCommand.Prepare();
 					updateCommand.Prepare();
-
-					selectTagsCommand.Prepare();
-					insertTagsCommand.Prepare();
-					updateTagsCommand.Prepare();
-					deleteTagsCommand.Prepare();
 
 					var procValidateId = new Action<long>(c =>
 					{
@@ -111,12 +327,9 @@ namespace TecWare.PPSn
 							selectCommand.Transaction =
 								insertCommand.Transaction =
 								updateCommand.Transaction =
-								selectTagsCommand.Transaction =
-								 insertTagsCommand.Transaction =
-								 updateTagsCommand.Transaction =
-								 deleteTagsCommand.Transaction = transaction;
+								updateTags.Transaction = transaction;
 
-							selectTagsObjectId.Value = DBNull.Value;
+							updateTags.ObjectId = DBNull.Value;
 
 							#region -- upsert on objects -> selectTagsObjectId get filled --
 
@@ -133,7 +346,7 @@ namespace TecWare.PPSn
 							{
 								if (r.Read())
 								{
-									selectTagsObjectId.Value =
+									updateTags.ObjectId =
 										updateId.Value = r.GetInt64(0);
 									objectExists = true;
 								}
@@ -160,72 +373,15 @@ namespace TecWare.PPSn
 
 								insertCommand.ExecuteNonQuery();
 
-								selectTagsObjectId.Value = LocalConnection.LastInsertRowId;
+								updateTags.ObjectId = LocalConnection.LastInsertRowId;
 							}
 							#endregion
 
-							#region -- upsert tabs --
+							#region -- upsert tags --
 
-							var updatedTags = new List<string>();
 							var tagDataString = enumerator.GetValue<string>(indexTags, null);
 							if (tagDataString != null)
-							{
-								var tagData = XDocument.Parse(tagDataString);
-
-								// update tags
-								using (var r = selectTagsCommand.ExecuteReader(CommandBehavior.SingleResult))
-								{
-									while (r.Read())
-									{
-										var tagKey = r.GetString(1);
-										var tagClass = r.GetInt64(2);
-										var tagValue = r.GetString(3);
-
-										var xSource = tagData.Root.Element(tagKey);
-										if (xSource != null) // source exists, compare the value
-										{
-											var otherClass = xSource.GetAttribute("c", 0);
-											var otherValue = Procs.EscapeSpecialChars(xSource.Value);
-											if (!String.IsNullOrEmpty(otherValue))
-											{
-												if (otherClass != tagClass && tagValue != otherValue) // -> update
-												{
-													updateTagsId.Value = r.GetInt64(0);
-													updateTagsClass.Value = otherClass;
-													updateTagsValue.Value = otherValue;
-												}
-
-												updatedTags.Add(tagKey);
-											}
-											else
-											{
-												deleteTagsId.Value = r.GetInt64(0);
-												deleteTagsCommand.ExecuteNonQuery();
-											}
-										} // if xSource
-										else
-										{
-											deleteTagsId.Value = r.GetInt64(0);
-											deleteTagsCommand.ExecuteNonQuery();
-										}
-									} // while r
-								} // using r
-
-								// insert all tags, they are not touched
-								foreach (var xSource in tagData.Root.Elements())
-								{
-									var tagKey = xSource.Name.LocalName;
-									var tagValue = xSource.Value;
-									if (!String.IsNullOrEmpty(tagValue) && !updatedTags.Exists(c => String.Compare(c, tagKey, StringComparison.OrdinalIgnoreCase) == 0))
-									{
-										insertTagsObjectId.Value = selectTagsObjectId.Value;
-										insertTagsKey.Value = tagKey;
-										insertTagsClass.Value = xSource.GetAttribute("c", 0);
-										insertTagsValue.Value = tagValue;
-										insertTagsCommand.ExecuteNonQuery();
-									}
-								}
-							} // if tagData
+								updateTags.UpdateTags(PpsObjectTag.ParseTagFields(tagDataString).ToArray());
 
 							#endregion
 
@@ -621,7 +777,7 @@ namespace TecWare.PPSn
 
 				private string CastToDateExpression(string columnExpr)
 					=> "cast(" + columnExpr + " AS datetime)";
-				
+
 				public string CreateWhereExpression()
 				{
 					if (type != ObjectViewColumnType.Key)
@@ -783,7 +939,7 @@ namespace TecWare.PPSn
 				cmd.Append("ORDER BY ").Append(orderCondition);
 
 				// add limit
-				if (limitStart  != -1 || limitCount != -1)
+				if (limitStart != -1 || limitCount != -1)
 				{
 					if (limitCount < 0)
 						limitCount = 0;
@@ -831,6 +987,274 @@ order by t_liefnr.value desc
 
 		#endregion
 
+		#region -- GetConstantList --------------------------------------------------------
+
+		#region -- class ConstantUpdateCommand --------------------------------------------
+
+		private sealed class ConstantUpdateCommand : IDisposable
+		{
+			private readonly SQLiteCommand selectCommand;
+			private readonly SQLiteParameter selectServerId;
+			private readonly SQLiteParameter selectTyp;
+
+			private readonly SQLiteCommand insertCommand;
+			private readonly SQLiteParameter insertServerId;
+			private readonly SQLiteParameter insertTyp;
+			private readonly SQLiteParameter insertIsActive;
+			private readonly SQLiteParameter insertSync;
+			private readonly SQLiteParameter insertName;
+
+			private readonly SQLiteCommand updateCommand;
+			private readonly SQLiteParameter updateIsActive;
+			private readonly SQLiteParameter updateSync;
+			private readonly SQLiteParameter updateName;
+			private readonly SQLiteParameter updateId;
+
+			private readonly SQLiteCommand selectAttrCommand;
+			private readonly SQLiteParameter selectAttrConstantId;
+
+			private readonly SQLiteCommand insertAttrCommand;
+			private readonly SQLiteParameter insertAttrConstantId;
+			private readonly SQLiteParameter insertAttrKey;
+			private readonly SQLiteParameter insertAttrValue;
+
+			private readonly SQLiteCommand updateAttrCommand;
+			private readonly SQLiteParameter updateAttrId;
+			private readonly SQLiteParameter updateAttrValue;
+
+			private readonly SQLiteCommand deleteAttrCommand;
+			private readonly SQLiteParameter deleteAttrId;
+
+			#region -- Ctor/Dtor ------------------------------------------------------------
+
+			public ConstantUpdateCommand(SQLiteConnection connection)
+			{
+				selectCommand = new SQLiteCommand("SELECT Id, Sync FROM main.Constants WHERE ServerId = @ServerId AND Typ = @Typ", connection);
+				selectServerId = selectCommand.Parameters.Add("@ServerId", DbType.Int64);
+				selectTyp = selectCommand.Parameters.Add("@Typ", DbType.String);
+
+				insertCommand = new SQLiteCommand("INSERT INTO main.Constants (ServerId, Typ, IsActive, Sync, Name) VALUES (@ServerId, @Typ, @IsActive, @Sync, @Name)", connection);
+				insertServerId = insertCommand.Parameters.Add("@ServerId", DbType.Int64);
+				insertTyp = insertCommand.Parameters.Add("@Typ", DbType.String);
+				insertIsActive = insertCommand.Parameters.Add("@IsActive", DbType.Boolean);
+				insertSync = insertCommand.Parameters.Add("@Sync", DbType.Int64);
+				insertName = insertCommand.Parameters.Add("@Name", DbType.String);
+
+				updateCommand = new SQLiteCommand("UPDATE main.Constants SET IsActive = @IsActive, Sync = @Sync, Name = @Name WHERE Id = @Id", connection);
+				updateIsActive = updateCommand.Parameters.Add("@IsActive", DbType.Boolean);
+				updateSync = updateCommand.Parameters.Add("@Sync", DbType.Int64);
+				updateName = updateCommand.Parameters.Add("@Name", DbType.String);
+				updateId = updateCommand.Parameters.Add("@Id", DbType.Int64);
+
+				selectAttrCommand = new SQLiteCommand("SELECT Id, Key, Value FROM main.ConstantTags WHERE ConstantId = @ConstantId", connection);
+				selectAttrConstantId = selectAttrCommand.Parameters.Add("@ConstantId", DbType.Int64);
+
+				insertAttrCommand = new SQLiteCommand("INSERT INTO main.ConstantTags (ConstantId, Key, Value) VALUES (@ConstantId, @Key, @Value)", connection);
+				insertAttrConstantId = insertAttrCommand.Parameters.Add("@ConstantId", DbType.Int64);
+				insertAttrKey = insertAttrCommand.Parameters.Add("@Key", DbType.String);
+				insertAttrValue = insertAttrCommand.Parameters.Add("@Value", DbType.String);
+
+				updateAttrCommand = new SQLiteCommand("UPDATE main.ConstantTags SET Value = @Value WHERE Id = @Id", connection);
+				updateAttrId = updateAttrCommand.Parameters.Add("@Id", DbType.Int64);
+				updateAttrValue = updateAttrCommand.Parameters.Add("@Value", DbType.String);
+
+				deleteAttrCommand = new SQLiteCommand("DELETE FROM main.ConstantTags WHERE Id = @Id", connection);
+				deleteAttrId = deleteAttrCommand.Parameters.Add("@Id", DbType.Int64);
+
+				selectCommand.Prepare();
+				insertCommand.Prepare();
+				updateCommand.Prepare();
+
+				selectAttrCommand.Prepare();
+				insertAttrCommand.Prepare();
+				updateAttrCommand.Prepare();
+				deleteAttrCommand.Prepare();
+			} // ctor
+
+			public void Dispose()
+			{
+				selectCommand?.Dispose();
+				insertCommand?.Dispose();
+				updateCommand?.Dispose();
+				selectAttrCommand?.Dispose();
+				insertAttrCommand?.Dispose();
+				updateAttrCommand?.Dispose();
+				deleteAttrCommand?.Dispose();
+			} // proc Dispose
+
+			#endregion
+
+			public void Merge(long serverId, string typ, bool isActive, long remoteSync, string name, string attr)
+			{
+				long localId;
+				long localSync;
+
+				#region -- check if the constants exists on the client --
+				selectServerId.Value = serverId;
+				selectTyp.Value = typ;
+
+				using (var r = selectCommand.ExecuteReader(CommandBehavior.SingleRow))
+				{
+					if (r.Read())
+					{
+						localId = r.GetInt64(0);
+						localSync = r.GetInt64(1);
+					}
+					else
+					{
+						localId = -1;
+						localSync = -1;
+					}
+				}
+				#endregion
+
+				#region -- merge constant, contains "return" --
+				if (localId == -1) // insert new constant
+				{
+					insertServerId.Value = serverId;
+					insertTyp.Value = typ;
+					insertIsActive.Value = isActive;
+					insertSync.Value = localSync = remoteSync;
+					insertName.Value = (object)name ?? DBNull.Value;
+					insertCommand.ExecuteNonQuery();
+					localId = insertCommand.Connection.LastInsertRowId;
+				}
+				else if (localSync < remoteSync) // update existing constant
+				{
+					updateIsActive.Value = isActive;
+					updateSync.Value = remoteSync;
+					updateName.Value = (object)name ?? DBNull.Value;
+					updateId.Value = localId;
+					updateCommand.ExecuteNonQuery();
+				}
+				else
+					return; // EXIT: nothing todo
+				#endregion
+
+				#region -- update attributes --
+
+				var attribues = XElement.Parse(attr);
+
+				selectAttrConstantId.Value = localId;
+				using (var r = selectAttrCommand.ExecuteReader(CommandBehavior.SingleResult))
+				{
+					while (r.Read())
+					{
+						var attrId = r.GetInt64(0);
+						var key = r.GetString(1);
+						var value = r.GetString(2);
+
+						var xSource = attribues.Element(key);
+						if (xSource == null) // removed
+						{
+							deleteAttrId.Value = attrId;
+							deleteAttrCommand.ExecuteNonQuery();
+						}
+						else // update key
+						{
+							xSource.Remove();
+
+							if (value != xSource.Value)
+							{
+								updateAttrId.Value = attrId;
+								updateAttrValue.Value = xSource.Value;
+								updateAttrCommand.ExecuteNonQuery();
+							}
+						}
+					}
+
+					// insert missing
+					insertAttrConstantId.Value = localId;
+					foreach (var x in attribues.Elements())
+					{
+						insertAttrKey.Value = x.Name.LocalName;
+						insertAttrValue.Value = x.Value;
+						insertAttrCommand.ExecuteNonQuery();
+					}
+				}
+
+				#endregion
+			} // proc Merge
+
+			public SQLiteTransaction Transaction
+			{
+				get { return selectCommand.Transaction; }
+				set
+				{
+					selectCommand.Transaction =
+						insertCommand.Transaction =
+						updateCommand.Transaction =
+						selectAttrCommand.Transaction =
+						insertAttrCommand.Transaction =
+						updateAttrCommand.Transaction =
+						deleteAttrCommand.Transaction = value;
+				}
+			} // prop Transaction
+		} // class ConstantUpdateCommand
+
+		#endregion
+
+		private IDataColumn CreateConstantColumn(XElement x)
+		{
+			return new SimpleDataColumn(
+				x.GetAttribute("name", String.Empty),
+				LuaType.GetType(x.GetAttribute("dataType", "string"), lateAllowed: false).Type
+			);
+		} // func CreateConstantColumn
+
+		private void UpdateConstants()
+		{
+			// first sync schema table
+			var xSchema = Request.GetXmlAsync("/constants.xml", rootName: "constants").Result;
+			foreach (var xTable in xSchema.Elements("constant"))
+			{
+				var name = xTable.GetAttribute("name", String.Empty);
+				if (String.IsNullOrEmpty(name))
+					throw new ArgumentException("constant needs name.");
+
+				var columns =
+					(
+						from xColumn in xTable.Elements("column")
+						select CreateConstantColumn(xColumn)
+					).ToArray();
+
+				constants.AppendItem(new PpsConstantData(this, name, columns)); // todo: refresh?
+			}
+
+			// second sync data
+			using (var update = new ConstantUpdateCommand(LocalConnection))
+			{
+				// sync not via max -> store last sync
+				using (var r = GetViewData(new PpsShellGetList("sys.constants") { }).GetEnumerator())
+				{
+					var idxServerId = r.FindColumnIndex("Id", true);
+					var idxTyp = r.FindColumnIndex("Typ", true);
+					var idxIsActive = r.FindColumnIndex("IsActive", true);
+					var idxSync = r.FindColumnIndex("Sync", true);
+					var idxName = r.FindColumnIndex("Name", true);
+					var idxAttr = r.FindColumnIndex("Attr", true);
+
+					while (r.MoveNext())
+					{
+						using (var trans = LocalConnection.BeginTransaction())
+						{
+							update.Merge(
+								(long)r.Current[idxServerId],
+								(string)r.Current[idxTyp],
+								(bool)(r.Current[idxIsActive] ?? false),
+								(long)(r.Current[idxSync] ?? 0L),
+								(string)r.Current[idxName],
+								(string)r.Current[idxAttr]
+							);
+							trans.Commit();
+						}
+					}
+				}
+			}
+		} // proc UpdateConstants
+
+		#endregion
+
 		protected override IEnumerable<Tuple<Type, string>> GetStoreTables()
 			=> base.GetStoreTables().Union(GetStoreTablesFromAssembly(typeof(PpsMainEnvironment), "Static.SQLite"));
 
@@ -867,4 +1291,4 @@ order by t_liefnr.value desc
 				return base.GetViewData(arguments);
 		} // func GetViewData
 	} // class PpsMainEnvironment
-	}
+}

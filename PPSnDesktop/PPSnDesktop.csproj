@@ -78,6 +78,7 @@
     </ApplicationDefinition>
     <Compile Include="PpsMainEnvironment.cs" />
     <Compile Include="PpsMainEnvironment.Data.cs" />
+    <Compile Include="PpsMainEnvironment.Documents.cs" />
     <Compile Include="PpsMainEnvironment.Views.cs" />
     <Compile Include="UI\Panes\PpsLoginPane.xaml.cs">
       <DependentUpon>PpsLoginPane.xaml</DependentUpon>
@@ -85,6 +86,7 @@
     <Compile Include="UI\PpsCharmbarControl.xaml.cs">
       <DependentUpon>PpsCharmbarControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
     <Compile Include="UI\PpsMainWindow.xaml.cs">
       <DependentUpon>PpsMainWindow.xaml</DependentUpon>
     </Compile>
@@ -99,6 +101,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <EmbeddedResource Include="Static\SQLite\Constants.sql" />
     <EmbeddedResource Include="Static\SQLite\Objects.sql" />
     <EmbeddedResource Include="Static\navigator.xml">
       <SubType>Designer</SubType>
@@ -162,6 +165,9 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <None Include="..\PPSnDesktopUI\ppsn.licenseheader">
+      <Link>ppsn.licenseheader</Link>
+    </None>
     <None Include="app.manifest" />
     <None Include="Local\Masks\MasterData.Contacts.dxml" />
     <None Include="Local\Masks\MasterData.Contacts.sxml" />
