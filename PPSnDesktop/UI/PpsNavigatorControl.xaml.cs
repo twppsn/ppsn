@@ -21,12 +21,98 @@ namespace TecWare.PPSn.UI
 	/// </summary>
 	public partial class PpsNavigatorControl : UserControl
 	{
+		private PpsNavigatorModel navigatorModel;
+
+		#region -- ctor / init --------------------------------------------------------
+
 		public PpsNavigatorControl()
 		{
 			InitializeComponent();
 		} // ctor
+
+		public void Init(PpsMainWindow windowModel)
+		{
+			navigatorModel = new PpsNavigatorModel(windowModel);
+			DataContext = navigatorModel;
+		} // proc Init
+
+		#endregion
+
+		public void OnPreview_MouseDown(object originalSource)
+		{
+			if (!ElementIsChildOfSearchBox(originalSource))
+				CollapseSearchBox();
+		}
+
+		public void OnPreview_TextInput(TextCompositionEventArgs e)
+		{
+			if (!object.Equals(e.OriginalSource, PART_SearchBox))
+				e.Handled = ExpandSearchBox(e.Text);
+		}
+
+		#region -- SearchBoxHandling --------------------------------------------------
+
+		private void PART_SearchBox_KeyDown(object sender, KeyEventArgs e)
+		{
+			if (e.Key == Key.Enter)
+			{
+				navigatorModel.ExecuteCurrentSearchText();
+			}
+		}
+
+		private bool ExpandSearchBox(string input)
+		{
+			if (String.IsNullOrEmpty(input) || (PpsNavigatorSearchBoxState)PART_SearchBox.Tag == PpsNavigatorSearchBoxState.Expanded)
+				return false;
+			if (!IsValidSearchText(input))
+				return false;
+			PART_SearchBox.Text += input;
+			PART_SearchBox.Select(PART_SearchBox.Text.Length, 0);
+			FocusManager.SetFocusedElement(PART_NavigatorGrid, PART_SearchBox);
+			Keyboard.Focus(PART_SearchBox);
+			return true;
+		}
+
+		private void CollapseSearchBox()
+		{
+			if (PART_SearchBox.Visibility != Visibility.Visible || (PpsNavigatorSearchBoxState)PART_SearchBox.Tag == PpsNavigatorSearchBoxState.Collapsed)
+				return;
+			FocusManager.SetFocusedElement(PART_ViewsHeader, PART_ViewsHeaderDescription);
+			Keyboard.Focus(PART_ViewsHeaderDescription);
+		}
+
+		private bool IsValidSearchText(string input)
+		{
+			return Char.IsLetterOrDigit(input, 0);
+		}
+
+		private bool ElementIsChildOfSearchBox(object element)
+		{
+			var o = element as DependencyObject;
+			if (o == null)
+				return false;
+			return FindChild(PART_SearchBox, o);
+		} // func ElementIsChildOfSearchBox
+
+		private bool FindChild(DependencyObject parent, DependencyObject o)
+		{
+			int childrenCount = VisualTreeHelper.GetChildrenCount(parent);
+			for (int i = 0; i < childrenCount; i++)
+			{
+				var child = VisualTreeHelper.GetChild(parent, i);
+				if (child.Equals(o))
+					return true;
+				if (FindChild(child, o))
+					return true;
+			}
+			return false;
+		} // func FindChild
+
+		#endregion
+
 	} // class PpsNavigatorControl
 
+	#region -- class PpsNavigatorPriorityToDockPosition -------------------------------
 
 	/// <summary>
 	/// Converter zum Ermitteln der Dockimg Position aus der Priority Property eines ActionCommands
@@ -47,4 +133,17 @@ namespace TecWare.PPSn.UI
 			return DependencyProperty.UnsetValue;
 		}
 	} // class PpsNavigatorPriorityToDockPosition
+
+	#endregion
+
+	#region -- enum PpsNavigatorSearchBoxState ----------------------------------------
+
+	internal enum PpsNavigatorSearchBoxState
+	{
+		Expanded,
+		Collapsed
+	} // enum PpsNavigatorSearchBoxState
+
+	#endregion
+
 }

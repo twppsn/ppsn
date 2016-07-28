@@ -71,7 +71,7 @@ namespace TecWare.PPSn.UI
 		private sealed class EmptyExpression : CurrentSearchTextExpression
 		{
 			public EmptyExpression(PpsNavigatorModel navigator, string searchText, int searchTextOffset)
-				:base(navigator, searchText, searchTextOffset)
+				: base(navigator, searchText, searchTextOffset)
 			{
 			} // ctor
 
@@ -85,7 +85,7 @@ namespace TecWare.PPSn.UI
 		private sealed class SearchExpression : CurrentSearchTextExpression
 		{
 			public SearchExpression(PpsNavigatorModel navigator, string searchText, int searchTextOffset)
-				:base(navigator, searchText, searchTextOffset)
+				: base(navigator, searchText, searchTextOffset)
 			{
 			} // ctor
 		} // class SearchExpression
@@ -97,7 +97,7 @@ namespace TecWare.PPSn.UI
 		private sealed class MacroExpression : CurrentSearchTextExpression
 		{
 			public MacroExpression(PpsNavigatorModel navigator, string searchText, int searchTextOffset)
-				:base(navigator, searchText, searchTextOffset)
+				: base(navigator, searchText, searchTextOffset)
 			{
 			} // ctor
 		} // class MacroExpression
@@ -166,7 +166,7 @@ namespace TecWare.PPSn.UI
 
 			private PpsNavigatorModel model;
 			private PpsMainViewFilter filter;
-			
+
 			internal PpsFilterView(PpsNavigatorModel model, PpsMainViewFilter filter)
 			{
 				this.model = model;
@@ -217,11 +217,63 @@ namespace TecWare.PPSn.UI
 
 			internal void FireIsCheckedChanged() => OnPropertyChanged(nameof(IsChecked));
 
-
 			public string Name => order.Name;
 			public string DisplayName => order.DisplayName;
 			public bool? IsChecked => model.currentOrder == this ? (bool?)model.sortAscending : null;
-    } // class PpsOrderView
+		} // class PpsOrderView
+
+		#endregion
+
+		#region -- class RunActionCommand -------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private class RunActionCommand : ICommand
+		{
+			public event EventHandler CanExecuteChanged { add { } remove { } }
+
+			private PpsNavigatorModel model;
+
+			internal RunActionCommand(PpsNavigatorModel model)
+			{
+				this.model = model;
+			} // ctor
+
+			public void Execute(object parameter)
+			{
+				var action = parameter as PpsMainActionDefinition;
+				if (action != null)
+					model.ExecuteAction(action);
+            } // proc Execute
+
+			public bool CanExecute(object parameter) => true;
+		} // class RunActionCommand
+
+		#endregion
+
+		#region -- class ToggleShowViewDescriptionCommand ---------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private class ToggleShowViewDescriptionCommand : ICommand
+		{
+			public event EventHandler CanExecuteChanged { add { } remove { } }
+
+			private PpsNavigatorModel model;
+
+			internal ToggleShowViewDescriptionCommand(PpsNavigatorModel model)
+			{
+				this.model = model;
+			} // ctor
+
+			public void Execute(object parameter)
+			{
+				var currentShow = model.ViewsShowDescription;
+				model.ShowViewsDescription(!currentShow);
+			} // proc Execute
+
+			public bool CanExecute(object parameter) => true;
+		} // class ToggleShowViewDescriptionCommand
 
 		#endregion
 
@@ -238,9 +290,13 @@ namespace TecWare.PPSn.UI
 
 		private PpsDataList items;
 		private ICollectionView itemsView;
-		
-		private CurrentSearchTextExpression currentSearchTextExpression = EmptyExpression.Instance;		
-		
+
+		private CurrentSearchTextExpression currentSearchTextExpression = EmptyExpression.Instance;
+
+		private RunActionCommand runActionCommand;
+		private ToggleShowViewDescriptionCommand toggleShowViewDescriptionCommand;
+		private bool viewsShowDescription = true;
+
 		public PpsNavigatorModel(PpsMainWindow windowModel)
 		{
 			this.windowModel = windowModel;
@@ -262,17 +318,24 @@ namespace TecWare.PPSn.UI
 			itemsView = CollectionViewSource.GetDefaultView(items);
 			itemsView.CurrentChanged += (sender, e) => RefreshActions();
 
-			// Update the view
-			if (!views.View.MoveCurrentToFirst())
-				UpdateCurrentView((PpsMainViewDefinition)views.View.CurrentItem);
+			// Create Command
+			toggleShowViewDescriptionCommand = new ToggleShowViewDescriptionCommand(this);
+			runActionCommand = new RunActionCommand(this);
+
+			// Update the view, no selection
+			if (views.View.CurrentItem != null)
+				views.View.MoveCurrentToPosition(-1);
+			else
+				UpdateCurrentView(null);
 		} // ctor
 
 		private bool FilterAction(object item)
 		{
+
 			var action = item as PpsMainActionDefinition;
 			return action != null ? action.CheckCondition(this, false) : false;
 		} // func ActionFilter
-		
+
 		private void UpdateCurrentView(PpsMainViewDefinition currentView)
 		{
 			if (currentView == null)
@@ -336,7 +399,7 @@ namespace TecWare.PPSn.UI
 				oldOrder.FireIsCheckedChanged();
 			if (newOrder != null)
 				newOrder.FireIsCheckedChanged();
-    } // proc UpdateCurrentOrder
+		} // proc UpdateCurrentOrder
 
 		private void UpdateCurrentExtentedSearch(string searchText)
 		{
@@ -389,7 +452,6 @@ namespace TecWare.PPSn.UI
 			PpsDataFilterExpression exprFilter;
 			PpsDataFilterExpression exprSearch;
 
-
 			// build neu data source
 			if (CurrentView == null) // create view from local view
 			{
@@ -420,6 +482,19 @@ namespace TecWare.PPSn.UI
 		{
 			actions.View.Refresh();
 		} // proc RefreshActions
+
+		private void ExecuteAction(PpsMainActionDefinition action)
+		{
+			action.Execute(this);
+		} // proc ExecuteAction
+
+		private void ShowViewsDescription(bool show)
+		{
+			if (show == viewsShowDescription)
+				return;
+			viewsShowDescription = show;
+			OnPropertyChanged(nameof(ViewsShowDescription));
+		} // proc ShowViewsDescription
 
 		[LuaMember(nameof(IsItemType))]
 		public bool IsItemType(object item, string typ)
@@ -476,5 +551,12 @@ namespace TecWare.PPSn.UI
 		public string CurrentSearchText { get { return currentSearchTextExpression?.SearchText; } set { UpdateCurrentExtentedSearch(value); } }
 		/// <summary>Is the current search content executable.</summary>
 		public bool CanExecuteSearchText => currentSearchTextExpression.IsExecutable;
+
+		/// <summary>Command to run action</summary>
+		public ICommand RunAction => runActionCommand;
+		/// <summary>Command to toggle description visibility</summary>
+		public ICommand ToggleShowViewDescription => toggleShowViewDescriptionCommand;
+		/// <summary>Are Descriptions in views visible?</summary>
+		public bool ViewsShowDescription => viewsShowDescription;
 	} // class PpsNavigatorModel
 }

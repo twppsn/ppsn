@@ -40,15 +40,9 @@ namespace TecWare.PPSn.UI
 	{
 		/// <summary>Toggles between DataPane and Navigator.</summary>
 		public readonly static RoutedCommand NavigatorToggleCommand = new RoutedCommand("NavigatorToggle", typeof(PpsMainWindow));
-		/// <summary>Toggles the description texts in the navigator panel.</summary>
-		public readonly static RoutedCommand NavigatorViewsToggleDescriptionCommand = new RoutedCommand("NavigatorViewsToggleDescription", typeof(PpsMainWindow));
-		/// <summary>Command to run a dynamic command in the navigator.</summary>
-		public readonly static RoutedCommand RunActionCommand = new RoutedCommand("RunAction", typeof(PpsNavigatorControl));
 
 		private readonly static DependencyProperty NavigatorVisibilityProperty = DependencyProperty.Register("NavigatorVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Visible));
-		private readonly static DependencyProperty NavigatorViewsDescriptionVisibilityProperty = DependencyProperty.Register("NavigatorViewsDescriptionVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Visible));
 		private readonly static DependencyProperty PaneVisibilityProperty = DependencyProperty.Register("PaneVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Collapsed));
-		private readonly static DependencyProperty CharmbarVisibilityProperty = DependencyProperty.Register("CharmbarVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Collapsed));
 		private readonly static DependencyProperty CharmbarActualWidthProperty = DependencyProperty.Register("CharmbarActualWidth", typeof(double), typeof(PpsMainWindow));
 
 		/// <summary>Readonly property for the current pane.</summary>
@@ -56,8 +50,7 @@ namespace TecWare.PPSn.UI
 		private readonly static DependencyProperty CurrentPaneProperty = CurrentPaneKey.DependencyProperty;
 
 		private int windowIndex = -1;										// settings key
-		private PpsWindowApplicationSettings settings;	// current settings for the window
-		private PpsNavigatorModel navigator;						// base model for the navigator content
+		private PpsWindowApplicationSettings settings;	                    // current settings for the window
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -66,10 +59,10 @@ namespace TecWare.PPSn.UI
 			this.windowIndex = windowIndex;
 
 			InitializeComponent();
-
+			
 			// initialize settings
-			navigator = new PpsNavigatorModel(this);
 			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
+			PART_Navigator.Init(this);
 
 			#region -- set basic command bindings --
 			CommandBindings.Add(
@@ -95,32 +88,11 @@ namespace TecWare.PPSn.UI
 			);
 
 			CommandBindings.Add(
-				new CommandBinding(NavigatorViewsToggleDescriptionCommand,
-					(sender, e) =>
-					{
-						IsViewsDescriptionVisible = !IsViewsDescriptionVisible;
-						e.Handled = true;
-					},
-					(sender, e) => e.CanExecute = true
-				)
-			);
-
-			CommandBindings.Add(
 				new CommandBinding(PpsWindow.TraceLogCommand,
 					async	(sender, e) =>
 					{
 						e.Handled = true;
 						await LoadPaneAsync(Environment.TracePane, PpsNewWindowMode.NewSingleWindow, null);
-					}
-				)
-			);
-
-			CommandBindings.Add(
-				new CommandBinding(RunActionCommand,
-					(sender, e) =>
-					{
-						((PpsMainActionDefinition)((Button)e.OriginalSource).DataContext).Execute(navigator);
-						e.Handled = true;
 					}
 				)
 			);
@@ -137,8 +109,6 @@ namespace TecWare.PPSn.UI
 		} // ctor
 
 		#endregion
-
-
 
 		#region -- LoadPaneAsync ----------------------------------------------------------
 
@@ -307,47 +277,35 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		public void RefreshTitle()
+		{
+			this.Title = CurrentPane == null ? "PPS2000n" : String.Format("PPS2000n - {0}", CurrentPane.Title);
+		} // proc RefreshTitle
+
+		#region -- Navigator.SearchBox ------------------------------------------------
+
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
 			base.OnPreviewMouseDown(e);
-			if (!object.Equals(e.Source, PART_SearchBox))
-				CollapseSearchBox();
-		}
+			if (!IsNavigatorVisible)
+				return;
+			PART_Navigator.OnPreview_MouseDown(e.OriginalSource);
+		} // event OnPreviewMouseDown
 
 		protected override void OnPreviewTextInput(TextCompositionEventArgs e)
 		{
 			base.OnPreviewTextInput(e);
-			if (!object.Equals(e.Source, PART_SearchBox))
-				e.Handled = ExpandSearchBox(e.Text);
-		}
+			if (!IsNavigatorVisible)
+				return;
+			PART_Navigator.OnPreview_TextInput(e);
+		} // event OnPreviewTextInput
 
 		protected override void OnWindowCaptionClicked()
 		{
-			CollapseSearchBox();
-		}
-
-		#region -- SearchBoxHandling --------------------------------------------------
-
-		private bool ExpandSearchBox(string input)
-		{
-			if (String.IsNullOrEmpty(input) || PART_SearchBox.Visibility != Visibility.Visible || (PpsnSearchBoxState)PART_SearchBox.Tag == PpsnSearchBoxState.Expanded)
-				return false;
-			if (!Char.IsLetterOrDigit(input, 0))
-				return false;
-			PART_SearchBox.Text += input;
-			PART_SearchBox.Select(PART_SearchBox.Text.Length, 0);
-			FocusManager.SetFocusedElement(PART_MainWindowGrid, PART_SearchBox);
-			Keyboard.Focus(PART_SearchBox);
-			return true;
-		}
-
-		private void CollapseSearchBox()
-		{
-			if (PART_SearchBox.Visibility != Visibility.Visible || (PpsnSearchBoxState)PART_SearchBox.Tag == PpsnSearchBoxState.Collapsed)
+			if (!IsNavigatorVisible)
 				return;
-			FocusManager.SetFocusedElement(PART_MainWindowGrid, PART_Caption);
-			Keyboard.Focus(PART_Caption);
-		}
+			PART_Navigator.OnPreview_MouseDown(null);
+		} //
 
 		#endregion
 
@@ -365,28 +323,8 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		// TEST Schmidt open ContextMenu CurrentUser with MouseButtonLeft
-		private void PART_User_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-		{
-			e.Handled = true;
-			var mouseDownEvent =
-				new MouseButtonEventArgs(Mouse.PrimaryDevice, System.Environment.TickCount, MouseButton.Right)
-				{
-					RoutedEvent = Mouse.MouseUpEvent,
-					Source = PART_User,
-				};
-			InputManager.Current.ProcessInput(mouseDownEvent);
-		} // event PART_User_MouseLeftButtonUp
-				
-		public void RefreshTitle()
-		{
-			this.Title = CurrentPane == null ? "PPS2000n" : String.Format("PPS2000n - {0}", CurrentPane.Title);
-		} // proc RefreshTitle
-
 		/// <summary>Returns the current view of the pane as a wpf control.</summary>
 		public IPpsWindowPane CurrentPane => (IPpsWindowPane)GetValue(CurrentPaneProperty);
-		/// <summary></summary>
-		public PpsNavigatorModel Navigator => navigator;
 		/// <summary>Settings of the current window.</summary>
 		public PpsWindowApplicationSettings Settings => settings;
 		/// <summary>Index of the current window</summary>
@@ -410,56 +348,16 @@ namespace TecWare.PPSn.UI
 					{
 						SetValue(NavigatorVisibilityProperty, Visibility.Visible);
 						SetValue(PaneVisibilityProperty, Visibility.Collapsed);
-						SetValue(CharmbarVisibilityProperty, Visibility.Collapsed);
 					}
 					else
 					{
 						SetValue(NavigatorVisibilityProperty, Visibility.Collapsed);
 						SetValue(PaneVisibilityProperty, Visibility.Visible);
-						SetValue(CharmbarVisibilityProperty, Visibility.Visible);
 					}
 				}
 			}
 		} // prop NavigatorState
 
-		private bool IsViewsDescriptionVisible
-		{
-			get
-			{
-				return (Visibility)GetValue(NavigatorViewsDescriptionVisibilityProperty) == Visibility.Visible;
-			}
-			set
-			{
-				if (IsViewsDescriptionVisible != value)
-				{
-					if (value)
-					{
-						SetValue(NavigatorViewsDescriptionVisibilityProperty, Visibility.Visible);
-					}
-					else
-					{
-						SetValue(NavigatorViewsDescriptionVisibilityProperty, Visibility.Collapsed);
-					}
-				}
-			}
-		} // prop IsViewsDescriptionVisible
-
-		private void PART_SearchBox_KeyDown(object sender, KeyEventArgs e)
-		{
-			if (e.Key == Key.Enter)
-			{
-				navigator.ExecuteCurrentSearchText();
-			}
-		}
 	} // class PpsMainWindow
 
-	#region -- enum PpsnSearchBoxState ------------------------------------------------
-
-	internal enum PpsnSearchBoxState
-	{
-		Expanded,
-		Collapsed
-	}
-
-	#endregion
 }
