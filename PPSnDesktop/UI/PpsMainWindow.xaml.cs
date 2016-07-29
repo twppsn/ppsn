@@ -20,20 +20,6 @@ using System.Reflection;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- enum PpsNewWindowMode ----------------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public enum PpsNewWindowMode
-	{
-		Default,
-		UseThisWindow,
-		NewMainWindow,
-		NewSingleWindow
-	} // enum PpsNewWindowMode
-
-	#endregion
-
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public partial class PpsMainWindow : PpsWindow
@@ -92,7 +78,7 @@ namespace TecWare.PPSn.UI
 					async	(sender, e) =>
 					{
 						e.Handled = true;
-						await LoadPaneAsync(Environment.TracePane, PpsNewWindowMode.NewSingleWindow, null);
+						await LoadPaneAsync(Environment.TracePane, PpsOpenPaneMode.NewSingleWindow, null);
 					}
 				)
 			);
@@ -107,173 +93,6 @@ namespace TecWare.PPSn.UI
 			var descriptor = DependencyPropertyDescriptor.FromProperty(PpsCharmbarControl.ActualWidthProperty, typeof(PpsCharmbarControl));
 			descriptor.AddValueChanged(PART_Charmbar, OnCharmbarActualWidthChanged);
 		} // ctor
-
-		#endregion
-
-		#region -- LoadPaneAsync ----------------------------------------------------------
-
-		private async Task StartLoginAsync()
-		{
-			await LoadPaneAsync(typeof(Panes.PpsLoginPane), null);
-		} // proc StartLogin
-
-		private IPpsWindowPane CreateEmptyPane(Type paneType)
-		{
-			var ti = paneType.GetTypeInfo();
-			var ctorBest = (ConstructorInfo)null;
-			var ctoreBestParamLength = -1;
-
-			// search for the longest constructor
-			foreach (var ci in ti.GetConstructors())
-			{
-				var pi = ci.GetParameters();
-				if (ctoreBestParamLength < pi.Length)
-				{
-					ctorBest = ci;
-					ctoreBestParamLength = pi.Length;
-				}
-			}
-			if (ctorBest == null)
-				throw new ArgumentException($"'{ti.Name}' has no constructor.");
-
-			// create the argument set
-			var parameterInfo = ctorBest.GetParameters();
-			var paneArguments = new object[parameterInfo.Length];
-
-			for (int i = 0; i < paneArguments.Length; i++)
-			{
-				var pi = parameterInfo[i];
-				var tiParam = pi.ParameterType.GetTypeInfo();
-				if (tiParam.IsAssignableFrom(typeof(PpsMainEnvironment)))
-					paneArguments[i] = Environment;
-				else if (pi.HasDefaultValue)
-					paneArguments[i] = pi.DefaultValue;
-				else
-					throw new ArgumentException($"Unsupported argument '{pi.Name}' for type '{ti.Name}'.");
-			}
-
-			// activate the pane
-			return (IPpsWindowPane)Activator.CreateInstance(paneType, paneArguments);
-		} // func CreateEmptyPane
-
-		/// <summary>Loads a new current pane.</summary>
-		/// <param name="paneType">Type of the pane to load.</param>
-		/// <param name="arguments">Argument set for the pane</param>
-		/// <returns></returns>
-		public Task LoadPaneAsync(Type paneType, LuaTable arguments)
-		{
-			return LoadPaneAsync(paneType, PpsNewWindowMode.Default, arguments);
-		} // func LoadPaneAsync
-
-		/// <summary>Loads a new current pane.</summary>
-		/// <param name="paneType">Type of the pane to load.</param>
-		/// <param name="newWindowMode"></param>
-		/// <param name="arguments">Argument set for the pane</param>
-		/// <returns></returns>
-		public async Task LoadPaneAsync(Type paneType, PpsNewWindowMode newWindowMode, LuaTable arguments)
-		{
-			if (newWindowMode == PpsNewWindowMode.Default)
-				newWindowMode = (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) ? PpsNewWindowMode.NewMainWindow : PpsNewWindowMode.UseThisWindow;
-
-			switch (newWindowMode)
-			{
-				case PpsNewWindowMode.NewMainWindow:
-				case PpsNewWindowMode.NewSingleWindow:
-					{
-						var newWindow = Environment.GetWindows().FirstOrDefault(c => ComparePane(c.CurrentPane, paneType, arguments) == PpsWindowPaneCompareResult.Same);
-						if (newWindow == null)
-						{
-							newWindow = await Environment.CreateMainWindowAsync();
-							await newWindow.LoadPaneInternAsync(paneType, arguments);
-						}
-						newWindow.Activate();
-					}
-					break;
-				default:
-					await LoadPaneInternAsync(paneType, arguments);
-					break;
-			}
-		} // proc StartPaneAsync
-
-		private async Task LoadPaneInternAsync(Type paneType, LuaTable arguments)
-		{
-			var currentPane = CurrentPane;
-			if (arguments == null)
-				arguments = new LuaTable();
-
-			try
-			{
-				// check, if we have to initialize a new pane
-				PpsWindowPaneCompareResult loadMode = ComparePane(currentPane, paneType, arguments);
-
-				// do the load mode
-				switch (loadMode)
-				{
-					case PpsWindowPaneCompareResult.Incompatible:
-
-						// unload the current pane
-						if (!await UnloadPaneAsync())
-							return;
-
-						// Build the new pane
-						currentPane = CreateEmptyPane(paneType);
-						SetValue(CurrentPaneKey, currentPane);
-
-						goto case PpsWindowPaneCompareResult.Reload;
-
-					case PpsWindowPaneCompareResult.Reload:
-
-						// load or reload data
-						await currentPane.LoadAsync(arguments);
-						goto case PpsWindowPaneCompareResult.Same;
-
-					case PpsWindowPaneCompareResult.Same:
-
-						// Hide Navigator
-						await Dispatcher.InvokeAsync(() =>
-						{
-							IsNavigatorVisible = false;
-							RefreshTitle();
-						});
-						break;
-				}
-			}
-			catch (Exception e)
-			{
-				await Environment.ShowExceptionAsync(ExceptionShowFlags.None, e, "Die Ansicht konnte nicht geladen werden.");
-			}
-		} // proc LoadPaneInternAsync
-
-		private static PpsWindowPaneCompareResult ComparePane(IPpsWindowPane currentPane, Type paneType, LuaTable arguments)
-		{
-			var loadMode = PpsWindowPaneCompareResult.Incompatible;
-			if (currentPane != null)
-			{
-				if (currentPane.GetType() == paneType)
-					loadMode = currentPane.CompareArguments(arguments);
-			}
-			return loadMode;
-		} // func ComparePane
-
-		/// <summary>Unloads the current pane, to a empty pane.</summary>
-		/// <returns></returns>
-		public async Task<bool> UnloadPaneAsync()
-		{
-			if (CurrentPane == null)
-				return true;
-			else
-			{
-				var currentPane = CurrentPane;
-				if (await currentPane.UnloadAsync())
-				{
-					Procs.FreeAndNil(ref currentPane);
-					SetValue(CurrentPaneKey, null);
-					return true;
-				}
-				else
-					return false;
-			}
-		} // proc UnloadPaneAsync
 
 		#endregion
 
@@ -323,8 +142,6 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		/// <summary>Returns the current view of the pane as a wpf control.</summary>
-		public IPpsWindowPane CurrentPane => (IPpsWindowPane)GetValue(CurrentPaneProperty);
 		/// <summary>Settings of the current window.</summary>
 		public PpsWindowApplicationSettings Settings => settings;
 		/// <summary>Index of the current window</summary>

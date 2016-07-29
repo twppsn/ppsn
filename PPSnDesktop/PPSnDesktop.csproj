@@ -87,6 +87,7 @@
       <DependentUpon>PpsCharmbarControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="UI\PpsGenericMaskWindowPane.cs" />
+    <Compile Include="UI\PpsMainWindow.Panes.cs" />
     <Compile Include="UI\PpsMainWindow.xaml.cs">
       <DependentUpon>PpsMainWindow.xaml</DependentUpon>
     </Compile>
