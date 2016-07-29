@@ -482,7 +482,7 @@
 
         <TextBox x:Name="PART_SearchBox" Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="320"
 				 Style="{StaticResource NavigatorSearchBoxStyle}"
-				 Text="{Binding Path=CurrentSearchText, Delay=300, UpdateSourceTrigger=PropertyChanged}"/>
+				 Text="{Binding Path=CurrentSearchText, Delay=300, UpdateSourceTrigger=PropertyChanged}" KeyDown="PART_SearchBox_KeyDown"/>
 
         <uiC:DataListControl x:Name="PART_Items" Grid.Column="2" Grid.Row="3" Style="{StaticResource PPSnListBoxStyle}" FontSize="14.667" SnapsToDevicePixels="True"
 							 AlternationCount="2" IsSynchronizedWithCurrentItem="True"

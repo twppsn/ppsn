@@ -230,7 +230,7 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		private class RunActionCommand : ICommand
 		{
-			public event EventHandler CanExecuteChanged { add { } remove { } }
+			public event EventHandler CanExecuteChanged;
 
 			private PpsNavigatorModel model;
 
@@ -244,9 +244,15 @@ namespace TecWare.PPSn.UI
 				var action = parameter as PpsMainActionDefinition;
 				if (action != null)
 					model.ExecuteAction(action);
-            } // proc Execute
+			} // proc Execute
 
-			public bool CanExecute(object parameter) => true;
+			public void DoCanExecuteChanged()
+			{
+				CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+			} // proc DoCanExecuteChanged
+
+			public bool CanExecute(object parameter)
+				=> model.currentSearchTextExpression?.IsExecutable ?? false;
 		} // class RunActionCommand
 
 		#endregion
@@ -549,9 +555,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Current SearchText</summary>
 		public string CurrentSearchText { get { return currentSearchTextExpression?.SearchText; } set { UpdateCurrentExtentedSearch(value); } }
-		/// <summary>Is the current search content executable.</summary>
-		public bool CanExecuteSearchText => currentSearchTextExpression.IsExecutable;
-
+	
 		/// <summary>Command to run action</summary>
 		public ICommand RunAction => runActionCommand;
 		/// <summary>Command to toggle description visibility</summary>

@@ -220,17 +220,17 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Loads a new current pane.</summary>
 		/// <param name="paneType">Type of the pane to load.</param>
-		/// <param name="newWindowMode"></param>
+		/// <param name="newPaneMode"></param>
 		/// <param name="arguments">Argument set for the pane</param>
 		/// <returns></returns>
-		public async Task LoadPaneAsync(Type paneType, PpsOpenPaneMode newWindowMode, LuaTable arguments)
+		public async Task LoadPaneAsync(Type paneType, PpsOpenPaneMode newPaneMode, LuaTable arguments)
 		{
-			if (newWindowMode == PpsOpenPaneMode.Default)
-				newWindowMode = (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) ?
+			if (newPaneMode == PpsOpenPaneMode.Default)
+				newPaneMode = (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) ?
 					PpsOpenPaneMode.NewMainWindow :
 					(panes.Count > 1 ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane);
 
-			switch (newWindowMode)
+			switch (newPaneMode)
 			{
 				case PpsOpenPaneMode.NewMainWindow:
 				case PpsOpenPaneMode.NewSingleWindow:
