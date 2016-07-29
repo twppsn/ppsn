@@ -35,7 +35,7 @@ namespace TecWare.PPSn.UI
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		private readonly List<IPpsWindowPane> panes = new List<IPpsWindowPane>();
-		
+
 		public IEnumerator<IPpsWindowPane> GetEnumerator()
 			=> panes.GetEnumerator();
 
@@ -61,7 +61,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="arguments"></param>
 		/// <param name="compatibleAllowed"></param>
 		/// <returns></returns>
-		public Tuple<PpsWindowPaneCompareResult, IPpsWindowPane>  FindPaneByArguments(Type paneType, LuaTable arguments, bool compatibleAllowed = false)
+		public Tuple<PpsWindowPaneCompareResult, IPpsWindowPane> FindPaneByArguments(Type paneType, LuaTable arguments, bool compatibleAllowed = false)
 		{
 			IPpsWindowPane compatiblePane = null;
 
@@ -81,7 +81,7 @@ namespace TecWare.PPSn.UI
 				new Tuple<PpsWindowPaneCompareResult, IPpsWindowPane>(PpsWindowPaneCompareResult.Incompatible, null) :
 				new Tuple<PpsWindowPaneCompareResult, IPpsWindowPane>(PpsWindowPaneCompareResult.Reload, compatiblePane);
 		} // func FindPaneByArguments
-		
+
 		public int Count => panes.Count;
 
 		public IPpsWindowPane this[int index] => panes[index];
@@ -217,7 +217,7 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		public Task LoadPaneAsync(Type paneType, LuaTable arguments)
 			=> LoadPaneAsync(paneType, PpsOpenPaneMode.Default, arguments);
-		
+
 		/// <summary>Loads a new current pane.</summary>
 		/// <param name="paneType">Type of the pane to load.</param>
 		/// <param name="newWindowMode"></param>
@@ -235,12 +235,12 @@ namespace TecWare.PPSn.UI
 				case PpsOpenPaneMode.NewMainWindow:
 				case PpsOpenPaneMode.NewSingleWindow:
 					{
-						var loadedPane = 
+						var loadedPane =
 						(
-							from w in	Environment.GetWindows()
-								let r = w.Panes.FindPaneByArguments(paneType, arguments, false)
-								where r.Item1 == PpsWindowPaneCompareResult.Same
-								select new Tuple<PpsMainWindow, IPpsWindowPane>(w, r.Item2)
+							from w in Environment.GetWindows()
+							let r = w.Panes.FindPaneByArguments(paneType, arguments, false)
+							where r.Item1 == PpsWindowPaneCompareResult.Same
+							select new Tuple<PpsMainWindow, IPpsWindowPane>(w, r.Item2)
 						).FirstOrDefault();
 
 						if (loadedPane == null)
@@ -248,10 +248,11 @@ namespace TecWare.PPSn.UI
 							var newWindow = await Environment.CreateMainWindowAsync();
 							await newWindow.LoadPaneInternAsync(paneType, arguments);
 						}
-
-						loadedPane.Item1.Activate(loadedPane.Item2);
+						else
+							loadedPane.Item1.Activate(loadedPane.Item2);
 					}
 					break;
+
 				case PpsOpenPaneMode.ReplacePane:
 
 					// replace pane => will close all panes an open an new one
@@ -259,6 +260,7 @@ namespace TecWare.PPSn.UI
 						await LoadPaneInternAsync(paneType, arguments);
 
 					break;
+
 				default:
 					{
 						var loadedPane = Panes.FirstOrDefault(c => c.GetType() == paneType && c.CompareArguments(arguments) == PpsWindowPaneCompareResult.Same);
@@ -291,7 +293,7 @@ namespace TecWare.PPSn.UI
 					newPane.Dispose();
 					throw;
 				}
-				
+
 				// Hide Navigator and show the pane
 				await Dispatcher.InvokeAsync(() =>
 				{
@@ -350,7 +352,7 @@ namespace TecWare.PPSn.UI
 		{
 			await LoadPaneAsync(typeof(Panes.PpsLoginPane), null);
 		} // proc StartLogin
-		
+
 		/// <summary>Returns the current view of the pane as a wpf control.</summary>
 		public IPpsWindowPane CurrentPane => (IPpsWindowPane)GetValue(CurrentPaneProperty);
 		/// <summary>List with the current open panes.</summary>

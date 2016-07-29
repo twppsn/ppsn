@@ -107,10 +107,6 @@
     <EmbeddedResource Include="Static\navigator.xml">
       <SubType>Designer</SubType>
     </EmbeddedResource>
-    <Resource Include="Local\Templates.xml" />
-    <Resource Include="Local\Actions.xml">
-      <SubType>Designer</SubType>
-    </Resource>
     <Content Include="Local\Masks\TestWpfGeneric.xaml">
       <SubType>Designer</SubType>
     </Content>
@@ -184,14 +180,7 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Local\Views.xml">
-      <SubType>Designer</SubType>
-    </Resource>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Local\Data\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <ProjectReference Include="..\..\..\twdes\des\Extern\Core\DESCore\DESCore.csproj">
       <Project>{67528843-e631-4c05-b6e8-514cc8bec7b6}</Project>

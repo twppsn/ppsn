@@ -248,7 +248,14 @@ namespace TecWare.PPSn.UI
 		/// <summary>Access to the current lua compiler</summary>
 		public Lua Lua => Environment.Lua;
 
-		public IEnumerable<object> Commands => control == null ? null : ((PpsGenericWpfControl)control).Commands;
+		public IEnumerable<object> Commands
+		{
+			get
+			{
+				var ppsGeneric = control as PpsGenericWpfControl;
+				return ppsGeneric == null ? null : ppsGeneric.Commands;
+			}
+		} // prop Commands
 
 		public virtual bool IsDirty => false;
 	} // class PpsGenericWpfWindowContext
