@@ -1,6 +1,6 @@
 ﻿CREATE TABLE [dbo].[Adre]
 (
-	[Id] BIGINT NOT NULL CONSTRAINT pkAdreId PRIMARY KEY IDENTITY (1,1), 
+	[Id] BIGINT NOT NULL CONSTRAINT pkAdreId PRIMARY KEY IDENTITY (1,1),
 	[ObjkId] BIGINT NOT NULL CONSTRAINT fkAdreObjkId REFERENCES dbo.Objk (Id), 
 	[Name] NVARCHAR(100) NOT NULL, 
 	[Postfach] NVARCHAR(20) NULL, 
@@ -102,4 +102,4 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1type = N'TABLE',
     @level1name = N'Adre',
     @level2type = N'COLUMN',
-    @level2name = 'Plz'
+    @level2name = N'PLZ'

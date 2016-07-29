@@ -318,6 +318,8 @@ namespace TecWare.PPSn.Server
 
 		public PpsDataSource DataSource => dataSource;
 		public string Name => name;
+
+		public abstract IEnumerable<IDataColumn> Columns { get; }
 	} // class PpsConstantDefintion
 
 	#endregion
@@ -776,6 +778,26 @@ namespace TecWare.PPSn.Server
 
 		public PpsDataSelector GetConstantSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
 			=> new ConstantSelector(dataSource, this);
+
+		private XDocument GetConstantGlobalSchema()
+		{
+			lock (constantDefinitions)
+			{
+				return new XDocument(
+					new XElement("constants",
+						from constant in constantDefinitions.Values
+						select new XElement("constant",
+							new XAttribute("name", constant.Name),
+							from col in constant.Columns
+							select new XElement("column",
+								new XAttribute("name", col.Name),
+								new XAttribute("dataType", LuaType.GetType(col.DataType).AliasName)
+							)
+						)
+					)
+				);
+			}
+		} // func GetConstantGlobalSchema
 
 		#endregion
 
