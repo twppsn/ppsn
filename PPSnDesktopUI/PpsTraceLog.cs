@@ -88,10 +88,11 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public sealed class PpsExceptionItem : PpsTraceItemBase
 	{
-		private string message;
-		private Exception exception;
+		private readonly string message;
+		private readonly Exception exception;
+		private readonly bool asWarning;
 
-		public PpsExceptionItem(string alternativeMessage, Exception exception)
+		public PpsExceptionItem(string alternativeMessage, Exception exception, bool asWarning)
 		{
 			if (!String.IsNullOrEmpty(alternativeMessage))
 				message = alternativeMessage;
@@ -99,11 +100,12 @@ namespace TecWare.PPSn
 				message = exception.Message;
 
 			this.exception = exception;
+			this.asWarning = asWarning;
 		} // ctor
 
-		public override string Message { get { return message; } }
-		public Exception Exception { get { return exception; } }
-		public override PpsTraceItemType Type { get { return PpsTraceItemType.Exception; } }
+		public override string Message => message;
+		public Exception Exception => exception;
+		public override PpsTraceItemType Type => asWarning ? PpsTraceItemType.Warning : PpsTraceItemType.Exception;
 	} // class PpsExceptionItem
 
 	#endregion
@@ -399,9 +401,9 @@ namespace TecWare.PPSn
 			AppendItem(new PpsTextItem(type, message));
 		} // proc AppendText
 
-		public void AppendException(Exception exception, string alternativeMessage = null)
+		public void AppendException(Exception exception, string alternativeMessage = null, bool asWarning = false)
 		{
-			AppendItem(new PpsExceptionItem(alternativeMessage, exception));
+			AppendItem(new PpsExceptionItem(alternativeMessage, exception, asWarning));
 		} // proc AppendException
 
 		#endregion

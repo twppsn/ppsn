@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Networking;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn
 {
@@ -65,25 +66,56 @@ namespace TecWare.PPSn
 			}
 		} // func CompileAsync
 
-		/// <summary></summary>
-		/// <param name="chunk"></param>
-		/// <param name="env"></param>
-		/// <param name="throwException"></param>
-		/// <param name="arguments"></param>
-		/// <returns></returns>
-		public LuaResult RunScript(LuaChunk chunk, LuaTable env, bool throwException, params object[] arguments)
+		public T RunScriptWithReturn<T>(LuaChunk chunk, LuaTable context, Nullable<T> returnOnException, params object[] arguments)
+			where T : struct
 		{
 			try
 			{
-				return chunk.Run(env, arguments);
+				if (chunk == null)
+				{
+					if (returnOnException.HasValue)
+						return returnOnException.Value;
+					else
+						throw new ArgumentNullException("chunk");
+				}
+				else 
+					return chunk.Run(context, arguments).ChangeType<T>();
 			}
-			catch (LuaException e)
+			catch (Exception ex)
+			{
+				if (returnOnException.HasValue)
+				{
+					// notify exception as warning
+					Traces.AppendException(ex, "Execution failed.", true);
+
+					return returnOnException.Value;
+				}
+				else
+					throw;
+			}
+		} // func RunScriptWithReturn
+
+		/// <summary></summary>
+		/// <param name="chunk"></param>
+		/// <param name="context"></param>
+		/// <param name="throwException"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public LuaResult RunScript(LuaChunk chunk, LuaTable context, bool throwException, params object[] arguments)
+		{
+			try
+			{
+				return chunk.Run(context, arguments);
+			}
+			catch (LuaException ex)
 			{
 				if (throwException)
 					throw;
 				else
 				{
-					ShowException(ExceptionShowFlags.None, e);
+					// notify exception as warning
+					Traces.AppendException(ex, "Execution failed.", true);
+
 					return LuaResult.Empty;
 				}
 			}

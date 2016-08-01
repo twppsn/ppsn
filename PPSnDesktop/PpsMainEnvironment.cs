@@ -45,6 +45,7 @@ namespace TecWare.PPSn
 
 		private readonly string displayName;
 		private readonly int displayGlyph;
+		private readonly bool isHidden;
 		private readonly LuaChunk condition;
 		private readonly LuaChunk code;
 
@@ -53,29 +54,27 @@ namespace TecWare.PPSn
 		{
 			this.displayName = xCur.GetAttribute("displayName", this.Name);
 			this.displayGlyph = xCur.GetAttribute("displayGlyph", 57807);
+			this.isHidden = xCur.GetAttribute("isHidden", false);
 			this.Priority = priority = xCur.GetAttribute("priority", priority + 1);
 
-			condition = environment.CreateLuaChunk(xCur.Element(xnCondition)); // , new KeyValuePair<string, Type>("contextMenu", typeof(bool))
+			// compile condition
+			condition = environment.CreateLuaChunk(xCur.Element(xnCondition));
+			// compile action
 			code = environment.CreateLuaChunk(xCur.Element(xnCode));
 		} // ctor
 
-		public bool CheckCondition(LuaTable environment, bool contextMenu)
-		{
-			if (condition != null)
-				return (bool)Lua.RtConvertValue(condition.Run(environment), typeof(bool));
-			else
-				return true;
-		}// func CheckCondition
+		public bool CheckCondition(LuaTable context)
+			=> condition == null ? true : (bool)Environment.RunScriptWithReturn<bool>(condition, context, false);
 
-		public void Execute(LuaTable environment)
-		{
-			if (code != null)
-				Environment.RunScript(code, environment, false);
-		} // proc Execute
+		public LuaResult Execute(LuaTable context)
+			=> CheckCondition(context) ?
+				new LuaResult(true, Environment.RunScript(code, context, false)) :
+				new LuaResult(false);
 
 		public string DisplayName => displayName;
 		public string DisplayGlyph => char.ConvertFromUtf32(displayGlyph);
 		public int Priority { get; }
+		public bool IsHidden => isHidden;
 	} // class PpsMainActionDefinition
 
   #endregion

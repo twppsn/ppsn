@@ -25,8 +25,11 @@ namespace TecWare.PPSn.UI
 			private readonly int searchTextOffset;
 			private readonly string originalSearchText;
 
-			public CurrentSearchTextExpression(PpsNavigatorModel navigator, string searchText, int searchTextOffset)
+			public CurrentSearchTextExpression(PpsNavigatorModel navigator, bool forceNavigator, string searchText, int searchTextOffset)
 			{
+				if (forceNavigator && navigator == null)
+					throw new ArgumentNullException("navigator");
+
 				this.navigator = navigator;
 				this.searchTextOffset = searchTextOffset;
 				this.originalSearchText = searchText;
@@ -61,6 +64,10 @@ namespace TecWare.PPSn.UI
 			public string Data => originalSearchText.Substring(searchTextOffset);
 			public string SearchText => originalSearchText;
 
+			public virtual bool IsValid => !String.IsNullOrEmpty(ExceptionText);
+			public virtual string ExceptionText => null;
+			public virtual int ExceptionPosition => -1;
+
 			public PpsNavigatorModel Navigator => navigator;
 		} // class CurrentSearchTextExpression
 
@@ -70,12 +77,17 @@ namespace TecWare.PPSn.UI
 
 		private sealed class EmptyExpression : CurrentSearchTextExpression
 		{
-			public EmptyExpression(PpsNavigatorModel navigator, string searchText, int searchTextOffset)
-				: base(navigator, searchText, searchTextOffset)
+			private EmptyExpression()
+				: base(null, false, String.Empty, 0)
 			{
 			} // ctor
 
-			public static EmptyExpression Instance { get; } = new EmptyExpression(null, String.Empty, 0);
+			public EmptyExpression(string searchText, int searchTextOffset)
+				: base(null, false, searchText, searchTextOffset)
+			{
+			} // ctor
+
+			public static EmptyExpression Instance { get; } = new EmptyExpression();
 		} // class EmptyExpression
 
 		#endregion
@@ -84,10 +96,25 @@ namespace TecWare.PPSn.UI
 
 		private sealed class SearchExpression : CurrentSearchTextExpression
 		{
+			private readonly PpsDataFilterExpression filterExpression;
+			private readonly string exceptionText;
+
 			public SearchExpression(PpsNavigatorModel navigator, string searchText, int searchTextOffset)
-				: base(navigator, searchText, searchTextOffset)
+				: base(navigator, true, searchText, searchTextOffset)
 			{
+				try
+				{
+					this.filterExpression = PpsDataFilterExpression.Parse(searchText, searchTextOffset);
+				}
+				catch (Exception e)
+				{
+					navigator.Environment.Traces.AppendText(PpsTraceItemType.Debug, $"Parse of search expression failed: {e.Message}");
+					exceptionText = e.Message;
+				}
 			} // ctor
+
+			public PpsDataFilterExpression FilterExpression => filterExpression;
+			public override string ExceptionText => exceptionText;
 		} // class SearchExpression
 
 		#endregion
@@ -96,10 +123,19 @@ namespace TecWare.PPSn.UI
 
 		private sealed class MacroExpression : CurrentSearchTextExpression
 		{
+			private readonly PpsMainActionDefinition actionDefinition;
+
 			public MacroExpression(PpsNavigatorModel navigator, string searchText, int searchTextOffset)
-				: base(navigator, searchText, searchTextOffset)
+				: base(navigator, true, searchText, searchTextOffset)
 			{
+				this.actionDefinition = navigator.Environment.Actions[Data];
 			} // ctor
+
+			public override void Execute()
+				=> actionDefinition.Execute(Navigator);
+
+			public override bool IsExecutable
+				=> actionDefinition?.CheckCondition(Navigator) ?? false;
 		} // class MacroExpression
 
 		#endregion
@@ -109,13 +145,12 @@ namespace TecWare.PPSn.UI
 		private sealed class LuaExpression : CurrentSearchTextExpression
 		{
 			private readonly LuaChunk chunk;
+			private readonly string exceptionText;
+			private readonly int exceptionPosition;
 
 			public LuaExpression(PpsNavigatorModel navigator, string searchText, int searchTextOffset)
-				: base(navigator, searchText, searchTextOffset)
+				: base(navigator, true, searchText, searchTextOffset)
 			{
-				if (navigator == null)
-					throw new ArgumentNullException("navigator");
-
 				if (String.IsNullOrWhiteSpace(Data))
 					chunk = null;
 				else // compile to check for syntax
@@ -126,7 +161,10 @@ namespace TecWare.PPSn.UI
 					}
 					catch (LuaParseException e)
 					{
-						navigator.Environment.Traces.AppendText(PpsTraceItemType.Debug, String.Format("Syntax: {0} at {1}", e.Message, e.Index));
+						navigator.Environment.Traces.AppendText(PpsTraceItemType.Debug, String.Format("Syntax: {0} at {1}", e.Message, e.Index + searchTextOffset));
+
+						exceptionText = e.Message;
+						exceptionPosition = (int)e.Index + searchTextOffset;
 						chunk = null;
 					}
 				}
@@ -152,6 +190,9 @@ namespace TecWare.PPSn.UI
 			} // proc Execute
 
 			public override bool IsExecutable => chunk != null;
+
+			public override string ExceptionText => exceptionText;
+			public override int ExceptionPosition => exceptionPosition;
 		} // class LuaExpression
 
 		#endregion
@@ -164,8 +205,8 @@ namespace TecWare.PPSn.UI
 		{
 			public event EventHandler CanExecuteChanged { add { } remove { } }
 
-			private PpsNavigatorModel model;
-			private PpsMainViewFilter filter;
+			private readonly PpsNavigatorModel model;
+			private readonly PpsMainViewFilter filter;
 
 			internal PpsFilterView(PpsNavigatorModel model, PpsMainViewFilter filter)
 			{
@@ -176,7 +217,7 @@ namespace TecWare.PPSn.UI
 			public void Execute(object parameter)
 			{
 				model.UpdateCurrentFilter(IsSelected ? null : this);
-				model.RefreshDataAsync(); // reload data
+				Task.Run(model.RefreshDataAsync); // reload data
 			} // proc Execute
 
 			public bool CanExecute(object parameter) => true;
@@ -199,8 +240,8 @@ namespace TecWare.PPSn.UI
 		{
 			public event EventHandler CanExecuteChanged { add { } remove { } }
 
-			private PpsNavigatorModel model;
-			private PpsMainViewOrder order;
+			private readonly PpsNavigatorModel model;
+			private readonly PpsMainViewOrder order;
 
 			internal PpsOrderView(PpsNavigatorModel model, PpsMainViewOrder order)
 			{
@@ -211,16 +252,42 @@ namespace TecWare.PPSn.UI
 			public void Execute(object parameter)
 			{
 				model.UpdateCurrentOrder(this);
-				model.RefreshDataAsync();
+				Task.Run(model.RefreshDataAsync);
 			}
 			public bool CanExecute(object parameter) => true;
 
-			internal void FireIsCheckedChanged() => OnPropertyChanged(nameof(IsChecked));
+			internal void FireIsCheckedChanged()
+				=> OnPropertyChanged(nameof(IsChecked));
 
 			public string Name => order.Name;
 			public string DisplayName => order.DisplayName;
 			public bool? IsChecked => model.currentOrder == this ? (bool?)model.sortAscending : null;
 		} // class PpsOrderView
+
+		#endregion
+
+		#region -- class SearchActionCommand ----------------------------------------------
+
+		private class SearchActionCommand : ICommand
+		{
+			public event EventHandler CanExecuteChanged;
+
+			private readonly PpsNavigatorModel model;
+
+			internal SearchActionCommand(PpsNavigatorModel model)
+			{
+				this.model = model;
+			} // ctor
+
+			public void Execute(object parameter)
+				=> model.ExecuteCurrentSearchText();
+
+			public void DoCanExecuteChanged()
+				=> CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+
+			public bool CanExecute(object parameter)
+				=> model.currentSearchTextExpression?.IsExecutable ?? false;
+		} // class SearchActionCommand
 
 		#endregion
 
@@ -230,29 +297,23 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		private class RunActionCommand : ICommand
 		{
-			public event EventHandler CanExecuteChanged;
+			event EventHandler ICommand.CanExecuteChanged { add { } remove { } }
 
-			private PpsNavigatorModel model;
+			private readonly PpsNavigatorModel model;
 
 			internal RunActionCommand(PpsNavigatorModel model)
 			{
 				this.model = model;
 			} // ctor
 
+			private PpsMainActionDefinition GetActionFromParameter(object parameter)
+				=> parameter as PpsMainActionDefinition;
+
 			public void Execute(object parameter)
-			{
-				var action = parameter as PpsMainActionDefinition;
-				if (action != null)
-					model.ExecuteAction(action);
-			} // proc Execute
+				=> GetActionFromParameter(parameter)?.Execute(model);
 
-			public void DoCanExecuteChanged()
-			{
-				CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-			} // proc DoCanExecuteChanged
-
-			public bool CanExecute(object parameter)
-				=> model.currentSearchTextExpression?.IsExecutable ?? false;
+			bool ICommand.CanExecute(object parameter)
+				=> GetActionFromParameter(parameter)?.CheckCondition(model) ?? true;
 		} // class RunActionCommand
 
 		#endregion
@@ -265,7 +326,7 @@ namespace TecWare.PPSn.UI
 		{
 			public event EventHandler CanExecuteChanged { add { } remove { } }
 
-			private PpsNavigatorModel model;
+			private readonly PpsNavigatorModel model;
 
 			internal ToggleShowViewDescriptionCommand(PpsNavigatorModel model)
 			{
@@ -278,12 +339,13 @@ namespace TecWare.PPSn.UI
 				model.ShowViewsDescription(!currentShow);
 			} // proc Execute
 
-			public bool CanExecute(object parameter) => true;
+			public bool CanExecute(object parameter)
+				=> true;
 		} // class ToggleShowViewDescriptionCommand
 
 		#endregion
 
-		private PpsMainWindow windowModel;
+		private readonly PpsMainWindow windowModel;
 
 		private CollectionViewSource views;
 		private CollectionViewSource actions;
@@ -297,11 +359,14 @@ namespace TecWare.PPSn.UI
 		private PpsDataList items;
 		private ICollectionView itemsView;
 
+		private readonly SearchActionCommand searchActionCommand;
 		private CurrentSearchTextExpression currentSearchTextExpression = EmptyExpression.Instance;
 
-		private RunActionCommand runActionCommand;
-		private ToggleShowViewDescriptionCommand toggleShowViewDescriptionCommand;
+		private readonly RunActionCommand runActionCommand;
+		private readonly ToggleShowViewDescriptionCommand toggleShowViewDescriptionCommand;
 		private bool viewsShowDescription = true;
+
+		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		public PpsNavigatorModel(PpsMainWindow windowModel)
 		{
@@ -317,6 +382,7 @@ namespace TecWare.PPSn.UI
 			views = new CollectionViewSource();
 			views.Source = Environment.Views;
 			views.SortDescriptions.Add(new SortDescription("DisplayName", ListSortDirection.Ascending));
+			views.View.Filter += FilterView;
 			views.View.CurrentChanged += (sender, e) => UpdateCurrentView((PpsMainViewDefinition)views.View.CurrentItem);
 
 			// init data list
@@ -327,6 +393,7 @@ namespace TecWare.PPSn.UI
 			// Create Command
 			toggleShowViewDescriptionCommand = new ToggleShowViewDescriptionCommand(this);
 			runActionCommand = new RunActionCommand(this);
+			searchActionCommand = new SearchActionCommand(this);
 
 			// Update the view, no selection
 			if (views.View.CurrentItem != null)
@@ -337,10 +404,18 @@ namespace TecWare.PPSn.UI
 
 		private bool FilterAction(object item)
 		{
-
 			var action = item as PpsMainActionDefinition;
-			return action != null ? action.CheckCondition(this, false) : false;
-		} // func ActionFilter
+			return action != null &&
+				!action.IsHidden &&
+				action.CheckCondition(this);
+		} // func FilterAction
+
+		private bool FilterView(object item)
+			=> (item as PpsMainViewDefinition)?.IsVisible ?? false;
+
+		#endregion
+
+		#region -- Update UI - View, Filter, Order ----------------------------------------
 
 		private void UpdateCurrentView(PpsMainViewDefinition currentView)
 		{
@@ -367,8 +442,11 @@ namespace TecWare.PPSn.UI
 			// Update States
 			UpdateCurrentFilter(null);
 
-			RefreshDataAsync();
+			// refresh lists
 			RefreshActions();
+			views.View.Refresh();
+
+			Task.Run(RefreshDataAsync);
 		} // proc UpdateCurrentView
 
 		private void UpdateCurrentFilter(PpsFilterView newFilter)
@@ -407,6 +485,10 @@ namespace TecWare.PPSn.UI
 				newOrder.FireIsCheckedChanged();
 		} // proc UpdateCurrentOrder
 
+		#endregion
+
+		#region -- Update Extended Search Text --------------------------------------------
+
 		private void UpdateCurrentExtentedSearch(string searchText)
 		{
 			// parses the current search text
@@ -419,7 +501,7 @@ namespace TecWare.PPSn.UI
 			else if (searchText[0] == '.') // special expression
 			{
 				if (searchText.Length == 1)
-					newSearchExpression = new EmptyExpression(this, searchText, 1);
+					newSearchExpression = new EmptyExpression(searchText, 1);
 				else if (searchText[1] == ':') // lua
 					newSearchExpression = new LuaExpression(this, searchText, 2);
 				else if (Char.IsLetter(searchText[1])) // macro
@@ -431,41 +513,46 @@ namespace TecWare.PPSn.UI
 				newSearchExpression = new SearchExpression(this, searchText, 0);
 
 			var cmp = newSearchExpression.CompareTo(currentSearchTextExpression);
-			if (cmp < 0)
-				currentSearchTextExpression = newSearchExpression;
-			else if (cmp > 0)
+			if (cmp != 0)
 			{
-				currentSearchTextExpression = newSearchExpression;
-				RefreshDataAsync();
-			}
-		} // proc ReUpdateCurrentExtentedSearch
+				currentSearchTextExpression = newSearchExpression; // set the new expression
+				OnPropertyChanged(nameof(CurrentSearchExpression));
 
+				if (currentSearchTextExpression is SearchExpression) // new search expression, redo filter
+					Task.Run(RefreshDataAsync); // start refresh in background
+			}
+		} // proc UpdateCurrentExtentedSearch
+
+		[LuaMember(nameof(ClearCurrentSearchText))]
 		public void ClearCurrentSearchText()
 		{
 			currentSearchTextExpression = EmptyExpression.Instance;
 			OnPropertyChanged(nameof(CurrentSearchText));
 		} // proc ClearCurrentSearchText
 
+		[LuaMember(nameof(ExecuteCurrentSearchText))]
 		public void ExecuteCurrentSearchText()
-		{
-			currentSearchTextExpression.Execute();
-		} // proc ExecuteCurrentSearchText
+			=> currentSearchTextExpression.Execute();
 
-		private async void RefreshDataAsync()
+		#endregion
+
+		#region -- RefreshDataAsync -------------------------------------------------------
+
+		private PpsShellGetList CreateDataSource()
 		{
 			PpsShellGetList dataSource;
 			PpsDataFilterExpression exprView;
 			PpsDataFilterExpression exprFilter;
 			PpsDataFilterExpression exprSearch;
 
-			// build neu data source
+			// build new data source
 			if (CurrentView == null) // create view from local view
 			{
 				dataSource = new PpsShellGetList("local.objects");
 				exprView = PpsDataFilterTrueExpression.True;
 				exprFilter = PpsDataFilterTrueExpression.True;
 			}
-			else // create a different view
+			else // create a different view, could be remote
 			{
 				dataSource = new PpsShellGetList(CurrentView.ViewId);
 				exprView = CurrentView.ViewFilterExpression;
@@ -475,24 +562,38 @@ namespace TecWare.PPSn.UI
 					dataSource.Order = PpsDataOrderExpression.Parse((sortAscending ? "+" : "-") + currentOrder.Name).ToArray();
 			}
 
-			// todo: add search expression
-			//var currentSearchExpression = currentSearchTextExpression as SearchExpression;
-			exprSearch = PpsDataFilterTrueExpression.True;
+			// add search expression
+			var currentSearchExpression = currentSearchTextExpression as SearchExpression;
+			exprSearch = currentSearchExpression != null ?
+				currentSearchExpression.FilterExpression :
+				PpsDataFilterTrueExpression.True;
 
+			// combine the contitions
 			dataSource.Filter = PpsDataFilterExpression.Combine(exprView, exprFilter, exprSearch);
+			return dataSource;
+		} // func CreateDataSource
 
+		private async Task RefreshDataAsync()
+		{
+			var dataSource = await Window.Dispatcher.InvokeAsync(CreateDataSource);
 			await items.Reset(dataSource);
 		} // proc RefreshDataAsync
 
-		private void RefreshActions()
-		{
-			actions.View.Refresh();
-		} // proc RefreshActions
+		#endregion
 
-		private void ExecuteAction(PpsMainActionDefinition action)
-		{
-			action.Execute(this);
-		} // proc ExecuteAction
+		#region -- Actions ----------------------------------------------------------------
+
+		private void RefreshActions()
+			=> actions.View.Refresh();
+
+		[
+			LuaMember(nameof(ExecuteAction)),
+			Description("Executes the action by name.")
+		]
+		public LuaResult ExecuteAction(string actionName)
+			=> Environment.Actions[actionName]?.Execute(this);
+
+		#endregion
 
 		private void ShowViewsDescription(bool show)
 		{
@@ -510,18 +611,18 @@ namespace TecWare.PPSn.UI
 				return false;
 			else
 			{
-				var itemTyp = t.GetOptionalValue("OBJKTYP", String.Empty);
+				var itemTyp = t.GetOptionalValue("Typ", String.Empty);
 				return itemTyp == typ;
 			}
 		} // func IsItemType
 
-		[LuaMember("LoadPane")]
+		[LuaMember("LoadPane")] // todo:
 		private async Task LuaLoadGenericPaneAsync(LuaTable arguments)
 		{
 			await windowModel.LoadPaneAsync(typeof(PpsGenericWpfWindowPane), arguments);
 		} // proc LuaLoadGenericPane
 
-		[LuaMember("LoadMask")]
+		[LuaMember("LoadMask")] // todo:
 		private async Task LoadGenericMaskAsync(LuaTable arguments)
 		{
 			await windowModel.LoadPaneAsync(typeof(PpsGenericMaskWindowPane), arguments);
@@ -530,7 +631,8 @@ namespace TecWare.PPSn.UI
 		protected override object OnIndex(object key)
 			=> base.OnIndex(key) ?? Environment.GetValue(key); // inherit from the environment
 
-		/// <summary>The environment, that is the owenr of this window.</summary>
+		/// <summary>The environment, that is the owner of this window.</summary>
+		[LuaMember(nameof(Environment))]
 		public PpsMainEnvironment Environment => windowModel.Environment;
 
 		[LuaMember(nameof(Window))]
@@ -554,8 +656,15 @@ namespace TecWare.PPSn.UI
 		public ICollectionView Items => itemsView;
 
 		/// <summary>Current SearchText</summary>
+		[LuaMember(nameof(CurrentSearchText))]
 		public string CurrentSearchText { get { return currentSearchTextExpression?.SearchText; } set { UpdateCurrentExtentedSearch(value); } }
-	
+		/// <summary>Parsed expression object.</summary>
+		[LuaMember(nameof(CurrentSearchExpression))]
+		public object CurrentSearchExpression => currentSearchTextExpression; 
+
+		/// <summary>Command for the search code execution.</summary>
+		public ICommand SearchAction => searchActionCommand;
+
 		/// <summary>Command to run action</summary>
 		public ICommand RunAction => runActionCommand;
 		/// <summary>Command to toggle description visibility</summary>

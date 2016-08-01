@@ -19,6 +19,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 
@@ -88,6 +89,7 @@ namespace TecWare.PPSn
 	{
 		public static readonly XName xnViews = "views";
 		public static readonly XName xnView = "view";
+		public static readonly XName xnVisible = "visible";
 
 		public static readonly XName xnFilter = "filter";
 		public static readonly XName xnOrder = "order";
@@ -97,10 +99,13 @@ namespace TecWare.PPSn
 		private readonly string displayName;
 		private readonly string displayImage;
 
+		private readonly LuaChunk visibleCondition;
+
 		private PpsMainViewOrder[] sortOrders;
 		private PpsMainViewFilter[] filters;
 
-		internal PpsMainViewDefinition(PpsEnvironment environment, XElement xDefinition)
+
+		internal PpsMainViewDefinition(PpsMainEnvironment environment, XElement xDefinition)
 			: base(environment, xDefinition.GetAttribute("name", null))
 		{
 			this.viewId = xDefinition.GetAttribute("view", String.Empty);
@@ -111,6 +116,8 @@ namespace TecWare.PPSn
 			this.displayName = xDefinition.GetAttribute("displayName", this.Name);
 			this.displayImage = xDefinition.GetAttribute("displayGlyph", this.Name);
 
+			this.visibleCondition = environment.CreateLuaChunk(xDefinition.Element(xnVisible));
+
 			// parse the filters
 			var priority = 0;
 			this.filters = (from c in xDefinition.Elements(xnFilter) select new PpsMainViewFilter(c, ref priority)).OrderBy(c => c.Priority).ToArray();
@@ -118,11 +125,12 @@ namespace TecWare.PPSn
 			priority = 0;
 			this.sortOrders = (from c in xDefinition.Elements(xnOrder) select new PpsMainViewOrder(c, ref priority)).OrderBy(c => c.Priority).ToArray();
 		} // ctor
-
+		
 		public string ViewId => viewId;
 		public PpsDataFilterExpression ViewFilterExpression => viewBaseFilter;
 		public string DisplayName => displayName;
 		public string DisplayImage => displayImage;
+		public bool IsVisible => visibleCondition == null ? true : (bool)Environment.RunScriptWithReturn<bool>(visibleCondition, Environment, false);
 		public IEnumerable<PpsMainViewFilter> Filters => filters;
 		public IEnumerable<PpsMainViewOrder> SortOrders => sortOrders;
 	} // class PpsMainViewDefinition
