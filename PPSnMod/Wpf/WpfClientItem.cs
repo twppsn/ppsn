@@ -633,7 +633,7 @@ namespace TecWare.PPSn.Server.Wpf
 				xSourceResources.Remove();
 
 			// create the new dictionary
-			var xTargetResourceDictionary = new XElement(nameRootResources.Namespace + "ResourceDictionary");
+			var xTargetResourceDictionary = new XElement(PresentationNamespace + "ResourceDictionary");
 			var xTargetResources = new XElement(nameRootResources, xTargetResourceDictionary);
 
 			// add the resources
