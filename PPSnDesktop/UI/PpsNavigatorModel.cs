@@ -157,7 +157,11 @@ namespace TecWare.PPSn.UI
 				{
 					try
 					{
-						chunk = navigator.Environment.CreateLuaChunk(Data);
+						var code = Data;
+						if (code.StartsWith("="))
+							code = "msgbox(" + code.Substring(1) + ")";
+
+						chunk = navigator.Environment.CreateLuaChunk(code);
 					}
 					catch (LuaParseException e)
 					{
@@ -366,6 +370,8 @@ namespace TecWare.PPSn.UI
 		private readonly ToggleShowViewDescriptionCommand toggleShowViewDescriptionCommand;
 		private bool viewsShowDescription = true;
 
+		private readonly EventHandler onlineChanged;
+
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		public PpsNavigatorModel(PpsMainWindow windowModel)
@@ -395,6 +401,10 @@ namespace TecWare.PPSn.UI
 			runActionCommand = new RunActionCommand(this);
 			searchActionCommand = new SearchActionCommand(this);
 
+			onlineChanged = Environment_IsOnlineChanged;
+			Environment.IsOnlineChanged += onlineChanged;
+			Window.Closed += Window_Closed;
+
 			// Update the view, no selection
 			if (views.View.CurrentItem != null)
 				views.View.MoveCurrentToPosition(-1);
@@ -412,6 +422,17 @@ namespace TecWare.PPSn.UI
 
 		private bool FilterView(object item)
 			=> (item as PpsMainViewDefinition)?.IsVisible ?? false;
+
+		private void Window_Closed(object sender, EventArgs e)
+		{
+			Environment.IsOnlineChanged -= onlineChanged;
+		} // event Window_Closed
+
+		private void Environment_IsOnlineChanged(object sender, EventArgs e)
+		{
+			views.View.Refresh();
+			UpdateCurrentView(null);
+		} // event Environment_IsOnlineChanged
 
 		#endregion
 
@@ -444,10 +465,11 @@ namespace TecWare.PPSn.UI
 
 			// refresh lists
 			RefreshActions();
-			views.View.Refresh();
 
-			Task.Run(RefreshDataAsync);
+			Task.Run(RefreshDataAsync)
+				.ContinueWith(async r => await Window.Dispatcher.InvokeAsync(RefreshActions));
 		} // proc UpdateCurrentView
+
 
 		private void UpdateCurrentFilter(PpsFilterView newFilter)
 		{
@@ -660,7 +682,7 @@ namespace TecWare.PPSn.UI
 		public string CurrentSearchText { get { return currentSearchTextExpression?.SearchText; } set { UpdateCurrentExtentedSearch(value); } }
 		/// <summary>Parsed expression object.</summary>
 		[LuaMember(nameof(CurrentSearchExpression))]
-		public object CurrentSearchExpression => currentSearchTextExpression; 
+		public object CurrentSearchExpression => currentSearchTextExpression;
 
 		/// <summary>Command for the search code execution.</summary>
 		public ICommand SearchAction => searchActionCommand;
