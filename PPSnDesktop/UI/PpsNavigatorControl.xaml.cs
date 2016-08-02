@@ -55,9 +55,7 @@ namespace TecWare.PPSn.UI
 		private void PART_SearchBox_KeyDown(object sender, KeyEventArgs e)
 		{
 			if (e.Key == Key.Enter)
-			{
-				navigatorModel.ExecuteCurrentSearchText();
-			}
+                navigatorModel.ExecuteCurrentSearchText();
 		}
 
 		private bool ExpandSearchBox(string input)
@@ -83,7 +81,7 @@ namespace TecWare.PPSn.UI
 
 		private bool IsValidSearchText(string input)
 		{
-			return Char.IsLetterOrDigit(input, 0);
+			return true;
 		}
 
 		private bool ElementIsChildOfSearchBox(object element)
