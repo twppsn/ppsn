@@ -2,8 +2,9 @@
               xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
               xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
-			  xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
-    Style="{StaticResource PpsWindow}" Title="PpsMainWindow" Height="300" Width="600" >
+              xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
+              Style="{StaticResource PpsWindow}" 
+              Title="{Binding CurrentPane.Title, Mode=OneWay, Converter={StaticResource StringConverter}, ConverterParameter='PPS2000n - {0}',FallbackValue='PPS2000n'}" Height="300" Width="600" >
 
     <ui:PpsWindow.Resources>
         <Style x:Key="PPSnWindowButtonStyle" TargetType="{x:Type Button}">

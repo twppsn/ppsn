@@ -50,4 +50,21 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	#region -- class PpsStringConverter -------------------------------------------------
+
+	public sealed class PpsStringConverter : IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+			=> value == null ? String.Empty : String.Format((string)parameter ?? Text, value);
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		} // func ConvertBack
+
+		public string Text { get; set; } = "{0}";
+	} // class PpsStringConverter
+
+	#endregion
+
 }

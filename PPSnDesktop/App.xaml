@@ -15,7 +15,9 @@
 				<ResourceDictionary Source="Local/Templates.xaml" />
 			</ResourceDictionary.MergedDictionaries>
 
-            <Style x:Key="PanePresenterToolBarStyle" TargetType="{x:Type ToolBar}">
+			<ui:PpsStringConverter x:Key="StringConverter" />
+
+			<Style x:Key="PanePresenterToolBarStyle" TargetType="{x:Type ToolBar}">
 				<Style.Resources>
 					<DataTemplate x:Key="{x:Type ui:PpsUICommandButton}" DataType="{x:Type ui:PpsUICommandButton}">
                         <Button Style="{StaticResource PpsToolBarButtonStyle}" ToolTip="{Binding Description}" Command="{Binding Command}">

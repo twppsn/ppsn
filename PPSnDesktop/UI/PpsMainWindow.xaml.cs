@@ -1,10 +1,26 @@
-﻿using Neo.IronLua;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -15,8 +31,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using Neo.IronLua;
 using TecWare.DE.Stuff;
-using System.Reflection;
 
 namespace TecWare.PPSn.UI
 {
@@ -38,8 +54,8 @@ namespace TecWare.PPSn.UI
 		private readonly static DependencyPropertyKey CurrentPaneKey = DependencyProperty.RegisterReadOnly("CurrentPane", typeof(IPpsWindowPane), typeof(PpsMainWindow), new PropertyMetadata(null));
 		private readonly static DependencyProperty CurrentPaneProperty = CurrentPaneKey.DependencyProperty;
 
-		private int windowIndex = -1;										// settings key
-		private PpsWindowApplicationSettings settings;	                    // current settings for the window
+		private int windowIndex = -1;                   // settings key
+		private PpsWindowApplicationSettings settings;                      // current settings for the window
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -48,7 +64,7 @@ namespace TecWare.PPSn.UI
 			this.windowIndex = windowIndex;
 
 			InitializeComponent();
-			
+
 			// initialize settings
 			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
 			PART_Navigator.Init(this);
@@ -78,7 +94,7 @@ namespace TecWare.PPSn.UI
 
 			CommandBindings.Add(
 				new CommandBinding(PpsWindow.TraceLogCommand,
-					async	(sender, e) =>
+					async (sender, e) =>
 					{
 						e.Handled = true;
 						await LoadPaneAsync(Environment.TracePane, PpsOpenPaneMode.NewSingleWindow, null);
@@ -87,12 +103,12 @@ namespace TecWare.PPSn.UI
 			);
 
 			CommandBindings.Add(
-				new CommandBinding(PpsMainWindow.NextPaneCommand, 
+				new CommandBinding(PpsMainWindow.NextPaneCommand,
 					(sender, e) =>
 					{
 						e.Handled = true;
 						ActivateNextPane(true);
-					}, 
+					},
 					(sender, e) =>
 					{
 						e.CanExecute = Panes.IndexOf(CurrentPane) < Panes.Count - 1;
@@ -117,7 +133,6 @@ namespace TecWare.PPSn.UI
 
 			this.DataContext = this;
 
-			RefreshTitle();
 			Trace.TraceInformation("MainWindow[{0}] created.", windowIndex);
 
 			var descriptor = DependencyPropertyDescriptor.FromProperty(PpsCharmbarControl.ActualWidthProperty, typeof(PpsCharmbarControl));
@@ -126,12 +141,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		public void RefreshTitle()
-		{
-			this.Title = CurrentPane == null ? "PPS2000n" : String.Format("PPS2000n - {0}", CurrentPane.Title);
-		} // proc RefreshTitle
-
-		#region -- Navigator.SearchBox ------------------------------------------------
+		#region -- Navigator.SearchBox ----------------------------------------------------
 
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
@@ -154,7 +164,7 @@ namespace TecWare.PPSn.UI
 			if (!IsNavigatorVisible)
 				return;
 			PART_Navigator.OnPreview_MouseDown(null);
-		} //
+		} // proc OnWindowCaptionClicked
 
 		#endregion
 
@@ -175,12 +185,15 @@ namespace TecWare.PPSn.UI
 		/// <summary>Settings of the current window.</summary>
 		public PpsWindowApplicationSettings Settings => settings;
 		/// <summary>Index of the current window</summary>
-		public int WindowIndex => windowIndex; 
+		public int WindowIndex => windowIndex;
 		/// <summary>Access to the current environment,</summary>
 		public new PpsMainEnvironment Environment => (PpsMainEnvironment)base.Environment;
 		/// <summary>Access to current charmbar width</summary>
-		public double CharmbarActualWidth { get { return (double)GetValue(CharmbarActualWidthProperty); } }
+		public double CharmbarActualWidth => (double)GetValue(CharmbarActualWidthProperty);
+		/// <summary>Access to the navigator model</summary>
+		public PpsNavigatorModel Navigator => (PpsNavigatorModel)PART_Navigator.DataContext;
 
+		/// <summary>Is the navigator visible.</summary>
 		public bool IsNavigatorVisible
 		{
 			get
@@ -204,7 +217,5 @@ namespace TecWare.PPSn.UI
 				}
 			}
 		} // prop NavigatorState
-
 	} // class PpsMainWindow
-
 }
