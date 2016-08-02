@@ -57,6 +57,7 @@
     <None Include="PPSn.template">
       <SubType>Designer</SubType>
     </None>
+    <Content Include="PPSn.Test.xml" />
     <Content Include="PPSn.xml">
       <SubType>Designer</SubType>
     </Content>

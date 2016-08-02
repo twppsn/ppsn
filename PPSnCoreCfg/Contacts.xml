@@ -142,7 +142,7 @@
 			</pps:view>
 			
 			<pps:action name="contactNew" displayName="Neue Kontakt" priority="100">
-				<pps:condition><![CDATA[ return CurrentView == Views["contacts"]; ]]></pps:condition>
+				<pps:condition><![CDATA[ return CurrentView == Views["ko"]; ]]></pps:condition>
 				<pps:code><![CDATA[ LoadMask{ document = 'ko', pane = 'wpf/panes/contacts.xaml' }; ]]></pps:code>
 			</pps:action>
 		</pps:wpf>
