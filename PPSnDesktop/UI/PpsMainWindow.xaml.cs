@@ -27,6 +27,9 @@ namespace TecWare.PPSn.UI
 		/// <summary>Toggles between DataPane and Navigator.</summary>
 		public readonly static RoutedCommand NavigatorToggleCommand = new RoutedCommand("NavigatorToggle", typeof(PpsMainWindow));
 
+		public readonly static RoutedCommand NextPaneCommand = new RoutedCommand("NextPane", typeof(PpsMainWindow));
+		public readonly static RoutedCommand PrevPaneCommand = new RoutedCommand("PrevPane", typeof(PpsMainWindow));
+
 		private readonly static DependencyProperty NavigatorVisibilityProperty = DependencyProperty.Register("NavigatorVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Visible));
 		private readonly static DependencyProperty PaneVisibilityProperty = DependencyProperty.Register("PaneVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Collapsed));
 		private readonly static DependencyProperty CharmbarActualWidthProperty = DependencyProperty.Register("CharmbarActualWidth", typeof(double), typeof(PpsMainWindow));
@@ -79,6 +82,33 @@ namespace TecWare.PPSn.UI
 					{
 						e.Handled = true;
 						await LoadPaneAsync(Environment.TracePane, PpsOpenPaneMode.NewSingleWindow, null);
+					}
+				)
+			);
+
+			CommandBindings.Add(
+				new CommandBinding(PpsMainWindow.NextPaneCommand, 
+					(sender, e) =>
+					{
+						e.Handled = true;
+						ActivateNextPane(true);
+					}, 
+					(sender, e) =>
+					{
+						e.CanExecute = Panes.IndexOf(CurrentPane) < Panes.Count - 1;
+					}
+				)
+			);
+			CommandBindings.Add(
+				new CommandBinding(PpsMainWindow.PrevPaneCommand,
+					(sender, e) =>
+					{
+						e.Handled = true;
+						ActivateNextPane(false);
+					},
+					(sender, e) =>
+					{
+						e.CanExecute = Panes.IndexOf(CurrentPane) > 0;
 					}
 				)
 			);

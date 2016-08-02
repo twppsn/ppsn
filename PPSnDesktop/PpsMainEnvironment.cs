@@ -68,7 +68,7 @@ namespace TecWare.PPSn
 
 		public LuaResult Execute(LuaTable context)
 			=> CheckCondition(context) ?
-				new LuaResult(true, Environment.RunScript(code, context, false)) :
+				new LuaResult(true, Environment.RunScript(code, context, true)) :
 				new LuaResult(false);
 
 		public string DisplayName => displayName;

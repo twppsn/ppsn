@@ -638,18 +638,6 @@ namespace TecWare.PPSn.UI
 			}
 		} // func IsItemType
 
-		[LuaMember("LoadPane")] // todo:
-		private async Task LuaLoadGenericPaneAsync(LuaTable arguments)
-		{
-			await windowModel.LoadPaneAsync(typeof(PpsGenericWpfWindowPane), arguments);
-		} // proc LuaLoadGenericPane
-
-		[LuaMember("LoadMask")] // todo:
-		private async Task LoadGenericMaskAsync(LuaTable arguments)
-		{
-			await windowModel.LoadPaneAsync(typeof(PpsGenericMaskWindowPane), arguments);
-		} // proc LoadGenericMask
-
 		protected override object OnIndex(object key)
 			=> base.OnIndex(key) ?? Environment.GetValue(key); // inherit from the environment
 

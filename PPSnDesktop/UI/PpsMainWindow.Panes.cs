@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Neo.IronLua;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
 {
@@ -211,6 +212,16 @@ namespace TecWare.PPSn.UI
 			return (IPpsWindowPane)Activator.CreateInstance(paneType, paneArguments);
 		} // func CreateEmptyPane
 
+		public async Task LoadPaneAsync(LuaTable arguments)
+		{
+			await LoadPaneAsync(typeof(PpsGenericWpfWindowPane), arguments);
+		} // proc LoadPaneAsync
+
+		public async Task LoadMaskAsync(LuaTable arguments)
+		{
+			await LoadPaneAsync(typeof(PpsGenericMaskWindowPane), arguments);
+		} // proc LoadMaskAsync
+
 		/// <summary>Loads a new current pane.</summary>
 		/// <param name="paneType">Type of the pane to load.</param>
 		/// <param name="arguments">Argument set for the pane</param>
@@ -225,87 +236,93 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		public async Task LoadPaneAsync(Type paneType, PpsOpenPaneMode newPaneMode, LuaTable arguments)
 		{
-			if (newPaneMode == PpsOpenPaneMode.Default)
-				newPaneMode = (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) ?
-					PpsOpenPaneMode.NewMainWindow :
-					(panes.Count > 1 ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane);
-
-			switch (newPaneMode)
-			{
-				case PpsOpenPaneMode.NewMainWindow:
-				case PpsOpenPaneMode.NewSingleWindow:
-					{
-						var loadedPane =
-						(
-							from w in Environment.GetWindows()
-							let r = w.Panes.FindPaneByArguments(paneType, arguments, false)
-							where r.Item1 == PpsWindowPaneCompareResult.Same
-							select new Tuple<PpsMainWindow, IPpsWindowPane>(w, r.Item2)
-						).FirstOrDefault();
-
-						if (loadedPane == null)
-						{
-							var newWindow = await Environment.CreateMainWindowAsync();
-							await newWindow.LoadPaneInternAsync(paneType, arguments);
-						}
-						else
-							loadedPane.Item1.Activate(loadedPane.Item2);
-					}
-					break;
-
-				case PpsOpenPaneMode.ReplacePane:
-
-					// replace pane => will close all panes an open an new one
-					if (await UnloadPanesAsync())
-						await LoadPaneInternAsync(paneType, arguments);
-
-					break;
-
-				default:
-					{
-						var loadedPane = Panes.FirstOrDefault(c => c.GetType() == paneType && c.CompareArguments(arguments) == PpsWindowPaneCompareResult.Same);
-						if (loadedPane != null)
-							Activate(loadedPane);
-						else
-							await LoadPaneInternAsync(paneType, arguments);
-					}
-					break;
-			}
-		} // proc StartPaneAsync
-
-		private async Task LoadPaneInternAsync(Type paneType, LuaTable arguments)
-		{
-			arguments = arguments ?? new LuaTable();
-
 			try
 			{
-				// Build the new pane
-				var newPane = CreateEmptyPane(paneType);
+				if (newPaneMode == PpsOpenPaneMode.Default)
+					newPaneMode = (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) ? PpsOpenPaneMode.NewMainWindow : GetDefaultPaneMode(arguments);
+				
+				switch (newPaneMode)
+				{
+					case PpsOpenPaneMode.NewMainWindow:
+					case PpsOpenPaneMode.NewSingleWindow:
+						{
+							var loadedPane =
+							(
+								from w in Environment.GetWindows()
+								let r = w.Panes.FindPaneByArguments(paneType, arguments, false)
+								where r.Item1 == PpsWindowPaneCompareResult.Same
+								select new Tuple<PpsMainWindow, IPpsWindowPane>(w, r.Item2)
+							).FirstOrDefault();
 
-				try
-				{
-					// load the pane
-					await newPane.LoadAsync(arguments);
-					await Dispatcher.InvokeAsync(() => panes.AddPane(newPane));
-				}
-				catch
-				{
-					newPane.Dispose();
-					throw;
-				}
+							if (loadedPane == null)
+							{
+								var newWindow = await Environment.CreateMainWindowAsync();
+								await newWindow.LoadPaneInternAsync(paneType, arguments);
+							}
+							else
+								loadedPane.Item1.Activate(loadedPane.Item2);
+						}
+						break;
 
-				// Hide Navigator and show the pane
-				await Dispatcher.InvokeAsync(() =>
-				{
-					Activate(newPane);
-					IsNavigatorVisible = false;
-					RefreshTitle();
-				});
+					case PpsOpenPaneMode.ReplacePane:
+
+						// replace pane => will close all panes an open an new one
+						if (await UnloadPanesAsync())
+							await LoadPaneInternAsync(paneType, arguments);
+
+						break;
+
+					default:
+						{
+							var loadedPane = Panes.FirstOrDefault(c => c.GetType() == paneType && c.CompareArguments(arguments) == PpsWindowPaneCompareResult.Same);
+							if (loadedPane != null)
+								Activate(loadedPane);
+							else
+								await LoadPaneInternAsync(paneType, arguments);
+						}
+						break;
+				}
 			}
 			catch (Exception e)
 			{
 				await Environment.ShowExceptionAsync(ExceptionShowFlags.None, e, "Die Ansicht konnte nicht geladen werden.");
 			}
+		} // proc StartPaneAsync
+
+		private PpsOpenPaneMode GetDefaultPaneMode(dynamic arguments)
+		{
+			if (arguments.mode != null)
+				return Procs.ChangeType<PpsOpenPaneMode>(arguments.mode);
+
+			return (panes.Count > 1 ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane);
+		} // func GetDefaultPaneMode
+
+		private async Task LoadPaneInternAsync(Type paneType, LuaTable arguments)
+		{
+			arguments = arguments ?? new LuaTable();
+
+			// Build the new pane
+			var newPane = CreateEmptyPane(paneType);
+
+			try
+			{
+				// load the pane
+				await newPane.LoadAsync(arguments);
+				await Dispatcher.InvokeAsync(() => panes.AddPane(newPane));
+			}
+			catch
+			{
+				newPane.Dispose();
+				throw;
+			}
+
+			// Hide Navigator and show the pane
+			await Dispatcher.InvokeAsync(() =>
+			{
+				Activate(newPane);
+				IsNavigatorVisible = false;
+				RefreshTitle();
+			});
 		} // proc LoadPaneInternAsync
 
 		public async Task<bool> UnloadPaneAsync(IPpsWindowPane pane)
