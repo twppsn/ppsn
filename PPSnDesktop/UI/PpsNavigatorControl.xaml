@@ -299,43 +299,42 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type TextBox}">
-                        <Border x:Name="PART_Border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+                        <Border x:Name="PART_Border" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
                             <Grid x:Name="PART_Grid">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="32"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="34"/>
                                 </Grid.ColumnDefinitions>
                                 <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" 
 											  SnapsToDevicePixels="True" Margin="4,0">
                                 </ScrollViewer>
-                                <Border x:Name="PART_SearchIconBorder" Grid.Column="1" BorderThickness="2" BorderBrush="Transparent" Background="{TemplateBinding Background}">
+                                <Button x:Name="PART_SearchActionButton" Grid.Column="1" Width="30" Height="30" Margin="0,2" Command="{Binding SearchAction}">
+                                    <Button.Style>
+                                        <Style TargetType="{x:Type Button}">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+                                            <Setter Property="IsTabStop" Value="False"/>
+											<Setter Property="Focusable" Value="False"/>
+											<Setter Property="Visibility" Value="Collapsed"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="{x:Type Button}">
+                                                        <Border x:Name="PART_SearchActionBorder" BorderThickness="0" Background="Black">
+                                                            <Path x:Name="PART_SearchActionIcon" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{TemplateBinding Foreground}" Data="M 0 1 L 5 10 L 10 3 Z"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                                <Border x:Name="PART_SearchIconBorder" Grid.Column="2" BorderThickness="2" BorderBrush="Transparent" Background="{TemplateBinding Background}">
                                     <Path x:Name="PART_SearchIcon" Width="18" Height="18" SnapsToDevicePixels="True"
-										  Data="
-										  M 19 3 
-										  C 13.488997 3 9 7.4889972 9 13 
-										  C 9 15.39499 9.8389508 17.588106 11.25 19.3125 
-										  L 3.28125 27.28125 
-										  L 4.71875 28.71875 
-										  L 12.6875 20.75 
-										  C 14.411894 22.161049 16.60501 23 19 23 
-										  C 24.511003 23 29 18.511003 29 13 
-										  C 29 7.4889972 24.511003 3 19 3 z 
-										  M 19 5 
-										  C 23.430123 5 27 8.5698774 27 13 
-										  C 27 17.430123 23.430123 21 19 21 
-										  C 14.569877 21 11 17.430123 11 13 
-										  C 11 8.5698774 14.569877 5 19 5 Z"
-										  Stretch="Fill"
-										  Fill="{StaticResource PPSnWindowForegroundBrush}">
-                                    </Path>
-
-
-
-                                    <!--<Path x:Name="PART_SearchIcon" Width="18" Height="18" SnapsToDevicePixels="True"
 										  Data="M 19 3 C 13.488997 3 9 7.4889972 9 13 C 9 15.39499 9.8389508 17.588106 11.25 19.3125 L 3.28125 27.28125 L 4.71875 28.71875 L 12.6875 20.75 C 14.411894 22.161049 16.60501 23 19 23 C 24.511003 23 29 18.511003 29 13 C 29 7.4889972 24.511003 3 19 3 z M 19 5 C 23.430123 5 27 8.5698774 27 13 C 27 17.430123 23.430123 21 19 21 C 14.569877 21 11 17.430123 11 13 C 11 8.5698774 14.569877 5 19 5 Z"
 										  Stretch="Fill"
 										  Fill="{StaticResource PPSnWindowForegroundBrush}">
-                                    </Path>-->
+                                    </Path>
                                 </Border>
                             </Grid>
                         </Border>
@@ -344,10 +343,18 @@
                                 <Setter Property="Background" Value="White"/>
                                 <Setter Property="Foreground" Value="Black"/>
                                 <Setter TargetName="PART_SearchIcon" Property="Fill" Value="Black"/>
+                                <Setter TargetName="PART_SearchActionButton" Property="Foreground" Value="Black"/>
                             </Trigger>
                             <Trigger SourceName="PART_SearchIconBorder" Property="IsMouseOver" Value="true">
                                 <Setter TargetName="PART_SearchIcon" Property="Fill" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-                                <Setter Property="Background" TargetName="PART_SearchIconBorder" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+                                <Setter TargetName="PART_SearchIconBorder" Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+                            </Trigger>
+                            <Trigger SourceName="PART_SearchActionButton" Property="IsMouseOver" Value="true">
+                                <Setter TargetName="PART_SearchActionButton" Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+                                <Setter TargetName="PART_SearchActionButton" Property="Background"  Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+                            </Trigger>
+                            <Trigger SourceName="PART_SearchActionButton" Property="IsEnabled" Value="true">
+                                <Setter TargetName="PART_SearchActionButton" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <EventTrigger RoutedEvent="LostFocus">
                                 <BeginStoryboard>
@@ -489,6 +496,13 @@
 							 ItemsSource="{Binding Items}"
 							 ScrollViewer.PanningMode="VerticalFirst"
 							 ItemContainerStyle="{StaticResource PpsAlternatingListBoxItemStyle}"/>
+
+        <!--<uiC:DataListControl x:Name="PART_Items" Grid.Column="2" Grid.Row="3" FontSize="14.667" SnapsToDevicePixels="True"
+							 AlternationCount="2" IsSynchronizedWithCurrentItem="True"
+							 ItemsSource="{Binding Items}"
+							 Foreground="Black"
+							 ScrollViewer.PanningMode="VerticalFirst"
+							 />-->
 
         <ItemsControl x:Name="PART_Actions" Grid.Column="2" Grid.Row="4" ItemsSource="{Binding VisibleActions}" IsTabStop="False" >
             <ItemsControl.ItemsPanel>

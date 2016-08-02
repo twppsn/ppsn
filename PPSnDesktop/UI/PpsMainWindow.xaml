@@ -202,8 +202,13 @@
 				<ColumnDefinition Width="*"/>
 				<ColumnDefinition Width="72"/>
 			</Grid.ColumnDefinitions>
-            <ToolBar x:Name="PART_PanePresenterToolBar" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" FontSize="14.667"
+            <DockPanel LastChildFill="True"	>
+                <Button Content="&lt;--" Command="{x:Static uiL:PpsMainWindow.PrevPaneCommand}"/>
+                <TextBlock Text="{Binding CurrentPane.Title}"/>
+                <Button Content="-->" Command="{x:Static uiL:PpsMainWindow.NextPaneCommand}"/>
+                <ToolBar x:Name="PART_PanePresenterToolBar" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" FontSize="14.667" Background="Beige"
 					 Style="{StaticResource PanePresenterToolBarStyle}"/>
+            </DockPanel>
             <ContentPresenter x:Name="PART_PanePresenter" Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}" />
             <uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right" Margin="24,24,0,24"/>
             <Grid.Style>
@@ -220,6 +225,7 @@
                     </Style.Triggers>
 				</Style>
 			</Grid.Style>
+			
 		</Grid>
 
         <DockPanel x:Name="PART_StatusBar" Grid.Row="4" Grid.ColumnSpan="5"  Background="{StaticResource PPSnWindowFooterBrush}" LastChildFill="False">
@@ -242,5 +248,6 @@
                 </Viewbox.Style>
             </Viewbox>
         </DockPanel>
+
     </Grid>
 </ui:PpsWindow>

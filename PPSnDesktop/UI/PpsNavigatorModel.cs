@@ -333,6 +333,7 @@ namespace TecWare.PPSn.UI
 
 			bool ICommand.CanExecute(object parameter)
 				=> GetActionFromParameter(parameter)?.CheckCondition(model) ?? true;
+
 		} // class RunActionCommand
 
 		#endregion
@@ -485,7 +486,6 @@ namespace TecWare.PPSn.UI
 				.ContinueWith(async r => await Window.Dispatcher.InvokeAsync(RefreshActions));
 		} // proc UpdateCurrentView
 
-
 		private void UpdateCurrentFilter(PpsFilterView newFilter)
 		{
 			var oldFilter = currentFilter;
@@ -554,6 +554,7 @@ namespace TecWare.PPSn.UI
 			{
 				currentSearchTextExpression = newSearchExpression; // set the new expression
 				OnPropertyChanged(nameof(CurrentSearchExpression));
+				searchActionCommand.DoCanExecuteChanged();
 
 				if (currentSearchTextExpression is SearchExpression) // new search expression, redo filter
 					Task.Run(RefreshDataAsync); // start refresh in background
@@ -565,6 +566,7 @@ namespace TecWare.PPSn.UI
 		{
 			currentSearchTextExpression = EmptyExpression.Instance;
 			OnPropertyChanged(nameof(CurrentSearchText));
+			searchActionCommand.DoCanExecuteChanged();
 		} // proc ClearCurrentSearchText
 
 		[LuaMember(nameof(ExecuteCurrentSearchText))]
