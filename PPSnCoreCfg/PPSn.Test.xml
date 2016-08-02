@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
+		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+
+	<pps:ppsn name="ppsn">
+		<pps:wpf name="wpf">
+			<!-- test -->
+			<pps:action name="hello" displayName="Hallo" priority="1000">
+				<pps:code>
+					<![CDATA[
+
+				if Environment.helloIndex == nil then
+					Environment.helloIndex = 1;
+				else
+					Environment.helloIndex = Environment.helloIndex  + 1;
+				end;
+				
+				Window:LoadPaneAsync{ pane = '/wpf/panes/hello.xaml', mode = clr.TecWare.PPSn.UI.PpsOpenPaneMode.NewPane, index = Environment.helloIndex }; 
+
+				]]>
+				</pps:code>
+			</pps:action>
+		</pps:wpf>
+	</pps:ppsn>
+</fragment>
