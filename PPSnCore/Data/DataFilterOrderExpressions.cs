@@ -387,6 +387,7 @@ namespace TecWare.PPSn.Data
 				}
 				else
 				{
+					offset = startAt; // nothing special try compare expression
 					var value = ParseCompareValue(expression, ref offset);
 					if (value != PpsDataFilterCompareNullValue.Default)
 						compareExpressions.Add(new PpsDataFilterCompareExpression(null, PpsDataFilterCompareOperator.Contains, value));
