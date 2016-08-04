@@ -558,11 +558,13 @@ namespace TecWare.PPSn.UI
 			var cmp = newSearchExpression.CompareTo(currentSearchTextExpression);
 			if (cmp != 0)
 			{
+				var resetData = newSearchExpression is SearchExpression || currentSearchTextExpression is SearchExpression;
+
 				currentSearchTextExpression = newSearchExpression; // set the new expression
 				OnPropertyChanged(nameof(CurrentSearchExpression));
 				searchActionCommand.DoCanExecuteChanged();
 
-				if (currentSearchTextExpression is SearchExpression) // new search expression, redo filter
+				if (resetData) // new search expression, redo filter
 					Task.Run(RefreshDataAsync); // start refresh in background
 			}
 		} // proc UpdateCurrentExtentedSearch
