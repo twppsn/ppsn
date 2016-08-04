@@ -149,6 +149,11 @@ namespace TecWare.PPSn.UI
 			document.CommitWork();
 		} // proc CommitEdit
 
+		[LuaMember(nameof(PushData))]
+		public void PushData()
+		{
+		} // proc PushData
+
 		public bool OnIdle(int elapsed)
 		{
 			if (elapsed > 3000)
