@@ -8,6 +8,13 @@
 			 Title="{Binding Data.Head.First.Name}">
     <x:Code>
         <![CDATA[
+        
+        pushContact = command(
+            function (args) : void
+                PushData();
+            end
+       );
+        
 		]]>
     </x:Code>
     <pps:PpsGenericWpfControl.Resources>
@@ -34,4 +41,7 @@
 
         <TextBlock Grid.Row="2" Text="{Binding Data.Head.First.Guid, Mode=OneWay}" />
     </Grid>
+    <pps:PpsGenericWpfControl.Commands>
+        <pps:PpsUICommandButton DisplayText="Veröffentlichen" Command="{Binding pushContact}" />
+    </pps:PpsGenericWpfControl.Commands>
 </pps:PpsGenericWpfControl>
