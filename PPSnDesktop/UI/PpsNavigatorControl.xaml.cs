@@ -86,7 +86,8 @@ namespace TecWare.PPSn.UI
 
 		private bool IsValidSearchText(string input)
 		{
-			return true;
+			var c = input[0];
+			return !Char.IsControl(c);
 		}
 
 		private bool ElementIsChildOfSearchBox(object element)
