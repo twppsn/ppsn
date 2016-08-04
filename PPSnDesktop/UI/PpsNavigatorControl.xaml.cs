@@ -55,7 +55,12 @@ namespace TecWare.PPSn.UI
 		private void PART_SearchBox_KeyDown(object sender, KeyEventArgs e)
 		{
 			if (e.Key == Key.Enter)
-                navigatorModel.ExecuteCurrentSearchText();
+			{
+				var expr = BindingOperations.GetBindingExpression(PART_SearchBox, TextBox.TextProperty);
+				if (expr != null)
+					expr.UpdateSource();
+				navigatorModel.ExecuteCurrentSearchText();
+			}
 		}
 
 		private bool ExpandSearchBox(string input)

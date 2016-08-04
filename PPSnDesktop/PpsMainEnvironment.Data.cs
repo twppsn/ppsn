@@ -104,11 +104,13 @@ namespace TecWare.PPSn
 					{
 						if (sourceTag.Value != null)
 						{
-							if ((long)sourceTag.Class != tagClass && !sourceTag.IsValueEqual(tagValue)) // -> update
+							if ((long)sourceTag.Class != tagClass || !sourceTag.IsValueEqual(tagValue)) // -> update
 							{
 								updateId.Value = r.GetInt64(0);
 								updateClass.Value = sourceTag.Class;
 								updateValue.Value = sourceTag.Value;
+
+								updateCommand.ExecuteNonQuery();
 							}
 
 							updatedTags.Add(tagKey);
@@ -490,7 +492,7 @@ namespace TecWare.PPSn
 					string attributeName;
 					int classHint;
 
-					if (indexColon > 0 && indexColon > indexEqual) // with class hint
+					if (indexColon > 0 && indexColon < indexEqual) // with class hint
 					{
 						attributeName = attributeLine.Substring(0, indexColon);
 						if (!Int32.TryParse(attributeLine.Substring(indexColon + 1, indexEqual - indexColon - 1), out classHint))
@@ -529,7 +531,7 @@ namespace TecWare.PPSn
 						else if (index < staticColumns.Length)
 							return staticValues[index];
 						else if (index < staticColumns.Length + dynamicKeys.Length)
-							return dynamicKeys[index - staticColumns.Length];
+							return dynamicKeys[index - staticColumns.Length].Value;
 						else
 							throw new ArgumentOutOfRangeException();
 					}

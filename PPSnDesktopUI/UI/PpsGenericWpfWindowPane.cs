@@ -63,7 +63,7 @@ namespace TecWare.PPSn.UI
 			Dispose(true);
 		} // proc Dispose
 
-		protected virtual void Dispose(bool lDisposing)
+		protected virtual void Dispose(bool disposing)
 		{
 		} // proc Dispose
 
@@ -236,9 +236,9 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Wpf-Control</summary>
 		[LuaMember(nameof(Control))]
-		public FrameworkElement Control { get { return control; } }
+		public FrameworkElement Control => control;
 		/// <summary>This member is resolved dynamic, that is the reason the FrameworkElement Control is public.</summary>
-		object IPpsWindowPane.Control { get { return control; } }
+		object IPpsWindowPane.Control => control;
 
 		/// <summary>BaseUri of the Wpf-Control</summary>
 		public Uri BaseUri => fileSource?.BaseUri;

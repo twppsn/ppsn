@@ -67,9 +67,17 @@ namespace TecWare.PPSn
 			=> condition == null ? true : (bool)Environment.RunScriptWithReturn<bool>(condition, context, false);
 
 		public LuaResult Execute(LuaTable context)
-			=> CheckCondition(context) ?
-				new LuaResult(true, Environment.RunScript(code, context, true)) :
-				new LuaResult(false);
+		{
+			try
+			{
+				return new LuaResult(true, Environment.RunScript(code, context, true));
+			}
+			catch (Exception e)
+			{
+				Environment.ShowException(ExceptionShowFlags.None, e);
+				return new LuaResult(false);
+			}
+		} // func Execute
 
 		public string DisplayName => displayName;
 		public string DisplayGlyph => char.ConvertFromUtf32(displayGlyph);
@@ -142,8 +150,16 @@ namespace TecWare.PPSn
 
 		public LuaChunk CreateLuaChunk(XElement xCode, params KeyValuePair<string, Type>[] args)
 		{
-			var code = xCode?.Value;
-			return code != null ? Lua.CompileChunk(code, "dummy", null, args) : null;
+			try
+			{
+				var code = xCode?.Value;
+				return code != null ? Lua.CompileChunk(code, "dummy", null, args) : null;
+			}
+			catch (LuaParseException ex)
+			{
+				//ShowException(ExceptionShowFlags.None, ex);
+				return null;
+			}
 		} // proc CreateLuaChunk
 
 		private async Task RefreshNavigatorAsync()

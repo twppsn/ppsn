@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -24,7 +25,9 @@ namespace TecWare.PPSn
 	public interface IPpsIdleAction
 	{
 		/// <summary>Gets called on application idle start.</summary>
-		void OnIdle();
+		/// <param name="elapsed">ms elapsed since the idle started</param>
+		/// <returns><c>false</c>, if there are more idles needed.</returns>
+		bool OnIdle(int elapsed);
 	} // interface IPpsIdleAction
 
 	#endregion
@@ -38,6 +41,7 @@ namespace TecWare.PPSn
 		private readonly SynchronizationContext synchronizationContext;
 		private readonly ResourceDictionary mainResources;
 
+		private int restartTime = 0;
 		private readonly DispatcherTimer idleTimer;
 		private readonly List<WeakReference<IPpsIdleAction>> idleActions = new List<WeakReference<IPpsIdleAction>>();
 		private readonly PreProcessInputEventHandler preProcessInputEventHandler;
@@ -158,25 +162,38 @@ namespace TecWare.PPSn
 
 		private void OnIdle()
 		{
+			var stopIdle = true;
+			var timeSinceRestart = unchecked(Environment.TickCount - restartTime);
 			for (var i = idleActions.Count - 1; i >= 0; i--)
 			{
 				IPpsIdleAction t;
 				if (idleActions[i].TryGetTarget(out t))
-					t.OnIdle();
+				{
+					stopIdle = stopIdle && !t.OnIdle(timeSinceRestart);
+				}
 				else
 					idleActions.RemoveAt(i);
 			}
 
-			// stop the timer, this function should only called once
-			idleTimer.Stop();
+			// increase the steps
+			if (stopIdle)
+				idleTimer.Stop();
+			else
+				idleTimer.Interval = TimeSpan.FromMilliseconds(100);
 		} // proc OnIdle
 
-		private void RestartIdleTimer()
+		private void RestartIdleTimer(PreProcessInputEventArgs e)
 		{
 			if (idleActions.Count > 0)
 			{
-				idleTimer.Stop();
-				idleTimer.Start();
+				var inputEvent = e.StagingItem.Input;
+				if (inputEvent is MouseEventArgs ||
+					inputEvent is KeyboardEventArgs)
+				{
+					restartTime = Environment.TickCount;
+					idleTimer.Stop();
+					idleTimer.Start();
+				}
 			}
 		} // proc RestartIdleTimer
 

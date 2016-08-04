@@ -340,7 +340,7 @@ namespace TecWare.PPSn
 
 			// Start idle implementation
 			this.idleTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.ApplicationIdle, (sender, e) => OnIdle(), currentDispatcher);
-			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer();
+			inputManager.PreProcessInput += preProcessInputEventHandler = (sender, e) => RestartIdleTimer(e);
 
 			// Register internal uri
 			lock (environmentCounterLock)

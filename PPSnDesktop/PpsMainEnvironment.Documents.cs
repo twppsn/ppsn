@@ -123,8 +123,9 @@ namespace TecWare.PPSn
 		private PpsDocumentId documentId = PpsDocumentId.Empty;	// document id
 		private long localId = -2;        // local Id in the cache (-2 for not setted)
 		private long pulledRevisionId;
-		private bool isDocumentChanged = false;
-		private bool isReadonly = true;   // is this document a special read-only revision
+		private bool isDocumentChanged = false;		// is this document changed to the pulled version
+		private bool isReadonly = true;           // is this document a special read-only revision
+		private bool isDirty = false;							// is this document changed since the last dump
 
 		private readonly object documentOwnerLock = new object();
 		private readonly List<IPpsDocumentOwner> documentOwner = new List<IPpsDocumentOwner>(); // list with document owners
@@ -150,6 +151,8 @@ namespace TecWare.PPSn
 			this.pulledRevisionId = pulledRevisionId;
 			this.isDocumentChanged = isDocumentChanged;
 			this.isReadonly = isReadonly;
+
+			ResetDirty();
 		} // proc SetLocalState
 
 		private void CheckLocalState()
@@ -191,6 +194,34 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		private void SetDirty()
+		{
+			isDirty = true;
+		} // proc SetDirty
+
+		public void ResetDirty()
+		{
+			isDirty = false;
+		} // proc ResetDirty
+
+		protected override void OnTableRowAdded(PpsDataTable table, PpsDataRow row)
+		{
+			base.OnTableRowAdded(table, row);
+			SetDirty();
+		} // proc OnTableRowAdded
+
+		protected override void OnTableRowDeleted(PpsDataTable table, PpsDataRow row)
+		{
+			base.OnTableRowDeleted(table, row);
+			SetDirty();
+		} // proc OnTableRowDeleted
+
+		protected override void OnTableColumnValueChanged(PpsDataRow row, int iColumnIndex, object oldValue, object value)
+		{
+			base.OnTableColumnValueChanged(row, iColumnIndex, oldValue, value);
+			SetDirty();
+		} // proc OnTableColumnValueChanged
+
 		public override Task OnNewAsync(LuaTable arguments)
 		{
 			CheckLocalState();
@@ -226,7 +257,7 @@ namespace TecWare.PPSn
 				{
 					cmd.CommandText = localId <= 0 ?
 						"insert into main.[Objects] (Guid, Typ, Document, DocumentIsChanged) values (@Guid, @Typ, @Document, 1);" :
-						"update main.[Objects] set Document = @Document, DocumentIsChanged = 1where Id = @Id";
+						"update main.[Objects] set Document = @Document, DocumentIsChanged = 1 where Id = @Id";
 
 					if (localId > 0) // for update
 					{
@@ -253,15 +284,18 @@ namespace TecWare.PPSn
 				using (var updateTags = new TagDatabaseCommands(environment.LocalConnection))
 				{
 					updateTags.Transaction = trans;
+					updateTags.ObjectId = localId;
 					updateTags.UpdateTags(GetAutoTags().ToArray());
 				}
 
 				trans.Commit();
+				ResetDirty();
 			}
-		} // proc Commit
+		} // proc CommitWork
 
 		public bool IsReadOnly => isReadonly;
 		public bool IsLoaded => documentId != PpsDocumentId.Empty;
+		public bool IsDirty => isDirty;
 
 		public PpsUndoManager UndoManager => undoManager;
 
@@ -468,7 +502,14 @@ namespace TecWare.PPSn
 					trans.Rollback();
 
 					var newDocument = (PpsDocument)(await GetDocumentDefinitionAsync(documentType)).CreateDataSet();
-					newDocument.Read(XElement.Parse(documentData));
+
+					using (var docTrans = newDocument.UndoSink.BeginTransaction("Internal Read"))
+					{
+						newDocument.Read(XElement.Parse(documentData));
+						docTrans.Commit();
+					}
+					newDocument.UndoManager.Clear();
+
 					newDocument.SetLocalState(guid, localId, pulledRevId, isDocumentChanged, false); // synced and change able
 					return newDocument;
 				}

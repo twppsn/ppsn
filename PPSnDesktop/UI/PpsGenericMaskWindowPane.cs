@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -24,6 +25,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
+using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.PPSn.Data;
@@ -33,20 +36,32 @@ namespace TecWare.PPSn.UI
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Inhalt, welcher aus einem dynamisch geladenen Xaml besteht
 	/// und einer Dataset</summary>
-	public class PpsGenericMaskWindowPane : PpsGenericWpfWindowPane, IPpsDocumentOwner
+	public class PpsGenericMaskWindowPane : PpsGenericWpfWindowPane, IPpsDocumentOwner, IPpsIdleAction
 	{
 		private readonly IPpsDocuments rdt;
+		private readonly PpsMainWindow window;
 		private CollectionViewSource undoView;
 		private CollectionViewSource redoView;
 
 		private PpsDocument document; // current DataSet which is controlled by the mask
 		private string documentType = null;
-
-		public PpsGenericMaskWindowPane(PpsEnvironment environment)
+		
+		public PpsGenericMaskWindowPane(PpsEnvironment environment, PpsMainWindow window)
 			: base(environment)
 		{
+			this.window = window;
 			this.rdt = (IPpsDocuments)environment.GetService(typeof(IPpsDocuments));
+			
+			Environment.AddIdleAction(this);
 		} // ctor
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+				Environment.RemoveIdleAction(this);
+
+			base.Dispose(disposing);
+		} // proc Dispose
 
 		public override async Task LoadAsync(LuaTable arguments)
 		{
@@ -92,20 +107,68 @@ namespace TecWare.PPSn.UI
 				redoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Redo;
 			}
 
+			// Extent command bar
+			var ppsGenericControl = Control as PpsGenericWpfControl;
+			if (ppsGenericControl != null)
+			{
+				//ppsGenericControl.Commands.Add(
+			}
+			
 			OnPropertyChanged("UndoManager");
 			OnPropertyChanged("UndoView");
 			OnPropertyChanged("RedoView");
 			OnPropertyChanged("Data");
 		} // porc InitializeData
 
-		[LuaMember(nameof(CommitEdit))]
-		public void CommitEdit()
+		public override Task<bool> UnloadAsync(bool? commit = default(bool?))
+		{
+			if (document.IsDirty)
+				CommitEdit();
+
+			return base.UnloadAsync(commit);
+		} // func UnloadAsync
+
+		[LuaMember(nameof(CommitToDisk))]
+		public void CommitToDisk(string fileName)
+		{
+			using (var xml = XmlWriter.Create(fileName, new XmlWriterSettings() { Encoding = Encoding.UTF8, NewLineHandling = NewLineHandling.Entitize, NewLineChars = "\n\r", IndentChars = "\t" }))
+				document.Write(xml);
+		} // proc CommitToDisk
+
+		[LuaMember(nameof(UpdateSources))]
+		public void UpdateSources()
 		{
 			foreach (var expr in BindingOperations.GetSourceUpdatingBindings(Control))
 				expr.UpdateSource();
+		} // proc UpdateSources
 
+		[LuaMember(nameof(CommitEdit))]
+		public void CommitEdit()
+		{
+			UpdateSources();
 			document.CommitWork();
 		} // proc CommitEdit
+
+		[LuaMember(nameof(PushData))]
+		public void PushData()
+		{
+		} // proc PushData
+
+		public bool OnIdle(int elapsed)
+		{
+			if (elapsed > 3000)
+			{
+				CommitEdit();
+				return false;
+			}
+			else if (elapsed > 500)
+			{
+				UpdateSources();
+				return document.IsDirty;
+			}
+			else
+				return true;
+		} // func OnIdle
 
 		[LuaMember(nameof(UndoManager))]
 		public PpsUndoManager UndoManager => document.UndoManager;
@@ -117,6 +180,8 @@ namespace TecWare.PPSn.UI
 
 		[LuaMember(nameof(Data))]
 		public PpsDataSet Data => document;
+		[LuaMember(nameof(Window))]
+		public PpsWindow Window => window;
 
 		LuaTable IPpsDocumentOwner.DocumentEvents => this;
 	} // class PpsGenericMaskWindowPane
