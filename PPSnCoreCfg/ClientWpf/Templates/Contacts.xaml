@@ -5,11 +5,13 @@
 		<ResourceDictionary Source="..\Default.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
-	<DataTemplate x:Key="KO,,100">
+	<DataTemplate x:Key="ko,,100">
 		 <!--  ko,dbo.contacts,100 -->
 		<StackPanel Orientation="Horizontal">
             <TextBlock Text="Kontakt-Nr.: "/>
-			<TextBlock Text="{Binding Nr}" />
+            <TextBlock Text="{Binding Nr}" />
+            <TextBlock Text=" / "/>
+            <TextBlock Text="{Binding Name}" />
         </StackPanel>
 	</DataTemplate>
 	
