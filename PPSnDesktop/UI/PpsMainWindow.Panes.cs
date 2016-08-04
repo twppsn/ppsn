@@ -185,6 +185,11 @@ namespace TecWare.PPSn.UI
 			return Activate(panes[index]);
 		} // func ActivateNextPane
 
+		private void Remove(IPpsWindowPane paneToRemove)
+		{
+			var r = UnloadPaneAsync(paneToRemove);
+		} // proc Remove
+
 		/// <summary>Initialize a empty pane.</summary>
 		/// <param name="paneType"></param>
 		/// <returns></returns>
@@ -347,7 +352,7 @@ namespace TecWare.PPSn.UI
 				{
 					if (CurrentPane == pane)
 					{
-						if (panes.Count > 0)
+						if (panes.Count > 1)
 							ActivateNextPane(true);
 						else
 							SetValue(CurrentPaneKey, null);

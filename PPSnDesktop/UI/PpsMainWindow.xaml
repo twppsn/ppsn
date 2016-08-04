@@ -7,12 +7,30 @@
               Title="{Binding CurrentPane.Title, Mode=OneWay, Converter={StaticResource StringConverter}, ConverterParameter='PPS2000n - {0}',FallbackValue='PPS2000n'}" Height="300" Width="600" >
 
     <ui:PpsWindow.Resources>
+        <SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />
+        <SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnAccentColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
+        <Geometry x:Key="PpsWindowCloseButton">M 0.5,0.5L 9.5,9.5M 9.5,0.5L 0.5,9.5</Geometry>
+        <Geometry x:Key="PpsWindowMaximizeButton">M 8.5,1.5L 0.5,1.5L 0.5,9.5L 8.5,9.5L 8.5,1.5 Z M 0.5,9.5L 0.5,3.27777L 8.5,3.27777L 8.5,9.5L 0.5,9.5 Z</Geometry>
+        <Geometry x:Key="PpsWindowRestoreButton">M 0.5,9.5L 0.5,4.5L 0.5,9.5L 7.5,9.5L 7.5,3.5L 0.5,3.5L 0.5,4.5L 7.5,4.5L 7.5,9.5L 0.5,9.5M 3.5,1.5L 9.5,1.5L 9.5,7.5L 9.5,1.5L 3.5,1.5</Geometry>
+        <Storyboard x:Key="FadeOutStoryboard" FillBehavior="HoldEnd">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:.3"/>
+            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+                <DiscreteObjectKeyFrame KeyTime="0:0:.3" Value="{x:Static Visibility.Collapsed}"/>
+            </ObjectAnimationUsingKeyFrames>
+        </Storyboard>
+        <Storyboard x:Key="FadeInStoryboard" FillBehavior="HoldEnd">
+            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+                <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+            </ObjectAnimationUsingKeyFrames>
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:.3" />
+        </Storyboard>
+
         <Style x:Key="PPSnWindowButtonStyle" TargetType="{x:Type Button}">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
             <Setter Property="Focusable" Value="False" />
             <Setter Property="IsTabStop" Value="False" />
-			<Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
             <Setter Property="Width" Value="34"/>
             <Setter Property="Height" Value="26" />
             <Setter Property="Template">
@@ -34,12 +52,9 @@
             </Setter>
         </Style>
 
-        <SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />
-        <SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnAccentColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
-
-		<Style x:Key="NavigatorToggleButtonStyle" TargetType="{x:Type Button}">
+        <Style x:Key="NavigatorToggleButtonStyle" TargetType="{x:Type Button}">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-			<Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="IsTabStop" Value="False"/>
             <Setter Property="Background" Value="{StaticResource ButtonDarkerBackGroundBrush}"/>
             <Setter Property="Foreground" Value="{StaticResource ButtonDarkerBorderBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource ButtonDarkerBorderBrush}"/>
@@ -54,7 +69,7 @@
 								  Data="F1 M 57.0079,38.0053L 38.0053,47.5066L 19.0027,38.0053L 25.3369,34.8382L 38.0053,41.1724L 50.6737,34.8382L 57.0079,38.0053 Z M 38.0053,19.0027L 57.0079,28.504L 38.0053,38.0053L 19.0026,28.504L 38.0053,19.0027 Z M 57.0079,47.5066L 38.0053,57.008L 19.0026,47.5066L 25.3369,44.3395L 38.0053,50.6737L 50.6737,44.3395L 57.0079,47.5066 Z"
 								  Stretch="Fill"
 								  Fill="{TemplateBinding Foreground}">
-							</Path>
+                            </Path>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="true">
@@ -70,26 +85,73 @@
                 </Setter.Value>
             </Setter>
         </Style>
-		
-        <Geometry x:Key="PpsWindowCloseButton">M 0.5,0.5L 9.5,9.5M 9.5,0.5L 0.5,9.5</Geometry>
-        <Geometry x:Key="PpsWindowMaximizeButton">M 8.5,1.5L 0.5,1.5L 0.5,9.5L 8.5,9.5L 8.5,1.5 Z M 0.5,9.5L 0.5,3.27777L 8.5,3.27777L 8.5,9.5L 0.5,9.5 Z</Geometry>
-        <Geometry x:Key="PpsWindowRestoreButton">M 0.5,9.5L 0.5,4.5L 0.5,9.5L 7.5,9.5L 7.5,3.5L 0.5,3.5L 0.5,4.5L 7.5,4.5L 7.5,9.5L 0.5,9.5M 3.5,1.5L 9.5,1.5L 9.5,7.5L 9.5,1.5L 3.5,1.5</Geometry>
 
-        <Storyboard x:Key="FadeOutStoryboard" FillBehavior="HoldEnd">
-            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:.3"/>
-            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                <DiscreteObjectKeyFrame KeyTime="0:0:.3" Value="{x:Static Visibility.Collapsed}"/>
-            </ObjectAnimationUsingKeyFrames>
-        </Storyboard>
-        <Storyboard x:Key="FadeInStoryboard" FillBehavior="HoldEnd">
-            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
-            </ObjectAnimationUsingKeyFrames>
-            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:.3" />
-        </Storyboard>
+        <Style x:Key="PaneSelectToggleButtonStyle" TargetType="{x:Type ToggleButton}">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Background" Value="{StaticResource PPSnWindowBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Tag" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ToggleButton}">
+                        <Border x:Name="PART_Border" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+                            <Path x:Name="PART_Icon" Width="19" Height="19" SnapsToDevicePixels="True"
+								  Data="M9,1 L0,9 8,18 9,18 1.5,9.5 18,9.5 18,8.5 1.5,8.5 10,1Z"
+								  StrokeThickness="0.5"
+								  StrokeStartLineCap="Square"
+								  StrokeEndLineCap="Flat"
+								  Stroke="{TemplateBinding Foreground}"
+								  Fill="{TemplateBinding Foreground}">
+                            </Path>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Tag" Value="1">
+                                <Setter TargetName="PART_Icon" Property="Data" Value="M10,1 L18,9 10,18 9,18 16.5,9.5 0,9.5 0,8.5 16.5,8.5 9,1Z"/>
+                            </Trigger>
+                            <Trigger Property="Tag" Value="2">
+                                <Setter TargetName="PART_Icon" Property="Data" Value="M0,3 L18,3 18,4 0,4Z M0,8 L18,8 18,9 0,9Z M0,13 L5,13 6,14 0,14Z M8,12 L16,12 12,16 Z"/>
+                            </Trigger>
+                            <Trigger Property="Tag" Value="3">
+                                <Setter TargetName="PART_Icon" Property="Data" Value="M1,2 L16,17 17,17 2,2 Z M17,2 L2,17 1,17 16,2 Z"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="PART_Icon" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+								<Setter Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+							</Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PaneCloseButtonStyle" TargetType="{x:Type Button}">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="PART_Content" BorderThickness="0" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+                            <Path Stroke="White" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Stretch="Fill" Width="12" Height="12" Data="{StaticResource PpsWindowCloseButton}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
     </ui:PpsWindow.Resources>
 
-	<Grid x:Name="PART_MainWindowGrid" Background="{StaticResource PPSnWindowBackgroundBrush}">
+    <Grid x:Name="PART_MainWindowGrid" Background="{StaticResource PPSnWindowBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="37" />
             <RowDefinition Height="20" />
@@ -103,14 +165,15 @@
             <ColumnDefinition Width="34" />
             <ColumnDefinition Width="34" />
         </Grid.ColumnDefinitions>
+
         <Button x:Name="PART_ToggleButtton" Grid.RowSpan="2" Width="48" Height="48" Margin="6,6,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Focusable="False"
 				Style="{StaticResource NavigatorToggleButtonStyle}"
 				Command="{x:Static uiL:PpsMainWindow.NavigatorToggleCommand}" />
         <Label x:Name="PART_Caption" Grid.Column="1" Content="{Binding Title, Mode=OneWay}" Foreground="{StaticResource PPSnWindowForegroundBrush}" Padding="10,0,0,0" FontSize="21.333">
-			<Label.Tag>
-				<ui:PpsWindowHitTest HitTest="2" />
-			</Label.Tag>
-		</Label>
+            <Label.Tag>
+                <ui:PpsWindowHitTest HitTest="2" />
+            </Label.Tag>
+        </Label>
         <Button x:Name="PART_MinButton" Grid.Column="2" Style="{StaticResource PPSnWindowButtonStyle}" VerticalAlignment="Top" ToolTip="Minimieren" Command="{x:Static ui:PpsWindow.MinimizeCommand}" >
             <Rectangle
 				Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
@@ -176,39 +239,142 @@
                 </ContextMenu>
             </Label.ContextMenu>
         </Label>
-		
-		<uiL:PpsNavigatorControl x:Name="PART_Navigator" Grid.Row="2" Grid.ColumnSpan="5" Margin="24,0,24,8">
+        <uiL:PpsNavigatorControl x:Name="PART_Navigator" Grid.Row="2" Grid.ColumnSpan="5" Margin="24,0,24,8">
             <uiL:PpsNavigatorControl.Style>
                 <Style TargetType="{x:Type UserControl}">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding Path=NavigatorVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="Collapsed">
                             <DataTrigger.EnterActions>
                                 <BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}" />
-							</DataTrigger.EnterActions>							
-							<DataTrigger.ExitActions>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
                                 <BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}" />
                             </DataTrigger.ExitActions>
                         </DataTrigger>
                     </Style.Triggers>
-				</Style>
-			</uiL:PpsNavigatorControl.Style>
+                </Style>
+            </uiL:PpsNavigatorControl.Style>
         </uiL:PpsNavigatorControl>
         <Grid x:Name="PART_PaneContainer" Grid.Row="2" Grid.ColumnSpan="5">
             <Grid.RowDefinitions>
-				<RowDefinition Height="36"/>
-				<RowDefinition Height="*"/>
-			</Grid.RowDefinitions>
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="*"/>
-				<ColumnDefinition Width="72"/>
-			</Grid.ColumnDefinitions>
+                <RowDefinition Height="36"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="72"/>
+            </Grid.ColumnDefinitions>
+
             <DockPanel LastChildFill="True"	>
-                <Button Content="&lt;--" Command="{x:Static uiL:PpsMainWindow.PrevPaneCommand}"/>
-                <TextBlock Text="{Binding CurrentPane.Title}"/>
-                <Button Content="-->" Command="{x:Static uiL:PpsMainWindow.NextPaneCommand}"/>
-                <ToolBar x:Name="PART_PanePresenterToolBar" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" FontSize="14.667" Background="Beige"
-					 Style="{StaticResource PanePresenterToolBarStyle}"/>
+                <ToggleButton Width="32" Command="{x:Static uiL:PpsMainWindow.PrevPaneCommand}" Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="0"/>
+                <ToggleButton Width="32" Command="{x:Static uiL:PpsMainWindow.NextPaneCommand}" Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="1"/>
+				<ToggleButton x:Name="PART_OpenPaneListButton" Width="32" ClickMode="Press" Tag="2">
+                    <ToggleButton.Style>
+                        <Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource PaneSelectToggleButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Path=CurrentPane, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="{x:Null}">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ToggleButton.Style>
+                    <ToggleButton.Triggers>
+                        <EventTrigger RoutedEvent="Button.MouseEnter">
+                            <EventTrigger.Actions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <BooleanAnimationUsingKeyFrames Storyboard.TargetName="PART_PaneListPopup" Storyboard.TargetProperty="StaysOpen">
+                                            <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="True"/>
+                                        </BooleanAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger.Actions>
+                        </EventTrigger>
+                        <EventTrigger RoutedEvent="Button.MouseLeave">
+                            <EventTrigger.Actions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <BooleanAnimationUsingKeyFrames Storyboard.TargetName="PART_PaneListPopup" Storyboard.TargetProperty="StaysOpen">
+                                            <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+                                        </BooleanAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger.Actions>
+                        </EventTrigger>
+                    </ToggleButton.Triggers>
+                </ToggleButton>
+                <Popup x:Name="PART_PaneListPopup" IsOpen="{Binding ElementName=PART_OpenPaneListButton, Path=IsChecked}" PlacementTarget="{Binding ElementName=PART_OpenPaneListButton}" AllowsTransparency="True" PopupAnimation="Slide">
+                    <ListBox ItemsSource="{Binding Panes}" Background="{StaticResource ButtonDarkerBackGroundBrush}" BorderBrush="{StaticResource PPSnSeparatorBrush}" BorderThickness="1" Style="{StaticResource PPSnListBoxStyle}">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="{x:Type ListBoxItem}">
+                                <Setter Property="Focusable" Value="False"/>
+                                <Setter Property="FontSize" Value="13.333"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                                            <Button x:Name="PART_Item" BorderThickness="0" Height="32" Content="{Binding Title}" Command="{x:Static uiL:PpsMainWindow.GoToPaneCommand}" CommandParameter="{Binding}" >
+                                                <Button.Style>
+                                                    <Style TargetType="{x:Type Button}">
+                                                        <Setter Property="Focusable" Value="False"/>
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                        <Setter Property="Background" Value="Transparent"/>
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="{x:Type Button}">
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*"/>
+                                                                            <ColumnDefinition Width="32"/>
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <Border x:Name="PART_ItemBorder" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+                                                                            <ContentPresenter Margin="24,0,8,0" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                                                        </Border>
+                                                                        <Border x:Name="PART_CloseBorder" Grid.Column="1" Background="{TemplateBinding Background}">
+                                                                            <Button x:Name="PART_CloseButton" Visibility="Hidden" Style="{StaticResource PaneCloseButtonStyle}" Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}" CommandParameter="{Binding}"/>
+                                                                        </Border>
+                                                                    </Grid>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+                                                                            <Setter Property="Background" Value="{StaticResource PPSnAlternation0Brush}"/>
+                                                                            <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Style>
+                                                </Button.Style>
+                                                <Button.Triggers>
+                                                    <EventTrigger RoutedEvent="Button.Click">
+                                                        <EventTrigger.Actions>
+                                                            <BeginStoryboard>
+                                                                <Storyboard>
+                                                                    <BooleanAnimationUsingKeyFrames Storyboard.Target="{Binding ElementName=PART_OpenPaneListButton}" Storyboard.TargetProperty="IsChecked">
+                                                                        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+                                                                    </BooleanAnimationUsingKeyFrames>
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </EventTrigger.Actions>
+                                                    </EventTrigger>
+                                                </Button.Triggers>
+                                            </Button>
+                                            <ControlTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True">
+                                                    <Setter Property="IsSelected" Value="True" />
+                                                </DataTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
+                </Popup>
+                <ToggleButton Width="32" Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}" CommandParameter="{Binding Path=CurrentPane, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}"
+							  Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="3"/>
+                <ToolBar x:Name="PART_PaneToolBar" Margin="16,0" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" FontSize="14.667" Background="Black" Style="{StaticResource PanePresenterToolBarStyle}"/>
             </DockPanel>
+
             <ContentPresenter x:Name="PART_PanePresenter" Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}" />
             <uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right" Margin="24,24,0,24"/>
             <Grid.Style>
@@ -223,10 +389,9 @@
                             </DataTrigger.ExitActions>
                         </DataTrigger>
                     </Style.Triggers>
-				</Style>
-			</Grid.Style>
-			
-		</Grid>
+                </Style>
+            </Grid.Style>
+        </Grid>
 
         <DockPanel x:Name="PART_StatusBar" Grid.Row="4" Grid.ColumnSpan="5"  Background="{StaticResource PPSnWindowFooterBrush}" LastChildFill="False">
             <Button DockPanel.Dock="Left" Content="Trace" Style="{StaticResource PpsSimpleButtonStyle}" Padding="8,0" Margin="32,2" Command="{x:Static ui:PpsWindow.TraceLogCommand}" Focusable="False" />

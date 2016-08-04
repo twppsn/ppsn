@@ -45,6 +45,8 @@ namespace TecWare.PPSn.UI
 
 		public readonly static RoutedCommand NextPaneCommand = new RoutedCommand("NextPane", typeof(PpsMainWindow));
 		public readonly static RoutedCommand PrevPaneCommand = new RoutedCommand("PrevPane", typeof(PpsMainWindow));
+		public readonly static RoutedCommand GoToPaneCommand = new RoutedCommand("GoToPane", typeof(PpsMainWindow));
+		public readonly static RoutedCommand ClosePaneCommand = new RoutedCommand("ClosePane", typeof(PpsMainWindow));
 
 		private readonly static DependencyProperty NavigatorVisibilityProperty = DependencyProperty.Register("NavigatorVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Visible));
 		private readonly static DependencyProperty PaneVisibilityProperty = DependencyProperty.Register("PaneVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Collapsed));
@@ -125,6 +127,36 @@ namespace TecWare.PPSn.UI
 					(sender, e) =>
 					{
 						e.CanExecute = Panes.IndexOf(CurrentPane) > 0;
+					}
+				)
+			);
+			CommandBindings.Add(
+				new CommandBinding(PpsMainWindow.GoToPaneCommand,
+					(sender, e) =>
+					{
+						e.Handled = true;
+						var pane = e.Parameter as IPpsWindowPane;
+						if (pane != null)
+							Activate(pane);
+					},
+					(sender, e) =>
+					{
+						e.CanExecute = true;
+					}
+				)
+			);
+			CommandBindings.Add(
+				new CommandBinding(PpsMainWindow.ClosePaneCommand,
+					(sender, e) =>
+					{
+						e.Handled = true;
+						var pane = e.Parameter as IPpsWindowPane;
+						if (pane != null)
+							Remove(pane);
+					},
+					(sender, e) =>
+					{
+						e.CanExecute = CurrentPane != null;
 					}
 				)
 			);
