@@ -348,7 +348,7 @@ namespace TecWare.PPSn.Data
 				else
 				{
 					// find the table
-					var tableIndex = Array.FindIndex(dataset.tables, c => String.Compare(c.Name, binder.Name) == 0);
+					var tableIndex = Array.FindIndex(dataset.tables, c => String.Compare(c.TableName, binder.Name) == 0);
 					if (tableIndex == -1) // find meta data
 						expr = dataset.DataSetDefinition.Meta.GetMetaConstantExpression(binder.Name);
 					else
@@ -363,7 +363,7 @@ namespace TecWare.PPSn.Data
 				PpsDataSet dataset = (PpsDataSet)Value;
 
 				return
-					(from t in dataset.Tables select t.Name)
+					(from t in dataset.Tables select t.TableName)
 					.Concat(from key in dataset.DataSetDefinition.Meta.Keys select key);
 			} // func GetDynamicMemberNames
 		} // class PpsDataSetMetaObject
@@ -383,7 +383,7 @@ namespace TecWare.PPSn.Data
 			{
 				get
 				{
-					var table = this.FirstOrDefault(c => String.Compare(c.Name, tableName, StringComparison.OrdinalIgnoreCase) == 0);
+					var table = this.FirstOrDefault(c => String.Compare(c.TableName, tableName, StringComparison.OrdinalIgnoreCase) == 0);
 					if (table == null && throwException)
 						throw new ArgumentOutOfRangeException("tableName", $"Table '{tableName}' not found.");
 					return table;
@@ -433,7 +433,7 @@ namespace TecWare.PPSn.Data
 
 		private int FindTableIndex(string tableName)
 		{
-			return Array.FindIndex(tables, dt => String.Compare(dt.Name, tableName, StringComparison.OrdinalIgnoreCase) == 0);
+			return Array.FindIndex(tables, dt => String.Compare(dt.TableName, tableName, StringComparison.OrdinalIgnoreCase) == 0);
 		} // func FindTableIndex
 
 		private void ClearInternal()
@@ -463,7 +463,7 @@ namespace TecWare.PPSn.Data
 			x.WriteAttributeString("xmlns", "t", null, "table");
 			foreach (var table in tables)
 			{
-				x.WriteStartElement(table.Name, "table");
+				x.WriteStartElement(table.TableName, "table");
 				table.Write(x);
 				x.WriteEndElement();
 			}
@@ -500,6 +500,14 @@ namespace TecWare.PPSn.Data
 			lock (nextPrimaryLock)
 				return --lastPrimaryId;
 		} // func GetNextId
+
+		protected internal virtual void OnTableRowAdded(PpsDataTable table, PpsDataRow row)
+		{
+		} // proc OnTableRowAdded
+
+		protected internal virtual void OnTableRowDeleted(PpsDataTable table, PpsDataRow row)
+		{
+		} // proc OnTableRowDeleted
 
 		protected internal virtual void OnTableColumnValueChanged(PpsDataRow row, int iColumnIndex, object oldValue, object value)
 		{

@@ -29,6 +29,7 @@ namespace TecWare.PPSn.Data
 	public static class PpsDataHelperClient
 	{
 		internal static readonly XName xnTable = "table";
+		internal static readonly XName xnTag = "tag";
 		internal static readonly XName xnColumn = "column";
 		internal static readonly XName xnRelation = "relation";
 		internal static readonly XName xnPrimary = "primary";
@@ -36,6 +37,9 @@ namespace TecWare.PPSn.Data
 
 		internal static void AddMetaGroup(XElement xMetaGroup, Action<string, Func<Type>, object> add)
 		{
+			if (xMetaGroup == null)
+				return;
+
 			foreach (XElement c in xMetaGroup.Elements())
 				add(c.Name.LocalName, () => LuaType.GetType(c.GetAttribute("dataType", "object"), lateAllowed: false), c.Value);
 		} // proc AddMetaGroup

@@ -155,6 +155,8 @@ namespace TecWare.PPSn.Data
 			this.columnName = columnName;
 			this.parentRelation = null;
 
+			this.isIdentity = isIdentity;
+
 			if (isPrimaryKey)
 				table.SetPrimaryKey(this);
 		} // ctor

@@ -55,19 +55,31 @@ namespace TecWare.PPSn.Data
 			this.shell = shell;
 			this.type = type;
 
-			// Lade die Tabellen
+			// read definitions
 			foreach (XElement c in xSchema.Elements())
 			{
 				if (c.Name == xnTable)
 					Add(new PpsDataTableDefinitionClient(this, c));
+				else if (c.Name == xnTag)
+					Add(CreateAutoTagDefinition(c));
 				else if (c.Name == xnMeta)
 					metaInfo = new PpsDataSetMetaCollectionClient(c);
 			}
 
-			// Immer MetaDaten erzeugen
+			// create always a meta data collection
 			if (metaInfo == null)
 				metaInfo = new PpsDataSetMetaCollectionClient(new XElement("meta"));
 		} // ctor
+
+		private PpsDataSetAutoTagDefinition CreateAutoTagDefinition(XElement x)
+		{
+			var tagName = x.GetAttribute("name", String.Empty);
+			var tagMode = x.GetAttribute("mode", PpsDataSetAutoTagMode.First);
+			var tableName = x.GetAttribute("tableName", String.Empty);
+			var columnName = x.GetAttribute("columnName", String.Empty);
+
+			return new PpsDataSetAutoTagDefinition(this, tagName, tableName, columnName, tagMode);
+		} // func CreateAutoTagDefinition
 
 		public override PpsDataSet CreateDataSet()
 			=> new PpsDataSetClient(this, shell);
@@ -184,7 +196,7 @@ namespace TecWare.PPSn.Data
 			{
 				// create head
 				var head = Tables["Head", true];
-				var row = head.Add(-1L);
+				var row = head.Add();
 				row["Typ"] = ((PpsDataSetDefinitionClient)DataSetDefinition).ObjectType;
 				row["Guid"] = Guid.NewGuid();
 

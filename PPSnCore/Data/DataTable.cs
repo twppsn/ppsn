@@ -500,6 +500,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="row">The new row</param>
 		protected virtual void OnRowAdded(PpsDataRow row)
 		{
+			dataset.OnTableRowAdded(this, row);
 			OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, row));
 		} // proc OnRowAdded
 
@@ -507,6 +508,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="row"></param>
 		protected virtual void OnRowRemoved(PpsDataRow row)
 		{
+			dataset.OnTableRowDeleted(this, row);
 			OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, row));
 		} // proc OnRowRemoved
 
@@ -725,7 +727,7 @@ namespace TecWare.PPSn.Data
 		{
 			var primaryKey = TableDefinition.PrimaryKey;
 			if (primaryKey == null)
-				throw new ArgumentException($"No primary key defined (at table {Name}).");
+				throw new ArgumentException($"No primary key defined (at table {TableName}).");
 
 			return FindRows(primaryKey, keyValue, allRows).FirstOrDefault();
 		} // func FindKey
@@ -850,7 +852,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Definition of this table.</summary>
 		public PpsDataTableDefinition TableDefinition => tableDefinition;
 		/// <summary>Name of the table.</summary>
-		public string Name => tableDefinition.Name;
+		public string TableName => tableDefinition.Name;
 		/// <summary>Columns of the table</summary>
 		public ReadOnlyCollection<PpsDataColumnDefinition> Columns => tableDefinition.Columns;
 
