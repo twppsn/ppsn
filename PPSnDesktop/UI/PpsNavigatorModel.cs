@@ -147,10 +147,16 @@ namespace TecWare.PPSn.UI
 			} // ctor
 
 			public override void Execute()
-				=> actionDefinition.Execute(Navigator);
+			{
+				if (IsExecutable)
+				{
+					actionDefinition.Execute(Navigator);
+					Navigator.ClearCurrentSearchText();
+				}
+			} // proc Execute
 
 			public override bool IsExecutable
-				=> actionDefinition?.CheckCondition(Navigator) ?? false;
+				=> actionDefinition != null;
 		} // class MacroExpression
 
 		#endregion

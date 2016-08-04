@@ -75,12 +75,9 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		public void Refresh()
-		{
-			if (CanExecuteChanged != null)
-				CanExecuteChanged(this, EventArgs.Empty);
-		} // proc Refresh
+			=> CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 
-		void IPpsIdleAction.OnIdle() { Refresh(); }
+		bool IPpsIdleAction.OnIdle(int elapsed) { Refresh(); return true; }
 	} // class PpsCommand
 
 

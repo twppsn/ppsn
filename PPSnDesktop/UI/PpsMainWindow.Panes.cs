@@ -158,7 +158,7 @@ namespace TecWare.PPSn.UI
 			return r;
 		} // func Activate
 
-		private bool ActivateNextPane(bool forward)
+		public bool ActivateNextPane(bool forward)
 		{
 			var currentPane = CurrentPane;
 			if (currentPane == null)
@@ -217,6 +217,8 @@ namespace TecWare.PPSn.UI
 				var tiParam = pi.ParameterType.GetTypeInfo();
 				if (tiParam.IsAssignableFrom(typeof(PpsMainEnvironment)))
 					paneArguments[i] = Environment;
+				else if (tiParam.IsAssignableFrom(typeof(PpsMainWindow)))
+					paneArguments[i] = this;
 				else if (pi.HasDefaultValue)
 					paneArguments[i] = pi.DefaultValue;
 				else
@@ -347,7 +349,7 @@ namespace TecWare.PPSn.UI
 				{
 					if (CurrentPane == pane)
 					{
-						if (panes.Count > 0)
+						if (panes.Count > 1)
 							ActivateNextPane(true);
 						else
 							SetValue(CurrentPaneKey, null);
