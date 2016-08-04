@@ -188,7 +188,7 @@ namespace TecWare.PPSn.Server
 			var objectId = (long)firstRow["Id"];
 			var guidId = (Guid)firstRow["Guid"];
 			var typ = Name;
-			var nr = (string)firstRow["Nr"];
+			var nr = "T00001"; // (string)firstRow["Nr"];
 			var pulledRevId = firstRow.GetProperty("HeadRevId", -1L);
 
 			// persist the data to the database
