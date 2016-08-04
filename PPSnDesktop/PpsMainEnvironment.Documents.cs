@@ -23,6 +23,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 
@@ -234,9 +235,26 @@ namespace TecWare.PPSn
 			return base.OnLoadedAsync(arguments);
 		} // proc OnLoadedAsync
 
-		public void PushWork()
+		public async Task PushWorkAsync()
 		{
-			throw new NotImplementedException();
+			var head = Tables["Head", true];
+			var documentType = head.First["Typ"];
+
+			// send the document to the server
+			using (var xmlAnswer = environment.Request.GetXmlStreamAsync(
+				await environment.Request.PutTextResponseAsync(documentType + "/?action=push", MimeTypes.Text.Xml,
+					(tw) =>
+					{
+						using (var xmlPush = XmlWriter.Create(tw, Procs.XmlWriterSettings))
+							Write(xmlPush);
+						}
+				)))
+			{
+				var xResult = XDocument.Load(xmlAnswer);
+			}
+
+			// pull the document again, and update the local store
+
 		} // proc PushWork
 
 		public void CommitWork()
@@ -246,7 +264,7 @@ namespace TecWare.PPSn
 
 			// convert data to a string
 			using (var dst = new StringWriter(data))
-			using (var xml = XmlWriter.Create(dst, new XmlWriterSettings() { }))
+			using (var xml = XmlWriter.Create(dst, Procs.XmlWriterSettings))
 				Write(xml);
 
 			// update local store

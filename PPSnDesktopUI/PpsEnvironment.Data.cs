@@ -7,6 +7,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
@@ -581,6 +582,10 @@ namespace TecWare.PPSn
 			private WebHeaderCollection headers;
 			private NameValueCollection arguments;
 
+			private string method = HttpMethod.Get.Method;
+			private string contentType = null;
+			private long contentLength = -1;
+
 			public PpsStoreRequest(PpsEnvironment environment, Uri uri, string path)
 			{
 				this.environment = environment;
@@ -624,6 +629,10 @@ namespace TecWare.PPSn
 
 			#endregion
 
+			public override string Method { get { return method; } set { method = value; } }
+			public override string ContentType { get { return contentType; } set { contentType = value; } }
+			public override long ContentLength { get { return contentLength; } set { contentLength = value; } }
+
 			public PpsEnvironment Environment => environment;
 
 			public override Uri RequestUri => uri;
@@ -634,58 +643,6 @@ namespace TecWare.PPSn
 			public string Path => path;
 			/// <summary>Header</summary>
 			public override WebHeaderCollection Headers { get { return headers ?? (headers = new WebHeaderCollection()); } set { headers = value; } }
-
-
-
-
-
-
-
-			public override void Abort()
-			{
-				base.Abort();
-			}
-
-			public override IAsyncResult BeginGetRequestStream(AsyncCallback callback, object state)
-			{
-				return base.BeginGetRequestStream(callback, state);
-			}
-
-			public override Stream EndGetRequestStream(IAsyncResult asyncResult)
-			{
-				return base.EndGetRequestStream(asyncResult);
-			}
-
-			public override Stream GetRequestStream()
-			{
-				return base.GetRequestStream();
-			}
-
-
-			public override string ContentType
-			{
-				get
-				{
-					return base.ContentType;
-				}
-
-				set
-				{
-					base.ContentType = value;
-				}
-			}
-
-			public override long ContentLength
-			{
-				get
-				{
-					return base.ContentLength;
-				}
-				set
-				{
-					base.ContentLength = value;
-				}
-			}
 		} // class PpsStoreRequest
 
 		#endregion
@@ -696,36 +653,122 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		private sealed class PpsStoreCacheRequest : PpsStoreRequest
 		{
+			private WebRequest onlineRequest = null;
+
 			public PpsStoreCacheRequest(PpsEnvironment environment, Uri uri, string absolutePath)
 				: base(environment, uri, absolutePath)
 			{
 			} // ctor
 
+			private WebRequest CreateOnlineRequest()
+			{
+				if (onlineRequest == null)
+				{
+					var r = Environment.GetOnlineRequest(RequestUri, Path);
+
+					// copy properties
+					r.Method = this.Method;
+
+					if (ContentType != null)
+						r.ContentType = this.ContentType;
+					if (r.ContentLength > 0)
+						r.ContentLength = this.ContentLength;
+
+					// copy headers
+					foreach (string k in Headers.Keys)
+						r.Headers[k] = this.Headers[k];
+
+					onlineRequest = r;
+				}
+
+				return onlineRequest;
+			} // func GetOnlineRequest
+
+
 			public override WebResponse GetResponse()
 			{
-				string contentType;
-				Stream source;
+				if (onlineRequest == null)
+				{
+					string contentType;
+					Stream source;
 
-				// is this a static item
-				if (Environment.TryGetOfflineItem(Path, true, out contentType, out source))
-				{
-					var r = new PpsStoreResponse(this);
-					r.SetResponseData(source, contentType);
-					return r;
-				}
-				else if (Environment.IsOnline)
-				{
-					// todo: dynamic cache, copy of properties and headers
-					return Environment.GetOnlineRequest(RequestUri, Path).GetResponse();
+					// is this a static item
+					if (Environment.TryGetOfflineItem(Path, true, out contentType, out source))
+					{
+						var r = new PpsStoreResponse(this);
+						r.SetResponseData(source, contentType);
+						return r;
+					}
+					else if (Environment.IsOnline)
+					{
+						// todo: dynamic cache, copy of properties and headers
+						return CreateOnlineRequest().GetResponse();
+					}
+					else
+						throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, null);
 				}
 				else
-					throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, null);
+					return onlineRequest.GetResponse();
 			} // func GetResponse
+
+			public override IAsyncResult BeginGetRequestStream(AsyncCallback callback, object state)
+				=> CreateOnlineRequest().BeginGetRequestStream(callback, state);
+
+			public override Stream EndGetRequestStream(IAsyncResult asyncResult)
+				=> onlineRequest.EndGetRequestStream(asyncResult);
+
+			public override Stream GetRequestStream()
+				=> CreateOnlineRequest().GetRequestStream();
+
+			public override WebHeaderCollection Headers
+			{
+				get
+				{
+					return onlineRequest == null ? base.Headers : onlineRequest.Headers;
+				}
+				set
+				{
+					if (onlineRequest == null)
+						base.Headers = value;
+					else
+						onlineRequest.Headers = value;
+				}
+			} // prop Headers
+
+			public override string ContentType
+			{
+				get
+				{
+					return onlineRequest == null ? base.ContentType : onlineRequest.ContentType;
+				}
+				set
+				{
+					if (onlineRequest == null)
+						base.ContentType = value;
+					else
+						onlineRequest.ContentType = value;
+				}
+			} // prop ContentType
+
+			public override long ContentLength
+			{
+				get
+				{
+					return onlineRequest == null ? base.ContentLength : onlineRequest.ContentLength;
+				}
+				set
+				{
+					if (onlineRequest == null)
+						base.ContentLength = value;
+					else
+						onlineRequest.ContentLength = value;
+				}
+			}
 		} // class PpsStoreCacheRequest
 
 		#endregion
 
-		#region -- class PpsStoreResponse ---------------------------------------------------
+		#region -- class PpsStoreResponse -------------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
