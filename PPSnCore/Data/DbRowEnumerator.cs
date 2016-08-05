@@ -56,6 +56,9 @@ namespace TecWare.PPSn.Data
 
 			public DbDataColumn(string name, Type dataType, IPropertyEnumerableDictionary attributes)
 			{
+				if (String.IsNullOrEmpty(name))
+					throw new ArgumentNullException("name");
+
 				this.name = name;
 				this.dataType = dataType;
 				this.attributes = attributes;
@@ -135,7 +138,13 @@ namespace TecWare.PPSn.Data
 
 			var tmp = new DbDataColumn[reader.FieldCount];
 			for (var i = 0; i < reader.FieldCount; i++)
-				tmp[i] = new DbDataColumn(reader.GetName(i), reader.GetFieldType(i), PropertyDictionary.EmptyReadOnly);
+			{
+				var columnName = reader.GetName(i);
+				if (String.IsNullOrEmpty(columnName))
+					columnName = $"_Col{i}";
+
+				tmp[i] = new DbDataColumn(columnName, reader.GetFieldType(i), PropertyDictionary.EmptyReadOnly);
+			}
 			return tmp;
 		} // func RetrieveColumnDescriptions
 

@@ -448,13 +448,22 @@ namespace TecWare.PPSn.Data
 			if (x.Name != xnData)
 				throw new ArgumentException();
 
-			// clear current data, for a fresh load
-			if (!combineData)
-				ClearInternal();
+			var tmp = undoSink;
+			undoSink = null;
+			try
+			{
+				// clear current data, for a fresh load
+				if (!combineData)
+					ClearInternal();
 
-			// fetch the tables
-			foreach (var xTable in x.Elements().Where(c => c.Name.NamespaceName == "table"))
-				this.Tables[xTable.Name.LocalName, true].Read(xTable, combineData);
+				// fetch the tables
+				foreach (var xTable in x.Elements().Where(c => c.Name.NamespaceName == "table"))
+					this.Tables[xTable.Name.LocalName, true].Read(xTable, combineData);
+			}
+			finally
+			{
+				undoSink = tmp;
+			}
 		} // proc Read
 
 		public void Write(XmlWriter x)
@@ -469,6 +478,15 @@ namespace TecWare.PPSn.Data
 			}
 			x.WriteEndElement();
 		} // proc Write
+
+		public string GetAsString()
+		{
+			var sb = new StringBuilder();
+			using (var tw = new StringWriter(sb))
+			using (var xml = XmlWriter.Create(tw, Procs.XmlWriterSettings))
+				Write(xml);
+			return sb.ToString();
+		} // func GetAsString
 
 		public void Commit()
 		{
