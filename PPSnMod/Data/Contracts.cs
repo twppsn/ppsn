@@ -78,6 +78,8 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		PpsDataTransaction CreateTransaction(PpsDataSource dataSource, bool throwException = true);
 
+		/// <summary>UserId of the user in the main database</summary>
+		long UserId { get; }
 		/// <summary>Name of the current user.</summary>
 		string UserName { get; }
 
