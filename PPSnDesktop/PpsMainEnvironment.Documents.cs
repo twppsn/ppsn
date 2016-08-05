@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -60,7 +61,7 @@ namespace TecWare.PPSn
 		public Guid ObjectGuid => objectGuid;
 		/// <summary>Pulled revision</summary>
 		public long RevisionId => revisionId;
-		
+
 		public bool IsEmpty => objectGuid == Guid.Empty && revisionId <= 0;
 
 		public static PpsDocumentId Empty { get; } = new PpsDocumentId(Guid.Empty, 0);
@@ -101,7 +102,7 @@ namespace TecWare.PPSn
 	{
 		private readonly PpsMainEnvironment environment;
 
-		public PpsDocumentDefinition(PpsMainEnvironment environment, string type, XElement xSchema) 
+		public PpsDocumentDefinition(PpsMainEnvironment environment, string type, XElement xSchema)
 			: base(environment, type, xSchema)
 		{
 			this.environment = environment;
@@ -121,12 +122,12 @@ namespace TecWare.PPSn
 		private readonly PpsMainEnvironment environment;
 		private readonly PpsUndoManager undoManager;
 
-		private PpsDocumentId documentId = PpsDocumentId.Empty;	// document id
+		private PpsDocumentId documentId = PpsDocumentId.Empty; // document id
 		private long localId = -2;        // local Id in the cache (-2 for not setted)
 		private long pulledRevisionId;
-		private bool isDocumentChanged = false;		// is this document changed to the pulled version
+		private bool isDocumentChanged = false;   // is this document changed to the pulled version
 		private bool isReadonly = true;           // is this document a special read-only revision
-		private bool isDirty = false;							// is this document changed since the last dump
+		private bool isDirty = false;             // is this document changed since the last dump
 
 		private readonly object documentOwnerLock = new object();
 		private readonly List<IPpsDocumentOwner> documentOwner = new List<IPpsDocumentOwner>(); // list with document owners
@@ -237,8 +238,13 @@ namespace TecWare.PPSn
 
 		public async Task PushWorkAsync()
 		{
+			CommitWork();
+
 			var head = Tables["Head", true];
 			var documentType = head.First["Typ"];
+
+			long newServerId;
+			long newRevId;
 
 			// send the document to the server
 			using (var xmlAnswer = environment.Request.GetXmlStreamAsync(
@@ -247,14 +253,31 @@ namespace TecWare.PPSn
 					{
 						using (var xmlPush = XmlWriter.Create(tw, Procs.XmlWriterSettings))
 							Write(xmlPush);
-						}
+					}
 				)))
 			{
 				var xResult = XDocument.Load(xmlAnswer);
+
+				newServerId = xResult.Root.GetAttribute("id", -1L);
+				newRevId = xResult.Root.GetAttribute("revId", -1L);
+				if (newServerId < 0 || newRevId < 0)
+					throw new ArgumentOutOfRangeException("id", "Pull action failed.");
 			}
 
 			// pull the document again, and update the local store
+			var xRoot = await environment.Request.GetXmlAsync($"{documentType}/?action=pull&id={newServerId}&rev={newRevId}");
 
+			// recreate dataset
+			undoManager.Clear();
+			Read(xRoot);
+			SetLocalState(documentId.ObjectGuid, localId, newRevId, false, false);
+
+			// update local store and
+			using (var trans = environment.LocalConnection.BeginTransaction())
+			{
+				environment.UpdateLocalDocumentState(trans, localId, this, newServerId, newRevId, Tables["Head", true].First["Nr"].ToString());
+				trans.Commit();
+			}
 		} // proc PushWork
 
 		public void CommitWork()
@@ -391,7 +414,7 @@ namespace TecWare.PPSn
 
 		private void ClearDocumentDefinitionInfo(List<string> updatedDocuments)
 		{
-			foreach(var k in documentDefinitions.Keys.ToArray())
+			foreach (var k in documentDefinitions.Keys.ToArray())
 			{
 				if (updatedDocuments.IndexOf(k) == -1)
 					documentDefinitions.Remove(k);
@@ -432,28 +455,29 @@ namespace TecWare.PPSn
 
 			// register events, owner, and in the openDocuments dictionary
 			newDocument.RegisterOwner(owner);
-			
+
 			return newDocument;
 		} // func CreateDocument
-		
+
 		// the return is a uninitialized document
 		// SetLocalState, OnLoadAsync is not called, yet
-		private async Task<Tuple< PpsDocument,long>> PullDocumentCoreAsync(string documentType, long serverId, long revisionId = -1)
+		private async Task<Tuple<PpsDocument, long, string>> PullDocumentCoreAsync(string documentType, long serverId, long revisionId = -1)
 		{
 			if (serverId <= 0)
 				throw new ArgumentOutOfRangeException("serverId", "Invalid server id.");
 
 			var def = await GetDocumentDefinitionAsync(documentType);
 			var xRoot = await Request.GetXmlAsync($"{documentType}/?action=pull&id={serverId}&rev={revisionId}");
-			
+
 			var newDocument = (PpsDocument)def.CreateDataSet();
 			newDocument.Read(xRoot);
 
-			var pulledRevisionId = newDocument.Tables["Head", true].First.GetProperty("HeadRevId", -1L);
+			var headRow = newDocument.Tables["Head", true].First;
+			var pulledRevisionId = headRow.GetProperty("HeadRevId", -1L);
 			if (pulledRevisionId < 0)
 				throw new ArgumentOutOfRangeException("pulledRevisionId");
-
-			return new Tuple<PPSn.PpsDocument, long>(newDocument, pulledRevisionId);
+			
+			return new Tuple<PpsDocument, long, string>(newDocument, pulledRevisionId, headRow["Nr"].ToString());
 		} // func PullDocumentCoreAsync
 
 		private async Task<PpsDocument> GetLocalDocumentAsync(Guid guid)
@@ -464,7 +488,7 @@ namespace TecWare.PPSn
 			string documentData;
 			bool isDocumentChanged;
 			long pulledRevId;
-			
+
 			using (var trans = LocalConnection.BeginTransaction())
 			{
 				// get database info
@@ -497,16 +521,7 @@ namespace TecWare.PPSn
 					var newDocument = await PullDocumentCoreAsync(documentType, serverId);
 
 					// update document data in the local store
-					using (var cmd = LocalConnection.CreateCommand())
-					{
-						cmd.Transaction = trans;
-						cmd.CommandText = "update main.Objects set Document = @Data where Id = @Id;";
-
-						cmd.Parameters.Add("@Id", DbType.Int64).Value = localId;
-						cmd.Parameters.Add("@Data", DbType.String).Value = newDocument.Item1;
-
-						cmd.ExecuteNonQuery();
-					}
+					UpdateLocalDocumentState(trans, localId, newDocument.Item1, serverId, newDocument.Item2, newDocument.Item3);
 
 					trans.Commit();
 
@@ -533,6 +548,31 @@ namespace TecWare.PPSn
 				}
 			}
 		} // func GetLocalDocumentAsync
+
+		internal void UpdateLocalDocumentState(SQLiteTransaction trans, long localId, PpsDocument document, long serverId, long pulledRevId, string nr)
+		{
+			using (var cmd = LocalConnection.CreateCommand())
+			{
+				cmd.Transaction = trans;
+				cmd.CommandText = "update main.Objects set ServerId = @ServerId, Document = @Data, PulledRevId = @RevId, Nr = @Nr where Id = @Id;";
+
+				cmd.Parameters.Add("@Id", DbType.Int64).Value = localId;
+				cmd.Parameters.Add("@ServerId", DbType.Int64).Value = serverId;
+				cmd.Parameters.Add("@Nr", DbType.String).Value = nr;
+				cmd.Parameters.Add("@Data", DbType.String).Value = document.GetAsString();
+				cmd.Parameters.Add("@RevId", DbType.Int64).Value = pulledRevId;
+
+				cmd.ExecuteNonQuery();
+
+				using (var tags = new TagDatabaseCommands(LocalConnection))
+				{
+					tags.ObjectId = localId;
+					tags.Transaction = trans;
+
+					tags.UpdateTags(document.GetAutoTags().ToArray());
+				}
+			}
+		} // proc UpdateLocalState
 
 		private async Task<PpsDocument> GetServerDocumentAsync(PpsDocumentId documentId)
 		{
@@ -561,7 +601,7 @@ namespace TecWare.PPSn
 						throw new InvalidOperationException("unknown local revision"); // todo:
 				}
 			}
-			
+
 			// load from server
 			var newDocument = await PullDocumentCoreAsync(documentType, serverId, documentId.RevisionId);
 			if (newDocument.Item2 != documentId.RevisionId)
@@ -575,7 +615,7 @@ namespace TecWare.PPSn
 		public async Task<PpsDocument> OpenDocumentAsync(IPpsDocumentOwner owner, PpsDocumentId documentId, LuaTable arguments)
 		{
 			PpsDocument document;
-			
+
 			// check if the document is already opened
 			if (!openDocuments.TryGetValue(documentId, out document))
 			{
