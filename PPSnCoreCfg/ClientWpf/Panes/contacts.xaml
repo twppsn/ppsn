@@ -11,7 +11,7 @@
         
         pushContact = command(
             function (args) : void
-                PushData();
+                syncUI(PushDataAsync());
             end
        );
         
