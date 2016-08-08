@@ -1,6 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
 		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+	<luaengine>
+		<script id="ContactsScript" filename="contacts\contactsServer.lua" />
+	</luaengine>
 
 	<pps:ppsn name="ppsn">
 		<pps:register source="main">
@@ -79,7 +82,7 @@
 			</pps:view> -->
 
 			<!-- contacts mask -->
-			<pps:dataset name="contactsDataSet" inherited="coreDataSet" clientScripts="contacts\contactsLocal.lua">
+			<pps:dataset name="contactsDataSet" inherited="coreDataSet" clientScripts="contacts\contactsLocal.lua" serverScripts="ContactsScript">
 				<pps:autoTag name="Name" tableName="Head" columnName="Name" mode="First" />
 				<pps:autoTag name="LiefNr" tableName="Head" columnName="LiefNr" mode="Number" />
 				<pps:autoTag name="KundNr" tableName="Head" columnName="KundNr" mode="Number" />
@@ -157,16 +160,15 @@
 			
 			<pps:action name="contactNew" displayName="Neue Kontakt" priority="100">
 				<pps:condition><![CDATA[ return CurrentView == Views["ko"]; ]]></pps:condition>
-				<pps:code><![CDATA[ Window:LoadMaskAsync{ document = 'ko', pane = 'wpf/panes/contacts.xaml' }; ]]></pps:code>
+				<pps:code><![CDATA[ Window:LoadMask{ document = 'ko', pane = 'wpf/panes/contacts.xaml' }; ]]></pps:code>
 			</pps:action>
 			<pps:action name="contactOpen" displayName="Bearbeiten" priority="200">
 				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "ko" ]]></pps:condition>
-				<pps:code><![CDATA[ Window:LoadMaskAsync{ document = 'ko', pane = 'wpf/panes/contacts.xaml', guid = CurrentItem.Guid }; ]]> </pps:code>
+				<pps:code><![CDATA[ Window:LoadMask{ document = 'ko', pane = 'wpf/panes/contacts.xaml', guid = CurrentItem.Guid }; ]]> </pps:code>
 			</pps:action>
 		</pps:wpf>
 
 		<pps:document name="ko" dataset="contactsDataSet" displayname="Contacts">
-			
 		</pps:document>
 	</pps:ppsn>
 </fragment>

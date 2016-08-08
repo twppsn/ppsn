@@ -517,6 +517,7 @@ namespace TecWare.PPSn.Server.Data
 
 		public DateTime ConfigurationStamp => configurationStamp;
 		public string[] ClientScripts => clientScripts;
+		public string[] ServerScripts => serverScripts;
 
 		// -- Static --------------------------------------------------------------
 
