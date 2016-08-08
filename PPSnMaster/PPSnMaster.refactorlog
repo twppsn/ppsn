@@ -7,11 +7,6 @@
     <Property Name="ParentElementType" Value="SqlTable" />
     <Property Name="NewName" Value="Document" />
   </Operation>
-
-
-
-
-
   <Operation Name="Rename Refactor" Key="aeaddd1e-12f7-4343-94ce-3e35f65314d0" ChangeDateTime="07/27/2016 06:47:49">
     <Property Name="ElementName" Value="[dbo].[Plzd].[Id]" />
     <Property Name="ElementType" Value="SqlSimpleColumn" />
@@ -81,5 +76,12 @@
     <Property Name="ParentElementName" Value="[dbo].[Land]" />
     <Property Name="ParentElementType" Value="SqlTable" />
     <Property Name="NewName" Value="Zone" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="a8224f99-1387-495d-b30f-37661da07006" ChangeDateTime="08/08/2016 12:50:28">
+    <Property Name="ElementName" Value="[dbo].[Ansp].[ArdeId]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[Ansp]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="AdreId" />
   </Operation>
 </Operations>

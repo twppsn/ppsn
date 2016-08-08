@@ -5,7 +5,7 @@
 	<pps:ppsn name="ppsn">
 		<pps:register source="main">
 			<!-- contact fields -->
-			<pps:field name="dbo.Kont.Id" />
+			<pps:field name="dbo.Kont.ObjkId" />
 			<pps:field name="dbo.Kont.Name">
 				<pps:attribute name="displayName">Name</pps:attribute>
 			</pps:field>
@@ -36,8 +36,19 @@
 				<pps:attribute name="displayName">Anmerkung</pps:attribute>
 			</pps:field>
 
+			<pps:field name="dbo.Adre.Id" />
+			<pps:field name="dbo.Adre.ObjkId" />
+			<pps:field name="dbo.Adre.Name" />
+			<pps:field name="dbo.Adre.Postfach" />
+			<pps:field name="dbo.Adre.Zusatz" />
+			<pps:field name="dbo.Adre.Strasse" />
+			<pps:field name="dbo.Adre.Ort" />
+			<pps:field name="dbo.Adre.Region" />
+			<pps:field name="dbo.Adre.Plz" />
+			<pps:field name="dbo.Adre.LandId" />
+
 			<pps:field name="dbo.Ansp.Id" />
-			<pps:field name="dbo.Ansp.ObjkId" />
+			<pps:field name="dbo.Ansp.AdreId" />
 			<pps:field name="dbo.Ansp.Name" />
 			<pps:field name="dbo.Ansp.Titel" />
 			<pps:field name="dbo.Ansp.Tel" />
@@ -49,7 +60,7 @@
 			<pps:field name="dbo.Ansp.Funktion" />
 			<pps:field name="dbo.Ansp.Brief" />
 			<pps:field name="dbo.Ansp.Anmerk" />
-
+			
 			<!-- menü eintrag für online daten praktisch?
 			<pps:view name="contacts" displayName="Kontakte">
 				<pps:source type="select">
@@ -74,6 +85,7 @@
 				<pps:autoTag name="KundNr" tableName="Head" columnName="KundNr" mode="Number" />
 
 				<pps:table name="Head">
+					<pps:column name="ObjkId" fieldName="dbo.Kont.ObjkId" />
 					<pps:column name="Name" fieldName="dbo.Kont.Name" />
 					<pps:column name="LiefNr" fieldName="dbo.Kont.LiefNr" />
 					<pps:column name="KundNr" fieldName="dbo.Kont.KundNr" />
@@ -91,9 +103,22 @@
 					<pps:column name="Inaktiv" fieldName="dbo.Kont.Inaktiv" />
 				</pps:table>
 
+				<pps:table name="Adre">
+					<pps:column name="Id" fieldName="dbo.Adre.Id" isPrimary="true" />
+					<pps:relation name="ObjkId" fieldName="dbo.Adre.ObjkId" relationName="AdreHead" parentTable="Head" parentColumn="ObjkId" parentType="Root" />
+					<pps:column name="Name" fieldName="dbo.Adre.Name" />
+					<pps:column name="Postfach" fieldName="dbo.Adre.Postfach" />
+					<pps:column name="Zusatz" fieldName="dbo.Adre.Zusatz" />
+					<pps:column name="Strasse" fieldName="dbo.Adre.Strasse" />
+					<pps:column name="Ort" fieldName="dbo.Adre.Ort" />
+					<pps:column name="Region" fieldName="dbo.Adre.Region" />
+					<pps:column name="Plz" fieldName="dbo.Adre.Plz" />
+					<pps:column name="LandId" fieldName="dbo.Adre.LandId" />
+				</pps:table>
+
 				<pps:table name="Ansp">
 					<pps:column name="Id" fieldName="dbo.Ansp.Id" isPrimary="true" />
-					<pps:relation name="ObjkId" fieldName="dbo.Ansp.ObjkId" relationName="AnspHead" parentTable="Head" parentColumn="Id" parentType="Root" />
+					<pps:relation name="AdreId" fieldName="dbo.Ansp.AdreId" relationName="AnspAdre" parentTable="Head" parentColumn="Id" parentType="Root" />
 					<pps:column name="Name" fieldName="dbo.Ansp.Name" />
 					<pps:column name="Titel" fieldName="dbo.Ansp.Titel" />
 					<pps:column name="Tel" fieldName="dbo.Ansp.Tel" />
@@ -105,19 +130,6 @@
 					<pps:column name="Funktion" fieldName="dbo.Ansp.Funktion" />
 					<pps:column name="Brief" fieldName="dbo.Ansp.Brief" />
 					<pps:column name="Anmerk" fieldName="dbo.Ansp.Anmerk" />
-				</pps:table>
-
-				<pps:table name="Adre">
-					<pps:column name="Id" fieldName="dbo.Adre.Id" isPrimary="true" />
-					<pps:relation name="ObjkId" fieldName="dbo.Adre.ObjkId" relationName="AdreHead" parentTable="Head" parentColumn="Id" parentType="Root" />
-					<pps:column name="Name" fieldName="dbo.Adre.Name" />
-					<pps:column name="Postfach" fieldName="dbo.Adre.Postfach" />
-					<pps:column name="Zusatz" fieldName="dbo.Adre.Zusatz" />
-					<pps:column name="Strasse" fieldName="dbo.Adre.Strasse" />
-					<pps:column name="Ort" fieldName="dbo.Adre.Ort" />
-					<pps:column name="Region" fieldName="dbo.Adre.Region" />
-					<pps:column name="Plz" fieldName="dbo.Adre.Plz" />
-					<pps:column name="LandId" fieldName="dbo.Adre.LandId" />
 				</pps:table>
 			</pps:dataset>
 		</pps:register>

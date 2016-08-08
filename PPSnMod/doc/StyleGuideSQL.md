@@ -65,7 +65,7 @@
 ### Spalten
 
 * Camel Case - Schreibweise
-* sprechende Bezeichner mit führendem Tabellenamen
+* sprechende Bezeichner
 * Bsp.: Name, Id
 * feste Spaltennamen (Spaltenname):
 	- Id - Primärschlüssel

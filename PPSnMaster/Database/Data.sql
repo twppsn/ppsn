@@ -19,7 +19,7 @@ INSERT INTO [dbo].[User] (Id, Login, Security, LoginVersion) VALUES (2, 'TECWARE
 INSERT INTO [dbo].[User] (Id, Login, Security, LoginVersion) VALUES (3, 'TECWARE\Schmidt', 'desSys;Chef',3)
 SET IDENTITY_INSERT [dbo].[User] OFF
 ALTER TABLE [dbo].[Kgrp] DROP CONSTRAINT [fkKgrpKnst]
-ALTER TABLE [dbo].[Ansp] DROP CONSTRAINT [fkAnspObjkId]
+ALTER TABLE [dbo].[Ansp] DROP CONSTRAINT [fkAnspAdreId]
 ALTER TABLE [dbo].[Waeh] DROP CONSTRAINT [fkWaehKnst]
 ALTER TABLE [dbo].[Plzd] DROP CONSTRAINT [fkPlzdKons]
 ALTER TABLE [dbo].[Plzd] DROP CONSTRAINT [fkPlzdLand]
@@ -60,7 +60,7 @@ INSERT INTO [dbo].[Kgrp] ([KnstId], [Name]) VALUES (11, N'Glas')
 ALTER TABLE [dbo].[Kgrp]
     ADD CONSTRAINT [fkKgrpKnst] FOREIGN KEY ([KnstId]) REFERENCES [dbo].[Knst] ([Id])
 ALTER TABLE [dbo].[Ansp]
-    ADD CONSTRAINT [fkAnspObjkId] FOREIGN KEY ([ObjkId]) REFERENCES [dbo].[Objk] ([Id])
+    ADD CONSTRAINT [fkAnspAdreId] FOREIGN KEY ([AdreId]) REFERENCES [dbo].[Adre] ([Id])
 ALTER TABLE [dbo].[Waeh]
     ADD CONSTRAINT [fkWaehKnst] FOREIGN KEY ([KnstId]) REFERENCES [dbo].[Knst] ([Id])
 ALTER TABLE [dbo].[Plzd]
