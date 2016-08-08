@@ -200,7 +200,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- charmbar -----------------------------------------------------------------
+		#region -- charmbar ---------------------------------------------------------------
 
 		private void OnCharmbarActualWidthChanged(object sender, EventArgs e)
 		{

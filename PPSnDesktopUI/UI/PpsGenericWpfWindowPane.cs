@@ -129,8 +129,7 @@ namespace TecWare.PPSn.UI
 			var h = new SyncUIHandler(this, onFinish);
 			task.ContinueWith(h.Finish);
 		} // func LuaSyncUI
-
-
+		
 		#endregion
 
 		#region -- Load/Unload ------------------------------------------------------------

@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Data;
 using System.Data.SQLite;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -321,9 +322,9 @@ namespace TecWare.PPSn
 							throw new ArgumentException($"Invalid Nr '{c}'.");
 					});
 
-					while (enumerator.MoveNext())
+					using (var transaction = LocalConnection.BeginTransaction(IsolationLevel.ReadCommitted))
 					{
-						using (var transaction = LocalConnection.BeginTransaction(IsolationLevel.ReadCommitted))
+						while (enumerator.MoveNext())
 						{
 							// update the transaction
 							selectCommand.Transaction =
@@ -363,6 +364,7 @@ namespace TecWare.PPSn
 								updateNr.Value = enumerator.GetValue(indexNr, String.Empty, procValidateNr);
 								updateRevId.Value = enumerator.GetValue(indexRevId, -1).DbNullIf(-1);
 
+								Debug.Print("Upsert Object: {0}", updateServerId.Value);
 								updateCommand.ExecuteNonQuery();
 							}
 							else
@@ -373,7 +375,10 @@ namespace TecWare.PPSn
 								insertTyp.Value = enumerator.GetValue(indexTyp, String.Empty).DbNullIfString();
 								insertRevId.Value = enumerator.GetValue(indexRevId, -1).DbNullIf(-1);
 
+								Debug.Print("Insert Object: {0}", insertServerId.Value);
+								var sw = Stopwatch.StartNew();
 								insertCommand.ExecuteNonQuery();
+								Debug.Print("Elapsed: {0}ms", sw.ElapsedMilliseconds);
 
 								updateTags.ObjectId = LocalConnection.LastInsertRowId;
 							}
@@ -386,9 +391,9 @@ namespace TecWare.PPSn
 								updateTags.UpdateTags(PpsObjectTag.ParseTagFields(tagDataString).ToArray());
 
 							#endregion
-
-							transaction.Commit();
 						} // while enumerator
+
+						transaction.Commit();
 					}
 				}
 			} // using prepare

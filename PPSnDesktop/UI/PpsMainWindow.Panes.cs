@@ -234,10 +234,16 @@ namespace TecWare.PPSn.UI
 			return (IPpsWindowPane)Activator.CreateInstance(paneType, paneArguments);
 		} // func CreateEmptyPane
 
+		public LuaResult LoadPane(LuaTable arguments)
+			=> Environment.RunAsync(LoadPaneAsync(arguments)).BlockUI("Wird geladen...");
+
 		public async Task LoadPaneAsync(LuaTable arguments)
 		{
 			await LoadPaneAsync(typeof(PpsGenericWpfWindowPane), arguments);
 		} // proc LoadPaneAsync
+
+		public LuaResult LoadMask(LuaTable arguments)
+			=> Environment.RunAsync(LoadMaskAsync(arguments)).BlockUI("Wird geladen...");
 
 		public async Task LoadMaskAsync(LuaTable arguments)
 		{
