@@ -42,24 +42,23 @@ namespace TecWare.PPSn.UI
 	{
 		/// <summary>Toggles between DataPane and Navigator.</summary>
 		public readonly static RoutedCommand NavigatorToggleCommand = new RoutedCommand("NavigatorToggle", typeof(PpsMainWindow));
-
 		public readonly static RoutedCommand NextPaneCommand = new RoutedCommand("NextPane", typeof(PpsMainWindow));
 		public readonly static RoutedCommand PrevPaneCommand = new RoutedCommand("PrevPane", typeof(PpsMainWindow));
 		public readonly static RoutedCommand GoToPaneCommand = new RoutedCommand("GoToPane", typeof(PpsMainWindow));
 		public readonly static RoutedCommand ClosePaneCommand = new RoutedCommand("ClosePane", typeof(PpsMainWindow));
 
-		private readonly static DependencyProperty NavigatorVisibilityProperty = DependencyProperty.Register("NavigatorVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Visible));
-		private readonly static DependencyProperty PaneVisibilityProperty = DependencyProperty.Register("PaneVisibility", typeof(Visibility), typeof(PpsMainWindow), new UIPropertyMetadata(Visibility.Collapsed));
+		private readonly static DependencyProperty IsNavigatorVisibleProperty = DependencyProperty.Register("IsNavigatorVisible", typeof(bool), typeof(PpsMainWindow), new PropertyMetadata(true));
+		private readonly static DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register("IsPaneVisible", typeof(bool), typeof(PpsMainWindow), new PropertyMetadata(false));
 		private readonly static DependencyProperty CharmbarActualWidthProperty = DependencyProperty.Register("CharmbarActualWidth", typeof(double), typeof(PpsMainWindow));
 
 		/// <summary>Readonly property for the current pane.</summary>
 		private readonly static DependencyPropertyKey CurrentPaneKey = DependencyProperty.RegisterReadOnly("CurrentPane", typeof(IPpsWindowPane), typeof(PpsMainWindow), new PropertyMetadata(null));
 		private readonly static DependencyProperty CurrentPaneProperty = CurrentPaneKey.DependencyProperty;
 
-		private int windowIndex = -1;                   // settings key
+		private int windowIndex = -1;                                       // settings key
 		private PpsWindowApplicationSettings settings;                      // current settings for the window
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------------
 
 		public PpsMainWindow(int windowIndex)
 		{
@@ -173,7 +172,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Navigator.SearchBox ----------------------------------------------------
+		#region -- Navigator.SearchBox ------------------------------------------------------
 
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
@@ -224,13 +223,12 @@ namespace TecWare.PPSn.UI
 		public double CharmbarActualWidth => (double)GetValue(CharmbarActualWidthProperty);
 		/// <summary>Access to the navigator model</summary>
 		public PpsNavigatorModel Navigator => (PpsNavigatorModel)PART_Navigator.DataContext;
-
 		/// <summary>Is the navigator visible.</summary>
 		public bool IsNavigatorVisible
 		{
 			get
 			{
-				return (Visibility)GetValue(NavigatorVisibilityProperty) == Visibility.Visible;
+				return (bool)GetValue(IsNavigatorVisibleProperty);
 			}
 			set
 			{
@@ -238,16 +236,17 @@ namespace TecWare.PPSn.UI
 				{
 					if (value)
 					{
-						SetValue(NavigatorVisibilityProperty, Visibility.Visible);
-						SetValue(PaneVisibilityProperty, Visibility.Collapsed);
+						SetValue(IsNavigatorVisibleProperty, true);
+						SetValue(IsPaneVisibleProperty, false);
 					}
 					else
 					{
-						SetValue(NavigatorVisibilityProperty, Visibility.Collapsed);
-						SetValue(PaneVisibilityProperty, Visibility.Visible);
+						SetValue(IsNavigatorVisibleProperty, false);
+						SetValue(IsPaneVisibleProperty, true);
 					}
 				}
 			}
 		} // prop NavigatorState
+
 	} // class PpsMainWindow
 }
