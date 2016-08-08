@@ -171,9 +171,32 @@ namespace TecWare.PPSn.Server
 
 		#region -- Push -------------------------------------------------------------------
 
-		public void PushDataSet(PpsDataSetServer dataset)
+		private string GetNextNumber(PpsDataTransaction trans, PpsDataSet dataset)
 		{
-			var currentUser = application.CreateSysContext(); // DEContext.GetCurrentUser<IPpsPrivateDataContext>();
+			// is there a lua implementation
+			var getNextNumber = this["GetNextNumber"];
+			if (Lua.RtInvokeable(getNextNumber))
+				return Lua.RtInvoke(getNextNumber, trans, dataset).ChangeType<string>();
+			else
+			{
+				var args = new LuaTable();
+				args["sql"] = "select max(Nr) from dbo.Objk where Typ = @Typ";
+				args[1] = Procs.CreateLuaTable(new PropertyValue("Typ", Name));
+
+				var row = trans.ExecuteSingleRow(args);
+				if (row != null && row[0] != null)
+				{
+					var nrNumber = row[0].ChangeType<long>();
+					return (++nrNumber).ToString("00000000");
+				}
+				else
+					return "00000001";
+			}
+		} // func GetNextNumber
+
+		public Tuple<long, long> PushDataSet(PpsDataSetServer dataset)
+		{
+			var currentUser = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
 
 			// fire triggers
 			dataset.OnBeforePush();
@@ -208,13 +231,16 @@ namespace TecWare.PPSn.Server
 					if (row != null)
 						throw new ArgumentException("todo: Guid exists!");
 
+					// get the new objekt id
+					nr = GetNextNumber(trans, dataset);
+
 					// create the new object in the database
 					args = new LuaTable();
 					args["insert"] = "dbo.Objk";
 					args[1] = Procs.CreateLuaTable(
 						new PropertyValue("Guid", guidId),
 						new PropertyValue("Typ", typ),
-						new PropertyValue("Nr", nr) // todo: set get new number
+						new PropertyValue("Nr", nr)
 					);
 					trans.ExecuteNoneResult(args);
 
@@ -243,6 +269,44 @@ namespace TecWare.PPSn.Server
 						throw new ArgumentException(); // todo: rev error
 				}
 
+				// update all local generated id's to server id's
+				foreach (var dt in dataset.Tables)
+				{
+					if (dt.TableDefinition.PrimaryKey == null)
+						continue;
+
+					var idxPrimaryKey = dt.TableDefinition.PrimaryKey.Index;
+					if (dt.TableDefinition.PrimaryKey.IsIdentity) // auto incr => getnext
+					{
+						var maxKey = 0L;
+
+						// scan for max key
+						foreach (var row in dt)
+						{
+							var t = row[idxPrimaryKey].ChangeType<long>();
+							if (t > maxKey)
+								maxKey = t;
+						}
+
+						// reverse
+						foreach (var row in dt)
+						{
+							if (row[idxPrimaryKey].ChangeType<long>() < 0)
+								row[idxPrimaryKey] = ++maxKey;
+						}
+					}
+					else  // self set => abs(nr)
+					{
+						// absolute
+						foreach (var row in dt)
+						{
+							var t = row[idxPrimaryKey].ChangeType<long>();
+							if (t < 0)
+								row[idxPrimaryKey] = Math.Abs(t);
+						}
+					}
+				}
+
 				// commit all to orignal
 				dataset.Commit();
 
@@ -263,7 +327,7 @@ namespace TecWare.PPSn.Server
 					new PropertyValue("ObjkId", objectId),
 					new PropertyValue("Tags", PpsObjectTag.FormatTagFields(dataset.GetAutoTags())),
 					new PropertyValue("Document", documentRawData.ToString()),
-					new PropertyValue("CreateUserId", 1)
+					new PropertyValue("CreateUserId", currentUser.UserId)
 				);
 
 				trans.ExecuteNoneResult(args);
@@ -280,6 +344,7 @@ namespace TecWare.PPSn.Server
 
 				// commit sql
 				trans.Commit();
+				return new Tuple<long, long>(objectId, newRevId);
 			}
 		} // proc PushDataSet
 
@@ -302,10 +367,12 @@ namespace TecWare.PPSn.Server
 				dataset.Read(xDoc.Root);
 
 				// push data to object store
-				PushDataSet(dataset);
+				var newId = PushDataSet(dataset);
 
 				// notify client
-				ctx.WriteSafeCall(new XElement("return"));
+				ctx.WriteSafeCall(new XElement("return",
+					new XAttribute("id", newId.Item1),
+					new XAttribute("revId", newId.Item2)));
 			}
 			catch (HttpResponseException)
 			{

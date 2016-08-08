@@ -537,6 +537,8 @@ namespace TecWare.PPSn.Server
 				return true; // todo: folge identität
 			}
 
+			public long UserId => privateUser.Id;
+
 			public string UserName => privateUser.Name;
 
 			public IIdentity Identity => currentIdentity;
