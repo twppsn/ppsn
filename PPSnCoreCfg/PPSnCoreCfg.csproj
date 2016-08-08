@@ -48,6 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="contacts\contactsLocal.lua" />
+    <None Include="contacts\contactsServer.lua" />
     <None Include="contacts\contactTagging.lua" />
   </ItemGroup>
   <ItemGroup>
