@@ -149,10 +149,12 @@ namespace TecWare.PPSn.UI
 			document.CommitWork();
 		} // proc CommitEdit
 
-		[LuaMember(nameof(PushData))]
-		public void PushData()
+		[LuaMember(nameof(PushDataAsync))]
+		public Task PushDataAsync()
 		{
-		} // proc PushData
+			UpdateSources();
+			return document.PushWorkAsync();
+		} // proc PushDataAsync
 
 		public bool OnIdle(int elapsed)
 		{
