@@ -121,7 +121,7 @@
 
 				<pps:table name="Ansp">
 					<pps:column name="Id" fieldName="dbo.Ansp.Id" isPrimary="true" />
-					<pps:relation name="AdreId" fieldName="dbo.Ansp.AdreId" relationName="AnspAdre" parentTable="Head" parentColumn="Id" parentType="Root" />
+					<pps:relation name="AdreId" fieldName="dbo.Ansp.AdreId" relationName="AnspAdre" parentTable="Adre" parentColumn="Id" parentType="Root" />
 					<pps:column name="Name" fieldName="dbo.Ansp.Name" />
 					<pps:column name="Titel" fieldName="dbo.Ansp.Titel" />
 					<pps:column name="Tel" fieldName="dbo.Ansp.Tel" />
@@ -160,11 +160,11 @@
 			
 			<pps:action name="contactNew" displayName="Neue Kontakt" priority="100">
 				<pps:condition><![CDATA[ return CurrentView == Views["ko"]; ]]></pps:condition>
-				<pps:code><![CDATA[ Window:LoadMask{ document = 'ko', pane = 'wpf/panes/contacts.xaml' }; ]]></pps:code>
+				<pps:code><![CDATA[ Window:LoadMaskAsync{ document = 'ko', pane = 'wpf/panes/contacts.xaml' }; ]]></pps:code>
 			</pps:action>
 			<pps:action name="contactOpen" displayName="Bearbeiten" priority="200">
 				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "ko" ]]></pps:condition>
-				<pps:code><![CDATA[ Window:LoadMask{ document = 'ko', pane = 'wpf/panes/contacts.xaml', guid = CurrentItem.Guid }; ]]> </pps:code>
+				<pps:code><![CDATA[ Window:LoadMaskAsync{ document = 'ko', pane = 'wpf/panes/contacts.xaml', guid = CurrentItem.Guid }; ]]> </pps:code>
 			</pps:action>
 		</pps:wpf>
 
