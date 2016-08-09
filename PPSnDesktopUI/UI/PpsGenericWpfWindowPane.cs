@@ -38,7 +38,7 @@ namespace TecWare.PPSn.UI
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Pane that combines a xaml file with lua code.</summary>
-	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane
+	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane, IPpsLuaTaskParent
 	{
 		private BaseWebRequest fileSource;
 		private FrameworkElement control;
@@ -87,49 +87,14 @@ namespace TecWare.PPSn.UI
 			return cmd;
 		} // func LuaCommand
 
-		private sealed class SyncUIHandler
-		{
-			private readonly PpsGenericWpfWindowPane parent;
-			private readonly Delegate onFinish;
+		[LuaMember("runTask")]
+		public PpsLuaTask RunAsync(object func, params object[] args)
+			=> PpsEnvironment.RunTask(this, func, args);
 
-			public SyncUIHandler(PpsGenericWpfWindowPane parent, Delegate onFinish)
-			{
-				this.parent = parent;
-				this.onFinish = onFinish;
-			} // ctor
-
-			public void Finish(Task t)
-			{
-				parent.Dispatcher.Invoke(new Action<Task>(FinishUI), t);
-			} // proc Finish
-
-			private void FinishUI(Task t)
-			{
-				if (t.IsCompleted)
-				{
-					if (t.IsCanceled)
-					{
-						// todo: canceled
-					}
-					else if (t.IsFaulted)
-					{
-						parent.Environment.ShowException(ExceptionShowFlags.None, t.Exception);
-					}
-					else
-					{
-						// todo: all ok
-					}
-				}
-			} // proc FinishUI
-		} // func SyncUIHandler
-
-		[LuaMember("syncUI")]
-		private void LuaSyncUI(Task task, Delegate onFinish = null)
-		{
-			var h = new SyncUIHandler(this, onFinish);
-			task.ContinueWith(h.Finish);
-		} // func LuaSyncUI
-
+		IDisposable IPpsLuaTaskParent.BlockUI(string statusText)
+			=> null;
+		
+		PpsTraceLog IPpsLuaTaskParent.Traces => Environment.Traces;
 
 		#endregion
 

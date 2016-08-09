@@ -683,8 +683,7 @@ namespace TecWare.PPSn
 
 				return onlineRequest;
 			} // func GetOnlineRequest
-
-
+			
 			public override WebResponse GetResponse()
 			{
 				if (onlineRequest == null)

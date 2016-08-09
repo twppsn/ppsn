@@ -17,10 +17,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 using System.Net.Mime;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,6 +41,7 @@ using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
+using LExpression = System.Linq.Expressions.Expression;
 
 namespace TecWare.PPSn
 {
@@ -86,7 +90,7 @@ namespace TecWare.PPSn
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsEnvironmentCollection<T> : ICollection, IDictionary<string, T>, INotifyCollectionChanged
+	public sealed class PpsEnvironmentCollection<T> : ICollection, IDictionary<string, T>, INotifyCollectionChanged, IDynamicMetaObjectProvider
 		where T : PpsEnvironmentDefinition
 	{
 		#region -- class ValueCollection --------------------------------------------------
@@ -136,6 +140,30 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- class PpsEnvironmentMetaObjectProvider ---------------------------------
+
+		private sealed class PpsEnvironmentMetaObjectProvider : DynamicMetaObject
+		{
+			public PpsEnvironmentMetaObjectProvider(LExpression expression, PpsEnvironmentCollection<T> value)
+				: base(expression, BindingRestrictions.Empty, value)
+			{
+			} // ctor
+
+			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
+			{
+				var expr = LExpression.MakeIndex(
+					LExpression.Convert(Expression, typeof(PpsEnvironmentCollection<T>)), thisIndexPropertyInfo, new LExpression[] { LExpression.Constant(binder.Name) }
+				);
+
+				return new DynamicMetaObject(expr,
+					BindingRestrictions.GetExpressionRestriction(LExpression.TypeIs(Expression, typeof(PpsEnvironmentCollection<T>)))
+				);
+			} // func BindGetMember
+
+		} // class PpsEnvironmentMetaObjectProvider
+
+		#endregion
+
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		private PpsEnvironment environment;
@@ -143,10 +171,17 @@ namespace TecWare.PPSn
 		private List<T> items = new List<T>(); // list with all items
 		private Dictionary<string, int> keys = new Dictionary<string, int>(); // list with all active items
 
+		#region -- Ctor/Dtor --------------------------------------------------------------
+
 		public PpsEnvironmentCollection(PpsEnvironment environment)
 		{
 			this.environment = environment;
 		} // ctor
+
+		public DynamicMetaObject GetMetaObject(LExpression parameter)
+			=> new PpsEnvironmentMetaObjectProvider(parameter, this);
+
+		#endregion
 
 		public void AppendItem(T item)
 		{
@@ -286,6 +321,24 @@ namespace TecWare.PPSn
 		public int Count => keys.Count;
 		/// <summary></summary>
 		public PpsEnvironment Environment => environment;
+
+		// -- Static --------------------------------------------------------------
+
+		private static readonly PropertyInfo thisIndexPropertyInfo;
+		private static readonly MethodInfo getTypeMethodInfo;
+
+		static PpsEnvironmentCollection()
+		{
+			var ti = typeof(PpsEnvironmentCollection<T>);
+			thisIndexPropertyInfo = ti.GetProperty("Item");
+			if (thisIndexPropertyInfo == null)
+				throw new ArgumentNullException();
+
+			getTypeMethodInfo = typeof(Object).GetMethod("GetType", BindingFlags.Public | BindingFlags.Instance | BindingFlags.InvokeMethod);
+			if (getTypeMethodInfo == null)
+				throw new ArgumentNullException();
+		} // sctor
+
 	} // class PpsEnvironmentCollection
 
 	#endregion
