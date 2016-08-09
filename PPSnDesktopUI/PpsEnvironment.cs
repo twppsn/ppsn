@@ -325,18 +325,11 @@ namespace TecWare.PPSn
 		// -- Static --------------------------------------------------------------
 
 		private static readonly PropertyInfo thisIndexPropertyInfo;
-		private static readonly MethodInfo getTypeMethodInfo;
 
 		static PpsEnvironmentCollection()
 		{
 			var ti = typeof(PpsEnvironmentCollection<T>);
-			thisIndexPropertyInfo = ti.GetProperty("Item");
-			if (thisIndexPropertyInfo == null)
-				throw new ArgumentNullException();
-
-			getTypeMethodInfo = typeof(Object).GetMethod("GetType", BindingFlags.Public | BindingFlags.Instance | BindingFlags.InvokeMethod);
-			if (getTypeMethodInfo == null)
-				throw new ArgumentNullException();
+			thisIndexPropertyInfo = Procs.GetProperty(ti, "Item");
 		} // sctor
 
 	} // class PpsEnvironmentCollection
