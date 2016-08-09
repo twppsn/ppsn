@@ -1,18 +1,18 @@
 ﻿CREATE TABLE [dbo].[Ansp]
 (
 	[Id] BIGINT NOT NULL CONSTRAINT pkAnspId PRIMARY KEY IDENTITY (1,1), 
-    [ObjkId] BIGINT NOT NULL CONSTRAINT fkAnspObjkId REFERENCES dbo.Objk (Id), 
-    [Name] NVARCHAR(100) NOT NULL, 
-    [Titel] NVARCHAR(30) NULL, 
-    [Tel] VARCHAR(30) NULL, 
-    [Fax] VARCHAR(30) NULL, 
-    [Mobil] VARCHAR(30) NULL, 
-    [Mail] NVARCHAR(100) NULL, 
-    [Std] BIT NOT NULL DEFAULT 0, 
-    [Geschl] CHAR NULL, 
-    [Funktion] NVARCHAR(50) NULL, 
-    [Brief] NVARCHAR(50) NULL, 
-    [Anmerk] NVARCHAR(2048) NULL
+	[AdreId] BIGINT NOT NULL CONSTRAINT fkAnspAdreId REFERENCES dbo.Adre (Id),
+	[Name] NVARCHAR(100) NOT NULL, 
+	[Titel] NVARCHAR(30) NULL, 
+	[Tel] VARCHAR(30) NULL, 
+	[Fax] VARCHAR(30) NULL, 
+	[Mobil] VARCHAR(30) NULL, 
+	[Mail] NVARCHAR(100) NULL, 
+	[Std] BIT NOT NULL DEFAULT 0, 
+	[Geschl] CHAR NULL, 
+	[Funktion] NVARCHAR(50) NULL, 
+	[Brief] NVARCHAR(50) NULL, 
+	[Anmerk] NVARCHAR(2048) NULL
 )
 
 GO
@@ -25,15 +25,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level2type = N'COLUMN',
     @level2name = N'Id'
 GO
-EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'FK zu Objk',
-    @level0type = N'SCHEMA',
-    @level0name = N'dbo',
-    @level1type = N'TABLE',
-    @level1name = N'Ansp',
-    @level2type = N'COLUMN',
-    @level2name = N'ObjkId'
-GO
+
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Name des Ansprechpartners',
     @level0type = N'SCHEMA',
@@ -133,3 +125,12 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Ansp',
     @level2type = N'COLUMN',
     @level2name = N'Anmerk'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'FK zu Adre',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = 'AdreId'

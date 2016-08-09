@@ -39,7 +39,9 @@ namespace TecWare.PPSn.Server
 	public sealed class PpsDocument : DEConfigItem
 	{
 		private readonly PpsApplication application;
+
 		private PpsDataSetServerDefinition datasetDefinition = null;
+		private ILuaAttachedScript[] currentAttachedScripts = null;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -48,6 +50,18 @@ namespace TecWare.PPSn.Server
 		{
 			this.application = sp.GetService<PpsApplication>(true);
 		} // ctor
+
+		protected override void OnBeginReadConfiguration(IDEConfigLoading config)
+		{
+			base.OnBeginReadConfiguration(config);
+
+			// dispose scripts connections
+			if (currentAttachedScripts != null)
+			{
+				Array.ForEach(currentAttachedScripts, s => s.Dispose());
+				currentAttachedScripts = null;
+			}
+		} // proc OnBeginReadConfiguration
 
 		protected override void OnEndReadConfiguration(IDEConfigLoading config)
 		{
@@ -60,21 +74,23 @@ namespace TecWare.PPSn.Server
 		private async Task BindDataSetDefinitonAsync()
 		{
 			datasetDefinition = application.GetDataSetDefinition(Config.GetAttribute("dataset", String.Empty));
-			if (!datasetDefinition.IsInitialized)
-			{
-				// initialize dataset functionality
+			if (!datasetDefinition.IsInitialized) // initialize dataset functionality
 				await datasetDefinition.InitializeAsync();
 
-				// prepare current node for the dataset
-				// run scripts
+			// prepare scripts for the the current node
+			var luaEngine = this.GetService<IDELuaEngine>(true);
 
-			}
+			var list = new List<ILuaAttachedScript>();
+			foreach (var scriptId in datasetDefinition.ServerScripts)
+				list.Add(luaEngine.AttachScript(scriptId, this, true));
+			currentAttachedScripts = list.ToArray();
 		} // proc BindDataSetDefinitonAsync
 
 		#endregion
 
 		#region -- Pull -------------------------------------------------------------------
 
+		[LuaMember("Pull")]
 		public PpsDataSetServer PullDataSet(long? objectId, Guid? guidId, long? revId)
 		{
 			var currentUser = application.CreateSysContext(); // DEContext.GetCurrentUser<IPpsPrivateDataContext>();
@@ -179,21 +195,26 @@ namespace TecWare.PPSn.Server
 				return Lua.RtInvoke(getNextNumber, trans, dataset).ChangeType<string>();
 			else
 			{
+				var nrLength = Config.GetAttribute("nrLength", 0);
+				if (nrLength <= 0)
+					throw new ArgumentException("GetNextNumber is missing."); // todo:
+
+				var format = new String('0', nrLength);
+
 				var args = new LuaTable();
 				args["sql"] = "select max(Nr) from dbo.Objk where Typ = @Typ";
 				args[1] = Procs.CreateLuaTable(new PropertyValue("Typ", Name));
 
 				var row = trans.ExecuteSingleRow(args);
+				var nrNumber = 0L;
 				if (row != null && row[0] != null)
-				{
-					var nrNumber = row[0].ChangeType<long>();
-					return (++nrNumber).ToString("00000000");
-				}
-				else
-					return "00000001";
+					nrNumber = row[0].ChangeType<long>();
+
+				return (++nrNumber).ToString(format);
 			}
 		} // func GetNextNumber
 
+		[LuaMember("Push")]
 		public Tuple<long, long> PushDataSet(PpsDataSetServer dataset)
 		{
 			var currentUser = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
@@ -232,7 +253,7 @@ namespace TecWare.PPSn.Server
 						throw new ArgumentException("todo: Guid exists!");
 
 					// get the new objekt id
-					nr = GetNextNumber(trans, dataset);
+					nr = nr ?? GetNextNumber(trans, dataset);
 
 					// create the new object in the database
 					args = new LuaTable();
@@ -380,6 +401,7 @@ namespace TecWare.PPSn.Server
 			}
 			catch (Exception e)
 			{
+				Log.Except("Push failed.", e);
 				ctx.WriteSafeCall(e);
 			}
 		} // proc HttpPushAction
@@ -458,6 +480,9 @@ namespace TecWare.PPSn.Server
 			}
 			return base.OnProcessRequest(r);
 		} // proc OnProcessRequest
+
+		[LuaMember(nameof(DataSetDefinition))]
+		public PpsDataSetServerDefinition DataSetDefinition => datasetDefinition;
 	} // class PpsDocument
 
 	#endregion

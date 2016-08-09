@@ -19,7 +19,7 @@ INSERT INTO [dbo].[User] (Id, Login, Security, LoginVersion) VALUES (2, 'TECWARE
 INSERT INTO [dbo].[User] (Id, Login, Security, LoginVersion) VALUES (3, 'TECWARE\Schmidt', 'desSys;Chef',3)
 SET IDENTITY_INSERT [dbo].[User] OFF
 ALTER TABLE [dbo].[Kgrp] DROP CONSTRAINT [fkKgrpKnst]
-ALTER TABLE [dbo].[Ansp] DROP CONSTRAINT [fkAnspObjkId]
+ALTER TABLE [dbo].[Ansp] DROP CONSTRAINT [fkAnspAdreId]
 ALTER TABLE [dbo].[Waeh] DROP CONSTRAINT [fkWaehKnst]
 ALTER TABLE [dbo].[Plzd] DROP CONSTRAINT [fkPlzdKons]
 ALTER TABLE [dbo].[Plzd] DROP CONSTRAINT [fkPlzdLand]
@@ -38,6 +38,12 @@ INSERT INTO [dbo].[Land] ([KnstId], [Name], [EnglishName], [Iso], [Iso3], [Tld],
 INSERT INTO [dbo].[Land] ([KnstId], [Name], [EnglishName], [Iso], [Iso3], [Tld], [Vorwahl], [Zone], [PostAdr]) VALUES (6, N'Schweiz', N'Schwitzerland', N'CH', N'CHE', N'.ch', 41, NULL, NULL)
 INSERT INTO [dbo].[Land] ([KnstId], [Name], [EnglishName], [Iso], [Iso3], [Tld], [Vorwahl], [Zone], [PostAdr]) VALUES (7, N'Frankreich', N'France', N'FR', N'FRA', N'.fr', 33, 'EU', NULL)
 INSERT INTO [dbo].[Land] ([KnstId], [Name], [EnglishName], [Iso], [Iso3], [Tld], [Vorwahl], [Zone], [PostAdr]) VALUES (8, N'Russland', N'Russia', N'RU', N'RUS', N'.ru', 7, NULL, NULL)
+INSERT INTO [dbo].[Land] ([KnstId], [Name], [EnglishName], [Iso], [Iso3], [Tld], [Vorwahl], [Zone], [PostAdr]) VALUES (12, N'Ungarn', N'Hungary', N'HU', N'HUN', N'.hu', null, NULL, NULL)
+INSERT INTO [dbo].[Land] ([KnstId], [Name], [EnglishName], [Iso], [Iso3], [Tld], [Vorwahl], [Zone], [PostAdr]) VALUES (13, N'Spanien', N'Spain', N'ES', N'ESP', N'.es', null, 'EU', NULL)
+INSERT INTO [dbo].[Land] ([KnstId], [Name], [EnglishName], [Iso], [Iso3], [Tld], [Vorwahl], [Zone], [PostAdr]) VALUES (14, N'Tschechien', N'Czech Republic', N'CZ', N'CZE', N'.cz', null, 'EU', NULL)
+INSERT INTO [dbo].[Land] ([KnstId], [Name], [EnglishName], [Iso], [Iso3], [Tld], [Vorwahl], [Zone], [PostAdr]) VALUES (15, N'Slowakei', N'Slovakia', N'SK', N'SVK', N'.sk', null, 'EU', NULL)
+INSERT INTO [dbo].[Land] ([KnstId], [Name], [EnglishName], [Iso], [Iso3], [Tld], [Vorwahl], [Zone], [PostAdr]) VALUES (16, N'Italien', N'Italy', N'IT', N'ITL', N'.it', null, 'EU', NULL)
+INSERT INTO [dbo].[Land] ([KnstId], [Name], [EnglishName], [Iso], [Iso3], [Tld], [Vorwahl], [Zone], [PostAdr]) VALUES (17, N'Finnland', N'Finland', N'FI', N'FIN', N'.fi', null, 'EU', NULL)
 SET IDENTITY_INSERT [dbo].[Knst] ON
 INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (1, N'Waeh', 1, '20160728 08:50:59.0733199')
 INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (2, N'Waeh', 1, '20160728 08:50:59.0773302')
@@ -47,6 +53,12 @@ INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (5, N'Land', 1
 INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (6, N'Land', 1, '20160728 08:50:59.0813444')
 INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (7, N'Land', 1, '20160728 08:50:59.0823251')
 INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (8, N'Land', 1, '20160728 08:50:59.0828386')
+INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (12, N'Land', 1, '20160728 08:50:59.0828386')
+INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (13, N'Land', 1, '20160728 08:50:59.0828386')
+INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (14, N'Land', 1, '20160728 08:50:59.0828386')
+INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (15, N'Land', 1, '20160728 08:50:59.0828386')
+INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (16, N'Land', 1, '20160728 08:50:59.0828386')
+INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (17, N'Land', 1, '20160728 08:50:59.0828386')
 INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (9, N'Kgrp', 1, '20160728 08:50:59.0838247')
 INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (10, N'Kgrp', 1, '20160728 08:50:59.0848247')
 INSERT INTO [dbo].[Knst] ([Id], [Typ], [IsActive], [Sync]) VALUES (11, N'Kgrp', 1, '20160728 08:50:59.0853386')
@@ -60,7 +72,7 @@ INSERT INTO [dbo].[Kgrp] ([KnstId], [Name]) VALUES (11, N'Glas')
 ALTER TABLE [dbo].[Kgrp]
     ADD CONSTRAINT [fkKgrpKnst] FOREIGN KEY ([KnstId]) REFERENCES [dbo].[Knst] ([Id])
 ALTER TABLE [dbo].[Ansp]
-    ADD CONSTRAINT [fkAnspObjkId] FOREIGN KEY ([ObjkId]) REFERENCES [dbo].[Objk] ([Id])
+    ADD CONSTRAINT [fkAnspAdreId] FOREIGN KEY ([AdreId]) REFERENCES [dbo].[Adre] ([Id])
 ALTER TABLE [dbo].[Waeh]
     ADD CONSTRAINT [fkWaehKnst] FOREIGN KEY ([KnstId]) REFERENCES [dbo].[Knst] ([Id])
 ALTER TABLE [dbo].[Plzd]

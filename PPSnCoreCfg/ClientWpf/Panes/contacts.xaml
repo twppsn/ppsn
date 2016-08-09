@@ -1,19 +1,21 @@
 ﻿<pps:PpsGenericWpfControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-						  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-						  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-						  xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-						  xmlns:pps="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
-						  mc:Ignorable="d" 
-                          Title="{Binding Data.Head.First.Name, Mode=OneWay, Converter={StaticResource StringConverter}, ConverterParameter='Kontakt: {0}',FallbackValue='Kontakt'}" 
-						  d:DesignHeight="300" d:DesignWidth="300">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+			 xmlns:pps="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
+             mc:Ignorable="d" 
+             d:DesignHeight="300" d:DesignWidth="300"
+			 Title="{Binding Data.Head.First.Name}">
     <x:Code>
         <![CDATA[
         
         pushContact = command(
             function (args) : void
-                syncUI(PushDataAsync());
+                PushDataAsync();
             end
        );
+        
+        
         
 		]]>
     </x:Code>
@@ -22,7 +24,6 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="../Default.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            <pps:PpsStringConverter x:Key="StringConverter" />
         </ResourceDictionary>
     </pps:PpsGenericWpfControl.Resources>
     <Grid>
@@ -45,14 +46,14 @@
 
         <Label Content="{Binding Data.Head.LandId.displayName}" Grid.Column="0" Grid.Row="2"/>
         <ComboBox Grid.Column="1" Grid.Row="2" SelectedValue="{Binding Data.Head.First.LandId}"
-				  ItemsSource="{Binding Path=Constants.Land}"
-				  SelectedValuePath="Id"
-				  DisplayMemberPath="Name">
+								ItemsSource="{Binding Path=Constants.Land}"
+								SelectedValuePath="ServerId"
+								DisplayMemberPath="Name">
         </ComboBox>
 		<Button Grid.Column="0" Grid.Row="3" Content="Neu" Width="100" Margin="0,8"/>
         <TreeView Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" ItemsSource="{Binding Data.Head/AdreHead}">
             <TreeView.ItemTemplate>
-                <HierarchicalDataTemplate ItemsSource="{Binding Data.Ansp}">
+                <HierarchicalDataTemplate ItemsSource="{Binding AnspAdre}">
                     <Border Height="27">
                         <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="Bold"/>
                     </Border>
@@ -66,8 +67,10 @@
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>
 		</TreeView>		
+
+
     </Grid>
     <pps:PpsGenericWpfControl.Commands>
-        <pps:PpsUICommandButton DisplayText="Veröffentlichen" Command="{Binding pushContact}" Image="floppy_diskImage" />
+        <pps:PpsUICommandButton DisplayText="Veröffentlichen" Image="floppy_diskImage" Command="{Binding pushContact}" />
     </pps:PpsGenericWpfControl.Commands>
 </pps:PpsGenericWpfControl>
