@@ -51,9 +51,9 @@
 								DisplayMemberPath="Name">
         </ComboBox>
 		<Button Grid.Column="0" Grid.Row="3" Content="Neu" Width="100" Margin="0,8"/>
-		<TreeView Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" ItemsSource="{Binding Data.Adre}">
+        <TreeView Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" ItemsSource="{Binding Data.Head/AdreHead}">
             <TreeView.ItemTemplate>
-                <HierarchicalDataTemplate ItemsSource="{Binding Data.Ansp}">
+                <HierarchicalDataTemplate ItemsSource="{Binding AnspAdre}">
                     <Border Height="27">
                         <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="Bold"/>
                     </Border>
