@@ -295,7 +295,8 @@ namespace TecWare.PPSn.UI
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{
 			// todo: does not work ???
-			//return null;
+			var x = binding.Path;
+
 			var target = (IProvideValueTarget)serviceProvider.GetService(typeof(IProvideValueTarget));
 			var targetObject = (System.Windows.FrameworkElement)target.TargetObject;
 
@@ -304,12 +305,9 @@ namespace TecWare.PPSn.UI
 			var dummyDO = new System.Windows.DependencyObject();
 			BindingOperations.SetBinding(dummyDO, dummyProperty, binding);
 			ResourceKey = dummyDO.GetValue(dummyProperty);
-			// Q+D
-			if (ResourceKey.GetType() == typeof(System.Xml.XmlAttribute))
-			{
-				ResourceKey = ((System.Xml.XmlAttribute)ResourceKey).Value;
-			}
+
 			return base.ProvideValue(serviceProvider);
 		}
 	} // class PpsImageStaticResourceBinding
+
 }
