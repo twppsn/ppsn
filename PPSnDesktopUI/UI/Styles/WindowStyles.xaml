@@ -494,6 +494,50 @@
         </Setter>
     </Style>
 
+    <Style x:Key="PPSnPaneToolBarStyle" TargetType="{x:Type ToolBar}">
+        <Style.Resources>
+            <DataTemplate x:Key="{x:Type ui:PpsUICommandButton}" DataType="{x:Type ui:PpsUICommandButton}">
+                <Button Style="{StaticResource PpsToolBarButtonStyle}" ToolTip="{Binding Description}" Command="{Binding Command}">
+                    <StackPanel Orientation="Horizontal" Margin="0">
+                        <Image Source="{ui:PpsImageStaticResourceBinding {Binding Image}}" Width="20" Height="20" Margin="0,0,6,0" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding DisplayText}" VerticalAlignment="Center" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
+                    </StackPanel>
+                </Button>
+            </DataTemplate>
+            <DataTemplate x:Key="{x:Type ui:PpsUISplitCommandButton}" DataType="{x:Type ui:PpsUISplitCommandButton}">
+                <uiC:SplitButton Style="{StaticResource PpsToolBarSplitButtonStyle}" ToolTip="{Binding Description}" Command="{Binding Command}" Popup="{Binding Popup}" ContextMenu="{Binding ContextMenu}">
+                    <StackPanel Orientation="Horizontal" Margin="0">
+                        <Image Source="{ui:PpsImageStaticResourceBinding {Binding Image}}" Width="20" Height="20" Margin="0,0,6,0" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding DisplayText}" VerticalAlignment="Center" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
+                    </StackPanel>
+                </uiC:SplitButton>
+            </DataTemplate>
+            <DataTemplate x:Key="Seperator" DataType="{x:Type FrameworkContentElement}">
+                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Background="{StaticResource PPSnSeparatorBrush}" Margin="6" />
+            </DataTemplate>
+        </Style.Resources>
+        <Setter Property="ItemTemplateSelector">
+            <Setter.Value>
+                <uiC:PpsToolbarDataTemplateSelector/>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ToolBar}">
+                    <Border x:Name="PART_Border" BorderBrush="{StaticResource PPSnSeparatorBrush}" BorderThickness="0,0,0,1">
+                        <ToolBarPanel x:Name="PART_ToolBarPanel" Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Margin="0,2" IsItemsHost="true" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="HasItems" Value="False">
+                            <Setter TargetName="PART_Border" Property="BorderBrush" Value="Transparent" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 
 
     <!--<Style x:Key="PpsContextMenu" TargetType="{x:Type ContextMenu}">

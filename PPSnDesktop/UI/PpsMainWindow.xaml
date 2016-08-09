@@ -5,8 +5,8 @@
               xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
 			  xmlns:sys="clr-namespace:System;assembly=mscorlib"
 			  Style="{StaticResource PpsWindow}" 
-              Title="{Binding CurrentPane.Title, Mode=OneWay, Converter={StaticResource StringConverter}, ConverterParameter='PPS2000n - {0}',FallbackValue='PPS2000n'}" Height="300" Width="600" >
-
+              Title="{Binding CurrentPane.Title, Mode=OneWay, Converter={StaticResource StringConverter}, ConverterParameter='PPS2000n - {0}',FallbackValue='PPS2000n'}" 
+			  Height="300" Width="600" >
     <ui:PpsWindow.Resources>
         <SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />
         <SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnAccentColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
@@ -388,7 +388,7 @@
                 </Popup>
                 <ToggleButton Width="32" Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}" CommandParameter="{Binding Path=CurrentPane, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}"
 							  Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="3"/>
-                <ToolBar x:Name="PART_PaneToolBar" Margin="16,0" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" FontSize="14.667" Background="Black" Style="{StaticResource PanePresenterToolBarStyle}"/>
+                <ToolBar x:Name="PART_PaneToolBar" Margin="16,0" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" FontSize="14.667" Background="Black" Style="{StaticResource PPSnPaneToolBarStyle}"/>
             </DockPanel>
 
             <ContentPresenter x:Name="PART_PanePresenter" Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}" />
