@@ -72,6 +72,14 @@ namespace TecWare.PPSn.Data
 			}
 		} // ctor
 
+		protected override void EndInit()
+		{
+			foreach (var c in Columns)
+				c.EndInit();
+
+			base.EndInit();
+		} // proc EndInit
+
 		public override PpsDataTableDefinition Clone(PpsDataSetDefinition dataset)
 			=> new PpsDataTableDefinitionClient((PpsDataSetDefinitionClient)dataset, this);
 
