@@ -250,7 +250,12 @@ namespace TecWare.PPSn
 			var cmd = connection.CreateCommand();
 			cmd.CommandText = selectCommand;
 
-			return new DbRowEnumerator(cmd);
+			// copy the items
+			using (var e = new DbRowEnumerator(cmd))
+			{
+				while (e.MoveNext())
+					yield return new SimpleDataRow(e.Current);
+			}				
 		} // func GetEnumerator
 	} // class PpsConstantData
 

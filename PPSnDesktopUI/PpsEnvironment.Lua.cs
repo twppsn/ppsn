@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
@@ -12,13 +14,28 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn
 {
+	#region -- interface IPpsLuaTaskParent ----------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public interface IPpsLuaTaskParent
+	{
+		IDisposable BlockUI(string statusText);
+
+		Dispatcher Dispatcher { get; }
+		PpsTraceLog Traces { get; }
+	} // interface IPpsLuaTaskParent
+
+	#endregion
+
+
 	#region -- class PpsLuaTask ---------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Task wrapper for the lua script code</summary>
 	public sealed class PpsLuaTask
 	{
-		private readonly PpsEnvironment environment;
+		private readonly IPpsLuaTaskParent parent;
 		private readonly Task<LuaResult> task;
 
 		private Queue<object> continueWith = new Queue<object>();
@@ -26,20 +43,21 @@ namespace TecWare.PPSn
 		private object onException = null;
 
 		private volatile bool isCompleted = false;
-		private DispatcherFrame currentFrame = null;
+		private volatile bool waitInUIThread = false;
 		private LuaResult currentResult = LuaResult.Empty;
+		private IDisposable blockedUI = null;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		public PpsLuaTask(PpsEnvironment environment, Task<LuaResult> task)
+		public PpsLuaTask(IPpsLuaTaskParent parent, Task<LuaResult> task)
 		{
-			this.environment = environment;
+			this.parent = parent;
 			this.task = task.ContinueWith(Continue);
 		} // ctor
 
-		public PpsLuaTask(PpsEnvironment environment, params Task[] tasks)
+		public PpsLuaTask(IPpsLuaTaskParent parent, params Task[] tasks)
 		{
-			this.environment = environment;
+			this.parent = parent;
 
 			this.task = Task.Run(() => { Task.WaitAll(tasks); return LuaResult.Empty; })
 				.ContinueWith(Continue); // parallel task are combined in one task
@@ -58,28 +76,36 @@ namespace TecWare.PPSn
 					// fetch async tasks
 					currentResult = t.Result;
 					FetchContinue(continueWith);
+					continueWith.Clear();
 
 					// fetch ui tasks
-					environment.Dispatcher.Invoke(() => FetchContinue(continueUI));
+					if (!waitInUIThread)
+					{
+						parent.Dispatcher.Invoke(() => FetchContinue(continueUI));
+						continueUI.Clear();
+					}
 
 					return currentResult;
 				}
 				catch (Exception e)
 				{
-					environment.Traces.AppendException(e);
+					parent.Traces.AppendException(e);
 
 					if (onException == null)
 						currentResult = LuaResult.Empty;
 					else
-						currentResult = environment.Dispatcher.Invoke(() => new LuaResult(Lua.RtInvoke(onException, e)));
+						currentResult = parent.Dispatcher.Invoke(() => new LuaResult(Lua.RtInvoke(onException, e)));
 
 					isCompleted = true;
+
+					continueWith.Clear();
+					continueUI.Clear();
+
 					return currentResult;
 				}
 				finally
 				{
-					if (currentFrame != null)
-						currentFrame.Continue = true;
+					blockedUI?.Dispose();
 				}
 			}
 		} // proc Continue
@@ -112,32 +138,36 @@ namespace TecWare.PPSn
 			lock (task)
 			{
 				if (IsCompleted) // run sync
-					environment.Dispatcher.Invoke(() => FetchContinue(onContinue));
+					parent.Dispatcher.Invoke(() => FetchContinue(onContinue));
 				else // else queue
 					continueUI.Enqueue(onContinue);
 			}
 			return this;
 		} // func ContinueUI
 
-		public LuaResult BlockUI(string statusText)
+		public PpsLuaTask BlockUI(string statusText)
 		{
+			System.Threading.Thread.Sleep(100); // give chance to stop synchron
 			lock (task)
 			{
-				if (IsCompleted)
-					return currentResult;
-				else
-					currentFrame = new DispatcherFrame();
+				if (!IsCompleted && blockedUI != null)
+					blockedUI = parent.BlockUI(statusText);
 			}
 
-			// block current execute line
-			Dispatcher.PushFrame(currentFrame);
-
-			return currentResult; // return the result
+			return this;
 		} // func BlockUI
 
 		public LuaResult Wait()
 		{
-			task.Wait();
+			lock (task)
+			{
+				waitInUIThread = parent.Dispatcher.Thread == Thread.CurrentThread;
+				task.Wait();
+
+				// fetch ui continue
+				if (waitInUIThread && continueUI.Count > 0)
+					FetchContinue(continueUI);
+			}
 			return currentResult;
 		} // func Wait
 
@@ -146,7 +176,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	public partial class PpsEnvironment
+	public partial class PpsEnvironment : IPpsLuaTaskParent
 	{
 		private LuaCompileOptions luaOptions = LuaDeskop.StackTraceCompileOptions;
 
@@ -292,12 +322,10 @@ namespace TecWare.PPSn
 			LuaTrace(PpsTraceItemType.Information, args);
 		} // proc LuaPrint
 
-		/// <summary>Creates a background task, and run's the given function in it.</summary>
-		/// <param name="func"></param>
-		/// <param name="args"></param>
-		/// <returns></returns>
-		[LuaMember("runAsync")]
-		public PpsLuaTask RunAsync(object func, params object[] args)
+		private static Task<LuaResult> ConvertToLuaResultTask<T>(Task<T> task)
+			=> task.ContinueWith(_ => new LuaResult(_));
+
+		public static PpsLuaTask RunTask(IPpsLuaTaskParent parent, object func, params object[] args)
 		{
 			if (func is Task)
 			{
@@ -305,25 +333,55 @@ namespace TecWare.PPSn
 
 				if (func.GetType() == typeof(Task))
 					t = ((Task)func).ContinueWith(_ => LuaResult.Empty);
-				else if (func.GetType() == typeof(Task<LuaResult>))
-					t = (Task<LuaResult>)func;
+				else if (func.GetType().GetGenericTypeDefinition() == typeof(Task<>))
+				{
+					var genericArguments = func.GetType().GetGenericArguments();
+					if (genericArguments[0] == typeof(LuaResult))
+						t = (Task<LuaResult>)func;
+					else
+					{
+						var mi = convertToLuaResultTask.MakeGenericMethod(genericArguments);
+						t = (Task<LuaResult>)mi.Invoke(null, new object[] { func });
+					}
+				}
 				else
 					throw new NotImplementedException("todo: convert code missing.");
 
-				return new PpsLuaTask(this, t);
+				return new PpsLuaTask(parent, t);
 			}
 			else
-				return new PpsLuaTask(this, Task.Run<object>(() => Lua.RtInvoke(func, args)));
-		} // func RunAsync
+				return new PpsLuaTask(parent, Task.Run<object>(() => Lua.RtInvoke(func, args)));
+		} // func RunTask
+
+		/// <summary>Creates a background task, and run's the given function in it.</summary>
+		/// <param name="func"></param>
+		/// <param name="args"></param>
+		/// <returns></returns>
+		[LuaMember("runTask")]
+		public PpsLuaTask RunTask(object func, params object[] args)
+			=> RunTask(this, func, args);
 
 		/// <summary>Executes the function in the UI thread.</summary>
 		/// <param name="func"></param>
 		/// <param name="args"></param>
 		/// <returns></returns>
-		[LuaMember("runSync")]
-		public LuaResult RunSync(object func, params object[] args)
+		[LuaMember("runUI")]
+		public LuaResult RunUI(object func, params object[] args)
 			=> Dispatcher.Invoke<LuaResult>(() => new LuaResult(Lua.RtInvoke(func, args)));
 
+		IDisposable IPpsLuaTaskParent.BlockUI(string statusText)
+			=> null;
+
 		#endregion
+
+		private readonly static MethodInfo convertToLuaResultTask;
+
+
+		static PpsEnvironment()
+		{
+			convertToLuaResultTask = typeof(PpsEnvironment).GetMethod(nameof(ConvertToLuaResultTask), BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.InvokeMethod | BindingFlags.Static);
+			if (convertToLuaResultTask == null)
+				throw new ArgumentNullException();
+		} // sctor
 	} // class PpsEnvironment
 }

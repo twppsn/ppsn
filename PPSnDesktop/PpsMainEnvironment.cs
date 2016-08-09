@@ -157,7 +157,7 @@ namespace TecWare.PPSn
 			}
 			catch (LuaParseException ex)
 			{
-				//ShowException(ExceptionShowFlags.None, ex);
+				ShowException(ExceptionShowFlags.None, ex);
 				return null;
 			}
 		} // proc CreateLuaChunk
