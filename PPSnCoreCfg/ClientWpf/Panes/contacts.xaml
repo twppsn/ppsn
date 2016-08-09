@@ -11,9 +11,11 @@
         
         pushContact = command(
             function (args) : void
-                syncUI(PushDataAsync());
+                PushDataAsync();
             end
        );
+        
+        
         
 		]]>
     </x:Code>
@@ -44,8 +46,8 @@
 
         <Label Content="{Binding Data.Head.LandId.displayName}" Grid.Column="0" Grid.Row="2"/>
         <ComboBox Grid.Column="1" Grid.Row="2" SelectedValue="{Binding Data.Head.First.LandId}"
-								ItemsSource="{Binding Path=Data.Constants/Land}"
-								SelectedValuePath="KnstId"
+								ItemsSource="{Binding Path=Constants.Land}"
+								SelectedValuePath="ServerId"
 								DisplayMemberPath="Name">
         </ComboBox>
 		<Button Grid.Column="0" Grid.Row="3" Content="Neu" Width="100" Margin="0,8"/>
