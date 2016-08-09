@@ -637,6 +637,8 @@ namespace TecWare.PPSn
 
 			public override Uri RequestUri => uri;
 
+			public override IWebProxy Proxy { get { return null; } set { } } // avoid NotImplementedExceptions
+
 			/// <summary>Arguments of the request</summary>
 			public NameValueCollection Arguments => arguments;
 			/// <summary>Relative path for the request.</summary>

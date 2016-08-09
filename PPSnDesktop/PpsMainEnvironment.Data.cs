@@ -20,9 +20,13 @@ using System.Collections.Specialized;
 using System.Data;
 using System.Data.SQLite;
 using System.Diagnostics;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
@@ -168,6 +172,47 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsConstantRow -----------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class PpsConstantRow : DynamicDataRow
+	{
+		private readonly PpsConstant parent;
+		private readonly object[] values;
+
+		public PpsConstantRow(PpsConstant parent, object[] values)
+		{
+			this.parent = parent;
+			this.values = values;
+		} // ctor
+		
+		protected override BindingRestrictions GetRowBindingRestriction(Expression expression)
+		{
+			return BindingRestrictions.GetExpressionRestriction(
+				Expression.AndAlso(
+					Expression.TypeEqual(expression, typeof(PpsConstantRow)),
+					Expression.Equal(Expression.Property(Expression.Convert(expression, typeof(PpsConstantRow)), parentProperty), Expression.Constant(parent, typeof(PpsConstant)))
+				)
+			);
+		} // func GetRowBindingRestriction
+
+		public PpsConstant Parent => parent;
+		public override object this[int index] => values[index];
+		public override IReadOnlyList<IDataColumn> Columns => parent.Columns;
+
+		// -- Static --------------------------------------------------------------
+
+		private readonly static System.Reflection.PropertyInfo parentProperty;
+
+		static PpsConstantRow()
+		{
+			parentProperty = Procs.GetProperty(typeof(PpsConstantRow), nameof(Parent));
+		} // sctor
+	} // class PpsConstantRow
+
+	#endregion
+
 	#region -- class PpsConstant --------------------------------------------------------
 
 	public abstract class PpsConstant : PpsEnvironmentDefinition, IEnumerable, IEnumerable<IDataRow>, IDataColumns, INotifyCollectionChanged
@@ -200,15 +245,38 @@ namespace TecWare.PPSn
 
 	public sealed class PpsConstantData : PpsConstant
 	{
+		private const int staticColumns = 3;
+
 		private readonly SQLiteConnection connection;
 		private readonly string selectCommand;
 
-		public PpsConstantData(PpsMainEnvironment environment, string name, IDataColumn[] columns)
-			: base(environment, name, columns)
+		public PpsConstantData(PpsMainEnvironment environment, string name, IEnumerable<IDataColumn> columns)
+			: base(environment, name, CreateColumns(columns))
 		{
 			this.connection = environment.LocalConnection;
 			this.selectCommand = BuidSqlCommand();
 		} // ctor
+
+		private static IDataColumn[] CreateColumns(IEnumerable<IDataColumn> columns)
+		{
+			var columnList = new List<IDataColumn>();
+
+			columnList.AddRange(new IDataColumn[] {
+				new SimpleDataColumn("ServerId", typeof(long)),
+				new SimpleDataColumn("IsActive", typeof(bool)),
+				new SimpleDataColumn("Name", typeof(string))
+			});
+
+			foreach (var col in columns)
+			{
+				if (String.Compare(col.Name, "Name", StringComparison.OrdinalIgnoreCase) == 0)
+					columnList[2] = col;
+				else
+					columnList.Add(col);
+			}
+
+			return columnList.ToArray();
+		} // func CreateColumns
 
 		private string BuidSqlCommand()
 		{
@@ -220,24 +288,20 @@ namespace TecWare.PPSn
 				.Append(",k.Name");
 
 			// add columns for the meta
-			for (var i = 0; i < Columns.Count; i++)
+			for (var i = staticColumns; i < Columns.Count; i++)
 			{
 				var columnName = Columns[i].Name;
-				if (string.Compare(columnName, "Name", StringComparison.OrdinalIgnoreCase) != 0)
-					sql.Append(", a_").Append(columnName).Append(".Value AS [").Append(columnName).Append("]");
+				sql.Append(", a_").Append(columnName).Append(".Value AS [").Append(columnName).Append("]");
 			}
 
 			// build FROM
 			sql.Append(" FROM main.Constants k");
-			for (var i = 0; i < Columns.Count; i++)
+			for (var i = staticColumns; i < Columns.Count; i++)
 			{
 				var columnName = Columns[i].Name;
-				if (string.Compare(columnName, "Name", StringComparison.OrdinalIgnoreCase) != 0)
-				{
-					sql.Append(" LEFT OUTER JOIN main.ConstantTags AS a_").Append(columnName)
-						.Append(" ON k.Id = a_").Append(columnName).Append(".ConstantId AND ")
-						.Append("a_").Append(columnName).Append(".Key = '").Append(columnName).Append("'");
-				}
+				sql.Append(" LEFT OUTER JOIN main.ConstantTags AS a_").Append(columnName)
+					.Append(" ON k.Id = a_").Append(columnName).Append(".ConstantId AND ")
+					.Append("a_").Append(columnName).Append(".Key = '").Append(columnName).Append("'");
 			}
 
 			sql.Append(" WHERE k.Typ = '").Append(Name).Append("'");
@@ -250,11 +314,18 @@ namespace TecWare.PPSn
 			var cmd = connection.CreateCommand();
 			cmd.CommandText = selectCommand;
 
-			// copy the items
 			using (var e = new DbRowEnumerator(cmd))
 			{
 				while (e.MoveNext())
-					yield return new SimpleDataRow(e.Current);
+				{
+					// copy the items
+					var values = new object[Columns.Count];
+					for (var i = 0; i < values.Length; i++)
+						values[i] = e.Current[i];
+
+					// return the constant
+					yield return new PpsConstantRow(this, values);
+				}
 			}				
 		} // func GetEnumerator
 	} // class PpsConstantData
@@ -1214,25 +1285,38 @@ order by t_liefnr.value desc
 			);
 		} // func CreateConstantColumn
 
-		private void UpdateConstants()
+		private async Task RefreshConstantsSchemaAsync()
 		{
-			// first sync schema table
-			var xSchema = Request.GetXmlAsync("/constants.xml", rootName: "constants").Result;
-			foreach (var xTable in xSchema.Elements("constant"))
-			{
-				var name = xTable.GetAttribute("name", String.Empty);
-				if (String.IsNullOrEmpty(name))
-					throw new ArgumentException("constant needs name.");
+			constants.Clear();
 
-				var columns =
-					(
+			try
+			{
+				var xSchema = await Request.GetXmlAsync("/constants.xml", rootName: "constants");
+				foreach (var xTable in xSchema.Elements("constant"))
+				{
+					var name = xTable.GetAttribute("name", String.Empty);
+					if (String.IsNullOrEmpty(name))
+						throw new ArgumentException("constant needs name.");
+
+					var constantList = new PpsConstantData(this, name,
 						from xColumn in xTable.Elements("column")
 						select CreateConstantColumn(xColumn)
-					).ToArray();
+					);
 
-				constants.AppendItem(new PpsConstantData(this, name, columns)); // todo: refresh?
+					constants.AppendItem(constantList);
+				}
 			}
+			catch (WebException ex)
+			{
+				if (ex.Status == WebExceptionStatus.ProtocolError) // e.g. file not found
+					await ShowExceptionAsync(ExceptionShowFlags.Background, ex);
+				else
+					throw;
+			}
+		} // proc RefreshConstantsSchemaAsync
 
+		private void UpdateConstants()
+		{
 			// second sync data
 			using (var update = new ConstantUpdateCommand(LocalConnection))
 			{

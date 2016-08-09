@@ -125,6 +125,7 @@ namespace TecWare.PPSn
 				await Task.Run(new Action(UpdateDocumentStore));
 			}
 
+			await RefreshConstantsSchemaAsync();
 			await RefreshNavigatorAsync();
 		} // proc RefreshAsync
 
