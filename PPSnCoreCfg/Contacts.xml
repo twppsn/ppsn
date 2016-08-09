@@ -140,7 +140,7 @@
 		<pps:wpf name="wpf">
 			<pps:template id="contacts" file="ClientWpf\Templates\Contacts.xaml" />
 			
-			<pps:view name="ko" displayName="Kontakt" view="local.objects" filter="Typ:=ko">
+			<pps:view name="ko" displayName="Kontakt" displayGlyph="usersImage" view="local.objects" filter="Typ:=ko">
 				<pps:filter name="lief" displayName="Lieferanten">
 					<![CDATA[ LiefNr:! ]]>
 				</pps:filter>

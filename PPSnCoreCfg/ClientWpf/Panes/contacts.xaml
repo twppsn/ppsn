@@ -68,7 +68,6 @@
             </TreeView.ItemTemplate>
 		</TreeView>		
 
-
     </Grid>
     <pps:PpsGenericWpfControl.Commands>
         <pps:PpsUICommandButton DisplayText="Veröffentlichen" Image="floppy_diskImage" Command="{Binding pushContact}" />
