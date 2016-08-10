@@ -657,19 +657,6 @@ namespace TecWare.PPSn.UI
 			OnPropertyChanged(nameof(ViewsShowDescription));
 		} // proc ShowViewsDescription
 
-		[LuaMember(nameof(IsItemType))]
-		public bool IsItemType(object item, string typ)
-		{
-			var t = item as LuaTable;
-			if (t == null)
-				return false;
-			else
-			{
-				var itemTyp = t.GetOptionalValue("Typ", String.Empty);
-				return itemTyp == typ;
-			}
-		} // func IsItemType
-
 		protected override object OnIndex(object key)
 			=> base.OnIndex(key) ?? Environment.GetValue(key); // inherit from the environment
 
