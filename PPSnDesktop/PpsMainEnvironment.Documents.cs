@@ -98,7 +98,7 @@ namespace TecWare.PPSn
 
 	#region -- class PpsDocumentDefinition ----------------------------------------------
 
-	public sealed class PpsDocumentDefinition : PpsDataSetDefinitionClient
+	public sealed class PpsDocumentDefinition : PpsDataSetDefinitionDesktop
 	{
 		private readonly PpsMainEnvironment environment;
 
