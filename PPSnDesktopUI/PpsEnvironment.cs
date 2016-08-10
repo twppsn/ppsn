@@ -77,7 +77,7 @@ namespace TecWare.PPSn
 			this.environment = environment;
 			this.name = name;
 		} // ctor
-		
+
 		/// <summary>Access to the owning environment.</summary>
 		public PpsEnvironment Environment => environment;
 		/// <summary>Name of the property.</summary>
@@ -86,11 +86,27 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- interface IPpsEnvironmentCollectionInternal ------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	internal interface IPpsEnvironmentCollectionInternal
+	{
+		int FindItemIndex(string name);
+
+		object this[int index] { get; }
+
+		int CurrentVersion { get; }
+		int Count { get; }
+	} // interface IPpsEnvironmentCollectionInternal
+
+	#endregion
+
 	#region -- class PpsEnvironmentCollection -------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsEnvironmentCollection<T> : ICollection, IDictionary<string, T>, INotifyCollectionChanged, IDynamicMetaObjectProvider
+	public sealed class PpsEnvironmentCollection<T> : IPpsEnvironmentCollectionInternal, ICollection, IDictionary<string, T>, INotifyCollectionChanged, IDynamicMetaObjectProvider
 		where T : PpsEnvironmentDefinition
 	{
 		#region -- class ValueCollection --------------------------------------------------
@@ -149,24 +165,87 @@ namespace TecWare.PPSn
 			{
 			} // ctor
 
-			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
+			private BindingRestrictions GetRestriction(IPpsEnvironmentCollectionInternal value, bool countRestriction)
 			{
-				var expr = LExpression.MakeIndex(
-					LExpression.Convert(Expression, typeof(PpsEnvironmentCollection<T>)), thisIndexPropertyInfo, new LExpression[] { LExpression.Constant(binder.Name) }
+				var expr = LExpression.AndAlso(
+					LExpression.TypeIs(Expression, typeof(IPpsEnvironmentCollectionInternal)),
+					LExpression.AndAlso(
+						LExpression.Equal(Expression, LExpression.Constant(Value)),
+						LExpression.Equal(
+							LExpression.Property(
+								LExpression.Convert(Expression, typeof(IPpsEnvironmentCollectionInternal)),
+								countRestriction ? CountPropertyInfo : CurrentVersionPropertyInfo
+							),
+							LExpression.Constant(countRestriction ? value.Count : value.CurrentVersion)
+						)
+					)
 				);
+				return BindingRestrictions.GetExpressionRestriction(expr);
+			} // func GetRestriction
 
-				return new DynamicMetaObject(expr,
-					BindingRestrictions.GetExpressionRestriction(LExpression.TypeIs(Expression, typeof(PpsEnvironmentCollection<T>)))
-				);
-			} // func BindGetMember
+			private DynamicMetaObject BindGetItem(string name, bool throwException)
+			{
+				var value = (IPpsEnvironmentCollectionInternal)Value;
 
+				var index = value.FindItemIndex(name);
+				if (index >= 0)
+				{
+					return new DynamicMetaObject(
+						LExpression.MakeIndex(
+							LExpression.Convert(Expression, typeof(IPpsEnvironmentCollectionInternal)),
+							ItemsPropertyInfo,
+							new LExpression[] { LExpression.Constant(index) }
+						), GetRestriction(value, false)
+					);
+				}
+				else
+				{
+					LExpression expr;
+					if (throwException)
+					{
+						expr = LExpression.Throw(
+							LExpression.New(Procs.ArgumentOutOfRangeConstructorInfo2,
+								new LExpression[]
+								{
+									LExpression.Constant(name),
+									LExpression.Constant("Could not get environment item.")
+								}
+							), typeof(object)
+						);
+					}
+					else
+						expr = LExpression.Constant(null, typeof(object));
+
+					return new DynamicMetaObject(expr, GetRestriction(value, true));
+				}
+			} // func BindGetItem
+
+			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
+				=> BindGetItem(binder.Name, false);
+
+			public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
+				=> BindGetItem(binder.Name, true);
+
+			// -- Static ------------------------------------------------------------
+
+			private static readonly PropertyInfo CountPropertyInfo;
+			private static readonly PropertyInfo CurrentVersionPropertyInfo;
+			private static readonly PropertyInfo ItemsPropertyInfo;
+
+			static PpsEnvironmentMetaObjectProvider()
+			{
+				var t = typeof(IPpsEnvironmentCollectionInternal);
+				CountPropertyInfo = Procs.GetProperty(t, nameof(IPpsEnvironmentCollectionInternal.Count));
+				CurrentVersionPropertyInfo = Procs.GetProperty(t, nameof(IPpsEnvironmentCollectionInternal.CurrentVersion));
+				ItemsPropertyInfo = Procs.GetProperty(t, "Item", typeof(int));
+			} // sctor
 		} // class PpsEnvironmentMetaObjectProvider
 
 		#endregion
 
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
-		private PpsEnvironment environment;
+		private readonly PpsEnvironment environment;
 		private int currentVersion = 0;
 		private List<T> items = new List<T>(); // list with all items
 		private Dictionary<string, int> keys = new Dictionary<string, int>(); // list with all active items
@@ -207,9 +286,9 @@ namespace TecWare.PPSn
 		{
 			lock (items)
 			{
-					items.Clear();
-					keys.Clear();
-					currentVersion++;
+				items.Clear();
+				keys.Clear();
+				currentVersion++;
 			}
 			OnResetCollection();
 		} // proc Clear
@@ -305,14 +384,25 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		public T this[string name]
+		int IPpsEnvironmentCollectionInternal.FindItemIndex(string name)
+		{
+			int index;
+			return keys.TryGetValue(name, out index) ? index : -1;
+		} // func FindItemIndex
+
+		public T this[string name, bool throwExpression = false]
 		{
 			get
 			{
 				lock (items)
 				{
 					var index = 0;
-					return keys.TryGetValue(name, out index) ? items[index] : null;
+					if (keys.TryGetValue(name, out index))
+						return items[index];
+					else if (throwExpression)
+						throw new ArgumentOutOfRangeException(name);
+					else
+						return null;
 				}
 			}
 		} // prop this
@@ -322,16 +412,8 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		public PpsEnvironment Environment => environment;
 
-		// -- Static --------------------------------------------------------------
-
-		private static readonly PropertyInfo thisIndexPropertyInfo;
-
-		static PpsEnvironmentCollection()
-		{
-			var ti = typeof(PpsEnvironmentCollection<T>);
-			thisIndexPropertyInfo = Procs.GetProperty(ti, "Item");
-		} // sctor
-
+		int IPpsEnvironmentCollectionInternal.CurrentVersion => currentVersion;
+		object IPpsEnvironmentCollectionInternal.this[int index] => items[index];
 	} // class PpsEnvironmentCollection
 
 	#endregion
@@ -347,11 +429,11 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		public event EventHandler UsernameChanged;
 
-		private readonly int environmentId;						// unique id of the environment
+		private readonly int environmentId;           // unique id of the environment
 		private readonly PpsEnvironmentInfo info;     // source information of the environment
 
 		private ICredentials userInfo;  // currently credentials of the user
-		private string userName;				// display name of the user
+		private string userName;        // display name of the user
 
 		private PpsTraceLog logData = new PpsTraceLog();
 		private PpsDataListTemplateSelector dataListTemplateSelector;
@@ -413,7 +495,7 @@ namespace TecWare.PPSn
 				services.ForEach(serv => (serv as IDisposable)?.Dispose());
 
 				mainResources.Remove(EnvironmentService);
-				
+
 				inputManager.PreProcessInput -= preProcessInputEventHandler;
 
 				// close handles
@@ -457,7 +539,7 @@ namespace TecWare.PPSn
 		} // func GetService
 
 		#endregion
-		
+
 		#region -- Login/Logout -----------------------------------------------------------
 
 		protected virtual bool ShowLoginDialog(PpsClientLogin clientLogin)
@@ -651,7 +733,7 @@ namespace TecWare.PPSn
 		public PpsTraceLog Traces => logData;
 
 		LuaTable IPpsShell.LuaLibrary => this;
-		
+
 		// -- Static --------------------------------------------------------------
 
 		private static object environmentCounterLock = new object();
