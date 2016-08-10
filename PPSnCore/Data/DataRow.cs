@@ -269,7 +269,16 @@ namespace TecWare.PPSn.Data
 					);
 				}
 				else
-					return new DynamicMetaObject(Expression.Empty(), GetRestriction());
+					return new DynamicMetaObject(
+						Expression.Throw(
+							Expression.New(Procs.ArgumentOutOfRangeConstructorInfo2, 
+								new Expression[]
+								{
+									Expression.Constant(binder.Name),
+									Expression.Constant(String.Format("Could not resolve column {0} in table {1}.", binder.Name, Row.Table.TableName))
+								}
+							)
+						), GetRestriction());
 			} // func BindSetMember
 
 			public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
@@ -282,7 +291,7 @@ namespace TecWare.PPSn.Data
 						new Expression[]
 						{
 							Expression.Constant(binder.Name),
-							Expression.Constant(String.Format("Could not resolve column {0} in table {1}.", binder.Name, Row.table.TableName))
+							Expression.Constant(String.Format("Could not resolve column {0} in table {1}.", binder.Name, Row.Table.TableName))
 						}
 					), typeof(object)));
 				}
