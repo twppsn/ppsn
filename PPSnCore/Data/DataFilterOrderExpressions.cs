@@ -1139,10 +1139,8 @@ namespace TecWare.PPSn.Data
 			}
 		} // func Parse
 
-		public static string ToString(PpsDataOrderExpression[] order)
-		{
-			throw new NotImplementedException();
-		}
+		public static string ToString(PpsDataOrderExpression[] orders)
+			=> String.Join(",", from o in orders select (o.Negate ? "-" : "+") + o.Identifier);
 	} // class PpsDataOrderExpression
 
 	#endregion
