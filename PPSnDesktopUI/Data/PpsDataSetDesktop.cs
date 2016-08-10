@@ -66,10 +66,19 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public class PpsDataCollectionView : ListCollectionView
 	{
+		private readonly IDisposable detachView;
+
 		public PpsDataCollectionView(IPpsDataView dataTable) 
 			: base(dataTable)
 		{
+			this.detachView = dataTable as IDisposable;
 		} // ctor
+
+		public override void DetachFromSourceCollection()
+		{
+			base.DetachFromSourceCollection();
+			detachView?.Dispose();
+		} // proc DetachFromSourceCollection
 
 		public PpsDataRow Add(LuaTable values)
 		{

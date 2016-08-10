@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -23,6 +24,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Markup;
 using System.Windows.Threading;
 using System.Xml;
@@ -88,8 +90,36 @@ namespace TecWare.PPSn.UI
 		} // func LuaCommand
 
 		[LuaMember("runTask")]
-		public PpsLuaTask RunAsync(object func, params object[] args)
+		public PpsLuaTask RunTask(object func, params object[] args)
 			=> PpsEnvironment.RunTask(this, func, args);
+
+		[LuaMember("getView")]
+		private ICollectionView LuaGetView(object collection)
+			=> CollectionViewSource.GetDefaultView(collection);
+
+		[LuaMember("createView")]
+		private ICollectionView LuaCreateView(object collection)
+		{
+			// get containted list
+			var listSource = collection as IListSource;
+			if (listSource != null)
+				collection = listSource.GetList();
+
+			// do we have a factory
+			var factory = collection as ICollectionViewFactory;
+			if (factory != null)
+				return factory.CreateView();
+
+			if (collection is IBindingList)
+				return new BindingListCollectionView((IBindingList)collection);
+			else if (collection is IList)
+				return new ListCollectionView((IList)collection);
+			else if (collection is IEnumerable)
+				return new CollectionView((IEnumerable)collection);
+			else
+				throw new ArgumentException("collection is no enumerable.");
+		} // func LuaCreateView
+
 
 		IDisposable IPpsLuaTaskParent.BlockUI(string statusText)
 			=> null;
