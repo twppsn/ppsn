@@ -81,7 +81,7 @@ namespace TecWare.PPSn.Data
 
 			return values;
 		} // proc InitializeValues
-		
+
 		protected sealed override bool FilterRow(PpsDataRow row)
 			=> Object.Equals(parentRow[parentColumnIndex], row[childColumnIndex]);
 
@@ -226,28 +226,33 @@ namespace TecWare.PPSn.Data
 				);
 			} // func GetIndexExpression
 
-			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
+			private DynamicMetaObject BindDataColumn(string name, Expression defaultExpression)
 			{
-				if (PpsDataHelper.IsStandardMember(LimitType, binder.Name))
-					return base.BindGetMember(binder);
-
-				// find a column
-				var columnIndex = Row.table.TableDefinition.FindColumnIndex(binder.Name);
+				// find the column and bind a index expression
+				var columnIndex = Row.table.TableDefinition.FindColumnIndex(name);
 				if (columnIndex >= 0)
 					return new DynamicMetaObject(GetIndexExpression(columnIndex), GetRestriction());
-				else
+				else // find a relation
 				{
 					PpsDataTableRelationDefinition relation;
-					if (ItemInfo.DeclaringType == typeof(PpsDataRow) && (relation = Row.table.TableDefinition.Relations[binder.Name]) != null)  // find a relation
+					if (ItemInfo.DeclaringType == typeof(PpsDataRow) && (relation = Row.table.TableDefinition.Relations[name]) != null)  // find a relation
 					{
 						return new DynamicMetaObject(
 							Expression.Call(Expression.Convert(Expression, typeof(PpsDataRow)), GetDefaultRelationMethodInfo, Expression.Constant(relation)),
 							GetRestriction()
 						);
 					}
-					else
-						return new DynamicMetaObject(Expression.Constant(null, typeof(object)), GetRestriction());
+					else // return default expression
+						return new DynamicMetaObject(defaultExpression, GetRestriction());
 				}
+			} // func BindDataColumn
+
+			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
+			{
+				if (PpsDataHelper.IsStandardMember(LimitType, binder.Name))
+					return base.BindGetMember(binder);
+
+				return BindDataColumn(binder.Name, Expression.Constant(null, typeof(object)));
 			} // func BindGetMember
 
 			public override DynamicMetaObject BindSetMember(SetMemberBinder binder, DynamicMetaObject value)
@@ -266,6 +271,22 @@ namespace TecWare.PPSn.Data
 				else
 					return new DynamicMetaObject(Expression.Empty(), GetRestriction());
 			} // func BindSetMember
+
+			public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
+			{
+				if (args.Length > 0 || PpsDataHelper.IsStandardMember(LimitType, binder.Name))
+					return base.BindInvokeMember(binder, args);
+				else
+				{
+					return BindDataColumn(binder.Name, Expression.Throw(Expression.New(Procs.ArgumentOutOfRangeConstructorInfo2,
+						new Expression[]
+						{
+							Expression.Constant(binder.Name),
+							Expression.Constant(String.Format("Could not resolve column {0} in table {1}.", binder.Name, Row.table.TableName))
+						}
+					), typeof(object)));
+				}
+			} // func BindInvokeMember
 
 			public override IEnumerable<string> GetDynamicMemberNames()
 			{
@@ -835,37 +856,24 @@ namespace TecWare.PPSn.Data
 
 		static PpsDataRow()
 		{
-			var typeRowInfo = typeof(PpsDataRow).GetTypeInfo();
-			RowStatePropertyInfo = typeRowInfo.GetDeclaredProperty(nameof(RowState));
-			ItemPropertyInfo = FindItemIndex(typeRowInfo);
-			CurrentPropertyInfo = typeRowInfo.GetDeclaredProperty(nameof(Current));
-			OriginalPropertyInfo = typeRowInfo.GetDeclaredProperty(nameof(Original));
-			TableFieldInfo = typeRowInfo.GetDeclaredField(nameof(table));
-			ResetMethodInfo = typeRowInfo.GetDeclaredMethod(nameof(Reset));
-			CommitMethodInfo = typeRowInfo.GetDeclaredMethod(nameof(Commit));
-			GetDefaultRelationMethodInfo = typeRowInfo.GetDeclaredMethod(nameof(GetDefaultRelation));
+			var typeRow = typeof(PpsDataRow);
+			RowStatePropertyInfo = Procs.GetProperty(typeRow, nameof(RowState));
+			ItemPropertyInfo = Procs.GetProperty(typeRow, "Item", typeof(int));
+			CurrentPropertyInfo = Procs.GetProperty(typeRow, nameof(Current));
+			OriginalPropertyInfo = Procs.GetProperty(typeRow, nameof(Original));
+			TableFieldInfo = typeRow.GetTypeInfo().GetDeclaredField(nameof(table));
+			ResetMethodInfo = Procs.GetMethod(typeRow, nameof(Reset));
+			CommitMethodInfo = Procs.GetMethod(typeRow, nameof(Commit));
+			GetDefaultRelationMethodInfo = Procs.GetMethod(typeRow, nameof(GetDefaultRelation), typeof(PpsDataTableRelationDefinition));
 
-			var typeValueInfo = typeof(RowValues).GetTypeInfo();
-			ValuesPropertyInfo = FindItemIndex(typeValueInfo);
-			RowFieldInfo = typeValueInfo.GetDeclaredField("row");
+			var typeValue = typeof(RowValues);
+			ValuesPropertyInfo = Procs.GetProperty(typeValue, "Item", typeof(int));
+			RowFieldInfo = typeValue.GetTypeInfo().GetDeclaredField("row");
 
-			if (RowStatePropertyInfo == null ||
-					ItemPropertyInfo == null ||
-					CurrentPropertyInfo == null ||
-					OriginalPropertyInfo == null ||
-					TableFieldInfo == null ||
-					ResetMethodInfo == null ||
-					CommitMethodInfo == null ||
-					GetDefaultRelationMethodInfo == null ||
-					ValuesPropertyInfo == null ||
+			if (TableFieldInfo == null ||
 					RowFieldInfo == null)
-				throw new InvalidOperationException("Reflection fehlgeschlagen (PpsDataRow)");
+				throw new InvalidOperationException("Reflection failed (PpsDataRow)");
 		} // sctor
-
-		private static PropertyInfo FindItemIndex(TypeInfo typeInfo)
-		{
-			return (from pi in typeInfo.DeclaredProperties where pi.Name == "Item" && pi.GetIndexParameters()[0].ParameterType == typeof(int) select pi).FirstOrDefault();
-		} // func FindItemIndex
 
 		#endregion
 	} // class PpsDataRow

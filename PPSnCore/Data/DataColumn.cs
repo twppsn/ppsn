@@ -108,19 +108,32 @@ namespace TecWare.PPSn.Data
 			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
 			{
 				if (PpsDataHelper.IsStandardMember(LimitType, binder.Name))
-				{
 					return base.BindGetMember(binder);
-				}
 				else
 				{
 					var column = (PpsDataColumnDefinition)Value;
 
 					return new DynamicMetaObject(
-						column.Meta.GetMetaConstantExpression(binder.Name),
+						column.Meta.GetMetaConstantExpression(binder.Name, false),
 						BindingRestrictions.GetInstanceRestriction(Expression, Value)
 					);
 				}
-			} // func BindGetMemger
+			} // func BindGetMember
+
+			public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
+			{
+				if (args.Length > 0 || PpsDataHelper.IsStandardMember(LimitType, binder.Name))
+					return base.BindInvokeMember(binder, args);
+				else
+				{
+					var column = (PpsDataColumnDefinition)Value;
+
+					return new DynamicMetaObject(
+						column.Meta.GetMetaConstantExpression(binder.Name, true),
+						BindingRestrictions.GetInstanceRestriction(Expression, Value)
+					);
+				}
+			} // func BindInvokeMember
 		} // class PpsDataColumnMetaObject
 
 		#endregion

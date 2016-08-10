@@ -336,27 +336,36 @@ namespace TecWare.PPSn.Data
 				);
 			} // func GetRestrictions
 
-			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
+			private DynamicMetaObject BindTableOrMeta(string name, bool generateException)
 			{
 				Expression expr;
 				PpsDataSet dataset = (PpsDataSet)Value;
 
-				if (PpsDataHelper.IsStandardMember(LimitType, binder.Name))
-				{
-					return base.BindGetMember(binder);
-				}
+				// find the table
+				var tableIndex = Array.FindIndex(dataset.tables, c => String.Compare(c.TableName, name, StringComparison.OrdinalIgnoreCase) == 0);
+				if (tableIndex == -1) // find meta data
+					expr = dataset.DataSetDefinition.Meta.GetMetaConstantExpression(name, generateException);
 				else
-				{
-					// find the table
-					var tableIndex = Array.FindIndex(dataset.tables, c => String.Compare(c.TableName, binder.Name) == 0);
-					if (tableIndex == -1) // find meta data
-						expr = dataset.DataSetDefinition.Meta.GetMetaConstantExpression(binder.Name);
-					else
-						expr = Expression.ArrayIndex(Expression.Field(Expression.Convert(Expression, typeof(PpsDataSet)), TableFieldInfo), Expression.Constant(tableIndex));
+					expr = Expression.ArrayIndex(Expression.Field(Expression.Convert(Expression, typeof(PpsDataSet)), TableFieldInfo), Expression.Constant(tableIndex));
 
-					return new DynamicMetaObject(expr, GetRestrictions(dataset));
-				}
+				return new DynamicMetaObject(expr, GetRestrictions(dataset));
+			} // func BindTableOrMeta
+
+			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
+			{
+				if (PpsDataHelper.IsStandardMember(LimitType, binder.Name))
+					return base.BindGetMember(binder);
+				else
+					return BindTableOrMeta(binder.Name, false);
 			} // func BindGetMember
+
+			public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
+			{
+				if (args.Length > 0 || PpsDataHelper.IsStandardMember(LimitType, binder.Name))
+					return base.BindInvokeMember(binder, args);
+				else
+					return BindTableOrMeta(binder.Name, true);
+			} // func BindInvokeMember
 
 			public override IEnumerable<string> GetDynamicMemberNames()
 			{

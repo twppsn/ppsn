@@ -438,39 +438,48 @@ namespace TecWare.PPSn.Data
 				);
 			} // func GetBindingRestrictions
 
-			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
+			private DynamicMetaObject BindColumnOrMeta(string name, bool generateException)
 			{
-				if (PpsDataHelper.IsStandardMember(LimitType, binder.Name))
+				var table = (PpsDataTable)Value;
+				var columnIndex = table.TableDefinition.FindColumnIndex(name);
+				if (columnIndex == -1)
 				{
-					return base.BindGetMember(binder);
+					if (table.TableDefinition.Meta == null)
+						return new DynamicMetaObject(Expression.Constant(null, typeof(object)), GetBindingRestrictions(table));
+					else
+						return new DynamicMetaObject(table.TableDefinition.Meta.GetMetaConstantExpression(name, generateException), GetBindingRestrictions(table));
 				}
 				else
 				{
-					var table = (PpsDataTable)Value;
-					var columnIndex = table.TableDefinition.FindColumnIndex(binder.Name);
-					if (columnIndex == -1)
-					{
-						if (table.TableDefinition.Meta == null)
-							return new DynamicMetaObject(Expression.Constant(null, typeof(object)), GetBindingRestrictions(table));
-						else
-							return new DynamicMetaObject(table.TableDefinition.Meta.GetMetaConstantExpression(binder.Name), GetBindingRestrictions(table));
-					}
-					else
-					{
-						return new DynamicMetaObject(
-							Expression.MakeIndex(
-								Expression.Property(
-									Expression.Convert(Expression, typeof(PpsDataTable)),
-									ColumnsPropertyInfo
-								),
-								ReadOnlyCollectionIndexPropertyInfo,
-								new Expression[] { Expression.Constant(columnIndex) }
+					return new DynamicMetaObject(
+						Expression.MakeIndex(
+							Expression.Property(
+								Expression.Convert(Expression, typeof(PpsDataTable)),
+								ColumnsPropertyInfo
 							),
-							GetBindingRestrictions(table)
-						);
-					}
+							ReadOnlyCollectionIndexPropertyInfo,
+							new Expression[] { Expression.Constant(columnIndex) }
+						),
+						GetBindingRestrictions(table)
+					);
 				}
+			} // func DynamicMetaObject
+
+			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
+			{
+				if (PpsDataHelper.IsStandardMember(LimitType, binder.Name))
+					return base.BindGetMember(binder);
+				else
+					return BindColumnOrMeta(binder.Name, false);
 			} // func BindGetMember
+
+			public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
+			{
+				if (args.Length > 0 || PpsDataHelper.IsStandardMember(LimitType, binder.Name))
+					return base.BindInvokeMember(binder, args);
+				else
+					return BindColumnOrMeta(binder.Name, true);
+			} // func BindInvokeMember
 		} // class PpsDataTableMetaObject
 
 		#endregion

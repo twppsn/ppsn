@@ -85,7 +85,7 @@ namespace TecWare.PPSn.Data
 		public bool TryGetProperty(string name, out object value)
 			=> metaInfo.TryGetValue(name, out value);
 
-		internal Expression GetMetaConstantExpression(string key)
+		internal Expression GetMetaConstantExpression(string key, bool generateException)
 		{
 			object value;
 			Type type;
@@ -93,6 +93,18 @@ namespace TecWare.PPSn.Data
 				return Expression.Constant(value, typeof(object));
 			else if (WellknownMetaTypes.TryGetValue(key, out type))
 				return Expression.Convert(Expression.Default(type), typeof(object));
+			else if (generateException)
+			{
+				return Expression.Throw(
+					Expression.New(Procs.ArgumentOutOfRangeConstructorInfo2,
+						new Expression[]
+						{
+							Expression.Constant(key),
+							Expression.Constant("Could not resolve key.")
+						}
+					), typeof(object)
+				);
+			}
 			else
 				return Expression.Constant(null, typeof(object));
 		} // func GetMetaConstantExpression
