@@ -46,6 +46,50 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
+	#region -- class PpsDataRelatedFilter -----------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class PpsDataRelatedFilter : PpsDataFilter
+	{
+		private readonly PpsDataTableRelationDefinition relation;
+		private readonly PpsDataRow parentRow;
+		private readonly int parentColumnIndex;
+		private readonly int childColumnIndex;
+
+		public PpsDataRelatedFilter(PpsDataRow parentRow, PpsDataTableRelationDefinition relation)
+			 : base(parentRow.Table.DataSet.Tables[relation.ChildColumn.Table])
+		{
+			this.relation = relation;
+			this.parentRow = parentRow;
+			this.parentColumnIndex = relation.ParentColumn.Index;
+			this.childColumnIndex = relation.ChildColumn.Index;
+
+			if (parentColumnIndex < 0 || parentColumnIndex >= parentRow.Table.Columns.Count)
+				throw new ArgumentOutOfRangeException("parentColumnIndex");
+			if (childColumnIndex < 0 || childColumnIndex >= Table.Columns.Count)
+				throw new ArgumentOutOfRangeException("childColumnIndex");
+
+			Refresh();
+		} // ctor
+
+		protected override object[] InitializeValues(object[] values)
+		{
+			values = base.InitializeValues(values);
+
+			values[childColumnIndex] = parentRow[parentColumnIndex];
+
+			return values;
+		} // proc InitializeValues
+		
+		protected sealed override bool FilterRow(PpsDataRow row)
+			=> Object.Equals(parentRow[parentColumnIndex], row[childColumnIndex]);
+
+		public PpsDataTableRelationDefinition Relation => relation;
+	} // class PpsDataRelatedFilter
+
+	#endregion
+
 	#region -- class PpsDataRow ---------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -360,50 +404,6 @@ namespace TecWare.PPSn.Data
 				remove { Row.PropertyChanged -= value; }
 			} // prop PropertyChanged
 		} // class CurrentRowValues
-
-		#endregion
-
-		#region -- class PpsDataRelatedFilter ---------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class PpsDataRelatedFilter : PpsDataFilter
-		{
-			private readonly PpsDataTableRelationDefinition relation;
-			private readonly PpsDataRow parentRow;
-			private readonly int parentColumnIndex;
-			private readonly int childColumnIndex;
-
-			public PpsDataRelatedFilter(PpsDataRow parentRow, PpsDataTableRelationDefinition relation)
-				 : base(parentRow.Table.DataSet.Tables[relation.ChildColumn.Table])
-			{
-				this.relation = relation;
-				this.parentRow = parentRow;
-				this.parentColumnIndex = relation.ParentColumn.Index;
-				this.childColumnIndex = relation.ChildColumn.Index;
-
-				if (parentColumnIndex < 0 || parentColumnIndex >= parentRow.Table.Columns.Count)
-					throw new ArgumentOutOfRangeException("parentColumnIndex");
-				if (childColumnIndex < 0 || childColumnIndex >= Table.Columns.Count)
-					throw new ArgumentOutOfRangeException("childColumnIndex");
-
-				Refresh();
-			} // ctor
-
-			public override PpsDataRow Add(params object[] values)
-			{
-				if (values == null || values.Length == 0)
-					values = new object[Table.Columns.Count];
-
-				values[childColumnIndex] = parentRow[parentColumnIndex];
-				return base.Add(values);
-			} // func Add
-
-			protected override bool FilterRow(PpsDataRow row)
-				=> Object.Equals(parentRow[parentColumnIndex], row[childColumnIndex]);
-
-			public PpsDataTableRelationDefinition Relation => relation;
-		} // class PpsDataRelatedFilter
 
 		#endregion
 
@@ -780,7 +780,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="relation"></param>
 		/// <returns></returns>
 		public PpsDataFilter CreateRelation(PpsDataTableRelationDefinition relation)
-			=> new PpsDataRelatedFilter(this, relation);
+			=> table.CreateRelationFilter(this, relation);
 
 		public PpsDataFilter GetDefaultRelation(PpsDataTableRelationDefinition relation)
 		{

@@ -59,7 +59,7 @@ namespace TecWare.PPSn.Data
 			foreach (XElement c in xSchema.Elements())
 			{
 				if (c.Name == xnTable)
-					Add(new PpsDataTableDefinitionClient(this, c));
+					Add(CreateDataTable(c));
 				else if (c.Name == xnTag)
 					Add(CreateAutoTagDefinition(c));
 				else if (c.Name == xnMeta)
@@ -70,6 +70,10 @@ namespace TecWare.PPSn.Data
 			if (metaInfo == null)
 				metaInfo = new PpsDataSetMetaCollectionClient(new XElement("meta"));
 		} // ctor
+
+		protected virtual PpsDataTableDefinitionClient CreateDataTable(XElement c)
+			=> new PpsDataTableDefinitionClient(this, c);
+		
 
 		private PpsDataSetAutoTagDefinition CreateAutoTagDefinition(XElement x)
 		{
@@ -85,6 +89,8 @@ namespace TecWare.PPSn.Data
 			=> new PpsDataSetClient(this, shell);
 
 		public string ObjectType => type;
+
+		public IPpsShell Shell => shell;
 
 		public override PpsDataSetMetaCollection Meta { get { return metaInfo; } }
 	} // class PpsDataSetDefinitionClient

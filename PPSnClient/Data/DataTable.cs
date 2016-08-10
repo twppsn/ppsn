@@ -29,7 +29,7 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsDataTableDefinitionClient : PpsDataTableDefinition
+	public class PpsDataTableDefinitionClient : PpsDataTableDefinition
 	{
 		#region -- class PpsDataTableMetaCollectionClient ---------------------------------
 

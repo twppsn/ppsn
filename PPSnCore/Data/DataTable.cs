@@ -334,11 +334,33 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
+	#region -- interface IPpsDataView ---------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public interface IPpsDataView : IList, IEnumerable<PpsDataRow>, INotifyCollectionChanged
+	{
+		/// <summary>Creates a new unattached data row, that could be add.</summary>
+		/// <param name="originalValues"></param>
+		/// <param name="currentValues"></param>
+		/// <returns></returns>
+		PpsDataRow NewRow(object[] originalValues, object[] currentValues);
+		/// <summary>Removes a data row.</summary>
+		/// <param name="row"></param>
+		/// <returns></returns>
+		bool Remove(PpsDataRow row);
+
+		/// <summary></summary>
+		PpsDataTable Table { get; }
+	} // interface IPpsDataView
+
+	#endregion
+
 	#region -- class PpsDataTable -------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Table</summary>
-	public class PpsDataTable : IList, IEnumerable<PpsDataRow>, INotifyCollectionChanged, IDynamicMetaObjectProvider
+	public class PpsDataTable : IPpsDataView, IDynamicMetaObjectProvider
 	{
 		#region -- class PpsDataTableAddChangeItem ----------------------------------------
 
@@ -491,6 +513,9 @@ namespace TecWare.PPSn.Data
 		{
 			return new PpsDataTableMetaObject(parameter, this);
 		} // func GetMetaObject
+
+		public virtual PpsDataFilter CreateRelationFilter(PpsDataRow row, PpsDataTableRelationDefinition relation)
+			=> new PpsDataRelatedFilter(row, relation);
 
 		#endregion
 
@@ -657,15 +682,9 @@ namespace TecWare.PPSn.Data
 			return values;
 		} // func GetDataRowValues
 
-		public PpsDataRow Add(LuaTable values)
-			=> Add(GetDataRowValues(values));
-
-		/// <summary>Erzeugt eine neue Zeile.</summary>
-		/// <param name="values">Werte, die in der Zeile enthalten sein sollen.</param>
-		/// <returns>Neue Datenzeile</returns>
-		public PpsDataRow Add(params object[] values)
+		public object[] CreateDataRowValuesArray(object[] values)
 		{
-			if (values != null && values.Length == 0) // no values 
+			if (values == null || values.Length == 0) // no values 
 			{
 				values = new object[Columns.Count];
 			}
@@ -675,16 +694,28 @@ namespace TecWare.PPSn.Data
 				Array.Copy(values, 0, n, 0, Math.Min(values.Length, n.Length));
 				values = n;
 			}
+			return values;
+		} // func CheckValueArray
 
-			return AddInternal(false, new PpsDataRow(this, PpsDataRowState.Modified, new object[Columns.Count], values));
-		} // proc Add
+		private PpsDataRow NewRow(object[] originalValues, object[] currentValues)
+			=> new PpsDataRow(this, PpsDataRowState.Modified, CreateDataRowValuesArray(originalValues), CreateDataRowValuesArray(currentValues));
+
+		public PpsDataRow Add(LuaTable values)
+			=> AddInternal(false, NewRow(GetDataRowValues(values), null));
+
+		/// <summary>Erzeugt eine neue Zeile.</summary>
+		/// <param name="values">Werte, die in der Zeile enthalten sein sollen.</param>
+		/// <returns>Neue Datenzeile</returns>
+		public PpsDataRow Add(params object[] values)
+			=> AddInternal(false, NewRow(values, null));
+
+		PpsDataRow IPpsDataView.NewRow(object[] originalValues, object[] currentValues)
+			=> NewRow(originalValues, currentValues);
 
 		/// <summary>Entfernt die Datenzeile</summary>
 		/// <param name="row">Datenzeile, die als Entfernt markiert werden soll.</param>
 		public bool Remove(PpsDataRow row)
-		{
-			return row.Remove();
-		} // proc Remove
+			=> row.Remove();
 
 		/// <summary>Entfernt die Datenzeile</summary>
 		/// <param name="index"></param>
@@ -778,8 +809,25 @@ namespace TecWare.PPSn.Data
 			return ((System.Collections.IEnumerable)currentRows).GetEnumerator();
 		} // func System.Collections.IEnumerable.GetEnumerator
 
+		int IList.Add(object value)
+		{
+			if (value is PpsDataRow)
+			{
+				var row = (PpsDataRow)value;
+				if (row.Table != this)
+					throw new ArgumentException("Row does not belong to the current table.");
+
+				return IndexOf(AddInternal(false, row));
+			}
+			else if (value is LuaTable)
+			{
+				return IndexOf(Add((LuaTable)value));
+			}
+			else
+				throw new NotSupportedException();
+		} // func IListAdd
+		
 		// not supported
-		int IList.Add(object value) { throw new NotSupportedException(); }
 		void IList.Insert(int index, object value) { throw new NotSupportedException(); }
 
 		// mapped
@@ -895,6 +943,8 @@ namespace TecWare.PPSn.Data
 			}
 		} // prop this
 
+		PpsDataTable IPpsDataView.Table => this;
+
 		// -- Static --------------------------------------------------------------
 
 		private static readonly PropertyInfo ReadOnlyCollectionIndexPropertyInfo;
@@ -920,12 +970,12 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Base class for a bindable filter of rows in a table.</summary>
-	public abstract class PpsDataFilter : IList, IEnumerable<PpsDataRow>, INotifyCollectionChanged, IDisposable
+	public abstract class PpsDataFilter : IPpsDataView, IDisposable
 	{
 		/// <summary>Notifies about changes in this collection.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
-		private PpsDataTable table;
+		private readonly PpsDataTable table;
 		private List<PpsDataRow> rows;
 		private bool isDisposed = false;
 
@@ -1059,14 +1109,36 @@ namespace TecWare.PPSn.Data
 		#region -- IList members ----------------------------------------------------------
 
 		public PpsDataRow Add(LuaTable values)
-		{
-			return Add(table.GetDataRowValues(values));
-		} // func Add
+			=> Add(table.GetDataRowValues(values));
 
-		public virtual PpsDataRow Add(params object[] values)
+		public PpsDataRow Add(params object[] values)
+			=> table.Add(InitializeValues(values));
+
+		PpsDataRow IPpsDataView.NewRow(object[] originalValues, object[] currentValues)
+			=> ((IPpsDataView)table).NewRow(InitializeValues(originalValues), currentValues);
+
+		protected virtual object[] InitializeValues(object[] values)
+			=> table.CreateDataRowValuesArray(values);
+
+		public bool Remove(PpsDataRow row)
+			=> table.Remove(row);
+
+		int IList.Add(object value)
 		{
-			return table.Add(values);
-		} // func Add
+			if (value is PpsDataRow)
+			{
+				var row = (PpsDataRow)value;
+				return rows.IndexOf(table.AddInternal(false, row));
+			}
+			else if (value is LuaTable)
+			{
+				lock (rows)
+					return rows.IndexOf(Add((LuaTable)value));
+			}
+			else
+				throw new NotSupportedException();
+		} // prop IList.Add
+
 
 		bool IList.Contains(object value)
 		{
@@ -1080,7 +1152,8 @@ namespace TecWare.PPSn.Data
 				return rows.IndexOf((PpsDataRow)value);
 		} // func IList.IndexOf
 
-		void IList.Remove(object value) => table.Remove((PpsDataRow)value);
+		void IList.Remove(object value)
+			=> table.Remove((PpsDataRow)value);
 
 		void IList.RemoveAt(int index)
 		{
@@ -1097,7 +1170,6 @@ namespace TecWare.PPSn.Data
 		} // proc ICollection.CopyTo
 
 		// not supported
-		int IList.Add(object value) { throw new NotSupportedException(); }
 		void IList.Insert(int index, object value) { throw new NotSupportedException(); }
 		void IList.Clear() { throw new NotSupportedException(); }
 
@@ -1135,7 +1207,7 @@ namespace TecWare.PPSn.Data
 		public PpsDataTable Table => table;
 		/// <summary></summary>
 		public bool IsDisposed => isDisposed;
-	} // class PpsDataView
+	} // class PpsDataFilter
 
 	#endregion
 }
