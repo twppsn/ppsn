@@ -214,7 +214,7 @@ namespace TecWare.PPSn
 				using (var r = await request.GetResponseAsync(source.ToString()))
 				{
 					var contentDisposion = r.GetContentDisposition(true);
-					using (var sr = request.GetTextReaderAsync(r, MimeTypes.Text.Lua))
+					using (var sr = request.GetTextReaderAsync(r, MimeTypes.Text.Plain))
 						return Lua.CompileChunk(sr, contentDisposion.FileName, luaOptions, arguments);
 				}
 			}

@@ -31,20 +31,29 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public sealed class PpsMainViewOrder
 	{
+		private readonly string name;
+		private readonly string displayName;
+		private readonly string orderExpression;
+		private readonly int priority;
+
 		internal PpsMainViewOrder(XElement x, ref int priority)
 		{
-			this.Name = x.GetAttribute("name", String.Empty);
+			this.name = x.GetAttribute("name", String.Empty);
 			if (String.IsNullOrEmpty(this.Name))
 				throw new ArgumentNullException("@name");
 
-			this.DisplayName = x.GetAttribute("displayName", Name);
+			this.displayName = x.GetAttribute("displayName", Name);
+			this.priority = priority = x.GetAttribute("priority", priority + 1);
 
-			this.Priority = priority = x.GetAttribute("priority", priority + 1);
+			var t = x.Value;
+			this.orderExpression = String.IsNullOrWhiteSpace(t) ? name : t;
 		} // ctor
 
-		public string Name { get; }
-		public string DisplayName { get; }
-		public int Priority { get; }
+		public string Name => name;
+		public string DisplayName => displayName;
+		public int Priority => priority;
+
+		public string OrderExpression => orderExpression;
 	} // class PpsMainViewSort
 
 	#endregion

@@ -286,6 +286,8 @@ namespace TecWare.PPSn.UI
 
 			public string Name => order.Name;
 			public string DisplayName => order.DisplayName;
+			public string OrderExpression => order.OrderExpression;
+
 			public bool? IsChecked => model.currentOrder == this ? (bool?)model.sortAscending : null;
 		} // class PpsOrderView
 
@@ -606,7 +608,12 @@ namespace TecWare.PPSn.UI
 				exprFilter = currentFilter?.FilterExpression ?? PpsDataFilterTrueExpression.True;
 
 				if (currentOrder != null)
-					dataSource.Order = PpsDataOrderExpression.Parse((sortAscending ? "+" : "-") + currentOrder.Name).ToArray();
+				{
+					var orders = PpsDataOrderExpression.Parse(currentOrder.OrderExpression);
+					if (!sortAscending)
+						orders = orders.Select(o => new PpsDataOrderExpression(!o.Negate, o.Identifier));
+					dataSource.Order = orders.ToArray();
+				}
 			}
 
 			// add search expression
