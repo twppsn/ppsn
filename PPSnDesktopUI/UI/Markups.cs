@@ -295,7 +295,6 @@ namespace TecWare.PPSn.UI
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{
 			// todo: does not work ???
-			var x = binding.Path;
 
 			var target = (IProvideValueTarget)serviceProvider.GetService(typeof(IProvideValueTarget));
 			var targetObject = (System.Windows.FrameworkElement)target.TargetObject;
