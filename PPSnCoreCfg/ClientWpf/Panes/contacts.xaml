@@ -13,7 +13,7 @@
 		]]>
     </x:Code>
 
-	<pps:PpsGenericWpfControl.Resources>
+    <pps:PpsGenericWpfControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="../Default.xaml" />
@@ -21,7 +21,7 @@
         </ResourceDictionary>
     </pps:PpsGenericWpfControl.Resources>
 
-	<Grid>
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="60" />
             <RowDefinition Height="29"/>
@@ -37,7 +37,7 @@
         <Label Content="{Binding Data.Head.Name.displayName}" Grid.Column="0" Grid.Row="0"/>
         <TextBox Text="{Binding Data.Head.First.Name}" Grid.Column="1" Grid.Row="0" HorizontalAlignment="Stretch" Margin="0,3" MaxLength="{Binding Data.Head.Name.MaxLength,Mode=OneWay}" />
 
-		<Label Content="{Binding Data.Head.KurzName.displayName}" Grid.Column="0" Grid.Row="1"/>
+        <Label Content="{Binding Data.Head.KurzName.displayName}" Grid.Column="0" Grid.Row="1"/>
         <TextBox Text="{Binding Data.Head.First.KurzName}" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Stretch" Margin="0,3" MaxLength="{Binding Data.Head.KurzName.MaxLength,Mode=OneWay}"/>
 
         <Label Content="{Binding Data.Head.LandId.displayName}" Grid.Column="0" Grid.Row="2"/>
@@ -46,21 +46,12 @@
 								SelectedValuePath="ServerId"
 								DisplayMemberPath="Name">
         </ComboBox>
-<<<<<<< .mine
         <StackPanel Grid.Column="0" Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal">
             <Button Content="Neue Adresse" Width="100" Margin="0,8" Command="{Binding newAddress}"/>
             <Button Content="Neuer Partner" Width="100" Margin="8,8" Command="{Binding newPartner}"/>
             <Button Content="Löschen" Width="100" Margin="0,8" Command="{Binding delItem}"/>
         </StackPanel>
         <TreeView x:Name="ADR_TreeView" Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" ItemsSource="{Binding Data.Head/AdreHead}">
-=======
-		<Button Grid.Column="0" Grid.Row="3" Content="Neu" Width="100" Margin="0,8"/>
-        <TreeView Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" ItemsSource="{Binding Data.Head/AdreHead}" x:Name="tvw">
-
-
-
-
->>>>>>> .theirs
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding AnspAdre}">
                     <Border Height="27">
@@ -92,7 +83,7 @@
                     </StackPanel>
                 </DataTemplate>
             </ContentControl.Resources>
-		</ContentControl>
+        </ContentControl>
     </Grid>
     <pps:PpsGenericWpfControl.Commands>
         <pps:PpsUICommandButton Order="100,100" DisplayText="Veröffentlichen" Image="floppy_diskImage" Command="{Binding pushContact}" />
