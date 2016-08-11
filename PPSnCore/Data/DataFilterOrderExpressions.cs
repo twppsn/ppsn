@@ -190,7 +190,7 @@ namespace TecWare.PPSn.Data
 			else
 			{
 				var startAt2 = offset;
-				while (offset < expression.Length && !Char.IsWhiteSpace(expression[offset]))
+				while (offset < expression.Length && !(Char.IsWhiteSpace(expression[offset]) || expression[offset] == ')' || expression[offset] == '\'' || expression[offset] == '"'))
 					offset++;
 				value = startAt2 < offset ? new PpsDataFilterCompareTextValue(expression.Substring(startAt2, offset - startAt2)) : PpsDataFilterCompareNullValue.Default;
 			}
