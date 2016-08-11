@@ -170,6 +170,27 @@ namespace TecWare.PPSn.UI
 			descriptor.AddValueChanged(PART_Charmbar, OnCharmbarActualWidthChanged);
 		} // ctor
 
+		private Task<bool> unloadTask = null;
+
+		protected override void OnClosing(CancelEventArgs e)
+		{
+			if (unloadTask != null) // currently unloading
+				e.Cancel = !unloadTask.IsCompleted;
+			else if (Panes.Count > 0)
+			{
+				e.Cancel = true; // cancel operation an start shutdown
+
+				unloadTask = UnloadPanesAsync();
+				unloadTask.ContinueWith(FinishClosing);
+			}
+		} // func OnClosing
+
+		private void FinishClosing(Task<bool> r)
+		{
+			if (r.Result)
+				Dispatcher.Invoke(Close);
+		} // proc FinishClosing
+
 		#endregion
 
 		#region -- Navigator.SearchBox ------------------------------------------------------

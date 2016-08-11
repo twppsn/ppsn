@@ -154,6 +154,7 @@ namespace TecWare.PPSn.UI
 			var r = base.Activate();
 
 			SetValue(CurrentPaneKey, paneToActivate);
+			IsNavigatorVisible = false;
 
 			return r;
 		} // func Activate
@@ -268,7 +269,7 @@ namespace TecWare.PPSn.UI
 							(
 								from w in Environment.GetWindows()
 								let r = w.Panes.FindPaneByArguments(paneType, arguments, false)
-								where r.Item1 == PpsWindowPaneCompareResult.Same
+								where w != this && r.Item1 == PpsWindowPaneCompareResult.Same
 								select new Tuple<PpsMainWindow, IPpsWindowPane>(w, r.Item2)
 							).FirstOrDefault();
 
@@ -278,7 +279,7 @@ namespace TecWare.PPSn.UI
 								await newWindow.LoadPaneInternAsync(paneType, arguments);
 							}
 							else
-								loadedPane.Item1.Activate(loadedPane.Item2);
+								await Dispatcher.InvokeAsync(() => loadedPane.Item1.Activate(loadedPane.Item2));
 						}
 						break;
 
@@ -294,7 +295,7 @@ namespace TecWare.PPSn.UI
 						{
 							var loadedPane = Panes.FirstOrDefault(c => c.GetType() == paneType && c.CompareArguments(arguments) == PpsWindowPaneCompareResult.Same);
 							if (loadedPane != null)
-								Activate(loadedPane);
+								await Dispatcher.InvokeAsync(() => Activate(loadedPane));
 							else
 								await LoadPaneInternAsync(paneType, arguments);
 						}
@@ -312,7 +313,7 @@ namespace TecWare.PPSn.UI
 			if (arguments.mode != null)
 				return Procs.ChangeType<PpsOpenPaneMode>(arguments.mode);
 
-			return (panes.Count > 1 ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane);
+			return Environment.GetOptionalValue<bool>("NewPaneMode", false) ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
 		} // func GetDefaultPaneMode
 
 		private async Task LoadPaneInternAsync(Type paneType, LuaTable arguments)
@@ -338,7 +339,6 @@ namespace TecWare.PPSn.UI
 			await Dispatcher.InvokeAsync(() =>
 			{
 				Activate(newPane);
-				IsNavigatorVisible = false;
 			});
 		} // proc LoadPaneInternAsync
 

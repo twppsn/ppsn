@@ -34,7 +34,7 @@ namespace TecWare.PPSn
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class PpsDocumentId : IEquatable<PpsDocumentId>
+	public class PpsDocumentId : IComparable<PpsDocumentId>, IEquatable<PpsDocumentId>
 	{
 		private readonly Guid objectGuid;
 		private readonly long revisionId;
@@ -51,11 +51,20 @@ namespace TecWare.PPSn
 		public override int GetHashCode()
 			=> objectGuid.GetHashCode() ^ revisionId.GetHashCode();
 
-		public override bool Equals(object obj)
-			=> Object.ReferenceEquals(this, obj) ? true : Equals(obj as PpsDocumentId);
+		public override bool Equals(object other)
+			=> Equals(other as PpsDocumentId);
 
 		public bool Equals(PpsDocumentId other)
-			=> other != null && other.objectGuid == this.objectGuid && other.revisionId == this.revisionId;
+			=> (object)other != null && (Object.ReferenceEquals(this, other) || (other.objectGuid == this.objectGuid && other.revisionId == this.revisionId));
+
+		public int CompareTo(PpsDocumentId other)
+		{
+			if ((object)other == null)
+				return -1;
+
+			var t = objectGuid.CompareTo(other.ObjectGuid);
+			return t == 0 ? revisionId.CompareTo(other.revisionId) : t;
+		} // func CompareTo
 
 		/// <summary>Client site Id, not the server id.</summary>
 		public Guid ObjectGuid => objectGuid;
@@ -65,6 +74,12 @@ namespace TecWare.PPSn
 		public bool IsEmpty => objectGuid == Guid.Empty && revisionId <= 0;
 
 		public static PpsDocumentId Empty { get; } = new PpsDocumentId(Guid.Empty, 0);
+
+		public static bool operator ==(PpsDocumentId left, PpsDocumentId right)
+			=> ((object)left == null && (object)right == null) || ((object)left != null && left.Equals(right));
+
+		public static bool operator !=(PpsDocumentId left, PpsDocumentId right)
+			=> ((object)left != null || (object)right != null) && ((object)left == null || !left.Equals(right));
 	} // class PpsDocumentId
 
 	#endregion
@@ -82,14 +97,14 @@ namespace TecWare.PPSn
 
 	public interface IPpsDocuments
 	{
-		Task<PpsDocument> CreateDocumentAsync(IPpsDocumentOwner owner, string type, LuaTable arguments);
+		Task<PpsDocument> CreateDocumentAsync(string type, LuaTable arguments);
 		/// <summary></summary>
 		/// <param name="owner"></param>
 		/// <param name="documentId"></param>
 		/// <param name="revisionId"></param>
 		/// <param name="arguments"></param>
 		/// <returns></returns>
-		Task<PpsDocument> OpenDocumentAsync(IPpsDocumentOwner owner, PpsDocumentId documentId, LuaTable arguments);
+		Task<PpsDocument> OpenDocumentAsync(PpsDocumentId documentId, LuaTable arguments);
 
 		string GetDocumentDefaultPane(string type);
 	} // interface IPpsDocuments
@@ -421,15 +436,11 @@ namespace TecWare.PPSn
 			}
 		} // proc ClearDocumentDefinitionInfo
 
-		internal void OnDocumentClosed(PpsDocument document)
-		{
-			openDocuments.Add(document.DocumentId, document);
-		}
-
 		internal void OnDocumentOpend(PpsDocument document)
-		{
-			openDocuments.Remove(document.DocumentId);
-		}
+			=> openDocuments.Add(document.DocumentId, document);
+
+		internal void OnDocumentClosed(PpsDocument document)
+			=> openDocuments.Remove(document.DocumentId);
 
 		private async Task<PpsDataSetDefinitionClient> GetDocumentDefinitionAsync(string typ)
 		{
@@ -442,7 +453,7 @@ namespace TecWare.PPSn
 				throw new NotImplementedException("todo"); // todo: exception for unknown document
 		} // func GetDocumentDefinitionAsync
 
-		public async Task<PpsDocument> CreateDocumentAsync(IPpsDocumentOwner owner, string typ, LuaTable arguments)
+		public async Task<PpsDocument> CreateDocumentAsync(string typ, LuaTable arguments)
 		{
 			var def = await GetDocumentDefinitionAsync(typ);
 
@@ -452,9 +463,6 @@ namespace TecWare.PPSn
 			// initialize
 			newDocument.SetLocalState(Guid.NewGuid(), -1, -1, false, false);
 			await newDocument.OnNewAsync(arguments);
-
-			// register events, owner, and in the openDocuments dictionary
-			newDocument.RegisterOwner(owner);
 
 			return newDocument;
 		} // func CreateDocument
@@ -612,7 +620,7 @@ namespace TecWare.PPSn
 			return newDocument.Item1;
 		} // func GetServerDocumentAsync
 
-		public async Task<PpsDocument> OpenDocumentAsync(IPpsDocumentOwner owner, PpsDocumentId documentId, LuaTable arguments)
+		public async Task<PpsDocument> OpenDocumentAsync(PpsDocumentId documentId, LuaTable arguments)
 		{
 			PpsDocument document;
 
@@ -632,9 +640,6 @@ namespace TecWare.PPSn
 				// load document
 				await document.OnLoadedAsync(arguments);
 			}
-
-			// register the document -> openDocuments get filled
-			document.RegisterOwner(owner);
 
 			return document;
 		} // func OpenDocument

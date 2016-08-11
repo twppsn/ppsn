@@ -63,6 +63,21 @@ namespace TecWare.PPSn.UI
 			base.Dispose(disposing);
 		} // proc Dispose
 
+		public override PpsWindowPaneCompareResult CompareArguments(LuaTable otherArgumens)
+		{
+			var r = base.CompareArguments(otherArgumens);
+			if (r == PpsWindowPaneCompareResult.Reload)
+			{
+				var otherDocumentId = new PpsDocumentId(
+					otherArgumens.GetOptionalValue("guid", Guid.Empty),
+					Convert.ToInt64(otherArgumens.GetMemberValue("revId") ?? -1L)
+				);
+
+				return document.DocumentId == otherDocumentId ? PpsWindowPaneCompareResult.Same : PpsWindowPaneCompareResult.Reload;
+			}
+			return r;
+		} // func CompareArguments
+
 		public override async Task LoadAsync(LuaTable arguments)
 		{
 			// get the document path
@@ -76,8 +91,11 @@ namespace TecWare.PPSn.UI
 			var id = arguments.GetMemberValue("guid");
 			var revId = arguments.GetMemberValue("revId");
 			this.document = id == null ?
-				await rdt.CreateDocumentAsync(this, documentType, arguments) :
-				await rdt.OpenDocumentAsync(this, new PpsDocumentId((Guid)id, Convert.ToInt64(revId ?? -1)), arguments);
+				await rdt.CreateDocumentAsync(documentType, arguments) :
+				await rdt.OpenDocumentAsync(new PpsDocumentId((Guid)id, Convert.ToInt64(revId ?? -1)), arguments);
+
+			// register events, owner, and in the openDocuments dictionary
+			document.RegisterOwner(this);
 						
 			// get the pane to view, if it is not given
 			if (!arguments.ContainsKey("pane"))
@@ -124,6 +142,8 @@ namespace TecWare.PPSn.UI
 		{
 			if (document.IsDirty)
 				CommitEdit();
+			
+			document.UnregisterOwner(this);
 
 			return base.UnloadAsync(commit);
 		} // func UnloadAsync
