@@ -47,6 +47,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="ClientWpf\Panes\contacts.lua" />
     <None Include="contacts\contactsLocal.lua" />
     <None Include="contacts\contactsServer.lua" />
     <None Include="contacts\contactTagging.lua" />

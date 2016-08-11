@@ -9,49 +9,8 @@
 			 Title="{Binding Data.Head.First.Name}">
     <x:Code>
         <![CDATA[
-		
-        pushContact = command(
-            function (args) : void
-                PushDataAsync();
-            end
-		);
-
-        newAddress = command(
-            function (args) : void
-	            do (trans = UndoManager:BeginTransaction("Neue Adresse"))
-			        Data.Head.First.AdreHead:Add({ Name = "Neue Adresse"});
- 			        trans:Commit();
-		        end;
-            end
-		);
-		
-        newPartner = command(
-            function (args) : void
-  		        local cur = ADR_TreeView.SelectedValue;
-                if cur ~= nil and cur:Table:TableName == "Adre" then
-			        do (trans = UndoManager:BeginTransaction("Neuer Partner"))
- 			            cur.AnspAdre:Add({ Name = "Neuer Partner"});
-				        trans:Commit();
-			        end;
-		        end;
-            end
-		);
-		
-        delItem = command(
-            function (args) : void
-  		        local cur = ADR_TreeView.SelectedValue;
-                if cur ~= nil then
-			        do (trans = UndoManager:BeginTransaction("Neuer Partner"))
- 			            cur:Remove({"Löschen " .. (cur.Name)});
-				        trans:Commit();
-			        end;
-		        end;
-            end
-		);
-		
-			
+        require 'contacts.lua';
 		]]>
-
     </x:Code>
 
 	<pps:PpsGenericWpfControl.Resources>
@@ -87,12 +46,21 @@
 								SelectedValuePath="ServerId"
 								DisplayMemberPath="Name">
         </ComboBox>
+<<<<<<< .mine
         <StackPanel Grid.Column="0" Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal">
             <Button Content="Neue Adresse" Width="100" Margin="0,8" Command="{Binding newAddress}"/>
             <Button Content="Neuer Partner" Width="100" Margin="8,8" Command="{Binding newPartner}"/>
             <Button Content="Löschen" Width="100" Margin="0,8" Command="{Binding delItem}"/>
         </StackPanel>
         <TreeView x:Name="ADR_TreeView" Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" ItemsSource="{Binding Data.Head/AdreHead}">
+=======
+		<Button Grid.Column="0" Grid.Row="3" Content="Neu" Width="100" Margin="0,8"/>
+        <TreeView Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" ItemsSource="{Binding Data.Head/AdreHead}" x:Name="tvw">
+
+
+
+
+>>>>>>> .theirs
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding AnspAdre}">
                     <Border Height="27">
