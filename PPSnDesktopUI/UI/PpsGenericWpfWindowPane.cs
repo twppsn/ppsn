@@ -336,4 +336,27 @@ namespace TecWare.PPSn.UI
 	} // class PpsGenericWpfWindowPane
 
 	#endregion
+
+	#region -- class PpsContentTemplateSelector -----------------------------------------
+
+	public class PpsContentTemplateSelector : DataTemplateSelector
+	{
+		public override DataTemplate SelectTemplate(object item, DependencyObject container)
+		{
+			var row = item as Data.PpsDataRow;
+			if (row == null)
+				return null;
+
+			var control = container as FrameworkElement;
+			if (control == null)
+				return null;
+
+			var r = (DataTemplate)control.FindResource(row.Table.TableName);
+			return r;
+			//var r = control.TryFindResource(row.Table.TableName);
+			//return r as DataTemplate;
+		}
+	} // class PpsContentTemplateSelector
+
+	#endregion
 }
