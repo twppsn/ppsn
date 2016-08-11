@@ -1,9 +1,9 @@
 ﻿CREATE TABLE [dbo].[Objk]
 (
 	[Id] BIGINT NOT NULL  CONSTRAINT pkObjkId PRIMARY KEY IDENTITY (1, 1),
-    [Guid] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(), 
-    [Typ] CHAR(2) NOT NULL, 
-    [Nr] NVARCHAR(20) NOT NULL,
+	[Guid] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(), 
+	[Typ] VARCHAR(25) NOT NULL, 
+	[Nr] NVARCHAR(20) NOT NULL,
 	[CurRevId] BIGINT NULL CONSTRAINT fkObjkObjrCurId REFERENCES dbo.Objr (Id),
 	[HeadRevId] BIGINT NULL CONSTRAINT fkObjkObjrHeadId REFERENCES dbo.Objr (Id)
 )
@@ -19,7 +19,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level2name = N'Id'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Type of the object e.g. KO-Contact, BE-Order',
+    @value = N'Type of the object e.g. crmContacts-Contact, sdsOrder-Order',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',

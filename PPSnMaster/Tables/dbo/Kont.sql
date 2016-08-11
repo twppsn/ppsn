@@ -3,6 +3,7 @@
 	[Id] BIGINT NOT NULL CONSTRAINT pkKontId PRIMARY KEY IDENTITY (1,1), 
 	[ObjkId] BIGINT NOT NULL CONSTRAINT fkKontObjkId REFERENCES dbo.Objk (Id), 
 	[Name] NVARCHAR(100) NOT NULL,
+	[KurzName] NVARCHAR(25) NULL,
 	[LiefNr] NVARCHAR(50) NULL,
 	[KundNr] NVARCHAR(50) NULL, 
 	[StIdentNr] VARCHAR(25) NULL, 
@@ -11,8 +12,8 @@
 	[Inaktiv] SMALLDATETIME NULL, 
 	[Abc] CHAR NULL, 
 	[KgrpId] BIGINT NULL CONSTRAINT fkKontKgrpId REFERENCES dbo.Kgrp (KnstId), 
-    [Iban] CHAR(34) NULL, 
-    [Bic] CHAR(11) NULL
+	[Iban] CHAR(34) NULL, 
+	[Bic] CHAR(11) NULL
 )
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
@@ -131,3 +132,12 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Kont',
     @level2type = N'COLUMN',
     @level2name = N'Bic'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Kurzname des Kontakts, MatchCode',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Kont',
+    @level2type = N'COLUMN',
+    @level2name = N'KurzName'

@@ -22,11 +22,10 @@
 			<pps:field name="dbo.Kont.UstIdNr" />
 			<pps:field name="dbo.Kont.Inaktiv" />
 			<pps:field name="dbo.Kont.KgrpId" />
-
-			<pps:field name="dbo.Kont.KurzName" dataType="string">
-				<pps:attribute name="maxLength">50</pps:attribute>
-				<pps:attribute name="displayName">Match-Code</pps:attribute>
+			<pps:field name="dbo.Kont.KurzName" >
+				<pps:attribute name="displayName">Kurzname</pps:attribute>
 			</pps:field>
+			
 			<pps:field name="dbo.Kont.LandId" dataType="int">
 				<pps:attribute name="displayName">Land</pps:attribute>
 			</pps:field>
@@ -66,7 +65,7 @@
 								,k.Name
 							from dbo.Objk o
 								inner join sds.Kont k on (o.Id = k.ObjkId)
-							where Typ = 'KO']]>
+							where Typ = 'crmContacts']]>
 				</pps:source>
 			</pps:view> -->
 
@@ -75,6 +74,7 @@
 				<pps:autoTag name="Name" tableName="Head" columnName="Name" mode="First" />
 				<pps:autoTag name="LiefNr" tableName="Head" columnName="LiefNr" mode="Number" />
 				<pps:autoTag name="KundNr" tableName="Head" columnName="KundNr" mode="Number" />
+				<pps:autoTag name="Inaktiv" tableName="Head" columnName="Inaktiv" mode="First" />
 
 				<pps:table name="Head">
 					<pps:column name="ObjkId" fieldName="dbo.Kont.ObjkId" />
@@ -129,7 +129,7 @@
 		<pps:wpf name="wpf">
 			<pps:template id="contacts" file="ClientWpf\Templates\Contacts.xaml" />
 			
-			<pps:view name="ko" displayName="Kontakt" displayGlyph="usersImage" view="local.objects" filter="Typ:=ko">
+			<pps:view name="crmContacts" displayName="Kontakt" displayGlyph="usersImage" view="local.objects" filter="Typ:=crmContacts">
 				<pps:filter name="lief" displayName="Lieferanten">
 					<![CDATA[ LiefNr:! ]]>
 				</pps:filter>
@@ -148,19 +148,22 @@
 				<pps:order name="test" displayName="Test">
 					<![CDATA[ +Name ]]>
 				</pps:order>
+				<pps:order name="inaktiv" displayName="Inaktivierungsdatum">
+					<![CDATA[ +Inaktiv ]]>
+				</pps:order>
 			</pps:view>
 			
 			<pps:action name="contactNew" displayName="Neue Kontakt" priority="100">
-				<pps:condition><![CDATA[ return CurrentView == Views["ko"]; ]]></pps:condition>
-				<pps:code><![CDATA[ Window:LoadMask{ document = 'ko', pane = 'wpf/panes/contacts.xaml' }; ]]></pps:code>
+				<pps:condition><![CDATA[ return CurrentView == Views["crmContacts"]; ]]></pps:condition>
+				<pps:code><![CDATA[ Window:LoadMask{ document = 'crmContacts', pane = 'wpf/panes/contacts.xaml' }; ]]></pps:code>
 			</pps:action>
 			<pps:action name="contactOpen" displayName="Bearbeiten" priority="200">
-				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "ko" ]]></pps:condition>
-				<pps:code><![CDATA[ Window:LoadMask{ document = 'ko', pane = 'wpf/panes/contacts.xaml', guid = CurrentItem.Guid }; ]]> </pps:code>
+				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "crmContacts" ]]></pps:condition>
+				<pps:code><![CDATA[ Window:LoadMask{ document = 'crmContacts', pane = 'wpf/panes/contacts.xaml', guid = CurrentItem.Guid }; ]]> </pps:code>
 			</pps:action>
 		</pps:wpf>
 
-		<pps:document name="ko" dataset="contactsDataSet" displayname="Contacts">
+		<pps:document name="crmContacts" dataset="contactsDataSet" displayname="Contacts">
 		</pps:document>
 	</pps:ppsn>
 </fragment>
