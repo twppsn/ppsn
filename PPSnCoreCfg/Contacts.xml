@@ -154,7 +154,7 @@
 			</pps:view>
 			
 			<pps:action name="contactNew" displayName="Neue Kontakt" priority="100">
-				<pps:condition><![CDATA[ return CurrentView == Views["crmContacts"]; ]]></pps:condition>
+				<pps:condition><![CDATA[ return CurrentView == Views:crmContacts; ]]></pps:condition>
 				<pps:code><![CDATA[ Window:LoadMask{ document = 'crmContacts', pane = 'wpf/panes/contacts.xaml' }; ]]></pps:code>
 			</pps:action>
 			<pps:action name="contactOpen" displayName="Bearbeiten" priority="200">

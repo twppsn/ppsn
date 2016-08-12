@@ -9,6 +9,7 @@ Vorlage für ein Skript nach der Bereitstellung
                SELECT * FROM [$(TableName)]					
 --------------------------------------------------------------------------------------
 */
+
 DECLARE @data int = 1;
 
 IF @data = 1
@@ -100,7 +101,6 @@ ALTER TABLE [dbo].[Objk]
 ALTER TABLE [dbo].[Objk]
     ADD CONSTRAINT [fkObjkObjrHeadId] FOREIGN KEY ([HeadRevId]) REFERENCES [dbo].[Objr] ([Id])
 COMMIT TRANSACTION
-
 
 
 /*BEGIN
