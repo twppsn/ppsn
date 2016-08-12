@@ -87,19 +87,5 @@
     </Grid>
     <pps:PpsGenericWpfControl.Commands>
         <pps:PpsUICommandButton Order="100,100" DisplayText="Veröffentlichen" Image="floppy_diskImage" Command="{Binding pushContact}" />
-        <pps:PpsUISplitCommandButton Order="200,130" DisplayText="Rückgängig" Description="Rückgängig" Image="undoImage">
-            <pps:PpsUISplitCommandButton.Popup>
-                <Popup>
-                    <uiC:UndoManagerListBox Style="{StaticResource UndoManagerListBoxStyle}" DataContext="{Binding Path=DataContext.UndoView}"/>
-                </Popup>
-            </pps:PpsUISplitCommandButton.Popup>
-        </pps:PpsUISplitCommandButton>
-        <pps:PpsUISplitCommandButton Order="200,140" DisplayText="Wiederholen" Description="Wiederholen" Image="redoImage">
-            <pps:PpsUISplitCommandButton.Popup>
-                <Popup>
-                    <uiC:UndoManagerListBox Style="{StaticResource UndoManagerListBoxStyle}" DataContext="{Binding Path=DataContext.RedoView}" IsRedoList="True"/>
-                </Popup>
-            </pps:PpsUISplitCommandButton.Popup>
-        </pps:PpsUISplitCommandButton>
     </pps:PpsGenericWpfControl.Commands>
 </pps:PpsGenericWpfControl>
