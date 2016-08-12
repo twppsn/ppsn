@@ -463,6 +463,7 @@ namespace TecWare.PPSn
 			// initialize
 			newDocument.SetLocalState(Guid.NewGuid(), -1, -1, false, false);
 			await newDocument.OnNewAsync(arguments);
+			newDocument.UndoManager.Clear();
 
 			return newDocument;
 		} // func CreateDocument
@@ -639,6 +640,8 @@ namespace TecWare.PPSn
 
 				// load document
 				await document.OnLoadedAsync(arguments);
+
+				document.UndoManager.Clear();
 			}
 
 			return document;

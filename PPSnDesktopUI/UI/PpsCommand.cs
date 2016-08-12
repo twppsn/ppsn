@@ -40,15 +40,18 @@ namespace TecWare.PPSn.UI
 	/// can also be added to the idle collection.</summary>
 	public class PpsCommand : ICommand, IPpsIdleAction
 	{
-		private PpsEnvironment environment;
-		private Action<object> command;
-		private Func<object, bool> canExecute;
+		private readonly PpsEnvironment environment;
+		private readonly Action<object> command;
+		private readonly Func<object, bool> canExecute;
 
-		public PpsCommand(PpsEnvironment environment, Action<object> command, Func<object, bool> canExecute)
+		public PpsCommand(PpsEnvironment environment, Action<object> command, Func<object, bool> canExecute = null, bool idleCall = true)
 		{
 			this.environment = environment;
 			this.command = command;
 			this.canExecute = canExecute;
+
+			if (canExecute != null && idleCall)
+				environment.AddIdleAction(this);
 		} // ctor
 
 		#region -- ICommand Member ---------------------------------------------------------
@@ -56,9 +59,7 @@ namespace TecWare.PPSn.UI
 		public event EventHandler CanExecuteChanged;
 
 		public virtual bool CanExecute(object parameter)
-		{
-			return canExecute == null || canExecute(parameter);
-		} // func CanExecute
+			=> canExecute == null || canExecute(parameter);
 
 		public virtual void Execute(object parameter)
 		{
@@ -77,10 +78,13 @@ namespace TecWare.PPSn.UI
 		public void Refresh()
 			=> CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 
-		bool IPpsIdleAction.OnIdle(int elapsed) { Refresh(); return true; }
+		bool IPpsIdleAction.OnIdle(int elapsed)
+		{
+			Refresh();
+			return false;
+		} // func IPpsIdleAction.OnIdle
 	} // class PpsCommand
-
-
+	
 	#endregion
 
 	#region -- class PpsCommandOrderConverter -------------------------------------------

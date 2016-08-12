@@ -30,6 +30,7 @@ using System.Windows.Threading;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
@@ -132,7 +133,60 @@ namespace TecWare.PPSn.UI
 			var ppsGenericControl = Control as PpsGenericWpfControl;
 			if (ppsGenericControl != null)
 			{
-				//ppsGenericControl.Commands.Add(
+				UndoManagerListBox listBox;
+
+				var undoCommand = new PpsUISplitCommandButton()
+				{
+					Order = new PpsCommandOrder(200, 130),
+					DisplayText = "Rückgängig",
+					Description = "Rückgängig",
+					Image = "undoImage",
+					Command = new PpsCommand(Environment,
+						(args) =>
+						{
+							UpdateSources();
+							UndoManager.Undo();
+						},
+						(args) => UndoManager?.CanUndo ?? false
+					),
+					Popup = new System.Windows.Controls.Primitives.Popup()
+					{
+						Child = listBox = new UndoManagerListBox()
+						{
+							Style = (Style)App.Current.FindResource("PPSnUndoManagerListBoxStyle")
+						}
+					}
+				};
+
+				listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.UndoManager"));
+
+				var redoCommand = new PpsUISplitCommandButton()
+				{
+					Order = new PpsCommandOrder(200, 140),
+					DisplayText = "Wiederholen",
+					Description = "Wiederholen",
+					Image = "redoImage",
+					Command = new PpsCommand(Environment,
+						(args) =>
+						{
+							UpdateSources();
+							UndoManager.Redo();
+						},
+						(args) => UndoManager?.CanRedo ?? false
+					),						
+					Popup = new System.Windows.Controls.Primitives.Popup()
+					{
+						Child = listBox = new UndoManagerListBox()
+						{
+							Style = (Style)App.Current.FindResource("PPSnUndoManagerListBoxStyle")
+						}
+					}
+				};
+
+				listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.UndoManager"));
+
+				ppsGenericControl.Commands.Add(undoCommand);
+				ppsGenericControl.Commands.Add(redoCommand);
 			}
 
 			OnPropertyChanged("UndoManager");
@@ -358,7 +412,7 @@ namespace TecWare.PPSn.UI
 			else
 			{
 				CheckBindingOnIdle();
-				return document.IsDirty || forceUpdateSource;
+				return document != null && (document.IsDirty || forceUpdateSource);
 			}
 		} // func OnIdle
 

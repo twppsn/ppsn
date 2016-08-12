@@ -82,12 +82,7 @@ namespace TecWare.PPSn.UI
 
 		[LuaMember("command")]
 		private object LuaCommand(Action<object> command, Func<object, bool> canExecute = null, bool idleCall = true)
-		{
-			var cmd = new PpsCommand(Environment, command, canExecute);
-			if (canExecute != null && idleCall)
-				Environment.AddIdleAction(cmd);
-			return cmd;
-		} // func LuaCommand
+			=> new PpsCommand(Environment, command, canExecute, idleCall);
 
 		[LuaMember("runTask")]
 		public PpsLuaTask RunTask(object func, params object[] args)
