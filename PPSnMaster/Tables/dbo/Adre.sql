@@ -102,4 +102,4 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1type = N'TABLE',
     @level1name = N'Adre',
     @level2type = N'COLUMN',
-    @level2name = N'PLZ'
+    @level2name = N'Plz'
