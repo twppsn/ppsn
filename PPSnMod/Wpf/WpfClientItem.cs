@@ -170,25 +170,32 @@ namespace TecWare.PPSn.Server.Wpf
 				}
 			} // func AddNode
 
-			private void AddNamespace(string sPrefix, XNamespace ns)
+			private void AddNamespace(string prefix, XNamespace ns)
 			{
 				var pos = collectedNamespaces.BinarySearch(ns.NamespaceName);
 				if (pos < 0)
 				{
 					collectedNamespaces.Insert(~pos, ns.NamespaceName);
-					if (!String.IsNullOrEmpty(sPrefix))
-						xResources.SetAttributeValue(XNamespace.Xmlns + sPrefix, ns.NamespaceName);
+					if (!String.IsNullOrEmpty(prefix))
+						cachedDocument.Root.SetAttributeValue(XNamespace.Xmlns + prefix, ns.NamespaceName);
 				}
 			} // proc AddNamespace
 
 			private void AddNamespaces(XElement x)
 			{
+				// current node
 				AddNamespace(x.GetPrefixOfNamespace(x.Name.Namespace), x.Name.Namespace);
+
+				// name space declarations
 				foreach (var attr in x.Attributes())
 				{
 					if (attr.IsNamespaceDeclaration)
 						AddNamespace(attr.Name.LocalName, attr.Value);
 				}
+
+				// collect all namespaces, also from parent elements
+				if (x.Parent != null)
+					AddNamespaces(x.Parent);
 			} // proc AddNamespaces
 
 			private XNode AddResource(XElement xSource, XNode xAddBefore)
@@ -536,7 +543,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 			// create the resource file
 			var resourceFile = new ParsedXamlFile(this, null, xTarget, xTargetResources, false);
-			foreach (var x in Config.Elements(PpsStuff.xnWpfTheme).Where(x=> String.Compare(x.GetAttribute("id", String.Empty), theme, StringComparison.OrdinalIgnoreCase) == 0))
+			foreach (var x in Config.Elements(PpsStuff.xnWpfTheme).Where(x => String.Compare(x.GetAttribute("id", String.Empty), theme, StringComparison.OrdinalIgnoreCase) == 0))
 			{
 				var fileName = x.GetAttribute("file", String.Empty);
 				if (String.IsNullOrEmpty(fileName))
