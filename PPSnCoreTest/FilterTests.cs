@@ -38,5 +38,13 @@ namespace TecWare.PPSn
 		[TestMethod]
 		public void TestFilter03()
 			=> TestFilter("or(a b)", "or(a  b)");
+
+		[TestMethod]
+		public void TestFilter04()
+			=> TestFilter("#20.09.2010", "#20.09.2010#");
+
+		[TestMethod]
+		public void TestFilter05()
+			=> TestFilter("#2010", "#2010");
 	}
 }
