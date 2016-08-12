@@ -457,14 +457,14 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		/// <summary></summary>
-		public bool CanUndo { get { return undoBorder > 0; } }
+		public bool CanUndo => undoBorder > 0;
 		/// <summary></summary>
-		public bool CanRedo { get { return undoBorder < items.Count; } }
+		public bool CanRedo => undoBorder < items.Count;
 
 		/// <summary></summary>
-		public bool InTransaction { get { return currentUndoTransaction != null; } }
+		public bool InTransaction => currentUndoTransaction != null;
 		/// <summary></summary>
-		public bool InUndoRedoOperation { get { return appendSuspended > 0; } }
+		public bool InUndoRedoOperation => appendSuspended > 0;
 	} // class PpsUndoManager
 
 	#endregion

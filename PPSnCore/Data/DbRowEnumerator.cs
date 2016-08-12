@@ -207,7 +207,18 @@ namespace TecWare.PPSn.Data
 
 					var values = new object[reader.FieldCount];
 					for (var i = 0; i < reader.FieldCount; i++)
-						values[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+					{
+						if (reader.IsDBNull(i))
+							values[i] = null;
+						else
+						{
+							var o = reader.GetValue(i);
+							if (o is string)
+								values[i] = ((String)o).TrimEnd(' ');
+							else
+								values[i] = o;
+						}
+					}
 					currentRow = new DbDataRow(this, values);
 
 					return true;
