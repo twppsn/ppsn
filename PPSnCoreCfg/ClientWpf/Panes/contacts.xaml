@@ -3,7 +3,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 			 xmlns:pps="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
-			 xmlns:ppsC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
+			 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="800"
 			 Title="{Binding Data.Head.First.Name}">
@@ -90,18 +90,16 @@
         <pps:PpsUISplitCommandButton Order="200,130" DisplayText="Rückgängig" Description="Rückgängig" Image="undoImage">
             <pps:PpsUISplitCommandButton.Popup>
                 <Popup>
-                    <ppsC:UndoManagerListBox Style="{StaticResource PPSnUndoManagerListBoxStyle}" DataContext="{Binding Path=DataContext.UndoView}"/>
+                    <uiC:UndoManagerListBox Style="{StaticResource UndoManagerListBoxStyle}" DataContext="{Binding Path=DataContext.UndoView}"/>
                 </Popup>
             </pps:PpsUISplitCommandButton.Popup>
         </pps:PpsUISplitCommandButton>
         <pps:PpsUISplitCommandButton Order="200,140" DisplayText="Wiederholen" Description="Wiederholen" Image="redoImage">
             <pps:PpsUISplitCommandButton.Popup>
                 <Popup>
-                    <ppsC:UndoManagerListBox Style="{StaticResource PPSnUndoManagerListBoxStyle}" DataContext="{Binding Path=DataContext.RedoView}" IsRedoList="True"/>
+                    <uiC:UndoManagerListBox Style="{StaticResource UndoManagerListBoxStyle}" DataContext="{Binding Path=DataContext.RedoView}" IsRedoList="True"/>
                 </Popup>
             </pps:PpsUISplitCommandButton.Popup>
         </pps:PpsUISplitCommandButton>
-
-
     </pps:PpsGenericWpfControl.Commands>
 </pps:PpsGenericWpfControl>
