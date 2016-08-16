@@ -535,7 +535,7 @@ namespace TecWare.PPSn.Data
 		protected virtual void OnRowAdded(PpsDataRow row)
 		{
 			dataset.OnTableRowAdded(this, row);
-			OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, row));
+			OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, row, currentRows.IndexOf(row)));
 		} // proc OnRowAdded
 
 		/// <summary>Notifies if a row is removed.</summary>
@@ -1100,7 +1100,7 @@ namespace TecWare.PPSn.Data
 
 		private void OnCollectionAdd(PpsDataRow row)
 		{
-			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, row));
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, row, rows.IndexOf(row)));
 		} // proc OnCollectionAdd
 
 		private void OnCollectionRemove(PpsDataRow row)
