@@ -53,7 +53,8 @@
 							<Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
 							<Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
 						</Trigger>
-						<Trigger SourceName="PART_VerticalScrollBar" Property="Visibility" Value="Visible">
+
+                        <Trigger SourceName="PART_VerticalScrollBar" Property="Visibility" Value="Visible">
 							<Trigger.EnterActions>
 								<BeginStoryboard>
 									<Storyboard>
@@ -96,7 +97,7 @@
 		</Setter>
 	</Style>
 
-    <Style x:Key="PPSnTreeViewStyle" TargetType="{x:Type TreeView}">
+    <!--<Style x:Key="PPSnTreeViewStyle" TargetType="{x:Type TreeView}">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
@@ -130,6 +131,6 @@
                 </Setter>
             </Trigger>
         </Style.Triggers>
-    </Style>
+    </Style>-->
 	
 </ResourceDictionary>

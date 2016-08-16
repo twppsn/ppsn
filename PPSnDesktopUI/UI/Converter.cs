@@ -67,4 +67,29 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	#region -- class MultiLineStringConverter -------------------------------------------
+
+	public sealed class MultiLineStringConverter : IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+			=> value == null ? String.Empty : RemoveNewLines(value);
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotImplementedException();
+		} // func ConvertBack
+
+		private string RemoveNewLines(object value)
+		{
+			var txt = (string)value;
+			if (!txt.Contains(Environment.NewLine))
+				return txt;
+
+			var lines = txt.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+			return string.Join(" ", lines);
+		}
+	} // class MultiLineStringConverter
+
+	#endregion
+
 }

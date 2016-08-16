@@ -153,7 +153,7 @@ namespace TecWare.PPSn.UI
 					{
 						Child = listBox = new UndoManagerListBox()
 						{
-							Style = (Style)App.Current.FindResource("PPSnUndoManagerListBoxStyle")
+							Style = (Style)App.Current.FindResource("UndoManagerListBoxStyle")
 						}
 					}
 				};
@@ -178,7 +178,8 @@ namespace TecWare.PPSn.UI
 					{
 						Child = listBox = new UndoManagerListBox()
 						{
-							Style = (Style)App.Current.FindResource("PPSnUndoManagerListBoxStyle")
+							IsRedoList=true,
+							Style = (Style)App.Current.FindResource("UndoManagerListBoxStyle")
 						}
 					}
 				};

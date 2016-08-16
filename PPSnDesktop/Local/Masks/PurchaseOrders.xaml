@@ -48,7 +48,7 @@
                 </Grid.RowDefinitions>
 
                 <ToggleButton x:Name="PART_Expander" Width="24" Height="24" Margin="0,1" Style="{StaticResource PPSnShrinkButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                <Button Content="Neue Position" Width="100" Height="23" Style="{StaticResource PpsSimpleButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,0,0,0"/>
+                <Button Content="Neue Position" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,0,0,0"/>
                 <ListBox x:Name="OrderPositions_Listbox" Grid.Column="0" Grid.Row="1" HorizontalAlignment="Stretch" ItemsSource="{Binding Source={StaticResource OrderItems},XPath=*}"
 								 AlternationCount="2"
 								 IsSynchronizedWithCurrentItem="True"

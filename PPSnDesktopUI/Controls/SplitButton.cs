@@ -111,10 +111,10 @@ namespace TecWare.PPSn.Controls
 
 		// -- Static --------------------------------------------------------------
 
-		static SplitButton()
-		{
-			DefaultStyleKeyProperty.OverrideMetadata(typeof(SplitButton), new FrameworkPropertyMetadata(typeof(SplitButton)));
-		} // ctor
+		//static SplitButton()
+		//{
+		//	DefaultStyleKeyProperty.OverrideMetadata(typeof(SplitButton), new FrameworkPropertyMetadata(typeof(SplitButton)));
+		//} // ctor
 
 		private static void IsOpenChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{

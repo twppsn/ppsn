@@ -16,7 +16,8 @@
     <ui:PpsGenericWpfControl.Resources>
         <uiC:PpsTreeViewLevelToIndentConverter x:Key="LevelToIndentConverter" />
         <uiL:PpsCharmbarWidthToPaddingConverter x:Key="CharmbarWidthToPaddingConverter"/>
-		<Style x:Key="TreeListViewItemStyle" TargetType="{x:Type uiC:PpsTreeListViewItem}">
+
+		<!--<Style x:Key="TreeListViewItemStyle" TargetType="{x:Type uiC:PpsTreeListViewItem}">
 			<Setter Property="Background" Value="{StaticResource PPSnAlternation0Brush}"/>
 			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
 			<Setter Property="AlternationCount" Value="2"/>
@@ -57,8 +58,9 @@
 					</ControlTemplate>
 				</Setter.Value>
 			</Setter>
-		</Style>
-        <ControlTemplate x:Key="ApartTemplate">
+		</Style>-->
+
+		<ControlTemplate x:Key="ApartTemplate">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="470"/>
@@ -70,9 +72,9 @@
                     <RowDefinition/>
                 </Grid.RowDefinitions>
                 <ToggleButton x:Name="PART_Expander" Width="24" Height="24" Margin="0,1" Style="{StaticResource PPSnShrinkButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                <Button Content="Neue Adresse" Width="100" Height="23" Style="{StaticResource PpsSimpleButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,0,0,0" Command="{Binding NewAddressCommand}"/>
-                <Button Content="Neuer Partner" Width="100" Height="23" Style="{StaticResource PpsSimpleButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="138,0,0,0" Command="{Binding NewPartnerCommand}"/>
-                <Button Content="Löschen" Width="90" Height="23" Style="{StaticResource PpsSimpleButtonStyle}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="246,0,0,0" Command="{Binding RemovePosCommand}"/>
+                <Button Content="Neue Adresse" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,0,0,0" Command="{Binding NewAddressCommand}"/>
+                <Button Content="Neuer Partner" Width="100" Height="23"  HorizontalAlignment="Left" VerticalAlignment="Top" Margin="138,0,0,0" Command="{Binding NewPartnerCommand}"/>
+                <Button Content="Löschen" Width="90" Height="23"  HorizontalAlignment="Left" VerticalAlignment="Top" Margin="246,0,0,0" Command="{Binding RemovePosCommand}"/>
                 <uiC:PpsTreeListView x:Name="APART_TreeView" Grid.Row="1" HorizontalAlignment="Stretch" AlternationCount="2" ItemsSource="{Binding Data.KONT/ADRE}" BorderThickness="0"
 											Style="{StaticResource PPSnTreeViewStyle}"
 											ItemContainerStyle="{StaticResource TreeListViewItemStyle}">
