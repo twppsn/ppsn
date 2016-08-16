@@ -12,11 +12,21 @@
 			<pps:field name="dbo.Kont.Name">
 				<pps:attribute name="displayName">Name</pps:attribute>
 			</pps:field>
-			<pps:field name="dbo.Kont.LiefNr" />
-			<pps:field name="dbo.Kont.KundNr" />
-			<pps:field name="dbo.Kont.Iban" />
-			<pps:field name="dbo.Kont.Bic" />
-			<pps:field name="dbo.Kont.Abc" />
+			<pps:field name="dbo.Kont.LiefNr" >
+				<pps:attribute name="displayName">Lief.-Nr.</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Kont.KundNr" >
+				<pps:attribute name="displayName">Kund.-Nr.</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Kont.Iban" >
+				<pps:attribute name="displayName">IBAN</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Kont.Bic" >
+				<pps:attribute name="displayName">BIC</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Kont.Abc" >
+				<pps:attribute name="displayName">ABC-Klass.</pps:attribute>
+			</pps:field>
 			<pps:field name="dbo.Kont.SteuerNr" />
 			<pps:field name="dbo.Kont.StIdentNr" />
 			<pps:field name="dbo.Kont.UstIdNr" />
@@ -40,17 +50,61 @@
 
 			<pps:field name="dbo.Ansp.Id" />
 			<pps:field name="dbo.Ansp.AdreId" />
-			<pps:field name="dbo.Ansp.Name" />
-			<pps:field name="dbo.Ansp.Titel" />
-			<pps:field name="dbo.Ansp.Tel" />
-			<pps:field name="dbo.Ansp.Fax" />
-			<pps:field name="dbo.Ansp.Mail" />
-			<pps:field name="dbo.Ansp.Mobil" />
-			<pps:field name="dbo.Ansp.Std" />
-			<pps:field name="dbo.Ansp.Geschl" />
-			<pps:field name="dbo.Ansp.Funktion" />
-			<pps:field name="dbo.Ansp.Brief" />
-			<pps:field name="dbo.Ansp.Anmerk" />
+			<pps:field name="dbo.Ansp.Name" >
+				<pps:attribute name="displayName">Name</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Titel" >
+				<pps:attribute name="displayName">Titel</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Tel" >
+				<pps:attribute name="displayName">Telefon</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Fax" >
+				<pps:attribute name="displayName">Fax</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Mail" >
+				<pps:attribute name="displayName">E-Mail</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Mobil" >
+				<pps:attribute name="displayName">Mobil</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Std" >
+				<pps:attribute name="displayName">Standard</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Geschl" >
+				<pps:attribute name="displayName">Geschlecht</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Funktion" >
+				<pps:attribute name="displayName">Funktion</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Brief" >
+				<pps:attribute name="displayName">Briefanrede</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Anmerk" >
+				<pps:attribute name="displayName">Anmerkung</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Postfach" >
+				<pps:attribute name="displayName">Postfach</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Zusatz" >
+				<pps:attribute name="displayName">Zusatz</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Strasse" >
+				<pps:attribute name="displayName">Strasse/Nr</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Ort" >
+				<pps:attribute name="displayName">Ort</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Region" >
+				<pps:attribute name="displayName">Region</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.PLZ" >
+				<pps:attribute name="displayName">Plz</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Adresse" >
+				<pps:attribute name="displayName">Adresse</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.AdreChanged" />
 			
 			<!-- menü eintrag für online daten praktisch?
 			<pps:view name="contacts" displayName="Kontakte">
@@ -122,6 +176,14 @@
 					<pps:column name="Funktion" fieldName="dbo.Ansp.Funktion" />
 					<pps:column name="Brief" fieldName="dbo.Ansp.Brief" />
 					<pps:column name="Anmerk" fieldName="dbo.Ansp.Anmerk" />
+					<pps:column name="Postfach" fieldName="dbo.Ansp.Postfach" />
+					<pps:column name="Zusatz" fieldName="dbo.Ansp.Zusatz" />
+					<pps:column name="Strasse" fieldName="dbo.Ansp.Strasse" />
+					<pps:column name="Ort" fieldName="dbo.Ansp.Ort" />
+					<pps:column name="Region" fieldName="dbo.Ansp.Region" />
+					<pps:column name="Plz" fieldName="dbo.Ansp.Plz" />
+					<pps:column name="Adresse" fieldName="dbo.Ansp.Adresse" />
+					<pps:column name="AdreChanged" fieldName="dbo.Ansp.AdreChanged" />
 				</pps:table>
 			</pps:dataset>
 		</pps:register>
