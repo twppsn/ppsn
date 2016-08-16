@@ -76,7 +76,7 @@ namespace TecWare.PPSn.UI
 
 		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			throw new NotImplementedException();
+			throw new NotSupportedException();
 		} // func ConvertBack
 
 		private string RemoveNewLines(object value)
@@ -87,7 +87,7 @@ namespace TecWare.PPSn.UI
 
 			var lines = txt.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
 			return string.Join(" ", lines);
-		}
+		} // func RemoveNewLines
 	} // class MultiLineStringConverter
 
 	#endregion

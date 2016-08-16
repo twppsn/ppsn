@@ -84,6 +84,7 @@ namespace TecWare.PPSn.Data
 		{
 			var row = DataView.NewRow(DataView.Table.GetDataRowValues(values), null);
 			AddNewItem(row);
+			CommitNew();
 			return row;
 		} // func Add
 
