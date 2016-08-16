@@ -59,29 +59,22 @@
 			<!-- address fields -->
 			<pps:field name="dbo.Adre.Id" />
 			<pps:field name="dbo.Adre.ObjkId" />
-			<pps:field name="dbo.Adre.Name" >
-				<pps:attribute name="displayName">Name</pps:attribute>
+			<pps:field name="dbo.Adre.Name" displayName="Name" />
+			<pps:field name="dbo.Adre.Postfach" displayName="Postfach" />
+			<pps:field name="dbo.Adre.Zusatz" displayName="Zusatz" />
+			<pps:field name="dbo.Adre.Strasse" displayName="Strasse/Nr" />
+			<pps:field name="dbo.Adre.Ort" displayName="Ort" />
+			<pps:field name="dbo.Adre.Region" displayName="Region" />
+			<pps:field name="dbo.Adre.PLZ" displayName="Plz" />
+			<pps:field name="dbo.Adre.LandId" displayName="Land" />
+			<pps:field name="dbo.Adre.Adresse" >
+				<pps:attribute name="dataType">string</pps:attribute>
+				<pps:attribute name="maxLength">512</pps:attribute>
+				<pps:attribute name="displayName">Adresse</pps:attribute>
 			</pps:field>
-			<pps:field name="dbo.Adre.Postfach" >
-				<pps:attribute name="displayName">Postfach</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Adre.Zusatz" >
-				<pps:attribute name="displayName">Zusatz</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Adre.Strasse" >
-				<pps:attribute name="displayName">Strasse/Nr</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Adre.Ort" >
-				<pps:attribute name="displayName">Ort</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Adre.Region" >
-				<pps:attribute name="displayName">Region</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Adre.PLZ" >
-				<pps:attribute name="displayName">Plz</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Adre.LandId" >
-				<pps:attribute name="displayName">Land</pps:attribute>
+			<pps:field name="dbo.Adre.AdreChanged" >
+				<pps:attribute name="dataType">bool</pps:attribute>
+				<pps:attribute name="displayName">Andere Adresse</pps:attribute>
 			</pps:field>
 			
 			<!-- objects -->
