@@ -187,7 +187,6 @@ namespace TecWare.PPSn.Data
 				catch (Exception e)
 				{
 					shell.ShowExceptionAsync(ExceptionShowFlags.None, e).Wait();
-					throw;
 				}
 				finally
 				{

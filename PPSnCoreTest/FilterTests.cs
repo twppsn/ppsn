@@ -46,5 +46,9 @@ namespace TecWare.PPSn
 		[TestMethod]
 		public void TestFilter05()
 			=> TestFilter("#2010", "#2010");
+
+		[TestMethod]
+		public void TestFilter06()
+			=> TestFilter("Name:(A)", "Name:(A)");
 	}
 }

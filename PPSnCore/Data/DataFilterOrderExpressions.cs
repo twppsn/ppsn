@@ -575,10 +575,10 @@ namespace TecWare.PPSn.Data
 
 		// -- Static ----------------------------------------------------------------------
 
-		internal static PpsDataFilterCompareValue Create(string expression, int startAt2, int v)
+		public static PpsDataFilterCompareValue Create(string expression, int offset, int count)
 		{
 			throw new NotImplementedException();
-		}
+		} // func Create
 	} // class PpsDataFilterCompareDateValue
 
 	#endregion
@@ -826,11 +826,8 @@ namespace TecWare.PPSn.Data
 			}
 		} // func CreateCompareFilter
 
-		private string CreateCompareFilterText(string columnToken, PpsDataFilterCompareOperator op, string text)
+		private string CreateDefaultCompareText(Tuple<string, Type> column, PpsDataFilterCompareOperator op, string value)
 		{
-			var column = LookupColumn(columnToken);
-
-			var value = CreateParsableValue(text, column.Item2);
 			switch (op)
 			{
 				case PpsDataFilterCompareOperator.Contains:
@@ -860,6 +857,12 @@ namespace TecWare.PPSn.Data
 				default:
 					throw new NotImplementedException();
 			}
+		} // func CreateDefaultCompareText
+
+		private string CreateCompareFilterText(string columnToken, PpsDataFilterCompareOperator op, string text)
+		{
+			var column = LookupColumn(columnToken);
+			return CreateDefaultCompareText(column, op, CreateParsableValue(text, column.Item2));
 		} // func CreateCompareFilterText
 
 		private string CreateCompareFilterNumber(string columnToken, PpsDataFilterCompareOperator op, string text)
@@ -868,22 +871,16 @@ namespace TecWare.PPSn.Data
 			if (column.Item2 != typeof(string))
 				return "1=0"; // invalid filter for this column -> todo: exception
 
+			var value = CreateParsableValue(text, typeof(string));
 			switch (op)
 			{
 				case PpsDataFilterCompareOperator.Contains:
-					return CreateLikeString(column.Item1, PpsSqlLikeStringEscapeFlag.Leading);
+					return column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Leading);
 				case PpsDataFilterCompareOperator.NotContains:
-					return "NOT " + CreateLikeString(column.Item1, PpsSqlLikeStringEscapeFlag.Leading);
+					return "NOT " + column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Leading);
 
-				case PpsDataFilterCompareOperator.Equal:
-				case PpsDataFilterCompareOperator.NotEqual:
-				case PpsDataFilterCompareOperator.Greater:
-				case PpsDataFilterCompareOperator.GreaterOrEqual:
-				case PpsDataFilterCompareOperator.Lower:
-				case PpsDataFilterCompareOperator.LowerOrEqual:
-					return "1=0"; // todo:
 				default:
-					throw new NotImplementedException();
+					return CreateDefaultCompareText(column, op, value);
 			}
 		} // func CreateCompareFilterNumber
 
@@ -1001,12 +998,13 @@ namespace TecWare.PPSn.Data
 
 		private string CreateLikeString(string value, PpsSqlLikeStringEscapeFlag flag)
 		{
-			value = value.Replace("%", "[%]");
+			value = value.Replace("%", "[%]")
+				.Replace("?", "[?]");
 
 			if ((flag & PpsSqlLikeStringEscapeFlag.Both) == PpsSqlLikeStringEscapeFlag.Both)
 				value = "'%" + value.Substring(1, value.Length - 2) + "%'";
 			else if ((flag & PpsSqlLikeStringEscapeFlag.Leading) == PpsSqlLikeStringEscapeFlag.Leading)
-				value = "'%" + value.Substring(1, value.Length - 1);
+				value = "'%" + value.Substring(1);
 			else if ((flag & PpsSqlLikeStringEscapeFlag.Trailing) == PpsSqlLikeStringEscapeFlag.Trailing)
 				value = value.Substring(0, value.Length - 1) + "%'";
 
