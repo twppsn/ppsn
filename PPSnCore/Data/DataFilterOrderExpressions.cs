@@ -564,20 +564,202 @@ namespace TecWare.PPSn.Data
 			this.to = to;
 		} // ctor
 
+		private void AppendComponents(StringBuilder sb, string notAllowedPatterns)
+		{
+			var shortDatePattern = CultureInfo.CurrentUICulture.DateTimeFormat.ShortDatePattern;
+			var myDatePattern = new StringBuilder(shortDatePattern.Length);
+
+			for (var i = 0; i < shortDatePattern.Length; i++)
+			{
+				if (notAllowedPatterns.IndexOf(shortDatePattern[i]) == -1)
+					myDatePattern.Append(shortDatePattern[i]);
+			}
+
+			sb.Append(from.ToString(myDatePattern.ToString(), CultureInfo.CurrentUICulture.DateTimeFormat));
+		} // proc AppendComponents
+
 		public override void ToString(StringBuilder sb)
 		{
-			throw new NotImplementedException();
+			sb.Append('#');
+			if (from.Day == 1 && from.Month == 1 && to.Day == 1 && to.Month == 1 && to.Year - from.Year == 1) // diff is a year
+				AppendComponents(sb, "Md");
+			else if (from.Day == 1 && to.Day == 1 && to.Month - from.Month == 1 && to.Year - from.Year == 0) // diff is a month
+				AppendComponents(sb, "d");
+			else if (to.Day - from.Day == 1 && to.Month - from.Month == 0 && to.Year - from.Year == 0) // diff is a day
+				AppendComponents(sb, "");
+			else if (IsValid)
+			{
+				sb.Append(from.ToString("d", CultureInfo.CurrentUICulture.DateTimeFormat))
+					.Append("~")
+					.Append(to.ToString("d", CultureInfo.CurrentUICulture.DateTimeFormat));
+			}
+
+			sb.Append('#');
 		}
 
 		public DateTime From => from;
 		public DateTime To => to;
+
+		public bool IsValid => from != DateTime.MinValue || to != DateTime.MaxValue;
+
 		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Date;
 
 		// -- Static ----------------------------------------------------------------------
 
+		private static char JumpPattern(char patternSymbol, string datePattern, ref int patterPos)
+		{
+			while (patterPos < datePattern.Length && patternSymbol == datePattern[patterPos])
+				patterPos++;
+
+			if (patterPos < datePattern.Length) // jump over pattern
+				return datePattern[patterPos++];
+			else
+				return '\0';
+		} // func JumpPattern
+
+		private static int ReadDigits(char splitSymbol, string inputDate, ref int inputPos)
+		{
+			string digits;
+
+			var symbolPos = inputDate.IndexOf(splitSymbol, inputPos);
+			if (symbolPos == -1)
+			{
+				digits = inputDate.Substring(inputPos);
+				inputPos = inputDate.Length;
+			}
+			else
+			{
+				digits = inputDate.Substring(inputPos, symbolPos - inputPos);
+				inputPos = symbolPos + 1;
+			}
+			
+			int r;
+			if (Int32.TryParse(digits, NumberStyles.None, CultureInfo.CurrentUICulture.NumberFormat, out r))
+				return r;
+			else
+				return -1;
+		} // func ReadDigits
+
+		private static PpsDataFilterCompareDateValue CreateValue(DateTime from, char addType)
+		{
+			switch (addType)
+			{
+				case 'y':
+					return new PpsDataFilterCompareDateValue(from, from.AddYears(1));
+				case 'M':
+					return new PpsDataFilterCompareDateValue(from, from.AddMonths(1));
+				default:
+					return new PpsDataFilterCompareDateValue(from, from.AddDays(1));
+			}
+		} // func CreateValue
+
 		public static PpsDataFilterCompareValue Create(string expression, int offset, int count)
 		{
-			throw new NotImplementedException();
+			var inputDate = expression.Substring(offset, count);
+			var dateSplit = inputDate.IndexOf('~');
+			if (dateSplit >= 0) // split date format
+			{
+				DateTime from;
+				DateTime to;
+				if (DateTime.TryParse(inputDate.Substring(0, dateSplit), out from) && DateTime.TryParse(inputDate.Substring(dateSplit + 1), out to))
+					return new PpsDataFilterCompareDateValue(from, to);
+			}
+
+			// Guess a date combination
+			// range patterns:
+			//   yyyy
+			//   MM.yyyy
+			//   dd.MM.yyyy
+			// fill up patterns:
+			//   dd.MM.
+			//   dd.
+			//   null
+
+			var datePattern = CultureInfo.CurrentUICulture.DateTimeFormat.ShortDatePattern;
+
+			var year = -1;
+			var month = -1;
+			var day = -1;
+
+			var patterPos = 0;
+			var inputPos = 0;
+			var error = false;
+			while (patterPos < datePattern.Length && !error)
+			{
+				var patternSymbol = datePattern[patterPos];
+				var splitSymbol = JumpPattern(patternSymbol, datePattern, ref patterPos);
+				var startAt = inputPos;
+				var t = ReadDigits(splitSymbol, inputDate, ref inputPos);
+				var readedNum = inputPos - startAt;
+				if (t > 0)
+				{
+					if (readedNum == 4) // switch to date
+						patternSymbol = 'y';
+
+					switch (patternSymbol)
+					{
+						case 'y':
+							if (year == -1 || readedNum == 4)
+								year = t;
+							break;
+						case 'M':
+							if (t > 12)
+								goto case 'd';
+
+							if (month == -1)
+								month = t;
+							break;
+						case 'd':
+							if (t > 31)
+								goto case 'y';
+
+							if (day == -1)
+								day = t;
+							break;
+						default:
+							error = true;
+							break;
+					}
+				}
+			}
+			if (error)
+			{
+				DateTime dt;
+				if (DateTime.TryParse(expression.Substring(offset, count), out dt)) // try parse full date
+					return CreateValue(dt.Date, 'd');
+				else // set a invalid date
+					return new PpsDataFilterCompareDateValue(DateTime.MinValue, DateTime.MaxValue);
+			}
+			else
+			{
+				var dtNow = DateTime.Now;
+				if (year == -1 && month == -1 && day == -1) // all components are missing
+					return CreateValue(dtNow.Date, 'd');
+				else if (year != -1 && month == -1 && day == -1) // only year is given
+					return CreateValue(new DateTime(year, 01, 01), 'y');
+				else if (year != -1 && month != -1 && day == -1) // year and month is given
+					return CreateValue(new DateTime(year, month, 01), 'M');
+				else if (year != -1 && month == -1 && day >= 1 && day <= 12) // year and month is given (day is detected)
+					return CreateValue(new DateTime(year, day, 01), 'M');
+				else // fill up with now
+				{
+					if (year == -1)
+						year = dtNow.Year;
+					if (month == -1)
+						month = dtNow.Month;
+					if (day == -1)
+						day = dtNow.Day;
+
+					try
+					{
+						return CreateValue(new DateTime(year, month, day), 'd');
+					}
+					catch (ArgumentOutOfRangeException) // invalid date
+					{
+						return new PpsDataFilterCompareDateValue(DateTime.MinValue, DateTime.MaxValue);
+					}
+				}
+			}
 		} // func Create
 	} // class PpsDataFilterCompareDateValue
 
