@@ -2,7 +2,27 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
 	<Color x:Key="StandardBackgroundColor">#FFC0C0C0</Color>
-	<SolidColorBrush x:Key="StanardBackgroundBrush" Color="{StaticResource StandardBackgroundColor}" />
+
+
+    <Color x:Key="PPSnBlackColor">#000</Color>
+    <Color x:Key="PPSnDesktopColor">#3B4A62</Color>
+    <Color x:Key="PPSnAccentColor">#FFFFFF</Color>
+    <Color x:Key="PPSnAccentColor1">#F7E51D</Color>
+    <Color x:Key="PPSnButtonMouseOverColor">#1F6588</Color>
+    <Color x:Key="PPSnButtonPressedColor">#293956</Color>
+    <Color x:Key="PPSnControlBackgroundColor">#4E5C71</Color>
+    <Color x:Key="PPSnControlNormalBorderColor">#6B7789</Color>
+    <Color x:Key="PPSnControlFocusedBorderColor">#99973F</Color>
+    <Color x:Key="PPSnWindowActiveGlowColor">#007ACC</Color>
+    <Color x:Key="PPSnWindowInActiveGlowColor">#60728C</Color>
+
+    <SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="{StaticResource PPSnAccentColor}" />
+    <SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="{StaticResource PPSnDesktopColor}" />
+    <SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="#007ACC" />
+    <SolidColorBrush x:Key="PPSnMarkerBrush" Color="{StaticResource PPSnAccentColor1}"/>
+
+
+    <SolidColorBrush x:Key="StanardBackgroundBrush" Color="{StaticResource StandardBackgroundColor}" />
 	<SolidColorBrush x:Key="StandardForegroundBrush" Color="{x:Static SystemColors.WindowTextColor}" />
 	
 </ResourceDictionary>

@@ -12,12 +12,12 @@
             <TextBlock Text="{Binding Nr}" />
             <TextBlock Text=" / "/>
             <TextBlock Text="{Binding Name}" />
-						<TextBlock Text=" / "/>
-						<TextBlock Text="{Binding LiefNr}" />
-						<TextBlock Text=" / "/>
-						<TextBlock Text="{Binding KundNr}" />
-						<TextBlock Text=" / "/>
-						<TextBlock Text="{Binding Inaktiv}" />
+			<TextBlock Text=" / "/>
+			<TextBlock Text="{Binding LiefNr}" />
+			<TextBlock Text=" / "/>
+			<TextBlock Text="{Binding KundNr}" />
+			<TextBlock Text=" / "/>
+			<TextBlock Text="{Binding Inaktiv}" />
 		</StackPanel>
 	</DataTemplate>
 	

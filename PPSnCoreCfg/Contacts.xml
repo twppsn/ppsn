@@ -10,7 +10,7 @@
 			<!-- contact fields -->
 			<pps:field name="dbo.Kont.ObjkId" />
 			<pps:field name="dbo.Kont.Name">
-				<pps:attribute name="displayName">Name</pps:attribute>
+				<pps:attribute name="displayName">Name:</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Kont.LiefNr" />
 			<pps:field name="dbo.Kont.KundNr" />
@@ -23,9 +23,8 @@
 			<pps:field name="dbo.Kont.Inaktiv" />
 			<pps:field name="dbo.Kont.KgrpId" />
 			<pps:field name="dbo.Kont.KurzName" >
-				<pps:attribute name="displayName">Kurzname</pps:attribute>
+				<pps:attribute name="displayName">Kurzname:</pps:attribute>
 			</pps:field>
-			
 			<pps:field name="dbo.Kont.LandId" dataType="int">
 				<pps:attribute name="displayName">Land</pps:attribute>
 			</pps:field>
@@ -38,7 +37,11 @@
 				<pps:attribute name="displayName">Anmerkung</pps:attribute>
 			</pps:field>
 
-			<pps:field name="dbo.Ansp.Id" />
+		    <pps:field name="dbo.Adre.Postfach" >
+			  <pps:attribute name="displayName">Postfach:</pps:attribute>
+			</pps:field>
+
+		  <pps:field name="dbo.Ansp.Id" />
 			<pps:field name="dbo.Ansp.AdreId" />
 			<pps:field name="dbo.Ansp.Name" />
 			<pps:field name="dbo.Ansp.Titel" />
@@ -51,8 +54,8 @@
 			<pps:field name="dbo.Ansp.Funktion" />
 			<pps:field name="dbo.Ansp.Brief" />
 			<pps:field name="dbo.Ansp.Anmerk" />
-			
-			<!-- menü eintrag für online daten praktisch?
+		  
+		  <!-- menü eintrag für online daten praktisch?
 			<pps:view name="contacts" displayName="Kontakte">
 				<pps:source type="select">
 					<![CDATA[
