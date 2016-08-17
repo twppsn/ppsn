@@ -96,6 +96,9 @@ namespace TecWare.PPSn
 		private PpsEnvironmentCollection<PpsMainViewDefinition> views;
 		private readonly PpsEnvironmentCollection<PpsConstant> constants;
 
+		private readonly PpsProgressStack backgroundProgress;
+		private readonly PpsProgressStack forgroundProgress;
+
 		public PpsMainEnvironment(PpsEnvironmentInfo info, App app)
 			: base(info, app.Resources)
 		{
@@ -104,6 +107,9 @@ namespace TecWare.PPSn
 			this.actions = new PpsEnvironmentCollection<PpsMainActionDefinition>(this);
 			this.views = new PpsEnvironmentCollection<PpsMainViewDefinition>(this);
 			this.constants = new PpsEnvironmentCollection<PpsConstant>(this);
+
+			this.backgroundProgress = new PpsProgressStack(app.Dispatcher);
+			this.forgroundProgress = new PpsProgressStack(app.Dispatcher);
 		} // ctor
 
 		protected override bool ShowLoginDialog(PpsClientLogin clientLogin)
@@ -219,11 +225,24 @@ namespace TecWare.PPSn
 			}
 		} // func GetWindows
 
+		[LuaMember(nameof(TestBackgroundProgressState))]
+		public IPpsProgress TestBackgroundProgressState()
+			=> BackgroundProgressState.CreateProgress();
+
+		[LuaMember(nameof(TestForegroundProgressState))]
+		public IPpsProgress TestForegroundProgressState()
+			=> ForegroundProgressState.CreateProgress();
+
 		[LuaMember(nameof(Actions))]
 		public PpsEnvironmentCollection<PpsMainActionDefinition> Actions => actions;
 		[LuaMember(nameof(Views))]
 		public PpsEnvironmentCollection<PpsMainViewDefinition> Views => views;
 		[LuaMember(nameof(Constants))]
 		public PpsEnvironmentCollection<PpsConstant> Constants => constants;
+
+		[LuaMember(nameof(BackgroundProgressState))]
+		public PpsProgressStack BackgroundProgressState => backgroundProgress;
+		[LuaMember(nameof(ForegroundProgressState))]
+		public PpsProgressStack ForegroundProgressState => forgroundProgress;
 	} // class PpsMainEnvironment
 }

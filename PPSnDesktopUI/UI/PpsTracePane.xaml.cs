@@ -64,6 +64,7 @@ namespace TecWare.PPSn.UI
 
 		public string Title => "Anwendungsereignisse";
 		public object Control => this;
+		public IPpsPWindowPaneControl PaneControl => null;
 		public bool IsDirty => false;
 	} // class PpsTracePane
 

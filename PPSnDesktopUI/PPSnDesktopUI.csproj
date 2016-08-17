@@ -107,6 +107,7 @@
     <Compile Include="UI\PpsCommand.cs" />
     <Compile Include="UI\PpsDialogWindow.cs" />
     <Compile Include="UI\PpsGenericWpfWindowPane.cs" />
+    <Compile Include="UI\PpsProgressStack.cs" />
     <Compile Include="UI\PpsTraceDialog.xaml.cs">
       <DependentUpon>PpsTraceDialog.xaml</DependentUpon>
     </Compile>
