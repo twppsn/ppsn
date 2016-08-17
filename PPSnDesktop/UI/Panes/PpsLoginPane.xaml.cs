@@ -57,5 +57,7 @@ namespace TecWare.PPSn.UI.Panes
 				throw new NotImplementedException();
 			}
 		}
+
+		IPpsPWindowPaneControl IPpsWindowPane.PaneControl => null;
 	} // class PpsLoginPane
 }

@@ -21,10 +21,12 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Threading;
 using System.Xml;
@@ -40,7 +42,7 @@ namespace TecWare.PPSn.UI
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Pane that combines a xaml file with lua code.</summary>
-	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane, IPpsLuaTaskParent
+	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane
 	{
 		private BaseWebRequest fileSource;
 		private FrameworkElement control;
@@ -84,9 +86,9 @@ namespace TecWare.PPSn.UI
 		private object LuaCommand(Action<object> command, Func<object, bool> canExecute = null, bool idleCall = true)
 			=> new PpsCommand(Environment, command, canExecute, idleCall);
 
-		[LuaMember("runTask")]
-		public PpsLuaTask RunTask(object func, params object[] args)
-			=> PpsEnvironment.RunTask(this, func, args);
+		[LuaMember("disableUI")]
+		public IPpsProgress DisableUI(PpsLuaTask task)
+			=> PaneControl?.ProgressStack?.CreateProgress() ?? PpsProgressStack.Dummy;
 
 		[LuaMember("getView")]
 		private ICollectionView LuaGetView(object collection)
@@ -114,12 +116,6 @@ namespace TecWare.PPSn.UI
 			else
 				throw new ArgumentException("collection is no enumerable.");
 		} // func LuaCreateView
-
-
-		IDisposable IPpsLuaTaskParent.BlockUI(string statusText)
-			=> null;
-		
-		PpsTraceLog IPpsLuaTaskParent.Traces => Environment.Traces;
 
 		#endregion
 
@@ -251,7 +247,7 @@ namespace TecWare.PPSn.UI
 		} // func OnIndex
 
 		#endregion
-
+		
 		/// <summary>Arguments of the generic content.</summary>
 		[LuaMember("Arguments")]
 		public LuaTable Arguments { get { return arguments; } }
@@ -282,14 +278,8 @@ namespace TecWare.PPSn.UI
 		/// <summary>Access to the current lua compiler</summary>
 		public Lua Lua => Environment.Lua;
 
-		public IEnumerable<object> Commands
-		{
-			get
-			{
-				var ppsGeneric = control as PpsGenericWpfControl;
-				return ppsGeneric == null ? null : ppsGeneric.Commands;
-			}
-		} // prop Commands
+		/// <summary>Interface of the hosted control.</summary>
+		public IPpsPWindowPaneControl PaneControl => control as IPpsPWindowPaneControl;
 
 		public virtual bool IsDirty => false;
 	} // class PpsGenericWpfWindowContext
@@ -300,11 +290,12 @@ namespace TecWare.PPSn.UI
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Base control for the wpf generic pane.</summary>
-	public class PpsGenericWpfControl : ContentControl, ILuaEventSink
+	public class PpsGenericWpfControl : ContentControl, ILuaEventSink, IPpsPWindowPaneControl
 	{
-		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register("Title", typeof(string), typeof(PpsGenericWpfControl), new UIPropertyMetadata(String.Empty));
+		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PpsGenericWpfControl), new UIPropertyMetadata(String.Empty));
 
-		private PpsUICommandCollection commands;
+		private readonly PpsUICommandCollection commands;
+		private readonly PpsProgressStack progressStack;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -314,7 +305,10 @@ namespace TecWare.PPSn.UI
 		{
 			commands = new PpsUICommandCollection();
 			commands.CollectionChanged += Commands_CollectionChanged;
-      Focusable = false;
+
+			progressStack = new PpsProgressStack(Dispatcher);
+
+			Focusable = false;
 		} // ctor
 
 		#endregion
@@ -355,6 +349,13 @@ namespace TecWare.PPSn.UI
 		Description("Sets the title of the pane")
 		]
 		public string Title { get { return (string)GetValue(TitleProperty); } set { SetValue(TitleProperty, value); } }
+
+		/// <summary>Title of the window pane</summary>
+		[
+		DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden),
+		]
+		public PpsProgressStack ProgressStack => progressStack;
+
 		/// <summary>List of commands for the main toolbar.</summary>
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
 		public PpsUICommandCollection Commands => commands;

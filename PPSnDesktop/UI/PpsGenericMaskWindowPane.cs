@@ -130,8 +130,7 @@ namespace TecWare.PPSn.UI
 			}
 
 			// Extent command bar
-			var ppsGenericControl = Control as PpsGenericWpfControl;
-			if (ppsGenericControl != null)
+			if (PaneControl?.Commands != null)
 			{
 				UndoManagerListBox listBox;
 
@@ -186,8 +185,8 @@ namespace TecWare.PPSn.UI
 
 				listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.UndoManager"));
 
-				ppsGenericControl.Commands.Add(undoCommand);
-				ppsGenericControl.Commands.Add(redoCommand);
+				PaneControl.Commands.Add(undoCommand);
+				PaneControl.Commands.Add(redoCommand);
 			}
 
 			OnPropertyChanged("UndoManager");

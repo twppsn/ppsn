@@ -70,6 +70,8 @@ namespace TecWare.PPSn.UI
 		/// <summary>Content control</summary>
 		/// <remarks>Can not be implemented hidden, because of the binding.</remarks>
 		object Control { get; }
+		/// <summary>Returns the optional pane control, if the hosted control is not a pane control, this property is <c>null</c>.</summary>
+		IPpsPWindowPaneControl PaneControl { get; }
 
 		/// <summary>If the pane contains changes, this flag is <c>true</c>.</summary>
 		bool IsDirty { get; }
@@ -77,11 +79,19 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	#region -- interface IPpsPWindowPaneControl -----------------------------------------
+
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public interface IPpsWindowPane2 : IPpsWindowPane
+	/// <summary>Optional inferface for the control</summary>
+	public interface IPpsPWindowPaneControl
 	{
-		/// <summary>Attached commands</summary>
-		IEnumerable<System.Windows.UIElement> Commands { get; }
-	} // interface IPpsWindowPane2
+		/// <summary>Title of the pane control</summary>
+		string Title { get; }
+		/// <summary>Commands of the Pane-Controls</summary>
+		PpsUICommandCollection Commands { get; }
+		/// <summary>Optional progress stack</summary>
+		PpsProgressStack ProgressStack { get; }
+	} // interface IPpsPWindowPaneControl
+
+	#endregion
 }
