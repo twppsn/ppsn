@@ -1076,10 +1076,10 @@ namespace TecWare.PPSn.Data
 			{
 				case PpsDataFilterCompareOperator.Contains:
 				case PpsDataFilterCompareOperator.Equal:
-					return column.Item1 + " BETWEEN " + CreateDateString(from) + " TO " + CreateDateString(to);
+					return column.Item1 + " BETWEEN " + CreateDateString(from) + " AND " + CreateDateString(to);
 				case PpsDataFilterCompareOperator.NotContains:
 				case PpsDataFilterCompareOperator.NotEqual:
-					return "NOT " + column.Item1 + " BETWEEN " + CreateDateString(from) + " TO " + CreateDateString(to);
+					return "NOT " + column.Item1 + " BETWEEN " + CreateDateString(from) + " AND " + CreateDateString(to);
 
 				case PpsDataFilterCompareOperator.Greater:
 					return column.Item1 + " > " + CreateDateString(to);
