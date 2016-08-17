@@ -8,18 +8,7 @@
 						d:DesignHeight="300" d:DesignWidth="300">
 	<x:Code>
 		<![CDATA[
-		
-		clickCount = 1;
-		
-		bindTitle = "Hello {0}":Format(Arguments.index);
-		
-		helloWorld = command(
-			function (arg) : void
-				bindTitle = "Hello World clicked {0} times.":Format(clickCount);
-				clickCount = clickCount + 1;
-			end
-		);
-		
+		require "hello.lua";
 		]]>
 	</x:Code>
 	<pps:PpsGenericWpfControl.Resources>
@@ -31,19 +20,27 @@
 	</pps:PpsGenericWpfControl.Resources>
 	<Grid>
 		<Grid.RowDefinitions>
-			<RowDefinition Height="60" />
-			<RowDefinition />
+            <RowDefinition Height="60" />
+            <RowDefinition Height="60" />
+            <RowDefinition Height="60" />
+            <RowDefinition Height="60" />
+            <RowDefinition />
 		</Grid.RowDefinitions>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="200" />
 			<ColumnDefinition />
 		</Grid.ColumnDefinitions>
-		<Button Content="Hello World" Margin="12" Command="{Binding helloWorld}" />
-		<TextBlock Grid.Column="1">
+        <Button Content="Hello World" Margin="12" Command="{Binding helloWorld}" />
+        <Button Content="Block Pane" Margin="12" Command="{Binding blockPane}" Grid.Row="1" />
+        <Button Content="Block Background" Margin="12" Command="{Binding blockBk}" Grid.Row="2" />
+        <Button Content="Block Global" Margin="12" Command="{Binding blockGlobal}" Grid.Row="3" />
+        <TextBlock Grid.Column="1">
 			<Run Text="Hallo Pane with number " />
 			<Run Text="{Binding Arguments.index}" />
 			<LineBreak />
 			<Run Text="{Binding bindTitle}" />
-		</TextBlock>
+            <LineBreak />
+			<Run Text="{Binding data.Name}" />
+        </TextBlock>
 	</Grid>
 </pps:PpsGenericWpfControl>
