@@ -46,20 +46,24 @@ newAddress = command(
 		end;
     end
 );
-		
+
 newPartner = command(
     function (args) : void
-  		local cur = ADR_TreeView:SelectedValue;
-        if cur ~= nil and cur:Table:TableName == "Adre" then
-			do (trans = UndoManager:BeginTransaction("Neuer Partner"))
- 			    local viewAdre = getView(cur.AnspAdre);
- 			    viewAdre:Add({ Name = "Neuer Partner"});
-				trans:Commit();
-			end;
+        local cur = ADR_TreeView.SelectedValue;
+        if cur ~= nil then
+            do (trans = UndoManager:BeginTransaction("Neuer Partner"))
+                if cur:Table:TableName == "Adre" then
+                    local viewAdre = getView(cur.AnspAdre);
+                    viewAdre:Add({ Name = "Neuer Partner"});
+                else
+                    cur.Table:Add({AdreId = cur:AdreId, Name = "Neuer Partner"});
+                end;
+                trans:Commit();
+            end;
 		end;
-    end
+	end
 );
-		
+				
 delItem = command(
     function (args) : void
   		local cur = ADR_TreeView:SelectedValue;

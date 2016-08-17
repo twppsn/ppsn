@@ -118,6 +118,8 @@
                         </TreeView.ItemTemplate>
                     </uiC:PpsTreeListView>
 
+
+
                     <ContentControl Grid.Column="2" Grid.Row="1" Content="{Binding ElementName=ADR_TreeView, Path=SelectedValue}" Foreground="{StaticResource PPSnWindowForegroundBrush}" Focusable="False">
                         <ContentControl.ContentTemplateSelector>
                             <ui:PpsContentTemplateSelector/>
