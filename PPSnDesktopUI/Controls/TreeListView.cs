@@ -23,8 +23,10 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
+using System.Windows.Threading;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Controls
@@ -35,28 +37,64 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public class PpsTreeListView : TreeView
 	{
+		public PpsTreeListView()
+		{
+			Loaded += OnLoaded;
+		} // ctor
+
 		protected override DependencyObject GetContainerForItemOverride()
 			=> new PpsTreeListViewItem();
 
 		protected override bool IsItemItsOwnContainerOverride(object item)
 			=> item is PpsTreeListViewItem;
 
+		private void OnLoaded(object sender, RoutedEventArgs e)
+			=> EnsureSelection();
+
 		protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
 		{
 			base.OnItemsChanged(e);
-			if (e.Action == NotifyCollectionChangedAction.Remove)
-				AlternationExtensions.SetAlternationIndexRecursively((ItemsControl)this, 0);
+			switch (e.Action)
+			{
+				case NotifyCollectionChangedAction.Remove:
+					var x = ItemContainerGenerator;
+					AlternationExtensions.SetAlternationIndexRecursively((ItemsControl)this, 0);
+					break;
+				case NotifyCollectionChangedAction.Add:
+					SelectNode(e.NewItems[0]);
+					break;
+			}
 		} // proc OnItemChanged
+
+		private void SelectNode(object item)
+		{
+			var node = ItemContainerGenerator.ContainerFromItem(item) as PpsTreeListViewItem;
+			if (node == null)
+				throw new ArgumentNullException("SelectNode TreeListView");
+			Dispatcher.BeginInvoke(new Action(() => node.IsSelected = true), DispatcherPriority.Input);
+		} // proc SelectNode
+
+		private void EnsureSelection()
+		{
+			if (ItemContainerGenerator.Status != GeneratorStatus.ContainersGenerated)
+				return;
+			if (Items.Count == 0 || SelectedItem != null)
+				return;
+			SelectNode(Items[0]);
+		} // proc EnsureSelection
+
 	} // class PpsTreeListView
 
 	#endregion
 
-	#region -- class PpsTreeListViewItem -----------------------------------------------
+	#region -- class PpsTreeListViewItem ------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class PpsTreeListViewItem : TreeViewItem
 	{
+		private object itemToSelect;
+
 		public PpsTreeListViewItem()
 		{
 			Loaded += OnLoaded;
@@ -64,8 +102,12 @@ namespace TecWare.PPSn.Controls
 
 		protected override DependencyObject GetContainerForItemOverride()
 			=> new PpsTreeListViewItem();
+
 		protected override bool IsItemItsOwnContainerOverride(object item)
 			=> item is PpsTreeListViewItem;
+
+		private void OnLoaded(object sender, RoutedEventArgs e)
+			=> UpdateAlternationIndex();
 
 		protected override void OnExpanded(RoutedEventArgs e)
 		{
@@ -82,27 +124,88 @@ namespace TecWare.PPSn.Controls
 		protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
 		{
 			base.OnItemsChanged(e);
-			if (e.Action == NotifyCollectionChangedAction.Remove)
-				UpdateAlternationIndex();
-		} // proc OnItemsChanged
 
-		private void OnLoaded(object sender, RoutedEventArgs e)
-		{
-			UpdateAlternationIndex();
-		} // proc OnLoaded
+			switch (e.Action)
+			{
+				case NotifyCollectionChangedAction.Remove:
+					UpdateAlternationIndex();
+					break;
+				case NotifyCollectionChangedAction.Add:
+					SelectAddedNode(e.NewItems[0]);
+					break;
+			}
+		} // proc OnItemChanged
 
 		private void UpdateAlternationIndex()
 		{
-			var parent = VisualTreeHelper.GetParent(this);
-			
-			// search from Treeview
-			while (!(parent is PpsTreeListView) && (parent != null))
-				parent = VisualTreeHelper.GetParent(parent);
-			
 			// update index
-			if (parent is PpsTreeListView)
+			var parent = ParentTreeView;
+			if (parent != null)
 				AlternationExtensions.SetAlternationIndexRecursively((ItemsControl)parent, 0);
 		} // proc UpdateAlternationIndex
+
+		#region -- ItemSelection --------------------------------------------------------
+
+		private void SelectNode(object item)
+		{
+			var node = ItemContainerGenerator.ContainerFromItem(item) as PpsTreeListViewItem;
+			if (node == null)
+				throw new ArgumentNullException("SelectNode TreeListViewItem");
+			Dispatcher.BeginInvoke(new Action(() => node.IsSelected = true), DispatcherPriority.Input);
+		} // proc SelectNode
+
+		private void SelectAddedNode(object item)
+		{
+			if (ItemContainerGenerator.Status == GeneratorStatus.ContainersGenerated)
+			{
+				SelectNode(item);
+			}
+			else
+			{
+				itemToSelect = item;
+				ItemContainerGenerator.StatusChanged += OnItemContainerGeneratorStatusChanged;
+			}
+			// ensure new node is visible, also fire StatusChanged
+			ExpandParentNode();
+		} // proc SelectAddedNode
+
+		private void OnItemContainerGeneratorStatusChanged(object sender, EventArgs e)
+		{
+			if (ItemContainerGenerator.Status == GeneratorStatus.ContainersGenerated)
+			{
+				ItemContainerGenerator.StatusChanged -= OnItemContainerGeneratorStatusChanged;
+				SelectNode(itemToSelect);
+			}
+		} // event OnItemContainerGeneratorStatusChanged
+
+		private void ExpandParentNode()
+		{
+			// error handling?
+			var parent = ParentItemControl;
+			var idx = parent.ItemContainerGenerator.IndexFromContainer(this);
+			var node = parent.ItemContainerGenerator.ContainerFromIndex(idx) as PpsTreeListViewItem;
+			if (!node.IsExpanded)
+				node.IsExpanded = true;
+		} // proc ExpandParentNode
+
+		#endregion
+
+		private ItemsControl ParentItemControl { get { return ItemsControl.ItemsControlFromItemContainer(this); } }
+
+		private PpsTreeListView ParentTreeView
+		{
+			get
+			{
+				var parent = ParentItemControl;
+				while (parent != null)
+				{
+					if (parent is PpsTreeListView)
+						return (PpsTreeListView)parent;
+					parent = ItemsControl.ItemsControlFromItemContainer(parent);
+				}
+				return null;
+			}
+		} // prop ParentTreeView
 	} // class PpsTreeListViewItem
 
 	#endregion
@@ -142,6 +245,7 @@ namespace TecWare.PPSn.Controls
 
 			return firstAlternationIndex;
 		}
+
 	} // class AlternationExtensions
 
 	#endregion
