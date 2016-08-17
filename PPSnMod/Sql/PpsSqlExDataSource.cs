@@ -63,6 +63,8 @@ namespace TecWare.PPSn.Server.Sql
 			for (var i = 0; i < columns.Length; i++) 
 			{
 				columnInfo = fields[i].GetColumnDescriptionImplementation<PpsSqlExDataSource.SqlColumnInfo>();
+				if (columnInfo == null)
+					throw new ArgumentException($"Datenbankfeld {fields[i].Name} in der Tabelle {Name} nicht vorhanden.");
 				columns[i] = new PpsColumnDescription(fields[i], columnInfo.ColumnName, fields[i].DataType); // translate column
 
 				sb.Append(", c.")
