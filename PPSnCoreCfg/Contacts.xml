@@ -83,9 +83,13 @@
 				<pps:attribute name="maxLength">512</pps:attribute>
 				<pps:attribute name="displayName">Adresse</pps:attribute>
 			</pps:field>
-			<pps:field name="dbo.Ansp.AdreChanged" >
+			<pps:field name="dbo.Ansp.Changed" >
 				<pps:attribute name="dataType">bool</pps:attribute>
 				<pps:attribute name="displayName">Andere Adresse</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Template" >
+				<pps:attribute name="dataType">string</pps:attribute>
+				<pps:attribute name="maxLength">512</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Ansp.Versand" >
 				<pps:attribute name="dataType">bool</pps:attribute>
@@ -174,6 +178,9 @@
 					<pps:column name="Region" fieldName="dbo.Adre.Region" />
 					<pps:column name="Plz" fieldName="dbo.Adre.Plz" />
 					<pps:column name="LandId" fieldName="dbo.Adre.LandId" />
+					<pps:column name="Adresse" fieldName="dbo.Adre.Adresse" />
+					<pps:column name="Changed" fieldName="dbo.Adre.Changed" />
+					<pps:column name="Template" fieldName="dbo.Adre.Template" />
 				</pps:table>
 
 				<pps:table name="Ansp">
@@ -197,7 +204,8 @@
 					<pps:column name="Region" fieldName="dbo.Ansp.Region" />
 					<pps:column name="Plz" fieldName="dbo.Ansp.Plz" />
 					<pps:column name="Adresse" fieldName="dbo.Ansp.Adresse" />
-					<pps:column name="AdreChanged" fieldName="dbo.Ansp.AdreChanged" />
+					<pps:column name="Changed" fieldName="dbo.Ansp.Changed" />
+					<pps:column name="Template" fieldName="dbo.Ansp.Template" />
 					<pps:column name="Versand" fieldName="dbo.Ansp.Versand" />
 					<pps:column name="Angebot" fieldName="dbo.Ansp.Angebot" />
 					<pps:column name="Auftrag" fieldName="dbo.Ansp.Auftrag" />

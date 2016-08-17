@@ -12,7 +12,17 @@
 	[Geschl] CHAR NULL, 
 	[Funktion] NVARCHAR(50) NULL, 
 	[Brief] NVARCHAR(50) NULL, 
-	[Anmerk] NVARCHAR(2048) NULL
+	[Anmerk] NVARCHAR(2048) NULL,
+	[Postfach] NVARCHAR(20) NULL, 
+	[Zusatz] NVARCHAR(20) NULL, 
+	[Strasse] NVARCHAR(50) NULL, 
+	[Ort] NVARCHAR(50) NULL, 
+	[Region] NVARCHAR(50) NULL, 
+	[Plz] NVARCHAR(10) NULL, 
+	[Template] NVARCHAR(512) NULL, 
+	[Adresse] NVARCHAR(512) NULL, 
+	[Changed] BIT NULL, 
+
 )
 
 GO
@@ -134,3 +144,84 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Ansp',
     @level2type = N'COLUMN',
     @level2name = 'AdreId'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Postfach',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = N'Postfach'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Adress-Zusatz',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = N'Zusatz'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Straße mit Nr',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = N'Strasse'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Ort',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = N'Ort'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Region',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = N'Region'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Plz',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = N'Plz'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'geändertes Template',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = N'Template'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'vollständige Adresse',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = N'Adresse'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'geänderte Adresse',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = N'Changed'

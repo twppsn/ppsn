@@ -72,9 +72,13 @@
 				<pps:attribute name="maxLength">512</pps:attribute>
 				<pps:attribute name="displayName">Adresse</pps:attribute>
 			</pps:field>
-			<pps:field name="dbo.Adre.AdreChanged" >
+			<pps:field name="dbo.Adre.Changed" >
 				<pps:attribute name="dataType">bool</pps:attribute>
 				<pps:attribute name="displayName">Andere Adresse</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Adre.Template" >
+				<pps:attribute name="dataType">string</pps:attribute>
+				<pps:attribute name="maxLength">512</pps:attribute>
 			</pps:field>
 			
 			<!-- objects -->
