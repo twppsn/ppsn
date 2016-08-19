@@ -65,7 +65,7 @@
 			<pps:field name="dbo.Adre.Strasse" displayName="Strasse/Nr" />
 			<pps:field name="dbo.Adre.Ort" displayName="Ort" />
 			<pps:field name="dbo.Adre.Region" displayName="Region" />
-			<pps:field name="dbo.Adre.PLZ" displayName="Plz" />
+			<pps:field name="dbo.Adre.Plz" displayName="Postleitzahl" />
 			<pps:field name="dbo.Adre.LandId" displayName="Land" />
 			<pps:field name="dbo.Adre.Adresse" >
 				<pps:attribute name="dataType">string</pps:attribute>

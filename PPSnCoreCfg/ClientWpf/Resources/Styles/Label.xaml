@@ -7,4 +7,5 @@
 	<Style TargetType="{x:Type Label}">
 		<Setter Property="Foreground" Value="{StaticResource StandardForegroundBrush}" />
 	</Style>
+
 </ResourceDictionary>

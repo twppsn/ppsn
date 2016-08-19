@@ -53,10 +53,10 @@ newPartner = command(
         if cur ~= nil then
             do (trans = UndoManager:BeginTransaction("Neuer Partner"))
                 if cur:Table:TableName == "Adre" then
-                    local viewAdre = getView(cur.AnspAdre);
+                    local viewAdre = getView(cur:AnspAdre);
                     viewAdre:Add({ Name = "Neuer Partner"});
                 else
-                    cur.Table:Add({AdreId = cur:AdreId, Name = "Neuer Partner"});
+                    cur:Table:Add({AdreId = cur:AdreId, Name = "Neuer Partner"});
                 end;
                 trans:Commit();
             end;
@@ -68,7 +68,7 @@ delItem = command(
     function (args) : void
   		local cur = ADR_TreeView:SelectedValue;
         if cur ~= nil then
-			do (trans = UndoManager:BeginTransaction("Neuer Partner"))
+			do (trans = UndoManager:BeginTransaction("Löschen"))
  			    cur:Remove({"Löschen " .. (cur.Name)});
 				trans:Commit();
 			end;

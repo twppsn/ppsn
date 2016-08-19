@@ -7,15 +7,14 @@
 	</ResourceDictionary.MergedDictionaries>
 
     <Style x:Key="PaneTabItemStyle" TargetType="{x:Type TabItem}">
-        <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-        <Setter Property="Background" Value="Transparent"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="IsTabStop" Value="False"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type TabItem}">
-                    <Border x:Name="Panel" BorderBrush="{StaticResource PPSnSeparatorBrush}" Height="30" BorderThickness="0,0,0,4" Background="{TemplateBinding Background}" Margin="0,0,18,16" SnapsToDevicePixels="True">
-                        <TextBlock FontSize="14.667" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,2,2">
+                    <Border x:Name="Panel" BorderBrush="{StaticResource PPSnSeparatorBrush}" Background="Transparent"
+							Height="30" BorderThickness="0,0,0,4" Margin="0,0,18,16" SnapsToDevicePixels="True">
+                        <TextBlock Foreground="{StaticResource PPSnWindowForegroundBrush}" FontSize="14.667" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,2,2">
 							<ContentPresenter ContentSource="Header"/>
                         </TextBlock>
                     </Border>
@@ -28,7 +27,7 @@
                                 <Condition Property="IsMouseOver" Value="True"/>
                                 <Condition Property="IsSelected" Value="False"/>
                             </MultiTrigger.Conditions>
-                            <Setter Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+                            <Setter TargetName="Panel" Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
                         </MultiTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -36,7 +35,7 @@
         </Setter>
     </Style>
 
-    <Style x:Key="PaneTabItemStyle1" TargetType="{x:Type TabItem}">
+    <!--<Style x:Key="PaneTabItemStyle1" TargetType="{x:Type TabItem}">
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -95,7 +94,7 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
-    </Style>
+    </Style>-->
 
 
 </ResourceDictionary>
