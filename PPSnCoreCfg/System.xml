@@ -80,6 +80,14 @@
 				<pps:attribute name="dataType">string</pps:attribute>
 				<pps:attribute name="maxLength">512</pps:attribute>
 			</pps:field>
+			<pps:field name="dbo.Adre.Versand" >
+				<pps:attribute name="dataType">bool</pps:attribute>
+				<pps:attribute name="displayName">Versand</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Adre.Rechnung" >
+				<pps:attribute name="dataType">bool</pps:attribute>
+				<pps:attribute name="displayName">Rechnung</pps:attribute>
+			</pps:field>
 			
 			<!-- objects -->
 			<pps:view name="dbo.objects">

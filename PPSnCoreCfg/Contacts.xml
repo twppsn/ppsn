@@ -91,10 +91,6 @@
 				<pps:attribute name="dataType">bool</pps:attribute>
 				<pps:attribute name="displayName">Versand</pps:attribute>
 			</pps:field>
-			<pps:field name="dbo.Ansp.Versand" >
-				<pps:attribute name="dataType">bool</pps:attribute>
-				<pps:attribute name="displayName">Versand</pps:attribute>
-			</pps:field>
 			<pps:field name="dbo.Ansp.Angebot" >
 				<pps:attribute name="dataType">bool</pps:attribute>
 				<pps:attribute name="displayName">Angebot</pps:attribute>
@@ -103,13 +99,9 @@
 				<pps:attribute name="dataType">bool</pps:attribute>
 				<pps:attribute name="displayName">Auftrag</pps:attribute>
 			</pps:field>
-			<pps:field name="dbo.Ansp.Faktura" >
+			<pps:field name="dbo.Ansp.Rechnung" >
 				<pps:attribute name="dataType">bool</pps:attribute>
-				<pps:attribute name="displayName">Faktura</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Ansp.Rempf" >
-				<pps:attribute name="dataType">bool</pps:attribute>
-				<pps:attribute name="displayName">RE-Empfg.</pps:attribute>
+				<pps:attribute name="displayName">Rechnung</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Ansp.Anfrage" >
 				<pps:attribute name="dataType">bool</pps:attribute>
@@ -177,6 +169,8 @@
 					<pps:column name="Adresse" fieldName="dbo.Adre.Adresse" />
 					<pps:column name="Changed" fieldName="dbo.Adre.Changed" />
 					<pps:column name="Template" fieldName="dbo.Adre.Template" />
+					<pps:column name="Versand" fieldName="dbo.Adre.Versand" />
+					<pps:column name="Rechnung" fieldName="dbo.Adre.Rechnung" />
 				</pps:table>
 
 				<pps:table name="Ansp">
@@ -202,10 +196,8 @@
 					<pps:column name="Adresse" fieldName="dbo.Ansp.Adresse" />
 					<pps:column name="Changed" fieldName="dbo.Ansp.Changed" />
 					<pps:column name="Template" fieldName="dbo.Ansp.Template" />
-					<pps:column name="Versand" fieldName="dbo.Ansp.Versand" />
 					<pps:column name="Angebot" fieldName="dbo.Ansp.Angebot" />
 					<pps:column name="Auftrag" fieldName="dbo.Ansp.Auftrag" />
-					<pps:column name="Faktura" fieldName="dbo.Ansp.Faktura" />
 					<pps:column name="Rempf" fieldName="dbo.Ansp.Rempf" />
 					<pps:column name="Anfrage" fieldName="dbo.Ansp.Anfrage" />
 					<pps:column name="Bestellung" fieldName="dbo.Ansp.Bestellung" />
