@@ -77,6 +77,7 @@
     </Compile>
     <Compile Include="Controls\DataListControl.cs" />
     <Compile Include="Controls\SplitButton.cs" />
+    <Compile Include="Controls\TemplateTextBox.cs" />
     <Compile Include="Controls\Toolbar.cs" />
     <Compile Include="Controls\TreeListView.cs" />
     <Compile Include="Controls\UndoManagerListBox.cs" />

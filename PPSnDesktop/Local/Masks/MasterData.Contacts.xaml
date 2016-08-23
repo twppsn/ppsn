@@ -75,9 +75,7 @@
                 <Button Content="Neue Adresse" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,0,0,0" Command="{Binding NewAddressCommand}"/>
                 <Button Content="Neuer Partner" Width="100" Height="23"  HorizontalAlignment="Left" VerticalAlignment="Top" Margin="138,0,0,0" Command="{Binding NewPartnerCommand}"/>
                 <Button Content="Löschen" Width="90" Height="23"  HorizontalAlignment="Left" VerticalAlignment="Top" Margin="246,0,0,0" Command="{Binding RemovePosCommand}"/>
-                <uiC:PpsTreeListView x:Name="APART_TreeView" Grid.Row="1" HorizontalAlignment="Stretch" AlternationCount="2" ItemsSource="{Binding Data.KONT/ADRE}" BorderThickness="0"
-											Style="{StaticResource PPSnTreeViewStyle}"
-											ItemContainerStyle="{StaticResource TreeListViewItemStyle}">
+                <uiC:PpsTreeListView x:Name="APART_TreeView" Grid.Row="1" HorizontalAlignment="Stretch" AlternationCount="2" ItemsSource="{Binding Data.KONT/ADRE}" BorderThickness="0">
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding ANSP}">
                             <Border Height="27">
@@ -160,7 +158,7 @@
 	<ScrollViewer Style="{StaticResource PPSnScrollViewerStyle}" Padding="24" Focusable="False"
 				  Margin="{Binding Path=CharmbarActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ui:PpsWindow}}, Converter={StaticResource CharmbarWidthToPaddingConverter}}">
 		<StackPanel MinWidth="1020" MaxWidth="1020">
-			<Expander Header="Ident" Style="{StaticResource PPSnExpanderStyle}" ExpandDirection="Down" IsExpanded="True">
+			<Expander Header="Ident"  ExpandDirection="Down" IsExpanded="True">
 				<Grid>
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="120"/>
@@ -207,7 +205,7 @@
 					<TextBox Grid.Column="4" Grid.Row="3" Text="{Binding Data.KONT/KONTBIC}" HorizontalAlignment="Stretch"/>
 				</Grid>
 			</Expander>
-			<Expander Header="Adressen / Ansprechpartner" Style="{StaticResource PPSnExpanderStyle}" ExpandDirection="Down" IsExpanded="True">
+			<Expander Header="Adressen / Ansprechpartner" ExpandDirection="Down" IsExpanded="True">
                 <ContentControl x:Name="APART" Template="{StaticResource ApartTemplate}" Focusable="False"/>
             </Expander>
         </StackPanel>

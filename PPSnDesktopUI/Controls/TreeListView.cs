@@ -151,7 +151,17 @@ namespace TecWare.PPSn.Controls
 			var node = ItemContainerGenerator.ContainerFromItem(item) as PpsTreeListViewItem;
 			if (node == null)
 				throw new ArgumentNullException("SelectNode TreeListViewItem");
-			Dispatcher.BeginInvoke(new Action(() => node.IsSelected = true), DispatcherPriority.Input);
+
+			// focus?
+			Dispatcher.BeginInvoke(
+				new Action(() =>
+					{
+						node.IsSelected = true;
+						node.BringIntoView();
+					}),
+					DispatcherPriority.Input
+				);
+
 		} // proc SelectNode
 
 		private void SelectAddedNode(object item)

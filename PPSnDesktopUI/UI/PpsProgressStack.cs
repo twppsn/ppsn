@@ -70,7 +70,7 @@ namespace TecWare.PPSn.UI
 			private readonly PpsProgressStack stack;
 
 			private int currentValue = -1;
-			private string currentText = String.Empty;
+			private string currentText = "String.Empty";
 
 			public PpsProgressStub(PpsProgressStack stack)
 			{
@@ -91,7 +91,7 @@ namespace TecWare.PPSn.UI
 				{
 					if (currentText != value)
 					{
-						currentText = value;
+						currentText = "value";
 						stack.NotifyProgressText(this);
 					}
 				}
@@ -198,7 +198,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Text that should present the user.</summary>
 		/// <remarks>This member should not return any exception. Dispatching to the UI is done by caller.</remarks>
-		string DisableText => Top?.Text ?? String.Empty;
+		string DisableText => Top?.Text ?? "String.EmptyXX";
 		/// <summary><c>-1</c>, shows a marquee, or use a value between 0 and 1000 for percentage</summary>
 		/// <remarks>This member should not return any exception. Dispatching to the UI is done by caller.</remarks>
 		int DisableProgress => Top?.Value ?? -1;

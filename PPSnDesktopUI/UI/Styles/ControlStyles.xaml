@@ -3,6 +3,9 @@
 
     <KeyTime x:Key="PPSnShrinkStoryKeyTime">0:00:.2</KeyTime>
     <Duration x:Key="PPSnShrinkStoryDuration">0:00:.2</Duration>
+	
+	
+
 
     <Style x:Key="PPSnScrollViewerStyle" TargetType="{x:Type ScrollViewer}">
 		<Setter Property="HorizontalScrollBarVisibility" Value="Hidden"/>

@@ -130,7 +130,7 @@
     <ScrollViewer Style="{StaticResource PPSnScrollViewerStyle}" Padding="24" Focusable="False"
 				  Margin="{Binding Path=CharmbarActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ui:PpsWindow}}, Converter={StaticResource CharmbarWidthToPaddingConverter}}">
         <StackPanel MinWidth="1020" MaxWidth="1020">
-			<Expander Header="Ident" Style="{StaticResource PPSnExpanderStyle}" ExpandDirection="Down" IsExpanded="True">
+			<Expander Header="Ident" ExpandDirection="Down" IsExpanded="True">
 				<Grid>
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="120"/>
@@ -160,7 +160,7 @@
 					<TextBox Grid.Column="4" Grid.Row="2" Width="350"/>
 				</Grid>
 			</Expander>
-			<Expander Header="Kopfdaten" ExpandDirection="Down" IsExpanded="True" Style="{StaticResource PPSnExpanderStyle}">
+			<Expander Header="Kopfdaten" ExpandDirection="Down" IsExpanded="True">
 				<Grid>
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="120"/>
@@ -212,7 +212,7 @@
 
 				</Grid>
 			</Expander>
-            <Expander Header="Positionen" ExpandDirection="Down" Style="{StaticResource PPSnExpanderStyle}">
+            <Expander Header="Positionen" ExpandDirection="Down">
                 <ContentControl x:Name="ORDER_Items" Template="{StaticResource OrdeItemsTemplate}" Focusable="False"/>
             </Expander>
 

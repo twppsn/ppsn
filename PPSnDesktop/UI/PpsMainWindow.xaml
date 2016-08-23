@@ -273,7 +273,7 @@
                     <ToggleButton.Style>
                         <Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource PaneSelectToggleButtonStyle}">
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding Path=CurrentPane, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="{x:Null}">
+                                <DataTrigger Binding="{Binding Path=CurrentPane}" Value="{x:Null}">
                                     <Setter Property="IsEnabled" Value="False"/>
                                 </DataTrigger>
                             </Style.Triggers>
@@ -314,7 +314,7 @@
                                     <Setter.Value>
                                         <ControlTemplate TargetType="{x:Type ListBoxItem}">
                                             <Button x:Name="PART_Item" BorderThickness="0" Height="32" Content="{Binding Title}" Command="{x:Static uiL:PpsMainWindow.GoToPaneCommand}" CommandParameter="{Binding}" >
-                                                <Button.Style>
+												<Button.Style>
                                                     <Style TargetType="{x:Type Button}">
                                                         <Setter Property="Focusable" Value="False"/>
                                                         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
@@ -354,6 +354,9 @@
                                                                         <DataTrigger Binding="{Binding Path=Control.IsVisible}" Value="False">
                                                                             <Setter TargetName="PART_Marker" Property="Visibility" Value="Hidden"/>
                                                                         </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding PaneControl.ProgressStack.IsEnabled}" Value="True">
+                                                                            <Setter Property="Background" Value="Red"/>
+                                                                        </DataTrigger>
                                                                     </ControlTemplate.Triggers>
                                                                 </ControlTemplate>
                                                             </Setter.Value>
@@ -386,14 +389,27 @@
                         </ListBox.ItemContainerStyle>
                     </ListBox>
                 </Popup>
-                <ToggleButton Width="32" Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}" CommandParameter="{Binding Path=CurrentPane, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}"
+                <ToggleButton Width="32" Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}" 
+							  CommandParameter="{Binding Path=CurrentPane}"
 							  Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="3"/>
-                <ToolBar x:Name="PART_PaneToolBar" Margin="16,0" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" Style="{StaticResource PaneToolBarStyle}"/>
+                <!--<ToolBar x:Name="PART_PaneToolBar" Margin="16,0" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" Style="{StaticResource PaneToolBarStyle}"/>-->
+                <ToolBar x:Name="PaneToolBar" Margin="16,0" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}">
+                    <ToolBar.Style>
+                        <Style TargetType="{x:Type ToolBar}" BasedOn="{StaticResource PaneToolBarStyle}" >
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Path=PaneControl.ProgressStack.IsEnabled}" Value="True">
+                                    <Setter Property="IsEnabled" Value="False" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ToolBar.Style>
+                </ToolBar>
             </DockPanel>
 
-            <ContentPresenter x:Name="PART_PanePresenter" Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}" HorizontalAlignment="Center" Margin="0,24"/>
+            <ContentPresenter x:Name="PART_PanePresenter" Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}" HorizontalAlignment="Stretch" Margin="0,24"/>
             <uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right" Margin="24,24,0,24"/>
-            <Grid.Style>
+
+			<Grid.Style>
                 <Style TargetType="{x:Type Grid}">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding Path=IsPaneVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="False">
