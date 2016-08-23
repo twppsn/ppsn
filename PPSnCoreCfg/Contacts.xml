@@ -58,7 +58,7 @@
 			<pps:field name="dbo.Ansp.Strasse" >
 				<pps:attribute name="dataType">string</pps:attribute>
 				<pps:attribute name="maxLength">50</pps:attribute>
-				<pps:attribute name="displayName">Straße / Nr.</pps:attribute>
+				<pps:attribute name="displayName">Strasse/Nr</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Ansp.Ort" >
 				<pps:attribute name="dataType">string</pps:attribute>
@@ -86,10 +86,6 @@
 			<pps:field name="dbo.Ansp.Template" >
 				<pps:attribute name="dataType">string</pps:attribute>
 				<pps:attribute name="maxLength">512</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Ansp.Versand" >
-				<pps:attribute name="dataType">bool</pps:attribute>
-				<pps:attribute name="displayName">Versand</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Ansp.Angebot" >
 				<pps:attribute name="dataType">bool</pps:attribute>
@@ -198,6 +194,7 @@
 					<pps:column name="Template" fieldName="dbo.Ansp.Template" />
 					<pps:column name="Angebot" fieldName="dbo.Ansp.Angebot" />
 					<pps:column name="Auftrag" fieldName="dbo.Ansp.Auftrag" />
+					<pps:column name="Rechnung" fieldName="dbo.Ansp.Rechnung" />
 					<pps:column name="Anfrage" fieldName="dbo.Ansp.Anfrage" />
 					<pps:column name="Bestellung" fieldName="dbo.Ansp.Bestellung" />
 				</pps:table>
