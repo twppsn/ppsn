@@ -62,7 +62,7 @@
 			<pps:field name="dbo.Adre.Name" displayName="Name" />
 			<pps:field name="dbo.Adre.Postfach" displayName="Postfach" />
 			<pps:field name="dbo.Adre.Zusatz" displayName="Zusatz" />
-			<pps:field name="dbo.Adre.Strasse" displayName="Strasse/Nr" />
+			<pps:field name="dbo.Adre.Strasse" displayName="Straße / Nr." />
 			<pps:field name="dbo.Adre.Ort" displayName="Ort" />
 			<pps:field name="dbo.Adre.Region" displayName="Region" />
 			<pps:field name="dbo.Adre.Plz" displayName="Postleitzahl" />

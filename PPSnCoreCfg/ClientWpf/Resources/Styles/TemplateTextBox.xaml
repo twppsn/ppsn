@@ -2,17 +2,18 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			        xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI">
 
-
     <ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="../Colors.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
     <Style x:Key="TemplateTextBoxStyle" TargetType="{x:Type uiC:PpsTemplateTextBox}">
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="Padding" Value="2,2"/>
         <Setter Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource PPSnControlNormalBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="SelectionBrush" Value="Black"/>
+        <Setter Property="SelectionOpacity" Value=".25"/>
         <Setter Property="CaretBrush" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="KeyboardNavigation.TabNavigation" Value="None"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -20,18 +21,67 @@
         <Setter Property="Stylus.IsFlicksEnabled" Value="False"/>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="{x:Type TextBox}">
-                    <Border x:Name="PART_Border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
-                        <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                <ControlTemplate TargetType="{x:Type uiC:PpsTemplateTextBox}">
+                    <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="24"/>
+                            </Grid.ColumnDefinitions>
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="false" Visibility="Hidden" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                            <ScrollViewer x:Name="CalculatedStringViewer" Focusable="false" Visibility="Visible" Padding="4,2" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+                                <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=uiC:PpsTemplateTextBox}, Path=CalculatedString}"/>
+                            </ScrollViewer>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter Property="BorderBrush" TargetName="PART_Border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
+                            <Setter TargetName="CalculatedStringViewer" Property="Visibility" Value="Hidden"/>
+                            <Setter TargetName="PART_ContentHost" Property="Visibility" Value="Visible"/>
+                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
+
+    <!--<Style x:Key="TemplateTextBoxStyle" TargetType="{x:Type uiC:PpsTemplateTextBox}">
+        <Setter Property="Padding" Value="2,2"/>
+        <Setter Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource PPSnControlNormalBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="SelectionBrush" Value="Black"/>
+        <Setter Property="SelectionOpacity" Value=".25"/>
+        <Setter Property="CaretBrush" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+        <Setter Property="KeyboardNavigation.TabNavigation" Value="None"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="ScrollViewer.PanningMode" Value="VerticalFirst"/>
+        <Setter Property="Stylus.IsFlicksEnabled" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type uiC:PpsTemplateTextBox}">
+                    <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+                            <ScrollViewer Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+                                <Grid Background="Transparent">
+                                    <AdornerDecorator x:Name="PART_ContentHost" Opacity="0" Focusable="False"/>
+                                    <TextBlock x:Name="CalculatedStringViewer" Opacity="1" Padding="2,0" Text="{Binding RelativeSource={RelativeSource AncestorType=uiC:PpsTemplateTextBox}, Path=CalculatedString}"/>
+                                </Grid>
+                            </ScrollViewer>
+                    </Border>
+
+					<ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter Property="Opacity" TargetName="CalculatedStringViewer" Value="0"/>
+                            <Setter Property="Opacity" TargetName="PART_ContentHost" Value="1"/>
+                            <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>-->
+
 
 </ResourceDictionary>
