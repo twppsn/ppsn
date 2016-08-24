@@ -7,6 +7,7 @@
 	</ResourceDictionary.MergedDictionaries>
 
     <Style x:Key="PaneTabItemStyle" TargetType="{x:Type TabItem}">
+        <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="IsTabStop" Value="False"/>
         <Setter Property="Template">
@@ -21,6 +22,10 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Panel" Property="BorderBrush" Value="{StaticResource PPSnMarkerBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Panel" Property="Opacity" Value="0.45" />
+                            <Setter Property="Foreground" Value="{StaticResource PPSnWindowDisabledForegroundBrush}" />
                         </Trigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
@@ -95,6 +100,5 @@
             </Setter.Value>
         </Setter>
     </Style>-->
-
 
 </ResourceDictionary>

@@ -13,8 +13,6 @@
 		
 		bindTitle = "Hello {0}":Format(Arguments.index);
 
-		progress = nil;
-		
 		helloWorld = command(
 			function (arg) : void
 				bindTitle = "Hello World clicked {0} times.":Format(clickCount);
@@ -22,22 +20,6 @@
 			end
 		);
 		
-		startTask = command(
-			function (arg) : void
-		        if progress == nil then
-	                progress = disableUI();
-				end;
-			end
-		);
-	
-		stopTask = command(
-			function (arg) : void
-		        if progress ~= nil then
-					progress.Dispose();
-					progress = niL;
-				end;
-			end
-		);
 		
 		]]>
 	</x:Code>
@@ -69,25 +51,14 @@
 			<LineBreak />
 			<Run Text="{Binding bindTitle}" />
 		</TextBlock>
-        <Button Content="Starte Task" Grid.Row="1" Margin="12" Command="{Binding startTask}" />
-        <Button Content="Beende Task" Grid.Row="2" Margin="12" Command="{Binding stopTask}" />
-        <Border Grid.Row="3">
-            <Border.Style>
-                <Style TargetType="Border">
-					<Setter Property="Background" Value="Blue"/>
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding PaneControl.ProgressStack.IsEnabled}" Value="True">
-                            <Setter Property="Background" Value="Red"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-				</Style>
-			</Border.Style>
-		</Border>
     </Grid>
 
     <ui:PpsGenericWpfControl.Commands>
         <ui:PpsUICommandButton Order="100,100" DisplayText="command A" Image="floppy_diskImage" />
         <ui:PpsUICommandButton Order="200,100" DisplayText="command B" Image="floppy_diskImage" />
+        <ui:PpsUICommandButton Order="300,100" DisplayText="command C" Image="floppy_diskImage" />
+        <ui:PpsUICommandButton Order="400,100" DisplayText="command D" Image="floppy_diskImage" />
+        <ui:PpsUICommandButton Order="500,100" DisplayText="command E" Image="floppy_diskImage" />
     </ui:PpsGenericWpfControl.Commands>
 
 </ui:PpsGenericWpfControl>

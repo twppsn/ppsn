@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ClientWpf\Panes\contacts.lua" />
+    <None Include="ClientWpf\Panes\contract.lua" />
     <None Include="contacts\contactsLocal.lua" />
     <None Include="contacts\contactsServer.lua" />
     <None Include="contacts\contactTagging.lua" />
@@ -61,7 +62,9 @@
     <None Include="PPSn.template">
       <SubType>Designer</SubType>
     </None>
-    <Content Include="Contract.xml" />
+    <Content Include="Contract.xml">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="PPSn.Test.xml" />
     <Content Include="PPSn.xml">
       <SubType>Designer</SubType>
@@ -88,6 +91,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="ClientWpf\Resources\Colors.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="ClientWpf\Resources\Dimensions.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

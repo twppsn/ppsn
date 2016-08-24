@@ -21,12 +21,12 @@
         </ResourceDictionary>
     </ui:PpsGenericWpfControl.Resources>
 
-    <Grid MaxWidth="1060">
+    <Grid MaxWidth="{StaticResource PaneMaxGridWidth}">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="110" />
+            <ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="70"/>
-            <ColumnDefinition Width="110"/>
+            <ColumnDefinition Width="{StaticResource PaneSpaceColumnWidth}"/>
+            <ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
@@ -38,26 +38,26 @@
         </Grid.RowDefinitions>
 
         <Label Grid.Column="0" Grid.Row="0" Content="Kontakt-Nr.:" Height="23" VerticalAlignment="Top" />
-        <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Data.Head.First.Nr}" MaxLength="12" Width="90" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
+        <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Data.Head.First.Nr}" MaxLength="12" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
         <Label Grid.Column="0" Grid.Row="1" Content="{Binding Data.Head.Name.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
         <TextBox Grid.Column="1" Grid.Row="1" Grid.RowSpan="2" Text="{Binding Data.Head.First.Name}" MaxLength="{Binding Data.Head.Name.MaxLength, Mode=OneTime}" AcceptsReturn="True" TextWrapping="Wrap" 
-				 VerticalContentAlignment="Top" Height="52" VerticalAlignment="Top"/>
+				 Height="52" VerticalAlignment="Top"/>
 
         <Label Grid.Column="3" Grid.Row="0" Content="{Binding Data.Head.KurzName.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
         <TextBox Grid.Column="4" Grid.Row="0" Text="{Binding Data.Head.First.KurzName}" MaxLength="{Binding Data.Head.KurzName.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
         <Label Grid.Column="3" Grid.Row="1" Content="{Binding Data.Head.LiefNr.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
-        <TextBox Grid.Column="4" Grid.Row="1" Text="{Binding Data.Head.First.LiefNr}" MaxLength="{Binding Data.Head.LiefNr.MaxLength, Mode=OneTime}" Width="90" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
+        <TextBox Grid.Column="4" Grid.Row="1" Text="{Binding Data.Head.First.LiefNr}" MaxLength="{Binding Data.Head.LiefNr.MaxLength, Mode=OneTime}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
         <Label Grid.Column="3" Grid.Row="2" Content="{Binding Data.Head.KundNr.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
-        <TextBox Grid.Column="4" Grid.Row="2" Text="{Binding Data.Head.First.KundNr}" MaxLength="{Binding Data.Head.KundNr.MaxLength, Mode=OneTime}" Width="90" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
+        <TextBox Grid.Column="4" Grid.Row="2" Text="{Binding Data.Head.First.KundNr}" MaxLength="{Binding Data.Head.KundNr.MaxLength, Mode=OneTime}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
 
         <TabControl Grid.Row="4" Grid.ColumnSpan="5" BorderThickness="0" Padding="0" Background="Transparent" ItemContainerStyle="{StaticResource PaneTabItemStyle}">
             <TabItem Header="Kopfdaten">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="110" />
+                        <ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="70"/>
-                        <ColumnDefinition Width="110"/>
+                        <ColumnDefinition Width="{StaticResource PaneSpaceColumnWidth}"/>
+                        <ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
@@ -82,7 +82,7 @@
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="70"/>
+                        <ColumnDefinition Width="{StaticResource PaneSpaceColumnWidth}"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
@@ -95,10 +95,7 @@
 							Style="{StaticResource SimpleButtonStyle}"/>
                     <Button Content="Löschen" Command="{Binding delItem}" Padding="10,0" Width="Auto" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="232,0,0,0"
 							Style="{StaticResource SimpleButtonStyle}"/>
-                    <uiC:PpsTreeListView x:Name="ADR_TreeView" Grid.Column="0" Grid.Row="1"
-										 ItemsSource="{Binding Data.Head/AdreHead}"
-										 Style="{StaticResource TreeListViewStyle}"
-										 ItemContainerStyle="{StaticResource TreeListViewItemStyle}">
+                    <uiC:PpsTreeListView x:Name="AdreTreeView" Grid.Column="0" Grid.Row="1" ItemsSource="{Binding Data.Head/AdreHead}" Style="{StaticResource TreeListViewStyle}">
                         <uiC:PpsTreeListView.Resources>
                             <ui:MultiLineStringConverter x:Key="MlStringConverter" />
                         </uiC:PpsTreeListView.Resources>
@@ -118,16 +115,17 @@
                         </TreeView.ItemTemplate>
                     </uiC:PpsTreeListView>
 
-                    <ContentControl Grid.Column="2" Grid.Row="1" Content="{Binding ElementName=ADR_TreeView, Path=SelectedValue}" Focusable="False" Foreground="{StaticResource PPSnWindowForegroundBrush}">
-                        <ContentControl.ContentTemplateSelector>
+                    <ContentControl Grid.Column="2" Grid.Row="1" Content="{Binding ElementName=AdreTreeView, Path=SelectedValue}" ContentTemplateSelector="{DynamicResource TemplateSelector}" Focusable="False">
+                        <!--<ContentControl.ContentTemplateSelector>
                             <ui:PpsContentTemplateSelector/>
-                        </ContentControl.ContentTemplateSelector>
+                        </ContentControl.ContentTemplateSelector>-->
                         <ContentControl.Resources>
+                            <ui:PpsContentTemplateSelector x:Key="TemplateSelector" />
                             <uiC:TemplateTextBoxResultConverter x:Key="TemplateConverter" />
                             <DataTemplate x:Key="Adre">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="110"/>
+                                        <ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
@@ -142,7 +140,7 @@
                                     </Grid.RowDefinitions>
                                     <Label Grid.Column="0" Grid.Row="0" Content="{Binding Table.Name.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
                                     <TextBox Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" Text="{Binding Name}" MaxLength="{Binding Table.Name.MaxLength, Mode=OneTime}" AcceptsReturn="True" TextWrapping="Wrap" 
-											 VerticalContentAlignment="Top" Height="52" VerticalAlignment="Top"/>
+											 Height="52" VerticalAlignment="Top"/>
                                     <Label Grid.Column="0" Grid.Row="2" Content="{Binding Table.LandId.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
                                     <ComboBox Grid.Column="1" Grid.Row="2" Height="23" VerticalAlignment="Top"
 											  ItemsSource="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType=ui:PpsGenericWpfControl}, Path=DataContext.Constants.Land}"
@@ -161,11 +159,11 @@
 										<Run Text="{Binding Table.Ort.displayName, Mode=OneTime}"/>
 										<Run Text=":"/>
                                     </TextBlock>
-                                    <TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Plz}" MaxLength="{Binding Table.Plz.MaxLength, Mode=OneTime}" Height="23" Width="80" HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                                    <TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Ort}" MaxLength="{Binding Table.Ort.MaxLength, Mode=OneTime}" Height="23" Margin="86,0,0,0" VerticalAlignment="Top"/>
+                                    <TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Plz}" MaxLength="{Binding Table.Plz.MaxLength, Mode=OneTime}" Height="23" Width="100" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                                    <TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Ort}" MaxLength="{Binding Table.Ort.MaxLength, Mode=OneTime}" Height="23" Margin="106,0,0,0" VerticalAlignment="Top"/>
 
                                     <Label Grid.Column="0" Grid.Row="7" Content="{Binding Table.Adresse.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
-                                    <uiC:PpsTemplateTextBox Grid.Column="1" Grid.Row="7" AcceptsReturn="True" TextWrapping="Wrap" Height="110" VerticalContentAlignment="Top" VerticalAlignment="Top"
+                                    <uiC:PpsTemplateTextBox Grid.Column="1" Grid.Row="7" AcceptsReturn="True" TextWrapping="Wrap" Height="110" VerticalAlignment="Top"
 															Style="{StaticResource TemplateTextBoxStyle}"
 															Text="{Binding Template}" MaxLength="{Binding Table.Template.MaxLength, Mode=OneTime}"															
 															SourceFields="Name;Strasse;Plz;Ort"
@@ -185,7 +183,7 @@
                             <DataTemplate x:Key="Ansp">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="110"/>
+                                        <ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
@@ -213,7 +211,7 @@
                                     <Expander Grid.Column="0" Grid.Row="6" Grid.ColumnSpan="2" Header="Adresse" Style="{StaticResource SimpleExpanderStyle}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="110"/>
+                                                <ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <Grid.RowDefinitions>
@@ -231,8 +229,8 @@
 												<Run Text="{Binding Table.Ort.displayName, Mode=OneTime}"/>
 												<Run Text=":"/>
 											</TextBlock>
-                                            <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Plz}" MaxLength="{Binding Table.Plz.MaxLength, Mode=OneTime}" Height="23" Width="80" HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                                            <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Ort}" MaxLength="{Binding Table.Ort.MaxLength, Mode=OneTime}" Height="23" Margin="86,0,0,0" VerticalAlignment="Top"/>
+                                            <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Plz}" MaxLength="{Binding Table.Plz.MaxLength, Mode=OneTime}" Height="23" Width="100" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                                            <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Ort}" MaxLength="{Binding Table.Ort.MaxLength, Mode=OneTime}" Height="23" Margin="106,0,0,0" VerticalAlignment="Top"/>
 										</Grid>
 									</Expander>
                                 </Grid>

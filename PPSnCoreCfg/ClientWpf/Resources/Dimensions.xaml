@@ -1,0 +1,9 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+					xmlns:core="clr-namespace:System;assembly=mscorlib"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <core:Double x:Key="PaneMaxGridWidth">1060</core:Double>
+    <GridLength x:Key="PaneLabelColumnWidth">110</GridLength>
+    <GridLength x:Key="PaneSpaceColumnWidth">70</GridLength>
+
+</ResourceDictionary>

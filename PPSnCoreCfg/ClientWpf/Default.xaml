@@ -3,7 +3,8 @@
 	
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Resources/Colors.xaml" />
-		<ResourceDictionary Source="Resources/Styles/Button.xaml" />
+        <ResourceDictionary Source="Resources/Dimensions.xaml" />
+        <ResourceDictionary Source="Resources/Styles/Button.xaml" />
 		<ResourceDictionary Source="Resources/Styles/Label.xaml" />
         <ResourceDictionary Source="Resources/Styles/UndoManagerListBox.xaml" />
         <ResourceDictionary Source="Resources/Styles/ToolBar.xaml" />

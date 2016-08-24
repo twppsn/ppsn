@@ -7,9 +7,9 @@
 
 	<pps:ppsn name="ppsn">
 		<pps:register source="main">
-			<!-- contact fields -->
+			<!-- contract fields -->
 			<pps:field name="dbo.Auko.ObjkId" >
-				<pps:attribute name="dataType">int</pps:attribute>
+				<pps:attribute name="dataType">long</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Auko.Datum" >
 				<pps:attribute name="dataType">datetime</pps:attribute>
@@ -73,10 +73,10 @@
 			</pps:field>
 
 			<pps:field name="dbo.Aupo.Id" >
-				<pps:attribute name="dataType">int</pps:attribute>
+				<pps:attribute name="dataType">long</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Aupo.ObjkId" >
-				<pps:attribute name="dataType">int</pps:attribute>
+				<pps:attribute name="dataType">long</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Aupo.Pos" >
 				<pps:attribute name="dataType">int</pps:attribute>
@@ -115,23 +115,6 @@
 				<pps:attribute name="displayName">Menge</pps:attribute>
 			</pps:field>
 			
-			<!-- menü eintrag für online daten praktisch?
-			<pps:view name="contacts" displayName="Kontakte">
-				<pps:source type="select">
-					<![CDATA[
-						select 
-								o.Id
-								,o.[Guid]
-								,o.Typ
-								,o.Nr
-								,o.HeadRevId
-								,k.Name
-							from dbo.Objk o
-								inner join sds.Kont k on (o.Id = k.ObjkId)
-							where Typ = 'crmContacts']]>
-				</pps:source>
-			</pps:view> -->
-
 			<!-- contracts mask -->
 			<pps:dataset name="contractDataSet" inherited="coreDataSet" serverScripts="ContractScript">
 				<pps:autoTag name="Nr" tableName="Head" columnName="Nr" mode="First" />

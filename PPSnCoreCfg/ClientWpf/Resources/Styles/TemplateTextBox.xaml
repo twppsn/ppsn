@@ -7,7 +7,8 @@
 	</ResourceDictionary.MergedDictionaries>
 
     <Style x:Key="TemplateTextBoxStyle" TargetType="{x:Type uiC:PpsTemplateTextBox}">
-        <Setter Property="Padding" Value="2,2"/>
+        <Setter Property="Padding" Value="2,2,2,0"/>
+		<Setter Property="VerticalContentAlignment" Value="Top"/>
         <Setter Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource PPSnControlNormalBorderBrush}"/>
@@ -28,9 +29,9 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="24"/>
                             </Grid.ColumnDefinitions>
-                            <ScrollViewer x:Name="PART_ContentHost" Focusable="false" Visibility="Hidden" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
-                            <ScrollViewer x:Name="CalculatedStringViewer" Focusable="false" Visibility="Visible" Padding="4,2" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
-                                <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=uiC:PpsTemplateTextBox}, Path=CalculatedString}"/>
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="false" Visibility="Hidden" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" Foreground="{TemplateBinding Foreground}"/>
+                            <ScrollViewer x:Name="CalculatedStringViewer" Focusable="false" Visibility="Visible" Padding="4,2,4,0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+                                <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=uiC:PpsTemplateTextBox}, Path=CalculatedString}" Foreground="{TemplateBinding Foreground}"/>
                             </ScrollViewer>
                         </Grid>
                     </Border>
@@ -40,6 +41,9 @@
                             <Setter TargetName="PART_ContentHost" Property="Visibility" Value="Visible"/>
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
                         </Trigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="Foreground" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
+						</Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>

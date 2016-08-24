@@ -27,8 +27,6 @@ pushContact = command(
     end
 );
 ]]
-
-
 		
 pushContact = command(
     function (args) : void
@@ -49,7 +47,7 @@ newAddress = command(
 
 newPartner = command(
     function (args) : void
-        local cur = ADR_TreeView.SelectedValue;
+        local cur = AdreTreeView.SelectedValue;
         if cur ~= nil then
             do (trans = UndoManager:BeginTransaction("Neuer Partner"))
                 if cur:Table:TableName == "Adre" then
@@ -66,7 +64,7 @@ newPartner = command(
 				
 delItem = command(
     function (args) : void
-  		local cur = ADR_TreeView:SelectedValue;
+  		local cur = AdreTreeView:SelectedValue;
         if cur ~= nil then
 			do (trans = UndoManager:BeginTransaction("Löschen"))
  			    cur:Remove({"Löschen " .. (cur.Name)});

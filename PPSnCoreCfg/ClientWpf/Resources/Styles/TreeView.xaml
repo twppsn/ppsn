@@ -8,43 +8,10 @@
 
     <uiC:PpsTreeViewLevelToIndentConverter x:Key="LevelToIndentConverter" />
 
-    <Style x:Key="TreeListViewStyle" TargetType="{x:Type TreeView}">
-        <Setter Property="AlternationCount" Value="2"/>
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="Padding" Value="0"/>
-		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type TreeView}">
-                    <Border x:Name="Part_Border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
-							Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
-                        <ScrollViewer x:Name="PART_Scrollviewer" Focusable="False" Padding="{TemplateBinding Padding}" HorizontalScrollBarVisibility="Disabled" Style="{StaticResource PPSnScrollViewerStyle}"
-									  Background="{TemplateBinding Background}" CanContentScroll="False" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-                        </ScrollViewer>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="VirtualizingPanel.IsVirtualizing" Value="True">
-                            <Setter Property="CanContentScroll" TargetName="PART_Scrollviewer" Value="True"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-        <Style.Triggers>
-            <Trigger Property="VirtualizingPanel.IsVirtualizing" Value="True">
-                <Setter Property="ItemsPanel">
-                    <Setter.Value>
-                        <ItemsPanelTemplate>
-                            <VirtualizingStackPanel/>
-                        </ItemsPanelTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Trigger>
-        </Style.Triggers>
-    </Style>
+    <!--<Style x:Key="ItemTextBlockStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type TreeViewItem}}, Path=Foreground}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>-->
 
     <Style x:Key="TreeListViewExpanderButtonStyle" TargetType="{x:Type ToggleButton}">
         <Setter Property="Focusable" Value="False"/>
@@ -112,6 +79,48 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <Style x:Key="TreeListViewStyle" TargetType="{x:Type TreeView}">
+        <Setter Property="AlternationCount" Value="2"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="ItemContainerStyle" Value="{StaticResource TreeListViewItemStyle}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TreeView}">
+                    <Border x:Name="Part_Border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
+							Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
+                        <ScrollViewer x:Name="PART_Scrollviewer" Focusable="False" Padding="{TemplateBinding Padding}" HorizontalScrollBarVisibility="Disabled" Style="{StaticResource PPSnScrollViewerStyle}"
+									  Background="{TemplateBinding Background}" CanContentScroll="False" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                        </ScrollViewer>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="VirtualizingPanel.IsVirtualizing" Value="True">
+                            <Setter Property="CanContentScroll" TargetName="PART_Scrollviewer" Value="True"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="VirtualizingPanel.IsVirtualizing" Value="True">
+                <Setter Property="ItemsPanel">
+                    <Setter.Value>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel/>
+                        </ItemsPanelTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+				<Setter Property="Opacity" Value="0.45"/>
+			</Trigger>
+        </Style.Triggers>
     </Style>
 
 </ResourceDictionary>
