@@ -325,7 +325,7 @@ namespace TecWare.PPSn.UI
 
 			try
 			{
-				// load the pane
+				// load the pane>
 				await newPane.LoadAsync(arguments);
 				await Dispatcher.InvokeAsync(() => panes.AddPane(newPane));
 			}

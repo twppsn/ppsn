@@ -368,7 +368,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>List of commands for the main toolbar.</summary>
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
 		public PpsUICommandCollection Commands => commands;
-	} // class PpsGenericWpfWindowPane
+	} // class PpsGenericWpfControl
 
 	#endregion
 

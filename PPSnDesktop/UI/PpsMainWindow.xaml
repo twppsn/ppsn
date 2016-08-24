@@ -157,7 +157,7 @@
             <RowDefinition Height="37" />
             <RowDefinition Height="20" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="23" />
+            <RowDefinition Height="25" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="54" />
@@ -392,7 +392,19 @@
                 <ToggleButton Width="32" Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}" 
 							  CommandParameter="{Binding Path=CurrentPane}"
 							  Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="3"/>
-                <!--<ToolBar x:Name="PART_PaneToolBar" Margin="16,0" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}" Style="{StaticResource PaneToolBarStyle}"/>-->
+                <Border Width="32" Height="32" Margin="4,0,0,0" Background="Red">
+                    <Border.Style>
+                        <Style TargetType="{x:Type Border}" >
+							<Setter Property="Visibility" Value="Hidden"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Path=CurrentPane.PaneControl.ProgressStack.IsEnabled}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                </Border>
+                <Button x:Name="LockUIButton" Content="test" Width="50" DockPanel.Dock="Right" Height="23" VerticalAlignment="Bottom" Focusable="False" Click="LockUIButton_Click"/>
                 <ToolBar x:Name="PaneToolBar" Margin="16,0" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}">
                     <ToolBar.Style>
                         <Style TargetType="{x:Type ToolBar}" BasedOn="{StaticResource PaneToolBarStyle}" >
@@ -406,13 +418,23 @@
                 </ToolBar>
             </DockPanel>
 
-            <ContentPresenter x:Name="PART_PanePresenter" Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}" HorizontalAlignment="Stretch" Margin="0,24"/>
+            <ContentPresenter x:Name="PART_PanePresenter" Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}" HorizontalAlignment="Stretch" Margin="0,24">
+                <ContentPresenter.Style>
+                    <Style TargetType="{x:Type ContentPresenter}" >
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Path=CurrentPane.PaneControl.ProgressStack.IsEnabled}" Value="True">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentPresenter.Style>
+            </ContentPresenter>
             <uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right" Margin="24,24,0,24"/>
 
 			<Grid.Style>
                 <Style TargetType="{x:Type Grid}">
                     <Style.Triggers>
-                        <DataTrigger Binding="{Binding Path=IsPaneVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="False">
+                        <DataTrigger Binding="{Binding Path=IsPaneVisible}" Value="False">
                             <DataTrigger.EnterActions>
                                 <BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}" />
                             </DataTrigger.EnterActions>

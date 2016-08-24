@@ -141,7 +141,7 @@ namespace TecWare.PPSn.UI
 					},
 					(sender, e) =>
 					{
-						e.CanExecute = CurrentPane != null && !CurrentPane.PaneControl.ProgressStack.IsEnabled;
+						e.CanExecute = CurrentPane != null && CurrentPane.PaneControl != null && !CurrentPane.PaneControl.ProgressStack.IsEnabled;
 					}
 				)
 			);
@@ -254,6 +254,31 @@ namespace TecWare.PPSn.UI
 				}
 			}
 		} // prop NavigatorState
+
+		#region -- Q+D TEST DisableUI ---------------------------------------------------
+
+		private System.Collections.Generic.Dictionary<IPpsWindowPane, IPpsProgress> stubs = new System.Collections.Generic.Dictionary<IPpsWindowPane, IPpsProgress>();
+
+		private void LockUIButton_Click(object sender, RoutedEventArgs e)
+		{
+			if (CurrentPane == null)
+				return;
+
+			if(!stubs.ContainsKey(CurrentPane))
+			{
+				var stub = CurrentPane.PaneControl.ProgressStack.CreateProgress();
+				stubs.Add(CurrentPane, stub);
+			}
+			else
+			{
+				IPpsProgress stub = null;
+				stubs.TryGetValue(CurrentPane, out stub);
+				DE.Stuff.Procs.FreeAndNil(ref stub);
+				stubs.Remove(CurrentPane);
+			}
+		}
+
+		#endregion
 
 	} // class PpsMainWindow
 }

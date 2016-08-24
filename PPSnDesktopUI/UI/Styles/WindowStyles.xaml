@@ -5,6 +5,8 @@
 
     <SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="{StaticResource PPSnDesktopColor}" />
     <SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="{StaticResource PPSnAccentColor}" />
+    <SolidColorBrush x:Key="PPSnWindowDisabledForegroundBrush" Color="{StaticResource PPSnAccentColor}" Opacity="0.35" />
+
     <SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="#007ACC" />
     <SolidColorBrush x:Key="PPSnMarkerBrush" Color="{StaticResource PPSnAccentColor1}"/>
     <SolidColorBrush x:Key="PPSnSeparatorBrush">
@@ -44,7 +46,6 @@
             </Setter.Value>
         </Setter>
     </Style>
-
 
     <Style x:Key="SimpleButtonStyle" TargetType="{x:Type Button}" />
 
@@ -103,6 +104,11 @@
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <Style TargetType="{x:Type TextBox}">
@@ -130,6 +136,9 @@
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
                         </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -137,6 +146,7 @@
         <Style.Triggers>
             <Trigger Property="AcceptsReturn" Value="True">
 				<Setter Property="Padding" Value="2,2,2,0"/>
+				<Setter Property="VerticalContentAlignment" Value="Top"/>
 			</Trigger>
             <!--<MultiTrigger>
                 <MultiTrigger.Conditions>
@@ -157,11 +167,14 @@
             <Border x:Name="PART_Border" Grid.ColumnSpan="2" BorderBrush="{StaticResource PPSnControlNormalBorderBrush}" BorderThickness="1" Background="{StaticResource PPSnControlBackgroundBrush}" />
             <Border x:Name="PART_ButtonBorder" Grid.Column="1" Margin="1" BorderThickness="0" Background="{StaticResource PPSnControlBackgroundBrush}" />
             <Path x:Name="PART_Arrow" Grid.Column="1" Data="M 0 0 L 0 2 L 4 6 L 8 2 L 8 0 L 4 4 Z" Fill="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-		</Grid>
+        </Grid>
         <ControlTemplate.Triggers>
             <DataTrigger Binding="{Binding Path=IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}" Value="True">
                 <Setter Property="BorderBrush" TargetName="PART_Border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
             </DataTrigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Fill" TargetName="PART_Arrow" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
+            </Trigger>
         </ControlTemplate.Triggers>
 	</ControlTemplate>
 	
@@ -192,8 +205,8 @@
 		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
 		<Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
 		<Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
-		<Setter Property="TextElement.Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="TextElement.Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="ItemContainerStyle" Value="{StaticResource PPSnComboBoxItemStyle}"/>
 		<Setter Property="Control.Template">
 			<Setter.Value>
@@ -229,6 +242,9 @@
                         </Trigger>
                         <Trigger Property="ItemsControl.IsGrouping" Value="True">
                             <Setter Property="ScrollViewer.CanContentScroll" Value="False"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
                         </Trigger>
                         <Trigger Property="ComboBox.IsEditable" Value="True">
                             <Setter Property="KeyboardNavigation.IsTabStop" Value="False"/>
