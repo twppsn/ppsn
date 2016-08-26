@@ -20,7 +20,7 @@
 				<pps:attribute name="displayName">Bestelldatum</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Auko.KontId" >
-				<pps:attribute name="dataType">int</pps:attribute>
+				<pps:attribute name="dataType">long</pps:attribute>
 				<pps:attribute name="displayName">Kontakt</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Auko.Adresse" >
@@ -46,14 +46,14 @@
 			<pps:field name="dbo.Auko.Zusatz" >
 				<pps:attribute name="dataType">string</pps:attribute>
 				<pps:attribute name="maxLength">128</pps:attribute>
-				<pps:attribute name="displayName">Ihre Zeichen</pps:attribute>
+				<pps:attribute name="displayName">Bestellangaben</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Auko.PersId" >
-				<pps:attribute name="dataType">int</pps:attribute>
+				<pps:attribute name="dataType">long</pps:attribute>
 				<pps:attribute name="displayName">Sachbearbeiter</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Auko.Ansp" >
-				<pps:attribute name="dataType">int</pps:attribute>
+				<pps:attribute name="dataType">long</pps:attribute>
 				<pps:attribute name="displayName">Ansprechpartner</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Auko.KopfText" >
@@ -83,7 +83,7 @@
 				<pps:attribute name="displayName">Position</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Aupo.ProdId" >
-				<pps:attribute name="dataType">int</pps:attribute>
+				<pps:attribute name="dataType">long</pps:attribute>
 				<pps:attribute name="displayName">Produkt</pps:attribute>
 			</pps:field>
 			<pps:field name="dbo.Aupo.ProdNr" >

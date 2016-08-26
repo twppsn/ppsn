@@ -50,6 +50,7 @@
   <ItemGroup>
     <None Include="ClientWpf\Panes\contacts.lua" />
     <None Include="ClientWpf\Panes\contract.lua" />
+    <None Include="ClientWpf\Panes\offer.lua" />
     <None Include="contacts\contactsLocal.lua" />
     <None Include="contacts\contactsServer.lua" />
     <None Include="contacts\contactTagging.lua" />
@@ -59,12 +60,14 @@
       <SubType>Designer</SubType>
     </Content>
     <None Include="contract\contractServer.lua" />
+    <None Include="offer\offerServer.lua" />
     <None Include="PPSn.template">
       <SubType>Designer</SubType>
     </None>
     <Content Include="Contract.xml">
       <SubType>Designer</SubType>
     </Content>
+    <Content Include="Offer.xml" />
     <Content Include="PPSn.Test.xml" />
     <Content Include="PPSn.xml">
       <SubType>Designer</SubType>
@@ -89,6 +92,10 @@
     <Page Include="ClientWpf\Panes\contract.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="ClientWpf\Panes\offer.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="ClientWpf\Resources\Colors.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -145,6 +152,10 @@
     <Page Include="ClientWpf\Templates\Contract.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="ClientWpf\Templates\Offer.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
   <ItemGroup>
