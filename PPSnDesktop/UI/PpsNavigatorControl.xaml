@@ -76,6 +76,7 @@
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </DataTrigger.ExitActions>
+                                <Setter TargetName="PART_Image" Property="ToolTip" Value="{Binding DisplayName}"/>
                             </DataTrigger>
 
                             <Trigger Property="IsMouseOver" Value="True">
@@ -105,9 +106,6 @@
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
-                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type ListBox}}, Path=DataContext.ViewsShowDescription}" Value="false">
-                                <Setter TargetName="PART_Image" Property="ToolTip" Value="{Binding DisplayName}"/>
-                            </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
