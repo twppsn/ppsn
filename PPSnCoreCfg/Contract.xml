@@ -155,7 +155,7 @@
 		<pps:wpf name="wpf">
 			<pps:template id="contract" file="ClientWpf\Templates\Contract.xaml" />
 
-			<pps:view name="sdsContract" displayName="Aufträge" displayGlyph="usersImage" view="local.objects" filter="Typ:=sdsContract">
+			<pps:view name="sdsContract" displayName="Aufträge" displayGlyph="sales_quotationImage" view="local.objects" filter="Typ:=sdsContract">
 				<pps:order name="Name" displayName="Nummer">
 					<![CDATA[ +Nr ]]>
 				</pps:order>
