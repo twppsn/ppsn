@@ -200,7 +200,7 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		private ItemsControl ParentItemControl { get { return ItemsControl.ItemsControlFromItemContainer(this); } }
+		private ItemsControl ParentItemControl => ItemsControl.ItemsControlFromItemContainer(this);
 
 		private PpsTreeListView ParentTreeView
 		{
