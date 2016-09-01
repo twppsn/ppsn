@@ -10,9 +10,10 @@ Vorlage für ein Skript nach der Bereitstellung
 --------------------------------------------------------------------------------------
 */
 
-DECLARE @data int = 1;
+DECLARE @data int = 0;
 
 IF @data = 1
+BEGIN
 BEGIN TRANSACTION
 SET IDENTITY_INSERT [dbo].[User] ON
 INSERT INTO [dbo].[User] (Id, Login, Security, LoginVersion) VALUES (1, 'TECWARE\Stein', 'desSys;Chef',3)
@@ -101,7 +102,7 @@ ALTER TABLE [dbo].[Objk]
 ALTER TABLE [dbo].[Objk]
     ADD CONSTRAINT [fkObjkObjrHeadId] FOREIGN KEY ([HeadRevId]) REFERENCES [dbo].[Objr] ([Id])
 COMMIT TRANSACTION
-
+END
 
 /*BEGIN
 	DELETE FROM dbo.Kont;

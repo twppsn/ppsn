@@ -463,7 +463,7 @@ namespace TecWare.PPSn.Server.Data
 			// add own scripts
 			if (clientScripts != null && clientScripts.Length > 0)
 				collectedClientScripts.AddRange(clientScripts);
-			clientScripts = clientScripts.ToArray();
+			clientScripts = collectedClientScripts.ToArray();
 
 			// resolve tables
 			 base.EndInit();

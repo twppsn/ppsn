@@ -3,12 +3,15 @@
 	
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Resources/Colors.xaml" />
-		<ResourceDictionary Source="Resources/Styles/Button.xaml" />
+        <ResourceDictionary Source="Resources/Dimensions.xaml" />
+        <ResourceDictionary Source="Resources/Styles/Button.xaml" />
 		<ResourceDictionary Source="Resources/Styles/Label.xaml" />
         <ResourceDictionary Source="Resources/Styles/UndoManagerListBox.xaml" />
         <ResourceDictionary Source="Resources/Styles/ToolBar.xaml" />
         <ResourceDictionary Source="Resources/Styles/TabControl.xaml" />
         <ResourceDictionary Source="Resources/Styles/TextBox.xaml" />
+        <ResourceDictionary Source="Resources/Styles/TemplateTextBox.xaml" />
         <ResourceDictionary Source="Resources/Styles/TreeView.xaml" />
+        <ResourceDictionary Source="Resources/Styles/Expander.xaml" />
     </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>

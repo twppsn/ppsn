@@ -17,6 +17,7 @@
     <Color x:Key="PPSnWindowInActiveGlowColor">#60728C</Color>
 
     <SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="{StaticResource PPSnAccentColor}" />
+    <SolidColorBrush x:Key="PPSnWindowDisabledForegroundBrush" Color="{StaticResource PPSnAccentColor}" Opacity="0.35" />
     <SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="{StaticResource PPSnDesktopColor}" />
     <SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="#007ACC" />
     <SolidColorBrush x:Key="PPSnMarkerBrush" Color="{StaticResource PPSnAccentColor1}"/>

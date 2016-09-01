@@ -86,6 +86,10 @@
     <Build Include="Tables\dbo\Land.sql" />
     <Build Include="Tables\dbo\Plzd.sql" />
     <Build Include="Tables\dbo\Kgrp.sql" />
+    <Build Include="Tables\sds\Auko.sql" />
+    <Build Include="Tables\sds\Aupo.sql" />
+    <Build Include="Tables\sds\Anko.sql" />
+    <Build Include="Tables\sds\Anpo.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="PPSn03.publish.xml" />

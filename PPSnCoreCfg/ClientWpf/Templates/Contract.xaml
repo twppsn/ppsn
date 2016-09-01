@@ -1,0 +1,16 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<ResourceDictionary.MergedDictionaries>
+		<ResourceDictionary Source="..\Default.xaml" />
+	</ResourceDictionary.MergedDictionaries>
+
+	<DataTemplate x:Key="sdsContract,,100">
+		<!--  crmContacts,dbo.contacts,100 -->
+		<StackPanel Orientation="Horizontal">
+			<TextBlock Text="Auftrag-Nr.: "/>
+			<TextBlock Text="{Binding Nr}" />
+		</StackPanel>
+	</DataTemplate>
+
+</ResourceDictionary>
