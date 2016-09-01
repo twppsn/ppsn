@@ -53,7 +53,7 @@ namespace TecWare.PPSn
 
 		private readonly SQLiteConnection localStore;   // local datastore
 		private readonly Uri baseUri;                   // internal uri for this datastore
-		private bool isOnline = false;                  // is there a only connection
+		private bool isOnline = false;                  // is there an online connection
 
 		private readonly BaseWebRequest request;
 
