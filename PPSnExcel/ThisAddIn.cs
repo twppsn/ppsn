@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.Office.Tools.Excel;
+using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn;
@@ -61,11 +62,23 @@ namespace PPSnExcel
 
 		public T RunUISynchron<T>(Task<T> task)
 		{
+			// QD
+			while (!task.IsCompleted)
+			{
+				System.Windows.Forms.Application.DoEvents();
+				Thread.Sleep(100);
+			}
 			return task.Result;
 		} // proc RunUISynchron
 
 		public void RunUISynchron(Task task)
 		{
+			// QD
+			while (!task.IsCompleted)
+			{
+				System.Windows.Forms.Application.DoEvents();
+				Thread.Sleep(100);
+			}
 			task.Wait();
 		} // proc RunUISynchron
 
@@ -86,17 +99,17 @@ namespace PPSnExcel
 			var columns = new List<KeyValuePair<string, Type>>();
 			var rows = new List<XElement>();
 			#region -- get columns and rows --
-			using (var e = environment.Request.CreateViewDataReader("remote/?action=viewget&v=test").GetEnumerator())
+			using (var e = environment.Request.CreateViewDataReader("remote/?action=viewget&v=dbo.objects").GetEnumerator())
 			{
 				if (e.MoveNext())
 				{
-					for (var i = 0; i < e.Current.ColumnCount; i++)
+					for (var i = 0; i < e.Current.Columns.Count; i++)
 						columns.Add(new KeyValuePair<string, Type>(e.Current.Columns[i].Name, e.Current.Columns[i].DataType));
 
 					do
 					{
 						var row = new XElement("r");
-						for (var i = 0; i < e.Current.ColumnCount; i++)
+						for (var i = 0; i < e.Current.Columns.Count; i++)
 						{
 							if (e.Current[i] != null)
 							{
