@@ -654,6 +654,7 @@
 						<xs:element ref="pps:wpf" minOccurs="0" maxOccurs="1" />
 						<xs:element ref="pps:register" minOccurs="0" maxOccurs="unbounded" />
 						<xs:element ref="pps:document" minOccurs="0" maxOccurs="unbounded" />
+						<xs:element ref="pps:package" minOccurs="0" maxOccurs="unbounded" />
 					</xs:sequence>
 					<xs:attribute name="mainDataSource" type="xs:string" use="optional">
 						<xs:annotation>
