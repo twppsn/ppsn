@@ -16,6 +16,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -32,6 +33,13 @@ using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn.Server.Wpf
 {
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public interface IWpfClientApplicationFileProvider
+	{
+		IEnumerable<PpsApplicationFileItem> GetApplicationFiles();
+	} // IWpfClientApplicationFileProvider
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class WpfClientItem : DEConfigItem
@@ -424,12 +432,26 @@ namespace TecWare.PPSn.Server.Wpf
 		private readonly PpsApplication application;
 
 		private ParsedXamlFile defaultTheme = null;
+		private List<PpsApplicationFileItem> scriptAddedFiles = new List<PpsApplicationFileItem>();
+
+		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		public WpfClientItem(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
 			this.application = sp.GetService<PpsApplication>(true);
+
+			sp.GetService<IServiceContainer>(true).AddService(typeof(WpfClientItem), this);
 		} // ctor
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+				this.GetService<IServiceContainer>(true).RemoveService(typeof(WpfClientItem));
+			base.Dispose(disposing);
+		} // proc Dispose
+
+		#endregion
 
 		#region -- LoadDocument -----------------------------------------------------------
 
@@ -599,12 +621,14 @@ namespace TecWare.PPSn.Server.Wpf
 					continue;
 				var virtualPath = x.GetAttribute("virtualPath", String.Empty) + "/";
 
-				if (relativePath.StartsWith(virtualPath))
+				if (virtualPath == "/" || relativePath.StartsWith(virtualPath))
 				{
 					// replate the slashes
-					relativePath = relativePath.Substring(virtualPath.Length).Replace('/', '\\');
+					var relativeLocalPath = virtualPath == "/" ?
+						relativePath.Replace('/', '\\') :
+						relativePath.Substring(virtualPath.Length).Replace('/', '\\');
 
-					var tmp = Path.Combine(directoryPath, relativePath);
+					var tmp = Path.Combine(directoryPath, relativeLocalPath);
 					if (File.Exists(tmp))
 					{
 						fullPath = tmp;
@@ -791,6 +815,18 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#region -- Client synchronisation -------------------------------------------------
 
+		public void AddApplicationFileItem(string path, long length, DateTime lastWriteTime)
+		{
+			lock (scriptAddedFiles)
+			{
+				var index = scriptAddedFiles.FindIndex(c => c.Path == path);
+				if (index == -1)
+					scriptAddedFiles.Add(new PpsApplicationFileItem(path, length, lastWriteTime));
+				else
+					scriptAddedFiles[index] = new PpsApplicationFileItem(path, length, lastWriteTime);
+			}
+		} // proc AddApplicationFileItem
+
 		private IEnumerable<PpsApplicationFileItem> GetApplicationFileList(IPpsPrivateDataContext privateUserData)
 		{
 			var basePath = this.Name;
@@ -805,10 +841,17 @@ namespace TecWare.PPSn.Server.Wpf
 			yield return new PpsApplicationFileItem(basePath + "/templates.xaml", -1, DateTime.MinValue);
 
 			// schemas from application/documents
-			foreach (var c in application.CollectChildren<PpsDocument>())
+			foreach (var c in application.CollectChildren<IWpfClientApplicationFileProvider>())
 			{
-				foreach (var f in c.GetClientFiles(c.Name))
+				foreach (var f in c.GetApplicationFiles())
 					yield return f;
+			}
+
+			// add script files
+			lock (scriptAddedFiles)
+			{
+				foreach (var c in scriptAddedFiles)
+					yield return c;
 			}
 
 			// theme, wpfWpfSource

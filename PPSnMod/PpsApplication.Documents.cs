@@ -29,6 +29,7 @@ using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
+using TecWare.PPSn.Server.Wpf;
 
 namespace TecWare.PPSn.Server
 {
@@ -36,7 +37,7 @@ namespace TecWare.PPSn.Server
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsDocument : DEConfigItem
+	public sealed class PpsDocument : DEConfigItem, IWpfClientApplicationFileProvider
 	{
 		private readonly PpsApplication application;
 
@@ -416,12 +417,9 @@ namespace TecWare.PPSn.Server
 			throw new NotImplementedException();
 		} // proc HttpExecuteAction
 
-		public IEnumerable<PpsApplicationFileItem> GetClientFiles(string baseUri)
+		IEnumerable<PpsApplicationFileItem> IWpfClientApplicationFileProvider.GetApplicationFiles()
 		{
-			if (String.IsNullOrEmpty(baseUri))
-				baseUri = "";
-			else if (baseUri[baseUri.Length - 1] != '/')
-				baseUri += '/';
+			var baseUri = Name + '/';
 
 			// schema
 			yield return new PpsApplicationFileItem(baseUri + "schema.xml", -1, datasetDefinition.ConfigurationStamp);
@@ -433,7 +431,7 @@ namespace TecWare.PPSn.Server
 				if (fi.Exists)
 					yield return new PpsApplicationFileItem(baseUri + fi.Name, fi.Length, fi.LastWriteTimeUtc);
 			}
-		} // func GetClientFiles
+		} // func GetApplicationFiles
 
 		private bool GetDatasetResourceFile(string relativeSubPath, out FileInfo fi)
 		{
@@ -454,23 +452,7 @@ namespace TecWare.PPSn.Server
 			FileInfo fi;
 			if (r.RelativeSubPath == "schema.xml")
 			{
-				r.SetLastModified(datasetDefinition.ConfigurationStamp);
-
-				r.WriteContent(() =>
-					{
-						var xSchema = new XElement("schema");
-						datasetDefinition.WriteSchema(xSchema);
-
-						var dst = new MemoryStream();
-						var xmlSettings = Procs.XmlWriterSettings;
-						xmlSettings.CloseOutput = false;
-						using (var xml = XmlWriter.Create(dst, xmlSettings))
-							xSchema.WriteTo(xml);
-
-						dst.Position = 0;
-						return dst;
-					}, ConfigPath + "/schema.xml", MimeTypes.Text.Xml
-				);
+				datasetDefinition.WriteToDEContext(r, ConfigPath + "/schema.xml");
 				return true;
 			}
 			else if (GetDatasetResourceFile(r.RelativeSubPath, out fi))

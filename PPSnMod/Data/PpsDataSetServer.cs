@@ -19,8 +19,10 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
@@ -511,6 +513,27 @@ namespace TecWare.PPSn.Server.Data
 				t.WriteSchema(xSchema);
 		} // func WriteSchema
 
+		public void WriteToDEContext(IDEContext r, string cacheId)
+		{
+			r.SetLastModified(ConfigurationStamp);
+
+			r.WriteContent(() =>
+				{
+					var xSchema = new XElement("schema");
+					WriteSchema(xSchema);
+
+					var dst = new MemoryStream();
+					var xmlSettings = Procs.XmlWriterSettings;
+					xmlSettings.CloseOutput = false;
+					using (var xml = XmlWriter.Create(dst, xmlSettings))
+						xSchema.WriteTo(xml);
+
+					dst.Position = 0;
+					return dst;
+				}, cacheId, MimeTypes.Text.Xml
+			);
+		} // proc WriteToDEContext
+		
 		public string Name => name;
 		public override PpsDataSetMetaCollection Meta => metaInfo;
 		public PpsApplication Application => application;

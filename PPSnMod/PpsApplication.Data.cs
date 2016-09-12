@@ -645,6 +645,7 @@ namespace TecWare.PPSn.Server
 		public PpsDataSelector GetViewDefinitionSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
 			=> new PpsGenericSelector<PpsViewDescription>(dataSource, "sys.views", GetViewDefinitions());
 
+		[LuaMember(nameof(GetDataSetDefinition))]
 		public PpsDataSetServerDefinition GetDataSetDefinition(string name, bool throwException = true)
 		{
 			lock (datasetDefinitions)

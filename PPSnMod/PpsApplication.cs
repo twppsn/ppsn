@@ -20,6 +20,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Server.Http;
@@ -201,6 +202,10 @@ namespace TecWare.PPSn.Server
 		/// <returns></returns>
 		public bool? WaitForInitializationProcess(int timeout = -1)
 			=> initializationProcess.Wait(timeout) ? new bool?(isInitializedSuccessful) : null;
+
+		[LuaMember(nameof(RegisterInitializationAction))]
+		public void RegisterInitializationAction(int order, string status, Action task)
+			=> RegisterInitializationTask(order, status, () => Task.Run(task));
 
 		public void RegisterInitializationTask(int order, string status, Func<Task> task)
 		{
