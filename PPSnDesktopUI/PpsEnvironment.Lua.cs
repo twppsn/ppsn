@@ -155,8 +155,9 @@ namespace TecWare.PPSn
 		{
 			lock (task)
 			{
-				waitInUIThread = parent.Dispatcher.Thread == Thread.CurrentThread;
 				task.Wait();
+
+				waitInUIThread = parent.Dispatcher.Thread == Thread.CurrentThread;
 
 				// fetch ui continue
 				if (waitInUIThread && continueUI.Count > 0)
@@ -321,7 +322,7 @@ namespace TecWare.PPSn
 		} // proc LuaPrint
 
 		private static Task<LuaResult> ConvertToLuaResultTask<T>(Task<T> task, CancellationToken cancellationToken)
-			=> task.ContinueWith(_ => new LuaResult(_), cancellationToken);
+			=> task.ContinueWith(_ => new LuaResult(_.Result), cancellationToken);
 
 		public static PpsLuaTask RunTask(IPpsLuaTaskParent parent, object func, CancellationToken cancellationToken , params object[] args)
 		{
@@ -394,8 +395,7 @@ namespace TecWare.PPSn
 		#endregion
 
 		private readonly static MethodInfo convertToLuaResultTask;
-
-
+		
 		static PpsEnvironment()
 		{
 			convertToLuaResultTask = typeof(PpsEnvironment).GetMethod(nameof(ConvertToLuaResultTask), BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.InvokeMethod | BindingFlags.Static);

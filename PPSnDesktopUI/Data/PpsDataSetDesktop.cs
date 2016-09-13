@@ -91,23 +91,9 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- interface IPpsActiveDataSetCollection ------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public interface IPpsActiveDataSetCollection : IReadOnlyCollection<PpsDataSetDesktop>
-	{
-		/// <summary>Returns a currenty opened dataset.</summary>
-		/// <param name="id">Id of the requested dataset.</param>
-		/// <returns><c>null</c> or the active dataset.</returns>
-		PpsDataSetDesktop this[PpsDataSetId id] { get; }
-	} // interface IPpsActiveDataSetCollection
-
-	#endregion
-
 	#region -- interface IPpsActiveDataSets ---------------------------------------------
 
-	public interface IPpsActiveDataSets
+	public interface IPpsActiveDataSets : IReadOnlyCollection<PpsDataSetDesktop>
 	{
 		/// <summary>Register a schema source.</summary>
 		/// <param name="schema">Name of the schema.</param>
@@ -115,6 +101,9 @@ namespace TecWare.PPSn.Data
 		/// <param name="datasetDefinitionType"></param>
 		/// <returns><c>true</c>, if the registration is changed.</returns>
 		bool RegisterDataSetSchema(string schema, string uri, Type datasetDefinitionType = null);
+		/// <summary></summary>
+		/// <param name="schema"></param>
+		void UnregisterDataSetSchema(string schema);
 		/// <summary>Returns the schema source.</summary>
 		/// <param name="schema">Name of the schema.</param>
 		/// <returns></returns>
@@ -131,10 +120,14 @@ namespace TecWare.PPSn.Data
 		/// <returns>Registered dataset.</returns>
 		Task<PpsDataSetDesktop> CreateEmptyDataSetAsync(string schema, PpsDataSetId id);
 
-		/// <summary>Returns a list with all active datasets.</summary>
-		IPpsActiveDataSetCollection ActiveDataSets { get; }
 		/// <summary>Returns a list of registered definitions.</summary>
 		IEnumerable<string> KnownSchemas { get; }
+
+		/// <summary>Returns a currenty opened dataset.</summary>
+		/// <param name="id">Id of the requested dataset.</param>
+		/// <returns><c>null</c> or the active dataset.</returns>
+		PpsDataSetDesktop this[PpsDataSetId id] { get; }
+
 	} // interface IPpsActiveDataSets
 
 	#endregion

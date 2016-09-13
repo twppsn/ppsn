@@ -34,7 +34,7 @@ namespace TecWare.PPSn
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Extension for the dataset model.</summary>
-	public interface IPpsActiveDocuments : IPpsActiveDataSets
+	public interface IPpsActiveDocuments
 	{
 		/// <summary>Create and initialize a new document.</summary>
 		/// <param name="schema">Schema of the document.</param>
@@ -261,7 +261,7 @@ namespace TecWare.PPSn
 				throw new ArgumentNullException("@source");
 
 			// update dataset definitions
-			RegisterDataSetSchema(schema, sourceUri, typeof(PpsDocumentDefinition));
+			ActiveDataSets.RegisterDataSetSchema(schema, sourceUri, typeof(PpsDocumentDefinition));
 
 			// update pane hint
 			if (!String.IsNullOrEmpty(paneUri))
@@ -276,10 +276,10 @@ namespace TecWare.PPSn
 
 		private void ClearDocumentDefinitionInfo(List<string> updatedDocuments)
 		{
-			foreach (var k in KnownSchemas) // is already an array
+			foreach (var k in ActiveDataSets.KnownSchemas) // is already an array
 			{
 				if (updatedDocuments.IndexOf(k) == -1)
-					UnregisterDataSetSchema(k);
+					ActiveDataSets.UnregisterDataSetSchema(k);
 			}
 		} // proc ClearDocumentDefinitionInfo
 
@@ -447,7 +447,7 @@ namespace TecWare.PPSn
 
 		private async Task<PpsDocument> CreateDocumentInternalAsync(string schema, PpsDataSetId documentId)
 		{
-			var def = await GetDataSetDefinition(schema) as PpsDocumentDefinition;
+			var def = await ActiveDataSets.GetDataSetDefinition(schema) as PpsDocumentDefinition;
 			if (def == null)
 				throw new ArgumentNullException("schema", $"{schema} could not initialized definition.");
 
@@ -511,7 +511,7 @@ namespace TecWare.PPSn
 				return Task.FromResult<string>(paneUri);
 
 			// read the schema meta data
-			return GetDataSetDefinition(schema)
+			return ActiveDataSets.GetDataSetDefinition(schema)
 				.ContinueWith(t => t.Result == null ? null : t.Result.Meta.GetProperty<string>(PpsDataSetMetaData.DefaultPaneUri, null));
 		} // func GetDocumentDefaultPaneAsync
 	} // class PpsMainEnvironment

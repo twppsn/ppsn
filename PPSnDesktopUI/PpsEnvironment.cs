@@ -452,6 +452,7 @@ namespace TecWare.PPSn
 				throw new ArgumentNullException("mainResources");
 
 			this.info = info;
+			this.activeDataSets = new PpsActiveDataSetsImplementation(this);
 
 			// create ui stuff
 			this.mainResources = mainResources;

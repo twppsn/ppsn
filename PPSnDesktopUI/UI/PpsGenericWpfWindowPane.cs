@@ -49,6 +49,11 @@ namespace TecWare.PPSn.UI
 
 		private LuaTable arguments; // arguments
 
+		protected override void OnPropertyChanged(string sPropertyName)
+		{
+			base.OnPropertyChanged(sPropertyName);
+		}
+
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		public PpsGenericWpfWindowPane(PpsEnvironment environment)
