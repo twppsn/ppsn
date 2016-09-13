@@ -530,39 +530,212 @@ namespace TecWare.PPSn.Data
 
 		#region -- Collection Changed -----------------------------------------------------
 
+		#region -- class PpsDataRowChangedEvent -------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private abstract class PpsDataRowChangedEvent : PpsDataChangedEvent
+		{
+			private readonly PpsDataTable table;
+			private readonly PpsDataRow row;
+
+			public PpsDataRowChangedEvent(PpsDataTable table, PpsDataRow row)
+			{
+				this.table = table;
+				this.row = row;
+			} // ctor
+
+			public PpsDataTable Table => table;
+			public PpsDataRow Row => row;
+		} // class PpsDataRowChangedEvent
+
+		#endregion
+
+		#region -- class PpsDataRowAddedChangedEvent --------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private class PpsDataRowAddedChangedEvent : PpsDataRowChangedEvent
+		{
+			public PpsDataRowAddedChangedEvent(PpsDataTable table, PpsDataRow row)
+				: base(table, row)
+			{
+			} // ctor
+
+			public override void InvokeEvent()
+			{
+				Table.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, Row, Table.currentRows.IndexOf(Row)));
+				Table.dataset.OnTableRowAdded(Table, Row);
+			} // proc InvokeEvent
+			
+			public override bool Same(PpsDataChangedEvent ev)
+			{
+				if (ev == this)
+					return true;
+				else
+				{
+					var other = ev as PpsDataRowAddedChangedEvent;
+					return other != null ?
+						other.Row == Row :
+						false;
+				}
+			} // func Same
+
+			public override PpsDataChangeLevel Level => PpsDataChangeLevel.RowAdded;
+		} // class PpsDataRowAddedChangedEvent
+
+		#endregion
+
+		#region -- class PpsDataRowRemovedChangedEvent ------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class PpsDataRowRemovedChangedEvent : PpsDataRowChangedEvent
+		{
+			public PpsDataRowRemovedChangedEvent(PpsDataTable table, PpsDataRow row)
+				: base(table, row)
+			{
+			} // ctor
+
+			public override void InvokeEvent()
+			{
+				Table.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, Row));
+				Table.dataset.OnTableRowDeleted(Table, Row);
+			} // proc InvokeEvent
+
+			public override bool Same(PpsDataChangedEvent ev)
+			{
+				if (ev == this)
+					return true;
+				else
+				{
+					var other = ev as PpsDataRowRemovedChangedEvent;
+					return other != null ?
+						other.Row == Row :
+						false;
+				}
+			} // func Same
+
+			public override PpsDataChangeLevel Level => PpsDataChangeLevel.RowRemoved;
+		} // class PpsDataRowRemovedChangedEvent
+
+		#endregion
+
+		#region -- class PpsDataRowModifiedChangedEvent -----------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class PpsDataRowModifiedChangedEvent : PpsDataRowChangedEvent
+		{
+			private readonly int columnIndex;
+			private readonly object oldValue;
+			private readonly object newValue;
+
+			public PpsDataRowModifiedChangedEvent(PpsDataTable table, PpsDataRow row, int columnIndex, object oldValue, object newValue)
+				: base(table, row)
+			{
+				this.columnIndex = columnIndex;
+				this.oldValue = oldValue;
+				this.newValue = newValue;
+			} // ctor
+
+			public override void InvokeEvent()
+			{
+				Table.dataset.OnTableRowChanged(Table, Row);
+				Table.InvokeColumnValueChanged(new ColumnValueChangedEventArgs(Row, columnIndex, oldValue, newValue));
+			} // proc InvokeEvent
+
+			public override bool Same(PpsDataChangedEvent ev)
+			{
+				if (ev == this)
+					return true;
+				else
+				{
+					var other = ev as PpsDataRowModifiedChangedEvent;
+					return other != null ?
+						other.Row == Row && other.columnIndex == columnIndex && Object.Equals(other.newValue, newValue) :
+						false;
+				}
+			} // func Same
+
+			public override PpsDataChangeLevel Level => PpsDataChangeLevel.RowModified;
+		} // class PpsDataRowModifiedChangedEvent
+
+		#endregion
+
+		#region -- class PpsDataTableChangedEvent -----------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class PpsDataTableChangedEvent : PpsDataChangedEvent
+		{
+			private readonly PpsDataTable table;
+
+			public PpsDataTableChangedEvent(PpsDataTable table)
+			{
+				this.table = table;
+			} // ctor
+
+			public override void InvokeEvent()
+			{
+				table.dataset.OnTableChanged(table);
+			} // proc InvokeEvent
+
+			public override bool Same(PpsDataChangedEvent ev)
+			{
+				if (ev == this)
+					return true;
+				else
+				{
+					var other = ev as PpsDataTableChangedEvent;
+					return other != null ?
+						other.table == table :
+						false;
+				}
+			} // func Same
+
+			public override PpsDataChangeLevel Level => PpsDataChangeLevel.TableModifed;
+		} // class PpsDataTableChangedEvent
+
+		#endregion
+
 		/// <summary>Notifies if a rows is added.</summary>
 		/// <param name="row">The new row</param>
 		protected virtual void OnRowAdded(PpsDataRow row)
 		{
-			dataset.OnTableRowAdded(this, row);
-			OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, row, currentRows.IndexOf(row)));
+			dataset.ExecuteEvent(new PpsDataRowAddedChangedEvent(this, row));
+			OnTableChanged();
 		} // proc OnRowAdded
 
 		/// <summary>Notifies if a row is removed.</summary>
 		/// <param name="row"></param>
 		protected virtual void OnRowRemoved(PpsDataRow row)
 		{
-			dataset.OnTableRowDeleted(this, row);
-			OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, row));
-		} // proc OnRowRemoved
+			dataset.ExecuteEvent(new PpsDataRowRemovedChangedEvent(this, row));
+			OnTableChanged();
+		} // proc OnRowModified
 
-		/// <summary>Notifies if value is changed.</summary>
+		/// <summary>Notifies if a row is mnodified.</summary>
 		/// <param name="row"></param>
-		/// <param name="columnIndex"></param>
-		/// <param name="oldValue"></param>
-		/// <param name="value"></param>
-		protected internal virtual void OnColumnValueChanged(PpsDataRow row, int columnIndex, object oldValue, object value)
+		protected internal virtual void OnRowModified(PpsDataRow row, int columnIndex, object oldValue, object newValue)
 		{
-			dataset.OnTableColumnValueChanged(row, columnIndex, oldValue, value);
-			ColumnValueChanged?.Invoke(this, new ColumnValueChangedEventArgs(row, columnIndex, oldValue, value));
-		} // proc OnColumnValueChanged
+			dataset.ExecuteEvent(new PpsDataRowModifiedChangedEvent(this, row, columnIndex, oldValue, newValue));
+			OnTableChanged();
+		} // proc OnDataChanged
+
+		private void InvokeColumnValueChanged(ColumnValueChangedEventArgs e)
+			=> ColumnValueChanged?.Invoke(this, e);
+
+		protected virtual void OnTableChanged()
+		{
+			dataset.ExecuteEvent(new PpsDataTableChangedEvent(this));
+			dataset.ExecuteDataChanged();
+		} // proc OnTableChanged
 
 		/// <summary>Notifies if the collection of current rows is changed.</summary>
 		/// <param name="e"></param>
 		protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
-		{
-			CollectionChanged?.Invoke(this, e);
-		} // proc OnCollectionChanged
+			=> CollectionChanged?.Invoke(this, e);
 
 		#endregion
 

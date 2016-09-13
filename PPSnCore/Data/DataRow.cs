@@ -418,13 +418,22 @@ namespace TecWare.PPSn.Data
 				}
 				set
 				{
-					// Convert the value to the expected type
-					value = Procs.ChangeType(value, Row.table.TableDefinition.Columns[columnIndex].DataType);
+					var columnInfo = Row.Table.Columns[columnIndex];
+					if (columnInfo.IsExtended)
+					{
+						// set the value through the interface
+						Row.SetCurrentValue(columnIndex, Row.originalValues[columnIndex], value);
+					}
+					else
+					{
+						// Convert the value to the expected type
+						value = Procs.ChangeType(value, columnInfo.DataType);
 
-					// Is the value changed
-					object oldValue = this[columnIndex];
-					if (!Object.Equals(oldValue, value))
-						Row.SetCurrentValue(columnIndex, oldValue, value);
+						// Is the value changed
+						object oldValue = this[columnIndex];
+						if (!Object.Equals(oldValue, value))
+							Row.SetCurrentValue(columnIndex, oldValue, value);
+					}
 				}
 			} // prop CurrentRowValues
 
@@ -492,14 +501,14 @@ namespace TecWare.PPSn.Data
 
 			for (var i = 0; i < length; i++)
 			{
-				var typeTo = table.Columns[i].DataType;
+				var columnInfo = table.Columns[i];
 
 				// set the originalValue
-				var newOriginalValue = originalValues[i] == null ? null : Procs.ChangeType(originalValues[i], typeTo);
+				object newOriginalValue = GetConvertedValue(columnInfo, originalValues[i]);
 				table.Columns[i].OnColumnValueChanging(this, PpsDataColumnValueChangingFlag.Initial, null, ref newOriginalValue);
 
 				// get the new value
-				var newCurrentValue = currentValues[i] == null ? NotSet : (Procs.ChangeType(currentValues[i], typeTo) ?? NotSet);
+				var newCurrentValue = currentValues[i] == null ? NotSet : (GetConvertedValue(columnInfo, currentValues[i]) ?? NotSet);
 				if (newCurrentValue != NotSet)
 					table.Columns[i].OnColumnValueChanging(this, PpsDataColumnValueChangingFlag.SetValue, null, ref newCurrentValue);
 
@@ -508,6 +517,13 @@ namespace TecWare.PPSn.Data
 				this.currentValues[i] = newCurrentValue;
 			}
 		} // ctor
+
+		private static object GetConvertedValue(PpsDataColumnDefinition columnInfo, object value)
+		{
+			if (!columnInfo.IsExtended && value != null) // fix data type
+				value = Procs.ChangeType(value, columnInfo.DataType);
+			return value;
+		} // func GetConvertedValue
 
 		internal PpsDataRow(PpsDataTable table, XElement xRow)
 			: this(table)
@@ -549,14 +565,33 @@ namespace TecWare.PPSn.Data
 				if (column == null)
 					continue; // ignore unknown rows
 
-				var xOriginal = xValue.Element(xnDataRowValueOriginal);
-				var xCurrent = xValue.Element(xnDataRowValueCurrent);
-
-				// load the values
 				var index = column.Index;
-				var valueType = column.DataType;
-				originalValues[index] = xOriginal == null || xOriginal.IsEmpty ? null : Procs.ChangeType(xOriginal.Value, valueType);
-				currentValues[index] = xCurrent == null ? NotSet : xCurrent.IsEmpty ? null : Procs.ChangeType(xCurrent.Value, valueType);
+
+				if (column.IsExtended)
+				{
+					// create the extended value
+					object v = null;
+					column.OnColumnValueChanging(this, PpsDataColumnValueChangingFlag.Initial, null, ref v);
+					var extendedValue = (IPpsDataRowExtendedValue)v;
+
+					// set the values
+					originalValues[index] = v;
+					currentValues[index] = NotSet;
+
+					// read the extend values
+					extendedValue.CoreData = xValue;
+				}
+				else
+				{
+					// load the values
+					var valueType = column.DataType;
+
+					var xOriginal = xValue.Element(xnDataRowValueOriginal);
+					var xCurrent = xValue.Element(xnDataRowValueCurrent);
+
+					originalValues[index] = xOriginal == null || xOriginal.IsEmpty ? null : Procs.ChangeType(xOriginal.Value, valueType);
+					currentValues[index] = xCurrent == null ? NotSet : xCurrent.IsEmpty ? null : Procs.ChangeType(xCurrent.Value, valueType);
+				}
 
 				// notify
 				var newValue = this[index];
@@ -672,13 +707,22 @@ namespace TecWare.PPSn.Data
 			// Werte
 			for (int i = 0; i < originalValues.Length; i++)
 			{
-				x.WriteStartElement(Table.TableDefinition.Columns[i].Name);
+				var columnInfo = Table.TableDefinition.Columns[i];
+				x.WriteStartElement(columnInfo.Name);
 
-				if (originalValues[i] != null)
-					WriteValue(x, xnDataRowValueOriginal, originalValues[i]);
-				if (rowState != PpsDataRowState.Deleted && currentValues[i] != NotSet)
-					WriteValue(x, xnDataRowValueCurrent, currentValues[i]);
-
+				if (columnInfo.IsExtended)
+				{
+					var extendedValue = (IPpsDataRowExtendedValue)originalValues[i];
+					if (!extendedValue.IsNull)
+						extendedValue.CoreData.WriteTo(x);
+				}
+				else
+				{
+					if (originalValues[i] != null)
+						WriteValue(x, xnDataRowValueOriginal, originalValues[i]);
+					if (rowState != PpsDataRowState.Deleted && currentValues[i] != NotSet)
+						WriteValue(x, xnDataRowValueCurrent, currentValues[i]);
+				}
 				x.WriteEndElement();
 			}
 		} // proc Write
@@ -711,13 +755,16 @@ namespace TecWare.PPSn.Data
 			{
 				if (column.OnColumnValueChanging(this, PpsDataColumnValueChangingFlag.SetValue, oldValue, ref value)) // notify the value set, e.g. to child tables, or unique indizes
 				{
-					// change the value
-					var realCurrentValue = currentValues[columnIndex];
-					currentValues[columnIndex] = value;
+					if (!column.IsExtended)
+					{
+						// change the value
+						var realCurrentValue = currentValues[columnIndex];
+						currentValues[columnIndex] = value;
 
-					// update the undo stack
-					column.OnColumnValueChanged(this, oldValue, value);
-					undo?.Append(new PpsDataRowValueChangedItem(this, columnIndex, realCurrentValue, value));
+						// update the undo stack
+						column.OnColumnValueChanged(this, oldValue, value);
+						undo?.Append(new PpsDataRowValueChangedItem(this, columnIndex, realCurrentValue, value));
+					}
 
 					// notify the value change
 					OnValueChanged(columnIndex, oldValue, value); // Notify the value change 
@@ -740,12 +787,62 @@ namespace TecWare.PPSn.Data
 				RowState = PpsDataRowState.Modified;
 			}
 
-			table.OnColumnValueChanged(this, columnIndex, oldValue, value);
-			OnPropertyChanged(table.Columns[columnIndex].Name);
+			// notify the change
+			OnPropertyChanged(columnIndex, table.Columns[columnIndex].Name, oldValue, value);
 		} // proc OnValueChanged
 
-		protected virtual void OnPropertyChanged(string sPropertyName)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(sPropertyName));
+		#region -- OnPropertyChanged ------------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private class PpsDataRowPropertyChangedEvent : PpsDataChangedEvent
+		{
+			private readonly PpsDataRow row;
+			private readonly string propertyName;
+			private readonly object oldValue;
+			private readonly object newValue;
+			
+			public PpsDataRowPropertyChangedEvent(PpsDataRow row, string propertyName, object oldValue, object newValue)
+			{
+				this.row = row;
+				this.propertyName = propertyName;
+				this.oldValue = oldValue;
+				this.newValue = newValue;
+			} // ctor
+
+			public override void InvokeEvent()
+			{
+				row.table.DataSet.OnTableColumnValueChanged(row, propertyName, oldValue, newValue);
+				row.InvokePropertyChanged(propertyName);
+			} // proc InvokeEvent
+
+			public override bool Same(PpsDataChangedEvent ev)
+			{
+				if (ev == this)
+					return true;
+				else
+				{
+					var other = ev as PpsDataRowPropertyChangedEvent;
+					return other != null ? 
+						other.row == row && other.propertyName == propertyName && Object.Equals(other.newValue, newValue) :
+						false;
+				}
+			} // func Same
+
+			public override PpsDataChangeLevel Level => PpsDataChangeLevel.PropertyValue;
+		} // class PpsDataRowPropertyChangedEvent
+
+		protected virtual void OnPropertyChanged(int columnIndex, string propertyName, object oldValue, object newValue)
+		{
+			table.DataSet.ExecuteEvent(new PpsDataRowPropertyChangedEvent(this, propertyName, oldValue, newValue));
+			// mark row as modified
+			table.OnRowModified(this, columnIndex, oldValue, newValue);
+		} // proc OnPropertyChanged
+
+		private void InvokePropertyChanged(string propertyName)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+		#endregion
 
 		public bool TryGetProperty(string name, out object value)
 		{
@@ -793,8 +890,9 @@ namespace TecWare.PPSn.Data
 			{
 				if (rowState != value)
 				{
+					var oldState = rowState;
 					rowState = value;
-					OnPropertyChanged("RowState");
+					OnPropertyChanged(-1, "RowState", oldState, rowState);
 				}
 			}
 		} // prop RowState

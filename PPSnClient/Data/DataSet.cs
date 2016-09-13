@@ -47,13 +47,13 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		private readonly IPpsShell shell;
-		private readonly string type;
+		private readonly string schema;
 		private PpsDataSetMetaCollectionClient metaInfo;
 
-		public PpsDataSetDefinitionClient(IPpsShell shell, string type, XElement xSchema)
+		public PpsDataSetDefinitionClient(IPpsShell shell, string schema, XElement xSchema)
 		{
 			this.shell = shell;
-			this.type = type;
+			this.schema = schema;
 
 			// read definitions
 			foreach (XElement c in xSchema.Elements())
@@ -88,7 +88,7 @@ namespace TecWare.PPSn.Data
 		public override PpsDataSet CreateDataSet()
 			=> new PpsDataSetClient(this, shell);
 
-		public string ObjectType => type;
+		public string SchemaType => schema;
 
 		public IPpsShell Shell => shell;
 
@@ -203,7 +203,7 @@ namespace TecWare.PPSn.Data
 				// create head
 				var head = Tables["Head", true];
 				var row = head.Add();
-				row["Typ"] = ((PpsDataSetDefinitionClient)DataSetDefinition).ObjectType;
+				row["Typ"] = ((PpsDataSetDefinitionClient)DataSetDefinition).SchemaType;
 				row["Guid"] = Guid.NewGuid();
 
 				await InvokeEventHandlerAsync("OnNewAsync");
@@ -224,6 +224,8 @@ namespace TecWare.PPSn.Data
 		} // proc OnLoadedAsync
 
 		public bool IsInitialized => arguments != null;
+
+		public IPpsShell Shell => shell;
 	} // class PpsDataSetClient
 
 	#endregion

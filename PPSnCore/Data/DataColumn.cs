@@ -15,9 +15,12 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Xml.Linq;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 
@@ -53,6 +56,41 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
+	#region -- interface IPpsDataRowExtendedValue ---------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Interface that is implement on special values classes.
+	/// It represent a nested structur of values (e.g. value formulas, ...).
+	/// - Special values are instanciated per Value an will not destroyed
+	/// during the whole life time.
+	/// - If a special value is changable, it has to take care on its own.
+	/// -The changes to the undo/redo stack has to be done by the
+	/// implementation.</summary>
+	public interface IPpsDataRowExtendedValue : INotifyPropertyChanged
+	{
+		bool IsNull { get; }
+
+		/// <summary>Gets/Sets the core data of the extended value.</summary>
+		XElement CoreData { get; set; }
+	} // interface IPpsDataRowExtendedValue
+
+	#endregion
+
+	#region -- interface IPpsDataRowGenericValue ----------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Does this extended value supports a generic setter</summary>
+	public interface IPpsDataRowGenericValue : IPpsDataRowExtendedValue
+	{
+		/// <summary>Generic value</summary>
+		/// <param name="inital"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		bool SetGenericValue(bool inital, object value);
+	} //	interface IPpsDataRowGenericValue
+
+	#endregion
+	
 	#region -- class PpsDataColumnDefinition --------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -141,7 +179,7 @@ namespace TecWare.PPSn.Data
 		private readonly PpsDataTableDefinition table;  // table
 		private readonly string columnName;             // Internal name of the column
 		private readonly bool isIdentity;
-
+		private readonly Lazy<bool> isExtendedValue;
 		private PpsDataTableRelationDefinition parentRelation; // relation to the parent column, the current column has a value from the parent column
 
 		protected PpsDataColumnDefinition(PpsDataTableDefinition table, PpsDataColumnDefinition clone)
@@ -149,6 +187,7 @@ namespace TecWare.PPSn.Data
 			this.table = table;
 			this.columnName = clone.columnName;
 			this.isIdentity = clone.isIdentity;
+			this.isExtendedValue = new Lazy<bool>(() => DataType.GetTypeInfo().ImplementedInterfaces.Contains(typeof(IPpsDataRowExtendedValue)));
 
 			if (clone.IsPrimaryKey)
 				table.SetPrimaryKey(this);
@@ -169,6 +208,7 @@ namespace TecWare.PPSn.Data
 			this.parentRelation = null;
 
 			this.isIdentity = isIdentity;
+			this.isExtendedValue = new Lazy<bool>(() => DataType.GetTypeInfo().ImplementedInterfaces.Contains(typeof(IPpsDataRowExtendedValue)));
 
 			if (isPrimaryKey)
 				table.SetPrimaryKey(this);
@@ -195,30 +235,50 @@ namespace TecWare.PPSn.Data
 		/// <param name="flag"></param>
 		/// <param name="oldValue"></param>
 		/// <param name="value"></param>
-		protected internal virtual bool OnColumnValueChanging(PpsDataRow row, PpsDataColumnValueChangingFlag flag, object oldValue, ref object value)
+		internal bool OnColumnValueChanging(PpsDataRow row, PpsDataColumnValueChangingFlag flag, object oldValue, ref object value)
 		{
+			var initial = false;
 			switch (flag)
 			{
 				case PpsDataColumnValueChangingFlag.SetValue:
+					var ret = true;
+
 					if (parentRelation != null) // check value contraint
 					{
 						if (!ExistsValueInParentTable(row, value))
 							throw new ArgumentOutOfRangeException($"Value '{value}' does not exist in '{parentRelation.ParentColumn.Table.Name}.{parentRelation.ParentColumn.Name}'.");
 					}
-					else if (IsPrimaryKey) // check unique
+					if (IsExtended)
+					{
+						// check for a internal interface to set a generic value
+						var v = oldValue as IPpsDataRowGenericValue;
+						if (v != null)
+						{
+							ret = v.SetGenericValue(initial, value);
+							value = oldValue; // reset old value
+						}
+						else
+							throw new NotSupportedException("It is not allowed to changed extended columns.");
+					}
+					if (IsPrimaryKey) // check unique
 					{
 						if (row.Table.FindRows(this, value).FirstOrDefault() != null)
 							throw new ArgumentOutOfRangeException($"Value '{value}' is not unique for column '{Table.Name}.{Name}'.");
 					}
-					return true;
+					return ret;
 
 				case PpsDataColumnValueChangingFlag.Initial:
 
 					if (isIdentity) // automatic value
 						value = row.Table.DataSet.GetNextId();
+					else if (IsExtended) // is extended
+						value = CreateExtendedValue(row);
 
 					if (value != null)
+					{
+						initial = true;
 						goto case PpsDataColumnValueChangingFlag.SetValue;
+					}
 
 					return true;
 
@@ -227,7 +287,45 @@ namespace TecWare.PPSn.Data
 			}
 		} // func OnColumnValueChanging
 
-		protected internal virtual void OnColumnValueChanged(PpsDataRow row, object oldValue, object value)
+		private object CreateExtendedValue(PpsDataRow row)
+		{
+			var typeInfo = DataType.GetTypeInfo();
+
+			// find the longest ctor
+			var ci = (ConstructorInfo )null;
+			var currentCtorLength = -1;
+			foreach (var cur in typeInfo.DeclaredConstructors)
+			{
+				var newCtorLength = cur.GetParameters().Length;
+				if (currentCtorLength < newCtorLength)
+				{
+					ci = cur;
+					currentCtorLength = newCtorLength;
+				}
+			}
+
+			// create the arguments array
+			var parameterInfo = ci.GetParameters();
+			var arguments = new object[parameterInfo.Length];
+			
+			for (var i = 0; i < arguments.Length; i++)
+			{
+				var parameterType = parameterInfo[i].ParameterType;
+				if (parameterType == typeof(PpsDataRow))
+					arguments[i] = row;
+				else if (parameterType == typeof(PpsDataColumnDefinition))
+					arguments[i] = this;
+				else if (parameterInfo[i].HasDefaultValue)
+					arguments[i] = parameterInfo[i].DefaultValue;
+				else
+					throw new ArgumentException("Unknown argument.");
+			}
+
+			// initialize the value
+			return ci.Invoke(arguments);
+		} // func CreateExtendedValue
+
+		internal void OnColumnValueChanged(PpsDataRow row, object oldValue, object value)
 		{
 			if (isIdentity)
 				row.Table.DataSet.UpdateNextId((long)value);
@@ -269,6 +367,8 @@ namespace TecWare.PPSn.Data
 		public bool IsPrimaryKey => table.PrimaryKey == this;
 		/// <summary></summary>
 		public bool IsIdentity => isIdentity;
+		/// <summary>Is the value in this column an extended value.</summary>
+		public bool IsExtended => isExtendedValue.Value;
 		/// <summary>Has this column a parent/child relation.</summary>
 		public bool IsRelationColumn => parentRelation != null;
 		/// <summary>Parent column for the parent child relation.</summary>

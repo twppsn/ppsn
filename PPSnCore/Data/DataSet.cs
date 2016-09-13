@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
@@ -25,6 +26,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DE.Stuff;
 using static TecWare.PPSn.Data.PpsDataHelper;
 
@@ -37,7 +39,9 @@ namespace TecWare.PPSn.Data
 	public enum PpsDataSetMetaData
 	{
 		/// <summary>Titel der Datensammlung.</summary>
-		Caption
+		Caption,
+		/// <summary>Default pane uri</summary>
+		DefaultPaneUri
 	} // enum PpsDataSetMetaData
 
 	#endregion
@@ -195,7 +199,37 @@ namespace TecWare.PPSn.Data
 	} // class PpsDataSetAutoTagDefinition
 
 	#endregion
-		
+
+	#region -- enum PpsDataChangeLevel --------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public enum PpsDataChangeLevel
+	{
+		ExtentedValue = 1,
+		PropertyValue = 2,
+		RowAdded = 3,
+		RowRemoved = 3,
+		RowModified = 4,
+		TableModifed = 5,
+		DataSetModified = 6
+	} // enum PpsDataChangeLevel
+
+	#endregion
+
+	#region -- class PpsDataChangedEvent ------------------------------------------------
+
+	public abstract class PpsDataChangedEvent
+	{
+		public abstract void InvokeEvent();
+
+		public abstract bool Same(PpsDataChangedEvent ev);
+
+		public abstract PpsDataChangeLevel Level { get; }
+	} // class PpsDataChangedEvent
+
+	#endregion
+
 	#region -- class PpsDataSetDefinition -----------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -305,7 +339,7 @@ namespace TecWare.PPSn.Data
 	} // class PpsDataSetDefinition
 
 	#endregion
-
+	
 	#region -- class PpsDataSet ---------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -509,6 +543,11 @@ namespace TecWare.PPSn.Data
 				t.Reset();
 		} // proc Reset
 
+		protected LuaResult CallDynamicFunction(string functionName, params object[] arguments)
+		{
+			return LuaResult.Empty;
+		} // func CallDynamicFunction
+
 		/// <summary>Updates to next id.</summary>
 		/// <param name="value">Value for a primary column</param>
 		public void UpdateNextId(long value)
@@ -528,17 +567,129 @@ namespace TecWare.PPSn.Data
 				return --lastPrimaryId;
 		} // func GetNextId
 
+		#region -- ExecuteEvent -----------------------------------------------------------
+
+		private bool inChanged = false;
+		private List<PpsDataChangedEvent> changedEvents = new List<PpsDataChangedEvent>();
+		/*
+		 * Sortierte Liste der Ereignisse. Idee:
+		 * Zuerst werden die Properties ausgelöst, wenn diese sich beruhigt haben started die nächste ebene.
+		 */
+
+		internal void ExecuteEvent(PpsDataChangedEvent ev)
+		{
+			if (inChanged)
+			{
+				var i = 0;
+				var length = changedEvents.Count;
+				PpsDataChangedEvent cur;
+				while (i < length && (cur = changedEvents[i]).Level <= ev.Level)
+				{
+					if (cur.Same(ev))
+						return; // same event, no add needed
+					i++;
+				}
+
+				changedEvents.Insert(i, ev);
+			}
+			else
+			{
+				inChanged = true;
+				try
+				{
+					// clear list to zero
+					changedEvents.Clear();
+
+					// invoke the event and start the loop
+					ev.InvokeEvent();
+
+					// invoke related events
+					var sw = Stopwatch.StartNew();
+					while (changedEvents.Count > 0)
+					{
+						var  cur = changedEvents[0];
+						changedEvents.RemoveAt(0);
+
+						cur.InvokeEvent();
+
+						if (sw.ElapsedMilliseconds > 1000)
+						{
+							Debug.WriteLine("PPSDataSet: StopEvent work due timeout.");
+							break;
+						}
+					}
+				}
+				finally
+				{
+					inChanged = false;
+				}
+			}
+		} // proc ExecuteEvent
+
+		#endregion
+
+		#region -- class PpsDataSetChangedEvent -------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class PpsDataSetChangedEvent : PpsDataChangedEvent
+		{
+			private readonly PpsDataSet dataset;
+
+			public PpsDataSetChangedEvent(PpsDataSet dataset)
+			{
+				this.dataset = dataset;
+			} // ctor
+
+			public override void InvokeEvent()
+				=> dataset.OnDataChanged();
+
+
+			public override bool Same(PpsDataChangedEvent ev)
+				=> true;
+
+			public override PpsDataChangeLevel Level => PpsDataChangeLevel.DataSetModified;
+		} // class PpsDataSetChangedEvent
+
+		#endregion
+
+		internal void ExecuteDataChanged()
+			=> ExecuteEvent(new PpsDataSetChangedEvent(this));
+
+		protected virtual void OnDataChanged()
+		{
+			CallDynamicFunction("OnDataChanged");
+		} // proc OnDataChanged
+
+		protected internal virtual void OnTableChanged(PpsDataTable table)
+		{
+			CallDynamicFunction("OnTableChanged", table);
+		} // proc OnTableChanged
+		
 		protected internal virtual void OnTableRowAdded(PpsDataTable table, PpsDataRow row)
 		{
+			CallDynamicFunction("OnTableRowAdded", table, row);
 		} // proc OnTableRowAdded
 
 		protected internal virtual void OnTableRowDeleted(PpsDataTable table, PpsDataRow row)
 		{
+			CallDynamicFunction("OnTableRowDeleted", table, row);
 		} // proc OnTableRowDeleted
 
-		protected internal virtual void OnTableColumnValueChanged(PpsDataRow row, int iColumnIndex, object oldValue, object value)
+		protected internal virtual void OnTableRowChanged(PpsDataTable table, PpsDataRow row)
 		{
+			CallDynamicFunction("OnTableRowChanged", table, row);
+		} // proc OnTableRowChanged
+
+		protected internal virtual void OnTableColumnValueChanged(PpsDataRow row, string propertyName, object oldValue, object value)
+		{
+			CallDynamicFunction("OnTableColumnValueChanged", row, propertyName, oldValue, value);
 		} // proc OnTableColumnValueChanged
+
+		protected internal virtual void OnTableColumnExtendedValueChanged(PpsDataRow row, int columnIndex, string propertyName, object oldValue, object value)
+		{
+			CallDynamicFunction("OnTableColumnExtendedValueChanged", row, columnIndex, oldValue, value);
+		} // proc OnTableColumnExtendedValueChanged
 
 		public virtual IEnumerable<PpsObjectTag> GetAutoTags()
 		{
