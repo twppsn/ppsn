@@ -11,6 +11,7 @@ using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Threading;
 using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
@@ -45,6 +46,10 @@ namespace TecWare.PPSn
 		private readonly DispatcherTimer idleTimer;
 		private readonly List<WeakReference<IPpsIdleAction>> idleActions = new List<WeakReference<IPpsIdleAction>>();
 		private readonly PreProcessInputEventHandler preProcessInputEventHandler;
+
+		public PpsEnvironment(Lua lua) : base(lua)
+		{
+		}
 
 		private async Task<Tuple<XDocument, DateTime>> GetXmlDocumentAsync(string path, bool isXaml, bool isOptional)
 		{

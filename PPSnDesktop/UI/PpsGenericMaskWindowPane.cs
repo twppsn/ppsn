@@ -38,9 +38,9 @@ namespace TecWare.PPSn.UI
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Inhalt, welcher aus einem dynamisch geladenen Xaml besteht
 	/// und einer Dataset</summary>
-	public class PpsGenericMaskWindowPane : PpsGenericWpfWindowPane, IPpsDocumentOwner, IPpsIdleAction
+	public class PpsGenericMaskWindowPane : PpsGenericWpfWindowPane, IPpsActiveDataSetOwner, IPpsIdleAction
 	{
-		private readonly IPpsDocuments rdt;
+		private readonly IPpsActiveDocuments rdt;
 		private readonly PpsMainWindow window;
 		private CollectionViewSource undoView;
 		private CollectionViewSource redoView;
@@ -54,7 +54,7 @@ namespace TecWare.PPSn.UI
 			: base(environment)
 		{
 			this.window = window;
-			this.rdt = (IPpsDocuments)environment.GetService(typeof(IPpsDocuments));
+			this.rdt = (IPpsActiveDocuments)environment.GetService(typeof(IPpsActiveDocuments));
 
 			Environment.AddIdleAction(this);
 		} // ctor
@@ -72,12 +72,12 @@ namespace TecWare.PPSn.UI
 			var r = base.CompareArguments(otherArgumens);
 			if (r == PpsWindowPaneCompareResult.Reload)
 			{
-				var otherDocumentId = new PpsDocumentId(
+				var otherDocumentId = new PpsDataSetId(
 					otherArgumens.GetOptionalValue("guid", Guid.Empty),
 					Convert.ToInt64(otherArgumens.GetMemberValue("revId") ?? -1L)
 				);
 
-				return document.DocumentId == otherDocumentId ? PpsWindowPaneCompareResult.Same : PpsWindowPaneCompareResult.Reload;
+				return document.DataSetId == otherDocumentId ? PpsWindowPaneCompareResult.Same : PpsWindowPaneCompareResult.Reload;
 			}
 			return r;
 		} // func CompareArguments
@@ -96,14 +96,14 @@ namespace TecWare.PPSn.UI
 			var revId = arguments.GetMemberValue("revId");
 			this.document = id == null ?
 				await rdt.CreateDocumentAsync(documentType, arguments) :
-				await rdt.OpenDocumentAsync(new PpsDocumentId((Guid)id, Convert.ToInt64(revId ?? -1)), arguments);
+				await rdt.OpenDocumentAsync(new PpsDataSetId((Guid)id, Convert.ToInt64(revId ?? -1)), arguments);
 
 			// register events, owner, and in the openDocuments dictionary
 			document.RegisterOwner(this);
 
 			// get the pane to view, if it is not given
 			if (!arguments.ContainsKey("pane"))
-				arguments.SetMemberValue("pane", rdt.GetDocumentDefaultPane(documentType));
+				arguments.SetMemberValue("pane", await rdt.GetDocumentDefaultPaneAsync(documentType));
 
 			// Lade die Maske
 			await base.LoadAsync(arguments);
@@ -429,6 +429,6 @@ namespace TecWare.PPSn.UI
 		[LuaMember(nameof(Window))]
 		public PpsWindow Window => window;
 
-		LuaTable IPpsDocumentOwner.DocumentEvents => this;
+		LuaTable IPpsActiveDataSetOwner.Events => this;
 	} // class PpsGenericMaskWindowPane
 }

@@ -30,83 +30,27 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {
-	#region -- class PpsDocumentId ------------------------------------------------------
+	#region -- interface IPpsActiveDocuments --------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public class PpsDocumentId : IComparable<PpsDocumentId>, IEquatable<PpsDocumentId>
+	/// <summary>Extension for the dataset model.</summary>
+	public interface IPpsActiveDocuments : IPpsActiveDataSets
 	{
-		private readonly Guid objectGuid;
-		private readonly long revisionId;
+		/// <summary>Create and initialize a new document.</summary>
+		/// <param name="schema">Schema of the document.</param>
+		/// <param name="arguments">Arguments</param>
+		/// <returns>Initialized document.</returns>
+		Task<PpsDocument> CreateDocumentAsync(string schema, LuaTable arguments);
+		/// <summary>Open an existing document (or already opened document).</summary>
+		/// <param name="documentId">Id of the document.</param>
+		/// <param name="arguments">Arguments</param>
+		/// <returns>Initialized document</returns>
+		Task<PpsDocument> OpenDocumentAsync(PpsDataSetId documentId, LuaTable arguments);
 
-		public PpsDocumentId(Guid objectGuid, long revisionId)
-		{
-			this.objectGuid = objectGuid;
-			this.revisionId = revisionId;
-		} // ctor
-
-		public override string ToString()
-			=> $"DocId: {objectGuid:D}@{revisionId:N0}";
-
-		public override int GetHashCode()
-			=> objectGuid.GetHashCode() ^ revisionId.GetHashCode();
-
-		public override bool Equals(object other)
-			=> Equals(other as PpsDocumentId);
-
-		public bool Equals(PpsDocumentId other)
-			=> (object)other != null && (Object.ReferenceEquals(this, other) || (other.objectGuid == this.objectGuid && other.revisionId == this.revisionId));
-
-		public int CompareTo(PpsDocumentId other)
-		{
-			if ((object)other == null)
-				return -1;
-
-			var t = objectGuid.CompareTo(other.ObjectGuid);
-			return t == 0 ? revisionId.CompareTo(other.revisionId) : t;
-		} // func CompareTo
-
-		/// <summary>Client site Id, not the server id.</summary>
-		public Guid ObjectGuid => objectGuid;
-		/// <summary>Pulled revision</summary>
-		public long RevisionId => revisionId;
-
-		public bool IsEmpty => objectGuid == Guid.Empty && revisionId <= 0;
-
-		public static PpsDocumentId Empty { get; } = new PpsDocumentId(Guid.Empty, 0);
-
-		public static bool operator ==(PpsDocumentId left, PpsDocumentId right)
-			=> ((object)left == null && (object)right == null) || ((object)left != null && left.Equals(right));
-
-		public static bool operator !=(PpsDocumentId left, PpsDocumentId right)
-			=> ((object)left != null || (object)right != null) && ((object)left == null || !left.Equals(right));
-	} // class PpsDocumentId
-
-	#endregion
-
-	#region -- interface IPpsDocumentOwner ----------------------------------------------
-
-	public interface IPpsDocumentOwner
-	{
-		LuaTable DocumentEvents { get; }
-	} // interface IPpsDocumentOwner
-
-	#endregion
-
-	#region -- interface IPpsDocuments --------------------------------------------------
-
-	public interface IPpsDocuments
-	{
-		Task<PpsDocument> CreateDocumentAsync(string type, LuaTable arguments);
-		/// <summary></summary>
-		/// <param name="owner"></param>
-		/// <param name="documentId"></param>
-		/// <param name="revisionId"></param>
-		/// <param name="arguments"></param>
-		/// <returns></returns>
-		Task<PpsDocument> OpenDocumentAsync(PpsDocumentId documentId, LuaTable arguments);
-
-		string GetDocumentDefaultPane(string type);
+		/// <summary>Returns the default pane for a schema.</summary>
+		/// <param name="schema">Name of the document.</param>
+		/// <returns>Uri of the pane.</returns>
+		Task<string> GetDocumentDefaultPaneAsync(string schema);
 	} // interface IPpsDocuments
 
 	#endregion
@@ -124,7 +68,12 @@ namespace TecWare.PPSn
 		} // ctor
 
 		public override PpsDataSet CreateDataSet()
-			=> new PpsDocument(this, environment);
+		{
+			throw new NotSupportedException();
+		} // func CreateDataSet
+
+		public override PpsDataSetDesktop CreateDataSet(PpsDataSetId id)
+			=> new PpsDocument(this, (PpsMainEnvironment)Shell, id);
 	} // class PpsDocumentDefinition
 
 
@@ -132,25 +81,21 @@ namespace TecWare.PPSn
 
 	#region -- class PpsDocument --------------------------------------------------------
 
-	public sealed class PpsDocument : PpsDataSetClient
+	public sealed class PpsDocument : PpsDataSetDesktop
 	{
 		private readonly PpsMainEnvironment environment;
 		private readonly PpsUndoManager undoManager;
 
-		private PpsDocumentId documentId = PpsDocumentId.Empty; // document id
 		private long localId = -2;        // local Id in the cache (-2 for not setted)
 		private long pulledRevisionId;
 		private bool isDocumentChanged = false;   // is this document changed to the pulled version
 		private bool isReadonly = true;           // is this document a special read-only revision
-		private bool isDirty = false;             // is this document changed since the last dump
 
-		private readonly object documentOwnerLock = new object();
-		private readonly List<IPpsDocumentOwner> documentOwner = new List<IPpsDocumentOwner>(); // list with document owners
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		public PpsDocument(PpsDataSetDefinition datasetDefinition, PpsMainEnvironment environment)
-			: base(datasetDefinition, environment)
+		public PpsDocument(PpsDataSetDefinitionDesktop datasetDefinition, PpsMainEnvironment environment, PpsDataSetId datasetId)
+			: base(datasetDefinition, environment, datasetId)
 		{
 			this.environment = environment;
 
@@ -158,12 +103,11 @@ namespace TecWare.PPSn
 			RegisterUndoSink(undoManager);
 		} // ctor
 
-		public void SetLocalState(Guid objectId, long localId, long pulledRevisionId, bool isDocumentChanged, bool isReadonly)
+		public void SetLocalState(long localId, long pulledRevisionId, bool isDocumentChanged, bool isReadonly)
 		{
 			if (localId < 0)
 				localId = -1;
 
-			this.documentId = new PpsDocumentId(objectId, isReadonly ? pulledRevisionId : -1);
 			this.localId = localId;
 			this.pulledRevisionId = pulledRevisionId;
 			this.isDocumentChanged = isDocumentChanged;
@@ -178,67 +122,8 @@ namespace TecWare.PPSn
 				throw new InvalidOperationException("Document is not initialized.");
 		} // proc CheckLocalState
 
-		public void RegisterOwner(IPpsDocumentOwner owner)
-		{
-			lock (documentOwnerLock)
-			{
-				if (documentOwner.IndexOf(owner) >= 0)
-					throw new InvalidOperationException("Already registered.");
-
-				if (documentOwner.Count == 0)
-					environment.OnDocumentOpend(this);
-
-				RegisterEventSink(owner.DocumentEvents);
-				documentOwner.Add(owner);
-			}
-		} // proc RegisterOwner
-
-		public void UnregisterOwner(IPpsDocumentOwner owner)
-		{
-			lock (documentOwnerLock)
-			{
-				var index = documentOwner.IndexOf(owner);
-				if (index == -1)
-					throw new InvalidOperationException("Owner not registered.");
-
-				documentOwner.RemoveAt(index);
-				UnregisterEventSink(owner.DocumentEvents);
-
-				if (documentOwner.Count == 0)
-					environment.OnDocumentClosed(this);
-			}
-		} // proc Unregister
-
 		#endregion
-
-		private void SetDirty()
-		{
-			isDirty = true;
-		} // proc SetDirty
-
-		public void ResetDirty()
-		{
-			isDirty = false;
-		} // proc ResetDirty
-
-		protected override void OnTableRowAdded(PpsDataTable table, PpsDataRow row)
-		{
-			base.OnTableRowAdded(table, row);
-			SetDirty();
-		} // proc OnTableRowAdded
-
-		protected override void OnTableRowDeleted(PpsDataTable table, PpsDataRow row)
-		{
-			base.OnTableRowDeleted(table, row);
-			SetDirty();
-		} // proc OnTableRowDeleted
-
-		protected override void OnTableColumnValueChanged(PpsDataRow row, int iColumnIndex, object oldValue, object value)
-		{
-			base.OnTableColumnValueChanged(row, iColumnIndex, oldValue, value);
-			SetDirty();
-		} // proc OnTableColumnValueChanged
-
+		
 		public override Task OnNewAsync(LuaTable arguments)
 		{
 			CheckLocalState();
@@ -285,7 +170,7 @@ namespace TecWare.PPSn
 			// recreate dataset
 			undoManager.Clear();
 			Read(xRoot);
-			SetLocalState(documentId.ObjectGuid, localId, newRevId, false, false);
+			SetLocalState(localId, newRevId, false, false);
 
 			// update local store and
 			using (var trans = environment.LocalConnection.BeginTransaction())
@@ -350,12 +235,9 @@ namespace TecWare.PPSn
 		} // proc CommitWork
 
 		public bool IsReadOnly => isReadonly;
-		public bool IsLoaded => documentId != PpsDocumentId.Empty;
-		public bool IsDirty => isDirty;
+		public bool IsLoaded => localId < 0;
 
 		public PpsUndoManager UndoManager => undoManager;
-
-		public PpsDocumentId DocumentId => documentId;
 	} // class PpsDocument
 
 	#endregion
@@ -364,128 +246,60 @@ namespace TecWare.PPSn
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public partial class PpsMainEnvironment : IPpsDocuments
+	public partial class PpsMainEnvironment : IPpsActiveDocuments
 	{
-		#region -- class KnownDocumentDefinition ------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class KnownDocumentDefinition
-		{
-			private readonly PpsMainEnvironment environment;
-
-			private readonly string typ;
-			private readonly string sourceUri;
-			private readonly string paneUri;
-
-			private PpsDocumentDefinition definition = null;
-
-			public KnownDocumentDefinition(PpsMainEnvironment environment, string typ, string sourceUri, string paneUri)
-			{
-				this.environment = environment;
-				this.typ = typ;
-				this.sourceUri = sourceUri;
-				this.paneUri = paneUri;
-			} // ctor
-
-			public async Task<PpsDocumentDefinition> GetDocumentDefinitionAsync()
-			{
-				if (definition != null)
-					return definition;
-
-				// load the schema
-				definition = new PpsDocumentDefinition(environment, typ, await environment.Request.GetXmlAsync(sourceUri));
-				definition.EndInit();
-				return definition;
-			} // func GetDocumentDefinitionAsync
-
-			public string Typ => typ;
-			public string Schema => sourceUri;
-			public string Pane => paneUri;
-		} // class KnownDocumentDefinition
-
-		#endregion
-
-		private Dictionary<PpsDocumentId, PpsDocument> openDocuments = new Dictionary<PpsDocumentId, PpsDocument>(); // current active documents
-		private Dictionary<string, KnownDocumentDefinition> documentDefinitions = new Dictionary<string, KnownDocumentDefinition>(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, string> defaultPanes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // default panes
 
 		private void UpdateDocumentDefinitionInfo(XElement x, List<string> updatedDocuments)
 		{
-			var typ = x.GetAttribute("name", String.Empty);
-			var schemaUri = x.GetAttribute("source", String.Empty);
+			var schema = x.GetAttribute("name", String.Empty);
+			var sourceUri = x.GetAttribute("source", String.Empty);
 			var paneUri = x.GetAttribute("pane", String.Empty);
-			if (String.IsNullOrEmpty(typ))
+			if (String.IsNullOrEmpty(schema))
 				return;
-
-			if (String.IsNullOrEmpty(schemaUri))
+			if (String.IsNullOrEmpty(sourceUri))
 				throw new ArgumentNullException("@source");
 
-			KnownDocumentDefinition cur;
-			if (!documentDefinitions.TryGetValue(typ, out cur) || cur.Schema != schemaUri || cur.Pane != paneUri)
-				documentDefinitions[typ] = new KnownDocumentDefinition(this, typ, schemaUri, paneUri);
+			// update dataset definitions
+			RegisterDataSetSchema(schema, sourceUri, typeof(PpsDocumentDefinition));
 
-			updatedDocuments.Add(typ);
+			// update pane hint
+			if (!String.IsNullOrEmpty(paneUri))
+			{
+				lock (defaultPanes)
+					defaultPanes[schema] = paneUri;
+			}
+
+			// mark document as readed
+			updatedDocuments.Add(schema);
 		} // proc UpdateDocumentDefinitionInfo
 
 		private void ClearDocumentDefinitionInfo(List<string> updatedDocuments)
 		{
-			foreach (var k in documentDefinitions.Keys.ToArray())
+			foreach (var k in KnownSchemas) // is already an array
 			{
 				if (updatedDocuments.IndexOf(k) == -1)
-					documentDefinitions.Remove(k);
+					UnregisterDataSetSchema(k);
 			}
 		} // proc ClearDocumentDefinitionInfo
 
-		internal void OnDocumentOpend(PpsDocument document)
-			=> openDocuments.Add(document.DocumentId, document);
-
-		internal void OnDocumentClosed(PpsDocument document)
-			=> openDocuments.Remove(document.DocumentId);
-
-		private async Task<PpsDataSetDefinitionClient> GetDocumentDefinitionAsync(string typ)
-		{
-			KnownDocumentDefinition def;
-
-			// get the known document definition
-			if (documentDefinitions.TryGetValue(typ, out def))
-				return await def.GetDocumentDefinitionAsync();
-			else
-				throw new NotImplementedException("todo"); // todo: exception for unknown document
-		} // func GetDocumentDefinitionAsync
-
-		public async Task<PpsDocument> CreateDocumentAsync(string typ, LuaTable arguments)
-		{
-			var def = await GetDocumentDefinitionAsync(typ);
-
-			// create the empty dataset
-			var newDocument = (PpsDocument)def.CreateDataSet();
-
-			// initialize
-			newDocument.SetLocalState(Guid.NewGuid(), -1, -1, false, false);
-			await newDocument.OnNewAsync(arguments);
-			newDocument.UndoManager.Clear();
-
-			return newDocument;
-		} // func CreateDocument
-
 		// the return is a uninitialized document
 		// SetLocalState, OnLoadAsync is not called, yet
-		private async Task<Tuple<PpsDocument, long, string>> PullDocumentCoreAsync(string documentType, long serverId, long revisionId = -1)
+		private async Task<Tuple<PpsDocument, long, string>> PullDocumentCoreAsync(string documentSchema, Guid guid, long serverId, long revisionId = -1)
 		{
 			if (serverId <= 0)
 				throw new ArgumentOutOfRangeException("serverId", "Invalid server id.");
 
-			var def = await GetDocumentDefinitionAsync(documentType);
-			var xRoot = await Request.GetXmlAsync($"{documentType}/?action=pull&id={serverId}&rev={revisionId}");
+			var xRoot = await Request.GetXmlAsync($"{documentSchema}/?action=pull&id={serverId}&rev={revisionId}");
 
-			var newDocument = (PpsDocument)def.CreateDataSet();
+			var newDocument = await CreateDocumentInternalAsync(documentSchema, new PpsDataSetId(guid, revisionId));
 			newDocument.Read(xRoot);
 
 			var headRow = newDocument.Tables["Head", true].First;
 			var pulledRevisionId = headRow.GetProperty("HeadRevId", -1L);
 			if (pulledRevisionId < 0)
 				throw new ArgumentOutOfRangeException("pulledRevisionId");
-			
+
 			return new Tuple<PpsDocument, long, string>(newDocument, pulledRevisionId, headRow["Nr"].ToString());
 		} // func PullDocumentCoreAsync
 
@@ -493,7 +307,7 @@ namespace TecWare.PPSn
 		{
 			long localId;
 			long serverId;
-			string documentType;
+			string documentSchema;
 			string documentData;
 			bool isDocumentChanged;
 			long pulledRevId;
@@ -513,7 +327,7 @@ namespace TecWare.PPSn
 						{
 							localId = r.GetInt64(0);
 							serverId = r.IsDBNull(1) ? -1 : r.GetInt64(1);
-							documentType = r.GetString(2);
+							documentSchema = r.GetString(2);
 							documentData = r.IsDBNull(3) ? null : r.GetString(3);
 							isDocumentChanged = r.IsDBNull(4) ? false : r.GetBoolean(4);
 							pulledRevId = r.IsDBNull(5) ? -1 : r.GetInt32(5);
@@ -527,7 +341,7 @@ namespace TecWare.PPSn
 
 				if (documentData == null) // not synced yet, pull the head revision
 				{
-					var newDocument = await PullDocumentCoreAsync(documentType, serverId);
+					var newDocument = await PullDocumentCoreAsync(documentSchema, guid, serverId);
 
 					// update document data in the local store
 					UpdateLocalDocumentState(trans, localId, newDocument.Item1, serverId, newDocument.Item2, newDocument.Item3);
@@ -535,15 +349,14 @@ namespace TecWare.PPSn
 					trans.Commit();
 
 					// init document
-					newDocument.Item1.SetLocalState(guid, localId, newDocument.Item2, false, false);
+					newDocument.Item1.SetLocalState(localId, newDocument.Item2, false, false);
 
 					return newDocument.Item1;
 				}
 				else // synced, get the current staging
 				{
 					trans.Rollback();
-
-					var newDocument = (PpsDocument)(await GetDocumentDefinitionAsync(documentType)).CreateDataSet();
+					var newDocument = await CreateDocumentInternalAsync(documentSchema, new PpsDataSetId(guid, -1));
 
 					using (var docTrans = newDocument.UndoSink.BeginTransaction("Internal Read"))
 					{
@@ -552,7 +365,7 @@ namespace TecWare.PPSn
 					}
 					newDocument.UndoManager.Clear();
 
-					newDocument.SetLocalState(guid, localId, pulledRevId, isDocumentChanged, false); // synced and change able
+					newDocument.SetLocalState(localId, pulledRevId, isDocumentChanged, false); // synced and change able
 					return newDocument;
 				}
 			}
@@ -583,16 +396,16 @@ namespace TecWare.PPSn
 			}
 		} // proc UpdateLocalState
 
-		private async Task<PpsDocument> GetServerDocumentAsync(PpsDocumentId documentId)
+		private async Task<PpsDocument> GetServerDocumentAsync(PpsDataSetId documentId)
 		{
 			long serverId;
-			string documentType;
+			string documentSchema;
 
 			// get database info
 			using (var cmd = LocalConnection.CreateCommand())
 			{
 				cmd.CommandText = "select o.ServerId, o.Typ from main.Objects o where o.Guid = @Guid";
-				cmd.Parameters.Add("@Guid", DbType.Guid).Value = documentId.ObjectGuid;
+				cmd.Parameters.Add("@Guid", DbType.Guid).Value = documentId.Guid;
 
 				using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
 				{
@@ -603,7 +416,7 @@ namespace TecWare.PPSn
 						else
 						{
 							serverId = r.GetInt64(0);
-							documentType = r.GetString(1);
+							documentSchema = r.GetString(1);
 						}
 					}
 					else
@@ -612,31 +425,67 @@ namespace TecWare.PPSn
 			}
 
 			// load from server
-			var newDocument = await PullDocumentCoreAsync(documentType, serverId, documentId.RevisionId);
-			if (newDocument.Item2 != documentId.RevisionId)
+			var newDocument = await PullDocumentCoreAsync(documentSchema, documentId.Guid, serverId, documentId.Index);
+			if (newDocument.Item2 != documentId.Index)
 				throw new ArgumentException("rev requested != rev pulled"); // todo:
 
 			// initialize
-			newDocument.Item1.SetLocalState(documentId.ObjectGuid, -1, documentId.RevisionId, false, true);
+			newDocument.Item1.SetLocalState(-1, documentId.Index, false, true);
 			return newDocument.Item1;
 		} // func GetServerDocumentAsync
 
-		public async Task<PpsDocument> OpenDocumentAsync(PpsDocumentId documentId, LuaTable arguments)
+		private PpsDocument FindActiveDocumentById(PpsDataSetId documentId)
+		{
+			var dataset = ActiveDataSets[documentId];
+			if (dataset is PpsDocument)
+				return (PpsDocument)dataset;
+			else if (dataset != null)
+				throw new ArgumentException($"{documentId} is not a document.");
+			else
+				return null;
+		} // func FindActivateDocumentById
+
+		private async Task<PpsDocument> CreateDocumentInternalAsync(string schema, PpsDataSetId documentId)
+		{
+			var def = await GetDataSetDefinition(schema) as PpsDocumentDefinition;
+			if (def == null)
+				throw new ArgumentNullException("schema", $"{schema} could not initialized definition.");
+
+			// create the empty dataset
+			return (PpsDocument)def.CreateDataSet(documentId);
+		} // func CreateDocumentInternalAsync
+
+		public async Task<PpsDocument> CreateDocumentAsync(string schema, LuaTable arguments)
+		{
+			var documentId = new PpsDataSetId(Guid.NewGuid(), -1);
+
+			PpsDocument newDocument = await CreateDocumentInternalAsync(schema, documentId);
+
+			// initialize
+			newDocument.SetLocalState(-1, -1, false, false);
+			await newDocument.OnNewAsync(arguments);
+			newDocument.UndoManager.Clear();
+
+			return newDocument;
+		} // func CreateDocumentAsync
+
+		public async Task<PpsDocument> OpenDocumentAsync(PpsDataSetId documentId, LuaTable arguments)
 		{
 			PpsDocument document;
 
 			// check if the document is already opened
-			if (!openDocuments.TryGetValue(documentId, out document))
+			document = FindActiveDocumentById(documentId);
+			if (document == null)
 			{
 				// is a request for the head revision
-				if (documentId.RevisionId < 0)
-					document = await GetLocalDocumentAsync(documentId.ObjectGuid);
+				if (documentId.Index < 0)
+					document = await GetLocalDocumentAsync(documentId.Guid);
 				else // get a special revision
 					document = await GetServerDocumentAsync(documentId);
 
 				// load document
 				if (document == null)
-					throw new ArgumentException("todo: open failed"); // todo:
+					throw new ArgumentException($"Failed to load {documentId}.");
 
 				// load document
 				await document.OnLoadedAsync(arguments);
@@ -645,16 +494,26 @@ namespace TecWare.PPSn
 			}
 
 			return document;
-		} // func OpenDocument
+		} // func OpenDocumentAsync
 
-		public string GetDocumentDefaultPane(string type)
+		private string GetDefaultPaneFromDictionary(string schema)
 		{
-			KnownDocumentDefinition def;
-			if (documentDefinitions.TryGetValue(type, out def))
-				return def.Pane;
-			else
-				return null;
-		} // func GetDocumentDefaultPane
+			string paneUri;
+			lock (defaultPanes)
+				return defaultPanes.TryGetValue(schema, out paneUri) ? paneUri : null;
+		} // func GetDocumentDefaultPaneAsync
+
+		public Task<string> GetDocumentDefaultPaneAsync(string schema)
+		{
+			// try to get the uri from the pane list
+			var paneUri = GetDefaultPaneFromDictionary(schema);
+			if (!String.IsNullOrEmpty(paneUri))
+				return Task.FromResult<string>(paneUri);
+
+			// read the schema meta data
+			return GetDataSetDefinition(schema)
+				.ContinueWith(t => t.Result == null ? null : t.Result.Meta.GetProperty<string>(PpsDataSetMetaData.DefaultPaneUri, null));
+		} // func GetDocumentDefaultPaneAsync
 	} // class PpsMainEnvironment
 
 	#endregion

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Data;
@@ -19,7 +20,7 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {
-	public partial class PpsEnvironment
+	public partial class PpsEnvironment : IPpsActiveDataSets
 	{
 		private const string TemporaryTablePrefix = "old_";
 
@@ -918,6 +919,163 @@ namespace TecWare.PPSn
 
 			return Request.CreateViewDataReader(sb.ToString());
 		} // func GetRemoteViewData
+
+		#endregion
+
+		#region -- IPpsActiveDataSets member ----------------------------------------------
+
+		#region -- class KnownDataSetDefinition -------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class KnownDataSetDefinition
+		{
+			private readonly PpsEnvironment environment;
+
+			private readonly Type datasetDefinitionType;
+			private readonly string schema;
+			private readonly string sourceUri;
+
+			private PpsDataSetDefinitionDesktop definition = null;
+
+			public KnownDataSetDefinition(PpsEnvironment environment, Type datasetDefinitionType, string schema, string sourceUri)
+			{
+				this.environment = environment;
+				this.datasetDefinitionType = datasetDefinitionType;
+				this.schema = schema;
+				this.sourceUri = sourceUri;
+			} // ctor
+
+			public async Task<PpsDataSetDefinitionDesktop> GetDocumentDefinitionAsync()
+			{
+				if (definition != null)
+					return definition;
+
+				// load the schema
+				var xSchema = await environment.Request.GetXmlAsync(sourceUri);
+				definition = (PpsDataSetDefinitionDesktop)Activator.CreateInstance(datasetDefinitionType, environment, schema, xSchema);
+				definition.EndInit();
+
+				return definition;
+			} // func GetDocumentDefinitionAsync
+
+			public Type DataSetDefinitionType => datasetDefinitionType;
+			public string Schema => schema;
+			public string SourceUri => sourceUri;
+		} // class KnownDataSetDefinition
+
+		#endregion
+
+		#region -- class ActiveDataSetCollection ------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private class ActiveDataSetCollection : Dictionary<PpsDataSetId, PpsDataSetDesktop>, IPpsActiveDataSetCollection
+		{
+			PpsDataSetDesktop IPpsActiveDataSetCollection.this[PpsDataSetId id]
+			{
+				get
+				{
+					PpsDataSetDesktop dataset;
+					return TryGetValue(id, out dataset) ? dataset : null;
+				}
+			} // proc IPpsActiveDataSetCollection.this
+
+			IEnumerator<PpsDataSetDesktop> IEnumerable<PpsDataSetDesktop>.GetEnumerator()
+				=> Values.GetEnumerator();
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> Values.GetEnumerator();
+		} // class ActiveDataSetCollection
+
+		#endregion
+
+		private Dictionary<string, KnownDataSetDefinition> datasetDefinitions = new Dictionary<string, KnownDataSetDefinition>(StringComparer.OrdinalIgnoreCase);
+		private ActiveDataSetCollection activeDataSets = new ActiveDataSetCollection();
+
+		public bool RegisterDataSetSchema(string schema, string uri, Type datasetDefinitionType = null)
+		{
+			lock (datasetDefinitions)
+			{
+				KnownDataSetDefinition definition;
+				if (!datasetDefinitions.TryGetValue(schema, out definition) || // definition is not registered
+					definition.Schema != schema || definition.SourceUri != uri) // or registration has changed
+				{
+					datasetDefinitions[schema] = new KnownDataSetDefinition(this, datasetDefinitionType ?? typeof(PpsDataSetDefinitionDesktop), schema, uri);
+					return true;
+				}
+				else
+					return false;
+			}
+		} // proc RegisterDataSetSchema
+
+		public void UnregisterDataSetSchema(string schema)
+		{
+			lock (datasetDefinitions)
+				datasetDefinitions.Remove(schema);
+		} // proc UnregisterDataSetSchema
+
+		public string GetDataSetSchemaUri(string schema)
+		{
+			lock (datasetDefinitions)
+			{
+				KnownDataSetDefinition definition;
+				return datasetDefinitions.TryGetValue(schema, out definition) ? definition.Schema : null;
+			}
+		} // GetDataSetSchemaUri
+
+		public Task<PpsDataSetDefinitionDesktop> GetDataSetDefinition(string schema)
+		{
+			KnownDataSetDefinition definition;
+			lock (datasetDefinitions)
+			{
+				if (!datasetDefinitions.TryGetValue(schema, out definition))
+					return Task.FromResult<PpsDataSetDefinitionDesktop>(null);
+			}
+			return definition.GetDocumentDefinitionAsync();
+		} // func GetDataSetDefinition
+
+		public async Task<PpsDataSetDesktop> CreateEmptyDataSetAsync(string schema, PpsDataSetId id)
+		{
+			if (id == PpsDataSetId.Empty)
+				throw new ArgumentNullException("id", "Empty id is not allowed.");
+
+			var dataset = ActiveDataSets[id];
+			if (dataset != null)
+				throw new ArgumentOutOfRangeException("id", $"DataSet already opened: {id}");
+
+			// try to find known schema
+			var definition = await GetDataSetDefinition(schema);
+			if (definition == null)
+				throw new ArgumentOutOfRangeException("schema", $"'{schema}' is not registered.");
+
+			// create a empty dataset
+			return definition.CreateDataSet(id);
+		} // func CreateEmptyOrOpenDataSetAsync
+
+		internal void OnDataSetActivated(PpsDataSetDesktop dataset)
+		{
+			if (ActiveDataSets[dataset.DataSetId] != null)
+				throw new ArgumentException($"DataSet already registered (Id: ${dataset.DataSetId})");
+
+			activeDataSets[dataset.DataSetId] = dataset;
+		} // proc OnDataSetActivated
+
+		internal void OnDataSetDeactivated(PpsDataSetDesktop dataset)
+		{
+			activeDataSets.Remove(dataset.DataSetId);
+		} // proc OnDataSetDeactivated
+		
+		public IPpsActiveDataSetCollection ActiveDataSets => activeDataSets;
+
+		public IEnumerable<string> KnownSchemas
+		{
+			get
+			{
+				lock (datasetDefinitions)
+					return datasetDefinitions.Keys.ToArray();
+			}
+		} // prop KnownSchemas
 
 		#endregion
 
