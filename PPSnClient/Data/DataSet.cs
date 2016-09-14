@@ -135,8 +135,6 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		private readonly IPpsShell shell;
-		private readonly LuaTable clientScript;
-		private readonly List<LuaTable> eventSinks;
 
 		private LuaTable arguments;
 
@@ -144,53 +142,10 @@ namespace TecWare.PPSn.Data
 			: base(datasetDefinition)
 		{
 			this.shell = shell;
-			this.clientScript = new LuaTable();
-			this.eventSinks = new List<LuaTable>();
 		} // ctor
 
-		public void RegisterEventSink(LuaTable eventSink)
-		{
-			eventSinks.Add(eventSink);
-		} // proc RegisterEventSink
-
-		public void UnregisterEventSink(LuaTable eventSink)
-		{
-			eventSinks.Remove(eventSink);
-		} // proc UnregisterEventSink
-
-		private LuaTable[] GetEventSinks()
-			=> eventSinks.ToArray();
-		
-		private LuaResult InvokeLuaFunction(LuaTable t, string methodName, params object[] args)
-		{
-			var handler = t.GetMemberValue(methodName, lRawGet: true);
-			if (Lua.RtInvokeable(handler))
-				return new LuaResult(Lua.RtInvoke(handler, args));
-			return LuaResult.Empty;
-		} // func InvokeClientFunction
-		
-		private Task AsyncLua(LuaResult r)
-			=> r[0] as Task ?? Task.FromResult<int>(0);
-
-		private void InvokeEventHandler(string methodName, params object[] args)
-		{
-			// call the local function
-			InvokeLuaFunction(clientScript, methodName, args);
-
-			// call connected events
-			foreach (var s in eventSinks)
-				InvokeLuaFunction(s, methodName, args);
-		} // proc InvokeEventHandler
-
-		private async Task InvokeEventHandlerAsync(string methodName, params object[] args)
-		{
-			// call the local function
-			await AsyncLua(InvokeLuaFunction(clientScript, methodName, args));
-
-			// call connected events
-			foreach (var s in GetEventSinks())
-				await AsyncLua(InvokeLuaFunction(s, methodName, args));
-		} // proc InvokeEventHandler
+		protected override object GetEnvironmentValue(object key)
+			=> shell.LuaLibrary?.GetValue(key);
 
 		/// <summary>Initialize a new dataset</summary>
 		public virtual async Task OnNewAsync(LuaTable arguments)

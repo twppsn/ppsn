@@ -18,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
@@ -360,7 +361,7 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Table</summary>
-	public class PpsDataTable : IPpsDataView, IDynamicMetaObjectProvider
+	public class PpsDataTable : IPpsDataView, IDynamicMetaObjectProvider, INotifyPropertyChanged
 	{
 		#region -- class PpsDataTableAddChangeItem ----------------------------------------
 
@@ -488,6 +489,8 @@ namespace TecWare.PPSn.Data
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 		/// <summary>Notifies changes of single values.</summary>
 		public event ColumnValueChangedEventHandler ColumnValueChanged;
+		/// <summary>Notifies the change of a table property.</summary>
+		public event PropertyChangedEventHandler PropertyChanged;
 
 		private PpsDataTableDefinition tableDefinition;   // definition of this table
 		private PpsDataSet dataset;                       // owner of this table
@@ -699,10 +702,50 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		#region -- class PpsDataTablePropertyChangedEvent -----------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class PpsDataTablePropertyChangedEvent : PpsDataChangedEvent
+		{
+			private readonly PpsDataTable table;
+			private readonly string propertyName;
+
+			public PpsDataTablePropertyChangedEvent(PpsDataTable table, string propertyName)
+			{
+				this.table = table;
+				this.propertyName = propertyName;
+			} // ctor
+
+			public override void InvokeEvent()
+			{
+				table.InvokePropertyChanged(propertyName);
+			} // proc InvokeEvent
+
+			public override bool Same(PpsDataChangedEvent ev)
+			{
+				if (ev == this)
+					return true;
+				else
+				{
+					var other = ev as PpsDataTablePropertyChangedEvent;
+					return other != null ?
+						other.table == table && other.propertyName == propertyName :
+						false;
+				}
+			} // func Same
+
+			public override PpsDataChangeLevel Level => PpsDataChangeLevel.TableModifed;
+		} // class PpsDataTablePropertyChangedEvent
+
+		#endregion
+
 		/// <summary>Notifies if a rows is added.</summary>
 		/// <param name="row">The new row</param>
 		protected virtual void OnRowAdded(PpsDataRow row)
 		{
+			if (rows.Count == 1)
+				OnPropertyChanged(nameof(First));
 			dataset.ExecuteEvent(new PpsDataRowAddedChangedEvent(this, row));
 			OnTableChanged();
 		} // proc OnRowAdded
@@ -731,6 +774,14 @@ namespace TecWare.PPSn.Data
 			dataset.ExecuteEvent(new PpsDataTableChangedEvent(this));
 			dataset.ExecuteDataChanged();
 		} // proc OnTableChanged
+
+		protected virtual void OnPropertyChanged(string propertyName)
+		{
+			dataset.ExecuteEvent(new PpsDataTablePropertyChangedEvent(this, propertyName));
+		} // proc OnPropertyChanged
+
+		private void InvokePropertyChanged(string propertyName)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 		/// <summary>Notifies if the collection of current rows is changed.</summary>
 		/// <param name="e"></param>

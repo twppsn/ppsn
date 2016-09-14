@@ -438,6 +438,31 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		#region -- class DynamicRuntimeTable ----------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private class DynamicRuntimeTable : LuaTable
+		{
+			private readonly PpsDataSet dataset;
+
+			public DynamicRuntimeTable(PpsDataSet dataset)
+			{
+				this.dataset = dataset;
+			} // ctor
+
+			protected override void OnPropertyChanged(string propertyName)
+			{
+				base.OnPropertyChanged(propertyName);
+				dataset.ExecuteDataChanged();
+			} // proc OnPropertyChanged
+
+			protected override object OnIndex(object key)
+				=> base.OnIndex(key) ?? dataset.GetEnvironmentValue(key);
+		} // class DynamicRuntimeTable
+
+		#endregion
+
 		private PpsDataSetDefinition datasetDefinition;
 		private PpsDataTable[] tables;
 		private TableCollection tableCollection;
@@ -446,6 +471,9 @@ namespace TecWare.PPSn.Data
 
 		private long lastPrimaryId = -1;
 		private object nextPrimaryLock = new object();
+
+		private LuaTable properties; // local properties and states, that are not persisted
+		private readonly List<LuaTable> eventSinks;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -458,12 +486,71 @@ namespace TecWare.PPSn.Data
 				tables[i] = datasetDefinition.TableDefinitions[i].CreateDataTable(this);
 
 			this.tableCollection = new TableCollection(tables);
+			this.properties = new DynamicRuntimeTable(this);
+			this.eventSinks = new List<LuaTable>();
 		} // ctor
 
 		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
 		{
 			return new PpsDataSetMetaObject(parameter, this);
 		} // func GetMetaObject
+
+		#endregion
+
+		#region --  Environment, EventSink ------------------------------------------------
+
+		protected virtual object GetEnvironmentValue(object key)
+			=> null;
+		
+		/// <summary>Registers a new event sink.</summary>
+		/// <param name="eventSink"></param>
+		public void RegisterEventSink(LuaTable eventSink)
+		{
+			eventSinks.Add(eventSink);
+		} // proc RegisterEventSink
+
+		/// <summary>Unregisters an event sink.</summary>
+		/// <param name="eventSink"></param>
+		public void UnregisterEventSink(LuaTable eventSink)
+		{
+			eventSinks.Remove(eventSink);
+		} // proc UnregisterEventSink
+
+		/// <summary>Get all event sinks.</summary>
+		/// <returns></returns>
+		private LuaTable[] GetEventSinks()
+			=> eventSinks.ToArray();
+
+		private Task AsyncLua(LuaResult r)
+			=> r[0] as Task ?? Task.FromResult<int>(0);
+
+		public LuaResult InvokeLuaFunction(LuaTable t, string methodName, params object[] args)
+		{
+			var handler = t.GetMemberValue(methodName, lRawGet: true);
+			if (Lua.RtInvokeable(handler))
+				return new LuaResult(Lua.RtInvoke(handler, args));
+			return LuaResult.Empty;
+		} // func InvokeClientFunction
+
+		public void InvokeEventHandler(string methodName, params object[] args)
+		{
+			// call the local function
+			InvokeLuaFunction(properties, methodName, args);
+
+			// call connected events
+			foreach (var s in eventSinks)
+				InvokeLuaFunction(s, methodName, args);
+		} // proc InvokeEventHandler
+
+		public async Task InvokeEventHandlerAsync(string methodName, params object[] args)
+		{
+			// call the local function
+			await AsyncLua(InvokeLuaFunction(properties, methodName, args));
+
+			// call connected events
+			foreach (var s in GetEventSinks())
+				await AsyncLua(InvokeLuaFunction(s, methodName, args));
+		} // proc InvokeEventHandler
 
 		#endregion
 
@@ -542,11 +629,6 @@ namespace TecWare.PPSn.Data
 			foreach (PpsDataTable t in Tables)
 				t.Reset();
 		} // proc Reset
-
-		protected LuaResult CallDynamicFunction(string functionName, params object[] arguments)
-		{
-			return LuaResult.Empty;
-		} // func CallDynamicFunction
 
 		/// <summary>Updates to next id.</summary>
 		/// <param name="value">Value for a primary column</param>
@@ -653,43 +735,33 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		#region -- Events -----------------------------------------------------------------
+
 		internal void ExecuteDataChanged()
 			=> ExecuteEvent(new PpsDataSetChangedEvent(this));
 
 		protected virtual void OnDataChanged()
-		{
-			CallDynamicFunction("OnDataChanged");
-		} // proc OnDataChanged
+			=> InvokeEventHandler("OnDataChanged", this);
 
 		protected internal virtual void OnTableChanged(PpsDataTable table)
-		{
-			CallDynamicFunction("OnTableChanged", table);
-		} // proc OnTableChanged
+			=> InvokeEventHandler("OnTableChanged", table);
 		
 		protected internal virtual void OnTableRowAdded(PpsDataTable table, PpsDataRow row)
-		{
-			CallDynamicFunction("OnTableRowAdded", table, row);
-		} // proc OnTableRowAdded
+			=> InvokeEventHandler("OnTableRowAdded", table, row);
 
 		protected internal virtual void OnTableRowDeleted(PpsDataTable table, PpsDataRow row)
-		{
-			CallDynamicFunction("OnTableRowDeleted", table, row);
-		} // proc OnTableRowDeleted
+			=> InvokeEventHandler("OnTableRowDeleted", table, row);
 
 		protected internal virtual void OnTableRowChanged(PpsDataTable table, PpsDataRow row)
-		{
-			CallDynamicFunction("OnTableRowChanged", table, row);
-		} // proc OnTableRowChanged
+			=> InvokeEventHandler("OnTableRowChanged", table, row);
 
 		protected internal virtual void OnTableColumnValueChanged(PpsDataRow row, string propertyName, object oldValue, object value)
-		{
-			CallDynamicFunction("OnTableColumnValueChanged", row, propertyName, oldValue, value);
-		} // proc OnTableColumnValueChanged
+			=> InvokeEventHandler("OnTableColumnValueChanged", row, propertyName, oldValue, value);
 
-		protected internal virtual void OnTableColumnExtendedValueChanged(PpsDataRow row, int columnIndex, string propertyName, object oldValue, object value)
-		{
-			CallDynamicFunction("OnTableColumnExtendedValueChanged", row, columnIndex, oldValue, value);
-		} // proc OnTableColumnExtendedValueChanged
+		protected internal virtual void OnTableColumnExtendedValueChanged(PpsDataRow row, string columnName, object value, string propertyName)
+			=> InvokeEventHandler("OnTableColumnExtendedValueChanged", row, columnName, value, propertyName);
+
+		#endregion
 
 		public virtual IEnumerable<PpsObjectTag> GetAutoTags()
 		{
@@ -707,6 +779,8 @@ namespace TecWare.PPSn.Data
 		public TableCollection Tables => tableCollection;
 		/// <summary></summary>
 		public IPpsUndoSink UndoSink => undoSink;
+		/// <summary>Local properties and functions for the dataset.</summary>
+		public LuaTable Properties => properties;
 
 		// -- Static --------------------------------------------------------------
 

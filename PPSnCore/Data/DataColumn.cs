@@ -90,7 +90,80 @@ namespace TecWare.PPSn.Data
 	} //	interface IPpsDataRowGenericValue
 
 	#endregion
-	
+
+	#region -- class PpsDataRowExtentedValue --------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public abstract class PpsDataRowExtentedValue : IPpsDataRowExtendedValue, INotifyPropertyChanged
+	{
+		public event PropertyChangedEventHandler PropertyChanged;
+
+		#region -- class PpsDataRowExtentedValueChanged -----------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private class PpsDataRowExtentedValueChanged : PpsDataChangedEvent
+		{
+			private readonly PpsDataRowExtentedValue value;
+			private readonly string propertyName;
+
+			public PpsDataRowExtentedValueChanged(PpsDataRowExtentedValue value, string propertyName)
+			{
+				this.value = value;
+				this.propertyName = propertyName;
+			} // ctor
+
+			public override bool Same(PpsDataChangedEvent ev)
+			{
+				if (ev == this)
+					return true;
+				else
+				{
+					var other = ev as PpsDataRowExtentedValueChanged;
+					return other != null ?
+						other.value == value && other.propertyName == propertyName :
+						false;
+				}
+			} // func Same
+
+			public override void InvokeEvent()
+			{
+				value.InvokePropertyChanged(propertyName);
+				value.row.Table.DataSet.OnTableColumnExtendedValueChanged(value.row, value.column.Name, value, propertyName);
+			} // proc InvokeEvent
+
+			public override PpsDataChangeLevel Level => PpsDataChangeLevel.ExtentedValue;
+		} // class PpsDataRowExtentedValueChanged
+
+		#endregion
+
+		private readonly PpsDataRow row;
+		private readonly PpsDataColumnDefinition column;
+
+		public PpsDataRowExtentedValue(PpsDataRow row, PpsDataColumnDefinition column)
+		{
+			this.row = row;
+			this.column = column;
+		} // ctor
+
+		private void InvokePropertyChanged(string propertyName)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+		protected virtual void OnPropertyChanged(string propertyName)
+		{
+			row.Table.DataSet.ExecuteEvent(new PpsDataRowExtentedValueChanged(this, propertyName));
+		} // proc OnPropertyChanged
+
+		public abstract bool IsNull { get; }
+		public abstract XElement CoreData { get; set; }
+
+		public PpsDataRow Row => row;
+		public PpsDataColumnDefinition Column => column;
+	} // class PpsDataRowExtentedValue
+
+	#endregion
+
 	#region -- class PpsDataColumnDefinition --------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -272,13 +345,15 @@ namespace TecWare.PPSn.Data
 					if (isIdentity) // automatic value
 						value = row.Table.DataSet.GetNextId();
 					else if (IsExtended) // is extended
-						value = CreateExtendedValue(row);
+						oldValue = CreateExtendedValue(row);
 
 					if (value != null)
 					{
 						initial = true;
 						goto case PpsDataColumnValueChangingFlag.SetValue;
 					}
+					else
+						value = oldValue;
 
 					return true;
 
