@@ -127,7 +127,6 @@ namespace TecWare.PPSn.Data
 		/// <param name="id">Id of the requested dataset.</param>
 		/// <returns><c>null</c> or the active dataset.</returns>
 		PpsDataSetDesktop this[PpsDataSetId id] { get; }
-
 	} // interface IPpsActiveDataSets
 
 	#endregion

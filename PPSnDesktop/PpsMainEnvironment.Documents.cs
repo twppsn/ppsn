@@ -300,7 +300,7 @@ namespace TecWare.PPSn
 			if (pulledRevisionId < 0)
 				throw new ArgumentOutOfRangeException("pulledRevisionId");
 
-			return new Tuple<PpsDocument, long, string>(newDocument, pulledRevisionId, headRow["Nr"].ToString());
+			return new Tuple<PpsDocument, long, string>(newDocument, pulledRevisionId, headRow["Nr"]?.ToString());
 		} // func PullDocumentCoreAsync
 
 		private async Task<PpsDocument> GetLocalDocumentAsync(Guid guid)

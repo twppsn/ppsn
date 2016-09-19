@@ -172,7 +172,7 @@ namespace TecWare.PPSn
 			IEnumerator IEnumerable.GetEnumerator()
 				=> Values.GetEnumerator();
 
-			private PpsDataSetDesktop Find(PpsDataSetId id)
+			public PpsDataSetDesktop Find(PpsDataSetId id)
 			{
 				PpsDataSetDesktop dataset;
 				return TryGetValue(id, out dataset) ? dataset : null;
@@ -186,6 +186,8 @@ namespace TecWare.PPSn
 						return datasetDefinitions.Keys.ToArray();
 				}
 			} // prop KnownSchemas
+
+			PpsDataSetDesktop IPpsActiveDataSets.this[PpsDataSetId id] => Find(id);
 		} // class PpsActiveDataSetsImplementation
 
 		#endregion
@@ -1068,7 +1070,7 @@ namespace TecWare.PPSn
 
 		internal void OnDataSetActivated(PpsDataSetDesktop dataset)
 		{
-			if (activeDataSets[dataset.DataSetId] != null)
+			if (activeDataSets.Find(dataset.DataSetId) != null)
 				throw new ArgumentException($"DataSet already registered (Id: ${dataset.DataSetId})");
 
 			activeDataSets[dataset.DataSetId] = dataset;

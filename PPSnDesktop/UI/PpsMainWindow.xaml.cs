@@ -279,6 +279,5 @@ namespace TecWare.PPSn.UI
 		}
 
 		#endregion
-
 	} // class PpsMainWindow
 }

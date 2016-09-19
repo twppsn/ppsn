@@ -601,6 +601,8 @@ namespace TecWare.PPSn
 
 				private static Type TypeFromClassHint(int classHint)
 				{
+					if (classHint == 2)
+						return typeof(DateTime);
 					// todo:
 					return typeof(string);
 				} // func TypeFromClassHint
@@ -759,7 +761,10 @@ namespace TecWare.PPSn
 
 				protected override string LookupNativeExpression(string key)
 					=> "1=1"; // not supported
-			} // class ObjectViewFilterVisitor
+
+				protected override string CreateDateString(DateTime value)
+					=> "datetime('" + value.ToString("s") + "')";
+		} // class ObjectViewFilterVisitor
 
 			#endregion
 
@@ -865,7 +870,7 @@ namespace TecWare.PPSn
 				} // func Equals
 
 				private string CastToDateExpression(string columnExpr)
-					=> "cast(" + columnExpr + " AS datetime)";
+					=> "datetime(" + columnExpr + ")";
 
 				public string CreateWhereExpression()
 				{
@@ -982,7 +987,7 @@ namespace TecWare.PPSn
 				}
 
 				// append multi-value column
-				cmd.Append("group_concat(s_all.Key || ':' || s_all.Class || '=' || s_all.Value, char(10)) as [Values]");
+				cmd.Append("group_concat(s_all.Key || ':' || s_all.Class || '=' || replace(s_all.Value, char(10), ' '), char(10)) as [Values]");
 
 				// generate dynamic columns
 				foreach (var c in GetAllKeyColumns())
