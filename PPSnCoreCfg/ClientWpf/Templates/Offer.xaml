@@ -9,6 +9,12 @@
 		<StackPanel Orientation="Horizontal">
 			<TextBlock Text="Angebots-Nr.: "/>
 			<TextBlock Text="{Binding Nr}" />
+			<TextBlock Text=" / "/>
+			<TextBlock Text="{Binding Datum}" />
+			<TextBlock Text=" / "/>
+			<TextBlock Text="{Binding AnfNr}" />
+			<TextBlock Text=" / "/>
+			<TextBlock Text="{Binding AnfDatum}" />
 		</StackPanel>
 	</DataTemplate>
 

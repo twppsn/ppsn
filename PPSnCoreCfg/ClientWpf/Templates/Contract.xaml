@@ -6,10 +6,15 @@
 	</ResourceDictionary.MergedDictionaries>
 
 	<DataTemplate x:Key="sdsContract,,100">
-		<!--  crmContacts,dbo.contacts,100 -->
 		<StackPanel Orientation="Horizontal">
 			<TextBlock Text="Auftrag-Nr.: "/>
 			<TextBlock Text="{Binding Nr}" />
+			<TextBlock Text=" / "/>
+			<TextBlock Text="{Binding Datum}" />
+			<TextBlock Text=" / "/>
+			<TextBlock Text="{Binding BestNr}" />
+			<TextBlock Text=" / "/>
+			<TextBlock Text="{Binding BestDatum}" />
 		</StackPanel>
 	</DataTemplate>
 

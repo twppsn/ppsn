@@ -1,9 +1,9 @@
 ﻿CREATE TABLE [dbo].[User]
 (
 	[Id] BIGINT NOT NULL CONSTRAINT pk_UserId PRIMARY KEY IDENTITY (1,1),
-    [Login] [sys].[sysname] NULL, 
-    [Security] NVARCHAR(MAX) NULL, 
-    [LoginVersion] BIGINT NOT NULL DEFAULT 0, 
+	[Login] [sys].[sysname] NULL, 
+	[Security] NVARCHAR(MAX) NULL, 
+	[LoginVersion] BIGINT NOT NULL CONSTRAINT dfUserLoginVersion DEFAULT 0, 
 )
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',

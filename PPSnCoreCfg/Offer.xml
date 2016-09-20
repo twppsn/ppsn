@@ -154,6 +154,12 @@
 			<pps:template id="offer" file="ClientWpf\Templates\Offer.xaml" />
 
 			<pps:view name="sdsOffer" displayName="Angebote" displayGlyph="purchase_orderImage" view="local.objects" filter="Typ:=sdsOffer">
+				<pps:filter name="entwurf" displayName="Entwurf">
+					<![CDATA[ Datum: ]]>
+				</pps:filter>
+				<pps:filter name="archiv" displayName="Archiv">
+					<![CDATA[ Datum:! ]]>
+				</pps:filter>
 				<pps:order name="Name" displayName="Nummer">
 					<![CDATA[ +Nr ]]>
 				</pps:order>
