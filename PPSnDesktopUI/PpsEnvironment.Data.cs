@@ -1060,6 +1060,8 @@ namespace TecWare.PPSn
 				sb.Append("&s=").Append(arguments.Start);
 			if (arguments.Count != -1)
 				sb.Append("&c=").Append(arguments.Count);
+			if (!String.IsNullOrEmpty(arguments.AttributeSelector))
+				sb.Append("&a=").Append(arguments.AttributeSelector);
 
 			return Request.CreateViewDataReader(sb.ToString());
 		} // func GetRemoteViewData

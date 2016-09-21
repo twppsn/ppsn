@@ -7,6 +7,8 @@ using System.Threading;
 using System.Windows.Interop;
 using System.Xml.Linq;
 using Microsoft.Office.Tools.Ribbon;
+using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 using TecWare.PPSn;
 using Excel = Microsoft.Office.Interop.Excel;
 
@@ -148,8 +150,13 @@ namespace PPSnExcel
 					Debug.Print("REPORT: {0}, {1}, {2}", en.Current["Type"], en.Current["ReportId"], en.Current["DisplayName"]);
 			}
 
-			using (var en = Environment.GetViewData(new PpsShellGetList("sds.ansp") { Count = 10 }).GetEnumerator())
+			using (var en = Environment.GetViewData(new PpsShellGetList("sds.ansp") { Count = 10, AttributeSelector = "*" }).GetEnumerator())
 			{
+				var columns = (IDataColumns)en;
+
+				foreach (var col in columns.Columns)
+					Debug.Print("Column: {0} => {1} ", col.Name, col.Attributes.GetProperty("displayName", col.Name));
+
 				while (en.MoveNext())
 					Debug.Print("ANSP: {0}, {1}, {2}", en.Current["Name"], en.Current["Tel"], en.Current["Fax"]);
 			}
