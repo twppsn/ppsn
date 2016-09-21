@@ -1057,9 +1057,9 @@ namespace TecWare.PPSn.Data
 			switch (op)
 			{
 				case PpsDataFilterCompareOperator.Contains:
-					return column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Leading);
+					return column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Trailing);
 				case PpsDataFilterCompareOperator.NotContains:
-					return "NOT " + column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Leading);
+					return "NOT " + column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Trailing);
 
 				default:
 					return CreateDefaultCompareText(column, op, value);

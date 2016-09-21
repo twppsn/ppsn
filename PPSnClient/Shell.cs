@@ -73,6 +73,7 @@ namespace TecWare.PPSn
 		public PpsDataOrderExpression[] Order { get; set; }
 		public int Start { get; set; } = -1;
 		public int Count { get; set; } = -1;
+		public string AttributeSelector { get; set; } = String.Empty;
 
 		public bool IsEmpty => String.IsNullOrEmpty(ViewId);
 
