@@ -8,7 +8,7 @@
 	[Fax] VARCHAR(30) NULL, 
 	[Mobil] VARCHAR(30) NULL, 
 	[Mail] NVARCHAR(100) NULL, 
-	[Std] BIT NOT NULL DEFAULT 0, 
+	[Std] BIT NOT NULL CONSTRAINT dfAnspStd DEFAULT 0, 
 	[Geschl] CHAR NULL, 
 	[Funktion] NVARCHAR(50) NULL, 
 	[Brief] NVARCHAR(50) NULL, 
@@ -225,3 +225,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Ansp',
     @level2type = N'COLUMN',
     @level2name = N'Changed'
+GO
+
+CREATE INDEX [idxAnspAdreId] ON [dbo].[Ansp] ([AdreId])
+GO

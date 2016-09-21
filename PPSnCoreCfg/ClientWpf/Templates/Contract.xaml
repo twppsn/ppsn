@@ -6,7 +6,6 @@
 	</ResourceDictionary.MergedDictionaries>
 
 	<DataTemplate x:Key="sdsContract,,100">
-		<!--  crmContacts,dbo.contacts,100 -->
 		<Grid>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="100" />

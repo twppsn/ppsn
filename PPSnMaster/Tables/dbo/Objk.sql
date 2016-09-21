@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [dbo].[Objk]
 (
 	[Id] BIGINT NOT NULL  CONSTRAINT pkObjkId PRIMARY KEY IDENTITY (1, 1),
-	[Guid] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(), 
+	[Guid] UNIQUEIDENTIFIER NOT NULL CONSTRAINT dfObjkGuid DEFAULT NEWID(), 
 	[Typ] CHAR(25) NOT NULL, 
 	[Nr] NVARCHAR(20) NOT NULL,
 	[CurRevId] BIGINT NULL CONSTRAINT fkObjkObjrCurId REFERENCES dbo.Objr (Id),
@@ -62,3 +62,11 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Objk',
     @level2type = N'COLUMN',
     @level2name = N'CurRevId'
+GO
+
+CREATE INDEX [idxObjkCurId] ON [dbo].[Objk] ([CurRevId])
+GO
+CREATE INDEX [idxObjkHeadId] ON [dbo].[Objk] ([HeadRevId])
+GO
+CREATE INDEX [idxObjkTyp] ON [dbo].[Objk] ([Typ]) INCLUDE ([Id])
+GO
