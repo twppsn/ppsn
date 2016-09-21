@@ -11,6 +11,7 @@ using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn
 {
@@ -181,13 +182,11 @@ namespace TecWare.PPSn
 
 		#region -- Lua Compiler -----------------------------------------------------------
 
-		public async Task<LuaChunk> CompileAsync(XElement xSource, bool throwException, params KeyValuePair<string, Type>[] arguments)
+		public async Task<LuaChunk> CompileAsync(string sourceCode, string sourceFileName, bool throwException, params KeyValuePair<string, Type>[] arguments)
 		{
 			try
 			{
-				var code = xSource.Value;
-				var fileName = "dummy.lua"; // todo: get position
-				return Lua.CompileChunk(code, fileName, luaOptions, arguments);
+				return Lua.CompileChunk(sourceCode, sourceFileName, luaOptions, arguments);
 			}
 			catch (LuaParseException e)
 			{
@@ -195,10 +194,17 @@ namespace TecWare.PPSn
 					throw;
 				else
 				{
-					await ShowExceptionAsync(ExceptionShowFlags.Background, e, "Compile failed.");
+					await ShowExceptionAsync(ExceptionShowFlags.Background, e, $"Compile for {sourceFileName} failed.");
 					return null;
 				}
 			}
+		} // func CompileAsync
+
+		public Task<LuaChunk> CompileAsync(XElement xSource, bool throwException, params KeyValuePair<string, Type>[] arguments)
+		{
+			var code = xSource.Value;
+			var pos = PpsXmlPosition.GetXmlPositionFromAttributes(xSource);
+			return CompileAsync(code, pos.LineInfo ?? "dummy.lua", throwException, arguments);
 		} // func CompileAsync
 
 		/// <summary>Load an compile the file from a remote source.</summary>

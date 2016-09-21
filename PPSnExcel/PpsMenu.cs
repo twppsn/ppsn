@@ -141,6 +141,19 @@ namespace PPSnExcel
 
 		private void cmdReport_Click(object sender, RibbonControlEventArgs e)
 		{
+
+			using (var en = Environment.GetViewData(new PpsShellGetList("wpf.reports")).GetEnumerator())
+			{
+				while (en.MoveNext())
+					Debug.Print("REPORT: {0}, {1}, {2}", en.Current["Type"], en.Current["ReportId"], en.Current["DisplayName"]);
+			}
+
+			using (var en = Environment.GetViewData(new PpsShellGetList("sds.ansp") { Count = 10 }).GetEnumerator())
+			{
+				while (en.MoveNext())
+					Debug.Print("ANSP: {0}, {1}, {2}", en.Current["Name"], en.Current["Tel"], en.Current["Fax"]);
+			}
+
 			var w = new Wpf.PpsReportSelectWindow();
 			var wh = new WindowInteropHelper(w);
 			wh.Owner = new IntPtr(application.Hwnd);
