@@ -7,18 +7,33 @@
 
 	<DataTemplate x:Key="crmContacts,,100">
 		<!--  crmContacts,dbo.contacts,100 -->
-		<StackPanel Orientation="Horizontal">
-            <TextBlock Text="Kontakt-Nr.: "/>
-            <TextBlock Text="{Binding Nr}" />
-            <TextBlock Text=" / "/>
-            <TextBlock Text="{Binding Name}" />
-			<TextBlock Text=" / "/>
-			<TextBlock Text="{Binding LiefNr}" />
-			<TextBlock Text=" / "/>
-			<TextBlock Text="{Binding KundNr}" />
-			<TextBlock Text=" / "/>
-			<TextBlock Text="{Binding Inaktiv}" />
-		</StackPanel>
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="20" />
+				<RowDefinition Height="20" />
+			</Grid.RowDefinitions>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="50" />
+				<ColumnDefinition Width="300" />
+				<ColumnDefinition Width="300" />
+				<ColumnDefinition Width="100"/>
+				<ColumnDefinition Width="150"/>
+				<ColumnDefinition Width="300"/>
+				<ColumnDefinition Width="300"/>
+			</Grid.ColumnDefinitions>
+			<TextBlock Text="{Binding Nr}" Grid.RowSpan="2" VerticalAlignment="Center" FontWeight="Bold" ToolTip="Kontaktnummer" />
+			<!--<TextBlock Text="{Binding STATUS}" Grid.Column="1" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Status"/>-->
+			<TextBlock Text="{Binding Name}" Grid.Column="2" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Name"/>
+			<TextBlock Text="{Binding Adresse}" Grid.Column="3" Grid.RowSpan="2" FontStretch="Expanded" ToolTip="Adresse"/>
+			<TextBlock Text="{Binding LiefNr}" Grid.Column="4" ToolTip="Debitorennummer"/>
+			<TextBlock Text="{Binding KundNr}" Grid.Column="4" Grid.Row="2" ToolTip="Kreditorennummer" />
+			<!--<TextBlock Text="{Binding USTID}" Grid.Column="5" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="USt.-Ident.-Nr."/>-->
+			<TextBlock Text="{Binding Inaktiv,StringFormat='d',ConverterCulture='de-DE'}" Grid.Column="6" ToolTip="InAktiv"/>
+			<!--<TextBlock Text="{Binding TEL}" Grid.Column="6" Grid.Row="2" FontSize="11" ToolTip="Telefonnummer" />
+			<TextBlock Text="{Binding PERS}" Grid.Column="7" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Sachbearbeiter" />-->
+		</Grid>
+
 	</DataTemplate>
 	
 </ResourceDictionary>

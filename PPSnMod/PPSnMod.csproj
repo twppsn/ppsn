@@ -70,6 +70,7 @@
     <Compile Include="Sql\PpsSqlExDataSource.cs" />
     <Compile Include="Sql\PpsSqlDataSource.cs" />
     <Compile Include="Stuff.cs" />
+    <Compile Include="Wpf\ExcelCientItem.cs" />
     <Compile Include="Wpf\WpfClientItem.cs" />
   </ItemGroup>
   <ItemGroup>
