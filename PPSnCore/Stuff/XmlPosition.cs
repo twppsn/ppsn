@@ -144,8 +144,10 @@ namespace TecWare.PPSn.Stuff
 			// read the filename
 			if ((f & 2) == 0)
 			{
-				fileName = x.GetAttribute(xnFileName, String.Empty);
-				if (!String.IsNullOrEmpty(fileName))
+				fileName = x.GetAttribute<string>(xnFileName, null);
+				if (String.IsNullOrWhiteSpace(fileName))
+					fileName = null;
+				else if (fileName != null)
 					f = f | 2;
 			}
 		} // func ReadInfo
