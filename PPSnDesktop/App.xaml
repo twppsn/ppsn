@@ -6,7 +6,7 @@
 			 xmlns:uim="clr-namespace:TecWare.PPSn.UI"
 			 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
 			 xmlns:env="clr-namespace:TecWare.PPSn"
-             ShutdownMode="OnLastWindowClose">
+       ShutdownMode="OnLastWindowClose">
 	<Application.Resources>
 		<ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

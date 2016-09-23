@@ -59,9 +59,9 @@ namespace TecWare.PPSn
 			this.Priority = priority = xCur.GetAttribute("priority", priority + 1);
 
 			// compile condition
-			condition = environment.CreateLuaChunk(xCur.Element(xnCondition));
+			condition = environment.CreateChunk(xCur.Element(xnCondition), true);
 			// compile action
-			code = environment.CreateLuaChunk(xCur.Element(xnCode));
+			code =  environment.CreateChunk(xCur.Element(xnCode), true);
 		} // ctor
 
 		public bool CheckCondition(LuaTable context)
@@ -150,25 +150,6 @@ namespace TecWare.PPSn
 					return window;
 				});
 		} // proc CreateMainWindow
-
-		public LuaChunk CreateLuaChunk(string line, params KeyValuePair<string, Type>[] args)
-		{
-			return Lua.CompileChunk(line, "line.lua", null, args);
-		} // func CreateLuaChunk
-
-		public LuaChunk CreateLuaChunk(XElement xCode, params KeyValuePair<string, Type>[] args)
-		{
-			try
-			{
-				var code = xCode?.Value;
-				return code != null ? Lua.CompileChunk(code, "dummy", null, args) : null;
-			}
-			catch (LuaParseException ex)
-			{
-				ShowException(ExceptionShowFlags.None, ex);
-				return null;
-			}
-		} // proc CreateLuaChunk
 
 		private static readonly XName xnEnvironment = "environment";
 		private static readonly XName xnCode = "code";

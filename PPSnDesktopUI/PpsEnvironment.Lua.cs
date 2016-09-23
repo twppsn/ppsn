@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -21,6 +23,8 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public interface IPpsLuaTaskParent
 	{
+		void RunTaskSync(Task task);
+
 		/// <summary>Returns the dispatcher fo the UI thread</summary>
 		Dispatcher Dispatcher { get; }
 		/// <summary>Returns the trace sink.</summary>
@@ -43,7 +47,7 @@ namespace TecWare.PPSn
 		private object onException = null;
 
 		private volatile bool isCompleted = false;
-		private volatile bool waitInUIThread = false;
+		private Exception currentException = null;
 		private LuaResult currentResult = LuaResult.Empty;
 
 		private readonly CancellationToken cancellationToken;
@@ -85,22 +89,31 @@ namespace TecWare.PPSn
 					continueWith.Clear();
 
 					// fetch ui tasks
-					if (!waitInUIThread)
-					{
-						parent.Dispatcher.Invoke(() => FetchContinue(continueUI));
-						continueUI.Clear();
-					}
+					parent.Dispatcher.Invoke(() => FetchContinue(continueUI));
+					continueUI.Clear();
 
 					return currentResult;
 				}
 				catch (Exception e)
 				{
-					parent.Traces.AppendException(e);
-
+					var cleanException = e.GetInnerException();
 					if (onException == null)
+					{
+						currentException = cleanException;
 						currentResult = LuaResult.Empty;
+					}
 					else
-						currentResult = parent.Dispatcher.Invoke(() => new LuaResult(Lua.RtInvoke(onException, e)));
+					{
+						if (onException is LuaResult)
+						{
+							parent.Traces.AppendException(cleanException);
+							currentResult = (LuaResult)onException;
+						}
+						else if (Lua.RtInvokeable(onException))
+							currentResult = parent.Dispatcher.Invoke(() => new LuaResult(Lua.RtInvoke(onException, cleanException)));
+						else
+							currentResult = new LuaResult(onException, cleanException);
+					}
 
 					isCompleted = true;
 
@@ -140,12 +153,24 @@ namespace TecWare.PPSn
 			lock (task)
 			{
 				if (IsCompleted) // run sync
-					parent.Dispatcher.Invoke(() => FetchContinue(onContinue));
+				{
+					if (parent.Dispatcher.Thread == Thread.CurrentThread)
+						FetchContinue(onContinue);
+					else
+						parent.Dispatcher.Invoke(() => FetchContinue(onContinue));
+				}
 				else // else queue
 					continueUI.Enqueue(onContinue);
 			}
 			return this;
 		} // func ContinueUI
+
+		public PpsLuaTask OnException(object onException)
+		{
+			lock (task)
+				this.onException = onException;
+			return this;
+		} // func OnException
 
 		#endregion
 
@@ -154,16 +179,24 @@ namespace TecWare.PPSn
 
 		public LuaResult Wait()
 		{
-			lock (task)
+			var  waitInUIThread = parent.Dispatcher.Thread == Thread.CurrentThread; // check if the current thread, is the main thread4
+			if (waitInUIThread)
 			{
-				task.Wait();
-
-				waitInUIThread = parent.Dispatcher.Thread == Thread.CurrentThread;
-
-				// fetch ui continue
-				if (waitInUIThread && continueUI.Count > 0)
-					FetchContinue(continueUI);
+				Task t;
+				lock (task)
+					t = task;
+				parent.RunTaskSync(t);
 			}
+			else
+			{
+				lock (task)
+					task.Wait();
+			}
+
+			if (onException == null && currentException != null)
+				throw new TargetInvocationException(currentException);
+			
+			// return the result
 			return currentResult;
 		} // func Wait
 		
@@ -178,15 +211,82 @@ namespace TecWare.PPSn
 
 	public partial class PpsEnvironment : IPpsLuaTaskParent
 	{
-		private LuaCompileOptions luaOptions = LuaDeskop.StackTraceCompileOptions;
+		#region -- class LuaTraceLineDebugInfo --------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class LuaTraceLineDebugInfo : ILuaDebugInfo
+		{
+			private readonly string chunkName;
+			private readonly string sourceFile;
+			private readonly int line;
+
+			public LuaTraceLineDebugInfo(LuaTraceLineExceptionEventArgs e, string sourceFile)
+			{
+				this.chunkName = e.SourceName;
+				this.sourceFile = sourceFile;
+				this.line = e.SourceLine;
+			} // ctor
+
+			public string ChunkName => chunkName;
+			public int Column => 0;
+			public string FileName => sourceFile;
+			public int Line => line;
+		} // class LuaTraceLineDebugInfo
+
+		#endregion
+
+		#region -- class LuaEnvironmentTraceLineDebugger ----------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class LuaEnvironmentTraceLineDebugger : LuaTraceLineDebugger
+		{
+			protected override void OnExceptionUnwind(LuaTraceLineExceptionEventArgs e)
+			{
+				var luaFrames = new List<LuaStackFrame>();
+				var offsetForRecalc = 0;
+				LuaExceptionData currentData = null;
+
+				// get default exception data
+				if (e.Exception.Data[LuaRuntimeException.ExceptionDataKey] is LuaExceptionData)
+				{
+					currentData = LuaExceptionData.GetData(e.Exception);
+					offsetForRecalc = currentData.Count;
+					luaFrames.AddRange(currentData);
+				}
+				else
+					currentData = LuaExceptionData.GetData(e.Exception, resolveStackTrace: false);
+
+				// re-trace the stack frame
+				var trace = new StackTrace(e.Exception, true);
+				for (var i = offsetForRecalc; i < trace.FrameCount - 1; i++)
+					luaFrames.Add(LuaExceptionData.GetStackFrame(trace.GetFrame(i)));
+
+				// add trace point
+				luaFrames.Add(new LuaStackFrame(trace.GetFrame(trace.FrameCount - 1), new LuaTraceLineDebugInfo(e, e.SourceName)));
+
+				currentData.UpdateStackTrace(luaFrames.ToArray());
+			} // proc OnExceptionUnwind
+		} // class LuaEnvironmentTraceLineDebugger
+
+		#endregion
+
+		private LuaCompileOptions luaOptions;
+
+		private void CreateLuaCompileOptions()
+		{
+			luaOptions = new LuaCompileOptions();
+			luaOptions.DebugEngine = new LuaEnvironmentTraceLineDebugger();
+		} // CreateLuaCompileOptions
 
 		#region -- Lua Compiler -----------------------------------------------------------
 
-		public async Task<LuaChunk> CompileAsync(string sourceCode, string sourceFileName, bool throwException, params KeyValuePair<string, Type>[] arguments)
+		public async Task<LuaChunk> CompileAsync(TextReader tr, string sourceLocation, bool throwException, params KeyValuePair<string, Type>[] arguments)
 		{
 			try
 			{
-				return Lua.CompileChunk(sourceCode, sourceFileName, luaOptions, arguments);
+				return Lua.CompileChunk(tr, sourceLocation, luaOptions, arguments);
 			}
 			catch (LuaParseException e)
 			{
@@ -194,10 +294,16 @@ namespace TecWare.PPSn
 					throw;
 				else
 				{
-					await ShowExceptionAsync(ExceptionShowFlags.Background, e, $"Compile for {sourceFileName} failed.");
+					await ShowExceptionAsync(ExceptionShowFlags.Background, e, $"Compile for {sourceLocation} failed.");
 					return null;
 				}
 			}
+		} // func CompileAsync
+
+		public Task<LuaChunk> CompileAsync(string sourceCode, string sourceFileName, bool throwException, params KeyValuePair<string, Type>[] arguments)
+		{
+			using (var tr = new StringReader(sourceCode))
+				return CompileAsync(tr, sourceFileName, throwException, arguments);
 		} // func CompileAsync
 
 		public Task<LuaChunk> CompileAsync(XElement xSource, bool throwException, params KeyValuePair<string, Type>[] arguments)
@@ -218,23 +324,33 @@ namespace TecWare.PPSn
 			{
 				using (var r = await request.GetResponseAsync(source.ToString()))
 				{
-					var contentDisposion = r.GetContentDisposition(true);
+					var contentDisposition = r.GetContentDisposition(true);
 					using (var sr = request.GetTextReaderAsync(r, MimeTypes.Text.Plain))
-						return Lua.CompileChunk(sr, contentDisposion.FileName, luaOptions, arguments);
+						return await CompileAsync(sr, contentDisposition.FileName, throwException, arguments);
 				}
 			}
-			catch (LuaParseException e)
+			catch (Exception e)
 			{
 				if (throwException)
 					throw;
+				else if (e is LuaParseException) // alread handled
+					return null;
 				else
 				{
-					await ShowExceptionAsync(ExceptionShowFlags.Background, e, $"Compile for {source} failed.");
+					await ShowExceptionAsync(ExceptionShowFlags.Background, e, $"Compile failed for {source}.");
 					return null;
 				}
 			}
 		} // func CompileAsync
 
+		public LuaChunk CreateChunk(XElement xCode, bool throwException, params KeyValuePair<string, Type>[] arguments)
+		{
+			if (xCode == null)
+				return null;
+
+			return RunTaskSync(CompileAsync(xCode, throwException, arguments));
+		} // func CreateChunk
+		
 		public T RunScriptWithReturn<T>(LuaChunk chunk, LuaTable context, Nullable<T> returnOnException, params object[] arguments)
 			where T : struct
 		{
@@ -284,7 +400,6 @@ namespace TecWare.PPSn
 				{
 					// notify exception as warning
 					Traces.AppendException(ex, "Execution failed.", true);
-
 					return LuaResult.Empty;
 				}
 			}
@@ -326,6 +441,19 @@ namespace TecWare.PPSn
 		{
 			LuaTrace(PpsTraceItemType.Information, args);
 		} // proc LuaPrint
+
+		[LuaMember("typeof")]
+		private Type LuaType(object o)
+			=> o?.GetType();
+
+		[LuaMember("require")]
+		private LuaResult LuaRequire(string path)
+		{
+			// compile code, synchonize the code to this thread
+			var chunk = RunTaskSync(CompileAsync(new Uri(path, UriKind.Relative), true));
+
+			return RunScript(chunk, this, true);
+		} // proc LuaRequire
 
 		private static Task<LuaResult> ConvertToLuaResultTask<T>(Task<T> task, CancellationToken cancellationToken)
 			=> task.ContinueWith(_ => new LuaResult(_.Result), cancellationToken);
@@ -381,6 +509,27 @@ namespace TecWare.PPSn
 				return new PpsLuaTask(parent, cancellationSource, cancellationToken, Task.Run<object>(() => Lua.RtInvoke(func, args), cancellationToken));
 		} // func RunTask
 
+		public void RunTaskSync(Task task)
+		{
+			var inUIThread = Dispatcher.Thread == Thread.CurrentThread;
+
+			if (inUIThread && !task.IsCompleted)
+			{
+				var frame = new DispatcherFrame();
+				Task.Run(new Action(task.Wait)).ContinueWith(t => { frame.Continue = false; });
+				using (BlockAllUI(frame))
+					Dispatcher.PushFrame(frame);
+			}
+
+			task.Wait();
+		} // proc RunTaskSync
+
+		public T RunTaskSync<T>(Task<T> task)
+		{
+			RunTaskSync((Task)task);
+			return task.Result;
+		} // proc RunTaskSync
+
 		/// <summary>Creates a background task, and run's the given function in it.</summary>
 		/// <param name="func"></param>
 		/// <param name="args"></param>
@@ -396,7 +545,15 @@ namespace TecWare.PPSn
 		[LuaMember("runUI")]
 		public LuaResult RunUI(object func, params object[] args)
 			=> Dispatcher.Invoke<LuaResult>(() => new LuaResult(Lua.RtInvoke(func, args)));
-		
+
+		public IDisposable BlockAllUI(DispatcherFrame frame, string message = null)
+		{
+			Thread.Sleep(200); // wait for finish
+			if(frame.Continue)
+				return null; // block ui
+			else
+				return null;
+		} // proc BlockAllUI
 
 		#endregion
 

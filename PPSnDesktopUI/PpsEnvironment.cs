@@ -462,6 +462,8 @@ namespace TecWare.PPSn
 			this.dataListTemplateSelector = new PpsDataListTemplateSelector(this);
 			this.templateDefinitions = new PpsEnvironmentCollection<PpsDataListItemDefinition>(this);
 
+			CreateLuaCompileOptions();
+
 			// enable trace access
 			BindingOperations.EnableCollectionSynchronization(logData, logData.SyncRoot,
 				(collection, context, accessMethod, writeAccess) => currentDispatcher.Invoke(accessMethod)
