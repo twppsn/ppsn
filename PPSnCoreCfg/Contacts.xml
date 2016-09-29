@@ -124,6 +124,15 @@
 							where Typ = 'crmContacts']]>
 				</pps:source>
 			</pps:view> -->
+			
+			<!--  Ansprechpartner -->
+			<pps:view name="sds.ansp" displayName="Ansprechpartner">
+				<pps:source type="select">
+					<![CDATA[SELECT [Name],[Titel],[Tel],[Fax],[Mobil],[Mail],[Std],[Geschl],[Funktion],[Brief],[Anmerk],[Postfach],[Zusatz],[Strasse],[Ort],[Region],[Plz],[Adresse] FROM [dbo].[Ansp]]]>
+				</pps:source>
+				<pps:attribute name="Excel.Report">true</pps:attribute>
+			</pps:view>
+			
 
 			<!-- contacts mask -->
 			<pps:dataset name="contactsDataSet" inherited="coreDataSet" clientScripts="contacts\contactsLocal.lua" serverScripts="ContactsScript">

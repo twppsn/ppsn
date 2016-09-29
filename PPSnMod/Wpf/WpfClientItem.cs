@@ -700,7 +700,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#region -- ParseNavigator ---------------------------------------------------------
 
-		private void WriteSubItem(XmlWriter xml, string name, XElement x,ref int priority)
+		private void EmitSubViewItem(XmlWriter xml, string name, XElement x,ref int priority)
 		{
 			var displayName = x.GetAttribute("displayName", String.Empty);
 			if (String.IsNullOrEmpty(displayName))
@@ -717,43 +717,100 @@ namespace TecWare.PPSn.Server.Wpf
 
 			xml.WriteCData(x.Value);
 			xml.WriteEndElement();
-		} // proc WriteSubItem
+		} // proc EmitSubViewItem
 
-		private void ParseNavigator(IDEContext r)
+		private void EmitViewItem(IDEContext r, XmlWriter xml, XElement view)
+		{
+			var viewId = view.GetAttribute("view", String.Empty);
+			var displayName = view.GetAttribute("displayName", String.Empty);
+
+			if (String.IsNullOrEmpty(viewId) ||  // viewId exists
+					String.IsNullOrEmpty(displayName) || // displayName exists
+					!r.TryDemandToken(view.GetAttribute("securityToken", String.Empty))) // and is accessable
+				return;
+
+			// write the attributes
+			xml.WriteStartElement("view");
+			xml.WriteAttributeString("name", view.GetAttribute("name", String.Empty));
+			xml.WriteAttributeString("displayName", displayName);
+			xml.WriteAttributeString("view", viewId);
+
+			xml.WriteAttributeString(view, "filter");
+			xml.WriteAttributeString(view, "displayGlyph");
+
+			// write filters and orders
+			var priority = 1;
+			foreach (var f in view.Elements(PpsStuff.xnFilter))
+				EmitSubViewItem(xml, "filter", f, ref priority);
+			priority = 1;
+			foreach (var f in view.Elements(PpsStuff.xnOrder))
+				EmitSubViewItem(xml, "order", f, ref priority);
+
+			xml.WriteEndElement();
+		} // proc EmitViewItem
+
+		#region -- class EnvironmentCodeComparer ------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class EnvironmentCodeComparer : IComparer<KeyValuePair<int, string>>
+		{
+			private EnvironmentCodeComparer()
+			{
+			} // ctor
+
+			public int Compare(KeyValuePair<int, string> x, KeyValuePair<int, string> y)
+				=> x.Key - y.Key;
+
+			public static EnvironmentCodeComparer Instance { get; } = new EnvironmentCodeComparer();
+		} // class EnvironmentCodeComparer
+
+		private string CollectEnvironmentScripts()
+		{
+			var priority = 1;
+			var environmentLoader = new List<KeyValuePair<int, string>>();
+			foreach (var env in Config.Elements(PpsStuff.xnEnvironment))
+			{
+				priority = env.GetAttribute("priority", priority);
+
+				var xCode = env.GetElement(PpsStuff.xnCode);
+				if (xCode != null && !String.IsNullOrEmpty(xCode.Value))
+				{
+					var item = new KeyValuePair<int, string>(priority,
+						"--L=" + PpsXmlPosition.GetXmlPositionFromXml(xCode).LineInfo + Environment.NewLine + xCode.Value
+					);
+					var index = environmentLoader.BinarySearch(item, EnvironmentCodeComparer.Instance);
+					environmentLoader.Insert(index < 0 ? ~index : index + 1, item);
+				}
+
+				priority = priority + 1;
+			}
+
+			return String.Join(Environment.NewLine, from c in environmentLoader select c.Value);
+		} // func CollectEnvironmentScripts
+
+		#endregion
+
+		private void ParseEnvironment(IDEContext r)
 		{
 			using (XmlWriter xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml), Procs.XmlWriterSettings))
 			{
+				xml.WriteStartElement("environment");
+
+				// create environment extentsions
+				var environmentCode = CollectEnvironmentScripts();
+				if (environmentCode != null)
+				{
+					xml.WriteStartElement("code");
+					xml.WriteCData(environmentCode);
+					xml.WriteEndElement();
+				}
+				
+				// write navigator specific
 				xml.WriteStartElement("navigator");
 
 				foreach (var view in Config.Elements(PpsStuff.xnView))
-				{
-					var viewId = view.GetAttribute("view", String.Empty);
-					var displayName = view.GetAttribute("displayName", String.Empty);
-
-					if (String.IsNullOrEmpty(viewId) ||  // viewId exists
-							String.IsNullOrEmpty(displayName) || // displayName exists
-							!r.TryDemandToken(view.GetAttribute("securityToken", String.Empty))) // and is accessable
-						continue;
-
-					// write the attributes
-					xml.WriteStartElement("view");
-					xml.WriteAttributeString("name", view.GetAttribute("name", String.Empty));
-					xml.WriteAttributeString("displayName", displayName);
-					xml.WriteAttributeString("view", viewId);
-
-					xml.WriteAttributeString(view, "filter");
-					xml.WriteAttributeString(view, "displayGlyph");
-
-					// write filters and orders
-					var priority = 1;
-					foreach (var f in view.Elements(PpsStuff.xnFilter))
-						WriteSubItem(xml, "filter", f, ref priority);
-					priority = 1;
-					foreach (var f in view.Elements(PpsStuff.xnOrder))
-						WriteSubItem(xml, "order", f, ref priority);
-
-					xml.WriteEndElement();
-				} // foreach v
+					EmitViewItem(r, xml, view);
 
 				// parse all action attributes
 				var posPriority = 1;
@@ -808,6 +865,7 @@ namespace TecWare.PPSn.Server.Wpf
 				}
 
 				xml.WriteEndElement();
+				xml.WriteEndElement();
 			}
 		} // func ParseNavigator
 
@@ -832,7 +890,7 @@ namespace TecWare.PPSn.Server.Wpf
 			var basePath = this.Name;
 
 			// navigator.xml
-			yield return new PpsApplicationFileItem(basePath + "/navigator.xml", -1, DateTime.MinValue);
+			yield return new PpsApplicationFileItem(basePath + "/environment.xml", -1, DateTime.MinValue);
 
 			// templates.xml
 			yield return new PpsApplicationFileItem("constants.xml", -1, DateTime.MinValue);
@@ -899,9 +957,9 @@ namespace TecWare.PPSn.Server.Wpf
 				r.WriteXml(ParseXamlTheme("default").Document, GetXamlContentType(r));
 				return true;
 			}
-			else if (r.RelativeSubPath == "navigator.xml")
+			else if (r.RelativeSubPath == "environment.xml")
 			{
-				ParseNavigator(r);
+				ParseEnvironment(r);
 				return true;
 			}
 			else if (r.RelativeSubPath == "templates.xaml")

@@ -25,6 +25,7 @@ using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
 using TecWare.PPSn.Server.Sql;
 
@@ -87,6 +88,9 @@ namespace TecWare.PPSn.Server
 			: base(sp, name)
 		{
 			initializationProgress = new SimpleConfigItemProperty<string>(this, "ppsn_init_progress", "Initialization", "Misc", "Show the current state of the initialization of the node.", null, "Pending");
+
+			// register shortcut for text
+			LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
 
 			InitData();
 			InitUser();
