@@ -60,7 +60,6 @@
   <ItemGroup>
     <Folder Include="Properties" />
     <Folder Include="Tables" />
-    <Folder Include="Database" />
     <Folder Include="Tables\dbo" />
     <Folder Include="Tables\hrs" />
     <Folder Include="Tables\sds" />
@@ -96,8 +95,5 @@
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="PPSnMaster.refactorlog" />
-  </ItemGroup>
-  <ItemGroup>
-    <PostDeploy Include="Database\Data.sql" />
   </ItemGroup>
 </Project>
