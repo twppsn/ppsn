@@ -241,7 +241,7 @@ namespace TecWare.PPSn.UI
 		private object GetXamlElement(object key)
 		{
 			if (key is string)
-				return Control.FindName((string)key);
+				return Control.Dispatcher.Invoke(() => Control.FindName((string)key));
 			else
 				return null;
 		} // func GetXamlElement

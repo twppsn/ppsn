@@ -538,6 +538,10 @@ namespace TecWare.PPSn
 		public PpsLuaTask RunTask(object func, params object[] args)
 			=> RunTask(this, func, CancellationToken.None, args);
 
+		[LuaMember("run")]
+		public PpsLuaTask RunBackground(object func, params object[] args)
+			=> RunTask(Task.Run(() => Lua.RtInvoke(func, args)));
+
 		/// <summary>Executes the function in the UI thread.</summary>
 		/// <param name="func"></param>
 		/// <param name="args"></param>

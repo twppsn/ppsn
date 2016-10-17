@@ -90,7 +90,7 @@ namespace TecWare.PPSn
 			deleteCommand.Dispose();
 		} // proc Dispose
 
-		public void UpdateTags(PpsObjectTag[] tags)
+		public void UpdateTags(IList<PpsObjectTag> tags)
 		{
 			var updatedTags = new List<string>();
 
@@ -341,144 +341,159 @@ namespace TecWare.PPSn
 			// todo: lock -> mutex
 			// todo: user rights -> server
 
-			// get last rev id
-			var maxRevId = 0L;
-			using (var cmd = new SQLiteCommand("SELECT max([RemoteRevId]) FROM main.[Objects]", LocalConnection))
+			// get last state
+			var maxState = 0L;
+			using (var cmd = new SQLiteCommand("SELECT max([StateChg]) FROM main.[Objects]", LocalConnection))
 			{
 				using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
-					maxRevId = r.Read() && !r.IsDBNull(0) ? r.GetInt64(0) : 0;
+					maxState = r.Read() && !r.IsDBNull(0) ? r.GetInt64(0) : -1;
 			}
 
-			// get the new objects, todo: not via RevId -> change id
-			using (var enumerator = GetViewData(new PpsShellGetList("dbo.objects") { Filter = new PpsDataFilterCompareExpression("RevId", PpsDataFilterCompareOperator.Greater, new PpsDataFilterCompareTextValue(maxRevId.ToString())) }).GetEnumerator())
+			// get the new objects
+			using (var enumerator = GetViewData(new PpsShellGetList("dbo.objects") { Filter = new PpsDataFilterCompareExpression("StateChg", PpsDataFilterCompareOperator.Greater, new PpsDataFilterCompareTextValue(maxState.ToString())) }).GetEnumerator())
 			{
 				var indexId = enumerator.FindColumnIndex("Id", true);
 				var indexGuid = enumerator.FindColumnIndex("Guid", true);
 				var indexTyp = enumerator.FindColumnIndex("Typ", true);
 				var indexNr = enumerator.FindColumnIndex("Nr", true);
+				var indexIsRev = enumerator.FindColumnIndex("IsRev", true);
+				var indexState = enumerator.FindColumnIndex("State", true);
+				var indexStateChg = enumerator.FindColumnIndex("StateChg", true);
 				var indexRevId = enumerator.FindColumnIndex("RevId", true);
 				var indexTags = enumerator.FindColumnIndex("Tags");
 
-                using (SQLiteCommand
-                    selectCommand = new SQLiteCommand("SELECT [Id] FROM main.[Objects] WHERE [Guid] = @Guid", LocalConnection),
-                    insertCommand = new SQLiteCommand("INSERT INTO main.[Objects] ([ServerId], [Guid], [Typ], [Nr], [RemoteRevId]) VALUES (@ServerId, @Guid, @Typ, @Nr, @RevId);", LocalConnection),
-                    updateCommand = new SQLiteCommand("UPDATE main.[Objects] SET [ServerId] = @ServerId, [Nr] = @Nr, [RemoteRevId] = @RevId where [Id] = @Id;", LocalConnection)
-                )
-                using (var updateTags = new TagDatabaseCommands(LocalConnection))
-                {
-                    #region -- prepare upsert --
+				using (SQLiteCommand
+						selectCommand = new SQLiteCommand("SELECT [Id] FROM main.[Objects] WHERE [Guid] = @Guid", LocalConnection),
+						insertCommand = new SQLiteCommand("INSERT INTO main.[Objects] ([ServerId], [Guid], [Typ], [Nr], [IsRev], [StateChg], [RemoteRevId]) VALUES (@ServerId, @Guid, @Typ, @Nr, @IsRev, @StateChg, @RevId);", LocalConnection),
+						updateCommand = new SQLiteCommand("UPDATE main.[Objects] SET [ServerId] = @ServerId, [Nr] = @Nr, [StateChg] = @StateChg, IsRev = @IsRev, [RemoteRevId] = @RevId where [Id] = @Id;", LocalConnection)
+				)
+				using (var updateTags = new TagDatabaseCommands(LocalConnection))
+				{
+					#region -- prepare upsert --
 
-                    var selectGuid = selectCommand.Parameters.Add("@Guid", DbType.Guid);
+					var selectGuid = selectCommand.Parameters.Add("@Guid", DbType.Guid);
 
-                    var insertServerId = insertCommand.Parameters.Add("@ServerId", DbType.Int64);
-                    var insertGuid = insertCommand.Parameters.Add("@Guid", DbType.Guid);
-                    var insertTyp = insertCommand.Parameters.Add("@Typ", DbType.String);
-                    var insertNr = insertCommand.Parameters.Add("@Nr", DbType.String);
-                    var insertRevId = insertCommand.Parameters.Add("@RevId", DbType.Int64);
+					var insertServerId = insertCommand.Parameters.Add("@ServerId", DbType.Int64);
+					var insertGuid = insertCommand.Parameters.Add("@Guid", DbType.Guid);
+					var insertTyp = insertCommand.Parameters.Add("@Typ", DbType.String);
+					var insertNr = insertCommand.Parameters.Add("@Nr", DbType.String);
+					var insertIsRev = insertCommand.Parameters.Add("@IsRev", DbType.Boolean);
+					var insertStateChg = insertCommand.Parameters.Add("@StateChg", DbType.Int64);
+					var insertRevId = insertCommand.Parameters.Add("@RevId", DbType.Int64);
 
-                    var updateServerId = updateCommand.Parameters.Add("@ServerId", DbType.Int64);
-                    var updateNr = updateCommand.Parameters.Add("@Nr", DbType.String);
-                    var updateRevId = updateCommand.Parameters.Add("@RevId", DbType.Int64);
-                    var updateId = updateCommand.Parameters.Add("@Id", DbType.Int64);
+					var updateServerId = updateCommand.Parameters.Add("@ServerId", DbType.Int64);
+					var updateNr = updateCommand.Parameters.Add("@Nr", DbType.String);
+					var updateIsRev = updateCommand.Parameters.Add("@IsRev", DbType.Boolean);
+					var updateStateChg = updateCommand.Parameters.Add("@StateChg", DbType.Int64);
+					var updateRevId = updateCommand.Parameters.Add("@RevId", DbType.Int64);
+					var updateId = updateCommand.Parameters.Add("@Id", DbType.Int64);
 
-                    #endregion
+					#endregion
 
-                    selectCommand.Prepare();
-                    insertCommand.Prepare();
-                    updateCommand.Prepare();
+					selectCommand.Prepare();
+					insertCommand.Prepare();
+					updateCommand.Prepare();
 
-                    var procValidateId = new Action<long>(c =>
-                    {
-                        if (c <= 0)
-                            throw new ArgumentException($"Invalid ServerId '{c}'.");
-                    });
-                    var procValidateNr = new Action<string>(c =>
-                    {
-                        if (String.IsNullOrEmpty(c))
-                            throw new ArgumentException($"Invalid Nr '{c}'.");
-                    });
+					var procValidateId = new Action<long>(c =>
+					{
+						if (c <= 0)
+							throw new ArgumentException($"Invalid ServerId '{c}'.");
+					});
+					var procValidateNr = new Action<string>(c =>
+					{
+						if (String.IsNullOrEmpty(c))
+							throw new ArgumentException($"Invalid Nr '{c}'.");
+					});
 
-                    var run = true;
-                    do
-                    {
-                        using (var transaction = LocalConnection.BeginTransaction(IsolationLevel.ReadCommitted))
-                        {
-                            selectCommand.Transaction =
-                                insertCommand.Transaction =
-                                updateCommand.Transaction =
-                                updateTags.Transaction = transaction;
+					var run = true;
+					do
+					{
+						using (var transaction = LocalConnection.BeginTransaction(IsolationLevel.ReadCommitted))
+						{
+							selectCommand.Transaction =
+									insertCommand.Transaction =
+									updateCommand.Transaction =
+									updateTags.Transaction = transaction;
 
-                            for (var i = 0; i < 1000; i++)
-                            {
-                                run = enumerator.MoveNext();
-                                if (!run)
-                                    break;
+							var sw = Stopwatch.StartNew();
+							while (sw.ElapsedMilliseconds < 500)
+							{
+								run = enumerator.MoveNext();
+								if (!run)
+									break;
 
-                                updateTags.ObjectId = DBNull.Value;
+								updateTags.ObjectId = DBNull.Value;
 
-                                #region -- upsert on objects -> selectTagsObjectId get filled --
+								#region -- upsert on objects -> selectTagsObjectId get filled --
 
-                                // find the current element
-                                selectGuid.Value = enumerator.GetValue(indexGuid, Guid.Empty, c =>
-                                {
-                                    if (c == Guid.Empty)
-                                        throw new ArgumentNullException("Invalid empty guid.");
-                                });
+								// find the current element
+								selectGuid.Value = enumerator.GetValue(indexGuid, Guid.Empty, c =>
+								{
+									if (c == Guid.Empty)
+										throw new ArgumentNullException("Invalid empty guid.");
+								});
 
-                                bool objectExists;
-                                using (var r = selectCommand.ExecuteReader(CommandBehavior.SingleRow))
-                                {
-                                    if (r.Read())
-                                    {
-                                        updateTags.ObjectId =
-                                            updateId.Value = r.GetInt64(0);
-                                        objectExists = true;
-                                    }
-                                    else
-                                        objectExists = false;
-                                }
+								bool objectExists;
+								using (var r = selectCommand.ExecuteReader(CommandBehavior.SingleRow))
+								{
+									if (r.Read())
+									{
+										updateTags.ObjectId =
+												updateId.Value = r.GetInt64(0);
+										objectExists = true;
+									}
+									else
+										objectExists = false;
+								}
 
-                                // upsert
-                                if (objectExists)
-                                {
-                                    updateServerId.Value = enumerator.GetValue(indexId, -1, procValidateId);
-                                    updateNr.Value = enumerator.GetValue(indexNr, String.Empty, procValidateNr);
-                                    updateRevId.Value = enumerator.GetValue(indexRevId, -1).DbNullIf(-1);
+								// upsert
+								if (objectExists)
+								{
+									updateServerId.Value = enumerator.GetValue(indexId, -1L, procValidateId);
+									updateNr.Value = enumerator.GetValue(indexNr, String.Empty, procValidateNr);
+									updateIsRev.Value = enumerator.GetValue(indexIsRev, false);
+									updateStateChg.Value = enumerator.GetValue(indexStateChg, 0L);
+									updateRevId.Value = enumerator.GetValue(indexRevId, -1L).DbNullIf(-1L);
 
-                                    Debug.Print("Upsert Object: {0}", updateServerId.Value);
-                                    updateCommand.ExecuteNonQuery();
-                                }
-                                else
-                                {
-                                    insertServerId.Value = enumerator.GetValue(indexId, -1, procValidateId);
-                                    insertGuid.Value = selectGuid.Value;
-                                    insertNr.Value = enumerator.GetValue(indexNr, String.Empty, procValidateNr);
-                                    insertTyp.Value = enumerator.GetValue(indexTyp, String.Empty).DbNullIfString();
-                                    insertRevId.Value = enumerator.GetValue(indexRevId, -1).DbNullIf(-1);
+									Debug.Print("Upsert Object: {0}", updateServerId.Value);
+									updateCommand.ExecuteNonQuery();
+								}
+								else
+								{
+									insertServerId.Value = enumerator.GetValue(indexId, -1L, procValidateId);
+									insertGuid.Value = selectGuid.Value;
+									insertNr.Value = enumerator.GetValue(indexNr, String.Empty, procValidateNr);
+									insertIsRev.Value = enumerator.GetValue(indexIsRev, false);
+									insertTyp.Value = enumerator.GetValue(indexTyp, String.Empty).DbNullIfString();
+									insertStateChg.Value = enumerator.GetValue(indexStateChg, 0L);
+									insertRevId.Value = enumerator.GetValue(indexRevId, -1L).DbNullIf(-1L);
 
-                                    Debug.Print("Insert Object: {0}", insertServerId.Value);
-                                    var sw = Stopwatch.StartNew();
-                                    insertCommand.ExecuteNonQuery();
-                                    Debug.Print("Elapsed: {0}ms", sw.ElapsedMilliseconds);
+									insertCommand.ExecuteNonQuery();
 
-                                    updateTags.ObjectId = LocalConnection.LastInsertRowId;
-                                }
+									updateTags.ObjectId = LocalConnection.LastInsertRowId;
+								}
 
-                                #endregion
+								#endregion
 
-                                #region -- upsert tags --
+								#region -- upsert tags --
 
-                                var tagDataString = enumerator.GetValue<string>(indexTags, null);
-                                if (tagDataString != null)
-                                    updateTags.UpdateTags(PpsObjectTag.ParseTagFields(tagDataString).ToArray());
+								var tagStateString = enumerator.GetValue<string>(indexState, null);
+								var tagDataString = enumerator.GetValue<string>(indexTags, null);
 
-                                #endregion
-                            } // for i
-                            transaction.Commit();
-                        } // using transaction
-                    } while (run);
-                } // using selectCommand, insertCommand, updateCommand, using updateTags
-            } // using enumerator
+								if (tagStateString != null || tagDataString != null)
+								{
+									updateTags.UpdateTags(
+										PpsObjectTag.ParseTagFields(tagStateString).Concat(PpsObjectTag.ParseTagFields(tagDataString)).ToArray()
+									);
+								}
+
+								#endregion
+							} // while sw
+							transaction.Commit();
+						} // using transaction
+					} while (run);
+				} // using selectCommand, insertCommand, updateCommand, using updateTags
+			} // using enumerator
 		} // proc UpdateDocumentStore
 
 		#endregion

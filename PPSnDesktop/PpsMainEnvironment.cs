@@ -118,8 +118,8 @@ namespace TecWare.PPSn
 			return app.Dispatcher.Invoke(
 				() =>
 				{
-					var wih = new System.Windows.Interop.WindowInteropHelper(app.MainWindow);
-					return clientLogin.ShowWindowsLogin(wih.EnsureHandle());
+					var wih = app.MainWindow != null ? new System.Windows.Interop.WindowInteropHelper(app.MainWindow) : null;
+					return clientLogin.ShowWindowsLogin(wih?.EnsureHandle() ?? IntPtr.Zero);
 				});
 		} // func ShowLoginDialog
 

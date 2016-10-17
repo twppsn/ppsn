@@ -109,6 +109,11 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		string GetDataSetSchemaUri(string schema);
 
+		/// <summary>Parses the guid from the xml-representation</summary>
+		/// <param name="xData"></param>
+		/// <returns></returns>
+		Guid GetGuidFromData(XElement xData, XName rootTable = null);
+
 		/// <summary>Returns a dataset definition for the schema (not registered, empty id).</summary>
 		/// <param name="schema">Name of the schema</param>
 		/// <returns>DataSet definition</returns>

@@ -148,6 +148,34 @@ namespace TecWare.PPSn
 				return definition.GetDocumentDefinitionAsync();
 			} // func GetDataSetDefinition
 
+			public Guid GetGuidFromData(XElement xData, XName rootTable)
+			{
+				// tag of the root table
+				var xn = XNamespace.Get("table");
+				if (rootTable == null)
+					rootTable = xn + "Head";
+				else if (rootTable.Namespace != xn)
+					rootTable = xn + rootTable.LocalName;
+
+				var x = xData.Element(rootTable);
+				if (x == null)
+					throw new ArgumentException($"Root table not found (tag: {rootTable}).");
+
+				var xRow = x.Element("r");
+				if (xRow == null)
+					throw new ArgumentException($"Root table has no row (tag: {rootTable}).");
+
+				var xGuid = xRow.Element("Guid");
+				if (xGuid == null)
+					throw new ArgumentException($"Root table has no guid-column (tag: {rootTable}).");
+
+				var guidString = xGuid.Element("o")?.Value;
+				if (String.IsNullOrEmpty(guidString))
+					throw new ArgumentException($"Guid-column is empty (tag: {rootTable}).");
+
+				return Guid.Parse(guidString);
+			} // func GetGuidFromData
+
 			public async Task<PpsDataSetDesktop> CreateEmptyDataSetAsync(string schema, PpsDataSetId id)
 			{
 				if (id == PpsDataSetId.Empty)
@@ -177,7 +205,7 @@ namespace TecWare.PPSn
 				PpsDataSetDesktop dataset;
 				return TryGetValue(id, out dataset) ? dataset : null;
 			} // func Find
-			
+
 			public IEnumerable<string> KnownSchemas
 			{
 				get
@@ -195,7 +223,7 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		public event EventHandler IsOnlineChanged;
 
-		private readonly SQLiteConnection localStore;   // local datastore
+		private readonly SQLiteConnection localConnection;   // local datastore
 		private readonly Uri baseUri;                   // internal uri for this datastore
 		private bool isOnline = false;                  // is there an online connection
 
@@ -554,12 +582,12 @@ namespace TecWare.PPSn
 				throw new ArgumentException("Parameter \"path\" is null or empty.");
 
 			// create a transaction for the sync
-			using (var transaction = localStore.BeginTransaction())
+			using (var transaction = localConnection.BeginTransaction())
 			{
 				// find the current cached item
 				long? currentRowId;
 				bool updateItem;
-				using (var command = new SQLiteCommand("SELECT [Id], [ContentSize], [ContentLastModification] FROM [main].[OfflineCache] WHERE [Path] = @path;", localStore, transaction))
+				using (var command = new SQLiteCommand("SELECT [Id], [ContentSize], [ContentLastModification] FROM [main].[OfflineCache] WHERE [Path] = @path;", localConnection, transaction))
 				{
 					command.Parameters.Add("@path", DbType.String).Value = path;
 					using (var reader = command.ExecuteReader(CommandBehavior.SingleRow))
@@ -609,7 +637,7 @@ namespace TecWare.PPSn
 						currentRowId == null ?
 							"INSERT INTO [main].[OfflineCache] ([Path], [OnlineMode], [ContentType], [ContentEncoding], [ContentSize], [ContentLastModification], [Content]) VALUES (@path, @onlineMode, @contentType, @contentEncoding, @contentSize, @lastModified, @content);" :
 							"UPDATE [main].[OfflineCache] SET [OnlineMode] = @onlineMode, [ContentType] = @contentType, [ContentEncoding] = @contentEncoding, [ContentSize] = @contentSize, [ContentLastModification] = @lastModified, [Content] = @content WHERE [Id] = @id;",
-						localStore, transaction
+						localConnection, transaction
 					))
 					{
 						if (currentRowId == null)
@@ -652,7 +680,7 @@ namespace TecWare.PPSn
 
 			try
 			{
-				if (localStore == null || localStore.State != ConnectionState.Open)
+				if (localConnection == null || localConnection.State != ConnectionState.Open)
 					return false;
 			}
 			catch (ObjectDisposedException)
@@ -664,7 +692,7 @@ namespace TecWare.PPSn
 			Stream resultData = null;
 			try
 			{
-				using (var command = new SQLiteCommand("SELECT [OnlineMode], [ContentType], [ContentEncoding], [Content] FROM [main].[OfflineCache] WHERE [Path] = @path;", localStore))
+				using (var command = new SQLiteCommand("SELECT [OnlineMode], [ContentType], [ContentEncoding], [Content] FROM [main].[OfflineCache] WHERE [Path] = @path;", localConnection))
 				{
 					command.Parameters.Add("@path", DbType.String).Value = path;
 					using (var reader = command.ExecuteReader(CommandBehavior.SingleRow))
@@ -1095,6 +1123,7 @@ namespace TecWare.PPSn
 		} // proc OnIsOnlineChanged
 
 		/// <summary></summary>
+		[LuaMember("Request")]
 		public BaseWebRequest Request => request;
 		/// <summary>Default encodig for strings.</summary>
 		public Encoding Encoding => Encoding.Default;
@@ -1112,6 +1141,6 @@ namespace TecWare.PPSn
 		} // prop IsOnline
 
 		/// <summary>Connection to the local datastore</summary>
-		public SQLiteConnection LocalConnection => localStore;
+		public SQLiteConnection LocalConnection => localConnection;
 	} // class PpsEnvironment
 }

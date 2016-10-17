@@ -55,6 +55,120 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsObjectInfo ------------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class PpsObjectInfo
+	{
+		private readonly long localId;
+		private readonly long serverId;
+		private readonly Guid guid;
+		private readonly string typ;
+		private readonly string nr;
+		private readonly bool isRev;
+		private readonly long remoteRevId;
+		private readonly long pulledRevId;
+		private readonly bool isDocumentChanged;
+		private readonly bool hasData;
+
+		public PpsObjectInfo(long localId, long serverId, Guid guid, string typ, string nr, bool isRev, long remoteRevId, long pulledRevId, bool isDocumentChanged, bool hasData)
+		{
+			this.localId = localId;
+			this.serverId = serverId;
+			this.guid = guid;
+			this.typ = typ;
+			this.nr = nr;
+			this.isRev = isRev;
+			this.remoteRevId = remoteRevId;
+			this.pulledRevId = pulledRevId;
+			this.isDocumentChanged = isDocumentChanged;
+			this.hasData = hasData;
+		} // ctor
+
+		public long LocalId => localId;
+		public long ServerId => serverId;
+		public Guid Guid => guid;
+		public string Typ => typ;
+		public string Nr => nr;
+		public bool IsRev => isRev;
+		public long RemoteRevId => remoteRevId;
+		public long PulledRevId => pulledRevId;
+		public bool IsDocumentChanged => isDocumentChanged;
+		public bool HasData => hasData;
+	} // class PpsObjectInfo
+
+	#endregion
+
+	#region -- interface IPpsLocalStoreTransaction --------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public interface IPpsLocalStoreTransaction : IDbTransaction
+	{
+		/// <summary>Get information about the object guid.</summary>
+		/// <param name="guid"></param>
+		/// <returns></returns>
+		PpsObjectInfo GetInfo(Guid guid);
+
+		/// <summary>Create a new object.</summary>
+		/// <param name="serverId"></param>
+		/// <param name="guid"></param>
+		/// <param name="typ"></param>
+		/// <param name="nr"></param>
+		/// <param name="isRev"></param>
+		/// <param name="remoteRevId"></param>
+		/// <returns></returns>
+		long Create(long serverId, Guid guid, string typ, string nr, bool isRev, long remoteRevId);
+
+		/// <summary></summary>
+		/// <param name="localId"></param>
+		/// <param name="serverId"></param>
+		/// <param name="pulledRevId"></param>
+		/// <param name="nr"></param>
+		void Update(long localId, long serverId, long pulledRevId, string nr);
+		/// <summary>Write document data in the local store.</summary>
+		/// <param name="trans"></param>
+		/// <param name="localId"></param>
+		/// <param name="serverId"></param>
+		/// <param name="pulledRevId"></param>
+		/// <param name="nr"></param>
+		/// <param name="data"></param>
+		void UpdateData(long localId, Action<Stream> data, long serverId = -1, long pulledRevId = -1, string nr = null, bool isDocumentChanged = true);
+
+		/// <summary>Read data from the object.</summary>
+		/// <param name="localId"></param>
+		/// <returns></returns>
+		Stream GetData(long localId);
+
+		/// <summary></summary>
+		/// <param name="localId"></param>
+		void Delete(long localId);
+
+		/// <summary>Refresh the meta data/tags of a local store object</summary>
+		/// <param name="localId"></param>
+		/// <param name="tags"></param>
+		void UpdateTags(long localId, IEnumerable<PpsObjectTag> tags);
+		/// <summary>Refresh the meta data/tags of a local store object</summary>
+		/// <param name="localId"></param>
+		/// <param name="tags"></param>
+		void UpdateTags(long localId, LuaTable tags);
+
+		/// <summary>Read a DataSet from the local store.</summary>
+		/// <param name="dataset">DataSet</param>
+		/// <param name="guid"></param>
+		/// <returns></returns>
+		bool ReadDataSet(long localId, PpsDataSet dataset);
+		/// <summary>Refresh a dataset in the local store.</summary>
+		/// <param name="dataset"></param>
+		void UpdateDataSet(long localId, PpsDataSet dataset);
+
+		/// <summary>Access to the core transaction.</summary>
+		IDbTransaction Transaction { get; }
+	} // interface IPpsLocalStoreTransaction
+
+	#endregion
+
 	#region -- class PpsDocumentDefinition ----------------------------------------------
 
 	public sealed class PpsDocumentDefinition : PpsDataSetDefinitionDesktop
@@ -75,8 +189,7 @@ namespace TecWare.PPSn
 		public override PpsDataSetDesktop CreateDataSet(PpsDataSetId id)
 			=> new PpsDocument(this, (PpsMainEnvironment)Shell, id);
 	} // class PpsDocumentDefinition
-
-
+	
 	#endregion
 
 	#region -- class PpsDocument --------------------------------------------------------
@@ -90,7 +203,6 @@ namespace TecWare.PPSn
 		private long pulledRevisionId;
 		private bool isDocumentChanged = false;   // is this document changed to the pulled version
 		private bool isReadonly = true;           // is this document a special read-only revision
-
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -173,9 +285,10 @@ namespace TecWare.PPSn
 			SetLocalState(localId, newRevId, false, false);
 
 			// update local store and
-			using (var trans = environment.LocalConnection.BeginTransaction())
+			using (var trans = environment.BeginLocalStoreTransaction())
 			{
-				environment.UpdateLocalDocumentState(trans, localId, this, newServerId, newRevId, Tables["Head", true].First["Nr"].ToString());
+				trans.Update(localId, newServerId, newRevId, Tables["Head", true].First["Nr"].ToString());
+				trans.UpdateDataSet(localId, this);
 				trans.Commit();
 			}
 		} // proc PushWork
@@ -191,43 +304,17 @@ namespace TecWare.PPSn
 				Write(xml);
 
 			// update local store
-			using (var trans = environment.LocalConnection.BeginTransaction())
+			using (var trans = environment.BeginLocalStoreTransaction())
 			{
 				// update object data
-				using (var cmd = environment.LocalConnection.CreateCommand())
-				{
-					cmd.CommandText = localId <= 0 ?
-						"insert into main.[Objects] (Guid, Typ, Document, DocumentIsChanged) values (@Guid, @Typ, @Document, 1);" :
-						"update main.[Objects] set Document = @Document, DocumentIsChanged = 1 where Id = @Id";
+				if (localId <= 0)
+					localId = trans.Create(-1, (Guid)head.First["Guid"], (string)head.First["Typ"], head.First["Nr"]?.ToString(), true, -1);
 
-					if (localId > 0) // for update
-					{
-						cmd.Parameters.Add("@Id", DbType.Int64).Value = localId;
-					}
-					else // for insert
-					{
-						cmd.Parameters.Add("@Guid", DbType.Guid).Value = head.First["Guid"];
-						cmd.Parameters.Add("@Typ", DbType.String).Value = head.First["Typ"];
-					}
-
-					// update the document data
-					cmd.Parameters.Add("@Document", DbType.String).Value = data.ToString();
-
-					// exec
-					cmd.ExecuteNonQuery();
-
-					// update localId
-					if (localId <= 0)
-						localId = environment.LocalConnection.LastInsertRowId;
-				}
+				// update the document data
+				trans.UpdateDataSet(localId, this);
 
 				// update meta tags
-				using (var updateTags = new TagDatabaseCommands(environment.LocalConnection))
-				{
-					updateTags.Transaction = trans;
-					updateTags.ObjectId = localId;
-					updateTags.UpdateTags(GetAutoTags().ToArray());
-				}
+				trans.UpdateTags(localId, GetAutoTags());
 
 				trans.Commit();
 				ResetDirty();
@@ -248,6 +335,274 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public partial class PpsMainEnvironment : IPpsActiveDocuments
 	{
+		#region -- class PpsLocalStoreTransaction -----------------------------------------
+
+		private sealed class PpsLocalStoreTransaction : IPpsLocalStoreTransaction
+		{
+			private readonly PpsMainEnvironment environment;
+			private readonly SQLiteTransaction transaction;
+			private bool isDisposed = false;
+
+			#region -- Ctor/Dtor/Commit -----------------------------------------------------
+
+			public PpsLocalStoreTransaction(PpsMainEnvironment environment)
+			{
+				this.environment = environment;
+				this.transaction = LocalConnection.BeginTransaction();
+			} // ctor
+
+			public void Dispose()
+				=> Dispose(true);
+
+			private void Dispose(bool disposing)
+			{
+				if (!isDisposed)
+				{
+					if (disposing)
+						transaction.Dispose();
+
+					isDisposed = true;
+				}
+			} // proc Dispose
+
+			public void Commit()
+			{
+				if (!isDisposed)
+					transaction.Commit();
+				else
+					throw new InvalidOperationException();
+			} // proc Commit
+
+			public void Rollback()
+			{
+				if (!isDisposed)
+					transaction.Rollback();
+				else
+					throw new InvalidOperationException();
+			} // proc Rollback
+
+			#endregion
+
+			private static bool DbNullOnNeg(long value)
+				=> value < 0;
+
+			public PpsObjectInfo GetInfo(Guid guid)
+			{
+				using (var cmd = LocalConnection.CreateCommand())
+				{
+					cmd.CommandText = "SELECT o.Id, o.ServerId, o.Typ, o.Nr, o.IsRev, o.RemoteRevId, o.PulledRevId, o.DocumentIsChanged, length(o.Document) FROM main.Objects o WHERE o.Guid = @Guid";
+					cmd.Transaction = transaction;
+					cmd.Parameters.Add("@Guid", DbType.Guid).Value = guid;
+
+					using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
+					{
+						if (r.Read())
+						{
+							return new PpsObjectInfo(
+								r.GetInt64(0),
+								r.IsDBNull(1) ? -1 : r.GetInt64(1),
+								guid,
+								r.GetString(2),
+								r.GetString(3),
+								r.GetBoolean(4),
+								r.IsDBNull(5) ? -1 : r.GetInt64(5),
+								r.IsDBNull(6) ? -1 : r.GetInt64(6),
+								r.IsDBNull(7) ? false : r.GetBoolean(7),
+								!r.IsDBNull(8)
+							);
+						}
+						else
+							return null;
+					}
+				}
+			} // func GetInfo
+
+			public long Create(long serverId, Guid guid, string typ, string nr, bool isRev, long remoteRevId)
+			{
+				using (var cmd = LocalConnection.CreateCommand())
+				{
+					cmd.CommandText = "INSERT INTO main.Objects (ServerId, Guid, Typ, Nr, IsRev, RemoteRevId) VALUES (@ServerId, @Guid, @Typ, @Nr, @IsRev, @RemoteRevId)";
+					cmd.Transaction = transaction;
+
+					cmd.Parameters.Add("@ServerId", DbType.Int64).Value = serverId.DbNullIf(DbNullOnNeg);
+					cmd.Parameters.Add("@Guid", DbType.Guid).Value = guid;
+					cmd.Parameters.Add("@Typ", DbType.String).Value = typ.DbNullIfString();
+					cmd.Parameters.Add("@Nr", DbType.String).Value = nr.DbNullIfString();
+					cmd.Parameters.Add("@IsRev", DbType.Boolean).Value = isRev;
+					cmd.Parameters.Add("@RemoteRevId", DbType.Int64).Value = remoteRevId.DbNullIf(DbNullOnNeg);
+
+					cmd.ExecuteNonQuery();
+
+					return LocalConnection.LastInsertRowId;
+				}
+			} // func Create
+
+			public void Update(long localId, long serverId, long pulledRevId, string nr)
+			{
+				using (var cmd = LocalConnection.CreateCommand())
+				{
+					cmd.CommandText = "UPDATE main.Objects SET ServerId = @ServerId, PulledRevId = @PulledRevId, Nr = @Nr WHERE Id = @Id";
+					cmd.Transaction = transaction;
+
+					cmd.Parameters.Add("@Id", DbType.Int64).Value = localId;
+					cmd.Parameters.Add("@ServerId", DbType.Int64).Value = serverId.DbNullIf(DbNullOnNeg);
+					cmd.Parameters.Add("@PulledRevId", DbType.Int64).Value = pulledRevId.DbNullIf(DbNullOnNeg);
+					cmd.Parameters.Add("@Nr", DbType.String).Value = nr.DbNullIfString();
+
+					cmd.ExecuteNonQuery();
+				}
+			} // proc Update
+
+			public void UpdateData(long localId, Action<Stream> data, long serverId, long pulledRevId, string nr, bool isDocumentChanged)
+			{
+				byte[] bData = null;
+
+				// read the data into a memory stream
+				if (data != null)
+				{
+					using (var dst = new MemoryStream())
+					{
+						data(dst);
+						dst.Position = 0;
+						bData = dst.ToArray();
+					}
+				}
+
+				// store the value
+				using (var cmd = LocalConnection.CreateCommand())
+				{
+					cmd.CommandText = "UPDATE main.Objects SET ServerId = IFNULL(@ServerId, ServerId), PulledRevId = IFNULL(@PulledRevId, PulledRevId), Nr = IFNULL(@Nr, Nr), Document = @Document, DocumentIsChanged = @DocumentIsChanged WHERE Id = @Id";
+					cmd.Transaction = transaction;
+
+					cmd.Parameters.Add("@Id", DbType.Int64).Value = localId;
+					cmd.Parameters.Add("@ServerId", DbType.Int64).Value = serverId.DbNullIf(DbNullOnNeg);
+					cmd.Parameters.Add("@PulledRevId", DbType.Int64).Value = bData== null ? DBNull.Value : pulledRevId.DbNullIf(DbNullOnNeg);
+					cmd.Parameters.Add("@Nr", DbType.String).Value = nr.DbNullIfString();
+					cmd.Parameters.Add("@Document", DbType.Binary).Value = bData == null ? (object)DBNull.Value : bData;
+					cmd.Parameters.Add("@DocumentIsChanged", DbType.Boolean).Value = bData == null ? false : isDocumentChanged;
+
+					cmd.ExecuteNonQuery();
+				}
+			} // proc UpdateData
+
+			public Stream GetData(long localId)
+			{
+				using (var cmd = LocalConnection.CreateCommand())
+				{
+					cmd.CommandText = "SELECT Document, length(Document) FROM main.Objects WHERE Id = @Id";
+					cmd.Transaction = transaction;
+
+					cmd.Parameters.Add("@Id", DbType.Int64).Value = localId;
+
+					using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
+					{
+						if (r.Read() && !r.IsDBNull(0))
+						{
+							var data = new byte[r.GetInt64(1)];
+
+							r.GetBytes(0, 0, data, 0, data.Length);
+
+							return new MemoryStream(data, false);
+						}
+						else
+							return null;
+					}
+				}
+			} // func GetData
+
+			public void UpdateTags(long localId, IEnumerable<PpsObjectTag> tags)
+			{
+				using (var tagUpdater = new TagDatabaseCommands(LocalConnection))
+				{
+					tagUpdater.ObjectId = localId;
+					tagUpdater.Transaction = transaction;
+
+					IList<PpsObjectTag> t;
+					if (tags is PpsObjectTag[])
+						t = (PpsObjectTag[])tags;
+					else if (tags is IList<PpsObjectTag>)
+						t = (IList<PpsObjectTag>)tags;
+					else
+						t = tags.ToArray();
+
+					tagUpdater.UpdateTags(t);
+				}
+			} // proc UpdateTags
+
+			public void UpdateTags(long localId, LuaTable tags)
+			{
+				var tagList = new List<PpsObjectTag>();
+				foreach (var c in tags.Members)
+				{
+					if (c.Key[0] == '_')
+						continue;
+
+					var v = c.Value;
+					var t = PpsObjectTagClass.Text;
+					var tString = tags.GetOptionalValue<string>("_" + c.Key, null);
+					if (tString != null)
+					{
+						if (String.Compare(tString, "Number", StringComparison.OrdinalIgnoreCase) == 0)
+							t = PpsObjectTagClass.Number;
+						else if (String.Compare(tString, "Date", StringComparison.OrdinalIgnoreCase) == 0)
+							t = PpsObjectTagClass.Date;
+					}
+					else if (v is DateTime)
+						t = PpsObjectTagClass.Date;
+
+					tagList.Add(new PpsObjectTag(c.Key, t, c.Value));
+				}
+
+				UpdateTags(localId, tagList);
+			} // proc UpdateTags
+
+			public void Delete(long localId)
+			{
+				using (var cmd = LocalConnection.CreateCommand())
+				{
+					cmd.CommandText = "DELETE FROM main.Objects WHERE Id = @Id;";
+					cmd.Transaction = transaction;
+
+					cmd.Parameters.Add("@Id", DbType.Int64).Value = localId;
+
+					cmd.ExecuteNonQuery();
+				}
+			} // func Delete
+
+			public bool ReadDataSet(long localId, PpsDataSet dataset)
+			{
+				var src = GetData(localId);
+				if (src == null)
+					return false;
+
+				using (var xml = XmlReader.Create(src, Procs.XmlReaderSettings))
+					dataset.Read(XDocument.Load(xml).Root);
+
+				return true;
+			} // func ReadDataSet
+
+			public void UpdateDataSet(long localId, PpsDataSet dataset)
+			{
+				UpdateData(localId,
+					dst =>
+					{
+						var settings = Procs.XmlWriterSettings;
+						settings.CloseOutput = false;
+						using (var xml = XmlWriter.Create(dst, settings))
+							dataset.Write(xml);
+					}, -1, -1, null, true
+				);
+			} // func UpdateDataSet
+
+			public IDbConnection Connection => LocalConnection;
+			public IsolationLevel IsolationLevel => transaction.IsolationLevel;
+			public IDbTransaction Transaction => transaction;
+
+			private SQLiteConnection LocalConnection => environment.LocalConnection;
+		} // class PpsLocalStoreTransaction
+
+		#endregion
+
 		private readonly Dictionary<string, string> defaultPanes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // default panes
 
 		private void UpdateDocumentDefinitionInfo(XElement x, List<string> updatedDocuments)
@@ -305,133 +660,68 @@ namespace TecWare.PPSn
 
 		private async Task<PpsDocument> GetLocalDocumentAsync(Guid guid)
 		{
-			long localId;
-			long serverId;
-			string documentSchema;
-			string documentData;
-			bool isDocumentChanged;
-			long pulledRevId;
-
-			using (var trans = LocalConnection.BeginTransaction())
+			using (var trans = BeginLocalStoreTransaction())
 			{
 				// get database info
-				using (var cmd = LocalConnection.CreateCommand())
-				{
-					cmd.CommandText = "select o.Id, o.ServerId, o.Typ, o.Document, o.DocumentIsChanged, o.PulledRevId from main.Objects o where o.Guid = @Guid";
-					cmd.Transaction = trans;
-					cmd.Parameters.Add("@Guid", DbType.Guid).Value = guid;
+				var objectInfo = trans.GetInfo(guid);
+				if (objectInfo == null)
+					throw new ArgumentException($"Object {0:B} not found.");
 
-					using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
-					{
-						if (r.Read())
-						{
-							localId = r.GetInt64(0);
-							serverId = r.IsDBNull(1) ? -1 : r.GetInt64(1);
-							documentSchema = r.GetString(2);
-							documentData = r.IsDBNull(3) ? null : r.GetString(3);
-							isDocumentChanged = r.IsDBNull(4) ? false : r.GetBoolean(4);
-							pulledRevId = r.IsDBNull(5) ? -1 : r.GetInt32(5);
-						}
-						else
-						{
-							throw new InvalidOperationException("unknown local revision"); // todo:
-						}
-					}
-				}
-
-				if (documentData == null) // not synced yet, pull the head revision
+				if (objectInfo.PulledRevId < 0) // not synced yet, pull the head revision
 				{
-					var newDocument = await PullDocumentCoreAsync(documentSchema, guid, serverId);
+					var newDocument = await PullDocumentCoreAsync(objectInfo.Typ, guid, objectInfo.ServerId);
 
 					// update document data in the local store
-					UpdateLocalDocumentState(trans, localId, newDocument.Item1, serverId, newDocument.Item2, newDocument.Item3);
+					trans.Update(objectInfo.LocalId, objectInfo.ServerId, newDocument.Item2, newDocument.Item3);
+					trans.UpdateDataSet(objectInfo.LocalId, newDocument.Item1);
 
 					trans.Commit();
 
 					// init document
-					newDocument.Item1.SetLocalState(localId, newDocument.Item2, false, false);
+					newDocument.Item1.SetLocalState(objectInfo.LocalId, newDocument.Item2, false, false);
 
 					return newDocument.Item1;
 				}
 				else // synced, get the current staging
 				{
-					trans.Rollback();
-					var newDocument = await CreateDocumentInternalAsync(documentSchema, new PpsDataSetId(guid, -1));
+					var newDocument = await CreateDocumentInternalAsync(objectInfo.Typ, new PpsDataSetId(guid, -1));
 
 					using (var docTrans = newDocument.UndoSink.BeginTransaction("Internal Read"))
 					{
-						newDocument.Read(XElement.Parse(documentData));
+						trans.ReadDataSet(objectInfo.LocalId, newDocument);
 						docTrans.Commit();
 					}
 					newDocument.UndoManager.Clear();
+					trans.Rollback();
 
-					newDocument.SetLocalState(localId, pulledRevId, isDocumentChanged, false); // synced and change able
+					newDocument.SetLocalState(objectInfo.LocalId, objectInfo.PulledRevId, objectInfo.IsDocumentChanged, false); // synced and change able
 					return newDocument;
 				}
 			}
 		} // func GetLocalDocumentAsync
-
-		internal void UpdateLocalDocumentState(SQLiteTransaction trans, long localId, PpsDocument document, long serverId, long pulledRevId, string nr)
-		{
-			using (var cmd = LocalConnection.CreateCommand())
-			{
-				cmd.Transaction = trans;
-				cmd.CommandText = "update main.Objects set ServerId = @ServerId, Document = @Data, PulledRevId = @RevId, Nr = @Nr where Id = @Id;";
-
-				cmd.Parameters.Add("@Id", DbType.Int64).Value = localId;
-				cmd.Parameters.Add("@ServerId", DbType.Int64).Value = serverId;
-				cmd.Parameters.Add("@Nr", DbType.String).Value = nr;
-				cmd.Parameters.Add("@Data", DbType.String).Value = document.GetAsString();
-				cmd.Parameters.Add("@RevId", DbType.Int64).Value = pulledRevId;
-
-				cmd.ExecuteNonQuery();
-
-				using (var tags = new TagDatabaseCommands(LocalConnection))
-				{
-					tags.ObjectId = localId;
-					tags.Transaction = trans;
-
-					tags.UpdateTags(document.GetAutoTags().ToArray());
-				}
-			}
-		} // proc UpdateLocalState
-
+		
 		private async Task<PpsDocument> GetServerDocumentAsync(PpsDataSetId documentId)
 		{
-			long serverId;
-			string documentSchema;
-
 			// get database info
-			using (var cmd = LocalConnection.CreateCommand())
+			using (var trans = BeginLocalStoreTransaction())
 			{
-				cmd.CommandText = "select o.ServerId, o.Typ from main.Objects o where o.Guid = @Guid";
-				cmd.Parameters.Add("@Guid", DbType.Guid).Value = documentId.Guid;
+				var objectInfo = trans.GetInfo(documentId.Guid);
+				if(objectInfo == null || objectInfo.ServerId <0)
+					throw new ArgumentException($"No server object for document {documentId.Guid:N}."); // todo:
+				
+				// load from server
+				var newDocument = await PullDocumentCoreAsync(objectInfo.Typ, documentId.Guid, objectInfo.ServerId, documentId.Index);
+				if (newDocument.Item2 != documentId.Index)
+					throw new ArgumentException("rev requested != rev pulled"); // todo:
 
-				using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
-				{
-					if (r.Read())
-					{
-						if (r.IsDBNull(0))
-							throw new ArgumentOutOfRangeException("no server object."); // todo:
-						else
-						{
-							serverId = r.GetInt64(0);
-							documentSchema = r.GetString(1);
-						}
-					}
-					else
-						throw new InvalidOperationException("unknown local revision"); // todo:
-				}
+
+				// initialize
+				newDocument.Item1.SetLocalState(-1, documentId.Index, false, true);
+
+				trans.Rollback();
+
+				return newDocument.Item1;
 			}
-
-			// load from server
-			var newDocument = await PullDocumentCoreAsync(documentSchema, documentId.Guid, serverId, documentId.Index);
-			if (newDocument.Item2 != documentId.Index)
-				throw new ArgumentException("rev requested != rev pulled"); // todo:
-
-			// initialize
-			newDocument.Item1.SetLocalState(-1, documentId.Index, false, true);
-			return newDocument.Item1;
 		} // func GetServerDocumentAsync
 
 		private PpsDocument FindActiveDocumentById(PpsDataSetId documentId)
@@ -514,6 +804,10 @@ namespace TecWare.PPSn
 			return ActiveDataSets.GetDataSetDefinition(schema)
 				.ContinueWith(t => t.Result == null ? null : t.Result.Meta.GetProperty<string>(PpsDataSetMetaData.DefaultPaneUri, null));
 		} // func GetDocumentDefaultPaneAsync
+
+		[LuaMember(nameof(BeginLocalStoreTransaction))]
+		public IPpsLocalStoreTransaction BeginLocalStoreTransaction()
+			=> new PpsLocalStoreTransaction(this);
 	} // class PpsMainEnvironment
 
 	#endregion

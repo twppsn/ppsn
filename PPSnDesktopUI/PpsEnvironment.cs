@@ -45,22 +45,6 @@ using LExpression = System.Linq.Expressions.Expression;
 
 namespace TecWare.PPSn
 {
-	#region -- enum PpsClientAuthentificationType ---------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public enum PpsClientAuthentificationType
-	{
-		/// <summary>Unkown type.</summary>
-		Unknown = 0,
-		/// <summary>Normal unsecure web authentification.</summary>
-		Basic,
-		/// <summary>Windows/Kerberos authentification.</summary>
-		Ntlm
-	} // enum PpsClientAuthentificationType
-
-	#endregion
-
 	#region -- class PpsEnvironmentDefinition -------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -454,6 +438,8 @@ namespace TecWare.PPSn
 			this.info = info;
 			this.activeDataSets = new PpsActiveDataSetsImplementation(this);
 
+			Neo.IronLua.LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
+
 			// create ui stuff
 			this.mainResources = mainResources;
 			this.currentDispatcher = Dispatcher.CurrentDispatcher;
@@ -479,7 +465,7 @@ namespace TecWare.PPSn
 
 			// initialize local store
 			this.baseUri = InitProxy();
-			this.localStore = InitLocalStore();
+			this.localConnection = InitLocalStore();
 			request = new BaseWebRequest(baseUri, Encoding);
 
 			// Register Service
@@ -504,7 +490,7 @@ namespace TecWare.PPSn
 				// close handles
 				Lua.Dispose();
 				// dispose local store
-				localStore?.Dispose();
+				localConnection?.Dispose();
 			}
 		} // proc Dispose
 
@@ -553,13 +539,13 @@ namespace TecWare.PPSn
 		/// <param name="realm">Realm of the server.</param>
 		/// <param name="count">Counts the login requests.</param>
 		/// <returns>User information or <c>null</c> for cancel.</returns>
-		protected virtual ICredentials GetCredentials(PpsClientAuthentificationType type, string realm, int count)
+		protected virtual ICredentials GetCredentials(ClientAuthentificationInformation authentificationInfo, int count)
 		{
-			if (type == PpsClientAuthentificationType.Ntlm && count == 0)
+			if (authentificationInfo.Type == ClientAuthentificationType.Ntlm && count == 0)
 				return CredentialCache.DefaultCredentials;
 			else
 			{
-				using (PpsClientLogin loginCache = new PpsClientLogin("twppsn:" + info.Uri.AbsoluteUri, realm, count > 1))
+				using (var loginCache = new PpsClientLogin("twppsn:" + info.Uri.AbsoluteUri, authentificationInfo.Realm, count > 1))
 				{
 					if (ShowLoginDialog(loginCache))
 					{
@@ -574,10 +560,8 @@ namespace TecWare.PPSn
 
 		public async Task LoginUserAsync()
 		{
-			const string integratedSecurity = "Integrated Security";
 			var count = 0;
-			var realm = integratedSecurity;
-			var type = PpsClientAuthentificationType.Ntlm;
+			var authentificationInfo = ClientAuthentificationInformation.Ntlm;
 			try
 			{
 				XElement xLogin = null;
@@ -585,7 +569,7 @@ namespace TecWare.PPSn
 				while (xLogin == null)
 				{
 					// get the user information
-					userInfo = GetCredentials(type, realm, count);
+					userInfo = GetCredentials(authentificationInfo, count);
 					if (userInfo == null)
 					{
 						ResetLogin();
@@ -599,40 +583,10 @@ namespace TecWare.PPSn
 					}
 					catch (WebException e)
 					{
-						if (e.Response == null)
+						var tmp = ClientAuthentificationInformation.Get(e);
+						if (tmp == null)
 							throw;
-
-						// get the response
-						using (var r = (HttpWebResponse)e.Response)
-						{
-							var code = r.StatusCode;
-
-							if (code == HttpStatusCode.Unauthorized)
-							{
-								// Lese die Authentifizierung aus
-								var authenticate = r.Headers["WWW-Authenticate"];
-
-								if (authenticate.StartsWith("Basic realm=", StringComparison.OrdinalIgnoreCase)) // basic network authentification
-								{
-									type = PpsClientAuthentificationType.Basic;
-									realm = authenticate.Substring(12);
-									if (!String.IsNullOrEmpty(realm) && realm[0] == '"')
-										realm = realm.Substring(1, realm.Length - 2);
-								}
-								else if (authenticate.IndexOf("NTLM", StringComparison.OrdinalIgnoreCase) >= 0) // Windows authentification
-								{
-									type = PpsClientAuthentificationType.Ntlm;
-									realm = integratedSecurity;
-								}
-								else
-								{
-									type = PpsClientAuthentificationType.Unknown;
-									realm = "Unknown";
-								}
-							}
-							else
-								throw;
-						}
+						authentificationInfo = tmp;
 					}
 				} // while xLogin
 
