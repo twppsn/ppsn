@@ -89,6 +89,9 @@ namespace TecWare.PPSn.Server
 		{
 			initializationProgress = new SimpleConfigItemProperty<string>(this, "ppsn_init_progress", "Initialization", "Misc", "Show the current state of the initialization of the node.", null, "Pending");
 
+			this.objectsLibrary =  new PpsObjectsLibrary(this);
+			this.httpLibrary = new PpsHttpLibrary(this);
+
 			// register shortcut for text
 			LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
 
@@ -250,7 +253,7 @@ namespace TecWare.PPSn.Server
 			}
 			else if (r.RelativeSubPath == "login.xml")
 			{
-				// todo: r.DemandToken("USER");
+				//r.DemandToken("USER");
 
 				var ctx = r.GetUser<IPpsPrivateDataContext>();
 				r.WriteObject(

@@ -108,10 +108,13 @@
 								, o.Guid
 								, o.Typ
 								, o.Nr
+								, o.IsRev
+								, o.State
+								, o.StateChg
 								, r.Id as RevId
 								, r.Tags as Tags
 							FROM dbo.Objk o
-								inner join dbo.Objr r on (o.HeadRevId = r.Id)
+								LEFT OUTER JOIN dbo.Objr r on (o.HeadRevId = r.Id)
 					]]>
 				</pps:source>
 			</pps:view>

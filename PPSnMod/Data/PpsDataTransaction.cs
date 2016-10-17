@@ -23,14 +23,16 @@ namespace TecWare.PPSn.Server.Data
 	public class PpsDataTransaction : IDisposable
 	{
 		private readonly PpsDataSource dataSource;
+		private readonly IPpsConnectionHandle connection;
 
 		private bool? commited = null;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		public PpsDataTransaction(PpsDataSource dataSource)
+		public PpsDataTransaction(PpsDataSource dataSource, IPpsConnectionHandle connection)
 		{
 			this.dataSource = dataSource;
+			this.connection = connection;
 		} // ctor
 
 		public void Dispose()
@@ -114,6 +116,8 @@ namespace TecWare.PPSn.Server.Data
 
 		/// <summary></summary>
 		public PpsDataSource DataSource => dataSource;
+		/// <summary></summary>
+		public IPpsConnectionHandle Connection => connection;
 
 		/// <summary></summary>
 		public bool? IsCommited => commited;
