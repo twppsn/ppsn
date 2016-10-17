@@ -27,6 +27,7 @@ using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 using static TecWare.PPSn.Data.PpsDataHelper;
 
@@ -907,6 +908,17 @@ namespace TecWare.PPSn.Data
 			originalRows.Clear();
 		} // proc ClearInternal
 
+		public object[] GetDataRowValues(IPropertyReadOnlyDictionary properties)
+		{
+			var values = new object[Columns.Count];
+			for (int i = 0; i < Columns.Count; i++)
+			{
+				object v;
+				values[i] = properties.TryGetProperty(Columns[i].Name, out v) ? v : null;
+			}
+			return values;
+		} // func GetDataRowValues
+
 		public object[] GetDataRowValues(LuaTable table)
 		{
 			var values = new object[Columns.Count];
@@ -936,11 +948,23 @@ namespace TecWare.PPSn.Data
 		public PpsDataRow Add(LuaTable values)
 			=> AddInternal(false, NewRow(GetDataRowValues(values), null));
 
+		public PpsDataRow Add(IPropertyReadOnlyDictionary properties)
+			=> AddInternal(false, NewRow(GetDataRowValues(properties), null));
+
 		/// <summary>Erzeugt eine neue Zeile.</summary>
 		/// <param name="values">Werte, die in der Zeile enthalten sein sollen.</param>
 		/// <returns>Neue Datenzeile</returns>
 		public PpsDataRow Add(params object[] values)
-			=> AddInternal(false, NewRow(values, null));
+		{
+			if (values.Length == 1)
+			{
+				if (values[0] is LuaTable)
+					return Add((LuaTable)values[0]);
+				else if (values[1] is IPropertyReadOnlyDictionary)
+					return Add((IPropertyReadOnlyDictionary)values[0]);
+			}
+			return AddInternal(false, NewRow(values, null));
+		} // func Add
 
 		PpsDataRow IPpsDataView.NewRow(object[] originalValues, object[] currentValues)
 			=> NewRow(originalValues, currentValues);

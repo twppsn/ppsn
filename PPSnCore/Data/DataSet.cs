@@ -117,6 +117,9 @@ namespace TecWare.PPSn.Data
 
 		public static IEnumerable<PpsObjectTag> ParseTagFields(string tags)
 		{
+			if (String.IsNullOrEmpty(tags))
+				return Enumerable.Empty<PpsObjectTag>();
+
 			var xDoc = XDocument.Parse(tags);
 			return from x in xDoc.Root.Elements() select new PpsObjectTag(x);
 		} // func ParseTagFields

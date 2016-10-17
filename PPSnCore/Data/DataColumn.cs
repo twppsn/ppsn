@@ -342,7 +342,7 @@ namespace TecWare.PPSn.Data
 
 				case PpsDataColumnValueChangingFlag.Initial:
 
-					if (isIdentity) // automatic value
+					if (isIdentity && value == null) // automatic value
 						value = row.Table.DataSet.GetNextId();
 					else if (IsExtended) // is extended
 						oldValue = CreateExtendedValue(row);
