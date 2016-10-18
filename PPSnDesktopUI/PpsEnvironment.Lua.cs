@@ -488,7 +488,7 @@ namespace TecWare.PPSn
 				Task<LuaResult> t;
 
 				if (func.GetType() == typeof(Task))
-					t = ((Task)func).ContinueWith(_ => LuaResult.Empty, cancellationToken);
+					t = ((Task)func).ContinueWith(_ => { _.Wait(); return LuaResult.Empty; }, cancellationToken);
 				else if (func.GetType().GetGenericTypeDefinition() == typeof(Task<>))
 				{
 					var genericArguments = func.GetType().GetGenericArguments();

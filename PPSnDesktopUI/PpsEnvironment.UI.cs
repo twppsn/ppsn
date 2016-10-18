@@ -141,6 +141,28 @@ namespace TecWare.PPSn
 
 		#region -- Idle service -----------------------------------------------------------
 
+		#region -- class FunctionIdleActionImplementation ---------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class FunctionIdleActionImplementation : IPpsIdleAction
+		{
+			private readonly Func<int, bool> onIdle;
+
+			public FunctionIdleActionImplementation(Func<int, bool> onIdle)
+			{
+				if (onIdle == null)
+					throw new ArgumentNullException("onIdle");
+
+				this.onIdle = onIdle;
+			} // ctor
+
+			public bool OnIdle(int elapsed)
+				=> onIdle(elapsed);
+		} // class FunctionIdleActionImplementation
+
+		#endregion
+
 		private int IndexOfIdleAction(IPpsIdleAction idleAction)
 		{
 			for (int i = 0; i < idleActions.Count; i++)
@@ -152,14 +174,23 @@ namespace TecWare.PPSn
 			return -1;
 		} // func IndexOfIdleAction
 
-		public void AddIdleAction(IPpsIdleAction idleAction)
+		[LuaMember(nameof(AddIdleAction))]
+		public IPpsIdleAction AddIdleAction(Func<int, bool> onIdle)
+			=> AddIdleAction(new FunctionIdleActionImplementation(onIdle));
+
+		public IPpsIdleAction AddIdleAction(IPpsIdleAction idleAction)
 		{
 			if (IndexOfIdleAction(idleAction) == -1)
 				idleActions.Add(new WeakReference<IPpsIdleAction>(idleAction));
+			return idleAction;
 		} // proc AddIdleAction
 
+		[LuaMember(nameof(RemoveIdleAction))]
 		public void RemoveIdleAction(IPpsIdleAction idleAction)
 		{
+			if (idleAction == null)
+				return;
+
 			var i = IndexOfIdleAction(idleAction);
 			if (i >= 0)
 				idleActions.RemoveAt(i);
@@ -214,6 +245,14 @@ namespace TecWare.PPSn
 
 		async Task<T> IPpsShell.InvokeAsync<T>(Func<T> func)
 			=> await Dispatcher.InvokeAsync<T>(func);
+
+		[LuaMember(nameof(AppendException))]
+		public void AppendException(Exception exception, string alternativeMessage = null)
+			=> ShowException(ExceptionShowFlags.Background, exception, alternativeMessage);
+
+		[LuaMember(nameof(ShowException))]
+		public void ShowException(Exception exception, string alternativeMessage = null)
+			=> ShowException(ExceptionShowFlags.None, exception, alternativeMessage);
 
 		public void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 		{
