@@ -103,3 +103,9 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Adre',
     @level2type = N'COLUMN',
     @level2name = N'Plz'
+GO
+
+CREATE INDEX [idxAdreObjkId] ON [dbo].[Adre] ([ObjkId])
+GO
+CREATE INDEX [idxAdreLandId] ON [dbo].[Adre] ([LandId])
+GO

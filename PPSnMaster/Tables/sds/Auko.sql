@@ -1,6 +1,6 @@
 ﻿CREATE TABLE [sds].[Auko]
 (
-	[ObjkId] BIGINT NOT NULL CONSTRAINT pkAukotId PRIMARY KEY, 
+	[ObjkId] BIGINT NOT NULL CONSTRAINT pkAukotId PRIMARY KEY CONSTRAINT fkAukoObjkId REFERENCES dbo.Objk (Id), 
 	[Datum] DATE NULL, 
 	[BestDatum] DATE NULL, 
 	[KontId] BIGINT NULL CONSTRAINT fkAukoKontId REFERENCES dbo.Objk (Id), 
@@ -13,13 +13,10 @@
 	[Ansp] BIGINT NULL, 
 	[KopfText] NVARCHAR(MAX) NULL, 
 	[FussText] NVARCHAR(MAX) NULL, 
-	[Anmerk] NVARCHAR(MAX) NULL,
-	CONSTRAINT fkAukoObjkId FOREIGN KEY (ObjkId) REFERENCES dbo.Objk (Id)
+	[Anmerk] NVARCHAR(MAX) NULL
 )
-
 GO
 
-GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'FK zu Objk',
     @level0type = N'SCHEMA',
@@ -145,3 +142,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Auko',
     @level2type = N'COLUMN',
     @level2name = N'Anmerk'
+GO
+
+CREATE INDEX [idxAukoKontId] ON [sds].[Auko] ([KontId])
+GO

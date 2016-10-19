@@ -1,6 +1,6 @@
 ﻿CREATE TABLE [sds].[Anko]
 (
-	[ObjkId] BIGINT NOT NULL CONSTRAINT pkAnkotId PRIMARY KEY, 
+	[ObjkId] BIGINT NOT NULL CONSTRAINT pkAnkotId PRIMARY KEY CONSTRAINT fkAnkoObjkId REFERENCES dbo.Objk (Id), 
 	[Datum] DATE NULL, 
 	[BisDatum] DATE NULL, 
 	[AnfDatum] DATE NULL, 
@@ -13,8 +13,7 @@
 	[Ansp] BIGINT NULL, 
 	[KopfText] NVARCHAR(MAX) NULL, 
 	[Fusstext] NVARCHAR(MAX) NULL, 
-	[Anmerk] NVARCHAR(MAX) NULL, 
-	CONSTRAINT fkAnkoObjkId FOREIGN KEY (ObjkId) REFERENCES dbo.Objk (Id) 
+	[Anmerk] NVARCHAR(MAX) NULL
 )
 
 GO
@@ -143,3 +142,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Anko',
     @level2type = N'COLUMN',
     @level2name = N'Anmerk'
+GO
+
+CREATE INDEX [idxAnkoKontId] ON [sds].[Anko] ([KontId])
+GO

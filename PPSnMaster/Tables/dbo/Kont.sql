@@ -1,7 +1,6 @@
 ﻿CREATE TABLE [dbo].[Kont]
 (
-	[Id] BIGINT NOT NULL CONSTRAINT pkKontId PRIMARY KEY IDENTITY (1,1), 
-	[ObjkId] BIGINT NOT NULL CONSTRAINT fkKontObjkId REFERENCES dbo.Objk (Id), 
+	[ObjkId] BIGINT NOT NULL CONSTRAINT pkKontId PRIMARY KEY CONSTRAINT fkKontObjkId REFERENCES dbo.Objk (Id), 
 	[Name] NVARCHAR(100) NOT NULL,
 	[KurzName] NVARCHAR(25) NULL,
 	[LiefNr] NVARCHAR(50) NULL,
@@ -15,15 +14,6 @@
 	[Iban] CHAR(34) NULL, 
 	[Bic] CHAR(11) NULL
 )
-GO
-EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'PK',
-    @level0type = N'SCHEMA',
-    @level0name = N'dbo',
-    @level1type = N'TABLE',
-    @level1name = N'Kont',
-    @level2type = N'COLUMN',
-    @level2name = N'Id'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'FK zu Objk',
@@ -141,3 +131,4 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Kont',
     @level2type = N'COLUMN',
     @level2name = N'KurzName'
+GO

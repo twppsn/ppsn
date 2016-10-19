@@ -6,11 +6,24 @@
 	</ResourceDictionary.MergedDictionaries>
 
 	<DataTemplate x:Key="sdsContract,,100">
-		<!--  crmContacts,dbo.contacts,100 -->
-		<StackPanel Orientation="Horizontal">
-			<TextBlock Text="Auftrag-Nr.: "/>
-			<TextBlock Text="{Binding Nr}" />
-		</StackPanel>
+		<Grid>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="*" />
+			</Grid.ColumnDefinitions>
+			<TextBlock Grid.Column="0" Text="Auftrag:" Margin="10" />
+			<TextBlock Grid.Column="1" Text="{Binding Nr}" Margin="10" />
+			<TextBlock Grid.Column="2" Text="{Binding Datum,StringFormat='d',ConverterCulture='de-DE'}" Margin="10"  />
+			<TextBlock Grid.Column="3" Text="{Binding BestNr}" Margin="10"  />
+			<TextBlock Grid.Column="4" Text="{Binding BestDatum,StringFormat='d',ConverterCulture='de-DE'}" Margin="10"  />
+			<TextBlock Grid.Column="5" Text="{Binding Adresse}" Margin="10"  />
+			<TextBlock Grid.Column="6" Text="{Binding Zusatz}" Margin="10"  />
+		</Grid>
 	</DataTemplate>
 
 </ResourceDictionary>

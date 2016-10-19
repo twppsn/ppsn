@@ -90,14 +90,14 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Content>
-    <Page Include="ClientWpf\Panes\contract.xaml">
+    <Content Include="ClientWpf\Panes\contract.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="ClientWpf\Panes\offer.xaml">
+    </Content>
+    <Content Include="ClientWpf\Panes\offer.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
+    </Content>
     <Page Include="ClientWpf\Resources\Colors.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

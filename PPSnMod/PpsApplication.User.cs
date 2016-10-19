@@ -31,6 +31,7 @@ using TecWare.DE.Stuff;
 using TecWare.DE.Data;
 using TecWare.PPSn.Server.Data;
 using TecWare.PPSn.Data;
+using TecWare.DE.Server.Http;
 
 namespace TecWare.PPSn.Server
 {
@@ -618,9 +619,20 @@ namespace TecWare.PPSn.Server
 
 		/// <summary>Creates a context for the system user.</summary>
 		/// <returns></returns>
-		[LuaMember("CreateSysContext")]
+		[LuaMember(nameof(CreateSysContext))]
 		public IPpsPrivateDataContext CreateSysContext()
 			=> (IPpsPrivateDataContext)systemUser.Authentificate(PpsUserIdentity.System);
+
+		/// <summary>Creates a context for the system user.</summary>
+		/// <returns></returns>
+		[LuaMember(nameof(GetUserContext))]
+		public IPpsPrivateDataContext GetUserContext()
+		{
+			var ctx = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
+			if (ctx == null)
+				throw new ArgumentNullException("No context.");
+			return ctx;
+		} // func CreateUserContext
 
 		/// <summary>Creates a context for a special user.</summary>
 		/// <param name="flags"></param>

@@ -1,9 +1,14 @@
 ﻿CREATE TABLE [dbo].[Objk]
 (
 	[Id] BIGINT NOT NULL  CONSTRAINT pkObjkId PRIMARY KEY IDENTITY (1, 1),
-	[Guid] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(), 
-	[Typ] CHAR(25) NOT NULL, 
-	[Nr] NVARCHAR(20) NOT NULL,
+	[Guid] UNIQUEIDENTIFIER NOT NULL CONSTRAINT dfObjkGuid DEFAULT NEWID(), 
+	[Typ] CHAR(25) NOT NULL CONSTRAINT dfObjkTyp CHECK (len(Typ) > 0 ), 
+	[Nr] NVARCHAR(20) NOT NULL CONSTRAINT chkObjkNr CHECK (len(Nr) > 0),
+	[IsRev] BIT NOT NULL,
+	[IsHidden] BIT NOT NULL CONSTRAINT dfObjkIsHidden DEFAULT 0,
+	[IsRemoved] BIT NOT NULL CONSTRAINT dfObjkIsRemoved DEFAULT 0,
+	[State] XML NOT NULL DEFAULT '<tags />',
+	[StateChg] BIGINT NOT NULL DEFAULT 0,
 	[CurRevId] BIGINT NULL CONSTRAINT fkObjkObjrCurId REFERENCES dbo.Objr (Id),
 	[HeadRevId] BIGINT NULL CONSTRAINT fkObjkObjrHeadId REFERENCES dbo.Objr (Id)
 )
@@ -62,3 +67,58 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Objk',
     @level2type = N'COLUMN',
     @level2name = N'CurRevId'
+GO
+
+CREATE INDEX [idxObjkCurId] ON [dbo].[Objk] ([CurRevId])
+GO
+CREATE INDEX [idxObjkHeadId] ON [dbo].[Objk] ([HeadRevId])
+GO
+CREATE UNIQUE INDEX [idxObjkGuid] ON [dbo].[Objk] ([Guid])
+GO
+CREATE UNIQUE INDEX [idxObjkTypNr] ON [dbo].[Objk] ([Typ], [Nr]) INCLUDE ([Id])
+GO
+
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Is the object removed',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Objk',
+    @level2type = N'COLUMN',
+    @level2name = N'IsRemoved'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Is the object invisible to the user',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Objk',
+    @level2type = N'COLUMN',
+    @level2name = N'IsHidden'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Has this object revisions, or is this only an hook',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Objk',
+    @level2type = N'COLUMN',
+    @level2name = N'IsRev'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Time stamp of the last change, to synchronize the object info',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Objk',
+    @level2type = N'COLUMN',
+    @level2name = N'StateChg'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Extented data for the object',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Objk',
+    @level2type = N'COLUMN',
+    @level2name = 'State'

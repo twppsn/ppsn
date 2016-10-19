@@ -59,6 +59,7 @@
     <Compile Include="Data\PpsDataTransaction.cs" />
     <Compile Include="PpsApplication.cs" />
     <Compile Include="PpsApplication.Documents.cs" />
+    <Compile Include="PpsApplication.Objects.cs" />
     <Compile Include="PpsApplication.User.cs" />
     <Compile Include="PpsApplication.Data.cs" />
     <Compile Include="Data\PpsDataSource.cs" />
@@ -70,6 +71,7 @@
     <Compile Include="Sql\PpsSqlExDataSource.cs" />
     <Compile Include="Sql\PpsSqlDataSource.cs" />
     <Compile Include="Stuff.cs" />
+    <Compile Include="Wpf\ExcelCientItem.cs" />
     <Compile Include="Wpf\WpfClientItem.cs" />
   </ItemGroup>
   <ItemGroup>

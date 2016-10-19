@@ -102,3 +102,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Aupo',
     @level2type = N'COLUMN',
     @level2name = N'Menge'
+GO
+
+CREATE INDEX [idxAupoObjkId] ON [sds].[Aupo] ([ObjkId])
+GO

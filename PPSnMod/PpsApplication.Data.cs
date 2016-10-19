@@ -122,7 +122,12 @@ namespace TecWare.PPSn.Server
 
 			displayName = new Lazy<string>(() => this.Attributes.GetProperty(DisplayNameAttributeString, name));
 			maxLength = new Lazy<int>(() => this.Attributes.GetProperty(MaxLengthAttributeString, Int32.MaxValue));
-			dataType = new Lazy<Type>(() => this.Attributes.GetProperty(DataTypeAttributeString, typeof(string)));
+
+			var xDataType = xDefinition.Attribute(DataTypeAttributeString);
+
+			dataType = xDataType != null ? 
+				new Lazy<Type>(() => LuaType.GetType(xDataType.Value, lateAllowed: false)):
+				null;
 		} // ctor
 
 		internal void SetColumnDescription(IPpsColumnDescription columnDescription)
@@ -167,7 +172,7 @@ namespace TecWare.PPSn.Server
 				if (String.Compare(propertyName, DisplayNameAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
 					return new PropertyValue(DisplayNameAttributeString, typeof(string), xDefinition.GetAttribute<string>(DisplayNameAttributeString, this.name));
 				else if (String.Compare(propertyName, DataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
-					return new PropertyValue(DataTypeAttributeString, typeof(Type), LuaType.GetType(xDefinition.GetAttribute<string>(DataTypeAttributeString, "string"), lateAllowed: false).Type);
+					return new PropertyValue(DataTypeAttributeString, typeof(Type), DataType);
 			}
 
 			return ret;
@@ -201,7 +206,7 @@ namespace TecWare.PPSn.Server
 		public string DisplayName => displayName.Value;
 
 		public int MaxLength => Attributes.GetPropertyLate("MaxLength", () => maxLength.Value);
-		public Type DataType => parentColumnDescription?.DataType ?? dataType.Value;
+		public Type DataType => dataType?.Value ?? (parentColumnDescription?.DataType ?? typeof(string));
 
 		public IPropertyEnumerableDictionary Attributes => attributes;
 		public IPpsColumnDescription Parent => parentColumnDescription;
@@ -888,7 +893,7 @@ namespace TecWare.PPSn.Server
 							{
 								columnNames[i] = nativeColumnName;
 
-								var fieldDescription = String.IsNullOrEmpty(attributeSelector) ? null : this.GetFieldDescription(fieldDefinition.Name, false); // get the global description of the field
+								var fieldDescription = fieldDefinition.GetColumnDescriptionImplementation<PpsFieldDescription>(); // get the global description of the field
 
 								xml.WriteStartElement(nativeColumnName);
 
