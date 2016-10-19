@@ -77,9 +77,9 @@ namespace TecWare.PPSn
 
 		private LuaResult Continue(Task<LuaResult> t)
 		{
-			lock (task)
+			try
 			{
-				try
+				lock (task)
 				{
 					isCompleted = true;
 
@@ -87,41 +87,48 @@ namespace TecWare.PPSn
 					currentResult = t.Result;
 					FetchContinue(continueWith);
 					continueWith.Clear();
-
-					// fetch ui tasks
-					parent.Dispatcher.Invoke(() => FetchContinue(continueUI));
+				}
+				// fetch ui tasks
+				parent.Dispatcher.Invoke(() => FetchContinue(continueUI));
+				lock (task)
 					continueUI.Clear();
 
-					return currentResult;
-				}
-				catch (Exception e)
+				return currentResult;
+			}
+			catch (Exception e)
+			{
+				var cleanException = e.GetInnerException();
+
+				lock (task)
 				{
-					var cleanException = e.GetInnerException();
-					if (onException == null)
-					{
-						currentException = cleanException;
-						currentResult = LuaResult.Empty;
-					}
-					else
-					{
-						if (onException is LuaResult)
-						{
-							parent.Traces.AppendException(cleanException);
-							currentResult = (LuaResult)onException;
-						}
-						else if (Lua.RtInvokeable(onException))
-							currentResult = parent.Dispatcher.Invoke(() => new LuaResult(Lua.RtInvoke(onException, cleanException)));
-						else
-							currentResult = new LuaResult(onException, cleanException);
-					}
 
 					isCompleted = true;
 
 					continueWith.Clear();
 					continueUI.Clear();
-
-					return currentResult;
 				}
+				if (onException == null)
+				{
+					lock (task)
+					{
+						currentException = cleanException;
+						currentResult = LuaResult.Empty;
+					}
+				}
+				else
+				{
+					if (onException is LuaResult)
+					{
+						parent.Traces.AppendException(cleanException);
+						currentResult = (LuaResult)onException;
+					}
+					else if (Lua.RtInvokeable(onException))
+						currentResult = parent.Dispatcher.Invoke(() => new LuaResult(Lua.RtInvoke(onException, cleanException)));
+					else
+						currentResult = new LuaResult(onException, cleanException);
+				}
+
+				return currentResult;
 			}
 		} // proc Continue
 

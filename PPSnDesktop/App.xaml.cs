@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ namespace TecWare.PPSn
 		public App()
 		{
 			this.DispatcherUnhandledException += App_DispatcherUnhandledException;
-		}
+		} // ctor
 
 		#region -- OnStartup, OnExit ------------------------------------------------------
 
@@ -42,6 +43,16 @@ namespace TecWare.PPSn
 								await currentEnvironment.CreateMainWindowAsync();
 								// first window is created -> change shutdown mode
 								await Dispatcher.InvokeAsync(() => { ShutdownMode = ShutdownMode.OnLastWindowClose; });
+
+								foreach (var k in this.Resources.Keys)
+								{
+									Debug.Print("({0}) {1}", k.GetType().Name, k.ToString());
+									var v = this.Resources[k];
+									if (v is Style)
+										Debug.Print("  ==> Style: {0}", ((Style)v).TargetType.Name);
+									else
+										Debug.Print("  ==> {0}", v.GetType().Name);
+								}
 							}
 							else
 							{

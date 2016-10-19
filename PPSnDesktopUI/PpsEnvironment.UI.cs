@@ -47,9 +47,10 @@ namespace TecWare.PPSn
 		private readonly List<WeakReference<IPpsIdleAction>> idleActions = new List<WeakReference<IPpsIdleAction>>();
 		private readonly PreProcessInputEventHandler preProcessInputEventHandler;
 
-		public PpsEnvironment(Lua lua) : base(lua)
+		public PpsEnvironment(Lua lua)
+			: base(lua)
 		{
-		}
+		} // ctor
 
 		private async Task<Tuple<XDocument, DateTime>> GetXmlDocumentAsync(string path, bool isXaml, bool isOptional)
 		{
@@ -131,11 +132,7 @@ namespace TecWare.PPSn
 			if (xResources != null)
 			{
 				foreach (var cur in xResources.Elements())
-				{
-					var key = cur.GetAttribute(StuffUI.xnKey, String.Empty);
-					if (key != null)
-						Dispatcher.Invoke(() => UpdateResource(key, cur.ToString(), parserContext));
-				}
+					Dispatcher.Invoke(() => UpdateResource(cur.GetAttribute(StuffUI.xnKey, String.Empty), cur.ToString(), parserContext));
 			}
 		} // proc UpdateResources
 
@@ -314,8 +311,23 @@ namespace TecWare.PPSn
 
 		private void UpdateResource(string keyString, string xamlSource, ParserContext parserContext)
 		{
+			// create the resource
 			object resource = CreateResource(xamlSource, parserContext);
-			mainResources[keyString] = resource;
+			object key;
+
+			// check the key
+			if (String.IsNullOrEmpty(keyString))
+			{
+				var style = resource as Style;
+				if (style == null)
+					throw new ArgumentNullException("keyString");
+
+				key = style.TargetType;
+			}
+			else
+				key = keyString;
+
+			mainResources[key] = resource;
 		} // func UpdateResource
 
 		public object CreateResource(string xamlSource, ParserContext parserContext)

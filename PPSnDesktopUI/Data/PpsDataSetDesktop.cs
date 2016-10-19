@@ -89,6 +89,13 @@ namespace TecWare.PPSn.Data
 		LuaTable Events { get; }
 	} // interface IPpsActiveDataSetOwner
 
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class PpsActiveDataSetOwner : LuaTable, IPpsActiveDataSetOwner
+	{
+		LuaTable IPpsActiveDataSetOwner.Events => this;
+	} // class PpsActiveDataSetOwner
+	
 	#endregion
 
 	#region -- interface IPpsActiveDataSets ---------------------------------------------

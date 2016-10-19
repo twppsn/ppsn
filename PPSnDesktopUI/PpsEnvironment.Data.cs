@@ -1059,10 +1059,11 @@ namespace TecWare.PPSn
 			Stream src;
 			string contentType;
 
-			if (TryGetOfflineItem(r.Request.Path, false, out contentType, out src)) // ask the file from the cache
+			var filePath = r.ResponseUri.GetComponents(UriComponents.PathAndQuery, UriFormat.UriEscaped);
+			if (TryGetOfflineItem(filePath, false, out contentType, out src)) // ask the file from the cache
 				r.SetResponseData(src, contentType);
 			else
-				throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, r);
+				throw new WebException($"File '{filePath}' not found.", null, WebExceptionStatus.ProtocolError, r);
 		} // proc GetResponseDataStream
 
 		#endregion

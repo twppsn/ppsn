@@ -583,6 +583,7 @@ namespace TecWare.PPSn
 
 			public void UpdateDataSet(long localId, PpsDataSet dataset)
 			{
+				// update data
 				UpdateData(localId,
 					dst =>
 					{
@@ -592,6 +593,9 @@ namespace TecWare.PPSn
 							dataset.Write(xml);
 					}, -1, -1, null, true
 				);
+
+				// update tags
+				UpdateTags(localId, dataset.GetAutoTags());
 			} // func UpdateDataSet
 
 			public IDbConnection Connection => LocalConnection;

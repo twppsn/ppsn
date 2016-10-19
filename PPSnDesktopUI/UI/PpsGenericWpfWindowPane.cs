@@ -394,7 +394,10 @@ namespace TecWare.PPSn.UI
 		} // proc OnControlCreated
 
 		public virtual Task<bool> UnloadAsync(bool? commit = default(bool?))
-			=> Task.FromResult(true);
+		{
+			CallMemberDirect("UnloadAsync", new object[] { commit }, throwExceptions: true);
+			return Task.FromResult(true);
+		} // func UnloadAsync
 
 		#endregion
 
