@@ -345,7 +345,7 @@ namespace TecWare.PPSn.UI
 					break;
 				default:
 					throw new InvalidOperationException();
-      }
+			}
 		} // proc Commands_CollectionChanged
 
 		#endregion

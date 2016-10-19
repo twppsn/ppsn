@@ -410,7 +410,7 @@ namespace TecWare.PPSn.UI
 						for (; index < Count; index++)
 						{
 							var t = this[index];
-              if (t == null || (t.Order.Group == currentGroup && t.Order.Order > order))
+							if (t == null || (t.Order.Group == currentGroup && t.Order.Order > order))
 								break;
 						}
 						break;

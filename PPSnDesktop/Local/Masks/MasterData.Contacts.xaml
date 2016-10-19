@@ -155,7 +155,7 @@
         </ControlTemplate>
 	</ui:PpsGenericWpfControl.Resources>
 
-	<ScrollViewer Style="{StaticResource PPSnScrollViewerStyle}" Padding="24" Focusable="False"
+	<ScrollViewer Padding="24" Focusable="False"
 				  Margin="{Binding Path=CharmbarActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ui:PpsWindow}}, Converter={StaticResource CharmbarWidthToPaddingConverter}}">
 		<StackPanel MinWidth="1020" MaxWidth="1020">
 			<Expander Header="Ident"  ExpandDirection="Down" IsExpanded="True">

@@ -285,6 +285,7 @@ namespace TecWare.PPSn.UI
 		public PpsImageStaticResourceBinding(Binding binding)
 		{
 			this.binding = binding;
+			this.binding.Mode = BindingMode.OneWay;
 		}
 
 		static PpsImageStaticResourceBinding()
@@ -294,18 +295,24 @@ namespace TecWare.PPSn.UI
 
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{
-			// todo: does not work ???
-
 			var target = (IProvideValueTarget)serviceProvider.GetService(typeof(IProvideValueTarget));
 			var targetObject = (System.Windows.FrameworkElement)target.TargetObject;
 
 			// simuliere Binding
 			binding.Source = targetObject.DataContext;
 			var dummyDO = new System.Windows.DependencyObject();
-			BindingOperations.SetBinding(dummyDO, dummyProperty, binding);
-			ResourceKey = dummyDO.GetValue(dummyProperty);
 
-			return base.ProvideValue(serviceProvider);
+			BindingOperations.SetBinding(dummyDO, dummyProperty, binding);
+			// todo: checken ob die die source das object hat
+			try
+			{
+				ResourceKey = dummyDO.GetValue(dummyProperty);
+				return base.ProvideValue(serviceProvider);
+			}
+			catch
+			{
+				return null;
+			}
 		}
 	} // class PpsImageStaticResourceBinding
 

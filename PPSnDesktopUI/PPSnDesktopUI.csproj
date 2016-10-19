@@ -76,6 +76,7 @@
       <Link>Data\DbRowEnumerator.cs</Link>
     </Compile>
     <Compile Include="Controls\DataListControl.cs" />
+    <Compile Include="Controls\SideBarMenu.cs" />
     <Compile Include="Controls\SplitButton.cs" />
     <Compile Include="Controls\TemplateTextBox.cs" />
     <Compile Include="Controls\Toolbar.cs" />
@@ -168,10 +169,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="UI\PpsTracePane.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="UI\Styles\ControlStyles.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
