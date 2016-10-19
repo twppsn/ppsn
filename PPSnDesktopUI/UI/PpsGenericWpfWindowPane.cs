@@ -42,18 +42,24 @@ namespace TecWare.PPSn.UI
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Pane that combines a xaml file with lua code.</summary>
-	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane
+	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane, IPpsIdleAction
 	{
+		private readonly PpsWindow window;
+
 		private BaseWebRequest fileSource;
 		private FrameworkElement control;
 
 		private LuaTable arguments; // arguments
 
+		private bool forceUpdateSource = false; // set this to true, to update the document on idle
+
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		public PpsGenericWpfWindowPane(PpsEnvironment environment)
+		public PpsGenericWpfWindowPane(PpsEnvironment environment, PpsWindow window)
 			: base(environment)
 		{
+			this.window = window;
+			Environment.AddIdleAction(this);
 		} // ctor
 
 		~PpsGenericWpfWindowPane()
@@ -69,7 +75,163 @@ namespace TecWare.PPSn.UI
 
 		protected virtual void Dispose(bool disposing)
 		{
+			if (disposing)
+			{
+				if (disposing)
+					Environment.RemoveIdleAction(this);
+
+				CallMemberDirect("Dispose", new object[0], throwExceptions: false);
+			}
 		} // proc Dispose
+
+		#endregion
+
+		#region -- Undo/Redo Management ---------------------------------------------------
+
+		/*
+		 * TextBox default binding is LostFocus, to support changes in long text, we try to
+		 * connact undo operations.
+		 */
+		private BindingExpression currentBindingExpression = null;
+
+		private static bool IsCharKey(Key k)
+		{
+			switch (k)
+			{
+				case Key.Back:
+				case Key.Return:
+				case Key.Space:
+				case Key.D0:
+				case Key.D1:
+				case Key.D2:
+				case Key.D3:
+				case Key.D4:
+				case Key.D5:
+				case Key.D6:
+				case Key.D7:
+				case Key.D8:
+				case Key.D9:
+				case Key.A:
+				case Key.B:
+				case Key.C:
+				case Key.D:
+				case Key.E:
+				case Key.F:
+				case Key.G:
+				case Key.H:
+				case Key.I:
+				case Key.J:
+				case Key.K:
+				case Key.L:
+				case Key.M:
+				case Key.N:
+				case Key.O:
+				case Key.P:
+				case Key.Q:
+				case Key.R:
+				case Key.S:
+				case Key.T:
+				case Key.U:
+				case Key.V:
+				case Key.W:
+				case Key.X:
+				case Key.Y:
+				case Key.Z:
+				case Key.NumPad0:
+				case Key.NumPad1:
+				case Key.NumPad2:
+				case Key.NumPad3:
+				case Key.NumPad4:
+				case Key.NumPad5:
+				case Key.NumPad6:
+				case Key.NumPad7:
+				case Key.NumPad8:
+				case Key.NumPad9:
+				case Key.Multiply:
+				case Key.Add:
+				case Key.Separator:
+				case Key.Subtract:
+				case Key.Decimal:
+				case Key.Divide:
+				case Key.Oem1:
+				case Key.OemPlus:
+				case Key.OemComma:
+				case Key.OemMinus:
+				case Key.OemPeriod:
+				case Key.Oem2:
+				case Key.Oem3:
+				case Key.Oem4:
+				case Key.Oem5:
+				case Key.Oem6:
+				case Key.Oem7:
+				case Key.Oem8:
+				case Key.Oem102:
+					return true;
+				default:
+					return false;
+			}
+		} // func IsCharKey
+
+		private void Control_MouseDownHandler(object sender, MouseButtonEventArgs e)
+		{
+			if (currentBindingExpression != null && currentBindingExpression.IsDirty)
+			{
+#if DEBUG && NOTIFY_BINDING_SOURCE_UPDATE
+				Debug.Print("TextBox force update on mouse.");
+#endif
+				forceUpdateSource = true;
+			}
+		} // event Control_MouseDownHandler
+
+		private void Control_KeyUpHandler(object sender, KeyEventArgs e)
+		{
+			if (currentBindingExpression != null && currentBindingExpression.IsDirty && !IsCharKey(e.Key))
+			{
+#if DEBUG && NOTIFY_BINDING_SOURCE_UPDATE
+				Debug.Print("TextBox force update on keyboard.");
+#endif
+				forceUpdateSource = true;
+			}
+		} // event Control_KeyUpHandler
+
+		private void Control_GotKeyboardFocusHandler(object sender, KeyboardFocusChangedEventArgs e)
+		{
+			var newTextBox = e.NewFocus as TextBox;
+			if (newTextBox != null)
+			{
+				var b = BindingOperations.GetBinding(newTextBox, TextBox.TextProperty);
+				var expr = BindingOperations.GetBindingExpression(newTextBox, TextBox.TextProperty);
+				if (b != null && (b.UpdateSourceTrigger == UpdateSourceTrigger.Default || b.UpdateSourceTrigger == UpdateSourceTrigger.LostFocus) && expr.Status != BindingStatus.PathError)
+				{
+					currentBindingExpression = expr;
+#if DEBUG && NOTIFY_BINDING_SOURCE_UPDATE
+					Debug.Print("Textbox GotFocus");
+#endif
+				}
+			}
+		} // event Control_GotKeyboardFocusHandler
+
+		private void Control_LostKeyboardFocusHandler(object sender, KeyboardFocusChangedEventArgs e)
+		{
+			if (currentBindingExpression != null && e.OldFocus == currentBindingExpression.Target)
+			{
+#if DEBUG && NOTIFY_BINDING_SOURCE_UPDATE
+				Debug.Print("LostFocus");
+#endif
+				currentBindingExpression = null;
+			}
+		} // event Control_LostKeyboardFocusHandler
+
+		private void CheckBindingOnIdle()
+		{
+			if (currentBindingExpression != null && !forceUpdateSource && currentBindingExpression.IsDirty && !Window.IsActive)
+			{
+#if DEBUG && NOTIFY_BINDING_SOURCE_UPDATE
+				Debug.Print("TextBox force update on idle.");
+#endif
+				forceUpdateSource = true;
+			}
+		} // proc CheckBindingOnIdle
 
 		#endregion
 
@@ -224,10 +386,18 @@ namespace TecWare.PPSn.UI
 
 		protected virtual void OnControlCreated()
 		{
+			Mouse.AddPreviewMouseDownHandler(Control, Control_MouseDownHandler);
+			Mouse.AddPreviewMouseDownOutsideCapturedElementHandler(Control, Control_MouseDownHandler);
+			Keyboard.AddPreviewGotKeyboardFocusHandler(Control, Control_GotKeyboardFocusHandler);
+			Keyboard.AddPreviewLostKeyboardFocusHandler(Control, Control_LostKeyboardFocusHandler);
+			Keyboard.AddPreviewKeyUpHandler(Control, Control_KeyUpHandler);
 		} // proc OnControlCreated
 
 		public virtual Task<bool> UnloadAsync(bool? commit = default(bool?))
-			=> Task.FromResult(true);
+		{
+			CallMemberDirect("UnloadAsync", new object[] { commit }, throwExceptions: true);
+			return Task.FromResult(true);
+		} // func UnloadAsync
 
 		#endregion
 
@@ -236,7 +406,7 @@ namespace TecWare.PPSn.UI
 		private object GetXamlElement(object key)
 		{
 			if (key is string)
-				return Control.FindName((string)key);
+				return Control.Dispatcher.Invoke(() => Control.FindName((string)key));
 			else
 				return null;
 		} // func GetXamlElement
@@ -247,7 +417,31 @@ namespace TecWare.PPSn.UI
 		} // func OnIndex
 
 		#endregion
-		
+
+		[LuaMember(nameof(UpdateSources))]
+		public void UpdateSources()
+		{
+			forceUpdateSource = false;
+
+			foreach (var expr in BindingOperations.GetSourceUpdatingBindings(Control))
+				expr.UpdateSource();
+		} // proc UpdateSources
+
+		bool IPpsIdleAction.OnIdle(int elapsed)
+		{
+			if (elapsed > 300)
+			{
+				if (forceUpdateSource)
+					UpdateSources();
+				return false;
+			}
+			else
+			{
+				CheckBindingOnIdle();
+				return forceUpdateSource;
+			}
+		} // proc OnIdle
+
 		/// <summary>Arguments of the generic content.</summary>
 		[LuaMember("Arguments")]
 		public LuaTable Arguments { get { return arguments; } }
@@ -269,6 +463,9 @@ namespace TecWare.PPSn.UI
 		public FrameworkElement Control => control;
 		/// <summary>This member is resolved dynamic, that is the reason the FrameworkElement Control is public.</summary>
 		object IPpsWindowPane.Control => control;
+
+		[LuaMember(nameof(Window))]
+		public PpsWindow Window => window;
 
 		/// <summary>BaseUri of the Wpf-Control</summary>
 		public Uri BaseUri => fileSource?.BaseUri;

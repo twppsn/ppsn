@@ -11,6 +11,7 @@ using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Threading;
 using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
@@ -45,6 +46,11 @@ namespace TecWare.PPSn
 		private readonly DispatcherTimer idleTimer;
 		private readonly List<WeakReference<IPpsIdleAction>> idleActions = new List<WeakReference<IPpsIdleAction>>();
 		private readonly PreProcessInputEventHandler preProcessInputEventHandler;
+
+		public PpsEnvironment(Lua lua)
+			: base(lua)
+		{
+		} // ctor
 
 		private async Task<Tuple<XDocument, DateTime>> GetXmlDocumentAsync(string path, bool isXaml, bool isOptional)
 		{
@@ -126,15 +132,33 @@ namespace TecWare.PPSn
 			if (xResources != null)
 			{
 				foreach (var cur in xResources.Elements())
-				{
-					var key = cur.GetAttribute(StuffUI.xnKey, String.Empty);
-					if (key != null)
-						Dispatcher.Invoke(() => UpdateResource(key, cur.ToString(), parserContext));
-				}
+					Dispatcher.Invoke(() => UpdateResource(cur.GetAttribute(StuffUI.xnKey, String.Empty), cur.ToString(), parserContext));
 			}
 		} // proc UpdateResources
 
 		#region -- Idle service -----------------------------------------------------------
+
+		#region -- class FunctionIdleActionImplementation ---------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class FunctionIdleActionImplementation : IPpsIdleAction
+		{
+			private readonly Func<int, bool> onIdle;
+
+			public FunctionIdleActionImplementation(Func<int, bool> onIdle)
+			{
+				if (onIdle == null)
+					throw new ArgumentNullException("onIdle");
+
+				this.onIdle = onIdle;
+			} // ctor
+
+			public bool OnIdle(int elapsed)
+				=> onIdle(elapsed);
+		} // class FunctionIdleActionImplementation
+
+		#endregion
 
 		private int IndexOfIdleAction(IPpsIdleAction idleAction)
 		{
@@ -147,14 +171,23 @@ namespace TecWare.PPSn
 			return -1;
 		} // func IndexOfIdleAction
 
-		public void AddIdleAction(IPpsIdleAction idleAction)
+		[LuaMember(nameof(AddIdleAction))]
+		public IPpsIdleAction AddIdleAction(Func<int, bool> onIdle)
+			=> AddIdleAction(new FunctionIdleActionImplementation(onIdle));
+
+		public IPpsIdleAction AddIdleAction(IPpsIdleAction idleAction)
 		{
 			if (IndexOfIdleAction(idleAction) == -1)
 				idleActions.Add(new WeakReference<IPpsIdleAction>(idleAction));
+			return idleAction;
 		} // proc AddIdleAction
 
+		[LuaMember(nameof(RemoveIdleAction))]
 		public void RemoveIdleAction(IPpsIdleAction idleAction)
 		{
+			if (idleAction == null)
+				return;
+
 			var i = IndexOfIdleAction(idleAction);
 			if (i >= 0)
 				idleActions.RemoveAt(i);
@@ -209,6 +242,14 @@ namespace TecWare.PPSn
 
 		async Task<T> IPpsShell.InvokeAsync<T>(Func<T> func)
 			=> await Dispatcher.InvokeAsync<T>(func);
+
+		[LuaMember(nameof(AppendException))]
+		public void AppendException(Exception exception, string alternativeMessage = null)
+			=> ShowException(ExceptionShowFlags.Background, exception, alternativeMessage);
+
+		[LuaMember(nameof(ShowException))]
+		public void ShowException(Exception exception, string alternativeMessage = null)
+			=> ShowException(ExceptionShowFlags.None, exception, alternativeMessage);
 
 		public void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 		{
@@ -270,14 +311,27 @@ namespace TecWare.PPSn
 
 		private void UpdateResource(string keyString, string xamlSource, ParserContext parserContext)
 		{
+			// create the resource
 			object resource = CreateResource(xamlSource, parserContext);
-			mainResources[keyString] = resource;
+			object key;
+
+			// check the key
+			if (String.IsNullOrEmpty( keyString ))
+			{
+				var style = resource as Style;
+				if (style == null)
+					throw new ArgumentNullException("keyString");
+
+				key = style.TargetType;
+			}
+			else
+				key = keyString;
+
+			mainResources[key] = resource;
 		} // func UpdateResource
 
 		public object CreateResource(string xamlSource, ParserContext parserContext)
-		{
-			return XamlReader.Parse(xamlSource, parserContext); // todo: Exception handling
-		} // func CreateResource
+			=> XamlReader.Parse(xamlSource, parserContext);
 
 		#endregion
 	} // class PpsEnvironment

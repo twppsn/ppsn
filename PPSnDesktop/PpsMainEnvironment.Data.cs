@@ -90,7 +90,7 @@ namespace TecWare.PPSn
 			deleteCommand.Dispose();
 		} // proc Dispose
 
-		public void UpdateTags(PpsObjectTag[] tags)
+		public void UpdateTags(IList<PpsObjectTag> tags)
 		{
 			var updatedTags = new List<string>();
 
@@ -341,28 +341,31 @@ namespace TecWare.PPSn
 			// todo: lock -> mutex
 			// todo: user rights -> server
 
-			// get last rev id
-			var maxRevId = 0L;
-			using (var cmd = new SQLiteCommand("SELECT max([RemoteRevId]) FROM main.[Objects]", LocalConnection))
+			// get last state
+			var maxState = 0L;
+			using (var cmd = new SQLiteCommand("SELECT max([StateChg]) FROM main.[Objects]", LocalConnection))
 			{
 				using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
-					maxRevId = r.Read() && !r.IsDBNull(0) ? r.GetInt64(0) : 0;
+					maxState = r.Read() && !r.IsDBNull(0) ? r.GetInt64(0) : -1;
 			}
 
-			// get the new objects, todo: not via RevId -> change id
-			using (var enumerator = GetViewData(new PpsShellGetList("dbo.objects") { Filter = new PpsDataFilterCompareExpression("RevId", PpsDataFilterCompareOperator.Greater, new PpsDataFilterCompareTextValue(maxRevId.ToString())) }).GetEnumerator())
+			// get the new objects
+			using (var enumerator = GetViewData(new PpsShellGetList("dbo.objects") { Filter = new PpsDataFilterCompareExpression("StateChg", PpsDataFilterCompareOperator.Greater, new PpsDataFilterCompareTextValue(maxState.ToString())) }).GetEnumerator())
 			{
 				var indexId = enumerator.FindColumnIndex("Id", true);
 				var indexGuid = enumerator.FindColumnIndex("Guid", true);
 				var indexTyp = enumerator.FindColumnIndex("Typ", true);
 				var indexNr = enumerator.FindColumnIndex("Nr", true);
+				var indexIsRev = enumerator.FindColumnIndex("IsRev", true);
+				var indexState = enumerator.FindColumnIndex("State", true);
+				var indexStateChg = enumerator.FindColumnIndex("StateChg", true);
 				var indexRevId = enumerator.FindColumnIndex("RevId", true);
 				var indexTags = enumerator.FindColumnIndex("Tags");
 
 				using (SQLiteCommand
-					selectCommand = new SQLiteCommand("SELECT [Id] FROM main.[Objects] WHERE [Guid] = @Guid", LocalConnection),
-					insertCommand = new SQLiteCommand("INSERT INTO main.[Objects] ([ServerId], [Guid], [Typ], [Nr], [RemoteRevId]) VALUES (@ServerId, @Guid, @Typ, @Nr, @RevId);", LocalConnection),
-					updateCommand = new SQLiteCommand("UPDATE main.[Objects] SET [ServerId] = @ServerId, [Nr] = @Nr, [RemoteRevId] = @RevId where [Id] = @Id;", LocalConnection)
+						selectCommand = new SQLiteCommand("SELECT [Id] FROM main.[Objects] WHERE [Guid] = @Guid", LocalConnection),
+						insertCommand = new SQLiteCommand("INSERT INTO main.[Objects] ([ServerId], [Guid], [Typ], [Nr], [IsRev], [StateChg], [RemoteRevId]) VALUES (@ServerId, @Guid, @Typ, @Nr, @IsRev, @StateChg, @RevId);", LocalConnection),
+						updateCommand = new SQLiteCommand("UPDATE main.[Objects] SET [ServerId] = @ServerId, [Nr] = @Nr, [StateChg] = @StateChg, IsRev = @IsRev, [RemoteRevId] = @RevId where [Id] = @Id;", LocalConnection)
 				)
 				using (var updateTags = new TagDatabaseCommands(LocalConnection))
 				{
@@ -374,10 +377,14 @@ namespace TecWare.PPSn
 					var insertGuid = insertCommand.Parameters.Add("@Guid", DbType.Guid);
 					var insertTyp = insertCommand.Parameters.Add("@Typ", DbType.String);
 					var insertNr = insertCommand.Parameters.Add("@Nr", DbType.String);
+					var insertIsRev = insertCommand.Parameters.Add("@IsRev", DbType.Boolean);
+					var insertStateChg = insertCommand.Parameters.Add("@StateChg", DbType.Int64);
 					var insertRevId = insertCommand.Parameters.Add("@RevId", DbType.Int64);
 
 					var updateServerId = updateCommand.Parameters.Add("@ServerId", DbType.Int64);
 					var updateNr = updateCommand.Parameters.Add("@Nr", DbType.String);
+					var updateIsRev = updateCommand.Parameters.Add("@IsRev", DbType.Boolean);
+					var updateStateChg = updateCommand.Parameters.Add("@StateChg", DbType.Int64);
 					var updateRevId = updateCommand.Parameters.Add("@RevId", DbType.Int64);
 					var updateId = updateCommand.Parameters.Add("@Id", DbType.Int64);
 
@@ -398,81 +405,95 @@ namespace TecWare.PPSn
 							throw new ArgumentException($"Invalid Nr '{c}'.");
 					});
 
-					using (var transaction = LocalConnection.BeginTransaction(IsolationLevel.ReadCommitted))
+					var run = true;
+					do
 					{
-						while (enumerator.MoveNext())
+						using (var transaction = LocalConnection.BeginTransaction(IsolationLevel.ReadCommitted))
 						{
-							// update the transaction
 							selectCommand.Transaction =
-								insertCommand.Transaction =
-								updateCommand.Transaction =
-								updateTags.Transaction = transaction;
+									insertCommand.Transaction =
+									updateCommand.Transaction =
+									updateTags.Transaction = transaction;
 
-							updateTags.ObjectId = DBNull.Value;
-
-							#region -- upsert on objects -> selectTagsObjectId get filled --
-
-							// find the current element
-							selectGuid.Value = enumerator.GetValue(indexGuid, Guid.Empty, c =>
+							var sw = Stopwatch.StartNew();
+							while (sw.ElapsedMilliseconds < 500)
 							{
-								if (c == Guid.Empty)
-									throw new ArgumentNullException("Invalid empty guid.");
-							}
-							);
+								run = enumerator.MoveNext();
+								if (!run)
+									break;
 
-							bool objectExists;
-							using (var r = selectCommand.ExecuteReader(CommandBehavior.SingleRow))
-							{
-								if (r.Read())
+								updateTags.ObjectId = DBNull.Value;
+
+								#region -- upsert on objects -> selectTagsObjectId get filled --
+
+								// find the current element
+								selectGuid.Value = enumerator.GetValue(indexGuid, Guid.Empty, c =>
 								{
-									updateTags.ObjectId =
-										updateId.Value = r.GetInt64(0);
-									objectExists = true;
+									if (c == Guid.Empty)
+										throw new ArgumentNullException("Invalid empty guid.");
+								});
+
+								bool objectExists;
+								using (var r = selectCommand.ExecuteReader(CommandBehavior.SingleRow))
+								{
+									if (r.Read())
+									{
+										updateTags.ObjectId =
+												updateId.Value = r.GetInt64(0);
+										objectExists = true;
+									}
+									else
+										objectExists = false;
+								}
+
+								// upsert
+								if (objectExists)
+								{
+									updateServerId.Value = enumerator.GetValue(indexId, -1L, procValidateId);
+									updateNr.Value = enumerator.GetValue(indexNr, String.Empty, procValidateNr);
+									updateIsRev.Value = enumerator.GetValue(indexIsRev, false);
+									updateStateChg.Value = enumerator.GetValue(indexStateChg, 0L);
+									updateRevId.Value = enumerator.GetValue(indexRevId, -1L).DbNullIf(-1L);
+
+									Debug.Print("Upsert Object: {0}", updateServerId.Value);
+									updateCommand.ExecuteNonQuery();
 								}
 								else
-									objectExists = false;
-							}
+								{
+									insertServerId.Value = enumerator.GetValue(indexId, -1L, procValidateId);
+									insertGuid.Value = selectGuid.Value;
+									insertNr.Value = enumerator.GetValue(indexNr, String.Empty, procValidateNr);
+									insertIsRev.Value = enumerator.GetValue(indexIsRev, false);
+									insertTyp.Value = enumerator.GetValue(indexTyp, String.Empty).DbNullIfString();
+									insertStateChg.Value = enumerator.GetValue(indexStateChg, 0L);
+									insertRevId.Value = enumerator.GetValue(indexRevId, -1L).DbNullIf(-1L);
 
-							// upsert
-							if (objectExists)
-							{
-								updateServerId.Value = enumerator.GetValue(indexId, -1, procValidateId);
-								updateNr.Value = enumerator.GetValue(indexNr, String.Empty, procValidateNr);
-								updateRevId.Value = enumerator.GetValue(indexRevId, -1).DbNullIf(-1);
+									insertCommand.ExecuteNonQuery();
 
-								Debug.Print("Upsert Object: {0}", updateServerId.Value);
-								updateCommand.ExecuteNonQuery();
-							}
-							else
-							{
-								insertServerId.Value = enumerator.GetValue(indexId, -1, procValidateId);
-								insertGuid.Value = selectGuid.Value;
-								insertNr.Value = enumerator.GetValue(indexNr, String.Empty, procValidateNr);
-								insertTyp.Value = enumerator.GetValue(indexTyp, String.Empty).DbNullIfString();
-								insertRevId.Value = enumerator.GetValue(indexRevId, -1).DbNullIf(-1);
+									updateTags.ObjectId = LocalConnection.LastInsertRowId;
+								}
 
-								Debug.Print("Insert Object: {0}", insertServerId.Value);
-								var sw = Stopwatch.StartNew();
-								insertCommand.ExecuteNonQuery();
-								Debug.Print("Elapsed: {0}ms", sw.ElapsedMilliseconds);
+								#endregion
 
-								updateTags.ObjectId = LocalConnection.LastInsertRowId;
-							}
-							#endregion
+								#region -- upsert tags --
 
-							#region -- upsert tags --
+								var tagStateString = enumerator.GetValue<string>(indexState, null);
+								var tagDataString = enumerator.GetValue<string>(indexTags, null);
 
-							var tagDataString = enumerator.GetValue<string>(indexTags, null);
-							if (tagDataString != null)
-								updateTags.UpdateTags(PpsObjectTag.ParseTagFields(tagDataString).ToArray());
+								if (tagStateString != null || tagDataString != null)
+								{
+									updateTags.UpdateTags(
+										PpsObjectTag.ParseTagFields(tagStateString).Concat(PpsObjectTag.ParseTagFields(tagDataString)).ToArray()
+									);
+								}
 
-							#endregion
-						} // while enumerator
-
-						transaction.Commit();
-					}
-				}
-			} // using prepare
+								#endregion
+							} // while sw
+							transaction.Commit();
+						} // using transaction
+					} while (run);
+				} // using selectCommand, insertCommand, updateCommand, using updateTags
+			} // using enumerator
 		} // proc UpdateDocumentStore
 
 		#endregion
@@ -595,6 +616,8 @@ namespace TecWare.PPSn
 
 				private static Type TypeFromClassHint(int classHint)
 				{
+					if (classHint == 2)
+						return typeof(DateTime);
 					// todo:
 					return typeof(string);
 				} // func TypeFromClassHint
@@ -753,7 +776,10 @@ namespace TecWare.PPSn
 
 				protected override string LookupNativeExpression(string key)
 					=> "1=1"; // not supported
-			} // class ObjectViewFilterVisitor
+
+				protected override string CreateDateString(DateTime value)
+					=> "datetime('" + value.ToString("s") + "')";
+		} // class ObjectViewFilterVisitor
 
 			#endregion
 
@@ -859,7 +885,7 @@ namespace TecWare.PPSn
 				} // func Equals
 
 				private string CastToDateExpression(string columnExpr)
-					=> "cast(" + columnExpr + " AS datetime)";
+					=> "datetime(" + columnExpr + ")";
 
 				public string CreateWhereExpression()
 				{
@@ -976,7 +1002,7 @@ namespace TecWare.PPSn
 				}
 
 				// append multi-value column
-				cmd.Append("group_concat(s_all.Key || ':' || s_all.Class || '=' || s_all.Value, char(10)) as [Values]");
+				cmd.Append("group_concat(s_all.Key || ':' || s_all.Class || '=' || replace(s_all.Value, char(10), ' '), char(10)) as [Values]");
 
 				// generate dynamic columns
 				foreach (var c in GetAllKeyColumns())
@@ -1317,37 +1343,45 @@ order by t_liefnr.value desc
 
 		private void UpdateConstants()
 		{
-			// second sync data
-			using (var update = new ConstantUpdateCommand(LocalConnection))
-			{
-				// sync not via max -> store last sync
-				using (var r = GetViewData(new PpsShellGetList("sys.constants") { }).GetEnumerator())
-				{
-					var idxServerId = r.FindColumnIndex("Id", true);
-					var idxTyp = r.FindColumnIndex("Typ", true);
-					var idxIsActive = r.FindColumnIndex("IsActive", true);
-					var idxSync = r.FindColumnIndex("Sync", true);
-					var idxName = r.FindColumnIndex("Name", true);
-					var idxAttr = r.FindColumnIndex("Attr", true);
+            // sync not via max -> store last sync
+            using (var enumerator = GetViewData(new PpsShellGetList("sys.constants") { }).GetEnumerator())
+            // second sync data
+            using (var update = new ConstantUpdateCommand(LocalConnection))
+            {
+                var idxServerId = enumerator.FindColumnIndex("Id", true);
+                var idxTyp = enumerator.FindColumnIndex("Typ", true);
+                var idxIsActive = enumerator.FindColumnIndex("IsActive", true);
+                var idxSync = enumerator.FindColumnIndex("Sync", true);
+                var idxName = enumerator.FindColumnIndex("Name", true);
+                var idxAttr = enumerator.FindColumnIndex("Attr", true);
+               
+                var run = true;
+                do
+                {
+                    using (var transaction = LocalConnection.BeginTransaction())
+                    {
+                        update.Transaction = transaction;
 
-					while (r.MoveNext())
-					{
-						using (var trans = LocalConnection.BeginTransaction())
-						{
-							update.Merge(
-								(long)r.Current[idxServerId],
-								(string)r.Current[idxTyp],
-								(bool)(r.Current[idxIsActive] ?? false),
-								(long)(r.Current[idxSync] ?? 0L),
-								(string)r.Current[idxName],
-								(string)r.Current[idxAttr]
-							);
-							trans.Commit();
-						}
-					}
-				}
-			}
-		} // proc UpdateConstants
+                        for (var i = 0; i < 1000; i++)
+                        {
+                            run = enumerator.MoveNext();
+                            if (!run)
+                                break;
+
+                            update.Merge(
+                                (long)enumerator.Current[idxServerId],
+                                (string)enumerator.Current[idxTyp],
+                                (bool)(enumerator.Current[idxIsActive] ?? false),
+                                (long)(enumerator.Current[idxSync] ?? 0L),
+                                (string)enumerator.Current[idxName],
+                                (string)enumerator.Current[idxAttr]
+                            );
+                        } // for i
+                        transaction.Commit();
+                    } // using transaction
+                } while (run);
+            } // using enumerator, using update
+        } // proc UpdateConstants
 
 		#endregion
 

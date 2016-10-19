@@ -7,7 +7,7 @@ CREATE TABLE main.[Constants]
 	[ServerId] INTEGER NULL,					-- the unique server site id
 	[Typ] TEXT NOT NULL,						-- Typ of the constant
 	[IsActive] BIT NOT NULL DEFAULT 0,			-- Is the constant active
-	[Sync] INTEGET NOT NULL DEFAULT 0,          -- Synchronisation key
+	[Sync] INTEGER NOT NULL DEFAULT 0,          -- Synchronisation key
 	[Name] TEXT NULL							-- name of the constant
 );
 

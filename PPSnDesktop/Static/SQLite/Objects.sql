@@ -1,4 +1,4 @@
---<info schema="main" name="Objects" rev="0" />
+--<info schema="main" name="Objects" rev="1" />
 
 --<create />
 CREATE TABLE main.[Objects]
@@ -8,6 +8,8 @@ CREATE TABLE main.[Objects]
 	[Guid] UNIQUEIDENTIFIER NOT NULL UNIQUE,	-- unique object id
 	[Typ] TEXT NOT NULL,						-- Typ of the object, to find the correct template
 	[Nr] TEXT NULL,								-- User number of the object
+	[StateChg] INTEGER NOT NULL DEFAULT 0,      -- Server site state information
+	[IsRev] BIT NOT NULL DEFAULT 1,             -- Synchronize the document with push/pull
 	[RemoteRevId] INTEGER NULL,					-- the last synchronized server site revision
 	[PulledRevId] INTEGER NULL,					-- the server site revision of the pulled document
 	[DocumentIsChanged] BIT NOT NULL DEFAULT 0,	-- is the current revision modified
@@ -26,3 +28,5 @@ CREATE TABLE main.[ObjectTags]
 );
 
 --<convert />
+
+-- drop full content

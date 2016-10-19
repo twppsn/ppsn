@@ -124,7 +124,7 @@ namespace TecWare.PPSn
 			this.displayName = xDefinition.GetAttribute("displayName", this.Name);
 			this.displayImage = xDefinition.GetAttribute("displayImage", this.Name);
 
-			this.visibleCondition = environment.CreateLuaChunk(xDefinition.Element(xnVisible));
+			this.visibleCondition = environment.CreateChunk(xDefinition.Element(xnVisible), true);
 
 			// parse the filters
 			var priority = 0;

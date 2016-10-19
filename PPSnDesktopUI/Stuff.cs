@@ -96,6 +96,9 @@ namespace TecWare.PPSn
 
 		public static object DbNullIf<T>(this T value, T @null)
 			=> Object.Equals(value, @null) ? (object)DBNull.Value : value;
+
+		public static object DbNullIf<T>(this T value, Func<T, bool> @null)
+			=> @null(value) ? (object)DBNull.Value : value;
 	} // class StuffDB
 
 	#endregion

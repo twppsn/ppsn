@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Data;
@@ -12,6 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
@@ -48,14 +50,185 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- class KnownDataSetDefinition -------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class KnownDataSetDefinition
+		{
+			private readonly PpsEnvironment environment;
+
+			private readonly Type datasetDefinitionType;
+			private readonly string schema;
+			private readonly string sourceUri;
+
+			private PpsDataSetDefinitionDesktop definition = null;
+
+			public KnownDataSetDefinition(PpsEnvironment environment, Type datasetDefinitionType, string schema, string sourceUri)
+			{
+				this.environment = environment;
+				this.datasetDefinitionType = datasetDefinitionType;
+				this.schema = schema;
+				this.sourceUri = sourceUri;
+			} // ctor
+
+			public async Task<PpsDataSetDefinitionDesktop> GetDocumentDefinitionAsync()
+			{
+				if (definition != null)
+					return definition;
+
+				// load the schema
+				var xSchema = await environment.Request.GetXmlAsync(sourceUri);
+				definition = (PpsDataSetDefinitionDesktop)Activator.CreateInstance(datasetDefinitionType, environment, schema, xSchema);
+				definition.EndInit();
+
+				return definition;
+			} // func GetDocumentDefinitionAsync
+
+			public Type DataSetDefinitionType => datasetDefinitionType;
+			public string Schema => schema;
+			public string SourceUri => sourceUri;
+		} // class KnownDataSetDefinition
+
+		#endregion
+
+		#region -- class PpsActiveDataSetsImplementation ----------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private class PpsActiveDataSetsImplementation : Dictionary<PpsDataSetId, PpsDataSetDesktop>, IPpsActiveDataSets
+		{
+			private readonly PpsEnvironment environment;
+			private readonly Dictionary<string, KnownDataSetDefinition> datasetDefinitions = new Dictionary<string, KnownDataSetDefinition>(StringComparer.OrdinalIgnoreCase);
+
+			public PpsActiveDataSetsImplementation(PpsEnvironment environment)
+			{
+				this.environment = environment;
+			} // ctor
+
+			public bool RegisterDataSetSchema(string schema, string uri, Type datasetDefinitionType)
+			{
+				lock (datasetDefinitions)
+				{
+					KnownDataSetDefinition definition;
+					if (!datasetDefinitions.TryGetValue(schema, out definition) || // definition is not registered
+						definition.Schema != schema || definition.SourceUri != uri) // or registration has changed
+					{
+						datasetDefinitions[schema] = new KnownDataSetDefinition(environment, datasetDefinitionType ?? typeof(PpsDataSetDefinitionDesktop), schema, uri);
+						return true;
+					}
+					else
+						return false;
+				}
+			} // proc IPpsActiveDataSets.RegisterDataSetSchema
+
+			public void UnregisterDataSetSchema(string schema)
+			{
+				lock (datasetDefinitions)
+					datasetDefinitions.Remove(schema);
+			} // proc UnregisterDataSetSchema
+
+			public string GetDataSetSchemaUri(string schema)
+			{
+				lock (datasetDefinitions)
+				{
+					KnownDataSetDefinition definition;
+					return datasetDefinitions.TryGetValue(schema, out definition) ? definition.Schema : null;
+				}
+			} // func GetDataSetSchemaUri
+
+			public Task<PpsDataSetDefinitionDesktop> GetDataSetDefinition(string schema)
+			{
+				KnownDataSetDefinition definition;
+				lock (datasetDefinitions)
+				{
+					if (!datasetDefinitions.TryGetValue(schema, out definition))
+						return Task.FromResult<PpsDataSetDefinitionDesktop>(null);
+				}
+				return definition.GetDocumentDefinitionAsync();
+			} // func GetDataSetDefinition
+
+			public Guid GetGuidFromData(XElement xData, XName rootTable)
+			{
+				// tag of the root table
+				var xn = XNamespace.Get("table");
+				if (rootTable == null)
+					rootTable = xn + "Head";
+				else if (rootTable.Namespace != xn)
+					rootTable = xn + rootTable.LocalName;
+
+				var x = xData.Element(rootTable);
+				if (x == null)
+					throw new ArgumentException($"Root table not found (tag: {rootTable}).");
+
+				var xRow = x.Element("r");
+				if (xRow == null)
+					throw new ArgumentException($"Root table has no row (tag: {rootTable}).");
+
+				var xGuid = xRow.Element("Guid");
+				if (xGuid == null)
+					throw new ArgumentException($"Root table has no guid-column (tag: {rootTable}).");
+
+				var guidString = xGuid.Element("o")?.Value;
+				if (String.IsNullOrEmpty(guidString))
+					throw new ArgumentException($"Guid-column is empty (tag: {rootTable}).");
+
+				return Guid.Parse(guidString);
+			} // func GetGuidFromData
+
+			public async Task<PpsDataSetDesktop> CreateEmptyDataSetAsync(string schema, PpsDataSetId id)
+			{
+				if (id == PpsDataSetId.Empty)
+					throw new ArgumentNullException("id", "Empty id is not allowed.");
+
+				var dataset = Find(id);
+				if (dataset != null)
+					throw new ArgumentOutOfRangeException("id", $"DataSet already opened: {id}");
+
+				// try to find known schema
+				var definition = await GetDataSetDefinition(schema);
+				if (definition == null)
+					throw new ArgumentOutOfRangeException("schema", $"'{schema}' is not registered.");
+
+				// create a empty dataset
+				return definition.CreateDataSet(id);
+			} // func IPpsActiveDataSets.CreateEmptyOrOpenDataSetAsync
+
+			IEnumerator<PpsDataSetDesktop> IEnumerable<PpsDataSetDesktop>.GetEnumerator()
+				=> Values.GetEnumerator();
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> Values.GetEnumerator();
+
+			public PpsDataSetDesktop Find(PpsDataSetId id)
+			{
+				PpsDataSetDesktop dataset;
+				return TryGetValue(id, out dataset) ? dataset : null;
+			} // func Find
+
+			public IEnumerable<string> KnownSchemas
+			{
+				get
+				{
+					lock (datasetDefinitions)
+						return datasetDefinitions.Keys.ToArray();
+				}
+			} // prop KnownSchemas
+
+			PpsDataSetDesktop IPpsActiveDataSets.this[PpsDataSetId id] => Find(id);
+		} // class PpsActiveDataSetsImplementation
+
+		#endregion
+
 		/// <summary></summary>
 		public event EventHandler IsOnlineChanged;
 
-		private readonly SQLiteConnection localStore;   // local datastore
+		private readonly SQLiteConnection localConnection;   // local datastore
 		private readonly Uri baseUri;                   // internal uri for this datastore
-		private bool isOnline = false;                  // is there a only connection
+		private bool isOnline = false;                  // is there an online connection
 
 		private readonly BaseWebRequest request;
+		private readonly PpsActiveDataSetsImplementation activeDataSets;
 
 		#region -- Init -------------------------------------------------------------------
 
@@ -409,12 +582,12 @@ namespace TecWare.PPSn
 				throw new ArgumentException("Parameter \"path\" is null or empty.");
 
 			// create a transaction for the sync
-			using (var transaction = localStore.BeginTransaction())
+			using (var transaction = localConnection.BeginTransaction())
 			{
 				// find the current cached item
 				long? currentRowId;
 				bool updateItem;
-				using (var command = new SQLiteCommand("SELECT [Id], [ContentSize], [ContentLastModification] FROM [main].[OfflineCache] WHERE [Path] = @path;", localStore, transaction))
+				using (var command = new SQLiteCommand("SELECT [Id], [ContentSize], [ContentLastModification] FROM [main].[OfflineCache] WHERE [Path] = @path;", localConnection, transaction))
 				{
 					command.Parameters.Add("@path", DbType.String).Value = path;
 					using (var reader = command.ExecuteReader(CommandBehavior.SingleRow))
@@ -464,7 +637,7 @@ namespace TecWare.PPSn
 						currentRowId == null ?
 							"INSERT INTO [main].[OfflineCache] ([Path], [OnlineMode], [ContentType], [ContentEncoding], [ContentSize], [ContentLastModification], [Content]) VALUES (@path, @onlineMode, @contentType, @contentEncoding, @contentSize, @lastModified, @content);" :
 							"UPDATE [main].[OfflineCache] SET [OnlineMode] = @onlineMode, [ContentType] = @contentType, [ContentEncoding] = @contentEncoding, [ContentSize] = @contentSize, [ContentLastModification] = @lastModified, [Content] = @content WHERE [Id] = @id;",
-						localStore, transaction
+						localConnection, transaction
 					))
 					{
 						if (currentRowId == null)
@@ -507,7 +680,7 @@ namespace TecWare.PPSn
 
 			try
 			{
-				if (localStore == null || localStore.State != ConnectionState.Open)
+				if (localConnection == null || localConnection.State != ConnectionState.Open)
 					return false;
 			}
 			catch (ObjectDisposedException)
@@ -519,7 +692,7 @@ namespace TecWare.PPSn
 			Stream resultData = null;
 			try
 			{
-				using (var command = new SQLiteCommand("SELECT [OnlineMode], [ContentType], [ContentEncoding], [Content] FROM [main].[OfflineCache] WHERE [Path] = @path;", localStore))
+				using (var command = new SQLiteCommand("SELECT [OnlineMode], [ContentType], [ContentEncoding], [Content] FROM [main].[OfflineCache] WHERE [Path] = @path;", localConnection))
 				{
 					command.Parameters.Add("@path", DbType.String).Value = path;
 					using (var reader = command.ExecuteReader(CommandBehavior.SingleRow))
@@ -886,10 +1059,11 @@ namespace TecWare.PPSn
 			Stream src;
 			string contentType;
 
-			if (TryGetOfflineItem(r.Request.Path, false, out contentType, out src)) // ask the file from the cache
+			var filePath = r.ResponseUri.GetComponents(UriComponents.PathAndQuery, UriFormat.UriEscaped);
+			if (TryGetOfflineItem(filePath, false, out contentType, out src)) // ask the file from the cache
 				r.SetResponseData(src, contentType);
 			else
-				throw new WebException("File not found.", null, WebExceptionStatus.ProtocolError, r);
+				throw new WebException($"File '{filePath}' not found.", null, WebExceptionStatus.ProtocolError, r);
 		} // proc GetResponseDataStream
 
 		#endregion
@@ -915,9 +1089,31 @@ namespace TecWare.PPSn
 				sb.Append("&s=").Append(arguments.Start);
 			if (arguments.Count != -1)
 				sb.Append("&c=").Append(arguments.Count);
+			if (!String.IsNullOrEmpty(arguments.AttributeSelector))
+				sb.Append("&a=").Append(arguments.AttributeSelector);
 
 			return Request.CreateViewDataReader(sb.ToString());
 		} // func GetRemoteViewData
+
+		#endregion
+
+		#region -- ActiveDataSets ---------------------------------------------------------
+
+		internal void OnDataSetActivated(PpsDataSetDesktop dataset)
+		{
+			if (activeDataSets.Find(dataset.DataSetId) != null)
+				throw new ArgumentException($"DataSet already registered (Id: ${dataset.DataSetId})");
+
+			activeDataSets[dataset.DataSetId] = dataset;
+		} // proc OnDataSetActivated
+
+		internal void OnDataSetDeactivated(PpsDataSetDesktop dataset)
+		{
+			activeDataSets.Remove(dataset.DataSetId);
+		} // proc OnDataSetDeactivated
+
+		[LuaMember(nameof(ActiveDataSets))]
+		public IPpsActiveDataSets ActiveDataSets => activeDataSets;
 
 		#endregion
 
@@ -928,6 +1124,7 @@ namespace TecWare.PPSn
 		} // proc OnIsOnlineChanged
 
 		/// <summary></summary>
+		[LuaMember("Request")]
 		public BaseWebRequest Request => request;
 		/// <summary>Default encodig for strings.</summary>
 		public Encoding Encoding => Encoding.Default;
@@ -945,6 +1142,6 @@ namespace TecWare.PPSn
 		} // prop IsOnline
 
 		/// <summary>Connection to the local datastore</summary>
-		public SQLiteConnection LocalConnection => localStore;
+		public SQLiteConnection LocalConnection => localConnection;
 	} // class PpsEnvironment
 }

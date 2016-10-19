@@ -28,6 +28,7 @@ using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Stuff;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
@@ -58,9 +59,9 @@ namespace TecWare.PPSn
 			this.Priority = priority = xCur.GetAttribute("priority", priority + 1);
 
 			// compile condition
-			condition = environment.CreateLuaChunk(xCur.Element(xnCondition));
+			condition = environment.CreateChunk(xCur.Element(xnCondition), true);
 			// compile action
-			code = environment.CreateLuaChunk(xCur.Element(xnCode));
+			code =  environment.CreateChunk(xCur.Element(xnCode), true);
 		} // ctor
 
 		public bool CheckCondition(LuaTable context)
@@ -117,8 +118,8 @@ namespace TecWare.PPSn
 			return app.Dispatcher.Invoke(
 				() =>
 				{
-					var wih = new System.Windows.Interop.WindowInteropHelper(app.MainWindow);
-					return clientLogin.ShowWindowsLogin(wih.EnsureHandle());
+					var wih = app.MainWindow != null ? new System.Windows.Interop.WindowInteropHelper(app.MainWindow) : null;
+					return clientLogin.ShowWindowsLogin(wih?.EnsureHandle() ?? IntPtr.Zero);
 				});
 		} // func ShowLoginDialog
 
@@ -150,24 +151,9 @@ namespace TecWare.PPSn
 				});
 		} // proc CreateMainWindow
 
-		public LuaChunk CreateLuaChunk(string line, params KeyValuePair<string, Type>[] args)
-		{
-			return Lua.CompileChunk(line, "line.lua", null, args);
-		} // func CreateLuaChunk
-
-		public LuaChunk CreateLuaChunk(XElement xCode, params KeyValuePair<string, Type>[] args)
-		{
-			try
-			{
-				var code = xCode?.Value;
-				return code != null ? Lua.CompileChunk(code, "dummy", null, args) : null;
-			}
-			catch (LuaParseException ex)
-			{
-				ShowException(ExceptionShowFlags.None, ex);
-				return null;
-			}
-		} // proc CreateLuaChunk
+		private static readonly XName xnEnvironment = "environment";
+		private static readonly XName xnCode = "code";
+		private static readonly XName xnNavigator = "navigator";
 
 		private async Task RefreshNavigatorAsync()
 		{
@@ -178,22 +164,36 @@ namespace TecWare.PPSn
 			try
 			{
 				// get the views from storage
-				var xNavigator = await Request.GetXmlAsync("wpf/navigator.xml", rootName: "navigator");
+				var xEnvironment = await Request.GetXmlAsync("wpf/environment.xml", rootName: xnEnvironment);
+				
+				// read navigator content
+				var xNavigator = xEnvironment.Element(xnNavigator);
+				if (xNavigator != null)
+				{
 
-				// append the new views
-				foreach (var cur in xNavigator.Elements(PpsMainViewDefinition.xnView))
-					views.AppendItem(new PpsMainViewDefinition(this, cur));
+					// append the new views
+					foreach (var cur in xNavigator.Elements(PpsMainViewDefinition.xnView))
+						views.AppendItem(new PpsMainViewDefinition(this, cur));
 
-				// append the new actions
-				var priority = 0;
-				foreach (var cur in xNavigator.Elements(PpsMainActionDefinition.xnAction))
-					actions.AppendItem(new PpsMainActionDefinition(this, cur, ref priority));
+					// append the new actions
+					var priority = 0;
+					foreach (var cur in xNavigator.Elements(PpsMainActionDefinition.xnAction))
+						actions.AppendItem(new PpsMainActionDefinition(this, cur, ref priority));
 
-				// update document info
-				var updateList = new List<string>();
-				foreach (var cur in xNavigator.Elements(XName.Get("document")))
-					UpdateDocumentDefinitionInfo(cur, updateList);
-				ClearDocumentDefinitionInfo(updateList);
+					// update document info
+					var updateList = new List<string>();
+					foreach (var cur in xNavigator.Elements(XName.Get("document")))
+						UpdateDocumentDefinitionInfo(cur, updateList);
+					ClearDocumentDefinitionInfo(updateList);
+				}
+
+				// run environment extensions
+				var code = xEnvironment.Element(xnCode)?.Value;
+				if (!String.IsNullOrEmpty(code))
+				{
+					var chunk = await CompileAsync(code, "environment.lua", true);
+					await Dispatcher.InvokeAsync(() => RunScript(chunk, this, true));
+				}
 			}
 			catch (WebException ex)
 			{

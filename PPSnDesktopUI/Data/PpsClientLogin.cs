@@ -1,12 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.ComponentModel;
-using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace TecWare.PPSn.Data
 {
@@ -24,8 +36,8 @@ namespace TecWare.PPSn.Data
 		private IntPtr password = IntPtr.Zero;
 		private int passwordLength = 0;
 
-		private bool doSave;
-		private bool isLoaded;
+		private bool doSave;		//
+		private bool isLoaded;	// is the credential blob loaded
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -74,7 +86,8 @@ namespace TecWare.PPSn.Data
 			SecureFreeCoTaskMem(ref password, passwordLength);
 		} // proc Dispose
 
-		internal void Commit()
+		/// <summary>Commit the login-cache</summary>
+		public void Commit()
 		{
 			if (doSave && !String.IsNullOrEmpty(credential.UserName))
 			{
@@ -98,7 +111,7 @@ namespace TecWare.PPSn.Data
 				if (!NativeMethods.CredWrite(ref credential, 0))
 					throw new Win32Exception();
 			}
-			else
+			else if (isLoaded)
 			{
 				if (!NativeMethods.CredDelete(target, NativeMethods.CredentialType.Generic, 0))
 					throw new Win32Exception();
@@ -109,6 +122,9 @@ namespace TecWare.PPSn.Data
 
 		#region -- ShowWindowsLogin -------------------------------------------------------
 
+		/// <summary>Show the default windows login dialog.</summary>
+		/// <param name="hwndParent"></param>
+		/// <returns></returns>
 		public bool ShowWindowsLogin(IntPtr hwndParent)
 		{
 			int hr;
@@ -225,6 +241,8 @@ namespace TecWare.PPSn.Data
 
 		#region -- SetPassword, GetPassword, GetCredentials -------------------------------
 
+		/// <summary>Set a new password.</summary>
+		/// <param name="newPassword"></param>
 		public void SetPassword(SecureString newPassword)
 		{
 			if (password != IntPtr.Zero)
@@ -242,11 +260,15 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc SetPassword
 
+		/// <summary>Get the stored passowrd.</summary>
+		/// <returns></returns>
 		public unsafe SecureString GetPassword()
 			=> password != IntPtr.Zero ?
 				new SecureString((char*)password.ToPointer(), passwordLength) :
 				null;
 
+		/// <summary>Get the credentilas, as <c>NetworkCredential</c>.</summary>
+		/// <returns></returns>
 		public ICredentials GetCredentials()
 		{
 			if (String.IsNullOrEmpty(credential.UserName))
@@ -271,14 +293,21 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		/// <summary>Key for the windows key ring</summary>
 		public string Target => target;
+		/// <summary>Realm from the web-server.</summary>
 		public string Realm => realm;
+		/// <summary>Show the windows login error message (LoginFailure).</summary>
 		public bool ShowErrorMessage => showErrorMessage;
 
+		/// <summary>User name</summary>
 		public string UserName { get { return credential.UserName; } set { credential.UserName = value; } }
-		public bool HasPassword { get { return credential.CredentialBlob != IntPtr.Zero; } }
+		/// <summary>Is a password set.</summary>
+		public bool HasPassword => credential.CredentialBlob != IntPtr.Zero;
 
+		/// <summary>State of the save check box.</summary>
 		public bool Save { get { return doSave; } set { doSave = value; } }
+		/// <summary>Is the data loaded.</summary>
 		public bool IsLoaded => isLoaded;
 	} // class PpsClientLogin
 

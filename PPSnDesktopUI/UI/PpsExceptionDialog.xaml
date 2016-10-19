@@ -27,7 +27,7 @@
 			<ColumnDefinition Width="70" />
 			<ColumnDefinition />
 		</Grid.ColumnDefinitions>
-    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding MessageText}" Margin="12" />
+    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding MessageText}" Margin="12" TextWrapping="Wrap" />
 		<Separator Grid.Row="0" Grid.ColumnSpan="2" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="0" />
     <CheckBox Grid.Row="1" Grid.Column="2" Content="Weitere Meldung nicht mehr anzeigen." VerticalAlignment="Center" Margin="16,0" IsChecked="{Binding SkipChecked}" Visibility="{Binding SkipVisible,Converter={StaticResource VisibilityConverter}}" />
     <Button Grid.Row="1" Grid.Column="2" Content="Details" Command="{x:Static ApplicationCommands.Properties}" Width="120" Height="23" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,150,0" Visibility="{Binding DetailsVisible,Converter={StaticResource VisibilityConverter}}" />
