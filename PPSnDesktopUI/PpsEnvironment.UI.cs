@@ -316,7 +316,7 @@ namespace TecWare.PPSn
 			object key;
 
 			// check the key
-			if (String.IsNullOrEmpty(keyString))
+			if (String.IsNullOrEmpty( keyString ))
 			{
 				var style = resource as Style;
 				if (style == null)
@@ -331,9 +331,7 @@ namespace TecWare.PPSn
 		} // func UpdateResource
 
 		public object CreateResource(string xamlSource, ParserContext parserContext)
-		{
-			return XamlReader.Parse(xamlSource, parserContext); // todo: Exception handling
-		} // func CreateResource
+			=> XamlReader.Parse(xamlSource, parserContext);
 
 		#endregion
 	} // class PpsEnvironment

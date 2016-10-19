@@ -141,7 +141,7 @@ namespace TecWare.PPSn.UI
 					},
 					(sender, e) =>
 					{
-						e.CanExecute = CurrentPane != null && CurrentPane.PaneControl != null && !CurrentPane.PaneControl.ProgressStack.IsEnabled;
+						e.CanExecute = CurrentPane != null && (CurrentPane.PaneControl == null || !CurrentPane.PaneControl.ProgressStack.IsEnabled);
 					}
 				)
 			);
