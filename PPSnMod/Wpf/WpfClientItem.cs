@@ -742,7 +742,7 @@ namespace TecWare.PPSn.Server.Wpf
 					xml.WriteAttributeString("view", viewId);
 
 					xml.WriteAttributeString(view, "filter");
-					xml.WriteAttributeString(view, "displayGlyph");
+					xml.WriteAttributeString(view, "displayImage");
 
 					// write filters and orders
 					var priority = 1;

@@ -56,7 +56,7 @@
     <ui:PpsGenericWpfControl.Commands>
         <ui:PpsUICommandButton Order="100,100" DisplayText="command A" Image="floppy_diskImage" />
         <ui:PpsUICommandButton Order="100,110" DisplayText="command B" Image="floppy_diskImage" />
-        <ui:PpsUICommandButton Order="100,120" DisplayText="command C" Image="floppy_diskImage" />
+        <ui:PpsUICommandButton Order="100,120" DisplayText="command C" />
         <ui:PpsUICommandButton Order="200,100" DisplayText="command D" Image="floppy_diskImage" />
         <ui:PpsUICommandButton Order="200,110" DisplayText="command E" Image="floppy_diskImage" />
     </ui:PpsGenericWpfControl.Commands>
