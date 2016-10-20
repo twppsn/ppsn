@@ -372,8 +372,9 @@ namespace TecWare.PPSn.Server.Wpf
 					{
 						if (x.Name == xnXamlMergedDictionaries)
 							continue;
-
-						if (AddKey(x))
+						else if (x.Name == xnXamlResourceDictionary)
+							CombineResourceDictionary(x, xAddBefore, removeNodes);
+						else if (AddKey(x))
 						{
 							var xAdded = xResourceDictionary == xResources ? // do we need to copy the resources
 									x :
@@ -661,7 +662,10 @@ namespace TecWare.PPSn.Server.Wpf
 			// find root resource element and detach it
 			var xSourceResources = xTarget.Root.Element(nameRootResources);
 			if (xSourceResources != null)
+			{
+				Procs.XCopyAnnotations(xSourceResources, xSourceResources);
 				xSourceResources.Remove();
+			}
 
 			// create the new dictionary
 			var xTargetResourceDictionary = new XElement(PresentationNamespace + "ResourceDictionary");
@@ -736,7 +740,7 @@ namespace TecWare.PPSn.Server.Wpf
 			xml.WriteAttributeString("view", viewId);
 
 			xml.WriteAttributeString(view, "filter");
-			xml.WriteAttributeString(view, "displayGlyph");
+			xml.WriteAttributeString(view, "displayImage");
 
 			// write filters and orders
 			var priority = 1;
@@ -765,6 +769,8 @@ namespace TecWare.PPSn.Server.Wpf
 			public static EnvironmentCodeComparer Instance { get; } = new EnvironmentCodeComparer();
 		} // class EnvironmentCodeComparer
 
+		#endregion
+
 		private string CollectEnvironmentScripts()
 		{
 			var priority = 1;
@@ -788,8 +794,6 @@ namespace TecWare.PPSn.Server.Wpf
 
 			return String.Join(Environment.NewLine, from c in environmentLoader select c.Value);
 		} // func CollectEnvironmentScripts
-
-		#endregion
 
 		private void ParseEnvironment(IDEContext r)
 		{

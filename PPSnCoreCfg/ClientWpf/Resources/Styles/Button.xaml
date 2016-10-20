@@ -4,10 +4,6 @@
 		<ResourceDictionary Source="../Colors.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 	
-	<Style TargetType="{x:Type Button}">
-		<Setter Property="Foreground" Value="{StaticResource StandardForegroundBrush}" />
-	</Style>
-
     <Style x:Key="SimpleButtonStyle" TargetType="{x:Type Button}">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
@@ -30,6 +26,29 @@
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="false">
                             <Setter Property="Foreground" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="PPSnShrinkButtonStyle" TargetType="{x:Type ToggleButton}">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+        <Setter Property="Background" Value="{StaticResource PPSnWindowBackgroundBrush}"/>
+        <Setter Property="ClickMode" Value="Press"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ToggleButton}">
+                    <Border Background="{TemplateBinding Background}" BorderThickness="0">
+                        <Path Width="21" Height="12" SnapsToDevicePixels="True" VerticalAlignment="Center" HorizontalAlignment="Center" Stroke="{TemplateBinding Foreground}" StrokeThickness="1" Stretch="None" RenderOptions.EdgeMode="Aliased"
+							  Data="M0,1 L20,1 M0,6 L20,6 M0,11 L20,11">
+                        </Path>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
