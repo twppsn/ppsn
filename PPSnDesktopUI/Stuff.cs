@@ -111,10 +111,10 @@ namespace TecWare.PPSn
 	{
 		public static ContentDisposition GetContentDisposition(this WebResponse r, bool createDummy = true)
 		{
-			var tmp = r.Headers["Content-Disposition"];
+			//var tmp = r.Headers["Content-Disposition"];
 
-			if (tmp == null)
-			{
+			//if (tmp == null)
+			//{
 				if (createDummy)
 				{
 					var cd = new ContentDisposition();
@@ -135,9 +135,9 @@ namespace TecWare.PPSn
 				}
 				else
 					return null;
-			}
-			else
-				return new ContentDisposition(tmp);
+			//}
+			//else
+			//	return new ContentDisposition(tmp);
 		} // func GetContentDisposition
 
 		public static DateTime GetLastModified(this WebResponse r)

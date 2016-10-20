@@ -113,7 +113,6 @@ namespace TecWare.PPSn
 		private PpsMainViewOrder[] sortOrders;
 		private PpsMainViewFilter[] filters;
 
-
 		internal PpsMainViewDefinition(PpsMainEnvironment environment, XElement xDefinition)
 			: base(environment, xDefinition.GetAttribute("name", null))
 		{
@@ -123,7 +122,7 @@ namespace TecWare.PPSn
 
 			this.viewBaseFilter = PpsDataFilterExpression.Parse(xDefinition.GetAttribute("filter", String.Empty));
 			this.displayName = xDefinition.GetAttribute("displayName", this.Name);
-			this.displayImage = xDefinition.GetAttribute("displayGlyph", this.Name);
+			this.displayImage = xDefinition.GetAttribute("displayImage", this.Name);
 
 			this.visibleCondition = environment.CreateChunk(xDefinition.Element(xnVisible), true);
 

@@ -1,5 +1,6 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					xmlns:core="clr-namespace:System;assembly=mscorlib"
 	                xmlns:ui="clr-namespace:TecWare.PPSn.UI"
 					xmlns:uiC="clr-namespace:TecWare.PPSn.Controls">
 
@@ -30,6 +31,10 @@
     <SolidColorBrush x:Key="PPSnControlNormalBorderBrush" Color="{StaticResource PPSnControlNormalBorderColor}"/>
     <SolidColorBrush x:Key="PPSnControlFocusedBorderBrush" Color="{StaticResource PPSnControlFocusedBorderColor}"/>
 
+	<KeyTime x:Key="PPSnShrinkStoryKeyTime">0:00:.2</KeyTime>
+    <Duration x:Key="PPSnShrinkStoryDuration">0:00:.2</Duration>
+    <core:Double x:Key="PaneMaxGridWidth">1160</core:Double>
+
     <Style x:Key="PpsWindow" TargetType="{x:Type ui:PpsWindow}">
         <Setter Property="WindowStyle" Value="SingleBorderWindow"/>
         <Setter Property="ResizeMode" Value="CanResize"/>
@@ -47,58 +52,15 @@
         </Setter>
     </Style>
 
+    <Style x:Key="PPSnListBoxStyle" TargetType="{x:Type ListBox}"/>
+
     <Style x:Key="SimpleButtonStyle" TargetType="{x:Type Button}" />
 
-    <Style x:Key="PpsAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
-        <Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
-		<Setter Property="Margin" Value="0,0,0,1"/>
-		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-        <Setter Property="Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type ListBoxItem}">
-					<StackPanel x:Name="PART_Panel" SnapsToDevicePixels="True">
-						<ContentPresenter Margin="0"/>
-					</StackPanel>
-					<ControlTemplate.Triggers>
-						<Trigger Property="ItemsControl.AlternationIndex" Value="0">
-							<Setter Property="Background" TargetName="PART_Panel" Value="{StaticResource PPSnAlternation0Brush}" />
-						</Trigger>
-						<Trigger Property="ItemsControl.AlternationIndex" Value="1">
-							<Setter Property="Background" TargetName="PART_Panel" Value="{StaticResource PPSnAlternation1Brush}" />
-						</Trigger>
-						<Trigger Property="IsSelected" Value="True">
-							<Setter Property="Foreground" Value="{StaticResource PPSnMarkerBrush}"/>
-						</Trigger>
-                    </ControlTemplate.Triggers>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
-	</Style>
+    <Style x:Key="PpsAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}"/>
 
-    <Style x:Key="PpsTreeExpanderButtonStyle" TargetType="{x:Type ToggleButton}">
-        <Setter Property="Focusable" Value="False"/>
-        <Setter Property="Width" Value="19"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border Background="Transparent">
-                        <Path x:Name="PART_Symbol" HorizontalAlignment="Center" VerticalAlignment="Center"
-							  Stroke="White"
-							  StrokeThickness="1"
-							  StrokeMiterLimit="3"
-							  Fill="Transparent"
-							  Data="M 0 1 L 4 5 L 0 9 L 0 1 Z"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsChecked" Value="True">
-                            <Setter Property="Data" TargetName="PART_Symbol" Value="M 5 0 L 0 5 L 5 5 L 5 0 Z"/>
-                            <Setter Property="Fill" TargetName="PART_Symbol" Value="White"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
+    <Style x:Key="PPSnShrinkButtonStyle" TargetType="{x:Type ToggleButton}"/>
+
+    <Style x:Key="PaneToolBarStyle" TargetType="{x:Type ToolBar}"/>
 
     <Style TargetType="{x:Type Label}">
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
@@ -114,13 +76,13 @@
     <Style TargetType="{x:Type TextBox}">
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
-		<Setter Property="Padding" Value="2,0"/>
+        <Setter Property="Padding" Value="2,0"/>
         <Setter Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource PPSnControlNormalBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-		<Setter Property="SelectionBrush" Value="Black"/>
-		<Setter Property="SelectionOpacity" Value=".25"/>
+        <Setter Property="SelectionBrush" Value="Black"/>
+        <Setter Property="SelectionOpacity" Value=".25"/>
         <Setter Property="CaretBrush" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="KeyboardNavigation.TabNavigation" Value="None"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -145,9 +107,9 @@
         </Setter>
         <Style.Triggers>
             <Trigger Property="AcceptsReturn" Value="True">
-				<Setter Property="Padding" Value="2,2,2,0"/>
-				<Setter Property="VerticalContentAlignment" Value="Top"/>
-			</Trigger>
+                <Setter Property="Padding" Value="2,2,2,0"/>
+                <Setter Property="VerticalContentAlignment" Value="Top"/>
+            </Trigger>
             <!--<MultiTrigger>
                 <MultiTrigger.Conditions>
                     <Condition Property="IsInactiveSelectionHighlightEnabled" Value="true"/>
@@ -159,11 +121,11 @@
     </Style>
 
     <ControlTemplate x:Key="PPSnComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}">
-		<Grid>
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition />
-				<ColumnDefinition Width="20" />
-			</Grid.ColumnDefinitions>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="20" />
+            </Grid.ColumnDefinitions>
             <Border x:Name="PART_Border" Grid.ColumnSpan="2" BorderBrush="{StaticResource PPSnControlNormalBorderBrush}" BorderThickness="1" Background="{StaticResource PPSnControlBackgroundBrush}" />
             <Border x:Name="PART_ButtonBorder" Grid.Column="1" Margin="1" BorderThickness="0" Background="{StaticResource PPSnControlBackgroundBrush}" />
             <Path x:Name="PART_Arrow" Grid.Column="1" Data="M 0 0 L 0 2 L 4 6 L 8 2 L 8 0 L 4 4 Z" Fill="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -176,9 +138,9 @@
                 <Setter Property="Fill" TargetName="PART_Arrow" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
             </Trigger>
         </ControlTemplate.Triggers>
-	</ControlTemplate>
-	
-	<Style x:Key="PPSnComboBoxItemStyle" TargetType="{x:Type ComboBoxItem}">
+    </ControlTemplate>
+
+    <Style x:Key="PPSnComboBoxItemStyle" TargetType="{x:Type ComboBoxItem}">
         <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
@@ -187,7 +149,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ComboBoxItem}">
                     <Border Name="Border" SnapsToDevicePixels="True" Padding="4">
-						<ContentPresenter/>
+                        <ContentPresenter/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsHighlighted" Value="True">
@@ -200,33 +162,33 @@
     </Style>
 
     <Style TargetType="{x:Type ComboBox}">
-		<Setter Property="SnapsToDevicePixels" Value="True"/>
-		<Setter Property="OverridesDefaultStyle" Value="True"/>
-		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
-		<Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
-		<Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
         <Setter Property="TextElement.Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="ItemContainerStyle" Value="{StaticResource PPSnComboBoxItemStyle}"/>
-		<Setter Property="Control.Template">
-			<Setter.Value>
+        <Setter Property="Control.Template">
+            <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ComboBox}">
-					<Grid>
-						<ToggleButton x:Name="PART_ToggleButton" ClickMode="Press" Focusable="False"
+                    <Grid>
+                        <ToggleButton x:Name="PART_ToggleButton" ClickMode="Press" Focusable="False"
 									  IsChecked="{Binding Path=IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
 									  Template="{StaticResource PPSnComboBoxToggleButtonTemplate}"/>
-						<ContentPresenter x:Name="PART_ContentSite" Margin="5,3,23,3" IsHitTestVisible="False" HorizontalAlignment="Left" VerticalAlignment="Center"                              
+                        <ContentPresenter x:Name="PART_ContentSite" Margin="5,3,23,3" IsHitTestVisible="False" HorizontalAlignment="Left" VerticalAlignment="Center"                              
 										  Content="{TemplateBinding ComboBox.SelectionBoxItem}" 
 										  ContentTemplate="{TemplateBinding ComboBox.SelectionBoxItemTemplate}"
 										  ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
-						<TextBox Name="PART_EditableTextBox" Margin="5,3,23,3" IsReadOnly="{TemplateBinding IsReadOnly}" Visibility="Hidden" Background="Transparent" HorizontalAlignment="Left" VerticalAlignment="Center" Focusable="True" >
-							<TextBox.Template>
-								<ControlTemplate TargetType="{x:Type TextBox}" >
-									<Border x:Name="PART_ContentHost" Focusable="False" />
-								</ControlTemplate>
-							</TextBox.Template>
-						</TextBox>
-						<Popup Name="PART_Popup" Placement="Bottom" VerticalOffset="1" Focusable="False" AllowsTransparency="True" IsOpen="{TemplateBinding ComboBox.IsDropDownOpen}" PopupAnimation="Slide">
+                        <TextBox Name="PART_EditableTextBox" Margin="5,3,23,3" IsReadOnly="{TemplateBinding IsReadOnly}" Visibility="Hidden" Background="Transparent" HorizontalAlignment="Left" VerticalAlignment="Center" Focusable="True" >
+                            <TextBox.Template>
+                                <ControlTemplate TargetType="{x:Type TextBox}" >
+                                    <Border x:Name="PART_ContentHost" Focusable="False" />
+                                </ControlTemplate>
+                            </TextBox.Template>
+                        </TextBox>
+                        <Popup Name="PART_Popup" Placement="Bottom" VerticalOffset="1" Focusable="False" AllowsTransparency="True" IsOpen="{TemplateBinding ComboBox.IsDropDownOpen}" PopupAnimation="Slide">
                             <Grid Name="PART_DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding FrameworkElement.ActualWidth}" MaxHeight="{TemplateBinding ComboBox.MaxDropDownHeight}">
                                 <Border Name="PART_DropDownBorder" Background="{StaticResource PPSnControlBackgroundBrush}" BorderThickness="1" BorderBrush="{StaticResource PPSnControlFocusedBorderBrush}">
                                     <ScrollViewer SnapsToDevicePixels="True">
@@ -235,7 +197,7 @@
                                 </Border>
                             </Grid>
                         </Popup>
-					</Grid>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="ItemsControl.HasItems" Value="False">
                             <Setter Property="FrameworkElement.MinHeight" TargetName="PART_DropDownBorder" Value="95"/>
@@ -252,34 +214,10 @@
                             <Setter Property="Visibility" TargetName="PART_ContentSite" Value="Hidden"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
-	</Style>
-
-    <Style x:Key="PPSnShrinkButtonStyle" TargetType="{x:Type ToggleButton}">
-        <Setter Property="Focusable" Value="False"/>
-        <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-        <Setter Property="Background" Value="{StaticResource PPSnWindowBackgroundBrush}"/>
-		<Setter Property="ClickMode" Value="Press"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border Background="{TemplateBinding Background}" BorderThickness="0">
-                        <Path Width="21" Height="12" SnapsToDevicePixels="True" VerticalAlignment="Center" HorizontalAlignment="Center" Stroke="{TemplateBinding Foreground}" StrokeThickness="1" Stretch="None" RenderOptions.EdgeMode="Aliased"
-							  Data="M0,1 L20,1 M0,6 L20,6 M0,11 L20,11">
-                        </Path>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
-    <Style x:Key="PaneToolBarStyle" TargetType="{x:Type ToolBar}"/>
 
 </ResourceDictionary>

@@ -286,6 +286,10 @@ namespace TecWare.PPSn.UI
 			return Environment.RunUI(new Func<PpsGenericWpfChildPane>(() => new PpsGenericWpfChildPane(this, parts.Item1, parts.Item2)));
 		} // func LuaRequireXaml
 
+		[LuaMember(nameof(GetResource))]
+		private object GetResource(object key)
+			=> Control.TryFindResource(key);
+
 		[LuaMember("command")]
 		private object LuaCommand(Action<object> command, Func<object, bool> canExecute = null, bool idleCall = true)
 			=> new PpsCommand(Environment, command, canExecute, idleCall);
