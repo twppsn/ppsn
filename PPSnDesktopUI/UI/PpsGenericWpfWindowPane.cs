@@ -38,6 +38,41 @@ using static TecWare.PPSn.StuffUI;
 
 namespace TecWare.PPSn.UI
 {
+	#region -- class PpsGenericWpfChildPane ---------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class PpsGenericWpfChildPane : LuaTable
+	{
+		private readonly PpsGenericWpfWindowPane parentPane;
+		private readonly FrameworkElement control;
+
+		public PpsGenericWpfChildPane(PpsGenericWpfWindowPane parentPane, XDocument xXaml, LuaChunk code)
+		{
+			if (parentPane == null)
+				throw new ArgumentNullException("parentPane");
+
+			this.parentPane = parentPane;
+
+			// create the control
+			control = (FrameworkElement)parentPane.Environment.CreateResource(xXaml);
+			control.DataContext = this;
+
+			// run the chunk on the current table
+			code.Run(this);
+		} // ctor
+
+		protected override object OnIndex(object key)
+			=> base.OnIndex(key) ?? parentPane.GetValue(key);
+
+		[LuaMember(nameof(Parent))]
+		public PpsGenericWpfWindowPane Parent => parentPane;
+		[LuaMember(nameof(Control))]
+		public FrameworkElement Control => control;
+	} // class PpsGenericWpfChildPane 
+
+	#endregion
+
 	#region -- class PpsGenericWpfWindowPane --------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -240,9 +275,16 @@ namespace TecWare.PPSn.UI
 		[LuaMember("require")]
 		private LuaResult LuaRequire(string path)
 		{
-			var chunk = Task.Run(async () => await Environment.CompileAsync(fileSource.GetFullUri(path), true)).Result;
+			var chunk = Task.Run(() => Environment.CompileAsync(fileSource.GetFullUri(path), true)).Result;
 			return Environment.RunScript(chunk, this, true);
 		} // proc LuaRequire
+
+		[LuaMember("requireXaml")]
+		private LuaResult LuaRequireXaml(string path)
+		{
+			var parts = Task.Run(() => LoadXamlAsync(new LuaTable(), fileSource.GetFullUri(path))).Result;
+			return Environment.RunUI(new Func<PpsGenericWpfChildPane>(() => new PpsGenericWpfChildPane(this, parts.Item1, parts.Item2)));
+		} // func LuaRequireXaml
 
 		[LuaMember("command")]
 		private object LuaCommand(Action<object> command, Func<object, bool> canExecute = null, bool idleCall = true)
@@ -306,7 +348,7 @@ namespace TecWare.PPSn.UI
 
 			if (Uri.Compare(currentXamlUri, otherXamlUri, UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped, StringComparison.Ordinal) == 0)
 				return PpsWindowPaneCompareResult.Reload;
-			
+
 			return PpsWindowPaneCompareResult.Incompatible;
 		} // func CompareArguments
 
@@ -316,22 +358,15 @@ namespace TecWare.PPSn.UI
 
 			// save the arguments
 			this.arguments = arguments;
-			
+
 			// prepare the base
 			var xamlUri = GetTemplateUri(arguments, true);
 			fileSource = new BaseWebRequest(new Uri(xamlUri, "."), Environment.Encoding);
 
-			// Load the xaml file
-			var xaml = await LoadXamlAsync(arguments, xamlUri);
-
-			// Load the content of the code-tag, to initialize extended functionality
-			var xCode = xaml.Root.Element(xnCode);
-			var chunk = (LuaChunk)null;
-			if (xCode != null)
-			{
-				chunk = await Environment.CompileAsync(xCode, true);
-				xCode.Remove();
-			}
+			// Load the xaml file and code
+			var r = await LoadXamlAsync(arguments, xamlUri);
+			var xaml = r.Item1;
+			var chunk = r.Item2;
 
 			// Create the Wpf-Control
 			var xamlReader = new XamlReader();
@@ -361,10 +396,11 @@ namespace TecWare.PPSn.UI
 			});
 		} // proc LoadAsync
 
-		private async Task<XDocument> LoadXamlAsync(LuaTable arguments, Uri xamlUri)
+		private async Task<Tuple<XDocument, LuaChunk>> LoadXamlAsync(LuaTable arguments, Uri xamlUri)
 		{
 			try
 			{
+				XDocument xXaml;
 				using (var r = await fileSource.GetResponseAsync(xamlUri.ToString()))
 				{
 					// read the file name
@@ -374,9 +410,20 @@ namespace TecWare.PPSn.UI
 					using (var sr = fileSource.GetTextReaderAsync(r, MimeTypes.Application.Xaml))
 					{
 						using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, xamlUri.ToString()))
-							return XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);
+							xXaml = XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);
 					}
 				}
+
+				// Load the content of the code-tag, to initialize extended functionality
+				var xCode = xXaml.Root.Element(xnCode);
+				var chunk = (LuaChunk)null;
+				if (xCode != null)
+				{
+					chunk = await Environment.CompileAsync(xCode, true);
+					xCode.Remove();
+				}
+
+				return new Tuple<XDocument, LuaChunk>(xXaml, chunk);
 			}
 			catch (Exception e)
 			{
@@ -395,7 +442,8 @@ namespace TecWare.PPSn.UI
 
 		public virtual Task<bool> UnloadAsync(bool? commit = default(bool?))
 		{
-			CallMemberDirect("UnloadAsync", new object[] { commit }, throwExceptions: true);
+			if (Members.ContainsKey("UnloadAsync"))
+				CallMemberDirect("UnloadAsync", new object[] { commit }, throwExceptions: true);
 			return Task.FromResult(true);
 		} // func UnloadAsync
 
@@ -412,9 +460,7 @@ namespace TecWare.PPSn.UI
 		} // func GetXamlElement
 
 		protected override object OnIndex(object key)
-		{
-			return base.OnIndex(key) ?? GetXamlElement(key);
-		} // func OnIndex
+			=> base.OnIndex(key) ?? GetXamlElement(key);
 
 		#endregion
 
@@ -542,7 +588,7 @@ namespace TecWare.PPSn.UI
 					break;
 				default:
 					throw new InvalidOperationException();
-      }
+			}
 		} // proc Commands_CollectionChanged
 
 		#endregion

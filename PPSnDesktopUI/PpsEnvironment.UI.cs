@@ -330,6 +330,18 @@ namespace TecWare.PPSn
 			mainResources[key] = resource;
 		} // func UpdateResource
 
+		public object CreateResource(XDocument xaml)
+		{
+			if (xaml == null)
+				throw new ArgumentNullException("xaml");
+
+			// build context
+			var parserContext = new ParserContext();
+			parserContext.AddNamespaces(xaml.Root);
+
+			return CreateResource(xaml.ToString(), parserContext);
+		} // func CreateResource
+
 		public object CreateResource(string xamlSource, ParserContext parserContext)
 			=> XamlReader.Parse(xamlSource, parserContext);
 
