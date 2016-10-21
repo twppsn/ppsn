@@ -14,9 +14,22 @@ specific language governing permissions and limitations under the Licence.
 
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-	<ResourceDictionary.MergedDictionaries>
-		<ResourceDictionary Source="Styles/WindowStyles.xaml" />
-		<ResourceDictionary Source="Styles/DrawingImages.xaml" />
-		<ResourceDictionary Source="Styles/Templates.xaml" />
-	</ResourceDictionary.MergedDictionaries>
+	<DataTemplate x:Key="DefaultListTemplate">
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="22" />
+				<RowDefinition Height="22" />
+			</Grid.RowDefinitions>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="*" />
+			</Grid.ColumnDefinitions>
+
+			<TextBlock Grid.ColumnSpan="3" Text="No template for the current data object." />
+			<TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Nr}" />
+			<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Typ}" />
+			<TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Guid, StringFormat='B'}" />
+		</Grid>
+	</DataTemplate>
 </ResourceDictionary>

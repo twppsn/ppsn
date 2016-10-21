@@ -36,11 +36,14 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public class PpsDataListTemplateSelector : DataTemplateSelector
 	{
-		private PpsEnvironment environment;
+		private readonly PpsEnvironment environment;
+		private readonly DataTemplate defaultTemplate;
 
 		public PpsDataListTemplateSelector(PpsEnvironment environment)
 		{
 			this.environment = environment;
+
+			defaultTemplate = environment.FindResource<DataTemplate>("DefaultListTemplate");
 		} // ctor
 
 		public override DataTemplate SelectTemplate(object item, DependencyObject container)
@@ -51,7 +54,7 @@ namespace TecWare.PPSn.Controls
 				return null;
 
 			var typeDef = environment.DataListItemTypes[key];
-			return typeDef?.FindTemplate(item);
+			return typeDef?.FindTemplate(item) ?? defaultTemplate;
 		} // proc SelectTemplate
 	} // class PpsDataListTemplateSelector
 
