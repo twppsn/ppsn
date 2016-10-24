@@ -83,7 +83,7 @@ namespace TecWare.PPSn.Controls
 			{
 				if (IsVisible != value)
 					SetValue(IsVisibleProperty, value);
-            }
+			}
 		} // prop IsVisible
 
 		/// <summary></summary>
@@ -146,7 +146,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		public bool IsExpanded
 		{
-			get { return(bool)GetValue(IsExpandedProperty); }
+			get { return (bool)GetValue(IsExpandedProperty); }
 			set
 			{
 				if (value != IsExpanded && HasChildItems)
@@ -185,7 +185,6 @@ namespace TecWare.PPSn.Controls
 			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, this[index], index));
 			base.RemoveItem(index);
 		} // proc RemoveItem
-
 	} // class SideBarMenuItemCollection
 
 	#endregion

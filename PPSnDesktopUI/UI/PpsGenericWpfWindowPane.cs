@@ -38,6 +38,13 @@ using static TecWare.PPSn.StuffUI;
 
 namespace TecWare.PPSn.UI
 {
+	internal static class WpfPaneHelper
+	{
+		public static object GetXamlElement(FrameworkElement control, object key)
+			=> key is string && control.Dispatcher.CheckAccess() ? control.FindName((string)key) : null;
+	} // class WpfPaneHelper
+
+
 	#region -- class PpsGenericWpfChildPane ---------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -72,7 +79,7 @@ namespace TecWare.PPSn.UI
 		} // proc LuaRequire
 
 		protected override object OnIndex(object key)
-			=> base.OnIndex(key) ?? parentPane.GetValue(key);
+			=> base.OnIndex(key) ?? parentPane.GetValue(key) ?? WpfPaneHelper.GetXamlElement(control, key);
 
 		[LuaMember(nameof(Parent))]
 		public PpsGenericWpfWindowPane Parent => parentPane;
@@ -466,16 +473,8 @@ namespace TecWare.PPSn.UI
 
 		#region -- LuaTable, OnIndex ------------------------------------------------------
 
-		private object GetXamlElement(object key)
-		{
-			if (key is string)
-				return Control.Dispatcher.Invoke(() => Control.FindName((string)key));
-			else
-				return null;
-		} // func GetXamlElement
-
 		protected override object OnIndex(object key)
-			=> base.OnIndex(key) ?? GetXamlElement(key);
+			=> base.OnIndex(key) ?? WpfPaneHelper.GetXamlElement(control, key);
 
 		#endregion
 
