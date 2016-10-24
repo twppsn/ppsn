@@ -59,7 +59,7 @@
             </Style>
 
             <DataTemplate DataType="{x:Type uiC:SideBarMenuItem}">
-                <Button Content="{Binding DisplayText}" Command="{Binding Command}">
+                <Button Content="{Binding DisplayText}" Command="{Binding Command}" CommandParameter="{Binding CommandParameter}">
                     <Button.Style>
                         <Style TargetType="{x:Type Button}" BasedOn="{StaticResource SideBarMenuButtonStyle}">
                             <Style.Triggers>
@@ -74,7 +74,7 @@
             <DataTemplate DataType="{x:Type uiC:SideBarMenuRootItem}">
                 <HeaderedItemsControl ItemsSource="{Binding Items}">
                     <HeaderedItemsControl.Header>
-                        <Button Content="{Binding DisplayText}" Command="{Binding Command}" Style="{StaticResource SideBarMenuButtonStyle}" />
+						<Button Content="{Binding DisplayText}" Command="{Binding Command}" CommandParameter="{Binding CommandParameter}" Style="{StaticResource SideBarMenuButtonStyle}" />
                     </HeaderedItemsControl.Header>
                     <HeaderedItemsControl.Template>
                         <ControlTemplate TargetType="{x:Type HeaderedItemsControl}">
