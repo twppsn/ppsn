@@ -46,6 +46,7 @@ namespace TecWare.PPSn.UI
 	{
 		private readonly PpsGenericWpfWindowPane parentPane;
 		private readonly FrameworkElement control;
+		private readonly BaseWebRequest fileSource;
 
 		public PpsGenericWpfChildPane(PpsGenericWpfWindowPane parentPane, XDocument xXaml, LuaChunk code)
 		{
@@ -53,14 +54,22 @@ namespace TecWare.PPSn.UI
 				throw new ArgumentNullException("parentPane");
 
 			this.parentPane = parentPane;
+			this.fileSource = new BaseWebRequest(new Uri(new Uri(xXaml.BaseUri), "."), Environment.Encoding);
 
 			// create the control
 			control = (FrameworkElement)parentPane.Environment.CreateResource(xXaml);
 			control.DataContext = this;
 
 			// run the chunk on the current table
-			code.Run(this);
+			code?.Run(this);
 		} // ctor
+
+		[LuaMember("require")]
+		private LuaResult LuaRequire(string path)
+		{
+			var chunk = Task.Run(() => Environment.CompileAsync(fileSource.GetFullUri(path), true)).Result;
+			return Environment.RunScript(chunk, this, true);
+		} // proc LuaRequire
 
 		protected override object OnIndex(object key)
 			=> base.OnIndex(key) ?? parentPane.GetValue(key);
@@ -69,7 +78,9 @@ namespace TecWare.PPSn.UI
 		public PpsGenericWpfWindowPane Parent => parentPane;
 		[LuaMember(nameof(Control))]
 		public FrameworkElement Control => control;
-	} // class PpsGenericWpfChildPane 
+		[LuaMember(nameof(Environment))]
+		public PpsEnvironment Environment => parentPane.Environment;
+    } // class PpsGenericWpfChildPane 
 
 	#endregion
 

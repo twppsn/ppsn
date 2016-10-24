@@ -68,7 +68,7 @@ namespace TecWare.PPSn.Controls
 	public class SideBarMenuItem : FrameworkContentElement
 	{
 		private static readonly DependencyProperty DisplayTextProperty = DependencyProperty.Register("DisplayText", typeof(string), typeof(SideBarMenuItem));
-		private static readonly DependencyProperty CommandProperty = DependencyProperty.Register("Command", typeof(ICommand), typeof(SideBarMenuItem));
+		private static readonly DependencyProperty CommandProperty = DependencyProperty.Register("Command", typeof(ICommand), typeof(SideBarMenuItem), new UIPropertyMetadata(null));
 		private static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register("IsVisible", typeof(bool), typeof(SideBarMenuItem), new PropertyMetadata(false));
 		private static readonly DependencyProperty IsChildItemProperty = DependencyProperty.Register("IsChildItem", typeof(bool), typeof(SideBarMenuItem), new PropertyMetadata(false));
 
@@ -80,12 +80,15 @@ namespace TecWare.PPSn.Controls
 			{
 				if (IsVisible != value)
 					SetValue(IsVisibleProperty, value);
-			}
+            }
 		} // prop IsVisible
+
 		/// <summary></summary>
 		public string DisplayText { get { return (string)GetValue(DisplayTextProperty); } set { SetValue(DisplayTextProperty, value); } }
+
 		/// <summary></summary>
 		public ICommand Command { get { return (ICommand)GetValue(CommandProperty); } set { SetValue(CommandProperty, value); } }
+
 		/// <summary></summary>
 		public bool IsChildItem { get { return (bool)GetValue(IsChildItemProperty); } set { SetValue(IsChildItemProperty, value); } }
 	} // class SideBarMenuItem
