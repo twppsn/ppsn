@@ -153,7 +153,7 @@
 		<pps:wpf name="wpf">
 			<pps:template id="offer" file="ClientWpf\Templates\Offer.xaml" />
 
-			<pps:view name="sdsOffer" displayName="Angebote" displayGlyph="purchase_orderImage" view="local.objects" filter="Typ:=sdsOffer">
+			<pps:view name="sdsOffer" displayName="Angebote" displayImage="purchase_orderImage" view="local.objects" filter="Typ:=sdsOffer">
 				<pps:filter name="entwurf" displayName="Entwurf">
 					<![CDATA[ Datum: ]]>
 				</pps:filter>

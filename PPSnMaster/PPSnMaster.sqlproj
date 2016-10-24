@@ -25,6 +25,7 @@
     <TargetDatabaseSet>True</TargetDatabaseSet>
     <DefaultSchema>dbo</DefaultSchema>
     <Trustworthy>True</Trustworthy>
+    <NonTransactedFileStreamAccess>READ_ONLY</NonTransactedFileStreamAccess>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>bin\Release\</OutputPath>
@@ -89,6 +90,8 @@
     <Build Include="Tables\sds\Aupo.sql" />
     <Build Include="Tables\sds\Anko.sql" />
     <Build Include="Tables\sds\Anpo.sql" />
+    <Build Include="Tables\dbo\Objf.sql" />
+    <Build Include="Database\FileStreamGroup.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="PPSn03.publish.xml" />

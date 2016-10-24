@@ -9,7 +9,15 @@
 	<x:Code>
 		<![CDATA[
 		
+		SubChild = requireXaml 'helloSub.xaml';
+		
 		clickCount = 1;
+		
+		__metatable = { 
+			__changed = function (table, name)
+		    msgbox("Changed: " .. name);
+			end
+	 };
 		
 		bindTitle = "Hello {0}":Format(Arguments.index);
 
@@ -19,7 +27,6 @@
 				clickCount = clickCount + 1;
 			end
 		);
-		
 		
 		]]>
 	</x:Code>
@@ -31,14 +38,14 @@
 			</ResourceDictionary.MergedDictionaries>
 		</ResourceDictionary>
 	</ui:PpsGenericWpfControl.Resources>
-	
+
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="60" />
-            <RowDefinition Height="60" />
-            <RowDefinition Height="60" />
-            <RowDefinition Height="60" />
-            <RowDefinition />
+			<RowDefinition Height="60" />
+			<RowDefinition Height="60" />
+			<RowDefinition Height="60" />
+			<RowDefinition />
 		</Grid.RowDefinitions>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="200" />
@@ -51,14 +58,15 @@
 			<LineBreak />
 			<Run Text="{Binding bindTitle}" />
 		</TextBlock>
-    </Grid>
+		<ContentPresenter Content="{Binding SubChild.Control}" Grid.Row="2"></ContentPresenter>
+	</Grid>
 
-    <ui:PpsGenericWpfControl.Commands>
+	<ui:PpsGenericWpfControl.Commands>
         <ui:PpsUICommandButton Order="100,100" DisplayText="command A" Image="floppy_diskImage" />
-        <ui:PpsUICommandButton Order="200,100" DisplayText="command B" Image="floppy_diskImage" />
-        <ui:PpsUICommandButton Order="300,100" DisplayText="command C" Image="floppy_diskImage" />
-        <ui:PpsUICommandButton Order="400,100" DisplayText="command D" Image="floppy_diskImage" />
-        <ui:PpsUICommandButton Order="500,100" DisplayText="command E" Image="floppy_diskImage" />
+        <ui:PpsUICommandButton Order="100,110" DisplayText="command B" Image="floppy_diskImage" />
+        <ui:PpsUICommandButton Order="100,120" DisplayText="command C" />
+        <ui:PpsUICommandButton Order="200,100" DisplayText="command D" Image="floppy_diskImage" />
+        <ui:PpsUICommandButton Order="200,110" DisplayText="command E" Image="floppy_diskImage" />
     </ui:PpsGenericWpfControl.Commands>
 
 </ui:PpsGenericWpfControl>

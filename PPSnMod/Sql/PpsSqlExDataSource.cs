@@ -667,10 +667,10 @@ namespace TecWare.PPSn.Server.Sql
 
 			#region -- Ctor/Dtor ------------------------------------------------------------
 
-			public SqlDataTransaction(PpsSqlDataSource dataSource, SqlConnection connection)
-				: base(dataSource)
+			public SqlDataTransaction(PpsSqlDataSource dataSource, SqlConnectionHandle connectionHandle)
+				: base(dataSource, connectionHandle)
 			{
-				this.connection = connection;
+				this.connection = connectionHandle.ForkConnection();
 
 				// create the sql transaction
 				this.transaction = connection.BeginTransaction(IsolationLevel.ReadUncommitted);
@@ -733,6 +733,22 @@ namespace TecWare.PPSn.Server.Sql
 				}
 			} // func ExecuteReaderCommand
 
+			private LuaTable GetArguments(object value, bool throwException)
+			{
+				var args = value as LuaTable;
+				if (args == null && throwException)
+					throw new ArgumentNullException($"value", "No arguments defined.");
+				return args;
+			} // func GetArguments
+
+			private LuaTable GetArguments(LuaTable parameter, int index, bool throwException)
+			{
+				var args = GetArguments(parameter[index], false);
+				if (args == null && throwException)
+					throw new ArgumentNullException($"parameter[{index}]", "No arguments defined.");
+				return args;
+			} // func GetArguments
+
 			#region -- ExecuteCall ----------------------------------------------------------
 
 			private IEnumerable<IEnumerable<IDataRow>> ExecuteCall(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
@@ -761,7 +777,7 @@ namespace TecWare.PPSn.Server.Sql
 					// copy arguments
 					for (var i = 1; i <= parameter.ArrayList.Count; i++)
 					{
-						var args = parameter[1] as LuaTable;
+						var args = GetArguments(parameter, i, false);
 						if (args == null)
 							yield break;
 
@@ -811,9 +827,7 @@ namespace TecWare.PPSn.Server.Sql
 				 */
 				 
 				// find the connected table
-				var tableInfo = SqlDataSource.ResolveTableByName(name);
-				if (tableInfo == null)
-					throw new ArgumentNullException("insert", $"Table '{name}' is not defined.");
+				var tableInfo = SqlDataSource.ResolveTableByName(name, true);
 				
 				using (var cmd = CreateCommand(parameter, CommandType.Text))
 				{
@@ -825,9 +839,7 @@ namespace TecWare.PPSn.Server.Sql
 						.Append(tableInfo.FullName);
 
 					// default is that only one row is done
-					var args = parameter[1] as LuaTable;
-					if (args == null)
-						throw new ArgumentNullException("parameter[1]", "No arguments defined.");
+					var args = GetArguments(parameter, 1, true);
 
 					commandText.Append(" (");
 
@@ -897,9 +909,7 @@ namespace TecWare.PPSn.Server.Sql
 				 */
 
 				// find the connected table
-				var tableInfo = SqlDataSource.ResolveTableByName(name);
-				if (tableInfo == null)
-					throw new ArgumentNullException("update", $"Table '{name}' is not defined.");
+				var tableInfo = SqlDataSource.ResolveTableByName(name, true);
 
 				using (var cmd = CreateCommand(parameter, CommandType.Text))
 				{
@@ -910,9 +920,7 @@ namespace TecWare.PPSn.Server.Sql
 						.Append(tableInfo.FullName);
 
 					// default is that only one row is done
-					var args = parameter[1] as LuaTable;
-					if (args == null)
-						throw new ArgumentNullException("parameter[1]", "No arguments defined.");
+					var args = GetArguments(parameter, 1, true);
 
 					commandText.Append(" SET ");
 
@@ -979,12 +987,253 @@ namespace TecWare.PPSn.Server.Sql
 
 			private IEnumerable<IEnumerable<IDataRow>> ExecuteUpsert(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
 			{
-				throw new NotImplementedException();
+				/*
+				 * merge into table as dst
+				 *	 using (values (@args), (@args)) as src
+				 *	 on @primkey or on clause
+				 *	 when matched then
+				 *     set @arg = @arg, @arg = @arg, 
+				 *	 when not matched then
+				 *	   insert (@args) values (@args)
+				 *	 output 
+				 * 
+				 */
+
+				var tableInfo = SqlDataSource.ResolveTableByName(name, true);
+				using (var cmd = CreateCommand(parameter, CommandType.Text))
+				{
+					var commandText = new StringBuilder();
+					var args = GetArguments(parameter, 1, true);
+					var columns = new List<SqlColumnInfo>();
+
+					#region -- dst --
+					commandText.Append("MERGE INTO ")
+						.Append(tableInfo.FullName)
+						.Append(" as DST ");
+					#endregion
+
+					#region -- src --
+					var columnNames = new StringBuilder();
+					commandText.Append("USING (VALUES (");
+					var first = true;
+					foreach (var p in args.Members)
+					{
+						if (first)
+							first = false;
+						else
+						{
+							commandText.Append(", ");
+							columnNames.Append(", ");
+						}
+
+						var col = tableInfo.FindColumn(p.Key, true);
+						col.AppendAsParameter(commandText);
+						col.AppendAsColumn(columnNames);
+						cmd.Parameters.Add(col.CreateSqlParameter(p.Value));
+						columns.Add(col);
+					}
+					commandText.Append(")) AS SRC (")
+						.Append(columnNames)
+						.Append(") ");
+					#endregion
+
+					#region -- on --
+					commandText.Append("ON ");
+					var onClause = GetArguments(parameter.GetMemberValue("on"), false);
+					if (onClause == null) // no on clause use primary key
+					{
+						var col = tableInfo.PrimaryKey;
+						ExecuteUpsertAppendOnClause(commandText, col);
+					}
+					else // create the on clause from colums
+					{
+						first = true;
+						foreach (var p in onClause.ArrayList)
+						{
+							if (first)
+								first = false;
+							else
+								commandText.Append(" AND ");
+							var col = tableInfo.FindColumn((string)p, true);
+							ExecuteUpsertAppendOnClause(commandText, col);
+						}
+					}
+					commandText.Append(" ");
+					#endregion
+
+					#region -- when matched --
+					commandText.Append("WHEN MATCHED THEN UPDATE SET ");
+					first = true;
+					foreach (var col in columns)
+					{
+						if (first)
+							first = false;
+						else
+							commandText.Append(", ");
+						commandText.Append("DST.");
+						col.AppendAsColumn(commandText);
+						commandText.Append(" = ");
+						commandText.Append("SRC.");
+						col.AppendAsColumn(commandText);
+					}
+					commandText.Append(' ');
+					#endregion
+
+					#region -- when not matched --
+					commandText.Append("WHEN NOT MATCHED THEN INSERT (");
+					first = true;
+					foreach (var col in columns)
+					{
+						if (first)
+							first = false;
+						else
+							commandText.Append(", ");
+						col.AppendAsColumn(commandText);
+					}
+					commandText.Append(") VALUES (");
+					first = true;
+					foreach (var col in columns)
+					{
+						if (first)
+							first = false;
+						else
+							commandText.Append(", ");
+						commandText.Append("SRC.");
+						col.AppendAsColumn(commandText);
+					}
+					commandText.Append(") ");
+					#endregion
+
+					#region -- output --
+					commandText.Append("OUTPUT ");
+					first = true;
+					foreach (var col in tableInfo.Columns)
+					{
+						if (first)
+							first = false;
+						else
+							commandText.Append(", ");
+						commandText.Append("INSERTED.");
+						col.AppendAsColumn(commandText);
+					}
+
+					#endregion
+
+					commandText.Append(';');
+
+					cmd.CommandText = commandText.ToString();
+					using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
+					{
+						if (!r.Read())
+							throw new InvalidDataException("Invalid return data from sql command.");
+
+						for (var i = 0; i < r.FieldCount; i++)
+							args[r.GetName(i)] = r.GetValue(i).NullIfDBNull();
+					}
+				}
+				yield break;
 			} // func ExecuteUpsert
+
+			private static void ExecuteUpsertAppendOnClause(StringBuilder commandText, SqlColumnInfo col)
+			{
+				commandText.Append("SRC.");
+				col.AppendAsColumn(commandText);
+				commandText.Append(" = ");
+				commandText.Append("DST.");
+				col.AppendAsColumn(commandText);
+			} // proc ExecuteUpsertAppendOnClause
+
+			#endregion
+
+			#region -- ExecuteSimpleSelect --------------------------------------------------
+
+			private IEnumerable<IEnumerable<IDataRow>> ExecuteSimpleSelect(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
+			{
+				/*
+				 * select @cols from @name where @args
+				 */
+
+				// find the connected table
+				var tableInfo = SqlDataSource.ResolveTableByName(name, true);
+
+				using (var cmd = CreateCommand(parameter, CommandType.Text))
+				{
+					var first = true;
+					var commandText = new StringBuilder("SELECT ");
+
+					#region -- select List --
+					var selectList = GetArguments(parameter.GetMemberValue("selectList"), false);
+					if (selectList == null)
+					{
+						foreach (var col in tableInfo.Columns)
+						{
+							if (first)
+								first = false;
+							else
+								commandText.Append(", ");
+							col.AppendAsColumn(commandText);
+						}
+					}
+					else
+					{
+						foreach (var item in selectList.ArrayList)
+						{
+							if (first)
+								first = false;
+							else
+								commandText.Append(", ");
+
+							var col = tableInfo.FindColumn((string)item, true);
+							col.AppendAsColumn(commandText);
+						}
+					}
+					#endregion
+
+					// append from
+					commandText.Append(" FROM ")
+						.Append(tableInfo.FullName).Append(' ')
+						.Append(" WHERE ");
+
+					// get where arguments
+					var args = GetArguments(parameter, 1, true);
+					first = true;
+					foreach (var p in args.Members)
+					{
+						if (first)
+							first = false;
+						else
+							commandText.Append(" AND ");
+
+						var col = tableInfo.FindColumn(p.Key, true);
+						cmd.Parameters.Add(col.CreateSqlParameter(p.Value));
+						col.AppendAsColumn(commandText)
+							.Append(" = ");
+						col.AppendAsParameter(commandText);
+					}
+
+					cmd.CommandText = commandText.ToString();
+
+					using (var r = ExecuteReaderCommand(cmd, behavior))
+					{
+						// return results
+						if (r != null)
+						{
+							do
+							{
+								yield return new DbRowReaderEnumerable(r);
+								if (behavior == PpsDataTransactionExecuteBehavior.SingleResult)
+									break;
+							} while (r.NextResult());
+						}
+					} // using r
+				}
+			} // proc ExecuteSimpleSelect
 
 			#endregion
 
 			#region -- ExecuteSql -----------------------------------------------------------
+
+			private static Regex regExSqlParameter = new Regex(@"\@(\w+)", RegexOptions.Compiled);
 
 			private IEnumerable<IEnumerable<IDataRow>> ExecuteSql(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
 			{
@@ -994,15 +1243,16 @@ namespace TecWare.PPSn.Server.Sql
 
 				using (var cmd = CreateCommand(parameter, CommandType.Text))
 				{
-					cmd.CommandText = name;
+					cmd.CommandText = name; 
 
-					var args = parameter[1] as LuaTable;
+					var args = GetArguments(parameter, 1, false);
 					if (args != null)
 					{
-						foreach (var kv in args.Members)
+						foreach (Match m in regExSqlParameter.Matches(name))
 						{
-							var parameterName = "@" + kv.Key;
-							cmd.Parameters.Add(new SqlParameter(parameterName, kv.Value));
+							var k = m.Groups[1].Value;
+							var v = args[k];
+							cmd.Parameters.Add(new SqlParameter("@" + k, v.NullIfDBNull()));
 						}
 					}
 
@@ -1039,6 +1289,10 @@ namespace TecWare.PPSn.Server.Sql
 					return ExecuteUpdate(parameter, name, behavior);
 				else if ((name = (string)parameter["delete"]) != null)
 					return ExecuteDelete(parameter, name, behavior);
+				else if ((name = (string)parameter["upsert"]) != null)
+					return ExecuteUpsert(parameter, name, behavior);
+				else if ((name = (string)parameter["select"]) != null)
+					return ExecuteSimpleSelect(parameter, name, behavior);
 				else if ((name = (string)parameter["sql"]) != null)
 					return ExecuteSql(parameter, name, behavior);
 				else
@@ -1110,6 +1364,14 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				relationInfo.Add(sqlRelationInfo);
 			} // proc AddRelation
+
+			public SqlColumnInfo FindColumn(string columnName, bool throwException = false)
+			{
+				var col = columns.Find(c => String.Compare(c.ColumnName, columnName, StringComparison.OrdinalIgnoreCase) == 0);
+				if (col == null && throwException)
+					throw new ArgumentOutOfRangeException("columnName", $"Table '{Name}' does not define  Column '{columnName}'.");
+				return col;
+			} // func FindColumn
 			
 			public int TableId => objectId;
 			public string Schema => schema;
@@ -1236,8 +1498,19 @@ namespace TecWare.PPSn.Server.Sql
 			protected override IPropertyEnumerableDictionary CreateAttributes()
 				=> new PpsColumnAttributes(this);
 
+			public StringBuilder AppendAsParameter(StringBuilder sb)
+				=> sb.Append('@').Append(columnName);
+
+			public StringBuilder AppendAsColumn(StringBuilder sb)
+				=> sb.Append('[').Append(columnName).Append(']');
+
+			public SqlParameter CreateSqlParameter(object value)
+				=> CreateSqlParameter("@" + columnName, value);
+
 			public SqlParameter CreateSqlParameter(string parameterName, object value)
-				=> new SqlParameter(parameterName, sqlType, maxLength, ParameterDirection.Input, isNull, precision, scale, Name, DataRowVersion.Current, Procs.ChangeType(value, DataType));
+				=> new SqlParameter(parameterName, sqlType, maxLength, ParameterDirection.Input, isNull, precision, scale, Name, DataRowVersion.Current,
+					value != null ? Procs.ChangeType(value, DataType) : value.NullIfDBNull()
+				);
 
 			#region -- GetFieldType, GetSqlType -----------------------------------------------
 
@@ -1591,10 +1864,12 @@ namespace TecWare.PPSn.Server.Sql
 			throw new ArgumentException($"Column '{key}' not found.", "key");
 		} // func ResolveColumnByName
 
-		private SqlTableInfo ResolveTableByName(string name)
+		private SqlTableInfo ResolveTableByName(string name,  bool throwException = false)
 		{
-			// todo: throwException, with or without schema
-			return tableStore[name];
+			var tableInfo = tableStore[name];
+			if (tableInfo == null && throwException)
+				throw new ArgumentNullException("name", $"Table '{name}' is not defined.");
+			return tableInfo;
 		} // func ResolveTableByName
 
 		#endregion
@@ -1691,7 +1966,7 @@ namespace TecWare.PPSn.Server.Sql
 		public override PpsDataTransaction CreateTransaction(IPpsConnectionHandle connection)
 		{
 			var c = GetSqlConnection(connection, true);
-			return new SqlDataTransaction(this, c.ForkConnection());
+			return new SqlDataTransaction(this, c);
 		} // func CreateTransaction
 
 		public async override Task<PpsConstantDefintion> CreateConstantDefinitionAsync(string name, XElement xDefinition)
