@@ -91,6 +91,25 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	#region -- class LuaDataTemplateSelector ----------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class LuaDataTemplateSelector : DataTemplateSelector
+	{
+		private readonly Delegate selectTemplate;
+
+		public LuaDataTemplateSelector(Delegate selectTemplate)
+		{
+			this.selectTemplate = selectTemplate;
+		} // ctor
+
+		public override DataTemplate SelectTemplate(object item, DependencyObject container)
+			=> (DataTemplate)new LuaResult(Lua.RtInvoke(selectTemplate, item, container))[0];
+	} // class LuaDataTemplateSelector
+
+	#endregion
+
 	#region -- class PpsGenericWpfWindowPane --------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -311,6 +330,10 @@ namespace TecWare.PPSn.UI
 		[LuaMember("command")]
 		private object LuaCommand(Action<object> command, Func<object, bool> canExecute = null, bool idleCall = true)
 			=> new PpsCommand(Environment, command, canExecute, idleCall);
+
+		[LuaMember("templateSelector")]
+		private DataTemplateSelector LuaDataTemplateSelectorCreate(Delegate func)
+			=> new LuaDataTemplateSelector(func);
 
 		[LuaMember("disableUI")]
 		public IPpsProgress DisableUI(PpsLuaTask task)

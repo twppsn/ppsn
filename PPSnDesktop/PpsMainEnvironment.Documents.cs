@@ -268,10 +268,13 @@ namespace TecWare.PPSn
 					}
 				)))
 			{
-				var xResult = XDocument.Load(xmlAnswer);
-
-				newServerId = xResult.Root.GetAttribute("id", -1L);
-				newRevId = xResult.Root.GetAttribute("revId", -1L);
+				var xResult = environment.Request.CheckForExceptionResult(XDocument.Load(xmlAnswer).Root);
+				
+				newServerId = xResult.GetAttribute("id", -1L);
+				newRevId = xResult.GetAttribute("revId", -1L);
+				var pullRequest = xResult.GetAttribute("pullRequest", false);
+				if (pullRequest)
+					throw new ArgumentException("todo: Pull before push");
 				if (newServerId < 0 || newRevId < 0)
 					throw new ArgumentOutOfRangeException("id", "Pull action failed.");
 			}

@@ -61,7 +61,8 @@ namespace TecWare.PPSn.Controls
 					AlternationExtensions.SetAlternationIndexRecursively((ItemsControl)this, 0);
 					break;
 				case NotifyCollectionChangedAction.Add:
-					SelectNode(e.NewItems[0]);
+					if (e.NewItems.Count > 0 && e.NewItems[0] != null)
+						SelectNode(e.NewItems[0]);
 					break;
 			}
 		} // proc OnItemChanged
