@@ -228,10 +228,13 @@ namespace TecWare.PPSn.UI
 		} // proc CommitEdit
 
 		[LuaMember(nameof(PushDataAsync))]
-		public Task PushDataAsync()
+		public PpsLuaTask PushDataAsync()
 		{
 			UpdateSources();
-			return document.PushWorkAsync();
+			return Environment.RunTask(document.PushWorkAsync())
+				.OnException(
+				new Action<Exception>(ex => Environment.ShowException(ex, "Veröffentlichung ist fehlgeschlagen."))
+			);
 		} // proc PushDataAsync
 
 		[LuaMember(nameof(UndoManager))]
