@@ -72,8 +72,8 @@ namespace TecWare.PPSn.Controls
 		private static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register("IsVisible", typeof(bool), typeof(SideBarMenuItem), new PropertyMetadata(false));
 		private static readonly DependencyProperty IsChildItemProperty = DependencyProperty.Register("IsChildItem", typeof(bool), typeof(SideBarMenuItem), new PropertyMetadata(false));
 
-		public static readonly DependencyProperty CommandParameterProperty = DependencyProperty.Register("CommandParameter", typeof(object), typeof(SideBarMenuItem), new PropertyMetadata(null));
-		public static readonly DependencyProperty CommandTargetProperty = DependencyProperty.Register("CommandTarget", typeof(IInputElement), typeof(SideBarMenuItem), new PropertyMetadata(null));
+		private static readonly DependencyProperty CommandParameterProperty = DependencyProperty.Register("CommandParameter", typeof(object), typeof(SideBarMenuItem), new PropertyMetadata(null));
+		private static readonly DependencyProperty CommandTargetProperty = DependencyProperty.Register("CommandTarget", typeof(IInputElement), typeof(SideBarMenuItem), new PropertyMetadata(null));
 
 		/// <summary>only used for child items</summary>
 		public bool IsVisible
@@ -95,7 +95,9 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		public bool IsChildItem { get { return (bool)GetValue(IsChildItemProperty); } set { SetValue(IsChildItemProperty, value); } }
 
+		/// <summary></summary>
 		public object CommandParameter { get { return GetValue(CommandParameterProperty); } set { SetValue(CommandParameterProperty, value); } }
+
 		/// <summary>nur für RoutedCommands</summary>
 		public IInputElement CommandTarget { get { return (IInputElement)GetValue(CommandTargetProperty); } set { SetValue(CommandTargetProperty, value); } }
 	} // class SideBarMenuItem
