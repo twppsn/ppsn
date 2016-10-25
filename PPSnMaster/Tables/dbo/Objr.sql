@@ -4,7 +4,8 @@
 	[ParentId] BIGINT NULL CONSTRAINT fkObjrObjrId REFERENCES dbo.Objr (Id),
 	[ObjkId] BIGINT NOT NULL CONSTRAINT fkObjrObjkId REFERENCES dbo.Objk (Id), 
 	[Tags] XML NOT NULL CONSTRAINT dfObjrTags DEFAULT '<tags />',
-	[IsDocumentText] BIT DEFAULT 0,
+	[IsDocumentText] BIT DEFAULT 0 NOT NULL,
+	[IsDocumentDeflate] BIT DEFAULT 0 NOT NULL,
 	[Document] VARBINARY(MAX) NULL, 
 	[DocumentId] BIGINT NULL CONSTRAINT fkObjrObjfId REFERENCES dbo.[Objf] (Id),
 	[DocumentLink] VARCHAR(max) NULL,
@@ -92,3 +93,21 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level2type = N'COLUMN',
     @level2name = N'DocumentLink'
 GO
+
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Is the document a utf8 encoded text',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Objr',
+    @level2type = N'COLUMN',
+    @level2name = N'IsDocumentText'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Is the document packed with deflate',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Objr',
+    @level2type = N'COLUMN',
+    @level2name = N'IsDocumentDeflate'

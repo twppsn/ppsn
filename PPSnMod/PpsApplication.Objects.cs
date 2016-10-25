@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -152,7 +154,7 @@ namespace TecWare.PPSn.Server
 					new PropertyValue("selectList", Procs.CreateLuaArray("Id", "Guid", "Typ", "Nr", "IsRev", "IsHidden", "IsRemoved", "State", "CurRevId", "HeadRevId"))
 				);
 
-				if (args.GetValue("Id") != null && args.GetValue("Guid") != null) // get object by id or guid
+				if (args.GetValue("Id") != null || args.GetValue("Guid") != null) // get object by id or guid
 					cmd.SetArrayValue(1, args);
 				else
 					throw new ArgumentException("Id or Guid needed to select an object.");
@@ -217,8 +219,79 @@ namespace TecWare.PPSn.Server
 				);
 				cmd[1] = args;
 
-				trans.ExecuteNoneResult(args);
-				return (long)args[1, "Id"];
+				// convert data
+				var rawData = args.GetMemberValue("Document");
+				var shouldText = args.GetMemberValue("IsDocumentText");
+				var shouldDeflate = args.GetMemberValue("IsDocumentDeflate");
+
+				if (rawData != null)
+				{
+					if (rawData is string || rawData is StringBuilder)
+					{
+						#region -- text --
+						if (shouldDeflate == null)
+							shouldDeflate = true;
+						if (shouldText == null)
+							shouldText = true;
+
+						args["IsDocumentText"] = shouldText;
+						args["IsDocumentDeflate"] = shouldDeflate;
+
+						using (var dstMemory = new MemoryStream())
+						{
+							Stream dstDeflate = null;
+							StreamWriter tr = null;
+							try
+							{
+								if ((bool)shouldDeflate)
+									dstDeflate = new GZipStream(dstMemory, CompressionMode.Compress, true);
+								tr = new StreamWriter(dstDeflate ?? dstMemory, Encoding.UTF8, 1024, true);
+
+								tr.Write(rawData.ToString());
+							}
+							finally
+							{
+								tr?.Dispose();
+								dstDeflate?.Close();
+							}
+
+							args["Document"] = dstMemory.ToArray();
+						}
+						#endregion
+					}
+					else if (rawData is byte[])
+					{
+						#region -- byte[] --
+						if (shouldDeflate == null)
+							shouldDeflate = false;
+
+						args["IsDocumentText"] = shouldText ?? false;
+						args["IsDocumentDeflate"] = shouldDeflate;
+
+						using (var dstMemory = new MemoryStream())
+						{
+							var b = (byte[])rawData;
+							if ((bool)shouldDeflate)
+							{
+								using (var dstDeflate = new GZipStream(dstMemory, CompressionMode.Compress))
+									dstDeflate.Write(b, 0, b.Length);
+							}
+							else
+								dstMemory.Write(b, 0, b.Length);
+							dstMemory.Flush();
+
+							args["Document"] = dstMemory.ToArray();
+						}
+						#endregion
+					}
+					else
+						throw new ArgumentException("Document data format is unknown (only string or byte[] allowed).");
+				}
+				else
+					throw new ArgumentNullException("Document data is missing.");
+
+				trans.ExecuteNoneResult(cmd);
+				return (long)args["Id"];
 			} // func CreateRevision
 
 			/// <summary>Removes all existing revision, and sets a new one.</summary>
@@ -231,10 +304,45 @@ namespace TecWare.PPSn.Server
 				return null;
 			} // func ReplaceRevision
 
+			private static Stream OpenObjectRevisionStream(LuaTable args)
+			{
+				var rawData = args.GetMemberValue("Document");
+				var externalLink = args.GetMemberValue("DocumentLink");
+				var internalLink = args.GetMemberValue("DocumentId");
+				var isDocumentDeflate = args.GetMemberValue("IsDocumentDeflate");
+
+				Stream src = null;
+				if (rawData != null) // raw byte stream detected
+				{
+					src = new MemoryStream((byte[])rawData, false);
+				}
+				else
+					throw new NotImplementedException();
+
+				// unpack stream
+				return isDocumentDeflate is bool && (bool)isDocumentDeflate ? new GZipStream(src, CompressionMode.Decompress) : src;
+			} // func OpenObjectRevisionStream
+
+			private static StreamReader OpenObjectRevisionText(LuaTable args)
+			{
+				// open the stream
+				var src = OpenObjectRevisionStream(args);
+				return new StreamReader(src, true);
+			} // func OpenObjectRevisionText
+
+			private static string GetObjectRevisionText(LuaTable args)
+			{
+				// open the stream
+				using (var sr = OpenObjectRevisionText(args))
+					return sr.ReadToEnd();
+			} // func OpenObjectRevisionText
+
 			[LuaMember(nameof(GetObjectRevision))]
 			public LuaTable GetObjectRevision(PpsDataTransaction trans, LuaTable args)
 			{
-				const string baseSql = "select o.Id, o.Guid, o.Typ, o.HeadRevId, o.CurRevId, r.Document from Objk o inner join Objr r";
+				const string baseSql = "select o.Id, o.Guid, o.Typ, o.HeadRevId, o.CurRevId, r.Document, r.DocumentLink, r.DocumentId, r.IsDocumentText, r.IsDocumentDeflate " +
+					"from Objk o inner join Objr r";
+
 				var objectId = args["Id"];
 				var guidId = args["Guid"];
 				var revId = args["RevId"];
@@ -259,6 +367,13 @@ namespace TecWare.PPSn.Server
 					return null;
 
 				UpdateArgumentsWithRow(args, row);
+
+				// patch methods for the stream access
+				args["__trans"] = true;
+				args.DefineMethod("openText", new Func<LuaTable, StreamReader>(OpenObjectRevisionText));
+				args.DefineMethod("openStream", new Func<LuaTable, Stream>(OpenObjectRevisionStream));
+				args.DefineMethod("getText", new Func<LuaTable, string>(GetObjectRevisionText));
+
 				return args;
 			} // func GetObjectRevision
 

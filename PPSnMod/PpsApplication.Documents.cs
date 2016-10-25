@@ -130,7 +130,7 @@ namespace TecWare.PPSn.Server
 
 				// check the result
 				documentType = args.GetOptionalValue("Typ", String.Empty);
-				documentData = args["Document"].ChangeType<XDocument>();
+				documentData = args.CallMember("getText", args).ChangeType<XDocument>();
 
 				if (documentType != Name)
 					throw new ArgumentException($"Object typ mismatch (expected: {Name}, found: {documentType})");
@@ -338,7 +338,7 @@ namespace TecWare.PPSn.Server
 					Procs.CreateLuaTable(
 						new PropertyValue("ObjkId", objectId),
 						new PropertyValue("ParentId", pulledRevId > 0 ? (object)pulledRevId : null),
-						new PropertyValue("Document", documentRawData.ToString()),
+						new PropertyValue("Document", documentRawData),
 						new PropertyValue("Tags", dataset.GetAutoTags())
 					)
 				);
