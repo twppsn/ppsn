@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -343,7 +344,12 @@ namespace TecWare.PPSn
 		} // func CreateResource
 
 		public object CreateResource(string xamlSource, ParserContext parserContext)
-			=> XamlReader.Parse(xamlSource, parserContext);
+		{
+			// fix ms bug: XamlReader.Parse creates a MemoryStream with the Default-Ansi-CodePage, but in the XamlReader core utf8 is expected 
+			// the XmlReader overload, has no way to give ParserContext
+			using (var src = new MemoryStream(Encoding.UTF8.GetBytes(xamlSource), false))
+				return XamlReader.Load(src, parserContext);
+		} // func CreateResource
 
 		#endregion
 	} // class PpsEnvironment
