@@ -4,25 +4,25 @@
 		version="330"
 		displayname="PPSn">
 
+	<!-- Change default log path -->
 	<server logpath="Log">
+		<!-- Update search paths for the assemblies -->
 		<resolve>..\..\PPSnMod\bin\Debug</resolve>
-		<load>DEM.PPSn</load>
 	</server>
 
-	<http threads="1">
-		<prefix>http://localhost:8080/</prefix>
-		<access scheme="ntlm">http://localhost:8080/ppsn/</access>
-	</http>
+	<!-- Change binding of the webserver here. -->
+	<?des-var-webBinding http://localhost:8080?>
 
+	<http threads="1" />
 	<cron />
 	<luaengine />
 
+	<?des-merge PPSn.all.xml?>
+
 	<pps:ppsn name="ppsn" mainDataSource="main" displayname="PPSN Demo">
 		<pps:sqlExDataSource name="main">
+			<!-- Change database connections here. -->
 			<pps:connectionString>Data Source=(localdb)\mssqllocaldb;Initial Catalog=???????;Integrated Security=True</pps:connectionString>
 		</pps:sqlExDataSource>
 	</pps:ppsn>
-	
-	<?des-merge System.xml?>
-	<?des-merge Contacts.xml?>
 </des>
