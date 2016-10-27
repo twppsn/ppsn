@@ -44,7 +44,6 @@ namespace TecWare.PPSn.UI
 			=> key is string && control.Dispatcher.CheckAccess() ? control.FindName((string)key) : null;
 	} // class WpfPaneHelper
 
-
 	#region -- class PpsGenericWpfChildPane ---------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -71,6 +70,10 @@ namespace TecWare.PPSn.UI
 			code?.Run(this);
 		} // ctor
 
+		[LuaMember(nameof(GetResource))]
+		private object GetResource(object key)
+			=> Control.TryFindResource(key);
+
 		[LuaMember("require")]
 		private LuaResult LuaRequire(string path)
 		{
@@ -83,15 +86,17 @@ namespace TecWare.PPSn.UI
 
 		[LuaMember(nameof(Parent))]
 		public PpsGenericWpfWindowPane Parent => parentPane;
+
 		[LuaMember(nameof(Control))]
 		public FrameworkElement Control => control;
+
 		[LuaMember(nameof(Environment))]
 		public PpsEnvironment Environment => parentPane.Environment;
     } // class PpsGenericWpfChildPane 
 
 	#endregion
 
-	#region -- class LuaDataTemplateSelector ----------------------------------------------
+	#region -- class LuaDataTemplateSelector ---------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -323,10 +328,6 @@ namespace TecWare.PPSn.UI
 			return Environment.RunUI(new Func<PpsGenericWpfChildPane>(() => new PpsGenericWpfChildPane(this, parts.Item1, parts.Item2)));
 		} // func LuaRequireXaml
 
-		[LuaMember(nameof(GetResource))]
-		private object GetResource(object key)
-			=> Control.TryFindResource(key);
-
 		[LuaMember("command")]
 		private object LuaCommand(Action<object> command, Func<object, bool> canExecute = null, bool idleCall = true)
 			=> new PpsCommand(Environment, command, canExecute, idleCall);
@@ -334,6 +335,10 @@ namespace TecWare.PPSn.UI
 		[LuaMember("templateSelector")]
 		private DataTemplateSelector LuaDataTemplateSelectorCreate(Delegate func)
 			=> new LuaDataTemplateSelector(func);
+
+		[LuaMember(nameof(GetResource))]
+		private object GetResource(object key)
+			=> Control.TryFindResource(key);
 
 		[LuaMember("disableUI")]
 		public IPpsProgress DisableUI(PpsLuaTask task)
