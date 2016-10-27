@@ -16,28 +16,37 @@ namespace TecWare.PPSn.Controls
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class SideBarMenu : ListBox
+	public class SideBarMenu : ListBox, INotifyPropertyChanged
 	{
+		/// <summary></summary>
+		public event PropertyChangedEventHandler PropertyChanged;
+		private string paneTitleText = String.Empty;
+		private string headlineText = String.Empty;
+
 		/// <summary></summary>
 		public SideBarMenu()
 		{
 			AddHandler(Button.ClickEvent, new RoutedEventHandler(SideBarMenuItemButtonClick));
 		} // ctor
 
-		void SideBarMenuItemButtonClick(object sender, RoutedEventArgs e)
+		private void SideBarMenuItemButtonClick(object sender, RoutedEventArgs e)
 		{
 			var button = e.OriginalSource as Button;
-			// ups
 			if (button == null)
+				return;
+			var item = button.DataContext as SideBarMenuItem;
+			if (item == null)
 				return;
 
 			e.Handled = true;
 
-			var item = button.DataContext as SideBarMenuRootItem;
+			PaneTitleText = GetPaneTitleTextFromItem(item).ToUpper();
+
 			// action only for RootItems
-			if (item == null)
+			if (item.IsChildItem)
 				return;
-			SetItemState(item);
+
+			SetItemState((SideBarMenuRootItem)item);
 		} // proc SideBarMenuItemButtonClick
 
 		private void SetItemState(SideBarMenuRootItem item)
@@ -48,7 +57,6 @@ namespace TecWare.PPSn.Controls
 
 			if (!currIsExpanded)
 				item.IsExpanded = true;
-
 		} // proc SetItemState
 
 		private void CollapseItems()
@@ -57,6 +65,47 @@ namespace TecWare.PPSn.Controls
 				item.IsExpanded = false;
 		} // proc CollapseItems
 
+		private string GetPaneTitleTextFromItem(SideBarMenuItem item)
+		{
+			if (!item.IsChildItem)
+				return item.DisplayText;
+			foreach (SideBarMenuRootItem rootItem in Items)
+			{
+				if (rootItem.IsChildOf(item))
+					return String.Format("{0} / {1}", rootItem.DisplayText, item.DisplayText);
+			}
+			return string.Empty;
+		} // func GetPaneTitleTextFromItem
+
+		protected void OnPropertyChanged(string name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+		} // proc OnPropertyChanged
+
+		/// <summary></summary>
+		public string PaneTitleText
+		{
+			get { return paneTitleText; }
+			private set
+			{
+				if (String.Compare(value, paneTitleText, false) != 0)
+				{
+					paneTitleText = value;
+					OnPropertyChanged("PaneTitleText");
+				}
+			}
+		} // prop PaneTitleText
+
+		/// <summary></summary>
+		public string HeadLineText
+		{
+			get { return headlineText; }
+			set
+			{
+				headlineText = value;
+				OnPropertyChanged("HeadLineText");
+			}
+		} // prop HeadLineText
 	} // class SideBarMenu
 
 	#endregion
@@ -69,11 +118,10 @@ namespace TecWare.PPSn.Controls
 	{
 		private static readonly DependencyProperty DisplayTextProperty = DependencyProperty.Register("DisplayText", typeof(string), typeof(SideBarMenuItem));
 		private static readonly DependencyProperty CommandProperty = DependencyProperty.Register("Command", typeof(ICommand), typeof(SideBarMenuItem), new PropertyMetadata(null));
-		private static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register("IsVisible", typeof(bool), typeof(SideBarMenuItem), new PropertyMetadata(false));
-		private static readonly DependencyProperty IsChildItemProperty = DependencyProperty.Register("IsChildItem", typeof(bool), typeof(SideBarMenuItem), new PropertyMetadata(false));
-
 		private static readonly DependencyProperty CommandParameterProperty = DependencyProperty.Register("CommandParameter", typeof(object), typeof(SideBarMenuItem), new PropertyMetadata(null));
 		private static readonly DependencyProperty CommandTargetProperty = DependencyProperty.Register("CommandTarget", typeof(IInputElement), typeof(SideBarMenuItem), new PropertyMetadata(null));
+		private static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register("IsVisible", typeof(bool), typeof(SideBarMenuItem), new PropertyMetadata(false));
+		private static readonly DependencyProperty IsChildItemProperty = DependencyProperty.Register("IsChildItem", typeof(bool), typeof(SideBarMenuItem), new PropertyMetadata(false));
 
 		/// <summary>only used for child items</summary>
 		public bool IsVisible
@@ -93,13 +141,13 @@ namespace TecWare.PPSn.Controls
 		public ICommand Command { get { return (ICommand)GetValue(CommandProperty); } set { SetValue(CommandProperty, value); } }
 
 		/// <summary></summary>
-		public bool IsChildItem { get { return (bool)GetValue(IsChildItemProperty); } set { SetValue(IsChildItemProperty, value); } }
-
-		/// <summary></summary>
 		public object CommandParameter { get { return GetValue(CommandParameterProperty); } set { SetValue(CommandParameterProperty, value); } }
 
 		/// <summary>nur für RoutedCommands</summary>
 		public IInputElement CommandTarget { get { return (IInputElement)GetValue(CommandTargetProperty); } set { SetValue(CommandTargetProperty, value); } }
+
+		/// <summary></summary>
+		public bool IsChildItem { get { return (bool)GetValue(IsChildItemProperty); } set { SetValue(IsChildItemProperty, value); } }
 	} // class SideBarMenuItem
 
 	#endregion
@@ -160,7 +208,11 @@ namespace TecWare.PPSn.Controls
 		} // prop IsExpanded
 
 		/// <summary></summary>
+		public bool IsChildOf(SideBarMenuItem item)	=> items.Contains(item);
+
+		/// <summary></summary>
 		public bool HasChildItems => items.Count > 0;
+
 		/// <summary>List of ChildMenuItems.</summary>
 		public SideBarMenuItemCollection Items => items;
 	} // class SideBarMenuRootItem
