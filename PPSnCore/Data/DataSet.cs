@@ -529,7 +529,7 @@ namespace TecWare.PPSn.Data
 
 		public LuaResult InvokeLuaFunction(LuaTable t, string methodName, params object[] args)
 		{
-			var handler = t.GetMemberValue(methodName, lRawGet: true);
+			var handler = t.GetMemberValue(methodName, rawGet: true);
 			if (Lua.RtInvokeable(handler))
 				return new LuaResult(Lua.RtInvoke(handler, args));
 			return LuaResult.Empty;
