@@ -44,7 +44,7 @@ namespace TecWare.PPSn.UI
 			=> key is string && control.Dispatcher.CheckAccess() ? control.FindName((string)key) : null;
 	} // class WpfPaneHelper
 
-	#region -- class PpsGenericWpfChildPane ---------------------------------------------
+	#region -- class PpsGenericWpfChildPane ----------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -92,7 +92,7 @@ namespace TecWare.PPSn.UI
 
 		[LuaMember(nameof(Environment))]
 		public PpsEnvironment Environment => parentPane.Environment;
-    } // class PpsGenericWpfChildPane 
+	} // class PpsGenericWpfChildPane 
 
 	#endregion
 
@@ -115,7 +115,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsGenericWpfWindowPane --------------------------------------------
+	#region -- class PpsGenericWpfWindowPane ---------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Pane that combines a xaml file with lua code.</summary>
@@ -130,7 +130,7 @@ namespace TecWare.PPSn.UI
 
 		private bool forceUpdateSource = false; // set this to true, to update the document on idle
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------------
 
 		public PpsGenericWpfWindowPane(PpsEnvironment environment, PpsWindow window)
 			: base(environment)
@@ -580,7 +580,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsGenericWpfControl -----------------------------------------------
+	#region -- class PpsGenericWpfControl ------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Base control for the wpf generic pane.</summary>
@@ -657,26 +657,26 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsContentTemplateSelector -----------------------------------------
+	#region -- class PpsContentTemplateSelector ------------------------------------------
 
-	public class PpsContentTemplateSelector : DataTemplateSelector
-	{
-		public override DataTemplate SelectTemplate(object item, DependencyObject container)
-		{
-			var row = item as Data.PpsDataRow;
-			if (row == null)
-				return null;
+	//public class PpsContentTemplateSelector : DataTemplateSelector
+	//{
+	//	public override DataTemplate SelectTemplate(object item, DependencyObject container)
+	//	{
+	//		var row = item as Data.PpsDataRow;
+	//		if (row == null)
+	//			return null;
 
-			var control = container as FrameworkElement;
-			if (control == null)
-				return null;
+	//		var control = container as FrameworkElement;
+	//		if (control == null)
+	//			return null;
 
-			var r = (DataTemplate)control.FindResource(row.Table.TableName);
-			return r;
-			//var r = control.TryFindResource(row.Table.TableName);
-			//return r as DataTemplate;
-		}
-	} // class PpsContentTemplateSelector
+	//		var r = (DataTemplate)control.FindResource(row.Table.TableName);
+	//		return r;
+	//		//var r = control.TryFindResource(row.Table.TableName);
+	//		//return r as DataTemplate;
+	//	}
+	//} // class PpsContentTemplateSelector
 
 	#endregion
 }
