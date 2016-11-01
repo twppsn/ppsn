@@ -18,10 +18,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -29,38 +25,37 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Threading;
-using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Networking;
-using TecWare.DE.Stuff;
-using static TecWare.PPSn.StuffUI;
 
 namespace TecWare.PPSn.UI
 {
+	#region -- class WpfPaneHelper ------------------------------------------------------
+
 	internal static class WpfPaneHelper
 	{
 		public static object GetXamlElement(FrameworkElement control, object key)
 			=> key is string && control.Dispatcher.CheckAccess() ? control.FindName((string)key) : null;
 	} // class WpfPaneHelper
 
+	#endregion
 
 	#region -- class PpsGenericWpfChildPane ---------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class PpsGenericWpfChildPane : LuaTable
+	public class PpsGenericWpfChildPane : LuaEnvironmentTable, IPpsLuaRequest
 	{
-		private readonly PpsGenericWpfWindowPane parentPane;
 		private readonly FrameworkElement control;
 		private readonly BaseWebRequest fileSource;
 
 		public PpsGenericWpfChildPane(PpsGenericWpfWindowPane parentPane, XDocument xXaml, LuaChunk code)
+			:base(parentPane)
 		{
 			if (parentPane == null)
 				throw new ArgumentNullException("parentPane");
 
-			this.parentPane = parentPane;
 			this.fileSource = new BaseWebRequest(new Uri(new Uri(xXaml.BaseUri), "."), Environment.Encoding);
 
 			// create the control
@@ -68,26 +63,14 @@ namespace TecWare.PPSn.UI
 			control.DataContext = this;
 
 			// run the chunk on the current table
-			code?.Run(this);
+			code?.Run(this, this);
 		} // ctor
 
-		[LuaMember("require")]
-		private LuaResult LuaRequire(string path)
-		{
-			var chunk = Task.Run(() => Environment.CompileAsync(fileSource.GetFullUri(path), true)).Result;
-			return Environment.RunScript(chunk, this, true);
-		} // proc LuaRequire
-
-		protected override object OnIndex(object key)
-			=> base.OnIndex(key) ?? parentPane.GetValue(key) ?? WpfPaneHelper.GetXamlElement(control, key);
-
-		[LuaMember(nameof(Parent))]
-		public PpsGenericWpfWindowPane Parent => parentPane;
-		[LuaMember(nameof(Control))]
+		[LuaMember]
 		public FrameworkElement Control => control;
-		[LuaMember(nameof(Environment))]
-		public PpsEnvironment Environment => parentPane.Environment;
-    } // class PpsGenericWpfChildPane 
+		[LuaMember]
+		public BaseWebRequest Request => fileSource;
+	} // class PpsGenericWpfChildPane 
 
 	#endregion
 
@@ -114,7 +97,7 @@ namespace TecWare.PPSn.UI
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Pane that combines a xaml file with lua code.</summary>
-	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane, IPpsIdleAction
+	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane, IPpsIdleAction, IPpsLuaRequest
 	{
 		private readonly PpsWindow window;
 
@@ -309,23 +292,19 @@ namespace TecWare.PPSn.UI
 
 		#region -- Lua-Interface ----------------------------------------------------------
 
-		[LuaMember("require")]
-		private LuaResult LuaRequire(string path)
-		{
-			var chunk = Task.Run(() => Environment.CompileAsync(fileSource.GetFullUri(path), true)).Result;
-			return Environment.RunScript(chunk, this, true);
-		} // proc LuaRequire
-
-		[LuaMember("requireXaml")]
-		private LuaResult LuaRequireXaml(string path)
-		{
-			var parts = Task.Run(() => LoadXamlAsync(new LuaTable(), fileSource.GetFullUri(path))).Result;
-			return Environment.RunUI(new Func<PpsGenericWpfChildPane>(() => new PpsGenericWpfChildPane(this, parts.Item1, parts.Item2)));
-		} // func LuaRequireXaml
-
-		[LuaMember(nameof(GetResource))]
+		[LuaMember]
 		private object GetResource(object key)
 			=> Control.TryFindResource(key);
+
+		[LuaMember("requireXaml", true)]
+		private LuaResult LuaRequireXaml(LuaTable self, string path, LuaTable initialTable = null)
+		{
+			// get the current root
+			var webRequest = self.GetMemberValue(nameof(IPpsLuaRequest.Request)) as BaseWebRequest ?? Request;
+
+			var parts = Task.Run(() => Environment.LoadXamlAsync(webRequest, initialTable ?? new LuaTable(), webRequest.GetFullUri(path))).Result;
+			return Environment.RunUI(new Func<PpsGenericWpfChildPane>(() => new PpsGenericWpfChildPane(this, parts.Item1, parts.Item2)));
+		} // func LuaRequireXaml
 
 		[LuaMember("command")]
 		private object LuaCommand(Action<object> command, Func<object, bool> canExecute = null, bool idleCall = true)
@@ -409,7 +388,7 @@ namespace TecWare.PPSn.UI
 			fileSource = new BaseWebRequest(new Uri(xamlUri, "."), Environment.Encoding);
 
 			// Load the xaml file and code
-			var r = await LoadXamlAsync(arguments, xamlUri);
+			var r = await Environment.LoadXamlAsync(fileSource, arguments, xamlUri);
 			var xaml = r.Item1;
 			var chunk = r.Item2;
 
@@ -422,7 +401,7 @@ namespace TecWare.PPSn.UI
 
 				// Initialize the control and run the code in UI-Thread
 				if (chunk != null)
-					Environment.RunScript(chunk, this, true);
+					Environment.RunScript(chunk, this, true, this);
 
 				// init bindings
 				control.DataContext = this;
@@ -440,41 +419,6 @@ namespace TecWare.PPSn.UI
 				OnPropertyChanged("Title");
 			});
 		} // proc LoadAsync
-
-		private async Task<Tuple<XDocument, LuaChunk>> LoadXamlAsync(LuaTable arguments, Uri xamlUri)
-		{
-			try
-			{
-				XDocument xXaml;
-				using (var r = await fileSource.GetResponseAsync(xamlUri.ToString()))
-				{
-					// read the file name
-					arguments["_filename"] = r.GetContentDisposition().FileName;
-
-					// parse the xaml as xml document
-					using (var sr = fileSource.GetTextReaderAsync(r, MimeTypes.Application.Xaml))
-					{
-						using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, xamlUri.ToString()))
-							xXaml = XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);
-					}
-				}
-
-				// Load the content of the code-tag, to initialize extended functionality
-				var xCode = xXaml.Root.Element(xnCode);
-				var chunk = (LuaChunk)null;
-				if (xCode != null)
-				{
-					chunk = await Environment.CompileAsync(xCode, true);
-					xCode.Remove();
-				}
-
-				return new Tuple<XDocument, LuaChunk>(xXaml, chunk);
-			}
-			catch (Exception e)
-			{
-				throw new ArgumentException("Can not load xaml definition.\n" + xamlUri.ToString(), e);
-			}
-		} // func LoadXamlAsync
 
 		protected virtual void OnControlCreated()
 		{
@@ -501,7 +445,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		[LuaMember(nameof(UpdateSources))]
+		[LuaMember]
 		public void UpdateSources()
 		{
 			forceUpdateSource = false;
@@ -526,7 +470,7 @@ namespace TecWare.PPSn.UI
 		} // proc OnIdle
 
 		/// <summary>Arguments of the generic content.</summary>
-		[LuaMember("Arguments")]
+		[LuaMember]
 		public LuaTable Arguments { get { return arguments; } }
 
 		/// <summary>Title of the pane</summary>
@@ -542,13 +486,15 @@ namespace TecWare.PPSn.UI
 		} // prop Title
 
 		/// <summary>Wpf-Control</summary>
-		[LuaMember(nameof(Control))]
+		[LuaMember]
 		public FrameworkElement Control => control;
 		/// <summary>This member is resolved dynamic, that is the reason the FrameworkElement Control is public.</summary>
 		object IPpsWindowPane.Control => control;
 
-		[LuaMember(nameof(Window))]
+		[LuaMember]
 		public PpsWindow Window => window;
+		[LuaMember]
+		public BaseWebRequest Request => fileSource;
 
 		/// <summary>BaseUri of the Wpf-Control</summary>
 		public Uri BaseUri => fileSource?.BaseUri;

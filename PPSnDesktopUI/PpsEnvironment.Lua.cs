@@ -9,11 +9,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Stuff;
+using TecWare.PPSn.UI;
+using static TecWare.PPSn.StuffUI;
 
 namespace TecWare.PPSn
 {
@@ -30,6 +33,18 @@ namespace TecWare.PPSn
 		/// <summary>Returns the trace sink.</summary>
 		PpsTraceLog Traces { get; }
 	} // interface IPpsLuaTaskParent
+
+	#endregion
+
+	#region -- interface IPpsLuaRequest -------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public interface IPpsLuaRequest
+	{
+		/// <summary>Implementes a redirect for the request call.</summary>
+		BaseWebRequest Request { get; }
+	} // interface IPpsLuaRequest
 
 	#endregion
 
@@ -216,7 +231,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	public partial class PpsEnvironment : IPpsLuaTaskParent
+	public partial class PpsEnvironment : IPpsLuaTaskParent, IPpsLuaRequest
 	{
 		#region -- class LuaTraceLineDebugInfo --------------------------------------------
 
@@ -325,7 +340,7 @@ namespace TecWare.PPSn
 		/// <param name="throwException">Throw an exception on fail</param>
 		/// <param name="arguments"></param>
 		/// <returns></returns>
-		public async Task<LuaChunk> CompileAsync(Uri source, bool throwException, params KeyValuePair<string, Type>[] arguments)
+		public async Task<LuaChunk> CompileAsync(BaseWebRequest request, Uri source, bool throwException, params KeyValuePair<string, Type>[] arguments)
 		{
 			try
 			{
@@ -453,14 +468,51 @@ namespace TecWare.PPSn
 		private Type LuaType(object o)
 			=> o?.GetType();
 
-		[LuaMember("require")]
-		private LuaResult LuaRequire(string path)
+		[LuaMember("require", true)]
+		private LuaResult LuaRequire(LuaTable self, string path)
 		{
-			// compile code, synchonize the code to this thread
-			var chunk = RunTaskSync(CompileAsync(new Uri(path, UriKind.Relative), true));
+			// get the current root
+			var webRequest = self.GetMemberValue(nameof(IPpsLuaRequest.Request)) as BaseWebRequest ?? Request;
 
-			return RunScript(chunk, this, true);
+			// compile code, synchonize the code to this thread
+			var chunk = RunTaskSync(CompileAsync(webRequest, new Uri(path, UriKind.Relative), true, new KeyValuePair<string, Type>("self", typeof(LuaTable))));
+			return RunScript(chunk, self, true, self);
 		} // proc LuaRequire
+		
+		public async Task<Tuple<XDocument, LuaChunk>> LoadXamlAsync(BaseWebRequest request, LuaTable arguments, Uri xamlUri)
+		{
+			try
+			{
+				XDocument xXaml;
+				using (var r = await request.GetResponseAsync(xamlUri.ToString()))
+				{
+					// read the file name
+					arguments["_filename"] = r.GetContentDisposition().FileName;
+
+					// parse the xaml as xml document
+					using (var sr = request.GetTextReaderAsync(r, MimeTypes.Application.Xaml))
+					{
+						using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, xamlUri.ToString()))
+							xXaml = XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);
+					}
+				}
+
+				// Load the content of the code-tag, to initialize extended functionality
+				var xCode = xXaml.Root.Element(xnCode);
+				var chunk = (LuaChunk)null;
+				if (xCode != null)
+				{
+					chunk = await CompileAsync(xCode, true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
+					xCode.Remove();
+				}
+
+				return new Tuple<XDocument, LuaChunk>(xXaml, chunk);
+			}
+			catch (Exception e)
+			{
+				throw new ArgumentException("Can not load xaml definition.\n" + xamlUri.ToString(), e);
+			}
+		} // func LoadXamlAsync
 
 		private static Task<LuaResult> ConvertToLuaResultTask<T>(Task<T> task, CancellationToken cancellationToken)
 			=> task.ContinueWith(_ => new LuaResult(_.Result), cancellationToken);
