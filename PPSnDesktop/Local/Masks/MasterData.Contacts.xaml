@@ -92,9 +92,9 @@
                     </TreeView.ItemTemplate>
                 </uiC:PpsTreeListView>
                 <ContentControl x:Name="PART_Data" Grid.Column="2" Grid.Row="1" Content="{Binding ElementName=APART_TreeView,Path=SelectedValue}" Focusable="False">
-                    <ContentControl.ContentTemplateSelector>
+                    <!--<ContentControl.ContentTemplateSelector>
                         <ui:PpsContentTemplateSelector />
-                    </ContentControl.ContentTemplateSelector>
+                    </ContentControl.ContentTemplateSelector>-->
                     <ContentControl.Resources>
                         <DataTemplate x:Key="ADRE">
                             <Grid>
