@@ -101,8 +101,8 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="ItemContainerStyle" Value="{StaticResource SideBarMenuItemStyle}"/>
-        <Setter Property="FontSize" Value="14.667"/>
-        <Setter Property="FontWeight" Value="DemiBold"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListBox}">
@@ -113,7 +113,7 @@
                         </Grid.RowDefinitions>
                         <Border Grid.Row="0" BorderBrush="{StaticResource PPSnWindowForegroundBrush}" BorderThickness="0,0,0,4" Margin="16,0" SnapsToDevicePixels="True">
 							<TextBlock Text="{Binding HeadLineText, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiC:SideBarMenu}, Mode=OneWay}"
-									   FontSize="14.667" FontWeight="DemiBold" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
+									   FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
 						</Border>
                         <ScrollViewer Grid.Row="1" Focusable="false" Padding="0">
                             <ItemsPresenter SnapsToDevicePixels="True"/>
