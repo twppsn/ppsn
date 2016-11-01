@@ -9,7 +9,7 @@
 			 Title="{Binding Data.Head.First.Name}">
     <x:Code>
         <![CDATA[
-        require 'contacts.lua';
+        self:require 'contacts.lua';
 		]]>
     </x:Code>
 
