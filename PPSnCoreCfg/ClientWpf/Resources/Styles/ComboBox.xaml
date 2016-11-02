@@ -46,7 +46,9 @@
 		</Setter>
 	</Style>
 
-	<Style TargetType="{x:Type ComboBox}">
+	<Style x:Key="PPSnComboBoxStyle" TargetType="{x:Type ComboBox}">
+		<Setter Property="Height" Value="23"/>
+		<Setter Property="VerticalAlignment" Value="Top"/>
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
 		<Setter Property="OverridesDefaultStyle" Value="True"/>
 		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
@@ -103,5 +105,7 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+	<Style TargetType="{x:Type ComboBox}" BasedOn="{StaticResource PPSnComboBoxStyle}" />
 
 </ResourceDictionary>
