@@ -596,14 +596,17 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		private sealed class PpsDataRowRemovedChangedEvent : PpsDataRowChangedEvent
 		{
-			public PpsDataRowRemovedChangedEvent(PpsDataTable table, PpsDataRow row)
+			private readonly int oldIndex;
+
+			public PpsDataRowRemovedChangedEvent(PpsDataTable table, PpsDataRow row, int oldIndex)
 				: base(table, row)
 			{
+				this.oldIndex = oldIndex;
 			} // ctor
 
 			public override void InvokeEvent()
 			{
-				Table.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, Row));
+				Table.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, Row, oldIndex));
 				Table.dataset.OnTableRowDeleted(Table, Row);
 			} // proc InvokeEvent
 
@@ -703,7 +706,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataTablePropertyChangedEvent -----------------------------------------
+		#region -- class PpsDataTablePropertyChangedEvent ---------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
@@ -753,9 +756,10 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Notifies if a row is removed.</summary>
 		/// <param name="row"></param>
-		protected virtual void OnRowRemoved(PpsDataRow row)
+		/// <param name="oldIndex"></param>
+		protected virtual void OnRowRemoved(PpsDataRow row, int oldIndex)
 		{
-			dataset.ExecuteEvent(new PpsDataRowRemovedChangedEvent(this, row));
+			dataset.ExecuteEvent(new PpsDataRowRemovedChangedEvent(this, row, oldIndex));
 			OnTableChanged();
 		} // proc OnRowModified
 
@@ -873,12 +877,13 @@ namespace TecWare.PPSn.Data
 				throw new InvalidOperationException();
 
 			// remove the entry from the current list
+			var oldIndex = currentRows.IndexOf(row);
 			if (currentRows.Remove(row))
 			{
 				RemoveRelatedRows(row); // check related rows
 
 				GetUndoSink()?.Append(new PpsDataTableRemoveChangeItem(this, row));
-				OnRowRemoved(row);
+				OnRowRemoved(row, oldIndex);
 				r = true;
 			}
 
@@ -1313,8 +1318,12 @@ namespace TecWare.PPSn.Data
 						var row = (PpsDataRow)e.OldItems[0];
 						lock (rows)
 						{
-							if (rows.Remove(row))
-								OnCollectionRemove(row);
+							var oldIndex = rows.IndexOf(row);
+							if (oldIndex != -1)
+							{
+								rows.RemoveAt(oldIndex);
+								OnCollectionRemove(row, oldIndex);
+							}
 						}
 					}
 					break;
@@ -1325,7 +1334,7 @@ namespace TecWare.PPSn.Data
 		{
 			lock (rows)
 			{
-				if (FilterRow(e.Row))
+				if (e.Row.RowState != PpsDataRowState.Deleted && FilterRow(e.Row))
 				{
 					if (!rows.Contains(e.Row)) // add row if not in list
 					{
@@ -1335,27 +1344,25 @@ namespace TecWare.PPSn.Data
 				}
 				else
 				{
-					if (rows.Remove(e.Row))
-						OnCollectionRemove(e.Row);
+					var oldIndex = rows.IndexOf(e.Row);
+					if (oldIndex != -1)
+					{
+						rows.RemoveAt(oldIndex);
+						OnCollectionRemove(e.Row, oldIndex);
+					}
 				}
 			}
 		} // proc TableColumnValueChanged
 
 		private void OnCollectionReset()
-		{
-			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-		} // proc OnCollectionReset
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
 		private void OnCollectionAdd(PpsDataRow row)
-		{
-			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, row, rows.IndexOf(row)));
-		} // proc OnCollectionAdd
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, row, rows.IndexOf(row)));
 
-		private void OnCollectionRemove(PpsDataRow row)
-		{
-			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, row));
-		} // proc OnCollectionRemove
-
+		private void OnCollectionRemove(PpsDataRow row, int oldIndex)
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, row, oldIndex));
+		
 		/// <summary>Belongs the given row to the filter.</summary>
 		/// <param name="row">Row to check</param>
 		/// <returns><c>true</c>, it belongs to the filter.</returns>
