@@ -8,7 +8,7 @@
 						 Title="Auftrag">
         <x:Code>
 		<![CDATA[
-		require 'contract.lua';
+		self:require 'contract.lua';
 		]]>
 	</x:Code>
 

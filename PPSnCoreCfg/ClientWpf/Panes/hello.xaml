@@ -9,7 +9,7 @@
 	<x:Code>
 		<![CDATA[
 		
-		SubChild = requireXaml 'helloSub.xaml';
+		SubChild = self:requireXaml 'helloSub.xaml';
 		
 		clickCount = 1;
 		

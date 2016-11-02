@@ -24,7 +24,7 @@ namespace TecWare.PPSn.Server
 		public virtual IEnumerable<PpsApplicationFileItem> GetApplicationFiles()
 		{
 			// check the LuaTable "ApplicationFiles"
-			var applicationFileProvider = GetMemberValue(LuaApplicationFiles, lRawGet: true) as LuaTable;
+			var applicationFileProvider = GetMemberValue(LuaApplicationFiles, rawGet: true) as LuaTable;
 
 			if (applicationFileProvider != null)
 			{
@@ -52,7 +52,7 @@ namespace TecWare.PPSn.Server
 		{
 			var value = base.OnIndex(key);
 			if (value == null && key is string && (string)key == LuaApplicationFiles)
-				value = SetMemberValue(LuaApplicationFiles, new LuaTable(), lRawSet: true);
+				value = SetMemberValue(LuaApplicationFiles, new LuaTable(), rawSet: true);
 			return value;
 		} // func OnIndex
 	} // class PpsPackage

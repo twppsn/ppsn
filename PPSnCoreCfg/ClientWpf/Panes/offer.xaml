@@ -8,7 +8,7 @@
 						 Title="Angebot">
         <x:Code>
 		<![CDATA[
-		require 'offer.lua';
+		self:require 'offer.lua';
 		]]>
 	</x:Code>
 
