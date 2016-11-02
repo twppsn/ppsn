@@ -712,20 +712,29 @@ namespace TecWare.PPSn
 	public class LuaEnvironmentTable : LuaTable
 	{
 		private readonly PpsEnvironment environment;
+		private readonly LuaEnvironmentTable parentTable;
+
+		public LuaEnvironmentTable(LuaEnvironmentTable parentTable)
+		{
+			this.environment = parentTable.Environment;
+			this.parentTable = parentTable;
+		} // ctor
 
 		public LuaEnvironmentTable(PpsEnvironment environment)
 		{
 			this.environment = environment;
+			this.parentTable = null;
 		} // ctor
 
 		protected override object OnIndex(object key)
-		{
-			return base.OnIndex(key) ?? environment.GetValue(key);
-		} // func OnIndex
+			=> base.OnIndex(key) ?? ((LuaTable)parentTable ?? environment).GetValue(key);
 
+		/// <summary>Optional parent table.</summary>
+		[LuaMember()]
+		public LuaEnvironmentTable Parent => parentTable;
 		/// <summary>Access to the current environemnt.</summary>
-		[LuaMember("Environment")]
-		public PpsEnvironment Environment { get { return environment; } }
+		[LuaMember()]
+		public PpsEnvironment Environment => environment;
 	} // class LuaEnvironmentTable
 
 	#endregion

@@ -1124,7 +1124,7 @@ namespace TecWare.PPSn
 		} // proc OnIsOnlineChanged
 
 		/// <summary></summary>
-		[LuaMember("Request")]
+		[LuaMember]
 		public BaseWebRequest Request => request;
 		/// <summary>Default encodig for strings.</summary>
 		public Encoding Encoding => Encoding.Default;

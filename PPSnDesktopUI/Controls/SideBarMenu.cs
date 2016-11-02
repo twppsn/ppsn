@@ -77,9 +77,9 @@ namespace TecWare.PPSn.Controls
 			return string.Empty;
 		} // func GetPaneTitleTextFromItem
 
-		protected void OnPropertyChanged(string name)
+		protected void OnPropertyChanged(string propertyName)
 		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 		} // proc OnPropertyChanged
 
 		/// <summary></summary>
@@ -91,7 +91,7 @@ namespace TecWare.PPSn.Controls
 				if (String.Compare(value, paneTitleText, false) != 0)
 				{
 					paneTitleText = value;
-					OnPropertyChanged("PaneTitleText");
+					OnPropertyChanged(nameof(PaneTitleText));
 				}
 			}
 		} // prop PaneTitleText
@@ -103,7 +103,7 @@ namespace TecWare.PPSn.Controls
 			set
 			{
 				headlineText = value;
-				OnPropertyChanged("HeadLineText");
+				OnPropertyChanged(nameof(HeadLineText));
 			}
 		} // prop HeadLineText
 	} // class SideBarMenu
