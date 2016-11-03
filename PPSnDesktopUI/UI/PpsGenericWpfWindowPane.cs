@@ -66,6 +66,9 @@ namespace TecWare.PPSn.UI
 			code?.Run(this, this);
 		} // ctor
 
+		protected override object OnIndex(object key)
+			=> base.OnIndex(key) ?? WpfPaneHelper.GetXamlElement(control, key);
+
 		[LuaMember]
 		private object GetResource(object key)
 			=> Control.TryFindResource(key);
