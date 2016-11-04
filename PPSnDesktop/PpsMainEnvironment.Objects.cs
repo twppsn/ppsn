@@ -510,12 +510,14 @@ namespace TecWare.PPSn
 							case 4:
 								return nr;
 							case 5:
-								return remoteRevId;
+								return isRev;
 							case 6:
-								return pulledRevId;
+								return remoteRevId;
 							case 7:
-								return isDocumentChanged;
+								return pulledRevId;
 							case 8:
+								return isDocumentChanged;
+							case 9:
 								return hasData;
 							default:
 								return null;
