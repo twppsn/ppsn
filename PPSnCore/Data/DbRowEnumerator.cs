@@ -99,6 +99,7 @@ namespace TecWare.PPSn.Data
 			#region -- override ---------------------------------------------------------------
 
 			public override object this[int index] => values[index];
+			public override bool IsDataOwner => true;
 
 			public override IReadOnlyList<IDataColumn> Columns => enumerator.Columns;
 

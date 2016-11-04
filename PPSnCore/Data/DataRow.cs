@@ -870,8 +870,9 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Zugriff auf den aktuellen Wert.</summary>
 		/// <param name="columnName">Spalte</param>
+		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public object this[string columnName]
+		public object this[string columnName, bool throwException = false]
 		{
 			get { return currentValuesProxy[columnName]; }
 			set { currentValuesProxy[columnName] = value; }
@@ -899,6 +900,8 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Wurde die Datenzeile neu angefügt.</summary>
 		public bool IsAdded => table == null ? false : !table.OriginalRows.Contains(this);
+
+		bool IDataRow.IsDataOwner => true;
 
 		#endregion
 

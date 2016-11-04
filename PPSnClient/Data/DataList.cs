@@ -34,12 +34,59 @@ namespace TecWare.PPSn.Data
 	/// </summary>
 	public sealed class PpsDataList : IList, INotifyCollectionChanged, INotifyPropertyChanged
 	{
+		#region -- class LuaItemTable -----------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class LuaItemTable : LuaTable
+		{
+			private readonly IDataRow row;
+
+			public LuaItemTable(IDataRow row)
+			{
+				if (row.IsDataOwner) // use reference for special items
+				{
+					this.row = row;
+
+					// todo: memleak?
+					var t = this.row as INotifyPropertyChanged;
+					if (t != null)
+						t.PropertyChanged += (sender, e) => OnPropertyChanged(e.PropertyName);
+				}
+				else
+				{
+					// copy the columns
+					var i = 0;
+					foreach (var c in row.Columns)
+					{
+						if (c != null)
+							SetMemberValue(c.Name, row[i], rawSet: true);
+						i++;
+					}
+				}
+			} // ctor
+
+			protected override object OnIndex(object key)
+			{
+				var r = base.OnIndex(key);
+				if (r == null && row != null && key is string)
+					r = row[(string)key, false];
+				return r;
+			} // func OnIndex
+		} // class LuaItemTable
+
+		#endregion
+
+		#region -- enum FetchFollow -------------------------------------------------------
+
 		private enum FetchFollow
 		{
 			None,
 			NextWindow,
 			NextAll
 		} // enum FetchFollow
+
+		#endregion
 
 		/// <summary>Notifies if the items of the collection are changed.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
@@ -237,16 +284,7 @@ namespace TecWare.PPSn.Data
 			foreach (var row in shell.GetViewData(fetchSource))
 			{
 				// All lines are simple lua tables
-				var t = new LuaTable();
-
-				// copy the columns
-				var i = 0;
-				foreach (var c in row.Columns)
-				{
-					if (c != null)
-						t[c.Name] = row[i];
-					i++;
-				}
+				var t = new LuaItemTable(row);
 
 				// todo: are more data available
 				//if (shell.IsOnline)
