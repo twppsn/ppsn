@@ -79,6 +79,7 @@
     <Compile Include="PpsMainEnvironment.cs" />
     <Compile Include="PpsMainEnvironment.Data.cs" />
     <Compile Include="PpsMainEnvironment.Documents.cs" />
+    <Compile Include="PpsMainEnvironment.Objects.cs" />
     <Compile Include="PpsMainEnvironment.Views.cs" />
     <Compile Include="UI\Panes\PpsLoginPane.xaml.cs">
       <DependentUpon>PpsLoginPane.xaml</DependentUpon>
