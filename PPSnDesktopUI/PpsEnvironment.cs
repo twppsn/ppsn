@@ -569,7 +569,7 @@ namespace TecWare.PPSn
 				while (xLogin == null)
 				{
 					// get the user information
-					userInfo = GetCredentials(authentificationInfo, count);
+					userInfo = GetCredentials(authentificationInfo, count++);
 					if (userInfo == null)
 					{
 						ResetLogin();
