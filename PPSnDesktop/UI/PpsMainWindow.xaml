@@ -170,7 +170,8 @@
         <Button x:Name="PART_ToggleButtton" Grid.RowSpan="2" Width="48" Height="48" Margin="6,6,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Focusable="False"
 				Style="{StaticResource NavigatorToggleButtonStyle}"
 				Command="{x:Static uiL:PpsMainWindow.NavigatorToggleCommand}" />
-        <Label x:Name="PART_Caption" Grid.Column="1" Content="{Binding Title, Mode=OneWay}" Foreground="{StaticResource PPSnWindowForegroundBrush}" Padding="10,0,0,0" FontSize="21.333">
+        <Label Grid.Column="1" Content="{Binding Title, Mode=OneWay}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
+			   Padding="10,0,0,0" VerticalContentAlignment="Top" Height="Auto" FontSize="20">
             <Label.Tag>
                 <ui:PpsWindowHitTest HitTest="2" />
             </Label.Tag>
@@ -420,7 +421,7 @@
             </ToolBar>
             <Button x:Name="LockUIButton" Grid.Column="1" Content="test" Width="50" Height="23" VerticalAlignment="Bottom" Focusable="False" Click="LockUIButton_Click"/>
 
-            <ContentPresenter x:Name="PanePresenter" Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}" Margin="0,24">
+            <ContentPresenter x:Name="PanePresenter" Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}">
                 <ContentPresenter.Style>
                     <Style TargetType="{x:Type ContentPresenter}" >
                         <Style.Triggers>

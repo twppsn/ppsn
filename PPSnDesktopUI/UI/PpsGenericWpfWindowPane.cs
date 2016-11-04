@@ -66,6 +66,12 @@ namespace TecWare.PPSn.UI
 			code?.Run(this, this);
 		} // ctor
 
+		protected override object OnIndex(object key)
+			=> base.OnIndex(key) ?? WpfPaneHelper.GetXamlElement(control, key);
+
+		[LuaMember]
+		private object GetResource(object key)
+			=> Control.TryFindResource(key);
 		[LuaMember]
 		public FrameworkElement Control => control;
 		[LuaMember]
@@ -74,7 +80,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class LuaDataTemplateSelector ----------------------------------------------
+	#region -- class LuaDataTemplateSelector ---------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -600,24 +606,24 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsContentTemplateSelector -----------------------------------------
 
-	public class PpsContentTemplateSelector : DataTemplateSelector
-	{
-		public override DataTemplate SelectTemplate(object item, DependencyObject container)
-		{
-			var row = item as Data.PpsDataRow;
-			if (row == null)
-				return null;
+	//public class PpsContentTemplateSelector : DataTemplateSelector
+	//{
+	//	public override DataTemplate SelectTemplate(object item, DependencyObject container)
+	//	{
+	//		var row = item as Data.PpsDataRow;
+	//		if (row == null)
+	//			return null;
 
-			var control = container as FrameworkElement;
-			if (control == null)
-				return null;
+	//		var control = container as FrameworkElement;
+	//		if (control == null)
+	//			return null;
 
-			var r = (DataTemplate)control.FindResource(row.Table.TableName);
-			return r;
-			//var r = control.TryFindResource(row.Table.TableName);
-			//return r as DataTemplate;
-		}
-	} // class PpsContentTemplateSelector
+	//		var r = (DataTemplate)control.FindResource(row.Table.TableName);
+	//		return r;
+	//		//var r = control.TryFindResource(row.Table.TableName);
+	//		//return r as DataTemplate;
+	//	}
+	//} // class PpsContentTemplateSelector
 
 	#endregion
 }
