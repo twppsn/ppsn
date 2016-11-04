@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using Neo.IronLua;
@@ -9,6 +13,7 @@ using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server
@@ -21,7 +26,7 @@ namespace TecWare.PPSn.Server
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
-		private sealed class PpsObjectsLibrary : LuaTable
+		public sealed class PpsObjectsLibrary : LuaTable
 		{
 			private readonly PpsApplication application;
 
@@ -36,12 +41,24 @@ namespace TecWare.PPSn.Server
 					args.SetMemberValue("StateChg", DateTime.Now.ToFileTimeUtc());
 			} // proc SetStateChange
 
+			private static void UpdateArgumentsWithRow(LuaTable args, IDataRow r)
+			{
+				for (var i = 0; i < r.Columns.Count; i++)
+					args[r.Columns[i].Name] = r[i];
+			} // proc UpdateArgumentsWithRow
+
+			[LuaMember(nameof(ValidateNumber))]
+			public void ValidateNumber(string nr, object nextNumber, object data)
+			{
+				throw new NotImplementedException("todo");
+			} // proc ValidateNumber
+
 			/// <summary>Gets the next number of an object class</summary>
 			/// <param name="trans"></param>
 			/// <param name="typ"></param>
 			/// <returns></returns>
 			[LuaMember(nameof(GetNextNumber))]
-			public object GetNextNumber(PpsDataTransaction trans, string typ)
+			public string GetNextNumber(PpsDataTransaction trans, string typ, object nextNumber, object data)
 			{
 				// get the highest number
 				var args = Procs.CreateLuaTable(
@@ -51,13 +68,33 @@ namespace TecWare.PPSn.Server
 
 				var row = trans.ExecuteSingleRow(args);
 
-				// todo: currently, just add
-				var nr = row == null || row[0] == null ? "0" : row[0].ToString();
-				int i;
-				if (Int32.TryParse(nr, out i))
-					return i + 1;
+				string nr;
+				if (nextNumber == null || nextNumber is int) // fill with zeros
+				{
+					long i;
+					if (row == null || row[0] == null)
+						nr = "1"; // first number
+					else if (Int64.TryParse(row[0].ToString(), out i))
+						nr = (i + 1L).ToString(CultureInfo.InvariantCulture);
+					else
+						throw new ArgumentException($"GetNextNumber failed, could not parse '{row[0]}' to number.");
+
+					if (nextNumber != null)
+						nr = nr.PadLeft((int)nextNumber, '0');
+				}
+				else if (nextNumber is string) // format mask
+				{
+					// V<YY><NR>
+					throw new NotImplementedException();
+				}
+				else if (Lua.RtInvokeable(nextNumber)) // use a function
+				{
+					nr = new LuaResult(Lua.RtInvoke(nextNumber, trans, row == null ? null : row[0], data)).ToString();
+				}
 				else
-					return null;
+					throw new ArgumentException($"Unknown number format '{nextNumber}'.", "nextNumber");
+
+				return nr;
 			} // func GetNextNumber
 
 			/// <summary>Updates a new entry in the objk</summary>
@@ -117,16 +154,19 @@ namespace TecWare.PPSn.Server
 					new PropertyValue("selectList", Procs.CreateLuaArray("Id", "Guid", "Typ", "Nr", "IsRev", "IsHidden", "IsRemoved", "State", "CurRevId", "HeadRevId"))
 				);
 
-				if (args.GetValue("Id") != null && args.GetValue("Guid") != null) // get object by id or guid
+				if (args.GetValue("Id") != null || args.GetValue("Guid") != null) // get object by id or guid
 					cmd.SetArrayValue(1, args);
 				else
 					throw new ArgumentException("Id or Guid needed to select an object.");
 
 				var r = trans.ExecuteSingleRow(cmd);
-				for (var i = 0; i < r.Columns.Count; i++)
-					args[r.Columns[i].Name] = r[i];
-
-				return args;
+				if (r != null)
+				{
+					UpdateArgumentsWithRow(args, r);
+					return args;
+				}
+				else
+					return null;
 			} // func GetObject
 
 			/// <summary>Returns a view on the objects.</summary>
@@ -149,14 +189,109 @@ namespace TecWare.PPSn.Server
 				return null;
 			} // func UpdateState
 
+			private void CheckTagField(LuaTable args, string tagName)
+			{
+				var v = args[tagName];
+				if (v is IEnumerable<PpsObjectTag>)
+					args[tagName] = PpsObjectTag.FormatTagFields((IEnumerable<PpsObjectTag>)v);
+				else if (v != null)
+					throw new ArgumentException("Could not convert tag field.");
+			} // func CheckTagField
+
 			/// <summary>Appends a new revision to the object.</summary>
 			/// <param name="trans"></param>
 			/// <param name="args"></param>
 			/// <returns></returns>
 			[LuaMember(nameof(CreateRevision))]
-			public LuaTable CreateRevision(PpsDataTransaction trans, LuaTable args)
+			public long CreateRevision(PpsDataTransaction trans, LuaTable args)
 			{
-				return null;
+				// fill optional values
+				if (args.GetMemberValue("CreateUserId") == null)
+					args["CreateUserId"] = DEContext.GetCurrentUser<IPpsPrivateDataContext>().UserId;
+				if (args.GetMemberValue("CreateDate") == null)
+					args["CreateDate"] = DateTime.Now;
+
+				CheckTagField(args, "Tags");
+
+				// execute insert
+				var cmd = Procs.CreateLuaTable(
+					new PropertyValue("insert", "dbo.Objr")
+				);
+				cmd[1] = args;
+
+				// convert data
+				var rawData = args.GetMemberValue("Document");
+				var shouldText = args.GetMemberValue("IsDocumentText");
+				var shouldDeflate = args.GetMemberValue("IsDocumentDeflate");
+
+				if (rawData != null)
+				{
+					if (rawData is string || rawData is StringBuilder)
+					{
+						#region -- text --
+						if (shouldDeflate == null)
+							shouldDeflate = true;
+						if (shouldText == null)
+							shouldText = true;
+
+						args["IsDocumentText"] = shouldText;
+						args["IsDocumentDeflate"] = shouldDeflate;
+
+						using (var dstMemory = new MemoryStream())
+						{
+							Stream dstDeflate = null;
+							StreamWriter tr = null;
+							try
+							{
+								if ((bool)shouldDeflate)
+									dstDeflate = new GZipStream(dstMemory, CompressionMode.Compress, true);
+								tr = new StreamWriter(dstDeflate ?? dstMemory, Encoding.UTF8, 1024, true);
+
+								tr.Write(rawData.ToString());
+							}
+							finally
+							{
+								tr?.Dispose();
+								dstDeflate?.Close();
+							}
+
+							args["Document"] = dstMemory.ToArray();
+						}
+						#endregion
+					}
+					else if (rawData is byte[])
+					{
+						#region -- byte[] --
+						if (shouldDeflate == null)
+							shouldDeflate = false;
+
+						args["IsDocumentText"] = shouldText ?? false;
+						args["IsDocumentDeflate"] = shouldDeflate;
+
+						using (var dstMemory = new MemoryStream())
+						{
+							var b = (byte[])rawData;
+							if ((bool)shouldDeflate)
+							{
+								using (var dstDeflate = new GZipStream(dstMemory, CompressionMode.Compress))
+									dstDeflate.Write(b, 0, b.Length);
+							}
+							else
+								dstMemory.Write(b, 0, b.Length);
+							dstMemory.Flush();
+
+							args["Document"] = dstMemory.ToArray();
+						}
+						#endregion
+					}
+					else
+						throw new ArgumentException("Document data format is unknown (only string or byte[] allowed).");
+				}
+				else
+					throw new ArgumentNullException("Document data is missing.");
+
+				trans.ExecuteNoneResult(cmd);
+				return (long)args["Id"];
 			} // func CreateRevision
 
 			/// <summary>Removes all existing revision, and sets a new one.</summary>
@@ -169,11 +304,78 @@ namespace TecWare.PPSn.Server
 				return null;
 			} // func ReplaceRevision
 
+			private static Stream OpenObjectRevisionStream(LuaTable args)
+			{
+				var rawData = args.GetMemberValue("Document");
+				var externalLink = args.GetMemberValue("DocumentLink");
+				var internalLink = args.GetMemberValue("DocumentId");
+				var isDocumentDeflate = args.GetMemberValue("IsDocumentDeflate");
+
+				Stream src = null;
+				if (rawData != null) // raw byte stream detected
+				{
+					src = new MemoryStream((byte[])rawData, false);
+				}
+				else
+					throw new NotImplementedException();
+
+				// unpack stream
+				return isDocumentDeflate is bool && (bool)isDocumentDeflate ? new GZipStream(src, CompressionMode.Decompress) : src;
+			} // func OpenObjectRevisionStream
+
+			private static StreamReader OpenObjectRevisionText(LuaTable args)
+			{
+				// open the stream
+				var src = OpenObjectRevisionStream(args);
+				return new StreamReader(src, true);
+			} // func OpenObjectRevisionText
+
+			private static string GetObjectRevisionText(LuaTable args)
+			{
+				// open the stream
+				using (var sr = OpenObjectRevisionText(args))
+					return sr.ReadToEnd();
+			} // func OpenObjectRevisionText
+
 			[LuaMember(nameof(GetObjectRevision))]
 			public LuaTable GetObjectRevision(PpsDataTransaction trans, LuaTable args)
 			{
-				return null;
-			}// func GetObjectRevision
+				const string baseSql = "select o.Id, o.Guid, o.Typ, o.HeadRevId, o.CurRevId, r.Document, r.DocumentLink, r.DocumentId, r.IsDocumentText, r.IsDocumentDeflate " +
+					"from Objk o inner join Objr r";
+
+				var objectId = args["Id"];
+				var guidId = args["Guid"];
+				var revId = args["RevId"];
+
+				// create commands
+				var cmd = new LuaTable();
+				if (objectId != null && revId != null)
+					cmd["sql"] = baseSql + " on (o.Id = r.ObjkId) where o.Id = @Id and r.Id = @RevId";
+				else if (objectId != null)
+					cmd["sql"] = baseSql + " on (o.HeadRevId = r.Id) where o.Id = @Id";
+				else if (guidId != null && revId != null)
+					args["sql"] = baseSql + " on (o.Id = r.ObjkId) where o.Id = @Guid and r.Id = @RevId";
+				else if (guidId != null)
+					args["sql"] = baseSql + " on (o.HeadRevId = r.Id) where o.Guid = @Guid";
+				else
+					throw new ArgumentNullException("Id or Guid is missing.");
+
+				cmd[1] = args;
+
+				var row = trans.ExecuteSingleRow(cmd);
+				if (row == null)
+					return null;
+
+				UpdateArgumentsWithRow(args, row);
+
+				// patch methods for the stream access
+				args["__trans"] = true;
+				args.DefineMethod("openText", new Func<LuaTable, StreamReader>(OpenObjectRevisionText));
+				args.DefineMethod("openStream", new Func<LuaTable, Stream>(OpenObjectRevisionStream));
+				args.DefineMethod("getText", new Func<LuaTable, string>(GetObjectRevisionText));
+
+				return args;
+			} // func GetObjectRevision
 
 			[LuaMember(nameof(GetObjectRevisions))]
 			public LuaTable GetObjectRevisions(PpsDataTransaction trans, LuaTable args)
@@ -219,8 +421,28 @@ namespace TecWare.PPSn.Server
 			throw new Exception(message);
 		} // proc LuaError
 
+		private object HttpPushFile()
+		{
+			return null;
+		}
+
+		private object HttpPullFile()
+		{
+			return null;
+		}
+
+		private object HttpLoadFile()
+		{
+			return null;
+		}
+
+		private object HttpStoreFile()
+		{
+			return null;
+		}
+
 		[LuaMember(nameof(Objects))]
-		public LuaTable Objects => objectsLibrary;
+		public PpsObjectsLibrary Objects => objectsLibrary;
 		[LuaMember(nameof(Http))]
 		public LuaTable Http => httpLibrary;
 	} // class PpsApplication

@@ -843,6 +843,11 @@ namespace TecWare.PPSn.Server.Sql
 
 					commandText.Append(" (");
 
+					// output always primary key
+					var primaryKey = tableInfo.PrimaryKey;
+					if (primaryKey != null)
+						insertedList.Append("inserted.").Append(primaryKey.ColumnName);
+
 					// create the column list
 					var first = true;
 					foreach (var column in tableInfo.Columns)
@@ -866,9 +871,12 @@ namespace TecWare.PPSn.Server.Sql
 							cmd.Parameters.Add(column.CreateSqlParameter(parameterName, value));
 						}
 
-						if (insertedList.Length > 0)
-							insertedList.Append(',');
-						insertedList.Append("inserted.").Append(columnName);
+						if (primaryKey != column)
+						{
+							if (insertedList.Length > 0)
+								insertedList.Append(',');
+							insertedList.Append("inserted.").Append(columnName);
+						}
 					}
 
 					commandText.Append(") ");

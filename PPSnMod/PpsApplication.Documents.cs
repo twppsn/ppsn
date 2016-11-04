@@ -101,40 +101,39 @@ namespace TecWare.PPSn.Server
 			string documentType;
 			using (var trans = currentUser.CreateTransaction(application.MainDataSource))
 			{
-				const string baseSql = "select o.Id, o.Guid, o.Typ, o.HeadRevId, o.CurRevId, r.Document from Objk o inner join Objr r";
 				var args = new LuaTable();
-				if (objectId.HasValue && revId.HasValue)
+				string idText;
+				if (objectId.HasValue)
 				{
-					args["sql"] = baseSql + " on (o.Id = r.ObjkId) where o.Id = @Id and r.Id = @RevId";
-					args[1] = Procs.CreateLuaTable(
-						new PropertyValue("Id", objectId.Value),
-						new PropertyValue("RevId", revId.Value)
-					);
-				}
-				else if (objectId.HasValue)
-				{
-					args["sql"] = baseSql + " on (o.HeadRevId = r.Id) where o.Id = @Id";
-					args[1] = Procs.CreateLuaTable(new PropertyValue("Id", objectId.Value));
+					args["Id"] = objectId.Value;
+					idText = $"{objectId.Value}:";
 				}
 				else if (guidId.HasValue)
 				{
-					args["sql"] = baseSql + " on (o.HeadRevId = r.Id) where o.Guid = @Guid";
-					args[1] = Procs.CreateLuaTable(new PropertyValue("Guid", guidId.Value));
+					args["Guid"] = guidId.Value;
+					idText = $"{guidId.Value:N}:";
 				}
 				else
-					throw new ArgumentNullException(); // todo:
+					throw new ArgumentNullException("Object Id or Guid is missing.");
 
-				var row = trans.ExecuteSingleRow(args);
-				if (row != null)
+				if (revId.HasValue)
 				{
-					documentType = row.GetProperty("Typ", String.Empty);
-					documentData = row["Document"].ChangeType<XDocument>();
+					args["RevId"] = revId.Value;
+					idText += revId.Value.ToString();
 				}
 				else
-					throw new ArgumentException(); // todo:
+					idText += "Head";
+
+				args = application.Objects.GetObjectRevision(trans, args);
+				if (args == null)
+					throw new ArgumentException($"Object not found ({idText}).");
+
+				// check the result
+				documentType = args.GetOptionalValue("Typ", String.Empty);
+				documentData = args.CallMember("getText", args).ChangeType<XDocument>();
 
 				if (documentType != Name)
-					throw new ArgumentException(); // todo:
+					throw new ArgumentException($"Object typ mismatch (expected: {Name}, found: {documentType})");
 
 				// create the dataset
 				var dataset = (PpsDataSetServer)datasetDefinition.CreateDataSet();
@@ -142,11 +141,11 @@ namespace TecWare.PPSn.Server
 
 				// update data fields
 				var headTable = dataset.Tables["Head"];
-				headTable.First["Id"] = row["Id"];
-				headTable.First["Guid"] = row["Guid"];
+				headTable.First["Id"] = args["Id"];
+				headTable.First["Guid"] = args["Guid"];
 				headTable.First["Typ"] = Name;
-				headTable.First["HeadRevId"] = row["HeadRevId"];
-				headTable.First["CurRevId"] = row["CurRevId"];
+				headTable.First["HeadRevId"] = args["HeadRevId"];
+				headTable.First["CurRevId"] = args["CurRevId"];
 
 				// fire triggers
 				dataset.OnAfterPull();
@@ -187,35 +186,29 @@ namespace TecWare.PPSn.Server
 		#endregion
 
 		#region -- Push -------------------------------------------------------------------
-
-		private string GetNextNumber(PpsDataTransaction trans, PpsDataSet dataset)
+		
+		private object GetNextNumberMethod()
 		{
-			// is there a lua implementation
-			var getNextNumber = this["GetNextNumber"];
-			if (Lua.RtInvokeable(getNextNumber))
-				return Lua.RtInvoke(getNextNumber, trans, dataset).ChangeType<string>();
-			else
-			{
-				var nrLength = Config.GetAttribute("nrLength", 0);
-				if (nrLength <= 0)
-					throw new ArgumentException("GetNextNumber is missing."); // todo:
+			// test for next number
+			var nextNumber = this["NextNumber"];
+			if (nextNumber != null)
+				return nextNumber;
 
-				var format = new String('0', nrLength);
+			// test for length
+			var nrLength = Config.GetAttribute("nrLength", 0);
+			if (nrLength > 0)
+				return nrLength;
 
-				var args = new LuaTable();
-				args["sql"] = "select max(Nr) from dbo.Objk where Typ = @Typ";
-				args[1] = Procs.CreateLuaTable(new PropertyValue("Typ", Name));
-
-				var row = trans.ExecuteSingleRow(args);
-				var nrNumber = 0L;
-				if (row != null && row[0] != null)
-					nrNumber = row[0].ChangeType<long>();
-
-				return (++nrNumber).ToString(format);
-			}
-		} // func GetNextNumber
+			return null;
+		} // func GetNextNumberMethod
 
 		[LuaMember("Push")]
+		private LuaResult LuaPushDataSet(PpsDataSetServer dataset)
+		{
+			var r = PushDataSet(dataset);
+			return new LuaResult(r.Item1, r.Item2);
+		} // func LuaPushDataSet
+
 		public Tuple<long, long> PushDataSet(PpsDataSetServer dataset)
 		{
 			var currentUser = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
@@ -238,57 +231,56 @@ namespace TecWare.PPSn.Server
 
 			// persist the data to the database
 			var isNewObject = objectId < 0;
-			LuaTable args;
 			using (var trans = currentUser.CreateTransaction(application.MainDataSource))
 			{
 				// check for conflict
 				if (isNewObject)
 				{
 					// check if the guid already exists
-					args = new LuaTable();
-					args["sql"] = "select o.Id, o.Guid from dbo.Objk o where o.Guid = @Guid";
-					args[1] = Procs.CreateLuaTable(new PropertyValue("Guid", guidId));
-
-					var row = trans.ExecuteSingleRow(args);
-					if (row != null)
-						throw new ArgumentException("todo: Guid exists!");
+					var objectInfo = application.Objects.GetObject(trans, Procs.CreateLuaTable(new PropertyValue("Guid", guidId)));
+					if (objectInfo != null)
+						throw new ArgumentException($"Push of a already existing object ({guidId:N}).");
 
 					// get the new objekt id
-					nr = nr ?? GetNextNumber(trans, dataset);
-
+					var nextNumber = GetNextNumberMethod();
+					if (nextNumber == null && nr == null) // no next number and no number --> error
+						throw new ArgumentException($"The field 'nr' is null or no nextNumber is given.");
+					else if (Config.GetAttribute("forceNextNumber", false) || nr == null) // force the next number or there is no number
+						nr = application.Objects.GetNextNumber(trans, typ, nextNumber, dataset);
+					else  // check the number format
+						application.Objects.ValidateNumber(nr, nextNumber, dataset);
+					
 					// create the new object in the database
-					args = new LuaTable();
-					args["insert"] = "dbo.Objk";
-					args[1] = Procs.CreateLuaTable(
-						new PropertyValue("Guid", guidId),
-						new PropertyValue("Typ", typ),
-						new PropertyValue("Nr", nr)
+					objectInfo = application.Objects.Update(trans,
+						Procs.CreateLuaTable(
+							new PropertyValue("Guid", guidId),
+							new PropertyValue("Typ", typ),
+							new PropertyValue("Nr", nr),
+							new PropertyValue("IsRev", true)
+						)
 					);
-					trans.ExecuteNoneResult(args);
 
 					// update the objectId to the database id
-					headTable.First["Id"] = objectId = (long)args[1, "Id"];
+					headTable.First["Id"] = objectId = (long)objectInfo["Id"];
 					headTable.First["Nr"] = nr;
 				}
 				else
 				{
 					// check the head revision and the guid, id, typ combination
-					args = new LuaTable();
-					args["sql"] = "select o.Guid, o.Typ, o.HeadRevId from dbo.Objk o where o.Id = @Id";
-					args[1] = Procs.CreateLuaTable(new PropertyValue("Id", objectId));
+					var objectInfo = application.Objects.GetObject(trans, Procs.CreateLuaTable(new PropertyValue("Guid", guidId)));
+					if (objectInfo == null)
+						throw new ArgumentException($"Push of none existing object ({guidId:N}).");
+					
+					if (objectInfo.GetOptionalValue("Guid", Guid.Empty) != guidId)
+						throw new ArgumentException($"Push failed, object guid mismatch (expected: {guidId:N}, found: '{objectInfo.GetOptionalValue("Guid", Guid.Empty):N}')");
+					if (objectInfo.GetOptionalValue("Typ", String.Empty) != typ)
+						throw new ArgumentException($"Push failed, object type mismatch (expected: {typ}, found: '{objectInfo["Typ"]}')");
 
-					var row = trans.ExecuteSingleRow(args);
-
-					if (row.GetProperty("Guid", Guid.Empty) != guidId)
-						throw new ArgumentException(); // todo: passt nett
-					if (row.GetProperty("Typ", String.Empty) != typ)
-						throw new ArgumentException(); // todo: passt nett
-
-					var headRevId = row.GetProperty("HeadRevId", -1L);
+					var headRevId = objectInfo.GetOptionalValue("HeadRevId", -1L);
 					if (headRevId > pulledRevId)
-						throw new ArgumentException("todo: pull first.");
+						return new Tuple<long, long>(objectId, -1); // head revision is newer than pulled revision -> return this fact
 					else if (headRevId < pulledRevId)
-						throw new ArgumentException(); // todo: rev error
+						throw new ArgumentException($"Push failed. Pulled revision is greater than head revision.");
 				}
 
 				// update all local generated id's to server id's
@@ -342,27 +334,22 @@ namespace TecWare.PPSn.Server
 				}
 
 				// create new revision
-				args = new LuaTable();
-				args["insert"] = "dbo.Objr";
-				args[1] = Procs.CreateLuaTable(
-					new PropertyValue("ParentId", pulledRevId > 0 ? (object)pulledRevId : null),
-					new PropertyValue("ObjkId", objectId),
-					new PropertyValue("Tags", PpsObjectTag.FormatTagFields(dataset.GetAutoTags())),
-					new PropertyValue("Document", documentRawData.ToString()),
-					new PropertyValue("CreateUserId", currentUser.UserId)
+				var newRevId = application.Objects.CreateRevision(trans,
+					Procs.CreateLuaTable(
+						new PropertyValue("ObjkId", objectId),
+						new PropertyValue("ParentId", pulledRevId > 0 ? (object)pulledRevId : null),
+						new PropertyValue("Document", documentRawData),
+						new PropertyValue("Tags", dataset.GetAutoTags())
+					)
 				);
-
-				trans.ExecuteNoneResult(args);
-				var newRevId = (long)args[1, "Id"];
 
 				// set the new head revision
-				args = new LuaTable();
-				args["update"] = "dbo.Objk";
-				args[1] = Procs.CreateLuaTable(
-					new PropertyValue("Id", objectId),
-					new PropertyValue("HeadRevId", newRevId)
+				application.Objects.Update(trans,
+					Procs.CreateLuaTable(
+						new PropertyValue("Id", objectId),
+						new PropertyValue("HeadRevId", newRevId)
+					)
 				);
-				trans.ExecuteNoneResult(args);
 
 				// commit sql
 				trans.Commit();
@@ -392,9 +379,20 @@ namespace TecWare.PPSn.Server
 				var newId = PushDataSet(dataset);
 
 				// notify client
-				ctx.WriteSafeCall(new XElement("return",
-					new XAttribute("id", newId.Item1),
-					new XAttribute("revId", newId.Item2)));
+				if (newId.Item2 == -1) // head is ahead
+				{
+					ctx.WriteSafeCall(new XElement("return",
+						new XAttribute("id", newId.Item1),
+						new XAttribute("pullRequest", true)
+					));
+				}
+				else
+				{
+					ctx.WriteSafeCall(new XElement("return",
+						new XAttribute("id", newId.Item1),
+						new XAttribute("revId", newId.Item2)
+					));
+				}
 			}
 			catch (HttpResponseException)
 			{

@@ -2,6 +2,17 @@
 <fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
 		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
 
+	<server>
+		<load>DEM.PPSn</load>
+	</server>
+
+	<http>
+		<prefix>$(webBinding)/</prefix>
+		<access id="root" scheme="ntlm">$(webBinding)/</access>
+		<access id="ppsnInfo" scheme="none">$(webBinding)/ppsn/info.xml</access>
+		<access id="ppsnWpf" scheme="none">$(webBinding)/ppsn/wpf/</access>
+	</http>
+
 	<pps:ppsn name="ppsn">
 		<pps:sysDataSource name="sys" />
 		

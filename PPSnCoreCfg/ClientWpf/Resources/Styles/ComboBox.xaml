@@ -1,0 +1,111 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<ResourceDictionary.MergedDictionaries>
+		<ResourceDictionary Source="../Colors.xaml" />
+	</ResourceDictionary.MergedDictionaries>
+
+	<ControlTemplate x:Key="PPSnComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}">
+		<Grid>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition />
+				<ColumnDefinition Width="20" />
+			</Grid.ColumnDefinitions>
+			<Border x:Name="border" Grid.ColumnSpan="2" BorderBrush="{StaticResource PPSnControlNormalBorderBrush}" BorderThickness="1" Background="{StaticResource PPSnControlBackgroundBrush}" />
+			<Border x:Name="buttonBorder" Grid.Column="1" Margin="1" BorderThickness="0" Background="{StaticResource PPSnControlBackgroundBrush}" />
+			<Path x:Name="arrow" Grid.Column="1" Data="M 0 0 L 0 2 L 4 6 L 8 2 L 8 0 L 4 4 Z" Fill="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+		</Grid>
+		<ControlTemplate.Triggers>
+			<DataTrigger Binding="{Binding Path=IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}" Value="True">
+				<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
+			</DataTrigger>
+			<Trigger Property="IsEnabled" Value="False">
+				<Setter Property="Fill" TargetName="arrow" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
+			</Trigger>
+		</ControlTemplate.Triggers>
+	</ControlTemplate>
+
+	<Style x:Key="PPSnComboBoxItemStyle" TargetType="{x:Type ComboBoxItem}">
+		<Setter Property="SnapsToDevicePixels" Value="True"/>
+		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+		<Setter Property="FrameworkElement.OverridesDefaultStyle" Value="True"/>
+		<Setter Property="Control.Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type ComboBoxItem}">
+					<Border Name="border" SnapsToDevicePixels="True" Padding="4">
+						<ContentPresenter/>
+					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsHighlighted" Value="True">
+							<Setter Property="Panel.Background" TargetName="border" Value="{StaticResource PPSnSeparatorBrush}"/>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style x:Key="PPSnComboBoxStyle" TargetType="{x:Type ComboBox}">
+		<Setter Property="Height" Value="23"/>
+		<Setter Property="VerticalAlignment" Value="Top"/>
+		<Setter Property="SnapsToDevicePixels" Value="True"/>
+		<Setter Property="OverridesDefaultStyle" Value="True"/>
+		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+		<Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+		<Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+		<Setter Property="TextElement.Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+		<Setter Property="ItemContainerStyle" Value="{StaticResource PPSnComboBoxItemStyle}"/>
+		<Setter Property="Control.Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type ComboBox}">
+					<Grid>
+						<ToggleButton x:Name="PART_ToggleButton" ClickMode="Press" Focusable="False"
+									  IsChecked="{Binding Path=IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+									  Template="{StaticResource PPSnComboBoxToggleButtonTemplate}"/>
+						<ContentPresenter x:Name="PART_ContentSite" Margin="5,3,23,3" IsHitTestVisible="False" HorizontalAlignment="Left" VerticalAlignment="Center"                              
+										  Content="{TemplateBinding ComboBox.SelectionBoxItem}" 
+										  ContentTemplate="{TemplateBinding ComboBox.SelectionBoxItemTemplate}"
+										  ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
+						<TextBox Name="PART_EditableTextBox" Margin="5,3,23,3" IsReadOnly="{TemplateBinding IsReadOnly}" Visibility="Hidden" Background="Transparent" HorizontalAlignment="Left" VerticalAlignment="Center" Focusable="True" >
+							<TextBox.Template>
+								<ControlTemplate TargetType="{x:Type TextBox}" >
+									<Border x:Name="PART_ContentHost" Focusable="False" />
+								</ControlTemplate>
+							</TextBox.Template>
+						</TextBox>
+						<Popup Name="PART_Popup" Placement="Bottom" VerticalOffset="1" Focusable="False" AllowsTransparency="True" IsOpen="{TemplateBinding ComboBox.IsDropDownOpen}" PopupAnimation="Slide">
+							<Grid Name="PART_DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding FrameworkElement.ActualWidth}" MaxHeight="{TemplateBinding ComboBox.MaxDropDownHeight}">
+								<Border Name="PART_DropDownBorder" Background="{StaticResource PPSnControlBackgroundBrush}" BorderThickness="1" BorderBrush="{StaticResource PPSnControlFocusedBorderBrush}">
+									<ScrollViewer SnapsToDevicePixels="True">
+										<ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+									</ScrollViewer>
+								</Border>
+							</Grid>
+						</Popup>
+					</Grid>
+					<ControlTemplate.Triggers>
+						<Trigger Property="ItemsControl.HasItems" Value="False">
+							<Setter Property="FrameworkElement.MinHeight" TargetName="PART_DropDownBorder" Value="95"/>
+						</Trigger>
+						<Trigger Property="ItemsControl.IsGrouping" Value="True">
+							<Setter Property="ScrollViewer.CanContentScroll" Value="False"/>
+						</Trigger>
+						<Trigger Property="IsEnabled" Value="False">
+							<Setter Property="Foreground" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
+						</Trigger>
+						<Trigger Property="ComboBox.IsEditable" Value="True">
+							<Setter Property="KeyboardNavigation.IsTabStop" Value="False"/>
+							<Setter Property="Visibility" TargetName="PART_EditableTextBox" Value="Visible"/>
+							<Setter Property="Visibility" TargetName="PART_ContentSite" Value="Hidden"/>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style TargetType="{x:Type ComboBox}" BasedOn="{StaticResource PPSnComboBoxStyle}" />
+
+</ResourceDictionary>

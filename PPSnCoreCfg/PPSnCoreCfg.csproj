@@ -69,6 +69,7 @@
       <SubType>Designer</SubType>
     </Content>
     <Content Include="Offer.xml" />
+    <Content Include="PPSn.all.xml" />
     <Content Include="PPSn.Test.xml" />
     <Content Include="PPSn.xml">
       <SubType>Designer</SubType>
@@ -115,6 +116,14 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="ClientWpf\Resources\Styles\Button.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="ClientWpf\Resources\Styles\CheckBox.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="ClientWpf\Resources\Styles\ComboBox.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

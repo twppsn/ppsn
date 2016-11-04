@@ -73,3 +73,14 @@ delItem = command(
 		end;
     end
 );
+
+templateSelectorAdr = templateSelector(
+    function (item, container) : object
+    	if item == nil then
+    		return nil;
+		end;
+
+		local resName = item:Table:TableName;
+    	return GetResource(resName);
+    end
+);

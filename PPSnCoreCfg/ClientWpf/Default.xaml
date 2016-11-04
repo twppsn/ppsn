@@ -17,6 +17,8 @@
         <ResourceDictionary Source="Resources/Icons/DrawingImage.xaml" />
         <ResourceDictionary Source="Resources/Styles/TextBox.xaml" />
         <ResourceDictionary Source="Resources/Styles/Label.xaml" />
-    </ResourceDictionary.MergedDictionaries>
+		<ResourceDictionary Source="Resources/Styles/ComboBox.xaml" />
+		<ResourceDictionary Source="Resources/Styles/CheckBox.xaml" />
+	</ResourceDictionary.MergedDictionaries>
 
 </ResourceDictionary>
