@@ -16,6 +16,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
@@ -210,7 +211,7 @@ namespace TecWare.PPSn.Data
 			CommitNew();
 			return row;
 		} // func Add
-
+		
 		public IPpsDataView DataView => (IPpsDataView)base.SourceCollection;
 	} // class PpsDataCollectionView
 

@@ -27,6 +27,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using Neo.IronLua;
 using TecWare.PPSn.Data;
+using System.Windows.Data;
+using System.Globalization;
 
 namespace TecWare.PPSn.Controls
 {
@@ -122,4 +124,21 @@ namespace TecWare.PPSn.Controls
 		//	base.OnContextMenuOpening(e);
 		//} // proc OnContextMenuOpening
 	} // class DataListControl
+
+	/// <summary>compare local with server revisionId</summary>
+	public class CompareRevisionConverter : IMultiValueConverter
+	{
+		public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (object.Equals(values[0], values[1]))
+				return true;
+
+			return false;
+		} // func Convert
+
+		public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		}
+	} // CompareRevisionConverter
 }

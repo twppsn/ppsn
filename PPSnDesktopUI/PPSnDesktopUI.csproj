@@ -172,11 +172,11 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="Themes\Theme2.xaml">
+    <Page Include="UI\Themes\Theme2.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Themes\Theme1.xaml">
+    <Page Include="UI\Themes\Theme1.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -413,7 +413,153 @@
             </Setter>
         </Style>
 
-    </UserControl.Resources>
+		<ui:LuaValueConverter x:Key="isDocOnServerConverter">
+			<![CDATA[
+			if cast(int, value) > 0 then
+				return true;
+			else
+				return false;
+			end;
+			]]>
+		</ui:LuaValueConverter>
+
+		<ui:LuaValueConverter x:Key="isDocPulledConverter">
+			<![CDATA[
+			if cast(int, value) == -1 then
+				return false;
+			else
+				return true;
+			end;
+			]]>
+		</ui:LuaValueConverter>
+
+		<uiC:CompareRevisionConverter x:Key="compareRevisionConverter"/>
+
+		<Style x:Key="PPSnDataListControlItemStyle" TargetType="{x:Type ListBoxItem}">
+			<Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
+			<Setter Property="Margin" Value="0,0,0,1"/>
+			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ListBoxItem}">
+						<Grid x:Name="panel" SnapsToDevicePixels="True">
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition/>
+							</Grid.ColumnDefinitions>
+							<Grid.RowDefinitions>
+								<RowDefinition/>
+								<RowDefinition/>
+							</Grid.RowDefinitions>
+							<TextBlock Grid.Column="0" Grid.Row="0" Text="Server"/>
+							<TextBlock x:Name="isOnServer" Grid.Column="0" Grid.Row="1" Text="NEIN" HorizontalAlignment="Center"/>
+
+							<TextBlock Grid.Column="1" Grid.Row="0" Text="Revision" Margin="6,0,0,0"/>
+							<TextBlock x:Name="isRevision" Grid.Column="1" Grid.Row="1" Text="NEIN" HorizontalAlignment="Center"/>
+
+							<TextBlock Grid.Column="2" Grid.Row="0" Text="RevStatus" Margin="6,0,0,0"/>
+							<TextBlock x:Name="revStatus" Grid.Column="2" Grid.Row="1" Text="EQUAL" HorizontalAlignment="Center"/>
+
+							<TextBlock Grid.Column="3" Grid.Row="0" Text="HasData" Margin="6,0,0,0"/>
+							<TextBlock x:Name="hasData" Grid.Column="3" Grid.Row="1" Text="NEIN" HorizontalAlignment="Center"/>
+
+							<TextBlock Grid.Column="4" Grid.Row="0" Text="Changed" Margin="6,0"/>
+							<TextBlock x:Name="isDocumentChanged" Grid.Column="4" Grid.Row="1" Text="NEIN" HorizontalAlignment="Center"/>
+
+							<!--<TextBlock Grid.Column="5" Grid.RowSpan="2" Background="White" Foreground="Black">
+								<Run Text="ServerId: "/>
+								<Run Text="{Binding ServerId, Mode=OneWay}"/>
+								<Run Text="RemoteRevId: "/>
+								<Run Text="{Binding RemoteRevId, Mode=OneWay}"/>
+								<Run Text="PulledRevId: "/>
+								<Run Text="{Binding PulledRevId, Mode=OneWay}"/>
+								<Run Text="IsDocumentChanged: "/>
+								<Run Text="{Binding IsDocumentChanged, Mode=OneWay}"/>
+								<Run Text="HasData: "/>
+								<Run Text="{Binding HasData, Mode=OneWay}"/>
+								<Run Text="IsRev: "/>
+								<Run Text="{Binding IsRev, Mode=OneWay}"/>
+								<Run Text="Typ: "/>
+								<Run Text="{Binding Typ, Mode=OneWay}"/>
+							</TextBlock>-->
+							<ContentPresenter Grid.Column="5" Grid.RowSpan="2"/>
+						</Grid>
+						<ControlTemplate.Triggers>
+							<Trigger Property="ItemsControl.AlternationIndex" Value="0">
+								<Setter Property="Background" TargetName="panel" Value="{StaticResource PPSnAlternation0Brush}" />
+							</Trigger>
+							<Trigger Property="ItemsControl.AlternationIndex" Value="1">
+								<Setter Property="Background" TargetName="panel" Value="{StaticResource PPSnAlternation1Brush}" />
+							</Trigger>
+							<Trigger Property="IsSelected" Value="True">
+								<Setter Property="Foreground" Value="{StaticResource PPSnMarkerBrush}"/>
+							</Trigger>
+
+							<DataTrigger Binding="{Binding Path=ServerId, Mode=OneWay, Converter={StaticResource isDocOnServerConverter}}">
+								<DataTrigger.Value>
+									<sys:Boolean>true</sys:Boolean>
+								</DataTrigger.Value>
+								<Setter TargetName="isOnServer" Property="Text" Value="JA"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding Path=IsRev, Mode=OneWay}">
+								<DataTrigger.Value>
+									<sys:Boolean>true</sys:Boolean>
+								</DataTrigger.Value>
+								<Setter TargetName="isRevision" Property="Text" Value="JA"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding Path=PulledRevId, Mode=OneWay, Converter={StaticResource isDocPulledConverter}}">
+								<DataTrigger.Value>
+									<sys:Boolean>false</sys:Boolean>
+								</DataTrigger.Value>
+								<Setter TargetName="revStatus" Property="Text" Value="N.PULLED"/>
+							</DataTrigger>
+							<MultiDataTrigger>
+								<MultiDataTrigger.Conditions>
+									<Condition>
+										<Condition.Value>
+											<sys:Boolean>true</sys:Boolean>
+										</Condition.Value>
+										<Condition.Binding>
+											<Binding Path="PulledRevId" Mode="OneWay" Converter="{StaticResource isDocPulledConverter}"/>
+										</Condition.Binding>
+									</Condition>
+									<Condition>
+										<Condition.Value>
+											<sys:Boolean>false</sys:Boolean>
+										</Condition.Value>
+										<Condition.Binding>
+											<MultiBinding Converter="{StaticResource compareRevisionConverter}">
+												<Binding Path="RemoteRevId" Mode="OneWay" />
+												<Binding Path="PulledRevId" Mode="OneWay" />
+											</MultiBinding>
+										</Condition.Binding>
+									</Condition>
+								</MultiDataTrigger.Conditions>
+								<Setter TargetName="revStatus" Property="Text" Value="DIFF"/>
+							</MultiDataTrigger>
+							<DataTrigger Binding="{Binding Path=HasData, Mode=OneWay}">
+								<DataTrigger.Value>
+									<sys:Boolean>true</sys:Boolean>
+								</DataTrigger.Value>
+								<Setter TargetName="hasData" Property="Text" Value="JA"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding Path=IsDocumentChanged, Mode=OneWay}">
+								<DataTrigger.Value>
+									<sys:Boolean>true</sys:Boolean>
+								</DataTrigger.Value>
+								<Setter TargetName="isDocumentChanged" Property="Text" Value="JA"/>
+							</DataTrigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+	</UserControl.Resources>
 
     <Grid x:Name="PART_NavigatorGrid" Background="Transparent">
         <Grid.ColumnDefinitions>
@@ -523,11 +669,11 @@
 				 Style="{StaticResource NavigatorSearchBoxStyle}"
 				 Text="{Binding Path=CurrentSearchText, Delay=300, UpdateSourceTrigger=PropertyChanged}" KeyDown="PART_SearchBox_KeyDown"/>
 
-        <uiC:DataListControl x:Name="PART_Items" Grid.Column="2" Grid.Row="3" Style="{StaticResource PPSnListBoxStyle}" FontSize="14.667" SnapsToDevicePixels="True"
+        <uiC:DataListControl x:Name="PART_Items" Grid.Column="2" Grid.Row="3" Style="{StaticResource PPSnListBoxStyle}" FontSize="14" SnapsToDevicePixels="True"
 							 AlternationCount="2" IsSynchronizedWithCurrentItem="True"
 							 ItemsSource="{Binding Items}"
 							 ScrollViewer.PanningMode="VerticalFirst"
-							 ItemContainerStyle="{StaticResource PpsAlternatingListBoxItemStyle}"/>
+							 ItemContainerStyle="{StaticResource PPSnDataListControlItemStyle}"/>
 
 		<ItemsControl x:Name="PART_Actions" Grid.Column="2" Grid.Row="4" ItemsSource="{Binding VisibleActions}" IsTabStop="False" >
             <ItemsControl.ItemsPanel>
