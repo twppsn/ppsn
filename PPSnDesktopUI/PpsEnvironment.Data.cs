@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using System.Xml.Linq;
@@ -276,18 +277,17 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		private enum ParsingState
 		{
-			Default = 0,
-			ReadElementDescription = 1,
-			ReadElementContent = 2,
+			Default,
+			ReadInfoElement,
+			ReadCreateElement,
+			ReadConvertElement,
 		} // enum ParsingState
 
 		#endregion
 
-		#region -- ParseSQLiteCreateTableCommands -----------------------------------------
-
-		private XElement ParseSQLiteCreateTableCommands(Type type, string resourceName)
+		private XElement ParseSQLiteScript(Type type, string resourceName)
 		{
-			var command = new XElement("command",
+			var result = new XElement("commands",
 				new XAttribute("name", type.AssemblyQualifiedName + ", " + resourceName)
 			);
 
@@ -302,60 +302,66 @@ namespace TecWare.PPSn
 				{
 					var line = reader.ReadLine();
 
-					switch (state)
+					if (line == null)
 					{
-						#region -- ParsingState.Default --
-						case ParsingState.Default:
-							if (line == null)
-								return command;
-							else if (line.StartsWith("--<", StringComparison.Ordinal))
-							{
-								lineData.Append(line.Substring(2));
-								state = ParsingState.ReadElementDescription;
-							}
-							break;
-						#endregion
-						#region -- ParsingState.ReadElementDescription --
-						case ParsingState.ReadElementDescription:
-							if (line != null && line.StartsWith("--", StringComparison.Ordinal))
-								lineData.Append(line.Substring(2));
-							else
-							{
-								currentNode = XElement.Parse(lineData.ToString());
-								command.Add(currentNode);
-								lineData = new StringBuilder();
-								state = ParsingState.ReadElementContent;
-								goto case ParsingState.ReadElementContent;
-							}
-							break;
-						#endregion
-						#region -- ParsingState.ReadElementContent --
-						case ParsingState.ReadElementContent:
-							if (line == null || line.StartsWith("--<", StringComparison.Ordinal))
-							{
-								currentNode.Add(new XCData(lineData.ToString()));
-								lineData = new StringBuilder();
-								state = ParsingState.Default;
-								goto case ParsingState.Default;
-							}
-							else if (!line.StartsWith("--", StringComparison.Ordinal))
-							{
-								var tmp = line.IndexOf("--", StringComparison.Ordinal);
-								if (tmp != -1)
-									line = line.Substring(0, tmp);
-								line = line.TrimEnd();
-								lineData.AppendLine(line);
-							}
-							break;
-							#endregion
-					} // switch state
+						if (currentNode != null)
+							currentNode.Add(new XCData(lineData.ToString()));
+						break; // end of file
+					}
+
+					if (line.StartsWith("--<", StringComparison.Ordinal))
+					{
+						if (currentNode != null)
+						{
+							currentNode.Add(new XCData(lineData.ToString()));
+							lineData.Length = 0;
+						}
+
+						currentNode = XElement.Parse(line.Substring(2));
+						result.Add(currentNode);
+
+						switch (state)
+						{
+							case ParsingState.Default:
+								if (!currentNode.Name.LocalName.Equals("info", StringComparison.Ordinal))
+									throw new FormatException(String.Format("Resource \"{0}\" contains for parsing state \"{1}\" unsupported element \"{2}\".", resourceName, state.ToString(), currentNode.Name.LocalName));
+								state = ParsingState.ReadInfoElement;
+								break;
+							case ParsingState.ReadInfoElement:
+								if (!currentNode.Name.LocalName.Equals("create", StringComparison.Ordinal))
+									throw new FormatException(String.Format("Resource \"{0}\" contains for parsing state \"{1}\" unsupported element \"{2}\".", resourceName, state.ToString(), currentNode.Name.LocalName));
+								state = ParsingState.ReadCreateElement;
+								break;
+							case ParsingState.ReadCreateElement:
+								if (!currentNode.Name.LocalName.Equals("convert", StringComparison.Ordinal))
+									throw new FormatException(String.Format("Resource \"{0}\" contains for parsing state \"{1}\" unsupported element \"{2}\".", resourceName, state.ToString(), currentNode.Name.LocalName));
+								state = ParsingState.ReadConvertElement;
+								break;
+							case ParsingState.ReadConvertElement:
+								if (!currentNode.Name.LocalName.Equals("convert", StringComparison.Ordinal))
+									throw new FormatException(String.Format("Resource \"{0}\" contains for parsing state \"{1}\" unsupported element \"{2}\".", resourceName, state.ToString(), currentNode.Name.LocalName));
+								break;
+							default:
+								throw new InvalidOperationException("unsupported parsing state");
+						} // switch state
+					} // if
+
+					if (line.StartsWith("--", StringComparison.Ordinal))
+						continue; // ignore comment lines
+
+					if (state != ParsingState.Default)
+					{
+						var index = line.IndexOf("--", StringComparison.Ordinal);
+						if (index != -1)
+							line = line.Substring(0, index);
+						line = line.TrimEnd();
+						lineData.AppendLine(line);
+					}
 				} // while true
 			} // using reader source
-		} // func ParseSQLiteCreateTableCommands
 
-		#endregion
-
-		#region -- VerifyLocalStore -------------------------------------------------------
+			return result;
+		} // func ParseSQLiteScript
 
 		protected IEnumerable<Tuple<Type, string>> GetStoreTablesFromAssembly(Type type, string resourceBase)
 		{
@@ -375,122 +381,122 @@ namespace TecWare.PPSn
 		{
 			using (var transaction = localStore.BeginTransaction())
 			{
-				var existsMetaTable = false; // is the meta table existing
+				var existsMetaTable = false; // exists the meta table
 
 				#region -- validate meta table --
+				var metaTableScript = ParseSQLiteScript(typeof(PpsEnvironment), "Scripts.Meta.sql");
 
-				var metaTableCommands = ParseSQLiteCreateTableCommands(typeof(PpsEnvironment), "Scripts.Meta.sql");
-
-				var metaTableInfo = metaTableCommands.Element("info");
-				var metaTableSchema = metaTableInfo.Attribute("schema").Value;
+				var metaTableInfo = metaTableScript.Element("info");
 				var metaTableName = metaTableInfo.Attribute("name").Value;
 
-				var metaTableCreate = metaTableCommands.Element("create").Value;
+				var metaTableCreate = metaTableScript.Element("create").Value;
+				string metaTableConvert = null;
 
-				if (String.Compare(metaTableSchema, "main", StringComparison.OrdinalIgnoreCase) != 0)
-					throw new InvalidDataException(String.Format("The schema \"{0}\" for the table \"{1}\" is not supported. Only \"main\" schema is supported!", metaTableSchema, metaTableName));
-
-				using (var command = new SQLiteCommand("SELECT 1 FROM [sqlite_master] WHERE [type] = 'table' AND [tbl_name] = @metaTableName;", localStore, transaction))
+				using (var command = new SQLiteCommand("SELECT [tbl_name] FROM [sqlite_master] WHERE [type] = 'table' AND [tbl_name] LIKE 'Meta\\_%' ESCAPE '\\';", localStore, transaction))
+				using (var reader = command.ExecuteReader())
 				{
-					command.Parameters.Add("@metaTableName", DbType.AnsiString).Value = metaTableName;
-					using (var reader = command.ExecuteReader())
-						existsMetaTable = reader.HasRows;
-				}
+					while (reader.Read())
+					{
+						var existingMetaTableName = reader.GetString(0);
+						if (Regex.IsMatch(existingMetaTableName, @"^Meta_[0-9]+$"))
+						{
+							if (existsMetaTable)
+								throw new InvalidDataException("localStore contains several meta tables.");
+
+							existsMetaTable = true;
+
+							if (existingMetaTableName.Equals(metaTableName, StringComparison.Ordinal))
+								continue;
+
+							foreach (var c in metaTableScript.Elements())
+								if (c.Name.LocalName.Equals("convert"))
+									if (c.Attribute("previousTable").Value.Equals(existingMetaTableName, StringComparison.Ordinal))
+										metaTableConvert = c.Value;
+
+							if (metaTableConvert == null)
+								throw new InvalidDataException(String.Format("No convert commands found from meta table \"{0}\" to \"{1}\".", existingMetaTableName, metaTableName));
+						} // if Regex.IsMatch()
+					} // while reader.Read()
+				} // using reader command
 
 				if (!existsMetaTable)
-				{
 					using (var command = new SQLiteCommand(metaTableCreate, localStore, transaction))
 						command.ExecuteNonQuery();
-				}
+
+				if (metaTableConvert != null)
+					using (var command = new SQLiteCommand(metaTableConvert, localStore, transaction))
+						command.ExecuteNonQuery();
 				#endregion
 
 				#region -- *.sql --
 				foreach (var scriptSource in GetStoreTables())
 				{
-					var existsTable = false;
+					var script = ParseSQLiteScript(scriptSource.Item1, scriptSource.Item2);
+					var resourceName = script.Attribute("name").Value;
 
-					var tableCommands = ParseSQLiteCreateTableCommands(scriptSource.Item1, scriptSource.Item2);
+					var infoSection = script.Element("info");
+					var scriptName = infoSection.Attribute("name").Value;
+					var resourceRevision = Int64.Parse(infoSection.Attribute("rev").Value);
 
-					var tableResourceName = tableCommands.Attribute("name").Value;
-					var tableInfo = tableCommands.Element("info");
-					var tableSchema = tableInfo.Attribute("schema").Value;
-					var tableName = tableInfo.Attribute("name").Value;
-					var tableRev = Int64.Parse(tableInfo.Attribute("rev").Value);
-
-					var tableCreate = tableCommands.Element("create").Value;
-					var tableConvert = tableCommands.Element("convert").Value;
-
-					if (String.Compare(tableSchema, "main", StringComparison.OrdinalIgnoreCase) != 0)
-						throw new InvalidDataException(String.Format("The schema \"{0}\" for the table \"{1}\" is not supported. Only \"main\" schema is supported!", metaTableSchema, metaTableName));
+					var createInstructions = script.Element("create").Value;
+					string convertInstructions = null;
 
 					try
 					{
-						using (var command = new SQLiteCommand("SELECT 1 FROM [sqlite_master] WHERE [type] = 'table' AND [tbl_name] = @tableName;", localStore, transaction))
+						if (existsMetaTable)
 						{
-							command.Parameters.Add("@tableName", DbType.String).Value = tableName;
-							using (var reader = command.ExecuteReader())
-								existsTable = reader.HasRows;
-						}
+							var resourceFound = false;
+							var existingRevision = 0L;
 
-						if (!existsMetaTable)
-						{
-							if (existsTable)
-								throw new InvalidDataException(String.Format("The table \"{0}\".\"{1}\" can not be verified, because it was created before the revision table \"{2}\".\"{3}\".", tableSchema, tableName, metaTableSchema, metaTableName));
-
-							using (var command = new SQLiteCommand(tableCreate, localStore, transaction))
-								command.ExecuteNonQuery();
-						}
-						else if (!existsTable)
-						{
-							using (var command = new SQLiteCommand(tableCreate, localStore, transaction))
-								command.ExecuteNonQuery();
-						}
-						else
-						{
-							var readRev = -1L;
-
-							using (var command = new SQLiteCommand($"SELECT [Revision] FROM [{metaTableSchema}].[{metaTableName}] WHERE [ResourceName] = @resourceName;", localStore, transaction))
+							using (var command = new SQLiteCommand($"SELECT [Revision] FROM [{metaTableName}] WHERE [ResourceName] = @resourceName;", localStore, transaction))
 							{
-								command.Parameters.Add("@resourceName", DbType.String).Value = tableResourceName;
+								command.Parameters.Add("@resourceName", DbType.String).Value = resourceName;
 								using (var reader = command.ExecuteReader())
 								{
-									var enumerator = reader.GetEnumerator();
-									if (!enumerator.MoveNext())
-										throw new InvalidDataException(String.Format("There is no entry in the revision table \"{0}\".\"{1}\" for resource \"{2}\".", metaTableSchema, metaTableName, tableResourceName));
+									while (reader.Read())
+									{
+										if (resourceFound)
+											throw new InvalidDataException(String.Format("localStore contains several entries for resource \"{0}\".", resourceName));
 
-									readRev = reader.GetInt64(0);
+										resourceFound = true;
+
+										if (reader.IsDBNull(0))
+											throw new InvalidDataException(String.Format("The meta table \"{0}\" contains the null value for revision of resource \"{1}\".", metaTableName, scriptName));
+
+										existingRevision = reader.GetInt64(0);
+									}
 								}
 							} // using command
 
-							if (readRev > tableRev)
-								throw new InvalidDataException(String.Format("The table \"{0}\".\"{1}\" can not be verified, because the revision number in the revision table \"{2}\".\"{3}\" is greater than the revision number for resource \"{4}\".", tableSchema, tableName, metaTableSchema, metaTableName, tableResourceName));
-							else if (readRev == tableRev)
-								continue; // Matching revision. Skip revision table update.
-							else if (readRev < tableRev)
+							if (resourceFound)
 							{
-								using (var command = new SQLiteCommand($"DROP TABLE IF EXISTS [{tableSchema}].[{TemporaryTablePrefix}{tableName}];", localStore, transaction))
-									command.ExecuteNonQuery();
+								if (existingRevision == resourceRevision)
+									// Continue with the next scriptSource.
+									continue;
 
-								using (var command = new SQLiteCommand($"ALTER TABLE [{tableSchema}].[{tableName}] RENAME TO [{TemporaryTablePrefix}{tableName}];", localStore, transaction))
-									command.ExecuteNonQuery();
+								foreach (var c in script.Elements())
+									if (c.Name.LocalName.Equals("convert"))
+										if (existingRevision == Int64.Parse(c.Attribute("previousRev").Value))
+											convertInstructions = c.Value;
 
-								using (var command = new SQLiteCommand(tableCreate, localStore, transaction))
-									command.ExecuteNonQuery();
+								if (convertInstructions == null)
+									throw new InvalidDataException(String.Format("No conversion commands found for resource \"{0}\" from revision \"{1}\" to \"{2}\".", scriptName, existingRevision, resourceRevision));
+							} // if resourceFound
+						} // if existsMetaTable
 
-								using (var command = new SQLiteCommand(tableConvert, localStore, transaction))
-									command.ExecuteNonQuery();
-
-								using (var command = new SQLiteCommand($"DROP TABLE IF EXISTS [{tableSchema}].[{TemporaryTablePrefix}{tableName}];", localStore, transaction))
-									command.ExecuteNonQuery();
-							} // if readRev < tableRev
+						using (var command = new SQLiteCommand(convertInstructions == null ?
+							createInstructions :
+							convertInstructions, localStore, transaction))
+						{
+							command.ExecuteNonQuery();
 						}
 
-						using (var command = new SQLiteCommand(existsTable ?
-							$"UPDATE [{metaTableSchema}].[{metaTableName}] SET [Revision] = @tableRev, [LastModification] = DATETIME('now') WHERE [ResourceName] = @resourceName;" :
-							$"INSERT INTO [{metaTableSchema}].[{metaTableName}] ([Revision], [LastModification], [ResourceName]) values (@tableRev, DATETIME('now'), @resourceName);", localStore, transaction))
+						using (var command = new SQLiteCommand(convertInstructions == null ?
+							$"UPDATE [{metaTableName}] SET [Revision] = @resourceRevision, [LastModification] = DATETIME('now') WHERE [ResourceName] = @resourceName;" :
+							$"INSERT INTO [{metaTableName}] ([ResourceName], [Revision], [LastModification]) VALUES (@resourceName, @resourceRevision, DATETIME('now'));", localStore, transaction))
 						{
-							command.Parameters.Add("@tableRev", DbType.Int64).Value = tableRev;
-							command.Parameters.Add("@resourceName", DbType.String).Value = tableResourceName;
+							command.Parameters.Add("@resourceRevision", DbType.Int64).Value = resourceRevision;
+							command.Parameters.Add("@resourceName", DbType.String).Value = resourceName;
 							var affectedRows = command.ExecuteNonQuery();
 
 							string errorText = null;
@@ -502,22 +508,19 @@ namespace TecWare.PPSn
 								errorText = "multiple entries";
 
 							if (errorText != null)
-								throw new Exception(String.Format("The update in the revision table \"{0}\".\"{1}\" for resource \"{2}\" failed. Reason: {3}", metaTableSchema, metaTableName, tableResourceName, errorText));
+								throw new Exception(String.Format("The {0} in the revision table \"{1}\" for resource \"{2}\" revision \"{3}\" failed. Reason: {4}", convertInstructions == null ? "update" : "insert", metaTableName, scriptName, resourceRevision, errorText));
 						} // using command
-
-					}
+					} // try
 					catch (SQLiteException e)
 					{
-						throw new Exception(String.Format("Verify of localStore failed for object [{0}.{1}].", tableSchema, tableName), e);
-					}
+						throw new Exception(String.Format("Verification of localStore failed for resource \"{0}\" revision \"{1}\".", scriptName, resourceRevision), e);
+					} // catch
 				} // foreach script
 				#endregion
 
 				transaction.Commit();
 			} // using transaction
 		} // proc VerifyLocalStore
-
-		#endregion
 
 		#endregion
 
