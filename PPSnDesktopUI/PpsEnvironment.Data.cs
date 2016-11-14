@@ -392,26 +392,30 @@ namespace TecWare.PPSn
 				var metaTableCreate = metaTableScript.Element("create").Value;
 				string metaTableConvert = null;
 
-				using (var command = new SQLiteCommand("SELECT [tbl_name] FROM [sqlite_master] WHERE [type] = 'table' AND [tbl_name] LIKE 'Meta\\_%' ESCAPE '\\';", localStore, transaction))
+				using (var command = new SQLiteCommand("SELECT [tbl_name] FROM [sqlite_master] WHERE [type] = 'table' AND [tbl_name] LIKE 'Meta%';", localStore, transaction))
 				using (var reader = command.ExecuteReader())
 				{
 					while (reader.Read())
 					{
 						var existingMetaTableName = reader.GetString(0);
-						if (Regex.IsMatch(existingMetaTableName, @"^Meta_[0-9]+$"))
+						if (Regex.IsMatch(existingMetaTableName, @"^Meta_?[0-9]*$"))
 						{
 							if (existsMetaTable)
 								throw new InvalidDataException("localStore contains several meta tables.");
 
 							existsMetaTable = true;
 
-							if (existingMetaTableName.Equals(metaTableName, StringComparison.Ordinal))
+							if (String.Compare(existingMetaTableName, metaTableName, StringComparison.Ordinal) == 0)
 								continue;
 
 							foreach (var c in metaTableScript.Elements())
-								if (c.Name.LocalName.Equals("convert"))
-									if (c.Attribute("previousTable").Value.Equals(existingMetaTableName, StringComparison.Ordinal))
-										metaTableConvert = c.Value;
+							{
+								if (c.Name.LocalName == "convert" &&
+									String.Compare(c.Attribute("previousTable").Value, existingMetaTableName, StringComparison.Ordinal) == 0)
+								{
+									metaTableConvert = c.Value;
+								}
+							}
 
 							if (metaTableConvert == null)
 								throw new InvalidDataException(String.Format("No convert commands found from meta table \"{0}\" to \"{1}\".", existingMetaTableName, metaTableName));
