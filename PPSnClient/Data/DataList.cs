@@ -83,7 +83,8 @@ namespace TecWare.PPSn.Data
 		{
 			None,
 			NextWindow,
-			NextAll
+			NextAll,
+			Cancel
 		} // enum FetchFollow
 
 		#endregion
@@ -105,6 +106,7 @@ namespace TecWare.PPSn.Data
 
 		private Action<int, int> procFetchNextWindow; // Delegate, for the background fetch of a page
 		private int currentFetchTo = 0;               // position to read
+		private readonly object currentFetchLock = new object();
 		private FetchFollow currentFetchFollow = FetchFollow.None; // type of background fetch
 		private IAsyncResult currentFetchResult = null; // Current fetch
 
@@ -117,7 +119,7 @@ namespace TecWare.PPSn.Data
 			if (context == null)
 				throw new ArgumentNullException("context");
 			if (windowSize < 1)
-				throw new IndexOutOfRangeException("windowSize darf nicht unter 1 liegen.");
+				throw new IndexOutOfRangeException("windowSize lower than 1 is not allowed.");
 
 			this.shell = context;
 			this.windowSize = windowSize;
@@ -157,9 +159,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Clears the current content of the list.</summary>
 		public async Task ClearAsync()
 		{
-			// Finish the current fetch
-			if (currentFetchResult != null)
-				await Task.Run(new Action(EndFetchNextWindow));
+			await Task.Run(new Action(() => EndFetchNextWindow(true)));
 
 			// Clear list synchron to the ui
 			await shell.InvokeAsync(
@@ -190,13 +190,16 @@ namespace TecWare.PPSn.Data
 
 		private void BeginFetchNextWindow(bool all = false)
 		{
-			bool lRaisePropertyChanged = false;
+			var raisePropertyChanged = false;
 
 			if (fullyLoaded) // wurden schon alle Daten geladen
 				return;
-
-			lock (this)
+			
+			lock (currentFetchLock)
 			{
+				if (currentFetchFollow == FetchFollow.Cancel)
+					return;
+
 				if (currentFetchResult == null)
 				{
 					var fetchCount = all ? -1 : windowSize;
@@ -204,7 +207,7 @@ namespace TecWare.PPSn.Data
 					currentFetchTo = all ? -1 : visibleCount + fetchCount;
 
 					currentFetchResult = procFetchNextWindow.BeginInvoke(visibleCount, fetchCount, EndFetchNextWindow, null);
-					lRaisePropertyChanged = true;
+					raisePropertyChanged = true;
 				}
 				else if (all)
 				{
@@ -218,13 +221,13 @@ namespace TecWare.PPSn.Data
 				}
 			}
 
-			if (lRaisePropertyChanged)
+			if (raisePropertyChanged)
 				OnPropertyChanged(nameof(IsLoading));
 		} // proc BeginFetchNextWindow
 
 		private void EndFetchNextWindow(IAsyncResult ar)
 		{
-			lock (this)
+			lock (currentFetchLock)
 			{
 				var doSilent = ar != currentFetchResult;
 				try
@@ -239,8 +242,7 @@ namespace TecWare.PPSn.Data
 				{
 					if (!doSilent)
 					{
-						lock (this)
-							currentFetchResult = null;
+						currentFetchResult = null;
 
 						switch (currentFetchFollow)
 						{
@@ -258,10 +260,19 @@ namespace TecWare.PPSn.Data
 			}
 		} // EndFetchNextWindow
 
-		private void EndFetchNextWindow()
+		private void EndFetchNextWindow(bool cancel)
 		{
-			if (currentFetchResult != null)
-				currentFetchResult.AsyncWaitHandle.WaitOne();
+			lock (currentFetchLock)
+			{
+				if (cancel)
+					currentFetchFollow = FetchFollow.Cancel;
+
+				if (currentFetchResult != null)
+					currentFetchResult.AsyncWaitHandle.WaitOne();
+
+				if (cancel)
+					currentFetchFollow = FetchFollow.None;
+			}
 		} // proc EndFetchNextWindow
 
 		private void FetchNextWindow(int startAt, int count)
@@ -292,6 +303,8 @@ namespace TecWare.PPSn.Data
 
 
 				// update the data
+				if (currentFetchFollow == FetchFollow.Cancel)
+					break;
 				AppendRow(currentIndex++, t);
 				fetchedRows++;
 
@@ -321,6 +334,7 @@ namespace TecWare.PPSn.Data
 				t.SetMemberValue("__Index", loadedCount);
 #endif
 				rows[index] = t;
+				currentFetchResult.AsyncWaitHandle.WaitOne(10);
 				if (index == loadedCount)
 					loadedCount++;
 			}
@@ -436,7 +450,7 @@ namespace TecWare.PPSn.Data
 				while (true)
 				{
 					// warte auf das Ende eines Fetch-Prozesses
-					EndFetchNextWindow(); // warte Synchron
+					EndFetchNextWindow(false); // warte Synchron
 
 					lock (rowLock)
 					{
@@ -496,7 +510,7 @@ namespace TecWare.PPSn.Data
 		{
 			get
 			{
-				lock (this)
+				lock (currentFetchLock)
 					return currentFetchResult != null;
 			}
 		} // prop IsLoading
