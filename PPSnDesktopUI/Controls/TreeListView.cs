@@ -64,15 +64,27 @@ namespace TecWare.PPSn.Controls
 					if (e.NewItems.Count > 0 && e.NewItems[0] != null)
 						SelectNode(e.NewItems[0]);
 					break;
+				case NotifyCollectionChangedAction.Reset:
+					EnsureSelection();
+					break;
 			}
 		} // proc OnItemChanged
 
-		private void SelectNode(object item)
+		/// <summary></summary>
+		public void SelectNode(object item)
 		{
 			var node = ItemContainerGenerator.ContainerFromItem(item) as PpsTreeListViewItem;
 			if (node == null)
 				throw new ArgumentNullException("SelectNode TreeListView");
-			Dispatcher.BeginInvoke(new Action(() => node.IsSelected = true), DispatcherPriority.Input);
+			// focus?
+			Dispatcher.BeginInvoke(
+				new Action(() =>
+				{
+					node.IsSelected = true;
+					node.BringIntoView();
+				}),
+		 		DispatcherPriority.Input
+				);
 		} // proc SelectNode
 
 		private void EnsureSelection()
