@@ -331,7 +331,7 @@ namespace TecWare.PPSn.Data
 							value = oldValue; // reset old value
 						}
 						else
-							throw new NotSupportedException("It is not allowed to changed extended columns.");
+							throw new NotSupportedException($"It is not allowed to change this extended column ({Table.Name}.{Name}).");
 					}
 					if (IsPrimaryKey) // check unique
 					{

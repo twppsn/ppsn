@@ -528,6 +528,8 @@ namespace TecWare.PPSn.Data
 		internal PpsDataRow(PpsDataTable table, XElement xRow)
 			: this(table)
 		{
+			// init 
+
 			// update row state
 			this.rowState = ReadRowState(xRow);
 
@@ -559,12 +561,9 @@ namespace TecWare.PPSn.Data
 
 		private void UpdateRowValues(XElement xRow)
 		{
-			foreach (var xValue in xRow.Elements())
+			foreach (var column in Table.TableDefinition.Columns)
 			{
-				var column = Table.TableDefinition.Columns[xValue.Name.LocalName];
-				if (column == null)
-					continue; // ignore unknown rows
-
+				var xValue = xRow.Element(column.Name);
 				var index = column.Index;
 
 				if (column.IsExtended)
@@ -579,15 +578,16 @@ namespace TecWare.PPSn.Data
 					currentValues[index] = NotSet;
 
 					// read the extend values
-					extendedValue.CoreData = xValue;
+					if (xValue != null)
+						extendedValue.CoreData = xValue;
 				}
 				else
 				{
 					// load the values
 					var valueType = column.DataType;
 
-					var xOriginal = xValue.Element(xnDataRowValueOriginal);
-					var xCurrent = xValue.Element(xnDataRowValueCurrent);
+					var xOriginal = xValue?.Element(xnDataRowValueOriginal);
+					var xCurrent = xValue?.Element(xnDataRowValueCurrent);
 
 					originalValues[index] = xOriginal == null || xOriginal.IsEmpty ? null : Procs.ChangeType(xOriginal.Value, valueType);
 					currentValues[index] = xCurrent == null ? NotSet : xCurrent.IsEmpty ? null : Procs.ChangeType(xCurrent.Value, valueType);
