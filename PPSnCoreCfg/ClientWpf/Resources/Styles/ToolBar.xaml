@@ -99,25 +99,6 @@
 
     <Style x:Key="PaneToolBarStyle" TargetType="{x:Type ToolBar}">
         <Style.Resources>
-            <!--<DataTemplate x:Key="{x:Type ui:PpsUICommandButton}" DataType="{x:Type ui:PpsUICommandButton}">
-                <Button Style="{StaticResource ToolBarButtonStyle}" ToolTip="{Binding Description}" Command="{Binding Command}">
-                    <StackPanel Orientation="Horizontal" Margin="0">
-                        <Image Source="{ui:PpsImageStaticResourceBinding {Binding Image}}" Width="18" Height="18" Margin="0,0,6,0" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding DisplayText}" VerticalAlignment="Center" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
-                    </StackPanel>
-                </Button>
-            </DataTemplate>
-            <DataTemplate x:Key="{x:Type ui:PpsUISplitCommandButton}" DataType="{x:Type ui:PpsUISplitCommandButton}">
-                <uiC:SplitButton Style="{StaticResource ToolBarSplitButtonStyle}" ToolTip="{Binding Description}" Command="{Binding Command}" Popup="{Binding Popup}" ContextMenu="{Binding ContextMenu}">
-                    <StackPanel Orientation="Horizontal" Margin="0">
-                        <Image Source="{ui:PpsImageStaticResourceBinding {Binding Image}}" Width="18" Height="18" Margin="0,0,6,0" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding DisplayText}" VerticalAlignment="Center" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
-                    </StackPanel>
-                </uiC:SplitButton>
-            </DataTemplate>
-            <DataTemplate x:Key="Seperator" DataType="{x:Type FrameworkContentElement}">
-                <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Background="{StaticResource PPSnSeparatorBrush}" Margin="6" />
-            </DataTemplate>-->
             <DataTemplate x:Key="{x:Type ui:PpsUICommandButton}">
                 <Button Style="{StaticResource ToolBarButtonStyle}" ToolTip="{Binding Description}" Command="{Binding Command}">
                     <StackPanel Orientation="Horizontal" Margin="0">

@@ -53,7 +53,6 @@
                 </Setter>
             </Style>
             <Style x:Key="SideBarMenuItemStyle" TargetType="{x:Type ListBoxItem}">
-                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                 <Setter Property="Margin" Value="0"/>
                 <Setter Property="Template">
                     <Setter.Value>

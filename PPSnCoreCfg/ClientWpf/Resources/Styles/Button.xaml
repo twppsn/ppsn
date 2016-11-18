@@ -4,7 +4,7 @@
 		<ResourceDictionary Source="../Colors.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 	
-    <Style x:Key="SimpleButtonStyle" TargetType="{x:Type Button}">
+    <!--<Style x:Key="SimpleButtonStyle" TargetType="{x:Type Button}">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}"/>
@@ -33,9 +33,43 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
-    </Style>
+    </Style>-->
 
-    <Style x:Key="PPSnShrinkButtonStyle" TargetType="{x:Type ToggleButton}">
+	<Style x:Key="SimpleButtonStyle" TargetType="{x:Type Button}">
+		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+		<Setter Property="Background" Value="{StaticResource PPSnSeparatorBrush}"/>
+		<Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}"/>
+		<Setter Property="Focusable" Value="False"/>
+		<Setter Property="SnapsToDevicePixels" Value="True"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type Button}">
+					<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}"
+							CornerRadius="0" SnapsToDevicePixels="true">
+						<ContentPresenter x:Name="PART_ContentPresenter" Focusable="False" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+										  Margin="{TemplateBinding Padding}" RecognizesAccessKey="True"
+										  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsMouseOver" Value="true">
+							<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+						</Trigger>
+						<Trigger Property="IsPressed" Value="true">
+							<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+							<Setter Property="Background" TargetName="border" Value="{StaticResource PPSnButtonPressedBrush}"/>
+						</Trigger>
+						<Trigger Property="IsEnabled" Value="false">
+							<Setter Property="Background" Value="Transparent"/>
+							<Setter Property="Foreground" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+
+	<Style x:Key="PPSnShrinkButtonStyle" TargetType="{x:Type ToggleButton}">
         <Setter Property="Focusable" Value="False"/>
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="Background" Value="{StaticResource PPSnWindowBackgroundBrush}"/>

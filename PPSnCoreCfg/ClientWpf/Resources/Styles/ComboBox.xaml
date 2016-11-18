@@ -4,7 +4,7 @@
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="../Colors.xaml" />
 	</ResourceDictionary.MergedDictionaries>
-
+	
 	<ControlTemplate x:Key="PPSnComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}">
 		<Grid>
 			<Grid.ColumnDefinitions>
@@ -13,14 +13,19 @@
 			</Grid.ColumnDefinitions>
 			<Border x:Name="border" Grid.ColumnSpan="2" BorderBrush="{StaticResource PPSnControlNormalBorderBrush}" BorderThickness="1" Background="{StaticResource PPSnControlBackgroundBrush}" />
 			<Border x:Name="buttonBorder" Grid.Column="1" Margin="1" BorderThickness="0" Background="{StaticResource PPSnControlBackgroundBrush}" />
-			<Path x:Name="arrow" Grid.Column="1" Data="M 0 0 L 0 2 L 4 6 L 8 2 L 8 0 L 4 4 Z" Fill="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+			<Path x:Name="arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity=".75"
+				  Stroke="{StaticResource PPSnWindowForegroundBrush}"
+				  StrokeThickness="1"
+				  StrokeDashCap="Round"
+				  Data="M 0,0 L5.5,5.5 11,0" />
 		</Grid>
 		<ControlTemplate.Triggers>
 			<DataTrigger Binding="{Binding Path=IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}" Value="True">
 				<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
+				<Setter Property="Opacity" TargetName="arrow" Value="1.0"/>
 			</DataTrigger>
 			<Trigger Property="IsEnabled" Value="False">
-				<Setter Property="Fill" TargetName="arrow" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
+				<Setter Property="Opacity" TargetName="arrow" Value=".45"/>
 			</Trigger>
 		</ControlTemplate.Triggers>
 	</ControlTemplate>

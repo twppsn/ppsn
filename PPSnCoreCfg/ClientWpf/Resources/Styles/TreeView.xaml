@@ -8,12 +8,7 @@
 
     <uiC:PpsTreeViewLevelToIndentConverter x:Key="LevelToIndentConverter" />
 
-    <!--<Style x:Key="ItemTextBlockStyle" TargetType="{x:Type TextBlock}">
-        <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type TreeViewItem}}, Path=Foreground}"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>-->
-
-    <Style x:Key="TreeListViewExpanderButtonStyle" TargetType="{x:Type ToggleButton}">
+    <!--<Style x:Key="TreeListViewExpanderButtonStyle" TargetType="{x:Type ToggleButton}">
         <Setter Property="Focusable" Value="False"/>
         <Setter Property="Width" Value="19"/>
         <Setter Property="Template">
@@ -21,7 +16,7 @@
                 <ControlTemplate TargetType="{x:Type ToggleButton}">
                     <Border Background="Transparent">
                         <Path x:Name="PART_Symbol" HorizontalAlignment="Center" VerticalAlignment="Center"
-							  Stroke="White"
+							  Stroke="{StaticResource PPSnWindowForegroundBrush}"
 							  StrokeThickness="1"
 							  StrokeMiterLimit="3"
 							  Fill="Transparent"
@@ -30,24 +25,53 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter Property="Data" TargetName="PART_Symbol" Value="M 5 0 L 0 5 L 5 5 L 5 0 Z"/>
-                            <Setter Property="Fill" TargetName="PART_Symbol" Value="White"/>
+							<Setter Property="Fill" TargetName="PART_Symbol" Value="{StaticResource PPSnWindowForegroundBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
-    </Style>
+    </Style>-->
 
-    <Style x:Key="TreeListViewItemStyle" TargetType="{x:Type uiC:PpsTreeListViewItem}">
+	<Style x:Key="TreeListViewExpanderButtonStyle" TargetType="{x:Type ToggleButton}">
+		<Setter Property="Focusable" Value="False"/>
+		<Setter Property="Width" Value="19"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type ToggleButton}">
+					<Border Background="Transparent">
+						<Path x:Name="symbol" HorizontalAlignment="Left" VerticalAlignment="Center" Opacity=".75"
+							  Stroke="{StaticResource PPSnWindowForegroundBrush}"
+							  StrokeThickness="1"
+							  StrokeDashCap="Round"
+							  Data="M6,0 L11,5 6,10"/>
+					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsChecked" Value="True">
+							<Setter Property="Data" TargetName="symbol" Value="M3,0 L8.5,5.5 14,0"/>
+							<Setter Property="Opacity" TargetName="symbol" Value="1"/>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+
+	<Style x:Key="TreeListViewItemStyle" TargetType="{x:Type uiC:PpsTreeListViewItem}">
         <Setter Property="Background" Value="{StaticResource PPSnAlternation0Brush}"/>
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="AlternationCount" Value="2"/>
         <Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
-        <Setter Property="Template">
+		<!--<Setter Property="Margin" Value="0,0,0,1"/>-->
+		<Setter Property="BorderBrush" Value="Transparent"/>
+		<Setter Property="BorderThickness" Value="0,0,0,1"/>
+		<Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type uiC:PpsTreeListViewItem}">
                     <StackPanel Orientation="Vertical">
-                        <Border Name="PART_Border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+                        <Border Name="PART_Border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+								Padding="{TemplateBinding Padding}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
