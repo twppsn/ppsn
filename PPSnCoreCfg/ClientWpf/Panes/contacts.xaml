@@ -233,7 +233,10 @@
                         </TreeView.ItemTemplate>
                     </uiC:PpsTreeListView>
 
-					<ContentControl Grid.Column="2" Grid.Row="1" Content="{Binding ElementName=AdreTreeView, Path=SelectedValue}" ContentTemplateSelector="{Binding templateSelectorAdr}" Focusable="False"/>
+					<ContentControl Grid.Column="2" Grid.Row="1" 
+									Content="{Binding ElementName=AdreTreeView, Path=SelectedValue}" 
+									ContentTemplateSelector="{Binding templateSelectorAdr}" 
+									Focusable="False"/>
                 </Grid>
 	            </TabItem>
             <TabItem Header="Sonstiges">
