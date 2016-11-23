@@ -27,60 +27,6 @@ using Neo.IronLua;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- class PpsDataSetId -------------------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public class PpsDataSetId : IComparable<PpsDataSetId>, IEquatable<PpsDataSetId>
-	{
-		private readonly Guid guid;
-		private readonly long index;
-
-		public PpsDataSetId(Guid guid, long index)
-		{
-			this.guid = guid;
-			this.index = index;
-		} // ctor
-
-		public override string ToString()
-			=> $"DataSet: {guid:D}@{index:N0}";
-
-		public override int GetHashCode()
-			=> guid.GetHashCode() ^ index.GetHashCode();
-
-		public override bool Equals(object other)
-			=> Equals(other as PpsDataSetId);
-
-		public bool Equals(PpsDataSetId other)
-			=> (object)other != null && (Object.ReferenceEquals(this, other) || (other.guid == this.guid && other.index == this.index));
-
-		public int CompareTo(PpsDataSetId other)
-		{
-			if ((object)other == null)
-				return -1;
-
-			var t = guid.CompareTo(other.Guid);
-			return t == 0 ? index.CompareTo(other.index) : t;
-		} // func CompareTo
-
-		/// <summary>Client site Id, not the server id.</summary>
-		public Guid Guid => guid;
-		/// <summary>Pulled revision</summary>
-		public long Index => index;
-
-		public bool IsEmpty => guid == Guid.Empty && index <= 0;
-
-		public static PpsDataSetId Empty { get; } = new PpsDataSetId(Guid.Empty, 0);
-
-		public static bool operator ==(PpsDataSetId left, PpsDataSetId right)
-			=> ((object)left == null && (object)right == null) || ((object)left != null && left.Equals(right));
-
-		public static bool operator !=(PpsDataSetId left, PpsDataSetId right)
-			=> ((object)left != null || (object)right != null) && ((object)left == null || !left.Equals(right));
-	} // class PpsDataSetId
-
-	#endregion
-
 	#region -- interface IPpsActiveDataSetOwner -----------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -96,7 +42,7 @@ namespace TecWare.PPSn.Data
 	{
 		LuaTable IPpsActiveDataSetOwner.Events => this;
 	} // class PpsActiveDataSetOwner
-	
+
 	#endregion
 
 	#region -- interface IPpsActiveDataSets ---------------------------------------------
@@ -117,29 +63,20 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		string GetDataSetSchemaUri(string schema);
 
-		/// <summary>Parses the guid from the xml-representation</summary>
-		/// <param name="xData"></param>
-		/// <returns></returns>
-		Guid GetGuidFromData(XElement xData, XName rootTable = null);
-
 		/// <summary>Returns a dataset definition for the schema (not registered, empty id).</summary>
 		/// <param name="schema">Name of the schema</param>
 		/// <returns>DataSet definition</returns>
 		Task<PpsDataSetDefinitionDesktop> GetDataSetDefinition(string schema);
 
-		/// <summary>Creates a uninitialized dataset (registered).</summary>
-		/// <param name="schema">Name of the schema.</param>
-		/// <param name="id">Id for the registered dataset.</param>
-		/// <returns>Registered dataset.</returns>
-		Task<PpsDataSetDesktop> CreateEmptyDataSetAsync(string schema, PpsDataSetId id);
-
+		/// <summary>Returns open datasets of a specific type.</summary>
+		/// <param name="schema"></param>
+		/// <typeparam name="T"></typeparam>
+		/// <returns></returns>
+		IEnumerable<T> GetKnownDataSets<T>(string schema = null)
+			where T : PpsDataSetDesktop;
+		
 		/// <summary>Returns a list of registered definitions.</summary>
 		IEnumerable<string> KnownSchemas { get; }
-
-		/// <summary>Returns a currenty opened dataset.</summary>
-		/// <param name="id">Id of the requested dataset.</param>
-		/// <returns><c>null</c> or the active dataset.</returns>
-		PpsDataSetDesktop this[PpsDataSetId id] { get; }
 	} // interface IPpsActiveDataSets
 
 	#endregion
@@ -176,10 +113,7 @@ namespace TecWare.PPSn.Data
 			=> new PpsDataTableDefinitionDesktop(this, c);
 
 		public override PpsDataSet CreateDataSet()
-			=> new PpsDataSetDesktop(this, (PpsEnvironment)Shell, PpsDataSetId.Empty);
-
-		public virtual PpsDataSetDesktop CreateDataSet(PpsDataSetId id)
-			=> new PpsDataSetDesktop(this, (PpsEnvironment) Shell, id);
+			=> new PpsDataSetDesktop(this, (PpsEnvironment)Shell);
 	} // class PpsDataSetDefinitionDesktop
 
 	#endregion
@@ -211,7 +145,9 @@ namespace TecWare.PPSn.Data
 			CommitNew();
 			return row;
 		} // func Add
-		
+
+		public PpsDataRow Parent => (InternalList as PpsDataRelatedFilter)?.Parent;
+
 		public IPpsDataView DataView => (IPpsDataView)base.SourceCollection;
 	} // class PpsDataCollectionView
 
@@ -256,26 +192,19 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsDataSetDesktop --------------------------------------------------
 
-	public class PpsDataSetDesktop : PpsDataSetClient, INotifyPropertyChanged
+	public class PpsDataSetDesktop : PpsDataSetClient
 	{
-		public event PropertyChangedEventHandler PropertyChanged;
-
-		private readonly PpsDataSetId dataSetId;
-
-		private bool isDirty = false;             // is this document changed since the last dump
-
 		private readonly object datasetOwnerLock = new object();
 		private readonly List<IPpsActiveDataSetOwner> datasetOwner = new List<IPpsActiveDataSetOwner>(); // list with document owners
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		public PpsDataSetDesktop(PpsDataSetDefinitionDesktop definition, PpsEnvironment environment, PpsDataSetId datasetId)
+		public PpsDataSetDesktop(PpsDataSetDefinitionDesktop definition, PpsEnvironment environment)
 			: base(definition, environment)
 		{
-			this.dataSetId = datasetId;
 		} // ctor
 
-		public void RegisterOwner(IPpsActiveDataSetOwner owner)
+		public void RegisterOwner(IPpsActiveDataSetOwner owner)//<-- verschieben?
 		{
 			lock (datasetOwnerLock)
 			{
@@ -308,43 +237,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- Dirty Flag -------------------------------------------------------------
-
-		private void SetDirty()
-		{
-			if (!isDirty)
-			{
-				isDirty = true;
-				OnPropertyChanged(nameof(IsDirty));
-			}
-		} // proc SetDirty
-
-		public void ResetDirty()
-		{
-			if (!isDirty)
-			{
-				isDirty = false;
-				OnPropertyChanged(nameof(IsDirty));
-			}
-		} // proc ResetDirty
-
-		protected override void OnDataChanged()
-		{
-			base.OnDataChanged();
-			SetDirty();
-		} // proc OnDataChanged
-
-		#endregion
-
-		protected void OnPropertyChanged(string propertyName)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
 		/// <summary>Environment.</summary>
 		public PpsEnvironment Environment => (PpsEnvironment)Shell;
-		/// <summary>Id of the current dataset.</summary>
-		public PpsDataSetId DataSetId => dataSetId;
-		/// <summary>Is the current dataset changed.</summary>
-		public bool IsDirty => isDirty;
 	} // class PpsDataSetDesktop
 
 	#endregion

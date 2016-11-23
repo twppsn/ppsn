@@ -40,29 +40,26 @@ namespace TecWare.PPSn.UI
 	/// und einer Dataset</summary>
 	public class PpsGenericMaskWindowPane : PpsGenericWpfWindowPane, IPpsActiveDataSetOwner
 	{
-		private readonly IPpsActiveDocuments rdt;
 		private readonly IPpsIdleAction idleActionToken;
 		private CollectionViewSource undoView;
 		private CollectionViewSource redoView;
 
-		private PpsDocument document; // current DataSet which is controlled by the mask
-		private string documentType = null;
-
+		private PpsObject obj; // current object, controlled by this mask
+		private PpsObjectDataSet data; // data object
+		
 		public PpsGenericMaskWindowPane(PpsEnvironment environment, PpsMainWindow window)
 			: base(environment, window)
 		{
-			this.rdt = (IPpsActiveDocuments)environment.GetService(typeof(IPpsActiveDocuments));
-
 			idleActionToken = Environment.AddIdleAction(
 				elapsed =>
 				{
 					if (elapsed > 3000)
 					{
-						CommitEdit();
+						CommitEditAsync();
 						return false;
 					}
 					else
-						return document != null && document.IsDirty;
+						return data != null && data.IsDirty;
 				}
 			);
 		} // ctor
@@ -79,12 +76,8 @@ namespace TecWare.PPSn.UI
 			var r = base.CompareArguments(otherArgumens);
 			if (r == PpsWindowPaneCompareResult.Reload)
 			{
-				var otherDocumentId = new PpsDataSetId(
-					otherArgumens.GetOptionalValue("guid", Guid.Empty),
-					Convert.ToInt64(otherArgumens.GetMemberValue("revId") ?? -1L)
-				);
-
-				return document.DataSetId == otherDocumentId ? PpsWindowPaneCompareResult.Same : PpsWindowPaneCompareResult.Reload;
+				var otherObj = otherArgumens.GetMemberValue("object");
+				return otherObj == obj ? PpsWindowPaneCompareResult.Same : PpsWindowPaneCompareResult.Reload;
 			}
 			return r;
 		} // func CompareArguments
@@ -92,27 +85,53 @@ namespace TecWare.PPSn.UI
 		public override async Task LoadAsync(LuaTable arguments)
 		{
 			// get the document path
-			this.documentType = arguments.GetOptionalValue("document", String.Empty);
-			if (String.IsNullOrEmpty(documentType))
-				throw new ArgumentNullException("document", "Parameter is missing.");
+			obj = (PpsObject)arguments.GetMemberValue("object");
+			if(obj == null)
+				throw new ArgumentNullException("object", "Parameter is missing.");
 
 			await Task.Yield(); // spawn new thread
 
 			// new document or load one
-			var id = arguments.GetMemberValue("guid");
-			var revId = arguments.GetMemberValue("revId");
-			this.document = id == null ?
-				await rdt.CreateDocumentAsync(documentType, arguments) :
-				await rdt.OpenDocumentAsync(new PpsDataSetId((Guid)id, Convert.ToInt64(revId ?? -1)), arguments);
+			using (var transaction = Environment.BeginLocalStoreTransaction())
+			{
+				data = await obj.GetDataAsync<PpsObjectDataSet>(transaction);
 
-			// register events, owner, and in the openDocuments dictionary
-			document.RegisterOwner(this);
+				// register events, owner, and in the openDocuments dictionary
+				data.RegisterOwner(this);
+
+				// load data
+				if (!data.IsInitialized)
+				{
+					if (obj.HasData) // existing data
+					{
+						await data.LoadAsync(transaction);
+						await data.OnLoadedAsync(arguments);
+					}
+					else // new data
+					{
+						await data.OnNewAsync(arguments);
+					}
+				}
+			}
 
 			// get the pane to view, if it is not given
 			if (!arguments.ContainsKey("pane"))
-				arguments.SetMemberValue("pane", await rdt.GetDocumentDefaultPaneAsync(documentType));
+			{
+				// try to get the uri from the pane list
+				var info = Environment.GetObjectInfo(obj.Typ);
+				var paneUri = info["defaultPane"] as string;
+				if (!String.IsNullOrEmpty(paneUri))
+					arguments.SetMemberValue("pane", paneUri);
+				else
+				{
+					// read the schema meta data
+					paneUri = data.DataSetDefinition.Meta.GetProperty<string>(PpsDataSetMetaData.DefaultPaneUri, null);
+					if (!String.IsNullOrEmpty(paneUri))
+						arguments.SetMemberValue("pane", paneUri);
+				}
+			}
 
-			// Lade die Maske
+			// Load mask
 			await base.LoadAsync(arguments);
 
 			await Dispatcher.InvokeAsync(InitializeData);
@@ -124,7 +143,7 @@ namespace TecWare.PPSn.UI
 			undoView = new CollectionViewSource();
 			using (undoView.DeferRefresh())
 			{
-				undoView.Source = document.UndoManager;
+				undoView.Source = data.UndoManager;
 				undoView.SortDescriptions.Add(new SortDescription("Index", ListSortDirection.Descending));
 				undoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Undo;
 			}
@@ -132,7 +151,7 @@ namespace TecWare.PPSn.UI
 			redoView = new CollectionViewSource();
 			using (redoView.DeferRefresh())
 			{
-				redoView.Source = document.UndoManager;
+				redoView.Source = data.UndoManager;
 				redoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Redo;
 			}
 
@@ -204,10 +223,10 @@ namespace TecWare.PPSn.UI
 
 		public override Task<bool> UnloadAsync(bool? commit = default(bool?))
 		{
-			if (document.IsDirty)
-				CommitEdit();
+			if (data.IsDirty)
+				CommitEditAsync().Wait();
 
-			document.UnregisterOwner(this);
+			data.UnregisterOwner(this);
 
 			return base.UnloadAsync(commit);
 		} // func UnloadAsync
@@ -216,29 +235,29 @@ namespace TecWare.PPSn.UI
 		public void CommitToDisk(string fileName)
 		{
 			using (var xml = XmlWriter.Create(fileName, new XmlWriterSettings() { Encoding = Encoding.UTF8, NewLineHandling = NewLineHandling.Entitize, NewLineChars = "\n\r", IndentChars = "\t" }))
-				document.Write(xml);
+				data.Write(xml);
 		} // proc CommitToDisk
 
-		[LuaMember(nameof(CommitEdit))]
-		public void CommitEdit()
+		[LuaMember(nameof(CommitEditAsync))]
+		public PpsLuaTask CommitEditAsync()
 		{
 			UpdateSources();
-			document.CommitWork();
-			Debug.Print("Saved Document.");
+			return Environment.RunTask(data.CommitAsync())
+				.ContinueUI(new Action(() => Debug.Print("Saved Document.")));
 		} // proc CommitEdit
 
 		[LuaMember(nameof(PushDataAsync))]
 		public PpsLuaTask PushDataAsync()
 		{
 			UpdateSources();
-			return Environment.RunTask(document.PushWorkAsync())
+			return Environment.RunTask(data.PushAsync())
 				.OnException(
 				new Action<Exception>(ex => Environment.ShowException(ex, "Veröffentlichung ist fehlgeschlagen."))
 			);
 		} // proc PushDataAsync
 
 		[LuaMember(nameof(UndoManager))]
-		public PpsUndoManager UndoManager => document.UndoManager;
+		public PpsUndoManager UndoManager => data.UndoManager;
 
 		/// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
 		public ICollectionView UndoView => undoView.View;
@@ -246,7 +265,7 @@ namespace TecWare.PPSn.UI
 		public ICollectionView RedoView => redoView.View;
 
 		[LuaMember(nameof(Data))]
-		public PpsDataSet Data => document;
+		public PpsDataSet Data => data;
 
 		LuaTable IPpsActiveDataSetOwner.Events => this;
 	} // class PpsGenericMaskWindowPane

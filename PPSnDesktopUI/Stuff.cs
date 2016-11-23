@@ -91,6 +91,9 @@ namespace TecWare.PPSn
 
 	public static class StuffDB
 	{
+		public static bool DbNullOnNeg(long value)
+			=> value < 0;
+
 		public static object DbNullIfString(this string value)
 			=> String.IsNullOrEmpty(value) ? (object)DBNull.Value : value;
 

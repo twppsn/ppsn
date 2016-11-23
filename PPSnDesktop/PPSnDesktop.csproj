@@ -78,8 +78,6 @@
     </ApplicationDefinition>
     <Compile Include="PpsMainEnvironment.cs" />
     <Compile Include="PpsMainEnvironment.Data.cs" />
-    <Compile Include="PpsMainEnvironment.Documents.cs" />
-    <Compile Include="PpsMainEnvironment.Objects.cs" />
     <Compile Include="PpsMainEnvironment.Views.cs" />
     <Compile Include="UI\Panes\PpsLoginPane.xaml.cs">
       <DependentUpon>PpsLoginPane.xaml</DependentUpon>
@@ -103,6 +101,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <EmbeddedResource Include="Static\SQLite\SyncTokens.sql" />
     <EmbeddedResource Include="Static\SQLite\Constants.sql" />
     <EmbeddedResource Include="Static\SQLite\Objects.sql" />
     <EmbeddedResource Include="Static\navigator.xml">

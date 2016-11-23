@@ -129,7 +129,7 @@ namespace TecWare.PPSn
 			if (IsOnline && IsAuthentificated)
 			{
 				await Task.Run(new Action(UpdateConstants));
-				await Task.Run(new Action(UpdateDocumentStore));
+				await Task.Run(RefreshObjectStoreAsync);
 			}
 
 			await RefreshConstantsSchemaAsync();
@@ -181,10 +181,13 @@ namespace TecWare.PPSn
 						actions.AppendItem(new PpsMainActionDefinition(this, cur, ref priority));
 
 					// update document info
-					var updateList = new List<string>();
-					foreach (var cur in xNavigator.Elements(XName.Get("document")))
-						UpdateDocumentDefinitionInfo(cur, updateList);
-					ClearDocumentDefinitionInfo(updateList);
+					lock (GetObjectInfoSyncObject())
+					{
+						var removeList = GetRemoveObjectInfo();
+						foreach (var cur in xNavigator.Elements(XName.Get("document")))
+							UpdateObjectInfo(cur, removeList);
+						ClearObjectInfo(removeList);
+					}
 				}
 
 				// run environment extensions

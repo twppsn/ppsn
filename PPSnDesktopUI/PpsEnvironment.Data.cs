@@ -97,7 +97,7 @@ namespace TecWare.PPSn
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
-		private class PpsActiveDataSetsImplementation : Dictionary<PpsDataSetId, PpsDataSetDesktop>, IPpsActiveDataSets
+		private class PpsActiveDataSetsImplementation : List<PpsDataSetDesktop>, IPpsActiveDataSets
 		{
 			private readonly PpsEnvironment environment;
 			private readonly Dictionary<string, KnownDataSetDefinition> datasetDefinitions = new Dictionary<string, KnownDataSetDefinition>(StringComparer.OrdinalIgnoreCase);
@@ -149,63 +149,16 @@ namespace TecWare.PPSn
 				return definition.GetDocumentDefinitionAsync();
 			} // func GetDataSetDefinition
 
-			public Guid GetGuidFromData(XElement xData, XName rootTable)
+			public IEnumerable<T> GetKnownDataSets<T>(string schema = null)
+				where T : PpsDataSetDesktop
 			{
-				// tag of the root table
-				var xn = XNamespace.Get("table");
-				if (rootTable == null)
-					rootTable = xn + "Head";
-				else if (rootTable.Namespace != xn)
-					rootTable = xn + rootTable.LocalName;
-
-				var x = xData.Element(rootTable);
-				if (x == null)
-					throw new ArgumentException($"Root table not found (tag: {rootTable}).");
-
-				var xRow = x.Element("r");
-				if (xRow == null)
-					throw new ArgumentException($"Root table has no row (tag: {rootTable}).");
-
-				var xGuid = xRow.Element("Guid");
-				if (xGuid == null)
-					throw new ArgumentException($"Root table has no guid-column (tag: {rootTable}).");
-
-				var guidString = xGuid.Element("o")?.Value;
-				if (String.IsNullOrEmpty(guidString))
-					throw new ArgumentException($"Guid-column is empty (tag: {rootTable}).");
-
-				return Guid.Parse(guidString);
-			} // func GetGuidFromData
-
-			public async Task<PpsDataSetDesktop> CreateEmptyDataSetAsync(string schema, PpsDataSetId id)
-			{
-				if (id == PpsDataSetId.Empty)
-					throw new ArgumentNullException("id", "Empty id is not allowed.");
-
-				var dataset = Find(id);
-				if (dataset != null)
-					throw new ArgumentOutOfRangeException("id", $"DataSet already opened: {id}");
-
-				// try to find known schema
-				var definition = await GetDataSetDefinition(schema);
-				if (definition == null)
-					throw new ArgumentOutOfRangeException("schema", $"'{schema}' is not registered.");
-
-				// create a empty dataset
-				return definition.CreateDataSet(id);
-			} // func IPpsActiveDataSets.CreateEmptyOrOpenDataSetAsync
-
-			IEnumerator<PpsDataSetDesktop> IEnumerable<PpsDataSetDesktop>.GetEnumerator()
-				=> Values.GetEnumerator();
-
-			IEnumerator IEnumerable.GetEnumerator()
-				=> Values.GetEnumerator();
-
-			public PpsDataSetDesktop Find(PpsDataSetId id)
-			{
-				PpsDataSetDesktop dataset;
-				return TryGetValue(id, out dataset) ? dataset : null;
-			} // func Find
+				foreach (var c in this)
+				{
+					var ds = c as T;
+					if (ds != null && (schema == null || ((PpsDataSetDefinitionDesktop)ds.DataSetDefinition).SchemaType == schema))
+						yield return ds;
+				}
+			} // func GetKnownDataSets
 
 			public IEnumerable<string> KnownSchemas
 			{
@@ -215,8 +168,6 @@ namespace TecWare.PPSn
 						return datasetDefinitions.Keys.ToArray();
 				}
 			} // prop KnownSchemas
-
-			PpsDataSetDesktop IPpsActiveDataSets.this[PpsDataSetId id] => Find(id);
 		} // class PpsActiveDataSetsImplementation
 
 		#endregion
@@ -229,7 +180,6 @@ namespace TecWare.PPSn
 		private bool isOnline = false;                  // is there an online connection
 
 		private readonly BaseWebRequest request;
-		private readonly PpsActiveDataSetsImplementation activeDataSets;
 
 		#region -- Init -------------------------------------------------------------------
 
@@ -408,15 +358,10 @@ namespace TecWare.PPSn
 							if (String.Compare(existingMetaTableName, metaTableName, StringComparison.Ordinal) == 0)
 								continue;
 
-							foreach (var c in metaTableScript.Elements())
-							{
-								if (c.Name.LocalName == "convert" &&
-									String.Compare(c.Attribute("previousTable").Value, existingMetaTableName, StringComparison.Ordinal) == 0)
-								{
-									metaTableConvert = c.Value;
-								}
-							}
-
+							metaTableConvert = (from c in metaTableScript.Elements("convert")
+																	where String.Compare(c.Attribute("previousTable").Value, existingMetaTableName, StringComparison.Ordinal) == 0
+																	select c.Value).FirstOrDefault();
+							
 							if (metaTableConvert == null)
 								throw new InvalidDataException(String.Format("No convert commands found from meta table \"{0}\" to \"{1}\".", existingMetaTableName, metaTableName));
 						} // if Regex.IsMatch()
@@ -449,45 +394,33 @@ namespace TecWare.PPSn
 					{
 						if (existsMetaTable)
 						{
-							var resourceFound = false;
-							var existingRevision = 0L;
+							var existingRevision = -1L;
 
 							using (var command = new SQLiteCommand($"SELECT [Revision] FROM [{metaTableName}] WHERE [ResourceName] = @resourceName;", localStore, transaction))
 							{
 								command.Parameters.Add("@resourceName", DbType.String).Value = resourceName;
-								using (var reader = command.ExecuteReader())
+								using (var reader = command.ExecuteReader(CommandBehavior.SingleRow))
 								{
-									while (reader.Read())
-									{
-										if (resourceFound)
-											throw new InvalidDataException(String.Format("localStore contains several entries for resource \"{0}\".", resourceName));
-
-										resourceFound = true;
-
-										if (reader.IsDBNull(0))
-											throw new InvalidDataException(String.Format("The meta table \"{0}\" contains the null value for revision of resource \"{1}\".", metaTableName, scriptName));
-
+									if (reader.Read())
 										existingRevision = reader.GetInt64(0);
-									}
 								}
 							} // using command
+							
+							if (existingRevision == resourceRevision) // Continue with the next scriptSource.
+								continue;
 
-							if (resourceFound)
+							if (existingRevision >= 0)
 							{
-								if (existingRevision == resourceRevision)
-									// Continue with the next scriptSource.
-									continue;
-
-								foreach (var c in script.Elements())
-									if (c.Name.LocalName.Equals("convert"))
-										if (existingRevision == Int64.Parse(c.Attribute("previousRev").Value))
-											convertInstructions = c.Value;
+								convertInstructions = (from c in script.Elements("convert")
+									where existingRevision == Int64.Parse(c.Attribute("previousRev").Value)
+									select c.Value).FirstOrDefault();
 
 								if (convertInstructions == null)
 									throw new InvalidDataException(String.Format("No conversion commands found for resource \"{0}\" from revision \"{1}\" to \"{2}\".", scriptName, existingRevision, resourceRevision));
-							} // if resourceFound
+							}
 						} // if existsMetaTable
 
+						// execute the command
 						using (var command = new SQLiteCommand(convertInstructions == null ?
 							createInstructions :
 							convertInstructions, localStore, transaction))
@@ -495,24 +428,17 @@ namespace TecWare.PPSn
 							command.ExecuteNonQuery();
 						}
 
+						// update the meta table
 						using (var command = new SQLiteCommand(convertInstructions == null ?
-							$"UPDATE [{metaTableName}] SET [Revision] = @resourceRevision, [LastModification] = DATETIME('now') WHERE [ResourceName] = @resourceName;" :
-							$"INSERT INTO [{metaTableName}] ([ResourceName], [Revision], [LastModification]) VALUES (@resourceName, @resourceRevision, DATETIME('now'));", localStore, transaction))
+							$"INSERT INTO [{metaTableName}] ([ResourceName], [Revision], [LastModification]) VALUES (@resourceName, @resourceRevision, DATETIME('now'));" :
+							$"UPDATE [{metaTableName}] SET [Revision] = @resourceRevision, [LastModification] = DATETIME('now') WHERE [ResourceName] = @resourceName;", localStore, transaction))
 						{
 							command.Parameters.Add("@resourceRevision", DbType.Int64).Value = resourceRevision;
 							command.Parameters.Add("@resourceName", DbType.String).Value = resourceName;
 							var affectedRows = command.ExecuteNonQuery();
 
-							string errorText = null;
-							if (affectedRows < 0)
-								errorText = String.Format("unknown ({0})", affectedRows);
-							else if (affectedRows == 0)
-								errorText = "no entry";
-							else if (affectedRows > 1)
-								errorText = "multiple entries";
-
-							if (errorText != null)
-								throw new Exception(String.Format("The {0} in the revision table \"{1}\" for resource \"{2}\" revision \"{3}\" failed. Reason: {4}", convertInstructions == null ? "update" : "insert", metaTableName, scriptName, resourceRevision, errorText));
+							if (affectedRows != 1)
+								throw new Exception(String.Format("The {0} in the revision table \"{1}\" for resource \"{2}\" revision \"{3}\" failed.", convertInstructions == null ? "update" : "insert", metaTableName, scriptName, resourceRevision));
 						} // using command
 					} // try
 					catch (SQLiteException e)
@@ -1085,44 +1011,42 @@ namespace TecWare.PPSn
 
 		protected IEnumerable<IDataRow> GetRemoteViewData(PpsShellGetList arguments)
 		{
-			var sb = new StringBuilder("remote/?action=viewget&v=");
-			sb.Append(arguments.ViewId);
+			if (arguments.ViewId.StartsWith("local.", StringComparison.OrdinalIgnoreCase)) // it references the local db
+			{
+				if (arguments.ViewId == "local.objects")
+					return CreateObjectFilter(arguments);
+				else
+					throw new ArgumentOutOfRangeException("todo"); // todo: exception
+			}
+			else
+			{
+				var sb = new StringBuilder("remote/?action=viewget&v=");
+				sb.Append(arguments.ViewId);
 
-			if (arguments.Filter != null && arguments.Filter != PpsDataFilterTrueExpression.True)
-				sb.Append("&f=").Append(Uri.EscapeDataString(arguments.Filter.ToString()));
-			if (arguments.Order != null && arguments.Order.Length > 0)
-				sb.Append("&o=").Append(Uri.EscapeDataString(PpsDataOrderExpression.ToString(arguments.Order)));
-			if (arguments.Start != -1)
-				sb.Append("&s=").Append(arguments.Start);
-			if (arguments.Count != -1)
-				sb.Append("&c=").Append(arguments.Count);
-			if (!String.IsNullOrEmpty(arguments.AttributeSelector))
-				sb.Append("&a=").Append(arguments.AttributeSelector);
+				if (arguments.Filter != null && arguments.Filter != PpsDataFilterTrueExpression.True)
+					sb.Append("&f=").Append(Uri.EscapeDataString(arguments.Filter.ToString()));
+				if (arguments.Order != null && arguments.Order.Length > 0)
+					sb.Append("&o=").Append(Uri.EscapeDataString(PpsDataOrderExpression.ToString(arguments.Order)));
+				if (arguments.Start != -1)
+					sb.Append("&s=").Append(arguments.Start);
+				if (arguments.Count != -1)
+					sb.Append("&c=").Append(arguments.Count);
+				if (!String.IsNullOrEmpty(arguments.AttributeSelector))
+					sb.Append("&a=").Append(arguments.AttributeSelector);
 
-			return Request.CreateViewDataReader(sb.ToString());
+				return Request.CreateViewDataReader(sb.ToString());
+			}
 		} // func GetRemoteViewData
 
 		#endregion
 
-		#region -- ActiveDataSets ---------------------------------------------------------
-
-		internal void OnDataSetActivated(PpsDataSetDesktop dataset)
+		public Task<bool> ForceOnlineAsync(bool throwException = true)
 		{
-			if (activeDataSets.Find(dataset.DataSetId) != null)
-				throw new ArgumentException($"DataSet already registered (Id: ${dataset.DataSetId})");
-
-			activeDataSets[dataset.DataSetId] = dataset;
-		} // proc OnDataSetActivated
-
-		internal void OnDataSetDeactivated(PpsDataSetDesktop dataset)
-		{
-			activeDataSets.Remove(dataset.DataSetId);
-		} // proc OnDataSetDeactivated
-
-		[LuaMember(nameof(ActiveDataSets))]
-		public IPpsActiveDataSets ActiveDataSets => activeDataSets;
-
-		#endregion
+			if (IsOnline)
+				return Task.FromResult(true);
+			
+			throw new NotImplementedException("Todo: Force online mode.");
+		} // func ForceOnlineMode
 
 		protected virtual void OnIsOnlineChanged()
 		{
