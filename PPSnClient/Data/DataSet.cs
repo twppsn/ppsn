@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -101,7 +102,7 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class PpsDataSetClient : PpsDataSet
+	public class PpsDataSetClient : PpsDataSet, INotifyPropertyChanged
 	{
 		#region -- class PpsDataSetTable --------------------------------------------------
 
@@ -134,9 +135,12 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		private readonly IPpsShell shell;
+		public event PropertyChangedEventHandler PropertyChanged;
 
 		private LuaTable arguments;
+		private readonly IPpsShell shell;
+
+		private bool isDirty = false;             // is this document changed since the last dump
 
 		protected internal PpsDataSetClient(PpsDataSetDefinition datasetDefinition, IPpsShell shell)
 			: base(datasetDefinition)
@@ -147,6 +151,34 @@ namespace TecWare.PPSn.Data
 		protected override object GetEnvironmentValue(object key)
 			=> shell.LuaLibrary?.GetValue(key);
 
+		#region -- Dirty Flag -------------------------------------------------------------
+
+		private void SetDirty()
+		{
+			if (!isDirty)
+			{
+				isDirty = true;
+				OnPropertyChanged(nameof(IsDirty));
+			}
+		} // proc SetDirty
+
+		public void ResetDirty()
+		{
+			if (!isDirty)
+			{
+				isDirty = false;
+				OnPropertyChanged(nameof(IsDirty));
+			}
+		} // proc ResetDirty
+
+		protected override void OnDataChanged()
+		{
+			base.OnDataChanged();
+			SetDirty();
+		} // proc OnDataChanged
+
+		#endregion
+		
 		/// <summary>Initialize a new dataset</summary>
 		public virtual async Task OnNewAsync(LuaTable arguments)
 		{
@@ -178,9 +210,16 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc OnLoadedAsync
 
+		protected void OnPropertyChanged(string propertyName)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+		/// <summary>Is the dataset initialized.</summary>
 		public bool IsInitialized => arguments != null;
 
+		/// <summary>Environment of the dataset.</summary>
 		public IPpsShell Shell => shell;
+		/// <summary>Is the current dataset changed.</summary>
+		public bool IsDirty => isDirty;
 	} // class PpsDataSetClient
 
 	#endregion

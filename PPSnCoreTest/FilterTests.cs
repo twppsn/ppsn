@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -127,5 +128,53 @@ namespace TecWare.PPSn
 		[TestMethod]
 		public void TestFilter07()
 			=> TestFilter("Name:(A)", "Name:(A)");
+		
+		private static Tuple<bool, string, int, int, string> SplitRegEx(string line)
+		{
+			var  regAttributeLine = new Regex(@"(?<r>[\+\-])(?<n>\w+)(\:(?<c>\d*)(\:(?<u>\d*))?)?\=(?<v>.*)", RegexOptions.Singleline | RegexOptions.Compiled);
+			var m = regAttributeLine.Match(line);
+			if (!m.Success)
+				return null;
+
+			var isRemoved = m.Groups["r"].Value[0] != '-';
+			var tagName = m.Groups["n"].Value;
+			var classification = String.IsNullOrEmpty(m.Groups["c"].Value) ? -1 :Int32.Parse(m.Groups["c"].Value) ;
+			var userId = String.IsNullOrEmpty(m.Groups["u"].Value) ? -1 : Int32.Parse(m.Groups["u"].Value);
+			var value = m.Groups["v"].Value;
+
+			return new Tuple<bool, string, int, int, string>(isRemoved, tagName, classification, userId, value);
+		}
+
+		[TestMethod]
+		public void TestTagRex01()
+		{
+			var t1 = SplitRegEx("+tag1=");
+			Assert.AreEqual(true, t1.Item1);
+			Assert.AreEqual("tag1", t1.Item2);
+			Assert.AreEqual(-1, t1.Item3);
+			Assert.AreEqual(-1, t1.Item4);
+			Assert.AreEqual(String.Empty, t1.Item5);
+
+			t1 = SplitRegEx("+tag1:1:2=v1");
+			Assert.AreEqual(true, t1.Item1);
+			Assert.AreEqual("tag1", t1.Item2);
+			Assert.AreEqual(1, t1.Item3);
+			Assert.AreEqual(2, t1.Item4);
+			Assert.AreEqual("v1", t1.Item5);
+			
+			t1 = SplitRegEx("-tag1:3=");
+			Assert.AreEqual(false, t1.Item1);
+			Assert.AreEqual("tag1", t1.Item2);
+			Assert.AreEqual(3, t1.Item3);
+			Assert.AreEqual(-1, t1.Item4);
+			Assert.AreEqual(String.Empty, t1.Item5);
+			
+			t1 = SplitRegEx("-tag1::4=v2.");
+			Assert.AreEqual(false, t1.Item1);
+			Assert.AreEqual("tag1", t1.Item2);
+			Assert.AreEqual(-1, t1.Item3);
+			Assert.AreEqual(4, t1.Item4);
+			Assert.AreEqual("v2.", t1.Item5);
+		}
 	}
 }

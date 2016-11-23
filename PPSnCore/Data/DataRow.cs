@@ -85,6 +85,9 @@ namespace TecWare.PPSn.Data
 		protected sealed override bool FilterRow(PpsDataRow row)
 			=> Object.Equals(parentRow[parentColumnIndex], row[childColumnIndex]);
 
+		/// <summary>Parent row for the filter</summary>
+		public PpsDataRow Parent => parentRow;
+		/// <summary>Relation that builds the filter</summary>
 		public PpsDataTableRelationDefinition Relation => relation;
 	} // class PpsDataRelatedFilter
 
