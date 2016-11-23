@@ -112,22 +112,7 @@
 			
 			<!-- objects -->
 			<pps:view name="dbo.objects">
-				<pps:source type="select">
-					<![CDATA[
-						SELECT
-								o.Id
-								, o.Guid
-								, o.Typ
-								, o.Nr
-								, o.IsRev
-								, o.State
-								, o.StateChg
-								, r.Id as RevId
-								, r.Tags as Tags
-							FROM dbo.Objk o
-								LEFT OUTER JOIN dbo.Objr r on (o.HeadRevId = r.Id)
-					]]>
-				</pps:source>
+				<pps:source type="view">dbo.objects</pps:source>
 			</pps:view>
 			
 			<!-- base dataset -->

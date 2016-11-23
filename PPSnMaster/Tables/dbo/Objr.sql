@@ -1,9 +1,8 @@
-﻿CREATE TABLE [dbo].[Objr]
+﻿CREATE TABLE [dbo].[ObjR]
 (
 	[Id] BIGINT NOT NULL CONSTRAINT pkObjrId PRIMARY KEY CLUSTERED IDENTITY (1, 1),
 	[ParentId] BIGINT NULL CONSTRAINT fkObjrObjrId REFERENCES dbo.Objr (Id),
 	[ObjkId] BIGINT NOT NULL CONSTRAINT fkObjrObjkId REFERENCES dbo.Objk (Id), 
-	[Tags] XML NOT NULL CONSTRAINT dfObjrTags DEFAULT '<tags />',
 	[IsDocumentText] BIT DEFAULT 0 NOT NULL,
 	[IsDocumentDeflate] BIT DEFAULT 0 NOT NULL,
 	[Document] VARBINARY(MAX) NULL, 
@@ -59,14 +58,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level2type = N'COLUMN',
     @level2name = N'ParentId'
 GO
-EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Simple view data for search proposes (todo: ggf. eigene Tabelle)',
-    @level0type = N'SCHEMA',
-    @level0name = N'dbo',
-    @level1type = N'TABLE',
-    @level1name = N'Objr',
-    @level2type = N'COLUMN',
-    @level2name = N'Tags'
+
 GO
 CREATE INDEX [idxObjrObjkId] ON [dbo].[Objr] ([ObjkId])
 GO
