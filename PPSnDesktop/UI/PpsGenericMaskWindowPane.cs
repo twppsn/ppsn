@@ -13,7 +13,6 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-#define NOTIFY_BINDING_SOURCE_UPDATE
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

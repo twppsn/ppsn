@@ -832,6 +832,8 @@ namespace TecWare.PPSn
 		Task CommitAsync(SQLiteTransaction transaction = null);
 		Task PushAsync(SQLiteTransaction transaction = null);
 		Task UnloadAsync(SQLiteTransaction transaction = null);
+
+		bool IsLoaded { get; }
 	} // interface IPpsObjectData
 
 	#endregion
@@ -868,6 +870,8 @@ namespace TecWare.PPSn
 		{
 			throw new NotImplementedException();
 		}
+
+		public bool IsLoaded => false;
 	} // class PpsObjectBlobData
 
 	#endregion
@@ -936,6 +940,7 @@ namespace TecWare.PPSn
 			=> Task.CompletedTask;
 
 		public PpsUndoManager UndoManager => null;
+		public bool IsLoaded => IsInitialized;
 	} // class PpsObjectDataSet
 
 	#endregion
@@ -1182,9 +1187,12 @@ namespace TecWare.PPSn
 		public async Task<T> GetDataAsync<T>(SQLiteTransaction transaction)
 			where T : IPpsObjectData
 		{
-			data = await environment.CreateObjectDataObjectAsync<T>(this);
-			if (!hasData && serverId >= 0)
+			if (data == null)
+			{
+				data = await environment.CreateObjectDataObjectAsync<T>(this);
+				if (!hasData && serverId >= 0)
 					await PullDataAsync(transaction);
+			}
 			return (T)data;
 		} // func GetDataAsync
 
@@ -1358,6 +1366,8 @@ namespace TecWare.PPSn
 							case 9:
 								return hasData;
 							case 10:
+								if (data == null)
+									data = GetDataAsync<IPpsObjectData>(null).Result;
 								return data;
 							case 11:
 								return tags;
