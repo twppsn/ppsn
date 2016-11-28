@@ -98,4 +98,11 @@
     <Property Name="ParentElementType" Value="SqlTable" />
     <Property Name="NewName" Value="State" />
   </Operation>
+  <Operation Name="Rename Refactor" Key="5d27c5a0-f587-4994-82c5-a25f37842649" ChangeDateTime="11/17/2016 10:54:43">
+    <Property Name="ElementName" Value="[dbo].[Objk].[StateChg]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[Objk]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="SyncToken" />
+  </Operation>
 </Operations>

@@ -7,8 +7,7 @@
 	[IsRev] BIT NOT NULL,
 	[IsHidden] BIT NOT NULL CONSTRAINT dfObjkIsHidden DEFAULT 0,
 	[IsRemoved] BIT NOT NULL CONSTRAINT dfObjkIsRemoved DEFAULT 0,
-	[State] XML NOT NULL DEFAULT '<tags />',
-	[StateChg] BIGINT NOT NULL DEFAULT 0,
+	[SyncToken] BIGINT NOT NULL DEFAULT 0,
 	[CurRevId] BIGINT NULL CONSTRAINT fkObjkObjrCurId REFERENCES dbo.Objr (Id),
 	[HeadRevId] BIGINT NULL CONSTRAINT fkObjkObjrHeadId REFERENCES dbo.Objr (Id)
 )
@@ -112,13 +111,5 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1type = N'TABLE',
     @level1name = N'Objk',
     @level2type = N'COLUMN',
-    @level2name = N'StateChg'
+    @level2name = 'SyncToken'
 GO
-EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Extented data for the object',
-    @level0type = N'SCHEMA',
-    @level0name = N'dbo',
-    @level1type = N'TABLE',
-    @level1name = N'Objk',
-    @level2type = N'COLUMN',
-    @level2name = 'State'
