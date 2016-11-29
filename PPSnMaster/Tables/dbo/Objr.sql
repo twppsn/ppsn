@@ -1,13 +1,13 @@
 ﻿CREATE TABLE [dbo].[ObjR]
 (
 	[Id] BIGINT NOT NULL CONSTRAINT pkObjrId PRIMARY KEY CLUSTERED IDENTITY (1, 1),
-	[ParentId] BIGINT NULL CONSTRAINT fkObjrObjrId REFERENCES dbo.Objr (Id),
-	[ObjkId] BIGINT NOT NULL CONSTRAINT fkObjrObjkId REFERENCES dbo.Objk (Id), 
+	[ParentId] BIGINT NULL CONSTRAINT fkObjrObjrId REFERENCES dbo.ObjR (Id),
+	[ObjkId] BIGINT NOT NULL CONSTRAINT fkObjrObjkId REFERENCES dbo.ObjK (Id), 
 	[IsDocumentText] BIT DEFAULT 0 NOT NULL,
 	[IsDocumentDeflate] BIT DEFAULT 0 NOT NULL,
 	[Document] VARBINARY(MAX) NULL, 
-	[DocumentId] BIGINT NULL CONSTRAINT fkObjrObjfId REFERENCES dbo.[Objf] (Id),
-	[DocumentLink] VARCHAR(max) NULL,
+	[DocumentId] BIGINT NULL CONSTRAINT fkObjrObjfId REFERENCES dbo.ObjF (Id),
+	[DocumentLink] VARCHAR(MAX) NULL,
 	[CreateDate] DATETIME NOT NULL CONSTRAINT dfObjrCreateDate DEFAULT getdate(),
 	[CreateUserId] BIGINT NOT NULL CONSTRAINT fkObjrUserId REFERENCES dbo.[User] (Id)
 )

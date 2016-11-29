@@ -65,6 +65,7 @@
     <Folder Include="Tables\hrs" />
     <Folder Include="Tables\sds" />
     <Folder Include="Stuff" />
+    <Folder Include="Database\" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\120\SqlSchemas\master.dacpac">

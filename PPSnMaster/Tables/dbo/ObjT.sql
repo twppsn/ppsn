@@ -8,7 +8,7 @@
 	[Value] VARCHAR(2048) NULL,
 	[UserId] BIGINT NULL CONSTRAINT fkObjTUserId REFERENCES dbo.[User] (Id),
 	[SyncToken] BIGINT NOT NULL DEFAULT 0
-	UNIQUE ([ObjkId], [Key])
+	CONSTRAINT uqObjkIdKey UNIQUE ([ObjkId], [Key])
 );
 
 GO
@@ -56,3 +56,30 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'ObjT',
     @level2type = N'COLUMN',
     @level2name = N'SyncToken'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'FK to the object',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'ObjT',
+    @level2type = N'COLUMN',
+    @level2name = N'ObjKId'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'FK to the revision',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'ObjT',
+    @level2type = N'COLUMN',
+    @level2name = N'ObjRId'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'PK',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'ObjT',
+    @level2type = N'COLUMN',
+    @level2name = N'Id'
