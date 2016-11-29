@@ -17,7 +17,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objr',
+    @level1name = N'ObjR',
     @level2type = N'COLUMN',
     @level2name = 'Document'
 GO
@@ -27,7 +27,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objr',
+    @level1name = N'ObjR',
     @level2type = NULL,
     @level2name = NULL
 GO
@@ -36,7 +36,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objr',
+    @level1name = N'ObjR',
     @level2type = N'COLUMN',
     @level2name = N'Id'
 GO
@@ -45,7 +45,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objr',
+    @level1name = N'ObjR',
     @level2type = N'COLUMN',
     @level2name = N'ObjkId'
 GO
@@ -54,24 +54,24 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objr',
+    @level1name = N'ObjR',
     @level2type = N'COLUMN',
     @level2name = N'ParentId'
 GO
 
 GO
-CREATE INDEX [idxObjrObjkId] ON [dbo].[Objr] ([ObjkId])
+CREATE INDEX [idxObjrObjkId] ON [dbo].[ObjR] ([ObjkId])
 GO
-CREATE INDEX [idxObjrParentId] ON [dbo].[Objr] ([ParentId])
+CREATE INDEX [idxObjrParentId] ON [dbo].[ObjR] ([ParentId])
 GO
-CREATE INDEX [idxObjrUserId] ON [dbo].[Objr] ([CreateUserId])
+CREATE INDEX [idxObjrUserId] ON [dbo].[ObjR] ([CreateUserId])
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Reference to the revision data',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objr',
+    @level1name = N'ObjR',
     @level2type = N'COLUMN',
     @level2name = N'DocumentId'
 GO
@@ -81,7 +81,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objr',
+    @level1name = N'ObjR',
     @level2type = N'COLUMN',
     @level2name = N'DocumentLink'
 GO
@@ -91,7 +91,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objr',
+    @level1name = N'ObjR',
     @level2type = N'COLUMN',
     @level2name = N'IsDocumentText'
 GO
@@ -100,6 +100,6 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objr',
+    @level1name = N'ObjR',
     @level2type = N'COLUMN',
     @level2name = N'IsDocumentDeflate'
