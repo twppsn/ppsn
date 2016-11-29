@@ -45,11 +45,23 @@ using LExpression = System.Linq.Expressions.Expression;
 
 namespace TecWare.PPSn
 {
+	#region -- class IPpsEnvironmentDefinition ------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public interface IPpsEnvironmentDefinition
+	{
+		PpsEnvironment Environment { get; }
+		string Name { get; }
+	} // interface IPpsEnvironmentDefinition
+
+	#endregion
+
 	#region -- class PpsEnvironmentDefinition -------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Base class of sort and accessable environment items.</summary>
-	public abstract class PpsEnvironmentDefinition
+	public abstract class PpsEnvironmentDefinition : IPpsEnvironmentDefinition
 	{
 		private readonly PpsEnvironment environment;
 		private readonly string name;           // internal name of the item
@@ -91,7 +103,7 @@ namespace TecWare.PPSn
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public sealed class PpsEnvironmentCollection<T> : IPpsEnvironmentCollectionInternal, ICollection, IDictionary<string, T>, INotifyCollectionChanged, IDynamicMetaObjectProvider
-		where T : PpsEnvironmentDefinition
+		where T : class, IPpsEnvironmentDefinition
 	{
 		#region -- class ValueCollection --------------------------------------------------
 
@@ -355,8 +367,8 @@ namespace TecWare.PPSn
 		void IDictionary<string, T>.Add(string key, T value) { throw new NotSupportedException(); }
 		bool IDictionary<string, T>.Remove(string key) { throw new NotSupportedException(); }
 		T IDictionary<string, T>.this[string key] { get { return this[key]; } set { throw new NotSupportedException(); } }
-		ICollection<T> IDictionary<string, T>.Values { get { return new ValueCollection(this); } }
-		ICollection<string> IDictionary<string, T>.Keys { get { return keys.Keys; } }
+		ICollection<T> IDictionary<string, T>.Values => new ValueCollection(this);
+		ICollection<string> IDictionary<string, T>.Keys => keys.Keys;
 
 		void ICollection<KeyValuePair<string, T>>.Add(KeyValuePair<string, T> item) { throw new NotSupportedException(); }
 		bool ICollection<KeyValuePair<string, T>>.Contains(KeyValuePair<string, T> item) { throw new NotSupportedException(); }
@@ -437,6 +449,7 @@ namespace TecWare.PPSn
 
 			this.info = info;
 			this.activeDataSets = new PpsActiveDataSetsImplementation(this);
+			this.objectInfo = new PPSn.PpsEnvironmentCollection<PPSn.PpsObjectInfo>(this);
 
 			Neo.IronLua.LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
 

@@ -99,7 +99,7 @@ namespace TecWare.PPSn.UI
 				data.RegisterOwner(this);
 
 				// load data
-				if (!data.IsInitialized)
+				if (!data.IsLoaded)
 				{
 					if (obj.HasData) // existing data
 					{

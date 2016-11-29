@@ -1458,6 +1458,30 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsObjectInfo ------------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class PpsObjectInfo : LuaEnvironmentTable, IPpsEnvironmentDefinition
+	{
+		private readonly string name;
+
+		public PpsObjectInfo(PpsEnvironment environemnt, string name)
+			: base(environemnt)
+		{
+			this.name = name;
+		} // ctor
+
+		[LuaMember]
+		public string Name
+		{
+			get { return name; }
+			private set { }
+		} // prop Name
+	} // class PpsObjectInfo
+
+	#endregion
+
 	#region -- class PpsEnvironment -----------------------------------------------------
 
 	public partial class PpsEnvironment
@@ -1470,7 +1494,7 @@ namespace TecWare.PPSn
 		private readonly Dictionary<long, int> objectStoreById = new Dictionary<long, int>();
 		private readonly Dictionary<Guid, int> objectStoreByGuid = new Dictionary<Guid, int>();
 
-		private readonly Dictionary<string, LuaTable> objectInfo = new Dictionary<string, LuaTable>(StringComparer.OrdinalIgnoreCase);
+		private readonly PpsEnvironmentCollection<PpsObjectInfo> objectInfo;
 
 		private const bool UseId = false;
 		private const bool UseGuid = true;
@@ -1494,17 +1518,7 @@ namespace TecWare.PPSn
 					Filter = new PpsDataFilterCompareExpression("SyncToken", PpsDataFilterCompareOperator.Greater, new PpsDataFilterCompareTextValue(maxSyncToken.ToString()))
 				}).GetEnumerator())
 			{
-				var columnIndexes = new int[]
-				{
-					enumerator.FindColumnIndex(PpsObjectServerIndex.Id.ToString(), true),
-					enumerator.FindColumnIndex(PpsObjectServerIndex.Guid.ToString(), true),
-					enumerator.FindColumnIndex(PpsObjectServerIndex.Typ.ToString(), true),
-					enumerator.FindColumnIndex(PpsObjectServerIndex.Nr.ToString(), true),
-					enumerator.FindColumnIndex(PpsObjectServerIndex.IsRev.ToString(), true),
-					enumerator.FindColumnIndex(PpsObjectServerIndex.SyncToken.ToString(), true),
-					enumerator.FindColumnIndex(PpsObjectServerIndex.RevId.ToString(), true),
-					enumerator.FindColumnIndex(PpsObjectServerIndex.Tags.ToString())
-				};
+				var columnIndexes = CreateColumnIndexes(enumerator);
 
 				var run = true;
 				do
@@ -1518,28 +1532,7 @@ namespace TecWare.PPSn
 							if (!run)
 								break;
 
-							var objectGuid = enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Guid], Guid.Empty);
-							if (objectGuid == Guid.Empty)
-								throw new ArgumentException("Object guid is empty. Check the server return.", "guid");
-
-							var obj = GetObject(objectGuid, transaction);
-
-							if (obj == null) // create empty object
-							{
-								CreateNewObject(
-									transaction,
-									enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Id], -1L),
-									enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Guid], Guid.Empty),
-									enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Typ], (string)null),
-									enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Nr], (string)null),
-									enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.IsRev], false),
-									enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.RevId], -1L),
-									enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.SyncToken], -1L)
-								);
-							}
-
-							// update the object informations
-							await obj.PullAsnc(transaction, enumerator.Current, columnIndexes, false);
+							await RefreshObjectAsync(enumerator, columnIndexes, transaction);
 
 							maxSyncToken = Math.Max(maxSyncToken, enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.SyncToken], 0L));
 						}
@@ -1560,7 +1553,50 @@ namespace TecWare.PPSn
 				cmd.Parameters.Add("@SyncToken", DbType.Int64).Value = maxSyncToken;
 				await cmd.ExecuteNonQueryAsync();
 			}
-		} // proc RefreshObjectStore
+		} // proc RefreshObjectStoreAsync
+
+		private static int[] CreateColumnIndexes(IEnumerator<IDataRow> enumerator)
+		{
+			return new int[]
+			{
+					enumerator.FindColumnIndex(PpsObjectServerIndex.Id.ToString(), true),
+					enumerator.FindColumnIndex(PpsObjectServerIndex.Guid.ToString(), true),
+					enumerator.FindColumnIndex(PpsObjectServerIndex.Typ.ToString(), true),
+					enumerator.FindColumnIndex(PpsObjectServerIndex.Nr.ToString(), true),
+					enumerator.FindColumnIndex(PpsObjectServerIndex.IsRev.ToString(), true),
+					enumerator.FindColumnIndex(PpsObjectServerIndex.SyncToken.ToString(), true),
+					enumerator.FindColumnIndex(PpsObjectServerIndex.RevId.ToString(), true),
+					enumerator.FindColumnIndex(PpsObjectServerIndex.Tags.ToString())
+			};
+		} // func CreateColumnIndexes
+
+		private async Task<PpsObject> RefreshObjectAsync(IEnumerator<IDataRow> enumerator, int[] columnIndexes, SQLiteTransaction transaction)
+		{
+			var objectGuid = enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Guid], Guid.Empty);
+			if (objectGuid == Guid.Empty)
+				throw new ArgumentException("Object guid is empty. Check the server return.", "guid");
+
+			var obj = GetObject(objectGuid, transaction);
+
+			if (obj == null) // create empty object
+			{
+				obj = CreateNewObject(
+					transaction,
+					enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Id], -1L),
+					enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Guid], Guid.Empty),
+					enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Typ], (string)null),
+					enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Nr], (string)null),
+					enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.IsRev], false),
+					enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.RevId], -1L),
+					enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.SyncToken], -1L)
+				);
+			}
+
+			// update the object informations
+			await obj.PullAsnc(transaction, enumerator.Current, columnIndexes, false);
+
+			return obj;
+		} // func RefreshObjectAsync
 
 		#endregion
 
@@ -2002,7 +2038,7 @@ order by t_liefnr.value desc
 		{
 			using (var cmd = LocalConnection.CreateCommand())
 			{
-				cmd.CommandText = "INSERT INTO main.Objects (ServerId, Guid, Typ, Nr, IsRev, RemoteRevId, StateChg) VALUES (@ServerId, @Guid, @Typ, @Nr, @IsRev, @RemoteRevId, @SyncToken)";
+				cmd.CommandText = "INSERT INTO main.Objects (ServerId, Guid, Typ, Nr, IsRev, RemoteRevId, SyncToken) VALUES (@ServerId, @Guid, @Typ, @Nr, @IsRev, @RemoteRevId, @SyncToken)";
 				cmd.Transaction = transaction;
 
 				cmd.Parameters.Add("@ServerId", DbType.Int64).Value = serverId.DbNullIf(StuffDB.DbNullOnNeg);
@@ -2040,7 +2076,7 @@ order by t_liefnr.value desc
 			=> objectInfo;
 
 		protected List<string> GetRemoveObjectInfo()
-			=> objectInfo.Keys.ToList();
+			=> ((IDictionary<string, PpsObjectInfo>)objectInfo).Keys.ToList();
 
 		protected void UpdateObjectInfo(XElement x, List<string> removeObjectInfo)
 		{
@@ -2054,8 +2090,8 @@ order by t_liefnr.value desc
 			if (!String.IsNullOrEmpty(sourceUri))
 				ActiveDataSets.RegisterDataSetSchema(objectTyp, sourceUri, typeof(PpsDataSetDefinitionDesktop));
 
-			var oi = new LuaTable();
-			objectInfo[objectTyp] = oi;
+			var oi = new PpsObjectInfo(this, objectTyp);
+			objectInfo.AppendItem(oi);
 
 			// update pane hint
 			if (!String.IsNullOrEmpty(paneUri))
@@ -2071,10 +2107,7 @@ order by t_liefnr.value desc
 		protected void ClearObjectInfo(List<string> removeObjectInfo)
 		{
 			foreach (var d in removeObjectInfo)
-			{
 				ActiveDataSets.UnregisterDataSetSchema(d);
-				objectInfo.Remove(d);
-			}
 		} // proc ClearObjectInfo
 
 		#endregion
@@ -2184,14 +2217,34 @@ order by t_liefnr.value desc
 		[LuaMember]
 		public PpsObject GetObject(Guid guid, SQLiteTransaction transaction = null)
 			=> GetCachedObjectOrRead(objectStoreByGuid, guid, UseGuid, transaction);
+		
+		[LuaMember]
+		public PpsObject GetObjectFromServer(Guid guid, SQLiteTransaction transaction = null)
+		{
+			lock (objectStoreLock)
+			{
+				// ask cache
+				var o = GetCachedObject(objectStoreByGuid, guid);
+				if (o != null)
+					return o;
+
+				using (var e = GetViewData(
+					new PpsShellGetList("dbo.objects")
+					{
+						Filter = new PpsDataFilterCompareExpression("Guid", PpsDataFilterCompareOperator.Equal, new PpsDataFilterCompareTextValue(guid.ToString("G")))
+					}).GetEnumerator())
+				{
+					if (e.MoveNext())
+						return RefreshObjectAsync(e, CreateColumnIndexes(e), transaction).Result;
+					else
+						throw new ArgumentException($"Object '{guid}' not found.");
+				}
+			}
+		} // func GetObjectFromServer
 
 		[LuaMember]
 		public LuaTable GetObjectInfo(string objectTyp)
-		{
-			LuaTable info;
-			lock (objectInfo)
-				return objectInfo.TryGetValue(objectTyp, out info) ? info : null;
-		} // func GetObjectInfo
+			=> objectInfo[objectTyp, false];
 
 		#endregion
 
@@ -2216,6 +2269,9 @@ order by t_liefnr.value desc
 
 		[LuaMember]
 		public IPpsActiveDataSets ActiveDataSets => activeDataSets;
+
+		[LuaMember]
+		public PpsEnvironmentCollection<PpsObjectInfo> ObjectInfos => objectInfo;
 
 		#endregion
 	} // class PpsEnvironment
