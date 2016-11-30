@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
@@ -37,8 +38,8 @@ namespace TecWare.PPSn.Server
 
 			private static void SetStateChange(LuaTable args)
 			{
-				if (args.GetOptionalValue<long>("StateChg", 0) <= 0)
-					args.SetMemberValue("StateChg", DateTime.Now.ToFileTimeUtc());
+				if (args.GetOptionalValue<long>("SyncToken", 0) <= 0)
+					args.SetMemberValue("SyncToken", Procs.GetSyncStamp());
 			} // proc SetStateChange
 
 			private static void UpdateArgumentsWithRow(LuaTable args, IDataRow r)
@@ -151,7 +152,7 @@ namespace TecWare.PPSn.Server
 			{
 				var cmd = Procs.CreateLuaTable(
 					new PropertyValue("select", "dbo.Objk"),
-					new PropertyValue("selectList", Procs.CreateLuaArray("Id", "Guid", "Typ", "Nr", "IsRev", "IsHidden", "IsRemoved", "State", "CurRevId", "HeadRevId"))
+					new PropertyValue("selectList", Procs.CreateLuaArray("Id", "Guid", "Typ", "Nr", "IsRev", "IsHidden", "IsRemoved", "SyncToken", "CurRevId", "HeadRevId"))
 				);
 
 				if (args.GetValue("Id") != null || args.GetValue("Guid") != null) // get object by id or guid
@@ -202,7 +203,7 @@ namespace TecWare.PPSn.Server
 			/// <param name="trans"></param>
 			/// <param name="args"></param>
 			/// <returns></returns>
-			[LuaMember(nameof(CreateRevision))]
+			[LuaMember]
 			public long CreateRevision(PpsDataTransaction trans, LuaTable args)
 			{
 				// fill optional values
@@ -298,7 +299,7 @@ namespace TecWare.PPSn.Server
 			/// <param name="trans"></param>
 			/// <param name="args"></param>
 			/// <returns></returns>
-			[LuaMember(nameof(ReplaceObjectRevision))]
+			[LuaMember]
 			public LuaTable ReplaceObjectRevision(PpsDataTransaction trans, LuaTable args)
 			{
 				return null;
@@ -337,7 +338,14 @@ namespace TecWare.PPSn.Server
 					return sr.ReadToEnd();
 			} // func OpenObjectRevisionText
 
-			[LuaMember(nameof(GetObjectRevision))]
+			[
+				LuaMember,
+				LuaArgument("trans"),
+				LuaArgument("args"),
+				LuaArgument("args|Id"),
+				LuaArgument("args|Guid"),
+				LuaArgument("args|RevId")
+			]
 			public LuaTable GetObjectRevision(PpsDataTransaction trans, LuaTable args)
 			{
 				const string baseSql = "select o.Id, o.Guid, o.Typ, o.HeadRevId, o.CurRevId, r.Document, r.DocumentLink, r.DocumentId, r.IsDocumentText, r.IsDocumentDeflate " +
@@ -377,7 +385,7 @@ namespace TecWare.PPSn.Server
 				return args;
 			} // func GetObjectRevision
 
-			[LuaMember(nameof(GetObjectRevisions))]
+			[LuaMember]
 			public LuaTable GetObjectRevisions(PpsDataTransaction trans, LuaTable args)
 			{
 				return null;
