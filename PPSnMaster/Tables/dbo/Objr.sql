@@ -64,6 +64,8 @@ CREATE INDEX [idxObjrObjkId] ON [dbo].[ObjR] ([ObjkId])
 GO
 CREATE INDEX [idxObjrParentId] ON [dbo].[ObjR] ([ParentId])
 GO
+CREATE INDEX [idxObjrObjfId] ON [dbo].[ObjR] ([DocumentId])
+GO
 CREATE INDEX [idxObjrUserId] ON [dbo].[ObjR] ([CreateUserId])
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
