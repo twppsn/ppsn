@@ -318,6 +318,7 @@ namespace TecWare.PPSn.Data
 
 					if (parentRelation != null) // check value contraint
 					{
+						row.ClearParentRowCache(this);
 						if (!ExistsValueInParentTable(row, value))
 							throw new ArgumentOutOfRangeException($"Value '{value}' does not exist in '{parentRelation.ParentColumn.Table.Name}.{parentRelation.ParentColumn.Name}'.");
 					}

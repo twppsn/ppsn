@@ -23,6 +23,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
@@ -63,6 +64,7 @@ namespace TecWare.PPSn.Data
 
 	public enum PpsObjectTagClass : int
 	{
+		Deleted = -1,
 		Text = 0,
 		Number = 1,
 		Date = 2
@@ -77,42 +79,55 @@ namespace TecWare.PPSn.Data
 		private readonly string tagName;
 		private readonly PpsObjectTagClass cls;
 		private readonly object value;
+		private readonly long syncToken;
 
-		private PpsObjectTag(XElement tag)
-		{
-			this.tagName = tag.Name.LocalName;
-			this.cls = (PpsObjectTagClass)tag.GetAttribute("c", 0);
-			this.value = tag.Value == null ? null : Procs.ChangeType(tag.Value, GetTypeFromClass(cls));
-		} // ctor
-
-		public PpsObjectTag(string tagName, PpsObjectTagClass cls, object value)
+		public PpsObjectTag(string tagName, PpsObjectTagClass cls, object value, long syncToken = -1)
 		{
 			this.tagName = tagName;
 			this.cls = cls;
 			this.value = value;
+			this.syncToken = syncToken < 0 ? Procs.GetSyncStamp() : syncToken;
 		} // ctor
 
 		public bool IsValueEqual(object otherValue)
 			=> Object.Equals(value, Procs.ChangeType(otherValue, GetTypeFromClass(cls)));
 
-		private XElement GetXTag()
-			=> new XElement(tagName,
-					new XAttribute("c", (int)cls),
-					new XText(value.ChangeType<string>())
-				);
-
 		public string Name => tagName;
 		public PpsObjectTagClass Class => cls;
 		public object Value => value;
+		public long SyncToken => syncToken;
 
 		// -- Static ----------------------------------------------------------------------
 
+		private static Regex regAttributeLine = new Regex(@"(?<n>\w+)(\:(?<c>\d*)(\:(?<u>\d*)(\:(?<s>\d*))?)?)?\=(?<v>.*)", RegexOptions.Singleline);
+
+		private static PpsObjectTag CreateKeyValue(string attributeLine)
+		{
+			//+Key:0:0:0=
+
+			var m = regAttributeLine.Match(attributeLine);
+			if (!m.Success)
+				throw new FormatException();
+
+			var classHint = (PpsObjectTagClass)(String.IsNullOrEmpty(m.Groups["c"].Value) ? 0 : Int32.Parse(m.Groups["c"].Value));
+			object value;
+			if (classHint == PpsObjectTagClass.Deleted)
+				value = null;
+			else
+			{
+				var dataType = GetTypeFromClass(classHint);
+				value = Procs.UnescapeSpecialChars(m.Groups["v"].Value);
+				if (value != null)
+					value = Procs.ChangeType(value, dataType);
+			}
+
+			return new PpsObjectTag(m.Groups["n"].Value, classHint, value, String.IsNullOrEmpty(m.Groups["s"].Value) ? 0 : Int64.Parse(m.Groups["s"].Value));
+		} // func CreateKeyValue
+
+		[Obsolete("Not implemented yet.")]
 		public static string FormatTagFields(IEnumerable<PpsObjectTag> tags)
 		{
-			var xDoc = new XDocument(
-				new XElement("tags", from t in tags where t.Value != null select t.GetXTag())
-			);
-			return xDoc.ToString();
+			throw new NotImplementedException();
 		} // func CreateTagField
 
 		public static IEnumerable<PpsObjectTag> ParseTagFields(string tags)
@@ -120,12 +135,16 @@ namespace TecWare.PPSn.Data
 			if (String.IsNullOrEmpty(tags))
 				return Enumerable.Empty<PpsObjectTag>();
 
-			var xDoc = XDocument.Parse(tags);
-			return from x in xDoc.Root.Elements() select new PpsObjectTag(x);
+			return tags
+				.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
+				.Select(c => CreateKeyValue(c));
 		} // func ParseTagFields
 
-		public static Type GetTypeFromClass(PpsObjectTagClass cls)
+		public static Type GetTypeFromClass(PpsObjectTagClass classHint)
 		{
+			if (classHint == PpsObjectTagClass.Date)
+				return typeof(DateTime);
+			// todo:
 			return typeof(string);
 		} // func GetTypeFromClass
 	} // class PpsObjectTag

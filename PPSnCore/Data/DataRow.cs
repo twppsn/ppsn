@@ -85,6 +85,9 @@ namespace TecWare.PPSn.Data
 		protected sealed override bool FilterRow(PpsDataRow row)
 			=> Object.Equals(parentRow[parentColumnIndex], row[childColumnIndex]);
 
+		/// <summary>Parent row for the filter</summary>
+		public PpsDataRow Parent => parentRow;
+		/// <summary>Relation that builds the filter</summary>
 		public PpsDataTableRelationDefinition Relation => relation;
 	} // class PpsDataRelatedFilter
 
@@ -231,7 +234,16 @@ namespace TecWare.PPSn.Data
 				// find the column and bind a index expression
 				var columnIndex = Row.table.TableDefinition.FindColumnIndex(name);
 				if (columnIndex >= 0)
-					return new DynamicMetaObject(GetIndexExpression(columnIndex), GetRestriction());
+				{
+					var columnInfo = Row.Table.Columns[columnIndex];
+					if (columnInfo.IsRelationColumn)
+						return new DynamicMetaObject(
+							Expression.Call(Expression.Convert(Expression, typeof(PpsDataRow)), GetParentRowMethodInfo, Expression.Constant(columnInfo)), 
+							GetRestriction()
+						);
+					else
+						return new DynamicMetaObject(GetIndexExpression(columnIndex), GetRestriction());
+				}
 				else // find a relation
 				{
 					PpsDataTableRelationDefinition relation;
@@ -462,6 +474,7 @@ namespace TecWare.PPSn.Data
 
 		private object relationFilterLock = new object();
 		private List<PpsDataRelatedFilter> relationFilter = null;
+		private Dictionary<PpsDataColumnDefinition, PpsDataRow> parentRows = new Dictionary<PpsDataColumnDefinition, PpsDataRow>();
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -940,6 +953,34 @@ namespace TecWare.PPSn.Data
 			}
 		} // func GetDefaultRelation
 
+		internal void ClearParentRowCache(PpsDataColumnDefinition column)
+		{
+			lock (relationFilterLock)
+				parentRows.Remove(column);
+		} // func ClearParentRowCache
+
+		public PpsDataRow GetParentRow(PpsDataColumnDefinition column)
+		{
+			var val = this[column.Index];
+			if (val != null)
+			{
+				PpsDataRow row;
+				if (!parentRows.TryGetValue(column, out row))
+				{
+					var parentTable = Table.DataSet.Tables[column.ParentColumn.Table];
+					if (column.ParentColumn.IsPrimaryKey)
+						row = parentTable.FindKey(val);
+					else
+						row = parentTable.FindRows(column.ParentColumn, val).FirstOrDefault();
+
+					parentRows[column] = row;
+				}
+				return row;
+			}
+			else
+				return null;
+		} // func GetParentRow
+
 		#endregion
 
 		/// <summary>Zugehörige Datentabelle</summary>
@@ -958,6 +999,7 @@ namespace TecWare.PPSn.Data
 		private static readonly MethodInfo ResetMethodInfo;
 		private static readonly MethodInfo CommitMethodInfo;
 		private static readonly MethodInfo GetDefaultRelationMethodInfo;
+		private static readonly MethodInfo GetParentRowMethodInfo;
 
 		private static readonly PropertyInfo ValuesPropertyInfo;
 		private static readonly FieldInfo RowFieldInfo;
@@ -975,6 +1017,7 @@ namespace TecWare.PPSn.Data
 			ResetMethodInfo = Procs.GetMethod(typeRow, nameof(Reset));
 			CommitMethodInfo = Procs.GetMethod(typeRow, nameof(Commit));
 			GetDefaultRelationMethodInfo = Procs.GetMethod(typeRow, nameof(GetDefaultRelation), typeof(PpsDataTableRelationDefinition));
+			GetParentRowMethodInfo = Procs.GetMethod(typeRow, nameof(GetParentRow), typeof(PpsDataColumnDefinition));
 
 			var typeValue = typeof(RowValues);
 			ValuesPropertyInfo = Procs.GetProperty(typeValue, "Item", typeof(int));
