@@ -52,7 +52,7 @@
 
     <Grid Margin="32,24">
         <ListBox ItemsSource="{Binding Traces}"	Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
-				 ItemContainerStyle="{StaticResource PpsAlternatingListBoxItemStyle}" >
+				 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" >
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <Grid>

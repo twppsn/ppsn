@@ -54,7 +54,7 @@ namespace TecWare.PPSn.UI
 
 			// initialize settings
 			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
-			PART_Navigator.Init(this);
+			navigator.Init(this);
 
 			#region -- set basic command bindings --
 			CommandBindings.Add(
@@ -186,7 +186,7 @@ namespace TecWare.PPSn.UI
 			base.OnPreviewMouseDown(e);
 			if (!IsNavigatorVisible)
 				return;
-			PART_Navigator.OnPreview_MouseDown(e.OriginalSource);
+			navigator.OnPreview_MouseDown(e.OriginalSource);
 		} // event OnPreviewMouseDown
 
 		protected override void OnPreviewTextInput(TextCompositionEventArgs e)
@@ -194,14 +194,14 @@ namespace TecWare.PPSn.UI
 			base.OnPreviewTextInput(e);
 			if (!IsNavigatorVisible)
 				return;
-			PART_Navigator.OnPreview_TextInput(e);
+			navigator.OnPreview_TextInput(e);
 		} // event OnPreviewTextInput
 
 		protected override void OnWindowCaptionClicked()
 		{
 			if (!IsNavigatorVisible)
 				return;
-			PART_Navigator.OnPreview_MouseDown(null);
+			navigator.OnPreview_MouseDown(null);
 		} // proc OnWindowCaptionClicked
 
 		#endregion
@@ -229,7 +229,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Access to current charmbar width</summary>
 		public double CharmbarActualWidth => (double)GetValue(CharmbarActualWidthProperty);
 		/// <summary>Access to the navigator model</summary>
-		public PpsNavigatorModel Navigator => (PpsNavigatorModel)PART_Navigator.DataContext;
+		public PpsNavigatorModel Navigator => (PpsNavigatorModel)navigator.DataContext;
 		/// <summary>Is the navigator visible.</summary>
 		public bool IsNavigatorVisible
 		{

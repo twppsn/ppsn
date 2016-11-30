@@ -67,13 +67,10 @@ specific language governing permissions and limitations under the Licence.
     </Style>
 
     <Style x:Key="PPSnListBoxStyle" TargetType="{x:Type ListBox}"/>
-
-    <Style x:Key="SimpleButtonStyle" TargetType="{x:Type Button}" />
-
-    <Style x:Key="PpsAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}"/>
-
+	<Style x:Key="PPSnAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}"/>
     <Style x:Key="PPSnShrinkButtonStyle" TargetType="{x:Type ToggleButton}"/>
-
-    <Style x:Key="PaneToolBarStyle" TargetType="{x:Type ToolBar}"/>
+	<Style x:Key="PPSnSelectionToggleButtonStyle" TargetType="{x:Type ToggleButton}"/>
+	<Style x:Key="SimpleButtonStyle" TargetType="{x:Type Button}" />
+	<Style x:Key="PaneToolBarStyle" TargetType="{x:Type ToolBar}"/>
 
 </ResourceDictionary>

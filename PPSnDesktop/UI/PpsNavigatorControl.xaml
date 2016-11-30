@@ -191,7 +191,7 @@
         </Style>
 
         <Style x:Key="NavigatorActionButtonStyle" TargetType="{x:Type Button}">
-            <Setter Property="FontSize" Value="14.667"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="IsTabStop" Value="False"/>
@@ -241,36 +241,6 @@
             </Setter>
         </Style>
 
-        <Style x:Key="NavigatorFilterButtonStyle" TargetType="{x:Type ToggleButton}">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}" />
-            <Setter Property="Margin" Value="0,0,18,0" />
-            <Setter Property="BorderThickness" Value="0,0,0,4" />
-            <Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}" />
-            <Setter Property="FontSize" Value="14.667"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-            <Setter Property="Focusable" Value="False" />
-            <Setter Property="IsTabStop" Value="False" />
-            <Setter Property="IsChecked" Value="False" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type ToggleButton}">
-                        <Border x:Name="PART_Content" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
-                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,2,2"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="PART_Content" Property="BorderBrush" Value="{StaticResource PPSnMarkerBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <Style x:Key="NavigatorOrderButtonStyle" TargetType="{x:Type ToggleButton}">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
@@ -314,8 +284,7 @@
 
         <Style x:Key="NavigatorSearchBoxStyle" TargetType="{x:Type TextBox}">
             <Setter Property="Tag" Value="{x:Static uiL:PpsNavigatorSearchBoxState.Collapsed}"/>
-            <Setter Property="Height" Value="34"/>
-            <Setter Property="FontSize" Value="14.667"/>
+            <Setter Property="FontSize" Value="16"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="IsTabStop" Value="False"/>
             <Setter Property="MaxLines" Value="1"/>
@@ -583,7 +552,9 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <ToggleButton Content="{Binding DisplayName}" IsChecked="{Binding IsSelected, Mode=OneWay}" Command="{Binding}" Style="{StaticResource NavigatorFilterButtonStyle}"/>
+					<ToggleButton Content="{Binding DisplayName}" IsChecked="{Binding IsSelected, Mode=OneWay}" Command="{Binding}" Margin="0,0,18,0"
+								  FontSize="14"
+								  Style="{StaticResource PPSnSelectionToggleButtonStyle}"/>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -624,9 +595,9 @@
 					  Command="{Binding ToggleShowViewDescription}"
 					  Style="{StaticResource PPSnShrinkButtonStyle}"/>
 
-        <Border x:Name="PART_ViewsHeader" Grid.Column="0" Grid.Row="1" Grid.RowSpan="2" Height="26" VerticalAlignment="Bottom" BorderThickness="0,0,0,4" BorderBrush="{StaticResource PPSnWindowForegroundBrush}" SnapsToDevicePixels="True">
-            <Label x:Name="PART_ViewsHeaderDescription" Content="DATEN" VerticalAlignment="Bottom" Margin="38,0,0,2" Focusable="True" FocusVisualStyle="{x:Null}"
-					   Foreground="{StaticResource PPSnWindowForegroundBrush}" FontSize="14.667" FontWeight="DemiBold"/>
+		<Border x:Name="PART_ViewsHeader" Grid.Column="0" Grid.Row="1" Grid.RowSpan="2" Height="28" VerticalAlignment="Bottom" BorderThickness="0,0,0,4" BorderBrush="{StaticResource PPSnWindowForegroundBrush}" SnapsToDevicePixels="True">
+            <TextBlock x:Name="PART_ViewsHeaderDescription" Text="DATEN" VerticalAlignment="Bottom" Margin="38,0,0,2" Focusable="True" FocusVisualStyle="{x:Null}"
+				   Foreground="{StaticResource PPSnWindowForegroundBrush}" FontSize="14" FontWeight="SemiBold"/>
             <Border.Style>
                 <Style TargetType="{x:Type Border}">
                     <Setter Property="Width" Value="{StaticResource ViewsIncreasedWidth}"/>
@@ -644,7 +615,11 @@
             </Border.Style>
         </Border>
 
-        <ListBox x:Name="PART_Views" Grid.Column="0" Grid.Row="3" Margin="0,2,0,0" FontSize="14.667" SnapsToDevicePixels="True"
+		<TextBox x:Name="PART_SearchBox" Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" HorizontalAlignment="Right" Width="340" Margin="0,12,0,8"
+				 Style="{StaticResource NavigatorSearchBoxStyle}"
+				 Text="{Binding Path=CurrentSearchText, Delay=300, UpdateSourceTrigger=PropertyChanged}" KeyDown="PART_SearchBox_KeyDown"/>
+
+		<ListBox x:Name="PART_Views" Grid.Column="0" Grid.Row="3" Margin="0,2,0,0" FontSize="14" SnapsToDevicePixels="True"
 				 ItemsSource="{Binding VisibleViews}"
 				 IsSynchronizedWithCurrentItem="True"
 				 ItemContainerStyle="{StaticResource NavigatorViewsContainerStyle}">
@@ -664,10 +639,6 @@
                 </Style>
             </ListBox.Style>
         </ListBox>
-
-        <TextBox x:Name="PART_SearchBox" Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="320"
-				 Style="{StaticResource NavigatorSearchBoxStyle}"
-				 Text="{Binding Path=CurrentSearchText, Delay=300, UpdateSourceTrigger=PropertyChanged}" KeyDown="PART_SearchBox_KeyDown"/>
 
         <uiC:DataListControl x:Name="PART_Items" Grid.Column="2" Grid.Row="3" Style="{StaticResource PPSnListBoxStyle}" FontSize="14" SnapsToDevicePixels="True"
 							 AlternationCount="2" IsSynchronizedWithCurrentItem="True"

@@ -417,12 +417,15 @@ namespace TecWare.PPSn.UI
 				{
 					var desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.TitleProperty, typeof(PpsGenericWpfControl));
 					desc.AddValueChanged(control, (sender, e) => OnPropertyChanged("Title"));
+					desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.SubTitleProperty, typeof(PpsGenericWpfControl));
+					desc.AddValueChanged(control, (sender, e) => OnPropertyChanged("SubTitle"));
 				}
 
 				// notify changes on control
 				OnPropertyChanged("Control");
 				OnPropertyChanged("Commands");
 				OnPropertyChanged("Title");
+				OnPropertyChanged("SubTitle");
 			});
 		} // proc LoadAsync
 
@@ -491,6 +494,18 @@ namespace TecWare.PPSn.UI
 			}
 		} // prop Title
 
+		/// <summary>SubTitle of the pane</summary>
+		public string SubTitle
+		{
+			get
+			{
+				if (control == null)
+					return String.Empty;
+
+				return (string)control.GetValue(PpsGenericWpfControl.SubTitleProperty);
+			}
+		} // prop SubTitle
+
 		/// <summary>Wpf-Control</summary>
 		[LuaMember]
 		public FrameworkElement Control => control;
@@ -534,6 +549,7 @@ namespace TecWare.PPSn.UI
 	public class PpsGenericWpfControl : ContentControl, ILuaEventSink, IPpsPWindowPaneControl
 	{
 		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PpsGenericWpfControl), new UIPropertyMetadata(String.Empty));
+		public static readonly DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsGenericWpfControl), new UIPropertyMetadata(String.Empty));
 
 		private readonly PpsUICommandCollection commands;
 		private readonly PpsProgressStack progressStack;
@@ -584,12 +600,20 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Access to the owning pane.</summary>
 		public PpsGenericWpfWindowPane Pane => (PpsGenericWpfWindowPane)DataContext;
+
 		/// <summary>Title of the window pane</summary>
 		[
 		DesignerSerializationVisibility(DesignerSerializationVisibility.Visible),
 		Description("Sets the title of the pane")
 		]
 		public string Title { get { return (string)GetValue(TitleProperty); } set { SetValue(TitleProperty, value); } }
+
+		/// <summary>SubTitle of the window pane</summary>
+		[
+		DesignerSerializationVisibility(DesignerSerializationVisibility.Visible),
+		Description("Sets the subtitle of the pane")
+		]
+		public string SubTitle { get { return (string)GetValue(SubTitleProperty); } set { SetValue(SubTitleProperty, value); } }
 
 		/// <summary>Title of the window pane</summary>
 		[

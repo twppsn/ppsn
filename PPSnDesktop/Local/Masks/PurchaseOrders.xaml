@@ -53,7 +53,7 @@
 								 AlternationCount="2"
 								 IsSynchronizedWithCurrentItem="True"
 								 Style="{StaticResource PPSnListBoxStyle}"
-								 ItemContainerStyle="{StaticResource PpsAlternatingListBoxItemStyle}">
+								 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid>
