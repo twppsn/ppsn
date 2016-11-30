@@ -109,6 +109,7 @@
     <Compile Include="NativeMethods.cs" />
     <Compile Include="PpsEnvironment.Data.cs" />
     <Compile Include="PpsEnvironment.Lua.cs" />
+    <Compile Include="PpsEnvironment.Objects.cs" />
     <Compile Include="PpsEnvironment.Trace.cs" />
     <Compile Include="PpsEnvironment.UI.cs" />
     <Compile Include="PpsEnvironmentInfo.cs" />

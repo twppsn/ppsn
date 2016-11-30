@@ -13,6 +13,7 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
+#define _NOTIFY_BINDING_SOURCE_UPDATE
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -36,7 +37,7 @@ namespace TecWare.PPSn.UI
 	internal static class WpfPaneHelper
 	{
 		public static object GetXamlElement(FrameworkElement control, object key)
-			=> key is string && control.Dispatcher.CheckAccess() ? control.FindName((string)key) : null;
+			=> key is string && control != null && control.Dispatcher.CheckAccess() ? control.FindName((string)key) : null;
 	} // class WpfPaneHelper
 
 	#endregion

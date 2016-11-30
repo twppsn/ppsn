@@ -579,7 +579,7 @@ namespace TecWare.PPSn
 				using (BlockAllUI(frame))
 					Dispatcher.PushFrame(frame);
 			}
-
+			
 			task.Wait();
 		} // proc RunTaskSync
 
