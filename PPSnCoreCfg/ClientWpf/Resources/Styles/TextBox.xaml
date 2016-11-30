@@ -8,9 +8,9 @@
 	<Style x:Key="PPSnTextBoxStyle" TargetType="{x:Type TextBox}">
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
 		<Setter Property="HorizontalContentAlignment" Value="Left"/>
+		<Setter Property="VerticalAlignment" Value="Top"/>
 		<Setter Property="Height" Value="23"/>
 		<Setter Property="Padding" Value="2,0"/>
-		<Setter Property="VerticalAlignment" Value="Top"/>
 		<Setter Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
 		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
 		<Setter Property="BorderBrush" Value="{StaticResource PPSnControlNormalBorderBrush}"/>

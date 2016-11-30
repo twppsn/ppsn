@@ -112,7 +112,7 @@
                         </Grid.RowDefinitions>
                         <Border Grid.Row="0" BorderBrush="{StaticResource PPSnWindowForegroundBrush}" BorderThickness="0,0,0,4" Margin="16,0" SnapsToDevicePixels="True">
 							<TextBlock Text="{Binding HeadLineText, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiC:SideBarMenu}, Mode=OneWay}"
-									   FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
+									   Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="0,0,0,2" FontSize="14" FontWeight="SemiBold"/>
 						</Border>
                         <ScrollViewer Grid.Row="1" Focusable="false" Padding="0">
                             <ItemsPresenter SnapsToDevicePixels="True"/>

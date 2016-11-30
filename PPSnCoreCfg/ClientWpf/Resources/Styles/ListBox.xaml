@@ -25,7 +25,7 @@
         </Setter>
     </Style>
 
-    <Style x:Key="PpsAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
+	<Style x:Key="PPSnAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
         <Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
         <Setter Property="Margin" Value="0,0,0,1"/>
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
