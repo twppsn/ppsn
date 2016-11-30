@@ -61,10 +61,11 @@
   <ItemGroup>
     <Folder Include="Properties" />
     <Folder Include="Tables" />
-    <Folder Include="Database" />
     <Folder Include="Tables\dbo" />
     <Folder Include="Tables\hrs" />
     <Folder Include="Tables\sds" />
+    <Folder Include="Stuff" />
+    <Folder Include="Database\" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\120\SqlSchemas\master.dacpac">
@@ -76,8 +77,8 @@
   <ItemGroup>
     <Build Include="PpsMaster.sql" />
     <Build Include="Tables\Schemas.sql" />
-    <Build Include="Tables\dbo\Objk.sql" />
-    <Build Include="Tables\dbo\Objr.sql" />
+    <Build Include="Tables\dbo\ObjK.sql" />
+    <Build Include="Tables\dbo\ObjR.sql" />
     <Build Include="Tables\dbo\Adre.sql" />
     <Build Include="Tables\dbo\Ansp.sql" />
     <Build Include="Tables\dbo\User.sql" />
@@ -91,13 +92,25 @@
     <Build Include="Tables\sds\Aupo.sql" />
     <Build Include="Tables\sds\Anko.sql" />
     <Build Include="Tables\sds\Anpo.sql" />
-    <Build Include="Tables\dbo\Objf.sql" />
+    <Build Include="Tables\dbo\ObjF.sql" />
     <Build Include="Database\FileStreamGroup.sql" />
+    <Build Include="Tables\dbo\ObjL.sql" />
+    <Build Include="Tables\dbo\ObjT.sql" />
+    <Build Include="Stuff\MaxBigInt.sql" />
+    <Build Include="Stuff\Objects.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="PPSn03.publish.xml" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="PPSnMaster.refactorlog" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Stuff\GetSyncStamp.cs" />
   </ItemGroup>
 </Project>

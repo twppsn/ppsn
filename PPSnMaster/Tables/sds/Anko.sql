@@ -1,11 +1,11 @@
 ﻿CREATE TABLE [sds].[Anko]
 (
-	[ObjkId] BIGINT NOT NULL CONSTRAINT pkAnkotId PRIMARY KEY CONSTRAINT fkAnkoObjkId REFERENCES dbo.Objk (Id), 
+	[ObjkId] BIGINT NOT NULL CONSTRAINT pkAnkotId PRIMARY KEY CONSTRAINT fkAnkoObjkId REFERENCES dbo.ObjK (Id), 
 	[Datum] DATE NULL, 
 	[BisDatum] DATE NULL, 
 	[AnfDatum] DATE NULL, 
 	[AnfNr] NVARCHAR(30) NULL, 
-	[KontId] BIGINT NULL CONSTRAINT fkAnkoKontId REFERENCES dbo.Objk (Id), 
+	[KontId] BIGINT NULL CONSTRAINT fkAnkoKontId REFERENCES dbo.ObjK (Id), 
 	[Adresse] NVARCHAR(1024) NULL, 
 	[Variante] CHAR(2) NULL, 
 	[Zusatz] NVARCHAR(128) NULL, 

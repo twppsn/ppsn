@@ -1,16 +1,15 @@
-﻿CREATE TABLE [dbo].[Objk]
+﻿CREATE TABLE [dbo].[ObjK]
 (
 	[Id] BIGINT NOT NULL  CONSTRAINT pkObjkId PRIMARY KEY IDENTITY (1, 1),
 	[Guid] UNIQUEIDENTIFIER NOT NULL CONSTRAINT dfObjkGuid DEFAULT NEWID(), 
-	[Typ] CHAR(25) NOT NULL CONSTRAINT dfObjkTyp CHECK (len(Typ) > 0 ), 
-	[Nr] NVARCHAR(20) NOT NULL CONSTRAINT chkObjkNr CHECK (len(Nr) > 0),
+	[Typ] CHAR(25) NOT NULL CONSTRAINT dfObjkTyp CHECK (LEN(Typ) > 0 ), 
+	[Nr] NVARCHAR(20) NOT NULL CONSTRAINT chkObjkNr CHECK (LEN(Nr) > 0),
 	[IsRev] BIT NOT NULL,
 	[IsHidden] BIT NOT NULL CONSTRAINT dfObjkIsHidden DEFAULT 0,
 	[IsRemoved] BIT NOT NULL CONSTRAINT dfObjkIsRemoved DEFAULT 0,
-	[State] XML NOT NULL DEFAULT '<tags />',
-	[StateChg] BIGINT NOT NULL DEFAULT 0,
-	[CurRevId] BIGINT NULL CONSTRAINT fkObjkObjrCurId REFERENCES dbo.Objr (Id),
-	[HeadRevId] BIGINT NULL CONSTRAINT fkObjkObjrHeadId REFERENCES dbo.Objr (Id)
+	[SyncToken] BIGINT NOT NULL DEFAULT 0,
+	[CurRevId] BIGINT NULL CONSTRAINT fkObjkObjrCurId REFERENCES dbo.ObjR (Id),
+	[HeadRevId] BIGINT NULL CONSTRAINT fkObjkObjrHeadId REFERENCES dbo.ObjR (Id)
 )
 
 GO
@@ -19,7 +18,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objk',
+    @level1name = N'ObjK',
     @level2type = N'COLUMN',
     @level2name = N'Id'
 GO
@@ -28,7 +27,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objk',
+    @level1name = N'ObjK',
     @level2type = N'COLUMN',
     @level2name = N'Typ'
 GO
@@ -37,7 +36,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objk',
+    @level1name = N'ObjK',
     @level2type = N'COLUMN',
     @level2name = N'Nr'
 GO
@@ -46,7 +45,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objk',
+    @level1name = N'ObjK',
     @level2type = N'COLUMN',
     @level2name = N'Guid'
 GO
@@ -55,7 +54,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objk',
+    @level1name = N'ObjK',
     @level2type = N'COLUMN',
     @level2name = N'HeadRevId'
 GO
@@ -64,18 +63,18 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objk',
+    @level1name = N'ObjK',
     @level2type = N'COLUMN',
     @level2name = N'CurRevId'
 GO
 
-CREATE INDEX [idxObjkCurId] ON [dbo].[Objk] ([CurRevId])
+CREATE INDEX [idxObjkCurId] ON [dbo].[ObjK] ([CurRevId])
 GO
-CREATE INDEX [idxObjkHeadId] ON [dbo].[Objk] ([HeadRevId])
+CREATE INDEX [idxObjkHeadId] ON [dbo].[ObjK] ([HeadRevId])
 GO
-CREATE UNIQUE INDEX [idxObjkGuid] ON [dbo].[Objk] ([Guid])
+CREATE UNIQUE INDEX [idxObjkGuid] ON [dbo].[ObjK] ([Guid])
 GO
-CREATE UNIQUE INDEX [idxObjkTypNr] ON [dbo].[Objk] ([Typ], [Nr]) INCLUDE ([Id])
+CREATE UNIQUE INDEX [idxObjkTypNr] ON [dbo].[ObjK] ([Typ], [Nr]) INCLUDE ([Id])
 GO
 
 EXEC sp_addextendedproperty @name = N'MS_Description',
@@ -83,7 +82,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objk',
+    @level1name = N'ObjK',
     @level2type = N'COLUMN',
     @level2name = N'IsRemoved'
 GO
@@ -92,7 +91,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objk',
+    @level1name = N'ObjK',
     @level2type = N'COLUMN',
     @level2name = N'IsHidden'
 GO
@@ -101,7 +100,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objk',
+    @level1name = N'ObjK',
     @level2type = N'COLUMN',
     @level2name = N'IsRev'
 GO
@@ -110,15 +109,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
-    @level1name = N'Objk',
+    @level1name = N'ObjK',
     @level2type = N'COLUMN',
-    @level2name = N'StateChg'
+    @level2name = 'SyncToken'
 GO
-EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Extented data for the object',
-    @level0type = N'SCHEMA',
-    @level0name = N'dbo',
-    @level1type = N'TABLE',
-    @level1name = N'Objk',
-    @level2type = N'COLUMN',
-    @level2name = 'State'

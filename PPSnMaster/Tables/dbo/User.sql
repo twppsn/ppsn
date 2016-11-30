@@ -1,6 +1,6 @@
 ﻿CREATE TABLE [dbo].[User]
 (
-	[Id] BIGINT NOT NULL CONSTRAINT pk_UserId PRIMARY KEY IDENTITY (1,1),
+	[Id] BIGINT NOT NULL CONSTRAINT pkUserId PRIMARY KEY IDENTITY (1,1),
 	[Login] [sys].[sysname] NULL, 
 	[Security] NVARCHAR(MAX) NULL, 
 	[LoginVersion] BIGINT NOT NULL CONSTRAINT dfUserLoginVersion DEFAULT 0, 

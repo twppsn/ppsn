@@ -136,6 +136,8 @@
 
 			<!-- contacts mask -->
 			<pps:dataset name="contactsDataSet" inherited="coreDataSet" clientScripts="contacts\contactsLocal.lua" serverScripts="ContactsScript">
+				<pps:meta name="DefaultPaneUri" dataType="string">wpf/panes/contacts.xaml</pps:meta>
+				
 				<pps:autoTag name="Name" tableName="Head" columnName="Name" mode="First" />
 				<pps:autoTag name="LiefNr" tableName="Head" columnName="LiefNr" mode="Number" />
 				<pps:autoTag name="KundNr" tableName="Head" columnName="KundNr" mode="Number" />
@@ -239,11 +241,11 @@
 
 			<pps:action name="contactNew" displayName="Neuer Kontakt" priority="100">
 				<pps:condition><![CDATA[ return CurrentView == Views.crmContacts; ]]></pps:condition>
-				<pps:code><![CDATA[ Window:LoadMask{ document = 'crmContacts', pane = 'wpf/panes/contacts.xaml' }; ]]></pps:code>
+				<pps:code><![CDATA[ Window:LoadMask{ createNew = 'crmContacts' }; ]]></pps:code>
 			</pps:action>
 			<pps:action name="contactOpen" displayName="Bearbeiten" priority="200">
 				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "crmContacts" ]]></pps:condition>
-				<pps:code><![CDATA[ Window:LoadMask{ document = 'crmContacts', pane = 'wpf/panes/contacts.xaml', guid = CurrentItem.Guid }; ]]> </pps:code>
+				<pps:code><![CDATA[ Window:LoadMask{ object = GetObject(CurrentItem.Id) }; ]]> </pps:code>
 			</pps:action>
 		</pps:wpf>
 
