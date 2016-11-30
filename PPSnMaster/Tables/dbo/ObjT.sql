@@ -10,8 +10,15 @@
 	[SyncToken] BIGINT NOT NULL DEFAULT 0
 	CONSTRAINT uqObjkIdKey UNIQUE ([ObjKId], [Key])
 );
-
 GO
+
+CREATE INDEX [idxObjtObjkId] ON [dbo].[ObjT] ([ObjKId])
+GO
+CREATE INDEX [idxObjtObjrId] ON [dbo].[ObjT] ([ObjRId])
+GO
+CREATE INDEX [idxObjtUserId] ON [dbo].[ObjT] ([UserId])
+GO
+
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Tag name',
     @level0type = N'SCHEMA',
