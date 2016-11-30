@@ -1154,8 +1154,8 @@ namespace TecWare.PPSn
 		private async Task<Stream> PullDataAsync(long revisionId)
 		{
 			var objectInfo = Environment.GetObjectInfo(Typ);
-			var objectUri = objectInfo.GetMemberValue("objectUri") ?? Typ;
-			var acceptedMimeType = objectInfo.GetMemberValue("acceptedMimeType") as string;
+			var objectUri = objectInfo?.GetMemberValue("objectUri") ?? Typ;
+			var acceptedMimeType = objectInfo?.GetMemberValue("acceptedMimeType") as string;
 
 			return await Environment.Request.GetStreamAsync($"{objectUri}/?action=pull&id={serverId}&rev={revisionId}", acceptedMimeType);
 		} // proc PullDataAsync
@@ -1181,6 +1181,7 @@ namespace TecWare.PPSn
 						(dst) => src.CopyTo(dst)
 					);
 				}
+				trans.Commit();
 			}
 		} // proc PullDataAsync
 
