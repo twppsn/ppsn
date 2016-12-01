@@ -42,7 +42,8 @@ namespace TecWare.PPSn
 	{
 		Null,
 		Restrict,
-		Delete
+		Delete,
+		Deleted
 	} // enum PpsObjectLinkRestriction
 
 	#endregion
@@ -94,31 +95,44 @@ namespace TecWare.PPSn
 	public sealed class PpsObjectLink
 	{
 		private readonly PpsObject parent;
-		private readonly long linkId;   // id of the linked object
+		private readonly long localId;
+		private readonly long serverId;
+		private readonly long linkToObj;   // id of the linked object
+		private readonly long syncToken;
 		private PpsObjectLinkRestriction onDelete;  // is delete cascade possible
 
-		private WeakReference<PpsObject> obj; // weak ref to the actual object
+		private WeakReference<PpsObject> linkToCache; // weak ref to the actual object
 
-		internal PpsObjectLink(PpsObject parent, long linkId)
+		internal PpsObjectLink(PpsObject parent, long localId, long serverId, long linkTo, PpsObjectLinkRestriction onDelete, long syncToken)
 		{
 			this.parent = parent;
-			this.linkId = linkId;
+			this.localId = localId;
+			this.serverId = serverId;
+			this.linkToObj = linkTo;
+			this.onDelete = onDelete;
+			this.syncToken = syncToken;
+			this.linkToCache = null;
 		} // ctor
 
 		private PpsObject GetLinkedObject()
 		{
 			PpsObject r;
-			if (obj != null && obj.TryGetTarget(out r))
+			if (linkToCache != null && linkToCache.TryGetTarget(out r))
 				return r;
 
-			r = parent.Environment.GetObject(linkId);
-			obj = new WeakReference<PPSn.PpsObject>(r);
+			r = parent.Environment.GetObject(linkToObj);
+			linkToCache = new WeakReference<PPSn.PpsObject>(r);
 			return r;
 		} // func GetLinkedObject
 
 		public PpsObject ParentObject => parent;
 
-		public long ObjectId => linkId;
+		public long LocalId => localId;
+		public long ServerId => serverId;
+		public long ObjectId => linkToObj;
+		public long SyncToken => syncToken;
+		public PpsObjectLinkRestriction OnDelete => onDelete;
+
 		public PpsObject Object => GetLinkedObject();
 	} // class PpsObjectLink
 
@@ -130,12 +144,83 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public sealed class PpsObjectLinks : IList, IReadOnlyList<PpsObjectLink>, INotifyCollectionChanged
 	{
+		#region -- class LinkCommand ------------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private class LinkCommand : IDisposable
+		{
+			protected readonly SQLiteCommand command;
+
+			public LinkCommand(SQLiteTransaction trans)
+			{
+				this.command = trans.Connection.CreateCommand();
+				this.command.Transaction = trans;
+			} // ctor
+
+			public void Dispose()
+			{
+				command?.Dispose();
+			} // proc Dispose
+		} // class LinkCommand
+
+		#endregion
+
+		#region -- class LinkSelectCommand ------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class LinkSelectCommand : LinkCommand
+		{
+			private readonly SQLiteParameter objectIdParameter;
+
+			public LinkSelectCommand(SQLiteTransaction trans, bool visibleOnly)
+				: base(trans)
+			{
+				this.command.CommandText =
+					"SELECT [Id], [ServerId], [LinkObjectId], [OnDelete], [SyncToken] FROM main.[ObjectLinks] WHERE [ParentObjectId] = @ObjectId" + (visibleOnly ? " AND [Class] <> '-'" : ";");
+
+				this.objectIdParameter = command.Parameters.Add("@ObjectId", DbType.Int64);
+
+				this.command.Prepare();
+			} // ctor
+
+			public IEnumerable<PpsObjectLink> Select(PpsObject parentObject, long objectId)
+			{
+				objectIdParameter.Value = objectId;
+
+				using (var r = command.ExecuteReader(CommandBehavior.SingleResult))
+				{
+					while (r.Read())
+					{
+						yield return new PpsObjectLink(parentObject,
+							r.GetInt64(0),
+							r.GetInt64(1),
+							r.GetInt64(2),
+							ParseObjectLinkRestriction(r.GetString(3)),
+							r.GetInt64(4)
+						);
+					}
+				}
+			}// func Select
+		} // class LinkSelectCommand
+
+		#endregion
+
+		/// <summary></summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		private readonly PpsObject parent;
 
-		private bool isLoaded = false;
-		private readonly List<PpsObjectLink> links;
+		private readonly object linksLink = new object();
+		private bool isLoaded = false; // marks if the link list is loaded from the local store
+		private readonly List<PpsObjectLink> links; // local links
+
+		internal PpsObjectLinks(PpsObject parent)
+		{
+			this.parent = parent;
+			this.links = new List<PpsObjectLink>();
+		} // ctor
 
 		public int Count
 		{
@@ -206,12 +291,6 @@ namespace TecWare.PPSn
 			}
 		}
 
-		internal PpsObjectLinks(PpsObject parent)
-		{
-			this.parent = parent;
-			this.links = new List<PpsObjectLink>();
-		} // ctor
-
 		public IEnumerator<PpsObjectLink> GetEnumerator()
 		{
 			throw new NotImplementedException();
@@ -266,6 +345,43 @@ namespace TecWare.PPSn
 		{
 			throw new NotImplementedException();
 		}
+
+		public static PpsObjectLinkRestriction ParseObjectLinkRestriction(string onDelete)
+		{
+			if (String.IsNullOrEmpty(onDelete))
+				return PpsObjectLinkRestriction.Deleted;
+			else
+				switch (Char.ToUpper(onDelete[0]))
+				{
+					case 'N':
+						return PpsObjectLinkRestriction.Null;
+					case 'R':
+						return PpsObjectLinkRestriction.Restrict;
+					case 'D':
+						return PpsObjectLinkRestriction.Delete;
+					case '-':
+						return PpsObjectLinkRestriction.Deleted;
+					default:
+						throw new ArgumentOutOfRangeException($"Can not parse '{onDelete}' to an link restriction.");
+				}
+		} // func ParseObjectLinkRestriction
+
+		public static string FormatObjectLinkRestriction(PpsObjectLinkRestriction onDelete)
+		{
+			switch (onDelete)
+			{
+				case PpsObjectLinkRestriction.Null:
+					return "N";
+				case PpsObjectLinkRestriction.Restrict:
+					return "R";
+				case PpsObjectLinkRestriction.Delete:
+					return "D";
+				case PpsObjectLinkRestriction.Deleted:
+					return "-";
+				default:
+					throw new ArgumentOutOfRangeException($"Can not format '{onDelete}'.");
+			}
+		} // func FormatObjectLinkRestriction
 	} // class PpsObjectLinks
 
 	#endregion
@@ -365,7 +481,7 @@ namespace TecWare.PPSn
 					}
 				}
 			}// func Select
-		} // class TagSelectByKeyCommand
+		} // class TagSelectCommand
 
 		#endregion
 
@@ -826,7 +942,7 @@ namespace TecWare.PPSn
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public interface IPpsObjectData
+	public interface IPpsObjectData : INotifyPropertyChanged
 	{
 		Task LoadAsync(SQLiteTransaction transaction = null);
 		Task CommitAsync(SQLiteTransaction transaction = null);
@@ -841,9 +957,11 @@ namespace TecWare.PPSn
 	#region -- class PpsObjectBlobData --------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Control byte based data.</summary>
 	public sealed class PpsObjectBlobData : IPpsObjectData
 	{
+		public event PropertyChangedEventHandler PropertyChanged;
+
 		private readonly PpsObject baseObj;
 
 		public PpsObjectBlobData(PpsObject obj)
@@ -851,14 +969,14 @@ namespace TecWare.PPSn
 			this.baseObj = obj;
 		} // ctor
 
-		public Task CommitAsync(SQLiteTransaction transaction = null)
-		{
-			throw new NotImplementedException();
-		}
-
 		public Task LoadAsync(SQLiteTransaction transaction = null)
 		{
 			return Task.CompletedTask;
+		} // proc LoadAsync
+
+		public Task CommitAsync(SQLiteTransaction transaction = null)
+		{
+			throw new NotImplementedException();
 		}
 
 		public Task PushAsync(SQLiteTransaction transaction = null)
@@ -1169,30 +1287,53 @@ namespace TecWare.PPSn
 			if (serverId <= 0)
 				throw new ArgumentOutOfRangeException("serverId", "Invalid server id, this is a local only object and has no server representation.");
 
-			// create the request for the data
-			using (var trans = new PpsNestedDatabaseTransaction(Environment.LocalConnection, transaction))
+			var t = Environment.SynchronizationWorker.RemovePull(this);
+			if (t == null)
 			{
-				using (var src = await PullDataAsync(RemoteRevId))
+				// create the request for the data
+				using (var trans = new PpsNestedDatabaseTransaction(Environment.LocalConnection, transaction))
 				{
+					using (var src = await PullDataAsync(RemoteRevId))
+					{
+						// update data
+						pulledRevId = RemoteRevId;
+						await SaveRawDataAsync(trans.Transaction,
+							(dst) => src.CopyTo(dst)
+						);
+					}
 
-					// update data
-					pulledRevId = RemoteRevId;
-					await SaveRawDataAsync(trans.Transaction,
-						(dst) => src.CopyTo(dst)
-					);
+					// read data
+					if (data != null && !data.IsLoaded)
+						await data.LoadAsync(trans.Transaction);
+
+					trans.Commit();
 				}
-				trans.Commit();
 			}
+			else
+				await t;
 		} // proc PullDataAsync
 
-		public async Task<T> GetDataAsync<T>(SQLiteTransaction transaction)
+		public async Task<T> GetDataAsync<T>(SQLiteTransaction transaction, bool asyncPullData = false)
 			where T : IPpsObjectData
 		{
 			if (data == null)
 			{
+				// create the core data object
 				data = await environment.CreateObjectDataObjectAsync<T>(this);
-				if (!hasData && serverId >= 0)
-					await PullDataAsync(transaction);
+
+				// update data from server, if not present
+				if (serverId >= 0)
+				{
+					if (!hasData) // first data pull
+					{
+						if (asyncPullData)
+							Environment.SynchronizationWorker.EnqueuePull(this);
+						else
+							await PullDataAsync(transaction);
+					}
+					else // todo: check for changes
+					{ }
+				}
 			}
 			return (T)data;
 		} // func GetDataAsync
@@ -1368,7 +1509,7 @@ namespace TecWare.PPSn
 								return hasData;
 							case 10:
 								if (data == null)
-									data = GetDataAsync<IPpsObjectData>(null).Result;
+									data = GetDataAsync<IPpsObjectData>(null, true).Result;
 								return data;
 							case 11:
 								return tags;
@@ -1483,6 +1624,49 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsObjectSynchronizationWorker -------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Background work for the synchronization of data.</summary>
+	public sealed class PpsObjectSynchronizationWorker
+	{
+		private readonly PpsEnvironment environment;
+
+		public PpsObjectSynchronizationWorker(PpsEnvironment environment)
+		{
+			this.environment = environment;
+		} // ctor
+
+		//private struct QueuedObject
+		//{
+		//	public int Action; // pull/push
+		//	public PpsObject Object;
+		//} // struct QueuedTask
+
+		/*
+		 * PushStructure
+		 * PullStructure
+		 */
+
+		//private List<>
+
+		public void EnqueuePull(PpsObject obj)
+		{
+			throw new NotImplementedException();
+		} // proc EnqueuePull
+
+		public void EnqueuePush(PpsObject obj)
+		{
+		} // func EnqueuePush
+
+		internal Task RemovePull(PpsObject ppsObject)
+		{
+			return null;
+		}
+	} // class PpsObjectSynchronizationWorker
+
+	#endregion
+
 	#region -- class PpsEnvironment -----------------------------------------------------
 
 	public partial class PpsEnvironment
@@ -1496,6 +1680,7 @@ namespace TecWare.PPSn
 		private readonly Dictionary<Guid, int> objectStoreByGuid = new Dictionary<Guid, int>();
 
 		private readonly PpsEnvironmentCollection<PpsObjectInfo> objectInfo;
+		private readonly PpsObjectSynchronizationWorker synchronizationWorker;
 
 		private const bool UseId = false;
 		private const bool UseGuid = true;
@@ -2274,6 +2459,8 @@ order by t_liefnr.value desc
 		[LuaMember]
 		public PpsEnvironmentCollection<PpsObjectInfo> ObjectInfos => objectInfo;
 
+
+		public PpsObjectSynchronizationWorker SynchronizationWorker => synchronizationWorker;
 		#endregion
 	} // class PpsEnvironment
 

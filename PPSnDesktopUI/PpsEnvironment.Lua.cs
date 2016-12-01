@@ -1,4 +1,7 @@
-﻿using System;
+﻿#if DEBUG
+#define DEBUG_LUATASK
+#endif
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -75,6 +78,9 @@ namespace TecWare.PPSn
 			this.parent = parent;
 			this.cancellationToken = cancellationToken;
 			this.task = task.ContinueWith(Continue, cancellationToken);
+#if DEBUG_LUATASK
+			Debug.Print("PpsLuaTask: Create Single");
+#endif
 		} // ctor
 
 		public PpsLuaTask(IPpsLuaTaskParent parent, CancellationTokenSource cancellationSource, CancellationToken cancellationToken, params Task[] tasks)
@@ -84,6 +90,9 @@ namespace TecWare.PPSn
 
 			this.task = Task.Run(() => { Task.WaitAll(tasks); return LuaResult.Empty; })
 				.ContinueWith(Continue, cancellationToken); // parallel task are combined in one task
+#if DEBUG_LUATASK
+			Debug.Print("PpsLuaTask: Create Multi");
+#endif
 		} // ctor
 
 		#endregion
@@ -96,6 +105,9 @@ namespace TecWare.PPSn
 			{
 				lock (task)
 				{
+#if DEBUG_LUATASK
+					Debug.Print("PpsLuaTask: Continue");
+#endif
 					isCompleted = true;
 
 					// fetch async tasks
@@ -131,21 +143,24 @@ namespace TecWare.PPSn
 					}
 				}
 				else
-				{
-					if (onException is LuaResult)
-					{
-						parent.Traces.AppendException(cleanException);
-						currentResult = (LuaResult)onException;
-					}
-					else if (Lua.RtInvokeable(onException))
-						currentResult = parent.Dispatcher.Invoke(() => new LuaResult(Lua.RtInvoke(onException, cleanException)));
-					else
-						currentResult = new LuaResult(onException, cleanException);
-				}
+					ExecuteException(onException, cleanException);
 
 				return currentResult;
 			}
 		} // proc Continue
+
+		private void ExecuteException(object onException, Exception cleanException)
+		{
+			if (onException is LuaResult)
+			{
+				parent.Traces.AppendException(cleanException);
+				currentResult = (LuaResult)onException;
+			}
+			else if (Lua.RtInvokeable(onException))
+				currentResult = parent.Dispatcher.Invoke(() => new LuaResult(Lua.RtInvoke(onException, cleanException)));
+			else
+				currentResult = new LuaResult(onException, cleanException);
+		} // proc ExecuteException
 
 		private void FetchContinue(Queue<object> continueQueue)
 		{
@@ -162,6 +177,9 @@ namespace TecWare.PPSn
 		{
 			lock (task)
 			{
+#if DEBUG_LUATASK
+				Debug.Print("PpsLuaTask: ContinueAdd");
+#endif
 				if (IsCompleted) // run sync
 					FetchContinue(onContinue);
 				else // else queue
@@ -174,6 +192,9 @@ namespace TecWare.PPSn
 		{
 			lock (task)
 			{
+#if DEBUG_LUATASK
+				Debug.Print("PpsLuaTask: ContinueUI");
+#endif
 				if (IsCompleted) // run sync
 				{
 					if (parent.Dispatcher.Thread == Thread.CurrentThread)
@@ -190,7 +211,14 @@ namespace TecWare.PPSn
 		public PpsLuaTask OnException(object onException)
 		{
 			lock (task)
+			{
+#if DEBUG_LUATASK
+				Debug.Print("PpsLuaTask: OnException");
+#endif
 				this.onException = onException;
+				if (IsCompleted && currentException != null)
+					ExecuteException(onException, currentException);
+			}
 			return this;
 		} // func OnException
 
@@ -211,8 +239,10 @@ namespace TecWare.PPSn
 			}
 			else
 			{
+				Task t;
 				lock (task)
-					task.Wait();
+					t = task;
+				t.Wait();
 			}
 
 			if (onException == null && currentException != null)
