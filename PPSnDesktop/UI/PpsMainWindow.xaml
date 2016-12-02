@@ -257,7 +257,7 @@
             </uiL:PpsNavigatorControl.Style>
         </uiL:PpsNavigatorControl>
 
-		<ContentControl Grid.Column="1" Grid.Row="0" Margin="10,24,0,0" HorizontalAlignment="Left">
+		<ContentControl Grid.Column="1" Grid.Row="0" Margin="10,24,0,0" HorizontalAlignment="Left" Focusable="False">
 			<ContentControl.Template>
 				<ControlTemplate>
 					<Grid>
