@@ -32,13 +32,14 @@ namespace TecWare.PPSn.UI
 	[ContentProperty("ConvertExpression")]
 	public class LuaValueConverter : IValueConverter
 	{
-		private delegate object ConvertDelegate(object value, Type targetType, object parameter, CultureInfo culture);
+		private delegate object ConvertDelegate(object value, Type targetType, object parameter, PpsEnvironment environment, CultureInfo culture);
 		private static Lua lua = new Lua(); // lua engine for the value converters
 
 		private string convert;
 		private ConvertDelegate convertDelegate;
 		private string convertBack;
 		private ConvertDelegate convertBackDelegate;
+		private Lazy<PpsEnvironment> getEnvironment = null;
 
 		private object ConvertIntern(string script, ref ConvertDelegate dlg, object value, Type targetType, object parameter, CultureInfo culture)
 		{
@@ -48,7 +49,7 @@ namespace TecWare.PPSn.UI
 			if (dlg == null) // compile function
 				dlg = lua.CreateLambda<ConvertDelegate>("convert.lua", script);
 
-			return dlg.DynamicInvoke(value, targetType, parameter, culture);
+			return dlg.DynamicInvoke(value, targetType, parameter, getEnvironment?.Value, culture);
 		} // func ConvertIntern
 
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -86,6 +87,12 @@ namespace TecWare.PPSn.UI
 				}
 			}
 		} // prop ConvertBackExpression
+
+		public bool UseEnvironment
+		{
+			get { return getEnvironment != null; }
+			set { getEnvironment = new Lazy<PpsEnvironment>(PpsEnvironment.GetEnvironment); }
+		} // prop UseEnvironment
 	} // class LuaValueConverter
 
 	#endregion
