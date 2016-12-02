@@ -1,4 +1,7 @@
-﻿using System;
+﻿#if DEBUG
+#define _DEBUG_LUATASK
+#endif
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -12,6 +15,7 @@ using System.Windows.Threading;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Stuff;
@@ -57,9 +61,10 @@ namespace TecWare.PPSn
 		private readonly IPpsLuaTaskParent parent;
 		private readonly Task<LuaResult> task;
 
-		private Queue<object> continueWith = new Queue<object>();
-		private Queue<object> continueUI = new Queue<object>();
+		private readonly Queue<object> continueWith = new Queue<object>();
+		private readonly Queue<object> continueUI = new Queue<object>();
 		private object onException = null;
+		private readonly Queue<object> finishQueue = new Queue<object>();
 
 		private volatile bool isCompleted = false;
 		private Exception currentException = null;
@@ -75,6 +80,9 @@ namespace TecWare.PPSn
 			this.parent = parent;
 			this.cancellationToken = cancellationToken;
 			this.task = task.ContinueWith(Continue, cancellationToken);
+#if DEBUG_LUATASK
+			Debug.Print("PpsLuaTask: Create Single");
+#endif
 		} // ctor
 
 		public PpsLuaTask(IPpsLuaTaskParent parent, CancellationTokenSource cancellationSource, CancellationToken cancellationToken, params Task[] tasks)
@@ -84,6 +92,9 @@ namespace TecWare.PPSn
 
 			this.task = Task.Run(() => { Task.WaitAll(tasks); return LuaResult.Empty; })
 				.ContinueWith(Continue, cancellationToken); // parallel task are combined in one task
+#if DEBUG_LUATASK
+			Debug.Print("PpsLuaTask: Create Multi");
+#endif
 		} // ctor
 
 		#endregion
@@ -96,6 +107,9 @@ namespace TecWare.PPSn
 			{
 				lock (task)
 				{
+#if DEBUG_LUATASK
+					Debug.Print("PpsLuaTask: Continue");
+#endif
 					isCompleted = true;
 
 					// fetch async tasks
@@ -104,7 +118,12 @@ namespace TecWare.PPSn
 					continueWith.Clear();
 				}
 				// fetch ui tasks
-				parent.Dispatcher.Invoke(() => FetchContinue(continueUI));
+				parent.Dispatcher.Invoke(
+					() =>
+					{
+						FetchContinue(continueUI);
+						FetchFinishQueue(); 
+					});
 				lock (task)
 					continueUI.Clear();
 
@@ -131,21 +150,26 @@ namespace TecWare.PPSn
 					}
 				}
 				else
-				{
-					if (onException is LuaResult)
-					{
-						parent.Traces.AppendException(cleanException);
-						currentResult = (LuaResult)onException;
-					}
-					else if (Lua.RtInvokeable(onException))
-						currentResult = parent.Dispatcher.Invoke(() => new LuaResult(Lua.RtInvoke(onException, cleanException)));
-					else
-						currentResult = new LuaResult(onException, cleanException);
-				}
+					ExecuteException(onException, cleanException);
+
+				parent.Dispatcher.Invoke(FetchFinishQueue);
 
 				return currentResult;
 			}
 		} // proc Continue
+
+		private void ExecuteException(object onException, Exception cleanException)
+		{
+			if (onException is LuaResult)
+			{
+				parent.Traces.AppendException(cleanException);
+				currentResult = (LuaResult)onException;
+			}
+			else if (Lua.RtInvokeable(onException))
+				currentResult = parent.Dispatcher.Invoke(() => new LuaResult(Lua.RtInvoke(onException, cleanException)));
+			else
+				currentResult = new LuaResult(onException, cleanException);
+		} // proc ExecuteException
 
 		private void FetchContinue(Queue<object> continueQueue)
 		{
@@ -162,6 +186,9 @@ namespace TecWare.PPSn
 		{
 			lock (task)
 			{
+#if DEBUG_LUATASK
+				Debug.Print("PpsLuaTask: ContinueAdd");
+#endif
 				if (IsCompleted) // run sync
 					FetchContinue(onContinue);
 				else // else queue
@@ -174,6 +201,9 @@ namespace TecWare.PPSn
 		{
 			lock (task)
 			{
+#if DEBUG_LUATASK
+				Debug.Print("PpsLuaTask: ContinueUI");
+#endif
 				if (IsCompleted) // run sync
 				{
 					if (parent.Dispatcher.Thread == Thread.CurrentThread)
@@ -187,10 +217,53 @@ namespace TecWare.PPSn
 			return this;
 		} // func ContinueUI
 
+		private void FetchFinishQueue()
+		{
+			while (finishQueue.Count > 0)
+				FetchFinish(finishQueue.Dequeue());
+		} // proc FetchFinishQueue
+
+		private void FetchFinish(object func)
+		{
+			if (func is IDisposable)
+				((IDisposable)func).Dispose();
+			else if (Lua.RtInvokeable(func))
+				Lua.RtInvoke(func);
+			else
+				throw new ArgumentException();
+		} // proc FetchFinish
+
+		public PpsLuaTask OnFinish(object onFinish)
+		{
+			lock (task)
+			{
+#if DEBUG_LUATASK
+				Debug.Print("PpsLuaTask: OnFinish");
+#endif
+				if (IsCompleted) // run sync
+				{
+					if (parent.Dispatcher.Thread == Thread.CurrentThread)
+						FetchFinish(onFinish);
+					else
+						parent.Dispatcher.Invoke(() => FetchFinish(onFinish));
+				}
+				else // else queue
+					this.finishQueue.Enqueue(onFinish);
+			}
+			return this;
+		} // func OnFinish
+
 		public PpsLuaTask OnException(object onException)
 		{
 			lock (task)
+			{
+#if DEBUG_LUATASK
+				Debug.Print("PpsLuaTask: OnException");
+#endif
 				this.onException = onException;
+				if (IsCompleted && currentException != null)
+					ExecuteException(onException, currentException);
+			}
 			return this;
 		} // func OnException
 
@@ -201,7 +274,7 @@ namespace TecWare.PPSn
 
 		public LuaResult Wait()
 		{
-			var  waitInUIThread = parent.Dispatcher.Thread == Thread.CurrentThread; // check if the current thread, is the main thread4
+			var waitInUIThread = parent.Dispatcher.Thread == Thread.CurrentThread; // check if the current thread, is the main thread4
 			if (waitInUIThread)
 			{
 				Task t;
@@ -211,13 +284,15 @@ namespace TecWare.PPSn
 			}
 			else
 			{
+				Task t;
 				lock (task)
-					task.Wait();
+					t = task;
+				t.Wait();
 			}
 
 			if (onException == null && currentException != null)
 				throw new TargetInvocationException(currentException);
-			
+
 			// return the result
 			return currentResult;
 		} // func Wait
@@ -347,7 +422,7 @@ namespace TecWare.PPSn
 				using (var r = await request.GetResponseAsync(source.ToString()))
 				{
 					var contentDisposition = r.GetContentDisposition(true);
-					using (var sr = request.GetTextReaderAsync(r, MimeTypes.Text.Plain))
+					using (var sr = request.GetTextReader(r, MimeTypes.Text.Plain))
 						return await CompileAsync(sr, contentDisposition.FileName, throwException, arguments);
 				}
 			}
@@ -464,6 +539,33 @@ namespace TecWare.PPSn
 			LuaTrace(PpsTraceItemType.Information, args);
 		} // proc LuaPrint
 
+		[LuaMember("toTable")]
+		private LuaTable LuaToTable(object table)
+		{
+			if (table == null)
+				return null;
+			else if (table is LuaTable)
+				return (LuaTable)table;
+			else if (table is IDataRow)
+			{
+				var r = new LuaTable();
+				var row = (IDataRow)table;
+				var i = 0;
+				foreach (var c in row.Columns)
+					r[c.Name] = row[i++];
+				return r;
+			}
+			else if (table is IEnumerable<PropertyValue>)
+			{
+				var r = new LuaTable();
+				foreach (var p in (IEnumerable<PropertyValue>)table)
+					r[p.Name] = p.Value;
+				return r;
+			}
+			else
+				throw new ArgumentException();
+		} // func LuaToTable
+
 		[LuaMember("typeof")]
 		private Type LuaType(object o)
 			=> o?.GetType();
@@ -490,7 +592,7 @@ namespace TecWare.PPSn
 					arguments["_filename"] = r.GetContentDisposition().FileName;
 
 					// parse the xaml as xml document
-					using (var sr = request.GetTextReaderAsync(r, MimeTypes.Application.Xaml))
+					using (var sr = request.GetTextReader(r, MimeTypes.Application.Xaml))
 					{
 						using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, xamlUri.ToString()))
 							xXaml = XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo);

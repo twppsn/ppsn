@@ -559,7 +559,7 @@ namespace TecWare.PPSn
 						throw new InvalidOperationException("links are not implemented yet.");
 
 					byte[] contentBytes;
-					using (var src = Request.GetStreamAsync(content.Response, null))
+					using (var src = Request.GetStream(content.Response, null))
 						contentBytes = src.ReadInArray(); // simple data into an byte array
 
 					if (content.ContentLength > 0 && content.ContentLength != contentBytes.Length)

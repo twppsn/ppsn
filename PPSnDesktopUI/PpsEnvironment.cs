@@ -449,7 +449,8 @@ namespace TecWare.PPSn
 
 			this.info = info;
 			this.activeDataSets = new PpsActiveDataSetsImplementation(this);
-			this.objectInfo = new PPSn.PpsEnvironmentCollection<PPSn.PpsObjectInfo>(this);
+			this.objectInfo = new PpsEnvironmentCollection<PpsObjectInfo>(this);
+			this.synchronizationWorker = new PpsObjectSynchronizationWorker(this);
 
 			Neo.IronLua.LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
 

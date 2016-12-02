@@ -58,7 +58,7 @@ namespace TecWare.PPSn
 			try
 			{
 				using (var r = await Request.GetResponseAsync(path))
-				using (var xml = Request.GetXmlStreamAsync(r, isXaml ? MimeTypes.Application.Xaml : MimeTypes.Text.Xml))
+				using (var xml = Request.GetXmlStream(r, isXaml ? MimeTypes.Application.Xaml : MimeTypes.Text.Xml))
 				{
 					var dt = DateTime.MinValue;
 					return new Tuple<XDocument, DateTime>(XDocument.Load(xml), dt);
