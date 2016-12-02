@@ -407,13 +407,48 @@ namespace TecWare.PPSn.Server
 				this.application = application;
 			} // ctor
 
-			[LuaMember(nameof(CreateXmlWriter))]
-			public static XmlWriter CreateXmlWriter(IDEContext r)
+			private static IDEContext CheckContextArgument(IDEContext r)
 			{
 				if (r == null)
 					throw new ArgumentNullException("r", "No context given.");
+				return r;
+			} // func CheckContextArgument
+
+			[LuaMember]
+			public static XmlWriter CreateXmlWriter(IDEContext r)
+			{
+				CheckContextArgument(r);
 				return XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, r.Server.Encoding), Procs.XmlWriterSettings);
 			} // func CreateXmlWriter
+
+			[LuaMember]
+			public static XmlReader CreateXmlReader(IDEContext r)
+			{
+				CheckContextArgument(r);
+				return XmlReader.Create(r.GetInputTextReader(), Procs.XmlReaderSettings);
+			} // func CreateXmlReader
+
+			[LuaMember]
+			public static void WriteXml(IDEContext r, XElement x)
+			{
+				using (var xml = CreateXmlWriter(r))
+					x.WriteTo(xml);
+			} // proc WriteXml
+
+			[LuaMember]
+			public static XElement GetXml(IDEContext r)
+			{
+				using (var xml = CreateXmlReader(r))
+					return XElement.Load(xml);
+			} // proc WriteXml
+
+			[LuaMember]
+			public static void WriteTable(IDEContext r, LuaTable t)
+				=> WriteXml(r, t.ToXml());
+
+			[LuaMember]
+			public static LuaTable GetTable(IDEContext r)
+				=> Procs.CreateLuaTable(GetXml(r));
 		} // class PpsHttpLibrary
 
 		#endregion
