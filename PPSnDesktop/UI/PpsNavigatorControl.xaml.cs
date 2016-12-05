@@ -80,8 +80,8 @@ namespace TecWare.PPSn.UI
 		{
 			if (PART_SearchBox.Visibility != Visibility.Visible || (PpsNavigatorSearchBoxState)PART_SearchBox.Tag == PpsNavigatorSearchBoxState.Collapsed)
 				return;
-			FocusManager.SetFocusedElement(PART_ViewsHeader, PART_ViewsHeaderDescription);
-			Keyboard.Focus(PART_ViewsHeaderDescription);
+			FocusManager.SetFocusedElement(PART_NavigatorGrid, PART_Views);
+			Keyboard.Focus(PART_Views);
 		}
 
 		private bool IsValidSearchText(string input)

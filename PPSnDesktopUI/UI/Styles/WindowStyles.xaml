@@ -47,7 +47,7 @@ specific language governing permissions and limitations under the Licence.
 
 	<KeyTime x:Key="PPSnShrinkStoryKeyTime">0:00:.2</KeyTime>
     <Duration x:Key="PPSnShrinkStoryDuration">0:00:.2</Duration>
-    <core:Double x:Key="PaneMaxGridWidth">1160</core:Double>
+	<core:Double x:Key="PaneMaxGridWidth">1160</core:Double>
 
     <Style x:Key="PpsWindow" TargetType="{x:Type ui:PpsWindow}">
         <Setter Property="WindowStyle" Value="SingleBorderWindow"/>
@@ -72,5 +72,7 @@ specific language governing permissions and limitations under the Licence.
 	<Style x:Key="PPSnSelectionToggleButtonStyle" TargetType="{x:Type ToggleButton}"/>
 	<Style x:Key="SimpleButtonStyle" TargetType="{x:Type Button}" />
 	<Style x:Key="PaneToolBarStyle" TargetType="{x:Type ToolBar}"/>
+	<Style x:Key="PPSnScrollViewerStyle" TargetType="{x:Type ScrollViewer}"/>
+
 
 </ResourceDictionary>
