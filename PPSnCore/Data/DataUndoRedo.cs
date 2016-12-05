@@ -60,11 +60,13 @@ namespace TecWare.PPSn.Data
 		void Append(IPpsUndoItem item);
 		/// <summary>Undo/redo operation aktive.</summary>
 		bool InUndoRedoOperation { get; }
+		/// <summary>Gets call if one member of the undo sink marks his data invalid.</summary>
+		void ResetUndoStack();
 
 		/// <summary>Opens a new transaction.</summary>
-		/// <param name="sDescription">Description of the transaction.</param>
+		/// <param name="description">Description of the transaction.</param>
 		/// <returns></returns>
-		IPpsUndoTransaction BeginTransaction(string sDescription);
+		IPpsUndoTransaction BeginTransaction(string description);
 		/// <summary>Is a transaction aktive.</summary>
 		bool InTransaction { get; }
 	} // interface IPpsUndoSink

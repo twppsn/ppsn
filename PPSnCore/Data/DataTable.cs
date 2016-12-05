@@ -1109,9 +1109,9 @@ namespace TecWare.PPSn.Data
 
 		#region -- Read/Write -------------------------------------------------------------
 
-		/// <summary>Fügt die Daten in die Tabelle ein.</summary>
+		/// <summary>Reads data of an table.</summary>
 		/// <param name="x"></param>
-		public void Read(XElement x, bool combineData)
+		internal void Read(XElement x, bool combineData)
 		{
 			if (!combineData)
 				ClearInternal();

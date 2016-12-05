@@ -303,6 +303,18 @@ namespace TecWare.PPSn.Data
 		{
 		} // proc EndInit
 
+		private void CheckParentRelationValue(PpsDataRow row, object value)
+		{
+			if (!ExistsValueInParentTable(row, value))
+				throw new ArgumentOutOfRangeException($"Value '{value}' does not exist in '{parentRelation.ParentColumn.Table.Name}.{parentRelation.ParentColumn.Name}'.");
+		} // proc CheckParentRelationValue
+
+		private void CheckPrimaryKeyValue(PpsDataRow row, object value)
+		{
+			if (row.Table.FindRows(this, value).FirstOrDefault() != null)
+				throw new ArgumentOutOfRangeException($"Value '{value}' is not unique for column '{Table.Name}.{Name}'.");
+		} // proc CheckPrimaryKeyValue
+
 		/// <summary>Gets called if a value is changing.</summary>
 		/// <param name="row"></param>
 		/// <param name="flag"></param>
@@ -319,8 +331,15 @@ namespace TecWare.PPSn.Data
 					if (parentRelation != null) // check value contraint
 					{
 						row.ClearParentRowCache(this);
-						if (!ExistsValueInParentTable(row, value))
-							throw new ArgumentOutOfRangeException($"Value '{value}' does not exist in '{parentRelation.ParentColumn.Table.Name}.{parentRelation.ParentColumn.Name}'.");
+
+						if (value != null)
+						{
+							var t = row.Table.DataSet.DeferredConstraints;
+							if (t == null)
+								CheckParentRelationValue(row, value);
+							else
+								t.Register(new Action<PpsDataRow, object>(CheckParentRelationValue), "Foreign key constraint failed.", row, value);
+						}
 					}
 					if (IsExtended)
 					{
@@ -336,8 +355,11 @@ namespace TecWare.PPSn.Data
 					}
 					if (IsPrimaryKey) // check unique
 					{
-						if (row.Table.FindRows(this, value).FirstOrDefault() != null)
-							throw new ArgumentOutOfRangeException($"Value '{value}' is not unique for column '{Table.Name}.{Name}'.");
+						var t = row.Table.DataSet.DeferredConstraints;
+						if (t == null)
+							CheckPrimaryKeyValue(row, value);
+						else
+							t.Register(new Action<PpsDataRow, object>(CheckPrimaryKeyValue), "Primary key contraint failed.", row, value);
 					}
 					return ret;
 
@@ -412,8 +434,11 @@ namespace TecWare.PPSn.Data
 				var table = row.Table.DataSet.Tables[relation.ChildColumn.Table];
 				var columnIndex = relation.ChildColumn.Index;
 
-				foreach (var childRow in table.FindRows(relation.ChildColumn, oldValue))
-					childRow[columnIndex] = value;
+				if (oldValue != null && row.Table.DataSet.DeferredConstraints == null)
+				{
+					foreach (var childRow in table.FindRows(relation.ChildColumn, oldValue))
+						childRow[columnIndex] = value;
+				}
 			}
 		} // proc OnColumnValueChanged
 

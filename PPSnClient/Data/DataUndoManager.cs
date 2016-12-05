@@ -361,6 +361,9 @@ namespace TecWare.PPSn.Data
 			RaiseCollectionReset();
 		} // proc AppendUndoGroup
 
+		void IPpsUndoSink.ResetUndoStack()
+			=> Clear();
+
 		#endregion
 
 		#region -- BeginTransaction -------------------------------------------------------

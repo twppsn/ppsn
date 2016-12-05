@@ -361,14 +361,25 @@ namespace TecWare.PPSn.Data
 	} // class PpsDataSetDefinition
 
 	#endregion
-	
+
+	#region -- interface IPpsDeferedConstraintCheck -------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public interface IPpsDeferredConstraintCheck
+	{
+		void Register(Delegate check, string failText, params object[] arguments);
+	} // interface IPpsDeferedConstraintCheck
+
+	#endregion
+
 	#region -- class PpsDataSet ---------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class PpsDataSet : IDynamicMetaObjectProvider
 	{
-		#region -- class PpsDataSetMetaObject --------------------------------------------
+		#region -- class PpsDataSetMetaObject ---------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
@@ -485,11 +496,46 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		#region -- class PpsDeferedConstraintCheck ----------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class PpsDeferedConstraintCheck : IPpsDeferredConstraintCheck
+		{
+			private List<Tuple<Delegate, string, object[]>> checks = new List<Tuple<Delegate, string, object[]>>();
+
+			public void ExecuteAll()
+			{
+				for (var i = 0; i < checks.Count; i++)
+				{
+					var c = checks[i];
+					try
+					{
+						c.Item1.DynamicInvoke(c.Item3);
+					}
+					catch (TargetInvocationException e)
+					{
+						throw new TargetInvocationException(
+							String.Format(c.Item2, c.Item3), e.InnerException
+						);
+					}
+				}
+			} // proc ExecuteAll
+
+			public void Register(Delegate check, string failText, params object[] arguments)
+			{
+				checks.Add(new Tuple<Delegate, string, object[]>(check, failText, arguments));
+			} // proc Register
+		} // class PpsDeferedConstraintCheck
+
+		#endregion
+
 		private PpsDataSetDefinition datasetDefinition;
 		private PpsDataTable[] tables;
 		private TableCollection tableCollection;
 
 		private IPpsUndoSink undoSink = null;
+		private PpsDeferedConstraintCheck deferredConstraintChecks = null;
 
 		private long lastPrimaryId = -1;
 		private object nextPrimaryLock = new object();
@@ -584,25 +630,55 @@ namespace TecWare.PPSn.Data
 		} // proc RegisterUndoSink
 
 		private int FindTableIndex(string tableName)
-		{
-			return Array.FindIndex(tables, dt => String.Compare(dt.TableName, tableName, StringComparison.OrdinalIgnoreCase) == 0);
-		} // func FindTableIndex
+			=> Array.FindIndex(tables, dt => String.Compare(dt.TableName, tableName, StringComparison.OrdinalIgnoreCase) == 0);
 
 		private void ClearInternal()
 		{
 			// Tabellen
-			for (int i = 0; i < tables.Length; i++)
+			for (var i = 0; i < tables.Length; i++)
 				tables[i].ClearInternal();
 		} // proc ClearInternal
 
+		/// <summary>This functions starts a section without any constraint and foreign key check.</summary>
+		/// <param name="disableUndoStack">Do not add to use undo stack. The undo-stack will be cut.</param>
+		/// <returns></returns>
+		public IDisposable BeginData(bool disableUndoStack = true)
+		{
+			if (deferredConstraintChecks != null)
+				throw new InvalidOperationException();
+
+			// detach undo sink
+			var tmp = disableUndoStack && undoSink != null ? undoSink : null;
+			if (tmp != null)
+			{
+				undoSink.ResetUndoStack();
+				undoSink = null;
+			}
+
+			// start deferred contraints
+			deferredConstraintChecks = new PpsDeferedConstraintCheck();
+
+			return new DisposableScope(
+				() =>
+				{
+					// executes constaint checks
+					deferredConstraintChecks.ExecuteAll();
+					
+					// attach undo sink
+					if (tmp != null)
+						undoSink = tmp;
+				});
+		} // func BeginData
+
+		/// <summary>Reads the structur into the dataset.</summary>
+		/// <param name="x">data of the dataset</param>
+		/// <param name="combineData"><c>true</c>, to combine the data. <c>false</c>, clear the data first.</param>
 		public void Read(XElement x, bool combineData = false)
 		{
 			if (x.Name != xnData)
 				throw new ArgumentException();
 
-			var tmp = undoSink;
-			undoSink = null;
-			try
+			using (BeginData(true))
 			{
 				// clear current data, for a fresh load
 				if (!combineData)
@@ -611,10 +687,6 @@ namespace TecWare.PPSn.Data
 				// fetch the tables
 				foreach (var xTable in x.Elements().Where(c => c.Name.NamespaceName == "table"))
 					this.Tables[xTable.Name.LocalName, true].Read(xTable, combineData);
-			}
-			finally
-			{
-				undoSink = tmp;
 			}
 		} // proc Read
 
@@ -803,6 +875,9 @@ namespace TecWare.PPSn.Data
 		public IPpsUndoSink UndoSink => undoSink;
 		/// <summary>Local properties and functions for the dataset.</summary>
 		public LuaTable Properties => properties;
+
+		/// <summary></summary>
+		public IPpsDeferredConstraintCheck DeferredConstraints => deferredConstraintChecks;
 
 		// -- Static --------------------------------------------------------------
 
