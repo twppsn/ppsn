@@ -10,15 +10,14 @@
             <Style x:Key="SideBarMenuButtonStyle" TargetType="{x:Type Button}">
                 <Setter Property="Stylus.IsPressAndHoldEnabled" Value="False"/>
                 <Setter Property="Focusable" Value="False"/>
-                <Setter Property="Foreground" Value="White"/>
-                <Setter Property="FontWeight" Value="Normal"/>
+                <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="{x:Type Button}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="*"/>
-                                    <RowDefinition Height="33"/>
+                                    <RowDefinition Height="38"/>
                                     <RowDefinition x:Name="bottomMargin" Height="3"/>
                                 </Grid.RowDefinitions>
 								<Border x:Name="topBorder" Grid.Row="0" Margin="16,0" BorderBrush="{StaticResource PPSnSeparatorBrush}" BorderThickness="0,1,0,0" Height="4" Background="{x:Null}"/>
@@ -37,7 +36,7 @@
 								</MultiDataTrigger>
 
 								<Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="contentBorder" Property="Background" Value="#1F6588" />
+									<Setter TargetName="contentBorder" Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" />
                                 </Trigger>
                                 <DataTrigger Binding="{Binding Path=IsChildItem}" Value="True">
                                     <Setter TargetName="topBorder" Property="Visibility" Value="Collapsed"/>
@@ -101,7 +100,7 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="ItemContainerStyle" Value="{StaticResource SideBarMenuItemStyle}"/>
         <Setter Property="FontSize" Value="14"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontWeight" Value="Normal"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListBox}">
