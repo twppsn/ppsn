@@ -61,12 +61,13 @@
 		<pps:register source="main">
 
 			<!-- object fields -->
-			<pps:field name="dbo.Objk.Id" />
-			<pps:field name="dbo.Objk.Guid" />
-			<pps:field name="dbo.Objk.Typ" />
-			<pps:field name="dbo.Objk.Nr" />
-			<pps:field name="dbo.Objk.HeadRevId" />
-			<pps:field name="dbo.Objk.CurRevId" />
+			<pps:field name="dbo.ObjK.Id" />
+			<pps:field name="dbo.ObjK.Guid" />
+			<pps:field name="dbo.ObjK.Typ" />
+			<pps:field name="dbo.ObjK.Nr" />
+			<pps:field name="dbo.ObjK.HeadRevId" />
+			<pps:field name="dbo.ObjK.CurRevId" />
+			<pps:field name="dbo.ObjK.SyncToken" />
 
 			<!-- revision fields -->
 			<pps:field name="dbo.Objr.Id" />
