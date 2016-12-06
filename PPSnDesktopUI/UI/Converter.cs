@@ -81,7 +81,9 @@ namespace TecWare.PPSn.UI
 
 		private string RemoveNewLines(object value)
 		{
-			var txt = (string)value;
+			var txt = value.ToString();
+			if (String.IsNullOrEmpty(txt))
+				return String.Empty;
 			if (!txt.Contains(Environment.NewLine))
 				return txt;
 
