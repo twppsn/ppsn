@@ -1226,6 +1226,9 @@ namespace TecWare.PPSn
 			//
 		} // proc Push
 
+		public Task PullAsync(SQLiteTransaction transaction)
+			=> Task.Run(() => Environment.GetObjectFromServer(guid, true, transaction));
+
 		internal async Task PullAsnc(SQLiteTransaction transaction, IDataRow current, int[] columnIndexes, bool withData)
 		{
 			// check guid
@@ -1242,31 +1245,35 @@ namespace TecWare.PPSn
 			Set(ref isRev, current.GetValue(columnIndexes[(int)PpsObjectServerIndex.IsRev], false), nameof(IsRev));
 			Set(ref remoteRevId, current.GetValue(columnIndexes[(int)PpsObjectServerIndex.RevId], -1L), nameof(RemoteRevId));
 
-			using (var cmd = environment.LocalConnection.CreateCommand())
+			using (var trans = new PpsNestedDatabaseTransaction(Environment.LocalConnection, transaction))
 			{
-				cmd.CommandText = "UPDATE main.Objects SET ServerId = @ServerId, IsRev = @IsRev, PulledRevId = @PulledRevId, Nr = @Nr WHERE Id = @Id";
-				cmd.Transaction = transaction;
+				using (var cmd = environment.LocalConnection.CreateCommand())
+				{
+					cmd.CommandText = "UPDATE main.Objects SET ServerId = @ServerId, IsRev = @IsRev, PulledRevId = @PulledRevId, Nr = @Nr WHERE Id = @Id";
+					cmd.Transaction = trans.Transaction;
 
-				cmd.Parameters.Add("@Id", DbType.Int64).Value = localId;
-				cmd.Parameters.Add("@ServerId", DbType.Int64).Value = serverId.DbNullIf(DbNullOnNeg);
-				cmd.Parameters.Add("@IsRev", DbType.Boolean).Value = isRev;
-				cmd.Parameters.Add("@PulledRevId", DbType.Int64).Value = pulledRevId.DbNullIf(DbNullOnNeg);
-				cmd.Parameters.Add("@Nr", DbType.String).Value = nr.DbNullIfString();
+					cmd.Parameters.Add("@Id", DbType.Int64).Value = localId;
+					cmd.Parameters.Add("@ServerId", DbType.Int64).Value = serverId.DbNullIf(DbNullOnNeg);
+					cmd.Parameters.Add("@IsRev", DbType.Boolean).Value = isRev;
+					cmd.Parameters.Add("@PulledRevId", DbType.Int64).Value = pulledRevId.DbNullIf(DbNullOnNeg);
+					cmd.Parameters.Add("@Nr", DbType.String).Value = nr.DbNullIfString();
 
-				await cmd.ExecuteNonQueryAsync();
+					await cmd.ExecuteNonQueryAsync();
+				}
+
+				// update Tags
+				var tagList = PpsObjectTag.ParseTagFields(current.GetValue(columnIndexes[(int)PpsObjectServerIndex.Tags], String.Empty)).ToArray();
+				tags.Update(tagList, refreshTags: false, transaction: trans.Transaction);
+				tags.RefreshTags(tagList);
+
+				// update links
+				// todo:
+
+				// update data
+				if (withData)
+					await PullDataAsync(trans.Transaction);
+
 			}
-
-			// update Tags
-			var tagList = PpsObjectTag.ParseTagFields(current.GetValue(columnIndexes[(int)PpsObjectServerIndex.Tags], String.Empty)).ToArray();
-			tags.Update(tagList, refreshTags: false, transaction: transaction);
-			tags.RefreshTags(tagList);
-
-			// update links
-			// todo:
-
-			// update data
-			if (withData)
-				await PullDataAsync(transaction);
 		} // proc PullAsnc
 
 		private async Task<Stream> PullDataAsync(long revisionId)
@@ -2403,16 +2410,20 @@ order by t_liefnr.value desc
 		[LuaMember]
 		public PpsObject GetObject(Guid guid, SQLiteTransaction transaction = null)
 			=> GetCachedObjectOrRead(objectStoreByGuid, guid, UseGuid, transaction);
-		
+
+
 		[LuaMember]
-		public PpsObject GetObjectFromServer(Guid guid, SQLiteTransaction transaction = null)
+		public PpsObject GetObjectFromServer(Guid guid, bool forceRefresh = false, SQLiteTransaction transaction = null)
 		{
 			lock (objectStoreLock)
 			{
 				// ask cache
-				var o = GetCachedObject(objectStoreByGuid, guid);
-				if (o != null)
-					return o;
+				if (!forceRefresh)
+				{
+					var o = GetCachedObject(objectStoreByGuid, guid);
+					if (o != null)
+						return o;
+				}
 
 				using (var e = GetViewData(
 					new PpsShellGetList("dbo.objects")

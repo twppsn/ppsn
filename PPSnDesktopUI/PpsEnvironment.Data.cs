@@ -599,7 +599,35 @@ namespace TecWare.PPSn
 			} // transaction
 		} // proc UpdateOfflineItem
 
-		protected virtual bool TryGetOfflineItem(string path, bool onlineMode, out string contentType, out Stream data)
+		private bool MoveReader(SQLiteDataReader r, string path, NameValueCollection arguments)
+		{
+			while (r.Read())
+			{
+				var testPath = r.GetString(0);
+
+				// get query is only allowed for absolute queries, so we scan for ?
+				var pos = testPath.IndexOf('?');
+				if (pos == -1 && arguments.Count == 0) // path is exact
+				{
+					if (String.Compare(path, testPath, StringComparison.OrdinalIgnoreCase) == 0)
+						return true;
+				}
+				else if (arguments.Count > 0)
+				{
+					var testArguments = HttpUtility.ParseQueryString(testPath.Substring(pos + 1));
+					foreach (var c in arguments.AllKeys)
+					{
+						var testValue = testArguments[c];
+						if (testValue == null || String.Compare(testValue, arguments[c], StringComparison.OrdinalIgnoreCase) != 0)
+							continue;
+					}
+					return true; // all arguments are fit
+				}
+			}
+			return false;
+		} // func MoveReader
+
+		protected virtual bool TryGetOfflineItem(string path, NameValueCollection arguments, bool onlineMode, out string contentType, out Stream data)
 		{
 			contentType = null;
 			data = null;
@@ -625,32 +653,32 @@ namespace TecWare.PPSn
 			Stream resultData = null;
 			try
 			{
-				using (var command = new SQLiteCommand("SELECT [OnlineMode], [ContentType], [ContentEncoding], [Content] FROM [main].[OfflineCache] WHERE [Path] = @path;", localConnection))
+				using (var command = new SQLiteCommand("SELECT [Path], [OnlineMode], [ContentType], [ContentEncoding], [Content] FROM [main].[OfflineCache] WHERE substr([Path], 1, length(@path)) = @path;", localConnection))
 				{
 					command.Parameters.Add("@path", DbType.String).Value = path;
 					using (var reader = command.ExecuteReader(CommandBehavior.SingleRow))
 					{
-						if (!reader.Read())
+						if (!MoveReader(reader, path, arguments))
 							return false;
 
-						var readOnlineMode = reader.GetBoolean(0);
+						var readOnlineMode = reader.GetBoolean(1);
 						if (onlineMode && !readOnlineMode) // Verify that the stored item can be used in online mode.
 							return false;
 
-						resultContentType = reader.GetString(1);
+						resultContentType = reader.GetString(2);
 						if (String.IsNullOrEmpty(resultContentType))
 							return false;
 
-						var readContentEncoding = reader.IsDBNull(2) ? 
-							new string[0] : 
-							reader.GetString(2).Split(';');
+						var readContentEncoding = reader.IsDBNull(3) ?
+							new string[0] :
+							reader.GetString(3).Split(';');
 
 						if (readContentEncoding.Length > 0 && !String.IsNullOrEmpty(readContentEncoding[0]))
 							resultContentType = resultContentType + ";charset=" + readContentEncoding[0];
 
 						var isCompressedContent = readContentEncoding.Length > 1 && readContentEncoding[1] == "gzip"; // compression is marked on index 1
 
-						var src = reader.GetStream(3); // This method returns a newly created MemoryStream object.
+						var src = reader.GetStream(4); // This method returns a newly created MemoryStream object.
 						resultData = isCompressedContent ?
 							new GZipStream(src, CompressionMode.Decompress, false) :
 							src;
@@ -800,7 +828,7 @@ namespace TecWare.PPSn
 					Stream source;
 
 					// is this a static item
-					if (Environment.TryGetOfflineItem(Path, true, out contentType, out source))
+					if (Environment.TryGetOfflineItem(Path, Arguments, true, out contentType, out source))
 					{
 						var r = new PpsStoreResponse(this);
 						r.SetResponseData(source, contentType);
@@ -992,11 +1020,10 @@ namespace TecWare.PPSn
 			Stream src;
 			string contentType;
 
-			var filePath = r.ResponseUri.GetComponents(UriComponents.PathAndQuery, UriFormat.UriEscaped);
-			if (TryGetOfflineItem(filePath, false, out contentType, out src)) // ask the file from the cache
+			if (TryGetOfflineItem(r.Request.Path, r.Request.Arguments, false, out contentType, out src)) // ask the file from the cache
 				r.SetResponseData(src, contentType);
 			else
-				throw new WebException($"File '{filePath}' not found.", null, WebExceptionStatus.ProtocolError, r);
+				throw new WebException($"File '{r.Request.RequestUri.GetComponents(UriComponents.PathAndQuery, UriFormat.Unescaped)}' not found.", null, WebExceptionStatus.ProtocolError, r);
 		} // proc GetResponseDataStream
 
 		#endregion

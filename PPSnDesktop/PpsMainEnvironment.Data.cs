@@ -500,9 +500,9 @@ namespace TecWare.PPSn
 			return data != null;
 		} // func TryGetStaticItem
 
-		protected override bool TryGetOfflineItem(string path, bool onlineMode, out string contentType, out Stream data)
+		protected override bool TryGetOfflineItem(string path, NameValueCollection arguments, bool onlineMode, out string contentType, out Stream data)
 		{
-			var r = base.TryGetOfflineItem(path, onlineMode, out contentType, out data);
+			var r = base.TryGetOfflineItem(path, arguments, onlineMode, out contentType, out data);
 			if (r)
 				return r;
 			else if (path.StartsWith("/wpf/") && !onlineMode) // request could not resolved for the offline item
