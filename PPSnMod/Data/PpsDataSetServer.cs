@@ -525,12 +525,13 @@ namespace TecWare.PPSn.Server.Data
 					var dst = new MemoryStream();
 					var xmlSettings = Procs.XmlWriterSettings;
 					xmlSettings.CloseOutput = false;
+					xmlSettings.Encoding = Encoding.UTF8;
 					using (var xml = XmlWriter.Create(dst, xmlSettings))
 						xSchema.WriteTo(xml);
 
 					dst.Position = 0;
 					return dst;
-				}, cacheId, MimeTypes.Text.Xml
+				}, cacheId, MimeTypes.Text.Xml + ";charset=utf-8"
 			);
 		} // proc WriteToDEContext
 		

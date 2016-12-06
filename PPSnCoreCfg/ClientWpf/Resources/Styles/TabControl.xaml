@@ -10,7 +10,6 @@
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="IsTabStop" Value="False"/>
-		<Setter Property="FontSize" Value="14"/>
 		<Setter Property="Height" Value="46"/>
 		<Setter Property="Margin" Value="0,0,18,16"/>
 		<Setter Property="Template">
@@ -18,7 +17,7 @@
                 <ControlTemplate TargetType="{x:Type TabItem}">
                     <Border x:Name="panel" BorderBrush="{StaticResource PPSnSeparatorBrush}" Background="Transparent"
 							BorderThickness="0,0,0,4" Margin="{TemplateBinding Margin}" SnapsToDevicePixels="True">
-                        <TextBlock Foreground="{StaticResource PPSnWindowForegroundBrush}" FontSize="{TemplateBinding FontSize}" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,2,2">
+                        <TextBlock Foreground="{StaticResource PPSnWindowForegroundBrush}" FontSize="14" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,2,2">
 							<ContentPresenter ContentSource="Header"/>
                         </TextBlock>
                     </Border>
