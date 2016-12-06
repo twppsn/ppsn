@@ -440,11 +440,32 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Button x:Name="PART_Button" Grid.Column="1" Foreground="{TemplateBinding Foreground}" Focusable="False" VerticalAlignment="Stretch" Width="18"/>
-                            <DatePickerTextBox x:Name="PART_TextBox" Focusable="{TemplateBinding Focusable}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center"
+							<Button x:Name="PART_Button" Grid.Column="1" Foreground="{TemplateBinding Foreground}" Focusable="False" VerticalAlignment="Stretch" Width="20">
+								<Button.Style>
+									<Style TargetType="{x:Type Button}">
+										<Setter Property="Background" Value="Transparent"/>
+										<Setter Property="Template">
+											<Setter.Value>
+												<ControlTemplate TargetType="{x:Type Button}">
+													<Border x:Name="buttonBorder" BorderThickness="0" Background="{StaticResource PPSnControlBackgroundBrush}">
+														<Path x:Name="arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity=".75"
+														  Stroke="{StaticResource PPSnWindowForegroundBrush}"
+														  StrokeThickness="1"
+														  StrokeDashCap="Round"
+														  Data="M 0,0 L5.5,5.5 11,0" />
+													</Border>
+												</ControlTemplate>
+											</Setter.Value>
+										</Setter>
+
+									</Style>
+								</Button.Style>
+							</Button>
+							<DatePickerTextBox x:Name="PART_TextBox" Focusable="{TemplateBinding Focusable}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center"
 												   Style="{StaticResource PpsDatePickerTextBoxStyle}" />
                             <Grid x:Name="PART_DisabledVisual" Grid.ColumnSpan="2" IsHitTestVisible="False" Opacity="0">
-                                <Popup x:Name="PART_Popup" AllowsTransparency="True" PopupAnimation="Slide" Placement="Bottom" HorizontalOffset="-1" PlacementTarget="{Binding ElementName=PART_TextBox}" StaysOpen="False"/>
+                                <Popup x:Name="PART_Popup" AllowsTransparency="True" PopupAnimation="Slide" Placement="Bottom" HorizontalOffset="-1"
+									   PlacementTarget="{Binding ElementName=PART_TextBox}" StaysOpen="False"/>
                             </Grid>
                         </Grid>
                     </Border>
