@@ -230,14 +230,14 @@ namespace TecWare.PPSn.UI
 			return base.UnloadAsync(commit);
 		} // func UnloadAsync
 
-		[LuaMember(nameof(CommitToDisk))]
+		[LuaMember]
 		public void CommitToDisk(string fileName)
 		{
 			using (var xml = XmlWriter.Create(fileName, new XmlWriterSettings() { Encoding = Encoding.UTF8, NewLineHandling = NewLineHandling.Entitize, NewLineChars = "\n\r", IndentChars = "\t" }))
 				data.Write(xml);
 		} // proc CommitToDisk
 
-		[LuaMember(nameof(CommitEditAsync))]
+		[LuaMember]
 		public PpsLuaTask CommitEditAsync()
 		{
 			UpdateSources();
@@ -245,7 +245,7 @@ namespace TecWare.PPSn.UI
 				.ContinueUI(new Action(() => Debug.Print("Saved Document.")));
 		} // proc CommitEdit
 
-		[LuaMember(nameof(PushDataAsync))]
+		[LuaMember]
 		public PpsLuaTask PushDataAsync()
 		{
 			UpdateSources();
@@ -255,7 +255,7 @@ namespace TecWare.PPSn.UI
 			);
 		} // proc PushDataAsync
 
-		[LuaMember(nameof(UndoManager))]
+		[LuaMember]
 		public PpsUndoManager UndoManager => data.UndoManager;
 
 		/// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
@@ -263,8 +263,10 @@ namespace TecWare.PPSn.UI
 		/// <summary>Access to the filtert undo/redo list of the undo manager.</summary>
 		public ICollectionView RedoView => redoView.View;
 
-		[LuaMember(nameof(Data))]
+		[LuaMember]
 		public PpsDataSet Data => data;
+		[LuaMember]
+		public PpsObject Object => obj;
 
 		LuaTable IPpsActiveDataSetOwner.Events => this;
 	} // class PpsGenericMaskWindowPane
