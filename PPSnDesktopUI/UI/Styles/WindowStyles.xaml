@@ -44,7 +44,10 @@ specific language governing permissions and limitations under the Licence.
     <SolidColorBrush x:Key="PPSnControlBackgroundBrush" Color="{StaticResource PPSnControlBackgroundColor}"/>
     <SolidColorBrush x:Key="PPSnControlNormalBorderBrush" Color="{StaticResource PPSnControlNormalBorderColor}"/>
     <SolidColorBrush x:Key="PPSnControlFocusedBorderBrush" Color="{StaticResource PPSnControlFocusedBorderColor}"/>
-
+	<SolidColorBrush x:Key="PPSnPopUpBackGroundBrush" Color="DarkBlue"/>
+	
+	
+	
 	<KeyTime x:Key="PPSnShrinkStoryKeyTime">0:00:.2</KeyTime>
     <Duration x:Key="PPSnShrinkStoryDuration">0:00:.2</Duration>
 	<core:Double x:Key="PaneMaxGridWidth">1160</core:Double>

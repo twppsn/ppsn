@@ -306,11 +306,11 @@
 						</ToggleButton>
 						<ToggleButton Grid.Column="3" Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}" CommandParameter="{Binding Path=CurrentPane}" Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="3"/>
 						<Popup x:Name="paneListPopup" IsOpen="{Binding ElementName=openPaneListButton, Path=IsChecked}" PlacementTarget="{Binding ElementName=openPaneListButton}" AllowsTransparency="True" PopupAnimation="Slide">
-							<ListBox ItemsSource="{Binding Panes}" Background="{StaticResource ButtonDarkerBackGroundBrush}" BorderBrush="{StaticResource PPSnSeparatorBrush}" BorderThickness="1" Style="{StaticResource PPSnListBoxStyle}">
+							<ListBox ItemsSource="{Binding Panes}" Background="{StaticResource PPSnPopUpBackGroundBrush}" BorderBrush="{StaticResource PPSnSeparatorBrush}" BorderThickness="1" Style="{StaticResource PPSnListBoxStyle}">
 								<ListBox.ItemContainerStyle>
 									<Style TargetType="{x:Type ListBoxItem}">
 										<Setter Property="Focusable" Value="False"/>
-										<Setter Property="FontSize" Value="13.333"/>
+										<Setter Property="FontSize" Value="14"/>
 										<Setter Property="Template">
 											<Setter.Value>
 												<ControlTemplate TargetType="{x:Type ListBoxItem}">
@@ -331,12 +331,12 @@
 																				</Grid.ColumnDefinitions>
 																				<Border x:Name="PART_MarkerBorder" Grid.Column="0" Background="{TemplateBinding Background}">
 																					<Path x:Name="PART_Marker" Width="20" Height="20" SnapsToDevicePixels="True"
-																				  Data="M4,10 9,15 15,5, 14,5 9,14 5,10Z"
-																				  StrokeThickness="0.5"
-																				  StrokeStartLineCap="Flat"
-																				  StrokeEndLineCap="Flat"
-																				  Stroke="{TemplateBinding Foreground}"
-																				  Fill="{TemplateBinding Foreground}">
+																						  Data="M4,10 9,15 15,5, 14,5 9,14 5,10Z"
+																						  StrokeThickness="0.5"
+																						  StrokeStartLineCap="Flat"
+																						  StrokeEndLineCap="Flat"
+																						  Stroke="{TemplateBinding Foreground}"
+																						  Fill="{TemplateBinding Foreground}">
 																					</Path>
 																				</Border>
 																				<Border x:Name="PART_ItemBorder" Grid.Column="1" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
