@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -295,7 +310,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- Append -----------------------------------------------------------------
+		#region -- Append, Clear ----------------------------------------------------------
 
 		public void Append(IPpsUndoItem item)
 		{
@@ -306,6 +321,21 @@ namespace TecWare.PPSn.Data
 
 			currentUndoTransaction.Append(item); // append new item to current undo transaction
 		} // proc Append
+
+		public void Clear()
+		{
+			if (currentUndoTransaction != null)
+				throw new InvalidOperationException("There is an active transaction.");
+
+			// clear stack
+			items.Clear();
+			undoBorder = 0;
+
+			// raise the events
+			RaiseCanUndo();
+			RaiseCanRedo();
+			RaiseCollectionReset();
+		} // proc Clear
 
 		private void SuspendAppend()
 		{
@@ -330,6 +360,9 @@ namespace TecWare.PPSn.Data
 			RaiseCanRedo();
 			RaiseCollectionReset();
 		} // proc AppendUndoGroup
+
+		void IPpsUndoSink.ResetUndoStack()
+			=> Clear();
 
 		#endregion
 
@@ -427,14 +460,14 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		/// <summary></summary>
-		public bool CanUndo { get { return undoBorder > 0; } }
+		public bool CanUndo => undoBorder > 0;
 		/// <summary></summary>
-		public bool CanRedo { get { return undoBorder < items.Count; } }
+		public bool CanRedo => undoBorder < items.Count;
 
 		/// <summary></summary>
-		public bool InTransaction { get { return currentUndoTransaction != null; } }
+		public bool InTransaction => currentUndoTransaction != null;
 		/// <summary></summary>
-		public bool InUndoRedoOperation { get { return appendSuspended > 0; } }
+		public bool InUndoRedoOperation => appendSuspended > 0;
 	} // class PpsUndoManager
 
 	#endregion

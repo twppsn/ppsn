@@ -41,7 +41,7 @@ public class FooBar
     * x for XElement
     * uri for Uri
     * ftp, web, xml
-    
+
 * Not allowed: usrGrp Allowed: userGroup
 * No underscores allowed
 * Exception:
@@ -71,8 +71,8 @@ public struct Foo
 
 ### Use of regions
 
-* Use a region to group functionallity
-* A functionallity group as the following style, (the minus goes to column 88)
+* Use a region to group functionality
+* A functionality group as the following style, (the minus goes to column 88)
 ```C#
  #region -- GroupName/Methods -------------------
 
@@ -116,18 +116,18 @@ Attribute()
 
 ### Use of partial types
 
-* It is allowed to group functionallity in different files
+* It is allowed to group functionality in different files
 * Modifiers must be equal
 
 ### Static
 
-* Statics always defined at the end of type (and might be separated with // -- Statics --------------------------------)
+* Statics always defined at the end of type (and might be separated with // -- Static --------------------------------------------------------------)
 * Follow basic layout
 
 ### Comments
 
 * Use xml comments e.g. <summary>
-* Manly place the long comments on separate lines, before the statements
+* Place long comments on separate lines, before the statements
 * If a comment is only for one short statement, it is allowed at the end of line
 * Insert one space between the comment delimiter (//) and the comment text
 * Do not create formatted blocks of asterisks around comments.
@@ -138,7 +138,7 @@ Attribute()
 * Mark need to fix with // fix:
 * Mark hacks with // hack:
 
-* Mark the closing bracket if the span over more then 10 lines
+* Mark the closing bracket if the span is over more then 10 lines
 * Always mark closing methods and types
 
 * type comments start with a line of / to column 80
@@ -190,7 +190,7 @@ e.g. if ((a && b) || (c && d))
     }
 ```
 
-* Concat string with **+**
+* Concat strings with **+**
 * Use Environent.NewLine
 * Do not concat variables, use String.Format
 * Try to use the “@” prefix for string literals instead of escaped strings
@@ -201,12 +201,12 @@ e.g. if ((a && b) || (c && d))
 * Use implicit typing for local variables when the type of the variable is obvious
   from the right side of the assignment, or when the precise type is not important.
 * Do not use var when the type is not apparent from the right side of the assignment
-* Use var in compination with casts, e.g. var test = (Test)GetTest();
+* Use var in combination with casts, e.g. var test = (Test)GetTest();
 
 * Use object initializers to simplify object creation
 
 * Use "as", "(cast)" in the right way
-* Do only use dynamic, when it not avoidable
+* Only use dynamic if it is unavoidable
 * Do not rely on the variable name to specify the type of the variable. It might not be correct (e.g. the prefix)
 * "tmp" is allowed within 3 lines
 * "i", "j", "k", "l" are loop variables
@@ -226,24 +226,23 @@ var names = new string[] {
 ```
 
 * Use explicit exception handling in methods
-* short scopes
-* avoid exceptions, it is not allowed for controlling the regulare program flow
-* no empty catch blocks
-* Goodstyle:
+* Short scopes
+* Avoid exceptions, it is not allowed for controlling the regular program flow
+* No empty catch blocks
+* Good style:
     try
     {
     }
     catch
     {
-
-    throw; <--important
-ALternative:
-    throw new SomeException(innerException: e); // new exceptions contain the original exception
-* Always set the innerException property on thrown exceptions so the exception chain & call stack are maintained
+        throw; <--important
+Or:
+        throw new SomeException(innerException: e); // new exceptions contain the original exception
+* Always set the innerException property on thrown exceptions so the exception chain & call stack is maintained
     }
 
-* Do not create exceptions, prefare build exceptions
-* Use descriping error text
+* Do not create exceptions, prefer available exceptions
+* Use describing error text
 
 * Simplify your code by using the C# using statement. If you have a try-finally statement in which the 
 only code in the finally block is a call to the Dispose method, use a using statement instead.
@@ -272,9 +271,9 @@ finally
 * Only private/internal fields are allowed
 
 * Use predefined type names (int) instead of system types (Int32) on declarations, e.g. int i;
-* Use system types instead of predefined types names on static calls, e.g. Int32.Parse("1");
+* Use system types instead of predefined type names on static calls, e.g. Int32.Parse("1");
 
-### Re/Enginierung rules
+### Re/Engineering rules
 
 * Do not make members public
 * Define small interfaces

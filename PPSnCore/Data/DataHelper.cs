@@ -1,4 +1,20 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -7,6 +23,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
@@ -15,84 +32,90 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public abstract class PpsMetaCollection : IReadOnlyDictionary<string, object>
+	public abstract class PpsMetaCollection : IPropertyEnumerableDictionary
 	{
-		private Dictionary<string, object> metaInfo = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, object> metaInfo;
 
-		protected void Add(string sKey, Func<Type> getDataType, object value)
+		public PpsMetaCollection()
 		{
-			if (String.IsNullOrEmpty(sKey))
+			this.metaInfo = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+		} // ctor
+
+		protected PpsMetaCollection(PpsMetaCollection clone)
+		{
+			this.metaInfo = new Dictionary<string, object>(clone.metaInfo);
+		} // ctor
+
+		protected void Add(string key, Func<Type> getDataType, object value)
+		{
+			if (String.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
 			if (value == null)
-				metaInfo.Remove(sKey);
+				metaInfo.Remove(key);
 			else
 			{
-				// Umwandlung der Daten
+				// change the type
 				Type dataType;
-				if (WellknownMetaTypes.TryGetValue(sKey, out dataType))
+				if (WellknownMetaTypes.TryGetValue(key, out dataType))
 					value = Procs.ChangeType(value, dataType);
-				else
+				else if (getDataType != null)
 					value = Procs.ChangeType(value, getDataType());
 
-				// Füge die Daten hinzu
+				// add the key
 				if (value == null)
-					metaInfo.Remove(sKey);
+					metaInfo.Remove(key);
 				else
-					metaInfo[sKey] = value;
+					metaInfo[key] = value;
 			}
 		} // proc Add
 
+		public void Merge(PpsMetaCollection otherMeta)
+		{
+			foreach (var c in otherMeta)
+			{
+				if (!ContainsKey(c.Name))
+					Add(c.Name, null, c.Value);
+			}
+		} // func Merge
+
 		public bool ContainsKey(string key)
-		{
-			return metaInfo.ContainsKey(key);
-		} // func ContainsKey
+			=> metaInfo.ContainsKey(key);
 
-		public bool TryGetValue(string key, out object value)
-		{
-			return metaInfo.TryGetValue(key, out value);
-		} // func TryGetValue
+		public bool TryGetProperty(string name, out object value)
+			=> metaInfo.TryGetValue(name, out value);
 
-		public T Get<T>(string sKey, T @default)
-		{
-			object v;
-			try
-			{
-				if (TryGetValue(sKey, out v))
-					return v.ChangeType<T>();
-				else
-					return @default;
-			}
-			catch
-			{
-				return @default;
-			}
-		} // func Get
-
-		internal Expression GetMetaConstantExpression(string sKey)
+		internal Expression GetMetaConstantExpression(string key, bool generateException)
 		{
 			object value;
 			Type type;
-			if (TryGetValue(sKey, out value))
+			if (TryGetProperty(key, out value))
 				return Expression.Constant(value, typeof(object));
-			else if (WellknownMetaTypes.TryGetValue(sKey, out type))
+			else if (WellknownMetaTypes.TryGetValue(key, out type))
 				return Expression.Convert(Expression.Default(type), typeof(object));
+			else if (generateException)
+			{
+				return Expression.Throw(
+					Expression.New(Procs.ArgumentOutOfRangeConstructorInfo2,
+						new Expression[]
+						{
+							Expression.Constant(key),
+							Expression.Constant("Could not resolve key.")
+						}
+					), typeof(object)
+				);
+			}
 			else
 				return Expression.Constant(null, typeof(object));
 		} // func GetMetaConstantExpression
 
-		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-		{
-			return ((System.Collections.IEnumerable)this).GetEnumerator();
-		} // func System.Collections.IEnumerable.GetEnumerator
+		IEnumerator IEnumerable.GetEnumerator()
+			=> GetEnumerator();
 
-		public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
-		{
-			return metaInfo.GetEnumerator();
-		} // func GetEnumerator
+		public IEnumerator<PropertyValue> GetEnumerator()
+			=> (from c in metaInfo select new PropertyValue(c.Key, c.Value)).GetEnumerator();
 
-		public IEnumerable<string> Keys { get { return metaInfo.Keys; } }
-		public IEnumerable<object> Values { get { return metaInfo.Values; } }
+		public IEnumerable<string> Keys => metaInfo.Keys;
 		public abstract IReadOnlyDictionary<string, Type> WellknownMetaTypes { get; }
 
 		public object this[string key]
@@ -100,11 +123,11 @@ namespace TecWare.PPSn.Data
 			get
 			{
 				object v;
-				return TryGetValue(key, out v) ? v : null;
+				return TryGetProperty(key, out v) ? v : null;
 			}
 		} // prop this
 
-		public int Count { get { return metaInfo.Count; } }
+		public int Count => metaInfo.Count;
 	} // class PpsMetaCollection
 
 	#endregion
@@ -116,18 +139,13 @@ namespace TecWare.PPSn.Data
 		#region -- Element/Atributenamen des Daten-XML --
 
 		internal static readonly XName xnData = "data";
-		internal static readonly XName xnTable = "t";
 		internal static readonly XName xnDataRow = "r";
 
-		internal static readonly XName xnDataRowValue = "v";
 		internal static readonly XName xnDataRowValueOriginal = "o";
 		internal static readonly XName xnDataRowValueCurrent = "c";
 
 		internal static readonly XName xnDataRowState = "s";
 		internal static readonly XName xnDataRowAdd = "a";
-		internal static readonly XName xnRowName = "n";
-
-		public static readonly XName xnCombine = "combine";
 
 		#endregion
 

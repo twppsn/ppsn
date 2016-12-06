@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -45,11 +60,13 @@ namespace TecWare.PPSn.Data
 		void Append(IPpsUndoItem item);
 		/// <summary>Undo/redo operation aktive.</summary>
 		bool InUndoRedoOperation { get; }
+		/// <summary>Gets call if one member of the undo sink marks his data invalid.</summary>
+		void ResetUndoStack();
 
 		/// <summary>Opens a new transaction.</summary>
-		/// <param name="sDescription">Description of the transaction.</param>
+		/// <param name="description">Description of the transaction.</param>
 		/// <returns></returns>
-		IPpsUndoTransaction BeginTransaction(string sDescription);
+		IPpsUndoTransaction BeginTransaction(string description);
 		/// <summary>Is a transaction aktive.</summary>
 		bool InTransaction { get; }
 	} // interface IPpsUndoSink
