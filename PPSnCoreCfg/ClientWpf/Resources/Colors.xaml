@@ -37,7 +37,7 @@
     </SolidColorBrush>
 
 
-	<SolidColorBrush x:Key="PPSnPopUpBackGroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.90}" />
+	<SolidColorBrush x:Key="PPSnPopUpBackGroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.70}" />
 
 
 	<SolidColorBrush x:Key="PPSnButtonMouseOverBrush" Color="{StaticResource PPSnButtonMouseOverColor}"/>

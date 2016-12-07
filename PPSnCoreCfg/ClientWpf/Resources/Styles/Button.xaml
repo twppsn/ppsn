@@ -31,10 +31,12 @@
 		</Setter>
 	</Style>
 
+	<SolidColorBrush x:Key="simpleButtonBackground" Color="{StaticResource PPSnAccentColor}" Opacity="0.15"/>
+
 	<Style x:Key="SimpleButtonStyle" TargetType="{x:Type Button}">
 		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-		<Setter Property="Background" Value="{StaticResource PPSnSeparatorBrush}"/>
-		<Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}"/>
+		<Setter Property="Background" Value="{StaticResource simpleButtonBackground}"/>
+		<Setter Property="BorderBrush" Value="{StaticResource simpleButtonBackground}"/>
 		<Setter Property="Focusable" Value="False"/>
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
 		<Setter Property="Template">
