@@ -464,6 +464,10 @@ namespace TecWare.PPSn.Server
 			throw new Exception(message);
 		} // proc LuaError
 
+		[LuaMember]
+		public long GetSyncStamp()
+			=> Procs.GetSyncStamp();
+
 		private object HttpPushFile()
 		{
 			return null;
