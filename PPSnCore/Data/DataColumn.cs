@@ -311,7 +311,7 @@ namespace TecWare.PPSn.Data
 
 		private void CheckPrimaryKeyValue(PpsDataRow row, object value)
 		{
-			if (row.Table.FindRows(this, value).FirstOrDefault() != null)
+			if (row.Table.FindRows(this, value).Where(c => c != row).FirstOrDefault() != null)
 				throw new ArgumentOutOfRangeException($"Value '{value}' is not unique for column '{Table.Name}.{Name}'.");
 		} // proc CheckPrimaryKeyValue
 
