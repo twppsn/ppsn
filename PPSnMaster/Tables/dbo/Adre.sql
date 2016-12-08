@@ -9,7 +9,8 @@
 	[Ort] NVARCHAR(50) NULL, 
 	[Region] NVARCHAR(50) NULL, 
 	[Plz] NVARCHAR(10) NULL, 
-	[LandId] BIGINT NULL CONSTRAINT fkAdreLandId REFERENCES dbo.Land (KnstId)
+	[LandId] BIGINT NULL CONSTRAINT fkAdreLandId REFERENCES dbo.Land (KnstId), 
+	[Adresse] NVARCHAR(512) NULL 
 )
 
 GO
@@ -109,3 +110,11 @@ CREATE INDEX [idxAdreObjkId] ON [dbo].[Adre] ([ObjkId])
 GO
 CREATE INDEX [idxAdreLandId] ON [dbo].[Adre] ([LandId])
 GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Adresse komplett',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Adre',
+    @level2type = N'COLUMN',
+    @level2name = N'Adresse'
