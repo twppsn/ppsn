@@ -663,7 +663,8 @@ namespace TecWare.PPSn.Data
 				{
 					// executes constaint checks
 					deferredConstraintChecks.ExecuteAll();
-					
+					deferredConstraintChecks = null;
+
 					// attach undo sink
 					if (tmp != null)
 						undoSink = tmp;
