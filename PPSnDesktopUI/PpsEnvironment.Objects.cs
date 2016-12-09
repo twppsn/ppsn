@@ -476,7 +476,7 @@ namespace TecWare.PPSn
 					{
 						var k = r.GetString(1);
 						var t = r.GetInt32(2);
-						var v = r.GetString(3);
+						var v = r.IsDBNull(3) ? null : r.GetString(3);
 						yield return new Tuple<long, PpsObjectTag>(r.GetInt64(0), new PpsObjectTag(k, (PpsObjectTagClass)t, v, r.GetInt64(4)));
 					}
 				}
@@ -1333,9 +1333,9 @@ namespace TecWare.PPSn
 				{
 					if (!hasData) // first data pull
 					{
-						if (asyncPullData)
-							Environment.SynchronizationWorker.EnqueuePull(this);
-						else
+						//if (asyncPullData)
+						//	Environment.SynchronizationWorker.EnqueuePull(this);
+						//else
 							await PullDataAsync(transaction);
 					}
 					else // todo: check for changes

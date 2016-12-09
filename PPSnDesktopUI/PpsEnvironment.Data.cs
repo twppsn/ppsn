@@ -615,13 +615,18 @@ namespace TecWare.PPSn
 				else if (arguments.Count > 0)
 				{
 					var testArguments = HttpUtility.ParseQueryString(testPath.Substring(pos + 1));
+					var failed = false;
 					foreach (var c in arguments.AllKeys)
 					{
 						var testValue = testArguments[c];
 						if (testValue == null || String.Compare(testValue, arguments[c], StringComparison.OrdinalIgnoreCase) != 0)
-							continue;
+						{
+							failed = true;
+							break;
+						}
 					}
-					return true; // all arguments are fit
+					if (!failed)
+						return true; // all arguments are fit
 				}
 			}
 			return false;
