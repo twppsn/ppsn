@@ -209,12 +209,9 @@
                         <RowDefinition Height="29"/>
                         <RowDefinition/>
                     </Grid.RowDefinitions>
-                    <Button Content="Neue Adresse" Command="{Binding newAddress}" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,0,0,0"
-							Style="{StaticResource SimpleButtonStyle}"/>
-                    <Button Content="Neuer Partner" Command="{Binding newPartner}" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="108,0,0,0"
-							Style="{StaticResource SimpleButtonStyle}"/>
-                    <Button Content="Löschen" Command="{Binding delItem}" Padding="10,0" Width="Auto" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="232,0,0,0"
-							Style="{StaticResource SimpleButtonStyle}"/>
+                    <Button Content="Neue Adresse" Command="{Binding newAddress}" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,0,0,0" />
+                    <Button Content="Neuer Partner" Command="{Binding newPartner}" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="108,0,0,0" />
+                    <Button Content="Löschen" Command="{Binding delItem}" Padding="10,0" Width="Auto" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="232,0,0,0" />
                     <uiC:PpsTreeListView x:Name="AdreTreeView" Grid.Column="0" Grid.Row="1" ItemsSource="{Binding Data.Head/AdreHead}" Style="{StaticResource TreeListViewStyle}">
                         <uiC:PpsTreeListView.Resources>
                             <ui:MultiLineStringConverter x:Key="MlStringConverter" />

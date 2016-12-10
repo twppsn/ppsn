@@ -31,12 +31,12 @@
 		</Setter>
 	</Style>
 
-	<SolidColorBrush x:Key="simpleButtonBackground" Color="{StaticResource PPSnAccentColor}" Opacity="0.15"/>
+	<SolidColorBrush x:Key="PPSnButtonStyleBackgroundBrush" Color="{StaticResource PPSnAccentColor}" Opacity="0.15"/>
 
-	<Style x:Key="SimpleButtonStyle" TargetType="{x:Type Button}">
+	<Style x:Key="PPSnButtonStyle" TargetType="{x:Type Button}">
 		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-		<Setter Property="Background" Value="{StaticResource simpleButtonBackground}"/>
-		<Setter Property="BorderBrush" Value="{StaticResource simpleButtonBackground}"/>
+		<Setter Property="Background" Value="{StaticResource PPSnButtonStyleBackgroundBrush}"/>
+		<Setter Property="BorderBrush" Value="{StaticResource PPSnButtonStyleBackgroundBrush}"/>
 		<Setter Property="Focusable" Value="False"/>
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
 		<Setter Property="Template">
@@ -65,7 +65,7 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
-
+	
 
 	<Style x:Key="PPSnShrinkButtonStyle" TargetType="{x:Type ToggleButton}">
         <Setter Property="Focusable" Value="False"/>
@@ -89,5 +89,7 @@
             </Setter.Value>
         </Setter>
     </Style>
+
+	<Style TargetType="{x:Type Button}" BasedOn="{StaticResource PPSnButtonStyle}" />
 
 </ResourceDictionary>

@@ -89,7 +89,7 @@
                         <RowDefinition Height="29"/>
                         <RowDefinition/>
                     </Grid.RowDefinitions>
-                    <Button Content="Neue Position" Command="{Binding newPosition}" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Style="{StaticResource SimpleButtonStyle}"/>
+                    <Button Content="Neue Position" Command="{Binding newPosition}" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" />
                     <ListBox x:Name="AnpoListbox" Grid.Column="0" Grid.Row="1" IsSynchronizedWithCurrentItem="True" ItemsSource="{Binding Data.Head/AnpoHead}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
