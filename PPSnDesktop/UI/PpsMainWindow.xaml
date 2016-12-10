@@ -602,7 +602,7 @@
         </Grid>
 
         <DockPanel x:Name="PART_StatusBar" Grid.Row="2" Grid.ColumnSpan="5"  Background="{StaticResource PPSnWindowFooterBrush}" LastChildFill="False">
-            <Button DockPanel.Dock="Left" Content="Trace" Style="{StaticResource SimpleButtonStyle}" Padding="8,0" Margin="32,2" Command="{x:Static ui:PpsWindow.TraceLogCommand}" Focusable="False" />
+            <Button DockPanel.Dock="Left" Content="Trace" Padding="8,0" Margin="32,2" Command="{x:Static ui:PpsWindow.TraceLogCommand}" Focusable="False" />
             <Viewbox x:Name="PART_SizeGripper" DockPanel.Dock="Right" Width="15" VerticalAlignment="Bottom">
                 <Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SizeGrip.png">
                     <Image.Tag>
