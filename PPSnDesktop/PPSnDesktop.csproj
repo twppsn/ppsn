@@ -107,22 +107,6 @@
     <EmbeddedResource Include="Static\navigator.xml">
       <SubType>Designer</SubType>
     </EmbeddedResource>
-    <Content Include="Local\Masks\TestWpfGeneric.xaml">
-      <SubType>Designer</SubType>
-    </Content>
-    <Content Include="Local\Masks\MasterData.Contacts.xaml">
-      <SubType>Designer</SubType>
-    </Content>
-    <Content Include="Local\Masks\PurchaseOrders.xaml">
-      <SubType>Designer</SubType>
-    </Content>
-    <Content Include="Local\Masks\InfoCenterTest.xaml">
-      <SubType>Designer</SubType>
-    </Content>
-    <Page Include="Local\Templates.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="UI\Panes\PpsLoginPane.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -166,10 +150,6 @@
       <Link>ppsn.licenseheader</Link>
     </None>
     <None Include="app.manifest" />
-    <None Include="Local\Masks\MasterData.Contacts.dxml" />
-    <None Include="Local\Masks\MasterData.Contacts.sxml" />
-    <None Include="Local\Masks\MasterData.Contracts.lua" />
-    <None Include="Local\Masks\TestWpfGeneric.lua" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

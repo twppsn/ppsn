@@ -173,14 +173,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="UI\Themes\Theme2.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="UI\Themes\Theme1.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="UI\PpsExceptionDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

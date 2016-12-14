@@ -67,6 +67,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Title of the content.</summary>
 		/// <remarks>Can not be implemented hidden, because of the binding.</remarks>
 		string Title { get; }
+
 		/// <summary>Content control</summary>
 		/// <remarks>Can not be implemented hidden, because of the binding.</remarks>
 		object Control { get; }
@@ -75,6 +76,10 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>If the pane contains changes, this flag is <c>true</c>.</summary>
 		bool IsDirty { get; }
+
+		/// <summary>has sidebar?</summary>
+		bool HasSideBar { get; }
+
 	} // interface IPpsWindowPane
 
 	#endregion
@@ -87,10 +92,15 @@ namespace TecWare.PPSn.UI
 	{
 		/// <summary>Title of the pane control</summary>
 		string Title { get; }
+
 		/// <summary>Commands of the Pane-Controls</summary>
 		PpsUICommandCollection Commands { get; }
+
 		/// <summary>Optional progress stack</summary>
 		PpsProgressStack ProgressStack { get; }
+
+		/// <summary>has sidebar?</summary>
+		bool HasSideBar { get; }
 	} // interface IPpsPWindowPaneControl
 
 	#endregion

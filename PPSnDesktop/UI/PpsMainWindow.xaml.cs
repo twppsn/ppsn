@@ -36,6 +36,7 @@ namespace TecWare.PPSn.UI
 		private readonly static DependencyProperty IsNavigatorVisibleProperty = DependencyProperty.Register("IsNavigatorVisible", typeof(bool), typeof(PpsMainWindow), new PropertyMetadata(true));
 		private readonly static DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register("IsPaneVisible", typeof(bool), typeof(PpsMainWindow), new PropertyMetadata(false));
 		private readonly static DependencyProperty CharmbarActualWidthProperty = DependencyProperty.Register("CharmbarActualWidth", typeof(double), typeof(PpsMainWindow));
+		private readonly static DependencyProperty IsSideBarVisibleProperty = DependencyProperty.Register("IsSideBarVisible", typeof(bool), typeof(PpsMainWindow), new PropertyMetadata(true));
 
 		/// <summary>Readonly property for the current pane.</summary>
 		private readonly static DependencyPropertyKey CurrentPaneKey = DependencyProperty.RegisterReadOnly("CurrentPane", typeof(IPpsWindowPane), typeof(PpsMainWindow), new PropertyMetadata(null));
@@ -79,12 +80,22 @@ namespace TecWare.PPSn.UI
 				)
 			);
 
+			//CommandBindings.Add(
+			//	new CommandBinding(PpsWindow.TraceLogCommand,
+			//		async (sender, e) =>
+			//		{
+			//			e.Handled = true;
+			//			await LoadPaneAsync(Environment.TracePane, PpsOpenPaneMode.NewSingleWindow, null);
+			//		}
+			//	)
+			//);
+
 			CommandBindings.Add(
 				new CommandBinding(PpsWindow.TraceLogCommand,
 					async (sender, e) =>
 					{
 						e.Handled = true;
-						await LoadPaneAsync(Environment.TracePane, PpsOpenPaneMode.NewSingleWindow, null);
+						await LoadPaneAsync(Environment.TracePane, PpsOpenPaneMode.NewPane, null);
 					}
 				)
 			);
@@ -252,8 +263,17 @@ namespace TecWare.PPSn.UI
 						SetValue(IsPaneVisibleProperty, true);
 					}
 				}
+				ShowSideBarBackground();
 			}
 		} // prop NavigatorState
+
+		/// <summary>Show SideBarBackground</summary>
+		public void ShowSideBarBackground()
+		{
+			bool show = (IsNavigatorVisible && navigator.ViewsShowDescriptions) || (!IsNavigatorVisible && ShowPaneSideBar);
+			if (show != (bool)GetValue(IsSideBarVisibleProperty))
+				SetValue(IsSideBarVisibleProperty, show);
+		} // proc ShowSideBarBackground
 
 		#region -- Q+D TEST DisableUI ---------------------------------------------------
 

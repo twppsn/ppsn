@@ -14,7 +14,8 @@
 			</ResourceDictionary.MergedDictionaries>
 
 			<ui:PpsStringConverter x:Key="StringConverter" />
-
+			<ui:PpsMultiLineStringConverter x:Key="MultiLineStringConverter" />
+											
 		</ResourceDictionary>
 	</Application.Resources>
 </Application>

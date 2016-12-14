@@ -50,6 +50,9 @@ namespace TecWare.PPSn.UI
 				e.Handled = ExpandSearchBox(e.Text);
 		}
 
+		/// <summary></summary>
+		public bool ViewsShowDescriptions => navigatorModel.ViewsShowDescription;
+
 		#region -- SearchBoxHandling --------------------------------------------------
 
 		private void PART_SearchBox_KeyDown(object sender, KeyEventArgs e)

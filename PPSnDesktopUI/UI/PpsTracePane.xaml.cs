@@ -63,9 +63,11 @@ namespace TecWare.PPSn.UI
 		public PpsWindowPaneCompareResult CompareArguments(LuaTable args) => PpsWindowPaneCompareResult.Same;
 
 		public string Title => "Anwendungsereignisse";
+		public string SubTitle => "System";
 		public object Control => this;
 		public IPpsPWindowPaneControl PaneControl => null;
 		public bool IsDirty => false;
+		public bool HasSideBar => false;
 	} // class PpsTracePane
 
 	#region -- class TraceItemTemplateSelector ------------------------------------------

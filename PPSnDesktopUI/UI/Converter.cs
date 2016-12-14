@@ -55,21 +55,24 @@ namespace TecWare.PPSn.UI
 	public sealed class PpsStringConverter : IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-			=> value == null ? String.Empty : String.Format((string)parameter ?? Text, value);
+			=> value == null ? String.Empty : String.Format((string)parameter ?? Text, RemoveNewLines(value));
 
 		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotSupportedException();
 		} // func ConvertBack
 
+		private string RemoveNewLines(object value)
+			=> value.ToString().Replace(Environment.NewLine, " ");
+
 		public string Text { get; set; } = "{0}";
 	} // class PpsStringConverter
 
 	#endregion
 
-	#region -- class MultiLineStringConverter -------------------------------------------
+	#region -- class PpsMultiLineStringConverter ----------------------------------------
 
-	public sealed class MultiLineStringConverter : IValueConverter
+	public sealed class PpsMultiLineStringConverter : IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 			=> value == null ? String.Empty : RemoveNewLines(value);
@@ -80,17 +83,9 @@ namespace TecWare.PPSn.UI
 		} // func ConvertBack
 
 		private string RemoveNewLines(object value)
-		{
-			var txt = value.ToString();
-			if (String.IsNullOrEmpty(txt))
-				return String.Empty;
-			if (!txt.Contains(Environment.NewLine))
-				return txt;
+			=> value.ToString().Replace(Environment.NewLine, " ");
 
-			var lines = txt.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
-			return string.Join(" ", lines);
-		} // func RemoveNewLines
-	} // class MultiLineStringConverter
+	} // class PpsMultiLineStringConverter
 
 	#endregion
 

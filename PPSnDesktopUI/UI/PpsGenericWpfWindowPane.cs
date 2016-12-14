@@ -420,6 +420,8 @@ namespace TecWare.PPSn.UI
 					desc.AddValueChanged(control, (sender, e) => OnPropertyChanged("Title"));
 					desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.SubTitleProperty, typeof(PpsGenericWpfControl));
 					desc.AddValueChanged(control, (sender, e) => OnPropertyChanged("SubTitle"));
+					desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.HasSideBarProperty, typeof(PpsGenericWpfControl));
+					desc.AddValueChanged(control, (sender, e) => OnPropertyChanged("HasSideBar"));
 				}
 
 				// notify changes on control
@@ -427,6 +429,7 @@ namespace TecWare.PPSn.UI
 				OnPropertyChanged("Commands");
 				OnPropertyChanged("Title");
 				OnPropertyChanged("SubTitle");
+				OnPropertyChanged("HasSideBar");
 			});
 		} // proc LoadAsync
 
@@ -502,10 +505,20 @@ namespace TecWare.PPSn.UI
 			{
 				if (control == null)
 					return String.Empty;
-
 				return (string)control.GetValue(PpsGenericWpfControl.SubTitleProperty);
 			}
 		} // prop SubTitle
+
+		/// <summary>Has sidebar?</summary>
+		public bool HasSideBar
+		{
+			get
+			{
+				if (control == null)
+					return false;
+				return (bool)control.GetValue(PpsGenericWpfControl.HasSideBarProperty);
+			}
+		} // prop HasSideBar
 
 		/// <summary>Wpf-Control</summary>
 		[LuaMember]
@@ -551,6 +564,7 @@ namespace TecWare.PPSn.UI
 	{
 		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PpsGenericWpfControl), new UIPropertyMetadata(String.Empty));
 		public static readonly DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsGenericWpfControl), new UIPropertyMetadata(String.Empty));
+		public static readonly DependencyProperty HasSideBarProperty = DependencyProperty.Register("HasSideBar", typeof(bool), typeof(PpsGenericWpfControl), new PropertyMetadata(false));
 
 		private readonly PpsUICommandCollection commands;
 		private readonly PpsProgressStack progressStack;
@@ -616,9 +630,15 @@ namespace TecWare.PPSn.UI
 		]
 		public string SubTitle { get { return (string)GetValue(SubTitleProperty); } set { SetValue(SubTitleProperty, value); } }
 
-		/// <summary>Title of the window pane</summary>
+		/// <summary>pane with SideBar?</summary>
 		[
-		DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden),
+		DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)
+		]
+		public bool HasSideBar { get { return (bool)GetValue(HasSideBarProperty); } set { SetValue(HasSideBarProperty, value); } }
+
+		/// <summary>ProgressStack of the pane</summary>
+		[
+		DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)
 		]
 		public PpsProgressStack ProgressStack => progressStack;
 

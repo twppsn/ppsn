@@ -16,7 +16,6 @@ specific language governing permissions and limitations under the Licence.
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Styles/WindowStyles.xaml" />
-		<ResourceDictionary Source="Styles/DrawingImages.xaml" />
 		<ResourceDictionary Source="Styles/Templates.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>

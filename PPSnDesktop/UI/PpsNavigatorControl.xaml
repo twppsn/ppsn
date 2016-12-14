@@ -11,10 +11,9 @@
              d:DesignHeight="300" d:DesignWidth="600">
 
 	<UserControl.Resources>
-		<sys:Double x:Key="ViewsIncreasedWidth">240</sys:Double>
-		<sys:Double x:Key="ViewsShrinkedWidth">50</sys:Double>
 
-		<SolidColorBrush x:Key="SearchBoxBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnAccentColor}, SourcePart=0.98}" />
+		<SolidColorBrush x:Key="SearchBoxBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnAccentColor}, SourcePart=0.90}" />
+		<SolidColorBrush x:Key="ShrinkedSeparatorBackgroundBrush" Color="Transparent" />
 
 		<Style x:Key="NavigatorViewsListBoxStyle" TargetType="{x:Type ListBox}" BasedOn="{StaticResource PPSnListBoxStyle}">
 			<Style.Resources>
@@ -33,12 +32,12 @@
 										</Grid.ColumnDefinitions>
 										<Image x:Name="image" Grid.Column="0" Source="{ui:PpsImageStaticResourceBinding {Binding DisplayImage}}" Height="18"/>
 										<TextBlock x:Name="description" Grid.Column="1" Text="{Binding DisplayName}" Foreground="{TemplateBinding Foreground}"
-													   Margin="8,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="14"/>
+													   Margin="12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="14"/>
 									</Grid>
 								</Border>
 								<ControlTemplate.Triggers>
 									<Trigger Property="IsMouseOver" Value="True">
-										<Setter TargetName="contentBorder" Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}" />
+										<Setter TargetName="contentBorder" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
 									</Trigger>
 									<Trigger Property="IsPressed" Value="True">
 										<Setter TargetName="contentBorder" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
@@ -107,7 +106,7 @@
 											<BeginStoryboard>
 												<Storyboard Storyboard.TargetName="separator" Storyboard.TargetProperty="Background" FillBehavior="HoldEnd">
 													<ObjectAnimationUsingKeyFrames>
-														<DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{StaticResource PPSnWindowBackgroundBrush}"/>
+														<DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{StaticResource ShrinkedSeparatorBackgroundBrush}"/>
 													</ObjectAnimationUsingKeyFrames>
 												</Storyboard>
 											</BeginStoryboard>
@@ -128,22 +127,20 @@
 					</Setter>
 				</Style>
 			</Style.Resources>
-			<Setter Property="Width" Value="{StaticResource ViewsIncreasedWidth}"/>
+			<Setter Property="Width" Value="{StaticResource PPSnSideBarIncreasedWidth}"/>
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type ListBox}">
 						<Grid>
 							<Grid.RowDefinitions>
-								<RowDefinition Height="29"/>
+								<RowDefinition Height="Auto"/>
 								<RowDefinition Height="*"/>
 							</Grid.RowDefinitions>
-							<ToggleButton x:Name="viewsToggleButton" Grid.Row="0" Width="24" Height="23" Margin="14,0,0,5" VerticalAlignment="Top" HorizontalAlignment="Left"
+							<ToggleButton x:Name="viewsToggleButton" Grid.Row="0" Width="30" Height="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="11,0,0,8" 
 										  Command="{Binding ToggleShowViewDescription}"
 										  Style="{StaticResource PPSnShrinkButtonStyle}"/>
-							<Border x:Name="headerBorder" Grid.Row="0" BorderBrush="{StaticResource PPSnWindowForegroundBrush}" BorderThickness="0,0,0,4" Margin="16,0,16,3" SnapsToDevicePixels="True">
-								<TextBlock Text="DATEN" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Bottom" Margin="26,0,0,2"
-										   FontSize="14" FontWeight="SemiBold"/>
-							</Border>
+							<TextBlock x:Name="headerBorder" Text="DATEN" Foreground="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="46,0,0,10"
+										   FontSize="15" FontWeight="SemiBold" />
 							<ScrollViewer Grid.Row="1" Focusable="false" Padding="0" Style="{StaticResource PPSnScrollViewerStyle}" HorizontalScrollBarVisibility="Disabled">
 								<ItemsPresenter SnapsToDevicePixels="True"/>
 							</ScrollViewer>
@@ -153,7 +150,7 @@
 								<DataTrigger.EnterActions>
 									<BeginStoryboard>
 										<Storyboard FillBehavior="HoldEnd">
-											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource ViewsShrinkedWidth}" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
+											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarShrinkedWidth}" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
 										</Storyboard>
 									</BeginStoryboard>
 									<BeginStoryboard>
@@ -167,7 +164,7 @@
 								<DataTrigger.ExitActions>
 									<BeginStoryboard>
 										<Storyboard FillBehavior="HoldEnd">
-											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource ViewsIncreasedWidth}" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
+											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarIncreasedWidth}" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
 										</Storyboard>
 									</BeginStoryboard>
 									<BeginStoryboard>
@@ -217,7 +214,7 @@
 									<VisualState x:Name="MouseOver">
 										<Storyboard>
 											<ObjectAnimationUsingKeyFrames  Storyboard.TargetName="PART_Circle" Storyboard.TargetProperty="Fill">
-												<DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+												<DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnMouseOverBrush}"/>
 											</ObjectAnimationUsingKeyFrames>
 										</Storyboard>
 									</VisualState>
@@ -269,7 +266,7 @@
 								<Setter TargetName="PART_Arrow" Property="Data" Value="M 0 2 L 5 7 L 10 2 Z"/>
 							</Trigger>
 							<Trigger Property="IsMouseOver" Value="True">
-								<Setter TargetName="PART_Content" Property="Background"  Value="{StaticResource PPSnButtonMouseOverBrush}" />
+								<Setter TargetName="PART_Content" Property="Background"  Value="{StaticResource PPSnMouseOverBrush}" />
 							</Trigger>
 						</ControlTemplate.Triggers>
 					</ControlTemplate>
@@ -348,7 +345,7 @@
 							</Trigger>
 							<Trigger SourceName="PART_SearchActionButton" Property="IsMouseOver" Value="true">
 								<Setter TargetName="PART_SearchActionButton" Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-								<Setter TargetName="PART_SearchActionButton" Property="Background"  Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+								<Setter TargetName="PART_SearchActionButton" Property="Background"  Value="{StaticResource PPSnMouseOverBrush}"/>
 							</Trigger>
 							<Trigger SourceName="PART_SearchActionButton" Property="IsEnabled" Value="true">
 								<Setter TargetName="PART_SearchActionButton" Property="Visibility" Value="Visible"/>
@@ -386,7 +383,6 @@
 			end;
 			]]>
 		</ui:LuaValueConverter>
-
 		<ui:LuaValueConverter x:Key="isDocPulledConverter">
 			<![CDATA[
 			if cast(int, value) == -1 then
@@ -396,7 +392,6 @@
 			end;
 			]]>
 		</ui:LuaValueConverter>
-
 		<uiC:CompareRevisionConverter x:Key="compareRevisionConverter"/>
 
 		<Style x:Key="PPSnDataListControlItemStyle" TargetType="{x:Type ListBoxItem}">
@@ -406,61 +401,51 @@
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type ListBoxItem}">
-						<Grid x:Name="panel" SnapsToDevicePixels="True">
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition/>
-							</Grid.ColumnDefinitions>
-							<Grid.RowDefinitions>
-								<RowDefinition/>
-								<RowDefinition/>
-							</Grid.RowDefinitions>
-							<TextBlock Grid.Column="0" Grid.Row="0" Text="Server"/>
-							<TextBlock x:Name="isOnServer" Grid.Column="0" Grid.Row="1" Text="NEIN" HorizontalAlignment="Center"/>
+						<Grid>
+							<Border x:Name="panelBorder" Padding="6,3">
+								<Grid SnapsToDevicePixels="True">
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition/>
+									</Grid.ColumnDefinitions>
+									<Grid.RowDefinitions>
+										<RowDefinition/>
+										<RowDefinition/>
+									</Grid.RowDefinitions>
+									<TextBlock Grid.Column="0" Grid.Row="0" Text="Server"/>
+									<TextBlock x:Name="isOnServer" Grid.Column="0" Grid.Row="1" Text="NEIN" HorizontalAlignment="Center"/>
 
-							<TextBlock Grid.Column="1" Grid.Row="0" Text="Revision" Margin="6,0,0,0"/>
-							<TextBlock x:Name="isRevision" Grid.Column="1" Grid.Row="1" Text="NEIN" HorizontalAlignment="Center"/>
+									<TextBlock Grid.Column="1" Grid.Row="0" Text="Revision" Margin="6,0,0,0"/>
+									<TextBlock x:Name="isRevision" Grid.Column="1" Grid.Row="1" Text="NEIN" HorizontalAlignment="Center"/>
 
-							<TextBlock Grid.Column="2" Grid.Row="0" Text="RevStatus" Margin="6,0,0,0"/>
-							<TextBlock x:Name="revStatus" Grid.Column="2" Grid.Row="1" Text="EQUAL" HorizontalAlignment="Center"/>
+									<TextBlock Grid.Column="2" Grid.Row="0" Text="RevStatus" Margin="6,0,0,0"/>
+									<TextBlock x:Name="revStatus" Grid.Column="2" Grid.Row="1" Text="EQUAL" HorizontalAlignment="Center"/>
 
-							<TextBlock Grid.Column="3" Grid.Row="0" Text="HasData" Margin="6,0,0,0"/>
-							<TextBlock x:Name="hasData" Grid.Column="3" Grid.Row="1" Text="NEIN" HorizontalAlignment="Center"/>
+									<TextBlock Grid.Column="3" Grid.Row="0" Text="HasData" Margin="6,0,0,0"/>
+									<TextBlock x:Name="hasData" Grid.Column="3" Grid.Row="1" Text="NEIN" HorizontalAlignment="Center"/>
 
-							<TextBlock Grid.Column="4" Grid.Row="0" Text="Changed" Margin="6,0"/>
-							<TextBlock x:Name="isDocumentChanged" Grid.Column="4" Grid.Row="1" Text="NEIN" HorizontalAlignment="Center"/>
+									<TextBlock Grid.Column="4" Grid.Row="0" Text="Changed" Margin="6,0"/>
+									<TextBlock x:Name="isDocumentChanged" Grid.Column="4" Grid.Row="1" Text="NEIN" HorizontalAlignment="Center"/>
 
-							<!--<TextBlock Grid.Column="5" Grid.RowSpan="2" Background="White" Foreground="Black">
-								<Run Text="ServerId: "/>
-								<Run Text="{Binding ServerId, Mode=OneWay}"/>
-								<Run Text="RemoteRevId: "/>
-								<Run Text="{Binding RemoteRevId, Mode=OneWay}"/>
-								<Run Text="PulledRevId: "/>
-								<Run Text="{Binding PulledRevId, Mode=OneWay}"/>
-								<Run Text="IsDocumentChanged: "/>
-								<Run Text="{Binding IsDocumentChanged, Mode=OneWay}"/>
-								<Run Text="HasData: "/>
-								<Run Text="{Binding HasData, Mode=OneWay}"/>
-								<Run Text="IsRev: "/>
-								<Run Text="{Binding IsRev, Mode=OneWay}"/>
-								<Run Text="Typ: "/>
-								<Run Text="{Binding Typ, Mode=OneWay}"/>
-							</TextBlock>-->
-							<ContentPresenter Grid.Column="5" Grid.RowSpan="2"/>
+									<ContentPresenter Grid.Column="5" Grid.RowSpan="2"/>
+								</Grid>
+							</Border>
+							<Rectangle x:Name="showSelection" Fill="Transparent" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0"/>
 						</Grid>
 						<ControlTemplate.Triggers>
 							<Trigger Property="ItemsControl.AlternationIndex" Value="0">
-								<Setter Property="Background" TargetName="panel" Value="{StaticResource PPSnAlternation0Brush}" />
+								<Setter Property="Background" TargetName="panelBorder" Value="{StaticResource PPSnAlternation0Brush}" />
 							</Trigger>
 							<Trigger Property="ItemsControl.AlternationIndex" Value="1">
-								<Setter Property="Background" TargetName="panel" Value="{StaticResource PPSnAlternation1Brush}" />
+								<Setter Property="Background" TargetName="panelBorder" Value="{StaticResource PPSnAlternation1Brush}" />
 							</Trigger>
 							<Trigger Property="IsSelected" Value="True">
-								<Setter Property="Foreground" Value="{StaticResource PPSnMarkerBrush}"/>
+								<!--<Setter Property="Foreground" Value="{StaticResource PPSnMarkerBrush}"/>-->
+								<Setter Property="Opacity" TargetName="showSelection" Value="1"/>
 							</Trigger>
 
 							<DataTrigger Binding="{Binding Path=ServerId, Mode=OneWay, Converter={StaticResource isDocOnServerConverter}}">
@@ -552,7 +537,7 @@
 				</DataTemplate>
 			</ItemsControl.ItemTemplate>
 		</ItemsControl>
-		
+
 		<HeaderedItemsControl x:Name="PART_Orders" Grid.Column="2" Grid.Row="1" ItemsSource="{Binding CurrentOrders}" Focusable="False" Margin="0,2,0,0">
 			<HeaderedItemsControl.Header>
 				<TextBlock Text="SORTIERUNG:" Margin="0,0,10,0" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Center"/>
@@ -590,7 +575,7 @@
 				 Style="{StaticResource NavigatorSearchBoxStyle}"
 				 Text="{Binding Path=CurrentSearchText, Delay=300, UpdateSourceTrigger=PropertyChanged}" KeyDown="PART_SearchBox_KeyDown"/>
 
-		<ListBox x:Name="PART_Views" Grid.Column="0" Grid.Row="1" Grid.RowSpan="3" Margin="0,10,0,0"
+		<ListBox x:Name="PART_Views" Grid.Column="0" Grid.Row="1" Grid.RowSpan="3"
 				 ItemsSource="{Binding VisibleViews}"
 				 IsSynchronizedWithCurrentItem="True"
 				 Style="{StaticResource NavigatorViewsListBoxStyle}"/>
