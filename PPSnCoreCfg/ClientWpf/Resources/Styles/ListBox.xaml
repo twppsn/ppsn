@@ -27,25 +27,29 @@
     </Style>
 
 	<Style x:Key="PPSnAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
-        <Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
-        <Setter Property="Margin" Value="0,0,0,1"/>
-        <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-        <Setter Property="Template">
+		<Setter Property="Background" Value="{StaticResource PPSnAlternation0Brush}"/>
+		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+		<Setter Property="Margin" Value="0,0,0,1"/>
+		<Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
+		<Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                    <StackPanel x:Name="panel" SnapsToDevicePixels="True">
-                        <ContentPresenter Margin="0"/>
-                    </StackPanel>
+					<Grid>
+						<Border x:Name="panelBorder" Padding="6,3" SnapsToDevicePixels="True">
+							<ContentPresenter />
+						</Border>
+						<Rectangle x:Name="showSelection" Fill="Transparent" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0"/>
+					</Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="ItemsControl.AlternationIndex" Value="0">
-                            <Setter Property="Background" TargetName="panel" Value="{StaticResource PPSnAlternation0Brush}" />
+							<Setter Property="Background" TargetName="panelBorder" Value="{StaticResource PPSnAlternation0Brush}" />
                         </Trigger>
                         <Trigger Property="ItemsControl.AlternationIndex" Value="1">
-                            <Setter Property="Background" TargetName="panel" Value="{StaticResource PPSnAlternation1Brush}" />
+							<Setter Property="Background" TargetName="panelBorder" Value="{StaticResource PPSnAlternation1Brush}" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Foreground" Value="{StaticResource PPSnMarkerBrush}"/>
-                        </Trigger>
+							<Setter Property="Opacity" TargetName="showSelection" Value="1" />
+						</Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>

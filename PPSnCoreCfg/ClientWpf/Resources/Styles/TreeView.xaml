@@ -8,31 +8,6 @@
 
     <uiC:PpsTreeViewLevelToIndentConverter x:Key="LevelToIndentConverter" />
 
-    <!--<Style x:Key="TreeListViewExpanderButtonStyle" TargetType="{x:Type ToggleButton}">
-        <Setter Property="Focusable" Value="False"/>
-        <Setter Property="Width" Value="19"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type ToggleButton}">
-                    <Border Background="Transparent">
-                        <Path x:Name="PART_Symbol" HorizontalAlignment="Center" VerticalAlignment="Center"
-							  Stroke="{StaticResource PPSnWindowForegroundBrush}"
-							  StrokeThickness="1"
-							  StrokeMiterLimit="3"
-							  Fill="Transparent"
-							  Data="M 0 1 L 4 5 L 0 9 L 0 1 Z"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsChecked" Value="True">
-                            <Setter Property="Data" TargetName="PART_Symbol" Value="M 5 0 L 0 5 L 5 5 L 5 0 Z"/>
-							<Setter Property="Fill" TargetName="PART_Symbol" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>-->
-
 	<Style x:Key="TreeListViewExpanderButtonStyle" TargetType="{x:Type ToggleButton}">
 		<Setter Property="Focusable" Value="False"/>
 		<Setter Property="Width" Value="19"/>
@@ -57,44 +32,44 @@
 		</Setter>
 	</Style>
 
-
 	<Style x:Key="TreeListViewItemStyle" TargetType="{x:Type uiC:PpsTreeListViewItem}">
         <Setter Property="Background" Value="{StaticResource PPSnAlternation0Brush}"/>
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
         <Setter Property="AlternationCount" Value="2"/>
         <Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
-		<!--<Setter Property="Margin" Value="0,0,0,1"/>-->
-		<Setter Property="BorderBrush" Value="Transparent"/>
-		<Setter Property="BorderThickness" Value="0,0,0,1"/>
+		<Setter Property="Margin" Value="0,0,0,1"/>
 		<Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type uiC:PpsTreeListViewItem}">
-                    <StackPanel Orientation="Vertical">
-                        <Border Name="PART_Border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
-								Padding="{TemplateBinding Padding}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <ToggleButton x:Name="PART_Expander" Grid.Column="0" Style="{StaticResource TreeListViewExpanderButtonStyle}"
+					<StackPanel Orientation="Vertical">
+						<Grid>
+							<Border Name="panelBorder" Background="{TemplateBinding Background}" Padding="6,3">
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="Auto" />
+										<ColumnDefinition Width="*" />
+									</Grid.ColumnDefinitions>
+									<ToggleButton x:Name="PART_Expander" Grid.Column="0" Style="{StaticResource TreeListViewExpanderButtonStyle}"
 												  Margin="{Binding  RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type uiC:PpsTreeListViewItem}}, Converter={StaticResource LevelToIndentConverter}}"
 												  IsChecked="{Binding Path=IsExpanded, RelativeSource={RelativeSource AncestorType={x:Type uiC:PpsTreeListViewItem}}}"
 												  ClickMode="Press"/>
-                                <ContentPresenter Grid.Column="1" x:Name="PART_Header" ContentSource="Header"/>
-                            </Grid>
-                        </Border>
-                        <ItemsPresenter x:Name="PART_ItemsHost"/>
-                    </StackPanel>
-                    <ControlTemplate.Triggers>
+									<ContentPresenter Grid.Column="1" x:Name="PART_Header" ContentSource="Header"/>
+								</Grid>
+							</Border>
+							<Rectangle x:Name="showSelection" Fill="Transparent" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0"/>
+						</Grid>
+						<ItemsPresenter x:Name="PART_ItemsHost"/>
+					</StackPanel>
+
+					<ControlTemplate.Triggers>
                         <Trigger Property="IsExpanded" Value="false">
                             <Setter TargetName="PART_ItemsHost" Property="Visibility" Value="Collapsed"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="true">
-                            <Setter Property="Foreground" Value="{StaticResource PPSnMarkerBrush}"/>
-                        </Trigger>
+							<Setter Property="Opacity" TargetName="showSelection" Value="1"/>
+						</Trigger>
                         <Trigger Property="AlternationIndex" Value="1">
-                            <Setter TargetName="PART_Border" Property="Background" Value="{StaticResource PPSnAlternation1Brush}"/>
+							<Setter TargetName="panelBorder" Property="Background" Value="{StaticResource PPSnAlternation1Brush}"/>
                         </Trigger>
                         <Trigger Property="ItemsControl.HasItems" Value="False">
                             <Setter TargetName="PART_Expander" Property="Visibility" Value="Hidden"/>

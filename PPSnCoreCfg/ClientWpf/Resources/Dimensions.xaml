@@ -5,8 +5,8 @@
 	<sys:Double x:Key="PPSnSideBarIncreasedWidth">230</sys:Double>
 	<sys:Double x:Key="PPSnSideBarShrinkedWidth">50</sys:Double>
 
-	<sys:Double x:Key="PPSnPaneMaxGridWidth">1200</sys:Double>
+	<sys:Double x:Key="PPSnPaneMaxGridWidth">1000</sys:Double>
     <GridLength x:Key="PaneLabelColumnWidth">110</GridLength>
-    <GridLength x:Key="PaneSpaceColumnWidth">70</GridLength>
+	<GridLength x:Key="PaneSpaceColumnWidth">60</GridLength>
 
 </ResourceDictionary>
