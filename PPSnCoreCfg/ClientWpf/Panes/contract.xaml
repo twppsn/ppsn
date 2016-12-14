@@ -20,7 +20,7 @@
         </ResourceDictionary>
     </ui:PpsGenericWpfControl.Resources>
 
-    <Grid MaxWidth="{StaticResource PaneMaxGridWidth}">
+    <Grid MaxWidth="{StaticResource PPSnPaneMaxGridWidth}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}" />
             <ColumnDefinition Width="*"/>

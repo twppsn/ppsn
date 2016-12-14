@@ -54,10 +54,10 @@
 					<Label Grid.Column="0" Grid.Row="5" Content="{Binding Table.Postfach.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
 					<TextBox Grid.Column="1" Grid.Row="5" Text="{Binding Postfach}" MaxLength="{Binding Table.Postfach.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
 					<TextBlock Grid.Column="0" Grid.Row="6" Height="23" VerticalAlignment="Center">
-										<Run Text="{Binding Table.Plz.displayName, Mode=OneTime}"/>
-										<Run Text=" / "/>
-										<Run Text="{Binding Table.Ort.displayName, Mode=OneTime}"/>
-										<Run Text=":"/>
+						<Run Text="{Binding Table.Plz.displayName, Mode=OneTime}"/>
+						<Run Text=" / "/>
+						<Run Text="{Binding Table.Ort.displayName, Mode=OneTime}"/>
+						<Run Text=":"/>
 					</TextBlock>
 					<TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Plz}" MaxLength="{Binding Table.Plz.MaxLength, Mode=OneTime}" Height="23" Width="100" HorizontalAlignment="Left" VerticalAlignment="Top"/>
 					<TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Ort}" MaxLength="{Binding Table.Ort.MaxLength, Mode=OneTime}" Height="23" Margin="106,0,0,0" VerticalAlignment="Top"/>
@@ -141,7 +141,7 @@
 		</ResourceDictionary>
     </ui:PpsGenericWpfControl.Resources>
 
-    <Grid MaxWidth="{StaticResource PaneMaxGridWidth}" Margin="0,24">
+    <Grid MaxWidth="{StaticResource PPSnPaneMaxGridWidth}" Margin="0,24">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
             <ColumnDefinition Width="*"/>
@@ -214,7 +214,7 @@
                     <Button Content="Löschen" Command="{Binding delItem}" Padding="10,0" Width="Auto" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="232,0,0,0" />
                     <uiC:PpsTreeListView x:Name="AdreTreeView" Grid.Column="0" Grid.Row="1" ItemsSource="{Binding Data.Head/AdreHead}" Style="{StaticResource TreeListViewStyle}">
                         <uiC:PpsTreeListView.Resources>
-                            <ui:MultiLineStringConverter x:Key="MlStringConverter" />
+                            <ui:PpsMultiLineStringConverter x:Key="MlStringConverter" />
                         </uiC:PpsTreeListView.Resources>
                         <TreeView.ItemTemplate>
                             <HierarchicalDataTemplate ItemsSource="{Binding AnspAdre}">

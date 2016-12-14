@@ -34,7 +34,7 @@
                                 <Condition Property="IsMouseOver" Value="True"/>
                                 <Condition Property="IsSelected" Value="False"/>
                             </MultiTrigger.Conditions>
-                            <Setter TargetName="panel" Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+							<Setter TargetName="panel" Property="Background" Value="{StaticResource PPSnMouseOverBrush}"/>
                         </MultiTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

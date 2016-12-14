@@ -43,7 +43,7 @@
 					</Border>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsHighlighted" Value="True">
-							<Setter Property="Panel.Background" TargetName="border" Value="{StaticResource PPSnSeparatorBrush}"/>
+							<Setter Property="Panel.Background" TargetName="border" Value="{StaticResource PPSnMouseOverBrush}"/>
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>

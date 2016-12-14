@@ -7,7 +7,8 @@
 	</ResourceDictionary.MergedDictionaries>
 
     <Style x:Key="TemplateTextBoxStyle" TargetType="{x:Type uiC:PpsTemplateTextBox}">
-        <Setter Property="Padding" Value="2,2,2,0"/>
+		<Setter Property="VerticalAlignment" Value="Top"/>
+		<Setter Property="Padding" Value="2,2,2,0"/>
 		<Setter Property="VerticalContentAlignment" Value="Top"/>
         <Setter Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>

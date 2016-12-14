@@ -29,7 +29,7 @@
                             <Setter Property="Data" TargetName="PART_Arrow" Value="M 0,7 L7,0 14,7"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+							<Setter Property="Background" Value="{StaticResource PPSnMouseOverBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
                             <Setter Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>

@@ -50,7 +50,7 @@
 							<Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource PPSnButtonPressedBrush}"/>
 						</Trigger>
 						<!--<Trigger Property="IsMouseOver" Value="true">
-							<Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+							<Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource PPSnMouseOverBrush}"/>
 						</Trigger>-->
 						<Trigger Property="IsChecked" Value="true">
 							<Setter Property="Opacity" TargetName="optionMark" Value="1"/>

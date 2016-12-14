@@ -27,7 +27,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Background" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+							<Setter Property="Background" Value="{StaticResource PPSnMouseOverBrush}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
@@ -73,7 +73,7 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter Property="Background" TargetName="PART_LayoutGrid" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+							<Setter Property="Background" TargetName="PART_LayoutGrid" Value="{StaticResource PPSnMouseOverBrush}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}"/>
                             <Setter Property="BorderBrush" TargetName="PART_Dropdown" Value="{StaticResource PPSnSeparatorBrush}"/>
                         </Trigger>
@@ -84,7 +84,7 @@
                             <Setter Property="Background" TargetName="PART_Dropdown" Value="{StaticResource PPSnButtonPressedBrush}"/>
                         </Trigger>
                         <Trigger Property="IsOpen" Value="True">
-                            <Setter Property="Background" TargetName="PART_LayoutGrid" Value="{StaticResource PPSnButtonMouseOverBrush}"/>
+							<Setter Property="Background" TargetName="PART_LayoutGrid" Value="{StaticResource PPSnMouseOverBrush}"/>
                             <Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}"/>
                             <Setter Property="BorderBrush" TargetName="PART_Dropdown" Value="{StaticResource PPSnSeparatorBrush}"/>
                         </Trigger>
