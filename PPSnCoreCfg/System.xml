@@ -198,6 +198,13 @@
 				<pps:column name="RegSchl" fieldName="dbo.Plzd.RegSchl"/>
 				<pps:column name="Region" fieldName="dbo.Plzd.Region"/>
 			</pps:constant>
+		
+			<!-- definition for quantity units -->
+			<pps:field name="dbo.Mein.Name" />
+
+			<pps:constant name="Mein">
+				<pps:column name="Name" fieldName="dbo.Mein.Name"/>
+			</pps:constant>
 		</pps:register>
 	</pps:ppsn>
 </fragment>

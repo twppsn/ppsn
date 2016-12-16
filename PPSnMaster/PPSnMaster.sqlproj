@@ -98,6 +98,7 @@
     <Build Include="Tables\dbo\ObjT.sql" />
     <Build Include="Stuff\MaxBigInt.sql" />
     <Build Include="Stuff\Objects.sql" />
+    <Build Include="Tables\dbo\Mein.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="PPSn03.publish.xml" />
