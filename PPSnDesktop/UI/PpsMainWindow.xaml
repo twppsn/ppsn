@@ -17,8 +17,11 @@
 
 	<ui:PpsWindow.Resources>
 		<SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />
-        <SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnAccentColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
-        <Geometry x:Key="PpsWindowCloseButton">M 0.5,0.5L 9.5,9.5M 9.5,0.5L 0.5,9.5</Geometry>
+		<SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnAccentColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
+		<!--Q+D dpm-->
+		<!--<SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="#556B2F" />-->
+		
+		<Geometry x:Key="PpsWindowCloseButton">M 0.5,0.5L 9.5,9.5M 9.5,0.5L 0.5,9.5</Geometry>
         <Geometry x:Key="PpsWindowMaximizeButton">M 8.5,1.5L 0.5,1.5L 0.5,9.5L 8.5,9.5L 8.5,1.5 Z M 0.5,9.5L 0.5,3.27777L 8.5,3.27777L 8.5,9.5L 0.5,9.5 Z</Geometry>
         <Geometry x:Key="PpsWindowRestoreButton">M 0.5,9.5L 0.5,4.5L 0.5,9.5L 7.5,9.5L 7.5,3.5L 0.5,3.5L 0.5,4.5L 7.5,4.5L 7.5,9.5L 0.5,9.5M 3.5,1.5L 9.5,1.5L 9.5,7.5L 9.5,1.5L 3.5,1.5</Geometry>
         <Storyboard x:Key="FadeOutStoryboard" FillBehavior="HoldEnd">
@@ -83,11 +86,11 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="true">
 								<Setter Property="Background" Value="{StaticResource PPSnMouseOverBrush}"/>
-                                <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+                                <!--<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>-->
                             </Trigger>
                             <Trigger Property="IsPressed" Value="true">
                                 <Setter Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
-                                <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+                                <!--<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>-->
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -367,7 +370,7 @@
 			</StackPanel>
 		</Grid>
 
-		<TextBlock Grid.Column="1" Foreground="{StaticResource PPSnWindowForegroundBrush}" Padding="32,2,0,0" VerticalAlignment="Top" Height="32" FontSize="16">
+		<TextBlock Grid.Column="1" Foreground="{StaticResource PPSnWindowForegroundBrush}" Padding="24,2,0,0" VerticalAlignment="Top" Height="32" FontSize="16">
 			<Run Text="{Binding CurrentPane.SubTitle, Mode=OneWay}"/>
 			<Run Text=" "/>
 			<Run Text="{Binding CurrentPane.Title, Mode=OneWay, Converter={StaticResource MultiLineStringConverter}}"/>

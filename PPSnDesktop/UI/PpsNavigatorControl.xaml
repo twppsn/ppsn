@@ -11,8 +11,11 @@
              d:DesignHeight="300" d:DesignWidth="600">
 
 	<UserControl.Resources>
+		<SolidColorBrush x:Key="ActionButtonBrush" Color="{StaticResource PPSnAccentColor}" />
+		<!--Q+D dpm-->
+		<!--<SolidColorBrush x:Key="ActionButtonBrush" Color="#556B2F" />-->
 
-		<SolidColorBrush x:Key="SearchBoxBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnAccentColor}, SourcePart=0.90}" />
+		<SolidColorBrush x:Key="SearchBoxBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnAccentColor}, SourcePart=0.95}" />
 		<SolidColorBrush x:Key="ShrinkedSeparatorBackgroundBrush" Color="Transparent" />
 
 		<Style x:Key="NavigatorViewsListBoxStyle" TargetType="{x:Type ListBox}" BasedOn="{StaticResource PPSnListBoxStyle}">
@@ -24,7 +27,21 @@
 					<Setter Property="Template">
 						<Setter.Value>
 							<ControlTemplate TargetType="{x:Type ToggleButton}">
-								<Border x:Name="contentBorder" BorderThickness="0" Padding="16,0" Background="Transparent">
+								<Border x:Name="contentBorder" BorderThickness="0" Background="Transparent" Padding="0,0,16,0" >
+									<Grid>
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="16"/>
+											<ColumnDefinition Width="18"/>
+											<ColumnDefinition/>
+										</Grid.ColumnDefinitions>
+										<Rectangle x:Name="selectedMarker" Grid.Column="0" Fill="{StaticResource PPSnMarkerBrush}" Width="4" HorizontalAlignment="Left" Opacity="0"/>
+										<Image x:Name="image" Grid.Column="1" Source="{ui:PpsImageStaticResourceBinding {Binding DisplayImage}}" Height="18"/>
+										<TextBlock x:Name="description" Grid.Column="2" Text="{Binding DisplayName}" Foreground="{TemplateBinding Foreground}"
+												   Margin="12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="14"/>
+									</Grid>
+								</Border>
+
+								<!--<Border x:Name="contentBorder" BorderThickness="0" Background="Transparent" Padding="16,0" >
 									<Grid>
 										<Grid.ColumnDefinitions>
 											<ColumnDefinition Width="18"/>
@@ -32,9 +49,10 @@
 										</Grid.ColumnDefinitions>
 										<Image x:Name="image" Grid.Column="0" Source="{ui:PpsImageStaticResourceBinding {Binding DisplayImage}}" Height="18"/>
 										<TextBlock x:Name="description" Grid.Column="1" Text="{Binding DisplayName}" Foreground="{TemplateBinding Foreground}"
-													   Margin="12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="14"/>
+												   Margin="12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="14"/>
 									</Grid>
-								</Border>
+								</Border>-->
+
 								<ControlTemplate.Triggers>
 									<Trigger Property="IsMouseOver" Value="True">
 										<Setter TargetName="contentBorder" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
@@ -43,12 +61,13 @@
 										<Setter TargetName="contentBorder" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
 									</Trigger>
 									<Trigger Property="IsChecked" Value="True">
-										<Setter Property="Foreground" Value="{StaticResource PPSnMarkerBrush}"/>
+										<!--<Setter Property="Foreground" Value="{StaticResource PPSnMarkerBrush}"/>-->
+										<Setter Property="Opacity" TargetName="selectedMarker" Value="1"/>
 									</Trigger>
 									<DataTrigger Binding="{Binding ElementName=image, Path=(Image.Source)}" Value="{x:Null}">
 										<Setter Property="Visibility" TargetName="image" Value="Hidden" />
 									</DataTrigger>
-									<MultiTrigger>
+									<!--<MultiTrigger>
 										<MultiTrigger.Conditions>
 											<Condition Property="IsChecked" Value="true"/>
 											<Condition Property="Visibility" SourceName="image" Value="Visible"/>
@@ -71,7 +90,7 @@
 												</Storyboard>
 											</BeginStoryboard>
 										</MultiTrigger.ExitActions>
-									</MultiTrigger>
+									</MultiTrigger>-->
 									<DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type ListBox}}, Path=DataContext.ViewsShowDescription}" Value="false">
 										<Setter TargetName="image" Property="ToolTip" Value="{Binding DisplayName}"/>
 									</DataTrigger>
@@ -187,7 +206,7 @@
 			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
 			<Setter Property="Focusable" Value="False"/>
 			<Setter Property="IsTabStop" Value="False"/>
-			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+			<Setter Property="Foreground" Value="{StaticResource ActionButtonBrush}"/>
 			<Setter Property="BorderThickness" Value="0"/>
 			<Setter Property="Height" Value="60"/>
 			<Setter Property="Margin" Value="0,0,24,0"/>
@@ -202,11 +221,12 @@
 							<Ellipse x:Name="PART_Circle" Grid.Row="0" Height="36" Width="36" SnapsToDevicePixels="True" VerticalAlignment="Top"
 									 Fill="Transparent"
 									 StrokeThickness="1.5"
-									 Stroke="{StaticResource PPSnWindowForegroundBrush}" >
+									 Stroke="{StaticResource ActionButtonBrush}" >
 							</Ellipse>
-							<TextBlock x:Name="PART_Glyph" Text="{TemplateBinding Tag}" FontFamily="Segoe UI Symbol" FontSize="18.667" Margin="0,5,0,0" HorizontalAlignment="Center" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
+							<TextBlock x:Name="PART_Glyph" Text="{TemplateBinding Tag}" FontFamily="Segoe UI Symbol" FontSize="18.667" Margin="0,5,0,0" HorizontalAlignment="Center"
+									   Foreground="{StaticResource ActionButtonBrush}"/>
 							<Border x:Name="PART_Content" Grid.Row="1" BorderThickness="0" SnapsToDevicePixels="true" IsHitTestVisible="True">
-								<ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Top"></ContentPresenter>
+								<ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Top" />
 							</Border>
 							<VisualStateManager.VisualStateGroups>
 								<VisualStateGroup x:Name="CommonStates">
