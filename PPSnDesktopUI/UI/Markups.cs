@@ -20,6 +20,8 @@ using System.Windows.Data;
 using System.Windows.Markup;
 using System.Windows.Media;
 using System.Xaml;
+using Neo.IronLua;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
 {
@@ -48,41 +50,80 @@ namespace TecWare.PPSn.UI
 			this.methodName = methodName;
 		} // ctor
 
+		private T FindImplementation<T>(IRootObjectProvider root)
+			where T : class
+		{
+			// check the object itself
+			var r = root.RootObject as T;
+			if (r != null)
+				return r;
+
+			// check the context
+			var ctrl = root.RootObject as System.Windows.FrameworkElement;
+			return ctrl?.DataContext as T;
+		} // func FindImplementation
+
+		private LambdaExpression GenerateCallMethod(EventInfo eventInfo, object eventSink, Type eventSinkType, MethodInfo callMethodInfo)
+		{
+			// prepare event signature
+			var methodInfo = eventInfo.EventHandlerType.GetMethod("Invoke");
+			var parameterInfo = methodInfo.GetParameters();
+			var parameterExpressions = new ParameterExpression[parameterInfo.Length];
+
+			for (var i = 0; i < parameterInfo.Length; i++)
+				parameterExpressions[i] = Expression.Parameter(parameterInfo[i].ParameterType);
+
+			var eventBody = Expression.Lambda(eventInfo.EventHandlerType,
+				Expression.Call(
+					Expression.Constant(eventSink, eventSinkType),
+					callMethodInfo,
+					Expression.Constant(methodName), Expression.NewArrayInit(typeof(object), parameterExpressions)
+				),
+				parameterExpressions
+			);
+
+			return eventBody;
+		} // func GenerateCallMethod
+
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{
 			var target = (IProvideValueTarget)serviceProvider.GetService(typeof(IProvideValueTarget));
 			var root = (IRootObjectProvider)serviceProvider.GetService(typeof(IRootObjectProvider));
 
-			// check if the root is can call lua methods
-			var eventSink = root.RootObject as ILuaEventSink;
-			if (eventSink == null)
-				throw new ArgumentNullException("LuaEvent did not find ILuaEventSink.");
-
+			// check that we have to provide a value for an event
 			var eventInfo = target.TargetProperty as EventInfo;
 			if (eventInfo == null)
 				throw new ArgumentException("LuaEvent can only used with events.");
 
-			var methodInfo = eventInfo.EventHandlerType.GetMethod("Invoke");
-			var parameterInfo = methodInfo.GetParameters();
-			var parameterExpressions = new ParameterExpression[parameterInfo.Length];
-
-			for (int i = 0; i < parameterInfo.Length; i++)
-				parameterExpressions[i] = Expression.Parameter(parameterInfo[i].ParameterType);
-
-			var callEventMethodInfo = typeof(ILuaEventSink).GetRuntimeMethod("CallMethod", new Type[] { typeof(string), typeof(object[]) });
-			var eventBody = Expression.Lambda(eventInfo.EventHandlerType,
-				Expression.Call(
-					Expression.Constant(eventSink),
-					callEventMethodInfo,
-					Expression.Constant(methodName), Expression.NewArrayInit(typeof(object), parameterExpressions)
-				),
-				parameterExpressions);
-
-			return eventBody.Compile();
+			// check for a ILuaEventSink implementation
+			var eventSink = FindImplementation<ILuaEventSink>(root);
+			if (eventSink != null) // bind event sink
+			{
+				return GenerateCallMethod(eventInfo, eventSink, typeof(ILuaEventSink), LuaEventSinkCallMethodMethodInfo).Compile();
+			}
+			else // check for a Table
+			{
+				var table = FindImplementation<LuaTable>(root);
+				if (table != null) // bind table method
+				{
+					return GenerateCallMethod(eventInfo, table, typeof(LuaTable), LuaTableCallMemberMethodInfo).Compile();
+				}
+				else
+					throw new ArgumentNullException("LuaEvent did not find ILuaEventSink or LuaTable.");
+			}
 		} // func ProvideValue
 
 		[ConstructorArgument("methodName")]
 		public string MethodName { get { return methodName; } set { methodName = value; } }
+
+		private static MethodInfo LuaEventSinkCallMethodMethodInfo { get; }
+		private static MethodInfo LuaTableCallMemberMethodInfo { get; }
+
+		static LuaEventExtension()
+		{
+			LuaEventSinkCallMethodMethodInfo = Procs.GetMethod(typeof(ILuaEventSink), nameof(ILuaEventSink.CallMethod), typeof(string), typeof(object[]));
+			LuaTableCallMemberMethodInfo = Procs.GetMethod(typeof(LuaTable), nameof(LuaTable.CallMember), typeof(string), typeof(object[]));
+		} // sctor
 	} // class LuaEventExtension
 
 	#endregion
