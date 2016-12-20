@@ -439,7 +439,15 @@ namespace TecWare.PPSn.Data
 					else
 					{
 						// Convert the value to the expected type
-						value = Procs.ChangeType(value, columnInfo.DataType);
+						if (value is PpsDataRow && columnInfo.IsRelationColumn)
+						{
+							var parentRow = (PpsDataRow)value;
+							if (parentRow.Table.TableDefinition != columnInfo.ParentColumn.Table)
+								throw new InvalidCastException($"The row (from table '{parentRow.Table.TableName}') is not a member of the parent table ({columnInfo.ParentColumn.Table.Name})");
+							value = parentRow[columnInfo.ParentColumn.Index]; // use key value
+						}
+						else
+							value = Procs.ChangeType(value, columnInfo.DataType);
 
 						// Is the value changed
 						object oldValue = this[columnIndex];
