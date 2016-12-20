@@ -398,9 +398,9 @@ namespace TecWare.PPSn
 		{
 			protected readonly SQLiteCommand command;
 
-			public TagCommand(SQLiteTransaction trans)
+			public TagCommand(SQLiteTransaction trans, SQLiteConnection connection)
 			{
-				this.command = trans.Connection.CreateCommand();
+				this.command = connection.CreateCommand();
 				this.command.Transaction = trans;
 			} // ctor
 
@@ -420,7 +420,7 @@ namespace TecWare.PPSn
 			private readonly SQLiteParameter keyParameter;
 
 			public TagSelectByKeyCommand(SQLiteTransaction trans)
-				: base(trans)
+				: base(trans, trans.Connection)
 			{
 				this.command.CommandText = "SELECT [Id] FROM main.[ObjectTags] WHERE [ObjectId] = @ObjectId AND [Key] = @Key;";
 
@@ -455,8 +455,8 @@ namespace TecWare.PPSn
 		{
 			private readonly SQLiteParameter objectIdParameter;
 
-			public TagSelectCommand(SQLiteTransaction trans, bool visibleOnly)
-				: base(trans)
+			public TagSelectCommand(SQLiteTransaction trans, SQLiteConnection connection, bool visibleOnly)
+				: base(trans, connection)
 			{
 				this.command.CommandText =
 					"SELECT [Id], [Key], [Class], [Value], [SyncToken] FROM main.[ObjectTags] WHERE [ObjectId] = @ObjectId" + (visibleOnly ? " AND [Class] >= 0" : ";");
@@ -496,7 +496,7 @@ namespace TecWare.PPSn
 			private readonly SQLiteParameter syncTokenParameter;
 
 			public TagInsertCommand(SQLiteTransaction trans)
-				: base(trans)
+				: base(trans, trans.Connection)
 			{
 				this.command.CommandText = "INSERT INTO main.[ObjectTags] ([ObjectId], [Key], [Class], [Value], [SyncToken]) values (@ObjectId, @Key, @Class, @Value, @SyncToken);";
 				this.objectIdParameter = command.Parameters.Add("@ObjectId", DbType.Int64);
@@ -536,7 +536,7 @@ namespace TecWare.PPSn
 			private readonly SQLiteParameter syncTokenParameter;
 
 			public TagUpdateCommand(SQLiteTransaction trans)
-				: base(trans)
+				: base(trans, trans.Connection)
 			{
 				this.command.CommandText = "UPDATE main.[ObjectTags] SET [Class] = @Class, [Value] = @Value, [SyncToken] = @syncToken where [Id] = @Id;";
 
@@ -570,7 +570,7 @@ namespace TecWare.PPSn
 			private readonly SQLiteParameter idParameter;
 
 			public TagDeleteCommand(SQLiteTransaction trans)
-				: base(trans)
+				: base(trans, trans.Connection)
 			{
 				this.command.CommandText = "DELETE FROM main.[ObjectTags] WHERE [Id] = @Id;";
 
@@ -647,12 +647,8 @@ namespace TecWare.PPSn
 
 		internal void RefreshTags(SQLiteTransaction transaction = null)
 		{
-			using (var trans = new PpsNestedDatabaseTransaction(parent.Environment.LocalConnection, transaction))
-			using (var cmd = new TagSelectCommand(trans.Transaction, true))
-			{
+			using (var cmd = new TagSelectCommand(transaction, parent.Environment.LocalConnection, true))
 				RefreshTags(cmd.Select(parent.LocalId).Select(c => c.Item2));
-				trans.Rollback();
-			}
 		} // proc RefreshTags
 
 		internal void CheckTagsLoaded(SQLiteTransaction transaction)
@@ -730,7 +726,7 @@ namespace TecWare.PPSn
 			// update tags
 			using (var trans = new PpsNestedDatabaseTransaction(parent.Environment.LocalConnection, transaction))
 			{
-				using (var selectTags = new TagSelectCommand(trans.Transaction, false))
+				using (var selectTags = new TagSelectCommand(trans.Transaction, trans.Connection, false))
 				using (var updateTag = new TagUpdateCommand(trans.Transaction))
 				using (var insertTag = new TagInsertCommand(trans.Transaction))
 				using (var deleteTag = new TagDeleteCommand(trans.Transaction))
@@ -774,7 +770,7 @@ namespace TecWare.PPSn
 				// refresh tags
 				if (refreshTags)
 				{
-					using (var selectTags = new TagSelectCommand(trans.Transaction, true))
+					using (var selectTags = new TagSelectCommand(trans.Transaction, trans.Connection, true))
 						RefreshTags(selectTags.Select(parent.LocalId).Select(c => c.Item2));
 				}
 				else
@@ -1047,6 +1043,9 @@ namespace TecWare.PPSn
 
 				transaction.Commit();
 			}
+
+			// mark not dirty anymore
+			ResetDirty();
 		} // proc CommitAsync
 
 		public Task PushAsync(SQLiteTransaction transaction = null)
