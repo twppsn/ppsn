@@ -85,7 +85,7 @@
 							<Grid Name="PART_DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding FrameworkElement.ActualWidth}" MaxHeight="{TemplateBinding ComboBox.MaxDropDownHeight}">
 								<Border Name="PART_DropDownBorder" Background="{StaticResource PPSnControlBackgroundBrush}" BorderThickness="1" BorderBrush="{StaticResource PPSnControlFocusedBorderBrush}">
 									<ScrollViewer SnapsToDevicePixels="True" Style="{StaticResource PPSnScrollViewerStyle}">
-										<ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+										<VirtualizingStackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
 									</ScrollViewer>
 								</Border>
 							</Grid>
