@@ -1015,7 +1015,10 @@ namespace TecWare.PPSn
 						throw new ArgumentNullException("Data is missing.");
 
 					using (var xml = XmlReader.Create(src, Procs.XmlReaderSettings))
-						Read(XDocument.Load(xml).Root);
+					{
+						var xData = XDocument.Load(xml).Root;
+						await Environment.Dispatcher.InvokeAsync(() => Read(xData));
+					}
 				}
 				docTrans?.Commit();
 			}
