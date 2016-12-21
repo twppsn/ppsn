@@ -2430,7 +2430,7 @@ order by t_liefnr.value desc
 				using (var e = GetViewData(
 					new PpsShellGetList("dbo.objects")
 					{
-						Filter = new PpsDataFilterCompareExpression("Guid", PpsDataFilterCompareOperator.Equal, new PpsDataFilterCompareTextValue(guid.ToString("G")))
+						Filter = new PpsDataFilterCompareExpression("Guid", PpsDataFilterCompareOperator.Equal, new PpsDataFilterCompareTextValue(guid.ToString("N")))
 					}).GetEnumerator())
 				{
 					if (e.MoveNext())
