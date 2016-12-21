@@ -71,7 +71,7 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Rectangle x:Name="TodayBackground" Fill="Black" Margin="2" Opacity="0"/>
+                        <Rectangle x:Name="TodayBackground" Fill="{StaticResource PPSnButtonPressedBrush}" Margin="2" Opacity="0"/>
                         <Rectangle x:Name="SelectedBackground" Stroke="{TemplateBinding Foreground}" Margin="1" StrokeThickness="1" Opacity="0"/>
                         <Rectangle x:Name="HighlightBackground" Stroke="{TemplateBinding Foreground}" Margin="1" StrokeThickness="1" Opacity="0"/>
                         <ContentPresenter x:Name="NormalText" TextElement.Foreground="{TemplateBinding Foreground}" Margin="0,-2,0,0" HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
@@ -174,7 +174,7 @@
                     <Grid x:Name="PART_Root">
                         <Grid.Resources>
                             <SolidColorBrush x:Key="DisabledColor" Color="#A5FFFFFF"/>
-                        </Grid.Resources>
+						</Grid.Resources>
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">
                                 <VisualState x:Name="Normal"/>
