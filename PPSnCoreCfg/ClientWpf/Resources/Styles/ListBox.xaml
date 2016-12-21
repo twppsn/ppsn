@@ -11,12 +11,13 @@
         <Setter Property="BorderThickness" Value="0"/>
 		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
 		<Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="Padding" Value="0"/>
+		<Setter Property="SnapsToDevicePixels" Value="True"/>
+		<Setter Property="Padding" Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListBox}">
                     <Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
-							Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
+							Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
                         <ScrollViewer Focusable="false" Padding="{TemplateBinding Padding}" Style="{StaticResource PPSnScrollViewerStyle}">
                             <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                         </ScrollViewer>
@@ -31,14 +32,15 @@
 		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
 		<Setter Property="Margin" Value="0,0,0,1"/>
 		<Setter Property="FocusVisualStyle" Value="{StaticResource PpsFocusVisualStyle}"/>
+		<Setter Property="SnapsToDevicePixels" Value="True"/>
 		<Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListBoxItem}">
 					<Grid>
-						<Border x:Name="panelBorder" Padding="6,1" SnapsToDevicePixels="True">
+						<Border x:Name="panelBorder" Padding="6,1" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
 							<ContentPresenter />
 						</Border>
-						<Rectangle x:Name="showSelection" Fill="Transparent" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0"/>
+						<Rectangle x:Name="showSelection" Fill="Transparent" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Opacity="0"/>
 					</Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="ItemsControl.AlternationIndex" Value="0">

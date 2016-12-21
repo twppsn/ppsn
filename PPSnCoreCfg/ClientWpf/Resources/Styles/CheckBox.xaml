@@ -12,7 +12,7 @@
 		<Setter Property="VerticalAlignment" Value="Top"/>
 		<Setter Property="HorizontalContentAlignment" Value="Left"/>
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
-		<Setter Property="Padding" Value="6,0,0,0"/>
+		<Setter Property="Padding" Value="8,0,0,0"/>
 		<Setter Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
 		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
 		<Setter Property="BorderBrush" Value="{StaticResource PPSnControlNormalBorderBrush}"/>
@@ -30,8 +30,8 @@
 								Background="{TemplateBinding Background}" 
 								HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
 							<Path x:Name="optionMark" Opacity="0" HorizontalAlignment="Center" VerticalAlignment="Center" Width="15" Height="15"
-									  Data="M0,70 L50,120 140,30"
-									  Stroke="{StaticResource PPSnWindowForegroundBrush}" StrokeThickness="1.5" StrokeStartLineCap="Flat" StrokeEndLineCap="Flat" Stretch="Uniform"/>
+								  Data="M0,70 L50,120 140,30"
+								  Stroke="{StaticResource PPSnWindowForegroundBrush}" StrokeThickness="1.5" StrokeStartLineCap="Flat" StrokeEndLineCap="Flat" Stretch="Uniform"/>
 						</Border>
 						<ContentPresenter x:Name="contentPresenter" Grid.Column="1" Focusable="False" RecognizesAccessKey="True"
 										  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
