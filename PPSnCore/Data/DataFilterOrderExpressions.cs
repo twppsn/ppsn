@@ -1173,8 +1173,11 @@ namespace TecWare.PPSn.Data
 					sb.Append('\'');
 					return sb.ToString();
 
+				case nameof(Guid):
+					return "'" + Guid.Parse(text).ToString("D") + "'";
+
 				default:
-					throw new NotImplementedException();
+					return text;
 			}
 		} // func CreateParsableValue
 
