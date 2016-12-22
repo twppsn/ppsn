@@ -56,11 +56,10 @@
 									<ContentPresenter Grid.Column="1" x:Name="PART_Header" ContentSource="Header"/>
 								</Grid>
 							</Border>
-							<Rectangle x:Name="showSelection" Fill="Transparent" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0"/>
+							<Rectangle x:Name="showSelection" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0" IsHitTestVisible="False"/>
 						</Grid>
 						<ItemsPresenter x:Name="PART_ItemsHost"/>
 					</StackPanel>
-
 					<ControlTemplate.Triggers>
                         <Trigger Property="IsExpanded" Value="false">
                             <Setter TargetName="PART_ItemsHost" Property="Visibility" Value="Collapsed"/>
@@ -93,7 +92,7 @@
                 <ControlTemplate TargetType="{x:Type TreeView}">
                     <Border x:Name="Part_Border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
 							Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
-                        <ScrollViewer x:Name="PART_Scrollviewer" Focusable="False" Padding="{TemplateBinding Padding}" HorizontalScrollBarVisibility="Disabled" Style="{StaticResource PPSnScrollViewerStyle}"
+                        <ScrollViewer x:Name="PART_Scrollviewer" Focusable="False" Padding="{TemplateBinding Padding}" HorizontalScrollBarVisibility="Disabled" Style="{DynamicResource PPSnScrollViewerStyle}"
 									  Background="{TemplateBinding Background}" CanContentScroll="False" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
                             <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                         </ScrollViewer>

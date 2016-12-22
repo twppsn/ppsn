@@ -84,7 +84,7 @@
 						<Popup Name="PART_Popup" Placement="Bottom" VerticalOffset="1" Focusable="False" AllowsTransparency="True" IsOpen="{TemplateBinding ComboBox.IsDropDownOpen}" PopupAnimation="Slide">
 							<Grid Name="PART_DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding FrameworkElement.ActualWidth}" MaxHeight="{TemplateBinding ComboBox.MaxDropDownHeight}">
 								<Border Name="PART_DropDownBorder" Background="{StaticResource PPSnControlBackgroundBrush}" BorderThickness="1" BorderBrush="{StaticResource PPSnControlFocusedBorderBrush}">
-									<ScrollViewer SnapsToDevicePixels="True" Style="{StaticResource PPSnScrollViewerStyle}">
+									<ScrollViewer SnapsToDevicePixels="True" Style="{DynamicResource PPSnScrollViewerStyle}">
 										<VirtualizingStackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
 									</ScrollViewer>
 								</Border>
