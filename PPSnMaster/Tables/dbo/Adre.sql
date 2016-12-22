@@ -10,7 +10,8 @@
 	[Region] NVARCHAR(50) NULL, 
 	[Plz] NVARCHAR(10) NULL, 
 	[LandId] BIGINT NULL CONSTRAINT fkAdreLandId REFERENCES dbo.Land (KnstId), 
-	[Adresse] NVARCHAR(512) NULL 
+	[Adresse] NVARCHAR(512) NULL, 
+	[Template] NVARCHAR(512) NULL 
 )
 
 GO
@@ -118,3 +119,12 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'Adre',
     @level2type = N'COLUMN',
     @level2name = N'Adresse'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'geändertes Template',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Adre',
+    @level2type = N'COLUMN',
+    @level2name = N'Template'
