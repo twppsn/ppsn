@@ -55,7 +55,7 @@
                             <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
                         </Trigger>
 
-                        <Trigger SourceName="PART_VerticalScrollBar" Property="Visibility" Value="Visible">
+						<Trigger SourceName="PART_VerticalScrollBar" Property="Visibility" Value="Visible">
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>

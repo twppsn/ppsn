@@ -7,40 +7,19 @@
 	<Color x:Key="PPSnDesktopColor">#3B4A62</Color>
 	<Color x:Key="PPSnAccentColor">#FFFFFF</Color>
 	<Color x:Key="PPSnMarkerColor">#D2C62B</Color>
+	<Color x:Key="PPSnActionButtonColor">#FFFFFF</Color>
 	<Color x:Key="PPSnControlBackgroundColor">#4E5C71</Color>
+	<Color x:Key="PPSnWindowFooterColor">#007ACC</Color>
 	<Color x:Key="PPSnBlackColor">#000</Color>
 
 	<sys:Single x:Key="Alternation0Transpareny">0.175</sys:Single>
 	<sys:Single x:Key="Alternation1Transpareny">0.098</sys:Single>
 	<sys:Single x:Key="SideBarTranspareny">0.05</sys:Single>
-
-	<!--Theme British racing Green-->
-	<!--<Color x:Key="PPSnDesktopColor">#004225</Color>
-	<Color x:Key="PPSnAccentColor">#FFFFFF</Color>
-	<Color x:Key="PPSnMarkerColor">#D2C62B</Color>
-	<Color x:Key="PPSnControlBackgroundColor">#18543A</Color>
-	<Color x:Key="PPSnBlackColor">#000</Color>
-
-	<sys:Single x:Key="Alternation0Transpareny">0.175</sys:Single>
-	<sys:Single x:Key="Alternation1Transpareny">0.098</sys:Single>
-	<sys:Single x:Key="SideBarTranspareny">0.05</sys:Single>-->
-	
-	<!--Theme White BackGround-->
-	<!--<Color x:Key="PPSnDesktopColor">#FAFAFA</Color>
-
-	<Color x:Key="PPSnAccentColor">#000000</Color>
-	<Color x:Key="PPSnMarkerColor">#556B2F</Color>
-	<Color x:Key="PPSnControlBackgroundColor">#F0F0F0</Color>
-	<Color x:Key="PPSnBlackColor">#000</Color>
-
-	<sys:Single x:Key="Alternation0Transpareny">0.06</sys:Single>
-	<sys:Single x:Key="Alternation1Transpareny">0.03</sys:Single>
-	<sys:Single x:Key="SideBarTranspareny">0.04</sys:Single>-->
-
 	
 	<SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="{StaticResource PPSnDesktopColor}" />
 	<SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="{StaticResource PPSnAccentColor}" />
 	<SolidColorBrush x:Key="PPSnMarkerBrush" Color="{StaticResource PPSnMarkerColor}" />
+	<SolidColorBrush x:Key="PPSnActionButtonBrush" Color="{StaticResource PPSnActionButtonColor}" />
 	<SolidColorBrush x:Key="PPSnWindowDisabledForegroundBrush" Color="{StaticResource PPSnAccentColor}" Opacity="0.35" />
 
 	<SolidColorBrush x:Key="PPSnSeparatorBrush">
@@ -63,7 +42,7 @@
 	<SolidColorBrush x:Key="PPSnControlBackgroundBrush" Color="{StaticResource PPSnControlBackgroundColor}"/>
 	<SolidColorBrush x:Key="PPSnControlNormalBorderBrush">
 		<SolidColorBrush.Color>
-			<ui:TransparencyResultColor BackColor="{StaticResource PPSnDesktopColor}" TransparentColor="{StaticResource PPSnAccentColor}" Transpareny=".2" />
+			<ui:TransparencyResultColor BackColor="{StaticResource PPSnDesktopColor}" TransparentColor="{StaticResource PPSnAccentColor}" Transpareny=".15" />
 		</SolidColorBrush.Color>
 	</SolidColorBrush>
 	<SolidColorBrush x:Key="PPSnControlFocusedBorderBrush" Color="{StaticResource PPSnMarkerColor}"/>
@@ -74,12 +53,14 @@
 		</SolidColorBrush.Color>
 	</SolidColorBrush>
 
-	<SolidColorBrush x:Key="PPSnButtonPressedBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.4}" />
+	<SolidColorBrush x:Key="PPSnButtonPressedBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.5}" />
 
 	<SolidColorBrush x:Key="PPSnImageBrush" Color="{StaticResource PPSnAccentColor}" Opacity=".80"/>
 
-	<SolidColorBrush x:Key="PPSnPopUpBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.90}" />
-	
+	<SolidColorBrush x:Key="PPSnPopUpBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.82}" />
+
+	<SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="{StaticResource PPSnWindowFooterColor}" />
+
 	<SolidColorBrush x:Key="PPSnSideBarBackgroundBrush">
 		<SolidColorBrush.Color>
 			<ui:TransparencyResultColor BackColor="{StaticResource PPSnDesktopColor}" TransparentColor="{StaticResource PPSnAccentColor}" Transpareny="{StaticResource SideBarTranspareny}" />
@@ -87,12 +68,7 @@
 	</SolidColorBrush>
 
 	<!--old-->
-	<SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="#007ACC" />
 	<Color x:Key="PPSnWindowActiveGlowColor">#007ACC</Color>
 	<Color x:Key="PPSnWindowInActiveGlowColor">#60728C</Color>
-
-	<!--<SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="#8FBC8B"/>-->
-	<!--<SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="#007ACC" />-->
-	<!--<SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />-->
 
 </ResourceDictionary>
