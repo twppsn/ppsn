@@ -75,7 +75,7 @@ namespace TecWare.PPSn
 		private async Task RefreshDefaultResourcesAsync()
 		{
 			// update the resources, load a server site resource dictionary
-			var t = await GetXmlDocumentAsync("wpf/default.xaml", true, true);
+			var t = await GetXmlDocumentAsync("wpf/styles.xaml", true, true);
 			if (t == null)
 				return;
 
