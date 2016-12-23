@@ -89,4 +89,19 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	public sealed class PpsCommandParameterPassthroughConverter : IMultiValueConverter
+	{
+		public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+		{
+			return values.Clone();
+		} // func Convert
+
+		public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		}
+
+	}
 }
+
+

@@ -11,9 +11,6 @@
              d:DesignHeight="300" d:DesignWidth="600">
 
 	<UserControl.Resources>
-		<SolidColorBrush x:Key="ActionButtonBrush" Color="{StaticResource PPSnAccentColor}" />
-		<!--Q+D dpm-->
-		<!--<SolidColorBrush x:Key="ActionButtonBrush" Color="#556B2F" />-->
 
 		<SolidColorBrush x:Key="SearchBoxBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnAccentColor}, SourcePart=0.95}" />
 		<SolidColorBrush x:Key="ShrinkedSeparatorBackgroundBrush" Color="Transparent" />
@@ -206,7 +203,7 @@
 			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
 			<Setter Property="Focusable" Value="False"/>
 			<Setter Property="IsTabStop" Value="False"/>
-			<Setter Property="Foreground" Value="{StaticResource ActionButtonBrush}"/>
+			<Setter Property="Foreground" Value="{StaticResource PPSnActionButtonBrush}"/>
 			<Setter Property="BorderThickness" Value="0"/>
 			<Setter Property="Height" Value="60"/>
 			<Setter Property="Margin" Value="0,0,24,0"/>
@@ -221,10 +218,10 @@
 							<Ellipse x:Name="PART_Circle" Grid.Row="0" Height="36" Width="36" SnapsToDevicePixels="True" VerticalAlignment="Top"
 									 Fill="Transparent"
 									 StrokeThickness="1.5"
-									 Stroke="{StaticResource ActionButtonBrush}" >
+									 Stroke="{StaticResource PPSnActionButtonBrush}" >
 							</Ellipse>
 							<TextBlock x:Name="PART_Glyph" Text="{TemplateBinding Tag}" FontFamily="Segoe UI Symbol" FontSize="18.667" Margin="0,5,0,0" HorizontalAlignment="Center"
-									   Foreground="{StaticResource ActionButtonBrush}"/>
+									   Foreground="{StaticResource PPSnActionButtonBrush}"/>
 							<Border x:Name="PART_Content" Grid.Row="1" BorderThickness="0" SnapsToDevicePixels="true" IsHitTestVisible="True">
 								<ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Top" />
 							</Border>

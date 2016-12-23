@@ -21,6 +21,7 @@ specific language governing permissions and limitations under the Licence.
 	<Color x:Key="PPSnAccentColor">#FFFFFF</Color>
 	<Color x:Key="PPSnWindowActiveGlowColor">#007ACC</Color>
 	<Color x:Key="PPSnWindowInActiveGlowColor">#60728C</Color>
+	<Color x:Key="PPSnActionButtonColor">#FFFFFF</Color>
 	<Color x:Key="PPSnBlackColor">#000</Color>
 
 	<SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="#3B4A62" />
@@ -29,6 +30,7 @@ specific language governing permissions and limitations under the Licence.
 	<SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="#007ACC" />
 	<SolidColorBrush x:Key="PPSnMarkerBrush" Color="#F7E51D"/>
 	<SolidColorBrush x:Key="PPSnSeparatorBrush" Color="#586579"/>
+	<SolidColorBrush x:Key="PPSnActionButtonBrush" Color="{StaticResource PPSnActionButtonColor}" />
 
 	<SolidColorBrush x:Key="PPSnAlternation0Brush" Color="#5D697D"/>
 	<SolidColorBrush x:Key="PPSnAlternation1Brush" Color="#4E5B71"/>

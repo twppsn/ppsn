@@ -133,7 +133,18 @@ namespace TecWare.PPSn
 			if (xResources != null)
 			{
 				foreach (var cur in xResources.Elements())
-					Dispatcher.Invoke(() => UpdateResource(cur.GetAttribute(StuffUI.xnKey, String.Empty), cur.ToString(), parserContext));
+					Dispatcher.Invoke(() =>
+					{
+						try
+						{
+							UpdateResource(cur.GetAttribute(StuffUI.xnKey, String.Empty), cur.ToString(), parserContext);
+						}
+						catch (Exception e)
+						{
+							Debug.Print(e.ToString()); // todo: exception
+						}
+					}
+			);
 			}
 		} // proc UpdateResources
 

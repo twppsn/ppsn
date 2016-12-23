@@ -8,18 +8,15 @@
 			  Height="300" Width="600" >
 
 	<ui:PpsWindow.Title>
-		<MultiBinding FallbackValue="LA P T O B U I L D" StringFormat="{}L A P T O B U I L D - {0} - {1}">
+		<MultiBinding FallbackValue="L A P T O B U I L D" StringFormat="{}L A P T O B U I L D - {0} - {1}">
 			<Binding Path="CurrentPane.SubTitle"/>
 			<Binding Path="CurrentPane.Title" Converter="{StaticResource MultiLineStringConverter}"/>
 		</MultiBinding>
 	</ui:PpsWindow.Title>
-	<!--Title="{Binding CurrentPane.Title, Mode=OneWay, Converter={StaticResource StringConverter}, ConverterParameter='PPS2000n - {0}', FallbackValue='PPS2000n'}"-->
 
 	<ui:PpsWindow.Resources>
 		<SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />
-		<SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnAccentColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
-		<!--Q+D dpm-->
-		<!--<SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="#556B2F" />-->
+		<SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnActionButtonColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
 		
 		<Geometry x:Key="PpsWindowCloseButton">M 0.5,0.5L 9.5,9.5M 9.5,0.5L 0.5,9.5</Geometry>
         <Geometry x:Key="PpsWindowMaximizeButton">M 8.5,1.5L 0.5,1.5L 0.5,9.5L 8.5,9.5L 8.5,1.5 Z M 0.5,9.5L 0.5,3.27777L 8.5,3.27777L 8.5,9.5L 0.5,9.5 Z</Geometry>
