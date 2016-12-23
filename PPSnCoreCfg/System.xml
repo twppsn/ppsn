@@ -19,8 +19,9 @@
 		<pps:wpf name="wpf">
 			<pps:wpfSource id="core" directory="ClientWpf/Panes" virtualPath="panes" />
 			<pps:theme id="default" file="ClientWpf/default.xaml"/>
-			<!--<pps:theme id="green" file="ClientWpf/green.xaml"/>-->
-			
+			<pps:theme id="blue" file="ClientWpf/default.xaml"/>
+			<pps:theme id="green" file="ClientWpf/green.xaml"/>
+
 			<pps:action name="close" displayName="Schließen" priority="-1000" displayGlyph="57639">
 				<pps:code><![CDATA[ Window:Close() ]]></pps:code>
 			</pps:action>

@@ -129,7 +129,7 @@ namespace TecWare.PPSn.Server.Wpf
 				return parentFile != null && parentFile.ExistsFile(fileName);
 			} // func ExistsFile
 
-			private bool AddKey(XElement x)
+			private bool AddKey(XElement x, bool allowRedefine)
 			{
 				var keyName = x.GetAttribute(xnXamlKey, String.Empty);
 				if (String.IsNullOrEmpty(keyName))
@@ -141,7 +141,7 @@ namespace TecWare.PPSn.Server.Wpf
 				}
 
 				if (parentFile != null && parentFile.ExistsKey(keyName))
-					return false;
+					return allowRedefine;
 
 				var pos = collectedKeys.BinarySearch(keyName);
 				if (pos < 0)
@@ -232,16 +232,16 @@ namespace TecWare.PPSn.Server.Wpf
 
 			#region -- Add, Load ------------------------------------------------------------
 
-			public void AddResourcesFromFile(string resourceFile)
+			public void AddResourcesFromFile(string resourceFile, bool allowRedefine)
 			{
 				if (AddFile(resourceFile))
 				{
 					var xDocument = LoadResourceDictionary(resourceFile);
-					CombineResourceDictionary(xDocument.Root, null, true);
+					CombineResourceDictionary(xDocument.Root, null, true, allowRedefine);
 				}
 			} // proc AddResourcesFromFile
 
-			public void AddTemplatesFromFile(string templateFile, ref int currentTemplatePriority)
+			public void AddTemplatesFromFile(string templateFile, bool allowRedefine, ref int currentTemplatePriority)
 			{
 				if (AddFile(templateFile))
 				{
@@ -250,7 +250,7 @@ namespace TecWare.PPSn.Server.Wpf
 					foreach (var x in xDocument.Root.Elements())
 					{
 						if (x.Name == xnXamlMergedDictionaries) // merge resources
-							CombineMergedResourceDictionaries(x, null, false);
+							CombineMergedResourceDictionaries(x, null, false, allowRedefine);
 						else // parse template
 						{
 							string onlineViewId = null;
@@ -356,7 +356,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 			#region -- Combine --------------------------------------------------------------
 
-			public void CombineResourceDictionary(XElement xResourceDictionary, XNode xAddBefore, bool removeNodes)
+			public void CombineResourceDictionary(XElement xResourceDictionary, XNode xAddBefore, bool removeNodes, bool allowRedefine)
 			{
 				if (xResourceDictionary == null)
 					return;
@@ -373,8 +373,8 @@ namespace TecWare.PPSn.Server.Wpf
 						if (x.Name == xnXamlMergedDictionaries)
 							continue;
 						else if (x.Name == xnXamlResourceDictionary)
-							CombineResourceDictionary(x, xAddBefore, removeNodes);
-						else if (AddKey(x))
+							CombineResourceDictionary(x, xAddBefore, removeNodes, allowRedefine);
+						else if (AddKey(x, allowRedefine))
 						{
 							var xAdded = xResourceDictionary == xResources ? // do we need to copy the resources
 									x :
@@ -387,21 +387,21 @@ namespace TecWare.PPSn.Server.Wpf
 					// refrenced
 					var xMerged = xResourceDictionary.Element(xnXamlMergedDictionaries);
 					if (xMerged != null)
-						CombineMergedResourceDictionaries(xMerged, xMergedAddBefore, removeNodes);
+						CombineMergedResourceDictionaries(xMerged, xMergedAddBefore, removeNodes, allowRedefine);
 				}
 				else // refrenced
 				{
-					CombineResourceDictionary(LoadResourceDictionary(source, AddFile)?.Root, xAddBefore, removeNodes);
+					CombineResourceDictionary(LoadResourceDictionary(source, AddFile)?.Root, xAddBefore, removeNodes, allowRedefine);
 				}
 			} // proc CombineResourceDictionary
 
-			private void CombineMergedResourceDictionaries(XElement xMerged, XNode xAddBefore, bool removeNodes)
+			private void CombineMergedResourceDictionaries(XElement xMerged, XNode xAddBefore, bool removeNodes, bool allowRedefine)
 			{
 				// resolve only ResourceDictionaries
 				var xResourceDictionaries = xMerged.Elements(xnXamlResourceDictionary).ToArray();
 				for (int i = xResourceDictionaries.Length - 1; i >= 0; i--)
 				{
-					CombineResourceDictionary(xResourceDictionaries[i], xAddBefore, removeNodes);
+					CombineResourceDictionary(xResourceDictionaries[i], xAddBefore, removeNodes, allowRedefine);
 					if (removeNodes)
 						xResourceDictionaries[i].Remove();
 				}
@@ -565,13 +565,13 @@ namespace TecWare.PPSn.Server.Wpf
 			);
 
 			// create the resource file
-			var resourceFile = new ParsedXamlFile(this, null, xTarget, xTargetResources, false);
+			var resourceFile = new ParsedXamlFile(this, isDefaultTheme ? null : GetDefaultTheme(), xTarget, xTargetResources, false);
 			foreach (var x in Config.Elements(PpsStuff.xnWpfTheme).Where(x => String.Compare(x.GetAttribute("id", String.Empty), theme, StringComparison.OrdinalIgnoreCase) == 0))
 			{
 				var fileName = x.GetAttribute("file", String.Empty);
 				if (String.IsNullOrEmpty(fileName))
 					throw new DEConfigurationException(x, "@file is missing.");
-				resourceFile.AddResourcesFromFile(fileName);
+				resourceFile.AddResourcesFromFile(fileName, true);
 			}
 
 			// cache
@@ -602,7 +602,7 @@ namespace TecWare.PPSn.Server.Wpf
 				if (String.IsNullOrEmpty(fileName))
 					throw new DEConfigurationException(x, "@file is missing.");
 
-				templateFile.AddTemplatesFromFile(fileName, ref currentTemplatePriority);
+				templateFile.AddTemplatesFromFile(fileName, false, ref currentTemplatePriority);
 			}
 
 			return templateFile;
@@ -682,7 +682,7 @@ namespace TecWare.PPSn.Server.Wpf
 			paneFile.AddRootFile(fullPath);
 
 			// resolve merged resources
-			paneFile.CombineResourceDictionary(xSourceResources, null, false);
+			paneFile.CombineResourceDictionary(xSourceResources, null, false, false);
 			
 			// Gibt die Quelle für den Code an
 			if (xCode != null)
@@ -893,6 +893,8 @@ namespace TecWare.PPSn.Server.Wpf
 		{
 			var basePath = this.Name;
 
+			yield return new PpsApplicationFileItem(basePath + "/styles.xaml", -1, DateTime.MinValue);
+
 			// navigator.xml
 			yield return new PpsApplicationFileItem(basePath + "/environment.xml", -1, DateTime.MinValue);
 
@@ -929,9 +931,9 @@ namespace TecWare.PPSn.Server.Wpf
 				}
 				else if (x.Name == PpsStuff.xnWpfTheme)
 				{
-					var fileName = x.GetAttribute("file", String.Empty);
-					var name = Path.GetFileName(fileName);
-					yield return new PpsApplicationFileItem(basePath + "/" + name, -1, DateTime.MinValue);
+					var id = x.GetAttribute("id", String.Empty);
+					if (String.Compare(id, "default", StringComparison.OrdinalIgnoreCase) != 0)
+						yield return new PpsApplicationFileItem(basePath + "/styles.xaml?id=" + id, -1, DateTime.MinValue);
 				}
 			}
 		} // func GetApplicationFileList
@@ -956,9 +958,10 @@ namespace TecWare.PPSn.Server.Wpf
 
 		protected override bool OnProcessRequest(IDEContext r)
 		{
-			if (r.RelativeSubPath == "default.xaml")
+			if (r.RelativeSubPath == "styles.xaml")
 			{
-				r.WriteXml(ParseXamlTheme("default").Document, GetXamlContentType(r));
+				var id = r.GetProperty("id", "default");
+				r.WriteXml(ParseXamlTheme(id).Document, GetXamlContentType(r));
 				return true;
 			}
 			else if (r.RelativeSubPath == "environment.xml")
