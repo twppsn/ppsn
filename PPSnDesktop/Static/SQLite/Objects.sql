@@ -8,22 +8,35 @@ CREATE TABLE [Objects]
 	[Guid] UNIQUEIDENTIFIER NOT NULL UNIQUE,	-- unique object id
 	[Typ] TEXT NOT NULL,						-- Typ of the object, to find the correct template
 	[Nr] TEXT NULL,								-- User number of the object
-	[StateChg] INTEGER NOT NULL DEFAULT 0,		-- Server site state information
+	[SyncToken] INTEGER NOT NULL DEFAULT 0,		-- Server site synchronization token
 	[IsRev] BIT NOT NULL DEFAULT 1,				-- Synchronize the document with push/pull
 	[RemoteRevId] INTEGER NULL,					-- the last synchronized server site revision
 	[PulledRevId] INTEGER NULL,					-- the server site revision of the pulled document
 	[DocumentIsChanged] BIT NOT NULL DEFAULT 0,	-- is the current revision modified
+	[DocumentIsLinked] BIT NOT NULL DEFAULT 0,  -- is the document data stored on disk
 	[Document] BLOB NULL						-- current revision of the object
 );
 
 CREATE TABLE [ObjectTags]
 (
 	[Id] INTEGER PRIMARY KEY NOT NULL UNIQUE,
-	[ObjectId] INTEGER NOT NULL REFERENCES [Objects] ([Id]) ON DELETE CASCADE,
-	[Key] TEXT NOT NULL,														-- keyword
-	[Class] INTEGER NOT NULL DEFAULT 0,											-- 0 => normal string field, 1 => Number fields
-	[Value] TEXT NOT NULL,														-- value of the keyword
+	[ObjectId] INTEGER NOT NULL REFERENCES [new_Objects] ([Id]) ON DELETE CASCADE,
+	[Key] TEXT NOT NULL,															-- keyword
+	[Class] INTEGER NOT NULL DEFAULT 0,												-- 0 => normal string field, 1 => Number fields
+	[Value] TEXT NULL,																-- value of the keyword (is the value NULL then is equals the tag)
+	[UserId] INTEGER NULL,															-- UserId that created the tag (null for system created)
+	[SyncToken] INTEGER NOT NULL DEFAULT 0,
 	UNIQUE ([ObjectId], [Key])
+);
+
+CREATE TABLE [ObjectLinks]
+(
+	[Id] INTEGER PRIMARY KEY NOT NULL UNIQUE,
+	[ServerId] INTEGER NULL,						-- Server site Id of the link
+	[ParentObjectId] INTEGER NULL CONSTRAINT fkParentObjectId REFERENCES [Objects] ([Id]) ON DELETE CASCADE,
+	[LinkObjectId] INTEGER NULL CONSTRAINT fkLinkObjectId REFERENCES [Objects] ([Id]) ON DELETE NO ACTION,
+    [OnDelete] CHAR(1) NOT NULL DEFAULT 0,			-- Delete,Null,Restrict
+    [SyncToken] INTEGER NOT NULL					-- int64 time stamp
 );
 
 -- ----------------------------------------------------------------------------

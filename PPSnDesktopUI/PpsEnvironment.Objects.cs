@@ -1028,25 +1028,31 @@ namespace TecWare.PPSn
 
 		public async Task CommitAsync(SQLiteTransaction trans = null)
 		{
-			using (var transaction = new PpsNestedDatabaseTransaction(Environment.LocalConnection, trans))
+			try
 			{
-				// update data
-				await baseObj.SaveRawDataAsync(transaction.Transaction,
-					 dst =>
-					 {
-						 var settings = Procs.XmlWriterSettings;
-						 settings.CloseOutput = false;
-						 using (var xml = XmlWriter.Create(dst, settings))
-							 Write(xml);
-					 }
-					);
+				using (var transaction = new PpsNestedDatabaseTransaction(Environment.LocalConnection, trans))
+				{
+					// update data
+					await baseObj.SaveRawDataAsync(transaction.Transaction,
+						 dst =>
+						 {
+							 var settings = Procs.XmlWriterSettings;
+							 settings.CloseOutput = false;
+							 using (var xml = XmlWriter.Create(dst, settings))
+								 Write(xml);
+						 }
+						);
 
-				// update tags
-				baseObj.Tags.Update(GetAutoTags().ToList(), transaction: transaction.Transaction);
+					// update tags
+					baseObj.Tags.Update(GetAutoTags().ToList(), transaction: transaction.Transaction);
 
-				transaction.Commit();
+					transaction.Commit();
+				}
 			}
-
+			catch(Exception e)
+			{
+				throw;
+			}
 			// mark not dirty anymore
 			ResetDirty();
 		} // proc CommitAsync
