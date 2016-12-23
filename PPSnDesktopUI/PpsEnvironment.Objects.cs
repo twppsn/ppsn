@@ -1015,7 +1015,10 @@ namespace TecWare.PPSn
 						throw new ArgumentNullException("Data is missing.");
 
 					using (var xml = XmlReader.Create(src, Procs.XmlReaderSettings))
-						Read(XDocument.Load(xml).Root);
+					{
+						var xData = XDocument.Load(xml).Root;
+						await Environment.Dispatcher.InvokeAsync(() => Read(xData));
+					}
 				}
 				docTrans?.Commit();
 			}
@@ -1025,25 +1028,31 @@ namespace TecWare.PPSn
 
 		public async Task CommitAsync(SQLiteTransaction trans = null)
 		{
-			using (var transaction = new PpsNestedDatabaseTransaction(Environment.LocalConnection, trans))
+			try
 			{
-				// update data
-				await baseObj.SaveRawDataAsync(transaction.Transaction,
-					 dst =>
-					 {
-						 var settings = Procs.XmlWriterSettings;
-						 settings.CloseOutput = false;
-						 using (var xml = XmlWriter.Create(dst, settings))
-							 Write(xml);
-					 }
-					);
+				using (var transaction = new PpsNestedDatabaseTransaction(Environment.LocalConnection, trans))
+				{
+					// update data
+					await baseObj.SaveRawDataAsync(transaction.Transaction,
+						 dst =>
+						 {
+							 var settings = Procs.XmlWriterSettings;
+							 settings.CloseOutput = false;
+							 using (var xml = XmlWriter.Create(dst, settings))
+								 Write(xml);
+						 }
+						);
 
-				// update tags
-				baseObj.Tags.Update(GetAutoTags().ToList(), transaction: transaction.Transaction);
+					// update tags
+					baseObj.Tags.Update(GetAutoTags().ToList(), transaction: transaction.Transaction);
 
-				transaction.Commit();
+					transaction.Commit();
+				}
 			}
-
+			catch(Exception e)
+			{
+				throw;
+			}
 			// mark not dirty anymore
 			ResetDirty();
 		} // proc CommitAsync
@@ -2427,7 +2436,7 @@ order by t_liefnr.value desc
 				using (var e = GetViewData(
 					new PpsShellGetList("dbo.objects")
 					{
-						Filter = new PpsDataFilterCompareExpression("Guid", PpsDataFilterCompareOperator.Equal, new PpsDataFilterCompareTextValue(guid.ToString("G")))
+						Filter = new PpsDataFilterCompareExpression("Guid", PpsDataFilterCompareOperator.Equal, new PpsDataFilterCompareTextValue(guid.ToString("N")))
 					}).GetEnumerator())
 				{
 					if (e.MoveNext())
