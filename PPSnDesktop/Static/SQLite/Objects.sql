@@ -20,7 +20,7 @@ CREATE TABLE [Objects]
 CREATE TABLE [ObjectTags]
 (
 	[Id] INTEGER PRIMARY KEY NOT NULL UNIQUE,
-	[ObjectId] INTEGER NOT NULL REFERENCES [new_Objects] ([Id]) ON DELETE CASCADE,
+	[ObjectId] INTEGER NOT NULL REFERENCES [Objects] ([Id]) ON DELETE CASCADE,
 	[Key] TEXT NOT NULL,															-- keyword
 	[Class] INTEGER NOT NULL DEFAULT 0,												-- 0 => normal string field, 1 => Number fields
 	[Value] TEXT NULL,																-- value of the keyword (is the value NULL then is equals the tag)
