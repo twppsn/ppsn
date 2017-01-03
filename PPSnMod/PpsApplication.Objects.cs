@@ -48,6 +48,10 @@ namespace TecWare.PPSn.Server
 					args[r.Columns[i].Name] = r[i];
 			} // proc UpdateArgumentsWithRow
 
+			/// <summary>todo</summary>
+			/// <param name="nr"></param>
+			/// <param name="nextNumber"></param>
+			/// <param name="data"></param>
 			[LuaMember(nameof(ValidateNumber))]
 			public void ValidateNumber(string nr, object nextNumber, object data)
 			{
@@ -240,8 +244,8 @@ namespace TecWare.PPSn.Server
 
 						using (var dstMemory = new MemoryStream())
 						{
-							Stream dstDeflate = null;
-							StreamWriter tr = null;
+							var dstDeflate = (Stream)null;
+							var tr = (StreamWriter)null;
 							try
 							{
 								if ((bool)shouldDeflate)
@@ -312,7 +316,7 @@ namespace TecWare.PPSn.Server
 				var internalLink = args.GetMemberValue("DocumentId");
 				var isDocumentDeflate = args.GetMemberValue("IsDocumentDeflate");
 
-				Stream src = null;
+				Stream src;
 				if (rawData != null) // raw byte stream detected
 				{
 					src = new MemoryStream((byte[])rawData, false);
@@ -338,6 +342,10 @@ namespace TecWare.PPSn.Server
 					return sr.ReadToEnd();
 			} // func OpenObjectRevisionText
 
+			/// <summary>Gets a specific revision of an object.</summary>
+			/// <param name="trans"></param>
+			/// <param name="args"></param>
+			/// <returns></returns>
 			[
 				LuaMember,
 				LuaArgument("trans"),
@@ -385,6 +393,10 @@ namespace TecWare.PPSn.Server
 				return args;
 			} // func GetObjectRevision
 
+			/// <summary>todo: returns null</summary>
+			/// <param name="trans"></param>
+			/// <param name="args"></param>
+			/// <returns></returns>
 			[LuaMember]
 			public LuaTable GetObjectRevisions(PpsDataTransaction trans, LuaTable args)
 			{
@@ -414,6 +426,9 @@ namespace TecWare.PPSn.Server
 				return r;
 			} // func CheckContextArgument
 
+			/// <summary>Creates a XmlWriter for the output stream</summary>
+			/// <param name="r"></param>
+			/// <returns></returns>
 			[LuaMember]
 			public static XmlWriter CreateXmlWriter(IDEContext r)
 			{
@@ -421,6 +436,9 @@ namespace TecWare.PPSn.Server
 				return XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, r.Server.Encoding), Procs.XmlWriterSettings);
 			} // func CreateXmlWriter
 
+			/// <summary>Creates a XmlReader for the input stream.</summary>
+			/// <param name="r"></param>
+			/// <returns></returns>
 			[LuaMember]
 			public static XmlReader CreateXmlReader(IDEContext r)
 			{
@@ -428,6 +446,9 @@ namespace TecWare.PPSn.Server
 				return XmlReader.Create(r.GetInputTextReader(), Procs.XmlReaderSettings);
 			} // func CreateXmlReader
 
+			/// <summary>Writes the XElement in the output stream.</summary>
+			/// <param name="r"></param>
+			/// <param name="x"></param>
 			[LuaMember]
 			public static void WriteXml(IDEContext r, XElement x)
 			{
@@ -435,6 +456,9 @@ namespace TecWare.PPSn.Server
 					x.WriteTo(xml);
 			} // proc WriteXml
 
+			/// <summary>Gets the input stream as an XElement.</summary>
+			/// <param name="r"></param>
+			/// <returns></returns>
 			[LuaMember]
 			public static XElement GetXml(IDEContext r)
 			{
@@ -442,10 +466,16 @@ namespace TecWare.PPSn.Server
 					return XElement.Load(xml);
 			} // proc WriteXml
 
+			/// <summary>Write the table in the output stream.</summary>
+			/// <param name="r"></param>
+			/// <param name="t"></param>
 			[LuaMember]
 			public static void WriteTable(IDEContext r, LuaTable t)
 				=> WriteXml(r, t.ToXml());
 
+			/// <summary>Gets the input stream as an lua-table.</summary>
+			/// <param name="r"></param>
+			/// <returns></returns>
 			[LuaMember]
 			public static LuaTable GetTable(IDEContext r)
 				=> Procs.CreateLuaTable(GetXml(r));
@@ -456,6 +486,9 @@ namespace TecWare.PPSn.Server
 		private readonly PpsObjectsLibrary objectsLibrary;
 		private readonly PpsHttpLibrary httpLibrary;
 
+		/// <summary>Throws an exception.</summary>
+		/// <param name="message">Message of the exception.</param>
+		/// <param name="args"></param>
 		[LuaMember("error")]
 		public void LuaError(string message, params object[] args)
 		{
@@ -464,6 +497,8 @@ namespace TecWare.PPSn.Server
 			throw new Exception(message);
 		} // proc LuaError
 
+		/// <summary>Funktion to create a synchronisation time stamp.</summary>
+		/// <returns>Timestamp formatted as an Int64.</returns>
 		[LuaMember]
 		public long GetSyncStamp()
 			=> Procs.GetSyncStamp();
@@ -488,8 +523,10 @@ namespace TecWare.PPSn.Server
 			return null;
 		}
 
+		/// <summary>Library for access the object store.</summary>
 		[LuaMember(nameof(Objects))]
 		public PpsObjectsLibrary Objects => objectsLibrary;
+		/// <summary>Library for easy creation of http-results.</summary>
 		[LuaMember(nameof(Http))]
 		public LuaTable Http => httpLibrary;
 	} // class PpsApplication
