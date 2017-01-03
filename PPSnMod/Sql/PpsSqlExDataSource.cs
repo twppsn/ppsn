@@ -1976,32 +1976,7 @@ namespace TecWare.PPSn.Server.Sql
 			var c = GetSqlConnection(connection, true);
 			return new SqlDataTransaction(this, c);
 		} // func CreateTransaction
-
-		public async override Task<PpsConstantDefintion> CreateConstantDefinitionAsync(string name, XElement xDefinition)
-		{
-			var columns = new List<PpsFieldDescription>();
-
-			// collect all "columns"
-			foreach (var x in xDefinition.Elements(PpsStuff.xnColumn))
-			{
-				var columnName = x.GetAttribute("name", String.Empty);
-				var fieldName = x.GetAttribute("fieldName", String.Empty);
-
-				if (String.IsNullOrEmpty(columnName))
-					throw new DEConfigurationException(x, "@name is empty.");
-
-				var fieldDescription = application.GetFieldDescription(fieldName);
-				if (fieldDescription.DataSource != this)
-					throw new DEConfigurationException(x, "Field is defined in a different datasource.");
-
-				columns.Add(fieldDescription);
-			}
-
-			var constantDef = new SqlConstantDefinition(this, name, columns.ToArray());
-			await constantDef.InitializeAsync();
-			return constantDef;
-		} // func CreateConstantDefinitionAsync
-
+		
 		public override PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config, DateTime configurationStamp)
 			=> new PpsSqlDataSetDefinition(sp, this, documentName, config, configurationStamp);
 

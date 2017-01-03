@@ -353,31 +353,6 @@
 						</xs:attribute>
 					</xs:complexType>
 				</xs:element>
-				<xs:element name="constant" minOccurs="0" maxOccurs="unbounded">
-					<xs:annotation>
-						<xs:documentation>Registers a constant table.</xs:documentation>
-					</xs:annotation>
-					<xs:complexType>
-						<xs:sequence minOccurs="0" maxOccurs="unbounded">
-							<xs:element name="attribute" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType">
-							</xs:element>
-							<xs:element name="column" minOccurs="0" maxOccurs="unbounded">
-								<xs:complexType>
-									<xs:sequence>
-										<xs:element name="attribute" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType">
-										</xs:element>
-									</xs:sequence>
-									<xs:attribute name="name" type="KeyType" use="required">
-									</xs:attribute>
-									<xs:attribute name="fieldName" type="xs:string" use="optional">
-									</xs:attribute>
-								</xs:complexType>
-							</xs:element>
-						</xs:sequence>
-						<xs:attribute name="name" type="KeyType" use="required">
-						</xs:attribute>
-					</xs:complexType>
-				</xs:element>
 			</xs:sequence>
 			<xs:attribute name="source" type="KeyType" use="required">
 				<xs:annotation>

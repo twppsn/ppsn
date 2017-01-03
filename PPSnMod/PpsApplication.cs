@@ -263,11 +263,6 @@ namespace TecWare.PPSn.Server
 				);
 				return true;
 			}
-			else if (r.RelativeSubPath == "constants.xml")
-			{
-				r.WriteObject(GetConstantGlobalSchema());
-				return true;
-			}
 			else
 				return base.OnProcessRequest(r);
 		} // proc OnProcessRequest

@@ -515,7 +515,6 @@ namespace TecWare.PPSn.Server
 		{
 			var fieldDeclarationList = new List<DependencyElement>();
 			var viewDeclarationList = new List<DependencyElement>();
-			var constantDeclarationList = new List<DependencyElement>();
 			var datasetDeclarationList = new List<DependencyElement>();
 		
 			// register views, columns, ...
@@ -532,8 +531,6 @@ namespace TecWare.PPSn.Server
 						fieldDeclarationList.Add(new DependencyElement(source, xNode));
 					else if (xNode.Name == xnView)
 						viewDeclarationList.Add(new DependencyElement(source, xNode));
-					else if (xNode.Name == xnConstant)
-						constantDeclarationList.Add(new DependencyElement(source, xNode));
 					else if (xNode.Name == xnDataSet)
 						datasetDeclarationList.Add(new DependencyElement(source, xNode));
 					else
@@ -543,7 +540,6 @@ namespace TecWare.PPSn.Server
 
 			DependencyElement.RegisterList(fieldDeclarationList, RegisterField); // register all fields
 			DependencyElement.RegisterList(viewDeclarationList, RegisterView); // register all views
-			DependencyElement.RegisterList(constantDeclarationList, RegisterConstant); // register all constants
 			DependencyElement.RegisterList(datasetDeclarationList, RegisterDataSet); // register all datasets
 		} // proc BeginEndConfigurationData
 
@@ -585,19 +581,7 @@ namespace TecWare.PPSn.Server
 			lock (viewController)
 				viewController[view.Name] = view;
 		} // func RegisterView
-
-		private void RegisterConstant(PpsDataSource source, string name, XElement x)
-		{
-			var cur = new PpsConstantDefintionInit(source, name, x);
-			RegisterInitializationTask(10003, "Build constants", async () => RegisterConstant(await cur.InitializeAsync()));
-		} // func RegisterConstant
-
-		private void RegisterConstant(PpsConstantDefintion constant)
-		{
-			lock (constantDefinitions)
-				constantDefinitions[constant.Name] = constant;
-		} // proc RegisterConstant
-
+		
 		private void RegisterDataSet(PpsDataSource source, string name, XElement x)
 		{
 			var datasetDefinition = source == null ? new PpsDataSetServerDefinition(this, name, x, DateTime.Now) : source.CreateDocumentDescription(this, name, x, DateTime.Now);
@@ -664,148 +648,6 @@ namespace TecWare.PPSn.Server
 					return null;
 			}
 		} // func GetDataSetDefinition
-
-		#region -- GetConstantSelector ----------------------------------------------------
-
-		#region -- class ConstantEnumerator -----------------------------------------------
-
-		private sealed class ConstantEnumerator : IEnumerator<IDataRow>, IDataColumns
-		{
-			private readonly ConstantSelector selector;
-
-			private int currentConstant = -1;
-			private IEnumerator<IDataRow> currentEnumerator = null;
-
-			public ConstantEnumerator(ConstantSelector selector)
-			{
-				this.selector = selector;
-			} // ctor
-
-			public void Dispose()
-			{
-				currentEnumerator?.Dispose();
-			} // proc Dispose
-
-			public void Reset()
-			{
-				currentConstant = -1;
-				currentEnumerator?.Dispose();
-				currentEnumerator = null;
-			} // proc Reset
-
-			public bool MoveNext()
-			{
-				if (currentConstant == -2)
-					return false;
-				else if (currentConstant == -1 || !currentEnumerator.MoveNext()) // get the next enumerator
-				{
-					currentConstant++;
-
-					currentEnumerator?.Dispose();
-					currentEnumerator = selector.GetNextConstant(currentConstant);
-					if (currentEnumerator == null)
-					{
-						currentConstant = -2;
-						return false;
-					}
-					else
-						return MoveNext();
-				}
-				return true;
-			} // func MoveNext
-
-			public IDataRow Current => currentEnumerator?.Current;
-			object IEnumerator.Current => currentEnumerator?.Current;
-
-			public IReadOnlyList<IDataColumn> Columns => SqlConstantDefinition.DefaultDataColumns;
-		} // class ConstantEnumerator 
-
-		#endregion
-
-		#region -- class ConstantSelector -------------------------------------------------
-
-		private sealed class ConstantSelector : PpsDataSelector
-		{
-			private readonly PpsApplication application;
-			private readonly PpsConstantDefintion[] constants;
-			private readonly long syncFilter = 0;
-
-			public ConstantSelector(PpsDataSource source, PpsApplication application) 
-				: base(source)
-			{
-				this.application = application;
-
-				lock (application.constantDefinitions)
-					constants = application.constantDefinitions.Values.ToArray();
-			} // ctor
-
-			public ConstantSelector(PpsDataSource source, PpsApplication application, PpsConstantDefintion[] constants, long syncFilter)
-				: base(source)
-			{
-				this.application = application;
-				this.constants = constants;
-				this.syncFilter = syncFilter;
-			} // ctor
-
-			internal IEnumerator<IDataRow> GetNextConstant(int index)
-			{
-				if (index >= 0 && index < constants.Length)
-					return constants[index].GetValues(syncFilter).GetEnumerator();
-				else
-					return null;
-			} // func GetNextConstant
-
-			public override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
-			{
-				if (expression.Type == PpsDataFilterExpressionType.Compare)
-				{
-					var expr = expression as PpsDataFilterCompareExpression;
-					if (expr.Operator == PpsDataFilterCompareOperator.Greater && expr.Operand == "sync" && expr.Value.Type == PpsDataFilterCompareValueType.Text)
-						return new ConstantSelector(DataSource, application, constants, Int64.Parse(((PpsDataFilterCompareTextValue)expr.Value).Text));
-				}
-
-				throw new InvalidOperationException("Invalid filter");
-			} // func ApplyFilter
-
-			public override IEnumerator<IDataRow> GetEnumerator(int start, int count)
-				=> new ConstantEnumerator(this);
-
-			public override IPpsColumnDescription GetFieldDescription(string nativeColumnName)
-			{
-				var index = Array.FindIndex(SqlConstantDefinition.DefaultDataColumns, c => String.Compare(c.Name, nativeColumnName, StringComparison.OrdinalIgnoreCase) == 0);
-				if (index == -1)
-					throw new ArgumentException($"Invalid column name '{nativeColumnName}'");
-
-				return SqlConstantDefinition.DefaultDataColumns[index].ToColumnDescription(application.GetFieldDescription("sys.constants." + nativeColumnName, false));
-			} // func GetFiedDescription
-		} // class ConstantSelector
-
-		#endregion
-
-		public PpsDataSelector GetConstantSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
-			=> new ConstantSelector(dataSource, this);
-
-		private XDocument GetConstantGlobalSchema()
-		{
-			lock (constantDefinitions)
-			{
-				return new XDocument(
-					new XElement("constants",
-						from constant in constantDefinitions.Values
-						select new XElement("constant",
-							new XAttribute("name", constant.Name),
-							from col in constant.Columns
-							select new XElement("column",
-								new XAttribute("name", col.Name),
-								new XAttribute("dataType", LuaType.GetType(col.DataType).AliasName)
-							)
-						)
-					)
-				);
-			}
-		} // func GetConstantGlobalSchema
-
-		#endregion
 
 		private void WriteDataRow(XmlWriter xml, IDataValues row, string[] columnNames)
 		{
