@@ -432,6 +432,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 		private readonly PpsApplication application;
 
+		private PpsDataSetServerDefinition masterDataSetDefinition;
 		private ParsedXamlFile defaultTheme = null;
 		private List<PpsApplicationFileItem> scriptAddedFiles = new List<PpsApplicationFileItem>();
 
@@ -451,6 +452,21 @@ namespace TecWare.PPSn.Server.Wpf
 				this.GetService<IServiceContainer>(true).RemoveService(typeof(WpfClientItem));
 			base.Dispose(disposing);
 		} // proc Dispose
+
+		protected override void OnEndReadConfiguration(IDEConfigLoading config)
+		{
+			if (masterDataSetDefinition == null)
+				application.RegisterInitializationTask(12000, "Bind documents", BindMasterDataSetDefinitionAsync);
+
+			base.OnEndReadConfiguration(config);
+		} // proc OnEndReadConfiguration
+
+		private async Task BindMasterDataSetDefinitionAsync()
+		{
+			masterDataSetDefinition = application.GetDataSetDefinition("masterdata");
+			if (!masterDataSetDefinition.IsInitialized) // initialize dataset functionality
+				await masterDataSetDefinition.InitializeAsync();
+		} // proc BindMasterDataSetDefinitionAsync
 
 		#endregion
 
@@ -899,7 +915,7 @@ namespace TecWare.PPSn.Server.Wpf
 			yield return new PpsApplicationFileItem(basePath + "/environment.xml", -1, DateTime.MinValue);
 
 			// templates.xml
-			yield return new PpsApplicationFileItem("constants.xml", -1, DateTime.MinValue);
+			yield return new PpsApplicationFileItem(basePath + "masterdata.xml", -1, DateTime.MinValue);
 
 			// templates.xml
 			yield return new PpsApplicationFileItem(basePath + "/templates.xaml", -1, DateTime.MinValue);
@@ -972,6 +988,11 @@ namespace TecWare.PPSn.Server.Wpf
 			else if (r.RelativeSubPath == "templates.xaml")
 			{
 				r.WriteXml(ParseXamlTemplates().Document, GetXamlContentType(r));
+				return true;
+			}
+			else if (r.RelativeSubPath == "masterdata.xml")
+			{
+				masterDataSetDefinition.WriteToDEContext(r, ConfigPath + "/masterdata.xml");
 				return true;
 			}
 			else if (r.RelativeSubPath.EndsWith(".xaml")) // parse wpf template file

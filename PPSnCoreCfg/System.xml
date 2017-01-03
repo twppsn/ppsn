@@ -55,9 +55,6 @@
 			<pps:view name="sys.views">
 				<pps:source type="view">GetViewDefinitionSelector</pps:source>
 			</pps:view>
-			<pps:view name="sys.constants">
-				<pps:source type="view">GetConstantSelector</pps:source>
-			</pps:view>
 		</pps:register>
 
 		<pps:register source="main">
@@ -173,8 +170,24 @@
 			<pps:field name="dbo.Mein.Name" />
 
 			<pps:dataset name="masterdata">
+				<!--<pps:table name="Objects">
+					
+				</pps:table>
+
+				<pps:table name="ObjectLinks">
+
+				</pps:table>
+
+				<pps:table name="ObjectTags">
+
+				</pps:table>
+
+				<pps:table name="OfflineCache">
+					
+				</pps:table>-->
+
 				<pps:table name="Waeh">
-					<pps:column name="Id" fieldName="dbo.Knst.Id" />
+					<pps:column name="Id" fieldName="dbo.Knst.Id" isPrimary="true" />
 					<pps:column name="ISO" fieldName="dbo.Waeh.Iso"/>
 					<pps:column name="Symbol" fieldName="dbo.Waeh.Symbol"/>
 					<pps:column name="Name" fieldName="dbo.Waeh.Name"/>
@@ -183,7 +196,7 @@
 				</pps:table>
 
 				<pps:table name="Land">
-					<pps:column name="Id" fieldName="dbo.Knst.Id" />
+					<pps:column name="Id" fieldName="dbo.Knst.Id" isPrimary="true" />
 					<pps:column name="ISO" fieldName="dbo.Land.Iso"/>
 					<pps:column name="Name" fieldName="dbo.Land.Name"/>
 					<pps:column name="EnglishName" fieldName="dbo.Land.EnglishName"/>
@@ -195,12 +208,12 @@
 				</pps:table>
 
 				<pps:table name="Kgrp">
-					<pps:column name="Id" fieldName="dbo.Knst.Id" />
+					<pps:column name="Id" fieldName="dbo.Knst.Id" isPrimary="true" />
 					<pps:column name="Name" fieldName="dbo.Kgrp.Name"/>
 				</pps:table>
 
 				<pps:table name="Plzd">
-					<pps:column name="Id" fieldName="dbo.Knst.Id" />
+					<pps:column name="Id" fieldName="dbo.Knst.Id" isPrimary="true" />
 					<pps:column name="Plz" fieldName="dbo.Plzd.Plz"/>
 					<pps:column name="Ort" fieldName="dbo.Plzd.Ort"/>
 					<pps:column name="LandId" fieldName="dbo.Plzd.LandId"/>
@@ -212,7 +225,7 @@
 				</pps:table>
 
 				<pps:table name="Mein">
-					<pps:column name="Id" fieldName="dbo.Knst.Id" />
+					<pps:column name="Id" fieldName="dbo.Knst.Id" isPrimary="true" />
 					<pps:column name="Name" fieldName="dbo.Mein.Name"/>
 				</pps:table>
 			</pps:dataset>
