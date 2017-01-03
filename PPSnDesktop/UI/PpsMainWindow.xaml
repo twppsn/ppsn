@@ -105,24 +105,24 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type ToggleButton}">
                         <Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
-                            <Path x:Name="icon" Width="19" Height="19" SnapsToDevicePixels="True"
-								  Data="M8,1 L0,9 8,18 9,18 1.5,9.5 18,9.5 18,8.5 1.5,8.5 9,1 Z"
-								  StrokeThickness="0.3"
-								  StrokeStartLineCap="Square"
-								  StrokeEndLineCap="Flat"
-								  Stroke="{TemplateBinding Foreground}"
-								  Fill="{TemplateBinding Foreground}">
-                            </Path>
+							<Canvas Width="20.0001" Height="18.0001">
+								<Path x:Name="icon" Width="19.0001" Height="17.0001" Stretch="None" 
+									  StrokeThickness="1.00014"
+									  StrokeLineJoin="Round"
+									  StrokeEndLineCap="Flat"
+									  Stroke="{TemplateBinding Foreground}" Fill="Transparent"
+									  Data="M 8.50007,0.500069 L 0.50007,8.50007 L 8.50007,16.5001 M 0.50007,8.50007L 18.5001,8.50007"/>
+							</Canvas>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="Tag" Value="1">
-                                <Setter TargetName="icon" Property="Data" Value="M10,1 L18,9 10,18 9,18 16.5,9.5 0,9.5 0,8.5 16.5,8.5 9,1 Z"/>
+								<Setter TargetName="icon" Property="Data" Value="M 10.5001,16.5001L 18.5001,8.50007L 10.5001,0.50007M 18.5001,8.50007L 0.50007,8.50007"/>
                             </Trigger>
                             <Trigger Property="Tag" Value="2">
-								<Setter TargetName="icon" Property="Data" Value="M0,4 L18,4 18,5 0,5Z M0,9 L18,9 18,10 0,10Z M0,14 L6,14 7,15 0,15Z M9,13 L17,13 13,17 Z"/>
+								<Setter TargetName="icon" Property="Data" Value="M 1.500071,3.50007L 17.5001,3.50007M 1.500072,8.50007L 19.5001,8.50007 M 1.50007,13.5001L 12.5001,13.5001"/>
                             </Trigger>
                             <Trigger Property="Tag" Value="3">
-                                <Setter TargetName="icon" Property="Data" Value="M1,2 L16,17 17,17 2,2 Z M17,2 L2,17 1,17 16,2 Z"/>
+								<Setter TargetName="icon" Property="Data" Value="M 2.50007,15.5001 L 16.5001,1.50007 M 2.50007,1.50007 L 16.5001,15.5001 "/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="icon" Property="Opacity" Value="0.30"/>
@@ -130,7 +130,10 @@
                             <Trigger Property="IsMouseOver" Value="True">
 								<Setter Property="Background" Value="{StaticResource PPSnMouseOverBrush}"/>
 							</Trigger>
-                        </ControlTemplate.Triggers>
+							<Trigger Property="IsPressed" Value="True">
+								<Setter Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
