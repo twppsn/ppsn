@@ -854,7 +854,7 @@ namespace TecWare.PPSn.Server.Sql
 					{
 						var columnName = column.ColumnName;
 
-						var value = args[columnName];
+						var value = args.GetMemberValue(columnName, true);
 						if (value != null)
 						{
 							if (first)
@@ -937,7 +937,7 @@ namespace TecWare.PPSn.Server.Sql
 					foreach (var column in tableInfo.Columns)
 					{
 						var columnName = column.ColumnName;
-						var value = args[columnName];
+						var value = args.GetMemberValue(columnName, true);
 						if (value == null || column == tableInfo.PrimaryKey)
 							continue;
 
@@ -1259,7 +1259,7 @@ namespace TecWare.PPSn.Server.Sql
 						foreach (Match m in regExSqlParameter.Matches(name))
 						{
 							var k = m.Groups[1].Value;
-							var v = args[k];
+							var v = args.GetMemberValue(k, true);
 							cmd.Parameters.Add(new SqlParameter("@" + k, v.NullIfDBNull()));
 						}
 					}
