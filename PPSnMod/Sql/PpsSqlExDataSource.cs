@@ -1074,7 +1074,9 @@ namespace TecWare.PPSn.Server.Sql
 					first = true;
 					foreach (var col in columns)
 					{
-						if (first)
+						if (col.IsIdentity)
+							continue;
+						else if (first)
 							first = false;
 						else
 							commandText.Append(", ");
@@ -1092,7 +1094,9 @@ namespace TecWare.PPSn.Server.Sql
 					first = true;
 					foreach (var col in columns)
 					{
-						if (first)
+						if (col.IsIdentity)
+							continue;
+						else if (first)
 							first = false;
 						else
 							commandText.Append(", ");
@@ -1102,7 +1106,9 @@ namespace TecWare.PPSn.Server.Sql
 					first = true;
 					foreach (var col in columns)
 					{
-						if (first)
+						if (col.IsIdentity)
+							continue;
+						else if (first)
 							first = false;
 						else
 							commandText.Append(", ");
