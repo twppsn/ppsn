@@ -654,8 +654,8 @@ namespace TecWare.PPSn
 				return false;
 			}
 
-			string resultContentType = null;
-			Stream resultData = null;
+			var resultContentType = (string)null;
+			var resultData = (Stream)null;
 			try
 			{
 				using (var command = new SQLiteCommand("SELECT [Path], [OnlineMode], [ContentType], [ContentEncoding], [Content] FROM [main].[OfflineCache] WHERE substr([Path], 1, length(@path)) = @path;", localConnection))

@@ -270,34 +270,9 @@ namespace TecWare.PPSn.UI
 		/// <summary>Show SideBarBackground</summary>
 		public void ShowSideBarBackground()
 		{
-			bool show = (IsNavigatorVisible && navigator.ViewsShowDescriptions) || (!IsNavigatorVisible && ShowPaneSideBar);
+			var show = (IsNavigatorVisible && navigator.ViewsShowDescriptions) || (!IsNavigatorVisible && ShowPaneSideBar);
 			if (show != (bool)GetValue(IsSideBarVisibleProperty))
 				SetValue(IsSideBarVisibleProperty, show);
 		} // proc ShowSideBarBackground
-
-		#region -- Q+D TEST DisableUI ---------------------------------------------------
-
-		private System.Collections.Generic.Dictionary<IPpsWindowPane, IPpsProgress> stubs = new System.Collections.Generic.Dictionary<IPpsWindowPane, IPpsProgress>();
-
-		private void LockUIButton_Click(object sender, RoutedEventArgs e)
-		{
-			if (CurrentPane == null)
-				return;
-
-			if(!stubs.ContainsKey(CurrentPane))
-			{
-				var stub = CurrentPane.PaneControl.ProgressStack.CreateProgress();
-				stubs.Add(CurrentPane, stub);
-			}
-			else
-			{
-				IPpsProgress stub = null;
-				stubs.TryGetValue(CurrentPane, out stub);
-				DE.Stuff.Procs.FreeAndNil(ref stub);
-				stubs.Remove(CurrentPane);
-			}
-		}
-
-		#endregion
 	} // class PpsMainWindow
 }

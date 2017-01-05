@@ -483,7 +483,6 @@
 					</Style>
                 </ToolBar.Style>
             </ToolBar>
-            <Button x:Name="LockUIButton" Grid.Column="1" Grid.Row="1" Content="test" Width="50" Height="23" VerticalAlignment="Top" Focusable="False" Click="LockUIButton_Click"/>
 
             <ContentPresenter x:Name="panePresenter" Grid.Column="0" Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}">
                 <ContentPresenter.Style>
@@ -497,7 +496,7 @@
                 </ContentPresenter.Style>
             </ContentPresenter>
 
-			<uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right" Margin="24,24,0,0"/>
+			<uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right" Margin="24,24,0,0" Visibility="Collapsed" />
 
 			<Grid.Style>
                 <Style TargetType="{x:Type Grid}">

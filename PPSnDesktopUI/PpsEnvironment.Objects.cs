@@ -1049,10 +1049,11 @@ namespace TecWare.PPSn
 					transaction.Commit();
 				}
 			}
-			catch(Exception e)
+			catch (Exception)
 			{
 				throw;
 			}
+
 			// mark not dirty anymore
 			ResetDirty();
 		} // proc CommitAsync
@@ -2051,7 +2052,7 @@ namespace TecWare.PPSn
 						default:
 							throw new NotSupportedException();
 					}
-				} //func CreateLeftOuterJoinExpression
+				} // func CreateLeftOuterJoinExpression
 
 				public string KeyName => keyName;
 				public int Classification => classification;

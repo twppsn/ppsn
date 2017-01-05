@@ -441,7 +441,7 @@ namespace TecWare.PPSn.UI
 			RemoveAt(index);
 			InsertItem(index, item);
 		} // proc SetItem
-	} //class PPsUICommandCollection
+	} // class PPsUICommandCollection
 
 	#endregion
 }
