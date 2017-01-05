@@ -1517,7 +1517,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			public SqlParameter CreateSqlParameter(string parameterName, object value)
 				=> new SqlParameter(parameterName, sqlType, maxLength, ParameterDirection.Input, isNull, precision, scale, Name, DataRowVersion.Current,
-					value != null ? Procs.ChangeType(value, DataType) : value.NullIfDBNull()
+					value != null ? (value == DBNull.Value ? value : Procs.ChangeType(value, DataType)) : DBNull.Value
 				);
 
 			#region -- GetFieldType, GetSqlType -----------------------------------------------
