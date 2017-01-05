@@ -37,6 +37,8 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public class PpsTreeListView : TreeView
 	{
+		private object itemToSelect;
+
 		public PpsTreeListView()
 		{
 			Loaded += OnLoaded;
@@ -73,9 +75,23 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		public void SelectNode(object item)
 		{
+			if (ItemContainerGenerator.Status == GeneratorStatus.ContainersGenerated)
+			{
+				DoSelectNode(item);
+			}
+			else
+			{
+				itemToSelect = item;
+				ItemContainerGenerator.StatusChanged += OnItemContainerGeneratorStatusChanged;
+			}
+		}
+
+		private void DoSelectNode(object item)
+		{
 			var node = ItemContainerGenerator.ContainerFromItem(item) as PpsTreeListViewItem;
 			if (node == null)
-				throw new ArgumentNullException("SelectNode TreeListView");
+				throw new ArgumentNullException("SelectNode TreeListViewItem");
+
 			// focus?
 			Dispatcher.BeginInvoke(
 				new Action(() =>
@@ -83,14 +99,21 @@ namespace TecWare.PPSn.Controls
 					node.IsSelected = true;
 					node.BringIntoView();
 				}),
-		 		DispatcherPriority.Input
+					DispatcherPriority.Input
 				);
-		} // proc SelectNode
+		} // proc DoSelectNode
+
+		private void OnItemContainerGeneratorStatusChanged(object sender, EventArgs e)
+		{
+			if (ItemContainerGenerator.Status == GeneratorStatus.ContainersGenerated)
+			{
+				ItemContainerGenerator.StatusChanged -= OnItemContainerGeneratorStatusChanged;
+				SelectNode(itemToSelect);
+			}
+		} // event OnItemContainerGeneratorStatusChanged
 
 		private void EnsureSelection()
 		{
-			if (ItemContainerGenerator.Status != GeneratorStatus.ContainersGenerated)
-				return;
 			if (Items.Count == 0 || SelectedItem != null)
 				return;
 			SelectNode(Items[0]);
@@ -174,7 +197,6 @@ namespace TecWare.PPSn.Controls
 					}),
 					DispatcherPriority.Input
 				);
-
 		} // proc SelectNode
 
 		private void SelectAddedNode(object item)

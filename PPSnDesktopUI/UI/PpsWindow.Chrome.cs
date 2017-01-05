@@ -497,8 +497,9 @@ namespace TecWare.PPSn.UI
 			{
 				RECT rect;
 				NativeMethods.GetWindowRect(handle, out rect);
-				int xLParam = lParam.ToInt32() & 0xFFFF;
-				int yLParam = lParam.ToInt32() >> 16;
+				var value = lParam.ToInt32();
+				var xLParam = (int)((short)(value & 0xFFFF));
+				var yLParam = (int)((short)(value >> 16));
 				int offset = 2 * glowDimension;
 				switch (direction)
 				{
@@ -965,7 +966,11 @@ namespace TecWare.PPSn.UI
 
 		private IntPtr WmNcHitTest(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
 		{
-			Point point = PointFromScreen(new Point(lParam.ToInt32() & 0xFFFF, lParam.ToInt32() >> 16));
+			var value = lParam.ToInt32();
+			var x = (int)((short)(value & 0xFFFF));
+			var y = (int)((short)(value >> 16));
+			Point point = PointFromScreen(new Point(x, y));
+
 			DependencyObject visualHit = null;
 			VisualTreeHelper.HitTest(
 				this,
