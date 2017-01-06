@@ -91,19 +91,12 @@
 			<pps:field name="dbo.Adre.Region" displayName="Region" />
 			<pps:field name="dbo.Adre.Plz" displayName="Postleitzahl" />
 			<pps:field name="dbo.Adre.LandId" displayName="Land" />
-			<pps:field name="dbo.Adre.Adresse" >
-				<pps:attribute name="dataType">string</pps:attribute>
-				<pps:attribute name="maxLength">512</pps:attribute>
-				<pps:attribute name="displayName">Adresse</pps:attribute>
-			</pps:field>
+			<pps:field name="dbo.Adre.Adresse" displayName="Adresse" />
 			<pps:field name="dbo.Adre.Changed" >
 				<pps:attribute name="dataType">bool</pps:attribute>
 				<pps:attribute name="displayName">Andere Adresse</pps:attribute>
 			</pps:field>
-			<pps:field name="dbo.Adre.Template" >
-				<pps:attribute name="dataType">string</pps:attribute>
-				<pps:attribute name="maxLength">512</pps:attribute>
-			</pps:field>
+			<pps:field name="dbo.Adre.Template" />
 			<pps:field name="dbo.Adre.Versand" >
 				<pps:attribute name="dataType">bool</pps:attribute>
 				<pps:attribute name="displayName">Versand</pps:attribute>
