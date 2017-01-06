@@ -607,12 +607,14 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		[LuaMember]
 		public PpsDataSource GetDataSource(string name, bool throwException)
 		{
 			using (this.EnterReadLock())
 				return (PpsDataSource)this.UnsafeChildren.FirstOrDefault(c => c is PpsDataSource && String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
 		} // func GetDataSource
 
+		[LuaMember]
 		public PpsFieldDescription GetFieldDescription(string name, bool throwException = true)
 		{
 			PpsFieldDescription fieldInfo;
@@ -624,6 +626,7 @@ namespace TecWare.PPSn.Server
 				return null;
 		} // func GetFieldDescription
 
+		[LuaMember]
 		public PpsViewDescription GetViewDefinition(string name, bool throwException = true)
 		{
 			PpsViewDescription viewInfo;
@@ -650,7 +653,7 @@ namespace TecWare.PPSn.Server
 		public PpsDataSelector GetViewDefinitionSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
 			=> new PpsGenericSelector<PpsViewDescription>(dataSource, "sys.views", GetViewDefinitions());
 
-		[LuaMember(nameof(GetDataSetDefinition))]
+		[LuaMember]
 		public PpsDataSetServerDefinition GetDataSetDefinition(string name, bool throwException = true)
 		{
 			lock (datasetDefinitions)

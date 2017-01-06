@@ -16,7 +16,7 @@ SELECT
 		, c.column_id
 		, c.name
 		, c.system_type_id
-		, c.max_length
+		, cast(case when c.system_type_id in (231, 239) then c.max_length / 2 else c.max_length end as smallint)
 		, c.precision
 		, c.scale
 		, c.is_nullable
