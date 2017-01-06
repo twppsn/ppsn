@@ -1094,6 +1094,7 @@ namespace TecWare.PPSn
 		/// <summary>Internal Uri of the environment.</summary>
 		public Uri BaseUri => baseUri;
 		/// <summary>Is <c>true</c>, if the application is online.</summary>
+		[LuaMember]
 		public bool IsOnline
 		{
 			get { return isOnline; }
