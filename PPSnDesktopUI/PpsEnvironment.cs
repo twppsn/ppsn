@@ -678,9 +678,11 @@ namespace TecWare.PPSn
 			await RefreshTemplatesAsync();
 		} // proc RefreshAsync
 
+		/// <summary>Internal Id of the loaded environment</summary>
 		public int EnvironmentId => environmentId;
 
 		/// <summary>Local description of the environment.</summary>
+		[LuaMember]
 		public PpsEnvironmentInfo Info => info;
 
 		/// <summary>Has the application login data.</summary>
@@ -710,9 +712,14 @@ namespace TecWare.PPSn
 		private static object environmentCounterLock = new object();
 		private static int environmentCounter = 1;
 
+		/// <summary>Gets the environment from the ui.</summary>
+		/// <param name="ui"></param>
+		/// <returns></returns>
 		public static PpsEnvironment GetEnvironment(FrameworkElement ui)
 			=> (PpsEnvironment)ui.FindResource(EnvironmentService);
 
+		/// <summary>Gets the environment from the current application.</summary>
+		/// <returns></returns>
 		public static PpsEnvironment GetEnvironment()
 			=> (PpsEnvironment)Application.Current.FindResource(EnvironmentService);
 	} // class PpsEnvironment

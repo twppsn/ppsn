@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using Neo.IronLua;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
 {
@@ -86,6 +87,57 @@ namespace TecWare.PPSn.UI
 			=> value.ToString().Replace(Environment.NewLine, " ");
 
 	} // class PpsMultiLineStringConverter
+
+	#endregion
+
+	#region -- class PpsSingleLineConverter ---------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class PpsSingleLineConverter : IValueConverter
+	{
+		/// <summary></summary>
+		/// <param name="value"></param>
+		/// <param name="targetType"></param>
+		/// <param name="parameter"></param>
+		/// <param name="culture"></param>
+		/// <returns></returns>
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (value == null)
+				return null;
+
+			var ellipse = false;
+			var txt = value.ToString().TrimStart('\n', ' ', '\r');
+			var p = txt.IndexOf('\n');
+
+			if (p >= 0)
+			{
+				txt = txt.Substring(0, p).TrimEnd();
+				ellipse = true;
+			}
+
+			if (parameter != null)
+			{
+				var maxLen = Procs.ChangeType<int>(parameter);
+				if (maxLen > 1 && txt.Length > maxLen)
+				{
+					txt = txt.Substring(0, maxLen);
+					ellipse = true;
+				}
+			}
+
+			if (ellipse)
+				txt += "...";
+
+			return txt;
+		} // func Convert
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		} // func ConvertBack
+	} // class PpsSingleLineConverter
 
 	#endregion
 

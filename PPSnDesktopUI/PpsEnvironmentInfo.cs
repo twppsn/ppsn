@@ -28,7 +28,7 @@ namespace TecWare.PPSn
 	#region -- class PpsEnvironmentInfo -------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Class for the local environment information.</summary>
 	public sealed class PpsEnvironmentInfo
 	{
 		private readonly string name;
@@ -37,6 +37,8 @@ namespace TecWare.PPSn
 		private readonly DirectoryInfo localPath;
 		private readonly FileInfo infoFile;
 
+		/// <summary>Opens a local environment information.</summary>
+		/// <param name="name"></param>
 		public PpsEnvironmentInfo(string name)
 		{
 			this.name = name;
@@ -58,6 +60,8 @@ namespace TecWare.PPSn
 				content = new XDocument(new XElement("ppsn"));
 		} // proc
 
+		/// <summary>Update the local environment info.</summary>
+		/// <param name="xNewInfo"></param>
 		public void Update(XElement xNewInfo)
 		{
 			// copy uri
@@ -70,9 +74,11 @@ namespace TecWare.PPSn
 			}
 		} // proc UpdateInfoFile
 
+		/// <summary>Name of the instance.</summary>
 		public string Name => name;
-
+		/// <summary>Displayname of the instance for the user</summary>
 		public string DisplayName { get { return content.Root.GetAttribute("displayName", name); } set { content.Root.SetAttributeValue("displayName", value); } }
+		/// <summary>Uri of the server site.</summary>
 		public Uri Uri
 		{
 			get
@@ -83,14 +89,20 @@ namespace TecWare.PPSn
 			set { content.Root.SetAttributeValue("uri", value.ToString()); }
 		} // prop Uri
 
+		/// <summary>Version of the server</summary>
 		public Version Version { get { return new Version(content.Root.GetAttribute("version", "0.0.0.0")); } set { content.Root.SetAttributeValue("version", value.ToString()); } }
 
+		/// <summary>Local store for the user data of the instance.</summary>
 		public DirectoryInfo LocalPath => localPath;
 
 		// -- static --------------------------------------------------------------
 
 		private static string localEnvironmentsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ppsn", "env");
 
+		/// <summary>Create a new environment information.</summary>
+		/// <param name="serverName"></param>
+		/// <param name="serverUri"></param>
+		/// <returns></returns>
 		public static PpsEnvironmentInfo CreateEnvironment(string serverName, Uri serverUri)
 		{
 			var info = new PpsEnvironmentInfo(serverName);
@@ -99,6 +111,8 @@ namespace TecWare.PPSn
 			return info;
 		} // func CreateEnvironment
 
+		/// <summary>Enumerates the local environments</summary>
+		/// <returns></returns>
 		public static IEnumerable<PpsEnvironmentInfo> GetLocalEnvironments()
 		{
 			var localEnvironmentsDirectory = new DirectoryInfo(localEnvironmentsPath);
@@ -106,7 +120,7 @@ namespace TecWare.PPSn
 			{
 				foreach (var cur in localEnvironmentsDirectory.EnumerateDirectories())
 				{
-					PpsEnvironmentInfo localEnvironment = null;
+					var localEnvironment = (PpsEnvironmentInfo)null;
 					try
 					{
 						localEnvironment = new PpsEnvironmentInfo(cur.Name);
