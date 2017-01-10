@@ -482,6 +482,9 @@ namespace TecWare.PPSn
 			this.localConnection = InitLocalStore();
 			request = new BaseWebRequest(baseUri, Encoding);
 
+			// Register new Data Schemes from, the server
+			ActiveDataSets.RegisterDataSetSchema("masterdata", "wpf/masterdata.xml", typeof(PpsDataSetDefinitionDesktop));
+
 			// Register Service
 			mainResources[EnvironmentService] = this;
 		} // ctor
@@ -676,6 +679,8 @@ namespace TecWare.PPSn
 			await RefreshOfflineCacheAsync();
 			await RefreshDefaultResourcesAsync();
 			await RefreshTemplatesAsync();
+
+			await RefreshMasterDataSchemeAsync();
 		} // proc RefreshAsync
 
 		public int EnvironmentId => environmentId;

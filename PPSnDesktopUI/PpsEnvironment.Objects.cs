@@ -2259,7 +2259,7 @@ order by t_liefnr.value desc
 		internal async Task<T> CreateObjectDataObjectAsync<T>(PpsObject obj)
 			where T : IPpsObjectData
 		{
-			var schema = await ActiveDataSets.GetDataSetDefinition(obj.Typ);
+			var schema = await ActiveDataSets.GetDataSetDefinitionAsync(obj.Typ);
 			if (schema == null)
 				return (T)(IPpsObjectData)new PpsObjectBlobData(obj);
 			else

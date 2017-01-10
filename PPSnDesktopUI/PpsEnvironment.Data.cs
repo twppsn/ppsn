@@ -138,7 +138,7 @@ namespace TecWare.PPSn
 				}
 			} // func GetDataSetSchemaUri
 
-			public Task<PpsDataSetDefinitionDesktop> GetDataSetDefinition(string schema)
+			public Task<PpsDataSetDefinitionDesktop> GetDataSetDefinitionAsync(string schema)
 			{
 				KnownDataSetDefinition definition;
 				lock (datasetDefinitions)
@@ -359,9 +359,9 @@ namespace TecWare.PPSn
 								continue;
 
 							metaTableConvert = (from c in metaTableScript.Elements("convert")
-																	where String.Compare(c.Attribute("previousTable").Value, existingMetaTableName, StringComparison.Ordinal) == 0
-																	select c.Value).FirstOrDefault();
-							
+													  where String.Compare(c.Attribute("previousTable").Value, existingMetaTableName, StringComparison.Ordinal) == 0
+													  select c.Value).FirstOrDefault();
+
 							if (metaTableConvert == null)
 								throw new InvalidDataException(String.Format("No convert commands found from meta table \"{0}\" to \"{1}\".", existingMetaTableName, metaTableName));
 						} // if Regex.IsMatch()
@@ -405,15 +405,15 @@ namespace TecWare.PPSn
 										existingRevision = reader.GetInt64(0);
 								}
 							} // using command
-							
+
 							if (existingRevision == resourceRevision) // Continue with the next scriptSource.
 								continue;
 
 							if (existingRevision >= 0)
 							{
 								convertInstructions = (from c in script.Elements("convert")
-									where existingRevision == Int64.Parse(c.Attribute("previousRev").Value)
-									select c.Value).FirstOrDefault();
+															  where existingRevision == Int64.Parse(c.Attribute("previousRev").Value)
+															  select c.Value).FirstOrDefault();
 
 								if (convertInstructions == null)
 									throw new InvalidDataException(String.Format("No conversion commands found for resource \"{0}\" from revision \"{1}\" to \"{2}\".", scriptName, existingRevision, resourceRevision));
@@ -487,6 +487,8 @@ namespace TecWare.PPSn
 				{
 					// get the item
 					var path = items.GetValue(indexPath, String.Empty);
+					if (path.Contains("masterdata"))
+						path = path;
 					var length = items.GetValue(indexLength, -1L);
 					var lastWriteTime = items.GetValue(indexLastWriteTime, DateTime.MinValue);
 
@@ -499,7 +501,7 @@ namespace TecWare.PPSn
 							return new OfflineItemResult(
 								response,
 								contentType.MediaType,
-								contentType.CharSet == null ?  Encoding.UTF8 : Encoding.GetEncoding(contentType.CharSet),
+								contentType.CharSet == null ? Encoding.UTF8 : Encoding.GetEncoding(contentType.CharSet),
 								response.GetLastModified(),
 								response.ContentLength
 							);
@@ -824,7 +826,7 @@ namespace TecWare.PPSn
 
 				return onlineRequest;
 			} // func GetOnlineRequest
-			
+
 			public override WebResponse GetResponse()
 			{
 				if (onlineRequest == null)
@@ -1072,11 +1074,271 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		private async Task RefreshMasterDataSchemeAsync()
+		{
+			var masterData = await ActiveDataSets.GetDataSetDefinitionAsync("masterdata");
+			if (masterData == null)
+				throw new Exception("Failed to load masterdata.xml.");
+			foreach (var table in masterData.TableDefinitions)
+			{
+				// table.Meta is normally null - if not ''mustimport'' is set
+				if (table.Meta == null)
+					return;
+
+				var mustConvert = table.Meta.GetProperty("mustImport", false); // convention, only explicitly marked tables must be imported
+
+				object existingTable;
+
+				using (var findTable = localConnection.CreateCommand())
+				{
+					findTable.CommandText = $"SELECT [name] FROM sqlite_master WHERE [type]='table' AND [name]='{table.Name}';";
+					existingTable = findTable.ExecuteScalar();
+				}
+				
+
+				// if the table is dropable (no need for conversion) or does not exist...
+				if (!mustConvert || existingTable == null)
+				{
+					#region -- table is droppable --
+
+					using (var dropTable = localConnection.CreateCommand())
+					{
+						dropTable.CommandText = $"DROP TABLE IF EXISTS '{table.Name}';";
+						dropTable.ExecuteNonQuery();
+						dropTable.Dispose();
+					}
+
+					CreateTableInLocalScheme(table);
+					
+					#endregion
+				}
+				else
+				{
+					#region -- Table exists already and is not droppable - check if it is the same or if it has to be updated --
+
+					#region -- reading the local scheme --
+
+					var localScheme = new List<Column>();
+					using (var readExistingTable = localConnection.CreateCommand())
+					{
+						readExistingTable.CommandText = $"PRAGMA table_info({table.Name});";
+						var existingTableReader = readExistingTable.ExecuteReader();
+
+						while (existingTableReader.Read())
+							localScheme.Add(new Column(existingTableReader.GetString(1), existingTableReader.GetString(2), !existingTableReader.GetBoolean(3), existingTableReader.GetValue(4).ToString()));   // indexes for GetString hardcoded - is a given from SQLite3
+						readExistingTable.Dispose();
+					}
+
+					#endregion
+
+					#region -- reading the remote scheme --
+					var remoteScheme = new List<Column>();
+					foreach (var column in table.Columns)
+					{
+						var isNull = false;
+						column.Meta.TryGetProperty("IsNull", out isNull);
+						var defaultValue = String.Empty;
+						column.Meta.TryGetProperty("Default", out defaultValue);
+						remoteScheme.Add(new Column(column.Name, DataTypeToSQLTypeString(column.DataType), isNull, defaultValue));
+					}
+
+					#endregion
+					
+					var newColumns = (from Column remote in remoteScheme where !localScheme.Contains(remote) select remote);
+					var sameColumns = (from Column remote in remoteScheme where localScheme.Contains(remote) select remote);
+					var obsoleteColumns = (from Column local in localScheme where !remoteScheme.Contains(local) select local);
+
+					if (obsoleteColumns.Count() > 0)
+					{
+						var setSavepoint = localConnection.CreateCommand();
+						setSavepoint.CommandText = $"SAVEPOINT upgrade_{table.Name}";
+						setSavepoint.ExecuteNonQuery();
+
+						try
+						{
+							#region -- drop old indexes --
+
+							var indexes = new List<string>();
+
+							using (var findIndexes = localConnection.CreateCommand())
+							{
+								findIndexes.CommandText = $"SELECT [name] FROM 'sqlite_master' WHERE [tbl_name]='{table.Name}' AND [type] = 'index';";
+								var foundIndexes = findIndexes.ExecuteReader();
+								while (foundIndexes.Read())
+									indexes.Add(foundIndexes.GetString(0));   // a temporary table must be used, because with an open(undisposed) ''SELECT'' operation one must not ''DROP'' anything
+								findIndexes.Dispose();
+							}
+							foreach (var index in indexes)
+								using (var alterTable = localConnection.CreateCommand())
+								{
+									alterTable.CommandText = $"DROP INDEX '{index}';";
+									var check = alterTable.ExecuteNonQuery();
+									alterTable.Dispose();
+								}
+
+							#endregion
+
+							#region -- rename local table --
+
+							using (var alterTable = localConnection.CreateCommand())
+							{
+								alterTable.CommandText = $"ALTER TABLE '{table.Name}' RENAME TO '{table.Name}_temp';";
+								var check = alterTable.ExecuteNonQuery();
+								alterTable.Dispose();
+							}
+
+							#endregion
+
+							#region -- create a new table, according to new Scheme... --
+
+							CreateTableInLocalScheme(table);
+							// copy
+							using (var copyTable = localConnection.CreateCommand())
+							{
+								copyTable.CommandText = $"INSERT INTO '{table.Name}' ({String.Join(", ", sameColumns)}) SELECT {String.Join(", ", sameColumns)} FROM '{table.Name}_temp' ;";
+								var check = copyTable.ExecuteNonQuery();
+								copyTable.Dispose();
+							}
+
+							#endregion
+
+							#region -- drop local table --
+
+							using (var dropTable = localConnection.CreateCommand())
+							{
+								dropTable.CommandText = $"DROP TABLE '{table.Name}_temp';";  // no IF EXISTS - at this point the table must exist or error
+								var check = dropTable.ExecuteNonQuery();
+								dropTable.Dispose();
+							}
+
+							#endregion
+						}
+						catch
+						{
+							var takeSavepoint = localConnection.CreateCommand();
+							takeSavepoint.CommandText = $"ROLLBACK TO SAVEPOINT upgrade_{table.Name}";
+							takeSavepoint.ExecuteNonQuery();
+							throw new Exception($"Database upgrade failed on table {table.Name}.");
+						}
+					}
+					else
+					// there are no columns, which have to be deleted - check now if there are new columns to add
+					if (newColumns.Count() > 0)
+					{
+						foreach (var column in newColumns)
+							using (var extentTable = localConnection.CreateCommand())
+							{
+								if (!column.IsNull && String.IsNullOrEmpty(column.Default))
+									throw new Exception("Can not upgrade the Database. The new scheme trys to add a column wich must not be null but does not provide a default value for it.");
+								extentTable.CommandText = $"ALTER TABLE '{table.Name}' ADD COLUMN [{column.Name}] {column.Type} {(column.IsNull ? " NULL" : " NOT NULL")}{(String.IsNullOrEmpty(column.Default) ? String.Empty : " DEFAULT '" + column.Default + "'")};";
+								extentTable.ExecuteNonQuery();
+								extentTable.Dispose();
+							}
+					}
+					#endregion
+				}
+			}
+		}
+
+		private struct Column : IEquatable<Column>
+		{
+			public string Name;
+			public string Type;
+			public bool IsNull;
+			public string Default;
+
+			public Column(string Name, string Type, bool IsNull, string Default)
+			{
+				this.Name = Name;
+				this.Type = Type;
+				this.IsNull = IsNull;
+				this.Default = Default;
+			}
+
+			public bool Equals(Column other)
+			{
+				return ((this.Name == other.Name) && (this.Type == other.Type) && (this.IsNull == other.IsNull) && (this.Default == other.Default));
+			}
+
+			public override string ToString()
+			{
+				return this.Name;
+			}
+		}
+
+		private void CreateTableInLocalScheme(PpsDataTableDefinition table)
+		{
+			// no SAVEPOINT needed: if the CREATE fails -no hamr done, if the indexing fails (schould not) same
+			var indexingCommands = new List<string>();   // indexes have to be created after the table, also there can be multiple indexes
+
+			using (var createTable = localConnection.CreateCommand())
+			{
+				var command = new StringBuilder("CREATE TABLE '").Append(table.Name).Append("' (");
+				foreach (var column in table.Columns)
+				{
+					command.Append(" [").Append(column.Name).Append("] ").Append(DataTypeToSQLTypeString(column.DataType)).Append(" ");
+
+					var isNull = false;
+					if (column.Meta.TryGetProperty("IsNull", out isNull))
+					{
+						if (!isNull)
+							command.Append("NOT ");
+						command.Append("NULL ");
+					}
+
+					var defaultValue = String.Empty;
+					if (column.Meta.TryGetProperty("Default", out defaultValue))
+					{
+						command.Append("DEFAULT ").Append(defaultValue).Append(" ");
+					}
+
+					command[command.Length - 1] = ',';
+
+					if (column.IsPrimaryKey)
+						indexingCommands.Add($"CREATE UNIQUE INDEX '{table.Name}_{column.Name}_index' ON '{table.Name}'([{column.Name}]);");
+
+				}
+				command[command.Length - 1] = ')';	// the Parameterlist ends with a whitespace
+				command.Append(";");
+
+				createTable.CommandText = command.ToString();
+				var check = createTable.ExecuteScalar();
+				if (check != null)
+					throw new Exception("The table can't be created.");
+			}
+
+			foreach (var indexingCommand in indexingCommands)
+			{
+				using (var indexTable = localConnection.CreateCommand())
+				{
+					indexTable.CommandText = indexingCommand;
+					var check = indexTable.ExecuteScalar();
+					if (check != null)
+						throw new Exception($"The table ''{table.Name}'' can't be indexed.");
+				}
+			}
+		}
+
+		private string DataTypeToSQLTypeString(Type dataType)
+		{
+			// according to https://www.sqlite.org/datatype3.html there are only these datatypes - so map everything to these 5
+			if (dataType == typeof(long) || dataType == typeof(Int32))
+				return "INTEGER";
+			else if (dataType == typeof(string) || dataType == typeof(Guid))
+				return "TEXT";
+			else if (dataType == typeof(decimal))
+				return "REAL";
+			else if (dataType == typeof(bool))
+				return "BOOLEAN";
+
+			throw new Exception("TypeToSqliteConversionException");	// one could map any unknown to ''blob''
+		}
+
 		public Task<bool> ForceOnlineAsync(bool throwException = true)
 		{
 			if (IsOnline)
 				return Task.FromResult(true);
-			
+
 			throw new NotImplementedException("Todo: Force online mode.");
 		} // func ForceOnlineMode
 
