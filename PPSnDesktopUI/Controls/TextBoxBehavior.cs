@@ -153,17 +153,32 @@ namespace TecWare.PPSn.Controls
 		{
 			switch(inputType)
 			{
-				case PPSnNumTextBoxInputType.Decimal:
-					return ValidateDecimal(text);
 				case PPSnNumTextBoxInputType.Integer:
 					return ValidateInteger(text);
+				case PPSnNumTextBoxInputType.Decimal:
+					return ValidateDecimal(text);
 				default:
 					return false;
 			}
 		}
 
+		private static bool ValidateInteger(string text)
+		{
+			if(text == "-")
+				return true;
+
+			var numberStyles = NumberStyles.AllowLeadingSign | NumberStyles.AllowThousands;
+			int value;
+			if (!int.TryParse(text, numberStyles, CultureInfo.CurrentUICulture, out value))
+				return false;
+
+			return true;
+		}
+
 		private static bool ValidateDecimal(string text)
 		{
+			if(text == "-")
+				return true;
 			var numberStyles = NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign | NumberStyles.AllowThousands;
 			decimal value;
 			if (!Decimal.TryParse(text, numberStyles, CultureInfo.CurrentUICulture, out value))
@@ -172,23 +187,12 @@ namespace TecWare.PPSn.Controls
 			return true;
 		}
 
-		private static bool ValidateInteger(string text)
-		{
-			var numberStyles = NumberStyles.AllowLeadingSign | NumberStyles.AllowThousands;
-			decimal value;
-			if (!Decimal.TryParse(text, numberStyles, CultureInfo.CurrentUICulture, out value))
-				return false;
-
-			return true;
-		}
-
-
 	} // class PPSnNumTextBoxBehavior
 
 	public enum PPSnNumTextBoxInputType
 	{
-		Integer,
-		Decimal
+		Integer = 1,
+		Decimal = 2
 	} // enum PPSnNumTextBoxInputType
 
 }
