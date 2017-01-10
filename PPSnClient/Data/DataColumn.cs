@@ -53,6 +53,7 @@ namespace TecWare.PPSn.Data
 		private readonly Type dataType;
 
 		private readonly string parentRelationName;
+		private readonly PpsRelationType parentRelationType;
 		private readonly string parentTableName;
 		private readonly string parentColumn;
 
@@ -63,6 +64,7 @@ namespace TecWare.PPSn.Data
 			this.dataType = clone.dataType;
 
 			this.parentRelationName = clone.parentRelationName;
+			this.parentRelationType = clone.parentRelationType;
 			this.parentTableName = clone.parentTableName;
 			this.parentColumn = clone.parentColumn;
 		} // ctor
@@ -74,6 +76,7 @@ namespace TecWare.PPSn.Data
 			this.dataType = LuaType.GetType(xColumn.GetAttribute("dataType", "object"), lateAllowed: false).Type;
 
 			this.parentRelationName = xColumn.GetAttribute<string>("parentRelationName", null);
+			this.parentRelationType = xColumn.GetAttribute<PpsRelationType>("parentRelationType", PpsRelationType.None);
 			this.parentTableName = xColumn.GetAttribute<string>("parentTable", null);
 			this.parentColumn = xColumn.GetAttribute<string>("parentColumn", null);
 		} // ctor
@@ -89,7 +92,7 @@ namespace TecWare.PPSn.Data
 			if (parentRelationName != null)
 			{
 				var parentTable = Table.DataSet.FindTable(this.parentTableName);
-				parentTable.AddRelation(parentRelationName, parentTable.Columns[parentColumn, true], this);
+				parentTable.AddRelation(parentRelationName, parentRelationType, parentTable.Columns[parentColumn, true], this);
 			}
 			base.EndInit();
 		} // proc EndInit

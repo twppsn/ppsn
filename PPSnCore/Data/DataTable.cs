@@ -59,6 +59,24 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
+	#region -- enum PpsRelationType -----------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public enum PpsRelationType
+	{
+		/// <summary>Default behaviour, Cascade.</summary>
+		None,
+		/// <summary>Throws an exception</summary>
+		Restricted,
+		/// <summary>Deletes all related rows.</summary>
+		Cascade,
+		/// <summary>Sets the foreign key to zero.</summary>
+		SetNull
+	} // enum PpsRelationType
+
+	#endregion
+
 	#region -- class PpsDataTableRelationDefinition -------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -66,12 +84,14 @@ namespace TecWare.PPSn.Data
 	public sealed class PpsDataTableRelationDefinition
 	{
 		private readonly string name;
+		private readonly PpsRelationType type;
 		private readonly PpsDataColumnDefinition parentColumn;
 		private readonly PpsDataColumnDefinition childColumn;
 
-		internal PpsDataTableRelationDefinition(string name, PpsDataColumnDefinition parentColumn, PpsDataColumnDefinition childColumn)
+		internal PpsDataTableRelationDefinition(string name, PpsRelationType type, PpsDataColumnDefinition parentColumn, PpsDataColumnDefinition childColumn)
 		{
 			this.name = name;
+			this.type = type;
 			this.parentColumn = parentColumn;
 			this.childColumn = childColumn;
 		} // ctor
@@ -80,6 +100,7 @@ namespace TecWare.PPSn.Data
 			=> $"{parentColumn} -> {name}";
 
 		public string Name => name;
+		public PpsRelationType Type => type;
 		public PpsDataColumnDefinition ParentColumn => parentColumn;
 		public PpsDataColumnDefinition ChildColumn => childColumn;
 	} // class PpsDataTableRelationDefinition
@@ -311,7 +332,7 @@ namespace TecWare.PPSn.Data
 
 			// clone relations
 			foreach (var relation in clone.Relations)
-				AddRelation(relation.Name, Columns[relation.ParentColumn.Name, true], Columns[relation.ChildColumn.Name, true]);
+				AddRelation(relation.Name, relation.Type, Columns[relation.ParentColumn.Name, true], Columns[relation.ChildColumn.Name, true]);
 		} // ctor
 
 		public abstract PpsDataTableDefinition Clone(PpsDataSetDefinition dataset);
@@ -364,9 +385,10 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Creates a new relation between two columns.</summary>
 		/// <param name="relationName">Name of the relation</param>
+		/// <param name="relationType"></param>
 		/// <param name="parentColumn">Parent column, that must belong to the current table definition.</param>
 		/// <param name="childColumn">Child column.</param>
-		public void AddRelation(string relationName, PpsDataColumnDefinition parentColumn, PpsDataColumnDefinition childColumn)
+		public void AddRelation(string relationName, PpsRelationType relationType, PpsDataColumnDefinition parentColumn, PpsDataColumnDefinition childColumn)
 		{
 			if (IsInitialized)
 				throw new InvalidOperationException($"Can not add relation '{relationName}', because table '{name}' is initialized.");
@@ -380,7 +402,7 @@ namespace TecWare.PPSn.Data
 			if (parentColumn.Table != this)
 				throw new ArgumentException("parentColumn must belong to the current table.");
 
-			var relation = new PpsDataTableRelationDefinition(relationName, parentColumn, childColumn);
+			var relation = new PpsDataTableRelationDefinition(relationName, relationType, parentColumn, childColumn);
 			relations.Add(relation);
 
 			childColumn.SetParentRelation(relation);
@@ -941,11 +963,11 @@ namespace TecWare.PPSn.Data
 		/// <param name="row"></param>
 		internal bool RestoreInternal(PpsDataRow row)
 		{
-			int iOriginalIndex = originalRows.IndexOf(row);
-			int iCurrentIndex = currentRows.IndexOf(row);
-			if (iCurrentIndex == -1)
+			var originalIndex = originalRows.IndexOf(row);
+			var currentIndex = currentRows.IndexOf(row);
+			if (currentIndex == -1)
 			{
-				if (iOriginalIndex == -1 || row.Table == null)
+				if (originalIndex == -1 || row.Table == null)
 					return false;
 
 				currentRows.Add(row);
@@ -969,10 +991,22 @@ namespace TecWare.PPSn.Data
 					for (var i = childTable.Count - 1; i >= 0; i--)
 					{
 						if (Object.Equals(childTable[i][childColumnIndex], parentValue))
-							childTable.RemoveAt(i);
-					}
+						{
+							switch (r.Type)
+							{
+								case PpsRelationType.Restricted:
+									throw new ArgumentOutOfRangeException("row", $"Row {row} is referenced by {childTable[i]}.");
+								case PpsRelationType.SetNull:
+									childTable[i][childColumnIndex] = null;
+									break;
+								default:
+									childTable.RemoveAt(i);
+									break;
+							}
+						}
+					} // for
 				}
-			}
+			} // foreach
 		} // proc RemoveRelatedRows		
 
 		/// <summary></summary>
@@ -981,18 +1015,20 @@ namespace TecWare.PPSn.Data
 		/// <returns>Wurde der Eintrag gelöscht</returns>
 		internal bool RemoveInternal(PpsDataRow row, bool removeOriginal)
 		{
-			bool r = false;
+			var r = false;
 
 			if (row.Table != this)
 				throw new InvalidOperationException();
 
 			// remove the entry from the current list
 			var oldIndex = currentRows.IndexOf(row);
-			if (currentRows.Remove(row))
+			if (oldIndex != -1)
 			{
 				RemoveRelatedRows(row); // check related rows
 
+				currentRows.Remove(row);
 				GetUndoSink()?.Append(new PpsDataTableRemoveChangeItem(this, row));
+
 				OnRowRemoved(row, oldIndex);
 				r = true;
 			}
@@ -1110,6 +1146,12 @@ namespace TecWare.PPSn.Data
 			foreach (PpsDataRow row in rows)
 				row.Reset();
 		} // proc Reset
+
+		internal void CommitRow(PpsDataRow row)
+		{
+			if (row.IsAdded)
+				originalRows.Add(row);
+		} // proc CommitRow
 
 		/// <summary>Die aktuelle Werte werden in die Default-Wert kopiert.</summary>
 		public void Commit()

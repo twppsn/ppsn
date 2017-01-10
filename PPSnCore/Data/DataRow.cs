@@ -626,7 +626,7 @@ namespace TecWare.PPSn.Data
 			=> new PpsDataRowMetaObject(parameter, this);
 
 		public override string ToString()
-			=> $"PpsDataRow: {table.TableName}";
+			=> $"{table.TableName}[pk: {this[table.TableDefinition.PrimaryKey.Index]?.ToString() ?? "<null>"}]";
 
 		#endregion
 
@@ -689,6 +689,9 @@ namespace TecWare.PPSn.Data
 
 					}
 				}
+				
+				if (IsAdded)
+					table.CommitRow(this);
 
 				RowState = PpsDataRowState.Unchanged;
 			}
