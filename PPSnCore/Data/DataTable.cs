@@ -172,6 +172,96 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		#region -- class PpsColumnPropertyDescriptor --------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class PpsColumnPropertyDescriptor : PropertyDescriptor
+		{
+			private readonly PpsDataColumnDefinition column;
+			private readonly PropertyChangedEventHandler propertyChangedHandler;
+
+			public PpsColumnPropertyDescriptor(PpsDataColumnDefinition column)
+				: base(column.Name, Array.Empty<Attribute>())
+			{
+				this.column = column;
+
+				propertyChangedHandler = (sender, e) =>
+				{
+					if (String.Compare(column.Name, e.PropertyName, StringComparison.OrdinalIgnoreCase) == 0)
+						OnValueChanged(sender, EventArgs.Empty);
+				};
+			} // ctor
+
+			public override void AddValueChanged(object component, EventHandler handler)
+			{
+				if (!(component is PpsDataRow))
+					return;
+				
+				var row = (PpsDataRow)component;
+				if (GetValueChangedHandler(component) == null)
+					row.PropertyChanged += propertyChangedHandler;
+
+				base.AddValueChanged(component, handler);
+			} // proc AddValueChanged
+
+			public override void RemoveValueChanged(object component, EventHandler handler)
+			{
+				if (!(component is PpsDataRow))
+					return;
+
+				base.RemoveValueChanged(component, handler);
+
+				var row = (PpsDataRow)component;
+				if (GetValueChangedHandler(component) == null)
+					row.PropertyChanged -= propertyChangedHandler;
+			} // proc RemoveValueChanged
+
+			public override Type ComponentType
+				=> typeof(PpsDataRow);
+
+			public override bool IsReadOnly
+				=> column.IsExtended;
+
+			public override Type PropertyType
+				=> column.IsRelationColumn ? typeof(PpsDataRow) : column.DataType;
+
+			public override bool CanResetValue(object component)
+			{
+				var row = (PpsDataRow)component;
+				return row.Original[column.Index] != null;
+			} // func CanResetValue
+
+			public override void ResetValue(object component)
+			{
+				var row = (PpsDataRow)component;
+				row[column.Index] = row.Original[column.Index];
+			} // proc ResetValue
+
+			public override object GetValue(object component)
+			{
+				var row = (PpsDataRow)component;
+				if (column.IsRelationColumn)
+					return row.GetParentRow(column);
+				else
+					return row[column.Index];
+			} // func GetValue
+
+			public override void SetValue(object component, object value)
+			{
+				var row = (PpsDataRow)component;
+				row[column.Index] = value;
+			} // proc SetValue
+
+			public override bool ShouldSerializeValue(object component)
+			{
+				var row = (PpsDataRow)component;
+				return row.IsValueModified(column.Index);
+			} // func ShouldSerializeValue
+		} // class PpsColumnPropertyDescriptor
+
+		#endregion
+
 		private readonly PpsDataSetDefinition dataset;
 		private readonly string name;
 
@@ -181,6 +271,8 @@ namespace TecWare.PPSn.Data
 		private PpsDataTabbleRelationCollection relationCollection;
 
 		private PpsDataColumnDefinition primaryKeyColumn;
+
+		private readonly Lazy<PropertyDescriptorCollection> properties;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -192,6 +284,15 @@ namespace TecWare.PPSn.Data
 			this.columnCollection = new PpsDataTableColumnCollection(columns);
 			this.relations = new List<PpsDataTableRelationDefinition>();
 			this.relationCollection = new PpsDataTabbleRelationCollection(relations);
+
+			this.properties = new Lazy<PropertyDescriptorCollection>(
+				() => new PropertyDescriptorCollection(
+					(
+						from c in Columns
+						select new PpsColumnPropertyDescriptor(c)
+					).ToArray()
+				)
+			);
 		} // ctor
 
 		protected PpsDataTableDefinition(PpsDataSetDefinition dataset, PpsDataTableDefinition clone)
@@ -247,9 +348,9 @@ namespace TecWare.PPSn.Data
 			if (column.Table != this)
 				throw new ArgumentException();
 
-			int iIndex = FindColumnIndex(column.Name);
-			if (iIndex >= 0)
-				columns[iIndex] = column;
+			var index = FindColumnIndex(column.Name);
+			if (index >= 0)
+				columns[index] = column;
 			else
 				columns.Add(column);
 		} // proc AddColumn
@@ -298,6 +399,8 @@ namespace TecWare.PPSn.Data
 		public PpsDataTabbleRelationCollection Relations => relationCollection;
 		/// <summary>The column that identifies every row.</summary>
 		public PpsDataColumnDefinition PrimaryKey => primaryKeyColumn;
+
+		internal PropertyDescriptorCollection PropertyDescriptors => properties.Value;
 
 		/// <summary>Access to the table meta-data.</summary>
 		public abstract PpsDataTableMetaCollection Meta { get; }
@@ -1119,7 +1222,7 @@ namespace TecWare.PPSn.Data
 			// read all rows
 			foreach (var xRow in x.Elements(xnDataRow))
 			{
-				PpsDataRow row = null;
+				var row = (PpsDataRow)null;
 
 				if (combineData)
 				{

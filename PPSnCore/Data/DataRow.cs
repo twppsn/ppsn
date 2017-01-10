@@ -97,7 +97,7 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class PpsDataRow : IDynamicMetaObjectProvider, IDataRow, INotifyPropertyChanged
+	public class PpsDataRow : IDynamicMetaObjectProvider, IDataRow, INotifyPropertyChanged, ICustomTypeDescriptor
 	{
 		#region -- class NotSetValue ------------------------------------------------------
 
@@ -880,6 +880,9 @@ namespace TecWare.PPSn.Data
 			}
 		} // func TryGetProperty
 
+		public bool IsValueModified(int index)
+			=> currentValues[index] != NotSet;
+
 		/// <summary>Zugriff auf den aktuellen Wert.</summary>
 		/// <param name="columnIndex">Spalte</param>
 		/// <returns></returns>
@@ -989,6 +992,46 @@ namespace TecWare.PPSn.Data
 				return null;
 		} // func GetParentRow
 
+		#endregion
+
+		#region -- ICustomTypeDescriptor members ------------------------------------------
+
+		AttributeCollection ICustomTypeDescriptor.GetAttributes()
+			=> AttributeCollection.Empty;
+
+		string ICustomTypeDescriptor.GetClassName()
+			=> nameof(PpsDataRow);
+
+		string ICustomTypeDescriptor.GetComponentName()
+			=> nameof(PpsDataRow);
+
+		TypeConverter ICustomTypeDescriptor.GetConverter()
+			=> null;
+
+		EventDescriptor ICustomTypeDescriptor.GetDefaultEvent()
+			=> null;
+
+		PropertyDescriptor ICustomTypeDescriptor.GetDefaultProperty()
+			=> Table.TableDefinition.PropertyDescriptors.Find(Table.TableDefinition.PrimaryKey.Name, true);
+
+		object ICustomTypeDescriptor.GetEditor(Type editorBaseType)
+			=> null;
+
+		EventDescriptorCollection ICustomTypeDescriptor.GetEvents()
+			=> EventDescriptorCollection.Empty;
+
+		EventDescriptorCollection ICustomTypeDescriptor.GetEvents(Attribute[] attributes)
+			=> EventDescriptorCollection.Empty;
+		
+		PropertyDescriptorCollection ICustomTypeDescriptor.GetProperties()
+			=> Table.TableDefinition.PropertyDescriptors;
+
+		PropertyDescriptorCollection ICustomTypeDescriptor.GetProperties(Attribute[] attributes)
+			=> Table.TableDefinition.PropertyDescriptors;
+
+		object ICustomTypeDescriptor.GetPropertyOwner(PropertyDescriptor pd)
+			=> this;
+		
 		#endregion
 
 		/// <summary>Zugehörige Datentabelle</summary>
