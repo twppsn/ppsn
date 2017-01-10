@@ -40,7 +40,8 @@
 						<Border x:Name="panelBorder" Padding="6,1" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
 							<ContentPresenter />
 						</Border>
-						<Rectangle x:Name="showSelection" Fill="Transparent" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Opacity="0"/>
+						<Rectangle x:Name="showSelection" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0" IsHitTestVisible="False"
+								   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
 					</Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="ItemsControl.AlternationIndex" Value="0">
