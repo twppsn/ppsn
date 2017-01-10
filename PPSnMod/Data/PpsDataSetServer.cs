@@ -37,7 +37,9 @@ namespace TecWare.PPSn.Server.Data
 	{
 		None,
 		Root,
-		Relation
+		Cascade,
+		Restricted,
+		SetNull
 	} // enum PpsDataColumnParentRelationType
 
 	#endregion
@@ -148,7 +150,7 @@ namespace TecWare.PPSn.Server.Data
 				var parentTable = Table.DataSet.FindTable(parentTableName);
 				if (parentTable == null)
 					throw new ArgumentException($"Table {parentTableName} for relation {parentRelationName} not found.");
-				parentTable.AddRelation(parentRelationName, parentTable.Columns[parentColumnName, true], this);
+				parentTable.AddRelation(parentRelationName, GetClientRelationFromServerRelation(parentType), parentTable.Columns[parentColumnName, true], this);
 			}
 
 			// resolve the correct field
@@ -165,6 +167,23 @@ namespace TecWare.PPSn.Server.Data
 			base.EndInit();
 		} // proc EndInit
 
+		private static PpsRelationType GetClientRelationFromServerRelation(PpsDataColumnParentRelationType parentType)
+		{
+			switch (parentType)
+			{
+				case PpsDataColumnParentRelationType.None:
+					return PpsRelationType.None;
+
+				case PpsDataColumnParentRelationType.Restricted:
+					return PpsRelationType.Restricted;
+				case PpsDataColumnParentRelationType.SetNull:
+					return PpsRelationType.SetNull;
+
+				default:
+					return PpsRelationType.Cascade;
+			}
+		} // func GetClientRelationFromServerRelation
+
 		public void WriteSchema(XElement xTable)
 		{
 			var xColumn = new XElement("column",
@@ -180,6 +199,7 @@ namespace TecWare.PPSn.Server.Data
 			if (IsRelationColumn)
 			{
 				xColumn.Add(new XAttribute("parentRelationName", parentRelationName));
+				xColumn.Add(new XAttribute("parentRelationType", GetClientRelationFromServerRelation(parentType)));
 				xColumn.Add(new XAttribute("parentTable", ParentColumn.Table.Name));
 				xColumn.Add(new XAttribute("parentColumn", ParentColumn.Name));
 			}

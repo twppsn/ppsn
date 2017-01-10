@@ -313,7 +313,9 @@
 													<xs:simpleType>
 														<xs:restriction base="xs:string">
 															<xs:enumeration value="Root" />
-															<xs:enumeration value="Relation" />
+															<xs:enumeration value="Cascade" />
+															<xs:enumeration value="Restricted" />
+															<xs:enumeration value="SetNull" />
 														</xs:restriction>
 													</xs:simpleType>
 												</xs:attribute>
