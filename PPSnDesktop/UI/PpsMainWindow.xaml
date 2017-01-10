@@ -8,8 +8,9 @@
 			  Height="300" Width="600" >
 
 	<ui:PpsWindow.Title>
-		<MultiBinding FallbackValue="L A P T O B U I L D" StringFormat="{}L A P T O B U I L D - {0} - {1}">
-			<Binding Path="CurrentPane.SubTitle"/>
+        <MultiBinding FallbackValue="{StaticResource PPSnApplicationTitle}" StringFormat="{}{0} - {1} - {2}">
+            <Binding Path="Text" ElementName="PART_Title" />
+            <Binding Path="CurrentPane.SubTitle"/>
 			<Binding Path="CurrentPane.Title" Converter="{StaticResource MultiLineStringConverter}"/>
 		</MultiBinding>
 	</ui:PpsWindow.Title>
@@ -217,7 +218,7 @@
 			<Button Grid.Column="0" Width="48" Height="48" Margin="6,6,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Focusable="False"
 								Style="{StaticResource NavigatorToggleButtonStyle}"
 								Command="{x:Static uiL:PpsMainWindow.NavigatorToggleCommand}" />
-			<TextBlock Grid.Column="1" Text="L A P T O B U I L D" Foreground="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Top" FontSize="18" />
+			<TextBlock x:Name="PART_Title" Grid.Column="1" Text="{StaticResource PPSnApplicationTitle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Top" FontSize="18" />
 			<StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,24,0,0" Width="144">
 				<StackPanel.Style>
 					<Style TargetType="{x:Type StackPanel}">

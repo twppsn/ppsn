@@ -174,7 +174,7 @@ namespace TecWare.PPSn
 
 		private int IndexOfIdleAction(IPpsIdleAction idleAction)
 		{
-			for (int i = 0; i < idleActions.Count; i++)
+			for (var i = 0; i < idleActions.Count; i++)
 			{
 				IPpsIdleAction t;
 				if (idleActions[i].TryGetTarget(out t) && t == idleAction)
@@ -189,6 +189,8 @@ namespace TecWare.PPSn
 
 		public IPpsIdleAction AddIdleAction(IPpsIdleAction idleAction)
 		{
+			this.Dispatcher.VerifyAccess();
+
 			if (IndexOfIdleAction(idleAction) == -1)
 				idleActions.Add(new WeakReference<IPpsIdleAction>(idleAction));
 			return idleAction;
@@ -199,6 +201,8 @@ namespace TecWare.PPSn
 		{
 			if (idleAction == null)
 				return;
+
+			this.Dispatcher.VerifyAccess();
 
 			var i = IndexOfIdleAction(idleAction);
 			if (i >= 0)

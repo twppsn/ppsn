@@ -66,7 +66,7 @@
                             <RowDefinition/>
                         </Grid.RowDefinitions>
                         <TextBlock Text="{Binding Type}" />
-                        <TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=dd.mm.yyyy  hh:MM:ss}" Margin="8,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=dd.MM.yyyy  HH:mm:ss}" Margin="8,0"/>
                         <ContentControl Grid.Column="2" Margin="8,0" Grid.Row="0" Grid.RowSpan="2" FocusVisualStyle="{x:Null}"
 										Content="{Binding}" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}"/>
                     </Grid>

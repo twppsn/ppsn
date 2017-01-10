@@ -24,6 +24,8 @@ specific language governing permissions and limitations under the Licence.
 	<Color x:Key="PPSnActionButtonColor">#FFFFFF</Color>
 	<Color x:Key="PPSnBlackColor">#000</Color>
 
+    <sys:String x:Key="PPSnApplicationTitle">PPSn</sys:String>
+
 	<SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="#3B4A62" />
     <SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="#FFFFFF" />
 

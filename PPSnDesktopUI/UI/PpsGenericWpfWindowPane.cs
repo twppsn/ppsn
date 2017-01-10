@@ -139,9 +139,7 @@ namespace TecWare.PPSn.UI
 		{
 			if (disposing)
 			{
-				if (disposing)
-					Environment.RemoveIdleAction(this);
-
+				Environment.RemoveIdleAction(this);
 				CallMemberDirect("Dispose", new object[0], throwExceptions: false);
 			}
 		} // proc Dispose
@@ -464,7 +462,10 @@ namespace TecWare.PPSn.UI
 			forceUpdateSource = false;
 
 			foreach (var expr in BindingOperations.GetSourceUpdatingBindings(Control))
-				expr.UpdateSource();
+			{
+				if (!expr.HasError)
+					expr.UpdateSource();
+			}
 		} // proc UpdateSources
 
 		bool IPpsIdleAction.OnIdle(int elapsed)
