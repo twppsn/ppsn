@@ -217,6 +217,13 @@ namespace TecWare.PPSn.Data
 					row.PropertyChanged -= propertyChangedHandler;
 			} // proc RemoveValueChanged
 
+			private static Type GetNullableType(Type dataType)
+			{
+				if (dataType.IsValueType && dataType != typeof(void))
+					return typeof(Nullable<>).MakeGenericType(dataType);
+				return dataType;
+			} // func GetNullableType
+
 			public override Type ComponentType
 				=> typeof(PpsDataRow);
 
@@ -224,7 +231,7 @@ namespace TecWare.PPSn.Data
 				=> column.IsExtended;
 
 			public override Type PropertyType
-				=> column.IsRelationColumn ? typeof(PpsDataRow) : column.DataType;
+				=> column.IsRelationColumn ? typeof(PpsDataRow) : GetNullableType(column.DataType);
 
 			public override bool CanResetValue(object component)
 			{
