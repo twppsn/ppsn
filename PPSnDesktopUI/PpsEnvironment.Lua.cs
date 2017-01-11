@@ -513,7 +513,7 @@ namespace TecWare.PPSn
 		/// <param name="image"></param>
 		/// <param name="defaultResult"></param>
 		/// <returns></returns>
-		[LuaMember]
+		[LuaMember("msgbox")]
 		public MessageBoxResult MsgBox(string text, string caption, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
 		{
 			return MessageBox.Show(text, caption ?? "Information", button, image, defaultResult);
