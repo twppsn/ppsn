@@ -995,7 +995,7 @@ namespace TecWare.PPSn.Data
 							switch (r.Type)
 							{
 								case PpsRelationType.Restricted:
-									throw new ArgumentOutOfRangeException("row", $"Row {row} is referenced by {childTable[i]}.");
+									throw new PpsDataTableForeignKeyRestriction(row, childTable[i]);
 								case PpsRelationType.SetNull:
 									childTable[i][childColumnIndex] = null;
 									break;

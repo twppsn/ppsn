@@ -177,4 +177,26 @@ namespace TecWare.PPSn.Data
 	} // class DataHelper
 
 	#endregion
+
+	#region -- class PpsDataTableForeignKeyRestriction ----------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class PpsDataTableForeignKeyRestriction : ArgumentOutOfRangeException
+	{
+		private readonly PpsDataRow parentRow;
+		private readonly PpsDataRow childRow;
+
+		public PpsDataTableForeignKeyRestriction(PpsDataRow parentRow, PpsDataRow childRow)
+			:base("row","row", $"Row {parentRow} is referenced by {childRow}.")
+		{
+			this.parentRow = parentRow;
+			this.childRow = childRow;
+		} // ctor
+
+		public PpsDataRow ParentRow => parentRow;
+		public PpsDataRow ChildRow => childRow;
+	} // class PpsDataTableForeignKeyRestriction
+
+	#endregion
 }
