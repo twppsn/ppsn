@@ -18,7 +18,7 @@
                 <ControlTemplate TargetType="{x:Type ListBox}">
                     <Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
 							Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                        <ScrollViewer Focusable="false" Padding="{TemplateBinding Padding}" Style="{DynamicResource PPSnScrollViewerStyle}">
+                        <ScrollViewer Focusable="false" Padding="{TemplateBinding Padding}" Style="{StaticResource PPSnScrollViewerStyle}">
                             <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                         </ScrollViewer>
                     </Border>
