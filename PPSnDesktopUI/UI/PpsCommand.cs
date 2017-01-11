@@ -30,6 +30,7 @@ using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
 using TecWare.PPSn.Controls;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
@@ -66,6 +67,11 @@ namespace TecWare.PPSn.UI
 			try
 			{
 				command(parameter);
+			}
+			catch (PpsDataTableForeignKeyRestriction)
+			{
+				// todo: in lua verlagern
+				environment.MsgBox("Auf diesen Datensatz wird noch verwiesen.\nLöschen nicht möglich.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
 			}
 			catch (Exception e)
 			{
