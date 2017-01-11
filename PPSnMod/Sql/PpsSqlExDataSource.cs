@@ -1287,11 +1287,78 @@ namespace TecWare.PPSn.Server.Sql
 
 			private IEnumerable<IEnumerable<IDataRow>> ExecuteDelete(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
 			{
-				throw new NotImplementedException();
+				/*
+				 * DELETE FROM name 
+				 * OUTPUT
+				 * WHERE Col = @Col
+				 */
+
+				// find the connected table
+				var tableInfo = SqlDataSource.ResolveTableByName(name, true);
+
+				using (var cmd = CreateCommand(parameter, CommandType.Text))
+				{
+					var commandText = new StringBuilder();
+
+					commandText.Append("DELETE ")
+						.Append(tableInfo.FullName);
+
+					// default is that only one row is done
+					var args = GetArguments(parameter, 1, true);
+
+					// add primary key as out put
+					commandText.Append(" OUTPUT ")
+						.Append("deleted.")
+						.Append(tableInfo.PrimaryKey.ColumnName);
+
+					// append where
+					commandText.Append(" WHERE ");
+
+					var first = true;
+					foreach (var m in args.Members)
+					{
+						var column = tableInfo.FindColumn(m.Key, false);
+						if (column == null)
+							continue;
+
+						if (first)
+							first = false;
+						else
+							commandText.Append(" AND ");
+
+						var columnName = column.ColumnName;
+						var parameterName = '@' + columnName;
+						commandText.Append(columnName)
+							.Append(" = ")
+							.Append(parameterName);
+						cmd.Parameters.Add(column.CreateSqlParameter(parameterName, m.Value));
+					}
+
+					if (first && args.GetOptionalValue("__all", false))
+						throw new ArgumentException("To delete all rows, set __all to true.");
+
+					cmd.CommandText = commandText.ToString();
+
+					// execute delete
+					using (var r = ExecuteReaderCommand(cmd, behavior))
+					{
+						// return results
+						if (r != null)
+						{
+							do
+							{
+								yield return new DbRowReaderEnumerable(r);
+								if (behavior == PpsDataTransactionExecuteBehavior.SingleResult)
+									break;
+							} while (r.NextResult());
+						}
+					}
+				}
+				yield break; // empty enumeration
 			} // func ExecuteDelete
 
 			#endregion
-			
+
 			protected override IEnumerable<IEnumerable<IDataRow>> ExecuteResult(LuaTable parameter, PpsDataTransactionExecuteBehavior behavior)
 			{
 				string name;
