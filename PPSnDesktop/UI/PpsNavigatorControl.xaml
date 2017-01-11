@@ -597,12 +597,11 @@
 				 IsSynchronizedWithCurrentItem="True"
 				 Style="{StaticResource NavigatorViewsListBoxStyle}"/>
 
-		<uiC:DataListControl x:Name="PART_Items" Grid.Column="2" Grid.Row="3" Style="{StaticResource PPSnListBoxStyle}" FontSize="14" SnapsToDevicePixels="True"
-							 AlternationCount="2" IsSynchronizedWithCurrentItem="True"
+		<uiC:DataListControl x:Name="PART_Items" Grid.Column="2" Grid.Row="3" AlternationCount="2" IsSynchronizedWithCurrentItem="True" FontSize="14" SnapsToDevicePixels="True"
 							 ItemsSource="{Binding Items}"
 							 ScrollViewer.PanningMode="VerticalFirst"
+							 Style="{StaticResource PPSnListBoxStyle}"
 							 ItemContainerStyle="{StaticResource PPSnDataListControlItemStyle}"/>
-
 		<ItemsControl x:Name="PART_Actions" Grid.Column="2" Grid.Row="4" ItemsSource="{Binding VisibleActions}" IsTabStop="False" >
 			<ItemsControl.ItemsPanel>
 				<ItemsPanelTemplate>
