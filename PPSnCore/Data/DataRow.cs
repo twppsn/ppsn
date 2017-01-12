@@ -136,6 +136,8 @@ namespace TecWare.PPSn.Data
 			private object GetOldValue()
 				=> oldValue == NotSet ? row.originalValues[columnIndex] : oldValue;
 
+			public void Freeze() { }
+
 			public void Undo()
 			{
 				row.currentValues[columnIndex] = oldValue;
@@ -168,6 +170,8 @@ namespace TecWare.PPSn.Data
 
 			public override string ToString()
 				=> $"Undo RowState: {oldValue} -> {newValue}";
+
+			public void Freeze() { }
 
 			public void Undo()
 			{

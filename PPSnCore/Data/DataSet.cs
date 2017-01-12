@@ -530,11 +530,14 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		/// <summary>Raised, if any data is changed.</summary>
+		public event EventHandler DataChanged;
+
 		private PpsDataSetDefinition datasetDefinition;
 		private PpsDataTable[] tables;
 		private TableCollection tableCollection;
 
-		private IPpsUndoSink undoSink = null;
+		private IPpsUndoSink undoSink;
 		private PpsDeferedConstraintCheck deferredConstraintChecks = null;
 
 		private long lastPrimaryId = -1;
@@ -548,6 +551,7 @@ namespace TecWare.PPSn.Data
 		public PpsDataSet(PpsDataSetDefinition datasetDefinition)
 		{
 			this.datasetDefinition = datasetDefinition;
+			this.undoSink = new PpsUndoManagerBase();
 			this.tables = new PpsDataTable[datasetDefinition.TableDefinitions.Count];
 
 			for (int i = 0; i < tables.Length; i++)
@@ -626,7 +630,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="undoSink"></param>
 		public void RegisterUndoSink(IPpsUndoSink undoSink)
 		{
-			this.undoSink = undoSink;
+			this.undoSink = undoSink ?? new PpsUndoManagerBase();
 		} // proc RegisterUndoSink
 
 		private int FindTableIndex(string tableName)
@@ -746,11 +750,41 @@ namespace TecWare.PPSn.Data
 
 		#region -- ExecuteEvent -----------------------------------------------------------
 
+		#region -- class ExecuteEvents ----------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class ExecuteEvents : IPpsUndoItem
+		{
+			private PpsDataSet dataset;
+
+			public ExecuteEvents(PpsDataSet dataset)
+			{
+				this.dataset = dataset;
+			} // ctor
+
+			public void Freeze()
+			{
+				if (dataset != null)
+				{
+					dataset.ExecuteQueuedEvents();
+					dataset = null;
+				}
+			} // proc Freeze
+
+			public void Redo() { }
+
+			public void Undo()
+				=> dataset?.ExecuteQueuedEvents();
+		} // class ExecuteEvents
+
+		#endregion
+
 		private bool inChanged = false;
 		private List<PpsDataChangedEvent> changedEvents = new List<PpsDataChangedEvent>();
 		/*
 		 * Sortierte Liste der Ereignisse. Idee:
-		 * Zuerst werden die Properties ausgelöst, wenn diese sich beruhigt haben started die nächste ebene.
+		 * Zuerst werden die Properties ausgelöst, wenn diese sich beruhigt haben started die nächste Ebene.
 		 */
 
 		internal void ExecuteEvent(PpsDataChangedEvent ev)
@@ -769,6 +803,12 @@ namespace TecWare.PPSn.Data
 
 				changedEvents.Insert(i, ev);
 			}
+			else if (undoSink?.InTransaction ?? false)
+			{
+				inChanged = true;
+				ExecuteEvent(ev);
+				undoSink.Append(new ExecuteEvents(this));
+			}
 			else
 			{
 				inChanged = true;
@@ -781,20 +821,7 @@ namespace TecWare.PPSn.Data
 					ev.InvokeEvent();
 
 					// invoke related events
-					var sw = Stopwatch.StartNew();
-					while (changedEvents.Count > 0)
-					{
-						var  cur = changedEvents[0];
-						changedEvents.RemoveAt(0);
-
-						cur.InvokeEvent();
-
-						if (sw.ElapsedMilliseconds > 1000)
-						{
-							Debug.WriteLine("PPSDataSet: StopEvent work due timeout.");
-							break;
-						}
-					}
+					ExecuteQueuedEventsUnsafe();
 				}
 				finally
 				{
@@ -802,6 +829,36 @@ namespace TecWare.PPSn.Data
 				}
 			}
 		} // proc ExecuteEvent
+
+		private void ExecuteQueuedEvents()
+		{
+			try
+			{
+				ExecuteQueuedEventsUnsafe();
+			}
+			finally
+			{
+				inChanged = false;
+			}
+		} // proc ExecuteQueuedEvents
+
+		private void ExecuteQueuedEventsUnsafe()
+		{
+			var sw = Stopwatch.StartNew();
+			while (changedEvents.Count > 0)
+			{
+				var cur = changedEvents[0];
+				changedEvents.RemoveAt(0);
+
+				cur.InvokeEvent();
+
+				if (sw.ElapsedMilliseconds > 1000)
+				{
+					Debug.WriteLine("PPSDataSet: StopEvent work due timeout.");
+					break;
+				}
+			}
+		} // proc ExecuteQueuedEventsUnsafe
 
 		#endregion
 
@@ -836,7 +893,10 @@ namespace TecWare.PPSn.Data
 			=> ExecuteEvent(new PpsDataSetChangedEvent(this));
 
 		protected virtual void OnDataChanged()
-			=> InvokeEventHandler("OnDataChanged", this);
+		{
+			DataChanged?.Invoke(this, EventArgs.Empty);
+			InvokeEventHandler("OnDataChanged", this);
+		} // proc OnDataChanged
 
 		protected internal virtual void OnTableChanged(PpsDataTable table)
 			=> InvokeEventHandler("OnTableChanged", table);

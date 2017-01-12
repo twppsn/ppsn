@@ -61,7 +61,7 @@ namespace TecWare.PPSn.Data
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Manages the undo/redo elements. The undo operations are collected in transactions.</summary>
 	/// ~todo: Reset,Commit,Rollback müssen UndoManager ändern können, sonst ist er invalid
-	public sealed class PpsUndoManager : IPpsUndoSink, IEnumerable<IPpsUndoStep>, INotifyCollectionChanged
+	public sealed class PpsUndoManager : PpsUndoManagerBase, IEnumerable<IPpsUndoStep>, INotifyCollectionChanged
 	{
 		#region -- class PpsUndoGroup -------------------------------------------------------
 
@@ -80,7 +80,7 @@ namespace TecWare.PPSn.Data
 
 			public void Goto()
 			{
-				int index = manager.items.IndexOf(this);
+				var index = manager.items.IndexOf(this);
 				if (index <= -1)
 					throw new InvalidOperationException("Undo group has no manager.");
 				else if (index < manager.undoBorder)
@@ -91,13 +91,13 @@ namespace TecWare.PPSn.Data
 
 			internal void Undo()
 			{
-				for (int i = items.Length - 1; i >= 0; i--)
+				for (var i = items.Length - 1; i >= 0; i--)
 					items[i].Undo();
 			} // proc Undo
 
 			internal void Redo()
 			{
-				for (int i = 0; i < items.Length; i++)
+				for (var i = 0; i < items.Length; i++)
 					items[i].Redo();
 			} // proc Redo
 
@@ -105,10 +105,10 @@ namespace TecWare.PPSn.Data
 			{
 				get
 				{
-					int iIndex = manager.items.IndexOf(this);
-					if (iIndex <= -1)
+					var index = manager.items.IndexOf(this);
+					if (index <= -1)
 						throw new InvalidOperationException("Undo group has no manager.");
-					else if (iIndex < manager.undoBorder)
+					else if (index < manager.undoBorder)
 						return PpsUndoStepType.Undo;
 					else
 						return PpsUndoStepType.Redo;
@@ -121,176 +121,6 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsUndoTransaction -------------------------------------------------
-
-		private abstract class PpsUndoTransaction : IPpsUndoTransaction
-		{
-			protected string description;
-			private bool? commited = null;
-			private PpsUndoTransaction blockingTransaction = null;
-
-			public PpsUndoTransaction(string description)
-			{
-				if (String.IsNullOrEmpty(description))
-					throw new ArgumentNullException("description");
-
-				this.description = description;
-			} // ctor
-
-			public void Dispose()
-			{
-				if (!commited.HasValue)
-					Rollback();
-			} // proc Dispose
-
-			internal void CloseTransaction(bool lCommit)
-			{
-				CheckBlockingTransaction();
-				if (commited.HasValue)
-					throw new ObjectDisposedException(String.Format("Undo Operation: {0}", Description));
-
-				commited = lCommit;
-			} // proc CloseTransaction
-
-			private void CheckBlockingTransaction()
-			{
-				if (blockingTransaction != null)
-					throw new InvalidOperationException(String.Format("Transaction '{0}' is still blocked by '{1}'.", Description, blockingTransaction.Description));
-			} // proc CheckBlockingTransaction
-
-			public abstract void Append(IPpsUndoItem item);
-
-			public abstract void Commit();
-			public abstract void Rollback();
-
-			internal abstract int GetRollbackIndex();
-			internal abstract void RollbackToIndex(int iRollbackIndex);
-			internal abstract void UpdateCurrentTransaction(PpsUndoTransaction trans);
-
-			internal int LockTransaction(PpsUndoTransaction locked)
-			{
-				CheckBlockingTransaction();
-
-				blockingTransaction = locked;
-				return GetRollbackIndex();
-			} // proc LockTransaction
-
-			internal void UnlockTransaction(bool lCommit, int iRollbackIndex)
-			{
-				if (blockingTransaction == null)
-					throw new InvalidOperationException(String.Format("No blocking transaction."));
-
-				// is a rollback needed
-				if (!lCommit)
-					RollbackToIndex(iRollbackIndex);
-
-				// Close the current transaction
-				blockingTransaction.CloseTransaction(lCommit);
-				blockingTransaction = null;
-				UpdateCurrentTransaction(this);
-			} // proc UnlockTransaction
-
-			public string Description { get { return description; } }
-		} // class PpsUndoTransaction
-
-		#endregion
-
-		#region -- class PpsUndoRootTransaction ---------------------------------------------
-
-		private sealed class PpsUndoRootTransaction : PpsUndoTransaction
-		{
-			private PpsUndoManager manager;
-			private List<IPpsUndoItem> items;
-
-			public PpsUndoRootTransaction(PpsUndoManager manager, string sDescription)
-				: base(sDescription)
-			{
-				this.manager = manager;
-				this.items = new List<IPpsUndoItem>();
-			} // ctor
-
-			public override void Append(IPpsUndoItem item)
-			{
-				items.Add(item);
-			} // proc Append
-
-			internal override int GetRollbackIndex()
-			{
-				return items.Count;
-			} // func GetRollbackIndex
-
-			internal override void RollbackToIndex(int iRollbackIndex)
-			{
-				manager.SuspendAppend();
-				try
-				{
-					for (int i = items.Count - 1; i >= iRollbackIndex; i--)
-						items[i].Undo();
-				}
-				finally
-				{
-					manager.ResumeAppend();
-				}
-			} // proc RollbackToIndex
-
-			internal override void UpdateCurrentTransaction(PpsUndoTransaction trans)
-			{
-				manager.currentUndoTransaction = trans;
-			} // proc UpdateCurrentTransaction
-
-			public override void Commit()
-			{
-				CloseTransaction(true);
-				UpdateCurrentTransaction(null);
-				manager.AppendUndoGroup(new PpsUndoGroup(manager, Description, items.ToArray()));
-			} // proc Commit
-
-			public override void Rollback()
-			{
-				CloseTransaction(false);
-				UpdateCurrentTransaction(null);
-				RollbackToIndex(0);
-			} // proc Rollback
-		} // class PpsUndoRootTransaction
-
-		#endregion
-
-		#region -- class PpsUndoParentTransaction -------------------------------------------
-
-		private sealed class PpsUndoParentTransaction : PpsUndoTransaction
-		{
-			private PpsUndoTransaction parent;
-			private int rollbackIndex;
-
-			public PpsUndoParentTransaction(PpsUndoTransaction parent, string sDescription)
-				: base(sDescription)
-			{
-				this.parent = parent;
-				this.rollbackIndex = parent.LockTransaction(this);
-			} // ctor
-
-			public override void Append(IPpsUndoItem item)
-			{
-				parent.Append(item);
-			} // proc Append
-
-			internal override void RollbackToIndex(int rollbackIndex) { parent.RollbackToIndex(rollbackIndex); }
-			internal override int GetRollbackIndex() { return parent.GetRollbackIndex(); }
-			internal override void UpdateCurrentTransaction(PpsUndoTransaction trans) { parent.UpdateCurrentTransaction(trans); }
-
-			public override void Commit()
-			{
-				parent.UnlockTransaction(true, rollbackIndex);
-			} // proc Commit
-
-			public override void Rollback()
-			{
-				parent.UnlockTransaction(false, rollbackIndex);
-			} // proc Rollback
-		} // class PpsUndoParentTransaction
-
-		#endregion
-
 		public event EventHandler CanUndoChanged;
 		public event EventHandler CanRedoChanged;
 
@@ -298,9 +128,6 @@ namespace TecWare.PPSn.Data
 
 		private List<PpsUndoGroup> items = new List<PpsUndoGroup>();
 		private int undoBorder = 0;
-
-		private PpsUndoTransaction currentUndoTransaction = null;
-		private int appendSuspended = 0;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -310,22 +137,25 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- Append, Clear ----------------------------------------------------------
+		#region -- Clear, Commit ----------------------------------------------------------
 
-		public void Append(IPpsUndoItem item)
+		protected override void Commit(string description, IPpsUndoItem[] undoItems)
 		{
-			if (InUndoRedoOperation)
-				return;
-			if (currentUndoTransaction == null)
-				throw new InvalidOperationException("There is no active transaction.");
+			// Remove undo commands
+			items.RemoveRange(undoBorder, items.Count - undoBorder);
 
-			currentUndoTransaction.Append(item); // append new item to current undo transaction
-		} // proc Append
+			// add the undo item
+			items.Add(new PpsUndoGroup(this, description, undoItems));
+			undoBorder++;
 
-		public void Clear()
+			RaiseCanUndo();
+			RaiseCanRedo();
+			RaiseCollectionReset();
+		} // proc Commit
+
+		public override void Clear()
 		{
-			if (currentUndoTransaction != null)
-				throw new InvalidOperationException("There is an active transaction.");
+			base.Clear();
 
 			// clear stack
 			items.Clear();
@@ -336,48 +166,7 @@ namespace TecWare.PPSn.Data
 			RaiseCanRedo();
 			RaiseCollectionReset();
 		} // proc Clear
-
-		private void SuspendAppend()
-		{
-			appendSuspended++;
-		} // proc SuspendAppend
-
-		private void ResumeAppend()
-		{
-			appendSuspended--; //~todo: throw logic errors
-		} // proc SuspendAppend
-
-		private void AppendUndoGroup(PpsUndoGroup undoGroup)
-		{
-			// Remove undo commands
-			items.RemoveRange(undoBorder, items.Count - undoBorder);
-
-			// add the undo item
-			items.Add(undoGroup);
-			undoBorder++;
-
-			RaiseCanUndo();
-			RaiseCanRedo();
-			RaiseCollectionReset();
-		} // proc AppendUndoGroup
-
-		void IPpsUndoSink.ResetUndoStack()
-			=> Clear();
-
-		#endregion
-
-		#region -- BeginTransaction -------------------------------------------------------
-
-		public IPpsUndoTransaction BeginTransaction(string description)
-		{
-			currentUndoTransaction =
-				currentUndoTransaction == null ?
-					new PpsUndoRootTransaction(this, description) :
-					currentUndoTransaction = new PpsUndoParentTransaction(currentUndoTransaction, description);
-
-			return currentUndoTransaction;
-		} // func BeginTransaction
-
+		
 		#endregion
 
 		#region -- Undo/Redo --------------------------------------------------------------
@@ -431,19 +220,13 @@ namespace TecWare.PPSn.Data
     } // proc Redo
 
 		private void RaiseCanUndo()
-		{
-			CanUndoChanged?.Invoke(this, EventArgs.Empty);
-		} // proc RaiseCanUndo
+			=> CanUndoChanged?.Invoke(this, EventArgs.Empty);
 
 		private void RaiseCanRedo()
-		{
-			CanRedoChanged?.Invoke(this, EventArgs.Empty);
-		} // proc RaiseCanRedo
+			=> CanRedoChanged?.Invoke(this, EventArgs.Empty);
 
 		private void RaiseCollectionReset()
-		{
-			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-		} // proc RaiseCollectionReset
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
 		#endregion
 
@@ -463,11 +246,6 @@ namespace TecWare.PPSn.Data
 		public bool CanUndo => undoBorder > 0;
 		/// <summary></summary>
 		public bool CanRedo => undoBorder < items.Count;
-
-		/// <summary></summary>
-		public bool InTransaction => currentUndoTransaction != null;
-		/// <summary></summary>
-		public bool InUndoRedoOperation => appendSuspended > 0;
 	} // class PpsUndoManager
 
 	#endregion

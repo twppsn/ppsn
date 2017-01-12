@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
@@ -13,34 +14,48 @@ namespace TecWare.PPSn.Data
 	#region -- class PpsStaticCalculated ------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public sealed class PpsStaticCalculated : IPpsDataRowExtendedValue, INotifyPropertyChanged
+	/// <summary>The formular to get the result is definied in the column.</summary>
+	public sealed class PpsStaticCalculated : PpsDataRowExtentedValue
 	{
-		public event PropertyChangedEventHandler PropertyChanged;
+		private object currentValue = null;
+		// private readonly LuaChunk chunk;
 
-		private readonly PpsDataRow row;
-		private readonly PpsDataColumnDefinition column;
-
-		public PpsStaticCalculated(PpsDataColumnDefinition column, PpsDataRow row)
+		public PpsStaticCalculated(PpsDataRow row, PpsDataColumnDefinition column)
+			: base(row, column)
 		{
-			this.row = row;
-			this.column = column;
+
+			// var code = column.Meta.GetProperty("formula", (String)null);
+
+			// row.Table.DataSet.Properties.
+
+			// row.Table.DataSet.OnTableChanged
 		} // ctor
 
-		public XElement CoreData
+		private void UpdateValue()
 		{
-			get { return null; }
-			set { }
+		} // proc UpdateValue
+
+		/// <summary>Do persist the calculated value.</summary>
+		public override XElement CoreData
+		{
+			get
+			{
+				return new XElement("c", currentValue.ChangeType<string>());
+			}
+			set
+			{
+				var t = value?.Element("c")?.Value;
+				currentValue = t != null ? t : Procs.ChangeType(t, Column.DataType);
+			}
 		} // prop CoreData
 
-		/// <summary>Always <c>true</c>, there is no value to persist.</summary>
-		public bool IsNull => true;
+		public override bool IsNull => currentValue == null;
 	} // class PpsStaticCalculated
 
 	#endregion
 
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Multi line text field, that supports a macro syntax.</summary>
 	public sealed class PpsFormattedStringValue : PpsDataRowExtentedValue, IPpsDataRowGenericValue
 	{
 		private string value;

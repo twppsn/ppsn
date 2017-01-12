@@ -509,15 +509,13 @@ namespace TecWare.PPSn.Data
 				this.rowAdded = rowAdded;
 			} // ctor
 
+			public void Freeze() { }
+
 			public void Redo()
-			{
-				table.AddInternal(false, rowAdded);
-			} // proc Redo
+				=> table.AddInternal(false, rowAdded);
 
 			public void Undo()
-			{
-				table.RemoveInternal(rowAdded, false);
-			} // proc Undo
+				=> table.RemoveInternal(rowAdded, false);
 		} // class PpsDataTableAddChangeItem
 
 		#endregion
@@ -535,15 +533,13 @@ namespace TecWare.PPSn.Data
 				this.rowDeleted = rowDeleted;
 			} // ctor
 
+			public void Freeze() { }
+
 			public void Redo()
-			{
-				table.RemoveInternal(rowDeleted, false);
-			} // proc Redo
+				=> table.RemoveInternal(rowDeleted, false);
 
 			public void Undo()
-			{
-				table.AddInternal(false, rowDeleted);
-			} // proc Undo
+				=> table.AddInternal(false, rowDeleted);
 		} // class PpsDataTableAddChangeItem
 
 		#endregion
@@ -940,20 +936,26 @@ namespace TecWare.PPSn.Data
 			if (row.Table != this)
 				throw new InvalidOperationException();
 
-			// add the line
-			rows.Add(row);
-
-			// add this as an original row
-			if (isOriginal)
-				originalRows.Add(row);
-
-			// update current rows, if not deleted
-			if (row.RowState != PpsDataRowState.Deleted)
+			var undo = GetUndoSink();
+			using (var trans = undo?.BeginTransaction("Add row"))
 			{
-				currentRows.Add(row);
-				GetUndoSink()?.Append(new PpsDataTableAddChangeItem(this, row));
+				// add the line
+				rows.Add(row);
 
-				OnRowAdded(row);
+				// add this as an original row
+				if (isOriginal)
+					originalRows.Add(row);
+
+				// update current rows, if not deleted
+				if (row.RowState != PpsDataRowState.Deleted)
+				{
+					currentRows.Add(row);
+					undo?.Append(new PpsDataTableAddChangeItem(this, row));
+
+					OnRowAdded(row);
+				}
+
+				trans?.Commit();
 			}
 
 			return row;
@@ -1020,35 +1022,37 @@ namespace TecWare.PPSn.Data
 			if (row.Table != this)
 				throw new InvalidOperationException();
 
-			// remove the entry from the current list
-			var oldIndex = currentRows.IndexOf(row);
-			if (oldIndex != -1)
+			var undo = GetUndoSink();
+			using (var trans = undo?.BeginTransaction("Remove row"))
 			{
-				RemoveRelatedRows(row); // check related rows
-
-				currentRows.Remove(row);
-				GetUndoSink()?.Append(new PpsDataTableRemoveChangeItem(this, row));
-
-				OnRowRemoved(row, oldIndex);
-				r = true;
-			}
-
-			// remove the row also from the original rows
-			var originalIndex = originalRows.IndexOf(row);
-			if (originalIndex == -1) // it is a new added line
-			{
-				rows.Remove(row);
-				return r;
-			}
-			else // it is original loaded
-			{
-				if (removeOriginal)
+				// remove the entry from the current list
+				var oldIndex = currentRows.IndexOf(row);
+				if (oldIndex != -1)
 				{
-					rows.Remove(row);
-					return originalRows.Remove(row);
+					RemoveRelatedRows(row); // check related rows
+
+					currentRows.Remove(row);
+					undo?.Append(new PpsDataTableRemoveChangeItem(this, row));
+
+					OnRowRemoved(row, oldIndex);
+					r = true;
 				}
-				else
-					return r;
+
+				// remove the row also from the original rows
+				var originalIndex = originalRows.IndexOf(row);
+				if (originalIndex == -1) // it is a new added line
+					rows.Remove(row);
+				else // it is original loaded
+				{
+					if (removeOriginal)
+					{
+						rows.Remove(row);
+						r = originalRows.Remove(row);
+					}
+				}
+
+				trans?.Commit();
+				return r;
 			}
 		} // proc RemoveInternal
 
@@ -1469,9 +1473,13 @@ namespace TecWare.PPSn.Data
 						if (FilterRow(row))
 						{
 							lock (rows)
-								rows.Add(row);
-
-							OnCollectionAdd(row);
+							{
+								if (!rows.Contains(row))
+								{
+									rows.Add(row);
+									OnCollectionAdd(row);
+								}
+							}
 						}
 					}
 					break;
