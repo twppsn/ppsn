@@ -1153,12 +1153,22 @@ namespace TecWare.PPSn.Data
 				originalRows.Add(row);
 		} // proc CommitRow
 
-		/// <summary>Die aktuelle Werte werden in die Default-Wert kopiert.</summary>
+		/// <summary>Copy the current values into the original values and remove all deleted rows.</summary>
 		public void Commit()
 		{
-			// Alle Dateizeilen bearbeiten
-			foreach (PpsDataRow row in currentRows)
+			// copy values of the current rows
+			foreach (var row in currentRows)
 				row.Commit();
+
+			// remove all deleted rows
+			for (var i = rows.Count - 1; i >= 0; i--)
+			{
+				if (rows[i].RowState == PpsDataRowState.Deleted)
+				{
+					originalRows.Remove(rows[i]);
+					rows.RemoveAt(i);
+				}
+			}
 		} // proc Commit
 
 		#endregion
