@@ -30,7 +30,7 @@ namespace TecWare.PPSn.UI
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Generic value converter</summary>
 	[ContentProperty("ConvertExpression")]
-	public class LuaValueConverter : IValueConverter
+	public class LuaValueConverter : IValueConverter, IMultiValueConverter
 	{
 		private delegate object ConvertDelegate(object value, Type targetType, object parameter, PpsEnvironment environment, CultureInfo culture);
 		private static Lua lua = new Lua(); // lua engine for the value converters
@@ -41,7 +41,7 @@ namespace TecWare.PPSn.UI
 		private ConvertDelegate convertBackDelegate;
 		private Lazy<PpsEnvironment> getEnvironment = null;
 
-		private object ConvertIntern(string script, ref ConvertDelegate dlg, object value, Type targetType, object parameter, CultureInfo culture)
+		private object ConvertIntern(string script, ref ConvertDelegate dlg, object value, object targetType, object parameter, CultureInfo culture)
 		{
 			if (String.IsNullOrEmpty(script))
 				throw new NotImplementedException();
@@ -52,16 +52,18 @@ namespace TecWare.PPSn.UI
 			return dlg.DynamicInvoke(value, targetType, parameter, getEnvironment?.Value, culture);
 		} // func ConvertIntern
 
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-		{
-			return ConvertIntern(convert, ref convertDelegate, value, targetType, parameter, culture);
-		} // func Convert
+		object IMultiValueConverter.Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+			=> ConvertIntern(convert, ref convertDelegate, values, targetType, parameter, culture);
 
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-		{
-			return ConvertIntern(convertBack, ref convertBackDelegate, value, targetType, parameter, culture);
-		} // func ConvertBack
+		object[] IMultiValueConverter.ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+			=> new LuaResult(ConvertIntern(convertBack, ref convertBackDelegate, value, targetTypes, parameter, culture)).Values;
 
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+			=> ConvertIntern(convert, ref convertDelegate, value, targetType, parameter, culture);
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+			=> ConvertIntern(convertBack, ref convertBackDelegate, value, targetType, parameter, culture);
+		
 		public string ConvertExpression
 		{
 			get { return convert; }
