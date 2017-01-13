@@ -12,16 +12,12 @@
 // CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
 // specific language governing permissions and limitations under the Licence.
 //
-# endregion
+#endregion
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TecWare.PPSn.Data;
 using System.Xml.Linq;
-using System.Data;
-using System.Collections.Generic;
 using System.Data.SQLite;
-using TecWare.DE.Data;
-using System.Text;
 
 namespace TecWare.PPSn.PpsEnvironment
 {
@@ -32,7 +28,7 @@ namespace TecWare.PPSn.PpsEnvironment
 		/// This Scheme supposed to be equal to GetTestDatabase()
 		/// </summary>
 		/// <returns></returns>
-		private PpsDataSetDefinitionDesktop GetMasterDataScheme_A()
+		private PpsDataSetDefinitionDesktop GetMasterDataScheme_Same()
 		{
 			var xScheme = XElement.Parse("<schema>" +
 													"<table name=\"Table1\">" +
@@ -72,7 +68,7 @@ namespace TecWare.PPSn.PpsEnvironment
 		/// also the new Column contains a default value, which must be inserted
 		/// </summary>
 		/// <returns></returns>
-		private PpsDataSetDefinitionDesktop GetMasterDataScheme_B()
+		private PpsDataSetDefinitionDesktop GetMasterDataScheme_AddColumn()
 		{
 			var xScheme = XElement.Parse("<schema>" +
 													"<table name=\"Table1\">" +
@@ -124,7 +120,7 @@ namespace TecWare.PPSn.PpsEnvironment
 		/// The data in the first column must be the same (if import is successful)
 		/// </summary>
 		/// <returns></returns>
-		private PpsDataSetDefinitionDesktop GetMasterDataScheme_C()
+		private PpsDataSetDefinitionDesktop GetMasterDataScheme_RemoveColumn()
 		{
 			var xScheme = XElement.Parse("<schema>" +
 													"<table name=\"Table1\">" +
@@ -152,7 +148,7 @@ namespace TecWare.PPSn.PpsEnvironment
 		/// This Scheme supposed to have a different datatype in second column than GetTestDatabase()
 		/// </summary>
 		/// <returns></returns>
-		private PpsDataSetDefinitionDesktop GetMasterDataScheme_D()
+		private PpsDataSetDefinitionDesktop GetMasterDataScheme_ChangeColumnType()
 		{
 			var xScheme = XElement.Parse("<schema>" +
 													"<table name=\"Table1\">" +
@@ -192,7 +188,7 @@ namespace TecWare.PPSn.PpsEnvironment
 		/// but is marked dropable (not marked as ''MustImport'')
 		/// </summary>
 		/// <returns></returns>
-		private PpsDataSetDefinitionDesktop GetMasterDataScheme_E()
+		private PpsDataSetDefinitionDesktop GetMasterDataScheme_Dropable()
 		{
 			var xScheme = XElement.Parse("<schema>" +
 													"<table name=\"Table1\">" +
@@ -316,7 +312,7 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme_A(), sqliteDataBase);
+				var master = new PpsMasterData(GetMasterDataScheme_Same(), sqliteDataBase);
 				try
 				{
 					master.RefreshMasterDataScheme();
@@ -339,7 +335,7 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme_B(), sqliteDataBase);
+				var master = new PpsMasterData(GetMasterDataScheme_AddColumn(), sqliteDataBase);
 				try
 				{
 					master.RefreshMasterDataScheme();
@@ -365,7 +361,7 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme_C(), sqliteDataBase);
+				var master = new PpsMasterData(GetMasterDataScheme_RemoveColumn(), sqliteDataBase);
 				try
 				{
 					master.RefreshMasterDataScheme();
@@ -391,7 +387,7 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme_D(), sqliteDataBase);
+				var master = new PpsMasterData(GetMasterDataScheme_ChangeColumnType(), sqliteDataBase);
 				try
 				{
 					master.RefreshMasterDataScheme();
@@ -417,7 +413,7 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme_E(), sqliteDataBase);
+				var master = new PpsMasterData(GetMasterDataScheme_Dropable(), sqliteDataBase);
 				try
 				{
 					master.RefreshMasterDataScheme();
