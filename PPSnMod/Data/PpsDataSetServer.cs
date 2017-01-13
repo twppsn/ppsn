@@ -59,7 +59,7 @@ namespace TecWare.PPSn.Server.Data
 			public PpsDataColumnMetaCollectionServer(XElement xColumnDefinition)
 			{
 				foreach (var x in xColumnDefinition.Elements(xnMeta))
-					PpsDataSetServerDefinition.AddMetaFromElement(xColumnDefinition, WellknownMetaTypes, Add);
+					PpsDataSetServerDefinition.AddMetaFromElement(x, WellknownMetaTypes, Add);
 			} // ctor
 
 			public PpsDataColumnMetaCollectionServer(PpsDataColumnMetaCollectionServer clone)
