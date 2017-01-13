@@ -57,7 +57,7 @@ namespace TecWare.PPSn.Server.Data
 			public PpsDataColumnMetaCollectionServer(XElement xColumnDefinition)
 			{
 				foreach (var x in xColumnDefinition.Elements(xnMeta))
-					PpsDataSetServerDefinition.AddMetaFromElement(xColumnDefinition, WellknownMetaTypes, Add);
+					PpsDataSetServerDefinition.AddMetaFromElement(x, WellknownMetaTypes, Add);
 			} // ctor
 
 			public PpsDataColumnMetaCollectionServer(PpsDataColumnMetaCollectionServer clone)
@@ -549,12 +549,18 @@ namespace TecWare.PPSn.Server.Data
 		{
 			if (xMeta == null)
 				return;
-
+			
 			var name = xMeta.GetAttribute("name", String.Empty);
 			if (String.IsNullOrEmpty(name))
 				throw new DEConfigurationException(xMeta, "@name is empty.");
-
-			add(name, () => LuaType.GetType(xMeta.GetAttribute("datatype", "object")), xMeta.Value);
+			try
+			{
+				add(name, () => LuaType.GetType(xMeta.GetAttribute("dataType", "object")), xMeta.Value);
+			}
+			catch (ArgumentNullException e)
+			{
+				throw new DEConfigurationException(xMeta, $"Datatype '{xMeta.GetAttribute("dataType", "object")}' unknown.", e);
+			}
 		} // proc AddMetaFromElement
 
 		public static void WriteSchemaMetaInfo(XElement xParent, PpsMetaCollection metaInfo)
