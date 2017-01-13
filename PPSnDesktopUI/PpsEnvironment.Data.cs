@@ -1076,14 +1076,17 @@ namespace TecWare.PPSn
 
 		private async Task RefreshMasterDataSchemeAsync()
 		{
-			var commands = new List<string>();
-			var masterDataDataSet = await ActiveDataSets.GetDataSetDefinitionAsync("masterdata");
-			if (masterDataDataSet == null)
-				throw new Exception("Failed to load masterdata.xml.");
+			if (isOnline)
+			{
+				var commands = new List<string>();
+				var masterDataDataSet = await ActiveDataSets.GetDataSetDefinitionAsync("masterdata");
+				if (masterDataDataSet == null)
+					throw new Exception("Failed to load masterdata.xml.");
 
-			var master = new PpsMasterData(masterDataDataSet, localConnection);
+				var master = new PpsMasterData(masterDataDataSet, localConnection);
 
-			master.RefreshMasterDataScheme();
+				master.RefreshMasterDataScheme();
+			}
 		}
 
 		public Task<bool> ForceOnlineAsync(bool throwException = true)

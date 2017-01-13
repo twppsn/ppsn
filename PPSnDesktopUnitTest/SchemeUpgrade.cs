@@ -24,58 +24,24 @@ namespace TecWare.PPSn.PpsEnvironment
 	[TestClass]
 	public class SchemeUpgrade
 	{
-		/// <summary>
-		/// This Scheme supposed to be equal to GetTestDatabase()
-		/// </summary>
-		/// <returns></returns>
-		private PpsDataSetDefinitionDesktop GetMasterDataScheme_Same()
+		private enum TestCase
 		{
-			var xScheme = XElement.Parse("<schema>" +
-													"<table name=\"Table1\">" +
-													 "<meta>" +
-													  "<mustImport dataType=\"string\">true</mustImport>" +
-													 "</meta>" +
-													 "<column name=\"Column1\" dataType=\"long\" isPrimary=\"true\" isIdentity=\"true\">" +
-														"<meta>" +
-														 "<displayName dataType=\"string\">dbo.Knst.Id</displayName>" +
-														 "<SqlType dataType=\"System.Data.SqlDbType\">BigInt</SqlType>" +
-														 "<MaxLength dataType=\"int\">8</MaxLength>" +
-														 "<Precision dataType=\"int\">19</Precision>" +
-														 "<Scale dataType=\"int\">0</Scale>" +
-														 "<IsNull dataType=\"bool\">false</IsNull>" +
-														 "<IsIdentity dataType=\"bool\">true</IsIdentity>" +
-														"</meta>" +
-													  "</column>" +
-													  "<column name =\"Column2\" dataType=\"string\">" +
-														"<meta>" +
-														 "<displayName dataType=\"string\">dbo.Knst.Id</displayName>" +
-														 "<SqlType dataType=\"System.Data.SqlDbType\">NVarChar</SqlType>" +
-														 "<MaxLength dataType=\"int\">8</MaxLength>" +
-														 "<Precision dataType=\"int\">19</Precision>" +
-														 "<Scale dataType=\"int\">0</Scale>" +
-														 "<IsNull dataType=\"bool\">true</IsNull>" +
-														 "<IsIdentity dataType=\"bool\">false</IsIdentity>" +
-														"</meta>" +
-													  "</column>" +
-													 "</table>" +
-													"</schema>");
-
-			return new PpsDataSetDefinitionDesktop(null, "masterDataSet", xScheme);
+			SameTable,
+			AddColumn,
+			RemoveColumn,
+			ChangeColumnType,
+			DropableTable
 		}
-
+		
 		/// <summary>
-		/// This Scheme supposed to have one column more than GetTestDatabase()
-		/// also the new Column contains a default value, which must be inserted
+		/// Compiles the dataset according to the test case.
 		/// </summary>
+		/// <param name="testcase"></param>
 		/// <returns></returns>
-		private PpsDataSetDefinitionDesktop GetMasterDataScheme_AddColumn()
+		private PpsDataSetDefinitionDesktop GetMasterDataScheme(TestCase testcase)
 		{
-			var xScheme = XElement.Parse("<schema>" +
-													"<table name=\"Table1\">" +
-													 "<meta>" +
-													  "<mustImport dataType=\"string\">true</mustImport>" +
-													 "</meta>" +
-													 "<column name=\"Column1\" dataType=\"long\" isPrimary=\"true\" isIdentity=\"true\">" +
+			#region -- XElements --
+			var column1 = XElement.Parse("<column name=\"Column1\" dataType=\"long\" isPrimary=\"true\" isIdentity=\"true\">" +
 														"<meta>" +
 														 "<displayName dataType=\"string\">dbo.Knst.Id</displayName>" +
 														 "<SqlType dataType=\"System.Data.SqlDbType\">BigInt</SqlType>" +
@@ -85,8 +51,8 @@ namespace TecWare.PPSn.PpsEnvironment
 														 "<IsNull dataType=\"bool\">false</IsNull>" +
 														 "<IsIdentity dataType=\"bool\">true</IsIdentity>" +
 														"</meta>" +
-													  "</column>" +
-													  "<column name =\"Column2\" dataType=\"string\">" +
+													  "</column>");
+			var column2 = XElement.Parse("<column name =\"Column2\" dataType=\"string\">" +
 														"<meta>" +
 														 "<displayName dataType=\"string\">dbo.Knst.Id</displayName>" +
 														 "<SqlType dataType=\"System.Data.SqlDbType\">NVarChar</SqlType>" +
@@ -96,77 +62,8 @@ namespace TecWare.PPSn.PpsEnvironment
 														 "<IsNull dataType=\"bool\">true</IsNull>" +
 														 "<IsIdentity dataType=\"bool\">false</IsIdentity>" +
 														"</meta>" +
-													  "</column>" +
-													  "<column name =\"Column3\" dataType=\"string\">" +
-														"<meta>" +
-														 "<Default dataType=\"string\">I am a default value.</Default>"+
-														 "<displayName dataType=\"string\">dbo.Knst.Id</displayName>" +
-														 "<SqlType dataType=\"System.Data.SqlDbType\">NVarChar</SqlType>" +
-														 "<MaxLength dataType=\"int\">8</MaxLength>" +
-														 "<Precision dataType=\"int\">19</Precision>" +
-														 "<Scale dataType=\"int\">0</Scale>" +
-														 "<IsNull dataType=\"bool\">true</IsNull>" +
-														 "<IsIdentity dataType=\"bool\">false</IsIdentity>" +
-														"</meta>" +
-													  "</column>" +
-													 "</table>" +
-													"</schema>");
-
-			return new PpsDataSetDefinitionDesktop(null, "masterDataSet", xScheme);
-		}
-
-		/// <summary>
-		/// This Scheme supposed to have one column less than GetTestDatabase()
-		/// The data in the first column must be the same (if import is successful)
-		/// </summary>
-		/// <returns></returns>
-		private PpsDataSetDefinitionDesktop GetMasterDataScheme_RemoveColumn()
-		{
-			var xScheme = XElement.Parse("<schema>" +
-													"<table name=\"Table1\">" +
-													 "<meta>" +
-													  "<mustImport dataType=\"string\">true</mustImport>" +
-													 "</meta>" +
-													 "<column name=\"Column1\" dataType=\"long\" isPrimary=\"true\" isIdentity=\"true\">" +
-														"<meta>" +
-														 "<displayName dataType=\"string\">dbo.Knst.Id</displayName>" +
-														 "<SqlType dataType=\"System.Data.SqlDbType\">BigInt</SqlType>" +
-														 "<MaxLength dataType=\"int\">8</MaxLength>" +
-														 "<Precision dataType=\"int\">19</Precision>" +
-														 "<Scale dataType=\"int\">0</Scale>" +
-														 "<IsNull dataType=\"bool\">false</IsNull>" +
-														 "<IsIdentity dataType=\"bool\">true</IsIdentity>" +
-														"</meta>" +
-													  "</column>" +
-													 "</table>" +
-													"</schema>");
-
-			return new PpsDataSetDefinitionDesktop(null, "masterDataSet", xScheme);
-		}
-
-		/// <summary>
-		/// This Scheme supposed to have a different datatype in second column than GetTestDatabase()
-		/// </summary>
-		/// <returns></returns>
-		private PpsDataSetDefinitionDesktop GetMasterDataScheme_ChangeColumnType()
-		{
-			var xScheme = XElement.Parse("<schema>" +
-													"<table name=\"Table1\">" +
-													 "<meta>" +
-													  "<mustImport dataType=\"string\">true</mustImport>" +
-													 "</meta>" +
-													 "<column name=\"Column1\" dataType=\"long\" isPrimary=\"true\" isIdentity=\"true\">" +
-														"<meta>" +
-														 "<displayName dataType=\"string\">dbo.Knst.Id</displayName>" +
-														 "<SqlType dataType=\"System.Data.SqlDbType\">BigInt</SqlType>" +
-														 "<MaxLength dataType=\"int\">8</MaxLength>" +
-														 "<Precision dataType=\"int\">19</Precision>" +
-														 "<Scale dataType=\"int\">0</Scale>" +
-														 "<IsNull dataType=\"bool\">false</IsNull>" +
-														 "<IsIdentity dataType=\"bool\">true</IsIdentity>" +
-														"</meta>" +
-													  "</column>" +
-													  "<column name =\"Column2\" dataType=\"int\">" +
+													  "</column>");
+			var column2int = XElement.Parse("<column name =\"Column2\" dataType=\"int\">" +
 														"<meta>" +
 														 "<displayName dataType=\"string\">dbo.Knst.Id</displayName>" +
 														 "<SqlType dataType=\"System.Data.SqlDbType\">NVarChar</SqlType>" +
@@ -176,35 +73,10 @@ namespace TecWare.PPSn.PpsEnvironment
 														 "<IsNull dataType=\"bool\">true</IsNull>" +
 														 "<IsIdentity dataType=\"bool\">false</IsIdentity>" +
 														"</meta>" +
-													  "</column>" +
-													 "</table>" +
-													"</schema>");
-
-			return new PpsDataSetDefinitionDesktop(null, "masterDataSet", xScheme);
-		}
-
-		/// <summary>
-		/// This Scheme supposed to be equal to GetTestDatabase()
-		/// but is marked dropable (not marked as ''MustImport'')
-		/// </summary>
-		/// <returns></returns>
-		private PpsDataSetDefinitionDesktop GetMasterDataScheme_Dropable()
-		{
-			var xScheme = XElement.Parse("<schema>" +
-													"<table name=\"Table1\">" +
-													 "<column name=\"Column1\" dataType=\"long\" isPrimary=\"true\" isIdentity=\"true\">" +
+													  "</column>");
+			var column3 = XElement.Parse("<column name =\"Column3\" dataType=\"string\">" +
 														"<meta>" +
-														 "<displayName dataType=\"string\">dbo.Knst.Id</displayName>" +
-														 "<SqlType dataType=\"System.Data.SqlDbType\">BigInt</SqlType>" +
-														 "<MaxLength dataType=\"int\">8</MaxLength>" +
-														 "<Precision dataType=\"int\">19</Precision>" +
-														 "<Scale dataType=\"int\">0</Scale>" +
-														 "<IsNull dataType=\"bool\">false</IsNull>" +
-														 "<IsIdentity dataType=\"bool\">true</IsIdentity>" +
-														"</meta>" +
-													  "</column>" +
-													  "<column name =\"Column2\" dataType=\"string\">" +
-														"<meta>" +
+														 "<Default dataType=\"string\">I am a default value.</Default>" +
 														 "<displayName dataType=\"string\">dbo.Knst.Id</displayName>" +
 														 "<SqlType dataType=\"System.Data.SqlDbType\">NVarChar</SqlType>" +
 														 "<MaxLength dataType=\"int\">8</MaxLength>" +
@@ -213,11 +85,52 @@ namespace TecWare.PPSn.PpsEnvironment
 														 "<IsNull dataType=\"bool\">true</IsNull>" +
 														 "<IsIdentity dataType=\"bool\">false</IsIdentity>" +
 														"</meta>" +
-													  "</column>" +
-													 "</table>" +
-													"</schema>");
+													  "</column>");
+			var xMustImportMeta = XElement.Parse("<meta>" +
+															  "<mustImport dataType=\"string\">true</mustImport>" +
+															 "</meta>");
 
-			return new PpsDataSetDefinitionDesktop(null, "masterDataSet", xScheme);
+			#endregion
+
+			switch (testcase)
+			{
+				case TestCase.SameTable:
+					return new PpsDataSetDefinitionDesktop(null, "masterDataSet", new XElement("schema",
+																									     new XElement("table",
+																											  new XAttribute("name", "Table1"),
+																											  xMustImportMeta,
+																											  column1,
+																											  column2)));
+				case TestCase.AddColumn:
+					return new PpsDataSetDefinitionDesktop(null, "masterDataSet", new XElement("schema",
+																										  new XElement("table",
+																											  new XAttribute("name", "Table1"),
+																											  xMustImportMeta,
+																											  column1,
+																											  column2,
+																											  column3)));
+				case TestCase.RemoveColumn:
+					return new PpsDataSetDefinitionDesktop(null, "masterDataSet", new XElement("schema",
+																										  new XElement("table",
+																											  new XAttribute("name", "Table1"),
+																											  xMustImportMeta,
+																											  column1)));
+				case TestCase.ChangeColumnType:
+					return new PpsDataSetDefinitionDesktop(null, "masterDataSet", new XElement("schema",
+																										  new XElement("table",
+																											  new XAttribute("name", "Table1"),
+																											  xMustImportMeta,
+																											  column1,
+																											  column2int)));
+				case TestCase.DropableTable:
+					return new PpsDataSetDefinitionDesktop(null, "masterDataSet", new XElement("schema",
+																										  new XElement("table",
+																											  new XAttribute("name", "Table1"),
+																											  column1,
+																											  column2)));
+			}
+
+			return null;
 		}
 
 		/// <summary>
@@ -312,7 +225,7 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme_Same(), sqliteDataBase);
+				var master = new PpsMasterData(GetMasterDataScheme(TestCase.SameTable), sqliteDataBase);
 				try
 				{
 					master.RefreshMasterDataScheme();
@@ -342,7 +255,7 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme_AddColumn(), sqliteDataBase);
+				var master = new PpsMasterData(GetMasterDataScheme(TestCase.AddColumn), sqliteDataBase);
 				try
 				{
 					master.RefreshMasterDataScheme();
@@ -368,7 +281,7 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme_RemoveColumn(), sqliteDataBase);
+				var master = new PpsMasterData(GetMasterDataScheme(TestCase.RemoveColumn), sqliteDataBase);
 				try
 				{
 					master.RefreshMasterDataScheme();
@@ -394,7 +307,7 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme_ChangeColumnType(), sqliteDataBase);
+				var master = new PpsMasterData(GetMasterDataScheme(TestCase.ChangeColumnType), sqliteDataBase);
 				try
 				{
 					master.RefreshMasterDataScheme();
@@ -420,7 +333,7 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme_Dropable(), sqliteDataBase);
+				var master = new PpsMasterData(GetMasterDataScheme(TestCase.DropableTable), sqliteDataBase);
 				try
 				{
 					master.RefreshMasterDataScheme();
@@ -452,7 +365,7 @@ namespace TecWare.PPSn.PpsEnvironment
 
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme_RemoveColumn(), sqliteDataBase);
+				var master = new PpsMasterData(GetMasterDataScheme(TestCase.RemoveColumn), sqliteDataBase);
 				try
 				{
 					master.RefreshMasterDataScheme();

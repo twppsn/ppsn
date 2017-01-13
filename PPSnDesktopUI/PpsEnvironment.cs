@@ -18,11 +18,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Dynamic;
-using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Net;
-using System.Net.Mime;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -30,9 +27,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
-using System.Windows.Markup;
 using System.Windows.Threading;
-using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
@@ -40,7 +35,6 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
-using TecWare.PPSn.UI;
 using LExpression = System.Linq.Expressions.Expression;
 using System.Data.SQLite;
 
@@ -431,7 +425,7 @@ namespace TecWare.PPSn
 		static IEnumerable<string> GenerateUpdateScript(string tableName, bool mustImport, IEnumerable<IDataColumn> remoteScheme, IEnumerable<IDataColumn> localScheme)
 		{
 			var commands = new List<string>();
-			// -----------------------------------------------------------------------------------------
+
 			// the table does not exist or is droppable - must be created
 			if (!localScheme.Any() || !mustImport)
 			{
@@ -444,10 +438,8 @@ namespace TecWare.PPSn
 			else
 			{
 				var newColumns = new List<IDataColumn>();
-				var sameColumns = new List<string>();
-				//var obsoleteColumns = new List<IDataColumn>();
-
-				// behave: *.Name includes the TableName!
+				var sameColumns = new List<string>();	// for String.Join - only Column names are used
+				
 				foreach (var remoteColumn in remoteScheme)
 				{
 					var found = false;
@@ -489,20 +481,14 @@ namespace TecWare.PPSn
 				else
 				// there are no columns, which have to be deleted - check now if there are new columns to add
 				if (newColumns.Count() > 0)
-				{
 					foreach (var column in newColumns)
-					{
-						//if (!column.IsNull && String.IsNullOrEmpty(column.Default))
-						//	throw new Exception("Can not upgrade the Database. The new scheme trys to add a column wich must not be null but does not provide a default value for it.");
 						commands.Add($"ALTER TABLE '{tableName}' ADD COLUMN [{column.Name}] {DataTypeToSQLTypeString(column.DataType)} {(column.Attributes.GetProperty("IsNull", false) ? " NULL" : " NOT NULL")}{(String.IsNullOrEmpty(column.Attributes.GetProperty("Default", String.Empty)) ? String.Empty : " DEFAULT '" + column.Attributes.GetProperty("Default", String.Empty) + "'")};");
-					}
-				}
 			}
 
 			return commands;
 		}
 
-		static private List<string> CreateNewTable(IEnumerable<IDataColumn> remoteTable, string tableName)
+		private static List<string> CreateNewTable(IEnumerable<IDataColumn> remoteTable, string tableName)
 		{
 			var indexingCommands = new List<string>();
 			var command = new StringBuilder("CREATE TABLE '").Append(tableName).Append("' (");

@@ -128,11 +128,11 @@ namespace TecWare.PPSn
 			await base.RefreshAsync();
 			if (IsOnline && IsAuthentificated)
 			{
-				await Task.Run(new Action(UpdateConstants));
+				// await Task.Run(new Action(UpdateConstants));
 				await Task.Run(RefreshObjectStoreAsync);
 			}
 
-			await RefreshConstantsSchemaAsync();
+			// await RefreshConstantsSchemaAsync();
 			await RefreshNavigatorAsync();
 		} // proc RefreshAsync
 
