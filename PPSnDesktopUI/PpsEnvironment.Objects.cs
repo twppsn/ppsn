@@ -1007,23 +1007,17 @@ namespace TecWare.PPSn
 
 		public async Task LoadAsync(SQLiteTransaction transaction = null)
 		{
-			using (var docTrans = UndoSink?.BeginTransaction("Internal Read"))
+			using (var src = await baseObj.LoadRawDataAsync(transaction))
 			{
-				using (var src = await baseObj.LoadRawDataAsync(transaction))
+				if (src == null)
+					throw new ArgumentNullException("Data is missing.");
+
+				using (var xml = XmlReader.Create(src, Procs.XmlReaderSettings))
 				{
-					if (src == null)
-						throw new ArgumentNullException("Data is missing.");
-
-					using (var xml = XmlReader.Create(src, Procs.XmlReaderSettings))
-					{
-						var xData = XDocument.Load(xml).Root;
-						await Environment.Dispatcher.InvokeAsync(() => Read(xData));
-					}
+					var xData = XDocument.Load(xml).Root;
+					await Environment.Dispatcher.InvokeAsync(() => Read(xData));
 				}
-				docTrans?.Commit();
 			}
-
-			UndoManager?.Clear();
 		} // proc LoadAsync
 
 		public async Task CommitAsync(SQLiteTransaction trans = null)
