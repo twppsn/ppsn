@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+# endregion
+using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TecWare.PPSn.Data;
 using System.Xml.Linq;
@@ -174,6 +189,7 @@ namespace TecWare.PPSn.PpsEnvironment
 
 		/// <summary>
 		/// This Scheme supposed to be equal to GetTestDatabase()
+		/// but is marked dropable (not marked as ''MustImport'')
 		/// </summary>
 		/// <returns></returns>
 		private PpsDataSetDefinitionDesktop GetMasterDataScheme_E()
@@ -208,7 +224,12 @@ namespace TecWare.PPSn.PpsEnvironment
 			return new PpsDataSetDefinitionDesktop(null, "masterDataSet", xScheme);
 		}
 
-
+		/// <summary>
+		/// Creates the database for the tests
+		/// two colums, int and text
+		/// with one row of actual data
+		/// </summary>
+		/// <returns></returns>
 		private SQLiteConnection GetTestDatabase()
 		{
 			var sqliteDataBase = new SQLiteConnection("Data Source=:memory:;DateTimeKind=Utc;foreign keys=true;new=true;");
