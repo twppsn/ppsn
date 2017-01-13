@@ -59,7 +59,7 @@ namespace TecWare.PPSn.Server.Data
 			public PpsDataColumnMetaCollectionServer(XElement xColumnDefinition)
 			{
 				foreach (var x in xColumnDefinition.Elements(xnMeta))
-					PpsDataSetServerDefinition.AddMetaFromElement(xColumnDefinition, WellknownMetaTypes, Add);
+					PpsDataSetServerDefinition.AddMetaFromElement(x, WellknownMetaTypes, Add);
 			} // ctor
 
 			public PpsDataColumnMetaCollectionServer(PpsDataColumnMetaCollectionServer clone)
@@ -369,6 +369,7 @@ namespace TecWare.PPSn.Server.Data
 		#endregion
 
 		private readonly PpsApplication application;
+		private readonly Lua lua;
 		private readonly string name;
 		private readonly DateTime configurationStamp;
 		private readonly string[] inheritedFrom;
@@ -383,6 +384,7 @@ namespace TecWare.PPSn.Server.Data
 		public PpsDataSetServerDefinition(IServiceProvider sp, string name, XElement config, DateTime configurationStamp)
 		{
 			this.application = sp.GetService<PpsApplication>(true);
+			this.lua = sp.GetService<IDELuaEngine>(true).Lua; 
 			this.name = name;
 			this.configurationStamp = configurationStamp;
 
@@ -558,6 +560,7 @@ namespace TecWare.PPSn.Server.Data
 		public string Name => name;
 		public override PpsDataSetMetaCollection Meta => metaInfo;
 		public PpsApplication Application => application;
+		public override Lua Lua => lua;
 
 		public DateTime ConfigurationStamp => configurationStamp;
 		public string[] ClientScripts => clientScripts;
