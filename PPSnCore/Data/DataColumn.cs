@@ -37,7 +37,9 @@ namespace TecWare.PPSn.Data
 		/// <summary>Kurztext der Spalte</summary>
 		Caption,
 		/// <summary>Beschreibungstext der Spalte</summary>
-		Description
+		Description,
+		/// <summary></summary>
+		NotNull
 	} // enum PpsDataColumnMetaData
 
 	#endregion

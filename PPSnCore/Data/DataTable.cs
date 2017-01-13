@@ -238,9 +238,9 @@ namespace TecWare.PPSn.Data
 					row.PropertyChanged -= propertyChangedHandler;
 			} // proc RemoveValueChanged
 
-			private static Type GetNullableType(Type dataType)
+			private static Type GetNullableType(Type dataType, bool isNullable)
 			{
-				if (dataType.IsValueType && dataType != typeof(void))
+				if (isNullable && dataType.IsValueType && dataType != typeof(void))
 					return typeof(Nullable<>).MakeGenericType(dataType);
 				return dataType;
 			} // func GetNullableType
@@ -252,7 +252,7 @@ namespace TecWare.PPSn.Data
 				=> column.IsExtended;
 
 			public override Type PropertyType
-				=> column.IsRelationColumn ? typeof(PpsDataRow) : GetNullableType(column.DataType);
+				=> column.IsRelationColumn ? typeof(PpsDataRow) : GetNullableType(column.DataType, IsNullable);
 
 			public override bool CanResetValue(object component)
 			{
@@ -286,6 +286,8 @@ namespace TecWare.PPSn.Data
 				var row = (PpsDataRow)component;
 				return row.IsValueModified(column.Index);
 			} // func ShouldSerializeValue
+
+			public bool IsNullable => !column.Meta.GetProperty<bool>(PpsDataColumnMetaData.NotNull, false);
 		} // class PpsColumnPropertyDescriptor
 
 		#endregion
