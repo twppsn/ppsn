@@ -574,7 +574,7 @@ namespace TecWare.PPSn.Server.Data
 			if (String.IsNullOrEmpty(name))
 				throw new DEConfigurationException(xMeta, "@name is empty.");
 
-			add(name, () => LuaType.GetType(xMeta.GetAttribute("datatype", "object")), xMeta.Value);
+			add(name, () => LuaType.GetType(xMeta.GetAttribute("dataType", "object")), xMeta.Value);
 		} // proc AddMetaFromElement
 
 		public static void WriteSchemaMetaInfo(XElement xParent, PpsMetaCollection metaInfo)
