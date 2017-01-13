@@ -431,6 +431,36 @@ namespace TecWare.PPSn.PpsEnvironment
 				Assert.AreEqual(expectedText.Replace("\t\t", "\tnull\t"), afterState.Replace("\t\t", "\tnull\t"));
 			}
 		}
+
+		[TestMethod]
+		public void PpsMasterDataImportTest_TemporaryTableUncreateable()
+		{
+			using (var sqliteDataBase = GetTestDatabase())
+			{
+				using (var addTableCommand = sqliteDataBase.CreateCommand())
+				{
+					addTableCommand.CommandText = "CREATE TABLE 'Table1_temp' ([Column1] INTEGER PRIMARY KEY NOT NULL);";
+					addTableCommand.ExecuteNonQuery();
+				}
+
+				var beforeState = GetDatabaseHash(sqliteDataBase);
+
+				var master = new PpsMasterData(GetMasterDataScheme_RemoveColumn(), sqliteDataBase);
+				try
+				{
+					master.RefreshMasterDataScheme();
+				}
+				catch (Exception e)
+				{
+					return;
+				}
+
+				var afterState = GetDatabaseHash(sqliteDataBase);
+
+				Assert.AreEqual(beforeState,afterState, "The database was supposed to throw an Exception and revert to the original state.");
+				Assert.Fail("The database was supposed to throw an Exception");
+			}
+		}
 	}
 }
 
