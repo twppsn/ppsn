@@ -69,29 +69,29 @@ namespace TecWare.PPSn.PpsEnvironment
 
 				#endregion
 
-				var beforeState = new StringBuilder();
+				var beforeState = String.Empty;
 				#region -- get the current state of the database --
 
 				using (var sqlite = sqliteDataBase.CreateCommand())
 				{
 					sqlite.CommandText = "PRAGMA table_info('Table1');";
 					var reader = sqlite.ExecuteReader();
-					beforeState.Append("\n--Scheme:\n");
+					beforeState+="\n--Scheme:\n";
 					while (reader.Read())
 					{
 						for (var i = 0; i < reader.FieldCount; i++)
-							beforeState.Append(reader.GetValue(i).ToString()+'\t');
-						beforeState.Append('\n');
+							beforeState+=reader.GetValue(i).ToString()+'\t';
+						beforeState += '\n';
 					}
 					reader.Close();
 					sqlite.CommandText = "SELECT * FROM 'Table1';";
 					reader = sqlite.ExecuteReader();
-					beforeState.Append("--Data:\n");
+					beforeState += "--Data:\n";
 					while (reader.Read())
 					{
 						for (var i = 0; i < reader.FieldCount; i++)
-							beforeState.Append(reader.GetValue(i).ToString() + '\t');
-						beforeState.Append('\n');
+							beforeState += reader.GetValue(i).ToString() + '\t';
+						beforeState += '\n';
 					}
 				}
 
@@ -100,35 +100,35 @@ namespace TecWare.PPSn.PpsEnvironment
 				var master = new PpsMasterData(GetMasterDataScheme(), sqliteDataBase);
 				master.RefreshMasterDataScheme();
 
-				var afterState = new StringBuilder();
+				var afterState = String.Empty;
 				#region -- get the changed state of the database --
 
 				using (var sqlite = sqliteDataBase.CreateCommand())
 				{
 					sqlite.CommandText = "PRAGMA table_info('Table1');";
 					var reader = sqlite.ExecuteReader();
-					afterState.Append("\n--Scheme:\n");
+					afterState+="\n--Scheme:\n";
 					while (reader.Read())
 					{
 						for (var i = 0; i < reader.FieldCount; i++)
-							afterState.Append(reader.GetValue(i).ToString() + '\t');
-						afterState.Append('\n');
+							afterState += reader.GetValue(i).ToString() + '\t';
+						afterState += '\n';
 					}
 					reader.Close();
 					sqlite.CommandText = "SELECT * FROM 'Table1';";
 					reader = sqlite.ExecuteReader();
-					afterState.Append("--Data:\n");
+					afterState += "--Data:\n";
 					while (reader.Read())
 					{
 						for (var i = 0; i < reader.FieldCount; i++)
-							afterState.Append(reader.GetValue(i).ToString() + '\t');
-						afterState.Append('\n');
+							afterState += reader.GetValue(i).ToString() + '\t';
+						afterState += '\n';
 					}
 				}
 
 				#endregion
 
-				Assert.AreEqual(beforeState.ToString(), afterState.ToString(), "The Datatable was expected to remain unchanged");
+				Assert.AreEqual(beforeState, afterState, "The Datatable was expected to remain unchanged");
 			}
 			/*
 				var masterDataSchemeImporter = new PpsMasterData.PpsMasterDataSchemeImporter("testtable", true);
