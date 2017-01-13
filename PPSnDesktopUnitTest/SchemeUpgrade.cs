@@ -325,6 +325,13 @@ namespace TecWare.PPSn.PpsEnvironment
 				var afterState = GetDatabaseHash(sqliteDataBase);
 
 				Assert.AreEqual(beforeState.Replace("\t\t", "\tnull\t"), afterState.Replace("\t\t", "\tnull\t"));
+
+				using (var rowIdCommand = sqliteDataBase.CreateCommand())
+				{
+					// if the table was recreated in the process it would have a new rowid...
+					rowIdCommand.CommandText = "SELECT [rowid] FROM 'sqlite_master' WHERE ([type] = 'table' AND [name] = 'Table1');";
+					Assert.AreEqual((Int64)1, rowIdCommand.ExecuteScalar(), "The Refresh was supposed to do nothing - but it recreated the database. No data lost but anyhow.");
+				}
 			}
 		}
 
@@ -450,7 +457,7 @@ namespace TecWare.PPSn.PpsEnvironment
 				{
 					master.RefreshMasterDataScheme();
 				}
-				catch (Exception e)
+				catch (Exception)
 				{
 					return;
 				}
