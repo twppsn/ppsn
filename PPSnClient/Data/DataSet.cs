@@ -93,7 +93,7 @@ namespace TecWare.PPSn.Data
 
 		public IPpsShell Shell => shell;
 
-		public override PpsDataSetMetaCollection Meta { get { return metaInfo; } }
+		public override PpsDataSetMetaCollection Meta => metaInfo;
 	} // class PpsDataSetDefinitionClient
 
 	#endregion

@@ -281,7 +281,7 @@ namespace TecWare.PPSn.Data
 
 		public virtual void Clear()
 		{
-			if (currentUndoTransaction == null)
+			if (currentUndoTransaction != null)
 				throw new InvalidOperationException("There is an active transaction.");
 		} // proc Clear
 
