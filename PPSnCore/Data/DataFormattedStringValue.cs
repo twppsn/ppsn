@@ -17,22 +17,79 @@ namespace TecWare.PPSn.Data
 	/// <summary>The formular to get the result is definied in the column.</summary>
 	public sealed class PpsStaticCalculated : PpsDataRowExtentedValue
 	{
+		#region -- class SimpleRowTable ---------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class SimpleRowTable : LuaTable
+		{
+			private readonly LuaTable env;
+			private readonly PpsDataRow row;
+
+			public SimpleRowTable(PpsDataRow row)
+			{
+				this.env = row.Table.DataSet.Properties;
+				this.row = row;
+			} // ctor
+
+			protected override object OnIndex(object key)
+			{
+				if (key is string)
+				{
+					var column = row.Table.TableDefinition.Columns[(string)key];
+					if (column != null)
+					{
+						if (column.IsRelationColumn)
+							return row.GetParentRow(column);
+						else
+							return row[column.Index];
+					}
+				}
+
+				return env[key] ?? base.OnIndex(key);
+			} // proc OnIndex
+		} // class SimpleRowTable
+
+		#endregion
+
+		private readonly LuaChunk chunk;
 		private object currentValue = null;
-		// private readonly LuaChunk chunk;
 
 		public PpsStaticCalculated(PpsDataRow row, PpsDataColumnDefinition column)
 			: base(row, column)
 		{
+			var code = column.Meta.GetProperty("formula", (String)null);
 
-			// var code = column.Meta.GetProperty("formula", (String)null);
+			// compile the code
+			if (!String.IsNullOrEmpty(code))
+			{
+				// get lua engine
+				var lua = column.Table.DataSet.Lua;
+				chunk = lua.CompileChunk(code, column.Name + "-formula.lua", null);
 
-			// row.Table.DataSet.Properties.
-
-			// row.Table.DataSet.OnTableChanged
+				// register table changed, for the update
+				row.Table.DataSet.DataChanged += (sender, e) => UpdateValue();
+			}
 		} // ctor
 
 		private void UpdateValue()
 		{
+			if (chunk == null)
+				return;
+
+			try
+			{
+				var r = chunk.Run(new SimpleRowTable(Row));
+				if (!Object.Equals(currentValue, r[0]))
+				{
+					currentValue = r[0];
+					OnPropertyChanged(nameof(Value));
+				}
+			}
+			catch (Exception e)
+			{
+				System.Diagnostics.Debug.Print(e.ToString()); // todo:
+			}
 		} // proc UpdateValue
 
 		/// <summary>Do persist the calculated value.</summary>
@@ -50,6 +107,8 @@ namespace TecWare.PPSn.Data
 		} // prop CoreData
 
 		public override bool IsNull => currentValue == null;
+		/// <summary></summary>
+		public object Value => currentValue;
 	} // class PpsStaticCalculated
 
 	#endregion

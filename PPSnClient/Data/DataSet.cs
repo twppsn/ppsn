@@ -75,7 +75,6 @@ namespace TecWare.PPSn.Data
 		protected virtual PpsDataTableDefinitionClient CreateDataTable(XElement c)
 			=> new PpsDataTableDefinitionClient(this, c);
 		
-
 		private PpsDataSetAutoTagDefinition CreateAutoTagDefinition(XElement x)
 		{
 			var tagName = x.GetAttribute("name", String.Empty);
@@ -92,6 +91,8 @@ namespace TecWare.PPSn.Data
 		public string SchemaType => schema;
 
 		public IPpsShell Shell => shell;
+		/// <summary>Give access to the shell lua engine.</summary>
+		public override Lua Lua => shell.Lua;
 
 		public override PpsDataSetMetaCollection Meta => metaInfo;
 	} // class PpsDataSetDefinitionClient

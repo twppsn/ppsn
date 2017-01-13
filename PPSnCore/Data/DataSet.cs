@@ -358,6 +358,8 @@ namespace TecWare.PPSn.Data
 		public abstract PpsDataSetMetaCollection Meta { get; }
 		/// <summary>Is the dataset initialized.</summary>
 		public bool IsInitialized => isInitialized;
+		/// <summary>Access to a lua frame work.</summary>
+		public abstract Lua Lua { get; }
 	} // class PpsDataSetDefinition
 
 	#endregion
@@ -942,7 +944,7 @@ namespace TecWare.PPSn.Data
 
 		// -- Static --------------------------------------------------------------
 
-		//private static readonly ConstructorInfo ArgumentOutOfRangeExceptionConstructorInfo;
+		// private static readonly ConstructorInfo ArgumentOutOfRangeExceptionConstructorInfo;
 		private static readonly FieldInfo TableFieldInfo;
 		private static readonly PropertyInfo DefinitionPropertyInfo;
 
@@ -950,7 +952,7 @@ namespace TecWare.PPSn.Data
 		{
 			var typeInfo = typeof(ArgumentOutOfRangeException).GetTypeInfo();
 
-			//ArgumentOutOfRangeExceptionConstructorInfo =
+			// ArgumentOutOfRangeExceptionConstructorInfo =
 			//	(
 			//		from ci in typeInfo.DeclaredConstructors
 			//		let pi = ci.GetParameters()
