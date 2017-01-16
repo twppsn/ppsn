@@ -95,6 +95,7 @@
     <Compile Include="..\..\PPSnCore\PPSnCore\Data\DbRowEnumerator.cs">
       <Link>Data\DbRowEnumerator.cs</Link>
     </Compile>
+    <Compile Include="Controls\ComboBoxBehavior.cs" />
     <Compile Include="Controls\DataListControl.cs" />
     <Compile Include="Controls\SideBarMenu.cs" />
     <Compile Include="Controls\SplitButton.cs" />
