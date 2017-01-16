@@ -6,9 +6,9 @@
 	</ResourceDictionary.MergedDictionaries>
 
     <Style x:Key="PPSnScrollViewerStyle" TargetType="{x:Type ScrollViewer}">
-        <Setter Property="HorizontalScrollBarVisibility" Value="Hidden"/>
         <Setter Property="VerticalScrollBarVisibility" Value="Hidden"/>
-        <Setter Property="PanningMode" Value="Both"/>
+		<Setter Property="HorizontalScrollBarVisibility" Value="Hidden"/>
+		<Setter Property="PanningMode" Value="Both"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ScrollViewer}">
@@ -28,7 +28,7 @@
 												ContentTemplate="{TemplateBinding ContentTemplate}" 
 												Content="{TemplateBinding Content}" 
 												Margin="{TemplateBinding Padding}"/>
-                        <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Grid.Row="0" Orientation="Vertical"
+						<ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Grid.Row="0" Orientation="Vertical"
 								   AutomationProperties.AutomationId="VerticalScrollBar"
 								   IsTabStop="False"
 								   Cursor="Arrow"
@@ -48,26 +48,23 @@
 								   Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" 
 								   Value="{Binding HorizontalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" 
 								   ViewportSize="{TemplateBinding ViewportWidth}"/>
-						<!--<TextBlock x:Name="tbTest" Grid.Column="0" Grid.Row="2" Text="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ScrollViewer}}, Path=HorizontalScrollBarVisibility}"/>-->
 					</Grid>
                     <ControlTemplate.Triggers>
+
 						<Trigger Property="IsMouseOver" Value="True">
 							<Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
 							<Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
 						</Trigger>
 
-						<!--<Trigger Property="HorizontalScrollBarVisibility" Value="Disabled">
-							<Setter TargetName="PART_HorizontalScrollBar" Property="IsEnabled" Value="False"/>
-							<Setter TargetName="PART_VerticalScrollBar" Property="Background" Value="Red"/>
-						</Trigger>-->
-
-						<!--<MultiTrigger>
-							<MultiTrigger.Conditions>
-								<Condition Property="IsMouseOver" Value="True"/>
-								<Condition SourceName="PART_HorizontalScrollBar" Property="IsEnabled" Value="True"/>
-							</MultiTrigger.Conditions>
-							<Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
-						</MultiTrigger>-->
+						<Trigger SourceName="PART_HorizontalScrollBar" Property="Visibility" Value="Visible">
+							<Trigger.EnterActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="PART_HorizontalScrollBar" Storyboard.TargetProperty="Opacity" From="0.0" To="0.6" Duration="0:0:0.5"/>
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.EnterActions>
+						</Trigger>
 
 						<Trigger SourceName="PART_VerticalScrollBar" Property="Visibility" Value="Visible">
                             <Trigger.EnterActions>
@@ -79,15 +76,6 @@
                             </Trigger.EnterActions>
                         </Trigger>
 
-						<Trigger SourceName="PART_HorizontalScrollBar" Property="Visibility" Value="Visible">
-                            <Trigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="PART_HorizontalScrollBar" Storyboard.TargetProperty="Opacity" From="0.0" To="0.6" Duration="0:0:0.5"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </Trigger.EnterActions>
-                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>

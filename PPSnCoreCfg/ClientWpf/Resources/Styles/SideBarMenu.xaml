@@ -118,7 +118,7 @@
 							<TextBlock x:Name="headerTextBlock" Text="{Binding HeadLineText, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiC:SideBarMenu}, Mode=OneWay}"
 									   Foreground="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,4,0,0" FontSize="15" FontWeight="SemiBold"/>
 						</Border>
-						<ScrollViewer Grid.Row="1" Focusable="false" Padding="0" Style="{DynamicResource PPSnScrollViewerStyle}">
+						<ScrollViewer Grid.Row="1" Focusable="false" Padding="0" Style="{StaticResource PPSnScrollViewerStyle}" HorizontalScrollBarVisibility="Disabled">
                             <ItemsPresenter SnapsToDevicePixels="True"/>
                         </ScrollViewer>
                     </Grid>
