@@ -18,6 +18,7 @@ using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.Stuff;
 using TecWare.PPSn.UI;
 using static TecWare.PPSn.StuffUI;
@@ -539,6 +540,15 @@ namespace TecWare.PPSn
 			LuaTrace(PpsTraceItemType.Information, args);
 		} // proc LuaPrint
 
+		private object GetValueFromTable(object value)
+		{
+			var exData = value as IPpsDataRowExtendedValue;
+			if (exData != null)
+				return exData.ToString();
+			else
+				return value;
+		} // func GetValueFromTable
+
 		[LuaMember("toTable")]
 		private LuaTable LuaToTable(object table)
 		{
@@ -552,14 +562,14 @@ namespace TecWare.PPSn
 				var row = (IDataRow)table;
 				var i = 0;
 				foreach (var c in row.Columns)
-					r[c.Name] = row[i++];
+					r[c.Name] = GetValueFromTable(row[i++]);
 				return r;
 			}
 			else if (table is IEnumerable<PropertyValue>)
 			{
 				var r = new LuaTable();
 				foreach (var p in (IEnumerable<PropertyValue>)table)
-					r[p.Name] = p.Value;
+					r[p.Name] = GetValueFromTable(p.Value);
 				return r;
 			}
 			else
