@@ -76,11 +76,9 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ListBoxItem}">
-					<Grid>
-						<Border x:Name="panelBorder" Padding="6,1" Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-							<ContentPresenter />
-						</Border>
-					</Grid>
+					<Border x:Name="panelBorder" Padding="6,1" Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+						<ContentPresenter />
+					</Border>
 					<ControlTemplate.Triggers>
 						<Trigger Property="ItemsControl.AlternationIndex" Value="1">
 							<Setter Property="Background" TargetName="panelBorder" Value="{StaticResource PPSnAlternation1Brush}" />
