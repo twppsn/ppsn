@@ -571,7 +571,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region --  Environment, EventSink ------------------------------------------------
+		#region -- Environment, EventSink -------------------------------------------------
 
 		protected virtual object GetEnvironmentValue(object key)
 			=> null;
@@ -663,6 +663,7 @@ namespace TecWare.PPSn.Data
 
 			// start deferred contraints
 			deferredConstraintChecks = new PpsDeferedConstraintCheck();
+			var events = DeferedEvents();
 
 			return new DisposableScope(
 				() =>
@@ -670,6 +671,9 @@ namespace TecWare.PPSn.Data
 					// executes constaint checks
 					deferredConstraintChecks.ExecuteAll();
 					deferredConstraintChecks = null;
+
+					// run events
+					events?.Dispose();
 
 					// attach undo sink
 					if (tmp != null)
@@ -788,6 +792,29 @@ namespace TecWare.PPSn.Data
 		 * Sortierte Liste der Ereignisse. Idee:
 		 * Zuerst werden die Properties ausgelöst, wenn diese sich beruhigt haben started die nächste Ebene.
 		 */
+
+		public IDisposable DeferedEvents()
+		{
+			if (inChanged)
+				return null;
+
+			inChanged = true;
+			changedEvents.Clear();
+
+			return new DisposableScope(
+				() =>
+				{
+					try
+					{
+						ExecuteQueuedEventsUnsafe();
+					}
+					finally
+					{
+						inChanged = false;
+					}
+				}
+			);
+		} // proc DeferedEvents
 
 		internal void ExecuteEvent(PpsDataChangedEvent ev)
 		{

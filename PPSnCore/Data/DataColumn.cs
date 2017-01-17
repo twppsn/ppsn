@@ -330,7 +330,7 @@ namespace TecWare.PPSn.Data
 				case PpsDataColumnValueChangingFlag.SetValue:
 					var ret = true;
 
-					if (parentRelation != null) // check value contraint
+					if (IsRelationColumn) // check value contraint
 					{
 						row.ClearParentRowCache(this);
 

@@ -624,6 +624,8 @@ namespace TecWare.PPSn.Data
 				var newValue = this[index];
 				Table.Columns[index].OnColumnValueChanged(this, null, newValue);
 			}
+
+			ClearRowCache();
 		} // func UpdateRowValues
 
 		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
@@ -972,6 +974,15 @@ namespace TecWare.PPSn.Data
 					return relationFilter[i];
 			}
 		} // func GetDefaultRelation
+
+		private void ClearRowCache()
+		{
+			lock (relationFilterLock)
+			{
+				parentRows.Clear();
+				relationFilter?.Clear();
+			}
+		} // proc ClearRowCache
 
 		internal void ClearParentRowCache(PpsDataColumnDefinition column)
 		{

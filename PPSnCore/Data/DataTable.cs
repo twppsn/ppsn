@@ -696,6 +696,9 @@ namespace TecWare.PPSn.Data
 			{
 			} // ctor
 
+			public override string ToString()
+				=> $"Add: {Table.TableName} -> {Row}";
+
 			public override void InvokeEvent()
 			{
 				Table.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, Row, Table.currentRows.IndexOf(Row)));
@@ -733,6 +736,9 @@ namespace TecWare.PPSn.Data
 			{
 				this.oldIndex = oldIndex;
 			} // ctor
+
+			public override string ToString()
+				=> $"Remove: {Table.TableName} -> {Row}";
 
 			public override void InvokeEvent()
 			{
@@ -889,7 +895,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="oldIndex"></param>
 		protected virtual void OnRowRemoved(PpsDataRow row, int oldIndex)
 		{
-			dataset.ExecuteEvent(new PpsDataRowRemovedChangedEvent(this, row, oldIndex));
+			dataset.ExecuteEvent(new PpsDataRowRemovedChangedEvent(this, row, -1)); // fire with -1 to support batches (the internal check of ListCollectionView is on the current state *arg*)
 			OnTableChanged();
 		} // proc OnRowModified
 
@@ -1033,9 +1039,14 @@ namespace TecWare.PPSn.Data
 				{
 					RemoveRelatedRows(row); // check related rows
 
+					// index might be changed
+					oldIndex = currentRows.IndexOf(row);
 					currentRows.Remove(row);
+
+					// undo manager
 					undo?.Append(new PpsDataTableRemoveChangeItem(this, row));
 
+					// event
 					OnRowRemoved(row, oldIndex);
 					r = true;
 				}
