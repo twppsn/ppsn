@@ -779,9 +779,7 @@ namespace TecWare.PPSn.Data
 			} // proc Freeze
 
 			public void Redo() { }
-
-			public void Undo()
-				=> dataset?.ExecuteQueuedEvents();
+			public void Undo() { }
 		} // class ExecuteEvents
 
 		#endregion
