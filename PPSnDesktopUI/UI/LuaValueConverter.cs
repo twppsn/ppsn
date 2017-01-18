@@ -32,7 +32,7 @@ namespace TecWare.PPSn.UI
 	[ContentProperty("ConvertExpression")]
 	public class LuaValueConverter : IValueConverter, IMultiValueConverter
 	{
-		private delegate object ConvertDelegate(object value, Type targetType, object parameter, PpsEnvironment environment, CultureInfo culture);
+		private delegate object ConvertDelegate(object value, object targetType, object parameter, PpsEnvironment environment, CultureInfo culture);
 		private static Lua lua = new Lua(); // lua engine for the value converters
 
 		private string convert;

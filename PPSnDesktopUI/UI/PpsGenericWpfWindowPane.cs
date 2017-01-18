@@ -82,7 +82,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class LuaDataTemplateSelector ---------------------------------------------
+	#region -- class LuaDataTemplateSelector --------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
