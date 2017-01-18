@@ -90,7 +90,7 @@ namespace TecWare.PPSn.Controls
 		{
 			var node = ItemContainerGenerator.ContainerFromItem(item) as PpsTreeListViewItem;
 			if (node == null)
-				throw new ArgumentNullException("SelectNode TreeListViewItem");
+				return; // todo: noch nicht generiert? throw new ArgumentNullException("SelectNode TreeListViewItem");
 
 			// focus?
 			Dispatcher.BeginInvoke(

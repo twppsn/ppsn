@@ -19,6 +19,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Markup;
 using Neo.IronLua;
@@ -62,7 +63,16 @@ namespace TecWare.PPSn.UI
 			=> ConvertIntern(convert, ref convertDelegate, value, targetType, parameter, culture);
 
 		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-			=> ConvertIntern(convertBack, ref convertBackDelegate, value, targetType, parameter, culture);
+		{
+			try
+			{
+				return ConvertIntern(convertBack, ref convertBackDelegate, value, targetType, parameter, culture);
+			}
+			catch (Exception e)
+			{
+				return new ValidationResult(false, e);
+			}
+		} // func IValueConverter.Convert
 		
 		public string ConvertExpression
 		{
