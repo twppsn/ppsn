@@ -74,6 +74,7 @@ namespace TecWare.PPSn.UI
 		[LuaMember]
 		private object GetResource(object key)
 			=> Control.TryFindResource(key);
+
 		[LuaMember]
 		public FrameworkElement Control => control;
 		[LuaMember]
