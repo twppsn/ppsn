@@ -15,7 +15,7 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>The formular to get the result is definied in the column.</summary>
-	public sealed class PpsStaticCalculated : PpsDataRowExtentedValue
+	public sealed class PpsStaticCalculated : PpsDataRowExtentedValue, IPpsDataRowGetGenericValue
 	{
 		#region -- class SimpleRowTable ---------------------------------------------------
 
@@ -115,7 +115,7 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Multi line text field, that supports a macro syntax.</summary>
-	public sealed class PpsFormattedStringValue : PpsDataRowExtentedValue, IPpsDataRowGenericValue
+	public sealed class PpsFormattedStringValue : PpsDataRowExtentedValue, IPpsDataRowSetGenericValue
 	{
 		private string value;
 		private string formattedValue;

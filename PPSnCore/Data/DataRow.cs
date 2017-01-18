@@ -425,12 +425,18 @@ namespace TecWare.PPSn.Data
 			{
 			} // ctor
 
+			private object GetGenericValue(object v)
+			{
+				var t = v as IPpsDataRowGetGenericValue;
+				return t != null ? t.Value : v;
+			} // func GetGenericValue
+
 			public override object this[int columnIndex]
 			{
 				get
 				{
 					object currentValue = Row.currentValues[columnIndex];
-					return currentValue == NotSet ? Row.originalValues[columnIndex] : currentValue;
+					return currentValue == NotSet ? GetGenericValue(Row.originalValues[columnIndex]) : currentValue;
 				}
 				set
 				{

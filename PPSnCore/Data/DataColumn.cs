@@ -78,18 +78,30 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- interface IPpsDataRowGenericValue ----------------------------------------
+	#region -- interface IPpsDataRowSetGenericValue -------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Does this extended value supports a generic setter</summary>
-	public interface IPpsDataRowGenericValue : IPpsDataRowExtendedValue
+	public interface IPpsDataRowSetGenericValue : IPpsDataRowExtendedValue
 	{
 		/// <summary>Generic value</summary>
 		/// <param name="inital"></param>
 		/// <param name="value"></param>
 		/// <returns></returns>
 		bool SetGenericValue(bool inital, object value);
-	} //	interface IPpsDataRowGenericValue
+	} //	interface IPpsDataRowSetGenericValue
+
+	#endregion
+
+	#region -- interface IPpsDataRowGetGenericValue -------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Does this extended value supports a generic getter</summary>
+	public interface IPpsDataRowGetGenericValue : IPpsDataRowExtendedValue
+	{
+		/// <summary>Generic value</summary>
+		object Value { get; }
+	} //	interface IPpsDataRowGetGenericValue
 
 	#endregion
 
@@ -346,7 +358,7 @@ namespace TecWare.PPSn.Data
 					if (IsExtended)
 					{
 						// check for a internal interface to set a generic value
-						var v = oldValue as IPpsDataRowGenericValue;
+						var v = oldValue as IPpsDataRowSetGenericValue;
 						if (v != null)
 						{
 							ret = v.SetGenericValue(initial, value);
