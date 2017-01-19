@@ -779,7 +779,7 @@ namespace TecWare.PPSn.Data
 			} // proc Freeze
 
 			public void Redo() { }
-			public void Undo() { }
+			public void Undo() { dataset.inChanged = false; }
 		} // class ExecuteEvents
 
 		#endregion
@@ -830,7 +830,7 @@ namespace TecWare.PPSn.Data
 
 				changedEvents.Insert(i, ev);
 			}
-			else if (undoSink?.InTransaction ?? false)
+			else if (undoSink != null && undoSink.InTransaction && !undoSink.InUndoRedoOperation)
 			{
 				inChanged = true;
 				ExecuteEvent(ev);
