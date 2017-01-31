@@ -43,7 +43,7 @@
                 <ControlTemplate TargetType="{x:Type uiC:PpsTreeListViewItem}">
 					<StackPanel Orientation="Vertical">
 						<Grid>
-							<Border Name="panelBorder" Background="{TemplateBinding Background}" Padding="6,1" BorderThickness="0,0,0,1">
+							<Border Name="panelBorder" Background="{TemplateBinding Background}" Padding="6,1" BorderThickness="0,0,0,1" SnapsToDevicePixels="True">
 								<Grid>
 									<Grid.ColumnDefinitions>
 										<ColumnDefinition Width="Auto" />
@@ -56,9 +56,9 @@
 									<ContentPresenter Grid.Column="1" x:Name="PART_Header" ContentSource="Header"/>
 								</Grid>
 							</Border>
-							<Rectangle x:Name="showSelection" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0" IsHitTestVisible="False"/>
+							<Rectangle x:Name="showSelection" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0" IsHitTestVisible="False" SnapsToDevicePixels="True"/>
 						</Grid>
-						<ItemsPresenter x:Name="PART_ItemsHost"/>
+						<ItemsPresenter x:Name="PART_ItemsHost" />
 					</StackPanel>
 					<ControlTemplate.Triggers>
                         <Trigger Property="IsExpanded" Value="false">
