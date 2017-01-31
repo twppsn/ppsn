@@ -241,30 +241,32 @@ namespace TecWare.PPSn.Server
 
 		protected override bool OnProcessRequest(IDEContext r)
 		{
-			if (r.RelativeSubPath == "info.xml")
+			switch (r.RelativeSubPath)
 			{
-				r.WriteObject(
-					new XElement("ppsn",
-						new XAttribute("displayName", DisplayName),
-						new XAttribute("version", "1.0.0.0")
-					)
-				);
-				return true;
-			}
-			else if (r.RelativeSubPath == "login.xml")
-			{
-				//r.DemandToken("USER");
+				case "info.xml":
+					r.WriteObject(
+						new XElement("ppsn",
+							new XAttribute("displayName", DisplayName),
+							new XAttribute("version", "1.0.0.0")
+						)
+					);
+					return true;
+				case "login.xml":
+					// r.DemandToken("USER");
 
-				var ctx = r.GetUser<IPpsPrivateDataContext>();
-				r.WriteObject(
-					new XElement("user",
-						new XAttribute("displayName", ctx.UserName)
-					)
-				);
-				return true;
+					var ctx = r.GetUser<IPpsPrivateDataContext>();
+					r.WriteObject(
+						new XElement("user",
+							new XAttribute("displayName", ctx.UserName)
+						)
+					);
+					return true;
+				case "constants.xml":
+					r.WriteObject(GetConstantGlobalSchema());
+					return true;
+				default:
+					return base.OnProcessRequest(r);
 			}
-			else
-				return base.OnProcessRequest(r);
 		} // proc OnProcessRequest
 	} // class PpsApplication
 }

@@ -18,7 +18,7 @@
                 <ControlTemplate TargetType="{x:Type ListBox}">
                     <Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
 							Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                        <ScrollViewer Focusable="false" Padding="{TemplateBinding Padding}" Style="{DynamicResource PPSnScrollViewerStyle}">
+                        <ScrollViewer Focusable="false" Padding="{TemplateBinding Padding}" Style="{StaticResource PPSnScrollViewerStyle}" >
                             <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                         </ScrollViewer>
                     </Border>
@@ -26,6 +26,21 @@
             </Setter.Value> 
         </Setter>
     </Style>
+
+	<Style x:Key="PPSnListBoxNoHoriScrollStyle" TargetType="{x:Type ListBox}" BasedOn="{StaticResource PPSnListBoxStyle}">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type ListBox}">
+					<Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
+							Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+						<ScrollViewer Focusable="false" Padding="{TemplateBinding Padding}" Style="{StaticResource PPSnScrollViewerStyle}" HorizontalScrollBarVisibility="Disabled">
+							<ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+						</ScrollViewer>
+					</Border>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
 
 	<Style x:Key="PPSnAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
 		<Setter Property="Background" Value="{StaticResource PPSnAlternation0Brush}"/>
@@ -37,15 +52,13 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListBoxItem}">
 					<Grid>
-						<Border x:Name="panelBorder" Padding="6,1" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+						<Border x:Name="panelBorder" Padding="6,1" Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
 							<ContentPresenter />
 						</Border>
-						<Rectangle x:Name="showSelection" Fill="Transparent" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Opacity="0"/>
+						<Rectangle x:Name="showSelection" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0" IsHitTestVisible="False"
+								   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
 					</Grid>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="ItemsControl.AlternationIndex" Value="0">
-							<Setter Property="Background" TargetName="panelBorder" Value="{StaticResource PPSnAlternation0Brush}" />
-                        </Trigger>
                         <Trigger Property="ItemsControl.AlternationIndex" Value="1">
 							<Setter Property="Background" TargetName="panelBorder" Value="{StaticResource PPSnAlternation1Brush}" />
                         </Trigger>
@@ -58,7 +71,25 @@
         </Setter>
     </Style>
 
-    <Style x:Key="UndoManagerListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
+	<Style x:Key="PPSnNoSelectionListBoxItemStyle" TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource PPSnAlternatingListBoxItemStyle}">
+		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type ListBoxItem}">
+					<Border x:Name="panelBorder" Padding="6,1" Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+						<ContentPresenter />
+					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="ItemsControl.AlternationIndex" Value="1">
+							<Setter Property="Background" TargetName="panelBorder" Value="{StaticResource PPSnAlternation1Brush}" />
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style x:Key="UndoManagerListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListBoxItem}">

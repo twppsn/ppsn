@@ -49,15 +49,21 @@
 						<Trigger Property="IsPressed" Value="true">
 							<Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource PPSnButtonPressedBrush}"/>
 						</Trigger>
-						<!--<Trigger Property="IsMouseOver" Value="true">
-							<Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource PPSnMouseOverBrush}"/>
-						</Trigger>-->
 						<Trigger Property="IsChecked" Value="true">
 							<Setter Property="Opacity" TargetName="optionMark" Value="1"/>
 						</Trigger>
 						<Trigger Property="IsChecked" Value="{x:Null}">
 							<Setter Property="Opacity" TargetName="optionMark" Value="0"/>
 						</Trigger>
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="IsHitTestVisible" Value="False"/>
+								<Condition Property="Focusable" Value="False"/>
+							</MultiTrigger.Conditions>
+							<Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="Transparent"/>
+							<Setter Property="Background" TargetName="checkBoxBorder" Value="Transparent"/>
+						</MultiTrigger>
+
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>

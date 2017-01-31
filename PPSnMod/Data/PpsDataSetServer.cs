@@ -37,7 +37,9 @@ namespace TecWare.PPSn.Server.Data
 	{
 		None,
 		Root,
-		Relation
+		Cascade,
+		Restricted,
+		SetNull
 	} // enum PpsDataColumnParentRelationType
 
 	#endregion
@@ -148,7 +150,7 @@ namespace TecWare.PPSn.Server.Data
 				var parentTable = Table.DataSet.FindTable(parentTableName);
 				if (parentTable == null)
 					throw new ArgumentException($"Table {parentTableName} for relation {parentRelationName} not found.");
-				parentTable.AddRelation(parentRelationName, parentTable.Columns[parentColumnName, true], this);
+				parentTable.AddRelation(parentRelationName, GetClientRelationFromServerRelation(parentType), parentTable.Columns[parentColumnName, true], this);
 			}
 
 			// resolve the correct field
@@ -165,6 +167,23 @@ namespace TecWare.PPSn.Server.Data
 			base.EndInit();
 		} // proc EndInit
 
+		private static PpsRelationType GetClientRelationFromServerRelation(PpsDataColumnParentRelationType parentType)
+		{
+			switch (parentType)
+			{
+				case PpsDataColumnParentRelationType.None:
+					return PpsRelationType.None;
+
+				case PpsDataColumnParentRelationType.Restricted:
+					return PpsRelationType.Restricted;
+				case PpsDataColumnParentRelationType.SetNull:
+					return PpsRelationType.SetNull;
+
+				default:
+					return PpsRelationType.Cascade;
+			}
+		} // func GetClientRelationFromServerRelation
+
 		public void WriteSchema(XElement xTable)
 		{
 			var xColumn = new XElement("column",
@@ -180,6 +199,7 @@ namespace TecWare.PPSn.Server.Data
 			if (IsRelationColumn)
 			{
 				xColumn.Add(new XAttribute("parentRelationName", parentRelationName));
+				xColumn.Add(new XAttribute("parentRelationType", GetClientRelationFromServerRelation(parentType)));
 				xColumn.Add(new XAttribute("parentTable", ParentColumn.Table.Name));
 				xColumn.Add(new XAttribute("parentColumn", ParentColumn.Name));
 			}
@@ -349,6 +369,7 @@ namespace TecWare.PPSn.Server.Data
 		#endregion
 
 		private readonly PpsApplication application;
+		private readonly Lua lua;
 		private readonly string name;
 		private readonly DateTime configurationStamp;
 		private readonly string[] inheritedFrom;
@@ -363,6 +384,7 @@ namespace TecWare.PPSn.Server.Data
 		public PpsDataSetServerDefinition(IServiceProvider sp, string name, XElement config, DateTime configurationStamp)
 		{
 			this.application = sp.GetService<PpsApplication>(true);
+			this.lua = sp.GetService<IDELuaEngine>(true).Lua; 
 			this.name = name;
 			this.configurationStamp = configurationStamp;
 
@@ -538,6 +560,7 @@ namespace TecWare.PPSn.Server.Data
 		public string Name => name;
 		public override PpsDataSetMetaCollection Meta => metaInfo;
 		public PpsApplication Application => application;
+		public override Lua Lua => lua;
 
 		public DateTime ConfigurationStamp => configurationStamp;
 		public string[] ClientScripts => clientScripts;
@@ -553,6 +576,7 @@ namespace TecWare.PPSn.Server.Data
 			var name = xMeta.GetAttribute("name", String.Empty);
 			if (String.IsNullOrEmpty(name))
 				throw new DEConfigurationException(xMeta, "@name is empty.");
+
 			try
 			{
 				add(name, () => LuaType.GetType(xMeta.GetAttribute("dataType", "object")), xMeta.Value);
