@@ -26,6 +26,8 @@
     <DefaultSchema>dbo</DefaultSchema>
     <Trustworthy>True</Trustworthy>
     <NonTransactedFileStreamAccess>READ_ONLY</NonTransactedFileStreamAccess>
+    <IsChangeTrackingOn>True</IsChangeTrackingOn>
+    <ChangeTrackingRetentionPeriod>30</ChangeTrackingRetentionPeriod>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>bin\Release\</OutputPath>

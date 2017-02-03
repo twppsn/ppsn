@@ -959,6 +959,81 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#endregion
 
+		#region -- Master-Data Synchronisation --------------------------------------------
+
+		[DEConfigHttpAction("mdata", IsSafeCall = true)]
+		private void HttpMasterDataSyncAction(IDEContext r, long timeStamp = -1, long syncId = -1)
+		{
+			// todo: user demand
+			var user = r.GetUser<IPpsPrivateDataContext>();
+
+			if (masterDataSetDefinition == null || !masterDataSetDefinition.IsInitialized)
+				throw new ArgumentException("Masterdata schema not initialized.");
+
+			var synchronisationSessions = new Dictionary<PpsDataSource, PpsDataSynchronization>();
+			try
+			{
+				var msg = Log.CreateScope(LogMsgType.Information, stopTime: true);
+
+				using (var xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, Encoding.UTF8), Procs.XmlWriterSettings))
+				{
+					xml.WriteStartDocument();
+					xml.WriteStartElement("mdata");
+
+					foreach (var table in masterDataSetDefinition.TableDefinitions)
+					{
+						msg.WriteLine("Sync: {0}", table.Name);
+						using (msg.Indent())
+						{
+							var syncType = table.Meta.GetProperty("syncType", String.Empty);
+							if (String.IsNullOrEmpty(syncType))
+							{
+								msg.WriteLine("Ignored.");
+								continue; // next table
+							}
+
+							var primaryKey = table.PrimaryKey as PpsDataColumnServerDefinition;
+							if (primaryKey == null)
+							{
+								msg.WriteLine("Primary is null or has no field definition.");
+								continue;
+							}
+
+							var dataSource = primaryKey.FieldDescription.DataSource;
+
+							// start a session
+							PpsDataSynchronization session;
+							if (!synchronisationSessions.TryGetValue(dataSource, out session))
+							{
+								session = dataSource.CreateSynchronizationSession(user, timeStamp, syncId);
+								synchronisationSessions[dataSource] = session;
+							}
+
+							// generate synchronization batch
+							xml.WriteStartElement("batch");
+							xml.WriteAttributeString("table", table.Name);
+
+							session.GenerateBatch(xml, table, syncType);
+
+							xml.WriteEndElement();
+						}
+					}
+
+					xml.WriteEndElement();
+					xml.WriteEndDocument();
+				}
+			}
+			finally
+			{
+				// finish the sync sessions
+				foreach (var c in synchronisationSessions)
+					c.Value.Dispose();
+			}
+			// 
+		} // proc HttpMasterDataSyncAction
+
+		#endregion
+
 		private static string GetXamlContentType(IDEContext r)
 		{
 			switch (r.GetProperty("_debug", String.Empty))

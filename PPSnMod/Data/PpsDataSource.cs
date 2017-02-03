@@ -49,15 +49,15 @@ namespace TecWare.PPSn.Server.Data
 			throw new NotImplementedException();
 		} // func CreateSelectorTokenAsync
 
+		public virtual PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, long timeStamp, long syncId)
+		{
+			throw new NotImplementedException();
+		} // func CreateSynchronizationSession
+
 		public virtual PpsDataTransaction CreateTransaction(IPpsConnectionHandle connection)
 		{
 			throw new NotImplementedException();
 		}// func CreateTransaction
-
-		public virtual Task<PpsConstantDefintion> CreateConstantDefinitionAsync(string name, XElement xDefinition)
-		{
-			throw new NotImplementedException();
-		}
 
 		/// <summary>Returns a native column description.</summary>
 		/// <param name="columnName"></param>

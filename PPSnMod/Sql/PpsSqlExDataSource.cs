@@ -27,6 +27,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
@@ -37,109 +38,6 @@ using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server.Sql
 {
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public sealed class SqlConstantDefinition : PpsConstantDefintion
-	{
-		private readonly PpsFieldDescription[] fields;
-		private IPpsColumnDescription[] columns;
-		
-		private string selectCommand;
-
-		public SqlConstantDefinition(PpsDataSource dataSource, string name, PpsFieldDescription[] fields)
-			: base(dataSource, name)
-		{
-			this.fields = fields;
-		} // ctor
-
-		internal Task InitializeAsync()
-		{
-			// Q&D: Initialization, needs improvement
-			PpsSqlExDataSource.SqlColumnInfo columnInfo = null;
-			var sb = new StringBuilder();
-			sb.Append("SELECT k.Id, k.Typ, k.IsActive, k.Sync");
-
-			columns = new IPpsColumnDescription[fields.Length];
-			for (var i = 0; i < columns.Length; i++) 
-			{
-				columnInfo = fields[i].GetColumnDescriptionImplementation<PpsSqlExDataSource.SqlColumnInfo>();
-				if (columnInfo == null)
-					throw new ArgumentException($"Datenbankfeld {fields[i].Name} in der Tabelle {Name} nicht vorhanden.");
-				columns[i] = new PpsColumnDescription(fields[i], columnInfo.ColumnName, fields[i].DataType); // translate column
-
-				sb.Append(", c.")
-					.Append(columns[i].Name);
-			}
-
-			sb.AppendFormat(" FROM dbo.Knst k INNER JOIN {0} c on (k.Id = c.KnstId)", columnInfo.Table.FullName);
-			sb.Append(" WHERE k.Sync > @SYNC");
-
-			selectCommand = sb.ToString();
-
-			return Task.CompletedTask;
-		} // func InitializeAsync
-
-		public override IEnumerable<IDataRow> GetValues(long lastSync)
-		{
-			// Id, Typ, IsActive, Name, Meta
-			SqlConnection con;
-			using (SqlDataSource.UseMasterConnection(out con))
-			using (var cmd = con.CreateCommand())
-			{
-				cmd.CommandText = selectCommand;
-
-				cmd.Parameters.Add("@SYNC", SqlDbType.DateTime2, 0).Value = DateTime.FromFileTime(lastSync);
-
-				using (var r = cmd.ExecuteReader(CommandBehavior.SingleResult))
-				{
-					var values = new object[6];
-					while (r.Read())
-					{
-						values[0] = r.GetInt64(0);
-						values[1] = r.GetString(1);
-						values[2] = r.GetBoolean(2);
-						values[3] =  r.GetDateTime(3).ToFileTime();
-						values[4] = null;
-
-						var xMeta = new XElement("attr");
-						for (var i = 0; i < columns.Length; i++)
-						{
-							var v = r.GetValue(i + 4).NullIfDBNull();
-							if (v != null)
-							{
-								var n = r.GetName(i + 4);
-								if (String.Compare(n, "Name", StringComparison.OrdinalIgnoreCase) == 0)
-									values[4] = v;
-								else
-									xMeta.Add(new XElement(n, v.ChangeType<string>()));
-							}
-						}
-
-						values[5] = xMeta.ToString();
-
-						yield return new SimpleDataRow(values, simpleDataColumns);
-					}
-				}
-			}
-		} // func GetValues
-
-		private PpsSqlExDataSource SqlDataSource => (PpsSqlExDataSource)base.DataSource;
-
-		public override IEnumerable<IDataColumn> Columns => columns;
-
-		private static readonly SimpleDataColumn[] simpleDataColumns = new SimpleDataColumn[]
-			{
-				new SimpleDataColumn("Id", typeof(long)),
-				new SimpleDataColumn("Typ", typeof(string)),
-				new SimpleDataColumn("IsActive", typeof(bool)),
-				new SimpleDataColumn("Sync", typeof(long)),
-				new SimpleDataColumn("Name", typeof(string)),
-				new SimpleDataColumn("Attr", typeof(string))
-			};
-
-		public static IDataColumn[] DefaultDataColumns => simpleDataColumns;
-	} // class SqlConstantDefinition
-
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class PpsSqlExDataSource : PpsSqlDataSource
@@ -647,7 +545,7 @@ namespace TecWare.PPSn.Server.Sql
 		} // class SqlDataSelector
 
 		#endregion
-
+		
 		#region -- class SqlResultInfo ----------------------------------------------------
 
 		private sealed class SqlResultInfo : List<Func<SqlDataReader, IEnumerable<IDataRow>>>
@@ -1747,6 +1645,168 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
+		#region -- class SqlSynchronizationTransaction ------------------------------------
+
+		private sealed class SqlSynchronizationTransaction : PpsDataSynchronization
+		{
+			private readonly long syncId;
+			private readonly long currentSyncId;
+			private readonly SqlConnectionHandle connection;
+			private readonly SqlTransaction transaction;
+
+			public SqlSynchronizationTransaction(PpsDataSource dataSource, IPpsPrivateDataContext privateDataContext, long timeStamp, long syncId)
+				: base(timeStamp)
+			{
+				this.syncId = syncId;
+				this.connection = (SqlConnectionHandle)dataSource.CreateConnection(privateDataContext, true);
+				connection.EnsureConnection(true);
+
+				// create transaction
+				this.transaction = connection.Connection.BeginTransaction(IsolationLevel.ReadCommitted);
+
+				// get the current sync id
+				using (var cmd = connection.Connection.CreateCommand())
+				{
+					cmd.Transaction = transaction;
+					cmd.CommandText = "SELECT change_tracking_current_version()";
+
+					currentSyncId = (long)cmd.ExecuteScalar();
+				}
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				if (disposing)
+				{
+					connection.Dispose();
+				}
+				base.Dispose(disposing);
+			} // proc Dispose
+
+			protected override IEnumerable<IDataRow> GetSynchronizationRows(string name, string timeStampColumn)
+			{
+				return base.GetSynchronizationRows(name, timeStampColumn);
+			} // func GetSynchronizationRows
+
+			private static string[] PrepareSynchronizationColumns(PpsDataTableDefinition table, StringBuilder command)
+			{
+				string[] columnNames = new string[table.Columns.Count];
+				var i = 0;
+				foreach (var col in table.Columns)
+				{
+					var colInfo = ((PpsDataColumnServerDefinition)col).GetColumnDescriptionImplementation<SqlColumnInfo>();
+					if (colInfo == null)
+						columnNames[i] = null;
+					else
+					{
+						command.Append(",d.")
+							.Append(colInfo.ColumnName);
+						columnNames[i] = "c" + i.ToString();
+					}
+					i++;
+				}
+
+				return columnNames;
+			} // func PrepareSynchronizationColumns
+
+			private string PrepareChangeTrackingCommand(PpsDataTableDefinition table, SqlTableInfo tableInfo, SqlColumnInfo columnInfo, out string[] columnNames)
+			{
+				// build command string for change table
+				var command = new StringBuilder("SELECT ct.sys_change_operation");
+
+				columnNames = PrepareSynchronizationColumns(table, command);
+
+				command.Append(" FROM ")
+					.Append("changetable(changes ").Append(tableInfo.FullName).Append(',').Append(syncId).Append(") as Ct ")
+					.Append("LEFT OUTER JOIN ").Append(tableInfo.FullName)
+					.Append(" as d ON d.").Append(columnInfo.ColumnName).Append(" = ct.").Append(columnInfo.ColumnName)
+					.Append(" WHERE ct.sys_change_version < ").Append(currentSyncId);
+
+				return command.ToString();
+			} // proc PrepareChangeTrackingCommand
+
+			private string PrepareFullCommand(PpsDataTableDefinition table, SqlTableInfo tableInfo, out string[] columnNames)
+			{
+				var command = new StringBuilder("SELECT 'R'");
+
+				columnNames = PrepareSynchronizationColumns(table, command);
+
+				command.Append(" FROM ")
+					.Append(tableInfo.FullName)
+					.Append(" as d");
+
+				return command.ToString();
+			} // proc PrepareFullCommand
+
+			private void GenerateChangeTrackingBatch(XmlWriter xml, PpsDataTableDefinition table)
+			{
+				var column = (PpsDataColumnServerDefinition)table.PrimaryKey;
+				var columnInfo = column.GetColumnDescriptionImplementation<SqlColumnInfo>();
+				var tableInfo = columnInfo.Table;
+				var isFull = IsFull;
+
+				// is the given syncId valid
+				using (var command = connection.Connection.CreateCommand())
+				{
+					command.Transaction = transaction;
+					command.CommandText = "SELECT change_tracking_min_valid_version(object_id('" + tableInfo.FullName + "'))";
+
+					var minValidVersion=  command.ExecuteScalar().ChangeType<long>();
+					isFull = minValidVersion > syncId;
+				}
+
+				// generate the command
+				using (var command = connection.Connection.CreateCommand())
+				{
+					string[] columnNames;
+					command.Transaction = transaction;
+					command.CommandText = isFull ?
+						PrepareFullCommand(table, tableInfo, out columnNames) :
+						PrepareChangeTrackingCommand(table, tableInfo, columnInfo, out columnNames);
+
+					using (var r = command.ExecuteReader(CommandBehavior.SingleResult))
+					{
+						while (r.Read())
+						{
+							xml.WriteStartElement(r.GetString(0));
+							for (var i = 1; i < r.FieldCount; i++)
+							{
+								if (columnNames[i - 1] != null && !r.IsDBNull(i))
+									xml.WriteElementString(columnNames[i - 1], r.GetValue(i).ChangeType<string>());
+							}
+							xml.WriteEndElement();
+						}
+					}
+				}
+			} // proc GenerateChangeTrackingBatch
+
+			public override void GenerateBatch(XmlWriter xml, PpsDataTableDefinition table, string syncType)
+			{
+				string syncAlgorithm;
+				string syncArguments;
+				ParseSynchronizationArguments(syncType, out syncAlgorithm, out syncArguments);
+
+				if (String.Compare(syncAlgorithm, "TimeStamp", StringComparison.OrdinalIgnoreCase) == 0)
+				{
+					string name;
+					string column;
+					ParseSynchronizationTimeStampArguments(syncArguments, out name, out column);
+
+					base.GenerateTimeStampBatch(xml, table, name, column);
+				}
+				else if (String.Compare(syncAlgorithm, "ChangeTracking", StringComparison.OrdinalIgnoreCase) == 0)
+				{
+					GenerateChangeTrackingBatch(xml, table);
+				}
+				else
+				{
+					throw new ArgumentException(String.Format("Unsupported sync algorithm: {0}", syncAlgorithm));
+				}
+			} // proc GenerateBatch
+		} // class SqlSynchronizationTransaction
+
+		#endregion
+
 		private readonly PpsApplication application;
 		private readonly SqlConnection masterConnection;
 		private string lastReadedConnectionString = String.Empty;
@@ -2052,6 +2112,9 @@ namespace TecWare.PPSn.Server.Sql
 		
 		public override PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config, DateTime configurationStamp)
 			=> new PpsSqlDataSetDefinition(sp, this, documentName, config, configurationStamp);
+
+		public override PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, long timeStamp, long syncId)
+			=> new SqlSynchronizationTransaction(this, privateUserData, timeStamp, syncId);
 
 		public bool IsConnected
 		{

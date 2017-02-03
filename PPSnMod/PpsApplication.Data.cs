@@ -120,7 +120,7 @@ namespace TecWare.PPSn.Server
 			this.attributes = new PpsFieldAttributes(this);
 			this.xDefinition = xDefinition;
 
-			displayName = new Lazy<string>(() => this.Attributes.GetProperty(DisplayNameAttributeString, name));
+			displayName = new Lazy<string>(() => this.Attributes.GetProperty(DisplayNameAttributeString, null));
 			maxLength = new Lazy<int>(() => this.Attributes.GetProperty(MaxLengthAttributeString, Int32.MaxValue));
 
 			var xDataType = xDefinition.Attribute(DataTypeAttributeString);
@@ -169,9 +169,7 @@ namespace TecWare.PPSn.Server
 
 			if (ret == null)
 			{
-				if (String.Compare(propertyName, DisplayNameAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
-					return new PropertyValue(DisplayNameAttributeString, typeof(string), xDefinition.GetAttribute<string>(DisplayNameAttributeString, this.name));
-				else if (String.Compare(propertyName, DataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
+				if (String.Compare(propertyName, DataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
 					return new PropertyValue(DataTypeAttributeString, typeof(Type), DataType);
 			}
 
@@ -306,29 +304,6 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
-	#region -- class PpsConstantDefintion -----------------------------------------------
-
-	public abstract class PpsConstantDefintion
-	{
-		private readonly PpsDataSource dataSource;
-		private readonly string name;
-
-		public PpsConstantDefintion(PpsDataSource dataSource, string name)
-		{
-			this.dataSource = dataSource;
-			this.name = name;
-		} // ctor
-
-		public abstract IEnumerable<IDataRow> GetValues(long lastSync);
-
-		public PpsDataSource DataSource => dataSource;
-		public string Name => name;
-
-		public abstract IEnumerable<IDataColumn> Columns { get; }
-	} // class PpsConstantDefintion
-
-	#endregion
-
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public partial class PpsApplication
@@ -370,29 +345,6 @@ namespace TecWare.PPSn.Server
 				return view;
 			} // proc InitializeAsync
 		} // class PpsViewDefinitionInit
-
-		#endregion
-
-		#region -- class PpsConstantDefintionInit -----------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class PpsConstantDefintionInit
-		{
-			private readonly PpsDataSource source;
-			private readonly string name;
-			private readonly XElement xDefinition;
-
-			public PpsConstantDefintionInit(PpsDataSource source, string name, XElement xDefinition)
-			{
-				this.source = source;
-				this.name = name;
-				this.xDefinition = xDefinition;
-			} // ctor
-
-			public async Task<PpsConstantDefintion> InitializeAsync()
-				=> await source.CreateConstantDefinitionAsync(name, xDefinition);
-		} // class PpsConstantDefintionInit
 
 		#endregion
 		
@@ -485,7 +437,6 @@ namespace TecWare.PPSn.Server
 
 		private Dictionary<string, PpsFieldDescription> fieldDescription = new Dictionary<string, PpsFieldDescription>(StringComparer.OrdinalIgnoreCase);
 		private Dictionary<string, PpsViewDescription> viewController = new Dictionary<string, PpsViewDescription>(StringComparer.OrdinalIgnoreCase);
-		private Dictionary<string, PpsConstantDefintion> constantDefinitions = new Dictionary<string, PpsConstantDefintion>(StringComparer.OrdinalIgnoreCase);
 		private Dictionary<string, PpsDataSetServerDefinition> datasetDefinitions = new Dictionary<string, PpsDataSetServerDefinition>(StringComparer.OrdinalIgnoreCase);
 
 		#region -- Init/Done --------------------------------------------------------------

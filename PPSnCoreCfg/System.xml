@@ -10,7 +10,7 @@
 		<prefix>$(webBinding)/</prefix>
 		<access id="root" scheme="ntlm">$(webBinding)/</access>
 		<access id="ppsnInfo" scheme="none">$(webBinding)/ppsn/info.xml</access>
-		<access id="ppsnWpf" scheme="none">$(webBinding)/ppsn/wpf/</access>
+		<access id="ppsnWpf" scheme="ntlm">$(webBinding)/ppsn/wpf/</access>
 	</http>
 
 	<pps:ppsn name="ppsn">
@@ -31,13 +31,21 @@
 		<pps:excel name="excel" />
 
 		<pps:register source="sys">
-			<pps:field name="wpf.sync.Path" dataType="string" displayName="Uri" />
-			<pps:field name="wpf.sync.Length" dataType="long" displayName="Länge" />
-			<pps:field name="wpf.sync.LastWriteTime" dataType="datetime" displayName="Änderung" />
-			
+			<pps:field name="sys.Fields.Path" dataType="string" />
+			<pps:field name="sys.Fields.ContentType" dataType="string" />
+			<pps:field name="sys.Fields.ContentEncoding" dataType="string" />
+			<pps:field name="sys.Fields.ContentSize" dataType="long" />
+			<pps:field name="sys.Fields.LastModificationStamp" dataType="long" />
+			<pps:field name="sys.Fields.Bit" dataType="bool" />
+			<pps:field name="sys.Fields.Blob" dataType="blob" />
+	
 			<pps:view name="wpf.sync">
 				<pps:source type="view">wpf/GetApplicationFilesSelector</pps:source>
 			</pps:view>
+			
+			<pps:field name="wpf.sync.Path" inherited="sys.Fields.Path" />
+			<pps:field name="wpf.sync.Length" inherited="sys.Fields.ContentSize" />
+			<pps:field name="wpf.sync.LastWriteTime" dataType="datetime" />
 
 			<pps:field name="wpf.reports.Type" dataType="string" displayName="Type" />
 			<pps:field name="wpf.reports.ReportId" dataType="string" displayName="Report" />
@@ -137,6 +145,7 @@
 			<pps:field name="dbo.Waeh.System" />
 			
 			<!-- definition for countries -->
+			<pps:field name="dbo.Land.Id" />
 			<pps:field name="dbo.Land.Iso" />
 			<pps:field name="dbo.Land.Name" />
 			<pps:field name="dbo.Land.EnglishName" />
@@ -173,23 +182,35 @@
 
 				<pps:table name="ObjectTags">
 
-				</pps:table>
-
-				<pps:table name="OfflineCache">
-					
 				</pps:table>-->
 
-				<pps:table name="Waeh">
+				<pps:table name="OfflineCache">
+					<pps:meta name="syncType">TimeStamp: wpf.sync, ContentLastModification</pps:meta>
+					<pps:column name="Path" isPrimary="true" fieldName="sys.Fields.Path" />
+					<pps:column name="ContextType" fieldName="sys.Fields.ContentType" />
+					<pps:column name="ContentEncoding" fieldName="sys.Fields.ContentEncoding" />
+					<pps:column name="ContentSize" fieldName="sys.Fields.ContentSize">
+						<pps:meta name="syncSource">Length</pps:meta>
+					</pps:column>
+					<pps:column name="ContentLastModification" fieldName="sys.Fields.LastModificationStamp">
+						<pps:meta name="syncSource">LastWriteTime</pps:meta>
+					</pps:column>
+					<pps:column name="Content" fieldName="sys.Fields.Blob" />
+					<pps:column name="LocalPath" fieldName="sys.Fields.Path" />
+				</pps:table>
+
+				<!--<pps:table name="Waeh">
 					<pps:column name="Id" fieldName="dbo.Knst.Id" isPrimary="true" />
 					<pps:column name="ISO" fieldName="dbo.Waeh.Iso"/>
 					<pps:column name="Symbol" fieldName="dbo.Waeh.Symbol"/>
 					<pps:column name="Name" fieldName="dbo.Waeh.Name"/>
 					<pps:column name="Kurs" fieldName="dbo.Waeh.Kurs"/>
 					<pps:column name="System" fieldName="dbo.Waeh.System"/>
-				</pps:table>
+				</pps:table>-->
 
 				<pps:table name="Land">
-					<pps:column name="Id" fieldName="dbo.Knst.Id" isPrimary="true" />
+					<pps:meta name="syncType">ChangeTracking: dbo.Land</pps:meta>
+					<pps:column name="Id" fieldName="dbo.Land.Id" isPrimary="true" />
 					<pps:column name="ISO" fieldName="dbo.Land.Iso"/>
 					<pps:column name="Name" fieldName="dbo.Land.Name"/>
 					<pps:column name="EnglishName" fieldName="dbo.Land.EnglishName"/>
@@ -200,7 +221,7 @@
 					<pps:column name="PostAdr" fieldName="dbo.Land.PostAdr"/>
 				</pps:table>
 
-				<pps:table name="Kgrp">
+				<!--<pps:table name="Kgrp">
 					<pps:column name="Id" fieldName="dbo.Knst.Id" isPrimary="true" />
 					<pps:column name="Name" fieldName="dbo.Kgrp.Name"/>
 				</pps:table>
@@ -220,7 +241,7 @@
 				<pps:table name="Mein">
 					<pps:column name="Id" fieldName="dbo.Knst.Id" isPrimary="true" />
 					<pps:column name="Name" fieldName="dbo.Mein.Name"/>
-				</pps:table>
+				</pps:table>-->
 			</pps:dataset>
 		</pps:register>
 	</pps:ppsn>

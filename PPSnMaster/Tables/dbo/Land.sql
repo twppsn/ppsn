@@ -1,6 +1,6 @@
 ﻿CREATE TABLE [dbo].[Land]
 (
-	[KnstId] BIGINT NOT NULL CONSTRAINT pkLandId PRIMARY KEY CONSTRAINT fkLandKnst REFERENCES dbo.Knst (Id), 
+	[Id] BIGINT NOT NULL CONSTRAINT pkLandId PRIMARY KEY IDENTITY (1,1), 
 	[Name] NVARCHAR(50) NOT NULL,
 	[EnglishName] NVARCHAR(50) NOT NULL,
 	[Iso] CHAR(2) NULL, 
@@ -11,6 +11,8 @@
 	[PostAdr] NVARCHAR(50) NULL
 )
 GO
+ALTER TABLE [dbo].[Land] ENABLE CHANGE_TRACKING;
+GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Primary key, FK zu Knst',
     @level0type = N'SCHEMA',
@@ -18,7 +20,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1type = N'TABLE',
     @level1name = N'Land',
     @level2type = N'COLUMN',
-    @level2name = N'KnstId'
+    @level2name = N'Id'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Name des Landes',

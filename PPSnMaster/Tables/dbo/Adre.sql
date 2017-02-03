@@ -9,7 +9,7 @@
 	[Ort] NVARCHAR(50) NULL, 
 	[Region] NVARCHAR(50) NULL, 
 	[Plz] NVARCHAR(10) NULL, 
-	[LandId] BIGINT NULL CONSTRAINT fkAdreLandId REFERENCES dbo.Land (KnstId), 
+	[LandId] BIGINT NULL CONSTRAINT fkAdreLandId REFERENCES dbo.Land (Id), 
 	[Adresse] NVARCHAR(512) NULL, 
 	[Template] NVARCHAR(512) NULL 
 )

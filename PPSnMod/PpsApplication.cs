@@ -94,6 +94,7 @@ namespace TecWare.PPSn.Server
 
 			// register shortcut for text
 			LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
+			LuaType.RegisterTypeAlias("blob", typeof(byte[]));
 
 			InitData();
 			InitUser();
@@ -156,51 +157,69 @@ namespace TecWare.PPSn.Server
 			initializationProgress.Value = state;
 		} // proc UpdateInitializationState
 
+		private void UpdateInitializationState(LogMessageScopeProxy scope, int order, string state)
+		{
+			UpdateInitializationState(state);
+
+			scope.WriteStopWatch()
+				.WriteLine("{0:N0}: {1}", order, state);
+		} // proc UpdateInitializationState
+
 		private void InitializeApplication()
 		{
-			try
+			using (var msg = Log.CreateScope(LogMsgType.Information, stopTime: true))
 			{
-				UpdateInitializationState("Init databases");
-
-				// get the init tasks
-				initializationTasks.Sort();
-
-				var i = 0;
-				while (i < initializationTasks.Count)
+				try
 				{
-					// combine same order
-					var startAt = i;
-					var order = initializationTasks[i].Order;
-					while (i < initializationTasks.Count && initializationTasks[i].Order == order)
-						i++;
+					msg.WriteLine("Initialize system");
 
-					UpdateInitializationState(initializationTasks[startAt].Status);
+					UpdateInitializationState("Initialize databases");
 
-					// execute the action
-					var count = i - startAt;
-					if (count == 1)
+					// get the init tasks
+					initializationTasks.Sort();
+
+					var i = 0;
+					while (i < initializationTasks.Count)
 					{
-						initializationTasks[startAt].Task().Wait();
-					}
-					else
-					{
-						// start all tasks parallel
-						var currentTasks = new Task[count];
-						for (var j = startAt; j < i; j++)
-							currentTasks[j - startAt] = initializationTasks[j].Task();
+						// combine same order
+						var startAt = i;
+						var order = initializationTasks[i].Order;
+						while (i < initializationTasks.Count && initializationTasks[i].Order == order)
+							i++;
 
-						Task.WaitAll(currentTasks);
+						UpdateInitializationState(
+							msg,
+							initializationTasks[startAt].Order,
+							initializationTasks[startAt].Status
+						);
+
+						// execute the action
+						var count = i - startAt;
+						if (count == 1)
+						{
+							initializationTasks[startAt].Task().Wait();
+						}
+						else
+						{
+							// start all tasks parallel
+							var currentTasks = new Task[count];
+							for (var j = startAt; j < i; j++)
+								currentTasks[j - startAt] = initializationTasks[j].Task();
+
+							Task.WaitAll(currentTasks);
+						}
 					}
+
+					isInitializedSuccessful = true;
+					UpdateInitializationState("Successful");
 				}
-
-				isInitializedSuccessful = true;
-				UpdateInitializationState("Successful");
-			}
-			catch (Exception e)
-			{
-				isInitializedSuccessful = false;
-				UpdateInitializationState("Failed");
-				Log.Except(e);
+				catch (Exception e)
+				{
+					isInitializedSuccessful = false;
+					UpdateInitializationState("Failed");
+					msg.NewLine()
+						.WriteException(e);
+				}
 			}
 		} // proc InitializeApplication
 		
@@ -260,9 +279,6 @@ namespace TecWare.PPSn.Server
 							new XAttribute("displayName", ctx.UserName)
 						)
 					);
-					return true;
-				case "constants.xml":
-					r.WriteObject(GetConstantGlobalSchema());
 					return true;
 				default:
 					return base.OnProcessRequest(r);

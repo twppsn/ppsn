@@ -17,7 +17,7 @@ namespace TecWare.PPSn.Server.Data
 		SingleResult,
 		MutliResult
 	} // enum PpsDataTransactionExecuteBehavior
-
+	
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class PpsDataTransaction : IDisposable
