@@ -51,32 +51,43 @@ namespace TecWare.PPSn
 					environment = PpsEnvironmentInfo.GetLocalEnvironments().FirstOrDefault(c => c.Name.ToLower() == "test");
 				}
 
-				// no arguments are given, show user interface
-				if (environment == null || userInfo == null)
+				var redo = true;
+				while (redo)
 				{
-					var t = await splashWindow.ShowLoginAsync(environment);
-					if (t == null)
-						return false;
+					try
+					{
+						// no arguments are given, show user interface
+						if (environment == null || userInfo == null)
+						{
+							var t = await splashWindow.ShowLoginAsync(environment);
+							if (t == null)
+								return false;
 
-					environment = t.Item1;
-					userInfo = t.Item2;
+							environment = t.Item1;
+							userInfo = t.Item2;
+						}
+
+						// close the current environment
+						if (currentEnvironment != null && !await CloseApplicationAsync())
+							return false;
+
+						// create the application environment
+						splashWindow.SetProgressTextAsync("Starte Anwendung...");
+						var env = await Dispatcher.InvokeAsync(() => new PpsMainEnvironment(environment, userInfo, this));
+
+						// create environment
+						await env.InitAsync();
+
+						// set new environment
+						redo = false;
+						currentEnvironment = env;
+					}
+					catch (Exception e)
+					{
+						MessageBox.Show(e.ToString());
+						// failed????
+					}
 				}
-
-				// close the current environment
-				if (currentEnvironment != null && !await CloseApplicationAsync())
-					return false;
-
-				// create the application environment
-				splashWindow.SetProgressTextAsync("Starte Anwendung...");
-				var env = await Dispatcher.InvokeAsync(() => new PpsMainEnvironment(environment, this)); // todo: userInfo, 
-
-				//try
-				//{
-				//	await env.InitAsync();
-				//}
-				//catch ()
-				//{
-				//}
 
 				Thread.Sleep(3000);
 				return false;

@@ -99,7 +99,7 @@ namespace TecWare.PPSn
 		private readonly PpsProgressStack backgroundProgress;
 		private readonly PpsProgressStack forgroundProgress;
 
-		public PpsMainEnvironment(PpsEnvironmentInfo info, App app)
+		public PpsMainEnvironment(PpsEnvironmentInfo info, ICredentials userInfo, App app)
 			: base(info, app.Resources)
 		{
 			this.app = app;
