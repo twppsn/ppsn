@@ -126,6 +126,7 @@ namespace TecWare.PPSn.UI
 		public readonly static DependencyProperty LoginStateProperty = LoginStatePropertyKey.DependencyProperty;
 
 		private LoginStateData loginStateUnSafe;
+		private bool dialogResult = false;
 		private DispatcherFrame loginFrame = null;
 		private bool allowClose = false;
 
@@ -188,12 +189,14 @@ namespace TecWare.PPSn.UI
 		private void ExecuteLoginFrame(object sender, ExecutedRoutedEventArgs e)
 		{
 			loginFrame.Continue = false;
+			dialogResult = true;
 			e.Handled = true;
 		} // proc ExecuteLoginFrame
 
 		private void CloseLoginFrame(object sender, ExecutedRoutedEventArgs e)
 		{
 			loginFrame.Continue = false;
+			dialogResult = false;
 			e.Handled = true;
 		} // proc CloseLoginFrame
 
@@ -212,7 +215,7 @@ namespace TecWare.PPSn.UI
 				Dispatcher.PushFrame(loginFrame);
 				loginFrame = null;
 
-				if (loginStateUnSafe.IsValid)
+				if (dialogResult && loginStateUnSafe.IsValid)
 				{
 					return new Tuple<PpsEnvironmentInfo, ICredentials>(loginStateUnSafe.CurrentEnvironment, loginStateUnSafe.GetCredentials());
 				}

@@ -175,9 +175,9 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		public event EventHandler IsOnlineChanged;
 
-		private readonly SQLiteConnection localConnection;   // local datastore
-		private readonly Uri baseUri;                   // internal uri for this datastore
-		private bool isOnline = false;                  // is there an online connection
+		private SQLiteConnection localConnection;   // local datastore
+		private readonly Uri baseUri;               // internal uri for this datastore
+		private bool isOnline = false;              // is there an online connection
 
 		private readonly BaseWebRequest request;
 
@@ -213,11 +213,11 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		private async Task RefreshOfflineCacheAsync()
-		{
-			if (IsOnline && IsAuthentificated)
-				await Task.Run(new Action(UpdateOfflineItems));
-		} // RefreshOfflineCacheAsync
+		//private async Task RefreshOfflineCacheAsync()
+		//{
+		//	if (IsOnline && IsAuthentificated)
+		//		await Task.Run(new Action(UpdateOfflineItems));
+		//} // RefreshOfflineCacheAsync
 
 		#region -- VerifyLocalStore -------------------------------------------------------
 

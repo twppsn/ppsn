@@ -625,8 +625,7 @@ namespace TecWare.PPSn
 
 		private readonly int environmentId;           // unique id of the environment
 		private readonly PpsEnvironmentInfo info;     // source information of the environment
-
-		private ICredentials userInfo;  // currently credentials of the user
+		private readonly ICredentials userInfo;				// currently credentials of the user
 		private string userName;        // display name of the user
 
 		private PpsTraceLog logData = new PpsTraceLog();
@@ -637,7 +636,7 @@ namespace TecWare.PPSn
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		public PpsEnvironment(PpsEnvironmentInfo info, ResourceDictionary mainResources)
+		public PpsEnvironment(PpsEnvironmentInfo info, ICredentials userInfo, ResourceDictionary mainResources)
 			: base(new Lua())
 		{
 			if (info == null)
@@ -646,6 +645,8 @@ namespace TecWare.PPSn
 				throw new ArgumentNullException("mainResources");
 
 			this.info = info;
+			this.userInfo = userInfo;
+
 			this.activeDataSets = new PpsActiveDataSetsImplementation(this);
 			this.objectInfo = new PpsEnvironmentCollection<PpsObjectInfo>(this);
 			this.synchronizationWorker = new PpsObjectSynchronizationWorker(this);
@@ -677,7 +678,7 @@ namespace TecWare.PPSn
 
 			// initialize local store
 			this.baseUri = InitProxy();
-			this.localConnection = InitLocalStore();
+			//////this.localConnection = InitLocalStore();
 			request = new BaseWebRequest(baseUri, Encoding);
 
 			// Register new Data Schemes from, the server
@@ -688,7 +689,9 @@ namespace TecWare.PPSn
 		} // ctor
 
 		public Task InitAsync()
-			=> Task.CompletedTask;
+		{
+			return Task.CompletedTask;
+		} // func InitAsync
 
 		public void Dispose()
 		{
@@ -749,157 +752,153 @@ namespace TecWare.PPSn
 
 		#region -- Login/Logout -----------------------------------------------------------
 
-		protected virtual bool ShowLoginDialog(PpsClientLogin clientLogin)
-			=> false;
+		//protected virtual bool ShowLoginDialog(PpsClientLogin clientLogin)
+		//	=> false;
 
-		/// <summary>Gets called to request the user information.</summary>
-		/// <param name="type">Authentification type</param>
-		/// <param name="realm">Realm of the server.</param>
-		/// <param name="count">Counts the login requests.</param>
-		/// <returns>User information or <c>null</c> for cancel.</returns>
-		protected virtual ICredentials GetCredentials(ClientAuthentificationInformation authentificationInfo, int count)
-		{
-			if (authentificationInfo.Type == ClientAuthentificationType.Ntlm && count == 0)
-				return CredentialCache.DefaultCredentials;
-			else
-			{
-				using (var loginCache = new PpsClientLogin("twppsn:" + info.Uri.AbsoluteUri, authentificationInfo.Realm, count > 1))
-				{
-					if (ShowLoginDialog(loginCache))
-					{
-						loginCache.Commit();
-						return loginCache.GetCredentials();
-					}
-					else
-						return null;
-				}
-			}
-		} // func GetCredentials
+		///// <summary>Gets called to request the user information.</summary>
+		///// <param name="type">Authentification type</param>
+		///// <param name="realm">Realm of the server.</param>
+		///// <param name="count">Counts the login requests.</param>
+		///// <returns>User information or <c>null</c> for cancel.</returns>
+		//protected virtual ICredentials GetCredentials(ClientAuthentificationInformation authentificationInfo, int count)
+		//{
+		//	if (authentificationInfo.Type == ClientAuthentificationType.Ntlm && count == 0)
+		//		return CredentialCache.DefaultCredentials;
+		//	else
+		//	{
+		//		using (var loginCache = new PpsClientLogin("twppsn:" + info.Uri.AbsoluteUri, authentificationInfo.Realm, count > 1))
+		//		{
+		//			if (ShowLoginDialog(loginCache))
+		//			{
+		//				loginCache.Commit();
+		//				return loginCache.GetCredentials();
+		//			}
+		//			else
+		//				return null;
+		//		}
+		//	}
+		//} // func GetCredentials
 
-		public async Task LoginUserAsync()
-		{
-			var count = 0;
-			var authentificationInfo = ClientAuthentificationInformation.Ntlm;
-			try
-			{
-				XElement xLogin = null;
+		//public async Task LoginUserAsync()
+		//{
+		//	var count = 0;
+		//	var authentificationInfo = ClientAuthentificationInformation.Ntlm;
+		//	try
+		//	{
+		//		XElement xLogin = null;
 
-				while (xLogin == null)
-				{
-					// get the user information
-					userInfo = GetCredentials(authentificationInfo, count++);
-					if (userInfo == null)
-					{
-						ResetLogin();
-						return;
-					}
+		//		while (xLogin == null)
+		//		{
+		//			// get the user information
+		//			userInfo = GetCredentials(authentificationInfo, count++);
+		//			if (userInfo == null)
+		//			{
+		//				ResetLogin();
+		//				return;
+		//			}
 
-					try
-					{
-						// try to login with this user
-						xLogin = await request.GetXmlAsync("remote/login.xml", MimeTypes.Text.Xml, "user");
-					}
-					catch (WebException e)
-					{
-						var tmp = ClientAuthentificationInformation.Get(e);
-						if (tmp == null)
-							throw;
-						authentificationInfo = tmp;
-					}
-				} // while xLogin
+		//			try
+		//			{
+		//				// try to login with this user
+		//				xLogin = await request.GetXmlAsync("remote/login.xml", MimeTypes.Text.Xml, "user");
+		//			}
+		//			catch (WebException e)
+		//			{
+		//				var tmp = ClientAuthentificationInformation.Get(e);
+		//				if (tmp == null)
+		//					throw;
+		//				authentificationInfo = tmp;
+		//			}
+		//		} // while xLogin
 
-				userName = xLogin.GetAttribute("displayName", userInfo.ToString());
+		//		userName = xLogin.GetAttribute("displayName", userInfo.ToString());
 
-				OnUsernameChanged();
-				await RefreshAsync();
-			}
-			catch
-			{
-				ResetLogin();
-				throw;
-			}
-		} // proc LoginUser
+		//		OnUsernameChanged();
+		//		await RefreshAsync();
+		//	}
+		//	catch
+		//	{
+		//		ResetLogin();
+		//		throw;
+		//	}
+		//} // proc LoginUser
 
-		public async Task LogoutUserAsync()
-		{
-			await Task.Yield();
-			ResetLogin();
-		} // proc LogoutUser
+		//public async Task LogoutUserAsync()
+		//{
+		//	await Task.Yield();
+		//	ResetLogin();
+		//} // proc LogoutUser
 
-		private void ResetLogin()
-		{
-			userName = null;
-			userInfo = null;
-			OnUsernameChanged();
-		} // proc ResetLogin
+		//private void ResetLogin()
+		//{
+		//	userName = null;
+		//	userInfo = null;
+		//	OnUsernameChanged();
+		//} // proc ResetLogin
 
-		protected virtual void OnUsernameChanged()
-			=> UsernameChanged?.Invoke(this, EventArgs.Empty);
+		//protected virtual void OnUsernameChanged()
+		//	=> UsernameChanged?.Invoke(this, EventArgs.Empty);
 
-		/// <summary>Queues a request, to check if the server is available. After this the environment and the cache will be updated.</summary>
-		/// <param name="timeout">wait timeout for the server</param>
-		/// <returns></returns>
-		public async Task<bool> StartOnlineMode(CancellationToken token)
-		{
-			XElement xInfo;
-			try
-			{
-				xInfo = await request.GetXmlAsync("remote/info.xml", MimeTypes.Text.Xml, "ppsn");
-			}
-			catch (WebException ex)
-			{
-				if (ex.Status == WebExceptionStatus.ConnectFailure) // remote host does not respond
-					return false;
-				else
-					throw;
-			}
+		///// <summary>Queues a request, to check if the server is available. After this the environment and the cache will be updated.</summary>
+		///// <param name="timeout">wait timeout for the server</param>
+		///// <returns></returns>
+		//public async Task<bool> StartOnlineMode(CancellationToken token)
+		//{
+		//	XElement xInfo;
+		//	try
+		//	{
+		//		xInfo = await request.GetXmlAsync("remote/info.xml", MimeTypes.Text.Xml, "ppsn");
+		//	}
+		//	catch (WebException ex)
+		//	{
+		//		if (ex.Status == WebExceptionStatus.ConnectFailure) // remote host does not respond
+		//			return false;
+		//		else
+		//			throw;
+		//	}
 
-			// update the current info data
-			info.Update(xInfo);
+		//	// update the current info data
+		//	info.Update(xInfo);
 
-			if (!isOnline)
-			{
-				isOnline = true;
-				OnIsOnlineChanged();
-			}
+		//	if (!isOnline)
+		//	{
+		//		isOnline = true;
+		//		OnIsOnlineChanged();
+		//	}
 
-			// refresh data
-			await RefreshAsync();
+		//	// refresh data
+		//	//await RefreshAsync();
 
-			return true;
-		} // func StartOnlineMode
+		//	return true;
+		//} // func StartOnlineMode
 
 		#endregion
 
-		/// <summary>Loads basic data for the environment.</summary>
-		/// <returns></returns>
-		public async virtual Task RefreshAsync()
-		{
-			await Task.Yield();
+		///// <summary>Loads basic data for the environment.</summary>
+		///// <returns></returns>
+		//public async virtual Task RefreshAsync()
+		//{
+		//	await Task.Yield();
 
-			await RefreshOfflineCacheAsync();
-			await RefreshDefaultResourcesAsync();
-			await RefreshTemplatesAsync();
+		//	await RefreshOfflineCacheAsync();
+		//	await RefreshDefaultResourcesAsync();
+		//	await RefreshTemplatesAsync();
 
 
-			await RefreshMasterDataSchemeAsync();
-		} // proc RefreshAsync
+		//	await RefreshMasterDataSchemeAsync();
+		//} // proc RefreshAsync
 
+		/// <summary>Internal Id of the environment.</summary>
 		public int EnvironmentId => environmentId;
-
-		/// <summary>Local description of the environment.</summary>
-		public PpsEnvironmentInfo Info => info;
-
-		/// <summary>Has the application login data.</summary>
-		public bool IsAuthentificated => userInfo != null;
+		
 		/// <summary>Current user the is logged in.</summary>
 		public string Username => userName ?? String.Empty;
 		/// <summary>Display name for the user.</summary>
-		public string UsernameDisplay => IsAuthentificated ? userName : "Nicht angemeldet";
+		public string UsernameDisplay => userName;
 
-		/// <summary></summary>
+		/// <summary>Data list items definitions</summary>
 		public PpsEnvironmentCollection<PpsDataListItemDefinition> DataListItemTypes => templateDefinitions;
-		/// <summary></summary>
+		/// <summary>Basic template selector for the item selector</summary>
 		public PpsDataListTemplateSelector DataListTemplateSelector => dataListTemplateSelector;
 
 		/// <summary>Dispatcher of the ui-thread.</summary>
@@ -917,9 +916,14 @@ namespace TecWare.PPSn
 		private static object environmentCounterLock = new object();
 		private static int environmentCounter = 1;
 
+		/// <summary>Get the environment, that is attached to the current ui-element.</summary>
+		/// <param name="ui"></param>
+		/// <returns></returns>
 		public static PpsEnvironment GetEnvironment(FrameworkElement ui)
 			=> (PpsEnvironment)ui.FindResource(EnvironmentService);
 
+		/// <summary>Get the Environment, that is attached to the current application.</summary>
+		/// <returns></returns>
 		public static PpsEnvironment GetEnvironment()
 			=> (PpsEnvironment)Application.Current.FindResource(EnvironmentService);
 	} // class PpsEnvironment
