@@ -101,9 +101,9 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <EmbeddedResource Include="Static\SQLite\SyncTokens.sql" />
-    <EmbeddedResource Include="Static\SQLite\Constants.sql" />
-    <EmbeddedResource Include="Static\SQLite\Objects.sql" />
+    <Compile Include="UI\PpsSplashWindow.xaml.cs">
+      <DependentUpon>PpsSplashWindow.xaml</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="Static\navigator.xml">
       <SubType>Designer</SubType>
     </EmbeddedResource>
@@ -124,6 +124,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="UI\PpsSingleWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\PpsSplashWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

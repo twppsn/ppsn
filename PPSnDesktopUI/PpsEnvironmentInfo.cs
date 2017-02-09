@@ -29,7 +29,7 @@ namespace TecWare.PPSn
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsEnvironmentInfo
+	public sealed class PpsEnvironmentInfo : IEquatable<PpsEnvironmentInfo>
 	{
 		private readonly string name;
 		private XDocument content;
@@ -41,7 +41,7 @@ namespace TecWare.PPSn
 		{
 			this.name = name;
 
-			this.localPath = new DirectoryInfo(Path.Combine(localEnvironmentsPath, name));
+			this.localPath = new DirectoryInfo(Path.GetFullPath(Path.Combine(localEnvironmentsPath, name)));
 			if (!localPath.Exists)
 				localPath.Create();
 
@@ -49,6 +49,22 @@ namespace TecWare.PPSn
 
 			ReadInfoFile();
 		} // ctor
+
+		public override bool Equals(object obj)
+			=> Equals(obj as PpsEnvironmentInfo);
+
+		public bool Equals(PpsEnvironmentInfo other)
+		{
+			if (Object.ReferenceEquals(this, other))
+				return true;
+			else if (Object.ReferenceEquals(other, null))
+				return false;
+			else
+				return localPath.FullName.Equals(other.LocalPath.FullName);
+		} // func Equals
+
+		public override int GetHashCode()
+			=> localPath.FullName.GetHashCode();
 
 		private void ReadInfoFile()
 		{
@@ -90,6 +106,12 @@ namespace TecWare.PPSn
 		// -- static --------------------------------------------------------------
 
 		private static string localEnvironmentsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ppsn", "env");
+
+		public static bool operator==(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
+			=> !Object.ReferenceEquals(a, null) && a.Equals(b);
+
+		public static bool operator !=(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
+			=> Object.ReferenceEquals(a, null) || !a.Equals(b);
 
 		public static PpsEnvironmentInfo CreateEnvironment(string serverName, Uri serverUri)
 		{

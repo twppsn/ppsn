@@ -93,9 +93,8 @@ namespace TecWare.PPSn
   public partial class PpsMainEnvironment : PpsEnvironment
 	{
 		private readonly App app;
-		private PpsEnvironmentCollection<PpsMainActionDefinition> actions;
-		private PpsEnvironmentCollection<PpsMainViewDefinition> views;
-		private readonly PpsEnvironmentCollection<PpsConstant> constants;
+		private readonly PpsEnvironmentCollection<PpsMainActionDefinition> actions;
+		private readonly PpsEnvironmentCollection<PpsMainViewDefinition> views;
 
 		private readonly PpsProgressStack backgroundProgress;
 		private readonly PpsProgressStack forgroundProgress;
@@ -107,7 +106,6 @@ namespace TecWare.PPSn
 
 			this.actions = new PpsEnvironmentCollection<PpsMainActionDefinition>(this);
 			this.views = new PpsEnvironmentCollection<PpsMainViewDefinition>(this);
-			this.constants = new PpsEnvironmentCollection<PpsConstant>(this);
 
 			this.backgroundProgress = new PpsProgressStack(app.Dispatcher);
 			this.forgroundProgress = new PpsProgressStack(app.Dispatcher);
@@ -240,8 +238,6 @@ namespace TecWare.PPSn
 		public PpsEnvironmentCollection<PpsMainActionDefinition> Actions => actions;
 		[LuaMember(nameof(Views))]
 		public PpsEnvironmentCollection<PpsMainViewDefinition> Views => views;
-		[LuaMember(nameof(Constants))]
-		public PpsEnvironmentCollection<PpsConstant> Constants => constants;
 
 		[LuaMember(nameof(BackgroundProgressState))]
 		public PpsProgressStack BackgroundProgressState => backgroundProgress;

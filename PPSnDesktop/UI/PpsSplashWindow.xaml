@@ -1,0 +1,53 @@
+﻿<Window x:Class="TecWare.PPSn.UI.PpsSplashWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TecWare.PPSn.UI"
+        mc:Ignorable="d"
+        Title="PPSn" Height="400" Width="600" WindowStyle="None" ResizeMode="NoResize">
+    <Grid>
+        <Grid Visibility="{Binding StatusPaneVisible,Mode=OneWay}">
+            <TextBlock Text="{Binding StatusText,Mode=OneWay}" FontSize="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,0,0" />
+        </Grid>
+        
+        <Grid HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" Visibility="{Binding LoginPaneVisible,Mode=OneWay,RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=Window}}" DataContext="{Binding LoginState}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="70" />
+                <ColumnDefinition Width="200" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="50" />
+                <RowDefinition Height="29" />
+                <RowDefinition Height="29" />
+                <RowDefinition Height="29" />
+                <RowDefinition Height="29" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.ColumnSpan="2" Text="- ANMELDEN -" FontSize="28"  HorizontalAlignment="Center"/>
+
+            <Label Grid.Column="0" Grid.Row="1" Content="Mandant:" />
+            <ComboBox Grid.Column="1" Grid.Row="1" Margin="0,3" ItemsSource="{Binding Environments,Mode=OneWay}" SelectedItem="{Binding CurrentEnvironment}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock>
+                            <Run Text="{Binding DisplayName,Mode=OneWay}" />
+                            <Run Text="{Binding Name,Mode=OneWay,StringFormat='({0})'}" Foreground="DarkGray" />
+                        </TextBlock>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Label Grid.Column="0" Grid.Row="2" Content="Nutzer:" />
+            <ComboBox Grid.Column="1" Grid.Row="2" Margin="0,3" IsEditable="True" IsEnabled="{Binding IsUserNameEnabled}" Text="{Binding UserName}" />
+            <Label Grid.Column="0" Grid.Row="3" Content="Passwort:" />
+            <PasswordBox Grid.Column="1" Grid.Row="3" Margin="0,3" IsEnabled="{Binding IsPasswordEnabled}" />
+
+            <Button Grid.Column="0" Grid.Row="4" Content="*" Width="23" Height="23" HorizontalAlignment="Left" VerticalAlignment="Bottom" Command="{x:Static ApplicationCommands.New}" />
+
+            <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                <Button Content="Anmelden" Width="80" Height="23" Margin="0,0,0,0" Command="{x:Static ApplicationCommands.Save}" IsEnabled="{Binding IsValid}" />
+                <Button Content="Abbruch" Width="80" Height="23" Margin="12,0,0,0" Command="{x:Static ApplicationCommands.Close}" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
