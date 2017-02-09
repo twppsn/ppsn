@@ -687,6 +687,9 @@ namespace TecWare.PPSn
 			mainResources[EnvironmentService] = this;
 		} // ctor
 
+		public Task InitAsync()
+			=> Task.CompletedTask;
+
 		public void Dispose()
 		{
 			Dispose(true);
