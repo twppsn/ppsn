@@ -5,49 +5,258 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TecWare.PPSn.UI"
         mc:Ignorable="d"
-        Title="PPSn" Height="400" Width="600" WindowStyle="None" ResizeMode="NoResize">
-    <Grid>
+        Title="PPSn" Height="400" Width="600" WindowStyle="None" ResizeMode="NoResize" Background="Transparent" AllowsTransparency="True" MouseDown="Window_MouseDown">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary>
+                    <Color x:Key="ColorDark">#FF1111AA</Color>
+                    <Color x:Key="ColorLight">#FF1111FF</Color>
+                    <Color x:Key="ColorInvariant">#FF1111DD</Color>
+                    <Color x:Key="BorderDark">#FF000055</Color>
+                    <Color x:Key="TextColor">#EEEEEEEE</Color>
+                    <SolidColorBrush x:Key="TextBrushLight" Color="{StaticResource TextColor}"/>
+                    <SolidColorBrush x:Key="BackgroundBrushDark" Color="{StaticResource ColorDark}"/>
+                    <SolidColorBrush x:Key="BorderBrushDark" Color="{StaticResource BorderDark}"/>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1" x:Key="ButtonBlackBackground">
+                        <LinearGradientBrush.GradientStops>
+                            <GradientStop Color="{StaticResource BorderDark}"/>
+                            <GradientStop Color="{StaticResource BorderDark}"/>
+                        </LinearGradientBrush.GradientStops>
+                    </LinearGradientBrush>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1" x:Key="ButtonTextLight">
+                        <LinearGradientBrush.GradientStops>
+                            <GradientStop Color="{StaticResource TextColor}"/>
+                            <GradientStop Color="{StaticResource TextColor}"/>
+                        </LinearGradientBrush.GradientStops>
+                    </LinearGradientBrush>
+                    <Style x:Key="BorderGrid" TargetType="Grid">
+                        <Setter Property="Background">
+                            <Setter.Value>
+                                <SolidColorBrush Color="{StaticResource TextColor}" Opacity="0.5"/>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                    <Style x:Key="BackgroundGrid" TargetType="Grid">
+                        <Style.Triggers>
+                            <EventTrigger RoutedEvent="Grid.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetProperty="(Background).(LinearGradientBrush.GradientStops)[0].(GradientStop.Color)"
+                    To="{StaticResource ColorLight}" Duration="0:0:3" AutoReverse="True" RepeatBehavior="Forever" DecelerationRatio="0.5" AccelerationRatio="0.5"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetProperty="(Background).(LinearGradientBrush.GradientStops)[2].(GradientStop.Color)"
+                    To="{StaticResource ColorDark}" Duration="0:0:5" AutoReverse="True" RepeatBehavior="Forever" DecelerationRatio="0.5" AccelerationRatio="0.5"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Style.Triggers>
+                        <Setter Property="Background">
+                            <Setter.Value>
+                                <LinearGradientBrush x:Name="gradientBrush" StartPoint="0.2,0.1" EndPoint="1,0.8">
+                                    <GradientStop Color="{StaticResource ColorDark}" />
+                                    <GradientStop Color="{StaticResource ColorInvariant}" Offset="0.5" />
+                                    <GradientStop Color="{StaticResource ColorLight}" Offset="1" />
+                                </LinearGradientBrush>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                    <Style TargetType="Label" x:Key="LightLabel">
+                        <Setter Property="Foreground" Value="{StaticResource TextBrushLight}">
+                        </Setter>
+                    </Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{StaticResource TextBrushLight}">
+                        </Setter>
+                    </Style>
+                    <Style TargetType="Button" x:Key="ButtonDark">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Grid x:Name="ButtonGrid">
+                                        <Border x:Name="ButtonBorder" BorderThickness="2" BorderBrush="{StaticResource BorderBrushDark}" 
+               Background="{DynamicResource ButtonBlackBackground}" MinHeight="21.96">
+                                        </Border>
+                                        <ContentPresenter x:Name="ButtonContentPresenter" 
+                    HorizontalAlignment="{TemplateBinding Property=Button.HorizontalContentAlignment}" 
+                    VerticalAlignment="{TemplateBinding Property=Button.VerticalContentAlignment}" 
+                    Content="{TemplateBinding Property=Button.Content}" />
+                                    </Grid>
+                                    <ControlTemplate.Triggers>
+                                        <EventTrigger RoutedEvent="Button.MouseEnter">
+                                            <EventTrigger.Actions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <ColorAnimation  Storyboard.TargetName="ButtonBorder"
+                         Storyboard.TargetProperty="Background.GradientStops[0].Color" 
+                         To="{StaticResource TextColor}" Duration="0:0:0.5" />
+                                                        <ColorAnimation Storyboard.TargetName="ButtonBorder"
+                         Storyboard.TargetProperty="Background.GradientStops[1].Color" 
+                         To="{StaticResource TextColor}" Duration="0:0:0.5" />
+                                                        <ColorAnimation
+                         Storyboard.TargetProperty="Foreground.GradientStops[0].Color" 
+                         To="{StaticResource BorderDark}" Duration="0:0:0.2" />
+                                                        <ColorAnimation
+                         Storyboard.TargetProperty="Foreground.GradientStops[1].Color" 
+                         To="{StaticResource BorderDark}" Duration="0:0:0.2" />
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger.Actions>
+                                        </EventTrigger>
+                                        <EventTrigger RoutedEvent="Button.MouseLeave">
+                                            <EventTrigger.Actions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <ColorAnimation  Storyboard.TargetName="ButtonBorder"
+                         Storyboard.TargetProperty="Background.GradientStops[0].Color" 
+                         To="{StaticResource BorderDark}" Duration="0:0:0.5" />
+                                                        <ColorAnimation Storyboard.TargetName="ButtonBorder"
+                         Storyboard.TargetProperty="Background.GradientStops[1].Color" 
+                         To="{StaticResource BorderDark}" Duration="0:0:0.5" />
+                                                        <ColorAnimation
+                         Storyboard.TargetProperty="Foreground.GradientStops[0].Color" 
+                         To="{StaticResource TextColor}" Duration="0:0:0.7" />
+                                                        <ColorAnimation
+                         Storyboard.TargetProperty="Foreground.GradientStops[1].Color" 
+                         To="{StaticResource TextColor}" Duration="0:0:0.7" />
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger.Actions>
+                                        </EventTrigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Setter Property="BorderBrush">
+                            <Setter.Value>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="{StaticResource ColorDark}" />
+                                    <GradientStop Color="{StaticResource ColorDark}" />
+                                </LinearGradientBrush>
+                            </Setter.Value>
+                        </Setter>
+                        <Setter Property="Foreground" Value="{StaticResource ButtonTextLight}"/>
+                    </Style>
+                    <Style TargetType="ComboBox" x:Key="CBBDark">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBox">
+                                    <Grid x:Name="ComboGrid">
+                                        <Border x:Name="ComboBorder" BorderThickness="2" BorderBrush="{StaticResource BorderBrushDark}" 
+               Background="{DynamicResource ButtonBlackBackground}" MinHeight="21.96">
+                                        </Border>
+                                    </Grid>
+                                    <ControlTemplate.Triggers>
+                                        <EventTrigger RoutedEvent="ComboBox.MouseEnter">
+                                            <EventTrigger.Actions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <ColorAnimation  Storyboard.TargetName="ComboBorder"
+                         Storyboard.TargetProperty="Background.GradientStops[0].Color" 
+                         To="{StaticResource TextColor}" Duration="0:0:0.5" />
+                                                        <ColorAnimation Storyboard.TargetName="ComboBorder"
+                         Storyboard.TargetProperty="Background.GradientStops[1].Color" 
+                         To="{StaticResource TextColor}" Duration="0:0:0.5" />
+                                                        <ColorAnimation
+                         Storyboard.TargetProperty="Foreground.GradientStops[0].Color" 
+                         To="{StaticResource BorderDark}" Duration="0:0:0.2" />
+                                                        <ColorAnimation
+                         Storyboard.TargetProperty="Foreground.GradientStops[1].Color" 
+                         To="{StaticResource BorderDark}" Duration="0:0:0.2" />
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger.Actions>
+                                        </EventTrigger>
+                                        <EventTrigger RoutedEvent="ComboBox.MouseLeave">
+                                            <EventTrigger.Actions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <ColorAnimation  Storyboard.TargetName="ComboBorder"
+                         Storyboard.TargetProperty="Background.GradientStops[0].Color" 
+                         To="{StaticResource BorderDark}" Duration="0:0:0.5" />
+                                                        <ColorAnimation Storyboard.TargetName="ComboBorder"
+                         Storyboard.TargetProperty="Background.GradientStops[1].Color" 
+                         To="{StaticResource BorderDark}" Duration="0:0:0.5" />
+                                                        <ColorAnimation
+                         Storyboard.TargetProperty="Foreground.GradientStops[0].Color" 
+                         To="{StaticResource TextColor}" Duration="0:0:0.7" />
+                                                        <ColorAnimation
+                         Storyboard.TargetProperty="Foreground.GradientStops[1].Color" 
+                         To="{StaticResource TextColor}" Duration="0:0:0.7" />
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger.Actions>
+                                        </EventTrigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Setter Property="BorderBrush">
+                            <Setter.Value>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="{StaticResource ColorDark}" />
+                                    <GradientStop Color="{StaticResource ColorDark}" />
+                                </LinearGradientBrush>
+                            </Setter.Value>
+                        </Setter>
+                        <Setter Property="Foreground" Value="{StaticResource ButtonTextLight}"/>
+                    </Style>
+                </ResourceDictionary>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Style="{StaticResource BorderGrid}">
+        <Grid Style="{StaticResource BackgroundGrid}" Margin="5">
         <Grid Visibility="{Binding StatusPaneVisible,Mode=OneWay}">
             <TextBlock Text="{Binding StatusText,Mode=OneWay}" FontSize="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,0,0" />
         </Grid>
-        
-        <Grid HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" Visibility="{Binding LoginPaneVisible,Mode=OneWay,RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=Window}}" DataContext="{Binding LoginState}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="70" />
-                <ColumnDefinition Width="200" />
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="50" />
-                <RowDefinition Height="29" />
-                <RowDefinition Height="29" />
-                <RowDefinition Height="29" />
-                <RowDefinition Height="29" />
-            </Grid.RowDefinitions>
+        <Image Source="http://www.tecware-gmbh.de/UserFiles/Image/layout/logo_tecware.png" Width="200" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="40,40" />
+            <Grid HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" Style="{StaticResource BorderGrid}">
+                <Grid Margin="2"  Style="{StaticResource BackgroundGrid}">
+                <Grid Margin="5" Grid.Column="1" Style="{StaticResource BackgroundGrid}" Visibility="{Binding LoginPaneVisible,Mode=OneWay,RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=Window}}" DataContext="{Binding LoginState}">
 
-            <TextBlock Grid.ColumnSpan="2" Text="- ANMELDEN -" FontSize="28"  HorizontalAlignment="Center"/>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="70" />
+                        <ColumnDefinition Width="200" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="50" />
+                        <RowDefinition Height="29" />
+                        <RowDefinition Height="29" />
+                        <RowDefinition Height="29" />
+                        <RowDefinition Height="29" />
+                    </Grid.RowDefinitions>
 
-            <Label Grid.Column="0" Grid.Row="1" Content="Mandant:" />
-            <ComboBox Grid.Column="1" Grid.Row="1" Margin="0,3" ItemsSource="{Binding Environments,Mode=OneWay}" SelectedItem="{Binding CurrentEnvironment}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock>
+                    <TextBlock Grid.ColumnSpan="2" Text="- ANMELDEN -" FontSize="28"  HorizontalAlignment="Center"/>
+
+                    <Label Grid.Column="0" Grid.Row="1" Content="Mandant:" Style="{StaticResource LightLabel}"/>
+                    <ComboBox Grid.Column="1" Grid.Row="1" Margin="0,3" ItemsSource="{Binding Environments,Mode=OneWay}" SelectedItem="{Binding CurrentEnvironment}" Style="{StaticResource CBBDark}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock>
                             <Run Text="{Binding DisplayName,Mode=OneWay}" />
                             <Run Text="{Binding Name,Mode=OneWay,StringFormat='({0})'}" Foreground="DarkGray" />
-                        </TextBlock>
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <Label Grid.Column="0" Grid.Row="2" Content="Nutzer:" />
-            <ComboBox Grid.Column="1" Grid.Row="2" Margin="0,3" IsEditable="True" IsEnabled="{Binding IsUserNameEnabled}" Text="{Binding UserName}" />
-            <Label Grid.Column="0" Grid.Row="3" Content="Passwort:" />
-            <PasswordBox Grid.Column="1" Grid.Row="3" Margin="0,3" IsEnabled="{Binding IsPasswordEnabled}" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Label Grid.Column="0" Grid.Row="2" Content="Nutzer:"  Style="{StaticResource LightLabel}"/>
+                    <ComboBox Grid.Column="1" Grid.Row="2" Margin="0,3" IsEditable="True" IsEnabled="{Binding IsUserNameEnabled}" Text="{Binding UserName}"  Style="{StaticResource CBBDark}"/>
+                    <Label Grid.Column="0" Grid.Row="3" Content="Passwort:" Style="{StaticResource LightLabel}"/>
+                    <PasswordBox Grid.Column="1" Grid.Row="3" Margin="0,3" IsEnabled="{Binding IsPasswordEnabled}" />
 
-            <Button Grid.Column="0" Grid.Row="4" Content="*" Width="23" Height="23" HorizontalAlignment="Left" VerticalAlignment="Bottom" Command="{x:Static ApplicationCommands.New}" />
+                    <Button Grid.Column="0" Grid.Row="4" Content="*" Width="23" Height="23" HorizontalAlignment="Left" VerticalAlignment="Bottom" Command="{x:Static ApplicationCommands.New}" Style="{StaticResource ButtonDark}"/>
 
-            <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" HorizontalAlignment="Right" VerticalAlignment="Bottom">
-                <Button Content="Anmelden" Width="80" Height="23" Margin="0,0,0,0" Command="{x:Static ApplicationCommands.Save}" IsEnabled="{Binding IsValid}" />
-                <Button Content="Abbruch" Width="80" Height="23" Margin="12,0,0,0" Command="{x:Static ApplicationCommands.Close}" />
-            </StackPanel>
+                    <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                        <Button Content="Anmelden" Width="80" Height="23" Margin="0,0,0,0" Command="{x:Static ApplicationCommands.Save}" IsEnabled="{Binding IsValid}" Style="{StaticResource ButtonDark}"/>
+                        <Button Content="Abbruch" Width="80" Height="23" Margin="12,0,0,0" Command="{x:Static ApplicationCommands.Close}" Style="{StaticResource ButtonDark}"/>
+                    </StackPanel>
+                </Grid>
+                </Grid>
+            </Grid>
         </Grid>
     </Grid>
 </Window>

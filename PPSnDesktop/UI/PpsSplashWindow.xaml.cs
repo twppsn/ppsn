@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -182,7 +183,7 @@ namespace TecWare.PPSn.UI
 
 		private void CreateNewEnvironment(object sender, ExecutedRoutedEventArgs e)
 		{
-			MessageBox.Show("Wizasrd fürs verbinden!");
+			MessageBox.Show("Wizzard fürs Verbinden!");
 			e.Handled = true;
 		} // proc CreateNewEnvironment
 
@@ -252,5 +253,11 @@ namespace TecWare.PPSn.UI
 		public Visibility StatusPaneVisible => (Visibility)GetValue(StatusPaneVisibleProperty);
 		public string StatusText { get { return (string)GetValue(StatusTextProperty); } set { SetValue(StatusTextProperty, value); } }
 		public LoginStateData LoginState => (LoginStateData)GetValue(LoginStateProperty);
-	} // class PpsSplashWindow
+
+      private void Window_MouseDown(object sender, MouseButtonEventArgs e)
+      {
+         if (e.ChangedButton == MouseButton.Left)
+            DragMove();
+      }
+   } // class PpsSplashWindow
 }
