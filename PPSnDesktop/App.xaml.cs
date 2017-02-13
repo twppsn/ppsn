@@ -51,8 +51,7 @@ namespace TecWare.PPSn
 					environment = PpsEnvironmentInfo.GetLocalEnvironments().FirstOrDefault(c => c.Name.ToLower() == "test");
 				}
 
-				var redo = true;
-				while (redo)
+				while (true)
 				{
 					try
 					{
@@ -76,11 +75,30 @@ namespace TecWare.PPSn
 						var env = await Dispatcher.InvokeAsync(() => new PpsMainEnvironment(environment, userInfo, this));
 
 						// create environment
-						await env.InitAsync();
+						switch (await env.InitAsync(splashWindow))
+						{
+							case PpsEnvironmentModeResult.LoginFailed:
+								// todo: show error as simple text
+								break;
+							case PpsEnvironmentModeResult.Shutdown:
+								// todo: application restart
+								return false;
 
-						// set new environment
-						redo = false;
-						currentEnvironment = env;
+							case PpsEnvironmentModeResult.ServerFailure:
+								// todo: show error as simple text
+								break;
+
+							case PpsEnvironmentModeResult.Online:
+							case PpsEnvironmentModeResult.Offline:
+								// set new environment
+								currentEnvironment = env;
+
+								// create first window
+
+								return false; // todo: true
+							default:
+								throw new InvalidOperationException();
+						}
 					}
 					catch (Exception e)
 					{
@@ -88,9 +106,6 @@ namespace TecWare.PPSn
 						// failed????
 					}
 				}
-
-				Thread.Sleep(3000);
-				return false;
 			}
 			finally
 			{

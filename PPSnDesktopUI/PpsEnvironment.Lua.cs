@@ -515,9 +515,7 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		[LuaMember("msgbox")]
 		private MessageBoxResult LuaMsgBox(string text, string caption, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
-		{
-			return MessageBox.Show(text, caption ?? "Information", button, image, defaultResult);
-		} // proc LuaMsgBox
+			=> MsgBox(text, button, image, defaultResult);
 
 		[LuaMember("trace")]
 		private void LuaTrace(PpsTraceItemType type, params object[] args)

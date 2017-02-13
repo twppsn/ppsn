@@ -19,7 +19,7 @@ namespace TecWare.PPSn.UI
 {
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public partial class PpsSplashWindow : Window
+	public partial class PpsSplashWindow : Window, IProgress<string>
 	{
 		#region -- class LoginState -------------------------------------------------------
 
@@ -242,6 +242,9 @@ namespace TecWare.PPSn.UI
 
 		public void SetProgressTextAsync(string text)
 			=> Dispatcher.BeginInvoke(new Action<string>(t => StatusText = t), DispatcherPriority.Normal, text);
+
+		void IProgress<string>.Report(string text)
+			=> SetProgressTextAsync(text);
 
 		#endregion
 

@@ -487,8 +487,8 @@ namespace TecWare.PPSn
 				{
 					// get the item
 					var path = items.GetValue(indexPath, String.Empty);
-					if (path.Contains("masterdata"))
-						path = path;
+					//if (path.Contains("masterdata"))
+					//	path = path;
 					var length = items.GetValue(indexLength, -1L);
 					var lastWriteTime = items.GetValue(indexLastWriteTime, DateTime.MinValue);
 

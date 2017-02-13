@@ -17,6 +17,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Data.SQLite;
+using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using System.Net;
@@ -36,7 +38,6 @@ using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 using LExpression = System.Linq.Expressions.Expression;
-using System.Data.SQLite;
 
 namespace TecWare.PPSn
 {
@@ -612,6 +613,63 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- enum PpsEnvironmentState --------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Current state of the environment.</summary>
+	public enum PpsEnvironmentState
+	{
+		/// <summary>Nothing</summary>
+		None,
+		/// <summary>System environment will be destroyed or is destroyed.</summary>
+		Shutdown,
+		/// <summary>System is offline.</summary>
+		Offline,
+		/// <summary>System is offline and tries to connect to the server.</summary>
+		OfflineConnect,
+		/// <summary>System is online.</summary>
+		Online
+	} // enum PpsEnvironmentState
+
+	#endregion
+
+	#region -- enum PpsEnvironmentMode --------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Current mode of the environment.</summary>
+	public enum PpsEnvironmentMode
+	{
+		/// <summary>No state.</summary>
+		None,
+		/// <summary>System offline.</summary>
+		Offline,
+		/// <summary>System online.</summary>
+		Online,
+		/// <summary>System closes.</summary>
+		Shutdown
+	} // enum PpsEnvironmentMode
+
+	#endregion
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public enum PpsEnvironmentModeResult
+	{
+		/// <summary>System offline.</summary>
+		Offline,
+		/// <summary>System online.</summary>
+		Online,
+		/// <summary>System closes.</summary>
+		Shutdown,
+
+		/// <summary>Application data is outdated.</summary>
+		NeedsUpdate,
+		/// <summary>State change login failed.</summary>
+		LoginFailed,
+		/// <summary>Server is not available.</summary>
+		ServerFailure
+	} // enum PpsEnvironmentModeResult
+
 	#region -- class PpsEnvironment -----------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -686,12 +744,47 @@ namespace TecWare.PPSn
 
 			// Register Service
 			mainResources[EnvironmentService] = this;
+
+			InitBackgroundNotifier(out backgroundNotifier, out backgroundNotifierModeTransmission);
 		} // ctor
 
-		public Task InitAsync()
+		public async Task<PpsEnvironmentModeResult> InitAsync(IProgress<string> progress, bool bootOffline = false)
 		{
-			return Task.CompletedTask;
+			// initialize the local database
+			// todo: close local db
+			// todo: connect local db
+			// if no localdb and offline boot then fehler!
+
+			// check for online mode
+		redoConnect:
+			progress.Report("Verbinden...");
+			var r = await WaitForEnvironmentMode(bootOffline ? PpsEnvironmentMode.Offline : PpsEnvironmentMode.Online);
+			if (r == PpsEnvironmentModeResult.NeedsUpdate)
+			{
+				if (await MsgBoxAsync("Es steht eine neue Version zur Verfügung.\nUpdate durchführen?", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+				{
+					if (await UpdateAsync(progress))
+						goto redoConnect;
+					else
+						return PpsEnvironmentModeResult.NeedsUpdate;
+				}
+				else
+				{
+					await WaitForEnvironmentMode(PpsEnvironmentMode.Offline);
+					bootOffline = true;
+					goto redoConnect;
+				}
+			}
+			return r;
 		} // func InitAsync
+
+		// true => update successful
+		// false => needs restart
+		private Task<bool> UpdateAsync(IProgress<string> progress)
+		{
+			progress.Report("Lade Anwendungsänderungen...");
+			return Task.FromResult(true);
+		} // proc UpdateAsync
 
 		public void Dispose()
 		{
@@ -702,6 +795,8 @@ namespace TecWare.PPSn
 		{
 			if (disposing)
 			{
+				SetNewMode(PpsEnvironmentMode.Shutdown);
+
 				services.ForEach(serv => (serv as IDisposable)?.Dispose());
 
 				mainResources.Remove(EnvironmentService);
@@ -717,6 +812,9 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		public bool IsNetworkPresent
+			=> true;
+		
 		#region -- Services ---------------------------------------------------------------
 
 		public void RegisterService(string key, object service)
@@ -747,6 +845,212 @@ namespace TecWare.PPSn
 
 			return null;
 		} // func GetService
+
+		#endregion
+
+		#region -- Background Notifier ----------------------------------------------------
+
+		#region -- class ModeTransission --------------------------------------------------
+
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class ModeTransission
+		{
+			private bool isCompleted = false;
+			private readonly PpsEnvironmentMode desiredMode;
+			private readonly TaskCompletionSource<PpsEnvironmentModeResult> waitForSuccess;
+
+			public ModeTransission(PpsEnvironmentMode desiredMode)
+			{
+				if (desiredMode != PpsEnvironmentMode.Online && 
+						desiredMode != PpsEnvironmentMode.Offline &&
+						desiredMode != PpsEnvironmentMode.Shutdown)
+					throw new ArgumentException($"{desiredMode} is not a valid mode transission.");
+
+				this.desiredMode = desiredMode;
+				this.waitForSuccess = new TaskCompletionSource<PPSn.PpsEnvironmentModeResult>();
+			} // ctor
+
+			public void SetResult(PpsEnvironmentModeResult result)
+			{
+				if (isCompleted)
+					throw new InvalidOperationException();
+
+				waitForSuccess.SetResult(result);
+				isCompleted = true;
+			} // proc SetResult
+
+			public void SetException(Exception e)
+			{
+				if (!isCompleted)
+				{
+					waitForSuccess.SetException(e);
+					isCompleted = true;
+				}
+			} // proc SetException
+
+			public void Cancel()
+			{
+				if (!isCompleted)
+				{
+					waitForSuccess.TrySetCanceled();
+					isCompleted = true;
+				}
+			} // proc Cancel
+
+			public PpsEnvironmentMode DesiredMode => desiredMode;
+			public Task<PpsEnvironmentModeResult> Task => waitForSuccess.Task;
+		} // class StateTransission
+
+		#endregion
+
+		private PpsEnvironmentMode currentMode = PpsEnvironmentMode.None;
+		private PpsEnvironmentState currentState = PpsEnvironmentState.None;
+
+		private readonly object modeTransmissionLock = new object();
+		private ModeTransission modeTransmission = null;
+
+		private readonly Thread backgroundNotifier;
+		private readonly ManualResetEventSlim backgroundNotifierModeTransmission;
+
+		private void InitBackgroundNotifier(out Thread backgroundNotifier, out ManualResetEventSlim backgroundNotifierModeTransmission)
+		{
+			backgroundNotifierModeTransmission = new ManualResetEventSlim(false);
+			backgroundNotifier = new Thread(ExecuteNotifierLoop);
+			backgroundNotifier.IsBackground = true;
+			backgroundNotifier.Name = $"Environment Notify {environmentId}";
+			backgroundNotifier.Start();
+		} // proc InitBackgroundNotifier
+
+		private void SetNewMode(PpsEnvironmentMode newMode)
+			=> WaitForEnvironmentMode(newMode).Wait();
+
+		private Task<PpsEnvironmentModeResult> WaitForEnvironmentMode(PpsEnvironmentMode desiredMode)
+		{
+			// is this a new mode
+			if (desiredMode == currentMode)
+			{
+				switch (desiredMode)
+				{
+					case PpsEnvironmentMode.Offline:
+						return Task.FromResult(PpsEnvironmentModeResult.Offline);
+					case PpsEnvironmentMode.Online:
+						return Task.FromResult(PpsEnvironmentModeResult.Online);
+					case PpsEnvironmentMode.Shutdown:
+						return Task.FromResult(PpsEnvironmentModeResult.Shutdown);
+					default:
+						throw new InvalidOperationException();
+				}
+			}
+
+			// start the mode switching
+			lock (modeTransmissionLock)
+			{
+				modeTransmission = new ModeTransission(desiredMode);
+				backgroundNotifierModeTransmission.Set();
+				return modeTransmission.Task;
+			}
+		} // func WaitForEnvironmentState
+
+		private bool TryGetModeTransmission(ref ModeTransission result)
+		{
+			lock (modeTransmissionLock)
+			{
+				if (modeTransmission == null)
+					return false;
+				else
+				{
+					if (result != null)
+						result.Cancel();
+
+					result = modeTransmission;
+					backgroundNotifierModeTransmission.Reset();
+					modeTransmission = null;
+					return result != null;
+				}
+			}
+		} // func TryGetModeTransmission
+
+
+		private void ExecuteNotifierLoop()
+		{
+			var state = PpsEnvironmentState.None;
+			ModeTransission currentTransmission = null;
+			while (true)
+				try
+				{
+					// new mode requested
+					if (TryGetModeTransmission(ref currentTransmission))
+					{
+						switch (currentTransmission.DesiredMode)
+						{
+							case PpsEnvironmentMode.Offline:
+								state = PpsEnvironmentState.Offline;
+								break;
+							case PpsEnvironmentMode.Online:
+								state = PpsEnvironmentState.OfflineConnect;
+								break;
+							case PpsEnvironmentMode.Shutdown:
+								state = PpsEnvironmentState.Shutdown;
+								break;
+						}
+					}
+
+					// process current state
+					UpdatePulicState(state);
+					switch (state)
+					{
+						case PpsEnvironmentState.None: // nothing to do wait for a state
+						case PpsEnvironmentState.Offline:
+							if (currentTransmission != null)
+							{
+								currentTransmission.SetResult(PpsEnvironmentModeResult.Offline);
+								currentTransmission = null;
+							}
+							backgroundNotifierModeTransmission.Wait();
+							break;
+
+						case PpsEnvironmentState.OfflineConnect:
+							// load application info / new version
+							//UpdateApplicationInfo(Request.GetXmlAsync("remote/info.xml", rootName: "ppsn").Result);
+
+							// new state? -> user login am server
+							// new state? -> sync restart
+							Thread.Sleep(1000);
+							if (currentTransmission != null)
+							{
+								currentTransmission.SetResult(PpsEnvironmentModeResult.Online);
+								currentTransmission = null;
+							}
+							state = PpsEnvironmentState.Online;
+							break;
+
+						case PpsEnvironmentState.Online:
+							// fetch next state on ws-info
+							break;
+
+						case PpsEnvironmentState.Shutdown:
+							return; // cancel all connections
+
+						default:
+							throw new InvalidOperationException("Unknown state.");
+					}
+				}
+				catch (Exception e)
+				{
+					// todo: exception
+					Debug.Print(e.ToString());
+				}
+		} // proc ExecuteNotifierLoop
+
+		private void UpdatePulicState(PpsEnvironmentState state)
+		{
+			if (currentState != state)
+			{
+				currentState = state;
+				Dispatcher.BeginInvoke(new Action(() => OnPropertyChanged(nameof(CurrentMode))));
+			}
+		} // proc UpdatePulicState
 
 		#endregion
 
@@ -895,6 +1199,9 @@ namespace TecWare.PPSn
 		public string Username => userName ?? String.Empty;
 		/// <summary>Display name for the user.</summary>
 		public string UsernameDisplay => userName;
+
+		public PpsEnvironmentMode CurrentMode => currentMode;
+		public PpsEnvironmentState CurrentState => currentState;
 
 		/// <summary>Data list items definitions</summary>
 		public PpsEnvironmentCollection<PpsDataListItemDefinition> DataListItemTypes => templateDefinitions;

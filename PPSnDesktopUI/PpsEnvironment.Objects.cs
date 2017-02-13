@@ -1049,7 +1049,7 @@ namespace TecWare.PPSn
 					transaction.Commit();
 				}
 			}
-			catch(Exception e)
+			catch (Exception)
 			{
 				throw;
 			}
