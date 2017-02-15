@@ -281,5 +281,10 @@ namespace TecWare.PPSn.UI
          if (e.ChangedButton == MouseButton.Left)
             DragMove();
       }
+
+      private void cbEnviroments_SelectionChanged(object sender, SelectionChangedEventArgs e)
+      {
+         loginStateUnSafe.CurrentEnvironment = (PpsEnvironmentInfo)((ComboBox)sender).SelectedItem;
+      }
    } // class PpsSplashWindow
 }

@@ -144,9 +144,10 @@ namespace TecWare.PPSn
          }
          get
          {
-            var lastUser = from user in recentUsers
-                    select recentUsers.OrderByDescending(t => t.Timestamp).FirstOrDefault();
-            return lastUser.First().UserName;
+            if (recentUsers.Any())
+               return (from user in recentUsers select recentUsers.OrderByDescending(t => t.Timestamp).FirstOrDefault()).First().UserName;
+            else
+               return String.Empty;
          }
       }
 
