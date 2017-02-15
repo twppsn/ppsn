@@ -36,7 +36,7 @@ namespace TecWare.PPSn
 			// show a login/splash
 			var splashWindow = await Dispatcher.InvokeAsync(() =>
 				{
-					var w = new PpsSplashWindow();
+               var w = new PpsSplashWindow();
 					w.Owner = currentEnvironment?.GetWindows().FirstOrDefault();
 					w.StatusText = "Initialisiere die Anwendung...";
 					w.Show();
@@ -92,7 +92,7 @@ namespace TecWare.PPSn
 							case PpsEnvironmentModeResult.Offline:
 								// set new environment
 								currentEnvironment = env;
-
+                        environment.LastUser = ((dynamic)userInfo).UserName;
 								// create first window
 
 								return false; // todo: true

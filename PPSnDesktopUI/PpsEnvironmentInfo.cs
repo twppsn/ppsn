@@ -25,124 +25,229 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn
 {
-	#region -- class PpsEnvironmentInfo -------------------------------------------------
+   #region -- class PpsEnvironmentInfo -------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public sealed class PpsEnvironmentInfo : IEquatable<PpsEnvironmentInfo>
-	{
-		private readonly string name;
-		private XDocument content;
+   ///////////////////////////////////////////////////////////////////////////////
+   /// <summary></summary>
+   public sealed class PpsEnvironmentInfo : IEquatable<PpsEnvironmentInfo>
+   {
+      private readonly string name;
+      private XDocument content;
 
-		private readonly DirectoryInfo localPath;
-		private readonly FileInfo infoFile;
+      private readonly DirectoryInfo localPath;
+      private readonly FileInfo infoFile;
 
-		public PpsEnvironmentInfo(string name)
-		{
-			this.name = name;
+      List<RecentLogin> recentUsers = new List<RecentLogin>();
 
-			this.localPath = new DirectoryInfo(Path.GetFullPath(Path.Combine(localEnvironmentsPath, name)));
-			if (!localPath.Exists)
-				localPath.Create();
+      public PpsEnvironmentInfo(string name)
+      {
+         this.name = name;
 
-			this.infoFile = new FileInfo(Path.Combine(localPath.FullName, "info.xml"));
+         this.localPath = new DirectoryInfo(Path.GetFullPath(Path.Combine(localEnvironmentsPath, name)));
+         if (!localPath.Exists)
+            localPath.Create();
 
-			ReadInfoFile();
-		} // ctor
+         this.infoFile = new FileInfo(Path.Combine(localPath.FullName, "info.xml"));
 
-		public override bool Equals(object obj)
-			=> Equals(obj as PpsEnvironmentInfo);
+         ReadInfoFile();
+      } // ctor
 
-		public bool Equals(PpsEnvironmentInfo other)
-		{
-			if (Object.ReferenceEquals(this, other))
-				return true;
-			else if (Object.ReferenceEquals(other, null))
-				return false;
-			else
-				return localPath.FullName.Equals(other.LocalPath.FullName);
-		} // func Equals
+      public override bool Equals(object obj)
+         => Equals(obj as PpsEnvironmentInfo);
 
-		public override int GetHashCode()
-			=> localPath.FullName.GetHashCode();
+      public bool Equals(PpsEnvironmentInfo other)
+      {
+         if (Object.ReferenceEquals(this, other))
+            return true;
+         else if (Object.ReferenceEquals(other, null))
+            return false;
+         else
+            return localPath.FullName.Equals(other.LocalPath.FullName);
+      } // func Equals
 
-		private void ReadInfoFile()
-		{
-			if (infoFile.Exists)
-				content = XDocument.Load(infoFile.FullName);
-			else
-				content = new XDocument(new XElement("ppsn"));
-		} // proc
+      public override int GetHashCode()
+         => localPath.FullName.GetHashCode();
 
-		public void Update(XElement xNewInfo)
-		{
-			// copy uri
-			xNewInfo.SetAttributeValue("uri", Uri);
+      private void ReadInfoFile()
+      {
+         if (infoFile.Exists)
+         {
+            content = XDocument.Load(infoFile.FullName);
+            LoadRecentUsers(content, ref recentUsers);
+         }
+         else
+            content = new XDocument(new XElement("ppsn"));
+      } // proc
 
-			if (!Procs.CompareNode(content.Root, xNewInfo))
-			{
-				content = new XDocument(xNewInfo);
-				content.Save(infoFile.FullName);
-			}
-		} // proc UpdateInfoFile
+      private static void LoadRecentUsers(XDocument content, ref List<RecentLogin> recentUsers)
+      {
+         if (content == null)
+            return;
+         if (content.Descendants("ppsn").First() == null)
+            return;
+         if (!content.Descendants("ppsn").First().HasElements)
+            return;
+         if (!content.Descendants("ppsn").First().Descendants("login").First().HasElements)
+            return;
+         foreach (var ru in content.Descendants("ppsn").First().Descendants("login").First().Descendants())
+         {
+            if (ru.Name == "recentuser")
+               recentUsers.Add(new RecentLogin(ru.GetAttribute("username", String.Empty), ru.GetAttribute<DateTime>("timestamp", DateTime.MinValue)));
+         }
+         recentUsers.Sort((a, b) => (b.Timestamp.CompareTo(a.Timestamp)));
+      }
 
-		public string Name => name;
+      public string LastUser
+      {
+         set
+         {
+            // get the persitent settings for login
+            var ppsn = content.Descendants("ppsn")?.First();
+            var login = ppsn.HasElements ? ppsn.Descendants("login")?.First() : null;
+            if (login == null)
+            {
+               login = new XElement("login");
+               ppsn.Add(login);
+            }
 
-		public string DisplayName { get { return content.Root.GetAttribute("displayName", name); } set { content.Root.SetAttributeValue("displayName", value); } }
-		public Uri Uri
-		{
-			get
-			{
-				var uri = content.Root.GetAttribute("uri", null);
-				return uri == null ? null : new Uri(uri);
-			}
-			set { content.Root.SetAttributeValue("uri", value.ToString()); }
-		} // prop Uri
+            // find the actual user in memory
+            var reoccuringUser = recentUsers.Find(t => t.UserName == value);
 
-		public Version Version { get { return new Version(content.Root.GetAttribute("version", "0.0.0.0")); } set { content.Root.SetAttributeValue("version", value.ToString()); } }
+            XElement newLogin = null;
+            
+            if (reoccuringUser == null)
+            {
+               // new user - create it
+               reoccuringUser = (new RecentLogin(value));
+               recentUsers.Add(reoccuringUser);
+               newLogin = new XElement("recentuser");
+               newLogin.SetAttributeValue("username", value);
+               login.Add(newLogin);
+            }
+            else
+            {
+               // existing user - select in persistent settings
+               var logins = login.Descendants().GetEnumerator();
+               while (logins.MoveNext())
+               {
+                  if (logins.Current.Name == "recentuser")
+                     if (logins.Current.GetAttribute("username", String.Empty) == value)
+                        newLogin = logins.Current;
+               }
+            }
 
-		public DirectoryInfo LocalPath => localPath;
+            // set the time
+            reoccuringUser.Timestamp = DateTime.Now;
+            newLogin.SetAttributeValue("timestamp", reoccuringUser.Timestamp);
+            // save to persistent setting
+            content.Save(infoFile.FullName);
+         }
+         get
+         {
+            var lastUser = from user in recentUsers
+                    select recentUsers.OrderByDescending(t => t.Timestamp).FirstOrDefault();
+            return lastUser.First().UserName;
+         }
+      }
 
-		// -- static --------------------------------------------------------------
+      public void Update(XElement xNewInfo)
+      {
+         // copy uri
+         xNewInfo.SetAttributeValue("uri", Uri);
 
-		private static string localEnvironmentsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ppsn", "env");
+         if (!Procs.CompareNode(content.Root, xNewInfo))
+         {
+            content = new XDocument(xNewInfo);
+            content.Save(infoFile.FullName);
+         }
+      } // proc UpdateInfoFile
+            
+      public class RecentLogin
+      {
+         public string UserName;
+         public DateTime Timestamp;
 
-		public static bool operator==(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
-			=> !Object.ReferenceEquals(a, null) && a.Equals(b);
+         public RecentLogin(string userName, DateTime timestamp)
+         {
+            this.UserName = userName;
+            this.Timestamp = timestamp;
+         }
 
-		public static bool operator !=(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
-			=> Object.ReferenceEquals(a, null) || !a.Equals(b);
+         public RecentLogin(string userName)
+         {
+            this.UserName = userName;
+         }
+      }
+      
+      public IEnumerable<string> RecentUsers
+      {
+         get
+         {
+            var users = new List<string>();
+            foreach (var user in recentUsers)
+               if (users.IndexOf(user.UserName) < 0)
+                  users.Add(user.UserName);
+            return users;
+         }
+      }
 
-		public static PpsEnvironmentInfo CreateEnvironment(string serverName, Uri serverUri)
-		{
-			var info = new PpsEnvironmentInfo(serverName);
-			if (info.Uri == null) // update server uri
-				info.Uri = serverUri;
-			return info;
-		} // func CreateEnvironment
+      public string Name => name;
 
-		public static IEnumerable<PpsEnvironmentInfo> GetLocalEnvironments()
-		{
-			var localEnvironmentsDirectory = new DirectoryInfo(localEnvironmentsPath);
-			if (localEnvironmentsDirectory.Exists)
-			{
-				foreach (var cur in localEnvironmentsDirectory.EnumerateDirectories())
-				{
-					PpsEnvironmentInfo localEnvironment = null;
-					try
-					{
-						localEnvironment = new PpsEnvironmentInfo(cur.Name);
-					}
-					catch (Exception e)
-					{
-						Debug.Print(e.ToString());
-					}
-					if (localEnvironment != null)
-						yield return localEnvironment;
-				}
-			}
-		} // func GetLocalEnvironments
-	} // class PpsEnvironmentInfo
+      public string DisplayName { get { return content.Root.GetAttribute("displayName", name); } set { content.Root.SetAttributeValue("displayName", value); } }
+      public Uri Uri
+      {
+         get
+         {
+            var uri = content.Root.GetAttribute("uri", null);
+            return uri == null ? null : new Uri(uri);
+         }
+         set { content.Root.SetAttributeValue("uri", value.ToString()); }
+      } // prop Uri
 
-	#endregion
+      public Version Version { get { return new Version(content.Root.GetAttribute("version", "0.0.0.0")); } set { content.Root.SetAttributeValue("version", value.ToString()); } }
+
+      public DirectoryInfo LocalPath => localPath;
+
+      // -- static --------------------------------------------------------------
+
+      private static string localEnvironmentsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ppsn", "env");
+
+      public static bool operator ==(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
+         => !Object.ReferenceEquals(a, null) && a.Equals(b);
+
+      public static bool operator !=(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
+         => Object.ReferenceEquals(a, null) || !a.Equals(b);
+
+      public static PpsEnvironmentInfo CreateEnvironment(string serverName, Uri serverUri)
+      {
+         var info = new PpsEnvironmentInfo(serverName);
+         if (info.Uri == null) // update server uri
+            info.Uri = serverUri;
+         return info;
+      } // func CreateEnvironment
+
+      public static IEnumerable<PpsEnvironmentInfo> GetLocalEnvironments()
+      {
+         var localEnvironmentsDirectory = new DirectoryInfo(localEnvironmentsPath);
+         if (localEnvironmentsDirectory.Exists)
+         {
+            foreach (var cur in localEnvironmentsDirectory.EnumerateDirectories())
+            {
+               PpsEnvironmentInfo localEnvironment = null;
+               try
+               {
+                  localEnvironment = new PpsEnvironmentInfo(cur.Name);
+               }
+               catch (Exception e)
+               {
+                  Debug.Print(e.ToString());
+               }
+               if (localEnvironment != null)
+                  yield return localEnvironment;
+            }
+         }
+      } // func GetLocalEnvironments
+   } // class PpsEnvironmentInfo
+
+   #endregion
 }
