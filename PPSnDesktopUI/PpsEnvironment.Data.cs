@@ -183,26 +183,47 @@ namespace TecWare.PPSn
 
 		#region -- Init -------------------------------------------------------------------
 
-		private SQLiteConnection InitLocalStore()
+		private Task<string> GetLocalStorePassword()
 		{
+			var passwordFile = Path.Combine(LocalPath.FullName, "localStore.dat");
+			if (File.Exists(passwordFile))
+				return Task.FromResult("geheim"); // todo: rk read and verify
+			else
+				return Task.FromResult("geheim"); // todo: rk generate and store
+		} // func GetLocalStorePassword
+
+		/// <summary></summary>
+		/// <returns><c>true</c>, if a valid database is present.</returns>
+		private async Task<bool> InitLocalStoreAsync()
+		{
+			var isUseable = false;
+			// open a new local store
 			SQLiteConnection newLocalStore = null;
-			// open local data store
 			try
 			{
 				// open the local database
-				var dataPath = Path.Combine(info.LocalPath.FullName, "localStore.db");
-				newLocalStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc;foreign keys=true");
-				newLocalStore.Open();
-				VerifyLocalStore(newLocalStore);
+				var dataPath = Path.Combine(LocalPath.FullName, "localStore.db");
+				newLocalStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc;Password=Pps{GetLocalStorePassword()}"); // foreign keys=true
+				await newLocalStore.OpenAsync();
+
+				// check if this is no new database
+				isUseable = false; // todo: rk check if there are tables (test for system tables)
 			}
 			catch
 			{
 				newLocalStore?.Dispose();
 				throw;
 			}
-			return newLocalStore;
-		} // proc InitLocalStore
 
+			// close current connection
+			localConnection?.Dispose();
+
+			// set new connection
+			localConnection = newLocalStore;
+
+			return isUseable;
+		} // proc InitLocalStore
+		
 		private Uri InitProxy()
 		{
 			// register proxy for the web requests

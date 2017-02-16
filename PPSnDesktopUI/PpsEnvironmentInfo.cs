@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -142,6 +143,25 @@ namespace TecWare.PPSn
 				}
 			}
 		} // func GetLocalEnvironments
+
+		private static string GetDomainUserName(string domain, string userName)
+				=> String.IsNullOrEmpty(domain)? userName : domain + "\\" + userName;
+
+		public static string GetUserNameFromCredentials(ICredentials userInfo)
+		{
+			if (userInfo == null)
+				return null;
+			else if (CredentialCache.DefaultCredentials == userInfo)
+				return GetDomainUserName(Environment.UserDomainName, Environment.UserName);
+			else
+			{
+				var networkCredential = userInfo as NetworkCredential;
+				if (networkCredential != null)
+					return GetDomainUserName(networkCredential.Domain, networkCredential.UserName);
+				else
+					throw new ArgumentOutOfRangeException("Invalid userInfo.");
+			} // func GetUserNameFromCredentials
+		} // func GetUserNameFromCredentials
 	} // class PpsEnvironmentInfo
 
 	#endregion

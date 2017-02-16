@@ -20,6 +20,7 @@ using System.Collections.Specialized;
 using System.Data.SQLite;
 using System.Diagnostics;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -613,7 +614,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- enum PpsEnvironmentState --------------------------------------------------
+	#region -- enum PpsEnvironmentState -------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Current state of the environment.</summary>
@@ -651,6 +652,8 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- enum PpsEnvironmentModeResult --------------------------------------------
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public enum PpsEnvironmentModeResult
@@ -670,6 +673,8 @@ namespace TecWare.PPSn
 		ServerFailure
 	} // enum PpsEnvironmentModeResult
 
+	#endregion
+
 	#region -- class PpsEnvironment -----------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -678,14 +683,13 @@ namespace TecWare.PPSn
 	/// engine.</summary>
 	public partial class PpsEnvironment : LuaGlobalPortable, IPpsShell, IServiceProvider, IDisposable
 	{
-		/// <summary></summary>
-		public event EventHandler UsernameChanged;
+		private readonly int environmentId;				// unique id of the environment
+		private readonly PpsEnvironmentInfo info;		// source information of the environment
+		private readonly ICredentials userInfo;			// currently credentials of the user
 
-		private readonly int environmentId;           // unique id of the environment
-		private readonly PpsEnvironmentInfo info;     // source information of the environment
-		private readonly ICredentials userInfo;				// currently credentials of the user
-		private string userName;        // display name of the user
-
+		private string userName = null;					// display name of the user
+		private readonly DirectoryInfo localDirectory = null;	// local directory for the user data
+		
 		private PpsTraceLog logData = new PpsTraceLog();
 		private PpsDataListTemplateSelector dataListTemplateSelector;
 		private PpsEnvironmentCollection<PpsDataListItemDefinition> templateDefinitions;
@@ -699,11 +703,18 @@ namespace TecWare.PPSn
 		{
 			if (info == null)
 				throw new ArgumentNullException("info");
+			if (userInfo == null)
+				throw new ArgumentNullException("userInfo");
 			if (mainResources == null)
 				throw new ArgumentNullException("mainResources");
 
 			this.info = info;
 			this.userInfo = userInfo;
+			this.userName = PpsEnvironmentInfo.GetUserNameFromCredentials(userInfo);
+
+			this.localDirectory = new DirectoryInfo(Path.Combine(info.LocalPath.FullName, this.Username));
+			if (!localDirectory.Exists)
+				localDirectory.Create();
 
 			this.activeDataSets = new PpsActiveDataSetsImplementation(this);
 			this.objectInfo = new PpsEnvironmentCollection<PpsObjectInfo>(this);
@@ -736,7 +747,6 @@ namespace TecWare.PPSn
 
 			// initialize local store
 			this.baseUri = InitProxy();
-			//////this.localConnection = InitLocalStore();
 			request = new BaseWebRequest(baseUri, Encoding);
 
 			// Register new Data Schemes from, the server
@@ -751,9 +761,14 @@ namespace TecWare.PPSn
 		public async Task<PpsEnvironmentModeResult> InitAsync(IProgress<string> progress, bool bootOffline = false)
 		{
 			// initialize the local database
-			// todo: close local db
-			// todo: connect local db
-			// if no localdb and offline boot then fehler!
+			var isLocalDbReady = await InitLocalStoreAsync();
+			if (!isLocalDbReady && bootOffline)
+			{
+				if (await MsgBoxAsync("Es steht keine Offline-Version bereit.\nOnline Synchronisation jeztz starten?", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+					return await InitAsync(progress, false);
+				else
+					return PpsEnvironmentModeResult.NeedsUpdate;
+			}
 
 			// check for online mode
 		redoConnect:
@@ -1200,7 +1215,9 @@ namespace TecWare.PPSn
 		/// <summary>Display name for the user.</summary>
 		public string UsernameDisplay => userName;
 
+		/// <summary>The current mode of the environment.</summary>
 		public PpsEnvironmentMode CurrentMode => currentMode;
+		/// <summary>The current state of the environment.</summary>
 		public PpsEnvironmentState CurrentState => currentState;
 
 		/// <summary>Data list items definitions</summary>
@@ -1215,6 +1232,9 @@ namespace TecWare.PPSn
 
 		/// <summary>Access to the current collected informations.</summary>
 		public PpsTraceLog Traces => logData;
+
+		/// <summary>Path of the local data for the user.</summary>
+		public DirectoryInfo LocalPath => localDirectory;
 
 		LuaTable IPpsShell.LuaLibrary => this;
 

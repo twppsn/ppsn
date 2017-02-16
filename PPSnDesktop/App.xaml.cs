@@ -88,6 +88,10 @@ namespace TecWare.PPSn
 								// todo: show error as simple text
 								break;
 
+							case PpsEnvironmentModeResult.NeedsUpdate:
+								// todo: show error
+								break;
+
 							case PpsEnvironmentModeResult.Online:
 							case PpsEnvironmentModeResult.Offline:
 								// set new environment
