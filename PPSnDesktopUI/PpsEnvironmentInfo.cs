@@ -37,7 +37,7 @@ namespace TecWare.PPSn
 
 		private readonly DirectoryInfo localPath;
 		private readonly FileInfo infoFile;
-
+		
 		public PpsEnvironmentInfo(string name)
 		{
 			this.name = name;
@@ -52,7 +52,7 @@ namespace TecWare.PPSn
 		} // ctor
 
 		public override bool Equals(object obj)
-			=> Equals(obj as PpsEnvironmentInfo);
+		   => Equals(obj as PpsEnvironmentInfo);
 
 		public bool Equals(PpsEnvironmentInfo other)
 		{
@@ -65,15 +65,53 @@ namespace TecWare.PPSn
 		} // func Equals
 
 		public override int GetHashCode()
-			=> localPath.FullName.GetHashCode();
+		   => localPath.FullName.GetHashCode();
 
 		private void ReadInfoFile()
 		{
-			if (infoFile.Exists)
-				content = XDocument.Load(infoFile.FullName);
-			else
-				content = new XDocument(new XElement("ppsn"));
+			content = 
+				infoFile.Exists ? 
+					XDocument.Load(infoFile.FullName) : 
+					new XDocument(new XElement("ppsn"))
 		} // proc
+
+		private IEnumerable<XElement> RecentUsersInternal => content.Root.Element("login")?.Elements("recentUser") ?? Array.Empty<XElement>();
+
+		public string LastUser
+		{
+			get
+			{
+				return (from x in RecentUsersInternal
+						let userName = x.GetAttribute("userName", String.Empty)
+						let lastLogin = x.GetAttribute("timeStamp", DateTime.MinValue)
+						where !String.IsNullOrEmpty(userName)
+						orderby lastLogin
+						select userName
+						).FirstOrDefault() ?? String.Empty;
+			}
+			set
+			{
+				if (String.IsNullOrEmpty(value))
+					return;
+
+				// remove current reference
+				RecentUsersInternal
+					.FirstOrDefault(x => String.Compare(x.GetAttribute("userName", String.Empty), value, StringComparison.OrdinalIgnoreCase) == 0)
+					?.Remove();
+
+				var xLogin = content.Root.Element("login");
+				if (xLogin == null)
+					content.Root.Add(xLogin = new XElement("login"));
+
+				xLogin.AddFirst(new XElement("recentUser",
+					new XAttribute("userName", value),
+					new XAttribute("timeStamp", DateTime.UtcNow.ChangeType<string>())
+				));
+
+				// save to persistent setting
+				content.Save(infoFile.FullName);
+			}
+		}
 
 		public void Update(XElement xNewInfo)
 		{
@@ -87,9 +125,16 @@ namespace TecWare.PPSn
 			}
 		} // proc UpdateInfoFile
 
+		public IEnumerable<string> RecentUsers
+			=> from x in RecentUsersInternal
+			   let userName = x.GetAttribute("userName", String.Empty)
+			   where !String.IsNullOrEmpty(userName)
+			   select userName;
+
 		public string Name => name;
 
 		public string DisplayName { get { return content.Root.GetAttribute("displayName", name); } set { content.Root.SetAttributeValue("displayName", value); } }
+
 		public Uri Uri
 		{
 			get
@@ -108,11 +153,11 @@ namespace TecWare.PPSn
 
 		private static string localEnvironmentsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ppsn", "env");
 
-		public static bool operator==(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
-			=> !Object.ReferenceEquals(a, null) && a.Equals(b);
+		public static bool operator ==(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
+		   => !Object.ReferenceEquals(a, null) && a.Equals(b);
 
 		public static bool operator !=(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
-			=> Object.ReferenceEquals(a, null) || !a.Equals(b);
+		   => Object.ReferenceEquals(a, null) || !a.Equals(b);
 
 		public static PpsEnvironmentInfo CreateEnvironment(string serverName, Uri serverUri)
 		{
@@ -145,7 +190,7 @@ namespace TecWare.PPSn
 		} // func GetLocalEnvironments
 
 		private static string GetDomainUserName(string domain, string userName)
-				=> String.IsNullOrEmpty(domain)? userName : domain + "\\" + userName;
+				=> String.IsNullOrEmpty(domain) ? userName : domain + "\\" + userName;
 
 		public static string GetUserNameFromCredentials(ICredentials userInfo)
 		{

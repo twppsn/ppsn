@@ -34,8 +34,9 @@ namespace TecWare.PPSn.UI
 
 			private PpsEnvironmentInfo[] environments = null;
 			private PpsEnvironmentInfo currentEnvironment = null;
-			private string userName = null;
-			
+			private string actualUserName = null;
+			private IEnumerable<string> recentUsers = null;
+
 			public LoginStateData(PpsSplashWindow parent)
 			{
 				this.parent = parent;
@@ -46,7 +47,13 @@ namespace TecWare.PPSn.UI
 
 			public ICredentials GetCredentials()
 			{
-				return CredentialCache.DefaultCredentials;
+				if (IsDomainName(actualUserName))
+					return CredentialCache.DefaultCredentials.GetCredential(currentEnvironment.Uri, "");
+				else
+				{
+					var test = new NetworkCredential(ActualUserName, Password);
+					return new NetworkCredential(ActualUserName, Password);
+				}
 			} // func GetCredentials
 
 			public void RefreshEnvironments(PpsEnvironmentInfo selectEnvironment)
@@ -78,24 +85,29 @@ namespace TecWare.PPSn.UI
 						OnPropertyChanged(nameof(CurrentEnvironment));
 						OnPropertyChanged(nameof(IsUserNameEnabled));
 
-						UserName = Environment.UserDomainName + "\\" + Environment.UserName;
+						if (String.IsNullOrEmpty(currentEnvironment.LastUser))
+							ActualUserName = Environment.UserDomainName + "\\" + Environment.UserName;
+						else
+							ActualUserName = currentEnvironment.LastUser;
+
+						RecentUsers = currentEnvironment.RecentUsers;
 					}
 				}
 			} // prop CurrentEnvironment
 
-			public string UserName
+			public string ActualUserName
 			{
-				get { return userName; }
+				get { return actualUserName; }
 				set
 				{
 					if (value != null && value.Length == 0)
 						value = null;
 
-					if (value != userName)
+					if (value != actualUserName)
 					{
-						userName = value;
+						actualUserName = value;
 
-						OnPropertyChanged(nameof(UserName));
+						OnPropertyChanged(nameof(ActualUserName));
 						OnPropertyChanged(nameof(IsValid));
 						OnPropertyChanged(nameof(IsPasswordEnabled));
 					}
@@ -104,9 +116,22 @@ namespace TecWare.PPSn.UI
 
 			public string Password;
 
-			public bool IsValid => !String.IsNullOrEmpty(userName);
+			public bool IsValid => !String.IsNullOrEmpty(actualUserName);
 			public bool IsUserNameEnabled => currentEnvironment != null;
-			public bool IsPasswordEnabled => userName != null && !IsDomainName(userName) && !IsDefaultUser(userName);
+			public bool IsPasswordEnabled => actualUserName != null && !IsDomainName(actualUserName) && !IsDefaultUser(actualUserName);
+
+			public IEnumerable<string> RecentUsers
+			{
+				get
+				{
+					return recentUsers;
+				}
+				set
+				{
+					recentUsers = value;
+					OnPropertyChanged(nameof(RecentUsers));
+				}
+			}
 
 			private static bool IsDomainName(string userName)
 				=> userName.StartsWith(System.Environment.UserDomainName + "\\", StringComparison.OrdinalIgnoreCase);
@@ -145,7 +170,7 @@ namespace TecWare.PPSn.UI
 					new CommandBinding(ApplicationCommands.Close, CloseLoginFrame, LoginFrameActive)
 				}
 			);
-			
+
 			SetValue(LoginPaneVisiblePropertyKey, Visibility.Hidden);
 			SetValue(StatusPaneVisiblePropertyKey, Visibility.Visible);
 			SetValue(LoginStatePropertyKey, loginStateUnSafe = new LoginStateData(this));
@@ -254,10 +279,15 @@ namespace TecWare.PPSn.UI
 		public string StatusText { get { return (string)GetValue(StatusTextProperty); } set { SetValue(StatusTextProperty, value); } }
 		public LoginStateData LoginState => (LoginStateData)GetValue(LoginStateProperty);
 
-      private void Window_MouseDown(object sender, MouseButtonEventArgs e)
-      {
-         if (e.ChangedButton == MouseButton.Left)
-            DragMove();
-      }
-   } // class PpsSplashWindow
+		private void Window_Drag(object sender, MouseButtonEventArgs e)
+		{
+			if (e.ChangedButton == MouseButton.Left)
+				DragMove();
+		}
+
+		private void cbEnviroments_SelectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+			loginStateUnSafe.CurrentEnvironment = (PpsEnvironmentInfo)((ComboBox)sender).SelectedItem;
+		}
+	} // class PpsSplashWindow
 }
