@@ -30,15 +30,15 @@ namespace TecWare.PPSn
 
 		public async Task<bool> StartApplicationAsync(PpsEnvironmentInfo _environment = null, ICredentials _userInfo = null, bool parseArguments = false)
 		{
-         var environment = _environment;
-         var userInfo = _userInfo;
-         // we will have no windows
-         await Dispatcher.InvokeAsync(() => ShutdownMode = ShutdownMode.OnExplicitShutdown);
+			var environment = _environment;
+			var userInfo = _userInfo;
+			// we will have no windows
+			await Dispatcher.InvokeAsync(() => ShutdownMode = ShutdownMode.OnExplicitShutdown);
 
 			// show a login/splash
 			var splashWindow = await Dispatcher.InvokeAsync(() =>
 				{
-               var w = new PpsSplashWindow();
+					var w = new PpsSplashWindow();
 					w.Owner = currentEnvironment?.GetWindows().FirstOrDefault();
 					w.StatusText = "Initialisiere die Anwendung...";
 					w.Show();
@@ -63,7 +63,7 @@ namespace TecWare.PPSn
 							var t = await splashWindow.ShowLoginAsync(environment);
 							if (t == null)
 								return false;
-                     environment = t.Item1;
+							environment = t.Item1;
 							userInfo = t.Item2;
 						}
 
@@ -97,7 +97,7 @@ namespace TecWare.PPSn
 							case PpsEnvironmentModeResult.Offline:
 								// set new environment
 								currentEnvironment = env;
-                        environment.LastUser = ((dynamic)userInfo).UserName;
+								environment.WriteLastUser(((dynamic)userInfo).UserName);
 								// create first window
 
 								return false; // todo: true
@@ -134,7 +134,7 @@ namespace TecWare.PPSn
 		{
 			Task.Run(() =>
 				{
-               StartApplicationAsync(parseArguments: true)
+					StartApplicationAsync(parseArguments: true)
 					.ContinueWith(t =>
 					{
 						if (!t.Result)
@@ -248,7 +248,7 @@ namespace TecWare.PPSn
 			CoreExceptionHandler(e.Exception);
 			e.Handled = true;
 		} // event App_DispatcherUnhandledException
-		
+
 		#endregion
 
 		private void SetEnvironment(PpsMainEnvironment env)
