@@ -32,6 +32,12 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public sealed class PpsEnvironmentInfo : IEquatable<PpsEnvironmentInfo>
 	{
+      private const string UserNameId = "userName";
+      private const string LoginTimeId = "loginTime";
+      private const string LoginElementId = "recentUser";
+      private const string LoginId = "login";
+      private const string InfoFileId = "info.xml";
+
 		private readonly string name;
 		private XDocument content;
 
@@ -46,7 +52,7 @@ namespace TecWare.PPSn
 			if (!localPath.Exists)
 				localPath.Create();
 
-			this.infoFile = new FileInfo(Path.Combine(localPath.FullName, "info.xml"));
+			this.infoFile = new FileInfo(Path.Combine(localPath.FullName, InfoFileId));
 
 			ReadInfoFile();
 		} // ctor
@@ -75,15 +81,15 @@ namespace TecWare.PPSn
 					new XDocument(new XElement("ppsn"));
 		} // proc
 
-		private IEnumerable<XElement> RecentUsersInternal => content.Root.Element("login")?.Elements("recentUser") ?? Array.Empty<XElement>();
+		private IEnumerable<XElement> RecentUsersInternal => content.Root.Element(LoginId)?.Elements(LoginElementId) ?? Array.Empty<XElement>();
 
 		public string LastUser
 		{
 			get
 			{
 				return (from x in RecentUsersInternal
-						let userName = x.GetAttribute("userName", String.Empty)
-						let lastLogin = x.GetAttribute("timeStamp", DateTime.MinValue)
+						let userName = x.GetAttribute(UserNameId, String.Empty)
+						let lastLogin = x.GetAttribute(LoginTimeId, DateTime.MinValue)
 						where !String.IsNullOrEmpty(userName)
 						orderby lastLogin
 						select userName
@@ -96,16 +102,16 @@ namespace TecWare.PPSn
 
 				// remove current reference
 				RecentUsersInternal
-					.FirstOrDefault(x => String.Compare(x.GetAttribute("userName", String.Empty), value, StringComparison.OrdinalIgnoreCase) == 0)
+					.FirstOrDefault(x => String.Compare(x.GetAttribute(UserNameId, String.Empty), value, StringComparison.OrdinalIgnoreCase) == 0)
 					?.Remove();
 
-				var xLogin = content.Root.Element("login");
+				var xLogin = content.Root.Element(LoginId);
 				if (xLogin == null)
-					content.Root.Add(xLogin = new XElement("login"));
+					content.Root.Add(xLogin = new XElement(LoginId));
 
-				xLogin.AddFirst(new XElement("recentUser",
-					new XAttribute("userName", value),
-					new XAttribute("timeStamp", DateTime.UtcNow.ChangeType<string>())
+				xLogin.AddFirst(new XElement(LoginElementId,
+					new XAttribute(UserNameId, value),
+					new XAttribute(LoginTimeId, DateTime.UtcNow.ChangeType<string>())
 				));
 
 				// save to persistent setting
@@ -127,7 +133,7 @@ namespace TecWare.PPSn
 
 		public IEnumerable<string> RecentUsers
 			=> from x in RecentUsersInternal
-			   let userName = x.GetAttribute("userName", String.Empty)
+			   let userName = x.GetAttribute(UserNameId, String.Empty)
 			   where !String.IsNullOrEmpty(userName)
 			   select userName;
 
