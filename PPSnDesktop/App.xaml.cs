@@ -28,10 +28,12 @@ namespace TecWare.PPSn
 
 		#region -- OnStartup, OnExit ------------------------------------------------------
 
-		public async Task<bool> StartApplicationAsync(PpsEnvironmentInfo environment = null, ICredentials userInfo = null, bool parseArguments = false)
+		public async Task<bool> StartApplicationAsync(PpsEnvironmentInfo _environment = null, ICredentials _userInfo = null, bool parseArguments = false)
 		{
-			// we will have no windows
-			await Dispatcher.InvokeAsync(() => ShutdownMode = ShutdownMode.OnExplicitShutdown);
+         var environment = _environment;
+         var userInfo = _userInfo;
+         // we will have no windows
+         await Dispatcher.InvokeAsync(() => ShutdownMode = ShutdownMode.OnExplicitShutdown);
 
 			// show a login/splash
 			var splashWindow = await Dispatcher.InvokeAsync(() =>
@@ -61,8 +63,7 @@ namespace TecWare.PPSn
 							var t = await splashWindow.ShowLoginAsync(environment);
 							if (t == null)
 								return false;
-
-							environment = t.Item1;
+                     environment = t.Item1;
 							userInfo = t.Item2;
 						}
 
@@ -129,7 +130,7 @@ namespace TecWare.PPSn
 		{
 			Task.Run(() =>
 				{
-					StartApplicationAsync(parseArguments: true)
+               StartApplicationAsync(parseArguments: true)
 					.ContinueWith(t =>
 					{
 						if (!t.Result)

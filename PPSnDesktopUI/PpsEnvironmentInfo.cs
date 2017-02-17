@@ -202,7 +202,10 @@ namespace TecWare.PPSn
             var uri = content.Root.GetAttribute("uri", null);
             return uri == null ? null : new Uri(uri);
          }
-         set { content.Root.SetAttributeValue("uri", value.ToString()); }
+         set {
+            content.Root.SetAttributeValue("uri", value.ToString());
+            content.Save(infoFile.FullName);
+         }
       } // prop Uri
 
       public Version Version { get { return new Version(content.Root.GetAttribute("version", "0.0.0.0")); } set { content.Root.SetAttributeValue("version", value.ToString()); } }

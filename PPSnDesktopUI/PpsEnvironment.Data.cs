@@ -191,7 +191,7 @@ namespace TecWare.PPSn
 			{
 				// open the local database
 				var dataPath = Path.Combine(info.LocalPath.FullName, "localStore.db");
-				newLocalStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc;foreign keys=true");
+				newLocalStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc;foreign keys=true");   // ToDo: Encryption would be applied here - hardcoded key? key per installation?
 				newLocalStore.Open();
 				VerifyLocalStore(newLocalStore);
 			}
