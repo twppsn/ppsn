@@ -41,7 +41,7 @@ namespace TecWare.PPSn.Data
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		internal PpsClientLogin(string target, string realm, bool showErrorMessage)
+		public PpsClientLogin(string target, string realm, bool showErrorMessage)
 		{
 			this.target = target;
 			this.realm = realm;

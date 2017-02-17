@@ -32,12 +32,18 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public sealed class PpsEnvironmentInfo : IEquatable<PpsEnvironmentInfo>
 	{
+		private const string UserNameId = "userName";
+		private const string LoginTimeId = "loginTime";
+		private const string LoginElementId = "recentUser";
+		private const string LoginId = "login";
+		private const string InfoFileId = "info.xml";
+
 		private readonly string name;
 		private XDocument content;
 
 		private readonly DirectoryInfo localPath;
 		private readonly FileInfo infoFile;
-		
+
 		public PpsEnvironmentInfo(string name)
 		{
 			this.name = name;
@@ -46,13 +52,13 @@ namespace TecWare.PPSn
 			if (!localPath.Exists)
 				localPath.Create();
 
-			this.infoFile = new FileInfo(Path.Combine(localPath.FullName, "info.xml"));
+			this.infoFile = new FileInfo(Path.Combine(localPath.FullName, InfoFileId));
 
 			ReadInfoFile();
 		} // ctor
 
 		public override bool Equals(object obj)
-		   => Equals(obj as PpsEnvironmentInfo);
+			=> Equals(obj as PpsEnvironmentInfo);
 
 		public bool Equals(PpsEnvironmentInfo other)
 		{
@@ -65,7 +71,7 @@ namespace TecWare.PPSn
 		} // func Equals
 
 		public override int GetHashCode()
-		   => localPath.FullName.GetHashCode();
+			=> localPath.FullName.GetHashCode();
 
 		private void ReadInfoFile()
 		{
@@ -75,42 +81,43 @@ namespace TecWare.PPSn
 					new XDocument(new XElement("ppsn"));
 		} // proc
 
-		private IEnumerable<XElement> RecentUsersInternal => content.Root.Element("login")?.Elements("recentUser") ?? Array.Empty<XElement>();
+		private IEnumerable<XElement> RecentUsersInternal => content.Root.Element(LoginId)?.Elements(LoginElementId) ?? Array.Empty<XElement>();
 
 		public string LastUser
 		{
 			get
 			{
 				return (from x in RecentUsersInternal
-						let userName = x.GetAttribute("userName", String.Empty)
-						let lastLogin = x.GetAttribute("timeStamp", DateTime.MinValue)
-						where !String.IsNullOrEmpty(userName)
-						orderby lastLogin
-						select userName
+						  let userName = x.GetAttribute(UserNameId, String.Empty)
+						  let lastLogin = x.GetAttribute(LoginTimeId, DateTime.MinValue)
+						  where !String.IsNullOrEmpty(userName)
+						  orderby lastLogin
+						  select userName
 						).FirstOrDefault() ?? String.Empty;
 			}
-			set
-			{
-				if (String.IsNullOrEmpty(value))
-					return;
+		}
 
-				// remove current reference
-				RecentUsersInternal
-					.FirstOrDefault(x => String.Compare(x.GetAttribute("userName", String.Empty), value, StringComparison.OrdinalIgnoreCase) == 0)
-					?.Remove();
+		public void WriteLastUser(string userName)
+		{
+			if (String.IsNullOrEmpty(userName))
+				return;
 
-				var xLogin = content.Root.Element("login");
-				if (xLogin == null)
-					content.Root.Add(xLogin = new XElement("login"));
+			// remove current reference
+			RecentUsersInternal
+				.FirstOrDefault(x => String.Compare(x.GetAttribute(UserNameId, String.Empty), userName, StringComparison.OrdinalIgnoreCase) == 0)
+				?.Remove();
 
-				xLogin.AddFirst(new XElement("recentUser",
-					new XAttribute("userName", value),
-					new XAttribute("timeStamp", DateTime.UtcNow.ChangeType<string>())
-				));
+			var xLogin = content.Root.Element(LoginId);
+			if (xLogin == null)
+				content.Root.Add(xLogin = new XElement(LoginId));
 
-				// save to persistent setting
-				content.Save(infoFile.FullName);
-			}
+			xLogin.AddFirst(new XElement(LoginElementId,
+				new XAttribute(UserNameId, userName),
+				new XAttribute(LoginTimeId, DateTime.UtcNow.ChangeType<string>())
+			));
+
+			// save to persistent setting
+			content.Save(infoFile.FullName);
 		}
 
 		public void Update(XElement xNewInfo)
@@ -126,9 +133,9 @@ namespace TecWare.PPSn
 
 		public IEnumerable<string> RecentUsers
 			=> from x in RecentUsersInternal
-			   let userName = x.GetAttribute("userName", String.Empty)
-			   where !String.IsNullOrEmpty(userName)
-			   select userName;
+				let userName = x.GetAttribute(UserNameId, String.Empty)
+				where !String.IsNullOrEmpty(userName)
+				select userName;
 
 		public string Name => name;
 
@@ -155,10 +162,10 @@ namespace TecWare.PPSn
 		private static string localEnvironmentsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ppsn", "env");
 
 		public static bool operator ==(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
-		   => !Object.ReferenceEquals(a, null) && a.Equals(b);
+			=> !Object.ReferenceEquals(a, null) && a.Equals(b);
 
 		public static bool operator !=(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
-		   => Object.ReferenceEquals(a, null) || !a.Equals(b);
+			=> Object.ReferenceEquals(a, null) || !a.Equals(b);
 
 		public static PpsEnvironmentInfo CreateEnvironment(string serverName, Uri serverUri)
 		{
