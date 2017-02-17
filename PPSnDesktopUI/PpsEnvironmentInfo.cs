@@ -69,10 +69,10 @@ namespace TecWare.PPSn
 
 		private void ReadInfoFile()
 		{
-			content = 
-				infoFile.Exists ? 
-					XDocument.Load(infoFile.FullName) : 
-					new XDocument(new XElement("ppsn"))
+			content =
+				infoFile.Exists ?
+					XDocument.Load(infoFile.FullName) :
+					new XDocument(new XElement("ppsn"));
 		} // proc
 
 		private IEnumerable<XElement> RecentUsersInternal => content.Root.Element("login")?.Elements("recentUser") ?? Array.Empty<XElement>();
