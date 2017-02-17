@@ -667,10 +667,12 @@ namespace TecWare.PPSn
 
 		/// <summary>Application data is outdated.</summary>
 		NeedsUpdate,
+		/// <summary>Start synchronization.</summary>
+		NeedsSynchronization,
 		/// <summary>State change login failed.</summary>
 		LoginFailed,
 		/// <summary>Server is not available.</summary>
-		ServerFailure
+		ServerConnectFailure
 	} // enum PpsEnvironmentModeResult
 
 	#endregion
@@ -774,21 +776,28 @@ namespace TecWare.PPSn
 		redoConnect:
 			progress.Report("Verbinden...");
 			var r = await WaitForEnvironmentMode(bootOffline ? PpsEnvironmentMode.Offline : PpsEnvironmentMode.Online);
-			if (r == PpsEnvironmentModeResult.NeedsUpdate)
+			switch (r)
 			{
-				if (await MsgBoxAsync("Es steht eine neue Version zur Verfügung.\nUpdate durchführen?", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
-				{
-					if (await UpdateAsync(progress))
+				case PpsEnvironmentModeResult.NeedsUpdate:
+					if (await MsgBoxAsync("Es steht eine neue Version zur Verfügung.\nUpdate durchführen?", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+					{
+						if (await UpdateAsync(progress))
+							goto redoConnect;
+						else
+							return PpsEnvironmentModeResult.NeedsUpdate;
+					}
+					else
+					{
+						await WaitForEnvironmentMode(PpsEnvironmentMode.Offline);
+						bootOffline = true;
+						goto redoConnect;
+					}
+
+				case PpsEnvironmentModeResult.NeedsSynchronization:
+					if (await SynchronizationAsync(progress))
 						goto redoConnect;
 					else
-						return PpsEnvironmentModeResult.NeedsUpdate;
-				}
-				else
-				{
-					await WaitForEnvironmentMode(PpsEnvironmentMode.Offline);
-					bootOffline = true;
-					goto redoConnect;
-				}
+						return PpsEnvironmentModeResult.NeedsSynchronization;
 			}
 			return r;
 		} // func InitAsync
@@ -992,6 +1001,7 @@ namespace TecWare.PPSn
 			var state = PpsEnvironmentState.None;
 			ModeTransission currentTransmission = null;
 			while (true)
+			{
 				try
 				{
 					// new mode requested
@@ -1026,16 +1036,32 @@ namespace TecWare.PPSn
 							break;
 
 						case PpsEnvironmentState.OfflineConnect:
-							// load application info / new version
-							//UpdateApplicationInfo(Request.GetXmlAsync("remote/info.xml", rootName: "ppsn").Result);
 
-							// new state? -> user login am server
-							// new state? -> sync restart
-							Thread.Sleep(1000);
-							if (currentTransmission != null)
+							// load application info
+							var xInfo = Request.GetXmlAsync("remote/info.xml", rootName: "ppsn").Result;
+							info.Update(xInfo);
+							info.Save();
+
+							// new version
+							if (!info.IsApplicationLatest)
 							{
-								currentTransmission.SetResult(PpsEnvironmentModeResult.Online);
-								currentTransmission = null;
+								// application needs a update
+								state = PpsEnvironmentState.None;
+								SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsUpdate);
+							}
+							else
+							{
+								// try login for the user
+								var xUser = Request.GetXmlAsync("remote/login.xml", rootName: "user").Result;
+
+								userName = xUser.GetAttribute("displayName", userName);
+								Dispatcher.BeginInvoke(new Action(() => OnPropertyChanged(nameof(UsernameDisplay))));
+
+								// start synchronization
+								if (!IsSynchronizationStarted)
+									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsSynchronization);
+								else // mark the system online
+									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.Online);
 							}
 							state = PpsEnvironmentState.Online;
 							break;
@@ -1053,10 +1079,44 @@ namespace TecWare.PPSn
 				}
 				catch (Exception e)
 				{
-					// todo: exception
-					Debug.Print(e.ToString());
+					var ex = Procs.GetInnerException(e);
+					if (currentTransmission != null)
+					{
+						var webEx = ex as WebException;
+
+						switch (webEx?.Status ?? WebExceptionStatus.UnknownError)
+						{
+							case WebExceptionStatus.Timeout:
+							case WebExceptionStatus.ConnectFailure:
+								SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.ServerConnectFailure);
+								break;
+							case WebExceptionStatus.ProtocolError: // todo: detect Login failure
+								SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.LoginFailed);
+								break;
+							default:
+								currentTransmission.SetException(ex);
+								currentTransmission = null;
+								break;
+						}
+						state = PpsEnvironmentState.None;
+					}
+					else// todo: exception
+					{
+						Thread.Sleep(500);
+						Debug.Print(ex.ToString());
+					}
 				}
+			}
 		} // proc ExecuteNotifierLoop
+
+		private void SetTransmissionResult(ref ModeTransission currentTransmission, PpsEnvironmentModeResult result)
+		{
+			if (currentTransmission != null)
+			{
+				currentTransmission.SetResult(result);
+				currentTransmission = null;
+			}
+		} // proc SetTransmissionResult
 
 		private void UpdatePulicState(PpsEnvironmentState state)
 		{

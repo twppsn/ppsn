@@ -178,6 +178,7 @@ namespace TecWare.PPSn
 		private SQLiteConnection localConnection;   // local datastore
 		private readonly Uri baseUri;               // internal uri for this datastore
 		private bool isOnline = false;              // is there an online connection
+		private long lastSynchronizationId = -1;
 
 		private readonly BaseWebRequest request;
 
@@ -474,6 +475,14 @@ namespace TecWare.PPSn
 		} // proc VerifyLocalStore
 
 		#endregion
+
+		private Task<bool> SynchronizationAsync(IProgress<string> progress)
+		{
+			lastSynchronizationId = 0;
+			return Task.FromResult(true);
+		}
+
+		public bool IsSynchronizationStarted => lastSynchronizationId >= 0;
 
 		#region -- Offline Data -----------------------------------------------------------
 

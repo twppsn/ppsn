@@ -6,72 +6,74 @@
         xmlns:local="clr-namespace:TecWare.PPSn.UI"
         mc:Ignorable="d"
         Title="PPSn" Height="400" Width="600" WindowStyle="None" ResizeMode="NoResize" MouseDown="Window_Drag">
-    <Grid>
-        <Grid Visibility="{Binding StatusPaneVisible,Mode=OneWay}">
-            <TextBlock Text="{Binding StatusText,Mode=OneWay}" FontSize="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,0,0" />
-        </Grid>
-        
-        <Grid HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" Visibility="{Binding EnvironmentWizzardPaneVisible,Mode=OneWay}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="70" />
-                <ColumnDefinition Width="200" />
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="50" />
-                <RowDefinition Height="29" />
-                <RowDefinition Height="29" />
-                <RowDefinition Height="29" />
-                <RowDefinition Height="29" />
-            </Grid.RowDefinitions>
-            <TextBlock Grid.ColumnSpan="2" Text="- Neue Verbindung -" FontSize="28"  HorizontalAlignment="Center"/>
-            <Label Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Content="Mandant:"/>
-            <TextBox Grid.Row="1" Grid.Column="1" Name="tbNewEnvironmentName"/>
-            <Label Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Content="URI:"/>
-            <TextBox Grid.Row="2" Grid.Column="1" Name="tbNewEnvironmentUri"/>
+    <Border BorderThickness="1" BorderBrush="#3B4A62">
+        <Grid>
+            <Grid Visibility="{Binding StatusPaneVisible,Mode=OneWay}">
+                <TextBlock Text="{Binding StatusText,Mode=OneWay}" FontSize="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,0,0" />
+            </Grid>
 
-            <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" HorizontalAlignment="Right" VerticalAlignment="Bottom">
-                <Button Content="Speichern" Width="80" Height="23" Margin="0,0,0,0" Command="{x:Static ApplicationCommands.Save}" />
-                <Button Content="Abbruch" Width="80" Height="23" Margin="12,0,0,0" Command="{x:Static ApplicationCommands.Close}" />
-            </StackPanel>
-        </Grid>
+            <Grid HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" Visibility="{Binding EnvironmentWizzardPaneVisible,Mode=OneWay}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="70" />
+                    <ColumnDefinition Width="200" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50" />
+                    <RowDefinition Height="29" />
+                    <RowDefinition Height="29" />
+                    <RowDefinition Height="29" />
+                    <RowDefinition Height="29" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.ColumnSpan="2" Text="- Neue Verbindung -" FontSize="28"  HorizontalAlignment="Center"/>
+                <Label Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Content="Mandant:"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Name="tbNewEnvironmentName"/>
+                <Label Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Content="URI:"/>
+                <TextBox Grid.Row="2" Grid.Column="1" Name="tbNewEnvironmentUri"/>
 
-        <Grid HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" Visibility="{Binding LoginPaneVisible,Mode=OneWay,RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=Window}}" DataContext="{Binding LoginState}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="70" />
-                <ColumnDefinition Width="200" />
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="50" />
-                <RowDefinition Height="29" />
-                <RowDefinition Height="29" />
-                <RowDefinition Height="29" />
-                <RowDefinition Height="29" />
-            </Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                    <Button Content="Speichern" Width="80" Height="23" Margin="0,0,0,0" Command="{x:Static ApplicationCommands.Save}" />
+                    <Button Content="Abbruch" Width="80" Height="23" Margin="12,0,0,0" Command="{x:Static ApplicationCommands.Close}" />
+                </StackPanel>
+            </Grid>
 
-            <TextBlock Grid.ColumnSpan="2" Text="- ANMELDEN -" FontSize="28"  HorizontalAlignment="Center"/>
+            <Grid HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" Visibility="{Binding LoginPaneVisible,Mode=OneWay,RelativeSource={RelativeSource Mode=FindAncestor,AncestorType=Window}}" DataContext="{Binding LoginState}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="70" />
+                    <ColumnDefinition Width="200" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50" />
+                    <RowDefinition Height="29" />
+                    <RowDefinition Height="29" />
+                    <RowDefinition Height="29" />
+                    <RowDefinition Height="29" />
+                </Grid.RowDefinitions>
 
-            <Label Grid.Column="0" Grid.Row="1" Content="Mandant:" />
-            <ComboBox Grid.Column="1" Grid.Row="1" Margin="0,3" ItemsSource="{Binding Environments,Mode=OneWay}" SelectedItem="{Binding CurrentEnvironment}" Name="cbEnviroments" SelectionChanged="cbEnviroments_SelectionChanged">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock>
+                <TextBlock Grid.ColumnSpan="2" Text="- ANMELDEN -" FontSize="28"  HorizontalAlignment="Center"/>
+
+                <Label Grid.Column="0" Grid.Row="1" Content="Mandant:" />
+                <ComboBox Grid.Column="1" Grid.Row="1" Margin="0,3" ItemsSource="{Binding Environments,Mode=OneWay}" SelectedItem="{Binding CurrentEnvironment}" Name="cbEnviroments" SelectionChanged="cbEnviroments_SelectionChanged">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock>
                             <Run Text="{Binding DisplayName,Mode=OneWay}" />
                             <Run Text="{Binding Name,Mode=OneWay,StringFormat='({0})'}" Foreground="DarkGray" />
-                        </TextBlock>
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <Label Grid.Column="0" Grid.Row="2" Content="Nutzer:" />
-            <ComboBox Grid.Column="1" Grid.Row="2" Margin="0,3" IsEditable="True" IsEnabled="{Binding IsUserNameEnabled}" ItemsSource="{Binding ElementName=cbEnviroments, Path=SelectedItem.RecentUsers}" Text="{Binding ActualUserName}"/>
-            <Label Grid.Column="0" Grid.Row="3" Content="Passwort:" />
-            <PasswordBox Grid.Column="1" Grid.Row="3" Margin="0,3" IsEnabled="{Binding IsPasswordEnabled}" />
+                            </TextBlock>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Label Grid.Column="0" Grid.Row="2" Content="Nutzer:" />
+                <ComboBox Grid.Column="1" Grid.Row="2" Margin="0,3" IsEditable="True" IsEnabled="{Binding IsUserNameEnabled}" ItemsSource="{Binding ElementName=cbEnviroments, Path=SelectedItem.RecentUsers}" Text="{Binding ActualUserName}"/>
+                <Label Grid.Column="0" Grid.Row="3" Content="Passwort:" />
+                <PasswordBox Grid.Column="1" Grid.Row="3" Margin="0,3" IsEnabled="{Binding IsPasswordEnabled}" />
 
-            <Button Grid.Column="0" Grid.Row="4" Content="*" Width="23" Height="23" HorizontalAlignment="Left" VerticalAlignment="Bottom" Command="{x:Static ApplicationCommands.New}" />
+                <Button Grid.Column="0" Grid.Row="4" Content="*" Width="23" Height="23" HorizontalAlignment="Left" VerticalAlignment="Bottom" Command="{x:Static ApplicationCommands.New}" />
 
-            <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" HorizontalAlignment="Right" VerticalAlignment="Bottom">
-                <Button Content="Anmelden" Width="80" Height="23" Margin="0,0,0,0" Command="{x:Static ApplicationCommands.Save}" IsEnabled="{Binding IsValid}" />
-                <Button Content="Abbruch" Width="80" Height="23" Margin="12,0,0,0" Command="{x:Static ApplicationCommands.Close}" />
-            </StackPanel>
+                <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                    <Button Content="Anmelden" Width="80" Height="23" Margin="0,0,0,0" Command="{x:Static ApplicationCommands.Save}" IsEnabled="{Binding IsValid}" />
+                    <Button Content="Abbruch" Width="80" Height="23" Margin="12,0,0,0" Command="{x:Static ApplicationCommands.Close}" />
+                </StackPanel>
+            </Grid>
         </Grid>
-    </Grid>
+    </Border>
 </Window>

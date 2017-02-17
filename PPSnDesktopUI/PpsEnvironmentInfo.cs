@@ -116,14 +116,13 @@ namespace TecWare.PPSn
 		public void Update(XElement xNewInfo)
 		{
 			// copy uri
-			xNewInfo.SetAttributeValue("uri", Uri);
-
-			if (!Procs.CompareNode(content.Root, xNewInfo))
-			{
-				content = new XDocument(xNewInfo);
-				content.Save(infoFile.FullName);
-			}
+			var isChanged = false;
+			Procs.MergeAttributes(content.Root, xNewInfo, ref isChanged);
 		} // proc UpdateInfoFile
+
+		public void Save()
+		{
+		} // proc Save
 
 		public IEnumerable<string> RecentUsers
 			=> from x in RecentUsersInternal
@@ -148,6 +147,8 @@ namespace TecWare.PPSn
 		public Version Version { get { return new Version(content.Root.GetAttribute("version", "0.0.0.0")); } set { content.Root.SetAttributeValue("version", value.ToString()); } }
 
 		public DirectoryInfo LocalPath => localPath;
+
+		public bool IsApplicationLatest { get; internal set; }
 
 		// -- static --------------------------------------------------------------
 

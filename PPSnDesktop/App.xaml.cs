@@ -32,6 +32,7 @@ namespace TecWare.PPSn
 		{
          var environment = _environment;
          var userInfo = _userInfo;
+			var errorInfo = true;
          // we will have no windows
          await Dispatcher.InvokeAsync(() => ShutdownMode = ShutdownMode.OnExplicitShutdown);
 
@@ -58,7 +59,7 @@ namespace TecWare.PPSn
 					try
 					{
 						// no arguments are given, show user interface
-						if (environment == null || userInfo == null)
+						if (environment == null || userInfo == null || errorInfo)
 						{
 							var t = await splashWindow.ShowLoginAsync(environment);
 							if (t == null)
@@ -79,18 +80,27 @@ namespace TecWare.PPSn
 						switch (await env.InitAsync(splashWindow))
 						{
 							case PpsEnvironmentModeResult.LoginFailed:
+								errorInfo = true;
 								// todo: show error as simple text
 								break;
 							case PpsEnvironmentModeResult.Shutdown:
+								errorInfo = true;
 								// todo: application restart
 								return false;
 
-							case PpsEnvironmentModeResult.ServerFailure:
+							case PpsEnvironmentModeResult.ServerConnectFailure:
+								errorInfo = true;
 								// todo: show error as simple text
 								break;
 
 							case PpsEnvironmentModeResult.NeedsUpdate:
+								errorInfo = true;
 								// todo: show error
+								break;
+
+							case PpsEnvironmentModeResult.NeedsSynchronization:
+								errorInfo = true;
+								// todo: show sync failed error
 								break;
 
 							case PpsEnvironmentModeResult.Online:
@@ -107,8 +117,9 @@ namespace TecWare.PPSn
 					}
 					catch (Exception e)
 					{
+						errorInfo = true;
 						MessageBox.Show(e.ToString());
-						// failed????
+						// todo: show failed? or Shutdown?
 					}
 				}
 			}
