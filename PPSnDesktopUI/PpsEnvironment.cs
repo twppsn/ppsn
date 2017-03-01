@@ -557,7 +557,7 @@ namespace TecWare.PPSn
 					commands.AddRange(GenerateUpdateScript(table.Name, false, table.Columns, null));
 				else
 				{
-					var localScheme = new List<IDataColumn>();
+					var localScheme = new List<IDataColumn>(); // todo: replace with GetLocalTableColumns
 					using (var readExistingTable = dataBase.CreateCommand())
 					{
 						readExistingTable.CommandText = $"PRAGMA table_info({table.Name});";
@@ -763,7 +763,7 @@ namespace TecWare.PPSn
 		public async Task<PpsEnvironmentModeResult> InitAsync(IProgress<string> progress, bool bootOffline = false)
 		{
 			// initialize the local database
-			var isLocalDbReady = await InitLocalStoreAsync();
+			var isLocalDbReady = await InitLocalStoreAsync(progress);
 			if (!isLocalDbReady && bootOffline)
 			{
 				if (await MsgBoxAsync("Es steht keine Offline-Version bereit.\nOnline Synchronisation jeztz starten?", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
@@ -940,9 +940,11 @@ namespace TecWare.PPSn
 		private void InitBackgroundNotifier(out Thread backgroundNotifier, out ManualResetEventSlim backgroundNotifierModeTransmission)
 		{
 			backgroundNotifierModeTransmission = new ManualResetEventSlim(false);
-			backgroundNotifier = new Thread(ExecuteNotifierLoop);
-			backgroundNotifier.IsBackground = true;
-			backgroundNotifier.Name = $"Environment Notify {environmentId}";
+			backgroundNotifier = new Thread(ExecuteNotifierLoop)
+			{
+				IsBackground = true,
+				Name = $"Environment Notify {environmentId}"
+			};
 			backgroundNotifier.Start();
 		} // proc InitBackgroundNotifier
 
@@ -994,8 +996,7 @@ namespace TecWare.PPSn
 				}
 			}
 		} // func TryGetModeTransmission
-
-
+		
 		private void ExecuteNotifierLoop()
 		{
 			var state = PpsEnvironmentState.None;
@@ -1058,7 +1059,7 @@ namespace TecWare.PPSn
 								Dispatcher.BeginInvoke(new Action(() => OnPropertyChanged(nameof(UsernameDisplay))));
 
 								// start synchronization
-								if (!IsSynchronizationStarted)
+								if (!IsSynchronizationStarted || CheckSynchronizationStateAsync().Result)
 									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsSynchronization);
 								else // mark the system online
 									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.Online);

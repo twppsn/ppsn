@@ -172,13 +172,12 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		/// <summary></summary>
-		public event EventHandler IsOnlineChanged;
-
 		private SQLiteConnection localConnection;   // local datastore
 		private readonly Uri baseUri;               // internal uri for this datastore
-		private bool isOnline = false;              // is there an online connection
-		private long lastSynchronizationId = -1;
+		
+		private long lastSynchronizationId = -1;    // sync token
+		private DateTime lastSynchronizationStamp = DateTime.MinValue;	// last synchronization stamp
+		private DateTime lastSynchronizationSchema = DateTime.MinValue; // last synchronization of the schema
 
 		private readonly BaseWebRequest request;
 
@@ -195,7 +194,7 @@ namespace TecWare.PPSn
 
 		/// <summary></summary>
 		/// <returns><c>true</c>, if a valid database is present.</returns>
-		private async Task<bool> InitLocalStoreAsync()
+		private async Task<bool> InitLocalStoreAsync(IProgress<string> progress)
 		{
 			var isUseable = false;
 			// open a new local store
@@ -203,12 +202,42 @@ namespace TecWare.PPSn
 			try
 			{
 				// open the local database
+				progress.Report("Lokale Datenbank öffnen...");
 				var dataPath = Path.Combine(LocalPath.FullName, "localStore.db");
 				newLocalStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc;Password=Pps{GetLocalStorePassword()}"); // foreign keys=true
 				await newLocalStore.OpenAsync();
 
-				// check if this is no new database
-				isUseable = false; // todo: rk check if there are tables (test for system tables)
+				// check synchronisation table
+				progress.Report("Lokale Datenbank verifizieren...");
+				if (TestLocalTableColumns(newLocalStore, "SyncTokens",
+					new SimpleDataColumn("Schema", typeof(long)),
+					new SimpleDataColumn("SyncStamp", typeof(long)),
+					new SimpleDataColumn("SyncToken", typeof(long))
+					))
+				{
+					// read sync tokens
+					using (var commd = new SQLiteCommand("SELECT Schema, SyncStamp, SyncToken FROM main.SyncTokens ", newLocalStore))
+					{
+						using (var r = commd.ExecuteReader(CommandBehavior.SingleRow))
+						{
+							if (r.Read() && !r.IsDBNull(0) && !r.IsDBNull(1) && !r.IsDBNull(2))
+							{
+								lastSynchronizationSchema = DateTime.FromFileTimeUtc(r.GetInt64(0));
+								lastSynchronizationStamp = DateTime.FromFileTimeUtc(r.GetInt64(1));
+								lastSynchronizationId = r.GetInt64(2);
+								isUseable = true;
+							}
+						}
+					}
+				}
+
+				// reset values
+				if (!isUseable)
+				{
+					lastSynchronizationSchema = DateTime.MinValue;
+					lastSynchronizationStamp = DateTime.MinValue;
+					lastSynchronizationId = -1;
+				}
 			}
 			catch
 			{
@@ -224,7 +253,7 @@ namespace TecWare.PPSn
 
 			return isUseable;
 		} // proc InitLocalStore
-		
+
 		private Uri InitProxy()
 		{
 			// register proxy for the web requests
@@ -235,252 +264,114 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- Local store primitives -----------------------------------------------
+
+		private static Type ConvertSqLiteDataType(string dataType)
+		{
+			if (String.IsNullOrEmpty(dataType))
+				return typeof(string);
+			else
+				switch (Char.ToUpper(dataType[0]))
+				{
+					case 'I':
+						return String.Compare(dataType, "INTEGER", StringComparison.OrdinalIgnoreCase) == 0
+							? typeof(long)
+							: typeof(string);
+					case 'R':
+						return String.Compare(dataType, "REAL", StringComparison.OrdinalIgnoreCase) == 0
+							? typeof(double)
+							: typeof(string);
+					case 'B':
+						return String.Compare(dataType, "BLOB", StringComparison.OrdinalIgnoreCase) == 0
+							? typeof(byte[])
+							: typeof(string);
+					default: // TEXT, NUMERIC (numeric is date, datetime, decimal, boolean, ...)
+						return typeof(string);
+				}
+		} // func ConvertSqLiteDataType
+
+		private static bool CheckLocalTableExists(SQLiteConnection connection, string tableName)
+		{
+			using (var command = new SQLiteCommand("SELECT [tbl_name] FROM [sqlite_master] WHERE [type] = 'table' AND [tbl_name] = @tableName;", connection))
+			{
+				command.Parameters.Add("@tableName", DbType.String, tableName.Length + 1).Value = tableName;
+				using (var r = command.ExecuteReader(CommandBehavior.SingleRow))
+					return r.Read();
+			}
+		} // func CheckLocalTableExistsAsync
+
+		private static IEnumerable<IDataColumn> GetLocalTableColumns(SQLiteConnection connection, string tableName)
+		{
+			using (var command = new SQLiteCommand($"PRAGMA table_info({tableName});", connection))
+			{
+				using (var r = command.ExecuteReader(CommandBehavior.SingleResult))
+				{
+					while (r.Read())
+					{
+						yield return new SimpleDataColumn(
+							r.GetString(1),
+							r.IsDBNull(2) ? typeof(string) : ConvertSqLiteDataType(r.GetString(2)),
+							new PropertyDictionary(
+								new PropertyValue("IsNull", r.IsDBNull(3) || r.GetBoolean(3)),
+								new PropertyValue("Default", r.GetValue(4)?.ToString()),
+								new PropertyValue("IsPrimary", !r.IsDBNull(5) && r.GetBoolean(5))
+							)
+						);
+					}
+				}
+			}
+		} // func GetLocalTableColumns
+
+		private static bool TestLocalTableColumns(SQLiteConnection connection, string tableName, params SimpleDataColumn[] columns)
+		{
+			using (var e = GetLocalTableColumns(connection, tableName).GetEnumerator())
+			{
+				for (var i = 0; i < columns.Length; i++)
+				{
+					if (!e.MoveNext())
+						return false;
+
+					var textColumn = e.Current;
+					var expectedColumn = columns[i];
+					if (String.Compare(textColumn.Name, expectedColumn.Name, StringComparison.OrdinalIgnoreCase) != 0)
+						return false;
+					else if (textColumn.DataType != expectedColumn.DataType)
+						return false;
+				}
+			}
+			return true;
+		} // func TestLocalTableColumns
+
+		#endregion
+
 		//private async Task RefreshOfflineCacheAsync()
 		//{
 		//	if (IsOnline && IsAuthentificated)
 		//		await Task.Run(new Action(UpdateOfflineItems));
 		//} // RefreshOfflineCacheAsync
 
-		#region -- VerifyLocalStore -------------------------------------------------------
-
-		#region -- enum ParsingState ------------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private enum ParsingState
-		{
-			Default,
-			ReadInfoElement,
-			ReadCreateElement,
-			ReadConvertElement,
-		} // enum ParsingState
-
-		#endregion
-
-		private XElement ParseSQLiteScript(Type type, string resourceName)
-		{
-			var result = new XElement("commands",
-				new XAttribute("name", type.AssemblyQualifiedName + ", " + resourceName)
-			);
-
-			using (var source = type.Assembly.GetManifestResourceStream(type, resourceName))
-			using (var reader = new StreamReader(source, Encoding.UTF8))
-			{
-				var state = ParsingState.Default;
-				var lineData = new StringBuilder();
-				XElement currentNode = null;
-
-				while (true)
-				{
-					var line = reader.ReadLine();
-
-					if (line == null)
-					{
-						if (currentNode != null)
-							currentNode.Add(new XCData(lineData.ToString()));
-						break; // end of file
-					}
-
-					if (line.StartsWith("--<", StringComparison.Ordinal))
-					{
-						if (currentNode != null)
-						{
-							currentNode.Add(new XCData(lineData.ToString()));
-							lineData.Length = 0;
-						}
-
-						currentNode = XElement.Parse(line.Substring(2));
-						result.Add(currentNode);
-
-						switch (state)
-						{
-							case ParsingState.Default:
-								if (!currentNode.Name.LocalName.Equals("info", StringComparison.Ordinal))
-									throw new FormatException(String.Format("Resource \"{0}\" contains for parsing state \"{1}\" unsupported element \"{2}\".", resourceName, state.ToString(), currentNode.Name.LocalName));
-								state = ParsingState.ReadInfoElement;
-								break;
-							case ParsingState.ReadInfoElement:
-								if (!currentNode.Name.LocalName.Equals("create", StringComparison.Ordinal))
-									throw new FormatException(String.Format("Resource \"{0}\" contains for parsing state \"{1}\" unsupported element \"{2}\".", resourceName, state.ToString(), currentNode.Name.LocalName));
-								state = ParsingState.ReadCreateElement;
-								break;
-							case ParsingState.ReadCreateElement:
-								if (!currentNode.Name.LocalName.Equals("convert", StringComparison.Ordinal))
-									throw new FormatException(String.Format("Resource \"{0}\" contains for parsing state \"{1}\" unsupported element \"{2}\".", resourceName, state.ToString(), currentNode.Name.LocalName));
-								state = ParsingState.ReadConvertElement;
-								break;
-							case ParsingState.ReadConvertElement:
-								if (!currentNode.Name.LocalName.Equals("convert", StringComparison.Ordinal))
-									throw new FormatException(String.Format("Resource \"{0}\" contains for parsing state \"{1}\" unsupported element \"{2}\".", resourceName, state.ToString(), currentNode.Name.LocalName));
-								break;
-							default:
-								throw new InvalidOperationException("unsupported parsing state");
-						} // switch state
-					} // if
-
-					if (line.StartsWith("--", StringComparison.Ordinal))
-						continue; // ignore comment lines
-
-					if (state != ParsingState.Default)
-					{
-						var index = line.IndexOf("--", StringComparison.Ordinal);
-						if (index != -1)
-							line = line.Substring(0, index);
-						line = line.TrimEnd();
-						lineData.AppendLine(line);
-					}
-				} // while true
-			} // using reader source
-
-			return result;
-		} // func ParseSQLiteScript
-
-		protected IEnumerable<Tuple<Type, string>> GetStoreTablesFromAssembly(Type type, string resourceBase)
-		{
-			var resourcePath = type.Namespace + "." + resourceBase + ".";
-
-			foreach (var resourceName in type.Assembly.GetManifestResourceNames())
-			{
-				if (resourceName.StartsWith(resourcePath) && resourceName.EndsWith(".sql", StringComparison.OrdinalIgnoreCase))
-					yield return new Tuple<Type, string>(type, resourceName.Substring(type.Namespace.Length + 1));
-			}
-		} // func 
-
-		protected virtual IEnumerable<Tuple<Type, string>> GetStoreTables()
-			=> GetStoreTablesFromAssembly(typeof(PpsEnvironment), "Scripts").Where(c => !c.Item2.EndsWith("Meta.sql", StringComparison.OrdinalIgnoreCase));
-
-		private void VerifyLocalStore(SQLiteConnection localStore)
-		{
-			using (var transaction = localStore.BeginTransaction())
-			{
-				var existsMetaTable = false; // exists the meta table
-
-				#region -- validate meta table --
-				var metaTableScript = ParseSQLiteScript(typeof(PpsEnvironment), "Scripts.Meta.sql");
-
-				var metaTableInfo = metaTableScript.Element("info");
-				var metaTableName = metaTableInfo.Attribute("name").Value;
-
-				var metaTableCreate = metaTableScript.Element("create").Value;
-				string metaTableConvert = null;
-
-				using (var command = new SQLiteCommand("SELECT [tbl_name] FROM [sqlite_master] WHERE [type] = 'table' AND [tbl_name] LIKE 'Meta%';", localStore, transaction))
-				using (var reader = command.ExecuteReader())
-				{
-					while (reader.Read())
-					{
-						var existingMetaTableName = reader.GetString(0);
-						if (Regex.IsMatch(existingMetaTableName, @"^Meta_?[0-9]*$"))
-						{
-							if (existsMetaTable)
-								throw new InvalidDataException("localStore contains several meta tables.");
-
-							existsMetaTable = true;
-
-							if (String.Compare(existingMetaTableName, metaTableName, StringComparison.Ordinal) == 0)
-								continue;
-
-							metaTableConvert = (from c in metaTableScript.Elements("convert")
-													  where String.Compare(c.Attribute("previousTable").Value, existingMetaTableName, StringComparison.Ordinal) == 0
-													  select c.Value).FirstOrDefault();
-
-							if (metaTableConvert == null)
-								throw new InvalidDataException(String.Format("No convert commands found from meta table \"{0}\" to \"{1}\".", existingMetaTableName, metaTableName));
-						} // if Regex.IsMatch()
-					} // while reader.Read()
-				} // using reader command
-
-				if (!existsMetaTable)
-					using (var command = new SQLiteCommand(metaTableCreate, localStore, transaction))
-						command.ExecuteNonQuery();
-
-				if (metaTableConvert != null)
-					using (var command = new SQLiteCommand(metaTableConvert, localStore, transaction))
-						command.ExecuteNonQuery();
-				#endregion
-
-				#region -- *.sql --
-				foreach (var scriptSource in GetStoreTables())
-				{
-					var script = ParseSQLiteScript(scriptSource.Item1, scriptSource.Item2);
-					var resourceName = script.Attribute("name").Value;
-
-					var infoSection = script.Element("info");
-					var scriptName = infoSection.Attribute("name").Value;
-					var resourceRevision = Int64.Parse(infoSection.Attribute("rev").Value);
-
-					var createInstructions = script.Element("create").Value;
-					string convertInstructions = null;
-
-					try
-					{
-						if (existsMetaTable)
-						{
-							var existingRevision = -1L;
-
-							using (var command = new SQLiteCommand($"SELECT [Revision] FROM [{metaTableName}] WHERE [ResourceName] = @resourceName;", localStore, transaction))
-							{
-								command.Parameters.Add("@resourceName", DbType.String).Value = resourceName;
-								using (var reader = command.ExecuteReader(CommandBehavior.SingleRow))
-								{
-									if (reader.Read())
-										existingRevision = reader.GetInt64(0);
-								}
-							} // using command
-
-							if (existingRevision == resourceRevision) // Continue with the next scriptSource.
-								continue;
-
-							if (existingRevision >= 0)
-							{
-								convertInstructions = (from c in script.Elements("convert")
-															  where existingRevision == Int64.Parse(c.Attribute("previousRev").Value)
-															  select c.Value).FirstOrDefault();
-
-								if (convertInstructions == null)
-									throw new InvalidDataException(String.Format("No conversion commands found for resource \"{0}\" from revision \"{1}\" to \"{2}\".", scriptName, existingRevision, resourceRevision));
-							}
-						} // if existsMetaTable
-
-						// execute the command
-						using (var command = new SQLiteCommand(convertInstructions == null ?
-							createInstructions :
-							convertInstructions, localStore, transaction))
-						{
-							command.ExecuteNonQuery();
-						}
-
-						// update the meta table
-						using (var command = new SQLiteCommand(convertInstructions == null ?
-							$"INSERT INTO [{metaTableName}] ([ResourceName], [Revision], [LastModification]) VALUES (@resourceName, @resourceRevision, DATETIME('now'));" :
-							$"UPDATE [{metaTableName}] SET [Revision] = @resourceRevision, [LastModification] = DATETIME('now') WHERE [ResourceName] = @resourceName;", localStore, transaction))
-						{
-							command.Parameters.Add("@resourceRevision", DbType.Int64).Value = resourceRevision;
-							command.Parameters.Add("@resourceName", DbType.String).Value = resourceName;
-							var affectedRows = command.ExecuteNonQuery();
-
-							if (affectedRows != 1)
-								throw new Exception(String.Format("The {0} in the revision table \"{1}\" for resource \"{2}\" revision \"{3}\" failed.", convertInstructions == null ? "update" : "insert", metaTableName, scriptName, resourceRevision));
-						} // using command
-					} // try
-					catch (SQLiteException e)
-					{
-						throw new Exception(String.Format("Verification of localStore failed for resource \"{0}\" revision \"{1}\".", scriptName, resourceRevision), e);
-					} // catch
-				} // foreach script
-				#endregion
-
-				transaction.Commit();
-			} // using transaction
-		} // proc VerifyLocalStore
-
-		#endregion
-
 		private Task<bool> SynchronizationAsync(IProgress<string> progress)
 		{
+			progress.Report("Synchronization...");
+
+			// todo: check for new schema PpsMasterData
+
+			// todo: fetch data
+
 			lastSynchronizationId = 0;
 			return Task.FromResult(true);
-		}
+		} // func SynchronizationAsync
+
+		/// <summary>Tests, if the synchronization needs to be in foreground (last sync it to far away e.g. 1 day)</summary>
+		/// <returns></returns>
+		private Task<bool> CheckSynchronizationStateAsync()
+		{
+			// check if schema is change
+			// todo: HEAD schema
+
+			// is the system "synchrone enough"?
+			return Task.FromResult((DateTime.UtcNow - lastSynchronizationStamp) > TimeSpan.FromDays(1));
+		} // proc CheckSynchronizationStateAsync
 
 		public bool IsSynchronizationStarted => lastSynchronizationId >= 0;
 
@@ -871,7 +762,7 @@ namespace TecWare.PPSn
 						r.SetResponseData(source, contentType);
 						return r;
 					}
-					else if (Environment.IsOnline)
+					else if (Environment.CurrentMode == PpsEnvironmentMode.Online)
 					{
 						// todo: dynamic cache, copy of properties and headers
 						return CreateOnlineRequest().GetResponse();
@@ -1011,7 +902,7 @@ namespace TecWare.PPSn
 
 		private WebRequest CreateProxyRequest(Uri uri)
 		{
-			var useOfflineRequest = !isOnline;
+			var useOfflineRequest = CurrentMode == PpsEnvironmentMode.Offline;
 			var useCache = true;
 			var absolutePath = uri.AbsolutePath;
 
@@ -1106,7 +997,7 @@ namespace TecWare.PPSn
 
 		private async Task RefreshMasterDataSchemeAsync()
 		{
-			if (isOnline)
+			if (CurrentMode == PpsEnvironmentMode.Online)
 			{
 				var commands = new List<string>();
 				var masterDataDataSet = await ActiveDataSets.GetDataSetDefinitionAsync("masterdata");
@@ -1119,19 +1010,18 @@ namespace TecWare.PPSn
 			}
 		}
 
-		public Task<bool> ForceOnlineAsync(bool throwException = true)
+		public async Task<bool> ForceOnlineAsync(bool throwException = true)
 		{
-			if (IsOnline)
-				return Task.FromResult(true);
-
+			if (CurrentMode != PpsEnvironmentMode.Online)
+			{
+				switch (await WaitForEnvironmentMode(PpsEnvironmentMode.Online))
+				{
+					case PpsEnvironmentModeResult.Online:
+						return true;
+				}
+			}
 			throw new NotImplementedException("Todo: Force online mode.");
 		} // func ForceOnlineMode
-
-		protected virtual void OnIsOnlineChanged()
-		{
-			IsOnlineChanged?.Invoke(this, EventArgs.Empty);
-			OnPropertyChanged(nameof(IsOnline));
-		} // proc OnIsOnlineChanged
 
 		/// <summary></summary>
 		[LuaMember]
@@ -1140,16 +1030,6 @@ namespace TecWare.PPSn
 		public Encoding Encoding => Encoding.Default;
 		/// <summary>Internal Uri of the environment.</summary>
 		public Uri BaseUri => baseUri;
-		/// <summary>Is <c>true</c>, if the application is online.</summary>
-		public bool IsOnline
-		{
-			get { return isOnline; }
-			private set
-			{
-				if (isOnline != value)
-					OnIsOnlineChanged();
-			}
-		} // prop IsOnline
 
 		/// <summary>Connection to the local datastore</summary>
 		public SQLiteConnection LocalConnection => localConnection;

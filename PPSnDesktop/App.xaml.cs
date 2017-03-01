@@ -30,11 +30,12 @@ namespace TecWare.PPSn
 
 		public async Task<bool> StartApplicationAsync(PpsEnvironmentInfo _environment = null, ICredentials _userInfo = null, bool parseArguments = false)
 		{
-         var environment = _environment;
-         var userInfo = _userInfo;
-			var errorInfo = true;
-         // we will have no windows
-         await Dispatcher.InvokeAsync(() => ShutdownMode = ShutdownMode.OnExplicitShutdown);
+			var environment = _environment;
+			var userInfo = _userInfo;
+			var errorInfo = (object)null;
+
+			// we will have no windows
+			await Dispatcher.InvokeAsync(() => ShutdownMode = ShutdownMode.OnExplicitShutdown);
 
 			// show a login/splash
 			var splashWindow = await Dispatcher.InvokeAsync(() =>
@@ -59,13 +60,17 @@ namespace TecWare.PPSn
 					try
 					{
 						// no arguments are given, show user interface
-						if (environment == null || userInfo == null || errorInfo)
+						if (environment == null || userInfo == null || errorInfo != null)
 						{
+							if (errorInfo != null)
+								await splashWindow.SetErrorAsync(errorInfo);
 							var t = await splashWindow.ShowLoginAsync(environment);
 							if (t == null)
 								return false;
+
 							environment = t.Item1;
 							userInfo = t.Item2;
+							errorInfo = null;
 						}
 
 						// close the current environment
@@ -80,27 +85,21 @@ namespace TecWare.PPSn
 						switch (await env.InitAsync(splashWindow))
 						{
 							case PpsEnvironmentModeResult.LoginFailed:
-								errorInfo = true;
-								// todo: show error as simple text
+								errorInfo = "Anmeldung fehlgeschlagen.";
 								break;
 							case PpsEnvironmentModeResult.Shutdown:
-								//errorInfo = true;
-								// todo: application shutdown
 								return false;
 
 							case PpsEnvironmentModeResult.ServerConnectFailure:
-								errorInfo = true;
-								// todo: show error as simple text
+								errorInfo = "Verbindung zum Server fehlgeschlagen.";
 								break;
 
 							case PpsEnvironmentModeResult.NeedsUpdate:
-								errorInfo = true;
-								// todo: show error
+								errorInfo = "Update ist erforderlich.";
 								break;
 
 							case PpsEnvironmentModeResult.NeedsSynchronization:
-								errorInfo = true;
-								// todo: show sync failed error
+								errorInfo = "Synchronization ist erforderlich.";
 								break;
 
 							case PpsEnvironmentModeResult.Online:
@@ -108,6 +107,7 @@ namespace TecWare.PPSn
 								// set new environment
 								currentEnvironment = env;
 								environment.WriteLastUser(((dynamic)userInfo).UserName);
+
 								// create first window
 
 								return false; // todo: true
@@ -117,9 +117,7 @@ namespace TecWare.PPSn
 					}
 					catch (Exception e)
 					{
-						errorInfo = true;
-						MessageBox.Show(e.ToString());
-						// todo: show failed? or Shutdown?
+						errorInfo = e;
 					}
 				}
 			}

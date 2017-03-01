@@ -426,7 +426,7 @@ namespace TecWare.PPSn.UI
 			searchActionCommand = new SearchActionCommand(this);
 
 			onlineChanged = Environment_IsOnlineChanged;
-			Environment.IsOnlineChanged += onlineChanged;
+			//Environment.IsOnlineChanged += onlineChanged;
 			Window.Closed += Window_Closed;
 
 			// Update the view, no selection
@@ -449,7 +449,7 @@ namespace TecWare.PPSn.UI
 
 		private void Window_Closed(object sender, EventArgs e)
 		{
-			Environment.IsOnlineChanged -= onlineChanged;
+			//Environment.IsOnlineChanged -= onlineChanged;
 		} // event Window_Closed
 
 		private void Environment_IsOnlineChanged(object sender, EventArgs e)
