@@ -84,8 +84,8 @@ namespace TecWare.PPSn
 								// todo: show error as simple text
 								break;
 							case PpsEnvironmentModeResult.Shutdown:
-								errorInfo = true;
-								// todo: application restart
+								//errorInfo = true;
+								// todo: application shutdown
 								return false;
 
 							case PpsEnvironmentModeResult.ServerConnectFailure:

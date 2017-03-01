@@ -48,8 +48,14 @@ namespace TecWare.PPSn.UI
 
 			public ICredentials GetCredentials()
 			{
-				if (IsDomainName(actualUserName))
-					return CredentialCache.DefaultCredentials.GetCredential(currentEnvironment.Uri, "");
+				if (IsDomainName(actualUserName) && CurrentEnvironment != null && CurrentEnvironment.Uri != null)
+				{
+					var test = new PpsClientLogin(CurrentEnvironment.Uri.ToString(), "", false);
+					var creds = test.GetCredentials();
+					var match = creds?.GetCredential(CurrentEnvironment.Uri, CurrentEnvironment.AuthType);
+					return match ?? CredentialCache.DefaultCredentials.GetCredential(currentEnvironment.Uri, "");
+				}
+					//return CredentialCache.DefaultCredentials.GetCredential(currentEnvironment.Uri, "");
 				else
 				{
 					var test = new NetworkCredential(ActualUserName, Password);
@@ -111,11 +117,27 @@ namespace TecWare.PPSn.UI
 						OnPropertyChanged(nameof(ActualUserName));
 						OnPropertyChanged(nameof(IsValid));
 						OnPropertyChanged(nameof(IsPasswordEnabled));
+						
 					}
 				}
 			} // prop UserName
-
+			
 			public string Password;
+
+			public string ActualUserPassword()
+			{
+				if (IsPasswordEnabled && CurrentEnvironment != null && CurrentEnvironment.Uri != null)
+				{
+					var test = new PpsClientLogin(CurrentEnvironment.Uri.AbsoluteUri, "", false);
+					var creds = test.GetCredentials();
+					var match = creds?.GetCredential(CurrentEnvironment.Uri, CurrentEnvironment.AuthType);
+					if (match?.UserName == ActualUserName)
+						return match.Password ?? String.Empty;
+					return String.Empty;
+				}
+				else
+					return String.Empty;
+			}
 
 			public bool IsValid => !String.IsNullOrEmpty(actualUserName);
 			public bool IsUserNameEnabled => currentEnvironment != null;
@@ -331,6 +353,21 @@ namespace TecWare.PPSn.UI
 		private void cbEnviroments_SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
 			loginStateUnSafe.CurrentEnvironment = (PpsEnvironmentInfo)((ComboBox)sender).SelectedItem;
+		}
+
+		private void ComboBox_TextInput(object sender, TextCompositionEventArgs e)
+		{
+			pbPassword.Password = loginStateUnSafe.ActualUserPassword();
+		}
+
+		private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+			ComboBox_TextInput(sender, null);
+		}
+
+		private void ComboBox_KeyUp(object sender, KeyEventArgs e)
+		{
+			ComboBox_TextInput(sender, null);
 		}
 	} // class PpsSplashWindow
 }

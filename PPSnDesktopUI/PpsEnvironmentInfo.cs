@@ -36,6 +36,7 @@ namespace TecWare.PPSn
 		private const string LoginTimeId = "loginTime";
 		private const string LoginElementId = "recentUser";
 		private const string LoginId = "login";
+		private const string AuthTypeId = "authType";
 		private const string InfoFileId = "info.xml";
 
 		private readonly string name;
@@ -82,6 +83,8 @@ namespace TecWare.PPSn
 		} // proc
 
 		private IEnumerable<XElement> RecentUsersInternal => content.Root.Element(LoginId)?.Elements(LoginElementId) ?? Array.Empty<XElement>();
+
+		public string AuthType => content.Root.Element(LoginId)?.GetAttribute(AuthTypeId, String.Empty) ?? String.Empty;
 
 		public string LastUser
 		{
@@ -148,7 +151,8 @@ namespace TecWare.PPSn
 				var uri = content.Root.GetAttribute("uri", null);
 				return uri == null ? null : new Uri(uri);
 			}
-			set { content.Root.SetAttributeValue("uri", value.ToString()); }
+			set { content.Root.SetAttributeValue("uri", value.ToString());
+			}
 		} // prop Uri
 
 		public Version Version { get { return new Version(content.Root.GetAttribute("version", "0.0.0.0")); } set { content.Root.SetAttributeValue("version", value.ToString()); } }
