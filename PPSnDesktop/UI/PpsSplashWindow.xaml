@@ -52,7 +52,7 @@
                 <TextBlock Grid.ColumnSpan="2" Text="- ANMELDEN -" FontSize="28"  HorizontalAlignment="Center"/>
 
                 <Label Grid.Column="0" Grid.Row="1" Content="Mandant:" />
-                <ComboBox Grid.Column="1" Grid.Row="1" Margin="0,3" ItemsSource="{Binding Environments,Mode=OneWay}" SelectedItem="{Binding CurrentEnvironment}" Name="cbEnviroments" SelectionChanged="cbEnviroments_SelectionChanged">
+                <ComboBox Grid.Column="1" Grid.Row="1" Margin="0,3" ItemsSource="{Binding Environments,Mode=OneWay}" SelectedItem="{Binding CurrentEnvironment}" Name="cbEnviroments" SelectionChanged="Enviroments_SelectionChanged">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock>

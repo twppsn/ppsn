@@ -1,21 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 using TecWare.PPSn.Data;
+
+// todo: designer find place for ErrorText in ui
 
 namespace TecWare.PPSn.UI
 {
@@ -107,7 +102,7 @@ namespace TecWare.PPSn.UI
 				get { return actualUserName; }
 				set
 				{
-					if (value != null && value.Length == 0)
+					if (String.IsNullOrEmpty(value))
 						value = null;
 
 					if (value != actualUserName)
@@ -117,7 +112,7 @@ namespace TecWare.PPSn.UI
 						OnPropertyChanged(nameof(ActualUserName));
 						OnPropertyChanged(nameof(IsValid));
 						OnPropertyChanged(nameof(IsPasswordEnabled));
-						
+
 					}
 				}
 			} // prop UserName
@@ -165,25 +160,25 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		private readonly static DependencyPropertyKey LoginPaneVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(LoginPaneVisible), typeof(Visibility), typeof(PpsSplashWindow), new PropertyMetadata(Visibility.Hidden));
-		private readonly static DependencyPropertyKey StatusPaneVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(StatusPaneVisible), typeof(Visibility), typeof(PpsSplashWindow), new PropertyMetadata(Visibility.Hidden));//Visible
-      private readonly static DependencyPropertyKey EnvironmentWizzardPaneVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(EnvironmentWizzardPaneVisible), typeof(Visibility), typeof(PpsSplashWindow), new PropertyMetadata(Visibility.Visible));
-      private readonly static DependencyPropertyKey LoginStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(LoginState), typeof(LoginStateData), typeof(PpsSplashWindow), new PropertyMetadata(null));
+		private readonly static DependencyPropertyKey loginPaneVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(LoginPaneVisible), typeof(Visibility), typeof(PpsSplashWindow), new PropertyMetadata(Visibility.Hidden));
+		private readonly static DependencyPropertyKey statusPaneVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(StatusPaneVisible), typeof(Visibility), typeof(PpsSplashWindow), new PropertyMetadata(Visibility.Hidden));//Visible
+		private readonly static DependencyPropertyKey environmentWizzardPaneVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(EnvironmentWizzardPaneVisible), typeof(Visibility), typeof(PpsSplashWindow), new PropertyMetadata(Visibility.Visible));
+		private readonly static DependencyPropertyKey loginStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(LoginState), typeof(LoginStateData), typeof(PpsSplashWindow), new PropertyMetadata(null));
 
-		public readonly static DependencyProperty LoginPaneVisibleProperty = LoginPaneVisiblePropertyKey.DependencyProperty;
-		public readonly static DependencyProperty StatusPaneVisibleProperty = StatusPaneVisiblePropertyKey.DependencyProperty;
-      public readonly static DependencyProperty EnvironmentWizzardPaneVisibleProperty = EnvironmentWizzardPaneVisiblePropertyKey.DependencyProperty;
-      public readonly static DependencyProperty StatusTextProperty = DependencyProperty.Register(nameof(StatusText), typeof(string), typeof(PpsSplashWindow));
-		public readonly static DependencyProperty LoginStateProperty = LoginStatePropertyKey.DependencyProperty;
+		public readonly static DependencyProperty LoginPaneVisibleProperty = loginPaneVisiblePropertyKey.DependencyProperty;
+		public readonly static DependencyProperty StatusPaneVisibleProperty = statusPaneVisiblePropertyKey.DependencyProperty;
+		public readonly static DependencyProperty EnvironmentWizzardPaneVisibleProperty = environmentWizzardPaneVisiblePropertyKey.DependencyProperty;
+		public readonly static DependencyProperty StatusTextProperty = DependencyProperty.Register(nameof(StatusText), typeof(string), typeof(PpsSplashWindow));
+		public readonly static DependencyProperty LoginStateProperty = loginStatePropertyKey.DependencyProperty;
 
-		private LoginStateData loginStateUnSafe;
+		private readonly LoginStateData loginStateUnSafe;
 		private bool dialogResult = false;
 		private DispatcherFrame loginFrame = null;
 		private bool allowClose = false;
 
-      #region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor --------------------------------------------------------------
 
-      public PpsSplashWindow()
+		public PpsSplashWindow()
 		{
 			InitializeComponent();
 
@@ -193,14 +188,14 @@ namespace TecWare.PPSn.UI
 					new CommandBinding(ApplicationCommands.New, CreateNewEnvironment, LoginFrameActive),
 					new CommandBinding(ApplicationCommands.Save, ExecuteFrame, LoginFrameActive),
 					new CommandBinding(ApplicationCommands.Close, CloseFrame, LoginFrameActive)
-            }
-            // 
+			}
+			// 
 			);
 
-			SetValue(LoginPaneVisiblePropertyKey, Visibility.Hidden);
-			SetValue(StatusPaneVisiblePropertyKey, Visibility.Visible);
-         SetValue(EnvironmentWizzardPaneVisiblePropertyKey, Visibility.Hidden);
-         SetValue(LoginStatePropertyKey, loginStateUnSafe = new LoginStateData(this));
+			SetValue(loginPaneVisiblePropertyKey, Visibility.Hidden);
+			SetValue(statusPaneVisiblePropertyKey, Visibility.Visible);
+			SetValue(environmentWizzardPaneVisiblePropertyKey, Visibility.Hidden);
+			SetValue(loginStatePropertyKey, loginStateUnSafe = new LoginStateData(this));
 
 			this.DataContext = this;
 		} // ctor
@@ -235,66 +230,66 @@ namespace TecWare.PPSn.UI
 
 		private void CreateNewEnvironment(object sender, ExecutedRoutedEventArgs e)
 		{
-         SetValue(LoginPaneVisiblePropertyKey, Visibility.Hidden);
-         SetValue(StatusPaneVisiblePropertyKey, Visibility.Hidden);
-         SetValue(EnvironmentWizzardPaneVisiblePropertyKey, Visibility.Visible);
-         e.Handled = true;
+			SetValue(loginPaneVisiblePropertyKey, Visibility.Hidden);
+			SetValue(statusPaneVisiblePropertyKey, Visibility.Hidden);
+			SetValue(environmentWizzardPaneVisiblePropertyKey, Visibility.Visible);
+			e.Handled = true;
 		} // proc CreateNewEnvironment
 
 
-      private void ExecuteFrame(object sender, ExecutedRoutedEventArgs e)
+		private void ExecuteFrame(object sender, ExecutedRoutedEventArgs e)
 		{
-         if (LoginPaneVisible == Visibility.Visible && loginStateUnSafe.IsValid)
-         {
-            loginFrame.Continue = false;
-            dialogResult = true;
-            e.Handled = true;
-         }
-         else if (EnvironmentWizzardPaneVisible == Visibility.Visible)
-         {
-            loginFrame.Continue = true;
-            e.Handled = true;
-            SaveEnvironment();
-         }
-      } // proc ExecuteLoginFrame
+			if (LoginPaneVisible == Visibility.Visible && loginStateUnSafe.IsValid)
+			{
+				loginFrame.Continue = false;
+				dialogResult = true;
+				e.Handled = true;
+			}
+			else if (EnvironmentWizzardPaneVisible == Visibility.Visible)
+			{
+				loginFrame.Continue = true;
+				e.Handled = true;
+				SaveEnvironment();
+			}
+		} // proc ExecuteLoginFrame
 
-      private void SaveEnvironment()
-      {
-         // ToDo: create the environment
-         var newEnv = new PpsEnvironmentInfo(tbNewEnvironmentName.Text);
-         newEnv.Uri = new Uri(tbNewEnvironmentUri.Text);
-         loginStateUnSafe.RefreshEnvironments(newEnv);
-         SetValue(LoginPaneVisiblePropertyKey, Visibility.Visible);
-         SetValue(EnvironmentWizzardPaneVisiblePropertyKey, Visibility.Hidden);
-      }
+		private void SaveEnvironment()
+		{
+			// ToDo: create the environment
+			var newEnv = new PpsEnvironmentInfo(tbNewEnvironmentName.Text);
+			newEnv.Uri = new Uri(tbNewEnvironmentUri.Text);
+			loginStateUnSafe.RefreshEnvironments(newEnv);
+			SetValue(loginPaneVisiblePropertyKey, Visibility.Visible);
+			SetValue(environmentWizzardPaneVisiblePropertyKey, Visibility.Hidden);
+		}
 
-      private void AbortEnvironment()
-      {
-         SetValue(LoginPaneVisiblePropertyKey, Visibility.Visible);
-         SetValue(EnvironmentWizzardPaneVisiblePropertyKey, Visibility.Hidden);
-      }
+		private void AbortEnvironment()
+		{
+			SetValue(loginPaneVisiblePropertyKey, Visibility.Visible);
+			SetValue(environmentWizzardPaneVisiblePropertyKey, Visibility.Hidden);
+		}
 
 		private void CloseFrame(object sender, ExecutedRoutedEventArgs e)
 		{
-         if (LoginPaneVisible == Visibility.Visible)
-         {
-            loginFrame.Continue = false;
-			dialogResult = false;
-			e.Handled = true;
-         }
-         else if (EnvironmentWizzardPaneVisible == Visibility.Visible)
-         {
-            loginFrame.Continue = true;
-            e.Handled = true;
-            AbortEnvironment();
-         }
-      } // proc CloseLoginFrame
+			if (LoginPaneVisible == Visibility.Visible)
+			{
+				loginFrame.Continue = false;
+				dialogResult = false;
+				e.Handled = true;
+			}
+			else if (EnvironmentWizzardPaneVisible == Visibility.Visible)
+			{
+				loginFrame.Continue = true;
+				e.Handled = true;
+				AbortEnvironment();
+			}
+		} // proc CloseLoginFrame
 
 		private Tuple<PpsEnvironmentInfo, ICredentials> ShowLogin()
 		{
-			SetValue(LoginPaneVisiblePropertyKey, Visibility.Visible);
-			SetValue(StatusPaneVisiblePropertyKey, Visibility.Hidden);
-         try
+			SetValue(loginPaneVisiblePropertyKey, Visibility.Visible);
+			SetValue(statusPaneVisiblePropertyKey, Visibility.Hidden);
+			try
 			{
 				if (loginFrame != null)
 					throw new InvalidOperationException();
@@ -314,8 +309,8 @@ namespace TecWare.PPSn.UI
 			}
 			finally
 			{
-				SetValue(LoginPaneVisiblePropertyKey, Visibility.Hidden);
-				SetValue(StatusPaneVisiblePropertyKey, Visibility.Visible);
+				SetValue(loginPaneVisiblePropertyKey, Visibility.Hidden);
+				SetValue(statusPaneVisiblePropertyKey, Visibility.Visible);
 			}
 		} // proc ShowLogin
 
@@ -328,7 +323,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Progres ----------------------------------------------------------------
+		#region -- Progress -------------------------------------------------------------
 
 		public void SetProgressTextAsync(string text)
 			=> Dispatcher.BeginInvoke(new Action<string>(t => StatusText = t), DispatcherPriority.Normal, text);
@@ -338,22 +333,42 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- SetError -------------------------------------------------------------
+
+		private void SetError(object errorInfo)
+		{
+			if (errorInfo is Exception) // show exception
+			{
+				errorInfo = ((Exception)errorInfo).ToString();
+			}
+
+			MessageBox.Show(errorInfo.ToString(), "Fehler", MessageBoxButton.OK, MessageBoxImage.Information);
+		} // proc SetError
+
+		public async Task SetErrorAsync(object errorInfo)
+		{
+			if (Dispatcher.CheckAccess())
+				SetError(errorInfo);
+			else
+				await Dispatcher.InvokeAsync(() => SetError(errorInfo));
+		} // proc SetErrorAsync
+
+		#endregion
+
 		public Visibility LoginPaneVisible => (Visibility)GetValue(LoginPaneVisibleProperty);
 		public Visibility StatusPaneVisible => (Visibility)GetValue(StatusPaneVisibleProperty);
-      public Visibility EnvironmentWizzardPaneVisible => (Visibility)GetValue(EnvironmentWizzardPaneVisibleProperty);
-      public string StatusText { get { return (string)GetValue(StatusTextProperty); } set { SetValue(StatusTextProperty, value); } }
+		public Visibility EnvironmentWizzardPaneVisible => (Visibility)GetValue(EnvironmentWizzardPaneVisibleProperty);
+		public string StatusText { get { return (string)GetValue(StatusTextProperty); } set { SetValue(StatusTextProperty, value); } }
 		public LoginStateData LoginState => (LoginStateData)GetValue(LoginStateProperty);
 
 		private void Window_Drag(object sender, MouseButtonEventArgs e)
 		{
 			if (e.ChangedButton == MouseButton.Left)
 				DragMove();
-		}
+		} // event Window_Drag
 
-		private void cbEnviroments_SelectionChanged(object sender, SelectionChangedEventArgs e)
-		{
-			loginStateUnSafe.CurrentEnvironment = (PpsEnvironmentInfo)((ComboBox)sender).SelectedItem;
-		}
+		private void Enviroments_SelectionChanged(object sender, SelectionChangedEventArgs e)
+			=> loginStateUnSafe.CurrentEnvironment = (PpsEnvironmentInfo)((ComboBox)sender).SelectedItem;
 
 		private void ComboBox_TextInput(object sender, TextCompositionEventArgs e)
 		{
@@ -361,13 +376,9 @@ namespace TecWare.PPSn.UI
 		}
 
 		private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-		{
-			ComboBox_TextInput(sender, null);
-		}
+			=> ComboBox_TextInput(sender, null);
 
 		private void ComboBox_KeyUp(object sender, KeyEventArgs e)
-		{
-			ComboBox_TextInput(sender, null);
-		}
+			=> ComboBox_TextInput(sender, null);
 	} // class PpsSplashWindow
 }
