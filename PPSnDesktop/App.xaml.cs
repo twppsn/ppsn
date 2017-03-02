@@ -106,7 +106,6 @@ namespace TecWare.PPSn
 							case PpsEnvironmentModeResult.Offline:
 								// set new environment
 								currentEnvironment = env;
-								environment.WriteLastUser(((dynamic)userInfo).UserName);
 
 								// create first window
 

@@ -52,7 +52,7 @@
                 <TextBlock Grid.ColumnSpan="2" Text="- ANMELDEN -" FontSize="28"  HorizontalAlignment="Center"/>
 
                 <Label Grid.Column="0" Grid.Row="1" Content="Mandant:" />
-                <ComboBox Grid.Column="1" Grid.Row="1" Margin="0,3" ItemsSource="{Binding Environments,Mode=OneWay}" SelectedItem="{Binding CurrentEnvironment}" Name="cbEnviroments" SelectionChanged="Enviroments_SelectionChanged">
+                <ComboBox Grid.Column="1" Grid.Row="1" Margin="0,3" ItemsSource="{Binding Environments,Mode=OneWay}" SelectedItem="{Binding CurrentEnvironment,UpdateSourceTrigger=PropertyChanged}" Name="cbEnviroments">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock>
@@ -63,9 +63,9 @@
                     </ComboBox.ItemTemplate>
                 </ComboBox>
                 <Label Grid.Column="0" Grid.Row="2" Content="Nutzer:" />
-                <ComboBox Grid.Column="1" Grid.Row="2" Margin="0,3" IsEditable="True" IsEnabled="{Binding IsUserNameEnabled}" ItemsSource="{Binding ElementName=cbEnviroments, Path=SelectedItem.RecentUsers}" Text="{Binding ActualUserName}" TextInput="ComboBox_TextInput" SelectionChanged="ComboBox_SelectionChanged" KeyUp="ComboBox_KeyUp" />
+                <TextBox Grid.Column="1" Grid.Row="2" Margin="0,3" IsEnabled="{Binding IsUserNameEnabled}" Text="{Binding UserName,UpdateSourceTrigger=PropertyChanged}"/>
                 <Label Grid.Column="0" Grid.Row="3" Content="Passwort:" />
-                <PasswordBox Grid.Column="1" Grid.Row="3" Margin="0,3" IsEnabled="{Binding IsPasswordEnabled}" Name="pbPassword"/>
+                <PasswordBox Grid.Column="1" Grid.Row="3" Margin="0,3" IsEnabled="{Binding IsPasswordEnabled}" Name="pbPassword" />
                 <!-- Password="{Binding ActualUserPassword}"-->
 
                 <Button Grid.Column="0" Grid.Row="4" Content="*" Width="23" Height="23" HorizontalAlignment="Left" VerticalAlignment="Bottom" Command="{x:Static ApplicationCommands.New}" />
