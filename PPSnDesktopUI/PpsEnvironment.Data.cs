@@ -172,12 +172,401 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		private SQLiteConnection localConnection;   // local datastore
-		private readonly Uri baseUri;               // internal uri for this datastore
-		
-		private long lastSynchronizationId = -1;    // sync token
-		private DateTime lastSynchronizationStamp = DateTime.MinValue;	// last synchronization stamp
-		private DateTime lastSynchronizationSchema = DateTime.MinValue; // last synchronization of the schema
+		#region -- class PpsMasterData --------------------------------------------------
+
+		public sealed class PpsMasterData : IDisposable
+		{
+			public const string MasterDataSchema = "masterData";
+
+			private readonly PpsEnvironment environment;
+			private readonly SQLiteConnection connection;
+
+			private PpsDataSetDefinitionDesktop schema;
+			private bool schemaIsOutDated = false;
+			private DateTime lastSynchronizationSchema = DateTime.MinValue; // last synchronization of the schema
+
+			private long lastSynchronizationId = -1;    // sync token
+			private DateTime lastSynchronizationStamp = DateTime.MinValue;  // last synchronization stamp
+
+			private bool isDisposed = false;
+
+			#region -- Ctor/Dtor --------------------------------------------------------
+
+			public PpsMasterData(PpsEnvironment environment, SQLiteConnection connection, PpsDataSetDefinitionDesktop schema, DateTime lastSynchronizationSchema, DateTime lastSynchronizationStamp, long lastSynchronizationId)
+			{
+				this.environment = environment;
+				this.connection = connection;
+
+				this.schema = schema;
+				this.lastSynchronizationSchema = lastSynchronizationSchema;
+
+				this.lastSynchronizationId = lastSynchronizationId;
+				this.lastSynchronizationStamp = lastSynchronizationStamp;
+			} // ctor
+
+			public void Dispose()
+			{
+				if (!isDisposed)
+				{
+					isDisposed = true;
+					connection?.Dispose();
+				}
+			} // proc Dispose
+
+			#endregion
+
+			#region -- Local store schema update ----------------------------------------
+
+			private async Task UpdateSchemaAsync(IProgress<string> progress)
+			{
+				progress?.Report("Lokale Datenbank wird aktualisiert...");
+
+				// load new schema
+				var xSchema = await environment.Request.GetXmlAsync(environment.ActiveDataSets.GetDataSetSchemaUri(MasterDataSchema));
+				var newMasterDataSchema = new PpsDataSetDefinitionDesktop(environment, MasterDataSchema, xSchema);
+
+				// generate update commands
+
+
+				// update schema
+				schema = newMasterDataSchema;
+			} // proc UpdateSchemaAsync
+
+			#endregion
+
+			internal async Task<bool> SynchronizationAsync(IProgress<string> progress)
+			{
+				// synchronize schema
+				if (schemaIsOutDated)
+				{
+					await UpdateSchemaAsync(progress);
+					schemaIsOutDated = false;
+				}
+
+				progress?.Report("Synchronization...");
+
+				// todo: fetch data
+
+				lastSynchronizationId = 0;
+				return true;
+			} // func SynchronizationAsync
+
+			/// <summary>Tests, if the synchronization needs to be in foreground (last sync it to far away e.g. 1 day)</summary>
+			/// <returns></returns>
+			internal async Task<bool> CheckSynchronizationStateAsync()
+			{
+				// check if schema is change
+				var schemaUri =  environment.ActiveDataSets.GetDataSetSchemaUri(MasterDataSchema);
+				var request = WebRequest.Create(environment.Request.GetFullUri(schemaUri));
+				request.Method = "HEAD";
+				request.Credentials = environment.Request.Credentials;
+
+				using (var r = await request.GetResponseAsync())
+				{
+					if (r.GetLastModified() != lastSynchronizationSchema)
+					{
+						schemaIsOutDated = true;
+						return false;
+					}
+					else
+						schemaIsOutDated = false;
+				}
+
+				// is the system "synchrone enough"?
+				return (DateTime.UtcNow - lastSynchronizationStamp) > TimeSpan.FromDays(1);
+			} // proc CheckSynchronizationStateAsync
+
+			public bool IsSynchronizationStarted => lastSynchronizationId >= 0;
+			public SQLiteConnection Connection => connection;
+
+			static IEnumerable<string> GenerateUpdateScript(string tableName, bool mustImport, IEnumerable<IDataColumn> remoteScheme, IEnumerable<IDataColumn> localScheme)
+			{
+				var commands = new List<string>();
+
+				// the table does not exist or is droppable - must be created
+				if (!localScheme.Any() || !mustImport)
+				{
+					foreach (var column in localScheme)
+						if (column.Attributes.GetProperty("IsPrimary", false))
+							commands.Add($"DROP INDEX IF EXISTS '{tableName}_{column.Name}_index';");
+					commands.Add($"DROP TABLE IF EXISTS '{tableName}';");
+					commands.AddRange(CreateNewTable(remoteScheme, tableName));
+				}
+				else
+				{
+					var newColumns = new List<IDataColumn>();
+					var sameColumns = new List<string>();   // for String.Join - only Column names are used
+
+					foreach (var remoteColumn in remoteScheme)
+					{
+						var found = false;
+						foreach (var localColumn in localScheme)
+							if ((remoteColumn.Name == localColumn.Name) &&
+								 (DataTypeToSQLTypeString(remoteColumn.DataType) == localColumn.Attributes.GetProperty("DataType", "TEXT")) &&
+								 (remoteColumn.Attributes.GetProperty("IsNull", true) == localColumn.Attributes.GetProperty("IsNull", true)) &&
+								 (remoteColumn.Attributes.GetProperty("IsPrimary", true) == localColumn.Attributes.GetProperty("IsPrimary", true))
+								)
+							{
+								found = true;
+								break;
+							}
+						if (found)
+							sameColumns.Add(remoteColumn.Name);
+						else
+							newColumns.Add(remoteColumn);
+					}
+
+					// this is more performant than checking for obsolete columns
+					if (sameColumns.Count < localScheme.Count())
+					{
+						// drop the old indexes
+						foreach (var column in localScheme)
+							if (column.Attributes.GetProperty("IsPrimary", false))
+								commands.Add($"DROP INDEX IF EXISTS '{tableName}_{column.Name}_index';");
+
+						// rename local table
+						commands.Add($"ALTER TABLE '{tableName}' RENAME TO '{tableName}_temp';");
+
+						// create a new table, according to new Scheme...
+						commands.AddRange(CreateNewTable(remoteScheme, tableName));
+						// copy
+						commands.Add($"INSERT INTO '{tableName}' ({String.Join(", ", sameColumns)}) SELECT {String.Join(", ", sameColumns)} FROM '{tableName}_temp';");
+
+						// drop old local table
+						commands.Add($"DROP TABLE '{tableName}_temp';");  // no IF EXISTS - at this point the table must exist or error
+					}
+					else
+					// there are no columns, which have to be deleted - check now if there are new columns to add
+					if (newColumns.Count() > 0)
+						foreach (var column in newColumns)
+							commands.Add($"ALTER TABLE '{tableName}' ADD COLUMN [{column.Name}] {DataTypeToSQLTypeString(column.DataType)} {(column.Attributes.GetProperty("IsNull", false) ? " NULL" : " NOT NULL")}{(String.IsNullOrEmpty(column.Attributes.GetProperty("Default", String.Empty)) ? String.Empty : " DEFAULT '" + column.Attributes.GetProperty("Default", String.Empty) + "'")};");
+				}
+
+				return commands;
+			}
+
+			private static List<string> CreateNewTable(IEnumerable<IDataColumn> remoteTable, string tableName)
+			{
+				var indexingCommands = new List<string>();
+				var command = new StringBuilder("CREATE TABLE '").Append(tableName).Append("' (");
+				foreach (var column in remoteTable)
+				{
+					command.Append(" [").Append(column.Name).Append("] ").Append(DataTypeToSQLTypeString(column.DataType)).Append(" ");
+
+					if (((PpsDataColumnDefinition)column).IsPrimaryKey)
+					{
+						command.Append("PRIMARY KEY ");
+						indexingCommands.Add($"CREATE UNIQUE INDEX '{tableName}_{column.Name}_index' ON '{tableName}'([{column.Name}]);");
+					}
+
+					if (!column.Attributes.GetProperty("IsNull", true))
+						command.Append("NOT ");
+					command.Append("NULL ");
+
+					if (!String.IsNullOrEmpty(column.Attributes.GetProperty("Default", String.Empty)))
+					{
+						command.Append("DEFAULT ").Append(column.Attributes.GetProperty("Default", String.Empty)).Append(" ");
+					}
+
+					command[command.Length - 1] = ',';
+				}
+				command[command.Length - 1] = ')';  // the Parameterlist ends with a whitespace
+				command.Append(";");
+				var commands = new List<string>();
+				commands.Add(command.ToString());
+				commands.AddRange(indexingCommands);
+				return commands;
+			}
+
+			private static string DataTypeToSQLTypeString(Type dataType)
+			{
+				// according to https://www.sqlite.org/datatype3.html there are only these datatypes - so map everything to these 5
+				if (dataType == typeof(long) || dataType == typeof(Int32))
+					return "INTEGER";
+				else if (dataType == typeof(string) || dataType == typeof(Guid))
+					return "TEXT";
+				else if (dataType == typeof(decimal))
+					return "REAL";
+				else if (dataType == typeof(bool))
+					return "BOOLEAN";
+
+				throw new Exception("TypeToSqliteConversionException");  // one could map any unknown to ''blob''
+			}
+
+			public void RefreshMasterDataScheme()
+			{
+				var commands = new List<string>();
+				if (schema == null)
+					throw new Exception("Failed to load masterdata.xml.");
+				foreach (var table in schema.TableDefinitions)
+				{
+					object tableExists;
+
+					using (var findTable = connection.CreateCommand())
+					{
+						findTable.CommandText = $"SELECT [name] FROM sqlite_master WHERE [type]='table' AND [name]='{table.Name}';";
+						tableExists = findTable.ExecuteScalar();
+					}
+
+					if (tableExists == null)
+						commands.AddRange(GenerateUpdateScript(table.Name, false, table.Columns, null));
+					else
+					{
+						var localScheme = new List<IDataColumn>(); // todo: replace with GetLocalTableColumns
+						using (var readExistingTable = connection.CreateCommand())
+						{
+							readExistingTable.CommandText = $"PRAGMA table_info({table.Name});";
+							var existingTableReader = readExistingTable.ExecuteReader();
+
+							while (existingTableReader.Read())
+							{
+								var attributes = new PropertyDictionary();
+								if (existingTableReader.GetBoolean(3))
+									attributes.SetProperty("IsNull", false);
+								if (existingTableReader.GetBoolean(5))
+									attributes.SetProperty("IsPrimary", true);
+								attributes.SetProperty("Default", existingTableReader.GetValue(4).ToString());
+								attributes.SetProperty("DataType", existingTableReader.GetString(2));
+								var column = new SimpleDataColumn(existingTableReader.GetString(1), typeof(string), attributes);    // impossible to map the SQLiteTypeString to a Type
+								localScheme.Add(column);
+							}
+							readExistingTable.Dispose();
+						}
+						var mustImport = false;
+						if (table.Meta != null)
+							mustImport = table.Meta.GetProperty("MustImport", false);
+						commands.AddRange(GenerateUpdateScript(table.Name, mustImport, table.Columns, localScheme));
+					}
+				}
+
+				if (commands.Count == 0)
+					return;
+				using (var commitScheme = connection.CreateCommand())
+				{
+					using (var transaction = connection.BeginTransaction())
+					{
+						try
+						{
+							foreach (var command in commands)
+							{
+								commitScheme.CommandText = command;
+								var ret = commitScheme.ExecuteNonQuery();
+							}
+						}
+						catch
+						{
+							transaction.Rollback();
+							throw new Exception("Upgrading the Scheme failed.");
+						}
+						finally
+						{
+							transaction.Commit();
+						}
+					}
+				}
+			}
+
+			// -- Static ------------------------------------------------------
+
+			#region -- Read/Write Schema ------------------------------------------------
+
+			internal static XElement ReadSchemaValue(IDataReader r, int columnIndex)
+			{
+				using (var sr = new StringReader(r.GetString(columnIndex)))
+					return XDocument.Load(sr).Root;
+			} // func ReadSchemaValue
+
+			internal static void WriteSchemaValue()
+			{
+			}
+
+			#endregion
+
+			#region -- Local store primitives -----------------------------------------------
+
+			private static Type ConvertSqLiteDataType(string dataType)
+			{
+				if (String.IsNullOrEmpty(dataType))
+					return typeof(string);
+				else
+					switch (Char.ToUpper(dataType[0]))
+					{
+						case 'I':
+							return String.Compare(dataType, "INTEGER", StringComparison.OrdinalIgnoreCase) == 0
+								? typeof(long)
+								: typeof(string);
+						case 'R':
+							return String.Compare(dataType, "REAL", StringComparison.OrdinalIgnoreCase) == 0
+								? typeof(double)
+								: typeof(string);
+						case 'B':
+							return String.Compare(dataType, "BLOB", StringComparison.OrdinalIgnoreCase) == 0
+								? typeof(byte[])
+								: typeof(string);
+						default: // TEXT, NUMERIC (numeric is date, datetime, decimal, boolean, ...)
+							return typeof(string);
+					}
+			} // func ConvertSqLiteDataType
+
+			internal static bool CheckLocalTableExists(SQLiteConnection connection, string tableName)
+			{
+				using (var command = new SQLiteCommand("SELECT [tbl_name] FROM [sqlite_master] WHERE [type] = 'table' AND [tbl_name] = @tableName;", connection))
+				{
+					command.Parameters.Add("@tableName", DbType.String, tableName.Length + 1).Value = tableName;
+					using (var r = command.ExecuteReader(CommandBehavior.SingleRow))
+						return r.Read();
+				}
+			} // func CheckLocalTableExistsAsync
+
+			internal static IEnumerable<IDataColumn> GetLocalTableColumns(SQLiteConnection connection, string tableName)
+			{
+				using (var command = new SQLiteCommand($"PRAGMA table_info({tableName});", connection))
+				{
+					using (var r = command.ExecuteReader(CommandBehavior.SingleResult))
+					{
+						while (r.Read())
+						{
+							yield return new SimpleDataColumn(
+								r.GetString(1),
+								r.IsDBNull(2) ? typeof(string) : ConvertSqLiteDataType(r.GetString(2)),
+								new PropertyDictionary(
+									new PropertyValue("IsNull", r.IsDBNull(3) || r.GetBoolean(3)),
+									new PropertyValue("Default", r.GetValue(4)?.ToString()),
+									new PropertyValue("IsPrimary", !r.IsDBNull(5) && r.GetBoolean(5))
+								)
+							);
+						}
+					}
+				}
+			} // func GetLocalTableColumns
+
+			internal static bool TestTableColumns(SQLiteConnection connection, string tableName, params SimpleDataColumn[] columns)
+			{
+				using (var e = GetLocalTableColumns(connection, tableName).GetEnumerator())
+				{
+					for (var i = 0; i < columns.Length; i++)
+					{
+						if (!e.MoveNext())
+							return false;
+
+						var textColumn = e.Current;
+						var expectedColumn = columns[i];
+						if (String.Compare(textColumn.Name, expectedColumn.Name, StringComparison.OrdinalIgnoreCase) != 0)
+							return false;
+						else if (textColumn.DataType != expectedColumn.DataType)
+							return false;
+					}
+				}
+				return true;
+			} // func TestLocalTableColumns
+
+			#endregion
+		} // class PpsMasterData
+
+		#endregion
+
+		private PpsMasterData masterData;	// local datastore
+		private readonly Uri baseUri;       // internal uri for this datastore
 
 		private readonly BaseWebRequest request;
 
@@ -199,6 +588,10 @@ namespace TecWare.PPSn
 			var isUseable = false;
 			// open a new local store
 			SQLiteConnection newLocalStore = null;
+			PpsDataSetDefinitionDesktop newDataSet = null;
+			DateTime? lastSynchronizationSchema = null;
+			DateTime? lastSynchronizationStamp = null;
+			long? lastSynchronizationId = null;
 			try
 			{
 				// open the local database
@@ -209,22 +602,24 @@ namespace TecWare.PPSn
 
 				// check synchronisation table
 				progress.Report("Lokale Datenbank verifizieren...");
-				if (TestLocalTableColumns(newLocalStore, "SyncTokens",
-					new SimpleDataColumn("Schema", typeof(long)),
+				if (PpsMasterData.TestTableColumns(newLocalStore, "Header",
+					new SimpleDataColumn("SchemaStamp", typeof(long)),
+					new SimpleDataColumn("SchemaContent", typeof(string)),
 					new SimpleDataColumn("SyncStamp", typeof(long)),
 					new SimpleDataColumn("SyncToken", typeof(long))
 					))
 				{
 					// read sync tokens
-					using (var commd = new SQLiteCommand("SELECT Schema, SyncStamp, SyncToken FROM main.SyncTokens ", newLocalStore))
+					using (var commd = new SQLiteCommand("SELECT SchemaStamp, SchemaContent, SyncStamp, SyncToken FROM main.Header ", newLocalStore))
 					{
 						using (var r = commd.ExecuteReader(CommandBehavior.SingleRow))
 						{
-							if (r.Read() && !r.IsDBNull(0) && !r.IsDBNull(1) && !r.IsDBNull(2))
+							if (r.Read() && !r.IsDBNull(0) && !r.IsDBNull(1) && !r.IsDBNull(2) && !r.IsDBNull(3))
 							{
 								lastSynchronizationSchema = DateTime.FromFileTimeUtc(r.GetInt64(0));
-								lastSynchronizationStamp = DateTime.FromFileTimeUtc(r.GetInt64(1));
-								lastSynchronizationId = r.GetInt64(2);
+								newDataSet = new PpsDataSetDefinitionDesktop(this, PpsMasterData.MasterDataSchema, PpsMasterData.ReadSchemaValue(r, 1));
+								lastSynchronizationStamp = DateTime.FromFileTimeUtc(r.GetInt64(2));
+								lastSynchronizationId = r.GetInt64(3);
 								isUseable = true;
 							}
 						}
@@ -246,10 +641,10 @@ namespace TecWare.PPSn
 			}
 
 			// close current connection
-			localConnection?.Dispose();
+			masterData?.Dispose();
 
 			// set new connection
-			localConnection = newLocalStore;
+			masterData = new PpsMasterData(this, newLocalStore, newDataSet, lastSynchronizationSchema.Value, lastSynchronizationStamp.Value, lastSynchronizationId.Value);
 
 			return isUseable;
 		} // proc InitLocalStore
@@ -264,116 +659,11 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Local store primitives -----------------------------------------------
-
-		private static Type ConvertSqLiteDataType(string dataType)
-		{
-			if (String.IsNullOrEmpty(dataType))
-				return typeof(string);
-			else
-				switch (Char.ToUpper(dataType[0]))
-				{
-					case 'I':
-						return String.Compare(dataType, "INTEGER", StringComparison.OrdinalIgnoreCase) == 0
-							? typeof(long)
-							: typeof(string);
-					case 'R':
-						return String.Compare(dataType, "REAL", StringComparison.OrdinalIgnoreCase) == 0
-							? typeof(double)
-							: typeof(string);
-					case 'B':
-						return String.Compare(dataType, "BLOB", StringComparison.OrdinalIgnoreCase) == 0
-							? typeof(byte[])
-							: typeof(string);
-					default: // TEXT, NUMERIC (numeric is date, datetime, decimal, boolean, ...)
-						return typeof(string);
-				}
-		} // func ConvertSqLiteDataType
-
-		private static bool CheckLocalTableExists(SQLiteConnection connection, string tableName)
-		{
-			using (var command = new SQLiteCommand("SELECT [tbl_name] FROM [sqlite_master] WHERE [type] = 'table' AND [tbl_name] = @tableName;", connection))
-			{
-				command.Parameters.Add("@tableName", DbType.String, tableName.Length + 1).Value = tableName;
-				using (var r = command.ExecuteReader(CommandBehavior.SingleRow))
-					return r.Read();
-			}
-		} // func CheckLocalTableExistsAsync
-
-		private static IEnumerable<IDataColumn> GetLocalTableColumns(SQLiteConnection connection, string tableName)
-		{
-			using (var command = new SQLiteCommand($"PRAGMA table_info({tableName});", connection))
-			{
-				using (var r = command.ExecuteReader(CommandBehavior.SingleResult))
-				{
-					while (r.Read())
-					{
-						yield return new SimpleDataColumn(
-							r.GetString(1),
-							r.IsDBNull(2) ? typeof(string) : ConvertSqLiteDataType(r.GetString(2)),
-							new PropertyDictionary(
-								new PropertyValue("IsNull", r.IsDBNull(3) || r.GetBoolean(3)),
-								new PropertyValue("Default", r.GetValue(4)?.ToString()),
-								new PropertyValue("IsPrimary", !r.IsDBNull(5) && r.GetBoolean(5))
-							)
-						);
-					}
-				}
-			}
-		} // func GetLocalTableColumns
-
-		private static bool TestLocalTableColumns(SQLiteConnection connection, string tableName, params SimpleDataColumn[] columns)
-		{
-			using (var e = GetLocalTableColumns(connection, tableName).GetEnumerator())
-			{
-				for (var i = 0; i < columns.Length; i++)
-				{
-					if (!e.MoveNext())
-						return false;
-
-					var textColumn = e.Current;
-					var expectedColumn = columns[i];
-					if (String.Compare(textColumn.Name, expectedColumn.Name, StringComparison.OrdinalIgnoreCase) != 0)
-						return false;
-					else if (textColumn.DataType != expectedColumn.DataType)
-						return false;
-				}
-			}
-			return true;
-		} // func TestLocalTableColumns
-
-		#endregion
-
 		//private async Task RefreshOfflineCacheAsync()
 		//{
 		//	if (IsOnline && IsAuthentificated)
 		//		await Task.Run(new Action(UpdateOfflineItems));
 		//} // RefreshOfflineCacheAsync
-
-		private Task<bool> SynchronizationAsync(IProgress<string> progress)
-		{
-			progress.Report("Synchronization...");
-
-			// todo: check for new schema PpsMasterData
-
-			// todo: fetch data
-
-			lastSynchronizationId = 0;
-			return Task.FromResult(true);
-		} // func SynchronizationAsync
-
-		/// <summary>Tests, if the synchronization needs to be in foreground (last sync it to far away e.g. 1 day)</summary>
-		/// <returns></returns>
-		private Task<bool> CheckSynchronizationStateAsync()
-		{
-			// check if schema is change
-			// todo: HEAD schema
-
-			// is the system "synchrone enough"?
-			return Task.FromResult((DateTime.UtcNow - lastSynchronizationStamp) > TimeSpan.FromDays(1));
-		} // proc CheckSynchronizationStateAsync
-
-		public bool IsSynchronizationStarted => lastSynchronizationId >= 0;
 
 		#region -- Offline Data -----------------------------------------------------------
 
@@ -438,12 +728,12 @@ namespace TecWare.PPSn
 				throw new ArgumentException("Parameter \"path\" is null or empty.");
 
 			// create a transaction for the sync
-			using (var transaction = localConnection.BeginTransaction())
+			using (var transaction = masterData.Connection.BeginTransaction())
 			{
 				// find the current cached item
 				long? currentRowId;
 				bool updateItem;
-				using (var command = new SQLiteCommand("SELECT [Id], [ContentSize], [ContentLastModification] FROM [main].[OfflineCache] WHERE [Path] = @path;", localConnection, transaction))
+				using (var command = new SQLiteCommand("SELECT [Id], [ContentSize], [ContentLastModification] FROM [main].[OfflineCache] WHERE [Path] = @path;", masterData.Connection, transaction))
 				{
 					command.Parameters.Add("@path", DbType.String).Value = path;
 					using (var reader = command.ExecuteReader(CommandBehavior.SingleRow))
@@ -493,7 +783,7 @@ namespace TecWare.PPSn
 						currentRowId == null ?
 							"INSERT INTO [main].[OfflineCache] ([Path], [OnlineMode], [ContentType], [ContentEncoding], [ContentSize], [ContentLastModification], [Content]) VALUES (@path, @onlineMode, @contentType, @contentEncoding, @contentSize, @lastModified, @content);" :
 							"UPDATE [main].[OfflineCache] SET [OnlineMode] = @onlineMode, [ContentType] = @contentType, [ContentEncoding] = @contentEncoding, [ContentSize] = @contentSize, [ContentLastModification] = @lastModified, [Content] = @content WHERE [Id] = @id;",
-						localConnection, transaction
+						masterData.Connection, transaction
 					))
 					{
 						if (currentRowId == null)
@@ -569,7 +859,7 @@ namespace TecWare.PPSn
 
 			try
 			{
-				if (localConnection == null || localConnection.State != ConnectionState.Open)
+				if (masterData == null || masterData.Connection.State != ConnectionState.Open)
 					return false;
 			}
 			catch (ObjectDisposedException)
@@ -581,7 +871,7 @@ namespace TecWare.PPSn
 			Stream resultData = null;
 			try
 			{
-				using (var command = new SQLiteCommand("SELECT [Path], [OnlineMode], [ContentType], [ContentEncoding], [Content] FROM [main].[OfflineCache] WHERE substr([Path], 1, length(@path)) = @path;", localConnection))
+				using (var command = new SQLiteCommand("SELECT [Path], [OnlineMode], [ContentType], [ContentEncoding], [Content] FROM [main].[OfflineCache] WHERE substr([Path], 1, length(@path)) = @path;", masterData.Connection))
 				{
 					command.Parameters.Add("@path", DbType.String).Value = path;
 					using (var reader = command.ExecuteReader(CommandBehavior.SingleRow))
@@ -995,20 +1285,20 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		private async Task RefreshMasterDataSchemeAsync()
-		{
-			if (CurrentMode == PpsEnvironmentMode.Online)
-			{
-				var commands = new List<string>();
-				var masterDataDataSet = await ActiveDataSets.GetDataSetDefinitionAsync("masterdata");
-				if (masterDataDataSet == null)
-					throw new Exception("Failed to load masterdata.xml.");
+		//private async Task RefreshMasterDataSchemeAsync()
+		//{
+		//	if (CurrentMode == PpsEnvironmentMode.Online)
+		//	{
+		//		var commands = new List<string>();
+		//		var masterDataDataSet = await ActiveDataSets.GetDataSetDefinitionAsync("masterdata");
+		//		if (masterDataDataSet == null)
+		//			throw new Exception("Failed to load masterdata.xml.");
 
-				var master = new PpsMasterData(masterDataDataSet, localConnection);
+		//		var master = new PpsMasterData(localConnection);
 
-				master.RefreshMasterDataScheme();
-			}
-		}
+		//		master.RefreshMasterDataScheme();
+		//	}
+		//}
 
 		public async Task<bool> ForceOnlineAsync(bool throwException = true)
 		{
@@ -1032,6 +1322,7 @@ namespace TecWare.PPSn
 		public Uri BaseUri => baseUri;
 
 		/// <summary>Connection to the local datastore</summary>
-		public SQLiteConnection LocalConnection => localConnection;
+		[Obsolete("Use master data.")]
+		public SQLiteConnection LocalConnection => masterData.Connection;
 	} // class PpsEnvironment
 }

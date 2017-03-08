@@ -411,209 +411,6 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsMasterData ------------------------------------------------------
-
-	public class PpsMasterData
-	{
-		SQLiteConnection dataBase;
-		PpsDataSetDefinitionDesktop dataSet;
-
-		public PpsMasterData(PpsDataSetDefinitionDesktop dataSet, SQLiteConnection dataBaseConnection)
-		{
-			this.dataSet = dataSet;
-			this.dataBase = dataBaseConnection;
-		}
-
-		static IEnumerable<string> GenerateUpdateScript(string tableName, bool mustImport, IEnumerable<IDataColumn> remoteScheme, IEnumerable<IDataColumn> localScheme)
-		{
-			var commands = new List<string>();
-
-			// the table does not exist or is droppable - must be created
-			if (!localScheme.Any() || !mustImport)
-			{
-				foreach (var column in localScheme)
-					if (column.Attributes.GetProperty("IsPrimary", false))
-						commands.Add($"DROP INDEX IF EXISTS '{tableName}_{column.Name}_index';");
-				commands.Add($"DROP TABLE IF EXISTS '{tableName}';");
-				commands.AddRange(CreateNewTable(remoteScheme, tableName));
-			}
-			else
-			{
-				var newColumns = new List<IDataColumn>();
-				var sameColumns = new List<string>();	// for String.Join - only Column names are used
-				
-				foreach (var remoteColumn in remoteScheme)
-				{
-					var found = false;
-					foreach (var localColumn in localScheme)
-						if ((remoteColumn.Name == localColumn.Name) &&
-							 (DataTypeToSQLTypeString(remoteColumn.DataType) == localColumn.Attributes.GetProperty("DataType", "TEXT")) &&
-							 (remoteColumn.Attributes.GetProperty("IsNull", true) == localColumn.Attributes.GetProperty("IsNull", true)) &&
-							 (remoteColumn.Attributes.GetProperty("IsPrimary", true) == localColumn.Attributes.GetProperty("IsPrimary", true))
-							)
-						{
-							found = true;
-							break;
-						}
-					if (found)
-						sameColumns.Add(remoteColumn.Name);
-					else
-						newColumns.Add(remoteColumn);
-				}
-
-				// this is more performant than checking for obsolete columns
-				if (sameColumns.Count < localScheme.Count())
-				{
-					// drop the old indexes
-					foreach (var column in localScheme)
-						if (column.Attributes.GetProperty("IsPrimary", false))
-							commands.Add($"DROP INDEX IF EXISTS '{tableName}_{column.Name}_index';");
-
-					// rename local table
-					commands.Add($"ALTER TABLE '{tableName}' RENAME TO '{tableName}_temp';");
-
-					// create a new table, according to new Scheme...
-					commands.AddRange(CreateNewTable(remoteScheme, tableName));
-					// copy
-					commands.Add($"INSERT INTO '{tableName}' ({String.Join(", ", sameColumns)}) SELECT {String.Join(", ", sameColumns)} FROM '{tableName}_temp';");
-
-					// drop old local table
-					commands.Add($"DROP TABLE '{tableName}_temp';");  // no IF EXISTS - at this point the table must exist or error
-				}
-				else
-				// there are no columns, which have to be deleted - check now if there are new columns to add
-				if (newColumns.Count() > 0)
-					foreach (var column in newColumns)
-						commands.Add($"ALTER TABLE '{tableName}' ADD COLUMN [{column.Name}] {DataTypeToSQLTypeString(column.DataType)} {(column.Attributes.GetProperty("IsNull", false) ? " NULL" : " NOT NULL")}{(String.IsNullOrEmpty(column.Attributes.GetProperty("Default", String.Empty)) ? String.Empty : " DEFAULT '" + column.Attributes.GetProperty("Default", String.Empty) + "'")};");
-			}
-
-			return commands;
-		}
-
-		private static List<string> CreateNewTable(IEnumerable<IDataColumn> remoteTable, string tableName)
-		{
-			var indexingCommands = new List<string>();
-			var command = new StringBuilder("CREATE TABLE '").Append(tableName).Append("' (");
-			foreach (var column in remoteTable)
-			{
-				command.Append(" [").Append(column.Name).Append("] ").Append(DataTypeToSQLTypeString(column.DataType)).Append(" ");
-
-				if (((PpsDataColumnDefinition)column).IsPrimaryKey)
-				{
-					command.Append("PRIMARY KEY ");
-					indexingCommands.Add($"CREATE UNIQUE INDEX '{tableName}_{column.Name}_index' ON '{tableName}'([{column.Name}]);");
-				}
-
-				if (!column.Attributes.GetProperty("IsNull", true))
-					command.Append("NOT ");
-				command.Append("NULL ");
-
-				if (!String.IsNullOrEmpty(column.Attributes.GetProperty("Default", String.Empty)))
-				{
-					command.Append("DEFAULT ").Append(column.Attributes.GetProperty("Default", String.Empty)).Append(" ");
-				}
-
-				command[command.Length - 1] = ',';
-			}
-			command[command.Length - 1] = ')';  // the Parameterlist ends with a whitespace
-			command.Append(";");
-			var commands = new List<string>();
-			commands.Add(command.ToString());
-			commands.AddRange(indexingCommands);
-			return commands;
-		}
-
-		private static string DataTypeToSQLTypeString(Type dataType)
-		{
-			// according to https://www.sqlite.org/datatype3.html there are only these datatypes - so map everything to these 5
-			if (dataType == typeof(long) || dataType == typeof(Int32))
-				return "INTEGER";
-			else if (dataType == typeof(string) || dataType == typeof(Guid))
-				return "TEXT";
-			else if (dataType == typeof(decimal))
-				return "REAL";
-			else if (dataType == typeof(bool))
-				return "BOOLEAN";
-
-			throw new Exception("TypeToSqliteConversionException");  // one could map any unknown to ''blob''
-		}
-
-		public void RefreshMasterDataScheme()
-		{
-			var commands = new List<string>();
-			if (dataSet == null)
-				throw new Exception("Failed to load masterdata.xml.");
-			foreach (var table in dataSet.TableDefinitions)
-			{
-				object tableExists;
-
-				using (var findTable = dataBase.CreateCommand())
-				{
-					findTable.CommandText = $"SELECT [name] FROM sqlite_master WHERE [type]='table' AND [name]='{table.Name}';";
-					tableExists = findTable.ExecuteScalar();
-				}
-
-				if (tableExists == null)
-					commands.AddRange(GenerateUpdateScript(table.Name, false, table.Columns, null));
-				else
-				{
-					var localScheme = new List<IDataColumn>(); // todo: replace with GetLocalTableColumns
-					using (var readExistingTable = dataBase.CreateCommand())
-					{
-						readExistingTable.CommandText = $"PRAGMA table_info({table.Name});";
-						var existingTableReader = readExistingTable.ExecuteReader();
-
-						while (existingTableReader.Read())
-						{
-							var attributes = new PropertyDictionary();
-							if (existingTableReader.GetBoolean(3))
-								attributes.SetProperty("IsNull", false);
-							if (existingTableReader.GetBoolean(5))
-								attributes.SetProperty("IsPrimary", true);
-							attributes.SetProperty("Default", existingTableReader.GetValue(4).ToString());
-							attributes.SetProperty("DataType", existingTableReader.GetString(2));
-							var column = new SimpleDataColumn(existingTableReader.GetString(1), typeof(string), attributes);	// impossible to map the SQLiteTypeString to a Type
-							localScheme.Add(column);
-						}
-						readExistingTable.Dispose();
-					}
-					var mustImport = false;
-					if (table.Meta != null)
-						mustImport = table.Meta.GetProperty("MustImport", false);
-					commands.AddRange(GenerateUpdateScript(table.Name, mustImport, table.Columns, localScheme));
-				}
-			}
-
-			if (commands.Count == 0)
-				return;
-			using (var commitScheme = dataBase.CreateCommand())
-			{
-				using (var transaction = dataBase.BeginTransaction())
-				{
-					try
-					{
-						foreach (var command in commands)
-						{
-							commitScheme.CommandText = command;
-							var ret = commitScheme.ExecuteNonQuery();
-						}
-					}
-					catch
-					{
-						transaction.Rollback();
-						throw new Exception("Upgrading the Scheme failed.");
-					}
-					finally
-					{
-						transaction.Commit();
-					}
-				}
-			}
-		}
-	}
-
-	#endregion
-
 	#region -- enum PpsEnvironmentState -------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -794,7 +591,7 @@ namespace TecWare.PPSn
 					}
 
 				case PpsEnvironmentModeResult.NeedsSynchronization:
-					if (await SynchronizationAsync(progress))
+					if (await masterData.SynchronizationAsync(progress))
 						goto redoConnect;
 					else
 						return PpsEnvironmentModeResult.NeedsSynchronization;
@@ -806,7 +603,10 @@ namespace TecWare.PPSn
 		// false => needs restart
 		private Task<bool> UpdateAsync(IProgress<string> progress)
 		{
-			progress.Report("Lade Anwendungsänderungen...");
+			progress.Report("Lade Installationsdateien...");
+
+			// start setup
+		
 			return Task.FromResult(true);
 		} // proc UpdateAsync
 
@@ -830,7 +630,7 @@ namespace TecWare.PPSn
 				// close handles
 				Lua.Dispose();
 				// dispose local store
-				localConnection?.Dispose();
+				masterData?.Dispose();
 			}
 		} // proc Dispose
 
@@ -1059,7 +859,7 @@ namespace TecWare.PPSn
 								Dispatcher.BeginInvoke(new Action(() => OnPropertyChanged(nameof(UsernameDisplay))));
 
 								// start synchronization
-								if (!IsSynchronizationStarted || CheckSynchronizationStateAsync().Result)
+								if (!masterData.IsSynchronizationStarted || masterData.CheckSynchronizationStateAsync().Result)
 									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsSynchronization);
 								else // mark the system online
 									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.Online);
