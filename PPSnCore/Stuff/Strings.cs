@@ -13,6 +13,9 @@ namespace TecWare.PPSn.Stuff
 	{
 		public unsafe static bool SecureStringCompare(SecureString ss1, SecureString ss2)
 		{
+			if (ss1 == null || ss2 == null)
+				return false;
+
 			var bstr1 = IntPtr.Zero;
 			var bstr2 = IntPtr.Zero;
 			try
