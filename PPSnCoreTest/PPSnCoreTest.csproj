@@ -26,6 +26,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -61,11 +62,20 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FilterTests.cs" />
+    <Compile Include="Stuff.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\twdes\des\Extern\Core\DESCore\DESCore.csproj">
+      <Project>{67528843-e631-4c05-b6e8-514cc8bec7b6}</Project>
+      <Name>DESCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\PPSnClient\PPSnClient.csproj">
+      <Project>{6b2e2c3c-b2e0-4c9f-a1da-3e78bdb3a141}</Project>
+      <Name>PPSnClient</Name>
+    </ProjectReference>
     <ProjectReference Include="..\PPSnCore\PPSnCore.csproj">
       <Project>{f4609545-6d91-4b2d-a811-3201f4934505}</Project>
       <Name>PPSnCore</Name>
