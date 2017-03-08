@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
+using System.Security;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -30,8 +32,7 @@ namespace TecWare.PPSn.UI
 
 			private PpsEnvironmentInfo[] environments = null;
 			private PpsEnvironmentInfo currentEnvironment = null;
-			private string actualUserName = null;
-			private IEnumerable<string> recentUsers = null;
+
 
 			public LoginStateData(PpsSplashWindow parent)
 			{
@@ -43,19 +44,15 @@ namespace TecWare.PPSn.UI
 
 			public ICredentials GetCredentials()
 			{
-				if (IsDomainName(actualUserName) && CurrentEnvironment != null && CurrentEnvironment.Uri != null)
-				{
-					var test = new PpsClientLogin(CurrentEnvironment.Uri.ToString(), "", false);
-					var creds = test.GetCredentials();
-					var match = creds?.GetCredential(CurrentEnvironment.Uri, CurrentEnvironment.AuthType);
-					return match ?? CredentialCache.DefaultCredentials.GetCredential(currentEnvironment.Uri, "");
-				}
-					//return CredentialCache.DefaultCredentials.GetCredential(currentEnvironment.Uri, "");
+				if (IsDomainName(defaultUser.UserName))
+					return CredentialCache.DefaultNetworkCredentials.GetCredential(currentEnvironment.Uri, "Basic");
+
+				if (parent.pbPassword.Password == "tecware-gmbh.de")
+					return defaultUser;
 				else
-				{
-					var test = new NetworkCredential(ActualUserName, Password);
-					return new NetworkCredential(ActualUserName, Password);
-				}
+					return new NetworkCredential(defaultUser.UserName, parent.pbPassword.SecurePassword);
+
+
 			} // func GetCredentials
 
 			public void RefreshEnvironments(PpsEnvironmentInfo selectEnvironment)
@@ -87,78 +84,70 @@ namespace TecWare.PPSn.UI
 						OnPropertyChanged(nameof(CurrentEnvironment));
 						OnPropertyChanged(nameof(IsUserNameEnabled));
 
-						if (String.IsNullOrEmpty(currentEnvironment.LastUser))
-							ActualUserName = Environment.UserDomainName + "\\" + Environment.UserName;
-						else
-							ActualUserName = currentEnvironment.LastUser;
+						if (currentEnvironment?.Uri != null)
+							DefaultUser = LoadUserCredentials(currentEnvironment.Uri.ToString());
 
-						RecentUsers = currentEnvironment.RecentUsers;
 					}
 				}
 			} // prop CurrentEnvironment
 
-			public string ActualUserName
-			{
-				get { return actualUserName; }
-				set
-				{
-					if (String.IsNullOrEmpty(value))
-						value = null;
-
-					if (value != actualUserName)
-					{
-						actualUserName = value;
-
-						OnPropertyChanged(nameof(ActualUserName));
-						OnPropertyChanged(nameof(IsValid));
-						OnPropertyChanged(nameof(IsPasswordEnabled));
-
-					}
-				}
-			} // prop UserName
-			
-			public string Password;
-
-			public string ActualUserPassword()
-			{
-				if (IsPasswordEnabled && CurrentEnvironment != null && CurrentEnvironment.Uri != null)
-				{
-					var test = new PpsClientLogin(CurrentEnvironment.Uri.AbsoluteUri, "", false);
-					var creds = test.GetCredentials();
-					var match = creds?.GetCredential(CurrentEnvironment.Uri, CurrentEnvironment.AuthType);
-					if (match?.UserName == ActualUserName)
-						return match.Password ?? String.Empty;
-					return String.Empty;
-				}
-				else
-					return String.Empty;
-			}
-
-			public bool IsValid => !String.IsNullOrEmpty(actualUserName);
-			public bool IsUserNameEnabled => currentEnvironment != null;
-			public bool IsPasswordEnabled => actualUserName != null && !IsDomainName(actualUserName) && !IsDefaultUser(actualUserName);
-
-			public IEnumerable<string> RecentUsers
+			private NetworkCredential defaultUser;
+			public NetworkCredential DefaultUser
 			{
 				get
 				{
-					return recentUsers;
+					return defaultUser;
 				}
 				set
 				{
-					recentUsers = value;
-					OnPropertyChanged(nameof(RecentUsers));
+					defaultUser = value;
+
+					if (defaultUser?.SecurePassword?.Length > 0)
+						parent.pbPassword.Password = "tecware-gmbh.de";
+					else parent.pbPassword.Password = String.Empty;
+					OnPropertyChanged(nameof(UserName));
+					OnPropertyChanged(nameof(IsPasswordEnabled));
+					OnPropertyChanged(nameof(IsValid));
 				}
 			}
+
+			public string UserName
+			{
+				get
+				{
+					if (defaultUser != null)
+						return defaultUser.UserName;
+					return String.Empty;
+				}
+				set
+				{
+					var uriCredential = LoadUserCredentials(currentEnvironment.Uri.ToString());
+					if (value != uriCredential?.UserName)
+						DefaultUser = new NetworkCredential(value, "");
+					else DefaultUser = uriCredential;
+					OnPropertyChanged(nameof(IsValid));
+				}
+			}
+
+			private static NetworkCredential LoadUserCredentials(string uri)
+			{
+				NetworkCredential userCred;
+				using (var pcl = new PpsClientLogin(uri, "", false))
+					userCred = (NetworkCredential)pcl.GetCredentials();
+				return userCred;
+			}
+
+			public bool IsValid => IsDomainName(defaultUser != null ? defaultUser.UserName : String.Empty) || !String.IsNullOrEmpty(defaultUser?.Password);
+			public bool IsUserNameEnabled => currentEnvironment != null;
+			public bool IsPasswordEnabled => !IsDomainName(defaultUser != null ? defaultUser.UserName : String.Empty);
 
 			private static bool IsDomainName(string userName)
 				=> userName.StartsWith(System.Environment.UserDomainName + "\\", StringComparison.OrdinalIgnoreCase);
 
-			private static bool IsDefaultUser(string userName)
-				=> false;
 		} // class LoginStateData
 
 		#endregion
+
 
 		private readonly static DependencyPropertyKey loginPaneVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(LoginPaneVisible), typeof(Visibility), typeof(PpsSplashWindow), new PropertyMetadata(Visibility.Hidden));
 		private readonly static DependencyPropertyKey statusPaneVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(StatusPaneVisible), typeof(Visibility), typeof(PpsSplashWindow), new PropertyMetadata(Visibility.Hidden));//Visible
@@ -299,9 +288,24 @@ namespace TecWare.PPSn.UI
 				CommandManager.InvalidateRequerySuggested();
 				Dispatcher.PushFrame(loginFrame);
 				loginFrame = null;
-
+				
 				if (dialogResult && loginStateUnSafe.IsValid)
 				{
+					using (var plc = new PpsClientLogin(loginStateUnSafe.CurrentEnvironment.Uri.ToString(), "", false))
+					{
+						var newCreds = (NetworkCredential)loginStateUnSafe.GetCredentials();
+						if (newCreds != null && plc != null)
+							if (plc.UserName != newCreds.UserName || !SecureStringCompare(plc.GetPassword(), newCreds.SecurePassword))
+
+								if (MessageBox.Show("Kennwort speichern?", "PPSn", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+								{
+									plc.UserName = newCreds.UserName;
+									plc.SetPassword(newCreds.SecurePassword);
+									plc.Save = true;
+									plc.Commit();
+								}
+					}
+
 					return new Tuple<PpsEnvironmentInfo, ICredentials>(loginStateUnSafe.CurrentEnvironment, loginStateUnSafe.GetCredentials());
 				}
 				else
@@ -313,6 +317,38 @@ namespace TecWare.PPSn.UI
 				SetValue(statusPaneVisiblePropertyKey, Visibility.Visible);
 			}
 		} // proc ShowLogin
+
+		public static bool SecureStringCompare(SecureString ss1, SecureString ss2)
+		{
+			var bstr1 = IntPtr.Zero;
+			var bstr2 = IntPtr.Zero;
+			try
+			{
+				bstr1 = Marshal.SecureStringToBSTR(ss1);
+				bstr2 = Marshal.SecureStringToBSTR(ss2);
+				var length1 = Marshal.ReadInt32(bstr1, -4);
+				var length2 = Marshal.ReadInt32(bstr2, -4);
+				if (length1 == length2)
+				{
+					for (int x = 0; x < length1; ++x)
+					{
+						var b1 = Marshal.ReadByte(bstr1, x);
+						var b2 = Marshal.ReadByte(bstr2, x);
+						if (b1 != b2)
+							return false;
+					}
+				}
+				else return false;
+				return true;
+			}
+			finally
+			{
+				if (bstr2 != IntPtr.Zero)
+					Marshal.ZeroFreeBSTR(bstr2);
+				if (bstr1 != IntPtr.Zero)
+					Marshal.ZeroFreeBSTR(bstr1);
+			}
+		}
 
 		public async Task<Tuple<PpsEnvironmentInfo, ICredentials>> ShowLoginAsync(PpsEnvironmentInfo selectEnvironment)
 		{
@@ -367,18 +403,8 @@ namespace TecWare.PPSn.UI
 				DragMove();
 		} // event Window_Drag
 
-		private void Enviroments_SelectionChanged(object sender, SelectionChangedEventArgs e)
-			=> loginStateUnSafe.CurrentEnvironment = (PpsEnvironmentInfo)((ComboBox)sender).SelectedItem;
+		/*private void Enviroments_SelectionChanged(object sender, SelectionChangedEventArgs e)
+			=> loginStateUnSafe.CurrentEnvironment = (PpsEnvironmentInfo)((ComboBox)sender).SelectedItem;*/
 
-		private void ComboBox_TextInput(object sender, TextCompositionEventArgs e)
-		{
-			pbPassword.Password = loginStateUnSafe.ActualUserPassword();
-		}
-
-		private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-			=> ComboBox_TextInput(sender, null);
-
-		private void ComboBox_KeyUp(object sender, KeyEventArgs e)
-			=> ComboBox_TextInput(sender, null);
 	} // class PpsSplashWindow
 }

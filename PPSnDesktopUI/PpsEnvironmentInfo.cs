@@ -32,11 +32,6 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public sealed class PpsEnvironmentInfo : IEquatable<PpsEnvironmentInfo>
 	{
-		private const string UserNameId = "userName";
-		private const string LoginTimeId = "loginTime";
-		private const string LoginElementId = "recentUser";
-		private const string LoginId = "login";
-		private const string AuthTypeId = "authType";
 		private const string InfoFileId = "info.xml";
 
 		private readonly string name;
@@ -81,47 +76,7 @@ namespace TecWare.PPSn
 					XDocument.Load(infoFile.FullName) :
 					new XDocument(new XElement("ppsn"));
 		} // proc
-
-		private IEnumerable<XElement> RecentUsersInternal => content.Root.Element(LoginId)?.Elements(LoginElementId) ?? Array.Empty<XElement>();
-
-		public string AuthType => content.Root.Element(LoginId)?.GetAttribute(AuthTypeId, String.Empty) ?? String.Empty;
-
-		public string LastUser
-		{
-			get
-			{
-				return (from x in RecentUsersInternal
-						  let userName = x.GetAttribute(UserNameId, String.Empty)
-						  let lastLogin = x.GetAttribute(LoginTimeId, DateTime.MinValue)
-						  where !String.IsNullOrEmpty(userName)
-						  orderby lastLogin
-						  select userName
-						).FirstOrDefault() ?? String.Empty;
-			}
-		}
-
-		public void WriteLastUser(string userName)
-		{
-			if (String.IsNullOrEmpty(userName))
-				return;
-
-			// remove current reference
-			RecentUsersInternal
-				.FirstOrDefault(x => String.Compare(x.GetAttribute(UserNameId, String.Empty), userName, StringComparison.OrdinalIgnoreCase) == 0)
-				?.Remove();
-
-			var xLogin = content.Root.Element(LoginId);
-			if (xLogin == null)
-				content.Root.Add(xLogin = new XElement(LoginId));
-
-			xLogin.AddFirst(new XElement(LoginElementId,
-				new XAttribute(UserNameId, userName),
-				new XAttribute(LoginTimeId, DateTime.UtcNow.ChangeType<string>())
-			));
-
-			// save to persistent setting
-			content.Save(infoFile.FullName);
-		}
+		
 
 		public void Update(XElement xNewInfo)
 		{
@@ -133,13 +88,7 @@ namespace TecWare.PPSn
 		public void Save()
 		{
 		} // proc Save
-
-		public IEnumerable<string> RecentUsers
-			=> from x in RecentUsersInternal
-				let userName = x.GetAttribute(UserNameId, String.Empty)
-				where !String.IsNullOrEmpty(userName)
-				select userName;
-
+		
 		public string Name => name;
 
 		public string DisplayName { get { return content.Root.GetAttribute("displayName", name); } set { content.Root.SetAttributeValue("displayName", value); } }
