@@ -16,7 +16,15 @@ namespace TecWare.PPSn
 		[TestMethod]
 		public unsafe void CompareSecureString()
 		{
-			var strs = new string[] { "Hallo Welt", "", "Hallo Wel" };
+			var extralong = new StringBuilder();
+			for (var i = 0; i < 1024; i++)
+				extralong.Append("a");
+
+			var everyChar = new StringBuilder();
+			for (var i = 0; i < 256; i++)
+				everyChar.Append((char)i);
+
+			var strs = new string[] { "Hallo Welt", "", "Hallo Wel", extralong.ToString(), everyChar.ToString() };
 
 			fixed (char* s1 = strs[0])
 			fixed (char* s2 = strs[0])
@@ -76,6 +84,30 @@ namespace TecWare.PPSn
 				Assert.IsFalse(PpsProcs.SecureStringCompare(ss1, ss2), "String and null were equal");
 
 				ss1.Dispose();
+			}
+
+			fixed (char* s1 = strs[3])
+			fixed (char* s2 = strs[3])
+			{
+				var ss1 = new SecureString(s1, strs[3].Length);
+				var ss2 = new SecureString(s2, strs[3].Length); ;
+
+				Assert.IsTrue(PpsProcs.SecureStringCompare(ss1, ss2), "Long strings were not equal");
+
+				ss1.Dispose();
+				ss2.Dispose();
+			}
+
+			fixed (char* s1 = strs[4])
+			fixed (char* s2 = strs[4])
+			{
+				var ss1 = new SecureString(s1, strs[4].Length);
+				var ss2 = new SecureString(s2, strs[4].Length); ;
+
+				Assert.IsTrue(PpsProcs.SecureStringCompare(ss1, ss2), "Full-ASCII strings were not equal");
+
+				ss1.Dispose();
+				ss2.Dispose();
 			}
 		}
 	}
