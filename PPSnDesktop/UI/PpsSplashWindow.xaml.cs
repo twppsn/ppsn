@@ -46,7 +46,7 @@ namespace TecWare.PPSn.UI
 			public ICredentials GetCredentials()
 			{
 				if (IsDomainName(defaultUser.UserName))
-					return CredentialCache.DefaultNetworkCredentials.GetCredential(currentEnvironment.Uri, "Basic");
+					return new NetworkCredential(defaultUser.UserName, CredentialCache.DefaultNetworkCredentials.SecurePassword);
 
 				if (parent.pbPassword.Password == "tecware-gmbh.de")
 					return defaultUser;
@@ -87,7 +87,6 @@ namespace TecWare.PPSn.UI
 
 						if (currentEnvironment?.Uri != null)
 							DefaultUser = LoadUserCredentials(currentEnvironment.Uri.ToString());
-
 					}
 				}
 			} // prop CurrentEnvironment
@@ -135,12 +134,15 @@ namespace TecWare.PPSn.UI
 				NetworkCredential userCred;
 				using (var pcl = new PpsClientLogin(uri, "", false))
 					userCred = (NetworkCredential)pcl.GetCredentials();
+				if (userCred != null && !String.IsNullOrEmpty(userCred.Domain))
+					userCred.UserName = userCred.Domain + "\\" + userCred.UserName;
 				return userCred;
 			}
 
-			public bool IsValid => IsDomainName(defaultUser != null ? defaultUser.UserName : String.Empty) || !String.IsNullOrEmpty(defaultUser?.Password);
-			public bool IsUserNameEnabled => currentEnvironment != null;
-			public bool IsPasswordEnabled => !IsDomainName(defaultUser != null ? defaultUser.UserName : String.Empty);
+			public bool IsValid => IsUserNameEnabled && !String.IsNullOrEmpty(UserName) && !IsPasswordEnabled || parent.pbPassword.Password.Length > 0;
+			public bool IsUserNameEnabled => currentEnvironment?.Uri != null;
+			public bool IsPasswordEnabled => !IsDomainName(defaultUser != null ? defaultUser.UserName : String.Empty) && IsUserNameEnabled;
+			public void Validate() => OnPropertyChanged(nameof(IsValid));
 
 			private static bool IsDomainName(string userName)
 				=> userName.StartsWith(System.Environment.UserDomainName + "\\", StringComparison.OrdinalIgnoreCase);
@@ -177,7 +179,17 @@ namespace TecWare.PPSn.UI
 				{
 					new CommandBinding(ApplicationCommands.New, CreateNewEnvironment, LoginFrameActive),
 					new CommandBinding(ApplicationCommands.Save, ExecuteFrame, LoginFrameActive),
-					new CommandBinding(ApplicationCommands.Close, CloseFrame, LoginFrameActive)
+					new CommandBinding(ApplicationCommands.Close, CloseFrame, LoginFrameActive),
+					new CommandBinding(EnterKeyCommand, (sender, e) =>
+					{
+						EnterKey(sender, e);
+					},
+					(sender, e) => { e.CanExecute = true; e.Handled = true; }),
+					new CommandBinding(PressedKeyCommand, (sender, e) =>
+					{
+						PressedKey(sender, e);
+					},
+					(sender, e) => { e.CanExecute = true; e.Handled = true; })
 			}
 			// 
 			);
@@ -245,7 +257,6 @@ namespace TecWare.PPSn.UI
 
 		private void SaveEnvironment()
 		{
-			// ToDo: create the environment
 			var newEnv = new PpsEnvironmentInfo(tbNewEnvironmentName.Text);
 			newEnv.Uri = new Uri(tbNewEnvironmentUri.Text);
 			loginStateUnSafe.RefreshEnvironments(newEnv);
@@ -289,21 +300,21 @@ namespace TecWare.PPSn.UI
 				CommandManager.InvalidateRequerySuggested();
 				Dispatcher.PushFrame(loginFrame);
 				loginFrame = null;
-				
+
 				if (dialogResult && loginStateUnSafe.IsValid)
 				{
 					using (var plc = new PpsClientLogin(loginStateUnSafe.CurrentEnvironment.Uri.ToString(), "", false))
 					{
 						var newCreds = (NetworkCredential)loginStateUnSafe.GetCredentials();
-						if (newCreds != null && plc != null
-							&& (plc.UserName != newCreds.UserName || !PpsProcs.SecureStringCompare(plc.GetPassword(), newCreds.SecurePassword))
-							&& MessageBox.Show("Kennwort speichern?", "PPSn", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
-						{
-							plc.UserName = newCreds.UserName;
+
+						plc.UserName = newCreds.UserName;
+						var a = new SecureString();
+
+						if (newCreds.SecurePassword.Length > 0)
 							plc.SetPassword(newCreds.SecurePassword);
-							plc.Save = true;
-							plc.Commit();
-						}
+						plc.Save = true;
+
+						plc.Commit();
 					}
 
 					return new Tuple<PpsEnvironmentInfo, ICredentials>(loginStateUnSafe.CurrentEnvironment, loginStateUnSafe.GetCredentials());
@@ -371,8 +382,31 @@ namespace TecWare.PPSn.UI
 				DragMove();
 		} // event Window_Drag
 
-		/*private void Enviroments_SelectionChanged(object sender, SelectionChangedEventArgs e)
-			=> loginStateUnSafe.CurrentEnvironment = (PpsEnvironmentInfo)((ComboBox)sender).SelectedItem;*/
+		#region -- RoutedUICommand ------------------------------------------------------
+		public static RoutedUICommand EnterKeyCommand { get; } = new RoutedUICommand("EnterKey", "EnterKey", typeof(PpsSplashWindow));
+		public static RoutedUICommand PressedKeyCommand { get; } = new RoutedUICommand("PressedKey", "PressedKey", typeof(PpsSplashWindow));
 
+		private void EnterKey(object sender, ExecutedRoutedEventArgs e)
+		{
+			if (e.OriginalSource is TextBox || e.OriginalSource is PasswordBox)
+			{
+				dynamic textBox = e.OriginalSource;
+				var bindingExpression = textBox.GetBindingExpression(TextBox.TextProperty);
+
+				if (bindingExpression == null)
+					ApplicationCommands.Save.Execute(null, null);
+				else if (bindingExpression.ResolvedSourcePropertyName == "UserName")
+					if (loginStateUnSafe.IsValid)
+						ApplicationCommands.Save.Execute(null, null);
+					else
+						textBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+			}
+		}
+
+		private void PressedKey(object sender, ExecutedRoutedEventArgs e)
+		{
+			loginStateUnSafe.Validate();
+		}
+		#endregion
 	} // class PpsSplashWindow
 }

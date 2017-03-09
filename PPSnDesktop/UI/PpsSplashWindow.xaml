@@ -4,8 +4,12 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TecWare.PPSn.UI"
+        xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
         mc:Ignorable="d"
         Title="PPSn" Height="400" Width="600" WindowStyle="None" ResizeMode="NoResize" MouseDown="Window_Drag">
+    <Window.InputBindings>
+        <KeyBinding Key="Esc" Command="{x:Static ApplicationCommands.Close}"/>
+    </Window.InputBindings>
     <Border BorderThickness="1" BorderBrush="#3B4A62">
         <Grid>
             <Grid Visibility="{Binding StatusPaneVisible,Mode=OneWay}">
@@ -63,9 +67,29 @@
                     </ComboBox.ItemTemplate>
                 </ComboBox>
                 <Label Grid.Column="0" Grid.Row="2" Content="Nutzer:" />
-                <TextBox Grid.Column="1" Grid.Row="2" Margin="0,3" IsEnabled="{Binding IsUserNameEnabled}" Text="{Binding UserName,UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBox Grid.Column="1" Grid.Row="2" Margin="0,3" IsEnabled="{Binding IsUserNameEnabled}" Text="{Binding UserName,UpdateSourceTrigger=PropertyChanged}" Name="tbUserName">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Return" Command="local:PpsSplashWindow.EnterKeyCommand"/>
+                    </TextBox.InputBindings>
+                </TextBox>
                 <Label Grid.Column="0" Grid.Row="3" Content="Passwort:" />
-                <PasswordBox Grid.Column="1" Grid.Row="3" Margin="0,3" IsEnabled="{Binding IsPasswordEnabled}" Name="pbPassword" />
+                <Grid Grid.Column="1" Grid.Row="3" Margin="0,3">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <PasswordBox Grid.Column="0" IsEnabled="{Binding IsPasswordEnabled}" Name="pbPassword">
+                        <PasswordBox.InputBindings>
+                            <KeyBinding Key="Return" Command="local:PpsSplashWindow.EnterKeyCommand"/>
+                        </PasswordBox.InputBindings>
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="PasswordChanged">
+                                <i:InvokeCommandAction Command="local:PpsSplashWindow.PressedKeyCommand"/>
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </PasswordBox>
+                    <CheckBox Grid.Column="1" VerticalAlignment="Center" IsEnabled="{Binding IsPasswordEnabled}"/>
+                </Grid>
                 <!-- Password="{Binding ActualUserPassword}"-->
 
                 <Button Grid.Column="0" Grid.Row="4" Content="*" Width="23" Height="23" HorizontalAlignment="Left" VerticalAlignment="Bottom" Command="{x:Static ApplicationCommands.New}" />
