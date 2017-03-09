@@ -115,10 +115,12 @@ namespace TecWare.PPSn
 		private static string localEnvironmentsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ppsn", "env");
 
 		public static bool operator ==(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
-			=> !Object.ReferenceEquals(a, null) && a.Equals(b);
+			=> Object.ReferenceEquals(a, null) && Object.ReferenceEquals(b, null) ||
+			!Object.ReferenceEquals(a, null) && a.Equals(b);
 
 		public static bool operator !=(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
-			=> Object.ReferenceEquals(a, null) || !a.Equals(b);
+			=> Object.ReferenceEquals(a, null) && !Object.ReferenceEquals(b, null) ||
+			!Object.ReferenceEquals(a, null) && !a.Equals(b);
 
 		public static PpsEnvironmentInfo CreateEnvironment(string serverName, Uri serverUri)
 		{
