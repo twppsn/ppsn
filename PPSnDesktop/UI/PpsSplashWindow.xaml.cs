@@ -143,6 +143,18 @@ namespace TecWare.PPSn.UI
 			public bool IsUserNameEnabled => currentEnvironment?.Uri != null;
 			public bool IsPasswordEnabled => !IsDomainName(defaultUser != null ? defaultUser.UserName : String.Empty) && IsUserNameEnabled;
 			public void Validate() => OnPropertyChanged(nameof(IsValid));
+			private bool savePassword = false;
+			public bool SavePassword
+			{
+				get
+				{
+					return savePassword;
+				}
+				set
+				{
+					savePassword = value;
+				} 
+			}
 
 			private static bool IsDomainName(string userName)
 				=> userName.StartsWith(System.Environment.UserDomainName + "\\", StringComparison.OrdinalIgnoreCase);
@@ -259,6 +271,7 @@ namespace TecWare.PPSn.UI
 		{
 			var newEnv = new PpsEnvironmentInfo(tbNewEnvironmentName.Text);
 			newEnv.Uri = new Uri(tbNewEnvironmentUri.Text);
+			newEnv.Save();
 			loginStateUnSafe.RefreshEnvironments(newEnv);
 			SetValue(loginPaneVisiblePropertyKey, Visibility.Visible);
 			SetValue(environmentWizzardPaneVisiblePropertyKey, Visibility.Hidden);
@@ -301,7 +314,7 @@ namespace TecWare.PPSn.UI
 				Dispatcher.PushFrame(loginFrame);
 				loginFrame = null;
 
-				if (dialogResult && loginStateUnSafe.IsValid)
+				if (dialogResult && loginStateUnSafe.IsValid && loginStateUnSafe.SavePassword)
 				{
 					using (var plc = new PpsClientLogin(loginStateUnSafe.CurrentEnvironment.Uri.ToString(), "", false))
 					{

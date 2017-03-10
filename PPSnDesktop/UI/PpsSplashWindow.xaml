@@ -88,7 +88,7 @@
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
                     </PasswordBox>
-                    <CheckBox Grid.Column="1" VerticalAlignment="Center" IsEnabled="{Binding IsPasswordEnabled}"/>
+                    <CheckBox Grid.Column="1" VerticalAlignment="Center" IsEnabled="{Binding IsPasswordEnabled}" IsChecked="{Binding SavePassword}"/>
                 </Grid>
                 <!-- Password="{Binding ActualUserPassword}"-->
 

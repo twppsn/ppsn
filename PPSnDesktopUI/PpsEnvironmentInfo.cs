@@ -87,6 +87,7 @@ namespace TecWare.PPSn
 
 		public void Save()
 		{
+			content.Save(infoFile.FullName);
 		} // proc Save
 		
 		public string Name => name;
