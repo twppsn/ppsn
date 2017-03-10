@@ -145,17 +145,17 @@ namespace TecWare.PPSn.UI
 			public void Validate() => OnPropertyChanged(nameof(IsValid));
 			private bool savePassword = false;
 			public bool SavePassword
-			{
-				get
-				{
-					return savePassword;
-				}
-				set
-				{
-					savePassword = value;
-				} 
-			}
-
+			{ get { return savePassword; } set { savePassword = value; } }
+			private int activePage = 0;
+			public int ActivePage
+			{ get { return activePage; } set { this.activePage = value; } }
+			private string newEnvironmentName = String.Empty;
+			public string NewEnvironmentName
+			{ get { return newEnvironmentName; } set { this.newEnvironmentName = value; } }
+			private string newEnvironmentUri = String.Empty;
+			public string NewEnvironmentUri
+			{ get { return newEnvironmentUri; } set { this.newEnvironmentUri = value; } }
+			public bool NewEnvironmentIsValid => !String.IsNullOrWhiteSpace(NewEnvironmentName) && Uri.IsWellFormedUriString(NewEnvironmentUri, UriKind.Absolute);	//ToDo: check if that Environment already exists!
 			private static bool IsDomainName(string userName)
 				=> userName.StartsWith(System.Environment.UserDomainName + "\\", StringComparison.OrdinalIgnoreCase);
 
@@ -163,16 +163,10 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-
-		private readonly static DependencyPropertyKey loginPaneVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(LoginPaneVisible), typeof(Visibility), typeof(PpsSplashWindow), new PropertyMetadata(Visibility.Hidden));
-		private readonly static DependencyPropertyKey statusPaneVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(StatusPaneVisible), typeof(Visibility), typeof(PpsSplashWindow), new PropertyMetadata(Visibility.Hidden));//Visible
-		private readonly static DependencyPropertyKey environmentWizzardPaneVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(EnvironmentWizzardPaneVisible), typeof(Visibility), typeof(PpsSplashWindow), new PropertyMetadata(Visibility.Visible));
 		private readonly static DependencyPropertyKey loginStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(LoginState), typeof(LoginStateData), typeof(PpsSplashWindow), new PropertyMetadata(null));
 
-		public readonly static DependencyProperty LoginPaneVisibleProperty = loginPaneVisiblePropertyKey.DependencyProperty;
-		public readonly static DependencyProperty StatusPaneVisibleProperty = statusPaneVisiblePropertyKey.DependencyProperty;
-		public readonly static DependencyProperty EnvironmentWizzardPaneVisibleProperty = environmentWizzardPaneVisiblePropertyKey.DependencyProperty;
 		public readonly static DependencyProperty StatusTextProperty = DependencyProperty.Register(nameof(StatusText), typeof(string), typeof(PpsSplashWindow));
+		public readonly static DependencyProperty ActivePageProperty = DependencyProperty.Register(nameof(ActivePage), typeof(int), typeof(PpsSplashWindow));
 		public readonly static DependencyProperty LoginStateProperty = loginStatePropertyKey.DependencyProperty;
 
 		private readonly LoginStateData loginStateUnSafe;
@@ -190,7 +184,8 @@ namespace TecWare.PPSn.UI
 				new CommandBinding[]
 				{
 					new CommandBinding(ApplicationCommands.New, CreateNewEnvironment, LoginFrameActive),
-					new CommandBinding(ApplicationCommands.Save, ExecuteFrame, LoginFrameActive),
+					new CommandBinding(ApplicationCommands.Save, ExecuteFrame, (sender, e) => { e.CanExecute = ((int)GetValue(ActivePageProperty) == 1 && loginStateUnSafe.NewEnvironmentIsValid) ||
+																																			 ((int)GetValue(ActivePageProperty) == 2 && loginStateUnSafe.IsValid); e.Handled = true; }),
 					new CommandBinding(ApplicationCommands.Close, CloseFrame, LoginFrameActive),
 					new CommandBinding(EnterKeyCommand, (sender, e) =>
 					{
@@ -205,10 +200,7 @@ namespace TecWare.PPSn.UI
 			}
 			// 
 			);
-
-			SetValue(loginPaneVisiblePropertyKey, Visibility.Hidden);
-			SetValue(statusPaneVisiblePropertyKey, Visibility.Visible);
-			SetValue(environmentWizzardPaneVisiblePropertyKey, Visibility.Hidden);
+			SetValue(ActivePageProperty, 0);
 			SetValue(loginStatePropertyKey, loginStateUnSafe = new LoginStateData(this));
 
 			this.DataContext = this;
@@ -244,22 +236,20 @@ namespace TecWare.PPSn.UI
 
 		private void CreateNewEnvironment(object sender, ExecutedRoutedEventArgs e)
 		{
-			SetValue(loginPaneVisiblePropertyKey, Visibility.Hidden);
-			SetValue(statusPaneVisiblePropertyKey, Visibility.Hidden);
-			SetValue(environmentWizzardPaneVisiblePropertyKey, Visibility.Visible);
+			SetValue(ActivePageProperty, 1);
 			e.Handled = true;
 		} // proc CreateNewEnvironment
 
 
 		private void ExecuteFrame(object sender, ExecutedRoutedEventArgs e)
 		{
-			if (LoginPaneVisible == Visibility.Visible && loginStateUnSafe.IsValid)
+			if ((int)GetValue(ActivePageProperty) == 2 && loginStateUnSafe.IsValid)
 			{
 				loginFrame.Continue = false;
 				dialogResult = true;
 				e.Handled = true;
 			}
-			else if (EnvironmentWizzardPaneVisible == Visibility.Visible)
+			else if((int)GetValue(ActivePageProperty) == 1)
 			{
 				loginFrame.Continue = true;
 				e.Handled = true;
@@ -269,40 +259,42 @@ namespace TecWare.PPSn.UI
 
 		private void SaveEnvironment()
 		{
-			var newEnv = new PpsEnvironmentInfo(tbNewEnvironmentName.Text);
-			newEnv.Uri = new Uri(tbNewEnvironmentUri.Text);
+			var newEnv = new PpsEnvironmentInfo(loginStateUnSafe.NewEnvironmentName);
+			newEnv.Uri = new Uri(loginStateUnSafe.NewEnvironmentUri);
 			newEnv.Save();
 			loginStateUnSafe.RefreshEnvironments(newEnv);
-			SetValue(loginPaneVisiblePropertyKey, Visibility.Visible);
-			SetValue(environmentWizzardPaneVisiblePropertyKey, Visibility.Hidden);
+			SetValue(ActivePageProperty, 2);
 		}
 
 		private void AbortEnvironment()
 		{
-			SetValue(loginPaneVisiblePropertyKey, Visibility.Visible);
-			SetValue(environmentWizzardPaneVisiblePropertyKey, Visibility.Hidden);
+			SetValue(ActivePageProperty, 2);
 		}
 
 		private void CloseFrame(object sender, ExecutedRoutedEventArgs e)
 		{
-			if (LoginPaneVisible == Visibility.Visible)
+			switch ((int)GetValue(ActivePageProperty))
 			{
-				loginFrame.Continue = false;
-				dialogResult = false;
-				e.Handled = true;
-			}
-			else if (EnvironmentWizzardPaneVisible == Visibility.Visible)
-			{
-				loginFrame.Continue = true;
-				e.Handled = true;
-				AbortEnvironment();
+				case 2:
+					{
+						loginFrame.Continue = false;
+						dialogResult = false;
+						e.Handled = true;
+					}
+					break;
+				case 1:
+					{
+						loginFrame.Continue = true;
+						e.Handled = true;
+						AbortEnvironment();
+					}
+					break;
 			}
 		} // proc CloseLoginFrame
 
 		private Tuple<PpsEnvironmentInfo, ICredentials> ShowLogin()
 		{
-			SetValue(loginPaneVisiblePropertyKey, Visibility.Visible);
-			SetValue(statusPaneVisiblePropertyKey, Visibility.Hidden);
+			SetValue(ActivePageProperty, 2);
 			try
 			{
 				if (loginFrame != null)
@@ -337,8 +329,7 @@ namespace TecWare.PPSn.UI
 			}
 			finally
 			{
-				SetValue(loginPaneVisiblePropertyKey, Visibility.Hidden);
-				SetValue(statusPaneVisiblePropertyKey, Visibility.Visible);
+				SetValue(ActivePageProperty, 0);
 			}
 		} // proc ShowLogin
 
@@ -382,12 +373,10 @@ namespace TecWare.PPSn.UI
 		} // proc SetErrorAsync
 
 		#endregion
-
-		public Visibility LoginPaneVisible => (Visibility)GetValue(LoginPaneVisibleProperty);
-		public Visibility StatusPaneVisible => (Visibility)GetValue(StatusPaneVisibleProperty);
-		public Visibility EnvironmentWizzardPaneVisible => (Visibility)GetValue(EnvironmentWizzardPaneVisibleProperty);
+		
 		public string StatusText { get { return (string)GetValue(StatusTextProperty); } set { SetValue(StatusTextProperty, value); } }
 		public LoginStateData LoginState => (LoginStateData)GetValue(LoginStateProperty);
+		public int ActivePage => (int)GetValue(ActivePageProperty);
 
 		private void Window_Drag(object sender, MouseButtonEventArgs e)
 		{
