@@ -1,16 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Properties;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
@@ -28,7 +23,7 @@ namespace TecWare.PPSn
 
 		#region -- OnStartup, OnExit ------------------------------------------------------
 
-		public async Task<bool> StartApplicationAsync(PpsEnvironmentInfo _environment = null, ICredentials _userInfo = null, bool parseArguments = false)
+		public async Task<bool> StartApplicationAsync(PpsEnvironmentInfo _environment = null, ICredentials _userInfo = null)
 		{
 			var environment = _environment;
 			var userInfo = _userInfo;
@@ -49,12 +44,6 @@ namespace TecWare.PPSn
 			);
 			try
 			{
-				if (parseArguments)
-				{
-					// todo: Parse env, user
-					environment = PpsEnvironmentInfo.GetLocalEnvironments().FirstOrDefault(c => c.Name.ToLower() == "test");
-				}
-
 				while (true)
 				{
 					try
@@ -64,7 +53,7 @@ namespace TecWare.PPSn
 						{
 							if (errorInfo != null)
 								await splashWindow.SetErrorAsync(errorInfo);
-							var t = await splashWindow.ShowLoginAsync(environment);
+							var t = await splashWindow.ShowLoginAsync(environment, userInfo);
 							if (t == null)
 								return false;
 
@@ -140,9 +129,58 @@ namespace TecWare.PPSn
 
 		protected override void OnStartup(StartupEventArgs e)
 		{
-			Task.Run(() =>
+			if (!e.Args.Any())
+				Task.Run(() =>
+					{
+						StartApplicationAsync()
+						.ContinueWith(t =>
+						{
+							if (!t.Result)
+								Dispatcher.Invoke(Shutdown);
+						}
+					);
+					}
+				);
+			else
+			{
+				PpsEnvironmentInfo environment = null;
+				var userName = String.Empty;
+				var userPass = String.Empty;
+				var autoLogin = false;
+				var peiList = PpsEnvironmentInfo.GetLocalEnvironments().ToArray();
+				foreach (var arg in e.Args)
+					if (arg.StartsWith("-"))
+					{
+						var cmd = arg[1];
+						switch (cmd)
+						{
+							case 'm':
+								foreach (var env in peiList)
+									if (env.LocalPath.FullName == arg.Substring(2))
+										environment = env;
+								break;
+							case 'l':
+								foreach (var env in peiList)
+									if (env.Uri?.ToString() == arg.Substring(2))
+										environment = env;
+								break;
+							case 'u':
+								userName = arg.Substring(2);
+								break;
+							case 'p':
+								userPass = arg.Substring(2);
+								break;
+							case 'a':
+								autoLogin = true;
+								break;
+						}
+					}
+				ICredentials userCred;
+				using (var pcl = new PpsClientLogin(environment.Uri.ToString(), "", false))
+					userCred = (NetworkCredential)pcl.GetCredentials();
+				Task.Run(() =>
 				{
-					StartApplicationAsync(parseArguments: true)
+					StartApplicationAsync(_environment: environment, _userInfo: String.IsNullOrWhiteSpace(userName) ? (autoLogin ? userCred : null) : new NetworkCredential(userName, userPass))
 					.ContinueWith(t =>
 					{
 						if (!t.Result)
@@ -151,6 +189,8 @@ namespace TecWare.PPSn
 				);
 				}
 			);
+			}
+			//var environment = PpsEnvironment.
 			//ShutdownMode = ShutdownMode.OnExplicitShutdown; // set shutdown to explicit
 
 

@@ -155,10 +155,6 @@ namespace TecWare.PPSn.UI
 			public bool NewEnvironmentIsValid => !String.IsNullOrWhiteSpace(NewEnvironmentName) && Uri.IsWellFormedUriString(NewEnvironmentUri, UriKind.Absolute);   //ToDo: check if that Environment already exists!
 			private static bool IsDomainName(string userName)
 				=> userName.StartsWith(System.Environment.UserDomainName + "\\", StringComparison.OrdinalIgnoreCase);
-			//private bool inError = false;
-			//public bool InError
-			//{ get { return inError; } set { this.inError = value; } }
-
 		} // class LoginStateData
 
 		#endregion
@@ -342,11 +338,14 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc ShowLogin
 
-		public async Task<Tuple<PpsEnvironmentInfo, ICredentials>> ShowLoginAsync(PpsEnvironmentInfo selectEnvironment)
+		public async Task<Tuple<PpsEnvironmentInfo, ICredentials>> ShowLoginAsync(PpsEnvironmentInfo selectEnvironment, ICredentials userInfo = null)
 		{
-				loginStateUnSafe.RefreshEnvironments(selectEnvironment);
+			loginStateUnSafe.RefreshEnvironments(selectEnvironment);
 
-				return await Dispatcher.InvokeAsync(ShowLogin);
+			if (userInfo != null)
+				Dispatcher.Invoke(()=> loginStateUnSafe.UserName = ((NetworkCredential)userInfo).UserName);
+
+			return await Dispatcher.InvokeAsync(ShowLogin);
 		} // func ShowLoginAsync
 
 		#endregion
@@ -371,7 +370,6 @@ namespace TecWare.PPSn.UI
 			}
 			SetValue(StatusTextProperty, errorInfo);
 			SetValue(InErrorProperty, true); 
-			//MessageBox.Show(errorInfo.ToString(), "Fehler", MessageBoxButton.OK, MessageBoxImage.Information);
 		} // proc SetError
 
 		public async Task SetErrorAsync(object errorInfo)

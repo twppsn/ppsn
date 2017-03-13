@@ -25,7 +25,7 @@
                 </TabControl.Resources>
                 <TabItem>
                     <Grid>
-                        <TextBlock Text="{Binding StatusText,Mode=OneWay}" FontSize="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,0,0" />
+                        <TextBlock  Width="Auto" TextWrapping="Wrap" Text="{Binding StatusText,Mode=OneWay}" FontSize="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,0,0"/>
                         <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="20" Content="Neu starten..." Command="local:PpsSplashWindow.ReStartCommand"/>
                     </Grid>
                 </TabItem>
