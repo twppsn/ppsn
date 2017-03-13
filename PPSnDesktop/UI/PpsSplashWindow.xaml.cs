@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Net;
-using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading.Tasks;
 using System.Windows;
@@ -11,7 +9,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using TecWare.PPSn.Data;
-using TecWare.PPSn.Stuff;
 
 // todo: designer find place for ErrorText in ui
 
@@ -155,9 +152,12 @@ namespace TecWare.PPSn.UI
 			private string newEnvironmentUri = String.Empty;
 			public string NewEnvironmentUri
 			{ get { return newEnvironmentUri; } set { this.newEnvironmentUri = value; } }
-			public bool NewEnvironmentIsValid => !String.IsNullOrWhiteSpace(NewEnvironmentName) && Uri.IsWellFormedUriString(NewEnvironmentUri, UriKind.Absolute);	//ToDo: check if that Environment already exists!
+			public bool NewEnvironmentIsValid => !String.IsNullOrWhiteSpace(NewEnvironmentName) && Uri.IsWellFormedUriString(NewEnvironmentUri, UriKind.Absolute);   //ToDo: check if that Environment already exists!
 			private static bool IsDomainName(string userName)
 				=> userName.StartsWith(System.Environment.UserDomainName + "\\", StringComparison.OrdinalIgnoreCase);
+			//private bool inError = false;
+			//public bool InError
+			//{ get { return inError; } set { this.inError = value; } }
 
 		} // class LoginStateData
 
@@ -165,6 +165,7 @@ namespace TecWare.PPSn.UI
 
 		private readonly static DependencyPropertyKey loginStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(LoginState), typeof(LoginStateData), typeof(PpsSplashWindow), new PropertyMetadata(null));
 
+		public readonly static DependencyProperty InErrorProperty = DependencyProperty.Register(nameof(InError), typeof(bool), typeof(PpsSplashWindow));
 		public readonly static DependencyProperty StatusTextProperty = DependencyProperty.Register(nameof(StatusText), typeof(string), typeof(PpsSplashWindow));
 		public readonly static DependencyProperty ActivePageProperty = DependencyProperty.Register(nameof(ActivePage), typeof(int), typeof(PpsSplashWindow));
 		public readonly static DependencyProperty LoginStateProperty = loginStatePropertyKey.DependencyProperty;
@@ -194,7 +195,13 @@ namespace TecWare.PPSn.UI
 					(sender, e) => { e.CanExecute = true; e.Handled = true; }),
 					new CommandBinding(PressedKeyCommand, (sender, e) =>
 					{
-						PressedKey(sender, e);
+						loginStateUnSafe.Validate();
+					},
+					(sender, e) => { e.CanExecute = true; e.Handled = true; }),
+					new CommandBinding(ReStartCommand, (sender, e) =>
+					{
+						SetValue(InErrorProperty,false);
+						SetValue(ActivePageProperty, 2);
 					},
 					(sender, e) => { e.CanExecute = true; e.Handled = true; })
 			}
@@ -249,7 +256,7 @@ namespace TecWare.PPSn.UI
 				dialogResult = true;
 				e.Handled = true;
 			}
-			else if((int)GetValue(ActivePageProperty) == 1)
+			else if ((int)GetValue(ActivePageProperty) == 1)
 			{
 				loginFrame.Continue = true;
 				e.Handled = true;
@@ -294,7 +301,8 @@ namespace TecWare.PPSn.UI
 
 		private Tuple<PpsEnvironmentInfo, ICredentials> ShowLogin()
 		{
-			SetValue(ActivePageProperty, 2);
+			if (!(bool)GetValue(InErrorProperty))
+				SetValue(ActivePageProperty, 2);
 			try
 			{
 				if (loginFrame != null)
@@ -306,21 +314,22 @@ namespace TecWare.PPSn.UI
 				Dispatcher.PushFrame(loginFrame);
 				loginFrame = null;
 
-				if (dialogResult && loginStateUnSafe.IsValid && loginStateUnSafe.SavePassword)
+				if (dialogResult && loginStateUnSafe.IsValid)
 				{
-					using (var plc = new PpsClientLogin(loginStateUnSafe.CurrentEnvironment.Uri.ToString(), "", false))
-					{
-						var newCreds = (NetworkCredential)loginStateUnSafe.GetCredentials();
+					if (loginStateUnSafe.SavePassword)
+						using (var plc = new PpsClientLogin(loginStateUnSafe.CurrentEnvironment.Uri.ToString(), "", false))
+						{
+							var newCreds = (NetworkCredential)loginStateUnSafe.GetCredentials();
 
-						plc.UserName = newCreds.UserName;
-						var a = new SecureString();
+							plc.UserName = newCreds.UserName;
+							var a = new SecureString();
 
-						if (newCreds.SecurePassword.Length > 0)
-							plc.SetPassword(newCreds.SecurePassword);
-						plc.Save = true;
+							if (newCreds.SecurePassword.Length > 0)
+								plc.SetPassword(newCreds.SecurePassword);
+							plc.Save = true;
 
-						plc.Commit();
-					}
+							plc.Commit();
+						}
 
 					return new Tuple<PpsEnvironmentInfo, ICredentials>(loginStateUnSafe.CurrentEnvironment, loginStateUnSafe.GetCredentials());
 				}
@@ -335,9 +344,9 @@ namespace TecWare.PPSn.UI
 
 		public async Task<Tuple<PpsEnvironmentInfo, ICredentials>> ShowLoginAsync(PpsEnvironmentInfo selectEnvironment)
 		{
-			loginStateUnSafe.RefreshEnvironments(selectEnvironment);
+				loginStateUnSafe.RefreshEnvironments(selectEnvironment);
 
-			return await Dispatcher.InvokeAsync(ShowLogin);
+				return await Dispatcher.InvokeAsync(ShowLogin);
 		} // func ShowLoginAsync
 
 		#endregion
@@ -360,8 +369,9 @@ namespace TecWare.PPSn.UI
 			{
 				errorInfo = ((Exception)errorInfo).ToString();
 			}
-
-			MessageBox.Show(errorInfo.ToString(), "Fehler", MessageBoxButton.OK, MessageBoxImage.Information);
+			SetValue(StatusTextProperty, errorInfo);
+			SetValue(InErrorProperty, true); 
+			//MessageBox.Show(errorInfo.ToString(), "Fehler", MessageBoxButton.OK, MessageBoxImage.Information);
 		} // proc SetError
 
 		public async Task SetErrorAsync(object errorInfo)
@@ -373,8 +383,19 @@ namespace TecWare.PPSn.UI
 		} // proc SetErrorAsync
 
 		#endregion
-		
-		public string StatusText { get { return (string)GetValue(StatusTextProperty); } set { SetValue(StatusTextProperty, value); } }
+
+		public string StatusText
+		{
+			get { return (string)GetValue(StatusTextProperty); }
+			set
+			{
+				SetValue(StatusTextProperty, value);
+				SetValue(ActivePageProperty, 0);
+			}
+		}
+
+		public bool InError
+		{ get { return (bool)GetValue(InErrorProperty); } set { SetValue(InErrorProperty, value); } }
 		public LoginStateData LoginState => (LoginStateData)GetValue(LoginStateProperty);
 		public int ActivePage => (int)GetValue(ActivePageProperty);
 
@@ -387,6 +408,7 @@ namespace TecWare.PPSn.UI
 		#region -- RoutedUICommand ------------------------------------------------------
 		public static RoutedUICommand EnterKeyCommand { get; } = new RoutedUICommand("EnterKey", "EnterKey", typeof(PpsSplashWindow));
 		public static RoutedUICommand PressedKeyCommand { get; } = new RoutedUICommand("PressedKey", "PressedKey", typeof(PpsSplashWindow));
+		public static RoutedUICommand ReStartCommand { get; } = new RoutedUICommand("ReStart", "ReStart", typeof(PpsSplashWindow));
 
 		private void EnterKey(object sender, ExecutedRoutedEventArgs e)
 		{
@@ -403,11 +425,6 @@ namespace TecWare.PPSn.UI
 					else
 						textBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
 			}
-		}
-
-		private void PressedKey(object sender, ExecutedRoutedEventArgs e)
-		{
-			loginStateUnSafe.Validate();
 		}
 		#endregion
 	} // class PpsSplashWindow
