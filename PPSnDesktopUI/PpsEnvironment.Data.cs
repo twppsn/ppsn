@@ -576,10 +576,62 @@ namespace TecWare.PPSn
 		{
 			var passwordFile = Path.Combine(LocalPath.FullName, "localStore.dat");
 			if (File.Exists(passwordFile))
-				return Task.FromResult("geheim"); // todo: rk read and verify
+				return ReadPasswordFile(passwordFile);
 			else
-				return Task.FromResult("geheim"); // todo: rk generate and store
+				return CreatePasswordFile(passwordFile);
 		} // func GetLocalStorePassword
+
+		#region -- Passwording ------------------------------------------------------------
+		private string CreatePassword =>	StringCypher(StringMutate(DateTime.Now.ToLongDateString()+DateTime.MaxValue.ToLongDateString()));
+
+		public Task<string> ReadPasswordFile(string fileName)
+		{
+			return Task.Run(()=> StringDecypher(File.ReadAllText(fileName)));
+		}
+
+		public Task<string> CreatePasswordFile(string fileName)
+		{
+			if (File.Exists(fileName))
+				File.Delete(fileName);
+			File.Create(fileName);
+			File.WriteAllText(fileName, CreatePassword);
+			return ReadPasswordFile(fileName);
+		}
+
+		public string StringMutate(string input)
+		{
+			var ret = String.Empty;
+			for (var i = 0; i < input.Length; i++)
+				ret += input[(input.Length - 1) - i] ^ (char)i;
+			// ToDo: rk enlarge
+			return ret;
+		}
+
+		public string StringCypher(string input)
+		{
+			var ch = 'r';
+			var ret = String.Empty;
+			for (var i = 0; i < input.Length; i++)
+			{
+				var ch_ = (char)(input[i] ^ ch);
+				ret += ch_;
+				ch = ch_;
+			}
+			return ret;
+		}
+
+		public string StringDecypher(string input)
+		{
+			var ret = String.Empty;
+
+			for (var i = input.Length - 1; i > 0; i--)
+				ret = (char)(input[i] ^ input[i - 1]) + ret;
+
+			ret = ((char)(input[0] ^ 'r')) + ret;
+			return ret;
+		}
+
+		#endregion
 
 		/// <summary></summary>
 		/// <returns><c>true</c>, if a valid database is present.</returns>
