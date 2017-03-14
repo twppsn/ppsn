@@ -266,7 +266,8 @@ namespace TecWare.PPSn.Server
 					r.WriteObject(
 						new XElement("ppsn",
 							new XAttribute("displayName", DisplayName),
-							new XAttribute("version", "1.0.0.0")
+							new XAttribute("version", "1.0.0.0"),
+							new XAttribute("loginSecurity", "NTLM,Basic")
 						)
 					);
 					return true;

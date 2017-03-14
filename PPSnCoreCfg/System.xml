@@ -15,7 +15,7 @@
 
 	<pps:ppsn name="ppsn">
 		<pps:sysDataSource name="sys" />
-		
+
 		<pps:wpf name="wpf">
 			<pps:wpfSource id="core" directory="ClientWpf/Panes" virtualPath="panes" />
 			<pps:theme id="default" file="ClientWpf/default.xaml"/>
@@ -36,13 +36,16 @@
 			<pps:field name="sys.Fields.ContentEncoding" dataType="string" />
 			<pps:field name="sys.Fields.ContentSize" dataType="long" />
 			<pps:field name="sys.Fields.LastModificationStamp" dataType="long" />
+			<pps:field name="sys.Fields.PrimaryKey" dataType="long" />
+			<pps:field name="sys.Fields.Text" dataType="string" />
+			<pps:field name="sys.Fields.Long" dataType="long" />
 			<pps:field name="sys.Fields.Bit" dataType="bool" />
 			<pps:field name="sys.Fields.Blob" dataType="blob" />
-	
+
 			<pps:view name="wpf.sync">
 				<pps:source type="view">wpf/GetApplicationFilesSelector</pps:source>
 			</pps:view>
-			
+
 			<pps:field name="wpf.sync.Path" inherited="sys.Fields.Path" />
 			<pps:field name="wpf.sync.Length" inherited="sys.Fields.ContentSize" />
 			<pps:field name="wpf.sync.LastWriteTime" dataType="datetime" />
@@ -84,7 +87,7 @@
 			<pps:field name="dbo.Objr.Document" />
 			<pps:field name="dbo.Objr.CreateDate" />
 			<pps:field name="dbo.Objr.CreateUserId" />
-			
+
 			<!-- address fields -->
 			<pps:field name="dbo.Adre.Id" />
 			<pps:field name="dbo.Adre.ObjkId" />
@@ -110,12 +113,12 @@
 				<pps:attribute name="dataType">bool</pps:attribute>
 				<pps:attribute name="displayName">Rechnung</pps:attribute>
 			</pps:field>
-			
+
 			<!-- objects -->
 			<pps:view name="dbo.objects">
 				<pps:source type="view">dbo.objects</pps:source>
 			</pps:view>
-			
+
 			<!-- base dataset -->
 			<pps:dataset name="coreDataSet">
 				<!-- define the base table -->
@@ -132,7 +135,7 @@
 					<pps:column name="Id" fieldName="dbo.Objr.Id" isPrimary="true" />
 					<pps:relation name="ObjkId" fieldName="dbo.Objr.ObjkId" parentTable="Head" parentColumn="Id" parentType="Root" relationName="ObjrObjk" />
 				</pps:table>
-				
+
 			</pps:dataset>
 
 			<pps:field name="dbo.Knst.Id" />
@@ -143,7 +146,7 @@
 			<pps:field name="dbo.Waeh.Name" />
 			<pps:field name="dbo.Waeh.Kurs" />
 			<pps:field name="dbo.Waeh.System" />
-			
+
 			<!-- definition for countries -->
 			<pps:field name="dbo.Land.Id" />
 			<pps:field name="dbo.Land.Iso" />
@@ -154,10 +157,10 @@
 			<pps:field name="dbo.Land.Vorwahl" />
 			<pps:field name="dbo.Land.Zone" />
 			<pps:field name="dbo.Land.PostAdr" />
-		
+
 			<!-- definition for contact groups -->
 			<pps:field name="dbo.Kgrp.Name" />
-		
+
 			<!-- definition for postal codes -->
 			<pps:field name="dbo.Plzd.Plz" />
 			<pps:field name="dbo.Plzd.Ort" />
@@ -167,11 +170,28 @@
 			<pps:field name="dbo.Plzd.AmtSchl" />
 			<pps:field name="dbo.Plzd.RegSchl" />
 			<pps:field name="dbo.Plzd.Region" />
-		
+
 			<!-- definition for quantity units -->
 			<pps:field name="dbo.Mein.Name" />
 
 			<pps:dataset name="masterdata">
+				<pps:table name="Header">
+					<pps:meta name="syncType">None</pps:meta>
+					<pps:column name="_rowId" fieldName="sys.Fields.PrimaryKey" isPrimary="true" />
+					<pps:column name="SchemaStamp" fieldName="sys.Fields.LastModificationStamp">
+						<pps:meta name="IsNull">true</pps:meta>
+					</pps:column>
+					<pps:column name="SchemaContent" fieldName="sys.Fields.Text">
+						<pps:meta name="IsNull">true</pps:meta>
+					</pps:column>
+					<pps:column name="SyncStamp" fieldName="sys.Fields.LastModificationStamp">
+						<pps:meta name="IsNull">true</pps:meta>
+					</pps:column>
+					<pps:column name="SyncToken" fieldName="sys.Fields.Long">
+						<pps:meta name="IsNull">true</pps:meta>
+					</pps:column>
+				</pps:table>
+
 				<!--<pps:table name="Objects">
 					
 				</pps:table>

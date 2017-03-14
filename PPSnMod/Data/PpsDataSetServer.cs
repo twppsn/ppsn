@@ -56,21 +56,20 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary></summary>
 		private sealed class PpsDataColumnMetaCollectionServer : PpsDataColumnMetaCollection
 		{
-			public PpsDataColumnMetaCollectionServer(XElement xColumnDefinition)
+			public PpsDataColumnMetaCollectionServer(PpsDataColumnDefinition column, XElement xColumnDefinition)
+				: base(column)
 			{
 				foreach (var x in xColumnDefinition.Elements(xnMeta))
 					PpsDataSetServerDefinition.AddMetaFromElement(x, WellknownMetaTypes, Add);
 			} // ctor
 
-			public PpsDataColumnMetaCollectionServer(PpsDataColumnMetaCollectionServer clone)
-				: base(clone)
+			public PpsDataColumnMetaCollectionServer(PpsDataColumnDefinition column, PpsDataColumnMetaCollectionServer clone)
+				: base(column, clone)
 			{
 			} // ctor
 
 			public void Update(string key, Type type, object value)
-			{
-				Add(key, () => type, value);
-			} // proc Update
+				=> Add(key, () => type, value);
 		} // class PpsDataColumnMetaCollectionServer
 
 		#endregion
@@ -88,7 +87,7 @@ namespace TecWare.PPSn.Server.Data
 			: base(tableDefinition, clone)
 		{
 			this.fieldName = clone.fieldName;
-			this.metaInfo = new PpsDataColumnMetaCollectionServer(clone.metaInfo);
+			this.metaInfo = new PpsDataColumnMetaCollectionServer(this, clone.metaInfo);
 			this.fieldDescription = clone.fieldDescription;
 
 			this.parentType = clone.parentType;
@@ -118,7 +117,7 @@ namespace TecWare.PPSn.Server.Data
 				this.parentColumnName = null;
 			}
 
-			this.metaInfo = new PpsDataColumnMetaCollectionServer(config);
+			this.metaInfo = new PpsDataColumnMetaCollectionServer(this, config);
 		} // ctor
 
 		public static PpsDataColumnServerDefinition Create(PpsDataTableDefinition tableDefinition, bool createRelationColumn, XElement config)
