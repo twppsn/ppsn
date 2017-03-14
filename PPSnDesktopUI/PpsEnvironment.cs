@@ -520,6 +520,7 @@ namespace TecWare.PPSn
 			this.synchronizationWorker = new PpsObjectSynchronizationWorker(this);
 
 			Neo.IronLua.LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
+			Neo.IronLua.LuaType.RegisterTypeAlias("blob", typeof(byte[]));
 
 			// create ui stuff
 			this.mainResources = mainResources;
@@ -549,7 +550,7 @@ namespace TecWare.PPSn
 			request = new BaseWebRequest(baseUri, Encoding);
 
 			// Register new Data Schemes from, the server
-			ActiveDataSets.RegisterDataSetSchema("masterdata", "/remote/wpf/masterdata.xml", typeof(PpsDataSetDefinitionDesktop));
+			ActiveDataSets.RegisterDataSetSchema("masterdata", "remote/wpf/masterdata.xml", typeof(PpsDataSetDefinitionDesktop));
 
 			// Register Service
 			mainResources[EnvironmentService] = this;
@@ -772,9 +773,10 @@ namespace TecWare.PPSn
 			// start the mode switching
 			lock (modeTransmissionLock)
 			{
-				modeTransmission = new ModeTransission(desiredMode);
+				var transmission = new ModeTransission(desiredMode);
+				modeTransmission = transmission;
 				backgroundNotifierModeTransmission.Set();
-				return modeTransmission.Task;
+				return transmission.Task;
 			}
 		} // func WaitForEnvironmentState
 
@@ -841,7 +843,8 @@ namespace TecWare.PPSn
 							// load application info
 							var xInfo = Request.GetXmlAsync("remote/info.xml", rootName: "ppsn").Result;
 							info.Update(xInfo);
-							info.Save();
+							if (info.IsModified)
+								info.Save();
 
 							// new version
 							if (!info.IsApplicationLatest)
@@ -924,7 +927,26 @@ namespace TecWare.PPSn
 			if (currentState != state)
 			{
 				currentState = state;
-				Dispatcher.BeginInvoke(new Action(() => OnPropertyChanged(nameof(CurrentMode))));
+				switch (state)
+				{
+					case PpsEnvironmentState.Offline:
+					case PpsEnvironmentState.OfflineConnect:
+						currentMode = PpsEnvironmentMode.Offline;
+						break;
+					case PpsEnvironmentState.Online:
+						currentMode = PpsEnvironmentMode.Online;
+						break;
+					case PpsEnvironmentState.Shutdown:
+						currentMode = PpsEnvironmentMode.Shutdown;
+						break;
+				}
+				Dispatcher.BeginInvoke(new Action(
+					() =>
+					{
+						OnPropertyChanged(nameof(CurrentMode));
+						OnPropertyChanged(nameof(CurrentState));
+					})
+				);
 			}
 		} // proc UpdatePulicState
 

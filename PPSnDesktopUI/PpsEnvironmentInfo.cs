@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -32,10 +33,11 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public sealed class PpsEnvironmentInfo : IEquatable<PpsEnvironmentInfo>
 	{
-		private const string InfoFileId = "info.xml";
+		private const string infoFileId = "info.xml";
 
 		private readonly string name;
 		private XDocument content;
+		private bool isModified = false;
 
 		private readonly DirectoryInfo localPath;
 		private readonly FileInfo infoFile;
@@ -48,7 +50,7 @@ namespace TecWare.PPSn
 			if (!localPath.Exists)
 				localPath.Create();
 
-			this.infoFile = new FileInfo(Path.Combine(localPath.FullName, InfoFileId));
+			this.infoFile = new FileInfo(Path.Combine(localPath.FullName, infoFileId));
 
 			ReadInfoFile();
 		} // ctor
@@ -75,18 +77,20 @@ namespace TecWare.PPSn
 				infoFile.Exists ?
 					XDocument.Load(infoFile.FullName) :
 					new XDocument(new XElement("ppsn"));
+			isModified = false;
 		} // proc
 		
 
 		public void Update(XElement xNewInfo)
 		{
 			// copy uri
-			var isChanged = false;
-			Procs.MergeAttributes(content.Root, xNewInfo, ref isChanged);
+			Procs.MergeAttributes(content.Root, xNewInfo, ref isModified);
 		} // proc UpdateInfoFile
 
 		public void Save()
 		{
+			content.Save(infoFile.FullName);
+			isModified = false;
 		} // proc Save
 		
 		public string Name => name;
@@ -104,15 +108,31 @@ namespace TecWare.PPSn
 			}
 		} // prop Uri
 
-		public Version Version { get { return new Version(content.Root.GetAttribute("version", "0.0.0.0")); } set { content.Root.SetAttributeValue("version", value.ToString()); } }
+		public bool IsModified => isModified;
+
+		public Version Version { get => new Version(content.Root.GetAttribute("version", "0.0.0.0")); set => content.Root.SetAttributeValue("version", value.ToString()); }
 
 		public DirectoryInfo LocalPath => localPath;
 
-		public bool IsApplicationLatest { get; internal set; }
+		public bool IsApplicationLatest => Version  <= AppVersion;
 
 		// -- static --------------------------------------------------------------
 
 		private static string localEnvironmentsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ppsn", "env");
+		private static Lazy<Version> appVersion;
+
+		static PpsEnvironmentInfo()
+		{
+			appVersion = new Lazy<Version>(GetAppVersion);
+		} // sctor
+
+		private static Version GetAppVersion()
+		{
+			var versionString = typeof(PpsEnvironmentInfo).Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version;
+			return String.IsNullOrEmpty(versionString) ?
+				new Version() : 
+				new Version(versionString);
+		} // func GetAppVersion
 
 		public static bool operator ==(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
 			=> !Object.ReferenceEquals(a, null) && a.Equals(b);
@@ -168,6 +188,8 @@ namespace TecWare.PPSn
 					throw new ArgumentOutOfRangeException("Invalid userInfo.");
 			} // func GetUserNameFromCredentials
 		} // func GetUserNameFromCredentials
+
+		public static Version AppVersion => appVersion.Value;
 	} // class PpsEnvironmentInfo
 
 	#endregion
