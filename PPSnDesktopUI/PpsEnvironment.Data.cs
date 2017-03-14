@@ -19,6 +19,7 @@ using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn
 {
@@ -584,7 +585,7 @@ namespace TecWare.PPSn
 		#region -- Passwording ------------------------------------------------------------
 		public Task<string> ReadPasswordFile(string fileName)
 		{
-			return Task.Run(() => StringDecypher(File.ReadAllText(fileName)));
+			return Task.Run(() => PpsProcs.StringDecypher(File.ReadAllText(fileName)));
 		}
 
 		public Task<string> CreatePasswordFile(string fileName, int passwordLength, byte passwordLowerBoundary = 32, byte passwordUpperBoundary = 126)
@@ -599,51 +600,10 @@ namespace TecWare.PPSn
 		{
 			if (File.Exists(fileName))
 				File.Delete(fileName);
-			File.WriteAllText(fileName, StringCypher(GeneratePassword(passwordLength, passwordValidChars)));
+			File.WriteAllText(fileName, PpsProcs.StringCypher(PpsProcs.GeneratePassword(passwordLength, passwordValidChars)));
 			return ReadPasswordFile(fileName);
 		}
-
-		public string GeneratePassword(int length, char[] validChars)
-		{
-			var ret = String.Empty;
-
-			using (var secureRandomNumberGenerator = System.Security.Cryptography.RandomNumberGenerator.Create())
-				while (ret.Length < length)
-				{
-					var buffer = new byte[128];
-					secureRandomNumberGenerator.GetBytes(buffer);
-					foreach (char chr in buffer)
-						if (ret.Length < length && validChars.Contains(chr))
-							ret += chr;
-				}
-
-			return ret;
-		}
-
-		public string StringCypher(string input)
-		{
-			var ch = 'r';
-			var ret = String.Empty;
-			for (var i = 0; i < input.Length; i++)
-			{
-				var ch_ = (char)(input[i] ^ ch);
-				ret += ch_;
-				ch = ch_;
-			}
-			return ret;
-		}
-
-		public string StringDecypher(string input)
-		{
-			var ret = String.Empty;
-
-			for (var i = input.Length - 1; i > 0; i--)
-				ret = (char)(input[i] ^ input[i - 1]) + ret;
-
-			ret = ((char)(input[0] ^ 'r')) + ret;
-			return ret;
-		}
-
+		
 		#endregion
 
 		/// <summary></summary>
