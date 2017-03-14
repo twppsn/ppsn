@@ -13,6 +13,9 @@ namespace TecWare.PPSn.Stuff
 	{
 		public unsafe static bool SecureStringCompare(SecureString ss1, SecureString ss2)
 		{
+			if (ss1 == null || ss2 == null)
+				return false;
+
 			var bstr1 = IntPtr.Zero;
 			var bstr2 = IntPtr.Zero;
 			try
@@ -49,6 +52,50 @@ namespace TecWare.PPSn.Stuff
 				if (bstr1 != IntPtr.Zero)
 					Marshal.ZeroFreeBSTR(bstr1);
 			}
+		}
+		
+		public static string GeneratePassword(int length, char[] validChars)
+		{
+			var ret = String.Empty;
+
+			using (var secureRandomNumberGenerator = System.Security.Cryptography.RandomNumberGenerator.Create())
+				while (ret.Length < length)
+				{
+					var buffer = new byte[128];
+					secureRandomNumberGenerator.GetBytes(buffer);
+					foreach (char chr in buffer)
+						if (ret.Length < length && validChars.Contains(chr))
+							ret += chr;
+				}
+
+			return ret;
+		}
+
+		public static string StringCypher(string input)
+		{
+			var ch = 'r';
+			var ret = String.Empty;
+			for (var i = 0; i < input.Length; i++)
+			{
+				var ch_ = (char)(input[i] ^ ch);
+				ret += ch_;
+				ch = ch_;
+			}
+			return ret;
+		}
+
+		public static string StringDecypher(string input)
+		{
+			var ret = String.Empty;
+
+			if (String.IsNullOrWhiteSpace(input))
+				return ret;
+
+			for (var i = input.Length - 1; i > 0; i--)
+				ret = (char)(input[i] ^ input[i - 1]) + ret;
+
+			ret = ((char)(input[0] ^ 'r')) + ret;
+			return ret;
 		}
 	}
 }
