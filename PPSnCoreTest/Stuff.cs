@@ -110,5 +110,34 @@ namespace TecWare.PPSn
 				ss2.Dispose();
 			}
 		}
+
+		[TestMethod]
+		public void DbPasswordStoreTest()
+		{
+			var emptyString = String.Empty;
+			var aString = "A";
+			var bString = "B";
+			var testString = String.Empty;
+
+			for (var i = 0; i < 1024; i++)
+				testString += (char)(i % 256);
+
+			Assert.AreEqual(emptyString, PpsProcs.StringCypher(emptyString));
+			Assert.AreEqual(emptyString, PpsProcs.StringDecypher(emptyString));
+
+			Assert.AreEqual("3", PpsProcs.StringCypher(aString));
+			Assert.AreEqual("0", PpsProcs.StringCypher(bString));
+			Assert.AreEqual("3q", PpsProcs.StringCypher(aString+bString));
+
+			Assert.AreEqual(aString, PpsProcs.StringDecypher(PpsProcs.StringDecypher(aString)));
+			Assert.AreEqual(bString, PpsProcs.StringDecypher(PpsProcs.StringDecypher(bString)));
+			Assert.AreEqual(aString+bString, PpsProcs.StringDecypher(PpsProcs.StringCypher(aString+bString)));
+			Assert.AreEqual(emptyString, PpsProcs.StringDecypher(PpsProcs.StringDecypher(emptyString)));
+			
+			Assert.AreEqual(testString, PpsProcs.StringDecypher(PpsProcs.StringCypher(testString)));
+
+			foreach (var charA in PpsProcs.GeneratePassword(128, "a".ToCharArray()))
+				Assert.AreEqual('a', charA);
+		}
 	}
 }
