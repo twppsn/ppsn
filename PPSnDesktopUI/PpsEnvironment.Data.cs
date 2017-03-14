@@ -578,32 +578,45 @@ namespace TecWare.PPSn
 			if (File.Exists(passwordFile))
 				return ReadPasswordFile(passwordFile);
 			else
-				return CreatePasswordFile(passwordFile);
+				return CreatePasswordFile(passwordFile, 256);
 		} // func GetLocalStorePassword
 
 		#region -- Passwording ------------------------------------------------------------
-		private string CreatePassword =>	StringCypher(StringMutate(DateTime.Now.ToLongDateString()+DateTime.MaxValue.ToLongDateString()));
-
 		public Task<string> ReadPasswordFile(string fileName)
 		{
-			return Task.Run(()=> StringDecypher(File.ReadAllText(fileName)));
+			return Task.Run(() => StringDecypher(File.ReadAllText(fileName)));
 		}
 
-		public Task<string> CreatePasswordFile(string fileName)
+		public Task<string> CreatePasswordFile(string fileName, int passwordLength, byte passwordLowerBoundary = 32, byte passwordUpperBoundary = 126)
+		{
+			var passwordChars = String.Empty;
+			for (var i = passwordLowerBoundary; i <= passwordUpperBoundary; i++)
+				passwordChars += (char)i;
+			return CreatePasswordFile(fileName, passwordLength, passwordChars.ToCharArray());
+		}
+
+		public Task<string> CreatePasswordFile(string fileName, int passwordLength, char[] passwordValidChars)
 		{
 			if (File.Exists(fileName))
 				File.Delete(fileName);
-			File.Create(fileName);
-			File.WriteAllText(fileName, CreatePassword);
+			File.WriteAllText(fileName, StringCypher(GeneratePassword(passwordLength, passwordValidChars)));
 			return ReadPasswordFile(fileName);
 		}
 
-		public string StringMutate(string input)
+		public string GeneratePassword(int length, char[] validChars)
 		{
 			var ret = String.Empty;
-			for (var i = 0; i < input.Length; i++)
-				ret += input[(input.Length - 1) - i] ^ (char)i;
-			// ToDo: rk enlarge
+
+			using (var secureRandomNumberGenerator = System.Security.Cryptography.RandomNumberGenerator.Create())
+				while (ret.Length < length)
+				{
+					var buffer = new byte[128];
+					secureRandomNumberGenerator.GetBytes(buffer);
+					foreach (char chr in buffer)
+						if (ret.Length < length && validChars.Contains(chr))
+							ret += chr;
+				}
+
 			return ret;
 		}
 
