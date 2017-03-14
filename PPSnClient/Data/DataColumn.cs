@@ -30,12 +30,13 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	internal sealed class PpsDataColumnMetaCollectionClient : PpsDataColumnDefinition.PpsDataColumnMetaCollection
 	{
-		public PpsDataColumnMetaCollectionClient(PpsDataColumnMetaCollectionClient clone)
-			: base(clone)
+		public PpsDataColumnMetaCollectionClient(PpsDataColumnDefinition column, PpsDataColumnMetaCollectionClient clone)
+			: base(column, clone)
 		{
 		} // ctor
 
-		public PpsDataColumnMetaCollectionClient(XElement xMetaGroup)
+		public PpsDataColumnMetaCollectionClient(PpsDataColumnDefinition column, XElement xMetaGroup)
+			: base(column)
 		{
 			PpsDataHelperClient.AddMetaGroup(xMetaGroup, Add);
 		} // ctor
@@ -60,7 +61,7 @@ namespace TecWare.PPSn.Data
 		private PpsDataColumnDefinitionClient(PpsDataTableDefinition table, PpsDataColumnDefinitionClient clone)
 			: base(table, clone)
 		{
-			this.metaInfo = new PpsDataColumnMetaCollectionClient(clone.metaInfo);
+			this.metaInfo = new PpsDataColumnMetaCollectionClient(this, clone.metaInfo);
 			this.dataType = clone.dataType;
 
 			this.parentRelationName = clone.parentRelationName;
@@ -72,7 +73,7 @@ namespace TecWare.PPSn.Data
 		public PpsDataColumnDefinitionClient(PpsDataTableDefinitionClient table, XElement xColumn)
 			: base(table, xColumn.GetAttribute("name", (string)null), xColumn.GetAttribute("isPrimary", false), xColumn.GetAttribute("isIdentity", false))
 		{
-			this.metaInfo = new PpsDataColumnMetaCollectionClient(xColumn.Element("meta"));
+			this.metaInfo = new PpsDataColumnMetaCollectionClient(this, xColumn.Element("meta"));
 			this.dataType = LuaType.GetType(xColumn.GetAttribute("dataType", "object"), lateAllowed: false).Type;
 
 			this.parentRelationName = xColumn.GetAttribute<string>("parentRelationName", null);

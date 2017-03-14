@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Dynamic;
@@ -196,25 +197,101 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataColumnMetaCollection --------------------------------------
+		#region -- class PpsDataColumnStaticMetaCollection ------------------------------
+
+		private sealed class PpsDataColumnStaticMetaCollection : IReadOnlyDictionary<string, object>
+		{
+			private readonly PpsDataColumnDefinition column;
+
+			public PpsDataColumnStaticMetaCollection(PpsDataColumnDefinition column)
+			{
+				this.column = column;
+			} // ctor
+
+			public bool ContainsKey(string key) 
+				=> staticProperties.ContainsKey(key);
+
+			public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
+			{
+				foreach (var c in staticProperties)
+					yield return new KeyValuePair<string, object>(c.Key, c.Value(column));
+			} // func GetEnumerator
+
+			IEnumerator IEnumerable.GetEnumerator() 
+				=> GetEnumerator();
+
+			public bool TryGetValue(string key, out object value)
+			{
+				Func<PpsDataColumnDefinition, object> func;
+				if (staticProperties.TryGetValue(key, out func))
+				{
+					value = func(column);
+					return true;
+				}
+				else
+				{
+					value = null;
+					return false;
+				}
+			} // func TryGetValue
+
+			public object this[string key]
+			{
+				get
+				{
+					object v;
+					return TryGetValue(key, out v) ? v : null;
+				}
+			} // func this
+
+			public IEnumerable<string> Keys
+				=> staticProperties.Keys;
+
+			public IEnumerable<object> Values
+			{
+				get
+				{
+					foreach (var c in staticProperties.Values)
+						yield return c(column);
+				}
+			} // prop Values
+
+			public int Count
+				=> staticProperties.Count;
+
+			private static Dictionary<string, Func<PpsDataColumnDefinition, object>> staticProperties = new Dictionary<string, Func<PpsDataColumnDefinition, object>>(StringComparer.OrdinalIgnoreCase)
+			{
+				["IsIdentity"] = new Func<PpsDataColumnDefinition, object>(c => c.IsIdentity),
+				["IsPrimary"] = new Func<PpsDataColumnDefinition, object>(c => c.IsPrimaryKey)
+			};
+		} // class PpsDataColumnStaticMetaCollection
+
+		#endregion
+
+		#region -- class PpsDataColumnMetaCollection ------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		public class PpsDataColumnMetaCollection : PpsMetaCollection
 		{
-			public PpsDataColumnMetaCollection()
+			private readonly PpsDataColumnStaticMetaCollection staticMeta;
+
+			public PpsDataColumnMetaCollection(PpsDataColumnDefinition column)
 			{
+				this.staticMeta = new PpsDataColumnStaticMetaCollection(column);
 			} // ctor
 
-			protected PpsDataColumnMetaCollection(PpsDataColumnMetaCollection clone)
+			protected PpsDataColumnMetaCollection(PpsDataColumnDefinition column, PpsDataColumnMetaCollection clone)
 				: base(clone)
 			{
+				this.staticMeta = new PpsDataColumnStaticMetaCollection(column);
 			} // ctor
 
 			public T GetProperty<T>(PpsDataColumnMetaData key, T @default)
 				=> PropertyDictionaryExtensions.GetProperty<T>(this, key.ToString(), @default);
 
 			public override IReadOnlyDictionary<string, Type> WellknownMetaTypes => wellknownMetaTypes;
+			protected override IReadOnlyDictionary<string, object> StaticKeys => staticMeta;
 		} // class PpsDataColumnMetaCollection
 
 		#endregion

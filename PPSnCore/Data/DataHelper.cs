@@ -74,16 +74,23 @@ namespace TecWare.PPSn.Data
 		{
 			foreach (var c in otherMeta)
 			{
-				if (!ContainsKey(c.Name))
+				if (!metaInfo.ContainsKey(c.Name))
 					Add(c.Name, null, c.Value);
 			}
 		} // func Merge
 
 		public bool ContainsKey(string key)
-			=> metaInfo.ContainsKey(key);
+			=> metaInfo.ContainsKey(key) || (StaticKeys?.ContainsKey(key) ?? false);
 
 		public bool TryGetProperty(string name, out object value)
-			=> metaInfo.TryGetValue(name, out value);
+		{
+			if (metaInfo.TryGetValue(name, out value))
+				return true;
+			else if (StaticKeys != null && StaticKeys.TryGetValue(name, out value))
+				return true;
+			else
+				return false;
+		} // func TryGetProperty
 
 		internal Expression GetMetaConstantExpression(string key, bool generateException)
 		{
@@ -117,6 +124,7 @@ namespace TecWare.PPSn.Data
 
 		public IEnumerable<string> Keys => metaInfo.Keys;
 		public abstract IReadOnlyDictionary<string, Type> WellknownMetaTypes { get; }
+		protected virtual IReadOnlyDictionary<string, object> StaticKeys => null;
 
 		public object this[string key]
 		{
