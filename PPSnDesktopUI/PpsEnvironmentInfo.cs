@@ -135,10 +135,12 @@ namespace TecWare.PPSn
 		} // func GetAppVersion
 
 		public static bool operator ==(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
-			=> !Object.ReferenceEquals(a, null) && a.Equals(b);
+			=> Object.ReferenceEquals(a, null) && Object.ReferenceEquals(b, null) ||
+			!Object.ReferenceEquals(a, null) && a.Equals(b);
 
 		public static bool operator !=(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
-			=> Object.ReferenceEquals(a, null) || !a.Equals(b);
+			=> Object.ReferenceEquals(a, null) && !Object.ReferenceEquals(b, null) ||
+			!Object.ReferenceEquals(a, null) && !a.Equals(b);
 
 		public static PpsEnvironmentInfo CreateEnvironment(string serverName, Uri serverUri)
 		{

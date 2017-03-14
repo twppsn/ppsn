@@ -19,6 +19,7 @@ using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn
 {
@@ -673,10 +674,34 @@ namespace TecWare.PPSn
 		{
 			var passwordFile = Path.Combine(LocalPath.FullName, "localStore.dat");
 			if (File.Exists(passwordFile))
-				return Task.FromResult("geheim"); // todo: rk read and verify
+				return ReadPasswordFile(passwordFile);
 			else
-				return Task.FromResult("geheim"); // todo: rk generate and store
+				return CreatePasswordFile(passwordFile, 256);
 		} // func GetLocalStorePassword
+
+		#region -- Passwording ------------------------------------------------------------
+		public Task<string> ReadPasswordFile(string fileName)
+		{
+			return Task.Run(() => PpsProcs.StringDecypher(File.ReadAllText(fileName)));
+		}
+
+		public Task<string> CreatePasswordFile(string fileName, int passwordLength, byte passwordLowerBoundary = 32, byte passwordUpperBoundary = 126)
+		{
+			var passwordChars = String.Empty;
+			for (var i = passwordLowerBoundary; i <= passwordUpperBoundary; i++)
+				passwordChars += (char)i;
+			return CreatePasswordFile(fileName, passwordLength, passwordChars.ToCharArray());
+		}
+
+		public Task<string> CreatePasswordFile(string fileName, int passwordLength, char[] passwordValidChars)
+		{
+			if (File.Exists(fileName))
+				File.Delete(fileName);
+			File.WriteAllText(fileName, PpsProcs.StringCypher(PpsProcs.GeneratePassword(passwordLength, passwordValidChars)));
+			return ReadPasswordFile(fileName);
+		}
+		
+		#endregion
 
 		/// <summary></summary>
 		/// <returns><c>true</c>, if a valid database is present.</returns>
