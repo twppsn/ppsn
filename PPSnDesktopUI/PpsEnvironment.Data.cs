@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Data;
@@ -10,9 +9,9 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
+using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
@@ -241,12 +240,22 @@ namespace TecWare.PPSn
 						{
 							ExecuteUpdateScript(connection, transaction, updateScript);
 						}
-												
+
 						// update header
+						var existRow = false;
+						using (var cmd = connection.CreateCommand())
+						{
+							cmd.CommandText = "SELECT EXISTS (SELECT * FROM main.Header)";
+							existRow = ((long)cmd.ExecuteScalar()) != 0;
+						}
+
 						using (var cmd = connection.CreateCommand())
 						{
 							cmd.Transaction = transaction;
-							cmd.CommandText = "INSERT OR REPLACE INTO main.Header (SchemaStamp, SchemaContent) VALUES (@stamp, @content);";
+
+							cmd.CommandText = existRow
+								? "UPDATE main.Header SET SchemaStamp = @stamp, SchemaContent = @content;"
+								: "INSERT INTO main.Header (SchemaStamp, SchemaContent) VALUES (@stamp, @content);";
 							cmd.Parameters.Add("@stamp", DbType.Int64).Value = schemaStamp.ToFileTimeUtc();
 							cmd.Parameters.Add("@content", DbType.AnsiString).Value = xSchema.ToString(SaveOptions.None);
 							cmd.ExecuteNonQuery();
@@ -259,7 +268,7 @@ namespace TecWare.PPSn
 						transaction.Rollback();
 						throw;
 					}
-				
+
 				// update schema
 				schema = newMasterDataSchema;
 			} // proc UpdateSchemaAsync
@@ -325,7 +334,7 @@ namespace TecWare.PPSn
 				// create table
 				var commandText = new StringBuilder("CREATE TABLE ");
 				AppendSqlIdentifier(commandText, tableName).Append(" (");
-				
+
 				foreach (var column in remoteColumns)
 				{
 					if (String.Compare(column.Name, "_rowId", StringComparison.OrdinalIgnoreCase) == 0)
@@ -341,7 +350,7 @@ namespace TecWare.PPSn
 					}
 
 					CreateCommandColumnAttribute(commandText, column);
-					
+
 					commandText.Append(',');
 				}
 				commandText[commandText.Length - 1] = ')'; // replace last comma
@@ -465,6 +474,297 @@ namespace TecWare.PPSn
 
 			#endregion
 
+			#region -- FetchData --------------------------------------------------------
+
+			#region -- class ProcessBatch -----------------------------------------------
+
+			private sealed class ProcessBatch : IDisposable
+			{
+				private readonly PpsMasterData masterData;
+				private readonly PpsDataTableDefinition table;
+
+				private readonly int primaryColumnIndex;
+				private readonly SQLiteCommand existCommand;
+				private readonly SQLiteParameter existIdParameter;
+
+				private readonly SQLiteCommand insertCommand;
+				private readonly SQLiteParameter[] insertParameters;
+
+				private readonly SQLiteCommand updateCommand;
+				private readonly SQLiteParameter[] updateParameters;
+
+				private readonly SQLiteCommand deleteCommand;
+				private readonly SQLiteParameter deleteIdParameter;
+
+				#region -- Ctor/Dtor ----------------------------------------------------
+
+				public ProcessBatch(SQLiteConnection connection, SQLiteTransaction transaction, PpsMasterData masterData, string tableName)
+				{
+					this.masterData = masterData;
+
+					// check definition
+					this.table = masterData.schema.FindTable(tableName);
+					if (table == null)
+						throw new ArgumentOutOfRangeException(nameof(tableName), tableName, $"Could not find master table '{tableName}.'");
+					if (table.PrimaryKey == null)
+						throw new ArgumentException($"Table '{table.Name}' has no primary key.", nameof(table.PrimaryKey));
+
+					// prepare column parameter
+					insertCommand = new SQLiteCommand(connection) { Transaction = transaction };
+					updateCommand = new SQLiteCommand(connection) { Transaction = transaction };
+					insertParameters = new SQLiteParameter[table.Columns.Count];
+					updateParameters = new SQLiteParameter[table.Columns.Count];
+
+					primaryColumnIndex = -1;
+					for (var i = 0; i < table.Columns.Count; i++)
+					{
+						var column = table.Columns[i];
+						var syncSourceColumn = column.Meta.GetProperty("syncSource", String.Empty);
+						if (syncSourceColumn == "#")
+						{
+							if (column.IsPrimaryKey)
+								throw new ArgumentException($"Primary column '{column.Name}' is not in sync list.");
+
+							// exclude from update list
+							insertParameters[i] = null;
+							updateParameters[i] = null;
+						}
+						else
+						{
+							if (column.IsPrimaryKey)
+								primaryColumnIndex = i;
+							insertParameters[i] = insertCommand.Parameters.Add("@" + column.Name, ConvertDataTypeToDbType(column.DataType));
+							insertParameters[i].SourceColumn = column.Name;
+							updateParameters[i] = updateCommand.Parameters.Add("@" + column.Name, ConvertDataTypeToDbType(column.DataType));
+							updateParameters[i].SourceColumn = column.Name;
+						}
+					}
+
+					// prepare insert, update
+					bool excludeNull(SQLiteParameter p)
+						=> p != null;
+
+					insertCommand.CommandText =
+						"INSERT INTO main.[" + table.Name + "] (" + String.Join(", ", insertParameters.Where(excludeNull).Select(c => c.SourceColumn)) + ") " +
+						"VALUES (" + String.Join(", ", insertParameters.Where(excludeNull).Select(c => c.ParameterName)) + ");";
+
+					updateCommand.CommandText = "UPDATE main.[" + table.Name + "] SET " +
+						String.Join(", ", updateParameters.Where(excludeNull).Where(c => c != updateParameters[primaryColumnIndex]).Select(c => "[" + c.SourceColumn + "] = " + c.ParameterName)) +
+						" WHERE [" + updateParameters[primaryColumnIndex].SourceColumn + "] = " + updateParameters[primaryColumnIndex].ParameterName;
+
+					// prepare exists
+					existCommand = new SQLiteCommand("SELECT EXISTS(SELECT * FROM main.[" + table.Name + "] WHERE [" + table.PrimaryKey.Name + "] = @Id)", connection, transaction);
+					existIdParameter = existCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(table.PrimaryKey.DataType));
+
+					// prepare delete
+					deleteCommand = new SQLiteCommand("DELETE FROM main.[" + table.Name + "] WHERE [" + table.PrimaryKey.Name + "] = @Id;", connection, transaction);
+					deleteIdParameter = deleteCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(table.PrimaryKey.DataType));
+
+					existCommand.Prepare();
+					insertCommand.Prepare();
+					updateCommand.Prepare();
+					deleteCommand.Prepare();
+				} // ctor
+
+				public void Dispose()
+				{
+					existCommand?.Dispose();
+					insertCommand?.Dispose();
+					updateCommand?.Dispose();
+					deleteCommand?.Dispose();
+				} // proc Dispose
+
+				#endregion
+
+				#region -- Parse --------------------------------------------------------
+
+				public void Parse(XmlReader xml)
+				{
+					while (xml.NodeType == XmlNodeType.Element)
+					{
+						if (xml.IsEmptyElement) // skip empty element
+						{
+							xml.Read();
+							continue;
+						}
+
+						// action to process
+						var actionName = xml.LocalName.ToLower();
+						if (actionName != "r"
+							&& actionName != "i"
+							&& actionName != "d")
+							throw new InvalidOperationException($"The operation {actionName} is not supported.");
+
+						// clear current column set
+						for (var i = 0; i < updateParameters.Length; i++)
+						{
+							if (updateParameters[i] != null)
+								updateParameters[i].Value = DBNull.Value;
+							if (insertParameters[i] != null)
+								insertParameters[i].Value = DBNull.Value;
+						}
+						existIdParameter.Value = DBNull.Value;
+						deleteIdParameter.Value = DBNull.Value;
+
+						// collect columns
+						xml.Read();
+						while (xml.NodeType == XmlNodeType.Element)
+						{
+							if (xml.IsEmptyElement) // read column data
+								xml.Read();
+							else
+							{
+								var columnName = xml.LocalName;
+								int columnIndex;
+								if (columnName.StartsWith("c") && Int32.TryParse(columnName.Substring(1), out columnIndex))
+								{
+									xml.Read();
+
+									var value = ConvertStringToSQLiteValue(xml.ReadContentAsString(), updateParameters[columnIndex].DbType);
+									updateParameters[columnIndex].Value = value;
+									insertParameters[columnIndex].Value = value;
+
+									if (columnIndex == primaryColumnIndex)
+									{
+										existIdParameter.Value = value;
+										deleteIdParameter.Value = value;
+									}
+
+									xml.ReadEndElement();
+								}
+								else
+									xml.Skip();
+							}
+						}
+
+						// process action
+						switch (actionName[0])
+						{
+							case 'r':
+								if (RowExists())
+									UpdateRow();
+								else
+									InsertRow();
+								break;
+							case 'i':
+								InsertRow();
+								break;
+							case 'd':
+								DeleteRow();
+								break;
+						}
+
+						xml.ReadEndElement();
+					}
+				} // proc Parse
+
+				private bool RowExists()
+				{
+					using (var r = existCommand.ExecuteReader(CommandBehavior.SingleRow))
+					{
+						if (r.Read())
+							return r.GetBoolean(0);
+						else
+							throw new ArgumentException(); // todo: rk exception class with command
+					}
+				} // func RowExists
+
+				private void InsertRow()
+					=> ExecuteCommand(insertCommand);
+
+				private void UpdateRow()
+					=> ExecuteCommand(updateCommand);
+
+				private void DeleteRow()
+					=> ExecuteCommand(deleteCommand);
+
+				private void ExecuteCommand(SQLiteCommand command)
+				{
+					command.ExecuteNonQuery(); // todo: rk try-catch with exception and command
+				} // proc ExecuteCommand
+
+				#endregion
+			} // class ProcessBatch
+
+			#endregion
+
+			private async Task FetchDataAsync(IProgress<string> progess = null)
+			{
+				// create request
+				var requestString = "/remote/wpf/?action=mdata";
+				if (lastSynchronizationId >= 0)
+					requestString = "&syncId=" + lastSynchronizationId.ToString();
+				if (lastSynchronizationStamp > DateTime.MinValue)
+					requestString = "&timeStamp=" + lastSynchronizationStamp.ToFileTimeUtc();
+
+				// parse and process result
+				using (var xml = await environment.Request.GetXmlStreamAsync(requestString, settings: Procs.XmlReaderSettings))
+				{
+					xml.ReadStartElement("mdata");
+					if (!xml.IsEmptyElement)
+					{
+						// read batches
+						while (xml.NodeType == XmlNodeType.Element)
+						{
+							switch (xml.LocalName)
+							{
+								case "batch":
+									FetchDataXmlBatch(xml);
+									break;
+								case "sync":
+									var syncId = xml.GetAttribute("syncId", -1L);
+									var timeStamp = xml.GetAttribute("timeStamp", -1L);
+
+									using (var cmd = new SQLiteCommand("UPDATE main.Header SET SyncToken = IFNULL(@syncId, SyncToken), SyncStamp = IFNULL(@syncStamp, SyncStamp)", connection))
+									{
+										cmd.Parameters.Add("@syncId", DbType.Int64).Value = syncId.DbNullIf(-1L);
+										cmd.Parameters.Add("@syncStamp", DbType.Int64).Value = timeStamp.DbNullIf(-1L);
+
+										cmd.ExecuteNonQuery();
+
+										if (syncId >= 0)
+											lastSynchronizationId = syncId;
+										if (timeStamp >= 0)
+											lastSynchronizationStamp = DateTime.FromFileTimeUtc(timeStamp);
+									}
+
+									if (xml.IsEmptyElement)
+										xml.Read();
+									else
+										xml.Skip();
+									break;
+								default:
+									xml.Skip();
+									break;
+							}
+						}
+					}
+				}
+			} // proc FetchDataAsync
+
+			private void FetchDataXmlBatch(XmlReader xml)
+			{
+				// read batch attributes
+				var tableName = xml.GetAttribute("table");
+
+				if (!xml.IsEmptyElement) // batch needs rows
+				{
+					xml.Read(); // fetch element
+					using (var transaction = connection.BeginTransaction())
+					using (var b = new ProcessBatch(connection, transaction, this, tableName))
+					{
+						b.Parse(xml);
+						transaction.Commit();
+					}
+
+					xml.ReadEndElement();
+				}
+				else // fetch element
+					xml.Read();
+			}
+
+			#endregion
+
 			internal async Task<bool> SynchronizationAsync(IProgress<string> progress)
 			{
 				// synchronize schema
@@ -477,9 +777,8 @@ namespace TecWare.PPSn
 
 				progress?.Report("Synchronization...");
 
-				// todo: fetch data
-
-				lastSynchronizationId = 0;
+				// Fetch data
+				await FetchDataAsync(progress);
 				return true;
 			} // func SynchronizationAsync
 
@@ -488,7 +787,7 @@ namespace TecWare.PPSn
 			internal async Task<bool> CheckSynchronizationStateAsync()
 			{
 				// check if schema is change
-				var schemaUri =  environment.ActiveDataSets.GetDataSetSchemaUri(MasterDataSchema);
+				var schemaUri = environment.ActiveDataSets.GetDataSetSchemaUri(MasterDataSchema);
 				var request = WebRequest.Create(environment.Request.GetFullUri(schemaUri));
 				request.Method = "HEAD";
 
@@ -509,7 +808,7 @@ namespace TecWare.PPSn
 
 			public bool IsSynchronizationStarted => lastSynchronizationId >= 0;
 			public SQLiteConnection Connection => connection;
-			
+
 			// -- Static ------------------------------------------------------
 
 			#region -- Read/Write Schema ------------------------------------------------
@@ -519,7 +818,7 @@ namespace TecWare.PPSn
 				using (var sr = new StringReader(r.GetString(columnIndex)))
 					return XDocument.Load(sr).Root;
 			} // func ReadSchemaValue
-			
+
 			#endregion
 
 			#region -- Local store primitives -----------------------------------------------
@@ -585,6 +884,65 @@ namespace TecWare.PPSn
 							throw new ArgumentOutOfRangeException("type", $"No sqlite type assigned for '{type.Name}'.");
 				}
 			} // func ConvertDataTypeToSqLite
+
+			private static DbType ConvertDataTypeToDbType(Type type)
+			{
+				switch (Type.GetTypeCode(type))
+				{
+					case TypeCode.SByte:
+					case TypeCode.Int16:
+					case TypeCode.Int32:
+					case TypeCode.Int64:
+					case TypeCode.Byte:
+					case TypeCode.UInt16:
+					case TypeCode.UInt32:
+					case TypeCode.UInt64:
+						return DbType.Int64;
+					case TypeCode.Single:
+					case TypeCode.Double:
+						return DbType.Double;
+					case TypeCode.Decimal:
+						return DbType.Double;
+					case TypeCode.DateTime:
+						return DbType.DateTime;
+					case TypeCode.String:
+						return DbType.String;
+					case TypeCode.Boolean:
+						return DbType.Boolean;
+					default:
+						if (type == typeof(Guid))
+							return DbType.Guid;
+						else if (type == typeof(byte[]))
+							return DbType.Binary;
+						else
+							throw new ArgumentOutOfRangeException("type", $"No sqlite type assigned for '{type.Name}'.");
+				}
+			} // func ConvertDataTypeToSqLite
+
+			private static object ConvertStringToSQLiteValue(string value, DbType type)
+			{
+				switch (type)
+				{
+					case DbType.Int64:
+						return Procs.ChangeType(value, typeof(long));
+					case DbType.Double:
+						return Procs.ChangeType(value, typeof(Double));
+					case DbType.Decimal:
+						return Procs.ChangeType(value, typeof(Decimal));
+					case DbType.DateTime:
+						return Procs.ChangeType(value, typeof(DateTime));
+					case DbType.String:
+						return value;
+					case DbType.Boolean:
+						return Procs.ChangeType(value, typeof(bool));
+					case DbType.Guid:
+						return Procs.ChangeType(value, typeof(Guid));
+					case DbType.Binary:
+						throw new NotImplementedException("todo: ???");
+					default:
+						throw new ArgumentOutOfRangeException(nameof(type), type, $"DB-Type {type} is not supported.");
+				}
+			} // func ConvertStringToSQLiteValue
 
 			internal static bool CheckLocalTableExists(SQLiteConnection connection, string tableName)
 			{
@@ -663,7 +1021,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		private PpsMasterData masterData;	// local datastore
+		private PpsMasterData masterData;   // local datastore
 		private readonly Uri baseUri;       // internal uri for this datastore
 
 		private readonly BaseWebRequest request;
@@ -700,7 +1058,7 @@ namespace TecWare.PPSn
 			File.WriteAllText(fileName, PpsProcs.StringCypher(PpsProcs.GeneratePassword(passwordLength, passwordValidChars)));
 			return ReadPasswordFile(fileName);
 		}
-		
+
 		#endregion
 
 		/// <summary></summary>

@@ -4,7 +4,6 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TecWare.PPSn.UI"
-        xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
         mc:Ignorable="d"
         Title="PPSn" Height="400" Width="600" WindowStyle="None" ResizeMode="NoResize" MouseDown="Window_Drag">
     <Window.InputBindings>
@@ -93,17 +92,8 @@
                                 <ColumnDefinition />
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <PasswordBox Grid.Column="0" IsEnabled="{Binding IsPasswordEnabled}" Name="pbPassword">
-                                <PasswordBox.InputBindings>
-                                    <KeyBinding Key="Return" Command="local:PpsSplashWindow.EnterKeyCommand"/>
-                                </PasswordBox.InputBindings>
-                                <i:Interaction.Triggers>
-                                    <i:EventTrigger EventName="PasswordChanged">
-                                        <i:InvokeCommandAction Command="local:PpsSplashWindow.PressedKeyCommand"/>
-                                    </i:EventTrigger>
-                                </i:Interaction.Triggers>
-                            </PasswordBox>
-                            <CheckBox Grid.Column="1" VerticalAlignment="Center" IsEnabled="{Binding IsPasswordEnabled}" IsChecked="{Binding SavePassword}"/>
+							<PasswordBox Grid.Column="0" IsEnabled="{Binding IsPasswordEnabled}" Name="pbPassword" PasswordChanged="PasswordChanged" />
+							<CheckBox Grid.Column="1" VerticalAlignment="Center" IsEnabled="{Binding IsPasswordEnabled}" IsChecked="{Binding SavePassword}"/>
                         </Grid>
 
                         <Button Grid.Column="0" Grid.Row="4" Content="*" Width="23" Height="23" HorizontalAlignment="Left" VerticalAlignment="Bottom" Command="{x:Static ApplicationCommands.New}" />

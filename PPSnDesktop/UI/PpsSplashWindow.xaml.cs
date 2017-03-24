@@ -43,14 +43,12 @@ namespace TecWare.PPSn.UI
 			public ICredentials GetCredentials()
 			{
 				if (IsDomainName(defaultUser.UserName))
-					return new NetworkCredential(defaultUser.UserName, CredentialCache.DefaultNetworkCredentials.SecurePassword);
+					return CredentialCache.DefaultNetworkCredentials;
 
 				if (parent.pbPassword.Password == "tecware-gmbh.de")
 					return defaultUser;
 				else
 					return new NetworkCredential(defaultUser.UserName, parent.pbPassword.SecurePassword);
-
-
 			} // func GetCredentials
 
 			public void RefreshEnvironments(PpsEnvironmentInfo selectEnvironment)
@@ -171,7 +169,7 @@ namespace TecWare.PPSn.UI
 		private DispatcherFrame loginFrame = null;
 		private bool allowClose = false;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ------------------------------------------------------------
 
 		public PpsSplashWindow()
 		{
@@ -181,28 +179,30 @@ namespace TecWare.PPSn.UI
 				new CommandBinding[]
 				{
 					new CommandBinding(ApplicationCommands.New, CreateNewEnvironment, LoginFrameActive),
-					new CommandBinding(ApplicationCommands.Save, ExecuteFrame, (sender, e) => { e.CanExecute = ((int)GetValue(ActivePageProperty) == 1 && loginStateUnSafe.NewEnvironmentIsValid) ||
-																																			 ((int)GetValue(ActivePageProperty) == 2 && loginStateUnSafe.IsValid); e.Handled = true; }),
+					new CommandBinding(ApplicationCommands.Save, ExecuteFrame, 
+						(sender, e) => 
+						{
+							e.CanExecute = ((int)GetValue(ActivePageProperty) == 1 && loginStateUnSafe.NewEnvironmentIsValid)
+								|| ((int)GetValue(ActivePageProperty) == 2 && loginStateUnSafe.IsValid); e.Handled = true;
+						}
+					),
 					new CommandBinding(ApplicationCommands.Close, CloseFrame, LoginFrameActive),
-					new CommandBinding(EnterKeyCommand, (sender, e) =>
-					{
-						EnterKey(sender, e);
-					},
-					(sender, e) => { e.CanExecute = true; e.Handled = true; }),
-					new CommandBinding(PressedKeyCommand, (sender, e) =>
-					{
-						loginStateUnSafe.Validate();
-					},
-					(sender, e) => { e.CanExecute = true; e.Handled = true; }),
-					new CommandBinding(ReStartCommand, (sender, e) =>
-					{
-						SetValue(InErrorProperty,false);
-						SetValue(ActivePageProperty, 2);
-					},
-					(sender, e) => { e.CanExecute = true; e.Handled = true; })
-			}
-			// 
+					new CommandBinding(EnterKeyCommand, 
+						(sender, e) => EnterKey(sender, e)
+					),
+					new CommandBinding(PressedKeyCommand, 
+						(sender, e) =>loginStateUnSafe.Validate()
+					),
+					new CommandBinding(ReStartCommand, 
+						(sender, e) =>
+						{
+							SetValue(InErrorProperty,false);
+							SetValue(ActivePageProperty, 2);
+						}
+					)
+				}
 			);
+
 			SetValue(ActivePageProperty, 0);
 			SetValue(loginStatePropertyKey, loginStateUnSafe = new LoginStateData(this));
 
@@ -229,7 +229,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Login ------------------------------------------------------------------
+		#region -- Login ----------------------------------------------------------------
 
 		private void LoginFrameActive(object sender, CanExecuteRoutedEventArgs e)
 		{
@@ -392,8 +392,7 @@ namespace TecWare.PPSn.UI
 			}
 		}
 
-		public bool InError
-		{ get { return (bool)GetValue(InErrorProperty); } set { SetValue(InErrorProperty, value); } }
+		public bool InError { get { return (bool)GetValue(InErrorProperty); } set { SetValue(InErrorProperty, value); } }
 		public LoginStateData LoginState => (LoginStateData)GetValue(LoginStateProperty);
 		public int ActivePage => (int)GetValue(ActivePageProperty);
 
@@ -404,6 +403,7 @@ namespace TecWare.PPSn.UI
 		} // event Window_Drag
 
 		#region -- RoutedUICommand ------------------------------------------------------
+
 		public static RoutedUICommand EnterKeyCommand { get; } = new RoutedUICommand("EnterKey", "EnterKey", typeof(PpsSplashWindow));
 		public static RoutedUICommand PressedKeyCommand { get; } = new RoutedUICommand("PressedKey", "PressedKey", typeof(PpsSplashWindow));
 		public static RoutedUICommand ReStartCommand { get; } = new RoutedUICommand("ReStart", "ReStart", typeof(PpsSplashWindow));
@@ -424,6 +424,10 @@ namespace TecWare.PPSn.UI
 						textBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
 			}
 		}
+
 		#endregion
+
+		private void PasswordChanged(object sender, RoutedEventArgs e)
+			=> loginStateUnSafe.Validate();
 	} // class PpsSplashWindow
 }

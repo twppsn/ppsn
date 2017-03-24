@@ -37,7 +37,7 @@ namespace TecWare.PPSn
 				{
 					var w = new PpsSplashWindow();
 					w.Owner = currentEnvironment?.GetWindows().FirstOrDefault();
-					w.StatusText = "Initialisiere die Anwendung...";
+					w.StatusText = PPSn.Properties.Resources.AppStartApplicationAsyncInitApp;
 					w.Show();
 					return w;
 				}
