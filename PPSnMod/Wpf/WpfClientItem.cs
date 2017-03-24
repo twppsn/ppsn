@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -261,7 +262,7 @@ namespace TecWare.PPSn.Server.Wpf
 								continue;
 
 							// split the key
-							var keyElements = keyString.Split(',',';');
+							var keyElements = keyString.Split(',', ';');
 							if (keyElements.Length >= 1)
 								keyString = keyElements[0].Trim();
 							if (keyElements.Length >= 2)
@@ -596,7 +597,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 			return resourceFile;
 		} // func ParseXamlTheme
-		
+
 		private ParsedXamlFile ParseXamlTemplates()
 		{
 			// load the document and parse the content
@@ -674,7 +675,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 			// find code element
 			var xCode = xTarget.Root.Element(xnXamlCode);
-			
+
 			// find root resource element and detach it
 			var xSourceResources = xTarget.Root.Element(nameRootResources);
 			if (xSourceResources != null)
@@ -699,7 +700,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 			// resolve merged resources
 			paneFile.CombineResourceDictionary(xSourceResources, null, false, false);
-			
+
 			// Gibt die Quelle für den Code an
 			if (xCode != null)
 			{
@@ -720,7 +721,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#region -- ParseNavigator ---------------------------------------------------------
 
-		private void EmitSubViewItem(XmlWriter xml, string name, XElement x,ref int priority)
+		private void EmitSubViewItem(XmlWriter xml, string name, XElement x, ref int priority)
 		{
 			var displayName = x.GetAttribute("displayName", String.Empty);
 			if (String.IsNullOrEmpty(displayName))
@@ -825,7 +826,7 @@ namespace TecWare.PPSn.Server.Wpf
 					xml.WriteCData(environmentCode);
 					xml.WriteEndElement();
 				}
-				
+
 				// write navigator specific
 				xml.WriteStartElement("navigator");
 
@@ -961,7 +962,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#region -- Master-Data Synchronisation --------------------------------------------
 
-		[DEConfigHttpAction("mdata", IsSafeCall = true)]
+		[DEConfigHttpAction("mdata", IsSafeCall = false)]
 		private void HttpMasterDataSyncAction(IDEContext r, long timeStamp = -1, long syncId = -1)
 		{
 			// todo: user demand
@@ -975,6 +976,9 @@ namespace TecWare.PPSn.Server.Wpf
 			{
 				var msg = Log.CreateScope(LogMsgType.Information, stopTime: true);
 
+				var currentSyncId = -1L;
+				var currentTimeStamp = -1L;
+
 				using (var xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, Encoding.UTF8), Procs.XmlWriterSettings))
 				{
 					xml.WriteStartDocument();
@@ -986,7 +990,7 @@ namespace TecWare.PPSn.Server.Wpf
 						using (msg.Indent())
 						{
 							var syncType = table.Meta.GetProperty("syncType", String.Empty);
-							if (String.IsNullOrEmpty(syncType))
+							if (String.IsNullOrEmpty(syncType) || String.Compare(syncType, "None", StringComparison.OrdinalIgnoreCase) == 0)
 							{
 								msg.WriteLine("Ignored.");
 								continue; // next table
@@ -1002,8 +1006,7 @@ namespace TecWare.PPSn.Server.Wpf
 							var dataSource = primaryKey.FieldDescription.DataSource;
 
 							// start a session
-							PpsDataSynchronization session;
-							if (!synchronisationSessions.TryGetValue(dataSource, out session))
+							if (!synchronisationSessions.TryGetValue(dataSource, out var session))
 							{
 								session = dataSource.CreateSynchronizationSession(user, timeStamp, syncId);
 								synchronisationSessions[dataSource] = session;
@@ -1015,13 +1018,37 @@ namespace TecWare.PPSn.Server.Wpf
 
 							session.GenerateBatch(xml, table, syncType);
 
+							// calc synchronization id and stamp
+							if (currentSyncId == -1)
+								currentSyncId = session.LastSyncId;
+							else if (session.LastSyncId >= 0 && session.LastSyncId < currentSyncId)
+								currentSyncId = session.LastSyncId;
+
+							if (currentTimeStamp == -1)
+								currentTimeStamp = session.LastTimeStamp;
+							else if (session.LastTimeStamp >= 0 && session.LastTimeStamp < currentTimeStamp)
+								currentTimeStamp = session.LastTimeStamp;
+
+							// end element
 							xml.WriteEndElement();
 						}
 					}
 
+					// write sync info
+					xml.WriteStartElement("sync");
+					if (currentSyncId >= 0)
+						xml.WriteAttributeString("syncId", currentSyncId.ToString());
+					if (currentTimeStamp >= 0)
+						xml.WriteAttributeString("timeStamp", currentTimeStamp.ToString());
+					xml.WriteEndElement();
+
 					xml.WriteEndElement();
 					xml.WriteEndDocument();
 				}
+			}
+			catch (Exception e)
+			{
+				throw new HttpResponseException(HttpStatusCode.InternalServerError, "Can not create sync data.", e);
 			}
 			finally
 			{
@@ -1120,7 +1147,7 @@ namespace TecWare.PPSn.Server.Wpf
 			xCode.Add(new XCData(sbLua.ToString()));
 			destination.Add(xCode);
 		} // proc AddLuaCodeItem
-		
+
 		public string ThemesDirectory => Config.GetAttribute("xamlSource", String.Empty);
 	} // class WpfClientItem
 }

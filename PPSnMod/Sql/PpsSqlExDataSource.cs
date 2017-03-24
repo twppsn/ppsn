@@ -1670,7 +1670,11 @@ namespace TecWare.PPSn.Server.Sql
 					cmd.Transaction = transaction;
 					cmd.CommandText = "SELECT change_tracking_current_version()";
 
-					currentSyncId = (long)cmd.ExecuteScalar();
+					var r = cmd.ExecuteScalar();
+					if (r == DBNull.Value)
+						throw new ArgumentException("Change tracking is not active in this database.");
+
+					currentSyncId = (long)r;
 				}
 			} // ctor
 
@@ -1742,6 +1746,9 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				var column = (PpsDataColumnServerDefinition)table.PrimaryKey;
 				var columnInfo = column.GetColumnDescriptionImplementation<SqlColumnInfo>();
+				if (columnInfo == null)
+					throw new ArgumentOutOfRangeException("columnInfo", null, $"{column.Name} is not a sql column.");
+
 				var tableInfo = columnInfo.Table;
 				var isFull = IsFull;
 
@@ -1768,7 +1775,7 @@ namespace TecWare.PPSn.Server.Sql
 					{
 						while (r.Read())
 						{
-							xml.WriteStartElement(r.GetString(0));
+							xml.WriteStartElement(r.GetString(0).ToLower());
 							for (var i = 1; i < r.FieldCount; i++)
 							{
 								if (columnNames[i - 1] != null && !r.IsDBNull(i))
@@ -1803,7 +1810,9 @@ namespace TecWare.PPSn.Server.Sql
 					throw new ArgumentException(String.Format("Unsupported sync algorithm: {0}", syncAlgorithm));
 				}
 			} // proc GenerateBatch
-		} // class SqlSynchronizationTransaction
+
+            public override long LastSyncId => currentSyncId;
+        } // class SqlSynchronizationTransaction
 
 		#endregion
 
@@ -2080,10 +2089,15 @@ namespace TecWare.PPSn.Server.Sql
 			return selectorToken;
 		} // func CreateSelectorTokenAsync
 
-		public override IPpsColumnDescription GetColumnDescription(string columnName)
+		public override IPpsColumnDescription GetColumnDescription(string columnName, bool throwException)
 		{
 			SqlColumnInfo column;
-			return columnStore.TryGetValue(columnName, out column) ? column : null;
+			if (columnStore.TryGetValue(columnName, out column))
+				return column;
+			else if (throwException)
+				throw new ArgumentException($"Could not resolve column {columnName} to source {Name}.", columnName);
+			else
+				return null;
 		} // func GetColumnDescription
 
 		private SqlConnectionHandle GetSqlConnection(IPpsConnectionHandle connection, bool throwException)
@@ -2110,8 +2124,11 @@ namespace TecWare.PPSn.Server.Sql
 			return new SqlDataTransaction(this, c);
 		} // func CreateTransaction
 		
-		public override PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config, DateTime configurationStamp)
-			=> new PpsSqlDataSetDefinition(sp, this, documentName, config, configurationStamp);
+		public override PpsDataSetServerDefinition CreateDataSetDefinition(string documentName, XElement config, DateTime configurationStamp)
+			=> new PpsSqlDataSetDefinition(this, documentName, config, configurationStamp);
+
+		public override PpsDataTableServerDefinition CreateTableDefinition(PpsDataSetServerDefinition dataset, string tableName, XElement config)
+			=> new PpsSqlDataTableServerDefinition(dataset, tableName, config);
 
 		public override PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, long timeStamp, long syncId)
 			=> new SqlSynchronizationTransaction(this, privateUserData, timeStamp, syncId);

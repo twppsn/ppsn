@@ -15,10 +15,12 @@ namespace TecWare.PPSn.Server.Data
 	public abstract class PpsDataSynchronization : IDisposable
 	{
 		private readonly long timeStamp;
+		private readonly long lastTimeStamp;
 
 		protected PpsDataSynchronization(long timeStamp)
 		{
 			this.timeStamp = timeStamp;
+			this.lastTimeStamp = DateTime.Now.ToFileTimeUtc();
 		} // ctor
 
 		~PpsDataSynchronization()
@@ -46,10 +48,15 @@ namespace TecWare.PPSn.Server.Data
 			// get synchronization type "TimeStamp: viewName,column"
 			var pos = syncType.IndexOf(':');
 			if (pos == -1)
-				throw new FormatException("Synchronization token (colon expected).");
-
-			syncAlgorithm = syncType.Substring(0, pos);
-			syncArguments = syncType.Substring(pos + 1).Trim();
+			{
+				syncAlgorithm = syncType;
+				syncArguments = String.Empty;
+			}
+			else
+			{
+				syncAlgorithm = syncType.Substring(0, pos);
+				syncArguments = syncType.Substring(pos + 1).Trim();
+			}
 		} // func ParseSynchronizationArguments
 
 		protected void ParseSynchronizationTimeStampArguments(string syncArguments, out string name, out string column)
@@ -69,17 +76,13 @@ namespace TecWare.PPSn.Server.Data
 
 		public virtual void GenerateBatch(XmlWriter xml, PpsDataTableDefinition table, string syncType)
 		{
-			string syncAlgorithm;
-			string syncArguments;
-			ParseSynchronizationArguments(syncType, out syncAlgorithm, out syncArguments);
+			ParseSynchronizationArguments(syncType, out var syncAlgorithm, out var syncArguments);
 
 			if (String.Compare(syncAlgorithm, "TimeStamp", StringComparison.OrdinalIgnoreCase) != 0)
 				throw new FormatException("Synchronization token (only timestamp is allowed).");
 
 			// parse view and column
-			string viewName;
-			string viewColumn;
-			ParseSynchronizationTimeStampArguments(syncArguments, out viewName, out viewColumn);
+			ParseSynchronizationTimeStampArguments(syncArguments, out var viewName, out var viewColumn);
 
 			// get the synchronization rows
 			GenerateTimeStampBatch(xml, table, viewName, viewColumn);
@@ -93,14 +96,15 @@ namespace TecWare.PPSn.Server.Data
 				var sourceColumns = rows as IDataColumns;
 				var columnNames = new string[table.Columns.Count];
 				var columnIndex = new int[columnNames.Length];
-				var columnConvert =new Func<object, string>[columnNames.Length];
+				var columnConvert = new Func<object, string>[columnNames.Length];
 
 				for (var i = 0; i < columnNames.Length; i++)
 				{
 					columnNames[i] = "c" + i.ToString();
 
 					var targetColumn = table.Columns[i];
-					var sourceColumnIndex = sourceColumns.FindColumnIndex(targetColumn.Meta.GetProperty("syncSource", targetColumn.Name));
+					var syncSourceColumnName = targetColumn.Meta.GetProperty("syncSource", targetColumn.Name);
+					var sourceColumnIndex = syncSourceColumnName == "#" ? -1 : sourceColumns.FindColumnIndex(syncSourceColumnName);
 					if (sourceColumnIndex == -1)
 					{
 						columnNames[i] = null;
@@ -151,6 +155,9 @@ namespace TecWare.PPSn.Server.Data
 
 		public long TimeStamp => timeStamp;
 		public DateTime TimeStampDateTime => DateTime.FromFileTimeUtc(timeStamp);
+
+		public virtual long LastTimeStamp => lastTimeStamp;
+		public virtual long LastSyncId => -1;
 
 		public bool IsFull => timeStamp < 0;
 	} // class PpsDataSynchronization

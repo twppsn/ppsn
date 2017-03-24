@@ -175,7 +175,7 @@
 			<pps:field name="dbo.Mein.Name" />
 
 			<pps:dataset name="masterdata">
-				<pps:table name="Header">
+				<pps:table name="Header" dataSource="sys">
 					<pps:meta name="syncType">None</pps:meta>
 					<pps:column name="_rowId" fieldName="sys.Fields.PrimaryKey" isPrimary="true" />
 					<pps:column name="SchemaStamp" fieldName="sys.Fields.LastModificationStamp">
@@ -204,19 +204,33 @@
 
 				</pps:table>-->
 
-				<pps:table name="OfflineCache">
+				<pps:table name="OfflineCache" dataSource="sys">
 					<pps:meta name="syncType">TimeStamp: wpf.sync, ContentLastModification</pps:meta>
 					<pps:column name="Path" isPrimary="true" fieldName="sys.Fields.Path" />
-					<pps:column name="ContextType" fieldName="sys.Fields.ContentType" />
-					<pps:column name="ContentEncoding" fieldName="sys.Fields.ContentEncoding" />
+					<pps:column name="ContextType" fieldName="sys.Fields.ContentType">
+						<pps:meta name="syncSource">#</pps:meta>
+						<pps:meta name="IsNull">true</pps:meta>
+					</pps:column>
+					<pps:column name="ContentEncoding" fieldName="sys.Fields.ContentEncoding">
+						<pps:meta name="syncSource">#</pps:meta>
+						<pps:meta name="IsNull">true</pps:meta>
+					</pps:column>
 					<pps:column name="ContentSize" fieldName="sys.Fields.ContentSize">
 						<pps:meta name="syncSource">Length</pps:meta>
+						<pps:meta name="IsNull">true</pps:meta>
 					</pps:column>
 					<pps:column name="ContentLastModification" fieldName="sys.Fields.LastModificationStamp">
 						<pps:meta name="syncSource">LastWriteTime</pps:meta>
+						<pps:meta name="IsNull">true</pps:meta>
 					</pps:column>
-					<pps:column name="Content" fieldName="sys.Fields.Blob" />
-					<pps:column name="LocalPath" fieldName="sys.Fields.Path" />
+					<pps:column name="Content" fieldName="sys.Fields.Blob">
+						<pps:meta name="syncSource">#</pps:meta>
+						<pps:meta name="IsNull">true</pps:meta>
+					</pps:column>
+					<pps:column name="LocalPath" fieldName="sys.Fields.Path">
+						<pps:meta name="syncSource">#</pps:meta>
+						<pps:meta name="IsNull">true</pps:meta>
+					</pps:column>
 				</pps:table>
 
 				<!--<pps:table name="Waeh">

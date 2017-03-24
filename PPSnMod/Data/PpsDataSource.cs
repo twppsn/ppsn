@@ -62,13 +62,16 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary>Returns a native column description.</summary>
 		/// <param name="columnName"></param>
 		/// <returns></returns>
-		public virtual IPpsColumnDescription GetColumnDescription(string columnName)
+		public virtual IPpsColumnDescription GetColumnDescription(string columnName, bool throwException = false)
 		{
 			return null;
 		} // func GetColumnDescription
 
-		public virtual PpsDataSetServerDefinition CreateDocumentDescription(IServiceProvider sp, string documentName, XElement config, DateTime configurationStamp)
-			=> new PpsDataSetServerDefinition(sp, documentName, config, configurationStamp);
+		public virtual PpsDataSetServerDefinition CreateDataSetDefinition(string dataSetName, XElement config, DateTime configurationStamp)
+			=> new PpsDataSetServerDefinition(this, dataSetName, config, configurationStamp);
+
+		public virtual PpsDataTableServerDefinition CreateTableDefinition(PpsDataSetServerDefinition dataset, string tableName, XElement config)
+			=> new PpsDataTableServerDefinition(dataset, tableName, config);
 
 		public abstract string Type { get; }
 	} // class PpsDataSource

@@ -31,7 +31,6 @@ using TecWare.DE.Data;
 using TecWare.PPSn.Server.Data;
 using TecWare.PPSn.Server.Sql;
 using static TecWare.PPSn.Server.PpsStuff;
-using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Server
 {
@@ -510,7 +509,7 @@ namespace TecWare.PPSn.Server
 			{
 				RegisterInitializationTask(10001, "Resolve columns", () =>
 				{
-					fieldInfo.SetColumnDescription(source.GetColumnDescription(name));
+					fieldInfo.SetColumnDescription(source.GetColumnDescription(name, false)); // do throw exception here
 					return Task.CompletedTask;
 				});
 			}
@@ -535,7 +534,7 @@ namespace TecWare.PPSn.Server
 		
 		private void RegisterDataSet(PpsDataSource source, string name, XElement x)
 		{
-			var datasetDefinition = source == null ? new PpsDataSetServerDefinition(this, name, x, DateTime.Now) : source.CreateDocumentDescription(this, name, x, DateTime.Now);
+			var datasetDefinition = (source ?? mainDataSource).CreateDataSetDefinition(name, x, DateTime.Now);
 			lock (datasetDefinitions)
 				datasetDefinitions.Add(datasetDefinition.Name, datasetDefinition);
 		} // void RegisterDataSet

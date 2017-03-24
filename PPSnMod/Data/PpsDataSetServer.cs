@@ -367,6 +367,7 @@ namespace TecWare.PPSn.Server.Data
 
 		#endregion
 
+		private readonly PpsDataSource dataSource; // the data source the server definition is bound to
 		private readonly PpsApplication application;
 		private readonly Lua lua;
 		private readonly string name;
@@ -380,10 +381,11 @@ namespace TecWare.PPSn.Server.Data
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		public PpsDataSetServerDefinition(IServiceProvider sp, string name, XElement config, DateTime configurationStamp)
+		public PpsDataSetServerDefinition(PpsDataSource dataSource, string name, XElement config, DateTime configurationStamp)
 		{
-			this.application = sp.GetService<PpsApplication>(true);
-			this.lua = sp.GetService<IDELuaEngine>(true).Lua; 
+			this.dataSource = dataSource;
+			this.application = dataSource.GetService<PpsApplication>(true);
+			this.lua = dataSource.GetService<IDELuaEngine>(true).Lua; 
 			this.name = name;
 			this.configurationStamp = configurationStamp;
 
@@ -427,7 +429,16 @@ namespace TecWare.PPSn.Server.Data
 		} // ctor
 
 		protected virtual PpsDataTableServerDefinition CreateTableDefinition(string tableName, XElement config)
-			=> new PpsDataTableServerDefinition(this, tableName, config);
+		{
+			var alternativeDataSource = config.GetAttribute("dataSource", String.Empty);
+			if (String.IsNullOrEmpty(alternativeDataSource))
+				return dataSource.CreateTableDefinition(this, tableName, config);
+			else
+			{
+				return application.GetDataSource(alternativeDataSource, true)
+				   .CreateTableDefinition(this, tableName, config);
+			}
+		} // func CreateTableDefinition
 
 		public Task InitializeAsync()
 			=> Task.Run(new Action(EndInit));
@@ -499,7 +510,7 @@ namespace TecWare.PPSn.Server.Data
 
 		public override PpsDataSet CreateDataSet()
 			=> new PpsDataSetServer(this);
-
+		
 		private static XElement CreateTagSchema(PpsDataSetAutoTagDefinition def)
 		{
 			return new XElement("tag",
@@ -558,6 +569,7 @@ namespace TecWare.PPSn.Server.Data
 		
 		public string Name => name;
 		public override PpsDataSetMetaCollection Meta => metaInfo;
+		public PpsDataSource DataSource => dataSource;
 		public PpsApplication Application => application;
 		public override Lua Lua => lua;
 
