@@ -509,6 +509,7 @@ namespace TecWare.PPSn
 
 			this.info = info;
 			this.userInfo = userInfo;
+			this.webProxy = new PpsWebProxy(this);
 			this.userName = PpsEnvironmentInfo.GetUserNameFromCredentials(userInfo);
 
 			this.localDirectory = new DirectoryInfo(Path.Combine(info.LocalPath.FullName, this.Username));
@@ -564,7 +565,7 @@ namespace TecWare.PPSn
 			var isLocalDbReady = await InitLocalStoreAsync(progress);
 			if (!isLocalDbReady && bootOffline)
 			{
-				if (await MsgBoxAsync("Es steht keine Offline-Version bereit.\nOnline Synchronisation jeztz starten?", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+				if (await MsgBoxAsync("Es steht keine Offline-Version bereit.\nOnline Synchronisation jetzt starten?", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
 					return await InitAsync(progress, false);
 				else
 					return PpsEnvironmentModeResult.NeedsUpdate;
@@ -596,6 +597,11 @@ namespace TecWare.PPSn
 						goto redoConnect;
 					else
 						return PpsEnvironmentModeResult.NeedsSynchronization;
+
+				case PpsEnvironmentModeResult.ServerConnectFailure:
+					if (!bootOffline)
+						return await InitAsync(progress, true);
+					break;
 			}
 			return r;
 		} // func InitAsync
@@ -832,6 +838,7 @@ namespace TecWare.PPSn
 						case PpsEnvironmentState.Offline:
 							if (currentTransmission != null)
 							{
+								OnSystemOffline();
 								currentTransmission.SetResult(PpsEnvironmentModeResult.Offline);
 								currentTransmission = null;
 							}
@@ -865,7 +872,10 @@ namespace TecWare.PPSn
 								if (!masterData.IsSynchronizationStarted || masterData.CheckSynchronizationStateAsync().Result)
 									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsSynchronization);
 								else // mark the system online
+								{
+									OnSystemOnline();
 									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.Online);
+								}
 							}
 							state = PpsEnvironmentState.Online;
 							break;

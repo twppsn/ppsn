@@ -15,11 +15,13 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 using System.Windows;
 using System.Windows.Markup;
 using System.Windows.Media;
@@ -143,16 +145,83 @@ namespace TecWare.PPSn
 			//	return new ContentDisposition(tmp);
 		} // func GetContentDisposition
 
-		public static DateTime GetLastModified(this WebResponse r)
+		public static DateTime GetLastModified(this WebHeaderCollection headers)
 		{
 			DateTime lastModified;
-			if (!DateTime.TryParse(r.Headers[HttpResponseHeader.LastModified], out lastModified)) // todo: format?
+			if (!DateTime.TryParse(headers[HttpResponseHeader.LastModified], out lastModified)) // todo: format?
 				lastModified = DateTime.Now;
 			return lastModified;
 		} // func GetLastModified
 
+		public static DateTime GetLastModified(this WebResponse r)
+			=> GetLastModified(r.Headers);
+
 		public static ContentType GetContentType(this WebResponse r)
 			=> new ContentType(r.ContentType);
+
+		public static NameValueCollection ParseQuery(this Uri uri)
+			=> uri.IsAbsoluteUri
+				? HttpUtility.ParseQueryString(uri.Query)
+				: ParseQuery(uri.OriginalString);
+		
+		public static NameValueCollection ParseQuery(string uri)
+		{
+			var pos = uri.IndexOf('?');
+			return pos == -1
+				? emptyCollection
+				: HttpUtility.ParseQueryString(uri.Substring(pos + 1));
+		} // func ParseQuery
+
+		public static string ParsePath(this Uri uri)
+			=> uri.IsAbsoluteUri
+				? uri.AbsolutePath
+				: ParsePath(uri.OriginalString);
+
+		public static string ParsePath(string uri)
+		{
+			var pos = uri.IndexOf('?');
+			return pos == -1 ? uri : uri.Substring(0, pos);
+		} // func ParsePath
+
+		public static (string path, NameValueCollection arguments) ParseUri(this Uri uri)
+			=> uri.IsAbsoluteUri
+				? (uri.AbsolutePath, HttpUtility.ParseQueryString(uri.Query))
+				: ParseUri(uri.OriginalString);
+
+		public static (string path, NameValueCollection arguments) ParseUri(string uri)
+		{
+			var pos = uri.IndexOf('?');
+			return pos == -1
+				? (uri, emptyCollection)
+				: (uri.Substring(0, pos), HttpUtility.ParseQueryString(uri.Substring(pos + 1)));
+		} // func ParseUri
+
+		public static bool EqualUri(Uri uri1, Uri uri2)
+		{
+			if (uri1.IsAbsoluteUri && uri2.IsAbsoluteUri)
+				return uri1.Equals(uri2);
+			else if (uri1.IsAbsoluteUri || uri2.IsAbsoluteUri)
+				return false;
+			else
+			{
+				(var path1, var args1) = uri1.ParseUri();
+				(var path2, var args2) = uri2.ParseUri();
+
+				if (path1 == path2 && args1.Count == args2.Count)
+				{
+					foreach (var k in args1.AllKeys)
+					{
+						if (args1[k] != args2[k])
+							return false;
+					}
+					return true;
+				}
+				else
+					return false;
+			}
+		} // func EqualUri
+
+		private static NameValueCollection emptyCollection = new NameValueCollection();
 	} // class WebRequestHelper
 
 	#endregion

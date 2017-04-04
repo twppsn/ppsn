@@ -97,8 +97,12 @@ namespace TecWare.PPSn
 								currentEnvironment = env;
 
 								// create first window
+								await currentEnvironment.CreateMainWindowAsync();
 
-								return false; // todo: true
+								// now, we have windows
+								await Dispatcher.InvokeAsync(() => ShutdownMode = ShutdownMode.OnLastWindowClose);
+
+								return true;
 							default:
 								throw new InvalidOperationException();
 						}

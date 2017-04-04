@@ -37,6 +37,7 @@ namespace TecWare.PPSn
 
 		private readonly string name;
 		private XDocument content;
+		private Uri remoteUri = null;
 		private bool isModified = false;
 
 		private readonly DirectoryInfo localPath;
@@ -101,10 +102,30 @@ namespace TecWare.PPSn
 		{
 			get
 			{
-				var uri = content.Root.GetAttribute("uri", null);
-				return uri == null ? null : new Uri(uri);
+				lock (content)
+				{
+					if (remoteUri == null)
+					{
+						var uriString = content.Root.GetAttribute("uri", null);
+						if (String.IsNullOrEmpty(uriString))
+							throw new ArgumentNullException("@uri", "Attribute is missing.");
+						if (!uriString.EndsWith("/"))
+							uriString += "/";
+
+						remoteUri = new Uri(uriString, UriKind.Absolute);
+					}
+
+					return remoteUri;
+				}
 			}
-			set { content.Root.SetAttributeValue("uri", value.ToString());
+			set
+			{
+				lock (content)
+				{
+					content.Root.SetAttributeValue("uri", value.ToString());
+					remoteUri = null;
+					isModified = true;
+				}
 			}
 		} // prop Uri
 
