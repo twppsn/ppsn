@@ -198,6 +198,10 @@ namespace TecWare.PPSn.UI
 						{
 							SetValue(InErrorProperty,false);
 							SetValue(ActivePageProperty, 2);
+						},
+						(sender, e) =>
+						{
+							e.CanExecute = InError;
 						}
 					)
 				}
