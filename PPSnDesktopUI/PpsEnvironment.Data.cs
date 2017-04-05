@@ -378,7 +378,7 @@ namespace TecWare.PPSn
 
 			// append default
 			if (!String.IsNullOrEmpty(column.Attributes.GetProperty("Default", String.Empty)))
-				commandText.Append(" DEFAULT").Append(column.Attributes.GetProperty("Default", String.Empty));
+				commandText.Append(" DEFAULT ").Append(column.Attributes.GetProperty("Default", String.Empty));
 
 			return commandText;
 		} // func CreateCommandColumnAttribute
@@ -951,8 +951,8 @@ namespace TecWare.PPSn
 						task = PpsDummyProxyHelper.GetProxyTask(
 							new PpsLocalStoreRequest(
 								requestUri,
-								(MemoryStream)reader.GetStream(4), // This method returns a newly created MemoryStream object.
-								GetLocalPath(reader.GetString(5)),
+								(MemoryStream)reader.GetStream(3), // This method returns a newly created MemoryStream object.
+								GetLocalPath(reader.GetString(4)),
 								contentType,
 								isCompressedContent
 							)
@@ -2499,7 +2499,7 @@ namespace TecWare.PPSn
 		/// <param name="table"></param>
 		public void OnMasterDataTableChanged(PpsDataTableDefinition table)
 		{
-			if (masterData.IsInSynchronization && table.Name == "OfflineCache")
+			if (!masterData.IsInSynchronization && table.Name == "OfflineCache")
 			{
 				masterData.CheckOfflineCache();
 			}

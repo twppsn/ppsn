@@ -110,9 +110,6 @@
     <EmbeddedResource Include="Properties\Resources.en.resx">
       <DependentUpon>Resources.resx</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Static\navigator.xml">
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
     <Page Include="UI\Panes\PpsLoginPane.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

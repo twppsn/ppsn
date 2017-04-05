@@ -38,26 +38,6 @@ namespace TecWare.PPSn
 {
 	public partial class PpsMainEnvironment
 	{
-		//private bool TryGetStaticItem(string path, out string contentType, out Stream data)
-		//{
-		//	// check for a resource file
-		//	var baseType = typeof(PpsMainEnvironment);
-		//	data = baseType.Assembly.GetManifestResourceStream(baseType, "Static." + path.Replace('/', '.'));
-		//	contentType = MimeTypes.Text.Xml;
-		//	return data != null;
-		//} // func TryGetStaticItem
-
-		//protected override bool TryGetOfflineItem(string path, NameValueCollection arguments, bool onlineMode, out string contentType, out Stream data)
-		//{
-		//	var r = base.TryGetOfflineItem(path, arguments, onlineMode, out contentType, out data);
-		//	if (r)
-		//		return r;
-		//	else if (path.StartsWith("/wpf/") && !onlineMode) // request could not resolved for the offline item
-		//		return TryGetStaticItem(path.Substring(5), out contentType, out data);
-
-		//	return r;
-		//} // func TryGetOfflineItem
-
 		internal Task<bool> ShutdownAsync()
 		{
 			return Task.FromResult<bool>(true);
