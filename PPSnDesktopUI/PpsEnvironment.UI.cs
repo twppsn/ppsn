@@ -317,6 +317,27 @@ namespace TecWare.PPSn
 		public Type TracePane
 			=> typeof(PpsTracePane);
 
+		private static string GetMessageCaptionFromImage(MessageBoxImage image)
+		{
+			switch (image)
+			{
+				case MessageBoxImage.Error:
+					return "Fehler";
+				case MessageBoxImage.Warning:
+					return "Warnung";
+				case MessageBoxImage.Question:
+					return "Frage";
+				default:
+					return "Information";
+			}
+		} // func GetMessageCaptionFromImage
+
+		public MessageBoxResult MsgBox(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
+			=> MessageBox.Show(text, GetMessageCaptionFromImage(image), button, image, defaultResult);
+
+		public async Task<MessageBoxResult> MsgBoxAsync(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
+			=> await Dispatcher.InvokeAsync(() => MsgBox(text, button, image, defaultResult));
+
 		#endregion
 
 		#region -- Resources --------------------------------------------------------------
@@ -332,7 +353,7 @@ namespace TecWare.PPSn
 			object key;
 
 			// check the key
-			if (String.IsNullOrEmpty( keyString ))
+			if (String.IsNullOrEmpty(keyString))
 			{
 				var style = resource as Style;
 				if (style == null)

@@ -17,12 +17,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Data.SQLite;
+using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Net;
-using System.Net.Mime;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -30,9 +30,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
-using System.Windows.Markup;
 using System.Windows.Threading;
-using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
@@ -40,7 +38,6 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
-using TecWare.PPSn.UI;
 using LExpression = System.Linq.Expressions.Expression;
 
 namespace TecWare.PPSn
@@ -414,6 +411,69 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- enum PpsEnvironmentState -------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Current state of the environment.</summary>
+	public enum PpsEnvironmentState
+	{
+		/// <summary>Nothing</summary>
+		None,
+		/// <summary>System environment will be destroyed or is destroyed.</summary>
+		Shutdown,
+		/// <summary>System is offline.</summary>
+		Offline,
+		/// <summary>System is offline and tries to connect to the server.</summary>
+		OfflineConnect,
+		/// <summary>System is online.</summary>
+		Online
+	} // enum PpsEnvironmentState
+
+	#endregion
+
+	#region -- enum PpsEnvironmentMode --------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Current mode of the environment.</summary>
+	public enum PpsEnvironmentMode
+	{
+		/// <summary>No state.</summary>
+		None,
+		/// <summary>System offline.</summary>
+		Offline,
+		/// <summary>System online.</summary>
+		Online,
+		/// <summary>System closes.</summary>
+		Shutdown
+	} // enum PpsEnvironmentMode
+
+	#endregion
+
+	#region -- enum PpsEnvironmentModeResult --------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public enum PpsEnvironmentModeResult
+	{
+		/// <summary>System offline.</summary>
+		Offline,
+		/// <summary>System online.</summary>
+		Online,
+		/// <summary>System closes.</summary>
+		Shutdown,
+
+		/// <summary>Application data is outdated.</summary>
+		NeedsUpdate,
+		/// <summary>Start synchronization.</summary>
+		NeedsSynchronization,
+		/// <summary>State change login failed.</summary>
+		LoginFailed,
+		/// <summary>Server is not available.</summary>
+		ServerConnectFailure
+	} // enum PpsEnvironmentModeResult
+
+	#endregion
+
 	#region -- class PpsEnvironment -----------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -422,15 +482,13 @@ namespace TecWare.PPSn
 	/// engine.</summary>
 	public partial class PpsEnvironment : LuaGlobalPortable, IPpsShell, IServiceProvider, IDisposable
 	{
-		/// <summary></summary>
-		public event EventHandler UsernameChanged;
+		private readonly int environmentId;				// unique id of the environment
+		private readonly PpsEnvironmentInfo info;		// source information of the environment
+		private readonly ICredentials userInfo;			// currently credentials of the user
 
-		private readonly int environmentId;           // unique id of the environment
-		private readonly PpsEnvironmentInfo info;     // source information of the environment
-
-		private ICredentials userInfo;  // currently credentials of the user
-		private string userName;        // display name of the user
-
+		private string userName = null;					// display name of the user
+		private readonly DirectoryInfo localDirectory = null;	// local directory for the user data
+		
 		private PpsTraceLog logData = new PpsTraceLog();
 		private PpsDataListTemplateSelector dataListTemplateSelector;
 		private PpsEnvironmentCollection<PpsDataListItemDefinition> templateDefinitions;
@@ -439,20 +497,31 @@ namespace TecWare.PPSn
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		public PpsEnvironment(PpsEnvironmentInfo info, ResourceDictionary mainResources)
+		public PpsEnvironment(PpsEnvironmentInfo info, ICredentials userInfo, ResourceDictionary mainResources)
 			: base(new Lua())
 		{
 			if (info == null)
 				throw new ArgumentNullException("info");
+			if (userInfo == null)
+				throw new ArgumentNullException("userInfo");
 			if (mainResources == null)
 				throw new ArgumentNullException("mainResources");
 
 			this.info = info;
+			this.userInfo = userInfo;
+			this.webProxy = new PpsWebProxy(this);
+			this.userName = PpsEnvironmentInfo.GetUserNameFromCredentials(userInfo);
+
+			this.localDirectory = new DirectoryInfo(Path.Combine(info.LocalPath.FullName, this.Username));
+			if (!localDirectory.Exists)
+				localDirectory.Create();
+
 			this.activeDataSets = new PpsActiveDataSetsImplementation(this);
 			this.objectInfo = new PpsEnvironmentCollection<PpsObjectInfo>(this);
 			this.synchronizationWorker = new PpsObjectSynchronizationWorker(this);
 
 			Neo.IronLua.LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
+			Neo.IronLua.LuaType.RegisterTypeAlias("blob", typeof(byte[]));
 
 			// create ui stuff
 			this.mainResources = mainResources;
@@ -479,12 +548,74 @@ namespace TecWare.PPSn
 
 			// initialize local store
 			this.baseUri = InitProxy();
-			this.localConnection = InitLocalStore();
 			request = new BaseWebRequest(baseUri, Encoding);
+
+			// Register new Data Schemes from, the server
+			ActiveDataSets.RegisterDataSetSchema("masterdata", "remote/wpf/masterdata.xml", typeof(PpsDataSetDefinitionDesktop));
 
 			// Register Service
 			mainResources[EnvironmentService] = this;
+
+			InitBackgroundNotifier(out backgroundNotifier, out backgroundNotifierModeTransmission);
 		} // ctor
+
+		public async Task<PpsEnvironmentModeResult> InitAsync(IProgress<string> progress, bool bootOffline = false)
+		{
+			// initialize the local database
+			var isLocalDbReady = await InitLocalStoreAsync(progress);
+			if (!isLocalDbReady && bootOffline)
+			{
+				if (await MsgBoxAsync("Es steht keine Offline-Version bereit.\nOnline Synchronisation jetzt starten?", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+					return await InitAsync(progress, false);
+				else
+					return PpsEnvironmentModeResult.NeedsUpdate;
+			}
+
+			// check for online mode
+		redoConnect:
+			progress.Report("Verbinden...");
+			var r = await WaitForEnvironmentMode(bootOffline ? PpsEnvironmentMode.Offline : PpsEnvironmentMode.Online);
+			switch (r)
+			{
+				case PpsEnvironmentModeResult.NeedsUpdate:
+					if (await MsgBoxAsync("Es steht eine neue Version zur Verfügung.\nUpdate durchführen?", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+					{
+						if (await UpdateAsync(progress))
+							goto redoConnect;
+						else
+							return PpsEnvironmentModeResult.NeedsUpdate;
+					}
+					else
+					{
+						await WaitForEnvironmentMode(PpsEnvironmentMode.Offline);
+						bootOffline = true;
+						goto redoConnect;
+					}
+
+				case PpsEnvironmentModeResult.NeedsSynchronization:
+					if (await masterData.SynchronizationAsync(progress))
+						goto redoConnect;
+					else
+						return PpsEnvironmentModeResult.NeedsSynchronization;
+
+				case PpsEnvironmentModeResult.ServerConnectFailure:
+					if (!bootOffline)
+						return await InitAsync(progress, true);
+					break;
+			}
+			return r;
+		} // func InitAsync
+
+		// true => update successful
+		// false => needs restart
+		private Task<bool> UpdateAsync(IProgress<string> progress)
+		{
+			progress.Report("Lade Installationsdateien...");
+
+			// start setup
+		
+			return Task.FromResult(true);
+		} // proc UpdateAsync
 
 		public void Dispose()
 		{
@@ -495,6 +626,8 @@ namespace TecWare.PPSn
 		{
 			if (disposing)
 			{
+				SetNewMode(PpsEnvironmentMode.Shutdown);
+
 				services.ForEach(serv => (serv as IDisposable)?.Dispose());
 
 				mainResources.Remove(EnvironmentService);
@@ -504,12 +637,15 @@ namespace TecWare.PPSn
 				// close handles
 				Lua.Dispose();
 				// dispose local store
-				localConnection?.Dispose();
+				masterData?.Dispose();
 			}
 		} // proc Dispose
 
 		#endregion
 
+		public bool IsNetworkPresent
+			=> true;
+		
 		#region -- Services ---------------------------------------------------------------
 
 		public void RegisterService(string key, object service)
@@ -543,158 +679,443 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Login/Logout -----------------------------------------------------------
+		#region -- Background Notifier ----------------------------------------------------
 
-		protected virtual bool ShowLoginDialog(PpsClientLogin clientLogin)
-			=> false;
+		#region -- class ModeTransission --------------------------------------------------
 
-		/// <summary>Gets called to request the user information.</summary>
-		/// <param name="type">Authentification type</param>
-		/// <param name="realm">Realm of the server.</param>
-		/// <param name="count">Counts the login requests.</param>
-		/// <returns>User information or <c>null</c> for cancel.</returns>
-		protected virtual ICredentials GetCredentials(ClientAuthentificationInformation authentificationInfo, int count)
+		///////////////////////////////////////////////////////////////////////////////
+		/// <summary></summary>
+		private sealed class ModeTransission
 		{
-			if (authentificationInfo.Type == ClientAuthentificationType.Ntlm && count == 0)
-				return CredentialCache.DefaultCredentials;
-			else
+			private bool isCompleted = false;
+			private readonly PpsEnvironmentMode desiredMode;
+			private readonly TaskCompletionSource<PpsEnvironmentModeResult> waitForSuccess;
+
+			public ModeTransission(PpsEnvironmentMode desiredMode)
 			{
-				using (var loginCache = new PpsClientLogin("twppsn:" + info.Uri.AbsoluteUri, authentificationInfo.Realm, count > 1))
+				if (desiredMode != PpsEnvironmentMode.Online && 
+						desiredMode != PpsEnvironmentMode.Offline &&
+						desiredMode != PpsEnvironmentMode.Shutdown)
+					throw new ArgumentException($"{desiredMode} is not a valid mode transission.");
+
+				this.desiredMode = desiredMode;
+				this.waitForSuccess = new TaskCompletionSource<PPSn.PpsEnvironmentModeResult>();
+			} // ctor
+
+			public void SetResult(PpsEnvironmentModeResult result)
+			{
+				if (isCompleted)
+					throw new InvalidOperationException();
+
+				waitForSuccess.SetResult(result);
+				isCompleted = true;
+			} // proc SetResult
+
+			public void SetException(Exception e)
+			{
+				if (!isCompleted)
 				{
-					if (ShowLoginDialog(loginCache))
-					{
-						loginCache.Commit();
-						return loginCache.GetCredentials();
-					}
-					else
-						return null;
+					waitForSuccess.SetException(e);
+					isCompleted = true;
 				}
-			}
-		} // func GetCredentials
+			} // proc SetException
 
-		public async Task LoginUserAsync()
-		{
-			var count = 0;
-			var authentificationInfo = ClientAuthentificationInformation.Ntlm;
-			try
+			public void Cancel()
 			{
-				XElement xLogin = null;
-
-				while (xLogin == null)
+				if (!isCompleted)
 				{
-					// get the user information
-					userInfo = GetCredentials(authentificationInfo, count++);
-					if (userInfo == null)
-					{
-						ResetLogin();
-						return;
-					}
+					waitForSuccess.TrySetCanceled();
+					isCompleted = true;
+				}
+			} // proc Cancel
 
-					try
-					{
-						// try to login with this user
-						xLogin = await request.GetXmlAsync("remote/login.xml", MimeTypes.Text.Xml, "user");
-					}
-					catch (WebException e)
-					{
-						var tmp = ClientAuthentificationInformation.Get(e);
-						if (tmp == null)
-							throw;
-						authentificationInfo = tmp;
-					}
-				} // while xLogin
-
-				userName = xLogin.GetAttribute("displayName", userInfo.ToString());
-
-				OnUsernameChanged();
-				await RefreshAsync();
-			}
-			catch
-			{
-				ResetLogin();
-				throw;
-			}
-		} // proc LoginUser
-
-		public async Task LogoutUserAsync()
-		{
-			await Task.Yield();
-			ResetLogin();
-		} // proc LogoutUser
-
-		private void ResetLogin()
-		{
-			userName = null;
-			userInfo = null;
-			OnUsernameChanged();
-		} // proc ResetLogin
-
-		protected virtual void OnUsernameChanged()
-			=> UsernameChanged?.Invoke(this, EventArgs.Empty);
-
-		/// <summary>Queues a request, to check if the server is available. After this the environment and the cache will be updated.</summary>
-		/// <param name="timeout">wait timeout for the server</param>
-		/// <returns></returns>
-		public async Task<bool> StartOnlineMode(CancellationToken token)
-		{
-			XElement xInfo;
-			try
-			{
-				xInfo = await request.GetXmlAsync("remote/info.xml", MimeTypes.Text.Xml, "ppsn");
-			}
-			catch (WebException ex)
-			{
-				if (ex.Status == WebExceptionStatus.ConnectFailure) // remote host does not respond
-					return false;
-				else
-					throw;
-			}
-
-			// update the current info data
-			info.Update(xInfo);
-
-			if (!isOnline)
-			{
-				isOnline = true;
-				OnIsOnlineChanged();
-			}
-
-			// refresh data
-			await RefreshAsync();
-
-			return true;
-		} // func StartOnlineMode
+			public PpsEnvironmentMode DesiredMode => desiredMode;
+			public Task<PpsEnvironmentModeResult> Task => waitForSuccess.Task;
+		} // class StateTransission
 
 		#endregion
 
-		/// <summary>Loads basic data for the environment.</summary>
-		/// <returns></returns>
-		public async virtual Task RefreshAsync()
+		private PpsEnvironmentMode currentMode = PpsEnvironmentMode.None;
+		private PpsEnvironmentState currentState = PpsEnvironmentState.None;
+
+		private readonly object modeTransmissionLock = new object();
+		private ModeTransission modeTransmission = null;
+
+		private readonly Thread backgroundNotifier;
+		private readonly ManualResetEventSlim backgroundNotifierModeTransmission;
+
+		private void InitBackgroundNotifier(out Thread backgroundNotifier, out ManualResetEventSlim backgroundNotifierModeTransmission)
 		{
-			await Task.Yield();
+			backgroundNotifierModeTransmission = new ManualResetEventSlim(false);
+			backgroundNotifier = new Thread(ExecuteNotifierLoop)
+			{
+				IsBackground = true,
+				Name = $"Environment Notify {environmentId}"
+			};
+			backgroundNotifier.Start();
+		} // proc InitBackgroundNotifier
 
-			await RefreshOfflineCacheAsync();
-			await RefreshDefaultResourcesAsync();
-			await RefreshTemplatesAsync();
-		} // proc RefreshAsync
+		private void SetNewMode(PpsEnvironmentMode newMode)
+			=> WaitForEnvironmentMode(newMode).Wait();
 
-		/// <summary>Internal Id of the loaded environment</summary>
+		private Task<PpsEnvironmentModeResult> WaitForEnvironmentMode(PpsEnvironmentMode desiredMode)
+		{
+			// is this a new mode
+			if (desiredMode == currentMode)
+			{
+				switch (desiredMode)
+				{
+					case PpsEnvironmentMode.Offline:
+						return Task.FromResult(PpsEnvironmentModeResult.Offline);
+					case PpsEnvironmentMode.Online:
+						return Task.FromResult(PpsEnvironmentModeResult.Online);
+					case PpsEnvironmentMode.Shutdown:
+						return Task.FromResult(PpsEnvironmentModeResult.Shutdown);
+					default:
+						throw new InvalidOperationException();
+				}
+			}
+
+			// start the mode switching
+			lock (modeTransmissionLock)
+			{
+				var transmission = new ModeTransission(desiredMode);
+				modeTransmission = transmission;
+				backgroundNotifierModeTransmission.Set();
+				return transmission.Task;
+			}
+		} // func WaitForEnvironmentState
+
+		private bool TryGetModeTransmission(ref ModeTransission result)
+		{
+			lock (modeTransmissionLock)
+			{
+				if (modeTransmission == null)
+					return false;
+				else
+				{
+					if (result != null)
+						result.Cancel();
+
+					result = modeTransmission;
+					backgroundNotifierModeTransmission.Reset();
+					modeTransmission = null;
+					return result != null;
+				}
+			}
+		} // func TryGetModeTransmission
+		
+		private void ExecuteNotifierLoop()
+		{
+			var state = PpsEnvironmentState.None;
+			ModeTransission currentTransmission = null;
+			while (true)
+			{
+				try
+				{
+					// new mode requested
+					if (TryGetModeTransmission(ref currentTransmission))
+					{
+						switch (currentTransmission.DesiredMode)
+						{
+							case PpsEnvironmentMode.Offline:
+								state = PpsEnvironmentState.Offline;
+								break;
+							case PpsEnvironmentMode.Online:
+								state = PpsEnvironmentState.OfflineConnect;
+								break;
+							case PpsEnvironmentMode.Shutdown:
+								state = PpsEnvironmentState.Shutdown;
+								break;
+						}
+					}
+
+					// process current state
+					UpdatePulicState(state);
+					switch (state)
+					{
+						case PpsEnvironmentState.None: // nothing to do wait for a state
+						case PpsEnvironmentState.Offline:
+							if (currentTransmission != null)
+							{
+								OnSystemOffline();
+								currentTransmission.SetResult(PpsEnvironmentModeResult.Offline);
+								currentTransmission = null;
+							}
+							backgroundNotifierModeTransmission.Wait();
+							break;
+
+						case PpsEnvironmentState.OfflineConnect:
+
+							// load application info
+							var xInfo = Request.GetXmlAsync("remote/info.xml", rootName: "ppsn").Result;
+							info.Update(xInfo);
+							if (info.IsModified)
+								info.Save();
+
+							// new version
+							if (!info.IsApplicationLatest)
+							{
+								// application needs a update
+								state = PpsEnvironmentState.None;
+								SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsUpdate);
+							}
+							else
+							{
+								// try login for the user
+								var xUser = Request.GetXmlAsync("remote/login.xml", rootName: "user").Result;
+
+								userName = xUser.GetAttribute("displayName", userName);
+								Dispatcher.BeginInvoke(new Action(() => OnPropertyChanged(nameof(UsernameDisplay))));
+
+								// start synchronization
+								if (!masterData.IsSynchronizationStarted || masterData.CheckSynchronizationStateAsync().Result)
+									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsSynchronization);
+								else // mark the system online
+								{
+									OnSystemOnline();
+									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.Online);
+								}
+							}
+							state = PpsEnvironmentState.Online;
+							break;
+
+						case PpsEnvironmentState.Online:
+							// fetch next state on ws-info
+							break;
+
+						case PpsEnvironmentState.Shutdown:
+							return; // cancel all connections
+
+						default:
+							throw new InvalidOperationException("Unknown state.");
+					}
+				}
+				catch (Exception e)
+				{
+					var ex = Procs.GetInnerException(e);
+					if (currentTransmission != null)
+					{
+						var webEx = ex as WebException;
+
+						switch (webEx?.Status ?? WebExceptionStatus.UnknownError)
+						{
+							case WebExceptionStatus.Timeout:
+							case WebExceptionStatus.ConnectFailure:
+								SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.ServerConnectFailure);
+								break;
+							case WebExceptionStatus.ProtocolError: // todo: detect Login failure
+								SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.LoginFailed);
+								break;
+							default:
+								currentTransmission.SetException(ex);
+								currentTransmission = null;
+								break;
+						}
+						state = PpsEnvironmentState.None;
+					}
+					else// todo: exception
+					{
+						Thread.Sleep(500);
+						Debug.Print(ex.ToString());
+					}
+				}
+			}
+		} // proc ExecuteNotifierLoop
+
+		private void SetTransmissionResult(ref ModeTransission currentTransmission, PpsEnvironmentModeResult result)
+		{
+			if (currentTransmission != null)
+			{
+				currentTransmission.SetResult(result);
+				currentTransmission = null;
+			}
+		} // proc SetTransmissionResult
+
+		private void UpdatePulicState(PpsEnvironmentState state)
+		{
+			if (currentState != state)
+			{
+				currentState = state;
+				switch (state)
+				{
+					case PpsEnvironmentState.Offline:
+					case PpsEnvironmentState.OfflineConnect:
+						currentMode = PpsEnvironmentMode.Offline;
+						break;
+					case PpsEnvironmentState.Online:
+						currentMode = PpsEnvironmentMode.Online;
+						break;
+					case PpsEnvironmentState.Shutdown:
+						currentMode = PpsEnvironmentMode.Shutdown;
+						break;
+				}
+				Dispatcher.BeginInvoke(new Action(
+					() =>
+					{
+						OnPropertyChanged(nameof(CurrentMode));
+						OnPropertyChanged(nameof(CurrentState));
+					})
+				);
+			}
+		} // proc UpdatePulicState
+
+		#endregion
+
+		#region -- Login/Logout -----------------------------------------------------------
+
+		//protected virtual bool ShowLoginDialog(PpsClientLogin clientLogin)
+		//	=> false;
+
+		///// <summary>Gets called to request the user information.</summary>
+		///// <param name="type">Authentification type</param>
+		///// <param name="realm">Realm of the server.</param>
+		///// <param name="count">Counts the login requests.</param>
+		///// <returns>User information or <c>null</c> for cancel.</returns>
+		//protected virtual ICredentials GetCredentials(ClientAuthentificationInformation authentificationInfo, int count)
+		//{
+		//	if (authentificationInfo.Type == ClientAuthentificationType.Ntlm && count == 0)
+		//		return CredentialCache.DefaultCredentials;
+		//	else
+		//	{
+		//		using (var loginCache = new PpsClientLogin("twppsn:" + info.Uri.AbsoluteUri, authentificationInfo.Realm, count > 1))
+		//		{
+		//			if (ShowLoginDialog(loginCache))
+		//			{
+		//				loginCache.Commit();
+		//				return loginCache.GetCredentials();
+		//			}
+		//			else
+		//				return null;
+		//		}
+		//	}
+		//} // func GetCredentials
+
+		//public async Task LoginUserAsync()
+		//{
+		//	var count = 0;
+		//	var authentificationInfo = ClientAuthentificationInformation.Ntlm;
+		//	try
+		//	{
+		//		XElement xLogin = null;
+
+		//		while (xLogin == null)
+		//		{
+		//			// get the user information
+		//			userInfo = GetCredentials(authentificationInfo, count++);
+		//			if (userInfo == null)
+		//			{
+		//				ResetLogin();
+		//				return;
+		//			}
+
+		//			try
+		//			{
+		//				// try to login with this user
+		//				xLogin = await request.GetXmlAsync("remote/login.xml", MimeTypes.Text.Xml, "user");
+		//			}
+		//			catch (WebException e)
+		//			{
+		//				var tmp = ClientAuthentificationInformation.Get(e);
+		//				if (tmp == null)
+		//					throw;
+		//				authentificationInfo = tmp;
+		//			}
+		//		} // while xLogin
+
+		//		userName = xLogin.GetAttribute("displayName", userInfo.ToString());
+
+		//		OnUsernameChanged();
+		//		await RefreshAsync();
+		//	}
+		//	catch
+		//	{
+		//		ResetLogin();
+		//		throw;
+		//	}
+		//} // proc LoginUser
+
+		//public async Task LogoutUserAsync()
+		//{
+		//	await Task.Yield();
+		//	ResetLogin();
+		//} // proc LogoutUser
+
+		//private void ResetLogin()
+		//{
+		//	userName = null;
+		//	userInfo = null;
+		//	OnUsernameChanged();
+		//} // proc ResetLogin
+
+		//protected virtual void OnUsernameChanged()
+		//	=> UsernameChanged?.Invoke(this, EventArgs.Empty);
+
+		///// <summary>Queues a request, to check if the server is available. After this the environment and the cache will be updated.</summary>
+		///// <param name="timeout">wait timeout for the server</param>
+		///// <returns></returns>
+		//public async Task<bool> StartOnlineMode(CancellationToken token)
+		//{
+		//	XElement xInfo;
+		//	try
+		//	{
+		//		xInfo = await request.GetXmlAsync("remote/info.xml", MimeTypes.Text.Xml, "ppsn");
+		//	}
+		//	catch (WebException ex)
+		//	{
+		//		if (ex.Status == WebExceptionStatus.ConnectFailure) // remote host does not respond
+		//			return false;
+		//		else
+		//			throw;
+		//	}
+
+		//	// update the current info data
+		//	info.Update(xInfo);
+
+		//	if (!isOnline)
+		//	{
+		//		isOnline = true;
+		//		OnIsOnlineChanged();
+		//	}
+
+		//	// refresh data
+		//	//await RefreshAsync();
+
+		//	return true;
+		//} // func StartOnlineMode
+
+		#endregion
+
+		///// <summary>Loads basic data for the environment.</summary>
+		///// <returns></returns>
+		//public async virtual Task RefreshAsync()
+		//{
+		//	await Task.Yield();
+
+		//	await RefreshOfflineCacheAsync();
+		//	await RefreshDefaultResourcesAsync();
+		//	await RefreshTemplatesAsync();
+
+
+		//	await RefreshMasterDataSchemeAsync();
+		//} // proc RefreshAsync
+
+		/// <summary>Internal Id of the environment.</summary>
 		public int EnvironmentId => environmentId;
-
-		/// <summary>Local description of the environment.</summary>
-		[LuaMember]
-		public PpsEnvironmentInfo Info => info;
-
-		/// <summary>Has the application login data.</summary>
-		public bool IsAuthentificated => userInfo != null;
+		
 		/// <summary>Current user the is logged in.</summary>
 		public string Username => userName ?? String.Empty;
 		/// <summary>Display name for the user.</summary>
-		public string UsernameDisplay => IsAuthentificated ? userName : "Nicht angemeldet";
+		public string UsernameDisplay => userName;
 
-		/// <summary></summary>
+		/// <summary>The current mode of the environment.</summary>
+		public PpsEnvironmentMode CurrentMode => currentMode;
+		/// <summary>The current state of the environment.</summary>
+		public PpsEnvironmentState CurrentState => currentState;
+
+		/// <summary>Data list items definitions</summary>
 		public PpsEnvironmentCollection<PpsDataListItemDefinition> DataListItemTypes => templateDefinitions;
-		/// <summary></summary>
+		/// <summary>Basic template selector for the item selector</summary>
 		public PpsDataListTemplateSelector DataListTemplateSelector => dataListTemplateSelector;
 
 		/// <summary>Dispatcher of the ui-thread.</summary>
@@ -705,6 +1126,9 @@ namespace TecWare.PPSn
 		/// <summary>Access to the current collected informations.</summary>
 		public PpsTraceLog Traces => logData;
 
+		/// <summary>Path of the local data for the user.</summary>
+		public DirectoryInfo LocalPath => localDirectory;
+
 		LuaTable IPpsShell.LuaLibrary => this;
 
 		// -- Static --------------------------------------------------------------
@@ -712,13 +1136,13 @@ namespace TecWare.PPSn
 		private static object environmentCounterLock = new object();
 		private static int environmentCounter = 1;
 
-		/// <summary>Gets the environment from the ui.</summary>
+		/// <summary>Get the environment, that is attached to the current ui-element.</summary>
 		/// <param name="ui"></param>
 		/// <returns></returns>
 		public static PpsEnvironment GetEnvironment(FrameworkElement ui)
 			=> (PpsEnvironment)ui.FindResource(EnvironmentService);
 
-		/// <summary>Gets the environment from the current application.</summary>
+		/// <summary>Get the Environment, that is attached to the current application.</summary>
 		/// <returns></returns>
 		public static PpsEnvironment GetEnvironment()
 			=> (PpsEnvironment)Application.Current.FindResource(EnvironmentService);

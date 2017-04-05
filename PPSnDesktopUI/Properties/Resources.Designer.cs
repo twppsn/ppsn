@@ -59,14 +59,5 @@ namespace TecWare.PPSn.Properties {
                 resourceCulture = value;
             }
         }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Initialisiere die Anwendung....
-        /// </summary>
-        internal static string AppStartApplicationAsyncInitApp {
-            get {
-                return ResourceManager.GetString("AppStartApplicationAsyncInitApp", resourceCulture);
-            }
-        }
     }
 }

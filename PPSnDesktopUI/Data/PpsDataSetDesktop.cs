@@ -66,7 +66,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Returns a dataset definition for the schema (not registered, empty id).</summary>
 		/// <param name="schema">Name of the schema</param>
 		/// <returns>DataSet definition</returns>
-		Task<PpsDataSetDefinitionDesktop> GetDataSetDefinition(string schema);
+		Task<PpsDataSetDefinitionDesktop> GetDataSetDefinitionAsync(string schema);
 
 		/// <summary>Returns open datasets of a specific type.</summary>
 		/// <param name="schema"></param>

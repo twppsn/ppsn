@@ -1,0 +1,110 @@
+﻿<Window x:Class="TecWare.PPSn.UI.PpsSplashWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TecWare.PPSn.UI"
+        mc:Ignorable="d"
+        Title="PPSn" Height="400" Width="600" WindowStyle="None" ResizeMode="NoResize" MouseDown="Window_Drag">
+    <Window.InputBindings>
+        <KeyBinding Key="Esc" Command="{x:Static ApplicationCommands.Close}"/>
+    </Window.InputBindings>
+    <Border BorderThickness="1" BorderBrush="#3B4A62">
+        <Grid>
+            <TabControl SelectedIndex="{Binding ActivePage}" BorderThickness="0">
+                <TabControl.Resources>
+                    <Style TargetType="TabItem">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="TabItem">
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </TabControl.Resources>
+                <TabItem>
+                    <Grid>
+                        <TextBlock  Width="Auto" TextWrapping="Wrap" Text="{Binding StatusText,Mode=OneWay}" FontSize="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,0,0"/>
+                        <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="20" Content="Neu starten..." Command="local:PpsSplashWindow.ReStartCommand"/>
+                    </Grid>
+                </TabItem>
+                <TabItem>
+                    <Grid HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" DataContext="{Binding LoginState}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="70" />
+                            <ColumnDefinition Width="200" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="50" />
+                            <RowDefinition Height="29" />
+                            <RowDefinition Height="29" />
+                            <RowDefinition Height="29" />
+                            <RowDefinition Height="29" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.ColumnSpan="2" Text="- Neue Verbindung -" FontSize="28"  HorizontalAlignment="Center"/>
+                        <Label Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Content="Mandant:"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding NewEnvironmentName, Mode=TwoWay}"/>
+                        <Label Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Content="URI:"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding NewEnvironmentUri, Mode=OneWayToSource, UpdateSourceTrigger=PropertyChanged}"/>
+
+                        <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                            <Button Content="Speichern" Width="80" Height="23" Margin="0,0,0,0" Command="{x:Static ApplicationCommands.Save}" />
+                            <Button Content="Abbruch" Width="80" Height="23" Margin="12,0,0,0" Command="{x:Static ApplicationCommands.Close}" />
+                        </StackPanel>
+                    </Grid>
+                </TabItem>
+                <TabItem>
+                    <Grid HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" DataContext="{Binding LoginState}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="70" />
+                            <ColumnDefinition Width="200" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="50" />
+                            <RowDefinition Height="29" />
+                            <RowDefinition Height="29" />
+                            <RowDefinition Height="29" />
+                            <RowDefinition Height="29" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.ColumnSpan="2" Text="- ANMELDEN -" FontSize="28"  HorizontalAlignment="Center"/>
+
+                        <Label Grid.Column="0" Grid.Row="1" Content="Mandant:" />
+                        <ComboBox Grid.Column="1" Grid.Row="1" Margin="0,3" ItemsSource="{Binding Environments,Mode=OneWay}" SelectedItem="{Binding CurrentEnvironment,UpdateSourceTrigger=PropertyChanged}" Name="cbEnviroments">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock>
+                            <Run Text="{Binding DisplayName,Mode=OneWay}" />
+                            <Run Text="{Binding Name,Mode=OneWay,StringFormat='({0})'}" Foreground="DarkGray" />
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Label Grid.Column="0" Grid.Row="2" Content="Nutzer:" />
+                        <TextBox Grid.Column="1" Grid.Row="2" Margin="0,3" IsEnabled="{Binding IsUserNameEnabled}" Text="{Binding UserName,UpdateSourceTrigger=PropertyChanged}" Name="tbUserName">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Return" Command="local:PpsSplashWindow.EnterKeyCommand"/>
+                            </TextBox.InputBindings>
+                        </TextBox>
+                        <Label Grid.Column="0" Grid.Row="3" Content="Passwort:" />
+                        <Grid Grid.Column="1" Grid.Row="3" Margin="0,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+							<PasswordBox Grid.Column="0" IsEnabled="{Binding IsPasswordEnabled}" Name="pbPassword" PasswordChanged="PasswordChanged" />
+							<CheckBox Grid.Column="1" VerticalAlignment="Center" IsEnabled="{Binding IsPasswordEnabled}" IsChecked="{Binding SavePassword}"/>
+                        </Grid>
+
+                        <Button Grid.Column="0" Grid.Row="4" Content="*" Width="23" Height="23" HorizontalAlignment="Left" VerticalAlignment="Bottom" Command="{x:Static ApplicationCommands.New}" />
+
+                        <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                            <Button Content="Anmelden" Width="80" Height="23" Margin="0,0,0,0" Command="{x:Static ApplicationCommands.Save}" IsEnabled="{Binding IsValid}" />
+                            <Button Content="Abbruch" Width="80" Height="23" Margin="12,0,0,0" Command="{x:Static ApplicationCommands.Close}" />
+                        </StackPanel>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </Border>
+</Window>

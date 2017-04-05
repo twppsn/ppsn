@@ -65,7 +65,7 @@ namespace TecWare.PPSn.UI
 						e.Handled = true;
 						await StartLoginAsync();
 					},
-					(sender, e) => e.CanExecute = !Environment.IsAuthentificated
+					(sender, e) => e.CanExecute = true //!Environment.IsAuthentificated
 				)
 			);
 

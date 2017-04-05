@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.26228.9
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnDesktop", "PPSnDesktop\PPSnDesktop.csproj", "{399842B7-9C2D-4C1F-8B39-5D479D9C66A7}"
 EndProject
@@ -55,5 +55,8 @@ Global
 		{6B2E2C3C-B2E0-4C9F-A1DA-3E78BDB3A141} = {EBCF346C-E1AD-492E-A15C-84D184044512}
 		{F4609545-6D91-4B2D-A811-3201F4934505} = {EBCF346C-E1AD-492E-A15C-84D184044512}
 		{67528843-E631-4C05-B6E8-514CC8BEC7B6} = {EBCF346C-E1AD-492E-A15C-84D184044512}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		RESX_NeutralResourcesLanguage = de-DE
 	EndGlobalSection
 EndGlobal

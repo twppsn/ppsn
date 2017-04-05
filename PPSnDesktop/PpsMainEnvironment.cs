@@ -93,48 +93,46 @@ namespace TecWare.PPSn
   public partial class PpsMainEnvironment : PpsEnvironment
 	{
 		private readonly App app;
-		private PpsEnvironmentCollection<PpsMainActionDefinition> actions;
-		private PpsEnvironmentCollection<PpsMainViewDefinition> views;
-		private readonly PpsEnvironmentCollection<PpsConstant> constants;
+		private readonly PpsEnvironmentCollection<PpsMainActionDefinition> actions;
+		private readonly PpsEnvironmentCollection<PpsMainViewDefinition> views;
 
 		private readonly PpsProgressStack backgroundProgress;
 		private readonly PpsProgressStack forgroundProgress;
 
-		public PpsMainEnvironment(PpsEnvironmentInfo info, App app)
-			: base(info, app.Resources)
+		public PpsMainEnvironment(PpsEnvironmentInfo info, ICredentials userInfo, App app)
+			: base(info, userInfo, app.Resources)
 		{
 			this.app = app;
 
 			this.actions = new PpsEnvironmentCollection<PpsMainActionDefinition>(this);
 			this.views = new PpsEnvironmentCollection<PpsMainViewDefinition>(this);
-			this.constants = new PpsEnvironmentCollection<PpsConstant>(this);
 
 			this.backgroundProgress = new PpsProgressStack(app.Dispatcher);
 			this.forgroundProgress = new PpsProgressStack(app.Dispatcher);
 		} // ctor
 
-		protected override bool ShowLoginDialog(PpsClientLogin clientLogin)
-		{
-			return app.Dispatcher.Invoke(
-				() =>
-				{
-					var wih = app.MainWindow != null ? new System.Windows.Interop.WindowInteropHelper(app.MainWindow) : null;
-					return clientLogin.ShowWindowsLogin(wih?.EnsureHandle() ?? IntPtr.Zero);
-				});
-		} // func ShowLoginDialog
+		//protected override bool ShowLoginDialog(PpsClientLogin clientLogin)
+		//{
+		//	return app.Dispatcher.Invoke(
+		//		() =>
+		//		{
+		//			var wih = app.MainWindow != null ? new System.Windows.Interop.WindowInteropHelper(app.MainWindow) : null;
+		//			return clientLogin.ShowWindowsLogin(wih?.EnsureHandle() ?? IntPtr.Zero);
+		//		});
+		//} // func ShowLoginDialog
 
-		public async override Task RefreshAsync()
-		{
-			await base.RefreshAsync();
-			if (IsOnline && IsAuthentificated)
-			{
-				await Task.Run(new Action(UpdateConstants));
-				await Task.Run(RefreshObjectStoreAsync);
-			}
+		//public async override Task RefreshAsync()
+		//{
+		//	await base.RefreshAsync();
+		//	if (IsOnline && IsAuthentificated)
+		//	{
+		//		// await Task.Run(new Action(UpdateConstants));
+		//		await Task.Run(RefreshObjectStoreAsync);
+		//	}
 
-			await RefreshConstantsSchemaAsync();
-			await RefreshNavigatorAsync();
-		} // proc RefreshAsync
+		//	// await RefreshConstantsSchemaAsync();
+		//	await RefreshNavigatorAsync();
+		//} // proc RefreshAsync
 
 		public async Task<PpsMainWindow> CreateMainWindowAsync()
 		{
@@ -240,8 +238,6 @@ namespace TecWare.PPSn
 		public PpsEnvironmentCollection<PpsMainActionDefinition> Actions => actions;
 		[LuaMember(nameof(Views))]
 		public PpsEnvironmentCollection<PpsMainViewDefinition> Views => views;
-		[LuaMember(nameof(Constants))]
-		public PpsEnvironmentCollection<PpsConstant> Constants => constants;
 
 		[LuaMember(nameof(BackgroundProgressState))]
 		public PpsProgressStack BackgroundProgressState => backgroundProgress;

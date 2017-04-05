@@ -18,7 +18,6 @@ using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Data;
 using TecWare.PPSn.Stuff;
 using TecWare.PPSn.UI;
 using static TecWare.PPSn.StuffUI;
@@ -515,10 +514,8 @@ namespace TecWare.PPSn
 		/// <param name="defaultResult"></param>
 		/// <returns></returns>
 		[LuaMember("msgbox")]
-		public MessageBoxResult MsgBox(string text, string caption, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
-		{
-			return MessageBox.Show(text, caption ?? "Information", button, image, defaultResult);
-		} // proc LuaMsgBox
+		private MessageBoxResult LuaMsgBox(string text, string caption, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
+			=> MsgBox(text, button, image, defaultResult);
 
 		[LuaMember("trace")]
 		private void LuaTrace(PpsTraceItemType type, params object[] args)
@@ -540,15 +537,6 @@ namespace TecWare.PPSn
 			LuaTrace(PpsTraceItemType.Information, args);
 		} // proc LuaPrint
 
-		private object GetValueFromTable(object value)
-		{
-			var exData = value as IPpsDataRowExtendedValue;
-			if (exData != null)
-				return exData.ToString();
-			else
-				return value;
-		} // func GetValueFromTable
-
 		[LuaMember("toTable")]
 		private LuaTable LuaToTable(object table)
 		{
@@ -562,14 +550,14 @@ namespace TecWare.PPSn
 				var row = (IDataRow)table;
 				var i = 0;
 				foreach (var c in row.Columns)
-					r[c.Name] = GetValueFromTable(row[i++]);
+					r[c.Name] = row[i++];
 				return r;
 			}
 			else if (table is IEnumerable<PropertyValue>)
 			{
 				var r = new LuaTable();
 				foreach (var p in (IEnumerable<PropertyValue>)table)
-					r[p.Name] = GetValueFromTable(p.Value);
+					r[p.Name] = p.Value;
 				return r;
 			}
 			else
@@ -631,7 +619,7 @@ namespace TecWare.PPSn
 
 		public static PpsLuaTask RunTask(IPpsLuaTaskParent parent, object func, CancellationToken cancellationToken , params object[] args)
 		{
-			var cancellationSource = (CancellationTokenSource)null;
+			CancellationTokenSource cancellationSource  = null;
 			if (cancellationToken == CancellationToken.None) // find a source or a token in the arguments
 			{
 				for (var i = 0; i < args.Length; i++)

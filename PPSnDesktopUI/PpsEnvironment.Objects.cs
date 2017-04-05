@@ -1088,15 +1088,15 @@ namespace TecWare.PPSn
 
 		private readonly PpsEnvironment environment;
 		private readonly PpsObjectColumns columns;
-		private readonly long localId;
+		private readonly long objectId;
 		private readonly object objectLock = new object();
 
-		private long serverId;
 		private Guid guid;
 		private string typ;
 		private string nr;
 		private bool isRev;
-		private long remoteRevId;
+		private long remoteCurRevId;
+		private long remoteHeadRevId;
 		private long pulledRevId;
 		private bool isDocumentChanged;
 		private bool hasData;
@@ -1113,7 +1113,7 @@ namespace TecWare.PPSn
 		internal PpsObject(PpsEnvironment environment, IDataReader r)
 		{
 			this.environment = environment;
-			this.localId = r.GetInt64(0);
+			this.objectId = r.GetInt64(0);
 
 			this.columns = new PpsObjectColumns(this);
 			this.data = null;
@@ -1125,12 +1125,12 @@ namespace TecWare.PPSn
 
 		private void ReadObjectInfo(IDataReader r)
 		{
-			Set(ref serverId, r.IsDBNull(1) ? -1 : r.GetInt64(1), nameof(ServerId));
-			Set(ref guid, r.GetGuid(2), nameof(Guid));
-			Set(ref typ, r.GetString(3), nameof(Typ));
-			Set(ref nr, r.IsDBNull(4) ? null : r.GetString(4), nameof(Nr));
-			Set(ref isRev, r.GetBoolean(5), nameof(IsRev));
-			Set(ref remoteRevId, r.IsDBNull(6) ? -1 : r.GetInt64(6), nameof(RemoteRevId));
+			Set(ref guid, r.GetGuid(1), nameof(Guid));
+			Set(ref typ, r.GetString(2), nameof(Typ));
+			Set(ref nr, r.IsDBNull(3) ? null : r.GetString(3), nameof(Nr));
+			Set(ref isRev, r.GetBoolean(4), nameof(IsRev));
+			Set(ref remoteCurRevId, r.IsDBNull(5) ? -1 : r.GetInt64(5), nameof(RemoteCurRevId));
+			Set(ref remoteHeadRevId, r.IsDBNull(6) ? -1 : r.GetInt64(6), nameof(RemoteHeadRevId));
 			Set(ref pulledRevId, r.IsDBNull(7) ? -1 : r.GetInt64(7), nameof(PulledRevId));
 			Set(ref isDocumentChanged, r.IsDBNull(8) ? false : r.GetBoolean(8), nameof(IsDocumentChanged));
 			Set(ref hasData, !r.IsDBNull(9), nameof(HasData));
@@ -1150,7 +1150,7 @@ namespace TecWare.PPSn
 				{
 					cmd.CommandText = StaticColumnsSelect + " WHERE o.Id = @Id";
 					cmd.Transaction = transaction;
-					cmd.Parameters.Add("@Id", DbType.Int64).Value = localId;
+					cmd.Parameters.Add("@Id", DbType.Int64).Value = objectId;
 
 					using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
 					{
@@ -1243,20 +1243,18 @@ namespace TecWare.PPSn
 				throw new ArgumentOutOfRangeException("typ", $"Typ does not match (object: {guid}, expected: {typ}, found: {typ})");
 
 			// update the values
-			Set(ref serverId, current.GetValue(columnIndexes[(int)PpsObjectServerIndex.Id], -1), nameof(ServerId));
 			Set(ref nr, current.GetValue(columnIndexes[(int)PpsObjectServerIndex.Nr], (string)null), nameof(Nr));
 			Set(ref isRev, current.GetValue(columnIndexes[(int)PpsObjectServerIndex.IsRev], false), nameof(IsRev));
-			Set(ref remoteRevId, current.GetValue(columnIndexes[(int)PpsObjectServerIndex.RevId], -1L), nameof(RemoteRevId));
+			Set(ref remoteHeadRevId, current.GetValue(columnIndexes[(int)PpsObjectServerIndex.RevId], -1L), nameof(RemoteHeadRevId));
 
 			using (var trans = new PpsNestedDatabaseTransaction(Environment.LocalConnection, transaction))
 			{
 				using (var cmd = environment.LocalConnection.CreateCommand())
 				{
-					cmd.CommandText = "UPDATE main.Objects SET ServerId = @ServerId, IsRev = @IsRev, PulledRevId = @PulledRevId, Nr = @Nr WHERE Id = @Id";
+					cmd.CommandText = "UPDATE main.Objects SET IsRev = @IsRev, PulledRevId = @PulledRevId, Nr = @Nr WHERE Id = @Id";
 					cmd.Transaction = trans.Transaction;
 
-					cmd.Parameters.Add("@Id", DbType.Int64).Value = localId;
-					cmd.Parameters.Add("@ServerId", DbType.Int64).Value = serverId.DbNullIf(DbNullOnNeg);
+					cmd.Parameters.Add("@Id", DbType.Int64).Value = objectId;
 					cmd.Parameters.Add("@IsRev", DbType.Boolean).Value = isRev;
 					cmd.Parameters.Add("@PulledRevId", DbType.Int64).Value = pulledRevId.DbNullIf(DbNullOnNeg);
 					cmd.Parameters.Add("@Nr", DbType.String).Value = nr.DbNullIfString();
@@ -1285,7 +1283,7 @@ namespace TecWare.PPSn
 			var objectUri = objectInfo?.GetMemberValue("objectUri") ?? Typ;
 			var acceptedMimeType = objectInfo?.GetMemberValue("acceptedMimeType") as string;
 
-			return await Environment.Request.GetStreamAsync($"{objectUri}/?action=pull&id={serverId}&rev={revisionId}", acceptedMimeType);
+			return await Environment.Request.GetStreamAsync($"{objectUri}/?action=pull&id={objectId}&rev={revisionId}", acceptedMimeType);
 		} // proc PullDataAsync
 
 		internal async Task PullDataAsync(SQLiteTransaction transaction)
@@ -1294,8 +1292,8 @@ namespace TecWare.PPSn
 			await Environment.ForceOnlineAsync();
 
 			// load the data from the server
-			if (serverId <= 0)
-				throw new ArgumentOutOfRangeException("serverId", "Invalid server id, this is a local only object and has no server representation.");
+			if (objectId <= 0)
+				throw new ArgumentOutOfRangeException("objectId", "Invalid server id, this is a local only object and has no server representation.");
 
 			var t = Environment.SynchronizationWorker.RemovePull(this);
 			if (t == null)
@@ -1303,10 +1301,10 @@ namespace TecWare.PPSn
 				// create the request for the data
 				using (var trans = new PpsNestedDatabaseTransaction(Environment.LocalConnection, transaction))
 				{
-					using (var src = await PullDataAsync(RemoteRevId))
+					using (var src = await PullDataAsync(RemoteHeadRevId))
 					{
 						// update data
-						pulledRevId = RemoteRevId;
+						pulledRevId = RemoteHeadRevId;
 						await SaveRawDataAsync(trans.Transaction,
 							(dst) => src.CopyTo(dst)
 						);
@@ -1332,7 +1330,7 @@ namespace TecWare.PPSn
 				data = await environment.CreateObjectDataObjectAsync<T>(this);
 
 				// update data from server, if not present
-				if (serverId >= 0)
+				if (objectId >= 0)
 				{
 					if (!hasData) // first data pull
 					{
@@ -1356,7 +1354,7 @@ namespace TecWare.PPSn
 				cmd.CommandText = "SELECT Document, length(Document) FROM main.Objects WHERE Id = @Id";
 				cmd.Transaction = transaction;
 
-				cmd.Parameters.Add("@Id", DbType.Int64).Value = localId;
+				cmd.Parameters.Add("@Id", DbType.Int64).Value = objectId;
 
 				using (var r = await cmd.ExecuteReaderAsync(CommandBehavior.SingleRow))
 				{
@@ -1395,8 +1393,7 @@ namespace TecWare.PPSn
 				cmd.CommandText = "UPDATE main.Objects SET ServerId = IFNULL(@ServerId, ServerId), PulledRevId = IFNULL(@PulledRevId, PulledRevId), Nr = IFNULL(@Nr, Nr), Document = @Document, DocumentIsChanged = @DocumentIsChanged WHERE Id = @Id";
 				cmd.Transaction = transaction;
 
-				cmd.Parameters.Add("@Id", DbType.Int64).Value = localId;
-				cmd.Parameters.Add("@ServerId", DbType.Int64).Value = serverId.DbNullIf(DbNullOnNeg);
+				cmd.Parameters.Add("@Id", DbType.Int64).Value = objectId;
 				cmd.Parameters.Add("@PulledRevId", DbType.Int64).Value = bData == null ? DBNull.Value : pulledRevId.DbNullIf(DbNullOnNeg);
 				cmd.Parameters.Add("@Nr", DbType.String).Value = nr.DbNullIfString();
 				cmd.Parameters.Add("@Document", DbType.Binary).Value = bData == null ? (object)DBNull.Value : bData;
@@ -1407,7 +1404,7 @@ namespace TecWare.PPSn
 		} // proc SaveRawDataAsync
 
 		public override string ToString()
-			=> $"Object: {typ}; {localId} # {guid}:{pulledRevId}";
+			=> $"Object: {typ}; {objectId} # {guid}:{pulledRevId}";
 
 		#endregion
 
@@ -1498,19 +1495,19 @@ namespace TecWare.PPSn
 						switch (index)
 						{
 							case 0:
-								return localId;
+								return objectId;
 							case 1:
-								return serverId;
-							case 2:
 								return guid;
-							case 3:
+							case 2:
 								return typ;
-							case 4:
+							case 3:
 								return nr;
-							case 5:
+							case 4:
 								return isRev;
+							case 5:
+								return remoteCurRevId;
 							case 6:
-								return remoteRevId;
+								return remoteHeadRevId;
 							case 7:
 								return pulledRevId;
 							case 8:
@@ -1542,13 +1539,13 @@ namespace TecWare.PPSn
 		public PpsEnvironment Environment => environment;
 		public override bool IsDataOwner => true;
 
-		public long LocalId => localId;
-		public long ServerId => serverId;
+		public long LocalId => objectId;
 		public Guid Guid => guid;
 		public string Typ => typ;
 		public string Nr => nr;
 		public bool IsRev => isRev;
-		public long RemoteRevId => remoteRevId;
+		public long RemoteCurRevId => remoteCurRevId;
+		public long RemoteHeadRevId => remoteHeadRevId;
 		public long PulledRevId => pulledRevId;
 		public bool IsDocumentChanged => isDocumentChanged;
 		public bool HasData => hasData;
@@ -1564,12 +1561,12 @@ namespace TecWare.PPSn
 			StaticColumns = new IDataColumn[]
 			{
 				new SimpleDataColumn("Id", typeof(long)),
-				new SimpleDataColumn("ServerId", typeof(long)),
 				new SimpleDataColumn("Guid", typeof(Guid)),
 				new SimpleDataColumn("Typ", typeof(string)),
 				new SimpleDataColumn("Nr", typeof(string)),
 				new SimpleDataColumn("IsRev", typeof(bool)),
-				new SimpleDataColumn("RemoteRevId", typeof(long)),
+				new SimpleDataColumn("RemoteCurRevId", typeof(long)),
+				new SimpleDataColumn("RemoteHeadRevId", typeof(long)),
 				new SimpleDataColumn("PulledRevId", typeof(long)),
 				new SimpleDataColumn("IsDocumentChanged", typeof(bool)),
 				new SimpleDataColumn("HasData", typeof(bool))
@@ -1578,12 +1575,12 @@ namespace TecWare.PPSn
 			StaticColumnExpressions = new string[]
 			{
 				"o.Id",
-				"o.ServerId",
 				"o.Guid",
 				"o.Typ",
 				"o.Nr",
 				"o.IsRev",
-				"o.RemoteRevId",
+				"o.RemoteCurRevId",
+				"o.RemoteHeadRevId",
 				"o.PulledRevId",
 				"o.DocumentIsChanged",
 				"length(o.Document)"
@@ -2254,7 +2251,7 @@ order by t_liefnr.value desc
 		internal async Task<T> CreateObjectDataObjectAsync<T>(PpsObject obj)
 			where T : IPpsObjectData
 		{
-			var schema = await ActiveDataSets.GetDataSetDefinition(obj.Typ);
+			var schema = await ActiveDataSets.GetDataSetDefinitionAsync(obj.Typ);
 			if (schema == null)
 				return (T)(IPpsObjectData)new PpsObjectBlobData(obj);
 			else
