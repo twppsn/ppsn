@@ -91,7 +91,7 @@ namespace TecWare.PPSn.Server.Sql
 						connection.ConnectionString = connectionString.ToString();
 
 						//using (identity.SystemIdentity.Impersonate()) todo: Funktioniert nur als ADMIN?
-							connection.Open();
+						connection.Open();
 					}
 					return true;
 				}
@@ -369,7 +369,7 @@ namespace TecWare.PPSn.Server.Sql
 					this.lookupNative = lookupNative;
 					this.lookupColumn = lookupColumn;
 				} // ctor
-				
+
 				protected override Tuple<string, Type> LookupColumn(string columnToken)
 				{
 					var column = lookupColumn(columnToken);
@@ -545,7 +545,7 @@ namespace TecWare.PPSn.Server.Sql
 		} // class SqlDataSelector
 
 		#endregion
-		
+
 		#region -- class SqlResultInfo ----------------------------------------------------
 
 		private sealed class SqlResultInfo : List<Func<SqlDataReader, IEnumerable<IDataRow>>>
@@ -723,10 +723,10 @@ namespace TecWare.PPSn.Server.Sql
 				 * output inserted.{column}, inserted.{column}
 				 * values ({variableList}
 				 */
-				 
+
 				// find the connected table
 				var tableInfo = SqlDataSource.ResolveTableByName(name, true);
-				
+
 				using (var cmd = CreateCommand(parameter, CommandType.Text))
 				{
 					var commandText = new StringBuilder();
@@ -781,7 +781,7 @@ namespace TecWare.PPSn.Server.Sql
 
 					// generate output clause
 					commandText.Append("OUTPUT ").Append(insertedList);
-					
+
 					// values
 					commandText.Append(" VALUES (")
 						.Append(variableList)
@@ -846,7 +846,7 @@ namespace TecWare.PPSn.Server.Sql
 							commandText.Append(',');
 							insertedList.Append(',');
 						}
-						
+
 						var parameterName = '@' + columnName;
 						commandText.Append(columnName)
 							.Append(" = ")
@@ -871,7 +871,7 @@ namespace TecWare.PPSn.Server.Sql
 						.Append(" = ")
 						.Append("@").Append(primaryKeyName);
 					cmd.Parameters.Add(tableInfo.PrimaryKey.CreateSqlParameter("@" + primaryKeyName, primaryKeyValue));
-					
+
 					cmd.CommandText = commandText.ToString();
 
 					// execute insert
@@ -1155,7 +1155,7 @@ namespace TecWare.PPSn.Server.Sql
 
 				using (var cmd = CreateCommand(parameter, CommandType.Text))
 				{
-					cmd.CommandText = name; 
+					cmd.CommandText = name;
 
 					var args = GetArguments(parameter, 1, false);
 					if (args != null)
@@ -1175,7 +1175,7 @@ namespace TecWare.PPSn.Server.Sql
 						{
 							yield return new DbRowReaderEnumerable(r);
 						} while (r.NextResult());
-					}	
+					}
 				}
 			} // func ExecuteSql
 
@@ -1351,7 +1351,7 @@ namespace TecWare.PPSn.Server.Sql
 					throw new ArgumentOutOfRangeException("columnName", $"Table '{Name}' does not define  Column '{columnName}'.");
 				return col;
 			} // func FindColumn
-			
+
 			public int TableId => objectId;
 			public string Schema => schema;
 			public string Name => name;
@@ -1374,7 +1374,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			private sealed class PpsColumnAttributes : PpsColumnDescriptionAttributes<SqlColumnInfo>
 			{
-				public PpsColumnAttributes(SqlColumnInfo owner) 
+				public PpsColumnAttributes(SqlColumnInfo owner)
 					: base(owner)
 				{
 				} // ctor
@@ -1459,7 +1459,7 @@ namespace TecWare.PPSn.Server.Sql
 			private readonly bool isIdentity;
 
 			public SqlColumnInfo(SqlTableInfo table, SqlDataReader r)
-				:base(null, table.Schema + "." + table.Name + "." + r.GetString(2), GetFieldType(r.GetByte(3)))
+				: base(null, table.Schema + "." + table.Name + "." + r.GetString(2), GetFieldType(r.GetByte(3)))
 			{
 				this.table = table;
 				this.columnId = r.GetInt32(1);
@@ -1703,8 +1703,8 @@ namespace TecWare.PPSn.Server.Sql
 						columnNames[i] = null;
 					else
 					{
-						command.Append(",d.")
-							.Append(colInfo.ColumnName);
+						command.Append(",d.[")
+							.Append(colInfo.ColumnName).Append(']');
 						columnNames[i] = "c" + i.ToString();
 					}
 					i++;
@@ -1758,20 +1758,23 @@ namespace TecWare.PPSn.Server.Sql
 					command.Transaction = transaction;
 					command.CommandText = "SELECT change_tracking_min_valid_version(object_id('" + tableInfo.FullName + "'))";
 
-					var minValidVersion=  command.ExecuteScalar().ChangeType<long>();
+					var minValidVersionValue = command.ExecuteScalar();
+					if (minValidVersionValue == DBNull.Value)
+						throw new ArgumentException($"Change tracking is not activated for '{tableInfo.FullName}'.");
+
+					var minValidVersion = minValidVersionValue.ChangeType<long>();
 					isFull = minValidVersion > syncId;
 				}
 
 				// generate the command
 				using (var command = connection.Connection.CreateCommand())
 				{
-					string[] columnNames;
 					command.Transaction = transaction;
 					command.CommandText = isFull ?
-						PrepareFullCommand(table, tableInfo, out columnNames) :
+						PrepareFullCommand(table, tableInfo, out var columnNames) :
 						PrepareChangeTrackingCommand(table, tableInfo, columnInfo, out columnNames);
 
-					using (var r = command.ExecuteReader(CommandBehavior.SingleResult))
+					using (var r = command.ExecuteReaderEx(CommandBehavior.SingleResult))
 					{
 						while (r.Read())
 						{
@@ -1789,15 +1792,11 @@ namespace TecWare.PPSn.Server.Sql
 
 			public override void GenerateBatch(XmlWriter xml, PpsDataTableDefinition table, string syncType)
 			{
-				string syncAlgorithm;
-				string syncArguments;
-				ParseSynchronizationArguments(syncType, out syncAlgorithm, out syncArguments);
+				ParseSynchronizationArguments(syncType, out var syncAlgorithm, out var syncArguments);
 
 				if (String.Compare(syncAlgorithm, "TimeStamp", StringComparison.OrdinalIgnoreCase) == 0)
 				{
-					string name;
-					string column;
-					ParseSynchronizationTimeStampArguments(syncArguments, out name, out column);
+					ParseSynchronizationTimeStampArguments(syncArguments, out var name, out var column);
 
 					base.GenerateTimeStampBatch(xml, table, name, column);
 				}
@@ -1811,8 +1810,8 @@ namespace TecWare.PPSn.Server.Sql
 				}
 			} // proc GenerateBatch
 
-            public override long LastSyncId => currentSyncId;
-        } // class SqlSynchronizationTransaction
+			public override long LastSyncId => currentSyncId;
+		} // class SqlSynchronizationTransaction
 
 		#endregion
 
@@ -1969,7 +1968,7 @@ namespace TecWare.PPSn.Server.Sql
 						// read all relations between the tables
 						while (r.Read())
 						{
-							var tableInfo = ResolveTableById( r.GetInt32(2)); // table
+							var tableInfo = ResolveTableById(r.GetInt32(2)); // table
 							if (tableInfo != null)
 							{
 								var parentColumn = ResolveColumnById(tableInfo.TableId, r.GetInt32(3));
@@ -1983,7 +1982,7 @@ namespace TecWare.PPSn.Server.Sql
 
 				// Register Server logins
 				application.RegisterView(SqlDataSelectorToken.CreateFromResource(this, "dbo.serverLogins", "ServerLogins.sql"));
-				
+
 				// done
 				schemInfoInitialized.Set();
 			}
@@ -2014,7 +2013,7 @@ namespace TecWare.PPSn.Server.Sql
 			throw new ArgumentException($"Column '{key}' not found.", "key");
 		} // func ResolveColumnByName
 
-		private SqlTableInfo ResolveTableByName(string name,  bool throwException = false)
+		private SqlTableInfo ResolveTableByName(string name, bool throwException = false)
 		{
 			var tableInfo = tableStore[name];
 			if (tableInfo == null && throwException)
@@ -2123,7 +2122,7 @@ namespace TecWare.PPSn.Server.Sql
 			var c = GetSqlConnection(connection, true);
 			return new SqlDataTransaction(this, c);
 		} // func CreateTransaction
-		
+
 		public override PpsDataSetServerDefinition CreateDataSetDefinition(string documentName, XElement config, DateTime configurationStamp)
 			=> new PpsSqlDataSetDefinition(this, documentName, config, configurationStamp);
 
@@ -2176,12 +2175,12 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				return r.ChangeType<T>();
 			}
-			catch 
+			catch
 			{
 				return @default;
 			}
 		} // func GetDataRowValue
-		
+
 		#endregion
 	} // PpsSqlExDataSource
 }

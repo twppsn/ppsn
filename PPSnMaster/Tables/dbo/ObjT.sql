@@ -11,7 +11,8 @@
 	CONSTRAINT uqObjkIdKey UNIQUE ([ObjKId], [Key])
 );
 GO
-
+ALTER TABLE [dbo].[ObjT] ENABLE CHANGE_TRACKING;
+GO
 CREATE INDEX [idxObjtObjkId] ON [dbo].[ObjT] ([ObjKId])
 GO
 CREATE INDEX [idxObjtObjrId] ON [dbo].[ObjT] ([ObjRId])

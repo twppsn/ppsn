@@ -75,9 +75,22 @@
 			<pps:field name="dbo.ObjK.Guid" />
 			<pps:field name="dbo.ObjK.Typ" />
 			<pps:field name="dbo.ObjK.Nr" />
+			<pps:field name="dbo.ObjK.IsRev" />
+			<pps:field name="dbo.ObjK.IsHidden" />
 			<pps:field name="dbo.ObjK.HeadRevId" />
 			<pps:field name="dbo.ObjK.CurRevId" />
-			<pps:field name="dbo.ObjK.SyncToken" />
+
+			<pps:field name="dbo.ObjT.Id" />
+			<pps:field name="dbo.ObjT.ObjKId" />
+			<pps:field name="dbo.ObjT.Key" />
+			<pps:field name="dbo.ObjT.Class" />
+			<pps:field name="dbo.ObjT.Value" />
+			<pps:field name="dbo.ObjT.UserId" />
+
+			<pps:field name="dbo.ObjL.Id" />
+			<pps:field name="dbo.ObjL.ParentObjKId" />
+			<pps:field name="dbo.ObjL.LinkObjKId" />
+			<pps:field name="dbo.ObjL.OnDelete" />
 
 			<!-- revision fields -->
 			<pps:field name="dbo.Objr.Id" />
@@ -181,7 +194,7 @@
 					<pps:column name="SchemaStamp" fieldName="sys.Fields.LastModificationStamp">
 						<pps:meta name="IsNull">true</pps:meta>
 					</pps:column>
-					<pps:column name="SchemaContent" fieldName="sys.Fields.Text">
+					<pps:column name="SchemaContent" fieldName="sys.Fields.Blob">
 						<pps:meta name="IsNull">true</pps:meta>
 					</pps:column>
 					<pps:column name="SyncStamp" fieldName="sys.Fields.LastModificationStamp">
@@ -191,18 +204,6 @@
 						<pps:meta name="IsNull">true</pps:meta>
 					</pps:column>
 				</pps:table>
-
-				<!--<pps:table name="Objects">
-					
-				</pps:table>
-
-				<pps:table name="ObjectLinks">
-
-				</pps:table>
-
-				<pps:table name="ObjectTags">
-
-				</pps:table>-->
 
 				<pps:table name="OfflineCache" dataSource="sys">
 					<pps:meta name="syncType">TimeStamp: wpf.sync, ContentLastModification</pps:meta>
@@ -238,6 +239,72 @@
 					<pps:column name="LocalPath" fieldName="sys.Fields.Path">
 						<pps:meta name="syncSource">#</pps:meta>
 						<pps:meta name="IsNull">true</pps:meta>
+					</pps:column>
+				</pps:table>
+
+				<pps:table name="Objects">
+					<pps:meta name="syncType">ChangeTracking: dbo.Objk</pps:meta>
+					
+					<pps:column name="Id" fieldName="dbo.Objk.Id" isPrimary="true" />
+					<pps:column name="Guid" fieldName="dbo.Objk.Guid" />
+					<pps:column name="Typ" fieldName="dbo.Objk.Typ" />
+					<pps:column name="Nr" fieldName="dbo.Objk.Nr" />
+					<pps:column name="IsRev" fieldName="dbo.Objk.IsRev" />
+					<pps:column name="IsHidden" fieldName="dbo.Objk.IsHidden" />
+					<pps:column name="RemoteCurRevId" fieldName="dbo.Objk.CurRevId" />
+					<pps:column name="RemoteHeadRevId" fieldName="dbo.Objk.HeadRevId" />
+
+					<pps:column name="PulledRevId" fieldName="sys.Fields.Long">
+						<pps:meta name="syncSource">#</pps:meta>
+						<pps:meta name="IsNull">true</pps:meta>
+					</pps:column>
+
+					<pps:column name="DocumentIsChanged" fieldName="sys.Fields.Bit">
+						<pps:meta name="syncSource">#</pps:meta>
+						<pps:meta name="IsNull">true</pps:meta>
+					</pps:column>
+					<pps:column name="DocumentIsLinked" fieldName="sys.Fields.Text">
+						<pps:meta name="syncSource">#</pps:meta>
+						<pps:meta name="IsNull">true</pps:meta>
+					</pps:column>
+					<pps:column name="Document" fieldName="sys.Fields.Blob">
+						<pps:meta name="syncSource">#</pps:meta>
+						<pps:meta name="IsNull">true</pps:meta>
+					</pps:column>
+
+				</pps:table>
+
+				<pps:table name="ObjectTags">
+					<pps:meta name="syncType">ChangeTracking: dbo.ObjT</pps:meta>
+					
+					<pps:column name="Id" fieldName="dbo.ObjT.Id" isPrimary="true" />
+					<pps:relation name="ObjectId" fieldName="dbo.ObjT.ObjKId" relationName="Tags" parentTable="Objects" parentColumn="Id" parentType="Root"  />
+					<pps:column name="Key" fieldName="dbo.ObjT.Key" />
+					<pps:column name="Class" fieldName="dbo.ObjT.Class" />
+					<pps:column name="Value" fieldName="dbo.ObjT.Value" />
+					<pps:column name="UserId" fieldName="dbo.ObjT.UserId" />
+
+					<pps:column name="IsChanged" fieldName="sys.Fields.Bit">
+						<pps:meta name="syncSource">#</pps:meta>
+						<pps:meta name="Default">0</pps:meta>
+					</pps:column>
+					<pps:column name="IsRemoved" fieldName="sys.Fields.Bit">
+						<pps:meta name="syncSource">#</pps:meta>
+						<pps:meta name="Default">0</pps:meta>
+					</pps:column>
+				</pps:table>
+
+				<pps:table name="ObjectLinks">
+					<pps:meta name="syncType">ChangeTracking: dbo.ObjL</pps:meta>
+					
+					<pps:column name="Id" fieldName="dbo.Objl.Id" isPrimary="true" />
+					<pps:relation name="ParentObjectId" fieldName="dbo.Objl.ParentObjKId" relationName="LinkedTo" parentTable="Objects" parentColumn="Id" parentType="Root" />
+					<pps:relation name="LinkObjectId" fieldName="dbo.Objl.LinkObjKId" relationName="LinkedFrom" parentTable="Objects" parentColumn="Id" parentType="Cascade" />
+					<pps:column name="OnDelete" fieldName="dbo.Objl.OnDelete" />
+
+					<pps:column name="IsRemoved" fieldName="sys.Fields.Bit">
+						<pps:meta name="syncSource">#</pps:meta>
+						<pps:meta name="Default">0</pps:meta>
 					</pps:column>
 				</pps:table>
 

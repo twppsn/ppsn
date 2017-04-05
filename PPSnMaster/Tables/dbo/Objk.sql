@@ -11,7 +11,8 @@
 	[CurRevId] BIGINT NULL CONSTRAINT fkObjkObjrCurId REFERENCES dbo.ObjR (Id),
 	[HeadRevId] BIGINT NULL CONSTRAINT fkObjkObjrHeadId REFERENCES dbo.ObjR (Id)
 )
-
+GO
+ALTER TABLE [dbo].[ObjK] ENABLE CHANGE_TRACKING;
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'PK',

@@ -15,6 +15,8 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -97,5 +99,34 @@ namespace TecWare.PPSn.Server
 		} // func IPropertyReadOnlyDictionary
 
 		#endregion
+
+		#region -- Sql-Helper -----------------------------------------------------------
+		
+		public static DbDataReader ExecuteReaderEx(this DbCommand command, CommandBehavior commandBehavior = CommandBehavior.Default)
+		{
+			try
+			{
+				return command.ExecuteReader(commandBehavior);
+			}
+			catch (Exception e)
+			{
+				throw new CommandException(command, e);
+			}
+		} // func ExecuteReaderEx
+
+		#endregion
 	} // class PpsStuff
+
+	public class CommandException : DbException
+	{
+		private readonly string commandText;
+
+		public CommandException(DbCommand command, Exception innerException)
+			: base(innerException.Message, innerException)
+		{
+			this.commandText = command.CommandText;
+		} // ctor
+
+		public string CommandText => commandText;
+	} // class CommandException
 }
