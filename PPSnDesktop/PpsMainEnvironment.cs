@@ -111,28 +111,17 @@ namespace TecWare.PPSn
 			this.forgroundProgress = new PpsProgressStack(app.Dispatcher);
 		} // ctor
 
-		//protected override bool ShowLoginDialog(PpsClientLogin clientLogin)
-		//{
-		//	return app.Dispatcher.Invoke(
-		//		() =>
-		//		{
-		//			var wih = app.MainWindow != null ? new System.Windows.Interop.WindowInteropHelper(app.MainWindow) : null;
-		//			return clientLogin.ShowWindowsLogin(wih?.EnsureHandle() ?? IntPtr.Zero);
-		//		});
-		//} // func ShowLoginDialog
+		protected async override Task OnSystemOnlineAsync()
+		{
+			await base.OnSystemOnlineAsync();
+			await RefreshNavigatorAsync();
+		} // proc OnSystemOnlineAsync
 
-		//public async override Task RefreshAsync()
-		//{
-		//	await base.RefreshAsync();
-		//	if (IsOnline && IsAuthentificated)
-		//	{
-		//		// await Task.Run(new Action(UpdateConstants));
-		//		await Task.Run(RefreshObjectStoreAsync);
-		//	}
-
-		//	// await RefreshConstantsSchemaAsync();
-		//	await RefreshNavigatorAsync();
-		//} // proc RefreshAsync
+		protected async override Task OnSystemOfflineAsync()
+		{
+			await base.OnSystemOfflineAsync();
+			await RefreshNavigatorAsync();
+		} // proc OnSystemOfflineAsync
 
 		public async Task<PpsMainWindow> CreateMainWindowAsync()
 		{

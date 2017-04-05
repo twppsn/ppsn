@@ -698,6 +698,7 @@ namespace TecWare.PPSn
 						desiredMode != PpsEnvironmentMode.Shutdown)
 					throw new ArgumentException($"{desiredMode} is not a valid mode transission.");
 
+				Trace.WriteLine($"[WaitForEnvironmentMode] Wait for {desiredMode}");
 				this.desiredMode = desiredMode;
 				this.waitForSuccess = new TaskCompletionSource<PPSn.PpsEnvironmentModeResult>();
 			} // ctor
@@ -707,6 +708,7 @@ namespace TecWare.PPSn
 				if (isCompleted)
 					throw new InvalidOperationException();
 
+				Trace.WriteLine($"[WaitForEnvironmentMode] Return {result}");
 				waitForSuccess.SetResult(result);
 				isCompleted = true;
 			} // proc SetResult
@@ -715,6 +717,7 @@ namespace TecWare.PPSn
 			{
 				if (!isCompleted)
 				{
+					Trace.WriteLine($"[WaitForEnvironmentMode] Exception");
 					waitForSuccess.SetException(e);
 					isCompleted = true;
 				}
@@ -724,6 +727,7 @@ namespace TecWare.PPSn
 			{
 				if (!isCompleted)
 				{
+					Trace.WriteLine($"[WaitForEnvironmentMode] Canceled");
 					waitForSuccess.TrySetCanceled();
 					isCompleted = true;
 				}
@@ -838,7 +842,7 @@ namespace TecWare.PPSn
 						case PpsEnvironmentState.Offline:
 							if (currentTransmission != null)
 							{
-								OnSystemOffline();
+								OnSystemOfflineAsync().Wait();
 								currentTransmission.SetResult(PpsEnvironmentModeResult.Offline);
 								currentTransmission = null;
 							}
@@ -873,7 +877,7 @@ namespace TecWare.PPSn
 									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsSynchronization);
 								else // mark the system online
 								{
-									OnSystemOnline();
+									OnSystemOnlineAsync().Wait();
 									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.Online);
 								}
 							}
@@ -961,144 +965,6 @@ namespace TecWare.PPSn
 		} // proc UpdatePulicState
 
 		#endregion
-
-		#region -- Login/Logout -----------------------------------------------------------
-
-		//protected virtual bool ShowLoginDialog(PpsClientLogin clientLogin)
-		//	=> false;
-
-		///// <summary>Gets called to request the user information.</summary>
-		///// <param name="type">Authentification type</param>
-		///// <param name="realm">Realm of the server.</param>
-		///// <param name="count">Counts the login requests.</param>
-		///// <returns>User information or <c>null</c> for cancel.</returns>
-		//protected virtual ICredentials GetCredentials(ClientAuthentificationInformation authentificationInfo, int count)
-		//{
-		//	if (authentificationInfo.Type == ClientAuthentificationType.Ntlm && count == 0)
-		//		return CredentialCache.DefaultCredentials;
-		//	else
-		//	{
-		//		using (var loginCache = new PpsClientLogin("twppsn:" + info.Uri.AbsoluteUri, authentificationInfo.Realm, count > 1))
-		//		{
-		//			if (ShowLoginDialog(loginCache))
-		//			{
-		//				loginCache.Commit();
-		//				return loginCache.GetCredentials();
-		//			}
-		//			else
-		//				return null;
-		//		}
-		//	}
-		//} // func GetCredentials
-
-		//public async Task LoginUserAsync()
-		//{
-		//	var count = 0;
-		//	var authentificationInfo = ClientAuthentificationInformation.Ntlm;
-		//	try
-		//	{
-		//		XElement xLogin = null;
-
-		//		while (xLogin == null)
-		//		{
-		//			// get the user information
-		//			userInfo = GetCredentials(authentificationInfo, count++);
-		//			if (userInfo == null)
-		//			{
-		//				ResetLogin();
-		//				return;
-		//			}
-
-		//			try
-		//			{
-		//				// try to login with this user
-		//				xLogin = await request.GetXmlAsync("remote/login.xml", MimeTypes.Text.Xml, "user");
-		//			}
-		//			catch (WebException e)
-		//			{
-		//				var tmp = ClientAuthentificationInformation.Get(e);
-		//				if (tmp == null)
-		//					throw;
-		//				authentificationInfo = tmp;
-		//			}
-		//		} // while xLogin
-
-		//		userName = xLogin.GetAttribute("displayName", userInfo.ToString());
-
-		//		OnUsernameChanged();
-		//		await RefreshAsync();
-		//	}
-		//	catch
-		//	{
-		//		ResetLogin();
-		//		throw;
-		//	}
-		//} // proc LoginUser
-
-		//public async Task LogoutUserAsync()
-		//{
-		//	await Task.Yield();
-		//	ResetLogin();
-		//} // proc LogoutUser
-
-		//private void ResetLogin()
-		//{
-		//	userName = null;
-		//	userInfo = null;
-		//	OnUsernameChanged();
-		//} // proc ResetLogin
-
-		//protected virtual void OnUsernameChanged()
-		//	=> UsernameChanged?.Invoke(this, EventArgs.Empty);
-
-		///// <summary>Queues a request, to check if the server is available. After this the environment and the cache will be updated.</summary>
-		///// <param name="timeout">wait timeout for the server</param>
-		///// <returns></returns>
-		//public async Task<bool> StartOnlineMode(CancellationToken token)
-		//{
-		//	XElement xInfo;
-		//	try
-		//	{
-		//		xInfo = await request.GetXmlAsync("remote/info.xml", MimeTypes.Text.Xml, "ppsn");
-		//	}
-		//	catch (WebException ex)
-		//	{
-		//		if (ex.Status == WebExceptionStatus.ConnectFailure) // remote host does not respond
-		//			return false;
-		//		else
-		//			throw;
-		//	}
-
-		//	// update the current info data
-		//	info.Update(xInfo);
-
-		//	if (!isOnline)
-		//	{
-		//		isOnline = true;
-		//		OnIsOnlineChanged();
-		//	}
-
-		//	// refresh data
-		//	//await RefreshAsync();
-
-		//	return true;
-		//} // func StartOnlineMode
-
-		#endregion
-
-		///// <summary>Loads basic data for the environment.</summary>
-		///// <returns></returns>
-		//public async virtual Task RefreshAsync()
-		//{
-		//	await Task.Yield();
-
-		//	await RefreshOfflineCacheAsync();
-		//	await RefreshDefaultResourcesAsync();
-		//	await RefreshTemplatesAsync();
-
-
-		//	await RefreshMasterDataSchemeAsync();
-		//} // proc RefreshAsync
 
 		/// <summary>Internal Id of the environment.</summary>
 		public int EnvironmentId => environmentId;

@@ -71,7 +71,7 @@ namespace TecWare.PPSn.UI
 			catch (PpsDataTableForeignKeyRestriction)
 			{
 				// todo: in lua verlagern
-				environment.MsgBox("Auf diesen Datensatz wird noch verwiesen.\nLöschen nicht möglich.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+				environment.MsgBox("Auf diesen Datensatz wird noch verwiesen.\nLöschen nicht möglich.", MessageBoxButton.OK, MessageBoxImage.Information);
 			}
 			catch (Exception e)
 			{

@@ -750,7 +750,7 @@ namespace TecWare.PPSn
 					{
 						var path = r.GetString(0);
 						environment.GetProxyRequest(new Uri(path, UriKind.Relative))
-							.Enqueue(PpsLoadPriority.Background)
+							.Enqueue(PpsLoadPriority.Background, true)
 							.SetUpdateOfflineCache(c => UpdateOfflineData(path, c));
 					}
 				}
@@ -777,10 +777,13 @@ namespace TecWare.PPSn
 
 			public PpsLocalStoreRequest(Uri requestUri, MemoryStream content, string localPath, string contentType, bool isCompressed)
 			{
-				if (content == null || String.IsNullOrEmpty(localPath))
+				if (content == null && String.IsNullOrEmpty(localPath))
 					throw new ArgumentNullException(nameof(content));
 
 				this.requestUri = requestUri ?? throw new ArgumentNullException(nameof(requestUri));
+				if (requestUri.IsAbsoluteUri)
+					throw new ArgumentNullException("Uri must be relative.", nameof(requestUri));
+
 				this.content = content;
 				this.localPath = localPath;
 
@@ -820,7 +823,7 @@ namespace TecWare.PPSn
 				return src;
 			} // func CreateContentStream
 
-			public override Uri RequestUri => requestUri;
+			public override Uri RequestUri => new Uri(new Uri("http://offlineCache/"), requestUri);
 		} // class PpsLocalStoreRequest
 
 		#endregion
@@ -840,7 +843,7 @@ namespace TecWare.PPSn
 			{
 				this.requestUri = requestUri ?? throw new ArgumentNullException(nameof(requestUri));
 				this.content = content ?? throw new ArgumentNullException(nameof(content));
-				this.contentType = ContentType ?? throw new ArgumentNullException(nameof(contentType));
+				this.contentType = contentType ?? throw new ArgumentNullException(nameof(contentType));
 				this.isCompressed = isCompressed;
 
 				if (!content.CanRead)
@@ -952,7 +955,7 @@ namespace TecWare.PPSn
 							new PpsLocalStoreRequest(
 								requestUri,
 								(MemoryStream)reader.GetStream(3), // This method returns a newly created MemoryStream object.
-								GetLocalPath(reader.GetString(4)),
+								reader.IsDBNull(4) ? null : GetLocalPath(reader.GetString(4)),
 								contentType,
 								isCompressedContent
 							)
@@ -1461,10 +1464,10 @@ namespace TecWare.PPSn
 				return InternalGetResponseAsync();
 		} // func GetResponse
 
-		public IPpsProxyTask Enqueue(PpsLoadPriority priority)
+		public IPpsProxyTask Enqueue(PpsLoadPriority priority, bool forceOnline = false)
 		{
 			// check for offline item
-			if (environment.TryGetOfflineObject(this, out var task1))
+			if (!forceOnline && environment.TryGetOfflineObject(this, out var task1))
 				return task1;
 			else if (!HasRequestData && environment.WebProxy.TryGet(this, out var task2)) // check for already existing task
 				return task2;
@@ -1538,7 +1541,7 @@ namespace TecWare.PPSn
 
 		public PpsEnvironment Environment => environment;
 
-		public override Uri RequestUri => relativeUri;
+		public override Uri RequestUri => new Uri(new Uri("http://proxy/"), relativeUri);
 
 		public override IWebProxy Proxy { get => null; set { } } // avoid NotImplementedExceptions
 
@@ -2291,7 +2294,7 @@ namespace TecWare.PPSn
 				progress.Report("Lokale Datenbank verifizieren...");
 				if (PpsMasterData.TestTableColumns(newLocalStore, "Header",
 					new SimpleDataColumn("SchemaStamp", typeof(long)),
-					new SimpleDataColumn("SchemaContent", typeof(string)),
+					new SimpleDataColumn("SchemaContent", typeof(byte[])),
 					new SimpleDataColumn("SyncStamp", typeof(long)),
 					new SimpleDataColumn("SyncToken", typeof(long))
 					))
@@ -2344,6 +2347,8 @@ namespace TecWare.PPSn
 
 			// set new connection
 			masterData = new PpsMasterData(this, newLocalStore, newDataSet, lastSynchronizationSchema.Value, lastSynchronizationStamp.Value, lastSynchronizationId.Value);
+
+			Trace.WriteLine($"[MasterData] Create with Schema: {lastSynchronizationSchema.Value}; SyncStamp: {lastSynchronizationStamp.Value}; SyncId: {lastSynchronizationId.Value} ==> Use Schema={isSchemaUseable}, Use Data={isDataUseable}");
 
 			return isDataUseable && isSchemaUseable;
 		} // proc InitLocalStore
@@ -2480,12 +2485,19 @@ namespace TecWare.PPSn
 		protected internal virtual void OnBeforeSynchronization() { }
 		protected internal virtual void OnAfterSynchronization() { }
 
-		protected virtual void OnSystemOnline()
+		protected async virtual Task OnSystemOnlineAsync()
 		{
-			masterData.CheckOfflineCache();
+			masterData.CheckOfflineCache(); // start download
+
+			await RefreshDefaultResourcesAsync();
+			await RefreshTemplatesAsync();
 		} // proc OnSystemOnline
 
-		protected virtual void OnSystemOffline() { }
+		protected async virtual Task OnSystemOfflineAsync()
+		{
+			await RefreshDefaultResourcesAsync();
+			await RefreshTemplatesAsync();
+		} // proc OnSystemOffline
 
 		/// <summary>Gets called if the local database gets changed.</summary>
 		/// <param name="operation"></param>
