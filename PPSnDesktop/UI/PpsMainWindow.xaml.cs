@@ -60,10 +60,9 @@ namespace TecWare.PPSn.UI
 			#region -- set basic command bindings --
 			CommandBindings.Add(
 				new CommandBinding(PpsWindow.LoginCommand,
-					async (sender, e) =>
+					(sender, e) =>
 					{
 						e.Handled = true;
-						await StartLoginAsync();
 					},
 					(sender, e) => e.CanExecute = true //!Environment.IsAuthentificated
 				)

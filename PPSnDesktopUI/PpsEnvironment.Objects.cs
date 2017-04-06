@@ -459,7 +459,7 @@ namespace TecWare.PPSn
 				: base(trans, connection)
 			{
 				this.command.CommandText =
-					"SELECT [Id], [Key], [Class], [Value], [SyncToken] FROM main.[ObjectTags] WHERE [ObjectId] = @ObjectId" + (visibleOnly ? " AND [Class] >= 0" : ";");
+					"SELECT [Id], [Key], [Class], [Value], FROM main.[ObjectTags] WHERE [ObjectId] = @ObjectId" + (visibleOnly ? " AND [Class] >= 0" : ";");
 
 				this.objectIdParameter = command.Parameters.Add("@ObjectId", DbType.Int64);
 
@@ -477,7 +477,7 @@ namespace TecWare.PPSn
 						var k = r.GetString(1);
 						var t = r.GetInt32(2);
 						var v = r.IsDBNull(3) ? null : r.GetString(3);
-						yield return new Tuple<long, PpsObjectTag>(r.GetInt64(0), new PpsObjectTag(k, (PpsObjectTagClass)t, v, r.GetInt64(4)));
+						yield return new Tuple<long, PpsObjectTag>(r.GetInt64(0), new PpsObjectTag(k, (PpsObjectTagClass)t, v,0));
 					}
 				}
 			}// func Select
@@ -1390,7 +1390,7 @@ namespace TecWare.PPSn
 			// store the value
 			using (var cmd = Environment.LocalConnection.CreateCommand())
 			{
-				cmd.CommandText = "UPDATE main.Objects SET ServerId = IFNULL(@ServerId, ServerId), PulledRevId = IFNULL(@PulledRevId, PulledRevId), Nr = IFNULL(@Nr, Nr), Document = @Document, DocumentIsChanged = @DocumentIsChanged WHERE Id = @Id";
+				cmd.CommandText = "UPDATE main.Objects SET PulledRevId = IFNULL(@PulledRevId, PulledRevId), Nr = IFNULL(@Nr, Nr), Document = @Document, DocumentIsChanged = @DocumentIsChanged WHERE Id = @Id";
 				cmd.Transaction = transaction;
 
 				cmd.Parameters.Add("@Id", DbType.Int64).Value = objectId;
@@ -2231,10 +2231,10 @@ order by t_liefnr.value desc
 		{
 			using (var cmd = LocalConnection.CreateCommand())
 			{
-				cmd.CommandText = "INSERT INTO main.Objects (ServerId, Guid, Typ, Nr, IsRev, RemoteRevId, SyncToken) VALUES (@ServerId, @Guid, @Typ, @Nr, @IsRev, @RemoteRevId, @SyncToken)";
+				cmd.CommandText = "INSERT INTO main.Objects (Id, Guid, Typ, Nr, IsHidden, IsRev, RemoteHeadRevId) VALUES (@Id, @Guid, @Typ, @Nr, 0, @IsRev, @RemoteRevId)";
 				cmd.Transaction = transaction;
 
-				cmd.Parameters.Add("@ServerId", DbType.Int64).Value = serverId.DbNullIf(StuffDB.DbNullOnNeg);
+				cmd.Parameters.Add("@Id", DbType.Int64).Value = serverId.DbNullIf(StuffDB.DbNullOnNeg);
 				cmd.Parameters.Add("@Guid", DbType.Guid).Value = guid;
 				cmd.Parameters.Add("@Typ", DbType.String).Value = typ.DbNullIfString();
 				cmd.Parameters.Add("@Nr", DbType.String).Value = nr.DbNullIfString();

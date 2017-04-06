@@ -383,11 +383,6 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc UnloadPaneAsync
 
-		private async Task StartLoginAsync()
-		{
-			await LoadPaneAsync(typeof(Panes.PpsLoginPane), null);
-		} // proc StartLogin
-
 		/// <summary>Returns the current view of the pane as a wpf control.</summary>
 		public IPpsWindowPane CurrentPane => (IPpsWindowPane)GetValue(CurrentPaneProperty);
 		/// <summary>List with the current open panes.</summary>

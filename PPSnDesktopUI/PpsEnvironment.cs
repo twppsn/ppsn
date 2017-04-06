@@ -577,6 +577,13 @@ namespace TecWare.PPSn
 			var r = await WaitForEnvironmentMode(bootOffline ? PpsEnvironmentMode.Offline : PpsEnvironmentMode.Online);
 			switch (r)
 			{
+				case PpsEnvironmentModeResult.Online:
+					await OnSystemOnlineAsync(); // mark as online
+					break;
+				case PpsEnvironmentModeResult.Offline:
+					OnSystemOfflineAsync().Wait();
+					break;
+
 				case PpsEnvironmentModeResult.NeedsUpdate:
 					if (await MsgBoxAsync("Es steht eine neue Version zur Verfügung.\nUpdate durchführen?", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
 					{
@@ -765,7 +772,9 @@ namespace TecWare.PPSn
 		private Task<PpsEnvironmentModeResult> WaitForEnvironmentMode(PpsEnvironmentMode desiredMode)
 		{
 			// is this a new mode
-			if (desiredMode == currentMode)
+			if (desiredMode == currentMode
+				&& currentState != PpsEnvironmentState.None 
+				&& currentState != PpsEnvironmentState.OfflineConnect)
 			{
 				switch (desiredMode)
 				{
@@ -842,7 +851,6 @@ namespace TecWare.PPSn
 						case PpsEnvironmentState.Offline:
 							if (currentTransmission != null)
 							{
-								OnSystemOfflineAsync().Wait();
 								currentTransmission.SetResult(PpsEnvironmentModeResult.Offline);
 								currentTransmission = null;
 							}
@@ -876,10 +884,7 @@ namespace TecWare.PPSn
 								if (!masterData.IsSynchronizationStarted || masterData.CheckSynchronizationStateAsync().Result)
 									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsSynchronization);
 								else // mark the system online
-								{
-									OnSystemOnlineAsync().Wait();
 									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.Online);
-								}
 							}
 							state = PpsEnvironmentState.Online;
 							break;
@@ -934,6 +939,10 @@ namespace TecWare.PPSn
 				currentTransmission.SetResult(result);
 				currentTransmission = null;
 			}
+			else
+			{
+				// todo: Notify state change to UI (Online vs Offline)
+			}
 		} // proc SetTransmissionResult
 
 		private void UpdatePulicState(PpsEnvironmentState state)
@@ -967,17 +976,23 @@ namespace TecWare.PPSn
 		#endregion
 
 		/// <summary>Internal Id of the environment.</summary>
+		[LuaMember]
 		public int EnvironmentId => environmentId;
-		
+
 		/// <summary>Current user the is logged in.</summary>
+		[LuaMember]
 		public string Username => userName ?? String.Empty;
 		/// <summary>Display name for the user.</summary>
+		[LuaMember]
 		public string UsernameDisplay => userName;
 
 		/// <summary>The current mode of the environment.</summary>
 		public PpsEnvironmentMode CurrentMode => currentMode;
 		/// <summary>The current state of the environment.</summary>
 		public PpsEnvironmentState CurrentState => currentState;
+
+		[LuaMember]
+		public bool IsOnline => CurrentState == PpsEnvironmentState.Online;
 
 		/// <summary>Data list items definitions</summary>
 		public PpsEnvironmentCollection<PpsDataListItemDefinition> DataListItemTypes => templateDefinitions;
@@ -993,6 +1008,7 @@ namespace TecWare.PPSn
 		public PpsTraceLog Traces => logData;
 
 		/// <summary>Path of the local data for the user.</summary>
+		[LuaMember]
 		public DirectoryInfo LocalPath => localDirectory;
 
 		LuaTable IPpsShell.LuaLibrary => this;

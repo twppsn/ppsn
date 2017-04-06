@@ -30,8 +30,7 @@ namespace TecWare.PPSn.UI
 
 			private PpsEnvironmentInfo[] environments = null;
 			private PpsEnvironmentInfo currentEnvironment = null;
-
-
+			
 			public LoginStateData(PpsSplashWindow parent)
 			{
 				this.parent = parent;

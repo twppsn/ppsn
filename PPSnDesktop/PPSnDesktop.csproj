@@ -82,9 +82,6 @@
     <Compile Include="PpsMainEnvironment.cs" />
     <Compile Include="PpsMainEnvironment.Data.cs" />
     <Compile Include="PpsMainEnvironment.Views.cs" />
-    <Compile Include="UI\Panes\PpsLoginPane.xaml.cs">
-      <DependentUpon>PpsLoginPane.xaml</DependentUpon>
-    </Compile>
     <Compile Include="UI\PpsCharmbarControl.xaml.cs">
       <DependentUpon>PpsCharmbarControl.xaml</DependentUpon>
     </Compile>
@@ -110,10 +107,6 @@
     <EmbeddedResource Include="Properties\Resources.en.resx">
       <DependentUpon>Resources.resx</DependentUpon>
     </EmbeddedResource>
-    <Page Include="UI\Panes\PpsLoginPane.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
     <Page Include="UI\PpsCharmbarControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

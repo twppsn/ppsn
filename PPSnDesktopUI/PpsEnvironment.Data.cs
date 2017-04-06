@@ -767,6 +767,7 @@ namespace TecWare.PPSn
 
 		private sealed class PpsLocalStoreRequest : WebRequest
 		{
+			private readonly Uri originalUri;
 			private readonly Uri requestUri;
 			private readonly MemoryStream content;
 			private readonly string localPath;
@@ -775,7 +776,7 @@ namespace TecWare.PPSn
 
 			private readonly Func<WebResponse> getResponse;
 
-			public PpsLocalStoreRequest(Uri requestUri, MemoryStream content, string localPath, string contentType, bool isCompressed)
+			public PpsLocalStoreRequest(Uri originalUri, Uri requestUri, MemoryStream content, string localPath, string contentType, bool isCompressed)
 			{
 				if (content == null && String.IsNullOrEmpty(localPath))
 					throw new ArgumentNullException(nameof(content));
@@ -783,6 +784,10 @@ namespace TecWare.PPSn
 				this.requestUri = requestUri ?? throw new ArgumentNullException(nameof(requestUri));
 				if (requestUri.IsAbsoluteUri)
 					throw new ArgumentNullException("Uri must be relative.", nameof(requestUri));
+
+				this.originalUri = originalUri ?? throw new ArgumentNullException(nameof(originalUri));
+				if (!originalUri.IsAbsoluteUri)
+					throw new ArgumentNullException("Uri must be original.", nameof(originalUri));
 
 				this.content = content;
 				this.localPath = localPath;
@@ -809,7 +814,7 @@ namespace TecWare.PPSn
 				=> getResponse.EndInvoke(asyncResult);
 
 			public override WebResponse GetResponse()
-				=> new PpsLocalStoreResponse(requestUri, CreateContentStream(), contentType, isCompressed);
+				=> new PpsLocalStoreResponse(originalUri, CreateContentStream(), contentType, isCompressed);
 
 			private Stream CreateContentStream()
 			{
@@ -823,7 +828,7 @@ namespace TecWare.PPSn
 				return src;
 			} // func CreateContentStream
 
-			public override Uri RequestUri => new Uri(new Uri("http://offlineCache/"), requestUri);
+			public override Uri RequestUri => originalUri;
 		} // class PpsLocalStoreRequest
 
 		#endregion
@@ -832,16 +837,16 @@ namespace TecWare.PPSn
 
 		private sealed class PpsLocalStoreResponse : WebResponse
 		{
-			private readonly Uri requestUri;
+			private readonly Uri responeUri;
 			private readonly Stream content;
 			private readonly string contentType;
 			private readonly bool isCompressed;
 
 			private readonly WebHeaderCollection headers = new WebHeaderCollection();
 
-			public PpsLocalStoreResponse(Uri requestUri, Stream content, string contentType, bool isCompressed)
+			public PpsLocalStoreResponse(Uri responseUri, Stream content, string contentType, bool isCompressed)
 			{
-				this.requestUri = requestUri ?? throw new ArgumentNullException(nameof(requestUri));
+				this.responeUri = responseUri ?? throw new ArgumentNullException(nameof(responseUri));
 				this.content = content ?? throw new ArgumentNullException(nameof(content));
 				this.contentType = contentType ?? throw new ArgumentNullException(nameof(contentType));
 				this.isCompressed = isCompressed;
@@ -877,7 +882,7 @@ namespace TecWare.PPSn
 
 			public override bool SupportsHeaders => false;
 
-			public override Uri ResponseUri => requestUri;
+			public override Uri ResponseUri => responeUri;
 		} // class PpsLocalStoreResponse
 
 		#endregion
@@ -926,7 +931,7 @@ namespace TecWare.PPSn
 				if (!IsSynchronizationStarted)
 					throw new InvalidOperationException("Local store is not initialized.");
 
-				using (var command = new SQLiteCommand("SELECT [Path], [ContentType], [ContentEncoding], [Content], [LocalPath] FROM [main].[OfflineCache] WHERE substr([Path], 1, length(@path)) = @path;", connection))
+				using (var command = new SQLiteCommand("SELECT [Path], [ContentType], [ContentEncoding], [Content], [LocalPath] FROM [main].[OfflineCache] WHERE substr([Path], 1, length(@path)) = @path", connection))
 				{
 					command.Parameters.Add("@path", DbType.String).Value = requestUri.ParsePath();
 					using (var reader = command.ExecuteReader(CommandBehavior.SingleRow))
@@ -953,6 +958,7 @@ namespace TecWare.PPSn
 						var isCompressedContent = readContentEncoding.Length > 1 && readContentEncoding[1] == "gzip"; // compression is marked on index 1
 						task = PpsDummyProxyHelper.GetProxyTask(
 							new PpsLocalStoreRequest(
+								new Uri(environment.BaseUri, requestUri),
 								requestUri,
 								(MemoryStream)reader.GetStream(3), // This method returns a newly created MemoryStream object.
 								reader.IsDBNull(4) ? null : GetLocalPath(reader.GetString(4)),
@@ -1380,7 +1386,9 @@ namespace TecWare.PPSn
 	public sealed class PpsProxyRequest : WebRequest, IEquatable<PpsProxyRequest>
 	{
 		private readonly PpsEnvironment environment; // owner, that retrieves a resource
+		private readonly Uri originalUri;
 		private readonly Uri relativeUri; // relative Uri
+
 		private readonly bool offlineOnly;
 		private bool aborted = false; // is the request cancelled
 
@@ -1399,14 +1407,17 @@ namespace TecWare.PPSn
 
 		#region -- Ctor/Dtor ------------------------------------------------------------
 
-		internal PpsProxyRequest(PpsEnvironment environment, Uri relativeUri, bool offlineOnly)
+		internal PpsProxyRequest(PpsEnvironment environment, Uri originalUri, Uri relativeUri, bool offlineOnly)
 		{
+			this.environment = environment;
+			this.originalUri = originalUri ?? throw new ArgumentNullException(nameof(originalUri));
+			this.relativeUri = relativeUri ?? throw new ArgumentNullException(nameof(relativeUri));
+			this.offlineOnly = offlineOnly;
+
 			if (relativeUri.IsAbsoluteUri)
 				throw new ArgumentException("Uri must be relative.", nameof(relativeUri));
-
-			this.environment = environment;
-			this.relativeUri = relativeUri;
-			this.offlineOnly = offlineOnly;
+			if (!originalUri.IsAbsoluteUri)
+				throw new ArgumentException("Uri must be absolute.", nameof(originalUri));
 
 			this.procGetResponse = GetResponse;
 			this.procGetRequestStream = GetRequestStream;
@@ -1541,7 +1552,7 @@ namespace TecWare.PPSn
 
 		public PpsEnvironment Environment => environment;
 
-		public override Uri RequestUri => new Uri(new Uri("http://proxy/"), relativeUri);
+		public override Uri RequestUri => originalUri;
 
 		public override IWebProxy Proxy { get => null; set { } } // avoid NotImplementedExceptions
 
@@ -1753,11 +1764,12 @@ namespace TecWare.PPSn
 
 		private sealed class CacheResponseProxy : WebResponse
 		{
+			private readonly Uri responseUri;
 			private readonly Stream resultStream;
 			private readonly string contentType;
 			private readonly WebHeaderCollection headers;
 
-			public CacheResponseProxy(Stream resultStream, string contentType, WebHeaderCollection headers)
+			public CacheResponseProxy(Uri responseUri, Stream resultStream, string contentType, WebHeaderCollection headers)
 			{
 				this.resultStream = resultStream ?? throw new ArgumentNullException(nameof(headers));
 				this.contentType = contentType ?? throw new ArgumentNullException(nameof(headers));
@@ -1776,6 +1788,8 @@ namespace TecWare.PPSn
 
 			public override long ContentLength { get => resultStream.Length; set => throw new NotSupportedException(); }
 			public override string ContentType { get => contentType; set => throw new NotSupportedException(); }
+
+			public override Uri ResponseUri => responseUri;
 		} // class CacheResponseProxy
 
 		#endregion
@@ -1918,7 +1932,7 @@ namespace TecWare.PPSn
 									dst = updateOfflineCache(new PpsOfflineItemDataImplementation(dst, contentType, headers.GetLastModified()));
 
 								// spawn the result functions
-								var cacheResponse = new CacheResponseProxy(dst, contentType, headers);
+								var cacheResponse = new CacheResponseProxy(request.RequestUri, dst, contentType, headers);
 								foreach (var s in webResponseSinks)
 									System.Threading.Tasks.Task.Run(() => s(cacheResponse));
 
@@ -2402,22 +2416,24 @@ namespace TecWare.PPSn
 
 			// create the request proxy
 			if (useCache || useOfflineRequest)
-				return new PpsProxyRequest(this, relativeUri, useOfflineRequest);
+				return new PpsProxyRequest(this, uri, relativeUri, useOfflineRequest);
 			else
 				return CreateOnlineRequest(relativeUri);
 		} // func CreateWebRequest
 
 		/// <summary>Is used only internal to create the real request.</summary>
-		/// <param name="uri"></param>
+		/// <param name="relativeUri"></param>
 		/// <param name="absolutePath"></param>
 		/// <returns></returns>
-		internal WebRequest CreateOnlineRequest(Uri uri)
+		internal WebRequest CreateOnlineRequest(Uri relativeUri)
 		{
-			if (uri.IsAbsoluteUri || uri.OriginalString.StartsWith("/"))
-				throw new ArgumentException("Uri must be relative.", nameof(uri));
+			if (relativeUri.IsAbsoluteUri)
+				throw new ArgumentException("Uri must be relative.", nameof(relativeUri));
+			if (relativeUri.OriginalString.StartsWith("/"))
+				relativeUri = new Uri(relativeUri.OriginalString.Substring(1), UriKind.Relative);
 
 			// build the remote request with absolute uri and credentials
-			var absoluteUri = new Uri(info.Uri, uri);
+			var absoluteUri = new Uri(info.Uri, relativeUri);
 			var request = WebRequest.Create(absoluteUri);
 			request.Credentials = userInfo; // override the current credentials
 
@@ -2434,11 +2450,11 @@ namespace TecWare.PPSn
 		/// <param name="priority"></param>
 		/// <returns></returns>
 		public PpsProxyRequest GetProxyRequest(Uri uri)
-			=> new PpsProxyRequest(this, uri, CurrentState == PpsEnvironmentState.Offline);
+			=> new PpsProxyRequest(this, new Uri(BaseUri, uri), uri, CurrentState == PpsEnvironmentState.Offline);
 
 		protected internal virtual bool TryGetOfflineObject(WebRequest request, out IPpsProxyTask task)
 		{
-			return masterData.TryGetOflineCacheFile(request.RequestUri, out task);
+			return masterData.TryGetOflineCacheFile(BaseUri.MakeRelativeUri(request.RequestUri), out task);
 		} // func TryGetOfflineObject
 
 		#endregion
@@ -2487,6 +2503,7 @@ namespace TecWare.PPSn
 
 		protected async virtual Task OnSystemOnlineAsync()
 		{
+			Trace.WriteLine("[Environment] System goes online.");
 			masterData.CheckOfflineCache(); // start download
 
 			await RefreshDefaultResourcesAsync();
@@ -2495,6 +2512,7 @@ namespace TecWare.PPSn
 
 		protected async virtual Task OnSystemOfflineAsync()
 		{
+			Trace.WriteLine("[Environment] System goes offline.");
 			await RefreshDefaultResourcesAsync();
 			await RefreshTemplatesAsync();
 		} // proc OnSystemOffline
@@ -2519,7 +2537,9 @@ namespace TecWare.PPSn
 
 		public async Task<bool> ForceOnlineAsync(bool throwException = true)
 		{
-			if (CurrentMode != PpsEnvironmentMode.Online)
+			if (CurrentMode == PpsEnvironmentMode.Online)
+				return true;
+			else if (CurrentMode != PpsEnvironmentMode.Online)
 			{
 				switch (await WaitForEnvironmentMode(PpsEnvironmentMode.Online))
 				{
