@@ -5,13 +5,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TecWare.PPSn.UI"
         mc:Ignorable="d"
-        Title="PPSn" Height="400" Width="600" WindowStyle="None" ResizeMode="NoResize" MouseDown="Window_Drag">
+        Title="PPSn" Height="400" Width="600" WindowStyle="None" ResizeMode="NoResize" MouseDown="Window_Drag" WindowStartupLocation="CenterScreen">
     <Window.InputBindings>
         <KeyBinding Key="Esc" Command="{x:Static ApplicationCommands.Close}"/>
     </Window.InputBindings>
     <Border BorderThickness="1" BorderBrush="#3B4A62">
         <Grid>
-            <TabControl SelectedIndex="{Binding ActivePage}" BorderThickness="0">
+            <TabControl SelectedIndex="{Binding ActivePageNum,Mode=OneWay}" BorderThickness="0">
                 <TabControl.Resources>
                     <Style TargetType="TabItem">
                         <Setter Property="Template">

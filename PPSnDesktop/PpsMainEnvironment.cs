@@ -99,7 +99,7 @@ namespace TecWare.PPSn
 		private readonly PpsProgressStack backgroundProgress;
 		private readonly PpsProgressStack forgroundProgress;
 
-		public PpsMainEnvironment(PpsEnvironmentInfo info, ICredentials userInfo, App app)
+		public PpsMainEnvironment(PpsEnvironmentInfo info, NetworkCredential userInfo, App app)
 			: base(info, userInfo, app.Resources)
 		{
 			this.app = app;
@@ -135,7 +135,8 @@ namespace TecWare.PPSn
 					var window = new PpsMainWindow(freeIndex);
 					window.Show();
 					return window;
-				});
+				}
+			);
 		} // proc CreateMainWindow
 
 		private static readonly XName xnEnvironment = "environment";

@@ -484,7 +484,7 @@ namespace TecWare.PPSn
 	{
 		private readonly int environmentId;				// unique id of the environment
 		private readonly PpsEnvironmentInfo info;		// source information of the environment
-		private readonly ICredentials userInfo;			// currently credentials of the user
+		private readonly NetworkCredential userInfo;			// currently credentials of the user
 
 		private string userName = null;					// display name of the user
 		private readonly DirectoryInfo localDirectory = null;	// local directory for the user data
@@ -497,7 +497,7 @@ namespace TecWare.PPSn
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		public PpsEnvironment(PpsEnvironmentInfo info, ICredentials userInfo, ResourceDictionary mainResources)
+		public PpsEnvironment(PpsEnvironmentInfo info, NetworkCredential userInfo, ResourceDictionary mainResources)
 			: base(new Lua())
 		{
 			if (info == null)

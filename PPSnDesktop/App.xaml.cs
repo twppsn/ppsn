@@ -23,7 +23,7 @@ namespace TecWare.PPSn
 
 		#region -- OnStartup, OnExit ------------------------------------------------------
 
-		public async Task<bool> StartApplicationAsync(PpsEnvironmentInfo _environment = null, ICredentials _userInfo = null)
+		public async Task<bool> StartApplicationAsync(PpsEnvironmentInfo _environment = null, NetworkCredential _userInfo = null)
 		{
 			var environment = _environment;
 			var userInfo = _userInfo;
@@ -35,9 +35,11 @@ namespace TecWare.PPSn
 			// show a login/splash
 			var splashWindow = await Dispatcher.InvokeAsync(() =>
 				{
-					var w = new PpsSplashWindow();
-					w.Owner = currentEnvironment?.GetWindows().FirstOrDefault();
-					w.StatusText = PPSn.Properties.Resources.AppStartApplicationAsyncInitApp;
+					var w = new PpsSplashWindow()
+					{
+						Owner = currentEnvironment?.GetWindows().FirstOrDefault(),
+						StatusText = PPSn.Properties.Resources.AppStartApplicationAsyncInitApp
+					};
 					w.Show();
 					return w;
 				}
@@ -147,147 +149,58 @@ namespace TecWare.PPSn
 				);
 			else
 			{
-				PpsEnvironmentInfo environment = null;
-				var userName = String.Empty;
-				var userPass = String.Empty;
-				var autoLogin = false;
-				var peiList = PpsEnvironmentInfo.GetLocalEnvironments().ToArray();
-				foreach (var arg in e.Args)
-					if (arg.StartsWith("-"))
-					{
-						var cmd = arg[1];
-						switch (cmd)
-						{
-							case 'm':
-								foreach (var env in peiList)
-									if (env.LocalPath.FullName == arg.Substring(2))
-										environment = env;
-								break;
-							case 'l':
-								foreach (var env in peiList)
-									if (env.Uri?.ToString() == arg.Substring(2))
-										environment = env;
-								break;
-							case 'u':
-								userName = arg.Substring(2);
-								break;
-							case 'p':
-								userPass = arg.Substring(2);
-								break;
-							case 'a':
-								autoLogin = true;
-								break;
-						}
-					}
-				ICredentials userCred;
-				using (var pcl = new PpsClientLogin(environment.Uri.ToString(), "", false))
-					userCred = (NetworkCredential)pcl.GetCredentials();
+				ParseArguments(e, out var environment, out var userCred);
 				Task.Run(() =>
 				{
-					StartApplicationAsync(_environment: environment, _userInfo: String.IsNullOrWhiteSpace(userName) ? (autoLogin ? userCred : null) : new NetworkCredential(userName, userPass))
-					.ContinueWith(t =>
-					{
-						if (!t.Result)
-							Dispatcher.Invoke(Shutdown);
-					}
-				);
+					StartApplicationAsync(environment, userCred)
+						.ContinueWith(t =>
+						{
+							if (!t.Result)
+								Dispatcher.Invoke(Shutdown);
+						}
+					);
 				}
-			);
+				);
 			}
-			//var environment = PpsEnvironment.
-			//ShutdownMode = ShutdownMode.OnExplicitShutdown; // set shutdown to explicit
-
-
-
-			//private async Task<PpsMainEnvironment> ReloadApplicationAsync()
-			//{
-			//	// create an new environment in the ui-thread
-			//	var env = Dispatcher.Invoke(new Func<PpsMainEnvironment>(() => new PpsMainEnvironment(
-			//		PpsEnvironmentInfo.CreateEnvironment(Settings.Default.ServerName, new Uri(Settings.Default.ServerUri, UriKind.Absolute)),
-			//		this
-			//	)));
-
-			//	// load the offline part from the cache, if it is possible
-			//	var relyOnServer = false;
-			//	try
-			//	{
-			//		await env.RefreshAsync();
-			//	}
-			//	catch (Exception e) // offline part failed
-			//	{
-			//		relyOnServer = true;
-			//		await env.ShowExceptionAsync(ExceptionShowFlags.None, e, "Start der Anwendung fehlgeschlagen. Es wird versucht eine gültige Version vom Server zu laden.");
-			//	}
-
-			//	// go online and sync data from the server to client
-			//	if (Settings.Default.AutoOnlineMode || relyOnServer)
-			//	{
-			//		var cancellationSource = new CancellationTokenSource(30000);
-			//		bool onlineSuccess;
-			//		try
-			//		{
-			//			onlineSuccess = await env.StartOnlineMode(cancellationSource.Token); // does the online refresh again
-			//		}
-			//		catch (Exception) 
-			//		{
-			//			if (!env.IsOnline) // failed to go online -> shutdown
-			//				throw;
-			//			else
-			//				onlineSuccess = true;
-			//		}
-
-			//		if (onlineSuccess)
-			//			await env.LoginUserAsync(); // does the online refresh (last step)
-			//		else if (relyOnServer)
-			//			throw new Exception("Invalid client data. Server connection failed.");
-			//	}
-
-			//	return env;
-			//} // proc ReloadApplicationAsync
-
-			//// Load the environment
-			//ReloadApplicationAsync()
-			//	.ContinueWith(async t =>
-			//		{
-			//			try
-			//			{
-			//				SetEnvironment(t.Result);
-
-			//				if (currentEnvironment != null)
-			//				{
-			//					await currentEnvironment.CreateMainWindowAsync();
-			//					// first window is created -> change shutdown mode
-			//					await Dispatcher.InvokeAsync(() => { ShutdownMode = ShutdownMode.OnLastWindowClose; });
-
-			//					foreach (var k in this.Resources.Keys)
-			//					{
-			//						Debug.Print("({0}) {1}", k.GetType().Name, k.ToString());
-			//						var v = this.Resources[k];
-			//						if (v is Style)
-			//							Debug.Print("  ==> Style: {0}", ((Style)v).TargetType.Name);
-			//						else
-			//							Debug.Print("  ==> {0}", v.GetType().Name);
-			//					}
-			//				}
-			//				else
-			//				{
-			//					Dispatcher.Invoke(() => Shutdown(1));// cancel
-			//				}
-			//			}
-			//			catch (Exception ex)
-			//			{
-			//				Dispatcher.Invoke(() =>
-			//					{
-			//						if (PpsEnvironment.ShowExceptionDialog(null, ExceptionShowFlags.Shutown, ex, "Anwendung konnte nicht geladen werden."))
-			//							CoreExceptionHandler(ex);
-			//						Shutdown(1);
-			//					}
-			//				);
-			//			}
-			//		});
-
 			base.OnStartup(e);
 		} // proc OnStartup
+
+		private static void ParseArguments(StartupEventArgs e, out PpsEnvironmentInfo environment, out NetworkCredential userCred)
+		{
+			var userName = (string)null;
+			var userPass = (string)null;
+
+			environment = null;
+			userCred = (NetworkCredential)null;
+			
+			var environmentsInfos = PpsEnvironmentInfo.GetLocalEnvironments().ToArray();
+			foreach (var arg in e.Args)
+			{
+				if (arg.Length > 1 && arg[0] == '-')
+				{
+					var cmd = arg[1];
+					switch (cmd)
+					{
+						case 'u':
+							userName = arg.Substring(2);
+							break;
+						case 'p':
+							userPass = arg.Substring(2);
+							break;
+						case 'a':
+							environment = environmentsInfos.FirstOrDefault(c => String.Compare(c.Name, 0, arg, 2, Math.Max(c.Name.Length, arg.Length), StringComparison.OrdinalIgnoreCase) == 0);
+
+							// load user name
+							using (var pcl = new PpsClientLogin("ppsn_env:" + environment.Uri.ToString(), "", false))
+								userCred = (NetworkCredential)pcl.GetCredentials();
+							break;
+					}
+				}
+			}
+
+			if (userName != null)
+				userCred = new NetworkCredential(userName, userPass);
+		} // func ParseArguments
 
 		private static void CoreExceptionHandler(Exception ex)
 		{

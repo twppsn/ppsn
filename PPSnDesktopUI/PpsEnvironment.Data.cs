@@ -1783,7 +1783,7 @@ namespace TecWare.PPSn
 			} // ctor
 
 			public override Stream GetResponseStream()
-				=> base.GetResponseStream(); // create a new stream
+				=> new CacheResponseStream(resultStream); // create a new stream
 
 			public override WebHeaderCollection Headers => headers;
 
@@ -2125,6 +2125,34 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- class CredentialWrapper ----------------------------------------------
+
+		private sealed class CredentialWrapper : ICredentials
+		{
+			private readonly NetworkCredential userInfo;
+
+			public CredentialWrapper(NetworkCredential userInfo)
+			{
+				this.userInfo = userInfo;
+			} // ctor
+
+			public NetworkCredential GetCredential(Uri uri, string authType)
+			{
+				if (userInfo == CredentialCache.DefaultCredentials
+					|| userInfo == CredentialCache.DefaultNetworkCredentials)
+					return userInfo;
+				else if (String.IsNullOrEmpty(userInfo.Domain))
+				{
+					// force basic, if we have no domain
+					return String.Compare(authType, "basic", StringComparison.OrdinalIgnoreCase) == 0 ? userInfo : null;
+				}
+				else
+					return userInfo;
+			} // func GetCredential
+		} // class CredentialWrapper
+
+		#endregion
+
 		#region -- class KnownDataSetDefinition -------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
@@ -2436,7 +2464,7 @@ namespace TecWare.PPSn
 			// build the remote request with absolute uri and credentials
 			var absoluteUri = new Uri(info.Uri, relativeUri);
 			var request = WebRequest.Create(absoluteUri);
-			request.Credentials = userInfo; // override the current credentials
+			request.Credentials = new CredentialWrapper(userInfo); // override the current credentials
 
 			Debug.Print($"WebRequest: {absoluteUri}");
 

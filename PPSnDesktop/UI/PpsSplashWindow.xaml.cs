@@ -22,7 +22,7 @@ namespace TecWare.PPSn.UI
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
-		public sealed class LoginStateData : INotifyPropertyChanged
+		public sealed class LoginStateData : INotifyPropertyChanged, IDisposable
 		{
 			public event PropertyChangedEventHandler PropertyChanged;
 
@@ -30,24 +30,33 @@ namespace TecWare.PPSn.UI
 
 			private PpsEnvironmentInfo[] environments = null;
 			private PpsEnvironmentInfo currentEnvironment = null;
-			
+			private PpsClientLogin currentLogin = null;
+			private bool passwordHasChanged = false;
+
 			public LoginStateData(PpsSplashWindow parent)
 			{
 				this.parent = parent;
 			} // ctor
 
+			public void Dispose()
+			{
+				currentLogin?.Dispose();
+			} // proc Dispose
+
 			private void OnPropertyChanged(string propertyName)
 				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-			public ICredentials GetCredentials()
+			public NetworkCredential GetCredentials()
 			{
-				if (IsDomainName(defaultUser.UserName))
-					return CredentialCache.DefaultNetworkCredentials;
+				if (currentLogin == null)
+					return null;
 
-				if (parent.pbPassword.Password == "tecware-gmbh.de")
-					return defaultUser;
-				else
-					return new NetworkCredential(defaultUser.UserName, parent.pbPassword.SecurePassword);
+				// update password
+				if (HasParentPassword && passwordHasChanged)
+					currentLogin.SetPassword(parent.pbPassword.SecurePassword);
+				currentLogin.Commit();
+
+				return currentLogin.GetCredentials();
 			} // func GetCredentials
 
 			public void RefreshEnvironments(PpsEnvironmentInfo selectEnvironment)
@@ -76,94 +85,92 @@ namespace TecWare.PPSn.UI
 					if (currentEnvironment != value)
 					{
 						currentEnvironment = value;
-						OnPropertyChanged(nameof(CurrentEnvironment));
-						OnPropertyChanged(nameof(IsUserNameEnabled));
 
 						if (currentEnvironment?.Uri != null)
 						{
-							var cred = LoadUserCredentials(currentEnvironment.Uri.ToString());
-							DefaultUser = cred;
-							if (cred != null)
-							{
-								SavePassword = true;
-								OnPropertyChanged(nameof(SavePassword));
-							}
+							// change login
+							currentLogin?.Dispose();
+							currentLogin = new PpsClientLogin("ppsn_env:" + currentEnvironment.Uri.ToString(), currentEnvironment.Name, false);
+
+							// currect save options
+							if (currentLogin.SaveOptions == PpsClientLoginSaveOptions.None)
+								currentLogin.SaveOptions = PpsClientLoginSaveOptions.UserName; // at least write a username
+
+							// set dummy password
+							if (currentLogin.PasswordLength > 0)
+								parent.pbPassword.Password = new string('\x01', currentLogin.PasswordLength);
+							passwordHasChanged = false;
 						}
 
+						// mark properties as changed
+						OnPropertyChanged(nameof(CurrentEnvironment));
+						OnPropertyChanged(nameof(UserName));
+						OnPropertyChanged(nameof(SavePassword));
+
+						OnPropertyChanged(nameof(IsUserNameEnabled));
+						OnPropertyChanged(nameof(IsPasswordEnabled));
+						OnPropertyChanged(nameof(IsValid));
 					}
 				}
 			} // prop CurrentEnvironment
 
-			private NetworkCredential defaultUser;
-			public NetworkCredential DefaultUser
-			{
-				get
-				{
-					return defaultUser;
-				}
-				set
-				{
-					defaultUser = value;
-
-					if (defaultUser?.SecurePassword?.Length > 0 && !IsDomainName(defaultUser?.UserName))
-						parent.pbPassword.Password = "tecware-gmbh.de";
-					else parent.pbPassword.Password = String.Empty;
-					OnPropertyChanged(nameof(UserName));
-					OnPropertyChanged(nameof(IsPasswordEnabled));
-					OnPropertyChanged(nameof(IsValid));
-				}
-			}
-
 			public string UserName
 			{
-				get
-				{
-					if (defaultUser != null)
-						return defaultUser.UserName;
-					return String.Empty;
-				}
+				get => currentLogin?.UserName;
 				set
 				{
-					var uriCredential = LoadUserCredentials(currentEnvironment.Uri.ToString());
-					if (value != uriCredential?.UserName)
-						DefaultUser = new NetworkCredential(value, "");
-					else DefaultUser = uriCredential;
-					OnPropertyChanged(nameof(IsValid));
+					if (currentLogin != null)
+					{
+						currentLogin.UserName = value;
+						if (currentLogin.IsDefaultUserName) // clear password
+							parent.pbPassword.Password = String.Empty;
+
+						OnPropertyChanged(nameof(UserName));
+						OnPropertyChanged(nameof(IsPasswordEnabled));
+					}
 				}
-			}
+			} // prop UserName
 
-			private static NetworkCredential LoadUserCredentials(string uri)
+			public void Validate(bool passwordHasChanged)
 			{
-				NetworkCredential userCred;
-				using (var pcl = new PpsClientLogin(uri, "", false))
-					userCred = (NetworkCredential)pcl.GetCredentials();
-				if (userCred != null && !String.IsNullOrEmpty(userCred.Domain))
-					userCred.UserName = userCred.Domain + "\\" + userCred.UserName;
-				return userCred;
-			}
+				if (passwordHasChanged)
+					this.passwordHasChanged = passwordHasChanged;
+				OnPropertyChanged(nameof(IsValid));
+			} // proc Validate
 
-			public bool IsValid => IsUserNameEnabled && !String.IsNullOrEmpty(UserName) && !IsPasswordEnabled || parent.pbPassword.Password.Length > 0;
-			public bool IsUserNameEnabled => currentEnvironment?.Uri != null;
-			public bool IsPasswordEnabled => !IsDomainName(defaultUser != null ? defaultUser.UserName : String.Empty) && IsUserNameEnabled;
-			public void Validate() => OnPropertyChanged(nameof(IsValid));
-			private bool savePassword = false;
-			public bool SavePassword { get { return savePassword; } set { savePassword = value; } }
+			public bool IsUserNameEnabled => currentLogin != null;
+			public bool IsPasswordEnabled => currentLogin != null && !currentLogin.IsDefaultUserName;
+
+			public bool HasParentPassword => parent.pbPassword.SecurePassword != null && parent.pbPassword.SecurePassword.Length > 0;
+
+			public bool IsValid => currentLogin != null && (currentLogin.IsDefaultUserName || HasParentPassword);
+
+			public bool SavePassword
+			{
+				get => currentLogin?.SaveOptions == PpsClientLoginSaveOptions.Password;
+				set
+				{
+					if (currentLogin != null)
+						currentLogin.SaveOptions = value
+							? PpsClientLoginSaveOptions.Password
+							: PpsClientLoginSaveOptions.UserName;
+				}							
+			} // prop SavePassword
+
 			private string newEnvironmentName = String.Empty;
 			public string NewEnvironmentName { get { return newEnvironmentName; } set { this.newEnvironmentName = value; } }
 			private string newEnvironmentUri = String.Empty;
 			public string NewEnvironmentUri { get { return newEnvironmentUri; } set { this.newEnvironmentUri = value; } }
 			public bool NewEnvironmentIsValid => !String.IsNullOrWhiteSpace(NewEnvironmentName) && Uri.IsWellFormedUriString(NewEnvironmentUri, UriKind.Absolute);   //ToDo: check if that Environment already exists!
-			private static bool IsDomainName(string userName) => String.Compare(userName, System.Environment.UserDomainName + "\\" + System.Environment.UserName, true) == 0;
 		} // class LoginStateData
 
 		#endregion
 
 		private readonly static DependencyPropertyKey loginStatePropertyKey = DependencyProperty.RegisterReadOnly(nameof(LoginState), typeof(LoginStateData), typeof(PpsSplashWindow), new PropertyMetadata(null));
 
-		public readonly static DependencyProperty InErrorProperty = DependencyProperty.Register(nameof(InError), typeof(bool), typeof(PpsSplashWindow));
 		public readonly static DependencyProperty StatusTextProperty = DependencyProperty.Register(nameof(StatusText), typeof(string), typeof(PpsSplashWindow));
 		public readonly static DependencyProperty ErrorTextProperty = DependencyProperty.Register(nameof(ErrorText), typeof(string), typeof(PpsSplashWindow));
-		public readonly static DependencyProperty ActivePageProperty = DependencyProperty.Register(nameof(ActivePage), typeof(int), typeof(PpsSplashWindow));
+		public readonly static DependencyProperty ActivePageNumProperty = DependencyProperty.Register(nameof(ActivePageNum), typeof(int), typeof(PpsSplashWindow));
 		public readonly static DependencyProperty LoginStateProperty = loginStatePropertyKey.DependencyProperty;
 
 		private readonly LoginStateData loginStateUnSafe;
@@ -183,31 +190,30 @@ namespace TecWare.PPSn.UI
 				new CommandBinding[]
 				{
 					new CommandBinding(ApplicationCommands.New, CreateNewEnvironment, LoginFrameActive),
-					new CommandBinding(ApplicationCommands.Save, ExecuteFrame, 
-						(sender, e) => 
+					new CommandBinding(ApplicationCommands.Save, ExecuteFrame,
+						(sender, e) =>
 						{
-							e.CanExecute = ((int)GetValue(ActivePageProperty) == 1 && loginStateUnSafe.NewEnvironmentIsValid)
-								|| ((int)GetValue(ActivePageProperty) == 2 && loginStateUnSafe.IsValid); e.Handled = true;
+							e.CanExecute = (ActivePage == Panes.NewEnvironment && loginStateUnSafe.NewEnvironmentIsValid)
+								|| (ActivePage == Panes.Login && loginStateUnSafe.IsValid); e.Handled = true;
 						}
 					),
 					new CommandBinding(ApplicationCommands.Close, CloseFrame, LoginFrameActive),
-					new CommandBinding(EnterKeyCommand, 
+					new CommandBinding(EnterKeyCommand,
 						(sender, e) => EnterKey(sender, e)
 					),
-					new CommandBinding(PressedKeyCommand, 
-						(sender, e) =>loginStateUnSafe.Validate()
+					new CommandBinding(PressedKeyCommand,
+						(sender, e) => loginStateUnSafe.Validate(false)
 					),
-					new CommandBinding(ReStartCommand, 
-						(sender, e) =>
+					new CommandBinding(ReStartCommand,
+						(sender, e) =>						
 						{
-							SetValue(InErrorProperty,false);
 							ActivePage = Panes.Login;
 						}
 					)
 				}
 			);
 
-			ActivePage = 0; ;
+			ActivePage = Panes.Status;
 			SetValue(loginStatePropertyKey, loginStateUnSafe = new LoginStateData(this));
 
 			this.DataContext = this;
@@ -222,8 +228,16 @@ namespace TecWare.PPSn.UI
 			}
 			else
 				e.Cancel = !allowClose;
+
+
 			base.OnClosing(e);
 		} // proc OnClosing
+
+		protected override void OnClosed(EventArgs e)
+		{
+			base.OnClosed(e);
+			loginStateUnSafe?.Dispose();
+		} // proc Dispose
 
 		public void ForceClose()
 		{
@@ -247,7 +261,6 @@ namespace TecWare.PPSn.UI
 			e.Handled = true;
 		} // proc CreateNewEnvironment
 
-
 		private void ExecuteFrame(object sender, ExecutedRoutedEventArgs e)
 		{
 			if (ActivePage == Panes.Login && loginStateUnSafe.IsValid)
@@ -266,8 +279,10 @@ namespace TecWare.PPSn.UI
 
 		private void SaveEnvironment()
 		{
-			var newEnv = new PpsEnvironmentInfo(loginStateUnSafe.NewEnvironmentName);
-			newEnv.Uri = new Uri(loginStateUnSafe.NewEnvironmentUri);
+			var newEnv = new PpsEnvironmentInfo(loginStateUnSafe.NewEnvironmentName)
+			{
+				Uri = new Uri(loginStateUnSafe.NewEnvironmentUri)
+			};
 			newEnv.Save();
 			loginStateUnSafe.RefreshEnvironments(newEnv);
 			ActivePage = Panes.Login;
@@ -299,10 +314,11 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc CloseLoginFrame
 
-		private Tuple<PpsEnvironmentInfo, ICredentials> ShowLogin()
+		private Tuple<PpsEnvironmentInfo, NetworkCredential> ShowLogin()
 		{
-			if (!(bool)GetValue(InErrorProperty))
+			if (ActivePage != Panes.Error && ActivePage != Panes.Login)
 				ActivePage = Panes.Login;
+
 			try
 			{
 				if (loginFrame != null)
@@ -315,34 +331,7 @@ namespace TecWare.PPSn.UI
 				loginFrame = null;
 
 				if (dialogResult && loginStateUnSafe.IsValid)
-				{
-					if (loginStateUnSafe.SavePassword)
-						using (var plc = new PpsClientLogin(loginStateUnSafe.CurrentEnvironment.Uri.ToString(), "", false))
-						{
-							var newCreds = (NetworkCredential)loginStateUnSafe.GetCredentials();
-
-							plc.UserName = newCreds.UserName;
-
-							//if the app is here and the username is empty a System.Net.SystemNetworkCredential was passed where the username can't be read
-							if (String.IsNullOrWhiteSpace(plc.UserName))
-							{
-								plc.UserName = Environment.UserDomainName + "\\" + Environment.UserName;
-								var emptyPass = new SecureString();
-								emptyPass.AppendChar(' ');
-								plc.SetPassword(emptyPass);
-							}
-
-							var a = new SecureString();
-
-							if (newCreds.SecurePassword.Length > 0)
-								plc.SetPassword(newCreds.SecurePassword);
-							plc.Save = true;
-
-							plc.Commit();
-						}
-
-					return new Tuple<PpsEnvironmentInfo, ICredentials>(loginStateUnSafe.CurrentEnvironment, loginStateUnSafe.GetCredentials());
-				}
+					return new Tuple<PpsEnvironmentInfo, NetworkCredential>(loginStateUnSafe.CurrentEnvironment, loginStateUnSafe.GetCredentials());
 				else
 					return null;
 			}
@@ -352,12 +341,12 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc ShowLogin
 
-		public async Task<Tuple<PpsEnvironmentInfo, ICredentials>> ShowLoginAsync(PpsEnvironmentInfo selectEnvironment, ICredentials userInfo = null)
+		public async Task<Tuple<PpsEnvironmentInfo, NetworkCredential>> ShowLoginAsync(PpsEnvironmentInfo selectEnvironment, NetworkCredential userInfo = null)
 		{
 			loginStateUnSafe.RefreshEnvironments(selectEnvironment);
 
 			if (userInfo != null)
-				Dispatcher.Invoke(()=> loginStateUnSafe.UserName = ((NetworkCredential)userInfo).UserName);
+				Dispatcher.Invoke(() => loginStateUnSafe.UserName = userInfo.UserName);
 
 			return await Dispatcher.InvokeAsync(ShowLogin);
 		} // func ShowLoginAsync
@@ -379,11 +368,9 @@ namespace TecWare.PPSn.UI
 		private void SetError(object errorInfo)
 		{
 			if (errorInfo is Exception) // show exception
-			{
 				errorInfo = ((Exception)errorInfo).Message;
-			}
+
 			SetValue(ErrorTextProperty, errorInfo);
-			SetValue(InErrorProperty, true);
 			ActivePage = Panes.Error;
 		} // proc SetError
 
@@ -400,25 +387,19 @@ namespace TecWare.PPSn.UI
 		public string StatusText
 		{
 			get { return (string)GetValue(StatusTextProperty); }
-			set
-			{
-				SetValue(StatusTextProperty, value);
-				ActivePage = Panes.Status;
-			}
-		}
+			set { SetValue(StatusTextProperty, value); }
+		} // prop StatusText
+
 		public string ErrorText
 		{
 			get { return (string)GetValue(ErrorTextProperty); }
-			set
-			{
-				SetValue(ErrorTextProperty, value);
-				ActivePage = Panes.Error;
-			}
-		}
+			set { SetValue(ErrorTextProperty, value); }
+		} // prop ErrorText
 
-		public bool InError { get { return (bool)GetValue(InErrorProperty); } set { SetValue(InErrorProperty, value); } }
 		public LoginStateData LoginState => (LoginStateData)GetValue(LoginStateProperty);
-		public Panes ActivePage { get { return (Panes)GetValue(ActivePageProperty); } set { SetValue(ActivePageProperty, (int)value); } }
+
+		public int ActivePageNum { get => (int)GetValue(ActivePageNumProperty); set => SetValue(ActivePageNumProperty, (int)value); }
+		public Panes ActivePage { get => (Panes)ActivePageNum; set => ActivePageNum = (int)value; }
 
 		private void Window_Drag(object sender, MouseButtonEventArgs e)
 		{
@@ -452,6 +433,6 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		private void PasswordChanged(object sender, RoutedEventArgs e)
-			=> loginStateUnSafe.Validate();
+			=> loginStateUnSafe.Validate(true);
 	} // class PpsSplashWindow
 }

@@ -22,6 +22,17 @@ using System.Text;
 
 namespace TecWare.PPSn.Data
 {
+	#region -- enum PpsClientLoginSaveOptions -------------------------------------------
+
+	public enum PpsClientLoginSaveOptions
+	{
+		None = 0,
+		UserName = 1,
+		Password = 2
+	} // enum PpsClientLoginSaveOptions
+
+	#endregion
+
 	#region -- class PpsClientLogin -----------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -36,7 +47,7 @@ namespace TecWare.PPSn.Data
 		private IntPtr password = IntPtr.Zero;
 		private int passwordLength = 0;
 
-		private bool doSave;		//
+		private PpsClientLoginSaveOptions saveOptions = PpsClientLoginSaveOptions.None;
 		private bool isLoaded;	// is the credential blob loaded
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
@@ -47,8 +58,7 @@ namespace TecWare.PPSn.Data
 			this.realm = realm;
 			this.showErrorMessage = showErrorMessage;
 
-			IntPtr pCred;
-			if (NativeMethods.CredRead(target, NativeMethods.CredentialType.Generic, 0, out pCred))
+			if (NativeMethods.CredRead(target, NativeMethods.CredentialType.Generic, 0, out var pCred))
 			{
 				credential = Marshal.PtrToStructure<NativeMethods.CREDENTIAL>(pCred);
 
@@ -61,12 +71,14 @@ namespace TecWare.PPSn.Data
 
 				NativeMethods.CredFree(pCred);
 				isLoaded = true;
-				doSave = true;
+				saveOptions = passwordLength > 0 
+					? PpsClientLoginSaveOptions.Password 
+					: PpsClientLoginSaveOptions.UserName;
 			}
 			else
 			{
 				isLoaded = false;
-				doSave = false;
+				saveOptions = PpsClientLoginSaveOptions.None;
 			}
 		} // ctor
 
@@ -89,14 +101,23 @@ namespace TecWare.PPSn.Data
 		/// <summary>Commit the login-cache</summary>
 		public void Commit()
 		{
-			if (doSave && !String.IsNullOrEmpty(credential.UserName))
+			if (saveOptions != PpsClientLoginSaveOptions.None && TryParseUserName(out var domainName, out var userName, out var isDefaultUser))
 			{
 				credential.Flags = 0;
 				credential.Type = NativeMethods.CredentialType.Generic;
 				credential.TargetName = target;
+				credential.UserName = String.IsNullOrEmpty(domainName) ? userName : domainName + "\\" + userName;
 
-				credential.CredentialBlob = password;
-				credential.CredentialBlobSize = (passwordLength << 1) + 2;
+				if (saveOptions == PpsClientLoginSaveOptions.Password && !isDefaultUser)
+				{
+					credential.CredentialBlob = password;
+					credential.CredentialBlobSize = (passwordLength << 1) + 2;
+				}
+				else
+				{
+					credential.CredentialBlob = IntPtr.Zero;
+					credential.CredentialBlobSize = 0;
+				}
 
 				if (!isLoaded)
 				{
@@ -174,6 +195,7 @@ namespace TecWare.PPSn.Data
 
 				// show the dialog
 				var flags = NativeMethods.CredUIFlags.Generic | NativeMethods.CredUIFlags.CheckBox;
+				var doSave = saveOptions != PpsClientLoginSaveOptions.None;
 				hr = NativeMethods.CredUIPromptForWindowsCredentials(ref info, authentifactionError, ref dwAuthPackage, inCredBuffer, inCredBufferSize, out outCredBuffer, out outCredBufferSize, ref doSave, flags);
 				if (hr != 0)
 				{
@@ -182,6 +204,7 @@ namespace TecWare.PPSn.Data
 					else
 						throw new Win32Exception(hr);
 				}
+				saveOptions = doSave ? PpsClientLoginSaveOptions.Password : PpsClientLoginSaveOptions.None;
 
 				// unpack the result
 				var userName = new StringBuilder(NativeMethods.CREDUI_MAX_USERNAME_LENGTH);
@@ -248,7 +271,7 @@ namespace TecWare.PPSn.Data
 			if (password != IntPtr.Zero)
 				Marshal.ZeroFreeCoTaskMemUnicode(password);
 
-			if (newPassword.Length > 0)
+			if (newPassword != null && newPassword.Length > 0)
 			{
 				password = Marshal.SecureStringToCoTaskMemUnicode(newPassword);
 				passwordLength = newPassword.Length;
@@ -267,28 +290,62 @@ namespace TecWare.PPSn.Data
 				new SecureString((char*)password.ToPointer(), passwordLength) :
 				null;
 
-		/// <summary>Get the credentilas, as <c>NetworkCredential</c>.</summary>
-		/// <returns></returns>
-		public ICredentials GetCredentials()
+		public void SetCredentials(NetworkCredential credentials)
 		{
+			if (credentials == CredentialCache.DefaultNetworkCredentials
+				|| credentials == CredentialCache.DefaultCredentials)
+			{
+				UserName = Environment.UserDomainName + "\\" + Environment.UserName;
+				SetPassword(null);
+			}
+			else // all other authentificiations
+			{
+				UserName = credentials.UserName;
+				SetPassword(credentials.SecurePassword);
+			}
+		} // proc SetCredentials
+
+		private bool TryParseUserName(out string domainName, out string userName, out bool isDefaultUser)
+		{
+			domainName = null;
+			userName = null;
+			isDefaultUser = false;
+
 			if (String.IsNullOrEmpty(credential.UserName))
-				return null;
+				return false;
 
 			// Parse den Namen
-			var userName = new StringBuilder(NativeMethods.CREDUI_MAX_USERNAME_LENGTH);
-			var domainName = new StringBuilder(NativeMethods.CREDUI_MAX_USERNAME_LENGTH);
-			var hr = NativeMethods.CredUIParseUserName(credential.UserName, userName, userName.Capacity, domainName, domainName.Capacity);
+			var userNameBuilder = new StringBuilder(NativeMethods.CREDUI_MAX_USERNAME_LENGTH);
+			var domainNameBuilder = new StringBuilder(NativeMethods.CREDUI_MAX_USERNAME_LENGTH);
+			var hr = NativeMethods.CredUIParseUserName(credential.UserName, userNameBuilder, userNameBuilder.Capacity, domainNameBuilder, domainNameBuilder.Capacity);
 			if (hr == 1315)
 			{
-				userName.Clear();
-				userName.Append(credential.UserName);
-				domainName.Clear();
+				userNameBuilder.Clear();
+				userNameBuilder.Append(credential.UserName);
+				domainNameBuilder.Clear();
 			}
 			else if (hr != 0)
 				throw new Win32Exception();
 
-			// Gib die Credentials zurück
-			return new NetworkCredential(userName.ToString(), GetPassword(), domainName.ToString());
+			domainName = domainNameBuilder.ToString();
+			userName = userNameBuilder.ToString();
+
+			isDefaultUser = String.Compare(domainName, Environment.UserDomainName, StringComparison.OrdinalIgnoreCase) == 0
+				&& String.Compare(userName, Environment.UserName, StringComparison.OrdinalIgnoreCase) == 0;
+
+			return true;
+		} // TryParseUserName
+
+		/// <summary>Get the credentilas, as <c>NetworkCredential</c>.</summary>
+		/// <returns></returns>
+		public NetworkCredential GetCredentials()
+		{
+			if (TryParseUserName(out var domainName, out var userName, out var isDefaultUser))
+				return isDefaultUser
+						? CredentialCache.DefaultNetworkCredentials
+						: new NetworkCredential(userName, GetPassword(), domainName);
+			else
+				return null;
 		} // func GetCredentials
 
 		#endregion
@@ -302,11 +359,14 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>User name</summary>
 		public string UserName { get { return credential.UserName; } set { credential.UserName = value; } }
-		/// <summary>Is a password set.</summary>
-		public bool HasPassword => credential.CredentialBlob != IntPtr.Zero;
+		/// <summary>Returns the password length.</summary>
+		public int PasswordLength => passwordLength;
 
+		/// <summary>Is this the current user name</summary>
+		public bool IsDefaultUserName => TryParseUserName(out var t1, out var t2, out var isDefaultUserName) && isDefaultUserName;
+		
 		/// <summary>State of the save check box.</summary>
-		public bool Save { get { return doSave; } set { doSave = value; } }
+		public PpsClientLoginSaveOptions SaveOptions { get => saveOptions; set => saveOptions = value; }
 		/// <summary>Is the data loaded.</summary>
 		public bool IsLoaded => isLoaded;
 	} // class PpsClientLogin
