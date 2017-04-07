@@ -90,8 +90,8 @@ namespace TecWare.PPSn.Server.Sql
 						connectionString.IntegratedSecurity = true;
 						connection.ConnectionString = connectionString.ToString();
 
-						//using (identity.SystemIdentity.Impersonate()) todo: Funktioniert nur als ADMIN?
-						connection.Open();
+						using (identity.SystemIdentity.Impersonate()) // is only functional in the admin context
+							connection.Open();
 					}
 					return true;
 				}
