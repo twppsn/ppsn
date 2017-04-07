@@ -58,10 +58,10 @@ namespace TecWare.PPSn.UI
 						environments = tmp;
 						OnPropertyChanged(nameof(Environments));
 
-						if (environments.Length == 1)
-							CurrentEnvironment = environments[0];
-						else if (environments.Contains(selectEnvironment))
+						if (environments.Contains(selectEnvironment))
 							CurrentEnvironment = selectEnvironment;
+						else if (environments.Length > 0)
+							CurrentEnvironment = environments[0];
 					}
 				);
 			} // proc RefreshEnvironments
@@ -96,11 +96,12 @@ namespace TecWare.PPSn.UI
 				{
 					defaultUser = value;
 
-					if (defaultUser?.SecurePassword?.Length > 0)
+					if (defaultUser?.SecurePassword?.Length > 0 && !IsDomainName(defaultUser?.UserName))
 						parent.pbPassword.Password = "tecware-gmbh.de";
 					else parent.pbPassword.Password = String.Empty;
 					OnPropertyChanged(nameof(UserName));
 					OnPropertyChanged(nameof(IsPasswordEnabled));
+					OnPropertyChanged(nameof(IsPasswordSaveEnabled));
 					OnPropertyChanged(nameof(IsValid));
 				}
 			}
@@ -136,22 +137,17 @@ namespace TecWare.PPSn.UI
 			public bool IsValid => IsUserNameEnabled && !String.IsNullOrEmpty(UserName) && !IsPasswordEnabled || parent.pbPassword.Password.Length > 0;
 			public bool IsUserNameEnabled => currentEnvironment?.Uri != null;
 			public bool IsPasswordEnabled => !IsDomainName(defaultUser != null ? defaultUser.UserName : String.Empty) && IsUserNameEnabled;
+			public bool IsPasswordSaveEnabled => IsValid;
 			public void Validate() => OnPropertyChanged(nameof(IsValid));
 			private bool savePassword = false;
-			public bool SavePassword
-			{ get { return savePassword; } set { savePassword = value; } }
-			private int activePage = 0;
-			public int ActivePage
-			{ get { return activePage; } set { this.activePage = value; } }
+			public bool SavePassword { get { return savePassword; } set { savePassword = value; } }
 			private string newEnvironmentName = String.Empty;
-			public string NewEnvironmentName
-			{ get { return newEnvironmentName; } set { this.newEnvironmentName = value; } }
+			public string NewEnvironmentName { get { return newEnvironmentName; } set { this.newEnvironmentName = value; } }
 			private string newEnvironmentUri = String.Empty;
-			public string NewEnvironmentUri
-			{ get { return newEnvironmentUri; } set { this.newEnvironmentUri = value; } }
+			public string NewEnvironmentUri { get { return newEnvironmentUri; } set { this.newEnvironmentUri = value; } }
 			public bool NewEnvironmentIsValid => !String.IsNullOrWhiteSpace(NewEnvironmentName) && Uri.IsWellFormedUriString(NewEnvironmentUri, UriKind.Absolute);   //ToDo: check if that Environment already exists!
 			private static bool IsDomainName(string userName)
-				=> userName.StartsWith(System.Environment.UserDomainName + "\\", StringComparison.OrdinalIgnoreCase);
+				=> userName.ToUpper() == (System.Environment.UserDomainName + "\\" + System.Environment.UserName).ToUpper();
 		} // class LoginStateData
 
 		#endregion
@@ -196,7 +192,7 @@ namespace TecWare.PPSn.UI
 						(sender, e) =>
 						{
 							SetValue(InErrorProperty,false);
-							SetValue(ActivePageProperty, 2);
+							ActivePage = 2;
 						},
 						(sender, e) =>
 						{
@@ -206,7 +202,7 @@ namespace TecWare.PPSn.UI
 				}
 			);
 
-			SetValue(ActivePageProperty, 0);
+			ActivePage = 0; ;
 			SetValue(loginStatePropertyKey, loginStateUnSafe = new LoginStateData(this));
 
 			this.DataContext = this;
@@ -242,20 +238,20 @@ namespace TecWare.PPSn.UI
 
 		private void CreateNewEnvironment(object sender, ExecutedRoutedEventArgs e)
 		{
-			SetValue(ActivePageProperty, 1);
+			ActivePage = 1;
 			e.Handled = true;
 		} // proc CreateNewEnvironment
 
 
 		private void ExecuteFrame(object sender, ExecutedRoutedEventArgs e)
 		{
-			if ((int)GetValue(ActivePageProperty) == 2 && loginStateUnSafe.IsValid)
+			if (ActivePage == 2 && loginStateUnSafe.IsValid)
 			{
 				loginFrame.Continue = false;
 				dialogResult = true;
 				e.Handled = true;
 			}
-			else if ((int)GetValue(ActivePageProperty) == 1)
+			else if (ActivePage == 1)
 			{
 				loginFrame.Continue = true;
 				e.Handled = true;
@@ -269,17 +265,17 @@ namespace TecWare.PPSn.UI
 			newEnv.Uri = new Uri(loginStateUnSafe.NewEnvironmentUri);
 			newEnv.Save();
 			loginStateUnSafe.RefreshEnvironments(newEnv);
-			SetValue(ActivePageProperty, 2);
+			ActivePage = 2;
 		}
 
 		private void AbortEnvironment()
 		{
-			SetValue(ActivePageProperty, 2);
+			ActivePage = 2;
 		}
 
 		private void CloseFrame(object sender, ExecutedRoutedEventArgs e)
 		{
-			switch ((int)GetValue(ActivePageProperty))
+			switch (ActivePage)
 			{
 				case 2:
 					{
@@ -301,7 +297,7 @@ namespace TecWare.PPSn.UI
 		private Tuple<PpsEnvironmentInfo, ICredentials> ShowLogin()
 		{
 			if (!(bool)GetValue(InErrorProperty))
-				SetValue(ActivePageProperty, 2);
+				ActivePage = 2;
 			try
 			{
 				if (loginFrame != null)
@@ -321,6 +317,16 @@ namespace TecWare.PPSn.UI
 							var newCreds = (NetworkCredential)loginStateUnSafe.GetCredentials();
 
 							plc.UserName = newCreds.UserName;
+
+							//if the app is here and the username is empty a System.Net.SystemNetworkCredential was passed where the username can't be read
+							if (String.IsNullOrWhiteSpace(plc.UserName))
+							{
+								plc.UserName = Environment.UserDomainName + "\\" + Environment.UserName;
+								var emptyPass = new SecureString();
+								emptyPass.AppendChar(' ');
+								plc.SetPassword(emptyPass);
+							}
+
 							var a = new SecureString();
 
 							if (newCreds.SecurePassword.Length > 0)
@@ -337,7 +343,7 @@ namespace TecWare.PPSn.UI
 			}
 			finally
 			{
-				SetValue(ActivePageProperty, 0);
+				ActivePage = 0;
 			}
 		} // proc ShowLogin
 
@@ -369,11 +375,14 @@ namespace TecWare.PPSn.UI
 		{
 			if (errorInfo is Exception) // show exception
 			{
-				errorInfo = ((Exception)errorInfo).ToString();
+				errorInfo = ((Exception)errorInfo).Message;
 			}
 			SetValue(StatusTextProperty, errorInfo);
-			SetValue(InErrorProperty, true); 
+			SetValue(InErrorProperty, true);
+			//await LoadPaneAsync(Environment.TracePane, PpsOpenPaneMode.NewPane, null);
 		} // proc SetError
+
+		public Visibility ErrorItemsVisibility => Visibility.Visible; //InError ? Visibility.Visible : Visibility.Hidden;
 
 		public async Task SetErrorAsync(object errorInfo)
 		{
@@ -391,13 +400,13 @@ namespace TecWare.PPSn.UI
 			set
 			{
 				SetValue(StatusTextProperty, value);
-				SetValue(ActivePageProperty, 0);
+				ActivePage = 0;
 			}
 		}
 
 		public bool InError { get { return (bool)GetValue(InErrorProperty); } set { SetValue(InErrorProperty, value); } }
 		public LoginStateData LoginState => (LoginStateData)GetValue(LoginStateProperty);
-		public int ActivePage => (int)GetValue(ActivePageProperty);
+		public int ActivePage { get { return (int)GetValue(ActivePageProperty); } set { SetValue(ActivePageProperty, value); } }
 
 		private void Window_Drag(object sender, MouseButtonEventArgs e)
 		{
