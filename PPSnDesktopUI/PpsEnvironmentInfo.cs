@@ -187,7 +187,7 @@ namespace TecWare.PPSn
 					{
 						Debug.Print(e.ToString());
 					}
-					if (localEnvironment != null)
+					if (localEnvironment != null && !String.IsNullOrWhiteSpace(localEnvironment.content.Root.GetAttribute("uri", null)))
 						yield return localEnvironment;
 				}
 			}

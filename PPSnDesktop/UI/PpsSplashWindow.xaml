@@ -93,7 +93,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 							<PasswordBox Grid.Column="0" IsEnabled="{Binding IsPasswordEnabled}" Name="pbPassword" PasswordChanged="PasswordChanged" />
-							<CheckBox Grid.Column="1" VerticalAlignment="Center" IsEnabled="{Binding IsPasswordEnabled}" IsChecked="{Binding SavePassword}"/>
+							<CheckBox Grid.Column="1" VerticalAlignment="Center" IsEnabled="{Binding IsPasswordSaveEnabled}" IsChecked="{Binding SavePassword}"/>
                         </Grid>
 
                         <Button Grid.Column="0" Grid.Row="4" Content="*" Width="23" Height="23" HorizontalAlignment="Left" VerticalAlignment="Bottom" Command="{x:Static ApplicationCommands.New}" />

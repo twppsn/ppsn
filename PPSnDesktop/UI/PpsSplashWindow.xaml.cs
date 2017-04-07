@@ -59,10 +59,10 @@ namespace TecWare.PPSn.UI
 						environments = tmp;
 						OnPropertyChanged(nameof(Environments));
 
-						if (environments.Length == 1)
-							CurrentEnvironment = environments[0];
-						else if (environments.Contains(selectEnvironment))
+						if (environments.Contains(selectEnvironment))
 							CurrentEnvironment = selectEnvironment;
+						else if (environments.Length > 0)
+							CurrentEnvironment = environments[0];
 					}
 				);
 			} // proc RefreshEnvironments
@@ -97,7 +97,7 @@ namespace TecWare.PPSn.UI
 				{
 					defaultUser = value;
 
-					if (defaultUser?.SecurePassword?.Length > 0)
+					if (defaultUser?.SecurePassword?.Length > 0 && !IsDomainName(defaultUser?.UserName))
 						parent.pbPassword.Password = "tecware-gmbh.de";
 					else parent.pbPassword.Password = String.Empty;
 					OnPropertyChanged(nameof(UserName));
@@ -137,6 +137,7 @@ namespace TecWare.PPSn.UI
 			public bool IsValid => IsUserNameEnabled && !String.IsNullOrEmpty(UserName) && !IsPasswordEnabled || parent.pbPassword.Password.Length > 0;
 			public bool IsUserNameEnabled => currentEnvironment?.Uri != null;
 			public bool IsPasswordEnabled => !IsDomainName(defaultUser != null ? defaultUser.UserName : String.Empty) && IsUserNameEnabled;
+			public bool IsPasswordCheckEnabled => true; //!IsDomainName(defaultUser != null ? defaultUser.UserName : String.Empty) && IsUserNameEnabled;
 			public void Validate() => OnPropertyChanged(nameof(IsValid));
 			private bool savePassword = false;
 			public bool SavePassword
@@ -322,6 +323,16 @@ namespace TecWare.PPSn.UI
 							var newCreds = (NetworkCredential)loginStateUnSafe.GetCredentials();
 
 							plc.UserName = newCreds.UserName;
+
+							//if the app is here and the username is empty a System.Net.SystemNetworkCredential was passed where the username can't be read
+							if (String.IsNullOrWhiteSpace(plc.UserName))
+							{
+								plc.UserName = Environment.UserDomainName + "\\" + Environment.UserName;
+								var emptyPass = new SecureString();
+								emptyPass.AppendChar(' ');
+								plc.SetPassword(emptyPass);
+							}
+
 							var a = new SecureString();
 
 							if (newCreds.SecurePassword.Length > 0)
@@ -370,10 +381,11 @@ namespace TecWare.PPSn.UI
 		{
 			if (errorInfo is Exception) // show exception
 			{
-				errorInfo = ((Exception)errorInfo).ToString();
+				errorInfo = ((Exception)errorInfo).Message;
 			}
 			SetValue(StatusTextProperty, errorInfo);
-			SetValue(InErrorProperty, true); 
+			SetValue(InErrorProperty, true);
+			//await LoadPaneAsync(Environment.TracePane, PpsOpenPaneMode.NewPane, null);
 		} // proc SetError
 
 		public async Task SetErrorAsync(object errorInfo)
