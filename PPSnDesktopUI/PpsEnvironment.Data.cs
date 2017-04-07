@@ -1771,6 +1771,7 @@ namespace TecWare.PPSn
 
 			public CacheResponseProxy(Uri responseUri, Stream resultStream, string contentType, WebHeaderCollection headers)
 			{
+				this.responseUri = responseUri;
 				this.resultStream = resultStream ?? throw new ArgumentNullException(nameof(headers));
 				this.contentType = contentType ?? throw new ArgumentNullException(nameof(headers));
 				this.headers = headers ?? throw new ArgumentNullException(nameof(headers));
