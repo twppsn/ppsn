@@ -80,7 +80,16 @@ namespace TecWare.PPSn.UI
 						OnPropertyChanged(nameof(IsUserNameEnabled));
 
 						if (currentEnvironment?.Uri != null)
-							DefaultUser = LoadUserCredentials(currentEnvironment.Uri.ToString());
+						{
+							var cred = LoadUserCredentials(currentEnvironment.Uri.ToString());
+							DefaultUser = cred;
+							if (cred != null)
+							{
+								SavePassword = true;
+								OnPropertyChanged(nameof(SavePassword));
+							}
+						}
+
 					}
 				}
 			} // prop CurrentEnvironment
@@ -101,7 +110,6 @@ namespace TecWare.PPSn.UI
 					else parent.pbPassword.Password = String.Empty;
 					OnPropertyChanged(nameof(UserName));
 					OnPropertyChanged(nameof(IsPasswordEnabled));
-					OnPropertyChanged(nameof(IsPasswordSaveEnabled));
 					OnPropertyChanged(nameof(IsValid));
 				}
 			}
@@ -137,7 +145,6 @@ namespace TecWare.PPSn.UI
 			public bool IsValid => IsUserNameEnabled && !String.IsNullOrEmpty(UserName) && !IsPasswordEnabled || parent.pbPassword.Password.Length > 0;
 			public bool IsUserNameEnabled => currentEnvironment?.Uri != null;
 			public bool IsPasswordEnabled => !IsDomainName(defaultUser != null ? defaultUser.UserName : String.Empty) && IsUserNameEnabled;
-			public bool IsPasswordSaveEnabled => IsValid;
 			public void Validate() => OnPropertyChanged(nameof(IsValid));
 			private bool savePassword = false;
 			public bool SavePassword { get { return savePassword; } set { savePassword = value; } }

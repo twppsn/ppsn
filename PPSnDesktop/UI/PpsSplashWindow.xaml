@@ -92,7 +92,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 							<PasswordBox Grid.Column="0" IsEnabled="{Binding IsPasswordEnabled}" Name="pbPassword" PasswordChanged="PasswordChanged" />
-							<CheckBox Grid.Column="1" VerticalAlignment="Center" IsEnabled="{Binding IsPasswordSaveEnabled}" IsChecked="{Binding SavePassword}"/>
+							<CheckBox Grid.Column="1" VerticalAlignment="Center" IsEnabled="{Binding IsValid}" IsChecked="{Binding SavePassword}"/>
                         </Grid>
 
                         <Button Grid.Column="0" Grid.Row="4" Content="*" Width="23" Height="23" HorizontalAlignment="Left" VerticalAlignment="Bottom" Command="{x:Static ApplicationCommands.New}" />
@@ -102,7 +102,7 @@
                             <Button Content="Abbruch" Width="80" Height="23" Margin="12,0,0,0" Command="{x:Static ApplicationCommands.Close}" />
                         </StackPanel>
                     </Grid>
-                </TabItem>
+                </TabItem><!-- LoginPane -->
                 <TabItem><!-- ErrorPane -->
                     <Grid>
                         <TextBlock  Width="Auto" TextWrapping="Wrap" Text="{Binding ErrorText,Mode=OneWay}" FontSize="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,0,0"/>
