@@ -14,15 +14,11 @@
 //
 #endregion
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -73,25 +69,24 @@ namespace TecWare.PPSn.Server.Sql
 				// create the connection
 				try
 				{
-					if (identity.SystemIdentity == null) // use network credentials
+					using (var currentCredentials = identity.GetNetworkCredential())
 					{
-						connectionString.IntegratedSecurity = false;
-						connection.ConnectionString = connectionString.ToString();
+						if (currentCredentials is PpsIntegratedCredentials ic)
+						{
+							connectionString.IntegratedSecurity = true;
+							connection.ConnectionString = connectionString.ToString();
 
-						var altLogin = identity.AlternativeCredential;
-						if (altLogin == null)
-							throw new ArgumentException("User has no sql-login data.");
+							using (ic.Impersonate()) // is only functional in the admin context
+								connection.Open();
+						}
+						else if (currentCredentials is PpsUserCredentials uc) // use network credentials
+						{
+							connectionString.IntegratedSecurity = false;
+							connection.ConnectionString = connectionString.ToString();
 
-						connection.Credential = new SqlCredential(altLogin.UserName, altLogin.SecurePassword);
-						connection.Open();
-					}
-					else
-					{
-						connectionString.IntegratedSecurity = true;
-						connection.ConnectionString = connectionString.ToString();
-
-						using (identity.SystemIdentity.Impersonate()) // is only functional in the admin context
+							connection.Credential = new SqlCredential(uc.UserName, uc.Password);
 							connection.Open();
+						}
 					}
 					return true;
 				}
@@ -107,9 +102,11 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				// create a new connection
 				var con = new SqlConnection();
-				var conStr = new SqlConnectionStringBuilder(connectionString.ToString());
-				conStr.ApplicationName = "User_Trans";
-				conStr.Pooling = true;
+				var conStr = new SqlConnectionStringBuilder(connectionString.ToString())
+				{
+					ApplicationName = "User_Trans",
+					Pooling = true
+				};
 
 				// ensure connection
 				Connect(conStr, con, identity, true);

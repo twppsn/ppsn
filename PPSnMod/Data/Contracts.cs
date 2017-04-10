@@ -16,18 +16,273 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Principal;
-using System.Text;
-using System.Threading.Tasks;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server.Data
 {
+	#region -- class PpsUserIdentity ----------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Special Identity, for the system user.</summary>
+	public abstract class PpsUserIdentity : IIdentity, IEquatable<IIdentity>, IDisposable
+	{
+		#region -- class PpsSystemIdentity ----------------------------------------------
+
+		public sealed class PpsSystemIdentity : PpsUserIdentity
+		{
+			private const string name = "system";
+
+			internal PpsSystemIdentity()
+			{
+			} // ctor
+
+			public override bool Equals(IIdentity other)
+				=> other is PpsSystemIdentity;
+
+			protected override PpsCredentials GetCredentialsFromIdentityCore(IIdentity identity)
+				=> Equals(identity) ? new PpsIntegratedCredentials(WindowsIdentity.GetCurrent(), false) : null;
+
+			public override bool IsAuthenticated => true;
+			public override string Name => name;
+		} // class PpsSystemIdentity
+
+		#endregion
+
+		#region -- class PpsBasicIdentity -----------------------------------------------
+
+		private sealed class PpsBasicIdentity : PpsUserIdentity
+		{
+			private readonly string userName;
+			private readonly byte[] passwordHash;
+
+			public PpsBasicIdentity(string userName, string passwordHash)
+			{
+				this.userName = userName ?? throw new ArgumentNullException(nameof(userName));
+				this.passwordHash = ProcsDE.ParsePasswordHash(passwordHash ?? throw new ArgumentNullException(nameof(passwordHash)));
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				Array.Clear(passwordHash, 0, passwordHash.Length);
+				base.Dispose(disposing);
+			} // proc Dispose
+
+			public override bool Equals(IIdentity other)
+			{
+				if (other is HttpListenerBasicIdentity basicIdentity)
+				{
+					if (String.Compare(userName, other.Name, StringComparison.OrdinalIgnoreCase) != 0)
+						return false;
+					return ProcsDE.PasswordCompare(basicIdentity.Password, passwordHash);
+				}
+				else if (other is PpsBasicIdentity checkSql)
+				{
+					if (String.Compare(userName, checkSql.Name, StringComparison.OrdinalIgnoreCase) != 0)
+						return false;
+					return Procs.CompareBytes(passwordHash, checkSql.passwordHash);
+				}
+				else
+					return false;
+			} // func Equals
+
+			protected override PpsCredentials GetCredentialsFromIdentityCore(IIdentity identity)
+				=> identity is HttpListenerBasicIdentity p ? new PpsUserCredentials(p) : null;
+
+			public override string Name => userName;
+			public override bool IsAuthenticated => passwordHash != null;
+		} // class PpsBasicIdentity
+
+		#endregion
+
+		#region -- class PpsWindowsIdentity ---------------------------------------------
+
+		private sealed class PpsWindowsIdentity : PpsUserIdentity
+		{
+			private readonly WindowsIdentity identity;
+
+			public PpsWindowsIdentity(string userName)
+			{
+				this.identity = new WindowsIdentity(userName);
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				if (disposing)
+					identity.Dispose();
+				base.Dispose(disposing);
+			} // proc Dispose
+
+			public override bool Equals(IIdentity other)
+			{
+				if (other is WindowsIdentity checkWindows && checkWindows.IsAuthenticated)
+					return identity.User == checkWindows.User;
+				else if (other is PpsWindowsIdentity checkWin)
+					return identity.User == checkWin.identity.User;
+				else
+					return false;
+			} // func Equals
+
+			protected override PpsCredentials GetCredentialsFromIdentityCore(IIdentity identity)
+				=> identity is WindowsIdentity w ? new PpsIntegratedCredentials(w, true) : null;
+
+			public override string Name => identity.Name;
+			public override bool IsAuthenticated => identity.IsAuthenticated;
+		} // class PpsWindowsIdentity
+
+		#endregion
+
+		private PpsUserIdentity()
+		{
+		} // ctor
+
+		public void Dispose()
+		{
+			GC.SuppressFinalize(this);
+			Dispose(true);
+		} // proc Dispose
+
+		protected virtual void Dispose(bool disposing)
+		{
+		} // proc Dispose
+
+		public override int GetHashCode()
+			=> Name.GetHashCode();
+
+		public override bool Equals(object obj)
+		{
+			if (Object.ReferenceEquals(this, obj))
+				return true;
+			else if (obj is IIdentity i)
+				return Equals(i);
+			else
+				return false;
+		} // func Equals
+
+		public abstract bool Equals(IIdentity other);
+
+		internal PpsCredentials GetCredentialsFromIdentity(IIdentity identity)
+		{
+			if (identity == null)
+				throw new ArgumentNullException(nameof(identity));
+
+			return GetCredentialsFromIdentityCore(identity) ?? throw new ArgumentException("Identity from type {identity.GetType().Name} is not compatible.", nameof(identity));
+		} // func GetCredentialsFromIdentity
+
+		protected abstract PpsCredentials GetCredentialsFromIdentityCore(IIdentity identity);
+
+		/// <summary>des</summary>
+		public string AuthenticationType => "des";
+		/// <summary>Immer <c>true</c></summary>
+		public abstract bool IsAuthenticated { get; }
+		/// <summary>des\system</summary>
+		string IIdentity.Name => "des\\" + Name;
+		/// <summary>system</summary>
+		public abstract string Name { get; }
+
+		/// <summary>Singleton</summary>
+		public static PpsUserIdentity System { get; } = new PpsSystemIdentity();
+
+		internal static PpsUserIdentity CreateBasicIdentity(string userName, string passwordHash)
+			=> new PpsBasicIdentity(userName, passwordHash);
+
+		internal static PpsUserIdentity CreateIntegratedIdentity(string userName)
+		{
+			var p = userName.IndexOf('\\');
+			return p == -1
+				? new PpsWindowsIdentity(userName)
+				: new PpsWindowsIdentity(userName.Substring(p + 1) + "@" + userName.Substring(0, p));
+		} // func CreateIntegratedIdentity
+	} // class PpsUserIdentity
+
+	#endregion
+
+	#region -- class PpsCredentials -----------------------------------------------------
+
+	public abstract class PpsCredentials : IDisposable
+	{
+		public void Dispose()
+		{
+			Dispose(true);
+		} // proc Dispose
+
+		protected virtual void Dispose(bool disposing) { }
+	} // class PpsCredentials
+
+	#endregion
+
+	#region -- class PpsIntegratedCredentials -------------------------------------------
+
+	public sealed class PpsIntegratedCredentials : PpsCredentials
+	{
+		private readonly WindowsIdentity identity;
+
+		internal PpsIntegratedCredentials(WindowsIdentity identity, bool doClone)
+		{
+			if (identity == null)
+				throw new ArgumentNullException(nameof(identity));
+
+			this.identity = doClone ? (WindowsIdentity)identity.Clone() : identity;
+		} // ctor
+
+		protected override void Dispose(bool disposing)
+		{
+			base.Dispose(disposing);
+			if (disposing)
+				identity.Dispose();
+		} // proc Dispose
+
+		public IDisposable Impersonate()
+			=> identity.Impersonate();
+	} // class PpsIntegratedCredentials
+
+	#endregion
+
+	#region -- class PpsUserCredentials -------------------------------------------------
+
+	public sealed class PpsUserCredentials : PpsCredentials
+	{
+		private readonly string userName;
+		private readonly SecureString password;
+
+		internal unsafe PpsUserCredentials(HttpListenerBasicIdentity identity)
+		{
+			if (identity == null)
+				throw new ArgumentNullException(nameof(identity));
+			if (String.IsNullOrEmpty(identity.Password))
+				throw new ArgumentNullException(nameof(identity) + ".Password");
+
+			// copy the arguments
+			this.userName = identity.Name;
+			var passwordPtr = Marshal.StringToHGlobalUni(identity.Password);
+			try
+			{
+				this.password = new SecureString((char*)passwordPtr.ToPointer(), identity.Password.Length);
+			}
+			finally
+			{
+				Marshal.ZeroFreeGlobalAllocUnicode(passwordPtr);
+			}
+		} // ctor
+
+		protected override void Dispose(bool disposing)
+		{
+			base.Dispose(disposing);
+			if (disposing)
+				password?.Dispose();
+		} // proc Dispose
+
+		public string UserName => userName;
+		public SecureString Password => password;
+	} // class PpsUserCredentials
+
+	#endregion
+
 	#region -- interface IPpsConnectionHandle -------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -53,7 +308,7 @@ namespace TecWare.PPSn.Server.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Hold's the connection and context data for one user.</summary>
-	public interface IPpsPrivateDataContext : IDisposable
+	public interface IPpsPrivateDataContext : IPropertyReadOnlyDictionary, IDisposable
 	{
 		/// <summary>Creates a selector for a view.</summary>
 		/// <param name="name">Name of the view</param>
@@ -78,54 +333,20 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		PpsDataTransaction CreateTransaction(PpsDataSource dataSource, bool throwException = true);
 
-		/// <summary>UserId of the user in the main database</summary>
+		/// <summary>Creates the credentials for to user for external tasks (like database connections).</summary>
+		/// <returns></returns>
+		PpsCredentials GetNetworkCredential();
+		/// <summary>Creates the credentials for the local computer (e.g. file operations).</summary>
+		/// <returns></returns>
+		PpsIntegratedCredentials GetLocalCredentials();
+
+		/// <summary>UserId of the user in the main database.</summary>
 		long UserId { get; }
-		/// <summary>Name of the current user.</summary>
+		/// <summary>Name (display info) of the current user.</summary>
 		string UserName { get; }
-
-		/// <summary></summary>
-		PpsUserIdentity User { get; }
-		/// <summary></summary>
-		NetworkCredential AlternativeCredential { get; }
-		/// <summary></summary>
-		WindowsIdentity SystemIdentity { get; }
+		/// <summary>Returns the current identity.</summary>
+		PpsUserIdentity Identity { get; }
 	} // interface IPpsPrivateDataContext
-
-	#endregion
-
-	#region -- class PpsUserIdentity ----------------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Special Identity, for the system user.</summary>
-	public sealed class PpsUserIdentity : IIdentity
-	{
-		private readonly string name;
-
-		private PpsUserIdentity()
-		{
-			this.name = "system";
-		} // ctor
-
-	public PpsUserIdentity(string name)
-		{
-			if (String.IsNullOrEmpty(name) || String.Compare(name, "system", StringComparison.OrdinalIgnoreCase) == 0)
-				throw new ArgumentNullException("name");
-
-			this.name = name;
-		} // ctor
-
-		/// <summary>des</summary>
-		public string AuthenticationType => "des";
-		/// <summary>Immer <c>true</c></summary>
-		public bool IsAuthenticated => true;
-		/// <summary>des\system</summary>
-		string IIdentity.Name => "des\\" + name;
-		/// <summary>system</summary>
-		public string Name => name;
-
-		/// <summary>Singleton</summary>
-		public static PpsUserIdentity System { get; } = new PpsUserIdentity();
-	} // class PpsUserIdentity
 
 	#endregion
 
