@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TecWare.PPSn.UI"
         mc:Ignorable="d"
-        Title="{Binding Title}" Height="700" Width="800" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+        Title="{Binding Title}" Height="700" Width="800" WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Background="{StaticResource PPSnWindowBackgroundBrush}">
   <Grid>
     <ContentPresenter Content="{Binding}" Margin="12" />
   </Grid>
