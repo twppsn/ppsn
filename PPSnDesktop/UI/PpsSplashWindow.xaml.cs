@@ -206,7 +206,7 @@ namespace TecWare.PPSn.UI
 						(sender, e) => loginStateUnSafe.Validate(false)
 					),
 					new CommandBinding(ReStartCommand,
-						(sender, e) =>						
+						(sender, e) =>
 						{
 							ActivePage = Panes.Login;
 						}
@@ -215,6 +215,10 @@ namespace TecWare.PPSn.UI
 						(sender, e) =>
 						{
 							errorEnvironment.ShowTrace(this.Owner);
+						},
+						(sender, e) =>
+						{
+							e.CanExecute = errorEnvironment != null;
 						}
 					)
 				}
@@ -382,22 +386,22 @@ namespace TecWare.PPSn.UI
 		} // proc SetError
 
 		private PpsEnvironment errorEnvironment;
-		private void SetErrorEnvironment(PpsEnvironment env)
+		private void SetErrorEnvironment(PpsEnvironment environment)
 		{
-			errorEnvironment = env;
+			errorEnvironment = environment;
 		}
 
-		public async Task SetErrorAsync(object errorInfo, PpsEnvironment env)
+		public async Task SetErrorAsync(object errorInfo, PpsEnvironment environment)
 		{
 			if (Dispatcher.CheckAccess())
 			{
 				SetError(errorInfo);
-				SetErrorEnvironment(env);
+				SetErrorEnvironment(environment);
 			}
 			else
 			{
 				await Dispatcher.InvokeAsync(() => SetError(errorInfo));
-				await Dispatcher.InvokeAsync(() => SetErrorEnvironment(env));
+				await Dispatcher.InvokeAsync(() => SetErrorEnvironment(environment));
 			}
 		} // proc SetErrorAsync
 

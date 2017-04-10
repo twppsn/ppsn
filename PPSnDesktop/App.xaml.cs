@@ -72,27 +72,30 @@ namespace TecWare.PPSn
 						// create the application environment
 						splashWindow.SetProgressTextAsync("Starte Anwendung...");
 						var env = await Dispatcher.InvokeAsync(() => new PpsMainEnvironment(environment, userInfo, this));
-						
 
 						// create environment
 						switch (await env.InitAsync(splashWindow))
 						{
 							case PpsEnvironmentModeResult.LoginFailed:
 								errorInfo = "Anmeldung fehlgeschlagen.";
+								errorEnvironment = env;
 								break;
 							case PpsEnvironmentModeResult.Shutdown:
 								return false;
 
 							case PpsEnvironmentModeResult.ServerConnectFailure:
 								errorInfo = "Verbindung zum Server fehlgeschlagen.";
+								errorEnvironment = env;
 								break;
 
 							case PpsEnvironmentModeResult.NeedsUpdate:
 								errorInfo = "Update ist erforderlich.";
+								errorEnvironment = env;
 								break;
 
 							case PpsEnvironmentModeResult.NeedsSynchronization:
 								errorInfo = "Synchronization ist erforderlich.";
+								errorEnvironment = env;
 								break;
 
 							case PpsEnvironmentModeResult.Online:
