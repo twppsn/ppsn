@@ -28,6 +28,7 @@ namespace TecWare.PPSn
 			var environment = _environment;
 			var userInfo = _userInfo;
 			var errorInfo = (object)null;
+			PpsEnvironment errorEnvironment = null;
 
 			// we will have no windows
 			await Dispatcher.InvokeAsync(() => ShutdownMode = ShutdownMode.OnExplicitShutdown);
@@ -54,7 +55,7 @@ namespace TecWare.PPSn
 						if (environment == null || userInfo == null || errorInfo != null)
 						{
 							if (errorInfo != null)
-								await splashWindow.SetErrorAsync(errorInfo);
+								await splashWindow.SetErrorAsync(errorInfo, errorEnvironment);
 							var t = await splashWindow.ShowLoginAsync(environment, userInfo);
 							if (t == null)
 								return false;
@@ -71,6 +72,7 @@ namespace TecWare.PPSn
 						// create the application environment
 						splashWindow.SetProgressTextAsync("Starte Anwendung...");
 						var env = await Dispatcher.InvokeAsync(() => new PpsMainEnvironment(environment, userInfo, this));
+						
 
 						// create environment
 						switch (await env.InitAsync(splashWindow))

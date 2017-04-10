@@ -210,6 +210,12 @@ namespace TecWare.PPSn.UI
 						{
 							ActivePage = Panes.Login;
 						}
+					),
+					new CommandBinding(ShowErrorDetailsCommand,
+						(sender, e) =>
+						{
+							errorEnvironment.ShowTrace(this.Owner);
+						}
 					)
 				}
 			);
@@ -375,12 +381,24 @@ namespace TecWare.PPSn.UI
 			ActivePage = Panes.Error;
 		} // proc SetError
 
-		public async Task SetErrorAsync(object errorInfo)
+		private PpsEnvironment errorEnvironment;
+		private void SetErrorEnvironment(PpsEnvironment env)
+		{
+			errorEnvironment = env;
+		}
+
+		public async Task SetErrorAsync(object errorInfo, PpsEnvironment env)
 		{
 			if (Dispatcher.CheckAccess())
+			{
 				SetError(errorInfo);
+				SetErrorEnvironment(env);
+			}
 			else
+			{
 				await Dispatcher.InvokeAsync(() => SetError(errorInfo));
+				await Dispatcher.InvokeAsync(() => SetErrorEnvironment(env));
+			}
 		} // proc SetErrorAsync
 
 		#endregion
@@ -413,6 +431,7 @@ namespace TecWare.PPSn.UI
 		public static RoutedUICommand EnterKeyCommand { get; } = new RoutedUICommand("EnterKey", "EnterKey", typeof(PpsSplashWindow));
 		public static RoutedUICommand PressedKeyCommand { get; } = new RoutedUICommand("PressedKey", "PressedKey", typeof(PpsSplashWindow));
 		public static RoutedUICommand ReStartCommand { get; } = new RoutedUICommand("ReStart", "ReStart", typeof(PpsSplashWindow));
+		public static RoutedUICommand ShowErrorDetailsCommand { get; } = new RoutedUICommand("ShowErrorDetails", "ShowErrorDetails", typeof(PpsSplashWindow));
 
 		private void EnterKey(object sender, ExecutedRoutedEventArgs e)
 		{
