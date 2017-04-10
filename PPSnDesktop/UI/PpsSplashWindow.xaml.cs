@@ -127,6 +127,7 @@ namespace TecWare.PPSn.UI
 
 						OnPropertyChanged(nameof(UserName));
 						OnPropertyChanged(nameof(IsPasswordEnabled));
+						Validate(false);
 					}
 				}
 			} // prop UserName
