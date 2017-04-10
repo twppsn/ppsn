@@ -18,8 +18,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TecWare.PPSn.Data;
 using System.Xml.Linq;
 using System.Data.SQLite;
+using System.Collections.Generic;
 
-namespace TecWare.PPSn.PpsEnvironment
+namespace TecWare.PPSn
 {
 	[TestClass]
 	public class SchemeUpgrade
@@ -86,9 +87,7 @@ namespace TecWare.PPSn.PpsEnvironment
 														 "<IsIdentity dataType=\"bool\">false</IsIdentity>" +
 														"</meta>" +
 													  "</column>");
-			var xMustImportMeta = XElement.Parse("<meta>" +
-															  "<mustImport dataType=\"string\">true</mustImport>" +
-															 "</meta>");
+			var xMustImportMeta = XElement.Parse("<meta name=\"MustImport\">true</meta>");
 
 			#endregion
 
@@ -225,29 +224,16 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme(TestCase.SameTable), sqliteDataBase);
-				try
-				{
-					master.RefreshMasterDataScheme();
-				}
-				catch (Exception e)
-				{
-					Assert.Fail("The Database throw an Exception while being upgraded." + "\n" + e.Message);
-				}
+				var schema = GetMasterDataScheme(TestCase.SameTable);
 
-				var afterState = GetDatabaseHash(sqliteDataBase);
+				PrivateType accessor = new PrivateType(typeof(PpsMasterData));
 
-				Assert.AreEqual(beforeState.Replace("\t\t", "\tnull\t"), afterState.Replace("\t\t", "\tnull\t"));
+				var commands = (IReadOnlyList<string>)accessor.InvokeStatic("GetUpdateCommands", sqliteDataBase, schema);
 
-				using (var rowIdCommand = sqliteDataBase.CreateCommand())
-				{
-					// if the table was recreated in the process it would have a new rowid...
-					rowIdCommand.CommandText = "SELECT [rowid] FROM 'sqlite_master' WHERE ([type] = 'table' AND [name] = 'Table1');";
-					Assert.AreEqual((Int64)1, rowIdCommand.ExecuteScalar(), "The Refresh was supposed to do nothing - but it recreated the database. No data lost but anyhow.");
-				}
+				Assert.AreEqual(0, commands.Count);
 			}
 		}
-
+		
 		[TestMethod]
 		public void PpsMasterDataImportTest_mustImport_AddColumn()
 		{
@@ -255,10 +241,17 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme(TestCase.AddColumn), sqliteDataBase);
+				var schema = GetMasterDataScheme(TestCase.AddColumn);
+
+				PrivateType accessor = new PrivateType(typeof(PpsMasterData));
+
+				var commands = (IReadOnlyList<string>)accessor.InvokeStatic("GetUpdateCommands", sqliteDataBase, schema);
+
 				try
 				{
-					master.RefreshMasterDataScheme();
+					PrivateType accessor2 = new PrivateType(typeof(PpsMasterData));
+
+					accessor.InvokeStatic("ExecuteUpdateScript", sqliteDataBase, sqliteDataBase.BeginTransaction(),commands);
 				}
 				catch (Exception e)
 				{
@@ -273,7 +266,7 @@ namespace TecWare.PPSn.PpsEnvironment
 				Assert.AreEqual(expectedText.Replace("\t\t", "\tnull\t"), afterState.Replace("\t\t", "\tnull\t"));
 			}
 		}
-
+		
 		[TestMethod]
 		public void PpsMasterDataImportTest_mustImport_RemoveColumn()
 		{
@@ -281,10 +274,17 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme(TestCase.RemoveColumn), sqliteDataBase);
+				var schema = GetMasterDataScheme(TestCase.RemoveColumn);
+
+				PrivateType accessor = new PrivateType(typeof(PpsMasterData));
+
+				var commands = (IReadOnlyList<string>)accessor.InvokeStatic("GetUpdateCommands", sqliteDataBase, schema);
+
 				try
 				{
-					master.RefreshMasterDataScheme();
+					PrivateType accessor2 = new PrivateType(typeof(PpsMasterData));
+
+					accessor.InvokeStatic("ExecuteUpdateScript", sqliteDataBase, sqliteDataBase.BeginTransaction(), commands);
 				}
 				catch (Exception e)
 				{
@@ -299,7 +299,7 @@ namespace TecWare.PPSn.PpsEnvironment
 				Assert.AreEqual(expectedText.Replace("\t\t", "\tnull\t"), afterState.Replace("\t\t", "\tnull\t"));
 			}
 		}
-
+		
 		[TestMethod]
 		public void PpsMasterDataImportTest_mustImport_ChangeColumnType()
 		{
@@ -307,10 +307,16 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme(TestCase.ChangeColumnType), sqliteDataBase);
+				var schema = GetMasterDataScheme(TestCase.ChangeColumnType);
+
+				PrivateType accessor = new PrivateType(typeof(PpsMasterData));
+
+				var commands = (IReadOnlyList<string>)accessor.InvokeStatic("GetUpdateCommands", sqliteDataBase, schema);
 				try
 				{
-					master.RefreshMasterDataScheme();
+					PrivateType accessor2 = new PrivateType(typeof(PpsMasterData));
+
+					accessor.InvokeStatic("ExecuteUpdateScript", sqliteDataBase, sqliteDataBase.BeginTransaction(), commands);
 				}
 				catch (Exception e)
 				{
@@ -333,10 +339,16 @@ namespace TecWare.PPSn.PpsEnvironment
 			{
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme(TestCase.DropableTable), sqliteDataBase);
+				var schema = GetMasterDataScheme(TestCase.DropableTable);
+
+				PrivateType accessor = new PrivateType(typeof(PpsMasterData));
+
+				var commands = (IReadOnlyList<string>)accessor.InvokeStatic("GetUpdateCommands", sqliteDataBase, schema);
 				try
 				{
-					master.RefreshMasterDataScheme();
+					PrivateType accessor2 = new PrivateType(typeof(PpsMasterData));
+
+					accessor.InvokeStatic("ExecuteUpdateScript", sqliteDataBase, sqliteDataBase.BeginTransaction(), commands);
 				}
 				catch (Exception e)
 				{
@@ -365,10 +377,16 @@ namespace TecWare.PPSn.PpsEnvironment
 
 				var beforeState = GetDatabaseHash(sqliteDataBase);
 
-				var master = new PpsMasterData(GetMasterDataScheme(TestCase.RemoveColumn), sqliteDataBase);
+				var schema = GetMasterDataScheme(TestCase.RemoveColumn);
+
+				PrivateType accessor = new PrivateType(typeof(PpsMasterData));
+
+				var commands = (IReadOnlyList<string>)accessor.InvokeStatic("GetUpdateCommands", sqliteDataBase, schema);
 				try
 				{
-					master.RefreshMasterDataScheme();
+					PrivateType accessor2 = new PrivateType(typeof(PpsMasterData));
+
+					accessor.InvokeStatic("ExecuteUpdateScript", sqliteDataBase, sqliteDataBase.BeginTransaction(), commands);
 				}
 				catch (Exception)
 				{

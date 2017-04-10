@@ -195,7 +195,7 @@ namespace TecWare.PPSn
 			{
 				if (CheckLocalTableExists(connection, table.Name)) // generate alter table script
 				{
-					if (table.Meta.GetProperty("MustImport", false)) // recreate table
+					if (table.Meta == null || table.Meta.GetProperty("MustImport", false)) // recreate table
 					{
 						CreateDropScript(commands, table.Name, GetLocalTableIndexes(connection, table.Name).Select(c => c.Item1));
 						CreateTableScript(commands, table.Name, table.Columns);
@@ -378,7 +378,7 @@ namespace TecWare.PPSn
 
 			// append default
 			if (!String.IsNullOrEmpty(column.Attributes.GetProperty("Default", String.Empty)))
-				commandText.Append(" DEFAULT ").Append(column.Attributes.GetProperty("Default", String.Empty));
+				commandText.Append(" DEFAULT ").Append("'").Append(column.Attributes.GetProperty("Default", String.Empty)).Append("'");
 
 			return commandText;
 		} // func CreateCommandColumnAttribute
@@ -943,7 +943,7 @@ namespace TecWare.PPSn
 						if (environment.WebProxy.TryGet(requestUri, out task))
 							return true;
 
-						// check conent type
+						// check content type
 						var contentType = reader.IsDBNull(1) ? String.Empty : reader.GetString(1);
 						if (String.IsNullOrEmpty(contentType))
 							goto NoResult;
