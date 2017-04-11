@@ -50,8 +50,8 @@ namespace TecWare.PPSn.Server
 			private int currentVersion = -1;
 			private string[] securityTokens = null; // access rights
 
-			private PpsUserIdentity userIdentity = null; // user identity for the authentification
-			private PpsUserIdentity localIdentity = null; // user identity to access resources on the server
+			private readonly PpsUserIdentity userIdentity = null;	// user identity for the authentification
+			private PpsUserIdentity localIdentity = null;			// user identity to access resources on the server
 
 			private int lastAccess;   // last dispose of the last active context
 
@@ -60,7 +60,7 @@ namespace TecWare.PPSn.Server
 
 			#region -- Ctor/Dtor/Idle -------------------------------------------------------
 
-			public PrivateUserData(PpsApplication application, long userId, string connectionName)
+			public PrivateUserData(PpsApplication application, long userId, PpsUserIdentity userIdentity, string connectionName)
 			{
 				this.application = application ?? throw new ArgumentNullException(nameof(application));
 				this.userId = userId;
@@ -69,13 +69,16 @@ namespace TecWare.PPSn.Server
 
 				if (userId == SysUserId) // mark system user
 				{
+					if (userIdentity != null)
+						throw new ArgumentException("UserIdentity must be null.", nameof(userIdentity));
+
 					userIdentity =
 						localIdentity = PpsUserIdentity.System;
 					fullName = "System";
 				}
+				this.userIdentity = userIdentity;
 
-
-				CreateLogger();
+				log = LoggerProxy.Create(application, userIdentity.Name);
 
 				if (userId > 0)
 					application.Server.RegisterUser(this); // register the user in http-server
@@ -273,47 +276,38 @@ namespace TecWare.PPSn.Server
 
 			#region -- UpdateData -----------------------------------------------------------
 
-			private void CreateLogger()
-			{
-				var loggerName = userIdentity == null
-					? "User" + userId.ToString()
-					: userIdentity.Name;
-
-				log = LoggerProxy.Create(application, loggerName);
-			} // proc CreateLogger
-
 			public void UpdateData(IDataRow r)
 			{
-				string GetString(string fieldName)
-					=> r.GetProperty(fieldName, (string)null) ?? throw new ArgumentNullException($"{fieldName} is null.");
-
 				// check if we need a reload
 				var loginVersion = r.GetProperty("LoginVersion", 0);
 				if (loginVersion == currentVersion)
 					return;
 
-				// create the user
-				var userType = r.GetProperty("LoginType", (string)null);
-				if (userType == "U") // windows login
-				{
-					userIdentity = PpsUserIdentity.CreateIntegratedIdentity(GetString("Login"));
-					localIdentity = application.systemUser.userIdentity; // currently service is for local stuff
-				}
-				else if (userType == "S") // sql login
-				{
-					userIdentity = PpsUserIdentity.CreateBasicIdentity(
-						GetString("Login"),
-						GetString("LoginHash")
-					);
-
-					localIdentity = application.systemUser.userIdentity; // currently service is for local stuff
-				}
-				else
-					throw new ArgumentException($"Unsupported login type '{userType}'.");
-
+				// currently service is for local stuff
+				localIdentity = application.systemUser.userIdentity;
 				this.fullName = r.GetProperty("Name", userIdentity.Name);
 				this.securityTokens = application.Server.BuildSecurityTokens(r.GetProperty("Security", "User"));
 			} // proc UpdateData
+
+			public static PpsUserIdentity CreateUserIdentity(IDataRow r)
+			{
+				string GetString(string fieldName)
+					=> r.GetProperty(fieldName, (string)null) ?? throw new ArgumentNullException($"{fieldName} is null.");
+				
+				// create the user
+				var userType = r.GetProperty("LoginType", (string)null);
+				if (userType == "U") // windows login
+					return PpsUserIdentity.CreateIntegratedIdentity(GetString("Login"));
+				else if (userType == "S") // sql login
+				{
+					return PpsUserIdentity.CreateBasicIdentity(
+						GetString("Login"),
+						GetString("LoginHash")
+					);
+				}
+				else
+					throw new ArgumentException($"Unsupported login type '{userType}'.");
+			} // func CreateUserIdentity
 
 			#endregion
 
@@ -509,7 +503,7 @@ namespace TecWare.PPSn.Server
 
 		private void InitUser()
 		{
-			systemUser = new PrivateUserData(this, SysUserId, "System");
+			systemUser = new PrivateUserData(this, SysUserId, null, "System");
 			userList = new DEList<PrivateUserData>(this, "tw_users", "User list");
 		} // proc InitUser
 
@@ -561,7 +555,7 @@ namespace TecWare.PPSn.Server
 								}
 								else
 								{
-									var user = new PrivateUserData(this, userId, "User");
+									var user = new PrivateUserData(this, userId, PrivateUserData.CreateUserIdentity(u), "User");
 									if (UpdateUserData(user, u))
 										userList.Add(user);
 								}
