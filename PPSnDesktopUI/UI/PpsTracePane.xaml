@@ -7,6 +7,65 @@
 			 mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300" Background="{StaticResource PPSnWindowBackgroundBrush}">
     <UserControl.Resources>
+        <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+        <DataTemplate x:Key="ExceptionTemplate">
+            <StackPanel Orientation="Vertical">
+                <TextBlock>
+							<!--<Run Text="message:  "/>-->
+							<Run FontWeight="Bold" Text="{Binding Message, Mode=OneWay}"/>
+                </TextBlock>
+                <TextBlock>
+							<Run Text="Exception: "/>
+							<Run FontWeight="Bold" Text="{Binding Exception.Message, Mode=OneWay}"/>
+                </TextBlock>
+                <StackPanel x:Name="source">
+                    <TextBlock>
+							<Run Text="source:  "/>
+							<Run Text="{Binding Source, Mode=OneWay}" />
+                    </TextBlock>
+                </StackPanel>
+                <StackPanel x:Name="targetSite">
+                    <TextBlock>
+							<Run Text="TargetSite:  "/>
+							<Run Text="{Binding TargetSite, Mode=OneWay}" />
+                    </TextBlock>
+                </StackPanel>
+                <StackPanel x:Name="innerException">
+                    <StackPanel Orientation="Horizontal">
+                        <ToggleButton x:Name="innerExceptionEnable" Content="+" Width="20"/>
+                        <TextBlock Text="inner Exception:"/>
+                    </StackPanel>
+                    <Border BorderThickness="1" BorderBrush="White" Margin="2" Visibility="{Binding ElementName=innerExceptionEnable, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <ContentControl Content="{Binding InnerException}" ContentTemplate="{DynamicResource ExceptionTemplate}"/>
+                    </Border>
+                </StackPanel>
+                <StackPanel x:Name="stackTrace">
+                    <StackPanel Orientation="Horizontal">
+                        <ToggleButton x:Name="stackTraceEnable" Content="+" Width="20"/>
+                        <TextBlock Text="stacktrace:"/>
+                    </StackPanel>
+                    <TextBlock Visibility="{Binding ElementName=stackTraceEnable, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}" Text="{Binding StackTrace}"/>
+                </StackPanel>
+
+            </StackPanel>
+
+            <DataTemplate.Triggers>
+                <!-- Highlight for Not Reviewed -->
+                <DataTrigger Binding="{Binding Path=InnerException}" Value="{x:Null}">
+                    <Setter TargetName="innerException" Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Path=StackTrace}" Value="{x:Null}">
+                    <Setter TargetName="stackTrace" Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Path=TargetSite}" Value="{x:Null}">
+                    <Setter TargetName="targetSite" Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Path=Source}" Value="{x:Null}">
+                    <Setter TargetName="source" Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
         <local:TraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
             <local:TraceItemTemplateSelector.NullTemplate>
                 <DataTemplate>
@@ -18,16 +77,46 @@
                 <DataTemplate>
                     <StackPanel Orientation="Vertical">
                         <TextBlock>
-							<Run Text="message:  "/>
-							<Run Text="{Binding Message, Mode=OneWay}"/>
+							<!--<Run Text="message:  "/>-->
+							<Run FontWeight="Bold" Text="{Binding Message, Mode=OneWay}"/>
                         </TextBlock>
                         <TextBlock>
-							<Run Text="source:  "/>
-							<Run Text="{Binding Exception.Source, Mode=OneWay}" />
+							<Run Text="Exception: "/>
+							<Run FontWeight="Bold" Text="{Binding Exception.Message, Mode=OneWay}"/>
                         </TextBlock>
-						<TextBlock Text="stacktrace:"/>
-                        <TextBlock Text="{Binding Exception.StackTrace}"/>
+                        <TextBlock>
+                            <Run Text="Quelle:  "/>
+                            <Run FontWeight="Bold" Text="{Binding Exception.Source, Mode=OneWay}" />
+                        </TextBlock>
+                        <TextBlock>
+							<Run Text="TargetSite:  "/>
+							<Run FontWeight="Bold" Text="{Binding Exception.TargetSite, Mode=OneWay}" />
+                        </TextBlock>
+                        <StackPanel x:Name="innerException">
+                            <StackPanel Orientation="Horizontal">
+                                <ToggleButton x:Name="innerExceptionEnable" Content="+" Width="20"/>
+                                <TextBlock Text="inner Exception:"/>
+                            </StackPanel>
+                            <Border BorderThickness="1" BorderBrush="White" Margin="2" Visibility="{Binding ElementName=innerExceptionEnable, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <ContentControl Content="{Binding Exception.InnerException}" ContentTemplate="{DynamicResource ExceptionTemplate}"/>
+                            </Border>
+                        </StackPanel>
+                        <StackPanel x:Name="stackTrace">
+                            <StackPanel Orientation="Horizontal">
+                                <ToggleButton x:Name="stackTraceEnable" Content="+" Width="20"/>
+                                <TextBlock Text="stacktrace:"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <TextBlock Visibility="{Binding ElementName=stackTraceEnable, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}" Text="{Binding Exception.StackTrace}"/>
                     </StackPanel>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding Path=Exception.InnerException}" Value="{x:Null}">
+                            <Setter TargetName="innerException" Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=Exception.StackTrace}" Value="{x:Null}">
+                            <Setter TargetName="stackTrace" Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
                 </DataTemplate>
             </local:TraceItemTemplateSelector.ExceptionTemplate>
 
@@ -50,7 +139,7 @@
         </local:TraceItemTemplateSelector>
     </UserControl.Resources>
 
-    <Grid Margin="32,24">
+    <Grid>
         <ListBox ItemsSource="{Binding Traces}"	Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
 				 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" Background="{StaticResource PPSnWindowBackgroundBrush}">
             <ListBox.ItemTemplate>

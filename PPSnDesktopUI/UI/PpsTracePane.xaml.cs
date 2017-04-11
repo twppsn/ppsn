@@ -41,6 +41,11 @@ namespace TecWare.PPSn.UI
 		public PpsTracePane()
 		{
 			InitializeComponent();
+			try
+			{ }
+			catch (Exception e)
+			{
+			}
 		} // ctor
 
 		public void Dispose()
@@ -82,7 +87,7 @@ namespace TecWare.PPSn.UI
 			var resources = container as ContentPresenter;
 			if (item != null && resources != null)
 			{
-				if (item is PpsExceptionItem)
+				if (item is PpsExceptionItem || item is Exception)
 					r = ExceptionTemplate;
 				else if (item is PpsTraceItem)
 					r = TraceItemTemplate;
@@ -103,4 +108,18 @@ namespace TecWare.PPSn.UI
 	} // class TraceItemTemplateSelector
 
 	#endregion
+	public class BoolToVisibilityConverter : IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			if ((bool)value)
+				return Visibility.Visible;
+			else return Visibility.Collapsed;
+		}
+
+		public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			throw new NotImplementedException();
+		}
+	}
 }
