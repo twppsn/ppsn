@@ -8,8 +8,7 @@
               MinHeight="600"
               MinWidth="800"
 			  Height="600" Width="800" >
-
-	<ui:PpsWindow.Title>
+    <ui:PpsWindow.Title>
         <MultiBinding FallbackValue="{StaticResource PPSnApplicationTitle}" StringFormat="{}{0} - {1} - {2}">
             <Binding Path="Text" ElementName="PART_Title" />
             <Binding Path="CurrentPane.SubTitle"/>
@@ -17,8 +16,11 @@
 		</MultiBinding>
 	</ui:PpsWindow.Title>
 
-	<ui:PpsWindow.Resources>
-		<SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />
+    <ui:PpsWindow.Resources>
+        <CollectionViewSource x:Key="FilteredTraces" Source="{Binding Environment.Traces}"
+                      IsLiveFilteringRequested="True">
+        </CollectionViewSource>
+        <SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />
 		<SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnActionButtonColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
 		
 		<Geometry x:Key="PpsWindowCloseButton">M 0.5,0.5L 9.5,9.5M 9.5,0.5L 0.5,9.5</Geometry>
@@ -520,9 +522,51 @@
             </Grid.Style>
         </Grid>
 
-        <DockPanel x:Name="PART_StatusBar" Grid.Row="2" Grid.ColumnSpan="5"  Background="{StaticResource PPSnWindowFooterBrush}" LastChildFill="False">
-            <Button DockPanel.Dock="Left" Content="Trace" Padding="8,0" Margin="32,2" Command="{x:Static ui:PpsWindow.TraceLogCommand}" Focusable="False" />
-            <Viewbox x:Name="PART_SizeGripper" DockPanel.Dock="Right" Width="15" VerticalAlignment="Bottom">
+        <Grid  Grid.Row="2" Grid.ColumnSpan="5"  Background="{StaticResource PPSnWindowFooterBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="30"/>
+            </Grid.ColumnDefinitions>
+
+            <ToggleButton Grid.Column="0" Content="{Binding Environment.Traces.LastTrace,Mode=OneWay,UpdateSourceTrigger=PropertyChanged}" Focusable="False" x:Name="TracePopupEnableButton" />
+            <ToggleButton Grid.Column="1" Focusable="False" x:Name="WebRequestPopupEnableButton" HorizontalContentAlignment="Stretch">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition MinWidth="75"/>
+                    </Grid.ColumnDefinitions>
+                    <Label Grid.Column="0" Content="lade .../styles.xml"/>
+                    <ProgressBar Grid.Column="1" Maximum="100" Value="73" MinWidth="70" FlowDirection="RightToLeft"/>
+                </Grid>
+            </ToggleButton>
+
+            <Popup PlacementTarget="{Binding ElementName=TracePopupEnableButton}" Placement="Top" IsOpen="{Binding ElementName=TracePopupEnableButton, Path=IsChecked,Mode=TwoWay}" Width="{Binding ElementName=TracePopupEnableButton, Path=ActualWidth}" StaysOpen="False" MaxHeight="400">
+                <Border BorderThickness="1" BorderBrush="{StaticResource PPSnWindowForegroundBrush}">
+                    <ListBox ItemsSource="{Binding Source={StaticResource FilteredTraces}}" Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
+				 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" Background="{StaticResource PPSnWindowBackgroundBrush}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Button Command="{x:Static ui:PpsWindow.TraceLogCommand}" Content="{Binding}"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+            </Popup>
+            <Popup PlacementTarget="{Binding ElementName=WebRequestPopupEnableButton}" Placement="Top" IsOpen="{Binding ElementName=WebRequestPopupEnableButton, Path=IsChecked,Mode=TwoWay}" Width="{Binding ElementName=WebRequestPopupEnableButton, Path=ActualWidth}" StaysOpen="False">
+                <Border BorderThickness="1" BorderBrush="{StaticResource PPSnWindowForegroundBrush}">
+                    <ListBox Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
+				 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" Background="{StaticResource PPSnWindowBackgroundBrush}">
+                        <ListBoxItem>
+                            <Label Content="Herbert"/>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <Label Content="Harald"/>
+                        </ListBoxItem>
+                    </ListBox>
+                </Border>
+            </Popup>
+            <Viewbox x:Name="PART_SizeGripper" Grid.Column="2" Width="15" VerticalAlignment="Bottom" HorizontalAlignment="Right">
                 <Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SizeGrip.png">
                     <Image.Tag>
                         <ui:PpsWindowHitTest HitTest="17"/>
@@ -539,6 +583,6 @@
                     </Style>
                 </Viewbox.Style>
             </Viewbox>
-        </DockPanel>
+        </Grid>
     </Grid>
 </ui:PpsWindow>
