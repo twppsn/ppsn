@@ -307,12 +307,14 @@ namespace TecWare.PPSn
 		private PpsTraceListener listener;
 		private List<PpsTraceItemBase> items = new List<PpsTraceItemBase>();
 		private PpsTraceItemBase lastTrace = null;
+		private Timer updateTimer;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		public PpsTraceLog()
 		{
 			Trace.Listeners.Add(listener = new PpsTraceListener(this));
+			updateTimer = new Timer((a) => UpdateLastTrace(), null, 0, 2000);
 		} // ctor
 
 		~PpsTraceLog()
@@ -425,7 +427,7 @@ namespace TecWare.PPSn
 			if (IsLastTraceNear() && // the current trace event is pretty new
 				item.Type < lastTrace.Type) // and more important
 				return false;
-
+			
 			lastTrace = item;
 			return true;
 		} // proc SetLastTrace
@@ -435,6 +437,7 @@ namespace TecWare.PPSn
 			if (!IsLastTraceNear())
 			{
 				lastTrace = null;
+				OnPropertyChanged(nameof(LastTrace));
 				return true;
 			}
 			else
