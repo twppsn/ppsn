@@ -1,6 +1,6 @@
 ﻿CREATE TABLE [dbo].[Plzd]
 (
-	[KnstId] BIGINT NOT NULL CONSTRAINT pkPlzdId PRIMARY KEY CONSTRAINT fkPlzdKons REFERENCES dbo.Knst (Id), 
+	[Id] BIGINT NOT NULL CONSTRAINT pkPlzdId PRIMARY KEY IDENTITY (1,1), 
 	[Plz] CHAR(5) NOT NULL, 
 	[Ort] NVARCHAR(50) NOT NULL, 
 	[LandId] BIGINT NOT NULL CONSTRAINT fkPlzdLand REFERENCES dbo.Land (Id), 
@@ -8,18 +8,20 @@
 	[Kfz] CHAR(5) NULL, 
 	[AmtSchl] NVARCHAR(12) NULL, 
 	[RegSchl] NVARCHAR(10) NULL, 
-	[Region] NVARCHAR(50) NULL
+	[Region] NVARCHAR(50) NULL,
+	[IsActive] BIT NOT NULL CONSTRAINT dfPlzdIsActive DEFAULT  1
 )
-
+GO
+ALTER TABLE [dbo].[Plzd] ENABLE CHANGE_TRACKING;
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Primary key, FK zu Knst',
+    @value = N'Primary key',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
     @level1name = N'Plzd',
     @level2type = N'COLUMN',
-    @level2name = N'KnstId'
+    @level2name = N'Id'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Postleitzahl',

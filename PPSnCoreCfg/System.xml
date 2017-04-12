@@ -149,43 +149,7 @@
 					<pps:relation name="ObjkId" fieldName="dbo.Objr.ObjkId" parentTable="Head" parentColumn="Id" parentType="Root" relationName="ObjrObjk" />
 				</pps:table>
 
-			</pps:dataset>
-
-			<pps:field name="dbo.Knst.Id" />
-
-			<!-- definition for currencies -->
-			<pps:field name="dbo.Waeh.Iso" />
-			<pps:field name="dbo.Waeh.Symbol" />
-			<pps:field name="dbo.Waeh.Name" />
-			<pps:field name="dbo.Waeh.Kurs" />
-			<pps:field name="dbo.Waeh.System" />
-
-			<!-- definition for countries -->
-			<pps:field name="dbo.Land.Id" />
-			<pps:field name="dbo.Land.Iso" />
-			<pps:field name="dbo.Land.Name" />
-			<pps:field name="dbo.Land.EnglishName" />
-			<pps:field name="dbo.Land.Iso3" />
-			<pps:field name="dbo.Land.Tld" />
-			<pps:field name="dbo.Land.Vorwahl" />
-			<pps:field name="dbo.Land.Zone" />
-			<pps:field name="dbo.Land.PostAdr" />
-
-			<!-- definition for contact groups -->
-			<pps:field name="dbo.Kgrp.Name" />
-
-			<!-- definition for postal codes -->
-			<pps:field name="dbo.Plzd.Plz" />
-			<pps:field name="dbo.Plzd.Ort" />
-			<pps:field name="dbo.Plzd.LandId" />
-			<pps:field name="dbo.Plzd.Vorwahl" />
-			<pps:field name="dbo.Plzd.Kfz" />
-			<pps:field name="dbo.Plzd.AmtSchl" />
-			<pps:field name="dbo.Plzd.RegSchl" />
-			<pps:field name="dbo.Plzd.Region" />
-
-			<!-- definition for quantity units -->
-			<pps:field name="dbo.Mein.Name" />
+			</pps:dataset>			
 
 			<pps:dataset name="masterdata">
 				<pps:table name="Header" dataSource="sys">
@@ -307,50 +271,7 @@
 						<pps:meta name="Default">0</pps:meta>
 					</pps:column>
 				</pps:table>
-
-				<!--<pps:table name="Waeh">
-					<pps:column name="Id" fieldName="dbo.Knst.Id" isPrimary="true" />
-					<pps:column name="ISO" fieldName="dbo.Waeh.Iso"/>
-					<pps:column name="Symbol" fieldName="dbo.Waeh.Symbol"/>
-					<pps:column name="Name" fieldName="dbo.Waeh.Name"/>
-					<pps:column name="Kurs" fieldName="dbo.Waeh.Kurs"/>
-					<pps:column name="System" fieldName="dbo.Waeh.System"/>
-				</pps:table>-->
-
-				<pps:table name="Land">
-					<pps:meta name="syncType">ChangeTracking: dbo.Land</pps:meta>
-					<pps:column name="Id" fieldName="dbo.Land.Id" isPrimary="true" />
-					<pps:column name="ISO" fieldName="dbo.Land.Iso"/>
-					<pps:column name="Name" fieldName="dbo.Land.Name"/>
-					<pps:column name="EnglishName" fieldName="dbo.Land.EnglishName"/>
-					<pps:column name="ISO3" fieldName="dbo.Land.Iso3"/>
-					<pps:column name="Tld" fieldName="dbo.Land.Tld"/>
-					<pps:column name="Vorwahl" fieldName="dbo.Land.Vorwahl"/>
-					<pps:column name="EuroZone" fieldName="dbo.Land.Zone"/>
-					<pps:column name="PostAdr" fieldName="dbo.Land.PostAdr"/>
-				</pps:table>
-
-				<!--<pps:table name="Kgrp">
-					<pps:column name="Id" fieldName="dbo.Knst.Id" isPrimary="true" />
-					<pps:column name="Name" fieldName="dbo.Kgrp.Name"/>
-				</pps:table>
-
-				<pps:table name="Plzd">
-					<pps:column name="Id" fieldName="dbo.Knst.Id" isPrimary="true" />
-					<pps:column name="Plz" fieldName="dbo.Plzd.Plz"/>
-					<pps:column name="Ort" fieldName="dbo.Plzd.Ort"/>
-					<pps:column name="LandId" fieldName="dbo.Plzd.LandId"/>
-					<pps:column name="Vorwahl" fieldName="dbo.Plzd.Vorwahl"/>
-					<pps:column name="Kfz" fieldName="dbo.Plzd.Kfz"/>
-					<pps:column name="AmtSchl" fieldName="dbo.Plzd.AmtSchl"/>
-					<pps:column name="RegSchl" fieldName="dbo.Plzd.RegSchl"/>
-					<pps:column name="Region" fieldName="dbo.Plzd.Region"/>
-				</pps:table>
-
-				<pps:table name="Mein">
-					<pps:column name="Id" fieldName="dbo.Knst.Id" isPrimary="true" />
-					<pps:column name="Name" fieldName="dbo.Mein.Name"/>
-				</pps:table>-->
+			
 			</pps:dataset>
 		</pps:register>
 	</pps:ppsn>

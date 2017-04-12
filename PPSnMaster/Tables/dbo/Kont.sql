@@ -10,7 +10,7 @@
 	[UstIdNr] CHAR(16) NULL, 
 	[Inaktiv] SMALLDATETIME NULL, 
 	[Abc] CHAR NULL, 
-	[KgrpId] BIGINT NULL CONSTRAINT fkKontKgrpId REFERENCES dbo.Kgrp (KnstId), 
+	[KgrpId] BIGINT NULL CONSTRAINT fkKontKgrpId REFERENCES dbo.Kgrp (Id), 
 	[Iban] CHAR(34) NULL, 
 	[Bic] CHAR(11) NULL
 )

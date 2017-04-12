@@ -1,22 +1,24 @@
 ﻿CREATE TABLE [dbo].[Waeh]
 (
-	[KnstId] BIGINT NOT NULL CONSTRAINT pkWaehId PRIMARY KEY CONSTRAINT fkWaehKnst REFERENCES dbo.Knst (Id), 
+	[Id] BIGINT NOT NULL CONSTRAINT pkWaehId PRIMARY KEY IDENTITY (1,1), 
 	[Name] NVARCHAR(30) NULL, 
 	[Symbol] NCHAR(5) NULL, 
 	[Kurs] DECIMAL(18, 4) NULL, 
 	[Iso] CHAR(3) NOT NULL,
-	[System] BIT NOT NULL
+	[System] BIT NOT NULL,
+	[IsActive] BIT NOT NULL CONSTRAINT dfWaehIsActive DEFAULT  1
 )
-
+GO
+ALTER TABLE [dbo].[Waeh] ENABLE CHANGE_TRACKING;
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'PK und FK zu Knst',
+    @value = N'Primary Key',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
     @level1name = N'Waeh',
     @level2type = N'COLUMN',
-    @level2name = 'KnstId'
+    @level2name = 'Id'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Systemwährung',
