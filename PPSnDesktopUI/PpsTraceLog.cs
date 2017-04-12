@@ -374,7 +374,7 @@ namespace TecWare.PPSn
 			{
 				if (itemRemoved != null)
 					OnCollectionRemoved(itemRemoved, 0);
-				OnCollectionAdded(item, items.Count);
+				OnCollectionAdded(item, items.Count - 1);
 			}
 			OnPropertyChanged(nameof(Count));
 			if (lastTraceChanged)
@@ -452,7 +452,7 @@ namespace TecWare.PPSn
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, index));
 
 		private void OnCollectionRemoved(object item, int index)
-			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, index);
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, index));
 
 		private void OnCollectionReset()
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));

@@ -161,7 +161,7 @@ namespace TecWare.PPSn.UI
 		private static IEnumerable<PpsTraceItemBase> GetLast(IList list, int count)
 		{
 			var end = list.Count - count;
-			for (var i = list.Count - 1; i >= 0 && i >= end; i--)
+			for (var i = Math.Max(end,0); i < list.Count; i++)
 				yield return (PpsTraceItemBase)list[i];
 		}
 
