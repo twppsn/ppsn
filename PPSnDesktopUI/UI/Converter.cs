@@ -154,6 +154,24 @@ namespace TecWare.PPSn.UI
 		}
 
 	}
+
+	public sealed class ManyToTopTenConverter : IMultiValueConverter
+	{
+		public object Convert(object[] value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			var ret = new System.Collections.ObjectModel.ObservableCollection<PpsTraceItemBase>();
+
+			if (value == null)
+				return ret;
+
+			return (from PpsTraceItemBase item in (value[0] as PpsTraceLog) orderby item.Stamp descending select item).Take(10);			
+		}
+
+		public object[] ConvertBack(object value, System.Type[] targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			throw new System.NotImplementedException();
+		}
+	}
 }
 
 

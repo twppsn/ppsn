@@ -16,6 +16,7 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
@@ -165,13 +166,8 @@ namespace TecWare.PPSn.UI
 
 			var descriptor = DependencyPropertyDescriptor.FromProperty(PpsCharmbarControl.ActualWidthProperty, typeof(PpsCharmbarControl));
 			descriptor.AddValueChanged(PART_Charmbar, OnCharmbarActualWidthChanged);
-
-#if !DEBUG
-			((CollectionViewSource)this.Resources["FilteredTraces"]).Filter += (sender, e) => e.Accepted = ((PpsTraceItemBase)e.Item).Type != PpsTraceItemType.Debug;
-#endif
-			
 		} // ctor
-
+		
 		private Task<bool> unloadTask = null;
 
 		protected override void OnClosing(CancelEventArgs e)
