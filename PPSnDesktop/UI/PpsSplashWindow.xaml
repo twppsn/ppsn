@@ -11,7 +11,7 @@
     </Window.InputBindings>
     <Border BorderThickness="1" BorderBrush="#3B4A62">
         <Grid>
-            <TabControl SelectedIndex="{Binding ActivePageNum,Mode=OneWay}" BorderThickness="0">
+            <TabControl SelectedIndex="{Binding ActivePageNum,Mode=OneWay,UpdateSourceTrigger=PropertyChanged}" BorderThickness="0" >
                 <TabControl.Resources>
                     <Style TargetType="TabItem">
                         <Setter Property="Template">

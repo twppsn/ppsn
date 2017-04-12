@@ -369,16 +369,16 @@ namespace TecWare.PPSn
 
 			// update view
 			if (resetList)
-				OnCollectionChanged();
+				OnCollectionReset();
 			else
 			{
 				if (itemRemoved != null)
-					OnCollectionRemoved(itemRemoved);
-				OnCollectionAdded(item);
+					OnCollectionRemoved(itemRemoved, 0);
+				OnCollectionAdded(item, items.Count);
 			}
-			OnPropertyChanged("Count");
+			OnPropertyChanged(nameof(Count));
 			if (lastTraceChanged)
-				OnPropertyChanged("LastTrace");
+				OnPropertyChanged(nameof(LastTrace));
 
 			return index;
 		} // proc AppendItem
@@ -391,7 +391,7 @@ namespace TecWare.PPSn
 				items.Clear();
 			}
 
-			OnCollectionChanged();
+			OnCollectionReset();
 			OnPropertyChanged("Count");
 			OnPropertyChanged("LastTrace");
 		} // proc Clear
@@ -448,13 +448,13 @@ namespace TecWare.PPSn
 		private void OnPropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-		private void OnCollectionAdded(object item)
-			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item));
+		private void OnCollectionAdded(object item, int index)
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, index));
 
-		private void OnCollectionRemoved(object item)
-			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item));
+		private void OnCollectionRemoved(object item, int index)
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, index);
 
-		private void OnCollectionChanged()
+		private void OnCollectionReset()
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
 		#endregion

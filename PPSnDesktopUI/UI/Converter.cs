@@ -23,6 +23,7 @@ using System.Windows;
 using System.Windows.Data;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
+using System.Collections;
 
 namespace TecWare.PPSn.UI
 {
@@ -157,6 +158,20 @@ namespace TecWare.PPSn.UI
 
 	public sealed class ManyToTopTenConverter : IMultiValueConverter
 	{
+		private static IEnumerable<PpsTraceItemBase> GetLast(IList list, int count)
+		{
+			var end = list.Count - count;
+			for (var i = list.Count - 1; i >= 0 && i >= end; i--)
+				yield return (PpsTraceItemBase)list[i];
+		}
+
+		//public class III : IEnumerable<PpsTraceItemBase>
+		//{
+		//	private readonly PpsTraceLog trace;
+
+
+		//}
+
 		public object Convert(object[] value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
 		{
 			var ret = new System.Collections.ObjectModel.ObservableCollection<PpsTraceItemBase>();
@@ -164,7 +179,7 @@ namespace TecWare.PPSn.UI
 			if (value == null)
 				return ret;
 
-			return (from PpsTraceItemBase item in (value[0] as PpsTraceLog) orderby item.Stamp descending select item).Take(10);			
+			return GetLast((IList)value[0], 10); // (from PpsTraceItemBase item in (value[0] as PpsTraceLog) select item).Take(10).Reverse();			
 		}
 
 		public object[] ConvertBack(object value, System.Type[] targetType, object parameter, System.Globalization.CultureInfo culture)
