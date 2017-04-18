@@ -179,6 +179,9 @@ namespace TecWare.PPSn.UI
 			if (value == null)
 				return ret;
 
+            if (!(value[0] is IList))
+                return ret;
+
 			return GetLast((IList)value[0], 10); // (from PpsTraceItemBase item in (value[0] as PpsTraceLog) select item).Take(10).Reverse();			
 		}
 
