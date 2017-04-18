@@ -91,7 +91,7 @@ namespace TecWare.PPSn.UI
 			await Task.Yield(); // spawn new thread
 
 			// new document or load one
-			using (var transaction = Environment.BeginLocalStoreTransaction())
+			using (var transaction = Environment.MasterData.CreateTransaction())
 			{
 				data = await obj.GetDataAsync<PpsObjectDataSet>(transaction);
 

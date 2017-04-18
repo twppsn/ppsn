@@ -518,7 +518,6 @@ namespace TecWare.PPSn
 
 			this.activeDataSets = new PpsActiveDataSetsImplementation(this);
 			this.objectInfo = new PpsEnvironmentCollection<PpsObjectInfo>(this);
-			this.synchronizationWorker = new PpsObjectSynchronizationWorker(this);
 
 			Neo.IronLua.LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
 			Neo.IronLua.LuaType.RegisterTypeAlias("blob", typeof(byte[]));

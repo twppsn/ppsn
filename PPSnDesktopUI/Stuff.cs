@@ -16,6 +16,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Net;
 using System.Net.Mime;
@@ -61,7 +63,7 @@ namespace TecWare.PPSn
 
 		public static void AddNamespaces(this ParserContext context, XElement x)
 		{
-			foreach (XAttribute xAttr in x.Attributes())
+			foreach (var xAttr in x.Attributes())
 			{
 				if (xAttr.IsNamespaceDeclaration)
 					AddNamespace(context, xAttr.Name.LocalName, xAttr.Value);
@@ -93,6 +95,28 @@ namespace TecWare.PPSn
 
 	public static class StuffDB
 	{
+		public static DbParameter AddParameter(this DbCommand command, string parameterName, DbType dbType, object value = null)
+		{
+			var param = command.CreateParameter();
+			param.ParameterName = parameterName;
+			param.DbType = dbType;
+			param.Value = value;
+			return param;
+		} // func AddParameter
+
+		public static DbDataReader ExecuteReaderEx(this DbCommand command, CommandBehavior commandBehavior = CommandBehavior.Default)
+		{
+			try
+			{
+				return command.ExecuteReader(commandBehavior);
+			}
+			catch (DbException e)
+			{
+				e.Data["CommandText"] = command.CommandText;
+				throw;
+			}
+		} // func ExecuteReaderEx
+
 		public static bool DbNullOnNeg(long value)
 			=> value < 0;
 

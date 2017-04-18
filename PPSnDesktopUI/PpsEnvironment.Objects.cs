@@ -4,10 +4,12 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Data;
+using System.Data.Common;
 using System.Data.SQLite;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -45,46 +47,6 @@ namespace TecWare.PPSn
 		Delete,
 		Deleted
 	} // enum PpsObjectLinkRestriction
-
-	#endregion
-
-	#region -- class PpsNestedDatabaseTransaction ---------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	internal class PpsNestedDatabaseTransaction : IDbTransaction
-	{
-		private readonly SQLiteTransaction otherTransaction;
-		private readonly SQLiteTransaction nestedTransaction;
-
-		internal PpsNestedDatabaseTransaction(SQLiteConnection connection, SQLiteTransaction transaction)
-		{
-			if (transaction != null)
-			{
-				this.otherTransaction = transaction;
-				this.nestedTransaction = null;
-			}
-			else
-			{
-				this.otherTransaction = null;
-				this.nestedTransaction = connection.BeginTransaction();
-			}
-		} // ctor
-
-		public void Dispose()
-			=> nestedTransaction?.Dispose();
-
-		public void Commit()
-			=> nestedTransaction?.Commit();
-
-		public void Rollback()
-			=> nestedTransaction?.Rollback();
-
-		IDbConnection IDbTransaction.Connection => Connection;
-		public SQLiteConnection Connection => Transaction.Connection;
-		public IsolationLevel IsolationLevel => Transaction.IsolationLevel;
-		public SQLiteTransaction Transaction => otherTransaction ?? nestedTransaction;
-	} // class PpsDatabaseTransaction
 
 	#endregion
 
@@ -396,12 +358,11 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		private class TagCommand : IDisposable
 		{
-			protected readonly SQLiteCommand command;
+			protected readonly DbCommand command;
 
-			public TagCommand(SQLiteTransaction trans, SQLiteConnection connection)
+			public TagCommand(PpsMasterDataTransaction transaction)
 			{
-				this.command = connection.CreateCommand();
-				this.command.Transaction = trans;
+				this.command = transaction.CreateNativeCommand();
 			} // ctor
 
 			public void Dispose()
@@ -416,16 +377,16 @@ namespace TecWare.PPSn
 
 		private sealed class TagSelectByKeyCommand : TagCommand
 		{
-			private readonly SQLiteParameter objectIdParameter;
-			private readonly SQLiteParameter keyParameter;
+			private readonly DbParameter objectIdParameter;
+			private readonly DbParameter keyParameter;
 
-			public TagSelectByKeyCommand(SQLiteTransaction trans)
-				: base(trans, trans.Connection)
+			public TagSelectByKeyCommand(PpsMasterDataTransaction transaction)
+				: base(transaction)
 			{
 				this.command.CommandText = "SELECT [Id] FROM main.[ObjectTags] WHERE [ObjectId] = @ObjectId AND [Key] = @Key;";
 
-				this.objectIdParameter = command.Parameters.Add("@ObjectId", DbType.Int64);
-				this.keyParameter = command.Parameters.Add("@Key", DbType.String);
+				this.objectIdParameter = command.AddParameter("@ObjectId", DbType.Int64);
+				this.keyParameter = command.AddParameter("@Key", DbType.String);
 
 				this.command.Prepare();
 			} // ctor
@@ -435,7 +396,7 @@ namespace TecWare.PPSn
 				objectIdParameter.Value = objectId;
 				keyParameter.Value = key;
 
-				using (var r = command.ExecuteReader(CommandBehavior.SingleRow))
+				using (var r = command.ExecuteReaderEx(CommandBehavior.SingleRow))
 				{
 					if (r.Read() && !r.IsDBNull(0))
 						return r.GetInt64(0);
@@ -453,15 +414,15 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		private sealed class TagSelectCommand : TagCommand
 		{
-			private readonly SQLiteParameter objectIdParameter;
+			private readonly DbParameter objectIdParameter;
 
-			public TagSelectCommand(SQLiteTransaction trans, SQLiteConnection connection, bool visibleOnly)
-				: base(trans, connection)
+			public TagSelectCommand(PpsMasterDataTransaction transaction, bool visibleOnly)
+				: base(transaction)
 			{
 				this.command.CommandText =
-					"SELECT [Id], [Key], [Class], [Value], FROM main.[ObjectTags] WHERE [ObjectId] = @ObjectId" + (visibleOnly ? " AND [Class] >= 0" : ";");
+					"SELECT [Id], [Key], [Class], [Value], [UserId] FROM main.[ObjectTags] WHERE [ObjectId] = @ObjectId" + (visibleOnly ? " AND [Class] >= 0" : ";");
 
-				this.objectIdParameter = command.Parameters.Add("@ObjectId", DbType.Int64);
+				this.objectIdParameter = command.AddParameter("@ObjectId", DbType.Int64);
 
 				this.command.Prepare();
 			} // ctor
@@ -477,7 +438,8 @@ namespace TecWare.PPSn
 						var k = r.GetString(1);
 						var t = r.GetInt32(2);
 						var v = r.IsDBNull(3) ? null : r.GetString(3);
-						yield return new Tuple<long, PpsObjectTag>(r.GetInt64(0), new PpsObjectTag(k, (PpsObjectTagClass)t, v,0));
+						var u = r.IsDBNull(4) ? -1L : r.GetInt64(4);
+						yield return new Tuple<long, PpsObjectTag>(r.GetInt64(0), new PpsObjectTag(k, (PpsObjectTagClass)t, v, u));
 					}
 				}
 			}// func Select
@@ -489,36 +451,43 @@ namespace TecWare.PPSn
 
 		private sealed class TagInsertCommand : TagCommand
 		{
-			private readonly SQLiteParameter objectIdParameter;
-			private readonly SQLiteParameter keyParameter;
-			private readonly SQLiteParameter classParameter;
-			private readonly SQLiteParameter valueParameter;
-			private readonly SQLiteParameter syncTokenParameter;
+			private readonly PpsMasterDataTransaction transaction;
+			private readonly DbParameter idParameter;
+			private readonly DbParameter objectIdParameter;
+			private readonly DbParameter keyParameter;
+			private readonly DbParameter classParameter;
+			private readonly DbParameter valueParameter;
+			private readonly DbParameter userIdParameter;
 
-			public TagInsertCommand(SQLiteTransaction trans)
-				: base(trans, trans.Connection)
+			public TagInsertCommand(PpsMasterDataTransaction transaction)
+				: base(transaction)
 			{
-				this.command.CommandText = "INSERT INTO main.[ObjectTags] ([ObjectId], [Key], [Class], [Value], [SyncToken]) values (@ObjectId, @Key, @Class, @Value, @SyncToken);";
-				this.objectIdParameter = command.Parameters.Add("@ObjectId", DbType.Int64);
-				this.keyParameter = command.Parameters.Add("@Key", DbType.String);
-				this.classParameter = command.Parameters.Add("@Class", DbType.Int64);
-				this.valueParameter = command.Parameters.Add("@Value", DbType.String);
-				this.syncTokenParameter = command.Parameters.Add("@SyncToken", DbType.Int64);
+				this.transaction = transaction;
+
+				this.command.CommandText = "INSERT INTO main.[ObjectTags] ([Id], [ObjectId], [Key], [Class], [Value], [UserId]) values (@Id, @ObjectId, @Key, @Class, @Value, @UserId);";
+				this.idParameter = command.AddParameter("@Id", DbType.Int64);
+				this.objectIdParameter = command.AddParameter("@ObjectId", DbType.Int64);
+				this.keyParameter = command.AddParameter("@Key", DbType.String);
+				this.classParameter = command.AddParameter("@Class", DbType.Int64);
+				this.valueParameter = command.AddParameter("@Value", DbType.String);
+				this.userIdParameter = command.AddParameter("@UserId", DbType.Int64);
 
 				this.command.Prepare();
 			} // ctor
 
-			public long Insert(long objectId, string key, int cls, string value, long syncToken)
+			public long Insert(long objectId, string key, int cls, string value, long userId)
 			{
+				var id = transaction.GetNextLocalId("main.ObjectTags", "Id");
+				idParameter.Value = id;
 				objectIdParameter.Value = objectId;
 				keyParameter.Value = key;
 				classParameter.Value = cls;
 				valueParameter.Value = value;
-				syncTokenParameter.Value = syncToken;
+				userIdParameter.Value = userId;
 
 				command.ExecuteNonQuery();
 
-				return command.Connection.LastInsertRowId;
+				return id;
 			} // func Insert
 		} // class TagInsertCommand
 
@@ -530,30 +499,30 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		private sealed class TagUpdateCommand : TagCommand
 		{
-			private readonly SQLiteParameter idParameter;
-			private readonly SQLiteParameter classParameter;
-			private readonly SQLiteParameter valueParameter;
-			private readonly SQLiteParameter syncTokenParameter;
+			private readonly DbParameter idParameter;
+			private readonly DbParameter classParameter;
+			private readonly DbParameter valueParameter;
+			private readonly DbParameter userIdParameter;
 
-			public TagUpdateCommand(SQLiteTransaction trans)
-				: base(trans, trans.Connection)
+			public TagUpdateCommand(PpsMasterDataTransaction transaction)
+				: base(transaction)
 			{
 				this.command.CommandText = "UPDATE main.[ObjectTags] SET [Class] = @Class, [Value] = @Value, [SyncToken] = @syncToken where [Id] = @Id;";
 
-				this.idParameter = command.Parameters.Add("@Id", DbType.Int64);
-				this.classParameter = command.Parameters.Add("@Class", DbType.Int64);
-				this.valueParameter = command.Parameters.Add("@Value", DbType.String);
-				this.syncTokenParameter = command.Parameters.Add("@syncToken", DbType.Int64);
+				this.idParameter = command.AddParameter("@Id", DbType.Int64);
+				this.classParameter = command.AddParameter("@Class", DbType.Int64);
+				this.valueParameter = command.AddParameter("@Value", DbType.String);
+				this.userIdParameter = command.AddParameter("@userId", DbType.Int64);
 
 				this.command.Prepare();
 			} // ctor
 
-			public void Update(long tagId, int cls, string value, long syncToken)
+			public void Update(long tagId, int cls, string value, long userId)
 			{
 				idParameter.Value = tagId;
 				classParameter.Value = cls;
 				valueParameter.Value = value ?? (object)DBNull.Value;
-				syncTokenParameter.Value = syncToken;
+				userIdParameter.Value = userId;
 
 				command.ExecuteNonQuery();
 			} // proc Update
@@ -567,14 +536,14 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		private sealed class TagDeleteCommand : TagCommand
 		{
-			private readonly SQLiteParameter idParameter;
+			private readonly DbParameter idParameter;
 
-			public TagDeleteCommand(SQLiteTransaction trans)
-				: base(trans, trans.Connection)
+			public TagDeleteCommand(PpsMasterDataTransaction transaction)
+				: base(transaction)
 			{
 				this.command.CommandText = "DELETE FROM main.[ObjectTags] WHERE [Id] = @Id;";
 
-				this.idParameter = command.Parameters.Add("@Id", DbType.Int64);
+				this.idParameter = command.AddParameter("@Id", DbType.Int64);
 
 				this.command.Prepare();
 			} // ctor
@@ -645,13 +614,13 @@ namespace TecWare.PPSn
 			RefreshTags(PpsObjectTag.ParseTagFields(tagList));
 		} // proc RefreshTagsFromString
 
-		internal void RefreshTags(SQLiteTransaction transaction = null)
+		internal void RefreshTags(PpsMasterDataTransaction transaction = null)
 		{
-			using (var cmd = new TagSelectCommand(transaction, parent.Environment.LocalConnection, true))
-				RefreshTags(cmd.Select(parent.LocalId).Select(c => c.Item2));
+			using (var cmd = new TagSelectCommand(transaction, true))
+				RefreshTags(cmd.Select(parent.Id).Select(c => c.Item2));
 		} // proc RefreshTags
 
-		internal void CheckTagsLoaded(SQLiteTransaction transaction)
+		internal void CheckTagsLoaded(PpsMasterDataTransaction transaction)
 		{
 			lock (parent.SyncRoot)
 			{
@@ -673,29 +642,29 @@ namespace TecWare.PPSn
 
 		#region -- Tag Manipulation -------------------------------------------------------
 
-		public PpsObjectTag Add(PpsObjectTag tag, SQLiteTransaction transaction = null)
+		public PpsObjectTag Add(PpsObjectTag tag, PpsMasterDataTransaction transaction = null)
 		{
 			CheckTagsLoaded(transaction);
 
 			lock (parent.SyncRoot)
 			{
-				using (var trans = new PpsNestedDatabaseTransaction(parent.Environment.LocalConnection, transaction))
+				using (var trans = parent.Environment.MasterData.CreateTransaction(transaction))
 				{
 					long? tagId;
 
 					// first update the local database
-					using (var cmd = new TagSelectByKeyCommand(trans.Transaction))
-						tagId = cmd.SelectByKey(parent.LocalId, tag.Name);
+					using (var cmd = new TagSelectByKeyCommand(trans))
+						tagId = cmd.SelectByKey(parent.Id, tag.Name);
 
 					if (tagId.HasValue) // update the entry
 					{
-						using (var cmd = new TagUpdateCommand(trans.Transaction))
+						using (var cmd = new TagUpdateCommand(trans))
 							cmd.Update(tagId.Value, (int)tag.Class, tag.Value.ChangeType<string>(), Procs.GetSyncStamp());
 					}
 					else // insert new entry
 					{
-						using (var cmd = new TagInsertCommand(trans.Transaction))
-							cmd.Insert(parent.LocalId, tag.Name, (int)tag.Class, tag.Value.ChangeType<string>(), Procs.GetSyncStamp());
+						using (var cmd = new TagInsertCommand(trans))
+							cmd.Insert(parent.Id, tag.Name, (int)tag.Class, tag.Value.ChangeType<string>(), Procs.GetSyncStamp());
 					}
 
 					// update the local list
@@ -719,19 +688,19 @@ namespace TecWare.PPSn
 			return tag;
 		} // func Add
 
-		public void Update(IReadOnlyList<PpsObjectTag> newTags, bool removeMissingTags = false, bool refreshTags = true, SQLiteTransaction transaction = null)
+		public void Update(IReadOnlyList<PpsObjectTag> newTags, bool removeMissingTags = false, bool refreshTags = true, PpsMasterDataTransaction transaction = null)
 		{
 			var updatedTags = new List<string>();
 
 			// update tags
-			using (var trans = new PpsNestedDatabaseTransaction(parent.Environment.LocalConnection, transaction))
+			using (var trans = parent.Environment.MasterData.CreateTransaction(transaction))
 			{
-				using (var selectTags = new TagSelectCommand(trans.Transaction, trans.Connection, false))
-				using (var updateTag = new TagUpdateCommand(trans.Transaction))
-				using (var insertTag = new TagInsertCommand(trans.Transaction))
-				using (var deleteTag = new TagDeleteCommand(trans.Transaction))
+				using (var selectTags = new TagSelectCommand(trans, false))
+				using (var updateTag = new TagUpdateCommand(trans))
+				using (var insertTag = new TagInsertCommand(trans))
+				using (var deleteTag = new TagDeleteCommand(trans))
 				{
-					foreach (var cur in selectTags.Select(parent.LocalId))
+					foreach (var cur in selectTags.Select(parent.Id))
 					{
 						var tagId = cur.Item1;
 						var currentTag = cur.Item2;
@@ -739,18 +708,16 @@ namespace TecWare.PPSn
 
 						if (sourceTag != null) // source exists, compare the value
 						{
-							if (sourceTag.SyncToken >= currentTag.SyncToken)
+							if (sourceTag.Class == PpsObjectTagClass.Deleted)
 							{
-								if (sourceTag.Class == PpsObjectTagClass.Deleted)
-								{
-									if (currentTag.Class != PpsObjectTagClass.Deleted)
-										deleteTag.Delete(tagId);
-								}
-								else if (sourceTag.Class != currentTag.Class || !sourceTag.IsValueEqual(currentTag.Value)) // -> update
-								{
-									updateTag.Update(tagId, (int)sourceTag.Class, sourceTag.Value.ChangeType<string>(), sourceTag.SyncToken);
-								}
+								if (currentTag.Class != PpsObjectTagClass.Deleted)
+									deleteTag.Delete(tagId);
 							}
+							else if (sourceTag.Class != currentTag.Class || !sourceTag.IsValueEqual(currentTag.Value)) // -> update
+							{
+								updateTag.Update(tagId, (int)sourceTag.Class, sourceTag.Value.ChangeType<string>(), sourceTag.UserId);
+							}
+							
 							updatedTags.Add(currentTag.Name);
 						}
 						else if (removeMissingTags) // no new tag, mark as deleted 
@@ -763,15 +730,15 @@ namespace TecWare.PPSn
 					foreach (var sourceTag in newTags)
 					{
 						if (sourceTag.Value != null && !updatedTags.Exists(c => String.Compare(c, sourceTag.Name, StringComparison.OrdinalIgnoreCase) == 0))
-							insertTag.Insert(parent.LocalId, sourceTag.Name, (int)sourceTag.Class, sourceTag.Value.ChangeType<string>(), sourceTag.SyncToken);
+							insertTag.Insert(parent.Id, sourceTag.Name, (int)sourceTag.Class, sourceTag.Value.ChangeType<string>(), sourceTag.UserId);
 					}
 				}
 
 				// refresh tags
 				if (refreshTags)
 				{
-					using (var selectTags = new TagSelectCommand(trans.Transaction, trans.Connection, true))
-						RefreshTags(selectTags.Select(parent.LocalId).Select(c => c.Item2));
+					using (var selectTags = new TagSelectCommand(trans, true))
+						RefreshTags(selectTags.Select(parent.Id).Select(c => c.Item2));
 				}
 				else
 				{
@@ -782,7 +749,7 @@ namespace TecWare.PPSn
 			}
 		} // proc Update
 
-		public void Update(LuaTable tags, bool removeMissingTags = false, SQLiteTransaction transaction = null)
+		public void Update(LuaTable tags, bool removeMissingTags = false, PpsMasterDataTransaction transaction = null)
 		{
 			var tagList = new List<PpsObjectTag>();
 			foreach (var c in tags.Members)
@@ -828,20 +795,20 @@ namespace TecWare.PPSn
 		public int IndexOf(PpsObjectTag tag)
 			=> IndexOf(tag.Name);
 
-		public bool Remove(string key, SQLiteTransaction transaction = null)
+		public bool Remove(string key, PpsMasterDataTransaction transaction = null)
 		{
 			CheckTagsLoaded(transaction);
 
-			using (var trans = new PpsNestedDatabaseTransaction(parent.Environment.LocalConnection, transaction))
+			using (var trans = parent.Environment.MasterData.CreateTransaction(transaction))
 			{
 				long? tagId;
-				using (var selectTag = new TagSelectByKeyCommand(trans.Transaction))
-					tagId = selectTag.SelectByKey(parent.LocalId, key);
+				using (var selectTag = new TagSelectByKeyCommand(trans))
+					tagId = selectTag.SelectByKey(parent.Id, key);
 
 				if (tagId.HasValue)
 				{
 					// update database
-					using (var updateTag = new TagUpdateCommand(trans.Transaction))
+					using (var updateTag = new TagUpdateCommand(trans))
 						updateTag.Update(tagId.Value, -1, null, Procs.GetSyncStamp());
 
 					// notify ui
@@ -877,10 +844,10 @@ namespace TecWare.PPSn
 				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, tags[index], index));
 		} // proc RemoveUI
 
-		public bool Remove(PpsObjectTag tag, SQLiteTransaction transaction = null)
+		public bool Remove(PpsObjectTag tag, PpsMasterDataTransaction transaction = null)
 			=> Remove(tag.Name, transaction);
 
-		public bool RemoveAt(int index, SQLiteTransaction transaction = null)
+		public bool RemoveAt(int index, PpsMasterDataTransaction transaction = null)
 			=> Remove(tags[index].Name, transaction);
 
 		public IEnumerator<PpsObjectTag> GetEnumerator()
@@ -940,10 +907,10 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public interface IPpsObjectData : INotifyPropertyChanged
 	{
-		Task LoadAsync(SQLiteTransaction transaction = null);
-		Task CommitAsync(SQLiteTransaction transaction = null);
-		Task PushAsync(SQLiteTransaction transaction = null);
-		Task UnloadAsync(SQLiteTransaction transaction = null);
+		Task LoadAsync(PpsMasterDataTransaction transaction = null);
+		Task CommitAsync(PpsMasterDataTransaction transaction = null);
+		Task PushAsync(PpsMasterDataTransaction transaction = null);
+		Task UnloadAsync(PpsMasterDataTransaction transaction = null);
 
 		bool IsLoaded { get; }
 	} // interface IPpsObjectData
@@ -965,22 +932,22 @@ namespace TecWare.PPSn
 			this.baseObj = obj;
 		} // ctor
 
-		public Task LoadAsync(SQLiteTransaction transaction = null)
+		public Task LoadAsync(PpsMasterDataTransaction transaction = null)
 		{
 			return Task.CompletedTask;
 		} // proc LoadAsync
 
-		public Task CommitAsync(SQLiteTransaction transaction = null)
+		public Task CommitAsync(PpsMasterDataTransaction transaction = null)
 		{
 			throw new NotImplementedException();
 		}
 
-		public Task PushAsync(SQLiteTransaction transaction = null)
+		public Task PushAsync(PpsMasterDataTransaction transaction = null)
 		{
 			throw new NotImplementedException();
 		}
 
-		public Task UnloadAsync(SQLiteTransaction transaction = null)
+		public Task UnloadAsync(PpsMasterDataTransaction transaction = null)
 		{
 			throw new NotImplementedException();
 		}
@@ -1005,7 +972,7 @@ namespace TecWare.PPSn
 			this.baseObj = obj;
 		} // ctor
 
-		public async Task LoadAsync(SQLiteTransaction transaction = null)
+		public async Task LoadAsync(PpsMasterDataTransaction transaction = null)
 		{
 			using (var src = await baseObj.LoadRawDataAsync(transaction))
 			{
@@ -1020,44 +987,44 @@ namespace TecWare.PPSn
 			}
 		} // proc LoadAsync
 
-		public async Task CommitAsync(SQLiteTransaction trans = null)
+		public async Task CommitAsync(PpsMasterDataTransaction trans = null)
 		{
-			try
-			{
-				using (var transaction = new PpsNestedDatabaseTransaction(Environment.LocalConnection, trans))
-				{
-					// update data
-					await baseObj.SaveRawDataAsync(transaction.Transaction,
-						 dst =>
-						 {
-							 var settings = Procs.XmlWriterSettings;
-							 settings.CloseOutput = false;
-							 using (var xml = XmlWriter.Create(dst, settings))
-								 Write(xml);
-						 }
-						);
+			//try
+			//{
+			//	using (var transaction = new PpsNestedDatabaseTransaction(Environment.LocalConnection, trans))
+			//	{
+			//		// update data
+			//		await baseObj.SaveRawDataAsync(transaction.Transaction,
+			//			 dst =>
+			//			 {
+			//				 var settings = Procs.XmlWriterSettings;
+			//				 settings.CloseOutput = false;
+			//				 using (var xml = XmlWriter.Create(dst, settings))
+			//					 Write(xml);
+			//			 }
+			//			);
 
-					// update tags
-					baseObj.Tags.Update(GetAutoTags().ToList(), transaction: transaction.Transaction);
+			//		// update tags
+			//		baseObj.Tags.Update(GetAutoTags().ToList(), transaction: transaction.Transaction);
 
-					transaction.Commit();
-				}
-			}
-			catch (Exception)
-			{
-				throw;
-			}
+			//		transaction.Commit();
+			//	}
+			//}
+			//catch (Exception)
+			//{
+			//	throw;
+			//}
 
 			// mark not dirty anymore
 			ResetDirty();
 		} // proc CommitAsync
 
-		public Task PushAsync(SQLiteTransaction transaction = null)
+		public Task PushAsync(PpsMasterDataTransaction transaction = null)
 		{
 			throw new NotImplementedException();
 		} // proc PushAsync
 
-		public Task UnloadAsync(SQLiteTransaction transaction = null)
+		public Task UnloadAsync(PpsMasterDataTransaction transaction = null)
 			=> Task.CompletedTask;
 
 		public PpsUndoManager UndoManager => null;
@@ -1084,26 +1051,34 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public sealed class PpsObject : DynamicDataRow, INotifyPropertyChanged
 	{
+		#region -- class PpsStaticObjectColumn ------------------------------------------
+
+		private sealed class PpsStaticObjectColumn : SimpleDataColumn
+		{
+			private readonly string columnExpression;
+
+			public PpsStaticObjectColumn(string columnName, string columnExpression, Type dataType)
+				: base(columnName, dataType)
+			{
+				this.columnExpression = columnExpression;
+			} // ctor
+
+			public string Expression => columnExpression;
+		} // class PpsStaticObjectColumn
+
+		#endregion
+
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private readonly PpsEnvironment environment;
 		private readonly PpsObjectColumns columns;
 		private readonly long objectId;
+		private readonly object[] staticValues;				// values of the table
 		private readonly object objectLock = new object();
-
-		private Guid guid;
-		private string typ;
-		private string nr;
-		private bool isRev;
-		private long remoteCurRevId;
-		private long remoteHeadRevId;
-		private long pulledRevId;
-		private bool isDocumentChanged;
-		private bool hasData;
 		
-		private IPpsObjectData data = null;
-		private readonly PpsObjectTags tags;
-		private readonly PpsObjectLinks links;
+		private IPpsObjectData data = null;					// access to the object data
+		private readonly PpsObjectTags tags;				// list with assigned tags
+		private readonly PpsObjectLinks links;				// linked objects
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -1117,6 +1092,7 @@ namespace TecWare.PPSn
 
 			this.columns = new PpsObjectColumns(this);
 			this.data = null;
+			this.staticValues = new object[staticColumns.Length];
 			this.tags = new PpsObjectTags(this);
 			this.links = new PpsObjectLinks(this);
 
@@ -1125,15 +1101,9 @@ namespace TecWare.PPSn
 
 		private void ReadObjectInfo(IDataReader r)
 		{
-			Set(ref guid, r.GetGuid(1), nameof(Guid));
-			Set(ref typ, r.GetString(2), nameof(Typ));
-			Set(ref nr, r.IsDBNull(3) ? null : r.GetString(3), nameof(Nr));
-			Set(ref isRev, r.GetBoolean(4), nameof(IsRev));
-			Set(ref remoteCurRevId, r.IsDBNull(5) ? -1 : r.GetInt64(5), nameof(RemoteCurRevId));
-			Set(ref remoteHeadRevId, r.IsDBNull(6) ? -1 : r.GetInt64(6), nameof(RemoteHeadRevId));
-			Set(ref pulledRevId, r.IsDBNull(7) ? -1 : r.GetInt64(7), nameof(PulledRevId));
-			Set(ref isDocumentChanged, r.IsDBNull(8) ? false : r.GetBoolean(8), nameof(IsDocumentChanged));
-			Set(ref hasData, !r.IsDBNull(9), nameof(HasData));
+			// update the values
+			for (var i = 1; i < StaticColumns.Length; i++)
+				SetValue(i, r.IsDBNull(i) ? null : r.GetValue(i));
 
 			// check for tags
 			if (r.FieldCount >= StaticColumns.Length && !r.IsDBNull(StaticColumns.Length))
@@ -1141,16 +1111,16 @@ namespace TecWare.PPSn
 		} // proc ReadObjectInfo
 
 		/// <summary>Refresh of the object data.</summary>
-		/// <param name="transaction">Optional transaction.</param>
-		public void Refresh(bool withTags = false, SQLiteTransaction transaction = null)
+		/// <param name="transaction">Optional parent transaction.</param>
+		public void Refresh(bool withTags = false, PpsMasterDataTransaction transaction = null)
 		{
 			// refresh core data
 			lock (objectLock)
-				using (var cmd = environment.LocalConnection.CreateCommand())
+			{
+				using (var trans = environment.MasterData.CreateTransaction(transaction))
+				using(var cmd = trans.CreateNativeCommand(StaticColumnsSelect + " WHERE o.Id = @Id"))
 				{
-					cmd.CommandText = StaticColumnsSelect + " WHERE o.Id = @Id";
-					cmd.Transaction = transaction;
-					cmd.Parameters.Add("@Id", DbType.Int64).Value = objectId;
+					cmd.AddParameter("@Id", DbType.Int64, objectId);
 
 					using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
 					{
@@ -1160,6 +1130,7 @@ namespace TecWare.PPSn
 							throw new InvalidOperationException("No result set.");
 					}
 				}
+			}
 
 			// refresh tags
 			if (withTags)
@@ -1169,159 +1140,61 @@ namespace TecWare.PPSn
 		#endregion
 
 		#region -- Pull, Push -------------------------------------------------------------
-
-		private static bool DbNullOnNeg(long value)
-			=> value < 0;
-
-		public void Push(SQLiteTransaction transaction)
-		{
-			// refresh the objects
-			Refresh(true, transaction);
-
-			// pack the object for the server
-			throw new NotImplementedException();
-			//		CommitWork();
-
-			//		var head = Tables["Head", true];
-			//		var documentType = head.First["Typ"];
-
-			//		long newServerId;
-			//		long newRevId;
-
-			//		// send the document to the server
-			//		using (var xmlAnswer = environment.Request.GetXmlStreamAsync(
-			//			await environment.Request.PutTextResponseAsync(documentType + "/?action=push", MimeTypes.Text.Xml,
-			//				(tw) =>
-			//				{
-			//					using (var xmlPush = XmlWriter.Create(tw, Procs.XmlWriterSettings))
-			//						Write(xmlPush);
-			//				}
-			//			)))
-			//		{
-			//			var xResult = environment.Request.CheckForExceptionResult(XDocument.Load(xmlAnswer).Root);
-
-			//			newServerId = xResult.GetAttribute("id", -1L);
-			//			newRevId = xResult.GetAttribute("revId", -1L);
-			//			var pullRequest = xResult.GetAttribute("pullRequest", false);
-			//			if (pullRequest)
-			//				throw new ArgumentException("todo: Pull before push");
-			//			if (newServerId < 0 || newRevId < 0)
-			//				throw new ArgumentOutOfRangeException("id", "Pull action failed.");
-			//		}
-
-			//		// pull the document again, and update the local store
-			//		var xRoot = await environment.Request.GetXmlAsync($"{documentType}/?action=pull&id={newServerId}&rev={newRevId}");
-
-			//		// recreate dataset
-			//		undoManager.Clear();
-			//		Read(xRoot);
-			//		SetLocalState(localId, newRevId, false, false);
-
-			//		// update local store and
-			//		using (var trans = environment.BeginLocalStoreTransaction())
-			//		{
-			//			throw new NotImplementedException();
-			//			//trans.Update(localId, newServerId, newRevId, Tables["Head", true].First["Nr"].ToString());
-			//			//trans.UpdateDataSet(localId, this);
-			//			trans.Commit();
-			//		}		//
-			// objekt descr. target, with data, with ref?
-			//
-		} // proc Push
-
-		public Task PullAsync(SQLiteTransaction transaction)
-			=> Task.Run(() => Environment.GetObjectFromServer(guid, true, transaction));
-
-		internal async Task PullAsnc(SQLiteTransaction transaction, IDataRow current, int[] columnIndexes, bool withData)
-		{
-			// check guid
-			var rowGuid = current.GetValue(columnIndexes[(int)PpsObjectServerIndex.Guid], Guid.Empty);
-			if (guid != rowGuid)
-				throw new ArgumentOutOfRangeException("guid", $"Guid does not match (expected: {guid}, found: {rowGuid})");
-			var rowTyp = current.GetValue(columnIndexes[(int)PpsObjectServerIndex.Typ], String.Empty);
-			if (typ != rowTyp)
-				throw new ArgumentOutOfRangeException("typ", $"Typ does not match (object: {guid}, expected: {typ}, found: {typ})");
-
-			// update the values
-			Set(ref nr, current.GetValue(columnIndexes[(int)PpsObjectServerIndex.Nr], (string)null), nameof(Nr));
-			Set(ref isRev, current.GetValue(columnIndexes[(int)PpsObjectServerIndex.IsRev], false), nameof(IsRev));
-			Set(ref remoteHeadRevId, current.GetValue(columnIndexes[(int)PpsObjectServerIndex.RevId], -1L), nameof(RemoteHeadRevId));
-
-			using (var trans = new PpsNestedDatabaseTransaction(Environment.LocalConnection, transaction))
-			{
-				using (var cmd = environment.LocalConnection.CreateCommand())
-				{
-					cmd.CommandText = "UPDATE main.Objects SET IsRev = @IsRev, PulledRevId = @PulledRevId, Nr = @Nr WHERE Id = @Id";
-					cmd.Transaction = trans.Transaction;
-
-					cmd.Parameters.Add("@Id", DbType.Int64).Value = objectId;
-					cmd.Parameters.Add("@IsRev", DbType.Boolean).Value = isRev;
-					cmd.Parameters.Add("@PulledRevId", DbType.Int64).Value = pulledRevId.DbNullIf(DbNullOnNeg);
-					cmd.Parameters.Add("@Nr", DbType.String).Value = nr.DbNullIfString();
-
-					await cmd.ExecuteNonQueryAsync();
-				}
-
-				// update Tags
-				var tagList = PpsObjectTag.ParseTagFields(current.GetValue(columnIndexes[(int)PpsObjectServerIndex.Tags], String.Empty)).ToArray();
-				tags.Update(tagList, refreshTags: false, transaction: trans.Transaction);
-				tags.RefreshTags(tagList);
-
-				// update links
-				// todo:
-
-				// update data
-				if (withData)
-					await PullDataAsync(trans.Transaction);
-
-			}
-		} // proc PullAsnc
-
-		private async Task<Stream> PullDataAsync(long revisionId)
+		
+		private PpsProxyRequest PullDataRequest(long revisionId)
 		{
 			var objectInfo = Environment.GetObjectInfo(Typ);
 			var objectUri = objectInfo?.GetMemberValue("objectUri") ?? Typ;
 			var acceptedMimeType = objectInfo?.GetMemberValue("acceptedMimeType") as string;
-
-			return await Environment.Request.GetStreamAsync($"{objectUri}/?action=pull&id={objectId}&rev={revisionId}", acceptedMimeType);
+			 
+			// create a proxy request, and enqueue it with high priority
+			return Environment.GetProxyRequest($"{objectUri}/?action=pull&id={objectId}&rev={revisionId}");
 		} // proc PullDataAsync
 
-		internal async Task PullDataAsync(SQLiteTransaction transaction)
+		private async Task<IPpsProxyTask> EnqueuePull(PpsMasterDataTransaction transaction)
 		{
-			// check if the environment is online
+			// check if the environment is online, force online
 			await Environment.ForceOnlineAsync();
 
 			// load the data from the server
 			if (objectId <= 0)
 				throw new ArgumentOutOfRangeException("objectId", "Invalid server id, this is a local only object and has no server representation.");
 
-			var t = Environment.SynchronizationWorker.RemovePull(this);
-			if (t == null)
+			var pulledRevId = RemoteHeadRevId;
+
+			// check download manager
+			lock (objectLock)
 			{
-				// create the request for the data
-				using (var trans = new PpsNestedDatabaseTransaction(Environment.LocalConnection, transaction))
+				var request = PullDataRequest(pulledRevId);
+				if (environment.WebProxy.TryGet(request, out var task))
+					return task;
+
+				// create new request
+				request.SetUpdateOfflineCache(c =>
 				{
-					using (var src = await PullDataAsync(RemoteHeadRevId))
-					{
-						// update data
-						pulledRevId = RemoteHeadRevId;
-						await SaveRawDataAsync(trans.Transaction,
-							(dst) => src.CopyTo(dst)
-						);
-					}
+					SetValue((int)PpsStaticObjectColumnIndex.PulledRevId, pulledRevId);
+					SaveRawDataAsync(transaction, c.ContentLength, c.ContentType,
+						dst => c.Content.CopyTo(dst)
+					).Wait();
+					return c.Content;
+				});
 
-					// read data
-					if (data != null && !data.IsLoaded)
-						await data.LoadAsync(trans.Transaction);
-
-					trans.Commit();
-				}
+				// read the object stream from server
+				return request.Enqueue(PpsLoadPriority.ObjectPrimaryData, true);
 			}
-			else
-				await t;
 		} // proc PullDataAsync
 
-		public async Task<T> GetDataAsync<T>(SQLiteTransaction transaction, bool asyncPullData = false)
+		private async Task PullDataAsync(PpsMasterDataTransaction transaction)
+		{
+			using (var r = await (await EnqueuePull(transaction)).ForegroundAsync())
+			{
+				// read prev stored data
+				if (data != null && !data.IsLoaded)
+					await data.LoadAsync(transaction);
+			}
+		} // proc PullDataAsync
+
+		public async Task<T> GetDataAsync<T>(PpsMasterDataTransaction transaction, bool asyncPullData = false)
 			where T : IPpsObjectData
 		{
 			if (data == null)
@@ -1329,42 +1202,34 @@ namespace TecWare.PPSn
 				// create the core data object
 				data = await environment.CreateObjectDataObjectAsync<T>(this);
 
-				// update data from server, if not present
-				if (objectId >= 0)
-				{
-					if (!hasData) // first data pull
-					{
-						//if (asyncPullData)
-						//	Environment.SynchronizationWorker.EnqueuePull(this);
-						//else
-							await PullDataAsync(transaction);
-					}
-					else // todo: check for changes
-					{ }
-				}
+				// update data from server, if not present (pull head)
+				if (objectId >= 0 && !HasData)
+					await PullDataAsync(transaction);
 			}
 			return (T)data;
 		} // func GetDataAsync
 
-		public async Task<Stream> LoadRawDataAsync(SQLiteTransaction transaction)
+		internal async Task<Stream> LoadRawDataAsync(PpsMasterDataTransaction transaction)
 		{
-			using (var localTransaction = new PpsNestedDatabaseTransaction(Environment.LocalConnection, transaction))
-			using (var cmd = Environment.LocalConnection.CreateCommand())
+			using (var trans = environment.MasterData.CreateTransaction())
+			using (var cmd = trans.CreateNativeCommand("SELECT Document, DocumentIsLinked, length(Document) FROM main.Objects WHERE Id = @Id"))
 			{
-				cmd.CommandText = "SELECT Document, length(Document) FROM main.Objects WHERE Id = @Id";
-				cmd.Transaction = transaction;
-
-				cmd.Parameters.Add("@Id", DbType.Int64).Value = objectId;
+				cmd.AddParameter("@Id", DbType.Int64, objectId);
 
 				using (var r = await cmd.ExecuteReaderAsync(CommandBehavior.SingleRow))
 				{
 					if (r.Read() && !r.IsDBNull(0))
 					{
-						var data = new byte[r.GetInt64(1)];
-
+						var data = new byte[r.GetInt64(2)];
 						r.GetBytes(0, 0, data, 0, data.Length);
 
-						return new MemoryStream(data, false);
+						if (!r.IsDBNull(1) && r.GetBoolean(1)) // linked document
+						{
+							var path = Encoding.Unicode.GetString(data);
+							return new FileStream(environment.MasterData.GetLocalPath(path), FileMode.Open);
+						}
+						else
+							return new MemoryStream(data, false);
 					}
 					else
 						return null;
@@ -1372,7 +1237,7 @@ namespace TecWare.PPSn
 			}
 		} // func LoadRawDataAsync
 
-		public async Task SaveRawDataAsync(SQLiteTransaction transaction, Action<Stream> data)
+		internal async Task SaveRawDataAsync(PpsMasterDataTransaction transaction, long contentLength, string mimeType, Action<Stream> data)
 		{
 			byte[] bData = null;
 
@@ -1388,23 +1253,23 @@ namespace TecWare.PPSn
 			}
 
 			// store the value
-			using (var cmd = Environment.LocalConnection.CreateCommand())
+			using (var trans = environment.MasterData.CreateTransaction())
+			using (var cmd = trans.CreateNativeCommand("UPDATE main.Objects " +
+				"SET PulledRevId = IFNULL(@PulledRevId, PulledRevId), Nr = IFNULL(@Nr, Nr), Document = @Document, DocumentIsLinked = 0, DocumentIsChanged = @DocumentIsChanged " +
+				"WHERE Id = @Id"))
 			{
-				cmd.CommandText = "UPDATE main.Objects SET PulledRevId = IFNULL(@PulledRevId, PulledRevId), Nr = IFNULL(@Nr, Nr), Document = @Document, DocumentIsChanged = @DocumentIsChanged WHERE Id = @Id";
-				cmd.Transaction = transaction;
-
-				cmd.Parameters.Add("@Id", DbType.Int64).Value = objectId;
-				cmd.Parameters.Add("@PulledRevId", DbType.Int64).Value = bData == null ? DBNull.Value : pulledRevId.DbNullIf(DbNullOnNeg);
-				cmd.Parameters.Add("@Nr", DbType.String).Value = nr.DbNullIfString();
-				cmd.Parameters.Add("@Document", DbType.Binary).Value = bData == null ? (object)DBNull.Value : bData;
-				cmd.Parameters.Add("@DocumentIsChanged", DbType.Boolean).Value = bData == null ? false : isDocumentChanged;
+				cmd.AddParameter("@Id", DbType.Int64, objectId);
+				cmd.AddParameter("@PulledRevId", DbType.Int64, bData == null ? DBNull.Value : PulledRevId.DbNullIf(StuffDB.DbNullOnNeg));
+				cmd.AddParameter("@Nr", DbType.String, Nr.DbNullIfString());
+				cmd.AddParameter("@Document", DbType.Binary, bData == null ? (object)DBNull.Value : bData);
+				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, bData == null ? false : IsDocumentChanged);
 
 				await cmd.ExecuteNonQueryAsync();
 			}
 		} // proc SaveRawDataAsync
 
 		public override string ToString()
-			=> $"Object: {typ}; {objectId} # {guid}:{pulledRevId}";
+			=> $"Object: {Typ}; {objectId} # {Guid}:{PulledRevId}";
 
 		#endregion
 
@@ -1413,14 +1278,17 @@ namespace TecWare.PPSn
 		internal void OnPropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-		private void Set<T>(ref T field, T newValue, string propertyName)
+		private T GetValue<T>(int index, T empty)
+			=> (T)(staticValues[index] ?? empty);
+
+		private void SetValue(int index, object newValue)
 		{
-			if (!Object.Equals(field, newValue))
+			if (Object.Equals(staticValues[index], newValue))
 			{
-				field = newValue;
-				OnPropertyChanged(propertyName);
+				staticValues[index] = newValue;
+				OnPropertyChanged(staticColumns[index].Name);
 			}
-		} // func Set
+		} // func SetValue
 
 		#endregion
 
@@ -1490,42 +1358,18 @@ namespace TecWare.PPSn
 				{
 					if (index < 0)
 						throw new ArgumentOutOfRangeException();
-					else if (index < StaticColumns.Length + StaticPropertyCount)
+					else if (index < StaticColumns.Length)
+						return staticValues[index];
+					else if (index == StaticColumns.Length + 0)
 					{
-						switch (index)
-						{
-							case 0:
-								return objectId;
-							case 1:
-								return guid;
-							case 2:
-								return typ;
-							case 3:
-								return nr;
-							case 4:
-								return isRev;
-							case 5:
-								return remoteCurRevId;
-							case 6:
-								return remoteHeadRevId;
-							case 7:
-								return pulledRevId;
-							case 8:
-								return isDocumentChanged;
-							case 9:
-								return hasData;
-							case 10:
-								if (data == null)
-									data = GetDataAsync<IPpsObjectData>(null, true).Result;
-								return data;
-							case 11:
-								return tags;
-							case 12:
-								return links;
-							default:
-								return null;
-						}
+						if (data == null)
+							data = GetDataAsync<IPpsObjectData>(null, true).Result;
+						return data;
 					}
+					else if (index == StaticColumns.Length + 1)
+						return tags;
+					else if (index == StaticColumns.Length + 2)
+						return links;
 					else if (index < StaticColumns.Length + Tags.Count + StaticPropertyCount)
 						return tags[index - StaticColumns.Length - StaticPropertyCount].Value;
 					else
@@ -1539,70 +1383,70 @@ namespace TecWare.PPSn
 		public PpsEnvironment Environment => environment;
 		public override bool IsDataOwner => true;
 
-		public long LocalId => objectId;
-		public Guid Guid => guid;
-		public string Typ => typ;
-		public string Nr => nr;
-		public bool IsRev => isRev;
-		public long RemoteCurRevId => remoteCurRevId;
-		public long RemoteHeadRevId => remoteHeadRevId;
-		public long PulledRevId => pulledRevId;
-		public bool IsDocumentChanged => isDocumentChanged;
-		public bool HasData => hasData;
+		public long Id => objectId;
+		public Guid Guid => GetValue((int)PpsStaticObjectColumnIndex.Guid, System.Guid.Empty);
+		public string Typ => GetValue((int)PpsStaticObjectColumnIndex.Typ, String.Empty);
+		public string MimeType => GetValue((int)PpsStaticObjectColumnIndex.MimeType, String.Empty);
+		public string Nr => GetValue((int)PpsStaticObjectColumnIndex.Nr, String.Empty);
+		public bool IsRev => GetValue((int)PpsStaticObjectColumnIndex.IsRev, false);
+		public long RemoteCurRevId => GetValue((int)PpsStaticObjectColumnIndex.RemoteCurRevId, -1L);
+		public long RemoteHeadRevId => GetValue((int)PpsStaticObjectColumnIndex.RemoteHeadRevId, -1L);
+		public long PulledRevId => GetValue((int)PpsStaticObjectColumnIndex.PulledRevId, -1L);
+		public bool IsDocumentChanged => GetValue((int)PpsStaticObjectColumnIndex.IsDocumentChanged, false);
+		public bool HasData => GetValue((int)PpsStaticObjectColumnIndex.HasData, false);
+
 		public PpsObjectLinks Links => links.RefreshLazy();
 		public PpsObjectTags Tags => tags;
 
 		internal object SyncRoot => objectLock;
 
-		// -- Static --------------------------------------------------------------
+		// -- Static ----------------------------------------------------------------
+
+		private static PpsStaticObjectColumn[] staticColumns;
+		
+		private enum PpsStaticObjectColumnIndex
+		{
+			Guid = 1,
+			Typ,
+			MimeType,
+			Nr,
+			IsRev,
+			RemoteCurRevId,
+			RemoteHeadRevId,
+			PulledRevId,
+			IsDocumentChanged,
+			HasData
+		} // enum PpsStaticObjectColumnIndex
 
 		static PpsObject()
 		{
-			StaticColumns = new IDataColumn[]
+			staticColumns = new PpsStaticObjectColumn[]
 			{
-				new SimpleDataColumn("Id", typeof(long)),
-				new SimpleDataColumn("Guid", typeof(Guid)),
-				new SimpleDataColumn("Typ", typeof(string)),
-				new SimpleDataColumn("Nr", typeof(string)),
-				new SimpleDataColumn("IsRev", typeof(bool)),
-				new SimpleDataColumn("RemoteCurRevId", typeof(long)),
-				new SimpleDataColumn("RemoteHeadRevId", typeof(long)),
-				new SimpleDataColumn("PulledRevId", typeof(long)),
-				new SimpleDataColumn("IsDocumentChanged", typeof(bool)),
-				new SimpleDataColumn("HasData", typeof(bool))
+				new PpsStaticObjectColumn(nameof(Id), "o.Id", typeof(long)),
+				new PpsStaticObjectColumn(nameof(Guid),"o.Guid", typeof(Guid)),
+				new PpsStaticObjectColumn(nameof(Typ), "o.Typ", typeof(string)),
+				new PpsStaticObjectColumn(nameof(MimeType), "o.MimeType", typeof(string)),
+				new PpsStaticObjectColumn(nameof(Nr),"o.Nr", typeof(string)),
+				new PpsStaticObjectColumn(nameof(IsRev),"o.IsRev", typeof(bool)),
+				new PpsStaticObjectColumn(nameof(RemoteCurRevId),"o.RemoteCurRevId", typeof(long)),
+				new PpsStaticObjectColumn(nameof(RemoteHeadRevId), "o.RemoteHeadRevId", typeof(long)),
+				new PpsStaticObjectColumn(nameof(PulledRevId),"o.PulledRevId", typeof(long)),
+				new PpsStaticObjectColumn(nameof(IsDocumentChanged), "o.DocumentIsChanged", typeof(bool)),
+				new PpsStaticObjectColumn(nameof(HasData), "length(o.Document)", typeof(bool))
 			};
 
-			StaticColumnExpressions = new string[]
-			{
-				"o.Id",
-				"o.Guid",
-				"o.Typ",
-				"o.Nr",
-				"o.IsRev",
-				"o.RemoteCurRevId",
-				"o.RemoteHeadRevId",
-				"o.PulledRevId",
-				"o.DocumentIsChanged",
-				"length(o.Document)"
-			};
-
-#if DEBUG
-			if (StaticColumnExpressions.Length != StaticColumns.Length)
-				throw new ArgumentOutOfRangeException("columns");
-#endif
-
-			StaticColumnsSelect = "SELECT " + String.Join(",", StaticColumnExpressions) + " FROM main.[Objects] o";
+			StaticColumnsSelect = "SELECT " + String.Join(",", staticColumns.Select(c => c.Expression)) + " FROM main.[Objects] o";
 		} // ctor
+		
 
 		internal const int StaticPropertyCount = 3;
 
-		internal static IDataColumn[] StaticColumns { get; }
-		internal static string[] StaticColumnExpressions { get; }
+		internal static IDataColumn[] StaticColumns => staticColumns;
 		internal static string StaticColumnsSelect { get; }
 
 		internal static IDataColumn StaticDataColumn { get; } = new SimpleDataColumn("Data", typeof(IPpsObjectData));
-		internal static IDataColumn StaticTagsColumn { get; } = new SimpleDataColumn("Tags", typeof(PpsObjectTags));
-		internal static IDataColumn StaticLinksColumn { get; } = new SimpleDataColumn("Links", typeof(PpsObjectLinks));
+		internal static IDataColumn StaticTagsColumn { get; } = new SimpleDataColumn(nameof(Tags), typeof(PpsObjectTags));
+		internal static IDataColumn StaticLinksColumn { get; } = new SimpleDataColumn(nameof(Links), typeof(PpsObjectLinks));
 	} // class PpsObject
 
 	#endregion
@@ -1631,49 +1475,6 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsObjectSynchronizationWorker -------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Background work for the synchronization of data.</summary>
-	public sealed class PpsObjectSynchronizationWorker
-	{
-		private readonly PpsEnvironment environment;
-
-		public PpsObjectSynchronizationWorker(PpsEnvironment environment)
-		{
-			this.environment = environment;
-		} // ctor
-
-		//private struct QueuedObject
-		//{
-		//	public int Action; // pull/push
-		//	public PpsObject Object;
-		//} // struct QueuedTask
-
-		/*
-		 * PushStructure
-		 * PullStructure
-		 */
-
-		//private List<>
-
-		public void EnqueuePull(PpsObject obj)
-		{
-			throw new NotImplementedException();
-		} // proc EnqueuePull
-
-		public void EnqueuePush(PpsObject obj)
-		{
-		} // func EnqueuePush
-
-		internal Task RemovePull(PpsObject ppsObject)
-		{
-			return null;
-		}
-	} // class PpsObjectSynchronizationWorker
-
-	#endregion
-
 	#region -- class PpsEnvironment -----------------------------------------------------
 
 	public partial class PpsEnvironment
@@ -1687,111 +1488,9 @@ namespace TecWare.PPSn
 		private readonly Dictionary<Guid, int> objectStoreByGuid = new Dictionary<Guid, int>();
 
 		private readonly PpsEnvironmentCollection<PpsObjectInfo> objectInfo;
-		private readonly PpsObjectSynchronizationWorker synchronizationWorker;
 
-		private const bool UseId = false;
-		private const bool UseGuid = true;
-
-		#region -- Update local store index -----------------------------------------------
-
-		protected async Task RefreshObjectStoreAsync()
-		{
-			long maxSyncToken;
-			bool syncTokenRowExists;
-			using (var cmd = LocalConnection.CreateCommand())
-			{
-				cmd.CommandText = "SELECT [SyncToken] FROM main.[SyncTokens] WHERE [Name] = 'Objects'";
-				using (var r = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult))
-					maxSyncToken = (syncTokenRowExists = await r.ReadAsync()) && !r.IsDBNull(0) ? r.GetInt64(0) : 0;
-			}
-
-			using (var enumerator = GetViewData(
-				new PpsShellGetList("dbo.objects")
-				{
-					Filter = new PpsDataFilterCompareExpression("SyncToken", PpsDataFilterCompareOperator.Greater, new PpsDataFilterCompareTextValue(maxSyncToken.ToString()))
-				}).GetEnumerator())
-			{
-				var columnIndexes = CreateColumnIndexes(enumerator);
-
-				var run = true;
-				do
-				{
-					using (var transaction = BeginLocalStoreTransaction())
-					{
-						var sw = Stopwatch.StartNew();
-						while (sw.ElapsedMilliseconds < 500)
-						{
-							run = enumerator.MoveNext();
-							if (!run)
-								break;
-
-							await RefreshObjectAsync(enumerator, columnIndexes, transaction);
-
-							maxSyncToken = Math.Max(maxSyncToken, enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.SyncToken], 0L));
-						}
-
-						transaction.Commit();
-					}
-				} while (run);
-			}
-
-			// update sync token
-			using (var cmd = LocalConnection.CreateCommand())
-			{
-
-				cmd.CommandText = syncTokenRowExists ?
-					"UPDATE main.[SyncTokens] SET [SyncToken] = @SyncToken WHERE [Name] = 'Objects'" :
-					"INSERT INTO main.[SyncTokens] ([Name], [SyncToken]) VALUES ('Objects', @SyncToken)";
-
-				cmd.Parameters.Add("@SyncToken", DbType.Int64).Value = maxSyncToken;
-				await cmd.ExecuteNonQueryAsync();
-			}
-		} // proc RefreshObjectStoreAsync
-
-		private static int[] CreateColumnIndexes(IEnumerator<IDataRow> enumerator)
-		{
-			return new int[]
-			{
-					enumerator.FindColumnIndex(PpsObjectServerIndex.Id.ToString(), true),
-					enumerator.FindColumnIndex(PpsObjectServerIndex.Guid.ToString(), true),
-					enumerator.FindColumnIndex(PpsObjectServerIndex.Typ.ToString(), true),
-					enumerator.FindColumnIndex(PpsObjectServerIndex.Nr.ToString(), true),
-					enumerator.FindColumnIndex(PpsObjectServerIndex.IsRev.ToString(), true),
-					enumerator.FindColumnIndex(PpsObjectServerIndex.SyncToken.ToString(), true),
-					enumerator.FindColumnIndex(PpsObjectServerIndex.RevId.ToString(), true),
-					enumerator.FindColumnIndex(PpsObjectServerIndex.Tags.ToString())
-			};
-		} // func CreateColumnIndexes
-
-		private async Task<PpsObject> RefreshObjectAsync(IEnumerator<IDataRow> enumerator, int[] columnIndexes, SQLiteTransaction transaction)
-		{
-			var objectGuid = enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Guid], Guid.Empty);
-			if (objectGuid == Guid.Empty)
-				throw new ArgumentException("Object guid is empty. Check the server return.", "guid");
-
-			var obj = GetObject(objectGuid, transaction);
-
-			if (obj == null) // create empty object
-			{
-				obj = CreateNewObject(
-					transaction,
-					enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Id], -1L),
-					enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Guid], Guid.Empty),
-					enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Typ], (string)null),
-					enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.Nr], (string)null),
-					enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.IsRev], false),
-					enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.RevId], -1L),
-					enumerator.GetValue(columnIndexes[(int)PpsObjectServerIndex.SyncToken], -1L)
-				);
-			}
-
-			// update the object informations
-			await obj.PullAsnc(transaction, enumerator.Current, columnIndexes, false);
-
-			return obj;
-		} // func RefreshObjectAsync
-
-		#endregion
+		private const bool useId = false;
+		private const bool useGuid = true;
 
 		#region -- CreateObjectFilter -----------------------------------------------------
 
@@ -2119,7 +1818,7 @@ namespace TecWare.PPSn
 				// generate static columns
 				for (var i = 0; i < PpsObject.StaticColumns.Length; i++)
 				{
-					cmd.Append(PpsObject.StaticColumnExpressions[i])
+					cmd.Append(PpsObject.StaticColumns[i].Name)
 						.Append(" AS ")
 						.Append(ColumnStaticPrefix).Append(PpsObject.StaticColumns[i].Name)
 						.Append(',');
@@ -2216,7 +1915,7 @@ order by t_liefnr.value desc
 		} // func CreateObjectFilter
 
 		#endregion
-
+		
 		/// <summary>Create a new object.</summary>
 		/// <param name="serverId"></param>
 		/// <param name="guid"></param>
@@ -2227,24 +1926,21 @@ order by t_liefnr.value desc
 		/// <param name="syncToken"></param>
 		/// <returns></returns>
 		[LuaMember]
-		public PpsObject CreateNewObject(SQLiteTransaction transaction, long serverId, Guid guid, string typ, string nr, bool isRev, long remoteRevId, long syncToken = 0)
+		public PpsObject CreateNewObject(PpsMasterDataTransaction transaction, long serverId, Guid guid, string typ, string nr)
 		{
-			using (var cmd = LocalConnection.CreateCommand())
+			using (var trans = MasterData.CreateTransaction(transaction))
+			using (var cmd = trans.CreateNativeCommand("INSERT INTO main.Objects (Id, Guid, Typ, Nr, IsHidden, IsRev) VALUES (@Id, @Guid, @Typ, @Nr, 0, @IsRev)"))
 			{
-				cmd.CommandText = "INSERT INTO main.Objects (Id, Guid, Typ, Nr, IsHidden, IsRev, RemoteHeadRevId) VALUES (@Id, @Guid, @Typ, @Nr, 0, @IsRev, @RemoteRevId)";
-				cmd.Transaction = transaction;
-
-				cmd.Parameters.Add("@Id", DbType.Int64).Value = serverId.DbNullIf(StuffDB.DbNullOnNeg);
-				cmd.Parameters.Add("@Guid", DbType.Guid).Value = guid;
-				cmd.Parameters.Add("@Typ", DbType.String).Value = typ.DbNullIfString();
-				cmd.Parameters.Add("@Nr", DbType.String).Value = nr.DbNullIfString();
-				cmd.Parameters.Add("@IsRev", DbType.Boolean).Value = isRev;
-				cmd.Parameters.Add("@RemoteRevId", DbType.Int64).Value = remoteRevId.DbNullIf(StuffDB.DbNullOnNeg);
-				cmd.Parameters.Add("@SyncToken", DbType.Int64).Value = syncToken < 0 ? 0 : syncToken;
+				var newObjectId = trans.GetNextLocalId("main.Objects", "Id");
+				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
+				cmd.AddParameter("@Guid", DbType.Guid, guid);
+				cmd.AddParameter("@Typ", DbType.String, typ.DbNullIfString());
+				cmd.AddParameter("@Nr", DbType.String, nr.DbNullIfString());
 
 				cmd.ExecuteNonQuery();
+				trans.Commit();
 
-				return GetObject(LocalConnection.LastInsertRowId, transaction);
+				return GetObject(newObjectId, transaction);
 			}
 		} // func CreateNewObject
 
@@ -2257,11 +1953,6 @@ order by t_liefnr.value desc
 			else
 				return (T)(IPpsObjectData)new PpsObjectDataSet(schema, obj);
 		} // func CreateObjectDataObjectAsync
-
-		#region -- Automatic download queue -----------------------------------------------
-
-
-		#endregion
 
 		#region -- Object Info ------------------------------------------------------------
 
@@ -2307,17 +1998,16 @@ order by t_liefnr.value desc
 
 		#region -- Object Cache -----------------------------------------------------------
 
-		private PpsObject ReadObject(object key, bool useGuid, SQLiteTransaction transaction)
+		private PpsObject ReadObject(object key, bool useGuid, PpsMasterDataTransaction transaction)
 		{
 			// refresh core data
-			using (var cmd = LocalConnection.CreateCommand())
+			using (var trans = MasterData.CreateTransaction(transaction))
+			using (var cmd = trans.CreateNativeCommand(PpsObject.StaticColumnsSelect + (useGuid ? " WHERE o.Guid = @Guid" : " WHERE o.Id = @Id")))
 			{
-				cmd.CommandText = PpsObject.StaticColumnsSelect + (useGuid ? " WHERE o.Guid = @Guid" : " WHERE o.Id = @Id");
-				cmd.Transaction = transaction;
 				if (useGuid)
-					cmd.Parameters.Add("@Guid", DbType.Guid).Value = key;
+					cmd.AddParameter("@Guid", DbType.Guid, key);
 				else
-					cmd.Parameters.Add("@Id", DbType.Int64).Value = key;
+					cmd.AddParameter("@Id", DbType.Int64, key);
 
 				using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
 				{
@@ -2333,15 +2023,13 @@ order by t_liefnr.value desc
 		{
 			if (c == null)
 				return true;
-			PpsObject o;
-			return !c.TryGetTarget(out o);
+			return !c.TryGetTarget(out var o);
 		} // func IsEmptyObject
 
 		private PpsObject UpdateCacheItem(PpsObject obj)
 		{
-			int cacheIndex;
 			// find a cache index
-			if (!objectStoreByGuid.TryGetValue(obj.Guid, out cacheIndex) && !objectStoreById.TryGetValue(obj.LocalId, out cacheIndex))
+			if (!objectStoreByGuid.TryGetValue(obj.Guid, out var cacheIndex) && !objectStoreById.TryGetValue(obj.Id, out cacheIndex))
 			{
 				cacheIndex = objectStore.FindIndex(c => IsEmptyObject(c));
 				if (cacheIndex == -1)
@@ -2353,7 +2041,7 @@ order by t_liefnr.value desc
 
 			// set cache
 			objectStore[cacheIndex] = new WeakReference<PpsObject>(obj);
-			objectStoreById[obj.LocalId] = cacheIndex;
+			objectStoreById[obj.Id] = cacheIndex;
 			objectStoreByGuid[obj.Guid] = cacheIndex;
 
 			return obj;
@@ -2361,14 +2049,12 @@ order by t_liefnr.value desc
 
 		private PpsObject GetCachedObject<T>(Dictionary<T, int> index, T key)
 		{
-			int cacheIndex;
-			if (index.TryGetValue(key, out cacheIndex))
+			if (index.TryGetValue(key, out var cacheIndex))
 			{
 				var reference = objectStore[cacheIndex];
 				if (reference != null)
 				{
-					PpsObject obj;
-					if (reference.TryGetTarget(out obj))
+					if (reference.TryGetTarget(out var obj))
 						return obj;
 					else
 					{
@@ -2382,7 +2068,7 @@ order by t_liefnr.value desc
 			return null;
 		} // func GetCachedObject
 
-		private PpsObject GetCachedObjectOrRead<T>(Dictionary<T, int> index, T key, bool keyIsGuid, SQLiteTransaction transaction = null)
+		private PpsObject GetCachedObjectOrRead<T>(Dictionary<T, int> index, T key, bool keyIsGuid, PpsMasterDataTransaction transaction = null)
 		{
 			lock (objectStoreLock)
 			{
@@ -2404,51 +2090,19 @@ order by t_liefnr.value desc
 		} // func GetCachedObjectOrCreate
 
 		[LuaMember]
-		public PpsObject GetObject(long localId, SQLiteTransaction transaction = null)
-			=> GetCachedObjectOrRead(objectStoreById, localId, UseId, transaction);
+		public PpsObject GetObject(long localId, PpsMasterDataTransaction transaction = null)
+			=> GetCachedObjectOrRead(objectStoreById, localId, useId, transaction);
 
 		[LuaMember]
-		public PpsObject GetObject(Guid guid, SQLiteTransaction transaction = null)
-			=> GetCachedObjectOrRead(objectStoreByGuid, guid, UseGuid, transaction);
-
-
-		[LuaMember]
-		public PpsObject GetObjectFromServer(Guid guid, bool forceRefresh = false, SQLiteTransaction transaction = null)
-		{
-			lock (objectStoreLock)
-			{
-				// ask cache
-				if (!forceRefresh)
-				{
-					var o = GetCachedObject(objectStoreByGuid, guid);
-					if (o != null)
-						return o;
-				}
-
-				using (var e = GetViewData(
-					new PpsShellGetList("dbo.objects")
-					{
-						Filter = new PpsDataFilterCompareExpression("Guid", PpsDataFilterCompareOperator.Equal, new PpsDataFilterCompareTextValue(guid.ToString("N")))
-					}).GetEnumerator())
-				{
-					if (e.MoveNext())
-						return RefreshObjectAsync(e, CreateColumnIndexes(e), transaction).Result;
-					else
-						throw new ArgumentException($"Object '{guid}' not found.");
-				}
-			}
-		} // func GetObjectFromServer
+		public PpsObject GetObject(Guid guid, PpsMasterDataTransaction transaction = null)
+			=> GetCachedObjectOrRead(objectStoreByGuid, guid, useGuid, transaction);
 
 		[LuaMember]
 		public LuaTable GetObjectInfo(string objectTyp)
 			=> objectInfo[objectTyp, false];
 
 		#endregion
-
-		[LuaMember]
-		public SQLiteTransaction BeginLocalStoreTransaction()
-			=> LocalConnection.BeginTransaction();
-
+		
 		#region -- ActiveDataSets ---------------------------------------------------------
 
 		internal void OnDataSetActivated(PpsDataSetDesktop dataset)
@@ -2470,8 +2124,6 @@ order by t_liefnr.value desc
 		[LuaMember]
 		public PpsEnvironmentCollection<PpsObjectInfo> ObjectInfos => objectInfo;
 
-
-		public PpsObjectSynchronizationWorker SynchronizationWorker => synchronizationWorker;
 		#endregion
 	} // class PpsEnvironment
 

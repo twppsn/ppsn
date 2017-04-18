@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Data;
+using System.Data.Common;
 using System.Data.SQLite;
 using System.Diagnostics;
 using System.IO;
@@ -55,6 +56,121 @@ namespace TecWare.PPSn
 	{
 		void MoveTo(string fileName);
 	} // interface IInternalFileCacheStream
+
+	#endregion
+
+	#region -- class PpsMasterDataTransaction -------------------------------------------
+
+	public abstract class PpsMasterDataTransaction : IDbTransaction, IDisposable
+	{
+		#region -- class PpsMasterNestedTransaction -------------------------------------
+
+		private sealed class PpsMasterNestedTransaction : PpsMasterDataTransaction
+		{
+			public PpsMasterNestedTransaction(SQLiteConnection connection, SQLiteTransaction parentTransaction)
+				: base(connection, parentTransaction)
+			{
+			} // ctor
+
+			protected override void CommitCore() { }
+			protected override void RollbackCore() { }
+		} // class PpsMasterNestedTransaction
+
+		#endregion
+
+		#region -- class PpsMasterRootTransaction ---------------------------------------
+
+		private sealed class PpsMasterRootTransaction : PpsMasterDataTransaction
+		{
+			public PpsMasterRootTransaction(SQLiteConnection connection, SQLiteTransaction rootTransaction)
+				: base(connection, rootTransaction)
+			{
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				base.Dispose(disposing);
+
+				if (disposing)
+					Transaction.Dispose();
+			} // proc Dispose
+
+			protected override void CommitCore()
+				=> transaction.Commit();
+
+			protected override void RollbackCore()
+				=> transaction.Rollback(); 
+		} // class PpsMasterRootTransaction
+
+		#endregion
+
+		private readonly SQLiteConnection connection;
+		private readonly SQLiteTransaction transaction;
+		private bool? transactionState = null;
+
+		#region -- Ctor/Dtor/Commit/Rollback --------------------------------------------
+
+		protected PpsMasterDataTransaction(SQLiteConnection connection, SQLiteTransaction transaction)
+		{
+			this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
+			this.transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+		} // ctor
+
+		public void Dispose()
+		{
+			Dispose(true);
+		} // proc Dispose
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!transactionState.HasValue)
+			{
+				if (transaction != null)
+					Rollback();
+				else
+					transactionState = false;
+			}
+		} // proc Dispose
+
+		protected abstract void CommitCore();
+		protected abstract void RollbackCore();
+
+		public void Commit()
+		{
+			CommitCore();
+			transactionState = true;
+		} // proc Commit
+
+		public void Rollback()
+		{
+			RollbackCore();
+			transactionState = false;
+		} // proc Rollback
+
+		#endregion
+
+		public DbCommand CreateNativeCommand(string commandText = null)
+			=> new SQLiteCommand(commandText, connection, transaction);
+
+		public long GetNextLocalId(string tableName, string primaryKey) 
+			=> -1;
+
+		public long LastInsertRowId => connection.LastInsertRowId;
+
+		protected SQLiteTransaction Transaction => transaction;
+
+		IDbConnection IDbTransaction.Connection => connection;
+		public DbConnection Connection => connection;
+		public IsolationLevel IsolationLevel => transaction?.IsolationLevel ?? System.Data.IsolationLevel.Unspecified;
+
+		public bool IsDisposed => transactionState.HasValue;
+		public bool IsCommited => transactionState ?? false;
+
+		internal static PpsMasterDataTransaction Create(SQLiteConnection connection, PpsMasterDataTransaction transaction)
+			=> transaction == null
+				? (PpsMasterDataTransaction)new PpsMasterRootTransaction(connection, connection.BeginTransaction())
+				: (PpsMasterDataTransaction)new PpsMasterNestedTransaction(connection, transaction.transaction);
+	} // class PpsMasterTransaction
 
 	#endregion
 
@@ -749,9 +865,9 @@ namespace TecWare.PPSn
 					while (r.Read())
 					{
 						var path = r.GetString(0);
-						environment.GetProxyRequest(new Uri(path, UriKind.Relative))
-							.Enqueue(PpsLoadPriority.Background, true)
-							.SetUpdateOfflineCache(c => UpdateOfflineData(path, c));
+						var request = environment.GetProxyRequest(new Uri(path, UriKind.Relative));
+						request.SetUpdateOfflineCache(c => UpdateOfflineData(path, c));
+						request.Enqueue(PpsLoadPriority.Background, true);
 					}
 				}
 			}
@@ -818,10 +934,7 @@ namespace TecWare.PPSn
 
 			private Stream CreateContentStream()
 			{
-				var src = content == null
-					? (Stream)new FileStream(localPath, FileMode.Open, FileAccess.Read)
-					: content;
-
+				var src = content ?? (Stream)new FileStream(localPath, FileMode.Open, FileAccess.Read);
 				if (isCompressed)
 					src = new GZipStream(src, CompressionMode.Decompress, false);
 
@@ -887,7 +1000,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		private string GetLocalPath(string relativePath)
+		internal string GetLocalPath(string relativePath)
 			=> Path.Combine(environment.LocalPath.FullName, relativePath);
 
 		private bool MoveReader(SQLiteDataReader r, Uri uri)
@@ -1067,7 +1180,18 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- Write Access ---------------------------------------------------------
+
+		public DbCommand CreateNativeCommand(string commandText)
+			=> new SQLiteCommand(commandText, connection, null);
+
+		public PpsMasterDataTransaction CreateTransaction(PpsMasterDataTransaction transaction = null)
+			=> PpsMasterDataTransaction.Create(connection, transaction);
+
+		#endregion
+
 		public bool IsSynchronizationStarted => lastSynchronizationId >= 0;
+		[Obsolete("ConnectionAccess")]
 		public SQLiteConnection Connection => connection;
 
 		// -- Static ------------------------------------------------------
@@ -1315,12 +1439,7 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		/// <param name="response"></param>
 		void AppendResponseSink(Action<WebResponse> response);
-
-		/// <summary></summary>
-		/// <param name="updateOfflineCache"></param>
-		[EditorBrowsable(EditorBrowsableState.Advanced)]
-		void SetUpdateOfflineCache(Func<IPpsOfflineItemData, Stream> updateOfflineCache);
-
+				
 		/// <summary>Processes the request in the forground (change priority to first).</summary>
 		/// <returns></returns>
 		Task<WebResponse> ForegroundAsync();
@@ -1403,6 +1522,7 @@ namespace TecWare.PPSn
 		private string contentType = null;
 		private long contentLength = -1;
 
+		private Func<IPpsOfflineItemData, Stream> updateOfflineCache = null;
 		private MemoryStream requestStream = null;
 
 		#region -- Ctor/Dtor ------------------------------------------------------------
@@ -1478,9 +1598,9 @@ namespace TecWare.PPSn
 		public IPpsProxyTask Enqueue(PpsLoadPriority priority, bool forceOnline = false)
 		{
 			// check for offline item
-			if (!forceOnline && environment.TryGetOfflineObject(this, out var task1))
+			if (!forceOnline && updateOfflineCache == null && environment.TryGetOfflineObject(this, out var task1))
 				return task1;
-			else if (!HasRequestData && environment.WebProxy.TryGet(this, out var task2)) // check for already existing task
+			else if (!HasRequestData && updateOfflineCache == null && environment.WebProxy.TryGet(this, out var task2)) // check for already existing task
 				return task2;
 			else // enqueue the new task
 				return environment.WebProxy.Append(this, priority);
@@ -1540,6 +1660,15 @@ namespace TecWare.PPSn
 		} // func GetRequestStream
 
 		#endregion
+
+		[EditorBrowsable(EditorBrowsableState.Advanced)]
+		public void SetUpdateOfflineCache(Func<IPpsOfflineItemData, Stream> updateOfflineCache)
+		{
+			this.updateOfflineCache = updateOfflineCache ?? throw new ArgumentNullException(nameof(updateOfflineCache));
+		} // proc SetUpdateOfflineCache
+
+		internal Stream UpdateOfflineCache(IPpsOfflineItemData data)
+			=> updateOfflineCache?.Invoke(data) ?? data.Content;
 
 		/// <summary></summary>
 		internal bool HasRequestData => requestStream != null;
@@ -1827,14 +1956,16 @@ namespace TecWare.PPSn
 			private readonly PpsWebProxy manager;
 			private readonly PpsLoadPriority priority;
 			private readonly PpsProxyRequest request;
-
+			
 			private readonly List<Action<WebResponse>> webResponseSinks = new List<Action<WebResponse>>();
-			private Func<IPpsOfflineItemData, Stream> updateOfflineCache = null;
 			private readonly TaskCompletionSource<WebResponse> task;
 
 			private readonly object stateLock = new object();
 			private PpsLoadState currentState = PpsLoadState.Pending;
 			private int progress = -1;
+
+			private CacheResponseProxy resultResponse = null;
+			private Exception resultException = null;
 
 			public WebLoadRequest(PpsWebProxy manager, PpsLoadPriority priority, PpsProxyRequest request)
 			{
@@ -1853,14 +1984,18 @@ namespace TecWare.PPSn
 
 			public void AppendResponseSink(Action<WebResponse> response)
 			{
-				if (webResponseSinks.IndexOf(response) == -1)
-					webResponseSinks.Add(response);
+				lock (stateLock)
+				{
+					if (State == PpsLoadState.Finished)
+						response(resultResponse);
+					else if (State == PpsLoadState.Canceled)
+						throw new OperationCanceledException("Response aborted.");
+					else if (State == PpsLoadState.Failed)
+						throw new Exception("Repsonse failed.", resultException);
+					else if (webResponseSinks.IndexOf(response) == -1)
+						webResponseSinks.Add(response);
+				}
 			} // proc AppendResponseSink
-
-			public void SetUpdateOfflineCache(Func<IPpsOfflineItemData, Stream> updateOfflineCache)
-			{
-				this.updateOfflineCache = updateOfflineCache ?? throw new ArgumentNullException();
-			} // proc SetUpdateOfflineCache
 
 			public Task<WebResponse> ForegroundAsync()
 			{
@@ -1929,16 +2064,19 @@ namespace TecWare.PPSn
 								dst.Flush();
 
 								// the cache stream will be disposed by the garbage collector, or if it is moved to the offline cache
-								if (updateOfflineCache != null)
-									dst = updateOfflineCache(new PpsOfflineItemDataImplementation(dst, contentType, headers.GetLastModified()));
+								request.UpdateOfflineCache(new PpsOfflineItemDataImplementation(dst, contentType, headers.GetLastModified()));
 
 								// spawn the result functions
-								var cacheResponse = new CacheResponseProxy(request.RequestUri, dst, contentType, headers);
+								lock (stateLock)
+								{
+									UpdateState(PpsLoadState.Finished);
+									resultResponse = new CacheResponseProxy(request.RequestUri, dst, contentType, headers);
+								}
 								foreach (var s in webResponseSinks)
-									System.Threading.Tasks.Task.Run(() => s(cacheResponse));
+									System.Threading.Tasks.Task.Run(() => s(resultResponse));
 
 								// set the result
-								task.SetResult(cacheResponse);
+								task.SetResult(resultResponse);
 							}
 							catch
 							{
@@ -1954,7 +2092,11 @@ namespace TecWare.PPSn
 				}
 				catch (Exception e)
 				{
-					UpdateState(PpsLoadState.Failed);
+					lock (stateLock)
+					{
+						UpdateState(PpsLoadState.Failed);
+						resultException = e;
+					}
 					task.SetException(e);
 				}
 			} // proc Execute
@@ -2013,13 +2155,22 @@ namespace TecWare.PPSn
 				else
 				{
 					var r = downloadList[0];
-					downloadList.RemoveAt(0);
-					if (currentForegroundCount > 0)
-						currentForegroundCount--;
+					if (currentForegroundCount == 0)
+						currentForegroundCount = 1; // mark as foreground
 					return r;
 				}
 			}
-		} // proc DequeueTask
+		} // proc TryDequeueTask
+
+		private void RemoveCurrentTask()
+		{
+			lock (downloadList)
+			{
+				downloadList.RemoveAt(0);
+				if (currentForegroundCount > 0)
+					currentForegroundCount--;
+			}
+		} // proc RemoveCurrentTask
 
 		private void ExecuteLoadQueue()
 		{
@@ -2036,6 +2187,10 @@ namespace TecWare.PPSn
 					{
 						// todo: connect lost?
 						environment.ShowExceptionAsync(ExceptionShowFlags.Background, e).Wait();
+					}
+					finally
+					{
+						RemoveCurrentTask();
 					}
 				}
 
@@ -2592,5 +2747,8 @@ namespace TecWare.PPSn
 		/// <summary>Connection to the local datastore</summary>
 		[Obsolete("Use master data.")]
 		public SQLiteConnection LocalConnection => masterData.Connection;
+
+		/// <summary>Access to the local store for the synced data.</summary>
+		public PpsMasterData MasterData => masterData;
 	} // class PpsEnvironment
 }
