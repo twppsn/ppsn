@@ -6,7 +6,6 @@ AS
 			, o.Typ
 			, o.Nr
 			, o.IsRev
-			, dbo.MaxBigInt(dbo.MaxBigInt(dbo.MaxBigInt(o.SyncToken, max(t.SyncToken)), max(ll.SyncToken)), max(lr.SyncToken)) as SyncToken
 			, r.Id as RevId
 			-- todo: test if aggregate function is faster?
 			, (SELECT CONCAT(t.[Key], ':', t.Class, ':', t.UserId, ':', t.SyncToken, '=', replace(t.Value, CHAR(10), '\n'), CHAR(10)) FROM dbo.ObjT t WHERE t.ObjKId = o.Id and t.ObjRId is null FOR XML PATH('')) as Tags
@@ -17,4 +16,4 @@ AS
 			LEFT OUTER JOIN dbo.ObjT t on (t.ObjKId = o.Id and t.ObjRId is null)
 			LEFT OUTER JOIN dbo.ObjL ll on (ll.ParentObjKId = o.Id and ll.ParentObjRId is null)
 			LEFT OUTER JOIN dbo.ObjL lr on (lr.ParentObjKId = o.Id and lr.ParentObjRId is null)
-		GROUP BY o.Id, o.Guid, o.Typ, o.Nr, o.IsRev, o.IsRemoved, o.SyncToken, r.Id
+		GROUP BY o.Id, o.Guid, o.Typ, o.Nr, o.IsRev, o.IsRemoved, r.Id

@@ -3,11 +3,11 @@
 	[Id] BIGINT NOT NULL  CONSTRAINT pkObjkId PRIMARY KEY IDENTITY (1, 1),
 	[Guid] UNIQUEIDENTIFIER NOT NULL CONSTRAINT dfObjkGuid DEFAULT NEWID(), 
 	[Typ] CHAR(25) NOT NULL CONSTRAINT dfObjkTyp CHECK (LEN(Typ) > 0 ), 
+	[MimeType] VARCHAR(30) NULL,
 	[Nr] NVARCHAR(20) NOT NULL CONSTRAINT chkObjkNr CHECK (LEN(Nr) > 0),
 	[IsRev] BIT NOT NULL,
 	[IsHidden] BIT NOT NULL CONSTRAINT dfObjkIsHidden DEFAULT 0,
 	[IsRemoved] BIT NOT NULL CONSTRAINT dfObjkIsRemoved DEFAULT 0,
-	[SyncToken] BIGINT NOT NULL DEFAULT 0,
 	[CurRevId] BIGINT NULL CONSTRAINT fkObjkObjrCurId REFERENCES dbo.ObjR (Id),
 	[HeadRevId] BIGINT NULL CONSTRAINT fkObjkObjrHeadId REFERENCES dbo.ObjR (Id)
 )
@@ -105,12 +105,5 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level2type = N'COLUMN',
     @level2name = N'IsRev'
 GO
-EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Time stamp of the last change, to synchronize the object info',
-    @level0type = N'SCHEMA',
-    @level0name = N'dbo',
-    @level1type = N'TABLE',
-    @level1name = N'ObjK',
-    @level2type = N'COLUMN',
-    @level2name = 'SyncToken'
+
 GO
