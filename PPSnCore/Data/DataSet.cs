@@ -77,16 +77,16 @@ namespace TecWare.PPSn.Data
 	public sealed class PpsObjectTag
 	{
 		private readonly string tagName;
+		private readonly long userId;
 		private readonly PpsObjectTagClass cls;
 		private readonly object value;
-		private readonly long syncToken;
 
-		public PpsObjectTag(string tagName, PpsObjectTagClass cls, object value, long syncToken = -1)
+		public PpsObjectTag(string tagName, PpsObjectTagClass cls, object value, long userId)
 		{
 			this.tagName = tagName;
 			this.cls = cls;
 			this.value = value;
-			this.syncToken = syncToken < 0 ? Procs.GetSyncStamp() : syncToken;
+			this.userId = userId;
 		} // ctor
 
 		public bool IsValueEqual(object otherValue)
@@ -95,11 +95,11 @@ namespace TecWare.PPSn.Data
 		public string Name => tagName;
 		public PpsObjectTagClass Class => cls;
 		public object Value => value;
-		public long SyncToken => syncToken;
+		public long UserId => userId;
 
 		// -- Static ----------------------------------------------------------------------
 
-		private static Regex regAttributeLine = new Regex(@"(?<n>\w+)(\:(?<c>\d*)(\:(?<u>\d*)(\:(?<s>\d*))?)?)?\=(?<v>.*)", RegexOptions.Singleline);
+		private static Regex regAttributeLine = new Regex(@"(?<n>\w+)(\:(?<c>\d*)(\:(?<u>\d*)(\:(?<u>\d*))?)?)?\=(?<v>.*)", RegexOptions.Singleline);
 
 		private static PpsObjectTag CreateKeyValue(string attributeLine)
 		{
@@ -121,7 +121,7 @@ namespace TecWare.PPSn.Data
 					value = Procs.ChangeType(value, dataType);
 			}
 
-			return new PpsObjectTag(m.Groups["n"].Value, classHint, value, String.IsNullOrEmpty(m.Groups["s"].Value) ? 0 : Int64.Parse(m.Groups["s"].Value));
+			return new PpsObjectTag(m.Groups["n"].Value, classHint, value, String.IsNullOrEmpty(m.Groups["u"].Value) ? -1 : Int64.Parse(m.Groups["u"].Value));
 		} // func CreateKeyValue
 
 		[Obsolete("Not implemented yet.")]
@@ -202,9 +202,9 @@ namespace TecWare.PPSn.Data
 			switch (mode)
 			{
 				case PpsDataSetAutoTagMode.First:
-					return new PpsObjectTag(Name, PpsObjectTagClass.Text, table.Count > 0 ? table[0][column.Index] : null);
+					return new PpsObjectTag(Name, PpsObjectTagClass.Text, table.Count > 0 ? table[0][column.Index] : null, -1);
 				case PpsDataSetAutoTagMode.Conact:
-					return new PpsObjectTag(Name, PpsObjectTagClass.Text, table.Count == 0 ? null : String.Join(" ", from c in table select c[column.Index].ToString()));
+					return new PpsObjectTag(Name, PpsObjectTagClass.Text, table.Count == 0 ? null : String.Join(" ", from c in table select c[column.Index].ToString()), -1);
 				case PpsDataSetAutoTagMode.Number:
 					goto case PpsDataSetAutoTagMode.First;
 				default:
