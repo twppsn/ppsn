@@ -72,30 +72,31 @@ namespace TecWare.PPSn
 						// create the application environment
 						splashWindow.SetProgressTextAsync("Starte Anwendung...");
 						var env = await Dispatcher.InvokeAsync(() => new PpsMainEnvironment(environment, userInfo, this));
+						errorEnvironment = env;
 
 						// create environment
 						switch (await env.InitAsync(splashWindow))
 						{
 							case PpsEnvironmentModeResult.LoginFailed:
 								errorInfo = "Anmeldung fehlgeschlagen.";
-								errorEnvironment = env;
+								errorEnvironment.Traces.AppendText(PpsTraceItemType.Fail, (string)errorInfo);
 								break;
 							case PpsEnvironmentModeResult.Shutdown:
 								return false;
 
 							case PpsEnvironmentModeResult.ServerConnectFailure:
 								errorInfo = "Verbindung zum Server fehlgeschlagen.";
-								errorEnvironment = env;
+								errorEnvironment.Traces.AppendText(PpsTraceItemType.Fail, (string)errorInfo);
 								break;
 
 							case PpsEnvironmentModeResult.NeedsUpdate:
 								errorInfo = "Update ist erforderlich.";
-								errorEnvironment = env;
+								errorEnvironment.Traces.AppendText(PpsTraceItemType.Fail, (string)errorInfo);
 								break;
 
 							case PpsEnvironmentModeResult.NeedsSynchronization:
 								errorInfo = "Synchronization ist erforderlich.";
-								errorEnvironment = env;
+								errorEnvironment.Traces.AppendText(PpsTraceItemType.Fail, (string)errorInfo);
 								break;
 
 							case PpsEnvironmentModeResult.Online:
@@ -116,6 +117,7 @@ namespace TecWare.PPSn
 					}
 					catch (Exception e)
 					{
+						errorEnvironment.Traces.AppendException(e);
 						errorInfo = e;
 					}
 				}
@@ -215,6 +217,7 @@ namespace TecWare.PPSn
 
 		private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
 		{
+			currentEnvironment.Traces.AppendException(e.Exception);
 			CoreExceptionHandler(e.Exception);
 			e.Handled = true;
 		} // event App_DispatcherUnhandledException

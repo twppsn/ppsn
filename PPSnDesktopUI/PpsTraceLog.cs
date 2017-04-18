@@ -202,6 +202,28 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsTraceProgress ---------------------------------------------------
+
+	public sealed class PpsTraceProgress : IProgress<string>, IDisposable
+	{
+		private readonly PpsTraceLog trace;
+
+		internal PpsTraceProgress(PpsTraceLog trace)
+		{
+			this.trace = trace;
+		} // ctor
+
+		public void Dispose() { }
+		public void Report(string progressText) { }
+
+		public void Except(Exception e)
+		{
+			trace.AppendException(e);
+		} // proc Except
+	} // class PpsTraceProgres
+
+	#endregion
+
 	#region -- class PpsTraceLog --------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -307,12 +329,14 @@ namespace TecWare.PPSn
 		private PpsTraceListener listener;
 		private List<PpsTraceItemBase> items = new List<PpsTraceItemBase>();
 		private PpsTraceItemBase lastTrace = null;
+		private Timer updateTimer;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		public PpsTraceLog()
 		{
 			Trace.Listeners.Add(listener = new PpsTraceListener(this));
+			updateTimer = new Timer((a) => UpdateLastTrace(), null, 0, 2000);
 		} // ctor
 
 		~PpsTraceLog()
@@ -334,6 +358,13 @@ namespace TecWare.PPSn
 				Clear();
 			}
 		} // proc Dispose
+
+		#endregion
+
+		#region -- Traces Progress ------------------------------------------------------
+
+		public PpsTraceProgress TraceProgress()
+			=> new PpsTraceProgress(this);
 
 		#endregion
 
@@ -369,16 +400,16 @@ namespace TecWare.PPSn
 
 			// update view
 			if (resetList)
-				OnCollectionChanged();
+				OnCollectionReset();
 			else
 			{
 				if (itemRemoved != null)
-					OnCollectionRemoved(itemRemoved);
-				OnCollectionAdded(item);
+					OnCollectionRemoved(itemRemoved, 0);
+				OnCollectionAdded(item, items.Count - 1);
 			}
-			OnPropertyChanged("Count");
+			OnPropertyChanged(nameof(Count));
 			if (lastTraceChanged)
-				OnPropertyChanged("LastTrace");
+				OnPropertyChanged(nameof(LastTrace));
 
 			return index;
 		} // proc AppendItem
@@ -391,7 +422,7 @@ namespace TecWare.PPSn
 				items.Clear();
 			}
 
-			OnCollectionChanged();
+			OnCollectionReset();
 			OnPropertyChanged("Count");
 			OnPropertyChanged("LastTrace");
 		} // proc Clear
@@ -425,7 +456,7 @@ namespace TecWare.PPSn
 			if (IsLastTraceNear() && // the current trace event is pretty new
 				item.Type < lastTrace.Type) // and more important
 				return false;
-
+			
 			lastTrace = item;
 			return true;
 		} // proc SetLastTrace
@@ -435,6 +466,7 @@ namespace TecWare.PPSn
 			if (!IsLastTraceNear())
 			{
 				lastTrace = null;
+				OnPropertyChanged(nameof(LastTrace));
 				return true;
 			}
 			else
@@ -448,13 +480,13 @@ namespace TecWare.PPSn
 		private void OnPropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-		private void OnCollectionAdded(object item)
-			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item));
+		private void OnCollectionAdded(object item, int index)
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, index));
 
-		private void OnCollectionRemoved(object item)
-			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item));
+		private void OnCollectionRemoved(object item, int index)
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, index));
 
-		private void OnCollectionChanged()
+		private void OnCollectionReset()
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
 		#endregion

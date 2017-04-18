@@ -619,6 +619,17 @@ namespace TecWare.PPSn
 
 		public static PpsLuaTask RunTask(IPpsLuaTaskParent parent, object func, CancellationToken cancellationToken , params object[] args)
 		{
+			int GetTaskType()
+			{
+				var t = func.GetType();
+				if (t.IsGenericTypeDefinition && t.GetGenericTypeDefinition() == typeof(Task<>))
+					return 0;
+				else if (typeof(Task).IsAssignableFrom(t))
+					return 1;
+				else
+					return -1;
+			};
+
 			CancellationTokenSource cancellationSource  = null;
 			if (cancellationToken == CancellationToken.None) // find a source or a token in the arguments
 			{
@@ -646,28 +657,31 @@ namespace TecWare.PPSn
 			{
 				Task<LuaResult> t;
 
-				if (func.GetType() == typeof(Task))
-					t = ((Task)func).ContinueWith(_ => { _.Wait(); return LuaResult.Empty; }, cancellationToken);
-				else if (func.GetType().GetGenericTypeDefinition() == typeof(Task<>))
+				switch (GetTaskType())
 				{
-					var genericArguments = func.GetType().GetGenericArguments();
-					if (genericArguments[0] == typeof(LuaResult))
-						t = (Task<LuaResult>)func;
-					else
-					{
-						var mi = convertToLuaResultTask.MakeGenericMethod(genericArguments);
-						t = (Task<LuaResult>)mi.Invoke(null, new object[] { func, cancellationToken });
-					}
+					case 0:
+						var genericArguments = func.GetType().GetGenericArguments();
+						if (genericArguments[0] == typeof(LuaResult))
+							t = (Task<LuaResult>)func;
+						else
+						{
+							var mi = convertToLuaResultTask.MakeGenericMethod(genericArguments);
+							t = (Task<LuaResult>)mi.Invoke(null, new object[] { func, cancellationToken });
+						}
+						break;
+					case 1:
+						t = ((Task)func).ContinueWith(_ => { _.Wait(); return LuaResult.Empty; }, cancellationToken);
+						break;
+					default:
+						throw new NotImplementedException("todo: convert code missing.");
 				}
-				else
-					throw new NotImplementedException("todo: convert code missing.");
 
 				return new PpsLuaTask(parent, cancellationSource, cancellationToken, t);
 			}
 			else
 				return new PpsLuaTask(parent, cancellationSource, cancellationToken, Task.Run<object>(() => Lua.RtInvoke(func, args), cancellationToken));
 		} // func RunTask
-
+		
 		public void RunTaskSync(Task task)
 		{
 			var inUIThread = Dispatcher.Thread == Thread.CurrentThread;
@@ -708,6 +722,10 @@ namespace TecWare.PPSn
 		[LuaMember("runUI")]
 		public LuaResult RunUI(object func, params object[] args)
 			=> Dispatcher.Invoke<LuaResult>(() => new LuaResult(Lua.RtInvoke(func, args)));
+
+		[LuaMember("startSync")]
+		public PpsLuaTask StartSync()
+			=> RunTask(masterData.StartSynchronization());
 
 		public IDisposable BlockAllUI(DispatcherFrame frame, string message = null)
 		{

@@ -41,11 +41,8 @@ namespace TecWare.PPSn.UI
 		public PpsTracePane()
 		{
 			InitializeComponent();
-			try
-			{ }
-			catch (Exception e)
-			{
-			}
+
+			((CollectionViewSource)this.Resources["SortedTraces"]).SortDescriptions.Add(new SortDescription("Stamp", ListSortDirection.Descending));
 		} // ctor
 
 		public void Dispose()

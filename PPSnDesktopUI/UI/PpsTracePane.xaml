@@ -7,6 +7,9 @@
 			 mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300" Background="{StaticResource PPSnWindowBackgroundBrush}">
     <UserControl.Resources>
+        <CollectionViewSource x:Key="SortedTraces" Source="{Binding Traces}"
+                      IsLiveFilteringRequested="True">
+        </CollectionViewSource>
         <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
         <DataTemplate x:Key="ExceptionTemplate">
             <StackPanel Orientation="Vertical">
@@ -140,7 +143,7 @@
     </UserControl.Resources>
 
     <Grid>
-        <ListBox ItemsSource="{Binding Traces}"	Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
+        <ListBox ItemsSource="{Binding Source={StaticResource SortedTraces}}"	Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
 				 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" Background="{StaticResource PPSnWindowBackgroundBrush}">
             <ListBox.ItemTemplate>
                 <DataTemplate>
