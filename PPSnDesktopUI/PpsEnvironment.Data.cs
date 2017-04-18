@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -1454,7 +1455,7 @@ namespace TecWare.PPSn
 		DateTime LastModification { get; }
 	} // interface IPpsOfflineItemData
 
-	public interface IPpsProxyTask
+	public interface IPpsProxyTask : INotifyPropertyChanged
 	{
 		/// <summary></summary>
 		/// <param name="response"></param>
@@ -1470,6 +1471,8 @@ namespace TecWare.PPSn
 		PpsLoadState State { get; }
 		/// <summary>Download state of the in percent.</summary>
 		int Progress { get; }
+		/// <summary>Displayname that will be shown in the ui.</summary>
+		string DisplayName { get; }
 	} // interface IPpsProxyTask
 
 	#endregion
@@ -1480,6 +1483,8 @@ namespace TecWare.PPSn
 	{
 		private sealed class PpsDummyProxyTask : IPpsProxyTask
 		{
+			event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged { add { } remove { } }
+
 			private readonly WebRequest request;
 			private bool responseCalled;
 
@@ -1508,6 +1513,7 @@ namespace TecWare.PPSn
 
 			public PpsLoadState State => PpsLoadState.Started;
 			public int Progress => -1;
+			public string DisplayName => PpsWebProxy.GetDisplayNameFromRequest(request);
 		} // class PpsDummyProxyTask
 
 		public static IPpsProxyTask GetProxyTask(this WebRequest request, PpsLoadPriority priority = PpsLoadPriority.Default)
@@ -1717,7 +1723,7 @@ namespace TecWare.PPSn
 
 	#region -- class PpsWebProxy --------------------------------------------------------
 
-	public sealed class PpsWebProxy : IDisposable
+	public sealed class PpsWebProxy : IEnumerable<IPpsProxyTask>, INotifyCollectionChanged, IDisposable
 	{
 		#region -- class MemoryCacheStream ----------------------------------------------
 
@@ -1973,6 +1979,8 @@ namespace TecWare.PPSn
 
 			private const long tempFileBorder = 10 << 20;
 
+			public event PropertyChangedEventHandler PropertyChanged;
+
 			private readonly PpsWebProxy manager;
 			private readonly PpsLoadPriority priority;
 			private readonly PpsProxyRequest request;
@@ -2121,19 +2129,37 @@ namespace TecWare.PPSn
 				}
 			} // proc Execute
 
+			private void OnPropertyChanged(string propertyName)
+				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
 			private void UpdateProgress(int newProgress)
-				=> progress = newProgress;
+			{
+				if (progress != newProgress)
+				{
+					progress = newProgress;
+					OnPropertyChanged(nameof(State));
+				}
+			} // proc UpdateProgress
 
 			private void UpdateState(PpsLoadState newState)
-				=> currentState = newState;
+			{
+				if (currentState != newState)
+				{
+					currentState = newState;
+					OnPropertyChanged(nameof(State));
+				}
+			} // proc UpdateState
 
 			public Task<WebResponse> Task => task.Task;
 			public PpsLoadState State => currentState;
 			public PpsLoadPriority Priority => priority;
 			public int Progress => progress;
+			public string DisplayName => PpsWebProxy.GetDisplayNameFromRequest(request);
 		} // class WebLoadRequest
 
 		#endregion
+
+		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		private readonly PpsEnvironment environment;
 		private readonly List<WebLoadRequest> downloadList = new List<WebLoadRequest>();
@@ -2163,6 +2189,24 @@ namespace TecWare.PPSn
 			executeLoadIsRunning.Set();
 		} // proc Dispose
 
+		private void OnCollectionChanged() 
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+
+		/// <summary>Enumerator for the download task.</summary>
+		/// <returns></returns>
+		/// <remarks>It locks the current process.</remarks>
+		public IEnumerator<IPpsProxyTask> GetEnumerator()
+		{
+			lock (downloadList)
+			{
+				foreach (var c in downloadList)
+					yield return c;
+			}
+		} // func GetEnumerator
+
+		IEnumerator IEnumerable.GetEnumerator() 
+			=> GetEnumerator();
+
 		private WebLoadRequest TryDequeueTask()
 		{
 			lock (downloadList)
@@ -2184,12 +2228,18 @@ namespace TecWare.PPSn
 
 		private void RemoveCurrentTask()
 		{
+			var notifyReset = false;
 			lock (downloadList)
 			{
-				downloadList.RemoveAt(0);
 				if (currentForegroundCount > 0)
+				{
+					downloadList.RemoveAt(0);
 					currentForegroundCount--;
+					notifyReset = true;
+				}
 			}
+			if (notifyReset)
+				OnCollectionChanged();
 		} // proc RemoveCurrentTask
 
 		private void ExecuteLoadQueue()
@@ -2227,22 +2277,30 @@ namespace TecWare.PPSn
 				if (downloadList.Remove(t))
 					downloadList.Insert(currentForegroundCount++, t);
 			}
+			OnCollectionChanged();
 		} // proc MoveToForeground
 
 		private IPpsProxyTask AppendTask(WebLoadRequest task)
 		{
-			lock (downloadList)
+			try
 			{
-				// priority section
-				var i = currentForegroundCount;
-				while (i < downloadList.Count && downloadList[i].Priority <= task.Priority)
-					i++;
+				lock (downloadList)
+				{
+					// priority section
+					var i = currentForegroundCount;
+					while (i < downloadList.Count && downloadList[i].Priority <= task.Priority)
+						i++;
 
-				// add at pos
-				downloadList.Insert(i, task);
-				executeLoadIsRunning.Set();
+					// add at pos
+					downloadList.Insert(i, task);
+					executeLoadIsRunning.Set();
 
-				return task;
+					return task;
+				}
+			}
+			finally
+			{
+				OnCollectionChanged();
 			}
 		} // proc AppendTask
 
@@ -2265,9 +2323,14 @@ namespace TecWare.PPSn
 				return task != null;
 			}
 		} // func TryGet
-
+		
 		internal IPpsProxyTask Append(PpsProxyRequest request, PpsLoadPriority priority)
 			=> AppendTask(new WebLoadRequest(this, priority, request));
+
+		// -- Static --------------------------------------------------------------------
+
+		internal static string GetDisplayNameFromRequest(WebRequest request)
+			=> request.RequestUri.AbsolutePath;
 	} // class PpsDownloadManager
 
 	#endregion
