@@ -1437,7 +1437,9 @@ namespace TecWare.PPSn
 
 			StaticColumnsSelect = "SELECT " + String.Join(",", staticColumns.Select(c => c.Expression)) + " FROM main.[Objects] o";
 		} // ctor
-		
+
+		internal static string GetStaticColumnExpression(int index)
+			=> staticColumns[index].Expression;
 
 		internal const int StaticPropertyCount = 3;
 
@@ -1818,7 +1820,7 @@ namespace TecWare.PPSn
 				// generate static columns
 				for (var i = 0; i < PpsObject.StaticColumns.Length; i++)
 				{
-					cmd.Append(PpsObject.StaticColumns[i].Name)
+					cmd.Append(PpsObject.GetStaticColumnExpression(i))
 						.Append(" AS ")
 						.Append(ColumnStaticPrefix).Append(PpsObject.StaticColumns[i].Name)
 						.Append(',');
