@@ -683,6 +683,26 @@ namespace TecWare.PPSn
 
 		#region -- Synchronization ------------------------------------------------------
 
+		public Task StartSynchronization()
+		{
+			var progressTracer = environment.Traces.TraceProgress();
+			return Task.Run(new Action(SynchronizationAsync(progressTracer).Wait))
+			.ContinueWith(t =>
+			{
+				try
+				{
+					t.Wait();
+				}
+				catch (Exception e)
+				{
+					progressTracer.Except(e);
+					throw;
+				}
+				progressTracer.Dispose();
+			});
+		} // proc StartSynchronization
+
+
 		internal async Task<bool> SynchronizationAsync(IProgress<string> progress)
 		{
 			// synchronize schema

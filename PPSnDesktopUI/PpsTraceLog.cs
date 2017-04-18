@@ -202,6 +202,28 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsTraceProgress ---------------------------------------------------
+
+	public sealed class PpsTraceProgress : IProgress<string>, IDisposable
+	{
+		private readonly PpsTraceLog trace;
+
+		internal PpsTraceProgress(PpsTraceLog trace)
+		{
+			this.trace = trace;
+		} // ctor
+
+		public void Dispose() { }
+		public void Report(string progressText) { }
+
+		public void Except(Exception e)
+		{
+			trace.AppendException(e);
+		} // proc Except
+	} // class PpsTraceProgres
+
+	#endregion
+
 	#region -- class PpsTraceLog --------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -336,6 +358,13 @@ namespace TecWare.PPSn
 				Clear();
 			}
 		} // proc Dispose
+
+		#endregion
+
+		#region -- Traces Progress ------------------------------------------------------
+
+		public PpsTraceProgress TraceProgress()
+			=> new PpsTraceProgress(this);
 
 		#endregion
 
