@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -166,9 +167,14 @@ namespace TecWare.PPSn.UI
 
 			var descriptor = DependencyPropertyDescriptor.FromProperty(PpsCharmbarControl.ActualWidthProperty, typeof(PpsCharmbarControl));
 			descriptor.AddValueChanged(PART_Charmbar, OnCharmbarActualWidthChanged);
-		} // ctor
-		
-		private Task<bool> unloadTask = null;
+            statusOfProxy = new ProxyStatus(Environment.WebProxy, Application.Current.Dispatcher);
+        } // ctor
+
+        private ProxyStatus statusOfProxy;
+
+        public ProxyStatus StatusOfProxy => statusOfProxy;
+
+        private Task<bool> unloadTask = null;
 
 		protected override void OnClosing(CancelEventArgs e)
 		{
@@ -189,9 +195,9 @@ namespace TecWare.PPSn.UI
 				Dispatcher.Invoke(Close);
 		} // proc FinishClosing
 
-#endregion
+		#endregion
 
-#region -- Navigator.SearchBox ------------------------------------------------------
+		#region -- Navigator.SearchBox ------------------------------------------------------
 
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
@@ -216,9 +222,9 @@ namespace TecWare.PPSn.UI
 			navigator.OnPreview_MouseDown(null);
 		} // proc OnWindowCaptionClicked
 
-#endregion
+		#endregion
 
-#region -- charmbar ---------------------------------------------------------------
+		#region -- charmbar ---------------------------------------------------------------
 
 		private void OnCharmbarActualWidthChanged(object sender, EventArgs e)
 		{
@@ -230,7 +236,7 @@ namespace TecWare.PPSn.UI
 			SetValue(CharmbarActualWidthProperty, value);
 		}
 
-#endregion
+		#endregion
 
 		/// <summary>Settings of the current window.</summary>
 		public PpsWindowApplicationSettings Settings => settings;

@@ -248,6 +248,31 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- Command Service --------------------------------------------------------
+
+		private static void CanExecuteCommandHandlerImpl(object sender, PpsEnvironment environment, CanExecuteRoutedEventArgs e)
+		{
+			if (e.Command is PpsCommandBase c)
+			{
+				c.CanExecuteCommand(new PpsCommandContext(environment, e.Source, e.Parameter));
+				e.Handled = true;
+			}
+		} // func CanExecuteCommandHandlerImpl
+
+		private static void ExecutedCommandHandlerImpl(object sender, PpsEnvironment environment, ExecutedRoutedEventArgs e)
+		{
+			if (e.Command is PpsCommandBase c)
+			{
+				c.ExecuteCommand(new PpsCommandContext(environment, e.Source, e.Parameter));
+				e.Handled = true;
+			}
+		} // func CanExecuteCommandHandlerImpl
+
+		public ExecutedRoutedEventHandler DefaultExecutedHandler { get; }
+		public CanExecuteRoutedEventHandler DefaultCanExecuteHandler { get; }
+
+		#endregion
+
 		#region -- UI - Helper ------------------------------------------------------------
 
 		void IPpsShell.BeginInvoke(Action action)

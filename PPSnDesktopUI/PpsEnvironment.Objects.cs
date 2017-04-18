@@ -1437,7 +1437,9 @@ namespace TecWare.PPSn
 
 			StaticColumnsSelect = "SELECT " + String.Join(",", staticColumns.Select(c => c.Expression)) + " FROM main.[Objects] o";
 		} // ctor
-		
+
+		internal static string GetStaticColumnExpression(int index)
+			=> staticColumns[index].Expression;
 
 		internal const int StaticPropertyCount = 3;
 
@@ -1502,7 +1504,7 @@ namespace TecWare.PPSn
 		{
 			private readonly PpsEnvironment environment;
 			private readonly SQLiteCommand command;
-			private SQLiteDataReader reader;
+			private DbDataReader reader;
 			private PpsObject current;
 
 			public PpsObjectEnumerator(PpsEnvironment environment, SQLiteCommand command)
@@ -1523,7 +1525,7 @@ namespace TecWare.PPSn
 			public bool MoveNext()
 			{
 				if (reader == null)
-					reader = command.ExecuteReader(CommandBehavior.SingleResult);
+					reader = command.ExecuteReaderEx(CommandBehavior.SingleResult);
 
 				if (reader.Read())
 				{
@@ -1818,7 +1820,7 @@ namespace TecWare.PPSn
 				// generate static columns
 				for (var i = 0; i < PpsObject.StaticColumns.Length; i++)
 				{
-					cmd.Append(PpsObject.StaticColumns[i].Name)
+					cmd.Append(PpsObject.GetStaticColumnExpression(i))
 						.Append(" AS ")
 						.Append(ColumnStaticPrefix).Append(PpsObject.StaticColumns[i].Name)
 						.Append(',');
@@ -2079,7 +2081,7 @@ order by t_liefnr.value desc
 			}
 		} // func GetCachedObject
 
-		private PpsObject GetCachedObjectOrCreate(SQLiteDataReader reader)
+		private PpsObject GetCachedObjectOrCreate(DbDataReader reader)
 		{
 			var localId = reader.GetInt64(0);
 			lock (objectStoreLock)
