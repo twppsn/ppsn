@@ -520,34 +520,79 @@
             </Grid.Style>
         </Grid>
 
-        <Grid  Grid.Row="2" Grid.ColumnSpan="5"  Background="{StaticResource PPSnWindowFooterBrush}">
+        <Grid  Grid.Row="2" Grid.ColumnSpan="5" Background="{StaticResource PPSnWindowFooterBrush}">
+			<Grid.Resources>
+				<Style TargetType="{x:Type Button}">
+					<Setter Property="Focusable" Value="False"/>
+					<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+					<Setter Property="Background" Value="Transparent"/>
+					<Setter Property="Template">
+						<Setter.Value>
+							<ControlTemplate TargetType="{x:Type Button}">
+								<Border x:Name="border" BorderThickness="0" Background="{TemplateBinding Background}" SnapsToDevicePixels="true">
+									<ContentPresenter Focusable="False" VerticalAlignment="Center"/>
+								</Border>
+								<ControlTemplate.Triggers>
+									<Trigger Property="IsPressed" Value="True">
+										<Setter TargetName="border" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+									</Trigger>
+								</ControlTemplate.Triggers>
+							</ControlTemplate>
+						</Setter.Value>
+					</Setter>
+				</Style>
+			</Grid.Resources>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*"/>
                 <ColumnDefinition Width="1*"/>
                 <ColumnDefinition Width="30"/>
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Column="0" Command="{x:Static ui:PpsWindow.TraceLogCommand}" Content="{Binding Environment.Traces.LastTrace,Mode=OneWay,UpdateSourceTrigger=PropertyChanged}" Focusable="False">
-                <Button.ToolTip>
-                    <Border BorderThickness="1" BorderBrush="{StaticResource PPSnWindowForegroundBrush}">
-                        <ListBox Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
-				 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" Background="{StaticResource PPSnWindowBackgroundBrush}">
-                            <ListBox.ItemsSource>
-                                <MultiBinding Converter="{StaticResource ManyToTopTenConverter}">
-                                    <Binding Path="Environment.Traces"/>
-                                    <Binding Path="Environment.Traces.Count"/>
-                                </MultiBinding>
-                            </ListBox.ItemsSource>
-                        </ListBox>
-                    </Border>
+			<Button Grid.Column="0" HorizontalContentAlignment="Left" VerticalContentAlignment="Center" Padding="16,0"
+					Command="{x:Static ui:PpsWindow.TraceLogCommand}"
+					Content="{Binding Environment.Traces.LastTrace,Mode=OneWay,UpdateSourceTrigger=PropertyChanged,Converter={StaticResource MultiLineStringConverter}}"
+					ToolTipService.InitialShowDelay="1000"
+					ToolTipService.ShowDuration="10000"	>
+				<Button.ToolTip>
+					<ToolTip Placement="Top" HorizontalOffset="16" VerticalOffset="-16"
+							 Foreground="{x:Static SystemColors.WindowTextBrush}" Background="{x:Static SystemColors.WindowBrush}" FontSize="14">
+						<ListBox Style="{StaticResource PPSnListBoxStyle}" Focusable="False">
+							<ListBox.ItemsSource>
+								<MultiBinding Converter="{StaticResource ManyToTopTenConverter}">
+									<Binding Path="Environment.Traces"/>
+									<Binding Path="Environment.Traces.Count"/>
+								</MultiBinding>
+							</ListBox.ItemsSource>
+							<ListBox.ItemTemplate>
+								<DataTemplate>
+									<Grid Height="25">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="86" />
+											<ColumnDefinition Width="Auto" />
+											<ColumnDefinition />
+										</Grid.ColumnDefinitions>
+										<TextBlock Grid.Column="0" Text="{Binding Path=Type}"/>
+										<TextBlock Grid.Column="1" Text="{Binding Path=Stamp, StringFormat=HH:mm:ss}" Margin="0,0,16,0"/>
+										<TextBlock Grid.Column="2" Text="{Binding Path=Message, Converter={StaticResource MultiLineStringConverter}}"/>
+									</Grid>
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+						</ListBox>
+					</ToolTip>
                 </Button.ToolTip>
             </Button>
-            <Button Grid.Column="1" Focusable="False" HorizontalContentAlignment="Stretch">
+
+			<ProgressBar Grid.Column="1" Maximum="100" Value="20" BorderThickness="0" Foreground="{StaticResource PPSnWindowBackgroundBrush}" Background="Transparent" Margin="16,5,16,1">
+				
+			</ProgressBar>
+			<TextBlock Grid.Column="1" Text="lade .../styles.xml" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+			<!--<Button Grid.Column="1" Focusable="False" HorizontalContentAlignment="Stretch">
                 <Button.ToolTip>
-                    <Border BorderThickness="1" BorderBrush="{StaticResource PPSnWindowForegroundBrush}">
-                        <ListBox Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
-				 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" Background="{StaticResource PPSnWindowBackgroundBrush}">
-                            <ListBoxItem>
+					<Border BorderThickness="1" BorderBrush="{StaticResource PPSnWindowForegroundBrush}">
+						<ListBox Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="14"
+								 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" Background="{StaticResource PPSnWindowBackgroundBrush}">
+							<ListBoxItem>
                                 <Label Content="Herbert"/>
                             </ListBoxItem>
                             <ListBoxItem>
@@ -562,9 +607,9 @@
                         <ColumnDefinition MinWidth="75"/>
                     </Grid.ColumnDefinitions>
                     <Label Grid.Column="0" Content="lade .../styles.xml"/>
-                    <ProgressBar Grid.Column="1" Maximum="100" Value="73" MinWidth="70" FlowDirection="RightToLeft"/>
+                    <ProgressBar Grid.Column="1" Maximum="100" Value="0" MinWidth="70" FlowDirection="RightToLeft"/>
                 </Grid>
-            </Button>
+            </Button>-->
 
             <Viewbox x:Name="PART_SizeGripper" Grid.Column="2" Width="15" VerticalAlignment="Bottom" HorizontalAlignment="Right">
                 <Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SizeGrip.png">
