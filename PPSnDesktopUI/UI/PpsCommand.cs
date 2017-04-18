@@ -29,21 +29,43 @@ namespace TecWare.PPSn.UI
 {
 	#region -- class PpsCommandContext --------------------------------------------------
 
-	public sealed class PpsCommandContext
+	public sealed class PpsCommandContext : IServiceProvider
 	{
 		private readonly PpsEnvironment environment;
 		private readonly object target;
 		private readonly object parameter;
 
+		private readonly Lazy<object> getDataContext;
+
 		public PpsCommandContext(PpsEnvironment environment, object target, object parameter)
 		{
 			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
 			this.target = target ?? throw new ArgumentNullException(nameof(target));
+			this.getDataContext = new Lazy<object>(GetDataContext);
 			this.parameter = parameter;
 		} // ctor
 
+		private object GetDataContext()
+			=> target is FrameworkElement frameworkElement ? frameworkElement.DataContext : null;
+		
+		public object GetService(Type serviceType)
+		{
+			object r = null;
+
+			// ask service
+			if (target is IServiceProvider sp)
+				r = sp.GetService(serviceType);
+
+			// next ask controls
+			if (r == null && target is FrameworkElement frameworkElement)
+				r = StuffUI.GetControlService(frameworkElement, serviceType);
+			
+			return r ?? environment.GetService(serviceType);
+		} // func GetService
+
 		public PpsEnvironment Environment => environment;
 		public object Target => target;
+		public object DataContext => getDataContext.Value;
 		public object Parameter => parameter;
 	} // class PpsCommandContext
 

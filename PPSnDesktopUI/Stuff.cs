@@ -70,6 +70,18 @@ namespace TecWare.PPSn
 			}
 		} // proc CollectNameSpaces
 
+		public static object GetControlService(this FrameworkElement frameworkElement, Type serviceType)
+		{
+			object r = null;
+
+			if (frameworkElement is IServiceProvider sp)
+				r = sp.GetService(serviceType);
+			else  if (frameworkElement.GetType().IsAssignableFrom(serviceType))
+				r = frameworkElement;
+
+			return GetControlService(frameworkElement.Parent as FrameworkElement, serviceType);
+		} // func GetControlService
+
 		public static T GetVisualChild<T>(this DependencyObject current)
 			where T : DependencyObject
 		{
