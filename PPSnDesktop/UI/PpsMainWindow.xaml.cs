@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -166,9 +167,14 @@ namespace TecWare.PPSn.UI
 
 			var descriptor = DependencyPropertyDescriptor.FromProperty(PpsCharmbarControl.ActualWidthProperty, typeof(PpsCharmbarControl));
 			descriptor.AddValueChanged(PART_Charmbar, OnCharmbarActualWidthChanged);
-		} // ctor
+            statusOfProxy = new ProxyStatus(Environment.WebProxy, Application.Current.Dispatcher);
+        } // ctor
 
-		private Task<bool> unloadTask = null;
+        private ProxyStatus statusOfProxy;
+
+        public ProxyStatus StatusOfProxy => statusOfProxy;
+
+        private Task<bool> unloadTask = null;
 
 		protected override void OnClosing(CancelEventArgs e)
 		{

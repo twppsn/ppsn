@@ -545,14 +545,13 @@
             <Button Grid.Column="1" Focusable="False" HorizontalContentAlignment="Stretch">
                 <Button.ToolTip>
                     <Border BorderThickness="1" BorderBrush="{StaticResource PPSnWindowForegroundBrush}">
-                        <ListBox Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
+                        <ListBox ItemsSource="{Binding StatusOfProxy.TopTen, IsAsync=True}" Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
 				 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" Background="{StaticResource PPSnWindowBackgroundBrush}">
-                            <ListBoxItem>
-                                <Label Content="Herbert"/>
-                            </ListBoxItem>
-                            <ListBoxItem>
-                                <Label Content="Harald"/>
-                            </ListBoxItem>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Label Content="{Binding DisplayName}"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
                         </ListBox>
                     </Border>
                 </Button.ToolTip>
@@ -561,8 +560,8 @@
                         <ColumnDefinition/>
                         <ColumnDefinition MinWidth="75"/>
                     </Grid.ColumnDefinitions>
-                    <Label Grid.Column="0" Content="lade .../styles.xml"/>
-                    <ProgressBar Grid.Column="1" Maximum="100" Value="73" MinWidth="70" FlowDirection="RightToLeft"/>
+                    <Label Grid.Column="0" Content="{Binding StatusOfProxy.ActualItem.DisplayName}"/>
+                    <ProgressBar Grid.Column="1" Maximum="1000" Value="{Binding StatusOfProxy.ActualItem.Progress, Mode=OneWay}" MinWidth="70" FlowDirection="RightToLeft"/>
                 </Grid>
             </Button>
 
