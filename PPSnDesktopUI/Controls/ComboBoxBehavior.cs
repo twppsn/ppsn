@@ -12,11 +12,11 @@ namespace TecWare.PPSn.Controls
 {
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class PPSnSelectionChangedBehavior
+	public class PpsSelectionChangedBehavior
 	{
 		public static readonly DependencyProperty CommandProperty = DependencyProperty.RegisterAttached("Command",
 			typeof(ICommand),
-			typeof(PPSnSelectionChangedBehavior),
+			typeof(PpsSelectionChangedBehavior),
 			new PropertyMetadata(PropertyChangedCallback));
 
 		public static void PropertyChangedCallback(DependencyObject depObj, DependencyPropertyChangedEventArgs args)

@@ -11,7 +11,7 @@ using System.Windows.Input;
 
 namespace TecWare.PPSn.Controls
 {
-	public class PPSnNumTextBoxBehavior
+	public class PpsNumTextBoxBehavior
 	{
 		public static PPSnNumTextBoxInputType GetInputType(TextBox textBox)
 		{
@@ -27,7 +27,7 @@ namespace TecWare.PPSn.Controls
 			DependencyProperty.RegisterAttached(
 				"InputType",
 				typeof(PPSnNumTextBoxInputType),
-				typeof(PPSnNumTextBoxBehavior),
+				typeof(PpsNumTextBoxBehavior),
 				new FrameworkPropertyMetadata(InputTypeChangedCallback)
 				);
 
