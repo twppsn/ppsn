@@ -72,6 +72,9 @@ namespace TecWare.PPSn.UI
 					new CommandBinding(MaximizeCommand, (sender, e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized),
 					new CommandBinding(CloseCommand, (sender, e) => Close())
 				});
+
+			CommandManager.AddExecutedHandler(this, Environment.DefaultExecutedHandler);
+			CommandManager.AddCanExecuteHandler(this, Environment.DefaultCanExecuteHandler);
 		} // ctor
 
 		protected virtual void OnWindowCaptionClicked()

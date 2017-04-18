@@ -1504,7 +1504,7 @@ namespace TecWare.PPSn
 		{
 			private readonly PpsEnvironment environment;
 			private readonly SQLiteCommand command;
-			private SQLiteDataReader reader;
+			private DbDataReader reader;
 			private PpsObject current;
 
 			public PpsObjectEnumerator(PpsEnvironment environment, SQLiteCommand command)
@@ -1525,7 +1525,7 @@ namespace TecWare.PPSn
 			public bool MoveNext()
 			{
 				if (reader == null)
-					reader = command.ExecuteReader(CommandBehavior.SingleResult);
+					reader = command.ExecuteReaderEx(CommandBehavior.SingleResult);
 
 				if (reader.Read())
 				{
@@ -2081,7 +2081,7 @@ order by t_liefnr.value desc
 			}
 		} // func GetCachedObject
 
-		private PpsObject GetCachedObjectOrCreate(SQLiteDataReader reader)
+		private PpsObject GetCachedObjectOrCreate(DbDataReader reader)
 		{
 			var localId = reader.GetInt64(0);
 			lock (objectStoreLock)
