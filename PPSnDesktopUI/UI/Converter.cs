@@ -158,34 +158,48 @@ namespace TecWare.PPSn.UI
 
 	public sealed class ManyToTopTenConverter : IMultiValueConverter
 	{
-		private static IEnumerable<PpsTraceItemBase> GetLast(IList list, int count)
+		private static IEnumerable<object> GetLast(IList list, int count)
 		{
 			var end = list.Count - count;
 			for (var i = Math.Max(end,0); i < list.Count; i++)
-				yield return (PpsTraceItemBase)list[i];
+				yield return (object)list[i];
 		}
 
-		//public class III : IEnumerable<PpsTraceItemBase>
-		//{
-		//	private readonly PpsTraceLog trace;
+        private IEnumerable<object> GetLast(PpsWebProxy ppsWebProxy, int v)
+        {
+            var walker = ppsWebProxy.GetEnumerator();
+            for (var i = 0; i < v; i++)
+            {
+                if (walker.MoveNext());
+                yield return walker.Current;
+            }
+        }
+
+        //public class III : IEnumerable<PpsTraceItemBase>
+        //{
+        //	private readonly PpsTraceLog trace;
 
 
-		//}
+        //}
 
-		public object Convert(object[] value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        public object Convert(object[] value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
 		{
 			var ret = new System.Collections.ObjectModel.ObservableCollection<PpsTraceItemBase>();
 
 			if (value == null)
 				return ret;
 
-            if (!(value[0] is IList))
-                return ret;
+            if (value[0] is IList)
+                return GetLast((IList)value[0], 10);
+            if (value[0] is PpsWebProxy)
+                return GetLast((PpsWebProxy)value[0], 10); // (from PpsTraceItemBase item in (value[0] as PpsTraceLog) select item).Take(10).Reverse();	
 
-			return GetLast((IList)value[0], 10); // (from PpsTraceItemBase item in (value[0] as PpsTraceLog) select item).Take(10).Reverse();			
-		}
+            return ret;
+        }
 
-		public object[] ConvertBack(object value, System.Type[] targetType, object parameter, System.Globalization.CultureInfo culture)
+        
+
+        public object[] ConvertBack(object value, System.Type[] targetType, object parameter, System.Globalization.CultureInfo culture)
 		{
 			throw new System.NotImplementedException();
 		}

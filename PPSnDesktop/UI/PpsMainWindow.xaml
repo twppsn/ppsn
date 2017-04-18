@@ -547,12 +547,17 @@
                     <Border BorderThickness="1" BorderBrush="{StaticResource PPSnWindowForegroundBrush}">
                         <ListBox Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
 				 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" Background="{StaticResource PPSnWindowBackgroundBrush}">
-                            <ListBoxItem>
-                                <Label Content="Herbert"/>
-                            </ListBoxItem>
-                            <ListBoxItem>
-                                <Label Content="Harald"/>
-                            </ListBoxItem>
+                            <ListBox.ItemsSource>
+                                <MultiBinding Converter="{StaticResource ManyToTopTenConverter}">
+                                    <Binding Path="Environment.WebProxy"/>
+                                    <Binding Path="Environment.WebProxy.Count"/>
+                                </MultiBinding>
+                            </ListBox.ItemsSource>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Label Content="{Binding DisplayName}"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
                         </ListBox>
                     </Border>
                 </Button.ToolTip>
