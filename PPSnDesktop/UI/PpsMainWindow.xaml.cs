@@ -27,7 +27,7 @@ namespace TecWare.PPSn.UI
 {
     ///////////////////////////////////////////////////////////////////////////////
     /// <summary></summary>
-    public partial class PpsMainWindow : PpsWindow, INotifyPropertyChanged
+    public partial class PpsMainWindow : PpsWindow
     {
         /// <summary>Toggles between DataPane and Navigator.</summary>
         public readonly static RoutedCommand NavigatorToggleCommand = new RoutedCommand("NavigatorToggle", typeof(PpsMainWindow));
@@ -168,45 +168,15 @@ namespace TecWare.PPSn.UI
             var descriptor = DependencyPropertyDescriptor.FromProperty(PpsCharmbarControl.ActualWidthProperty, typeof(PpsCharmbarControl));
             descriptor.AddValueChanged(PART_Charmbar, OnCharmbarActualWidthChanged);
 
-            loading = new ObservableCollection<object>();
-            Environment.WebProxy.CollectionChanged += WebProxy_CollectionChanged;
+            statusOfProxy = new ProxyStatus(Environment.WebProxy, Application.Current.Dispatcher);
         } // ctor
 
-        private void WebProxy_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                loading.Clear();
-                using (var walker = Environment.WebProxy.GetEnumerator())
-                {
-                    for (var i = 0; i < 10; i++)
-                    {
-                        if (walker.MoveNext())
-                            if (i == 0)
-                            {
-                                actualLoading = walker.Current;
-                                OnPropertyChanged(nameof(ActualLoading));
-                            }
-                            else
-                                loading.Add(walker.Current);
-                        else if (i == 0)
-                            actualLoading = null;
-                    }
-                }
-            });
-        }
+        private ProxyStatus statusOfProxy;
 
-        private ObservableCollection<object> loading;
-        private IPpsProxyTask actualLoading;
-        public ObservableCollection<object> Loading => loading;
-        public IPpsProxyTask ActualLoading => actualLoading;
+        public ProxyStatus StatusOfProxy => statusOfProxy;
 
         private Task<bool> unloadTask = null;
-
-        public event PropertyChangedEventHandler PropertyChanged;
-        private void OnPropertyChanged(string propertyName)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
+         
         protected override void OnClosing(CancelEventArgs e)
         {
             if (unloadTask != null) // currently unloading

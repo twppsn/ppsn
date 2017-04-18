@@ -24,6 +24,7 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Stuff;
+using System.Collections.ObjectModel;
 
 namespace TecWare.PPSn
 {
@@ -2834,4 +2835,60 @@ namespace TecWare.PPSn
 		/// <summary>Access to the local store for the synced data.</summary>
 		public PpsMasterData MasterData => masterData;
 	} // class PpsEnvironment
+
+    // interface Status
+    public interface IStatusList : INotifyPropertyChanged
+    {
+        object ActualItem { get; }
+        ObservableCollection<object> TopTen { get; }
+    }
+
+    public class ProxyStatus : IStatusList
+    {
+        private PpsWebProxy proxy;
+        private ObservableCollection<object> topTen = new ObservableCollection<object>();
+        private IPpsProxyTask actualItem;
+        private System.Windows.Threading.Dispatcher dispatcher;
+
+        public ProxyStatus(PpsWebProxy Proxy, System.Windows.Threading.Dispatcher Dispatcher)
+        {
+            this.proxy = Proxy;
+            this.dispatcher = Dispatcher;
+            this.proxy.CollectionChanged += WebProxyChanged;
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged(string propertyName)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+        private void WebProxyChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            dispatcher.Invoke(() =>
+            {
+                topTen.Clear();
+                using (var walker = proxy.GetEnumerator())
+                {
+                    for (var i = 0; i < 10; i++)
+                    {
+                        if (walker.MoveNext())
+                            if (i == 0)
+                            {
+                                actualItem = walker.Current;
+                                OnPropertyChanged(nameof(actualItem));
+                            }
+                            else
+                                topTen.Insert(0, walker.Current);
+                        else if (i == 0)
+                        {
+                            actualItem = null;
+                            OnPropertyChanged(nameof(actualItem));
+                        }
+                    }
+                }
+            });
+        }
+
+        public object ActualItem => actualItem;
+        public ObservableCollection<object> TopTen => topTen;
+    }
 }
