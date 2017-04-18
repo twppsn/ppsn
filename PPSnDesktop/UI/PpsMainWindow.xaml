@@ -545,14 +545,8 @@
             <Button Grid.Column="1" Focusable="False" HorizontalContentAlignment="Stretch">
                 <Button.ToolTip>
                     <Border BorderThickness="1" BorderBrush="{StaticResource PPSnWindowForegroundBrush}">
-                        <ListBox Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
+                        <ListBox ItemsSource="{Binding Loading}" Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
 				 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" Background="{StaticResource PPSnWindowBackgroundBrush}">
-                            <ListBox.ItemsSource>
-                                <MultiBinding Converter="{StaticResource ManyToTopTenConverter}">
-                                    <Binding Path="Environment.WebProxy"/>
-                                    <Binding Path="Environment.WebProxy.Count"/>
-                                </MultiBinding>
-                            </ListBox.ItemsSource>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Label Content="{Binding DisplayName}"/>
@@ -566,8 +560,8 @@
                         <ColumnDefinition/>
                         <ColumnDefinition MinWidth="75"/>
                     </Grid.ColumnDefinitions>
-                    <Label Grid.Column="0" Content="lade .../styles.xml"/>
-                    <ProgressBar Grid.Column="1" Maximum="100" Value="73" MinWidth="70" FlowDirection="RightToLeft"/>
+                    <Label Grid.Column="0" Content="{Binding ActualLoading.DisplayName}"/>
+                    <ProgressBar Grid.Column="1" Maximum="1000" Value="{Binding ActualLoading.Progress, Mode=OneWay}" MinWidth="70" FlowDirection="RightToLeft"/>
                 </Grid>
             </Button>
 
