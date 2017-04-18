@@ -27,61 +27,84 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
+	#region -- class PpsCommandContext --------------------------------------------------
+
+	public sealed class PpsCommandContext
+	{
+		private readonly PpsEnvironment environment;
+		private readonly object target;
+		private readonly object parameter;
+
+		public PpsCommandContext(PpsEnvironment environment, object target, object parameter)
+		{
+			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
+			this.target = target ?? throw new ArgumentNullException(nameof(target));
+			this.parameter = parameter;
+		} // ctor
+
+		public PpsEnvironment Environment => environment;
+		public object Target => target;
+		public object Parameter => parameter;
+	} // class PpsCommandContext
+
+	#endregion
+
+	#region -- class PpsCommandBase -----------------------------------------------------
+
+	/// <summary>We define a routed command to get the ExecutedEvent,CanExecuteEvent in the root control. The result is we get the command source for free, the drawback is we need to catch the event in the root and call the ExecuteCommand method.</summary>
+	public abstract class PpsCommandBase : RoutedCommand
+	{
+		protected PpsCommandBase()
+		{
+		} // ctor
+		
+		public virtual bool CanExecuteCommand(PpsCommandContext commandContext) 
+			=> true;
+
+		public abstract void ExecuteCommand(PpsCommandContext commandContext);
+	} // class PpsCommandBase
+
+	#endregion
+
 	#region -- class PpsCommand ---------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Implements a command that can call a delegate. This command
 	/// can also be added to the idle collection.</summary>
-	public class PpsCommand : ICommand, IPpsIdleAction
+	public sealed class PpsCommand : PpsCommandBase
 	{
-		private readonly PpsEnvironment environment;
 		private readonly Action<object> command;
 		private readonly Func<object, bool> canExecute;
 
-		public PpsCommand(PpsEnvironment environment, Action<object> command, Func<object, bool> canExecute = null, bool idleCall = true)
+		public PpsCommand(Action<object> command, Func<object, bool> canExecute = null)
 		{
-			this.environment = environment;
 			this.command = command;
 			this.canExecute = canExecute;
-
-			if (canExecute != null && idleCall)
-				environment.AddIdleAction(this);
 		} // ctor
 
-		#region -- ICommand Member ---------------------------------------------------------
+		#region -- Command Member -------------------------------------------------------
 
-		public event EventHandler CanExecuteChanged;
+		public override bool CanExecuteCommand(PpsCommandContext commandContext)
+			=> canExecute == null || canExecute(commandContext.Parameter);
 
-		public virtual bool CanExecute(object parameter)
-			=> canExecute == null || canExecute(parameter);
-
-		public virtual void Execute(object parameter)
+		public override void ExecuteCommand(PpsCommandContext commandContext)
 		{
 			try
 			{
-				command(parameter);
+				command(commandContext.Parameter);
 			}
 			catch (PpsDataTableForeignKeyRestriction)
 			{
 				// todo: in lua verlagern
-				environment.MsgBox("Auf diesen Datensatz wird noch verwiesen.\nLöschen nicht möglich.", MessageBoxButton.OK, MessageBoxImage.Information);
+				commandContext.Environment.MsgBox("Auf diesen Datensatz wird noch verwiesen.\nLöschen nicht möglich.", MessageBoxButton.OK, MessageBoxImage.Information);
 			}
 			catch (Exception e)
 			{
-				environment.ShowException(ExceptionShowFlags.None, e);
+				commandContext.Environment.ShowException(ExceptionShowFlags.None, e);
 			}
 		} // proc Execute
 
 		#endregion
-
-		public void Refresh()
-			=> CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-
-		bool IPpsIdleAction.OnIdle(int elapsed)
-		{
-			Refresh();
-			return false;
-		} // func IPpsIdleAction.OnIdle
 	} // class PpsCommand
 	
 	#endregion

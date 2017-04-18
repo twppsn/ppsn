@@ -165,7 +165,7 @@ namespace TecWare.PPSn.UI
 					DisplayText = "Rückgängig",
 					Description = "Rückgängig",
 					Image = "undoImage",
-					Command = new PpsCommand(Environment,
+					Command = new PpsCommand(
 						(args) =>
 						{
 							UpdateSources();
@@ -190,7 +190,7 @@ namespace TecWare.PPSn.UI
 					DisplayText = "Wiederholen",
 					Description = "Wiederholen",
 					Image = "redoImage",
-					Command = new PpsCommand(Environment,
+					Command = new PpsCommand(
 						(args) =>
 						{
 							UpdateSources();

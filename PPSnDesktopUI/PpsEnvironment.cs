@@ -17,23 +17,18 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Data.SQLite;
 using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
-using System.Xml.Linq;
 using Neo.IronLua;
-using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
@@ -500,16 +495,14 @@ namespace TecWare.PPSn
 		public PpsEnvironment(PpsEnvironmentInfo info, NetworkCredential userInfo, ResourceDictionary mainResources)
 			: base(new Lua())
 		{
-			if (info == null)
-				throw new ArgumentNullException("info");
-			if (userInfo == null)
-				throw new ArgumentNullException("userInfo");
-			if (mainResources == null)
-				throw new ArgumentNullException("mainResources");
+			this.info = info ?? throw new ArgumentNullException("info");
+			this.userInfo = userInfo ?? throw new ArgumentNullException("userInfo");
 
-			this.info = info;
-			this.userInfo = userInfo;
 			this.webProxy = new PpsWebProxy(this);
+
+			this.DefaultExecutedHandler = new ExecutedRoutedEventHandler((sender, e) => ExecutedCommandHandlerImpl(sender, this, e));
+			this.DefaultCanExecuteHandler = new CanExecuteRoutedEventHandler((sender, e) => CanExecuteCommandHandlerImpl(sender, this, e));
+
 			this.userName = PpsEnvironmentInfo.GetUserNameFromCredentials(userInfo);
 
 			this.localDirectory = new DirectoryInfo(Path.Combine(info.LocalPath.FullName, this.Username));
@@ -523,7 +516,7 @@ namespace TecWare.PPSn
 			Neo.IronLua.LuaType.RegisterTypeAlias("blob", typeof(byte[]));
 
 			// create ui stuff
-			this.mainResources = mainResources;
+			this.mainResources = mainResources ?? throw new ArgumentNullException("mainResources");
 			this.currentDispatcher = Dispatcher.CurrentDispatcher;
 			this.inputManager = InputManager.Current;
 			this.synchronizationContext = new DispatcherSynchronizationContext(currentDispatcher);
