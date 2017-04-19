@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:TecWare.PPSn.UI"
+             xmlns:lua="clr-namespace:Neo.IronLua"
 			 mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300" Background="{StaticResource PPSnWindowBackgroundBrush}">
     <UserControl.Resources>
@@ -108,7 +109,20 @@
                         </TextBlock>
                         <StackPanel Name="tbExceptionData">
 							<Label Content="Data:  "/>
-                            <DataGrid DataContext="{Binding Exception.Data.Values}"/>
+                            <ListBox 
+            ItemsSource="{Binding Path=Exception.Data}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="Black" BorderThickness="2">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Path=Key}" />
+                                                <TextBlock Text=" : "/>
+                                                <TextBlock Text="{Binding Path=Value}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
                         </StackPanel>
                         <StackPanel x:Name="innerException">
                             <StackPanel Orientation="Horizontal">
