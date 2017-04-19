@@ -1208,9 +1208,6 @@ namespace TecWare.PPSn
 		{
 			try
 			{
-				if (!IsSynchronizationStarted)
-					throw new InvalidOperationException("Local store is not initialized.");
-
 				using (var command = new SQLiteCommand("SELECT [Path], [ContentType], [ContentEncoding], [Content], [LocalPath] FROM [main].[OfflineCache] WHERE substr([Path], 1, length(@path)) = @path", connection))
 				{
 					command.Parameters.Add("@path", DbType.String).Value = requestUri.ParsePath();
