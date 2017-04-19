@@ -36,6 +36,10 @@
 			<pps:field name="sys.Fields.ContentEncoding" dataType="string" />
 			<pps:field name="sys.Fields.ContentSize" dataType="long" />
 			<pps:field name="sys.Fields.LastModificationStamp" dataType="long" />
+			<pps:field name="sys.Fields.IsUpdated" dataType="bit">
+				<pps:attribute name="syncSource">#</pps:attribute>
+				<pps:attribute name="IsNull">true</pps:attribute>
+			</pps:field>
 			<pps:field name="sys.Fields.PrimaryKey" dataType="long" />
 			<pps:field name="sys.Fields.Text" dataType="string" />
 			<pps:field name="sys.Fields.Long" dataType="long" />
@@ -166,9 +170,12 @@
 					<pps:column name="SyncStamp" fieldName="sys.Fields.LastModificationStamp">
 						<pps:meta name="IsNull">true</pps:meta>
 					</pps:column>
-					<pps:column name="SyncToken" fieldName="sys.Fields.Long">
-						<pps:meta name="IsNull">true</pps:meta>
-					</pps:column>
+				</pps:table>
+
+				<pps:table name="SyncState" dataSource="sys">
+					<pps:meta name="syncType">None</pps:meta>
+					<pps:column name="Table" fieldName="sys.Fields.Text" isPrimary="true" />
+					<pps:column name="SyncId" fieldName="sys.Fields.Long" />
 				</pps:table>
 
 				<pps:table name="OfflineCache" dataSource="sys">
@@ -206,13 +213,17 @@
 						<pps:meta name="syncSource">#</pps:meta>
 						<pps:meta name="IsNull">true</pps:meta>
 					</pps:column>
+					<pps:column name="_IsUpdated" fieldName="sys.Fields.IsUpdated" />
 				</pps:table>
 
 				<pps:table name="Objects">
 					<pps:meta name="syncType">ChangeTracking: dbo.Objk</pps:meta>
+					<pps:meta name="useAsKey">Guid</pps:meta>
 					
 					<pps:column name="Id" fieldName="dbo.Objk.Id" isPrimary="true" />
-					<pps:column name="Guid" fieldName="dbo.Objk.Guid" />
+					<pps:column name="Guid" fieldName="dbo.Objk.Guid">
+						<pps:meta name="IsUnique">true</pps:meta>
+					</pps:column>
 					<pps:column name="Typ" fieldName="dbo.Objk.Typ" />
 					<pps:column name="MimeType" fieldName="dbo.Objk.MimeType" />
 					<pps:column name="Nr" fieldName="dbo.Objk.Nr" />
@@ -227,6 +238,7 @@
 					</pps:column>
 
 					<pps:column name="DocumentIsChanged" fieldName="sys.Fields.Bit">
+						<!-- obsolete, use _IsUpdated -->
 						<pps:meta name="syncSource">#</pps:meta>
 						<pps:meta name="IsNull">true</pps:meta>
 					</pps:column>
@@ -239,6 +251,7 @@
 						<pps:meta name="IsNull">true</pps:meta>
 					</pps:column>
 
+					<pps:column name="_IsUpdated" fieldName="sys.Fields.IsUpdated" />
 				</pps:table>
 
 				<pps:table name="ObjectTags">

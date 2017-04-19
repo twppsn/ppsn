@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -1642,95 +1643,133 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- class SqlSynchronizationTransaction ------------------------------------
+		#region -- class SqlSynchronizationTransaction ----------------------------------
 
 		private sealed class SqlSynchronizationTransaction : PpsDataSynchronization
 		{
-			private readonly long syncId;
-			private readonly long currentSyncId;
-			private readonly SqlConnectionHandle connection;
+			private sealed class SqlSynchronizationBatch : IPpsDataSynchronizationBatch
+			{
+				private readonly SqlCommand command;
+				private readonly bool isFull;
+				private readonly DbRowEnumerator reader;
+
+				private long currentSyncId;
+
+				public SqlSynchronizationBatch(long currentSyncId, SqlCommand command, bool isFull)
+				{
+					this.currentSyncId = currentSyncId;
+					this.command = command ?? throw new ArgumentNullException(nameof(command));
+					this.isFull = isFull;
+					this.reader = new DbRowEnumerator(command.ExecuteReader(), true);
+				} // ctor
+
+				public void Dispose()
+				{
+					command.Dispose();
+					reader.Dispose();
+				} // proc Dispose
+
+				public bool MoveNext()
+				{
+					var r = reader.MoveNext();
+					if (r)
+					{
+						var t = reader.Current[1].ChangeType<long>();
+						if (t > currentSyncId)
+							currentSyncId = t;
+					}
+					return r;
+				} // func MoveNext
+
+				public void Reset()
+					=> ((IEnumerator)reader).Reset();
+
+				public IDataRow Current => reader.Current;
+				object IEnumerator.Current => reader.Current;
+
+				public IReadOnlyList<IDataColumn> Columns => reader.Columns;
+
+				public long CurrentSyncId => currentSyncId;
+				public char CurrentMode => reader.Current[0].ToString()[0];
+				public bool IsFullSync => isFull;
+			} // class SqlSynchronizationBatch
+
+			private readonly long startCurrentSyncId;
+			private readonly bool isForceFull;
 			private readonly SqlTransaction transaction;
 
-			public SqlSynchronizationTransaction(PpsDataSource dataSource, IPpsPrivateDataContext privateDataContext, long timeStamp, long syncId)
-				: base(timeStamp)
+			#region -- Ctor/Dtor --------------------------------------------------------
+
+			public SqlSynchronizationTransaction(PpsApplication application, PpsDataSource dataSource, IPpsPrivateDataContext privateDataContext, DateTime lastSynchronization)
+				:base(application, dataSource.CreateConnection(privateDataContext, true), lastSynchronization)
 			{
-				this.syncId = syncId;
-				this.connection = (SqlConnectionHandle)dataSource.CreateConnection(privateDataContext, true);
-				connection.EnsureConnection(true);
+				((SqlConnectionHandle)Connection).EnsureConnection(true);
 
 				// create transaction
-				this.transaction = connection.Connection.BeginTransaction(IsolationLevel.ReadCommitted);
+				this.transaction = SqlConnection.BeginTransaction(IsolationLevel.ReadCommitted);
 
 				// get the current sync id
-				using (var cmd = connection.Connection.CreateCommand())
+				using (var cmd = SqlConnection.CreateCommand())
 				{
 					cmd.Transaction = transaction;
-					cmd.CommandText = "SELECT change_tracking_current_version()";
+					cmd.CommandText = "SELECT change_tracking_current_version(), create_date FROM sys.databases WHERE database_id = DB_ID()";
 
-					var r = cmd.ExecuteScalar();
-					if (r == DBNull.Value)
-						throw new ArgumentException("Change tracking is not active in this database.");
+					using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleRow))
+					{
+						if (!r.Read())
+							throw new InvalidOperationException();
+						if (r.IsDBNull(0))
+							throw new ArgumentException("Change tracking is not active in this database.");
 
-					currentSyncId = (long)r;
+						startCurrentSyncId = r.GetInt64(0); // get highest SyncId
+						isForceFull = r.GetDateTime(1).ToUniversalTime() > lastSynchronization; // recreate database
+					}
 				}
 			} // ctor
 
 			protected override void Dispose(bool disposing)
 			{
 				if (disposing)
-				{
-					connection.Dispose();
-				}
+					transaction.Dispose();
 				base.Dispose(disposing);
 			} // proc Dispose
 
-			protected override IEnumerable<IDataRow> GetSynchronizationRows(string name, string timeStampColumn)
-			{
-				return base.GetSynchronizationRows(name, timeStampColumn);
-			} // func GetSynchronizationRows
+			#endregion
 
-			private static string[] PrepareSynchronizationColumns(PpsDataTableDefinition table, StringBuilder command)
+			private static void PrepareSynchronizationColumns(PpsDataTableDefinition table, StringBuilder command)
 			{
-				string[] columnNames = new string[table.Columns.Count];
-				var i = 0;
 				foreach (var col in table.Columns)
 				{
 					var colInfo = ((PpsDataColumnServerDefinition)col).GetColumnDescriptionImplementation<SqlColumnInfo>();
-					if (colInfo == null)
-						columnNames[i] = null;
-					else
+					if (colInfo != null)
 					{
 						command.Append(",d.[")
-							.Append(colInfo.ColumnName).Append(']');
-						columnNames[i] = "c" + i.ToString();
+							.Append(colInfo.ColumnName).Append(']')
+							.Append(" AS [").Append(col.Name).Append(']');
 					}
-					i++;
 				}
-
-				return columnNames;
 			} // func PrepareSynchronizationColumns
 
-			private string PrepareChangeTrackingCommand(PpsDataTableDefinition table, SqlTableInfo tableInfo, SqlColumnInfo columnInfo, out string[] columnNames)
+			private string PrepareChangeTrackingCommand(PpsDataTableDefinition table, SqlTableInfo tableInfo, SqlColumnInfo columnInfo, long lastSyncId)
 			{
 				// build command string for change table
-				var command = new StringBuilder("SELECT ct.sys_change_operation");
+				var command = new StringBuilder("SELECT ct.sys_change_operation,ct.sys_change_version");
 
-				columnNames = PrepareSynchronizationColumns(table, command);
+				PrepareSynchronizationColumns(table, command);
 
 				command.Append(" FROM ")
-					.Append("changetable(changes ").Append(tableInfo.FullName).Append(',').Append(syncId).Append(") as Ct ")
+					.Append("changetable(changes ").Append(tableInfo.FullName).Append(',').Append(lastSyncId).Append(") as Ct ")
 					.Append("LEFT OUTER JOIN ").Append(tableInfo.FullName)
-					.Append(" as d ON d.").Append(columnInfo.ColumnName).Append(" = ct.").Append(columnInfo.ColumnName)
-					.Append(" WHERE ct.sys_change_version < ").Append(currentSyncId);
+					.Append(" as d ON d.").Append(columnInfo.ColumnName).Append(" = ct.").Append(columnInfo.ColumnName);
 
 				return command.ToString();
 			} // proc PrepareChangeTrackingCommand
 
-			private string PrepareFullCommand(PpsDataTableDefinition table, SqlTableInfo tableInfo, out string[] columnNames)
+			private string PrepareFullCommand(PpsDataTableDefinition table, SqlTableInfo tableInfo)
 			{
-				var command = new StringBuilder("SELECT 'R'");
+				var command = new StringBuilder("SELECT 'I',cast(" + startCurrentSyncId.ToString() + " as bigint)");
 
-				columnNames = PrepareSynchronizationColumns(table, command);
+				PrepareSynchronizationColumns(table, command);
 
 				command.Append(" FROM ")
 					.Append(tableInfo.FullName)
@@ -1739,7 +1778,7 @@ namespace TecWare.PPSn.Server.Sql
 				return command.ToString();
 			} // proc PrepareFullCommand
 
-			private void GenerateChangeTrackingBatch(XmlWriter xml, PpsDataTableDefinition table)
+			private IPpsDataSynchronizationBatch GenerateChangeTrackingBatch(PpsDataTableDefinition table, long lastSyncId)
 			{
 				var column = (PpsDataColumnServerDefinition)table.PrimaryKey;
 				var columnInfo = column.GetColumnDescriptionImplementation<SqlColumnInfo>();
@@ -1747,47 +1786,44 @@ namespace TecWare.PPSn.Server.Sql
 					throw new ArgumentOutOfRangeException("columnInfo", null, $"{column.Name} is not a sql column.");
 
 				var tableInfo = columnInfo.Table;
-				var isFull = IsFull;
+				var isFull = isForceFull || lastSyncId <= 0;
 
 				// is the given syncId valid
-				using (var command = connection.Connection.CreateCommand())
+				if (!isFull)
 				{
-					command.Transaction = transaction;
-					command.CommandText = "SELECT change_tracking_min_valid_version(object_id('" + tableInfo.FullName + "'))";
+					using (var getMinVersionCommand = SqlConnection.CreateCommand())
+					{
+						getMinVersionCommand.Transaction = transaction;
+						getMinVersionCommand.CommandText = "SELECT change_tracking_min_valid_version(object_id('" + tableInfo.FullName + "'))";
 
-					var minValidVersionValue = command.ExecuteScalar();
-					if (minValidVersionValue == DBNull.Value)
-						throw new ArgumentException($"Change tracking is not activated for '{tableInfo.FullName}'.");
+						var minValidVersionValue = getMinVersionCommand.ExecuteScalar();
+						if (minValidVersionValue == DBNull.Value)
+							throw new ArgumentException($"Change tracking is not activated for '{tableInfo.FullName}'.");
 
-					var minValidVersion = minValidVersionValue.ChangeType<long>();
-					isFull = minValidVersion > syncId;
+						var minValidVersion = minValidVersionValue.ChangeType<long>();
+						isFull = minValidVersion > lastSyncId;
+					}
 				}
 
 				// generate the command
-				using (var command = connection.Connection.CreateCommand())
+				var command = SqlConnection.CreateCommand();
+				try
 				{
 					command.Transaction = transaction;
 					command.CommandText = isFull ?
-						PrepareFullCommand(table, tableInfo, out var columnNames) :
-						PrepareChangeTrackingCommand(table, tableInfo, columnInfo, out columnNames);
+						PrepareFullCommand(table, tableInfo) :
+						PrepareChangeTrackingCommand(table, tableInfo, columnInfo, lastSyncId);
 
-					using (var r = command.ExecuteReaderEx(CommandBehavior.SingleResult))
-					{
-						while (r.Read())
-						{
-							xml.WriteStartElement(r.GetString(0).ToLower());
-							for (var i = 1; i < r.FieldCount; i++)
-							{
-								if (columnNames[i - 1] != null && !r.IsDBNull(i))
-									xml.WriteElementString(columnNames[i - 1], r.GetValue(i).ChangeType<string>());
-							}
-							xml.WriteEndElement();
-						}
-					}
+					return new SqlSynchronizationBatch(startCurrentSyncId, command, isFull);
+				}
+				catch 
+				{
+					command.Dispose();
+					throw;
 				}
 			} // proc GenerateChangeTrackingBatch
 
-			public override void GenerateBatch(XmlWriter xml, PpsDataTableDefinition table, string syncType)
+			public override IPpsDataSynchronizationBatch GenerateBatch(PpsDataTableDefinition table, string syncType, long lastSyncId)
 			{
 				ParseSynchronizationArguments(syncType, out var syncAlgorithm, out var syncArguments);
 
@@ -1795,19 +1831,19 @@ namespace TecWare.PPSn.Server.Sql
 				{
 					ParseSynchronizationTimeStampArguments(syncArguments, out var name, out var column);
 
-					base.GenerateTimeStampBatch(xml, table, name, column);
+					return CreateTimeStampBatchFromSelector(name, column, lastSyncId);
 				}
 				else if (String.Compare(syncAlgorithm, "ChangeTracking", StringComparison.OrdinalIgnoreCase) == 0)
 				{
-					GenerateChangeTrackingBatch(xml, table);
+					return GenerateChangeTrackingBatch(table, lastSyncId);
 				}
 				else
 				{
 					throw new ArgumentException(String.Format("Unsupported sync algorithm: {0}", syncAlgorithm));
 				}
-			} // proc GenerateBatch
+			} // func GenerateBatch
 
-			public override long LastSyncId => currentSyncId;
+			private SqlConnection SqlConnection => ((SqlConnectionHandle)base.Connection).Connection;
 		} // class SqlSynchronizationTransaction
 
 		#endregion
@@ -2126,8 +2162,8 @@ namespace TecWare.PPSn.Server.Sql
 		public override PpsDataTableServerDefinition CreateTableDefinition(PpsDataSetServerDefinition dataset, string tableName, XElement config)
 			=> new PpsSqlDataTableServerDefinition(dataset, tableName, config);
 
-		public override PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, long timeStamp, long syncId)
-			=> new SqlSynchronizationTransaction(this, privateUserData, timeStamp, syncId);
+		public override PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, DateTime lastSynchronization)
+			=> new SqlSynchronizationTransaction(application, this, privateUserData, lastSynchronization);
 
 		public bool IsConnected
 		{

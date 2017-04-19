@@ -146,44 +146,6 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- class PpsSysSynchronizationTransaction ---------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class PpsSysSynchronizationTransaction : PpsDataSynchronization
-		{
-			private readonly PpsApplication application;
-			private readonly IPpsConnectionHandle connection;
-
-			public PpsSysSynchronizationTransaction(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData, long timeStamp)
-				: base(timeStamp)
-			{
-				this.application = dataSource.application;
-				this.connection = dataSource.CreateConnection(privateUserData, true);
-			} // ctor
-
-			protected override void Dispose(bool disposing)
-			{
-				if (disposing)
-				{
-					connection.Dispose();
-				}
-
-				base.Dispose(disposing);
-			} // proc Dispose
-
-			protected override IEnumerable<IDataRow> GetSynchronizationRows(string viewName, string viewColumn)
-			{
-				var view  = application.GetViewDefinition(viewName, true);
-				var selector = view.SelectorToken.CreateSelector(connection, true);
-				if (!IsFull)
-					selector.ApplyFilter(new PpsDataFilterCompareExpression(viewColumn, PpsDataFilterCompareOperator.GreaterOrEqual, new PpsDataFilterCompareDateValue(TimeStampDateTime, TimeStampDateTime)));
-				return selector;
-			} // func GetSynchronizationRows
-		} // class PpsSysSynchronizationTransaction
-
-		#endregion
-
 		private readonly PpsApplication application;
 		private readonly PpsSysConnectionHandle systemConnection;
 
@@ -233,8 +195,8 @@ namespace TecWare.PPSn.Server
 			throw new NotSupportedException();
 		} // proc CreateTransaction
 
-		public override PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, long timeStamp, long syncId)
-			=> new PpsSysSynchronizationTransaction(this, privateUserData, timeStamp);
+		public override PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, DateTime lastSynchronization)
+			=> new PpsDataSynchronization(application, CreateConnection(privateUserData, true), lastSynchronization);
 
 		public override string Type => "Sys";
 	} // class PpsSysDataSource

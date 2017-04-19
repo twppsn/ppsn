@@ -49,7 +49,7 @@ namespace TecWare.PPSn.Server.Data
 			throw new NotImplementedException();
 		} // func CreateSelectorTokenAsync
 
-		public virtual PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, long timeStamp, long syncId)
+		public virtual PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, DateTime lastSynchronization)
 		{
 			throw new NotImplementedException();
 		} // func CreateSynchronizationSession

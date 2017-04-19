@@ -29,6 +29,7 @@ using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
 using TecWare.PPSn.Stuff;
 
@@ -962,8 +963,169 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#region -- Master-Data Synchronisation --------------------------------------------
 
+		private static void PrepareMasterDataSyncArguments(IDEContext r, string tableName, long syncId, long lastSyncTimeStamp, out Dictionary<string, long> syncIds, out bool syncAllTables, out DateTime lastSynchronization)
+		{
+			syncIds = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+			if (r.HasInputData)
+			{
+				using (var xml = XmlReader.Create(r.GetInputTextReader(), Procs.XmlReaderSettings))
+				{
+					if (xml.MoveToContent() != XmlNodeType.Element)
+						throw new ArgumentException();
+
+					lastSyncTimeStamp = xml.GetAttribute<long>("lastSyncTimeStamp", -1);
+					lastSynchronization = lastSyncTimeStamp >= 0 ? DateTime.FromFileTimeUtc(lastSyncTimeStamp) : DateTime.MinValue;
+
+					if (!xml.IsEmptyElement)
+					{
+						xml.Read();
+
+						while (xml.NodeType == XmlNodeType.Element)
+						{
+							if (xml.LocalName == "sync")
+							{
+								var table = xml.GetAttribute("table");
+								syncIds[table] = Int64.Parse(xml.GetAttribute("syncId"));
+								if (!xml.IsEmptyElement)
+									xml.Skip();
+								else
+									xml.Read();
+							}
+							else
+								xml.Skip();
+						}
+
+						xml.ReadEndElement();
+					}
+				}
+				syncAllTables = true;
+			}
+			else if (!String.IsNullOrEmpty(tableName)) // create a single sync
+			{
+				lastSynchronization = lastSyncTimeStamp >= 0 ? DateTime.FromFileTimeUtc(lastSyncTimeStamp) : DateTime.MinValue;
+				syncIds[tableName] = syncId;
+				syncAllTables = false;
+			}
+			else // create a full batch
+			{
+				lastSynchronization = DateTime.MinValue;
+				syncAllTables = true;
+			}
+		} // proc PrepareMasterDataSyncArguments
+
+		private static void ExecuteMasterDataTableSync(LogMessageScopeProxy msg, IPpsPrivateDataContext user, Dictionary<PpsDataSource, PpsDataSynchronization> synchronisationSessions, XmlWriter xml, PpsDataTableDefinition table, long lastSyncId, DateTime lastSynchronization)
+		{
+			msg.WriteLine("Sync: {0}", table.Name);
+			using (msg.Indent())
+			{
+				var syncType = table.Meta.GetProperty("syncType", String.Empty);
+				if (String.IsNullOrEmpty(syncType) || String.Compare(syncType, "None", StringComparison.OrdinalIgnoreCase) == 0)
+				{
+					msg.WriteLine("Ignored.");
+					return; // next table
+				}
+
+				var primaryKey = table.PrimaryKey as PpsDataColumnServerDefinition;
+				if (primaryKey == null)
+				{
+					msg.WriteLine("Primary is null or has no field definition.");
+					return;
+				}
+
+				var dataSource = primaryKey.FieldDescription.DataSource;
+
+				// start a session
+				if (!synchronisationSessions.TryGetValue(dataSource, out var session))
+				{
+					session = dataSource.CreateSynchronizationSession(user, lastSynchronization);
+					synchronisationSessions[dataSource] = session;
+				}
+
+				// generate synchronization batch
+				xml.WriteStartElement("batch");
+				xml.WriteAttributeString("table", table.Name);
+
+				using (var rows = session.GenerateBatch(table, syncType, lastSyncId))
+				{
+					if (rows.IsFullSync)
+						xml.WriteAttributeString("isFull", rows.IsFullSync.ChangeType<string>());
+
+					// create column names
+					var columnNames = new string[table.Columns.Count];
+					var columnIndex = new int[columnNames.Length];
+					var columnConvert = new Func<object, string>[columnNames.Length];
+
+					for (var i = 0; i < columnNames.Length; i++)
+					{
+						columnNames[i] = "c" + i.ToString();
+
+						var targetColumn = table.Columns[i];
+						var syncSourceColumnName = targetColumn.Meta.GetProperty("syncSource", targetColumn.Name);
+						var sourceColumnIndex = syncSourceColumnName == "#" ? -1 : ((IDataColumns)rows).FindColumnIndex(syncSourceColumnName);
+						if (sourceColumnIndex == -1)
+						{
+							columnNames[i] = null;
+							columnIndex[i] = -1;
+							columnConvert[i] = null;
+						}
+						else
+						{
+							columnNames[i] = "c" + i.ToString();
+							columnIndex[i] = sourceColumnIndex;
+							if (rows.Columns[sourceColumnIndex].DataType == typeof(DateTime) && targetColumn.DataType == typeof(long))
+							{
+								columnConvert[i] = v =>
+								{
+									var dt = (DateTime)v;
+									return dt == DateTime.MinValue ? null : dt.ToFileTimeUtc().ToString();
+								};
+							}
+							else
+								columnConvert[i] = v => v.ChangeType<string>();
+						}
+					}
+
+					// export columns
+					var newSyncId = lastSyncId;
+					while (rows.MoveNext())
+					{
+						var r = rows.Current;
+
+						if (newSyncId < rows.CurrentSyncId)
+							newSyncId = rows.CurrentSyncId;
+
+						xml.WriteStartElement(rows.CurrentMode.ToString().ToLower());
+
+						for (var i = 0; i < columnNames.Length; i++)
+						{
+							if (columnIndex[i] != -1)
+							{
+								var v = r[columnIndex[i]];
+								if (v != null)
+								{
+									var s = columnConvert[i](v);
+									if (s != null)
+										xml.WriteElementString(columnNames[i], s);
+								}
+							}
+						}
+
+						xml.WriteEndElement();
+					}
+
+					// write syncId
+					xml.WriteStartElement("syncId");
+					xml.WriteValue(newSyncId.ChangeType<string>());
+					xml.WriteEndElement();
+				}
+
+				// end element
+				xml.WriteEndElement();
+			}
+		} // proc ExecuteMasterDataTableSync
+
 		[DEConfigHttpAction("mdata", IsSafeCall = false)]
-		private void HttpMasterDataSyncAction(IDEContext r, long timeStamp = -1, long syncId = -1)
+		private void HttpMasterDataSyncAction(IDEContext r, string tableName = null, long syncId = -1, long syncStamp = -1)
 		{
 			// todo: user demand
 			var user = r.GetUser<IPpsPrivateDataContext>();
@@ -971,75 +1133,44 @@ namespace TecWare.PPSn.Server.Wpf
 			if (masterDataSetDefinition == null || !masterDataSetDefinition.IsInitialized)
 				throw new ArgumentException("Masterdata schema not initialized.");
 
+			// parse incomming sync id's
+			PrepareMasterDataSyncArguments(r, tableName, syncId, syncStamp, out var syncIds, out var syncAllTables, out var lastSynchronization);
+			
 			var synchronisationSessions = new Dictionary<PpsDataSource, PpsDataSynchronization>();
+			var msg = Log.CreateScope(LogMsgType.Information, stopTime: true);
 			try
 			{
-				var msg = Log.CreateScope(LogMsgType.Information, stopTime: true);
-
-				var currentSyncId = -1L;
-				var currentTimeStamp = -1L;
-
+				var nextSyncStamp = DateTime.Now.ToFileTimeUtc();
 				using (var xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, Encoding.UTF8), Procs.XmlWriterSettings))
 				{
 					xml.WriteStartDocument();
 					xml.WriteStartElement("mdata");
 
-					foreach (var table in masterDataSetDefinition.TableDefinitions)
+					if (syncAllTables)
 					{
-						msg.WriteLine("Sync: {0}", table.Name);
-						using (msg.Indent())
+						foreach (var table in masterDataSetDefinition.TableDefinitions)
 						{
-							var syncType = table.Meta.GetProperty("syncType", String.Empty);
-							if (String.IsNullOrEmpty(syncType) || String.Compare(syncType, "None", StringComparison.OrdinalIgnoreCase) == 0)
-							{
-								msg.WriteLine("Ignored.");
-								continue; // next table
-							}
+							// get sync id
+							if (!syncIds.TryGetValue(table.Name, out var currentSyncId))
+								currentSyncId = -1;
 
-							var primaryKey = table.PrimaryKey as PpsDataColumnServerDefinition;
-							if (primaryKey == null)
-							{
-								msg.WriteLine("Primary is null or has no field definition.");
-								continue;
-							}
-
-							var dataSource = primaryKey.FieldDescription.DataSource;
-
-							// start a session
-							if (!synchronisationSessions.TryGetValue(dataSource, out var session))
-							{
-								session = dataSource.CreateSynchronizationSession(user, timeStamp, syncId);
-								synchronisationSessions[dataSource] = session;
-							}
-
-							// generate synchronization batch
-							xml.WriteStartElement("batch");
-							xml.WriteAttributeString("table", table.Name);
-
-							session.GenerateBatch(xml, table, syncType);
-
-							// calc synchronization id and stamp
-							if (currentSyncId == -1)
-								currentSyncId = session.LastSyncId;
-							else if (session.LastSyncId >= 0 && session.LastSyncId < currentSyncId)
-								currentSyncId = session.LastSyncId;
-
-							if (currentTimeStamp == -1)
-								currentTimeStamp = session.LastTimeStamp;
-							else if (session.LastTimeStamp >= 0 && session.LastTimeStamp < currentTimeStamp)
-								currentTimeStamp = session.LastTimeStamp;
-
-							// end element
-							xml.WriteEndElement();
+							ExecuteMasterDataTableSync(msg, user, synchronisationSessions, xml, table, currentSyncId, lastSynchronization);
+						}
+					}
+					else
+					{
+						foreach (var kv in syncIds)
+						{
+							var table = masterDataSetDefinition.FindTable(kv.Key);
+							if (table != null)
+								ExecuteMasterDataTableSync(msg, user, synchronisationSessions, xml, table, kv.Value, lastSynchronization);
+							else
+								msg.WriteLine($"Table not found: {kv.Value}");
 						}
 					}
 
-					// write sync info
-					xml.WriteStartElement("sync");
-					if (currentSyncId >= 0)
-						xml.WriteAttributeString("syncId", currentSyncId.ToString());
-					if (currentTimeStamp >= 0)
-						xml.WriteAttributeString("timeStamp", currentTimeStamp.ToString());
+					xml.WriteStartElement("syncStamp");
+					xml.WriteValue(nextSyncStamp);
 					xml.WriteEndElement();
 
 					xml.WriteEndElement();
@@ -1055,8 +1186,9 @@ namespace TecWare.PPSn.Server.Wpf
 				// finish the sync sessions
 				foreach (var c in synchronisationSessions)
 					c.Value.Dispose();
+
+				msg.Dispose();
 			}
-			// 
 		} // proc HttpMasterDataSyncAction
 
 		#endregion
