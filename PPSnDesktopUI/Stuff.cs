@@ -113,8 +113,22 @@ namespace TecWare.PPSn
 			param.ParameterName = parameterName;
 			param.DbType = dbType;
 			param.Value = value;
+			command.Parameters.Add(param);
 			return param;
 		} // func AddParameter
+
+		public static void ExecuteNonQueryEx(this DbCommand command)
+		{
+			try
+			{
+				command.ExecuteNonQuery();
+			}
+			catch (DbException e)
+			{
+				e.Data["CommandText"] = command.CommandText;
+				throw;
+			}
+		} // func ExecuteReaderEx
 
 		public static DbDataReader ExecuteReaderEx(this DbCommand command, CommandBehavior commandBehavior = CommandBehavior.Default)
 		{

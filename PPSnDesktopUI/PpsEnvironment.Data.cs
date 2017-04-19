@@ -23,6 +23,7 @@ using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Properties;
 using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn
@@ -180,6 +181,7 @@ namespace TecWare.PPSn
 	public sealed class PpsMasterData : IDisposable
 	{
 		public const string MasterDataSchema = "masterData";
+		private const string refreshColumnName = "_IsUpdated";
 
 		#region -- class SqLiteParameterDictionaryWrapper -------------------------------
 
@@ -214,24 +216,21 @@ namespace TecWare.PPSn
 		private PpsDataSetDefinitionDesktop schema;
 		private bool? schemaIsOutDated = null;
 		private DateTime lastSynchronizationSchema = DateTime.MinValue; // last synchronization of the schema
-
-		private long lastSynchronizationId = -1;    // sync token
 		private DateTime lastSynchronizationStamp = DateTime.MinValue;  // last synchronization stamp
+		private bool isSynchronizationStarted = false; // number of sync processes
 
 		private bool isDisposed = false;
 		private bool isInSynchronization = false;
 
 		#region -- Ctor/Dtor ------------------------------------------------------------
 
-		public PpsMasterData(PpsEnvironment environment, SQLiteConnection connection, PpsDataSetDefinitionDesktop schema, DateTime lastSynchronizationSchema, DateTime lastSynchronizationStamp, long lastSynchronizationId)
+		public PpsMasterData(PpsEnvironment environment, SQLiteConnection connection, PpsDataSetDefinitionDesktop schema, DateTime lastSynchronizationSchema, DateTime lastSynchronizationStamp)
 		{
 			this.environment = environment;
 			this.connection = connection;
 
 			this.schema = schema;
 			this.lastSynchronizationSchema = lastSynchronizationSchema;
-
-			this.lastSynchronizationId = lastSynchronizationId;
 			this.lastSynchronizationStamp = lastSynchronizationStamp;
 		} // ctor
 
@@ -261,16 +260,15 @@ namespace TecWare.PPSn
 			newMasterDataSchema.EndInit();
 
 			// generate update commands
-			var updateScript = GetUpdateCommands(connection, newMasterDataSchema);
+			var updateScript = GetUpdateCommands(connection, newMasterDataSchema, CheckLocalTableExists(connection, "SyncState"));
 
 			// execute update commands
 			using (var transaction = connection.BeginTransaction())
+			{
 				try
 				{
 					if (updateScript.Count > 0)
-					{
 						ExecuteUpdateScript(connection, transaction, updateScript);
-					}
 
 					// update header
 					var existRow = false;
@@ -299,38 +297,36 @@ namespace TecWare.PPSn
 					transaction.Rollback();
 					throw;
 				}
+			}
 
 			// update schema
 			schema = newMasterDataSchema;
 		} // proc UpdateSchemaAsync
 
-		private static IReadOnlyList<string> GetUpdateCommands(SQLiteConnection connection, PpsDataSetDefinitionDesktop schema)
+		private static IReadOnlyList<string> GetUpdateCommands(SQLiteConnection connection, PpsDataSetDefinitionDesktop schema, bool syncStateTableExists)
 		{
 			var commands = new List<string>();
-
+			var tableChanged = false;
 			foreach (var table in schema.TableDefinitions)
 			{
 				if (CheckLocalTableExists(connection, table.Name)) // generate alter table script
 				{
-					if (table.Meta == null || table.Meta.GetProperty("MustImport", false)) // recreate table
-					{
-						CreateDropScript(commands, table.Name, GetLocalTableIndexes(connection, table.Name).Select(c => c.Item1));
-						CreateTableScript(commands, table.Name, table.Columns);
-					}
-					else
-					{
-						CreateAlterTableScript(commands,
-							table.Name,
-							GetLocalTableColumns(connection, table.Name),
-							GetLocalTableIndexes(connection, table.Name),
-							table.Columns
-						);
-					}
+					tableChanged = CreateAlterTableScript(commands,
+						table.Name,
+						GetLocalTableColumns(connection, table.Name),
+						GetLocalTableIndexes(connection, table.Name),
+						table.Columns
+					);
 				}
 				else // generate create table script
 				{
-					CreateTableScript(commands, table.Name, table.Columns);
+					CreateTableScript(commands, table.Name, table.Columns, null);
+					tableChanged = true;
 				}
+
+				// clear sync token
+				if (tableChanged && syncStateTableExists)
+					commands.Add($"DELETE FROM main.[SyncState] WHERE [Table] = '{table.Name}'");
 			}
 
 			return commands;
@@ -346,7 +342,7 @@ namespace TecWare.PPSn
 					foreach (var c in commands)
 					{
 						cmd.CommandText = c;
-						var ret = cmd.ExecuteNonQuery();
+						cmd.ExecuteNonQueryEx();
 					}
 				}
 				catch (Exception e)
@@ -356,7 +352,7 @@ namespace TecWare.PPSn
 			}
 		} // proc ExecuteUpdateScript
 
-		private static void CreateTableScript(List<string> commands, string tableName, IEnumerable<IDataColumn> remoteColumns)
+		private static void CreateTableScript(List<string> commands, string tableName, IEnumerable<IDataColumn> remoteColumns, string[] localIndexArray)
 		{
 			// add dummy for the create table
 			var createTableIndex = commands.Count;
@@ -377,10 +373,12 @@ namespace TecWare.PPSn
 				if (column.Attributes.GetProperty("IsPrimary", false))
 				{
 					commandText.Append(" PRIMARY KEY");
-					CreateTableIndex(commands, tableName, column.Name, true);
+					CreateTableIndex(commands, tableName, column.Name, true, localIndexArray);
 				}
 
 				CreateCommandColumnAttribute(commandText, column);
+				if (column.Attributes.GetProperty<bool>("IsUnique", false))
+					CreateTableIndex(commands, tableName, column.Name, true, localIndexArray);
 
 				commandText.Append(',');
 			}
@@ -390,11 +388,14 @@ namespace TecWare.PPSn
 			commands[createTableIndex] = commandText.ToString();
 		} // func CreateTableScript
 
-		private static void CreateAlterTableScript(List<string> commands, string tableName, IEnumerable<IDataColumn> localColumns, IEnumerable<Tuple<string, bool>> localIndexes, IEnumerable<IDataColumn> remoteColumns)
+		private static bool CreateAlterTableScript(List<string> commands, string tableName, IEnumerable<IDataColumn> localColumns, IEnumerable<Tuple<string, bool>> localIndexes, IEnumerable<IDataColumn> remoteColumns)
 		{
 			var localColumnsArray = localColumns.ToArray();
 			var newColumns = new List<IDataColumn>();
 			var sameColumns = new List<string>();   // for String.Join - only Column names are used
+			var refreshColumnExists = false;
+
+			// todo: check index list
 
 			foreach (var remoteColumn in remoteColumns)
 			{
@@ -404,6 +405,9 @@ namespace TecWare.PPSn
 				var found = false;
 				foreach (var localColumn in localColumnsArray)
 				{
+					if (localColumn.Name == refreshColumnName)
+						refreshColumnExists = true;
+
 					// todo: check default
 					if ((remoteColumn.Name == localColumn.Name)
 						&& (ConvertDataTypeToSqLite(remoteColumn.DataType) == ConvertDataTypeToSqLite(localColumn.DataType))
@@ -420,32 +424,28 @@ namespace TecWare.PPSn
 				else
 					newColumns.Add(remoteColumn);
 			}
-
-			// this is more performant than checking for obsolete columns
-			if (sameColumns.Count < localColumnsArray.Length)
+			
+			if (sameColumns.Count < localColumnsArray.Length || newColumns.Count > 0)
 			{
-				// drop the old indexes
-				foreach (var column in localColumnsArray)
+				if (!refreshColumnExists) // drop and recreate
 				{
-					if (column.Attributes.GetProperty("IsPrimary", false)) // todo: rk real index check
-						commands.Add($"DROP INDEX IF EXISTS '{tableName}_{column.Name}_index';");
+					CreateDropScript(commands, tableName);
+					CreateTableScript(commands, tableName, remoteColumns, null);
 				}
+				else if (sameColumns.Count < localColumnsArray.Length) // this is more performant than checking for obsolete columns
+				{
+					// rename local table
+					commands.Add($"ALTER TABLE '{tableName}' RENAME TO '{tableName}_temp';");
 
-				// rename local table
-				commands.Add($"ALTER TABLE '{tableName}' RENAME TO '{tableName}_temp';");
+					// create a new table, according to new Scheme...
+					CreateTableScript(commands, tableName, remoteColumns, localIndexes.Select(c => c.Item1).ToArray());
+					// copy
+					commands.Add($"INSERT INTO '{tableName}' ({String.Join(", ", sameColumns)}) SELECT {String.Join(", ", sameColumns)} FROM '{tableName}_temp';");
 
-				// create a new table, according to new Scheme...
-				CreateTableScript(commands, tableName, remoteColumns);
-				// copy
-				commands.Add($"INSERT INTO '{tableName}' ({String.Join(", ", sameColumns)}) SELECT {String.Join(", ", sameColumns)} FROM '{tableName}_temp';");
-
-				// drop old local table
-				commands.Add($"DROP TABLE '{tableName}_temp';");  // no IF EXISTS - at this point the table must exist or error
-			}
-			else
-			{
-				// there are no columns, which have to be deleted - check now if there are new columns to add
-				if (newColumns.Count() > 0)
+					// drop old local table
+					commands.Add($"DROP TABLE '{tableName}_temp';");  // no IF EXISTS - at this point the table must exist or error
+				}
+				else if (newColumns.Count > 0) // there are no columns, which have to be deleted - check now if there are new columns to add
 				{
 					// todo: rk primary key column changed
 					foreach (var column in newColumns)
@@ -459,24 +459,37 @@ namespace TecWare.PPSn
 						commands.Add(commandText.ToString());
 					}
 				}
+				else
+					throw new InvalidOperationException();
+
+				return true;
 			}
+			else
+				return false;
 		} // proc CreateAlterTableScript
 
-		private static void CreateDropScript(List<string> commands, string tableName, IEnumerable<string> indexes)
+		private static void CreateDropScript(List<string> commands, string tableName)
 		{
-			foreach (var c in indexes)
-				commands.Add($"DROP INDEX IF EXISTS [{c}];");
-
 			commands.Add($"DROP TABLE IF EXISTS '{tableName}';");
 		} // proc CreateDropScript
 
-		private static void CreateTableIndex(List<string> commands, string tableName, string columnName, bool isUnique)
+		private static void CreateTableIndex(List<string> commands, string tableName, string columnName, bool isUnique, string[] localIndexArray)
 		{
 			var commandText = new StringBuilder("CREATE");
 			if (isUnique)
 				commandText.Append(" UNIQUE");
 			commandText.Append(" INDEX ");
-			AppendSqlIdentifier(commandText, tableName + "_" + columnName + "_index");
+
+			var baseName = tableName + "_" + columnName + "_index";
+			var indexName = baseName;
+			if (localIndexArray != null)
+			{
+				var nameIndex = 1;
+				while (Array.Exists(localIndexArray, c => String.Compare(c, indexName, StringComparison.OrdinalIgnoreCase) == 0))
+					indexName = baseName + (nameIndex++).ToString();
+			}
+
+			AppendSqlIdentifier(commandText, indexName);
 			commandText.Append(" ON ");
 			AppendSqlIdentifier(commandText, tableName);
 			commandText.Append(" (");
@@ -513,6 +526,9 @@ namespace TecWare.PPSn
 		{
 			private readonly PpsMasterData masterData;
 			private readonly PpsDataTableDefinition table;
+			private readonly SQLiteConnection connection;
+			private readonly SQLiteTransaction transaction;
+			private readonly bool isFull;
 
 			private readonly int primaryColumnIndex;
 			private readonly SQLiteCommand existCommand;
@@ -527,18 +543,28 @@ namespace TecWare.PPSn
 			private readonly SQLiteCommand deleteCommand;
 			private readonly SQLiteParameter deleteIdParameter;
 
+			private readonly int refreshColumnIndex = -1;
+
 			#region -- Ctor/Dtor ----------------------------------------------------
 
-			public ProcessBatch(SQLiteConnection connection, SQLiteTransaction transaction, PpsMasterData masterData, string tableName)
+			public ProcessBatch(SQLiteConnection connection, SQLiteTransaction transaction, PpsMasterData masterData, string tableName, bool isFull)
 			{
 				this.masterData = masterData;
+				this.connection = connection;
+				this.transaction = transaction;
+				this.isFull = isFull;
 
 				// check definition
 				this.table = masterData.schema.FindTable(tableName);
 				if (table == null)
 					throw new ArgumentOutOfRangeException(nameof(tableName), tableName, $"Could not find master table '{tableName}.'");
-				if (table.PrimaryKey == null)
-					throw new ArgumentException($"Table '{table.Name}' has no primary key.", nameof(table.PrimaryKey));
+
+				var alternativePrimaryKey = table.Meta.GetProperty<string>("useAsKey", null);
+				var primaryKey = String.IsNullOrEmpty(alternativePrimaryKey) ? table.PrimaryKey : table.Columns[alternativePrimaryKey];
+				if (primaryKey == null)
+					throw new ArgumentException($"Table '{table.Name}' has no primary key.", nameof(primaryKey));
+
+				refreshColumnIndex = table.FindColumnIndex(refreshColumnName);
 
 				// prepare column parameter
 				insertCommand = new SQLiteCommand(connection) { Transaction = transaction };
@@ -553,7 +579,7 @@ namespace TecWare.PPSn
 					var syncSourceColumn = column.Meta.GetProperty("syncSource", String.Empty);
 					if (syncSourceColumn == "#")
 					{
-						if (column.IsPrimaryKey)
+						if (column == primaryKey)
 							throw new ArgumentException($"Primary column '{column.Name}' is not in sync list.");
 
 						// exclude from update list
@@ -562,7 +588,7 @@ namespace TecWare.PPSn
 					}
 					else
 					{
-						if (column.IsPrimaryKey)
+						if (column == primaryKey)
 							primaryColumnIndex = i;
 						insertParameters[i] = insertCommand.Parameters.Add("@" + column.Name, ConvertDataTypeToDbType(column.DataType));
 						insertParameters[i].SourceColumn = column.Name;
@@ -575,21 +601,45 @@ namespace TecWare.PPSn
 				bool excludeNull(SQLiteParameter p)
 					=> p != null;
 
+				string insertColumnList()
+				{
+					var t = String.Join(", ", insertParameters.Where(excludeNull).Select(c => "[" + c.SourceColumn + "]"));
+					if (refreshColumnIndex >= 0)
+						t += ",[" + refreshColumnName + "]";
+					return t;
+				}
+
+				string insertValueList()
+				{
+					var t = String.Join(", ", insertParameters.Where(excludeNull).Select(c => c.ParameterName));
+					if (refreshColumnIndex >= 0)
+						t += ",0";
+					return t;
+				}
+
+				string updateColumnValueList()
+				{
+					var t = String.Join(", ", updateParameters.Where(excludeNull).Where(c => c != updateParameters[primaryColumnIndex]).Select(c => "[" + c.SourceColumn + "] = " + c.ParameterName));
+					if (refreshColumnIndex >= 0)
+						t += ",[" + refreshColumnName + "]=IFNULL([" + refreshColumnName + "], 0)";
+					return t;
+				}
+
 				insertCommand.CommandText =
-					"INSERT INTO main.[" + table.Name + "] (" + String.Join(", ", insertParameters.Where(excludeNull).Select(c => c.SourceColumn)) + ") " +
-					"VALUES (" + String.Join(", ", insertParameters.Where(excludeNull).Select(c => c.ParameterName)) + ");";
+					"INSERT INTO main.[" + table.Name + "] (" + insertColumnList() + ") " +
+					"VALUES (" + insertValueList() + ");";
 
 				updateCommand.CommandText = "UPDATE main.[" + table.Name + "] SET " +
-					String.Join(", ", updateParameters.Where(excludeNull).Where(c => c != updateParameters[primaryColumnIndex]).Select(c => "[" + c.SourceColumn + "] = " + c.ParameterName)) +
+					updateColumnValueList() +
 					" WHERE [" + updateParameters[primaryColumnIndex].SourceColumn + "] = " + updateParameters[primaryColumnIndex].ParameterName;
 
 				// prepare exists
-				existCommand = new SQLiteCommand("SELECT EXISTS(SELECT * FROM main.[" + table.Name + "] WHERE [" + table.PrimaryKey.Name + "] = @Id)", connection, transaction);
-				existIdParameter = existCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(table.PrimaryKey.DataType));
+				existCommand = new SQLiteCommand("SELECT EXISTS(SELECT * FROM main.[" + table.Name + "] WHERE [" + primaryKey.Name + "] = @Id)", connection, transaction);
+				existIdParameter = existCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(primaryKey.DataType));
 
 				// prepare delete
-				deleteCommand = new SQLiteCommand("DELETE FROM main.[" + table.Name + "] WHERE [" + table.PrimaryKey.Name + "] = @Id;", connection, transaction);
-				deleteIdParameter = deleteCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(table.PrimaryKey.DataType));
+				deleteCommand = new SQLiteCommand("DELETE FROM main.[" + table.Name + "] WHERE [" + primaryKey.Name + "] = @Id;", connection, transaction);
+				deleteIdParameter = deleteCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(primaryKey.DataType));
 
 				existCommand.Prepare();
 				insertCommand.Prepare();
@@ -609,8 +659,39 @@ namespace TecWare.PPSn
 
 			#region -- Parse --------------------------------------------------------
 
-			public void Parse(XmlReader xml)
+			public void Prepare()
 			{
+				// clear table, is full mode
+				if (isFull)
+				{
+					if (refreshColumnIndex == -1)
+					{
+						using (var cmd = new SQLiteCommand($"DELETE FROM main.[{table.Name}]", connection, transaction))
+							cmd.ExecuteNonQueryEx();
+					}
+					else
+					{
+						using (var cmd = new SQLiteCommand($"UPDATE main.[{table.Name}] SET [" + refreshColumnName + "] = null WHERE [" + refreshColumnName + "] <> 1", connection, transaction))
+						//using (var cmd = new SQLiteCommand($"DELETE FROM main.[{table.Name}] WHERE [" + refreshColumnName + "] <> 1", connection, transaction))
+							cmd.ExecuteNonQueryEx();
+					}
+				}
+			} // proc Prepare
+
+			public void Clean()
+			{
+				if (isFull && refreshColumnIndex >= 0)
+				{
+					using (var cmd = new SQLiteCommand($"DELETE FROM main.[{table.Name}] WHERE ["+ refreshColumnName + "] is null", connection, transaction))
+						cmd.ExecuteNonQueryEx();
+				}
+			} // proc Clean
+
+			public void Parse(XmlReader xml, IProgress<string> progress)
+			{
+				var objectCounter = 0;
+				var lastProgress = Environment.TickCount;
+
 				while (xml.NodeType == XmlNodeType.Element)
 				{
 					if (xml.IsEmptyElement) // skip empty element
@@ -621,75 +702,117 @@ namespace TecWare.PPSn
 
 					// action to process
 					var actionName = xml.LocalName.ToLower();
-					if (actionName != "r"
+					if (actionName != "r" 
+						&& actionName != "u"
 						&& actionName != "i"
-						&& actionName != "d")
+						&& actionName != "d"
+						&& actionName != "syncid")
 						throw new InvalidOperationException($"The operation {actionName} is not supported.");
 
-					// clear current column set
-					for (var i = 0; i < updateParameters.Length; i++)
+					if (actionName == "syncid")
 					{
-						if (updateParameters[i] != null)
-							updateParameters[i].Value = DBNull.Value;
-						if (insertParameters[i] != null)
-							insertParameters[i].Value = DBNull.Value;
-					}
-					existIdParameter.Value = DBNull.Value;
-					deleteIdParameter.Value = DBNull.Value;
+						#region -- update SyncState --
+						xml.Read(); // read element
 
-					// collect columns
-					xml.Read();
-					while (xml.NodeType == XmlNodeType.Element)
-					{
-						if (xml.IsEmptyElement) // read column data
-							xml.Read();
+						var newSyncId = xml.GetElementContent<long>(-1);
+						if (newSyncId == -1)
+						{
+							using (var cmd = new SQLiteCommand("DELETE FROM main.[SyncState] WHERE [Table] = @Table", connection, transaction))
+							{
+								cmd.AddParameter("@Table", DbType.String, table.Name);
+								cmd.ExecuteNonQueryEx();
+							}
+						}
 						else
 						{
-							var columnName = xml.LocalName;
-							if (columnName.StartsWith("c") && Int32.TryParse(columnName.Substring(1), out var columnIndex))
+							using (var cmd = new SQLiteCommand(
+								"INSERT OR REPLACE INTO main.[SyncState] ([Table], [SyncId]) " +
+								"VALUES (@Table, @SyncId);", connection, transaction))
 							{
-								xml.Read();
-
-								var value = ConvertStringToSQLiteValue(xml.ReadContentAsString(), updateParameters[columnIndex].DbType);
-								updateParameters[columnIndex].Value = value;
-								insertParameters[columnIndex].Value = value;
-
-								if (columnIndex == primaryColumnIndex)
-								{
-									existIdParameter.Value = value;
-									deleteIdParameter.Value = value;
-								}
-
-								xml.ReadEndElement();
+								cmd.AddParameter("@Table", DbType.String, table.Name);
+								cmd.AddParameter("@SyncId", DbType.Int64, newSyncId);
+								cmd.ExecuteNonQueryEx();
 							}
-							else
-								xml.Skip();
 						}
+						#endregion
 					}
-
-					// process action
-					switch (actionName[0])
+					else
 					{
-						case 'r':
-							if (RowExists())
-							{
-								ExecuteCommand(updateCommand);
-								masterData.environment.OnMasterDataRowChanged(PpsDataChangeOperation.Update, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
-							}
+						#region -- upsert --
+						if (isFull)
+							actionName = refreshColumnIndex == -1 ? "i" : "r";
+
+						// clear current column set
+						for (var i = 0; i < updateParameters.Length; i++)
+						{
+							if (updateParameters[i] != null)
+								updateParameters[i].Value = DBNull.Value;
+							if (insertParameters[i] != null)
+								insertParameters[i].Value = DBNull.Value;
+						}
+						existIdParameter.Value = DBNull.Value;
+						deleteIdParameter.Value = DBNull.Value;
+
+						// collect columns
+						xml.Read();
+						while (xml.NodeType == XmlNodeType.Element)
+						{
+							if (xml.IsEmptyElement) // read column data
+								xml.Read();
 							else
 							{
+								var columnName = xml.LocalName;
+								if (columnName.StartsWith("c") && Int32.TryParse(columnName.Substring(1), out var columnIndex))
+								{
+									xml.Read();
+
+									var value = ConvertStringToSQLiteValue(xml.ReadContentAsString(), updateParameters[columnIndex].DbType);
+									updateParameters[columnIndex].Value = value;
+									insertParameters[columnIndex].Value = value;
+
+									if (columnIndex == primaryColumnIndex)
+									{
+										existIdParameter.Value = value;
+										deleteIdParameter.Value = value;
+									}
+
+									xml.ReadEndElement();
+								}
+								else
+									xml.Skip();
+							}
+						}
+
+						// process action
+						switch (actionName[0])
+						{
+							case 'r':
+								if (RowExists())
+									goto case 'u';
+								else
+									goto case 'i';
+							case 'i':
 								ExecuteCommand(insertCommand);
 								masterData.environment.OnMasterDataRowChanged(PpsDataChangeOperation.Insert, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
-							}
-							break;
-						case 'i':
-							ExecuteCommand(insertCommand);
-							masterData.environment.OnMasterDataRowChanged(PpsDataChangeOperation.Insert, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
-							break;
-						case 'd':
-							ExecuteCommand(deleteCommand);
-							masterData.environment.OnMasterDataRowChanged(PpsDataChangeOperation.Delete, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
-							break;
+								break;
+							case 'u':
+								ExecuteCommand(updateCommand);
+								masterData.environment.OnMasterDataRowChanged(PpsDataChangeOperation.Update, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
+								break;
+							case 'd':
+								ExecuteCommand(deleteCommand);
+								masterData.environment.OnMasterDataRowChanged(PpsDataChangeOperation.Delete, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
+								break;
+						}
+
+						objectCounter++;
+						if(progress != null && unchecked(Environment.TickCount -lastProgress)> 500)
+						{
+							progress.Report(String.Format(Resources.MasterDataFetchSyncString, table.Name + " (" + objectCounter.ToString("N0") + ")"));
+							lastProgress = Environment.TickCount;
+						}
+
+						#endregion
 					}
 
 					xml.ReadEndElement();
@@ -719,17 +842,37 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		private void WriteCurentSyncState(XmlWriter xml)
+		{
+			xml.WriteStartElement("sync");
+			if (lastSynchronizationStamp > DateTime.MinValue)
+				xml.WriteAttributeString("lastSyncTimeStamp", lastSynchronizationStamp.ToFileTimeUtc().ChangeType<string>());
+
+			using (var cmd = new SQLiteCommand("SELECT [Table], [SyncId] FROM main.[SyncState]", connection))
+			using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleResult))
+			{
+				while (r.Read())
+				{
+					if (!r.IsDBNull(1))
+					{
+						xml.WriteStartElement("sync");
+						xml.WriteAttributeString("table", r.GetString(0));
+						xml.WriteAttributeString("syncId", r.GetInt64(1).ChangeType<string>());
+						xml.WriteEndElement();
+					}
+				}
+			}
+
+			xml.WriteEndElement();
+		} // proc WriteCurentSyncState
+
 		private async Task FetchDataAsync(IProgress<string> progess = null)
 		{
 			// create request
 			var requestString = "/remote/wpf/?action=mdata";
-			if (lastSynchronizationId >= 0)
-				requestString += "&syncId=" + lastSynchronizationId.ToString();
-			if (lastSynchronizationStamp > DateTime.MinValue)
-				requestString += "&timeStamp=" + lastSynchronizationStamp.ToFileTimeUtc();
 
 			// parse and process result
-			using (var xml = await environment.Request.GetXmlStreamAsync(requestString, settings: Procs.XmlReaderSettings))
+			using (var xml = environment.Request.GetXmlStream(await environment.Request.PutXmlResponseAsync(requestString, MimeTypes.Text.Xml, WriteCurentSyncState)))
 			{
 				xml.ReadStartElement("mdata");
 				if (!xml.IsEmptyElement)
@@ -740,29 +883,19 @@ namespace TecWare.PPSn
 						switch (xml.LocalName)
 						{
 							case "batch":
-								FetchDataXmlBatch(xml);
+								FetchDataXmlBatch(xml, progess);
 								break;
-							case "sync":
-								var syncId = xml.GetAttribute("syncId", -1L);
-								var timeStamp = xml.GetAttribute("timeStamp", -1L);
+							case "syncStamp":
+								var timeStamp = xml.ReadElementContent<long>(-1);
 
-								using (var cmd = new SQLiteCommand("UPDATE main.Header SET SyncToken = IFNULL(@syncId, SyncToken), SyncStamp = IFNULL(@syncStamp, SyncStamp)", connection))
+								using (var cmd = new SQLiteCommand("UPDATE main.Header SET SyncStamp = IFNULL(@syncStamp, SyncStamp)", connection))
 								{
-									cmd.Parameters.Add("@syncId", DbType.Int64).Value = syncId.DbNullIf(-1L);
 									cmd.Parameters.Add("@syncStamp", DbType.Int64).Value = timeStamp.DbNullIf(-1L);
 
 									cmd.ExecuteNonQuery();
-
-									if (syncId >= 0)
-										lastSynchronizationId = syncId;
 									if (timeStamp >= 0)
 										lastSynchronizationStamp = DateTime.FromFileTimeUtc(timeStamp);
 								}
-
-								if (xml.IsEmptyElement)
-									xml.Read();
-								else
-									xml.Skip();
 								break;
 							default:
 								xml.Skip();
@@ -771,21 +904,33 @@ namespace TecWare.PPSn
 					}
 				}
 			}
+			isSynchronizationStarted = true;
 		} // proc FetchDataAsync
 
-		private void FetchDataXmlBatch(XmlReader xml)
+		private void FetchDataXmlBatch(XmlReader xml, IProgress<string> progress)
 		{
 			// read batch attributes
 			var tableName = xml.GetAttribute("table");
+			var isFull =  xml.GetAttribute("isFull", false);
+
+			progress?.Report(String.Format(Resources.MasterDataFetchSyncString, tableName));
 
 			if (!xml.IsEmptyElement) // batch needs rows
 			{
 				xml.Read(); // fetch element
+							// process values
 				using (var transaction = connection.BeginTransaction())
-				using (var b = new ProcessBatch(connection, transaction, this, tableName))
+				using (var b = new ProcessBatch(connection, transaction, this, tableName, isFull))
 				{
-					b.Parse(xml);
+					// prepare table
+					b.Prepare();
+
+					// parse data
+					b.Parse(xml, progress);
+
+					b.Clean();
 					transaction.Commit();
+					
 					// run outsite the transaction
 					environment.OnMasterDataTableChanged(b.Table);
 				}
@@ -1211,7 +1356,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		public bool IsSynchronizationStarted => lastSynchronizationId >= 0;
+		public bool IsSynchronizationStarted => isSynchronizationStarted;
 		[Obsolete("ConnectionAccess")]
 		public SQLiteConnection Connection => connection;
 
@@ -2339,7 +2484,7 @@ namespace TecWare.PPSn
 	{
 		private const string temporaryTablePrefix = "old_";
 
-		#region -- class PpsWebRequestCreate ----------------------------------------------
+		#region -- class PpsWebRequestCreate --------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
@@ -2391,7 +2536,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class KnownDataSetDefinition -------------------------------------------
+		#region -- class KnownDataSetDefinition -----------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
@@ -2433,7 +2578,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class PpsActiveDataSetsImplementation ----------------------------------
+		#region -- class PpsActiveDataSetsImplementation --------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
@@ -2562,7 +2707,6 @@ namespace TecWare.PPSn
 			PpsDataSetDefinitionDesktop newDataSet = null;
 			DateTime? lastSynchronizationSchema = null;
 			DateTime? lastSynchronizationStamp = null;
-			long? lastSynchronizationId = null;
 			try
 			{
 				// open the local database
@@ -2576,12 +2720,11 @@ namespace TecWare.PPSn
 				if (PpsMasterData.TestTableColumns(newLocalStore, "Header",
 					new SimpleDataColumn("SchemaStamp", typeof(long)),
 					new SimpleDataColumn("SchemaContent", typeof(byte[])),
-					new SimpleDataColumn("SyncStamp", typeof(long)),
-					new SimpleDataColumn("SyncToken", typeof(long))
+					new SimpleDataColumn("SyncStamp", typeof(long))
 					))
 				{
 					// read sync tokens
-					using (var commd = new SQLiteCommand("SELECT SchemaStamp, SchemaContent, SyncStamp, SyncToken FROM main.Header ", newLocalStore))
+					using (var commd = new SQLiteCommand("SELECT SchemaStamp, SchemaContent, SyncStamp FROM main.Header ", newLocalStore))
 					{
 						using (var r = commd.ExecuteReader(CommandBehavior.SingleRow))
 						{
@@ -2595,10 +2738,9 @@ namespace TecWare.PPSn
 									isSchemaUseable = true;
 								}
 								// check data
-								if (!r.IsDBNull(2) && !r.IsDBNull(3))
+								if (!r.IsDBNull(2) && !r.IsDBNull(2))
 								{
 									lastSynchronizationStamp = DateTime.FromFileTimeUtc(r.GetInt64(2));
-									lastSynchronizationId = r.GetInt64(3);
 									isDataUseable = true;
 								}
 							}
@@ -2608,14 +2750,9 @@ namespace TecWare.PPSn
 
 				// reset values
 				if (!isSchemaUseable)
-				{
 					lastSynchronizationSchema = DateTime.MinValue;
-				}
 				if (!isDataUseable)
-				{
 					lastSynchronizationStamp = DateTime.MinValue;
-					lastSynchronizationId = -1;
-				}
 			}
 			catch
 			{
@@ -2627,9 +2764,9 @@ namespace TecWare.PPSn
 			masterData?.Dispose();
 
 			// set new connection
-			masterData = new PpsMasterData(this, newLocalStore, newDataSet, lastSynchronizationSchema.Value, lastSynchronizationStamp.Value, lastSynchronizationId.Value);
+			masterData = new PpsMasterData(this, newLocalStore, newDataSet, lastSynchronizationSchema.Value, lastSynchronizationStamp.Value);
 
-			Trace.WriteLine($"[MasterData] Create with Schema: {lastSynchronizationSchema.Value}; SyncStamp: {lastSynchronizationStamp.Value}; SyncId: {lastSynchronizationId.Value} ==> Use Schema={isSchemaUseable}, Use Data={isDataUseable}");
+			Trace.WriteLine($"[MasterData] Create with Schema: {lastSynchronizationSchema.Value}; SyncStamp: {lastSynchronizationStamp.Value}; ==> Use Schema={isSchemaUseable}, Use Data={isDataUseable}");
 
 			return isDataUseable && isSchemaUseable;
 		} // proc InitLocalStore
