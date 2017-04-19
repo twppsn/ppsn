@@ -254,7 +254,7 @@ namespace TecWare.PPSn
 		{
 			if (e.Command is PpsCommandBase c)
 			{
-				c.CanExecuteCommand(new PpsCommandContext(environment, e.Source, e.Parameter));
+				e.CanExecute = c.CanExecuteCommand(new PpsCommandContext(environment, e.Source, e.Parameter));
 				e.Handled = true;
 			}
 		} // func CanExecuteCommandHandlerImpl
