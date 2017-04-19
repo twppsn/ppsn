@@ -293,7 +293,7 @@ namespace TecWare.PPSn.Server
 			{
 				string GetString(string fieldName)
 					=> r.GetProperty(fieldName, (string)null) ?? throw new ArgumentNullException($"{fieldName} is null.");
-				
+
 				// create the user
 				var userType = r.GetProperty("LoginType", (string)null);
 				if (userType == "U") // windows login
@@ -302,7 +302,7 @@ namespace TecWare.PPSn.Server
 				{
 					return PpsUserIdentity.CreateBasicIdentity(
 						GetString("Login"),
-						GetString("LoginHash")
+						(byte[])r["LoginHash", true]
 					);
 				}
 				else

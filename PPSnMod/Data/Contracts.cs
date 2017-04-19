@@ -61,10 +61,10 @@ namespace TecWare.PPSn.Server.Data
 			private readonly string userName;
 			private readonly byte[] passwordHash;
 
-			public PpsBasicIdentity(string userName, string passwordHash)
+			public PpsBasicIdentity(string userName, byte[] passwordHash)
 			{
 				this.userName = userName ?? throw new ArgumentNullException(nameof(userName));
-				this.passwordHash = ProcsDE.ParsePasswordHash(passwordHash ?? throw new ArgumentNullException(nameof(passwordHash)));
+				this.passwordHash = passwordHash ?? throw new ArgumentNullException(nameof(passwordHash));
 			} // ctor
 
 			protected override void Dispose(bool disposing)
@@ -188,7 +188,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary>Singleton</summary>
 		public static PpsUserIdentity System { get; } = new PpsSystemIdentity();
 
-		internal static PpsUserIdentity CreateBasicIdentity(string userName, string passwordHash)
+		internal static PpsUserIdentity CreateBasicIdentity(string userName, byte[] passwordHash)
 			=> new PpsBasicIdentity(userName, passwordHash);
 
 		internal static PpsUserIdentity CreateIntegratedIdentity(string userName)
