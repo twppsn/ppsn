@@ -43,6 +43,17 @@ namespace TecWare.PPSn.UI
 			InitializeComponent();
 
 			((CollectionViewSource)this.Resources["SortedTraces"]).SortDescriptions.Add(new SortDescription("Stamp", ListSortDirection.Descending));
+
+			CommandBindings.Add(
+				new CommandBinding(CopyTraceCommand,
+					(sender, e) =>
+					{
+						CopyToClipboard(e.Parameter);
+						e.Handled = true;
+					},
+					(sender, e) => e.CanExecute = true
+				)
+			);
 		} // ctor
 
 		public void Dispose()
@@ -62,6 +73,43 @@ namespace TecWare.PPSn.UI
 			return Task.FromResult(true);
 		} // func UnloadAsync
 
+		private void CopyToClipboard(object item)
+		{
+			Clipboard.SetText(TraceToString(item)); // ToDo: enable Html/RichText/PlainText
+		}
+
+		private string TraceToString(object item)
+		{
+			if (item is PpsTraceItem)
+			{
+				var pti = (PpsTraceItem)item;
+				return $"{pti.Type} - {pti.Stamp} - ID:{pti.Id} - Source: {pti.Source} - Message: {pti.Message}";
+			}
+			else if (item is PpsTextItem)
+			{
+				var pti = (PpsTextItem)item;
+				return $"{pti.Type} - {pti.Stamp} - {pti.Message}";
+			}
+			else if (item is String)
+			{
+				return (string)item;
+			}
+			else if (item is Exception)
+			{
+				var exc = (Exception)item;
+				var ret = new StringBuilder();
+				ret.Append("Exception - ").Append(exc.Message);
+				if (!String.IsNullOrWhiteSpace(exc.Source)) ret.Append("\nQuelle: ").Append(exc.Source);
+				if (!String.IsNullOrWhiteSpace(exc.StackTrace)) ret.Append("\nStacktrace: ").Append(exc.StackTrace);
+				if (!String.IsNullOrWhiteSpace(exc.TargetSite.ToString())) ret.Append("\nTargetsite: ").Append(exc.TargetSite);
+				ret.Append("\nHResult: ").Append(exc.HResult);
+				if (!String.IsNullOrWhiteSpace(exc.HelpLink)) ret.Append("\nHilfelink: ").Append(exc.HelpLink);
+				if (exc.InnerException != null) ret.Append("\nInnere Ausnahme: ").Append(TraceToString(exc.InnerException));
+				return ret.ToString();
+			}
+			return String.Empty;
+		}
+
 		public PpsWindowPaneCompareResult CompareArguments(LuaTable args) => PpsWindowPaneCompareResult.Same;
 
 		public string Title => "Anwendungsereignisse";
@@ -70,6 +118,8 @@ namespace TecWare.PPSn.UI
 		public IPpsPWindowPaneControl PaneControl => null;
 		public bool IsDirty => false;
 		public bool HasSideBar => false;
+
+		public readonly static RoutedCommand CopyTraceCommand = new RoutedCommand("CopyTrace", typeof(PpsTracePane));
 	} // class PpsTracePane
 
 	#region -- class TraceItemTemplateSelector ------------------------------------------

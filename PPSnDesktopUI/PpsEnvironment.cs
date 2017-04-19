@@ -477,13 +477,13 @@ namespace TecWare.PPSn
 	/// engine.</summary>
 	public partial class PpsEnvironment : LuaGlobalPortable, IPpsShell, IServiceProvider, IDisposable
 	{
-		private readonly int environmentId;				// unique id of the environment
-		private readonly PpsEnvironmentInfo info;		// source information of the environment
-		private readonly NetworkCredential userInfo;			// currently credentials of the user
+		private readonly int environmentId;             // unique id of the environment
+		private readonly PpsEnvironmentInfo info;       // source information of the environment
+		private readonly NetworkCredential userInfo;    // currently credentials of the user
 
-		private string userName = null;					// display name of the user
-		private readonly DirectoryInfo localDirectory = null;	// local directory for the user data
-		
+		private string userName = null;                 // display name of the user
+		private readonly DirectoryInfo localDirectory = null;   // local directory for the user data
+
 		private PpsTraceLog logData = new PpsTraceLog();
 		private PpsDataListTemplateSelector dataListTemplateSelector;
 		private PpsEnvironmentCollection<PpsDataListItemDefinition> templateDefinitions;
@@ -522,6 +522,7 @@ namespace TecWare.PPSn
 			this.synchronizationContext = new DispatcherSynchronizationContext(currentDispatcher);
 			this.dataListTemplateSelector = new PpsDataListTemplateSelector(this);
 			this.templateDefinitions = new PpsEnvironmentCollection<PpsDataListItemDefinition>(this);
+			this.statusOfProxy = new ProxyStatus(this.webProxy, this.currentDispatcher);
 
 			CreateLuaCompileOptions();
 
@@ -564,7 +565,7 @@ namespace TecWare.PPSn
 			}
 
 			// check for online mode
-		redoConnect:
+			redoConnect:
 			progress.Report("Verbinden...");
 			var r = await WaitForEnvironmentMode(bootOffline ? PpsEnvironmentMode.Offline : PpsEnvironmentMode.Online);
 			switch (r)
@@ -612,7 +613,7 @@ namespace TecWare.PPSn
 			progress.Report("Lade Installationsdateien...");
 
 			// start setup
-		
+
 			return Task.FromResult(true);
 		} // proc UpdateAsync
 
@@ -644,7 +645,7 @@ namespace TecWare.PPSn
 
 		public bool IsNetworkPresent
 			=> true;
-		
+
 		#region -- Services ---------------------------------------------------------------
 
 		public void RegisterService(string key, object service)
@@ -692,7 +693,7 @@ namespace TecWare.PPSn
 
 			public ModeTransission(PpsEnvironmentMode desiredMode)
 			{
-				if (desiredMode != PpsEnvironmentMode.Online && 
+				if (desiredMode != PpsEnvironmentMode.Online &&
 						desiredMode != PpsEnvironmentMode.Offline &&
 						desiredMode != PpsEnvironmentMode.Shutdown)
 					throw new ArgumentException($"{desiredMode} is not a valid mode transission.");
@@ -765,7 +766,7 @@ namespace TecWare.PPSn
 		{
 			// is this a new mode
 			if (desiredMode == currentMode
-				&& currentState != PpsEnvironmentState.None 
+				&& currentState != PpsEnvironmentState.None
 				&& currentState != PpsEnvironmentState.OfflineConnect)
 			{
 				switch (desiredMode)
@@ -809,7 +810,7 @@ namespace TecWare.PPSn
 				}
 			}
 		} // func TryGetModeTransmission
-		
+
 		private void ExecuteNotifierLoop()
 		{
 			var state = PpsEnvironmentState.None;

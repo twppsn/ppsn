@@ -520,51 +520,87 @@
             </Grid.Style>
         </Grid>
 
-        <Grid  Grid.Row="2" Grid.ColumnSpan="5"  Background="{StaticResource PPSnWindowFooterBrush}">
+        <Grid  Grid.Row="2" Grid.ColumnSpan="5" Background="{StaticResource PPSnWindowFooterBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*"/>
                 <ColumnDefinition Width="1*"/>
-                <ColumnDefinition Width="30"/>
+                <ColumnDefinition Width="32"/>
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Column="0" Command="{x:Static ui:PpsWindow.TraceLogCommand}" Content="{Binding Environment.Traces.LastTrace,Mode=OneWay,UpdateSourceTrigger=PropertyChanged}" Focusable="False">
+            <Button Grid.Column="0" Focusable="False" Foreground="{StaticResource PPSnWindowForegroundBrush}"
+					Command="{x:Static ui:PpsWindow.TraceLogCommand}"
+					Content="{Binding Environment.Traces.LastTrace,Mode=OneWay,UpdateSourceTrigger=PropertyChanged,Converter={StaticResource MultiLineStringConverter}}"
+					ToolTipService.InitialShowDelay="750"
+					ToolTipService.ShowDuration="10000">
                 <Button.ToolTip>
-                    <Border BorderThickness="1" BorderBrush="{StaticResource PPSnWindowForegroundBrush}">
-                        <ListBox Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
-				 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" Background="{StaticResource PPSnWindowBackgroundBrush}">
+                    <ToolTip Placement="Top" HorizontalOffset="16" VerticalOffset="-16" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="14">
+                        <ListBox Style="{StaticResource PPSnListBoxStyle}" Focusable="False" Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}">
                             <ListBox.ItemsSource>
                                 <MultiBinding Converter="{StaticResource ManyToTopTenConverter}">
                                     <Binding Path="Environment.Traces"/>
                                     <Binding Path="Environment.Traces.Count"/>
                                 </MultiBinding>
                             </ListBox.ItemsSource>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Height="25">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="86" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Path=Type}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Path=Stamp, StringFormat=HH:mm:ss}" Margin="0,0,16,0"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Path=Message, Converter={StaticResource MultiLineStringConverter}}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
                         </ListBox>
-                    </Border>
+                    </ToolTip>
                 </Button.ToolTip>
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="border" BorderThickness="0" Background="Transparent" SnapsToDevicePixels="true" Padding="16,0">
+                            <ContentPresenter Focusable="False" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsPressed" Value="true">
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
             </Button>
-            <Button Grid.Column="1" Focusable="False" HorizontalContentAlignment="Stretch">
-                <Button.ToolTip>
-                    <Border BorderThickness="1" BorderBrush="{StaticResource PPSnWindowForegroundBrush}">
-                        <ListBox Style="{StaticResource PPSnListBoxStyle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" AlternationCount="2" FontSize="13.333"
-				 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}" Background="{StaticResource PPSnWindowBackgroundBrush}">
-                            <ListBoxItem>
-                                <Label Content="Herbert"/>
-                            </ListBoxItem>
-                            <ListBoxItem>
-                                <Label Content="Harald"/>
-                            </ListBoxItem>
+
+            <ProgressBar Grid.Column="1" Maximum="1000" Value="{Binding Environment.StatusOfProxy.ActualItem.Progress,Mode=OneWay}" Margin="0,3" BorderThickness="0"
+						 Foreground="{StaticResource ButtonDarkerBorderBrush}" Background="{StaticResource ButtonDarkerBackGroundBrush}"
+						 ToolTipService.InitialShowDelay="750"
+						 ToolTipService.ShowDuration="10000">
+                <ProgressBar.ToolTip>
+                    <ToolTip Placement="Top" VerticalOffset="-16" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="14">
+                        <ListBox ItemsSource="{Binding Environment.StatusOfProxy.TopTen, IsAsync=True}" Style="{StaticResource PPSnListBoxStyle}"
+								 Focusable="False" Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding DisplayName}" Height="25"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
                         </ListBox>
-                    </Border>
-                </Button.ToolTip>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition/>
-                        <ColumnDefinition MinWidth="75"/>
-                    </Grid.ColumnDefinitions>
-                    <Label Grid.Column="0" Content="lade .../styles.xml"/>
-                    <ProgressBar Grid.Column="1" Maximum="100" Value="73" MinWidth="70" FlowDirection="RightToLeft"/>
-                </Grid>
-            </Button>
+                    </ToolTip>
+                </ProgressBar.ToolTip>
+                <ProgressBar.Style>
+                    <Style TargetType="{x:Type ProgressBar}">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Environment.StatusOfProxy.ActualItem}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Hidden" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ProgressBar.Style>
+            </ProgressBar>
+            <TextBlock Grid.Column="1" Text="{Binding Environment.StatusOfProxy.ActualItem.DisplayName}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
+					   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0" TextWrapping="NoWrap" IsHitTestVisible="False"/>
 
             <Viewbox x:Name="PART_SizeGripper" Grid.Column="2" Width="15" VerticalAlignment="Bottom" HorizontalAlignment="Right">
                 <Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SizeGrip.png">
@@ -573,7 +609,7 @@
                     </Image.Tag>
                 </Image>
                 <Viewbox.Style>
-                    <Style TargetType="Viewbox">
+                    <Style TargetType="{x:Type Viewbox}">
                         <Setter Property="Visibility" Value="Visible" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized">

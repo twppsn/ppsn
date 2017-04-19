@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ namespace TecWare.PPSn
 		public App()
 		{
 			this.DispatcherUnhandledException += App_DispatcherUnhandledException;
+			BindingErrorListener.Listen(m => currentEnvironment.Traces.AppendText(PpsTraceItemType.Fail,m.Replace("; ",";\n")));
 		} // ctor
 
 		#region -- OnStartup, OnExit ------------------------------------------------------
@@ -221,6 +223,21 @@ namespace TecWare.PPSn
 			CoreExceptionHandler(e.Exception);
 			e.Handled = true;
 		} // event App_DispatcherUnhandledException
+
+		public class BindingErrorListener : TraceListener
+		{
+			private Action<string> logAction;
+			public static void Listen(Action<string> logAction)
+			{
+				PresentationTraceSources.DataBindingSource.Listeners
+					.Add(new BindingErrorListener() { logAction = logAction });
+			}
+			public override void Write(string message) { }
+			public override void WriteLine(string message)
+			{
+				logAction(message);
+			}
+		}
 
 		#endregion
 
