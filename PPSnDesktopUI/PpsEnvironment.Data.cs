@@ -101,7 +101,7 @@ namespace TecWare.PPSn
 				=> transaction.Commit();
 
 			protected override void RollbackCore()
-				=> transaction.Rollback(); 
+				=> transaction.Rollback();
 		} // class PpsMasterRootTransaction
 
 		#endregion
@@ -154,7 +154,7 @@ namespace TecWare.PPSn
 		public DbCommand CreateNativeCommand(string commandText = null)
 			=> new SQLiteCommand(commandText, connection, transaction);
 
-		public long GetNextLocalId(string tableName, string primaryKey) 
+		public long GetNextLocalId(string tableName, string primaryKey)
 			=> -1;
 
 		public long LastInsertRowId => connection.LastInsertRowId;
@@ -1461,7 +1461,7 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		/// <param name="response"></param>
 		void AppendResponseSink(Action<WebResponse> response);
-				
+
 		/// <summary>Processes the request in the forground (change priority to first).</summary>
 		/// <returns></returns>
 		Task<WebResponse> ForegroundAsync();
@@ -1985,7 +1985,7 @@ namespace TecWare.PPSn
 			private readonly PpsWebProxy manager;
 			private readonly PpsLoadPriority priority;
 			private readonly PpsProxyRequest request;
-			
+
 			private readonly List<Action<WebResponse>> webResponseSinks = new List<Action<WebResponse>>();
 			private readonly TaskCompletionSource<WebResponse> task;
 
@@ -2190,7 +2190,7 @@ namespace TecWare.PPSn
 			executeLoadIsRunning.Set();
 		} // proc Dispose
 
-		private void OnCollectionChanged() 
+		private void OnCollectionChanged()
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
 		/// <summary>Enumerator for the download task.</summary>
@@ -2205,7 +2205,7 @@ namespace TecWare.PPSn
 			}
 		} // func GetEnumerator
 
-		IEnumerator IEnumerable.GetEnumerator() 
+		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
 
 		private WebLoadRequest TryDequeueTask()
@@ -2324,7 +2324,7 @@ namespace TecWare.PPSn
 				return task != null;
 			}
 		} // func TryGet
-		
+
 		internal IPpsProxyTask Append(PpsProxyRequest request, PpsLoadPriority priority)
 			=> AppendTask(new WebLoadRequest(this, priority, request));
 
@@ -2516,6 +2516,7 @@ namespace TecWare.PPSn
 		private PpsMasterData masterData;   // local datastore
 		private PpsWebProxy webProxy;       // remote download/upload manager
 		private readonly Uri baseUri;       // internal uri for this datastore
+		private ProxyStatus statusOfProxy;  // interface for the transaction manager
 
 		private readonly BaseWebRequest request;
 
@@ -2827,6 +2828,7 @@ namespace TecWare.PPSn
 		public Uri BaseUri => baseUri;
 
 		public PpsWebProxy WebProxy => webProxy;
+		public ProxyStatus StatusOfProxy => statusOfProxy;
 
 		/// <summary>Connection to the local datastore</summary>
 		[Obsolete("Use master data.")]
@@ -2836,59 +2838,59 @@ namespace TecWare.PPSn
 		public PpsMasterData MasterData => masterData;
 	} // class PpsEnvironment
 
-    // interface Status
-    public interface IStatusList : INotifyPropertyChanged
-    {
-        object ActualItem { get; }
-        ObservableCollection<object> TopTen { get; }
-    }
+	// interface Status
+	public interface IStatusList : INotifyPropertyChanged
+	{
+		object ActualItem { get; }
+		ObservableCollection<object> TopTen { get; }
+	}
 
-    public class ProxyStatus : IStatusList
-    {
-        private PpsWebProxy proxy;
-        private ObservableCollection<object> topTen = new ObservableCollection<object>();
-        private IPpsProxyTask actualItem;
-        private System.Windows.Threading.Dispatcher dispatcher;
+	public class ProxyStatus : IStatusList
+	{
+		private PpsWebProxy proxy;
+		private ObservableCollection<object> topTen = new ObservableCollection<object>();
+		private IPpsProxyTask actualItem;
+		private System.Windows.Threading.Dispatcher dispatcher;
 
-        public ProxyStatus(PpsWebProxy Proxy, System.Windows.Threading.Dispatcher Dispatcher)
-        {
-            this.proxy = Proxy;
-            this.dispatcher = Dispatcher;
-            this.proxy.CollectionChanged += WebProxyChanged;
-        }
+		public ProxyStatus(PpsWebProxy Proxy, System.Windows.Threading.Dispatcher Dispatcher)
+		{
+			this.proxy = Proxy;
+			this.dispatcher = Dispatcher;
+			this.proxy.CollectionChanged += WebProxyChanged;
+		}
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        private void OnPropertyChanged(string propertyName)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+		public event PropertyChangedEventHandler PropertyChanged;
+		private void OnPropertyChanged(string propertyName)
+		=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-        private void WebProxyChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        {
-            dispatcher.Invoke(() =>
-            {
-                topTen.Clear();
-                using (var walker = proxy.GetEnumerator())
-                {
-                    for (var i = 0; i < 10; i++)
-                    {
-                        if (walker.MoveNext())
-                            if (i == 0)
-                            {
-                                actualItem = walker.Current;
-                                OnPropertyChanged(nameof(actualItem));
-                            }
-                            else
-                                topTen.Insert(0, walker.Current);
-                        else if (i == 0)
-                        {
-                            actualItem = null;
-                            OnPropertyChanged(nameof(actualItem));
-                        }
-                    }
-                }
-            });
-        }
+		private void WebProxyChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+		{
+			dispatcher?.Invoke(() =>
+			{
+				topTen.Clear();
+				using (var walker = proxy.GetEnumerator())
+				{
+					for (var i = 0; i < 10; i++)
+					{
+						if (walker.MoveNext())
+							if (i == 0)
+							{
+								actualItem = walker.Current;
+								OnPropertyChanged(nameof(actualItem));
+							}
+							else
+								topTen.Insert(0, walker.Current);
+						else if (i == 0)
+						{
+							actualItem = null;
+							OnPropertyChanged(nameof(actualItem));
+						}
+					}
+				}
+			});
+		}
 
-        public object ActualItem => actualItem;
-        public ObservableCollection<object> TopTen => topTen;
-    }
+		public object ActualItem => actualItem;
+		public ObservableCollection<object> TopTen => topTen;
+	}
 }
