@@ -2071,12 +2071,14 @@ namespace TecWare.PPSn
 								while (true)
 								{
 									var readed = src.Read(copyBuffer, 0, copyBuffer.Length);
+
+									UpdateProgress(unchecked((int)(readed * 1000 / contentLength)));
 									if (readed > 0)
 									{
 										dst.Write(copyBuffer, 0, readed);
 										readedTotal += readed;
 										if (contentLength > readedTotal)
-											UpdateProgress(unchecked((int)(readed * 1000 / contentLength)));
+											UpdateProgress(unchecked((int)(readedTotal * 1000 / contentLength)));
 										else if (checkForSwitchToFile && readedTotal > tempFileBorder)
 										{
 											var oldDst = (MemoryCacheStream)dst;
@@ -2138,7 +2140,7 @@ namespace TecWare.PPSn
 				if (progress != newProgress)
 				{
 					progress = newProgress;
-					OnPropertyChanged(nameof(State));
+					OnPropertyChanged(nameof(Progress));
 				}
 			} // proc UpdateProgress
 
