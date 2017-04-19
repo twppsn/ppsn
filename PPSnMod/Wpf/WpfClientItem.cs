@@ -1086,7 +1086,7 @@ namespace TecWare.PPSn.Server.Wpf
 					}
 
 					// export columns
-					var newSyncId = lastSyncId;
+					var newSyncId = rows.CurrentSyncId;
 					while (rows.MoveNext())
 					{
 						var r = rows.Current;

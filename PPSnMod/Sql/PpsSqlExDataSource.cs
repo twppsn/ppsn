@@ -1786,7 +1786,7 @@ namespace TecWare.PPSn.Server.Sql
 					throw new ArgumentOutOfRangeException("columnInfo", null, $"{column.Name} is not a sql column.");
 
 				var tableInfo = columnInfo.Table;
-				var isFull = isForceFull || lastSyncId <= 0;
+				var isFull = isForceFull || lastSyncId < 0;
 
 				// is the given syncId valid
 				if (!isFull)
