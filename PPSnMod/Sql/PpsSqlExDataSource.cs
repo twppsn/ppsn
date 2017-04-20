@@ -1639,6 +1639,7 @@ namespace TecWare.PPSn.Server.Sql
 			public int Scale => scale;
 			public bool IsNull => isNull;
 			public bool IsIdentity => isIdentity;
+			public bool IsPrimary => table.PrimaryKey == this;
 		} // class SqlColumnInfo
 
 		#endregion
@@ -1736,15 +1737,18 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
-			private static void PrepareSynchronizationColumns(PpsDataTableDefinition table, StringBuilder command)
+			private static void PrepareSynchronizationColumns(PpsDataTableDefinition table, StringBuilder command, string primaryKeyPrefix = null)
 			{
 				foreach (var col in table.Columns)
 				{
 					var colInfo = ((PpsDataColumnServerDefinition)col).GetColumnDescriptionImplementation<SqlColumnInfo>();
 					if (colInfo != null)
 					{
-						command.Append(",d.[")
-							.Append(colInfo.ColumnName).Append(']')
+						if (primaryKeyPrefix != null && colInfo.IsPrimary)
+							command.Append(',').Append(primaryKeyPrefix).Append('[');
+						else
+							command.Append(",d.[");
+						command.Append(colInfo.ColumnName).Append(']')
 							.Append(" AS [").Append(col.Name).Append(']');
 					}
 				}
@@ -1755,7 +1759,7 @@ namespace TecWare.PPSn.Server.Sql
 				// build command string for change table
 				var command = new StringBuilder("SELECT ct.sys_change_operation,ct.sys_change_version");
 
-				PrepareSynchronizationColumns(table, command);
+				PrepareSynchronizationColumns(table, command, "ct");
 
 				command.Append(" FROM ")
 					.Append("changetable(changes ").Append(tableInfo.FullName).Append(',').Append(lastSyncId).Append(") as Ct ")
