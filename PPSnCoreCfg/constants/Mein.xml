@@ -11,6 +11,7 @@
 
 			<pps:dataset name="masterdata">
 				<pps:table name="Mein">
+					<pps:meta name="syncType">ChangeTracking: dbo.Mein</pps:meta>
 					<pps:column name="Id" fieldName="dbo.Mein.Id" isPrimary="true" />
 					<pps:column name="Name" fieldName="dbo.Mein.Name"/>
 					<pps:column name="IsActive" fieldName="dbo.Mein.IsActive" />

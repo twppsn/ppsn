@@ -4,6 +4,7 @@
 	<?des-merge System.xml?>
 	<?des-merge constants/Land.xml?>
 	<?des-merge constants/Waeh.xml?>
+	<?des-merge constants/Mein.xml?>
 	<?des-merge Contacts.xml?>
 	<!--<?des-merge Contract.xml?>
 	<?des-merge Offer.xml?>-->
