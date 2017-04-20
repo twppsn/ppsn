@@ -15,7 +15,6 @@
         <DataTemplate x:Key="ExceptionTemplate">
             <StackPanel Orientation="Vertical">
                 <TextBlock>
-							<!--<Run Text="message:  "/>-->
 							<Run FontWeight="Bold" Text="{Binding Message, Mode=OneWay}"/>
                 </TextBlock>
                 <TextBlock>
@@ -50,11 +49,9 @@
                     </StackPanel>
                     <TextBlock Visibility="{Binding ElementName=stackTraceEnable, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}" Text="{Binding StackTrace}"/>
                 </StackPanel>
-
             </StackPanel>
 
             <DataTemplate.Triggers>
-                <!-- Highlight for Not Reviewed -->
                 <DataTrigger Binding="{Binding Path=InnerException}" Value="{x:Null}">
                     <Setter TargetName="innerException" Property="Visibility" Value="Collapsed" />
                 </DataTrigger>
@@ -73,26 +70,14 @@
         <local:TraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
             <local:TraceItemTemplateSelector.NullTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Message}">
-                        <TextBlock.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="Kopieren" Command="{x:Static local:PpsTracePane.CopyTraceCommand}" CommandParameter="{Binding Message}"/>
-                            </ContextMenu>
-                        </TextBlock.ContextMenu>
-                    </TextBlock>
+                    <TextBlock Text="{Binding Message}"/>
                 </DataTemplate>
             </local:TraceItemTemplateSelector.NullTemplate>
 
             <local:TraceItemTemplateSelector.ExceptionTemplate>
                 <DataTemplate>
                     <StackPanel Orientation="Vertical">
-                        <StackPanel.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="Kopieren" Command="{x:Static local:PpsTracePane.CopyTraceCommand}" CommandParameter="{Binding Exception}"/>
-                            </ContextMenu>
-                        </StackPanel.ContextMenu>
                         <TextBlock>
-							<!--<Run Text="message:  "/>-->
 							<Run FontWeight="Bold" Text="{Binding Message, Mode=OneWay}"/>
                         </TextBlock>
                         <TextBlock>
@@ -108,9 +93,8 @@
 							<Run FontWeight="Bold" Text="{Binding Exception.TargetSite, Mode=OneWay}" />
                         </TextBlock>
                         <StackPanel Name="tbExceptionData">
-							<Label Content="Data:  "/>
-                            <ListBox 
-            ItemsSource="{Binding Path=Exception.Data}">
+                            <Label Content="Data:  "/>
+                            <ListBox ItemsSource="{Binding Path=Exception.Data}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <Border BorderBrush="Black" BorderThickness="2">
@@ -149,8 +133,8 @@
                             <Setter TargetName="stackTrace" Property="Visibility" Value="Collapsed" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Path=Exception.Data}" Value="{x:Null}">
-                                    <Setter TargetName="tbExceptionData" Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
+                            <Setter TargetName="tbExceptionData" Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
                     </DataTemplate.Triggers>
                 </DataTemplate>
             </local:TraceItemTemplateSelector.ExceptionTemplate>
@@ -158,11 +142,6 @@
             <local:TraceItemTemplateSelector.TraceItemTemplate>
                 <DataTemplate>
                     <StackPanel>
-                        <StackPanel.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="Kopieren" Command="{x:Static local:PpsTracePane.CopyTraceCommand}" CommandParameter="{Binding}"/>
-                            </ContextMenu>
-                        </StackPanel.ContextMenu>
                         <TextBlock Text="{Binding Message}" />
                         <TextBlock Text="{Binding Id}" />
                         <TextBlock Text="{Binding Source}" />
@@ -173,11 +152,6 @@
             <local:TraceItemTemplateSelector.TextItemTemplate>
                 <DataTemplate>
                     <TextBlock Text="{Binding Message}">
-                        <TextBlock.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="Kopieren" Command="{x:Static local:PpsTracePane.CopyTraceCommand}" CommandParameter="{Binding}"/>
-                            </ContextMenu>
-                        </TextBlock.ContextMenu>
                     </TextBlock>
                 </DataTemplate>
             </local:TraceItemTemplateSelector.TextItemTemplate>
@@ -191,6 +165,12 @@
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <Grid>
+                        <Grid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Command="ApplicationCommands.Copy" CommandParameter="{Binding}">
+                                </MenuItem>
+                            </ContextMenu>
+                        </Grid.ContextMenu>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="90"/>
                             <ColumnDefinition Width="Auto"/>

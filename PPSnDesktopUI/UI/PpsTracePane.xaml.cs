@@ -29,6 +29,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Neo.IronLua;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
 {
@@ -45,10 +46,19 @@ namespace TecWare.PPSn.UI
 			((CollectionViewSource)this.Resources["SortedTraces"]).SortDescriptions.Add(new SortDescription("Stamp", ListSortDirection.Descending));
 
 			CommandBindings.Add(
-				new CommandBinding(CopyTraceCommand,
+				new CommandBinding(ApplicationCommands.Copy,
 					(sender, e) =>
 					{
-						CopyToClipboard(e.Parameter);
+						if (e.Parameter != null)
+							CopyToClipboard(e.Parameter);
+						else if (e.OriginalSource is PpsTracePane)
+							if (((PpsTracePane)e.OriginalSource).Content is Grid)
+								if (((Grid)((PpsTracePane)e.OriginalSource).Content).Children.Count > 0)
+									if (((Grid)((PpsTracePane)e.OriginalSource).Content).Children[0] is ListBox)
+									{
+										var exc = (ListBox)((Grid)((PpsTracePane)e.OriginalSource).Content).Children[0];
+										CopyToClipboard(exc.SelectedItem);
+									}
 						e.Handled = true;
 					},
 					(sender, e) => e.CanExecute = true
@@ -94,17 +104,15 @@ namespace TecWare.PPSn.UI
 			{
 				return (string)item;
 			}
-			else if (item is Exception)
+			else if (item is PpsExceptionItem)
 			{
-				var exc = (Exception)item;
+				var exc = (PpsExceptionItem)item;
 				var ret = new StringBuilder();
-				ret.Append("Exception - ").Append(exc.Message);
-				if (!String.IsNullOrWhiteSpace(exc.Source)) ret.Append("\nQuelle: ").Append(exc.Source);
-				if (!String.IsNullOrWhiteSpace(exc.StackTrace)) ret.Append("\nStacktrace: ").Append(exc.StackTrace);
-				if (!String.IsNullOrWhiteSpace(exc.TargetSite.ToString())) ret.Append("\nTargetsite: ").Append(exc.TargetSite);
-				ret.Append("\nHResult: ").Append(exc.HResult);
-				if (!String.IsNullOrWhiteSpace(exc.HelpLink)) ret.Append("\nHilfelink: ").Append(exc.HelpLink);
-				if (exc.InnerException != null) ret.Append("\nInnere Ausnahme: ").Append(TraceToString(exc.InnerException));
+
+				ret.Append($"{exc.Type} - {exc.Stamp} - ");
+
+				ExceptionFormatter.FormatPlainText(ret, exc.Exception);
+
 				return ret.ToString();
 			}
 			return String.Empty;
