@@ -835,7 +835,11 @@ namespace TecWare.PPSn
 					if (r.Read())
 						return r.GetBoolean(0);
 					else
-						throw new ArgumentException(); // todo: rk exception class with command
+					{
+						var exc = new ArgumentException();
+						exc.Data.Add("SQL-Command", existCommand.CommandText);
+						throw exc;
+					}
 				}
 			} // func RowExists
 
