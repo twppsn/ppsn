@@ -524,6 +524,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*"/>
                 <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="auto"/>
                 <ColumnDefinition Width="32"/>
             </Grid.ColumnDefinitions>
 
@@ -601,8 +602,8 @@
             </ProgressBar>
             <TextBlock Grid.Column="1" Text="{Binding Environment.StatusOfProxy.ActualItem.DisplayName}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
 					   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0" TextWrapping="NoWrap" IsHitTestVisible="False"/>
-
-            <Viewbox x:Name="PART_SizeGripper" Grid.Column="2" Width="15" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+            <TextBlock Grid.Column="2" Text="{Binding Environment.CurrentState}"/>
+            <Viewbox x:Name="PART_SizeGripper" Grid.Column="3" Width="15" VerticalAlignment="Bottom" HorizontalAlignment="Right">
                 <Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SizeGrip.png">
                     <Image.Tag>
                         <ui:PpsWindowHitTest HitTest="17"/>
