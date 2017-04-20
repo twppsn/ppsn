@@ -2899,7 +2899,12 @@ namespace TecWare.PPSn
 				if (arguments.ViewId == "local.objects")
 					return CreateObjectFilter(arguments);
 				else
-					throw new ArgumentOutOfRangeException("todo"); // todo: exception
+				{
+					var exc = new ArgumentOutOfRangeException();
+					exc.Data.Add("Variable", "ViewId");
+					exc.Data.Add("Value", arguments.ViewId);
+					throw exc;
+				}
 			}
 			else
 			{
