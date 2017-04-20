@@ -841,7 +841,15 @@ namespace TecWare.PPSn
 
 			private void ExecuteCommand(SQLiteCommand command)
 			{
-				command.ExecuteNonQuery(); // todo: rk try-catch with exception and command
+				try
+				{
+					command.ExecuteNonQuery();
+				}
+				catch (Exception e)
+				{
+					e.Data.Add("SQL-Command", command.CommandText);
+					throw e;
+				}
 			} // proc ExecuteCommand
 
 			#endregion
