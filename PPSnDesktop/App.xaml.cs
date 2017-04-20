@@ -20,7 +20,7 @@ namespace TecWare.PPSn
 		public App()
 		{
 			this.DispatcherUnhandledException += App_DispatcherUnhandledException;
-			BindingErrorListener.Listen(m => currentEnvironment.Traces.AppendText(PpsTraceItemType.Fail,m.Replace("; ",";\n")));
+			BindingErrorListener.Listen(m => currentEnvironment?.Traces.AppendText(PpsTraceItemType.Fail,m.Replace("; ",";\n")));
 		} // ctor
 
 		#region -- OnStartup, OnExit ------------------------------------------------------
