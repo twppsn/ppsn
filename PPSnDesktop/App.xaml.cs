@@ -20,7 +20,7 @@ namespace TecWare.PPSn
 		public App()
 		{
 			this.DispatcherUnhandledException += App_DispatcherUnhandledException;
-			BindingErrorListener.Listen(m => currentEnvironment?.Traces.AppendText(PpsTraceItemType.Fail,m.Replace("; ",";\n")));
+			BindingErrorListener.Listen(m => currentEnvironment?.Traces.AppendText(PpsTraceItemType.Fail, m.Replace("; ", ";\n")));
 		} // ctor
 
 		#region -- OnStartup, OnExit ------------------------------------------------------
@@ -181,7 +181,7 @@ namespace TecWare.PPSn
 
 			environment = null;
 			userCred = (NetworkCredential)null;
-			
+
 			var environmentsInfos = PpsEnvironmentInfo.GetLocalEnvironments().ToArray();
 			foreach (var arg in e.Args)
 			{
@@ -191,23 +191,24 @@ namespace TecWare.PPSn
 					switch (cmd)
 					{
 						case 'u':
-							userName = arg.Substring(2);
+							userName = arg.Substring(2).Trim('\"', '\'');
 							break;
 						case 'p':
-							userPass = arg.Substring(2);
+							userPass = arg.Substring(2).Trim('\"', '\'');
 							break;
 						case 'a':
-							environment = environmentsInfos.FirstOrDefault(c => String.Compare(c.Name, 0, arg, 2, Math.Max(c.Name.Length, arg.Length), StringComparison.OrdinalIgnoreCase) == 0);
+							var environmentname = arg.Substring(2).Trim('\"', '\'');
+							environment = environmentsInfos.FirstOrDefault(c => String.Compare(c.Name, environmentname, StringComparison.OrdinalIgnoreCase) == 0);
 
 							// load user name
-							using (var pcl = new PpsClientLogin("ppsn_env:" + environment.Uri.ToString(), "", false))
-								userCred = (NetworkCredential)pcl.GetCredentials();
+							using (var pcl = new PpsClientLogin("ppsn_env:" + environment.Uri.ToString(), environment.Name, false))
+								userCred = pcl.GetCredentials();
 							break;
 					}
 				}
 			}
 
-			if (userName != null)
+			if (userName != null && userCred == null)
 				userCred = new NetworkCredential(userName, userPass);
 		} // func ParseArguments
 
