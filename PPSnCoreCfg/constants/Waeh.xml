@@ -15,6 +15,7 @@
 
 			<pps:dataset name="masterdata">
 				<pps:table name="Waeh">
+					<pps:meta name="syncType">ChangeTracking: dbo.Waeh</pps:meta>
 					<pps:column name="Id" fieldName="dbo.Waeh.Id" isPrimary="true" />
 					<pps:column name="ISO" fieldName="dbo.Waeh.Iso"/>
 					<pps:column name="Symbol" fieldName="dbo.Waeh.Symbol"/>
