@@ -128,6 +128,8 @@ namespace TecWare.PPSn.UI
 		public bool HasSideBar => false;
 
 		public readonly static RoutedCommand CopyTraceCommand = new RoutedCommand("CopyTrace", typeof(PpsTracePane));
+
+		public object Commands => null;
 	} // class PpsTracePane
 
 	#region -- class TraceItemTemplateSelector ------------------------------------------
