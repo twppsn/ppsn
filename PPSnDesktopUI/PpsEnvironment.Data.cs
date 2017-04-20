@@ -348,7 +348,10 @@ namespace TecWare.PPSn
 				}
 				catch (Exception e)
 				{
-					throw new Exception("Upgrading the Scheme failed.", e); // todo: rk cmd.CommandText in exception
+					foreach (var cm in commands)
+						e.Data.Add("SQL-Commands", cm);
+					e.Data.Add("failed SQL-Command", cmd.CommandText);
+					throw new Exception("Upgrading the Scheme failed.", e);
 				}
 			}
 		} // proc ExecuteUpdateScript
@@ -425,7 +428,7 @@ namespace TecWare.PPSn
 				else
 					newColumns.Add(remoteColumn);
 			}
-			
+
 			if (sameColumns.Count < localColumnsArray.Length || newColumns.Count > 0)
 			{
 				if (!refreshColumnExists) // drop and recreate
@@ -682,7 +685,7 @@ namespace TecWare.PPSn
 					else
 					{
 						using (var cmd = new SQLiteCommand($"UPDATE main.[{table.Name}] SET [" + refreshColumnName + "] = null WHERE [" + refreshColumnName + "] <> 1", connection, transaction))
-						//using (var cmd = new SQLiteCommand($"DELETE FROM main.[{table.Name}] WHERE [" + refreshColumnName + "] <> 1", connection, transaction))
+							//using (var cmd = new SQLiteCommand($"DELETE FROM main.[{table.Name}] WHERE [" + refreshColumnName + "] <> 1", connection, transaction))
 							cmd.ExecuteNonQueryEx();
 					}
 				}
@@ -692,7 +695,7 @@ namespace TecWare.PPSn
 			{
 				if (isFull && refreshColumnIndex >= 0)
 				{
-					using (var cmd = new SQLiteCommand($"DELETE FROM main.[{table.Name}] WHERE ["+ refreshColumnName + "] is null", connection, transaction))
+					using (var cmd = new SQLiteCommand($"DELETE FROM main.[{table.Name}] WHERE [" + refreshColumnName + "] is null", connection, transaction))
 						cmd.ExecuteNonQueryEx();
 				}
 			} // proc Clean
@@ -712,7 +715,7 @@ namespace TecWare.PPSn
 
 					// action to process
 					var actionName = xml.LocalName.ToLower();
-					if (actionName != "r" 
+					if (actionName != "r"
 						&& actionName != "u"
 						&& actionName != "i"
 						&& actionName != "d"
@@ -815,7 +818,7 @@ namespace TecWare.PPSn
 						}
 
 						objectCounter++;
-						if(progress != null && unchecked(Environment.TickCount -lastProgress)> 500)
+						if (progress != null && unchecked(Environment.TickCount - lastProgress) > 500)
 						{
 							progress.Report(String.Format(Resources.MasterDataFetchSyncString, table.Name + " (" + objectCounter.ToString("N0") + ")"));
 							lastProgress = Environment.TickCount;
@@ -837,13 +840,25 @@ namespace TecWare.PPSn
 					if (r.Read())
 						return r.GetBoolean(0);
 					else
-						throw new ArgumentException(); // todo: rk exception class with command
+					{
+						var exc = new ArgumentException();
+						exc.Data.Add("SQL-Command", existCommand.CommandText);
+						throw exc;
+					}
 				}
 			} // func RowExists
 
 			private void ExecuteCommand(SQLiteCommand command)
 			{
-				command.ExecuteNonQuery(); // todo: rk try-catch with exception and command
+				try
+				{
+					command.ExecuteNonQuery();
+				}
+				catch (Exception e)
+				{
+					e.Data.Add("SQL-Command", command.CommandText);
+					throw e;
+				}
 			} // proc ExecuteCommand
 
 			#endregion
@@ -922,7 +937,7 @@ namespace TecWare.PPSn
 		{
 			// read batch attributes
 			var tableName = xml.GetAttribute("table");
-			var isFull =  xml.GetAttribute("isFull", false);
+			var isFull = xml.GetAttribute("isFull", false);
 
 			progress?.Report(String.Format(Resources.MasterDataFetchSyncString, tableName));
 
@@ -941,7 +956,7 @@ namespace TecWare.PPSn
 
 					b.Clean();
 					transaction.Commit();
-					
+
 					// run outsite the transaction
 					environment.OnMasterDataTableChanged(b.Table);
 				}
@@ -2843,7 +2858,12 @@ namespace TecWare.PPSn
 				if (arguments.ViewId == "local.objects")
 					return CreateObjectFilter(arguments);
 				else
-					throw new ArgumentOutOfRangeException("todo"); // todo: exception
+				{
+					var exc = new ArgumentOutOfRangeException();
+					exc.Data.Add("Variable", "ViewId");
+					exc.Data.Add("Value", arguments.ViewId);
+					throw exc;
+				}
 			}
 			else
 			{
