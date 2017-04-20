@@ -531,7 +531,8 @@ namespace TecWare.PPSn
 			private readonly SQLiteTransaction transaction;
 			private readonly bool isFull;
 
-			private readonly int primaryColumnIndex;
+			private readonly int physPrimaryColumnIndex;
+			private readonly int virtPrimaryColumnIndex;
 			private readonly SQLiteCommand existCommand;
 			private readonly SQLiteParameter existIdParameter;
 
@@ -560,10 +561,12 @@ namespace TecWare.PPSn
 				if (table == null)
 					throw new ArgumentOutOfRangeException(nameof(tableName), tableName, $"Could not find master table '{tableName}.'");
 
+				var physPrimaryKey = table.PrimaryKey;
+				if (physPrimaryKey == null)
+					throw new ArgumentException($"Table '{table.Name}' has no primary key.", nameof(physPrimaryKey));
+
 				var alternativePrimaryKey = table.Meta.GetProperty<string>("useAsKey", null);
-				var primaryKey = String.IsNullOrEmpty(alternativePrimaryKey) ? table.PrimaryKey : table.Columns[alternativePrimaryKey];
-				if (primaryKey == null)
-					throw new ArgumentException($"Table '{table.Name}' has no primary key.", nameof(primaryKey));
+				var virtPrimaryKey = String.IsNullOrEmpty(alternativePrimaryKey) ? table.PrimaryKey : table.Columns[alternativePrimaryKey];
 
 				refreshColumnIndex = table.FindColumnIndex(refreshColumnName);
 
@@ -573,15 +576,18 @@ namespace TecWare.PPSn
 				insertParameters = new SQLiteParameter[table.Columns.Count];
 				updateParameters = new SQLiteParameter[table.Columns.Count];
 
-				primaryColumnIndex = -1;
+				physPrimaryColumnIndex = -1;
+				virtPrimaryColumnIndex = -1;
 				for (var i = 0; i < table.Columns.Count; i++)
 				{
 					var column = table.Columns[i];
 					var syncSourceColumn = column.Meta.GetProperty("syncSource", String.Empty);
 					if (syncSourceColumn == "#")
 					{
-						if (column == primaryKey)
+						if (column == physPrimaryKey)
 							throw new ArgumentException($"Primary column '{column.Name}' is not in sync list.");
+						if (column == virtPrimaryKey)
+							throw new ArgumentException($"Alternative primary column '{column.Name}' is not in sync list.");
 
 						// exclude from update list
 						insertParameters[i] = null;
@@ -589,8 +595,11 @@ namespace TecWare.PPSn
 					}
 					else
 					{
-						if (column == primaryKey)
-							primaryColumnIndex = i;
+						if (column == physPrimaryKey)
+							physPrimaryColumnIndex = i;
+						if (column == virtPrimaryKey)
+							virtPrimaryColumnIndex = i;
+
 						insertParameters[i] = insertCommand.Parameters.Add("@" + column.Name, ConvertDataTypeToDbType(column.DataType));
 						insertParameters[i].SourceColumn = column.Name;
 						updateParameters[i] = updateCommand.Parameters.Add("@" + column.Name, ConvertDataTypeToDbType(column.DataType));
@@ -620,7 +629,7 @@ namespace TecWare.PPSn
 
 				string updateColumnValueList()
 				{
-					var t = String.Join(", ", updateParameters.Where(excludeNull).Where(c => c != updateParameters[primaryColumnIndex]).Select(c => "[" + c.SourceColumn + "] = " + c.ParameterName));
+					var t = String.Join(", ", updateParameters.Where(excludeNull).Where(c => c != updateParameters[virtPrimaryColumnIndex]).Select(c => "[" + c.SourceColumn + "] = " + c.ParameterName));
 					if (refreshColumnIndex >= 0)
 						t += ",[" + refreshColumnName + "]=IFNULL([" + refreshColumnName + "], 0)";
 					return t;
@@ -632,15 +641,15 @@ namespace TecWare.PPSn
 
 				updateCommand.CommandText = "UPDATE main.[" + table.Name + "] SET " +
 					updateColumnValueList() +
-					" WHERE [" + updateParameters[primaryColumnIndex].SourceColumn + "] = " + updateParameters[primaryColumnIndex].ParameterName;
+					" WHERE [" + updateParameters[virtPrimaryColumnIndex].SourceColumn + "] = " + updateParameters[virtPrimaryColumnIndex].ParameterName;
 
 				// prepare exists
-				existCommand = new SQLiteCommand("SELECT EXISTS(SELECT * FROM main.[" + table.Name + "] WHERE [" + primaryKey.Name + "] = @Id)", connection, transaction);
-				existIdParameter = existCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(primaryKey.DataType));
+				existCommand = new SQLiteCommand("SELECT EXISTS(SELECT * FROM main.[" + table.Name + "] WHERE [" + virtPrimaryKey.Name + "] = @Id)", connection, transaction);
+				existIdParameter = existCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(virtPrimaryKey.DataType));
 
 				// prepare delete
-				deleteCommand = new SQLiteCommand("DELETE FROM main.[" + table.Name + "] WHERE [" + primaryKey.Name + "] = @Id;", connection, transaction);
-				deleteIdParameter = deleteCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(primaryKey.DataType));
+				deleteCommand = new SQLiteCommand("DELETE FROM main.[" + table.Name + "] WHERE [" + physPrimaryKey.Name + "] = @Id;", connection, transaction);
+				deleteIdParameter = deleteCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(physPrimaryKey.DataType));
 
 				existCommand.Prepare();
 				insertCommand.Prepare();
@@ -771,11 +780,10 @@ namespace TecWare.PPSn
 									updateParameters[columnIndex].Value = value;
 									insertParameters[columnIndex].Value = value;
 
-									if (columnIndex == primaryColumnIndex)
-									{
+									if (columnIndex == virtPrimaryColumnIndex)
 										existIdParameter.Value = value;
+									if (columnIndex == physPrimaryColumnIndex)
 										deleteIdParameter.Value = value;
-									}
 
 									xml.ReadEndElement();
 								}
@@ -802,7 +810,7 @@ namespace TecWare.PPSn
 								break;
 							case 'd':
 								ExecuteCommand(deleteCommand);
-								masterData.environment.OnMasterDataRowChanged(PpsDataChangeOperation.Delete, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
+								masterData.environment.OnMasterDataRowChanged(PpsDataChangeOperation.Delete, table, deleteIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
 								break;
 						}
 
