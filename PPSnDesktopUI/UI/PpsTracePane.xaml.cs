@@ -14,8 +14,10 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -90,33 +92,28 @@ namespace TecWare.PPSn.UI
 
 		private string TraceToString(object item)
 		{
-			if (item is PpsTraceItem)
+			switch (item)
 			{
-				var pti = (PpsTraceItem)item;
-				return $"{pti.Type} - {pti.Stamp} - ID:{pti.Id} - Source: {pti.Source} - Message: {pti.Message}";
-			}
-			else if (item is PpsTextItem)
-			{
-				var pti = (PpsTextItem)item;
-				return $"{pti.Type} - {pti.Stamp} - {pti.Message}";
-			}
-			else if (item is String)
-			{
-				return (string)item;
-			}
-			else if (item is PpsExceptionItem)
-			{
-				var exc = (PpsExceptionItem)item;
-				var ret = new StringBuilder();
+				case PpsTraceItem pti:
+					return $"{pti.Type} - {pti.Stamp} - ID:{pti.Id} - Source: {pti.Source} - Message: {pti.Message}";
+				case PpsTextItem pti:
+					return $"{pti.Type} - {pti.Stamp} - {pti.Message}";
+				case string s:
+					return s;
+				case PpsExceptionItem exc:
+					var ret = new StringBuilder();
 
-				ret.Append($"{exc.Type} - {exc.Stamp} - ");
+					ret.Append($"{exc.Type} - {exc.Stamp} - ");
 
-				ExceptionFormatter.FormatPlainText(ret, exc.Exception);
+					ExceptionFormatter.FormatPlainText(ret, exc.Exception);
 
-				return ret.ToString();
+					return ret.ToString();
+				case null:
+					return "<null>";
+				default:
+					return String.Empty;
 			}
-			return String.Empty;
-		}
+		} // func TraceToString
 
 		public PpsWindowPaneCompareResult CompareArguments(LuaTable args) => PpsWindowPaneCompareResult.Same;
 
@@ -165,16 +162,113 @@ namespace TecWare.PPSn.UI
 	} // class TraceItemTemplateSelector
 
 	#endregion
+
+	#region -- class ExceptionToPropertyConverter ---------------------------------------
+
+	public sealed class ExceptionToPropertyConverter : IValueConverter
+	{
+		#region -- class ExceptionView --------------------------------------------------
+
+		public sealed class ExceptionView : IEnumerable<PropertyValue>
+		{
+			private readonly string title;
+			private readonly string type;
+			private readonly string text;
+			private readonly PropertyValue[] properties;
+
+			public ExceptionView(string title, string type, string text, PropertyValue[] properties)
+			{
+				this.title = title;
+				this.type = type ?? throw new ArgumentNullException(nameof(type));
+				this.text = text;
+				this.properties = properties ?? throw new ArgumentNullException(nameof(properties));
+			} // ctor
+
+			public IEnumerator<PropertyValue> GetEnumerator()
+				=> ((IEnumerable<PropertyValue>)properties).GetEnumerator();
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> GetEnumerator();
+		} // class ExceptionView
+
+		#endregion
+
+		#region -- class ExceptionViewArrayFormatter ------------------------------------
+
+		private sealed class ExceptionViewArrayFormatter : ExceptionFormatter
+		{
+			private List<ExceptionView> exceptions = new List<ExceptionView>();
+
+			private string currentTitle;
+			private Exception currentException;
+			private List<PropertyValue> currentProperties = new List<PropertyValue>();
+
+			protected override void AppendProperty(string name, Type type, Func<object> value)
+				=> currentProperties.Add(new PropertyValue(name, type, value()));
+
+			protected override void AppendSection(bool isFirst, string sectionName, Exception ex)
+			{
+				if (isFirst)
+				{
+					exceptions.Clear();
+					currentProperties.Clear();
+
+					currentTitle = null;
+					currentException = ex;
+				}
+				else
+				{
+					CompileCurrentException();
+					currentProperties.Clear();
+
+					currentTitle = sectionName;
+					currentException = ex;
+				}
+			} // proc AppendSection
+
+			private void CompileCurrentException()
+			{
+				if (currentException == null)
+					throw new InvalidOperationException();
+
+				exceptions.Add(new ExceptionView(currentTitle, currentException.GetType().Name, currentException.Message, currentProperties.ToArray()));
+			} // proc CompileCurrentException
+
+			protected override object Compile()
+			{
+				CompileCurrentException();
+				return exceptions.ToArray();
+			} // func Compile
+		} // class ExceptionViewArrayFormatter
+
+		#endregion
+
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (value == null)
+				return null;
+
+			return value is Exception e 
+				? ExceptionFormatter.Format<ExceptionViewArrayFormatter>(e)
+				: throw new ArgumentException(nameof(value));
+		} // func Convert
+
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) 
+			=> throw new NotSupportedException();
+	} // class ExceptionToPropertyConverter
+
+	#endregion
+
 	public class BoolToVisibilityConverter : IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if ((bool)value)
 				return Visibility.Visible;
 			else return Visibility.Collapsed;
 		}
 
-		public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotImplementedException();
 		}
