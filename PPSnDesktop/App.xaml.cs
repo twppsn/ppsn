@@ -144,33 +144,19 @@ namespace TecWare.PPSn
 
 		protected override void OnStartup(StartupEventArgs e)
 		{
-			if (!e.Args.Any())
-				Task.Run(() =>
+			ParseArguments(e, out var environment, out var userCred);
+			Task.Run(() =>
+			{
+				StartApplicationAsync(environment, userCred)
+					.ContinueWith(t =>
 					{
-						StartApplicationAsync()
-						.ContinueWith(t =>
-						{
-							if (!t.Result)
-								Dispatcher.Invoke(Shutdown);
-						}
-					);
+						if (!t.Result)
+							Dispatcher.Invoke(Shutdown);
 					}
 				);
-			else
-			{
-				ParseArguments(e, out var environment, out var userCred);
-				Task.Run(() =>
-				{
-					StartApplicationAsync(environment, userCred)
-						.ContinueWith(t =>
-						{
-							if (!t.Result)
-								Dispatcher.Invoke(Shutdown);
-						}
-					);
-				}
-				);
 			}
+			);
+
 			base.OnStartup(e);
 		} // proc OnStartup
 
@@ -181,6 +167,9 @@ namespace TecWare.PPSn
 
 			environment = null;
 			userCred = (NetworkCredential)null;
+
+			if (e.Args.Length == 0)
+				return;
 
 			var environmentsInfos = PpsEnvironmentInfo.GetLocalEnvironments().ToArray();
 			foreach (var arg in e.Args)

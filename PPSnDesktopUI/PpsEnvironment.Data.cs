@@ -434,7 +434,14 @@ namespace TecWare.PPSn
 					// create a new table, according to new Scheme...
 					CreateTableScript(commands, tableName, remoteColumns, localIndexes.Select(c => c.Item1).ToArray());
 					// copy
-					commands.Add($"INSERT INTO '{tableName}' ({String.Join(", ", sameColumns)}) SELECT {String.Join(", ", sameColumns)} FROM '{tableName}_temp';");
+					var insertColumns = new List<string>(sameColumns);
+					for (var i = 0; i < newColumns.Count; i++)
+					{
+						var idx = Array.FindIndex(localColumnsArray, c => String.Compare(c.Name, newColumns[i].Name, StringComparison.OrdinalIgnoreCase) == 0);
+						if (idx >= 0)
+							insertColumns.Add(newColumns[i].Name);
+					}
+					commands.Add($"INSERT INTO '{tableName}' ({String.Join(", ", insertColumns)}) SELECT {String.Join(", ", insertColumns)} FROM '{tableName}_temp';");
 
 					// drop old local table
 					commands.Add($"DROP TABLE '{tableName}_temp';");  // no IF EXISTS - at this point the table must exist or error
@@ -1405,7 +1412,9 @@ namespace TecWare.PPSn
 
 			(typeof(string), "Text", DbType.String),
 			(typeof(Guid), "Guid", DbType.Guid),
-			(typeof(byte[]), "Blob", DbType.Binary)
+			(typeof(byte[]), "Blob", DbType.Binary),
+			// alt
+			(typeof(long), "Integer", DbType.Int64)
 		};
 
 		private static Type ConvertSqLiteToDataType(string dataType)
@@ -1435,27 +1444,10 @@ namespace TecWare.PPSn
 
 		private static object ConvertStringToSQLiteValue(string value, DbType type)
 		{
-			switch (type)
-			{
-				case DbType.Int64:
-					return Procs.ChangeType(value, typeof(long));
-				case DbType.Double:
-					return Procs.ChangeType(value, typeof(Double));
-				case DbType.Decimal:
-					return Procs.ChangeType(value, typeof(Decimal));
-				case DbType.DateTime:
-					return Procs.ChangeType(value, typeof(DateTime));
-				case DbType.String:
-					return value;
-				case DbType.Boolean:
-					return Procs.ChangeType(value, typeof(bool));
-				case DbType.Guid:
-					return Procs.ChangeType(value, typeof(Guid));
-				case DbType.Binary:
-					throw new NotImplementedException("todo: ???");
-				default:
-					throw new ArgumentOutOfRangeException(nameof(type), type, $"DB-Type {type} is not supported.");
-			}
+			var index = Array.FindIndex(sqlLiteTypeMapping, c => c.DbType == type);
+			return index >= 0
+				? Procs.ChangeType(value, sqlLiteTypeMapping[index].Type)
+				: throw new ArgumentOutOfRangeException(nameof(type), type, $"DB-Type {type} is not supported.");
 		} // func ConvertStringToSQLiteValue
 
 		internal static bool CheckLocalTableExists(SQLiteConnection connection, string tableName)
