@@ -95,7 +95,7 @@ namespace TecWare.PPSn
 			var testtablelist = new List<TestTable>();
 
 			// table1
-			var testtable1 = new TestTable("Table1", null, "1");
+			var testtable1 = new TestTable("Table1", null, "'1'");
 			var testcolumn1 = new TestColumn("Column1", typeof(int), true, false, true, String.Empty);
 			testtable1.Columns.Add(testcolumn1);
 
@@ -103,7 +103,7 @@ namespace TecWare.PPSn
 			// table1
 
 			// table SyncState
-			var syncstate = new TestTable("SyncState", null, $"{testtable1.Name}, 1");
+			var syncstate = new TestTable("SyncState", null, $"'{testtable1.Name}', '1'");
 			var synccol1 = new TestColumn("Table", typeof(string), true, false, false, String.Empty);
 			var synccol2 = new TestColumn("Syncid", typeof(int), false, false, false, String.Empty);
 			syncstate.Columns.Add(synccol1);
@@ -130,7 +130,53 @@ namespace TecWare.PPSn
 		/// The data must be Upgraded
 		/// </summary>
 		[TestMethod]
-		public void PpsMasterDataImportTest_AddColumn()
+		public void PpsMasterDataImportTest_AddColumnUpdate()
+		{
+			var testtablelist = new List<TestTable>();
+
+			// table1
+			var testtable1 = new TestTable("Table1", null, "'1', '1'");
+			var testcolumn1 = new TestColumn("Column1", typeof(int), true, false, true, String.Empty);
+			var testcolumn2 = new TestColumn("Column2", typeof(string), false, true, false, "Teststring");
+			var testcolumn3 = new TestColumn("_IsUpdated", typeof(string), false, true, false, String.Empty);
+			testtable1.Columns.Add(testcolumn1);
+			testtable1.Columns.Add(testcolumn2);
+			testtable1.Columns.Add(testcolumn3);
+
+			testtablelist.Add(testtable1);
+			// table1
+
+			// table SyncState
+			var syncstate = new TestTable("SyncState", null, $"'{testtable1.Name}', '1'");
+			var synccol1 = new TestColumn("Table", typeof(string), true, false, false, String.Empty);
+			var synccol2 = new TestColumn("Syncid", typeof(int), false, true, false, String.Empty);
+			syncstate.Columns.Add(synccol1);
+			syncstate.Columns.Add(synccol2);
+
+			testtablelist.Add(syncstate);
+			// table syncstate
+
+
+			var testdataset = CreateTestDataSet(testtablelist);
+
+			testtablelist[0].Columns.RemoveAt(1);
+
+			using (var testdatabase = CreateTestDatabase(testtablelist))
+			{
+				var commands = GetUpdateCommands(testdatabase, testdataset, CheckLocalTableExists(testdatabase, "SyncState"));
+
+				using (var transaction = testdatabase.BeginTransaction())
+				{
+					if (commands.Count > 0)
+						ExecuteUpdateScript(testdatabase, transaction, commands);
+				}
+
+				Assert.AreEqual(2, commands.Count);
+			}
+		}
+
+		[TestMethod]
+		public void PpsMasterDataImportTest_AddColumnRecreate()
 		{
 			var testtablelist = new List<TestTable>();
 
@@ -154,7 +200,7 @@ namespace TecWare.PPSn
 			testtablelist.Add(syncstate);
 			// table syncstate
 
-			
+
 			var testdataset = CreateTestDataSet(testtablelist);
 
 			testtablelist[0].Columns.RemoveAt(1);
@@ -162,11 +208,24 @@ namespace TecWare.PPSn
 			using (var testdatabase = CreateTestDatabase(testtablelist))
 			{
 				var commands = GetUpdateCommands(testdatabase, testdataset, CheckLocalTableExists(testdatabase, "SyncState"));
-				
+
+				using (var transaction = testdatabase.BeginTransaction())
+				{
+					if (commands.Count > 0)
+						ExecuteUpdateScript(testdatabase, transaction, commands);
+				}
+
+				Assert.AreEqual(4, commands.Count);
 			}
 		}
 
 		#region -- Accessors ------------------------------------------------------------
+
+		private void ExecuteUpdateScript(SQLiteConnection connection, SQLiteTransaction transaction, IEnumerable<string> commands)
+		{
+			PrivateType accessor = new PrivateType(typeof(PpsMasterData));
+			accessor.InvokeStatic("ExecuteUpdateScript", connection, transaction, commands);
+		}
 
 		private string ConvertDataTypeToSqLite(Type type)
 		{
@@ -199,24 +258,24 @@ namespace TecWare.PPSn
 				List<object> content = new List<object>();
 				content.Add(new XAttribute("name", table.Name));
 
-				foreach(var column in table.Columns)
+				foreach (var column in table.Columns)
 				{
 					var xmlcolumn = XElement.Parse($"<column name=\"{column.Name}\" dataType=\"{column.DataType}\" isPrimary=\"{column.IsPrimary}\" isIdentity=\"{column.IsIndex}\">" +
 														$"<meta>" +
 														 $"<displayName dataType=\"string\">dbo.test.{column.Name}</displayName>" +
-														 $"<IsNull dataType=\"bool\">{column.Nullable}</IsNull>" +
+														 $"<nullable dataType=\"bool\">{column.Nullable}</nullable>" +
 														 $"<IsIdentity dataType=\"bool\">{column.IsIndex}</IsIdentity>" +
 														"</meta>" +
 													  "</column>");
 					content.Add(xmlcolumn);
 				}
 
-				var xmltable = new XElement("table",content);
+				var xmltable = new XElement("table", content);
 				tables.Add(xmltable);
 			}
 
 			var schema = new XElement("schema", tables);
-			
+
 			return new PpsDataSetDefinitionDesktop(null, "masterDataSet", schema);
 		}
 
@@ -260,7 +319,7 @@ namespace TecWare.PPSn
 							sqlite.ExecuteNonQueryEx();
 						}
 
-						if  (!String.IsNullOrWhiteSpace(table.FillString))
+						if (!String.IsNullOrWhiteSpace(table.FillString))
 						{
 							sqlite.CommandText = $"INSERT INTO '{table.Name}' VALUES ({table.FillString});";
 							sqlite.ExecuteNonQueryEx();
