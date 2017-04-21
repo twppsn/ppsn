@@ -155,8 +155,20 @@ namespace TecWare.PPSn
 		public DbCommand CreateNativeCommand(string commandText = null)
 			=> new SQLiteCommand(commandText, connection, transaction);
 
-		public long GetNextLocalId(string tableName, string primaryKey)
-			=> -1;
+		public long GetNextLocalId(PpsMasterDataTransaction transaction, string tableName, string primaryKey)
+		{
+			using (var cmd = transaction.CreateNativeCommand("SELECT min([" + primaryKey + "]) FROM main.[" + tableName + "]"))
+			{
+				var nextIdObject = cmd.ExecuteScalarEx();
+				if (nextIdObject == null)
+					return -1;
+				else
+				{
+					var nextId = nextIdObject.ChangeType<long>();
+					return nextId < 0 ? nextId - 1 : -1;
+				}
+			}
+		} // func GetNextLocalId
 
 		public long LastInsertRowId => connection.LastInsertRowId;
 
@@ -405,7 +417,7 @@ namespace TecWare.PPSn
 					// todo: check default
 					if ((remoteColumn.Name == localColumn.Name)
 						&& (ConvertDataTypeToSqLite(remoteColumn.DataType) == ConvertDataTypeToSqLite(localColumn.DataType))
-						&& (remoteColumn.Attributes.GetProperty("IsNull", false) == localColumn.Attributes.GetProperty("IsNull", false))
+						&& (remoteColumn.Attributes.GetProperty("Nullable", false) == localColumn.Attributes.GetProperty("Nullable", false))
 						&& (remoteColumn.Attributes.GetProperty("IsPrimary", false) == localColumn.Attributes.GetProperty("IsPrimary", false))
 						)
 					{
@@ -503,7 +515,7 @@ namespace TecWare.PPSn
 		private static StringBuilder CreateCommandColumnAttribute(StringBuilder commandText, IDataColumn column)
 		{
 			// not? null
-			if (!column.Attributes.GetProperty("IsNull", false))
+			if (!column.Attributes.GetProperty("Nullable", false))
 				commandText.Append(" NOT");
 			commandText.Append(" NULL");
 
@@ -581,7 +593,7 @@ namespace TecWare.PPSn
 				for (var i = 0; i < table.Columns.Count; i++)
 				{
 					var column = table.Columns[i];
-					var syncSourceColumn = column.Meta.GetProperty("syncSource", String.Empty);
+					var syncSourceColumn = column.Meta.GetProperty(PpsDataColumnMetaData.SourceColumn, String.Empty);
 					if (syncSourceColumn == "#")
 					{
 						if (column == physPrimaryKey)
@@ -1472,8 +1484,8 @@ namespace TecWare.PPSn
 							r.GetString(1),
 							r.IsDBNull(2) ? typeof(string) : ConvertSqLiteToDataType(r.GetString(2)),
 							new PropertyDictionary(
-								new PropertyValue("IsNull", r.IsDBNull(3) || !r.GetBoolean(3)),
-								new PropertyValue("Default", r.GetValue(4)?.ToString()),
+								new PropertyValue(nameof(PpsDataColumnMetaData.Nullable), r.IsDBNull(3) || !r.GetBoolean(3)),
+								new PropertyValue(nameof(PpsDataColumnMetaData.Default), r.GetValue(4)?.ToString()),
 								new PropertyValue("IsPrimary", !r.IsDBNull(5) && r.GetBoolean(5))
 							)
 						);

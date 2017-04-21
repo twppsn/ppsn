@@ -16,7 +16,16 @@
                 <TextBlock>
 							<Run FontWeight="Bold" Text="{Binding Message, Mode=OneWay}"/>
                 </TextBlock>
-                <TextBlock>
+				<ListBox Height="200">
+					<ListBox.ItemsSource>
+						<Binding Path="Exception">
+							<Binding.Converter>
+								<local:ExceptionToPropertyConverter />
+							</Binding.Converter>
+						</Binding>
+					</ListBox.ItemsSource>
+				</ListBox>
+                <!--<TextBlock>
 							<Run Text="Exception: "/>
 							<Run FontWeight="Bold" Text="{Binding Exception.Message, Mode=OneWay}"/>
                 </TextBlock>
@@ -47,10 +56,10 @@
                         <TextBlock Text="stacktrace:"/>
                     </StackPanel>
                     <TextBlock Visibility="{Binding ElementName=stackTraceEnable, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}" Text="{Binding StackTrace}"/>
-                </StackPanel>
+                </StackPanel>-->
             </StackPanel>
 
-            <DataTemplate.Triggers>
+            <!--<DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding Path=InnerException}" Value="{x:Null}">
                     <Setter TargetName="innerException" Property="Visibility" Value="Collapsed" />
                 </DataTrigger>
@@ -63,7 +72,7 @@
                 <DataTrigger Binding="{Binding Path=Source}" Value="{x:Null}">
                     <Setter TargetName="source" Property="Visibility" Value="Collapsed" />
                 </DataTrigger>
-            </DataTemplate.Triggers>
+            </DataTemplate.Triggers>-->
         </DataTemplate>
 
         <local:TraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
@@ -79,7 +88,34 @@
                         <TextBlock>
 							<Run FontWeight="Bold" Text="{Binding Message, Mode=OneWay}"/>
                         </TextBlock>
-                        <TextBlock>
+						<TextBlock>
+							<Run FontWeight="Bold" Text="{Binding Message, Mode=OneWay}"/>
+						</TextBlock>
+						<ListBox Height="200">
+							<ListBox.ItemsSource>
+								<Binding Path="Exception">
+									<Binding.Converter>
+										<local:ExceptionToPropertyConverter />
+									</Binding.Converter>
+								</Binding>
+							</ListBox.ItemsSource>
+							<ListBox.ItemTemplate>
+								<DataTemplate>
+									<ListBox ItemsSource="{Binding}" Height="120">
+										<ListBox.ItemTemplate>
+											<DataTemplate>
+												<StackPanel>
+													<TextBlock Text="{Binding Name}" />
+													<TextBlock Text="{Binding Type}" />
+													<TextBlock Text="{Binding Value}" />
+												</StackPanel>
+											</DataTemplate>
+										</ListBox.ItemTemplate>
+									</ListBox>
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+						</ListBox>
+						<!--<TextBlock>
 							<Run Text="Exception: "/>
 							<Run FontWeight="Bold" Text="{Binding Exception.Message, Mode=OneWay}"/>
                         </TextBlock>
@@ -127,9 +163,9 @@
                                 <TextBlock Text="stacktrace:"/>
                             </StackPanel>
                         </StackPanel>
-                        <TextBlock Visibility="{Binding ElementName=stackTraceEnable, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}" Text="{Binding Exception.StackTrace}"/>
+                        <TextBlock Visibility="{Binding ElementName=stackTraceEnable, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}" Text="{Binding Exception.StackTrace}"/>-->
                     </StackPanel>
-                    <DataTemplate.Triggers>
+                    <!--<DataTemplate.Triggers>
                         <DataTrigger Binding="{Binding Path=Exception.InnerException}" Value="{x:Null}">
                             <Setter TargetName="innerException" Property="Visibility" Value="Collapsed" />
                         </DataTrigger>
@@ -139,7 +175,7 @@
                         <DataTrigger Binding="{Binding Path=Exception.Data.Count}" Value="0">
                             <Setter TargetName="tbExceptionData" Property="Visibility" Value="Collapsed"/>
                         </DataTrigger>
-                    </DataTemplate.Triggers>
+                    </DataTemplate.Triggers>-->
                 </DataTemplate>
             </local:TraceItemTemplateSelector.ExceptionTemplate>
 
