@@ -38,7 +38,7 @@
 			<pps:field name="sys.Fields.LastModificationStamp" dataType="long" />
 			<pps:field name="sys.Fields.IsUpdated" dataType="bit">
 				<pps:attribute name="sourceColumn">#</pps:attribute>
-				<pps:attribute name="IsNull">true</pps:attribute>
+				<pps:attribute name="nullable">true</pps:attribute>
 			</pps:field>
 			<pps:field name="sys.Fields.PrimaryKey" dataType="long" />
 			<pps:field name="sys.Fields.Text" dataType="string" />
@@ -234,7 +234,7 @@
 
 					<pps:column name="PulledRevId" fieldName="sys.Fields.Long">
 						<pps:meta name="sourceColumn">#</pps:meta>
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 
 					<pps:column name="DocumentIsChanged" fieldName="sys.Fields.Bit">
