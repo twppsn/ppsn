@@ -132,10 +132,7 @@ namespace TecWare.PPSn.Server.Data
 			if (String.IsNullOrEmpty(fieldName))
 				throw new DEConfigurationException(config, "@fieldName is empty.");
 
-			if (createRelationColumn)
-				return new PpsDataColumnServerDefinition(tableDefinition, fieldName, columnName, isPrimary, true, config);
-			else
-				return new PpsDataColumnServerDefinition(tableDefinition, fieldName, columnName, isPrimary, false, config);
+			return new PpsDataColumnServerDefinition(tableDefinition, fieldName, columnName, isPrimary, createRelationColumn, config);
 		} // func Create
 
 		public override PpsDataColumnDefinition Clone(PpsDataTableDefinition tableOwner)
@@ -154,7 +151,7 @@ namespace TecWare.PPSn.Server.Data
 
 			// resolve the correct field
 			var application = ((PpsDataSetServerDefinition)Table.DataSet).Application;
-			fieldDescription = application.GetFieldDescription(FieldName, true);
+			fieldDescription = application.GetFieldDescription(fieldName, true);
 
 			// update the meta information
 			foreach (var c in fieldDescription.Attributes)
@@ -212,8 +209,6 @@ namespace TecWare.PPSn.Server.Data
 			=> fieldDescription?.DataType ?? typeof(object);
 
 		public override PpsDataColumnMetaCollection Meta => metaInfo;
-		
-		private string FieldName => fieldName;
 
 		public PpsFieldDescription FieldDescription => fieldDescription;
 		public PpsDataColumnParentRelationType ParentType => parentType;
