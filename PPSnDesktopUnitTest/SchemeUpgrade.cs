@@ -98,6 +98,16 @@ namespace TecWare.PPSn
 
 			testtablelist.Add(testtable1);
 			// table1
+
+			// table SyncState
+			var syncstate = new TestTable("SyncState");
+			var synccol1 = new TestColumn("Table", typeof(string), true, false, false, String.Empty);
+			var synccol2 = new TestColumn("Syncid", typeof(int), false, false, false, String.Empty);
+			syncstate.Columns.Add(synccol1);
+			syncstate.Columns.Add(synccol2);
+
+			testtablelist.Add(syncstate);
+			// table syncstate
 			
 			var testdatabase = CreateTestDatabase(testtablelist);
 			var testdataset = CreateTestDataSet(testtablelist);
@@ -105,7 +115,8 @@ namespace TecWare.PPSn
 			using (testdatabase)
 			{
 				var commands = GetUpdateCommands(testdatabase, testdataset, CheckLocalTableExists(testdatabase, "SyncState"));
-
+				Assert.AreEqual(0, commands.Count);
+				commands = GetUpdateCommands(testdatabase, testdataset, !CheckLocalTableExists(testdatabase, "SyncState"));
 				Assert.AreEqual(0, commands.Count);
 			}
 		}
@@ -186,6 +197,7 @@ namespace TecWare.PPSn
 							createcmd.Append($" {ConvertDataTypeToSqLite(column.DataType)}");
 							createcmd.Append($" {column.PrimaryString}");
 							createcmd.Append($" {column.NullString}");
+							createcmd.Append($" {column.DefaultString}");
 							createcmd.Append(",");
 
 							if (column.IsIndex)
@@ -268,6 +280,7 @@ namespace TecWare.PPSn
 			public string NullString => isnull ? " NULL" : " NOT NULL";
 			public bool IsIndex { get { return isindex; } set { isindex = value; } }
 			public string DefaultValue { get { return defaultvalue; } set { defaultvalue = value; } }
+			public string DefaultString => String.IsNullOrWhiteSpace(defaultvalue) ? String.Empty : $" DEFAULT '{defaultvalue}'";
 		}
 
 		#endregion
