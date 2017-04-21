@@ -59,5 +59,14 @@ namespace TecWare.PPSn.Properties {
                 resourceCulture = value;
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Synchronisiere {0}....
+        /// </summary>
+        internal static string MasterDataFetchSyncString {
+            get {
+                return ResourceManager.GetString("MasterDataFetchSyncString", resourceCulture);
+            }
+        }
     }
 }

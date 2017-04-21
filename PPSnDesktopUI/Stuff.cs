@@ -107,14 +107,30 @@ namespace TecWare.PPSn
 
 	public static class StuffDB
 	{
+		public const string CommandTextKey = "CommandText";
+
 		public static DbParameter AddParameter(this DbCommand command, string parameterName, DbType dbType, object value = null)
 		{
 			var param = command.CreateParameter();
 			param.ParameterName = parameterName;
 			param.DbType = dbType;
 			param.Value = value;
+			command.Parameters.Add(param);
 			return param;
 		} // func AddParameter
+
+		public static int ExecuteNonQueryEx(this DbCommand command)
+		{
+			try
+			{
+				return command.ExecuteNonQuery();
+			}
+			catch (DbException e)
+			{
+				e.Data[CommandTextKey] = command.CommandText;
+				throw;
+			}
+		} // func ExecuteReaderEx
 
 		public static DbDataReader ExecuteReaderEx(this DbCommand command, CommandBehavior commandBehavior = CommandBehavior.Default)
 		{
@@ -124,10 +140,23 @@ namespace TecWare.PPSn
 			}
 			catch (DbException e)
 			{
-				e.Data["CommandText"] = command.CommandText;
+				e.Data[CommandTextKey] = command.CommandText;
 				throw;
 			}
 		} // func ExecuteReaderEx
+
+		public static object ExecuteScalarEx(this DbCommand command)
+		{
+			try
+			{
+				return command.ExecuteScalar();
+			}
+			catch (DbException e)
+			{
+				e.Data[CommandTextKey] = command.CommandText;
+				throw;
+			}
+		} // func ExecuteScalarEx
 
 		public static bool DbNullOnNeg(long value)
 			=> value < 0;

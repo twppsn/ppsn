@@ -524,6 +524,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*"/>
                 <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="auto"/>
                 <ColumnDefinition Width="32"/>
             </Grid.ColumnDefinitions>
 
@@ -601,8 +602,34 @@
             </ProgressBar>
             <TextBlock Grid.Column="1" Text="{Binding Environment.StatusOfProxy.ActualItem.DisplayName}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
 					   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0" TextWrapping="NoWrap" IsHitTestVisible="False"/>
+            <Border Grid.Column="2" BorderThickness="2" BorderBrush="AntiqueWhite" Opacity=".7" CornerRadius="10,10,10,10" Width="16" Margin="4">
+                <Border.Style>
+                    <Style>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="0">
+                                <Setter Property="Border.Background" Value="OrangeRed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="1">
+                                <Setter Property="Border.Background" Value="OrangeRed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="2">
+                                <Setter Property="Border.Background" Value="OrangeRed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="3">
+                                <Setter Property="Border.Background" Value="Orange" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="4">
+                                <Setter Property="Border.Background" Value="Lime" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
 
-            <Viewbox x:Name="PART_SizeGripper" Grid.Column="2" Width="15" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+                </Border.Style>
+                <Border.ToolTip>
+                    <TextBlock Text="{Binding Environment.CurrentState}"/>
+                </Border.ToolTip>
+            </Border>
+            <Viewbox x:Name="PART_SizeGripper" Grid.Column="3" Width="15" VerticalAlignment="Bottom" HorizontalAlignment="Right">
                 <Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SizeGrip.png">
                     <Image.Tag>
                         <ui:PpsWindowHitTest HitTest="17"/>

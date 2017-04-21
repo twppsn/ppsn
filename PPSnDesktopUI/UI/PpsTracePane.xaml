@@ -14,7 +14,6 @@
         <DataTemplate x:Key="ExceptionTemplate">
             <StackPanel Orientation="Vertical">
                 <TextBlock>
-							<!--<Run Text="message:  "/>-->
 							<Run FontWeight="Bold" Text="{Binding Message, Mode=OneWay}"/>
                 </TextBlock>
                 <TextBlock>
@@ -49,11 +48,9 @@
                     </StackPanel>
                     <TextBlock Visibility="{Binding ElementName=stackTraceEnable, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}" Text="{Binding StackTrace}"/>
                 </StackPanel>
-
             </StackPanel>
 
             <DataTemplate.Triggers>
-                <!-- Highlight for Not Reviewed -->
                 <DataTrigger Binding="{Binding Path=InnerException}" Value="{x:Null}">
                     <Setter TargetName="innerException" Property="Visibility" Value="Collapsed" />
                 </DataTrigger>
@@ -72,7 +69,7 @@
         <local:TraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
             <local:TraceItemTemplateSelector.NullTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Message}" />
+                    <TextBlock Text="{Binding Message}"/>
                 </DataTemplate>
             </local:TraceItemTemplateSelector.NullTemplate>
 
@@ -80,7 +77,6 @@
                 <DataTemplate>
                     <StackPanel Orientation="Vertical">
                         <TextBlock>
-							<!--<Run Text="message:  "/>-->
 							<Run FontWeight="Bold" Text="{Binding Message, Mode=OneWay}"/>
                         </TextBlock>
                         <TextBlock>
@@ -95,6 +91,27 @@
 							<Run Text="TargetSite:  "/>
 							<Run FontWeight="Bold" Text="{Binding Exception.TargetSite, Mode=OneWay}" />
                         </TextBlock>
+                        <StackPanel Name="tbExceptionData">
+                            <TextBlock Text="Data:  "/>
+                            <Grid Grid.IsSharedSizeScope="True">
+                                <ListBox ItemsSource="{Binding Path=Exception.Data}" Background="Transparent" BorderThickness="0" Margin="20,0,0,0">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition SharedSizeGroup="ssgExceptionDataKeys"/>
+                                                    <ColumnDefinition/>
+                                                    <ColumnDefinition SharedSizeGroup="ssgExceptionDataValues"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Path=Key}" />
+                                                <TextBlock Grid.Column="1" Text=" : "/>
+                                                <TextBlock Grid.Column="2" Text="{Binding Path=Value}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </StackPanel>
                         <StackPanel x:Name="innerException">
                             <StackPanel Orientation="Horizontal">
                                 <ToggleButton x:Name="innerExceptionEnable" Content="+" Width="20"/>
@@ -119,6 +136,9 @@
                         <DataTrigger Binding="{Binding Path=Exception.StackTrace}" Value="{x:Null}">
                             <Setter TargetName="stackTrace" Property="Visibility" Value="Collapsed" />
                         </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=Exception.Data.Count}" Value="0">
+                            <Setter TargetName="tbExceptionData" Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
                     </DataTemplate.Triggers>
                 </DataTemplate>
             </local:TraceItemTemplateSelector.ExceptionTemplate>
@@ -135,7 +155,11 @@
 
             <local:TraceItemTemplateSelector.TextItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Message}" />
+                    <TextBlock Text="{Binding Message}">
+                    </TextBlock>
+                    <DataTemplate.Triggers>
+                        <!-- if the length is greater than x - make it collapseable -->
+                    </DataTemplate.Triggers>
                 </DataTemplate>
             </local:TraceItemTemplateSelector.TextItemTemplate>
 
@@ -148,6 +172,12 @@
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <Grid>
+                        <Grid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Command="ApplicationCommands.Copy" CommandParameter="{Binding}">
+                                </MenuItem>
+                            </ContextMenu>
+                        </Grid.ContextMenu>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="90"/>
                             <ColumnDefinition Width="Auto"/>
@@ -166,5 +196,4 @@
             </ListBox.ItemTemplate>
         </ListBox>
     </Grid>
-
 </UserControl>

@@ -884,6 +884,7 @@ namespace TecWare.PPSn
 
 						case PpsEnvironmentState.Online:
 							// fetch next state on ws-info
+							backgroundNotifierModeTransmission.Wait();
 							break;
 
 						case PpsEnvironmentState.Shutdown:
