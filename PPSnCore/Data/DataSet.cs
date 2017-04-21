@@ -36,10 +36,10 @@ namespace TecWare.PPSn.Data
 	#region -- enum PpsDataSetMetaData --------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Definiert Standardattribute am DataSet.</summary>
+	/// <summary>Meta attributes that can be defined at the dataset.</summary>
 	public enum PpsDataSetMetaData
 	{
-		/// <summary>Titel der Datensammlung.</summary>
+		/// <summary>Sets a nice title for the document data.</summary>
 		Caption,
 		/// <summary>Default pane uri</summary>
 		DefaultPaneUri

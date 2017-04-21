@@ -39,8 +39,12 @@ namespace TecWare.PPSn.Data
 		Caption,
 		/// <summary>Beschreibungstext der Spalte</summary>
 		Description,
-		/// <summary></summary>
-		NotNull
+		/// <summary>Is this column nullable.</summary>
+		Nullable,
+		/// <summary>Default value for the column, if there is no value given (only used on client site database, currently)</summary>
+		Default,
+		/// <summary>Is the column source for the synchronization or load (default is the column name)</summary>
+		SourceColumn
 	} // enum PpsDataColumnMetaData
 
 	#endregion
@@ -185,14 +189,17 @@ namespace TecWare.PPSn.Data
 	/// <summary>Basisklasse für die Spaltendefinitionen.</summary>
 	public abstract class PpsDataColumnDefinition : IDataColumn, IDynamicMetaObjectProvider
 	{
-		#region -- WellKnownTypes ---------------------------------------------------------
+		#region -- WellKnownTypes -------------------------------------------------------
 
 		/// <summary>Definiert die bekannten Meta Informationen.</summary>
 		private static readonly Dictionary<string, Type> wellknownMetaTypes = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
 		{
-			{ PpsDataColumnMetaData.MaxLength.ToString(), typeof(int) },
-			{ PpsDataColumnMetaData.Caption.ToString(), typeof(string) },
-			{ PpsDataColumnMetaData.Description.ToString(), typeof(string) }
+			{ nameof(PpsDataColumnMetaData.MaxLength), typeof(int) },
+			{ nameof(PpsDataColumnMetaData.Caption), typeof(string) },
+			{ nameof(PpsDataColumnMetaData.Description), typeof(string) },
+			{ nameof(PpsDataColumnMetaData.Nullable), typeof(bool) },
+			{ nameof(PpsDataColumnMetaData.Default), typeof(string) },
+			{ nameof(PpsDataColumnMetaData.SourceColumn), typeof(string) }
 		};
 
 		#endregion

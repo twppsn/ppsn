@@ -287,7 +287,7 @@ namespace TecWare.PPSn.Data
 				return row.IsValueModified(column.Index);
 			} // func ShouldSerializeValue
 
-			public bool IsNullable => !column.Meta.GetProperty<bool>(PpsDataColumnMetaData.NotNull, false);
+			public bool IsNullable => !column.Meta.GetProperty(PpsDataColumnMetaData.Nullable, false);
 		} // class PpsColumnPropertyDescriptor
 
 		#endregion
