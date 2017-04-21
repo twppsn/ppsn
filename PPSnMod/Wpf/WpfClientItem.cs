@@ -1060,7 +1060,7 @@ namespace TecWare.PPSn.Server.Wpf
 						columnNames[i] = "c" + i.ToString();
 
 						var targetColumn = table.Columns[i];
-						var syncSourceColumnName = targetColumn.Meta.GetProperty("syncSource", targetColumn.Name);
+						var syncSourceColumnName = targetColumn.Meta.GetProperty(PpsDataColumnMetaData.SourceColumn, targetColumn.Name);
 						var sourceColumnIndex = syncSourceColumnName == "#" ? -1 : ((IDataColumns)rows).FindColumnIndex(syncSourceColumnName);
 						if (sourceColumnIndex == -1)
 						{

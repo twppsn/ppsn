@@ -64,6 +64,9 @@
 			<xs:enumeration value="displayName" />
 			<xs:enumeration value="maxLength" />
 			<xs:enumeration value="dataType" />
+			<xs:enumeration value="nullable" />
+			<xs:enumeration value="default" />
+			<xs:enumeration value="sourceColumn" />
 		</xs:restriction>
 	</xs:simpleType>
 

@@ -37,7 +37,7 @@
 			<pps:field name="sys.Fields.ContentSize" dataType="long" />
 			<pps:field name="sys.Fields.LastModificationStamp" dataType="long" />
 			<pps:field name="sys.Fields.IsUpdated" dataType="bit">
-				<pps:attribute name="syncSource">#</pps:attribute>
+				<pps:attribute name="sourceColumn">#</pps:attribute>
 				<pps:attribute name="IsNull">true</pps:attribute>
 			</pps:field>
 			<pps:field name="sys.Fields.PrimaryKey" dataType="long" />
@@ -162,13 +162,13 @@
 					<pps:meta name="syncType">None</pps:meta>
 					<pps:column name="_rowId" fieldName="sys.Fields.PrimaryKey" isPrimary="true" />
 					<pps:column name="SchemaStamp" fieldName="sys.Fields.LastModificationStamp">
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					<pps:column name="SchemaContent" fieldName="sys.Fields.Blob">
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					<pps:column name="SyncStamp" fieldName="sys.Fields.LastModificationStamp">
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 				</pps:table>
 
@@ -182,36 +182,36 @@
 					<pps:meta name="syncType">TimeStamp: wpf.sync, ContentLastModification</pps:meta>
 					<pps:column name="Path" isPrimary="true" fieldName="sys.Fields.Path" />
 					<pps:column name="ContentType" fieldName="sys.Fields.ContentType">
-						<pps:meta name="syncSource">#</pps:meta>
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					<pps:column name="ContentEncoding" fieldName="sys.Fields.ContentEncoding">
-						<pps:meta name="syncSource">#</pps:meta>
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					<pps:column name="LocalContentSize" fieldName="sys.Fields.ContentSize">
-						<pps:meta name="syncSource">#</pps:meta>
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					<pps:column name="ServerContentSize" fieldName="sys.Fields.ContentSize">
-						<pps:meta name="syncSource">Length</pps:meta>
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="sourceColumn">Length</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					<pps:column name="LocalContentLastModification" fieldName="sys.Fields.LastModificationStamp">
-						<pps:meta name="syncSource">#</pps:meta>
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					<pps:column name="ServerContentLastModification" fieldName="sys.Fields.LastModificationStamp">
-						<pps:meta name="syncSource">LastWriteTime</pps:meta>
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="sourceColumn">LastWriteTime</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					<pps:column name="Content" fieldName="sys.Fields.Blob">
-						<pps:meta name="syncSource">#</pps:meta>
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					<pps:column name="LocalPath" fieldName="sys.Fields.Path">
-						<pps:meta name="syncSource">#</pps:meta>
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					<pps:column name="_IsUpdated" fieldName="sys.Fields.IsUpdated" />
 				</pps:table>
@@ -233,22 +233,22 @@
 					<pps:column name="RemoteHeadRevId" fieldName="dbo.Objk.HeadRevId" />
 
 					<pps:column name="PulledRevId" fieldName="sys.Fields.Long">
-						<pps:meta name="syncSource">#</pps:meta>
+						<pps:meta name="sourceColumn">#</pps:meta>
 						<pps:meta name="IsNull">true</pps:meta>
 					</pps:column>
 
 					<pps:column name="DocumentIsChanged" fieldName="sys.Fields.Bit">
 						<!-- obsolete, use _IsUpdated -->
-						<pps:meta name="syncSource">#</pps:meta>
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					<pps:column name="DocumentIsLinked" fieldName="sys.Fields.Text">
-						<pps:meta name="syncSource">#</pps:meta>
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					<pps:column name="Document" fieldName="sys.Fields.Blob">
-						<pps:meta name="syncSource">#</pps:meta>
-						<pps:meta name="IsNull">true</pps:meta>
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 
 					<pps:column name="_IsUpdated" fieldName="sys.Fields.IsUpdated" />
@@ -265,12 +265,12 @@
 					<pps:column name="UserId" fieldName="dbo.ObjT.UserId" />
 
 					<pps:column name="IsChanged" fieldName="sys.Fields.Bit">
-						<pps:meta name="syncSource">#</pps:meta>
-						<pps:meta name="Default">0</pps:meta>
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="default">0</pps:meta>
 					</pps:column>
 					<pps:column name="IsRemoved" fieldName="sys.Fields.Bit">
-						<pps:meta name="syncSource">#</pps:meta>
-						<pps:meta name="Default">0</pps:meta>
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="default">0</pps:meta>
 					</pps:column>
 				</pps:table>
 
@@ -283,8 +283,8 @@
 					<pps:column name="OnDelete" fieldName="dbo.Objl.OnDelete" />
 
 					<pps:column name="IsRemoved" fieldName="sys.Fields.Bit">
-						<pps:meta name="syncSource">#</pps:meta>
-						<pps:meta name="Default">0</pps:meta>
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="default">0</pps:meta>
 					</pps:column>
 				</pps:table>
 			
