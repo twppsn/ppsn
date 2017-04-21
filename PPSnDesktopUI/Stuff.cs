@@ -107,6 +107,8 @@ namespace TecWare.PPSn
 
 	public static class StuffDB
 	{
+		public const string CommandTextKey = "CommandText";
+
 		public static DbParameter AddParameter(this DbCommand command, string parameterName, DbType dbType, object value = null)
 		{
 			var param = command.CreateParameter();
@@ -125,7 +127,7 @@ namespace TecWare.PPSn
 			}
 			catch (DbException e)
 			{
-				e.Data["CommandText"] = command.CommandText;
+				e.Data[CommandTextKey] = command.CommandText;
 				throw;
 			}
 		} // func ExecuteReaderEx
@@ -138,7 +140,7 @@ namespace TecWare.PPSn
 			}
 			catch (DbException e)
 			{
-				e.Data["CommandText"] = command.CommandText;
+				e.Data[CommandTextKey] = command.CommandText;
 				throw;
 			}
 		} // func ExecuteReaderEx
@@ -151,7 +153,7 @@ namespace TecWare.PPSn
 			}
 			catch (DbException e)
 			{
-				e.Data["CommandText"] = command.CommandText;
+				e.Data[CommandTextKey] = command.CommandText;
 				throw;
 			}
 		} // func ExecuteScalarEx

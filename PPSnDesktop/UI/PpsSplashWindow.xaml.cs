@@ -109,6 +109,7 @@ namespace TecWare.PPSn.UI
 
 						OnPropertyChanged(nameof(IsUserNameEnabled));
 						OnPropertyChanged(nameof(IsPasswordEnabled));
+						OnPropertyChanged(nameof(IsPasswordSaveEnabled));
 						OnPropertyChanged(nameof(IsValid));
 					}
 				}
@@ -123,8 +124,11 @@ namespace TecWare.PPSn.UI
 					{
 						currentLogin.UserName = value;
 						if (currentLogin.IsDefaultUserName) // clear password
+						{
 							parent.pbPassword.Password = String.Empty;
-
+							SavePassword = false;
+							OnPropertyChanged(nameof(SavePassword));
+						}
 						OnPropertyChanged(nameof(UserName));
 						OnPropertyChanged(nameof(IsPasswordEnabled));
 						Validate(false);
@@ -135,16 +139,19 @@ namespace TecWare.PPSn.UI
 			public void Validate(bool passwordHasChanged)
 			{
 				if (passwordHasChanged)
+				{
 					this.passwordHasChanged = passwordHasChanged;
+					OnPropertyChanged(nameof(IsPasswordSaveEnabled));
+				}
 				OnPropertyChanged(nameof(IsValid));
 			} // proc Validate
 
 			public bool IsUserNameEnabled => currentLogin != null;
 			public bool IsPasswordEnabled => currentLogin != null && !currentLogin.IsDefaultUserName;
+			public bool IsPasswordSaveEnabled => currentLogin != null && !currentLogin.IsDefaultUserName && HasParentPassword;
+			public bool IsValid => currentLogin != null && (currentLogin.IsDefaultUserName || HasParentPassword);
 
 			public bool HasParentPassword => parent.pbPassword.SecurePassword != null && parent.pbPassword.SecurePassword.Length > 0;
-
-			public bool IsValid => currentLogin != null && (currentLogin.IsDefaultUserName || HasParentPassword);
 
 			public bool SavePassword
 			{
@@ -226,7 +233,6 @@ namespace TecWare.PPSn.UI
 
 			ActivePage = Panes.Status;
 			SetValue(loginStatePropertyKey, loginStateUnSafe = new LoginStateData(this));
-
 			this.DataContext = this;
 		} // ctor
 
@@ -458,5 +464,7 @@ namespace TecWare.PPSn.UI
 
 		private void PasswordChanged(object sender, RoutedEventArgs e)
 			=> loginStateUnSafe.Validate(true);
+
 	} // class PpsSplashWindow
 }
+;

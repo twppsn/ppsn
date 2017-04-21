@@ -155,6 +155,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Controls\text.fx" />
+    <Resource Include="Images\SplashLogo.png" />
     <None Include="packages.config" />
     <None Include="ppsn.licenseheader" />
     <Resource Include="Images\SizeGrip.png" />

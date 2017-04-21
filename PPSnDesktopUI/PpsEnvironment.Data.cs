@@ -155,8 +155,20 @@ namespace TecWare.PPSn
 		public DbCommand CreateNativeCommand(string commandText = null)
 			=> new SQLiteCommand(commandText, connection, transaction);
 
-		public long GetNextLocalId(string tableName, string primaryKey)
-			=> -1;
+		public long GetNextLocalId(PpsMasterDataTransaction transaction, string tableName, string primaryKey)
+		{
+			using (var cmd = transaction.CreateNativeCommand("SELECT min([" + primaryKey + "]) FROM main.[" + tableName + "]"))
+			{
+				var nextIdObject = cmd.ExecuteScalarEx();
+				if (nextIdObject == null)
+					return -1;
+				else
+				{
+					var nextId = nextIdObject.ChangeType<long>();
+					return nextId < 0 ? nextId - 1 : -1;
+				}
+			}
+		} // func GetNextLocalId
 
 		public long LastInsertRowId => connection.LastInsertRowId;
 
@@ -405,7 +417,7 @@ namespace TecWare.PPSn
 					// todo: check default
 					if ((remoteColumn.Name == localColumn.Name)
 						&& (ConvertDataTypeToSqLite(remoteColumn.DataType) == ConvertDataTypeToSqLite(localColumn.DataType))
-						&& (remoteColumn.Attributes.GetProperty("IsNull", false) == localColumn.Attributes.GetProperty("IsNull", false))
+						&& (remoteColumn.Attributes.GetProperty("Nullable", false) == localColumn.Attributes.GetProperty("Nullable", false))
 						&& (remoteColumn.Attributes.GetProperty("IsPrimary", false) == localColumn.Attributes.GetProperty("IsPrimary", false))
 						)
 					{
@@ -434,7 +446,14 @@ namespace TecWare.PPSn
 					// create a new table, according to new Scheme...
 					CreateTableScript(commands, tableName, remoteColumns, localIndexes.Select(c => c.Item1).ToArray());
 					// copy
-					commands.Add($"INSERT INTO '{tableName}' ({String.Join(", ", sameColumns)}) SELECT {String.Join(", ", sameColumns)} FROM '{tableName}_temp';");
+					var insertColumns = new List<string>(sameColumns);
+					for (var i = 0; i < newColumns.Count; i++)
+					{
+						var idx = Array.FindIndex(localColumnsArray, c => String.Compare(c.Name, newColumns[i].Name, StringComparison.OrdinalIgnoreCase) == 0);
+						if (idx >= 0)
+							insertColumns.Add(newColumns[i].Name);
+					}
+					commands.Add($"INSERT INTO '{tableName}' ({String.Join(", ", insertColumns)}) SELECT {String.Join(", ", insertColumns)} FROM '{tableName}_temp';");
 
 					// drop old local table
 					commands.Add($"DROP TABLE '{tableName}_temp';");  // no IF EXISTS - at this point the table must exist or error
@@ -496,7 +515,7 @@ namespace TecWare.PPSn
 		private static StringBuilder CreateCommandColumnAttribute(StringBuilder commandText, IDataColumn column)
 		{
 			// not? null
-			if (!column.Attributes.GetProperty("IsNull", false))
+			if (!column.Attributes.GetProperty("Nullable", false))
 				commandText.Append(" NOT");
 			commandText.Append(" NULL");
 
@@ -574,7 +593,7 @@ namespace TecWare.PPSn
 				for (var i = 0; i < table.Columns.Count; i++)
 				{
 					var column = table.Columns[i];
-					var syncSourceColumn = column.Meta.GetProperty("syncSource", String.Empty);
+					var syncSourceColumn = column.Meta.GetProperty(PpsDataColumnMetaData.SourceColumn, String.Empty);
 					if (syncSourceColumn == "#")
 					{
 						if (column == physPrimaryKey)
@@ -1405,7 +1424,9 @@ namespace TecWare.PPSn
 
 			(typeof(string), "Text", DbType.String),
 			(typeof(Guid), "Guid", DbType.Guid),
-			(typeof(byte[]), "Blob", DbType.Binary)
+			(typeof(byte[]), "Blob", DbType.Binary),
+			// alt
+			(typeof(long), "Integer", DbType.Int64)
 		};
 
 		private static Type ConvertSqLiteToDataType(string dataType)
@@ -1435,27 +1456,10 @@ namespace TecWare.PPSn
 
 		private static object ConvertStringToSQLiteValue(string value, DbType type)
 		{
-			switch (type)
-			{
-				case DbType.Int64:
-					return Procs.ChangeType(value, typeof(long));
-				case DbType.Double:
-					return Procs.ChangeType(value, typeof(Double));
-				case DbType.Decimal:
-					return Procs.ChangeType(value, typeof(Decimal));
-				case DbType.DateTime:
-					return Procs.ChangeType(value, typeof(DateTime));
-				case DbType.String:
-					return value;
-				case DbType.Boolean:
-					return Procs.ChangeType(value, typeof(bool));
-				case DbType.Guid:
-					return Procs.ChangeType(value, typeof(Guid));
-				case DbType.Binary:
-					throw new NotImplementedException("todo: ???");
-				default:
-					throw new ArgumentOutOfRangeException(nameof(type), type, $"DB-Type {type} is not supported.");
-			}
+			var index = Array.FindIndex(sqlLiteTypeMapping, c => c.DbType == type);
+			return index >= 0
+				? Procs.ChangeType(value, sqlLiteTypeMapping[index].Type)
+				: throw new ArgumentOutOfRangeException(nameof(type), type, $"DB-Type {type} is not supported.");
 		} // func ConvertStringToSQLiteValue
 
 		internal static bool CheckLocalTableExists(SQLiteConnection connection, string tableName)
@@ -1480,8 +1484,8 @@ namespace TecWare.PPSn
 							r.GetString(1),
 							r.IsDBNull(2) ? typeof(string) : ConvertSqLiteToDataType(r.GetString(2)),
 							new PropertyDictionary(
-								new PropertyValue("IsNull", r.IsDBNull(3) || !r.GetBoolean(3)),
-								new PropertyValue("Default", r.GetValue(4)?.ToString()),
+								new PropertyValue(nameof(PpsDataColumnMetaData.Nullable), r.IsDBNull(3) || !r.GetBoolean(3)),
+								new PropertyValue(nameof(PpsDataColumnMetaData.Default), r.GetValue(4)?.ToString()),
 								new PropertyValue("IsPrimary", !r.IsDBNull(5) && r.GetBoolean(5))
 							)
 						);
