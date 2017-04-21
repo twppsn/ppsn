@@ -86,31 +86,146 @@ namespace TecWare.PPSn
 			return hash;
 		}
 
+		/// <summary>
+		/// Nothing should be done
+		/// </summary>
 		[TestMethod]
 		public void PpsMasterDataImportTest_UnchangedTable()
 		{
 			var testtablelist = new List<TestTable>();
 
 			// table1
-			var testtable1 = new TestTable("Table1");
+			var testtable1 = new TestTable("Table1", null, "'1'");
 			var testcolumn1 = new TestColumn("Column1", typeof(int), true, false, true, String.Empty);
 			testtable1.Columns.Add(testcolumn1);
 
 			testtablelist.Add(testtable1);
 			// table1
-			
-			var testdatabase = CreateTestDatabase(testtablelist);
+
+			// table SyncState
+			var syncstate = new TestTable("SyncState", null, $"'{testtable1.Name}', '1'");
+			var synccol1 = new TestColumn("Table", typeof(string), true, false, false, String.Empty);
+			var synccol2 = new TestColumn("Syncid", typeof(int), false, false, false, String.Empty);
+			syncstate.Columns.Add(synccol1);
+			syncstate.Columns.Add(synccol2);
+
+			testtablelist.Add(syncstate);
+			// table syncstate
+
+
 			var testdataset = CreateTestDataSet(testtablelist);
-			
-			using (testdatabase)
+
+			using (var testdatabase = CreateTestDatabase(testtablelist))
 			{
 				var commands = GetUpdateCommands(testdatabase, testdataset, CheckLocalTableExists(testdatabase, "SyncState"));
-
+				Assert.AreEqual(0, commands.Count);
+				commands = GetUpdateCommands(testdatabase, testdataset, !CheckLocalTableExists(testdatabase, "SyncState"));
 				Assert.AreEqual(0, commands.Count);
 			}
 		}
-		
+
+		/// <summary>
+		/// The table must be deleted from the SyncTable
+		/// The table must be altered
+		/// The data must be Upgraded
+		/// </summary>
+		[TestMethod]
+		public void PpsMasterDataImportTest_AddColumnUpdate()
+		{
+			var testtablelist = new List<TestTable>();
+
+			// table1
+			var testtable1 = new TestTable("Table1", null, "'1', '1'");
+			var testcolumn1 = new TestColumn("Column1", typeof(int), true, false, true, String.Empty);
+			var testcolumn2 = new TestColumn("Column2", typeof(string), false, true, false, "Teststring");
+			var testcolumn3 = new TestColumn("_IsUpdated", typeof(string), false, true, false, String.Empty);
+			testtable1.Columns.Add(testcolumn1);
+			testtable1.Columns.Add(testcolumn2);
+			testtable1.Columns.Add(testcolumn3);
+
+			testtablelist.Add(testtable1);
+			// table1
+
+			// table SyncState
+			var syncstate = new TestTable("SyncState", null, $"'{testtable1.Name}', '1'");
+			var synccol1 = new TestColumn("Table", typeof(string), true, false, false, String.Empty);
+			var synccol2 = new TestColumn("Syncid", typeof(int), false, true, false, String.Empty);
+			syncstate.Columns.Add(synccol1);
+			syncstate.Columns.Add(synccol2);
+
+			testtablelist.Add(syncstate);
+			// table syncstate
+
+
+			var testdataset = CreateTestDataSet(testtablelist);
+
+			testtablelist[0].Columns.RemoveAt(1);
+
+			using (var testdatabase = CreateTestDatabase(testtablelist))
+			{
+				var commands = GetUpdateCommands(testdatabase, testdataset, CheckLocalTableExists(testdatabase, "SyncState"));
+
+				using (var transaction = testdatabase.BeginTransaction())
+				{
+					if (commands.Count > 0)
+						ExecuteUpdateScript(testdatabase, transaction, commands);
+				}
+
+				Assert.AreEqual(2, commands.Count);
+			}
+		}
+
+		[TestMethod]
+		public void PpsMasterDataImportTest_AddColumnRecreate()
+		{
+			var testtablelist = new List<TestTable>();
+
+			// table1
+			var testtable1 = new TestTable("Table1", null, "'1'");
+			var testcolumn1 = new TestColumn("Column1", typeof(int), true, false, true, String.Empty);
+			var testcolumn2 = new TestColumn("Column2", typeof(string), false, true, false, "Teststring");
+			testtable1.Columns.Add(testcolumn1);
+			testtable1.Columns.Add(testcolumn2);
+
+			testtablelist.Add(testtable1);
+			// table1
+
+			// table SyncState
+			var syncstate = new TestTable("SyncState", null, $"'{testtable1.Name}', '1'");
+			var synccol1 = new TestColumn("Table", typeof(string), true, false, false, String.Empty);
+			var synccol2 = new TestColumn("Syncid", typeof(int), false, true, false, String.Empty);
+			syncstate.Columns.Add(synccol1);
+			syncstate.Columns.Add(synccol2);
+
+			testtablelist.Add(syncstate);
+			// table syncstate
+
+
+			var testdataset = CreateTestDataSet(testtablelist);
+
+			testtablelist[0].Columns.RemoveAt(1);
+
+			using (var testdatabase = CreateTestDatabase(testtablelist))
+			{
+				var commands = GetUpdateCommands(testdatabase, testdataset, CheckLocalTableExists(testdatabase, "SyncState"));
+
+				using (var transaction = testdatabase.BeginTransaction())
+				{
+					if (commands.Count > 0)
+						ExecuteUpdateScript(testdatabase, transaction, commands);
+				}
+
+				Assert.AreEqual(4, commands.Count);
+			}
+		}
+
 		#region -- Accessors ------------------------------------------------------------
+
+		private void ExecuteUpdateScript(SQLiteConnection connection, SQLiteTransaction transaction, IEnumerable<string> commands)
+		{
+			PrivateType accessor = new PrivateType(typeof(PpsMasterData));
+			accessor.InvokeStatic("ExecuteUpdateScript", connection, transaction, commands);
+		}
 
 		private string ConvertDataTypeToSqLite(Type type)
 		{
@@ -143,24 +258,24 @@ namespace TecWare.PPSn
 				List<object> content = new List<object>();
 				content.Add(new XAttribute("name", table.Name));
 
-				foreach(var column in table.Columns)
+				foreach (var column in table.Columns)
 				{
 					var xmlcolumn = XElement.Parse($"<column name=\"{column.Name}\" dataType=\"{column.DataType}\" isPrimary=\"{column.IsPrimary}\" isIdentity=\"{column.IsIndex}\">" +
 														$"<meta>" +
 														 $"<displayName dataType=\"string\">dbo.test.{column.Name}</displayName>" +
-														 $"<IsNull dataType=\"bool\">{column.IsNull}</IsNull>" +
+														 $"<nullable dataType=\"bool\">{column.Nullable}</nullable>" +
 														 $"<IsIdentity dataType=\"bool\">{column.IsIndex}</IsIdentity>" +
 														"</meta>" +
 													  "</column>");
 					content.Add(xmlcolumn);
 				}
 
-				var xmltable = new XElement("table",content);
+				var xmltable = new XElement("table", content);
 				tables.Add(xmltable);
 			}
 
 			var schema = new XElement("schema", tables);
-			
+
 			return new PpsDataSetDefinitionDesktop(null, "masterDataSet", schema);
 		}
 
@@ -186,6 +301,7 @@ namespace TecWare.PPSn
 							createcmd.Append($" {ConvertDataTypeToSqLite(column.DataType)}");
 							createcmd.Append($" {column.PrimaryString}");
 							createcmd.Append($" {column.NullString}");
+							createcmd.Append($" {column.DefaultString}");
 							createcmd.Append(",");
 
 							if (column.IsIndex)
@@ -200,6 +316,12 @@ namespace TecWare.PPSn
 						foreach (var indexcommand in indexcommands)
 						{
 							sqlite.CommandText = indexcommand;
+							sqlite.ExecuteNonQueryEx();
+						}
+
+						if (!String.IsNullOrWhiteSpace(table.FillString))
+						{
+							sqlite.CommandText = $"INSERT INTO '{table.Name}' VALUES ({table.FillString});";
 							sqlite.ExecuteNonQueryEx();
 						}
 					}
@@ -228,15 +350,18 @@ namespace TecWare.PPSn
 		private class TestTable
 		{
 			private string name;
+			private string fillstring;
 			private List<TestColumn> columns;
 
-			public TestTable(string Name, List<TestColumn> Columns = null)
+			public TestTable(string Name, List<TestColumn> Columns = null, string FillString = null)
 			{
 				this.name = Name;
 				this.columns = (Columns == null) ? new List<TestColumn>() : Columns;
+				this.fillstring = FillString;
 			}
 
 			public string Name { get { return name; } set { name = value; } }
+			public string FillString { get { return fillstring; } set { fillstring = value; } }
 			public List<TestColumn> Columns { get { return columns; } set { columns = value; } }
 
 		}
@@ -246,16 +371,16 @@ namespace TecWare.PPSn
 			private string name;
 			private Type datatype;
 			private bool isprimary;
-			private bool isnull;
+			private bool nullable;
 			private bool isindex;
 			private string defaultvalue;
 
-			public TestColumn(string Name, Type DataType, bool IsPrimary, bool IsNull, bool IsIndex, string DefaultValue)
+			public TestColumn(string Name, Type DataType, bool IsPrimary, bool Nullable, bool IsIndex, string DefaultValue)
 			{
 				this.name = Name;
 				this.datatype = DataType;
 				this.isprimary = IsPrimary;
-				this.isnull = IsNull;
+				this.nullable = Nullable;
 				this.isindex = IsIndex;
 				this.defaultvalue = DefaultValue;
 			}
@@ -264,10 +389,11 @@ namespace TecWare.PPSn
 			public Type DataType { get { return datatype; } set { datatype = value; } }
 			public bool IsPrimary { get { return isprimary; } set { isprimary = value; } }
 			public string PrimaryString => isprimary ? " PRIMARY KEY" : String.Empty;
-			public bool IsNull { get { return isnull; } set { isnull = value; } }
-			public string NullString => isnull ? " NULL" : " NOT NULL";
+			public bool Nullable { get { return nullable; } set { nullable = value; } }
+			public string NullString => nullable ? " NULL" : " NOT NULL";
 			public bool IsIndex { get { return isindex; } set { isindex = value; } }
 			public string DefaultValue { get { return defaultvalue; } set { defaultvalue = value; } }
+			public string DefaultString => String.IsNullOrWhiteSpace(defaultvalue) ? String.Empty : $" DEFAULT '{defaultvalue}'";
 		}
 
 		#endregion
