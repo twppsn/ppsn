@@ -19,157 +19,26 @@ using TecWare.PPSn.Data;
 using System.Xml.Linq;
 using System.Data.SQLite;
 using System.Collections.Generic;
+using System.Text;
 
 namespace TecWare.PPSn
 {
 	[TestClass]
 	public class SchemeUpgrade
 	{
-		private enum TestCase
-		{
-			SameTable,
-			AddColumn,
-			RemoveColumn,
-			ChangeColumnType,
-			DropableTable
-		}
-		
-		/// <summary>
-		/// Compiles the dataset according to the test case.
-		/// </summary>
-		/// <param name="testcase"></param>
-		/// <returns></returns>
-		private PpsDataSetDefinitionDesktop GetMasterDataScheme(TestCase testcase)
-		{
-			#region -- XElements --
-			var column1 = XElement.Parse("<column name=\"Column1\" dataType=\"long\" isPrimary=\"true\" isIdentity=\"true\">" +
-														"<meta>" +
-														 "<displayName dataType=\"string\">dbo.Knst.Id</displayName>" +
-														 "<SqlType dataType=\"System.Data.SqlDbType\">BigInt</SqlType>" +
-														 "<MaxLength dataType=\"int\">8</MaxLength>" +
-														 "<Precision dataType=\"int\">19</Precision>" +
-														 "<Scale dataType=\"int\">0</Scale>" +
-														 "<IsNull dataType=\"bool\">false</IsNull>" +
-														 "<IsIdentity dataType=\"bool\">true</IsIdentity>" +
-														"</meta>" +
-													  "</column>");
-			var column2 = XElement.Parse("<column name =\"Column2\" dataType=\"string\">" +
-														"<meta>" +
-														 "<displayName dataType=\"string\">dbo.Knst.Id</displayName>" +
-														 "<SqlType dataType=\"System.Data.SqlDbType\">NVarChar</SqlType>" +
-														 "<MaxLength dataType=\"int\">8</MaxLength>" +
-														 "<Precision dataType=\"int\">19</Precision>" +
-														 "<Scale dataType=\"int\">0</Scale>" +
-														 "<IsNull dataType=\"bool\">true</IsNull>" +
-														 "<IsIdentity dataType=\"bool\">false</IsIdentity>" +
-														"</meta>" +
-													  "</column>");
-			var column2int = XElement.Parse("<column name =\"Column2\" dataType=\"int\">" +
-														"<meta>" +
-														 "<displayName dataType=\"string\">dbo.Knst.Id</displayName>" +
-														 "<SqlType dataType=\"System.Data.SqlDbType\">NVarChar</SqlType>" +
-														 "<MaxLength dataType=\"int\">8</MaxLength>" +
-														 "<Precision dataType=\"int\">19</Precision>" +
-														 "<Scale dataType=\"int\">0</Scale>" +
-														 "<IsNull dataType=\"bool\">true</IsNull>" +
-														 "<IsIdentity dataType=\"bool\">false</IsIdentity>" +
-														"</meta>" +
-													  "</column>");
-			var column3 = XElement.Parse("<column name =\"Column3\" dataType=\"string\">" +
-														"<meta>" +
-														 "<Default dataType=\"string\">I am a default value.</Default>" +
-														 "<displayName dataType=\"string\">dbo.Knst.Id</displayName>" +
-														 "<SqlType dataType=\"System.Data.SqlDbType\">NVarChar</SqlType>" +
-														 "<MaxLength dataType=\"int\">8</MaxLength>" +
-														 "<Precision dataType=\"int\">19</Precision>" +
-														 "<Scale dataType=\"int\">0</Scale>" +
-														 "<IsNull dataType=\"bool\">true</IsNull>" +
-														 "<IsIdentity dataType=\"bool\">false</IsIdentity>" +
-														"</meta>" +
-													  "</column>");
-			var xMustImportMeta = XElement.Parse("<meta name=\"MustImport\">true</meta>");
-
-			#endregion
-
-			switch (testcase)
-			{
-				case TestCase.SameTable:
-					return new PpsDataSetDefinitionDesktop(null, "masterDataSet", new XElement("schema",
-																									     new XElement("table",
-																											  new XAttribute("name", "Table1"),
-																											  xMustImportMeta,
-																											  column1,
-																											  column2)));
-				case TestCase.AddColumn:
-					return new PpsDataSetDefinitionDesktop(null, "masterDataSet", new XElement("schema",
-																										  new XElement("table",
-																											  new XAttribute("name", "Table1"),
-																											  xMustImportMeta,
-																											  column1,
-																											  column2,
-																											  column3)));
-				case TestCase.RemoveColumn:
-					return new PpsDataSetDefinitionDesktop(null, "masterDataSet", new XElement("schema",
-																										  new XElement("table",
-																											  new XAttribute("name", "Table1"),
-																											  xMustImportMeta,
-																											  column1)));
-				case TestCase.ChangeColumnType:
-					return new PpsDataSetDefinitionDesktop(null, "masterDataSet", new XElement("schema",
-																										  new XElement("table",
-																											  new XAttribute("name", "Table1"),
-																											  xMustImportMeta,
-																											  column1,
-																											  column2int)));
-				case TestCase.DropableTable:
-					return new PpsDataSetDefinitionDesktop(null, "masterDataSet", new XElement("schema",
-																										  new XElement("table",
-																											  new XAttribute("name", "Table1"),
-																											  column1,
-																											  column2)));
-			}
-
-			return null;
-		}
-
-		/// <summary>
-		/// Creates the database for the tests
-		/// two colums, int and text
-		/// with one row of actual data
-		/// </summary>
-		/// <returns></returns>
-		private SQLiteConnection GetTestDatabase()
-		{
-			var sqliteDataBase = new SQLiteConnection("Data Source=:memory:;DateTimeKind=Utc;foreign keys=true;new=true;");
-			{
-				sqliteDataBase.Open();
-
-				using (var sqlite = sqliteDataBase.CreateCommand())
-				{
-					// initialize the table
-					sqlite.CommandText = "CREATE TABLE 'Table1' ( [Column1] INTEGER PRIMARY KEY NOT NULL, [Column2] TEXT NULL);";
-					sqlite.ExecuteNonQuery();
-					sqlite.CommandText = "CREATE UNIQUE INDEX 'Table1_Column1_index' ON 'Table1'([Column1]);";
-					sqlite.ExecuteNonQuery();
-					sqlite.CommandText = "INSERT INTO 'Table1' VALUES (1,'Testtext');";
-					sqlite.ExecuteNonQuery();
-				}
-			}
-			return sqliteDataBase;
-		}
-
 		/// <summary>
 		/// Not really the Hash - but pretty close
 		/// </summary>
 		/// <returns></returns>
 		private string GetDatabaseHash(SQLiteConnection sqliteDatabase)
 		{
+			// ToDo: rk: make me smart
 			var hash = String.Empty;
 			using (var sqlite = sqliteDatabase.CreateCommand())
 			{
 				// Tables
 				sqlite.CommandText = "SELECT [name] FROM 'sqlite_master' WHERE [type] = 'table';";
-				var reader = sqlite.ExecuteReader();
+				var reader = sqlite.ExecuteReaderEx();
 				hash += "\n--Tables:\n";
 				while (reader.Read())
 				{
@@ -178,10 +47,10 @@ namespace TecWare.PPSn
 					hash += '\n';
 				}
 				reader.Close();
-				
+
 				// Scheme
 				sqlite.CommandText = "PRAGMA table_info('Table1');";
-				reader = sqlite.ExecuteReader();
+				reader = sqlite.ExecuteReaderEx();
 				hash += "--Scheme:\n";
 				while (reader.Read())
 				{
@@ -193,7 +62,7 @@ namespace TecWare.PPSn
 
 				// Indexes
 				sqlite.CommandText = "SELECT [name] FROM 'sqlite_master' WHERE ([type] = 'index' AND [tbl_name] = 'Table1');";
-				reader = sqlite.ExecuteReader();
+				reader = sqlite.ExecuteReaderEx();
 				hash += "--Indexes:\n";
 				while (reader.Read())
 				{
@@ -205,7 +74,7 @@ namespace TecWare.PPSn
 
 				// Data
 				sqlite.CommandText = "SELECT * FROM 'Table1';";
-				reader = sqlite.ExecuteReader();
+				reader = sqlite.ExecuteReaderEx();
 				hash += "--Data:\n";
 				while (reader.Read())
 				{
@@ -218,187 +87,190 @@ namespace TecWare.PPSn
 		}
 
 		[TestMethod]
-		public void PpsMasterDataImportTest_mustImport_Same()
+		public void PpsMasterDataImportTest_UnchangedTable()
 		{
-			using (var sqliteDataBase = GetTestDatabase())
+			var testtablelist = new List<TestTable>();
+
+			// table1
+			var testtable1 = new TestTable("Table1");
+			var testcolumn1 = new TestColumn("Column1", typeof(int), true, false, true, String.Empty);
+			testtable1.Columns.Add(testcolumn1);
+
+			testtablelist.Add(testtable1);
+			// table1
+			
+			var testdatabase = CreateTestDatabase(testtablelist);
+			var testdataset = CreateTestDataSet(testtablelist);
+			
+			using (testdatabase)
 			{
-				var beforeState = GetDatabaseHash(sqliteDataBase);
-
-				var schema = GetMasterDataScheme(TestCase.SameTable);
-
-				PrivateType accessor = new PrivateType(typeof(PpsMasterData));
-
-				var commands = (IReadOnlyList<string>)accessor.InvokeStatic("GetUpdateCommands", sqliteDataBase, schema);
+				var commands = GetUpdateCommands(testdatabase, testdataset, CheckLocalTableExists(testdatabase, "SyncState"));
 
 				Assert.AreEqual(0, commands.Count);
 			}
 		}
 		
-		[TestMethod]
-		public void PpsMasterDataImportTest_mustImport_AddColumn()
+		#region -- Accessors ------------------------------------------------------------
+
+		private string ConvertDataTypeToSqLite(Type type)
 		{
-			using (var sqliteDataBase = GetTestDatabase())
-			{
-				var beforeState = GetDatabaseHash(sqliteDataBase);
-
-				var schema = GetMasterDataScheme(TestCase.AddColumn);
-
-				PrivateType accessor = new PrivateType(typeof(PpsMasterData));
-
-				var commands = (IReadOnlyList<string>)accessor.InvokeStatic("GetUpdateCommands", sqliteDataBase, schema);
-
-				try
-				{
-					PrivateType accessor2 = new PrivateType(typeof(PpsMasterData));
-
-					accessor.InvokeStatic("ExecuteUpdateScript", sqliteDataBase, sqliteDataBase.BeginTransaction(),commands);
-				}
-				catch (Exception e)
-				{
-					Assert.Fail("The Database throw an Exception while being upgraded." + "\n" + e.Message);
-				}
-
-				var afterState = GetDatabaseHash(sqliteDataBase);
-
-				// there must be one Column more, with a default value
-				var expectedText = "\n--Tables:\nTable1\t\n--Scheme:\n0\tColumn1\tINTEGER\t1\t\t1\t\n1\tColumn2\tTEXT\t0\t\t0\t\n2\tColumn3\tTEXT\t0\t'I am a default value.'\t0\t\n--Indexes:\nTable1_Column1_index\t\n--Data:\n1\tTesttext\tI am a default value.\t\n";
-				
-				Assert.AreEqual(expectedText.Replace("\t\t", "\tnull\t"), afterState.Replace("\t\t", "\tnull\t"));
-			}
-		}
-		
-		[TestMethod]
-		public void PpsMasterDataImportTest_mustImport_RemoveColumn()
-		{
-			using (var sqliteDataBase = GetTestDatabase())
-			{
-				var beforeState = GetDatabaseHash(sqliteDataBase);
-
-				var schema = GetMasterDataScheme(TestCase.RemoveColumn);
-
-				PrivateType accessor = new PrivateType(typeof(PpsMasterData));
-
-				var commands = (IReadOnlyList<string>)accessor.InvokeStatic("GetUpdateCommands", sqliteDataBase, schema);
-
-				try
-				{
-					PrivateType accessor2 = new PrivateType(typeof(PpsMasterData));
-
-					accessor.InvokeStatic("ExecuteUpdateScript", sqliteDataBase, sqliteDataBase.BeginTransaction(), commands);
-				}
-				catch (Exception e)
-				{
-					Assert.Fail("The Database throw an Exception while being upgraded." + "\n" + e.Message);
-				}
-
-				var afterState = GetDatabaseHash(sqliteDataBase);
-
-				// there must be one Column more, with a default value
-				var expectedText = "\n--Tables:\nTable1\t\n--Scheme:\n0\tColumn1\tINTEGER\t1\t\t1\t\n--Indexes:\nTable1_Column1_index\t\n--Data:\n1\t\n";
-
-				Assert.AreEqual(expectedText.Replace("\t\t", "\tnull\t"), afterState.Replace("\t\t", "\tnull\t"));
-			}
-		}
-		
-		[TestMethod]
-		public void PpsMasterDataImportTest_mustImport_ChangeColumnType()
-		{
-			using (var sqliteDataBase = GetTestDatabase())
-			{
-				var beforeState = GetDatabaseHash(sqliteDataBase);
-
-				var schema = GetMasterDataScheme(TestCase.ChangeColumnType);
-
-				PrivateType accessor = new PrivateType(typeof(PpsMasterData));
-
-				var commands = (IReadOnlyList<string>)accessor.InvokeStatic("GetUpdateCommands", sqliteDataBase, schema);
-				try
-				{
-					PrivateType accessor2 = new PrivateType(typeof(PpsMasterData));
-
-					accessor.InvokeStatic("ExecuteUpdateScript", sqliteDataBase, sqliteDataBase.BeginTransaction(), commands);
-				}
-				catch (Exception e)
-				{
-					Assert.Fail("The Database throw an Exception while being upgraded." + "\n" + e.Message);
-				}
-
-				var afterState = GetDatabaseHash(sqliteDataBase);
-
-				// there must be one Column more, with a default value
-				var expectedText = "\n--Tables:\nTable1\t\n--Scheme:\n0\tColumn1\tINTEGER\t1\t\t1\t\n1\tColumn2\tINTEGER\t0\t\t0\t\n--Indexes:\nTable1_Column1_index\t\n--Data:\n1\t\t\n";
-
-				Assert.AreEqual(expectedText.Replace("\t\t","\tnull\t"), afterState.Replace("\t\t", "\tnull\t"));
-			}
+			PrivateType accessor = new PrivateType(typeof(PpsMasterData));
+			return (string)accessor.InvokeStatic("ConvertDataTypeToSqLite", type);
 		}
 
-		[TestMethod]
-		public void PpsMasterDataImportTest_Dropable()
+		private IReadOnlyList<string> GetUpdateCommands(SQLiteConnection sqliteDataBase, PpsDataSetDefinitionDesktop schema, bool syncStateTableExists)
 		{
-			using (var sqliteDataBase = GetTestDatabase())
-			{
-				var beforeState = GetDatabaseHash(sqliteDataBase);
-
-				var schema = GetMasterDataScheme(TestCase.DropableTable);
-
-				PrivateType accessor = new PrivateType(typeof(PpsMasterData));
-
-				var commands = (IReadOnlyList<string>)accessor.InvokeStatic("GetUpdateCommands", sqliteDataBase, schema);
-				try
-				{
-					PrivateType accessor2 = new PrivateType(typeof(PpsMasterData));
-
-					accessor.InvokeStatic("ExecuteUpdateScript", sqliteDataBase, sqliteDataBase.BeginTransaction(), commands);
-				}
-				catch (Exception e)
-				{
-					Assert.Fail("The Database throw an Exception while being upgraded."+"\n"+e.Message);
-				}
-
-				var afterState = GetDatabaseHash(sqliteDataBase);
-
-				// there must be one Column more, with a default value
-				var expectedText = "\n--Tables:\nTable1\t\n--Scheme:\n0\tColumn1\tINTEGER\t1\t\t1\t\n1\tColumn2\tTEXT\t0\t\t0\t\n--Indexes:\nTable1_Column1_index\t\n--Data:\n";
-
-				Assert.AreEqual(expectedText.Replace("\t\t", "\tnull\t"), afterState.Replace("\t\t", "\tnull\t"));
-			}
+			PrivateType accessor = new PrivateType(typeof(PpsMasterData));
+			return (IReadOnlyList<string>)accessor.InvokeStatic("GetUpdateCommands", sqliteDataBase, schema, syncStateTableExists);
 		}
 
-		[TestMethod]
-		public void PpsMasterDataImportTest_TemporaryTableUncreateable()
+		private bool CheckLocalTableExists(SQLiteConnection connection, string tableName)
 		{
-			using (var sqliteDataBase = GetTestDatabase())
-			{
-				using (var addTableCommand = sqliteDataBase.CreateCommand())
-				{
-					addTableCommand.CommandText = "CREATE TABLE 'Table1_temp' ([Column1] INTEGER PRIMARY KEY NOT NULL);";
-					addTableCommand.ExecuteNonQuery();
-				}
-
-				var beforeState = GetDatabaseHash(sqliteDataBase);
-
-				var schema = GetMasterDataScheme(TestCase.RemoveColumn);
-
-				PrivateType accessor = new PrivateType(typeof(PpsMasterData));
-
-				var commands = (IReadOnlyList<string>)accessor.InvokeStatic("GetUpdateCommands", sqliteDataBase, schema);
-				try
-				{
-					PrivateType accessor2 = new PrivateType(typeof(PpsMasterData));
-
-					accessor.InvokeStatic("ExecuteUpdateScript", sqliteDataBase, sqliteDataBase.BeginTransaction(), commands);
-				}
-				catch (Exception)
-				{
-					return;
-				}
-
-				var afterState = GetDatabaseHash(sqliteDataBase);
-
-				Assert.AreEqual(beforeState,afterState, "The database was supposed to throw an Exception and revert to the original state.");
-				Assert.Fail("The database was supposed to throw an Exception");
-			}
+			PrivateType accessor = new PrivateType(typeof(PpsMasterData));
+			return (bool)accessor.InvokeStatic("CheckLocalTableExists", connection, tableName);
 		}
+
+		#endregion
+
+		#region -- Helper Functions -----------------------------------------------------
+
+		private PpsDataSetDefinitionDesktop CreateTestDataSet(List<TestTable> Tables)
+		{
+			var tables = new List<XElement>();
+
+			foreach (var table in Tables)
+			{
+				List<object> content = new List<object>();
+				content.Add(new XAttribute("name", table.Name));
+
+				foreach(var column in table.Columns)
+				{
+					var xmlcolumn = XElement.Parse($"<column name=\"{column.Name}\" dataType=\"{column.DataType}\" isPrimary=\"{column.IsPrimary}\" isIdentity=\"{column.IsIndex}\">" +
+														$"<meta>" +
+														 $"<displayName dataType=\"string\">dbo.test.{column.Name}</displayName>" +
+														 $"<IsNull dataType=\"bool\">{column.IsNull}</IsNull>" +
+														 $"<IsIdentity dataType=\"bool\">{column.IsIndex}</IsIdentity>" +
+														"</meta>" +
+													  "</column>");
+					content.Add(xmlcolumn);
+				}
+
+				var xmltable = new XElement("table",content);
+				tables.Add(xmltable);
+			}
+
+			var schema = new XElement("schema", tables);
+			
+			return new PpsDataSetDefinitionDesktop(null, "masterDataSet", schema);
+		}
+
+		private SQLiteConnection CreateTestDatabase(List<TestTable> Tables)
+		{
+			var sqliteDataBase = new SQLiteConnection("Data Source=:memory:;DateTimeKind=Utc;foreign keys=true;new=true;");
+			{
+				sqliteDataBase.Open();
+
+				using (var sqlite = sqliteDataBase.CreateCommand())
+				{
+					foreach (var table in Tables)
+					{
+						var createcmd = new StringBuilder();
+						var indexcommands = new List<string>();
+
+						createcmd.Append("CREATE TABLE");
+						createcmd.Append($" '{table.Name}'");
+						createcmd.Append(" (");
+						foreach (var column in table.Columns)
+						{
+							createcmd.Append($" [{column.Name}]");
+							createcmd.Append($" {ConvertDataTypeToSqLite(column.DataType)}");
+							createcmd.Append($" {column.PrimaryString}");
+							createcmd.Append($" {column.NullString}");
+							createcmd.Append(",");
+
+							if (column.IsIndex)
+								indexcommands.Add($"CREATE UNIQUE INDEX '{table.Name}_{column.Name}_index' ON '{table.Name}'([{column.Name}]);");
+						}
+						createcmd.Remove(createcmd.Length - 1, 1);  // remove the last colon
+						createcmd.Append(");");
+
+						sqlite.CommandText = createcmd.ToString();
+						sqlite.ExecuteNonQueryEx();
+
+						foreach (var indexcommand in indexcommands)
+						{
+							sqlite.CommandText = indexcommand;
+							sqlite.ExecuteNonQueryEx();
+						}
+					}
+
+					// initialize the table
+					/*
+					sqlite.CommandText = "CREATE TABLE 'Table1' ( [Column1] INTEGER PRIMARY KEY NOT NULL, [Column2] TEXT NULL);";
+					sqlite.ExecuteNonQueryEx();
+					sqlite.CommandText = "CREATE UNIQUE INDEX 'Table1_Column1_index' ON 'Table1'([Column1]);";
+					sqlite.ExecuteNonQueryEx();
+					sqlite.CommandText = "INSERT INTO 'Table1' VALUES (1,'Testtext');";
+					sqlite.ExecuteNonQueryEx();
+					sqlite.CommandText = "CREATE TABLE [SyncState] ([Table] TEXT PRIMARY KEY NOT NULL,[SyncId] INTEGER NOT NULL);";
+					sqlite.ExecuteNonQueryEx();
+					sqlite.CommandText = "INSERT INTO 'SyncState' VALUES('Table1', 1);";
+					sqlite.ExecuteNonQueryEx();*/
+				}
+			}
+			return sqliteDataBase;
+		}
+
+		#endregion
+
+		#region -- TestClasses ----------------------------------------------------------
+
+		private class TestTable
+		{
+			private string name;
+			private List<TestColumn> columns;
+
+			public TestTable(string Name, List<TestColumn> Columns = null)
+			{
+				this.name = Name;
+				this.columns = (Columns == null) ? new List<TestColumn>() : Columns;
+			}
+
+			public string Name { get { return name; } set { name = value; } }
+			public List<TestColumn> Columns { get { return columns; } set { columns = value; } }
+
+		}
+
+		private class TestColumn
+		{
+			private string name;
+			private Type datatype;
+			private bool isprimary;
+			private bool isnull;
+			private bool isindex;
+			private string defaultvalue;
+
+			public TestColumn(string Name, Type DataType, bool IsPrimary, bool IsNull, bool IsIndex, string DefaultValue)
+			{
+				this.name = Name;
+				this.datatype = DataType;
+				this.isprimary = IsPrimary;
+				this.isnull = IsNull;
+				this.isindex = IsIndex;
+				this.defaultvalue = DefaultValue;
+			}
+
+			public string Name { get { return name; } set { name = value; } }
+			public Type DataType { get { return datatype; } set { datatype = value; } }
+			public bool IsPrimary { get { return isprimary; } set { isprimary = value; } }
+			public string PrimaryString => isprimary ? " PRIMARY KEY" : String.Empty;
+			public bool IsNull { get { return isnull; } set { isnull = value; } }
+			public string NullString => isnull ? " NULL" : " NOT NULL";
+			public bool IsIndex { get { return isindex; } set { isindex = value; } }
+			public string DefaultValue { get { return defaultvalue; } set { defaultvalue = value; } }
+		}
+
+		#endregion
 	}
 }
 
