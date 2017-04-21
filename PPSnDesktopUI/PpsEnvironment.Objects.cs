@@ -151,7 +151,7 @@ namespace TecWare.PPSn
 			{
 				objectIdParameter.Value = objectId;
 
-				using (var r = command.ExecuteReader(CommandBehavior.SingleResult))
+				using (var r = command.ExecuteReaderEx(CommandBehavior.SingleResult))
 				{
 					while (r.Read())
 					{
@@ -431,7 +431,7 @@ namespace TecWare.PPSn
 			{
 				objectIdParameter.Value = objectId;
 
-				using (var r = command.ExecuteReader(CommandBehavior.SingleResult))
+				using (var r = command.ExecuteReaderEx(CommandBehavior.SingleResult))
 				{
 					while (r.Read())
 					{
@@ -485,7 +485,7 @@ namespace TecWare.PPSn
 				valueParameter.Value = value;
 				userIdParameter.Value = userId;
 
-				command.ExecuteNonQuery();
+				command.ExecuteNonQueryEx();
 
 				return id;
 			} // func Insert
@@ -524,7 +524,7 @@ namespace TecWare.PPSn
 				valueParameter.Value = value ?? (object)DBNull.Value;
 				userIdParameter.Value = userId;
 
-				command.ExecuteNonQuery();
+				command.ExecuteNonQueryEx();
 			} // proc Update
 		} // class TagUpdateCommand
 
@@ -551,7 +551,7 @@ namespace TecWare.PPSn
 			public void Delete(long tagId)
 			{
 				idParameter.Value = tagId;
-				command.ExecuteNonQuery();
+				command.ExecuteNonQueryEx();
 			} // proc Update
 		} // class TagDeleteCommand
 
@@ -1122,7 +1122,7 @@ namespace TecWare.PPSn
 				{
 					cmd.AddParameter("@Id", DbType.Int64, objectId);
 
-					using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
+					using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleRow))
 					{
 						if (r.Read())
 							ReadObjectInfo(r);
@@ -1939,7 +1939,7 @@ order by t_liefnr.value desc
 				cmd.AddParameter("@Typ", DbType.String, typ.DbNullIfString());
 				cmd.AddParameter("@Nr", DbType.String, nr.DbNullIfString());
 
-				cmd.ExecuteNonQuery();
+				cmd.ExecuteNonQueryEx();
 				trans.Commit();
 
 				return GetObject(newObjectId, transaction);
@@ -2011,7 +2011,7 @@ order by t_liefnr.value desc
 				else
 					cmd.AddParameter("@Id", DbType.Int64, key);
 
-				using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
+				using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleRow))
 				{
 					if (r.Read())
 						return UpdateCacheItem(new PpsObject(this, r));
