@@ -381,17 +381,28 @@
 							</TextBlock>
 						</DataTemplate>
 					</ComboBox.ItemTemplate>
+					<ComboBox.InputBindings>
+						<KeyBinding Key="Return" Command="local:PpsSplashWindow.EnterKeyCommand"/>
+					</ComboBox.InputBindings>
 				</ComboBox>
 
 				<TextBlock Grid.Row="3" Text="Nutzer:" IsEnabled="{Binding IsUserNameEnabled}" />
-				<TextBox Grid.Row="4" Text="{Binding UserName,UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsUserNameEnabled}" />
+				<TextBox x:Name="tbUserName" Grid.Row="4" Text="{Binding UserName,UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsUserNameEnabled}">
+					<TextBox.InputBindings>
+						<KeyBinding Key="Return" Command="local:PpsSplashWindow.EnterKeyCommand"/>
+					</TextBox.InputBindings>
+				</TextBox>
 
 				<TextBlock Grid.Row="5" Text="Password:" IsEnabled="{Binding IsPasswordEnabled}"/>
-				<PasswordBox x:Name="pbPassword" Grid.Row="6" PasswordChanged="PasswordChanged" IsEnabled="{Binding IsPasswordEnabled}" />
+				<PasswordBox x:Name="pbPassword" Grid.Row="6" PasswordChanged="PasswordChanged" IsEnabled="{Binding IsPasswordEnabled}">
+					<PasswordBox.InputBindings>
+						<KeyBinding Key="Return" Command="local:PpsSplashWindow.EnterKeyCommand"/>
+					</PasswordBox.InputBindings>
+				</PasswordBox>
 				<CheckBox Grid.Row="7" IsChecked="{Binding SavePassword}" Content="Password speichern" IsEnabled="{Binding IsPasswordSaveEnabled}" VerticalAlignment="Top" Margin="0,12,0,0"/>
 
 				<StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Right">
-					<Button Content="Anmelden" Command="{x:Static ApplicationCommands.Save}" IsDefault="True"/>
+					<Button Content="Anmelden" Command="{x:Static ApplicationCommands.Save}"/>
 					<Button Content="Abbrechen" Command="{x:Static ApplicationCommands.Close}" Margin="12,0,0,0"/>
 				</StackPanel>
 			</Grid>
