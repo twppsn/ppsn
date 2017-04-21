@@ -117,11 +117,11 @@ namespace TecWare.PPSn
 			return param;
 		} // func AddParameter
 
-		public static void ExecuteNonQueryEx(this DbCommand command)
+		public static int ExecuteNonQueryEx(this DbCommand command)
 		{
 			try
 			{
-				command.ExecuteNonQuery();
+				return command.ExecuteNonQuery();
 			}
 			catch (DbException e)
 			{

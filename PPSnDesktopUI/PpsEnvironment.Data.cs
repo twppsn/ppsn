@@ -288,7 +288,7 @@ namespace TecWare.PPSn
 							: "INSERT INTO main.Header (SchemaStamp, SchemaContent) VALUES (@stamp, @content);";
 						cmd.Parameters.Add("@stamp", DbType.Int64).Value = schemaStamp.ToFileTimeUtc();
 						cmd.Parameters.Add("@content", DbType.AnsiString).Value = xSchema.ToString(SaveOptions.None);
-						cmd.ExecuteNonQuery();
+						cmd.ExecuteNonQueryEx();
 					}
 
 					transaction.Commit();
@@ -338,20 +338,10 @@ namespace TecWare.PPSn
 			using (var cmd = connection.CreateCommand())
 			{
 				cmd.Transaction = transaction;
-				try
+				foreach (var c in commands)
 				{
-					foreach (var c in commands)
-					{
-						cmd.CommandText = c;
-						cmd.ExecuteNonQueryEx();
-					}
-				}
-				catch (Exception e)
-				{
-					foreach (var cm in commands)
-						e.Data.Add("SQL-Commands", cm);
-					e.Data.Add("failed SQL-Command", cmd.CommandText);
-					throw new Exception("Upgrading the Scheme failed.", e);
+					cmd.CommandText = c;
+					cmd.ExecuteNonQueryEx();
 				}
 			}
 		} // proc ExecuteUpdateScript
@@ -833,7 +823,7 @@ namespace TecWare.PPSn
 
 			private bool RowExists()
 			{
-				using (var r = existCommand.ExecuteReader(CommandBehavior.SingleRow))
+				using (var r = existCommand.ExecuteReaderEx(CommandBehavior.SingleRow))
 				{
 					if (r.Read())
 						return r.GetBoolean(0);
@@ -848,15 +838,7 @@ namespace TecWare.PPSn
 
 			private void ExecuteCommand(SQLiteCommand command)
 			{
-				try
-				{
-					command.ExecuteNonQuery();
-				}
-				catch (Exception e)
-				{
-					e.Data.Add("SQL-Command", command.CommandText);
-					throw e;
-				}
+					command.ExecuteNonQueryEx();
 			} // proc ExecuteCommand
 
 			#endregion
@@ -916,7 +898,7 @@ namespace TecWare.PPSn
 								{
 									cmd.Parameters.Add("@syncStamp", DbType.Int64).Value = timeStamp.DbNullIf(-1L);
 
-									cmd.ExecuteNonQuery();
+									cmd.ExecuteNonQueryEx();
 									if (timeStamp >= 0)
 										lastSynchronizationStamp = DateTime.FromFileTimeUtc(timeStamp);
 								}
@@ -1050,7 +1032,7 @@ namespace TecWare.PPSn
 					"LocalContentLastModification is null OR " +
 					"LocalContentLastModification <> ServerContentLastModification";
 
-				using (var r = cmd.ExecuteReader(CommandBehavior.SingleResult))
+				using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleResult))
 				{
 					while (r.Read())
 					{
@@ -1234,9 +1216,9 @@ namespace TecWare.PPSn
 				using (var command = new SQLiteCommand("SELECT [Path], [ContentType], [ContentEncoding], [Content], [LocalPath] FROM [main].[OfflineCache] WHERE substr([Path], 1, length(@path)) = @path", connection))
 				{
 					command.Parameters.Add("@path", DbType.String).Value = requestUri.ParsePath();
-					using (var reader = command.ExecuteReader(CommandBehavior.SingleRow))
+					using (var reader = command.ExecuteReaderEx(CommandBehavior.SingleRow))
 					{
-						if (!MoveReader(reader, requestUri))
+						if (!MoveReader((SQLiteDataReader)reader, requestUri))
 							goto NoResult;
 
 						// check proxy for download process
@@ -1354,9 +1336,13 @@ namespace TecWare.PPSn
 							throw new ArgumentOutOfRangeException("content", String.Format("Expected {0:N0} bytes, but received {1:N0} bytes.", item.ContentLength, contentBytes.Length));
 					}
 
-					var affectedRows = command.ExecuteNonQuery();
+					var affectedRows = command.ExecuteNonQueryEx();
 					if (affectedRows != 1)
-						throw new Exception(String.Format("The insert of item \"{0}\" affected an unexpected number ({1}) of rows.", path, affectedRows));
+					{
+						var exc = new Exception(String.Format("The insert of item \"{0}\" affected an unexpected number ({1}) of rows.", path, affectedRows));
+						exc.Data["CommandText"] = command.CommandText;
+						throw exc;
+					}
 				}
 
 				transaction.Commit();
@@ -1521,7 +1507,7 @@ namespace TecWare.PPSn
 			using (var command = new SQLiteCommand("SELECT [tbl_name] FROM [sqlite_master] WHERE [type] = 'table' AND [tbl_name] = @tableName;", connection))
 			{
 				command.Parameters.Add("@tableName", DbType.String, tableName.Length + 1).Value = tableName;
-				using (var r = command.ExecuteReader(CommandBehavior.SingleRow))
+				using (var r = command.ExecuteReaderEx(CommandBehavior.SingleRow))
 					return r.Read();
 			}
 		} // func CheckLocalTableExistsAsync
@@ -1530,7 +1516,7 @@ namespace TecWare.PPSn
 		{
 			using (var command = new SQLiteCommand($"PRAGMA table_info({tableName});", connection))
 			{
-				using (var r = command.ExecuteReader(CommandBehavior.SingleResult))
+				using (var r = command.ExecuteReaderEx(CommandBehavior.SingleResult))
 				{
 					while (r.Read())
 					{
@@ -1552,7 +1538,7 @@ namespace TecWare.PPSn
 		{
 			using (var command = new SQLiteCommand($"PRAGMA index_list({tableName});", connection))
 			{
-				using (var r = command.ExecuteReader(CommandBehavior.SingleResult))
+				using (var r = command.ExecuteReaderEx(CommandBehavior.SingleResult))
 				{
 					const int indexName = 1;
 					const int indexIsUnique = 2;
@@ -2750,7 +2736,7 @@ namespace TecWare.PPSn
 					// read sync tokens
 					using (var commd = new SQLiteCommand("SELECT SchemaStamp, SchemaContent, SyncStamp FROM main.Header ", newLocalStore))
 					{
-						using (var r = commd.ExecuteReader(CommandBehavior.SingleRow))
+						using (var r = commd.ExecuteReaderEx(CommandBehavior.SingleRow))
 						{
 							if (r.Read())
 							{
