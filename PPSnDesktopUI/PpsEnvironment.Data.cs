@@ -819,6 +819,8 @@ namespace TecWare.PPSn
 
 					xml.ReadEndElement();
 				}
+				if (objectCounter > 0)
+					Trace.TraceInformation($"Synchonization of {table.Name} finished ({objectCounter:N0} objects.");
 			} // proc Parse
 
 			private bool RowExists()
@@ -1368,7 +1370,7 @@ namespace TecWare.PPSn
 		public SQLiteConnection Connection => connection;
 
 		// -- Static ------------------------------------------------------
-
+		
 		#region -- Read/Write Schema ------------------------------------------------
 
 		internal static XElement ReadSchemaValue(IDataReader r, int columnIndex)
@@ -1381,101 +1383,55 @@ namespace TecWare.PPSn
 
 		#region -- Local store primitives -------------------------------------------
 
-		// according to https://www.sqlite.org/datatype3.html there are only these datatypes - so map everything to these 5
+		// according to https://www.sqlite.org/datatype3.html there are only these datatypes - so map everything to these 5 - but we can define new
+
+		private static (Type Type, string SqlLite, DbType DbType)[] sqlLiteTypeMapping = 
+		{
+			(typeof(bool), "Boolean", DbType.Boolean),
+			(typeof(DateTime), "DateTime", DbType.DateTime),
+
+			(typeof(sbyte), "Int8", DbType.SByte),
+			(typeof(short), "Int16", DbType.Int16),
+			(typeof(int), "Int32", DbType.Int32),
+			(typeof(long), "Int64", DbType.Int64),
+			(typeof(byte), "UInt8", DbType.Byte),
+			(typeof(ushort), "UInt16", DbType.UInt16),
+			(typeof(uint), "UInt32", DbType.UInt32),
+			(typeof(ulong), "UInt64", DbType.UInt64),
+
+			(typeof(float), "Float", DbType.Single),
+			(typeof(double), "Double", DbType.Double),
+			(typeof(decimal), "Decimal", DbType.Decimal),
+
+			(typeof(string), "Text", DbType.String),
+			(typeof(Guid), "Guid", DbType.Guid),
+			(typeof(byte[]), "Blob", DbType.Binary)
+		};
 
 		private static Type ConvertSqLiteToDataType(string dataType)
-		{
-			if (String.IsNullOrEmpty(dataType))
-				return typeof(string);
-			else
-				switch (Char.ToUpper(dataType[0]))
-				{
-					case 'I':
-						return String.Compare(dataType, "INTEGER", StringComparison.OrdinalIgnoreCase) == 0
-							? typeof(long)
-							: typeof(string);
-					case 'R':
-						return String.Compare(dataType, "REAL", StringComparison.OrdinalIgnoreCase) == 0
-							? typeof(double)
-							: typeof(string);
-					case 'B':
-						if (String.Compare(dataType, "BLOB", StringComparison.OrdinalIgnoreCase) == 0)
-							return typeof(byte[]);
-						else if (String.Compare(dataType, "BOOLEAN", StringComparison.OrdinalIgnoreCase) == 0)
-							return typeof(bool);
-						else
-							return typeof(string);
-					default: // TEXT, NUMERIC (numeric is date, datetime, decimal, ...)
-						return typeof(string);
-				}
-		} // func ConvertSqLiteToDataType
+			=> String.IsNullOrEmpty(dataType)
+				? typeof(string)
+				:
+					(
+						from c in sqlLiteTypeMapping
+						where String.Compare(c.SqlLite, dataType, StringComparison.OrdinalIgnoreCase) == 0
+						select c.Type
+					).FirstOrDefault() ?? throw new ArgumentOutOfRangeException("type", $"No c# type assigned for '{dataType}'.");
+
+		private static int FindSqlLiteTypeMappingByType(Type type)
+			=> Array.FindIndex(sqlLiteTypeMapping, c => c.Type == type);
 
 		private static string ConvertDataTypeToSqLite(Type type)
 		{
-			switch (Type.GetTypeCode(type))
-			{
-				case TypeCode.SByte:
-				case TypeCode.Int16:
-				case TypeCode.Int32:
-				case TypeCode.Int64:
-				case TypeCode.Byte:
-				case TypeCode.UInt16:
-				case TypeCode.UInt32:
-				case TypeCode.UInt64:
-					return "INTEGER";
-				case TypeCode.Single:
-				case TypeCode.Double:
-					return "REAL";
-				case TypeCode.Decimal:
-					return "NUMERIC";
-				case TypeCode.DateTime:
-				case TypeCode.String:
-					return "TEXT";
-				case TypeCode.Boolean:
-					return "BOOLEAN";
-				default:
-					if (type == typeof(Guid))
-						return "TEXT";
-					else if (type == typeof(byte[]))
-						return "BLOB";
-					else
-						throw new ArgumentOutOfRangeException("type", $"No sqlite type assigned for '{type.Name}'.");
-			}
+			var index = FindSqlLiteTypeMappingByType(type);
+			return index >= 0 ? sqlLiteTypeMapping[index].SqlLite : throw new ArgumentOutOfRangeException("type", $"No sqlite type assigned for '{type.Name}'.");
 		} // func ConvertDataTypeToSqLite
 
 		private static DbType ConvertDataTypeToDbType(Type type)
 		{
-			switch (Type.GetTypeCode(type))
-			{
-				case TypeCode.SByte:
-				case TypeCode.Int16:
-				case TypeCode.Int32:
-				case TypeCode.Int64:
-				case TypeCode.Byte:
-				case TypeCode.UInt16:
-				case TypeCode.UInt32:
-				case TypeCode.UInt64:
-					return DbType.Int64;
-				case TypeCode.Single:
-				case TypeCode.Double:
-					return DbType.Double;
-				case TypeCode.Decimal:
-					return DbType.Double;
-				case TypeCode.DateTime:
-					return DbType.DateTime;
-				case TypeCode.String:
-					return DbType.String;
-				case TypeCode.Boolean:
-					return DbType.Boolean;
-				default:
-					if (type == typeof(Guid))
-						return DbType.Guid;
-					else if (type == typeof(byte[]))
-						return DbType.Binary;
-					else
-						throw new ArgumentOutOfRangeException("type", $"No sqlite type assigned for '{type.Name}'.");
-			}
-		} // func ConvertDataTypeToSqLite
+			var index = FindSqlLiteTypeMappingByType(type);
+			return index >= 0 ? sqlLiteTypeMapping[index].DbType : throw new ArgumentOutOfRangeException("type", $"No DbType type assigned for '{type.Name}'.");
+		} // func ConvertDataTypeToDbType
 
 		private static object ConvertStringToSQLiteValue(string value, DbType type)
 		{
