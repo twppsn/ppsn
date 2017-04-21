@@ -143,6 +143,19 @@ namespace TecWare.PPSn
 			}
 		} // func ExecuteReaderEx
 
+		public static object ExecuteScalarEx(this DbCommand command)
+		{
+			try
+			{
+				return command.ExecuteScalar();
+			}
+			catch (DbException e)
+			{
+				e.Data["CommandText"] = command.CommandText;
+				throw;
+			}
+		} // func ExecuteScalarEx
+
 		public static bool DbNullOnNeg(long value)
 			=> value < 0;
 

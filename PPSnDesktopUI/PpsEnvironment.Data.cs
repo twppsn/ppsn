@@ -276,7 +276,7 @@ namespace TecWare.PPSn
 					using (var cmd = connection.CreateCommand())
 					{
 						cmd.CommandText = "SELECT EXISTS (SELECT * FROM main.Header)";
-						existRow = ((long)cmd.ExecuteScalar()) != 0;
+						existRow = ((long)cmd.ExecuteScalarEx()) != 0;
 					}
 
 					using (var cmd = connection.CreateCommand())
