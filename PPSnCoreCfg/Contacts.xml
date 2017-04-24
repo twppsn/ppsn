@@ -136,7 +136,7 @@
 			
 
 			<!-- contacts mask -->
-			<pps:dataset name="contactsDataSet" inherited="coreDataSet" clientScripts="contacts\contactsLocal.lua" serverScripts="ContactsScript">
+			<pps:dataset name="contactsDataSet" clientScripts="contacts\contactsLocal.lua" serverScripts="ContactsScript">
 				<pps:meta name="DefaultPaneUri" dataType="string">wpf/panes/contacts.xaml</pps:meta>
 				
 				<pps:autoTag name="Name" tableName="Head" columnName="Name" mode="First" />
@@ -164,6 +164,12 @@
 					<pps:column name="Inaktiv" fieldName="dbo.Kont.Inaktiv" />
 				</pps:table>
 
+				<pps:table name="Zusa" dataSource="sys">
+					<pps:column name="Id" fieldName="sys.Fields.PrimaryKey" isPrimary="true" />
+					<pps:relation name="KontId" fieldName="dbo.Kont.Id" relationName="Zusa" parentTable="Head" parentColumn="Id" parentType="Root" />
+					<pps:column name="ObjkId" fieldName="dbo.ObjK.Id" />
+				</pps:table>
+				
 				<pps:table name="Adre">
 					<pps:column name="Id" fieldName="dbo.Adre.Id" isPrimary="true" />
 					<pps:relation name="ObjkId" fieldName="dbo.Adre.ObjkId" relationName="AdreHead" parentTable="Head" parentColumn="Id" parentType="Root" />
