@@ -2929,6 +2929,45 @@ namespace TecWare.PPSn
 			throw new NotImplementedException("Todo: Force online mode.");
 		} // func ForceOnlineMode
 
+		/// <summary>
+		/// DeleteMe - Only for Debug pruposes
+		/// </summary>
+		[LuaMember]
+		public static void throwme()
+		{
+			throw new Exception("Test");
+		}
+
+		/// <summary>
+		/// DeleteMe - Only for Debug pruposes
+		/// </summary>
+		[LuaMember]
+		public static void throwmemax()
+		{
+			var exc1 = new Exception("test");
+			for (var i = 0; i < 20; i++)
+				exc1.Data[$"Data{i}"] = $"Value{i}";
+			var exc2 = new Exception("Test", exc1);
+			for (var i = 0; i < 20; i++)
+				exc2.Data[$"Data{i}"] = $"Value{i}";
+			var exc3 = new Exception("Test", exc2);
+			for (var i = 0; i < 20; i++)
+				exc3.Data[$"Data{i}"] = $"Value{i}";
+
+			var exc4 = new Exception("test", exc3);
+			for (var i = 0; i < 20; i++)
+				exc4.Data[$"Data{i}"] = $"Value{i}";
+
+			var exc5 = new Exception("Test", exc4);
+			for (var i = 0; i < 20; i++)
+				exc5.Data[$"Data{i}"] = $"Value{i}";
+
+			var exc6 = new Exception("Test", exc5);
+			for (var i = 0; i < 20; i++)
+				exc6.Data[$"Data{i}"] = $"Value{i}";
+			throw exc6;
+		}
+
 		/// <summary></summary>
 		[LuaMember]
 		public BaseWebRequest Request => request;

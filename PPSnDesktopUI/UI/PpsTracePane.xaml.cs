@@ -204,7 +204,11 @@ namespace TecWare.PPSn.UI
 			private List<PropertyValue> currentProperties = new List<PropertyValue>();
 
 			protected override void AppendProperty(string name, Type type, Func<object> value)
-				=> currentProperties.Add(new PropertyValue(name, type, value()));
+			{
+				var val = value.Invoke();
+				if (val != null && !String.IsNullOrEmpty(val.ToString()))
+					currentProperties.Add(new PropertyValue(name, type, value()));
+			}
 
 			protected override void AppendSection(bool isFirst, string sectionName, Exception ex)
 			{
