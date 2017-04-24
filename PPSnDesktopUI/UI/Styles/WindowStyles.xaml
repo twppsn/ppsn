@@ -74,6 +74,8 @@ specific language governing permissions and limitations under the Licence.
 	<Style x:Key="PPSnSelectionToggleButtonStyle" TargetType="{x:Type ToggleButton}"/>
 	<Style x:Key="PaneToolBarStyle" TargetType="{x:Type ToolBar}"/>
 	<Style x:Key="PPSnScrollViewerStyle" TargetType="{x:Type ScrollViewer}"/>
+	
+	<!--fixed styles (no theme)-->
 
 	<Style x:Key="PPSnSysButtonStyle" TargetType="{x:Type Button}">
 		<Setter Property="Foreground" Value="Black"/>

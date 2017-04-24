@@ -477,7 +477,7 @@ namespace TecWare.PPSn
 
 			public long Insert(long objectId, string key, int cls, string value, long userId)
 			{
-				var id = transaction.GetNextLocalId("main.ObjectTags", "Id");
+				var id = transaction.GetNextLocalId(null, "main.ObjectTags", "Id");
 				idParameter.Value = id;
 				objectIdParameter.Value = objectId;
 				keyParameter.Value = key;
@@ -1933,7 +1933,7 @@ order by t_liefnr.value desc
 			using (var trans = MasterData.CreateTransaction(transaction))
 			using (var cmd = trans.CreateNativeCommand("INSERT INTO main.Objects (Id, Guid, Typ, Nr, IsHidden, IsRev) VALUES (@Id, @Guid, @Typ, @Nr, 0, @IsRev)"))
 			{
-				var newObjectId = trans.GetNextLocalId("main.Objects", "Id");
+				var newObjectId = trans.GetNextLocalId(null, "main.Objects", "Id");
 				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
 				cmd.AddParameter("@Guid", DbType.Guid, guid);
 				cmd.AddParameter("@Typ", DbType.String, typ.DbNullIfString());
