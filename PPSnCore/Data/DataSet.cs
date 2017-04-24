@@ -766,7 +766,7 @@ namespace TecWare.PPSn.Data
 
 			public ExecuteEvents(PpsDataSet dataset)
 			{
-				this.dataset = dataset;
+				this.dataset = dataset ?? throw new ArgumentNullException(nameof(dataset));
 			} // ctor
 
 			public void Freeze()

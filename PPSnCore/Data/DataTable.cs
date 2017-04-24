@@ -218,7 +218,7 @@ namespace TecWare.PPSn.Data
 			{
 				if (!(component is PpsDataRow))
 					return;
-				
+
 				var row = (PpsDataRow)component;
 				if (GetValueChangedHandler(component) == null)
 					row.PropertyChanged += propertyChangedHandler;
@@ -249,10 +249,25 @@ namespace TecWare.PPSn.Data
 				=> typeof(PpsDataRow);
 
 			public override bool IsReadOnly
-				=> column.IsExtended ? !typeof(IPpsDataRowSetGenericValue).IsAssignableFrom(column.DataType) : false;
+				=> column.IsExtended ? !HasColumnSetter : false;
 
 			public override Type PropertyType
-				=> column.IsRelationColumn ? typeof(PpsDataRow) : GetNullableType(column.DataType, IsNullable);
+			{
+				get
+				{
+					if (column.IsRelationColumn)
+						return typeof(PpsDataRow);
+					else if (column.IsExtended)
+					{
+						if (HasColumnSetter)
+							return typeof(object);
+						else
+							return column.DataType;
+					}
+					else
+						return GetNullableType(column.DataType, IsNullable);
+				}
+			} // prop PropertyType
 
 			public override bool CanResetValue(object component)
 			{
@@ -263,7 +278,7 @@ namespace TecWare.PPSn.Data
 			public override void ResetValue(object component)
 			{
 				var row = (PpsDataRow)component;
-				row[column.Index] = row.Original[column.Index];
+				row[column.Index] = row.Original[column.Index]; // todo: reset for extended
 			} // proc ResetValue
 
 			public override object GetValue(object component)
@@ -286,6 +301,9 @@ namespace TecWare.PPSn.Data
 				var row = (PpsDataRow)component;
 				return row.IsValueModified(column.Index);
 			} // func ShouldSerializeValue
+
+			private bool HasColumnSetter
+				=> typeof(IPpsDataRowSetGenericValue).IsAssignableFrom(column.DataType);
 
 			public bool IsNullable => !column.Meta.GetProperty(PpsDataColumnMetaData.Nullable, false);
 		} // class PpsColumnPropertyDescriptor

@@ -171,7 +171,6 @@ namespace TecWare.PPSn.Data
 			var p = GetPublicMemberList(type);
 			return Array.BinarySearch(p, memberName) >= 0;
 		} // func IsStandardMember
-
 	} // class DataHelper
 
 	#endregion
