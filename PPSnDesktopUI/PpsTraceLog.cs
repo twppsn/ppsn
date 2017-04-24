@@ -24,6 +24,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn
 {
@@ -90,9 +91,9 @@ namespace TecWare.PPSn
 	{
 		private readonly string message;
 		private readonly Exception exception;
-		private readonly bool asWarning;
+		private readonly PpsTraceItemType traceItemType;
 
-		public PpsExceptionItem(string alternativeMessage, Exception exception, bool asWarning)
+		public PpsExceptionItem(string alternativeMessage, Exception exception, PpsTraceItemType traceItemType = PpsTraceItemType.Exception)
 		{
 			if (!String.IsNullOrEmpty(alternativeMessage))
 				message = alternativeMessage;
@@ -100,12 +101,12 @@ namespace TecWare.PPSn
 				message = exception.Message;
 
 			this.exception = exception;
-			this.asWarning = asWarning;
+			this.traceItemType = traceItemType;
 		} // ctor
 
 		public override string Message => message;
 		public Exception Exception => exception;
-		public override PpsTraceItemType Type => asWarning ? PpsTraceItemType.Warning : PpsTraceItemType.Exception;
+		public override PpsTraceItemType Type => traceItemType;
 	} // class PpsExceptionItem
 
 	#endregion
@@ -432,10 +433,8 @@ namespace TecWare.PPSn
 			AppendItem(new PpsTextItem(type, message));
 		} // proc AppendText
 
-		public void AppendException(Exception exception, string alternativeMessage = null, bool asWarning = false)
-		{
-			AppendItem(new PpsExceptionItem(alternativeMessage, exception, asWarning));
-		} // proc AppendException
+		public void AppendException(Exception exception, string alternativeMessage = null, PpsTraceItemType traceItemType = PpsTraceItemType.Exception)
+			=> AppendItem(new PpsExceptionItem(alternativeMessage, exception, traceItemType));
 
 		#endregion
 
