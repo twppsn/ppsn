@@ -20,6 +20,7 @@
 
 			<pps:dataset name="masterdata">
 				<pps:table name="Plzd">
+					<pps:meta name="syncType">ChangeTracking: dbo.Plzd</pps:meta>
 					<pps:column name="Id" fieldName="dbo.Plzd.Id" isPrimary="true" />
 					<pps:column name="Plz" fieldName="dbo.Plzd.Plz"/>
 					<pps:column name="Ort" fieldName="dbo.Plzd.Ort"/>

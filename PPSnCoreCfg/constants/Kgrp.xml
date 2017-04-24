@@ -11,6 +11,7 @@
 
 			<pps:dataset name="masterdata">
 				<pps:table name="Kgrp">
+					<pps:meta name="syncType">ChangeTracking: dbo.Kgrp</pps:meta>
 					<pps:column name="Id" fieldName="dbo.Kgrp.Id" isPrimary="true" />
 					<pps:column name="Name" fieldName="dbo.Kgrp.Name"/>
 					<pps:column name="IsActive" fieldName="dbo.Kgrp.IsActive" />

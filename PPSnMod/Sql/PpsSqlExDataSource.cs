@@ -1759,7 +1759,7 @@ namespace TecWare.PPSn.Server.Sql
 				// build command string for change table
 				var command = new StringBuilder("SELECT ct.sys_change_operation,ct.sys_change_version");
 
-				PrepareSynchronizationColumns(table, command, "ct");
+				PrepareSynchronizationColumns(table, command, "ct.");
 
 				command.Append(" FROM ")
 					.Append("changetable(changes ").Append(tableInfo.FullName).Append(',').Append(lastSyncId).Append(") as Ct ")
