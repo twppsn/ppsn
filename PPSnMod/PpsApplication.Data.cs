@@ -40,9 +40,9 @@ namespace TecWare.PPSn.Server
 	/// <summary></summary>
 	public sealed class PpsFieldDescription : IPpsColumnDescription
 	{
-		private const string DisplayNameAttributeString = "displayName";
-		private const string MaxLengthAttributeString = "maxLength";
-		private const string DataTypeAttributeString = "dataType";
+		private const string displayNameAttributeString = "displayName";
+		private const string maxLengthAttributeString = "maxLength";
+		private const string dataTypeAttributeString = "dataType";
 
 		#region -- class PpsFieldAttributes -----------------------------------------------
 
@@ -76,19 +76,19 @@ namespace TecWare.PPSn.Server
 					if (p == null)
 						continue;
 
-					if (String.Compare(p.Name, DisplayNameAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
+					if (String.Compare(p.Name, displayNameAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
 						displayNameEmitted = true;
-					else if (String.Compare(p.Name, DataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
+					else if (String.Compare(p.Name, dataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
 						dataTypeEmitted = true;
 
 					yield return p;
 				}
 
 				if (!displayNameEmitted)
-					yield return new PropertyValue(DisplayNameAttributeString, typeof(string), Owner.DisplayName);
+					yield return new PropertyValue(displayNameAttributeString, typeof(string), Owner.DisplayName);
 
 				if (!dataTypeEmitted)
-					yield return new PropertyValue(DataTypeAttributeString, typeof(Type), Owner.DataType);
+					yield return new PropertyValue(dataTypeAttributeString, typeof(Type), Owner.DataType);
 
 				using (var e = base.GetEnumerator())
 				{
@@ -119,10 +119,10 @@ namespace TecWare.PPSn.Server
 			this.attributes = new PpsFieldAttributes(this);
 			this.xDefinition = xDefinition;
 
-			displayName = new Lazy<string>(() => this.Attributes.GetProperty(DisplayNameAttributeString, null));
-			maxLength = new Lazy<int>(() => this.Attributes.GetProperty(MaxLengthAttributeString, Int32.MaxValue));
+			displayName = new Lazy<string>(() => this.Attributes.GetProperty(displayNameAttributeString, null));
+			maxLength = new Lazy<int>(() => this.Attributes.GetProperty(maxLengthAttributeString, Int32.MaxValue));
 
-			var xDataType = xDefinition.Attribute(DataTypeAttributeString);
+			var xDataType = xDefinition.Attribute(dataTypeAttributeString);
 
 			dataType = xDataType != null ? 
 				new Lazy<Type>(() => LuaType.GetType(xDataType.Value, lateAllowed: false)):
@@ -164,12 +164,21 @@ namespace TecWare.PPSn.Server
 
 		private PropertyValue GetProperty(string propertyName)
 		{
-			var ret = GetProperty(xDefinition.Elements(xnFieldAttribute).FirstOrDefault(c => String.Compare(c.GetAttribute<string>("name", null), propertyName, StringComparison.OrdinalIgnoreCase) == 0));
+			var ret = GetProperty(
+				xDefinition.Elements(xnFieldAttribute)
+					.FirstOrDefault(c => String.Compare(c.GetAttribute<string>("name", null), propertyName, StringComparison.OrdinalIgnoreCase) == 0)
+			);
 
 			if (ret == null)
 			{
-				if (String.Compare(propertyName, DataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
-					return new PropertyValue(DataTypeAttributeString, typeof(Type), DataType);
+				if (String.Compare(propertyName, dataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
+					ret  =new PropertyValue(dataTypeAttributeString, typeof(Type), DataType);
+				else if(String.Compare(propertyName, displayNameAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
+				{
+					var xDisplayName = xDefinition.Attribute(displayNameAttributeString);
+					if (!String.IsNullOrEmpty(xDisplayName?.Value))
+						ret = new PropertyValue(displayNameAttributeString, xDisplayName.Value);
+				}	
 			}
 
 			return ret;
@@ -551,8 +560,7 @@ namespace TecWare.PPSn.Server
 		[LuaMember]
 		public PpsFieldDescription GetFieldDescription(string name, bool throwException = true)
 		{
-			PpsFieldDescription fieldInfo;
-			if (fieldDescription.TryGetValue(name, out fieldInfo))
+			if (fieldDescription.TryGetValue(name, out var fieldInfo))
 				return fieldInfo;
 			else if (throwException)
 				throw new ArgumentOutOfRangeException("fieldName", String.Format("Field is not defined ({0}).", name));

@@ -1402,6 +1402,14 @@ namespace TecWare.PPSn.Server.Sql
 								return true;
 							}
 							break;
+						case 'N':
+						case 'n':
+							if (String.Compare(name, nameof(Owner.Nullable), StringComparison.OrdinalIgnoreCase) == 0)
+							{
+								value = Owner.Nullable;
+								return true;
+							}
+							break;
 						case 'P':
 						case 'p':
 							if (String.Compare(name, nameof(Owner.Precision), StringComparison.OrdinalIgnoreCase) == 0)
@@ -1417,11 +1425,6 @@ namespace TecWare.PPSn.Server.Sql
 								value = Owner.IsIdentity;
 								return true;
 							}
-							else if (String.Compare(name, nameof(Owner.IsNull), StringComparison.OrdinalIgnoreCase) == 0)
-							{
-								value = Owner.IsNull;
-								return true;
-							}
 							break;
 					}
 					return base.TryGetProperty(name, out value);
@@ -1433,7 +1436,7 @@ namespace TecWare.PPSn.Server.Sql
 					yield return new PropertyValue(nameof(Owner.MaxLength), Owner.MaxLength);
 					yield return new PropertyValue(nameof(Owner.Precision), Owner.Precision);
 					yield return new PropertyValue(nameof(Owner.Scale), Owner.Scale);
-					yield return new PropertyValue(nameof(Owner.IsNull), Owner.IsNull);
+					yield return new PropertyValue(nameof(Owner.Nullable), Owner.Nullable);
 					yield return new PropertyValue(nameof(Owner.IsIdentity), Owner.IsIdentity);
 
 					using (var e = base.GetEnumerator())
@@ -1453,7 +1456,7 @@ namespace TecWare.PPSn.Server.Sql
 			private readonly int maxLength;
 			private readonly byte precision;
 			private readonly byte scale;
-			private readonly bool isNull;
+			private readonly bool isNullable;
 			private readonly bool isIdentity;
 
 			public SqlColumnInfo(SqlTableInfo table, SqlDataReader r)
@@ -1466,7 +1469,7 @@ namespace TecWare.PPSn.Server.Sql
 				this.maxLength = r.GetInt16(4);
 				this.precision = r.GetByte(5);
 				this.scale = r.GetByte(6);
-				this.isNull = r.GetBoolean(7);
+				this.isNullable = r.GetBoolean(7);
 				this.isIdentity = r.GetBoolean(8);
 
 				this.table.AddColumn(this);
@@ -1485,7 +1488,7 @@ namespace TecWare.PPSn.Server.Sql
 				=> CreateSqlParameter("@" + columnName, value);
 
 			public SqlParameter CreateSqlParameter(string parameterName, object value)
-				=> new SqlParameter(parameterName, sqlType, maxLength, ParameterDirection.Input, isNull, precision, scale, Name, DataRowVersion.Current,
+				=> new SqlParameter(parameterName, sqlType, maxLength, ParameterDirection.Input, isNullable, precision, scale, Name, DataRowVersion.Current,
 					value != null ? (value == DBNull.Value ? value : Procs.ChangeType(value, DataType)) : DBNull.Value
 				);
 
@@ -1637,7 +1640,7 @@ namespace TecWare.PPSn.Server.Sql
 			public int MaxLength => maxLength;
 			public int Precision => precision;
 			public int Scale => scale;
-			public bool IsNull => isNull;
+			public bool Nullable => isNullable;
 			public bool IsIdentity => isIdentity;
 			public bool IsPrimary => table.PrimaryKey == this;
 		} // class SqlColumnInfo
