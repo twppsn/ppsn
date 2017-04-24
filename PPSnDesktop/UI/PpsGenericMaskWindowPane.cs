@@ -83,16 +83,32 @@ namespace TecWare.PPSn.UI
 
 		public override async Task LoadAsync(LuaTable arguments)
 		{
-			// get the document path
-			obj = (PpsObject)arguments.GetMemberValue("object");
-			if(obj == null)
-				throw new ArgumentNullException("object", "Parameter is missing.");
+			void CreateNewObject(PpsMasterDataTransaction transaction)
+			{
 
-			await Task.Yield(); // spawn new thread
+				// load schema
+				var documentType = (string)arguments.GetMemberValue("createNew");
+				if (documentType == null)
+					throw new ArgumentException("No 'object' or 'createNew' set.");
+
+				// get the object info for the type
+				var objectInfo = Environment.ObjectInfos[documentType];
+				if (objectInfo.CreateServerSiteOnly || String.IsNullOrEmpty(objectInfo.DocumentUri))
+					throw new ArgumentNullException("object", "Parameter 'object' is missing.");
+
+				// create the new object entry
+				obj = Environment.CreateNewObject(transaction, objectInfo);
+			} // proc CreateNewObject
+			
+			// get the object reference for the document
+			obj = (PpsObject)arguments.GetMemberValue("object");
 
 			// new document or load one
 			using (var transaction = Environment.MasterData.CreateTransaction())
 			{
+				if (obj == null) // no object given
+					CreateNewObject(transaction);
+
 				data = await obj.GetDataAsync<PpsObjectDataSet>(transaction);
 
 				// register events, owner, and in the openDocuments dictionary
@@ -101,6 +117,7 @@ namespace TecWare.PPSn.UI
 				// load data
 				if (!data.IsLoaded)
 				{
+					// call initalization hook
 					if (obj.HasData) // existing data
 					{
 						await data.LoadAsync(transaction);
@@ -111,6 +128,8 @@ namespace TecWare.PPSn.UI
 						await data.OnNewAsync(arguments);
 					}
 				}
+
+				transaction.Commit();
 			}
 
 			// get the pane to view, if it is not given
