@@ -88,6 +88,16 @@ namespace TecWare.PPSn.Data
 		public override PpsDataSet CreateDataSet()
 			=> new PpsDataSetClient(this, shell);
 
+		public virtual Type GetColumnType(string dataType)
+		{
+			if (String.Compare(dataType, "formular", StringComparison.OrdinalIgnoreCase) == 0)
+				return typeof(PpsStaticCalculated);
+			else if (String.Compare(dataType, "formatted", StringComparison.OrdinalIgnoreCase) == 0)
+				return typeof(PpsFormattedStringValue);
+			else
+				return LuaType.GetType(dataType, lateAllowed: false).Type;
+		} // func GetColumnType
+
 		public string SchemaType => schema;
 
 		public IPpsShell Shell => shell;
@@ -185,18 +195,7 @@ namespace TecWare.PPSn.Data
 		{
 			this.arguments = arguments;
 
-			// call initalization hook
-			using (var trans = UndoSink?.BeginTransaction("Init"))
-			{
-				// create head
-				var head = Tables["Head", true];
-				var row = head.Add();
-				row["Typ"] = ((PpsDataSetDefinitionClient)DataSetDefinition).SchemaType;
-				row["Guid"] = Guid.NewGuid();
-
-				await InvokeEventHandlerAsync("OnNewAsync");
-				trans?.Commit();
-			}
+			await InvokeEventHandlerAsync("OnNewAsync");
 		} // proc OnNewAsync
 
 		public virtual async Task OnLoadedAsync(LuaTable arguments)
@@ -204,11 +203,7 @@ namespace TecWare.PPSn.Data
 			this.arguments = arguments;
 
 			// call initalization hook
-			using (var trans = UndoSink?.BeginTransaction("Init"))
-			{
-				await InvokeEventHandlerAsync("OnLoadedAsync");
-				trans?.Commit();
-			}
+			await InvokeEventHandlerAsync("OnLoadedAsync");
 		} // proc OnLoadedAsync
 
 		protected void OnPropertyChanged(string propertyName)

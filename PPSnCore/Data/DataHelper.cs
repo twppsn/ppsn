@@ -56,8 +56,7 @@ namespace TecWare.PPSn.Data
 			else
 			{
 				// change the type
-				Type dataType;
-				if (WellknownMetaTypes.TryGetValue(key, out dataType))
+				if (WellknownMetaTypes.TryGetValue(key, out var dataType))
 					value = Procs.ChangeType(value, dataType);
 				else if (getDataType != null)
 					value = Procs.ChangeType(value, getDataType());
@@ -94,11 +93,9 @@ namespace TecWare.PPSn.Data
 
 		internal Expression GetMetaConstantExpression(string key, bool generateException)
 		{
-			object value;
-			Type type;
-			if (TryGetProperty(key, out value))
+			if (TryGetProperty(key, out var value))
 				return Expression.Constant(value, typeof(object));
-			else if (WellknownMetaTypes.TryGetValue(key, out type))
+			else if (WellknownMetaTypes.TryGetValue(key, out var type))
 				return Expression.Convert(Expression.Default(type), typeof(object));
 			else if (generateException)
 			{
@@ -126,14 +123,7 @@ namespace TecWare.PPSn.Data
 		public abstract IReadOnlyDictionary<string, Type> WellknownMetaTypes { get; }
 		protected virtual IReadOnlyDictionary<string, object> StaticKeys => null;
 
-		public object this[string key]
-		{
-			get
-			{
-				object v;
-				return TryGetProperty(key, out v) ? v : null;
-			}
-		} // prop this
+		public object this[string key] => TryGetProperty(key, out var v) ? v : null;
 
 		public int Count => metaInfo.Count;
 	} // class PpsMetaCollection

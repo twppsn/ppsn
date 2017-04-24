@@ -611,8 +611,7 @@ namespace TecWare.PPSn.Data
 					currentValues[index] = NotSet;
 
 					// read the extend values
-					if (xValue != null)
-						extendedValue.CoreData = xValue;
+					extendedValue.Read(xValue);
 				}
 				else
 				{
@@ -743,7 +742,7 @@ namespace TecWare.PPSn.Data
 				x.WriteAttributeString(xnDataRowAdd.LocalName, "1");
 
 			// Werte
-			for (int i = 0; i < originalValues.Length; i++)
+			for (var i = 0; i < originalValues.Length; i++)
 			{
 				var columnInfo = Table.TableDefinition.Columns[i];
 				x.WriteStartElement(columnInfo.Name);
@@ -752,7 +751,12 @@ namespace TecWare.PPSn.Data
 				{
 					var extendedValue = (IPpsDataRowExtendedValue)originalValues[i];
 					if (!extendedValue.IsNull)
-						extendedValue.CoreData.WriteTo(x);
+					{
+						var xWriteTo = new XElement("t");
+						extendedValue.Write(xWriteTo);
+						foreach (var c in xWriteTo.Elements())
+							c.WriteTo(x);
+					}
 				}
 				else
 				{

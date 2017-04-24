@@ -75,10 +75,14 @@ namespace TecWare.PPSn.Data
 	/// implementation.</summary>
 	public interface IPpsDataRowExtendedValue : INotifyPropertyChanged
 	{
-		bool IsNull { get; }
+		/// <summary>Writes the value in the dataset.</summary>
+		/// <param name="x"></param>
+		void Write(XElement x);
+		/// <summary>Reads the value.</summary>
+		/// <param name="x"></param>
+		void Read(XElement x);
 
-		/// <summary>Gets/Sets the core data of the extended value.</summary>
-		XElement CoreData { get; set; }
+		bool IsNull { get; }
 	} // interface IPpsDataRowExtendedValue
 
 	#endregion
@@ -90,9 +94,9 @@ namespace TecWare.PPSn.Data
 	public interface IPpsDataRowSetGenericValue : IPpsDataRowExtendedValue
 	{
 		/// <summary>Generic value</summary>
-		/// <param name="inital"></param>
-		/// <param name="value"></param>
-		/// <returns></returns>
+		/// <param name="inital"><c>true</c>, if the value is set with the initial value.</param>
+		/// <param name="value">New value for the property.</param>
+		/// <returns><c>true</c>, let fire a notify property changed on the row value</returns>
 		bool SetGenericValue(bool inital, object value);
 	} //	interface IPpsDataRowSetGenericValue
 
@@ -174,12 +178,126 @@ namespace TecWare.PPSn.Data
 			row.Table.DataSet.ExecuteEvent(new PpsDataRowExtentedValueChanged(this, propertyName));
 		} // proc OnPropertyChanged
 
+		void IPpsDataRowExtendedValue.Write(XElement x)
+			=> Write(x);
+
+		void IPpsDataRowExtendedValue.Read(XElement x)
+			=> Read(x);
+
+		protected abstract void Write(XElement x);
+
+		protected abstract void Read(XElement x);
+
 		public abstract bool IsNull { get; }
-		public abstract XElement CoreData { get; set; }
 
 		public PpsDataRow Row => row;
 		public PpsDataColumnDefinition Column => column;
 	} // class PpsDataRowExtentedValue
+
+	#endregion
+
+	#region -- class PpsDataRowObjectExtendedValue --------------------------------------
+
+	public abstract class PpsDataRowObjectExtendedValue : PpsDataRowExtentedValue, IPpsDataRowGetGenericValue, IPpsDataRowSetGenericValue
+	{
+		#region -- class PpsUndoDataValue -----------------------------------------------
+
+		private sealed class PpsUndoDataValue : IPpsUndoItem
+		{
+			private readonly PpsDataRowObjectExtendedValue value;
+			private readonly object oldKey;
+			private readonly object newKey;
+
+			public PpsUndoDataValue(PpsDataRowObjectExtendedValue value, object oldKey, object newKey)
+			{
+				this.value = value;
+				this.oldKey = oldKey;
+				this.newKey = newKey;
+			} // ctor
+
+			public void Freeze() { }
+
+			public void Redo()
+				=> value.SetGenericValue(newKey, false);
+
+			public void Undo()
+				=> value.SetGenericValue(oldKey, false);
+		} // class PpsUndoDataValue
+
+		#endregion
+
+		private readonly object notSet = new object();
+		
+		private object originalValue = null; // original id
+		private object value = null; // id to the master data row
+		
+		protected PpsDataRowObjectExtendedValue(PpsDataRow row, PpsDataColumnDefinition column)
+			: base(row, column)
+		{
+		} // ctor
+
+		/// <summary>Change the internal value.</summary>
+		/// <param name="newValue"></param>
+		/// <param name="firePropertyChanged"></param>
+		/// <returns></returns>
+		protected virtual bool SetGenericValue(object newValue, bool firePropertyChanged)
+		{
+			if (Object.Equals(InternalValue, newValue))
+				return false;
+			else
+			{
+				Row.Table.DataSet.UndoSink?.Append(
+					new PpsUndoDataValue(this, value, newValue)
+				);
+				value = newValue;
+				return true;
+			}
+		} // proc SetGenericValue
+		
+		/// <summary>Writes the value as a normal value in the document data.</summary>
+		/// <param name="x"></param>
+		protected override void Write(XElement x)
+		{
+			// o
+			if (originalValue == null)
+				x.Add(new XElement("o"));
+			else
+				x.Add(new XElement("o", originalValue.ChangeType<string>()));
+			// v
+			if (value == notSet)
+			{
+				if (value == null)
+					x.Add(new XElement("o"));
+				else
+					x.Add(new XElement("o", value.ChangeType<string>()));
+			}
+		} // proc Write
+
+		/// <summary>Reads the value as a normal value from the document data.</summary>
+		/// <param name="x"></param>
+		protected override void Read(XElement x)
+		{
+			object ReadValueFromElementstring(XElement t)
+				=> t == null || String.IsNullOrEmpty(t.Value) ? null : (object)t.Value.ChangeType<long>();
+
+			originalValue = ReadValueFromElementstring(x.Element("o"));
+			var xV = x.Element("v");
+			if (xV == null)
+				value = notSet;
+			else
+				value = ReadValueFromElementstring(xV);
+		} // proc Read
+
+		bool IPpsDataRowSetGenericValue.SetGenericValue(bool inital, object value)
+			=> SetGenericValue(value, !inital);
+
+		protected object InternalValue => value == notSet ? originalValue : value;
+
+		/// <summary>Equals the internal value <c>null</c>.</summary>
+		public override bool IsNull => InternalValue == null;
+		/// <summary>Value get implementation.</summary>
+		public abstract object Value { get; }
+	} // class PpsDataRowObjectExtendedValue
 
 	#endregion
 
@@ -303,7 +421,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataColumnMetaObject ------------------------------------------
+		#region -- class PpsDataColumnMetaObject ----------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>

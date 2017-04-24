@@ -249,7 +249,7 @@ namespace TecWare.PPSn.Data
 				=> typeof(PpsDataRow);
 
 			public override bool IsReadOnly
-				=> column.IsExtended;
+				=> column.IsExtended ? !typeof(IPpsDataRowSetGenericValue).IsAssignableFrom(column.DataType) : false;
 
 			public override Type PropertyType
 				=> column.IsRelationColumn ? typeof(PpsDataRow) : GetNullableType(column.DataType, IsNullable);

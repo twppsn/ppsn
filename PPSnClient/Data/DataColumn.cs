@@ -74,14 +74,14 @@ namespace TecWare.PPSn.Data
 			: base(table, xColumn.GetAttribute("name", (string)null), xColumn.GetAttribute("isPrimary", false), xColumn.GetAttribute("isIdentity", false))
 		{
 			this.metaInfo = new PpsDataColumnMetaCollectionClient(this, xColumn.Element("meta"));
-			this.dataType = LuaType.GetType(xColumn.GetAttribute("dataType", "object"), lateAllowed: false).Type;
+			this.dataType = ((PpsDataSetDefinitionClient) table.DataSet).GetColumnType(xColumn.GetAttribute("dataType", "object"));
 
 			this.parentRelationName = xColumn.GetAttribute<string>("parentRelationName", null);
 			this.parentRelationType = xColumn.GetAttribute<PpsRelationType>("parentRelationType", PpsRelationType.None);
 			this.parentTableName = xColumn.GetAttribute<string>("parentTable", null);
 			this.parentColumn = xColumn.GetAttribute<string>("parentColumn", null);
 		} // ctor
-		
+
 		public override PpsDataColumnDefinition Clone(PpsDataTableDefinition tableOwner)
 			=> new PpsDataColumnDefinitionClient(tableOwner, this);
 

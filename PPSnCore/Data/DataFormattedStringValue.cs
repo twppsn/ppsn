@@ -72,6 +72,17 @@ namespace TecWare.PPSn.Data
 			}
 		} // ctor
 
+		protected override void Write(XElement x)
+		{
+			x.Add(new XElement("c", currentValue.ChangeType<string>()));
+		} // proc Write
+
+		protected override void Read(XElement x)
+		{
+			var t = x?.Element("c")?.Value;
+			currentValue = t ?? Procs.ChangeType(t, Column.DataType);
+		} // proc Read
+
 		private void UpdateValue()
 		{
 			if (chunk == null)
@@ -91,21 +102,7 @@ namespace TecWare.PPSn.Data
 				System.Diagnostics.Debug.Print(e.ToString()); // todo:
 			}
 		} // proc UpdateValue
-
-		/// <summary>Do persist the calculated value.</summary>
-		public override XElement CoreData
-		{
-			get
-			{
-				return new XElement("c", currentValue.ChangeType<string>());
-			}
-			set
-			{
-				var t = value?.Element("c")?.Value;
-				currentValue = t != null ? t : Procs.ChangeType(t, Column.DataType);
-			}
-		} // prop CoreData
-
+		
 		public override bool IsNull => currentValue == null;
 		/// <summary></summary>
 		public object Value => currentValue;
@@ -134,7 +131,20 @@ namespace TecWare.PPSn.Data
 
 		public override string ToString()
 			=> value;
-			
+
+		protected override void Write(XElement x)
+		{
+			x.Add(
+				new XElement("v", value),
+				new XElement("f", formattedValue)
+			);
+		} // proc Write
+
+		protected override void Read(XElement x)
+		{
+			Value = x?.Element("v")?.Value;
+		} // proc Read
+
 		private void UpdateFormattedValue()
 		{
 			if (value == null)
@@ -164,21 +174,6 @@ namespace TecWare.PPSn.Data
 			Value = value?.ToString();
 			return true;
 		} // proc SetGenericValue
-
-		public override XElement CoreData
-		{
-			get
-			{
-				return new XElement("fv",
-					new XElement("v", value),
-					new XElement("f", formattedValue)
-				);
-			}
-			set
-			{
-				Value = value?.Element("fv")?.Element("v")?.Value;
-			}
-		} // prop CoreData
 		
 		/// <summary>Set/Get the unformatted value.</summary>
 		public string Value
