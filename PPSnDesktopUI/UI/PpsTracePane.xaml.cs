@@ -189,6 +189,10 @@ namespace TecWare.PPSn.UI
 
 			IEnumerator IEnumerable.GetEnumerator()
 				=> GetEnumerator();
+
+			public string Title => title;
+			public string Type => type;
+			public string Text => text;
 		} // class ExceptionView
 
 		#endregion
@@ -252,12 +256,12 @@ namespace TecWare.PPSn.UI
 			if (value == null)
 				return null;
 
-			return value is Exception e 
+			return value is Exception e
 				? ExceptionFormatter.Format<ExceptionViewArrayFormatter>(e)
 				: throw new ArgumentException(nameof(value));
 		} // func Convert
 
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) 
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 			=> throw new NotSupportedException();
 	} // class ExceptionToPropertyConverter
 
