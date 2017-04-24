@@ -15,7 +15,7 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public partial class App : Application
 	{
-		private PpsMainEnvironment currentEnvironment = null;
+	private PpsMainEnvironment currentEnvironment = null;
 
 		public App()
 		{
@@ -190,8 +190,9 @@ namespace TecWare.PPSn
 							environment = environmentsInfos.FirstOrDefault(c => String.Compare(c.Name, environmentname, StringComparison.OrdinalIgnoreCase) == 0);
 
 							// load user name
-							using (var pcl = new PpsClientLogin("ppsn_env:" + environment.Uri.ToString(), environment.Name, false))
-								userCred = pcl.GetCredentials();
+							if (environment != null)
+								using (var pcl = new PpsClientLogin("ppsn_env:" + environment.Uri.ToString(), environment.Name, false))
+									userCred = pcl.GetCredentials();
 							break;
 					}
 				}
