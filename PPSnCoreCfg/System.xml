@@ -31,6 +31,16 @@
 		<pps:excel name="excel" />
 
 		<pps:register source="sys">
+			<pps:field name="sys.Fields.ObjectId" dataType="long">
+				<pps:attribute name="clientDataType">ppsObject</pps:attribute>
+			</pps:field>
+			<pps:field name="sys.Fields.ObjectLinkId" dataType="long">
+				<pps:attribute name="clientDataType">ppsLinkObject</pps:attribute>
+			</pps:field>
+			<pps:field name="sys.Fields.MasterDataKey" dataType="long">
+				<pps:attribute name="clientDataType">ppsMasterData</pps:attribute>
+			</pps:field>
+
 			<pps:field name="sys.Fields.Path" dataType="string" />
 			<pps:field name="sys.Fields.ContentType" dataType="string" />
 			<pps:field name="sys.Fields.ContentEncoding" dataType="string" />
@@ -137,7 +147,7 @@
 				<pps:source type="view">dbo.objects</pps:source>
 			</pps:view>
 
-			<!-- base dataset -->
+			<!-- base dataset, obsolete -->
 			<pps:dataset name="coreDataSet">
 				<!-- define the base table -->
 				<pps:table name="Head">

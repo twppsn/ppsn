@@ -182,9 +182,11 @@ namespace TecWare.PPSn.Server.Data
 
 		public void WriteSchema(XElement xTable)
 		{
+			var clientDataType = Meta.GetProperty<string>("clientDataType", null);
+
 			var xColumn = new XElement("column",
 				new XAttribute("name", Name),
-				new XAttribute("dataType", LuaType.GetType(DataType).AliasOrFullName)
+				new XAttribute("dataType", clientDataType ?? LuaType.GetType(DataType).AliasOrFullName)
 			);
 
 			if (IsPrimaryKey)
