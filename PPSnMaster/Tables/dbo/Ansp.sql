@@ -24,7 +24,8 @@
 	[Changed] BIT NULL, 
 
 )
-
+GO
+ALTER TABLE [dbo].[Ansp] ENABLE CHANGE_TRACKING;
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'PK',

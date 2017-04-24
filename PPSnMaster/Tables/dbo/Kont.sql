@@ -16,6 +16,8 @@
 	[Bic] CHAR(11) NULL
 )
 GO
+ALTER TABLE [dbo].[Kont] ENABLE CHANGE_TRACKING;
+GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'FK zu Objk',
     @level0type = N'SCHEMA',

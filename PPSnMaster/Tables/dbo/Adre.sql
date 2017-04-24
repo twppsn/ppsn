@@ -13,7 +13,8 @@
 	[Adresse] NVARCHAR(512) NULL, 
 	[Template] NVARCHAR(512) NULL 
 )
-
+GO
+ALTER TABLE [dbo].[Adre] ENABLE CHANGE_TRACKING;
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'PK',
