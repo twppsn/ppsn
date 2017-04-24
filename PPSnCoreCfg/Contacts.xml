@@ -8,7 +8,8 @@
 	<pps:ppsn name="ppsn">
 		<pps:register source="main">
 			<!-- contact fields -->
-			<pps:field name="dbo.Kont.ObjkId" />
+			<pps:field name="dbo.Kont.Id" />
+			<pps:field name="dbo.Kont.ObjkId" dataType="object" />
 			<pps:field name="dbo.Kont.Name" displayName="Name" />
 			<pps:field name="dbo.Kont.LiefNr" displayName="Lief.-Nr." />
 			<pps:field name="dbo.Kont.KundNr" displayName="Kund.-Nr." />
@@ -144,6 +145,7 @@
 				<pps:autoTag name="Inaktiv" tableName="Head" columnName="Inaktiv" mode="First" />
 
 				<pps:table name="Head">
+					<pps:column name="Id" fieldName="dbo.Kont.Id" isPrimary="true" />
 					<pps:column name="ObjkId" fieldName="dbo.Kont.ObjkId" />
 					<pps:column name="Name" fieldName="dbo.Kont.Name" />
 					<pps:column name="LiefNr" fieldName="dbo.Kont.LiefNr" />
