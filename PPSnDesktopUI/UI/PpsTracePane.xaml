@@ -11,74 +11,42 @@
                       IsLiveFilteringRequested="True">
         </CollectionViewSource>
         <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
-        <DataTemplate x:Key="ExceptionTemplate">
+        <LinearGradientBrush x:Key="fadeBrush" StartPoint="0,0.9" EndPoint="0,1">
+            <LinearGradientBrush.GradientStops>
+                <GradientStop Offset="0" Color="Black"/>
+                <GradientStop Offset="1" Color="Transparent"/>
+            </LinearGradientBrush.GradientStops>
+        </LinearGradientBrush>
+        <!--<DataTemplate x:Key="ExceptionTemplate">
             <StackPanel Orientation="Vertical">
                 <TextBlock>
 							<Run FontWeight="Bold" Text="{Binding Message, Mode=OneWay}"/>
                 </TextBlock>
-				<ListBox Height="200">
-					<ListBox.ItemsSource>
-						<Binding Path="Exception">
-							<Binding.Converter>
-								<local:ExceptionToPropertyConverter />
-							</Binding.Converter>
-						</Binding>
-					</ListBox.ItemsSource>
-				</ListBox>
-                <!--<TextBlock>
-							<Run Text="Exception: "/>
-							<Run FontWeight="Bold" Text="{Binding Exception.Message, Mode=OneWay}"/>
-                </TextBlock>
-                <StackPanel x:Name="source">
-                    <TextBlock>
-							<Run Text="source:  "/>
-							<Run Text="{Binding Source, Mode=OneWay}" />
-                    </TextBlock>
-                </StackPanel>
-                <StackPanel x:Name="targetSite">
-                    <TextBlock>
-							<Run Text="TargetSite:  "/>
-							<Run Text="{Binding TargetSite, Mode=OneWay}" />
-                    </TextBlock>
-                </StackPanel>
-                <StackPanel x:Name="innerException">
-                    <StackPanel Orientation="Horizontal">
-                        <ToggleButton x:Name="innerExceptionEnable" Content="+" Width="20"/>
-                        <TextBlock Text="inner Exception:"/>
-                    </StackPanel>
-                    <Border BorderThickness="1" BorderBrush="White" Margin="2" Visibility="{Binding ElementName=innerExceptionEnable, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <ContentControl Content="{Binding InnerException}" ContentTemplate="{DynamicResource ExceptionTemplate}"/>
-                    </Border>
-                </StackPanel>
-                <StackPanel x:Name="stackTrace">
-                    <StackPanel Orientation="Horizontal">
-                        <ToggleButton x:Name="stackTraceEnable" Content="+" Width="20"/>
-                        <TextBlock Text="stacktrace:"/>
-                    </StackPanel>
-                    <TextBlock Visibility="{Binding ElementName=stackTraceEnable, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}" Text="{Binding StackTrace}"/>
-                </StackPanel>-->
+                <ListBox Height="200" HorizontalAlignment="Stretch">
+                    <ListBox.ItemsSource>
+                        <Binding Path="Exception">
+                            <Binding.Converter>
+                                <local:ExceptionToPropertyConverter />
+                            </Binding.Converter>
+                        </Binding>
+                    </ListBox.ItemsSource>
+                </ListBox>
             </StackPanel>
-
-            <!--<DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding Path=InnerException}" Value="{x:Null}">
-                    <Setter TargetName="innerException" Property="Visibility" Value="Collapsed" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Path=StackTrace}" Value="{x:Null}">
-                    <Setter TargetName="stackTrace" Property="Visibility" Value="Collapsed" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Path=TargetSite}" Value="{x:Null}">
-                    <Setter TargetName="targetSite" Property="Visibility" Value="Collapsed" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Path=Source}" Value="{x:Null}">
-                    <Setter TargetName="source" Property="Visibility" Value="Collapsed" />
-                </DataTrigger>
-            </DataTemplate.Triggers>-->
-        </DataTemplate>
+        </DataTemplate>-->
 
         <local:TraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
             <local:TraceItemTemplateSelector.NullTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Message}"/>
+                    <ScrollViewer MaxHeight="150" Name="scrollPane" VerticalScrollBarVisibility="Disabled" CanContentScroll="False">
+                        <TextBlock Text="{Binding Message}"/>
+                    </ScrollViewer>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding ActualHeight, ElementName=scrollPane}" Value="150.0">
+                            <Setter TargetName="scrollPane" Property="ScrollViewer.VerticalScrollBarVisibility" Value="Visible" />
+                            <Setter TargetName="scrollPane" Property="ScrollViewer.CanContentScroll" Value="true" />
+                            <Setter TargetName="scrollPane" Property="ScrollViewer.OpacityMask" Value="{StaticResource fadeBrush}" />
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
                 </DataTemplate>
             </local:TraceItemTemplateSelector.NullTemplate>
 
@@ -88,113 +56,80 @@
                         <TextBlock>
 							<Run FontWeight="Bold" Text="{Binding Message, Mode=OneWay}"/>
                         </TextBlock>
-						<TextBlock>
-							<Run FontWeight="Bold" Text="{Binding Message, Mode=OneWay}"/>
-						</TextBlock>
-						<ListBox Height="200">
-							<ListBox.ItemsSource>
-								<Binding Path="Exception">
-									<Binding.Converter>
-										<local:ExceptionToPropertyConverter />
-									</Binding.Converter>
-								</Binding>
-							</ListBox.ItemsSource>
-							<ListBox.ItemTemplate>
-								<DataTemplate>
-									<ListBox ItemsSource="{Binding}" Height="120">
-										<ListBox.ItemTemplate>
-											<DataTemplate>
-												<StackPanel>
-													<TextBlock Text="{Binding Name}" />
-													<TextBlock Text="{Binding Type}" />
-													<TextBlock Text="{Binding Value}" />
-												</StackPanel>
-											</DataTemplate>
-										</ListBox.ItemTemplate>
-									</ListBox>
-								</DataTemplate>
-							</ListBox.ItemTemplate>
-						</ListBox>
-						<!--<TextBlock>
-							<Run Text="Exception: "/>
-							<Run FontWeight="Bold" Text="{Binding Exception.Message, Mode=OneWay}"/>
-                        </TextBlock>
-                        <TextBlock>
-                            <Run Text="Quelle:  "/>
-                            <Run FontWeight="Bold" Text="{Binding Exception.Source, Mode=OneWay}" />
-                        </TextBlock>
-                        <TextBlock>
-							<Run Text="TargetSite:  "/>
-							<Run FontWeight="Bold" Text="{Binding Exception.TargetSite, Mode=OneWay}" />
-                        </TextBlock>
-                        <StackPanel Name="tbExceptionData">
-                            <TextBlock Text="Data:  "/>
-                            <Grid Grid.IsSharedSizeScope="True">
-                                <ListBox ItemsSource="{Binding Path=Exception.Data}" Background="Transparent" BorderThickness="0" Margin="20,0,0,0">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition SharedSizeGroup="ssgExceptionDataKeys"/>
-                                                    <ColumnDefinition/>
-                                                    <ColumnDefinition SharedSizeGroup="ssgExceptionDataValues"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding Path=Key}" />
-                                                <TextBlock Grid.Column="1" Text=" : "/>
-                                                <TextBlock Grid.Column="2" Text="{Binding Path=Value}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </Grid>
-                        </StackPanel>
-                        <StackPanel x:Name="innerException">
-                            <StackPanel Orientation="Horizontal">
-                                <ToggleButton x:Name="innerExceptionEnable" Content="+" Width="20"/>
-                                <TextBlock Text="inner Exception:"/>
-                            </StackPanel>
-                            <Border BorderThickness="1" BorderBrush="White" Margin="2" Visibility="{Binding ElementName=innerExceptionEnable, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <ContentControl Content="{Binding Exception.InnerException}" ContentTemplate="{DynamicResource ExceptionTemplate}"/>
-                            </Border>
-                        </StackPanel>
-                        <StackPanel x:Name="stackTrace">
-                            <StackPanel Orientation="Horizontal">
-                                <ToggleButton x:Name="stackTraceEnable" Content="+" Width="20"/>
-                                <TextBlock Text="stacktrace:"/>
-                            </StackPanel>
-                        </StackPanel>
-                        <TextBlock Visibility="{Binding ElementName=stackTraceEnable, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}" Text="{Binding Exception.StackTrace}"/>-->
+                        <ItemsControl HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <ItemsControl.ItemsSource>
+                                <Binding Path="Exception">
+                                    <Binding.Converter>
+                                        <local:ExceptionToPropertyConverter />
+                                    </Binding.Converter>
+                                </Binding>
+                            </ItemsControl.ItemsSource>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <ScrollViewer MaxHeight="150" Name="scrollPane">
+                                        <Grid Grid.IsSharedSizeScope="True" >
+                                            <ItemsControl ItemsSource="{Binding}" Name="exceptionData" >
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition SharedSizeGroup="ssgExceptionDataName"/>
+                                                                <ColumnDefinition SharedSizeGroup="ssgExceptionDataType"/>
+                                                                <ColumnDefinition SharedSizeGroup="ssgExceptionDataValue"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="{Binding Name}" />
+                                                            <TextBlock Grid.Column="1" Margin="5,0,5,0" Text="{Binding Type}" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding Value}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Grid>
+                                    </ScrollViewer>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding ActualHeight, ElementName=scrollPane}" Value="150.0">
+                                            <Setter TargetName="scrollPane" Property="ScrollViewer.VerticalScrollBarVisibility" Value="Visible" />
+                                            <Setter TargetName="scrollPane" Property="ScrollViewer.CanContentScroll" Value="true" />
+                                            <Setter TargetName="scrollPane" Property="ScrollViewer.OpacityMask" Value="{StaticResource fadeBrush}" />
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
-                    <!--<DataTemplate.Triggers>
-                        <DataTrigger Binding="{Binding Path=Exception.InnerException}" Value="{x:Null}">
-                            <Setter TargetName="innerException" Property="Visibility" Value="Collapsed" />
-                        </DataTrigger>
-                        <DataTrigger Binding="{Binding Path=Exception.StackTrace}" Value="{x:Null}">
-                            <Setter TargetName="stackTrace" Property="Visibility" Value="Collapsed" />
-                        </DataTrigger>
-                        <DataTrigger Binding="{Binding Path=Exception.Data.Count}" Value="0">
-                            <Setter TargetName="tbExceptionData" Property="Visibility" Value="Collapsed"/>
-                        </DataTrigger>
-                    </DataTemplate.Triggers>-->
                 </DataTemplate>
             </local:TraceItemTemplateSelector.ExceptionTemplate>
 
             <local:TraceItemTemplateSelector.TraceItemTemplate>
                 <DataTemplate>
-                    <StackPanel>
-                        <TextBlock Text="{Binding Message}" />
-                        <TextBlock Text="{Binding Id}" />
-                        <TextBlock Text="{Binding Source}" />
-                    </StackPanel>
+                    <ScrollViewer MaxHeight="150" Name="scrollPane" VerticalScrollBarVisibility="Disabled" CanContentScroll="False">
+                        <StackPanel>
+                            <TextBlock Text="{Binding Message}" />
+                            <TextBlock Text="{Binding Id}" />
+                            <TextBlock Text="{Binding Source}" />
+                        </StackPanel>
+                    </ScrollViewer>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding ActualHeight, ElementName=scrollPane}" Value="150.0">
+                            <Setter TargetName="scrollPane" Property="ScrollViewer.VerticalScrollBarVisibility" Value="Visible" />
+                            <Setter TargetName="scrollPane" Property="ScrollViewer.CanContentScroll" Value="true" />
+                            <Setter TargetName="scrollPane" Property="ScrollViewer.OpacityMask" Value="{StaticResource fadeBrush}" />
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
                 </DataTemplate>
             </local:TraceItemTemplateSelector.TraceItemTemplate>
 
             <local:TraceItemTemplateSelector.TextItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Message}">
-                    </TextBlock>
+                    <ScrollViewer MaxHeight="150" Name="scrollPane" VerticalScrollBarVisibility="Disabled" CanContentScroll="False">
+                        <TextBlock Text="{Binding Message}"/>
+                    </ScrollViewer>
                     <DataTemplate.Triggers>
-                        <!-- if the length is greater than x - make it collapseable -->
+                        <DataTrigger Binding="{Binding ActualHeight, ElementName=scrollPane}" Value="150.0">
+                            <Setter TargetName="scrollPane" Property="ScrollViewer.VerticalScrollBarVisibility" Value="Visible" />
+                            <Setter TargetName="scrollPane" Property="ScrollViewer.CanContentScroll" Value="true" />
+                            <Setter TargetName="scrollPane" Property="ScrollViewer.OpacityMask" Value="{StaticResource fadeBrush}" />
+                        </DataTrigger>
                     </DataTemplate.Triggers>
                 </DataTemplate>
             </local:TraceItemTemplateSelector.TextItemTemplate>
