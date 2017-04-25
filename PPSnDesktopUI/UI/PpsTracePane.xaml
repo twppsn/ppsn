@@ -137,7 +137,7 @@
 															<ColumnDefinition SharedSizeGroup="ssgExceptionDataValue"/>
 														</Grid.ColumnDefinitions>
 														<TextBlock Grid.Column="0" Text="{Binding Name}" />
-														<TextBlock Grid.Column="1" Margin="5,0,5,0" Text="{Binding Type}" />
+                                                        <TextBlock Grid.Column="1" Margin="5,0,5,0" Text="{Binding Type, Converter={StaticResource TypeStringConverter}}" />
 														<TextBlock Grid.Column="2" Text="{Binding Value}" />
 													</Grid>
 												</DataTemplate>
