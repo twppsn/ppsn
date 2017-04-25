@@ -1,21 +1,24 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Data.SQLite;
 using System.Diagnostics;
+using System.Dynamic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
@@ -25,7 +28,6 @@ using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Properties;
 using TecWare.PPSn.Stuff;
-using System.Collections.ObjectModel;
 
 namespace TecWare.PPSn
 {
@@ -200,7 +202,15 @@ namespace TecWare.PPSn
 		{
 			this.owner = owner;
 			this.values = new object[r.FieldCount];
-			r.GetValues(this.values);
+			var primaryKeyIndex = owner.GetPrimaryKeyColumnIndex();
+			for (var i = 0;i< values.Length;i++)
+			{
+				var v = r.GetValue(i);
+				if (primaryKeyIndex == i && (v == null || v == DBNull.Value))
+					throw new ArgumentNullException(owner.Columns[primaryKeyIndex].Name, "Null primary columns are not allowed.");
+
+				values[i] = v == DBNull.Value ? null : v;
+			}
 		} // ctor
 
 		public override IReadOnlyList<IDataColumn> Columns 
@@ -211,7 +221,7 @@ namespace TecWare.PPSn
 			get
 			{
 				var value = values[index];
-				if (value == null)
+				if (value != null)
 				{
 					var column = owner.GetColumnDefinition(index);
 					if (column.IsRelationColumn) // return the related row
@@ -441,7 +451,7 @@ namespace TecWare.PPSn
 	
 	#region -- class PpsMasterData ------------------------------------------------------
 
-	public sealed class PpsMasterData : IDisposable
+	public sealed class PpsMasterData : IDynamicMetaObjectProvider, IDisposable
 	{
 		public const string MasterDataSchema = "masterData";
 		private const string refreshColumnName = "_IsUpdated";
@@ -470,6 +480,38 @@ namespace TecWare.PPSn
 				}
 			} // func TryGetProperty
 		} // class SqLiteParameterDictionaryWrapper
+
+		#endregion
+
+		#region -- class PpsMasterDataMetaObject ----------------------------------------
+
+		private sealed class PpsMasterDataMetaObject : DynamicMetaObject
+		{
+			public PpsMasterDataMetaObject(PpsMasterData masterData, Expression parameter)
+				: base(parameter, BindingRestrictions.Empty, masterData)
+			{
+			} // ctor
+
+			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
+			{
+				var masterData = (PpsMasterData)Value;
+
+				// check for table
+				var tableDefinition = masterData.FindTable(binder.Name);
+				if (tableDefinition == null)
+					return base.BindGetMember(binder);
+
+				// return the table
+				return new DynamicMetaObject(
+					Expression.Call(
+						Expression.Convert(Expression, typeof(PpsMasterData)),
+						getTableMethodInfo,
+						Expression.Constant(tableDefinition)
+					),
+					BindingRestrictions.GetInstanceRestriction(Expression, masterData)
+				);
+			} // proc BindGetMember
+		} // class PpsMasterDataMetaObject
 
 		#endregion
 
@@ -505,6 +547,9 @@ namespace TecWare.PPSn
 				connection?.Dispose();
 			}
 		} // proc Dispose
+
+		public DynamicMetaObject GetMetaObject(Expression parameter)
+			=> new PpsMasterDataMetaObject(this, parameter);
 
 		#endregion
 
@@ -1225,8 +1270,12 @@ namespace TecWare.PPSn
 		/// <summary>Creates a master data table result for the table definition</summary>
 		/// <param name="tableDefinition">Table definition for the new result.</param>
 		/// <returns></returns>
-		internal PpsMasterDataTable GetTable(PpsDataTableDefinition tableDefinition)
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public PpsMasterDataTable GetTable(PpsDataTableDefinition tableDefinition)
 		{
+			if (!schema.TableDefinitions.Contains(tableDefinition))
+				throw new ArgumentOutOfRangeException(nameof(tableDefinition));
+
 			return TryGetTableFromCache(tableDefinition, out var table)
 				? table
 				: new PpsMasterDataTable(this, tableDefinition);
@@ -1245,12 +1294,15 @@ namespace TecWare.PPSn
 			return GetTable(tableDefinition);
 		} // func GetTable
 
+		internal PpsDataTableDefinition FindTable(string tableName)
+			=> schema.FindTable(tableName);
+
 		private bool TryGetTableFromCache(PpsDataTableDefinition tableDefinition, out PpsMasterDataTable table)
 		{
 			table = null;
 			return false;
 		} // func TryGetTableFromCache
-
+		
 		#endregion
 
 		#region -- Synchronization ------------------------------------------------------
@@ -1672,7 +1724,15 @@ namespace TecWare.PPSn
 		public SQLiteConnection Connection => connection;
 
 		// -- Static ------------------------------------------------------
-		
+
+		private static readonly MethodInfo getTableMethodInfo;
+
+		static PpsMasterData()
+		{
+			var ti = typeof(PpsMasterData);
+			getTableMethodInfo = ti.GetMethod(nameof(GetTable), typeof(PpsDataTableDefinition));
+		} // ctor
+
 		#region -- Read/Write Schema ------------------------------------------------
 
 		internal static XElement ReadSchemaValue(IDataReader r, int columnIndex)
@@ -3212,45 +3272,6 @@ namespace TecWare.PPSn
 			throw new NotImplementedException("Todo: Force online mode.");
 		} // func ForceOnlineMode
 
-		/// <summary>
-		/// DeleteMe - Only for Debug pruposes
-		/// </summary>
-		[LuaMember]
-		public static void throwme()
-		{
-			throw new Exception("Test");
-		}
-
-		/// <summary>
-		/// DeleteMe - Only for Debug pruposes
-		/// </summary>
-		[LuaMember]
-		public static void throwmemax()
-		{
-			var exc1 = new Exception("test");
-			for (var i = 0; i < 20; i++)
-				exc1.Data[$"Data{i}"] = $"Value{i}";
-			var exc2 = new Exception("Test", exc1);
-			for (var i = 0; i < 20; i++)
-				exc2.Data[$"Data{i}"] = $"Value{i}";
-			var exc3 = new Exception("Test", exc2);
-			for (var i = 0; i < 20; i++)
-				exc3.Data[$"Data{i}"] = $"Value{i}";
-
-			var exc4 = new Exception("test", exc3);
-			for (var i = 0; i < 20; i++)
-				exc4.Data[$"Data{i}"] = $"Value{i}";
-
-			var exc5 = new Exception("Test", exc4);
-			for (var i = 0; i < 20; i++)
-				exc5.Data[$"Data{i}"] = $"Value{i}";
-
-			var exc6 = new Exception("Test", exc5);
-			for (var i = 0; i < 20; i++)
-				exc6.Data[$"Data{i}"] = $"Value{i}";
-			throw exc6;
-		}
-
 		/// <summary></summary>
 		[LuaMember]
 		public BaseWebRequest Request => request;
@@ -3267,6 +3288,7 @@ namespace TecWare.PPSn
 		public SQLiteConnection LocalConnection => masterData.Connection;
 
 		/// <summary>Access to the local store for the synced data.</summary>
+		[LuaMember]
 		public PpsMasterData MasterData => masterData;
 	} // class PpsEnvironment
 

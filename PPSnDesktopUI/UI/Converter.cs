@@ -189,6 +189,19 @@ namespace TecWare.PPSn.UI
             throw new System.NotImplementedException();
         }
     }
+
+	public sealed class PpsTypeStringConverter : IValueConverter
+	{
+		public object Convert(object value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			return value.ToString().Replace("System.", String.Empty);
+		}
+
+		public object ConvertBack(object value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			throw new System.NotImplementedException();
+		}
+	}
 }
 
 
