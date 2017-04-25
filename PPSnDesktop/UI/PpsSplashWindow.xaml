@@ -14,8 +14,8 @@
     </Window.InputBindings>
 
 	<Window.Resources>
-		<SolidColorBrush x:Key="SplashWindowControlForegroundBrush" Color="Black" />
-		<SolidColorBrush x:Key="SplashWindowControlBackgroundBrush" Color="White" />
+		<SolidColorBrush x:Key="SplashWindowControlForegroundBrush" Color="#000000" />
+		<SolidColorBrush x:Key="SplashWindowControlBackgroundBrush" Color="#FFFFFF" />
 		<SolidColorBrush x:Key="SplashWindowControlBorderBrushNormal" Color="#999999" />
 		<SolidColorBrush x:Key="SplashWindowControlBorderBrushFocused" Color="#666666" />
 
@@ -31,43 +31,12 @@
 			</Style.Triggers>
 		</Style>
 
-		<Style TargetType="{x:Type Button}">
-			<Setter Property="Foreground" Value="{StaticResource SplashWindowControlForegroundBrush}"/>
-			<Setter Property="Background" Value="#CCCCCC"/>
-			<Setter Property="BorderBrush" Value="#CCCCCC"/>
+		<Style TargetType="{x:Type Button}" BasedOn="{StaticResource PPSnSysButtonStyle}">
 			<Setter Property="BorderThickness" Value="2"/>
 			<Setter Property="Width" Value="110"/>
-			<Setter Property="Height" Value="32"/>
+			<Setter Property="Height" Value="30"/>
 			<Setter Property="FontSize" Value="14"/>
-			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-			<Setter Property="SnapsToDevicePixels" Value="True"/>
-			<Setter Property="Template">
-				<Setter.Value>
-					<ControlTemplate TargetType="{x:Type Button}">
-						<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}">
-							<ContentPresenter x:Name="PART_ContentPresenter" Focusable="False" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-											  Margin="{TemplateBinding Padding}" RecognizesAccessKey="True"
-											  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
-											  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
-						</Border>
-						<ControlTemplate.Triggers>
-							<Trigger Property="IsMouseOver" Value="true">
-								<Setter Property="BorderBrush" TargetName="border" Value="#7A7A7A"/>
-							</Trigger>
-							<Trigger Property="IsKeyboardFocused" Value="true">
-								<Setter Property="BorderBrush" TargetName="border" Value="#7A7A7A"/>
-							</Trigger>
-							<Trigger Property="IsPressed" Value="true">
-								<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SplashWindowControlBorderBrushNormal}"/>
-								<Setter Property="Background" TargetName="border" Value="{StaticResource SplashWindowControlBorderBrushNormal}"/>
-							</Trigger>
-							<Trigger Property="IsEnabled" Value="false">
-								<Setter Property="Foreground" Value="#7A7A7A"/>
-							</Trigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Setter.Value>
-			</Setter>
+			<Setter Property="Padding" Value="0,0,0,1"/>
 		</Style>
 
 		<ControlTemplate x:Key="SplashWindowComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}">
@@ -157,7 +126,7 @@
 			<Setter Property="Background" Value="{StaticResource SplashWindowControlBackgroundBrush}"/>
 			<Setter Property="BorderThickness" Value="2"/>
 			<Setter Property="BorderBrush" Value="{StaticResource SplashWindowControlBorderBrushNormal}"/>
-			<Setter Property="SelectionBrush" Value="Black"/>
+			<Setter Property="SelectionBrush" Value="#000000"/>
 			<Setter Property="SelectionOpacity" Value=".25"/>
 			<Setter Property="FontSize" Value="14"/>
 			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -189,7 +158,7 @@
 			<Setter Property="Background" Value="{StaticResource SplashWindowControlBackgroundBrush}"/>
 			<Setter Property="BorderThickness" Value="2"/>
 			<Setter Property="BorderBrush" Value="{StaticResource SplashWindowControlBorderBrushNormal}"/>
-			<Setter Property="SelectionBrush" Value="Black"/>
+			<Setter Property="SelectionBrush" Value="#000000"/>
 			<Setter Property="SelectionOpacity" Value=".25"/>
 			<Setter Property="FontSize" Value="14"/>
 			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -214,56 +183,9 @@
 			</Setter>
 		</Style>
 
-		<Style TargetType="{x:Type CheckBox}">
-			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-			<Setter Property="VerticalContentAlignment" Value="Center"/>
-			<Setter Property="Foreground" Value="{StaticResource SplashWindowControlForegroundBrush}"/>
-			<Setter Property="Background" Value="{StaticResource SplashWindowControlBackgroundBrush}"/>
-			<Setter Property="BorderBrush" Value="{StaticResource SplashWindowControlBorderBrushNormal}"/>
-			<Setter Property="FontSize" Value="14"/>
-			<Setter Property="Template">
-				<Setter.Value>
-					<ControlTemplate TargetType="{x:Type CheckBox}">
-						<Grid x:Name="templateRoot" Background="Transparent" SnapsToDevicePixels="True">
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="*"/>
-							</Grid.ColumnDefinitions>
-							<Border x:Name="checkBoxBorder" Grid.Column="0" Width="20" Height="20"
-									BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="2"
-									Background="{TemplateBinding Background}" 
-									HorizontalAlignment="Left" VerticalAlignment="Center">
-								<Path x:Name="optionMark" Opacity="0" HorizontalAlignment="Center" VerticalAlignment="Center" Width="16" Height="16"
-									  Data="M10,80 L50,120 140,30"
-									  Stroke="{StaticResource SplashWindowControlBackgroundBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Stretch="Uniform"/>
-							</Border>
-							<ContentPresenter x:Name="contentPresenter" Grid.Column="1" Focusable="False" RecognizesAccessKey="True"
-											  HorizontalAlignment="Left" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-											  Margin="8,0,0,0" SnapsToDevicePixels="True"/>
-						</Grid>
-						<ControlTemplate.Triggers>
-							<Trigger Property="IsChecked" Value="true">
-								<Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource SplashWindowControlBorderBrushNormal}"/>
-								<Setter Property="Opacity" TargetName="optionMark" Value="1"/>
-							</Trigger>
-							<Trigger Property="IsKeyboardFocused" Value="True">
-								<Setter Property="BorderBrush" TargetName="checkBoxBorder" Value="{StaticResource SplashWindowControlBorderBrushFocused}"/>
-							</Trigger>
-							<Trigger Property="IsPressed" Value="true">
-								<Setter Property="Background" TargetName="checkBoxBorder" Value="{StaticResource SplashWindowControlBorderBrushFocused}"/>
-							</Trigger>
-							<Trigger Property="IsEnabled" Value="false">
-								<Setter Property="Opacity" Value="0.4"/>
-							</Trigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Setter.Value>
-			</Setter>
-		</Style>
-
 	</Window.Resources>
 
-	<Border BorderThickness="1" BorderBrush="Black" Background="White">
+	<Border BorderThickness="1" BorderBrush="#000000" Background="#FFFFFF">
 		<Grid>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="96"/>
@@ -317,9 +239,9 @@
 				<Grid.RowDefinitions>
 					<RowDefinition/>
 					<RowDefinition Height="48"/>
-					<RowDefinition Height="32"/>
+					<RowDefinition Height="30"/>
 					<RowDefinition Height="48"/>
-					<RowDefinition Height="32"/>
+					<RowDefinition Height="30"/>
 					<RowDefinition/>
 					<RowDefinition Height="64"/>
 				</Grid.RowDefinitions>
@@ -360,11 +282,11 @@
 				<Grid.RowDefinitions>
 					<RowDefinition/>
 					<RowDefinition Height="40"/>
-					<RowDefinition Height="32"/>
+					<RowDefinition Height="30"/>
 					<RowDefinition Height="48"/>
-					<RowDefinition Height="32"/>
+					<RowDefinition Height="30"/>
 					<RowDefinition Height="48"/>
-					<RowDefinition Height="32"/>
+					<RowDefinition Height="30"/>
 					<RowDefinition/>
 					<RowDefinition Height="64"/>
 				</Grid.RowDefinitions>
@@ -399,7 +321,8 @@
 						<KeyBinding Key="Return" Command="local:PpsSplashWindow.EnterKeyCommand"/>
 					</PasswordBox.InputBindings>
 				</PasswordBox>
-				<CheckBox Grid.Row="7" IsChecked="{Binding SavePassword}" Content="Password speichern" IsEnabled="{Binding IsPasswordSaveEnabled}" VerticalAlignment="Top" Margin="0,12,0,0"/>
+				<CheckBox Grid.Row="7" IsChecked="{Binding SavePassword}" Content="Password speichern" IsEnabled="{Binding IsPasswordSaveEnabled}" Style="{StaticResource PPSnSysCheckBoxStyle}"
+						  BorderThickness="2" FontSize="14" VerticalAlignment="Top" Margin="0,12,0,0"/>
 
 				<StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Right">
 					<Button Content="Anmelden" Command="{x:Static ApplicationCommands.Save}"/>

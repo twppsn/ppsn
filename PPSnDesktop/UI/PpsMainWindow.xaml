@@ -9,381 +9,381 @@
               MinHeight="600"
               MinWidth="800"
 			  Height="600" Width="800" >
-    <ui:PpsWindow.Title>
-        <MultiBinding FallbackValue="{StaticResource PPSnApplicationTitle}" StringFormat="{}{0} - {1} - {2}">
-            <Binding Path="Text" ElementName="PART_Title" />
-            <Binding Path="CurrentPane.SubTitle"/>
-            <Binding Path="CurrentPane.Title" Converter="{StaticResource MultiLineStringConverter}"/>
-        </MultiBinding>
-    </ui:PpsWindow.Title>
+	<ui:PpsWindow.Title>
+		<MultiBinding FallbackValue="{StaticResource PPSnApplicationTitle}" StringFormat="{}{0} - {1} - {2}">
+			<Binding Path="Text" ElementName="PART_Title" />
+			<Binding Path="CurrentPane.SubTitle"/>
+			<Binding Path="CurrentPane.Title" Converter="{StaticResource MultiLineStringConverter}"/>
+		</MultiBinding>
+	</ui:PpsWindow.Title>
 
-    <ui:PpsWindow.Resources>
-        <SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />
-        <SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnActionButtonColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
+	<ui:PpsWindow.Resources>
+		<SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />
+		<SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnActionButtonColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
 
-        <Geometry x:Key="PpsWindowCloseButton">M 0.5,0.5L 9.5,9.5M 9.5,0.5L 0.5,9.5</Geometry>
-        <Geometry x:Key="PpsWindowMaximizeButton">M 8.5,1.5L 0.5,1.5L 0.5,9.5L 8.5,9.5L 8.5,1.5 Z M 0.5,9.5L 0.5,3.27777L 8.5,3.27777L 8.5,9.5L 0.5,9.5 Z</Geometry>
-        <Geometry x:Key="PpsWindowRestoreButton">M 0.5,9.5L 0.5,4.5L 0.5,9.5L 7.5,9.5L 7.5,3.5L 0.5,3.5L 0.5,4.5L 7.5,4.5L 7.5,9.5L 0.5,9.5M 3.5,1.5L 9.5,1.5L 9.5,7.5L 9.5,1.5L 3.5,1.5</Geometry>
-        <Storyboard x:Key="FadeOutStoryboard" FillBehavior="HoldEnd">
-            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:.3"/>
-            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                <DiscreteObjectKeyFrame KeyTime="0:0:.3" Value="{x:Static Visibility.Collapsed}"/>
-            </ObjectAnimationUsingKeyFrames>
-        </Storyboard>
-        <Storyboard x:Key="FadeInStoryboard" FillBehavior="HoldEnd">
-            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
-            </ObjectAnimationUsingKeyFrames>
-            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:.3" />
-        </Storyboard>
+		<Geometry x:Key="PpsWindowCloseButton">M 0.5,0.5L 9.5,9.5M 9.5,0.5L 0.5,9.5</Geometry>
+		<Geometry x:Key="PpsWindowMaximizeButton">M 8.5,1.5L 0.5,1.5L 0.5,9.5L 8.5,9.5L 8.5,1.5 Z M 0.5,9.5L 0.5,3.27777L 8.5,3.27777L 8.5,9.5L 0.5,9.5 Z</Geometry>
+		<Geometry x:Key="PpsWindowRestoreButton">M 0.5,9.5L 0.5,4.5L 0.5,9.5L 7.5,9.5L 7.5,3.5L 0.5,3.5L 0.5,4.5L 7.5,4.5L 7.5,9.5L 0.5,9.5M 3.5,1.5L 9.5,1.5L 9.5,7.5L 9.5,1.5L 3.5,1.5</Geometry>
+		<Storyboard x:Key="FadeOutStoryboard" FillBehavior="HoldEnd">
+			<DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:.3"/>
+			<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+				<DiscreteObjectKeyFrame KeyTime="0:0:.3" Value="{x:Static Visibility.Collapsed}"/>
+			</ObjectAnimationUsingKeyFrames>
+		</Storyboard>
+		<Storyboard x:Key="FadeInStoryboard" FillBehavior="HoldEnd">
+			<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+				<DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+			</ObjectAnimationUsingKeyFrames>
+			<DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:.3" />
+		</Storyboard>
 
-        <Style x:Key="PPSnWindowButtonStyle" TargetType="{x:Type Button}">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-            <Setter Property="Focusable" Value="False" />
-            <Setter Property="IsTabStop" Value="False" />
-            <Setter Property="VerticalAlignment" Value="Top"/>
-            <Setter Property="Width" Value="34"/>
-            <Setter Property="Height" Value="26" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="PART_Content" BorderBrush="Transparent" BorderThickness="0,0,0,0" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
-                            <ContentPresenter SnapsToDevicePixels="True" MaxHeight="10" MaxWidth="10" HorizontalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+		<Style x:Key="PPSnWindowButtonStyle" TargetType="{x:Type Button}">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+			<Setter Property="Focusable" Value="False" />
+			<Setter Property="IsTabStop" Value="False" />
+			<Setter Property="VerticalAlignment" Value="Top"/>
+			<Setter Property="Width" Value="34"/>
+			<Setter Property="Height" Value="26" />
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type Button}">
+						<Border x:Name="PART_Content" BorderBrush="Transparent" BorderThickness="0,0,0,0" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+							<ContentPresenter SnapsToDevicePixels="True" MaxHeight="10" MaxWidth="10" HorizontalAlignment="Center"/>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
+							</Trigger>
+							<Trigger Property="IsPressed" Value="True">
+								<Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
 
-        <Style x:Key="NavigatorToggleButtonStyle" TargetType="{x:Type Button}">
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="IsTabStop" Value="False"/>
-            <Setter Property="Background" Value="{StaticResource ButtonDarkerBackGroundBrush}"/>
-            <Setter Property="Foreground" Value="{StaticResource ButtonDarkerBorderBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource ButtonDarkerBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="2" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
-                            <Path Width="36" Height="28" SnapsToDevicePixels="True"
+		<Style x:Key="NavigatorToggleButtonStyle" TargetType="{x:Type Button}">
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="IsTabStop" Value="False"/>
+			<Setter Property="Background" Value="{StaticResource ButtonDarkerBackGroundBrush}"/>
+			<Setter Property="Foreground" Value="{StaticResource ButtonDarkerBorderBrush}"/>
+			<Setter Property="BorderBrush" Value="{StaticResource ButtonDarkerBorderBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type Button}">
+						<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="2" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+							<Path Width="36" Height="28" SnapsToDevicePixels="True"
 								  Data="M 57.0079,38.0053L 38.0053,47.5066L 19.0027,38.0053L 25.3369,34.8382L 38.0053,41.1724L 50.6737,34.8382L 57.0079,38.0053 Z M 38.0053,19.0027L 57.0079,28.504L 38.0053,38.0053L 19.0026,28.504L 38.0053,19.0027 Z M 57.0079,47.5066L 38.0053,57.008L 19.0026,47.5066L 25.3369,44.3395L 38.0053,50.6737L 50.6737,44.3395L 57.0079,47.5066 Z"
 								  Stretch="Fill"
 								  Fill="{TemplateBinding Foreground}">
-                            </Path>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="true">
-                                <Setter Property="Background" Value="{StaticResource PPSnMouseOverBrush}"/>
-                                <!--<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>-->
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="true">
-                                <Setter Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
-                                <!--<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>-->
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+							</Path>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="true">
+								<Setter Property="Background" Value="{StaticResource PPSnMouseOverBrush}"/>
+								<!--<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>-->
+							</Trigger>
+							<Trigger Property="IsPressed" Value="true">
+								<Setter Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+								<!--<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>-->
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
 
-        <Style x:Key="PaneSelectToggleButtonStyle" TargetType="{x:Type ToggleButton}">
-            <Setter Property="Focusable" Value="False"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Tag" Value="0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type ToggleButton}">
-                        <Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
-                            <Canvas Width="20.0001" Height="18.0001">
-                                <Path x:Name="icon" Width="19.0001" Height="17.0001" Stretch="None" 
+		<Style x:Key="PaneSelectToggleButtonStyle" TargetType="{x:Type ToggleButton}">
+			<Setter Property="Focusable" Value="False"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Tag" Value="0"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ToggleButton}">
+						<Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+							<Canvas Width="20.0001" Height="18.0001">
+								<Path x:Name="icon" Width="19.0001" Height="17.0001" Stretch="None" 
 									  StrokeThickness="1.00014"
 									  StrokeLineJoin="Round"
 									  StrokeEndLineCap="Flat"
 									  Stroke="{TemplateBinding Foreground}" Fill="Transparent"
 									  Data="M 8.50007,0.500069 L 0.50007,8.50007 L 8.50007,16.5001 M 0.50007,8.50007L 18.5001,8.50007"/>
-                            </Canvas>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="Tag" Value="1">
-                                <Setter TargetName="icon" Property="Data" Value="M 10.5001,16.5001L 18.5001,8.50007L 10.5001,0.50007M 18.5001,8.50007L 0.50007,8.50007"/>
-                            </Trigger>
-                            <Trigger Property="Tag" Value="2">
-                                <Setter TargetName="icon" Property="Data" Value="M 1.500071,3.50007L 17.5001,3.50007M 1.500072,8.50007L 19.5001,8.50007 M 1.50007,13.5001L 12.5001,13.5001"/>
-                            </Trigger>
-                            <Trigger Property="Tag" Value="3">
-                                <Setter TargetName="icon" Property="Data" Value="M 2.50007,15.5001 L 16.5001,1.50007 M 2.50007,1.50007 L 16.5001,15.5001 "/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="icon" Property="Opacity" Value="0.30"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource PPSnMouseOverBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+							</Canvas>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="Tag" Value="1">
+								<Setter TargetName="icon" Property="Data" Value="M 10.5001,16.5001L 18.5001,8.50007L 10.5001,0.50007M 18.5001,8.50007L 0.50007,8.50007"/>
+							</Trigger>
+							<Trigger Property="Tag" Value="2">
+								<Setter TargetName="icon" Property="Data" Value="M 1.500071,3.50007L 17.5001,3.50007M 1.500072,8.50007L 19.5001,8.50007 M 1.50007,13.5001L 12.5001,13.5001"/>
+							</Trigger>
+							<Trigger Property="Tag" Value="3">
+								<Setter TargetName="icon" Property="Data" Value="M 2.50007,15.5001 L 16.5001,1.50007 M 2.50007,1.50007 L 16.5001,15.5001 "/>
+							</Trigger>
+							<Trigger Property="IsEnabled" Value="False">
+								<Setter TargetName="icon" Property="Opacity" Value="0.30"/>
+							</Trigger>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter Property="Background" Value="{StaticResource PPSnMouseOverBrush}"/>
+							</Trigger>
+							<Trigger Property="IsPressed" Value="True">
+								<Setter Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
 
-        <Style x:Key="PaneCloseButtonStyle" TargetType="{x:Type Button}">
-            <Setter Property="Focusable" Value="False"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="PART_Content" BorderThickness="0" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
-                            <Path Stroke="{StaticResource PPSnWindowForegroundBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Stretch="Fill" Width="12" Height="12" Data="{StaticResource PpsWindowCloseButton}" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </ui:PpsWindow.Resources>
+		<Style x:Key="PaneCloseButtonStyle" TargetType="{x:Type Button}">
+			<Setter Property="Focusable" Value="False"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type Button}">
+						<Border x:Name="PART_Content" BorderThickness="0" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+							<Path Stroke="{StaticResource PPSnWindowForegroundBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Stretch="Fill" Width="12" Height="12" Data="{StaticResource PpsWindowCloseButton}" />
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
+							</Trigger>
+							<Trigger Property="IsPressed" Value="True">
+								<Setter TargetName="PART_Content" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+	</ui:PpsWindow.Resources>
 
-    <Grid x:Name="PART_MainWindowGrid" Background="{StaticResource PPSnWindowBackgroundBrush}">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="34" />
-            <ColumnDefinition Width="34" />
-            <ColumnDefinition Width="34" />
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="60" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="25" />
-        </Grid.RowDefinitions>
+	<Grid x:Name="PART_MainWindowGrid" Background="{StaticResource PPSnWindowBackgroundBrush}">
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto" />
+			<ColumnDefinition Width="*" />
+			<ColumnDefinition Width="34" />
+			<ColumnDefinition Width="34" />
+			<ColumnDefinition Width="34" />
+		</Grid.ColumnDefinitions>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="60" />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="25" />
+		</Grid.RowDefinitions>
 
-        <Rectangle Grid.Column="0" Grid.Row="0" Grid.RowSpan="3" HorizontalAlignment="Left" Fill="{StaticResource PPSnSideBarBackgroundBrush}">
-            <Rectangle.Style>
-                <Style TargetType="Rectangle">
-                    <Setter Property="Width" Value="{StaticResource PPSnSideBarIncreasedWidth}" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsSideBarVisible}" Value="false">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard FillBehavior="HoldEnd">
-                                        <DoubleAnimation Storyboard.TargetProperty="Width" To="0" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
-                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                            <DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{x:Static Visibility.Collapsed}"/>
-                                        </ObjectAnimationUsingKeyFrames>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.EnterActions>
-                            <DataTrigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard FillBehavior="HoldEnd">
-                                        <DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarIncreasedWidth}" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
-                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
-                                        </ObjectAnimationUsingKeyFrames>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.ExitActions>
-                        </DataTrigger>
+		<Rectangle Grid.Column="0" Grid.Row="0" Grid.RowSpan="3" HorizontalAlignment="Left" Fill="{StaticResource PPSnSideBarBackgroundBrush}">
+			<Rectangle.Style>
+				<Style TargetType="Rectangle">
+					<Setter Property="Width" Value="{StaticResource PPSnSideBarIncreasedWidth}" />
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding IsSideBarVisible}" Value="false">
+							<DataTrigger.EnterActions>
+								<BeginStoryboard>
+									<Storyboard FillBehavior="HoldEnd">
+										<DoubleAnimation Storyboard.TargetProperty="Width" To="0" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
+										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+											<DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{x:Static Visibility.Collapsed}"/>
+										</ObjectAnimationUsingKeyFrames>
+									</Storyboard>
+								</BeginStoryboard>
+							</DataTrigger.EnterActions>
+							<DataTrigger.ExitActions>
+								<BeginStoryboard>
+									<Storyboard FillBehavior="HoldEnd">
+										<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarIncreasedWidth}" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
+										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+											<DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+										</ObjectAnimationUsingKeyFrames>
+									</Storyboard>
+								</BeginStoryboard>
+							</DataTrigger.ExitActions>
+						</DataTrigger>
 
-                    </Style.Triggers>
-                </Style>
-            </Rectangle.Style>
-        </Rectangle>
+					</Style.Triggers>
+				</Style>
+			</Rectangle.Style>
+		</Rectangle>
 
-        <Grid Grid.Column="0" Grid.Row="0" Width="{StaticResource PPSnSideBarIncreasedWidth}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="54" />
-                <ColumnDefinition />
-            </Grid.ColumnDefinitions>
-            <Button Grid.Column="0" Width="48" Height="48" Margin="6,6,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Focusable="False"
+		<Grid Grid.Column="0" Grid.Row="0" Width="{StaticResource PPSnSideBarIncreasedWidth}">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="54" />
+				<ColumnDefinition />
+			</Grid.ColumnDefinitions>
+			<Button Grid.Column="0" Width="48" Height="48" Margin="6,6,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Focusable="False"
 								Style="{StaticResource NavigatorToggleButtonStyle}"
 								Command="{x:Static uiL:PpsMainWindow.NavigatorToggleCommand}" />
-            <TextBlock x:Name="PART_Title" Grid.Column="1" Text="{StaticResource PPSnApplicationTitle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Top" FontSize="18" />
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,24,0,0" Width="144">
-                <StackPanel.Style>
-                    <Style TargetType="{x:Type StackPanel}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Path=IsPaneVisible}" Value="false">
-                                <DataTrigger.EnterActions>
-                                    <BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}"/>
-                                </DataTrigger.EnterActions>
-                                <DataTrigger.ExitActions>
-                                    <BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}"/>
-                                </DataTrigger.ExitActions>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </StackPanel.Style>
-                <ToggleButton Command="{x:Static uiL:PpsMainWindow.PrevPaneCommand}" Width="36" Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="0"/>
-                <ToggleButton Command="{x:Static uiL:PpsMainWindow.NextPaneCommand}" Width="36" Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="1"/>
-                <ToggleButton x:Name="openPaneListButton" ClickMode="Press" Width="36" Tag="2">
-                    <ToggleButton.Style>
-                        <Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource PaneSelectToggleButtonStyle}">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Path=CurrentPane}" Value="{x:Null}">
-                                    <Setter Property="IsEnabled" Value="False"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ToggleButton.Style>
-                    <ToggleButton.Triggers>
-                        <EventTrigger RoutedEvent="Button.MouseEnter">
-                            <EventTrigger.Actions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <BooleanAnimationUsingKeyFrames Storyboard.TargetName="paneListPopup" Storyboard.TargetProperty="StaysOpen">
-                                            <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="True"/>
-                                        </BooleanAnimationUsingKeyFrames>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger.Actions>
-                        </EventTrigger>
-                        <EventTrigger RoutedEvent="Button.MouseLeave">
-                            <EventTrigger.Actions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <BooleanAnimationUsingKeyFrames Storyboard.TargetName="paneListPopup" Storyboard.TargetProperty="StaysOpen">
-                                            <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
-                                        </BooleanAnimationUsingKeyFrames>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger.Actions>
-                        </EventTrigger>
-                    </ToggleButton.Triggers>
-                </ToggleButton>
-                <ToggleButton Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}" CommandParameter="{Binding Path=CurrentPane}" Width="36" Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="3"/>
-                <Popup x:Name="paneListPopup" IsOpen="{Binding ElementName=openPaneListButton, Path=IsChecked}" PlacementTarget="{Binding ElementName=openPaneListButton}" AllowsTransparency="True" PopupAnimation="Slide">
-                    <ListBox ItemsSource="{Binding Panes}" Background="{StaticResource PPSnPopUpBackgroundBrush}" BorderBrush="{StaticResource PPSnSeparatorBrush}" BorderThickness="1"
+			<TextBlock x:Name="PART_Title" Grid.Column="1" Text="{StaticResource PPSnApplicationTitle}" Foreground="{StaticResource PPSnWindowForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Top" FontSize="18" />
+			<StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,24,0,0" Width="144">
+				<StackPanel.Style>
+					<Style TargetType="{x:Type StackPanel}">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding Path=IsPaneVisible}" Value="false">
+								<DataTrigger.EnterActions>
+									<BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}"/>
+								</DataTrigger.EnterActions>
+								<DataTrigger.ExitActions>
+									<BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}"/>
+								</DataTrigger.ExitActions>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</StackPanel.Style>
+				<ToggleButton Command="{x:Static uiL:PpsMainWindow.PrevPaneCommand}" Width="36" Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="0"/>
+				<ToggleButton Command="{x:Static uiL:PpsMainWindow.NextPaneCommand}" Width="36" Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="1"/>
+				<ToggleButton x:Name="openPaneListButton" ClickMode="Press" Width="36" Tag="2">
+					<ToggleButton.Style>
+						<Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource PaneSelectToggleButtonStyle}">
+							<Style.Triggers>
+								<DataTrigger Binding="{Binding Path=CurrentPane}" Value="{x:Null}">
+									<Setter Property="IsEnabled" Value="False"/>
+								</DataTrigger>
+							</Style.Triggers>
+						</Style>
+					</ToggleButton.Style>
+					<ToggleButton.Triggers>
+						<EventTrigger RoutedEvent="Button.MouseEnter">
+							<EventTrigger.Actions>
+								<BeginStoryboard>
+									<Storyboard>
+										<BooleanAnimationUsingKeyFrames Storyboard.TargetName="paneListPopup" Storyboard.TargetProperty="StaysOpen">
+											<DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="True"/>
+										</BooleanAnimationUsingKeyFrames>
+									</Storyboard>
+								</BeginStoryboard>
+							</EventTrigger.Actions>
+						</EventTrigger>
+						<EventTrigger RoutedEvent="Button.MouseLeave">
+							<EventTrigger.Actions>
+								<BeginStoryboard>
+									<Storyboard>
+										<BooleanAnimationUsingKeyFrames Storyboard.TargetName="paneListPopup" Storyboard.TargetProperty="StaysOpen">
+											<DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+										</BooleanAnimationUsingKeyFrames>
+									</Storyboard>
+								</BeginStoryboard>
+							</EventTrigger.Actions>
+						</EventTrigger>
+					</ToggleButton.Triggers>
+				</ToggleButton>
+				<ToggleButton Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}" CommandParameter="{Binding Path=CurrentPane}" Width="36" Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="3"/>
+				<Popup x:Name="paneListPopup" IsOpen="{Binding ElementName=openPaneListButton, Path=IsChecked}" PlacementTarget="{Binding ElementName=openPaneListButton}" AllowsTransparency="True" PopupAnimation="Slide">
+					<ListBox ItemsSource="{Binding Panes}" Background="{StaticResource PPSnPopUpBackgroundBrush}" BorderBrush="{StaticResource PPSnSeparatorBrush}" BorderThickness="1"
 										 Style="{StaticResource PPSnListBoxStyle}">
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="{x:Type ListBoxItem}">
-                                <Setter Property="Focusable" Value="False"/>
-                                <Setter Property="FontSize" Value="14"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                                            <Button x:Name="PART_Item" BorderThickness="0" Height="32" Command="{x:Static uiL:PpsMainWindow.GoToPaneCommand}" CommandParameter="{Binding}" >
-                                                <Button.Content>
-                                                    <TextBlock>
-                                                        <TextBlock.Text>
-                                                            <MultiBinding StringFormat="{}{0} - {1}">
-                                                                <Binding Path="SubTitle"/>
-                                                                <Binding Path="Title" Converter="{StaticResource MultiLineStringConverter}"/>
-                                                            </MultiBinding>
-                                                        </TextBlock.Text>
-                                                    </TextBlock>
-                                                </Button.Content>
-                                                <Button.Style>
-                                                    <Style TargetType="{x:Type Button}">
-                                                        <Setter Property="Focusable" Value="False"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-                                                        <Setter Property="Background" Value="Transparent"/>
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="{x:Type Button}">
-                                                                    <Grid>
-                                                                        <Grid.ColumnDefinitions>
-                                                                            <ColumnDefinition Width="24"/>
-                                                                            <ColumnDefinition Width="*"/>
-                                                                            <ColumnDefinition Width="32"/>
-                                                                        </Grid.ColumnDefinitions>
-                                                                        <Border x:Name="PART_MarkerBorder" Grid.Column="0" Background="{TemplateBinding Background}">
-                                                                            <Path x:Name="PART_Marker" Width="20" Height="20" SnapsToDevicePixels="True"
+						<ListBox.ItemContainerStyle>
+							<Style TargetType="{x:Type ListBoxItem}">
+								<Setter Property="Focusable" Value="False"/>
+								<Setter Property="FontSize" Value="14"/>
+								<Setter Property="Template">
+									<Setter.Value>
+										<ControlTemplate TargetType="{x:Type ListBoxItem}">
+											<Button x:Name="PART_Item" BorderThickness="0" Height="32" Command="{x:Static uiL:PpsMainWindow.GoToPaneCommand}" CommandParameter="{Binding}" >
+												<Button.Content>
+													<TextBlock>
+														<TextBlock.Text>
+															<MultiBinding StringFormat="{}{0} - {1}">
+																<Binding Path="SubTitle"/>
+																<Binding Path="Title" Converter="{StaticResource MultiLineStringConverter}"/>
+															</MultiBinding>
+														</TextBlock.Text>
+													</TextBlock>
+												</Button.Content>
+												<Button.Style>
+													<Style TargetType="{x:Type Button}">
+														<Setter Property="Focusable" Value="False"/>
+														<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+														<Setter Property="Background" Value="Transparent"/>
+														<Setter Property="Template">
+															<Setter.Value>
+																<ControlTemplate TargetType="{x:Type Button}">
+																	<Grid>
+																		<Grid.ColumnDefinitions>
+																			<ColumnDefinition Width="24"/>
+																			<ColumnDefinition Width="*"/>
+																			<ColumnDefinition Width="32"/>
+																		</Grid.ColumnDefinitions>
+																		<Border x:Name="PART_MarkerBorder" Grid.Column="0" Background="{TemplateBinding Background}">
+																			<Path x:Name="PART_Marker" Width="20" Height="20" SnapsToDevicePixels="True"
 																						  Data="M4,10 9,15 15,5, 14,5 9,14 5,10Z"
 																						  StrokeThickness="0.5"
 																						  StrokeStartLineCap="Flat"
 																						  StrokeEndLineCap="Flat"
 																						  Stroke="{TemplateBinding Foreground}"
 																						  Fill="{TemplateBinding Foreground}">
-                                                                            </Path>
-                                                                        </Border>
-                                                                        <Border x:Name="PART_ItemBorder" Grid.Column="1" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
-                                                                            <ContentPresenter Margin="0,0,8,2" HorizontalAlignment="Left" VerticalAlignment="Center"/>
-                                                                        </Border>
-                                                                        <Border x:Name="PART_CloseBorder" Grid.Column="2" Background="{TemplateBinding Background}">
-                                                                            <Button x:Name="PART_CloseButton" Visibility="Hidden" Style="{StaticResource PaneCloseButtonStyle}"
+																			</Path>
+																		</Border>
+																		<Border x:Name="PART_ItemBorder" Grid.Column="1" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+																			<ContentPresenter Margin="0,0,8,2" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+																		</Border>
+																		<Border x:Name="PART_CloseBorder" Grid.Column="2" Background="{TemplateBinding Background}">
+																			<Button x:Name="PART_CloseButton" Visibility="Hidden" Style="{StaticResource PaneCloseButtonStyle}"
 																					Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}" CommandParameter="{Binding}"/>
-                                                                        </Border>
-                                                                    </Grid>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
-                                                                            <Setter Property="Background" Value="{StaticResource PPSnMouseOverBrush}"/>
-                                                                            <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Visible"/>
-                                                                        </DataTrigger>
-                                                                        <DataTrigger Binding="{Binding Path=Control.IsVisible}" Value="False">
-                                                                            <Setter TargetName="PART_Marker" Property="Visibility" Value="Hidden"/>
-                                                                        </DataTrigger>
-                                                                        <DataTrigger Binding="{Binding PaneControl.ProgressStack.IsEnabled}" Value="True">
-                                                                            <Setter Property="Background" Value="Red"/>
-                                                                        </DataTrigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Style>
-                                                </Button.Style>
-                                                <Button.Triggers>
-                                                    <EventTrigger RoutedEvent="Button.Click">
-                                                        <EventTrigger.Actions>
-                                                            <BeginStoryboard>
-                                                                <Storyboard>
-                                                                    <BooleanAnimationUsingKeyFrames Storyboard.Target="{Binding ElementName=openPaneListButton}" Storyboard.TargetProperty="IsChecked">
-                                                                        <DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
-                                                                    </BooleanAnimationUsingKeyFrames>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </EventTrigger.Actions>
-                                                    </EventTrigger>
-                                                </Button.Triggers>
-                                            </Button>
-                                            <ControlTemplate.Triggers>
-                                                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True">
-                                                    <Setter Property="IsSelected" Value="True" />
-                                                </DataTrigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
-                    </ListBox>
-                </Popup>
-            </StackPanel>
-        </Grid>
+																		</Border>
+																	</Grid>
+																	<ControlTemplate.Triggers>
+																		<DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+																			<Setter Property="Background" Value="{StaticResource PPSnMouseOverBrush}"/>
+																			<Setter TargetName="PART_CloseButton" Property="Visibility" Value="Visible"/>
+																		</DataTrigger>
+																		<DataTrigger Binding="{Binding Path=Control.IsVisible}" Value="False">
+																			<Setter TargetName="PART_Marker" Property="Visibility" Value="Hidden"/>
+																		</DataTrigger>
+																		<DataTrigger Binding="{Binding PaneControl.ProgressStack.IsEnabled}" Value="True">
+																			<Setter Property="Background" Value="Red"/>
+																		</DataTrigger>
+																	</ControlTemplate.Triggers>
+																</ControlTemplate>
+															</Setter.Value>
+														</Setter>
+													</Style>
+												</Button.Style>
+												<Button.Triggers>
+													<EventTrigger RoutedEvent="Button.Click">
+														<EventTrigger.Actions>
+															<BeginStoryboard>
+																<Storyboard>
+																	<BooleanAnimationUsingKeyFrames Storyboard.Target="{Binding ElementName=openPaneListButton}" Storyboard.TargetProperty="IsChecked">
+																		<DiscreteBooleanKeyFrame KeyTime="0:0:0" Value="False"/>
+																	</BooleanAnimationUsingKeyFrames>
+																</Storyboard>
+															</BeginStoryboard>
+														</EventTrigger.Actions>
+													</EventTrigger>
+												</Button.Triggers>
+											</Button>
+											<ControlTemplate.Triggers>
+												<DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True">
+													<Setter Property="IsSelected" Value="True" />
+												</DataTrigger>
+											</ControlTemplate.Triggers>
+										</ControlTemplate>
+									</Setter.Value>
+								</Setter>
+							</Style>
+						</ListBox.ItemContainerStyle>
+					</ListBox>
+				</Popup>
+			</StackPanel>
+		</Grid>
 
-        <TextBlock Grid.Column="1" Foreground="{StaticResource PPSnWindowForegroundBrush}" Padding="24,2,0,0" VerticalAlignment="Top" Height="32" FontSize="16">
+		<TextBlock Grid.Column="1" Foreground="{StaticResource PPSnWindowForegroundBrush}" Padding="24,2,0,0" VerticalAlignment="Top" Height="32" FontSize="16">
 			<Run Text="{Binding CurrentPane.SubTitle, Mode=OneWay}"/>
 			<Run Text=" "/>
 			<Run Text="{Binding CurrentPane.Title, Mode=OneWay, Converter={StaticResource MultiLineStringConverter}}"/>
-            <TextBlock.Tag>
-                <ui:PpsWindowHitTest HitTest="2" />
-            </TextBlock.Tag>
-        </TextBlock>
+			<TextBlock.Tag>
+				<ui:PpsWindowHitTest HitTest="2" />
+			</TextBlock.Tag>
+		</TextBlock>
 
-        <Button x:Name="PART_MinButton" Grid.Column="2" Style="{StaticResource PPSnWindowButtonStyle}" VerticalAlignment="Top" ToolTip="Minimieren" Command="{x:Static ui:PpsWindow.MinimizeCommand}" >
-            <Rectangle
+		<Button x:Name="PART_MinButton" Grid.Column="2" Style="{StaticResource PPSnWindowButtonStyle}" VerticalAlignment="Top" ToolTip="Minimieren" Command="{x:Static ui:PpsWindow.MinimizeCommand}" >
+			<Rectangle
 				Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
 				Stretch="Fill"
 				RenderOptions.EdgeMode="Aliased" 
@@ -392,46 +392,46 @@
 				Margin="0,0,0,1"
 				Width="9" 
 				Height="3" />
-        </Button>
-        <Button x:Name="PART_MaxButton" Grid.Column="3" Command="{x:Static ui:PpsWindow.MaximizeCommand}" >
-            <Path x:Name="PART_MaxButtonPath"
+		</Button>
+		<Button x:Name="PART_MaxButton" Grid.Column="3" Command="{x:Static ui:PpsWindow.MaximizeCommand}" >
+			<Path x:Name="PART_MaxButtonPath"
 				  Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
 				  Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
 				  StrokeThickness="1"
 				  StrokeMiterLimit="2.75"
 				  Stretch="Fill"
 				  RenderOptions.EdgeMode="Aliased">
-                <Path.Style>
-                    <Style TargetType="Path">
-                        <Setter Property="Data" Value="{StaticResource PpsWindowMaximizeButton}" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized">
-                                <Setter Property="Data" Value="{StaticResource PpsWindowRestoreButton}" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Path.Style>
-            </Path>
-            <Button.Style>
-                <Style TargetType="Button" BasedOn="{StaticResource PPSnWindowButtonStyle}" >
-                    <Setter Property="ToolTip" Value="Maximieren" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized" >
-                            <Setter Property="ToolTip" Value="Verkleinern" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Button.Style>
-        </Button>
-        <Button x:Name="PART_CloseButton" Grid.Column="4" Style="{StaticResource PPSnWindowButtonStyle}" VerticalAlignment="Top" ToolTip="Schließen" Command="{x:Static ui:PpsWindow.CloseCommand}" >
-            <Path
+				<Path.Style>
+					<Style TargetType="Path">
+						<Setter Property="Data" Value="{StaticResource PpsWindowMaximizeButton}" />
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized">
+								<Setter Property="Data" Value="{StaticResource PpsWindowRestoreButton}" />
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Path.Style>
+			</Path>
+			<Button.Style>
+				<Style TargetType="Button" BasedOn="{StaticResource PPSnWindowButtonStyle}" >
+					<Setter Property="ToolTip" Value="Maximieren" />
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized" >
+							<Setter Property="ToolTip" Value="Verkleinern" />
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</Button.Style>
+		</Button>
+		<Button x:Name="PART_CloseButton" Grid.Column="4" Style="{StaticResource PPSnWindowButtonStyle}" VerticalAlignment="Top" ToolTip="Schließen" Command="{x:Static ui:PpsWindow.CloseCommand}" >
+			<Path
 				Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
 				StrokeThickness="1.5"
 				Stretch="Fill"
 				RenderOptions.EdgeMode="Aliased"
 				Data="{StaticResource PpsWindowCloseButton}" />
-        </Button>
-        <Label x:Name="PART_User" Grid.Column="1" Grid.Row="0" Grid.ColumnSpan="4" Grid.RowSpan="2" HorizontalAlignment="Right" VerticalAlignment="Top" Height="18" Margin="0,32,24,0" Padding="0"
+		</Button>
+		<Label x:Name="PART_User" Grid.Column="1" Grid.Row="0" Grid.ColumnSpan="4" Grid.RowSpan="2" HorizontalAlignment="Right" VerticalAlignment="Top" Height="18" Margin="0,32,24,0" Padding="0"
 			   VerticalContentAlignment="Center" Cursor="Hand"
 			   Content="{Binding Environment.UsernameDisplay}"
 			   Foreground="{StaticResource PPSnWindowForegroundBrush}"
@@ -440,212 +440,242 @@
 			   ContextMenuService.Placement="Left"
 			   ContextMenuService.HorizontalOffset="{Binding RelativeSource={RelativeSource Self}, Path=ActualWidth}"
 			   ContextMenuService.VerticalOffset="24" >
-            <Label.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Anmelden" Command="{x:Static ui:PpsWindow.LoginCommand}" CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
-                    <MenuItem Header="Abmelden" Command="{x:Static ui:PpsWindow.LogoutCommand}" CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
-                </ContextMenu>
-            </Label.ContextMenu>
-        </Label>
+			<Label.ContextMenu>
+				<ContextMenu>
+					<MenuItem Header="Anmelden" Command="{x:Static ui:PpsWindow.LoginCommand}" CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
+					<MenuItem Header="Abmelden" Command="{x:Static ui:PpsWindow.LogoutCommand}" CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
+				</ContextMenu>
+			</Label.ContextMenu>
+		</Label>
 
-        <uiL:PpsNavigatorControl x:Name="navigator" Grid.Row="1" Grid.ColumnSpan="5" Margin="0,0,32,16">
-            <uiL:PpsNavigatorControl.Style>
-                <Style TargetType="{x:Type UserControl}">
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding Path=IsNavigatorVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="False">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}" />
-                            </DataTrigger.EnterActions>
-                            <DataTrigger.ExitActions>
-                                <BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}" />
-                            </DataTrigger.ExitActions>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </uiL:PpsNavigatorControl.Style>
-        </uiL:PpsNavigatorControl>
+		<uiL:PpsNavigatorControl x:Name="navigator" Grid.Row="1" Grid.ColumnSpan="5" Margin="0,0,32,16">
+			<uiL:PpsNavigatorControl.Style>
+				<Style TargetType="{x:Type UserControl}">
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding Path=IsNavigatorVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="False">
+							<DataTrigger.EnterActions>
+								<BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}" />
+							</DataTrigger.EnterActions>
+							<DataTrigger.ExitActions>
+								<BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}" />
+							</DataTrigger.ExitActions>
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</uiL:PpsNavigatorControl.Style>
+		</uiL:PpsNavigatorControl>
 
-        <Grid x:Name="paneContainer" Grid.Row="1" Grid.ColumnSpan="5" Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="72"/>
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+		<Grid x:Name="paneContainer" Grid.Row="1" Grid.ColumnSpan="5" Margin="0,0,0,16">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="72"/>
+			</Grid.ColumnDefinitions>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="auto"/>
+				<RowDefinition Height="*"/>
+			</Grid.RowDefinitions>
 
-            <ToolBar Width="{StaticResource PPSnPaneMaxGridWidth}" Height="36" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}">
-                <ToolBar.Style>
-                    <Style TargetType="{x:Type ToolBar}" BasedOn="{StaticResource PaneToolBarStyle}" >
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Path=PaneControl.ProgressStack.IsEnabled}" Value="True">
-                                <Setter Property="IsEnabled" Value="False" />
-                            </DataTrigger>
-                            <Trigger Property="HasItems" Value="False">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </ToolBar.Style>
-            </ToolBar>
+			<ToolBar Width="{StaticResource PPSnPaneMaxGridWidth}" Height="36" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}">
+				<ToolBar.Style>
+					<Style TargetType="{x:Type ToolBar}" BasedOn="{StaticResource PaneToolBarStyle}" >
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding Path=PaneControl.ProgressStack.IsEnabled}" Value="True">
+								<Setter Property="IsEnabled" Value="False" />
+							</DataTrigger>
+							<Trigger Property="HasItems" Value="False">
+								<Setter Property="Visibility" Value="Collapsed" />
+							</Trigger>
+						</Style.Triggers>
+					</Style>
+				</ToolBar.Style>
+			</ToolBar>
 
-            <ContentPresenter x:Name="panePresenter" Grid.Column="0" Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}">
-                <ContentPresenter.Style>
-                    <Style TargetType="{x:Type ContentPresenter}" >
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Path=CurrentPane.PaneControl.ProgressStack.IsEnabled}" Value="True">
-                                <Setter Property="IsEnabled" Value="False" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ContentPresenter.Style>
-            </ContentPresenter>
+			<ContentPresenter x:Name="panePresenter" Grid.Column="0" Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}">
+				<ContentPresenter.Style>
+					<Style TargetType="{x:Type ContentPresenter}" >
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding Path=CurrentPane.PaneControl.ProgressStack.IsEnabled}" Value="True">
+								<Setter Property="IsEnabled" Value="False" />
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</ContentPresenter.Style>
+			</ContentPresenter>
 
-            <uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right" Margin="24,24,0,0" Visibility="Collapsed" />
+			<uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right" Margin="24,24,0,0" Visibility="Collapsed" />
 
-            <Grid.Style>
-                <Style TargetType="{x:Type Grid}">
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding Path=IsPaneVisible}" Value="False">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}" />
-                            </DataTrigger.EnterActions>
-                            <DataTrigger.ExitActions>
-                                <BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}" />
-                            </DataTrigger.ExitActions>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Grid.Style>
-        </Grid>
+			<Grid.Style>
+				<Style TargetType="{x:Type Grid}">
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding Path=IsPaneVisible}" Value="False">
+							<DataTrigger.EnterActions>
+								<BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}" />
+							</DataTrigger.EnterActions>
+							<DataTrigger.ExitActions>
+								<BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}" />
+							</DataTrigger.ExitActions>
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</Grid.Style>
+		</Grid>
 
-        <Grid  Grid.Row="2" Grid.ColumnSpan="5" Background="{StaticResource PPSnWindowFooterBrush}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*"/>
-                <ColumnDefinition Width="1*"/>
-                <ColumnDefinition Width="auto"/>
-                <ColumnDefinition Width="32"/>
-            </Grid.ColumnDefinitions>
+		<Grid  Grid.Row="2" Grid.ColumnSpan="5" Background="{StaticResource PPSnWindowFooterBrush}">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="2*"/>
+				<ColumnDefinition Width="1*"/>
+				<ColumnDefinition Width="auto"/>
+				<ColumnDefinition Width="32"/>
+			</Grid.ColumnDefinitions>
 
-            <Button Grid.Column="0" Focusable="False" Foreground="{StaticResource PPSnWindowForegroundBrush}"
+			<Button Grid.Column="0" Focusable="False" Foreground="{StaticResource PPSnWindowForegroundBrush}"
+					Content="{Binding Environment.Traces.LastTrace,Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource MultiLineStringConverter}}"
 					Command="{x:Static ui:PpsWindow.TraceLogCommand}"
-					Content="{Binding Environment.Traces.LastTrace,Mode=OneWay,UpdateSourceTrigger=PropertyChanged,Converter={StaticResource MultiLineStringConverter}}"
 					ToolTipService.InitialShowDelay="750"
 					ToolTipService.ShowDuration="10000">
-                <Button.ToolTip>
-                    <ToolTip Placement="Top" HorizontalOffset="16" VerticalOffset="-16" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="14">
-                        <ListBox Style="{StaticResource PPSnListBoxStyle}" Focusable="False" Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}">
-                            <ListBox.ItemsSource>
-                                <MultiBinding Converter="{StaticResource ManyToTopTenConverter}">
-                                    <Binding Path="Environment.Traces"/>
-                                    <Binding Path="Environment.Traces.Count"/>
-                                </MultiBinding>
-                            </ListBox.ItemsSource>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Height="25">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="86" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding Path=Type}"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Path=Stamp, StringFormat=HH:mm:ss}" Margin="0,0,16,0"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding Path=Message, Converter={StaticResource MultiLineStringConverter}}"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </ToolTip>
-                </Button.ToolTip>
-                <Button.Template>
-                    <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="border" BorderThickness="0" Background="Transparent" SnapsToDevicePixels="true" Padding="16,0">
-                            <ContentPresenter Focusable="False" HorizontalAlignment="Left" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsPressed" Value="true">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
+				<Button.ToolTip>
+					<ToolTip Placement="Top" HorizontalOffset="16" VerticalOffset="-16" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="14">
+						<ListBox Style="{StaticResource PPSnListBoxStyle}" Focusable="False" Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}">
+							<ListBox.ItemsSource>
+								<MultiBinding Converter="{StaticResource ManyToTopTenConverter}">
+									<Binding Path="Environment.Traces"/>
+									<Binding Path="Environment.Traces.Count"/>
+								</MultiBinding>
+							</ListBox.ItemsSource>
+							<ListBox.ItemTemplate>
+								<DataTemplate>
+									<Grid Height="25">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="86" />
+											<ColumnDefinition Width="Auto" />
+											<ColumnDefinition />
+										</Grid.ColumnDefinitions>
+										<TextBlock Grid.Column="0" Text="{Binding Path=Type}"/>
+										<TextBlock Grid.Column="1" Text="{Binding Path=Stamp, StringFormat=HH:mm:ss}" Margin="0,0,16,0"/>
+										<TextBlock Grid.Column="2" Text="{Binding Path=Message, Converter={StaticResource MultiLineStringConverter}}"/>
+									</Grid>
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+						</ListBox>
+					</ToolTip>
+				</Button.ToolTip>
+				<Button.Template>
+					<ControlTemplate TargetType="{x:Type Button}">
+						<Border x:Name="border" BorderThickness="0" Background="Transparent" SnapsToDevicePixels="true" Padding="16,0">
+							<ContentPresenter Focusable="False" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsPressed" Value="true">
+								<Setter TargetName="border" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Button.Template>
+			</Button>
 
-            <ProgressBar Grid.Column="1" Maximum="1000" Value="{Binding Environment.StatusOfProxy.ActualItem.Progress,Mode=OneWay}" Margin="0,3" BorderThickness="0"
+			<ProgressBar Grid.Column="1" Maximum="1000" Value="{Binding Environment.StatusOfProxy.ActualItem.Progress,Mode=OneWay}" Margin="0,3" BorderThickness="0"
 						 Foreground="{StaticResource ButtonDarkerBorderBrush}" Background="{StaticResource ButtonDarkerBackGroundBrush}"
 						 ToolTipService.InitialShowDelay="750"
 						 ToolTipService.ShowDuration="10000">
-                <ProgressBar.ToolTip>
-                    <ToolTip Placement="Top" VerticalOffset="-16" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="14">
-                        <ListBox ItemsSource="{Binding Environment.StatusOfProxy.TopTen, IsAsync=True}" Style="{StaticResource PPSnListBoxStyle}"
+				<ProgressBar.ToolTip>
+					<ToolTip Placement="Top" VerticalOffset="-16" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="14">
+						<ListBox ItemsSource="{Binding Environment.StatusOfProxy.TopTen, IsAsync=True}" Style="{StaticResource PPSnListBoxStyle}"
 								 Focusable="False" Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding DisplayName}" Height="25"/>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </ToolTip>
-                </ProgressBar.ToolTip>
-                <ProgressBar.Style>
-                    <Style TargetType="{x:Type ProgressBar}">
-                        <Setter Property="Visibility" Value="Visible"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Environment.StatusOfProxy.ActualItem}" Value="{x:Null}">
-                                <Setter Property="Visibility" Value="Hidden" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ProgressBar.Style>
-            </ProgressBar>
-            <TextBlock Grid.Column="1" Text="{Binding Environment.StatusOfProxy.ActualItem.DisplayName}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
+							<ListBox.ItemTemplate>
+								<DataTemplate>
+									<TextBlock Text="{Binding DisplayName}" Height="25"/>
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+						</ListBox>
+					</ToolTip>
+				</ProgressBar.ToolTip>
+				<ProgressBar.Style>
+					<Style TargetType="{x:Type ProgressBar}">
+						<Setter Property="Visibility" Value="Visible"/>
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding Environment.StatusOfProxy.ActualItem}" Value="{x:Null}">
+								<Setter Property="Visibility" Value="Hidden" />
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</ProgressBar.Style>
+			</ProgressBar>
+			<TextBlock Grid.Column="1" Text="{Binding Environment.StatusOfProxy.ActualItem.DisplayName}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
 					   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0" TextWrapping="NoWrap" IsHitTestVisible="False"/>
-            <Border Grid.Column="2" BorderThickness="2" BorderBrush="AntiqueWhite" Opacity=".7" CornerRadius="10,10,10,10" Width="16" Margin="4">
-                <Border.Style>
-                    <Style>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="0">
-                                <Setter Property="Border.Background" Value="OrangeRed" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="1">
-                                <Setter Property="Border.Background" Value="OrangeRed" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="2">
-                                <Setter Property="Border.Background" Value="OrangeRed" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="3">
-                                <Setter Property="Border.Background" Value="Orange" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="4">
-                                <Setter Property="Border.Background" Value="Lime" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
 
-                </Border.Style>
-                <Border.ToolTip>
-                    <TextBlock Text="{Binding Environment.CurrentState}"/>
-                </Border.ToolTip>
-            </Border>
-            <Viewbox x:Name="PART_SizeGripper" Grid.Column="3" Width="15" VerticalAlignment="Bottom" HorizontalAlignment="Right">
-                <Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SizeGrip.png">
-                    <Image.Tag>
-                        <ui:PpsWindowHitTest HitTest="17"/>
-                    </Image.Tag>
-                </Image>
-                <Viewbox.Style>
-                    <Style TargetType="{x:Type Viewbox}">
-                        <Setter Property="Visibility" Value="Visible" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized">
-                                <Setter Property="Visibility" Value="Hidden" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Viewbox.Style>
-            </Viewbox>
-        </Grid>
-    </Grid>
+			<Viewbox Grid.Column="2" Height="17" Opacity=".9">
+				<ContentControl Focusable="False">
+					<ContentControl.Template>
+						<ControlTemplate>
+							<Grid Background="Transparent">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="auto"/>
+									<ColumnDefinition Width="auto"/>
+									<ColumnDefinition Width="auto"/>
+								</Grid.ColumnDefinitions>
+								<Canvas Grid.Column="0" Width="10240" Height="10240" SnapsToDevicePixels="True" >
+									<Path Canvas.Left="552" Canvas.Top="1907" Width="9000" Height="7250" Stretch="Fill" Fill="#FFFFFF"
+										  Data="M4960 9600 l480 0c176,0 320,-144 320,-320l0 -320 -1920 0c-352,0 -640,-287 -640,-640l0 -3840c0,-353 287,-640 640,-640l5120 0c353,0 640,288 640,640l0 3840c0,352 -288,640 -640,640l-1920 0 0 320c0,176 144,320 320,320l480 0c88,0 160,72 160,160l0 160 -3200 0 0 -160c0,-88 72,-160 160,-160z m-1120 -5120l5120 0 0 3840 -5120 0 0 -3840z" />
+								</Canvas>
+								<Canvas Grid.Column="1" Width="10240" Height="10240" SnapsToDevicePixels="False" >
+									<Path x:Name="pathState" Fill="#FFFFFF"
+										  Data="M 60.0085,4800.68L 2420.34,4800.68L 2420.34,5440.77L 60.0085,5440.77 Z
+										  M 7801.09,4800.67L 10181.4,4800.67L 10181.4,5440.76L 7801.09,5440.76 Z
+										  M 3333.13,7431.23L 2808.17,6906.28L 4595.02,5119.42L 2815.43,3339.83L 3340.39,2814.88L 5119.98,4594.47L 6891.37,2823.08L 7416.33,3348.04L 5644.94,5119.42L 7423.59,6898.08L 6898.63,7423.03L 5119.98,5644.38 Z "/>
+								</Canvas>
+								<Canvas Grid.Column="2" Width="10240" Height="10240" SnapsToDevicePixels="True" >
+									<Path Fill="#FFFFFF"
+										  Data="M3920 6400c353,0 640,287 640,640 0,353 -287,640 -640,640 -353,0 -640,-287 -640,-640 0,-353 287,-640 640,-640Z
+										  M1040 640l5760 0c176,0 320,144 320,320l0 8640 -6400 0 0 -8640c0,-176 144,-320 320,-320z m960 1600l3840 0 0 640 -3840 0 0 -640z m0 2560l3840 0 0 640 -3840 0 0 -640z m0 -1280l3840 0 0 640 -3840 0 0 -640z m-640 -2240l5120 0 0 7360 -5120 0 0 -7360z m320 320l4480 0 0 6720 -4480 0 0 -6720z m2240 4480c530,0 960,430 960,960 0,530 -430,960 -960,960 -530,0 -960,-430 -960,-960 0,-530 430,-960 960,-960z" />
+								</Canvas>
+
+							</Grid>
+							<ControlTemplate.Triggers>
+								<DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="3">
+									<Setter Property="Data" TargetName="pathState"
+											Value="M 1500.21,4480.63C 1853.72,4480.63 2140.3,4767.2 2140.3,5120.71C 2140.3,5474.23 1853.72,5760.8 1500.21,5760.8C 1146.7,5760.8 860.12,5474.23 860.12,5120.71C 860.12,4767.2 1146.7,4480.63 1500.21,4480.63 Z
+											M 1500.21,3860.54C 2196.18,3860.54 2760.38,4424.74 2760.38,5120.71C 2760.38,5816.69 2196.18,6380.89 1500.21,6380.89C 804.233,6380.89 240.034,5816.69 240.034,5120.71C 240.034,4424.74 804.233,3860.54 1500.21,3860.54 Z
+											M 5120.71,4480.63C 5474.23,4480.63 5760.8,4767.2 5760.8,5120.71C 5760.8,5474.23 5474.22,5760.8 5120.71,5760.8C 4767.2,5760.8 4480.62,5474.23 4480.62,5120.71C 4480.62,4767.2 4767.2,4480.63 5120.71,4480.63 Z
+											M 5120.71,3860.54C 5816.69,3860.54 6380.89,4424.74 6380.89,5120.71C 6380.89,5816.69 5816.69,6380.89 5120.71,6380.89C 4424.74,6380.89 3860.54,5816.69 3860.54,5120.71C 3860.54,4424.74 4424.74,3860.54 5120.71,3860.54 Z
+											M 8741.22,4480.63C 9094.73,4480.63 9381.31,4767.2 9381.31,5120.71C 9381.31,5474.23 9094.73,5760.8 8741.22,5760.8C 8387.71,5760.8 8101.13,5474.23 8101.13,5120.71C 8101.13,4767.2 8387.71,4480.63 8741.22,4480.63 Z
+											M 8741.22,3860.54C 9437.2,3860.54 10001.4,4424.74 10001.4,5120.71C 10001.4,5816.69 9437.2,6380.89 8741.22,6380.89C 8045.24,6380.89 7481.04,5816.69 7481.04,5120.71C 7481.04,4424.74 8045.24,3860.54 8741.22,3860.54 Z "/>
+								</DataTrigger>
+								<DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="4">
+									<Setter Property="Data" TargetName="pathState"
+											Value="M 5120.71,4352.61C 5544.93,4352.61 5888.82,4696.5 5888.82,5120.72C 5888.82,5544.93 5544.93,5888.82 5120.71,5888.82C 4696.5,5888.82 4352.61,5544.93 4352.61,5120.72C 4352.61,4696.5 4696.5,4352.61 5120.71,4352.61 Z
+											M 5120.71,3680.52C 5916.11,3680.52 6560.91,4325.31 6560.91,5120.72C 6560.91,5916.12 5916.11,6560.92 5120.71,6560.92C 4325.31,6560.92 3680.51,5916.12 3680.51,5120.72C 3680.51,4325.31 4325.31,3680.52 5120.71,3680.52 Z
+											M 160.022,4800.67L 160.022,5440.76L 3280.46,5440.76L 3280.46,4800.67 Z
+											M 6960.97,4800.67L 6960.97,5440.76L 10081.4,5440.76L 10081.4,4800.67 Z"/>
+
+								</DataTrigger>
+							</ControlTemplate.Triggers>
+						</ControlTemplate>
+					</ContentControl.Template>
+					<ContentControl.ToolTip>
+						<ToolTip Placement="Top" FontSize="14">
+							<TextBlock Text="{Binding Environment.CurrentState}"/>
+						</ToolTip>
+					</ContentControl.ToolTip>
+				</ContentControl>
+			</Viewbox>
+
+			<Viewbox x:Name="PART_SizeGripper" Grid.Column="3" Width="15" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+				<Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SizeGrip.png">
+					<Image.Tag>
+						<ui:PpsWindowHitTest HitTest="17"/>
+					</Image.Tag>
+				</Image>
+				<Viewbox.Style>
+					<Style TargetType="{x:Type Viewbox}">
+						<Setter Property="Visibility" Value="Visible" />
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding Path=WindowState, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}}" Value="Maximized">
+								<Setter Property="Visibility" Value="Hidden" />
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Viewbox.Style>
+			</Viewbox>
+		</Grid>
+	</Grid>
 </ui:PpsWindow>

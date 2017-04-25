@@ -85,7 +85,7 @@ namespace TecWare.PPSn.UI
         } // func ConvertBack
 
         private string RemoveNewLines(object value)
-            => value.ToString().Replace(Environment.NewLine, " ");
+            => value.ToString().Replace(Environment.NewLine, " ").Replace("\n", " ");
 
     } // class PpsMultiLineStringConverter
 
