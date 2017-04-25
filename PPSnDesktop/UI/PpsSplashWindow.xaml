@@ -3,129 +3,360 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:TecWare.PPSn.UI"
+		xmlns:sys="clr-namespace:System;assembly=mscorlib"
+		xmlns:local="clr-namespace:TecWare.PPSn.UI"
         mc:Ignorable="d"
-        Title="PPSn" Height="400" Width="600" WindowStyle="None" ResizeMode="NoResize" MouseDown="Window_Drag" WindowStartupLocation="CenterScreen">
-    <Window.InputBindings>
+		x:Name="PPSnSplashWindow"
+        Title="PPSn" Height="400" Width="640" WindowStyle="None" ResizeMode="NoResize" MouseDown="Window_Drag" WindowStartupLocation="CenterScreen">
+
+	<Window.InputBindings>
         <KeyBinding Key="Esc" Command="{x:Static ApplicationCommands.Close}"/>
     </Window.InputBindings>
-    <Border BorderThickness="1" BorderBrush="#3B4A62">
-        <Grid>
-            <TabControl SelectedIndex="{Binding ActivePageNum,Mode=OneWay,UpdateSourceTrigger=PropertyChanged}" BorderThickness="0" >
-                <TabControl.Resources>
-                    <Style TargetType="TabItem">
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="TabItem">
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </TabControl.Resources>
-                <TabItem><!-- StatusPane -->
-                    <Grid>
-                        <TextBlock  Width="Auto" TextWrapping="Wrap" Text="{Binding StatusText,Mode=OneWay}" FontSize="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,0,0"/>
-                    </Grid>
-                </TabItem>
-                <TabItem>
-                    <Grid HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" DataContext="{Binding LoginState}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="70" />
-                            <ColumnDefinition Width="200" />
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="50" />
-                            <RowDefinition Height="29" />
-                            <RowDefinition Height="29" />
-                            <RowDefinition Height="29" />
-                            <RowDefinition Height="29" />
-                        </Grid.RowDefinitions>
-                        <TextBlock Grid.ColumnSpan="2" Text="- Neue Verbindung -" FontSize="28"  HorizontalAlignment="Center"/>
-                        <Label Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Content="Mandant:"/>
-                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding NewEnvironmentName, Mode=TwoWay}"/>
-                        <Label Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Content="URI:"/>
-                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding NewEnvironmentUri, Mode=OneWayToSource, UpdateSourceTrigger=PropertyChanged}"/>
 
-                        <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" HorizontalAlignment="Right" VerticalAlignment="Bottom">
-                            <Button Content="Speichern" Width="80" Height="23" Margin="0,0,0,0" Command="{x:Static ApplicationCommands.Save}" />
-                            <Button Content="Abbruch" Width="80" Height="23" Margin="12,0,0,0" Command="{x:Static ApplicationCommands.Close}" />
-                        </StackPanel>
-                    </Grid>
-                </TabItem><!-- NewEnvironmentPane -->
-                <TabItem>
-                    <Grid HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" DataContext="{Binding LoginState}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="70" />
-                            <ColumnDefinition Width="200" />
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="50" />
-                            <RowDefinition Height="29" />
-                            <RowDefinition Height="29" />
-                            <RowDefinition Height="29" />
-                            <RowDefinition Height="29" />
-                        </Grid.RowDefinitions>
+	<Window.Resources>
+		<SolidColorBrush x:Key="SplashWindowControlForegroundBrush" Color="#000000" />
+		<SolidColorBrush x:Key="SplashWindowControlBackgroundBrush" Color="#FFFFFF" />
+		<SolidColorBrush x:Key="SplashWindowControlBorderBrushNormal" Color="#999999" />
+		<SolidColorBrush x:Key="SplashWindowControlBorderBrushFocused" Color="#666666" />
 
-                        <TextBlock Grid.ColumnSpan="2" Text="- ANMELDEN -" FontSize="28"  HorizontalAlignment="Center"/>
+		<Style TargetType="{x:Type TextBlock}">
+			<Setter Property="VerticalAlignment" Value="Bottom"/>
+			<Setter Property="Foreground" Value="{StaticResource SplashWindowControlForegroundBrush}"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="Margin" Value="0,6"/>
+			<Style.Triggers>
+				<Trigger Property="IsEnabled" Value="false">
+					<Setter Property="Opacity" Value="0.4"/>
+				</Trigger>
+			</Style.Triggers>
+		</Style>
 
-                        <Label Grid.Column="0" Grid.Row="1" Content="Mandant:" />
-                        <ComboBox Grid.Column="1" Grid.Row="1" Margin="0,3" ItemsSource="{Binding Environments,Mode=OneWay}" SelectedItem="{Binding CurrentEnvironment,UpdateSourceTrigger=PropertyChanged}" Name="cbEnviroments">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock>
-                            <Run Text="{Binding DisplayName,Mode=OneWay}" />
-                            <Run Text="{Binding Name,Mode=OneWay,StringFormat='({0})'}" Foreground="DarkGray" />
-                                    </TextBlock>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-                        <Label Grid.Column="0" Grid.Row="2" Content="Nutzer:" />
-                        <TextBox Grid.Column="1" Grid.Row="2" Margin="0,3" IsEnabled="{Binding IsUserNameEnabled}" Text="{Binding UserName,UpdateSourceTrigger=PropertyChanged}" Name="tbUserName">
-                            <TextBox.InputBindings>
-                                <KeyBinding Key="Return" Command="local:PpsSplashWindow.EnterKeyCommand"/>
-                            </TextBox.InputBindings>
-                        </TextBox>
-                        <Label Grid.Column="0" Grid.Row="3" Content="Passwort:" />
-                        <Grid Grid.Column="1" Grid.Row="3" Margin="0,3">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition />
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-							<PasswordBox Grid.Column="0" IsEnabled="{Binding IsPasswordEnabled}" Name="pbPassword" PasswordChanged="PasswordChanged" />
-							<CheckBox Grid.Column="1" VerticalAlignment="Center" IsEnabled="{Binding IsValid}" IsChecked="{Binding SavePassword}"/>
-                        </Grid>
+		<Style TargetType="{x:Type Button}" BasedOn="{StaticResource PPSnSysButtonStyle}">
+			<Setter Property="BorderThickness" Value="2"/>
+			<Setter Property="Width" Value="110"/>
+			<Setter Property="Height" Value="30"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="Padding" Value="0,0,0,1"/>
+		</Style>
 
-                        <Button Grid.Column="0" Grid.Row="4" Content="*" Width="23" Height="23" HorizontalAlignment="Left" VerticalAlignment="Bottom" Command="{x:Static ApplicationCommands.New}" />
+		<ControlTemplate x:Key="SplashWindowComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}">
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition />
+					<ColumnDefinition Width="24" />
+				</Grid.ColumnDefinitions>
+				<Border x:Name="border" Grid.ColumnSpan="2" BorderBrush="{TemplateBinding BorderBrush}"	BorderThickness="{TemplateBinding BorderThickness}"	Background="{TemplateBinding Background}" />
+				<Path x:Name="arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+					  Stroke="{StaticResource SplashWindowControlBorderBrushNormal}"
+					  StrokeThickness="1"
+					  StrokeDashCap="Round"
+					  Data="M 0,0 L5.5,5.5 11,0" />
+			</Grid>
+			<ControlTemplate.Triggers>
+				<DataTrigger Binding="{Binding Path=IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}" Value="True">
+					<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SplashWindowControlBorderBrushFocused}"/>
+					<Setter Property="Stroke" TargetName="arrow" Value="{StaticResource SplashWindowControlBorderBrushFocused}"/>
+				</DataTrigger>
+			</ControlTemplate.Triggers>
+		</ControlTemplate>
 
-                        <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" HorizontalAlignment="Right" VerticalAlignment="Bottom">
-                            <Button Content="Anmelden" Width="80" Height="23" Margin="0,0,0,0" Command="{x:Static ApplicationCommands.Save}" IsEnabled="{Binding IsValid}" />
-                            <Button Content="Abbruch" Width="80" Height="23" Margin="12,0,0,0" Command="{x:Static ApplicationCommands.Close}" />
-                        </StackPanel>
-                    </Grid>
-                </TabItem><!-- LoginPane -->
-                <TabItem><!-- ErrorPane -->
-                    <Grid>
-                        <TextBlock  Width="Auto" TextWrapping="Wrap" Text="{Binding ErrorText,Mode=OneWay}" FontSize="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,0,0"/>
-                        <Grid HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="70" />
-                                <ColumnDefinition Width="200" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="50" />
-                                <RowDefinition Height="29" />
-                                <RowDefinition Height="29" />
-                                <RowDefinition Height="29" />
-                                <RowDefinition Height="29" />
-                            </Grid.RowDefinitions>
-                            <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="4" HorizontalAlignment="Right" VerticalAlignment="Bottom">
-                                <Button Content="Details" Command="local:PpsSplashWindow.ShowErrorDetailsCommand"/>
-                                <Button Margin="12,0,0,0" Content="Neu starten..." Command="local:PpsSplashWindow.ReStartCommand"/>
-                            </StackPanel>
-                        </Grid>
-                    </Grid>
-                </TabItem>
-            </TabControl>
-        </Grid>
-    </Border>
+		<Style x:Key="SplashWindowComboBoxItemStyle" TargetType="{x:Type ComboBoxItem}">
+			<Setter Property="Foreground" Value="{StaticResource SplashWindowControlForegroundBrush}"/>
+			<Setter Property="SnapsToDevicePixels" Value="True"/>
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="FrameworkElement.OverridesDefaultStyle" Value="True"/>
+			<Setter Property="Control.Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ComboBoxItem}">
+						<Border Name="border" Background="Transparent" SnapsToDevicePixels="True" Padding="7,0,3,0" Height="33">
+							<ContentPresenter VerticalAlignment="Center"/>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsHighlighted" Value="True">
+								<Setter Property="Panel.Background" TargetName="border" Value="#DADADA"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<Style TargetType="{x:Type ComboBox}">
+			<Setter Property="Foreground" Value="{StaticResource SplashWindowControlForegroundBrush}"/>
+			<Setter Property="Background" Value="{StaticResource SplashWindowControlBackgroundBrush}"/>
+			<Setter Property="BorderThickness" Value="2"/>
+			<Setter Property="BorderBrush" Value="{StaticResource SplashWindowControlBorderBrushNormal}" />
+			<Setter Property="SnapsToDevicePixels" Value="True"/>
+			<Setter Property="OverridesDefaultStyle" Value="True"/>
+			<Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="ItemContainerStyle" Value="{StaticResource SplashWindowComboBoxItemStyle}"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="Control.Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ComboBox}">
+						<Grid>
+							<ToggleButton x:Name="PART_ToggleButton" ClickMode="Press" Focusable="False"
+										  IsChecked="{Binding Path=IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+										  Template="{StaticResource SplashWindowComboBoxToggleButtonTemplate}" Background="{TemplateBinding Background}"
+										  BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}" />
+							<ContentPresenter x:Name="PART_ContentSite" Margin="8,0,30,1" IsHitTestVisible="False" HorizontalAlignment="Left" VerticalAlignment="Center"
+											  Content="{TemplateBinding ComboBox.SelectionBoxItem}"
+											  ContentTemplate="{TemplateBinding ComboBox.SelectionBoxItemTemplate}"
+											  ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" />
+							<Popup Name="PART_Popup" Placement="Bottom" VerticalOffset="1" Focusable="False" AllowsTransparency="True"
+								   IsOpen="{TemplateBinding ComboBox.IsDropDownOpen}" PopupAnimation="Slide">
+								<Grid Name="PART_DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding FrameworkElement.ActualWidth}" MaxHeight="{TemplateBinding ComboBox.MaxDropDownHeight}">
+									<Border Name="PART_DropDownBorder" Background="{StaticResource SplashWindowControlBackgroundBrush}"
+											BorderThickness="1" BorderBrush="{StaticResource SplashWindowControlBorderBrushFocused}">
+										<ScrollViewer SnapsToDevicePixels="True" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+											<VirtualizingStackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+										</ScrollViewer>
+									</Border>
+								</Grid>
+							</Popup>
+						</Grid>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<Style TargetType="{x:Type TextBox}">
+			<Setter Property="Foreground" Value="{StaticResource SplashWindowControlForegroundBrush}"/>
+			<Setter Property="Background" Value="{StaticResource SplashWindowControlBackgroundBrush}"/>
+			<Setter Property="BorderThickness" Value="2"/>
+			<Setter Property="BorderBrush" Value="{StaticResource SplashWindowControlBorderBrushNormal}"/>
+			<Setter Property="SelectionBrush" Value="#000000"/>
+			<Setter Property="SelectionOpacity" Value=".25"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="Padding" Value="4,0,0,1"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type TextBox}">
+						<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" 
+								Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+							<ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsKeyboardFocused" Value="True">
+								<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SplashWindowControlBorderBrushFocused}"/>
+							</Trigger>
+							<Trigger Property="IsEnabled" Value="false">
+								<Setter Property="Opacity" TargetName="border" Value="0.4"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<Style TargetType="{x:Type PasswordBox}">
+			<Setter Property="PasswordChar" Value="●"/>
+			<Setter Property="Foreground" Value="{StaticResource SplashWindowControlForegroundBrush}"/>
+			<Setter Property="Background" Value="{StaticResource SplashWindowControlBackgroundBrush}"/>
+			<Setter Property="BorderThickness" Value="2"/>
+			<Setter Property="BorderBrush" Value="{StaticResource SplashWindowControlBorderBrushNormal}"/>
+			<Setter Property="SelectionBrush" Value="#000000"/>
+			<Setter Property="SelectionOpacity" Value=".25"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="Padding" Value="4,0"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type PasswordBox}">
+						<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+							<ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsKeyboardFocused" Value="true">
+								<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource SplashWindowControlBorderBrushFocused}"/>
+							</Trigger>
+							<Trigger Property="IsEnabled" Value="false">
+								<Setter Property="Opacity" TargetName="border" Value="0.4"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+	</Window.Resources>
+
+	<Border BorderThickness="1" BorderBrush="#000000" Background="#FFFFFF">
+		<Grid>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="96"/>
+				<ColumnDefinition/>
+			</Grid.ColumnDefinitions>
+			<Border Grid.Column="0" Background="#F0F0F0">
+				<Viewbox Width="52" Height="48" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,16" Opacity=".5">
+					<Image Width="152" Height="151" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SplashLogo.png"/>
+				</Viewbox>
+			</Border>
+
+			<Grid Grid.Column="1" Margin="32,0">
+				<Grid.Style>
+					<Style TargetType="{x:Type Grid}">
+						<Setter Property="Visibility" Value="Hidden"/>
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ActivePageNum,Mode=OneWay}">
+								<DataTrigger.Value>
+									<sys:Int32>0</sys:Int32>
+								</DataTrigger.Value>
+								<Setter Property="Visibility" Value="Visible"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Grid.Style>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="64"/>
+					<RowDefinition/>
+				</Grid.RowDefinitions>
+				<TextBlock Grid.Row="0" Text="Status" FontSize="24" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="0,8,0,0"/>
+				<TextBlock Grid.Row="1" Text="{Binding StatusText, Mode=OneWay}" TextWrapping="Wrap" Foreground="{StaticResource SplashWindowControlForegroundBrush}"
+						   HorizontalAlignment="Left" VerticalAlignment="Top" FontSize="20"/>
+			</Grid>
+
+			<Grid Grid.Column="1" DataContext="{Binding LoginState}" Width="300">
+				<Grid.Style>
+					<Style TargetType="{x:Type Grid}">
+						<Setter Property="Visibility" Value="Hidden"/>
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ElementName=PPSnSplashWindow, Path=ActivePageNum, Mode=OneWay}">
+								<DataTrigger.Value>
+									<sys:Int32>1</sys:Int32>
+								</DataTrigger.Value>
+								<Setter Property="Visibility" Value="Visible"/>
+								<Setter Property="FocusManager.FocusedElement" Value="{Binding ElementName=tbxMandant}"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Grid.Style>
+
+				<Grid.RowDefinitions>
+					<RowDefinition/>
+					<RowDefinition Height="48"/>
+					<RowDefinition Height="30"/>
+					<RowDefinition Height="48"/>
+					<RowDefinition Height="30"/>
+					<RowDefinition/>
+					<RowDefinition Height="64"/>
+				</Grid.RowDefinitions>
+
+				<TextBlock Grid.Row="0" Text="Neue Verbindung" FontSize="24" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="0,8,0,0"/>
+
+				<TextBlock Grid.Row="1" Text="Mandant:"/>
+				<TextBox x:Name="tbxMandant" Grid.Row="2" Text="{Binding NewEnvironmentName, Mode=TwoWay}"/>
+
+				<TextBlock Grid.Row="3" Text="URI:"/>
+				<TextBox Grid.Row="4" Text="{Binding NewEnvironmentUri, Mode=OneWayToSource, UpdateSourceTrigger=PropertyChanged}"/>
+				<StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
+					<Button Content="Anlegen" Command="{x:Static ApplicationCommands.Save}" Width="110" />
+					<Button Content="Abbrechen" Command="{x:Static ApplicationCommands.Close}" Width="110" Margin="12,0,0,0" />
+				</StackPanel>
+			</Grid>
+
+			<Grid Grid.Column="1" DataContext="{Binding LoginState}" Width="300">
+				<Grid.Style>
+					<Style TargetType="{x:Type Grid}">
+						<Setter Property="Visibility" Value="Hidden"/>
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ElementName=PPSnSplashWindow, Path=ActivePageNum, Mode=OneWay}">
+								<DataTrigger.Value>
+									<sys:Int32>2</sys:Int32>
+								</DataTrigger.Value>
+								<Setter Property="Visibility" Value="Visible"/>
+								<Setter Property="FocusManager.FocusedElement" Value="{Binding ElementName=cbxMandant}"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Grid.Style>
+				
+				<Grid.InputBindings>
+					<KeyBinding Modifiers="Ctrl" Key="N" Command="{x:Static ApplicationCommands.New}" />
+				</Grid.InputBindings>
+
+				<Grid.RowDefinitions>
+					<RowDefinition/>
+					<RowDefinition Height="40"/>
+					<RowDefinition Height="30"/>
+					<RowDefinition Height="48"/>
+					<RowDefinition Height="30"/>
+					<RowDefinition Height="48"/>
+					<RowDefinition Height="30"/>
+					<RowDefinition/>
+					<RowDefinition Height="64"/>
+				</Grid.RowDefinitions>
+
+				<TextBlock Grid.Row="0" Text="Anmelden" FontSize="24" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="0,8,0,0"/>
+
+				<TextBlock Grid.Row="1" Text="Mandant:"/>
+				<ComboBox x:Name="cbxMandant" Grid.Row="2" ItemsSource="{Binding Environments, Mode=OneWay}" SelectedItem="{Binding CurrentEnvironment, UpdateSourceTrigger=PropertyChanged}">
+					<ComboBox.ItemTemplate>
+						<DataTemplate>
+							<TextBlock>
+								<Run Text="{Binding DisplayName, Mode=OneWay}" />
+								<Run Text="{Binding Name, Mode=OneWay, StringFormat='({0})'}" Foreground="DarkGray" />
+							</TextBlock>
+						</DataTemplate>
+					</ComboBox.ItemTemplate>
+					<ComboBox.InputBindings>
+						<KeyBinding Key="Return" Command="local:PpsSplashWindow.EnterKeyCommand"/>
+					</ComboBox.InputBindings>
+				</ComboBox>
+
+				<TextBlock Grid.Row="3" Text="Nutzer:" IsEnabled="{Binding IsUserNameEnabled}" />
+				<TextBox x:Name="tbUserName" Grid.Row="4" Text="{Binding UserName,UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsUserNameEnabled}">
+					<TextBox.InputBindings>
+						<KeyBinding Key="Return" Command="local:PpsSplashWindow.EnterKeyCommand"/>
+					</TextBox.InputBindings>
+				</TextBox>
+
+				<TextBlock Grid.Row="5" Text="Password:" IsEnabled="{Binding IsPasswordEnabled}"/>
+				<PasswordBox x:Name="pbPassword" Grid.Row="6" PasswordChanged="PasswordChanged" IsEnabled="{Binding IsPasswordEnabled}">
+					<PasswordBox.InputBindings>
+						<KeyBinding Key="Return" Command="local:PpsSplashWindow.EnterKeyCommand"/>
+					</PasswordBox.InputBindings>
+				</PasswordBox>
+				<CheckBox Grid.Row="7" IsChecked="{Binding SavePassword}" Content="Password speichern" IsEnabled="{Binding IsPasswordSaveEnabled}" Style="{StaticResource PPSnSysCheckBoxStyle}"
+						  BorderThickness="2" FontSize="14" VerticalAlignment="Top" Margin="0,12,0,0"/>
+
+				<StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Right">
+					<Button Content="Anmelden" Command="{x:Static ApplicationCommands.Save}"/>
+					<Button Content="Abbrechen" Command="{x:Static ApplicationCommands.Close}" Margin="12,0,0,0"/>
+				</StackPanel>
+			</Grid>
+
+			<Grid Grid.Column="1" Margin="32,0">
+				<Grid.Style>
+					<Style TargetType="{x:Type Grid}">
+						<Setter Property="Visibility" Value="Hidden"/>
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ActivePageNum,Mode=OneWay}">
+								<DataTrigger.Value>
+									<sys:Int32>3</sys:Int32>
+								</DataTrigger.Value>
+								<Setter Property="Visibility" Value="Visible"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Grid.Style>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="64"/>
+					<RowDefinition/>
+					<RowDefinition Height="64"/>
+				</Grid.RowDefinitions>
+				<TextBlock Grid.Row="0" Text="Es ist ein Fehler aufgetreten" FontSize="24" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="0,8,0,0"/>
+				<TextBlock Grid.Row="1" Text="{Binding ErrorText, Mode=OneWay}" TextWrapping="Wrap" Foreground="{StaticResource SplashWindowControlForegroundBrush}"
+						   HorizontalAlignment="Left" VerticalAlignment="Top" FontSize="20"/>
+				<StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+					<Button Content="Details..." Command="local:PpsSplashWindow.ShowErrorDetailsCommand"/>
+					<Button Content="Neu starten" Command="local:PpsSplashWindow.ReStartCommand" Margin="12,0,0,0" />
+				</StackPanel>
+			</Grid>
+		</Grid>
+	</Border>
 </Window>

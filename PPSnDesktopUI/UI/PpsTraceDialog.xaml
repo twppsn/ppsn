@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:TecWare.PPSn.UI"
         mc:Ignorable="d"
         Title="{Binding Title}" Height="700" Width="800" WindowStartupLocation="CenterOwner" WindowState="Maximized" Background="{StaticResource PPSnWindowBackgroundBrush}">
-  <Grid Margin="12">
-    <ContentPresenter Content="{Binding}"/>
-  </Grid>
+	<Grid>
+		<ContentPresenter Content="{Binding}"/>
+	</Grid>
 </Window>

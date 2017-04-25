@@ -15,12 +15,12 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public partial class App : Application
 	{
-		private PpsMainEnvironment currentEnvironment = null;
+	private PpsMainEnvironment currentEnvironment = null;
 
 		public App()
 		{
 			this.DispatcherUnhandledException += App_DispatcherUnhandledException;
-			BindingErrorListener.Listen(m => currentEnvironment.Traces.AppendText(PpsTraceItemType.Fail,m.Replace("; ",";\n")));
+			BindingErrorListener.Listen(m => currentEnvironment?.Traces.AppendText(PpsTraceItemType.Fail, m.Replace("; ", ";\n")));
 		} // ctor
 
 		#region -- OnStartup, OnExit ------------------------------------------------------
@@ -144,33 +144,19 @@ namespace TecWare.PPSn
 
 		protected override void OnStartup(StartupEventArgs e)
 		{
-			if (!e.Args.Any())
-				Task.Run(() =>
+			ParseArguments(e, out var environment, out var userCred);
+			Task.Run(() =>
+			{
+				StartApplicationAsync(environment, userCred)
+					.ContinueWith(t =>
 					{
-						StartApplicationAsync()
-						.ContinueWith(t =>
-						{
-							if (!t.Result)
-								Dispatcher.Invoke(Shutdown);
-						}
-					);
+						if (!t.Result)
+							Dispatcher.Invoke(Shutdown);
 					}
 				);
-			else
-			{
-				ParseArguments(e, out var environment, out var userCred);
-				Task.Run(() =>
-				{
-					StartApplicationAsync(environment, userCred)
-						.ContinueWith(t =>
-						{
-							if (!t.Result)
-								Dispatcher.Invoke(Shutdown);
-						}
-					);
-				}
-				);
 			}
+			);
+
 			base.OnStartup(e);
 		} // proc OnStartup
 
@@ -181,7 +167,10 @@ namespace TecWare.PPSn
 
 			environment = null;
 			userCred = (NetworkCredential)null;
-			
+
+			if (e.Args.Length == 0)
+				return;
+
 			var environmentsInfos = PpsEnvironmentInfo.GetLocalEnvironments().ToArray();
 			foreach (var arg in e.Args)
 			{
@@ -191,23 +180,25 @@ namespace TecWare.PPSn
 					switch (cmd)
 					{
 						case 'u':
-							userName = arg.Substring(2);
+							userName = arg.Substring(2).Trim('\"', '\'');
 							break;
 						case 'p':
-							userPass = arg.Substring(2);
+							userPass = arg.Substring(2).Trim('\"', '\'');
 							break;
 						case 'a':
-							environment = environmentsInfos.FirstOrDefault(c => String.Compare(c.Name, 0, arg, 2, Math.Max(c.Name.Length, arg.Length), StringComparison.OrdinalIgnoreCase) == 0);
+							var environmentname = arg.Substring(2).Trim('\"', '\'');
+							environment = environmentsInfos.FirstOrDefault(c => String.Compare(c.Name, environmentname, StringComparison.OrdinalIgnoreCase) == 0);
 
 							// load user name
-							using (var pcl = new PpsClientLogin("ppsn_env:" + environment.Uri.ToString(), "", false))
-								userCred = (NetworkCredential)pcl.GetCredentials();
+							if (environment != null)
+								using (var pcl = new PpsClientLogin("ppsn_env:" + environment.Uri.ToString(), environment.Name, false))
+									userCred = pcl.GetCredentials();
 							break;
 					}
 				}
 			}
 
-			if (userName != null)
+			if (userName != null && userCred == null)
 				userCred = new NetworkCredential(userName, userPass);
 		} // func ParseArguments
 

@@ -151,7 +151,7 @@ namespace TecWare.PPSn
 			{
 				objectIdParameter.Value = objectId;
 
-				using (var r = command.ExecuteReader(CommandBehavior.SingleResult))
+				using (var r = command.ExecuteReaderEx(CommandBehavior.SingleResult))
 				{
 					while (r.Read())
 					{
@@ -431,7 +431,7 @@ namespace TecWare.PPSn
 			{
 				objectIdParameter.Value = objectId;
 
-				using (var r = command.ExecuteReader(CommandBehavior.SingleResult))
+				using (var r = command.ExecuteReaderEx(CommandBehavior.SingleResult))
 				{
 					while (r.Read())
 					{
@@ -477,7 +477,7 @@ namespace TecWare.PPSn
 
 			public long Insert(long objectId, string key, int cls, string value, long userId)
 			{
-				var id = transaction.GetNextLocalId("main.ObjectTags", "Id");
+				var id = transaction.GetNextLocalId(transaction, "ObjectTags", "Id");
 				idParameter.Value = id;
 				objectIdParameter.Value = objectId;
 				keyParameter.Value = key;
@@ -485,7 +485,7 @@ namespace TecWare.PPSn
 				valueParameter.Value = value;
 				userIdParameter.Value = userId;
 
-				command.ExecuteNonQuery();
+				command.ExecuteNonQueryEx();
 
 				return id;
 			} // func Insert
@@ -524,7 +524,7 @@ namespace TecWare.PPSn
 				valueParameter.Value = value ?? (object)DBNull.Value;
 				userIdParameter.Value = userId;
 
-				command.ExecuteNonQuery();
+				command.ExecuteNonQueryEx();
 			} // proc Update
 		} // class TagUpdateCommand
 
@@ -551,7 +551,7 @@ namespace TecWare.PPSn
 			public void Delete(long tagId)
 			{
 				idParameter.Value = tagId;
-				command.ExecuteNonQuery();
+				command.ExecuteNonQueryEx();
 			} // proc Update
 		} // class TagDeleteCommand
 
@@ -961,16 +961,58 @@ namespace TecWare.PPSn
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsObjectDataSet : PpsDataSetDesktop, IPpsObjectData
+	public sealed class PpsObjectDataSet : PpsDataSetDesktop, IPpsObjectData, IPpsObjectBasedDataSet
 	{
 		private readonly PpsObject baseObj;
+		private readonly PpsUndoManager undoManager;
 		private readonly List<PpsRevisionDataSet> revisions = new List<PpsRevisionDataSet>();
 		
 		internal PpsObjectDataSet(PpsDataSetDefinitionDesktop definition, PpsObject obj)
 			: base(definition, obj.Environment)
 		{
 			this.baseObj = obj;
+			this.RegisterUndoSink(this.undoManager = new PpsUndoManager());
 		} // ctor
+
+		private void UpdateHeadTable(PpsDataTable head)
+		{
+			var r = head.First;
+			r["Id"] = baseObj.Id;
+			r["Guid"] = baseObj.Guid;
+			r["Nr"] = baseObj.Nr;
+		} // proc UpdateHeadTable
+
+		public override async Task OnNewAsync(LuaTable arguments)
+		{
+			// add the basic head table and update the object data
+			var head = Tables["Head", false];
+			if(head != null)
+			{
+				if (head.Count == 0)
+				{
+					head.Add(
+						new LuaTable
+						{
+							{ "Id", baseObj.Id },
+							{ "Guid", baseObj.Guid },
+							{ "Nr", baseObj.Nr }
+						});
+				}
+				else
+					UpdateHeadTable(head);
+			}
+
+			await base.OnNewAsync(arguments);
+		} // proc OnNewAsync
+
+		public override async Task OnLoadedAsync(LuaTable arguments)
+		{
+			var head = Tables["Head", false];
+			if (head != null)
+				UpdateHeadTable(head);
+
+			await base.OnLoadedAsync(arguments);
+		} // proc OnNewAsync
 
 		public async Task LoadAsync(PpsMasterDataTransaction transaction = null)
 		{
@@ -1027,8 +1069,12 @@ namespace TecWare.PPSn
 		public Task UnloadAsync(PpsMasterDataTransaction transaction = null)
 			=> Task.CompletedTask;
 
-		public PpsUndoManager UndoManager => null;
+		/// <summary>The document it self implements the undo-manager.</summary>
+		public PpsUndoManager UndoManager => undoManager;
+		/// <summary>Is the document fully loaded.</summary>
 		public bool IsLoaded => IsInitialized;
+		/// <summary>This document is connected with ...</summary>
+		public PpsObject Object => baseObj;
 	} // class PpsObjectDataSet
 
 	#endregion
@@ -1122,7 +1168,7 @@ namespace TecWare.PPSn
 				{
 					cmd.AddParameter("@Id", DbType.Int64, objectId);
 
-					using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
+					using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleRow))
 					{
 						if (r.Read())
 							ReadObjectInfo(r);
@@ -1279,11 +1325,11 @@ namespace TecWare.PPSn
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 		private T GetValue<T>(int index, T empty)
-			=> (T)(staticValues[index] ?? empty);
+			=> index == 0 ? (T)(object)objectId : (T)(staticValues[index] ?? empty);
 
 		private void SetValue(int index, object newValue)
 		{
-			if (Object.Equals(staticValues[index], newValue))
+			if (!Object.Equals(staticValues[index], newValue))
 			{
 				staticValues[index] = newValue;
 				OnPropertyChanged(staticColumns[index].Name);
@@ -1358,6 +1404,8 @@ namespace TecWare.PPSn
 				{
 					if (index < 0)
 						throw new ArgumentOutOfRangeException();
+					else if (index == 0)
+						return objectId;
 					else if (index < StaticColumns.Length)
 						return staticValues[index];
 					else if (index == StaticColumns.Length + 0)
@@ -1456,16 +1504,33 @@ namespace TecWare.PPSn
 	#region -- class PpsObjectInfo ------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Special environment table, that holds information about the 
+	/// object class.</summary>
 	public sealed class PpsObjectInfo : LuaEnvironmentTable, IPpsEnvironmentDefinition
 	{
 		private readonly string name;
-
+		private bool createServerSiteOnly = false;
+		private bool isRev = false;
+		
 		public PpsObjectInfo(PpsEnvironment environemnt, string name)
 			: base(environemnt)
 		{
 			this.name = name;
 		} // ctor
+
+		/// <summary>Creates a new local number for the document.</summary>
+		/// <param name="transaction">Database transaction.</param>
+		/// <returns><c>null</c>, or a temporary local number for the user.</returns>
+		[LuaMember]
+		public string GetNextNumber(PpsMasterDataTransaction transaction)
+		{
+			using (var cmd = transaction.CreateNativeCommand("SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND typeof(substr(Nr, 4)) = 'integer'"))
+			{
+				var lastNrString = cmd.ExecuteScalarEx() as string;
+				var lastNr = lastNrString == null ? 0 : Int32.Parse(lastNrString.Substring(3));
+				return "*n*" + (lastNr + 1).ToString("000");
+			}
+		} // func GetNextNumber
 
 		[LuaMember]
 		public string Name
@@ -1473,6 +1538,26 @@ namespace TecWare.PPSn
 			get { return name; }
 			private set { }
 		} // prop Name
+
+		/// <summary>If this option is set, new documents can only create on the server site (type: bool, default: false).</summary>
+		[LuaMember]
+		public bool CreateServerSiteOnly
+		{
+			get => createServerSiteOnly;
+			set => SetDeclaredMember(ref createServerSiteOnly, value, nameof(CreateServerSiteOnly));
+		} // prop CreateServerSiteOnly
+
+		/// <summary>Holds the document uri for loading a schema.</summary>
+		[LuaMember]
+		public string DocumentUri => Environment.ActiveDataSets.GetDataSetSchemaUri(name);
+
+		/// <summary>Will this object have revision.</summary>
+		[LuaMember]
+		public bool IsRev
+		{
+			get => isRev;
+			set => SetDeclaredMember(ref isRev, value, nameof(IsRev));
+		}
 	} // class PpsObjectInfo
 
 	#endregion
@@ -1509,11 +1594,8 @@ namespace TecWare.PPSn
 
 			public PpsObjectEnumerator(PpsEnvironment environment, SQLiteCommand command)
 			{
-				if (command == null)
-					throw new ArgumentNullException("command");
-
-				this.environment = environment;
-				this.command = command;
+				this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
+				this.command = command ?? throw new ArgumentNullException(nameof(command));
 			} // ctor
 
 			public void Dispose()
@@ -1918,6 +2000,13 @@ order by t_liefnr.value desc
 
 		#endregion
 		
+		/// <summary>Create a new object in the local database.</summary>
+		/// <param name="transaction"></param>
+		/// <param name="objectInfo"></param>
+		/// <returns></returns>
+		public PpsObject CreateNewObject(PpsMasterDataTransaction transaction, PpsObjectInfo objectInfo)
+			=> CreateNewObject(transaction, Guid.NewGuid(), objectInfo.Name, objectInfo.GetNextNumber(transaction), objectInfo.IsRev);
+		
 		/// <summary>Create a new object.</summary>
 		/// <param name="serverId"></param>
 		/// <param name="guid"></param>
@@ -1928,18 +2017,19 @@ order by t_liefnr.value desc
 		/// <param name="syncToken"></param>
 		/// <returns></returns>
 		[LuaMember]
-		public PpsObject CreateNewObject(PpsMasterDataTransaction transaction, long serverId, Guid guid, string typ, string nr)
+		public PpsObject CreateNewObject(PpsMasterDataTransaction transaction, Guid guid, string typ, string nr, bool isRev)
 		{
 			using (var trans = MasterData.CreateTransaction(transaction))
 			using (var cmd = trans.CreateNativeCommand("INSERT INTO main.Objects (Id, Guid, Typ, Nr, IsHidden, IsRev) VALUES (@Id, @Guid, @Typ, @Nr, 0, @IsRev)"))
 			{
-				var newObjectId = trans.GetNextLocalId("main.Objects", "Id");
+				var newObjectId = trans.GetNextLocalId(transaction, "Objects", "Id");
 				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
 				cmd.AddParameter("@Guid", DbType.Guid, guid);
 				cmd.AddParameter("@Typ", DbType.String, typ.DbNullIfString());
 				cmd.AddParameter("@Nr", DbType.String, nr.DbNullIfString());
+				cmd.AddParameter("@IsRev", DbType.Boolean, isRev);
 
-				cmd.ExecuteNonQuery();
+				cmd.ExecuteNonQueryEx();
 				trans.Commit();
 
 				return GetObject(newObjectId, transaction);
@@ -2000,7 +2090,7 @@ order by t_liefnr.value desc
 
 		#region -- Object Cache -----------------------------------------------------------
 
-		private PpsObject ReadObject(object key, bool useGuid, PpsMasterDataTransaction transaction)
+		private PpsObject ReadObject(object key, bool useGuid, PpsMasterDataTransaction transaction, bool throwException = false)
 		{
 			// refresh core data
 			using (var trans = MasterData.CreateTransaction(transaction))
@@ -2011,10 +2101,12 @@ order by t_liefnr.value desc
 				else
 					cmd.AddParameter("@Id", DbType.Int64, key);
 
-				using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
+				using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleRow))
 				{
 					if (r.Read())
 						return UpdateCacheItem(new PpsObject(this, r));
+					else if (throwException)
+						throw new ArgumentOutOfRangeException($"Object with key '{key}' not found.", nameof(key));
 					else
 						return null;
 				}
@@ -2070,14 +2162,14 @@ order by t_liefnr.value desc
 			return null;
 		} // func GetCachedObject
 
-		private PpsObject GetCachedObjectOrRead<T>(Dictionary<T, int> index, T key, bool keyIsGuid, PpsMasterDataTransaction transaction = null)
+		private PpsObject GetCachedObjectOrRead<T>(Dictionary<T, int> index, T key, bool keyIsGuid, PpsMasterDataTransaction transaction = null, bool throwException = false)
 		{
 			lock (objectStoreLock)
 			{
 				// check if the object is in memory
 				return GetCachedObject(index, key)
 					// object is not in memory, create a instance
-					?? ReadObject(key, keyIsGuid, transaction);
+					?? ReadObject(key, keyIsGuid, transaction, throwException);
 			}
 		} // func GetCachedObject
 
@@ -2092,12 +2184,12 @@ order by t_liefnr.value desc
 		} // func GetCachedObjectOrCreate
 
 		[LuaMember]
-		public PpsObject GetObject(long localId, PpsMasterDataTransaction transaction = null)
-			=> GetCachedObjectOrRead(objectStoreById, localId, useId, transaction);
+		public PpsObject GetObject(long localId, PpsMasterDataTransaction transaction = null, bool throwException = false)
+			=> GetCachedObjectOrRead(objectStoreById, localId, useId, transaction, throwException);
 
 		[LuaMember]
-		public PpsObject GetObject(Guid guid, PpsMasterDataTransaction transaction = null)
-			=> GetCachedObjectOrRead(objectStoreByGuid, guid, useGuid, transaction);
+		public PpsObject GetObject(Guid guid, PpsMasterDataTransaction transaction = null, bool throwException = false)
+			=> GetCachedObjectOrRead(objectStoreByGuid, guid, useGuid, transaction, throwException);
 
 		[LuaMember]
 		public LuaTable GetObjectInfo(string objectTyp)

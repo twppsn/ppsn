@@ -468,7 +468,7 @@ namespace TecWare.PPSn
 				if (returnOnException.HasValue)
 				{
 					// notify exception as warning
-					Traces.AppendException(ex, "Execution failed.", true);
+					Traces.AppendException(ex, "Execution failed.", PpsTraceItemType.Warning);
 
 					return returnOnException.Value;
 				}
@@ -496,7 +496,7 @@ namespace TecWare.PPSn
 				else
 				{
 					// notify exception as warning
-					Traces.AppendException(ex, "Execution failed.", true);
+					Traces.AppendException(ex, "Execution failed.", PpsTraceItemType.Warning);
 					return LuaResult.Empty;
 				}
 			}
