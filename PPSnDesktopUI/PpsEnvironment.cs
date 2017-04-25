@@ -1050,6 +1050,20 @@ namespace TecWare.PPSn
 		protected override object OnIndex(object key)
 			=> base.OnIndex(key) ?? ((LuaTable)parentTable ?? environment).GetValue(key);
 
+		/// <summary>Helper to set a declared member with an new value. If the value is changed OnPropertyChanged will be invoked.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="m">Field that to set.</param>
+		/// <param name="n">Value for the field.</param>
+		/// <param name="propertyName">Name of the property.</param>
+		protected void SetDeclaredMember<T>(ref T m, T n, string propertyName)
+		{
+			if (!Object.Equals(m, n))
+			{
+				m = n;
+				OnPropertyChanged(propertyName);
+			}
+		} // proc SetDeclaredMember
+
 		/// <summary>Optional parent table.</summary>
 		[LuaMember()]
 		public LuaEnvironmentTable Parent => parentTable;

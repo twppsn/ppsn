@@ -109,13 +109,19 @@ namespace TecWare.PPSn
 	{
 		public const string CommandTextKey = "CommandText";
 
-		public static DbParameter AddParameter(this DbCommand command, string parameterName, DbType dbType, object value = null)
+		public static DbParameter AddParameter(this DbCommand command, string parameterName)
 		{
 			var param = command.CreateParameter();
 			param.ParameterName = parameterName;
+			command.Parameters.Add(param);
+			return param;
+		} // func AddParameter
+
+		public static DbParameter AddParameter(this DbCommand command, string parameterName, DbType dbType, object value = null)
+		{
+			var param = AddParameter(command, parameterName);
 			param.DbType = dbType;
 			param.Value = value;
-			command.Parameters.Add(param);
 			return param;
 		} // func AddParameter
 

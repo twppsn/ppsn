@@ -189,6 +189,256 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsMasterDataRow ---------------------------------------------------
+
+	public sealed class PpsMasterDataRow : DynamicDataRow
+	{
+		private readonly PpsMasterDataTable owner;
+		private readonly object[] values;
+
+		internal PpsMasterDataRow(PpsMasterDataTable owner, IDataReader r)
+		{
+			this.owner = owner;
+			this.values = new object[r.FieldCount];
+			r.GetValues(this.values);
+		} // ctor
+
+		public override IReadOnlyList<IDataColumn> Columns 
+			=> owner.Columns;
+
+		public override object this[int index]
+		{
+			get
+			{
+				var value = values[index];
+				if (value == null)
+				{
+					var column = owner.GetColumnDefinition(index);
+					if (column.IsRelationColumn) // return the related row
+					{
+						var masterDataTable = owner.MasterData.GetTable(column.ParentColumn.Table);
+						return masterDataTable?.GetRowById(values[index]);
+					}
+					else
+						return values[index];
+				}
+				else
+					return null;
+			}
+		} // prop this
+
+		public override bool IsDataOwner => true;
+
+		public object Key => values[owner.GetPrimaryKeyColumnIndex()];
+	} // class PpsMasterDataRow
+
+	#endregion
+
+	#region -- class PpsMasterDataSelector ----------------------------------------------
+
+	public abstract class PpsMasterDataSelector : IEnumerable<IDataRow>, IDataColumns
+	{
+		protected PpsMasterDataSelector()
+		{
+		} // ctor
+
+		/// <summary>Creates the select for all data rows.</summary>
+		/// <returns></returns>
+		protected abstract DbCommand PrepareCommand();
+		
+		/// <summary>Returns the rows for the prepared command.</summary>
+		/// <returns></returns>
+		public IEnumerator<IDataRow> GetEnumerator()
+		{
+			using (var command = PrepareCommand())
+			using (var r = command.ExecuteReaderEx(CommandBehavior.SingleResult))
+			{
+				var primaryKeyColumnIndex = Table.GetPrimaryKeyColumnIndex();
+				while (r.Read())
+				{
+					var key = r.GetValue(primaryKeyColumnIndex);
+					yield return Table.TryGetRowFromCache(key, out var row) ? row : new PpsMasterDataRow(Table, r);
+				}
+			}
+		} // func GetEnumerator
+
+		IEnumerator IEnumerable.GetEnumerator() 
+			=> GetEnumerator();
+		
+		/// <summary>Columns of the rows.</summary>
+		public abstract IReadOnlyList<IDataColumn> Columns { get; }
+		/// <summary>Owner of the the rows.</summary>
+		public abstract PpsMasterDataTable Table { get; }
+	} // class PpsMasterDataSelector
+
+	#endregion
+
+	#region -- class PpsMasterDataTable -------------------------------------------------
+
+	public sealed class PpsMasterDataTable : PpsMasterDataSelector
+	{
+		#region -- struct PpsWhereConditionValue ----------------------------------------
+
+		private struct PpsWhereConditionValue 
+		{
+			public PpsWhereConditionValue(string name, object value)
+			{
+				this.Name = name;
+				this.Value = value;
+			}
+
+			public string Name { get; }
+			public object Value { get; }
+		} // struct PpsWhereConditionValue 
+
+		#endregion
+
+		#region -- class PpsMasterDataTableResult ---------------------------------------
+
+		private sealed class PpsMasterDataTableResult : PpsMasterDataSelector
+		{
+			private readonly PpsMasterDataTable table;
+			private readonly PpsWhereConditionValue[] whereCondition;
+
+			public PpsMasterDataTableResult(PpsMasterDataTable table, params PpsWhereConditionValue[] whereCondition)
+			{
+				this.table = table ?? throw new ArgumentNullException(nameof(table));
+				this.whereCondition = whereCondition;
+
+				if (whereCondition == null || whereCondition.Length == 0)
+					throw new ArgumentNullException(nameof(whereCondition));
+			} // ctor
+
+			protected override DbCommand PrepareCommand()
+			{
+				var command = Table.MasterData.CreateNativeCommand(null);
+				try
+				{
+					var commandText = table.PrepareCommandText();
+
+					commandText.Append(" WHERE ");
+					for (var i = 0; i < whereCondition.Length; i++)
+					{
+						if (i != 0)
+							commandText.Append(" AND ");
+
+						var parameterName = "@p" + i.ChangeType<string>();
+						commandText.Append('[')
+							.Append(whereCondition[i].Name)
+							.Append(']')
+							.Append(" = ")
+							.Append(parameterName);
+
+						command.AddParameter(parameterName).Value = whereCondition[i];
+					}
+
+					return command;
+				}
+				catch
+				{
+					command.Dispose();
+					throw;
+				}
+			} // func PrepareCommand
+
+			public override PpsMasterDataTable Table => table;
+			public override IReadOnlyList<IDataColumn> Columns => table.Columns;
+		} // class PpsMasterDataTableResult
+
+		#endregion
+
+		private readonly PpsMasterData masterData;
+		private readonly PpsDataTableDefinition definition;
+
+		public PpsMasterDataTable(PpsMasterData masterData, PpsDataTableDefinition table)
+		{
+			this.masterData = masterData;
+			this.definition = table;
+		} // ctor
+
+		private StringBuilder PrepareCommandText()
+		{
+			var commandText = new StringBuilder("SELECT ");
+
+			// create select
+			var first = true;
+			foreach (var c in definition.Columns)
+			{
+				if (first)
+					first = false;
+				else
+					commandText.Append(',');
+				commandText.Append('[')
+					.Append(c.Name)
+					.Append(']');
+			}
+
+			// build from
+			commandText.Append(" FROM main.[").Append(definition.Name).Append(']');
+			return commandText;
+		} // proc PrepareCommandText
+
+		protected override DbCommand PrepareCommand()
+		{
+			var commandText = PrepareCommandText();
+
+			return masterData.CreateNativeCommand(commandText.ToString());
+		} // func PrepareCommand
+
+		public PpsMasterDataRow GetRowById(object key, bool throwException = false)
+		{
+			if (TryGetRowFromCache(key, out var row))
+				return row;
+
+			var commandText = PrepareCommandText();
+			commandText.Append(" WHERE [")
+				.Append(definition.PrimaryKey.Name)
+				.Append("] = @Key");
+
+			using (var cmd = masterData.CreateNativeCommand(commandText.ToString()))
+			{
+				cmd.AddParameter("@key").Value = key;
+
+				using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleRow))
+				{
+					if (r.Read())
+						return new PpsMasterDataRow(this, r);
+					else if (throwException)
+						throw new ArgumentException($"Could not seek row with key '{key}' in table '{definition.Name}'.");
+					else
+						return null;
+				}
+			} // using cmd
+		} // func GetRowById
+
+		/// <summary>Returns the primary key index.</summary>
+		/// <returns></returns>
+		internal int GetPrimaryKeyColumnIndex()
+			=> definition.PrimaryKey.Index;
+
+		internal PpsDataColumnDefinition GetColumnDefinition(int index)
+			=> definition.Columns[index];
+
+		/// <summary>Returns a cached row.</summary>
+		/// <param name="key"></param>
+		/// <param name="row"></param>
+		/// <returns></returns>
+		internal bool TryGetRowFromCache(object key, out PpsMasterDataRow row)
+		{
+			row = null;
+			return false;
+		} // func TryGetRowFromCache
+
+		/// <summary>Columns</summary>
+		public override IReadOnlyList<IDataColumn> Columns => definition.Columns;
+		/// <summary>Self</summary>
+		public override PpsMasterDataTable Table => this;
+		/// <summary>The master data service.</summary>
+		public PpsMasterData MasterData => masterData;
+	} // class PpsMasterDataTable
+	
+	#endregion
+	
 	#region -- class PpsMasterData ------------------------------------------------------
 
 	public sealed class PpsMasterData : IDisposable
@@ -967,6 +1217,39 @@ namespace TecWare.PPSn
 			else // fetch element
 				xml.Read();
 		} // proc FetchDataXmlBatch
+
+		#endregion
+
+		#region -- Table access ---------------------------------------------------------
+
+		/// <summary>Creates a master data table result for the table definition</summary>
+		/// <param name="tableDefinition">Table definition for the new result.</param>
+		/// <returns></returns>
+		internal PpsMasterDataTable GetTable(PpsDataTableDefinition tableDefinition)
+		{
+			return TryGetTableFromCache(tableDefinition, out var table)
+				? table
+				: new PpsMasterDataTable(this, tableDefinition);
+		} // func GetTable
+
+		public PpsMasterDataTable GetTable(string tableName, bool throwException = true)
+		{
+			// find schema
+			var tableDefinition = schema.FindTable(tableName);
+			if (tableDefinition == null)
+			{
+				if (throwException)
+					throw new ArgumentException($"MasterData table '{tableName}' not found.", nameof(tableName));
+			}
+
+			return GetTable(tableDefinition);
+		} // func GetTable
+
+		private bool TryGetTableFromCache(PpsDataTableDefinition tableDefinition, out PpsMasterDataTable table)
+		{
+			table = null;
+			return false;
+		} // func TryGetTableFromCache
 
 		#endregion
 

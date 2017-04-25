@@ -14,16 +14,14 @@
 //
 #endregion
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {
@@ -98,6 +96,185 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
+	#region -- interface IPpsObjectBasedDataSet -----------------------------------------
+
+	/// <summary>Interface that needs to implement in the base dataset, to support the PpsObjectExtendedColumn.</summary>
+	public interface IPpsObjectBasedDataSet
+	{
+		/// <summary>Returns the attached object to the dataset.</summary>
+		PpsObject Object { get; }
+	} // interface IPpsObjectBasedDataSet
+
+	#endregion
+
+	#region -- class PpsObjectExtendedValue ---------------------------------------------
+
+	public sealed class PpsObjectExtendedValue : PpsDataRowExtentedValue, IPpsDataRowGetGenericValue
+	{
+		private readonly IPpsObjectBasedDataSet dataset;
+		private readonly PpsEnvironment environment;
+
+		public PpsObjectExtendedValue(PpsDataRow row, PpsDataColumnDefinition column)
+			: base(row, column)
+		{
+			this.environment = PpsDataSetDefinitionDesktop.GetEnvironmentFromColumn(column);
+			this.dataset = (row.Table.DataSet as IPpsObjectBasedDataSet) ?? throw new ArgumentException("Dataset does not implement IPpsObjectBasedDataSet.");
+		} // ctor
+
+		protected override void Read(XElement x)
+		{
+			// we do not load something
+		} // proc Read
+
+		protected override void Write(XElement x)
+		{
+			// should not get called, if isnull is true
+			x.Add(new XElement("o", dataset.Object.Id));
+		} // proc Write
+
+		public long Id => dataset.Object?.Id ?? 0;
+		public object Value => dataset?.Object;
+
+		public override bool IsNull => dataset.Object == null;
+	} // class PpsObjectExtendedValue
+
+	#endregion
+
+	#region -- class PpsLinkedObjectExtendedValue ---------------------------------------
+
+	public sealed class PpsLinkedObjectExtendedValue : PpsDataRowObjectExtendedValue
+	{
+		private readonly PpsEnvironment environment;
+		private readonly IPpsObjectBasedDataSet dataset; // optional
+
+		private WeakReference<PpsObject> referencedObject = null;
+
+		public PpsLinkedObjectExtendedValue(PpsDataRow row, PpsDataColumnDefinition column)
+			: base(row, column)
+		{
+			this.environment = PpsDataSetDefinitionDesktop.GetEnvironmentFromColumn(column);
+			this.dataset = row.Table.DataSet as IPpsObjectBasedDataSet;
+		} // ctor
+
+		protected override bool SetGenericValue(object newValue, bool firePropertyChanged)
+		{
+			switch (newValue)
+			{
+				case null:
+					referencedObject = null;
+					return base.SetGenericValue(null, firePropertyChanged);
+				case PpsObject o:
+					if (base.SetGenericValue(o.Id, firePropertyChanged))
+					{
+						referencedObject = new WeakReference<PpsObject>(o);
+						return true;
+					}
+					else
+					{
+						if (referencedObject == null || !referencedObject.TryGetTarget(out var t))
+							referencedObject = new WeakReference<PpsObject>(o);
+						return false;
+					}
+				case int idInt:
+					return SetGenericValue(environment.GetObject(idInt, throwException: true), firePropertyChanged);
+				case long idLong:
+					return SetGenericValue(environment.GetObject(idLong, throwException: true), firePropertyChanged);
+				default:
+					throw new ArgumentException("Only long or PpsObject is allowed.", nameof(newValue));
+			}
+			;
+		}
+		
+		public override object Value
+		{
+			get
+			{
+				var v = InternalValue;
+				if (v == null)
+					return null;
+				else if (referencedObject != null && referencedObject.TryGetTarget(out var obj))
+					return obj;
+				else
+				{
+					obj = environment.GetObject((long)v);
+					referencedObject = new WeakReference<PpsObject>(obj);
+					return obj;
+				}
+			}
+		} // prop Value
+	} // class PpsLinkedObjectExtendedValue
+
+	#endregion
+
+	#region -- class PpsMasterDataExtendedValue -----------------------------------------
+
+	public sealed class PpsMasterDataExtendedValue : PpsDataRowObjectExtendedValue
+	{
+		private readonly PpsEnvironment environment;
+		private readonly PpsMasterDataTable masterDataTable;
+
+		private WeakReference<PpsMasterDataRow> referencedRow = null; // pointer to the actual row
+		
+		public PpsMasterDataExtendedValue(PpsDataRow row, PpsDataColumnDefinition column)
+			: base(row, column)
+		{
+			this.environment = PpsDataSetDefinitionDesktop.GetEnvironmentFromColumn(column);
+
+			this.masterDataTable = environment.MasterData.GetTable(
+				column.Meta.GetProperty<string>("refTable", null) 
+					?? throw new ArgumentNullException("refTable", "Meta attribute refTable is not definied.")
+			) ?? throw new ArgumentNullException("refTable");
+		} // ctor
+
+		protected override bool SetGenericValue(object newValue, bool firePropertyChanged)
+		{
+			switch (newValue)
+			{
+				case null:
+					referencedRow = null;
+					return base.SetGenericValue(null, firePropertyChanged);
+				case int idInt:
+					return SetGenericValue(masterDataTable.GetRowById(idInt, true), firePropertyChanged);
+				case long idLong:
+					return SetGenericValue(masterDataTable.GetRowById(idLong, true), firePropertyChanged);
+				case PpsMasterDataRow o:
+					if (base.SetGenericValue(o.Key, firePropertyChanged)) // change change
+					{
+						referencedRow = new WeakReference<PpsMasterDataRow>(o);
+						return true;
+					}
+					else // update cache
+					{
+						if (referencedRow == null || !referencedRow.TryGetTarget(out var t))
+							referencedRow = new WeakReference<PpsMasterDataRow>(o);
+						return false;
+					}
+				default:
+					throw new ArgumentException("Only long or IDataRow is allowed.", nameof(newValue));
+			}
+		} // func SetGenericValue
+		
+		public override object Value
+		{
+			get
+			{
+				var v = InternalValue;
+				if (v == null)
+					return null;
+				else if (referencedRow != null && referencedRow.TryGetTarget(out var row))
+					return row;
+				else
+				{
+					row = masterDataTable.GetRowById(v);
+					referencedRow = new WeakReference<PpsMasterDataRow>(row);
+					return row;
+				}
+			}
+		} // prop Value
+	} // class PpsMasterDataExtendedValue
+
+	#endregion
+
 	#region -- class PpsDataSetDefinitionDesktop ----------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -114,6 +291,23 @@ namespace TecWare.PPSn.Data
 
 		public override PpsDataSet CreateDataSet()
 			=> new PpsDataSetDesktop(this, (PpsEnvironment)Shell);
+
+		public override Type GetColumnType(string dataType)
+		{
+			if (String.Compare(dataType, "ppsObject", StringComparison.OrdinalIgnoreCase) == 0)
+				return typeof(PpsObjectExtendedValue);
+			else if (String.Compare(dataType, "ppsLinkObject", StringComparison.OrdinalIgnoreCase) == 0)
+				return typeof(PpsLinkedObjectExtendedValue);
+			else if (String.Compare(dataType, "ppsMasterData", StringComparison.OrdinalIgnoreCase) == 0)
+				return typeof(PpsMasterDataExtendedValue);
+			else
+				return base.GetColumnType(dataType);
+		} // func GetColumnType
+
+		public PpsEnvironment Environment => (PpsEnvironment)base.Shell;
+
+		internal static PpsEnvironment GetEnvironmentFromColumn(PpsDataColumnDefinition column)
+			=> ((PpsDataSetDefinitionDesktop)column.Table.DataSet).Environment ?? throw new ArgumentNullException("environment");
 	} // class PpsDataSetDefinitionDesktop
 
 	#endregion
