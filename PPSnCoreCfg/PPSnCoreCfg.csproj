@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ClientWpf\Panes\contacts.lua" />
+    <None Include="ClientWpf\Panes\testEnvironment.lua" />
     <None Include="ClientWpf\Panes\hello.lua" />
     <None Include="ClientWpf\Panes\contract.lua" />
     <None Include="ClientWpf\Panes\offer.lua" />

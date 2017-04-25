@@ -4,6 +4,10 @@
 
 	<pps:ppsn name="ppsn">
 		<pps:wpf name="wpf">
+			<pps:environment id="testEnvironment" priority="1000000">
+				<pps:code><![CDATA[ self:require 'wpf/panes/testEnvironment.lua']]></pps:code>
+			</pps:environment>
+			
 			<!-- test -->
 			<pps:action name="hello" displayName="Hallo" priority="1000">
 				<pps:code>
