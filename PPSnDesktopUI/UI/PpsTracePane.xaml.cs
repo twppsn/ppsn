@@ -97,8 +97,6 @@ namespace TecWare.PPSn.UI
 													file.WriteLine($"{((dynamic)itm).Type};{((dynamic)itm).Stamp};\"{ExceptionFormatter.FormatPlainText(((PpsExceptionItem)itm).Exception)}\"");
 												else
 													file.WriteLine($"{((dynamic)itm).Type};{((dynamic)itm).Stamp};\"{((dynamic)itm).Message}\"");
-
-
 											}
 											file.Close();
 										}
