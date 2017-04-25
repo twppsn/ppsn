@@ -525,13 +525,12 @@
 				<ColumnDefinition Width="2*"/>
 				<ColumnDefinition Width="1*"/>
 				<ColumnDefinition Width="auto"/>
-				<ColumnDefinition Width="auto"/>
 				<ColumnDefinition Width="32"/>
 			</Grid.ColumnDefinitions>
 
 			<Button Grid.Column="0" Focusable="False" Foreground="{StaticResource PPSnWindowForegroundBrush}"
+					Content="{Binding Environment.Traces.LastTrace,Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource MultiLineStringConverter}}"
 					Command="{x:Static ui:PpsWindow.TraceLogCommand}"
-					Content="{Binding Environment.Traces.LastTrace,Mode=OneWay,UpdateSourceTrigger=PropertyChanged,Converter={StaticResource MultiLineStringConverter}}"
 					ToolTipService.InitialShowDelay="750"
 					ToolTipService.ShowDuration="10000">
 				<Button.ToolTip>
@@ -604,79 +603,63 @@
 			<TextBlock Grid.Column="1" Text="{Binding Environment.StatusOfProxy.ActualItem.DisplayName}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
 					   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0" TextWrapping="NoWrap" IsHitTestVisible="False"/>
 
-
 			<Viewbox Grid.Column="2" Height="17" Opacity=".9">
-				<StackPanel Orientation="Horizontal">
-					<Canvas Width="10240" Height="10240" SnapsToDevicePixels="True" >
-						<Path Canvas.Left="552" Canvas.Top="1907" Width="9000" Height="7250" Stretch="Fill" Fill="#FFFFFF"
-							  Data="M4960 9600 l480 0c176,0 320,-144 320,-320l0 -320 -1920 0c-352,0 -640,-287 -640,-640l0 -3840c0,-353 287,-640 640,-640l5120 0c353,0 640,288 640,640l0 3840c0,352 -288,640 -640,640l-1920 0 0 320c0,176 144,320 320,320l480 0c88,0 160,72 160,160l0 160 -3200 0 0 -160c0,-88 72,-160 160,-160z m-1120 -5120l5120 0 0 3840 -5120 0 0 -3840z" />
-					</Canvas>
+				<ContentControl Focusable="False">
+					<ContentControl.Template>
+						<ControlTemplate>
+							<Grid Background="Transparent">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="auto"/>
+									<ColumnDefinition Width="auto"/>
+									<ColumnDefinition Width="auto"/>
+								</Grid.ColumnDefinitions>
+								<Canvas Grid.Column="0" Width="10240" Height="10240" SnapsToDevicePixels="True" >
+									<Path Canvas.Left="552" Canvas.Top="1907" Width="9000" Height="7250" Stretch="Fill" Fill="#FFFFFF"
+										  Data="M4960 9600 l480 0c176,0 320,-144 320,-320l0 -320 -1920 0c-352,0 -640,-287 -640,-640l0 -3840c0,-353 287,-640 640,-640l5120 0c353,0 640,288 640,640l0 3840c0,352 -288,640 -640,640l-1920 0 0 320c0,176 144,320 320,320l480 0c88,0 160,72 160,160l0 160 -3200 0 0 -160c0,-88 72,-160 160,-160z m-1120 -5120l5120 0 0 3840 -5120 0 0 -3840z" />
+								</Canvas>
+								<Canvas Grid.Column="1" Width="10240" Height="10240" SnapsToDevicePixels="False" >
+									<Path x:Name="pathState" Fill="#FFFFFF"
+										  Data="M 60.0085,4800.68L 2420.34,4800.68L 2420.34,5440.77L 60.0085,5440.77 Z
+										  M 7801.09,4800.67L 10181.4,4800.67L 10181.4,5440.76L 7801.09,5440.76 Z
+										  M 3333.13,7431.23L 2808.17,6906.28L 4595.02,5119.42L 2815.43,3339.83L 3340.39,2814.88L 5119.98,4594.47L 6891.37,2823.08L 7416.33,3348.04L 5644.94,5119.42L 7423.59,6898.08L 6898.63,7423.03L 5119.98,5644.38 Z "/>
+								</Canvas>
+								<Canvas Grid.Column="2" Width="10240" Height="10240" SnapsToDevicePixels="True" >
+									<Path Fill="#FFFFFF"
+										  Data="M3920 6400c353,0 640,287 640,640 0,353 -287,640 -640,640 -353,0 -640,-287 -640,-640 0,-353 287,-640 640,-640Z
+										  M1040 640l5760 0c176,0 320,144 320,320l0 8640 -6400 0 0 -8640c0,-176 144,-320 320,-320z m960 1600l3840 0 0 640 -3840 0 0 -640z m0 2560l3840 0 0 640 -3840 0 0 -640z m0 -1280l3840 0 0 640 -3840 0 0 -640z m-640 -2240l5120 0 0 7360 -5120 0 0 -7360z m320 320l4480 0 0 6720 -4480 0 0 -6720z m2240 4480c530,0 960,430 960,960 0,530 -430,960 -960,960 -530,0 -960,-430 -960,-960 0,-530 430,-960 960,-960z" />
+								</Canvas>
 
-					<Canvas Width="10240" Height="10240" Margin="1000,0" SnapsToDevicePixels="False">
-						<Path Canvas.Left="60" Canvas.Top="3860" Stretch="Fill" Fill="#FFFFFF"
-							  Data="M 5120.71,3860.54C 5816.69,3860.54 6380.89,4424.74 6380.89,5120.72C 6380.89,5816.69 5816.69,6380.89 5120.71,6380.89C 4424.74,6380.89 3860.54,5816.69 3860.54,5120.72C 3860.54,4424.74 4424.74,3860.54 5120.71,3860.54 Z 
-							  M 5120.71,4480.63C 5474.23,4480.63 5760.8,4767.2 5760.8,5120.72C 5760.8,5474.23 5474.23,5760.8 5120.71,5760.8C 4767.2,5760.8 4480.62,5474.23 4480.62,5120.72C 4480.62,4767.2 4767.2,4480.63 5120.71,4480.63 Z 
-							  M 60.1732,4800.68 L3500.49,4800.68 L3500.49,5440.77 L60.1732,5440.77 Z 
-							  M 6741.08,4800.67 L10181.4,4800.67 L10181.4,5440.76  6741.08,5440.76 Z "/>
-					</Canvas>
+							</Grid>
+							<ControlTemplate.Triggers>
+								<DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="3">
+									<Setter Property="Data" TargetName="pathState"
+											Value="M 1500.21,4480.63C 1853.72,4480.63 2140.3,4767.2 2140.3,5120.71C 2140.3,5474.23 1853.72,5760.8 1500.21,5760.8C 1146.7,5760.8 860.12,5474.23 860.12,5120.71C 860.12,4767.2 1146.7,4480.63 1500.21,4480.63 Z
+											M 1500.21,3860.54C 2196.18,3860.54 2760.38,4424.74 2760.38,5120.71C 2760.38,5816.69 2196.18,6380.89 1500.21,6380.89C 804.233,6380.89 240.034,5816.69 240.034,5120.71C 240.034,4424.74 804.233,3860.54 1500.21,3860.54 Z
+											M 5120.71,4480.63C 5474.23,4480.63 5760.8,4767.2 5760.8,5120.71C 5760.8,5474.23 5474.22,5760.8 5120.71,5760.8C 4767.2,5760.8 4480.62,5474.23 4480.62,5120.71C 4480.62,4767.2 4767.2,4480.63 5120.71,4480.63 Z
+											M 5120.71,3860.54C 5816.69,3860.54 6380.89,4424.74 6380.89,5120.71C 6380.89,5816.69 5816.69,6380.89 5120.71,6380.89C 4424.74,6380.89 3860.54,5816.69 3860.54,5120.71C 3860.54,4424.74 4424.74,3860.54 5120.71,3860.54 Z
+											M 8741.22,4480.63C 9094.73,4480.63 9381.31,4767.2 9381.31,5120.71C 9381.31,5474.23 9094.73,5760.8 8741.22,5760.8C 8387.71,5760.8 8101.13,5474.23 8101.13,5120.71C 8101.13,4767.2 8387.71,4480.63 8741.22,4480.63 Z
+											M 8741.22,3860.54C 9437.2,3860.54 10001.4,4424.74 10001.4,5120.71C 10001.4,5816.69 9437.2,6380.89 8741.22,6380.89C 8045.24,6380.89 7481.04,5816.69 7481.04,5120.71C 7481.04,4424.74 8045.24,3860.54 8741.22,3860.54 Z "/>
+								</DataTrigger>
+								<DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="4">
+									<Setter Property="Data" TargetName="pathState"
+											Value="M 5120.71,4352.61C 5544.93,4352.61 5888.82,4696.5 5888.82,5120.72C 5888.82,5544.93 5544.93,5888.82 5120.71,5888.82C 4696.5,5888.82 4352.61,5544.93 4352.61,5120.72C 4352.61,4696.5 4696.5,4352.61 5120.71,4352.61 Z
+											M 5120.71,3680.52C 5916.11,3680.52 6560.91,4325.31 6560.91,5120.72C 6560.91,5916.12 5916.11,6560.92 5120.71,6560.92C 4325.31,6560.92 3680.51,5916.12 3680.51,5120.72C 3680.51,4325.31 4325.31,3680.52 5120.71,3680.52 Z
+											M 160.022,4800.67L 160.022,5440.76L 3280.46,5440.76L 3280.46,4800.67 Z
+											M 6960.97,4800.67L 6960.97,5440.76L 10081.4,5440.76L 10081.4,4800.67 Z"/>
 
-					<!--<Canvas Width="10240" Height="10240" Margin="1000,0" SnapsToDevicePixels="False">
-						<Path Canvas.Left="60" Canvas.Top="2814" Stretch="Fill" Fill="#FFFFFF"
-							  Data="M 60.0085,4800.68L 2420.34,4800.68L 2420.34,5440.77L 60.0085,5440.77 Z 
-							  M 7801.09,4800.67L 10181.4,4800.67L 10181.4,5440.76L 7801.09,5440.76 Z 
-							  M 3333.13,7431.23L 2808.17,6906.28L 4595.02,5119.42L 2815.43,3339.83L 3340.39,2814.88L 5119.98,4594.47L 6891.37,2823.08L 7416.33,3348.04L 5644.94,5119.42L 7423.59,6898.08L 6898.63,7423.03L 5119.98,5644.38 Z "/>
-					</Canvas>-->
-
-					<!--<Canvas Width="10240" Height="10240" Margin="1000,0" SnapsToDevicePixels="False">
-						<Path Canvas.Left="240" Canvas.Top="3861" Stretch="Fill" Fill="#FFFFFF"
-							  Data="M 1500.21,4480.63C 1853.72,4480.63 2140.3,4767.2 2140.3,5120.71C 2140.3,5474.23 1853.72,5760.8 1500.21,5760.8C 1146.7,5760.8 860.12,5474.23 860.12,5120.71C 860.12,4767.2 1146.7,4480.63 1500.21,4480.63 Z 
-							  M 1500.21,3860.54C 2196.18,3860.54 2760.38,4424.74 2760.38,5120.71C 2760.38,5816.69 2196.18,6380.89 1500.21,6380.89C 804.233,6380.89 240.034,5816.69 240.034,5120.71C 240.034,4424.74 804.233,3860.54 1500.21,3860.54 Z 
-							  M 5120.71,4480.63C 5474.23,4480.63 5760.8,4767.2 5760.8,5120.71C 5760.8,5474.23 5474.22,5760.8 5120.71,5760.8C 4767.2,5760.8 4480.62,5474.23 4480.62,5120.71C 4480.62,4767.2 4767.2,4480.63 5120.71,4480.63 Z 
-							  M 5120.71,3860.54C 5816.69,3860.54 6380.89,4424.74 6380.89,5120.71C 6380.89,5816.69 5816.69,6380.89 5120.71,6380.89C 4424.74,6380.89 3860.54,5816.69 3860.54,5120.71C 3860.54,4424.74 4424.74,3860.54 5120.71,3860.54 Z 
-							  M 8741.22,4480.63C 9094.73,4480.63 9381.31,4767.2 9381.31,5120.71C 9381.31,5474.23 9094.73,5760.8 8741.22,5760.8C 8387.71,5760.8 8101.13,5474.23 8101.13,5120.71C 8101.13,4767.2 8387.71,4480.63 8741.22,4480.63 Z 
-							  M 8741.22,3860.54C 9437.2,3860.54 10001.4,4424.74 10001.4,5120.71C 10001.4,5816.69 9437.2,6380.89 8741.22,6380.89C 8045.24,6380.89 7481.04,5816.69 7481.04,5120.71C 7481.04,4424.74 8045.24,3860.54 8741.22,3860.54 Z "/>
-					</Canvas>-->
-
-
-					<Canvas Width="10240" Height="10240" SnapsToDevicePixels="True" >
-						<Path Fill="#FFFFFF"
-							  Data="M3920 6400c353,0 640,287 640,640 0,353 -287,640 -640,640 -353,0 -640,-287 -640,-640 0,-353 287,-640 640,-640Z
-							  M1040 640l5760 0c176,0 320,144 320,320l0 8640 -6400 0 0 -8640c0,-176 144,-320 320,-320z m960 1600l3840 0 0 640 -3840 0 0 -640z m0 2560l3840 0 0 640 -3840 0 0 -640z m0 -1280l3840 0 0 640 -3840 0 0 -640z m-640 -2240l5120 0 0 7360 -5120 0 0 -7360z m320 320l4480 0 0 6720 -4480 0 0 -6720z m2240 4480c530,0 960,430 960,960 0,530 -430,960 -960,960 -530,0 -960,-430 -960,-960 0,-530 430,-960 960,-960z" />
-					</Canvas>
-
-				</StackPanel>
+								</DataTrigger>
+							</ControlTemplate.Triggers>
+						</ControlTemplate>
+					</ContentControl.Template>
+					<ContentControl.ToolTip>
+						<ToolTip Placement="Top" FontSize="14">
+							<TextBlock Text="{Binding Environment.CurrentState}"/>
+						</ToolTip>
+					</ContentControl.ToolTip>
+				</ContentControl>
 			</Viewbox>
 
-
-			<!--<Border Grid.Column="2" BorderThickness="2" BorderBrush="AntiqueWhite" Opacity=".7" CornerRadius="10,10,10,10" Width="16" Margin="4">
-                <Border.Style>
-                    <Style>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="0">
-                                <Setter Property="Border.Background" Value="OrangeRed" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="1">
-                                <Setter Property="Border.Background" Value="OrangeRed" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="2">
-                                <Setter Property="Border.Background" Value="OrangeRed" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="3">
-                                <Setter Property="Border.Background" Value="Orange" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding Path=Environment.CurrentState}" Value="4">
-                                <Setter Property="Border.Background" Value="Lime" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-
-                </Border.Style>
-                <Border.ToolTip>
-                    <TextBlock Text="{Binding Environment.CurrentState}"/>
-                </Border.ToolTip>
-            </Border>-->
-
-			<Viewbox x:Name="PART_SizeGripper" Grid.Column="4" Width="15" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+			<Viewbox x:Name="PART_SizeGripper" Grid.Column="3" Width="15" VerticalAlignment="Bottom" HorizontalAlignment="Right">
 				<Image Width="15" Height="15" VerticalAlignment="Bottom" HorizontalAlignment="Right" Source="pack://application:,,,/PPSn.Desktop.UI;component/Images/SizeGrip.png">
 					<Image.Tag>
 						<ui:PpsWindowHitTest HitTest="17"/>
