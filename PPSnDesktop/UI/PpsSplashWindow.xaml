@@ -14,8 +14,8 @@
     </Window.InputBindings>
 
 	<Window.Resources>
-		<SolidColorBrush x:Key="SplashWindowControlForegroundBrush" Color="Black" />
-		<SolidColorBrush x:Key="SplashWindowControlBackgroundBrush" Color="White" />
+		<SolidColorBrush x:Key="SplashWindowControlForegroundBrush" Color="#000000" />
+		<SolidColorBrush x:Key="SplashWindowControlBackgroundBrush" Color="#FFFFFF" />
 		<SolidColorBrush x:Key="SplashWindowControlBorderBrushNormal" Color="#999999" />
 		<SolidColorBrush x:Key="SplashWindowControlBorderBrushFocused" Color="#666666" />
 
@@ -126,7 +126,7 @@
 			<Setter Property="Background" Value="{StaticResource SplashWindowControlBackgroundBrush}"/>
 			<Setter Property="BorderThickness" Value="2"/>
 			<Setter Property="BorderBrush" Value="{StaticResource SplashWindowControlBorderBrushNormal}"/>
-			<Setter Property="SelectionBrush" Value="Black"/>
+			<Setter Property="SelectionBrush" Value="#000000"/>
 			<Setter Property="SelectionOpacity" Value=".25"/>
 			<Setter Property="FontSize" Value="14"/>
 			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -158,7 +158,7 @@
 			<Setter Property="Background" Value="{StaticResource SplashWindowControlBackgroundBrush}"/>
 			<Setter Property="BorderThickness" Value="2"/>
 			<Setter Property="BorderBrush" Value="{StaticResource SplashWindowControlBorderBrushNormal}"/>
-			<Setter Property="SelectionBrush" Value="Black"/>
+			<Setter Property="SelectionBrush" Value="#000000"/>
 			<Setter Property="SelectionOpacity" Value=".25"/>
 			<Setter Property="FontSize" Value="14"/>
 			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -185,7 +185,7 @@
 
 	</Window.Resources>
 
-	<Border BorderThickness="1" BorderBrush="Black" Background="White">
+	<Border BorderThickness="1" BorderBrush="#000000" Background="#FFFFFF">
 		<Grid>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="96"/>

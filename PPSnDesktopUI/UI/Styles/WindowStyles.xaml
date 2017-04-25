@@ -26,16 +26,16 @@ specific language governing permissions and limitations under the Licence.
 
     <sys:String x:Key="PPSnApplicationTitle">PPSn</sys:String>
 
-	<SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="#3B4A62" />
-    <SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="#FFFFFF" />
+	<SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="#000000" />
 
 	<SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="#007ACC" />
-	<SolidColorBrush x:Key="PPSnMarkerBrush" Color="#F7E51D"/>
+	<SolidColorBrush x:Key="PPSnMarkerBrush" Color="#000000"/>
 	<SolidColorBrush x:Key="PPSnSeparatorBrush" Color="#586579"/>
 	<SolidColorBrush x:Key="PPSnActionButtonBrush" Color="{StaticResource PPSnActionButtonColor}" />
 
-	<SolidColorBrush x:Key="PPSnAlternation0Brush" Color="#5D697D"/>
-	<SolidColorBrush x:Key="PPSnAlternation1Brush" Color="#4E5B71"/>
+	<SolidColorBrush x:Key="PPSnAlternation0Brush" Color="#96EDEDED"/>
+	<SolidColorBrush x:Key="PPSnAlternation1Brush" Color="#80F3F3F3"/>
 
 	<SolidColorBrush x:Key="PPSnMouseOverBrush" Color="#586579"/>
 	<SolidColorBrush x:Key="PPSnButtonPressedBrush" Color="#323E53"/>
@@ -78,7 +78,7 @@ specific language governing permissions and limitations under the Licence.
 	<!--fixed styles (no theme)-->
 
 	<Style x:Key="PPSnSysButtonStyle" TargetType="{x:Type Button}">
-		<Setter Property="Foreground" Value="Black"/>
+		<Setter Property="Foreground" Value="#000000"/>
 		<Setter Property="Background" Value="#CCCCCC"/>
 		<Setter Property="BorderBrush" Value="#CCCCCC"/>
 		<Setter Property="BorderThickness" Value="1"/>
@@ -111,8 +111,8 @@ specific language governing permissions and limitations under the Licence.
 	</Style>
 
 	<Style x:Key="PPSnSysCheckBoxStyle" TargetType="{x:Type CheckBox}">
-		<Setter Property="Foreground" Value="Black"/>
-		<Setter Property="Background" Value="White"/>
+		<Setter Property="Foreground" Value="#000000"/>
+		<Setter Property="Background" Value="#FFFFFF"/>
 		<Setter Property="BorderBrush" Value="#999999"/>
 		<Setter Property="BorderThickness" Value="1"/>
 		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
