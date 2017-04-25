@@ -191,8 +191,9 @@
                     <Grid>
                         <Grid.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Command="ApplicationCommands.Copy" CommandParameter="{Binding}">
-                                </MenuItem>
+                                <MenuItem Command="ApplicationCommands.Copy" CommandParameter="{Binding}"/>
+                                <Separator />
+                                <MenuItem Command="ApplicationCommands.SaveAs" CommandParameter="{Binding}"/>
                             </ContextMenu>
                         </Grid.ContextMenu>
                         <Grid.ColumnDefinitions>

@@ -66,6 +66,37 @@ namespace TecWare.PPSn.UI
 					(sender, e) => e.CanExecute = true
 				)
 			);
+			CommandBindings.Add(
+				new CommandBinding(ApplicationCommands.SaveAs,
+					(sender, e) =>
+					{
+
+						if (e.Source is PpsTracePane)
+							if (((PpsTracePane)e.Source).Content is Grid)
+								if (((Grid)((PpsTracePane)e.Source).Content).Children.Count > 0)
+									if (((Grid)((PpsTracePane)e.Source).Content).Children[0] is ListBox)
+									{
+										var exc = (ListBox)((Grid)((PpsTracePane)e.Source).Content).Children[0];
+										var list = exc.Items;
+
+										System.IO.StreamWriter file = new System.IO.StreamWriter("c:\\Temp\\test.csv");
+										file.Write("\xEF\xBB\xBF");
+										foreach (var itm in list)
+										{
+											if (itm is Exception)
+											file.WriteLine($"Exception;{DateTime.Now};{ExceptionFormatter.FormatPlainText((Exception)itm).Replace("\r\n","\n").Replace("\n\r","\n")}");
+
+
+										}
+										file.Close();
+
+										//CopyToClipboard(exc.SelectedItem);
+									}
+						e.Handled = true;
+					},
+					(sender, e) => e.CanExecute = true
+				)
+			);
 		} // ctor
 
 		public void Dispose()
@@ -124,7 +155,8 @@ namespace TecWare.PPSn.UI
 		public bool IsDirty => false;
 		public bool HasSideBar => false;
 
-		public readonly static RoutedCommand CopyTraceCommand = new RoutedCommand("CopyTrace", typeof(PpsTracePane));
+		//public readonly static RoutedCommand CopyTraceCommand = new RoutedCommand("CopyTrace", typeof(PpsTracePane));
+
 
 		public object Commands => null;
 	} // class PpsTracePane
