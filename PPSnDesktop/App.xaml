@@ -16,6 +16,7 @@
 			<ui:PpsStringConverter x:Key="StringConverter" />
 			<ui:PpsMultiLineStringConverter x:Key="MultiLineStringConverter" />
             <ui:ManyToTopTenConverter x:Key="ManyToTopTenConverter" />
+            <ui:PpsTypeStringConverter x:Key="TypeStringConverter" />
 											
 		</ResourceDictionary>
 	</Application.Resources>
