@@ -20,6 +20,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {
@@ -413,6 +414,55 @@ namespace TecWare.PPSn.Data
 
 		public static PpsDataFilterExpression Combine(params PpsDataFilterExpression[] expr)
 			=> new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.And, expr).Reduce();
+
+		public static PpsDataFilterExpression Compare(string operand, PpsDataFilterCompareOperator op, PpsDataFilterCompareValueType type, object value)
+		{
+			PpsDataFilterCompareValue GetValueExpresion()
+			{
+				switch (type)
+				{
+					case PpsDataFilterCompareValueType.Null:
+						return PpsDataFilterCompareNullValue.Default;
+					case PpsDataFilterCompareValueType.Text:
+						return new PpsDataFilterCompareTextValue(value.ChangeType<string>());
+					case PpsDataFilterCompareValueType.Number:
+						return new PpsDataFilterCompareNumberValue(value.ChangeType<string>());
+					case PpsDataFilterCompareValueType.Integer:
+						return new PpsDataFilterCompareIntegerValue(value.ChangeType<long>());
+					case  PpsDataFilterCompareValueType.Date:
+						var dt = value.ChangeType<DateTime>();
+						return new PpsDataFilterCompareDateValue(dt.Date, dt.Date.AddDays(1));
+					default:
+						throw new ArgumentOutOfRangeException(nameof(type), type, "Out of range.");
+				}
+			} // func GetValueExpresion
+
+			return new PpsDataFilterCompareExpression(operand, op, GetValueExpresion());
+		} // func Compare
+
+		public static PpsDataFilterExpression Compare(string operand, PpsDataFilterCompareOperator op, object value)
+		{
+			PpsDataFilterCompareValue GetValueExpresion()
+			{
+				switch (value)
+				{
+					case null:
+						return PpsDataFilterCompareNullValue.Default;
+					case string s:
+						return new PpsDataFilterCompareTextValue(s);
+					case int i:
+						return new PpsDataFilterCompareIntegerValue((long)i);
+					case long n:
+						return new PpsDataFilterCompareIntegerValue((long)n);
+					case DateTime dt:
+						return new PpsDataFilterCompareDateValue(dt.Date, dt.Date.AddDays(1));
+					default:
+						return new PpsDataFilterCompareTextValue(value.ChangeType<string>());
+				}
+			} // func GetValueExpresion
+
+			return new PpsDataFilterCompareExpression(operand, op, GetValueExpresion());
+		} // func Compare
 	} // class PpsDataFilterExpression
 
 	#endregion
@@ -467,6 +517,7 @@ namespace TecWare.PPSn.Data
 		Text,
 		Date,
 		Number,
+		Integer
 	} // enum PpsDataFilterCompareValueType
 
 	#endregion
@@ -546,6 +597,28 @@ namespace TecWare.PPSn.Data
 		public string Text => text;
 		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Text;
 	} // class PpsDataFilterCompareTextValue
+
+	#endregion
+
+	#region -- class PpsDataFilterCompareIntegerValue -----------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public sealed class PpsDataFilterCompareIntegerValue : PpsDataFilterCompareValue
+	{
+		private readonly long value;
+
+		public PpsDataFilterCompareIntegerValue(long value)
+		{
+			this.value = value;
+		} // ctor
+
+		public override void ToString(StringBuilder sb)
+			=> sb.Append(value);
+
+		public long Value => value;
+		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Text;
+	} // class PpsDataFilterCompareIntegerValue
 
 	#endregion
 
@@ -1001,40 +1074,42 @@ namespace TecWare.PPSn.Data
 					return CreateCompareFilterDate(expression.Operand, expression.Operator, ((PpsDataFilterCompareDateValue)expression.Value).From, ((PpsDataFilterCompareDateValue)expression.Value).To);
 				case PpsDataFilterCompareValueType.Number:
 					return CreateCompareFilterNumber(expression.Operand, expression.Operator, ((PpsDataFilterCompareNumberValue)expression.Value).Text);
+				case PpsDataFilterCompareValueType.Integer:
+					return CreateCompareFilterText(expression.Operand, expression.Operator, ((PpsDataFilterCompareIntegerValue)expression.Value).Value.ChangeType<string>());
 				case PpsDataFilterCompareValueType.Null:
 					return CreateCompareFilterNull(expression.Operand, expression.Operator);
 				default:
 					throw new NotImplementedException();
 			}
 		} // func CreateCompareFilter
-
-		private string CreateDefaultCompareText(Tuple<string, Type> column, PpsDataFilterCompareOperator op, string value)
+		
+		private string CreateDefaultCompareValue(string columnName, PpsDataFilterCompareOperator op, string value, bool useContains)
 		{
 			switch (op)
 			{
 				case PpsDataFilterCompareOperator.Contains:
-					if (column.Item2 == typeof(string))
-						return column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Both);
+					if (useContains)
+						return columnName + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Both);
 					else
 						goto case PpsDataFilterCompareOperator.Equal;
 				case PpsDataFilterCompareOperator.NotContains:
-					if (column.Item2 == typeof(string))
-						return "NOT " + column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Both);
+					if (useContains)
+						return "NOT " + columnName + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Both);
 					else
-						goto case PpsDataFilterCompareOperator.Equal;
+						goto case PpsDataFilterCompareOperator.NotEqual;
 
 				case PpsDataFilterCompareOperator.Equal:
-					return column.Item1 + " = " + value;
+					return columnName + " = " + value;
 				case PpsDataFilterCompareOperator.NotEqual:
-					return column.Item1 + " <> " + value;
+					return columnName + " <> " + value;
 				case PpsDataFilterCompareOperator.Greater:
-					return column.Item1 + " > " + value;
+					return columnName + " > " + value;
 				case PpsDataFilterCompareOperator.GreaterOrEqual:
-					return column.Item1 + " >= " + value;
+					return columnName + " >= " + value;
 				case PpsDataFilterCompareOperator.Lower:
-					return column.Item1 + " < " + value;
+					return columnName + " < " + value;
 				case PpsDataFilterCompareOperator.LowerOrEqual:
-					return column.Item1 + " <= " + value;
+					return columnName + " <= " + value;
 
 				default:
 					throw new NotImplementedException();
@@ -1044,7 +1119,13 @@ namespace TecWare.PPSn.Data
 		private string CreateCompareFilterText(string columnToken, PpsDataFilterCompareOperator op, string text)
 		{
 			var column = LookupColumn(columnToken);
-			return CreateDefaultCompareText(column, op, CreateParsableValue(text, column.Item2));
+			return CreateDefaultCompareValue(column.Item1, op, CreateParsableValue(text, column.Item2), column.Item2 == typeof(string));
+		} // func CreateCompareFilterText
+
+		private string CreateCompareFilterInteger(string columnToken, PpsDataFilterCompareOperator op, long value)
+		{
+			var column = LookupColumn(columnToken);
+			return CreateDefaultCompareValue(column.Item1, op, value.ChangeType<string>(), false);
 		} // func CreateCompareFilterText
 
 		private string CreateCompareFilterNumber(string columnToken, PpsDataFilterCompareOperator op, string text)
@@ -1062,7 +1143,7 @@ namespace TecWare.PPSn.Data
 					return "NOT " + column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Trailing);
 
 				default:
-					return CreateDefaultCompareText(column, op, value);
+					return CreateDefaultCompareValue(column.Item1, op, value, column.Item2 == typeof(string));
 			}
 		} // func CreateCompareFilterNumber
 
