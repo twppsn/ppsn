@@ -162,7 +162,7 @@ namespace TecWare.PPSn
 			using (var cmd = transaction.CreateNativeCommand("SELECT min([" + primaryKey + "]) FROM main.[" + tableName + "]"))
 			{
 				var nextIdObject = cmd.ExecuteScalarEx();
-				if (nextIdObject == null)
+				if (nextIdObject == DBNull.Value)
 					return -1;
 				else
 				{
