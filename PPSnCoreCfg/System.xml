@@ -252,7 +252,7 @@
 						<pps:meta name="sourceColumn">#</pps:meta>
 						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
-					<pps:column name="DocumentIsLinked" fieldName="sys.Fields.Text">
+					<pps:column name="DocumentIsLinked" fieldName="sys.Fields.Bit">
 						<pps:meta name="sourceColumn">#</pps:meta>
 						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
@@ -285,7 +285,7 @@
 				</pps:table>
 
 				<pps:table name="ObjectLinks">
-					<pps:meta name="syncType">ChangeTracking: dbo.ObjL</pps:meta>
+					<pps:meta name="syncType">None</pps:meta>
 					
 					<pps:column name="Id" fieldName="dbo.Objl.Id" isPrimary="true" />
 					<pps:relation name="ParentObjectId" fieldName="dbo.Objl.ParentObjKId" relationName="LinkedTo" parentTable="Objects" parentColumn="Id" parentType="Root" />
