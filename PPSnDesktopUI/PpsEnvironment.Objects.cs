@@ -1317,7 +1317,7 @@ namespace TecWare.PPSn
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 		private T GetValue<T>(int index, T empty)
-			=> index == 0 ? (T)(object)objectId : (T)(staticValues[index] ?? empty);
+			=> index == 0 ? (T)(object)objectId : (staticValues[index] ?? empty).ChangeType<T>();
 
 		private void SetValue(int index, object newValue)
 		{
