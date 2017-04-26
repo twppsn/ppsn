@@ -1029,33 +1029,25 @@ namespace TecWare.PPSn
 			}
 		} // proc LoadAsync
 
-		public async Task CommitAsync(PpsMasterDataTransaction trans = null)
+		public async Task CommitAsync(PpsMasterDataTransaction transaction = null)
 		{
-			//try
-			//{
-			//	using (var transaction = new PpsNestedDatabaseTransaction(Environment.LocalConnection, trans))
-			//	{
-			//		// update data
-			//		await baseObj.SaveRawDataAsync(transaction.Transaction,
-			//			 dst =>
-			//			 {
-			//				 var settings = Procs.XmlWriterSettings;
-			//				 settings.CloseOutput = false;
-			//				 using (var xml = XmlWriter.Create(dst, settings))
-			//					 Write(xml);
-			//			 }
-			//			);
+			using (var trans = Environment.MasterData.CreateTransaction(transaction))
+			{
+				await baseObj.SaveRawDataAsync(trans, -1, "application/dataset",
+					dst =>
+					{
+						var settings = Procs.XmlWriterSettings;
+						settings.CloseOutput = false;
+						using (var xml = XmlWriter.Create(dst, settings))
+							Write(xml);
+					}
+				);
 
-			//		// update tags
-			//		baseObj.Tags.Update(GetAutoTags().ToList(), transaction: transaction.Transaction);
+				//		// update tags
+				//		baseObj.Tags.Update(GetAutoTags().ToList(), transaction: transaction.Transaction);
 
-			//		transaction.Commit();
-			//	}
-			//}
-			//catch (Exception)
-			//{
-			//	throw;
-			//}
+				trans.Commit();
+			}
 
 			// mark not dirty anymore
 			ResetDirty();
@@ -1255,9 +1247,9 @@ namespace TecWare.PPSn
 			return (T)data;
 		} // func GetDataAsync
 
-		internal async Task<Stream> LoadRawDataAsync(PpsMasterDataTransaction transaction)
+		internal async Task<Stream> LoadRawDataAsync(PpsMasterDataTransaction transaction = null)
 		{
-			using (var trans = environment.MasterData.CreateTransaction())
+			using (var trans = environment.MasterData.CreateTransaction(transaction))
 			using (var cmd = trans.CreateNativeCommand("SELECT Document, DocumentIsLinked, length(Document) FROM main.Objects WHERE Id = @Id"))
 			{
 				cmd.AddParameter("@Id", DbType.Int64, objectId);
@@ -1299,7 +1291,7 @@ namespace TecWare.PPSn
 			}
 
 			// store the value
-			using (var trans = environment.MasterData.CreateTransaction())
+			using (var trans = environment.MasterData.CreateTransaction(transaction))
 			using (var cmd = trans.CreateNativeCommand("UPDATE main.Objects " +
 				"SET PulledRevId = IFNULL(@PulledRevId, PulledRevId), Nr = IFNULL(@Nr, Nr), Document = @Document, DocumentIsLinked = 0, DocumentIsChanged = @DocumentIsChanged " +
 				"WHERE Id = @Id"))
