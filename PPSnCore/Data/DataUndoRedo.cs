@@ -27,9 +27,9 @@ namespace TecWare.PPSn.Data
 	/// <summary>Basic interface for all undo/redo elements.</summary>
 	public interface IPpsUndoItem
 	{
-		/// <summary>Is called before the element is persist in the memory.</summary>
+		/// <summary>Is called before the element is persist in the memory (commit of the change transaction).</summary>
 		void Freeze();
-		/// <summary>Undo the element.</summary>
+		/// <summary>Undo the element (can also called within rollback).</summary>
 		void Undo();
 		/// <summary>Redo the element.</summary>
 		void Redo();
@@ -311,5 +311,4 @@ namespace TecWare.PPSn.Data
 	} // class PpsUndoManagerBase
 
 	#endregion
-
 }
