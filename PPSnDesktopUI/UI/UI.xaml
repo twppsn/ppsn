@@ -17,5 +17,7 @@ specific language governing permissions and limitations under the Licence.
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Styles/WindowStyles.xaml" />
 		<ResourceDictionary Source="Styles/Templates.xaml" />
+		<ResourceDictionary Source="Styles/DrawingImages.xaml" />
+
 	</ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>

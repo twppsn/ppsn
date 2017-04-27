@@ -19,7 +19,7 @@
             </LinearGradientBrush.GradientStops>
         </LinearGradientBrush>
 
-        <sys:Double x:Key="maxScrollHeight">280</sys:Double>
+		<sys:Double x:Key="maxScrollHeight">280</sys:Double>
 
         <Style x:Key="PPSnTraceAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
             <Setter Property="Background" Value="{StaticResource PPSnAlternation0Brush}"/>
@@ -124,26 +124,41 @@
                                             <RowDefinition Height="auto"/>
                                             <RowDefinition/>
                                         </Grid.RowDefinitions>
-                                        <TextBlock Grid.Row="0" FontWeight="Bold">
-												<Run Text="{Binding Title, Mode=OneWay}" />
-												<Run Text=" - "/>
-												<Run Text="{Binding Type, Mode=OneWay}" />
-												<Run Text=" - "/>
-												<Run Text="{Binding Text, Mode=OneWay}"/>
-                                        </TextBlock>
-                                        <ItemsControl Grid.Row="1" ItemsSource="{Binding}" Focusable="False" Margin="16,0,0,0">
+										<ContentControl Grid.Row="0" Focusable="False">
+											<ContentControl.Template>
+												<ControlTemplate>
+													<Grid TextBlock.FontWeight="Bold">
+														<Grid.ColumnDefinitions>
+															<ColumnDefinition Width="auto"/>
+															<ColumnDefinition x:Name="sep1" Width="12"/>
+															<ColumnDefinition Width="auto"/>
+															<ColumnDefinition x:Name="sep2" Width="12"/>
+															<ColumnDefinition />
+														</Grid.ColumnDefinitions>
+														<TextBlock Grid.Column="0" Text="{Binding Title, Mode=OneWay}"/>
+														<TextBlock Grid.Column="2" Text="{Binding Type, Mode=OneWay, Converter={StaticResource TypeStringConverter}}"/>
+														<TextBlock Grid.Column="4" Text="{Binding Text, Mode=OneWay}" TextWrapping="WrapWithOverflow"/>
+													</Grid>
+													<ControlTemplate.Triggers>
+														<DataTrigger Binding="{Binding Title}" Value="{x:Null}">
+															<Setter TargetName="sep1" Property="Width" Value="0"/>
+														</DataTrigger>
+													</ControlTemplate.Triggers>
+												</ControlTemplate>
+											</ContentControl.Template>
+										</ContentControl>
+										<ItemsControl Grid.Row="1" ItemsSource="{Binding}" Focusable="False" Margin="16,0,0,0">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition SharedSizeGroup="ssgExceptionDataName"/>
                                                             <ColumnDefinition SharedSizeGroup="ssgExceptionDataType"/>
-                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
                                                         <TextBlock Grid.Column="0" Text="{Binding Name}" />
                                                         <TextBlock Grid.Column="1" Margin="5,0,5,0" Text="{Binding Type, Converter={StaticResource TypeStringConverter}}" />
-                                                        <TextBlock Grid.Column="2" Text="{Binding Value}" ToolTip="{Binding Value}"/>
-                                                        <!--ToDo: Use Wrapping to show long Messages. Mind the VirtualizingStackPanel which disables that at the moment-->
+                                                        <TextBlock Grid.Column="2" Text="{Binding Value}" TextWrapping="WrapWithOverflow"/>
                                                     </Grid>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -160,7 +175,7 @@
                 <DataTemplate>
                     <ScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource maxScrollHeight}" VerticalScrollBarVisibility="Hidden" Focusable="False">
                         <StackPanel>
-                            <TextBlock Text="{Binding Message}" />
+                            <TextBlock Text="{Binding Message}" TextWrapping="WrapWithOverflow"/>
                             <TextBlock Text="{Binding Id}" />
                             <TextBlock Text="{Binding Source}" />
                         </StackPanel>
@@ -202,18 +217,40 @@
                             </ContextMenu>
                         </Grid.ContextMenu>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="22" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition/>
                         </Grid.RowDefinitions>
-                        <TextBlock Text="{Binding Type}" />
-                        <TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=dd.MM.yyyy  HH:mm:ss}" Margin="8,0"/>
+						<ContentControl Focusable="False" ToolTip="{Binding Type}">
+							<ContentControl.Template>
+								<ControlTemplate>
+									<Canvas Width="24" Height="24" Background="Transparent" Opacity=".65">
+										<Path x:Name="typeImagePath" Data="{StaticResource debugPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}" />
+									</Canvas>
+									<ControlTemplate.Triggers>
+										<DataTrigger Binding="{Binding Type}" Value="1">
+											<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource informationPathGeometry}"/>
+										</DataTrigger>
+										<DataTrigger Binding="{Binding Type}" Value="2">
+											<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource warningPathGeometry}"/>
+										</DataTrigger>
+										<DataTrigger Binding="{Binding Type}" Value="3">
+											<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource failPathGeometry}"/>
+										</DataTrigger>
+										<DataTrigger Binding="{Binding Type}" Value="4">
+											<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource exceptionPathGeometry}"/>
+										</DataTrigger>
+									</ControlTemplate.Triggers>
+								</ControlTemplate>
+							</ContentControl.Template>
+						</ContentControl>
+						<TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=dd.MM.yyyy  HH:mm:ss}" Margin="8,2,0,0"/>
                         <ContentControl Grid.Column="2" Grid.RowSpan="2" Content="{Binding}" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}" 
-										Focusable="False" Margin="8,0,24,0"	/>
+										Focusable="False" Margin="8,2,24,0"	/>
                     </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
