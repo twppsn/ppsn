@@ -228,7 +228,7 @@
 						<ContentControl Focusable="False" ToolTip="{Binding Type}">
 							<ContentControl.Template>
 								<ControlTemplate>
-									<Canvas Width="24" Height="24" Background="Transparent">
+									<Canvas Width="24" Height="24" Background="Transparent" Opacity=".65">
 										<Path x:Name="typeImagePath" Data="{StaticResource debugPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}" />
 									</Canvas>
 									<ControlTemplate.Triggers>
