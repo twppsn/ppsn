@@ -16,6 +16,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 
@@ -926,21 +927,29 @@ namespace TecWare.PPSn
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private readonly PpsObject baseObj;
+		private byte[] rawData = null;
 
 		public PpsObjectBlobData(PpsObject obj)
 		{
 			this.baseObj = obj;
 		} // ctor
 
-		public Task LoadAsync(PpsMasterDataTransaction transaction = null)
+		private void OnPropertyChanged(string propertyName)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+		public async Task LoadAsync(PpsMasterDataTransaction transaction = null)
 		{
-			return Task.CompletedTask;
+			using (var src = await baseObj.LoadRawDataAsync(transaction))
+			{
+				rawData = src.ReadInArray();
+				OnPropertyChanged(nameof(IsLoaded));
+			}
 		} // proc LoadAsync
 
-		public Task CommitAsync(PpsMasterDataTransaction transaction = null)
+		public async Task CommitAsync(PpsMasterDataTransaction transaction = null)
 		{
-			throw new NotImplementedException();
-		}
+			await baseObj.SaveRawDataAsync(transaction, rawData.Length, MimeTypes.Application.OctetStream, dst => dst.Write(rawData, 0, rawData.Length));
+		} // proc CommitAsync
 
 		public Task PushAsync(PpsMasterDataTransaction transaction = null)
 		{
@@ -949,10 +958,11 @@ namespace TecWare.PPSn
 
 		public Task UnloadAsync(PpsMasterDataTransaction transaction = null)
 		{
-			throw new NotImplementedException();
-		}
+			rawData = null;
+			return Task.CompletedTask;
+		} // func UnloadTask
 
-		public bool IsLoaded => false;
+		public bool IsLoaded => rawData != null;
 	} // class PpsObjectBlobData
 
 	#endregion
