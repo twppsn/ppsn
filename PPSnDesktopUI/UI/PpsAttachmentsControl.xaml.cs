@@ -1,7 +1,10 @@
 ﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using TecWare.PPSn.Data;
 
@@ -92,5 +95,19 @@ namespace TecWare.PPSn.UI
 		public static RoutedUICommand AddLinkAttachmentCommand { get; } = new RoutedUICommand("AddLinkAttachment", "AddLinkAttachment", typeof(PpsAttachmentsControl));
 
 		public IPpsAttachments Attachments { get; } = null; // wird von ItemsSource abgeleitet
+	}
+
+	public class PpsAttachmentConverter : IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			var obj = ((PpsObject)((dynamic)value).Table.DataSet.Environment.GetObject(((dynamic)value).Id));
+			return new string[] { obj.Nr, obj.Typ, obj.Id.ToString() };
+		}
+
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

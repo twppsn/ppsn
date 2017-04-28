@@ -6,6 +6,9 @@
              xmlns:local="clr-namespace:TecWare.PPSn.UI"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="300">
+    <UserControl.Resources>
+        <local:PpsAttachmentConverter x:Key="AttachmentConverter" />
+    </UserControl.Resources>
     <Grid Width="300" Height="600">
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
@@ -43,11 +46,14 @@
             Path=AttachmentListSelectedItem, Mode=TwoWay}" Background="Blue">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel>
-                        <Label Content="{Binding Id}"/>
-                        <Label Content="{Binding ObjkId.Id}"/>
-                        <!--<Label Content="{Binding ObjkId.Data.Head.First.Zusa.First.ObjkId.Id}"/>-->
-                    </StackPanel>
+                    <ListBox ItemsSource="{Binding Path=DataContext,
+                        RelativeSource={RelativeSource Self}, Converter={StaticResource AttachmentConverter}}" Background="Blue">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Label Content="{Binding}"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
