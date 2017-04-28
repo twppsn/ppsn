@@ -144,20 +144,23 @@ namespace TecWare.PPSn.Server
 				{
 					var (dataset, obj) = PullDataSet(trans, id, null, rev < 0 ? (long?)null : rev);
 
+					// prepare object data
+					var headerBytes = Encoding.Unicode.GetBytes(obj.ToXml().ToString(SaveOptions.DisableFormatting));
+					ctx.OutputHeaders["pps-header-length"] = headerBytes.Length.ChangeType<string>();
+
 					// write the content
-					using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
-					using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
+					using (var dst = ctx.GetOutputStream(MimeTypes.Application.OctetStream))
 					{
-						xml.WriteStartDocument();
-						xml.WriteStartElement("pull");
+						dst.Write(headerBytes, 0, headerBytes.Length);
 
-						// write object content
-						obj.ToXml().WriteTo(xml);
-						// write dataset
-						dataset.Write(xml);
-
-						xml.WriteEndElement();
-						xml.WriteEndDocument();
+						using (var tw = new StreamWriter(dst, Encoding.Unicode))
+						using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
+						{
+							// write dataset
+							xml.WriteStartDocument();
+							dataset.Write(xml);
+							xml.WriteEndDocument();
+						}
 					}
 
 					trans.Commit();
@@ -172,7 +175,7 @@ namespace TecWare.PPSn.Server
 		#endregion
 
 		#region -- Push -------------------------------------------------------------------
-		
+
 		private object GetNextNumberMethod()
 		{
 			// test for next number
@@ -261,8 +264,11 @@ namespace TecWare.PPSn.Server
 			// commit all to orignal
 			dataset.Commit();
 
-			// write object data
-			obj.Update();
+			// create obj data
+			if (obj.IsNew)
+				obj.Update(true);
+
+			// create rev data
 			obj.UpdateData(
 				new Action<Stream>(dst =>
 				{
@@ -274,6 +280,9 @@ namespace TecWare.PPSn.Server
 					}
 				})
 			);
+
+			// update
+			obj.Update();
 
 			return true;
 		} // proc PushDataSet
@@ -288,31 +297,50 @@ namespace TecWare.PPSn.Server
 
 			try
 			{
-				XDocument xDoc;
-				// read the data
-				using (var xml = XmlReader.Create(ctx.GetInputTextReader(), Procs.XmlReaderSettings))
-					xDoc = XDocument.Load(xml);
+				// read header length
+				var headerLength = ctx.GetProperty("ppsn-header-length", -1L);
+				if (headerLength > 10 << 20 || headerLength < 10) // ignore greater than 10mb or smaller 10bytes (<object/>)
+					throw new ArgumentOutOfRangeException("header-length");
 
+				var src = ctx.GetInputStream();
+
+				// parse the object body
+				XElement xObject;
+				using (var headerStream = new WindowStream(src, 0, headerLength, false, true))
+				using (var xmlHeader = XmlReader.Create(headerStream, Procs.XmlReaderSettings))
+					xObject = XElement.Load(xmlHeader);
+
+				// read the data
 				using (var transaction = currentUser.CreateTransaction(application.MainDataSource))
 				{
 					// first the get the object data
-					var obj = application.Objects.ObjectFromXml(transaction, xDoc.Root.Element("object"));
+					var obj = application.Objects.ObjectFromXml(transaction, xObject);
 
-					// create the dataset
+					// create and load the dataset
 					var dataset = (PpsDataSetServer)datasetDefinition.CreateDataSet();
-					dataset.Read(xDoc.Root.Element("dataset"));
+					using (var xml = XmlReader.Create(src, Procs.XmlReaderSettings))
+						dataset.Read(XDocument.Load(xml).Root);
+
+					// set IsRev
+					if (obj.IsNew)
+						obj.IsRev = datasetDefinition.Meta.GetProperty("IsRev", false);
 
 					// push dataset in the database
 					if (PushDataSet(transaction, obj, dataset))
-					{   
+					{
 						// write the object definition to client
 						using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
 						using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
-							obj.ToXml().WriteTo(xml);
+							obj.ToXml(true).WriteTo(xml);
 					}
 					else
 					{
-						ctx.WriteSafeCall(new XElement("dataset", new XAttribute("pullRequest", Boolean.TrueString)));
+						ctx.WriteSafeCall(
+							new XElement("push",
+								new XAttribute("headRevId", obj.HeadRevId),
+								new XAttribute("pullRequest", Boolean.TrueString)
+							)
+						);
 					}
 
 					transaction.Commit();

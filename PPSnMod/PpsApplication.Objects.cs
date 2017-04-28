@@ -64,7 +64,7 @@ namespace TecWare.PPSn.Server
 	{
 		private readonly PpsDataTransaction transaction;
 		private readonly IPropertyReadOnlyDictionary defaultData;
-		private readonly long objectId;
+		private long objectId;
 
 		private bool? isRev;
 		private long revId;
@@ -114,7 +114,6 @@ namespace TecWare.PPSn.Server
 		{
 			var args = new LuaTable
 			{
-				{ nameof(MimeType), MimeType },
 				{ nameof(Nr), Nr }
 			};
 
@@ -125,9 +124,13 @@ namespace TecWare.PPSn.Server
 					guid = Guid.NewGuid();
 				args[nameof(Guid)] = guid;
 				args[nameof(Typ)] = Typ;
+				args[nameof(IsRev)] = IsRev;
 			}
 			else
 				args[nameof(Id)] = objectId;
+
+			if (MimeType != null)
+				args[nameof(MimeType)] = MimeType;
 
 			if (CurRevId > 0)
 				args[nameof(CurRevId)] = CurRevId;
@@ -138,7 +141,7 @@ namespace TecWare.PPSn.Server
 		} // func GetObjectArguments
 
 		[LuaMember]
-		public void Update()
+		public void Update(bool updateObjectOnly = true)
 		{
 			LuaTable cmd;
 			// prepare stmt
@@ -158,30 +161,50 @@ namespace TecWare.PPSn.Server
 					GetObjectArguments(true)
 				};
 			}
-			else // upsert over guid
+			else // upsert over guid or id
 			{
+				var args = GetObjectArguments(IsNew);
+
 				cmd = new LuaTable
 				{
-					{ "upsert", "dbo.Objk"},
-					{ "on" ,new LuaTable { nameof(Guid) } },
-					GetObjectArguments(false)
+					{ "upsert", "dbo.ObjK"},
+					args
 				};
+
+				if (IsNew)
+				{
+					args[nameof(Guid)] = Guid;
+					cmd.Add("on", new LuaTable { nameof(Guid) });
+				}
 			}
 			
 			transaction.ExecuteNoneResult(cmd);
 
-			Reset();
+			// update values
+			if (IsNew)
+			{
+				var args = (LuaTable)cmd[1];
+				objectId = (long)args[nameof(Id)];
+				this[nameof(Guid)] = args[nameof(Guid)];
+			}
+
+			if (!updateObjectOnly)
+			{
+
+				Reset();
+			}
 		} // proc Update
 
 		[LuaMember]
-		public void SetRevision(long newRevId)
+		public void SetRevision(long newRevId, bool refreshLinks = true)
 		{
 			CheckRevision();
 			if (revId == newRevId)
 				return;
 
 			revId = newRevId;
-			Reset();
+			if (refreshLinks)
+				Reset();
 		} // proc SetRevision
 
 		private void SetDocumentArguments(LuaTable args, Action<Stream> copyData, long contentLength, bool deflateStream)
@@ -219,8 +242,8 @@ namespace TecWare.PPSn.Server
 				{ "CreateDate",  DateTime.Now }
 			};
 
-			var insertNew = isRev.Value && changeHead && !forceReplace && revId > 0;
-			if (insertNew)
+			var insertNew = isRev.Value || (!forceReplace && revId > 0);
+			if (insertNew && revId > 0)
 				args["ParentId"] = revId;
 
 			// convert data
@@ -293,20 +316,9 @@ namespace TecWare.PPSn.Server
 			// update
 			if (insertNew && changeHead)
 			{
-				transaction.ExecuteNoneResult(
-					new LuaTable
-					{
-						{ "update", "dbo.ObjK" },
-						new LuaTable
-						{
-							{ "Id", objectId },
-							{ "HeadRevId", newRevId }
-						}
-					}
-				);
+				this["HeadRevId"] = newRevId;
+				SetRevision(newRevId, false);
 			}
-
-			SetRevision(newRevId);
 		} // proc UpdateData
 
 		[LuaMember]
@@ -349,7 +361,7 @@ namespace TecWare.PPSn.Server
 		} // func GetText
 
 		[LuaMember]
-		public XElement ToXml()
+		public XElement ToXml(bool onlyObjectData = false)
 		{
 			var x = new XElement(
 				"object",
@@ -363,12 +375,15 @@ namespace TecWare.PPSn.Server
 				Procs.XAttributeCreate(nameof(IsRev), IsRev, false)
 			);
 
-			// append links
-			foreach (var cur in LinksTo)
-				x.Add(cur.ToXml("linkTo"));
-			foreach (var cur in LinksFrom)
-				x.Add(cur.ToXml("linkFrom"));
-			
+			if (!onlyObjectData)
+			{
+				// append links
+				foreach (var cur in LinksTo)
+					x.Add(cur.ToXml("linkTo"));
+				foreach (var cur in LinksFrom)
+					x.Add(cur.ToXml("linkFrom"));
+			}
+
 			return x;
 		} // func ToXml
 
@@ -394,8 +409,13 @@ namespace TecWare.PPSn.Server
 		{
 			if (links != null)
 				return links;
-
-			var cmd = new LuaTable
+			else if (IsNew)
+			{
+				links = new List<PpsObjectLinkAccess>();
+			}
+			else
+			{
+				var cmd = new LuaTable
 			{
 				{ "select", "dbo.ObjL" },
 				{ "selectList",
@@ -407,19 +427,18 @@ namespace TecWare.PPSn.Server
 						"OnDelete"
 					}
 				},
-				{ "args",
-					new LuaTable
-					{
-						{ "ParentObjKId", objectId },
-						{ "ParentObjRId", revId }
-					}
+
+				new LuaTable
+				{
+					{ "ParentObjKId", objectId },
+					{ "ParentObjRId", revId }
 				}
 			};
 
-			links = new List<PpsObjectLinkAccess>();
-			foreach (var c in transaction.ExecuteSingleResult(cmd))
-				links.Add(new PpsObjectLinkAccess(c));
-
+				links = new List<PpsObjectLinkAccess>();
+				foreach (var c in transaction.ExecuteSingleResult(cmd))
+					links.Add(new PpsObjectLinkAccess(c));
+			}
 			return links;
 		} // func GetLinks
 
@@ -450,6 +469,10 @@ namespace TecWare.PPSn.Server
 			{
 				CheckRevision();
 				return isRev.Value;
+			}
+			set
+			{
+				isRev = value;
 			}
 		} // prop IsRev
 
@@ -559,16 +582,24 @@ namespace TecWare.PPSn.Server
 				if (objectId > 0)
 					obj = GetObject(trans, new LuaTable { { nameof(PpsObjectAccess.Id), objectId } });
 				else if (objectGuid != Guid.Empty)
-					obj = GetObject(trans, new LuaTable { { nameof(PpsObjectAccess.Guid), objectId } });
+					obj = GetObject(trans, new LuaTable { { nameof(PpsObjectAccess.Guid), objectGuid } });
 
 				// create a new object
 				if (obj == null)
+				{
 					obj = new PpsObjectAccess(trans, PropertyDictionary.EmptyReadOnly);
+					if (objectId > 0)
+						throw new ArgumentOutOfRangeException(nameof(objectId), objectId, "Could not found object.");
+					if (objectGuid != Guid.Empty)
+						obj[nameof(PpsObjectAccess.Guid)] = objectGuid;
+				}
 
 				// update the values
 				// Do not use CurRev and HeadRev from xml
 				if (x.TryGetAttribute<string>(nameof(PpsObjectAccess.Nr), out var nr))
 					obj[nameof(PpsObjectAccess.Nr)] = nr;
+				if (x.TryGetAttribute<string>(nameof(PpsObjectAccess.Typ), out var typ))
+					obj[nameof(PpsObjectAccess.Typ)] = typ;
 				if (x.TryGetAttribute<string>(nameof(PpsObjectAccess.MimeType), out var mimeType))
 					obj[nameof(PpsObjectAccess.MimeType)] = mimeType;
 
