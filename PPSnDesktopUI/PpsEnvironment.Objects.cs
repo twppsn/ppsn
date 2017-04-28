@@ -962,6 +962,13 @@ namespace TecWare.PPSn
 			return Task.CompletedTask;
 		} // func UnloadTask
 
+		public Task ReadFromFile(string filename, PpsMasterDataTransaction transaction = null)
+		{
+			var fileStream = new FileStream(filename, FileMode.Open);
+			rawData = fileStream.ReadInArray();
+			return Task.CompletedTask;
+		}
+
 		public bool IsLoaded => rawData != null;
 	} // class PpsObjectBlobData
 
@@ -984,14 +991,6 @@ namespace TecWare.PPSn
 			this.RegisterUndoSink(this.undoManager = new PpsUndoManager());
 		} // ctor
 
-		private void UpdateHeadTable(PpsDataTable head)
-		{
-			var r = head.First;
-			r["Id"] = baseObj.Id;
-			r["Guid"] = baseObj.Guid;
-			r["Nr"] = baseObj.Nr;
-		} // proc UpdateHeadTable
-
 		public override async Task OnNewAsync(LuaTable arguments)
 		{
 			// add the basic head table and update the object data
@@ -999,29 +998,10 @@ namespace TecWare.PPSn
 			if(head != null)
 			{
 				if (head.Count == 0)
-				{
-					head.Add(
-						new LuaTable
-						{
-							{ "Id", baseObj.Id },
-							{ "Guid", baseObj.Guid },
-							{ "Nr", baseObj.Nr }
-						});
-				}
-				else
-					UpdateHeadTable(head);
+					head.Add();
 			}
 
 			await base.OnNewAsync(arguments);
-		} // proc OnNewAsync
-
-		public override async Task OnLoadedAsync(LuaTable arguments)
-		{
-			var head = Tables["Head", false];
-			if (head != null)
-				UpdateHeadTable(head);
-
-			await base.OnLoadedAsync(arguments);
 		} // proc OnNewAsync
 
 		public async Task LoadAsync(PpsMasterDataTransaction transaction = null)
