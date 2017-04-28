@@ -16,6 +16,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 
@@ -926,21 +927,29 @@ namespace TecWare.PPSn
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private readonly PpsObject baseObj;
+		private byte[] rawData = null;
 
 		public PpsObjectBlobData(PpsObject obj)
 		{
 			this.baseObj = obj;
 		} // ctor
 
-		public Task LoadAsync(PpsMasterDataTransaction transaction = null)
+		private void OnPropertyChanged(string propertyName)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+		public async Task LoadAsync(PpsMasterDataTransaction transaction = null)
 		{
-			return Task.CompletedTask;
+			using (var src = await baseObj.LoadRawDataAsync(transaction))
+			{
+				rawData = src.ReadInArray();
+				OnPropertyChanged(nameof(IsLoaded));
+			}
 		} // proc LoadAsync
 
-		public Task CommitAsync(PpsMasterDataTransaction transaction = null)
+		public async Task CommitAsync(PpsMasterDataTransaction transaction = null)
 		{
-			throw new NotImplementedException();
-		}
+			await baseObj.SaveRawDataAsync(transaction, rawData.Length, MimeTypes.Application.OctetStream, dst => dst.Write(rawData, 0, rawData.Length));
+		} // proc CommitAsync
 
 		public Task PushAsync(PpsMasterDataTransaction transaction = null)
 		{
@@ -949,10 +958,18 @@ namespace TecWare.PPSn
 
 		public Task UnloadAsync(PpsMasterDataTransaction transaction = null)
 		{
-			throw new NotImplementedException();
+			rawData = null;
+			return Task.CompletedTask;
+		} // func UnloadTask
+
+		public Task ReadFromFile(string filename, PpsMasterDataTransaction transaction = null)
+		{
+			var fileStream = new FileStream(filename, FileMode.Open);
+			rawData = fileStream.ReadInArray();
+			return Task.CompletedTask;
 		}
 
-		public bool IsLoaded => false;
+		public bool IsLoaded => rawData != null;
 	} // class PpsObjectBlobData
 
 	#endregion
@@ -974,14 +991,6 @@ namespace TecWare.PPSn
 			this.RegisterUndoSink(this.undoManager = new PpsUndoManager());
 		} // ctor
 
-		private void UpdateHeadTable(PpsDataTable head)
-		{
-			var r = head.First;
-			r["Id"] = baseObj.Id;
-			r["Guid"] = baseObj.Guid;
-			r["Nr"] = baseObj.Nr;
-		} // proc UpdateHeadTable
-
 		public override async Task OnNewAsync(LuaTable arguments)
 		{
 			// add the basic head table and update the object data
@@ -989,29 +998,10 @@ namespace TecWare.PPSn
 			if(head != null)
 			{
 				if (head.Count == 0)
-				{
-					head.Add(
-						new LuaTable
-						{
-							{ "Id", baseObj.Id },
-							{ "Guid", baseObj.Guid },
-							{ "Nr", baseObj.Nr }
-						});
-				}
-				else
-					UpdateHeadTable(head);
+					head.Add();
 			}
 
 			await base.OnNewAsync(arguments);
-		} // proc OnNewAsync
-
-		public override async Task OnLoadedAsync(LuaTable arguments)
-		{
-			var head = Tables["Head", false];
-			if (head != null)
-				UpdateHeadTable(head);
-
-			await base.OnLoadedAsync(arguments);
 		} // proc OnNewAsync
 
 		public async Task LoadAsync(PpsMasterDataTransaction transaction = null)
@@ -1516,7 +1506,7 @@ namespace TecWare.PPSn
 		[LuaMember]
 		public string GetNextNumber(PpsMasterDataTransaction transaction)
 		{
-			using (var cmd = transaction.CreateNativeCommand("SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND typeof(substr(Nr, 4)) = 'integer'"))
+			using (var cmd = transaction.CreateNativeCommand("SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND abs(substr(Nr, 4)) != 0.0")) //SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND typeof(substr(Nr, 4)) = 'integer'
 			{
 				var lastNrString = cmd.ExecuteScalarEx() as string;
 				var lastNr = lastNrString == null ? 0 : Int32.Parse(lastNrString.Substring(3));
