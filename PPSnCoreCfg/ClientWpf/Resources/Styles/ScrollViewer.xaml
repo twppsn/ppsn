@@ -60,7 +60,7 @@
 							<Trigger.EnterActions>
 								<BeginStoryboard>
 									<Storyboard>
-										<DoubleAnimation Storyboard.TargetName="PART_HorizontalScrollBar" Storyboard.TargetProperty="Opacity" From="0.0" To="0.6" Duration="0:0:0.5"/>
+										<DoubleAnimation Storyboard.TargetName="PART_HorizontalScrollBar" Storyboard.TargetProperty="Opacity" From="0.0" To="0.75" Duration="0:0:0.5"/>
 									</Storyboard>
 								</BeginStoryboard>
 							</Trigger.EnterActions>
@@ -70,7 +70,7 @@
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="PART_VerticalScrollBar" Storyboard.TargetProperty="Opacity" From="0.0" To="0.6" Duration="0:0:0.5"/>
+                                        <DoubleAnimation Storyboard.TargetName="PART_VerticalScrollBar" Storyboard.TargetProperty="Opacity" From="0.0" To="0.75" Duration="0:0:0.5"/>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.EnterActions>
