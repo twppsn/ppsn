@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Win32;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -38,6 +41,42 @@ namespace TecWare.PPSn.UI
 						list.Remove(itm);
 						e.Handled = true;
 					},
+					(sender, e) => e.CanExecute = ((PpsDataRow)GetValue(AttachmentListSelectedItemProperty) != null)
+				)
+			);
+			CommandBindings.Add(
+				new CommandBinding(AddFileAttachmentCommand,
+					(sender, e) =>
+					{
+					var ofd = new OpenFileDialog();
+					ofd.Multiselect = true;
+					ofd.CheckFileExists = true;
+					if (ofd.ShowDialog() == true)
+					{
+						var list = (PpsDataRelatedFilterDesktop)GetValue(AttachmentListProperty);
+						var env = PpsEnvironment.GetEnvironment(this);
+							//using ()
+							{
+								foreach (var filename in ofd.FileNames)
+								{
+									var trans = env.MasterData.CreateTransaction();
+									var obj = env.CreateNewObject(trans, Guid.NewGuid(), "Attachment", "1", false);
+									((PpsObjectBlobData)((dynamic)obj).Data).ReadFromFile(filename, trans).Wait();
+									((PpsObjectBlobData)((dynamic)obj).Data).CommitAsync(trans).GetAwaiter().OnCompleted(()=>
+									{
+										list.Table.Add(obj);
+										trans.Commit();
+										trans.Dispose();
+									});
+									//var view = list.CreateView();
+									//list.Table.Add(obj);
+									//list.Table.Add(obj);
+								}
+								//trans.Commit();
+							}
+						}
+						e.Handled = true;
+					},
 					(sender, e) => e.CanExecute = true
 				)
 			);
@@ -52,6 +91,8 @@ namespace TecWare.PPSn.UI
 			typeof(PpsDataRow),
 			typeof(PpsAttachmentsControl));
 		public static RoutedUICommand RemoveAttachmentCommand { get; } = new RoutedUICommand("RemoveAttachment", "RemoveAttachment", typeof(PpsAttachmentsControl));
+		public static RoutedUICommand AddFileAttachmentCommand { get; } = new RoutedUICommand("AddFileAttachment", "AddFileAttachment", typeof(PpsAttachmentsControl));
+		public static RoutedUICommand AddLinkAttachmentCommand { get; } = new RoutedUICommand("AddLinkAttachment", "AddLinkAttachment", typeof(PpsAttachmentsControl));
 
 		public IPpsAttachments Attachments { get; } = null; // wird von ItemsSource abgeleitet
 
