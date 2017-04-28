@@ -1898,7 +1898,7 @@ namespace TecWare.PPSn
 	#region -- interface IPpsProxyTask --------------------------------------------------
 
 	[EditorBrowsable(EditorBrowsableState.Advanced)]
-	public interface IPpsOfflineItemData
+	public interface IPpsOfflineItemData : IPropertyReadOnlyDictionary
 	{
 		/// <summary>Access to the content</summary>
 		Stream Content { get; }
@@ -2108,7 +2108,10 @@ namespace TecWare.PPSn
 			if (HasRequestData)
 			{
 				using (var dst = onlineRequest.GetRequestStream())
+				{
+					RequestData.Position = 0;
 					RequestData.CopyTo(dst);
+				}
 			}
 
 			return onlineRequest;
@@ -2137,7 +2140,7 @@ namespace TecWare.PPSn
 
 			if (requestStream == null)
 				requestStream = new MemoryStream();
-			return requestStream;
+			return new WindowStream(requestStream, 0, -1, true, true);
 		} // func GetRequestStream
 
 		#endregion
@@ -2415,19 +2418,22 @@ namespace TecWare.PPSn
 			{
 				private readonly Stream data;
 				private readonly string contentType;
-				private readonly DateTime lastModification;
+				private readonly WebHeaderCollection headers;
 
-				public PpsOfflineItemDataImplementation(Stream data, string contentType, DateTime lastModification)
+				public PpsOfflineItemDataImplementation(Stream data, string contentType, WebHeaderCollection headers)
 				{
 					this.data = data;
 					this.contentType = contentType;
-					this.lastModification = lastModification;
+					this.headers = headers;
 				} // ctor
+
+				public bool TryGetProperty(string name, out object value)
+					=> (value = headers.Get(name)) != null;
 
 				public Stream Content => data;
 				public string ContentType => contentType;
 				public long ContentLength => data.Length;
-				public DateTime LastModification => lastModification;
+				public DateTime LastModification => headers.GetLastModified();
 			} // class PpsOfflineItemDataImplementation
 
 			#endregion
@@ -2549,7 +2555,7 @@ namespace TecWare.PPSn
 								dst.Flush();
 
 								// the cache stream will be disposed by the garbage collector, or if it is moved to the offline cache
-								request.UpdateOfflineCache(new PpsOfflineItemDataImplementation(dst, contentType, headers.GetLastModified()));
+								request.UpdateOfflineCache(new PpsOfflineItemDataImplementation(dst, contentType, headers));
 
 								// spawn the result functions
 								lock (stateLock)
