@@ -23,9 +23,9 @@ namespace TecWare.PPSn.UI
 		IPpsAttachments Attachments { get; }
 	} // interface IPpsAttachmentSource
 
-	  /// <summary>
-	  /// Interaction logic for PpsAttachmentsControl.xaml
-	  /// </summary>
+	/// <summary>
+	/// Interaction logic for PpsAttachmentsControl.xaml
+	/// </summary>
 	public partial class PpsAttachmentsControl : UserControl, IPpsAttachmentSource
 	{
 		public PpsAttachmentsControl()
@@ -48,31 +48,27 @@ namespace TecWare.PPSn.UI
 				new CommandBinding(AddFileAttachmentCommand,
 					(sender, e) =>
 					{
-					var ofd = new OpenFileDialog();
-					ofd.Multiselect = true;
-					ofd.CheckFileExists = true;
-					if (ofd.ShowDialog() == true)
-					{
-						var list = (PpsDataRelatedFilterDesktop)GetValue(AttachmentListProperty);
-						var env = PpsEnvironment.GetEnvironment(this);
-							//using ()
+						var ofd = new OpenFileDialog();
+						ofd.Multiselect = true;
+						ofd.CheckFileExists = true;
+						if (ofd.ShowDialog() == true)
+						{
+							var list = (PpsDataRelatedFilterDesktop)GetValue(AttachmentListProperty);
+							var env = PpsEnvironment.GetEnvironment(this);
+							foreach (var filename in ofd.FileNames)
 							{
-								foreach (var filename in ofd.FileNames)
+								var trans = env.MasterData.CreateTransaction();
+								var oinf = new PpsObjectInfo(env, "Attachment");
+								oinf.IsRev = false;
+								//var obj = env.CreateNewObject(trans, Guid.NewGuid(), "Attachment", "1", false);
+								var obj = env.CreateNewObject(trans, oinf);
+								((PpsObjectBlobData)((dynamic)obj).Data).ReadFromFile(filename, trans).Wait();
+								((PpsObjectBlobData)((dynamic)obj).Data).CommitAsync(trans).GetAwaiter().OnCompleted(() =>
 								{
-									var trans = env.MasterData.CreateTransaction();
-									var obj = env.CreateNewObject(trans, Guid.NewGuid(), "Attachment", "1", false);
-									((PpsObjectBlobData)((dynamic)obj).Data).ReadFromFile(filename, trans).Wait();
-									((PpsObjectBlobData)((dynamic)obj).Data).CommitAsync(trans).GetAwaiter().OnCompleted(()=>
-									{
-										list.Table.Add(obj);
-										trans.Commit();
-										trans.Dispose();
-									});
-									//var view = list.CreateView();
-									//list.Table.Add(obj);
-									//list.Table.Add(obj);
-								}
-								//trans.Commit();
+									list.Table.Add(obj);
+									trans.Commit();
+									trans.Dispose();
+								});
 							}
 						}
 						e.Handled = true;
@@ -81,9 +77,9 @@ namespace TecWare.PPSn.UI
 				)
 			);
 		}
-		
-		public static  DependencyProperty AttachmentListProperty =
-			DependencyProperty.Register("AttachmentList", 
+
+		public static DependencyProperty AttachmentListProperty =
+			DependencyProperty.Register("AttachmentList",
 			typeof(PpsDataRelatedFilterDesktop),
 			typeof(PpsAttachmentsControl));
 		public static DependencyProperty AttachmentListSelectedItemProperty =
