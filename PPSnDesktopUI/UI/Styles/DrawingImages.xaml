@@ -17,23 +17,16 @@ specific language governing permissions and limitations under the Licence.
 
 	<SolidColorBrush x:Key="PPSnDrawingImageBrush" Color="{DynamicResource PPSnAccentColor}"/>
 
-
-	<!--label-outline-->
-	<!--<PathGeometry x:Key="debugPathGeometry" 
-				  Figures="M16,17H5V7H16L19.55,12M17.63,5.84C17.27,5.33 16.67,5 16,5H5A2,2 0 0,0 3,7V17A2,2 0 0,0 5,19H16C16.67,19 17.27,18.66 17.63,18.15L22,12L17.63,5.84Z" />-->
-
+	<!--arrow-right-bold-->
 	<PathGeometry x:Key="debugPathGeometry" 
 				  Figures="M4,15V9H12V4.16L19.84,12L12,19.84V15H4Z" />
-
 	<DrawingImage x:Key="debugDrawingImage">
 		<DrawingImage.Drawing>
 			<GeometryDrawing Brush="{StaticResource PPSnDrawingImageBrush}" Geometry="{StaticResource debugPathGeometry}"/>
 		</DrawingImage.Drawing>
 	</DrawingImage>
 
-	<!--information-outline-->
-	<!--<PathGeometry x:Key="informationPathGeometry" 
-				  Figures="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z" />-->
+	<!--information-->
 	<PathGeometry x:Key="informationPathGeometry" 
 				  Figures="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
 	<DrawingImage x:Key="informationDrawingImage">
@@ -42,9 +35,7 @@ specific language governing permissions and limitations under the Licence.
 		</DrawingImage.Drawing>
 	</DrawingImage>
 
-	<!--alert-outline-->
-	<!--<PathGeometry x:Key="warningPathGeometry" 
-				  Figures="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16" />-->
+	<!--alert-->
 	<PathGeometry x:Key="warningPathGeometry" 
 				  Figures="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z" />
 	<DrawingImage x:Key="warningDrawingImage">
@@ -53,9 +44,7 @@ specific language governing permissions and limitations under the Licence.
 		</DrawingImage.Drawing>
 	</DrawingImage>
 
-	<!--close-octagon-outline-->
-	<!--<PathGeometry x:Key="failPathGeometry" 
-				  Figures="M8.27,3L3,8.27V15.73L8.27,21H15.73C17.5,19.24 21,15.73 21,15.73V8.27L15.73,3M9.1,5H14.9L19,9.1V14.9L14.9,19H9.1L5,14.9V9.1M9.12,7.71L7.71,9.12L10.59,12L7.71,14.88L9.12,16.29L12,13.41L14.88,16.29L16.29,14.88L13.41,12L16.29,9.12L14.88,7.71L12,10.59" />-->
+	<!--close-octagon-->
 	<PathGeometry x:Key="failPathGeometry" 
 				  Figures="M8.27,3L3,8.27V15.73L8.27,21H15.73L21,15.73V8.27L15.73,3M8.41,7L12,10.59L15.59,7L17,8.41L13.41,12L17,15.59L15.59,17L12,13.41L8.41,17L7,15.59L10.59,12L7,8.41" />
 	<DrawingImage x:Key="failDrawingImage">
