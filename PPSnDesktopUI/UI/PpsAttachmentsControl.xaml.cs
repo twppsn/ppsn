@@ -101,6 +101,8 @@ namespace TecWare.PPSn.UI
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
+			if (!(value is PpsDataRow))
+				return null;
 			var obj = ((PpsObject)((dynamic)value).Table.DataSet.Environment.GetObject(((dynamic)value).Id));
 			return new string[] { obj.Nr, obj.Typ, obj.Id.ToString() };
 		}
