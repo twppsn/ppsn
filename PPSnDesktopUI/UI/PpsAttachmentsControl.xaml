@@ -37,6 +37,10 @@
                 <Button Width="60" Height="60">Signage</Button>
             </WrapPanel>
         </Grid>
+        <ListBox Grid.Row="1" VerticalAlignment="Stretch" ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
+            Path=AttachmentList,Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" 
+                 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
+            Path=AttachmentListSelectedItem, Mode=TwoWay}" Background="Blue">
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <StackPanel>
