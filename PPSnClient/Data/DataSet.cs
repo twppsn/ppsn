@@ -175,7 +175,7 @@ namespace TecWare.PPSn.Data
 
 		public void ResetDirty()
 		{
-			if (!isDirty)
+			if (isDirty)
 			{
 				isDirty = false;
 				OnPropertyChanged(nameof(IsDirty));

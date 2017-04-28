@@ -617,7 +617,7 @@ namespace TecWare.PPSn.Data
 			=> sb.Append(value);
 
 		public long Value => value;
-		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Text;
+		public override PpsDataFilterCompareValueType Type => PpsDataFilterCompareValueType.Integer;
 	} // class PpsDataFilterCompareIntegerValue
 
 	#endregion
