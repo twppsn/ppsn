@@ -1,7 +1,5 @@
 ﻿using Microsoft.Win32;
-using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -60,15 +58,18 @@ namespace TecWare.PPSn.UI
 								var trans = env.MasterData.CreateTransaction();
 								var oinf = new PpsObjectInfo(env, "Attachment");
 								oinf.IsRev = false;
-								//var obj = env.CreateNewObject(trans, Guid.NewGuid(), "Attachment", "1", false);
+								oinf.Values.Add("Filename", filename);
 								var obj = env.CreateNewObject(trans, oinf);
-								((PpsObjectBlobData)((dynamic)obj).Data).ReadFromFile(filename, trans).Wait();
-								((PpsObjectBlobData)((dynamic)obj).Data).CommitAsync(trans).GetAwaiter().OnCompleted(() =>
-								{
-									list.Table.Add(obj);
-									trans.Commit();
-									trans.Dispose();
-								});
+
+								((PpsObjectBlobData)((dynamic)obj).Data).ReadFromFile(filename, trans).GetAwaiter().OnCompleted(() =>
+									((PpsObjectBlobData)((dynamic)obj).Data).CommitAsync(trans).GetAwaiter().OnCompleted(() =>
+										{
+											list.Table.Add(obj);
+											trans.Commit();
+											trans.Dispose();
+										}
+									)
+								);
 							}
 						}
 						e.Handled = true;
@@ -91,7 +92,5 @@ namespace TecWare.PPSn.UI
 		public static RoutedUICommand AddLinkAttachmentCommand { get; } = new RoutedUICommand("AddLinkAttachment", "AddLinkAttachment", typeof(PpsAttachmentsControl));
 
 		public IPpsAttachments Attachments { get; } = null; // wird von ItemsSource abgeleitet
-
-
 	}
 }
