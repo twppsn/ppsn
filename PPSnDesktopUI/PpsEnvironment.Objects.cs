@@ -1506,7 +1506,7 @@ namespace TecWare.PPSn
 		[LuaMember]
 		public string GetNextNumber(PpsMasterDataTransaction transaction)
 		{
-			using (var cmd = transaction.CreateNativeCommand("SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND typeof(substr(Nr, 4)) = 'integer'"))
+			using (var cmd = transaction.CreateNativeCommand("SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND abs(substr(Nr, 4)) != 0.0")) //SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND typeof(substr(Nr, 4)) = 'integer'
 			{
 				var lastNrString = cmd.ExecuteScalarEx() as string;
 				var lastNr = lastNrString == null ? 0 : Int32.Parse(lastNrString.Substring(3));
