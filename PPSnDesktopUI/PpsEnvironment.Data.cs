@@ -2098,6 +2098,7 @@ namespace TecWare.PPSn
 			// copy headers
 			if (headers != null)
 			{
+				headers["ppsn-hostname"] = System.Environment.MachineName;
 				foreach (var k in headers.AllKeys)
 					onlineRequest.Headers[k] = headers[k];
 			}
