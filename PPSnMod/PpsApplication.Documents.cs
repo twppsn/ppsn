@@ -146,7 +146,7 @@ namespace TecWare.PPSn.Server
 
 					// prepare object data
 					var headerBytes = Encoding.Unicode.GetBytes(obj.ToXml().ToString(SaveOptions.DisableFormatting));
-					ctx.OutputHeaders["pps-header-length"] = headerBytes.Length.ChangeType<string>();
+					ctx.OutputHeaders["ppsn-header-length"] = headerBytes.Length.ChangeType<string>();
 
 					// write the content
 					using (var dst = ctx.GetOutputStream(MimeTypes.Application.OctetStream))

@@ -357,7 +357,8 @@ namespace TecWare.PPSn.Server
 		public string GetText()
 		{
 			// todo: in DESCore\Networking\Requests.cs:BaseWebRequest.CheckMimeType
-			return Encoding.Unicode.GetString(GetBytes());
+			using (var tr = Procs.OpenStreamReader(GetDataStream(), Encoding.Unicode))
+				return tr.ReadToEnd();
 		} // func GetText
 
 		[LuaMember]
