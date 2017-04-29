@@ -2,7 +2,6 @@
 		u.Id			AS Id
 		,s.Name			AS Name
 		,u.[Security]	AS [Security]
-
 		,u.LoginVersion	AS LoginVersion
 		,s.[type]		AS LoginType
 		,s.name			AS [Login]

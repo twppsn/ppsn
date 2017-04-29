@@ -466,6 +466,8 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
+	#region -- interface IPpsSelectorToken ----------------------------------------------
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface IPpsSelectorToken
@@ -482,4 +484,6 @@ namespace TecWare.PPSn.Server.Data
 
 		IEnumerable<IPpsColumnDescription> Columns { get; }
 	} // interface IPpsSelectorToken
+
+	#endregion
 }

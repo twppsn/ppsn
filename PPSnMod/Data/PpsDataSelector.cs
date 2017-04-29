@@ -40,11 +40,14 @@ namespace TecWare.PPSn.Server.Data
 		{
 			this.source = source;
 		} // ctor
-
-		public virtual IEnumerator GetEnumerator()
+		
+		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator(0, Int32.MaxValue);
 
 		IEnumerator<IDataRow> IEnumerable<IDataRow>.GetEnumerator()
+			=> GetEnumerator(0, Int32.MaxValue);
+
+		public virtual IEnumerator<IDataRow> GetEnumerator()
 			=> GetEnumerator(0, Int32.MaxValue);
 
 		/// <summary>Returns a enumerator for the range.</summary>
@@ -58,7 +61,7 @@ namespace TecWare.PPSn.Server.Data
 
 		public virtual PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 			=> this;
-
+		
 		/// <summary>Returns the field description for the name in the resultset</summary>
 		/// <param name="nativeColumnName"></param>
 		/// <returns></returns>
