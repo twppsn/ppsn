@@ -994,6 +994,7 @@ namespace TecWare.PPSn
 			this.baseObj = obj;
 			this.RegisterUndoSink(this.undoManager = new PpsUndoManager());
 		} // ctor
+
 		public override async Task OnNewAsync(LuaTable arguments)
 		{
 			// add the basic head table and update the object data
@@ -1026,7 +1027,7 @@ namespace TecWare.PPSn
 		{
 			using (var trans = Environment.MasterData.CreateTransaction(transaction))
 			{
-				await baseObj.SaveRawDataAsync(trans, -1, "application/dataset",
+				await baseObj.SaveRawDataAsync(trans, -1, MimeTypes.Text.DataSet,
 					dst =>
 					{
 						var settings = Procs.XmlWriterSettings;
@@ -1225,8 +1226,8 @@ namespace TecWare.PPSn
 			SetValue((int)PpsStaticObjectColumnIndex.Nr, x.GetAttribute(nameof(Nr), Nr));
 			SetValue((int)PpsStaticObjectColumnIndex.MimeType, x.GetAttribute(nameof(MimeType), MimeType));
 			SetValue((int)PpsStaticObjectColumnIndex.IsRev, x.GetAttribute(nameof(IsRev), IsRev));
-			SetValue((int)PpsStaticObjectColumnIndex.RemoteHeadRevId, x.GetAttribute(nameof(RemoteHeadRevId), RemoteHeadRevId));
-			SetValue((int)PpsStaticObjectColumnIndex.RemoteCurRevId, x.GetAttribute(nameof(RemoteCurRevId), RemoteCurRevId));
+			SetValue((int)PpsStaticObjectColumnIndex.RemoteHeadRevId, x.GetAttribute("HeadRevId", RemoteHeadRevId));
+			SetValue((int)PpsStaticObjectColumnIndex.RemoteCurRevId, x.GetAttribute("CurRevId", RemoteCurRevId));
 
 			// links
 
@@ -1289,6 +1290,8 @@ namespace TecWare.PPSn
 
 			using (var r = await (await EnqueuePull(transaction)).ForegroundAsync())
 			{
+				SetValue((int)PpsStaticObjectColumnIndex.PulledRevId, revId);
+
 				// read prev stored data
 				if (data != null)
 					await data.LoadAsync(transaction);
@@ -1363,7 +1366,6 @@ namespace TecWare.PPSn
 
 				// create the core data object
 				data = await environment.CreateObjectDataObjectAsync<T>(this);
-				await data.LoadAsync(transaction);
 			}
 			return (T)data;
 		} // func GetDataAsync
@@ -1430,6 +1432,7 @@ namespace TecWare.PPSn
 				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, bData == null ? false : true);
 				
 				await cmd.ExecuteNonQueryAsync();
+				SetValue((int)PpsStaticObjectColumnIndex.HasData, true);
 
 				trans.Commit();
 			}

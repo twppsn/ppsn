@@ -1056,7 +1056,7 @@ namespace TecWare.PPSn
 					else
 					{
 						#region -- upsert --
-						if (isFull)
+						if (isFull || actionName[0] == 'i')
 							actionName = refreshColumnIndex == -1 ? "i" : "r";
 
 						// clear current column set
