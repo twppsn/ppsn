@@ -884,7 +884,9 @@ namespace TecWare.PPSn
 
 						case PpsEnvironmentState.Online:
 							// fetch next state on ws-info
-							backgroundNotifierModeTransmission.Wait();
+							if (!backgroundNotifierModeTransmission.Wait(3000))
+								using (var log = Traces.TraceProgress())
+									masterData.SynchronizationAsync(log).Wait();
 							break;
 
 						case PpsEnvironmentState.Shutdown:
@@ -919,8 +921,12 @@ namespace TecWare.PPSn
 					}
 					else// todo: exception
 					{
+						var webEx = ex as WebException;
+						if (webEx.Status == WebExceptionStatus.ConnectFailure)
+							state = PpsEnvironmentState.OfflineConnect;
+						else
+							Traces.AppendException(ex, traceItemType: PpsTraceItemType.Warning);
 						Thread.Sleep(500);
-						Debug.Print(ex.ToString());
 					}
 				}
 			}

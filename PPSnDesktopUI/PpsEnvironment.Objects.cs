@@ -60,10 +60,9 @@ namespace TecWare.PPSn
 	public sealed class PpsObjectLink
 	{
 		private readonly PpsObject parent;
-		private readonly long localId;
-		private readonly long serverId;
-		private readonly long linkToObj;   // id of the linked object
-		private readonly long syncToken;
+		private readonly long id;
+		private readonly long parentId;
+		private readonly long linkId;   // id of the linked object
 		private PpsObjectLinkRestriction onDelete;  // is delete cascade possible
 
 		private WeakReference<PpsObject> linkToCache; // weak ref to the actual object
@@ -71,31 +70,25 @@ namespace TecWare.PPSn
 		internal PpsObjectLink(PpsObject parent, long localId, long serverId, long linkTo, PpsObjectLinkRestriction onDelete, long syncToken)
 		{
 			this.parent = parent;
-			this.localId = localId;
-			this.serverId = serverId;
-			this.linkToObj = linkTo;
 			this.onDelete = onDelete;
-			this.syncToken = syncToken;
 			this.linkToCache = null;
 		} // ctor
 
 		private PpsObject GetLinkedObject()
 		{
-			PpsObject r;
-			if (linkToCache != null && linkToCache.TryGetTarget(out r))
+			if (linkToCache != null && linkToCache.TryGetTarget(out var r))
 				return r;
 
-			r = parent.Environment.GetObject(linkToObj);
-			linkToCache = new WeakReference<PPSn.PpsObject>(r);
+			r = parent.Environment.GetObject(linkId);
+			linkToCache = new WeakReference<PpsObject>(r);
 			return r;
 		} // func GetLinkedObject
 
 		public PpsObject ParentObject => parent;
 
-		public long LocalId => localId;
-		public long ServerId => serverId;
-		public long ObjectId => linkToObj;
-		public long SyncToken => syncToken;
+		public long LocalId => id;
+		public long ServerId => parentId;
+		public long ObjectId => linkId;
 		public PpsObjectLinkRestriction OnDelete => onDelete;
 
 		public PpsObject Object => GetLinkedObject();
@@ -619,7 +612,8 @@ namespace TecWare.PPSn
 
 		internal void RefreshTags(PpsMasterDataTransaction transaction = null)
 		{
-			using (var cmd = new TagSelectCommand(transaction, true))
+			using (var trans = parent.Environment.MasterData.CreateTransaction(transaction))
+			using (var cmd = new TagSelectCommand(trans, true))
 				RefreshTags(cmd.Select(parent.Id).Select(c => c.Item2));
 		} // proc RefreshTags
 
@@ -1114,7 +1108,9 @@ namespace TecWare.PPSn
 		
 		private IPpsObjectData data = null;					// access to the object data
 		private readonly PpsObjectTags tags;				// list with assigned tags
-		private readonly PpsObjectLinks links;				// linked objects
+		private readonly PpsObjectLinks links;              // linked objects
+
+		private bool isChanged = false;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -1144,7 +1140,38 @@ namespace TecWare.PPSn
 			// check for tags
 			if (r.FieldCount >= StaticColumns.Length && !r.IsDBNull(StaticColumns.Length))
 				tags.RefreshTagsFromString(r.GetString(StaticColumns.Length));
+
+			isChanged = false;
 		} // proc ReadObjectInfo
+
+		internal void ReadObjectInfo(IPropertyReadOnlyDictionary properties)
+		{
+			if (properties.TryGetProperty<Guid>(nameof(Guid), out var guid))
+				SetValue((int)PpsStaticObjectColumnIndex.Guid, guid);
+			if (properties.TryGetProperty<string>(nameof(Typ), out var typ))
+				SetValue((int)PpsStaticObjectColumnIndex.Typ, typ);
+			if (properties.TryGetProperty<string>(nameof(Nr), out var nr))
+				SetValue((int)PpsStaticObjectColumnIndex.Nr, nr);
+			if (properties.TryGetProperty<string>(nameof(MimeType), out var mimeType))
+				SetValue((int)PpsStaticObjectColumnIndex.MimeType, mimeType);
+			if (properties.TryGetProperty<bool>(nameof(IsRev), out var isRev))
+				SetValue((int)PpsStaticObjectColumnIndex.IsRev, isRev);
+			if (properties.TryGetProperty<long>("HeadRevId", out var headRevId))
+				SetValue((int)PpsStaticObjectColumnIndex.RemoteHeadRevId, headRevId);
+			if (properties.TryGetProperty<long>("CurRevId", out var curRevId))
+				SetValue((int)PpsStaticObjectColumnIndex.RemoteCurRevId, curRevId);
+		} // func ReadObject
+
+		private void ReadObjectFromXml(XElement x)
+		{
+			// update object data
+			ReadObjectInfo(new XAttributesPropertyDictionary(x));
+			
+			// links
+
+			// tags
+
+		} // UpdateObjectFromXml
 
 		/// <summary>Refresh of the object data.</summary>
 		/// <param name="transaction">Optional parent transaction.</param>
@@ -1217,23 +1244,6 @@ namespace TecWare.PPSn
 				objectId = newObjectId; // todo: generic transaction will be a good idea
 			}
 		} // proc UpdateObjectId
-
-		private void ReadObjectFromXml(XElement x)
-		{
-			// update object data
-			SetValue((int)PpsStaticObjectColumnIndex.Guid, x.GetAttribute(nameof(Guid), Guid));
-			SetValue((int)PpsStaticObjectColumnIndex.Typ, x.GetAttribute(nameof(Typ), Typ));
-			SetValue((int)PpsStaticObjectColumnIndex.Nr, x.GetAttribute(nameof(Nr), Nr));
-			SetValue((int)PpsStaticObjectColumnIndex.MimeType, x.GetAttribute(nameof(MimeType), MimeType));
-			SetValue((int)PpsStaticObjectColumnIndex.IsRev, x.GetAttribute(nameof(IsRev), IsRev));
-			SetValue((int)PpsStaticObjectColumnIndex.RemoteHeadRevId, x.GetAttribute("HeadRevId", RemoteHeadRevId));
-			SetValue((int)PpsStaticObjectColumnIndex.RemoteCurRevId, x.GetAttribute("CurRevId", RemoteCurRevId));
-
-			// links
-
-			// tags
-
-		} // UpdateObjectFromXml
 
 		private async Task<IPpsProxyTask> EnqueuePull(PpsMasterDataTransaction transaction)
 		{
@@ -1489,6 +1499,8 @@ namespace TecWare.PPSn
 			// links
 
 			// tags
+
+			isChanged = false;
 		} // proc UpdateLocal
 
 		#region -- Properties -------------------------------------------------------------
@@ -1503,6 +1515,7 @@ namespace TecWare.PPSn
 		{
 			if (!Object.Equals(staticValues[index], newValue))
 			{
+				isChanged = true;
 				staticValues[index] = newValue;
 				OnPropertyChanged(staticColumns[index].Name);
 			}
@@ -1617,6 +1630,8 @@ namespace TecWare.PPSn
 
 		public PpsObjectLinks Links => links.RefreshLazy();
 		public PpsObjectTags Tags => tags;
+
+		public bool IsChanged => isChanged;
 
 		internal object SyncRoot => objectLock;
 
@@ -2209,6 +2224,16 @@ order by t_liefnr.value desc
 				return GetObject(newObjectId, transaction);
 			}
 		} // func CreateNewObject
+
+		private void RefreshCachedObject(long id, IPropertyReadOnlyDictionary properties)
+		{
+			lock (objectStoreLock)
+			{
+				var o = GetCachedObject(objectStoreById, id);
+				if (o != null)
+					o.ReadObjectInfo(properties);
+			}
+		} // proc RefreshCachedObject
 
 		internal async Task<T> CreateObjectDataObjectAsync<T>(PpsObject obj)
 			where T : IPpsObjectData
