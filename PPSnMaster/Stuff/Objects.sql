@@ -8,7 +8,7 @@ AS
 			, o.IsRev
 			, r.Id as RevId
 			-- todo: test if aggregate function is faster?
-			, (SELECT CONCAT(t.[Key], ':', t.Class, ':', t.UserId, ':', t.SyncToken, '=', replace(t.Value, CHAR(10), '\n'), CHAR(10)) FROM dbo.ObjT t WHERE t.ObjKId = o.Id and t.ObjRId is null FOR XML PATH('')) as Tags
+			, (SELECT CONCAT(t.[Key], ':', t.Class, ':', t.UserId, ':', '=', replace(t.Value, CHAR(10), '\n'), CHAR(10)) FROM dbo.ObjT t WHERE t.ObjKId = o.Id and t.ObjRId is null FOR XML PATH('')) as Tags
 			, (SELECT CONCAT(CASE ll.IsRemoved WHEN 0 THEN '+' ELSE '-' END, lo.Guid, ':', ll.OnDelete, CHAR(10)) FROM dbo.ObjL ll INNER JOIN dbo.ObjK lo ON (ll.LinkObjKId = lo.Id) WHERE ll.ParentObjKId = o.Id and ll.ParentObjRId is null) as LinksTo
 			, (SELECT CONCAT(CASE lr.IsRemoved WHEN 0 THEN '+' ELSE '-' END, lo.Guid, ':', lr.OnDelete, CHAR(10)) FROM dbo.ObjL lr INNER JOIN dbo.ObjK lo ON (lr.ParentObjKId = lo.Id) WHERE lr.LinkObjKId = o.Id and lr.LinkObjRId is null) as LinksFrom
 		FROM dbo.ObjK o

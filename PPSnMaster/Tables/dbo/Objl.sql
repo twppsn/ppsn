@@ -6,8 +6,7 @@
 	[LinkObjKId] BIGINT NULL CONSTRAINT fkLinkObjKId REFERENCES dbo.ObjK ([Id]) ON DELETE NO ACTION,
 	[LinkObjRId] BIGINT NULL CONSTRAINT fkLinkObjRId REFERENCES dbo.ObjR ([Id]) ON DELETE NO ACTION,
 	[IsRemoved] BIT NOT NULL DEFAULT 0,
-	[OnDelete] CHAR(1) NOT NULL DEFAULT 0,
-	[SyncToken] INTEGER NOT NULL
+	[OnDelete] CHAR(1) NOT NULL DEFAULT 0
 );
 GO
 ALTER TABLE [dbo].[ObjL] ENABLE CHANGE_TRACKING;
@@ -64,15 +63,6 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'ObjL',
     @level2type = N'COLUMN',
     @level2name = N'LinkObjRId'
-GO
-EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Last change of the link',
-    @level0type = N'SCHEMA',
-    @level0name = N'dbo',
-    @level1type = N'TABLE',
-    @level1name = N'ObjL',
-    @level2type = N'COLUMN',
-    @level2name = N'SyncToken'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Link is removed',
