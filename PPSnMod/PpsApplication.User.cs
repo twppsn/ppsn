@@ -35,7 +35,7 @@ namespace TecWare.PPSn.Server
 		private const int NoUserId = -1;
 		private const int SysUserId = Int32.MinValue;
 
-		#region -- class PrivateUserData --------------------------------------------------
+		#region -- class PrivateUserData ------------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary>This class holds all information for a currently inactive user.</summary>
@@ -347,7 +347,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- class PrivateUserDataContext -------------------------------------------
+		#region -- class PrivateUserDataContext -----------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary>This class holds a active context for a user. It is possible to
