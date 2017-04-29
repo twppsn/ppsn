@@ -446,12 +446,12 @@ namespace TecWare.PPSn.Server
 		[LuaMember]
 		public long Id => objectId;
 
-		public Guid Guid => this.TryGetValue<Guid>(nameof(Guid), out var t, rawGet: true) ? t : Guid.Empty;
-		public string Typ => this.TryGetValue<string>(nameof(Typ), out var t, rawGet: true) ? t : null;
-		public string MimeType => this.TryGetValue<string>(nameof(MimeType), out var t, rawGet: true) ? t : null;
-		public string Nr => this.TryGetValue<string>(nameof(Nr), out var t, rawGet: true) ? t : null;
-		public long CurRevId => this.TryGetValue<long>(nameof(CurRevId), out var t, rawGet: true) ? t : -1;
-		public long HeadRevId => this.TryGetValue<long>(nameof(HeadRevId), out var t, rawGet: true) ? t : -1;
+		public Guid Guid => this.TryGetValue<Guid>(nameof(Guid), out var t) ? t : Guid.Empty;
+		public string Typ => this.TryGetValue<string>(nameof(Typ), out var t) ? t : null;
+		public string MimeType => this.TryGetValue<string>(nameof(MimeType), out var t) ? t : null;
+		public string Nr => this.TryGetValue<string>(nameof(Nr), out var t) ? t : null;
+		public long CurRevId => this.TryGetValue<long>(nameof(CurRevId), out var t) ? t : -1;
+		public long HeadRevId => this.TryGetValue<long>(nameof(HeadRevId), out var t) ? t : -1;
 
 		[LuaMember]
 		public long RevId
