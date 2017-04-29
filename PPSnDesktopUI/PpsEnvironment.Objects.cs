@@ -966,6 +966,13 @@ namespace TecWare.PPSn
 			return Task.CompletedTask;
 		} // func UnloadTask
 
+		public Task ReadFromFile(string filename, PpsMasterDataTransaction transaction = null)
+		{
+			var fileStream = new FileStream(filename, FileMode.Open);
+			rawData = fileStream.ReadInArray();
+			return Task.CompletedTask;
+		}
+
 		public bool IsLoaded => rawData != null;
 	} // class PpsObjectBlobData
 
@@ -1350,12 +1357,13 @@ namespace TecWare.PPSn
 		{
 			if (data == null)
 			{
-				// create the core data object
-				data = await environment.CreateObjectDataObjectAsync<T>(this);
-
 				// update data from server, if not present (pull head)
 				if (objectId >= 0 && !HasData)
 					await PullAsync(transaction);
+
+				// create the core data object
+				data = await environment.CreateObjectDataObjectAsync<T>(this);
+				await data.LoadAsync(transaction);
 			}
 			return (T)data;
 		} // func GetDataAsync
@@ -1409,6 +1417,7 @@ namespace TecWare.PPSn
 				"SET " +
 					"PulledRevId = IFNULL(@PulledRevId, PulledRevId), " +
 					"MimeType = @MimeType," +
+					"Document = @Document, " +
 					"DocumentIsLinked = 0, " +
 					"DocumentIsChanged = @DocumentIsChanged, " +
 					"_IsUpdated = 1 " +
@@ -1417,7 +1426,6 @@ namespace TecWare.PPSn
 				cmd.AddParameter("@Id", DbType.Int64, objectId);
 				cmd.AddParameter("@PulledRevId", DbType.Int64, bData == null ? DBNull.Value : PulledRevId.DbNullIf(StuffDB.DbNullOnNeg));
 				cmd.AddParameter("@MimeType", DbType.String, mimeType.DbNullIfString());
-				cmd.AddParameter("@Nr", DbType.String, Nr.DbNullIfString());
 				cmd.AddParameter("@Document", DbType.Binary, bData == null ? (object)DBNull.Value : bData);
 				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, bData == null ? false : true);
 				
@@ -1685,7 +1693,7 @@ namespace TecWare.PPSn
 		[LuaMember]
 		public string GetNextNumber(PpsMasterDataTransaction transaction)
 		{
-			using (var cmd = transaction.CreateNativeCommand("SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND typeof(substr(Nr, 4)) = 'integer'"))
+			using (var cmd = transaction.CreateNativeCommand("SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND abs(substr(Nr, 4)) != 0.0")) //SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND typeof(substr(Nr, 4)) = 'integer'
 			{
 				var lastNrString = cmd.ExecuteScalarEx() as string;
 				var lastNr = lastNrString == null ? 0 : Int32.Parse(lastNrString.Substring(3));
