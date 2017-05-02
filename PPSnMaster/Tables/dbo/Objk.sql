@@ -7,7 +7,6 @@
 	[Nr] NVARCHAR(20) NOT NULL CONSTRAINT chkObjkNr CHECK (LEN(Nr) > 0),
 	[IsRev] BIT NOT NULL,
 	[IsHidden] BIT NOT NULL CONSTRAINT dfObjkIsHidden DEFAULT 0,
-	[IsRemoved] BIT NOT NULL CONSTRAINT dfObjkIsRemoved DEFAULT 0,
 	[CurRevId] BIGINT NULL CONSTRAINT fkObjkObjrCurId REFERENCES dbo.ObjR (Id),
 	[HeadRevId] BIGINT NULL CONSTRAINT fkObjkObjrHeadId REFERENCES dbo.ObjR (Id)
 )
@@ -78,15 +77,6 @@ GO
 CREATE UNIQUE INDEX [idxObjkTypNr] ON [dbo].[ObjK] ([Typ], [Nr]) INCLUDE ([Id])
 GO
 
-EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Is the object removed',
-    @level0type = N'SCHEMA',
-    @level0name = N'dbo',
-    @level1type = N'TABLE',
-    @level1name = N'ObjK',
-    @level2type = N'COLUMN',
-    @level2name = N'IsRemoved'
-GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Is the object invisible to the user',
     @level0type = N'SCHEMA',

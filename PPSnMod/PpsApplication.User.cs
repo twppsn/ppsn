@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Security.Claims;
 using System.Security.Principal;
 using System.Threading;
@@ -34,7 +35,7 @@ namespace TecWare.PPSn.Server
 		private const int NoUserId = -1;
 		private const int SysUserId = Int32.MinValue;
 
-		#region -- class PrivateUserData --------------------------------------------------
+		#region -- class PrivateUserData ------------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary>This class holds all information for a currently inactive user.</summary>
@@ -346,7 +347,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- class PrivateUserDataContext -------------------------------------------
+		#region -- class PrivateUserDataContext -----------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary>This class holds a active context for a user. It is possible to
@@ -496,6 +497,51 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		#region -- class ImpersonateContextImplementation -------------------------------
+
+		private sealed class ImpersonateContextImplementation : IDECommonContext
+		{
+			private readonly IDECommonContext oldContext;
+			private readonly IDEContextServer server;
+			private readonly IPpsPrivateDataContext userContext;
+
+			public ImpersonateContextImplementation(IDEContextServer server, IPpsPrivateDataContext userContext)
+			{
+				if (!DEContext.TryGetCurrentContext(out oldContext))
+					this.oldContext = null;
+
+				this.server = server;
+				this.userContext = userContext;
+
+				DEContext.UpdateContext(this);
+			} // ctor
+
+			public void Dispose()
+			{
+				if (oldContext != null)
+					DEContext.UpdateContext(oldContext);
+			} // proc Dispose
+
+			public T GetUser<T>() where T : class
+				=> userContext as T;
+
+			public bool TryGetProperty(string name, out object value)
+			{
+				value = null;
+				return false;
+			} // func TryGetProperty
+
+			public string AbsolutePath => String.Empty;
+
+			public string[] ParameterNames => Array.Empty<string>();
+			public string[] HeaderNames => Array.Empty<string>();
+
+			public CultureInfo CultureInfo => CultureInfo.CurrentCulture;
+			public IDEContextServer Server => server;
+		} // class ImpersonateContextImplementation
+
+		#endregion
+
 		private PrivateUserData systemUser;
 		private DEList<PrivateUserData> userList;
 
@@ -576,13 +622,13 @@ namespace TecWare.PPSn.Server
 
 		/// <summary>Creates a context for the system user.</summary>
 		/// <returns></returns>
-		[LuaMember(nameof(CreateSysContext))]
+		[LuaMember]
 		public IPpsPrivateDataContext CreateSysContext()
 			=> (IPpsPrivateDataContext)systemUser.Authentificate(PpsUserIdentity.System);
 
 		/// <summary>Creates a context for the system user.</summary>
 		/// <returns></returns>
-		[LuaMember(nameof(GetUserContext))]
+		[LuaMember]
 		public IPpsPrivateDataContext GetUserContext()
 		{
 			var ctx = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
@@ -591,16 +637,29 @@ namespace TecWare.PPSn.Server
 			return ctx;
 		} // func CreateUserContext
 
-		/// <summary>Creates a context for a special user.</summary>
-		/// <param name="flags"></param>
-		/// <param name="user"></param>
-		/// <param name="connectionName"></param>
-		/// <returns></returns>
-		public IPpsPrivateDataContext CreateUserContext(int flags, IIdentity user, string connectionName)
-		{
-			throw new NotImplementedException();
-		}
+		[LuaMember]
+		public IDECommonContext ImpersonateCurrent()
+			=> ImpersonateContext(WindowsIdentity.GetCurrent());
 
+		[LuaMember]
+		public IDECommonContext ImpersonateContext(IIdentity user)
+			=> new ImpersonateContextImplementation(Server.GetService<IDEHttpServer>(true), CreateUserContext(user));
+
+		/// <summary>Creates a context for a special user.</summary>
+		/// <param name="user"></param>
+		/// <returns></returns>
+		public IPpsPrivateDataContext CreateUserContext(IIdentity user)
+		{
+			lock (userList.EnterReadLock())
+			{
+				var idx = userList.FindIndex(c => c.User.Equals(user));
+				if (idx == -1)
+					throw new ArgumentOutOfRangeException(nameof(user), $"User '{user}' not found.");
+
+				return (IPpsPrivateDataContext)userList[idx].Authentificate(user);
+			}
+		} // func CreateUserContext
+		
 		public int UserLease => 650000; // todo in ms
 	} // class PpsApplication
 }

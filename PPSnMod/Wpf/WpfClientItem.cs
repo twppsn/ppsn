@@ -775,24 +775,24 @@ namespace TecWare.PPSn.Server.Wpf
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
-		private sealed class EnvironmentCodeComparer : IComparer<KeyValuePair<int, string>>
+		private sealed class EnvironmentCodeComparer : IComparer<Tuple<int, string>>
 		{
 			private EnvironmentCodeComparer()
 			{
 			} // ctor
 
-			public int Compare(KeyValuePair<int, string> x, KeyValuePair<int, string> y)
-				=> x.Key - y.Key;
+			public int Compare(Tuple<int, string> x, Tuple<int, string> y)
+				=> x.Item1 - y.Item1;
 
 			public static EnvironmentCodeComparer Instance { get; } = new EnvironmentCodeComparer();
 		} // class EnvironmentCodeComparer
 
 		#endregion
 
-		private string CollectEnvironmentScripts()
+		private string CollectEnvironmentScripts(IPpsPrivateDataContext user, string hostName)
 		{
 			var priority = 1;
-			var environmentLoader = new List<KeyValuePair<int, string>>();
+			var environmentLoader = new List<Tuple<int, string>>();
 			foreach (var env in Config.Elements(PpsStuff.xnEnvironment))
 			{
 				priority = env.GetAttribute("priority", priority);
@@ -800,7 +800,7 @@ namespace TecWare.PPSn.Server.Wpf
 				var xCode = env.GetElement(PpsStuff.xnCode);
 				if (xCode != null && !String.IsNullOrEmpty(xCode.Value))
 				{
-					var item = new KeyValuePair<int, string>(priority,
+					var item = new Tuple<int, string>(priority,
 						"--L=" + PpsXmlPosition.GetXmlPositionFromXml(xCode).LineInfo + Environment.NewLine + xCode.Value
 					);
 					var index = environmentLoader.BinarySearch(item, EnvironmentCodeComparer.Instance);
@@ -810,17 +810,23 @@ namespace TecWare.PPSn.Server.Wpf
 				priority = priority + 1;
 			}
 
-			return String.Join(Environment.NewLine, from c in environmentLoader select c.Value);
+			var createdScript = CallMemberDirect("OnCollectEnvironmentScripts", new object[] { user, hostName }, ignoreNilFunction: true).ToString();
+			if (!String.IsNullOrEmpty(createdScript))
+				environmentLoader.Add(new Tuple<int, string>(Int32.MaxValue, createdScript));
+
+			return String.Join(Environment.NewLine, from c in environmentLoader select c.Item2);
 		} // func CollectEnvironmentScripts
 
 		private void ParseEnvironment(IDEContext r)
 		{
-			using (XmlWriter xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml), Procs.XmlWriterSettings))
+			var user = r.GetUser<IPpsPrivateDataContext>();
+
+			using (var xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml), Procs.XmlWriterSettings))
 			{
 				xml.WriteStartElement("environment");
 
 				// create environment extentsions
-				var environmentCode = CollectEnvironmentScripts();
+				var environmentCode = CollectEnvironmentScripts(user, r.GetProperty("ppsn-hostname", String.Empty));
 				if (environmentCode != null)
 				{
 					xml.WriteStartElement("code");

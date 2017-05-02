@@ -108,13 +108,13 @@
 			<pps:field name="dbo.ObjL.OnDelete" />
 
 			<!-- revision fields -->
-			<pps:field name="dbo.Objr.Id" />
-			<pps:field name="dbo.Objr.ParentId" />
-			<pps:field name="dbo.Objr.ObjkId" />
-			<pps:field name="dbo.Objr.Tags" />
-			<pps:field name="dbo.Objr.Document" />
-			<pps:field name="dbo.Objr.CreateDate" />
-			<pps:field name="dbo.Objr.CreateUserId" />
+			<pps:field name="dbo.ObjR.Id" />
+			<pps:field name="dbo.ObjR.ParentId" />
+			<pps:field name="dbo.ObjR.ObjkId" />
+			<pps:field name="dbo.ObjR.Tags" />
+			<pps:field name="dbo.ObjR.Document" />
+			<pps:field name="dbo.ObjR.CreateDate" />
+			<pps:field name="dbo.ObjR.CreateUserId" />
 
 			<!-- address fields -->
 			<pps:field name="dbo.Adre.Id" />
@@ -151,18 +151,18 @@
 			<pps:dataset name="coreDataSet">
 				<!-- define the base table -->
 				<pps:table name="Head">
-					<pps:column name="Id" fieldName="dbo.Objk.Id" isPrimary="true" />
-					<pps:column name="CurRevId" fieldName="dbo.Objk.CurRevId" />
-					<pps:column name="HeadRevId" fieldName="dbo.Objk.HeadRevId" />
-					<pps:column name="Nr" fieldName="dbo.Objk.Nr" />
-					<pps:column name="Typ" fieldName="dbo.Objk.Typ" />
-					<pps:column name="MimeType" fieldName="dbo.Objk.MimeType" />
-					<pps:column name="Guid" fieldName="dbo.Objk.Guid" />
+					<pps:column name="Id" fieldName="dbo.ObjK.Id" isPrimary="true" />
+					<pps:column name="CurRevId" fieldName="dbo.ObjK.CurRevId" />
+					<pps:column name="HeadRevId" fieldName="dbo.ObjK.HeadRevId" />
+					<pps:column name="Nr" fieldName="dbo.ObjK.Nr" />
+					<pps:column name="Typ" fieldName="dbo.ObjK.Typ" />
+					<pps:column name="MimeType" fieldName="dbo.ObjK.MimeType" />
+					<pps:column name="Guid" fieldName="dbo.ObjK.Guid" />
 				</pps:table>
 
 				<pps:table name="Revision">
-					<pps:column name="Id" fieldName="dbo.Objr.Id" isPrimary="true" />
-					<pps:relation name="ObjkId" fieldName="dbo.Objr.ObjkId" parentTable="Head" parentColumn="Id" parentType="Root" relationName="ObjrObjk" />
+					<pps:column name="Id" fieldName="dbo.ObjR.Id" isPrimary="true" />
+					<pps:relation name="ObjkId" fieldName="dbo.ObjR.ObjkId" parentTable="Head" parentColumn="Id" parentType="Root" relationName="ObjrObjk" />
 				</pps:table>
 
 			</pps:dataset>			
@@ -227,20 +227,20 @@
 				</pps:table>
 
 				<pps:table name="Objects">
-					<pps:meta name="syncType">ChangeTracking: dbo.Objk</pps:meta>
+					<pps:meta name="syncType">ChangeTracking: dbo.ObjK</pps:meta>
 					<pps:meta name="useAsKey">Guid</pps:meta>
 					
-					<pps:column name="Id" fieldName="dbo.Objk.Id" isPrimary="true" />
-					<pps:column name="Guid" fieldName="dbo.Objk.Guid">
+					<pps:column name="Id" fieldName="dbo.ObjK.Id" isPrimary="true" />
+					<pps:column name="Guid" fieldName="dbo.ObjK.Guid">
 						<pps:meta name="IsUnique">true</pps:meta>
 					</pps:column>
-					<pps:column name="Typ" fieldName="dbo.Objk.Typ" />
-					<pps:column name="MimeType" fieldName="dbo.Objk.MimeType" />
-					<pps:column name="Nr" fieldName="dbo.Objk.Nr" />
-					<pps:column name="IsRev" fieldName="dbo.Objk.IsRev" />
-					<pps:column name="IsHidden" fieldName="dbo.Objk.IsHidden" />
-					<pps:column name="RemoteCurRevId" fieldName="dbo.Objk.CurRevId" />
-					<pps:column name="RemoteHeadRevId" fieldName="dbo.Objk.HeadRevId" />
+					<pps:column name="Typ" fieldName="dbo.ObjK.Typ" />
+					<pps:column name="MimeType" fieldName="dbo.ObjK.MimeType" />
+					<pps:column name="Nr" fieldName="dbo.ObjK.Nr" />
+					<pps:column name="IsRev" fieldName="dbo.ObjK.IsRev" />
+					<pps:column name="IsHidden" fieldName="dbo.ObjK.IsHidden" />
+					<pps:column name="RemoteCurRevId" fieldName="dbo.ObjK.CurRevId" />
+					<pps:column name="RemoteHeadRevId" fieldName="dbo.ObjK.HeadRevId" />
 
 					<pps:column name="PulledRevId" fieldName="sys.Fields.Long">
 						<pps:meta name="sourceColumn">#</pps:meta>
@@ -287,10 +287,10 @@
 				<pps:table name="ObjectLinks">
 					<pps:meta name="syncType">None</pps:meta>
 					
-					<pps:column name="Id" fieldName="dbo.Objl.Id" isPrimary="true" />
-					<pps:relation name="ParentObjectId" fieldName="dbo.Objl.ParentObjKId" relationName="LinkedTo" parentTable="Objects" parentColumn="Id" parentType="Root" />
-					<pps:relation name="LinkObjectId" fieldName="dbo.Objl.LinkObjKId" relationName="LinkedFrom" parentTable="Objects" parentColumn="Id" parentType="Cascade" />
-					<pps:column name="OnDelete" fieldName="dbo.Objl.OnDelete" />
+					<pps:column name="Id" fieldName="dbo.ObjL.Id" isPrimary="true" />
+					<pps:relation name="ParentObjectId" fieldName="dbo.ObjL.ParentObjKId" relationName="LinkedTo" parentTable="Objects" parentColumn="Id" parentType="Root" />
+					<pps:relation name="LinkObjectId" fieldName="dbo.ObjL.LinkObjKId" relationName="LinkedFrom" parentTable="Objects" parentColumn="Id" parentType="Cascade" />
+					<pps:column name="OnDelete" fieldName="dbo.ObjL.OnDelete" />
 
 					<pps:column name="IsRemoved" fieldName="sys.Fields.Bit">
 						<pps:meta name="sourceColumn">#</pps:meta>

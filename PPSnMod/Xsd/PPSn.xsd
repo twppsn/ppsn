@@ -394,6 +394,11 @@
 							<xs:documentation>Length to generate number, if this value is not set, GetNextNumber must defined.</xs:documentation>
 						</xs:annotation>
 					</xs:attribute>
+					<xs:attribute name="forceNextNumber" type="xs:boolean" use="optional" default="false">
+						<xs:annotation>
+							<xs:documentation>Force on new items an new number.</xs:documentation>
+						</xs:annotation>
+					</xs:attribute>
 				</xs:extension>
 			</xs:complexContent>
 		</xs:complexType>
