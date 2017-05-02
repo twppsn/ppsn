@@ -310,17 +310,23 @@ namespace TecWare.PPSn
 			}
 		} // proc ShowException
 
-		public static bool ShowExceptionDialog(Window dialogOwner, ExceptionShowFlags flags, Exception exception, string alternativeMessage)
+		public bool ShowExceptionDialog(Window dialogOwner, ExceptionShowFlags flags, Exception exception, string alternativeMessage)
 		{
-			var shutDown = (flags & ExceptionShowFlags.Shutown) != 0;
+			switch (exception)
+			{
+				case PpsEnvironmentOnlineFailedException ex:
+					return MsgBox(ex.Message, MessageBoxButton.OK, MessageBoxImage.Information) != MessageBoxResult.OK;
+				default:
+					var shutDown = (flags & ExceptionShowFlags.Shutown) != 0;
 
-			var dialog = new PpsExceptionDialog();
-			dialog.MessageType = shutDown ? PpsTraceItemType.Fail : PpsTraceItemType.Exception;
-			dialog.MessageText = alternativeMessage ?? exception.Message;
-			dialog.SkipVisible = !shutDown;
+					var dialog = new PpsExceptionDialog();
+					dialog.MessageType = shutDown ? PpsTraceItemType.Fail : PpsTraceItemType.Exception;
+					dialog.MessageText = alternativeMessage ?? exception.Message;
+					dialog.SkipVisible = !shutDown;
 
-			dialog.Owner = dialogOwner;
-			return dialog.ShowDialog() ?? false; // show the dialog
+					dialog.Owner = dialogOwner;
+					return dialog.ShowDialog() ?? false; // show the dialog
+			}
 		} // func ShowExceptionDialog
 
 		public async Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)

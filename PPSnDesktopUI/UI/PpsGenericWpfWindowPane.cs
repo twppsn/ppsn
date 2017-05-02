@@ -396,9 +396,7 @@ namespace TecWare.PPSn.UI
 			fileSource = new BaseWebRequest(new Uri(xamlUri, "."), Environment.Encoding);
 
 			// Load the xaml file and code
-			var r = await Environment.LoadXamlAsync(fileSource, arguments, xamlUri);
-			var xaml = r.Item1;
-			var chunk = r.Item2;
+			(var xaml, var code) = await Environment.LoadXamlAsync(fileSource, arguments, xamlUri);
 
 			// Create the Wpf-Control
 			var xamlReader = new XamlReader();
@@ -408,8 +406,8 @@ namespace TecWare.PPSn.UI
 				OnControlCreated();
 
 				// Initialize the control and run the code in UI-Thread
-				if (chunk != null)
-					Environment.RunScript(chunk, this, true, this);
+				if (code != null)
+					Environment.RunScript(code, this, true, this);
 
 				// init bindings
 				control.DataContext = this;
@@ -491,6 +489,7 @@ namespace TecWare.PPSn.UI
 		public LuaTable Arguments { get { return arguments; } }
 
 		/// <summary>Title of the pane</summary>
+		[LuaMember]
 		public string Title
 		{
 			get
@@ -503,6 +502,7 @@ namespace TecWare.PPSn.UI
 		} // prop Title
 
 		/// <summary>SubTitle of the pane</summary>
+		[LuaMember]
 		public string SubTitle
 		{
 			get
@@ -514,6 +514,7 @@ namespace TecWare.PPSn.UI
 		} // prop SubTitle
 
 		/// <summary>Has sidebar?</summary>
+		[LuaMember]
 		public bool HasSideBar
 		{
 			get

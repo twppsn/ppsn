@@ -3277,7 +3277,7 @@ namespace TecWare.PPSn
 						return true;
 				}
 			}
-			throw new NotImplementedException("Todo: Force online mode.");
+			throw new PpsEnvironmentOnlineFailedException();
 		} // func ForceOnlineMode
 
 		/// <summary></summary>

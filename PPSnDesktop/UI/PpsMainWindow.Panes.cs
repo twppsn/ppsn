@@ -344,6 +344,9 @@ namespace TecWare.PPSn.UI
 
 		public async Task<bool> UnloadPaneAsync(IPpsWindowPane pane)
 		{
+			if (pane == null)
+				throw new ArgumentNullException(nameof(pane));
+
 			if (await pane.UnloadAsync())
 			{
 				await Dispatcher.InvokeAsync(() =>
@@ -389,7 +392,6 @@ namespace TecWare.PPSn.UI
 		public PpsPaneCollection Panes => panes;
 		/// <summary>show the SideBarBackground</summary>
 		public bool ShowPaneSideBar => CurrentPane?.HasSideBar ?? false;
-
 	} // class PpsMainWindow
 
 	#endregion

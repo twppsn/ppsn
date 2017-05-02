@@ -105,6 +105,7 @@
     <Compile Include="NativeMethods.Credential.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="PpsEnvironment.Data.cs" />
+    <Compile Include="PpsEnvironment.Exceptions.cs" />
     <Compile Include="PpsEnvironment.Lua.cs" />
     <Compile Include="PpsEnvironment.Objects.cs" />
     <Compile Include="PpsEnvironment.Trace.cs" />

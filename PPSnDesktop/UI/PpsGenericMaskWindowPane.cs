@@ -242,7 +242,7 @@ namespace TecWare.PPSn.UI
 
 		public override Task<bool> UnloadAsync(bool? commit = default(bool?))
 		{
-			if (data.IsDirty)
+			if (data != null && data.IsDirty)
 				CommitEditAsync().Wait();
 
 			data.UnregisterOwner(this);

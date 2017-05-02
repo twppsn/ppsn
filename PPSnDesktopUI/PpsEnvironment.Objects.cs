@@ -944,7 +944,13 @@ namespace TecWare.PPSn
 
 		public async Task CommitAsync(PpsMasterDataTransaction transaction = null)
 		{
-			await baseObj.SaveRawDataAsync(transaction, rawData.Length, MimeTypes.Application.OctetStream, dst => dst.Write(rawData, 0, rawData.Length));
+			await baseObj.SaveRawDataAsync(
+				transaction, 
+				rawData.Length, 
+				baseObj.MimeType ?? MimeTypes.Application.OctetStream, 
+				dst => dst.Write(rawData, 0, rawData.Length), 
+				true
+			);
 		} // proc CommitAsync
 
 		public async Task PushAsync(PpsMasterDataTransaction transaction, Stream dst)
@@ -1012,8 +1018,14 @@ namespace TecWare.PPSn
 				using (var xml = XmlReader.Create(src, Procs.XmlReaderSettings))
 				{
 					var xData = XDocument.Load(xml).Root;
-					await Environment.Dispatcher.InvokeAsync(() => Read(xData));
-				}
+					await Environment.Dispatcher.InvokeAsync(
+						() =>
+						{
+							Read(xData);
+							ResetDirty();
+						}
+					);
+}
 			}
 		} // proc LoadAsync
 
@@ -1028,12 +1040,13 @@ namespace TecWare.PPSn
 						settings.CloseOutput = false;
 						using (var xml = XmlWriter.Create(dst, settings))
 							Write(xml);
-					}
+					},
+					true
 				);
 
 				//		// update tags
 				//		baseObj.Tags.Update(GetAutoTags().ToList(), transaction: transaction.Transaction);
-
+				
 				trans.Commit();
 			}
 
@@ -1131,74 +1144,56 @@ namespace TecWare.PPSn
 			ReadObjectInfo(r);
 		} // ctor
 
+		/// <summary>Reads the properties from the local database.</summary>
+		/// <param name="r"></param>
 		private void ReadObjectInfo(IDataReader r)
 		{
 			// update the values
 			for (var i = 1; i < StaticColumns.Length; i++)
-				SetValue(i, r.IsDBNull(i) ? null : r.GetValue(i));
+				SetValue((PpsStaticObjectColumnIndex)i, r.IsDBNull(i) ? null : r.GetValue(i), false);
 
 			// check for tags
 			if (r.FieldCount >= StaticColumns.Length && !r.IsDBNull(StaticColumns.Length))
 				tags.RefreshTagsFromString(r.GetString(StaticColumns.Length));
 
-			isChanged = false;
+			ResetDirty();
 		} // proc ReadObjectInfo
 
+		/// <summary>Reads the core properties from Sync or Pull.</summary>
+		/// <param name="properties"></param>
 		internal void ReadObjectInfo(IPropertyReadOnlyDictionary properties)
 		{
 			if (properties.TryGetProperty<Guid>(nameof(Guid), out var guid))
-				SetValue((int)PpsStaticObjectColumnIndex.Guid, guid);
+				SetValue(PpsStaticObjectColumnIndex.Guid, guid, false);
 			if (properties.TryGetProperty<string>(nameof(Typ), out var typ))
-				SetValue((int)PpsStaticObjectColumnIndex.Typ, typ);
+				SetValue(PpsStaticObjectColumnIndex.Typ, typ, false);
 			if (properties.TryGetProperty<string>(nameof(Nr), out var nr))
-				SetValue((int)PpsStaticObjectColumnIndex.Nr, nr);
+				SetValue(PpsStaticObjectColumnIndex.Nr, nr, false);
 			if (properties.TryGetProperty<string>(nameof(MimeType), out var mimeType))
-				SetValue((int)PpsStaticObjectColumnIndex.MimeType, mimeType);
+				SetValue(PpsStaticObjectColumnIndex.MimeType, mimeType, false);
 			if (properties.TryGetProperty<bool>(nameof(IsRev), out var isRev))
-				SetValue((int)PpsStaticObjectColumnIndex.IsRev, isRev);
+				SetValue(PpsStaticObjectColumnIndex.IsRev, isRev, false);
 			if (properties.TryGetProperty<long>("HeadRevId", out var headRevId))
-				SetValue((int)PpsStaticObjectColumnIndex.RemoteHeadRevId, headRevId);
+				SetValue(PpsStaticObjectColumnIndex.RemoteHeadRevId, headRevId, false);
 			if (properties.TryGetProperty<long>("CurRevId", out var curRevId))
-				SetValue((int)PpsStaticObjectColumnIndex.RemoteCurRevId, curRevId);
+				SetValue(PpsStaticObjectColumnIndex.RemoteCurRevId, curRevId, false);
+
+			ResetDirty();
 		} // func ReadObject
 
+		/// <summary>Reads the object from the pull request.</summary>
+		/// <param name="x"></param>
 		private void ReadObjectFromXml(XElement x)
 		{
 			// update object data
 			ReadObjectInfo(new XAttributesPropertyDictionary(x));
-			
+
 			// links
 
 			// tags
 
+			ResetDirty();
 		} // UpdateObjectFromXml
-
-		/// <summary>Refresh of the object data.</summary>
-		/// <param name="transaction">Optional parent transaction.</param>
-		public void Refresh(bool withTags = false, PpsMasterDataTransaction transaction = null)
-		{
-			// refresh core data
-			lock (objectLock)
-			{
-				using (var trans = environment.MasterData.CreateTransaction(transaction))
-				using(var cmd = trans.CreateNativeCommand(StaticColumnsSelect + " WHERE o.Id = @Id"))
-				{
-					cmd.AddParameter("@Id", DbType.Int64, objectId);
-
-					using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleRow))
-					{
-						if (r.Read())
-							ReadObjectInfo(r);
-						else
-							throw new InvalidOperationException("No result set.");
-					}
-				}
-			}
-
-			// refresh tags
-			if (withTags)
-				tags.RefreshTags(transaction);
-		} // proc Refresh
 
 		#endregion
 
@@ -1273,18 +1268,19 @@ namespace TecWare.PPSn
 
 					using (var headerData = new WindowStream(c.Content, 0, headerLength, false, true))
 					using (var xmlHeader = XmlReader.Create(headerData, Procs.XmlReaderSettings))
-					{
-						var xObject = XElement.Load(xmlHeader);
-						ReadObjectFromXml(xObject);
-
-						// persist current object state
-						UpdateLocal(transaction);
-					}
+						ReadObjectFromXml(XElement.Load(xmlHeader));
 
 					// update data block
-					SaveRawDataAsync(transaction, c.ContentLength, c.ContentType,
-						dst => c.Content.CopyTo(dst)
+					SaveRawDataAsync(transaction, c.ContentLength - headerLength, MimeType,
+						dst => c.Content.CopyTo(dst),
+						false
 					).Wait();
+
+					SetValue(PpsStaticObjectColumnIndex.PulledRevId, pulledRevId, true);
+					
+					// persist current object state
+					UpdateLocal(transaction);
+
 					return c.Content;
 				});
 
@@ -1300,8 +1296,6 @@ namespace TecWare.PPSn
 
 			using (var r = await (await EnqueuePull(transaction)).ForegroundAsync())
 			{
-				SetValue((int)PpsStaticObjectColumnIndex.PulledRevId, revId);
-
 				// read prev stored data
 				if (data != null)
 					await data.LoadAsync(transaction);
@@ -1408,7 +1402,7 @@ namespace TecWare.PPSn
 			}
 		} // func LoadRawDataAsync
 
-		internal async Task SaveRawDataAsync(PpsMasterDataTransaction transaction, long contentLength, string mimeType, Action<Stream> data)
+		internal async Task SaveRawDataAsync(PpsMasterDataTransaction transaction, long contentLength, string mimeType, Action<Stream> data, bool isDocumentChanged)
 		{
 			byte[] bData = null;
 
@@ -1422,13 +1416,14 @@ namespace TecWare.PPSn
 					bData = dst.ToArray();
 				}
 			}
+			else
+				isDocumentChanged = false;
 
 			// store the value
 			using (var trans = environment.MasterData.CreateTransaction(transaction))
-			using (var cmd = trans.CreateNativeCommand("UPDATE main.Objects " +
+			using (var cmd = trans.CreateNativeCommand("UPDATE main.[Objects] " +
 				"SET " +
-					"PulledRevId = IFNULL(@PulledRevId, PulledRevId), " +
-					"MimeType = @MimeType," +
+					"MimeType = @MimeType, " +
 					"Document = @Document, " +
 					"DocumentIsLinked = 0, " +
 					"DocumentIsChanged = @DocumentIsChanged, " +
@@ -1436,13 +1431,16 @@ namespace TecWare.PPSn
 				"WHERE Id = @Id"))
 			{
 				cmd.AddParameter("@Id", DbType.Int64, objectId);
-				cmd.AddParameter("@PulledRevId", DbType.Int64, bData == null ? DBNull.Value : PulledRevId.DbNullIf(StuffDB.DbNullOnNeg));
-				cmd.AddParameter("@MimeType", DbType.String, mimeType.DbNullIfString());
-				cmd.AddParameter("@Document", DbType.Binary, bData == null ? (object)DBNull.Value : bData);
-				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, bData == null ? false : true);
+				cmd.AddParameter("@MimeType", DbType.String, mimeType);
+				cmd.AddParameter("@Document", DbType.Binary, bData ?? (object)DBNull.Value);
+				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, isDocumentChanged);
 				
 				await cmd.ExecuteNonQueryAsync();
-				SetValue((int)PpsStaticObjectColumnIndex.HasData, true);
+
+				// set HasData to true
+				SetValue(PpsStaticObjectColumnIndex.MimeType, mimeType, false);
+				SetValue(PpsStaticObjectColumnIndex.IsDocumentChanged, isDocumentChanged, false);
+				SetValue(PpsStaticObjectColumnIndex.HasData, true, false);
 
 				trans.Commit();
 			}
@@ -1471,7 +1469,6 @@ namespace TecWare.PPSn
 
 		public void UpdateLocal(PpsMasterDataTransaction transaction)
 		{
-
 			using (var cmd = transaction.CreateNativeCommand(
 				"UPDATE main.[Objects] SET " +
 						"Guid = @Guid," +
@@ -1511,13 +1508,15 @@ namespace TecWare.PPSn
 		private T GetValue<T>(int index, T empty)
 			=> index == 0 ? (T)(object)objectId : (staticValues[index] ?? empty).ChangeType<T>();
 
-		private void SetValue(int index, object newValue)
+		private void SetValue(PpsStaticObjectColumnIndex index, object newValue, bool setDirty)
 		{
-			if (!Object.Equals(staticValues[index], newValue))
+			if (!Object.Equals(staticValues[(int)index], newValue))
 			{
-				isChanged = true;
-				staticValues[index] = newValue;
-				OnPropertyChanged(staticColumns[index].Name);
+				staticValues[(int)index] = newValue;
+
+				if (setDirty)
+					SetDirty();
+				OnPropertyChanged(staticColumns[(int)index].Name);
 			}
 		} // func SetValue
 
@@ -1560,9 +1559,9 @@ namespace TecWare.PPSn
 							return StaticTagsColumn;
 						else if (index == StaticColumns.Length + 2)
 							return StaticLinksColumn;
-						else if (index < StaticColumns.Length + obj.Tags.Count + StaticPropertyCount)
+						else if (index < StaticColumns.Length + obj.Tags.Count + staticPropertyCount)
 						{
-							var tag = obj.Tags[index - StaticColumns.Length - StaticPropertyCount];
+							var tag = obj.Tags[index - StaticColumns.Length - staticPropertyCount];
 							return CreateSimpleDataColumn(tag);
 						}
 						else
@@ -1574,7 +1573,7 @@ namespace TecWare.PPSn
 			private static SimpleDataColumn CreateSimpleDataColumn(PpsObjectTag tag)
 				=> new SimpleDataColumn(tag.Name, PpsObjectTag.GetTypeFromClass(tag.Class));
 
-			public int Count => StaticColumns.Length + obj.Tags.Count + StaticPropertyCount;
+			public int Count => StaticColumns.Length + obj.Tags.Count + staticPropertyCount;
 		} // class PpsObjectColumns
 
 		#endregion
@@ -1603,8 +1602,8 @@ namespace TecWare.PPSn
 						return tags;
 					else if (index == StaticColumns.Length + 2)
 						return links;
-					else if (index < StaticColumns.Length + Tags.Count + StaticPropertyCount)
-						return tags[index - StaticColumns.Length - StaticPropertyCount].Value;
+					else if (index < StaticColumns.Length + Tags.Count + staticPropertyCount)
+						return tags[index - StaticColumns.Length - staticPropertyCount].Value;
 					else
 						throw new ArgumentOutOfRangeException();
 				}
@@ -1612,6 +1611,24 @@ namespace TecWare.PPSn
 		} // prop this
 
 		#endregion
+
+		private void SetDirty()
+		{
+			if (!isChanged)
+			{
+				isChanged = true;
+				OnPropertyChanged(nameof(IsChanged));
+			}
+		} // proc SetDirty
+
+		private void ResetDirty()
+		{
+			if (isChanged)
+			{
+				isChanged = false;
+				OnPropertyChanged(nameof(IsChanged));
+			}
+		} // proc SetDirty
 
 		public PpsEnvironment Environment => environment;
 		public override bool IsDataOwner => true;
@@ -1625,12 +1642,18 @@ namespace TecWare.PPSn
 		public long RemoteCurRevId => GetValue((int)PpsStaticObjectColumnIndex.RemoteCurRevId, -1L);
 		public long RemoteHeadRevId => GetValue((int)PpsStaticObjectColumnIndex.RemoteHeadRevId, -1L);
 		public long PulledRevId => GetValue((int)PpsStaticObjectColumnIndex.PulledRevId, -1L);
+		/// <summary>Is the local data of the object changed.</summary>
 		public bool IsDocumentChanged => GetValue((int)PpsStaticObjectColumnIndex.IsDocumentChanged, false);
+
+		/// <summary>Has this object local data available.</summary>
 		public bool HasData => GetValue((int)PpsStaticObjectColumnIndex.HasData, false);
 
+		/// <summary>Access to the links of the object.</summary>
 		public PpsObjectLinks Links => links.RefreshLazy();
+		/// <summary>Object tags and properties</summary>
 		public PpsObjectTags Tags => tags;
 
+		/// <summary>Is the meta data changed and not persisted in the local database.</summary>
 		public bool IsChanged => isChanged;
 
 		internal object SyncRoot => objectLock;
@@ -1676,7 +1699,7 @@ namespace TecWare.PPSn
 		internal static string GetStaticColumnExpression(int index)
 			=> staticColumns[index].Expression;
 
-		internal const int StaticPropertyCount = 3;
+		internal const int staticPropertyCount = 3;
 
 		internal static IDataColumn[] StaticColumns => staticColumns;
 		internal static string StaticColumnsSelect { get; }

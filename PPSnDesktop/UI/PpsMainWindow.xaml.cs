@@ -82,16 +82,6 @@ namespace TecWare.PPSn.UI
 				)
 			);
 
-			//CommandBindings.Add(
-			//	new CommandBinding(PpsWindow.TraceLogCommand,
-			//		async (sender, e) =>
-			//		{
-			//			e.Handled = true;
-			//			await LoadPaneAsync(Environment.TracePane, PpsOpenPaneMode.NewSingleWindow, null);
-			//		}
-			//	)
-			//);
-
 			CommandBindings.Add(
 				new CommandBinding(PpsWindow.TraceLogCommand,
 					async (sender, e) =>
@@ -133,8 +123,7 @@ namespace TecWare.PPSn.UI
 					(sender, e) =>
 					{
 						e.Handled = true;
-						var pane = e.Parameter as IPpsWindowPane;
-						if (pane != null)
+						if (e.Parameter is IPpsWindowPane pane)
 							Activate(pane);
 					},
 					(sender, e) =>
@@ -148,8 +137,7 @@ namespace TecWare.PPSn.UI
 					(sender, e) =>
 					{
 						e.Handled = true;
-						var pane = e.Parameter as IPpsWindowPane;
-						if (pane != null)
+						if (e.Parameter is IPpsWindowPane pane)
 							Remove(pane);
 					},
 					(sender, e) =>
