@@ -467,7 +467,7 @@ namespace TecWare.PPSn
 
 			public bool TryGetProperty(string name, out object value)
 			{
-				var p = arguments.FirstOrDefault(c => String.Compare(c.SourceColumn, name, StringComparison.OrdinalIgnoreCase) == 0);
+				var p = arguments.FirstOrDefault(c => c != null && String.Compare(c.SourceColumn, name, StringComparison.OrdinalIgnoreCase) == 0);
 				if (p == null)
 				{
 					value = null;
@@ -834,8 +834,7 @@ namespace TecWare.PPSn
 		{
 			private readonly PpsMasterData masterData;
 			private readonly PpsDataTableDefinition table;
-			private readonly SQLiteConnection connection;
-			private readonly SQLiteTransaction transaction;
+			private readonly PpsMasterDataTransaction transaction;
 			private readonly bool isFull;
 
 			private readonly int physPrimaryColumnIndex;
@@ -856,10 +855,9 @@ namespace TecWare.PPSn
 
 			#region -- Ctor/Dtor ----------------------------------------------------
 
-			public ProcessBatch(SQLiteConnection connection, SQLiteTransaction transaction, PpsMasterData masterData, string tableName, bool isFull)
+			public ProcessBatch(PpsMasterDataTransaction transaction, PpsMasterData masterData, string tableName, bool isFull)
 			{
 				this.masterData = masterData;
-				this.connection = connection;
 				this.transaction = transaction;
 				this.isFull = isFull;
 
@@ -878,8 +876,8 @@ namespace TecWare.PPSn
 				refreshColumnIndex = table.FindColumnIndex(refreshColumnName);
 
 				// prepare column parameter
-				insertCommand = new SQLiteCommand(connection) { Transaction = transaction };
-				updateCommand = new SQLiteCommand(connection) { Transaction = transaction };
+				insertCommand = (SQLiteCommand)transaction.CreateNativeCommand(String.Empty);
+				updateCommand = (SQLiteCommand)transaction.CreateNativeCommand(String.Empty);
 				insertParameters = new SQLiteParameter[table.Columns.Count];
 				updateParameters = new SQLiteParameter[table.Columns.Count];
 
@@ -951,11 +949,11 @@ namespace TecWare.PPSn
 					" WHERE [" + updateParameters[virtPrimaryColumnIndex].SourceColumn + "] = " + updateParameters[virtPrimaryColumnIndex].ParameterName;
 
 				// prepare exists
-				existCommand = new SQLiteCommand("SELECT EXISTS(SELECT * FROM main.[" + table.Name + "] WHERE [" + virtPrimaryKey.Name + "] = @Id)", connection, transaction);
+				existCommand = (SQLiteCommand)transaction.CreateNativeCommand("SELECT EXISTS(SELECT * FROM main.[" + table.Name + "] WHERE [" + virtPrimaryKey.Name + "] = @Id)");
 				existIdParameter = existCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(virtPrimaryKey.DataType));
 
 				// prepare delete
-				deleteCommand = new SQLiteCommand("DELETE FROM main.[" + table.Name + "] WHERE [" + physPrimaryKey.Name + "] = @Id;", connection, transaction);
+				deleteCommand = (SQLiteCommand)transaction.CreateNativeCommand("DELETE FROM main.[" + table.Name + "] WHERE [" + physPrimaryKey.Name + "] = @Id;");
 				deleteIdParameter = deleteCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(physPrimaryKey.DataType));
 
 				existCommand.Prepare();
@@ -983,12 +981,12 @@ namespace TecWare.PPSn
 				{
 					if (refreshColumnIndex == -1)
 					{
-						using (var cmd = new SQLiteCommand($"DELETE FROM main.[{table.Name}]", connection, transaction))
+						using (var cmd = transaction.CreateNativeCommand($"DELETE FROM main.[{table.Name}]"))
 							cmd.ExecuteNonQueryEx();
 					}
 					else
 					{
-						using (var cmd = new SQLiteCommand($"UPDATE main.[{table.Name}] SET [" + refreshColumnName + "] = null WHERE [" + refreshColumnName + "] <> 1", connection, transaction))
+						using (var cmd = transaction.CreateNativeCommand($"UPDATE main.[{table.Name}] SET [" + refreshColumnName + "] = null WHERE [" + refreshColumnName + "] <> 1"))
 							//using (var cmd = new SQLiteCommand($"DELETE FROM main.[{table.Name}] WHERE [" + refreshColumnName + "] <> 1", connection, transaction))
 							cmd.ExecuteNonQueryEx();
 					}
@@ -999,7 +997,7 @@ namespace TecWare.PPSn
 			{
 				if (isFull && refreshColumnIndex >= 0)
 				{
-					using (var cmd = new SQLiteCommand($"DELETE FROM main.[{table.Name}] WHERE [" + refreshColumnName + "] is null", connection, transaction))
+					using (var cmd = transaction.CreateNativeCommand($"DELETE FROM main.[{table.Name}] WHERE [" + refreshColumnName + "] is null"))
 						cmd.ExecuteNonQueryEx();
 				}
 			} // proc Clean
@@ -1034,7 +1032,7 @@ namespace TecWare.PPSn
 						var newSyncId = xml.GetElementContent<long>(-1);
 						if (newSyncId == -1)
 						{
-							using (var cmd = new SQLiteCommand("DELETE FROM main.[SyncState] WHERE [Table] = @Table", connection, transaction))
+							using (var cmd = transaction.CreateNativeCommand("DELETE FROM main.[SyncState] WHERE [Table] = @Table"))
 							{
 								cmd.AddParameter("@Table", DbType.String, table.Name);
 								cmd.ExecuteNonQueryEx();
@@ -1042,9 +1040,9 @@ namespace TecWare.PPSn
 						}
 						else
 						{
-							using (var cmd = new SQLiteCommand(
+							using (var cmd = transaction.CreateNativeCommand(
 								"INSERT OR REPLACE INTO main.[SyncState] ([Table], [SyncId]) " +
-								"VALUES (@Table, @SyncId);", connection, transaction))
+								"VALUES (@Table, @SyncId);"))
 							{
 								cmd.AddParameter("@Table", DbType.String, table.Name);
 								cmd.AddParameter("@SyncId", DbType.Int64, newSyncId);
@@ -1056,7 +1054,7 @@ namespace TecWare.PPSn
 					else
 					{
 						#region -- upsert --
-						if (isFull)
+						if (isFull || actionName[0] == 'i')
 							actionName = refreshColumnIndex == -1 ? "i" : "r";
 
 						// clear current column set
@@ -1109,15 +1107,15 @@ namespace TecWare.PPSn
 									goto case 'i';
 							case 'i':
 								ExecuteCommand(insertCommand);
-								masterData.environment.OnMasterDataRowChanged(PpsDataChangeOperation.Insert, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
+								masterData.environment.OnMasterDataRowChanged(transaction, PpsDataChangeOperation.Insert, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
 								break;
 							case 'u':
 								ExecuteCommand(updateCommand);
-								masterData.environment.OnMasterDataRowChanged(PpsDataChangeOperation.Update, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
+								masterData.environment.OnMasterDataRowChanged(transaction, PpsDataChangeOperation.Update, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
 								break;
 							case 'd':
 								ExecuteCommand(deleteCommand);
-								masterData.environment.OnMasterDataRowChanged(PpsDataChangeOperation.Delete, table, deleteIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
+								masterData.environment.OnMasterDataRowChanged(transaction, PpsDataChangeOperation.Delete, table, deleteIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
 								break;
 						}
 
@@ -1241,8 +1239,8 @@ namespace TecWare.PPSn
 			{
 				xml.Read(); // fetch element
 							// process values
-				using (var transaction = connection.BeginTransaction())
-				using (var b = new ProcessBatch(connection, transaction, this, tableName, isFull))
+				using (var transaction = CreateTransaction())
+				using (var b = new ProcessBatch(transaction, this, tableName, isFull))
 				{
 					// prepare table
 					b.Prepare();
@@ -1898,7 +1896,7 @@ namespace TecWare.PPSn
 	#region -- interface IPpsProxyTask --------------------------------------------------
 
 	[EditorBrowsable(EditorBrowsableState.Advanced)]
-	public interface IPpsOfflineItemData
+	public interface IPpsOfflineItemData : IPropertyReadOnlyDictionary
 	{
 		/// <summary>Access to the content</summary>
 		Stream Content { get; }
@@ -2100,6 +2098,7 @@ namespace TecWare.PPSn
 			// copy headers
 			if (headers != null)
 			{
+				headers["ppsn-hostname"] = System.Environment.MachineName;
 				foreach (var k in headers.AllKeys)
 					onlineRequest.Headers[k] = headers[k];
 			}
@@ -2108,7 +2107,10 @@ namespace TecWare.PPSn
 			if (HasRequestData)
 			{
 				using (var dst = onlineRequest.GetRequestStream())
+				{
+					RequestData.Position = 0;
 					RequestData.CopyTo(dst);
+				}
 			}
 
 			return onlineRequest;
@@ -2137,7 +2139,7 @@ namespace TecWare.PPSn
 
 			if (requestStream == null)
 				requestStream = new MemoryStream();
-			return requestStream;
+			return new WindowStream(requestStream, 0, -1, true, true);
 		} // func GetRequestStream
 
 		#endregion
@@ -2415,19 +2417,22 @@ namespace TecWare.PPSn
 			{
 				private readonly Stream data;
 				private readonly string contentType;
-				private readonly DateTime lastModification;
+				private readonly WebHeaderCollection headers;
 
-				public PpsOfflineItemDataImplementation(Stream data, string contentType, DateTime lastModification)
+				public PpsOfflineItemDataImplementation(Stream data, string contentType, WebHeaderCollection headers)
 				{
 					this.data = data;
 					this.contentType = contentType;
-					this.lastModification = lastModification;
+					this.headers = headers;
 				} // ctor
+
+				public bool TryGetProperty(string name, out object value)
+					=> (value = headers.Get(name)) != null;
 
 				public Stream Content => data;
 				public string ContentType => contentType;
 				public long ContentLength => data.Length;
-				public DateTime LastModification => lastModification;
+				public DateTime LastModification => headers.GetLastModified();
 			} // class PpsOfflineItemDataImplementation
 
 			#endregion
@@ -2549,7 +2554,7 @@ namespace TecWare.PPSn
 								dst.Flush();
 
 								// the cache stream will be disposed by the garbage collector, or if it is moved to the offline cache
-								request.UpdateOfflineCache(new PpsOfflineItemDataImplementation(dst, contentType, headers.GetLastModified()));
+								request.UpdateOfflineCache(new PpsOfflineItemDataImplementation(dst, contentType, headers));
 
 								// spawn the result functions
 								lock (stateLock)
@@ -3243,8 +3248,11 @@ namespace TecWare.PPSn
 		/// <param name="operation"></param>
 		/// <param name="table">Table description</param>
 		/// <param name="id">Primary key.</param>
-		public virtual void OnMasterDataRowChanged(PpsDataChangeOperation operation, PpsDataTableDefinition table, object id, IPropertyReadOnlyDictionary arguments)
+		public virtual void OnMasterDataRowChanged(PpsMasterDataTransaction trans, PpsDataChangeOperation operation, PpsDataTableDefinition table, object id, IPropertyReadOnlyDictionary arguments)
 		{
+			// refresh object data
+			if (table.Name == "Objects")
+				RefreshCachedObject(arguments.GetProperty("Id", -1), arguments);
 		} // proc OnMasterDataChanged
 
 		/// <summary>Gets called if a batch is processed.</summary>

@@ -54,7 +54,8 @@ namespace TecWare.PPSn.UI
 				{
 					if (elapsed > 3000)
 					{
-						CommitEditAsync();
+						if (data != null && data.IsDirty)
+							CommitEditAsync();
 						return false;
 					}
 					else
@@ -268,7 +269,7 @@ namespace TecWare.PPSn.UI
 		public PpsLuaTask PushDataAsync()
 		{
 			UpdateSources();
-			return Environment.RunTask(data.PushAsync())
+			return Environment.RunTask(obj.PushAsync())
 				.OnException(
 				new Action<Exception>(ex => Environment.ShowException(ex, "Veröffentlichung ist fehlgeschlagen."))
 			);

@@ -10,7 +10,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
@@ -58,10 +60,9 @@ namespace TecWare.PPSn
 	public sealed class PpsObjectLink
 	{
 		private readonly PpsObject parent;
-		private readonly long localId;
-		private readonly long serverId;
-		private readonly long linkToObj;   // id of the linked object
-		private readonly long syncToken;
+		private readonly long id;
+		private readonly long parentId;
+		private readonly long linkId;   // id of the linked object
 		private PpsObjectLinkRestriction onDelete;  // is delete cascade possible
 
 		private WeakReference<PpsObject> linkToCache; // weak ref to the actual object
@@ -69,31 +70,25 @@ namespace TecWare.PPSn
 		internal PpsObjectLink(PpsObject parent, long localId, long serverId, long linkTo, PpsObjectLinkRestriction onDelete, long syncToken)
 		{
 			this.parent = parent;
-			this.localId = localId;
-			this.serverId = serverId;
-			this.linkToObj = linkTo;
 			this.onDelete = onDelete;
-			this.syncToken = syncToken;
 			this.linkToCache = null;
 		} // ctor
 
 		private PpsObject GetLinkedObject()
 		{
-			PpsObject r;
-			if (linkToCache != null && linkToCache.TryGetTarget(out r))
+			if (linkToCache != null && linkToCache.TryGetTarget(out var r))
 				return r;
 
-			r = parent.Environment.GetObject(linkToObj);
-			linkToCache = new WeakReference<PPSn.PpsObject>(r);
+			r = parent.Environment.GetObject(linkId);
+			linkToCache = new WeakReference<PpsObject>(r);
 			return r;
 		} // func GetLinkedObject
 
 		public PpsObject ParentObject => parent;
 
-		public long LocalId => localId;
-		public long ServerId => serverId;
-		public long ObjectId => linkToObj;
-		public long SyncToken => syncToken;
+		public long LocalId => id;
+		public long ServerId => parentId;
+		public long ObjectId => linkId;
 		public PpsObjectLinkRestriction OnDelete => onDelete;
 
 		public PpsObject Object => GetLinkedObject();
@@ -617,7 +612,8 @@ namespace TecWare.PPSn
 
 		internal void RefreshTags(PpsMasterDataTransaction transaction = null)
 		{
-			using (var cmd = new TagSelectCommand(transaction, true))
+			using (var trans = parent.Environment.MasterData.CreateTransaction(transaction))
+			using (var cmd = new TagSelectCommand(trans, true))
 				RefreshTags(cmd.Select(parent.Id).Select(c => c.Item2));
 		} // proc RefreshTags
 
@@ -910,7 +906,7 @@ namespace TecWare.PPSn
 	{
 		Task LoadAsync(PpsMasterDataTransaction transaction = null);
 		Task CommitAsync(PpsMasterDataTransaction transaction = null);
-		Task PushAsync(PpsMasterDataTransaction transaction = null);
+		Task PushAsync(PpsMasterDataTransaction transaction, Stream dst);
 		Task UnloadAsync(PpsMasterDataTransaction transaction = null);
 
 		bool IsLoaded { get; }
@@ -951,10 +947,12 @@ namespace TecWare.PPSn
 			await baseObj.SaveRawDataAsync(transaction, rawData.Length, MimeTypes.Application.OctetStream, dst => dst.Write(rawData, 0, rawData.Length));
 		} // proc CommitAsync
 
-		public Task PushAsync(PpsMasterDataTransaction transaction = null)
+		public async Task PushAsync(PpsMasterDataTransaction transaction, Stream dst)
 		{
-			throw new NotImplementedException();
-		}
+			if (IsLoaded)
+				await LoadAsync(transaction);
+			await dst.WriteAsync(rawData, 0, rawData.Length);
+		} // func PushAsync
 
 		public Task UnloadAsync(PpsMasterDataTransaction transaction = null)
 		{
@@ -1023,7 +1021,7 @@ namespace TecWare.PPSn
 		{
 			using (var trans = Environment.MasterData.CreateTransaction(transaction))
 			{
-				await baseObj.SaveRawDataAsync(trans, -1, "application/dataset",
+				await baseObj.SaveRawDataAsync(trans, -1, MimeTypes.Text.DataSet,
 					dst =>
 					{
 						var settings = Procs.XmlWriterSettings;
@@ -1043,9 +1041,13 @@ namespace TecWare.PPSn
 			ResetDirty();
 		} // proc CommitAsync
 
-		public Task PushAsync(PpsMasterDataTransaction transaction = null)
+		public async Task PushAsync(PpsMasterDataTransaction transaction, Stream dst)
 		{
-			throw new NotImplementedException();
+			if (IsDirty)
+				await CommitAsync(transaction);
+			
+			using (var xml = XmlWriter.Create(dst, Procs.XmlWriterSettings))
+				Write(xml);
 		} // proc PushAsync
 
 		public Task UnloadAsync(PpsMasterDataTransaction transaction = null)
@@ -1100,13 +1102,15 @@ namespace TecWare.PPSn
 
 		private readonly PpsEnvironment environment;
 		private readonly PpsObjectColumns columns;
-		private readonly long objectId;
+		private long objectId;
 		private readonly object[] staticValues;				// values of the table
 		private readonly object objectLock = new object();
 		
 		private IPpsObjectData data = null;					// access to the object data
 		private readonly PpsObjectTags tags;				// list with assigned tags
-		private readonly PpsObjectLinks links;				// linked objects
+		private readonly PpsObjectLinks links;              // linked objects
+
+		private bool isChanged = false;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -1136,7 +1140,38 @@ namespace TecWare.PPSn
 			// check for tags
 			if (r.FieldCount >= StaticColumns.Length && !r.IsDBNull(StaticColumns.Length))
 				tags.RefreshTagsFromString(r.GetString(StaticColumns.Length));
+
+			isChanged = false;
 		} // proc ReadObjectInfo
+
+		internal void ReadObjectInfo(IPropertyReadOnlyDictionary properties)
+		{
+			if (properties.TryGetProperty<Guid>(nameof(Guid), out var guid))
+				SetValue((int)PpsStaticObjectColumnIndex.Guid, guid);
+			if (properties.TryGetProperty<string>(nameof(Typ), out var typ))
+				SetValue((int)PpsStaticObjectColumnIndex.Typ, typ);
+			if (properties.TryGetProperty<string>(nameof(Nr), out var nr))
+				SetValue((int)PpsStaticObjectColumnIndex.Nr, nr);
+			if (properties.TryGetProperty<string>(nameof(MimeType), out var mimeType))
+				SetValue((int)PpsStaticObjectColumnIndex.MimeType, mimeType);
+			if (properties.TryGetProperty<bool>(nameof(IsRev), out var isRev))
+				SetValue((int)PpsStaticObjectColumnIndex.IsRev, isRev);
+			if (properties.TryGetProperty<long>("HeadRevId", out var headRevId))
+				SetValue((int)PpsStaticObjectColumnIndex.RemoteHeadRevId, headRevId);
+			if (properties.TryGetProperty<long>("CurRevId", out var curRevId))
+				SetValue((int)PpsStaticObjectColumnIndex.RemoteCurRevId, curRevId);
+		} // func ReadObject
+
+		private void ReadObjectFromXml(XElement x)
+		{
+			// update object data
+			ReadObjectInfo(new XAttributesPropertyDictionary(x));
+			
+			// links
+
+			// tags
+
+		} // UpdateObjectFromXml
 
 		/// <summary>Refresh of the object data.</summary>
 		/// <param name="transaction">Optional parent transaction.</param>
@@ -1168,16 +1203,47 @@ namespace TecWare.PPSn
 		#endregion
 
 		#region -- Pull, Push -------------------------------------------------------------
-		
+
+		private void GetObjectUri(out LuaTable objectInfo, out object objectUri)
+		{
+			objectInfo = Environment.GetObjectInfo(Typ);
+			objectUri = objectInfo?.GetMemberValue("objectUri") ?? Typ;
+		} // proc GetObjectUri
+
 		private PpsProxyRequest PullDataRequest(long revisionId)
 		{
-			var objectInfo = Environment.GetObjectInfo(Typ);
-			var objectUri = objectInfo?.GetMemberValue("objectUri") ?? Typ;
+			GetObjectUri(out var objectInfo, out var objectUri);
+
 			var acceptedMimeType = objectInfo?.GetMemberValue("acceptedMimeType") as string;
-			 
+
 			// create a proxy request, and enqueue it with high priority
 			return Environment.GetProxyRequest($"{objectUri}/?action=pull&id={objectId}&rev={revisionId}");
 		} // proc PullDataAsync
+
+		private PpsProxyRequest PushDataRequest()
+		{
+			GetObjectUri(out var objectInfo, out var objectUri);
+			var request = Environment.GetProxyRequest($"{objectUri}/?action=push");
+			request.Method = HttpMethod.Put.Method;
+			return request;
+		} //func PushDataRequest
+
+		private void UpdateObjectId(PpsMasterDataTransaction trans, long newObjectId)
+		{
+			if (newObjectId < 0)
+				throw new ArgumentOutOfRangeException(nameof(objectId), newObjectId, "New object Id is invalid.");
+			else if (objectId > 0 && objectId != newObjectId)
+				throw new ArgumentOutOfRangeException(nameof(Id), newObjectId, "Object id is different.");
+
+			using (var cmd = trans.CreateNativeCommand("UPDATE main.[Objects] SET Id = @Id WHERE Id = @OldId"))
+			{
+				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
+				cmd.AddParameter("@OldId", DbType.Int64, objectId);
+				cmd.ExecuteNonQueryEx();
+
+				objectId = newObjectId; // todo: generic transaction will be a good idea
+			}
+		} // proc UpdateObjectId
 
 		private async Task<IPpsProxyTask> EnqueuePull(PpsMasterDataTransaction transaction)
 		{
@@ -1200,7 +1266,22 @@ namespace TecWare.PPSn
 				// create new request
 				request.SetUpdateOfflineCache(c =>
 				{
-					SetValue((int)PpsStaticObjectColumnIndex.PulledRevId, pulledRevId);
+					// first read the object header
+					var headerLength = c.GetProperty("ppsn-header-length", -1L);
+					if (headerLength < 10)
+						throw new ArgumentOutOfRangeException("ppsn-header-length", headerLength, "Header is missing.");
+
+					using (var headerData = new WindowStream(c.Content, 0, headerLength, false, true))
+					using (var xmlHeader = XmlReader.Create(headerData, Procs.XmlReaderSettings))
+					{
+						var xObject = XElement.Load(xmlHeader);
+						ReadObjectFromXml(xObject);
+
+						// persist current object state
+						UpdateLocal(transaction);
+					}
+
+					// update data block
 					SaveRawDataAsync(transaction, c.ContentLength, c.ContentType,
 						dst => c.Content.CopyTo(dst)
 					).Wait();
@@ -1212,27 +1293,89 @@ namespace TecWare.PPSn
 			}
 		} // proc PullDataAsync
 
-		private async Task PullDataAsync(PpsMasterDataTransaction transaction)
+		public async Task PullAsync(PpsMasterDataTransaction transaction, long revId = -1)
 		{
+			if (revId == -1)
+				revId = RemoteHeadRevId;
+
 			using (var r = await (await EnqueuePull(transaction)).ForegroundAsync())
 			{
+				SetValue((int)PpsStaticObjectColumnIndex.PulledRevId, revId);
+
 				// read prev stored data
-				if (data != null && !data.IsLoaded)
+				if (data != null)
 					await data.LoadAsync(transaction);
 			}
 		} // proc PullDataAsync
+
+		public async Task PushAsync(PpsMasterDataTransaction transaction = null)
+		{
+			XElement xAnswer;
+			using (var trans = Environment.MasterData.CreateTransaction(transaction))
+			{
+				var request = PushDataRequest();
+
+				Monitor.Enter(objectLock);
+				try
+				{
+					// first build object data
+					var headerData = Encoding.Unicode.GetBytes(ToXml().ToString(SaveOptions.DisableFormatting));
+					request.Headers["ppsn-header-length"] = headerData.Length.ChangeType<string>();
+
+					// write data
+					using (var dst = request.GetRequestStream())
+					{
+						// write object structure
+						dst.Write(headerData, 0, headerData.Length);
+
+						// write the content
+						await data.PushAsync(trans, dst);
+					}
+				}
+				finally
+				{
+					Monitor.Exit(objectLock);
+				}
+
+				// get the result
+				xAnswer = Environment.Request.GetXml(await request.GetResponseAsync());
+				if (xAnswer.Name.LocalName == "push") // something is wrong / pull request.
+				{
+					throw new Exception("todo: exception for UI pull request.");
+				}
+				else if (xAnswer.Name.LocalName == "object")
+				{
+					// update id and basic meta data
+					var newObjectId = xAnswer.GetAttribute<long>(nameof(Id), -1);
+					UpdateObjectId(trans, newObjectId);
+
+					// update meta data
+					ReadObjectFromXml(xAnswer);
+
+					// repull the whole object
+					await PullAsync(trans, RemoteHeadRevId);
+
+					// write local database
+					UpdateLocal(trans);
+
+					trans.Commit();
+				}
+				else
+					throw new ArgumentException("Could not parse push-answer.");
+			}
+		} // proc PushAsync
 
 		public async Task<T> GetDataAsync<T>(PpsMasterDataTransaction transaction, bool asyncPullData = false)
 			where T : IPpsObjectData
 		{
 			if (data == null)
 			{
-				// create the core data object
-				data = await environment.CreateObjectDataObjectAsync<T>(this);
-
 				// update data from server, if not present (pull head)
 				if (objectId >= 0 && !HasData)
-					await PullDataAsync(transaction);
+					await PullAsync(transaction);
+
+				// create the core data object
+				data = await environment.CreateObjectDataObjectAsync<T>(this);
 			}
 			return (T)data;
 		} // func GetDataAsync
@@ -1251,7 +1394,7 @@ namespace TecWare.PPSn
 						var data = new byte[r.GetInt64(2)];
 						r.GetBytes(0, 0, data, 0, data.Length);
 
-						if (!r.IsDBNull(1) && r.GetBoolean(1)) // linked document
+						if (!r.IsDBNull(1) && r.GetValue(1).ChangeType<bool>()) // linked document
 						{
 							var path = Encoding.Unicode.GetString(data);
 							return new FileStream(environment.MasterData.GetLocalPath(path), FileMode.Open);
@@ -1283,16 +1426,25 @@ namespace TecWare.PPSn
 			// store the value
 			using (var trans = environment.MasterData.CreateTransaction(transaction))
 			using (var cmd = trans.CreateNativeCommand("UPDATE main.Objects " +
-				"SET PulledRevId = IFNULL(@PulledRevId, PulledRevId), Nr = IFNULL(@Nr, Nr), Document = @Document, DocumentIsLinked = 0, DocumentIsChanged = @DocumentIsChanged " +
+				"SET " +
+					"PulledRevId = IFNULL(@PulledRevId, PulledRevId), " +
+					"MimeType = @MimeType," +
+					"Document = @Document, " +
+					"DocumentIsLinked = 0, " +
+					"DocumentIsChanged = @DocumentIsChanged, " +
+					"_IsUpdated = 1 " +
 				"WHERE Id = @Id"))
 			{
 				cmd.AddParameter("@Id", DbType.Int64, objectId);
 				cmd.AddParameter("@PulledRevId", DbType.Int64, bData == null ? DBNull.Value : PulledRevId.DbNullIf(StuffDB.DbNullOnNeg));
-				cmd.AddParameter("@Nr", DbType.String, Nr.DbNullIfString());
+				cmd.AddParameter("@MimeType", DbType.String, mimeType.DbNullIfString());
 				cmd.AddParameter("@Document", DbType.Binary, bData == null ? (object)DBNull.Value : bData);
-				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, bData == null ? false : IsDocumentChanged);
-
+				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, bData == null ? false : true);
+				
 				await cmd.ExecuteNonQueryAsync();
+				SetValue((int)PpsStaticObjectColumnIndex.HasData, true);
+
+				trans.Commit();
 			}
 		} // proc SaveRawDataAsync
 
@@ -1300,6 +1452,56 @@ namespace TecWare.PPSn
 			=> $"Object: {Typ}; {objectId} # {Guid}:{PulledRevId}";
 
 		#endregion
+		
+		private XElement ToXml()
+		{
+			var xObj = new XElement("object");
+			xObj.Add(
+				Procs.XAttributeCreate("Id", objectId, -1L),
+				Procs.XAttributeCreate("Guid", Guid, Guid.Empty),
+				Procs.XAttributeCreate("Typ", Typ, null),
+				Procs.XAttributeCreate("MimeType", MimeType),
+				Procs.XAttributeCreate("Nr", Nr)
+			);
+
+			// todo: add links
+
+			return xObj;
+		} // proc ToXml
+
+		public void UpdateLocal(PpsMasterDataTransaction transaction)
+		{
+
+			using (var cmd = transaction.CreateNativeCommand(
+				"UPDATE main.[Objects] SET " +
+						"Guid = @Guid," +
+						"Typ = @Typ," +
+						"Nr = @Nr," +
+						"MimeType = @MimeType," +
+						"RemoteCurRevId = @CurRevId," +
+						"RemoteHeadRevId = @HeadRevId," +
+						"PulledRevId = @PulledRevId " +
+					"WHERE Id = @Id"))
+			{
+				cmd.AddParameter("@Id", DbType.Int64, objectId);
+				cmd.AddParameter("@Guid", DbType.Guid, Guid);
+				cmd.AddParameter("@Typ", DbType.String, Typ.DbNullIfString());
+				cmd.AddParameter("@Nr", DbType.String, Nr.DbNullIfString());
+				cmd.AddParameter("@MimeType", DbType.String, MimeType.DbNullIfString());
+				cmd.AddParameter("@IsRev", DbType.Boolean, IsRev);
+				cmd.AddParameter("@CurRevId", DbType.Int64, RemoteCurRevId.DbNullIf(-1L));
+				cmd.AddParameter("@HeadRevId", DbType.Int64, RemoteHeadRevId.DbNullIf(-1L));
+				cmd.AddParameter("@PulledRevId", DbType.Int64, PulledRevId.DbNullIf(-1L));
+
+				cmd.ExecuteNonQueryEx();
+			}
+
+			// links
+
+			// tags
+
+			isChanged = false;
+		} // proc UpdateLocal
 
 		#region -- Properties -------------------------------------------------------------
 
@@ -1313,6 +1515,7 @@ namespace TecWare.PPSn
 		{
 			if (!Object.Equals(staticValues[index], newValue))
 			{
+				isChanged = true;
 				staticValues[index] = newValue;
 				OnPropertyChanged(staticColumns[index].Name);
 			}
@@ -1414,7 +1617,7 @@ namespace TecWare.PPSn
 		public override bool IsDataOwner => true;
 
 		public long Id => objectId;
-		public Guid Guid => GetValue((int)PpsStaticObjectColumnIndex.Guid, System.Guid.Empty);
+		public Guid Guid => GetValue((int)PpsStaticObjectColumnIndex.Guid, Guid.Empty);
 		public string Typ => GetValue((int)PpsStaticObjectColumnIndex.Typ, String.Empty);
 		public string MimeType => GetValue((int)PpsStaticObjectColumnIndex.MimeType, String.Empty);
 		public string Nr => GetValue((int)PpsStaticObjectColumnIndex.Nr, String.Empty);
@@ -1427,6 +1630,8 @@ namespace TecWare.PPSn
 
 		public PpsObjectLinks Links => links.RefreshLazy();
 		public PpsObjectTags Tags => tags;
+
+		public bool IsChanged => isChanged;
 
 		internal object SyncRoot => objectLock;
 
@@ -2002,7 +2207,9 @@ order by t_liefnr.value desc
 		public PpsObject CreateNewObject(PpsMasterDataTransaction transaction, Guid guid, string typ, string nr, bool isRev)
 		{
 			using (var trans = MasterData.CreateTransaction(transaction))
-			using (var cmd = trans.CreateNativeCommand("INSERT INTO main.Objects (Id, Guid, Typ, Nr, IsHidden, IsRev) VALUES (@Id, @Guid, @Typ, @Nr, 0, @IsRev)"))
+			using (var cmd = trans.CreateNativeCommand(
+				"INSERT INTO main.Objects (Id, Guid, Typ, Nr, IsHidden, IsRev, _IsUpdated) " +
+				"VALUES (@Id, @Guid, @Typ, @Nr, 0, @IsRev, 1)"))
 			{
 				var newObjectId = trans.GetNextLocalId(transaction, "Objects", "Id");
 				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
@@ -2010,13 +2217,23 @@ order by t_liefnr.value desc
 				cmd.AddParameter("@Typ", DbType.String, typ.DbNullIfString());
 				cmd.AddParameter("@Nr", DbType.String, nr.DbNullIfString());
 				cmd.AddParameter("@IsRev", DbType.Boolean, isRev);
-
+				
 				cmd.ExecuteNonQueryEx();
 				trans.Commit();
 
 				return GetObject(newObjectId, transaction);
 			}
 		} // func CreateNewObject
+
+		private void RefreshCachedObject(long id, IPropertyReadOnlyDictionary properties)
+		{
+			lock (objectStoreLock)
+			{
+				var o = GetCachedObject(objectStoreById, id);
+				if (o != null)
+					o.ReadObjectInfo(properties);
+			}
+		} // proc RefreshCachedObject
 
 		internal async Task<T> CreateObjectDataObjectAsync<T>(PpsObject obj)
 			where T : IPpsObjectData
