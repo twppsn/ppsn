@@ -19,4 +19,4 @@ AS
 			--LEFT OUTER JOIN dbo.ObjT t on (t.ObjKId = o.Id and t.ObjRId is null)
 			--LEFT OUTER JOIN dbo.ObjL ll on (ll.ParentObjKId = o.Id and ll.ParentObjRId is null)
 			--LEFT OUTER JOIN dbo.ObjL lr on (lr.ParentObjKId = o.Id and lr.ParentObjRId is null)
-		GROUP BY o.Id, o.Guid, o.Typ, o.Nr, o.IsRev
+		--GROUP BY o.Id, o.Guid, o.Typ, o.Nr, o.IsRev
