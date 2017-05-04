@@ -31,6 +31,134 @@ using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn
 {
+	#region -- enum HashStreamDirection --------------------------------------------------
+
+	public enum HashStreamDirection
+	{
+		Read,
+		Write
+	} // enum HashStreamDirection
+
+	#endregion
+
+	#region -- class HashStream ----------------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class HashStream : Stream
+	{
+		private readonly Stream baseStream;
+		private readonly bool leaveOpen;
+
+		private readonly HashStreamDirection direction;
+		private readonly HashAlgorithm hashAlgorithm;
+		private bool isFinished = false;
+
+		public HashStream(Stream baseStream, HashStreamDirection direction, bool leaveOpen, HashAlgorithm hashAlgorithm)
+		{
+			this.baseStream = baseStream ?? throw new ArgumentNullException(nameof(baseStream));
+			this.leaveOpen = leaveOpen;
+			this.hashAlgorithm = hashAlgorithm ?? throw new ArgumentNullException(nameof(hashAlgorithm));
+			this.direction = direction;
+
+			if (direction == HashStreamDirection.Write && !baseStream.CanWrite)
+				throw new ArgumentException("baseStream is not writeable.");
+			if (direction == HashStreamDirection.Read && !baseStream.CanRead)
+				throw new ArgumentException("baseStream is not readable.");
+		} // ctor
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing && !leaveOpen)
+				baseStream?.Close();
+
+			base.Dispose(disposing);
+		} // proc Dispose
+
+		public override void Flush()
+			=> baseStream.Flush();
+
+		public override int Read(byte[] buffer, int offset, int count)
+		{
+			if (direction != HashStreamDirection.Read)
+				throw new NotSupportedException("The stream is in read mode.");
+			else if (isFinished)
+				throw new InvalidOperationException("Stream is finished.");
+
+			var readed = baseStream.Read(buffer, offset, count);
+			if (readed == 0 || baseStream.CanSeek && baseStream.Position == baseStream.Length)
+			{
+				FinalBlock(buffer, offset, readed);
+				isFinished = true;
+			}
+			else
+				hashAlgorithm.TransformBlock(buffer, offset, readed, buffer, offset);
+
+			return readed;
+		} // func Read
+
+		public override void Write(byte[] buffer, int offset, int count)
+		{
+			if (direction != HashStreamDirection.Write)
+				throw new NotSupportedException("The stream is in write mode.");
+			else if (isFinished)
+				throw new InvalidOperationException("Stream is finished.");
+
+			baseStream.Write(buffer, offset, count);
+
+			if (count == 0)
+				FinalBlock(buffer, offset, count);
+			else
+				hashAlgorithm.TransformBlock(buffer, offset, count, buffer, offset);
+		} // proc Write
+
+		public byte[] CalcHash()
+		{
+			if (!isFinished)
+				FinalBlock(Array.Empty<byte>(), 0, 0);
+
+			return hashAlgorithm.Hash;
+		} // func CalcHash
+
+		private void FinalBlock(byte[] buffer, int offset, int count)
+		{
+			hashAlgorithm.TransformFinalBlock(buffer, offset, count);
+			isFinished = true;
+
+			OnFinished(hashAlgorithm.Hash);
+		} // proc FinalBlock
+
+		protected virtual void OnFinished(byte[] bCheckSum)
+		{
+		} // proc Finished
+
+		public override long Seek(long offset, SeekOrigin origin)
+			=> throw new NotSupportedException();
+
+		public override void SetLength(long value)
+		{
+			if (direction == HashStreamDirection.Write)
+				baseStream.SetLength(value);
+			else
+				throw new NotSupportedException();
+		} // proc SetLength
+
+		public override bool CanRead => direction == HashStreamDirection.Read;
+		public override bool CanWrite => direction == HashStreamDirection.Write;
+		public override bool CanSeek => false;
+		public override long Length { get { return baseStream.Length; } }
+		public override long Position { get { return baseStream.Position; } set { throw new NotSupportedException(); } }
+
+		public Stream BaseStream => baseStream;
+		public HashAlgorithm HashAlgorithm => hashAlgorithm;
+
+		public bool IsFinished => isFinished;
+
+		public byte[] CheckSum => isFinished ? hashAlgorithm.Hash : null;
+	} // class HashStream
+
+	#endregion
+
 	internal static class StuffUI
 	{
 		public static readonly XNamespace PresentationNamespace = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
@@ -238,12 +366,7 @@ namespace TecWare.PPSn
 		} // func GetContentDisposition
 
 		public static DateTime GetLastModified(this WebHeaderCollection headers)
-		{
-			DateTime lastModified;
-			if (!DateTime.TryParse(headers[HttpResponseHeader.LastModified], out lastModified)) // todo: format?
-				lastModified = DateTime.Now;
-			return lastModified;
-		} // func GetLastModified
+			=> DateTime.TryParse(headers[HttpResponseHeader.LastModified], out var lastModified) ? lastModified : DateTime.Now; // todo: format?
 
 		public static DateTime GetLastModified(this WebResponse r)
 			=> GetLastModified(r.Headers);
