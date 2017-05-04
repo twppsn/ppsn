@@ -14,15 +14,13 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Data;
 using System.Data.Common;
-using System.Linq;
+using System.IO;
 using System.Net;
 using System.Net.Mime;
-using System.Text;
-using System.Threading.Tasks;
+using System.Security.Cryptography;
 using System.Web;
 using System.Windows;
 using System.Windows.Markup;
@@ -76,7 +74,7 @@ namespace TecWare.PPSn
 
 			if (frameworkElement is IServiceProvider sp)
 				r = sp.GetService(serviceType);
-			else  if (frameworkElement.GetType().IsAssignableFrom(serviceType))
+			else if (frameworkElement.GetType().IsAssignableFrom(serviceType))
 				r = frameworkElement;
 
 			return GetControlService(frameworkElement.Parent as FrameworkElement, serviceType);
@@ -179,6 +177,29 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class StuffIO ------------------------------------------------------------
+
+	public static class StuffIO
+	{
+		public static string GetFileHash(string filename)
+		{
+			using (FileStream filestream = File.OpenRead(filename))
+			{
+				return GetStreamHash(filestream);
+			}
+		}
+
+		public static string GetStreamHash(Stream stream)
+		{
+			var bstream = new BufferedStream(stream, 1024 * 32); // no using, because we want to keep the stream alive
+			var ret = BitConverter.ToString(new SHA256Managed().ComputeHash(bstream)).Replace("-", String.Empty).ToLower();
+			bstream.Flush();
+			return ret;
+		}
+	}
+
+	#endregion
+
 	#region -- class WebRequestHelper ---------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -191,26 +212,26 @@ namespace TecWare.PPSn
 
 			//if (tmp == null)
 			//{
-				if (createDummy)
-				{
-					var cd = new ContentDisposition();
+			if (createDummy)
+			{
+				var cd = new ContentDisposition();
 
-					// try to get a filename
-					var path = r.ResponseUri.AbsolutePath;
-					var pos = -1;
-					if (!String.IsNullOrEmpty(path))
-						pos = path.LastIndexOf('/', path.Length - 1);
-					if (pos >= 0)
-						cd.FileName = path.Substring(pos + 1);
-					else
-						cd.FileName = path;
-
-					// set the date
-					cd.ModificationDate = GetLastModified(r);
-					return cd;
-				}
+				// try to get a filename
+				var path = r.ResponseUri.AbsolutePath;
+				var pos = -1;
+				if (!String.IsNullOrEmpty(path))
+					pos = path.LastIndexOf('/', path.Length - 1);
+				if (pos >= 0)
+					cd.FileName = path.Substring(pos + 1);
 				else
-					return null;
+					cd.FileName = path;
+
+				// set the date
+				cd.ModificationDate = GetLastModified(r);
+				return cd;
+			}
+			else
+				return null;
 			//}
 			//else
 			//	return new ContentDisposition(tmp);
@@ -234,7 +255,7 @@ namespace TecWare.PPSn
 			=> uri.IsAbsoluteUri
 				? HttpUtility.ParseQueryString(uri.Query)
 				: ParseQuery(uri.OriginalString);
-		
+
 		public static NameValueCollection ParseQuery(string uri)
 		{
 			var pos = uri.IndexOf('?');
