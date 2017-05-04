@@ -227,6 +227,62 @@ namespace TecWare.PPSn
 			}
 		} // proc UpdateLocal
 
+		internal void ReadLinksFromXml(IEnumerable<XElement> xLinks)
+		{
+			lock (parent.SyncRoot)
+			{
+				CheckLinksLoaded();
+
+				var notProcessedLinks = new List<PpsObjectLink>(links);
+
+				// add new links
+				foreach(var x in xLinks)
+				{
+					var objectId = x.GetAttribute("objectId", -1L);
+					var onDelete = ParseObjectLinkRestriction(x.GetAttribute("onDelete", "R"));
+
+					var linkExists =links.Find(c => c.LinkToId == objectId && c.OnDelete == onDelete);
+					if (linkExists == null)
+						links.Add(new PpsObjectLink(parent, null, objectId, null, onDelete));
+					else
+						notProcessedLinks.Remove(linkExists);
+				}
+
+				// remove untouched links
+				foreach (var cur in notProcessedLinks)
+				{
+					links.Remove(cur);
+					if (cur.Id.HasValue)
+						removedLinks.Add(cur);
+				}
+
+				isChanged = true;
+				parent.SetDirty();
+			}
+			OnCollectionReset();
+		} // proc ReadLinksFromXml
+
+		internal void AddToXml(XElement xParent, XName linkElementName)
+		{
+			lock (parent.SyncRoot)
+			{
+				CheckLinksLoaded();
+
+				foreach(var c in links)
+				{
+					if (c.LinkToId < 0)
+						throw new ArgumentException("Only positive object id's can be pushed to the server.");
+
+					xParent.Add(
+						new XElement(linkElementName,
+							new XAttribute("objectId", c.LinkToId),
+							new XAttribute("onDelete", FormatObjectLinkRestriction(c.OnDelete))
+						)
+					);
+				}
+			}
+		} // func AddToXml
+
 		public void AppendLink(PpsObject linkTo, PpsObjectLinkRestriction onDelete)
 		{
 			lock (parent.SyncRoot)
@@ -239,7 +295,7 @@ namespace TecWare.PPSn
 				parent.SetDirty();
 			}
 
-			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+			OnCollectionReset();
 		} // proc AppendLink
 
 		public void RemoveLink(PpsObjectLink link)
@@ -259,8 +315,11 @@ namespace TecWare.PPSn
 				}
 			}
 
-			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+			OnCollectionReset();
 		} // proc RemoveLink
+
+		private void OnCollectionReset() 
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
 		void ICollection.CopyTo(Array array, int index)
 		{
@@ -396,6 +455,7 @@ namespace TecWare.PPSn
 		private long userId;
 
 		private bool isChanged;
+		private bool setToDefault = false;
 		private bool userIsNull = false;
 		private WeakReference<PpsMasterDataRow> userRow = null;
 
@@ -447,6 +507,29 @@ namespace TecWare.PPSn
 			}
 		} // ctor
 
+		public void Reset()
+		{
+			if (id.HasValue)
+			{
+				if (serverValuesLoaded)
+				{
+					localClass = null;
+					localValue = null;
+
+					OnPropertyChanged(nameof(Class));
+					OnPropertyChanged(nameof(Value));
+					OnPropertyChanged(nameof(IsRemoved));
+
+					setToDefault = true;
+				}
+
+				setToDefault = true;
+				SetDirty();
+			}
+			else
+				Remove();
+		} // proc Reset
+		
 		public void Update(PpsObjectTagClass newClass, object newValue)
 		{
 			if (!localClass.HasValue
@@ -514,6 +597,8 @@ namespace TecWare.PPSn
 
 		/// <summary>Is this tag changed.</summary>
 		public bool IsChanged => isChanged;
+
+		internal bool SetToDefault { get => (serverClass.HasValue && !localClass.HasValue) || setToDefault; set => setToDefault = false; }
 	} // class PpsObjectTagView
 
 	#endregion
@@ -662,16 +747,20 @@ namespace TecWare.PPSn
 		{
 			lock (parent.SyncRoot)
 			{
+				var reReadAll = false;
 				if (!isLoaded || !IsChanged)
 					return;
 
 				using (var trans = parent.Environment.MasterData.CreateTransaction())
 				using (var updateCommand = trans.CreateNativeCommand("UPDATE main.[ObjectTags] SET LocalClass = @LClass, LocalValue = @LValue, _IsUpdated = 1 WHERE Id = @Id"))
+				using (var setDefaultCommand = trans.CreateNativeCommand("UPDATE main.[ObjectTags] SET LocalClass = null, LocalValue = @null, _IsUpdated = 0 WHERE Id = @Id"))
 				using (var insertCommand = trans.CreateNativeCommand("INSERT INTO main.[ObjectTags] (Id, ObjectId, Key, LocalClass, LocalValue, UserId, _IsUpdated) VALUES (@Id, @ObjectId, @Key, @LClass, @LValue, @UserId, 1)"))
 				{
 					var updateIdParameter = updateCommand.AddParameter("@Id", DbType.Int64);
 					var updateClassParameter = updateCommand.AddParameter("@LClass", DbType.Int32);
 					var updateValueParameter = updateCommand.AddParameter("@LValue", DbType.String);
+
+					var setDefaultParameter = setDefaultCommand.AddParameter("@Id", DbType.Int64);
 
 					var insertIdParameter = insertCommand.AddParameter("@Id", DbType.Int64);
 					var insertObjectIdParameter = insertCommand.AddParameter("@ObjectId", DbType.Int64);
@@ -686,13 +775,25 @@ namespace TecWare.PPSn
 						{
 							if (cur.Id.HasValue)
 							{
-								updateIdParameter.Value = cur.Id.Value;
-								updateClassParameter.Value = PpsObjectTag.FormatClass(cur.Class);
-								updateValueParameter.Value = cur.Value ?? DBNull.Value;
+								if (cur.SetToDefault)
+								{
+									setDefaultParameter.Value = cur.Id.Value;
+									setDefaultCommand.ExecuteNonQueryEx();
 
-								updateCommand.ExecuteNonQueryEx();
+									cur.SetToDefault = false;
+									trans.AddRollbackOperation(() => cur.SetToDefault = true);
+									reReadAll = true;
+								}
+								else
+								{
+									updateIdParameter.Value = cur.Id.Value;
+									updateClassParameter.Value = PpsObjectTag.FormatClass(cur.Class);
+									updateValueParameter.Value = cur.Value ?? DBNull.Value;
+
+									updateCommand.ExecuteNonQueryEx();
+								}
 							}
-							else
+							else if (!cur.IsRemoved)
 							{
 								insertIdParameter.Value = trans.GetNextLocalId("ObjectTags", "Id");
 								insertObjectIdParameter.Value = parent.Id;
@@ -702,7 +803,6 @@ namespace TecWare.PPSn
 								insertUserIdParameter.Value = cur.UserId;
 
 								insertCommand.ExecuteNonQueryEx();
-
 							}
 							cur.ResetDirty(trans);
 						}
@@ -710,13 +810,66 @@ namespace TecWare.PPSn
 
 					trans.Commit();
 				}
+
+				if (reReadAll)
+					isLoaded = false;
 			}
 		} // proc UpdateLocal
-
-
+		
 		#endregion
 
 		#region -- Tag Manipulation -------------------------------------------------------
+
+		internal void AddToXml(XElement xObj, XName tagElementName)
+		{
+			lock (parent.SyncRoot)
+			{
+				CheckTagsLoaded();
+
+				foreach (var cur in tags)
+				{
+					// only tags from this user, or system tags
+					if (cur.UserId == 0 || cur.UserId == parent.Environment.UserId)
+					{
+						xObj.Add(
+							new XElement(tagElementName,
+								Procs.XAttributeCreate("id", cur.Id, new long?()),
+								new XAttribute("key", cur.Name),
+								new XAttribute("class", PpsObjectTag.FormatClass(cur.Class)),
+								new XAttribute("value", cur.Value),
+								new XAttribute("userId", cur.UserId)
+							)
+						);
+					}
+				}
+			}
+		} // proc AddToXml
+
+		internal void ReadTagsFromXml(IEnumerable<XElement> tagsToRead)
+		{
+			// should processed throw sync?
+			//lock (parent.SyncRoot)
+			//{
+			//	CheckTagsLoaded();
+
+			//	var notProcessedTags = new List<PpsObjectTagView>(tags);
+
+			//	// add the new tags
+			//	foreach(var x in tagsToRead)
+			//	{
+			//		x.GetAttribute("id", -1L);
+			//		x.GetAttribute("key", String.Empty);
+			//		x.GetAttribute("class", "R");
+			//		x.GetAttribute("value", String.Empty);
+			//		x.GetAttribute("userId", -1L);
+			//	}
+
+			//	// remove not processed tags
+
+			//	// reseet tags to default
+
+			//}
+		} // proc ReadTagsFromXml
 
 		public void UpdateTags(long userId, IEnumerable<PpsObjectTag> tagList)
 		{
@@ -1164,8 +1317,10 @@ namespace TecWare.PPSn
 			ReadObjectInfo(new XAttributesPropertyDictionary(x));
 
 			// links
+			links.ReadLinksFromXml(x.Elements("linksTo"));
 
 			// tags
+			tags.ReadTagsFromXml(x.Elements("tags")); // refresh of the pulled system tags, removes current system tags
 
 			ResetDirty(null);
 		} // UpdateObjectFromXml
@@ -1437,7 +1592,11 @@ namespace TecWare.PPSn
 				Procs.XAttributeCreate("Nr", Nr)
 			);
 
-			// todo: add links
+			// add links
+			links.AddToXml(xObj, "linkTo");
+
+			// add system tags
+			tags.AddToXml(xObj, "tags");
 
 			return xObj;
 		} // proc ToXml
