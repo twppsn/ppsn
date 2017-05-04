@@ -139,6 +139,8 @@ namespace TecWare.PPSn.Data
 				=> PropertyDictionaryExtensions.GetProperty<T>(this, key.ToString(), @default);
 
 			public override IReadOnlyDictionary<string, Type> WellknownMetaTypes => wellknownMetaTypes;
+
+			public static PpsDataTableMetaCollection Empty { get; } = new PpsDataTableMetaCollection();
 		} // class PpsDataTableMetaCollection
 
 		#endregion

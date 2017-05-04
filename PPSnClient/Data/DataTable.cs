@@ -37,6 +37,10 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		private sealed class PpsDataTableMetaCollectionClient : PpsDataTableMetaCollection
 		{
+			public PpsDataTableMetaCollectionClient()
+			{
+			} // ctor
+
 			public PpsDataTableMetaCollectionClient(PpsDataTableMetaCollectionClient clone)
 				: base(clone)
 			{
@@ -55,7 +59,7 @@ namespace TecWare.PPSn.Data
 		private PpsDataTableDefinitionClient(PpsDataSetDefinitionClient dataset, PpsDataTableDefinitionClient clone)
 			: base(dataset, clone)
 		{
-			this.metaInfo = new Data.PpsDataTableDefinitionClient.PpsDataTableMetaCollectionClient(clone.metaInfo);
+			this.metaInfo = new PpsDataTableMetaCollectionClient(clone.metaInfo);
 		} // ctor
 
 		public PpsDataTableDefinitionClient(PpsDataSetDefinitionClient dataset, XElement xTable)
@@ -70,6 +74,8 @@ namespace TecWare.PPSn.Data
 				else // todo: warning
 					throw new NotSupportedException($"Not supported element: {c.Name.LocalName}");
 			}
+
+			this.metaInfo = metaInfo ?? new PpsDataTableMetaCollectionClient();
 		} // ctor
 
 		protected override void EndInit()
@@ -83,7 +89,7 @@ namespace TecWare.PPSn.Data
 		public override PpsDataTableDefinition Clone(PpsDataSetDefinition dataset)
 			=> new PpsDataTableDefinitionClient((PpsDataSetDefinitionClient)dataset, this);
 
-		public override PpsDataTableMetaCollection Meta => metaInfo;
+		public override PpsDataTableMetaCollection Meta => metaInfo ?? PpsDataTableMetaCollection.Empty;
 	} // class PpsDataTableDefinitionClient
 
 	#endregion

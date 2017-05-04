@@ -62,18 +62,26 @@ namespace TecWare.PPSn.Data
 
 	#region -- enum PpsObjectTagClass ---------------------------------------------------
 
+	/// <summary>Classification of the tag.</summary>
 	public enum PpsObjectTagClass : int
 	{
+		/// <summary>Marks this tag as deleted.</summary>
 		Deleted = -1,
+		/// <summary>Attribute tag, with text content.</summary>
 		Text = 0,
+		/// <summary>Attribute tag, with alpha-numeric content.</summary>
 		Number = 1,
-		Date = 2
+		/// <summary>Attribute tag, with Date content.</summary>
+		Date = 2,
+		/// <summary>Real tag, no value.</summary>
+		Tag = 3
 	} // enum PpsObjectTagClass
 
 	#endregion
 
 	#region -- class PpsObjectTag -------------------------------------------------------
 
+	/// <summary>Tag that is attached to an object or document</summary>
 	public sealed class PpsObjectTag
 	{
 		private readonly string tagName;
@@ -81,6 +89,11 @@ namespace TecWare.PPSn.Data
 		private readonly PpsObjectTagClass cls;
 		private readonly object value;
 
+		/// <summary></summary>
+		/// <param name="tagName"></param>
+		/// <param name="cls"></param>
+		/// <param name="value"></param>
+		/// <param name="userId"></param>
 		public PpsObjectTag(string tagName, PpsObjectTagClass cls, object value, long userId)
 		{
 			this.tagName = tagName;
@@ -89,25 +102,33 @@ namespace TecWare.PPSn.Data
 			this.userId = userId;
 		} // ctor
 
+		public override string ToString()
+			=> FormatTag(this);
+
 		public bool IsValueEqual(object otherValue)
 			=> Object.Equals(value, Procs.ChangeType(otherValue, GetTypeFromClass(cls)));
 
+		/// <summary>Tag name.</summary>
 		public string Name => tagName;
+		/// <summary>Classification of the tag.</summary>
 		public PpsObjectTagClass Class => cls;
+		/// <summary>The optional value of the tag.</summary>
 		public object Value => value;
+		/// <summary>User that, created the tag. 0 zero is for system generated tag.</summary>
 		public long UserId => userId;
 
 		// -- Static ----------------------------------------------------------------------
 
-		private static Regex regAttributeLine = new Regex(@"(?<n>\w+)(\:(?<c>\d*)(\:(?<u>\d*)(\:(?<u>\d*))?)?)?\=(?<v>.*)", RegexOptions.Singleline);
+		private static Regex regAttributeLine = new Regex(@"(?<n>\w+)(\:(?<c>\d*)(\:(?<u>\d*))?)?\=(?<v>.*)", RegexOptions.Singleline);
 
-		private static PpsObjectTag CreateKeyValue(string attributeLine)
+		public static PpsObjectTag ParseTag(string attributeLine)
 		{
-			//+Key:0:0:0=
+			// name:class:user=value
+			// key:0:23=text
 
 			var m = regAttributeLine.Match(attributeLine);
 			if (!m.Success)
-				throw new FormatException();
+				throw new FormatException("Attribute line does not match format.");
 
 			var classHint = (PpsObjectTagClass)(String.IsNullOrEmpty(m.Groups["c"].Value) ? 0 : Int32.Parse(m.Groups["c"].Value));
 			object value;
@@ -122,31 +143,64 @@ namespace TecWare.PPSn.Data
 			}
 
 			return new PpsObjectTag(m.Groups["n"].Value, classHint, value, String.IsNullOrEmpty(m.Groups["u"].Value) ? -1 : Int64.Parse(m.Groups["u"].Value));
-		} // func CreateKeyValue
+		} // func ParseTag
 
-		[Obsolete("Not implemented yet.")]
-		public static string FormatTagFields(IEnumerable<PpsObjectTag> tags)
+		public static string FormatTag(PpsObjectTag tag)
 		{
-			throw new NotImplementedException();
-		} // func CreateTagField
+			string GetUserId()
+				=> tag.UserId > 0 ? ":" + tag.UserId.ChangeType<string>() : String.Empty;
 
-		public static IEnumerable<PpsObjectTag> ParseTagFields(string tags)
+			switch (tag.Class)
+			{
+				case PpsObjectTagClass.Deleted:
+					return tag.Name + ":-1" + GetUserId() + "=";
+				case PpsObjectTagClass.Text:
+				case PpsObjectTagClass.Number:
+				case PpsObjectTagClass.Date:
+					return tag.Name + ":" + tag.Class.ToString() + GetUserId() + "=" + (tag.Value == null ? String.Empty : Procs.EscapeSpecialChars(tag.Value.ChangeType<string>()));
+				case PpsObjectTagClass.Tag:
+					return tag.Name + ":3" + GetUserId() + "=";
+				default:
+					throw new ArgumentOutOfRangeException(nameof(PpsObjectTag.Class));
+
+			}
+		} // func FormatTag
+
+		/// <summary>Creates new line seperated string for the object tags.</summary>
+		/// <param name="tags"></param>
+		/// <returns></returns>
+		public static string FormatTags(IEnumerable<PpsObjectTag> tags)
+			=> String.Join("\n", tags.Select(FormatTag));
+
+		/// <summary>Parses a object tag string.</summary>
+		/// <param name="tags"></param>
+		/// <returns></returns>
+		public static IEnumerable<PpsObjectTag> ParseTags(string tags)
 		{
 			if (String.IsNullOrEmpty(tags))
 				return Enumerable.Empty<PpsObjectTag>();
 
 			return tags
 				.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
-				.Select(c => CreateKeyValue(c));
+				.Select(c => ParseTag(c));
 		} // func ParseTagFields
 
+		/// <summary>Gets the best value type, for the given class.</summary>
+		/// <param name="classHint"></param>
+		/// <returns></returns>
 		public static Type GetTypeFromClass(PpsObjectTagClass classHint)
+			=> classHint == PpsObjectTagClass.Date ? typeof(DateTime) : typeof(string);
+
+		public static PpsObjectTagClass ParseClass(int value)
 		{
-			if (classHint == PpsObjectTagClass.Date)
-				return typeof(DateTime);
-			// todo:
-			return typeof(string);
-		} // func GetTypeFromClass
+			var r = (PpsObjectTagClass)value;
+			if (!Enum.IsDefined(typeof(PpsObjectTagClass), r))
+				throw new ArgumentOutOfRangeException(nameof(value), value, "Invalid value.");
+			return r;
+		} // func ParseClass
+
+		public static int FormatClass(PpsObjectTagClass cls)
+			=> (int)cls;
 	} // class PpsObjectTag
 
 	#endregion
@@ -909,8 +963,7 @@ namespace TecWare.PPSn.Data
 
 			public override void InvokeEvent()
 				=> dataset.OnDataChanged();
-
-
+			
 			public override bool Same(PpsDataChangedEvent ev)
 				=> true;
 
