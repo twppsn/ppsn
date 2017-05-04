@@ -165,14 +165,14 @@ namespace TecWare.PPSn
 			parent.SetDirty();
 		} // proc RefreshLinks
 
-		internal void UpdateLocal(PpsMasterDataTransaction transaction)
+		internal void UpdateLocal()
 		{
 			lock (parent.SyncRoot)
 			{
 				if (!isLoaded || !isChanged)
 					return;
 
-				using (var trans = parent.Environment.MasterData.CreateTransaction(transaction))
+				using (var trans = parent.Environment.MasterData.CreateTransaction())
 				{
 					using (var insertCommand = trans.CreateNativeCommand("INSERT INTO main.[ObjectLinks] (ParentObjectId, LinkObjectId, LinkObjectDataId, OnDelete) " +
 						"VALUES (@Id, @ParentObjectId, @LinkObjectId, @LinkObjectDataId, @OnDelete)"))
@@ -197,8 +197,7 @@ namespace TecWare.PPSn
 							}
 						}
 					}
-
-
+					
 					if (removedLinks.Count > 0)
 					{
 						var removedLinksArray = removedLinks.ToArray();
@@ -221,6 +220,8 @@ namespace TecWare.PPSn
 							isChanged = false;
 						});
 					}
+
+					trans.Commit();
 				}
 				isChanged = false;
 			}
@@ -479,10 +480,11 @@ namespace TecWare.PPSn
 			}
 		} // proc SetDirty
 
-		internal void ResetDirty()
+		internal void ResetDirty(PpsMasterDataTransaction transaction)
 		{
 			if (isChanged)
 			{
+				transaction?.AddRollbackOperation(SetDirty);
 				isChanged = false;
 				OnPropertyChanged(nameof(IsChanged));
 			}
@@ -535,14 +537,14 @@ namespace TecWare.PPSn
 
 		#region -- Refresh ----------------------------------------------------------------
 		
-		private void CheckTagsLoaded(PpsMasterDataTransaction transaction)
+		private void CheckTagsLoaded()
 		{
 			lock (parent.SyncRoot)
 			{
 				if (isLoaded)
 					return;
 
-				RefreshTags(transaction);
+				RefreshTags();
 			}
 		} // proc CheckTagsLoaded
 		
@@ -603,14 +605,14 @@ namespace TecWare.PPSn
 			OnCollectionReset();
 		} // proc RefreshTags
 
-		private void RefreshTags(PpsMasterDataTransaction transaction)
+		private void RefreshTags()
 		{
 			lock (parent.SyncRoot)
 			{
 				// clear current state
 				tags.Clear();
 
-				using (var trans = parent.Environment.MasterData.CreateTransaction(transaction))
+				using (var trans = parent.Environment.MasterData.CreateTransaction())
 				{
 					// refresh first all user generated tags
 					using (var selectCommand = trans.CreateNativeCommand("SELECT [Id], [Key], [Class], [Value], [LocalClass], [LocalValue], [UserId] FROM main.[ObjectTags] WHERE ObjectId = @Id"))
@@ -656,14 +658,14 @@ namespace TecWare.PPSn
 
 		#region -- UpdateLocal ------------------------------------------------------------
 
-		internal void UpdateLocal(PpsMasterDataTransaction transaction)
+		internal void UpdateLocal()
 		{
 			lock (parent.SyncRoot)
 			{
 				if (!isLoaded || !IsChanged)
 					return;
 
-				using (var trans = parent.Environment.MasterData.CreateTransaction(transaction))
+				using (var trans = parent.Environment.MasterData.CreateTransaction())
 				using (var updateCommand = trans.CreateNativeCommand("UPDATE main.[ObjectTags] SET LocalClass = @LClass, LocalValue = @LValue, _IsUpdated = 1 WHERE Id = @Id"))
 				using (var insertCommand = trans.CreateNativeCommand("INSERT INTO main.[ObjectTags] (Id, ObjectId, Key, LocalClass, LocalValue, UserId, _IsUpdated) VALUES (@Id, @ObjectId, @Key, @LClass, @LValue, @UserId, 1)"))
 				{
@@ -702,9 +704,11 @@ namespace TecWare.PPSn
 								insertCommand.ExecuteNonQueryEx();
 
 							}
-							cur.ResetDirty();
+							cur.ResetDirty(trans);
 						}
 					}
+
+					trans.Commit();
 				}
 			}
 		} // proc UpdateLocal
@@ -725,7 +729,7 @@ namespace TecWare.PPSn
 		{
 			lock (parent.SyncRoot)
 			{
-				CheckTagsLoaded(null);
+				CheckTagsLoaded();
 
 				var idx = IndexOf(key, userId);
 				if (idx == -1)
@@ -773,7 +777,7 @@ namespace TecWare.PPSn
 		{
 			lock (parent.SyncRoot)
 			{
-				CheckTagsLoaded(null);
+				CheckTagsLoaded();
 				return tags.FindIndex(c => String.Compare(c.Name, key, StringComparison.CurrentCultureIgnoreCase) == 0);
 			}
 		} // func Contains
@@ -872,10 +876,10 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public interface IPpsObjectData : INotifyPropertyChanged
 	{
-		Task LoadAsync(PpsMasterDataTransaction transaction = null);
-		Task CommitAsync(PpsMasterDataTransaction transaction = null);
-		Task PushAsync(PpsMasterDataTransaction transaction, Stream dst);
-		Task UnloadAsync(PpsMasterDataTransaction transaction = null);
+		Task LoadAsync();
+		Task CommitAsync();
+		Task PushAsync(Stream dst);
+		Task UnloadAsync();
 
 		bool IsLoaded { get; }
 	} // interface IPpsObjectData
@@ -901,19 +905,18 @@ namespace TecWare.PPSn
 		private void OnPropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-		public async Task LoadAsync(PpsMasterDataTransaction transaction = null)
+		public async Task LoadAsync()
 		{
-			using (var src = await baseObj.LoadRawDataAsync(transaction))
+			using (var src = await baseObj.LoadRawDataAsync())
 			{
 				rawData = src.ReadInArray();
 				OnPropertyChanged(nameof(IsLoaded));
 			}
 		} // proc LoadAsync
 
-		public async Task CommitAsync(PpsMasterDataTransaction transaction = null)
+		public async Task CommitAsync()
 		{
 			await baseObj.SaveRawDataAsync(
-				transaction, 
 				rawData.Length, 
 				baseObj.MimeType ?? MimeTypes.Application.OctetStream, 
 				dst => dst.Write(rawData, 0, rawData.Length), 
@@ -921,20 +924,20 @@ namespace TecWare.PPSn
 			);
 		} // proc CommitAsync
 
-		public async Task PushAsync(PpsMasterDataTransaction transaction, Stream dst)
+		public async Task PushAsync(Stream dst)
 		{
 			if (IsLoaded)
-				await LoadAsync(transaction);
+				await LoadAsync();
 			await dst.WriteAsync(rawData, 0, rawData.Length);
 		} // func PushAsync
 
-		public Task UnloadAsync(PpsMasterDataTransaction transaction = null)
+		public Task UnloadAsync()
 		{
 			rawData = null;
 			return Task.CompletedTask;
 		} // func UnloadTask
 
-		public Task ReadFromFile(string filename, PpsMasterDataTransaction transaction = null)
+		public Task ReadFromFileAsync(string filename)
 		{
 			var fileStream = new FileStream(filename, FileMode.Open);
 			rawData = fileStream.ReadInArray();
@@ -976,9 +979,9 @@ namespace TecWare.PPSn
 			await base.OnNewAsync(arguments);
 		} // proc OnNewAsync
 
-		public async Task LoadAsync(PpsMasterDataTransaction transaction = null)
+		public async Task LoadAsync()
 		{
-			using (var src = await baseObj.LoadRawDataAsync(transaction))
+			using (var src = await baseObj.LoadRawDataAsync())
 			{
 				if (src == null)
 					throw new ArgumentNullException("Data is missing.");
@@ -997,11 +1000,11 @@ namespace TecWare.PPSn
 			}
 		} // proc LoadAsync
 
-		public async Task CommitAsync(PpsMasterDataTransaction transaction = null)
+		public async Task CommitAsync()
 		{
-			using (var trans = Environment.MasterData.CreateTransaction(transaction))
+			using (var trans = Environment.MasterData.CreateTransaction())
 			{
-				await baseObj.SaveRawDataAsync(trans, -1, MimeTypes.Text.DataSet,
+				await baseObj.SaveRawDataAsync(-1, MimeTypes.Text.DataSet,
 					dst =>
 					{
 						var settings = Procs.XmlWriterSettings;
@@ -1012,12 +1015,13 @@ namespace TecWare.PPSn
 					true
 				);
 
-				//		// update tags
-				//		baseObj.Tags.Update(GetAutoTags().ToList(), transaction: transaction.Transaction);
+				// update tags
+				baseObj.Tags.UpdateTags(0, GetAutoTags().ToList());
 
 				// persist the object description
-				baseObj.UpdateLocal(transaction);
+				baseObj.UpdateLocal();
 
+				trans.AddRollbackOperation(SetDirty);
 				trans.Commit();
 			}
 
@@ -1025,16 +1029,16 @@ namespace TecWare.PPSn
 			ResetDirty();
 		} // proc CommitAsync
 
-		public async Task PushAsync(PpsMasterDataTransaction transaction, Stream dst)
+		public async Task PushAsync(Stream dst)
 		{
 			if (IsDirty)
-				await CommitAsync(transaction);
+				await CommitAsync();
 			
 			using (var xml = XmlWriter.Create(dst, Procs.XmlWriterSettings))
 				Write(xml);
 		} // proc PushAsync
 
-		public Task UnloadAsync(PpsMasterDataTransaction transaction = null)
+		public Task UnloadAsync()
 			=> Task.CompletedTask;
 
 		/// <summary>The document it self implements the undo-manager.</summary>
@@ -1242,7 +1246,7 @@ namespace TecWare.PPSn
 						ReadObjectFromXml(XElement.Load(xmlHeader));
 
 					// update data block
-					SaveRawDataAsync(transaction, c.ContentLength - headerLength, MimeType,
+					SaveRawDataAsync(c.ContentLength - headerLength, MimeType,
 						dst => c.Content.CopyTo(dst),
 						false
 					).Wait();
@@ -1250,7 +1254,7 @@ namespace TecWare.PPSn
 					SetValue(PpsStaticObjectColumnIndex.PulledRevId, pulledRevId, true);
 					
 					// persist current object state
-					UpdateLocal(transaction);
+					UpdateLocal();
 
 					return c.Content;
 				});
@@ -1269,14 +1273,14 @@ namespace TecWare.PPSn
 			{
 				// read prev stored data
 				if (data != null)
-					await data.LoadAsync(transaction);
+					await data.LoadAsync();
 			}
 		} // proc PullDataAsync
 
 		public async Task PushAsync(PpsMasterDataTransaction transaction = null)
 		{
 			XElement xAnswer;
-			using (var trans = Environment.MasterData.CreateTransaction(transaction))
+			using (var trans = Environment.MasterData.CreateTransaction())
 			{
 				var request = PushDataRequest();
 
@@ -1294,7 +1298,7 @@ namespace TecWare.PPSn
 						dst.Write(headerData, 0, headerData.Length);
 
 						// write the content
-						await data.PushAsync(trans, dst);
+						await data.PushAsync(dst);
 					}
 				}
 				finally
@@ -1321,7 +1325,7 @@ namespace TecWare.PPSn
 					await PullAsync(trans, RemoteHeadRevId);
 
 					// write local database
-					UpdateLocal(trans);
+					UpdateLocal();
 
 					trans.Commit();
 				}
@@ -1345,9 +1349,9 @@ namespace TecWare.PPSn
 			return (T)data;
 		} // func GetDataAsync
 
-		internal async Task<Stream> LoadRawDataAsync(PpsMasterDataTransaction transaction = null)
+		internal async Task<Stream> LoadRawDataAsync()
 		{
-			using (var trans = environment.MasterData.CreateTransaction(transaction))
+			using (var trans = environment.MasterData.CreateTransaction())
 			using (var cmd = trans.CreateNativeCommand("SELECT Document, DocumentIsLinked, length(Document) FROM main.Objects WHERE Id = @Id"))
 			{
 				cmd.AddParameter("@Id", DbType.Int64, objectId);
@@ -1373,7 +1377,7 @@ namespace TecWare.PPSn
 			}
 		} // func LoadRawDataAsync
 
-		internal async Task SaveRawDataAsync(PpsMasterDataTransaction transaction, long contentLength, string mimeType, Action<Stream> data, bool isDocumentChanged)
+		internal async Task SaveRawDataAsync(long contentLength, string mimeType, Action<Stream> data, bool isDocumentChanged)
 		{
 			byte[] bData = null;
 
@@ -1391,7 +1395,7 @@ namespace TecWare.PPSn
 				isDocumentChanged = false;
 
 			// store the value
-			using (var trans = environment.MasterData.CreateTransaction(transaction))
+			using (var trans = environment.MasterData.CreateTransaction())
 			using (var cmd = trans.CreateNativeCommand("UPDATE main.[Objects] " +
 				"SET " +
 					"MimeType = @MimeType, " +
@@ -1438,40 +1442,43 @@ namespace TecWare.PPSn
 			return xObj;
 		} // proc ToXml
 
-		public void UpdateLocal(PpsMasterDataTransaction transaction)
+		public void UpdateLocal()
 		{
-			using (var cmd = transaction.CreateNativeCommand(
-				"UPDATE main.[Objects] SET " +
-						"Guid = @Guid," +
-						"Typ = @Typ," +
-						"Nr = @Nr," +
-						"MimeType = @MimeType," +
-						"RemoteCurRevId = @CurRevId," +
-						"RemoteHeadRevId = @HeadRevId," +
-						"PulledRevId = @PulledRevId " +
-					"WHERE Id = @Id"))
+			using (var trans = environment.MasterData.CreateTransaction())
 			{
-				cmd.AddParameter("@Id", DbType.Int64, objectId);
-				cmd.AddParameter("@Guid", DbType.Guid, Guid);
-				cmd.AddParameter("@Typ", DbType.String, Typ.DbNullIfString());
-				cmd.AddParameter("@Nr", DbType.String, Nr.DbNullIfString());
-				cmd.AddParameter("@MimeType", DbType.String, MimeType.DbNullIfString());
-				cmd.AddParameter("@IsRev", DbType.Boolean, IsRev);
-				cmd.AddParameter("@CurRevId", DbType.Int64, RemoteCurRevId.DbNullIf(-1L));
-				cmd.AddParameter("@HeadRevId", DbType.Int64, RemoteHeadRevId.DbNullIf(-1L));
-				cmd.AddParameter("@PulledRevId", DbType.Int64, PulledRevId.DbNullIf(-1L));
+				using (var cmd = trans.CreateNativeCommand(
+				  "UPDATE main.[Objects] SET " +
+						  "Guid = @Guid," +
+						  "Typ = @Typ," +
+						  "Nr = @Nr," +
+						  "MimeType = @MimeType," +
+						  "RemoteCurRevId = @CurRevId," +
+						  "RemoteHeadRevId = @HeadRevId," +
+						  "PulledRevId = @PulledRevId " +
+					  "WHERE Id = @Id"))
+				{
+					cmd.AddParameter("@Id", DbType.Int64, objectId);
+					cmd.AddParameter("@Guid", DbType.Guid, Guid);
+					cmd.AddParameter("@Typ", DbType.String, Typ.DbNullIfString());
+					cmd.AddParameter("@Nr", DbType.String, Nr.DbNullIfString());
+					cmd.AddParameter("@MimeType", DbType.String, MimeType.DbNullIfString());
+					cmd.AddParameter("@IsRev", DbType.Boolean, IsRev);
+					cmd.AddParameter("@CurRevId", DbType.Int64, RemoteCurRevId.DbNullIf(-1L));
+					cmd.AddParameter("@HeadRevId", DbType.Int64, RemoteHeadRevId.DbNullIf(-1L));
+					cmd.AddParameter("@PulledRevId", DbType.Int64, PulledRevId.DbNullIf(-1L));
 
-				cmd.ExecuteNonQueryEx();
+					cmd.ExecuteNonQueryEx();
+				}
+
+				// links
+				links.UpdateLocal();
+
+				// tags
+				tags.UpdateLocal();
+
+				// reset the dirty flag
+				ResetDirty(trans);
 			}
-
-			// links
-			links.UpdateLocal(transaction);
-
-			// tags
-			tags.UpdateLocal(transaction);
-
-			// reset the dirty flag
-			ResetDirty(transaction);
 		} // proc UpdateLocal
 
 		#region -- Properties -------------------------------------------------------------
@@ -2204,7 +2211,7 @@ order by t_liefnr.value desc
 		[LuaMember]
 		public PpsObject CreateNewObject(PpsMasterDataTransaction transaction, Guid guid, string typ, string nr, bool isRev)
 		{
-			using (var trans = MasterData.CreateTransaction(transaction))
+			using (var trans = MasterData.CreateTransaction())
 			using (var cmd = trans.CreateNativeCommand(
 				"INSERT INTO main.Objects (Id, Guid, Typ, Nr, IsHidden, IsRev, _IsUpdated) " +
 				"VALUES (@Id, @Guid, @Typ, @Nr, 0, @IsRev, 1)"))
@@ -2290,7 +2297,7 @@ order by t_liefnr.value desc
 		private PpsObject ReadObject(object key, bool useGuid, PpsMasterDataTransaction transaction, bool throwException = false)
 		{
 			// refresh core data
-			using (var trans = MasterData.CreateTransaction(transaction))
+			using (var trans = MasterData.CreateTransaction())
 			using (var cmd = trans.CreateNativeCommand(PpsObject.StaticColumnsSelect + (useGuid ? " WHERE o.Guid = @Guid" : " WHERE o.Id = @Id")))
 			{
 				if (useGuid)

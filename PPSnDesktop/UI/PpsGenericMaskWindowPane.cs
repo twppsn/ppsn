@@ -121,7 +121,7 @@ namespace TecWare.PPSn.UI
 					// call initalization hook
 					if (obj.HasData) // existing data
 					{
-						await data.LoadAsync(transaction);
+						await data.LoadAsync();
 						await data.OnLoadedAsync(arguments);
 					}
 					else // new data

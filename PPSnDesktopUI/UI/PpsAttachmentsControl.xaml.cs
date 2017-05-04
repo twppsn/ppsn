@@ -64,8 +64,8 @@ namespace TecWare.PPSn.UI
 								oinf.Values.Add("Filename", filename);
 								var obj = env.CreateNewObject(trans, oinf);
 
-								((PpsObjectBlobData)((dynamic)obj).Data).ReadFromFile(filename, trans).GetAwaiter().OnCompleted(() =>
-									((PpsObjectBlobData)((dynamic)obj).Data).CommitAsync(trans).GetAwaiter().OnCompleted(() =>
+								((PpsObjectBlobData)((dynamic)obj).Data).ReadFromFileAsync(filename).GetAwaiter().OnCompleted(() =>
+									((PpsObjectBlobData)((dynamic)obj).Data).CommitAsync().GetAwaiter().OnCompleted(() =>
 										{
 											list.Table.Add(obj);
 											trans.Commit();

@@ -68,126 +68,42 @@ namespace TecWare.PPSn
 
 	public abstract class PpsMasterDataTransaction : IDbTransaction, IDisposable
 	{
-		#region -- class PpsMasterNestedTransaction -------------------------------------
-
-		private sealed class PpsMasterNestedTransaction : PpsMasterDataTransaction
-		{
-			private readonly PpsMasterRootTransaction rootTransaction;
-
-			public PpsMasterNestedTransaction(PpsMasterRootTransaction rootTransaction, SQLiteConnection connection, SQLiteTransaction parentTransaction)
-				: base(connection, parentTransaction)
-			{
-				this.rootTransaction = rootTransaction ?? throw new ArgumentNullException(nameof(rootTransaction));
-			} // ctor
-
-			public override void AddRollbackOperation(Action rollback)
-			{
-				if (IsDisposed)
-					throw new ObjectDisposedException(nameof(PpsMasterDataTransaction));
-
-				rootTransaction.AddRollbackOperation(rollback);
-			} // proc AddRollbackOperation
-
-			protected override void CommitCore() { }
-			protected override void RollbackCore() { }
-
-			public PpsMasterRootTransaction RootTransaction => rootTransaction;
-		} // class PpsMasterNestedTransaction
-
-		#endregion
-
-		#region -- class PpsMasterRootTransaction ---------------------------------------
-
-		private sealed class PpsMasterRootTransaction : PpsMasterDataTransaction
-		{
-			private readonly List<Action> rollbackActions = new List<Action>();
-
-			public PpsMasterRootTransaction(SQLiteConnection connection, SQLiteTransaction rootTransaction)
-				: base(connection, rootTransaction)
-			{
-			} // ctor
-
-			protected override void Dispose(bool disposing)
-			{
-				base.Dispose(disposing);
-
-				if (disposing)
-					Transaction.Dispose();
-			} // proc Dispose
-
-			public override void AddRollbackOperation(Action rollback)
-				=> rollbackActions.Add(rollback);
-
-			protected override void CommitCore()
-				=> transaction.Commit();
-
-			protected override void RollbackCore()
-			{
-				transaction.Rollback();
-
-				// run rollback actions
-				foreach (var c in rollbackActions)
-				{
-					try
-					{
-						c();
-					}
-					catch { }
-				}
-			} // proc RollbackCore
-		} // class PpsMasterRootTransaction
-
-		#endregion
-
-		private readonly SQLiteConnection connection;
-		private readonly SQLiteTransaction transaction;
-		private bool? transactionState = null;
-
 		#region -- Ctor/Dtor/Commit/Rollback --------------------------------------------
 
-		protected PpsMasterDataTransaction(SQLiteConnection connection, SQLiteTransaction transaction)
+		protected PpsMasterDataTransaction()
 		{
-			this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
-			this.transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
 		} // ctor
+
+		~PpsMasterDataTransaction()
+		{
+			Dispose(false);
+		} // dtor
 
 		public void Dispose()
 		{
+			GC.SuppressFinalize(this);
 			Dispose(true);
 		} // proc Dispose
 
 		protected virtual void Dispose(bool disposing)
 		{
-			if (!transactionState.HasValue)
-			{
-				if (transaction != null)
-					Rollback();
-				else
-					transactionState = false;
-			}
 		} // proc Dispose
 
 		protected abstract void CommitCore();
 		protected abstract void RollbackCore();
 
 		public void Commit()
-		{
-			CommitCore();
-			transactionState = true;
-		} // proc Commit
+			=> CommitCore();
 
 		public void Rollback()
-		{
-			RollbackCore();
-			transactionState = false;
-		} // proc Rollback
+			=> RollbackCore();
 
 		#endregion
 
 		public abstract void AddRollbackOperation(Action rollback);
 
 		public DbCommand CreateNativeCommand(string commandText = null)
-			=> new SQLiteCommand(commandText, connection, transaction);
+			=> new SQLiteCommand(commandText, ConnectionCore, TransactionCore);
 
 		public long GetNextLocalId(string tableName, string primaryKey)
 		{
@@ -204,21 +120,18 @@ namespace TecWare.PPSn
 			}
 		} // func GetNextLocalId
 
-		public long LastInsertRowId => connection.LastInsertRowId;
+		public long LastInsertRowId => ConnectionCore.LastInsertRowId;
 
-		protected SQLiteTransaction Transaction => transaction;
+		protected abstract SQLiteConnection ConnectionCore { get; }
+		protected abstract SQLiteTransaction TransactionCore { get; }
 
-		IDbConnection IDbTransaction.Connection => connection;
-		public DbConnection Connection => connection;
-		public IsolationLevel IsolationLevel => transaction?.IsolationLevel ?? System.Data.IsolationLevel.Unspecified;
+		IDbConnection IDbTransaction.Connection => ConnectionCore;
 
-		public bool IsDisposed => transactionState.HasValue;
-		public bool IsCommited => transactionState ?? false;
+		public DbConnection Connection => ConnectionCore;
+		public IsolationLevel IsolationLevel => TransactionCore.IsolationLevel;
 
-		internal static PpsMasterDataTransaction Create(SQLiteConnection connection, PpsMasterDataTransaction transaction)
-			=> transaction == null
-				? (PpsMasterDataTransaction)new PpsMasterRootTransaction(connection, connection.BeginTransaction())
-				: (PpsMasterDataTransaction)new PpsMasterNestedTransaction(transaction as PpsMasterRootTransaction ?? ((PpsMasterNestedTransaction)transaction).RootTransaction, connection, transaction.transaction);
+		public abstract bool IsDisposed { get; }
+		public abstract bool IsCommited { get; }
 	} // class PpsMasterTransaction
 
 	#endregion
@@ -353,7 +266,7 @@ namespace TecWare.PPSn
 
 			protected override DbCommand PrepareCommand()
 			{
-				var command = Table.MasterData.CreateNativeCommand(null);
+				var command = Table.MasterData.CreateNativeCommand();
 				try
 				{
 					var commandText = table.PrepareCommandText();
@@ -1383,7 +1296,7 @@ namespace TecWare.PPSn
 				// update header
 				if (updateUserInfo)
 				{
-					using (var trans = CreateTransaction(null))
+					using (var trans = CreateTransaction())
 					using (var cmd = trans.CreateNativeCommand("UPDATE main.[Header] SET [UserId] = @UserId, [UserName] = @UserName"))
 					{
 						cmd.AddParameter("@UserId", DbType.Int64, environment.UserId);
@@ -1766,11 +1679,163 @@ namespace TecWare.PPSn
 
 		#region -- Write Access ---------------------------------------------------------
 
-		public DbCommand CreateNativeCommand(string commandText)
-			=> new SQLiteCommand(commandText, connection, null);
+		#region -- class PpsMasterNestedTransaction -------------------------------------
 
-		public PpsMasterDataTransaction CreateTransaction(PpsMasterDataTransaction transaction = null)
-			=> PpsMasterDataTransaction.Create(connection, transaction);
+		private sealed class PpsMasterNestedTransaction : PpsMasterDataTransaction
+		{
+			private readonly PpsMasterRootTransaction rootTransaction;
+
+			public PpsMasterNestedTransaction(PpsMasterRootTransaction rootTransaction)
+			{
+				this.rootTransaction = rootTransaction ?? throw new ArgumentNullException(nameof(rootTransaction));
+
+				rootTransaction.AddRef();
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				base.Dispose(disposing);
+				rootTransaction.DecRef();
+			} // proc Dispose
+
+			public override void AddRollbackOperation(Action rollback)
+			{
+				if (IsDisposed)
+					throw new ObjectDisposedException(nameof(PpsMasterDataTransaction));
+
+				rootTransaction.AddRollbackOperation(rollback);
+			} // proc AddRollbackOperation
+
+			protected override void CommitCore()
+				=> rootTransaction.SetCommitOnDispose();
+
+			protected override void RollbackCore() { }
+
+			protected override SQLiteConnection ConnectionCore => rootTransaction.SQLiteConnection;
+			protected override SQLiteTransaction TransactionCore => rootTransaction.SQLiteTransaction;
+
+			public override bool IsDisposed => rootTransaction.IsDisposed;
+			public override bool IsCommited => rootTransaction.IsCommited;
+
+			public PpsMasterRootTransaction RootTransaction => rootTransaction;
+		} // class PpsMasterNestedTransaction
+
+		#endregion
+
+		#region -- class PpsMasterRootTransaction ---------------------------------------
+
+		private sealed class PpsMasterRootTransaction : PpsMasterDataTransaction
+		{
+			private readonly PpsMasterData masterData;
+			private readonly SQLiteConnection connection;
+			private readonly SQLiteTransaction transaction;
+
+			private readonly List<Action> rollbackActions = new List<Action>();
+
+			private bool? transactionState = null;
+			private bool commitOnDispose = false;
+
+			private int nestedTransactionCounter = 0;
+
+			public PpsMasterRootTransaction(PpsMasterData masterData, SQLiteConnection connection, SQLiteTransaction transaction)
+			{
+				this.masterData = masterData ?? throw new ArgumentNullException(nameof(masterData));
+				this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
+				this.transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				base.Dispose(disposing);
+
+				if (nestedTransactionCounter > 0)
+					throw new InvalidOperationException("There are still nested transactions.");
+
+				if (!transactionState.HasValue)
+				{
+					if (commitOnDispose)
+						Commit();
+					else
+						Rollback();
+				}
+
+				// dispose transaction
+				if (disposing)
+					transaction.Dispose();
+
+				masterData.ClearTransaction();
+			} // proc Dispose
+
+			public override void AddRollbackOperation(Action rollback)
+				=> rollbackActions.Add(rollback);
+
+			protected override void CommitCore()
+			{
+				transaction.Commit();
+				transactionState = true;
+			} // proc CommitCore
+
+			protected override void RollbackCore()
+			{
+				transaction.Rollback();
+				transactionState = false;
+
+				// run rollback actions
+				foreach (var c in rollbackActions)
+				{
+					try
+					{
+						c();
+					}
+					catch { }
+				}
+			} // proc RollbackCore
+
+			public void SetCommitOnDispose()
+				=> commitOnDispose = true;
+
+			public void AddRef()
+				=> Interlocked.Increment(ref nestedTransactionCounter);
+
+			public void DecRef()
+				=> Interlocked.Decrement(ref nestedTransactionCounter);
+
+			protected override SQLiteConnection ConnectionCore => connection;
+			public SQLiteConnection SQLiteConnection => connection;
+			protected override SQLiteTransaction TransactionCore => transaction;
+			public SQLiteTransaction SQLiteTransaction => transaction;
+
+			public override bool IsDisposed => transactionState.HasValue;
+			public override bool IsCommited => transactionState ?? false;
+		} // class PpsMasterRootTransaction
+
+		#endregion
+
+		private readonly object currentTransactionLock = new object();
+		private PpsMasterRootTransaction currentTransaction;
+
+		public PpsMasterDataTransaction CreateTransaction()
+		{
+			lock (currentTransactionLock)
+			{
+				if (currentTransaction == null)
+				{
+					currentTransaction = new PpsMasterRootTransaction(this, connection, connection.BeginTransaction());
+					return currentTransaction;
+				}
+				else
+					return new PpsMasterNestedTransaction(currentTransaction);
+			}
+		} // func CreateTransaction
+
+		private void ClearTransaction()
+		{
+			lock (currentTransactionLock)
+				currentTransaction = null;
+		} // proc ClearTransaction
+
+		public DbCommand CreateNativeCommand(string commandText = null)
+			=> new SQLiteCommand(commandText, connection, null);
 
 		#endregion
 
