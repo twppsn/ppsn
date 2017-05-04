@@ -92,101 +92,90 @@ namespace TecWare.PPSn.Server
 		#region -- Pull -------------------------------------------------------------------
 
 		[LuaMember("Pull")]
-		public PpsDataSetServer PullDataSet(long? objectId, Guid? guidId, long? revId)
+		private LuaResult LuaPullDataSet(PpsDataTransaction transaction, long? objectId, Guid? guidId, long? revId)
 		{
-			var currentUser = application.CreateSysContext(); // DEContext.GetCurrentUser<IPpsPrivateDataContext>();
+			var r = PullDataSet(transaction, objectId, guidId, revId);
+			return new LuaResult(r.dataset, r.obj);
+		} // func PullDataSet
 
-			// read the raw document
-			XDocument documentData;
-			string documentType;
-			using (var trans = currentUser.CreateTransaction(application.MainDataSource))
-			{
-				var args = new LuaTable();
-				string idText;
-				if (objectId.HasValue)
+		private (PpsDataSetServer dataset, PpsObjectAccess obj) PullDataSet(PpsDataTransaction transaction, long? objectId, Guid? guidId, long? revId)
+		{
+			// get object data
+			var obj = application.Objects.GetObject(transaction,
+				new LuaTable
 				{
-					args["Id"] = objectId.Value;
-					idText = $"{objectId.Value}:";
+						{ nameof(PpsObjectAccess.Id), objectId.HasValue ? (object)objectId.Value : null },
+						{ nameof(PpsObjectAccess.Guid), guidId.HasValue ? (object)guidId.Value : null },
+						{ nameof(PpsObjectAccess.RevId), revId.HasValue ? (object)revId.Value : null },
 				}
-				else if (guidId.HasValue)
-				{
-					args["Guid"] = guidId.Value;
-					idText = $"{guidId.Value:N}:";
-				}
-				else
-					throw new ArgumentNullException("Object Id or Guid is missing.");
+			);
 
-				if (revId.HasValue)
-				{
-					args["RevId"] = revId.Value;
-					idText += revId.Value.ToString();
-				}
-				else
-					idText += "Head";
+			// get the head or given revision
+			// todo: create rev, if not exists
+			var xDocumentData = XDocument.Parse(obj.GetText());
 
-				args = application.Objects.GetObjectRevision(trans, args);
-				if (args == null)
-					throw new ArgumentException($"Object not found ({idText}).");
+			// create the dataset
+			var dataset = (PpsDataSetServer)datasetDefinition.CreateDataSet();
+			dataset.Read(xDocumentData.Root);
 
-				// check the result
-				documentType = args.GetOptionalValue("Typ", String.Empty);
-				documentData = args.CallMember("getText", args).ChangeType<XDocument>();
+			// correct id and revision
+			CheckHeadObjectId(obj, dataset);
 
-				if (documentType != Name)
-					throw new ArgumentException($"Object typ mismatch (expected: {Name}, found: {documentType})");
+			// fire triggers
+			dataset.OnAfterPull();
 
-				// create the dataset
-				var dataset = (PpsDataSetServer)datasetDefinition.CreateDataSet();
-				dataset.Read(documentData.Root);
+			// mark all has orignal
+			dataset.Commit();
 
-				// update data fields
-				var headTable = dataset.Tables["Head"];
-				headTable.First["Id"] = args["Id"];
-				headTable.First["Guid"] = args["Guid"];
-				headTable.First["Typ"] = Name;
-				headTable.First["HeadRevId"] = args["HeadRevId"];
-				headTable.First["CurRevId"] = args["CurRevId"];
-
-				// fire triggers
-				dataset.OnAfterPull();
-
-				// mark all has orignal
-				dataset.Commit();
-
-				return dataset;
-			}
+			return (dataset, obj);
 		} // func PullDataSet
 
 		[
-			DEConfigHttpAction("pull", IsSafeCall = false),
-			Description("Reads the revision from the server.")
+		DEConfigHttpAction("pull", IsSafeCall = false),
+		Description("Reads the revision from the server.")
 		]
 		private void HttpPullAction(IDEContext ctx, long id, long rev = -1)
 		{
+			var currentUser = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
+
 			try
 			{
-				var dataset = PullDataSet(id, null, rev < 0 ? (long?)null : rev);
-
-				// write the content
-				using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
-				using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
+				using (var trans = currentUser.CreateTransaction(application.MainDataSource))
 				{
-					xml.WriteStartDocument();
-					dataset.Write(xml);
-					xml.WriteEndDocument();
+					var (dataset, obj) = PullDataSet(trans, id, null, rev < 0 ? (long?)null : rev);
+
+					// prepare object data
+					var headerBytes = Encoding.Unicode.GetBytes(obj.ToXml().ToString(SaveOptions.DisableFormatting));
+					ctx.OutputHeaders["ppsn-header-length"] = headerBytes.Length.ChangeType<string>();
+
+					// write the content
+					using (var dst = ctx.GetOutputStream(MimeTypes.Application.OctetStream))
+					{
+						dst.Write(headerBytes, 0, headerBytes.Length);
+
+						using (var tw = new StreamWriter(dst, Encoding.Unicode))
+						using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
+						{
+							// write dataset
+							xml.WriteStartDocument();
+							dataset.Write(xml);
+							xml.WriteEndDocument();
+						}
+					}
+
+					trans.Commit();
 				}
 			}
 			catch (Exception e)
 			{
 				ctx.WriteSafeCall(e);
 			}
-
 		} // proc HttpPullAction
 
 		#endregion
 
 		#region -- Push -------------------------------------------------------------------
-		
+
 		private object GetNextNumberMethod()
 		{
 			// test for next number
@@ -203,195 +192,158 @@ namespace TecWare.PPSn.Server
 		} // func GetNextNumberMethod
 
 		[LuaMember("Push")]
-		private LuaResult LuaPushDataSet(PpsDataSetServer dataset)
+		public bool PushDataSet(PpsDataTransaction transaction, PpsObjectAccess obj, PpsDataSetServer dataset)
 		{
-			var r = PushDataSet(dataset);
-			return new LuaResult(r.Item1, r.Item2);
-		} // func LuaPushDataSet
-
-		public Tuple<long, long> PushDataSet(PpsDataSetServer dataset)
-		{
-			var currentUser = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
-
 			// fire triggers
 			dataset.OnBeforePush();
 
 			// move all to original row
 			dataset.Commit();
 
-			// get the arguments
-			var headTable = dataset.Tables["Head", true];
-			var firstRow = headTable.First;
-
-			var objectId = (long)firstRow["Id"];
-			var guidId = (Guid)firstRow["Guid"];
-			var typ = Name;
-			var nr = (string)firstRow["Nr"];
-			var pulledRevId = firstRow.GetProperty("HeadRevId", -1L);
-
-			// persist the data to the database
-			var isNewObject = objectId < 0;
-			using (var trans = currentUser.CreateTransaction(application.MainDataSource))
+			if (obj.IsNew)
 			{
-				// check for conflict
-				if (isNewObject)
-				{
-					// check if the guid already exists
-					var objectInfo = application.Objects.GetObject(trans, Procs.CreateLuaTable(new PropertyValue("Guid", guidId)));
-					if (objectInfo != null)
-						throw new ArgumentException($"Push of a already existing object ({guidId:N}).");
-
-					// get the new objekt id
-					var nextNumber = GetNextNumberMethod();
-					if (nextNumber == null && nr == null) // no next number and no number --> error
-						throw new ArgumentException($"The field 'nr' is null or no nextNumber is given.");
-					else if (Config.GetAttribute("forceNextNumber", false) || nr == null) // force the next number or there is no number
-						nr = application.Objects.GetNextNumber(trans, typ, nextNumber, dataset);
-					else  // check the number format
-						application.Objects.ValidateNumber(nr, nextNumber, dataset);
-					
-					// create the new object in the database
-					objectInfo = application.Objects.Update(trans,
-						Procs.CreateLuaTable(
-							new PropertyValue("Guid", guidId),
-							new PropertyValue("Typ", typ),
-							new PropertyValue("Nr", nr),
-							new PropertyValue("IsRev", true)
-						)
-					);
-
-					// update the objectId to the database id
-					headTable.First["Id"] = objectId = (long)objectInfo["Id"];
-					headTable.First["Nr"] = nr;
-				}
-				else
-				{
-					// check the head revision and the guid, id, typ combination
-					var objectInfo = application.Objects.GetObject(trans, Procs.CreateLuaTable(new PropertyValue("Guid", guidId)));
-					if (objectInfo == null)
-						throw new ArgumentException($"Push of none existing object ({guidId:N}).");
-					
-					if (objectInfo.GetOptionalValue("Guid", Guid.Empty) != guidId)
-						throw new ArgumentException($"Push failed, object guid mismatch (expected: {guidId:N}, found: '{objectInfo.GetOptionalValue("Guid", Guid.Empty):N}')");
-					if (objectInfo.GetOptionalValue("Typ", String.Empty) != typ)
-						throw new ArgumentException($"Push failed, object type mismatch (expected: {typ}, found: '{objectInfo["Typ"]}')");
-
-					var headRevId = objectInfo.GetOptionalValue("HeadRevId", -1L);
-					if (headRevId > pulledRevId)
-						return new Tuple<long, long>(objectId, -1); // head revision is newer than pulled revision -> return this fact
-					else if (headRevId < pulledRevId)
-						throw new ArgumentException($"Push failed. Pulled revision is greater than head revision.");
-				}
-
-				// update all local generated id's to server id's
-				foreach (var dt in dataset.Tables)
-				{
-					if (dt.TableDefinition.PrimaryKey == null)
-						continue;
-
-					var idxPrimaryKey = dt.TableDefinition.PrimaryKey.Index;
-					if (dt.TableDefinition.PrimaryKey.IsIdentity) // auto incr => getnext
-					{
-						var maxKey = 0L;
-
-						// scan for max key
-						foreach (var row in dt)
-						{
-							var t = row[idxPrimaryKey].ChangeType<long>();
-							if (t > maxKey)
-								maxKey = t;
-						}
-
-						// reverse
-						foreach (var row in dt)
-						{
-							if (row[idxPrimaryKey].ChangeType<long>() < 0)
-								row[idxPrimaryKey] = ++maxKey;
-						}
-					}
-					else  // self set => abs(nr)
-					{
-						// absolute
-						foreach (var row in dt)
-						{
-							var t = row[idxPrimaryKey].ChangeType<long>();
-							if (t < 0)
-								row[idxPrimaryKey] = Math.Abs(t);
-						}
-					}
-				}
-
-				// commit all to orignal
-				dataset.Commit();
-
-				// concert data to string
-				var documentRawData = new StringBuilder();
-				using (var xml = XmlWriter.Create(documentRawData, Procs.XmlWriterSettings))
-				{
-					xml.WriteStartDocument();
-					dataset.Write(xml);
-					xml.WriteEndDocument();
-				}
-
-				// create new revision
-				var newRevId = application.Objects.CreateRevision(trans,
-					Procs.CreateLuaTable(
-						new PropertyValue("ObjkId", objectId),
-						new PropertyValue("ParentId", pulledRevId > 0 ? (object)pulledRevId : null),
-						new PropertyValue("Document", documentRawData),
-						new PropertyValue("Tags", dataset.GetAutoTags())
-					)
-				);
-
-				// set the new head revision
-				application.Objects.Update(trans,
-					Procs.CreateLuaTable(
-						new PropertyValue("Id", objectId),
-						new PropertyValue("HeadRevId", newRevId)
-					)
-				);
-
-				// commit sql
-				trans.Commit();
-				return new Tuple<long, long>(objectId, newRevId);
+				// set the object number for new objects
+				var nextNumber = GetNextNumberMethod();
+				if (nextNumber == null && obj.Nr == null) // no next number and no number --> error
+					throw new ArgumentException($"The field 'Nr' is null or no nextNumber is given.");
+				else if (Config.GetAttribute("forceNextNumber", false) || obj.Nr == null) // force the next number or there is no number
+					obj["Nr"] = application.Objects.GetNextNumber(transaction, obj.Typ, nextNumber, dataset);
+				else  // check the number format
+					application.Objects.ValidateNumber(obj.Nr, nextNumber, dataset);
 			}
+			else
+			{
+				var headRevId = obj.HeadRevId;
+				if (headRevId > obj.RevId)
+					return false; // head revision is newer than pulled revision -> return this fact
+				else if (headRevId < obj.RevId)
+					throw new ArgumentException($"Push failed. Pulled revision is greater than head revision.");
+			}
+
+			// update head id
+			CheckHeadObjectId(obj, dataset);
+
+			// update all local generated id's to server id's
+			foreach (var dt in dataset.Tables)
+			{
+				if (dt.TableDefinition.PrimaryKey == null)
+					continue;
+
+				var idxPrimaryKey = dt.TableDefinition.PrimaryKey.Index;
+				if (dt.TableDefinition.PrimaryKey.IsIdentity) // auto incr => getnext
+				{
+					var maxKey = 0L;
+
+					// scan for max key
+					foreach (var row in dt)
+					{
+						var t = row[idxPrimaryKey].ChangeType<long>();
+						if (t > maxKey)
+							maxKey = t;
+					}
+
+					// reverse
+					foreach (var row in dt)
+					{
+						if (row[idxPrimaryKey].ChangeType<long>() < 0)
+							row[idxPrimaryKey] = ++maxKey;
+					}
+				}
+				else  // self set => abs(nr)
+				{
+					// absolute
+					foreach (var row in dt)
+					{
+						var t = row[idxPrimaryKey].ChangeType<long>();
+						if (t < 0)
+							row[idxPrimaryKey] = Math.Abs(t);
+					}
+				}
+			}
+
+			// commit all to orignal
+			dataset.Commit();
+
+			// create obj data
+			if (obj.IsNew)
+				obj.Update(true);
+
+			// create rev data
+			obj.UpdateData(
+				new Action<Stream>(dst =>
+				{
+					using (var xml = XmlWriter.Create(dst, Procs.XmlWriterSettings))
+					{
+						xml.WriteStartDocument();
+						dataset.Write(xml);
+						xml.WriteEndDocument();
+					}
+				})
+			);
+
+			// update
+			obj.Update();
+
+			return true;
 		} // proc PushDataSet
 
 		[
-			DEConfigHttpAction("push", IsSafeCall = false),
-			Description("Writes a new revision to the object store.")
+		DEConfigHttpAction("push", IsSafeCall = false),
+		Description("Writes a new revision to the object store.")
 		]
 		private void HttpPushAction(IDEContext ctx)
 		{
-			XDocument xDoc;
+			var currentUser = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
 
 			try
 			{
+				// read header length
+				var headerLength = ctx.GetProperty("ppsn-header-length", -1L);
+				if (headerLength > 10 << 20 || headerLength < 10) // ignore greater than 10mb or smaller 10bytes (<object/>)
+					throw new ArgumentOutOfRangeException("header-length");
+
+				var src = ctx.GetInputStream();
+
+				// parse the object body
+				XElement xObject;
+				using (var headerStream = new WindowStream(src, 0, headerLength, false, true))
+				using (var xmlHeader = XmlReader.Create(headerStream, Procs.XmlReaderSettings))
+					xObject = XElement.Load(xmlHeader);
+
 				// read the data
-				using (var xml = XmlReader.Create(ctx.GetInputTextReader(), Procs.XmlReaderSettings))
-					xDoc = XDocument.Load(xml);
-
-				// create the the dataset
-				var dataset = (PpsDataSetServer)datasetDefinition.CreateDataSet();
-				dataset.Read(xDoc.Root);
-
-				// push data to object store
-				var newId = PushDataSet(dataset);
-
-				// notify client
-				if (newId.Item2 == -1) // head is ahead
+				using (var transaction = currentUser.CreateTransaction(application.MainDataSource))
 				{
-					ctx.WriteSafeCall(new XElement("return",
-						new XAttribute("id", newId.Item1),
-						new XAttribute("pullRequest", true)
-					));
-				}
-				else
-				{
-					ctx.WriteSafeCall(new XElement("return",
-						new XAttribute("id", newId.Item1),
-						new XAttribute("revId", newId.Item2)
-					));
+					// first the get the object data
+					var obj = application.Objects.ObjectFromXml(transaction, xObject);
+
+					// create and load the dataset
+					var dataset = (PpsDataSetServer)datasetDefinition.CreateDataSet();
+					using (var xml = XmlReader.Create(src, Procs.XmlReaderSettings))
+						dataset.Read(XDocument.Load(xml).Root);
+
+					// set IsRev
+					if (obj.IsNew)
+						obj.IsRev = datasetDefinition.Meta.GetProperty("IsRev", false);
+
+					// push dataset in the database
+					if (PushDataSet(transaction, obj, dataset))
+					{
+						// write the object definition to client
+						using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
+						using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
+							obj.ToXml(true).WriteTo(xml);
+					}
+					else
+					{
+						ctx.WriteSafeCall(
+							new XElement("push",
+								new XAttribute("headRevId", obj.HeadRevId),
+								new XAttribute("pullRequest", Boolean.TrueString)
+							)
+						);
+					}
+
+					transaction.Commit();
 				}
 			}
 			catch (HttpResponseException)
@@ -463,6 +415,24 @@ namespace TecWare.PPSn.Server
 
 		[LuaMember(nameof(DataSetDefinition))]
 		public PpsDataSetServerDefinition DataSetDefinition => datasetDefinition;
+
+		private static void CheckHeadObjectId(PpsObjectAccess obj, PpsDataSetServer dataset)
+		{
+			var headTable = dataset.Tables["Head"];
+			if (headTable != null)
+			{
+				var firstRow = headTable.First;
+				if (firstRow != null)
+				{
+					var columnId = headTable.Columns.FirstOrDefault(c => String.Compare(c.Name, "Id", StringComparison.OrdinalIgnoreCase) == 0);
+					var columnRevId = headTable.Columns.FirstOrDefault(c => String.Compare(c.Name, "RevId", StringComparison.OrdinalIgnoreCase) == 0);
+					if (columnId != null)
+						firstRow[columnId.Index] = obj.Id;
+					if (columnRevId != null)
+						firstRow[columnRevId.Index] = obj.RevId;
+				}
+			}
+		} // proc CheckHeadObjectId
 	} // class PpsDocument
 
 	#endregion

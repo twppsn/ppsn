@@ -19,6 +19,476 @@ using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server
 {
+	#region -- class PpsObjectLinkAccess ------------------------------------------------
+
+	public sealed class PpsObjectLinkAccess
+	{
+		private readonly long id;
+		private readonly long objectId;
+		private readonly long revId;
+
+		private bool isRemoved = false;
+
+		internal PpsObjectLinkAccess(long id, long objectId, long revId)
+		{
+			this.id = id;
+			this.objectId = objectId;
+			this.revId = revId;
+		}
+
+		internal PpsObjectLinkAccess(IDataRow row)
+		{
+		} // ctor
+
+		public void Remove()
+		{
+		} // proc Remove
+
+		public XElement ToXml(string elementName) 
+			=> null;
+
+		public long Id => id;
+		public long ObjectId => objectId;
+		public long RevId => revId;
+
+		public bool IsNew => id < 0;
+		public bool IsRemoved => isRemoved;
+	} // class PpsObjectLinkAccess
+
+	#endregion
+
+	#region -- class PpsObjectAccess ----------------------------------------------------
+
+	/// <summary>This class defines a interface to access pps-object model. Some properties are late bound. So, wait for closing the transaction.</summary>
+	public sealed class PpsObjectAccess : LuaTable
+	{
+		private readonly PpsDataTransaction transaction;
+		private readonly IPropertyReadOnlyDictionary defaultData;
+		private long objectId;
+
+		private bool? isRev;
+		private long revId;
+
+		private List<PpsObjectLinkAccess> linksTo = null;
+		private List<PpsObjectLinkAccess> linksFrom = null;
+
+		internal PpsObjectAccess(PpsDataTransaction transaction, IPropertyReadOnlyDictionary defaultData)
+		{
+			this.transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+			this.defaultData = defaultData;
+
+			this.objectId = defaultData.GetProperty(nameof(Id), -1L);
+			this.revId = defaultData.GetProperty(nameof(RevId), defaultData.GetProperty(nameof(HeadRevId) ,- 1L));
+			this.isRev = defaultData.TryGetProperty<bool>(nameof(IsRev), out var t) ? (bool?)t : null;
+		} // ctor
+		
+		protected override object OnIndex(object key)
+			=> key is string k && defaultData.TryGetProperty(k, out var t) ? t : base.OnIndex(key);
+
+		private void Reset()
+		{
+			// reload links
+			linksTo = null;
+			linksFrom = null;
+		} // proc Reset
+
+		private void CheckRevision()
+		{
+			if (isRev.HasValue)
+				return;
+
+			// get head rev.
+			var cmd = new LuaTable
+			{
+				{ "select", "dbo.ObjK" },
+				{ "selectList", new LuaTable { nameof(IsRev), nameof(HeadRevId), } },
+				new LuaTable { "Id", objectId }
+			};
+
+			var r = transaction.ExecuteSingleRow(cmd);
+			isRev = (bool)r[nameof(IsRev), true];
+			revId = (long)(r[nameof(HeadRevId), true] ?? -1);
+		} // proc CheckRevision
+
+		private LuaTable GetObjectArguments(bool forInsert)
+		{
+			var args = new LuaTable
+			{
+				{ nameof(Nr), Nr }
+			};
+
+			if (forInsert)
+			{
+				var guid = Guid;
+				if (guid == Guid.Empty)
+					guid = Guid.NewGuid();
+				args[nameof(Guid)] = guid;
+				args[nameof(Typ)] = Typ;
+				args[nameof(IsRev)] = IsRev;
+			}
+			else
+				args[nameof(Id)] = objectId;
+
+			if (MimeType != null)
+				args[nameof(MimeType)] = MimeType;
+
+			if (CurRevId > 0)
+				args[nameof(CurRevId)] = CurRevId;
+			if (HeadRevId > 0)
+				args[nameof(HeadRevId)] = HeadRevId;
+
+			return args;
+		} // func GetObjectArguments
+
+		[LuaMember]
+		public void Update(bool updateObjectOnly = true)
+		{
+			LuaTable cmd;
+			// prepare stmt
+			if (objectId > 0) // exists an id for the object
+			{
+				cmd = new LuaTable
+				{
+					{"update", "dbo.ObjK" },
+					GetObjectArguments(false)
+				};
+			}
+			else if (Guid == Guid.Empty) // does not exists
+			{
+				cmd = new LuaTable
+				{
+					{"insert", "dbo.ObjK" },
+					GetObjectArguments(true)
+				};
+			}
+			else // upsert over guid or id
+			{
+				var args = GetObjectArguments(IsNew);
+
+				cmd = new LuaTable
+				{
+					{ "upsert", "dbo.ObjK"},
+					args
+				};
+
+				if (IsNew)
+				{
+					args[nameof(Guid)] = Guid;
+					cmd.Add("on", new LuaTable { nameof(Guid) });
+				}
+			}
+			
+			transaction.ExecuteNoneResult(cmd);
+
+			// update values
+			if (IsNew)
+			{
+				var args = (LuaTable)cmd[1];
+				objectId = (long)args[nameof(Id)];
+				this[nameof(Guid)] = args[nameof(Guid)];
+			}
+
+			if (!updateObjectOnly)
+			{
+
+				Reset();
+			}
+		} // proc Update
+
+		[LuaMember]
+		public void SetRevision(long newRevId, bool refreshLinks = true)
+		{
+			CheckRevision();
+			if (revId == newRevId)
+				return;
+
+			revId = newRevId;
+			if (refreshLinks)
+				Reset();
+		} // proc SetRevision
+
+		private void SetDocumentArguments(LuaTable args, Action<Stream> copyData, long contentLength, bool deflateStream)
+		{
+			args["IsDocumentDeflate"] = deflateStream;
+
+			using (var dstMemory = new MemoryStream())
+			{
+				if (deflateStream)
+				{
+					using (var dstDeflate = new GZipStream(dstMemory, CompressionMode.Compress))
+						copyData(dstDeflate);
+				}
+				else
+					copyData(dstMemory);
+				dstMemory.Flush();
+
+				args["Document"] = dstMemory.ToArray();
+			}
+		} // proc SetDocumentArguments
+
+		[LuaMember]
+		public void UpdateData(object content, long contentLength = -1, bool changeHead = true, bool forceReplace = false)
+		{
+			CheckRevision();
+
+			if (objectId < 0)
+				throw new ArgumentOutOfRangeException("Id", "Object Id is invalid.");
+
+			var args = new LuaTable
+			{
+				{ "ObjkId", objectId },
+
+				{ "CreateUserId", DEContext.GetCurrentUser<IPpsPrivateDataContext>().UserId },
+				{ "CreateDate",  DateTime.Now }
+			};
+
+			var insertNew = isRev.Value || (!forceReplace && revId > 0);
+			if (insertNew && revId > 0)
+				args["ParentId"] = revId;
+
+			// convert data
+			var shouldText = MimeType != null && MimeType.StartsWith("text/", StringComparison.OrdinalIgnoreCase);
+			var shouldDeflate = shouldText;
+
+			if(content != null)
+			{
+				switch (content)
+				{
+					case string s:
+						shouldText = true;
+						SetDocumentArguments(args, dst =>
+							{
+								using (var sr = new StreamWriter(dst, Encoding.Unicode, 4096, true))
+									sr.Write(s);
+							},
+							s.Length, shouldDeflate
+						);
+						break;
+					case StringBuilder sb:
+						shouldText = true;
+						SetDocumentArguments(args, dst =>
+							{
+								using (var sr = new StreamWriter(dst, Encoding.Unicode, 4096, true))
+									sr.Write(sb.ToString());
+							}, 
+							sb.Length, shouldDeflate
+						);
+						break;
+					case byte[] data:
+						SetDocumentArguments(args, dst => dst.Write(data, 0, data.Length), data.Length, shouldDeflate);
+						break;
+
+					case Action<Stream> copyStream:
+						SetDocumentArguments(args, copyStream, contentLength, shouldDeflate);
+						break;
+					default:
+						throw new ArgumentException("Document data format is unknown (only string or byte[] allowed).");
+				}
+			}
+			else
+				throw new ArgumentNullException("Document data is missing.");
+
+			args["IsDocumentText"] = shouldText;
+
+			LuaTable cmd;
+			if (insertNew)
+			{
+				cmd = new LuaTable
+				{
+					{  "insert", "dbo.ObjR" },
+					args
+				};
+			}
+			else// upsert current rev
+			{
+				args["Id"] = revId;
+
+				cmd = new LuaTable
+				{
+					{  "upsert", "dbo.ObjR" },
+					args
+				};
+			}
+
+			transaction.ExecuteNoneResult(cmd);
+			var newRevId = (long)args["Id"];
+
+			// update
+			if (insertNew && changeHead)
+			{
+				this["HeadRevId"] = newRevId;
+				SetRevision(newRevId, false);
+			}
+		} // proc UpdateData
+
+		[LuaMember]
+		public Stream GetDataStream()
+		{
+			CheckRevision();
+
+			var cmd = new LuaTable
+			{
+				{ "select", "dbo.ObjR" },
+				{ "selectList", new LuaTable { "Id", "IsDocumentText","IsDocumentDeflate","Document","DocumentId","DocumentLink" } },
+				new LuaTable { { "Id", revId } }
+			};
+
+			var row =	transaction.ExecuteSingleRow(cmd);
+			if (row == null)
+				throw new ArgumentException($"Could not read revision '{revId}'.");
+
+			var isDeflated = row.GetProperty("IsDocumentDeflate", false);
+			var rawData = (byte[])row["Document"];
+
+			var src = (Stream) new MemoryStream(rawData, false);
+			if (isDeflated)
+				src = new GZipStream(src, CompressionMode.Decompress, false);
+			return src;
+		} // func GetDataStream
+
+		[LuaMember]
+		public byte[] GetBytes()
+		{
+			using (var src = GetDataStream())
+				return src.ReadInArray();
+		} // func GetBytes
+
+		[LuaMember]
+		public string GetText()
+		{
+			// todo: in DESCore\Networking\Requests.cs:BaseWebRequest.CheckMimeType
+			using (var tr = Procs.OpenStreamReader(GetDataStream(), Encoding.Unicode))
+				return tr.ReadToEnd();
+		} // func GetText
+
+		[LuaMember]
+		public XElement ToXml(bool onlyObjectData = false)
+		{
+			var x = new XElement(
+				"object",
+				Procs.XAttributeCreate(nameof(Id), objectId, -1),
+				Procs.XAttributeCreate(nameof(RevId), RevId, -1),
+				Procs.XAttributeCreate(nameof(HeadRevId), HeadRevId, -1),
+				Procs.XAttributeCreate(nameof(CurRevId), CurRevId, -1),
+				Procs.XAttributeCreate(nameof(Typ), Typ, null),
+				Procs.XAttributeCreate(nameof(MimeType), MimeType, null),
+				Procs.XAttributeCreate(nameof(Nr), Nr),
+				Procs.XAttributeCreate(nameof(IsRev), IsRev, false)
+			);
+
+			if (!onlyObjectData)
+			{
+				// append links
+				foreach (var cur in LinksTo)
+					x.Add(cur.ToXml("linkTo"));
+				foreach (var cur in LinksFrom)
+					x.Add(cur.ToXml("linkFrom"));
+			}
+
+			return x;
+		} // func ToXml
+
+		public PpsObjectLinkAccess AddLinkTo(XElement x)
+		{
+			return null;
+		}
+
+		public PpsObjectLinkAccess AddLinkFrom(XElement x)
+		{
+			return null;
+		}
+
+		[LuaMember]
+		public void AddLink(long objectId, long revId)
+		{
+			var existingLink = GetLinks(true, ref linksTo).FirstOrDefault(c => c.ObjectId == objectId && c.RevId == revId);
+			if (existingLink == null)
+				linksTo.Add(new PpsObjectLinkAccess(-1, objectId, revId));
+		} // proc AddLink
+
+		private List<PpsObjectLinkAccess> GetLinks(bool linksTo, ref List<PpsObjectLinkAccess> links)
+		{
+			if (links != null)
+				return links;
+			else if (IsNew)
+			{
+				links = new List<PpsObjectLinkAccess>();
+			}
+			else
+			{
+				var cmd = new LuaTable
+			{
+				{ "select", "dbo.ObjL" },
+				{ "selectList",
+					new LuaTable
+					{
+						"Id",
+						{ linksTo ? "LinkObjKId" : "ParentObjKId", "ObjKId" },
+						{ linksTo ? "LinkObjRId" : "ParentObjRId", "ObjRId" },
+						"OnDelete"
+					}
+				},
+
+				new LuaTable
+				{
+					{ "ParentObjKId", objectId },
+					{ "ParentObjRId", revId }
+				}
+			};
+
+				links = new List<PpsObjectLinkAccess>();
+				foreach (var c in transaction.ExecuteSingleResult(cmd))
+					links.Add(new PpsObjectLinkAccess(c));
+			}
+			return links;
+		} // func GetLinks
+
+		[LuaMember]
+		public long Id => objectId;
+
+		public Guid Guid => this.TryGetValue<Guid>(nameof(Guid), out var t) ? t : Guid.Empty;
+		public string Typ => this.TryGetValue<string>(nameof(Typ), out var t) ? t : null;
+		public string MimeType => this.TryGetValue<string>(nameof(MimeType), out var t) ? t : null;
+		public string Nr => this.TryGetValue<string>(nameof(Nr), out var t) ? t : null;
+		public long CurRevId => this.TryGetValue<long>(nameof(CurRevId), out var t) ? t : -1;
+		public long HeadRevId => this.TryGetValue<long>(nameof(HeadRevId), out var t) ? t : -1;
+
+		[LuaMember]
+		public long RevId
+		{
+			get
+			{
+				CheckRevision();
+				return revId;
+			}
+		}
+
+		[LuaMember]
+		public bool IsRev
+		{
+			get
+			{
+				CheckRevision();
+				return isRev.Value;
+			}
+			set
+			{
+				isRev = value;
+			}
+		} // prop IsRev
+
+		[LuaMember]
+		public bool IsNew => objectId < 0;
+
+		[LuaMember]
+		public long ContentLength => throw new NotImplementedException();
+
+		public IEnumerable<PpsObjectLinkAccess> LinksTo => GetLinks(true, ref linksTo);
+		public IEnumerable<PpsObjectLinkAccess> LinksFrom => GetLinks(true, ref linksFrom);
+	} // class PpsObjectAccess
+
+	#endregion
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Function to store and load object related data.</summary>
 	public partial class PpsApplication
@@ -36,18 +506,6 @@ namespace TecWare.PPSn.Server
 				this.application = application;
 			} // ctor
 
-			private static void SetStateChange(LuaTable args)
-			{
-				if (args.GetOptionalValue<long>("SyncToken", 0) <= 0)
-					args.SetMemberValue("SyncToken", Procs.GetSyncStamp());
-			} // proc SetStateChange
-
-			private static void UpdateArgumentsWithRow(LuaTable args, IDataRow r)
-			{
-				for (var i = 0; i < r.Columns.Count; i++)
-					args[r.Columns[i].Name] = r[i];
-			} // proc UpdateArgumentsWithRow
-
 			/// <summary>todo</summary>
 			/// <param name="nr"></param>
 			/// <param name="nextNumber"></param>
@@ -55,7 +513,7 @@ namespace TecWare.PPSn.Server
 			[LuaMember(nameof(ValidateNumber))]
 			public void ValidateNumber(string nr, object nextNumber, object data)
 			{
-				throw new NotImplementedException("todo");
+				//throw new NotImplementedException("todo");
 			} // proc ValidateNumber
 
 			/// <summary>Gets the next number of an object class</summary>
@@ -101,307 +559,107 @@ namespace TecWare.PPSn.Server
 
 				return nr;
 			} // func GetNextNumber
-
-			/// <summary>Updates a new entry in the objk</summary>
-			/// <param name="args">
-			/// Id
-			/// Guid
-			/// Typ
-			/// Nr 
-			/// IsRev
-			/// IsHidden
-			/// IsRemoved
-			/// </param>
+			
+			/// <summary>Create a complete new object.</summary>
+			/// <param name="trans"></param>
+			/// <param name="args"></param>
 			/// <returns></returns>
-			[LuaMember(nameof(Update))]
-			public LuaTable Update(PpsDataTransaction trans, LuaTable args)
+			[LuaMember]
+			public PpsObjectAccess CreateNewObject(PpsDataTransaction trans, LuaTable args)
+				=> new PpsObjectAccess(trans, new LuaTableProperties(args));
+
+			/// <summary>Opens a object for an update operation.</summary>
+			/// <param name="trans"></param>
+			/// <param name="x"></param>
+			/// <returns></returns>
+			[LuaMember]
+			public PpsObjectAccess ObjectFromXml(PpsDataTransaction trans, XElement x)
 			{
-				LuaTable cmd;
+				var objectId = x.GetAttribute(nameof(PpsObjectAccess.Id), -1L);
+				var objectGuid = x.GetAttribute(nameof(PpsObjectAccess.Guid), Guid.Empty);
 
-				SetStateChange(args);
+				// try to find the object in the database
+				var obj = (PpsObjectAccess)null;
+				if (objectId > 0)
+					obj = GetObject(trans, new LuaTable { { nameof(PpsObjectAccess.Id), objectId } });
+				else if (objectGuid != Guid.Empty)
+					obj = GetObject(trans, new LuaTable { { nameof(PpsObjectAccess.Guid), objectGuid } });
 
-				// prepare stmt
-				// check arguments if guid exists -> create a merge
-				if (args.GetValue("Guid") != null)
+				// create a new object
+				if (obj == null)
 				{
-					cmd = Procs.CreateLuaTable(
-						new PropertyValue("upsert", "dbo.Objk"),
-						new PropertyValue("on", Procs.CreateLuaArray("Guid"))
-					);
-					cmd.SetArrayValue(1, args);
-				}
-				// check if id exists -> create a update
-				else if (args.GetValue("Id") != null)
-				{
-					cmd = Procs.CreateLuaTable(new PropertyValue("update", "dbo.Objk"));
-					cmd.SetArrayValue(1, args);
-				}
-				// none of both exists -> create a insert
-				else
-				{
-					cmd = Procs.CreateLuaTable(new PropertyValue("insert", "dbo.Objk"));
-					cmd.SetArrayValue(1, args);
+					obj = new PpsObjectAccess(trans, PropertyDictionary.EmptyReadOnly);
+					if (objectId > 0)
+						throw new ArgumentOutOfRangeException(nameof(objectId), objectId, "Could not found object.");
+					if (objectGuid != Guid.Empty)
+						obj[nameof(PpsObjectAccess.Guid)] = objectGuid;
 				}
 
-				// checks will be done by the database
-				trans.ExecuteNoneResult(cmd);
-				return args;
-			} // func Update
+				// update the values
+				// Do not use CurRev and HeadRev from xml
+				if (x.TryGetAttribute<string>(nameof(PpsObjectAccess.Nr), out var nr))
+					obj[nameof(PpsObjectAccess.Nr)] = nr;
+				if (x.TryGetAttribute<string>(nameof(PpsObjectAccess.Typ), out var typ))
+					obj[nameof(PpsObjectAccess.Typ)] = typ;
+				if (x.TryGetAttribute<string>(nameof(PpsObjectAccess.MimeType), out var mimeType))
+					obj[nameof(PpsObjectAccess.MimeType)] = mimeType;
+
+				// update the links
+				void UpdateLinks(string tagName, IEnumerable<PpsObjectLinkAccess> currentLinks, Func<XElement, PpsObjectLinkAccess> addLink)
+				{
+					var removeList = new List<PpsObjectLinkAccess>(currentLinks);
+					foreach (var c in x.Elements(tagName))
+					{
+						var idx = removeList.IndexOf(addLink(c));
+						if (idx != -1)
+							removeList.RemoveAt(idx);
+					}
+					removeList.ForEach(c => c.Remove());
+				} // proc UpdateLinks
+
+				UpdateLinks(nameof(PpsObjectAccess.LinksTo), obj.LinksTo, obj.AddLinkTo);
+				UpdateLinks(nameof(PpsObjectAccess.LinksFrom), obj.LinksFrom, obj.AddLinkTo);
+
+				return obj;
+			} // func ObjectFromXml
+
+			[LuaMember]
+			public PpsDataSelector GetObjectSelector(PpsDataTransaction trans)
+			{
+				var selector = application.GetViewDefinition("dbo.objects").SelectorToken;
+				return selector.CreateSelector(trans.Connection);
+			} // func GetObjectSelector
 
 			/// <summary>Returns object data.</summary>
 			/// <param name="args"></param>
 			/// <returns></returns>
 			[LuaMember(nameof(GetObject))]
-			public LuaTable GetObject(PpsDataTransaction trans, LuaTable args)
+			public PpsObjectAccess GetObject(PpsDataTransaction trans, LuaTable args)
 			{
-				var cmd = Procs.CreateLuaTable(
-					new PropertyValue("select", "dbo.Objk"),
-					new PropertyValue("selectList", Procs.CreateLuaArray("Id", "Guid", "Typ", "Nr", "IsRev", "IsHidden", "IsRemoved", "SyncToken", "CurRevId", "HeadRevId"))
-				);
+				var selector = GetObjectSelector(trans);
 
-				if (args.GetValue("Id") != null || args.GetValue("Guid") != null) // get object by id or guid
-					cmd.SetArrayValue(1, args);
+				// append filter
+				if (args.TryGetValue<long>(nameof(PpsObjectAccess.Id), out var objectId))
+					selector = selector.ApplyFilter(PpsDataFilterExpression.Compare("Id", PpsDataFilterCompareOperator.Equal, objectId));
+				else if (args.TryGetValue<Guid>(nameof(PpsObjectAccess.Guid), out var guidId))
+					selector = selector.ApplyFilter(PpsDataFilterExpression.Compare("Guid", PpsDataFilterCompareOperator.Equal, guidId));
 				else
-					throw new ArgumentException("Id or Guid needed to select an object.");
+					throw new ArgumentNullException(nameof(PpsObjectAccess.Id), "Id or Guid needed to select an object.");
 
-				var r = trans.ExecuteSingleRow(cmd);
-				if (r != null)
-				{
-					UpdateArgumentsWithRow(args, r);
-					return args;
-				}
-				else
-					return null;
+				// return only the first object
+				var r = selector.Select(c => new SimpleDataRow(c)).FirstOrDefault();
+				return r == null ? null : new PpsObjectAccess(trans, r);
 			} // func GetObject
 
 			/// <summary>Returns a view on the objects.</summary>
 			/// <param name="trans"></param>
 			/// <returns></returns>
 			[LuaMember(nameof(GetObjects))]
-			public PpsDataSelector GetObjects(PpsDataTransaction trans)
+			public IEnumerable<PpsObjectAccess> GetObjects(PpsDataTransaction trans)
 			{
-				var selector = application.GetViewDefinition("dbo.objects").SelectorToken;
-				return selector.CreateSelector(trans.Connection);
+				foreach (var r in GetObjectSelector(trans))
+					yield return new PpsObjectAccess(trans, r);
 			} // func GetObjects
-
-			/// <summary>Sets one ore more state member of an object, to a new value.</summary>
-			/// <param name="trans"></param>
-			/// <param name="args"></param>
-			/// <returns></returns>
-			[LuaMember(nameof(UpdateState))]
-			public LuaTable UpdateState(PpsDataTransaction trans, LuaTable args)
-			{
-				return null;
-			} // func UpdateState
-
-			private void CheckTagField(LuaTable args, string tagName)
-			{
-				var v = args[tagName];
-				if (v is IEnumerable<PpsObjectTag>)
-					args[tagName] = PpsObjectTag.FormatTagFields((IEnumerable<PpsObjectTag>)v);
-				else if (v != null)
-					throw new ArgumentException("Could not convert tag field.");
-			} // func CheckTagField
-
-			/// <summary>Appends a new revision to the object.</summary>
-			/// <param name="trans"></param>
-			/// <param name="args"></param>
-			/// <returns></returns>
-			[LuaMember]
-			public long CreateRevision(PpsDataTransaction trans, LuaTable args)
-			{
-				// fill optional values
-				if (args.GetMemberValue("CreateUserId") == null)
-					args["CreateUserId"] = DEContext.GetCurrentUser<IPpsPrivateDataContext>().UserId;
-				if (args.GetMemberValue("CreateDate") == null)
-					args["CreateDate"] = DateTime.Now;
-
-				CheckTagField(args, "Tags");
-
-				// execute insert
-				var cmd = Procs.CreateLuaTable(
-					new PropertyValue("insert", "dbo.Objr")
-				);
-				cmd[1] = args;
-
-				// convert data
-				var rawData = args.GetMemberValue("Document");
-				var shouldText = args.GetMemberValue("IsDocumentText");
-				var shouldDeflate = args.GetMemberValue("IsDocumentDeflate");
-
-				if (rawData != null)
-				{
-					if (rawData is string || rawData is StringBuilder)
-					{
-						#region -- text --
-						if (shouldDeflate == null)
-							shouldDeflate = true;
-						if (shouldText == null)
-							shouldText = true;
-
-						args["IsDocumentText"] = shouldText;
-						args["IsDocumentDeflate"] = shouldDeflate;
-
-						using (var dstMemory = new MemoryStream())
-						{
-							var dstDeflate = (Stream)null;
-							var tr = (StreamWriter)null;
-							try
-							{
-								if ((bool)shouldDeflate)
-									dstDeflate = new GZipStream(dstMemory, CompressionMode.Compress, true);
-								tr = new StreamWriter(dstDeflate ?? dstMemory, Encoding.UTF8, 1024, true);
-
-								tr.Write(rawData.ToString());
-							}
-							finally
-							{
-								tr?.Dispose();
-								dstDeflate?.Close();
-							}
-
-							args["Document"] = dstMemory.ToArray();
-						}
-						#endregion
-					}
-					else if (rawData is byte[])
-					{
-						#region -- byte[] --
-						if (shouldDeflate == null)
-							shouldDeflate = false;
-
-						args["IsDocumentText"] = shouldText ?? false;
-						args["IsDocumentDeflate"] = shouldDeflate;
-
-						using (var dstMemory = new MemoryStream())
-						{
-							var b = (byte[])rawData;
-							if ((bool)shouldDeflate)
-							{
-								using (var dstDeflate = new GZipStream(dstMemory, CompressionMode.Compress))
-									dstDeflate.Write(b, 0, b.Length);
-							}
-							else
-								dstMemory.Write(b, 0, b.Length);
-							dstMemory.Flush();
-
-							args["Document"] = dstMemory.ToArray();
-						}
-						#endregion
-					}
-					else
-						throw new ArgumentException("Document data format is unknown (only string or byte[] allowed).");
-				}
-				else
-					throw new ArgumentNullException("Document data is missing.");
-
-				trans.ExecuteNoneResult(cmd);
-				return (long)args["Id"];
-			} // func CreateRevision
-
-			/// <summary>Removes all existing revision, and sets a new one.</summary>
-			/// <param name="trans"></param>
-			/// <param name="args"></param>
-			/// <returns></returns>
-			[LuaMember]
-			public LuaTable ReplaceObjectRevision(PpsDataTransaction trans, LuaTable args)
-			{
-				return null;
-			} // func ReplaceRevision
-
-			private static Stream OpenObjectRevisionStream(LuaTable args)
-			{
-				var rawData = args.GetMemberValue("Document");
-				var externalLink = args.GetMemberValue("DocumentLink");
-				var internalLink = args.GetMemberValue("DocumentId");
-				var isDocumentDeflate = args.GetMemberValue("IsDocumentDeflate");
-
-				Stream src;
-				if (rawData != null) // raw byte stream detected
-				{
-					src = new MemoryStream((byte[])rawData, false);
-				}
-				else
-					throw new NotImplementedException();
-
-				// unpack stream
-				return isDocumentDeflate is bool && (bool)isDocumentDeflate ? new GZipStream(src, CompressionMode.Decompress) : src;
-			} // func OpenObjectRevisionStream
-
-			private static StreamReader OpenObjectRevisionText(LuaTable args)
-			{
-				// open the stream
-				var src = OpenObjectRevisionStream(args);
-				return new StreamReader(src, true);
-			} // func OpenObjectRevisionText
-
-			private static string GetObjectRevisionText(LuaTable args)
-			{
-				// open the stream
-				using (var sr = OpenObjectRevisionText(args))
-					return sr.ReadToEnd();
-			} // func OpenObjectRevisionText
-
-			/// <summary>Gets a specific revision of an object.</summary>
-			/// <param name="trans"></param>
-			/// <param name="args"></param>
-			/// <returns></returns>
-			[
-				LuaMember,
-				LuaArgument("trans"),
-				LuaArgument("args"),
-				LuaArgument("args|Id"),
-				LuaArgument("args|Guid"),
-				LuaArgument("args|RevId")
-			]
-			public LuaTable GetObjectRevision(PpsDataTransaction trans, LuaTable args)
-			{
-				const string baseSql = "select o.Id, o.Guid, o.Typ, o.HeadRevId, o.CurRevId, r.Document, r.DocumentLink, r.DocumentId, r.IsDocumentText, r.IsDocumentDeflate " +
-					"from Objk o inner join Objr r";
-
-				var objectId = args["Id"];
-				var guidId = args["Guid"];
-				var revId = args["RevId"];
-
-				// create commands
-				var cmd = new LuaTable();
-				if (objectId != null && revId != null)
-					cmd["sql"] = baseSql + " on (o.Id = r.ObjkId) where o.Id = @Id and r.Id = @RevId";
-				else if (objectId != null)
-					cmd["sql"] = baseSql + " on (o.HeadRevId = r.Id) where o.Id = @Id";
-				else if (guidId != null && revId != null)
-					args["sql"] = baseSql + " on (o.Id = r.ObjkId) where o.Id = @Guid and r.Id = @RevId";
-				else if (guidId != null)
-					args["sql"] = baseSql + " on (o.HeadRevId = r.Id) where o.Guid = @Guid";
-				else
-					throw new ArgumentNullException("Id or Guid is missing.");
-
-				cmd[1] = args;
-
-				var row = trans.ExecuteSingleRow(cmd);
-				if (row == null)
-					return null;
-
-				UpdateArgumentsWithRow(args, row);
-
-				// patch methods for the stream access
-				args["__trans"] = true;
-				args.DefineMethod("openText", new Func<LuaTable, StreamReader>(OpenObjectRevisionText));
-				args.DefineMethod("openStream", new Func<LuaTable, Stream>(OpenObjectRevisionStream));
-				args.DefineMethod("getText", new Func<LuaTable, string>(GetObjectRevisionText));
-
-				return args;
-			} // func GetObjectRevision
-
-			/// <summary>todo: returns null</summary>
-			/// <param name="trans"></param>
-			/// <param name="args"></param>
-			/// <returns></returns>
-			[LuaMember]
-			public LuaTable GetObjectRevisions(PpsDataTransaction trans, LuaTable args)
-			{
-				return null;
-			}// func GetObjectRevision
 		} // class PpsObjectsLibrary
 
 		#endregion
@@ -485,17 +743,6 @@ namespace TecWare.PPSn.Server
 
 		private readonly PpsObjectsLibrary objectsLibrary;
 		private readonly PpsHttpLibrary httpLibrary;
-
-		/// <summary>Throws an exception.</summary>
-		/// <param name="message">Message of the exception.</param>
-		/// <param name="args"></param>
-		[LuaMember("error")]
-		public void LuaError(string message, params object[] args)
-		{
-			if (args != null && args.Length > 0)
-				message = String.Format(message, args);
-			throw new Exception(message);
-		} // proc LuaError
 
 		/// <summary>Funktion to create a synchronisation time stamp.</summary>
 		/// <returns>Timestamp formatted as an Int64.</returns>

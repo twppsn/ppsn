@@ -1,6 +1,7 @@
 ﻿
 local function GetNextNumber(trans, lastNr, dataset) : string
-	return ((lastNr or 0) + 1):ToString("00000");
+	local curNr = lastNr and lastNr:sub(2) or 0;
+	return "K" .. (curNr + 1):ToString("000000");
 end;
 
 NextNumber = GetNextNumber;

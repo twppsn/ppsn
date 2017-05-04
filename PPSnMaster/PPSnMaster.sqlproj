@@ -100,6 +100,9 @@
     <Build Include="Stuff\MaxBigInt.sql" />
     <Build Include="Stuff\Objects.sql" />
     <Build Include="Tables\dbo\Mein.sql" />
+    <Build Include="Tables\dbo\Pers.sql" />
+    <Build Include="Tables\dbo\Lief.sql" />
+    <Build Include="Tables\dbo\Kund.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="PPSn03.publish.xml" />

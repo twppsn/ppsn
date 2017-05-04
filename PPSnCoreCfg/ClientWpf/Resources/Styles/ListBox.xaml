@@ -18,11 +18,19 @@
                 <ControlTemplate TargetType="{x:Type ListBox}">
                     <Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
 							Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                        <ScrollViewer Focusable="false" Padding="{TemplateBinding Padding}" Style="{StaticResource PPSnScrollViewerStyle}" >
+                        <ScrollViewer x:Name="scrollviewer" Focusable="false" Padding="{TemplateBinding Padding}" Style="{StaticResource PPSnScrollViewerStyle}" >
                             <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                         </ScrollViewer>
                     </Border>
-                </ControlTemplate>
+					<ControlTemplate.Triggers>
+						<Trigger Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled">
+							<Setter TargetName="scrollviewer" Property="VerticalScrollBarVisibility" Value="Disabled"/>
+						</Trigger>
+						<Trigger Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled">
+							<Setter TargetName="scrollviewer" Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
             </Setter.Value> 
         </Setter>
     </Style>
