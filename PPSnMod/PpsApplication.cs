@@ -277,6 +277,7 @@ namespace TecWare.PPSn.Server
 					var ctx = r.GetUser<IPpsPrivateDataContext>();
 					r.WriteObject(
 						new XElement("user",
+							new XAttribute("userId", ctx.UserId),
 							new XAttribute("displayName", ctx.UserName)
 						)
 					);

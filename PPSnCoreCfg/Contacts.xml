@@ -116,7 +116,7 @@
 				</pps:table>
 
 				<pps:table name="Ansp">
-					<pps:column name="=Id" fieldName="dbo.Ansp.Id" isPrimary="true" />
+					<pps:column name="Id" fieldName="dbo.Ansp.Id" isPrimary="true" />
 					<pps:column name="Name" fieldName="dbo.Ansp.Id" />
 				</pps:table>
 			</pps:dataset>
