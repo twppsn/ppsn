@@ -171,6 +171,7 @@
 					<pps:column name="LandId" fieldName="sys.Fields.MasterDataKey">
 						<pps:meta name="sourceColumn">dbo.Adre.LandId</pps:meta>
 						<pps:meta name="refTable">Land</pps:meta>
+						<pps:meta name="displayName">Land</pps:meta>
 					</pps:column>
 					<pps:column name="Adresse" fieldName="dbo.Adre.Adresse" />
 					<pps:column name="Changed" fieldName="dbo.Adre.Changed" />
