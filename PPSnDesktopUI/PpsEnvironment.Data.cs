@@ -72,13 +72,26 @@ namespace TecWare.PPSn
 
 		private sealed class PpsMasterNestedTransaction : PpsMasterDataTransaction
 		{
-			public PpsMasterNestedTransaction(SQLiteConnection connection, SQLiteTransaction parentTransaction)
+			private readonly PpsMasterRootTransaction rootTransaction;
+
+			public PpsMasterNestedTransaction(PpsMasterRootTransaction rootTransaction, SQLiteConnection connection, SQLiteTransaction parentTransaction)
 				: base(connection, parentTransaction)
 			{
+				this.rootTransaction = rootTransaction ?? throw new ArgumentNullException(nameof(rootTransaction));
 			} // ctor
+
+			public override void AddRollbackOperation(Action rollback)
+			{
+				if (IsDisposed)
+					throw new ObjectDisposedException(nameof(PpsMasterDataTransaction));
+
+				rootTransaction.AddRollbackOperation(rollback);
+			} // proc AddRollbackOperation
 
 			protected override void CommitCore() { }
 			protected override void RollbackCore() { }
+
+			public PpsMasterRootTransaction RootTransaction => rootTransaction;
 		} // class PpsMasterNestedTransaction
 
 		#endregion
@@ -87,6 +100,8 @@ namespace TecWare.PPSn
 
 		private sealed class PpsMasterRootTransaction : PpsMasterDataTransaction
 		{
+			private readonly List<Action> rollbackActions = new List<Action>();
+
 			public PpsMasterRootTransaction(SQLiteConnection connection, SQLiteTransaction rootTransaction)
 				: base(connection, rootTransaction)
 			{
@@ -100,11 +115,26 @@ namespace TecWare.PPSn
 					Transaction.Dispose();
 			} // proc Dispose
 
+			public override void AddRollbackOperation(Action rollback)
+				=> rollbackActions.Add(rollback);
+
 			protected override void CommitCore()
 				=> transaction.Commit();
 
 			protected override void RollbackCore()
-				=> transaction.Rollback();
+			{
+				transaction.Rollback();
+
+				// run rollback actions
+				foreach (var c in rollbackActions)
+				{
+					try
+					{
+						c();
+					}
+					catch { }
+				}
+			} // proc RollbackCore
 		} // class PpsMasterRootTransaction
 
 		#endregion
@@ -154,12 +184,14 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		public abstract void AddRollbackOperation(Action rollback);
+
 		public DbCommand CreateNativeCommand(string commandText = null)
 			=> new SQLiteCommand(commandText, connection, transaction);
 
-		public long GetNextLocalId(PpsMasterDataTransaction transaction, string tableName, string primaryKey)
+		public long GetNextLocalId(string tableName, string primaryKey)
 		{
-			using (var cmd = transaction.CreateNativeCommand("SELECT min([" + primaryKey + "]) FROM main.[" + tableName + "]"))
+			using (var cmd = CreateNativeCommand("SELECT min([" + primaryKey + "]) FROM main.[" + tableName + "]"))
 			{
 				var nextIdObject = cmd.ExecuteScalarEx();
 				if (nextIdObject == DBNull.Value)
@@ -186,7 +218,7 @@ namespace TecWare.PPSn
 		internal static PpsMasterDataTransaction Create(SQLiteConnection connection, PpsMasterDataTransaction transaction)
 			=> transaction == null
 				? (PpsMasterDataTransaction)new PpsMasterRootTransaction(connection, connection.BeginTransaction())
-				: (PpsMasterDataTransaction)new PpsMasterNestedTransaction(connection, transaction.transaction);
+				: (PpsMasterDataTransaction)new PpsMasterNestedTransaction(transaction as PpsMasterRootTransaction ?? ((PpsMasterNestedTransaction)transaction).RootTransaction, connection, transaction.transaction);
 	} // class PpsMasterTransaction
 
 	#endregion
@@ -526,6 +558,7 @@ namespace TecWare.PPSn
 
 		private bool isDisposed = false;
 		private bool isInSynchronization = false;
+		private bool updateUserInfo = false;
 
 		#region -- Ctor/Dtor ------------------------------------------------------------
 
@@ -621,6 +654,7 @@ namespace TecWare.PPSn
 				{
 					tableChanged = CreateAlterTableScript(commands,
 						table.Name,
+						table.Meta.GetProperty("syncType", String.Empty) == "None",
 						GetLocalTableColumns(connection, table.Name),
 						GetLocalTableIndexes(connection, table.Name),
 						table.Columns
@@ -667,8 +701,13 @@ namespace TecWare.PPSn
 			{
 				if (String.Compare(column.Name, "_rowId", StringComparison.OrdinalIgnoreCase) == 0)
 					continue; // ignore rowId column
-
-				AppendSqlIdentifier(commandText, column.Name).Append(' ').Append(ConvertDataTypeToSqLite(column.DataType));
+				
+				AppendSqlIdentifier(commandText, column.Name).Append(' ');
+				commandText.Append(
+					column.Attributes.GetProperty("IsIdentity", false)
+						? "INTEGER"
+						: ConvertDataTypeToSqLite(column.DataType)
+				);
 
 				// append primray key
 				if (column.Attributes.GetProperty("IsPrimary", false))
@@ -689,12 +728,11 @@ namespace TecWare.PPSn
 			commands[createTableIndex] = commandText.ToString();
 		} // func CreateTableScript
 
-		private static bool CreateAlterTableScript(List<string> commands, string tableName, IEnumerable<IDataColumn> localColumns, IEnumerable<Tuple<string, bool>> localIndexes, IEnumerable<IDataColumn> remoteColumns)
+		private static bool CreateAlterTableScript(List<string> commands, string tableName, bool preserveCurrentData, IEnumerable<IDataColumn> localColumns, IEnumerable<Tuple<string, bool>> localIndexes, IEnumerable<IDataColumn> remoteColumns)
 		{
 			var localColumnsArray = localColumns.ToArray();
 			var newColumns = new List<IDataColumn>();
 			var sameColumns = new List<string>();   // for String.Join - only Column names are used
-			var refreshColumnExists = false;
 
 			// todo: check index list
 
@@ -707,7 +745,7 @@ namespace TecWare.PPSn
 				foreach (var localColumn in localColumnsArray)
 				{
 					if (localColumn.Name == refreshColumnName)
-						refreshColumnExists = true;
+						preserveCurrentData = true;
 
 					// todo: check default
 					if ((remoteColumn.Name == localColumn.Name)
@@ -728,7 +766,7 @@ namespace TecWare.PPSn
 
 			if (sameColumns.Count < localColumnsArray.Length || newColumns.Count > 0)
 			{
-				if (!refreshColumnExists) // drop and recreate
+				if (!preserveCurrentData) // drop and recreate
 				{
 					CreateDropScript(commands, tableName);
 					CreateTableScript(commands, tableName, remoteColumns, null);
@@ -1342,6 +1380,22 @@ namespace TecWare.PPSn
 			isInSynchronization = true;
 			try
 			{
+				// update header
+				if (updateUserInfo)
+				{
+					using (var trans = CreateTransaction(null))
+					using (var cmd = trans.CreateNativeCommand("UPDATE main.[Header] SET [UserId] = @UserId, [UserName] = @UserName"))
+					{
+						cmd.AddParameter("@UserId", DbType.Int64, environment.UserId);
+						cmd.AddParameter("@UserName", DbType.String, environment.Username);
+						cmd.ExecuteNonQueryEx();
+
+						trans.Commit();
+						updateUserInfo = false;
+					}
+				}
+
+				// fetch data from server
 				await FetchDataAsync(progress);
 			}
 			finally
@@ -1398,6 +1452,9 @@ namespace TecWare.PPSn
 				}
 			}
 		} // proc CheckOfflineCache
+
+		public void SetUpdateUserInfo()
+			=> updateUserInfo = true;
 
 		public bool IsInSynchronization => isInSynchronization;
 
@@ -1717,6 +1774,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		/// <summary><c>true</c>, if the sync process is started.</summary>
 		public bool IsSynchronizationStarted => isSynchronizationStarted;
 		[Obsolete("ConnectionAccess")]
 		public SQLiteConnection Connection => connection;
@@ -3030,7 +3088,12 @@ namespace TecWare.PPSn
 				// open the local database
 				progress.Report("Lokale Datenbank öffnen...");
 				var dataPath = Path.Combine(LocalPath.FullName, "localStore.db");
-				newLocalStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc"); // foreign keys=true;Password=Pps{GetLocalStorePassword()}
+				var connectionString = "Data Source=" + dataPath + ";DateTimeKind=Utc"
+#if !DEBUG
+					+ "Password=Pps" + GetLocalStorePassword()
+#endif
+					;
+				newLocalStore = new SQLiteConnection(connectionString); // foreign keys=true;
 				await newLocalStore.OpenAsync();
 
 				// check synchronisation table
@@ -3038,11 +3101,13 @@ namespace TecWare.PPSn
 				if (PpsMasterData.TestTableColumns(newLocalStore, "Header",
 					new SimpleDataColumn("SchemaStamp", typeof(long)),
 					new SimpleDataColumn("SchemaContent", typeof(byte[])),
-					new SimpleDataColumn("SyncStamp", typeof(long))
+					new SimpleDataColumn("SyncStamp", typeof(long)),
+					new SimpleDataColumn("UserId", typeof(long)),
+					new SimpleDataColumn("UserName", typeof(string))
 					))
 				{
 					// read sync tokens
-					using (var commd = new SQLiteCommand("SELECT SchemaStamp, SchemaContent, SyncStamp FROM main.Header ", newLocalStore))
+					using (var commd = new SQLiteCommand("SELECT SchemaStamp, SchemaContent, SyncStamp, UserId, UserName FROM main.Header ", newLocalStore))
 					{
 						using (var r = commd.ExecuteReaderEx(CommandBehavior.SingleRow))
 						{
@@ -3055,10 +3120,13 @@ namespace TecWare.PPSn
 									newDataSet = new PpsDataSetDefinitionDesktop(this, PpsMasterData.MasterDataSchema, PpsMasterData.ReadSchemaValue(r, 1));
 									isSchemaUseable = true;
 								}
-								// check data
-								if (!r.IsDBNull(2) && !r.IsDBNull(2))
+								// check data and user info
+								if (!r.IsDBNull(2) && !r.IsDBNull(3) && !r.IsDBNull(4))
 								{
 									lastSynchronizationStamp = DateTime.FromFileTimeUtc(r.GetInt64(2));
+									userId = r.GetInt64(3);
+									userName = r.GetString(4);
+
 									isDataUseable = true;
 								}
 							}
