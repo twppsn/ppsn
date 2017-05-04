@@ -939,10 +939,9 @@ namespace TecWare.PPSn
 						}
 						state = PpsEnvironmentState.None;
 					}
-					else// todo: exception
+					else
 					{
-						var webEx = ex as WebException;
-						if (webEx.Status == WebExceptionStatus.ConnectFailure)
+						if (ex is WebException webEx && webEx.Status == WebExceptionStatus.ConnectFailure)
 							state = PpsEnvironmentState.OfflineConnect;
 						else
 							Traces.AppendException(ex, traceItemType: PpsTraceItemType.Warning);
