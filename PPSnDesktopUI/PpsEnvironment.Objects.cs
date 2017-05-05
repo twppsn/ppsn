@@ -59,10 +59,10 @@ namespace TecWare.PPSn
 	public sealed class PpsObjectLink
 	{
 		private readonly PpsObject parent;
-		private long? id;						// local id
-		private readonly long linkToId;			// id of the linked object
-		private readonly long? linkToLocalId;	// id for the object, that was used within the dataset (only neg numbers are allowed, it is for replacing before push)
-		private PpsObjectLinkRestriction onDelete;	// is delete cascade possible
+		private long? id;                       // local id
+		private readonly long linkToId;         // id of the linked object
+		private readonly long? linkToLocalId;   // id for the object, that was used within the dataset (only neg numbers are allowed, it is for replacing before push)
+		private PpsObjectLinkRestriction onDelete;  // is delete cascade possible
 
 		private WeakReference<PpsObject> linkToCache; // weak ref to the actual object
 
@@ -197,7 +197,7 @@ namespace TecWare.PPSn
 							}
 						}
 					}
-					
+
 					if (removedLinks.Count > 0)
 					{
 						var removedLinksArray = removedLinks.ToArray();
@@ -236,12 +236,12 @@ namespace TecWare.PPSn
 				var notProcessedLinks = new List<PpsObjectLink>(links);
 
 				// add new links
-				foreach(var x in xLinks)
+				foreach (var x in xLinks)
 				{
 					var objectId = x.GetAttribute("objectId", -1L);
 					var onDelete = ParseObjectLinkRestriction(x.GetAttribute("onDelete", "R"));
 
-					var linkExists =links.Find(c => c.LinkToId == objectId && c.OnDelete == onDelete);
+					var linkExists = links.Find(c => c.LinkToId == objectId && c.OnDelete == onDelete);
 					if (linkExists == null)
 						links.Add(new PpsObjectLink(parent, null, objectId, null, onDelete));
 					else
@@ -268,7 +268,7 @@ namespace TecWare.PPSn
 			{
 				CheckLinksLoaded();
 
-				foreach(var c in links)
+				foreach (var c in links)
 				{
 					if (c.LinkToId < 0)
 						throw new ArgumentException("Only positive object id's can be pushed to the server.");
@@ -318,7 +318,7 @@ namespace TecWare.PPSn
 			OnCollectionReset();
 		} // proc RemoveLink
 
-		private void OnCollectionReset() 
+		private void OnCollectionReset()
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
 		void ICollection.CopyTo(Array array, int index)
@@ -529,7 +529,7 @@ namespace TecWare.PPSn
 			else
 				Remove();
 		} // proc Reset
-		
+
 		public void Update(PpsObjectTagClass newClass, object newValue)
 		{
 			if (!localClass.HasValue
@@ -602,7 +602,7 @@ namespace TecWare.PPSn
 	} // class PpsObjectTagView
 
 	#endregion
-	
+
 	#region -- class PpsObjectTags ------------------------------------------------------
 
 	public sealed class PpsObjectTags : IList, IReadOnlyList<PpsObjectTagView>, INotifyCollectionChanged
@@ -621,7 +621,7 @@ namespace TecWare.PPSn
 		} // ctor
 
 		#region -- Refresh ----------------------------------------------------------------
-		
+
 		private void CheckTagsLoaded()
 		{
 			lock (parent.SyncRoot)
@@ -632,7 +632,7 @@ namespace TecWare.PPSn
 				RefreshTags();
 			}
 		} // proc CheckTagsLoaded
-		
+
 		/// <summary>Reads the text from a text-lob. (new line separated, id:key:class:userId=value</summary>
 		/// <param name="tagList"></param>
 		internal void RefreshTags(string tagList)
@@ -658,7 +658,7 @@ namespace TecWare.PPSn
 				// clear current state
 				tags.Clear();
 
-				foreach(var c in tagList.Split(new char[] { '\n'}, StringSplitOptions.RemoveEmptyEntries))
+				foreach (var c in tagList.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries))
 				{
 					var p = c.IndexOf(':');
 					if (p <= 0)
@@ -686,7 +686,7 @@ namespace TecWare.PPSn
 					tags.Add(t);
 				}
 			}
-
+			isLoaded = true;
 			OnCollectionReset();
 		} // proc RefreshTags
 
@@ -712,7 +712,7 @@ namespace TecWare.PPSn
 
 								var serverClass = r.IsDBNull(2) ? null : new PpsObjectTagClass?(PpsObjectTag.ParseClass(r.GetInt32(2)));
 								var localClass = r.IsDBNull(4) ? null : new PpsObjectTagClass?(PpsObjectTag.ParseClass(r.GetInt32(4)));
-								
+
 								var t = new PpsObjectTagView(
 									parent,
 									r.GetInt64(0),
@@ -732,10 +732,10 @@ namespace TecWare.PPSn
 					}
 				}
 			}
-
+			isLoaded = true;
 			OnCollectionReset();
 		} // proc RefreshTags
-		
+
 		private void OnCollectionReset()
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
@@ -767,9 +767,9 @@ namespace TecWare.PPSn
 					var insertKeyParameter = insertCommand.AddParameter("@Key", DbType.String);
 					var insertClassParameter = insertCommand.AddParameter("@LClass", DbType.Int32);
 					var insertValueParameter = insertCommand.AddParameter("@LValue", DbType.String);
-					var insertUserIdParameter = insertCommand.AddParameter("@ObjectId", DbType.Int64);
+					var insertUserIdParameter = insertCommand.AddParameter("@UserId", DbType.Int64);
 
-					foreach(var cur in tags)
+					foreach (var cur in tags)
 					{
 						if (cur.IsChanged)
 						{
@@ -815,7 +815,7 @@ namespace TecWare.PPSn
 					isLoaded = false;
 			}
 		} // proc UpdateLocal
-		
+
 		#endregion
 
 		#region -- Tag Manipulation -------------------------------------------------------
@@ -947,7 +947,7 @@ namespace TecWare.PPSn
 
 		int IList.Add(object value)
 		{
-			switch(value)
+			switch (value)
 			{
 				case PpsObjectTag t:
 					return IndexOf(UpdateTag(t.Name, t.Class, t.Value));
@@ -960,7 +960,7 @@ namespace TecWare.PPSn
 
 		void IList.Remove(object value)
 		{
-			switch(value)
+			switch (value)
 			{
 				case string key:
 					Remove(key);
@@ -1049,6 +1049,7 @@ namespace TecWare.PPSn
 
 		private readonly PpsObject baseObj;
 		private byte[] rawData = null;
+		private string sha256 = String.Empty;
 
 		public PpsObjectBlobData(PpsObject obj)
 		{
@@ -1069,10 +1070,11 @@ namespace TecWare.PPSn
 
 		public async Task CommitAsync()
 		{
+			baseObj.Tags.UpdateTag(-1, "Sha256", PpsObjectTagClass.Text, sha256);
 			await baseObj.SaveRawDataAsync(
-				rawData.Length, 
-				baseObj.MimeType ?? MimeTypes.Application.OctetStream, 
-				dst => dst.Write(rawData, 0, rawData.Length), 
+				rawData.Length,
+				baseObj.MimeType ?? MimeTypes.Application.OctetStream,
+				dst => dst.Write(rawData, 0, rawData.Length),
 				true
 			);
 		} // proc CommitAsync
@@ -1094,6 +1096,7 @@ namespace TecWare.PPSn
 		{
 			var fileStream = new FileStream(filename, FileMode.Open);
 			rawData = fileStream.ReadInArray();
+			sha256 = StuffIO.GetStreamHash(fileStream);// ToDo: changeme
 			return Task.CompletedTask;
 		}
 
@@ -1111,7 +1114,7 @@ namespace TecWare.PPSn
 		private readonly PpsObject baseObj;
 		private readonly PpsUndoManager undoManager;
 		private readonly List<PpsRevisionDataSet> revisions = new List<PpsRevisionDataSet>();
-		
+
 		internal PpsObjectDataSet(PpsDataSetDefinitionDesktop definition, PpsObject obj)
 			: base(definition, obj.Environment)
 		{
@@ -1123,7 +1126,7 @@ namespace TecWare.PPSn
 		{
 			// add the basic head table and update the object data
 			var head = Tables["Head", false];
-			if(head != null)
+			if (head != null)
 			{
 				if (head.Count == 0)
 					head.Add();
@@ -1149,7 +1152,7 @@ namespace TecWare.PPSn
 							ResetDirty();
 						}
 					);
-}
+				}
 			}
 		} // proc LoadAsync
 
@@ -1186,7 +1189,7 @@ namespace TecWare.PPSn
 		{
 			if (IsDirty)
 				await CommitAsync();
-			
+
 			using (var xml = XmlWriter.Create(dst, Procs.XmlWriterSettings))
 				Write(xml);
 		} // proc PushAsync
@@ -1244,11 +1247,11 @@ namespace TecWare.PPSn
 		private readonly PpsEnvironment environment;
 		private readonly PpsObjectColumns columns;
 		private long objectId;
-		private readonly object[] staticValues;				// values of the table
+		private readonly object[] staticValues;             // values of the table
 		private readonly object objectLock = new object();
-		
-		private IPpsObjectData data = null;					// access to the object data
-		private readonly PpsObjectTags tags;				// list with assigned tags
+
+		private IPpsObjectData data = null;                 // access to the object data
+		private readonly PpsObjectTags tags;                // list with assigned tags
 		private readonly PpsObjectLinks links;              // linked objects
 
 		private bool isChanged = false;
@@ -1407,7 +1410,7 @@ namespace TecWare.PPSn
 					).Wait();
 
 					SetValue(PpsStaticObjectColumnIndex.PulledRevId, pulledRevId, true);
-					
+
 					// persist current object state
 					UpdateLocal();
 
@@ -1564,7 +1567,7 @@ namespace TecWare.PPSn
 				cmd.AddParameter("@MimeType", DbType.String, mimeType);
 				cmd.AddParameter("@Document", DbType.Binary, bData ?? (object)DBNull.Value);
 				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, isDocumentChanged);
-				
+
 				await cmd.ExecuteNonQueryAsync();
 
 				// set HasData to true
@@ -1580,7 +1583,7 @@ namespace TecWare.PPSn
 			=> $"Object: {Typ}; {objectId} # {Guid}:{PulledRevId}";
 
 		#endregion
-		
+
 		private XElement ToXml()
 		{
 			var xObj = new XElement("object");
@@ -1802,7 +1805,7 @@ namespace TecWare.PPSn
 		// -- Static ----------------------------------------------------------------
 
 		private static PpsStaticObjectColumn[] staticColumns;
-		
+
 		private enum PpsStaticObjectColumnIndex
 		{
 			Guid = 1,
@@ -1862,7 +1865,7 @@ namespace TecWare.PPSn
 		private readonly string name;
 		private bool createServerSiteOnly = false;
 		private bool isRev = false;
-		
+
 		public PpsObjectInfo(PpsEnvironment environemnt, string name)
 			: base(environemnt)
 		{
@@ -2350,14 +2353,14 @@ order by t_liefnr.value desc
 		} // func CreateObjectFilter
 
 		#endregion
-		
+
 		/// <summary>Create a new object in the local database.</summary>
 		/// <param name="transaction"></param>
 		/// <param name="objectInfo"></param>
 		/// <returns></returns>
 		public PpsObject CreateNewObject(PpsMasterDataTransaction transaction, PpsObjectInfo objectInfo)
 			=> CreateNewObject(transaction, Guid.NewGuid(), objectInfo.Name, objectInfo.GetNextNumber(transaction), objectInfo.IsRev);
-		
+
 		/// <summary>Create a new object.</summary>
 		/// <param name="serverId"></param>
 		/// <param name="guid"></param>
@@ -2381,7 +2384,7 @@ order by t_liefnr.value desc
 				cmd.AddParameter("@Typ", DbType.String, typ.DbNullIfString());
 				cmd.AddParameter("@Nr", DbType.String, nr.DbNullIfString());
 				cmd.AddParameter("@IsRev", DbType.Boolean, isRev);
-				
+
 				cmd.ExecuteNonQueryEx();
 				trans.Commit();
 
@@ -2559,7 +2562,7 @@ order by t_liefnr.value desc
 			=> objectInfo[objectTyp, false];
 
 		#endregion
-		
+
 		#region -- ActiveDataSets ---------------------------------------------------------
 
 		internal void OnDataSetActivated(PpsDataSetDesktop dataset)
