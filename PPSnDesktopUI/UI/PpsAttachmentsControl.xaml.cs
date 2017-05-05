@@ -47,7 +47,7 @@ namespace TecWare.PPSn.UI
 			);
 			CommandBindings.Add(
 				new CommandBinding(AddFileAttachmentCommand,
-					(sender, e) =>
+					async (sender, e) =>
 					{
 						var ofd = new OpenFileDialog();
 						ofd.Multiselect = true;
@@ -59,20 +59,18 @@ namespace TecWare.PPSn.UI
 							foreach (var filename in ofd.FileNames)
 							{
 								var trans = env.MasterData.CreateTransaction();
-								var oinf = new PpsObjectInfo(env, "Attachment");
-								oinf.IsRev = false;
+								var oinf = new PpsObjectInfo(env, "Attachment") { IsRev = false };
 								oinf.Values.Add("Filename", filename);
 								var obj = env.CreateNewObject(trans, oinf);
 
-								((PpsObjectBlobData)((dynamic)obj).Data).ReadFromFileAsync(filename).GetAwaiter().OnCompleted(() =>
-									((PpsObjectBlobData)((dynamic)obj).Data).CommitAsync().GetAwaiter().OnCompleted(() =>
-										{
-											list.Table.Add(obj);
-											trans.Commit();
-											trans.Dispose();
-										}
-									)
-								);
+								var data = await obj.GetDataAsync<PpsObjectBlobData>(trans);
+								await data.ReadFromFileAsync(filename);
+								await data.CommitAsync();
+
+								Dispatcher.Invoke(() => list.Table.Add(obj));
+
+								trans.Commit();
+								trans.Dispose();
 							}
 						}
 						e.Handled = true;
