@@ -154,7 +154,8 @@
             <RowDefinition Height="29"/>
             <RowDefinition Height="29"/>
             <RowDefinition Height="29"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <Label x:Name="lblContactNr" Grid.Column="0" Grid.Row="0" Content="Kontakt-Nr.:" Height="23" VerticalAlignment="Top" />
@@ -242,6 +243,7 @@
             <TabItem Header="Sonstiges">
             </TabItem>
         </TabControl>
+		<ui:PpsAttachmentsControl AttachmentList="{Binding Data.Head.First.Zusa}" Grid.Row="5" Grid.Column="1" VerticalAlignment="Top" HorizontalAlignment="Right"/>
     </Grid>
 
     <ui:PpsGenericWpfControl.Commands>
