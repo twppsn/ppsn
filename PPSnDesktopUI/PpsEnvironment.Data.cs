@@ -148,7 +148,7 @@ namespace TecWare.PPSn
 			this.owner = owner;
 			this.values = new object[r.FieldCount];
 			var primaryKeyIndex = owner.GetPrimaryKeyColumnIndex();
-			for (var i = 0;i< values.Length;i++)
+			for (var i = 0; i < values.Length; i++)
 			{
 				var v = r.GetValue(i);
 				if (primaryKeyIndex == i && (v == null || v == DBNull.Value))
@@ -158,7 +158,7 @@ namespace TecWare.PPSn
 			}
 		} // ctor
 
-		public override IReadOnlyList<IDataColumn> Columns 
+		public override IReadOnlyList<IDataColumn> Columns
 			=> owner.Columns;
 
 		public override object this[int index]
@@ -200,7 +200,7 @@ namespace TecWare.PPSn
 		/// <summary>Creates the select for all data rows.</summary>
 		/// <returns></returns>
 		protected abstract DbCommand PrepareCommand();
-		
+
 		/// <summary>Returns the rows for the prepared command.</summary>
 		/// <returns></returns>
 		public IEnumerator<IDataRow> GetEnumerator()
@@ -217,9 +217,9 @@ namespace TecWare.PPSn
 			}
 		} // func GetEnumerator
 
-		IEnumerator IEnumerable.GetEnumerator() 
+		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
-		
+
 		/// <summary>Columns of the rows.</summary>
 		public abstract IReadOnlyList<IDataColumn> Columns { get; }
 		/// <summary>Owner of the the rows.</summary>
@@ -234,7 +234,7 @@ namespace TecWare.PPSn
 	{
 		#region -- struct PpsWhereConditionValue ----------------------------------------
 
-		private struct PpsWhereConditionValue 
+		private struct PpsWhereConditionValue
 		{
 			public PpsWhereConditionValue(string name, object value)
 			{
@@ -391,9 +391,9 @@ namespace TecWare.PPSn
 		/// <summary>The master data service.</summary>
 		public PpsMasterData MasterData => masterData;
 	} // class PpsMasterDataTable
-	
+
 	#endregion
-	
+
 	#region -- class PpsMasterData ------------------------------------------------------
 
 	public sealed class PpsMasterData : IDynamicMetaObjectProvider, IDisposable
@@ -614,7 +614,7 @@ namespace TecWare.PPSn
 			{
 				if (String.Compare(column.Name, "_rowId", StringComparison.OrdinalIgnoreCase) == 0)
 					continue; // ignore rowId column
-				
+
 				AppendSqlIdentifier(commandText, column.Name).Append(' ');
 				commandText.Append(
 					column.Attributes.GetProperty("IsIdentity", false)
@@ -699,7 +699,7 @@ namespace TecWare.PPSn
 						if (idx >= 0)
 							insertColumns.Add(newColumns[i].Name);
 					}
-					commands.Add($"INSERT INTO '{tableName}' ({String.Join(", ", insertColumns)}) SELECT {String.Join(", ", insertColumns)} FROM '{tableName}_temp';");
+					commands.Add($"INSERT INTO '{tableName}' ('{String.Join("', '", insertColumns)}') SELECT '{String.Join("', '", insertColumns)}' FROM '{tableName}_temp';");
 
 					// drop old local table
 					commands.Add($"DROP TABLE '{tableName}_temp';");  // no IF EXISTS - at this point the table must exist or error
@@ -1103,7 +1103,7 @@ namespace TecWare.PPSn
 
 			private void ExecuteCommand(SQLiteCommand command)
 			{
-					command.ExecuteNonQueryEx();
+				command.ExecuteNonQueryEx();
 			} // proc ExecuteCommand
 
 			#endregion
@@ -1251,7 +1251,7 @@ namespace TecWare.PPSn
 			table = null;
 			return false;
 		} // func TryGetTableFromCache
-		
+
 		#endregion
 
 		#region -- Synchronization ------------------------------------------------------
@@ -1868,7 +1868,7 @@ namespace TecWare.PPSn
 
 		// according to https://www.sqlite.org/datatype3.html there are only these datatypes - so map everything to these 5 - but we can define new
 
-		private static (Type Type, string SqlLite, DbType DbType)[] sqlLiteTypeMapping = 
+		private static (Type Type, string SqlLite, DbType DbType)[] sqlLiteTypeMapping =
 		{
 			(typeof(bool), "Boolean", DbType.Boolean),
 			(typeof(DateTime), "DateTime", DbType.DateTime),
