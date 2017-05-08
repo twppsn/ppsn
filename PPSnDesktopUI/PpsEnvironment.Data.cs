@@ -699,7 +699,7 @@ namespace TecWare.PPSn
 						if (idx >= 0)
 							insertColumns.Add(newColumns[i].Name);
 					}
-					commands.Add($"INSERT INTO '{tableName}' ('{String.Join("', '", insertColumns)}') SELECT '{String.Join("', '", insertColumns)}' FROM '{tableName}_temp';");
+					commands.Add($"INSERT INTO '{tableName}' ([{String.Join("], [", insertColumns)}]) SELECT [{String.Join("], [", insertColumns)}] FROM '{tableName}_temp';");
 
 					// drop old local table
 					commands.Add($"DROP TABLE '{tableName}_temp';");  // no IF EXISTS - at this point the table must exist or error
