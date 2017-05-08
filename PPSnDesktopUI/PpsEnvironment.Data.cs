@@ -1047,6 +1047,7 @@ namespace TecWare.PPSn
 									xml.Read();
 
 									var value = ConvertStringToSQLiteValue(xml.ReadContentAsString(), updateParameters[columnIndex].DbType);
+									
 									updateParameters[columnIndex].Value = value;
 									insertParameters[columnIndex].Value = value;
 
@@ -3173,6 +3174,13 @@ namespace TecWare.PPSn
 #endif
 					;
 				newLocalStore = new SQLiteConnection(connectionString); // foreign keys=true;
+				
+				newLocalStore.StateChange += (sender, e) =>
+				{
+					if (e.CurrentState == ConnectionState.Closed | e.CurrentState == ConnectionState.Broken)
+						Trace.TraceError("Verbindung zur lokalen Datenbank verloren!");
+				};
+
 				await newLocalStore.OpenAsync();
 
 				// check synchronisation table
