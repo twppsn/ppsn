@@ -63,7 +63,7 @@ namespace TecWare.PPSn.UI
 								oinf.Values.Add("Filename", filename);
 								var obj = env.CreateNewObject(trans, oinf);
 
-								var data = await obj.GetDataAsync<PpsObjectBlobData>(trans);
+								var data = await obj.GetDataAsync<PpsObjectBlobData>();
 								await data.ReadFromFileAsync(filename);
 								await data.CommitAsync();
 

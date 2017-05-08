@@ -110,7 +110,7 @@ namespace TecWare.PPSn.UI
 				if (obj == null) // no object given
 					CreateNewObject(transaction);
 
-				data = await obj.GetDataAsync<PpsObjectDataSet>(transaction);
+				data = await obj.GetDataAsync<PpsObjectDataSet>();
 
 				// register events, owner, and in the openDocuments dictionary
 				data.RegisterOwner(this);

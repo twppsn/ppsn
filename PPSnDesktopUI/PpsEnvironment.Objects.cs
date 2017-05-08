@@ -731,8 +731,8 @@ namespace TecWare.PPSn
 						}
 					}
 				}
+				isLoaded = true;
 			}
-			isLoaded = true;
 			OnCollectionReset();
 		} // proc RefreshTags
 
@@ -1373,7 +1373,7 @@ namespace TecWare.PPSn
 			}
 		} // proc UpdateObjectId
 
-		private async Task<IPpsProxyTask> EnqueuePull(PpsMasterDataTransaction transaction)
+		private async Task<IPpsProxyTask> EnqueuePullAsync(bool pullForeground)
 		{
 			// check if the environment is online, force online
 			await Environment.ForceOnlineAsync();
@@ -1403,6 +1403,17 @@ namespace TecWare.PPSn
 					using (var xmlHeader = XmlReader.Create(headerData, Procs.XmlReaderSettings))
 						ReadObjectFromXml(XElement.Load(xmlHeader));
 
+					// pull depended objects with lower request
+					if (pullForeground)
+					{
+						foreach (var linked in Links)
+						{
+							var linkTo = linked.LinkTo;
+							if (!linkTo.HasData)
+								linkTo.EnqueuePullAsync(false).Wait();
+						}
+					}
+
 					// update data block
 					SaveRawDataAsync(c.ContentLength - headerLength, MimeType,
 						dst => c.Content.CopyTo(dst),
@@ -1422,12 +1433,12 @@ namespace TecWare.PPSn
 			}
 		} // proc PullDataAsync
 
-		public async Task PullAsync(PpsMasterDataTransaction transaction, long revId = -1)
+		public async Task PullAsync(long revId = -1)
 		{
 			if (revId == -1)
 				revId = RemoteHeadRevId;
 
-			using (var r = await (await EnqueuePull(transaction)).ForegroundAsync())
+			using (var r = await (await EnqueuePullAsync(true)).ForegroundAsync())
 			{
 				// read prev stored data
 				if (data != null)
@@ -1480,7 +1491,7 @@ namespace TecWare.PPSn
 					ReadObjectFromXml(xAnswer);
 
 					// repull the whole object
-					await PullAsync(trans, RemoteHeadRevId);
+					await PullAsync(RemoteHeadRevId);
 
 					// write local database
 					UpdateLocal();
@@ -1492,14 +1503,14 @@ namespace TecWare.PPSn
 			}
 		} // proc PushAsync
 
-		public async Task<T> GetDataAsync<T>(PpsMasterDataTransaction transaction, bool asyncPullData = false)
+		public async Task<T> GetDataAsync<T>(bool asyncPullData = false)
 			where T : IPpsObjectData
 		{
 			if (data == null)
 			{
 				// update data from server, if not present (pull head)
 				if (objectId >= 0 && !HasData)
-					await PullAsync(transaction);
+					await PullAsync();
 
 				// create the core data object
 				data = await environment.CreateObjectDataObjectAsync<T>(this);
@@ -1738,7 +1749,7 @@ namespace TecWare.PPSn
 					else if (index == StaticColumns.Length + 0)
 					{
 						if (data == null)
-							data = GetDataAsync<IPpsObjectData>(null, true).Result;
+							data = GetDataAsync<IPpsObjectData>(true).Result;
 						return data;
 					}
 					else if (index == StaticColumns.Length + 1)

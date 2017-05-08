@@ -27,6 +27,7 @@ using System.Windows.Markup;
 using System.Windows.Media;
 using System.Xml;
 using System.Xml.Linq;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn
@@ -255,11 +256,12 @@ namespace TecWare.PPSn
 		{
 			try
 			{
+				System.Diagnostics.Trace.TraceInformation(command.CommandText);
 				return command.ExecuteNonQuery();
 			}
 			catch (DbException e)
 			{
-				e.Data[CommandTextKey] = command.CommandText;
+				e.Data[CommandTextKey] = InsertDbParams(command);
 				throw;
 			}
 		} // func ExecuteReaderEx
@@ -272,7 +274,7 @@ namespace TecWare.PPSn
 			}
 			catch (DbException e)
 			{
-				e.Data[CommandTextKey] = command.CommandText;
+				e.Data[CommandTextKey] = InsertDbParams(command);
 				throw;
 			}
 		} // func ExecuteReaderEx
@@ -285,7 +287,7 @@ namespace TecWare.PPSn
 			}
 			catch (DbException e)
 			{
-				e.Data[CommandTextKey] = command.CommandText;
+				e.Data[CommandTextKey] = InsertDbParams(command);
 				throw;
 			}
 		} // func ExecuteScalarEx
@@ -301,6 +303,15 @@ namespace TecWare.PPSn
 
 		public static object DbNullIf<T>(this T value, Func<T, bool> @null)
 			=> @null(value) ? (object)DBNull.Value : value;
+
+		private static string InsertDbParams(DbCommand cmd)
+		{
+			var ret = cmd.CommandText;
+			foreach (DbParameter parameter in cmd.Parameters)
+				ret = ret.Replace(parameter.ParameterName, parameter.Value.ToString());
+
+			return ret;
+		}
 	} // class StuffDB
 
 	#endregion
