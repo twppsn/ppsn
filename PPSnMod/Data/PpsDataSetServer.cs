@@ -96,8 +96,8 @@ namespace TecWare.PPSn.Server.Data
 			this.parentColumnName = clone.parentColumnName;
 		} // ctor
 
-		private PpsDataColumnServerDefinition(PpsDataTableDefinition tableDefinition, string fieldName, string columnName, bool isPrimaryKey, bool createRelationColumn, XElement config)
-			: base(tableDefinition, columnName, isPrimaryKey, isPrimaryKey)
+		private PpsDataColumnServerDefinition(PpsDataTableDefinition tableDefinition, string fieldName, string columnName, bool isPrimaryKey, bool isIdentity, bool createRelationColumn, XElement config)
+			: base(tableDefinition, columnName, isPrimaryKey, isIdentity)
 		{
 			this.fieldName = fieldName;
 
@@ -124,6 +124,7 @@ namespace TecWare.PPSn.Server.Data
 		{
 			var columnName = config.GetAttribute("name", (string)null);
 			var isPrimary = config.GetAttribute("isPrimary", false);
+			var isIdentity = config.GetAttribute("isIdentity", isPrimary);
 
 			if (String.IsNullOrEmpty(columnName))
 				throw new DEConfigurationException(config, $"@name is empty.");
@@ -132,7 +133,7 @@ namespace TecWare.PPSn.Server.Data
 			if (String.IsNullOrEmpty(fieldName))
 				throw new DEConfigurationException(config, "@fieldName is empty.");
 
-			return new PpsDataColumnServerDefinition(tableDefinition, fieldName, columnName, isPrimary, createRelationColumn, config);
+			return new PpsDataColumnServerDefinition(tableDefinition, fieldName, columnName, isPrimary, isIdentity, createRelationColumn, config);
 		} // func Create
 
 		public override PpsDataColumnDefinition Clone(PpsDataTableDefinition tableOwner)

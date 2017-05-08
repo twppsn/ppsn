@@ -191,13 +191,13 @@
 
 				<pps:table name="SyncState" dataSource="sys">
 					<pps:meta name="syncType">None</pps:meta>
-					<pps:column name="Table" fieldName="sys.Fields.Text" isPrimary="true" />
+					<pps:column name="Table" fieldName="sys.Fields.Text" isPrimary="true" isIdentity="false" />
 					<pps:column name="SyncId" fieldName="sys.Fields.Long" />
 				</pps:table>
 
 				<pps:table name="OfflineCache" dataSource="sys">
 					<pps:meta name="syncType">TimeStamp: wpf.sync, ContentLastModification</pps:meta>
-					<pps:column name="Path" isPrimary="true" fieldName="sys.Fields.Path" />
+					<pps:column name="Path" isPrimary="true" isIdentity="false" fieldName="sys.Fields.Path" />
 					<pps:column name="ContentType" fieldName="sys.Fields.ContentType">
 						<pps:meta name="sourceColumn">#</pps:meta>
 						<pps:meta name="nullable">true</pps:meta>
@@ -237,7 +237,7 @@
 					<pps:meta name="syncType">ChangeTracking: dbo.ObjK</pps:meta>
 					<pps:meta name="useAsKey">Guid</pps:meta>
 					
-					<pps:column name="Id" fieldName="dbo.ObjK.Id" isPrimary="true" />
+					<pps:column name="Id" fieldName="dbo.ObjK.Id" isPrimary="true" isIdentity="false" />
 					<pps:column name="Guid" fieldName="dbo.ObjK.Guid">
 						<pps:meta name="IsUnique">true</pps:meta>
 					</pps:column>
@@ -274,7 +274,7 @@
 				<pps:table name="ObjectTags">
 					<pps:meta name="syncType">ChangeTracking: dbo.ObjT</pps:meta>
 					
-					<pps:column name="Id" fieldName="dbo.ObjT.Id" isPrimary="true" />
+					<pps:column name="Id" fieldName="dbo.ObjT.Id" isPrimary="true" isIdentity="false" />
 					<pps:relation name="ObjectId" fieldName="dbo.ObjT.ObjKId" relationName="Tags" parentTable="Objects" parentColumn="Id" parentType="Root"  />
 					
 					<pps:column name="Key" fieldName="dbo.ObjT.Key" />
@@ -301,8 +301,7 @@
 					<!-- no sync, because it is updated with pull/push requests -->
 					<pps:meta name="syncType">None</pps:meta>
 
-						<pps:column name="Id" fieldName="sys.Fields.PrimaryKey" isPrimary="true" >
-						<pps:meta name="IsIdentity">true</pps:meta>
+						<pps:column name="Id" fieldName="sys.Fields.PrimaryKey" isPrimary="true" isIdentity="true">
 					</pps:column>
 					<pps:relation name="ParentObjectId" fieldName="sys.Fields.Long" relationName="LinkedTo" parentTable="Objects" parentColumn="Id" parentType="Root" />
 					<pps:relation name="LinkObjectId" fieldName="sys.Fields.Long" relationName="LinkedFrom" parentTable="Objects" parentColumn="Id" parentType="Cascade" />

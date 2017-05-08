@@ -93,6 +93,11 @@
 		</xs:attribute>
 		<xs:attribute name="isPrimary" type="xs:boolean" use="optional" default="false">
 		</xs:attribute>
+		<xs:attribute name="isIdentity" type="xs:boolean" use="optional" default="false">
+			<xs:annotation>
+				<xs:documentation>(Default: same as isPrimary)</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
 	</xs:attributeGroup>
 
 	<xs:complexType name="fieldAttributeType">
