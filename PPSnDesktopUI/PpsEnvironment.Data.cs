@@ -1033,8 +1033,6 @@ namespace TecWare.PPSn
 									xml.Read();
 
 									var value = ConvertStringToSQLiteValue(xml.ReadContentAsString(), updateParameters[columnIndex].DbType);
-									if (value is String)
-										value = "'" + (string)value + "'";
 									updateParameters[columnIndex].Value = value;
 									insertParameters[columnIndex].Value = value;
 
