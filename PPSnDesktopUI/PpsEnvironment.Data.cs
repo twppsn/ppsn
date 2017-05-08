@@ -602,6 +602,20 @@ namespace TecWare.PPSn
 
 		private static void CreateTableScript(List<string> commands, string tableName, IEnumerable<IDataColumn> remoteColumns, string[] localIndexArray)
 		{
+			bool IsIntegerType(Type t)
+			{
+				switch (Type.GetTypeCode(t))
+				{
+					case TypeCode.Int32:
+					case TypeCode.UInt32:
+					case TypeCode.Int64:
+					case TypeCode.UInt64:
+						return true;
+					default:
+						return false;
+				}
+			} // func IsIntegerType
+
 			// add dummy for the create table
 			var createTableIndex = commands.Count;
 			commands.Add(String.Empty);
@@ -617,7 +631,7 @@ namespace TecWare.PPSn
 
 				AppendSqlIdentifier(commandText, column.Name).Append(' ');
 				commandText.Append(
-					column.Attributes.GetProperty("IsIdentity", false)
+					column.Attributes.GetProperty("IsIdentity", false) && IsIntegerType(column.DataType)
 						? "INTEGER"
 						: ConvertDataTypeToSqLite(column.DataType)
 				);
@@ -687,7 +701,7 @@ namespace TecWare.PPSn
 				else if (sameColumns.Count < localColumnsArray.Length) // this is more performant than checking for obsolete columns
 				{
 					// rename local table
-					commands.Add($"ALTER TABLE '{tableName}' RENAME TO '{tableName}_temp';");
+					commands.Add($"ALTER TABLE [{tableName}] RENAME TO [{tableName}_temp];");
 
 					// create a new table, according to new Scheme...
 					CreateTableScript(commands, tableName, remoteColumns, localIndexes.Select(c => c.Item1).ToArray());
@@ -699,10 +713,10 @@ namespace TecWare.PPSn
 						if (idx >= 0)
 							insertColumns.Add(newColumns[i].Name);
 					}
-					commands.Add($"INSERT INTO '{tableName}' ('{String.Join("', '", insertColumns)}') SELECT '{String.Join("', '", insertColumns)}' FROM '{tableName}_temp';");
+					commands.Add($"INSERT INTO [{tableName}] ([{String.Join("], [", insertColumns)}]) SELECT [{String.Join("], [", insertColumns)}] FROM [{tableName}_temp];");
 
 					// drop old local table
-					commands.Add($"DROP TABLE '{tableName}_temp';");  // no IF EXISTS - at this point the table must exist or error
+					commands.Add($"DROP TABLE [{tableName}_temp];");  // no IF EXISTS - at this point the table must exist or error
 				}
 				else if (newColumns.Count > 0) // there are no columns, which have to be deleted - check now if there are new columns to add
 				{
