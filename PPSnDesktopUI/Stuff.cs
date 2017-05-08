@@ -256,7 +256,6 @@ namespace TecWare.PPSn
 		{
 			try
 			{
-				System.Diagnostics.Trace.TraceInformation(command.CommandText);
 				return command.ExecuteNonQuery();
 			}
 			catch (DbException e)
