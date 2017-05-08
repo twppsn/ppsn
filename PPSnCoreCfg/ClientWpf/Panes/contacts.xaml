@@ -241,9 +241,9 @@
                 </Grid>
 	            </TabItem>
             <TabItem Header="Sonstiges">
+			<ui:PpsAttachmentsControl AttachmentList="{Binding Data.Head.First.Zusa}" VerticalAlignment="Top" HorizontalAlignment="Left"/>
             </TabItem>
         </TabControl>
-		<ui:PpsAttachmentsControl AttachmentList="{Binding Data.Head.First.Zusa}" Grid.Row="5" Grid.Column="1" VerticalAlignment="Top" HorizontalAlignment="Right"/>
     </Grid>
 
     <ui:PpsGenericWpfControl.Commands>
