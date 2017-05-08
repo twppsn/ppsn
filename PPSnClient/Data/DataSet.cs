@@ -164,7 +164,7 @@ namespace TecWare.PPSn.Data
 
 		#region -- Dirty Flag -------------------------------------------------------------
 
-		private void SetDirty()
+		public void SetDirty()
 		{
 			if (!isDirty)
 			{
