@@ -334,6 +334,11 @@ namespace TecWare.PPSn
 			bstream.Flush();
 			return ret;
 		}
+
+		public static string CleanHash(string hash)
+		{
+			return hash.Replace("-", String.Empty).ToLower();
+		}
 	}
 
 	#endregion
