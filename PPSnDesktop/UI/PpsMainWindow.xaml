@@ -528,13 +528,13 @@
 				<ColumnDefinition Width="32"/>
 			</Grid.ColumnDefinitions>
 
-			<Button Grid.Column="0" Focusable="False" Foreground="{StaticResource PPSnWindowForegroundBrush}"
+			<Button x:Name="showTraceButton" Grid.Column="0" Focusable="False" Foreground="{StaticResource PPSnWindowForegroundBrush}"
 					Content="{Binding Environment.Traces.LastTrace,Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource MultiLineStringConverter}}"
 					Command="{x:Static ui:PpsWindow.TraceLogCommand}"
 					ToolTipService.InitialShowDelay="750"
 					ToolTipService.ShowDuration="10000">
 				<Button.ToolTip>
-					<ToolTip Placement="Top" HorizontalOffset="16" VerticalOffset="-16" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="14">
+					<ToolTip Placement="Top" VerticalOffset="-16" Margin="16,0" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="14">
 						<ListBox Style="{StaticResource PPSnListBoxStyle}" Focusable="False" Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}">
 							<ListBox.ItemsSource>
 								<MultiBinding Converter="{StaticResource ManyToTopTenConverter}">
@@ -552,7 +552,7 @@
 										</Grid.ColumnDefinitions>
 										<TextBlock Grid.Column="0" Text="{Binding Path=Type}"/>
 										<TextBlock Grid.Column="1" Text="{Binding Path=Stamp, StringFormat=HH:mm:ss}" Margin="0,0,16,0"/>
-										<TextBlock Grid.Column="2" Text="{Binding Path=Message, Converter={StaticResource MultiLineStringConverter}}"/>
+										<TextBlock Grid.Column="2" Text="{Binding Path=Message, Converter={StaticResource MultiLineStringConverter}}" />
 									</Grid>
 								</DataTemplate>
 							</ListBox.ItemTemplate>

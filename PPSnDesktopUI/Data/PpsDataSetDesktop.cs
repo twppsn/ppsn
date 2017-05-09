@@ -175,6 +175,7 @@ namespace TecWare.PPSn.Data
 							referencedObject = new WeakReference<PpsObject>(o);
 						return false;
 					}
+					// todo: validate id via links
 				case int idInt:
 					return SetGenericValue(environment.GetObject(idInt, throwException: true), firePropertyChanged);
 				case long idLong:

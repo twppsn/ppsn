@@ -193,9 +193,7 @@ namespace TecWare.PPSn.UI
 	public sealed class PpsTypeStringConverter : IValueConverter
 	{
 		public object Convert(object value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
-		{
-			return value.ToString().Replace("System.", String.Empty);
-		}
+			=> value is Type t ? LuaType.GetType(t).AliasName ?? t.Name : value?.ToString();
 
 		public object ConvertBack(object value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
 		{

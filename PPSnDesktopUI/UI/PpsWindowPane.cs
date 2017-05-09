@@ -79,7 +79,6 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>has sidebar?</summary>
 		bool HasSideBar { get; }
-
 	} // interface IPpsWindowPane
 
 	#endregion

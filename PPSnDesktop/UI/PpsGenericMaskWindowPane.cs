@@ -54,7 +54,8 @@ namespace TecWare.PPSn.UI
 				{
 					if (elapsed > 3000)
 					{
-						CommitEditAsync();
+						if (data != null && data.IsDirty)
+							CommitEditAsync();
 						return false;
 					}
 					else
@@ -109,7 +110,7 @@ namespace TecWare.PPSn.UI
 				if (obj == null) // no object given
 					CreateNewObject(transaction);
 
-				data = await obj.GetDataAsync<PpsObjectDataSet>(transaction);
+				data = await obj.GetDataAsync<PpsObjectDataSet>();
 
 				// register events, owner, and in the openDocuments dictionary
 				data.RegisterOwner(this);
@@ -120,7 +121,7 @@ namespace TecWare.PPSn.UI
 					// call initalization hook
 					if (obj.HasData) // existing data
 					{
-						await data.LoadAsync(transaction);
+						await data.LoadAsync();
 						await data.OnLoadedAsync(arguments);
 					}
 					else // new data
@@ -241,7 +242,7 @@ namespace TecWare.PPSn.UI
 
 		public override Task<bool> UnloadAsync(bool? commit = default(bool?))
 		{
-			if (data.IsDirty)
+			if (data != null && data.IsDirty)
 				CommitEditAsync().Wait();
 
 			data.UnregisterOwner(this);
@@ -268,7 +269,7 @@ namespace TecWare.PPSn.UI
 		public PpsLuaTask PushDataAsync()
 		{
 			UpdateSources();
-			return Environment.RunTask(data.PushAsync())
+			return Environment.RunTask(obj.PushAsync())
 				.OnException(
 				new Action<Exception>(ex => Environment.ShowException(ex, "Veröffentlichung ist fehlgeschlagen."))
 			);

@@ -481,6 +481,7 @@ namespace TecWare.PPSn
 		private readonly PpsEnvironmentInfo info;       // source information of the environment
 		private readonly NetworkCredential userInfo;    // currently credentials of the user
 
+		private long userId = -1;
 		private string userName = null;                 // display name of the user
 		private readonly DirectoryInfo localDirectory = null;   // local directory for the user data
 
@@ -870,8 +871,27 @@ namespace TecWare.PPSn
 								// try login for the user
 								var xUser = Request.GetXmlAsync("remote/login.xml", rootName: "user").Result;
 
-								userName = xUser.GetAttribute("displayName", userName);
-								Dispatcher.BeginInvoke(new Action(() => OnPropertyChanged(nameof(UsernameDisplay))));
+								// sync will write the header
+								var newUserId = xUser.GetAttribute("userId", -1);
+								var newUserName = xUser.GetAttribute("displayName", userName);
+
+								if (newUserId == -1)
+									throw new ArgumentOutOfRangeException("@userid", userId, "UID is missing.");
+
+								if (userId != newUserId || newUserName != userName)
+								{
+									userId = newUserId;
+									userName = newUserName;
+
+									masterData.SetUpdateUserInfo();
+									Dispatcher.BeginInvoke(
+										new Action(() =>
+										{
+											OnPropertyChanged(nameof(UserId));
+											OnPropertyChanged(nameof(Username));
+											OnPropertyChanged(nameof(UsernameDisplay));
+										}));
+								}
 
 								// start synchronization
 								if (!masterData.IsSynchronizationStarted || masterData.CheckSynchronizationStateAsync().Result)
@@ -884,7 +904,9 @@ namespace TecWare.PPSn
 
 						case PpsEnvironmentState.Online:
 							// fetch next state on ws-info
-							backgroundNotifierModeTransmission.Wait();
+							if (!backgroundNotifierModeTransmission.Wait(3000))
+								using (var log = Traces.TraceProgress())
+									masterData.SynchronizationAsync(log).Wait();
 							break;
 
 						case PpsEnvironmentState.Shutdown:
@@ -917,10 +939,13 @@ namespace TecWare.PPSn
 						}
 						state = PpsEnvironmentState.None;
 					}
-					else// todo: exception
+					else
 					{
+						if (ex is WebException webEx && webEx.Status == WebExceptionStatus.ConnectFailure)
+							state = PpsEnvironmentState.OfflineConnect;
+						else
+							Traces.AppendException(ex, traceItemType: PpsTraceItemType.Warning);
 						Thread.Sleep(500);
-						Debug.Print(ex.ToString());
 					}
 				}
 			}
@@ -973,6 +998,8 @@ namespace TecWare.PPSn
 		[LuaMember]
 		public int EnvironmentId => environmentId;
 
+		[LuaMember]
+		public long UserId => userId;
 		/// <summary>Current user the is logged in.</summary>
 		[LuaMember]
 		public string Username => userName ?? String.Empty;

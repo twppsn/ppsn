@@ -68,101 +68,49 @@ namespace TecWare.PPSn
 
 	public abstract class PpsMasterDataTransaction : IDbTransaction, IDisposable
 	{
-		#region -- class PpsMasterNestedTransaction -------------------------------------
-
-		private sealed class PpsMasterNestedTransaction : PpsMasterDataTransaction
-		{
-			public PpsMasterNestedTransaction(SQLiteConnection connection, SQLiteTransaction parentTransaction)
-				: base(connection, parentTransaction)
-			{
-			} // ctor
-
-			protected override void CommitCore() { }
-			protected override void RollbackCore() { }
-		} // class PpsMasterNestedTransaction
-
-		#endregion
-
-		#region -- class PpsMasterRootTransaction ---------------------------------------
-
-		private sealed class PpsMasterRootTransaction : PpsMasterDataTransaction
-		{
-			public PpsMasterRootTransaction(SQLiteConnection connection, SQLiteTransaction rootTransaction)
-				: base(connection, rootTransaction)
-			{
-			} // ctor
-
-			protected override void Dispose(bool disposing)
-			{
-				base.Dispose(disposing);
-
-				if (disposing)
-					Transaction.Dispose();
-			} // proc Dispose
-
-			protected override void CommitCore()
-				=> transaction.Commit();
-
-			protected override void RollbackCore()
-				=> transaction.Rollback();
-		} // class PpsMasterRootTransaction
-
-		#endregion
-
-		private readonly SQLiteConnection connection;
-		private readonly SQLiteTransaction transaction;
-		private bool? transactionState = null;
-
 		#region -- Ctor/Dtor/Commit/Rollback --------------------------------------------
 
-		protected PpsMasterDataTransaction(SQLiteConnection connection, SQLiteTransaction transaction)
+		protected PpsMasterDataTransaction()
 		{
-			this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
-			this.transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
 		} // ctor
+
+		~PpsMasterDataTransaction()
+		{
+			Dispose(false);
+		} // dtor
 
 		public void Dispose()
 		{
+			GC.SuppressFinalize(this);
 			Dispose(true);
 		} // proc Dispose
 
 		protected virtual void Dispose(bool disposing)
 		{
-			if (!transactionState.HasValue)
-			{
-				if (transaction != null)
-					Rollback();
-				else
-					transactionState = false;
-			}
 		} // proc Dispose
 
 		protected abstract void CommitCore();
 		protected abstract void RollbackCore();
 
 		public void Commit()
-		{
-			CommitCore();
-			transactionState = true;
-		} // proc Commit
+			=> CommitCore();
 
 		public void Rollback()
-		{
-			RollbackCore();
-			transactionState = false;
-		} // proc Rollback
+			=> RollbackCore();
 
 		#endregion
 
-		public DbCommand CreateNativeCommand(string commandText = null)
-			=> new SQLiteCommand(commandText, connection, transaction);
+		public abstract void AddRollbackOperation(Action rollback);
 
-		public long GetNextLocalId(PpsMasterDataTransaction transaction, string tableName, string primaryKey)
+		public DbCommand CreateNativeCommand(string commandText = null)
+			=> new SQLiteCommand(commandText, ConnectionCore, TransactionCore);
+
+		public long GetNextLocalId(string tableName, string primaryKey)
 		{
-			using (var cmd = transaction.CreateNativeCommand("SELECT min([" + primaryKey + "]) FROM main.[" + tableName + "]"))
+			using (var cmd = CreateNativeCommand("SELECT min([" + primaryKey + "]) FROM main.[" + tableName + "]"))
 			{
 				var nextIdObject = cmd.ExecuteScalarEx();
-				if (nextIdObject == null)
+				if (nextIdObject == DBNull.Value)
 					return -1;
 				else
 				{
@@ -172,21 +120,18 @@ namespace TecWare.PPSn
 			}
 		} // func GetNextLocalId
 
-		public long LastInsertRowId => connection.LastInsertRowId;
+		public long LastInsertRowId => ConnectionCore.LastInsertRowId;
 
-		protected SQLiteTransaction Transaction => transaction;
+		protected abstract SQLiteConnection ConnectionCore { get; }
+		protected abstract SQLiteTransaction TransactionCore { get; }
 
-		IDbConnection IDbTransaction.Connection => connection;
-		public DbConnection Connection => connection;
-		public IsolationLevel IsolationLevel => transaction?.IsolationLevel ?? System.Data.IsolationLevel.Unspecified;
+		IDbConnection IDbTransaction.Connection => ConnectionCore;
 
-		public bool IsDisposed => transactionState.HasValue;
-		public bool IsCommited => transactionState ?? false;
+		public DbConnection Connection => ConnectionCore;
+		public IsolationLevel IsolationLevel => TransactionCore.IsolationLevel;
 
-		internal static PpsMasterDataTransaction Create(SQLiteConnection connection, PpsMasterDataTransaction transaction)
-			=> transaction == null
-				? (PpsMasterDataTransaction)new PpsMasterRootTransaction(connection, connection.BeginTransaction())
-				: (PpsMasterDataTransaction)new PpsMasterNestedTransaction(connection, transaction.transaction);
+		public abstract bool IsDisposed { get; }
+		public abstract bool IsCommited { get; }
 	} // class PpsMasterTransaction
 
 	#endregion
@@ -203,7 +148,7 @@ namespace TecWare.PPSn
 			this.owner = owner;
 			this.values = new object[r.FieldCount];
 			var primaryKeyIndex = owner.GetPrimaryKeyColumnIndex();
-			for (var i = 0;i< values.Length;i++)
+			for (var i = 0; i < values.Length; i++)
 			{
 				var v = r.GetValue(i);
 				if (primaryKeyIndex == i && (v == null || v == DBNull.Value))
@@ -213,7 +158,7 @@ namespace TecWare.PPSn
 			}
 		} // ctor
 
-		public override IReadOnlyList<IDataColumn> Columns 
+		public override IReadOnlyList<IDataColumn> Columns
 			=> owner.Columns;
 
 		public override object this[int index]
@@ -255,7 +200,7 @@ namespace TecWare.PPSn
 		/// <summary>Creates the select for all data rows.</summary>
 		/// <returns></returns>
 		protected abstract DbCommand PrepareCommand();
-		
+
 		/// <summary>Returns the rows for the prepared command.</summary>
 		/// <returns></returns>
 		public IEnumerator<IDataRow> GetEnumerator()
@@ -272,9 +217,9 @@ namespace TecWare.PPSn
 			}
 		} // func GetEnumerator
 
-		IEnumerator IEnumerable.GetEnumerator() 
+		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
-		
+
 		/// <summary>Columns of the rows.</summary>
 		public abstract IReadOnlyList<IDataColumn> Columns { get; }
 		/// <summary>Owner of the the rows.</summary>
@@ -289,7 +234,7 @@ namespace TecWare.PPSn
 	{
 		#region -- struct PpsWhereConditionValue ----------------------------------------
 
-		private struct PpsWhereConditionValue 
+		private struct PpsWhereConditionValue
 		{
 			public PpsWhereConditionValue(string name, object value)
 			{
@@ -321,7 +266,7 @@ namespace TecWare.PPSn
 
 			protected override DbCommand PrepareCommand()
 			{
-				var command = Table.MasterData.CreateNativeCommand(null);
+				var command = Table.MasterData.CreateNativeCommand();
 				try
 				{
 					var commandText = table.PrepareCommandText();
@@ -446,9 +391,9 @@ namespace TecWare.PPSn
 		/// <summary>The master data service.</summary>
 		public PpsMasterData MasterData => masterData;
 	} // class PpsMasterDataTable
-	
+
 	#endregion
-	
+
 	#region -- class PpsMasterData ------------------------------------------------------
 
 	public sealed class PpsMasterData : IDynamicMetaObjectProvider, IDisposable
@@ -467,7 +412,7 @@ namespace TecWare.PPSn
 
 			public bool TryGetProperty(string name, out object value)
 			{
-				var p = arguments.FirstOrDefault(c => String.Compare(c.SourceColumn, name, StringComparison.OrdinalIgnoreCase) == 0);
+				var p = arguments.FirstOrDefault(c => c != null && String.Compare(c.SourceColumn, name, StringComparison.OrdinalIgnoreCase) == 0);
 				if (p == null)
 				{
 					value = null;
@@ -526,6 +471,7 @@ namespace TecWare.PPSn
 
 		private bool isDisposed = false;
 		private bool isInSynchronization = false;
+		private bool updateUserInfo = false;
 
 		#region -- Ctor/Dtor ------------------------------------------------------------
 
@@ -621,6 +567,7 @@ namespace TecWare.PPSn
 				{
 					tableChanged = CreateAlterTableScript(commands,
 						table.Name,
+						table.Meta.GetProperty("syncType", String.Empty) == "None",
 						GetLocalTableColumns(connection, table.Name),
 						GetLocalTableIndexes(connection, table.Name),
 						table.Columns
@@ -655,6 +602,20 @@ namespace TecWare.PPSn
 
 		private static void CreateTableScript(List<string> commands, string tableName, IEnumerable<IDataColumn> remoteColumns, string[] localIndexArray)
 		{
+			bool IsIntegerType(Type t)
+			{
+				switch (Type.GetTypeCode(t))
+				{
+					case TypeCode.Int32:
+					case TypeCode.UInt32:
+					case TypeCode.Int64:
+					case TypeCode.UInt64:
+						return true;
+					default:
+						return false;
+				}
+			} // func IsIntegerType
+
 			// add dummy for the create table
 			var createTableIndex = commands.Count;
 			commands.Add(String.Empty);
@@ -668,7 +629,12 @@ namespace TecWare.PPSn
 				if (String.Compare(column.Name, "_rowId", StringComparison.OrdinalIgnoreCase) == 0)
 					continue; // ignore rowId column
 
-				AppendSqlIdentifier(commandText, column.Name).Append(' ').Append(ConvertDataTypeToSqLite(column.DataType));
+				AppendSqlIdentifier(commandText, column.Name).Append(' ');
+				commandText.Append(
+					column.Attributes.GetProperty("IsIdentity", false) && IsIntegerType(column.DataType)
+						? "INTEGER"
+						: ConvertDataTypeToSqLite(column.DataType)
+				);
 
 				// append primray key
 				if (column.Attributes.GetProperty("IsPrimary", false))
@@ -689,12 +655,11 @@ namespace TecWare.PPSn
 			commands[createTableIndex] = commandText.ToString();
 		} // func CreateTableScript
 
-		private static bool CreateAlterTableScript(List<string> commands, string tableName, IEnumerable<IDataColumn> localColumns, IEnumerable<Tuple<string, bool>> localIndexes, IEnumerable<IDataColumn> remoteColumns)
+		private static bool CreateAlterTableScript(List<string> commands, string tableName, bool preserveCurrentData, IEnumerable<IDataColumn> localColumns, IEnumerable<Tuple<string, bool>> localIndexes, IEnumerable<IDataColumn> remoteColumns)
 		{
 			var localColumnsArray = localColumns.ToArray();
 			var newColumns = new List<IDataColumn>();
 			var sameColumns = new List<string>();   // for String.Join - only Column names are used
-			var refreshColumnExists = false;
 
 			// todo: check index list
 
@@ -707,7 +672,7 @@ namespace TecWare.PPSn
 				foreach (var localColumn in localColumnsArray)
 				{
 					if (localColumn.Name == refreshColumnName)
-						refreshColumnExists = true;
+						preserveCurrentData = true;
 
 					// todo: check default
 					if ((remoteColumn.Name == localColumn.Name)
@@ -728,7 +693,7 @@ namespace TecWare.PPSn
 
 			if (sameColumns.Count < localColumnsArray.Length || newColumns.Count > 0)
 			{
-				if (!refreshColumnExists) // drop and recreate
+				if (!preserveCurrentData) // drop and recreate
 				{
 					CreateDropScript(commands, tableName);
 					CreateTableScript(commands, tableName, remoteColumns, null);
@@ -736,7 +701,7 @@ namespace TecWare.PPSn
 				else if (sameColumns.Count < localColumnsArray.Length) // this is more performant than checking for obsolete columns
 				{
 					// rename local table
-					commands.Add($"ALTER TABLE '{tableName}' RENAME TO '{tableName}_temp';");
+					commands.Add($"ALTER TABLE [{tableName}] RENAME TO [{tableName}_temp];");
 
 					// create a new table, according to new Scheme...
 					CreateTableScript(commands, tableName, remoteColumns, localIndexes.Select(c => c.Item1).ToArray());
@@ -748,10 +713,10 @@ namespace TecWare.PPSn
 						if (idx >= 0)
 							insertColumns.Add(newColumns[i].Name);
 					}
-					commands.Add($"INSERT INTO '{tableName}' ({String.Join(", ", insertColumns)}) SELECT {String.Join(", ", insertColumns)} FROM '{tableName}_temp';");
+					commands.Add($"INSERT INTO [{tableName}] ([{String.Join("], [", insertColumns)}]) SELECT [{String.Join("], [", insertColumns)}] FROM [{tableName}_temp];");
 
 					// drop old local table
-					commands.Add($"DROP TABLE '{tableName}_temp';");  // no IF EXISTS - at this point the table must exist or error
+					commands.Add($"DROP TABLE [{tableName}_temp];");  // no IF EXISTS - at this point the table must exist or error
 				}
 				else if (newColumns.Count > 0) // there are no columns, which have to be deleted - check now if there are new columns to add
 				{
@@ -834,8 +799,7 @@ namespace TecWare.PPSn
 		{
 			private readonly PpsMasterData masterData;
 			private readonly PpsDataTableDefinition table;
-			private readonly SQLiteConnection connection;
-			private readonly SQLiteTransaction transaction;
+			private readonly PpsMasterDataTransaction transaction;
 			private readonly bool isFull;
 
 			private readonly int physPrimaryColumnIndex;
@@ -856,10 +820,9 @@ namespace TecWare.PPSn
 
 			#region -- Ctor/Dtor ----------------------------------------------------
 
-			public ProcessBatch(SQLiteConnection connection, SQLiteTransaction transaction, PpsMasterData masterData, string tableName, bool isFull)
+			public ProcessBatch(PpsMasterDataTransaction transaction, PpsMasterData masterData, string tableName, bool isFull)
 			{
 				this.masterData = masterData;
-				this.connection = connection;
 				this.transaction = transaction;
 				this.isFull = isFull;
 
@@ -878,8 +841,8 @@ namespace TecWare.PPSn
 				refreshColumnIndex = table.FindColumnIndex(refreshColumnName);
 
 				// prepare column parameter
-				insertCommand = new SQLiteCommand(connection) { Transaction = transaction };
-				updateCommand = new SQLiteCommand(connection) { Transaction = transaction };
+				insertCommand = (SQLiteCommand)transaction.CreateNativeCommand(String.Empty);
+				updateCommand = (SQLiteCommand)transaction.CreateNativeCommand(String.Empty);
 				insertParameters = new SQLiteParameter[table.Columns.Count];
 				updateParameters = new SQLiteParameter[table.Columns.Count];
 
@@ -951,11 +914,11 @@ namespace TecWare.PPSn
 					" WHERE [" + updateParameters[virtPrimaryColumnIndex].SourceColumn + "] = " + updateParameters[virtPrimaryColumnIndex].ParameterName;
 
 				// prepare exists
-				existCommand = new SQLiteCommand("SELECT EXISTS(SELECT * FROM main.[" + table.Name + "] WHERE [" + virtPrimaryKey.Name + "] = @Id)", connection, transaction);
+				existCommand = (SQLiteCommand)transaction.CreateNativeCommand("SELECT EXISTS(SELECT * FROM main.[" + table.Name + "] WHERE [" + virtPrimaryKey.Name + "] = @Id)");
 				existIdParameter = existCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(virtPrimaryKey.DataType));
 
 				// prepare delete
-				deleteCommand = new SQLiteCommand("DELETE FROM main.[" + table.Name + "] WHERE [" + physPrimaryKey.Name + "] = @Id;", connection, transaction);
+				deleteCommand = (SQLiteCommand)transaction.CreateNativeCommand("DELETE FROM main.[" + table.Name + "] WHERE [" + physPrimaryKey.Name + "] = @Id;");
 				deleteIdParameter = deleteCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(physPrimaryKey.DataType));
 
 				existCommand.Prepare();
@@ -983,12 +946,12 @@ namespace TecWare.PPSn
 				{
 					if (refreshColumnIndex == -1)
 					{
-						using (var cmd = new SQLiteCommand($"DELETE FROM main.[{table.Name}]", connection, transaction))
+						using (var cmd = transaction.CreateNativeCommand($"DELETE FROM main.[{table.Name}]"))
 							cmd.ExecuteNonQueryEx();
 					}
 					else
 					{
-						using (var cmd = new SQLiteCommand($"UPDATE main.[{table.Name}] SET [" + refreshColumnName + "] = null WHERE [" + refreshColumnName + "] <> 1", connection, transaction))
+						using (var cmd = transaction.CreateNativeCommand($"UPDATE main.[{table.Name}] SET [" + refreshColumnName + "] = null WHERE [" + refreshColumnName + "] <> 1"))
 							//using (var cmd = new SQLiteCommand($"DELETE FROM main.[{table.Name}] WHERE [" + refreshColumnName + "] <> 1", connection, transaction))
 							cmd.ExecuteNonQueryEx();
 					}
@@ -999,7 +962,7 @@ namespace TecWare.PPSn
 			{
 				if (isFull && refreshColumnIndex >= 0)
 				{
-					using (var cmd = new SQLiteCommand($"DELETE FROM main.[{table.Name}] WHERE [" + refreshColumnName + "] is null", connection, transaction))
+					using (var cmd = transaction.CreateNativeCommand($"DELETE FROM main.[{table.Name}] WHERE [" + refreshColumnName + "] is null"))
 						cmd.ExecuteNonQueryEx();
 				}
 			} // proc Clean
@@ -1034,7 +997,7 @@ namespace TecWare.PPSn
 						var newSyncId = xml.GetElementContent<long>(-1);
 						if (newSyncId == -1)
 						{
-							using (var cmd = new SQLiteCommand("DELETE FROM main.[SyncState] WHERE [Table] = @Table", connection, transaction))
+							using (var cmd = transaction.CreateNativeCommand("DELETE FROM main.[SyncState] WHERE [Table] = @Table"))
 							{
 								cmd.AddParameter("@Table", DbType.String, table.Name);
 								cmd.ExecuteNonQueryEx();
@@ -1042,9 +1005,9 @@ namespace TecWare.PPSn
 						}
 						else
 						{
-							using (var cmd = new SQLiteCommand(
+							using (var cmd = transaction.CreateNativeCommand(
 								"INSERT OR REPLACE INTO main.[SyncState] ([Table], [SyncId]) " +
-								"VALUES (@Table, @SyncId);", connection, transaction))
+								"VALUES (@Table, @SyncId);"))
 							{
 								cmd.AddParameter("@Table", DbType.String, table.Name);
 								cmd.AddParameter("@SyncId", DbType.Int64, newSyncId);
@@ -1056,7 +1019,7 @@ namespace TecWare.PPSn
 					else
 					{
 						#region -- upsert --
-						if (isFull)
+						if (isFull || actionName[0] == 'i')
 							actionName = refreshColumnIndex == -1 ? "i" : "r";
 
 						// clear current column set
@@ -1084,6 +1047,7 @@ namespace TecWare.PPSn
 									xml.Read();
 
 									var value = ConvertStringToSQLiteValue(xml.ReadContentAsString(), updateParameters[columnIndex].DbType);
+									
 									updateParameters[columnIndex].Value = value;
 									insertParameters[columnIndex].Value = value;
 
@@ -1109,15 +1073,15 @@ namespace TecWare.PPSn
 									goto case 'i';
 							case 'i':
 								ExecuteCommand(insertCommand);
-								masterData.environment.OnMasterDataRowChanged(PpsDataChangeOperation.Insert, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
+								masterData.environment.OnMasterDataRowChanged(transaction, PpsDataChangeOperation.Insert, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
 								break;
 							case 'u':
 								ExecuteCommand(updateCommand);
-								masterData.environment.OnMasterDataRowChanged(PpsDataChangeOperation.Update, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
+								masterData.environment.OnMasterDataRowChanged(transaction, PpsDataChangeOperation.Update, table, existIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
 								break;
 							case 'd':
 								ExecuteCommand(deleteCommand);
-								masterData.environment.OnMasterDataRowChanged(PpsDataChangeOperation.Delete, table, deleteIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
+								masterData.environment.OnMasterDataRowChanged(transaction, PpsDataChangeOperation.Delete, table, deleteIdParameter.Value, new SqLiteParameterDictionaryWrapper(updateParameters));
 								break;
 						}
 
@@ -1154,7 +1118,7 @@ namespace TecWare.PPSn
 
 			private void ExecuteCommand(SQLiteCommand command)
 			{
-					command.ExecuteNonQueryEx();
+				command.ExecuteNonQueryEx();
 			} // proc ExecuteCommand
 
 			#endregion
@@ -1241,8 +1205,8 @@ namespace TecWare.PPSn
 			{
 				xml.Read(); // fetch element
 							// process values
-				using (var transaction = connection.BeginTransaction())
-				using (var b = new ProcessBatch(connection, transaction, this, tableName, isFull))
+				using (var transaction = CreateTransaction())
+				using (var b = new ProcessBatch(transaction, this, tableName, isFull))
 				{
 					// prepare table
 					b.Prepare();
@@ -1302,7 +1266,7 @@ namespace TecWare.PPSn
 			table = null;
 			return false;
 		} // func TryGetTableFromCache
-		
+
 		#endregion
 
 		#region -- Synchronization ------------------------------------------------------
@@ -1344,6 +1308,22 @@ namespace TecWare.PPSn
 			isInSynchronization = true;
 			try
 			{
+				// update header
+				if (updateUserInfo)
+				{
+					using (var trans = CreateTransaction())
+					using (var cmd = trans.CreateNativeCommand("UPDATE main.[Header] SET [UserId] = @UserId, [UserName] = @UserName"))
+					{
+						cmd.AddParameter("@UserId", DbType.Int64, environment.UserId);
+						cmd.AddParameter("@UserName", DbType.String, environment.Username);
+						cmd.ExecuteNonQueryEx();
+
+						trans.Commit();
+						updateUserInfo = false;
+					}
+				}
+
+				// fetch data from server
 				await FetchDataAsync(progress);
 			}
 			finally
@@ -1400,6 +1380,9 @@ namespace TecWare.PPSn
 				}
 			}
 		} // proc CheckOfflineCache
+
+		public void SetUpdateUserInfo()
+			=> updateUserInfo = true;
 
 		public bool IsInSynchronization => isInSynchronization;
 
@@ -1711,14 +1694,167 @@ namespace TecWare.PPSn
 
 		#region -- Write Access ---------------------------------------------------------
 
-		public DbCommand CreateNativeCommand(string commandText)
-			=> new SQLiteCommand(commandText, connection, null);
+		#region -- class PpsMasterNestedTransaction -------------------------------------
 
-		public PpsMasterDataTransaction CreateTransaction(PpsMasterDataTransaction transaction = null)
-			=> PpsMasterDataTransaction.Create(connection, transaction);
+		private sealed class PpsMasterNestedTransaction : PpsMasterDataTransaction
+		{
+			private readonly PpsMasterRootTransaction rootTransaction;
+
+			public PpsMasterNestedTransaction(PpsMasterRootTransaction rootTransaction)
+			{
+				this.rootTransaction = rootTransaction ?? throw new ArgumentNullException(nameof(rootTransaction));
+
+				rootTransaction.AddRef();
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				base.Dispose(disposing);
+				rootTransaction.DecRef();
+			} // proc Dispose
+
+			public override void AddRollbackOperation(Action rollback)
+			{
+				if (IsDisposed)
+					throw new ObjectDisposedException(nameof(PpsMasterDataTransaction));
+
+				rootTransaction.AddRollbackOperation(rollback);
+			} // proc AddRollbackOperation
+
+			protected override void CommitCore()
+				=> rootTransaction.SetCommitOnDispose();
+
+			protected override void RollbackCore() { }
+
+			protected override SQLiteConnection ConnectionCore => rootTransaction.SQLiteConnection;
+			protected override SQLiteTransaction TransactionCore => rootTransaction.SQLiteTransaction;
+
+			public override bool IsDisposed => rootTransaction.IsDisposed;
+			public override bool IsCommited => rootTransaction.IsCommited;
+
+			public PpsMasterRootTransaction RootTransaction => rootTransaction;
+		} // class PpsMasterNestedTransaction
 
 		#endregion
 
+		#region -- class PpsMasterRootTransaction ---------------------------------------
+
+		private sealed class PpsMasterRootTransaction : PpsMasterDataTransaction
+		{
+			private readonly PpsMasterData masterData;
+			private readonly SQLiteConnection connection;
+			private readonly SQLiteTransaction transaction;
+
+			private readonly List<Action> rollbackActions = new List<Action>();
+
+			private bool? transactionState = null;
+			private bool commitOnDispose = false;
+
+			private int nestedTransactionCounter = 0;
+
+			public PpsMasterRootTransaction(PpsMasterData masterData, SQLiteConnection connection, SQLiteTransaction transaction)
+			{
+				this.masterData = masterData ?? throw new ArgumentNullException(nameof(masterData));
+				this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
+				this.transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				base.Dispose(disposing);
+
+				if (nestedTransactionCounter > 0)
+					throw new InvalidOperationException("There are still nested transactions.");
+
+				if (!transactionState.HasValue)
+				{
+					if (commitOnDispose)
+						Commit();
+					else
+						Rollback();
+				}
+
+				// dispose transaction
+				if (disposing)
+					transaction.Dispose();
+
+				masterData.ClearTransaction();
+			} // proc Dispose
+
+			public override void AddRollbackOperation(Action rollback)
+				=> rollbackActions.Add(rollback);
+
+			protected override void CommitCore()
+			{
+				transaction.Commit();
+				transactionState = true;
+			} // proc CommitCore
+
+			protected override void RollbackCore()
+			{
+				transaction.Rollback();
+				transactionState = false;
+
+				// run rollback actions
+				foreach (var c in rollbackActions)
+				{
+					try
+					{
+						c();
+					}
+					catch { }
+				}
+			} // proc RollbackCore
+
+			public void SetCommitOnDispose()
+				=> commitOnDispose = true;
+
+			public void AddRef()
+				=> Interlocked.Increment(ref nestedTransactionCounter);
+
+			public void DecRef()
+				=> Interlocked.Decrement(ref nestedTransactionCounter);
+
+			protected override SQLiteConnection ConnectionCore => connection;
+			public SQLiteConnection SQLiteConnection => connection;
+			protected override SQLiteTransaction TransactionCore => transaction;
+			public SQLiteTransaction SQLiteTransaction => transaction;
+
+			public override bool IsDisposed => transactionState.HasValue;
+			public override bool IsCommited => transactionState ?? false;
+		} // class PpsMasterRootTransaction
+
+		#endregion
+
+		private readonly object currentTransactionLock = new object();
+		private PpsMasterRootTransaction currentTransaction;
+
+		public PpsMasterDataTransaction CreateTransaction()
+		{
+			lock (currentTransactionLock)
+			{
+				if (currentTransaction == null)
+				{
+					currentTransaction = new PpsMasterRootTransaction(this, connection, connection.BeginTransaction());
+					return currentTransaction;
+				}
+				else
+					return new PpsMasterNestedTransaction(currentTransaction);
+			}
+		} // func CreateTransaction
+
+		private void ClearTransaction()
+		{
+			lock (currentTransactionLock)
+				currentTransaction = null;
+		} // proc ClearTransaction
+
+		public DbCommand CreateNativeCommand(string commandText = null)
+			=> new SQLiteCommand(commandText, connection, null);
+
+		#endregion
+
+		/// <summary><c>true</c>, if the sync process is started.</summary>
 		public bool IsSynchronizationStarted => isSynchronizationStarted;
 		[Obsolete("ConnectionAccess")]
 		public SQLiteConnection Connection => connection;
@@ -1747,7 +1883,7 @@ namespace TecWare.PPSn
 
 		// according to https://www.sqlite.org/datatype3.html there are only these datatypes - so map everything to these 5 - but we can define new
 
-		private static (Type Type, string SqlLite, DbType DbType)[] sqlLiteTypeMapping = 
+		private static (Type Type, string SqlLite, DbType DbType)[] sqlLiteTypeMapping =
 		{
 			(typeof(bool), "Boolean", DbType.Boolean),
 			(typeof(DateTime), "DateTime", DbType.DateTime),
@@ -1898,7 +2034,7 @@ namespace TecWare.PPSn
 	#region -- interface IPpsProxyTask --------------------------------------------------
 
 	[EditorBrowsable(EditorBrowsableState.Advanced)]
-	public interface IPpsOfflineItemData
+	public interface IPpsOfflineItemData : IPropertyReadOnlyDictionary
 	{
 		/// <summary>Access to the content</summary>
 		Stream Content { get; }
@@ -2100,6 +2236,7 @@ namespace TecWare.PPSn
 			// copy headers
 			if (headers != null)
 			{
+				headers["ppsn-hostname"] = System.Environment.MachineName;
 				foreach (var k in headers.AllKeys)
 					onlineRequest.Headers[k] = headers[k];
 			}
@@ -2108,7 +2245,10 @@ namespace TecWare.PPSn
 			if (HasRequestData)
 			{
 				using (var dst = onlineRequest.GetRequestStream())
+				{
+					RequestData.Position = 0;
 					RequestData.CopyTo(dst);
+				}
 			}
 
 			return onlineRequest;
@@ -2137,7 +2277,7 @@ namespace TecWare.PPSn
 
 			if (requestStream == null)
 				requestStream = new MemoryStream();
-			return requestStream;
+			return new WindowStream(requestStream, 0, -1, true, true);
 		} // func GetRequestStream
 
 		#endregion
@@ -2415,19 +2555,22 @@ namespace TecWare.PPSn
 			{
 				private readonly Stream data;
 				private readonly string contentType;
-				private readonly DateTime lastModification;
+				private readonly WebHeaderCollection headers;
 
-				public PpsOfflineItemDataImplementation(Stream data, string contentType, DateTime lastModification)
+				public PpsOfflineItemDataImplementation(Stream data, string contentType, WebHeaderCollection headers)
 				{
 					this.data = data;
 					this.contentType = contentType;
-					this.lastModification = lastModification;
+					this.headers = headers;
 				} // ctor
+
+				public bool TryGetProperty(string name, out object value)
+					=> (value = headers.Get(name)) != null;
 
 				public Stream Content => data;
 				public string ContentType => contentType;
 				public long ContentLength => data.Length;
-				public DateTime LastModification => lastModification;
+				public DateTime LastModification => headers.GetLastModified();
 			} // class PpsOfflineItemDataImplementation
 
 			#endregion
@@ -2549,7 +2692,7 @@ namespace TecWare.PPSn
 								dst.Flush();
 
 								// the cache stream will be disposed by the garbage collector, or if it is moved to the offline cache
-								request.UpdateOfflineCache(new PpsOfflineItemDataImplementation(dst, contentType, headers.GetLastModified()));
+								request.UpdateOfflineCache(new PpsOfflineItemDataImplementation(dst, contentType, headers));
 
 								// spawn the result functions
 								lock (stateLock)
@@ -3025,7 +3168,19 @@ namespace TecWare.PPSn
 				// open the local database
 				progress.Report("Lokale Datenbank öffnen...");
 				var dataPath = Path.Combine(LocalPath.FullName, "localStore.db");
-				newLocalStore = new SQLiteConnection($"Data Source={dataPath};DateTimeKind=Utc"); // foreign keys=true;Password=Pps{GetLocalStorePassword()}
+				var connectionString = "Data Source=" + dataPath + ";DateTimeKind=Utc"
+#if !DEBUG
+					+ "Password=Pps" + GetLocalStorePassword()
+#endif
+					;
+				newLocalStore = new SQLiteConnection(connectionString); // foreign keys=true;
+				
+				newLocalStore.StateChange += (sender, e) =>
+				{
+					if (e.CurrentState == ConnectionState.Closed | e.CurrentState == ConnectionState.Broken)
+						Trace.TraceError("Verbindung zur lokalen Datenbank verloren!");
+				};
+
 				await newLocalStore.OpenAsync();
 
 				// check synchronisation table
@@ -3033,11 +3188,13 @@ namespace TecWare.PPSn
 				if (PpsMasterData.TestTableColumns(newLocalStore, "Header",
 					new SimpleDataColumn("SchemaStamp", typeof(long)),
 					new SimpleDataColumn("SchemaContent", typeof(byte[])),
-					new SimpleDataColumn("SyncStamp", typeof(long))
+					new SimpleDataColumn("SyncStamp", typeof(long)),
+					new SimpleDataColumn("UserId", typeof(long)),
+					new SimpleDataColumn("UserName", typeof(string))
 					))
 				{
 					// read sync tokens
-					using (var commd = new SQLiteCommand("SELECT SchemaStamp, SchemaContent, SyncStamp FROM main.Header ", newLocalStore))
+					using (var commd = new SQLiteCommand("SELECT SchemaStamp, SchemaContent, SyncStamp, UserId, UserName FROM main.Header ", newLocalStore))
 					{
 						using (var r = commd.ExecuteReaderEx(CommandBehavior.SingleRow))
 						{
@@ -3050,10 +3207,13 @@ namespace TecWare.PPSn
 									newDataSet = new PpsDataSetDefinitionDesktop(this, PpsMasterData.MasterDataSchema, PpsMasterData.ReadSchemaValue(r, 1));
 									isSchemaUseable = true;
 								}
-								// check data
-								if (!r.IsDBNull(2) && !r.IsDBNull(2))
+								// check data and user info
+								if (!r.IsDBNull(2) && !r.IsDBNull(3) && !r.IsDBNull(4))
 								{
 									lastSynchronizationStamp = DateTime.FromFileTimeUtc(r.GetInt64(2));
+									userId = r.GetInt64(3);
+									userName = r.GetString(4);
+
 									isDataUseable = true;
 								}
 							}
@@ -3243,8 +3403,11 @@ namespace TecWare.PPSn
 		/// <param name="operation"></param>
 		/// <param name="table">Table description</param>
 		/// <param name="id">Primary key.</param>
-		public virtual void OnMasterDataRowChanged(PpsDataChangeOperation operation, PpsDataTableDefinition table, object id, IPropertyReadOnlyDictionary arguments)
+		public virtual void OnMasterDataRowChanged(PpsMasterDataTransaction trans, PpsDataChangeOperation operation, PpsDataTableDefinition table, object id, IPropertyReadOnlyDictionary arguments)
 		{
+			// refresh object data
+			if (table.Name == "Objects")
+				RefreshCachedObject(arguments.GetProperty("Id", -1), arguments);
 		} // proc OnMasterDataChanged
 
 		/// <summary>Gets called if a batch is processed.</summary>
@@ -3269,7 +3432,7 @@ namespace TecWare.PPSn
 						return true;
 				}
 			}
-			throw new NotImplementedException("Todo: Force online mode.");
+			throw new PpsEnvironmentOnlineFailedException();
 		} // func ForceOnlineMode
 
 		/// <summary></summary>

@@ -579,7 +579,7 @@ namespace TecWare.PPSn
 			return RunScript(chunk, self, true, self);
 		} // proc LuaRequire
 		
-		public async Task<Tuple<XDocument, LuaChunk>> LoadXamlAsync(BaseWebRequest request, LuaTable arguments, Uri xamlUri)
+		public async Task<(XDocument xaml, LuaChunk code)> LoadXamlAsync(BaseWebRequest request, LuaTable arguments, Uri xamlUri)
 		{
 			try
 			{
@@ -606,7 +606,7 @@ namespace TecWare.PPSn
 					xCode.Remove();
 				}
 
-				return new Tuple<XDocument, LuaChunk>(xXaml, chunk);
+				return (xXaml, chunk);
 			}
 			catch (Exception e)
 			{

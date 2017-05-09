@@ -10,12 +10,15 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 
@@ -44,8 +47,7 @@ namespace TecWare.PPSn
 	{
 		Null,
 		Restrict,
-		Delete,
-		Deleted
+		Delete
 	} // enum PpsObjectLinkRestriction
 
 	#endregion
@@ -57,45 +59,47 @@ namespace TecWare.PPSn
 	public sealed class PpsObjectLink
 	{
 		private readonly PpsObject parent;
-		private readonly long localId;
-		private readonly long serverId;
-		private readonly long linkToObj;   // id of the linked object
-		private readonly long syncToken;
+		private long? id;                       // local id
+		private readonly long linkToId;         // id of the linked object
+		private readonly long? linkToLocalId;   // id for the object, that was used within the dataset (only neg numbers are allowed, it is for replacing before push)
 		private PpsObjectLinkRestriction onDelete;  // is delete cascade possible
 
 		private WeakReference<PpsObject> linkToCache; // weak ref to the actual object
 
-		internal PpsObjectLink(PpsObject parent, long localId, long serverId, long linkTo, PpsObjectLinkRestriction onDelete, long syncToken)
+		internal PpsObjectLink(PpsObject parent, long? id, long linkToId, long? linkToLocalId, PpsObjectLinkRestriction onDelete)
 		{
-			this.parent = parent;
-			this.localId = localId;
-			this.serverId = serverId;
-			this.linkToObj = linkTo;
+			this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
+
+			this.id = id;
+			this.linkToId = linkToId;
+			this.linkToLocalId = linkToLocalId;
+
 			this.onDelete = onDelete;
-			this.syncToken = syncToken;
-			this.linkToCache = null;
 		} // ctor
 
 		private PpsObject GetLinkedObject()
 		{
-			PpsObject r;
-			if (linkToCache != null && linkToCache.TryGetTarget(out r))
+			if (linkToCache != null && linkToCache.TryGetTarget(out var r))
 				return r;
 
-			r = parent.Environment.GetObject(linkToObj);
-			linkToCache = new WeakReference<PPSn.PpsObject>(r);
+			r = parent.Environment.GetObject(linkToId);
+			linkToCache = new WeakReference<PpsObject>(r);
 			return r;
 		} // func GetLinkedObject
 
-		public PpsObject ParentObject => parent;
+		public void Remove()
+			=> parent.Links.RemoveLink(this);
 
-		public long LocalId => localId;
-		public long ServerId => serverId;
-		public long ObjectId => linkToObj;
-		public long SyncToken => syncToken;
+		public PpsObject Parent => parent;
+
+		internal long? Id { get => id; set => id = value; }
+
+		public long LinkToId => linkToId;
+		public long? LinkToLocalId => linkToLocalId;
+
+		public PpsObject LinkTo => GetLinkedObject();
+
 		public PpsObjectLinkRestriction OnDelete => onDelete;
-
-		public PpsObject Object => GetLinkedObject();
 	} // class PpsObjectLink
 
 	#endregion
@@ -106,212 +110,299 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public sealed class PpsObjectLinks : IList, IReadOnlyList<PpsObjectLink>, INotifyCollectionChanged
 	{
-		#region -- class LinkCommand ------------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private class LinkCommand : IDisposable
-		{
-			protected readonly SQLiteCommand command;
-
-			public LinkCommand(SQLiteTransaction trans)
-			{
-				this.command = trans.Connection.CreateCommand();
-				this.command.Transaction = trans;
-			} // ctor
-
-			public void Dispose()
-			{
-				command?.Dispose();
-			} // proc Dispose
-		} // class LinkCommand
-
-		#endregion
-
-		#region -- class LinkSelectCommand ------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class LinkSelectCommand : LinkCommand
-		{
-			private readonly SQLiteParameter objectIdParameter;
-
-			public LinkSelectCommand(SQLiteTransaction trans, bool visibleOnly)
-				: base(trans)
-			{
-				this.command.CommandText =
-					"SELECT [Id], [ServerId], [LinkObjectId], [OnDelete], [SyncToken] FROM main.[ObjectLinks] WHERE [ParentObjectId] = @ObjectId" + (visibleOnly ? " AND [Class] <> '-'" : ";");
-
-				this.objectIdParameter = command.Parameters.Add("@ObjectId", DbType.Int64);
-
-				this.command.Prepare();
-			} // ctor
-
-			public IEnumerable<PpsObjectLink> Select(PpsObject parentObject, long objectId)
-			{
-				objectIdParameter.Value = objectId;
-
-				using (var r = command.ExecuteReaderEx(CommandBehavior.SingleResult))
-				{
-					while (r.Read())
-					{
-						yield return new PpsObjectLink(parentObject,
-							r.GetInt64(0),
-							r.GetInt64(1),
-							r.GetInt64(2),
-							ParseObjectLinkRestriction(r.GetString(3)),
-							r.GetInt64(4)
-						);
-					}
-				}
-			}// func Select
-		} // class LinkSelectCommand
-
-		#endregion
-
-		/// <summary></summary>
+		/// <summary>Notify for link list changes.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		private readonly PpsObject parent;
 
-		private readonly object linksLink = new object();
 		private bool isLoaded = false; // marks if the link list is loaded from the local store
-		private readonly List<PpsObjectLink> links; // local links
+		private bool isChanged = false;
+		private readonly List<PpsObjectLink> links = new List<PpsObjectLink>(); // local active links
+		private readonly List<PpsObjectLink> removedLinks = new List<PpsObjectLink>();
 
 		internal PpsObjectLinks(PpsObject parent)
 		{
-			this.parent = parent;
-			this.links = new List<PpsObjectLink>();
+			this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
 		} // ctor
 
-		public int Count
+		private void CheckLinksLoaded()
 		{
-			get
+			lock (parent.SyncRoot)
 			{
-				throw new NotImplementedException();
-			}
-		}
+				if (isLoaded)
+					return;
+				RefreshLinks();
 
-		bool IList.IsReadOnly
-		{
-			get
-			{
-				throw new NotImplementedException();
+				isLoaded = true;
 			}
-		}
+		} // proc CheckLinksLoaded
 
-		bool IList.IsFixedSize
+		private void RefreshLinks()
 		{
-			get
-			{
-				throw new NotImplementedException();
-			}
-		}
+			links.Clear();
+			removedLinks.Clear();
 
-		int ICollection.Count
-		{
-			get
+			using (var cmd = parent.Environment.MasterData.CreateNativeCommand("SELECT [Id], [LinkObjectId], [LinkObjectDataId], [OnDelete] FROM main.[ObjectLinks] WHERE [ParentObjectId] = @ObjectId"))
 			{
-				throw new NotImplementedException();
-			}
-		}
+				cmd.AddParameter("@ObjectId", DbType.Int64, parent.Id);
 
-		object ICollection.SyncRoot
-		{
-			get
-			{
-				throw new NotImplementedException();
-			}
-		}
-
-		bool ICollection.IsSynchronized
-		{
-			get
-			{
-				throw new NotImplementedException();
-			}
-		}
-
-		object IList.this[int index]
-		{
-			get
-			{
-				throw new NotImplementedException();
+				using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleResult))
+				{
+					while (r.Read())
+					{
+						links.Add(new PpsObjectLink(
+							parent,
+							r.GetInt64(0),
+							r.GetInt64(1),
+							r.IsDBNull(2) ? null : new long?(r.GetInt64(2)),
+							ParseObjectLinkRestriction(r.IsDBNull(3) ? null : r.GetString(3))
+						));
+					}
+				}
 			}
 
-			set
+			isChanged = false;
+			parent.SetDirty();
+		} // proc RefreshLinks
+
+		internal void UpdateLocal()
+		{
+			lock (parent.SyncRoot)
 			{
-				throw new NotImplementedException();
+				if (!isLoaded || !isChanged)
+					return;
+
+				using (var trans = parent.Environment.MasterData.CreateTransaction())
+				{
+					using (var insertCommand = trans.CreateNativeCommand("INSERT INTO main.[ObjectLinks] (ParentObjectId, LinkObjectId, LinkObjectDataId, OnDelete) " +
+						"VALUES (@Id, @ParentObjectId, @LinkObjectId, @LinkObjectDataId, @OnDelete)"))
+					{
+						var insertParentIdParameter = insertCommand.AddParameter("@ParentObjectId", DbType.Int64);
+						var insertLinkIdParameter = insertCommand.AddParameter("@LinkObjectId", DbType.Int64);
+						var insertLinkDataIdParameter = insertCommand.AddParameter("@LinkObjectDataId", DbType.Int64);
+						var insertOnDeleteParameter = insertCommand.AddParameter("@OnDelete", DbType.Int64);
+
+						foreach (var cur in links)
+						{
+							if (!cur.Id.HasValue)
+							{
+								insertParentIdParameter.Value = parent.Id;
+								insertLinkIdParameter.Value = cur.LinkToId;
+								insertLinkDataIdParameter.Value = cur.LinkToLocalId ?? (object)DBNull.Value;
+								insertOnDeleteParameter.Value = FormatObjectLinkRestriction(cur.OnDelete);
+
+								insertCommand.ExecuteNonQueryEx();
+								cur.Id = trans.LastInsertRowId;
+								trans.AddRollbackOperation(() => cur.Id = null);
+							}
+						}
+					}
+
+					if (removedLinks.Count > 0)
+					{
+						var removedLinksArray = removedLinks.ToArray();
+
+						using (var deleteCommand = trans.CreateNativeCommand("DELETE FROM main.[ObjectLinks] WHERE Id = @Id"))
+						{
+							var deleteIdParameter = deleteCommand.AddParameter("@Id", DbType.Int64);
+							foreach (var cur in removedLinksArray)
+							{
+								deleteIdParameter.Value = cur.Id;
+								deleteCommand.ExecuteNonQueryEx();
+
+								removedLinks.Remove(cur);
+							}
+						}
+
+						trans.AddRollbackOperation(() =>
+						{
+							removedLinks.AddRange(removedLinksArray);
+							isChanged = false;
+						});
+					}
+
+					trans.Commit();
+				}
+				isChanged = false;
 			}
-		}
+		} // proc UpdateLocal
+
+		internal void ReadLinksFromXml(IEnumerable<XElement> xLinks)
+		{
+			lock (parent.SyncRoot)
+			{
+				CheckLinksLoaded();
+
+				var notProcessedLinks = new List<PpsObjectLink>(links);
+
+				// add new links
+				foreach (var x in xLinks)
+				{
+					var objectId = x.GetAttribute("objectId", -1L);
+					var onDelete = ParseObjectLinkRestriction(x.GetAttribute("onDelete", "R"));
+
+					var linkExists = links.Find(c => c.LinkToId == objectId && c.OnDelete == onDelete);
+					if (linkExists == null)
+						links.Add(new PpsObjectLink(parent, null, objectId, null, onDelete));
+					else
+						notProcessedLinks.Remove(linkExists);
+				}
+
+				// remove untouched links
+				foreach (var cur in notProcessedLinks)
+				{
+					links.Remove(cur);
+					if (cur.Id.HasValue)
+						removedLinks.Add(cur);
+				}
+
+				isChanged = true;
+				parent.SetDirty();
+			}
+			OnCollectionReset();
+		} // proc ReadLinksFromXml
+
+		internal void AddToXml(XElement xParent, XName linkElementName)
+		{
+			lock (parent.SyncRoot)
+			{
+				CheckLinksLoaded();
+
+				foreach (var c in links)
+				{
+					if (c.LinkToId < 0)
+						throw new ArgumentException("Only positive object id's can be pushed to the server.");
+
+					xParent.Add(
+						new XElement(linkElementName,
+							new XAttribute("objectId", c.LinkToId),
+							new XAttribute("onDelete", FormatObjectLinkRestriction(c.OnDelete))
+						)
+					);
+				}
+			}
+		} // func AddToXml
+
+		public void AppendLink(PpsObject linkTo, PpsObjectLinkRestriction onDelete)
+		{
+			lock (parent.SyncRoot)
+			{
+				CheckLinksLoaded();
+
+				// add link
+				links.Add(new PpsObjectLink(parent, null, linkTo.Id, linkTo.Id < 0 ? new long?(linkTo.Id) : null, onDelete));
+				isChanged = true;
+				parent.SetDirty();
+			}
+
+			OnCollectionReset();
+		} // proc AppendLink
+
+		public void RemoveLink(PpsObjectLink link)
+		{
+			lock (parent.SyncRoot)
+			{
+				var idx = links.IndexOf(link);
+				if (idx < 0)
+					throw new ArgumentOutOfRangeException(nameof(link));
+
+				links.RemoveAt(idx);
+				if (link.Id.HasValue)
+				{
+					removedLinks.Add(link);
+					isChanged = true;
+					parent.SetDirty();
+				}
+			}
+
+			OnCollectionReset();
+		} // proc RemoveLink
+
+		private void OnCollectionReset()
+			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+
+		void ICollection.CopyTo(Array array, int index)
+		{
+			CheckLinksLoaded();
+			((ICollection)links).CopyTo(array, index);
+		} // proc ICollection.CopyTo
+
+		public bool Constains(PpsObjectLink link)
+			=> IndexOf(link) >= 0;
+
+		public int IndexOf(PpsObjectLink link)
+		{
+			lock (parent.SyncRoot)
+			{
+				CheckLinksLoaded();
+				return links.IndexOf(link);
+			}
+		} // func IndexOf
+
+		bool IList.Contains(object value)
+			=> IndexOf(value as PpsObjectLink) >= 0;
+
+		int IList.IndexOf(object value)
+			=> IndexOf(value as PpsObjectLink);
+
+		int IList.Add(object value)
+			=> throw new NotSupportedException();
+		void IList.Clear()
+			=> throw new NotSupportedException();
+		void IList.Insert(int index, object value)
+			=> throw new NotSupportedException();
+		void IList.Remove(object value)
+			=> throw new NotSupportedException();
+		void IList.RemoveAt(int index)
+			=> throw new NotSupportedException();
+
+		bool IList.IsReadOnly => true;
+		bool IList.IsFixedSize => false;
+		object ICollection.SyncRoot => parent.SyncRoot;
+		bool ICollection.IsSynchronized => true;
+		object IList.this[int index] { get => this[index]; set => throw new NotSupportedException(); }
+
+		public IEnumerator<PpsObjectLink> GetEnumerator()
+		{
+			lock (parent.SyncRoot)
+			{
+				CheckLinksLoaded();
+				foreach (var c in links)
+					yield return c;
+			}
+		} // func GetEnumerator
 
 		public PpsObjectLink this[int index]
 		{
 			get
 			{
-				throw new NotImplementedException();
+				lock (parent.SyncRoot)
+				{
+					CheckLinksLoaded();
+					return links[index];
+				}
 			}
-		}
+		} // prop this 
 
-		public IEnumerator<PpsObjectLink> GetEnumerator()
+		public int Count
 		{
-			throw new NotImplementedException();
-		}
+			get
+			{
+				lock (parent.SyncRoot)
+				{
+					CheckLinksLoaded();
+					return links.Count;
+				}
+			}
+		} // prop Count
 
 		IEnumerator IEnumerable.GetEnumerator()
-		{
-			throw new NotImplementedException();
-		}
-
-		int IList.Add(object value)
-		{
-			throw new NotImplementedException();
-		}
-
-		bool IList.Contains(object value)
-		{
-			throw new NotImplementedException();
-		}
-
-		void IList.Clear()
-		{
-			throw new NotImplementedException();
-		}
-
-		int IList.IndexOf(object value)
-		{
-			throw new NotImplementedException();
-		}
-
-		void IList.Insert(int index, object value)
-		{
-			throw new NotImplementedException();
-		}
-
-		void IList.Remove(object value)
-		{
-			throw new NotImplementedException();
-		}
-
-		void IList.RemoveAt(int index)
-		{
-			throw new NotImplementedException();
-		}
-
-		void ICollection.CopyTo(Array array, int index)
-		{
-			throw new NotImplementedException();
-		}
-
-		internal PpsObjectLinks RefreshLazy()
-		{
-			throw new NotImplementedException();
-		}
+			=> GetEnumerator();
 
 		public static PpsObjectLinkRestriction ParseObjectLinkRestriction(string onDelete)
 		{
 			if (String.IsNullOrEmpty(onDelete))
-				return PpsObjectLinkRestriction.Deleted;
+				return PpsObjectLinkRestriction.Restrict;
 			else
 				switch (Char.ToUpper(onDelete[0]))
 				{
@@ -321,8 +412,6 @@ namespace TecWare.PPSn
 						return PpsObjectLinkRestriction.Restrict;
 					case 'D':
 						return PpsObjectLinkRestriction.Delete;
-					case '-':
-						return PpsObjectLinkRestriction.Deleted;
 					default:
 						throw new ArgumentOutOfRangeException($"Can not parse '{onDelete}' to an link restriction.");
 				}
@@ -338,8 +427,6 @@ namespace TecWare.PPSn
 					return "R";
 				case PpsObjectLinkRestriction.Delete:
 					return "D";
-				case PpsObjectLinkRestriction.Deleted:
-					return "-";
 				default:
 					throw new ArgumentOutOfRangeException($"Can not format '{onDelete}'.");
 			}
@@ -348,525 +435,547 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsObjectTagView ---------------------------------------------------
+
+	public sealed class PpsObjectTagView : INotifyPropertyChanged
+	{
+		public event PropertyChangedEventHandler PropertyChanged;
+
+		private readonly PpsObject parent;
+
+		private long? id;
+		private readonly string key;
+
+		private readonly bool serverValuesLoaded;
+		private readonly PpsObjectTagClass? serverClass; // can null, if the tag was loaded from the view, or not exists in the server
+		private readonly object serverValue;
+		private PpsObjectTagClass? localClass;
+		private object localValue; // the, that is set from the user, and not pushed to the server
+
+		private long userId;
+
+		private bool isChanged;
+		private bool setToDefault = false;
+		private bool userIsNull = false;
+		private WeakReference<PpsMasterDataRow> userRow = null;
+
+		internal PpsObjectTagView(PpsObject parent, long? id, string key, bool serverValuesLoaded, PpsObjectTagClass? serverClass, object serverValue, PpsObjectTagClass? localClass, object localValue, long userId, bool isChanged)
+		{
+			this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
+			this.id = id;
+			this.key = key ?? throw new ArgumentNullException(nameof(key));
+			this.serverValuesLoaded = serverValuesLoaded;
+			this.serverClass = serverClass;
+			this.serverValue = serverValue;
+			this.localClass = localClass;
+			this.localValue = localValue;
+			this.userId = userId;
+
+			this.isChanged = isChanged;
+		} // ctor
+
+		private void OnPropertyChanged(string propertyName)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+		private PpsMasterDataRow GetUserRow()
+		{
+			lock (parent.SyncRoot)
+			{
+				if (UserId <= 0 || userIsNull)
+					return null;
+				else if (userRow.TryGetTarget(out var row))
+					return row;
+				else
+				{
+					var table = parent.Environment.MasterData.GetTable("User");
+					if (table != null)
+					{
+						row = table.GetRowById(UserId, false);
+						if (row != null)
+						{
+							userRow = new WeakReference<PpsMasterDataRow>(row);
+							userIsNull = false;
+						}
+						else
+							userIsNull = true;
+					}
+					else
+						userIsNull = true;
+
+					return row;
+				}
+			}
+		} // ctor
+
+		public void Reset()
+		{
+			if (id.HasValue)
+			{
+				if (serverValuesLoaded)
+				{
+					localClass = null;
+					localValue = null;
+
+					OnPropertyChanged(nameof(Class));
+					OnPropertyChanged(nameof(Value));
+					OnPropertyChanged(nameof(IsRemoved));
+
+					setToDefault = true;
+				}
+
+				setToDefault = true;
+				SetDirty();
+			}
+			else
+				Remove();
+		} // proc Reset
+
+		public void Update(PpsObjectTagClass newClass, object newValue)
+		{
+			if (!localClass.HasValue
+				|| localClass.Value != newClass
+				|| !Object.Equals(localValue, newValue))
+			{
+				if (newClass == PpsObjectTagClass.Deleted)
+				{ } // check if the tag can deleted
+
+				localClass = newClass;
+				localValue = newValue;
+
+				OnPropertyChanged(nameof(Class));
+				OnPropertyChanged(nameof(Value));
+				OnPropertyChanged(nameof(IsRemoved));
+
+				SetDirty();
+			}
+		} // proc UpdateTag
+
+		public void Remove()
+			=> Update(PpsObjectTagClass.Deleted, localValue);
+
+		private void SetDirty()
+		{
+			if (!isChanged)
+			{
+				isChanged = true;
+				OnPropertyChanged(nameof(IsChanged));
+				parent.SetDirty();
+			}
+		} // proc SetDirty
+
+		internal void ResetDirty(PpsMasterDataTransaction transaction)
+		{
+			if (isChanged)
+			{
+				transaction?.AddRollbackOperation(SetDirty);
+				isChanged = false;
+				OnPropertyChanged(nameof(IsChanged));
+			}
+		} // proc ResetDirty
+
+		/// <summary>Internal Id.</summary>
+		internal long? Id { get => id; set => id = value; }
+		/// <summary>Name of the tag.</summary>
+		public string Name => key;
+
+		/// <summary>Returns the current class of the tag.</summary>
+		public PpsObjectTagClass Class => serverClass ?? localClass ?? PpsObjectTagClass.Deleted;
+
+		/// <summary>Returns the current value, for the item.</summary>
+		public object Value =>
+			localClass.HasValue
+				? localValue
+				: (serverClass.HasValue ? serverClass : null);
+
+		/// <summary>User that created this tag, or 0 for system created (like autotagging, states)</summary>
+		public long UserId => userId;
+
+		/// <summary>Reference to the master data.</summary>
+		public PpsMasterDataRow User => GetUserRow();
+		/// <summary>Is this tag removed.</summary>
+		public bool IsRemoved => Class == PpsObjectTagClass.Deleted;
+
+		/// <summary>Is this tag changed.</summary>
+		public bool IsChanged => isChanged;
+
+		internal bool SetToDefault { get => (serverClass.HasValue && !localClass.HasValue) || setToDefault; set => setToDefault = false; }
+	} // class PpsObjectTagView
+
+	#endregion
+
 	#region -- class PpsObjectTags ------------------------------------------------------
 
-	public sealed class PpsObjectTags : IList, IReadOnlyList<PpsObjectTag>, INotifyCollectionChanged
+	public sealed class PpsObjectTags : IList, IReadOnlyList<PpsObjectTagView>, INotifyCollectionChanged
 	{
-		#region -- class TagCommand -------------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private class TagCommand : IDisposable
-		{
-			protected readonly DbCommand command;
-
-			public TagCommand(PpsMasterDataTransaction transaction)
-			{
-				this.command = transaction.CreateNativeCommand();
-			} // ctor
-
-			public void Dispose()
-			{
-				command?.Dispose();
-			} // proc Dispose
-		} // class TagCommand
-
-		#endregion
-
-		#region -- class TagSelectByKeyCommand --------------------------------------------
-
-		private sealed class TagSelectByKeyCommand : TagCommand
-		{
-			private readonly DbParameter objectIdParameter;
-			private readonly DbParameter keyParameter;
-
-			public TagSelectByKeyCommand(PpsMasterDataTransaction transaction)
-				: base(transaction)
-			{
-				this.command.CommandText = "SELECT [Id] FROM main.[ObjectTags] WHERE [ObjectId] = @ObjectId AND [Key] = @Key;";
-
-				this.objectIdParameter = command.AddParameter("@ObjectId", DbType.Int64);
-				this.keyParameter = command.AddParameter("@Key", DbType.String);
-
-				this.command.Prepare();
-			} // ctor
-
-			public long? SelectByKey(long objectId, string key)
-			{
-				objectIdParameter.Value = objectId;
-				keyParameter.Value = key;
-
-				using (var r = command.ExecuteReaderEx(CommandBehavior.SingleRow))
-				{
-					if (r.Read() && !r.IsDBNull(0))
-						return r.GetInt64(0);
-					else
-						return null;
-				}
-			}// func Select
-		} // class TagSelectByKeyCommand
-
-		#endregion
-
-		#region -- class TagSelectCommand -------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class TagSelectCommand : TagCommand
-		{
-			private readonly DbParameter objectIdParameter;
-
-			public TagSelectCommand(PpsMasterDataTransaction transaction, bool visibleOnly)
-				: base(transaction)
-			{
-				this.command.CommandText =
-					"SELECT [Id], [Key], [Class], [Value], [UserId] FROM main.[ObjectTags] WHERE [ObjectId] = @ObjectId" + (visibleOnly ? " AND [Class] >= 0" : ";");
-
-				this.objectIdParameter = command.AddParameter("@ObjectId", DbType.Int64);
-
-				this.command.Prepare();
-			} // ctor
-
-			public IEnumerable<Tuple<long, PpsObjectTag>> Select(long objectId)
-			{
-				objectIdParameter.Value = objectId;
-
-				using (var r = command.ExecuteReaderEx(CommandBehavior.SingleResult))
-				{
-					while (r.Read())
-					{
-						var k = r.GetString(1);
-						var t = r.GetInt32(2);
-						var v = r.IsDBNull(3) ? null : r.GetString(3);
-						var u = r.IsDBNull(4) ? -1L : r.GetInt64(4);
-						yield return new Tuple<long, PpsObjectTag>(r.GetInt64(0), new PpsObjectTag(k, (PpsObjectTagClass)t, v, u));
-					}
-				}
-			}// func Select
-		} // class TagSelectCommand
-
-		#endregion
-
-		#region -- class TagInsertCommand -------------------------------------------------
-
-		private sealed class TagInsertCommand : TagCommand
-		{
-			private readonly PpsMasterDataTransaction transaction;
-			private readonly DbParameter idParameter;
-			private readonly DbParameter objectIdParameter;
-			private readonly DbParameter keyParameter;
-			private readonly DbParameter classParameter;
-			private readonly DbParameter valueParameter;
-			private readonly DbParameter userIdParameter;
-
-			public TagInsertCommand(PpsMasterDataTransaction transaction)
-				: base(transaction)
-			{
-				this.transaction = transaction;
-
-				this.command.CommandText = "INSERT INTO main.[ObjectTags] ([Id], [ObjectId], [Key], [Class], [Value], [UserId]) values (@Id, @ObjectId, @Key, @Class, @Value, @UserId);";
-				this.idParameter = command.AddParameter("@Id", DbType.Int64);
-				this.objectIdParameter = command.AddParameter("@ObjectId", DbType.Int64);
-				this.keyParameter = command.AddParameter("@Key", DbType.String);
-				this.classParameter = command.AddParameter("@Class", DbType.Int64);
-				this.valueParameter = command.AddParameter("@Value", DbType.String);
-				this.userIdParameter = command.AddParameter("@UserId", DbType.Int64);
-
-				this.command.Prepare();
-			} // ctor
-
-			public long Insert(long objectId, string key, int cls, string value, long userId)
-			{
-				var id = transaction.GetNextLocalId(transaction, "ObjectTags", "Id");
-				idParameter.Value = id;
-				objectIdParameter.Value = objectId;
-				keyParameter.Value = key;
-				classParameter.Value = cls;
-				valueParameter.Value = value;
-				userIdParameter.Value = userId;
-
-				command.ExecuteNonQueryEx();
-
-				return id;
-			} // func Insert
-		} // class TagInsertCommand
-
-		#endregion
-
-		#region -- class TagUpdateCommand -------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class TagUpdateCommand : TagCommand
-		{
-			private readonly DbParameter idParameter;
-			private readonly DbParameter classParameter;
-			private readonly DbParameter valueParameter;
-			private readonly DbParameter userIdParameter;
-
-			public TagUpdateCommand(PpsMasterDataTransaction transaction)
-				: base(transaction)
-			{
-				this.command.CommandText = "UPDATE main.[ObjectTags] SET [Class] = @Class, [Value] = @Value, [SyncToken] = @syncToken where [Id] = @Id;";
-
-				this.idParameter = command.AddParameter("@Id", DbType.Int64);
-				this.classParameter = command.AddParameter("@Class", DbType.Int64);
-				this.valueParameter = command.AddParameter("@Value", DbType.String);
-				this.userIdParameter = command.AddParameter("@userId", DbType.Int64);
-
-				this.command.Prepare();
-			} // ctor
-
-			public void Update(long tagId, int cls, string value, long userId)
-			{
-				idParameter.Value = tagId;
-				classParameter.Value = cls;
-				valueParameter.Value = value ?? (object)DBNull.Value;
-				userIdParameter.Value = userId;
-
-				command.ExecuteNonQueryEx();
-			} // proc Update
-		} // class TagUpdateCommand
-
-		#endregion
-
-		#region -- class TagDeleteCommand -------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class TagDeleteCommand : TagCommand
-		{
-			private readonly DbParameter idParameter;
-
-			public TagDeleteCommand(PpsMasterDataTransaction transaction)
-				: base(transaction)
-			{
-				this.command.CommandText = "DELETE FROM main.[ObjectTags] WHERE [Id] = @Id;";
-
-				this.idParameter = command.AddParameter("@Id", DbType.Int64);
-
-				this.command.Prepare();
-			} // ctor
-
-			public void Delete(long tagId)
-			{
-				idParameter.Value = tagId;
-				command.ExecuteNonQueryEx();
-			} // proc Update
-		} // class TagDeleteCommand
-
-		#endregion
-
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		private readonly PpsObject parent;
-		private readonly List<PpsObjectTag> tags;
+		private readonly List<PpsObjectTagView> tags;
 
 		private bool isLoaded = false;
 
 		internal PpsObjectTags(PpsObject parent)
 		{
-			this.parent = parent;
-			this.tags = new List<PpsObjectTag>();
+			this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
+			this.tags = new List<PpsObjectTagView>();
 		} // ctor
 
 		#region -- Refresh ----------------------------------------------------------------
 
-		internal void RefreshTags(IEnumerable<PpsObjectTag> newTags)
-		{
-			var isChanged = false;
-			lock (parent.SyncRoot)
-			{
-				foreach (var t in newTags)
-				{
-					var idx = tags.FindIndex(c => String.Compare(c.Name, t.Name, StringComparison.OrdinalIgnoreCase) == 0);
-					if (idx == -1)
-					{
-						if (t.Class != PpsObjectTagClass.Deleted)
-						{
-							tags.Add(t);
-							parent.OnPropertyChanged(t.Name);
-							isChanged = true;
-						}
-					}
-					else if (t.Class == PpsObjectTagClass.Deleted)
-					{
-						tags.RemoveAt(idx);
-						isChanged = true;
-					}
-					else if (!Object.Equals(tags[idx].Value, t.Value))
-					{
-						tags[idx] = t;
-						parent.OnPropertyChanged(t.Name);
-						isChanged = true;
-					}
-				}
-
-				// mark tags as loaded
-				isLoaded = true;
-			}
-			if (isChanged)
-				OnCollectionReset();
-		} // proc RefreshTags
-
-		internal void RefreshTagsFromString(string tagList)
-		{
-			RefreshTags(PpsObjectTag.ParseTagFields(tagList));
-		} // proc RefreshTagsFromString
-
-		internal void RefreshTags(PpsMasterDataTransaction transaction = null)
-		{
-			using (var cmd = new TagSelectCommand(transaction, true))
-				RefreshTags(cmd.Select(parent.Id).Select(c => c.Item2));
-		} // proc RefreshTags
-
-		internal void CheckTagsLoaded(PpsMasterDataTransaction transaction)
+		private void CheckTagsLoaded()
 		{
 			lock (parent.SyncRoot)
 			{
-				if (!isLoaded)
-					RefreshTags(transaction);
+				if (isLoaded)
+					return;
+
+				RefreshTags();
 			}
 		} // proc CheckTagsLoaded
 
-		internal IReadOnlyList<PpsObjectTag> RefreshLazy()
+		/// <summary>Reads the text from a text-lob. (new line separated, id:key:class:userId=value</summary>
+		/// <param name="tagList"></param>
+		internal void RefreshTags(string tagList)
 		{
-			CheckTagsLoaded(null);
-			return tags;
-		} // func RefreshLazy
+			bool IsServerLoaded(string id)
+			{
+
+				switch (id[0])
+				{
+					case 'S':
+					case 's':
+						return true;
+					case 'L':
+					case 'l':
+						return false;
+					default:
+						throw new FormatException();
+				}
+			} // func IsServerLoaded
+
+			lock (parent.SyncRoot)
+			{
+				// clear current state
+				tags.Clear();
+
+				foreach (var c in tagList.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries))
+				{
+					var p = c.IndexOf(':');
+					if (p <= 0)
+						continue;
+
+
+					var idText = c.Substring(0, p);
+					var isServerLoaded = IsServerLoaded(idText);
+					var databaseId = Int64.Parse(idText.Substring(1));
+					var tagData = PpsObjectTag.ParseTag(c.Substring(p + 1));
+
+					var t = new PpsObjectTagView(
+						parent,
+						databaseId,
+						tagData.Name,
+						isServerLoaded,
+						isServerLoaded ? new PpsObjectTagClass?(tagData.Class) : null,
+						isServerLoaded ? tagData.Value : null,
+						isServerLoaded ? null : new PpsObjectTagClass?(tagData.Class),
+						isServerLoaded ? null : tagData.Value,
+						tagData.UserId,
+						false
+					);
+
+					tags.Add(t);
+				}
+			}
+			isLoaded = true;
+			OnCollectionReset();
+		} // proc RefreshTags
+
+		private void RefreshTags()
+		{
+			lock (parent.SyncRoot)
+			{
+				// clear current state
+				tags.Clear();
+
+				using (var trans = parent.Environment.MasterData.CreateTransaction())
+				{
+					// refresh first all user generated tags
+					using (var selectCommand = trans.CreateNativeCommand("SELECT [Id], [Key], [Class], [Value], [LocalClass], [LocalValue], [UserId] FROM main.[ObjectTags] WHERE ObjectId = @Id"))
+					{
+						selectCommand.AddParameter("@Id", DbType.Int64, parent.Id);
+						using (var r = selectCommand.ExecuteReaderEx(CommandBehavior.SingleResult))
+						{
+							while (r.Read())
+							{
+								object FormatValue(PpsObjectTagClass? c, object v)
+									=> c.HasValue && v != null ? Procs.ChangeType(v, PpsObjectTag.GetTypeFromClass(c.Value)) : null;
+
+								var serverClass = r.IsDBNull(2) ? null : new PpsObjectTagClass?(PpsObjectTag.ParseClass(r.GetInt32(2)));
+								var localClass = r.IsDBNull(4) ? null : new PpsObjectTagClass?(PpsObjectTag.ParseClass(r.GetInt32(4)));
+
+								var t = new PpsObjectTagView(
+									parent,
+									r.GetInt64(0),
+									r.GetString(1),
+									true,
+									serverClass,
+									FormatValue(serverClass, r.GetValue(3)),
+									localClass,
+									FormatValue(localClass, r.GetValue(5)),
+									r.IsDBNull(6) ? 0 : r.GetInt64(6),
+									false
+								);
+
+								tags.Add(t);
+							}
+						}
+					}
+				}
+				isLoaded = true;
+			}
+			OnCollectionReset();
+		} // proc RefreshTags
 
 		private void OnCollectionReset()
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
 		#endregion
 
-		#region -- Tag Manipulation -------------------------------------------------------
+		#region -- UpdateLocal ------------------------------------------------------------
 
-		public PpsObjectTag Add(PpsObjectTag tag, PpsMasterDataTransaction transaction = null)
+		internal void UpdateLocal()
 		{
-			CheckTagsLoaded(transaction);
-
 			lock (parent.SyncRoot)
 			{
-				using (var trans = parent.Environment.MasterData.CreateTransaction(transaction))
+				var reReadAll = false;
+				if (!isLoaded || !IsChanged)
+					return;
+
+				using (var trans = parent.Environment.MasterData.CreateTransaction())
+				using (var updateCommand = trans.CreateNativeCommand("UPDATE main.[ObjectTags] SET LocalClass = @LClass, LocalValue = @LValue, _IsUpdated = 1 WHERE Id = @Id"))
+				using (var setDefaultCommand = trans.CreateNativeCommand("UPDATE main.[ObjectTags] SET LocalClass = null, LocalValue = @null, _IsUpdated = 0 WHERE Id = @Id"))
+				using (var insertCommand = trans.CreateNativeCommand("INSERT INTO main.[ObjectTags] (Id, ObjectId, Key, LocalClass, LocalValue, UserId, _IsUpdated) VALUES (@Id, @ObjectId, @Key, @LClass, @LValue, @UserId, 1)"))
 				{
-					long? tagId;
+					var updateIdParameter = updateCommand.AddParameter("@Id", DbType.Int64);
+					var updateClassParameter = updateCommand.AddParameter("@LClass", DbType.Int32);
+					var updateValueParameter = updateCommand.AddParameter("@LValue", DbType.String);
 
-					// first update the local database
-					using (var cmd = new TagSelectByKeyCommand(trans))
-						tagId = cmd.SelectByKey(parent.Id, tag.Name);
+					var setDefaultParameter = setDefaultCommand.AddParameter("@Id", DbType.Int64);
 
-					if (tagId.HasValue) // update the entry
-					{
-						using (var cmd = new TagUpdateCommand(trans))
-							cmd.Update(tagId.Value, (int)tag.Class, tag.Value.ChangeType<string>(), Procs.GetSyncStamp());
-					}
-					else // insert new entry
-					{
-						using (var cmd = new TagInsertCommand(trans))
-							cmd.Insert(parent.Id, tag.Name, (int)tag.Class, tag.Value.ChangeType<string>(), Procs.GetSyncStamp());
-					}
+					var insertIdParameter = insertCommand.AddParameter("@Id", DbType.Int64);
+					var insertObjectIdParameter = insertCommand.AddParameter("@ObjectId", DbType.Int64);
+					var insertKeyParameter = insertCommand.AddParameter("@Key", DbType.String);
+					var insertClassParameter = insertCommand.AddParameter("@LClass", DbType.Int32);
+					var insertValueParameter = insertCommand.AddParameter("@LValue", DbType.String);
+					var insertUserIdParameter = insertCommand.AddParameter("@UserId", DbType.Int64);
 
-					// update the local list
-					var index = IndexOf(tag.Name);
-					if (index == -1)
+					foreach (var cur in tags)
 					{
-						tags.Add(tag);
-						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, tag));
-					}
-					else
-					{
-						var oldTag = tags[index];
-						tags[index] = tag;
-						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, tag, oldTag, index));
+						if (cur.IsChanged)
+						{
+							if (cur.Id.HasValue)
+							{
+								if (cur.SetToDefault)
+								{
+									setDefaultParameter.Value = cur.Id.Value;
+									setDefaultCommand.ExecuteNonQueryEx();
+
+									cur.SetToDefault = false;
+									trans.AddRollbackOperation(() => cur.SetToDefault = true);
+									reReadAll = true;
+								}
+								else
+								{
+									updateIdParameter.Value = cur.Id.Value;
+									updateClassParameter.Value = PpsObjectTag.FormatClass(cur.Class);
+									updateValueParameter.Value = cur.Value ?? DBNull.Value;
+
+									updateCommand.ExecuteNonQueryEx();
+								}
+							}
+							else if (!cur.IsRemoved)
+							{
+								insertIdParameter.Value = trans.GetNextLocalId("ObjectTags", "Id");
+								insertObjectIdParameter.Value = parent.Id;
+								insertKeyParameter.Value = cur.Name;
+								insertClassParameter.Value = PpsObjectTag.FormatClass(cur.Class);
+								insertValueParameter.Value = cur.Value ?? DBNull.Value;
+								insertUserIdParameter.Value = cur.UserId;
+
+								insertCommand.ExecuteNonQueryEx();
+							}
+							cur.ResetDirty(trans);
+						}
 					}
 
 					trans.Commit();
 				}
+
+				if (reReadAll)
+					isLoaded = false;
 			}
+		} // proc UpdateLocal
 
-			return tag;
-		} // func Add
+		#endregion
 
-		public void Update(IReadOnlyList<PpsObjectTag> newTags, bool removeMissingTags = false, bool refreshTags = true, PpsMasterDataTransaction transaction = null)
+		#region -- Tag Manipulation -------------------------------------------------------
+
+		internal void AddToXml(XElement xObj, XName tagElementName)
 		{
-			var updatedTags = new List<string>();
-
-			// update tags
-			using (var trans = parent.Environment.MasterData.CreateTransaction(transaction))
+			lock (parent.SyncRoot)
 			{
-				using (var selectTags = new TagSelectCommand(trans, false))
-				using (var updateTag = new TagUpdateCommand(trans))
-				using (var insertTag = new TagInsertCommand(trans))
-				using (var deleteTag = new TagDeleteCommand(trans))
+				CheckTagsLoaded();
+
+				foreach (var cur in tags)
 				{
-					foreach (var cur in selectTags.Select(parent.Id))
+					// only tags from this user, or system tags
+					if (cur.UserId == 0 || cur.UserId == parent.Environment.UserId)
 					{
-						var tagId = cur.Item1;
-						var currentTag = cur.Item2;
-						var sourceTag = newTags.FirstOrDefault(c => String.Compare(c.Name, currentTag.Name, StringComparison.OrdinalIgnoreCase) == 0);
-
-						if (sourceTag != null) // source exists, compare the value
-						{
-							if (sourceTag.Class == PpsObjectTagClass.Deleted)
-							{
-								if (currentTag.Class != PpsObjectTagClass.Deleted)
-									deleteTag.Delete(tagId);
-							}
-							else if (sourceTag.Class != currentTag.Class || !sourceTag.IsValueEqual(currentTag.Value)) // -> update
-							{
-								updateTag.Update(tagId, (int)sourceTag.Class, sourceTag.Value.ChangeType<string>(), sourceTag.UserId);
-							}
-							
-							updatedTags.Add(currentTag.Name);
-						}
-						else if (removeMissingTags) // no new tag, mark as deleted 
-						{
-							updateTag.Update(tagId, -1, null, Procs.GetSyncStamp());
-						}
-					} // foreach
-
-					// insert all tags, they are not touched
-					foreach (var sourceTag in newTags)
-					{
-						if (sourceTag.Value != null && !updatedTags.Exists(c => String.Compare(c, sourceTag.Name, StringComparison.OrdinalIgnoreCase) == 0))
-							insertTag.Insert(parent.Id, sourceTag.Name, (int)sourceTag.Class, sourceTag.Value.ChangeType<string>(), sourceTag.UserId);
+						xObj.Add(
+							new XElement(tagElementName,
+								Procs.XAttributeCreate("id", cur.Id, new long?()),
+								new XAttribute("key", cur.Name),
+								new XAttribute("class", PpsObjectTag.FormatClass(cur.Class)),
+								new XAttribute("value", cur.Value),
+								new XAttribute("userId", cur.UserId)
+							)
+						);
 					}
 				}
+			}
+		} // proc AddToXml
 
-				// refresh tags
-				if (refreshTags)
+		internal void ReadTagsFromXml(IEnumerable<XElement> tagsToRead)
+		{
+			// should processed throw sync?
+			//lock (parent.SyncRoot)
+			//{
+			//	CheckTagsLoaded();
+
+			//	var notProcessedTags = new List<PpsObjectTagView>(tags);
+
+			//	// add the new tags
+			//	foreach(var x in tagsToRead)
+			//	{
+			//		x.GetAttribute("id", -1L);
+			//		x.GetAttribute("key", String.Empty);
+			//		x.GetAttribute("class", "R");
+			//		x.GetAttribute("value", String.Empty);
+			//		x.GetAttribute("userId", -1L);
+			//	}
+
+			//	// remove not processed tags
+
+			//	// reseet tags to default
+
+			//}
+		} // proc ReadTagsFromXml
+
+		public void UpdateTags(long userId, IEnumerable<PpsObjectTag> tagList)
+		{
+		} // proc RefreshTags
+
+		public PpsObjectTagView UpdateTag(string key, PpsObjectTagClass cls, object value)
+			=> UpdateTag(parent.Environment.UserId, key, cls, value);
+
+		public PpsObjectTagView UpdateTag(long userId, string key, PpsObjectTagClass cls, object value)
+		{
+			lock (parent.SyncRoot)
+			{
+				CheckTagsLoaded();
+
+				var idx = IndexOf(key, userId);
+				if (idx == -1)
 				{
-					using (var selectTags = new TagSelectCommand(trans, true))
-						RefreshTags(selectTags.Select(parent.Id).Select(c => c.Item2));
+					var newTag = new PpsObjectTagView(parent, null, key, true, null, null, cls, value, userId, true);
+					tags.Add(newTag);
+					OnCollectionReset();
+					return newTag;
 				}
 				else
 				{
-					tags.Clear();
-					isLoaded = false;
+					var t = tags[idx];
+					t.Update(cls, value);
+					return t;
 				}
-				trans.Commit();
 			}
-		} // proc Update
+		} // func UpdateTag
 
-		public void Update(LuaTable tags, bool removeMissingTags = false, PpsMasterDataTransaction transaction = null)
+		public void Remove(string key)
 		{
-			var tagList = new List<PpsObjectTag>();
-			foreach (var c in tags.Members)
+			lock (parent.SyncRoot)
 			{
-				if (c.Key[0] == '_')
-					continue;
-
-				var v = c.Value;
-				var t = PpsObjectTagClass.Text;
-				var tString = tags.GetOptionalValue<string>("_" + c.Key, null);
-				if (tString != null)
-				{
-					if (String.Compare(tString, "Number", StringComparison.OrdinalIgnoreCase) == 0)
-						t = PpsObjectTagClass.Number;
-					else if (String.Compare(tString, "Date", StringComparison.OrdinalIgnoreCase) == 0)
-						t = PpsObjectTagClass.Date;
-				}
-				else if (v is DateTime)
-					t = PpsObjectTagClass.Date;
-
-				tagList.Add(new PpsObjectTag(c.Key, t, c.Value, Procs.GetSyncStamp()));
+				var idx = IndexOf(key, parent.Environment.UserId);
+				if (idx >= 0)
+					tags[idx].Remove();
 			}
+		} // proc Remove
 
-			Update(tagList, removeMissingTags, true, transaction);
-		} // proc UpdateTags
-
+		public IEnumerator<PpsObjectTagView> GetEnumerator()
+			=> tags.GetEnumerator();
 
 		public bool Contains(string key)
 			=> IndexOf(key) >= 0;
 
 		public bool Contains(PpsObjectTag tag)
-			=> IndexOf(tag) >= 0;
+			=> IndexOf(tag.Name) >= 0;
+
+		public bool Contains(PpsObjectTagView tag)
+			=> IndexOf(tag.Name) >= 0;
 
 		public int IndexOf(string key)
+			=> IndexOf(key, parent.Environment.UserId);
+
+		public int IndexOf(string key, long userId)
 		{
 			lock (parent.SyncRoot)
 			{
-				CheckTagsLoaded(null);
+				CheckTagsLoaded();
 				return tags.FindIndex(c => String.Compare(c.Name, key, StringComparison.CurrentCultureIgnoreCase) == 0);
 			}
 		} // func Contains
 
-		public int IndexOf(PpsObjectTag tag)
+		public int IndexOf(PpsObjectTagView tag)
 			=> IndexOf(tag.Name);
 
-		public bool Remove(string key, PpsMasterDataTransaction transaction = null)
-		{
-			CheckTagsLoaded(transaction);
-
-			using (var trans = parent.Environment.MasterData.CreateTransaction(transaction))
-			{
-				long? tagId;
-				using (var selectTag = new TagSelectByKeyCommand(trans))
-					tagId = selectTag.SelectByKey(parent.Id, key);
-
-				if (tagId.HasValue)
-				{
-					// update database
-					using (var updateTag = new TagUpdateCommand(trans))
-						updateTag.Update(tagId.Value, -1, null, Procs.GetSyncStamp());
-
-					// notify ui
-					RemoveUI(key);
-
-					trans.Commit();
-					return true;
-				}
-				else
-				{
-					RemoveUI(key);
-
-					trans.Rollback();
-					return false;
-				}
-			}
-		} // func Remove
-
-		private void RemoveUI(string key)
-		{
-			int index;
-			PpsObjectTag tag;
-			lock (parent.SyncRoot)
-			{
-				index = IndexOf(key);
-				if (index >= 0)
-				{
-					tag = tags[index];
-					tags.RemoveAt(index);
-				}
-			}
-			if (index >= 0)
-				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, tags[index], index));
-		} // proc RemoveUI
-
-		public bool Remove(PpsObjectTag tag, PpsMasterDataTransaction transaction = null)
-			=> Remove(tag.Name, transaction);
-
-		public bool RemoveAt(int index, PpsMasterDataTransaction transaction = null)
-			=> Remove(tags[index].Name, transaction);
-
-		public IEnumerator<PpsObjectTag> GetEnumerator()
-			=> tags.GetEnumerator();
+		public int IndexOf(PpsObjectTag tag)
+			=> IndexOf(tag.Name);
 
 		#endregion
 
 		#region -- IList Interface --------------------------------------------------------
 
 		int IList.Add(object value)
-			=> IndexOf(Add((PpsObjectTag)value, null));
+		{
+			switch (value)
+			{
+				case PpsObjectTag t:
+					return IndexOf(UpdateTag(t.Name, t.Class, t.Value));
+				default:
+					throw new ArgumentException();
+			}
+		} // func IList.Add
 
 		void IList.Insert(int index, object value) { throw new NotSupportedException(); }
 
 		void IList.Remove(object value)
-			=> Remove((PpsObjectTag)value);
+		{
+			switch (value)
+			{
+				case string key:
+					Remove(key);
+					break;
+				case PpsObjectTag tag:
+					Remove(tag.Name);
+					break;
+				case PpsObjectTagView tag:
+					Remove(tag.Name);
+					break;
+			}
+		} // proc Remove
 
 		void IList.RemoveAt(int index)
-			=> RemoveAt(index);
+			=> tags[index].Remove();
 
 		void IList.Clear() { throw new NotSupportedException(); }
 
@@ -896,7 +1005,20 @@ namespace TecWare.PPSn
 
 		public int Count { get { lock (parent.SyncRoot) return tags.Count; } }
 
-		public PpsObjectTag this[int index] => RefreshLazy()[index];
+		public bool IsChanged
+		{
+			get
+			{
+				foreach (var c in tags)
+				{
+					if (c.IsChanged)
+						return true;
+				}
+				return false;
+			}
+		} // prop IsChanged
+
+		public PpsObjectTagView this[int index] => tags[index];
 	} // class PpsObjectTags
 
 	#endregion
@@ -907,10 +1029,10 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public interface IPpsObjectData : INotifyPropertyChanged
 	{
-		Task LoadAsync(PpsMasterDataTransaction transaction = null);
-		Task CommitAsync(PpsMasterDataTransaction transaction = null);
-		Task PushAsync(PpsMasterDataTransaction transaction = null);
-		Task UnloadAsync(PpsMasterDataTransaction transaction = null);
+		Task LoadAsync();
+		Task CommitAsync();
+		Task PushAsync(Stream dst);
+		Task UnloadAsync();
 
 		bool IsLoaded { get; }
 	} // interface IPpsObjectData
@@ -926,33 +1048,59 @@ namespace TecWare.PPSn
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private readonly PpsObject baseObj;
+		private byte[] rawData = null;
+		private string sha256 = String.Empty;
 
 		public PpsObjectBlobData(PpsObject obj)
 		{
 			this.baseObj = obj;
 		} // ctor
 
-		public Task LoadAsync(PpsMasterDataTransaction transaction = null)
+		private void OnPropertyChanged(string propertyName)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+		public async Task LoadAsync()
 		{
-			return Task.CompletedTask;
+			using (var src = await baseObj.LoadRawDataAsync())
+			{
+				rawData = src.ReadInArray();
+				OnPropertyChanged(nameof(IsLoaded));
+			}
 		} // proc LoadAsync
 
-		public Task CommitAsync(PpsMasterDataTransaction transaction = null)
+		public async Task CommitAsync()
 		{
-			throw new NotImplementedException();
+			baseObj.Tags.UpdateTag(-1, "Sha256", PpsObjectTagClass.Text, sha256);
+			await baseObj.SaveRawDataAsync(
+				rawData.Length,
+				baseObj.MimeType ?? MimeTypes.Application.OctetStream,
+				dst => dst.Write(rawData, 0, rawData.Length),
+				true
+			);
+		} // proc CommitAsync
+
+		public async Task PushAsync(Stream dst)
+		{
+			if (IsLoaded)
+				await LoadAsync();
+			await dst.WriteAsync(rawData, 0, rawData.Length);
+		} // func PushAsync
+
+		public Task UnloadAsync()
+		{
+			rawData = null;
+			return Task.CompletedTask;
+		} // func UnloadTask
+
+		public Task ReadFromFileAsync(string filename)
+		{
+			var fileStream = new FileStream(filename, FileMode.Open);
+			rawData = fileStream.ReadInArray();
+			sha256 = StuffIO.GetStreamHash(fileStream);// ToDo: changeme
+			return Task.CompletedTask;
 		}
 
-		public Task PushAsync(PpsMasterDataTransaction transaction = null)
-		{
-			throw new NotImplementedException();
-		}
-
-		public Task UnloadAsync(PpsMasterDataTransaction transaction = null)
-		{
-			throw new NotImplementedException();
-		}
-
-		public bool IsLoaded => false;
+		public bool IsLoaded => rawData != null;
 	} // class PpsObjectBlobData
 
 	#endregion
@@ -966,7 +1114,7 @@ namespace TecWare.PPSn
 		private readonly PpsObject baseObj;
 		private readonly PpsUndoManager undoManager;
 		private readonly List<PpsRevisionDataSet> revisions = new List<PpsRevisionDataSet>();
-		
+
 		internal PpsObjectDataSet(PpsDataSetDefinitionDesktop definition, PpsObject obj)
 			: base(definition, obj.Environment)
 		{
@@ -974,49 +1122,22 @@ namespace TecWare.PPSn
 			this.RegisterUndoSink(this.undoManager = new PpsUndoManager());
 		} // ctor
 
-		private void UpdateHeadTable(PpsDataTable head)
-		{
-			var r = head.First;
-			r["Id"] = baseObj.Id;
-			r["Guid"] = baseObj.Guid;
-			r["Nr"] = baseObj.Nr;
-		} // proc UpdateHeadTable
-
 		public override async Task OnNewAsync(LuaTable arguments)
 		{
 			// add the basic head table and update the object data
 			var head = Tables["Head", false];
-			if(head != null)
+			if (head != null)
 			{
 				if (head.Count == 0)
-				{
-					head.Add(
-						new LuaTable
-						{
-							{ "Id", baseObj.Id },
-							{ "Guid", baseObj.Guid },
-							{ "Nr", baseObj.Nr }
-						});
-				}
-				else
-					UpdateHeadTable(head);
+					head.Add();
 			}
 
 			await base.OnNewAsync(arguments);
 		} // proc OnNewAsync
 
-		public override async Task OnLoadedAsync(LuaTable arguments)
+		public async Task LoadAsync()
 		{
-			var head = Tables["Head", false];
-			if (head != null)
-				UpdateHeadTable(head);
-
-			await base.OnLoadedAsync(arguments);
-		} // proc OnNewAsync
-
-		public async Task LoadAsync(PpsMasterDataTransaction transaction = null)
-		{
-			using (var src = await baseObj.LoadRawDataAsync(transaction))
+			using (var src = await baseObj.LoadRawDataAsync())
 			{
 				if (src == null)
 					throw new ArgumentNullException("Data is missing.");
@@ -1024,49 +1145,56 @@ namespace TecWare.PPSn
 				using (var xml = XmlReader.Create(src, Procs.XmlReaderSettings))
 				{
 					var xData = XDocument.Load(xml).Root;
-					await Environment.Dispatcher.InvokeAsync(() => Read(xData));
+					await Environment.Dispatcher.InvokeAsync(
+						() =>
+						{
+							Read(xData);
+							ResetDirty();
+						}
+					);
 				}
 			}
 		} // proc LoadAsync
 
-		public async Task CommitAsync(PpsMasterDataTransaction trans = null)
+		public async Task CommitAsync()
 		{
-			//try
-			//{
-			//	using (var transaction = new PpsNestedDatabaseTransaction(Environment.LocalConnection, trans))
-			//	{
-			//		// update data
-			//		await baseObj.SaveRawDataAsync(transaction.Transaction,
-			//			 dst =>
-			//			 {
-			//				 var settings = Procs.XmlWriterSettings;
-			//				 settings.CloseOutput = false;
-			//				 using (var xml = XmlWriter.Create(dst, settings))
-			//					 Write(xml);
-			//			 }
-			//			);
+			using (var trans = Environment.MasterData.CreateTransaction())
+			{
+				await baseObj.SaveRawDataAsync(-1, MimeTypes.Text.DataSet,
+					dst =>
+					{
+						var settings = Procs.XmlWriterSettings;
+						settings.CloseOutput = false;
+						using (var xml = XmlWriter.Create(dst, settings))
+							Write(xml);
+					},
+					true
+				);
 
-			//		// update tags
-			//		baseObj.Tags.Update(GetAutoTags().ToList(), transaction: transaction.Transaction);
+				// update tags
+				baseObj.Tags.UpdateTags(0, GetAutoTags().ToList());
 
-			//		transaction.Commit();
-			//	}
-			//}
-			//catch (Exception)
-			//{
-			//	throw;
-			//}
+				// persist the object description
+				baseObj.UpdateLocal();
+
+				trans.AddRollbackOperation(SetDirty);
+				trans.Commit();
+			}
 
 			// mark not dirty anymore
 			ResetDirty();
 		} // proc CommitAsync
 
-		public Task PushAsync(PpsMasterDataTransaction transaction = null)
+		public async Task PushAsync(Stream dst)
 		{
-			throw new NotImplementedException();
+			if (IsDirty)
+				await CommitAsync();
+
+			using (var xml = XmlWriter.Create(dst, Procs.XmlWriterSettings))
+				Write(xml);
 		} // proc PushAsync
 
-		public Task UnloadAsync(PpsMasterDataTransaction transaction = null)
+		public Task UnloadAsync()
 			=> Task.CompletedTask;
 
 		/// <summary>The document it self implements the undo-manager.</summary>
@@ -1118,13 +1246,15 @@ namespace TecWare.PPSn
 
 		private readonly PpsEnvironment environment;
 		private readonly PpsObjectColumns columns;
-		private readonly long objectId;
-		private readonly object[] staticValues;				// values of the table
+		private long objectId;
+		private readonly object[] staticValues;             // values of the table
 		private readonly object objectLock = new object();
-		
-		private IPpsObjectData data = null;					// access to the object data
-		private readonly PpsObjectTags tags;				// list with assigned tags
-		private readonly PpsObjectLinks links;				// linked objects
+
+		private IPpsObjectData data = null;                 // access to the object data
+		private readonly PpsObjectTags tags;                // list with assigned tags
+		private readonly PpsObjectLinks links;              // linked objects
+
+		private bool isChanged = false;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -1145,59 +1275,105 @@ namespace TecWare.PPSn
 			ReadObjectInfo(r);
 		} // ctor
 
+		/// <summary>Reads the properties from the local database.</summary>
+		/// <param name="r"></param>
 		private void ReadObjectInfo(IDataReader r)
 		{
 			// update the values
 			for (var i = 1; i < StaticColumns.Length; i++)
-				SetValue(i, r.IsDBNull(i) ? null : r.GetValue(i));
+				SetValue((PpsStaticObjectColumnIndex)i, r.IsDBNull(i) ? null : r.GetValue(i), false);
 
 			// check for tags
 			if (r.FieldCount >= StaticColumns.Length && !r.IsDBNull(StaticColumns.Length))
-				tags.RefreshTagsFromString(r.GetString(StaticColumns.Length));
+				tags.RefreshTags(r.GetString(StaticColumns.Length));
+
+			ResetDirty(null);
 		} // proc ReadObjectInfo
 
-		/// <summary>Refresh of the object data.</summary>
-		/// <param name="transaction">Optional parent transaction.</param>
-		public void Refresh(bool withTags = false, PpsMasterDataTransaction transaction = null)
+		/// <summary>Reads the core properties from Sync or Pull.</summary>
+		/// <param name="properties"></param>
+		internal void ReadObjectInfo(IPropertyReadOnlyDictionary properties)
 		{
-			// refresh core data
-			lock (objectLock)
-			{
-				using (var trans = environment.MasterData.CreateTransaction(transaction))
-				using(var cmd = trans.CreateNativeCommand(StaticColumnsSelect + " WHERE o.Id = @Id"))
-				{
-					cmd.AddParameter("@Id", DbType.Int64, objectId);
+			if (properties.TryGetProperty<Guid>(nameof(Guid), out var guid))
+				SetValue(PpsStaticObjectColumnIndex.Guid, guid, false);
+			if (properties.TryGetProperty<string>(nameof(Typ), out var typ))
+				SetValue(PpsStaticObjectColumnIndex.Typ, typ, false);
+			if (properties.TryGetProperty<string>(nameof(Nr), out var nr))
+				SetValue(PpsStaticObjectColumnIndex.Nr, nr, false);
+			if (properties.TryGetProperty<string>(nameof(MimeType), out var mimeType))
+				SetValue(PpsStaticObjectColumnIndex.MimeType, mimeType, false);
+			if (properties.TryGetProperty<bool>(nameof(IsRev), out var isRev))
+				SetValue(PpsStaticObjectColumnIndex.IsRev, isRev, false);
+			if (properties.TryGetProperty<long>("HeadRevId", out var headRevId))
+				SetValue(PpsStaticObjectColumnIndex.RemoteHeadRevId, headRevId, false);
+			if (properties.TryGetProperty<long>("CurRevId", out var curRevId))
+				SetValue(PpsStaticObjectColumnIndex.RemoteCurRevId, curRevId, false);
 
-					using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleRow))
-					{
-						if (r.Read())
-							ReadObjectInfo(r);
-						else
-							throw new InvalidOperationException("No result set.");
-					}
-				}
-			}
+			ResetDirty(null);
+		} // func ReadObject
 
-			// refresh tags
-			if (withTags)
-				tags.RefreshTags(transaction);
-		} // proc Refresh
+		/// <summary>Reads the object from the pull request.</summary>
+		/// <param name="x"></param>
+		private void ReadObjectFromXml(XElement x)
+		{
+			// update object data
+			ReadObjectInfo(new XAttributesPropertyDictionary(x));
+
+			// links
+			links.ReadLinksFromXml(x.Elements("linksTo"));
+
+			// tags
+			tags.ReadTagsFromXml(x.Elements("tags")); // refresh of the pulled system tags, removes current system tags
+
+			ResetDirty(null);
+		} // UpdateObjectFromXml
 
 		#endregion
 
 		#region -- Pull, Push -------------------------------------------------------------
-		
+
+		private void GetObjectUri(out LuaTable objectInfo, out object objectUri)
+		{
+			objectInfo = Environment.GetObjectInfo(Typ);
+			objectUri = objectInfo?.GetMemberValue("objectUri") ?? Typ;
+		} // proc GetObjectUri
+
 		private PpsProxyRequest PullDataRequest(long revisionId)
 		{
-			var objectInfo = Environment.GetObjectInfo(Typ);
-			var objectUri = objectInfo?.GetMemberValue("objectUri") ?? Typ;
+			GetObjectUri(out var objectInfo, out var objectUri);
+
 			var acceptedMimeType = objectInfo?.GetMemberValue("acceptedMimeType") as string;
-			 
+
 			// create a proxy request, and enqueue it with high priority
 			return Environment.GetProxyRequest($"{objectUri}/?action=pull&id={objectId}&rev={revisionId}");
 		} // proc PullDataAsync
 
-		private async Task<IPpsProxyTask> EnqueuePull(PpsMasterDataTransaction transaction)
+		private PpsProxyRequest PushDataRequest()
+		{
+			GetObjectUri(out var objectInfo, out var objectUri);
+			var request = Environment.GetProxyRequest($"{objectUri}/?action=push");
+			request.Method = HttpMethod.Put.Method;
+			return request;
+		} //func PushDataRequest
+
+		private void UpdateObjectId(PpsMasterDataTransaction trans, long newObjectId)
+		{
+			if (newObjectId < 0)
+				throw new ArgumentOutOfRangeException(nameof(objectId), newObjectId, "New object Id is invalid.");
+			else if (objectId > 0 && objectId != newObjectId)
+				throw new ArgumentOutOfRangeException(nameof(Id), newObjectId, "Object id is different.");
+
+			using (var cmd = trans.CreateNativeCommand("UPDATE main.[Objects] SET Id = @Id WHERE Id = @OldId"))
+			{
+				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
+				cmd.AddParameter("@OldId", DbType.Int64, objectId);
+				cmd.ExecuteNonQueryEx();
+
+				objectId = newObjectId; // todo: generic transaction will be a good idea
+			}
+		} // proc UpdateObjectId
+
+		private async Task<IPpsProxyTask> EnqueuePullAsync(bool pullForeground)
 		{
 			// check if the environment is online, force online
 			await Environment.ForceOnlineAsync();
@@ -1218,10 +1394,37 @@ namespace TecWare.PPSn
 				// create new request
 				request.SetUpdateOfflineCache(c =>
 				{
-					SetValue((int)PpsStaticObjectColumnIndex.PulledRevId, pulledRevId);
-					SaveRawDataAsync(transaction, c.ContentLength, c.ContentType,
-						dst => c.Content.CopyTo(dst)
+					// first read the object header
+					var headerLength = c.GetProperty("ppsn-header-length", -1L);
+					if (headerLength < 10)
+						throw new ArgumentOutOfRangeException("ppsn-header-length", headerLength, "Header is missing.");
+
+					using (var headerData = new WindowStream(c.Content, 0, headerLength, false, true))
+					using (var xmlHeader = XmlReader.Create(headerData, Procs.XmlReaderSettings))
+						ReadObjectFromXml(XElement.Load(xmlHeader));
+
+					// pull depended objects with lower request
+					if (pullForeground)
+					{
+						foreach (var linked in Links)
+						{
+							var linkTo = linked.LinkTo;
+							if (!linkTo.HasData)
+								linkTo.EnqueuePullAsync(false).Wait();
+						}
+					}
+
+					// update data block
+					SaveRawDataAsync(c.ContentLength - headerLength, MimeType,
+						dst => c.Content.CopyTo(dst),
+						false
 					).Wait();
+
+					SetValue(PpsStaticObjectColumnIndex.PulledRevId, pulledRevId, true);
+
+					// persist current object state
+					UpdateLocal();
+
 					return c.Content;
 				});
 
@@ -1230,32 +1433,92 @@ namespace TecWare.PPSn
 			}
 		} // proc PullDataAsync
 
-		private async Task PullDataAsync(PpsMasterDataTransaction transaction)
+		public async Task PullAsync(long revId = -1)
 		{
-			using (var r = await (await EnqueuePull(transaction)).ForegroundAsync())
+			if (revId == -1)
+				revId = RemoteHeadRevId;
+
+			using (var r = await (await EnqueuePullAsync(true)).ForegroundAsync())
 			{
 				// read prev stored data
-				if (data != null && !data.IsLoaded)
-					await data.LoadAsync(transaction);
+				if (data != null)
+					await data.LoadAsync();
 			}
 		} // proc PullDataAsync
 
-		public async Task<T> GetDataAsync<T>(PpsMasterDataTransaction transaction, bool asyncPullData = false)
+		public async Task PushAsync(PpsMasterDataTransaction transaction = null)
+		{
+			XElement xAnswer;
+			using (var trans = Environment.MasterData.CreateTransaction())
+			{
+				var request = PushDataRequest();
+
+				Monitor.Enter(objectLock);
+				try
+				{
+					// first build object data
+					var headerData = Encoding.Unicode.GetBytes(ToXml().ToString(SaveOptions.DisableFormatting));
+					request.Headers["ppsn-header-length"] = headerData.Length.ChangeType<string>();
+
+					// write data
+					using (var dst = request.GetRequestStream())
+					{
+						// write object structure
+						dst.Write(headerData, 0, headerData.Length);
+
+						// write the content
+						await data.PushAsync(dst);
+					}
+				}
+				finally
+				{
+					Monitor.Exit(objectLock);
+				}
+
+				// get the result
+				xAnswer = Environment.Request.GetXml(await request.GetResponseAsync());
+				if (xAnswer.Name.LocalName == "push") // something is wrong / pull request.
+				{
+					throw new Exception("todo: exception for UI pull request.");
+				}
+				else if (xAnswer.Name.LocalName == "object")
+				{
+					// update id and basic meta data
+					var newObjectId = xAnswer.GetAttribute<long>(nameof(Id), -1);
+					UpdateObjectId(trans, newObjectId);
+
+					// update meta data
+					ReadObjectFromXml(xAnswer);
+
+					// repull the whole object
+					await PullAsync(RemoteHeadRevId);
+
+					// write local database
+					UpdateLocal();
+
+					trans.Commit();
+				}
+				else
+					throw new ArgumentException("Could not parse push-answer.");
+			}
+		} // proc PushAsync
+
+		public async Task<T> GetDataAsync<T>(bool asyncPullData = false)
 			where T : IPpsObjectData
 		{
 			if (data == null)
 			{
-				// create the core data object
-				data = await environment.CreateObjectDataObjectAsync<T>(this);
-
 				// update data from server, if not present (pull head)
 				if (objectId >= 0 && !HasData)
-					await PullDataAsync(transaction);
+					await PullAsync();
+
+				// create the core data object
+				data = await environment.CreateObjectDataObjectAsync<T>(this);
 			}
 			return (T)data;
 		} // func GetDataAsync
 
-		internal async Task<Stream> LoadRawDataAsync(PpsMasterDataTransaction transaction)
+		internal async Task<Stream> LoadRawDataAsync()
 		{
 			using (var trans = environment.MasterData.CreateTransaction())
 			using (var cmd = trans.CreateNativeCommand("SELECT Document, DocumentIsLinked, length(Document) FROM main.Objects WHERE Id = @Id"))
@@ -1269,7 +1532,7 @@ namespace TecWare.PPSn
 						var data = new byte[r.GetInt64(2)];
 						r.GetBytes(0, 0, data, 0, data.Length);
 
-						if (!r.IsDBNull(1) && r.GetBoolean(1)) // linked document
+						if (!r.IsDBNull(1) && r.GetValue(1).ChangeType<bool>()) // linked document
 						{
 							var path = Encoding.Unicode.GetString(data);
 							return new FileStream(environment.MasterData.GetLocalPath(path), FileMode.Open);
@@ -1283,7 +1546,7 @@ namespace TecWare.PPSn
 			}
 		} // func LoadRawDataAsync
 
-		internal async Task SaveRawDataAsync(PpsMasterDataTransaction transaction, long contentLength, string mimeType, Action<Stream> data)
+		internal async Task SaveRawDataAsync(long contentLength, string mimeType, Action<Stream> data, bool isDocumentChanged)
 		{
 			byte[] bData = null;
 
@@ -1297,20 +1560,33 @@ namespace TecWare.PPSn
 					bData = dst.ToArray();
 				}
 			}
+			else
+				isDocumentChanged = false;
 
 			// store the value
 			using (var trans = environment.MasterData.CreateTransaction())
-			using (var cmd = trans.CreateNativeCommand("UPDATE main.Objects " +
-				"SET PulledRevId = IFNULL(@PulledRevId, PulledRevId), Nr = IFNULL(@Nr, Nr), Document = @Document, DocumentIsLinked = 0, DocumentIsChanged = @DocumentIsChanged " +
+			using (var cmd = trans.CreateNativeCommand("UPDATE main.[Objects] " +
+				"SET " +
+					"MimeType = @MimeType, " +
+					"Document = @Document, " +
+					"DocumentIsLinked = 0, " +
+					"DocumentIsChanged = @DocumentIsChanged, " +
+					"_IsUpdated = 1 " +
 				"WHERE Id = @Id"))
 			{
 				cmd.AddParameter("@Id", DbType.Int64, objectId);
-				cmd.AddParameter("@PulledRevId", DbType.Int64, bData == null ? DBNull.Value : PulledRevId.DbNullIf(StuffDB.DbNullOnNeg));
-				cmd.AddParameter("@Nr", DbType.String, Nr.DbNullIfString());
-				cmd.AddParameter("@Document", DbType.Binary, bData == null ? (object)DBNull.Value : bData);
-				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, bData == null ? false : IsDocumentChanged);
+				cmd.AddParameter("@MimeType", DbType.String, mimeType);
+				cmd.AddParameter("@Document", DbType.Binary, bData ?? (object)DBNull.Value);
+				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, isDocumentChanged);
 
 				await cmd.ExecuteNonQueryAsync();
+
+				// set HasData to true
+				SetValue(PpsStaticObjectColumnIndex.MimeType, mimeType, false);
+				SetValue(PpsStaticObjectColumnIndex.IsDocumentChanged, isDocumentChanged, false);
+				SetValue(PpsStaticObjectColumnIndex.HasData, true, false);
+
+				trans.Commit();
 			}
 		} // proc SaveRawDataAsync
 
@@ -1319,20 +1595,82 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		private XElement ToXml()
+		{
+			var xObj = new XElement("object");
+			xObj.Add(
+				Procs.XAttributeCreate("Id", objectId, -1L),
+				Procs.XAttributeCreate("Guid", Guid, Guid.Empty),
+				Procs.XAttributeCreate("Typ", Typ, null),
+				Procs.XAttributeCreate("MimeType", MimeType),
+				Procs.XAttributeCreate("Nr", Nr)
+			);
+
+			// add links
+			links.AddToXml(xObj, "linkTo");
+
+			// add system tags
+			tags.AddToXml(xObj, "tags");
+
+			return xObj;
+		} // proc ToXml
+
+		public void UpdateLocal()
+		{
+			using (var trans = environment.MasterData.CreateTransaction())
+			{
+				using (var cmd = trans.CreateNativeCommand(
+				  "UPDATE main.[Objects] SET " +
+						  "Guid = @Guid," +
+						  "Typ = @Typ," +
+						  "Nr = @Nr," +
+						  "MimeType = @MimeType," +
+						  "RemoteCurRevId = @CurRevId," +
+						  "RemoteHeadRevId = @HeadRevId," +
+						  "PulledRevId = @PulledRevId " +
+					  "WHERE Id = @Id"))
+				{
+					cmd.AddParameter("@Id", DbType.Int64, objectId);
+					cmd.AddParameter("@Guid", DbType.Guid, Guid);
+					cmd.AddParameter("@Typ", DbType.String, Typ.DbNullIfString());
+					cmd.AddParameter("@Nr", DbType.String, Nr.DbNullIfString());
+					cmd.AddParameter("@MimeType", DbType.String, MimeType.DbNullIfString());
+					cmd.AddParameter("@IsRev", DbType.Boolean, IsRev);
+					cmd.AddParameter("@CurRevId", DbType.Int64, RemoteCurRevId.DbNullIf(-1L));
+					cmd.AddParameter("@HeadRevId", DbType.Int64, RemoteHeadRevId.DbNullIf(-1L));
+					cmd.AddParameter("@PulledRevId", DbType.Int64, PulledRevId.DbNullIf(-1L));
+
+					cmd.ExecuteNonQueryEx();
+				}
+
+				// links
+				links.UpdateLocal();
+
+				// tags
+				tags.UpdateLocal();
+
+				// reset the dirty flag
+				ResetDirty(trans);
+			}
+		} // proc UpdateLocal
+
 		#region -- Properties -------------------------------------------------------------
 
 		internal void OnPropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 		private T GetValue<T>(int index, T empty)
-			=> index == 0 ? (T)(object)objectId : (T)(staticValues[index] ?? empty);
+			=> index == 0 ? (T)(object)objectId : (staticValues[index] ?? empty).ChangeType<T>();
 
-		private void SetValue(int index, object newValue)
+		private void SetValue(PpsStaticObjectColumnIndex index, object newValue, bool setDirty)
 		{
-			if (!Object.Equals(staticValues[index], newValue))
+			if (!Object.Equals(staticValues[(int)index], newValue))
 			{
-				staticValues[index] = newValue;
-				OnPropertyChanged(staticColumns[index].Name);
+				staticValues[(int)index] = newValue;
+
+				if (setDirty)
+					SetDirty();
+				OnPropertyChanged(staticColumns[(int)index].Name);
 			}
 		} // func SetValue
 
@@ -1375,9 +1713,9 @@ namespace TecWare.PPSn
 							return StaticTagsColumn;
 						else if (index == StaticColumns.Length + 2)
 							return StaticLinksColumn;
-						else if (index < StaticColumns.Length + obj.Tags.Count + StaticPropertyCount)
+						else if (index < StaticColumns.Length + obj.Tags.Count + staticPropertyCount)
 						{
-							var tag = obj.Tags[index - StaticColumns.Length - StaticPropertyCount];
+							var tag = obj.Tags[index - StaticColumns.Length - staticPropertyCount];
 							return CreateSimpleDataColumn(tag);
 						}
 						else
@@ -1386,10 +1724,10 @@ namespace TecWare.PPSn
 				}
 			} // prop this
 
-			private static SimpleDataColumn CreateSimpleDataColumn(PpsObjectTag tag)
+			private static SimpleDataColumn CreateSimpleDataColumn(PpsObjectTagView tag)
 				=> new SimpleDataColumn(tag.Name, PpsObjectTag.GetTypeFromClass(tag.Class));
 
-			public int Count => StaticColumns.Length + obj.Tags.Count + StaticPropertyCount;
+			public int Count => StaticColumns.Length + obj.Tags.Count + staticPropertyCount;
 		} // class PpsObjectColumns
 
 		#endregion
@@ -1411,15 +1749,15 @@ namespace TecWare.PPSn
 					else if (index == StaticColumns.Length + 0)
 					{
 						if (data == null)
-							data = GetDataAsync<IPpsObjectData>(null, true).Result;
+							data = GetDataAsync<IPpsObjectData>(true).Result;
 						return data;
 					}
 					else if (index == StaticColumns.Length + 1)
 						return tags;
 					else if (index == StaticColumns.Length + 2)
 						return links;
-					else if (index < StaticColumns.Length + Tags.Count + StaticPropertyCount)
-						return tags[index - StaticColumns.Length - StaticPropertyCount].Value;
+					else if (index < StaticColumns.Length + Tags.Count + staticPropertyCount)
+						return tags[index - StaticColumns.Length - staticPropertyCount].Value;
 					else
 						throw new ArgumentOutOfRangeException();
 				}
@@ -1428,11 +1766,30 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		internal void SetDirty()
+		{
+			if (!isChanged)
+			{
+				isChanged = true;
+				OnPropertyChanged(nameof(IsChanged));
+			}
+		} // proc SetDirty
+
+		private void ResetDirty(PpsMasterDataTransaction transaction)
+		{
+			if (isChanged)
+			{
+				transaction?.AddRollbackOperation(SetDirty);
+				isChanged = false;
+				OnPropertyChanged(nameof(IsChanged));
+			}
+		} // proc SetDirty
+
 		public PpsEnvironment Environment => environment;
 		public override bool IsDataOwner => true;
 
 		public long Id => objectId;
-		public Guid Guid => GetValue((int)PpsStaticObjectColumnIndex.Guid, System.Guid.Empty);
+		public Guid Guid => GetValue((int)PpsStaticObjectColumnIndex.Guid, Guid.Empty);
 		public string Typ => GetValue((int)PpsStaticObjectColumnIndex.Typ, String.Empty);
 		public string MimeType => GetValue((int)PpsStaticObjectColumnIndex.MimeType, String.Empty);
 		public string Nr => GetValue((int)PpsStaticObjectColumnIndex.Nr, String.Empty);
@@ -1440,18 +1797,26 @@ namespace TecWare.PPSn
 		public long RemoteCurRevId => GetValue((int)PpsStaticObjectColumnIndex.RemoteCurRevId, -1L);
 		public long RemoteHeadRevId => GetValue((int)PpsStaticObjectColumnIndex.RemoteHeadRevId, -1L);
 		public long PulledRevId => GetValue((int)PpsStaticObjectColumnIndex.PulledRevId, -1L);
+		/// <summary>Is the local data of the object changed.</summary>
 		public bool IsDocumentChanged => GetValue((int)PpsStaticObjectColumnIndex.IsDocumentChanged, false);
+
+		/// <summary>Has this object local data available.</summary>
 		public bool HasData => GetValue((int)PpsStaticObjectColumnIndex.HasData, false);
 
-		public PpsObjectLinks Links => links.RefreshLazy();
+		/// <summary>Access to the links of the object.</summary>
+		public PpsObjectLinks Links => links;
+		/// <summary>Object tags and properties</summary>
 		public PpsObjectTags Tags => tags;
+
+		/// <summary>Is the meta data changed and not persisted in the local database.</summary>
+		public bool IsChanged => isChanged;
 
 		internal object SyncRoot => objectLock;
 
 		// -- Static ----------------------------------------------------------------
 
 		private static PpsStaticObjectColumn[] staticColumns;
-		
+
 		private enum PpsStaticObjectColumnIndex
 		{
 			Guid = 1,
@@ -1489,7 +1854,7 @@ namespace TecWare.PPSn
 		internal static string GetStaticColumnExpression(int index)
 			=> staticColumns[index].Expression;
 
-		internal const int StaticPropertyCount = 3;
+		internal const int staticPropertyCount = 3;
 
 		internal static IDataColumn[] StaticColumns => staticColumns;
 		internal static string StaticColumnsSelect { get; }
@@ -1511,7 +1876,7 @@ namespace TecWare.PPSn
 		private readonly string name;
 		private bool createServerSiteOnly = false;
 		private bool isRev = false;
-		
+
 		public PpsObjectInfo(PpsEnvironment environemnt, string name)
 			: base(environemnt)
 		{
@@ -1524,7 +1889,7 @@ namespace TecWare.PPSn
 		[LuaMember]
 		public string GetNextNumber(PpsMasterDataTransaction transaction)
 		{
-			using (var cmd = transaction.CreateNativeCommand("SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND typeof(substr(Nr, 4)) = 'integer'"))
+			using (var cmd = transaction.CreateNativeCommand("SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND abs(substr(Nr, 4)) != 0.0")) //SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND typeof(substr(Nr, 4)) = 'integer'
 			{
 				var lastNrString = cmd.ExecuteScalarEx() as string;
 				var lastNr = lastNrString == null ? 0 : Int32.Parse(lastNrString.Substring(3));
@@ -1999,14 +2364,14 @@ order by t_liefnr.value desc
 		} // func CreateObjectFilter
 
 		#endregion
-		
+
 		/// <summary>Create a new object in the local database.</summary>
 		/// <param name="transaction"></param>
 		/// <param name="objectInfo"></param>
 		/// <returns></returns>
 		public PpsObject CreateNewObject(PpsMasterDataTransaction transaction, PpsObjectInfo objectInfo)
 			=> CreateNewObject(transaction, Guid.NewGuid(), objectInfo.Name, objectInfo.GetNextNumber(transaction), objectInfo.IsRev);
-		
+
 		/// <summary>Create a new object.</summary>
 		/// <param name="serverId"></param>
 		/// <param name="guid"></param>
@@ -2019,10 +2384,12 @@ order by t_liefnr.value desc
 		[LuaMember]
 		public PpsObject CreateNewObject(PpsMasterDataTransaction transaction, Guid guid, string typ, string nr, bool isRev)
 		{
-			using (var trans = MasterData.CreateTransaction(transaction))
-			using (var cmd = trans.CreateNativeCommand("INSERT INTO main.Objects (Id, Guid, Typ, Nr, IsHidden, IsRev) VALUES (@Id, @Guid, @Typ, @Nr, 0, @IsRev)"))
+			using (var trans = MasterData.CreateTransaction())
+			using (var cmd = trans.CreateNativeCommand(
+				"INSERT INTO main.Objects (Id, Guid, Typ, Nr, IsHidden, IsRev, _IsUpdated) " +
+				"VALUES (@Id, @Guid, @Typ, @Nr, 0, @IsRev, 1)"))
 			{
-				var newObjectId = trans.GetNextLocalId(transaction, "Objects", "Id");
+				var newObjectId = trans.GetNextLocalId("Objects", "Id");
 				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
 				cmd.AddParameter("@Guid", DbType.Guid, guid);
 				cmd.AddParameter("@Typ", DbType.String, typ.DbNullIfString());
@@ -2035,6 +2402,16 @@ order by t_liefnr.value desc
 				return GetObject(newObjectId, transaction);
 			}
 		} // func CreateNewObject
+
+		private void RefreshCachedObject(long id, IPropertyReadOnlyDictionary properties)
+		{
+			lock (objectStoreLock)
+			{
+				var o = GetCachedObject(objectStoreById, id);
+				if (o != null)
+					o.ReadObjectInfo(properties);
+			}
+		} // proc RefreshCachedObject
 
 		internal async Task<T> CreateObjectDataObjectAsync<T>(PpsObject obj)
 			where T : IPpsObjectData
@@ -2093,7 +2470,7 @@ order by t_liefnr.value desc
 		private PpsObject ReadObject(object key, bool useGuid, PpsMasterDataTransaction transaction, bool throwException = false)
 		{
 			// refresh core data
-			using (var trans = MasterData.CreateTransaction(transaction))
+			using (var trans = MasterData.CreateTransaction())
 			using (var cmd = trans.CreateNativeCommand(PpsObject.StaticColumnsSelect + (useGuid ? " WHERE o.Guid = @Guid" : " WHERE o.Id = @Id")))
 			{
 				if (useGuid)
@@ -2196,7 +2573,7 @@ order by t_liefnr.value desc
 			=> objectInfo[objectTyp, false];
 
 		#endregion
-		
+
 		#region -- ActiveDataSets ---------------------------------------------------------
 
 		internal void OnDataSetActivated(PpsDataSetDesktop dataset)
