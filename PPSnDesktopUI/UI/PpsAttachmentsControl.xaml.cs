@@ -8,6 +8,8 @@ using System.Windows.Data;
 using System.Windows.Input;
 using TecWare.PPSn.Data;
 using System.IO;
+using Neo.IronLua;
+using System.Collections;
 
 namespace TecWare.PPSn.UI
 {
@@ -60,22 +62,26 @@ namespace TecWare.PPSn.UI
 						if (ofd.ShowDialog() == true)
 						{
 							var list = (PpsDataRelatedFilterDesktop)GetValue(AttachmentListProperty);
-							var env = PpsEnvironment.GetEnvironment(this);
+							var env = Environment;
 							foreach (var filename in ofd.FileNames)
 							{
-								var trans = env.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write);
-								var obj = env.CreateNewObject(Environment.ObjectInfos[PpsEnvironment.AttachmentObjectTyp], StuffIO.MimeTypesFromExtension(Path.GetExtension(filename)));
+								using (var trans = env.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
+								{
+									var obj = env.CreateNewObject(Environment.ObjectInfos[PpsEnvironment.AttachmentObjectTyp]);
 
-								obj.Tags.UpdateTag(env.UserId, "Filename", PpsObjectTagClass.Text, filename);
+									obj.Tags.UpdateTag(env.UserId, "Filename", PpsObjectTagClass.Text, filename);
 
-								var data = await obj.GetDataAsync<PpsObjectBlobData>();
-								await data.ReadFromFileAsync(filename);
-								await data.CommitAsync();
+									var data = await obj.GetDataAsync<PpsObjectBlobData>();
+									await data.ReadFromFileAsync(filename);
+									await data.CommitAsync();
 
-								Dispatcher.Invoke(() => list.Table.Add(obj));
+									var a = new LuaTable();
 
-								trans.Commit();
-								trans.Dispose();
+									a["ObjkId"] = obj.Id;
+									var b = new PpsUndoManager();
+									list.Add(a);
+									trans.Commit();
+								}
 							}
 						}
 						e.Handled = true;
@@ -87,16 +93,17 @@ namespace TecWare.PPSn.UI
 
 		public static DependencyProperty AttachmentListProperty =
 			DependencyProperty.Register("AttachmentList",
-			typeof(PpsDataRelatedFilterDesktop),
+			typeof(IList),
 			typeof(PpsAttachmentsControl));
 		public static DependencyProperty AttachmentListSelectedItemProperty =
 			DependencyProperty.Register("AttachmentListSelectedItem",
-			typeof(PpsDataRow),
+			typeof(object),
 			typeof(PpsAttachmentsControl));
 		public static RoutedUICommand RemoveAttachmentCommand { get; } = new RoutedUICommand("RemoveAttachment", "RemoveAttachment", typeof(PpsAttachmentsControl));
 		public static RoutedUICommand AddFileAttachmentCommand { get; } = new RoutedUICommand("AddFileAttachment", "AddFileAttachment", typeof(PpsAttachmentsControl));
 		public static RoutedUICommand AddLinkAttachmentCommand { get; } = new RoutedUICommand("AddLinkAttachment", "AddLinkAttachment", typeof(PpsAttachmentsControl));
 
+		
 		public IPpsAttachments Attachments { get; } = null; // wird von ItemsSource abgeleitet
 
 		public PpsEnvironment Environment => getEnvironment.Value;

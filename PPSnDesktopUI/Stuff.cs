@@ -371,10 +371,15 @@ namespace TecWare.PPSn
 		private static int FindTypeMappingByMimeType(string mimeType)
 			=> Array.FindIndex(mimeTypeMapping, mt => mt.MimeType == mimeType);
 
-		public static string MimeTypesFromExtension(string extension)
+		public static string MimeTypeFromExtension(string extension)
 		{
 			var typeIndex = FindTypeMappingByExtension(extension);
 			return (typeIndex >= 0) ? mimeTypeMapping[typeIndex].MimeType : DefaultMimeType;
+		}
+
+		public static string MimeTypeFromFilename(string filename)
+		{
+			return MimeTypeFromExtension(Path.GetExtension(filename));
 		}
 
 		#endregion
