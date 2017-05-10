@@ -37,19 +37,17 @@ namespace TecWare.PPSn.Server
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsDocument : DEConfigItem, IWpfClientApplicationFileProvider
+	public sealed class PpsDocumentItem : PpsObjectItem<PpsDataSetServer>, IWpfClientApplicationFileProvider
 	{
-		private readonly PpsApplication application;
 
 		private PpsDataSetServerDefinition datasetDefinition = null;
 		private ILuaAttachedScript[] currentAttachedScripts = null;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
-		public PpsDocument(IServiceProvider sp, string name)
+		public PpsDocumentItem(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
-			this.application = sp.GetService<PpsApplication>(true);
 		} // ctor
 
 		protected override void OnBeginReadConfiguration(IDEConfigLoading config)
@@ -67,14 +65,14 @@ namespace TecWare.PPSn.Server
 		protected override void OnEndReadConfiguration(IDEConfigLoading config)
 		{
 			if (datasetDefinition == null)
-				application.RegisterInitializationTask(12000, "Bind documents", BindDataSetDefinitonAsync);
+				Application.RegisterInitializationTask(12000, "Bind documents", BindDataSetDefinitonAsync);
 
 			base.OnEndReadConfiguration(config);
 		} // proc OnEndReadConfiguration
 
 		private async Task BindDataSetDefinitonAsync()
 		{
-			datasetDefinition = application.GetDataSetDefinition(Config.GetAttribute("dataset", String.Empty));
+			datasetDefinition = Application.GetDataSetDefinition(Config.GetAttribute("dataset", String.Empty));
 			if (!datasetDefinition.IsInitialized) // initialize dataset functionality
 				await datasetDefinition.InitializeAsync();
 
@@ -88,130 +86,60 @@ namespace TecWare.PPSn.Server
 		} // proc BindDataSetDefinitonAsync
 
 		#endregion
+		
+		#region -- Push/Pull --------------------------------------------------------------
 
-		#region -- Pull -------------------------------------------------------------------
-
-		[LuaMember("Pull")]
-		private LuaResult LuaPullDataSet(PpsDataTransaction transaction, long? objectId, Guid? guidId, long? revId)
+		protected override void WriteDataToStream(PpsDataSetServer data, Stream dst)
 		{
-			var r = PullDataSet(transaction, objectId, guidId, revId);
-			return new LuaResult(r.dataset, r.obj);
-		} // func PullDataSet
+			using (var xml = XmlWriter.Create(dst, Procs.XmlWriterSettings))
+			{
+				xml.WriteStartDocument();
+				data.Write(xml);
+				xml.WriteEndDocument();
+			}
+		} // proc WriteDataToStream
 
-		private (PpsDataSetServer dataset, PpsObjectAccess obj) PullDataSet(PpsDataTransaction transaction, long? objectId, Guid? guidId, long? revId)
+		protected override PpsDataSetServer GetDataFromStream(Stream src)
 		{
-			// get object data
-			var obj = application.Objects.GetObject(transaction,
-				new LuaTable
-				{
-						{ nameof(PpsObjectAccess.Id), objectId.HasValue ? (object)objectId.Value : null },
-						{ nameof(PpsObjectAccess.Guid), guidId.HasValue ? (object)guidId.Value : null },
-						{ nameof(PpsObjectAccess.RevId), revId.HasValue ? (object)revId.Value : null },
-				}
-			);
+			var data = (PpsDataSetServer)datasetDefinition.CreateDataSet();
+			using (var xml = XmlReader.Create(src, Procs.XmlReaderSettings))
+				data.Read(XDocument.Load(xml).Root);
+			return data;
+		} // func GetDataFromStream
 
+		protected override PpsDataSetServer PullData(PpsDataTransaction trans, PpsObjectAccess obj)
+		{
 			// get the head or given revision
 			// todo: create rev, if not exists
 			var xDocumentData = XDocument.Parse(obj.GetText());
 
 			// create the dataset
-			var dataset = (PpsDataSetServer)datasetDefinition.CreateDataSet();
-			dataset.Read(xDocumentData.Root);
+			var data = (PpsDataSetServer)datasetDefinition.CreateDataSet();
+			data.Read(xDocumentData.Root);
 
 			// correct id and revision
-			CheckHeadObjectId(obj, dataset);
+			CheckHeadObjectId(obj, data);
 
 			// fire triggers
-			dataset.OnAfterPull();
+			data.OnAfterPull();
 
 			// mark all has orignal
-			dataset.Commit();
+			data.Commit();
 
-			return (dataset, obj);
-		} // func PullDataSet
+			return data;
+		} // func PullData
 
-		[
-		DEConfigHttpAction("pull", IsSafeCall = false),
-		Description("Reads the revision from the server.")
-		]
-		private void HttpPullAction(IDEContext ctx, long id, long rev = -1)
-		{
-			var currentUser = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
-
-			try
-			{
-				using (var trans = currentUser.CreateTransaction(application.MainDataSource))
-				{
-					var (dataset, obj) = PullDataSet(trans, id, null, rev < 0 ? (long?)null : rev);
-
-					// prepare object data
-					var headerBytes = Encoding.Unicode.GetBytes(obj.ToXml().ToString(SaveOptions.DisableFormatting));
-					ctx.OutputHeaders["ppsn-header-length"] = headerBytes.Length.ChangeType<string>();
-
-					// write the content
-					using (var dst = ctx.GetOutputStream(MimeTypes.Application.OctetStream))
-					{
-						dst.Write(headerBytes, 0, headerBytes.Length);
-
-						using (var tw = new StreamWriter(dst, Encoding.Unicode))
-						using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
-						{
-							// write dataset
-							xml.WriteStartDocument();
-							dataset.Write(xml);
-							xml.WriteEndDocument();
-						}
-					}
-
-					trans.Commit();
-				}
-			}
-			catch (Exception e)
-			{
-				ctx.WriteSafeCall(e);
-			}
-		} // proc HttpPullAction
-
-		#endregion
-
-		#region -- Push -------------------------------------------------------------------
-
-		private object GetNextNumberMethod()
-		{
-			// test for next number
-			var nextNumber = this["NextNumber"];
-			if (nextNumber != null)
-				return nextNumber;
-
-			// test for length
-			var nrLength = Config.GetAttribute("nrLength", 0);
-			if (nrLength > 0)
-				return nrLength;
-
-			return null;
-		} // func GetNextNumberMethod
-
-		[LuaMember("Push")]
-		public bool PushDataSet(PpsDataTransaction transaction, PpsObjectAccess obj, PpsDataSetServer dataset)
+		protected override bool PushData(PpsDataTransaction transaction, PpsObjectAccess obj, PpsDataSetServer data)
 		{
 			// fire triggers
-			dataset.OnBeforePush();
+			data.OnBeforePush();
 
 			// move all to original row
-			dataset.Commit();
+			data.Commit();
 
 			if (obj.IsNew)
-			{
-				// set the object number for new objects
-				var nextNumber = GetNextNumberMethod();
-				if (nextNumber == null && obj.Nr == null) // no next number and no number --> error
-					throw new ArgumentException($"The field 'Nr' is null or no nextNumber is given.");
-				else if (Config.GetAttribute("forceNextNumber", false) || obj.Nr == null) // force the next number or there is no number
-					obj["Nr"] = application.Objects.GetNextNumber(transaction, obj.Typ, nextNumber, dataset);
-				else  // check the number format
-					application.Objects.ValidateNumber(obj.Nr, nextNumber, dataset);
-			}
-			else
+				InsertNewObject(transaction, obj, data);
+			else // check rev, to in base implementation?
 			{
 				var headRevId = obj.HeadRevId;
 				if (headRevId > obj.RevId)
@@ -221,10 +149,10 @@ namespace TecWare.PPSn.Server
 			}
 
 			// update head id
-			CheckHeadObjectId(obj, dataset);
+			CheckHeadObjectId(obj, data);
 
 			// update all local generated id's to server id's
-			foreach (var dt in dataset.Tables)
+			foreach (var dt in data.Tables)
 			{
 				if (dt.TableDefinition.PrimaryKey == null)
 					continue;
@@ -262,100 +190,13 @@ namespace TecWare.PPSn.Server
 			}
 
 			// commit all to orignal
-			dataset.Commit();
+			data.Commit();
 
-			// create obj data
-			if (obj.IsNew)
-				obj.Update(true);
-
-			// create rev data
-			obj.UpdateData(
-				new Action<Stream>(dst =>
-				{
-					using (var xml = XmlWriter.Create(dst, Procs.XmlWriterSettings))
-					{
-						xml.WriteStartDocument();
-						dataset.Write(xml);
-						xml.WriteEndDocument();
-					}
-				})
-			);
-
-			// update
+			obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
 			obj.Update();
 
 			return true;
-		} // proc PushDataSet
-
-		[
-		DEConfigHttpAction("push", IsSafeCall = false),
-		Description("Writes a new revision to the object store.")
-		]
-		private void HttpPushAction(IDEContext ctx)
-		{
-			var currentUser = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
-
-			try
-			{
-				// read header length
-				var headerLength = ctx.GetProperty("ppsn-header-length", -1L);
-				if (headerLength > 10 << 20 || headerLength < 10) // ignore greater than 10mb or smaller 10bytes (<object/>)
-					throw new ArgumentOutOfRangeException("header-length");
-
-				var src = ctx.GetInputStream();
-
-				// parse the object body
-				XElement xObject;
-				using (var headerStream = new WindowStream(src, 0, headerLength, false, true))
-				using (var xmlHeader = XmlReader.Create(headerStream, Procs.XmlReaderSettings))
-					xObject = XElement.Load(xmlHeader);
-
-				// read the data
-				using (var transaction = currentUser.CreateTransaction(application.MainDataSource))
-				{
-					// first the get the object data
-					var obj = application.Objects.ObjectFromXml(transaction, xObject);
-
-					// create and load the dataset
-					var dataset = (PpsDataSetServer)datasetDefinition.CreateDataSet();
-					using (var xml = XmlReader.Create(src, Procs.XmlReaderSettings))
-						dataset.Read(XDocument.Load(xml).Root);
-
-					// set IsRev
-					if (obj.IsNew)
-						obj.IsRev = datasetDefinition.Meta.GetProperty("IsRev", false);
-
-					// push dataset in the database
-					if (PushDataSet(transaction, obj, dataset))
-					{
-						// write the object definition to client
-						using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
-						using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
-							obj.ToXml(true).WriteTo(xml);
-					}
-					else
-					{
-						ctx.WriteSafeCall(
-							new XElement("push",
-								new XAttribute("headRevId", obj.HeadRevId),
-								new XAttribute("pullRequest", Boolean.TrueString)
-							)
-						);
-					}
-
-					transaction.Commit();
-				}
-			}
-			catch (HttpResponseException)
-			{
-				throw;
-			}
-			catch (Exception e)
-			{
-				Log.Except("Push failed.", e);
-				ctx.WriteSafeCall(e);
-			}
-		} // proc HttpPushAction
+		} // func PushData
 
 		#endregion
 
@@ -366,6 +207,8 @@ namespace TecWare.PPSn.Server
 		{
 			throw new NotImplementedException();
 		} // proc HttpExecuteAction
+
+		#region -- Application Files ----------------------------------------------------
 
 		IEnumerable<PpsApplicationFileItem> IWpfClientApplicationFileProvider.GetApplicationFiles()
 		{
@@ -399,19 +242,20 @@ namespace TecWare.PPSn.Server
 
 		protected override bool OnProcessRequest(IDEContext r)
 		{
-			FileInfo fi;
 			if (r.RelativeSubPath == "schema.xml")
 			{
 				datasetDefinition.WriteToDEContext(r, ConfigPath + "/schema.xml");
 				return true;
 			}
-			else if (GetDatasetResourceFile(r.RelativeSubPath, out fi))
+			else if (GetDatasetResourceFile(r.RelativeSubPath, out var fi))
 			{
 				r.WriteFile(fi.FullName);
 				return true;
 			}
 			return base.OnProcessRequest(r);
 		} // proc OnProcessRequest
+
+	#endregion
 
 		[LuaMember(nameof(DataSetDefinition))]
 		public PpsDataSetServerDefinition DataSetDefinition => datasetDefinition;

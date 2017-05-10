@@ -1,5 +1,21 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -12,6 +28,7 @@ using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
+using TecWare.DE.Server;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
@@ -44,7 +61,7 @@ namespace TecWare.PPSn.Server
 		{
 		} // proc Remove
 
-		public XElement ToXml(string elementName) 
+		public XElement ToXml(string elementName)
 			=> null;
 
 		public long Id => id;
@@ -78,10 +95,10 @@ namespace TecWare.PPSn.Server
 			this.defaultData = defaultData;
 
 			this.objectId = defaultData.GetProperty(nameof(Id), -1L);
-			this.revId = defaultData.GetProperty(nameof(RevId), defaultData.GetProperty(nameof(HeadRevId) ,- 1L));
+			this.revId = defaultData.GetProperty(nameof(RevId), defaultData.GetProperty(nameof(HeadRevId), -1L));
 			this.isRev = defaultData.TryGetProperty<bool>(nameof(IsRev), out var t) ? (bool?)t : null;
 		} // ctor
-		
+
 		protected override object OnIndex(object key)
 			=> key is string k && defaultData.TryGetProperty(k, out var t) ? t : base.OnIndex(key);
 
@@ -177,7 +194,7 @@ namespace TecWare.PPSn.Server
 					cmd.Add("on", new LuaTable { nameof(Guid) });
 				}
 			}
-			
+
 			transaction.ExecuteNoneResult(cmd);
 
 			// update values
@@ -250,7 +267,7 @@ namespace TecWare.PPSn.Server
 			var shouldText = MimeType != null && MimeType.StartsWith("text/", StringComparison.OrdinalIgnoreCase);
 			var shouldDeflate = shouldText;
 
-			if(content != null)
+			if (content != null)
 			{
 				switch (content)
 				{
@@ -270,7 +287,7 @@ namespace TecWare.PPSn.Server
 							{
 								using (var sr = new StreamWriter(dst, Encoding.Unicode, 4096, true))
 									sr.Write(sb.ToString());
-							}, 
+							},
 							sb.Length, shouldDeflate
 						);
 						break;
@@ -333,14 +350,14 @@ namespace TecWare.PPSn.Server
 				new LuaTable { { "Id", revId } }
 			};
 
-			var row =	transaction.ExecuteSingleRow(cmd);
+			var row = transaction.ExecuteSingleRow(cmd);
 			if (row == null)
 				throw new ArgumentException($"Could not read revision '{revId}'.");
 
 			var isDeflated = row.GetProperty("IsDocumentDeflate", false);
 			var rawData = (byte[])row["Document"];
 
-			var src = (Stream) new MemoryStream(rawData, false);
+			var src = (Stream)new MemoryStream(rawData, false);
 			if (isDeflated)
 				src = new GZipStream(src, CompressionMode.Decompress, false);
 			return src;
@@ -356,8 +373,8 @@ namespace TecWare.PPSn.Server
 		[LuaMember]
 		public string GetText()
 		{
-			// todo: in DESCore\Networking\Requests.cs:BaseWebRequest.CheckMimeType
-			using (var tr = Procs.OpenStreamReader(GetDataStream(), Encoding.Unicode))
+			// todo: in DESCore\Networking\Requests.cs:BaseWebRequest.CheckMimeType 
+			using (var tr = Procs.OpenStreamReader(GetDataStream(), DataEncoding))
 				return tr.ReadToEnd();
 		} // func GetText
 
@@ -453,6 +470,8 @@ namespace TecWare.PPSn.Server
 		public long CurRevId => this.TryGetValue<long>(nameof(CurRevId), out var t) ? t : -1;
 		public long HeadRevId => this.TryGetValue<long>(nameof(HeadRevId), out var t) ? t : -1;
 
+		public Encoding DataEncoding => Encoding.Unicode;
+
 		[LuaMember]
 		public long RevId
 		{
@@ -486,6 +505,249 @@ namespace TecWare.PPSn.Server
 		public IEnumerable<PpsObjectLinkAccess> LinksTo => GetLinks(true, ref linksTo);
 		public IEnumerable<PpsObjectLinkAccess> LinksFrom => GetLinks(true, ref linksFrom);
 	} // class PpsObjectAccess
+
+	#endregion
+
+	#region -- class PpsObjectItem --------------------------------------------------------
+
+	/// <summary>Base class for all objects, that can be processed from the server.</summary>
+	public abstract class PpsObjectItem<T> : DEConfigItem
+		where T : class
+	{
+		private readonly PpsApplication application;
+
+		#region -- Ctor/Dtor ------------------------------------------------------------
+
+		public PpsObjectItem(IServiceProvider sp, string name)
+			: base(sp, name)
+		{
+			this.application = sp.GetService<PpsApplication>(true);
+		} // ctor
+
+		#endregion
+
+		#region -- GetObject ------------------------------------------------------------
+
+		private PpsObjectAccess VerfiyObjectType(PpsObjectAccess obj)
+		{
+			if (String.Compare(obj.Typ, ObjectType, StringComparison.OrdinalIgnoreCase) != 0)
+				throw new ArgumentOutOfRangeException(nameof(obj), obj.Typ, "Object is '{obj.Typ}'. Expected: '{ObjectType}'");
+			return obj;
+		} // func VerfiyObjectType
+
+		public PpsObjectAccess GetObject(PpsDataTransaction trans, long id)
+			=> VerfiyObjectType(application.Objects.GetObject(trans, id));
+
+		public PpsObjectAccess GetObject(PpsDataTransaction trans, Guid guid)
+			=> VerfiyObjectType(application.Objects.GetObject(trans, guid));
+
+		/// <summary>Serialize data to an stream of bytes.</summary>
+		protected abstract void WriteDataToStream(T data, Stream dst);
+
+		protected abstract T GetDataFromStream(Stream src);
+
+		#endregion
+
+		#region -- Pull -----------------------------------------------------------------
+
+		protected virtual T PullData(PpsDataTransaction trans, PpsObjectAccess obj)
+		{
+			using (var src = obj.GetDataStream())
+				return GetDataFromStream(src);
+		} // func PullData
+
+		[LuaMember("Pull")]
+		private LuaResult LuaPull(PpsDataTransaction transaction, long? objectId, Guid? guidId, long? revId)
+		{
+			// initialize object access
+			var obj = objectId.HasValue
+				? GetObject(transaction, objectId.Value)
+				: guidId.HasValue
+					? GetObject(transaction, guidId.Value)
+					: throw new ArgumentNullException("objectId|guidId");
+
+			if (revId.HasValue)
+				obj.SetRevision(revId.Value);
+
+			var data = PullData(transaction, obj);
+
+			return new LuaResult(data, obj);
+		} // func PullDataSet
+
+		[
+		DEConfigHttpAction("pull", IsSafeCall = false),
+		Description("Reads the revision from the server.")
+		]
+		private void HttpPullAction(IDEContext ctx, long id, long rev = -1)
+		{
+			var currentUser = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
+
+			try
+			{
+				using (var trans = currentUser.CreateTransaction(application.MainDataSource))
+				{
+					// get the object and set the correct revision
+					var obj = GetObject(trans, id);
+					if (rev >= 0)
+						obj.SetRevision(rev);
+
+					// prepare object data
+					var headerBytes = Encoding.Unicode.GetBytes(obj.ToXml().ToString(SaveOptions.DisableFormatting));
+					ctx.OutputHeaders["ppsn-header-length"] = headerBytes.Length.ChangeType<string>();
+
+					// get content
+					var data = PullData(trans, obj);
+
+					// write all data to the application
+					using (var dst = ctx.GetOutputStream(MimeTypes.Application.OctetStream))
+					{
+						// write header bytes
+						dst.Write(headerBytes, 0, headerBytes.Length);
+
+						// write content
+						WriteDataToStream(data, dst);
+					}
+
+					trans.Commit();
+				}
+			}
+			catch (Exception e)
+			{
+				ctx.WriteSafeCall(e);
+			}
+		} // proc HttpPullAction
+
+		#endregion
+
+		#region -- Push -----------------------------------------------------------------
+
+		protected virtual bool IsDataRevision(T data)
+			=> false;
+
+		private object GetNextNumberMethod()
+		{
+			// test for next number
+			var nextNumber = this["NextNumber"];
+			if (nextNumber != null)
+				return nextNumber;
+
+			// test for length
+			var nrLength = Config.GetAttribute("nrLength", 0);
+			if (nrLength > 0)
+				return nrLength;
+
+			return null;
+		} // func GetNextNumberMethod
+
+		protected virtual void SetNextNumber(PpsDataTransaction transaction, PpsObjectAccess obj, T data)
+		{
+			// set the object number for new objects
+			var nextNumber = GetNextNumberMethod();
+			if (nextNumber == null && obj.Nr == null) // no next number and no number --> error
+				throw new ArgumentException($"The field 'Nr' is null or no nextNumber is given.");
+			else if (Config.GetAttribute("forceNextNumber", false) || obj.Nr == null) // force the next number or there is no number
+				obj["Nr"] = application.Objects.GetNextNumber(transaction, obj.Typ, nextNumber, data);
+			else  // check the number format
+				application.Objects.ValidateNumber(obj.Nr, nextNumber, data);
+		} // func SetNextNumber
+
+		protected void InsertNewObject(PpsDataTransaction transaction, PpsObjectAccess obj, T data)
+		{
+			obj.IsRev = IsDataRevision(data);
+			SetNextNumber(transaction, obj, data);
+
+			// insert the new object
+			obj.Update(true);
+		} // proc InsertNewObject
+
+		protected virtual bool PushData(PpsDataTransaction transaction, PpsObjectAccess obj, T data)
+		{
+			// set IsRev
+			if (obj.IsNew)
+				InsertNewObject(transaction, obj, data);
+
+			// update database
+			obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
+			obj.Update();
+
+			return true;
+		} // func PushData
+
+		[LuaMember("Push")]
+		protected virtual bool LuaPush(PpsDataTransaction transaction, PpsObjectAccess obj, object data)
+			=> PushData(transaction, obj, (T)data);
+
+		[
+		DEConfigHttpAction("push", IsSafeCall = false),
+		Description("Writes a new revision to the object store.")
+		]
+		private void HttpPushAction(IDEContext ctx)
+		{
+			var currentUser = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
+
+			try
+			{
+				// read header length
+				var headerLength = ctx.GetProperty("ppsn-header-length", -1L);
+				if (headerLength > 10 << 20 || headerLength < 10) // ignore greater than 10mb or smaller 10bytes (<object/>)
+					throw new ArgumentOutOfRangeException("header-length");
+
+				var src = ctx.GetInputStream();
+
+				// parse the object body
+				XElement xObject;
+				using (var headerStream = new WindowStream(src, 0, headerLength, false, true))
+				using (var xmlHeader = XmlReader.Create(headerStream, Procs.XmlReaderSettings))
+					xObject = XElement.Load(xmlHeader);
+
+				// read the data
+				using (var transaction = currentUser.CreateTransaction(application.MainDataSource))
+				{
+					// first the get the object data
+					var obj = application.Objects.ObjectFromXml(transaction, xObject);
+					VerfiyObjectType(obj);
+
+					// create and load the dataset
+					var data = GetDataFromStream(src);
+
+					// push data in the database
+					if (PushData(transaction, obj, data))
+					{
+						// write the object definition to client
+						using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
+						using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
+							obj.ToXml(true).WriteTo(xml);
+					}
+					else
+					{
+						ctx.WriteSafeCall(
+							new XElement("push",
+								new XAttribute("headRevId", obj.HeadRevId),
+								new XAttribute("pullRequest", Boolean.TrueString)
+							)
+						);
+					}
+
+					transaction.Commit();
+				}
+			}
+			catch (HttpResponseException)
+			{
+				throw;
+			}
+			catch (Exception e)
+			{
+				Log.Except("Push failed.", e);
+				ctx.WriteSafeCall(e);
+			}
+		} // proc HttpPushAction
+
+		#endregion
+
+		public virtual string ObjectType => Name;
+
+		public PpsApplication Application => application;
+	} // class PpsObjectItem
 
 	#endregion
 
@@ -559,7 +821,7 @@ namespace TecWare.PPSn.Server
 
 				return nr;
 			} // func GetNextNumber
-			
+
 			/// <summary>Create a complete new object.</summary>
 			/// <param name="trans"></param>
 			/// <param name="args"></param>
@@ -630,26 +892,39 @@ namespace TecWare.PPSn.Server
 				return selector.CreateSelector(trans.Connection);
 			} // func GetObjectSelector
 
-			/// <summary>Returns object data.</summary>
-			/// <param name="args"></param>
-			/// <returns></returns>
-			[LuaMember(nameof(GetObject))]
-			public PpsObjectAccess GetObject(PpsDataTransaction trans, LuaTable args)
+			private PpsObjectAccess GetObject(PpsDataTransaction trans, Func<PpsDataSelector, PpsDataSelector> applyFilter)
 			{
-				var selector = GetObjectSelector(trans);
-
-				// append filter
-				if (args.TryGetValue<long>(nameof(PpsObjectAccess.Id), out var objectId))
-					selector = selector.ApplyFilter(PpsDataFilterExpression.Compare("Id", PpsDataFilterCompareOperator.Equal, objectId));
-				else if (args.TryGetValue<Guid>(nameof(PpsObjectAccess.Guid), out var guidId))
-					selector = selector.ApplyFilter(PpsDataFilterExpression.Compare("Guid", PpsDataFilterCompareOperator.Equal, guidId));
-				else
-					throw new ArgumentNullException(nameof(PpsObjectAccess.Id), "Id or Guid needed to select an object.");
+				// create selector
+				var selector = applyFilter(GetObjectSelector(trans));
 
 				// return only the first object
 				var r = selector.Select(c => new SimpleDataRow(c)).FirstOrDefault();
 				return r == null ? null : new PpsObjectAccess(trans, r);
 			} // func GetObject
+
+			[LuaMember]
+			public PpsObjectAccess GetObject(PpsDataTransaction trans, long id)
+				=> GetObject(trans, s => s.ApplyFilter(PpsDataFilterExpression.Compare("Id", PpsDataFilterCompareOperator.Equal, id)));
+
+			[LuaMember]
+			public PpsObjectAccess GetObject(PpsDataTransaction trans, Guid guid)
+				=> GetObject(trans, s => s.ApplyFilter(PpsDataFilterExpression.Compare("Guid", PpsDataFilterCompareOperator.Equal, guid)));
+
+			/// <summary>Returns object data.</summary>
+			/// <param name="args"></param>
+			/// <returns></returns>
+			[LuaMember(nameof(GetObject))]
+			public PpsObjectAccess GetObject(PpsDataTransaction trans, LuaTable args)
+				=> GetObject(trans, s =>
+				{
+					// append filter
+					if (args.TryGetValue<long>(nameof(PpsObjectAccess.Id), out var objectId))
+						return s.ApplyFilter(PpsDataFilterExpression.Compare("Id", PpsDataFilterCompareOperator.Equal, objectId));
+					else if (args.TryGetValue<Guid>(nameof(PpsObjectAccess.Guid), out var guidId))
+						return s.ApplyFilter(PpsDataFilterExpression.Compare("Guid", PpsDataFilterCompareOperator.Equal, guidId));
+					else
+						throw new ArgumentNullException(nameof(PpsObjectAccess.Id), "Id or Guid needed to select an object.");
+				});
 
 			/// <summary>Returns a view on the objects.</summary>
 			/// <param name="trans"></param>
@@ -743,32 +1018,6 @@ namespace TecWare.PPSn.Server
 
 		private readonly PpsObjectsLibrary objectsLibrary;
 		private readonly PpsHttpLibrary httpLibrary;
-
-		/// <summary>Funktion to create a synchronisation time stamp.</summary>
-		/// <returns>Timestamp formatted as an Int64.</returns>
-		[LuaMember]
-		public long GetSyncStamp()
-			=> Procs.GetSyncStamp();
-
-		private object HttpPushFile()
-		{
-			return null;
-		}
-
-		private object HttpPullFile()
-		{
-			return null;
-		}
-
-		private object HttpLoadFile()
-		{
-			return null;
-		}
-
-		private object HttpStoreFile()
-		{
-			return null;
-		}
 
 		/// <summary>Library for access the object store.</summary>
 		[LuaMember(nameof(Objects))]

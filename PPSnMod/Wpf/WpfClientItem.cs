@@ -884,7 +884,7 @@ namespace TecWare.PPSn.Server.Wpf
 				}
 
 				// Parse all documents
-				foreach (var c in application.CollectChildren<PpsDocument>())
+				foreach (var c in application.CollectChildren<PpsDocumentItem>())
 				{
 					xml.WriteStartElement("document");
 					xml.WriteAttributeString("name", c.Name);
@@ -921,9 +921,6 @@ namespace TecWare.PPSn.Server.Wpf
 
 			// navigator.xml
 			yield return new PpsApplicationFileItem(basePath + "/environment.xml", -1, DateTime.MinValue);
-
-			// templates.xml
-			yield return new PpsApplicationFileItem(basePath + "masterdata.xml", -1, DateTime.MinValue);
 
 			// templates.xml
 			yield return new PpsApplicationFileItem(basePath + "/templates.xaml", -1, DateTime.MinValue);
@@ -1246,8 +1243,7 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 			else if (r.RelativeSubPath.EndsWith(".lua")) // sent a code snippet
 			{
-				string fullPath;
-				if (ResolveXamlPath(r.RelativeSubPath, out fullPath))
+				if (ResolveXamlPath(r.RelativeSubPath, out var fullPath))
 				{
 					r.WriteFile(fullPath, MimeTypes.Text.Plain);
 					return true;

@@ -377,37 +377,50 @@
 		</xs:complexType>
 	</xs:element>
 
+	<xs:complexType name="objectItemType">
+		<xs:complexContent>
+			<xs:extension base="ConfigItemType">
+				<xs:attribute name="nrLength" type="xs:integer" use="optional">
+					<xs:annotation>
+						<xs:documentation>Length to generate number, if this value is not set, GetNextNumber must defined.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="forceNextNumber" type="xs:boolean" use="optional" default="false">
+					<xs:annotation>
+						<xs:documentation>Force on new items an new number.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+
+	<xs:element name="attachment" type="pps:objectItemType">
+		<xs:annotation>
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.PpsAttachmentItem</class>
+			</xs:appinfo>
+			<xs:documentation></xs:documentation>
+		</xs:annotation>
+	</xs:element>
+
 	<xs:element name="document">
 		<xs:annotation>
 			<xs:appinfo>
-				<class>TecWare.PPSn.Server.PpsDocument</class>
+				<class>TecWare.PPSn.Server.PpsDocumentItem</class>
 			</xs:appinfo>
 			<xs:documentation></xs:documentation>
 		</xs:annotation>
 		<xs:complexType>
 			<xs:complexContent>
-				<xs:extension base="ConfigItemType">
-					<xs:sequence minOccurs="0" maxOccurs="unbounded">
-					</xs:sequence>
+				<xs:extension base="pps:objectItemType">
 					<xs:attribute name="dataset" type="xs:string" use="required">
 						<xs:annotation>
 							<xs:documentation>Connected dataset.</xs:documentation>
 						</xs:annotation>
 					</xs:attribute>
-					<xs:attribute name="nrLength" type="xs:integer" use="optional">
-						<xs:annotation>
-							<xs:documentation>Length to generate number, if this value is not set, GetNextNumber must defined.</xs:documentation>
-						</xs:annotation>
-					</xs:attribute>
-					<xs:attribute name="forceNextNumber" type="xs:boolean" use="optional" default="false">
-						<xs:annotation>
-							<xs:documentation>Force on new items an new number.</xs:documentation>
-						</xs:annotation>
-					</xs:attribute>
 				</xs:extension>
 			</xs:complexContent>
 		</xs:complexType>
-	
 	</xs:element>
 
 	<xs:element name="package" substitutionGroup="configItem">
@@ -691,6 +704,7 @@
 						<xs:element ref="pps:excel" minOccurs="0" maxOccurs="1" />
 						<xs:element ref="pps:register" minOccurs="0" maxOccurs="unbounded" />
 						<xs:element ref="pps:document" minOccurs="0" maxOccurs="unbounded" />
+						<xs:element ref="pps:attachment" minOccurs="0" maxOccurs="unbounded" />
 						<xs:element ref="pps:package" minOccurs="0" maxOccurs="unbounded" />
 					</xs:sequence>
 					<xs:attribute name="mainDataSource" type="xs:string" use="optional">

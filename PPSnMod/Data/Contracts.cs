@@ -238,7 +238,9 @@ namespace TecWare.PPSn.Server.Data
 		} // proc Dispose
 
 		public IDisposable Impersonate()
-			=> identity.Impersonate();
+			=> WindowsIdentity.GetCurrent().User != identity.User
+				? identity.Impersonate()
+				: null;
 	} // class PpsIntegratedCredentials
 
 	#endregion

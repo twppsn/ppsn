@@ -59,6 +59,7 @@
     <Compile Include="Data\PpsDataSetServer.cs" />
     <Compile Include="Data\PpsDataSynchronization.cs" />
     <Compile Include="Data\PpsDataTransaction.cs" />
+    <Compile Include="PpsApplication.Attachments.cs" />
     <Compile Include="PpsApplication.cs" />
     <Compile Include="PpsApplication.Documents.cs" />
     <Compile Include="PpsApplication.Objects.cs" />
