@@ -86,8 +86,11 @@ namespace TecWare.PPSn.Server
 		} // proc BindDataSetDefinitonAsync
 
 		#endregion
-		
+
 		#region -- Push/Pull --------------------------------------------------------------
+
+		protected override bool IsDataRevision(PpsDataSetServer data)
+			=> true;
 
 		protected override void WriteDataToStream(PpsDataSetServer data, Stream dst)
 		{
@@ -255,11 +258,13 @@ namespace TecWare.PPSn.Server
 			return base.OnProcessRequest(r);
 		} // proc OnProcessRequest
 
-	#endregion
+		#endregion
 
 		[LuaMember(nameof(DataSetDefinition))]
 		public PpsDataSetServerDefinition DataSetDefinition => datasetDefinition;
 
+		public override string ObjectSource => Name + "/schema.xml";
+		
 		private static void CheckHeadObjectId(PpsObjectAccess obj, PpsDataSetServer dataset)
 		{
 			var headTable = dataset.Tables["Head"];

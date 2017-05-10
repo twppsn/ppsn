@@ -884,11 +884,15 @@ namespace TecWare.PPSn.Server.Wpf
 				}
 
 				// Parse all documents
-				foreach (var c in application.CollectChildren<PpsDocumentItem>())
+				foreach (var c in application.CollectChildren<IPpsObjectItem>())
 				{
 					xml.WriteStartElement("document");
-					xml.WriteAttributeString("name", c.Name);
-					xml.WriteAttributeString("source", c.Name + "/schema.xml");
+					xml.WriteAttributeString("name", c.ObjectType);
+					if (c.ObjectSource != null)
+						xml.WriteAttributeString("source", c.ObjectSource);
+					if (c.DefaultPane != null)
+						xml.WriteAttributeString("pane", c.DefaultPane);
+					xml.WriteAttributeString("isRev", c.IsRevDefault.ChangeType<string>());
 					xml.WriteEndElement();
 				}
 

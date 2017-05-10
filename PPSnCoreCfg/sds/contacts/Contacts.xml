@@ -123,7 +123,6 @@
 
 			<!-- contacts mask -->
 			<pps:dataset name="contactsDataSet" clientScripts="contactsLocal.lua" serverScripts="ContactsScript">
-				<pps:meta name="IsRev" dataType="bool">True</pps:meta>
 				<pps:meta name="DefaultPaneUri" dataType="string">wpf/panes/contacts.xaml</pps:meta>
 				
 				<pps:autoTag name="Name" tableName="Head" columnName="Name" mode="First" />

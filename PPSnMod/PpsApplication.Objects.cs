@@ -508,10 +508,27 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
+	#region -- interface IPpsObjectItem ---------------------------------------------------
+
+	/// <summary>Description of an object item.</summary>
+	public interface IPpsObjectItem
+	{
+		/// <summary>The name or object typ of the object.</summary>
+		string ObjectType { get; }
+		/// <summary>Optional description for the object.</summary>
+		string ObjectSource { get; }
+		/// <summary>Optional default pane for the object.</summary>
+		string DefaultPane { get; }
+		/// <summary>Returns the default revision behaviour for the object</summary>
+		bool IsRevDefault { get; }
+	} // interface IPpsObjectItem
+
+	#endregion
+
 	#region -- class PpsObjectItem --------------------------------------------------------
 
 	/// <summary>Base class for all objects, that can be processed from the server.</summary>
-	public abstract class PpsObjectItem<T> : DEConfigItem
+	public abstract class PpsObjectItem<T> : DEConfigItem, IPpsObjectItem
 		where T : class
 	{
 		private readonly PpsApplication application;
@@ -745,6 +762,10 @@ namespace TecWare.PPSn.Server
 		#endregion
 
 		public virtual string ObjectType => Name;
+		public virtual string ObjectSource => null;
+		public virtual string DefaultPane => null;
+
+		public bool IsRevDefault => IsDataRevision(null);
 
 		public PpsApplication Application => application;
 	} // class PpsObjectItem
