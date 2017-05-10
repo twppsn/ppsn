@@ -309,6 +309,10 @@
 					<pps:column name="LinkObjectDataId" fieldName="sys.Fields.Long">
 						<pps:meta name="default">NULL</pps:meta>
 					</pps:column>
+					<pps:column name="RefCount" fieldName="sys.Fields.Int">
+						<pps:meta name="nullable">false</pps:meta>
+						<pps:meta name="default">0</pps:meta>
+					</pps:column>
 					<pps:column name="OnDelete" fieldName="sys.Fields.Text" />
 				</pps:table>
 			</pps:dataset>

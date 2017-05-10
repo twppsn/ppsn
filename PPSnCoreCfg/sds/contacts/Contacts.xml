@@ -207,6 +207,7 @@
 					<pps:column name="Rechnung" fieldName="dbo.Ansp.Rechnung" />
 					<pps:column name="Anfrage" fieldName="dbo.Ansp.Anfrage" />
 					<pps:column name="Bestellung" fieldName="dbo.Ansp.Bestellung" />
+					<pps:column name="PictureId" fieldName="sys.Fields.ObjectLinkId" />
 				</pps:table>
 			</pps:dataset>
 		</pps:register>
