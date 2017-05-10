@@ -214,7 +214,7 @@
 
 		<pps:wpf name="wpf">
 			<pps:template id="contacts" file="Templates.xaml" />
-			<pps:wpfSource id="core" directory="Wpf" virtualPath="panes" />
+			<pps:wpfSource id="sds.contacts" directory="Wpf" virtualPath="panes" />
 
 			<pps:view name="crmContacts" displayName="Kontakte" displayImage="usersImage" view="local.objects" filter="Typ:=crmContacts">
 				<pps:filter name="lief" displayName="Lieferanten">
