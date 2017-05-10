@@ -21,6 +21,7 @@ using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
+using System.Security.Cryptography;
 
 namespace TecWare.PPSn
 {
@@ -690,7 +691,7 @@ namespace TecWare.PPSn
 			OnCollectionReset();
 		} // proc RefreshTags
 
-		private void RefreshTags()
+		public void RefreshTags()
 		{
 			lock (parent.SyncRoot)
 			{
@@ -1094,9 +1095,11 @@ namespace TecWare.PPSn
 
 		public Task ReadFromFileAsync(string filename)
 		{
-			var fileStream = new FileStream(filename, FileMode.Open);
-			rawData = fileStream.ReadInArray();
-			sha256 = StuffIO.GetStreamHash(fileStream);// ToDo: changeme
+			using (var hashStream = new HashStream(new FileStream(filename, FileMode.Open), HashStreamDirection.Read, false, HashAlgorithm.Create("SHA-256")))
+			{
+				rawData = hashStream.ReadInArray();
+				sha256 = StuffIO.CleanHash(BitConverter.ToString(hashStream.CheckSum));
+			}
 			return Task.CompletedTask;
 		}
 
