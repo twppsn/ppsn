@@ -533,6 +533,11 @@ namespace TecWare.PPSn
 
 		public void Update(PpsObjectTagClass newClass, object newValue)
 		{
+			// correct strings
+			if (newValue is string t && String.IsNullOrEmpty(t))
+				newValue = null;
+
+			// update values
 			if (!localClass.HasValue
 				|| localClass.Value != newClass
 				|| !Object.Equals(localValue, newValue))
@@ -754,12 +759,15 @@ namespace TecWare.PPSn
 
 				using (var trans = parent.Environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
 				using (var updateCommand = trans.CreateNativeCommand("UPDATE main.[ObjectTags] SET LocalClass = @LClass, LocalValue = @LValue, _IsUpdated = 1 WHERE Id = @Id"))
+				using (var deleteCommand = trans.CreateNativeCommand("DELETE FROM main.[ObjectTags] WHERE Id = @Id"))
 				using (var setDefaultCommand = trans.CreateNativeCommand("UPDATE main.[ObjectTags] SET LocalClass = null, LocalValue = @null, _IsUpdated = 0 WHERE Id = @Id"))
 				using (var insertCommand = trans.CreateNativeCommand("INSERT INTO main.[ObjectTags] (Id, ObjectId, Key, LocalClass, LocalValue, UserId, _IsUpdated) VALUES (@Id, @ObjectId, @Key, @LClass, @LValue, @UserId, 1)"))
 				{
 					var updateIdParameter = updateCommand.AddParameter("@Id", DbType.Int64);
 					var updateClassParameter = updateCommand.AddParameter("@LClass", DbType.Int32);
 					var updateValueParameter = updateCommand.AddParameter("@LValue", DbType.String);
+
+					var deleteIdParameter = deleteCommand.AddParameter("@Id", DbType.Int64);
 
 					var setDefaultParameter = setDefaultCommand.AddParameter("@Id", DbType.Int64);
 
@@ -769,6 +777,8 @@ namespace TecWare.PPSn
 					var insertClassParameter = insertCommand.AddParameter("@LClass", DbType.Int32);
 					var insertValueParameter = insertCommand.AddParameter("@LValue", DbType.String);
 					var insertUserIdParameter = insertCommand.AddParameter("@UserId", DbType.Int64);
+
+					var removeList = new List<PpsObjectTagView>();
 
 					foreach (var cur in tags)
 					{
@@ -785,7 +795,14 @@ namespace TecWare.PPSn
 									trans.AddRollbackOperation(() => cur.SetToDefault = true);
 									reReadAll = true;
 								}
-								else
+								else if (cur.Class == PpsObjectTagClass.Deleted && cur.Id.Value < 0) // delete it
+								{
+									deleteIdParameter.Value = cur.Id;
+									deleteCommand.ExecuteNonQueryEx();
+
+									removeList.Add(cur);
+								}
+								else // mark as deleted
 								{
 									updateIdParameter.Value = cur.Id.Value;
 									updateClassParameter.Value = PpsObjectTag.FormatClass(cur.Class);
@@ -809,8 +826,14 @@ namespace TecWare.PPSn
 						}
 					}
 
+					trans.AddRollbackOperation(()=>tags.AddRange(removeList));
+					foreach (var c in removeList)
+						tags.Remove(c);
+
 					trans.Commit();
 				}
+
+				OnCollectionReset();
 
 				if (reReadAll)
 					isLoaded = false;
@@ -874,6 +897,33 @@ namespace TecWare.PPSn
 
 		public void UpdateTags(long userId, IEnumerable<PpsObjectTag> tagList)
 		{
+			lock (parent.SyncRoot)
+			{
+				var removeTags = new List<string>(
+					from t in tags
+					where t.UserId == userId
+					select t.Name
+				);
+
+				// update tags
+				foreach (var cur in tagList)
+				{
+					if ((cur.Class == PpsObjectTagClass.Date
+						|| cur.Class == PpsObjectTagClass.Number
+						|| cur.Class == PpsObjectTagClass.Text)
+						&& cur.Value != null)
+					{
+						UpdateTag(userId, cur.Name, cur.Class, cur.Value);
+						var idx = removeTags.FindIndex(c => String.Compare(c, cur.Name, StringComparison.OrdinalIgnoreCase) == 0);
+						if (idx != -1)
+							removeTags.RemoveAt(idx);
+					}
+				}
+
+				// remove not updated tags
+				foreach (var k in removeTags)
+					Remove(k);
+			}
 		} // proc RefreshTags
 
 		public PpsObjectTagView UpdateTag(string key, PpsObjectTagClass cls, object value)
