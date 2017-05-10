@@ -66,7 +66,7 @@ namespace TecWare.PPSn
 		private PpsObjectLinkRestriction onDelete;  // is delete cascade possible
 
 		private WeakReference<PpsObject> linkToCache; // weak ref to the actual object
-		private int refCount = 0; // how often is this link used
+		private int refCount; // how often is this link used
 
 		private bool isChanged;
 
@@ -77,6 +77,7 @@ namespace TecWare.PPSn
 			this.id = id;
 			this.linkToId = linkToId;
 			this.linkToLocalId = linkToLocalId;
+			this.refCount = refCount;
 			this.isChanged = !id.HasValue;
 
 			this.onDelete = onDelete;
@@ -208,7 +209,7 @@ namespace TecWare.PPSn
 							r.GetInt64(1),
 							r.IsDBNull(2) ? null : new long?(r.GetInt64(2)),
 							r.GetInt32(3),
-							ParseObjectLinkRestriction(r.IsDBNull(3) ? null : r.GetString(3))
+							ParseObjectLinkRestriction(r.IsDBNull(3) ? null : r.GetString(4))
 						));
 					}
 				}
@@ -228,13 +229,13 @@ namespace TecWare.PPSn
 				using (var trans = parent.Environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
 				{
 					using (var insertCommand = trans.CreateNativeCommand("INSERT INTO main.[ObjectLinks] (ParentObjectId, LinkObjectId, LinkObjectDataId, RefCount, OnDelete) " +
-						"VALUES (@Id, @ParentObjectId, @LinkObjectId, @LinkObjectDataId, @RefCount, @OnDelete)"))
+						"VALUES (@ParentObjectId, @LinkObjectId, @LinkObjectDataId, @RefCount, @OnDelete)"))
 					{
 						var insertParentIdParameter = insertCommand.AddParameter("@ParentObjectId", DbType.Int64);
 						var insertLinkIdParameter = insertCommand.AddParameter("@LinkObjectId", DbType.Int64);
 						var insertLinkDataIdParameter = insertCommand.AddParameter("@LinkObjectDataId", DbType.Int64);
 						var insertRefCountParameter = insertCommand.AddParameter("@RefCount", DbType.Int32);
-						var insertOnDeleteParameter = insertCommand.AddParameter("@OnDelete", DbType.Int64);
+						var insertOnDeleteParameter = insertCommand.AddParameter("@OnDelete", DbType.String);
 
 						foreach (var cur in links)
 						{
@@ -1157,7 +1158,17 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		public int Count { get { lock (parent.SyncRoot) return tags.Count; } }
+		public int Count
+		{
+			get
+			{
+				lock (parent.SyncRoot)
+				{
+					CheckTagsLoaded();
+					return tags.Count;
+				}
+			}
+		} // prop Count
 
 		public bool IsChanged
 		{
@@ -1172,7 +1183,17 @@ namespace TecWare.PPSn
 			}
 		} // prop IsChanged
 
-		public PpsObjectTagView this[int index] => tags[index];
+		public PpsObjectTagView this[int index]
+		{
+			get
+			{
+				lock (parent.SyncRoot)
+				{
+					CheckTagsLoaded();
+					return tags[index];
+				}
+			}
+		} // prop this
 	} // class PpsObjectTags
 
 	#endregion
