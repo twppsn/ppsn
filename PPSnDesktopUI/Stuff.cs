@@ -27,6 +27,7 @@ using System.Windows.Markup;
 using System.Windows.Media;
 using System.Xml;
 using System.Xml.Linq;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Stuff;
 
@@ -338,6 +339,14 @@ namespace TecWare.PPSn
 		public static string CleanHash(string hash)
 		{
 			return hash.Replace("-", String.Empty).ToLower();
+		}
+
+		public static string MimeTypesFromExtension(string extension)
+		{
+			if (extension == "png")
+				return MimeTypes.Image.Png;
+
+			return MimeTypes.Application.OctetStream;
 		}
 	}
 
