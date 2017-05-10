@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using TecWare.PPSn.Data;
+using System.IO;
 
 namespace TecWare.PPSn.UI
 {
@@ -63,7 +64,7 @@ namespace TecWare.PPSn.UI
 							foreach (var filename in ofd.FileNames)
 							{
 								var trans = env.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write);
-								var obj = env.CreateNewObject(Environment.ObjectInfos[PpsEnvironment.AttachmentObjectTyp]);
+								var obj = env.CreateNewObject(Environment.ObjectInfos[PpsEnvironment.AttachmentObjectTyp], StuffIO.MimeTypesFromExtension(Path.GetExtension(filename)));
 
 								obj.Tags.UpdateTag(env.UserId, "Filename", PpsObjectTagClass.Text, filename);
 

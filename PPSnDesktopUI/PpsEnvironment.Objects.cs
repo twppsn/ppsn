@@ -2442,8 +2442,8 @@ order by t_liefnr.value desc
 		/// <param name="transaction"></param>
 		/// <param name="objectInfo"></param>
 		/// <returns></returns>
-		public PpsObject CreateNewObject(PpsObjectInfo objectInfo)
-			=> CreateNewObject(Guid.NewGuid(), objectInfo.Name, objectInfo.GetNextNumber(), objectInfo.IsRev);
+		public PpsObject CreateNewObject(PpsObjectInfo objectInfo, string mimeType = MimeTypes.Application.OctetStream)
+			=> CreateNewObject(Guid.NewGuid(), objectInfo.Name, objectInfo.GetNextNumber(), objectInfo.IsRev, mimeType);
 
 		/// <summary>Create a new object.</summary>
 		/// <param name="serverId"></param>
@@ -2455,17 +2455,18 @@ order by t_liefnr.value desc
 		/// <param name="syncToken"></param>
 		/// <returns></returns>
 		[LuaMember]
-		public PpsObject CreateNewObject(Guid guid, string typ, string nr, bool isRev)
+		public PpsObject CreateNewObject(Guid guid, string typ, string nr, bool isRev, string mimeType = MimeTypes.Application.OctetStream)
 		{
 			using (var trans = MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
 			using (var cmd = trans.CreateNativeCommand(
-				"INSERT INTO main.Objects (Id, Guid, Typ, Nr, IsHidden, IsRev, _IsUpdated) " +
-				"VALUES (@Id, @Guid, @Typ, @Nr, 0, @IsRev, 1)"))
+				"INSERT INTO main.Objects (Id, Guid, Typ, MimeType, Nr, IsHidden, IsRev, _IsUpdated) " +
+				"VALUES (@Id, @Guid, @Typ, @MimeType, @Nr, 0, @IsRev, 1)"))
 			{
 				var newObjectId = trans.GetNextLocalId("Objects", "Id");
 				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
 				cmd.AddParameter("@Guid", DbType.Guid, guid);
 				cmd.AddParameter("@Typ", DbType.String, typ.DbNullIfString());
+				cmd.AddParameter("@MimeType", DbType.String, mimeType.DbNullIfString());
 				cmd.AddParameter("@Nr", DbType.String, nr.DbNullIfString());
 				cmd.AddParameter("@IsRev", DbType.Boolean, isRev);
 
