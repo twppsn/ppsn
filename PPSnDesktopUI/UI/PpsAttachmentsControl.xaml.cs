@@ -62,7 +62,8 @@ namespace TecWare.PPSn.UI
 								var oinf = new PpsObjectInfo(env, "Attachment") { IsRev = false };
 								var obj = env.CreateNewObject(trans, oinf);
 
-								obj.Tags.UpdateTag(env.UserId, "Filername", PpsObjectTagClass.Text, filename);
+								obj.Tags.UpdateTag(env.UserId, "Filename", PpsObjectTagClass.Text, filename);
+								obj.Tags.UpdateLocal();
 
 								var data = await obj.GetDataAsync<PpsObjectBlobData>();
 								await data.ReadFromFileAsync(filename);
@@ -101,9 +102,21 @@ namespace TecWare.PPSn.UI
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is PpsDataRow))
-				return null;
+				return String.Empty;
 			var obj = ((PpsObject)((dynamic)value).Table.DataSet.Environment.GetObject(((dynamic)value).Id));
-			return new string[] { obj.Nr, obj.Typ, obj.Id.ToString() };
+			if (obj == null)
+				return String.Empty;
+			obj.Tags.RefreshTags();
+
+			var details = new List<string>();
+			details.Add(obj.Nr);
+			details.Add(obj.Typ);
+			details.Add(obj.Id.ToString());
+			foreach (var tag in obj.Tags)
+				details.Add($"{tag.Name}:{((string)tag.Value)}");
+
+			return details;
+			
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
