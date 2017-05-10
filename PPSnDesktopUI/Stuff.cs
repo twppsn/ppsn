@@ -341,13 +341,44 @@ namespace TecWare.PPSn
 			return hash.Replace("-", String.Empty).ToLower();
 		}
 
+		#region ---- MimeTypes ----------------------------------------------------------
+
+		private static (string Extension, string MimeType)[] mimeTypeMapping =
+		{
+			("css", MimeTypes.Text.Css),
+			("exe", MimeTypes.Application.OctetStream),
+			("gif", MimeTypes.Image.Gif),
+			("htm", MimeTypes.Text.Html),
+			("html", MimeTypes.Text.Html),
+			("ico", MimeTypes.Image.Icon),
+			("js", MimeTypes.Text.JavaScript),
+			("jpeg", MimeTypes.Image.Jpeg),
+			("jpg", MimeTypes.Image.Jpeg),
+			("json", MimeTypes.Text.Json),
+			("log", MimeTypes.Text.Plain),
+			("lua", MimeTypes.Text.Lua),
+			("png", MimeTypes.Image.Png),
+			("txt", MimeTypes.Text.Plain),
+			("xaml", MimeTypes.Application.Xaml),
+			("xml", MimeTypes.Text.Xml),
+		};
+
+		private static string DefaultMimeType => MimeTypes.Application.OctetStream;
+
+		private static int FindTypeMappingByExtension(string extension)
+			=> Array.FindIndex(mimeTypeMapping, mt => mt.Extension == extension.TrimStart('.'));
+
+		private static int FindTypeMappingByMimeType(string mimeType)
+			=> Array.FindIndex(mimeTypeMapping, mt => mt.MimeType == mimeType);
+
 		public static string MimeTypesFromExtension(string extension)
 		{
-			if (extension == "png")
-				return MimeTypes.Image.Png;
-
-			return MimeTypes.Application.OctetStream;
+			var typeIndex = FindTypeMappingByExtension(extension);
+			return (typeIndex >= 0) ? mimeTypeMapping[typeIndex].MimeType : DefaultMimeType;
 		}
+
+		#endregion
+
 	}
 
 	#endregion
