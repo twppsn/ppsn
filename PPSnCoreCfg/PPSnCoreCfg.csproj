@@ -48,14 +48,14 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="ClientWpf\Panes\contacts.lua" />
+    <None Include="sds\contacts\Wpf\contacts.lua" />
     <None Include="ClientWpf\Panes\testEnvironment.lua" />
     <None Include="ClientWpf\Panes\hello.lua" />
     <None Include="ClientWpf\Panes\contract.lua" />
     <None Include="ClientWpf\Panes\offer.lua" />
-    <None Include="contacts\contactsLocal.lua" />
-    <None Include="contacts\contactsServer.lua" />
-    <None Include="contacts\contactTagging.lua" />
+    <None Include="sds\contacts\contactsLocal.lua" />
+    <None Include="sds\contacts\contactsServer.lua" />
+    <None Include="sds\contacts\contactTagging.lua" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="constants\Kgrp.xml" />
@@ -63,7 +63,7 @@
     <Content Include="constants\Mein.xml" />
     <Content Include="constants\Plzd.xml" />
     <Content Include="constants\Waeh.xml" />
-    <Content Include="Contacts.xml">
+    <Content Include="sds\contacts\Contacts.xml">
       <SubType>Designer</SubType>
     </Content>
     <None Include="contract\contractServer.lua" />
@@ -82,6 +82,7 @@
     <Content Include="PPSn.xml">
       <SubType>Designer</SubType>
     </Content>
+    <Content Include="sds\sds.all.xml" />
     <Content Include="System.xml">
       <SubType>Designer</SubType>
     </Content>
@@ -95,7 +96,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Content Include="ClientWpf\Panes\contacts.xaml">
+    <Content Include="sds\contacts\Wpf\contacts.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Content>
@@ -187,7 +188,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="ClientWpf\Templates\Contacts.xaml">
+    <Page Include="sds\contacts\Templates.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

@@ -2,10 +2,10 @@
 <fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
 		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
 	
-	<?des-merge constants/Land.xml?>
+	<?des-merge ../../constants/Land.xml?>
 	
 	<luaengine>
-		<script id="ContactsScript" filename="contacts\contactsServer.lua" />
+		<script id="ContactsScript" filename="contactsServer.lua" />
 	</luaengine>
 
 	<pps:ppsn name="ppsn">
@@ -122,7 +122,7 @@
 			</pps:dataset>
 
 			<!-- contacts mask -->
-			<pps:dataset name="contactsDataSet" clientScripts="contacts\contactsLocal.lua" serverScripts="ContactsScript">
+			<pps:dataset name="contactsDataSet" clientScripts="contactsLocal.lua" serverScripts="ContactsScript">
 				<pps:meta name="IsRev" dataType="bool">True</pps:meta>
 				<pps:meta name="DefaultPaneUri" dataType="string">wpf/panes/contacts.xaml</pps:meta>
 				
@@ -213,7 +213,8 @@
 		</pps:register>
 
 		<pps:wpf name="wpf">
-			<pps:template id="contacts" file="ClientWpf\Templates\Contacts.xaml" />
+			<pps:template id="contacts" file="Templates.xaml" />
+			<pps:wpfSource id="core" directory="Wpf" virtualPath="panes" />
 
 			<pps:view name="crmContacts" displayName="Kontakte" displayImage="usersImage" view="local.objects" filter="Typ:=crmContacts">
 				<pps:filter name="lief" displayName="Lieferanten">

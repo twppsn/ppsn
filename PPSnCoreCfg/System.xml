@@ -8,9 +8,9 @@
 
 	<http>
 		<prefix>$(webBinding)/</prefix>
-		<access id="root" scheme="ntlm basic none">$(webBinding)/</access>
+		<access id="root" scheme="ntlm negotiate basic none">$(webBinding)/</access>
 		<access id="ppsnInfo" scheme="none">$(webBinding)/ppsn/info.xml</access>
-		<access id="ppsnWpf" scheme="ntlm basic none">$(webBinding)/ppsn/wpf/</access>
+		<access id="ppsnWpf" scheme="ntlm negotiate basic none">$(webBinding)/ppsn/wpf/</access>
 	</http>
 
 	<pps:ppsn name="ppsn">
@@ -313,5 +313,7 @@
 				</pps:table>
 			</pps:dataset>
 		</pps:register>
+
+		<pps:attachment name="attachments" nrLength="8" displayname="Attachments" />
 	</pps:ppsn>
 </fragment>
