@@ -173,7 +173,7 @@ namespace TecWare.PPSn
 				if (!isLoaded || !isChanged)
 					return;
 
-				using (var trans = parent.Environment.MasterData.CreateTransaction())
+				using (var trans = parent.Environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
 				{
 					using (var insertCommand = trans.CreateNativeCommand("INSERT INTO main.[ObjectLinks] (ParentObjectId, LinkObjectId, LinkObjectDataId, OnDelete) " +
 						"VALUES (@Id, @ParentObjectId, @LinkObjectId, @LinkObjectDataId, @OnDelete)"))
@@ -698,7 +698,7 @@ namespace TecWare.PPSn
 				// clear current state
 				tags.Clear();
 
-				using (var trans = parent.Environment.MasterData.CreateTransaction())
+				using (var trans = parent.Environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.ReadUncommited))
 				{
 					// refresh first all user generated tags
 					using (var selectCommand = trans.CreateNativeCommand("SELECT [Id], [Key], [Class], [Value], [LocalClass], [LocalValue], [UserId] FROM main.[ObjectTags] WHERE ObjectId = @Id"))
@@ -752,7 +752,7 @@ namespace TecWare.PPSn
 				if (!isLoaded || !IsChanged)
 					return;
 
-				using (var trans = parent.Environment.MasterData.CreateTransaction())
+				using (var trans = parent.Environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
 				using (var updateCommand = trans.CreateNativeCommand("UPDATE main.[ObjectTags] SET LocalClass = @LClass, LocalValue = @LValue, _IsUpdated = 1 WHERE Id = @Id"))
 				using (var setDefaultCommand = trans.CreateNativeCommand("UPDATE main.[ObjectTags] SET LocalClass = null, LocalValue = @null, _IsUpdated = 0 WHERE Id = @Id"))
 				using (var insertCommand = trans.CreateNativeCommand("INSERT INTO main.[ObjectTags] (Id, ObjectId, Key, LocalClass, LocalValue, UserId, _IsUpdated) VALUES (@Id, @ObjectId, @Key, @LClass, @LValue, @UserId, 1)"))
@@ -906,6 +906,8 @@ namespace TecWare.PPSn
 		{
 			lock (parent.SyncRoot)
 			{
+				CheckTagsLoaded();
+
 				var idx = IndexOf(key, parent.Environment.UserId);
 				if (idx >= 0)
 					tags[idx].Remove();
@@ -913,7 +915,15 @@ namespace TecWare.PPSn
 		} // proc Remove
 
 		public IEnumerator<PpsObjectTagView> GetEnumerator()
-			=> tags.GetEnumerator();
+		{
+			lock(parent.SyncRoot)
+			{
+				CheckTagsLoaded();
+
+				foreach (var c in tags)
+					yield return c;
+			}
+		} // func GetEnumerator
 
 		public bool Contains(string key)
 			=> IndexOf(key) >= 0;
@@ -1072,13 +1082,13 @@ namespace TecWare.PPSn
 		public async Task CommitAsync()
 		{
 			baseObj.Tags.UpdateTag(-1, "Sha256", PpsObjectTagClass.Text, sha256);
-			baseObj.Tags.UpdateLocal();
 			await baseObj.SaveRawDataAsync(
 				rawData.Length,
 				baseObj.MimeType ?? MimeTypes.Application.OctetStream,
 				dst => dst.Write(rawData, 0, rawData.Length),
 				true
 			);
+			baseObj.UpdateLocal();
 		} // proc CommitAsync
 
 		public async Task PushAsync(Stream dst)
@@ -1162,7 +1172,7 @@ namespace TecWare.PPSn
 
 		public async Task CommitAsync()
 		{
-			using (var trans = Environment.MasterData.CreateTransaction())
+			using (var trans = Environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
 			{
 				await baseObj.SaveRawDataAsync(-1, MimeTypes.Text.DataSet,
 					dst =>
@@ -1419,16 +1429,20 @@ namespace TecWare.PPSn
 					}
 
 					// update data block
-					SaveRawDataAsync(c.ContentLength - headerLength, MimeType,
-						dst => c.Content.CopyTo(dst),
-						false
-					).Wait();
+					using (var trans = Environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
+					{
+						SaveRawDataAsync(c.ContentLength - headerLength, MimeType,
+							dst => c.Content.CopyTo(dst),
+							false
+						).Wait();
 
-					SetValue(PpsStaticObjectColumnIndex.PulledRevId, pulledRevId, true);
+						SetValue(PpsStaticObjectColumnIndex.PulledRevId, pulledRevId, true);
 
-					// persist current object state
-					UpdateLocal();
+						// persist current object state
+						UpdateLocal();
 
+						trans.Commit();
+					}
 					return c.Content;
 				});
 
@@ -1450,10 +1464,10 @@ namespace TecWare.PPSn
 			}
 		} // proc PullDataAsync
 
-		public async Task PushAsync(PpsMasterDataTransaction transaction = null)
+		public async Task PushAsync()
 		{
 			XElement xAnswer;
-			using (var trans = Environment.MasterData.CreateTransaction())
+			using (var trans = Environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
 			{
 				var request = PushDataRequest();
 
@@ -1524,7 +1538,7 @@ namespace TecWare.PPSn
 
 		internal async Task<Stream> LoadRawDataAsync()
 		{
-			using (var trans = environment.MasterData.CreateTransaction())
+			using (var trans = environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.ReadUncommited))
 			using (var cmd = trans.CreateNativeCommand("SELECT Document, DocumentIsLinked, length(Document) FROM main.Objects WHERE Id = @Id"))
 			{
 				cmd.AddParameter("@Id", DbType.Int64, objectId);
@@ -1568,7 +1582,7 @@ namespace TecWare.PPSn
 				isDocumentChanged = false;
 
 			// store the value
-			using (var trans = environment.MasterData.CreateTransaction())
+			using (var trans = environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
 			using (var cmd = trans.CreateNativeCommand("UPDATE main.[Objects] " +
 				"SET " +
 					"MimeType = @MimeType, " +
@@ -1621,7 +1635,7 @@ namespace TecWare.PPSn
 
 		public void UpdateLocal()
 		{
-			using (var trans = environment.MasterData.CreateTransaction())
+			using (var trans = environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
 			{
 				using (var cmd = trans.CreateNativeCommand(
 				  "UPDATE main.[Objects] SET " +
@@ -1655,6 +1669,8 @@ namespace TecWare.PPSn
 
 				// reset the dirty flag
 				ResetDirty(trans);
+
+				trans.Commit();
 			}
 		} // proc UpdateLocal
 
@@ -1891,9 +1907,10 @@ namespace TecWare.PPSn
 		/// <param name="transaction">Database transaction.</param>
 		/// <returns><c>null</c>, or a temporary local number for the user.</returns>
 		[LuaMember]
-		public string GetNextNumber(PpsMasterDataTransaction transaction)
+		public string GetNextNumber()
 		{
-			using (var cmd = transaction.CreateNativeCommand("SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND abs(substr(Nr, 4)) != 0.0")) //SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND typeof(substr(Nr, 4)) = 'integer'
+			using (var trans = Environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.ReadCommited))
+			using (var cmd = trans.CreateNativeCommand("SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND abs(substr(Nr, 4)) != 0.0")) //SELECT max(Nr) FROM main.[Objects] WHERE substr(Nr, 1, 3) = '*n*' AND typeof(substr(Nr, 4)) = 'integer'
 			{
 				var lastNrString = cmd.ExecuteScalarEx() as string;
 				var lastNr = lastNrString == null ? 0 : Int32.Parse(lastNrString.Substring(3));
@@ -1935,6 +1952,8 @@ namespace TecWare.PPSn
 
 	public partial class PpsEnvironment
 	{
+		public static string AttachmentObjectTyp = "attachments";
+
 		private readonly PpsActiveDataSetsImplementation activeDataSets;
 
 		// point of improvement: a structure equal to LuaTable-Hash should be created on perf. issues
@@ -2373,8 +2392,8 @@ order by t_liefnr.value desc
 		/// <param name="transaction"></param>
 		/// <param name="objectInfo"></param>
 		/// <returns></returns>
-		public PpsObject CreateNewObject(PpsMasterDataTransaction transaction, PpsObjectInfo objectInfo)
-			=> CreateNewObject(transaction, Guid.NewGuid(), objectInfo.Name, objectInfo.GetNextNumber(transaction), objectInfo.IsRev);
+		public PpsObject CreateNewObject(PpsObjectInfo objectInfo)
+			=> CreateNewObject(Guid.NewGuid(), objectInfo.Name, objectInfo.GetNextNumber(), objectInfo.IsRev);
 
 		/// <summary>Create a new object.</summary>
 		/// <param name="serverId"></param>
@@ -2386,9 +2405,9 @@ order by t_liefnr.value desc
 		/// <param name="syncToken"></param>
 		/// <returns></returns>
 		[LuaMember]
-		public PpsObject CreateNewObject(PpsMasterDataTransaction transaction, Guid guid, string typ, string nr, bool isRev)
+		public PpsObject CreateNewObject(Guid guid, string typ, string nr, bool isRev)
 		{
-			using (var trans = MasterData.CreateTransaction())
+			using (var trans = MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
 			using (var cmd = trans.CreateNativeCommand(
 				"INSERT INTO main.Objects (Id, Guid, Typ, Nr, IsHidden, IsRev, _IsUpdated) " +
 				"VALUES (@Id, @Guid, @Typ, @Nr, 0, @IsRev, 1)"))
@@ -2403,7 +2422,7 @@ order by t_liefnr.value desc
 				cmd.ExecuteNonQueryEx();
 				trans.Commit();
 
-				return GetObject(newObjectId, transaction);
+				return GetObject(newObjectId);
 			}
 		} // func CreateNewObject
 
@@ -2440,6 +2459,8 @@ order by t_liefnr.value desc
 			var objectTyp = x.GetAttribute("name", String.Empty);
 			var sourceUri = x.GetAttribute("source", String.Empty);
 			var paneUri = x.GetAttribute("pane", String.Empty);
+			var isRevDefault = x.GetAttribute("isRev", false);
+
 			if (String.IsNullOrEmpty(objectTyp))
 				return;
 
@@ -2447,14 +2468,13 @@ order by t_liefnr.value desc
 			if (!String.IsNullOrEmpty(sourceUri))
 				ActiveDataSets.RegisterDataSetSchema(objectTyp, sourceUri, typeof(PpsDataSetDefinitionDesktop));
 
-			var oi = new PpsObjectInfo(this, objectTyp);
+			var oi = new PpsObjectInfo(this, objectTyp) { IsRev = isRevDefault };
 			objectInfo.AppendItem(oi);
 
 			// update pane hint
 			if (!String.IsNullOrEmpty(paneUri))
 				oi["defaultPane"] = paneUri;
-
-
+			
 			// mark document as readed
 			var ri = removeObjectInfo.FindIndex(c => String.Compare(objectTyp, c, StringComparison.OrdinalIgnoreCase) == 0);
 			if (ri != -1)
@@ -2471,10 +2491,10 @@ order by t_liefnr.value desc
 
 		#region -- Object Cache -----------------------------------------------------------
 
-		private PpsObject ReadObject(object key, bool useGuid, PpsMasterDataTransaction transaction, bool throwException = false)
+		private PpsObject ReadObject(object key, bool useGuid, bool throwException = false)
 		{
 			// refresh core data
-			using (var trans = MasterData.CreateTransaction())
+			using (var trans = MasterData.CreateTransaction(PpsMasterDataTransactionLevel.ReadUncommited))
 			using (var cmd = trans.CreateNativeCommand(PpsObject.StaticColumnsSelect + (useGuid ? " WHERE o.Guid = @Guid" : " WHERE o.Id = @Id")))
 			{
 				if (useGuid)
@@ -2543,14 +2563,14 @@ order by t_liefnr.value desc
 			return null;
 		} // func GetCachedObject
 
-		private PpsObject GetCachedObjectOrRead<T>(Dictionary<T, int> index, T key, bool keyIsGuid, PpsMasterDataTransaction transaction = null, bool throwException = false)
+		private PpsObject GetCachedObjectOrRead<T>(Dictionary<T, int> index, T key, bool keyIsGuid, bool throwException = false)
 		{
 			lock (objectStoreLock)
 			{
 				// check if the object is in memory
 				return GetCachedObject(index, key)
 					// object is not in memory, create a instance
-					?? ReadObject(key, keyIsGuid, transaction, throwException);
+					?? ReadObject(key, keyIsGuid, throwException);
 			}
 		} // func GetCachedObject
 
@@ -2565,12 +2585,12 @@ order by t_liefnr.value desc
 		} // func GetCachedObjectOrCreate
 
 		[LuaMember]
-		public PpsObject GetObject(long localId, PpsMasterDataTransaction transaction = null, bool throwException = false)
-			=> GetCachedObjectOrRead(objectStoreById, localId, useId, transaction, throwException);
+		public PpsObject GetObject(long localId, bool throwException = false)
+			=> GetCachedObjectOrRead(objectStoreById, localId, useId, throwException);
 
 		[LuaMember]
-		public PpsObject GetObject(Guid guid, PpsMasterDataTransaction transaction = null, bool throwException = false)
-			=> GetCachedObjectOrRead(objectStoreByGuid, guid, useGuid, transaction, throwException);
+		public PpsObject GetObject(Guid guid, bool throwException = false)
+			=> GetCachedObjectOrRead(objectStoreByGuid, guid, useGuid, throwException);
 
 		[LuaMember]
 		public LuaTable GetObjectInfo(string objectTyp)

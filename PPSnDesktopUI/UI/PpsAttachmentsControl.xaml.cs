@@ -29,9 +29,13 @@ namespace TecWare.PPSn.UI
 	/// </summary>
 	public partial class PpsAttachmentsControl : UserControl, IPpsAttachmentSource
 	{
+		private readonly Lazy<PpsEnvironment> getEnvironment;
+
 		public PpsAttachmentsControl()
 		{
 			InitializeComponent();
+
+			this.getEnvironment = new Lazy<PpsEnvironment>(() => PpsEnvironment.GetEnvironment(this));
 
 			CommandBindings.Add(
 				new CommandBinding(RemoveAttachmentCommand,
@@ -58,12 +62,10 @@ namespace TecWare.PPSn.UI
 							var env = PpsEnvironment.GetEnvironment(this);
 							foreach (var filename in ofd.FileNames)
 							{
-								var trans = env.MasterData.CreateTransaction();
-								var oinf = new PpsObjectInfo(env, "Attachment") { IsRev = false };
-								var obj = env.CreateNewObject(trans, oinf);
+								var trans = env.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write);
+								var obj = env.CreateNewObject(Environment.ObjectInfos[PpsEnvironment.AttachmentObjectTyp]);
 
 								obj.Tags.UpdateTag(env.UserId, "Filename", PpsObjectTagClass.Text, filename);
-								obj.Tags.UpdateLocal();
 
 								var data = await obj.GetDataAsync<PpsObjectBlobData>();
 								await data.ReadFromFileAsync(filename);
@@ -95,7 +97,9 @@ namespace TecWare.PPSn.UI
 		public static RoutedUICommand AddLinkAttachmentCommand { get; } = new RoutedUICommand("AddLinkAttachment", "AddLinkAttachment", typeof(PpsAttachmentsControl));
 
 		public IPpsAttachments Attachments { get; } = null; // wird von ItemsSource abgeleitet
-	}
+
+		public PpsEnvironment Environment => getEnvironment.Value;
+	} // class PpsAttachmentsControl
 
 	public class PpsAttachmentConverter : IValueConverter
 	{
@@ -106,7 +110,6 @@ namespace TecWare.PPSn.UI
 			var obj = ((PpsObject)((dynamic)value).Table.DataSet.Environment.GetObject(((dynamic)value).Id));
 			if (obj == null)
 				return String.Empty;
-			obj.Tags.RefreshTags();
 
 			var details = new List<string>();
 			details.Add(obj.Nr);
@@ -120,8 +123,6 @@ namespace TecWare.PPSn.UI
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-		{
-			throw new NotImplementedException();
-		}
-	}
+			=> throw new NotSupportedException();
+	} // class PpsAttachmentConverter
 }
