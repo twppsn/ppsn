@@ -84,7 +84,7 @@ namespace TecWare.PPSn
 			if (direction != HashStreamDirection.Read)
 				throw new NotSupportedException("The stream is in read mode.");
 			else if (isFinished)
-				throw new InvalidOperationException("Stream is finished.");
+				return 0;
 
 			var readed = baseStream.Read(buffer, offset, count);
 			if (readed == 0 || baseStream.CanSeek && baseStream.Position == baseStream.Length)
@@ -333,6 +333,11 @@ namespace TecWare.PPSn
 			var ret = BitConverter.ToString(new SHA256Managed().ComputeHash(bstream)).Replace("-", String.Empty).ToLower();
 			bstream.Flush();
 			return ret;
+		}
+
+		public static string CleanHash(string hash)
+		{
+			return hash.Replace("-", String.Empty).ToLower();
 		}
 	}
 
