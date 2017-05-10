@@ -58,10 +58,10 @@ namespace TecWare.PPSn.UI
 							var env = PpsEnvironment.GetEnvironment(this);
 							foreach (var filename in ofd.FileNames)
 							{
-								var trans = env.MasterData.CreateTransaction();
+								var trans = env.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write);
 								var oinf = new PpsObjectInfo(env, "Attachment") { IsRev = false };
 								oinf.Values.Add("Filename", filename);
-								var obj = env.CreateNewObject(trans, oinf);
+								var obj = env.CreateNewObject(oinf);
 
 								var data = await obj.GetDataAsync<PpsObjectBlobData>();
 								await data.ReadFromFileAsync(filename);

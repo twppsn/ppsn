@@ -84,7 +84,7 @@ namespace TecWare.PPSn.UI
 
 		public override async Task LoadAsync(LuaTable arguments)
 		{
-			void CreateNewObject(PpsMasterDataTransaction transaction)
+			void CreateNewObject()
 			{
 
 				// load schema
@@ -98,17 +98,17 @@ namespace TecWare.PPSn.UI
 					throw new ArgumentNullException("object", "Parameter 'object' is missing.");
 
 				// create the new object entry
-				obj = Environment.CreateNewObject(transaction, objectInfo);
+				obj = Environment.CreateNewObject(objectInfo);
 			} // proc CreateNewObject
 			
 			// get the object reference for the document
 			obj = (PpsObject)arguments.GetMemberValue("object");
 
 			// new document or load one
-			using (var transaction = Environment.MasterData.CreateTransaction())
+			using (var transaction = Environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
 			{
 				if (obj == null) // no object given
-					CreateNewObject(transaction);
+					CreateNewObject();
 
 				data = await obj.GetDataAsync<PpsObjectDataSet>();
 

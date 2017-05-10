@@ -64,6 +64,17 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- enum PpsMasterDataTransactionLevel ---------------------------------------
+
+	public enum PpsMasterDataTransactionLevel
+	{
+		ReadUncommited,
+		ReadCommited,
+		Write
+	} // enum PpsMasterDataTransactionLevel
+
+	#endregion
+
 	#region -- class PpsMasterDataTransaction -------------------------------------------
 
 	public abstract class PpsMasterDataTransaction : IDbTransaction, IDisposable
@@ -89,8 +100,8 @@ namespace TecWare.PPSn
 		{
 		} // proc Dispose
 
-		protected abstract void CommitCore();
-		protected abstract void RollbackCore();
+		protected virtual void CommitCore() { }
+		protected virtual void RollbackCore() { }
 
 		public void Commit()
 			=> CommitCore();
@@ -1204,7 +1215,7 @@ namespace TecWare.PPSn
 			{
 				xml.Read(); // fetch element
 							// process values
-				using (var transaction = CreateTransaction())
+				using (var transaction = CreateTransaction(PpsMasterDataTransactionLevel.Write))
 				using (var b = new ProcessBatch(transaction, this, tableName, isFull))
 				{
 					// prepare table
@@ -1216,7 +1227,7 @@ namespace TecWare.PPSn
 					b.Clean();
 					transaction.Commit();
 
-					// run outsite the transaction
+					// run outsite the transaction, should not create a new
 					environment.OnMasterDataTableChanged(b.Table);
 				}
 
@@ -1310,7 +1321,7 @@ namespace TecWare.PPSn
 				// update header
 				if (updateUserInfo)
 				{
-					using (var trans = CreateTransaction())
+					using (var trans = CreateTransaction(PpsMasterDataTransactionLevel.Write))
 					using (var cmd = trans.CreateNativeCommand("UPDATE main.[Header] SET [UserId] = @UserId, [UserName] = @UserName"))
 					{
 						cmd.AddParameter("@UserId", DbType.Int64, environment.UserId);
@@ -1743,6 +1754,7 @@ namespace TecWare.PPSn
 			private readonly PpsMasterData masterData;
 			private readonly SQLiteConnection connection;
 			private readonly SQLiteTransaction transaction;
+			private readonly int threadId;
 
 			private readonly List<Action> rollbackActions = new List<Action>();
 
@@ -1756,6 +1768,7 @@ namespace TecWare.PPSn
 				this.masterData = masterData ?? throw new ArgumentNullException(nameof(masterData));
 				this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
 				this.transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+				this.threadId = Thread.CurrentThread.ManagedThreadId;
 			} // ctor
 
 			protected override void Dispose(bool disposing)
@@ -1777,20 +1790,36 @@ namespace TecWare.PPSn
 				if (disposing)
 					transaction.Dispose();
 
-				masterData.ClearTransaction();
+				masterData.ClearTransaction(this);
 			} // proc Dispose
 
+			private void VerifyThreadAccess()
+			{
+				if (!CheckAccess())
+					throw new InvalidOperationException();
+			} // proc CheckThreadAccess
+
+			public bool CheckAccess()
+				=> threadId == Thread.CurrentThread.ManagedThreadId;
+
 			public override void AddRollbackOperation(Action rollback)
-				=> rollbackActions.Add(rollback);
+			{
+				VerifyThreadAccess();
+				rollbackActions.Add(rollback);
+			} // proc AddRollbackOperation
 
 			protected override void CommitCore()
 			{
+				VerifyThreadAccess();
+
 				transaction.Commit();
 				transactionState = true;
 			} // proc CommitCore
 
 			protected override void RollbackCore()
 			{
+				VerifyThreadAccess();
+
 				transaction.Rollback();
 				transactionState = false;
 
@@ -1806,13 +1835,22 @@ namespace TecWare.PPSn
 			} // proc RollbackCore
 
 			public void SetCommitOnDispose()
-				=> commitOnDispose = true;
+			{
+				VerifyThreadAccess();
+				commitOnDispose = true;
+			} // proc SetCommitOnDispose
 
 			public void AddRef()
-				=> Interlocked.Increment(ref nestedTransactionCounter);
+			{
+				VerifyThreadAccess();
+				nestedTransactionCounter++;
+			} // proc AddRef
 
 			public void DecRef()
-				=> Interlocked.Decrement(ref nestedTransactionCounter);
+			{
+				VerifyThreadAccess();
+				nestedTransactionCounter--;
+			} // proc DecRef
 
 			protected override SQLiteConnection ConnectionCore => connection;
 			public SQLiteConnection SQLiteConnection => connection;
@@ -1825,27 +1863,87 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		private readonly object currentTransactionLock = new object();
+		#region -- class PpsMasterReadTransaction ---------------------------------------
+
+		/// <summary>Dummy transaction that does nothing. Dirty read is always possible.</summary>
+		private sealed class PpsMasterReadTransaction : PpsMasterDataTransaction
+		{
+			private readonly SQLiteConnection connection;
+			private bool isDisposed = false;
+
+			public PpsMasterReadTransaction(SQLiteConnection connection)
+				=> this.connection = connection;
+
+			protected override void Dispose(bool disposing)
+			{
+				if (disposing)
+				{
+					if (isDisposed)
+						throw new ObjectDisposedException(nameof(PpsMasterDataTransaction));
+					isDisposed = true;
+				}
+				base.Dispose(disposing);
+			} // proc Dispose
+
+			public override void AddRollbackOperation(Action rollback) { }
+
+			protected override SQLiteConnection ConnectionCore => connection;
+			protected override SQLiteTransaction TransactionCore => null;
+
+			public override bool IsDisposed => isDisposed;
+			public override bool IsCommited => false;
+		} // class PpsMasterReadTransaction
+
+		#endregion
+
+		private readonly ManualResetEventSlim currentTransactionLock = new ManualResetEventSlim(true);
 		private PpsMasterRootTransaction currentTransaction;
 
-		public PpsMasterDataTransaction CreateTransaction()
+		public PpsMasterDataTransaction CreateTransaction(PpsMasterDataTransactionLevel level)
+			=> CreateTransaction(level, CancellationToken.None);
+
+		public PpsMasterDataTransaction CreateTransaction(PpsMasterDataTransactionLevel level, CancellationToken cancellationToken)
 		{
-			lock (currentTransactionLock)
+			if (level == PpsMasterDataTransactionLevel.ReadUncommited)
+				return new PpsMasterReadTransaction(connection);
+			else // ReadCommit is thread as write for sqlite
 			{
-				if (currentTransaction == null)
+				while (true)
 				{
-					currentTransaction = new PpsMasterRootTransaction(this, connection, connection.BeginTransaction());
-					return currentTransaction;
+					lock (currentTransactionLock)
+					{
+						if (currentTransaction == null) // currently, no transaction
+						{
+							currentTransactionLock.Reset();
+							currentTransaction = new PpsMasterRootTransaction(this, connection, connection.BeginTransaction());
+							return currentTransaction;
+						}
+						else if (currentTransaction.CheckAccess()) // same thread, create a nested transaction
+						{
+							if (currentTransaction.IsDisposed)
+								throw new InvalidOperationException("Transaction is already disposed.");
+							return new PpsMasterNestedTransaction(currentTransaction);
+						}
+					}
+
+					// different thread, block until currentTransaction is zero
+					currentTransactionLock.Wait(cancellationToken);
+					if (cancellationToken.IsCancellationRequested)
+						return null;
 				}
-				else
-					return new PpsMasterNestedTransaction(currentTransaction);
 			}
 		} // func CreateTransaction
 
-		private void ClearTransaction()
+		private void ClearTransaction(PpsMasterRootTransaction trans)
 		{
 			lock (currentTransactionLock)
-				currentTransaction = null;
+			{
+				if (Object.ReferenceEquals(currentTransaction, trans))
+				{
+					currentTransaction = null;
+					currentTransactionLock.Set();
+				}
+			}
 		} // proc ClearTransaction
 
 		public DbCommand CreateNativeCommand(string commandText = null)
@@ -3175,6 +3273,13 @@ namespace TecWare.PPSn
 				newLocalStore = new SQLiteConnection(connectionString); // foreign keys=true;
 				await newLocalStore.OpenAsync();
 
+				// set pragma's
+				using (var cmd = newLocalStore.CreateCommand())
+				{
+					cmd.CommandText = "PRAGMA journal_mode=TRUNCATE"; // do not delete the transactio lock
+					cmd.ExecuteNonQueryEx();
+				}
+
 				// check synchronisation table
 				progress.Report("Lokale Datenbank verifizieren...");
 				if (PpsMasterData.TestTableColumns(newLocalStore, "Header",
@@ -3305,6 +3410,7 @@ namespace TecWare.PPSn
 			var absoluteUri = new Uri(info.Uri, relativeUri);
 			var request = WebRequest.Create(absoluteUri);
 			request.Credentials = new CredentialWrapper(userInfo); // override the current credentials
+			request.Headers.Add("des-multiple-authentifications", "true");
 
 			Debug.Print($"WebRequest: {absoluteUri}");
 
