@@ -691,7 +691,7 @@ namespace TecWare.PPSn
 			OnCollectionReset();
 		} // proc RefreshTags
 
-		private void RefreshTags()
+		public void RefreshTags()
 		{
 			lock (parent.SyncRoot)
 			{
@@ -1072,6 +1072,7 @@ namespace TecWare.PPSn
 		public async Task CommitAsync()
 		{
 			baseObj.Tags.UpdateTag(-1, "Sha256", PpsObjectTagClass.Text, sha256);
+			baseObj.Tags.UpdateLocal();
 			await baseObj.SaveRawDataAsync(
 				rawData.Length,
 				baseObj.MimeType ?? MimeTypes.Application.OctetStream,
