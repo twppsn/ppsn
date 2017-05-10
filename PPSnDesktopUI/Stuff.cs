@@ -84,7 +84,7 @@ namespace TecWare.PPSn
 			if (direction != HashStreamDirection.Read)
 				throw new NotSupportedException("The stream is in read mode.");
 			else if (isFinished)
-				throw new InvalidOperationException("Stream is finished.");
+				return 0;
 
 			var readed = baseStream.Read(buffer, offset, count);
 			if (readed == 0 || baseStream.CanSeek && baseStream.Position == baseStream.Length)
