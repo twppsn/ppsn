@@ -59,39 +59,81 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public sealed class PpsObjectLink
 	{
-		private readonly PpsObject parent;
+		private readonly PpsObjectLinks parent;
 		private long? id;                       // local id
 		private readonly long linkToId;         // id of the linked object
 		private readonly long? linkToLocalId;   // id for the object, that was used within the dataset (only neg numbers are allowed, it is for replacing before push)
 		private PpsObjectLinkRestriction onDelete;  // is delete cascade possible
 
 		private WeakReference<PpsObject> linkToCache; // weak ref to the actual object
+		private int refCount = 0; // how often is this link used
 
-		internal PpsObjectLink(PpsObject parent, long? id, long linkToId, long? linkToLocalId, PpsObjectLinkRestriction onDelete)
+		private bool isChanged;
+
+		internal PpsObjectLink(PpsObjectLinks parent, long? id, long linkToId, long? linkToLocalId, int refCount, PpsObjectLinkRestriction onDelete)
 		{
 			this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
 
 			this.id = id;
 			this.linkToId = linkToId;
 			this.linkToLocalId = linkToLocalId;
+			this.isChanged = !id.HasValue;
 
 			this.onDelete = onDelete;
 		} // ctor
+
+		public void AddRef()
+		{
+			refCount++;
+			SetDirty();
+		} // proc AddRef
+
+		public void DecRef()
+		{
+			if (refCount > 0)
+				refCount--;
+			SetDirty();
+		} // proc DecRef
+
+		public void SetOnDelete(PpsObjectLinkRestriction newOnDelete, bool merge)
+		{
+			if (merge)
+			{
+				if (newOnDelete > onDelete)
+					SetOnDelete(newOnDelete, false);
+			}
+			else if(newOnDelete != onDelete)
+			{
+				onDelete = newOnDelete;
+				SetDirty();
+			}
+		}
+
+		internal void SetDirty()
+		{
+			isChanged = true;
+			parent.SetDirty();
+		} // proc SetDirty
+
+		internal void ResetDirty()
+		{
+			isChanged = false;
+		} // proc ResetDirty
 
 		private PpsObject GetLinkedObject()
 		{
 			if (linkToCache != null && linkToCache.TryGetTarget(out var r))
 				return r;
 
-			r = parent.Environment.GetObject(linkToId);
+			r = parent.Parent.Environment.GetObject(linkToId);
 			linkToCache = new WeakReference<PpsObject>(r);
 			return r;
 		} // func GetLinkedObject
 
 		public void Remove()
-			=> parent.Links.RemoveLink(this);
+			=> parent.RemoveLink(this);
 
-		public PpsObject Parent => parent;
+		public PpsObject Parent => parent.Parent;
 
 		internal long? Id { get => id; set => id = value; }
 
@@ -100,7 +142,10 @@ namespace TecWare.PPSn
 
 		public PpsObject LinkTo => GetLinkedObject();
 
+		public int RefCount => refCount;
 		public PpsObjectLinkRestriction OnDelete => onDelete;
+
+		public bool IsChanged => isChanged;
 	} // class PpsObjectLink
 
 	#endregion
@@ -138,12 +183,18 @@ namespace TecWare.PPSn
 			}
 		} // proc CheckLinksLoaded
 
+		internal void SetDirty()
+		{
+			isChanged = true;
+			parent.SetDirty();
+		} // proc SetDirty
+
 		private void RefreshLinks()
 		{
 			links.Clear();
 			removedLinks.Clear();
 
-			using (var cmd = parent.Environment.MasterData.CreateNativeCommand("SELECT [Id], [LinkObjectId], [LinkObjectDataId], [OnDelete] FROM main.[ObjectLinks] WHERE [ParentObjectId] = @ObjectId"))
+			using (var cmd = parent.Environment.MasterData.CreateNativeCommand("SELECT [Id], [LinkObjectId], [LinkObjectDataId], [RefCount], [OnDelete] FROM main.[ObjectLinks] WHERE [ParentObjectId] = @ObjectId"))
 			{
 				cmd.AddParameter("@ObjectId", DbType.Int64, parent.Id);
 
@@ -152,10 +203,11 @@ namespace TecWare.PPSn
 					while (r.Read())
 					{
 						links.Add(new PpsObjectLink(
-							parent,
+							this,
 							r.GetInt64(0),
 							r.GetInt64(1),
 							r.IsDBNull(2) ? null : new long?(r.GetInt64(2)),
+							r.GetInt32(3),
 							ParseObjectLinkRestriction(r.IsDBNull(3) ? null : r.GetString(3))
 						));
 					}
@@ -175,26 +227,29 @@ namespace TecWare.PPSn
 
 				using (var trans = parent.Environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
 				{
-					using (var insertCommand = trans.CreateNativeCommand("INSERT INTO main.[ObjectLinks] (ParentObjectId, LinkObjectId, LinkObjectDataId, OnDelete) " +
-						"VALUES (@Id, @ParentObjectId, @LinkObjectId, @LinkObjectDataId, @OnDelete)"))
+					using (var insertCommand = trans.CreateNativeCommand("INSERT INTO main.[ObjectLinks] (ParentObjectId, LinkObjectId, LinkObjectDataId, RefCount, OnDelete) " +
+						"VALUES (@Id, @ParentObjectId, @LinkObjectId, @LinkObjectDataId, @RefCount, @OnDelete)"))
 					{
 						var insertParentIdParameter = insertCommand.AddParameter("@ParentObjectId", DbType.Int64);
 						var insertLinkIdParameter = insertCommand.AddParameter("@LinkObjectId", DbType.Int64);
 						var insertLinkDataIdParameter = insertCommand.AddParameter("@LinkObjectDataId", DbType.Int64);
+						var insertRefCountParameter = insertCommand.AddParameter("@RefCount", DbType.Int32);
 						var insertOnDeleteParameter = insertCommand.AddParameter("@OnDelete", DbType.Int64);
 
 						foreach (var cur in links)
 						{
-							if (!cur.Id.HasValue)
+							if (cur.IsChanged)
 							{
 								insertParentIdParameter.Value = parent.Id;
 								insertLinkIdParameter.Value = cur.LinkToId;
 								insertLinkDataIdParameter.Value = cur.LinkToLocalId ?? (object)DBNull.Value;
+								insertRefCountParameter.Value = cur.RefCount;
 								insertOnDeleteParameter.Value = FormatObjectLinkRestriction(cur.OnDelete);
 
 								insertCommand.ExecuteNonQueryEx();
 								cur.Id = trans.LastInsertRowId;
-								trans.AddRollbackOperation(() => cur.Id = null);
+								cur.ResetDirty();
+								trans.AddRollbackOperation(() => { cur.Id = null; cur.SetDirty(); });
 							}
 						}
 					}
@@ -240,11 +295,12 @@ namespace TecWare.PPSn
 				foreach (var x in xLinks)
 				{
 					var objectId = x.GetAttribute("objectId", -1L);
+					var refCount = x.GetAttribute("refCount", 0);
 					var onDelete = ParseObjectLinkRestriction(x.GetAttribute("onDelete", "R"));
 
 					var linkExists = links.Find(c => c.LinkToId == objectId && c.OnDelete == onDelete);
 					if (linkExists == null)
-						links.Add(new PpsObjectLink(parent, null, objectId, null, onDelete));
+						links.Add(new PpsObjectLink(this, null, objectId, null, refCount, onDelete));
 					else
 						notProcessedLinks.Remove(linkExists);
 				}
@@ -277,6 +333,7 @@ namespace TecWare.PPSn
 					xParent.Add(
 						new XElement(linkElementName,
 							new XAttribute("objectId", c.LinkToId),
+							new XAttribute("refCount", c.RefCount),
 							new XAttribute("onDelete", FormatObjectLinkRestriction(c.OnDelete))
 						)
 					);
@@ -291,13 +348,33 @@ namespace TecWare.PPSn
 				CheckLinksLoaded();
 
 				// add link
-				links.Add(new PpsObjectLink(parent, null, linkTo.Id, linkTo.Id < 0 ? new long?(linkTo.Id) : null, onDelete));
-				isChanged = true;
-				parent.SetDirty();
+				var currentLink = links.Find(c => c.LinkToId == linkTo.Id);
+				if (currentLink != null)
+				{
+					currentLink.SetOnDelete(onDelete, true);
+					currentLink.AddRef();
+				}
+				else
+				{
+					links.Add(new PpsObjectLink(this, null, linkTo.Id, linkTo.Id < 0 ? new long?(linkTo.Id) : null, 1, onDelete));
+					SetDirty();
+				}
 			}
 
 			OnCollectionReset();
 		} // proc AppendLink
+
+		public void RemoveLink(long objectId)
+		{
+			lock (parent.SyncRoot)
+			{
+				CheckLinksLoaded();
+				var l = links.Find(c => c.LinkToId == objectId);
+				if (l == null)
+					throw new ArgumentOutOfRangeException(nameof(objectId));
+				RemoveLink(l);
+			}
+		} // func RemoveLink
 
 		public void RemoveLink(PpsObjectLink link)
 		{
@@ -307,17 +384,31 @@ namespace TecWare.PPSn
 				if (idx < 0)
 					throw new ArgumentOutOfRangeException(nameof(link));
 
-				links.RemoveAt(idx);
-				if (link.Id.HasValue)
+				link.DecRef();
+				if (link.RefCount == 0)
 				{
-					removedLinks.Add(link);
-					isChanged = true;
-					parent.SetDirty();
+					links.RemoveAt(idx);
+					if (link.Id.HasValue)
+					{
+						removedLinks.Add(link);
+						SetDirty();
+					}
 				}
 			}
 
 			OnCollectionReset();
 		} // proc RemoveLink
+
+		public long TranslateObjectId(long currentObjectId)
+		{
+			if (currentObjectId >= 0)
+				return currentObjectId;
+			lock (parent.SyncRoot)
+			{
+				CheckLinksLoaded();
+				return links.FirstOrDefault(c => c.LinkToLocalId == currentObjectId)?.LinkToId ?? currentObjectId;
+			}
+		} // func TranslateObjectId
 
 		private void OnCollectionReset()
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -399,6 +490,8 @@ namespace TecWare.PPSn
 
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
+
+		public PpsObject Parent => parent;
 
 		public static PpsObjectLinkRestriction ParseObjectLinkRestriction(string onDelete)
 		{

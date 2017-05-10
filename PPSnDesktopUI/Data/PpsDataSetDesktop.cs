@@ -156,17 +156,44 @@ namespace TecWare.PPSn.Data
 			this.dataset = row.Table.DataSet as IPpsObjectBasedDataSet;
 		} // ctor
 
+		protected override void Read(XElement x)
+		{
+			base.Read(x);
+
+			// check linked value, corrent id
+			if (InternalValue != null && dataset != null)
+			{
+				var objectId = (long)InternalValue;
+				if (objectId < 0)
+					base.SetGenericValue(dataset.Object.Links.TranslateObjectId(objectId), false);
+			}
+		} // proc Read
+
 		protected override bool SetGenericValue(object newValue, bool firePropertyChanged)
 		{
 			switch (newValue)
 			{
 				case null:
 					referencedObject = null;
-					return base.SetGenericValue(null, firePropertyChanged);
+					var oldValue = InternalValue;
+					if (base.SetGenericValue(null, firePropertyChanged))
+					{
+						if (oldValue != null && dataset != null)
+							dataset.Object.Links.RemoveLink((long)oldValue);
+
+						return true;
+					}
+					else
+						return false;
 				case PpsObject o:
 					if (base.SetGenericValue(o.Id, firePropertyChanged))
 					{
 						referencedObject = new WeakReference<PpsObject>(o);
+
+						// todp: delete should be an option on the column meta data?
+						if (dataset != null)
+							dataset.Object.Links.AppendLink(o, PpsObjectLinkRestriction.Delete);
+
 						return true;
 					}
 					else
@@ -175,7 +202,6 @@ namespace TecWare.PPSn.Data
 							referencedObject = new WeakReference<PpsObject>(o);
 						return false;
 					}
-					// todo: validate id via links
 				case int idInt:
 					return SetGenericValue(environment.GetObject(idInt, throwException: true), firePropertyChanged);
 				case long idLong:
