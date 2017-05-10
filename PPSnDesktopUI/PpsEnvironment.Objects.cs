@@ -906,6 +906,8 @@ namespace TecWare.PPSn
 		{
 			lock (parent.SyncRoot)
 			{
+				CheckTagsLoaded();
+
 				var idx = IndexOf(key, parent.Environment.UserId);
 				if (idx >= 0)
 					tags[idx].Remove();
@@ -913,7 +915,15 @@ namespace TecWare.PPSn
 		} // proc Remove
 
 		public IEnumerator<PpsObjectTagView> GetEnumerator()
-			=> tags.GetEnumerator();
+		{
+			lock(parent.SyncRoot)
+			{
+				CheckTagsLoaded();
+
+				foreach (var c in tags)
+					yield return c;
+			}
+		} // func GetEnumerator
 
 		public bool Contains(string key)
 			=> IndexOf(key) >= 0;
@@ -1078,6 +1088,7 @@ namespace TecWare.PPSn
 				dst => dst.Write(rawData, 0, rawData.Length),
 				true
 			);
+			baseObj.UpdateLocal();
 		} // proc CommitAsync
 
 		public async Task PushAsync(Stream dst)
@@ -1941,6 +1952,8 @@ namespace TecWare.PPSn
 
 	public partial class PpsEnvironment
 	{
+		public static string AttachmentObjectTyp = "attachments";
+
 		private readonly PpsActiveDataSetsImplementation activeDataSets;
 
 		// point of improvement: a structure equal to LuaTable-Hash should be created on perf. issues
@@ -2446,6 +2459,8 @@ order by t_liefnr.value desc
 			var objectTyp = x.GetAttribute("name", String.Empty);
 			var sourceUri = x.GetAttribute("source", String.Empty);
 			var paneUri = x.GetAttribute("pane", String.Empty);
+			var isRevDefault = x.GetAttribute("isRev", false);
+
 			if (String.IsNullOrEmpty(objectTyp))
 				return;
 
@@ -2453,14 +2468,13 @@ order by t_liefnr.value desc
 			if (!String.IsNullOrEmpty(sourceUri))
 				ActiveDataSets.RegisterDataSetSchema(objectTyp, sourceUri, typeof(PpsDataSetDefinitionDesktop));
 
-			var oi = new PpsObjectInfo(this, objectTyp);
+			var oi = new PpsObjectInfo(this, objectTyp) { IsRev = isRevDefault };
 			objectInfo.AppendItem(oi);
 
 			// update pane hint
 			if (!String.IsNullOrEmpty(paneUri))
 				oi["defaultPane"] = paneUri;
-
-
+			
 			// mark document as readed
 			var ri = removeObjectInfo.FindIndex(c => String.Compare(objectTyp, c, StringComparison.OrdinalIgnoreCase) == 0);
 			if (ri != -1)
