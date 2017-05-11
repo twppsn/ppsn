@@ -111,7 +111,7 @@ namespace TecWare.PPSn.UI
 	{
 		#region -- class PpsAttachmentItemImplementation --------------------------------
 
-		private sealed class PpsAttachmentItemImplementation : IPpsAttachmentItem
+		private sealed class PpsAttachmentItemImplementation : IPpsAttachmentItem, IEquatable<PpsDataRow>
 		{
 			private readonly PpsDataRow row;
 			private readonly int linkColumnIndex;
@@ -134,6 +134,9 @@ namespace TecWare.PPSn.UI
 
 			public bool Remove() 
 				=> row.Remove();
+
+			public bool Equals(PpsDataRow other)
+				=> other == row;
 
 			public string Name => GetLinkedObject()?.GetProperty("Filename", "noname");
 			public string MimeType => GetLinkedObject()?.MimeType;
