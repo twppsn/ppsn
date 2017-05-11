@@ -264,12 +264,12 @@ namespace TecWare.PPSn.Data
 			else
 				x.Add(new XElement("o", originalValue.ChangeType<string>()));
 			// v
-			if (value == notSet)
+			if (value != notSet)
 			{
 				if (value == null)
-					x.Add(new XElement("o"));
+					x.Add(new XElement("v"));
 				else
-					x.Add(new XElement("o", value.ChangeType<string>()));
+					x.Add(new XElement("v", value.ChangeType<string>()));
 			}
 		} // proc Write
 

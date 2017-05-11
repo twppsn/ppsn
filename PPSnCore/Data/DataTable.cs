@@ -1592,15 +1592,12 @@ namespace TecWare.PPSn.Data
 
 		int IList.Add(object value)
 		{
-			if (value is PpsDataRow)
-			{
-				var row = (PpsDataRow)value;
+			if (value is PpsDataRow row)
 				return rows.IndexOf(table.AddInternal(false, row));
-			}
-			else if (value is LuaTable)
+			else if (value is LuaTable t)
 			{
 				lock (rows)
-					return rows.IndexOf(Add((LuaTable)value));
+					return rows.IndexOf(Add(t));
 			}
 			else
 				throw new NotSupportedException();

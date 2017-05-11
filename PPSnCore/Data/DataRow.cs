@@ -569,6 +569,11 @@ namespace TecWare.PPSn.Data
 			UpdateRowValues(xRow);
 		} // ctor
 
+		public override bool Equals(object obj)
+			=> obj is IEquatable<PpsDataRow> obj2
+				? obj2.Equals(this)
+				: base.Equals(obj);
+
 		private static PpsDataRowState ReadRowState(XElement xRow)
 		{
 			var rowState = xRow.GetAttribute(xnDataRowState, 0); // optional state of the row
