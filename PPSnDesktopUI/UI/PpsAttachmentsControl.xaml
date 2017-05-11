@@ -25,9 +25,9 @@
                         <Setter Property="Button.Margin" Value="3,3,3,3"/>
                     </Style>
                 </WrapPanel.Resources>
-                <Button Width="60" Height="60" Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddFileAttachmentCommand}">+</Button>
-                <Button Width="60" Height="60" Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=RemoveAttachmentCommand}">-</Button>
-                <Button Width="60" Height="60" Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddLinkAttachmentCommand}">~</Button>
+				<Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.AddFileAttachmentCommand}">+</Button>
+				<Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.RemoveAttachmentCommand}">-</Button>
+				<Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.AddLinkAttachmentCommand}">~</Button>
             </WrapPanel>
             <WrapPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Stretch">
                 <WrapPanel.Resources>
@@ -41,21 +41,19 @@
             </WrapPanel>
         </Grid>
         <ListBox Grid.Row="1" VerticalAlignment="Stretch" ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-            Path=AttachmentList.Table,Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" 
-                 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-            Path=AttachmentListSelectedItem, Mode=TwoWay}" Background="Blue">
+            Path=AttachmentsSource,Mode=OneWay}" Background="Blue">
             <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <ListBox ItemsSource="{Binding Path=DataContext,
-                        RelativeSource={RelativeSource Self}, Converter={StaticResource AttachmentConverter}}" Background="Blue">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Label Content="{Binding}"/>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
+				<DataTemplate>
+					<StackPanel Height="100">
+						<Label Content="{Binding Name}"/>
+						<Label Content="{Binding MimeType}"/>
+						<Label Content="{Binding Data.Sha256}"/>
+					</StackPanel>
+				</DataTemplate>
+			</ListBox.ItemTemplate>
+			<!--
+                 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
+            Path=AttachmentListSelectedItem, Mode=TwoWay}" -->
         </ListBox>
     </Grid>
 </UserControl>
