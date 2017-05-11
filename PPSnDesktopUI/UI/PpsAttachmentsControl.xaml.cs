@@ -116,6 +116,13 @@ namespace TecWare.PPSn.UI
 			private readonly PpsDataRow row;
 			private readonly int linkColumnIndex;
 
+			public PpsAttachmentItemImplementation(PpsDataRow row, string linkColumnName)
+			{
+
+				this.row = row;
+				this.linkColumnIndex = row.Table.TableDefinition.FindColumnIndex(linkColumnName ?? throw new ArgumentNullException(nameof(linkColumnName)), true);
+			} // ctor
+
 			public PpsAttachmentItemImplementation(PpsDataRow row, int linkColumnIndex)
 			{
 				this.row = row;
@@ -185,6 +192,8 @@ namespace TecWare.PPSn.UI
 		{
 			if (value is IPpsDataView v)
 				return new PpsAttachmentImplementation(v, LinkColumnName);
+			else if (value is PpsDataRow i)
+				return new PpsAttachmentItemImplementation(i, LinkColumnName);
 			else
 				throw new NotSupportedException();
 		} // func Convert
