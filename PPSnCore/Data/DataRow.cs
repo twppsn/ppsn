@@ -713,7 +713,7 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc Commit
 
-		/// <summary>Marks the current row as deleted. Supprots Undo</summary>
+		/// <summary>Marks the current row as deleted. Supports Undo</summary>
 		/// <returns><c>true</c>, wenn die Zeile als gelöscht markiert werden konnte.</returns>
 		public bool Remove()
 		{
