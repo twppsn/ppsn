@@ -93,8 +93,7 @@ namespace TecWare.PPSn.UI
 		} // ctor
 
 		public readonly static DependencyProperty AttachmentsSourceProperty = DependencyProperty.Register(nameof(AttachmentsSource), typeof(IPpsAttachments), typeof(PpsAttachmentsControl));
-		private readonly static DependencyPropertyKey SelectedAttachmentPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsAttachmentsControl), new UIPropertyMetadata(null));
-		public readonly static DependencyProperty SelectedAttachmentProperty = SelectedAttachmentPropertyKey.DependencyProperty;
+		public readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsAttachmentsControl));
 
 		public IPpsAttachments AttachmentsSource { get => (IPpsAttachments)GetValue(AttachmentsSourceProperty); set => SetValue(AttachmentsSourceProperty, value); }
 		public IPpsAttachmentItem SelectedAttachment => (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty);
