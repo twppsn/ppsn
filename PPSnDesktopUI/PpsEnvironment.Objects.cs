@@ -1225,6 +1225,7 @@ namespace TecWare.PPSn
 		private readonly PpsObject baseObj;
 		private byte[] rawData = null;
 		private string sha256 = String.Empty;
+		private string mimeType = null;
 
 		public PpsObjectBlobData(PpsObject obj)
 		{
@@ -1248,7 +1249,7 @@ namespace TecWare.PPSn
 			baseObj.Tags.UpdateTag(-1, "Sha256", PpsObjectTagClass.Text, sha256);
 			await baseObj.SaveRawDataAsync(
 				rawData.Length,
-				baseObj.MimeType ?? MimeTypes.Application.OctetStream,
+				mimeType ?? baseObj.MimeType ?? MimeTypes.Application.OctetStream,
 				dst => dst.Write(rawData, 0, rawData.Length),
 				true
 			);
@@ -1270,6 +1271,8 @@ namespace TecWare.PPSn
 
 		public Task ReadFromFileAsync(string filename)
 		{
+			mimeType = StuffIO.MimeTypeFromFilename(filename);
+
 			using (var hashStream = new HashStream(new FileStream(filename, FileMode.Open), HashStreamDirection.Read, false, HashAlgorithm.Create("SHA-256")))
 			{
 				rawData = hashStream.ReadInArray();

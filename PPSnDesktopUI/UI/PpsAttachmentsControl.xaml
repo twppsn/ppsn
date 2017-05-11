@@ -41,19 +41,17 @@
             </WrapPanel>
         </Grid>
         <ListBox Grid.Row="1" VerticalAlignment="Stretch" ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-            Path=AttachmentsSource,Mode=OneWay}" Background="Blue">
+            Path=AttachmentsSource,Mode=OneWay}" SelectedItem="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
+            Path=SelectedAttachment, Mode=OneWayToSource}" Background="Blue">
             <ListBox.ItemTemplate>
-				<DataTemplate>
-					<StackPanel Height="100">
-						<Label Content="{Binding Name}"/>
-						<Label Content="{Binding MimeType}"/>
-						<Label Content="{Binding Data.Sha256}"/>
-					</StackPanel>
-				</DataTemplate>
-			</ListBox.ItemTemplate>
-			<!--
-                 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-            Path=AttachmentListSelectedItem, Mode=TwoWay}" -->
+                <DataTemplate>
+                    <StackPanel Height="100">
+                        <Label Content="{Binding Name}"/>
+                        <Label Content="{Binding MimeType}"/>
+                        <Label Content="{Binding Data.Sha256}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
         </ListBox>
     </Grid>
 </UserControl>
