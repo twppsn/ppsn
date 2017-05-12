@@ -118,7 +118,6 @@ namespace TecWare.PPSn.UI
 
 			public PpsAttachmentItemImplementation(PpsDataRow row, string linkColumnName)
 			{
-
 				this.row = row;
 				this.linkColumnIndex = row.Table.TableDefinition.FindColumnIndex(linkColumnName ?? throw new ArgumentNullException(nameof(linkColumnName)), true);
 			} // ctor
