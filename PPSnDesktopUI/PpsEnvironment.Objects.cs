@@ -1279,6 +1279,13 @@ namespace TecWare.PPSn
 		{
 			mimeType = StuffIO.MimeTypeFromFilename(filename);
 
+			if (new FileInfo(filename).Length == 0)
+			{
+				rawData = new byte[] { };
+				sha256 = StuffIO.GetStreamHash(new MemoryStream(rawData));
+				return Task.CompletedTask;
+			}
+			
 			using (var hashStream = new HashStream(new FileStream(filename, FileMode.Open), HashStreamDirection.Read, false, HashAlgorithm.Create("SHA-256")))
 			{
 				rawData = hashStream.ReadInArray();

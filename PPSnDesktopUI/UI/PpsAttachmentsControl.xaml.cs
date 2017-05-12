@@ -133,7 +133,6 @@ namespace TecWare.PPSn.UI
 
 			public PpsAttachmentItemImplementation(PpsDataRow row, string linkColumnName)
 			{
-
 				this.row = row;
 				this.linkColumnIndex = row.Table.TableDefinition.FindColumnIndex(linkColumnName ?? throw new ArgumentNullException(nameof(linkColumnName)), true);
 			} // ctor
@@ -228,29 +227,4 @@ namespace TecWare.PPSn.UI
 	} // class PpsDataTableAttachmentConverter
 
 	#endregion
-
-	public class PpsAttachmentConverter : IValueConverter
-	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-		{
-			if (!(value is PpsDataRow))
-				return String.Empty;
-			var obj = ((PpsObject)((dynamic)value).Table.DataSet.Environment.GetObject(((dynamic)value).Id));
-			if (obj == null)
-				return String.Empty;
-
-			var details = new List<string>();
-			details.Add(obj.Nr);
-			details.Add(obj.Typ);
-			details.Add(obj.Id.ToString());
-			foreach (var tag in obj.Tags)
-				details.Add($"{tag.Name}:{((string)tag.Value)}");
-
-			return details;
-			
-		}
-
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-			=> throw new NotSupportedException();
-	} // class PpsAttachmentConverter
 }
