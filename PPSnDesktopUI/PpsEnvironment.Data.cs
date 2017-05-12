@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -110,6 +125,8 @@ namespace TecWare.PPSn
 			=> RollbackCore();
 
 		#endregion
+
+		public abstract void AccessJoin();
 
 		public abstract void AddRollbackOperation(Action rollback);
 
@@ -1171,7 +1188,7 @@ namespace TecWare.PPSn
 			// parse and process result
 			using (var xml = environment.Request.GetXmlStream(await environment.Request.PutXmlResponseAsync(requestString, MimeTypes.Text.Xml, WriteCurentSyncState)))
 			{
-				xml.ReadStartElement("mdata");
+				await Task.Run(() => xml.ReadStartElement("mdata"));
 				if (!xml.IsEmptyElement)
 				{
 					// read batches
@@ -1180,7 +1197,7 @@ namespace TecWare.PPSn
 						switch (xml.LocalName)
 						{
 							case "batch":
-								FetchDataXmlBatch(xml, progess);
+								 await FetchDataXmlBatchAsync(xml, progess);
 								break;
 							case "syncStamp":
 								var timeStamp = xml.ReadElementContent<long>(-1);
@@ -1195,7 +1212,7 @@ namespace TecWare.PPSn
 								}
 								break;
 							default:
-								xml.Skip();
+								await Task.Run(new Action(xml.Skip));
 								break;
 						}
 					}
@@ -1204,7 +1221,7 @@ namespace TecWare.PPSn
 			isSynchronizationStarted = true;
 		} // proc FetchDataAsync
 
-		private void FetchDataXmlBatch(XmlReader xml, IProgress<string> progress)
+		private async Task FetchDataXmlBatchAsync(XmlReader xml, IProgress<string> progress)
 		{
 			// read batch attributes
 			var tableName = xml.GetAttribute("table");
@@ -1216,14 +1233,14 @@ namespace TecWare.PPSn
 			{
 				xml.Read(); // fetch element
 							// process values
-				using (var transaction = CreateTransaction(PpsMasterDataTransactionLevel.Write))
+				using (var transaction = await CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
 				using (var b = new ProcessBatch(transaction, this, tableName, isFull))
 				{
 					// prepare table
 					b.Prepare();
 
 					// parse data
-					b.Parse(xml, progress);
+					await Task.Run(() => b.Parse(xml, progress));
 
 					b.Clean();
 					transaction.Commit();
@@ -1284,21 +1301,24 @@ namespace TecWare.PPSn
 
 		public Task StartSynchronization()
 		{
-			var progressTracer = environment.Traces.TraceProgress();
-			return Task.Run(new Action(SynchronizationAsync(progressTracer).Wait))
-			.ContinueWith(t =>
-			{
-				try
+			return environment.RunAsync(
+				async () =>
 				{
-					t.Wait();
-				}
-				catch (Exception e)
-				{
-					progressTracer.Except(e);
-					throw;
-				}
-				progressTracer.Dispose();
-			});
+					using (var progressTracer = environment.Traces.TraceProgress())
+					{
+						try
+						{
+							await SynchronizationAsync(progressTracer);
+						}
+						catch (Exception e)
+						{
+							progressTracer.Except(e);
+							throw;
+						}
+					}
+				}, 
+				"Synchronization", CancellationToken.None
+			);
 		} // proc StartSynchronization
 
 
@@ -1322,7 +1342,7 @@ namespace TecWare.PPSn
 				// update header
 				if (updateUserInfo)
 				{
-					using (var trans = CreateTransaction(PpsMasterDataTransactionLevel.Write))
+					using (var trans = await CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
 					using (var cmd = trans.CreateNativeCommand("UPDATE main.[Header] SET [UserId] = @UserId, [UserName] = @UserName"))
 					{
 						cmd.AddParameter("@UserId", DbType.Int64, environment.UserId);
@@ -1737,6 +1757,9 @@ namespace TecWare.PPSn
 
 			protected override void RollbackCore() { }
 
+			public override void AccessJoin()
+				=> rootTransaction.AccessJoin();
+
 			protected override SQLiteConnection ConnectionCore => rootTransaction.SQLiteConnection;
 			protected override SQLiteTransaction TransactionCore => rootTransaction.SQLiteTransaction;
 
@@ -1756,6 +1779,7 @@ namespace TecWare.PPSn
 			private readonly SQLiteConnection connection;
 			private readonly SQLiteTransaction transaction;
 			private readonly int threadId;
+			private int[] joinThreadIds = null;
 
 			private readonly List<Action> rollbackActions = new List<Action>();
 
@@ -1800,8 +1824,42 @@ namespace TecWare.PPSn
 					throw new InvalidOperationException();
 			} // proc CheckThreadAccess
 
+			public override void AccessJoin()
+			{
+				if (joinThreadIds == null)
+					joinThreadIds = new int[] { -1, -1, -1, -1 };
+
+				var currentId = Thread.CurrentThread.ManagedThreadId;
+				for (var i = 0; i < joinThreadIds.Length; i++)
+				{
+					if (joinThreadIds[i] == currentId)
+						return;
+					else if (joinThreadIds[i] == -1)
+					{
+						joinThreadIds[i] = currentId;
+						return;
+					}
+				}
+
+				throw new InvalidOperationException();
+			} // proc AccessJoin
+
 			public bool CheckAccess()
-				=> threadId == Thread.CurrentThread.ManagedThreadId;
+			{
+				var currentId = Thread.CurrentThread.ManagedThreadId;
+
+				bool CheckId()
+				{
+					for (var i = 0; i < joinThreadIds.Length; i++)
+					{
+						if (joinThreadIds[i] == currentId)
+							return true;
+					}
+					return false;
+				} // func CheckId
+
+				return threadId == currentId || joinThreadIds != null && CheckId();
+			} // func CheckAccess
 
 			public override void AddRollbackOperation(Action rollback)
 			{
@@ -1888,6 +1946,8 @@ namespace TecWare.PPSn
 
 			public override void AddRollbackOperation(Action rollback) { }
 
+			public override void AccessJoin() { }
+
 			protected override SQLiteConnection ConnectionCore => connection;
 			protected override SQLiteTransaction TransactionCore => null;
 
@@ -1900,15 +1960,22 @@ namespace TecWare.PPSn
 		private readonly ManualResetEventSlim currentTransactionLock = new ManualResetEventSlim(true);
 		private PpsMasterRootTransaction currentTransaction;
 
-		public PpsMasterDataTransaction CreateTransaction(PpsMasterDataTransactionLevel level)
-			=> CreateTransaction(level, CancellationToken.None);
+		public PpsMasterDataTransaction CreateReadUncommitedTransaction()
+			=> new PpsMasterReadTransaction(connection);
 
-		public PpsMasterDataTransaction CreateTransaction(PpsMasterDataTransactionLevel level, CancellationToken cancellationToken)
+		public Task<PpsMasterDataTransaction> CreateTransactionAsync(PpsMasterDataTransactionLevel level)
+			=> CreateTransactionAsync(level, CancellationToken.None);
+
+		public async Task<PpsMasterDataTransaction> CreateTransactionAsync(PpsMasterDataTransactionLevel level, CancellationToken cancellationToken)
 		{
-			if (level == PpsMasterDataTransactionLevel.ReadUncommited)
+			if (level == PpsMasterDataTransactionLevel.ReadUncommited) // we done care about any transaction
 				return new PpsMasterReadTransaction(connection);
 			else // ReadCommit is thread as write for sqlite
 			{
+				// check for single thread sync context
+				environment.VerifySynchronizationContext();
+
+				// try get the context
 				while (true)
 				{
 					lock (currentTransactionLock)
@@ -1923,12 +1990,13 @@ namespace TecWare.PPSn
 						{
 							if (currentTransaction.IsDisposed)
 								throw new InvalidOperationException("Transaction is already disposed.");
+
 							return new PpsMasterNestedTransaction(currentTransaction);
 						}
 					}
 
 					// different thread, block until currentTransaction is zero
-					currentTransactionLock.Wait(cancellationToken);
+					await Task.Run(() => currentTransactionLock.Wait(cancellationToken), cancellationToken);
 					if (cancellationToken.IsCancellationRequested)
 						return null;
 				}
@@ -1956,6 +2024,15 @@ namespace TecWare.PPSn
 		public bool IsSynchronizationStarted => isSynchronizationStarted;
 		[Obsolete("ConnectionAccess")]
 		public SQLiteConnection Connection => connection;
+
+		public PpsMasterDataTransaction CurrentTransaction
+		{
+			get
+			{
+				lock (currentTransactionLock)
+					return currentTransaction;
+			}
+		} // prop CurrentTransaction
 
 		// -- Static ------------------------------------------------------
 

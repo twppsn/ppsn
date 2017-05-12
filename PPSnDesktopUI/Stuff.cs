@@ -21,6 +21,7 @@ using System.IO;
 using System.Net;
 using System.Net.Mime;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 using System.Web;
 using System.Windows;
 using System.Windows.Markup;
@@ -266,6 +267,19 @@ namespace TecWare.PPSn
 			}
 		} // func ExecuteReaderEx
 
+		public static async Task<int> ExecuteNonQueryExAsync(this DbCommand command)
+		{
+			try
+			{
+				return await command.ExecuteNonQueryAsync();
+			}
+			catch (DbException e)
+			{
+				e.Data[CommandTextKey] = InsertDbParams(command);
+				throw;
+			}
+		} // func ExecuteReaderEx
+
 		public static DbDataReader ExecuteReaderEx(this DbCommand command, CommandBehavior commandBehavior = CommandBehavior.Default)
 		{
 			try
@@ -279,11 +293,37 @@ namespace TecWare.PPSn
 			}
 		} // func ExecuteReaderEx
 
+		public static async Task<DbDataReader> ExecuteReaderExAsync(this DbCommand command, CommandBehavior commandBehavior = CommandBehavior.Default)
+		{
+			try
+			{
+				return await command.ExecuteReaderAsync(commandBehavior);
+			}
+			catch (DbException e)
+			{
+				e.Data[CommandTextKey] = InsertDbParams(command);
+				throw;
+			}
+		} // func ExecuteReaderEx
+
 		public static object ExecuteScalarEx(this DbCommand command)
 		{
 			try
 			{
 				return command.ExecuteScalar();
+			}
+			catch (DbException e)
+			{
+				e.Data[CommandTextKey] = InsertDbParams(command);
+				throw;
+			}
+		} // func ExecuteScalarEx
+
+		public static async Task<object> ExecuteScalarExAsync(this DbCommand command)
+		{
+			try
+			{
+				return await command.ExecuteScalarAsync();
 			}
 			catch (DbException e)
 			{

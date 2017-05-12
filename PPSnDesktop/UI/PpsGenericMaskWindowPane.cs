@@ -55,7 +55,7 @@ namespace TecWare.PPSn.UI
 					if (elapsed > 3000)
 					{
 						if (data != null && data.IsDirty)
-							CommitEditAsync();
+							Environment.AwaitTask(CommitEditAsync());
 						return false;
 					}
 					else
@@ -84,7 +84,7 @@ namespace TecWare.PPSn.UI
 
 		public override async Task LoadAsync(LuaTable arguments)
 		{
-			void CreateNewObject()
+			async Task CreateNewObjectAsync()
 			{
 
 				// load schema
@@ -98,17 +98,17 @@ namespace TecWare.PPSn.UI
 					throw new ArgumentNullException("object", "Parameter 'object' is missing.");
 
 				// create the new object entry
-				obj = Environment.CreateNewObject(objectInfo);
+				obj = await Environment.CreateNewObjectAsync(objectInfo);
 			} // proc CreateNewObject
 			
 			// get the object reference for the document
 			obj = (PpsObject)arguments.GetMemberValue("object");
 
 			// new document or load one
-			using (var transaction = Environment.MasterData.CreateTransaction(PpsMasterDataTransactionLevel.Write))
+			using (var transaction = await Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
 			{
 				if (obj == null) // no object given
-					CreateNewObject();
+					await CreateNewObjectAsync();
 
 				data = await obj.GetDataAsync<PpsObjectDataSet>();
 
@@ -240,14 +240,14 @@ namespace TecWare.PPSn.UI
 			OnPropertyChanged("Data");
 		} // porc InitializeData
 
-		public override Task<bool> UnloadAsync(bool? commit = default(bool?))
+		public override async Task<bool> UnloadAsync(bool? commit = default(bool?))
 		{
 			if (data != null && data.IsDirty)
-				CommitEditAsync().Wait();
+				await CommitEditAsync();
 
 			data.UnregisterOwner(this);
 
-			return base.UnloadAsync(commit);
+			return await base.UnloadAsync(commit);
 		} // func UnloadAsync
 
 		[LuaMember]
@@ -258,21 +258,26 @@ namespace TecWare.PPSn.UI
 		} // proc CommitToDisk
 
 		[LuaMember]
-		public PpsLuaTask CommitEditAsync()
+		public async Task CommitEditAsync()
 		{
 			UpdateSources();
-			return Environment.RunTask(data.CommitAsync())
-				.ContinueUI(new Action(() => Debug.Print("Saved Document.")));
+			await data.CommitAsync();
+
+			Debug.Print("Saved Document.");
 		} // proc CommitEdit
 
 		[LuaMember]
-		public PpsLuaTask PushDataAsync()
+		public async Task PushDataAsync()
 		{
 			UpdateSources();
-			return Environment.RunTask(obj.PushAsync())
-				.OnException(
-				new Action<Exception>(ex => Environment.ShowException(ex, "Veröffentlichung ist fehlgeschlagen."))
-			);
+			try
+			{
+				await obj.PushAsync();
+			}
+			catch (Exception ex)
+			{
+				await Environment.ShowExceptionAsync(ExceptionShowFlags.None, ex, "Veröffentlichung ist fehlgeschlagen.");
+			}
 		} // proc PushDataAsync
 
 		[LuaMember]

@@ -235,11 +235,11 @@ namespace TecWare.PPSn.UI
 			return (IPpsWindowPane)Activator.CreateInstance(paneType, paneArguments);
 		} // func CreateEmptyPane
 
-		public PpsLuaTask LoadPane(LuaTable arguments)
-			=> Environment.RunTask(LoadPaneAsync(typeof(PpsGenericWpfWindowPane), arguments));
+		public void LoadPane(LuaTable arguments)
+			=> Environment.AwaitTask(LoadPaneAsync(typeof(PpsGenericWpfWindowPane), arguments));
 
-		public PpsLuaTask LoadMask(LuaTable arguments)
-			=> Environment.RunTask(LoadPaneAsync(typeof(PpsGenericMaskWindowPane), arguments));
+		public void LoadMask(LuaTable arguments)
+			=> Environment.AwaitTask(LoadPaneAsync(typeof(PpsGenericMaskWindowPane), arguments));
 
 		/// <summary>Loads a new current pane.</summary>
 		/// <param name="paneType">Type of the pane to load.</param>
