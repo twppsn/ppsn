@@ -6,9 +6,6 @@
              xmlns:local="clr-namespace:TecWare.PPSn.UI"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="300">
-    <UserControl.Resources>
-        <local:PpsAttachmentConverter x:Key="AttachmentConverter" />
-    </UserControl.Resources>
     <Grid Width="300" Height="600">
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
