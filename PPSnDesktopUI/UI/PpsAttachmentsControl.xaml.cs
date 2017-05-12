@@ -232,7 +232,6 @@ namespace TecWare.PPSn.UI
 				details.Add($"{tag.Name}:{((string)tag.Value)}");
 
 			return details;
-			
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
