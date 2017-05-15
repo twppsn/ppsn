@@ -126,8 +126,6 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		public abstract void AccessJoin();
-
 		public abstract void AddRollbackOperation(Action rollback);
 
 		public DbCommand CreateNativeCommand(string commandText = null)
@@ -1240,7 +1238,7 @@ namespace TecWare.PPSn
 					b.Prepare();
 
 					// parse data
-					await Task.Run(() => b.Parse(xml, progress));
+					b.Parse(xml, progress);
 
 					b.Clean();
 					transaction.Commit();
@@ -1635,7 +1633,7 @@ namespace TecWare.PPSn
 
 		private Stream UpdateOfflineData(string path, IPpsOfflineItemData item)
 		{
-			Stream outputStream = item.Content;
+			var outputStream = item.Content;
 
 			if (String.IsNullOrEmpty(path))
 				throw new ArgumentNullException(nameof(path));
@@ -1729,9 +1727,9 @@ namespace TecWare.PPSn
 
 		private sealed class PpsMasterNestedTransaction : PpsMasterDataTransaction
 		{
-			private readonly PpsMasterRootTransaction rootTransaction;
+			private readonly PpsMasterThreadSafeTransaction rootTransaction;
 
-			public PpsMasterNestedTransaction(PpsMasterRootTransaction rootTransaction)
+			public PpsMasterNestedTransaction(PpsMasterThreadSafeTransaction rootTransaction)
 			{
 				this.rootTransaction = rootTransaction ?? throw new ArgumentNullException(nameof(rootTransaction));
 
@@ -1757,31 +1755,103 @@ namespace TecWare.PPSn
 
 			protected override void RollbackCore() { }
 
-			public override void AccessJoin()
-				=> rootTransaction.AccessJoin();
-
 			protected override SQLiteConnection ConnectionCore => rootTransaction.SQLiteConnection;
 			protected override SQLiteTransaction TransactionCore => rootTransaction.SQLiteTransaction;
 
 			public override bool IsDisposed => rootTransaction.IsDisposed;
 			public override bool IsCommited => rootTransaction.IsCommited;
 
-			public PpsMasterRootTransaction RootTransaction => rootTransaction;
+			public PpsMasterThreadSafeTransaction RootTransaction => rootTransaction;
 		} // class PpsMasterNestedTransaction
+
+		#endregion
+
+		#region -- class PpsMasterThreadSafeTransaction ---------------------------------
+
+		private abstract class PpsMasterThreadSafeTransaction : PpsMasterDataTransaction
+		{
+			private readonly int threadId;
+
+			public PpsMasterThreadSafeTransaction()
+			{
+				this.threadId = Thread.CurrentThread.ManagedThreadId;
+			} // ctor
+
+			public void VerifyThreadAccess()
+			{
+				if (!CheckAccess())
+					throw new InvalidOperationException();
+			} // proc CheckThreadAccess
+
+			public bool CheckAccess()
+			{
+				var currentId = Thread.CurrentThread.ManagedThreadId;
+				return threadId == currentId;
+			} // func CheckAccess
+
+			public void AddRef()
+			{
+				VerifyThreadAccess();
+				AddRefUnsafe();
+			} // proc AddRef
+
+			internal abstract void AddRefUnsafe();
+
+			public void DecRef()
+			{
+				VerifyThreadAccess();
+				DecRefUnsafe();
+			} // proc DecRef
+
+			internal abstract void DecRefUnsafe();
+
+			public void SetCommitOnDispose()
+			{
+				VerifyThreadAccess();
+				SetCommitOnDisposeUnsafe();
+			} // proc SetCommitOnDispose
+
+			internal abstract void SetCommitOnDisposeUnsafe();
+
+			public sealed override void AddRollbackOperation(Action rollback)
+			{
+				VerifyThreadAccess();
+				AddRollbackOperationUnsafe(rollback);
+			} // proc AddRollbackOperation
+
+			internal abstract void AddRollbackOperationUnsafe(Action rollback);
+
+			public SQLiteConnection SQLiteConnection
+			{
+				get
+				{
+					VerifyThreadAccess();
+					return this.ConnectionCore;
+				}
+			} // prop SQLiteConnection
+
+			public SQLiteTransaction SQLiteTransaction
+			{
+				get
+				{
+					VerifyThreadAccess();
+					return this.TransactionCore;
+				}
+			} // prop SQLiteTransaction
+		} // class PpsMasterThreadSafeTransaction
 
 		#endregion
 
 		#region -- class PpsMasterRootTransaction ---------------------------------------
 
-		private sealed class PpsMasterRootTransaction : PpsMasterDataTransaction
+		private sealed class PpsMasterRootTransaction : PpsMasterThreadSafeTransaction
 		{
 			private readonly PpsMasterData masterData;
 			private readonly SQLiteConnection connection;
 			private readonly SQLiteTransaction transaction;
-			private readonly int threadId;
-			private int[] joinThreadIds = null;
 
 			private readonly List<Action> rollbackActions = new List<Action>();
+			private readonly ThreadLocal<PpsMasterThreadJoinTransaction> joinedTransaction = new ThreadLocal<PpsMasterThreadJoinTransaction>(false);
 
 			private bool? transactionState = null;
 			private bool commitOnDispose = false;
@@ -1793,7 +1863,6 @@ namespace TecWare.PPSn
 				this.masterData = masterData ?? throw new ArgumentNullException(nameof(masterData));
 				this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
 				this.transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
-				this.threadId = Thread.CurrentThread.ManagedThreadId;
 			} // ctor
 
 			protected override void Dispose(bool disposing)
@@ -1818,54 +1887,8 @@ namespace TecWare.PPSn
 				masterData.ClearTransaction(this);
 			} // proc Dispose
 
-			private void VerifyThreadAccess()
-			{
-				if (!CheckAccess())
-					throw new InvalidOperationException();
-			} // proc CheckThreadAccess
-
-			public override void AccessJoin()
-			{
-				if (joinThreadIds == null)
-					joinThreadIds = new int[] { -1, -1, -1, -1 };
-
-				var currentId = Thread.CurrentThread.ManagedThreadId;
-				for (var i = 0; i < joinThreadIds.Length; i++)
-				{
-					if (joinThreadIds[i] == currentId)
-						return;
-					else if (joinThreadIds[i] == -1)
-					{
-						joinThreadIds[i] = currentId;
-						return;
-					}
-				}
-
-				throw new InvalidOperationException();
-			} // proc AccessJoin
-
-			public bool CheckAccess()
-			{
-				var currentId = Thread.CurrentThread.ManagedThreadId;
-
-				bool CheckId()
-				{
-					for (var i = 0; i < joinThreadIds.Length; i++)
-					{
-						if (joinThreadIds[i] == currentId)
-							return true;
-					}
-					return false;
-				} // func CheckId
-
-				return threadId == currentId || joinThreadIds != null && CheckId();
-			} // func CheckAccess
-
-			public override void AddRollbackOperation(Action rollback)
-			{
-				VerifyThreadAccess();
-				rollbackActions.Add(rollback);
-			} // proc AddRollbackOperation
+			internal override void AddRollbackOperationUnsafe(Action rollback)
+				=> rollbackActions.Add(rollback);
 
 			protected override void CommitCore()
 			{
@@ -1893,32 +1916,76 @@ namespace TecWare.PPSn
 				}
 			} // proc RollbackCore
 
-			public void SetCommitOnDispose()
-			{
-				VerifyThreadAccess();
-				commitOnDispose = true;
-			} // proc SetCommitOnDispose
+			internal override void SetCommitOnDisposeUnsafe() 
+				=> commitOnDispose = true;
 
-			public void AddRef()
-			{
-				VerifyThreadAccess();
-				nestedTransactionCounter++;
-			} // proc AddRef
+			internal override void AddRefUnsafe() 
+				=> Interlocked.Increment(ref nestedTransactionCounter);
 
-			public void DecRef()
-			{
-				VerifyThreadAccess();
-				nestedTransactionCounter--;
-			} // proc DecRef
+			internal override void DecRefUnsafe() 
+				=> Interlocked.Decrement(ref nestedTransactionCounter);
 
 			protected override SQLiteConnection ConnectionCore => connection;
-			public SQLiteConnection SQLiteConnection => connection;
+			internal SQLiteConnection ConnectionUnsafe => connection;
 			protected override SQLiteTransaction TransactionCore => transaction;
-			public SQLiteTransaction SQLiteTransaction => transaction;
+			internal SQLiteTransaction TransactionUnsafe => transaction;
 
 			public override bool IsDisposed => transactionState.HasValue;
 			public override bool IsCommited => transactionState ?? false;
+
+			public PpsMasterThreadJoinTransaction JoinedTransaction
+			{
+				get { return joinedTransaction.Value; }
+				set
+				{
+					if (value == null)
+						joinedTransaction.Value = null;
+					else if (joinedTransaction.Value == null)
+						joinedTransaction.Value = value;
+					else
+						throw new InvalidOperationException();
+				}
+			} // prop JoinedTransaction
 		} // class PpsMasterRootTransaction
+
+		#endregion
+
+		#region -- class PpsMasterThreadJoinTransaction ---------------------------------
+
+		private sealed class PpsMasterThreadJoinTransaction : PpsMasterThreadSafeTransaction
+		{
+			private readonly PpsMasterRootTransaction rootTransaction;
+
+			public PpsMasterThreadJoinTransaction(PpsMasterRootTransaction rootTransaction)
+			{
+				this.rootTransaction = rootTransaction ?? throw new ArgumentNullException(nameof(rootTransaction));
+				rootTransaction.JoinedTransaction = this;
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				rootTransaction.JoinedTransaction = null;
+				base.Dispose(disposing);
+			} // proc Dispose
+
+			public override bool IsDisposed => rootTransaction.IsDisposed;
+			public override bool IsCommited => rootTransaction.IsCommited;
+
+			internal override void AddRefUnsafe()
+				=> rootTransaction.AddRefUnsafe();
+
+			internal override void DecRefUnsafe()
+				=> rootTransaction.DecRefUnsafe();
+
+			internal override void AddRollbackOperationUnsafe(Action rollback)
+				=> rootTransaction.AddRollbackOperationUnsafe(rollback);
+
+			internal override void SetCommitOnDisposeUnsafe()
+				=> rootTransaction.SetCommitOnDisposeUnsafe();
+
+			protected override SQLiteConnection ConnectionCore => rootTransaction.ConnectionUnsafe;
+			protected override SQLiteTransaction TransactionCore => rootTransaction.TransactionUnsafe;
+		} // class PpsMasterThreadJoinTransaction
 
 		#endregion
 
@@ -1946,8 +2013,6 @@ namespace TecWare.PPSn
 
 			public override void AddRollbackOperation(Action rollback) { }
 
-			public override void AccessJoin() { }
-
 			protected override SQLiteConnection ConnectionCore => connection;
 			protected override SQLiteTransaction TransactionCore => null;
 
@@ -1966,14 +2031,37 @@ namespace TecWare.PPSn
 		public Task<PpsMasterDataTransaction> CreateTransactionAsync(PpsMasterDataTransactionLevel level)
 			=> CreateTransactionAsync(level, CancellationToken.None);
 
-		public async Task<PpsMasterDataTransaction> CreateTransactionAsync(PpsMasterDataTransactionLevel level, CancellationToken cancellationToken)
+		public async Task<PpsMasterDataTransaction> CreateTransactionAsync(PpsMasterDataTransactionLevel level, CancellationToken cancellationToken, PpsMasterDataTransaction transactionJoinTo = null)
 		{
 			if (level == PpsMasterDataTransactionLevel.ReadUncommited) // we done care about any transaction
 				return new PpsMasterReadTransaction(connection);
+			else if (transactionJoinTo != null)  // join thread access
+			{
+				PpsMasterThreadSafeTransaction GetRootTransaction()
+				{
+					switch (transactionJoinTo)
+					{
+						case PpsMasterNestedTransaction mnt:
+							return mnt.RootTransaction;
+						case PpsMasterThreadSafeTransaction mrt:
+							return mrt;
+						default:
+							throw new InvalidOperationException();
+					}
+				} // func GetRootTransaction
+
+				// check for single thread sync context
+				StuffThreading.VerifySynchronizationContext();
+
+				var threadRootTransaction = GetRootTransaction();
+				return threadRootTransaction.CheckAccess()
+					? (PpsMasterDataTransaction)new PpsMasterNestedTransaction(currentTransaction)
+					: (PpsMasterDataTransaction)new PpsMasterThreadJoinTransaction(currentTransaction);
+			}
 			else // ReadCommit is thread as write for sqlite
 			{
 				// check for single thread sync context
-				environment.VerifySynchronizationContext();
+				StuffThreading.VerifySynchronizationContext();
 
 				// try get the context
 				while (true)
@@ -1992,6 +2080,14 @@ namespace TecWare.PPSn
 								throw new InvalidOperationException("Transaction is already disposed.");
 
 							return new PpsMasterNestedTransaction(currentTransaction);
+						}
+						else if (currentTransaction.JoinedTransaction != null) // other thread, check for a joined transaction
+						{
+							var threadRootTransaction = currentTransaction.JoinedTransaction;
+							if (threadRootTransaction.IsDisposed)
+								throw new InvalidOperationException("Transaction is already disposed.");
+
+							return new PpsMasterNestedTransaction(threadRootTransaction);
 						}
 					}
 
@@ -2940,19 +3036,14 @@ namespace TecWare.PPSn
 		private readonly List<WebLoadRequest> downloadList = new List<WebLoadRequest>();
 		private int currentForegroundCount = 0;
 
-		private readonly Thread executeLoadQueue;
+		private readonly PpsSynchronizationContext executeLoadQueue;
 		private readonly ManualResetEventSlim executeLoadIsRunning = new ManualResetEventSlim(false);
 		private bool isDisposed = false;
 
 		public PpsWebProxy(PpsEnvironment environment)
 		{
 			this.environment = environment;
-			this.executeLoadQueue = new Thread(ExecuteLoadQueue)
-			{
-				Name = "PpsWebProxy",
-				IsBackground = true,
-			};
-			executeLoadQueue.Start();
+			this.executeLoadQueue = new PpsSingleThreadSynchronizationContext("PpsWebProxy", CancellationToken.None, () => ExecuteLoadQueueAsync());
 		} // class PpsDownloadManager
 
 		public void Dispose()
@@ -3017,8 +3108,10 @@ namespace TecWare.PPSn
 				OnCollectionChanged();
 		} // proc RemoveCurrentTask
 
-		private void ExecuteLoadQueue()
+		private async Task ExecuteLoadQueueAsync()
 		{
+			await Task.Yield(); // enque the loop
+
 			while (!isDisposed)
 			{
 				var nextTask = TryDequeueTask();
@@ -3031,7 +3124,7 @@ namespace TecWare.PPSn
 					catch (Exception e)
 					{
 						// todo: connect lost?
-						environment.ShowExceptionAsync(ExceptionShowFlags.Background, e).Wait();
+						await environment.ShowExceptionAsync(ExceptionShowFlags.Background, e);
 					}
 					finally
 					{
@@ -3040,7 +3133,7 @@ namespace TecWare.PPSn
 				}
 
 				// wait for next item
-				executeLoadIsRunning.Wait();
+				await Task.Run(new Action(executeLoadIsRunning.Wait));
 			}
 		} // proc ExecuteLoadQueue
 
@@ -3663,7 +3756,7 @@ namespace TecWare.PPSn
 		private void OnPropertyChanged(string propertyName)
 		=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-		private void WebProxyChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+		private void WebProxyChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
 			dispatcher?.Invoke(() =>
 			{

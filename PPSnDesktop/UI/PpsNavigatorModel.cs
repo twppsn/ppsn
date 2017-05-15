@@ -182,7 +182,7 @@ namespace TecWare.PPSn.UI
 						if (code.StartsWith("="))
 							code = "msgbox(" + code.Substring(1) + ")";
 
-						chunk = navigator.Environment.AwaitTask(navigator.Environment.CompileAsync(code, "searchbox.lua", true));
+						chunk = navigator.Environment.CompileAsync(code, "searchbox.lua", true).AwaitTask();
 					}
 					catch (LuaParseException e)
 					{

@@ -309,8 +309,8 @@ namespace TecWare.PPSn.UI
 			// get the current root
 			var webRequest = self.GetMemberValue(nameof(IPpsLuaRequest.Request)) as BaseWebRequest ?? Request;
 
-			var parts = Task.Run(() => Environment.LoadXamlAsync(webRequest, initialTable ?? new LuaTable(), webRequest.GetFullUri(path))).Result;
-			return Environment.RunUI(new Func<PpsGenericWpfChildPane>(() => new PpsGenericWpfChildPane(this, parts.Item1, parts.Item2)));
+			var parts = Task.Run(() => Environment.LoadXamlAsync(webRequest, initialTable ?? new LuaTable(), webRequest.GetFullUri(path))).AwaitTask();
+			return new LuaResult(new PpsGenericWpfChildPane(this, parts.xaml, parts.code));
 		} // func LuaRequireXaml
 
 		[LuaMember("command")]

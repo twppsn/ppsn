@@ -55,7 +55,7 @@ namespace TecWare.PPSn.UI
 					if (elapsed > 3000)
 					{
 						if (data != null && data.IsDirty)
-							Environment.AwaitTask(CommitEditAsync());
+							CommitEditAsync().AwaitTask();
 						return false;
 					}
 					else

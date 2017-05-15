@@ -46,8 +46,6 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public interface IPpsLuaTaskParent
 	{
-		T AwaitTask<T>(Task<T> task);
-
 		/// <summary>Returns the dispatcher fo the UI thread</summary>
 		Dispatcher Dispatcher { get; }
 		/// <summary>Returns the trace sink.</summary>
@@ -72,13 +70,81 @@ namespace TecWare.PPSn
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Task wrapper for the lua script code</summary>
-	public sealed class PpsLuaTask
+	public sealed class PpsLuaTask : IDisposable
 	{
+		#region -- class ContinueTask ---------------------------------------------------
+
 		private class ContinueTask
 		{
 			public int Id { get; set; }
 			public object Task { get; set; }
 		} // class ContinueTask
+
+		#endregion
+
+		#region -- class PpsLuaTaskSynchronizationContext --------------------------------
+
+		private sealed class PpsLuaTaskSynchronizationContext : PpsSynchronizationContext, IDisposable
+		{
+			private WeakReference<PpsLuaTask> task;
+			private Thread queueThread;
+			private bool doContinue = true;
+
+			public PpsLuaTaskSynchronizationContext(PpsLuaTask luaTask)
+				: base(luaTask.cancellationToken)
+			{
+				this.task = new WeakReference<PpsLuaTask>(luaTask);
+
+				ThreadPool.QueueUserWorkItem(ExecuteMessageLoop);
+			} // ctor
+
+			public void Dispose()
+			{
+				doContinue = false;
+				TasksFilled.Set();
+			} // proc Dispose
+
+			private void ExecuteMessageLoop(object state)
+			{
+				var oldContext = Current;
+				SetSynchronizationContext(this);
+
+				// mark the thread
+				this.queueThread = Thread.CurrentThread;
+
+				try
+				{
+					while (Continue)
+					{
+						if (CancellationToken.IsCancellationRequested)
+						{
+							doContinue = false;
+							break;
+						}
+						else // execute tasks in this thread
+							ProcessMessageLoopUnsafe();
+
+						TasksFilled.Wait();
+					}
+				}
+				catch (Exception e)
+				{
+					if (task.TryGetTarget(out var t))
+						t.SetException(e);
+					else
+						throw;
+				}
+				finally
+				{
+					SetSynchronizationContext(oldContext);
+				}
+			} // proc ExecuteMessageLoop
+
+			protected override Thread QueueThread => queueThread;
+			protected override bool Continue => doContinue;
+		} // class PpsLuaTaskSynchronizationContext
+
+		#endregion
 
 		private readonly IPpsLuaTaskParent parent;
 		private readonly CancellationToken cancellationToken;
@@ -91,22 +157,48 @@ namespace TecWare.PPSn
 		private int? lastTaskId = null;
 
 		private readonly object executionLock = new object();
-		private LuaResult currentResult = LuaResult.Empty;
+		private LuaResult currentResult;
 		private Exception currentException = null;
+		private bool isDisposed = false;
 		
-		internal PpsLuaTask(IPpsLuaTaskParent parent, SynchronizationContext context, CancellationToken cancellationToken)
+		internal PpsLuaTask(IPpsLuaTaskParent parent, SynchronizationContext context, CancellationToken cancellationToken, LuaResult startArguments)
 		{
 			this.parent = parent;
 			this.cancellationToken = cancellationToken;
 			// the synchronization context must not have parallelity, we enforce this with the thread id
-			this.context = context;
+			this.context = context ?? new PpsLuaTaskSynchronizationContext(this);
+			this.currentResult = startArguments;
 		} // ctor
 
-		internal PpsLuaTask(IPpsLuaTaskParent parent, SynchronizationContext context, CancellationTokenSource cancellationTokenSource)
-			: this(parent, context, cancellationTokenSource?.Token ?? CancellationToken.None)
+		internal PpsLuaTask(IPpsLuaTaskParent parent, SynchronizationContext context, CancellationTokenSource cancellationTokenSource, LuaResult startArguments)
+			: this(parent, context, cancellationTokenSource?.Token ?? CancellationToken.None, startArguments)
 		{
 			this.cancellationTokenSource = cancellationTokenSource;
 		} // ctor
+
+		~PpsLuaTask()
+		{
+			if (!isDisposed)
+			{
+				isDisposed = true;
+				DisposeContext();
+			}
+		} // dtor
+
+		void IDisposable.Dispose()
+			=> Await();
+
+		private void DisposeContext()
+		{
+			if (context is PpsLuaTaskSynchronizationContext ctx)
+				ctx.Dispose();
+		} // proc DisposeContext
+
+		private void CheckDisposed()
+		{
+			if (isDisposed)
+				throw new ObjectDisposedException(nameof(PpsLuaTask));
+		} // proc CheckDisposed
 
 		private void VerifyThreadAccess()
 		{
@@ -166,10 +258,7 @@ namespace TecWare.PPSn
 				}
 				catch (Exception e)
 				{
-					if (currentException != null)
-						throw new InvalidOperationException(); // should never raised
-					currentException = e;
-					parent.Traces.AppendException(e);
+					SetException(e);
 				}
 
 				// mark task as executed
@@ -182,6 +271,14 @@ namespace TecWare.PPSn
 					d.Dispose();
 			}
 		} // proc ExecuteContinue
+
+		private void SetException(Exception e)
+		{
+			if (currentException != null)
+				throw new InvalidOperationException(); // should never raised
+			currentException = e;
+			parent.Traces.AppendException(e);
+		} // proc SetException
 
 		private void ExecuteException(object state)
 		{
@@ -213,6 +310,13 @@ namespace TecWare.PPSn
 				VerifyContinueTask(lastTaskId.Value, executedTaskId + 1);
 				taskCompletionSource.SetResult(currentResult);
 			}
+
+			// do not call dtor
+			GC.SuppressFinalize(this);
+			isDisposed = true;
+
+			// dispose context
+			DisposeContext();
 		} // proc ExecuteAwait
 
 		public PpsLuaTask Continue(object continueWith)
@@ -230,6 +334,7 @@ namespace TecWare.PPSn
 			if (continueWith == null)
 				throw new ArgumentNullException(nameof(continueWith));
 
+			CheckDisposed();
 			context.Post(ExecuteContinue, new ContinueTask() { Id = GetNextId(), Task = continueWith });
 			return this;
 		} // proc Continue
@@ -237,7 +342,10 @@ namespace TecWare.PPSn
 		private void CloseTaskList()
 		{
 			lock (executionLock)
+			{
+				CheckDisposed();
 				lastTaskId = currentTaskId;
+			}
 		} // proc CloseTaskList
 
 		public PpsLuaTask OnException(object onException)
@@ -264,7 +372,7 @@ namespace TecWare.PPSn
 
 			var taskComletionSource = new TaskCompletionSource<LuaResult>();
 			context.Post(ExecuteAwait, taskComletionSource);
-			return parent.AwaitTask(taskComletionSource.Task);
+			return taskComletionSource.Task.AwaitTask();
 		} // func Await
 
 		/// <summary>Is this thread cancelable.</summary>
@@ -452,7 +560,7 @@ namespace TecWare.PPSn
 			if (xCode == null)
 				return null;
 
-			return AwaitTask(RunAsync(() => CompileAsync(xCode, throwException, arguments)));
+			return RunAsync(() => CompileAsync(xCode, throwException, arguments)).AwaitTask();
 		} // func CreateChunk
 
 		/// <summary>Executes the script (the script is always execute in the UI thread).</summary>
@@ -512,162 +620,8 @@ namespace TecWare.PPSn
 
 		#region -- Async/Await Lua ------------------------------------------------------
 
-		#region -- class BackgroundThreadContext ----------------------------------------
-
-		/// <summary>For background task, we want one execution thread, that we do not
-		/// switch between thread, and destroy the assigned context to an thread</summary>
-		private sealed class BackgroundThreadContext : SynchronizationContext
-		{
-			#region -- struct CurrentTask -----------------------------------------------
-
-			private struct CurrentTask
-			{
-				public SendOrPostCallback Delegate { get; set; }
-				public object State { get; set; }
-				public ManualResetEventSlim WaitHandle { get; set; }
-			} // struct CurrentTask
-
-			#endregion
-
-			private struct NoneResult { }
-
-			private readonly Thread thread;
-			private readonly CancellationToken cancellationToken;
-
-			private readonly ManualResetEventSlim tasksFilled = new ManualResetEventSlim(false);
-			private readonly Queue<CurrentTask> tasks = new Queue<CurrentTask>();
-			private readonly TaskCompletionSource<NoneResult> taskCompletion = new TaskCompletionSource<NoneResult>();
-			private volatile bool doContinue = true;
-
-			public BackgroundThreadContext(string name, CancellationToken cancellationToken)
-			{
-				this.thread = new Thread(ExecuteMessageLoop)
-				{
-					Name = name,
-					IsBackground = true,
-					Priority = ThreadPriority.BelowNormal
-				};
-
-				// single thread apartment
-				thread.SetApartmentState(ApartmentState.STA);
-				this.cancellationToken = cancellationToken;
-
-				// mark thread as completed
-				cancellationToken.Register(tasksFilled.Set);
-				
-				thread.Start();
-			} // ctor
-
-			public void Finish()
-			{
-				lock (tasksFilled)
-				{
-					doContinue = false;
-					tasksFilled.Set();
-				}
-			} // proc Finish
-
-			private bool TryDequeueTask(out SendOrPostCallback d, out object state, out ManualResetEventSlim waitHandle)
-			{
-				lock (tasksFilled)
-				{
-					try
-					{
-						if (tasks.Count > 0)
-						{
-							var t = tasks.Dequeue();
-							d = t.Delegate;
-							state = t.State;
-							waitHandle = t.WaitHandle;
-							return true;
-						}
-						else
-						{
-							d = null;
-							state = null;
-							waitHandle = null;
-							return false;
-						}
-					}
-					finally
-					{
-						if (tasks.Count == 0 && doContinue)
-							tasksFilled.Reset();
-					}
-				}
-			} // proc DequeueTask
-
-			private void EnqueueTask(SendOrPostCallback d, object state, ManualResetEventSlim waitHandle)
-			{
-				lock (tasksFilled)
-				{
-					tasks.Enqueue(new CurrentTask() { Delegate = d, State = state, WaitHandle = waitHandle });
-					if (tasks.Count > 0)
-						tasksFilled.Set();
-				}
-			} // proc EnqueueTask
-
-			private void ExecuteMessageLoop()
-			{
-				var oldContext = SynchronizationContext.Current;
-				SynchronizationContext.SetSynchronizationContext(this);
-				try
-				{
-					while (doContinue)
-					{
-						if (cancellationToken.IsCancellationRequested)
-						{
-							taskCompletion.TrySetCanceled();
-							break;
-						}
-						else // execute tasks in this thread
-						{
-							while (TryDequeueTask(out var d, out var state, out var wait))
-							{
-								d(state);
-								if (wait != null)
-									wait.Set();
-							}
-						}
-
-						tasksFilled.Wait();
-					}
-
-					taskCompletion.TrySetResult(new NoneResult());
-				}
-				catch (Exception e)
-				{
-					taskCompletion.TrySetException(e);
-				}
-				finally
-				{
-					SynchronizationContext.SetSynchronizationContext(oldContext);
-				}
-			} // proc ExecuteMessageLoop
-
-			public override void Post(SendOrPostCallback d, object state)
-				=> EnqueueTask(d, state, null);
-			
-			public override void Send(SendOrPostCallback d, object state)
-			{
-				using (var waitHandle = new ManualResetEventSlim(false))
-				{
-					EnqueueTask(d, state, waitHandle);
-					waitHandle.Wait();
-				}
-			} // proc Send
-
-			public Task Task => taskCompletion.Task;
-		} // class BackgroundThreadContext
-
-		#endregion
-
 		private Task RunBackgroundInternal(Func<Task> task, string name, CancellationToken cancellationToken)
-		{
-			var backgroundThread = new BackgroundThreadContext(name, cancellationToken);
-			backgroundThread.Post(s => task().GetAwaiter().OnCompleted(backgroundThread.Finish), null);
-			return backgroundThread.Task;
-		} // func RunBackgroundInternal
+			=> new PpsSingleThreadSynchronizationContext(name, cancellationToken, task).Task;
 
 		/// <summary>Creates a new execution thread for the function in the background.</summary>
 		/// <param name="action">Action to run.</param>
@@ -692,53 +646,6 @@ namespace TecWare.PPSn
 
 		public Task<T> RunAsync<T>(Func<Task<T>> task)
 			=> RunAsync(task, "Worker", CancellationToken.None);
-
-		private void AwaitTaskInternal(INotifyCompletion awaiter)
-		{
-			var inUIThread = Dispatcher.Thread == Thread.CurrentThread;
-
-			if (inUIThread)
-			{
-				var frame = new DispatcherFrame();
-
-				// get the awaiter
-				awaiter.OnCompleted(() => frame.Continue = false);
-
-				// block ui for the task
-				using (BlockAllUI(frame))
-					Dispatcher.PushFrame(frame);
-			}
-		} // func RunTaskSyncInternal
-
-		public SynchronizationContext VerifySynchronizationContext()
-		{
-			var ctx = SynchronizationContext.Current;
-			if (ctx is DispatcherSynchronizationContext || ctx is BackgroundThreadContext)
-				return ctx;
-			else
-				throw new InvalidOperationException($"The synchronization context must be in the single-threaded.");
-		} // func VerifySynchronizationContext
-
-		/// <summary>Runs the async task in the ui thread (it simulates the async/await pattern for scripts).</summary>
-		/// <param name="task"></param>
-		/// <remarks></remarks>
-		public void AwaitTask(Task task)
-		{
-			if (!task.IsCompleted)
-				AwaitTaskInternal(task.GetAwaiter());
-			task.Wait();
-		} // proc AwaitTask
-
-		/// <summary>Runs the async task in the ui thread (it simulates the async/await pattern for scripts).</summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="task"></param>
-		/// <returns></returns>
-		public T AwaitTask<T>(Task<T> task)
-		{
-			if (!task.IsCompleted)
-				AwaitTaskInternal(task.GetAwaiter());
-			return task.Result;
-		} // proc AwaitTask
 
 		#endregion
 
@@ -813,7 +720,7 @@ namespace TecWare.PPSn
 			var webRequest = self.GetMemberValue(nameof(IPpsLuaRequest.Request)) as BaseWebRequest ?? Request;
 
 			// compile code, synchonize the code to this thread
-			var chunk = AwaitTask(CompileAsync(webRequest, new Uri(path, UriKind.Relative), true, new KeyValuePair<string, Type>("self", typeof(LuaTable))));
+			var chunk = CompileAsync(webRequest, new Uri(path, UriKind.Relative), true, new KeyValuePair<string, Type>("self", typeof(LuaTable))).AwaitTask();
 			return RunScript(chunk, self, true, self);
 		} // proc LuaRequire
 		
@@ -862,7 +769,7 @@ namespace TecWare.PPSn
 			int GetTaskType()
 			{
 				var t = func.GetType();
-				if (t.IsGenericTypeDefinition && t.GetGenericTypeDefinition() == typeof(Task<>))
+				if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Task<>) && t.GetGenericArguments()[0].IsPublic)
 					return 0;
 				else if (typeof(Task).IsAssignableFrom(t))
 					return 1;
@@ -877,7 +784,7 @@ namespace TecWare.PPSn
 				case PpsLuaTask lt:
 					return lt.Await();
 				case Task t:
-					AwaitTask(t);
+					t.AwaitTask();
 					switch (GetTaskType())
 					{
 						case 0:
@@ -889,10 +796,10 @@ namespace TecWare.PPSn
 								dynamic d = t;
 								return new LuaResult(d.Result);
 							}
-						case -1:
+						case 1:
 							return LuaResult.Empty;
 						default:
-							throw new NotImplementedException("");
+							throw new NotSupportedException($"Could not await for task ({func.GetType().Name}).");
 					}
 				case DispatcherOperation o:
 					LuaAwait(o.Task);
@@ -902,7 +809,7 @@ namespace TecWare.PPSn
 			}
 		} // func LuaRunTask
 
-		private PpsLuaTask CreateLuaTask(Func<CancellationToken, SynchronizationContext> createContext, object func, object[] args)
+		private PpsLuaTask CreateLuaTask(SynchronizationContext context, object func, object[] args)
 		{
 			var cancellationSource = (CancellationTokenSource)null;
 			var cancellationToken = CancellationToken.None;
@@ -924,8 +831,8 @@ namespace TecWare.PPSn
 
 			// create execution thread
 			var t = cancellationSource != null
-				? new PpsLuaTask(this, createContext(cancellationSource.Token), cancellationSource)
-				: new PpsLuaTask(this, createContext(cancellationToken), cancellationToken);
+				? new PpsLuaTask(this, context, cancellationSource, new LuaResult(args))
+				: new PpsLuaTask(this, context, cancellationToken, new LuaResult(args));
 
 			// start with the first function
 			return t.Continue(func);
@@ -937,7 +844,7 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		[LuaMember("run")]
 		public PpsLuaTask LuaRunBackground(object func, params object[] args)
-			=> CreateLuaTask(c => new BackgroundThreadContext("Lua Worker", c), func, args);
+			=> CreateLuaTask(null, func, args);
 
 		/// <summary>Executes the function or task, async in the ui thread.</summary>
 		/// <param name="func"></param>
@@ -946,21 +853,13 @@ namespace TecWare.PPSn
 		[LuaMember("async")]
 		public PpsLuaTask LuaAsync(object func, params object[] args)
 		{
-			SynchronizationContext GetContenxt(CancellationToken t)
+			SynchronizationContext GetUIContext()
 				=> Dispatcher.Thread == Thread.CurrentThread && SynchronizationContext.Current is DispatcherSynchronizationContext
 					? SynchronizationContext.Current
 					: new DispatcherSynchronizationContext(Dispatcher);
 
-			return CreateLuaTask(GetContenxt, func, args);
+			return CreateLuaTask(GetUIContext(), func, args);
 		} // func LuaRunBackground
-		
-		/// <summary>Executes the function in the UI thread.</summary>
-		/// <param name="func"></param>
-		/// <param name="args"></param>
-		/// <returns></returns>
-		[LuaMember("runUI")]
-		public LuaResult RunUI(object func, params object[] args)
-			=> Dispatcher.Invoke<LuaResult>(() => new LuaResult(Lua.RtInvoke(func, args)));
 
 		[LuaMember("startSync")]
 		public Task StartSync()

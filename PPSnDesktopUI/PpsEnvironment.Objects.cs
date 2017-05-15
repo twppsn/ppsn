@@ -1604,31 +1604,25 @@ namespace TecWare.PPSn
 						{
 							var linkTo = linked.LinkTo;
 							if (!linkTo.HasData)
-								linkTo.EnqueuePullAsync(null).Wait(); // not in foreground
+								linkTo.EnqueuePullAsync(null).AwaitTask(); // not in foreground
 						}
 					}
 
 					// update data block
-					var trans = foregroundTransaction ?? Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write).Result;
-					try
+					using (var trans = Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write, CancellationToken.None, foregroundTransaction).AwaitTask())
 					{
 						SaveRawDataAsync(c.ContentLength - headerLength, MimeType,
 							dst => c.Content.CopyTo(dst),
 							false
-						).Wait();
+						).AwaitTask();
 
 						SetValue(PpsStaticObjectColumnIndex.PulledRevId, pulledRevId, true);
 
 						// persist current object state
-						UpdateLocalAsync().Wait();
+						UpdateLocalAsync().AwaitTask();
 
 						if (foregroundTransaction == null)
 							trans.Commit();
-					}
-					finally
-					{
-						if (foregroundTransaction == null)
-							trans.Dispose();
 					}
 					return c.Content;
 				});

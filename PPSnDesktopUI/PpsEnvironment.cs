@@ -746,18 +746,13 @@ namespace TecWare.PPSn
 		private readonly object modeTransmissionLock = new object();
 		private ModeTransission modeTransmission = null;
 
-		private readonly Thread backgroundNotifier;
+		private readonly PpsSynchronizationContext backgroundNotifier;
 		private readonly ManualResetEventSlim backgroundNotifierModeTransmission;
 
-		private void InitBackgroundNotifier(out Thread backgroundNotifier, out ManualResetEventSlim backgroundNotifierModeTransmission)
+		private void InitBackgroundNotifier(out PpsSynchronizationContext backgroundNotifier, out ManualResetEventSlim backgroundNotifierModeTransmission)
 		{
 			backgroundNotifierModeTransmission = new ManualResetEventSlim(false);
-			backgroundNotifier = new Thread(ExecuteNotifierLoop)
-			{
-				IsBackground = true,
-				Name = $"Environment Notify {environmentId}"
-			};
-			backgroundNotifier.Start();
+			backgroundNotifier = new PpsSingleThreadSynchronizationContext($"Environment Notify {environmentId}", CancellationToken.None, () => ExecuteNotifierLoopAsync());
 		} // proc InitBackgroundNotifier
 
 		private void SetNewMode(PpsEnvironmentMode newMode)
@@ -812,11 +807,8 @@ namespace TecWare.PPSn
 			}
 		} // func TryGetModeTransmission
 
-		private void ExecuteNotifierLoop()
+		private async Task ExecuteNotifierLoopAsync()
 		{
-			// set a single threaded context
-			SynchronizationContext.SetSynchronizationContext(new BackgroundThreadContext("NotifierLoop", CancellationToken.None));
-
 			var state = PpsEnvironmentState.None;
 			ModeTransission currentTransmission = null;
 			while (true)
@@ -851,13 +843,13 @@ namespace TecWare.PPSn
 								currentTransmission.SetResult(PpsEnvironmentModeResult.Offline);
 								currentTransmission = null;
 							}
-							backgroundNotifierModeTransmission.Wait();
+							await Task.Run(new Action(backgroundNotifierModeTransmission.Wait));
 							break;
 
 						case PpsEnvironmentState.OfflineConnect:
 
 							// load application info
-							var xInfo = Request.GetXmlAsync("remote/info.xml", rootName: "ppsn").Result;
+							var xInfo = await Request.GetXmlAsync("remote/info.xml", rootName: "ppsn");
 							info.Update(xInfo);
 							if (info.IsModified)
 								info.Save();
@@ -872,7 +864,7 @@ namespace TecWare.PPSn
 							else
 							{
 								// try login for the user
-								var xUser = Request.GetXmlAsync("remote/login.xml", rootName: "user").Result;
+								var xUser = await Request.GetXmlAsync("remote/login.xml", rootName: "user");
 
 								// sync will write the header
 								var newUserId = xUser.GetAttribute("userId", -1);
@@ -887,7 +879,7 @@ namespace TecWare.PPSn
 									userName = newUserName;
 
 									masterData.SetUpdateUserInfo();
-									Dispatcher.BeginInvoke(
+									await Dispatcher.BeginInvoke(
 										new Action(() =>
 										{
 											OnPropertyChanged(nameof(UserId));
@@ -907,9 +899,11 @@ namespace TecWare.PPSn
 
 						case PpsEnvironmentState.Online:
 							// fetch next state on ws-info
-							if (!backgroundNotifierModeTransmission.Wait(3000))
+							if (!await Task.Run(() => backgroundNotifierModeTransmission.Wait(3000)))
+							{
 								using (var log = Traces.TraceProgress())
-									masterData.SynchronizationAsync(log).Wait();
+									await masterData.SynchronizationAsync(log);
+							}
 							break;
 
 						case PpsEnvironmentState.Shutdown:
@@ -948,11 +942,11 @@ namespace TecWare.PPSn
 							state = PpsEnvironmentState.OfflineConnect;
 						else
 							Traces.AppendException(ex, traceItemType: PpsTraceItemType.Warning);
-						Thread.Sleep(500);
+						await Task.Delay(500);
 					}
 				}
 			}
-		} // proc ExecuteNotifierLoop
+		} // proc ExecuteNotifierLoopAsync
 
 		private void SetTransmissionResult(ref ModeTransission currentTransmission, PpsEnvironmentModeResult result)
 		{
