@@ -571,27 +571,21 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public LuaResult RunScript(LuaChunk chunk, LuaTable env, bool throwException, params object[] arguments)
 		{
-			// check if we are in the UI context
-			if (Dispatcher.CheckAccess())
+			try
 			{
-				try
+				return chunk.Run(env, arguments);
+			}
+			catch (LuaException ex)
+			{
+				if (throwException)
+					throw;
+				else
 				{
-					return chunk.Run(env, arguments);
-				}
-				catch (LuaException ex)
-				{
-					if (throwException)
-						throw;
-					else
-					{
-						// notify exception as warning
-						Traces.AppendException(ex, "Execution failed.", PpsTraceItemType.Warning);
-						return LuaResult.Empty;
-					}
+					// notify exception as warning
+					Traces.AppendException(ex, "Execution failed.", PpsTraceItemType.Warning);
+					return LuaResult.Empty;
 				}
 			}
-			else
-				return Dispatcher.Invoke(() => RunScript(chunk, env, throwException, arguments));
 		} // func RunScript
 
 		/// <summary>Executes the script, and returns a value (the script is always execute in the UI thread).</summary>

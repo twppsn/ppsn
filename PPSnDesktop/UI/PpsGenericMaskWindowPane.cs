@@ -153,7 +153,7 @@ namespace TecWare.PPSn.UI
 			// Load mask
 			await base.LoadAsync(arguments);
 
-			await Dispatcher.InvokeAsync(InitializeData);
+			InitializeData();
 		} // proc LoadAsync
 
 		private void InitializeData()
@@ -234,10 +234,10 @@ namespace TecWare.PPSn.UI
 				PaneControl.Commands.Add(redoCommand);
 			}
 
-			OnPropertyChanged("UndoManager");
-			OnPropertyChanged("UndoView");
-			OnPropertyChanged("RedoView");
-			OnPropertyChanged("Data");
+			OnPropertyChanged(nameof(UndoManager));
+			OnPropertyChanged(nameof(UndoView));
+			OnPropertyChanged(nameof(RedoView));
+			OnPropertyChanged(nameof(Data));
 		} // porc InitializeData
 
 		public override async Task<bool> UnloadAsync(bool? commit = default(bool?))

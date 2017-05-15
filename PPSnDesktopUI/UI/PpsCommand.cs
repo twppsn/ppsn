@@ -329,9 +329,9 @@ namespace TecWare.PPSn.UI
 	/// <summary></summary>
 	public class PpsUICommandButton : PpsUICommand, IUriContext
 	{
-		public static readonly DependencyProperty DisplayTextProperty = DependencyProperty.Register("DisplayText", typeof(string), typeof(PpsUICommandButton));
-		public static readonly DependencyProperty DescriptionProperty = DependencyProperty.Register("Description", typeof(string), typeof(PpsUICommandButton));
-		public static readonly DependencyProperty ImageProperty = DependencyProperty.Register("Image", typeof(string), typeof(PpsUICommandButton));
+		public static readonly DependencyProperty DisplayTextProperty = DependencyProperty.Register(nameof(DisplayText), typeof(string), typeof(PpsUICommandButton));
+		public static readonly DependencyProperty DescriptionProperty = DependencyProperty.Register(nameof(Description), typeof(string), typeof(PpsUICommandButton));
+		public static readonly DependencyProperty ImageProperty = DependencyProperty.Register(nameof(Image), typeof(string), typeof(PpsUICommandButton));
 
 		//public static readonly DependencyProperty ImageProperty = DependencyProperty.Register("Image", typeof(object), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(ImagePropertyChanged));
 		//private static void ImagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -350,7 +350,7 @@ namespace TecWare.PPSn.UI
 		//	}
 		//} // proc ImagePropertyChanged
 
-		public static readonly DependencyProperty CommandProperty = DependencyProperty.Register("Command", typeof(ICommand), typeof(PpsUICommandButton));
+		public static readonly DependencyProperty CommandProperty = DependencyProperty.Register(nameof(Command), typeof(ICommand), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(null));
 
 		private Uri baseUri;
 

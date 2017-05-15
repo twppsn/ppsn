@@ -575,7 +575,7 @@ namespace TecWare.PPSn
 					await OnSystemOnlineAsync(); // mark as online
 					break;
 				case PpsEnvironmentModeResult.Offline:
-					OnSystemOfflineAsync().Wait();
+					OnSystemOfflineAsync().AwaitTask();
 					break;
 
 				case PpsEnvironmentModeResult.NeedsUpdate:

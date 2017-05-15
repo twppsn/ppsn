@@ -333,13 +333,11 @@ namespace TecWare.PPSn.UI
 		private ICollectionView LuaCreateView(object collection)
 		{
 			// get containted list
-			var listSource = collection as IListSource;
-			if (listSource != null)
+			if (collection is IListSource listSource)
 				collection = listSource.GetList();
 
 			// do we have a factory
-			var factory = collection as ICollectionViewFactory;
-			if (factory != null)
+			if (collection is ICollectionViewFactory factory)
 				return factory.CreateView();
 			else if (collection is IBindingList)
 				return new BindingListCollectionView((IBindingList)collection);
@@ -386,8 +384,6 @@ namespace TecWare.PPSn.UI
 
 		public virtual async Task LoadAsync(LuaTable arguments)
 		{
-			await Task.Yield(); // move to background
-
 			// save the arguments
 			this.arguments = arguments;
 
@@ -400,38 +396,35 @@ namespace TecWare.PPSn.UI
 
 			// Create the Wpf-Control
 			var xamlReader = new XamlReader();
-			await Dispatcher.InvokeAsync(() =>
+			control = xamlReader.LoadAsync(xaml.CreateReader()) as FrameworkElement;
+			OnControlCreated();
+
+			// Initialize the control and run the code in UI-Thread
+			if (code != null)
+				Environment.RunScript(code, this, true, this);
+
+			// init bindings
+			control.DataContext = this;
+
+			// notify if the title will be changed
+			if (control is PpsGenericWpfControl)
 			{
-				control = xamlReader.LoadAsync(xaml.CreateReader()) as FrameworkElement;
-				OnControlCreated();
-
-				// Initialize the control and run the code in UI-Thread
-				if (code != null)
-					Environment.RunScript(code, this, true, this);
-
-				// init bindings
-				control.DataContext = this;
-
-				// notify if the title will be changed
-				if (control is PpsGenericWpfControl)
-				{
-					var desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.TitleProperty, typeof(PpsGenericWpfControl));
-					desc.AddValueChanged(control, (sender, e) => OnPropertyChanged("Title"));
-					desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.SubTitleProperty, typeof(PpsGenericWpfControl));
-					desc.AddValueChanged(control, (sender, e) => OnPropertyChanged("SubTitle"));
-					desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.HasSideBarProperty, typeof(PpsGenericWpfControl));
-					desc.AddValueChanged(control, (sender, e) => OnPropertyChanged("HasSideBar"));
-				}
-
-				// notify changes on control
-				OnPropertyChanged("Control");
-				OnPropertyChanged("Commands");
-				OnPropertyChanged("Title");
-				OnPropertyChanged("SubTitle");
-				OnPropertyChanged("HasSideBar");
-			});
+				var desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.TitleProperty, typeof(PpsGenericWpfControl));
+				desc.AddValueChanged(control, (sender, e) => OnPropertyChanged(nameof(Title)));
+				desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.SubTitleProperty, typeof(PpsGenericWpfControl));
+				desc.AddValueChanged(control, (sender, e) => OnPropertyChanged(nameof(SubTitle)));
+				desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.HasSideBarProperty, typeof(PpsGenericWpfControl));
+				desc.AddValueChanged(control, (sender, e) => OnPropertyChanged(nameof(HasSideBar)));
+			}
+			
+			// notify changes on control
+			OnPropertyChanged(nameof(Control));
+			OnPropertyChanged(nameof(Commands));
+			OnPropertyChanged(nameof(Title));
+			OnPropertyChanged(nameof(SubTitle));
+			OnPropertyChanged(nameof(HasSideBar));
 		} // proc LoadAsync
-
+		
 		protected virtual void OnControlCreated()
 		{
 			Mouse.AddPreviewMouseDownHandler(Control, Control_MouseDownHandler);
@@ -615,6 +608,21 @@ namespace TecWare.PPSn.UI
 					throw new InvalidOperationException();
 			}
 		} // proc Commands_CollectionChanged
+
+		protected override IEnumerator LogicalChildren
+		{
+			get
+			{
+				// enumerate normal children
+				var e = base.LogicalChildren;
+				while(e.MoveNext())
+					yield return e.Current;
+
+				// enumerate commands
+				foreach (var cmd in commands)
+					yield return cmd;
+			}
+		} // prop LogicalChildren
 
 		#endregion
 

@@ -48,7 +48,7 @@ namespace TecWare.PPSn.UI
 		private int windowIndex = -1;                                       // settings key
 		private PpsWindowApplicationSettings settings;                      // current settings for the window
 
-		#region -- Ctor/Dtor ----------------------------------------------------------------
+		#region -- Ctor/Dtor ------------------------------------------------------------
 
 		public PpsMainWindow(int windowIndex)
 		{
@@ -150,7 +150,7 @@ namespace TecWare.PPSn.UI
 			#endregion
 
 			this.DataContext = this;
-
+			
 			Trace.TraceInformation("MainWindow[{0}] created.", windowIndex);
 
 			var descriptor = DependencyPropertyDescriptor.FromProperty(PpsCharmbarControl.ActualWidthProperty, typeof(PpsCharmbarControl));
@@ -180,7 +180,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Navigator.SearchBox ------------------------------------------------------
+		#region -- Navigator.SearchBox --------------------------------------------------
 
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
@@ -207,7 +207,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- charmbar ---------------------------------------------------------------
+		#region -- charmbar -------------------------------------------------------------
 
 		private void OnCharmbarActualWidthChanged(object sender, EventArgs e)
 		{
@@ -220,7 +220,7 @@ namespace TecWare.PPSn.UI
 		}
 
 		#endregion
-
+		
 		/// <summary>Settings of the current window.</summary>
 		public PpsWindowApplicationSettings Settings => settings;
 		/// <summary>Index of the current window</summary>
