@@ -30,7 +30,7 @@ pushContact = command(
 		
 pushContact = command(
     function (args) : void
-        runTask(PushDataAsync());
+        await(PushDataAsync());
     end
 );
 

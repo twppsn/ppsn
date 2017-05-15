@@ -62,8 +62,12 @@ namespace TecWare.PPSn.Server.Sql
 
 			public void Dispose()
 			{
+				// clear connection
+				connection?.Dispose();
+
+				// invoke disposed
 				Disposed?.Invoke(this, EventArgs.Empty);
-			}
+			} // proc Dispose
 
 			private static bool Connect(SqlConnectionStringBuilder connectionString, SqlConnection connection, IPpsPrivateDataContext identity, bool throwException)
 			{
