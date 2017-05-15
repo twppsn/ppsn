@@ -116,7 +116,7 @@ namespace TecWare.PPSn
 				if (newOnDelete > onDelete)
 					SetOnDelete(newOnDelete, false);
 			}
-			else if(newOnDelete != onDelete)
+			else if (newOnDelete != onDelete)
 			{
 				onDelete = newOnDelete;
 				SetDirty();
@@ -928,7 +928,7 @@ namespace TecWare.PPSn
 						}
 					}
 
-					transaction.AddRollbackOperation(()=>tags.AddRange(removeList));
+					transaction.AddRollbackOperation(() => tags.AddRange(removeList));
 					foreach (var c in removeList)
 						tags.Remove(c);
 				}
@@ -1066,7 +1066,7 @@ namespace TecWare.PPSn
 
 		public IEnumerator<PpsObjectTagView> GetEnumerator()
 		{
-			lock(parent.SyncRoot)
+			lock (parent.SyncRoot)
 			{
 				CheckTagsLoaded();
 
@@ -1285,7 +1285,7 @@ namespace TecWare.PPSn
 				sha256 = StuffIO.GetStreamHash(new MemoryStream(rawData));
 				return Task.CompletedTask;
 			}
-			
+
 			using (var hashStream = new HashStream(new FileStream(filename, FileMode.Open), HashStreamDirection.Read, false, HashAlgorithm.Create("SHA-256")))
 			{
 				rawData = hashStream.ReadInArray();
@@ -1853,7 +1853,7 @@ namespace TecWare.PPSn
 
 			// tags
 			tags.UpdateLocal(transaction);
-			
+
 			// reset the dirty flag
 			ResetDirty(transaction);
 		} // proc UpdateLocalInternal
@@ -2668,7 +2668,7 @@ order by t_liefnr.value desc
 			// update pane hint
 			if (!String.IsNullOrEmpty(paneUri))
 				oi["defaultPane"] = paneUri;
-			
+
 			// mark document as readed
 			var ri = removeObjectInfo.FindIndex(c => String.Compare(objectTyp, c, StringComparison.OrdinalIgnoreCase) == 0);
 			if (ri != -1)

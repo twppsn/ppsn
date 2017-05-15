@@ -145,16 +145,12 @@ namespace TecWare.PPSn
 		protected override void OnStartup(StartupEventArgs e)
 		{
 			ParseArguments(e, out var environment, out var userCred);
-			Task.Run(() =>
-			{
-				StartApplicationAsync(environment, userCred)
-					.ContinueWith(t =>
-					{
-						if (!t.Result)
-							Dispatcher.Invoke(Shutdown);
-					}
-				);
-			}
+			StartApplicationAsync(environment, userCred)
+				.ContinueWith(t =>
+				{
+					if (!t.Result)
+						Dispatcher.Invoke(Shutdown);
+				}
 			);
 
 			base.OnStartup(e);

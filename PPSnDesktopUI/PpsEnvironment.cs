@@ -814,6 +814,9 @@ namespace TecWare.PPSn
 
 		private void ExecuteNotifierLoop()
 		{
+			// set a single threaded context
+			SynchronizationContext.SetSynchronizationContext(new BackgroundThreadContext("NotifierLoop", CancellationToken.None));
+
 			var state = PpsEnvironmentState.None;
 			ModeTransission currentTransmission = null;
 			while (true)
