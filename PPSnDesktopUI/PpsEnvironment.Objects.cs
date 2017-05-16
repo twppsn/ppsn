@@ -1563,7 +1563,14 @@ namespace TecWare.PPSn
 				cmd.AddParameter("@OldId", DbType.Int64, objectId);
 				await cmd.ExecuteNonQueryExAsync();
 
-				objectId = newObjectId; // todo: generic transaction will be a good idea
+				// replace id
+				var oldObjectId = objectId;
+				objectId = newObjectId;
+				trans.AddRollbackOperation(() => objectId = oldObjectId);
+
+				// replace cache
+				Environment.ReplaceObjectId(oldObjectId, newObjectId);
+				trans.AddRollbackOperation(() => Environment.ReplaceObjectId(newObjectId, oldObjectId));
 			}
 		} // proc UpdateObjectId
 
@@ -2781,6 +2788,18 @@ order by t_liefnr.value desc
 					?? UpdateCacheItem(new PpsObject(this, reader));
 			}
 		} // func GetCachedObjectOrCreate
+
+		internal void ReplaceObjectId(long oldObjectId, long newObjectId)
+		{
+			lock (objectStoreLock)
+			{
+				if (objectStoreById.TryGetValue(oldObjectId, out var idx))
+				{
+					objectStoreById.Remove(oldObjectId);
+					objectStoreById[newObjectId] = idx;
+				}
+			}
+		} // proc ReplaceObjectId
 
 		[LuaMember]
 		public PpsObject GetObject(long localId, bool throwException = false)

@@ -349,19 +349,17 @@ namespace TecWare.PPSn.UI
 
 			if (await pane.UnloadAsync())
 			{
-				await Dispatcher.InvokeAsync(() =>
+				if (CurrentPane == pane)
 				{
-					if (CurrentPane == pane)
-					{
-						if (panes.Count > 1)
-							ActivateNextPane(true);
-						else
-							SetValue(CurrentPaneKey, null);
-					}
+					if (panes.Count > 1)
+						ActivateNextPane(true);
+					else
+						SetValue(CurrentPaneKey, null);
+				}
 
-					panes.RemovePane(pane);
-				});
+				panes.RemovePane(pane);
 				pane.Dispose();
+
 				ShowSideBarBackground();
 				return true;
 			}

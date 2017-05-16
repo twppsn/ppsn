@@ -86,7 +86,6 @@ namespace TecWare.PPSn.UI
 		{
 			async Task CreateNewObjectAsync()
 			{
-
 				// load schema
 				var documentType = (string)arguments.GetMemberValue("createNew");
 				if (documentType == null)
@@ -246,6 +245,9 @@ namespace TecWare.PPSn.UI
 				await CommitEditAsync();
 
 			data.UnregisterOwner(this);
+
+			obj = null;
+			data = null;
 
 			return await base.UnloadAsync(commit);
 		} // func UnloadAsync
