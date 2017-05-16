@@ -166,7 +166,7 @@ namespace TecWare.PPSn.Data
 			RaiseCanRedo();
 			RaiseCollectionReset();
 		} // proc Clear
-		
+
 		#endregion
 
 		#region -- Undo/Redo --------------------------------------------------------------
@@ -193,13 +193,13 @@ namespace TecWare.PPSn.Data
 			RaiseCanRedo();
 			RaiseCanUndo();
 			RaiseCollectionReset();
-    } // proc Undo
+		} // proc Undo
 
 		public void Redo(int count = 1)
 		{
 			if (!CanRedo)
 				return;
-			
+
 			SuspendAppend();
 			try
 			{
@@ -217,7 +217,7 @@ namespace TecWare.PPSn.Data
 			RaiseCanRedo();
 			RaiseCanUndo();
 			RaiseCollectionReset();
-    } // proc Redo
+		} // proc Redo
 
 		private void RaiseCanUndo()
 			=> CanUndoChanged?.Invoke(this, EventArgs.Empty);
@@ -238,7 +238,8 @@ namespace TecWare.PPSn.Data
 				yield return c;
 		} // func GetEnumerator
 
-		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() { return GetEnumerator(); }
+		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+			=> GetEnumerator();
 
 		#endregion
 

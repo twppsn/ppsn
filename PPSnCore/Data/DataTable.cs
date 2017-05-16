@@ -1447,10 +1447,7 @@ namespace TecWare.PPSn.Data
 
 		protected PpsDataFilter(PpsDataTable table)
 		{
-			if (table == null)
-				throw new ArgumentNullException();
-
-			this.table = table;
+			this.table = table ?? throw new ArgumentNullException();
 			this.rows = new List<PpsDataRow>();
 
 			evCollectionListener = TableNotifyCollectionChanged;
@@ -1498,7 +1495,6 @@ namespace TecWare.PPSn.Data
 			{
 				case NotifyCollectionChangedAction.Reset:
 					Refresh();
-					OnCollectionReset();
 					break;
 				case NotifyCollectionChangedAction.Add:
 					{

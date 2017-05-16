@@ -574,6 +574,9 @@ namespace TecWare.PPSn.Data
 				? obj2.Equals(this)
 				: base.Equals(obj);
 
+		public override int GetHashCode() 
+			=> base.GetHashCode();
+
 		private static PpsDataRowState ReadRowState(XElement xRow)
 		{
 			var rowState = xRow.GetAttribute(xnDataRowState, 0); // optional state of the row
