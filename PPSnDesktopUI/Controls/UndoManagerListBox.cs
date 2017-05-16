@@ -33,8 +33,8 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Special list box to show the undo/redo-stack</summary>
 	public class UndoManagerListBox : ListBox
 	{
-		private static readonly DependencyProperty FooterTextProperty = DependencyProperty.Register("FooterText", typeof(string), typeof(UndoManagerListBox));
-		private static readonly DependencyProperty IsRedoListProperty = DependencyProperty.Register("IsRedoList", typeof(bool), typeof(UndoManagerListBox), new PropertyMetadata(false));
+		public static readonly DependencyProperty FooterTextProperty = DependencyProperty.Register("FooterText", typeof(string), typeof(UndoManagerListBox));
+		public static readonly DependencyProperty IsRedoListProperty = DependencyProperty.Register("IsRedoList", typeof(bool), typeof(UndoManagerListBox), new FrameworkPropertyMetadata(false));
 
 		private int curStackPosition = -1;
 
@@ -68,20 +68,19 @@ namespace TecWare.PPSn.Controls
 
 		private void OnItemContainerGeneratorStatusChanged(object sender, EventArgs e)
 		{
-			if (ItemContainerGenerator.Status == System.Windows.Controls.Primitives.GeneratorStatus.ContainersGenerated)
+			if (ItemContainerGenerator.Status == GeneratorStatus.ContainersGenerated)
 			{
 				ItemContainerGenerator.StatusChanged -= OnItemContainerGeneratorStatusChanged;
 				ChangeSelectionFromIndex(0);
 			}
-		}
+		} // proc OnItemContainerGeneratorStatusChanged
 
 		private void StartUndoRedoAction()
 		{
 			ClosePopUp();
 
 			// Goto item
-			var step = ItemContainerGenerator.Items[curStackPosition] as IPpsUndoStep;
-			if (step != null)
+			if (ItemContainerGenerator.Items[curStackPosition] is IPpsUndoStep step)
 				step.Goto();
 			else
 				Trace.TraceWarning("Undo-Stack is invalid. Step is missing.");
@@ -117,13 +116,13 @@ namespace TecWare.PPSn.Controls
 		private void ChangeSelectionFromIndex(int itemIndex)
 		{
 			// unselect items above
-			for (int i = itemIndex + 1; i <= curStackPosition; i++)
+			for (var i = itemIndex + 1; i <= curStackPosition; i++)
 			{
 				var lbi = (ListBoxItem)(ItemContainerGenerator.ContainerFromIndex(i));
 				lbi.IsSelected = false;
 			}
 			// select items below
-			for (int i = curStackPosition + 1; i <= itemIndex; i++)
+			for (var i = curStackPosition + 1; i <= itemIndex; i++)
 			{
 				var lbi = (ListBoxItem)(ItemContainerGenerator.ContainerFromIndex(i));
 				lbi.IsSelected = true;

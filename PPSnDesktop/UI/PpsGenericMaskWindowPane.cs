@@ -162,7 +162,7 @@ namespace TecWare.PPSn.UI
 			using (undoView.DeferRefresh())
 			{
 				undoView.Source = data.UndoManager;
-				undoView.SortDescriptions.Add(new SortDescription("Index", ListSortDirection.Descending));
+				undoView.SortDescriptions.Add(new SortDescription(nameof(IPpsUndoStep.Index), ListSortDirection.Descending));
 				undoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Undo;
 			}
 
@@ -170,6 +170,7 @@ namespace TecWare.PPSn.UI
 			using (redoView.DeferRefresh())
 			{
 				redoView.Source = data.UndoManager;
+				redoView.SortDescriptions.Add(new SortDescription(nameof(IPpsUndoStep.Index), ListSortDirection.Ascending));
 				redoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Redo;
 			}
 
@@ -201,7 +202,7 @@ namespace TecWare.PPSn.UI
 					}
 				};
 
-				listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.UndoManager"));
+				listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.UndoView"));
 
 				var redoCommand = new PpsUISplitCommandButton()
 				{
@@ -221,13 +222,13 @@ namespace TecWare.PPSn.UI
 					{
 						Child = listBox = new UndoManagerListBox()
 						{
-							IsRedoList=true,
+							IsRedoList = true,
 							Style = (Style)App.Current.FindResource("UndoManagerListBoxStyle")
 						}
 					}
 				};
 
-				listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.UndoManager"));
+				listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.RedoView"));
 
 				PaneControl.Commands.Add(undoCommand);
 				PaneControl.Commands.Add(redoCommand);
