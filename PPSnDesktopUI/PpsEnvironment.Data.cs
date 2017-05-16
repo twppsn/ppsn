@@ -1964,7 +1964,8 @@ namespace TecWare.PPSn
 
 			protected override void Dispose(bool disposing)
 			{
-				rootTransaction.JoinedTransaction = null;
+				if (rootTransaction != null)
+					rootTransaction.JoinedTransaction = null;
 				base.Dispose(disposing);
 			} // proc Dispose
 

@@ -1295,6 +1295,8 @@ namespace TecWare.PPSn
 		}
 
 		public bool IsLoaded => rawData != null;
+
+		public byte[] RawData => rawData;
 	} // class PpsObjectBlobData
 
 	#endregion
