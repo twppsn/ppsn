@@ -262,7 +262,7 @@ namespace TecWare.PPSn
 			}
 			catch (DbException e)
 			{
-				e.Data[CommandTextKey] = InsertDbParams(command);
+				e.UpdateExceptionWithCommandInfo(command);
 				throw;
 			}
 		} // func ExecuteReaderEx
@@ -275,7 +275,7 @@ namespace TecWare.PPSn
 			}
 			catch (DbException e)
 			{
-				e.Data[CommandTextKey] = InsertDbParams(command);
+				e.UpdateExceptionWithCommandInfo(command);
 				throw;
 			}
 		} // func ExecuteReaderEx
@@ -288,7 +288,7 @@ namespace TecWare.PPSn
 			}
 			catch (DbException e)
 			{
-				e.Data[CommandTextKey] = InsertDbParams(command);
+				e.UpdateExceptionWithCommandInfo(command);
 				throw;
 			}
 		} // func ExecuteReaderEx
@@ -301,7 +301,7 @@ namespace TecWare.PPSn
 			}
 			catch (DbException e)
 			{
-				e.Data[CommandTextKey] = InsertDbParams(command);
+				e.UpdateExceptionWithCommandInfo(command);
 				throw;
 			}
 		} // func ExecuteReaderEx
@@ -314,7 +314,7 @@ namespace TecWare.PPSn
 			}
 			catch (DbException e)
 			{
-				e.Data[CommandTextKey] = InsertDbParams(command);
+				e.UpdateExceptionWithCommandInfo(command);
 				throw;
 			}
 		} // func ExecuteScalarEx
@@ -327,10 +327,21 @@ namespace TecWare.PPSn
 			}
 			catch (DbException e)
 			{
-				e.Data[CommandTextKey] = InsertDbParams(command);
+				e.UpdateExceptionWithCommandInfo(command);
 				throw;
 			}
 		} // func ExecuteScalarEx
+
+		public static void UpdateExceptionWithCommandInfo(this Exception e, DbCommand cmd)
+		{
+			var ret = cmd.CommandText;
+#pragma warning disable IDE0007 // Use implicit type
+			foreach (DbParameter parameter in cmd.Parameters)
+#pragma warning restore IDE0007 // Use implicit type
+				ret = ret.Replace(parameter.ParameterName, parameter.Value.ToString());
+
+			e.Data[CommandTextKey] = ret;
+		} // proc UpdateExceptionWithCommandInfo
 
 		public static bool DbNullOnNeg(long value)
 			=> value < 0;
@@ -343,15 +354,6 @@ namespace TecWare.PPSn
 
 		public static object DbNullIf<T>(this T value, Func<T, bool> @null)
 			=> @null(value) ? (object)DBNull.Value : value;
-
-		private static string InsertDbParams(DbCommand cmd)
-		{
-			var ret = cmd.CommandText;
-			foreach (DbParameter parameter in cmd.Parameters)
-				ret = ret.Replace(parameter.ParameterName, parameter.Value.ToString());
-
-			return ret;
-		}
 	} // class StuffDB
 
 	#endregion

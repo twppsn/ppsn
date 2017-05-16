@@ -88,21 +88,17 @@ namespace TecWare.PPSn
 		{
 			private WeakReference<PpsLuaTask> task;
 			private Thread queueThread;
-			private bool doContinue = true;
-
+			
 			public PpsLuaTaskSynchronizationContext(PpsLuaTask luaTask)
-				: base(luaTask.cancellationToken)
 			{
 				this.task = new WeakReference<PpsLuaTask>(luaTask);
+				luaTask.cancellationToken.Register(Dispose);
 
 				ThreadPool.QueueUserWorkItem(ExecuteMessageLoop);
 			} // ctor
 
 			public void Dispose()
-			{
-				doContinue = false;
-				TasksFilled.Set();
-			} // proc Dispose
+				=> Stop();
 
 			private void ExecuteMessageLoop(object state)
 			{
@@ -114,18 +110,8 @@ namespace TecWare.PPSn
 
 				try
 				{
-					while (Continue)
-					{
-						if (CancellationToken.IsCancellationRequested)
-						{
-							doContinue = false;
-							break;
-						}
-						else // execute tasks in this thread
-							ProcessMessageLoopUnsafe();
-
-						TasksFilled.Wait();
-					}
+					// execute tasks in this thread
+					ProcessMessageLoopUnsafe(CancellationToken.None);
 				}
 				catch (Exception e)
 				{
@@ -141,7 +127,6 @@ namespace TecWare.PPSn
 			} // proc ExecuteMessageLoop
 
 			protected override Thread QueueThread => queueThread;
-			protected override bool Continue => doContinue;
 		} // class PpsLuaTaskSynchronizationContext
 
 		#endregion

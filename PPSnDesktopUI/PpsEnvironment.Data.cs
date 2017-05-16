@@ -1403,7 +1403,7 @@ namespace TecWare.PPSn
 					{
 						var path = r.GetString(0);
 						var request = environment.GetProxyRequest(new Uri(path, UriKind.Relative));
-						request.SetUpdateOfflineCache(c => UpdateOfflineData(path, c));
+						request.SetUpdateOfflineCache(c => UpdateOfflineDataAsync(path, c).AwaitTask());
 						request.Enqueue(PpsLoadPriority.Background, true);
 					}
 				}
@@ -1631,22 +1631,22 @@ namespace TecWare.PPSn
 			return false;
 		} // func TryGetOfflineCacheFile
 
-		private Stream UpdateOfflineData(string path, IPpsOfflineItemData item)
+		private async Task<Stream> UpdateOfflineDataAsync(string path, IPpsOfflineItemData item)
 		{
-			var outputStream = item.Content;
-
 			if (String.IsNullOrEmpty(path))
 				throw new ArgumentNullException(nameof(path));
 			if (item == null)
 				throw new ArgumentNullException(nameof(item));
 
-			using (var transaction = connection.BeginTransaction())
+			var outputStream = item.Content;
+
+			using (var transaction = await CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
 			{
 				if (String.IsNullOrEmpty(item.ContentType))
 					throw new ArgumentNullException(nameof(item.ContentType));
 
 				// update data base
-				using (var command = new SQLiteCommand(
+				using (var command = transaction.CreateNativeCommand(
 						"UPDATE [main].[OfflineCache] " +
 							"SET [ContentType] = @contentType, " +
 								"[ContentEncoding] = @contentEncoding, " +
@@ -1654,18 +1654,18 @@ namespace TecWare.PPSn
 								"[LocalContentLastModification] = @lastModified, " +
 								"[Content] = @content, " +
 								"[LocalPath] = @LocalPath " +
-							"WHERE [Path] = @path;", connection, transaction
+							"WHERE [Path] = @path;"
 						)
 					)
 				{
 
-					command.Parameters.Add("@path", DbType.String).Value = path;
-					command.Parameters.Add("@contentType", DbType.String).Value = item.ContentType; // split mime from rest
-					command.Parameters.Add("@contentEncoding", DbType.String).Value = DBNull.Value;
-					command.Parameters.Add("@contentSize", DbType.Int32).Value = item.ContentLength;
-					command.Parameters.Add("@lastModified", DbType.DateTime).Value = item.LastModification;
-					var parameterContent = command.Parameters.Add("@content", DbType.Binary);
-					var parameterLocalPath = command.Parameters.Add("@LocalPath", DbType.String);
+					command.AddParameter("@path", DbType.String).Value = path;
+					command.AddParameter("@contentType", DbType.String).Value = item.ContentType; // split mime from rest
+					command.AddParameter("@contentEncoding", DbType.String).Value = DBNull.Value;
+					command.AddParameter("@contentSize", DbType.Int32).Value = item.ContentLength;
+					command.AddParameter("@lastModified", DbType.DateTime).Value = item.LastModification;
+					var parameterContent = command.AddParameter("@content", DbType.Binary);
+					var parameterLocalPath = command.AddParameter("@LocalPath", DbType.String);
 
 					if (item.ContentLength > 1 << 20) // create a link
 					{
@@ -1676,13 +1676,13 @@ namespace TecWare.PPSn
 
 						if (item.Content is IInternalFileCacheStream fcs)
 						{
-							fcs.MoveTo(fileInfo.FullName);
+							await Task.Run(() => fcs.MoveTo(fileInfo.FullName));
 							// dispose is done in moveto
 						}
 						else
 						{
 							using (var dst = fileInfo.Create())
-								item.Content.CopyTo(dst);
+								await item.Content.CopyToAsync(dst);
 							item.Content.Dispose();
 						}
 
@@ -1694,7 +1694,7 @@ namespace TecWare.PPSn
 					}
 					else // simple data into an byte array
 					{
-						var contentBytes = item.Content.ReadInArray();
+						var contentBytes = await item.Content.ReadInArrayAsync();
 						parameterContent.Value = contentBytes;
 						parameterLocalPath.Value = DBNull.Value;
 
@@ -1704,11 +1704,11 @@ namespace TecWare.PPSn
 							throw new ArgumentOutOfRangeException("content", String.Format("Expected {0:N0} bytes, but received {1:N0} bytes.", item.ContentLength, contentBytes.Length));
 					}
 
-					var affectedRows = command.ExecuteNonQueryEx();
+					var affectedRows = await command.ExecuteNonQueryExAsync();
 					if (affectedRows != 1)
 					{
 						var exc = new Exception(String.Format("The insert of item \"{0}\" affected an unexpected number ({1}) of rows.", path, affectedRows));
-						exc.Data["CommandText"] = command.CommandText;
+						exc.UpdateExceptionWithCommandInfo(command);
 						throw exc;
 					}
 				}

@@ -37,21 +37,25 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		private readonly CancellationToken cancellationToken;
-
 		private readonly ManualResetEventSlim tasksFilled = new ManualResetEventSlim(false);
 		private readonly Queue<CurrentTask> tasks = new Queue<CurrentTask>();
+		private volatile bool doContinue = true;
 
-		public PpsSynchronizationContext(CancellationToken cancellationToken)
+		public PpsSynchronizationContext()
 		{
-			this.cancellationToken = cancellationToken;
-
-			// mark thread as completed
-			cancellationToken.Register(tasksFilled.Set);
 		} // ctor
 
 		public override SynchronizationContext CreateCopy()
 			=> this;
+
+		protected void Stop()
+		{
+			lock (tasksFilled)
+			{
+				doContinue = false;
+				PulseTaskQueue();
+			}
+		} // proc Stop
 
 		private void VerifyThreadAccess()
 		{
@@ -59,7 +63,7 @@ namespace TecWare.PPSn
 				throw new InvalidOperationException($"Process of the queued task is only allowed in the same thread.(queue threadid {QueueThread.ManagedThreadId}, caller thread id: {Thread.CurrentThread.ManagedThreadId})");
 		} // proc VerifyThreadAccess
 
-		private bool TryDequeueTask(out SendOrPostCallback d, out object state, out ManualResetEventSlim waitHandle)
+		private bool TryDequeueTask(CancellationToken cancellationToken, out SendOrPostCallback d, out object state, out ManualResetEventSlim waitHandle)
 		{
 			lock (tasksFilled)
 			{
@@ -83,7 +87,7 @@ namespace TecWare.PPSn
 				}
 				finally
 				{
-					if (tasks.Count == 0 && Continue)
+					if (tasks.Count == 0 && Continue && !cancellationToken.IsCancellationRequested)
 						tasksFilled.Reset();
 				}
 			}
@@ -99,20 +103,46 @@ namespace TecWare.PPSn
 			}
 		} // proc EnqueueTask
 
-		protected void ProcessMessageLoopUnsafe()
+		protected void PulseTaskQueue()
 		{
-			while (TryDequeueTask(out var d, out var state, out var wait))
+			lock (tasksFilled)
+				tasksFilled.Set();
+		} // proc PulseTaskQueue
+
+		protected void ProcessMessageLoopUnsafe(CancellationToken cancellationToken)
+		{
+			// if cancel, then run the loop, we avoid an TaskCanceledException her
+			cancellationToken.Register(PulseTaskQueue);
+
+			// process messages until cancel
+			while (!cancellationToken.IsCancellationRequested && Continue)
 			{
-				d(state);
-				if (wait != null)
-					wait.Set();
+				// process queue
+				while (TryDequeueTask(cancellationToken, out var d, out var state, out var wait))
+				{
+					d(state);
+					if (wait != null)
+						wait.Set();
+				}
+
+				// wait for event
+				tasksFilled.Wait();
 			}
 		} // proc ProcessMessageLoop
 
-		public void ProcessMessageLoop()
+		public void ProcessMessageLoop(INotifyCompletion onCompletion)
+		{
+			using (var cancellationTokenSource = new CancellationTokenSource())
+			{
+				onCompletion.OnCompleted(cancellationTokenSource.Cancel);
+				ProcessMessageLoop(cancellationTokenSource.Token);
+			}
+		} // proc ProcessMessageLoop
+
+		public void ProcessMessageLoop(CancellationToken cancellationToken)
 		{
 			VerifyThreadAccess();
-			ProcessMessageLoopUnsafe();
+			ProcessMessageLoopUnsafe(cancellationToken);
 		} // proc ProcessMessageLoop
 
 		public sealed override void Post(SendOrPostCallback d, object state)
@@ -127,11 +157,8 @@ namespace TecWare.PPSn
 			}
 		} // proc Send
 
-		protected ManualResetEventSlim TasksFilled => tasksFilled;
 		protected abstract Thread QueueThread { get; }
-		protected abstract bool Continue { get; }
-
-		public CancellationToken CancellationToken => cancellationToken;
+		protected bool Continue => doContinue;
 	} // class PpsSynchronizationContext
 
 	#endregion
@@ -145,13 +172,13 @@ namespace TecWare.PPSn
 		private struct NoneResult { }
 
 		private readonly Thread thread;
-		private volatile bool doContinue = true;
-
+		
 		private readonly TaskCompletionSource<NoneResult> taskCompletion = new TaskCompletionSource<NoneResult>();
 
 		public PpsSingleThreadSynchronizationContext(string name, CancellationToken cancellationToken, Func<Task> mainProc)
-			: base(cancellationToken)
 		{
+			cancellationToken.Register(Finish);
+
 			this.thread = new Thread(ExecuteMessageLoop)
 			{
 				Name = name,
@@ -170,13 +197,7 @@ namespace TecWare.PPSn
 		} // ctor
 
 		public void Finish()
-		{
-			lock (TasksFilled)
-			{
-				doContinue = false;
-				TasksFilled.Set();
-			}
-		} // proc Finish
+			=> Stop();
 
 		private void ExecuteMessageLoop()
 		{
@@ -184,20 +205,7 @@ namespace TecWare.PPSn
 			SetSynchronizationContext(this);
 			try
 			{
-				while (doContinue)
-				{
-					if (CancellationToken.IsCancellationRequested)
-					{
-						doContinue = false;
-						taskCompletion.TrySetCanceled();
-						break;
-					}
-					else // execute tasks in this thread
-						ProcessMessageLoopUnsafe();
-
-					TasksFilled.Wait();
-				}
-
+				ProcessMessageLoopUnsafe(CancellationToken.None);
 				taskCompletion.TrySetResult(new NoneResult());
 			}
 			catch (Exception e)
@@ -212,7 +220,6 @@ namespace TecWare.PPSn
 
 		public Task Task => taskCompletion.Task;
 
-		protected override bool Continue => doContinue;
 		protected override Thread QueueThread => thread;
 	} // class PpsSingleThreadSynchronizationContext
 
@@ -234,7 +241,7 @@ namespace TecWare.PPSn
 					Dispatcher.PushFrame(frame);
 			}
 			else if (SynchronizationContext.Current is PpsSynchronizationContext ctx)
-				ctx.ProcessMessageLoop();
+				ctx.ProcessMessageLoop(awaiter);
 		} // func RunTaskSyncInternal
 
 		public static SynchronizationContext VerifySynchronizationContext()
