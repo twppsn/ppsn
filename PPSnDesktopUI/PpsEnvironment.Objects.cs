@@ -1657,8 +1657,12 @@ namespace TecWare.PPSn
 				Monitor.Enter(objectLock);
 				try
 				{
+					// update local database and object data
+					await data.CommitAsync();
+
 					// first build object data
-					var headerData = Encoding.Unicode.GetBytes(ToXml().ToString(SaveOptions.DisableFormatting));
+					var xHeaderData = ToXml();
+					var headerData = Encoding.Unicode.GetBytes(xHeaderData.ToString(SaveOptions.DisableFormatting));
 					request.Headers["ppsn-header-length"] = headerData.Length.ChangeType<string>();
 
 					// write data

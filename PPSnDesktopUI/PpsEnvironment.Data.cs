@@ -3033,8 +3033,8 @@ namespace TecWare.PPSn
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		private readonly PpsEnvironment environment;
-		private readonly List<WebLoadRequest> downloadList = new List<WebLoadRequest>();
-		private int currentForegroundCount = 0;
+		private readonly List<WebLoadRequest> downloadList = new List<WebLoadRequest>(); // current list of request
+		private int currentForegroundCount = 0; // web requests, that marked as foreground tasks (MoveToForeground moves to this point)
 
 		private readonly PpsSynchronizationContext executeLoadQueue;
 		private readonly ManualResetEventSlim executeLoadIsRunning = new ManualResetEventSlim(false);
@@ -3086,7 +3086,7 @@ namespace TecWare.PPSn
 				{
 					var r = downloadList[0];
 					if (currentForegroundCount == 0)
-						currentForegroundCount = 1; // mark as foreground
+						currentForegroundCount = 1; // mark as foreground, that no other request moves before
 					return r;
 				}
 			}
@@ -3142,8 +3142,12 @@ namespace TecWare.PPSn
 			lock (downloadList)
 			{
 				var t = (WebLoadRequest)task;
-				if (downloadList.Remove(t))
+				var idx = downloadList.IndexOf(t);
+				if (idx >= currentForegroundCount) // check if the task is already in foreground
+				{
+					downloadList.RemoveAt(idx);
 					downloadList.Insert(currentForegroundCount++, t);
+				}
 			}
 			OnCollectionChanged();
 		} // proc MoveToForeground
@@ -3154,7 +3158,7 @@ namespace TecWare.PPSn
 			{
 				lock (downloadList)
 				{
-					// priority section
+					// priority section, and not before the current requests
 					var i = currentForegroundCount;
 					while (i < downloadList.Count && downloadList[i].Priority <= task.Priority)
 						i++;
