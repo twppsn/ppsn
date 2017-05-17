@@ -119,7 +119,7 @@
     <Compile Include="Stuff.cs" />
     <Compile Include="Threading.cs" />
     <Compile Include="UI\Converter.cs" />
-    <Compile Include="UI\PpsAttachmentsControl.xaml.cs">
+    <Compile Include="Controls\PpsAttachmentsControl.xaml.cs">
       <DependentUpon>PpsAttachmentsControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="UI\PpsExceptionDialog.xaml.cs">
@@ -179,7 +179,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="UI\PpsAttachmentsControl.xaml">
+    <Page Include="Controls\PpsAttachmentsControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
