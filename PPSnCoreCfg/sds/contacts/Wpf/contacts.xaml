@@ -241,15 +241,15 @@
                 </Grid>
 	            </TabItem>
             <TabItem Header="Sonstiges">
-				<ui:PpsAttachmentsControl VerticalAlignment="Top" HorizontalAlignment="Left">
-					<ui:PpsAttachmentsControl.AttachmentsSource>
+				<uiC:PpsAttachmentsControl VerticalAlignment="Top" HorizontalAlignment="Left">
+					<uiC:PpsAttachmentsControl.AttachmentsSource>
 						<Binding Path="Data.Head.First.Zusa">
 							<Binding.Converter>
-								<ui:PpsDataTableAttachmentConverter LinkColumnName="ObjkId" />
+								<uiC:PpsDataTableAttachmentConverter LinkColumnName="ObjkId" />
 							</Binding.Converter>
 						</Binding>
-					</ui:PpsAttachmentsControl.AttachmentsSource>
-				</ui:PpsAttachmentsControl>
+					</uiC:PpsAttachmentsControl.AttachmentsSource>
+				</uiC:PpsAttachmentsControl>
 			</TabItem>
         </TabControl>
     </Grid>
