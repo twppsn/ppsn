@@ -32,10 +32,8 @@ namespace TecWare.PPSn.Controls
 	public interface IPpsAttachmentItem
 	{
 		bool Remove();
-
 		string Name { get; }
 		string MimeType { get; }
-
 		object Data { get; }
 	} // interface IPpsAttachmentItem
 
@@ -61,6 +59,8 @@ namespace TecWare.PPSn.Controls
 			InitializeComponent();
 
 			this.getEnvironment = new Lazy<PpsEnvironment>(() => PpsEnvironment.GetEnvironment(this));
+
+			#region -- class CommandBindings ----------------------------------------------------
 
 			CommandBindings.Add(
 				new CommandBinding(RemoveAttachmentCommand,
@@ -104,7 +104,12 @@ namespace TecWare.PPSn.Controls
 					(sender, e) => e.CanExecute = true
 				)
 			);
+
+			#endregion
+
 		} // ctor
+
+		#region -- Propertys ------------------------------------------------------------
 
 		public readonly static DependencyProperty AttachmentsSourceProperty = DependencyProperty.Register(nameof(AttachmentsSource), typeof(IPpsAttachments), typeof(PpsAttachmentsControl));
 		public readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsAttachmentsControl));
@@ -133,12 +138,14 @@ namespace TecWare.PPSn.Controls
 		public bool ScannerButtonVisible => (bool)GetValue(RemoveButtonVisibleProperty);
 		/// <summary>sets the visibility of the SignatureButton - default true</summary>
 		public bool SignatureButtonVisible => (bool)GetValue(RemoveButtonVisibleProperty);
-		/// <summary>sets the visibility of the SignatureButton - default true</summary>
+		/// <summary>sets the visibility of the SeventhButton - default true</summary>
 		public bool ButtonSevenVisible => (bool)GetValue(ButtonSevenVisibleProperty);
-		/// <summary>sets the visibility of the SignatureButton - default true</summary>
+		/// <summary>sets the caption of the SeventhButton - default true</summary>
 		public string ButtonSevenCaption => (string)GetValue(ButtonSevenCaptionProperty);
-		/// <summary>sets the visibility of the SignatureButton - default true</summary>
+		/// <summary>sets the command of the SeventhButton - default true</summary>
 		public TecWare.PPSn.UI.PpsCommand ButtonSevenCommand => (TecWare.PPSn.UI.PpsCommand)GetValue(ButtonSevenCommandProperty);
+
+		#endregion
 
 		public readonly static RoutedUICommand RemoveAttachmentCommand = new RoutedUICommand("RemoveAttachment", "RemoveAttachment", typeof(PpsAttachmentsControl));
 		public readonly static RoutedUICommand AddFileAttachmentCommand = new RoutedUICommand("AddFileAttachment", "AddFileAttachment", typeof(PpsAttachmentsControl));
@@ -173,7 +180,7 @@ namespace TecWare.PPSn.Controls
 			private PpsObject GetLinkedObject()
 				=> (PpsObject)row[linkColumnIndex];
 
-			public bool Remove() 
+			public bool Remove()
 				=> row.Remove();
 
 			public bool Equals(PpsDataRow other)
@@ -229,7 +236,7 @@ namespace TecWare.PPSn.Controls
 
 			public IPpsDataView View => view;
 		} // class PpsAttachmentImplementation
-		
+
 		#endregion
 
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -253,6 +260,10 @@ namespace TecWare.PPSn.Controls
 		public string LinkColumnName { get; set; }
 	} // class PpsDataTableAttachmentConverter
 
+	#endregion
+
+	#region -- class BoolToVisibilityConverter ------------------------------------
+
 	public class BoolToVisibilityConverter : IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -267,5 +278,6 @@ namespace TecWare.PPSn.Controls
 			throw new NotSupportedException();
 		}
 	}
+
 	#endregion
 }
