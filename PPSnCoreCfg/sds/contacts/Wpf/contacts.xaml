@@ -240,7 +240,15 @@
                 </Grid>
             </TabItem>
             <TabItem Header="Sonstiges">
-                <uiC:PpsAttachmentsControl VerticalAlignment="Top" HorizontalAlignment="Left">
+                <uiC:PpsAttachmentsControl VerticalAlignment="Top" HorizontalAlignment="Left"  
+                                           AddFileButtonVisible="true"
+                                           AddLinkButtonVisible="true"
+                                           RemoveButtonVisible="true"
+                                           CameraButtonVisible="true"
+                                           SignatureButtonVisible="true"
+                                           ButtonSevenVisible="true"
+                                           ButtonSevenCaption="Herbert"
+                                           ButtonSevenCommand="{Binding testCommand}">
                     <uiC:PpsAttachmentsControl.AttachmentsSource>
                         <Binding Path="Data.Head.First.Zusa">
                             <Binding.Converter>

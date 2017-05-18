@@ -84,3 +84,9 @@ templateSelectorAdr = templateSelector(
     	return GetResource(resName);
     end
 );
+
+testCommand = command(
+    function (args) : void
+  		msgbox("Test");
+    end
+);
