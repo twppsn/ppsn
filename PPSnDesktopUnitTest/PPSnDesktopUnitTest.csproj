@@ -71,6 +71,7 @@
   </Choose>
   <ItemGroup>
     <Compile Include="DESCoreStrings.cs" />
+    <Compile Include="FormattedStringParserTests.cs" />
     <Compile Include="SchemeUpgrade.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
