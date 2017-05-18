@@ -23,12 +23,11 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using Microsoft.Win32;
-using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using System.Collections.Specialized;
 
-namespace TecWare.PPSn.UI
+namespace TecWare.PPSn.Controls
 {
 	public interface IPpsAttachmentItem
 	{

@@ -275,7 +275,8 @@ namespace TecWare.PPSn.UI
 			UpdateSources();
 			try
 			{
-				await obj.PushAsync();
+				if (obj.IsDocumentChanged)
+					await obj.PushAsync();
 			}
 			catch (Exception ex)
 			{

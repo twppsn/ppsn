@@ -1252,7 +1252,7 @@ namespace TecWare.PPSn
 
 		public async Task CommitAsync()
 		{
-			baseObj.Tags.UpdateTag(-1, "Sha256", PpsObjectTagClass.Text, sha256);
+			baseObj.Tags.UpdateTag(0, "Sha256", PpsObjectTagClass.Text, sha256);
 			await baseObj.SaveRawDataAsync(
 				rawData.Length,
 				mimeType ?? baseObj.MimeType ?? MimeTypes.Application.OctetStream,
