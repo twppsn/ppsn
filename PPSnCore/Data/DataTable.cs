@@ -1172,7 +1172,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Markiert alle Einträge als gelöscht.</summary>
 		public void Clear()
 		{
-			for (int i = currentRows.Count - 1; i >= 0; i--)
+			for (var i = currentRows.Count - 1; i >= 0; i--)
 				currentRows[i].Remove();
 		} // proc Clear
 
@@ -1180,7 +1180,7 @@ namespace TecWare.PPSn.Data
 		public void Reset()
 		{
 			// Setze alle Datenzeilen zurück
-			foreach (PpsDataRow row in rows)
+			foreach (var row in rows)
 				row.Reset();
 		} // proc Reset
 

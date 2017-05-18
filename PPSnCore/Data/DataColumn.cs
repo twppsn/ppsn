@@ -98,6 +98,11 @@ namespace TecWare.PPSn.Data
 		/// <param name="value">New value for the property.</param>
 		/// <returns><c>true</c>, let fire a notify property changed on the row value</returns>
 		bool SetGenericValue(bool inital, object value);
+
+		/// <summary>Commit the value to the original</summary>
+		void Commit();
+		/// <summary>Reset the value from the original</summary>
+		void Reset();
 	} //	interface IPpsDataRowSetGenericValue
 
 	#endregion
@@ -225,8 +230,6 @@ namespace TecWare.PPSn.Data
 		} // class PpsUndoDataValue
 
 		#endregion
-
-		private readonly object notSet = new object();
 		
 		private object originalValue = null; // original id
 		private object value = null; // id to the master data row
@@ -253,7 +256,33 @@ namespace TecWare.PPSn.Data
 				return true;
 			}
 		} // proc SetGenericValue
+
+		protected virtual void Commit()
+		{
+			if (PpsDataRow.NotSet != value)
+			{
+				originalValue = value;
+				value = PpsDataRow.NotSet;
+			}
+		} // proc Commit
 		
+		protected virtual void Reset()
+		{
+			var oldValue = value;
+			value = PpsDataRow.NotSet;
+			Row.Table.DataSet.UndoSink?.Append(
+				new PpsUndoDataValue(this, oldValue, PpsDataRow.NotSet)
+			);
+
+			OnPropertyChanged(nameof(Value));
+		} // proc Reset
+
+		void IPpsDataRowSetGenericValue.Commit()
+			=> Commit();
+
+		void IPpsDataRowSetGenericValue.Reset()
+			=> Reset();
+
 		/// <summary>Writes the value as a normal value in the document data.</summary>
 		/// <param name="x"></param>
 		protected override void Write(XElement x)
@@ -264,7 +293,7 @@ namespace TecWare.PPSn.Data
 			else
 				x.Add(new XElement("o", originalValue.ChangeType<string>()));
 			// v
-			if (value != notSet)
+			if (value != PpsDataRow.NotSet)
 			{
 				if (value == null)
 					x.Add(new XElement("v"));
@@ -283,7 +312,7 @@ namespace TecWare.PPSn.Data
 			originalValue = ReadValueFromElementstring(x.Element("o"));
 			var xV = x.Element("v");
 			if (xV == null)
-				value = notSet;
+				value = PpsDataRow.NotSet;
 			else
 				value = ReadValueFromElementstring(xV);
 		} // proc Read
@@ -291,7 +320,7 @@ namespace TecWare.PPSn.Data
 		bool IPpsDataRowSetGenericValue.SetGenericValue(bool inital, object value)
 			=> SetGenericValue(value, !inital);
 
-		protected object InternalValue => value == notSet ? originalValue : value;
+		protected object InternalValue => value == PpsDataRow.NotSet ? originalValue : value;
 
 		/// <summary>Equals the internal value <c>null</c>.</summary>
 		public override bool IsNull => InternalValue == null;

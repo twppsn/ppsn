@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -11,54 +12,53 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {
+	#region -- class PpsLuaRowEnvironment -----------------------------------------------
+
+	/// <summary>Special environment, that gives access of a row for formulas.</summary>
+	public sealed class PpsLuaRowEnvironment : LuaTable
+	{
+		private readonly LuaTable env;
+		private readonly PpsDataRow row;
+
+		public PpsLuaRowEnvironment(LuaTable env, PpsDataRow row)
+		{
+			this.env = env;
+			this.row = row;
+		} // ctor
+
+		protected override object OnIndex(object key)
+		{
+			if (key is string)
+			{
+				var column = row.Table.TableDefinition.Columns[(string)key];
+				if (column != null)
+				{
+					if (column.IsRelationColumn)
+						return row.GetParentRow(column);
+					else
+						return row[column.Index];
+				}
+			}
+
+			return env[key] ?? base.OnIndex(key);
+		} // proc OnIndex
+	} // class PpsLuaRowEnvironment
+
+	#endregion
+
 	#region -- class PpsStaticCalculated ------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>The formular to get the result is definied in the column.</summary>
 	public sealed class PpsStaticCalculated : PpsDataRowExtentedValue, IPpsDataRowGetGenericValue
 	{
-		#region -- class SimpleRowTable ---------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private sealed class SimpleRowTable : LuaTable
-		{
-			private readonly LuaTable env;
-			private readonly PpsDataRow row;
-
-			public SimpleRowTable(PpsDataRow row)
-			{
-				this.env = row.Table.DataSet.Properties;
-				this.row = row;
-			} // ctor
-
-			protected override object OnIndex(object key)
-			{
-				if (key is string)
-				{
-					var column = row.Table.TableDefinition.Columns[(string)key];
-					if (column != null)
-					{
-						if (column.IsRelationColumn)
-							return row.GetParentRow(column);
-						else
-							return row[column.Index];
-					}
-				}
-
-				return env[key] ?? base.OnIndex(key);
-			} // proc OnIndex
-		} // class SimpleRowTable
-
-		#endregion
-
 		private readonly LuaChunk chunk;
 		private object currentValue = null;
 
 		public PpsStaticCalculated(PpsDataRow row, PpsDataColumnDefinition column)
 			: base(row, column)
 		{
-			var code = column.Meta.GetProperty("formula", (String)null);
+			var code = column.Meta.GetProperty("formula", (string)null);
 
 			// compile the code
 			if (!String.IsNullOrEmpty(code))
@@ -90,7 +90,7 @@ namespace TecWare.PPSn.Data
 
 			try
 			{
-				var r = chunk.Run(new SimpleRowTable(Row));
+				var r = chunk.Run(new PpsLuaRowEnvironment(Row.Table.DataSet.Properties, Row));
 				if (!Object.Equals(currentValue, r[0]))
 				{
 					currentValue = r[0];
@@ -111,90 +111,396 @@ namespace TecWare.PPSn.Data
 	#endregion
 
 	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Multi line text field, that supports a macro syntax.</summary>
+	/// <summary>Multiline text field, that supports a macro syntax.</summary>
 	public sealed class PpsFormattedStringValue : PpsDataRowExtentedValue, IPpsDataRowSetGenericValue
 	{
-		private string value;
-		private string formattedValue;
+		#region -- class ExpressionBlock ------------------------------------------------
 
-		private PropertyChangedEventHandler rowChangeHandler;
-		private bool changeHandlerAssigned = false;
+		public abstract class ExpressionBlock
+		{
+			public sealed override string ToString()
+				=> GetType().Name;
 
-		public PpsFormattedStringValue(PpsDataRow row, PpsDataColumnDefinition column, string value = null)
+			public abstract string ToString(PpsLuaRowEnvironment env);
+		} // class ExpressionBlock
+
+		#endregion
+
+		#region -- class StringBlock ----------------------------------------------------
+
+		private sealed class StringBlock : ExpressionBlock
+		{
+			private readonly string part;
+
+			public StringBlock(string part)
+				=> this.part = part;
+
+			public override string ToString(PpsLuaRowEnvironment env) 
+				=> part;
+		} // class StringBlock
+
+		#endregion
+
+		#region -- class LuaCodeBlock ---------------------------------------------------
+
+		private sealed class LuaCodeBlock : ExpressionBlock
+		{
+			private readonly LuaChunk chunk;
+			private readonly string fmt;
+
+			public LuaCodeBlock(LuaChunk chunk, string fmt)
+			{
+				this.chunk = chunk;
+				this.fmt = fmt;
+			} // ctor
+
+			public override string ToString(PpsLuaRowEnvironment env)
+			{
+				try
+				{
+					var r = chunk.Run(env)[0];
+					if (r == null)
+						return String.Empty;
+					else if (fmt == null)
+						return r.ToString();
+					else
+					{
+						switch (Type.GetTypeCode(r.GetType()))
+						{
+							case TypeCode.SByte:
+							case TypeCode.Byte:
+							case TypeCode.Int16:
+							case TypeCode.UInt16:
+							case TypeCode.Int32:
+							case TypeCode.UInt32:
+							case TypeCode.Int64:
+							case TypeCode.UInt64:
+								return r.ChangeType<long>().ToString(fmt);
+							case TypeCode.DateTime:
+								return ((DateTime)r).ToString(fmt);
+							case TypeCode.Decimal:
+								return ((decimal)r).ToString(fmt);
+							case TypeCode.Double:
+								return ((double)r).ToString(fmt);
+							case TypeCode.Single:
+								return ((float)r).ToString(fmt);
+
+							default:
+								if (r is IFormattable f)
+									return f.ToString(fmt, CultureInfo.CurrentCulture);
+								else
+									return r.ToString();
+						}
+					}
+				}
+				catch (LuaRuntimeException e)
+				{
+					return "{RE=" + e.Message + "}";
+				}
+				catch (Exception e)
+				{
+					return "{RE=" + e.Message + "}";
+				}
+			} // proc ToString
+		} // class LuaCodeBlock
+
+		#endregion
+
+		private object originalTemplate;
+		private object currentTemplate;
+		private ExpressionBlock[] parsedValue = null;
+		private string formattedValue; // cache for the formatted value
+
+		#region -- Ctor/Dtor ------------------------------------------------------------
+
+		public PpsFormattedStringValue(PpsDataRow row, PpsDataColumnDefinition column) 
 			: base(row, column)
 		{
-			this.value = value;
-			this.rowChangeHandler = (sender, e) => UpdateFormattedValue(); // holzhammer
-
-			UpdateFormattedValue();
+			if (column.DataType != typeof(string))
+				throw new ArgumentException("Column must be a string.");
 		} // ctor
 
 		public override string ToString()
-			=> value;
+			=> Value;
 
-		protected override void Write(XElement x)
-		{
-			x.Add(
-				new XElement("v", value),
-				new XElement("f", formattedValue)
-			);
-		} // proc Write
+		#endregion
+
+		#region -- Read/Write -----------------------------------------------------------
 
 		protected override void Read(XElement x)
 		{
-			Value = x?.Element("v")?.Value;
+			originalTemplate= x.Element("o")?.Value;
+			currentTemplate = x.Element("c")?.Value ?? PpsDataRow.NotSet;
+			formattedValue = x.Element("f")?.Value;
+
+			parsedValue = null; // invalidate the template
 		} // proc Read
+
+		protected override void Write(XElement x)
+		{
+			if (originalTemplate != null)
+				x.Add(new XElement("o", originalTemplate));
+			if (currentTemplate != PpsDataRow.NotSet)
+				x.Add(new XElement("c", currentTemplate));
+			if (formattedValue != null)
+				x.Add(new XElement("f", formattedValue));
+		} // proc Write
+
+		#endregion
+
+		#region -- Get/Set-Value --------------------------------------------------------
+
+		#region -- class PpsTemplateUnoItem ---------------------------------------------
+
+		private sealed class PpsTemplateUnoItem : IPpsUndoItem
+		{
+			private readonly PpsFormattedStringValue value;
+			private readonly object oldValue;
+			private readonly object newValue;
+
+			public PpsTemplateUnoItem(PpsFormattedStringValue value, object oldValue, object newValue)
+			{
+				this.value = value;
+				this.oldValue = oldValue;
+				this.newValue = newValue;
+			} // ctor
+
+			public void Freeze() { }
+
+			public void Undo()
+				=> value.SetValue(oldValue, true, false);
+
+			public void Redo()
+				=> value.SetValue(newValue, true, false);
+		} // class PpsTemplateUnoItem
+
+		#endregion
+
+		private void SetValue(object newValue, bool firePropertyChanged, bool addUndo)
+		{
+			var valueChanged = false;
+
+			var oldValue = currentTemplate;
+			if (newValue == PpsDataRow.NotSet && currentTemplate != PpsDataRow.NotSet)
+			{
+				currentTemplate = PpsDataRow.NotSet;
+				parsedValue = null;
+				valueChanged = true;
+			}
+			else if(!Object.Equals(Value, newValue))
+			{
+				currentTemplate = newValue;
+				parsedValue = null;
+				valueChanged = true;
+			}
+
+			// undo stack
+			if (valueChanged && addUndo)
+			{
+				Row.Table.DataSet.UndoSink?.Append(
+					new PpsTemplateUnoItem(this, oldValue, newValue)
+				);
+			}
+
+			// refresh values
+			if (firePropertyChanged && valueChanged)
+			{
+				OnPropertyChanged(nameof(Value));
+				UpdateFormattedValue();
+			}
+		} // proc SetValue
+
+		bool IPpsDataRowSetGenericValue.SetGenericValue(bool inital, object value)
+		{
+			SetValue(value, !inital, !inital);
+			return false;
+		} // proc IPpsDataRowSetGenericValue.SetGenericValue
+
+		void IPpsDataRowSetGenericValue.Commit()
+		{
+			// set original
+			if (currentTemplate != PpsDataRow.NotSet)
+			{
+				originalTemplate = currentTemplate;
+				currentTemplate = PpsDataRow.NotSet;
+			}
+		} // proc IPpsDataRowSetGenericValue.Commit
+
+		void IPpsDataRowSetGenericValue.Reset()
+		{
+			// clear current
+			SetValue(PpsDataRow.NotSet, true, true);
+
+			// refresh formatted value
+			parsedValue = null;
+			UpdateFormattedValue();
+		} // proc IPpsDataRowSetGenericValue.Reset
+
+		#endregion
+
+		#region -- ParseTemplate --------------------------------------------------------
+
+		private ExpressionBlock CreateExpressionBlock(string expr, string fmt)
+		{
+			// all is lua, currently
+			try
+			{
+				return new LuaCodeBlock(Row.Table.DataSet.DataSetDefinition.Lua.CompileChunk(expr, Column.Name + "-fmt.lua", null), fmt);
+			}
+			catch (LuaParseException e)
+			{
+				return new StringBlock("{PE=" + e.Message + "}");
+			}
+		} // func CreateExpressionBlock
+
+		public static ExpressionBlock[] ParseTemplate(string template, Func<string, string, ExpressionBlock> createExpressionBlock)
+		{
+			var spans = new List<ExpressionBlock>(); // result
+
+			var p = 0;
+			var s = 0;
+			var startAt = 0;
+			var formatAt = -1;
+
+			void EmitTextBlock(int endAt)
+			{
+				spans.Add(new StringBlock(template.Substring(startAt, endAt - startAt)));
+
+				startAt = endAt + 2;
+				formatAt = -1;
+			} // func EmitTextBlock
+
+			void EmitExprBlock(int endAt)
+			{
+				var expr = template.Substring(startAt,( formatAt == -1 ? endAt : formatAt) - startAt);
+				var fmt = formatAt == -1 ? null : template.Substring(formatAt + 2, endAt - formatAt - 2);
+
+				spans.Add(createExpressionBlock(expr.Trim(), fmt?.Trim()));
+
+				startAt = endAt + 2;
+				formatAt = -1;
+			} // func EmitExprBlock
+
+			while (p < template.Length)
+			{
+				var c = template[p];
+				switch (s)
+				{
+					case 0:
+						if (c == '%')
+							s = 1;
+						break; // eat all chars
+					case 1: // check for secound %
+						if (c == '%')
+						{
+							EmitTextBlock(p - 1);
+							s = 2; // jump to code
+						}
+						else
+							s = 0;
+						break;
+					case 2: // collect to format or end
+						if (c == '%')
+							s = 3;
+						else if (c == ':')
+							s = 4;
+						break; // eat for code block
+					case 3: // check for end of code
+						if (c == '%')
+						{
+							EmitExprBlock(p - 1);
+							s = 0;
+						}
+						else
+							s = 2;
+						break;
+					case 4: // start of format
+						if (c == ':')
+						{
+							formatAt = p -1;
+							s = 5;
+						}
+						else
+							s = 2;
+						break;
+					case 5: // collect format
+						if (c == '%')
+							s = 6;
+						break;
+					case 6: // end of format
+						if (c == '%')
+						{
+							EmitExprBlock(p - 1);
+							s = 0;
+						}
+						else
+							s = 5;
+						break;
+					default:
+						throw new InvalidOperationException();
+				}
+				
+				p++;
+			}
+
+			if (spans.Count > 0)
+				EmitTextBlock(p);
+			
+			return spans.ToArray();
+		} // func ParseTemplate
+
+		private void ParseTemplate(bool force)
+		{
+			// '%%' EXPR '::' FORMAT '%%'
+			// EXPR ::= IDENTIFIER.IDENTIFIER.IDENTIFIER
+			// EXPR ::= luacode?
+
+			if (!force && parsedValue != null)
+				return;
+
+			parsedValue = ParseTemplate(Value, CreateExpressionBlock);
+			if (parsedValue.Length == 0)
+				Row.Table.DataSet.DataChanged -= DataSetDataChanged;
+			else
+				Row.Table.DataSet.DataChanged += DataSetDataChanged;
+		} // proc ParseTemplate
+
+		private void DataSetDataChanged(object sender, EventArgs e)
+			=> UpdateFormattedValue();
+
+		#endregion
 
 		private void UpdateFormattedValue()
 		{
-			if (value == null)
-			{
-				if (changeHandlerAssigned)
-				{
-					Row.PropertyChanged -= rowChangeHandler;
-					changeHandlerAssigned = false;
-				}
-				formattedValue = value;
-			}
+			ParseTemplate(false);
+
+			var newFormattedValue = String.Empty;
+			if (parsedValue.Length == 0) // no formatting
+				newFormattedValue = Value;
 			else
 			{
-				if (!changeHandlerAssigned)
-				{
-					Row.PropertyChanged += rowChangeHandler;
-					changeHandlerAssigned = true;
+				var parts = new string[parsedValue.Length];
+				for (var i = 0; i < parsedValue.Length; i++)
+					parts[i] = parsedValue[i].ToString(new PpsLuaRowEnvironment(Row.Table.DataSet.Properties, Row));
+				newFormattedValue = String.Concat(parts);
+			}
 
-				}
-				var r = new Regex("\\%\\%(\\w+)\\%\\%"); // todo:
-				formattedValue = r.Replace(value, m => Row.GetProperty(m.Groups[1].Value, String.Empty));
+			if(newFormattedValue != formattedValue)
+			{
+				formattedValue = newFormattedValue;
+				OnPropertyChanged(nameof(FormattedValue));
 			}
 		} // proc UpdateFormattedValue
 
-		public bool SetGenericValue(bool inital, object value)
-		{
-			Value = value?.ToString();
-			return true;
-		} // proc SetGenericValue
-		
-		/// <summary>Set/Get the unformatted value.</summary>
+		public string FormattedValue
+			=> formattedValue;
+
 		public string Value
 		{
-			get { return value; }
-			set
-			{
-				if (this.value != value)
-				{
-					// todo: Undo-Operation missing
-					this.value = value;
-					OnPropertyChanged(nameof(Value));
-					UpdateFormattedValue();
-				}
-			}
-		} // prop Value
+			get { return currentTemplate != PpsDataRow.NotSet ? (string)currentTemplate : (string)originalTemplate; }
+			set { SetValue(value, true, true); }
+		} // proc Template
 
-		/// <summary>Is the core value null.</summary>
-		public override bool IsNull => String.IsNullOrEmpty(value);
-
-		/// <summary>Returns the formatted value.</summary>
-		public string FormattedValue => formattedValue;
+		public override bool IsNull => !String.IsNullOrEmpty(Value);
 	} // struct PpsFormattedStringValue
 }

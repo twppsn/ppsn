@@ -109,6 +109,12 @@ namespace TecWare.PPSn.Data
 			{
 				return "NotSet";
 			} // func ToString
+
+			public override int GetHashCode() 
+				=> typeof(NotSetValue).GetHashCode();
+
+			public override bool Equals(object obj)
+				=> obj is NotSetValue;
 		} // class NotSetValue
 
 		#endregion
@@ -426,16 +432,13 @@ namespace TecWare.PPSn.Data
 			} // ctor
 
 			private object GetGenericValue(object v)
-			{
-				var t = v as IPpsDataRowGetGenericValue;
-				return t != null ? t.Value : v;
-			} // func GetGenericValue
+				=> v is IPpsDataRowGetGenericValue t ? t.Value : v;
 
 			public override object this[int columnIndex]
 			{
 				get
 				{
-					object currentValue = Row.currentValues[columnIndex];
+					var currentValue = Row.currentValues[columnIndex];
 					return currentValue == NotSet ? GetGenericValue(Row.originalValues[columnIndex]) : currentValue;
 				}
 				set
@@ -462,7 +465,7 @@ namespace TecWare.PPSn.Data
 						}
 
 						// Is the value changed
-						object oldValue = this[columnIndex];
+						var oldValue = this[columnIndex];
 						if (!Object.Equals(oldValue, value))
 							Row.SetCurrentValue(columnIndex, oldValue, value);
 					}
@@ -478,7 +481,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		internal static readonly object NotSet = new NotSetValue();
+		public static readonly object NotSet = new NotSetValue();
 
 		/// <summary>Wird ausgelöst, wenn sich eine Eigenschaft geändert hat</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
@@ -537,7 +540,7 @@ namespace TecWare.PPSn.Data
 				var columnInfo = table.Columns[i];
 
 				// set the originalValue
-				object newOriginalValue = GetConvertedValue(columnInfo, originalValues[i]);
+				var newOriginalValue = GetConvertedValue(columnInfo, originalValues[i]);
 				table.Columns[i].OnColumnValueChanging(this, PpsDataColumnValueChangingFlag.Initial, null, ref newOriginalValue);
 
 				// get the new value
@@ -666,11 +669,19 @@ namespace TecWare.PPSn.Data
 			var undo = GetUndoSink();
 			using (var trans = undo?.BeginTransaction("Reset row"))
 			{
-				for (int i = 0; i < originalValues.Length; i++)
+				for (var i = 0; i < originalValues.Length; i++)
 				{
-					if (currentValues[i] != NotSet)
+					if(table.Columns[i].IsExtended)
 					{
-						object oldValue = currentValues[i];
+						if (originalValues[i] is IPpsDataRowSetGenericValue e)
+						{
+							e.Reset();
+							OnValueChanged(i, originalValues[i], originalValues[i]);
+						}
+					}
+					else if (currentValues[i] != NotSet)
+					{
+						var oldValue = currentValues[i];
 						currentValues[i] = NotSet;
 						undo?.Append(new PpsDataRowValueChangedItem(this, i, oldValue, NotSet));
 						OnValueChanged(i, oldValue, originalValues[i]);
@@ -699,9 +710,14 @@ namespace TecWare.PPSn.Data
 			}
 			else
 			{
-				for (int i = 0; i < originalValues.Length; i++)
+				for (var i = 0; i < originalValues.Length; i++)
 				{
-					if (currentValues[i] != NotSet)
+					if(table.Columns[i].IsExtended)
+					{
+						if (originalValues[i] is IPpsDataRowSetGenericValue e)
+							e.Commit();
+					}
+					else if (currentValues[i] != NotSet)
 					{
 						originalValues[i] = currentValues[i];
 						currentValues[i] = NotSet;
