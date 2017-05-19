@@ -253,6 +253,7 @@ namespace TecWare.PPSn.Controls
 		public readonly static RoutedUICommand ScannerAttachmentCommand = new RoutedUICommand("ScannerAttachment", "ScannerAttachment", typeof(PpsAttachmentsControl));
 		public readonly static RoutedUICommand CameraAttachmentCommand = new RoutedUICommand("CameraAttachment", "CameraAttachment", typeof(PpsAttachmentsControl));
 		public readonly static RoutedUICommand SignatureAttachmentCommand = new RoutedUICommand("SignatureAttachment", "SignatureAttachment", typeof(PpsAttachmentsControl));
+		public readonly static RoutedUICommand SeventhButtonAttachmentCommand = new RoutedUICommand("SeventhButtonAttachment", "SeventhButtonAttachment", typeof(PpsAttachmentsControl));
 
 		#endregion
 
