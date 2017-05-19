@@ -1468,8 +1468,13 @@ namespace TecWare.PPSn
 			this.tags = new PpsObjectTags(this);
 			this.links = new PpsObjectLinks(this);
 
+			environment.MasterData.RegisterWeakDataRowChanged("Objects", objectId, OnObjectDataChanged);
+
 			ReadObjectInfo(r);
 		} // ctor
+
+		private void OnObjectDataChanged(object sender, PpsDataRowChangedEventArgs e)
+			=> ReadObjectInfo(e.Arguments);
 
 		/// <summary>Reads the properties from the local database.</summary>
 		/// <param name="r"></param>
@@ -2628,16 +2633,6 @@ order by t_liefnr.value desc
 				return GetObject(newObjectId);
 			}
 		} // func CreateNewObject
-
-		private void RefreshCachedObject(long id, IPropertyReadOnlyDictionary properties)
-		{
-			lock (objectStoreLock)
-			{
-				var o = GetCachedObject(objectStoreById, id);
-				if (o != null)
-					o.ReadObjectInfo(properties);
-			}
-		} // proc RefreshCachedObject
 
 		internal async Task<T> CreateObjectDataObjectAsync<T>(PpsObject obj)
 			where T : IPpsObjectData
