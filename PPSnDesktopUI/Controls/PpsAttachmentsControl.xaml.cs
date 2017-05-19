@@ -93,7 +93,7 @@ namespace TecWare.PPSn.Controls
 									await data.ReadFromFileAsync(filename);
 									await data.CommitAsync();
 
-									Dispatcher.Invoke(() => AttachmentsSource.Append(obj));
+									AttachmentsSource.Append(obj);
 
 									trans.Commit();
 								}
@@ -198,6 +198,8 @@ namespace TecWare.PPSn.Controls
 
 		private sealed class PpsAttachmentImplementation : IPpsAttachments, INotifyCollectionChanged
 		{
+			public event NotifyCollectionChangedEventHandler CollectionChanged;
+
 			private readonly IPpsDataView view;
 			private readonly int linkColumnIndex;
 
@@ -205,6 +207,10 @@ namespace TecWare.PPSn.Controls
 			{
 				this.view = view;
 				this.linkColumnIndex = view.Table.TableDefinition.FindColumnIndex(linkColumnName ?? throw new ArgumentNullException(nameof(linkColumnName)), true);
+
+				WeakEventManager<INotifyCollectionChanged, NotifyCollectionChangedEventArgs>.AddHandler(view, nameof(INotifyCollectionChanged.CollectionChanged),
+					OnCollectionChanged
+				);
 			} // ctor
 
 			private PpsUndoManagerBase GetUndoManager(PpsDataSet ds)
@@ -228,11 +234,39 @@ namespace TecWare.PPSn.Controls
 			IEnumerator IEnumerable.GetEnumerator()
 				=> GetEnumerator();
 
-			public event NotifyCollectionChangedEventHandler CollectionChanged
+			private void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 			{
-				add { view.CollectionChanged += value; }
-				remove { view.CollectionChanged -= value; }
-			} // event CollectionChanged
+				switch(e.Action)
+				{
+					case NotifyCollectionChangedAction.Add:
+						if (e.NewItems.Count > 1)
+							throw new NotSupportedException();
+
+						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(
+							NotifyCollectionChangedAction.Add, 
+							new PpsAttachmentItemImplementation((PpsDataRow)e.NewItems[0], linkColumnIndex), 
+							e.NewStartingIndex)
+						);
+						break;
+					case NotifyCollectionChangedAction.Remove:
+						if (e.OldItems.Count > 1)
+							throw new NotSupportedException();
+
+						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(
+							NotifyCollectionChangedAction.Reset,
+							new PpsAttachmentItemImplementation((PpsDataRow)e.OldItems[0], linkColumnIndex),
+							e.OldStartingIndex)
+						);
+						break;
+					case NotifyCollectionChangedAction.Reset:
+						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+						break;
+					case NotifyCollectionChangedAction.Replace:
+					case NotifyCollectionChangedAction.Move:
+					default:
+						throw new NotSupportedException();
+				}
+			} // proc OnCollectionChanged
 
 			public IPpsDataView View => view;
 		} // class PpsAttachmentImplementation
@@ -262,7 +296,7 @@ namespace TecWare.PPSn.Controls
 
 	#endregion
 
-	#region -- class BoolToVisibilityConverter ------------------------------------
+	#region -- class BoolToVisibilityConverter ------------------------------------------
 
 	public class BoolToVisibilityConverter : IValueConverter
 	{
