@@ -1673,6 +1673,8 @@ namespace TecWare.PPSn
 					var xHeaderData = ToXml();
 					var headerData = Encoding.Unicode.GetBytes(xHeaderData.ToString(SaveOptions.DisableFormatting));
 					request.Headers["ppsn-header-length"] = headerData.Length.ChangeType<string>();
+					if (PulledRevId > 0) // we do not send pulled rev Id in the header
+						request.Headers["ppsn-pulled-revId"] = PulledRevId.ChangeType<string>();
 
 					// write data
 					using (var dst = request.GetRequestStream())
