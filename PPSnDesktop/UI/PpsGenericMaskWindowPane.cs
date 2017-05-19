@@ -14,20 +14,13 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Input;
-using System.Windows.Threading;
 using System.Xml;
-using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
@@ -45,7 +38,7 @@ namespace TecWare.PPSn.UI
 
 		private PpsObject obj; // current object, controlled by this mask
 		private PpsObjectDataSet data; // data object
-		
+
 		public PpsGenericMaskWindowPane(PpsEnvironment environment, PpsMainWindow window)
 			: base(environment, window)
 		{
@@ -99,7 +92,7 @@ namespace TecWare.PPSn.UI
 				// create the new object entry
 				obj = await Environment.CreateNewObjectAsync(objectInfo);
 			} // proc CreateNewObject
-			
+
 			// get the object reference for the document
 			obj = (PpsObject)arguments.GetMemberValue("object");
 
@@ -217,7 +210,7 @@ namespace TecWare.PPSn.UI
 							UndoManager.Redo();
 						},
 						(args) => UndoManager?.CanRedo ?? false
-					),						
+					),
 					Popup = new System.Windows.Controls.Primitives.Popup()
 					{
 						Child = listBox = new UndoManagerListBox()

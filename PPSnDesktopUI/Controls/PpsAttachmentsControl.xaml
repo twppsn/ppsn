@@ -20,6 +20,9 @@ specific language governing permissions and limitations under the Licence.
              xmlns:local="clr-namespace:TecWare.PPSn.Controls"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="300">
+    <UserControl.Resources>
+        <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </UserControl.Resources>
     <Grid Width="300" Height="600">
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
@@ -36,9 +39,12 @@ specific language governing permissions and limitations under the Licence.
                         <Setter Property="Button.Margin" Value="3,3,3,3"/>
                     </Style>
                 </WrapPanel.Resources>
-				<Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.AddFileAttachmentCommand}">+</Button>
-				<Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.RemoveAttachmentCommand}">-</Button>
-				<Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.AddLinkAttachmentCommand}">~</Button>
+                <Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.AddFileAttachmentCommand}" 
+                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddFileButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">+</Button>
+                <Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.RemoveAttachmentCommand}" 
+                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddLinkButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">~</Button>
+                <Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.AddLinkAttachmentCommand}" 
+                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=RemoveButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">-</Button>
             </WrapPanel>
             <WrapPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Stretch">
                 <WrapPanel.Resources>
@@ -46,9 +52,16 @@ specific language governing permissions and limitations under the Licence.
                         <Setter Property="Button.Margin" Value="3,3,3,3"/>
                     </Style>
                 </WrapPanel.Resources>
-                <Button Width="60" Height="60">Camera</Button>
-                <Button Width="60" Height="60">Scanner</Button>
-                <Button Width="60" Height="60">Signage</Button>
+                <Button Width="60" Height="60" 
+                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=CameraButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">Camera</Button>
+                <Button Width="60" Height="60" 
+                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ScannerButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">Scanner</Button>
+                <Button Width="60" Height="60" 
+                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SignatureButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">Signature</Button>
+                <Button Width="60" Height="60" 
+                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SignatureButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                        Content="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ButtonSevenCaption,Mode=OneWay}"
+                        Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ButtonSevenCommand,Mode=OneWay}"></Button>
             </WrapPanel>
         </Grid>
         <ListBox Grid.Row="1" VerticalAlignment="Stretch" ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 

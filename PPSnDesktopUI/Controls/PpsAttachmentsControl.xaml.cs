@@ -32,10 +32,8 @@ namespace TecWare.PPSn.Controls
 	public interface IPpsAttachmentItem
 	{
 		bool Remove();
-
 		string Name { get; }
 		string MimeType { get; }
-
 		object Data { get; }
 	} // interface IPpsAttachmentItem
 
@@ -61,6 +59,8 @@ namespace TecWare.PPSn.Controls
 			InitializeComponent();
 
 			this.getEnvironment = new Lazy<PpsEnvironment>(() => PpsEnvironment.GetEnvironment(this));
+
+			#region -- class CommandBindings ----------------------------------------------------
 
 			CommandBindings.Add(
 				new CommandBinding(RemoveAttachmentCommand,
@@ -104,13 +104,48 @@ namespace TecWare.PPSn.Controls
 					(sender, e) => e.CanExecute = true
 				)
 			);
+
+			#endregion
+
 		} // ctor
+
+		#region -- Propertys ------------------------------------------------------------
 
 		public readonly static DependencyProperty AttachmentsSourceProperty = DependencyProperty.Register(nameof(AttachmentsSource), typeof(IPpsAttachments), typeof(PpsAttachmentsControl));
 		public readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsAttachmentsControl));
+		public readonly static DependencyProperty AddFileButtonVisibleProperty = DependencyProperty.Register(nameof(AddFileButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
+		public readonly static DependencyProperty AddLinkButtonVisibleProperty = DependencyProperty.Register(nameof(AddLinkButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
+		public readonly static DependencyProperty RemoveButtonVisibleProperty = DependencyProperty.Register(nameof(RemoveButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
+		public readonly static DependencyProperty CameraButtonVisibleProperty = DependencyProperty.Register(nameof(CameraButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
+		public readonly static DependencyProperty ScannerButtonVisibleProperty = DependencyProperty.Register(nameof(ScannerButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
+		public readonly static DependencyProperty SignatureButtonVisibleProperty = DependencyProperty.Register(nameof(SignatureButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
+		public readonly static DependencyProperty ButtonSevenVisibleProperty = DependencyProperty.Register(nameof(ButtonSevenVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
+		public readonly static DependencyProperty ButtonSevenCaptionProperty = DependencyProperty.Register(nameof(ButtonSevenCaption), typeof(string), typeof(PpsAttachmentsControl), new UIPropertyMetadata(String.Empty));
+		public readonly static DependencyProperty ButtonSevenCommandProperty = DependencyProperty.Register(nameof(ButtonSevenCommand), typeof(TecWare.PPSn.UI.PpsCommand), typeof(PpsAttachmentsControl));
 
 		public IPpsAttachments AttachmentsSource { get => (IPpsAttachments)GetValue(AttachmentsSourceProperty); set => SetValue(AttachmentsSourceProperty, value); }
 		public IPpsAttachmentItem SelectedAttachment => (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty);
+
+		/// <summary>sets the visibility of the AddFileButton - default true</summary>
+		public bool AddFileButtonVisible => (bool)GetValue(AddFileButtonVisibleProperty);
+		/// <summary>sets the visibility of the AddLinkButton - default true</summary>
+		public bool AddLinkButtonVisible => (bool)GetValue(AddLinkButtonVisibleProperty);
+		/// <summary>sets the visibility of the RemoveButton - default true</summary>
+		public bool RemoveButtonVisible => (bool)GetValue(RemoveButtonVisibleProperty);
+		/// <summary>sets the visibility of the CameraButton - default true</summary>
+		public bool CameraButtonVisible => (bool)GetValue(RemoveButtonVisibleProperty);
+		/// <summary>sets the visibility of the ScannerButton - default true</summary>
+		public bool ScannerButtonVisible => (bool)GetValue(RemoveButtonVisibleProperty);
+		/// <summary>sets the visibility of the SignatureButton - default true</summary>
+		public bool SignatureButtonVisible => (bool)GetValue(RemoveButtonVisibleProperty);
+		/// <summary>sets the visibility of the SeventhButton - default true</summary>
+		public bool ButtonSevenVisible => (bool)GetValue(ButtonSevenVisibleProperty);
+		/// <summary>sets the caption of the SeventhButton - default true</summary>
+		public string ButtonSevenCaption => (string)GetValue(ButtonSevenCaptionProperty);
+		/// <summary>sets the command of the SeventhButton - default true</summary>
+		public TecWare.PPSn.UI.PpsCommand ButtonSevenCommand => (TecWare.PPSn.UI.PpsCommand)GetValue(ButtonSevenCommandProperty);
+
+		#endregion
 
 		public readonly static RoutedUICommand RemoveAttachmentCommand = new RoutedUICommand("RemoveAttachment", "RemoveAttachment", typeof(PpsAttachmentsControl));
 		public readonly static RoutedUICommand AddFileAttachmentCommand = new RoutedUICommand("AddFileAttachment", "AddFileAttachment", typeof(PpsAttachmentsControl));
@@ -145,7 +180,7 @@ namespace TecWare.PPSn.Controls
 			private PpsObject GetLinkedObject()
 				=> (PpsObject)row[linkColumnIndex];
 
-			public bool Remove() 
+			public bool Remove()
 				=> row.Remove();
 
 			public bool Equals(PpsDataRow other)
@@ -201,7 +236,7 @@ namespace TecWare.PPSn.Controls
 
 			public IPpsDataView View => view;
 		} // class PpsAttachmentImplementation
-		
+
 		#endregion
 
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -224,6 +259,25 @@ namespace TecWare.PPSn.Controls
 
 		public string LinkColumnName { get; set; }
 	} // class PpsDataTableAttachmentConverter
+
+	#endregion
+
+	#region -- class BoolToVisibilityConverter ------------------------------------
+
+	public class BoolToVisibilityConverter : IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if ((bool)value)
+				return Visibility.Visible;
+			else return Visibility.Collapsed;
+		}
+
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		}
+	}
 
 	#endregion
 }
