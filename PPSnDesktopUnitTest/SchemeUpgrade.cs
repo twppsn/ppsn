@@ -459,6 +459,7 @@ namespace TecWare.PPSn
 				var tc = (TestColumn)obj;
 
 				if (name != tc.Name || datatype != tc.DataType || isprimary != tc.IsPrimary || nullable != tc.Nullable || isindex != tc.IsIndex || defaultvalue != tc.DefaultValue)
+					if (! (isprimary && ((datatype == typeof(Int32) && tc.DataType == typeof(Int64)) || (datatype == typeof(Int64) && tc.DataType == typeof(Int32)))))
 					return 1;
 
 				return 0;
