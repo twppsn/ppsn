@@ -30,7 +30,12 @@ pushContact = command(
 		
 pushContact = command(
     function (args) : void
-        await(PushDataAsync());
+		UpdateSources();
+		if Data:IsDirty or Data:Object:IsDocumentChanged then
+			await(PushDataAsync());
+		else
+			msgbox("Es gibt keine Änderungen.", "Information");
+		end
     end
 );
 

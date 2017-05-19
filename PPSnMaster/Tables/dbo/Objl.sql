@@ -5,7 +5,7 @@
 	[ParentObjRId] BIGINT NULL CONSTRAINT fkParentObjLObjrId REFERENCES dbo.ObjR ([Id]) ON DELETE CASCADE,
 	[LinkObjKId] BIGINT NULL CONSTRAINT fkLinkObjKId REFERENCES dbo.ObjK ([Id]) ON DELETE NO ACTION,
 	[LinkObjRId] BIGINT NULL CONSTRAINT fkLinkObjRId REFERENCES dbo.ObjR ([Id]) ON DELETE NO ACTION,
-	[IsRemoved] BIT NOT NULL DEFAULT 0,
+	[RefCount] INT NOT NULL DEFAULT 0,
 	[OnDelete] CHAR(1) NOT NULL DEFAULT 0
 );
 GO
@@ -65,13 +65,13 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level2name = N'LinkObjRId'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Link is removed',
+    @value = N'Reference counter',
     @level0type = N'SCHEMA',
     @level0name = N'dbo',
     @level1type = N'TABLE',
     @level1name = N'ObjL',
     @level2type = N'COLUMN',
-    @level2name = N'IsRemoved'
+    @level2name = 'RefCount'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Action on delete',

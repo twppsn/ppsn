@@ -105,4 +105,11 @@
     <Property Name="ParentElementType" Value="SqlTable" />
     <Property Name="NewName" Value="SyncToken" />
   </Operation>
+  <Operation Name="Rename Refactor" Key="95bf9802-afcf-41b2-9654-9acf7d7f4279" ChangeDateTime="05/19/2017 09:23:51">
+    <Property Name="ElementName" Value="[dbo].[ObjL].[IsRemoved]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[ObjL]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="RefCount" />
+  </Operation>
 </Operations>

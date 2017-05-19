@@ -40,33 +40,45 @@ namespace TecWare.PPSn.Server
 
 	public sealed class PpsObjectLinkAccess
 	{
-		private readonly long id;
+		private readonly PpsObjectAccess obj;
+		private long id;
 		private readonly long objectId;
-		private readonly long revId;
+		private int refCount;
+		private char onDelete;
 
 		private bool isRemoved = false;
 
-		internal PpsObjectLinkAccess(long id, long objectId, long revId)
+		internal PpsObjectLinkAccess(PpsObjectAccess obj, long id, long objectId, int refCount, char onDelete)
 		{
+			this.obj = obj;
 			this.id = id;
 			this.objectId = objectId;
-			this.revId = revId;
-		}
+			this.refCount = refCount;
+			this.onDelete = onDelete;
+		} // ctor
 
-		internal PpsObjectLinkAccess(IDataRow row)
+		internal PpsObjectLinkAccess(PpsObjectAccess obj, IDataRow row)
+			: this(obj, row.GetProperty("Id", -1L), row.GetProperty("ObjKId", -1L), row.GetProperty("RefCount", 0), row.GetProperty("OnDelete", "R")[0])
 		{
 		} // ctor
 
 		public void Remove()
 		{
+			isRemoved = true;
 		} // proc Remove
 
 		public XElement ToXml(string elementName)
-			=> null;
+			=> new XElement(elementName,
+				new XAttribute("objectId", objectId),
+				new XAttribute("refCount", refCount),
+				new XAttribute("onDelete", onDelete)
+			);
 
-		public long Id => id;
+		public long Id { get => id; set => id = value; }
 		public long ObjectId => objectId;
-		public long RevId => revId;
+
+		public int RefCount { get => refCount; set => refCount = value; }
+		public char OnDelete { get => onDelete; set => onDelete = value; }
 
 		public bool IsNew => id < 0;
 		public bool IsRemoved => isRemoved;
@@ -87,7 +99,6 @@ namespace TecWare.PPSn.Server
 		private long revId;
 
 		private List<PpsObjectLinkAccess> linksTo = null;
-		private List<PpsObjectLinkAccess> linksFrom = null;
 
 		internal PpsObjectAccess(PpsDataTransaction transaction, IPropertyReadOnlyDictionary defaultData)
 		{
@@ -106,7 +117,6 @@ namespace TecWare.PPSn.Server
 		{
 			// reload links
 			linksTo = null;
-			linksFrom = null;
 		} // proc Reset
 
 		private void CheckRevision()
@@ -207,6 +217,70 @@ namespace TecWare.PPSn.Server
 
 			if (!updateObjectOnly)
 			{
+				// links changed?
+				if (linksTo != null)
+				{
+					#region -- update links --
+					cmd = new LuaTable
+					{
+						{ "delete", "dbo.ObjL" }
+					};
+					foreach (var l in linksTo)
+					{
+						if (l.IsRemoved && l.Id> 0)
+						{
+							cmd[1] = new LuaTable
+							{
+								{ "Id", l.Id }
+							};
+
+							transaction.ExecuteNoneResult(cmd);
+						}
+					}
+
+					// upsert, insert links
+					foreach (var l in linksTo)
+					{
+						if (l.IsNew)
+						{
+							cmd = new LuaTable
+							{
+								{ "insert", "dbo.ObjL" },
+								new LuaTable
+								{
+									{ "ParentObjKId", objectId },
+									{ "ParentObjRId", revId},
+									{ "LinkObjKId", l.ObjectId },
+									{ "RefCount", l.RefCount },
+									{ "OnDelete", l.OnDelete }
+								}
+							};
+
+							transaction.ExecuteNoneResult(cmd);
+
+							l.Id = ((LuaTable)cmd[1]).GetOptionalValue("Id", -1L);
+						}
+						else
+						{
+							cmd = new LuaTable
+							{
+								{ "upsert", "dbo.ObjL" },
+								new LuaTable
+								{
+									{ "Id", l.Id },
+									{ "ParentObjKId", objectId },
+									{ "ParentObjRId", revId},
+									{ "LinkObjKId", l.ObjectId },
+									{ "RefCount", l.RefCount },
+									{ "OnDelete", l.OnDelete }
+								}
+							};
+
+							transaction.ExecuteNoneResult(cmd);
+						}
+					}
+					#endregion
+				}
 
 				Reset();
 			}
@@ -398,29 +472,38 @@ namespace TecWare.PPSn.Server
 				// append links
 				foreach (var cur in LinksTo)
 					x.Add(cur.ToXml("linkTo"));
-				foreach (var cur in LinksFrom)
-					x.Add(cur.ToXml("linkFrom"));
 			}
 
 			return x;
 		} // func ToXml
 
+
 		public PpsObjectLinkAccess AddLinkTo(XElement x)
 		{
-			return null;
-		}
+			// refresh link list
+			GetLinks(true, ref linksTo);
 
-		public PpsObjectLinkAccess AddLinkFrom(XElement x)
-		{
+			var objectId = x.GetAttribute("objectId", -1L);
+			var cur = linksTo.Find(l => l.ObjectId == objectId);
+			var refCount =  x.GetAttribute("refCount",0);
+			var onDelete = x.GetAttribute("onDelete", "R");
+			if (cur == null) // new
+				linksTo.Add(new PpsObjectLinkAccess(this, -1, objectId, refCount, onDelete[0]));
+			else
+			{
+				cur.RefCount = refCount;
+				cur.OnDelete = onDelete[0];
+			}
+
 			return null;
 		}
 
 		[LuaMember]
-		public void AddLink(long objectId, long revId)
+		public void AddLink(long objectId)
 		{
-			var existingLink = GetLinks(true, ref linksTo).FirstOrDefault(c => c.ObjectId == objectId && c.RevId == revId);
+			var existingLink = GetLinks(true, ref linksTo).FirstOrDefault(c => c.ObjectId == objectId);
 			if (existingLink == null)
-				linksTo.Add(new PpsObjectLinkAccess(-1, objectId, revId));
+				linksTo.Add(new PpsObjectLinkAccess(this, -1, objectId, 0, 'R'));
 		} // proc AddLink
 
 		private List<PpsObjectLinkAccess> GetLinks(bool linksTo, ref List<PpsObjectLinkAccess> links)
@@ -434,28 +517,29 @@ namespace TecWare.PPSn.Server
 			else
 			{
 				var cmd = new LuaTable
-			{
-				{ "select", "dbo.ObjL" },
-				{ "selectList",
+				{
+					{ "select", "dbo.ObjL" },
+					{ "selectList",
+						new LuaTable
+						{
+							"Id",
+							{ linksTo ? "LinkObjKId" : "ParentObjKId", "ObjKId" },
+							{ linksTo ? "LinkObjRId" : "ParentObjRId", "ObjRId" },
+							"RefCount",
+							"OnDelete"
+						}
+					},
+
 					new LuaTable
 					{
-						"Id",
-						{ linksTo ? "LinkObjKId" : "ParentObjKId", "ObjKId" },
-						{ linksTo ? "LinkObjRId" : "ParentObjRId", "ObjRId" },
-						"OnDelete"
+						{ "ParentObjKId", objectId },
+						{ "ParentObjRId", revId }
 					}
-				},
-
-				new LuaTable
-				{
-					{ "ParentObjKId", objectId },
-					{ "ParentObjRId", revId }
-				}
-			};
+				};
 
 				links = new List<PpsObjectLinkAccess>();
 				foreach (var c in transaction.ExecuteSingleResult(cmd))
-					links.Add(new PpsObjectLinkAccess(c));
+					links.Add(new PpsObjectLinkAccess(this, c));
 			}
 			return links;
 		} // func GetLinks
@@ -503,7 +587,6 @@ namespace TecWare.PPSn.Server
 		public long ContentLength => throw new NotImplementedException();
 
 		public IEnumerable<PpsObjectLinkAccess> LinksTo => GetLinks(true, ref linksTo);
-		public IEnumerable<PpsObjectLinkAccess> LinksFrom => GetLinks(true, ref linksFrom);
 	} // class PpsObjectAccess
 
 	#endregion
@@ -709,6 +792,8 @@ namespace TecWare.PPSn.Server
 				if (headerLength > 10 << 20 || headerLength < 10) // ignore greater than 10mb or smaller 10bytes (<object/>)
 					throw new ArgumentOutOfRangeException("header-length");
 
+				var pulledId = ctx.GetProperty("ppsn-pulled-revId", -1L);
+				
 				var src = ctx.GetInputStream();
 
 				// parse the object body
@@ -723,6 +808,15 @@ namespace TecWare.PPSn.Server
 					// first the get the object data
 					var obj = application.Objects.ObjectFromXml(transaction, xObject);
 					VerfiyObjectType(obj);
+
+					// revision to update
+					if (obj.IsRev && obj.HeadRevId != -1)
+					{
+						if (pulledId == -1)
+							throw new ArgumentException("Pulled revId is missing.");
+						else
+							obj.SetRevision(pulledId);
+					}
 
 					// create and load the dataset
 					var data = GetDataFromStream(src);
@@ -887,6 +981,9 @@ namespace TecWare.PPSn.Server
 				if (x.TryGetAttribute<string>(nameof(PpsObjectAccess.MimeType), out var mimeType))
 					obj[nameof(PpsObjectAccess.MimeType)] = mimeType;
 
+				// update tags
+
+
 				// update the links
 				void UpdateLinks(string tagName, IEnumerable<PpsObjectLinkAccess> currentLinks, Func<XElement, PpsObjectLinkAccess> addLink)
 				{
@@ -901,7 +998,6 @@ namespace TecWare.PPSn.Server
 				} // proc UpdateLinks
 
 				UpdateLinks(nameof(PpsObjectAccess.LinksTo), obj.LinksTo, obj.AddLinkTo);
-				UpdateLinks(nameof(PpsObjectAccess.LinksFrom), obj.LinksFrom, obj.AddLinkTo);
 
 				return obj;
 			} // func ObjectFromXml

@@ -15,19 +15,14 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
-using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
-using TecWare.PPSn.Server.Sql;
 
 namespace TecWare.PPSn.Server
 {
@@ -77,7 +72,7 @@ namespace TecWare.PPSn.Server
 		#endregion
 
 		private readonly SimpleConfigItemProperty<string> initializationProgress;
-		private Task initializationProcess = null;				// initialization process
+		private Task initializationProcess = null;        // initialization process
 		private bool isInitializedSuccessful = false;     // is the system initialized properly
 
 		private List<InitializationTask> initializationTasks = new List<InitializationTask>(); // Action that should be done in the initialization process
@@ -89,7 +84,7 @@ namespace TecWare.PPSn.Server
 		{
 			initializationProgress = new SimpleConfigItemProperty<string>(this, "ppsn_init_progress", "Initialization", "Misc", "Show the current state of the initialization of the node.", null, "Pending");
 
-			this.objectsLibrary =  new PpsObjectsLibrary(this);
+			this.objectsLibrary = new PpsObjectsLibrary(this);
 			this.httpLibrary = new PpsHttpLibrary(this);
 
 			// register shortcut for text
@@ -222,7 +217,7 @@ namespace TecWare.PPSn.Server
 				}
 			}
 		} // proc InitializeApplication
-		
+
 		/// <summary>Wait for initialization of the system, initialization is processed synchron.</summary>
 		/// <param name="timeout"></param>
 		/// <returns></returns>
