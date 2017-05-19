@@ -240,15 +240,14 @@
                 </Grid>
             </TabItem>
             <TabItem Header="Sonstiges">
-                <uiC:PpsAttachmentsControl VerticalAlignment="Top" HorizontalAlignment="Left"  
-                                           AddFileButtonVisible="true"
-                                           AddLinkButtonVisible="true"
-                                           RemoveButtonVisible="true"
-                                           CameraButtonVisible="true"
-                                           SignatureButtonVisible="true"
-                                           ButtonSevenVisible="true"
-                                           ButtonSevenCaption="Herbert"
-                                           ButtonSevenCommand="{Binding testCommand}">
+                <uiC:PpsAttachmentsControl VerticalAlignment="Top" HorizontalAlignment="Left"
+                                           AddLinkButtonCommand="{Binding testCommand}"
+                                           SeventhButtonVisible="true"
+                                           SeventhButtonCaption="Test"
+                                           SeventhButtonCommand="{Binding testCommand}">
+                    <!--one can overload all the predefined Buttons with p.e. AddFileButtonCommand="{Binding testCommand}"-->
+                    <!--one can hide a button with AddFileButtonVisible="false"; all but seventh button are visible by default-->
+                    <!--known buttons AddFileButton,AddLinkButton,RemoveButton,CameraButton,SignatureButton,SeventhButton-->
                     <uiC:PpsAttachmentsControl.AttachmentsSource>
                         <Binding Path="Data.Head.First.Zusa">
                             <Binding.Converter>
