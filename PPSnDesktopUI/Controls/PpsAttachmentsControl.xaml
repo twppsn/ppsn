@@ -52,16 +52,15 @@ specific language governing permissions and limitations under the Licence.
                         <Setter Property="Button.Margin" Value="3,3,3,3"/>
                     </Style>
                 </WrapPanel.Resources>
-                <Button Width="60" Height="60" 
+                <Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.CameraAttachmentCommand}" 
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=CameraButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">Camera</Button>
-                <Button Width="60" Height="60" 
+                <Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.ScannerAttachmentCommand}" 
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ScannerButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">Scanner</Button>
-                <Button Width="60" Height="60" 
+                <Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.SignatureAttachmentCommand}" 
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SignatureButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">Signature</Button>
-                <Button Width="60" Height="60" 
+                <Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.SeventhButtonAttachmentCommand}" 
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SeventhButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                        Content="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SeventhButtonCaption,Mode=OneWay}"
-                        Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SeventhButtonCommand,Mode=OneWay}"></Button>
+                        Content="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SeventhButtonCaption,Mode=OneWay}"></Button>
             </WrapPanel>
         </Grid>
         <ListBox Grid.Row="1" VerticalAlignment="Stretch" ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 

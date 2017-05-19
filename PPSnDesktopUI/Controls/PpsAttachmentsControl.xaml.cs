@@ -173,6 +173,11 @@ namespace TecWare.PPSn.Controls
 				);
 			else
 				CommandBindings.Add(new CommandBinding(SignatureAttachmentCommand, (isender, ie) => SignatureButtonCommand.ExecuteCommand(new UI.PpsCommandContext(Environment, isender, ie))));
+
+			if (SeventhButtonCommand == null)
+				; // NOP
+			else
+				CommandBindings.Add(new CommandBinding(SeventhButtonAttachmentCommand, (isender, ie) => SeventhButtonCommand.ExecuteCommand(new UI.PpsCommandContext(Environment, isender, ie))));
 		}
 
 		#endregion
