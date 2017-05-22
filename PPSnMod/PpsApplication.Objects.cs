@@ -136,8 +136,16 @@ namespace TecWare.PPSn.Server
 			};
 
 			var r = transaction.ExecuteSingleRow(cmd);
-			isRev = (bool)r[nameof(IsRev), true];
-			revId = (long)(r[nameof(HeadRevId), true] ?? -1);
+			if (r != null)
+			{
+				isRev = (bool)r[nameof(IsRev), true];
+				revId = (long)(r[nameof(HeadRevId), true] ?? -1);
+			}
+			else
+			{
+				isRev = false;
+				revId = -1;
+			}
 		} // proc CheckRevision
 
 		private LuaTable GetObjectArguments(bool forInsert)
@@ -424,7 +432,10 @@ namespace TecWare.PPSn.Server
 			{
 				{ "select", "dbo.ObjR" },
 				{ "selectList", new LuaTable { "Id", "IsDocumentText","IsDocumentDeflate","Document","DocumentId","DocumentLink" } },
-				new LuaTable { { "Id", revId } }
+				new LuaTable
+				{
+					{ "Id", revId }
+				}
 			};
 
 			var row = transaction.ExecuteSingleRow(cmd);
