@@ -286,9 +286,20 @@ namespace TecWare.PPSn.Controls
 			private PpsObject GetLinkedObject()
 				=> (PpsObject)row[linkColumnIndex];
 
-			public bool Remove()
-				=> row.Remove();
+			private PpsObject GetParentObject()
+				=> ((IPpsObjectBasedDataSet)(row.Table.DataSet)).Object;
 
+			public bool Remove()
+			{
+				if (row.Remove())
+				{
+					GetParentObject().Links.RemoveLink(GetLinkedObject().Id);
+					return true;
+				}
+
+				return false;
+			}
+			
 			public bool Equals(PpsDataRow other)
 				=> other == row;
 
@@ -342,15 +353,15 @@ namespace TecWare.PPSn.Controls
 
 			private void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 			{
-				switch(e.Action)
+				switch (e.Action)
 				{
 					case NotifyCollectionChangedAction.Add:
 						if (e.NewItems.Count > 1)
 							throw new NotSupportedException();
 
 						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(
-							NotifyCollectionChangedAction.Add, 
-							new PpsAttachmentItemImplementation((PpsDataRow)e.NewItems[0], linkColumnIndex), 
+							NotifyCollectionChangedAction.Add,
+							new PpsAttachmentItemImplementation((PpsDataRow)e.NewItems[0], linkColumnIndex),
 							e.NewStartingIndex)
 						);
 						break;
@@ -358,11 +369,13 @@ namespace TecWare.PPSn.Controls
 						if (e.OldItems.Count > 1)
 							throw new NotSupportedException();
 
-						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(
-							NotifyCollectionChangedAction.Reset,
+						/*CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(
+							NotifyCollectionChangedAction.Remove,
 							new PpsAttachmentItemImplementation((PpsDataRow)e.OldItems[0], linkColumnIndex),
 							e.OldStartingIndex)
-						);
+						);*/
+						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset)); // ToDo
+
 						break;
 					case NotifyCollectionChangedAction.Reset:
 						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
