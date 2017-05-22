@@ -129,7 +129,10 @@ namespace TecWare.PPSn.Server
 			{
 				{ "select", "dbo.ObjK" },
 				{ "selectList", new LuaTable { nameof(IsRev), nameof(HeadRevId), } },
-				new LuaTable { "Id", objectId }
+				new LuaTable
+				{
+					{ "Id", objectId }
+				}
 			};
 
 			var r = transaction.ExecuteSingleRow(cmd);
@@ -227,7 +230,7 @@ namespace TecWare.PPSn.Server
 					};
 					foreach (var l in linksTo)
 					{
-						if (l.IsRemoved && l.Id> 0)
+						if (l.IsRemoved && l.Id > 0)
 						{
 							cmd[1] = new LuaTable
 							{
@@ -485,7 +488,7 @@ namespace TecWare.PPSn.Server
 
 			var objectId = x.GetAttribute("objectId", -1L);
 			var cur = linksTo.Find(l => l.ObjectId == objectId);
-			var refCount =  x.GetAttribute("refCount",0);
+			var refCount = x.GetAttribute("refCount", 0);
 			var onDelete = x.GetAttribute("onDelete", "R");
 			if (cur == null) // new
 				linksTo.Add(new PpsObjectLinkAccess(this, -1, objectId, refCount, onDelete[0]));
@@ -793,7 +796,7 @@ namespace TecWare.PPSn.Server
 					throw new ArgumentOutOfRangeException("header-length");
 
 				var pulledId = ctx.GetProperty("ppsn-pulled-revId", -1L);
-				
+
 				var src = ctx.GetInputStream();
 
 				// parse the object body
