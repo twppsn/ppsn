@@ -1246,6 +1246,7 @@ namespace TecWare.PPSn
 			using (var src = await baseObj.LoadRawDataAsync())
 			{
 				rawData = src.ReadInArray();
+				sha256 = (string)baseObj.Tags[baseObj.Tags.IndexOf("Sha256")].Value;
 				OnPropertyChanged(nameof(IsLoaded));
 			}
 		} // proc LoadAsync
@@ -1564,6 +1565,13 @@ namespace TecWare.PPSn
 			else if (objectId > 0 && objectId != newObjectId)
 				throw new ArgumentOutOfRangeException(nameof(Id), newObjectId, "Object id is different.");
 
+			using (var cmd = trans.CreateNativeCommand("UPDATE main.[ObjectLinks] SET LinkObjectId = @Id, LinkObjectDataId = @Id WHERE LinkObjectId = @OldId"))
+			{
+				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
+				cmd.AddParameter("@OldId", DbType.Int64, objectId);
+				await cmd.ExecuteNonQueryExAsync();
+			}
+
 			using (var cmd = trans.CreateNativeCommand("UPDATE main.[Objects] SET Id = @Id WHERE Id = @OldId"))
 			{
 				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
@@ -1672,7 +1680,15 @@ namespace TecWare.PPSn
 				try
 				{
 					// update local database and object data
+					if (data == null)
+					{
+						await this.GetDataAsync<IPpsObjectData>();
+						await data.LoadAsync();
+					}
 					await data.CommitAsync();
+
+					foreach (var link in this.Links)
+						await link.LinkTo.PushAsync();
 
 					// first build object data
 					var xHeaderData = ToXml();
