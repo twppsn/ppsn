@@ -1683,8 +1683,8 @@ namespace TecWare.PPSn
 					if (data == null)
 					{
 						await this.GetDataAsync<IPpsObjectData>();
-						await data.LoadAsync();
 					}
+					await data.LoadAsync();
 					await data.CommitAsync();
 
 					foreach (var link in this.Links)
