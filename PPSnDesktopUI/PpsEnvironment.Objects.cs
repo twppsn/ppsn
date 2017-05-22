@@ -203,7 +203,7 @@ namespace TecWare.PPSn
 			parent.SetDirty();
 		} // proc SetDirty
 
-		private void RefreshLinks()
+		public void RefreshLinks()
 		{
 			links.Clear();
 			removedLinks.Clear();
@@ -1572,6 +1572,13 @@ namespace TecWare.PPSn
 				await cmd.ExecuteNonQueryExAsync();
 			}
 
+			using (var cmd = trans.CreateNativeCommand("UPDATE main.[ObjectLinks] SET ParentObjectId = @Id WHERE ParentObjectId = @OldId"))
+			{
+				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
+				cmd.AddParameter("@OldId", DbType.Int64, objectId);
+				await cmd.ExecuteNonQueryExAsync();
+			}
+
 			using (var cmd = trans.CreateNativeCommand("UPDATE main.[Objects] SET Id = @Id WHERE Id = @OldId"))
 			{
 				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
@@ -1689,6 +1696,9 @@ namespace TecWare.PPSn
 
 					foreach (var link in this.Links)
 						await link.LinkTo.PushAsync();
+
+					Links.SetDirty();
+					Links.RefreshLinks();
 
 					// first build object data
 					var xHeaderData = ToXml();
