@@ -1854,7 +1854,7 @@ namespace TecWare.PPSn
 			);
 
 			// add links
-			links.AddToXml(xObj, "linkTo");
+			links.AddToXml(xObj, "linksTo");
 
 			// add system tags
 			tags.AddToXml(xObj, "tags");
