@@ -308,6 +308,7 @@
 					<!-- id used in the dataset -->
 					<pps:column name="LinkObjectDataId" fieldName="sys.Fields.Long">
 						<pps:meta name="default">NULL</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					<pps:column name="RefCount" fieldName="sys.Fields.Int">
 						<pps:meta name="nullable">false</pps:meta>
