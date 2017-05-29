@@ -485,7 +485,7 @@ namespace TecWare.PPSn.Server
 			{
 				// append links
 				foreach (var cur in LinksTo)
-					x.Add(cur.ToXml("linkTo"));
+					x.Add(cur.ToXml("linksTo"));
 			}
 
 			return x;
