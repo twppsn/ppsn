@@ -520,7 +520,7 @@ namespace TecWare.PPSn.Server
 				linksTo.Add(new PpsObjectLinkAccess(this, -1, objectId, 0, 'R'));
 		} // proc AddLink
 
-		private List<PpsObjectLinkAccess> GetLinks(bool linksTo, ref List<PpsObjectLinkAccess> links)
+		private List<PpsObjectLinkAccess> GetLinks(bool linksToThis, ref List<PpsObjectLinkAccess> links)
 		{
 			if (links != null)
 				return links;
@@ -537,8 +537,8 @@ namespace TecWare.PPSn.Server
 						new LuaTable
 						{
 							"Id",
-							{ linksTo ? "LinkObjKId" : "ParentObjKId", "ObjKId" },
-							{ linksTo ? "LinkObjRId" : "ParentObjRId", "ObjRId" },
+							{ linksToThis ? "LinkObjKId" : "ParentObjKId", "ObjKId" },
+							{ linksToThis ? "LinkObjRId" : "ParentObjRId", "ObjRId" },
 							"RefCount",
 							"OnDelete"
 						}
