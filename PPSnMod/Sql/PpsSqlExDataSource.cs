@@ -1100,6 +1100,12 @@ namespace TecWare.PPSn.Server.Sql
 							var col = tableInfo.FindColumn((string)item, true);
 							col.AppendAsColumn(commandText);
 						}
+						foreach (var item in selectList.Members.Keys)
+						{
+							commandText.Append(", ");
+
+							commandText.Append($"[{item}] AS [{selectList.Members[item]}]");
+						}
 					}
 					#endregion
 
