@@ -77,6 +77,20 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
+	#region -- enum PpsTablePrimaryKeyType ----------------------------------------------
+
+	/// <summary>Classification for the primary key.
+	/// - gt 0 database key
+	/// - lt 0 none databse key (server or local)</summary>
+	public enum PpsTablePrimaryKeyType
+	{
+		Database,
+		Server,
+		Local
+	} // enum PpsTablePrimaryKeyType
+
+	#endregion
+
 	#region -- class PpsDataTableRelationDefinition -------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -1412,6 +1426,9 @@ namespace TecWare.PPSn.Data
 		private static readonly PropertyInfo ColumnsPropertyInfo;
 		internal static readonly PropertyInfo TableDefinitionPropertyInfo;
 
+		private const ulong localKeyBit = (ulong)2 << 62;
+		private const ulong serverKeyBit = (ulong)3 << 62;
+		
 		static PpsDataTable()
 		{
 			var typeInfo = typeof(PpsDataTable).GetTypeInfo();
@@ -1423,6 +1440,49 @@ namespace TecWare.PPSn.Data
 			if (ColumnsPropertyInfo == null || TableDefinitionPropertyInfo == null || ReadOnlyCollectionIndexPropertyInfo == null)
 				throw new InvalidOperationException("Reflection fehlgeschlagen (PpsDataTable)");
 		} // sctor
+
+		public static void GetKey(long key, out PpsTablePrimaryKeyType type, out long value)
+		{
+			if (key > 0)
+			{
+				type = PpsTablePrimaryKeyType.Database;
+				value = key;
+			}
+			else
+			{
+				var k = unchecked((ulong)key);
+				if (k >> 62 == 2)
+				{
+					type = PpsTablePrimaryKeyType.Local;
+					value = (long)(~serverKeyBit & (ulong)key);
+				}
+				else if (k >> 62 == 3)
+				{
+					type = PpsTablePrimaryKeyType.Server;
+					value = (long)(~serverKeyBit & (ulong)key);
+				}
+				else
+					throw new ArgumentException(nameof(value));
+			}
+		} // func GetKey
+
+		public static long MakeKey(PpsTablePrimaryKeyType type, long value)
+		{
+			if ((serverKeyBit & (ulong)value) != 0)
+				throw new ArgumentOutOfRangeException(nameof(value));
+
+			switch(type)
+			{
+				case PpsTablePrimaryKeyType.Database:
+					return value;
+				case PpsTablePrimaryKeyType.Local:
+					return unchecked((long)(localKeyBit | (ulong)value));
+				case PpsTablePrimaryKeyType.Server:
+					return unchecked((long)(serverKeyBit | (ulong)value));
+				default:
+					throw new ArgumentOutOfRangeException(nameof(type));
+			}
+		} // func MakeKey
 	} // class PpsDataTable
 
 	#endregion

@@ -98,6 +98,8 @@ namespace TecWare.PPSn.Data
 				return LuaType.GetType(dataType, lateAllowed: false).Type;
 		} // func GetColumnType
 
+		public sealed override PpsTablePrimaryKeyType KeyType => PpsTablePrimaryKeyType.Local;
+
 		public string SchemaType => schema;
 
 		public IPpsShell Shell => shell;

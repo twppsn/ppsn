@@ -404,6 +404,8 @@ namespace TecWare.PPSn.Data
 		public PpsDataSetAutoTagDefinition FindTag(string name)
 			=> tags.Find(c => String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
 
+		public abstract PpsTablePrimaryKeyType KeyType { get; }
+
 		/// <summary></summary>
 		public ReadOnlyCollection<PpsDataSetAutoTagDefinition> TagDefinitions => tagDefinitions;
 		/// <summary>Access to the table definitions.</summary>
@@ -596,7 +598,7 @@ namespace TecWare.PPSn.Data
 		private IPpsUndoSink undoSink;
 		private PpsDeferedConstraintCheck deferredConstraintChecks = null;
 
-		private long lastPrimaryId = -1;
+		private long lastPrimaryId = 1;
 		private object nextPrimaryLock = new object();
 
 		private LuaTable properties; // local properties and states, that are not persisted
@@ -790,13 +792,17 @@ namespace TecWare.PPSn.Data
 		} // proc Reset
 
 		/// <summary>Updates to next id.</summary>
-		/// <param name="value">Value for a primary column</param>
-		public void UpdateNextId(long value)
+		/// <param name="key">Value for a primary column</param>
+		public void UpdateNextId(long key)
 		{
 			lock (nextPrimaryLock)
 			{
-				if (value < lastPrimaryId)
-					lastPrimaryId = value;
+				PpsDataTable.GetKey(key, out var type, out var value);
+				if (type == DataSetDefinition.KeyType)
+				{
+					if (lastPrimaryId < value)
+						lastPrimaryId = value;
+				}
 			}
 		} // proc UpdateNextId
 
@@ -805,7 +811,7 @@ namespace TecWare.PPSn.Data
 		public long GetNextId()
 		{
 			lock (nextPrimaryLock)
-				return --lastPrimaryId;
+				return PpsDataTable.MakeKey(DataSetDefinition.KeyType, ++lastPrimaryId);
 		} // func GetNextId
 
 		#region -- ExecuteEvent -----------------------------------------------------------
