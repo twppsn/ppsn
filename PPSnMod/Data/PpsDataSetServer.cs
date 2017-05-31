@@ -571,6 +571,8 @@ namespace TecWare.PPSn.Server.Data
 		public PpsApplication Application => application;
 		public override Lua Lua => lua;
 
+		public override PpsTablePrimaryKeyType KeyType => PpsTablePrimaryKeyType.Server;
+
 		public DateTime ConfigurationStamp => configurationStamp;
 		public string[] ClientScripts => clientScripts;
 		public string[] ServerScripts => serverScripts;
