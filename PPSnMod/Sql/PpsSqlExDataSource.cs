@@ -766,7 +766,7 @@ namespace TecWare.PPSn.Server.Sql
 							}
 
 							var parameterName = '@' + columnName;
-							commandText.Append(columnName);
+							commandText.Append('[' + columnName + ']');
 							variableList.Append(parameterName);
 							cmd.Parameters.Add(column.CreateSqlParameter(parameterName, value));
 						}
@@ -775,7 +775,7 @@ namespace TecWare.PPSn.Server.Sql
 						{
 							if (insertedList.Length > 0)
 								insertedList.Append(',');
-							insertedList.Append("inserted.").Append(columnName);
+							insertedList.Append("inserted.").Append('[' + columnName + ']');
 						}
 					}
 
