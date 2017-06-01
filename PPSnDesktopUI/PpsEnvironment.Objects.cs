@@ -2530,8 +2530,8 @@ namespace TecWare.PPSn
 				}
 
 				// append multi-value column
-				cmd.Append("group_concat(s_all.Key || ':' || s_all.Class || '=' || replace(s_all.Value, char(10), ' '), char(10)) as [Values]");
-
+				cmd.Append("group_concat('S' || s_all.Id || ':' || s_all.Key || ':' || s_all.Class || ':' || s_all.UserId || '=' || replace(s_all.Value, char(10), ' '), char(10)) as [Values]");
+				
 				// generate dynamic columns
 				foreach (var c in GetAllKeyColumns())
 				{
