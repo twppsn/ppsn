@@ -1525,7 +1525,7 @@ namespace TecWare.PPSn
 			links.ReadLinksFromXml(x.Elements("linksTo"));
 
 			// tags
-			tags.ReadTagsFromXml(x.Elements("tags")); // refresh of the pulled system tags, removes current system tags
+			tags.ReadTagsFromXml(x.Elements("tag")); // refresh of the pulled system tags, removes current system tags
 
 			ResetDirty(null);
 		} // UpdateObjectFromXml
@@ -1857,7 +1857,7 @@ namespace TecWare.PPSn
 			links.AddToXml(xObj, "linksTo");
 
 			// add system tags
-			tags.AddToXml(xObj, "tags");
+			tags.AddToXml(xObj, "tag");
 
 			return xObj;
 		} // proc ToXml
