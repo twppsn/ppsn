@@ -268,6 +268,7 @@ namespace TecWare.PPSn.UI
 			UpdateSources();
 			try
 			{
+				await CommitEditAsync();
 				await obj.PushAsync();
 			}
 			catch (Exception ex)
