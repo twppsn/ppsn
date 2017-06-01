@@ -451,6 +451,10 @@ namespace TecWare.PPSn.Server.Data
 			public IPropertyEnumerableDictionary Attributes => column.Attributes;
 		} // class PpsDataColumnDescription
 
+		public static bool TryGetColumnDescriptionImplementation<T>(this IPpsColumnDescription columnDescription, out T value)
+			where T : class
+			=> (value = GetColumnDescriptionImplementation<T>(columnDescription)) != null;
+
 		public static T GetColumnDescriptionImplementation<T>(this IPpsColumnDescription columnDescription)
 			where T : class
 		{

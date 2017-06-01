@@ -137,24 +137,24 @@ namespace TecWare.PPSn.Server
 		protected override bool IsDataRevision(PpsAttachmentAccess data)
 			=> false;
 		
-		protected override bool LuaPush(PpsDataTransaction transaction, PpsObjectAccess obj, object data)
+		protected override bool LuaPush(PpsDataTransaction transaction, PpsObjectAccess obj, object data, bool release)
 		{
 			switch (data)
 			{
 				case byte[] b:
 					using (var a = new PpsStreamAttachmentAccess(new MemoryStream(b, false)))
-						return PushData(transaction, obj, a);
+						return PushData(transaction, obj, a, release);
 
 				case string s:
 					using (var a = new PpsStreamAttachmentAccess(new FileStream(s, FileMode.Open, FileAccess.Read)))
-						return PushData(transaction, obj, a);
+						return PushData(transaction, obj, a, release);
 
 				case Stream src:
 					using (var a = new PpsStreamAttachmentAccess(src))
-						return PushData(transaction, obj, a);
+						return PushData(transaction, obj, a, release);
 
 				case PpsAttachmentAccess a:
-					return PushData(transaction, obj, a);
+					return PushData(transaction, obj, a, release);
 
 				case null:
 					throw new ArgumentNullException(nameof(data));

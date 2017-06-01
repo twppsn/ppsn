@@ -306,10 +306,7 @@ namespace TecWare.PPSn.Server.Data
 		} // proc Merge
 
 		#endregion
-
-		public override PpsDataTable CreateDataTable(PpsDataSet dataset)
-			=> new PpsDataTableServer(this, dataset);
-
+		
 		public void WriteSchema(XElement xSchema)
 		{
 			var xTable = new XElement("table");
@@ -329,24 +326,12 @@ namespace TecWare.PPSn.Server.Data
 	} // class PpsDataTableServerDefinition
 
 	#endregion
-
-	#region -- class PpsDataTableServer -------------------------------------------------
-
-	public sealed class PpsDataTableServer : PpsDataTable
-	{
-		public PpsDataTableServer(PpsDataTableDefinition definition, PpsDataSet dataset)
-			: base(definition, dataset)
-		{
-		} // ctor
-	} // class PpsDataTableServer
-
-	#endregion
-
+	
 	#region -- class PpsDataSetServerDefinition -----------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Definiert eine Datenklasse aus der Sicht des Servers heraus.</summary>
-	public class PpsDataSetServerDefinition : PpsDataSetDefinition, IServiceProvider
+	public sealed class PpsDataSetServerDefinition : PpsDataSetDefinition, IServiceProvider
 	{
 		#region -- class PpsDataSetMetaCollectionServerDefinition -------------------------
 
@@ -426,7 +411,7 @@ namespace TecWare.PPSn.Server.Data
 			} // foreach c
 		} // ctor
 
-		protected virtual PpsDataTableServerDefinition CreateTableDefinition(string tableName, XElement config)
+		private PpsDataTableServerDefinition CreateTableDefinition(string tableName, XElement config)
 		{
 			var alternativeDataSource = config.GetAttribute("dataSource", String.Empty);
 			if (String.IsNullOrEmpty(alternativeDataSource))
@@ -571,6 +556,8 @@ namespace TecWare.PPSn.Server.Data
 		public PpsApplication Application => application;
 		public override Lua Lua => lua;
 
+		public override PpsTablePrimaryKeyType KeyType => PpsTablePrimaryKeyType.Server;
+
 		public DateTime ConfigurationStamp => configurationStamp;
 		public string[] ClientScripts => clientScripts;
 		public string[] ServerScripts => serverScripts;
@@ -618,103 +605,16 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
-	#region -- interface IPpsLoadableDataSet --------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public interface IPpsLoadableDataSet
-	{
-		/// <summary></summary>
-		/// <param name="properties"></param>
-		void OnBeforeLoad(IPropertyReadOnlyDictionary properties);
-		/// <summary></summary>
-		/// <param name="properties"></param>
-		void OnLoad(IPropertyReadOnlyDictionary properties);
-		/// <summary></summary>
-		/// <param name="properties"></param>
-		void OnAfterLoad(IPropertyReadOnlyDictionary properties);
-	} // interface IPpsLoadableDataSet
-
-	#endregion
-
 	#region -- class PpsDataSetServer ---------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Serverseitige Implementierung des DataSets</summary>
 	public class PpsDataSetServer : PpsDataSet
 	{
-		#region -- enum PpsDataTrigger ----------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
-		private enum PpsDataTrigger
-		{
-			/// <summary>Wird aufgerufen, bevor die Daten aus der Datenbank geladen werden. Es können Argumente und das Sql-Script angepasst werden.</summary>
-			OnBeforeLoad,
-			/// <summary>Wird aufgerufen, bevor die Daten aus der Datenbank gelesen werden. Daten die vom Sql-Script angefordert werden, müssen abgeholt werden.</summary>
-			OnExecuteLoad,
-			/// <summary>Wird augerufen, nachdem die daten aus der Datenbank gelesen wurden.</summary>
-			OnAfterLoad
-		} // enum PpsDataTrigger
-
-		#endregion
-
 		public PpsDataSetServer(PpsDataSetServerDefinition datasetClass)
 			: base(datasetClass)
 		{
 		} // ctor
-
-		private void ExecuteTrigger(PpsDataTrigger trigger, params object[] args)
-		{
-			//foreach (var s in DataSetDefinition.Scripts)
-			//{
-			//	object memberValue = s.GetMemberValue(trigger.ToString());
-			//	if (memberValue != null)
-			//		Lua.RtInvoke(memberValue, args);
-			//}
-		} // func ExecuteTrigger
-
-		public void Load(IDEContext args)
-		{
-			//IXdeLockedConnection con = args.Caller.User.GetService<IXdeLockedConnection>(true);
-			//using (SqlCommand cmd = con.CreateCommand())
-			//{
-			//	StringBuilder sbCommand = new StringBuilder();
-
-			//	// Publiziere den Command
-			//	args.SetMemberValue("SqlText", sbCommand);
-			//	args.SetMemberValue("SqlCommand", cmd);
-
-			//	ExecuteTrigger(PPSnDataTrigger.OnBeforeLoad, this, args);
-
-			//	// Erzeuge das Script zum Laden der Daten
-			//	foreach (PPSnDataTable table in Tables)
-			//		((PPSnDataTableServerClass)table.Class).PrepareLoad(cmd, sbCommand, args);
-
-			//	// Fetch die Daten, wenn Daten abgefragt wurden
-			//	if (sbCommand.Length > 0)
-			//	{
-			//		cmd.CommandText = sbCommand.ToString();
-			//		using (SqlDataReader r = cmd.ExecuteReader())
-			//		{
-			//			ExecuteTrigger(PPSnDataTrigger.OnExecuteLoad, this, r, args);
-
-			//			foreach (PPSnDataTable table in Tables)
-			//				((PPSnDataTableServerClass)table.Class).FinishLoad(r, table);
-			//		}
-			//	}
-
-			//	ExecuteTrigger(PPSnDataTrigger.OnAfterLoad, this, args);
-			//}
-		} // proc Load
-
-		public virtual void OnAfterPull()
-		{
-		} // proc OnAfterPull
-
-		public virtual void OnBeforePush()
-		{
-		} // proc OnBeforePush
 
 		public new PpsDataSetServerDefinition DataSetDefinition => (PpsDataSetServerDefinition)base.DataSetDefinition;
 	} // class PpsDataSetServer

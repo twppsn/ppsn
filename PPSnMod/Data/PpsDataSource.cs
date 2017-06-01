@@ -67,7 +67,7 @@ namespace TecWare.PPSn.Server.Data
 			return null;
 		} // func GetColumnDescription
 
-		public virtual PpsDataSetServerDefinition CreateDataSetDefinition(string dataSetName, XElement config, DateTime configurationStamp)
+		public PpsDataSetServerDefinition CreateDataSetDefinition(string dataSetName, XElement config, DateTime configurationStamp)
 			=> new PpsDataSetServerDefinition(this, dataSetName, config, configurationStamp);
 
 		public virtual PpsDataTableServerDefinition CreateTableDefinition(PpsDataSetServerDefinition dataset, string tableName, XElement config)

@@ -760,22 +760,29 @@ namespace TecWare.PPSn.Server
 			obj.Update(true);
 		} // proc InsertNewObject
 
-		protected virtual bool PushData(PpsDataTransaction transaction, PpsObjectAccess obj, T data)
+		/// <summary>Persist the data in the server</summary>
+		/// <param name="transaction">Transaction to the database.</param>
+		/// <param name="obj">Object information.</param>
+		/// <param name="data">Data to push</param>
+		/// <param name="release">Has this data a release request.</param>
+		/// <returns></returns>
+		protected virtual bool PushData(PpsDataTransaction transaction, PpsObjectAccess obj, T data, bool release)
 		{
 			// set IsRev
 			if (obj.IsNew)
 				InsertNewObject(transaction, obj, data);
 
 			// update database
-			obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
+			if (data != null)
+				obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
 			obj.Update();
 
 			return true;
 		} // func PushData
 
 		[LuaMember("Push")]
-		protected virtual bool LuaPush(PpsDataTransaction transaction, PpsObjectAccess obj, object data)
-			=> PushData(transaction, obj, (T)data);
+		protected virtual bool LuaPush(PpsDataTransaction transaction, PpsObjectAccess obj, object data, bool relase)
+			=> PushData(transaction, obj, (T)data, relase);
 
 		[
 		DEConfigHttpAction("push", IsSafeCall = false),
@@ -793,6 +800,7 @@ namespace TecWare.PPSn.Server
 					throw new ArgumentOutOfRangeException("header-length");
 
 				var pulledId = ctx.GetProperty("ppsn-pulled-revId", -1L);
+				var releaseRequest = ctx.GetProperty("ppsn-release", false);
 				
 				var src = ctx.GetInputStream();
 
@@ -822,7 +830,7 @@ namespace TecWare.PPSn.Server
 					var data = GetDataFromStream(src);
 
 					// push data in the database
-					if (PushData(transaction, obj, data))
+					if (PushData(transaction, obj, data, releaseRequest))
 					{
 						// write the object definition to client
 						using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
