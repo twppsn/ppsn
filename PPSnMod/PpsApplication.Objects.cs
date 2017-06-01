@@ -270,7 +270,7 @@ namespace TecWare.PPSn.Server
 					GetObjectArguments(false)
 				};
 			}
-			else if (Guid == Guid.Empty) // does not exists
+			else if (Guid == Guid.Empty) // does not exist
 			{
 				cmd = new LuaTable
 				{
