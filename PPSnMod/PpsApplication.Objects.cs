@@ -1011,7 +1011,7 @@ namespace TecWare.PPSn.Server
 					removeList.ForEach(c => c.Remove());
 				} // proc UpdateLinks
 
-				UpdateLinks(nameof(PpsObjectAccess.LinksTo), obj.LinksTo, obj.AddLinkTo);
+				UpdateLinks("linksTo" , obj.LinksTo, obj.AddLinkTo);
 
 				return obj;
 			} // func ObjectFromXml
