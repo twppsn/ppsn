@@ -129,12 +129,23 @@ namespace TecWare.PPSn.Server
 			{
 				{ "select", "dbo.ObjK" },
 				{ "selectList", new LuaTable { nameof(IsRev), nameof(HeadRevId), } },
-				new LuaTable { "Id", objectId }
+				new LuaTable
+				{
+					{ "Id", objectId }
+				}
 			};
 
 			var r = transaction.ExecuteSingleRow(cmd);
-			isRev = (bool)r[nameof(IsRev), true];
-			revId = (long)(r[nameof(HeadRevId), true] ?? -1);
+			if (r != null)
+			{
+				isRev = (bool)r[nameof(IsRev), true];
+				revId = (long)(r[nameof(HeadRevId), true] ?? -1);
+			}
+			else
+			{
+				isRev = false;
+				revId = -1;
+			}
 		} // proc CheckRevision
 
 		private LuaTable GetObjectArguments(bool forInsert)
@@ -227,7 +238,7 @@ namespace TecWare.PPSn.Server
 					};
 					foreach (var l in linksTo)
 					{
-						if (l.IsRemoved && l.Id> 0)
+						if (l.IsRemoved && l.Id > 0)
 						{
 							cmd[1] = new LuaTable
 							{
@@ -421,7 +432,10 @@ namespace TecWare.PPSn.Server
 			{
 				{ "select", "dbo.ObjR" },
 				{ "selectList", new LuaTable { "Id", "IsDocumentText","IsDocumentDeflate","Document","DocumentId","DocumentLink" } },
-				new LuaTable { { "Id", revId } }
+				new LuaTable
+				{
+					{ "Id", revId }
+				}
 			};
 
 			var row = transaction.ExecuteSingleRow(cmd);
@@ -471,7 +485,7 @@ namespace TecWare.PPSn.Server
 			{
 				// append links
 				foreach (var cur in LinksTo)
-					x.Add(cur.ToXml("linkTo"));
+					x.Add(cur.ToXml("linksTo"));
 			}
 
 			return x;
@@ -485,7 +499,7 @@ namespace TecWare.PPSn.Server
 
 			var objectId = x.GetAttribute("objectId", -1L);
 			var cur = linksTo.Find(l => l.ObjectId == objectId);
-			var refCount =  x.GetAttribute("refCount",0);
+			var refCount = x.GetAttribute("refCount", 0);
 			var onDelete = x.GetAttribute("onDelete", "R");
 			if (cur == null) // new
 				linksTo.Add(new PpsObjectLinkAccess(this, -1, objectId, refCount, onDelete[0]));
@@ -506,7 +520,7 @@ namespace TecWare.PPSn.Server
 				linksTo.Add(new PpsObjectLinkAccess(this, -1, objectId, 0, 'R'));
 		} // proc AddLink
 
-		private List<PpsObjectLinkAccess> GetLinks(bool linksTo, ref List<PpsObjectLinkAccess> links)
+		private List<PpsObjectLinkAccess> GetLinks(bool linksToThis, ref List<PpsObjectLinkAccess> links)
 		{
 			if (links != null)
 				return links;
@@ -523,8 +537,8 @@ namespace TecWare.PPSn.Server
 						new LuaTable
 						{
 							"Id",
-							{ linksTo ? "LinkObjKId" : "ParentObjKId", "ObjKId" },
-							{ linksTo ? "LinkObjRId" : "ParentObjRId", "ObjRId" },
+							{ linksToThis ? "LinkObjKId" : "ParentObjKId", "ObjKId" },
+							{ linksToThis ? "LinkObjRId" : "ParentObjRId", "ObjRId" },
 							"RefCount",
 							"OnDelete"
 						}
