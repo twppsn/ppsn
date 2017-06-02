@@ -6,19 +6,13 @@ end;
 
 local function mergeToSql(trans, obj, data)
 	-- write kont table
-	data:Head:Merge(trans, {
-		ObjkId = obj.Id
-	});
+	data:Head:Merge(trans);
 
 	-- write adre
-	data:Adre:Merge(trans, {
-		ObjkId = obj.Id
-	});
+	data:Adre:Merge(trans);
 
 	-- write ansp
-	data:Ansp:Merge(trans, {
-		ObjkId = obj.Id
-	});
+	data:Ansp:Merge(trans);
 end;
 
 -- overwrite NextNumber

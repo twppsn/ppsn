@@ -73,7 +73,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		/// <summary>Write the the data over the primary key</summary>
 		/// <param name="data"></param>
-		public void Merge(PpsDataTransaction trans, PpsDataTransaction data)
+		public void Merge(PpsDataTransaction trans)
 		{
 			using (var sqlCommand = PpsSqlExDataSource.CreateSqlCommand(trans, CommandType.Text, false))
 			{
