@@ -215,16 +215,9 @@ namespace TecWare.PPSn.Server
 			};
 
 			var r = transaction.ExecuteSingleRow(cmd);
-			if (r != null)
-			{
-				isRev = (bool)r[nameof(IsRev), true];
-				revId = (long)(r[nameof(HeadRevId), true] ?? -1);
-			}
-			else
-			{
-				isRev = false;
-				revId = -1;
-			}
+
+			isRev = (bool)r[nameof(IsRev), true];
+			revId = (long)(r[nameof(HeadRevId), true] ?? -1);
 		} // proc CheckRevision
 
 		private LuaTable GetObjectArguments(bool forInsert)
@@ -1038,7 +1031,7 @@ namespace TecWare.PPSn.Server
 					VerfiyObjectType(obj);
 
 					// revision to update
-					if (obj.IsRev && obj.HeadRevId != -1)
+					if (obj.HeadRevId != -1 && obj.IsRev)
 					{
 						if (pulledId == -1)
 							throw new ArgumentException("Pulled revId is missing.");
