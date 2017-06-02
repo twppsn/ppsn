@@ -309,8 +309,15 @@ namespace TecWare.PPSn.Server.Sql
 				parentRootTable = sqlDataTable.GetPrimaryRootTable();
 
 				// find relation
-				parentRootTableRelation = sourceColumn.Table.RelationInfo.FirstOrDefault(c => c.ParentColumn == GetSqlColumnInfo(rootColumn.ParentColumn) && c.ReferencedColumn == GetSqlColumnInfo(rootColumn))
-					?? throw new ArgumentNullException($"No relation for parent:'{rootColumn.ParentColumn.Name}' -> ref: '{rootColumn.Name}'");
+				var sqlParentColumn = GetSqlColumnInfo(rootColumn.ParentColumn);
+				var sqlColumn = GetSqlColumnInfo(rootColumn);
+				if (sqlParentColumn == null || sqlParentColumn == null)
+					parentRootTable = null; // Todo: Problem mit Kont.ObjkId -> welche Meta-SourceColumn besitzt (übersetzung der Spalten ist falsch).
+				else
+				{
+					parentRootTableRelation = sourceColumn.Table.RelationInfo.FirstOrDefault(c => c.ParentColumn == sqlColumn && c.ReferencedColumn == sqlParentColumn)
+						?? throw new ArgumentNullException($"No relation for parent:'{rootColumn.ParentColumn.Name}' -> ref: '{rootColumn.Name}'");
+				}
 			}
 
 			// generate automatic schema binding
