@@ -1229,7 +1229,7 @@ namespace TecWare.PPSn.Server
 					removeList.ForEach(c => c.Remove());
 				} // proc UpdateLinks
 
-				UpdateLinks("linksTo" , obj.LinksTo, obj.AddLinkTo);
+				UpdateLinks("linksTo", obj.LinksTo, obj.AddLinkTo);
 				UpdateTags("tag", obj.Tags, obj.AddTag);
 
 				return obj;
