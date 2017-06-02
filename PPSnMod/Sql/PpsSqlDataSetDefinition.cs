@@ -303,7 +303,7 @@ namespace TecWare.PPSn.Server.Sql
 			SqlTableBinding parentRootTable = null;
 			PpsSqlExDataSource.SqlRelationInfo parentRootTableRelation = null;
 			var rootColumn = Columns.FirstOrDefault(col => col is PpsDataColumnServerDefinition colServer && colServer.ParentType == PpsDataColumnParentRelationType.Root);
-			if (rootColumn != null && rootColumn.Table is PpsSqlDataTableServerDefinition sqlDataTable)
+			if (rootColumn != null && rootColumn.ParentColumn.Table is PpsSqlDataTableServerDefinition sqlDataTable)
 			{
 				// find inner join
 				parentRootTable = sqlDataTable.GetPrimaryRootTable();
