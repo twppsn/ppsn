@@ -322,12 +322,12 @@ namespace TecWare.PPSn.Server
 						{
 							#region tag is going to be removed
 
-							cmd[1] = new LuaTable
+							deleteCmd[1] = new LuaTable
 							{
 								{ "Id", t.Id }
 							};
 
-							transaction.ExecuteNoneResult(cmd);
+							transaction.ExecuteNoneResult(deleteCmd);
 
 							#endregion
 						}
