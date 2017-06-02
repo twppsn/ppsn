@@ -977,6 +977,8 @@ namespace TecWare.PPSn.Server
 
 			// insert the new object
 			obj.Update(true);
+			obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
+			obj.Update(false);
 		} // proc InsertNewObject
 
 		protected virtual bool PushData(PpsDataTransaction transaction, PpsObjectAccess obj, T data)
@@ -986,8 +988,9 @@ namespace TecWare.PPSn.Server
 				InsertNewObject(transaction, obj, data);
 
 			// update database
+			obj.Update(true);
 			obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
-			obj.Update();
+			obj.Update(false);
 
 			return true;
 		} // func PushData
