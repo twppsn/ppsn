@@ -476,8 +476,6 @@ namespace TecWare.PPSn.Server
 		[LuaMember]
 		public void UpdateData(object content, long contentLength = -1, bool changeHead = true, bool forceReplace = false)
 		{
-			CheckRevision();
-
 			if (objectId < 0)
 				throw new ArgumentOutOfRangeException("Id", "Object Id is invalid.");
 
