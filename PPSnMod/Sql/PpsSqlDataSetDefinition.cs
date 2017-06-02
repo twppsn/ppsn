@@ -543,7 +543,7 @@ namespace TecWare.PPSn.Server.Sql
 				.Append("src.").Append(table.Columns[primaryKeyIndex].DataColumn.Name).Append(" ");
 
 			// matched
-			commandText.Append("WHEN MATCHED THEN UPDATE ");
+			commandText.Append("WHEN MATCHED THEN UPDATE SET ");
 			var first = true;
 			for (var i = 0; i < aliasList.Length; i++)
 			{
