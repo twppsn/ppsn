@@ -189,7 +189,7 @@ namespace TecWare.PPSn.Server
 			data.Commit();
 			
 			obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
-			obj.Update();
+			obj.Update(false);
 
 			// actions after push
 			CallTableMethods(LuaOnAfterPush, transaction, obj, data);
