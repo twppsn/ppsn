@@ -564,6 +564,8 @@ namespace TecWare.PPSn.Server
 				this["HeadRevId"] = newRevId;
 				SetRevision(newRevId, false);
 			}
+
+			revId = newRevId;
 		} // proc UpdateData
 
 		[LuaMember]
