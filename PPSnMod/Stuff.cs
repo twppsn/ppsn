@@ -59,7 +59,7 @@ namespace TecWare.PPSn.Server
 		public readonly static XName xnWpfCode = PpsNamespace + "code";
 		public readonly static XName xnWpfCondition = PpsNamespace + "condition";
 
-		#region -- WriteProperty ----------------------------------------------------------
+		#region -- WriteProperty --------------------------------------------------------
 
 		public static void WriteProperty(this XmlWriter xml, IPropertyReadOnlyDictionary attributes, string propertyName, string targetPropertyName = null)
 		{
@@ -102,6 +102,28 @@ namespace TecWare.PPSn.Server
 
 		#region -- Sql-Helper -----------------------------------------------------------
 		
+		private sealed class PropertyReadOnlyDictionaryRecord : IPropertyReadOnlyDictionary
+		{
+			private readonly IDataRecord record;
+
+			public PropertyReadOnlyDictionaryRecord(IDataRecord record)
+				=> this.record = record;
+
+			public bool TryGetProperty(string name, out object value)
+			{
+				for (var i = 0; i < record.FieldCount; i++)
+				{
+					if (String.Compare(record.GetName(i), name, StringComparison.OrdinalIgnoreCase) == 0)
+					{
+						value = record.GetValue(i);
+						return true;
+					}
+				}
+				value = null;
+				return false;
+			} // func TryGetProperty
+		} // class PropertyReadOnlyDictionaryRecord
+
 		public static DbDataReader ExecuteReaderEx(this DbCommand command, CommandBehavior commandBehavior = CommandBehavior.Default)
 		{
 			try
@@ -113,6 +135,9 @@ namespace TecWare.PPSn.Server
 				throw new CommandException(command, e);
 			}
 		} // func ExecuteReaderEx
+
+		public static IPropertyReadOnlyDictionary ToDictionary(this IDataRecord record)
+			=> new PropertyReadOnlyDictionaryRecord(record);
 
 		#endregion
 	} // class PpsStuff

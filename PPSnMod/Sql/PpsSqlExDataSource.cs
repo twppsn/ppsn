@@ -609,13 +609,16 @@ namespace TecWare.PPSn.Server.Sql
 
 			#region -- Execute Result -------------------------------------------------------
 
-			private SqlCommand CreateCommand(LuaTable parameter, CommandType commandType)
+			internal SqlCommand CreateCommand(CommandType commandType, bool noTransaction)
 			{
 				var cmd = connection.CreateCommand();
 				cmd.Connection = connection;
-				cmd.Transaction = parameter.GetOptionalValue("__notrans", false) ? null : transaction;
+				cmd.Transaction = noTransaction ? null : transaction;
 				return cmd;
 			} // func CreateCommand
+
+			private SqlCommand CreateCommand(LuaTable parameter, CommandType commandType)
+				=> CreateCommand(commandType, parameter.GetOptionalValue("__notrans", false));
 
 			private SqlDataReader ExecuteReaderCommand(SqlCommand cmd, PpsDataTransactionExecuteBehavior behavior)
 			{
@@ -1100,11 +1103,16 @@ namespace TecWare.PPSn.Server.Sql
 							var col = tableInfo.FindColumn((string)item, true);
 							col.AppendAsColumn(commandText);
 						}
-						foreach (var item in selectList.Members.Keys)
+						foreach (var m in selectList.Members)
 						{
-							commandText.Append(", ");
+							if (first)
+								first = false;
+							else
+								commandText.Append(", ");
 
-							commandText.Append($"[{item}] AS [{selectList.Members[item]}]");
+							var col = tableInfo.FindColumn((string)m.Key, true);
+							col.AppendAsColumn(commandText)
+								.Append(" AS [").Append(m.Value).Append(']');
 						}
 					}
 					#endregion
@@ -1287,7 +1295,7 @@ namespace TecWare.PPSn.Server.Sql
 			} // func ExecuteResult
 
 			#endregion
-
+			
 			public PpsSqlExDataSource SqlDataSource => (PpsSqlExDataSource)base.DataSource;
 		} // class SqlDataTransaction
 
@@ -1314,7 +1322,7 @@ namespace TecWare.PPSn.Server.Sql
 			public int RelationId => objectId;
 			public string Name => name;
 			public SqlColumnInfo ParentColumn => parentColumn;
-			public SqlColumnInfo ReferncedColumn => referencedColumn;
+			public SqlColumnInfo ReferencedColumn => referencedColumn;
 		} // class SqlRelationInfo
 
 		#endregion
@@ -2173,9 +2181,6 @@ namespace TecWare.PPSn.Server.Sql
 			return new SqlDataTransaction(this, c);
 		} // func CreateTransaction
 
-		public override PpsDataSetServerDefinition CreateDataSetDefinition(string documentName, XElement config, DateTime configurationStamp)
-			=> new PpsSqlDataSetDefinition(this, documentName, config, configurationStamp);
-
 		public override PpsDataTableServerDefinition CreateTableDefinition(PpsDataSetServerDefinition dataset, string tableName, XElement config)
 			=> new PpsSqlDataTableServerDefinition(dataset, tableName, config);
 
@@ -2212,6 +2217,14 @@ namespace TecWare.PPSn.Server.Sql
 
 		private static bool IsConnectionOpen(SqlConnection connection)
 			=> connection.State != System.Data.ConnectionState.Closed;
+
+		internal static SqlConnection GetSqlConnection(IPpsConnectionHandle connection)
+			=> connection is SqlConnectionHandle c
+				? c.Connection
+				: null;
+
+		internal static SqlCommand CreateSqlCommand(PpsDataTransaction trans, CommandType commandType, bool noTransaction)
+			=> trans is SqlDataTransaction t ? t.CreateCommand(commandType, noTransaction) : throw new ArgumentException(nameof(trans));
 
 		#region -- DataTable - Helper -----------------------------------------------------
 

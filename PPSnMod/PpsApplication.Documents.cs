@@ -33,12 +33,15 @@ using TecWare.PPSn.Server.Wpf;
 
 namespace TecWare.PPSn.Server
 {
-	#region -- class PpsDocument --------------------------------------------------------
+	#region -- class PpsDocumentItem ----------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public sealed class PpsDocumentItem : PpsObjectItem<PpsDataSetServer>, IWpfClientApplicationFileProvider
 	{
+		private const string LuaOnBeforePush = "OnBeforePush";
+		private const string LuaOnAfterPush = "OnAfterPush";
+		private const string LuaOnAfterPull = "OnAfterPull";
 
 		private PpsDataSetServerDefinition datasetDefinition = null;
 		private ILuaAttachedScript[] currentAttachedScripts = null;
@@ -124,18 +127,18 @@ namespace TecWare.PPSn.Server
 			CheckHeadObjectId(obj, data);
 
 			// fire triggers
-			data.OnAfterPull();
-
+			CallTableMethods(LuaOnAfterPull, trans, obj, data);
+			
 			// mark all has orignal
 			data.Commit();
 
 			return data;
 		} // func PullData
 
-		protected override bool PushData(PpsDataTransaction transaction, PpsObjectAccess obj, PpsDataSetServer data)
+		protected override bool PushData(PpsDataTransaction transaction, PpsObjectAccess obj, PpsDataSetServer data, bool release)
 		{
 			// fire triggers
-			data.OnBeforePush();
+			CallTableMethods(LuaOnBeforePush, transaction, obj, data);
 
 			// move all to original row
 			data.Commit();
@@ -163,40 +166,33 @@ namespace TecWare.PPSn.Server
 				var idxPrimaryKey = dt.TableDefinition.PrimaryKey.Index;
 				if (dt.TableDefinition.PrimaryKey.IsIdentity) // auto incr => getnext
 				{
-					var maxKey = 0L;
-
-					// scan for max key
 					foreach (var row in dt)
 					{
-						var t = row[idxPrimaryKey].ChangeType<long>();
-						if (t > maxKey)
-							maxKey = t;
-					}
-
-					// reverse
-					foreach (var row in dt)
-					{
-						if (row[idxPrimaryKey].ChangeType<long>() < 0)
-							row[idxPrimaryKey] = ++maxKey;
+						PpsDataTable.GetKey(row[idxPrimaryKey].ChangeType<long>(), out var type, out var value);
+						if (type == PpsTablePrimaryKeyType.Local)
+							row[idxPrimaryKey] = data.GetNextId();
 					}
 				}
-				else  // self set => abs(nr)
+				else // self set => abs(nr)
 				{
 					// absolute
 					foreach (var row in dt)
 					{
-						var t = row[idxPrimaryKey].ChangeType<long>();
-						if (t < 0)
-							row[idxPrimaryKey] = Math.Abs(t);
+						PpsDataTable.GetKey(row[idxPrimaryKey].ChangeType<long>(), out var type, out var value);
+						if (type == PpsTablePrimaryKeyType.Local)
+							row[idxPrimaryKey] = PpsDataTable.MakeKey(PpsTablePrimaryKeyType.Server, value);
 					}
 				}
 			}
 
 			// commit all to orignal
 			data.Commit();
-
+			
 			obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
 			obj.Update(false);
+
+			// actions after push
+			CallTableMethods(LuaOnAfterPush, transaction, obj, data);
 
 			return true;
 		} // func PushData
@@ -259,6 +255,19 @@ namespace TecWare.PPSn.Server
 		} // proc OnProcessRequest
 
 		#endregion
+
+		protected override bool IsMemberTableMethod(string key)
+		{
+			switch (key)
+			{
+				case LuaOnBeforePush:
+				case LuaOnAfterPush:
+				case LuaOnAfterPull:
+					return true;
+				default:
+					return base.IsMemberTableMethod(key);
+			}
+		} // func IsMemberTableMethod
 
 		[LuaMember(nameof(DataSetDefinition))]
 		public PpsDataSetServerDefinition DataSetDefinition => datasetDefinition;
