@@ -532,15 +532,15 @@ namespace TecWare.PPSn.Server.Sql
 			if (primaryKeyIndex == -1)
 				throw new ArgumentException("primary key missing.");
 
-			commandText.Append("USING (");
+			commandText.Append("USING (VALUES (");
 			commandText.Append(String.Join(",", parameterList));
-			commandText.Append(") as src (").Append(String.Join(",", aliasList)).Append(") ");
+			commandText.Append(") ) as src ([").Append(String.Join("],[", aliasList)).Append("]) ");
 
 			// on statement
 			commandText.Append("ON dst.")
 				.Append(table.Columns[primaryKeyIndex].SqlColumn.ColumnName)
 				.Append(" = ")
-				.Append("src.").Append(table.Columns[primaryKeyIndex].DataColumn.Name).Append(" ");
+				.Append("src.[").Append(table.Columns[primaryKeyIndex].DataColumn.Name).Append("] ");
 
 			// matched
 			commandText.Append("WHEN MATCHED THEN UPDATE SET ");
@@ -554,25 +554,56 @@ namespace TecWare.PPSn.Server.Sql
 					first = false;
 				else
 					commandText.Append(',');
-				commandText.Append("dst.").Append(table.Columns[i].SqlColumn.ColumnName)
+				commandText.Append("dst.").Append('[' + table.Columns[i].SqlColumn.ColumnName + ']')
 					.Append(" = ")
-					.Append("src.").Append(aliasList[i]);
+					.Append("src.").Append('[' + aliasList[i] + ']');
 			}
 			commandText.Append(' ');
 
 			// not matched -> insert
-			commandText.Append("WHEN NOT MATCHED BY TARGET THEN INSERT (")
-				.Append(String.Join(",", table.Columns.Select(c => "dst." + c.SqlColumn.ColumnName)))
-				.Append(") VALUES (").Append(String.Join(",", aliasList.Select(c => "src." + c))).Append(") ");
+			commandText.Append("WHEN NOT MATCHED BY TARGET THEN INSERT (");
+			first = true;
+			for (var i = 0; i < table.Columns.Length; i++)
+			{
+				if (primaryKeyIndex == i)
+					continue;
+
+				if (first)
+					first = false;
+				else
+					commandText.Append(',');
+
+				commandText.Append('[' + table.Columns[i].SqlColumn.ColumnName + ']');
+			}
+			commandText.Append(") VALUES (");
+			first = true;
+			for (var i = 0; i < aliasList.Length; i++)
+			{
+				if (primaryKeyIndex == i)
+					continue;
+
+				if (first)
+					first = false;
+				else
+					commandText.Append(',');
+				if (primaryKeyIndex == i)
+					commandText.Append("DEFAULT");
+				else
+					commandText.Append("src." + '[' + aliasList[i] + ']');
+			}
+			commandText.Append(") ");
+			//commandText.Append("WHEN NOT MATCHED BY TARGET THEN INSERT ([")
+			//	.Append(String.Join("],[", table.Columns.Select(c => c.SqlColumn.ColumnName)))
+			//	.Append("]) VALUES (").Append(String.Join(",", aliasList.Select(c => "src." + '[' +c + ']'))).Append(") ");
 
 			// not matched delete
 			commandText.Append("WHEN NOT MATCHED BY SOURCE THEN DELETE ");
 
 			// build the output for the primary key
-			commandText.Append("OUTPUT inserted.")
-				.Append(table.Columns[primaryKeyIndex].SqlColumn.ColumnName)
+			commandText.Append("OUTPUT [inserted].")
+				.Append('[' + table.Columns[primaryKeyIndex].SqlColumn.ColumnName + ']')
 				.Append(" AS ")
-				.Append(table.Columns[primaryKeyIndex].DataColumn.Name)
+				.Append('[' + table.Columns[primaryKeyIndex].DataColumn.Name + ']')
 				.Append(';');
 		} // proc PrepareMerge
 
