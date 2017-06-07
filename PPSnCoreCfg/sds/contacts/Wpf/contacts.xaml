@@ -170,7 +170,15 @@
         <TextBox Grid.Column="4" Grid.Row="1" Text="{Binding Data.Head.First.LiefNr}" MaxLength="{Binding Data.Head.LiefNr.MaxLength, Mode=OneTime}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
         <Label Grid.Column="3" Grid.Row="2" Content="{Binding Data.Head.KundNr.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
         <TextBox Grid.Column="4" Grid.Row="2" Text="{Binding Data.Head.First.KundNr}" MaxLength="{Binding Data.Head.KundNr.MaxLength, Mode=OneTime}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
-
+        <uiC:PpsPictureControl Grid.Column="0" Grid.Row="0" Grid.RowSpan="4">
+            <uiC:PpsPictureControl.PictureSource>
+                <Binding Path="Data.Head.First.Zusa">
+                    <Binding.Converter>
+                        <uiC:PpsDataObjectPictureConverter LinkColumnName="ObjkId" PictureTag="Grundriss"/>
+                    </Binding.Converter>
+                </Binding>
+            </uiC:PpsPictureControl.PictureSource>
+        </uiC:PpsPictureControl>
         <TabControl Grid.Row="4" Grid.ColumnSpan="5" Style="{StaticResource PPSnPaneTabControlStyle}">
             <TabItem Header="Kopfdaten">
                 <Grid>
