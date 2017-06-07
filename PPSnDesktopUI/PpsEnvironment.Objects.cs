@@ -28,6 +28,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Media.Imaging;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
@@ -1220,11 +1221,60 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsObjectImageData -------------------------------------------------
+
+	public sealed class PpsObjectImageData : PpsObjectBlobData
+	{
+		public PpsObjectImageData(PpsObject obj) : base(obj)
+		{
+		}
+
+		public BitmapImage GetImage(bool withOverlay = true)
+		{
+			if (!this.IsLoaded)
+				this.LoadAsync().Wait();
+
+			var bI = new BitmapImage();
+
+			using (MemoryStream stream = new MemoryStream(this.RawData))
+			{
+				bI.BeginInit();
+				bI.CacheOption = BitmapCacheOption.OnLoad;
+				bI.StreamSource = stream;
+				bI.EndInit();
+			}
+
+			return bI;
+		}
+
+		internal BitmapImage GetRawImage()
+		{
+			throw new NotImplementedException();
+		}
+
+		internal BitmapImage GetOverlay()
+		{
+			throw new NotImplementedException();
+		}
+
+		internal BitmapImage GetPreviewImage(bool withOverlay = true)
+		{
+			throw new NotImplementedException();
+		}
+
+		public BitmapImage Preview => GetPreviewImage();
+
+		public BitmapImage RawImage => GetImage(false);
+		public BitmapImage Image => GetImage();
+	}
+
+	#endregion
+
 	#region -- class PpsObjectBlobData --------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Control byte based data.</summary>
-	public sealed class PpsObjectBlobData : IPpsObjectData
+	public class PpsObjectBlobData : IPpsObjectData
 	{
 		public event PropertyChangedEventHandler PropertyChanged;
 
@@ -2665,7 +2715,7 @@ order by t_liefnr.value desc
 		{
 			var schema = await ActiveDataSets.GetDataSetDefinitionAsync(obj.Typ);
 			if (schema == null)
-				return (T)(IPpsObjectData)new PpsObjectBlobData(obj);
+				return (T)(IPpsObjectData)new PpsObjectImageData(obj);
 			else
 				return (T)(IPpsObjectData)new PpsObjectDataSet(schema, obj);
 		} // func CreateObjectDataObjectAsync

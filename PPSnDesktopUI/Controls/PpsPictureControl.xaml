@@ -9,7 +9,7 @@
     <Grid>
         <Button Command="{x:Static local:PpsPictureControl.ChangePictureCommand}">
             <Image Source="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-            Path=PictureSource,Mode=OneWay}"/>
+            Path=PictureSource.Picture,Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Stretch="Fill"/>
         </Button>  
     </Grid>
 </UserControl>

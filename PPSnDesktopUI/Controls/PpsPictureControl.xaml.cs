@@ -1,20 +1,20 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
-using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Controls
 {
-	public interface IPpsPictureItem
+	public interface IPpsPictureItem : INotifyPropertyChanged
 	{
 		bool Clear();
 		void Exchange(PpsObject data);
-		BitmapImage Picture { get; }
+		object Picture { get; }
 	}
 
 	/// <summary>
@@ -54,6 +54,7 @@ namespace TecWare.PPSn.Controls
 								var obj = await Environment.CreateNewObjectAsync(Environment.ObjectInfos[PpsEnvironment.AttachmentObjectTyp]);
 
 								obj.Tags.UpdateTag(Environment.UserId, "Filename", PpsObjectTagClass.Text, ofd.FileName);
+								obj.Tags.UpdateTag(Environment.UserId, "PictureItemType", PpsObjectTagClass.Text, "Grundriss");
 
 								var data = await obj.GetDataAsync<PpsObjectBlobData>();
 								await data.ReadFromFileAsync(ofd.FileName);
@@ -81,24 +82,36 @@ namespace TecWare.PPSn.Controls
 		public PpsEnvironment Environment => getEnvironment.Value;
 	}
 
-	public sealed class PpsDataObjectPictureConverter : IMultiValueConverter
+	public sealed class PpsDataObjectPictureConverter : IValueConverter
 	{
 		private sealed class PpsPictureItemImplementation : IPpsPictureItem
 		{
 			private readonly IPpsDataView view;
-			private readonly PpsLinkedObjectExtendedValue pictureId;
+			private readonly string pictureTag;
 			private readonly int linkColumnIndex;
+			private PpsObject obj;
 
-			public PpsPictureItemImplementation(IPpsDataView view, string linkColumnName, PpsLinkedObjectExtendedValue pictureId)
+			public event PropertyChangedEventHandler PropertyChanged;
+
+			public PpsPictureItemImplementation(IPpsDataView view, string linkColumnName, string pictureTag)
 			{
 				this.view = view;
-				this.pictureId = pictureId;
 				this.linkColumnIndex = view.Table.TableDefinition.FindColumnIndex(linkColumnName ?? throw new ArgumentNullException(nameof(linkColumnName)), true);
+				this.pictureTag = pictureTag;
+
+				for (var i = 0; i < view.Table.AllRows.Count; i++)
+				{
+					var tobj = ((PpsObject)view.Table.AllRows[i][linkColumnIndex]);
+					var idx = tobj.Tags.IndexOf("PictureItemType");
+					if (idx >= 0 && (string)tobj.Tags[idx].Value == pictureTag)
+					{
+						this.obj = tobj;
+					}
+				}
+
+
 			}
-			/*
-			private PpsObject GetLinkedObject()
-				=> (PpsObject)row[linkColumnIndex];
-*/
+
 			public bool Clear()
 			{
 				throw new NotImplementedException();
@@ -109,46 +122,67 @@ namespace TecWare.PPSn.Controls
 
 			public void Exchange(PpsObject data)
 			{
-				using (var trans = GetUndoManager(view.Table.DataSet).BeginTransaction("Datei hinzugefügt."))
+				using (var trans = GetUndoManager(view.Table.DataSet).BeginTransaction("Bild bearbeitet."))
 				{
+					if (obj != null)
+						for (var i = 0; i < view.Table.AllRows.Count; i++)
+						{
+							var tobj = ((PpsObject)view.Table.AllRows[i][linkColumnIndex]);
+							if (tobj == obj)
+							{
+								view.Table.RemoveAt(i);
+								continue;
+							}
+						}
+
 					var row = view.NewRow(null, null);
 					row[linkColumnIndex] = data;
 					view.Add(row);
-					
+
 					trans.Commit();
+				}
+
+				NotifyPropertyChanged("PictureSource");
+			}
+
+			private void NotifyPropertyChanged(string propertyName = "")
+			{
+				if (PropertyChanged != null)
+				{
+					PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
 				}
 			}
 
-			public BitmapImage Picture
+			public object Picture
 			{
 				get
 				{
-					var bi = new BitmapImage();
-					bi.BeginInit();
+					if (obj != null)
+					{
+						var handler = obj.GetDataAsync<PpsObjectImageData>();
+						handler.Wait();
+						return handler.Result.Image;
+					}
 
-					var obj = ((PpsObject)view.Table.AllRows[(int)pictureId.Value][linkColumnIndex]);
-					//var data = await obj.GetDataAsync<PpsObjectBlobData>();
-
-					//bi.StreamSource = ((dynamic)GetLinkedObject())?.RawData;
-					bi.EndInit();
-					return bi;
+					return DependencyProperty.UnsetValue;
 				}
 			}
 		}
 
-		public object Convert(object[] value, Type targetType, object parameter, CultureInfo culture)
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			return null;
-			if (value[0] is IPpsDataView view)
-				return new PpsPictureItemImplementation(view, LinkColumnName, (PpsLinkedObjectExtendedValue)value[1]);
+			if (value is PpsDataRelatedFilterDesktop view)
+				return new PpsPictureItemImplementation(view, LinkColumnName, PictureTag);
 			return null;
 		}
 
-		public object[] ConvertBack(object value, Type[] targetType, object parameter, CultureInfo culture)
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotSupportedException();
 		}
-		
+
 		public string LinkColumnName { get; set; }
+
+		public string PictureTag { get; set; }
 	}
 }
