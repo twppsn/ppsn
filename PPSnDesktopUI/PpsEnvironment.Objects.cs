@@ -1790,6 +1790,11 @@ namespace TecWare.PPSn
 					// repull the whole object
 					await PullAsync(RemoteHeadRevId);
 
+					foreach (var link in links)
+					{
+						await link.LinkTo.PullAsync();
+					}
+
 					// write local database
 					await UpdateLocalAsync();
 
