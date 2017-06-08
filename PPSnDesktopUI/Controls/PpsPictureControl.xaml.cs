@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using Microsoft.Win32;
+using TecWare.DE.Networking;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Controls
@@ -47,6 +48,7 @@ namespace TecWare.PPSn.Controls
 						var ofd = new OpenFileDialog();
 						ofd.Multiselect = false;
 						ofd.CheckFileExists = true;
+						ofd.Filter = StuffIO.FilterFromMimeType(new string[] { "image" }, new string[] { MimeTypes.Image.Icon });
 						if (ofd.ShowDialog() ?? false)
 						{
 							using (var trans = await Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
