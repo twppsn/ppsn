@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Data;
 using System.Data.Common;
@@ -29,7 +30,6 @@ using System.Windows.Media;
 using System.Xml;
 using System.Xml.Linq;
 using TecWare.DE.Networking;
-using TecWare.DE.Stuff;
 using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn
@@ -385,24 +385,25 @@ namespace TecWare.PPSn
 
 		#region ---- MimeTypes ----------------------------------------------------------
 
-		private static (string Extension, string MimeType)[] mimeTypeMapping =
+		// ToDo: may need translation
+		private static (string Extension, string MimeType, string FriendlyName)[] mimeTypeMapping =
 		{
-			("css", MimeTypes.Text.Css),
-			("exe", MimeTypes.Application.OctetStream),
-			("gif", MimeTypes.Image.Gif),
-			("htm", MimeTypes.Text.Html),
-			("html", MimeTypes.Text.Html),
-			("ico", MimeTypes.Image.Icon),
-			("js", MimeTypes.Text.JavaScript),
-			("jpeg", MimeTypes.Image.Jpeg),
-			("jpg", MimeTypes.Image.Jpeg),
-			("json", MimeTypes.Text.Json),
-			("log", MimeTypes.Text.Plain),
-			("lua", MimeTypes.Text.Lua),
-			("png", MimeTypes.Image.Png),
-			("txt", MimeTypes.Text.Plain),
-			("xaml", MimeTypes.Application.Xaml),
-			("xml", MimeTypes.Text.Xml),
+			("css", MimeTypes.Text.Css, "Textdatei"),
+			("exe", MimeTypes.Application.OctetStream, "Binärdatei"),
+			("gif", MimeTypes.Image.Gif, "Bilddatei"),
+			("htm", MimeTypes.Text.Html, "Textdatei"),
+			("html", MimeTypes.Text.Html, "Textdatei"),
+			("ico", MimeTypes.Image.Icon, "Bilddatei"),
+			("js", MimeTypes.Text.JavaScript, "Textdatei"),
+			("jpeg", MimeTypes.Image.Jpeg, "Bilddatei"),
+			("jpg", MimeTypes.Image.Jpeg, "Bilddatei"),
+			("json", MimeTypes.Text.Json, "Textdatei"),
+			("log", MimeTypes.Text.Plain, "Textdatei"),
+			("lua", MimeTypes.Text.Lua, "Textdatei"),
+			("png", MimeTypes.Image.Png, "Bilddatei"),
+			("txt", MimeTypes.Text.Plain, "Textdatei"),
+			("xaml", MimeTypes.Application.Xaml, "Textdatei"),
+			("xml", MimeTypes.Text.Xml, "Textdatei"),
 		};
 
 		private static string DefaultMimeType => MimeTypes.Application.OctetStream;
