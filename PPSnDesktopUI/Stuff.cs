@@ -425,6 +425,32 @@ namespace TecWare.PPSn
 			return MimeTypeFromExtension(Path.GetExtension(filename));
 		}
 
+		/// <summary>
+		/// Generates the filter string for FileDialogs
+		/// </summary>
+		/// <param name="mimeType">Mimetypes to include - can also be just the starts p.e. 'image'</param>
+		/// <param name="excludeMimeType">Mimetypes to exclude</param>
+		/// <returns>a string for the filter</returns>
+		public static string FilterFromMimeType(string[] mimeType, string[] excludeMimeType = null)
+		{
+			var names = new List<string>();
+			var extensions = new List<string>();
+			foreach (var mt in mimeTypeMapping)
+				foreach (var m in mimeType)
+					if ((excludeMimeType != null ? Array.IndexOf(excludeMimeType, mt.MimeType) == -1 : true) && mt.MimeType.StartsWith(m))
+					{
+						if (!names.Exists(i => i == mt.FriendlyName))
+							names.Add(mt.FriendlyName);
+						if (!extensions.Exists(i => i == "*." + mt.Extension))
+							extensions.Add("*." + mt.Extension);
+					}
+
+			names.Sort((a, b) => a.CompareTo(b));
+			extensions.Sort((a, b) => a.CompareTo(b));
+
+			return String.Join("/", names) + '|' + String.Join(";", extensions);
+		}
+
 		#endregion
 
 	}
