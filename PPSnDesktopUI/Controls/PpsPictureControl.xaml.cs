@@ -175,7 +175,7 @@ namespace TecWare.PPSn.Controls
 		{
 			if (value is PpsDataRelatedFilterDesktop view)
 				return new PpsPictureItemImplementation(view, LinkColumnName, PictureTag);
-			return null;
+			return DependencyProperty.UnsetValue;
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
