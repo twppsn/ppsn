@@ -171,7 +171,7 @@ namespace TecWare.PPSn.Server.Data
 			if (identity == null)
 				throw new ArgumentNullException(nameof(identity));
 
-			return GetCredentialsFromIdentityCore(identity) ?? throw new ArgumentException("Identity from type {identity.GetType().Name} is not compatible.", nameof(identity));
+			return GetCredentialsFromIdentityCore(identity) ?? throw new ArgumentException($"Identity from type {identity.GetType().Name} is not compatible.", nameof(identity));
 		} // func GetCredentialsFromIdentity
 
 		protected abstract PpsCredentials GetCredentialsFromIdentityCore(IIdentity identity);
@@ -252,24 +252,23 @@ namespace TecWare.PPSn.Server.Data
 		private readonly string userName;
 		private readonly SecureString password;
 
-		internal unsafe PpsUserCredentials(HttpListenerBasicIdentity identity)
+		internal PpsUserCredentials(HttpListenerBasicIdentity identity)
 		{
 			if (identity == null)
 				throw new ArgumentNullException(nameof(identity));
+
+			if (String.IsNullOrEmpty(identity.Name))
+				throw new ArgumentException($"{nameof(identity)}.Name is null or empty.");
+
 			if (String.IsNullOrEmpty(identity.Password))
-				throw new ArgumentNullException(nameof(identity) + ".Password");
+				throw new ArgumentException($"{nameof(identity)}.Password is null or empty.");
 
 			// copy the arguments
 			this.userName = identity.Name;
-			var passwordPtr = Marshal.StringToHGlobalUni(identity.Password);
-			try
-			{
-				this.password = new SecureString((char*)passwordPtr.ToPointer(), identity.Password.Length);
-			}
-			finally
-			{
-				Marshal.ZeroFreeGlobalAllocUnicode(passwordPtr);
-			}
+			this.password = new SecureString();
+			foreach (var c in identity.Password)
+				this.password.AppendChar(c);
+			this.password.MakeReadOnly();
 		} // ctor
 
 		protected override void Dispose(bool disposing)
