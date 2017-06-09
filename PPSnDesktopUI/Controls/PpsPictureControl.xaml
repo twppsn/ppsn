@@ -7,9 +7,16 @@
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
     <Grid>
-        <Button Command="{x:Static local:PpsPictureControl.ChangePictureCommand}">
+        <ToggleButton x:Name="tbPictureEditor">
             <Image Source="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-            Path=PictureSource.Picture,Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Stretch="Fill"/>
-        </Button>  
+            Path=PictureSource.Preview, UpdateSourceTrigger=PropertyChanged}" Stretch="Fill"/>
+        </ToggleButton>
+        <Popup Name="popLogFile" IsOpen="{Binding IsChecked, ElementName=tbPictureEditor, Mode=TwoWay}" AllowsTransparency="True" >
+            <StackPanel>
+                <Image Width="500" Height="500" Source="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
+            Path=PictureSource.Picture, UpdateSourceTrigger=PropertyChanged}" Stretch="Fill"/>
+            <Button Content="Austauschen" Command="{x:Static local:PpsPictureControl.ChangePictureCommand}"/>
+            </StackPanel>
+        </Popup>
     </Grid>
 </UserControl>

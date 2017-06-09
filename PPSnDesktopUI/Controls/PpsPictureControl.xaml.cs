@@ -169,7 +169,33 @@ namespace TecWare.PPSn.Controls
 					return DependencyProperty.UnsetValue;
 				}
 			}
-		}
+
+			public object Overlay
+				=> SubPicture("overlay");
+
+			public object Preview
+				=> SubPicture("preview");
+
+			private object SubPicture(string pictureItemType)
+				{
+					foreach (var sub in obj.Links)
+					{
+						var obj = sub.LinkTo;
+						var idx = obj.Tags.IndexOf("PictureItemType");
+						if (idx >= 0)
+						{
+							if ((string)obj.Tags[idx].Value == pictureItemType)
+							{
+								var handler = obj.GetDataAsync<PpsObjectImageData>();
+								handler.Wait();
+								return handler.Result.Image;
+							}
+						}
+					}
+
+					return null;
+				}
+			}
 
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
