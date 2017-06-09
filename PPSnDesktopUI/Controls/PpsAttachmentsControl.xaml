@@ -68,13 +68,11 @@ specific language governing permissions and limitations under the Licence.
             Path=SelectedAttachment, Mode=OneWayToSource}" Background="Blue">
             <ListBox.Resources>
                 <ControlTemplate x:Key="binary">
-                    <Border BorderThickness="1" BorderBrush="AntiqueWhite" Name="selectionBorder" Visibility="Hidden">
                     <StackPanel Height="100">
                         <Label Content="{Binding Name}"/>
                         <Label Content="{Binding MimeType}"/>
                         <Label Content="{Binding Data.Sha256}"/>
-                        </StackPanel>
-                    </Border>
+                    </StackPanel>
                 </ControlTemplate>
                 <ControlTemplate x:Key="image">
                     <Grid Height="100">
@@ -99,10 +97,10 @@ specific language governing permissions and limitations under the Licence.
                             <Setter Property="Template" Value="{StaticResource image}"/>
                         </DataTrigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter  Property="Opacity" Value="1"/>
+                            <Setter Property="Opacity" Value="1"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="False">
-                            <Setter  Property="Opacity" Value="0.7"/>
+                            <Setter Property="Opacity" Value="0.7"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
