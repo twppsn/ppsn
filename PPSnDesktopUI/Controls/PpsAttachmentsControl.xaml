@@ -66,15 +66,39 @@ specific language governing permissions and limitations under the Licence.
         <ListBox Grid.Row="1" VerticalAlignment="Stretch" ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
             Path=AttachmentsSource,Mode=OneWay}" SelectedItem="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
             Path=SelectedAttachment, Mode=OneWayToSource}" Background="Blue">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
+            <ListBox.Resources>
+                <ControlTemplate x:Key="binary">
                     <StackPanel Height="100">
                         <Label Content="{Binding Name}"/>
                         <Label Content="{Binding MimeType}"/>
                         <Label Content="{Binding Data.Sha256}"/>
                     </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
+                </ControlTemplate>
+                <ControlTemplate x:Key="image">
+                    <Grid Height="100">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="50"/>
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <Image Grid.Column="0" Source="{Binding Picture}"/>
+                        <StackPanel Grid.Column="1">
+                            <Label Content="{Binding Name}"/>
+                            <Label Content="{Binding MimeType}"/>
+                            <Label Content="{Binding Data.Sha256}"/>
+                        </StackPanel>
+                    </Grid>
+                </ControlTemplate>
+            </ListBox.Resources>
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Template" Value="{StaticResource binary}"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=Type}" Value="picture">
+                            <Setter Property="Template" Value="{StaticResource image}"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ListBox.ItemContainerStyle>
         </ListBox>
     </Grid>
 </UserControl>

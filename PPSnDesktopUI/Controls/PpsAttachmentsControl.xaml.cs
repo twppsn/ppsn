@@ -307,6 +307,18 @@ namespace TecWare.PPSn.Controls
 			public string MimeType => GetLinkedObject()?.MimeType;
 
 			public object Data => GetLinkedObject();
+
+			public object Picture
+			{
+				get
+				{
+					var handler = GetLinkedObject().GetDataAsync<PpsObjectImageData>();
+					handler.Wait();
+					return handler.Result.Image;
+				}
+			}
+
+			public string Type => MimeType.StartsWith("image") ? "picture" : "binary";
 		} // class PpsAttachmentItemImplementation
 
 		#endregion
