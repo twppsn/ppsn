@@ -1223,10 +1223,13 @@ namespace TecWare.PPSn
 
 	#region -- class PpsObjectImageData -------------------------------------------------
 
-	public sealed class PpsObjectImageData : PpsObjectBlobData
+	public sealed class PpsObjectImageData : PpsObjectBlobData, INotifyPropertyChanged
 	{
+		private readonly PpsObject baseObj;
+
 		public PpsObjectImageData(PpsObject obj) : base(obj)
 		{
+			this.baseObj = obj;
 		}
 
 		public BitmapImage GetImage(bool withOverlay = true)
@@ -1247,19 +1250,40 @@ namespace TecWare.PPSn
 			return bI;
 		}
 
-		internal BitmapImage GetRawImage()
+		public BitmapImage GetRawImage
 		{
-			throw new NotImplementedException();
+			get
+			{
+				return GetImage(true);
+			}
+			set
+			{
+				throw new NotImplementedException();
+			}
 		}
 
-		internal BitmapImage GetOverlay()
+		public BitmapImage GetOverlay
 		{
-			throw new NotImplementedException();
+			get
+			{
+				return GetImage(true);
+			}
+			set
+			{
+				throw new NotImplementedException();
+			}
 		}
 
-		internal BitmapImage GetPreviewImage(bool withOverlay = true)
+		public BitmapImage GetPreviewImage
 		{
-			throw new NotImplementedException();
+			get
+			{
+				return GetImage(true);
+			}
+			set
+			{
+				throw new NotImplementedException();
+			}
 		}
 
 		public BitmapImage Preview => GetPreviewImage();
