@@ -1223,16 +1223,30 @@ namespace TecWare.PPSn
 
 	#region -- class PpsObjectImageData -------------------------------------------------
 
-	public sealed class PpsObjectImageData : PpsObjectBlobData, INotifyPropertyChanged
+	public sealed class PpsObjectImageData : PpsObjectBlobData
 	{
+
 		private readonly PpsObject baseObj;
+
+		new public event PropertyChangedEventHandler PropertyChanged;
+
+
+		private void OnPropertyChanged(string propertyName)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 		public PpsObjectImageData(PpsObject obj) : base(obj)
 		{
 			this.baseObj = obj;
 		}
 
-		public BitmapImage GetImage(bool withOverlay = true)
+		private async void Initialize()
+		{
+			if (!this.IsLoaded)
+				await this.LoadAsync();
+			OnPropertyChanged(nameof(PreviewImage));
+		}
+
+		public BitmapImage GetImage()
 		{
 			if (!this.IsLoaded)
 				this.LoadAsync().Wait();
@@ -1250,11 +1264,11 @@ namespace TecWare.PPSn
 			return bI;
 		}
 
-		public BitmapImage RawImage
+		public BitmapSource RawImage
 		{
 			get
 			{
-				return GetImage(true);
+				return GetImage();
 			}
 			set
 			{
@@ -1262,11 +1276,11 @@ namespace TecWare.PPSn
 			}
 		}
 
-		public BitmapImage Overlay
+		public BitmapSource Overlay
 		{
 			get
 			{
-				return GetImage(true);
+				return GetImage();
 			}
 			set
 			{
@@ -1274,11 +1288,13 @@ namespace TecWare.PPSn
 			}
 		}
 
-		public BitmapImage PreviewImage
+		public BitmapSource PreviewImage
 		{
 			get
 			{
-				return GetImage(true);
+				var a = GetImage();
+				var b = new WriteableBitmap(a);
+				return b;
 			}
 			set
 			{
@@ -1286,7 +1302,7 @@ namespace TecWare.PPSn
 			}
 		}
 
-		public BitmapImage Image => GetImage();
+		public BitmapSource Image => GetImage();
 	}
 
 	#endregion
