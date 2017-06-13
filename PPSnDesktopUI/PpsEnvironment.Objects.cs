@@ -1250,7 +1250,7 @@ namespace TecWare.PPSn
 			return bI;
 		}
 
-		public BitmapImage GetRawImage
+		public BitmapImage RawImage
 		{
 			get
 			{
@@ -1262,7 +1262,7 @@ namespace TecWare.PPSn
 			}
 		}
 
-		public BitmapImage GetOverlay
+		public BitmapImage Overlay
 		{
 			get
 			{
@@ -1274,7 +1274,7 @@ namespace TecWare.PPSn
 			}
 		}
 
-		public BitmapImage GetPreviewImage
+		public BitmapImage PreviewImage
 		{
 			get
 			{
@@ -1286,9 +1286,6 @@ namespace TecWare.PPSn
 			}
 		}
 
-		public BitmapImage Preview => GetPreviewImage();
-
-		public BitmapImage RawImage => GetImage(false);
 		public BitmapImage Image => GetImage();
 	}
 
