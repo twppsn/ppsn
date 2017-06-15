@@ -34,8 +34,7 @@ using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server.Sql
-{
-	///////////////////////////////////////////////////////////////////////////////
+{	
 	/// <summary></summary>
 	public class PpsSqlExDataSource : PpsSqlDataSource
 	{
@@ -143,45 +142,49 @@ namespace TecWare.PPSn.Server.Sql
 		{
 			#region -- class PpsDataResultColumnAttributes ----------------------------------
 
-			private sealed class PpsDataResultColumnAttributes : PpsColumnDescriptionAttributes<PpsDataResultColumnDescription>
+			private sealed class PpsDataResultColumnAttributes : IPropertyEnumerableDictionary
 			{
-				public PpsDataResultColumnAttributes(PpsDataResultColumnDescription owner)
-					: base(owner)
+				private readonly PpsDataResultColumnDescription column;
+
+				public PpsDataResultColumnAttributes(PpsDataResultColumnDescription column)
 				{
+					this.column = column;
 				} // ctor
 
-				public override bool TryGetProperty(string name, out object value)
+				public bool TryGetProperty(string name, out object value)
 				{
 					if (String.Compare(name, "MaxLength", StringComparison.OrdinalIgnoreCase) == 0)
 					{
-						value = GetDataRowValue(Owner.row, "ColumnSize", 0);
+						value = GetDataRowValue(column.row, "ColumnSize", 0);
 						return true;
 					}
 					else
 					{
-						foreach (DataColumn c in Owner.row.Table.Columns)
+						foreach (var c in column.row.Table.Columns.Cast<DataColumn>())
 						{
 							if (String.Compare(c.ColumnName, name, StringComparison.OrdinalIgnoreCase) == 0)
 							{
-								value = Owner.row[c];
+								value = column.row[c];
 								return value != DBNull.Value;
 							}
 						}
 					}
-					return base.TryGetProperty(name, out value);
+
+					value = null;
+					return false;
 				} // func TryGetProperty
 
-				public override IEnumerator<PropertyValue> GetEnumerator()
+				public IEnumerator<PropertyValue> GetEnumerator()
 				{
-					foreach (DataColumn c in Owner.row.Table.Columns)
-						yield return new PropertyValue(c.ColumnName, Owner.row[c]);
-
-					using (var e = base.GetEnumerator())
+					foreach (var c in column.row.Table.Columns.Cast<DataColumn>())
 					{
-						while (e.MoveNext())
-							yield return e.Current;
+						if (column.row[c] != DBNull.Value)
+							yield return new PropertyValue(c.ColumnName, column.row[c]);
 					}
 				} // func GetEnumerator
+
+				IEnumerator IEnumerable.GetEnumerator()
+					=> GetEnumerator();
 			} // class PpsDataResultColumnAttributes
 
 			#endregion
@@ -195,7 +198,7 @@ namespace TecWare.PPSn.Server.Sql
 			} // ctor
 
 			protected override IPropertyEnumerableDictionary CreateAttributes()
-				=> new PpsDataResultColumnAttributes(this);
+				=> PpsColumnDescriptionHelper.GetColumnDescriptionParentAttributes(new PpsDataResultColumnAttributes(this), Parent);
 		} // class PpsDataResultColumnDescription
 
 		#endregion
@@ -1388,81 +1391,82 @@ namespace TecWare.PPSn.Server.Sql
 		{
 			#region -- class PpsColumnAttributes --------------------------------------------
 
-			private sealed class PpsColumnAttributes : PpsColumnDescriptionAttributes<SqlColumnInfo>
+			private sealed class PpsColumnAttributes : IPropertyEnumerableDictionary
 			{
-				public PpsColumnAttributes(SqlColumnInfo owner)
-					: base(owner)
+				private readonly SqlColumnInfo column;
+
+				public PpsColumnAttributes(SqlColumnInfo column)
 				{
+					this.column = column;
 				} // ctor
 
-				public override bool TryGetProperty(string name, out object value)
+				public bool TryGetProperty(string name, out object value)
 				{
 					switch (name[0])
 					{
 						case 'S':
 						case 's':
-							if (String.Compare(name, nameof(Owner.SqlType), StringComparison.OrdinalIgnoreCase) == 0)
+							if (String.Compare(name, nameof(column.SqlType), StringComparison.OrdinalIgnoreCase) == 0)
 							{
-								value = Owner.SqlType;
+								value = column.SqlType;
 								return true;
 							}
-							else if (String.Compare(name, nameof(Owner.SqlType), StringComparison.OrdinalIgnoreCase) == 0)
+							else if (String.Compare(name, nameof(column.Scale), StringComparison.OrdinalIgnoreCase) == 0)
 							{
-								value = Owner.Scale;
+								value = column.Scale;
 								return true;
 							}
 							break;
 						case 'M':
 						case 'm':
-							if (String.Compare(name, nameof(Owner.MaxLength), StringComparison.OrdinalIgnoreCase) == 0)
+							if (String.Compare(name, nameof(column.MaxLength), StringComparison.OrdinalIgnoreCase) == 0)
 							{
-								value = Owner.MaxLength;
+								value = column.MaxLength;
 								return true;
 							}
 							break;
 						case 'N':
 						case 'n':
-							if (String.Compare(name, nameof(Owner.Nullable), StringComparison.OrdinalIgnoreCase) == 0)
+							if (String.Compare(name, nameof(column.Nullable), StringComparison.OrdinalIgnoreCase) == 0)
 							{
-								value = Owner.Nullable;
+								value = column.Nullable;
 								return true;
 							}
 							break;
 						case 'P':
 						case 'p':
-							if (String.Compare(name, nameof(Owner.Precision), StringComparison.OrdinalIgnoreCase) == 0)
+							if (String.Compare(name, nameof(column.Precision), StringComparison.OrdinalIgnoreCase) == 0)
 							{
-								value = Owner.Precision;
+								value = column.Precision;
 								return true;
 							}
 							break;
 						case 'I':
 						case 'i':
-							if (String.Compare(name, nameof(Owner.IsIdentity), StringComparison.OrdinalIgnoreCase) == 0)
+							if (String.Compare(name, nameof(column.IsIdentity), StringComparison.OrdinalIgnoreCase) == 0)
 							{
-								value = Owner.IsIdentity;
+								value = column.IsIdentity;
 								return true;
 							}
 							break;
 					}
-					return base.TryGetProperty(name, out value);
+
+					value = null;
+					return false;
 				} // func TryGetProperty
 
-				public override IEnumerator<PropertyValue> GetEnumerator()
+				public IEnumerator<PropertyValue> GetEnumerator()
 				{
-					yield return new PropertyValue(nameof(Owner.SqlType), Owner.SqlType);
-					yield return new PropertyValue(nameof(Owner.MaxLength), Owner.MaxLength);
-					yield return new PropertyValue(nameof(Owner.Precision), Owner.Precision);
-					yield return new PropertyValue(nameof(Owner.Scale), Owner.Scale);
-					yield return new PropertyValue(nameof(Owner.Nullable), Owner.Nullable);
-					yield return new PropertyValue(nameof(Owner.IsIdentity), Owner.IsIdentity);
-
-					using (var e = base.GetEnumerator())
-					{
-						while (e.MoveNext())
-							yield return e.Current;
-					}
+					yield return new PropertyValue(nameof(column.SqlType), column.SqlType);
+					yield return new PropertyValue(nameof(column.MaxLength), column.MaxLength);
+					yield return new PropertyValue(nameof(column.Precision), column.Precision);
+					yield return new PropertyValue(nameof(column.Scale), column.Scale);
+					yield return new PropertyValue(nameof(column.Nullable), column.Nullable);
+					yield return new PropertyValue(nameof(column.IsIdentity), column.IsIdentity);
 				} // func GetEnumerator
+
+				IEnumerator IEnumerable.GetEnumerator() 
+					=> GetEnumerator();
 			} // class PpsColumnAttributes
 
 			#endregion
@@ -1762,7 +1766,7 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				foreach (var col in table.Columns)
 				{
-					var colInfo = ((PpsDataColumnServerDefinition)col).GetColumnDescriptionImplementation<SqlColumnInfo>();
+					var colInfo = ((PpsDataColumnServerDefinition)col).GetColumnDescription<SqlColumnInfo>();
 					if (colInfo != null)
 					{
 						if (primaryKeyPrefix != null && colInfo.IsPrimary)
@@ -1806,7 +1810,7 @@ namespace TecWare.PPSn.Server.Sql
 			private IPpsDataSynchronizationBatch GenerateChangeTrackingBatch(PpsDataTableDefinition table, long lastSyncId)
 			{
 				var column = (PpsDataColumnServerDefinition)table.PrimaryKey;
-				var columnInfo = column.GetColumnDescriptionImplementation<SqlColumnInfo>();
+				var columnInfo = column.GetColumnDescription<SqlColumnInfo>();
 				if (columnInfo == null)
 					throw new ArgumentOutOfRangeException("columnInfo", null, $"{column.Name} is not a sql column.");
 

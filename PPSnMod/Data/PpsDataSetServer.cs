@@ -76,6 +76,7 @@ namespace TecWare.PPSn.Server.Data
 
 		private readonly string fieldName;
 		private readonly PpsDataColumnMetaCollectionServer metaInfo;
+
 		private PpsFieldDescription fieldDescription = null;
 
 		private readonly PpsDataColumnParentRelationType parentType = PpsDataColumnParentRelationType.None;
@@ -208,17 +209,22 @@ namespace TecWare.PPSn.Server.Data
 			PpsDataSetServerDefinition.WriteSchemaMetaInfo(xColumn, metaInfo);
 		} // proc WriteSchema
 
+		public T GetColumnDescription<T>() where T : IPpsColumnDescription
+			=> this.GetColumnDescriptionParentImplementation<T>(fieldDescription);
+
 		protected override Type GetDataType()
 			=> fieldDescription?.DataType ?? typeof(object);
 
 		public override PpsDataColumnMetaCollection Meta => metaInfo;
 
+		/// <summary>Field, that descripse format and behaviour of the column.</summary>
 		public PpsFieldDescription FieldDescription => fieldDescription;
+
+		/// <summary>Relation to the parent column</summary>
 		public PpsDataColumnParentRelationType ParentType => parentType;
 
+		/// <summary>Is the column initialized.</summary>
 		public override bool IsInitialized => fieldDescription != null;
-
-		IPpsColumnDescription IPpsColumnDescription.Parent => fieldDescription;
 	} // class PpsDataColumnServerDefinition
 
 	#endregion

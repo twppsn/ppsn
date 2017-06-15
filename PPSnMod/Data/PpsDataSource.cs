@@ -22,14 +22,18 @@ using System.Xml.Linq;
 using TecWare.DE.Server;
 using TecWare.DE.Data;
 using TecWare.PPSn.Server.Data;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server.Data
 {
 	public abstract class PpsDataSource : DEConfigItem
 	{
+		private readonly PpsApplication application;
+
 		public PpsDataSource(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
+			this.application = sp.GetService<PpsApplication>(true);
 		} // ctor
 
 		//public virtual bool EnsureConnection(object context)
@@ -74,5 +78,8 @@ namespace TecWare.PPSn.Server.Data
 			=> new PpsDataTableServerDefinition(dataset, tableName, config);
 
 		public abstract string Type { get; }
+
+		/// <summary>Application object.</summary>
+		public PpsApplication Application => application;
 	} // class PpsDataSource
 }

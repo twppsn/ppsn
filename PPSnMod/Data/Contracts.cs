@@ -252,22 +252,28 @@ namespace TecWare.PPSn.Server.Data
 		private readonly string userName;
 		private readonly SecureString password;
 
-		internal PpsUserCredentials(HttpListenerBasicIdentity identity)
+		internal unsafe PpsUserCredentials(HttpListenerBasicIdentity identity)
 		{
 			if (identity == null)
 				throw new ArgumentNullException(nameof(identity));
 
 			if (String.IsNullOrEmpty(identity.Name))
-				throw new ArgumentException($"{nameof(identity)}.Name is null or empty.");
+				throw new ArgumentException($"{nameof(identity)}.{nameof(HttpListenerBasicIdentity.Name)} is null or empty.");
 
 			if (String.IsNullOrEmpty(identity.Password))
-				throw new ArgumentException($"{nameof(identity)}.Password is null or empty.");
+				throw new ArgumentException($"{nameof(identity)}.{nameof(HttpListenerBasicIdentity.Password)} is null or empty.");
 
 			// copy the arguments
 			this.userName = identity.Name;
-			this.password = new SecureString();
-			foreach (var c in identity.Password)
-				this.password.AppendChar(c);
+			var passwordPtr = Marshal.StringToHGlobalUni(identity.Password);
+			try
+			{
+				this.password = new SecureString((char*)passwordPtr.ToPointer(), identity.Password.Length);
+			}
+			finally
+			{
+				Marshal.ZeroFreeGlobalAllocUnicode(passwordPtr);
+			}
 			this.password.MakeReadOnly();
 		} // ctor
 
@@ -357,47 +363,11 @@ namespace TecWare.PPSn.Server.Data
 	/// <summary>Description for a column.</summary>
 	public interface IPpsColumnDescription : IDataColumn
 	{
-		/// <summary>Inherited properties.</summary>
-		IPpsColumnDescription Parent { get; }
+		/// <summary>Returns a specific column implemenation.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <returns></returns>
+		T GetColumnDescription<T>() where T : IPpsColumnDescription;
 	} // interface IPpsProviderColumnDescription
-
-	#endregion
-
-	#region -- class PpsColumnDescriptionAttributes -------------------------------------
-
-	public class PpsColumnDescriptionAttributes<T> : IPropertyEnumerableDictionary
-		where T : IPpsColumnDescription
-	{
-		private readonly T owner;
-
-		public PpsColumnDescriptionAttributes(T owner)
-		{
-			this.owner = owner;
-		} // ctor
-
-		public virtual IEnumerator<PropertyValue> GetEnumerator()
-		{
-			if (owner.Parent != null)
-			{
-				foreach (var p in owner.Parent.Attributes)
-					yield return p;
-			}
-		} // func GetEnumerator
-
-		public virtual bool TryGetProperty(string name, out object value)
-		{
-			if (owner.Parent != null)
-				return owner.Parent.Attributes.TryGetProperty(name, out value);
-
-			value = null;
-			return false;
-		} // func TryGetProperty
-
-		IEnumerator IEnumerable.GetEnumerator()
-			=> GetEnumerator();
-
-		public T Owner => owner;
-	} // class PpsColumnDescriptionAttributes
 
 	#endregion
 
@@ -421,7 +391,10 @@ namespace TecWare.PPSn.Server.Data
 		} // ctor
 
 		protected virtual IPropertyEnumerableDictionary CreateAttributes()
-			=> new PpsColumnDescriptionAttributes<IPpsColumnDescription>(this);
+			=> parent == null ? PropertyDictionary.EmptyReadOnly : parent.Attributes;
+
+		public T GetColumnDescription<T>() where T : IPpsColumnDescription
+			=> this.GetColumnDescriptionParentImplementation<T>(parent);
 
 		public string Name => name;
 		public Type DataType => dataType;
@@ -432,6 +405,66 @@ namespace TecWare.PPSn.Server.Data
 
 	public static class PpsColumnDescriptionHelper
 	{
+		#region -- class PpsColumnDescriptionAttributes ---------------------------------
+
+		private sealed class PpsColumnDescriptionAttributes : IPropertyEnumerableDictionary
+		{
+			private readonly IPropertyEnumerableDictionary self;
+			private readonly IPropertyEnumerableDictionary parent;
+			private readonly List<string> emittedProperties = new List<string>();
+
+			public PpsColumnDescriptionAttributes(IPropertyEnumerableDictionary self, IPropertyEnumerableDictionary parent)
+			{
+				this.self = self;
+				this.parent = parent;
+			} // ctor
+
+			private bool PropertyEmitted(string name)
+			{
+				var idx = emittedProperties.BinarySearch(name, StringComparer.OrdinalIgnoreCase);
+				if (idx >= 0)
+					return true;
+				emittedProperties.Insert(~idx, name);
+				return false;
+			} // func PropertyEmitted
+
+			public IEnumerator<PropertyValue> GetEnumerator()
+			{
+				foreach (var c in self)
+				{
+					if (!PropertyEmitted(c.Name))
+						yield return c;
+				}
+
+				if (parent != null)
+				{
+					foreach (var c in parent)
+					{
+						if (!PropertyEmitted(c.Name))
+							yield return c;
+					}
+				}
+			} // func GetEnumerator
+
+			public bool TryGetProperty(string name, out object value)
+			{
+				if (self.TryGetProperty(name, out value))
+					return true;
+				else if (parent != null && parent.TryGetProperty(name, out value))
+					return true;
+
+				value = null;
+				return false;
+			} // func TryGetProperty
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> GetEnumerator();
+		} // class PpsColumnDescriptionAttributes
+
+		#endregion
+
+		#region -- class PpsDataColumnDescription ---------------------------------------
+
 		private sealed class PpsDataColumnDescription : IPpsColumnDescription
 		{
 			private readonly IPpsColumnDescription parent;
@@ -443,27 +476,36 @@ namespace TecWare.PPSn.Server.Data
 				this.column = column;
 			} // ctor
 
+			public T GetColumnDescription<T>()
+				where T : IPpsColumnDescription
+				=> this.GetColumnDescriptionParentImplementation<T>(parent);
+
 			public string Name => column.Name;
 			public Type DataType => column.DataType;
 
-			public IPpsColumnDescription Parent => parent;
-			public IPropertyEnumerableDictionary Attributes => column.Attributes;
+			public IPropertyEnumerableDictionary Attributes
+				=> new PpsColumnDescriptionAttributes(column.Attributes, parent.Attributes);
 		} // class PpsDataColumnDescription
 
-		public static bool TryGetColumnDescriptionImplementation<T>(this IPpsColumnDescription columnDescription, out T value)
-			where T : class
-			=> (value = GetColumnDescriptionImplementation<T>(columnDescription)) != null;
+		#endregion
 
-		public static T GetColumnDescriptionImplementation<T>(this IPpsColumnDescription columnDescription)
-			where T : class
+		public static IPropertyEnumerableDictionary GetColumnDescriptionParentAttributes(IPropertyEnumerableDictionary properties, IPpsColumnDescription parent)
+			=> new PpsColumnDescriptionAttributes(properties, parent?.Attributes);
+
+		public static T GetColumnDescriptionParentImplementation<T>(this IPpsColumnDescription @this, IPpsColumnDescription parent)
+			where T : IPpsColumnDescription
 		{
-			var t = columnDescription as T;
+			if (typeof(T).IsAssignableFrom(@this.GetType()))
+				return (T)(IPpsColumnDescription)@this;
+			else if (parent != null)
+				return parent.GetColumnDescription<T>();
+			else
+				return default(T);
+		} // func GetColumnDescriptionParentImplementation
 
-			if (t == null && columnDescription.Parent != null)
-				return GetColumnDescriptionImplementation<T>(columnDescription.Parent);
-
-			return t;
-		} // func GetColumnDescriptionImplementation
+		public static bool TryGetColumnDescriptionImplementation<T>(this IPpsColumnDescription columnDescription, out T value)
+			where T : IPpsColumnDescription
+			=> (value = columnDescription.GetColumnDescription<T>()) != null;
 
 		public static IPpsColumnDescription ToColumnDescription(this IDataColumn column, IPpsColumnDescription parent = null)
 			=> new PpsDataColumnDescription(parent, column);

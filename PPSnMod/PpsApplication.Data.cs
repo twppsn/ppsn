@@ -36,79 +36,208 @@ namespace TecWare.PPSn.Server
 {
 	#region -- class PpsFieldDescription ------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Description of a field.</summary>
 	public sealed class PpsFieldDescription : IPpsColumnDescription
 	{
 		private const string displayNameAttributeString = "displayName";
 		private const string maxLengthAttributeString = "maxLength";
 		private const string dataTypeAttributeString = "dataType";
+		private const string inheritedAttributeString = "inherited";
 
-		#region -- class PpsFieldAttributes -----------------------------------------------
+		#region -- class PpsFieldAttributesEnumerator -----------------------------------
 
-		private sealed class PpsFieldAttributes : PpsColumnDescriptionAttributes<PpsFieldDescription>
+		private sealed class PpsFieldAttributesEnumerator : IEnumerator<PropertyValue>
 		{
-			public PpsFieldAttributes(PpsFieldDescription owner)
-				: base(owner)
+			private readonly List<string> emittedProperties = new List<string>();
+			private readonly PpsFieldDescription field;
+			private int state = 0;
+
+			private PropertyValue currentProperty;
+
+			private readonly Stack<IPpsColumnDescription> nativeColumnDescriptors = new Stack<IPpsColumnDescription>();
+			private PpsFieldDescription currentField = null;
+			private IEnumerator<XElement> currentFieldEnumerator = null;
+			private IEnumerator<PropertyValue> currentAttributesEnumerator = null;
+
+			public PpsFieldAttributesEnumerator(PpsFieldDescription field)
 			{
+				this.field = field;
+				Reset();
 			} // ctor
 
-			public override bool TryGetProperty(string name, out object value)
+			public void Dispose()
+				=> Reset();
+
+			private bool PropertyEmitted(string propertyName)
 			{
-				var p = Owner.GetProperty(name);
+				if (String.IsNullOrEmpty(propertyName))
+					return true;
+
+				var idx = emittedProperties.BinarySearch(propertyName, StringComparer.OrdinalIgnoreCase);
+				if (idx >= 0)
+					return true;
+				emittedProperties.Insert(~idx, propertyName);
+				return false;
+			} // func PropertyEmit
+
+			private bool EmitPropertyValue(PropertyValue v, int nextState)
+			{
+				if (PropertyEmitted(v.Name))
+					return false;
+
+				this.state = nextState;
+				this.currentProperty = v;
+				return true;
+			} // func EmitPropertyValue
+
+			public bool MoveNext()
+			{
+				PropertyValue r;
+				switch (state)
+				{
+					case 0:
+						if (currentField == null)
+						{
+							state = 5;
+							goto case 5;
+						}
+						else
+						{
+							if (currentField.nativeColumnDescription != null)
+								nativeColumnDescriptors.Push(currentField.nativeColumnDescription);
+
+							currentFieldEnumerator = currentField.xDefinition.Elements(xnFieldAttribute).GetEnumerator();
+							goto case 1;
+						}
+					case 1:
+						if (currentField.TryGetAttributeBasedProperty(displayNameAttributeString, typeof(string), out r) && EmitPropertyValue(r, 2))
+							return true;
+						else
+							goto case 2;
+					case 2:
+						if (currentField.TryGetAttributeBasedProperty(dataTypeAttributeString, typeof(string), out r) && EmitPropertyValue(r, 3))
+							return true;
+						else
+							goto case 3;
+					case 3:
+						if (currentField.TryGetAttributeBasedProperty(maxLengthAttributeString, typeof(string), out r) && EmitPropertyValue(r, 4))
+							return true;
+						else
+							goto case 4;
+					case 4:
+						while (currentFieldEnumerator.MoveNext())
+						{
+							var name = currentFieldEnumerator.Current.GetAttribute<string>("name", null);
+							if (!PropertyEmitted(name))
+							{
+								currentProperty = GetPropertyFromElement(currentFieldEnumerator.Current);
+								return true;
+							}
+						}
+						currentFieldEnumerator.Dispose();
+						currentFieldEnumerator = null;
+						currentField = currentField.inheritedDefinition;
+						goto case 0;
+
+					case 5:
+						if (nativeColumnDescriptors.Count == 0)
+						{
+							state = 7;
+							goto default;
+						}
+						else
+						{
+							var nativeColumnDescription = nativeColumnDescriptors.Pop();
+							currentAttributesEnumerator = nativeColumnDescription.Attributes.GetEnumerator();
+							state = 6;
+							goto case 6;
+						}
+					case 6:
+						while (currentAttributesEnumerator.MoveNext())
+						{
+							if (!PropertyEmitted(currentAttributesEnumerator.Current.Name))
+							{
+								currentProperty = currentAttributesEnumerator.Current;
+								return true;
+							}
+						}
+						currentAttributesEnumerator.Dispose();
+						currentAttributesEnumerator = null;
+						goto case 5;
+
+					default:
+						return false;
+				}
+			} // func MoveNext
+
+			public void Reset()
+			{
+				state = 0;
+				currentProperty = null;
+				currentField = field;
+				currentFieldEnumerator?.Dispose();
+				currentFieldEnumerator = null;
+				currentAttributesEnumerator?.Dispose();
+				currentAttributesEnumerator = null;
+			} // prop Reset
+	
+			public PropertyValue Current 
+				=> currentProperty;
+
+			object IEnumerator.Current => currentProperty;
+		} // class PpsFieldAttributesEnumerator
+
+		#endregion
+
+		#region -- class PpsFieldAttributes ---------------------------------------------
+
+		private sealed class PpsFieldAttributes : IPropertyEnumerableDictionary
+		{
+			private readonly PpsFieldDescription field;
+
+			public PpsFieldAttributes(PpsFieldDescription field)
+			{
+				this.field = field;
+			} // ctor
+			
+			public bool TryGetProperty(string name, out object value)
+			{
+				var p = field.GetProperty(name);
 				if (p != null)
 				{
 					value = p.Value;
 					return true;
 				}
-				return base.TryGetProperty(name, out value);
+				else
+				{
+					value = null;
+					return false;
+				}
 			} // func TryGetProperty
+			
+			public IEnumerator<PropertyValue> GetEnumerator()
+				=> new PpsFieldAttributesEnumerator(field);
 
-			public override IEnumerator<PropertyValue> GetEnumerator()
-			{
-				var displayNameEmitted = false;
-				var dataTypeEmitted = false;
-
-				foreach (var cur in Owner.xDefinition.Elements(xnFieldAttribute))
-				{
-					var p = Owner.GetProperty(cur);
-
-					if (p == null)
-						continue;
-
-					if (String.Compare(p.Name, displayNameAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
-						displayNameEmitted = true;
-					else if (String.Compare(p.Name, dataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
-						dataTypeEmitted = true;
-
-					yield return p;
-				}
-
-				if (!displayNameEmitted)
-					yield return new PropertyValue(displayNameAttributeString, typeof(string), Owner.DisplayName);
-
-				if (!dataTypeEmitted)
-					yield return new PropertyValue(dataTypeAttributeString, typeof(Type), Owner.DataType);
-
-				using (var e = base.GetEnumerator())
-				{
-					while (e.MoveNext())
-						yield return e.Current;
-				}
-			}
+			IEnumerator IEnumerable.GetEnumerator()
+				=> GetEnumerator();
 		} // class PpsFieldAttributes
 
 		#endregion
 
-		private readonly PpsDataSource source;
-		private readonly string name;
-		private readonly IPropertyEnumerableDictionary attributes;
-		private readonly XElement xDefinition;
-		private IPpsColumnDescription parentColumnDescription = null;
+		private readonly PpsDataSource source;	// attached datasource
+		private readonly string name; // name of the field
+		private readonly string inheritedFieldName; // name for the base field
+		private readonly IPropertyEnumerableDictionary attributes; // attributes
+		private readonly XElement xDefinition; // definition in configuration
+
+		private IPpsColumnDescription nativeColumnDescription = null; // assign field description of the datasource
+		private PpsFieldDescription inheritedDefinition = null; // inherited field description
 
 		private readonly Lazy<string> displayName;
 		private readonly Lazy<int> maxLength;
 		private readonly Lazy<Type> dataType;
+
+		private bool isInitialzed = false;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -119,6 +248,8 @@ namespace TecWare.PPSn.Server
 			this.attributes = new PpsFieldAttributes(this);
 			this.xDefinition = xDefinition;
 
+			this.inheritedFieldName = xDefinition.GetAttribute(inheritedAttributeString, (string)null);
+						
 			displayName = new Lazy<string>(() => this.Attributes.GetProperty(displayNameAttributeString, null));
 			maxLength = new Lazy<int>(() => this.Attributes.GetProperty(maxLengthAttributeString, Int32.MaxValue));
 
@@ -129,30 +260,46 @@ namespace TecWare.PPSn.Server
 				null;
 		} // ctor
 
-		internal void SetColumnDescription(IPpsColumnDescription columnDescription)
-			=> this.parentColumnDescription = columnDescription;
+		private void CheckInitialized()
+		{
+			if (!isInitialzed)
+				throw new InvalidOperationException($"Call of {nameof(EndInit)} is missing.");
+		} // proc CheckInitialized
+
+		/// <summary>Fills the network</summary>
+		public void EndInit()
+		{
+			// find inheritied column
+			if (!String.IsNullOrEmpty(inheritedFieldName))
+				inheritedDefinition = source.Application.GetFieldDescription(inheritedFieldName, true);
+			
+			// Resolve a native column description for the field.
+			this.nativeColumnDescription = source.GetColumnDescription(name); // no exception
+
+			isInitialzed = true;
+		} // proc EndInit
 
 		#endregion
 
 		#region -- GetProperty ------------------------------------------------------------
 
-		private PropertyValue GetProperty(XElement attribute)
+		private static PropertyValue GetPropertyFromElement(XElement xAttribute)
 		{
-			if (attribute?.Value == null)
+			if (xAttribute?.Value == null)
 				return null;
 
 			try
 			{
-				var name = attribute.GetAttribute<string>("name", null);
+				var name = xAttribute.GetAttribute<string>("name", null);
 				if (String.IsNullOrEmpty(name))
 					throw new ArgumentNullException("name");
 
 				object value;
-				var dataType = LuaType.GetType(attribute.GetAttribute("dataType", typeof(string))).Type;
+				var dataType = LuaType.GetType(xAttribute.GetAttribute("dataType", typeof(string))).Type;
 				if (dataType == typeof(Type))
-					value = (object)LuaType.GetType(attribute.Value, lateAllowed: false).Type;
+					value = (object)LuaType.GetType(xAttribute.Value, lateAllowed: false).Type;
 				else
-					value = Procs.ChangeType(attribute.Value, dataType);
+					value = Procs.ChangeType(xAttribute.Value, dataType);
 
 				return new PropertyValue(name, dataType, value);
 			}
@@ -162,26 +309,60 @@ namespace TecWare.PPSn.Server
 			}
 		} // func GetProperty
 
+		private bool TryGetAttributeBasedProperty(string attributeName, Type propertyType, out PropertyValue r)
+		{
+			var xAttr = xDefinition.Attribute(attributeName);
+			if (xAttr != null)
+			{
+				r = new PropertyValue(attributeName, propertyType, xAttr.Value);
+				return true;
+			}
+			else
+			{
+				r = null;
+				return false;
+			}
+		} // func TryGetAttributeBasedProperty
+
 		private PropertyValue GetProperty(string propertyName)
 		{
-			var ret = GetProperty(
+			bool TryGetAttributeBasedPropertyLocal(string attributeName, Type propertyType, out PropertyValue r)
+			{
+				if (String.Compare(attributeName, propertyName, StringComparison.OrdinalIgnoreCase) == 0
+					&& TryGetAttributeBasedProperty(attributeName, propertyType, out r))
+					return true;
+				r = null;
+				return false;
+			} // func TryGetAttributeBasedProperty
+
+			CheckInitialized();
+
+			// find a attribute property
+			if (TryGetAttributeBasedPropertyLocal(displayNameAttributeString, typeof(string), out var ret))
+				return ret;
+			if (TryGetAttributeBasedPropertyLocal(dataTypeAttributeString, typeof(Type), out ret))
+				return ret;
+			if (TryGetAttributeBasedPropertyLocal(maxLengthAttributeString, typeof(Type), out ret))
+				return ret;
+
+			// search for a attribute field, with the specific name
+			ret = GetPropertyFromElement(
 				xDefinition.Elements(xnFieldAttribute)
 					.FirstOrDefault(c => String.Compare(c.GetAttribute<string>("name", null), propertyName, StringComparison.OrdinalIgnoreCase) == 0)
 			);
+			if (ret != null)
+				return ret;
 
-			if (ret == null)
-			{
-				if (String.Compare(propertyName, dataTypeAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
-					ret  =new PropertyValue(dataTypeAttributeString, typeof(Type), DataType);
-				else if(String.Compare(propertyName, displayNameAttributeString, StringComparison.OrdinalIgnoreCase) == 0)
-				{
-					var xDisplayName = xDefinition.Attribute(displayNameAttributeString);
-					if (!String.IsNullOrEmpty(xDisplayName?.Value))
-						ret = new PropertyValue(displayNameAttributeString, xDisplayName.Value);
-				}	
-			}
+			// ask native, inherited
+			ret = inheritedDefinition?.GetProperty(propertyName);
+			if (ret != null)
+				return ret;
 
-			return ret;
+			object v = null;
+			if (nativeColumnDescription?.Attributes.TryGetProperty(propertyName, out v) ?? false)
+				return new PropertyValue(propertyName, v);
+
+			return null;
 		} // func GetProperty
 
 		#endregion
@@ -207,15 +388,28 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		/// <summary>Gets the specific column description.</summary>
+		/// <typeparam name="T">Specific type for the description.</typeparam>
+		/// <returns></returns>
+		public T GetColumnDescription<T>()
+			where T : IPpsColumnDescription
+		{
+			if (typeof(T).IsAssignableFrom(GetType()))
+				return (T)(IPpsColumnDescription)this;
+			else if (nativeColumnDescription != null && typeof(T).IsAssignableFrom(nativeColumnDescription.GetType()))
+				return (T)nativeColumnDescription;
+			else
+				return inheritedDefinition == null ? default(T) : inheritedDefinition.GetColumnDescription<T>();
+		} // func GetColumnDescription
+
 		public PpsDataSource DataSource => source;
 		public string Name => name;
 		public string DisplayName => displayName.Value;
 
 		public int MaxLength => Attributes.GetPropertyLate("MaxLength", () => maxLength.Value);
-		public Type DataType => dataType?.Value ?? (parentColumnDescription?.DataType ?? typeof(string));
+		public Type DataType => dataType?.Value ?? (nativeColumnDescription?.DataType ?? typeof(string));
 
 		public IPropertyEnumerableDictionary Attributes => attributes;
-		public IPpsColumnDescription Parent => parentColumnDescription;
 	} // class PpsFieldDescription
 
 	#endregion
@@ -518,7 +712,7 @@ namespace TecWare.PPSn.Server
 			{
 				RegisterInitializationTask(10001, "Resolve columns", () =>
 				{
-					fieldInfo.SetColumnDescription(source.GetColumnDescription(name, false)); // do throw exception here
+					fieldInfo.EndInit(); // do throw exception here
 					return Task.CompletedTask;
 				});
 			}
@@ -696,7 +890,7 @@ namespace TecWare.PPSn.Server
 							{
 								columnNames[i] = nativeColumnName;
 
-								var fieldDescription = fieldDefinition.GetColumnDescriptionImplementation<PpsFieldDescription>(); // get the global description of the field
+								var fieldDescription = fieldDefinition.GetColumnDescription<PpsFieldDescription>(); // get the global description of the field
 
 								xml.WriteStartElement(nativeColumnName);
 

@@ -99,7 +99,7 @@ namespace TecWare.PPSn.Server.Sql
 
 	#endregion
 
-	#region -- class PpsSqlDataTableServerDefinition ----------------------------------
+	#region -- class PpsSqlDataTableServerDefinition ------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -238,7 +238,7 @@ namespace TecWare.PPSn.Server.Sql
 		#region -- EndInit, Schema binding ----------------------------------------------
 
 		private PpsSqlExDataSource.SqlColumnInfo GetSqlColumnInfo(PpsDataColumnDefinition column)
-			=> ((IPpsColumnDescription)column).GetColumnDescriptionImplementation<PpsSqlExDataSource.SqlColumnInfo>();
+			=> ((IPpsColumnDescription)column).GetColumnDescription<PpsSqlExDataSource.SqlColumnInfo>();
 
 		private SqlTableBinding GenerateTableBinding(PpsSqlExDataSource.SqlTableInfo tableInfo, SqlTableBinding parent, PpsSqlExDataSource.SqlRelationInfo relationToParent)
 		{
@@ -369,7 +369,7 @@ namespace TecWare.PPSn.Server.Sql
 							var idx = Array.FindIndex(columnMapping, m => String.Compare(c.Name, m.MemberName, true) == 0);
 							if (idx >= 0)
 							{
-								columnMapping[idx].SetDataColumn(command, new SqlColumnBinding(c, c.GetColumnDescriptionImplementation<PpsSqlExDataSource.SqlColumnInfo>()), args[columnMapping[idx].MemberName]);
+								columnMapping[idx].SetDataColumn(command, new SqlColumnBinding(c, c.GetColumnDescription<PpsSqlExDataSource.SqlColumnInfo>()), args[columnMapping[idx].MemberName]);
 								columnMappingCount++;
 								if (columnMapping.Length == columnMappingCount)
 									return columnMapping;
