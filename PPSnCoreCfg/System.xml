@@ -86,7 +86,7 @@
 		<pps:register source="main">
 
 			<!-- object fields -->
-			<pps:field name="dbo.ObjK.Id" />
+			<pps:field name="dbo.ObjK.Id" inherited="sys.Fields.ObjectId" />
 			<pps:field name="dbo.ObjK.Guid" />
 			<pps:field name="dbo.ObjK.Typ" />
 			<pps:field name="dbo.ObjK.MimeType" />

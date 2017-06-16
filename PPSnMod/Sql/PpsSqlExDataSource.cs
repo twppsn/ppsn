@@ -2185,9 +2185,6 @@ namespace TecWare.PPSn.Server.Sql
 			return new SqlDataTransaction(this, c);
 		} // func CreateTransaction
 
-		public override PpsDataTableServerDefinition CreateTableDefinition(PpsDataSetServerDefinition dataset, string tableName, XElement config)
-			=> new PpsSqlDataTableServerDefinition(dataset, tableName, config);
-
 		public override PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, DateTime lastSynchronization)
 			=> new SqlSynchronizationTransaction(application, this, privateUserData, lastSynchronization);
 
