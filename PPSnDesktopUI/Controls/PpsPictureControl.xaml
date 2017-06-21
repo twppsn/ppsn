@@ -14,7 +14,7 @@
         <Popup Name="popLogFile" IsOpen="{Binding IsChecked, ElementName=tbPictureEditor, Mode=TwoWay}" AllowsTransparency="True" >
             <StackPanel>
                 <Image Width="500" Height="500" Source="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-            Path=PictureSource.Picture, UpdateSourceTrigger=PropertyChanged}" Stretch="Fill"/>
+            Path=PictureSource.Image, UpdateSourceTrigger=PropertyChanged}" Stretch="Fill"/>
             <Button Content="Austauschen" Command="{x:Static local:PpsPictureControl.ChangePictureCommand}"/>
             </StackPanel>
         </Popup>
