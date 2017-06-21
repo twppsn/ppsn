@@ -1476,7 +1476,7 @@ namespace TecWare.PPSn
 			await baseObj.SaveRawDataAsync(
 				rawData.Length,
 				mimeType ?? baseObj.MimeType ?? MimeTypes.Application.OctetStream,
-				dst => dst.Write(rawData, 0, rawData.Length),
+				rawData,
 				true
 			);
 			await baseObj.UpdateLocalAsync();
@@ -2016,6 +2016,35 @@ namespace TecWare.PPSn
 				}
 			}
 		} // func LoadRawDataAsync
+
+		internal async Task SaveRawDataAsync(long contentLength, string mimeType, byte[] data, bool isDocumentChanged)
+		{
+			// store the value
+			using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
+			using (var cmd = trans.CreateNativeCommand("UPDATE main.[Objects] " +
+				"SET " +
+					"MimeType = @MimeType, " +
+					"Document = @Document, " +
+					"DocumentIsLinked = 0, " +
+					"DocumentIsChanged = @DocumentIsChanged, " +
+					"_IsUpdated = 1 " +
+				"WHERE Id = @Id"))
+			{
+				cmd.AddParameter("@Id", DbType.Int64, objectId);
+				cmd.AddParameter("@MimeType", DbType.String, mimeType);
+				cmd.AddParameter("@Document", DbType.Binary, data ?? (object)DBNull.Value);
+				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, isDocumentChanged);
+
+				await cmd.ExecuteNonQueryAsync();
+
+				// set HasData to true
+				SetValue(PpsStaticObjectColumnIndex.MimeType, mimeType, false);
+				SetValue(PpsStaticObjectColumnIndex.IsDocumentChanged, isDocumentChanged, false);
+				SetValue(PpsStaticObjectColumnIndex.HasData, true, false);
+
+				trans.Commit();
+			}
+		} // proc SaveRawDataAsync
 
 		internal async Task SaveRawDataAsync(long contentLength, string mimeType, Action<Stream> data, bool isDocumentChanged)
 		{
