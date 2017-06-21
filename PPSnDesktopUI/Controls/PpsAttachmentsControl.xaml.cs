@@ -301,7 +301,7 @@ namespace TecWare.PPSn.Controls
 
 				return false;
 			}
-			
+
 			public bool Equals(PpsDataRow other)
 				=> other == row;
 
