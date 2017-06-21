@@ -1205,7 +1205,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class IPpsObjectData -----------------------------------------------------
+	#region -- interface IPpsObjectData -------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -1225,84 +1225,216 @@ namespace TecWare.PPSn
 
 	public sealed class PpsObjectImageData : PpsObjectBlobData
 	{
-
 		private readonly PpsObject baseObj;
 
-		new public event PropertyChangedEventHandler PropertyChanged;
+		private bool imageLoaded = false;
+		private bool previewLoaded = false;
+		private bool overlayLoaded = false;
 
+		private ImageSource image = null;
+		private ImageSource preview = null;
+		private ImageSource overlay = null;
 
-		private void OnPropertyChanged(string propertyName)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+		private static SemaphoreSlim LoadPreviewSemaphore = new SemaphoreSlim(1, 1);
 
 		public PpsObjectImageData(PpsObject obj) : base(obj)
 		{
 			this.baseObj = obj;
 		}
 
-		private async void Initialize()
+		private async void LoadPreview()
 		{
-			if (!this.IsLoaded)
-				await this.LoadAsync();
-			OnPropertyChanged(nameof(PreviewImage));
-		}
+			await LoadPreviewSemaphore.WaitAsync();
 
-		public BitmapImage GetImage()
-		{
-			if (!this.IsLoaded)
-				this.LoadAsync().Wait();
-
-			var bI = new BitmapImage();
-
-			using (MemoryStream stream = new MemoryStream(this.RawData))
+			if (!PreviewLoaded)
 			{
-				bI.BeginInit();
-				bI.CacheOption = BitmapCacheOption.OnLoad;
-				bI.StreamSource = stream;
-				bI.EndInit();
-			}
+				foreach (var lnk in baseObj.Links)
+				{
+					var idx = lnk.LinkTo.Tags.IndexOf("PictureItemType");
+					if (idx >= 0)
+					{
+						if ((string)lnk.LinkTo.Tags[idx].Value == "preview")
+						{
 
-			return bI;
+							var imgObj = await lnk.LinkTo.GetDataAsync<PpsObjectImageData>();
+							preview = imgObj.Image;
+							if (!imgObj.ImageLoaded)
+								imgObj.PropertyChanged += LinkedImage_PropertyChanged;
+							PreviewLoaded = true;
+
+							break;
+						}
+					}
+				}
+
+				if (!PreviewLoaded)
+				{
+					if (imageLoaded)
+					{
+						if (base.RawData.Length > 100000000)
+						{
+							LoadPreviewSemaphore.Release();
+							return;
+						}
+						// create a preview from the image
+						var scale = new ScaleTransform(image.Width / 120, image.Height / 120);
+						var thumb = new TransformedBitmap(BitmapFrame.Create((BitmapSource)image), scale);
+						var enc = new PngBitmapEncoder();
+						enc.Frames.Add(BitmapFrame.Create(thumb));
+
+						var obj = await baseObj.Environment.CreateNewObjectAsync(baseObj.Environment.ObjectInfos[PpsEnvironment.AttachmentObjectTyp]);
+
+						obj.Tags.UpdateTag(baseObj.Environment.UserId, "PictureItemType", PpsObjectTagClass.Text, "preview");
+						obj.Tags.UpdateTag(baseObj.Environment.UserId, "Sha256", PpsObjectTagClass.Text, "000");
+						var ms = new MemoryStream();
+						enc.Save(ms);
+						ms.Position = 0;
+
+						var data = await obj.GetDataAsync<PpsObjectBlobData>();
+						await data.ReadFromStreamAsync(ms, MimeTypes.Image.Png);
+						await data.CommitAsync();
+
+						baseObj.Links.AppendLink(obj, PpsObjectLinkRestriction.Delete);
+						await baseObj.UpdateLocalAsync();
+
+						preview = (await obj.GetDataAsync<PpsObjectImageData>()).Image;
+						PreviewLoaded = true;
+					}
+					else
+					{
+						PropertyChanged += CreatePreviewFromImage;
+					}
+				}
+			}
+			LoadPreviewSemaphore.Release();
 		}
 
-		public BitmapSource RawImage
+		private void LinkedImage_PropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (!((PpsObjectImageData)sender).ImageLoaded)
+				return;
+
+			var idx = ((PpsObjectImageData)sender).baseObj.Tags.IndexOf("PictureItemType");
+			if (idx >= 0)
+			{
+				if ((string)((PpsObjectImageData)sender).baseObj.Tags[idx].Value == "preview")
+				{
+					preview = ((PpsObjectImageData)sender).Image;
+					base.OnPropertyChanged(nameof(Preview));
+				}
+				if ((string)((PpsObjectImageData)sender).baseObj.Tags[idx].Value == "overlay")
+					base.OnPropertyChanged(nameof(Overlay));
+			}
+		}
+
+		private void CreatePreviewFromImage(object sender, PropertyChangedEventArgs e)
+		{
+			if (e.PropertyName == nameof(Image))
+			{
+				PropertyChanged -= CreatePreviewFromImage;
+				LoadPreview();
+			}
+		}
+
+		public bool PreviewLoaded { get { return previewLoaded; } set { previewLoaded = value; base.OnPropertyChanged(nameof(Preview)); } }
+
+		public ImageSource Preview
 		{
 			get
 			{
-				return GetImage();
-			}
-			set
-			{
-				throw new NotImplementedException();
+				{
+					if (!PreviewLoaded)
+					{
+						LoadPreview();
+						return new BitmapImage(new Uri("C:\\Projects\\material-design-icons\\action\\drawable-xxxhdpi\\ic_history_black_48dp.png"));
+					}
+					else if (preview == null)
+						return Image;
+					else return preview;
+				}
 			}
 		}
 
-		public BitmapSource Overlay
+		private async void LoadImage()
+		{
+			if (!imageLoaded)
+			{
+				await LoadAsync();
+
+				var bI = new BitmapImage();
+
+				using (MemoryStream stream = new MemoryStream(this.RawData))
+				{
+					bI.BeginInit();
+					bI.CacheOption = BitmapCacheOption.OnLoad;
+					bI.StreamSource = stream;
+					bI.EndInit();
+				}
+
+				image = bI;
+
+				ImageLoaded = true;
+			}
+		}
+
+		public bool ImageLoaded { get { return imageLoaded; } set { imageLoaded = value; base.OnPropertyChanged(nameof(Image)); } }
+
+		public ImageSource Image
 		{
 			get
 			{
-				return GetImage();
-			}
-			set
-			{
-				throw new NotImplementedException();
+				{
+					if (!imageLoaded)
+					{
+						LoadImage();
+						return new BitmapImage(new Uri("C:\\Projects\\material-design-icons\\action\\drawable-xxxhdpi\\ic_history_black_48dp.png"));
+					}
+					else if (image == null)
+						return new BitmapImage(new Uri("C:\\Projects\\material-design-icons\\action\\drawable-xxxhdpi\\ic_help_black_48dp.png"));
+					else return image;
+				}
 			}
 		}
 
-		public BitmapSource PreviewImage
+		private async void LoadOverlay()
+		{
+			if (!overlayLoaded)
+			{
+				foreach (var lnk in baseObj.Links)
+				{
+					var idx = lnk.LinkTo.Tags.IndexOf("PictureItemType");
+					if (idx >= 0)
+					{
+						if ((string)lnk.LinkTo.Tags[idx].Value == "overlay")
+						{
+							var imgObj = await lnk.LinkTo.GetDataAsync<PpsObjectImageData>().ConfigureAwait(false);
+
+							overlay = imgObj.Image;
+						}
+					}
+				}
+				OverlayLoaded = true;
+			}
+		}
+
+		public bool OverlayLoaded { get { return overlayLoaded; } set { overlayLoaded = value; OnPropertyChanged(nameof(Overlay)); } }
+
+		public ImageSource Overlay
 		{
 			get
 			{
-				var a = GetImage();
-				var b = new WriteableBitmap(a);
-				return b;
-			}
-			set
-			{
-				throw new NotImplementedException();
+				{
+					if (!overlayLoaded)
+					{
+						LoadOverlay();
+						return new BitmapImage(new Uri("C:\\Projects\\material - design - icons\\action\\drawable - xxxhdpi\\ic_history_black_48dp.png"));
+					}
+					else if (overlay == null)
+						return new BitmapImage(new Uri("C:\\Projects\\material-design-icons\\action\\drawable-xxxhdpi\\ic_help_black_48dp.png"));
+					else return overlay;
+				}
 			}
 		}
-
-		public BitmapSource Image => GetImage();
 	}
 
 	#endregion
@@ -1325,7 +1457,7 @@ namespace TecWare.PPSn
 			this.baseObj = obj;
 		} // ctor
 
-		private void OnPropertyChanged(string propertyName)
+		internal void OnPropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 		public async Task LoadAsync()
