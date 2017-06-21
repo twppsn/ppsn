@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using Microsoft.Win32;
 using TecWare.DE.Networking;
 using TecWare.PPSn.Data;
@@ -58,7 +59,7 @@ namespace TecWare.PPSn.Controls
 								obj.Tags.UpdateTag(Environment.UserId, "Filename", PpsObjectTagClass.Text, ofd.FileName);
 								obj.Tags.UpdateTag(Environment.UserId, "PictureItemType", PpsObjectTagClass.Text, "Grundriss");
 
-								var data = await obj.GetDataAsync<PpsObjectBlobData>();
+								var data = await obj.GetDataAsync<PpsObjectImageData>();
 								await data.ReadFromFileAsync(ofd.FileName);
 								await data.CommitAsync();
 
@@ -86,17 +87,19 @@ namespace TecWare.PPSn.Controls
 
 	public sealed class PpsDataObjectPictureConverter : IValueConverter
 	{
-		private sealed class PpsPictureItemImplementation : IPpsPictureItem
+		private sealed class PpsPictureItemImplementation : IPpsPictureItem, INotifyPropertyChanged
 		{
 			private readonly IPpsDataView view;
 			private readonly string pictureTag;
 			private readonly int linkColumnIndex;
 			private PpsObject obj;
+			private PpsObjectImageData dat;
 
 			public event PropertyChangedEventHandler PropertyChanged;
 
 			public PpsPictureItemImplementation(IPpsDataView view, string linkColumnName, string pictureTag)
 			{
+				view.CollectionChanged += ((sender, e) => NotifyPropertyChanged());
 				this.view = view;
 				this.linkColumnIndex = view.Table.TableDefinition.FindColumnIndex(linkColumnName ?? throw new ArgumentNullException(nameof(linkColumnName)), true);
 				this.pictureTag = pictureTag;
@@ -110,8 +113,13 @@ namespace TecWare.PPSn.Controls
 						this.obj = tobj;
 					}
 				}
+				dat = new PpsObjectImageData(obj);
+				dat.PropertyChanged += Dat_PropertyChanged;
+			}
 
-
+			private void Dat_PropertyChanged(object sender, PropertyChangedEventArgs e)
+			{
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(e.PropertyName));
 			}
 
 			public bool Clear()
@@ -142,60 +150,19 @@ namespace TecWare.PPSn.Controls
 					view.Add(row);
 
 					trans.Commit();
-				}
 
-				NotifyPropertyChanged("PictureSource");
+					this.obj = data;
+				}
+				NotifyPropertyChanged(nameof(Image));
 			}
 
 			private void NotifyPropertyChanged(string propertyName = "")
-			{
-				if (PropertyChanged != null)
-				{
-					PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-				}
-			}
+				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-			public object Picture
-			{
-				get
-				{
-					if (obj != null)
-					{
-						var handler = obj.GetDataAsync<PpsObjectImageData>();
-						handler.Wait();
-						return handler.Result.Image;
-					}
+			public ImageSource Image => dat.Image;
 
-					return DependencyProperty.UnsetValue;
-				}
-			}
-
-			public object Overlay
-				=> SubPicture("overlay");
-
-			public object Preview
-				=> SubPicture("preview");
-
-			private object SubPicture(string pictureItemType)
-				{
-					foreach (var sub in obj.Links)
-					{
-						var obj = sub.LinkTo;
-						var idx = obj.Tags.IndexOf("PictureItemType");
-						if (idx >= 0)
-						{
-							if ((string)obj.Tags[idx].Value == pictureItemType)
-							{
-								var handler = obj.GetDataAsync<PpsObjectImageData>();
-								handler.Wait();
-								return handler.Result.Image;
-							}
-						}
-					}
-
-					return null;
-				}
-			}
+			public ImageSource Preview => dat.Preview;
+		}
 
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
