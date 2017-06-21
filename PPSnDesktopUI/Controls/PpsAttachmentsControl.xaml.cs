@@ -26,6 +26,8 @@ using Microsoft.Win32;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using System.Collections.Specialized;
+using dpmLaptolex.PPSn.PictureEditor;
+using System.ComponentModel;
 
 namespace TecWare.PPSn.Controls
 {
@@ -268,8 +270,10 @@ namespace TecWare.PPSn.Controls
 	{
 		#region -- class PpsAttachmentItemImplementation --------------------------------
 
-		private sealed class PpsAttachmentItemImplementation : IPpsAttachmentItem, IEquatable<PpsDataRow>
+		private sealed class PpsAttachmentItemImplementation : IPpsAttachmentItem, IEquatable<PpsDataRow>, INotifyPropertyChanged
 		{
+			public event PropertyChangedEventHandler PropertyChanged;
+
 			private readonly PpsDataRow row;
 			private readonly int linkColumnIndex;
 
@@ -310,15 +314,10 @@ namespace TecWare.PPSn.Controls
 
 			public object Data => GetLinkedObject();
 
-			public object Picture
-			{
-				get
-				{
-					var handler = GetLinkedObject().GetDataAsync<PpsObjectImageData>();
-					handler.Wait();
-					return handler.Result.Image;
-				}
-			}
+			private void NotifyPropertyChanged(string propertyName = "")
+				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+			public object Picture => GetLinkedObject().GetDataAsync<PpsObjectImageData>().Result.Preview;
 
 			public string Type => MimeType.StartsWith("image") ? "picture" : "binary";
 		} // class PpsAttachmentItemImplementation
