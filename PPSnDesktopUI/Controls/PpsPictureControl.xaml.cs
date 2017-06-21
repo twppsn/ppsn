@@ -11,11 +11,11 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Controls
 {
-	public interface IPpsPictureItem : INotifyPropertyChanged
+	public interface IPpsPictureItem
 	{
 		bool Clear();
 		void Exchange(PpsObject data);
-		object Picture { get; }
+		ImageSource Image { get; }
 	}
 
 	/// <summary>
