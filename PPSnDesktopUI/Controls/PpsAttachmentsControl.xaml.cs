@@ -153,7 +153,9 @@ namespace TecWare.PPSn.Controls
 					new CommandBinding(CameraAttachmentCommand,
 						(isender, ie) =>
 						{
-							throw new NotImplementedException();
+							var dialog = new PictureEditorDialog(AttachmentsSource, true);
+							dialog.Owner = Application.Current.Windows[0];
+							dialog.ShowDialog();
 						},
 						(isender, ie) => ie.CanExecute = true
 					)
