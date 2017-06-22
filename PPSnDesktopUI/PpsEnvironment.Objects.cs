@@ -1225,6 +1225,7 @@ namespace TecWare.PPSn
 
 	public sealed class PpsObjectImageData : PpsObjectBlobData
 	{
+		#region privates
 		private readonly PpsObject baseObj;
 
 		private bool imageLoaded = false;
@@ -1234,13 +1235,31 @@ namespace TecWare.PPSn
 		private ImageSource image = null;
 		private ImageSource preview = null;
 		private ImageSource overlay = null;
+		#endregion
 
+		#region consts
+		private static readonly BitmapImage loadingImage = new BitmapImage(new Uri("C:\\Projects\\material-design-icons\\action\\drawable-xxxhdpi\\ic_history_black_48dp.png"));
+		private static readonly BitmapImage notfoundImage = new BitmapImage(new Uri("C:\\Projects\\material-design-icons\\action\\drawable-xxxhdpi\\ic_help_black_48dp.png"));
+		private static readonly BitmapImage nullImage = new BitmapImage();
+		const string PreviewId = "preview";
+		const string OverlayId = "overlay";
+		const string PictureItemId = "PictureItemType";
+		#endregion
+
+		#region syncronisation
 		private static SemaphoreSlim LoadPreviewSemaphore = new SemaphoreSlim(1, 1);
+		#endregion
 
+		#region ctor
 		public PpsObjectImageData(PpsObject obj) : base(obj)
 		{
 			this.baseObj = obj;
 		}
+		#endregion
+
+		#region Functionality
+
+		#region Preview
 
 		private async void LoadPreview()
 		{
@@ -1250,18 +1269,19 @@ namespace TecWare.PPSn
 			{
 				foreach (var lnk in baseObj.Links)
 				{
-					var idx = lnk.LinkTo.Tags.IndexOf("PictureItemType");
+					var idx = lnk.LinkTo.Tags.IndexOf(PictureItemId);
 					if (idx >= 0)
 					{
-						if ((string)lnk.LinkTo.Tags[idx].Value == "preview")
+						if ((string)lnk.LinkTo.Tags[idx].Value == PreviewId)
 						{
 
 							var imgObj = await lnk.LinkTo.GetDataAsync<PpsObjectImageData>();
-							preview = imgObj.Image;
-							if (!imgObj.ImageLoaded)
+							if (imgObj.ImageLoaded)
+								preview = imgObj.Image;
+							else
 								imgObj.PropertyChanged += LinkedImage_PropertyChanged;
-							PreviewLoaded = true;
 
+							PreviewLoaded = true;
 							break;
 						}
 					}
@@ -1284,15 +1304,17 @@ namespace TecWare.PPSn
 
 						var obj = await baseObj.Environment.CreateNewObjectAsync(baseObj.Environment.ObjectInfos[PpsEnvironment.AttachmentObjectTyp]);
 
-						obj.Tags.UpdateTag(baseObj.Environment.UserId, "PictureItemType", PpsObjectTagClass.Text, "preview");
-						obj.Tags.UpdateTag(baseObj.Environment.UserId, "Sha256", PpsObjectTagClass.Text, "000");
-						var ms = new MemoryStream();
-						enc.Save(ms);
-						ms.Position = 0;
+						obj.Tags.UpdateTag(baseObj.Environment.UserId, PictureItemId, PpsObjectTagClass.Text, PreviewId);
 
-						var data = await obj.GetDataAsync<PpsObjectBlobData>();
-						await data.ReadFromStreamAsync(ms, MimeTypes.Image.Png);
-						await data.CommitAsync();
+						using (var ms = new MemoryStream())
+						{
+							enc.Save(ms);
+							ms.Position = 0;
+
+							var data = await obj.GetDataAsync<PpsObjectBlobData>();
+							await data.ReadFromStreamAsync(ms, MimeTypes.Image.Png);
+							await data.CommitAsync();
+						}
 
 						baseObj.Links.AppendLink(obj, PpsObjectLinkRestriction.Delete);
 						await baseObj.UpdateLocalAsync();
@@ -1307,24 +1329,6 @@ namespace TecWare.PPSn
 				}
 			}
 			LoadPreviewSemaphore.Release();
-		}
-
-		private void LinkedImage_PropertyChanged(object sender, PropertyChangedEventArgs e)
-		{
-			if (!((PpsObjectImageData)sender).ImageLoaded)
-				return;
-
-			var idx = ((PpsObjectImageData)sender).baseObj.Tags.IndexOf("PictureItemType");
-			if (idx >= 0)
-			{
-				if ((string)((PpsObjectImageData)sender).baseObj.Tags[idx].Value == "preview")
-				{
-					preview = ((PpsObjectImageData)sender).Image;
-					base.OnPropertyChanged(nameof(Preview));
-				}
-				if ((string)((PpsObjectImageData)sender).baseObj.Tags[idx].Value == "overlay")
-					base.OnPropertyChanged(nameof(Overlay));
-			}
 		}
 
 		private void CreatePreviewFromImage(object sender, PropertyChangedEventArgs e)
@@ -1346,7 +1350,7 @@ namespace TecWare.PPSn
 					if (!PreviewLoaded)
 					{
 						LoadPreview();
-						return new BitmapImage(new Uri("C:\\Projects\\material-design-icons\\action\\drawable-xxxhdpi\\ic_history_black_48dp.png"));
+						return loadingImage;
 					}
 					else if (preview == null)
 						return Image;
@@ -1354,6 +1358,10 @@ namespace TecWare.PPSn
 				}
 			}
 		}
+
+		#endregion
+
+		#region Image
 
 		private async void LoadImage()
 		{
@@ -1372,7 +1380,6 @@ namespace TecWare.PPSn
 				}
 
 				image = bI;
-
 				ImageLoaded = true;
 			}
 		}
@@ -1387,14 +1394,39 @@ namespace TecWare.PPSn
 					if (!imageLoaded)
 					{
 						LoadImage();
-						return new BitmapImage(new Uri("C:\\Projects\\material-design-icons\\action\\drawable-xxxhdpi\\ic_history_black_48dp.png"));
+						return loadingImage;
 					}
 					else if (image == null)
-						return new BitmapImage(new Uri("C:\\Projects\\material-design-icons\\action\\drawable-xxxhdpi\\ic_help_black_48dp.png"));
+						return notfoundImage;
 					else return image;
 				}
 			}
 		}
+
+		private void LinkedImage_PropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (!((PpsObjectImageData)sender).ImageLoaded)
+				return;
+
+			var idx = ((PpsObjectImageData)sender).baseObj.Tags.IndexOf(PictureItemId);
+			if (idx >= 0)
+			{
+				if ((string)((PpsObjectImageData)sender).baseObj.Tags[idx].Value == PreviewId)
+				{
+					preview = ((PpsObjectImageData)sender).Image;
+					base.OnPropertyChanged(nameof(Preview));
+				}
+				if ((string)((PpsObjectImageData)sender).baseObj.Tags[idx].Value == OverlayId)
+				{
+					overlay = ((PpsObjectImageData)sender).Image;
+					base.OnPropertyChanged(nameof(Overlay));
+				}
+			}
+		}
+
+		#endregion
+
+		#region Overlay
 
 		private async void LoadOverlay()
 		{
@@ -1402,14 +1434,19 @@ namespace TecWare.PPSn
 			{
 				foreach (var lnk in baseObj.Links)
 				{
-					var idx = lnk.LinkTo.Tags.IndexOf("PictureItemType");
+					var idx = lnk.LinkTo.Tags.IndexOf(PictureItemId);
 					if (idx >= 0)
 					{
-						if ((string)lnk.LinkTo.Tags[idx].Value == "overlay")
+						if ((string)lnk.LinkTo.Tags[idx].Value == OverlayId)
 						{
 							var imgObj = await lnk.LinkTo.GetDataAsync<PpsObjectImageData>().ConfigureAwait(false);
 
-							overlay = imgObj.Image;
+							if (imgObj.ImageLoaded)
+								overlay = imgObj.Image;
+							else
+								imgObj.PropertyChanged += LinkedImage_PropertyChanged;
+
+							break;
 						}
 					}
 				}
@@ -1424,17 +1461,21 @@ namespace TecWare.PPSn
 			get
 			{
 				{
-					if (!overlayLoaded)
+					if (!OverlayLoaded)
 					{
 						LoadOverlay();
-						return new BitmapImage(new Uri("C:\\Projects\\material - design - icons\\action\\drawable - xxxhdpi\\ic_history_black_48dp.png"));
+						return loadingImage;
 					}
 					else if (overlay == null)
-						return new BitmapImage(new Uri("C:\\Projects\\material-design-icons\\action\\drawable-xxxhdpi\\ic_help_black_48dp.png"));
+						return nullImage;
 					else return overlay;
 				}
 			}
 		}
+
+		#endregion
+
+		#endregion
 	}
 
 	#endregion
@@ -2796,7 +2837,7 @@ namespace TecWare.PPSn
 
 				// append multi-value column
 				cmd.Append("group_concat('S' || s_all.Id || ':' || s_all.Key || ':' || s_all.Class || ':' || s_all.UserId || '=' || replace(s_all.Value, char(10), ' '), char(10)) as [Values]");
-				
+
 				// generate dynamic columns
 				foreach (var c in GetAllKeyColumns())
 				{
