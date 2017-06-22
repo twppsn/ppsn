@@ -35,5 +35,27 @@
 		</Grid>
 
 	</DataTemplate>
-	
+    <DataTemplate x:Key="attachments,,100">
+        <!--  crmContacts,dbo.contacts,100 -->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="20" />
+                <RowDefinition Height="20" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250" />
+                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="150"/>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="300"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding Filename}" Grid.Column="0" Grid.ColumnSpan="3" VerticalAlignment="Center" ToolTip="Dateiname"/>
+            <TextBlock Text="{Binding MimeType}" Grid.Column="3" Grid.ColumnSpan="3" FontStretch="Expanded" ToolTip="Mimetyp"/>
+            <!-- Sha256 should not be loaded - otherwise all attachments are loaded <TextBlock Text="{Binding Data.Sha256}" Grid.Column="2" ToolTip="Debitorennummer"/>-->
+        </Grid>
+
+    </DataTemplate>
+
 </ResourceDictionary>
