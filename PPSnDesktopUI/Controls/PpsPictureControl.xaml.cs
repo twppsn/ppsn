@@ -162,6 +162,8 @@ namespace TecWare.PPSn.Controls
 			public ImageSource Image => dat.Image;
 
 			public ImageSource Preview => dat.Preview;
+
+			public ImageSource Overlay => dat.Overlay;
 		}
 
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
