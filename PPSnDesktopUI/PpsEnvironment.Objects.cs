@@ -1407,16 +1407,15 @@ namespace TecWare.PPSn
 		{
 			get
 			{
+				if (!imageLoaded)
 				{
-					if (!imageLoaded)
-					{
-						LoadImage();
-						return loadingImage;
-					}
-					else if (image == null)
-						return notfoundImage;
-					else return image;
+					LoadImage();
+					return loadingImage;
 				}
+				else if (image == null)
+					return notfoundImage;
+				else return image;
+
 			}
 		}
 
