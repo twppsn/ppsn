@@ -1270,20 +1270,15 @@ namespace TecWare.PPSn
 				foreach (var lnk in baseObj.Links)
 				{
 					var idx = lnk.LinkTo.Tags.IndexOf(PictureItemId);
-					if (idx >= 0)
+					if (idx >= 0 && (string)lnk.LinkTo.Tags[idx].Value == PreviewId)
 					{
-						if ((string)lnk.LinkTo.Tags[idx].Value == PreviewId)
-						{
+						var imgObj = await lnk.LinkTo.GetDataAsync<PpsObjectImageData>();
+						preview = imgObj.Image;
 
-							var imgObj = await lnk.LinkTo.GetDataAsync<PpsObjectImageData>();
-							if (imgObj.ImageLoaded)
-								preview = imgObj.Image;
-							else
-								imgObj.PropertyChanged += LinkedImage_PropertyChanged;
+						imgObj.PropertyChanged += LinkedImage_PropertyChanged;
 
-							PreviewLoaded = true;
-							break;
-						}
+						PreviewLoaded = true;
+						break;
 					}
 				}
 
