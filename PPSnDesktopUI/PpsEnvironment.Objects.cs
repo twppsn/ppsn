@@ -1263,6 +1263,7 @@ namespace TecWare.PPSn
 
 		private async void LoadPreview()
 		{
+			// semaphore prevents this imageobject from bein loaded multiple times, it the preview ist getted multiple times
 			await LoadPreviewSemaphore.WaitAsync();
 
 			if (!PreviewLoaded)
@@ -1286,6 +1287,7 @@ namespace TecWare.PPSn
 				{
 					if (imageLoaded)
 					{
+						// do not create preview, if baseimage is to huge
 						if (base.RawData.Length > 100000000)
 						{
 							LoadPreviewSemaphore.Release();
@@ -1326,6 +1328,11 @@ namespace TecWare.PPSn
 			LoadPreviewSemaphore.Release();
 		}
 
+		/// <summary>
+		/// This handler is called, when the underlying image is loaded, to restart the creation of the preview
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
 		private void CreatePreviewFromImage(object sender, PropertyChangedEventArgs e)
 		{
 			if (e.PropertyName == nameof(Image))
@@ -1335,8 +1342,14 @@ namespace TecWare.PPSn
 			}
 		}
 
+		/// <summary>
+		/// true, if loading is finished (does not mean there must be a valid preview)
+		/// </summary>
 		public bool PreviewLoaded { get { return previewLoaded; } set { previewLoaded = value; base.OnPropertyChanged(nameof(Preview)); } }
 
+		/// <summary>
+		/// returns the Preview if loaded - starts the loading otherwise
+		/// </summary>
 		public ImageSource Preview
 		{
 			get
@@ -1358,6 +1371,9 @@ namespace TecWare.PPSn
 
 		#region Image
 
+		/// <summary>
+		/// requests the image from SQLite
+		/// </summary>
 		private async void LoadImage()
 		{
 			if (!imageLoaded)
@@ -1379,8 +1395,14 @@ namespace TecWare.PPSn
 			}
 		}
 
+		/// <summary>
+		/// true, if loading is finished (does not mean there must be a valid image)
+		/// </summary>
 		public bool ImageLoaded { get { return imageLoaded; } set { imageLoaded = value; base.OnPropertyChanged(nameof(Image)); } }
 
+		/// <summary>
+		/// returns the Image if loaded - starts the loading otherwise
+		/// </summary>
 		public ImageSource Image
 		{
 			get
@@ -1398,6 +1420,11 @@ namespace TecWare.PPSn
 			}
 		}
 
+		/// <summary>
+		/// used to propagate through that the underlying imageobject has changed
+		/// </summary>
+		/// <param name="sender">underlying object</param>
+		/// <param name="e">not used</param>
 		private void LinkedImage_PropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
 			if (!((PpsObjectImageData)sender).ImageLoaded)
@@ -1423,6 +1450,9 @@ namespace TecWare.PPSn
 
 		#region Overlay
 
+		/// <summary>
+		/// requests the overlay from SQLite
+		/// </summary>
 		private async void LoadOverlay()
 		{
 			if (!overlayLoaded)
@@ -1449,8 +1479,14 @@ namespace TecWare.PPSn
 			}
 		}
 
+		/// <summary>
+		/// true, if loading is finished (does not mean there must be a valid overlay)
+		/// </summary>
 		public bool OverlayLoaded { get { return overlayLoaded; } set { overlayLoaded = value; OnPropertyChanged(nameof(Overlay)); } }
 
+		/// <summary>
+		/// returns the Overlay if loaded - starts the loading otherwise
+		/// </summary>
 		public ImageSource Overlay
 		{
 			get
