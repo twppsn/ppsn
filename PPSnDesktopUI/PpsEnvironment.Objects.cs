@@ -1238,9 +1238,6 @@ namespace TecWare.PPSn
 		#endregion
 
 		#region consts
-		private static readonly BitmapImage loadingImage = new BitmapImage(new Uri("C:\\Projects\\material-design-icons\\action\\drawable-xxxhdpi\\ic_history_black_48dp.png"));
-		private static readonly BitmapImage notfoundImage = new BitmapImage(new Uri("C:\\Projects\\material-design-icons\\action\\drawable-xxxhdpi\\ic_help_black_48dp.png"));
-		private static readonly BitmapImage nullImage = new BitmapImage();
 		const string PreviewId = "preview";
 		const string OverlayId = "overlay";
 		const string PictureItemId = "PictureItemType";
@@ -1278,7 +1275,10 @@ namespace TecWare.PPSn
 
 						imgObj.PropertyChanged += LinkedImage_PropertyChanged;
 
-						PreviewLoaded = true;
+						if (!imgObj.ImageLoaded)
+							PreviewLoaded = false;
+						else
+							PreviewLoaded = true;
 						break;
 					}
 				}
@@ -1356,13 +1356,10 @@ namespace TecWare.PPSn
 			{
 				{
 					if (!PreviewLoaded)
-					{
 						LoadPreview();
-						return loadingImage;
-					}
 					else if (preview == null)
 						return Image;
-					else return preview;
+					return preview;
 				}
 			}
 		}
@@ -1408,14 +1405,9 @@ namespace TecWare.PPSn
 			get
 			{
 				if (!imageLoaded)
-				{
 					LoadImage();
-					return loadingImage;
-				}
-				else if (image == null)
-					return notfoundImage;
-				else return image;
 
+				return image;
 			}
 		}
 
@@ -1466,7 +1458,10 @@ namespace TecWare.PPSn
 							var imgObj = await lnk.LinkTo.GetDataAsync<PpsObjectImageData>().ConfigureAwait(false);
 
 							if (imgObj.ImageLoaded)
+							{
 								overlay = imgObj.Image;
+								OverlayLoaded = true;
+							}
 							else
 								imgObj.PropertyChanged += LinkedImage_PropertyChanged;
 
@@ -1474,7 +1469,6 @@ namespace TecWare.PPSn
 						}
 					}
 				}
-				OverlayLoaded = true;
 			}
 		}
 
@@ -1492,13 +1486,9 @@ namespace TecWare.PPSn
 			{
 				{
 					if (!OverlayLoaded)
-					{
 						LoadOverlay();
-						return loadingImage;
-					}
-					else if (overlay == null)
-						return nullImage;
-					else return overlay;
+
+					return overlay;
 				}
 			}
 		}
