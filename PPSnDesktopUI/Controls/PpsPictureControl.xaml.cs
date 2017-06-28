@@ -168,7 +168,13 @@ namespace TecWare.PPSn.Controls
 			}
 
 			private void NotifyPropertyChanged(string propertyName = "")
-				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+			{
+				if (String.IsNullOrEmpty(propertyName))
+					LoadObject();
+				else
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+			}
+			//	=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 			public ImageSource Image => dat.Image;
 
