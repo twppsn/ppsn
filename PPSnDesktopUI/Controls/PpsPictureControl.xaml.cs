@@ -104,6 +104,11 @@ namespace TecWare.PPSn.Controls
 				this.linkColumnIndex = view.Table.TableDefinition.FindColumnIndex(linkColumnName ?? throw new ArgumentNullException(nameof(linkColumnName)), true);
 				this.pictureTag = pictureTag;
 
+				LoadObject();
+			}
+
+			private void LoadObject()
+			{
 				for (var i = 0; i < view.Table.AllRows.Count; i++)
 				{
 					var tobj = ((PpsObject)view.Table.AllRows[i][linkColumnIndex]);
@@ -118,6 +123,8 @@ namespace TecWare.PPSn.Controls
 				}
 				dat = new PpsObjectImageData(obj);
 				dat.PropertyChanged += Dat_PropertyChanged;
+				NotifyPropertyChanged(nameof(Image));
+				NotifyPropertyChanged(nameof(Preview));
 			}
 
 			private void Dat_PropertyChanged(object sender, PropertyChangedEventArgs e)
