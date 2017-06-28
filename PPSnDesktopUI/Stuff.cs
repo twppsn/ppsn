@@ -388,7 +388,7 @@ namespace TecWare.PPSn
 		// ToDo: may need translation
 		private static (string Extension, string MimeType, string FriendlyName)[] mimeTypeMapping =
 		{
-			("bmp", MimeTypes.Image.Bitmap, "Bilddatei"),
+			("bmp", MimeTypes.Image.Bmp, "Bilddatei"),
 			("css", MimeTypes.Text.Css, "Textdatei"),
 			("exe", MimeTypes.Application.OctetStream, "Binärdatei"),
 			("gif", MimeTypes.Image.Gif, "Bilddatei"),
