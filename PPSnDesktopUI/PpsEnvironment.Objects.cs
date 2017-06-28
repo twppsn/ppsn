@@ -1348,7 +1348,7 @@ namespace TecWare.PPSn
 		public bool PreviewLoaded { get { return previewLoaded; } set { previewLoaded = value; base.OnPropertyChanged(nameof(Preview)); } }
 
 		/// <summary>
-		/// returns the Preview if loaded - starts the loading otherwise
+		/// returns the Preview if loaded - starts the loading otherwise, if preview is not set, returns Image
 		/// </summary>
 		public ImageSource Preview
 		{
