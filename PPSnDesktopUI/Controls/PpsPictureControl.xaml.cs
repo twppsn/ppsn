@@ -107,6 +107,9 @@ namespace TecWare.PPSn.Controls
 				for (var i = 0; i < view.Table.AllRows.Count; i++)
 				{
 					var tobj = ((PpsObject)view.Table.AllRows[i][linkColumnIndex]);
+					if (tobj == null)
+						continue;
+					tobj.UpdateLocalAsync().AwaitTask();
 					var idx = tobj.Tags.IndexOf("PictureItemType");
 					if (idx >= 0 && (string)tobj.Tags[idx].Value == pictureTag)
 					{
