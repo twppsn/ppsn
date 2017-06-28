@@ -162,8 +162,9 @@ namespace TecWare.PPSn.Controls
 					trans.Commit();
 
 					this.obj = data;
+					data.PropertyChanged += Dat_PropertyChanged;
 				}
-				NotifyPropertyChanged(nameof(Image));
+
 			}
 
 			private void NotifyPropertyChanged(string propertyName = "")
