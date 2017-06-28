@@ -1427,12 +1427,12 @@ namespace TecWare.PPSn
 				if ((string)((PpsObjectImageData)sender).baseObj.Tags[idx].Value == PreviewId)
 				{
 					preview = ((PpsObjectImageData)sender).Image;
-					base.OnPropertyChanged(nameof(Preview));
+					PreviewLoaded = true;
 				}
 				if ((string)((PpsObjectImageData)sender).baseObj.Tags[idx].Value == OverlayId)
 				{
 					overlay = ((PpsObjectImageData)sender).Image;
-					base.OnPropertyChanged(nameof(Overlay));
+					OverlayLoaded = true;
 				}
 			}
 		}
