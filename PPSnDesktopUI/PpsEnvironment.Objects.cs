@@ -1375,7 +1375,7 @@ namespace TecWare.PPSn
 		{
 			if (!imageLoaded)
 			{
-				await LoadAsync();
+				await LoadAsync().ConfigureAwait(true);
 
 				var bI = new BitmapImage();
 
