@@ -21,6 +21,9 @@ using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Data.SQLite;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -1261,6 +1264,9 @@ namespace TecWare.PPSn
 
 		private async void LoadPreview()
 		{
+			if (baseObj == null)
+				return;
+
 			// semaphore prevents this imageobject from bein loaded multiple times, it the preview ist getted multiple times
 			await LoadPreviewSemaphore.WaitAsync();
 
@@ -1374,6 +1380,9 @@ namespace TecWare.PPSn
 		/// </summary>
 		private async void LoadImage()
 		{
+			if (baseObj == null)
+				return;
+
 			if (!imageLoaded)
 			{
 				await LoadAsync().ConfigureAwait(true);
@@ -1447,6 +1456,9 @@ namespace TecWare.PPSn
 		/// </summary>
 		private async void LoadOverlay()
 		{
+			if (baseObj == null)
+				return;
+
 			if (!overlayLoaded)
 			{
 				foreach (var lnk in baseObj.Links)
