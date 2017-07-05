@@ -15,15 +15,12 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
-using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
@@ -113,7 +110,7 @@ namespace TecWare.PPSn.Server
 			return data;
 		} // func GetDataFromStream
 
-		protected override PpsDataSetServer PullData(PpsDataTransaction trans, PpsObjectAccess obj)
+		protected override PpsDataSetServer PullData(PpsObjectAccess obj)
 		{
 			// get the head or given revision
 			// todo: create rev, if not exists
@@ -127,7 +124,7 @@ namespace TecWare.PPSn.Server
 			CheckHeadObjectId(obj, data);
 
 			// fire triggers
-			CallTableMethods(LuaOnAfterPull, trans, obj, data);
+			CallTableMethods(LuaOnAfterPull, obj, data);
 			
 			// mark all has orignal
 			data.Commit();
@@ -135,16 +132,16 @@ namespace TecWare.PPSn.Server
 			return data;
 		} // func PullData
 
-		protected override bool PushData(PpsDataTransaction transaction, PpsObjectAccess obj, PpsDataSetServer data, bool release)
+		protected override bool PushData(PpsObjectAccess obj, PpsDataSetServer data, bool release)
 		{
 			// fire triggers
-			CallTableMethods(LuaOnBeforePush, transaction, obj, data);
+			CallTableMethods(LuaOnBeforePush, obj, data);
 
 			// move all to original row
 			data.Commit();
 
 			if (obj.IsNew)
-				InsertNewObject(transaction, obj, data);
+				InsertNewObject(obj, data);
 			else // check rev, to in base implementation?
 			{
 				var headRevId = obj.HeadRevId;
@@ -192,7 +189,7 @@ namespace TecWare.PPSn.Server
 			obj.Update(false);
 
 			// actions after push
-			CallTableMethods(LuaOnAfterPush, transaction, obj, data);
+			CallTableMethods(LuaOnAfterPush, obj, data);
 
 			return true;
 		} // func PushData
@@ -202,7 +199,7 @@ namespace TecWare.PPSn.Server
 		[
 		DEConfigHttpAction("execute", IsSafeCall = true)
 		]
-		public void HttpExecuteAction(IDEContext ctx, long id)
+		public void HttpExecuteAction(IDEWebRequestScope ctx, long id)
 		{
 			throw new NotImplementedException();
 		} // proc HttpExecuteAction
@@ -239,19 +236,19 @@ namespace TecWare.PPSn.Server
 			return false;
 		} // func GetDatasetResourceFile
 
-		protected override bool OnProcessRequest(IDEContext r)
+		protected override async Task<bool> OnProcessRequestAsync(IDEWebRequestScope r)
 		{
 			if (r.RelativeSubPath == "schema.xml")
 			{
-				datasetDefinition.WriteToDEContext(r, ConfigPath + "/schema.xml");
+				await Task.Run(() => datasetDefinition.WriteToDEContext(r, ConfigPath + "/schema.xml"));
 				return true;
 			}
 			else if (GetDatasetResourceFile(r.RelativeSubPath, out var fi))
 			{
-				r.WriteFile(fi.FullName);
+				await Task.Run(() => r.WriteFile(fi.FullName));
 				return true;
 			}
-			return base.OnProcessRequest(r);
+			return await base.OnProcessRequestAsync(r);
 		} // proc OnProcessRequest
 
 		#endregion

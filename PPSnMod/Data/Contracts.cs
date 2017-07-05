@@ -16,10 +16,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Principal;
+using System.Threading.Tasks;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
@@ -49,7 +51,7 @@ namespace TecWare.PPSn.Server.Data
 				=> Equals(identity) ? new PpsIntegratedCredentials(WindowsIdentity.GetCurrent(), false) : null;
 
 			public override bool IsAuthenticated => true;
-			public override string Name => name;
+			public override string Name => "des\\" + name;
 		} // class PpsSystemIdentity
 
 		#endregion
@@ -180,8 +182,6 @@ namespace TecWare.PPSn.Server.Data
 		public string AuthenticationType => "des";
 		/// <summary>Immer <c>true</c></summary>
 		public abstract bool IsAuthenticated { get; }
-		/// <summary>des\system</summary>
-		string IIdentity.Name => "des\\" + Name;
 		/// <summary>system</summary>
 		public abstract string Name { get; }
 
@@ -300,7 +300,7 @@ namespace TecWare.PPSn.Server.Data
 
 		/// <summary>Enforces the connection.</summary>
 		/// <returns></returns>
-		bool EnsureConnection(bool throwException = true);
+		Task<bool> EnsureConnectionAsync(bool throwException = true);
 
 		/// <summary>Is the connection still active.</summary>
 		bool IsConnected { get; }
@@ -323,22 +323,22 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="order">Order rules</param>
 		/// <param name="throwException">Should the method throw on an exception on failure.</param>
 		/// <returns></returns>
-		PpsDataSelector CreateSelector(string name, string filter = null, string order = null, bool throwException = true);
+		Task<PpsDataSelector> CreateSelectorAsync(string name, string filter = null, string order = null, bool throwException = true);
 		/// <summary>Create selector for a view (lua tables based).</summary>
 		/// <param name="table">Same arguments, like the c# version.</param>
 		/// <returns></returns>
-		PpsDataSelector CreateSelector(LuaTable table);
+		Task<PpsDataSelector> CreateSelectorAsync(LuaTable table);
 
 		/// <summary>Creates a transaction to manipulate data.</summary>
 		/// <param name="dataSource"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		PpsDataTransaction CreateTransaction(string dataSourceName, bool throwException = true);
+		Task<PpsDataTransaction> CreateTransactionAsync(string dataSourceName, bool throwException = true);
 		/// <summary></summary>
 		/// <param name="dataSource"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		PpsDataTransaction CreateTransaction(PpsDataSource dataSource, bool throwException = true);
+		Task<PpsDataTransaction> CreateTransactionAsync(PpsDataSource dataSource, bool throwException = true);
 
 		/// <summary>Creates the credentials for to user for external tasks (like database connections).</summary>
 		/// <returns></returns>
@@ -373,6 +373,7 @@ namespace TecWare.PPSn.Server.Data
 
 	#region -- class PpsColumnDescription -----------------------------------------------
 
+	[DebuggerDisplay("{DebuggerDisplay,nq}")]
 	public class PpsColumnDescription : IPpsColumnDescription
 	{
 		private readonly IPpsColumnDescription parent;
@@ -386,8 +387,8 @@ namespace TecWare.PPSn.Server.Data
 			this.parent = parent;
 			this.attributes = CreateAttributes();
 
-			this.name = name;
-			this.dataType = dataType;
+			this.name = name ?? throw new ArgumentNullException(nameof(name));
+			this.dataType = dataType ?? throw new ArgumentNullException(nameof(dataType));
 		} // ctor
 
 		protected virtual IPropertyEnumerableDictionary CreateAttributes()
@@ -395,6 +396,9 @@ namespace TecWare.PPSn.Server.Data
 
 		public T GetColumnDescription<T>() where T : IPpsColumnDescription
 			=> this.GetColumnDescriptionParentImplementation<T>(parent);
+
+		private string DebuggerDisplay
+			=> $"Column: {Name} : {DataType.Name}";
 
 		public string Name => name;
 		public Type DataType => dataType;

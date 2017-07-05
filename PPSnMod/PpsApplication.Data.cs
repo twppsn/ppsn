@@ -16,18 +16,16 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
-using TecWare.DE.Data;
 using TecWare.PPSn.Server.Data;
 using TecWare.PPSn.Server.Sql;
 using static TecWare.PPSn.Server.PpsStuff;
@@ -820,7 +818,7 @@ namespace TecWare.PPSn.Server
 		} // proc WriteDataRow
 
 		[DEConfigHttpAction("viewget", IsSafeCall = false)]
-		private void HttpViewGetAction(IDEContext r)
+		private void HttpViewGetAction(IDEWebRequestScope r)
 		{
 			// v=views,...&f={filterList}&o={orderList}&s={startAt]&c={count}&a={attributeSelector}
 			// ???views => view,view2(c1+c2),view3(c3+c4)
@@ -832,12 +830,12 @@ namespace TecWare.PPSn.Server
 			
 			var ctx = r.GetUser<IPpsPrivateDataContext>();
 			
-			var selector = ctx.CreateSelector(
+			var selector = ctx.CreateSelectorAsync(
 				r.GetProperty<string>("v", null),
 				r.GetProperty<string>("f", null),
 				r.GetProperty<string>("o", null),
 				true
-			);
+			).AwaitTask();
 
 			var attributeSelector = r.GetProperty("a", String.Empty);
 

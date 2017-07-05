@@ -103,6 +103,7 @@
     <Compile Include="PpsApplication.DataSource.cs" />
     <None Include="packages.config" />
     <None Include="ppsn.licenseheader" />
+    <None Include="Sql\SqlCommands.md" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Sql\tsql\ServerLogins.sql" />

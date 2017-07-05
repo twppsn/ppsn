@@ -21,7 +21,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
@@ -483,7 +482,7 @@ namespace TecWare.PPSn.Server
 			{
 				{ "ObjkId", objectId },
 
-				{ "CreateUserId", DEContext.GetCurrentUser<IPpsPrivateDataContext>().UserId },
+				{ "CreateUserId", DEScope.GetScopeService<IPpsPrivateDataContext>().UserId },
 				{ "CreateDate",  DateTime.Now }
 			};
 
@@ -812,7 +811,7 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
-	#region -- interface IPpsObjectItem ---------------------------------------------------
+	#region -- interface IPpsObjectItem -------------------------------------------------
 
 	/// <summary>Description of an object item.</summary>
 	public interface IPpsObjectItem
@@ -829,7 +828,7 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
-	#region -- class PpsObjectItem --------------------------------------------------------
+	#region -- class PpsObjectItem ------------------------------------------------------
 
 	/// <summary>Base class for all objects, that can be processed from the server.</summary>
 	public abstract class PpsObjectItem<T> : DEConfigItem, IPpsObjectItem
@@ -856,11 +855,11 @@ namespace TecWare.PPSn.Server
 			return obj;
 		} // func VerfiyObjectType
 
-		public PpsObjectAccess GetObject(PpsDataTransaction trans, long id)
-			=> VerfiyObjectType(application.Objects.GetObject(trans, id));
+		public PpsObjectAccess GetObject(long id)
+			=> VerfiyObjectType(application.Objects.GetObject(id));
 
-		public PpsObjectAccess GetObject(PpsDataTransaction trans, Guid guid)
-			=> VerfiyObjectType(application.Objects.GetObject(trans, guid));
+		public PpsObjectAccess GetObject(Guid guid)
+			=> VerfiyObjectType(application.Objects.GetObject(guid));
 
 		/// <summary>Serialize data to an stream of bytes.</summary>
 		protected abstract void WriteDataToStream(T data, Stream dst);
@@ -871,26 +870,26 @@ namespace TecWare.PPSn.Server
 
 		#region -- Pull -----------------------------------------------------------------
 
-		protected virtual T PullData(PpsDataTransaction trans, PpsObjectAccess obj)
+		protected virtual T PullData(PpsObjectAccess obj)
 		{
 			using (var src = obj.GetDataStream())
 				return GetDataFromStream(src);
 		} // func PullData
 
 		[LuaMember("Pull")]
-		private LuaResult LuaPull(PpsDataTransaction transaction, long? objectId, Guid? guidId, long? revId)
+		private LuaResult LuaPull(long? objectId, Guid? guidId, long? revId)
 		{
 			// initialize object access
 			var obj = objectId.HasValue
-				? GetObject(transaction, objectId.Value)
+				? GetObject(objectId.Value)
 				: guidId.HasValue
-					? GetObject(transaction, guidId.Value)
+					? GetObject(guidId.Value)
 					: throw new ArgumentNullException("objectId|guidId");
 
 			if (revId.HasValue)
 				obj.SetRevision(revId.Value);
 
-			var data = PullData(transaction, obj);
+			var data = PullData(obj);
 
 			return new LuaResult(data, obj);
 		} // func PullDataSet
@@ -899,38 +898,37 @@ namespace TecWare.PPSn.Server
 		DEConfigHttpAction("pull", IsSafeCall = false),
 		Description("Reads the revision from the server.")
 		]
-		private void HttpPullAction(IDEContext ctx, long id, long rev = -1)
+		private void HttpPullAction(long id, long rev = -1)
 		{
-			var currentUser = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
-
+			var ctx = DEScope.GetScopeService<IDEWebRequestScope>(true);
 			try
 			{
-				using (var trans = currentUser.CreateTransaction(application.MainDataSource))
+				var trans = application.Database.GetDatabase();
+
+				// get the object and set the correct revision
+				var obj = GetObject(id);
+				if (rev >= 0)
+					obj.SetRevision(rev);
+
+				// prepare object data
+				var headerBytes = Encoding.Unicode.GetBytes(obj.ToXml().ToString(SaveOptions.DisableFormatting));
+				ctx.OutputHeaders["ppsn-header-length"] = headerBytes.Length.ChangeType<string>();
+
+				// get content
+				var data = PullData(obj);
+
+				// write all data to the application
+				using (var dst = ctx.GetOutputStream(MimeTypes.Application.OctetStream))
 				{
-					// get the object and set the correct revision
-					var obj = GetObject(trans, id);
-					if (rev >= 0)
-						obj.SetRevision(rev);
+					// write header bytes
+					dst.Write(headerBytes, 0, headerBytes.Length);
 
-					// prepare object data
-					var headerBytes = Encoding.Unicode.GetBytes(obj.ToXml().ToString(SaveOptions.DisableFormatting));
-					ctx.OutputHeaders["ppsn-header-length"] = headerBytes.Length.ChangeType<string>();
-
-					// get content
-					var data = PullData(trans, obj);
-
-					// write all data to the application
-					using (var dst = ctx.GetOutputStream(MimeTypes.Application.OctetStream))
-					{
-						// write header bytes
-						dst.Write(headerBytes, 0, headerBytes.Length);
-
-						// write content
-						WriteDataToStream(data, dst);
-					}
-
-					trans.Commit();
+					// write content
+					WriteDataToStream(data, dst);
 				}
+
+				// commit
+				trans.Commit();
 			}
 			catch (Exception e)
 			{
@@ -967,15 +965,15 @@ namespace TecWare.PPSn.Server
 			if (nextNumber == null && obj.Nr == null) // no next number and no number --> error
 				throw new ArgumentException($"The field 'Nr' is null or no nextNumber is given.");
 			else if (Config.GetAttribute("forceNextNumber", false) || obj.Nr == null) // force the next number or there is no number
-				obj["Nr"] = application.Objects.GetNextNumber(transaction, obj.Typ, nextNumber, data);
+				obj["Nr"] = application.Objects.GetNextNumber(obj.Typ, nextNumber, data);
 			else  // check the number format
 				application.Objects.ValidateNumber(obj.Nr, nextNumber, data);
 		} // func SetNextNumber
 
-		protected void InsertNewObject(PpsDataTransaction transaction, PpsObjectAccess obj, T data)
+		protected void InsertNewObject(PpsObjectAccess obj, T data)
 		{
 			obj.IsRev = IsDataRevision(data);
-			SetNextNumber(transaction, obj, data);
+			SetNextNumber(application.Database.GetDatabaseAsync().AwaitTask(), obj, data);
 
 			// insert the new object
 			obj.Update(true);
@@ -989,11 +987,11 @@ namespace TecWare.PPSn.Server
 		/// <param name="data">Data to push</param>
 		/// <param name="release">Has this data a release request.</param>
 		/// <returns></returns>
-		protected virtual bool PushData(PpsDataTransaction transaction, PpsObjectAccess obj, T data, bool release)
+		protected virtual bool PushData(PpsObjectAccess obj, T data, bool release)
 		{
 			// set IsRev
 			if (obj.IsNew)
-				InsertNewObject(transaction, obj, data);
+				InsertNewObject(obj, data);
 
 			// update database
 			obj.Update(true);
@@ -1005,16 +1003,16 @@ namespace TecWare.PPSn.Server
 		} // func PushData
 
 		[LuaMember("Push")]
-		protected virtual bool LuaPush(PpsDataTransaction transaction, PpsObjectAccess obj, object data, bool relase)
-			=> PushData(transaction, obj, (T)data, relase);
+		protected virtual bool LuaPush(PpsObjectAccess obj, object data, bool relase)
+			=> PushData(obj, (T)data, relase);
 
 		[
 		DEConfigHttpAction("push", IsSafeCall = false),
 		Description("Writes a new revision to the object store.")
 		]
-		private void HttpPushAction(IDEContext ctx)
+		private void HttpPushAction(IDEWebRequestScope ctx)
 		{
-			var currentUser = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
+			var currentUser = ctx.GetUser<IPpsPrivateDataContext>();
 
 			try
 			{
@@ -1035,7 +1033,7 @@ namespace TecWare.PPSn.Server
 					xObject = XElement.Load(xmlHeader);
 
 				// read the data
-				using (var transaction = currentUser.CreateTransaction(application.MainDataSource))
+				using (var transaction = currentUser.CreateTransactionAsync(application.MainDataSource).AwaitTask())
 				{
 					// first the get the object data
 					var obj = application.Objects.ObjectFromXml(transaction, xObject);
@@ -1054,7 +1052,7 @@ namespace TecWare.PPSn.Server
 					var data = GetDataFromStream(src);
 
 					// push data in the database
-					if (PushData(transaction, obj, data, releaseRequest))
+					if (PushData(obj, data, releaseRequest))
 					{
 						// write the object definition to client
 						using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
@@ -1130,7 +1128,7 @@ namespace TecWare.PPSn.Server
 			/// <param name="typ"></param>
 			/// <returns></returns>
 			[LuaMember(nameof(GetNextNumber))]
-			public string GetNextNumber(PpsDataTransaction trans, string typ, object nextNumber, object data)
+			public string GetNextNumber(string typ, object nextNumber, object data)
 			{
 				// get the highest number
 				var args = Procs.CreateLuaTable(
@@ -1138,7 +1136,7 @@ namespace TecWare.PPSn.Server
 				);
 				args[1] = Procs.CreateLuaTable(new PropertyValue("Typ", typ));
 
-				var row = trans.ExecuteSingleRow(args);
+				var row = application.Database.Main.ExecuteSingleRow(args);
 
 				string nr;
 				if (nextNumber == null || nextNumber is int) // fill with zeros
@@ -1161,7 +1159,7 @@ namespace TecWare.PPSn.Server
 				}
 				else if (Lua.RtInvokeable(nextNumber)) // use a function
 				{
-					nr = new LuaResult(Lua.RtInvoke(nextNumber, trans, row == null ? null : row[0], data)).ToString();
+					nr = new LuaResult(Lua.RtInvoke(nextNumber, row?[0], data)).ToString();
 				}
 				else
 					throw new ArgumentException($"Unknown number format '{nextNumber}'.", "nextNumber");
@@ -1174,8 +1172,8 @@ namespace TecWare.PPSn.Server
 			/// <param name="args"></param>
 			/// <returns></returns>
 			[LuaMember]
-			public PpsObjectAccess CreateNewObject(PpsDataTransaction trans, LuaTable args)
-				=> new PpsObjectAccess(trans, new LuaTableProperties(args));
+			public PpsObjectAccess CreateNewObject(LuaTable args)
+				=> new PpsObjectAccess(application.Database.Main, new LuaTableProperties(args));
 
 			/// <summary>Opens a object for an update operation.</summary>
 			/// <param name="trans"></param>
@@ -1190,9 +1188,9 @@ namespace TecWare.PPSn.Server
 				// try to find the object in the database
 				var obj = (PpsObjectAccess)null;
 				if (objectId > 0)
-					obj = GetObject(trans, new LuaTable { { nameof(PpsObjectAccess.Id), objectId } });
+					obj = GetObject(new LuaTable { { nameof(PpsObjectAccess.Id), objectId } });
 				else if (objectGuid != Guid.Empty)
-					obj = GetObject(trans, new LuaTable { { nameof(PpsObjectAccess.Guid), objectGuid } });
+					obj = GetObject(new LuaTable { { nameof(PpsObjectAccess.Guid), objectGuid } });
 
 				// create a new object
 				if (obj == null)
@@ -1247,36 +1245,36 @@ namespace TecWare.PPSn.Server
 			} // func ObjectFromXml
 
 			[LuaMember]
-			public PpsDataSelector GetObjectSelector(PpsDataTransaction trans)
+			public PpsDataSelector GetObjectSelector()
 			{
 				var selector = application.GetViewDefinition("dbo.objects").SelectorToken;
-				return selector.CreateSelector(trans.Connection);
+				return selector.CreateSelector(application.Database.Main.Connection);
 			} // func GetObjectSelector
 
-			private PpsObjectAccess GetObject(PpsDataTransaction trans, Func<PpsDataSelector, PpsDataSelector> applyFilter)
+			private PpsObjectAccess GetObject(Func<PpsDataSelector, PpsDataSelector> applyFilter)
 			{
 				// create selector
-				var selector = applyFilter(GetObjectSelector(trans));
+				var selector = applyFilter(GetObjectSelector());
 
 				// return only the first object
 				var r = selector.Select(c => new SimpleDataRow(c)).FirstOrDefault();
-				return r == null ? null : new PpsObjectAccess(trans, r);
+				return r == null ? null : new PpsObjectAccess(application.Database.Main, r);
 			} // func GetObject
 
 			[LuaMember]
-			public PpsObjectAccess GetObject(PpsDataTransaction trans, long id)
-				=> GetObject(trans, s => s.ApplyFilter(PpsDataFilterExpression.Compare("Id", PpsDataFilterCompareOperator.Equal, id)));
+			public PpsObjectAccess GetObject(long id)
+				=> GetObject(s => s.ApplyFilter(PpsDataFilterExpression.Compare("Id", PpsDataFilterCompareOperator.Equal, id)));
 
 			[LuaMember]
-			public PpsObjectAccess GetObject(PpsDataTransaction trans, Guid guid)
-				=> GetObject(trans, s => s.ApplyFilter(PpsDataFilterExpression.Compare("Guid", PpsDataFilterCompareOperator.Equal, guid)));
+			public PpsObjectAccess GetObject(Guid guid)
+				=> GetObject(s => s.ApplyFilter(PpsDataFilterExpression.Compare("Guid", PpsDataFilterCompareOperator.Equal, guid)));
 
 			/// <summary>Returns object data.</summary>
 			/// <param name="args"></param>
 			/// <returns></returns>
 			[LuaMember(nameof(GetObject))]
-			public PpsObjectAccess GetObject(PpsDataTransaction trans, LuaTable args)
-				=> GetObject(trans, s =>
+			public PpsObjectAccess GetObject(LuaTable args)
+				=> GetObject(s =>
 				{
 					// append filter
 					if (args.TryGetValue<long>(nameof(PpsObjectAccess.Id), out var objectId))
@@ -1291,12 +1289,57 @@ namespace TecWare.PPSn.Server
 			/// <param name="trans"></param>
 			/// <returns></returns>
 			[LuaMember(nameof(GetObjects))]
-			public IEnumerable<PpsObjectAccess> GetObjects(PpsDataTransaction trans)
+			public IEnumerable<PpsObjectAccess> GetObjects()
 			{
-				foreach (var r in GetObjectSelector(trans))
-					yield return new PpsObjectAccess(trans, r);
+				foreach (var r in GetObjectSelector())
+					yield return new PpsObjectAccess(application.Database.GetDatabase(), r);
 			} // func GetObjects
 		} // class PpsObjectsLibrary
+
+		#endregion
+
+		#region -- class PpsDatabaseLibrary ---------------------------------------------
+
+		public sealed class PpsDatabaseLibrary : LuaTable
+		{
+			private readonly PpsApplication application;
+
+			public PpsDatabaseLibrary(PpsApplication application)
+			{
+				this.application = application;
+			} // ctor
+
+			public async Task<PpsDataTransaction> GetDatabaseAsync(string name = null)
+			{
+				var scope = DEScope.GetScopeService<IDECommonScope>(true);
+
+				// find existing source
+				var dataSource = name == null ? application.MainDataSource : application.GetDataSource(name, true);
+				if (scope.TryGetGlobal<PpsDataTransaction>(this, dataSource, out var trans))
+					return trans;
+
+				// get datasource
+				var user = DEScope.GetScopeService<IPpsPrivateDataContext>(true);
+
+				// create and register transaction
+				trans = await user.CreateTransactionAsync(dataSource, true);
+
+				scope.RegisterCommitAction(new Action(trans.Commit));
+				scope.RegisterRollbackAction(new Action(trans.Rollback));
+				scope.RegisterDispose(trans);
+
+				scope.SetGlobal(this, dataSource, trans);
+
+				return trans;
+			} // func GetDatabaseAsync
+			
+			[LuaMember]
+			public PpsDataTransaction GetDatabase(string name = null)
+				=> GetDatabaseAsync(name).AwaitTask();
+
+			[LuaMember]
+			public PpsDataTransaction Main => GetDatabase();
+		} // class PpsDatabaseLibrary
 
 		#endregion
 
@@ -1313,7 +1356,7 @@ namespace TecWare.PPSn.Server
 				this.application = application;
 			} // ctor
 
-			private static IDEContext CheckContextArgument(IDEContext r)
+			private static IDEWebRequestScope CheckContextArgument(IDEWebRequestScope r)
 			{
 				if (r == null)
 					throw new ArgumentNullException("r", "No context given.");
@@ -1324,17 +1367,17 @@ namespace TecWare.PPSn.Server
 			/// <param name="r"></param>
 			/// <returns></returns>
 			[LuaMember]
-			public static XmlWriter CreateXmlWriter(IDEContext r)
+			public static XmlWriter CreateXmlWriter(IDEWebRequestScope r)
 			{
 				CheckContextArgument(r);
-				return XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, r.Server.Encoding), Procs.XmlWriterSettings);
+				return XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, r.Http.DefaultEncoding), Procs.XmlWriterSettings);
 			} // func CreateXmlWriter
 
 			/// <summary>Creates a XmlReader for the input stream.</summary>
 			/// <param name="r"></param>
 			/// <returns></returns>
 			[LuaMember]
-			public static XmlReader CreateXmlReader(IDEContext r)
+			public static XmlReader CreateXmlReader(IDEWebRequestScope r)
 			{
 				CheckContextArgument(r);
 				return XmlReader.Create(r.GetInputTextReader(), Procs.XmlReaderSettings);
@@ -1344,7 +1387,7 @@ namespace TecWare.PPSn.Server
 			/// <param name="r"></param>
 			/// <param name="x"></param>
 			[LuaMember]
-			public static void WriteXml(IDEContext r, XElement x)
+			public static void WriteXml(IDEWebRequestScope r, XElement x)
 			{
 				using (var xml = CreateXmlWriter(r))
 					x.WriteTo(xml);
@@ -1354,7 +1397,7 @@ namespace TecWare.PPSn.Server
 			/// <param name="r"></param>
 			/// <returns></returns>
 			[LuaMember]
-			public static XElement GetXml(IDEContext r)
+			public static XElement GetXml(IDEWebRequestScope r)
 			{
 				using (var xml = CreateXmlReader(r))
 					return XElement.Load(xml);
@@ -1364,27 +1407,32 @@ namespace TecWare.PPSn.Server
 			/// <param name="r"></param>
 			/// <param name="t"></param>
 			[LuaMember]
-			public static void WriteTable(IDEContext r, LuaTable t)
+			public static void WriteTable(IDEWebRequestScope r, LuaTable t)
 				=> WriteXml(r, t.ToXml());
 
 			/// <summary>Gets the input stream as an lua-table.</summary>
 			/// <param name="r"></param>
 			/// <returns></returns>
 			[LuaMember]
-			public static LuaTable GetTable(IDEContext r)
+			public static LuaTable GetTable(IDEWebRequestScope r)
 				=> Procs.CreateLuaTable(GetXml(r));
 		} // class PpsHttpLibrary
 
 		#endregion
 
 		private readonly PpsObjectsLibrary objectsLibrary;
+		private readonly PpsDatabaseLibrary databaseLibrary;
 		private readonly PpsHttpLibrary httpLibrary;
 
 		/// <summary>Library for access the object store.</summary>
-		[LuaMember(nameof(Objects))]
+		[LuaMember("Db")]
+		public PpsDatabaseLibrary Database => databaseLibrary;
+
+		/// <summary>Library for access the object store.</summary>
+		[LuaMember]
 		public PpsObjectsLibrary Objects => objectsLibrary;
 		/// <summary>Library for easy creation of http-results.</summary>
-		[LuaMember(nameof(Http))]
+		[LuaMember]
 		public LuaTable Http => httpLibrary;
 	} // class PpsApplication
 }

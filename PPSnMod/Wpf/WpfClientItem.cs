@@ -14,7 +14,6 @@
 //
 #endregion
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.IO;
@@ -741,7 +740,7 @@ namespace TecWare.PPSn.Server.Wpf
 			xml.WriteEndElement();
 		} // proc EmitSubViewItem
 
-		private void EmitViewItem(IDEContext r, XmlWriter xml, XElement view)
+		private void EmitViewItem(IDEWebRequestScope r, XmlWriter xml, XElement view)
 		{
 			var viewId = view.GetAttribute("view", String.Empty);
 			var displayName = view.GetAttribute("displayName", String.Empty);
@@ -817,7 +816,7 @@ namespace TecWare.PPSn.Server.Wpf
 			return String.Join(Environment.NewLine, from c in environmentLoader select c.Item2);
 		} // func CollectEnvironmentScripts
 
-		private void ParseEnvironment(IDEContext r)
+		private void ParseEnvironment(IDEWebRequestScope r)
 		{
 			var user = r.GetUser<IPpsPrivateDataContext>();
 
@@ -970,7 +969,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#region -- Master-Data Synchronisation --------------------------------------------
 
-		private static void PrepareMasterDataSyncArguments(IDEContext r, string tableName, long syncId, long lastSyncTimeStamp, out Dictionary<string, long> syncIds, out bool syncAllTables, out DateTime lastSynchronization)
+		private static void PrepareMasterDataSyncArguments(IDEWebRequestScope r, string tableName, long syncId, long lastSyncTimeStamp, out Dictionary<string, long> syncIds, out bool syncAllTables, out DateTime lastSynchronization)
 		{
 			syncIds = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 			if (r.HasInputData)
@@ -1132,7 +1131,7 @@ namespace TecWare.PPSn.Server.Wpf
 		} // proc ExecuteMasterDataTableSync
 
 		[DEConfigHttpAction("mdata", IsSafeCall = false)]
-		private void HttpMasterDataSyncAction(IDEContext r, string tableName = null, long syncId = -1, long syncStamp = -1)
+		private void HttpMasterDataSyncAction(IDEWebRequestScope r, string tableName = null, long syncId = -1, long syncStamp = -1)
 		{
 			// todo: user demand
 			var user = r.GetUser<IPpsPrivateDataContext>();
@@ -1200,7 +1199,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#endregion
 
-		private static string GetXamlContentType(IDEContext r)
+		private static string GetXamlContentType(IDEWebRequestScope r)
 		{
 			switch (r.GetProperty("_debug", String.Empty))
 			{
@@ -1213,47 +1212,62 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 		} // proc GetXamlContentType
 
-		protected override bool OnProcessRequest(IDEContext r)
+		protected override async Task<bool> OnProcessRequestAsync(IDEWebRequestScope r)
 		{
 			if (r.RelativeSubPath == "styles.xaml")
 			{
-				var id = r.GetProperty("id", "default");
-				r.WriteXml(ParseXamlTheme(id).Document, GetXamlContentType(r));
+				await Task.Run(() =>
+				{
+					var id = r.GetProperty("id", "default");
+					r.WriteXml(ParseXamlTheme(id).Document, GetXamlContentType(r));
+				});
 				return true;
 			}
 			else if (r.RelativeSubPath == "environment.xml")
 			{
-				ParseEnvironment(r);
+				await Task.Run(() => ParseEnvironment(r));
 				return true;
 			}
 			else if (r.RelativeSubPath == "templates.xaml")
 			{
-				r.WriteXml(ParseXamlTemplates().Document, GetXamlContentType(r));
+				await Task.Run(() => r.WriteXml(ParseXamlTemplates().Document, GetXamlContentType(r)));
 				return true;
 			}
 			else if (r.RelativeSubPath == "masterdata.xml")
 			{
-				masterDataSetDefinition.WriteToDEContext(r, ConfigPath + "/masterdata.xml");
+				await Task.Run(() => masterDataSetDefinition.WriteToDEContext(r, ConfigPath + "/masterdata.xml"));
 				return true;
 			}
 			else if (r.RelativeSubPath.EndsWith(".xaml")) // parse wpf template file
 			{
-				var paneFile = ParseXaml(r.RelativeSubPath);
-				if (paneFile != null)
-				{
-					r.WriteXml(paneFile.Document, GetXamlContentType(r));
+				if (await Task.Run(() =>
+				 {
+					 var paneFile = ParseXaml(r.RelativeSubPath);
+					 if (paneFile != null)
+					 {
+						 r.WriteXml(paneFile.Document, GetXamlContentType(r));
+						 return true;
+					 }
+					 else
+						 return false;
+				 }))
 					return true;
-				}
 			}
 			else if (r.RelativeSubPath.EndsWith(".lua")) // sent a code snippet
 			{
-				if (ResolveXamlPath(r.RelativeSubPath, out var fullPath))
+				if (await Task.Run(() =>
 				{
-					r.WriteFile(fullPath, MimeTypes.Text.Plain);
+					if (ResolveXamlPath(r.RelativeSubPath, out var fullPath))
+					{
+						r.WriteFile(fullPath, MimeTypes.Text.Plain);
+						return true;
+					}
+					else
+						return false;
+				}))
 					return true;
-				}
 			}
-			return base.OnProcessRequest(r);
+			return await base.OnProcessRequestAsync(r);
 		} // func OnProcessRequest
 
 		private static void AddLuaCodeItem(XElement destination, XName name, XElement source)

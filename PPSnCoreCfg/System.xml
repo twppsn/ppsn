@@ -13,6 +13,10 @@
 		<access id="ppsnWpf" scheme="ntlm negotiate basic none">$(webBinding)/ppsn/wpf/</access>
 	</http>
 
+	<luaengine script="LuaDebug">
+		<script id="LuaDebug" filename="stuff\Debug.lua" />
+	</luaengine>
+
 	<pps:ppsn name="ppsn">
 		<pps:sysDataSource name="sys" />
 

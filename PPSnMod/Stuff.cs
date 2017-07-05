@@ -23,6 +23,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Server;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server
@@ -138,6 +139,31 @@ namespace TecWare.PPSn.Server
 
 		public static IPropertyReadOnlyDictionary ToDictionary(this IDataRecord record)
 			=> new PropertyReadOnlyDictionaryRecord(record);
+
+		public static void SetValue(this DbParameter parameter, object value, Type parameterType)
+		{
+			parameter.Value = value == null
+				? (object)DBNull.Value
+				: (value != DBNull.Value ? Procs.ChangeType(value, parameterType) : value);
+		} // proc SetValue
+
+		#endregion
+
+		#region -- Common Scope ---------------------------------------------------------
+
+		public static bool TryGetGlobal<T>(this IDECommonScope scope, object ns, object variable, out T value)
+		{
+			if (scope.TryGetGlobal(ns, variable, out object v))
+			{
+				value = (T)v;
+				return true;
+			}
+			else
+			{
+				value = default(T);
+				return false;
+			}
+		} // func TryGetGlobal
 
 		#endregion
 	} // class PpsStuff

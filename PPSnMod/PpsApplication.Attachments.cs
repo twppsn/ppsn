@@ -131,30 +131,30 @@ namespace TecWare.PPSn.Server
 		protected override void WriteDataToStream(PpsAttachmentAccess data, Stream dst)
 			=> data.CopyTo(dst);
 
-		protected override PpsAttachmentAccess PullData(PpsDataTransaction trans, PpsObjectAccess obj)
+		protected override PpsAttachmentAccess PullData(PpsObjectAccess obj)
 			=> new PpsObjectAttachmentAccess(obj);
 
 		protected override bool IsDataRevision(PpsAttachmentAccess data)
 			=> false;
 		
-		protected override bool LuaPush(PpsDataTransaction transaction, PpsObjectAccess obj, object data, bool release)
+		protected override bool LuaPush(PpsObjectAccess obj, object data, bool release)
 		{
 			switch (data)
 			{
 				case byte[] b:
 					using (var a = new PpsStreamAttachmentAccess(new MemoryStream(b, false)))
-						return PushData(transaction, obj, a, release);
+						return PushData(obj, a, release);
 
 				case string s:
 					using (var a = new PpsStreamAttachmentAccess(new FileStream(s, FileMode.Open, FileAccess.Read)))
-						return PushData(transaction, obj, a, release);
+						return PushData(obj, a, release);
 
 				case Stream src:
 					using (var a = new PpsStreamAttachmentAccess(src))
-						return PushData(transaction, obj, a, release);
+						return PushData(obj, a, release);
 
 				case PpsAttachmentAccess a:
-					return PushData(transaction, obj, a, release);
+					return PushData(obj, a, release);
 
 				case null:
 					throw new ArgumentNullException(nameof(data));

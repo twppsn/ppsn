@@ -17,14 +17,15 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
@@ -34,7 +35,7 @@ using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server.Sql
-{	
+{
 	/// <summary></summary>
 	public class PpsSqlExDataSource : PpsSqlDataSource
 	{
@@ -68,7 +69,7 @@ namespace TecWare.PPSn.Server.Sql
 				Disposed?.Invoke(this, EventArgs.Empty);
 			} // proc Dispose
 
-			private static bool Connect(SqlConnectionStringBuilder connectionString, SqlConnection connection, IPpsPrivateDataContext identity, bool throwException)
+			private static async Task<bool> ConnectAsync(SqlConnectionStringBuilder connectionString, SqlConnection connection, IPpsPrivateDataContext identity, bool throwException)
 			{
 				// create the connection
 				try
@@ -81,7 +82,7 @@ namespace TecWare.PPSn.Server.Sql
 							connection.ConnectionString = connectionString.ToString();
 
 							using (ic.Impersonate()) // is only functional in the admin context
-								connection.Open();
+								await connection.OpenAsync();
 						}
 						else if (currentCredentials is PpsUserCredentials uc) // use network credentials
 						{
@@ -89,7 +90,7 @@ namespace TecWare.PPSn.Server.Sql
 							connection.ConnectionString = connectionString.ToString();
 
 							connection.Credential = new SqlCredential(uc.UserName, uc.Password);
-							connection.Open();
+							await connection.OpenAsync();
 						}
 					}
 					return true;
@@ -102,7 +103,7 @@ namespace TecWare.PPSn.Server.Sql
 				}
 			} // func Connect
 
-			public SqlConnection ForkConnection()
+			public async Task<SqlConnection> ForkConnectionAsync()
 			{
 				// create a new connection
 				var con = new SqlConnection();
@@ -113,17 +114,17 @@ namespace TecWare.PPSn.Server.Sql
 				};
 
 				// ensure connection
-				Connect(conStr, con, identity, true);
+				await ConnectAsync(conStr, con, identity, true);
 
 				return con;
 			} // func ForkConnection
 
-			public bool EnsureConnection(bool throwException)
+			public Task<bool> EnsureConnectionAsync(bool throwException)
 			{
 				if (IsConnected)
-					return true;
+					return Task.FromResult(true);
 
-				return Connect(connectionString, connection, identity, throwException);
+				return ConnectAsync(connectionString, connection, identity, throwException);
 			} // func EnsureConnection
 
 			public PpsDataSource DataSource => dataSource;
@@ -559,21 +560,69 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- class SqlDataTransaction -----------------------------------------------
+		#region -- class SqlDataTransaction ---------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private sealed class SqlDataTransaction : PpsDataTransaction
 		{
+			#region -- class PpsColumnMapping -------------------------------------------
+
+			/// <summary></summary>
+			[DebuggerDisplay("{DebuggerDisplay,nq}")]
+			private sealed class PpsColumnMapping
+			{
+				private readonly PpsSqlColumnInfo columnInfo;
+				private readonly Func<object, object> getValue;
+				private readonly Action<object, object> updateValue;
+
+				private readonly string parameterName;
+				private DbParameter parameter = null;
+
+				public PpsColumnMapping(PpsSqlColumnInfo columnInfo, Func<object, object> getValue, Action<object, object> updateValue)
+				{
+					this.columnInfo = columnInfo ?? throw new ArgumentNullException(nameof(columnInfo));
+					this.getValue = getValue ?? throw new ArgumentNullException(nameof(getValue));
+					this.updateValue = updateValue;
+
+					this.parameterName = "@" + columnInfo.Name;
+				} // ctor
+
+				public object GetValue(object row)
+					=> getValue(row);
+
+				public void SetParameter(object row)
+					=> parameter.Value = GetValue(row) ?? (object)DBNull.Value;
+
+				public void UpdateValue(object row, object value)
+					=> updateValue(row, value);
+
+				public void AppendParameter(DbCommand cmd, object initialValues)
+				{
+					if (parameter != null)
+						throw new InvalidOperationException();
+					parameter = columnInfo.AppendSqlParameter(cmd, parameterName, initialValues == null ? null : getValue(initialValues));
+				} // func AppendParameter
+
+				private string DebuggerDisplay
+					=> $"Mapping: {columnInfo.TableColumnName} -> {parameterName}";
+
+				public PpsSqlColumnInfo ColumnInfo => columnInfo;
+				public string ColumnName => columnInfo.Name;
+				public string ParameterName => parameterName;
+			} // class PpsColumnMapping
+
+			#endregion
+
 			private readonly SqlConnection connection;
 			private readonly SqlTransaction transaction;
 
-			#region -- Ctor/Dtor ------------------------------------------------------------
+			#region -- Ctor/Dtor --------------------------------------------------------
 
 			public SqlDataTransaction(PpsSqlDataSource dataSource, SqlConnectionHandle connectionHandle)
 				: base(dataSource, connectionHandle)
 			{
-				this.connection = connectionHandle.ForkConnection();
+				this.connection = connectionHandle.ForkConnectionAsync().AwaitTask();
 
 				// create the sql transaction
 				this.transaction = connection.BeginTransaction(IsolationLevel.ReadUncommitted);
@@ -610,7 +659,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
-			#region -- Execute Result -------------------------------------------------------
+			#region -- Execute Result ---------------------------------------------------
 
 			internal SqlCommand CreateCommand(CommandType commandType, bool noTransaction)
 			{
@@ -742,7 +791,7 @@ namespace TecWare.PPSn.Server.Sql
 					var insertedList = new StringBuilder();
 
 					commandText.Append("INSERT INTO ")
-						.Append(tableInfo.FullName);
+						.Append(tableInfo.QuallifiedName);
 
 					// default is that only one row is done
 					var args = GetArguments(parameter, 1, true);
@@ -752,13 +801,13 @@ namespace TecWare.PPSn.Server.Sql
 					// output always primary key
 					var primaryKey = tableInfo.PrimaryKey;
 					if (primaryKey != null)
-						insertedList.Append("inserted.").Append(primaryKey.ColumnName);
+						insertedList.Append("inserted.").Append(primaryKey.Name);
 
 					// create the column list
 					var first = true;
 					foreach (var column in tableInfo.Columns)
 					{
-						var columnName = column.ColumnName;
+						var columnName = column.Name;
 
 						var value = args.GetMemberValue(columnName, true);
 						if (value != null)
@@ -774,7 +823,7 @@ namespace TecWare.PPSn.Server.Sql
 							var parameterName = '@' + columnName;
 							commandText.Append('[' + columnName + ']');
 							variableList.Append(parameterName);
-							cmd.Parameters.Add(column.CreateSqlParameter(parameterName, value));
+							column.AppendSqlParameter(cmd, parameterName, value);
 						}
 
 						if (primaryKey != column)
@@ -831,7 +880,7 @@ namespace TecWare.PPSn.Server.Sql
 					var insertedList = new StringBuilder();
 
 					commandText.Append("UPDATE ")
-						.Append(tableInfo.FullName);
+						.Append(tableInfo.QuallifiedName);
 
 					// default is that only one row is done
 					var args = GetArguments(parameter, 1, true);
@@ -842,7 +891,7 @@ namespace TecWare.PPSn.Server.Sql
 					var first = true;
 					foreach (var column in tableInfo.Columns)
 					{
-						var columnName = column.ColumnName;
+						var columnName = column.Name;
 						var value = args.GetMemberValue(columnName, true);
 						if (value == null || column == tableInfo.PrimaryKey)
 							continue;
@@ -860,7 +909,7 @@ namespace TecWare.PPSn.Server.Sql
 							.Append(" = ")
 							.Append(parameterName);
 
-						cmd.Parameters.Add(column.CreateSqlParameter(parameterName, value));
+						column.AppendSqlParameter(cmd, parameterName, value);
 
 						insertedList.Append("inserted.").Append(columnName);
 					}
@@ -869,7 +918,7 @@ namespace TecWare.PPSn.Server.Sql
 					commandText.Append(" output ").Append(insertedList);
 
 					// where
-					var primaryKeyName = tableInfo.PrimaryKey.ColumnName;
+					var primaryKeyName = tableInfo.PrimaryKey.Name;
 					var primaryKeyValue = args[primaryKeyName];
 					if (primaryKeyValue == null)
 						throw new ArgumentException("Invalid primary key.");
@@ -878,7 +927,7 @@ namespace TecWare.PPSn.Server.Sql
 						.Append(primaryKeyName)
 						.Append(" = ")
 						.Append("@").Append(primaryKeyName);
-					cmd.Parameters.Add(tableInfo.PrimaryKey.CreateSqlParameter("@" + primaryKeyName, primaryKeyValue));
+					tableInfo.PrimaryKey.AppendSqlParameter(cmd, "@" + primaryKeyName, primaryKeyValue);
 
 					cmd.CommandText = commandText.ToString();
 
@@ -899,6 +948,82 @@ namespace TecWare.PPSn.Server.Sql
 
 			#region -- ExecuteUpsert --------------------------------------------------------
 
+			private (IEnumerator<object> rows, PpsColumnMapping[] mapping) PrepareColumnMapping(PpsSqlTableInfo tableInfo, LuaTable parameter)
+			{
+				var columnMapping = new List<PpsColumnMapping>();
+
+				void CheckColumnMapping()
+				{
+					if (columnMapping.Count == 0)
+						throw new ArgumentException("Column Array is empty.");
+				} // proc CheckColumnMapping
+
+				IEnumerator<object> GetTableRowEnum()
+				{
+					var rowEnumerator = parameter.ArrayList.GetEnumerator();
+					if (!rowEnumerator.MoveNext())
+					{
+						rowEnumerator.Dispose();
+						throw new ArgumentException("");
+					}
+						return rowEnumerator;
+				}
+
+				if (parameter.GetMemberValue("rows") is IEnumerable<PpsDataRow> rows) // from DataTable
+				{
+					var rowEnumerator = rows.GetEnumerator();
+					if (!rowEnumerator.MoveNext()) // no arguments defined
+					{
+						rowEnumerator.Dispose();
+						return (null, null); // silent return nothing
+					}
+
+					// map the columns
+					var columns = ((IDataColumns)rowEnumerator.Current).Columns;
+					foreach (var c in columns)
+					{
+						if (c is IPpsColumnDescription t)
+						{
+							var dataColumn = (PpsDataColumnDefinition)t;
+							var idx = dataColumn.Index;
+							var nativeColumn = t.GetColumnDescription<PpsSqlColumnInfo>();
+							if (nativeColumn != null && nativeColumn.Table == tableInfo)
+								columnMapping.Add(new PpsColumnMapping(nativeColumn, row => ((PpsDataRow)row)[idx], (row, value) => ((PpsDataRow)row)[idx] = value));
+						}
+					}
+
+					CheckColumnMapping();
+
+					return (rowEnumerator, columnMapping.ToArray());
+				}
+				else if (parameter["columnList"] is LuaTable luaColumnList) // from a "select"-list
+				{
+					foreach (var k in luaColumnList.ArrayList)
+					{
+						if (k is string columnName)
+							columnMapping.Add(new PpsColumnMapping(tableInfo.FindColumn(columnName, true), row => ((LuaTable)row)[columnName], (row, obj) => ((LuaTable)row)[columnName] = obj));
+					}
+
+					CheckColumnMapping();
+
+					return (GetTableRowEnum(), columnMapping.ToArray());
+				}
+				else // from arguments
+				{
+					var args = GetArguments(parameter, 1, true);
+					foreach (var columnName in args.Members.Keys)
+					{
+						var column = tableInfo.FindColumn(columnName, true);
+						if (column != null)
+							columnMapping.Add(new PpsColumnMapping(column, row => ((LuaTable)row)[columnName], (row, obj) => ((LuaTable)row)[columnName] = obj));
+					}
+
+					CheckColumnMapping();
+
+					return (GetTableRowEnum(), columnMapping.ToArray());
+				}
+			} // func PrepareColumnMapping
+
 			private IEnumerable<IEnumerable<IDataRow>> ExecuteUpsert(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
 			{
 				/*
@@ -912,25 +1037,31 @@ namespace TecWare.PPSn.Server.Sql
 				 *	 output 
 				 * 
 				 */
-
+				
+				// prepare basic parameters for the merge command
 				var tableInfo = SqlDataSource.ResolveTableByName(name, true);
+
+				// data table row mapping
+				var (rowEnumerator, columnMapping) = PrepareColumnMapping(tableInfo, parameter);
+				if (columnMapping == null)
+					yield break;
+
 				using (var cmd = CreateCommand(parameter, CommandType.Text))
 				{
 					var commandText = new StringBuilder();
-					var args = GetArguments(parameter, 1, true);
-					var columns = new List<SqlColumnInfo>();
-
+					
 					#region -- dst --
 					commandText.Append("MERGE INTO ")
-						.Append(tableInfo.FullName)
+						.Append(tableInfo.QuallifiedName)
 						.Append(" as DST ");
 					#endregion
 
 					#region -- src --
 					var columnNames = new StringBuilder();
 					commandText.Append("USING (VALUES (");
+
 					var first = true;
-					foreach (var p in args.Members)
+					foreach (var col in columnMapping)
 					{
 						if (first)
 							first = false;
@@ -940,12 +1071,11 @@ namespace TecWare.PPSn.Server.Sql
 							columnNames.Append(", ");
 						}
 
-						var col = tableInfo.FindColumn(p.Key, true);
-						col.AppendAsParameter(commandText);
-						col.AppendAsColumn(columnNames);
-						cmd.Parameters.Add(col.CreateSqlParameter(p.Value));
-						columns.Add(col);
+						commandText.Append(col.ParameterName);
+						col.ColumnInfo.AppendAsColumn(columnNames);
+						col.AppendParameter(cmd, null);
 					}
+					
 					commandText.Append(")) AS SRC (")
 						.Append(columnNames)
 						.Append(") ");
@@ -956,7 +1086,7 @@ namespace TecWare.PPSn.Server.Sql
 					var onClause = GetArguments(parameter.GetMemberValue("on"), false);
 					if (onClause == null) // no on clause use primary key
 					{
-						var col = tableInfo.PrimaryKey;
+						var col = tableInfo.PrimaryKey ?? throw new ArgumentNullException("primaryKey", $"Table {tableInfo.QuallifiedName} has no primary key (use the onClause).");
 						ExecuteUpsertAppendOnClause(commandText, col);
 					}
 					else // create the on clause from colums
@@ -978,51 +1108,58 @@ namespace TecWare.PPSn.Server.Sql
 					#region -- when matched --
 					commandText.Append("WHEN MATCHED THEN UPDATE SET ");
 					first = true;
-					foreach (var col in columns)
+					foreach (var col in columnMapping)
 					{
-						if (col.IsIdentity)
+						if (col.ColumnInfo.IsIdentity) // no autoincrement
 							continue;
 						else if (first)
 							first = false;
 						else
 							commandText.Append(", ");
 						commandText.Append("DST.");
-						col.AppendAsColumn(commandText);
+						col.ColumnInfo.AppendAsColumn(commandText);
 						commandText.Append(" = ");
 						commandText.Append("SRC.");
-						col.AppendAsColumn(commandText);
+						col.ColumnInfo.AppendAsColumn(commandText);
 					}
 					commandText.Append(' ');
 					#endregion
 
-					#region -- when not matched --
-					commandText.Append("WHEN NOT MATCHED THEN INSERT (");
+					#region -- when not matched by target --
+					commandText.Append("WHEN NOT MATCHED BY TARGET THEN INSERT (");
 					first = true;
-					foreach (var col in columns)
+					foreach (var col in columnMapping)
 					{
-						if (col.IsIdentity)
+						if (col.ColumnInfo.IsIdentity)
 							continue;
 						else if (first)
 							first = false;
 						else
 							commandText.Append(", ");
-						col.AppendAsColumn(commandText);
+						col.ColumnInfo.AppendAsColumn(commandText);
 					}
 					commandText.Append(") VALUES (");
 					first = true;
-					foreach (var col in columns)
+					foreach (var col in columnMapping)
 					{
-						if (col.IsIdentity)
+						if (col.ColumnInfo.IsIdentity)
 							continue;
 						else if (first)
 							first = false;
 						else
 							commandText.Append(", ");
 						commandText.Append("SRC.");
-						col.AppendAsColumn(commandText);
+						col.ColumnInfo.AppendAsColumn(commandText);
 					}
 					commandText.Append(") ");
 					#endregion
+
+					#region -- when not matched by source --
+
+					// delete, or update to deleted?
+
+					#endregion
+
 
 					#region -- output --
 					commandText.Append("OUTPUT ");
@@ -1042,19 +1179,34 @@ namespace TecWare.PPSn.Server.Sql
 					commandText.Append(';');
 
 					cmd.CommandText = commandText.ToString();
-					using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
-					{
-						if (!r.Read())
-							throw new InvalidDataException("Invalid return data from sql command.");
 
-						for (var i = 0; i < r.FieldCount; i++)
-							args[r.GetName(i)] = r.GetValue(i).NullIfDBNull();
-					}
+					do
+					{
+						var currentRow = rowEnumerator.Current;
+
+						// update parameter
+						foreach (var col in columnMapping)
+							col.SetParameter(currentRow);
+
+						// exec
+						using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
+						{
+							if (!r.Read())
+								throw new InvalidDataException("Invalid return data from sql command.");
+
+							for (var i = 0; i < r.FieldCount; i++)
+							{
+								var col = columnMapping.FirstOrDefault(c => c.ColumnName == r.GetName(i));
+								if (col != null)
+									col.UpdateValue(currentRow, r.GetValue(i).NullIfDBNull());
+							}
+						}
+					} while (rowEnumerator.MoveNext());
 				}
 				yield break;
 			} // func ExecuteUpsert
 
-			private static void ExecuteUpsertAppendOnClause(StringBuilder commandText, SqlColumnInfo col)
+			private static void ExecuteUpsertAppendOnClause(StringBuilder commandText, PpsSqlColumnInfo col)
 			{
 				commandText.Append("SRC.");
 				col.AppendAsColumn(commandText);
@@ -1122,7 +1274,7 @@ namespace TecWare.PPSn.Server.Sql
 
 					// append from
 					commandText.Append(" FROM ")
-						.Append(tableInfo.FullName).Append(' ')
+						.Append(tableInfo.QuallifiedName).Append(' ')
 						.Append(" WHERE ");
 
 					// get where arguments
@@ -1136,7 +1288,7 @@ namespace TecWare.PPSn.Server.Sql
 							commandText.Append(" AND ");
 
 						var col = tableInfo.FindColumn(p.Key, true);
-						cmd.Parameters.Add(col.CreateSqlParameter(p.Value));
+						col.AppendSqlParameter(cmd, value: p.Value);
 						col.AppendAsColumn(commandText)
 							.Append(" = ");
 						col.AppendAsParameter(commandText);
@@ -1218,7 +1370,7 @@ namespace TecWare.PPSn.Server.Sql
 					var commandText = new StringBuilder();
 
 					commandText.Append("DELETE ")
-						.Append(tableInfo.FullName);
+						.Append(tableInfo.QuallifiedName);
 
 					// default is that only one row is done
 					var args = GetArguments(parameter, 1, true);
@@ -1226,7 +1378,7 @@ namespace TecWare.PPSn.Server.Sql
 					// add primary key as out put
 					commandText.Append(" OUTPUT ")
 						.Append("deleted.")
-						.Append(tableInfo.PrimaryKey.ColumnName);
+						.Append(tableInfo.PrimaryKey.Name);
 
 					// append where
 					commandText.Append(" WHERE ");
@@ -1243,12 +1395,12 @@ namespace TecWare.PPSn.Server.Sql
 						else
 							commandText.Append(" AND ");
 
-						var columnName = column.ColumnName;
+						var columnName = column.Name;
 						var parameterName = '@' + columnName;
 						commandText.Append(columnName)
 							.Append(" = ")
 							.Append(parameterName);
-						cmd.Parameters.Add(column.CreateSqlParameter(parameterName, m.Value));
+						column.AppendSqlParameter(cmd, parameterName, m.Value);
 					}
 
 					if (first && args.GetOptionalValue("__all", false))
@@ -1304,215 +1456,60 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- class SqlRelationInfo --------------------------------------------------
+		#region -- class SqlColumnInfo --------------------------------------------------
 
-		// todo: new name, new position
-		internal sealed class SqlRelationInfo
+		private sealed class SqlColumnInfo : PpsSqlColumnInfo
 		{
-			private readonly int objectId;
-			private readonly string name;
-			private readonly SqlColumnInfo parentColumn;
-			private readonly SqlColumnInfo referencedColumn;
-
-			public SqlRelationInfo(int objectId, string name, SqlColumnInfo parentColumn, SqlColumnInfo referencedColumn)
-			{
-				this.objectId = objectId;
-				this.name = name;
-				this.parentColumn = parentColumn;
-				this.referencedColumn = referencedColumn;
-			} // ctor
-
-			public int RelationId => objectId;
-			public string Name => name;
-			public SqlColumnInfo ParentColumn => parentColumn;
-			public SqlColumnInfo ReferencedColumn => referencedColumn;
-		} // class SqlRelationInfo
-
-		#endregion
-
-		#region -- class SqlTableInfo -----------------------------------------------------
-
-		// todo: new name, new position
-		internal sealed class SqlTableInfo
-		{
-			private readonly int objectId;
-			private readonly string schema;
-			private readonly string name;
-			private readonly int primaryColumnId;
-			private readonly List<SqlColumnInfo> columns = new List<SqlColumnInfo>();
-			private readonly List<SqlRelationInfo> relationInfo = new List<SqlRelationInfo>();
-			private readonly Lazy<SqlColumnInfo> primaryColumn;
-
-			public SqlTableInfo(Func<int, int, SqlColumnInfo> resolveColumn, SqlDataReader r)
-			{
-				this.objectId = r.GetInt32(0);
-				this.schema = r.GetString(1);
-				this.name = r.GetString(2);
-				this.primaryColumnId = r.IsDBNull(3) ? -1 : r.GetInt32(3);
-
-				this.primaryColumn = primaryColumnId == -1 ? null : new Lazy<SqlColumnInfo>(() => resolveColumn(objectId, primaryColumnId));
-			} // ctor
-
-			internal void AddColumn(SqlColumnInfo column)
-			{
-				columns.Add(column);
-			} // proc AddColumn
-
-			internal void AddRelation(SqlRelationInfo sqlRelationInfo)
-			{
-				relationInfo.Add(sqlRelationInfo);
-			} // proc AddRelation
-
-			public SqlColumnInfo FindColumn(string columnName, bool throwException = false)
-			{
-				var col = columns.Find(c => String.Compare(c.ColumnName, columnName, StringComparison.OrdinalIgnoreCase) == 0);
-				if (col == null && throwException)
-					throw new ArgumentOutOfRangeException("columnName", $"Table '{Name}' does not define  Column '{columnName}'.");
-				return col;
-			} // func FindColumn
-
-			public int TableId => objectId;
-			public string Schema => schema;
-			public string Name => name;
-			public string FullName => schema + "." + name;
-
-			public SqlColumnInfo PrimaryKey => primaryColumn?.Value;
-			public IEnumerable<SqlColumnInfo> Columns => columns;
-
-			public IEnumerable<SqlRelationInfo> RelationInfo => relationInfo;
-		} // class SqlTableInfo
-
-		#endregion
-
-		#region -- class SqlColumnInfo ----------------------------------------------------
-
-		// todo: new name, new position
-		internal sealed class SqlColumnInfo : PpsColumnDescription
-		{
-			#region -- class PpsColumnAttributes --------------------------------------------
-
-			private sealed class PpsColumnAttributes : IPropertyEnumerableDictionary
-			{
-				private readonly SqlColumnInfo column;
-
-				public PpsColumnAttributes(SqlColumnInfo column)
-				{
-					this.column = column;
-				} // ctor
-
-				public bool TryGetProperty(string name, out object value)
-				{
-					switch (name[0])
-					{
-						case 'S':
-						case 's':
-							if (String.Compare(name, nameof(column.SqlType), StringComparison.OrdinalIgnoreCase) == 0)
-							{
-								value = column.SqlType;
-								return true;
-							}
-							else if (String.Compare(name, nameof(column.Scale), StringComparison.OrdinalIgnoreCase) == 0)
-							{
-								value = column.Scale;
-								return true;
-							}
-							break;
-						case 'M':
-						case 'm':
-							if (String.Compare(name, nameof(column.MaxLength), StringComparison.OrdinalIgnoreCase) == 0)
-							{
-								value = column.MaxLength;
-								return true;
-							}
-							break;
-						case 'N':
-						case 'n':
-							if (String.Compare(name, nameof(column.Nullable), StringComparison.OrdinalIgnoreCase) == 0)
-							{
-								value = column.Nullable;
-								return true;
-							}
-							break;
-						case 'P':
-						case 'p':
-							if (String.Compare(name, nameof(column.Precision), StringComparison.OrdinalIgnoreCase) == 0)
-							{
-								value = column.Precision;
-								return true;
-							}
-							break;
-						case 'I':
-						case 'i':
-							if (String.Compare(name, nameof(column.IsIdentity), StringComparison.OrdinalIgnoreCase) == 0)
-							{
-								value = column.IsIdentity;
-								return true;
-							}
-							break;
-					}
-
-					value = null;
-					return false;
-				} // func TryGetProperty
-
-				public IEnumerator<PropertyValue> GetEnumerator()
-				{
-					yield return new PropertyValue(nameof(column.SqlType), column.SqlType);
-					yield return new PropertyValue(nameof(column.MaxLength), column.MaxLength);
-					yield return new PropertyValue(nameof(column.Precision), column.Precision);
-					yield return new PropertyValue(nameof(column.Scale), column.Scale);
-					yield return new PropertyValue(nameof(column.Nullable), column.Nullable);
-					yield return new PropertyValue(nameof(column.IsIdentity), column.IsIdentity);
-				} // func GetEnumerator
-
-				IEnumerator IEnumerable.GetEnumerator() 
-					=> GetEnumerator();
-			} // class PpsColumnAttributes
-
-			#endregion
-
-			private readonly SqlTableInfo table;
 			private readonly int columnId;
-			private readonly string columnName;
 			private readonly SqlDbType sqlType;
-			private readonly int maxLength;
-			private readonly byte precision;
-			private readonly byte scale;
-			private readonly bool isNullable;
-			private readonly bool isIdentity;
-
-			public SqlColumnInfo(SqlTableInfo table, SqlDataReader r)
-				: base(null, table.Schema + "." + table.Name + "." + r.GetString(2), GetFieldType(r.GetByte(3)))
+	
+			public SqlColumnInfo(PpsSqlTableInfo table, SqlDataReader r)
+				: base(table, 
+					  columnName: r.GetString(2), 
+					  dataType: GetFieldType(r.GetByte(3)), 
+					  maxLength: r.GetInt16(4),
+					  precision: r.GetByte(5),
+					  scale: r.GetByte(6),
+					  isNullable: r.GetBoolean(7),
+					  isIdentity: r.GetBoolean(8)
+				)
 			{
-				this.table = table;
 				this.columnId = r.GetInt32(1);
-				this.columnName = r.GetString(2);
 				this.sqlType = GetSqlType(r.GetByte(3));
-				this.maxLength = r.GetInt16(4);
-				this.precision = r.GetByte(5);
-				this.scale = r.GetByte(6);
-				this.isNullable = r.GetBoolean(7);
-				this.isIdentity = r.GetBoolean(8);
 
-				this.table.AddColumn(this);
+				EndInit();
 			} // ctor
 
-			protected override IPropertyEnumerableDictionary CreateAttributes()
-				=> new PpsColumnAttributes(this);
+			protected override IEnumerator<PropertyValue> GetProperties()
+			{
+				using (var e = base.GetProperties())
+				{
+					while (e.MoveNext())
+						yield return e.Current;
+				}
+				yield return new PropertyValue(nameof(SqlType), SqlType);
+			} // func GetProperties
 
-			public StringBuilder AppendAsParameter(StringBuilder sb)
-				=> sb.Append('@').Append(columnName);
+			protected override bool TryGetProperty(string propertyName, out object value)
+			{
+				if (!base.TryGetProperty(propertyName, out value))
+				{
+					if (String.Compare(propertyName, nameof(SqlType), StringComparison.OrdinalIgnoreCase) == 0)
+					{
+						value = SqlType;
+						return true;
+					}
+				}
 
-			public StringBuilder AppendAsColumn(StringBuilder sb)
-				=> sb.Append('[').Append(columnName).Append(']');
+				value = null;
+				return false;
+			} // func TryGetProperty
 
-			public SqlParameter CreateSqlParameter(object value)
-				=> CreateSqlParameter("@" + columnName, value);
-
-			public SqlParameter CreateSqlParameter(string parameterName, object value)
-				=> new SqlParameter(parameterName, sqlType, maxLength, ParameterDirection.Input, isNullable, precision, scale, Name, DataRowVersion.Current,
-					value != null ? (value == DBNull.Value ? value : Procs.ChangeType(value, DataType)) : DBNull.Value
-				);
+			protected override void InitSqlParameter(DbParameter parameter, string parameterName, object value)
+			{
+				base.InitSqlParameter(parameter, parameterName, value);
+				((SqlParameter)parameter).SqlDbType = sqlType;
+			} // proc InitSqlParameter
 
 			#region -- GetFieldType, GetSqlType -----------------------------------------------
 
@@ -1654,18 +1651,60 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
-			public SqlTableInfo Table => table;
 			public int ColumnId => columnId;
-			public string ColumnName => columnName;
-			public string TableColumnName => table.Name + "." + columnName;
 			public SqlDbType SqlType => sqlType;
-			public int MaxLength => maxLength;
-			public int Precision => precision;
-			public int Scale => scale;
-			public bool Nullable => isNullable;
-			public bool IsIdentity => isIdentity;
-			public bool IsPrimary => table.PrimaryKey == this;
 		} // class SqlColumnInfo
+
+		#endregion
+
+		#region -- class SqlRelationInfo ------------------------------------------------
+
+		private sealed class SqlRelationInfo : PpsSqlRelationInfo
+		{
+			private readonly int objectId;
+
+			public SqlRelationInfo(int objectId, string name, SqlColumnInfo parentColumn, SqlColumnInfo referencedColumn)
+				: base(name, parentColumn, referencedColumn)
+			{
+				this.objectId = objectId;
+			} // ctor
+
+			public int RelationId => objectId;
+		} // class SqlRelationInfo
+
+		#endregion
+
+		#region -- class SqlTableInfo ---------------------------------------------------
+
+		private sealed class SqlTableInfo : PpsSqlTableInfo
+		{
+			private readonly int objectId;
+			private readonly int primaryColumnId;
+
+			private SqlColumnInfo primaryKeyColumn = null;
+
+			public SqlTableInfo(Func<int, int, SqlColumnInfo> resolveColumn, SqlDataReader r)
+				: base(schemaName: r.GetString(1), tableName: r.GetString(2))
+			{
+				this.objectId = r.GetInt32(0);
+				this.primaryColumnId = r.IsDBNull(3) ? -1 : r.GetInt32(3);
+			} // ctor
+
+			protected override void OnColumnAdded(PpsSqlColumnInfo column)
+			{
+				if (column is SqlColumnInfo t)
+				{
+					if (t.ColumnId == primaryColumnId)
+						primaryKeyColumn = t;
+				}
+			} // proc OnColumnAdded
+
+			public override bool IsPrimaryKeyColumn(PpsSqlColumnInfo column)
+				=> column == primaryKeyColumn;
+
+			public int TableId => objectId;
+			public override PpsSqlColumnInfo PrimaryKey => primaryKeyColumn;
+		} // class SqlTableInfo
 
 		#endregion
 
@@ -1729,7 +1768,7 @@ namespace TecWare.PPSn.Server.Sql
 			public SqlSynchronizationTransaction(PpsApplication application, PpsDataSource dataSource, IPpsPrivateDataContext privateDataContext, DateTime lastSynchronization)
 				:base(application, dataSource.CreateConnection(privateDataContext, true), lastSynchronization)
 			{
-				((SqlConnectionHandle)Connection).EnsureConnection(true);
+				((SqlConnectionHandle)Connection).EnsureConnectionAsync(true).AwaitTask();
 
 				// create transaction
 				this.transaction = SqlConnection.BeginTransaction(IsolationLevel.ReadCommitted);
@@ -1773,13 +1812,13 @@ namespace TecWare.PPSn.Server.Sql
 							command.Append(',').Append(primaryKeyPrefix).Append('[');
 						else
 							command.Append(",d.[");
-						command.Append(colInfo.ColumnName).Append(']')
+						command.Append(colInfo.Name).Append(']')
 							.Append(" AS [").Append(col.Name).Append(']');
 					}
 				}
 			} // func PrepareSynchronizationColumns
 
-			private string PrepareChangeTrackingCommand(PpsDataTableDefinition table, SqlTableInfo tableInfo, SqlColumnInfo columnInfo, long lastSyncId)
+			private string PrepareChangeTrackingCommand(PpsDataTableDefinition table, PpsSqlTableInfo tableInfo, PpsSqlColumnInfo columnInfo, long lastSyncId)
 			{
 				// build command string for change table
 				var command = new StringBuilder("SELECT ct.sys_change_operation,ct.sys_change_version");
@@ -1787,21 +1826,21 @@ namespace TecWare.PPSn.Server.Sql
 				PrepareSynchronizationColumns(table, command, "ct.");
 
 				command.Append(" FROM ")
-					.Append("changetable(changes ").Append(tableInfo.FullName).Append(',').Append(lastSyncId).Append(") as Ct ")
-					.Append("LEFT OUTER JOIN ").Append(tableInfo.FullName)
-					.Append(" as d ON d.").Append(columnInfo.ColumnName).Append(" = ct.").Append(columnInfo.ColumnName);
+					.Append("changetable(changes ").Append(tableInfo.QuallifiedName).Append(',').Append(lastSyncId).Append(") as Ct ")
+					.Append("LEFT OUTER JOIN ").Append(tableInfo.QuallifiedName)
+					.Append(" as d ON d.").Append(columnInfo.Name).Append(" = ct.").Append(columnInfo.Name);
 
 				return command.ToString();
 			} // proc PrepareChangeTrackingCommand
 
-			private string PrepareFullCommand(PpsDataTableDefinition table, SqlTableInfo tableInfo)
+			private string PrepareFullCommand(PpsDataTableDefinition table, PpsSqlTableInfo tableInfo)
 			{
 				var command = new StringBuilder("SELECT 'I',cast(" + startCurrentSyncId.ToString() + " as bigint)");
 
 				PrepareSynchronizationColumns(table, command);
 
 				command.Append(" FROM ")
-					.Append(tableInfo.FullName)
+					.Append(tableInfo.QuallifiedName)
 					.Append(" as d");
 
 				return command.ToString();
@@ -1823,11 +1862,11 @@ namespace TecWare.PPSn.Server.Sql
 					using (var getMinVersionCommand = SqlConnection.CreateCommand())
 					{
 						getMinVersionCommand.Transaction = transaction;
-						getMinVersionCommand.CommandText = "SELECT change_tracking_min_valid_version(object_id('" + tableInfo.FullName + "'))";
+						getMinVersionCommand.CommandText = "SELECT change_tracking_min_valid_version(object_id('" + tableInfo.QuallifiedName + "'))";
 
 						var minValidVersionValue = getMinVersionCommand.ExecuteScalar();
 						if (minValidVersionValue == DBNull.Value)
-							throw new ArgumentException($"Change tracking is not activated for '{tableInfo.FullName}'.");
+							throw new ArgumentException($"Change tracking is not activated for '{tableInfo.QuallifiedName}'.");
 
 						var minValidVersion = minValidVersionValue.ChangeType<long>();
 						isFull = minValidVersion > lastSyncId;
@@ -1959,7 +1998,7 @@ namespace TecWare.PPSn.Server.Sql
 
 					// start background thread
 					application.RegisterInitializationTask(10000, "Database", async () => await Task.Run(new Action(schemInfoInitialized.Wait))); // block all other tasks
-					databaseMainThread = new DEThread(this, "Database", ExecuteDatabase);
+					databaseMainThread = new DEThread(this, "Database", () => ExecuteDatabaseAsync());
 				}
 			}
 		} // proc OnEndReadConfiguration
@@ -1999,7 +2038,7 @@ namespace TecWare.PPSn.Server.Sql
 							try
 							{
 								var t = new SqlTableInfo(ResolveColumnById, r);
-								tableStore.Add(t.FullName, t);
+								tableStore.Add(t.QuallifiedName, t);
 							}
 							catch (Exception e)
 							{
@@ -2016,7 +2055,7 @@ namespace TecWare.PPSn.Server.Sql
 							try
 							{
 								var c = new SqlColumnInfo(ResolveTableById(r.GetInt32(0)), r);
-								columnStore.Add(c.Name, c);
+								columnStore.Add(c.TableColumnName, c);
 							}
 							catch (Exception e)
 							{
@@ -2061,7 +2100,7 @@ namespace TecWare.PPSn.Server.Sql
 		private SqlColumnInfo ResolveColumnById(int tableId, int columnId)
 		{
 			foreach (var c in columnStore.Values)
-				if (c.Table.TableId == tableId && c.ColumnId == columnId)
+				if (((SqlTableInfo)c.Table).TableId == tableId && c.ColumnId == columnId)
 					return c;
 			return null;
 		} // func ResolveColumnById
@@ -2087,13 +2126,12 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- Execute Database -------------------------------------------------------
 
-		private void ExecuteDatabase()
+		private async Task ExecuteDatabaseAsync()
 		{
-			var executeStartTick = Environment.TickCount;
-
-			try
+			while (databaseMainThread.IsRunning)
 			{
-				lock (masterConnection)
+				var executeStartTick = Environment.TickCount;
+				try
 				{
 					try
 					{
@@ -2108,14 +2146,14 @@ namespace TecWare.PPSn.Server.Sql
 						if (masterConnection.State == System.Data.ConnectionState.Closed)
 						{
 							Log.Info("Open database connection.");
-							masterConnection.Open();
+							await masterConnection.OpenAsync();
 						}
 
 						// execute background task
 						if (masterConnection.State == ConnectionState.Open)
 						{
 							if (!schemInfoInitialized.IsSet)
-								InitializeSchema();
+								await Task.Run(new Action(InitializeSchema));
 
 						}
 					}
@@ -2124,13 +2162,13 @@ namespace TecWare.PPSn.Server.Sql
 						Log.Except(e); // todo: detect disconnect
 					}
 				}
+				finally
+				{
+					// delay at least 1 Sekunde
+					await Task.Delay(Math.Max(1000 - Math.Abs(Environment.TickCount - executeStartTick), 0));
+				}
 			}
-			finally
-			{
-				// Mindestens eine Sekunde
-				databaseMainThread.WaitFinish(Math.Max(1000 - Math.Abs(Environment.TickCount - executeStartTick), 0));
-			}
-		} // proc ExecuteDatabase
+		} // proc ExecuteDatabaseAsync
 
 		#endregion
 
@@ -2162,9 +2200,7 @@ namespace TecWare.PPSn.Server.Sql
 		} // func GetColumnDescription
 
 		private SqlConnectionHandle GetSqlConnection(IPpsConnectionHandle connection, bool throwException)
-		{
-			return (SqlConnectionHandle)connection;
-		} // func GetSqlConnection
+			=> (SqlConnectionHandle)connection;
 
 		/// <summary>Creates a user specific connection.</summary>
 		/// <param name="privateUserData"></param>

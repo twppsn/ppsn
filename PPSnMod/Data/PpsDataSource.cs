@@ -14,14 +14,9 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using TecWare.DE.Server;
-using TecWare.DE.Data;
-using TecWare.PPSn.Server.Data;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server.Data

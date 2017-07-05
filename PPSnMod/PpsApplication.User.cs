@@ -15,7 +15,6 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Security.Claims;
 using System.Security.Principal;
 using System.Threading;
@@ -23,7 +22,6 @@ using System.Threading.Tasks;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Server;
-using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
@@ -32,8 +30,8 @@ namespace TecWare.PPSn.Server
 {
 	public partial class PpsApplication
 	{
-		private const int NoUserId = -1;
-		private const int SysUserId = Int32.MinValue;
+		private const int noUserId = -1;
+		private const int sysUserId = Int32.MinValue;
 
 		#region -- class PrivateUserData ------------------------------------------------
 
@@ -43,7 +41,7 @@ namespace TecWare.PPSn.Server
 		{
 			private readonly PpsApplication application;
 			private readonly string connectionName;
-			private readonly ReaderWriterLockSlim connectionLock; // locks the user object
+			//private readonly ReaderWriterLockSlim connectionLock; // locks the user object -> geht nicht mehr durch thread pooling
 
 			private readonly long userId;           // unique id of the user
 			private LoggerProxy log;                // current log interface for the user
@@ -66,9 +64,9 @@ namespace TecWare.PPSn.Server
 				this.application = application ?? throw new ArgumentNullException(nameof(application));
 				this.userId = userId;
 				this.connectionName = connectionName ?? throw new ArgumentNullException(nameof(connectionName));
-				this.connectionLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+				//this.connectionLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
-				if (userId == SysUserId) // mark system user
+				if (userId == sysUserId) // mark system user
 				{
 					if (userIdentity != null)
 						throw new ArgumentException("UserIdentity must be null.", nameof(userIdentity));
@@ -81,21 +79,19 @@ namespace TecWare.PPSn.Server
 
 				log = LoggerProxy.Create(application, userIdentity.Name);
 
-				if (userId > 0)
-					application.Server.RegisterUser(this); // register the user in http-server
+				application.Server.RegisterUser(this); // register the user in http-server
 			} // ctor
 
 			public void Dispose()
 			{
 				// unregister the user
-				if (userId > 0)
-					application.Server.UnregisterUser(this);
+				application.Server.UnregisterUser(this);
 
 				// enter write lock
-				connectionLock.TryEnterWriteLock(30000); // force dispose after 30s
+				//connectionLock.TryEnterWriteLock(30000); // force dispose after 30s
 
 				// dispose lock
-				connectionLock.Dispose();
+				//connectionLock.Dispose();
 
 				// dispose identity
 				userIdentity.Dispose();
@@ -177,8 +173,8 @@ namespace TecWare.PPSn.Server
 				{
 					CleanCurrentContexts();
 
-					if (currentContexts.Count == 0)
-						connectionLock.EnterReadLock();
+					//if (currentContexts.Count == 0)
+					//	connectionLock.EnterReadLock();
 
 					var t = new PrivateUserDataContext(this, currentIdentity);
 					currentContexts.Add(new WeakReference<PrivateUserDataContext>(t));
@@ -196,8 +192,8 @@ namespace TecWare.PPSn.Server
 						currentContexts.RemoveAt(i);
 				}
 
-				if (inLock && currentContexts.Count == 0)
-					connectionLock.ExitReadLock();
+				//if (inLock && currentContexts.Count == 0)
+				//	connectionLock.ExitReadLock();
 			} // proc CleanCurrentContexts
 
 			internal void ContextDisposed(PrivateUserDataContext context)
@@ -210,19 +206,19 @@ namespace TecWare.PPSn.Server
 					if (idx != -1)
 					{
 						currentContexts.RemoveAt(idx);
-						if (currentContexts.Count == 0)
-							connectionLock.ExitReadLock();
+						//if (currentContexts.Count == 0)
+						//	connectionLock.ExitReadLock();
 					}
 
 					lastAccess = Environment.TickCount;
 				}
 			} // proc ContextDisposed
 
-			public IDEAuthentificatedUser Authentificate(IIdentity identity)
+			public async Task<IDEAuthentificatedUser> AuthentificateAsync(IIdentity identity)
 			{
-				connectionLock.EnterReadLock();
-				try
-				{
+				//connectionLock.EnterReadLock(); durch await, ändert sich der thread!
+				//try
+				//{
 					if (userIdentity == null) // is there a identity
 						return null;
 					if (!userIdentity.Equals(identity)) // check if that the identity matches
@@ -241,7 +237,7 @@ namespace TecWare.PPSn.Server
 							newConnection = application.MainDataSource.CreateConnection(context);
 
 							// ensure the database connection to the main database
-							if (newConnection.EnsureConnection())
+							if (await newConnection.EnsureConnectionAsync())
 							{
 								UpdateConnectionHandle(application.MainDataSource, newConnection);
 								return context;
@@ -257,16 +253,16 @@ namespace TecWare.PPSn.Server
 							return null;
 						}
 					}
-				}
-				finally
-				{
-					connectionLock.ExitReadLock();
-				}
+				//}
+				//finally
+				//{
+				//	connectionLock.ExitReadLock();
+				//}
 			} // func Authentificate
 
 			public bool DemandToken(string securityToken)
 			{
-				if (String.IsNullOrEmpty(securityToken) || userId == SysUserId)
+				if (String.IsNullOrEmpty(securityToken) || userId == sysUserId)
 					return true;
 
 				lock (connections)
@@ -319,6 +315,10 @@ namespace TecWare.PPSn.Server
 			public long Id => userId;
 			[LuaMember("UserName")]
 			public string Name => userIdentity.Name;
+
+			string IDEUser.DisplayName => userIdentity.Name;
+			IIdentity IDEUser.Identity => userIdentity;
+
 			[LuaMember]
 			public string FullName { get { return fullName ?? Name; } set { fullName = value; } }
 			[LuaMember]
@@ -330,7 +330,7 @@ namespace TecWare.PPSn.Server
 			public PpsUserIdentity LocalIdentity => localIdentity;
 
 			/// <summary>Are the user context expiered and should be cleared.</summary>
-			public bool IsExpired => userId != SysUserId && unchecked(Environment.TickCount - lastAccess) > application.UserLease;
+			public bool IsExpired => userId != sysUserId && unchecked(Environment.TickCount - lastAccess) > application.UserLease;
 			/// <summary>Is the context active</summary>
 			public bool IsActive
 			{
@@ -349,7 +349,6 @@ namespace TecWare.PPSn.Server
 
 		#region -- class PrivateUserDataContext -----------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary>This class holds a active context for a user. It is possible to
 		/// attach objects, that will be disposed on the end of the active process.</summary>
 		private sealed class PrivateUserDataContext : IPpsPrivateDataContext, IDEAuthentificatedUser
@@ -385,16 +384,16 @@ namespace TecWare.PPSn.Server
 
 			#region -- Data Tasks -----------------------------------------------------------
 
-			private IPpsConnectionHandle EnsureConnection(PpsDataSource source, bool throwException)
+			private async Task<IPpsConnectionHandle> EnsureConnectionAsync(PpsDataSource source, bool throwException)
 			{
 				var c = privateUser.GetConnectionHandle(source);
 				if (c == null)
 					c = source.CreateConnection(this, throwException);
 
-				return c != null && c.EnsureConnection(throwException) ? c : null;
+				return c != null && await c.EnsureConnectionAsync(throwException) ? c : null;
 			} // func EnsureConnection
 
-			public PpsDataSelector CreateSelector(string name, string filter = null, string order = null, bool throwException = true)
+			public async Task<PpsDataSelector> CreateSelectorAsync(string name, string filter = null, string order = null, bool throwException = true)
 			{
 				if (String.IsNullOrEmpty(name))
 					throw new ArgumentNullException("name");
@@ -405,7 +404,7 @@ namespace TecWare.PPSn.Server
 					return null;
 
 				// ensure the connection
-				var connectionHandle = EnsureConnection(viewInfo.SelectorToken.DataSource, throwException);
+				var connectionHandle = await EnsureConnectionAsync(viewInfo.SelectorToken.DataSource, throwException);
 				if (connectionHandle == null)
 				{
 					if (throwException)
@@ -428,32 +427,32 @@ namespace TecWare.PPSn.Server
 				return selector;
 			} // func CreateSelector
 
-			public PpsDataSelector CreateSelector(LuaTable table)
+			public Task<PpsDataSelector> CreateSelectorAsync(LuaTable table)
 			{
 				if (table == null)
 					throw new ArgumentNullException("table");
 
-				return CreateSelector(table.GetOptionalValue("name", (string)null), table.GetOptionalValue("filter", (string)null), table.GetOptionalValue("order", (string)null), table.GetOptionalValue("throwException", true));
+				return CreateSelectorAsync(table.GetOptionalValue("name", (string)null), table.GetOptionalValue("filter", (string)null), table.GetOptionalValue("order", (string)null), table.GetOptionalValue("throwException", true));
 			} // func CreateSelector
 
-			public PpsDataTransaction CreateTransaction(string dataSourceName = null, bool throwException = true)
+			public Task<PpsDataTransaction> CreateTransactionAsync(string dataSourceName = null, bool throwException = true)
 			{
 				if (String.IsNullOrEmpty(dataSourceName))
-					return CreateTransaction((PpsDataSource)null, throwException);
+					return CreateTransactionAsync((PpsDataSource)null, throwException);
 
 				var dataSource = Application.GetDataSource(dataSourceName, throwException);
 				if (dataSource == null)
 					return null;
 
-				return CreateTransaction(dataSource, throwException);
+				return CreateTransactionAsync(dataSource, throwException);
 			} // func CreateTransaction
 
-			public PpsDataTransaction CreateTransaction(PpsDataSource dataSource = null, bool throwException = true)
+			public async Task<PpsDataTransaction> CreateTransactionAsync(PpsDataSource dataSource = null, bool throwException = true)
 			{
 				dataSource = dataSource ?? MainDataSource;
 
 				// create the connection
-				var c = EnsureConnection(dataSource, throwException);
+				var c = await EnsureConnectionAsync(dataSource, throwException);
 				if (c == null)
 					return null;
 
@@ -496,52 +495,7 @@ namespace TecWare.PPSn.Server
 		} // class PrivateUserDataContext
 
 		#endregion
-
-		#region -- class ImpersonateContextImplementation -------------------------------
-
-		private sealed class ImpersonateContextImplementation : IDECommonContext
-		{
-			private readonly IDECommonContext oldContext;
-			private readonly IDEContextServer server;
-			private readonly IPpsPrivateDataContext userContext;
-
-			public ImpersonateContextImplementation(IDEContextServer server, IPpsPrivateDataContext userContext)
-			{
-				if (!DEContext.TryGetCurrentContext(out oldContext))
-					this.oldContext = null;
-
-				this.server = server;
-				this.userContext = userContext;
-
-				DEContext.UpdateContext(this);
-			} // ctor
-
-			public void Dispose()
-			{
-				if (oldContext != null)
-					DEContext.UpdateContext(oldContext);
-			} // proc Dispose
-
-			public T GetUser<T>() where T : class
-				=> userContext as T;
-
-			public bool TryGetProperty(string name, out object value)
-			{
-				value = null;
-				return false;
-			} // func TryGetProperty
-
-			public string AbsolutePath => String.Empty;
-
-			public string[] ParameterNames => Array.Empty<string>();
-			public string[] HeaderNames => Array.Empty<string>();
-
-			public CultureInfo CultureInfo => CultureInfo.CurrentCulture;
-			public IDEContextServer Server => server;
-		} // class ImpersonateContextImplementation
-
-		#endregion
-
+		
 		private PrivateUserData systemUser;
 		private DEList<PrivateUserData> userList;
 
@@ -549,7 +503,7 @@ namespace TecWare.PPSn.Server
 
 		private void InitUser()
 		{
-			systemUser = new PrivateUserData(this, SysUserId, null, "System");
+			systemUser = new PrivateUserData(this, sysUserId, null, "System");
 			userList = new DEList<PrivateUserData>(this, "tw_users", "User list");
 		} // proc InitUser
 
@@ -560,10 +514,10 @@ namespace TecWare.PPSn.Server
 		private void BeginEndConfigurationUser(IDEConfigLoading config)
 		{
 			// read the user data
-			RegisterInitializationTask(11000, "Register users", () => Task.Run(new Action(RefreshUserData)));
+			RegisterInitializationTask(11000, "Register users", () => RefreshUserDataAsync());
 		} // proc BeginEndConfigurationUser
 
-		private void RefreshUserData()
+		private async Task RefreshUserDataAsync()
 		{
 			bool UpdateUserData(PrivateUserData userData, IDataRow r)
 			{
@@ -580,13 +534,14 @@ namespace TecWare.PPSn.Server
 				}
 			} // func UpdateUserData
 
-			using (var ctx = CreateSysContext())
+			using (var ctx = await CreateSystemContextAsync())
 			{
-				var users = ctx?.CreateSelector("dbo.serverLogins", throwException: false);
+				var userData = ctx.GetService<IPpsPrivateDataContext>();
+				var users = await userData?.CreateSelectorAsync("dbo.serverLogins", throwException: false);
 				if (users != null)
 				{
 					// fetch user list
-					foreach (IDataRow u in users)
+					foreach (var u in users)
 					{
 						lock (userList)
 						{
@@ -611,6 +566,8 @@ namespace TecWare.PPSn.Server
 						}
 					} // foreach
 				} // users != null
+
+				await ctx.RollbackAsync();
 			}
 		} // proc RefreshUserData
 
@@ -620,46 +577,22 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		/// <summary>Creates a context for the system user.</summary>
-		/// <returns></returns>
-		[LuaMember]
-		public IPpsPrivateDataContext CreateSysContext()
-			=> (IPpsPrivateDataContext)systemUser.Authentificate(PpsUserIdentity.System);
-
-		/// <summary>Creates a context for the system user.</summary>
-		/// <returns></returns>
-		[LuaMember]
-		public IPpsPrivateDataContext GetUserContext()
+		[LuaMember("ImpersonateSystem")]
+		public IDECommonScope ImpersonateSystemContext()
 		{
-			var ctx = DEContext.GetCurrentUser<IPpsPrivateDataContext>();
-			if (ctx == null)
-				throw new ArgumentNullException("No context.");
-			return ctx;
-		} // func CreateUserContext
+			// build system context
+			var context = CreateSystemContextAsync().AwaitTask();
+			context.RegisterDispose(context.Use());
+			return context;
+		} // func ImpersonateSystemContext
 
-		[LuaMember]
-		public IDECommonContext ImpersonateCurrent()
-			=> ImpersonateContext(WindowsIdentity.GetCurrent());
-
-		[LuaMember]
-		public IDECommonContext ImpersonateContext(IIdentity user)
-			=> new ImpersonateContextImplementation(Server.GetService<IDEHttpServer>(true), CreateUserContext(user));
-
-		/// <summary>Creates a context for a special user.</summary>
-		/// <param name="user"></param>
-		/// <returns></returns>
-		public IPpsPrivateDataContext CreateUserContext(IIdentity user)
+		public async Task<IDECommonScope> CreateSystemContextAsync()
 		{
-			lock (userList.EnterReadLock())
-			{
-				var idx = userList.FindIndex(c => c.User.Equals(user));
-				if (idx == -1)
-					throw new ArgumentOutOfRangeException(nameof(user), $"User '{user}' not found.");
+			var context = new DECommonScope(this, true);
+			await context.AuthentificateUserAsync(systemUser.User);
+			return context;
+		} // proc CreateSystemContextAsync
 
-				return (IPpsPrivateDataContext)userList[idx].Authentificate(user);
-			}
-		} // func CreateUserContext
-		
 		public int UserLease => 650000; // todo in ms
 	} // class PpsApplication
 }

@@ -56,6 +56,7 @@
     <None Include="sds\contacts\contactsLocal.lua" />
     <None Include="sds\contacts\contactsServer.lua" />
     <None Include="sds\contacts\contactTagging.lua" />
+    <None Include="stuff\Debug.lua" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="constants\Kgrp.xml" />

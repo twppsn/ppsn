@@ -84,6 +84,7 @@ namespace TecWare.PPSn.Server
 		{
 			initializationProgress = new SimpleConfigItemProperty<string>(this, "ppsn_init_progress", "Initialization", "Misc", "Show the current state of the initialization of the node.", null, "Pending");
 
+			this.databaseLibrary = new PpsDatabaseLibrary(this);
 			this.objectsLibrary = new PpsObjectsLibrary(this);
 			this.httpLibrary = new PpsHttpLibrary(this);
 
@@ -253,32 +254,32 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		protected override bool OnProcessRequest(IDEContext r)
+		protected override async Task<bool> OnProcessRequestAsync(IDEWebRequestScope r)
 		{
 			switch (r.RelativeSubPath)
 			{
 				case "info.xml":
-					r.WriteObject(
+					await Task.Run(() => r.WriteObject(
 						new XElement("ppsn",
 							new XAttribute("displayName", DisplayName),
 							new XAttribute("version", "1.0.0.0"),
 							new XAttribute("loginSecurity", "NTLM,Basic")
 						)
-					);
+					));
 					return true;
 				case "login.xml":
 					// r.DemandToken("USER");
-
+					
 					var ctx = r.GetUser<IPpsPrivateDataContext>();
-					r.WriteObject(
+					await Task.Run(() => r.WriteObject(
 						new XElement("user",
 							new XAttribute("userId", ctx.UserId),
 							new XAttribute("displayName", ctx.UserName)
 						)
-					);
+					));
 					return true;
 				default:
-					return base.OnProcessRequest(r);
+					return await base.OnProcessRequestAsync(r);
 			}
 		} // proc OnProcessRequest
 	} // class PpsApplication

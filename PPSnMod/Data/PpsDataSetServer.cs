@@ -534,7 +534,7 @@ namespace TecWare.PPSn.Server.Data
 				t.WriteSchema(xSchema);
 		} // func WriteSchema
 
-		public void WriteToDEContext(IDEContext r, string cacheId)
+		public void WriteToDEContext(IDEWebRequestScope r, string cacheId)
 		{
 			r.SetLastModified(ConfigurationStamp);
 

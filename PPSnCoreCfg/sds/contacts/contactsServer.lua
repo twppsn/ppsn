@@ -4,15 +4,27 @@ local function GetNextNumber(trans, lastNr, dataset) : string
 	return "K" .. (curNr + 1):ToString("000000");
 end;
 
-local function mergeToSql(trans, obj, data)
+local function mergeToSql(obj, data)
+
+	trans = Db.Main;
+
 	-- write kont table
-	data:Head:Merge(trans);
+	trans:ExecuteNoneResult {
+		upsert ="dbo.Kont",
+		rows = data:Head
+	};
 
 	-- write adre
-	data:Adre:Merge(trans);
-
+	trans:ExecuteNoneResult {
+		upsert ="dbo.Adre",
+		rows = data:Adre
+	};
+	
 	-- write ansp
-	data:Ansp:Merge(trans);
+	trans:ExecuteNoneResult {
+		upsert ="dbo.Ansp",
+		rows = data:Ansp
+	};
 end;
 
 -- overwrite NextNumber
