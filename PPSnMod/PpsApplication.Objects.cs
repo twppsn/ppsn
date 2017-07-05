@@ -576,9 +576,12 @@ namespace TecWare.PPSn.Server
 			{
 				{ "select", "dbo.ObjR" },
 				{ "selectList", new LuaTable { "Id", "IsDocumentText","IsDocumentDeflate","Document","DocumentId","DocumentLink" } },
-				new LuaTable
+				revId > -1 ? new LuaTable
 				{
 					{ "Id", revId }
+				} : new LuaTable
+				{
+					{ "ObjkId", objectId }
 				}
 			};
 
