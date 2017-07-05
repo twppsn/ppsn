@@ -125,7 +125,7 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public abstract class PpsDataTableDefinition
+	public abstract class PpsDataTableDefinition : IDataColumns
 	{
 		#region -- WellKnownTypes ---------------------------------------------------------
 
@@ -460,6 +460,9 @@ namespace TecWare.PPSn.Data
 		public bool IsInitialized => dataset.IsInitialized;
 		/// <summary>Column definition</summary>
 		public PpsDataTableColumnCollection Columns => columnCollection;
+
+		IReadOnlyList<IDataColumn> IDataColumns.Columns => columnCollection;
+
 		/// <summary>Attached relations</summary>
 		public PpsDataTabbleRelationCollection Relations => relationCollection;
 		/// <summary>The column that identifies every row.</summary>
@@ -508,7 +511,7 @@ namespace TecWare.PPSn.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public interface IPpsDataView : IList, IEnumerable<PpsDataRow>, INotifyCollectionChanged
+	public interface IPpsDataView : IList, IDataColumns, IEnumerable<PpsDataRow>, INotifyCollectionChanged
 	{
 		/// <summary>Creates a new unattached data row, that could be add.</summary>
 		/// <param name="originalValues"></param>
@@ -597,7 +600,7 @@ namespace TecWare.PPSn.Data
 					Expression.AndAlso(
 						Expression.TypeIs(Expression, typeof(PpsDataTable)),
 						Expression.Equal(
-							Expression.Property(Expression.Convert(Expression, typeof(PpsDataTable)), TableDefinitionPropertyInfo),
+							Expression.Property(Expression.Convert(Expression, typeof(PpsDataTable)), tableDefinitionPropertyInfo),
 							Expression.Constant(table.TableDefinition)
 						)
 					)
@@ -621,9 +624,9 @@ namespace TecWare.PPSn.Data
 						Expression.MakeIndex(
 							Expression.Property(
 								Expression.Convert(Expression, typeof(PpsDataTable)),
-								ColumnsPropertyInfo
+								columnsPropertyInfo
 							),
-							ReadOnlyCollectionIndexPropertyInfo,
+							readOnlyCollectionIndexPropertyInfo,
 							new Expression[] { Expression.Constant(columnIndex) }
 						),
 						GetBindingRestrictions(table)
@@ -1378,6 +1381,7 @@ namespace TecWare.PPSn.Data
 		public string TableName => tableDefinition.Name;
 		/// <summary>Columns of the table</summary>
 		public ReadOnlyCollection<PpsDataColumnDefinition> Columns => tableDefinition.Columns;
+		IReadOnlyList<IDataColumn> IDataColumns.Columns => tableDefinition.Columns;
 
 		/// <summary>Total number of current rows.</summary>
 		public int Count => currentRows.Count;
@@ -1422,9 +1426,9 @@ namespace TecWare.PPSn.Data
 
 		// -- Static --------------------------------------------------------------
 
-		private static readonly PropertyInfo ReadOnlyCollectionIndexPropertyInfo;
-		private static readonly PropertyInfo ColumnsPropertyInfo;
-		internal static readonly PropertyInfo TableDefinitionPropertyInfo;
+		private static readonly PropertyInfo readOnlyCollectionIndexPropertyInfo;
+		private static readonly PropertyInfo columnsPropertyInfo;
+		internal static readonly PropertyInfo tableDefinitionPropertyInfo;
 
 		private const ulong localKeyBit = (ulong)2 << 62;
 		private const ulong serverKeyBit = (ulong)3 << 62;
@@ -1432,12 +1436,12 @@ namespace TecWare.PPSn.Data
 		static PpsDataTable()
 		{
 			var typeInfo = typeof(PpsDataTable).GetTypeInfo();
-			ColumnsPropertyInfo = typeInfo.GetDeclaredProperty("Columns");
-			TableDefinitionPropertyInfo = typeInfo.GetDeclaredProperty("TableDefinition");
+			columnsPropertyInfo = typeInfo.GetDeclaredProperty("Columns");
+			tableDefinitionPropertyInfo = typeInfo.GetDeclaredProperty("TableDefinition");
 
-			ReadOnlyCollectionIndexPropertyInfo = typeof(ReadOnlyCollection<PpsDataColumnDefinition>).GetTypeInfo().GetDeclaredProperty("Item");
+			readOnlyCollectionIndexPropertyInfo = typeof(ReadOnlyCollection<PpsDataColumnDefinition>).GetTypeInfo().GetDeclaredProperty("Item");
 
-			if (ColumnsPropertyInfo == null || TableDefinitionPropertyInfo == null || ReadOnlyCollectionIndexPropertyInfo == null)
+			if (columnsPropertyInfo == null || tableDefinitionPropertyInfo == null || readOnlyCollectionIndexPropertyInfo == null)
 				throw new InvalidOperationException("Reflection fehlgeschlagen (PpsDataTable)");
 		} // sctor
 
@@ -1725,6 +1729,8 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Access to the child table.</summary>
 		public PpsDataTable Table => table;
+		/// <summary>Columns</summary>
+		public IReadOnlyList<IDataColumn> Columns => table.Columns;
 		/// <summary></summary>
 		public bool IsDisposed => isDisposed;
 	} // class PpsDataFilter

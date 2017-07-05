@@ -222,7 +222,7 @@ namespace TecWare.PPSn.Data
 					Expression.AndAlso(
 						exprType,
 						Expression.Equal(
-							Expression.Property(Expression.Field(expr, TableFieldInfo), PpsDataTable.TableDefinitionPropertyInfo),
+							Expression.Property(Expression.Field(expr, TableFieldInfo), PpsDataTable.tableDefinitionPropertyInfo),
 							Expression.Constant(Row.table.TableDefinition, typeof(PpsDataTableDefinition))
 						)
 					);
