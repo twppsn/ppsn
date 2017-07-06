@@ -39,7 +39,7 @@ namespace TecWare.PPSn.Server.Sql
 	/// <summary></summary>
 	public class PpsSqlExDataSource : PpsSqlDataSource
 	{
-		#region -- class SqlConnectionHandle ----------------------------------------------
+		#region -- class SqlConnectionHandle --------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
@@ -135,7 +135,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- class PpsDataResultColumnDescription -----------------------------------
+		#region -- class PpsDataResultColumnDescription ---------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary>Simple column description implementation.</summary>
@@ -204,7 +204,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- class SqlDataSelectorToken ---------------------------------------------
+		#region -- class SqlDataSelectorToken -------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary>Representation of a data view for the system.</summary>
@@ -355,7 +355,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- class SqlDataSelector --------------------------------------------------
+		#region -- class SqlDataSelector ------------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
@@ -552,7 +552,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- class SqlResultInfo ----------------------------------------------------
+		#region -- class SqlResultInfo --------------------------------------------------
 
 		private sealed class SqlResultInfo : List<Func<SqlDataReader, IEnumerable<IDataRow>>>
 		{

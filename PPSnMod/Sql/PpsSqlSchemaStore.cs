@@ -76,8 +76,8 @@ namespace TecWare.PPSn.Server.Sql
 		protected virtual void EndInit()
 			=> this.table.AddColumn(this);
 
-		protected override IPropertyEnumerableDictionary CreateAttributes() 
-			=> base.CreateAttributes();
+		protected override IPropertyEnumerableDictionary CreateAttributes()
+			=> new PpsColumnAttributes(this);
 
 		protected virtual IEnumerator<PropertyValue> GetProperties()
 		{

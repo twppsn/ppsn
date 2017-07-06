@@ -13,7 +13,7 @@
 	<!-- Change binding of the webserver here. -->
 	<?des-var-webBinding http://localhost:8080?>
 
-	<http threads="1" />
+	<http />
 	<cron />
 	<luaengine />
 

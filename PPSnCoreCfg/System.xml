@@ -240,7 +240,7 @@
 				<pps:table name="Objects">
 					<pps:meta name="syncType">ChangeTracking: dbo.ObjK</pps:meta>
 					<pps:meta name="useAsKey">Guid</pps:meta>
-					
+
 					<pps:column name="Id" fieldName="dbo.ObjK.Id" isPrimary="true" isIdentity="false" />
 					<pps:column name="Guid" fieldName="dbo.ObjK.Guid">
 						<pps:meta name="IsUnique">true</pps:meta>
@@ -250,9 +250,12 @@
 					<pps:column name="Nr" fieldName="dbo.ObjK.Nr" />
 					<pps:column name="IsRev" fieldName="dbo.ObjK.IsRev" />
 					<pps:column name="IsHidden" fieldName="dbo.ObjK.IsHidden" />
-					<pps:column name="RemoteCurRevId" fieldName="dbo.ObjK.CurRevId" />
-					<pps:column name="RemoteHeadRevId" fieldName="dbo.ObjK.HeadRevId" />
-
+					<pps:column name="RemoteCurRevId" fieldName="dbo.ObjK.CurRevId">
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="RemoteHeadRevId" fieldName="dbo.ObjK.HeadRevId" >
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
 					<pps:column name="PulledRevId" fieldName="sys.Fields.Long">
 						<pps:meta name="sourceColumn">#</pps:meta>
 						<pps:meta name="nullable">true</pps:meta>
