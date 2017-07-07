@@ -21,6 +21,9 @@ using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Data.SQLite;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -28,6 +31,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Xml;
 using System.Xml.Linq;
@@ -1205,7 +1209,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class IPpsObjectData -----------------------------------------------------
+	#region -- interface IPpsObjectData -------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -1225,84 +1229,286 @@ namespace TecWare.PPSn
 
 	public sealed class PpsObjectImageData : PpsObjectBlobData
 	{
-
+		#region privates
 		private readonly PpsObject baseObj;
 
-		new public event PropertyChangedEventHandler PropertyChanged;
+		private bool imageLoaded = false;
+		private bool previewLoaded = false;
+		private bool overlayLoaded = false;
 
+		private ImageSource image = null;
+		private ImageSource preview = null;
+		private ImageSource overlay = null;
+		#endregion
 
-		private void OnPropertyChanged(string propertyName)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+		#region consts
+		const string PreviewId = "preview";
+		const string OverlayId = "overlay";
+		const string PictureItemId = "PictureItemType";
+		#endregion
 
+		#region syncronisation
+		private static SemaphoreSlim LoadPreviewSemaphore = new SemaphoreSlim(1, 1);
+		#endregion
+
+		#region ctor
 		public PpsObjectImageData(PpsObject obj) : base(obj)
 		{
 			this.baseObj = obj;
 		}
+		#endregion
 
-		private async void Initialize()
+		#region Functionality
+
+		#region Preview
+
+		private async void LoadPreview()
 		{
-			if (!this.IsLoaded)
-				await this.LoadAsync();
-			OnPropertyChanged(nameof(PreviewImage));
-		}
+			if (baseObj == null)
+				return;
 
-		public BitmapImage GetImage()
-		{
-			if (!this.IsLoaded)
-				this.LoadAsync().Wait();
+			// semaphore prevents this imageobject from bein loaded multiple times, it the preview ist getted multiple times
+			await LoadPreviewSemaphore.WaitAsync();
 
-			var bI = new BitmapImage();
-
-			using (MemoryStream stream = new MemoryStream(this.RawData))
+			if (!PreviewLoaded)
 			{
-				bI.BeginInit();
-				bI.CacheOption = BitmapCacheOption.OnLoad;
-				bI.StreamSource = stream;
-				bI.EndInit();
-			}
+				foreach (var lnk in baseObj.Links)
+				{
+					var idx = lnk.LinkTo.Tags.IndexOf(PictureItemId);
+					if (idx >= 0 && (string)lnk.LinkTo.Tags[idx].Value == PreviewId)
+					{
+						var imgObj = await lnk.LinkTo.GetDataAsync<PpsObjectImageData>();
+						preview = imgObj.Image;
 
-			return bI;
+						imgObj.PropertyChanged += LinkedImage_PropertyChanged;
+
+						if (!imgObj.ImageLoaded)
+							PreviewLoaded = false;
+						else
+							PreviewLoaded = true;
+						break;
+					}
+				}
+
+				if (!PreviewLoaded)
+				{
+					if (imageLoaded)
+					{
+						// do not create preview, if baseimage is to huge
+						if (base.RawData.Length > 100000000)
+						{
+							LoadPreviewSemaphore.Release();
+							return;
+						}
+						// create a preview from the image
+						var scale = new ScaleTransform(image.Width / 120, image.Height / 120);
+						var thumb = new TransformedBitmap(BitmapFrame.Create((BitmapSource)image), scale);
+						var enc = new PngBitmapEncoder();
+						enc.Frames.Add(BitmapFrame.Create(thumb));
+
+						var obj = await baseObj.Environment.CreateNewObjectAsync(baseObj.Environment.ObjectInfos[PpsEnvironment.AttachmentObjectTyp]);
+
+						obj.Tags.UpdateTag(baseObj.Environment.UserId, PictureItemId, PpsObjectTagClass.Text, PreviewId);
+
+						using (var ms = new MemoryStream())
+						{
+							enc.Save(ms);
+							ms.Position = 0;
+
+							var data = await obj.GetDataAsync<PpsObjectBlobData>();
+							await data.ReadFromStreamAsync(ms, MimeTypes.Image.Png);
+							await data.CommitAsync();
+						}
+
+						baseObj.Links.AppendLink(obj, PpsObjectLinkRestriction.Delete);
+						await baseObj.UpdateLocalAsync();
+
+						preview = (await obj.GetDataAsync<PpsObjectImageData>()).Image;
+						PreviewLoaded = true;
+					}
+					else
+					{
+						PropertyChanged += CreatePreviewFromImage;
+					}
+				}
+			}
+			LoadPreviewSemaphore.Release();
 		}
 
-		public BitmapSource RawImage
+		/// <summary>
+		/// This handler is called, when the underlying image is loaded, to restart the creation of the preview
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
+		private void CreatePreviewFromImage(object sender, PropertyChangedEventArgs e)
+		{
+			if (e.PropertyName == nameof(Image))
+			{
+				PropertyChanged -= CreatePreviewFromImage;
+				LoadPreview();
+			}
+		}
+
+		/// <summary>
+		/// true, if loading is finished (does not mean there must be a valid preview)
+		/// </summary>
+		public bool PreviewLoaded { get { return previewLoaded; } set { previewLoaded = value; base.OnPropertyChanged(nameof(Preview)); } }
+
+		/// <summary>
+		/// returns the Preview if loaded - starts the loading otherwise, if preview is not set, returns Image
+		/// </summary>
+		public ImageSource Preview
 		{
 			get
 			{
-				return GetImage();
-			}
-			set
-			{
-				throw new NotImplementedException();
+				{
+					if (!PreviewLoaded)
+						LoadPreview();
+					else if (preview == null)
+						return Image;
+					return preview;
+				}
 			}
 		}
 
-		public BitmapSource Overlay
+		#endregion
+
+		#region Image
+
+		/// <summary>
+		/// requests the image from SQLite
+		/// </summary>
+		private async void LoadImage()
+		{
+			if (baseObj == null)
+				return;
+
+			if (!imageLoaded)
+			{
+				await LoadAsync().ConfigureAwait(true);
+
+				var bI = new BitmapImage();
+
+				using (MemoryStream stream = new MemoryStream(this.RawData))
+				{
+					bI.BeginInit();
+					bI.CacheOption = BitmapCacheOption.OnLoad;
+					bI.StreamSource = stream;
+					bI.EndInit();
+				}
+
+				image = bI;
+				ImageLoaded = true;
+			}
+		}
+
+		/// <summary>
+		/// true, if loading is finished (does not mean there must be a valid image)
+		/// </summary>
+		public bool ImageLoaded { get { return imageLoaded; } set { imageLoaded = value; base.OnPropertyChanged(nameof(Image)); } }
+
+		/// <summary>
+		/// returns the Image if loaded - starts the loading otherwise
+		/// </summary>
+		public ImageSource Image
 		{
 			get
 			{
-				return GetImage();
-			}
-			set
-			{
-				throw new NotImplementedException();
+				if (!imageLoaded)
+					LoadImage();
+
+				return image;
 			}
 		}
 
-		public BitmapSource PreviewImage
+		/// <summary>
+		/// used to propagate through that the underlying imageobject has changed
+		/// </summary>
+		/// <param name="sender">underlying object</param>
+		/// <param name="e">not used</param>
+		private void LinkedImage_PropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (!((PpsObjectImageData)sender).ImageLoaded)
+				return;
+
+			var idx = ((PpsObjectImageData)sender).baseObj.Tags.IndexOf(PictureItemId);
+			if (idx >= 0)
+			{
+				if ((string)((PpsObjectImageData)sender).baseObj.Tags[idx].Value == PreviewId)
+				{
+					preview = ((PpsObjectImageData)sender).Image;
+					PreviewLoaded = true;
+				}
+				if ((string)((PpsObjectImageData)sender).baseObj.Tags[idx].Value == OverlayId)
+				{
+					overlay = ((PpsObjectImageData)sender).Image;
+					OverlayLoaded = true;
+				}
+			}
+		}
+
+		#endregion
+
+		#region Overlay
+
+		/// <summary>
+		/// requests the overlay from SQLite
+		/// </summary>
+		private async void LoadOverlay()
+		{
+			if (baseObj == null)
+				return;
+
+			if (!overlayLoaded)
+			{
+				foreach (var lnk in baseObj.Links)
+				{
+					var idx = lnk.LinkTo.Tags.IndexOf(PictureItemId);
+					if (idx >= 0)
+					{
+						if ((string)lnk.LinkTo.Tags[idx].Value == OverlayId)
+						{
+							var imgObj = await lnk.LinkTo.GetDataAsync<PpsObjectImageData>().ConfigureAwait(false);
+
+							if (imgObj.ImageLoaded)
+							{
+								overlay = imgObj.Image;
+								OverlayLoaded = true;
+							}
+							else
+								imgObj.PropertyChanged += LinkedImage_PropertyChanged;
+
+							break;
+						}
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// true, if loading is finished (does not mean there must be a valid overlay)
+		/// </summary>
+		public bool OverlayLoaded { get { return overlayLoaded; } set { overlayLoaded = value; OnPropertyChanged(nameof(Overlay)); } }
+
+		/// <summary>
+		/// returns the Overlay if loaded - starts the loading otherwise
+		/// </summary>
+		public ImageSource Overlay
 		{
 			get
 			{
-				var a = GetImage();
-				var b = new WriteableBitmap(a);
-				return b;
-			}
-			set
-			{
-				throw new NotImplementedException();
+				{
+					if (!OverlayLoaded)
+						LoadOverlay();
+
+					return overlay;
+				}
 			}
 		}
 
-		public BitmapSource Image => GetImage();
+		#endregion
+
+		#endregion
 	}
 
 	#endregion
@@ -1325,7 +1531,7 @@ namespace TecWare.PPSn
 			this.baseObj = obj;
 		} // ctor
 
-		private void OnPropertyChanged(string propertyName)
+		internal void OnPropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 		public async Task LoadAsync()
@@ -1344,7 +1550,7 @@ namespace TecWare.PPSn
 			await baseObj.SaveRawDataAsync(
 				rawData.Length,
 				mimeType ?? baseObj.MimeType ?? MimeTypes.Application.OctetStream,
-				dst => dst.Write(rawData, 0, rawData.Length),
+				rawData,
 				true
 			);
 			await baseObj.UpdateLocalAsync();
@@ -1362,6 +1568,18 @@ namespace TecWare.PPSn
 			rawData = null;
 			return Task.CompletedTask;
 		} // func UnloadTask
+
+		public Task ReadFromStreamAsync(Stream stream, string mimetype)
+		{
+			mimeType = mimetype;
+
+			using (var hashStream = new HashStream(stream, HashStreamDirection.Read, false, HashAlgorithm.Create("SHA-256")))
+			{
+				rawData = hashStream.ReadInArray();
+				sha256 = StuffIO.CleanHash(BitConverter.ToString(hashStream.CheckSum));
+			}
+			return Task.CompletedTask;
+		}
 
 		public Task ReadFromFileAsync(string filename)
 		{
@@ -1884,6 +2102,35 @@ namespace TecWare.PPSn
 				}
 			}
 		} // func LoadRawDataAsync
+
+		internal async Task SaveRawDataAsync(long contentLength, string mimeType, byte[] data, bool isDocumentChanged)
+		{
+			// store the value
+			using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
+			using (var cmd = trans.CreateNativeCommand("UPDATE main.[Objects] " +
+				"SET " +
+					"MimeType = @MimeType, " +
+					"Document = @Document, " +
+					"DocumentIsLinked = 0, " +
+					"DocumentIsChanged = @DocumentIsChanged, " +
+					"_IsUpdated = 1 " +
+				"WHERE Id = @Id"))
+			{
+				cmd.AddParameter("@Id", DbType.Int64, objectId);
+				cmd.AddParameter("@MimeType", DbType.String, mimeType);
+				cmd.AddParameter("@Document", DbType.Binary, data ?? (object)DBNull.Value);
+				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, isDocumentChanged);
+
+				await cmd.ExecuteNonQueryAsync();
+
+				// set HasData to true
+				SetValue(PpsStaticObjectColumnIndex.MimeType, mimeType, false);
+				SetValue(PpsStaticObjectColumnIndex.IsDocumentChanged, isDocumentChanged, false);
+				SetValue(PpsStaticObjectColumnIndex.HasData, true, false);
+
+				trans.Commit();
+			}
+		} // proc SaveRawDataAsync
 
 		internal async Task SaveRawDataAsync(long contentLength, string mimeType, Action<Stream> data, bool isDocumentChanged)
 		{
@@ -2623,7 +2870,7 @@ namespace TecWare.PPSn
 
 				// append multi-value column
 				cmd.Append("group_concat('S' || s_all.Id || ':' || s_all.Key || ':' || s_all.Class || ':' || s_all.UserId || '=' || replace(s_all.Value, char(10), ' '), char(10)) as [Values]");
-				
+
 				// generate dynamic columns
 				foreach (var c in GetAllKeyColumns())
 				{
