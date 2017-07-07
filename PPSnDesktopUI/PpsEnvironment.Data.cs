@@ -2474,7 +2474,8 @@ namespace TecWare.PPSn
 			(typeof(Guid), "Guid", DbType.Guid),
 			(typeof(byte[]), "Blob", DbType.Binary),
 			// alt
-			(typeof(long), "Integer", DbType.Int64)
+			(typeof(long), "Integer", DbType.Int64),
+			(typeof(PpsObjectExtendedValue), "integer", DbType.Int64)
 		};
 
 		private static Type ConvertSqLiteToDataType(string dataType)
@@ -3533,34 +3534,6 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class CredentialWrapper ----------------------------------------------
-
-		private sealed class CredentialWrapper : ICredentials
-		{
-			private readonly NetworkCredential userInfo;
-
-			public CredentialWrapper(NetworkCredential userInfo)
-			{
-				this.userInfo = userInfo;
-			} // ctor
-
-			public NetworkCredential GetCredential(Uri uri, string authType)
-			{
-				if (userInfo == CredentialCache.DefaultCredentials
-					|| userInfo == CredentialCache.DefaultNetworkCredentials)
-					return userInfo;
-				else if (String.IsNullOrEmpty(userInfo.Domain))
-				{
-					// force basic, if we have no domain
-					return String.Compare(authType, "basic", StringComparison.OrdinalIgnoreCase) == 0 ? userInfo : null;
-				}
-				else
-					return userInfo;
-			} // func GetCredential
-		} // class CredentialWrapper
-
-		#endregion
-
 		#region -- class KnownDataSetDefinition -----------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
@@ -3889,7 +3862,7 @@ namespace TecWare.PPSn
 			// build the remote request with absolute uri and credentials
 			var absoluteUri = new Uri(info.Uri, relativeUri);
 			var request = WebRequest.Create(absoluteUri);
-			request.Credentials = new CredentialWrapper(userInfo); // override the current credentials
+			request.Credentials = UserCredential.Wrap(userInfo); // override the current credentials
 			request.Headers.Add("des-multiple-authentifications", "true");
 
 			Debug.Print($"WebRequest: {absoluteUri}");
