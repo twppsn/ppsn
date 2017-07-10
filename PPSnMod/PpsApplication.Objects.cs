@@ -1144,10 +1144,9 @@ namespace TecWare.PPSn.Server
 				string nr;
 				if (nextNumber == null || nextNumber is int) // fill with zeros
 				{
-					long i;
 					if (row == null || row[0] == null)
 						nr = "1"; // first number
-					else if (Int64.TryParse(row[0].ToString(), out i))
+					else if (Int64.TryParse(row[0].ToString(), out var i))
 						nr = (i + 1L).ToString(CultureInfo.InvariantCulture);
 					else
 						throw new ArgumentException($"GetNextNumber failed, could not parse '{row[0]}' to number.");
@@ -1370,8 +1369,9 @@ namespace TecWare.PPSn.Server
 			/// <param name="r"></param>
 			/// <returns></returns>
 			[LuaMember]
-			public static XmlWriter CreateXmlWriter(IDEWebRequestScope r)
+			public static XmlWriter CreateXmlWriter()
 			{
+				var r = DEScope.GetScopeService<IDEWebRequestScope>(true);
 				CheckContextArgument(r);
 				return XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, r.Http.DefaultEncoding), Procs.XmlWriterSettings);
 			} // func CreateXmlWriter
@@ -1380,8 +1380,9 @@ namespace TecWare.PPSn.Server
 			/// <param name="r"></param>
 			/// <returns></returns>
 			[LuaMember]
-			public static XmlReader CreateXmlReader(IDEWebRequestScope r)
+			public static XmlReader CreateXmlReader()
 			{
+				var r = DEScope.GetScopeService<IDEWebRequestScope>(true);
 				CheckContextArgument(r);
 				return XmlReader.Create(r.GetInputTextReader(), Procs.XmlReaderSettings);
 			} // func CreateXmlReader
@@ -1390,9 +1391,9 @@ namespace TecWare.PPSn.Server
 			/// <param name="r"></param>
 			/// <param name="x"></param>
 			[LuaMember]
-			public static void WriteXml(IDEWebRequestScope r, XElement x)
+			public static void WriteXml(XElement x)
 			{
-				using (var xml = CreateXmlWriter(r))
+				using (var xml = CreateXmlWriter())
 					x.WriteTo(xml);
 			} // proc WriteXml
 
@@ -1400,9 +1401,9 @@ namespace TecWare.PPSn.Server
 			/// <param name="r"></param>
 			/// <returns></returns>
 			[LuaMember]
-			public static XElement GetXml(IDEWebRequestScope r)
+			public static XElement GetXml()
 			{
-				using (var xml = CreateXmlReader(r))
+				using (var xml = CreateXmlReader())
 					return XElement.Load(xml);
 			} // proc WriteXml
 
@@ -1410,15 +1411,15 @@ namespace TecWare.PPSn.Server
 			/// <param name="r"></param>
 			/// <param name="t"></param>
 			[LuaMember]
-			public static void WriteTable(IDEWebRequestScope r, LuaTable t)
-				=> WriteXml(r, t.ToXml());
+			public static void WriteTable(LuaTable t)
+				=> WriteXml(t.ToXml());
 
 			/// <summary>Gets the input stream as an lua-table.</summary>
 			/// <param name="r"></param>
 			/// <returns></returns>
 			[LuaMember]
-			public static LuaTable GetTable(IDEWebRequestScope r)
-				=> Procs.CreateLuaTable(GetXml(r));
+			public static LuaTable GetTable()
+				=> Procs.CreateLuaTable(GetXml());
 		} // class PpsHttpLibrary
 
 		#endregion
