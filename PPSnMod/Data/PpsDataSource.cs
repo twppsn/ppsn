@@ -21,6 +21,8 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server.Data
 {
+	#region -- class PpsDataSource ------------------------------------------------------
+
 	public abstract class PpsDataSource : DEConfigItem
 	{
 		private readonly PpsApplication application;
@@ -77,4 +79,6 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary>Application object.</summary>
 		public PpsApplication Application => application;
 	} // class PpsDataSource
+
+	#endregion
 }

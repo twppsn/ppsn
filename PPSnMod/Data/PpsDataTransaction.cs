@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -10,6 +25,9 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server.Data
 {
+	#region -- enum PpsDataTransactionExecuteBehavior -----------------------------------
+
+	/// <summary>Descripes the resultset of an data function.</summary>
 	public enum PpsDataTransactionExecuteBehavior
 	{
 		NoResult,
@@ -17,7 +35,11 @@ namespace TecWare.PPSn.Server.Data
 		SingleResult,
 		MutliResult
 	} // enum PpsDataTransactionExecuteBehavior
-	
+
+	#endregion
+
+	#region -- class PpsDataTransaction -------------------------------------------------
+
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class PpsDataTransaction : IDisposable
@@ -122,4 +144,6 @@ namespace TecWare.PPSn.Server.Data
 		/// <summary></summary>
 		public bool? IsCommited => commited;
 	} // class PpsDataTransaction
+
+	#endregion
 }
