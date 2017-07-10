@@ -20,6 +20,7 @@ using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Text;
+using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Server.Data;
 
@@ -208,7 +209,7 @@ namespace TecWare.PPSn.Server.Sql
 	#region -- class PpsSqlTableInfo ----------------------------------------------------
 
 	[DebuggerDisplay("{DebuggerDisplay,nq}")]
-	public abstract class PpsSqlTableInfo
+	public abstract class PpsSqlTableInfo : IDataColumns
 	{
 		private readonly string schemaName;
 		private readonly string tableName;
@@ -258,6 +259,8 @@ namespace TecWare.PPSn.Server.Sql
 
 		public IEnumerable<PpsSqlColumnInfo> Columns => columns;
 		public IEnumerable<PpsSqlRelationInfo> RelationInfo => relations;
+
+		IReadOnlyList<IDataColumn> IDataColumns.Columns => columns;
 	} // class PpsSqlTableInfo
 
 	#endregion
