@@ -560,6 +560,138 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
+		#region -- class SqlJoinExpression -----------------------------------------------
+
+		public sealed class SqlJoinExpression : PpsDataJoinExpression<PpsSqlTableInfo>
+		{
+			#region -- class SqlEmitVisitor ---------------------------------------------
+
+			private sealed class SqlEmitVisitor : PpsJoinVisitor<string>
+			{
+				public override string CreateJoinStatement(string leftExpression, PpsDataJoinType type, string rightExpression, string on)
+				{
+					string GetJoinExpr()
+					{
+						switch(type)
+						{
+							case PpsDataJoinType.Inner:
+								return " INNER JOIN ";
+							case PpsDataJoinType.Left:
+								return " LEFT OUTER JOIN ";
+							case PpsDataJoinType.Right:
+								return " RIGHT OUTER JOIN ";
+							default:
+								throw new ArgumentException(nameof(type));
+						}
+					} // func GetJoinExpr
+
+					return "(" + leftExpression + GetJoinExpr() + rightExpression + " ON (" + on + "))";
+				} // func CreateJoinStatement
+
+				public override string CreateTableStatement(PpsSqlTableInfo table, string alias)
+				{
+					if (String.IsNullOrEmpty(alias))
+						return table.QuallifiedName;
+					else
+						return table.QuallifiedName + " AS " + alias;
+				} // func CreateTableStatement
+			} // class SqlEmitVisitor
+
+			#endregion
+
+			private readonly PpsSqlExDataSource dataSource;
+
+			public SqlJoinExpression(PpsSqlExDataSource dataSource)
+			{
+				this.dataSource = dataSource;
+			} // ctor
+
+			protected override PpsSqlTableInfo ResolveTable(string tableName)
+				=> dataSource.ResolveTableByName(tableName, true);
+
+			protected override string CreateOnStatement(PpsTableExpression left, PpsDataJoinType joinOp, PpsTableExpression right)
+			{
+				foreach (var r in right.Table.RelationInfo)
+				{
+					if (r.ReferencedColumn.Table == left.Table)
+					{
+						var sb = new StringBuilder();
+						AppendColumn(sb, left, r.ReferencedColumn);
+						sb.Append(" = ");
+						AppendColumn(sb, right, r.ParentColumn);
+						return sb.ToString();
+					}
+				}
+				return null;
+			} // func CreateOnStatement
+
+			private void SplitColumnName(string name, out string alias, out string columnName)
+			{
+				var p = name.IndexOf('.'); // alias?
+				if (p >= 0)
+				{
+					alias = name.Substring(0, p);
+					columnName = name.Substring(p + 1);
+				}
+				else
+				{
+					alias = null;
+					columnName = name;
+				}
+			} // func SplitColumnName
+
+			public (PpsTableExpression, PpsSqlColumnInfo) FindColumn(IPpsColumnDescription ppsColumn, bool throwException)
+			{
+				foreach (var t in GetTables())
+				{
+					if (ppsColumn.TryGetColumnDescriptionImplementation<PpsSqlColumnInfo>(out var sqlColumn) && t.Table == sqlColumn.Table)
+						return (t, sqlColumn);
+				}
+
+				if (throwException)
+					throw new ArgumentException($"Column not found ({ppsColumn.Name}).");
+
+				return (null, null);
+			} // func FindColumn
+
+			public (PpsTableExpression, PpsSqlColumnInfo) FindColumn(string name, bool throwException)
+			{
+				SplitColumnName(name, out var alias, out var columnName);
+				foreach (var t in GetTables())
+				{
+					if (alias != null)
+					{
+						if (t.Alias != null && String.Compare(alias, t.Alias, StringComparison.OrdinalIgnoreCase) == 0)
+							return (t, t.Table.FindColumn(columnName, throwException));
+					}
+					else
+					{
+						var c = t.Table.FindColumn(columnName, false);
+						if (c != null)
+							return (t, c);
+					}
+				}
+
+				if (throwException)
+					throw new ArgumentException($"Column not found ({name}).");
+
+				return (null, null);
+			} // func FindColumn
+
+			public void AppendColumn(StringBuilder commandText, PpsTableExpression table, PpsSqlColumnInfo column)
+			{
+				if (String.IsNullOrEmpty(table.Alias))
+					commandText.Append(table.Table.QuallifiedName + "." + column.Name);
+				else
+					commandText.Append(table.Alias + "." + column.Name);
+			} // proc AppendColumn
+
+			public string EmitJoin()
+				=> new SqlEmitVisitor().Visit(this);
+		} // class SqlJoinExpression
+
+		#endregion
+
 		#region -- class SqlDataTransaction ---------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
@@ -964,22 +1096,13 @@ namespace TecWare.PPSn.Server.Sql
 					if (!rowEnumerator.MoveNext())
 					{
 						rowEnumerator.Dispose();
-						throw new ArgumentException("");
+						throw new ArgumentException("Empty result.");
 					}
 						return rowEnumerator;
-				}
+				} // func GetTableRowEnum
 
-				if (parameter.GetMemberValue("rows") is IEnumerable<PpsDataRow> rows) // from DataTable
+				void CreateColumnMapping(IReadOnlyCollection<IDataColumn> columns)
 				{
-					var rowEnumerator = rows.GetEnumerator();
-					if (!rowEnumerator.MoveNext()) // no arguments defined
-					{
-						rowEnumerator.Dispose();
-						return (null, null); // silent return nothing
-					}
-
-					// map the columns
-					var columns = ((IDataColumns)rowEnumerator.Current).Columns;
 					foreach (var c in columns)
 					{
 						if (c is IPpsColumnDescription t)
@@ -991,7 +1114,19 @@ namespace TecWare.PPSn.Server.Sql
 								columnMapping.Add(new PpsColumnMapping(nativeColumn, row => ((PpsDataRow)row)[idx], (row, value) => ((PpsDataRow)row)[idx] = value));
 						}
 					}
+				} // proc CreateColumnMapping
 
+				if (parameter.GetMemberValue("rows") is IEnumerable<PpsDataRow> rows) // from DataTable
+				{
+					var rowEnumerator = rows.GetEnumerator();
+					if (!rowEnumerator.MoveNext()) // no arguments defined
+					{
+						rowEnumerator.Dispose();
+						return (null, null); // silent return nothing
+					}
+
+					// map the columns
+					CreateColumnMapping(((IDataColumns)rowEnumerator.Current).Columns);
 					CheckColumnMapping();
 
 					return (rowEnumerator, columnMapping.ToArray());
@@ -1004,6 +1139,13 @@ namespace TecWare.PPSn.Server.Sql
 							columnMapping.Add(new PpsColumnMapping(tableInfo.FindColumn(columnName, true), row => ((LuaTable)row)[columnName], (row, obj) => ((LuaTable)row)[columnName] = obj));
 					}
 
+					CheckColumnMapping();
+
+					return (GetTableRowEnum(), columnMapping.ToArray());
+				}
+				else if(parameter["columnList"] is IDataColumns columnDefinition) // from a "column"-list
+				{
+					CreateColumnMapping(columnDefinition.Columns);
 					CheckColumnMapping();
 
 					return (GetTableRowEnum(), columnMapping.ToArray());
@@ -1159,8 +1301,7 @@ namespace TecWare.PPSn.Server.Sql
 					// delete, or update to deleted?
 
 					#endregion
-
-
+					
 					#region -- output --
 					commandText.Append("OUTPUT ");
 					first = true;
@@ -1199,6 +1340,8 @@ namespace TecWare.PPSn.Server.Sql
 								var col = columnMapping.FirstOrDefault(c => c.ColumnName == r.GetName(i));
 								if (col != null)
 									col.UpdateValue(currentRow, r.GetValue(i).NullIfDBNull());
+								else if (currentRow is LuaTable t)
+									t[r.GetName(i)] = r.GetValue(i);
 							}
 						}
 					} while (rowEnumerator.MoveNext());
@@ -1219,80 +1362,199 @@ namespace TecWare.PPSn.Server.Sql
 
 			#region -- ExecuteSimpleSelect --------------------------------------------------
 
+			#region -- class DefaultRowEnumerable -------------------------------------------
+
+			private sealed class DefaultRowEnumerable : IEnumerable<IDataRow>
+			{
+				private sealed class DefaultValueRow : DynamicDataRow
+				{
+					private readonly IDataRow current;
+					private readonly LuaTable defaults;
+
+					public DefaultValueRow(LuaTable defaults, IDataRow current)
+					{
+						this.defaults = defaults;
+						this.current = current;
+					} // ctor
+
+					private object GetDefaultValue(IDataRow current, int index)
+					{
+						var memberName = current.Columns[index].Name;
+						var value = defaults.GetMemberValue(memberName);
+
+						if (Lua.RtInvokeable(value))
+							return new LuaResult(Lua.RtInvoke(value, current))[0];
+						else
+							return value;
+					} // func GetDefaultValue
+
+					public override object this[int index] => current[index] ?? GetDefaultValue(current, index);
+
+					public override bool IsDataOwner => current.IsDataOwner;
+					public override IReadOnlyList<IDataColumn> Columns => current.Columns;
+				} // class DefaultValueRow
+
+				private sealed class DefaultRowEnumerator : IEnumerator<IDataRow>
+				{
+					private readonly LuaTable defaults;
+					private readonly IEnumerator<IDataRow> enumerator;
+
+					public DefaultRowEnumerator(LuaTable defaults, IEnumerator<IDataRow> enumerator)
+					{
+						this.defaults = defaults ?? throw new ArgumentNullException(nameof(defaults));
+						this.enumerator = enumerator ?? throw new ArgumentNullException(nameof(enumerator));
+					} // ctor
+
+					public void Dispose() 
+						=> enumerator.Dispose();
+
+					public bool MoveNext()
+						=> enumerator.MoveNext();
+
+					public void Reset()
+						=> enumerator.Reset();
+
+					public IDataRow Current => new DefaultValueRow(defaults, enumerator.Current);
+					object IEnumerator.Current => Current;
+				} // class DefaultRowEnumerator
+
+				private readonly LuaTable defaults;
+				private readonly IEnumerable<IDataRow> rowEnumerable;
+
+				public DefaultRowEnumerable(LuaTable defaults, IEnumerable<IDataRow> rowEnumerable)
+				{
+					this.defaults = defaults;
+					this.rowEnumerable = rowEnumerable;
+				} // ctor
+
+				public IEnumerator<IDataRow> GetEnumerator()
+					=> new DefaultRowEnumerator(defaults, rowEnumerable.GetEnumerator());
+
+				IEnumerator IEnumerable.GetEnumerator() 
+					=> GetEnumerator();
+			} // class DefaultRowEnumerable
+
+			#endregion
+
 			private IEnumerable<IEnumerable<IDataRow>> ExecuteSimpleSelect(LuaTable parameter, string name, PpsDataTransactionExecuteBehavior behavior)
 			{
 				/*
 				 * select @cols from @name where @args
 				 */
 
-				// find the connected table
-				var tableInfo = SqlDataSource.ResolveTableByName(name, true);
+				// collect tables
+				var tableInfos = new SqlJoinExpression(SqlDataSource);
+				tableInfos.Parse(name);
 
+				var defaults = GetArguments(parameter.GetMemberValue("defaults"), false);
+				
 				using (var cmd = CreateCommand(parameter, CommandType.Text))
 				{
 					var first = true;
 					var commandText = new StringBuilder("SELECT ");
 
 					#region -- select List --
-					var selectList = GetArguments(parameter.GetMemberValue("selectList"), false);
-					if (selectList == null)
+					var columnList = GetArguments(parameter.GetMemberValue("columnList"), false);
+					if (columnList == null) // no columns, simulate a select *
 					{
-						foreach (var col in tableInfo.Columns)
+						foreach (var table in tableInfos.GetTables())
+						{
+							foreach (var column in table.Table.Columns)
+							{
+								if (first)
+									first = false;
+								else
+									commandText.Append(", ");
+
+								tableInfos.AppendColumn(commandText, table, column);
+							}
+						}
+					}
+					else if (columnList is LuaTable t) // columns are definied in a table
+					{
+						foreach (var item in columnList.ArrayList)
 						{
 							if (first)
 								first = false;
 							else
 								commandText.Append(", ");
-							col.AppendAsColumn(commandText);
+
+							var (table, column) = tableInfos.FindColumn((string)item, true);
+							if (column == null)
+								commandText.Append("NULL AS [").Append(item).Append(']');
+							else
+								tableInfos.AppendColumn(commandText, table, column);
+						}
+						foreach (var m in columnList.Members)
+						{
+							if (first)
+								first = false;
+							else
+								commandText.Append(", ");
+
+							var (table, column) = tableInfos.FindColumn((string)m.Key, true);
+							tableInfos.AppendColumn(commandText, table, column);
+							commandText.Append(" AS [").Append(m.Value).Append(']');
+						}
+					}
+					else if (columnList is IDataColumns forcedColumns) // column set is forced
+					{
+						foreach(var col in forcedColumns.Columns)
+						{
+							if (first)
+								first = false;
+							else
+								commandText.Append(", ");
+
+							var (table, column) = col is IPpsColumnDescription ppsColumn
+								? tableInfos.FindColumn(ppsColumn, defaults == null)
+								: tableInfos.FindColumn(col.Name, defaults == null);
+
+							if (column == null)
+							{
+								if (col is IPpsColumnDescription ppsColumn1 && ppsColumn1.TryGetColumnDescriptionImplementation<PpsSqlColumnInfo>(out var sqlColumn))
+								{
+									sqlColumn.AppendSqlParameter(cmd);
+									sqlColumn.AppendAsParameter(commandText);
+								}
+								else
+									throw new ArgumentException($"Column error {col.Name}");
+							}
+							else
+								tableInfos.AppendColumn(commandText, table, column);
+							commandText.Append(" AS [").Append(col.Name).Append(']');
 						}
 					}
 					else
-					{
-						foreach (var item in selectList.ArrayList)
-						{
-							if (first)
-								first = false;
-							else
-								commandText.Append(", ");
-
-							var col = tableInfo.FindColumn((string)item, true);
-							col.AppendAsColumn(commandText);
-						}
-						foreach (var m in selectList.Members)
-						{
-							if (first)
-								first = false;
-							else
-								commandText.Append(", ");
-
-							var col = tableInfo.FindColumn((string)m.Key, true);
-							col.AppendAsColumn(commandText)
-								.Append(" AS [").Append(m.Value).Append(']');
-						}
-					}
+						throw new ArgumentException("Unknown columnList definition.");
 					#endregion
 
 					// append from
-					commandText.Append(" FROM ")
-						.Append(tableInfo.QuallifiedName).Append(' ')
-						.Append(" WHERE ");
+					commandText.Append(" FROM ");
+					commandText.Append(tableInfos.EmitJoin());
 
 					// get where arguments
-					var args = GetArguments(parameter, 1, true);
-					first = true;
-					foreach (var p in args.Members)
+					var args = GetArguments(parameter, 1, false);
+					if (args != null)
 					{
-						if (first)
-							first = false;
-						else
-							commandText.Append(" AND ");
+						commandText.Append(" WHERE ");
+						first = true;
+						foreach (var p in args.Members)
+						{
+							if (first)
+								first = false;
+							else
+								commandText.Append(" AND ");
 
-						var col = tableInfo.FindColumn(p.Key, true);
-						col.AppendSqlParameter(cmd, value: p.Value);
-						col.AppendAsColumn(commandText)
-							.Append(" = ");
-						col.AppendAsParameter(commandText);
+							var (table, column) = tableInfos.FindColumn((string)p.Key, true);
+							column.AppendSqlParameter(cmd, value: p.Value);
+							tableInfos.AppendColumn(commandText, table, column);
+							commandText.Append(" = ");
+							column.AppendAsParameter(commandText);
+						}
 					}
+					else if (parameter.GetMemberValue("where") is string sqlWhere)
+						commandText.Append(" WHERE ").Append(sqlWhere);
 
 					cmd.CommandText = commandText.ToString();
 
@@ -1303,7 +1565,11 @@ namespace TecWare.PPSn.Server.Sql
 						{
 							do
 							{
-								yield return new DbRowReaderEnumerable(r);
+								if (defaults != null)
+									yield return new DefaultRowEnumerable(defaults, new DbRowReaderEnumerable(r));
+								else
+									yield return new DbRowReaderEnumerable(r);
+
 								if (behavior == PpsDataTransactionExecuteBehavior.SingleResult)
 									break;
 							} while (r.NextResult());
