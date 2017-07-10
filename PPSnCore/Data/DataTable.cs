@@ -1116,18 +1116,15 @@ namespace TecWare.PPSn.Data
 		public object[] GetDataRowValues(IPropertyReadOnlyDictionary properties)
 		{
 			var values = new object[Columns.Count];
-			for (int i = 0; i < Columns.Count; i++)
-			{
-				object v;
-				values[i] = properties.TryGetProperty(Columns[i].Name, out v) ? v : null;
-			}
+			for (var i = 0; i < Columns.Count; i++)
+				values[i] = properties.TryGetProperty(Columns[i].Name, out var v) ? v : null;
 			return values;
 		} // func GetDataRowValues
 
 		public object[] GetDataRowValues(LuaTable table)
 		{
 			var values = new object[Columns.Count];
-			for (int i = 0; i < Columns.Count; i++)
+			for (var i = 0; i < Columns.Count; i++)
 				values[i] = table.GetMemberValue(Columns[i].Name);
 			return values;
 		} // func GetDataRowValues
@@ -1170,6 +1167,44 @@ namespace TecWare.PPSn.Data
 			}
 			return AddInternal(false, NewRow(values, null));
 		} // func Add
+
+		private void AddRangeDataRows(IEnumerable<IDataRow> newRows)
+		{
+			var columnMapping = (int[])null;
+
+			foreach (var r in newRows)
+			{
+				if (columnMapping == null) // create mapping, we assume all rows have an equal column set
+				{
+					columnMapping = new int[Columns.Count];
+					for (var i = 0; i < columnMapping.Length; i++)
+						columnMapping[i] = r.FindColumnIndex(Columns[i].Name, false);
+				}
+
+				// create values array
+				var values = new object[columnMapping.Length];
+				for (var i = 0; i < columnMapping.Length; i++)
+				{
+					var idx = columnMapping[i];
+					values[i] = idx == -1 ? null : r[idx];
+				}
+
+				// add row
+				AddInternal(false, NewRow(null, values));
+			}
+		} // proc AddRangeDataRows
+
+		public void AddRange(IEnumerable<IPropertyReadOnlyDictionary> newRows)
+		{
+
+			if (newRows is IEnumerable<IDataRow> newDataRows)
+				AddRangeDataRows(newDataRows);
+			else
+			{
+				foreach (var r in newRows)
+					Add(r);
+			}
+		} // proc AddRange
 
 		PpsDataRow IPpsDataView.NewRow(object[] originalValues, object[] currentValues)
 			=> NewRow(originalValues, currentValues);
