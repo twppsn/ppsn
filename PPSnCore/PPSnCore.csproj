@@ -39,6 +39,7 @@
     <Compile Include="Data\DataFilterOrderExpressions.cs" />
     <Compile Include="Data\DataFormattedStringValue.cs" />
     <Compile Include="Data\DataHelper.cs" />
+    <Compile Include="Data\DataJoinExpressions.cs" />
     <Compile Include="Data\DataRow.cs" />
     <Compile Include="Data\DataSet.cs" />
     <Compile Include="Data\DataTable.cs" />

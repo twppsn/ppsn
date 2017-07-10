@@ -876,12 +876,9 @@ namespace TecWare.PPSn.Data
 		public PpsDataFilterCompareExpression(string operand, PpsDataFilterCompareOperator op, PpsDataFilterCompareValue value)
 			:base (PpsDataFilterExpressionType.Compare)
 		{
-			if (value == null)
-				throw new ArgumentNullException("value");
-
 			this.operand = operand;
 			this.op = op;
-			this.value = value;
+			this.value = value ?? throw new ArgumentNullException("value");
 		} // ctor
 
 		public override void ToString(StringBuilder sb)
