@@ -106,9 +106,6 @@
     <Build Include="Stuff\ObjectRevisions.sql" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="PPSn03.publish.xml" />
-  </ItemGroup>
-  <ItemGroup>
     <RefactorLog Include="PPSnMaster.refactorlog" />
   </ItemGroup>
   <ItemGroup>
