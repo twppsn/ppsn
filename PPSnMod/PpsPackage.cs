@@ -24,19 +24,18 @@ namespace TecWare.PPSn.Server
 		public virtual IEnumerable<PpsApplicationFileItem> GetApplicationFiles()
 		{
 			// check the LuaTable "ApplicationFiles"
-			var applicationFileProvider = GetMemberValue(LuaApplicationFiles, rawGet: true) as LuaTable;
-
-			if (applicationFileProvider != null)
+			if (GetMemberValue(LuaApplicationFiles, rawGet: true) is LuaTable applicationFileProvider)
 			{
 				foreach (var c in applicationFileProvider)
 				{
-					var item = c.Value as LuaTable;
-					if (item != null)
+					if (c.Value is LuaTable item)
 					{
 						var path = item.GetOptionalValue<string>("path", String.Empty);
 						if (!String.IsNullOrEmpty(path))
 						{
-							path = Name + "/" + path;
+							path = path[0] == '/'
+								? path.Substring(1)
+								: Name + "/" + path;
 
 							yield return new PpsApplicationFileItem(path,
 								item.ReturnOptionalValue<long>("length", -1),
