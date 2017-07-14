@@ -1608,10 +1608,13 @@ namespace TecWare.PPSn.Server.Sql
 					// execute
 					using (var r = ExecuteReaderCommand(cmd, behavior))
 					{
-						do
+						if (r != null)
 						{
-							yield return new DbRowReaderEnumerable(r);
-						} while (r.NextResult());
+							do
+							{
+								yield return new DbRowReaderEnumerable(r);
+							} while (r.NextResult());
+						}
 					}
 				}
 			} // func ExecuteSql
