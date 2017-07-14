@@ -26,7 +26,6 @@ using Microsoft.Win32;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using System.Collections.Specialized;
-using dpmLaptolex.PPSn.PictureEditor;
 using System.ComponentModel;
 
 namespace TecWare.PPSn.Controls
@@ -155,9 +154,6 @@ namespace TecWare.PPSn.Controls
 					new CommandBinding(CameraAttachmentCommand,
 						(isender, ie) =>
 						{
-							var dialog = new PictureEditorDialog(AttachmentsSource, true);
-							dialog.Owner = Application.Current.Windows[0];
-							dialog.ShowDialog();
 						},
 						(isender, ie) => ie.CanExecute = true
 					)
