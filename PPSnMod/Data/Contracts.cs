@@ -106,26 +106,21 @@ namespace TecWare.PPSn.Server.Data
 
 		private sealed class PpsWindowsIdentity : PpsUserIdentity
 		{
-			private readonly WindowsIdentity identity;
+			private readonly SecurityIdentifier identityId;
+			private readonly NTAccount identityAccount;
 
-			public PpsWindowsIdentity(string userName)
+			public PpsWindowsIdentity(string domainName, string userName)
 			{
-				this.identity = new WindowsIdentity(userName);
+				this.identityAccount = new NTAccount(domainName, userName);
+				this.identityId = (SecurityIdentifier)identityAccount.Translate(typeof(SecurityIdentifier));
 			} // ctor
-
-			protected override void Dispose(bool disposing)
-			{
-				if (disposing)
-					identity.Dispose();
-				base.Dispose(disposing);
-			} // proc Dispose
 
 			public override bool Equals(IIdentity other)
 			{
 				if (other is WindowsIdentity checkWindows && checkWindows.IsAuthenticated)
-					return identity.User == checkWindows.User;
+					return identityId == checkWindows.User;
 				else if (other is PpsWindowsIdentity checkWin)
-					return identity.User == checkWin.identity.User;
+					return identityId == checkWin.identityId;
 				else
 					return false;
 			} // func Equals
@@ -133,8 +128,8 @@ namespace TecWare.PPSn.Server.Data
 			protected override PpsCredentials GetCredentialsFromIdentityCore(IIdentity identity)
 				=> identity is WindowsIdentity w ? new PpsIntegratedCredentials(w, true) : null;
 
-			public override string Name => identity.Name;
-			public override bool IsAuthenticated => identity.IsAuthenticated;
+			public override string Name => identityAccount.ToString();
+			public override bool IsAuthenticated => false;
 		} // class PpsWindowsIdentity
 
 		#endregion
@@ -195,8 +190,8 @@ namespace TecWare.PPSn.Server.Data
 		{
 			var p = userName.IndexOf('\\');
 			return p == -1
-				? new PpsWindowsIdentity(userName)
-				: new PpsWindowsIdentity(userName.Substring(p + 1) + "@" + userName.Substring(0, p));
+				? new PpsWindowsIdentity(null, userName)
+				: new PpsWindowsIdentity(userName.Substring(0, p),userName.Substring(p + 1) );
 		} // func CreateIntegratedIdentity
 	} // class PpsUserIdentity
 
