@@ -1454,7 +1454,7 @@ namespace TecWare.PPSn.Server.Sql
 					var commandText = new StringBuilder("SELECT ");
 
 					#region -- select List --
-					var columnList = GetArguments(parameter.GetMemberValue("columnList"), false);
+					var columnList = parameter.GetMemberValue("columnList");
 					if (columnList == null) // no columns, simulate a select *
 					{
 						foreach (var table in tableInfos.GetTables())
@@ -1472,7 +1472,7 @@ namespace TecWare.PPSn.Server.Sql
 					}
 					else if (columnList is LuaTable t) // columns are definied in a table
 					{
-						foreach (var item in columnList.ArrayList)
+						foreach (var item in t.ArrayList)
 						{
 							if (first)
 								first = false;
@@ -1485,7 +1485,7 @@ namespace TecWare.PPSn.Server.Sql
 							else
 								tableInfos.AppendColumn(commandText, table, column);
 						}
-						foreach (var m in columnList.Members)
+						foreach (var m in t.Members)
 						{
 							if (first)
 								first = false;

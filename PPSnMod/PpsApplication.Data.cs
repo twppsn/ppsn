@@ -322,6 +322,12 @@ namespace TecWare.PPSn.Server
 			}
 		} // func TryGetAttributeBasedProperty
 
+		private PropertyValue GetPropertyFromElement(string propertyName)
+			=> GetPropertyFromElement(
+					xDefinition.Elements(xnFieldAttribute)
+						.FirstOrDefault(c => String.Compare(c.GetAttribute<string>("name", null), propertyName, StringComparison.OrdinalIgnoreCase) == 0)
+				);
+
 		private PropertyValue GetProperty(string propertyName)
 		{
 			bool TryGetAttributeBasedPropertyLocal(string attributeName, Type propertyType, out PropertyValue r)
@@ -344,10 +350,7 @@ namespace TecWare.PPSn.Server
 				return ret;
 
 			// search for a attribute field, with the specific name
-			ret = GetPropertyFromElement(
-				xDefinition.Elements(xnFieldAttribute)
-					.FirstOrDefault(c => String.Compare(c.GetAttribute<string>("name", null), propertyName, StringComparison.OrdinalIgnoreCase) == 0)
-			);
+			ret = GetPropertyFromElement(propertyName);
 			if (ret != null)
 				return ret;
 
