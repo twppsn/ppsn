@@ -11,6 +11,9 @@
 		<access id="root" scheme="ntlm negotiate basic none">$(webBinding)/</access>
 		<access id="ppsnInfo" scheme="none">$(webBinding)/ppsn/info.xml</access>
 		<access id="ppsnWpf" scheme="ntlm negotiate basic none">$(webBinding)/ppsn/wpf/</access>
+
+		<mime ext=".dll" mime="application/octet" />
+		<mime ext=".pdb" mime="application/octet" />
 	</http>
 
 	<luaengine script="LuaDebug">

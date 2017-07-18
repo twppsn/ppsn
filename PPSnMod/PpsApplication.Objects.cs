@@ -834,7 +834,7 @@ namespace TecWare.PPSn.Server
 	#region -- class PpsObjectItem ------------------------------------------------------
 
 	/// <summary>Base class for all objects, that can be processed from the server.</summary>
-	public abstract class PpsObjectItem<T> : DEConfigItem, IPpsObjectItem
+	public abstract class PpsObjectItem<T> : PpsPackage, IPpsObjectItem
 		where T : class
 	{
 		private readonly PpsApplication application;
