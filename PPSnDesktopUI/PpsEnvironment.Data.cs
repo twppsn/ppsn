@@ -1669,6 +1669,7 @@ namespace TecWare.PPSn
 			} // func CreateContentStream
 
 			public override Uri RequestUri => originalUri;
+			public override IWebProxy Proxy { get => null; set { } }
 		} // class PpsLocalStoreRequest
 
 		#endregion
