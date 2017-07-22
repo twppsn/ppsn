@@ -143,8 +143,25 @@ namespace TecWare.PPSn.Server.Sql
 		public virtual StringBuilder AppendAsParameter(StringBuilder sb)
 			=> sb.Append('@').Append(Name);
 
-		public virtual StringBuilder AppendAsColumn(StringBuilder sb)
-			=> sb.Append('[').Append(Name).Append(']');
+		protected virtual void AppendColumnName(StringBuilder sb)
+		{
+			sb.Append('[').Append(Name).Append(']');
+		} // proc AppendColumnName
+
+		public StringBuilder AppendAsColumn(StringBuilder sb, bool fullQualified = false)
+		{
+			if (fullQualified) // add table
+				sb.Append(Table.QuallifiedName).Append('.');
+			AppendColumnName(sb);
+			return sb;
+		} // func AppendAsColumn
+
+		public StringBuilder AppendAsColumn(StringBuilder sb, string aliasName)
+		{
+			sb.Append(aliasName).Append('.');
+			AppendColumnName(sb);
+			return sb;
+		} // proc AppendAsColumn
 
 		protected virtual void InitSqlParameter(DbParameter parameter, string parameterName, object value)
 		{
@@ -175,7 +192,18 @@ namespace TecWare.PPSn.Server.Sql
 		public bool Nullable => isNullable;
 		public bool IsIdentity => isIdentity;
 		public bool IsPrimary => table.IsPrimaryKeyColumn(this);
-	} // class PpsSqlTableInfo
+
+		public static string GetColumnName(string columnName)
+		{
+			if (String.IsNullOrEmpty(columnName))
+				return columnName;
+
+			var pos = columnName.LastIndexOf('.');
+			return pos == -1
+				? columnName
+				: columnName.Substring(pos + 1);
+		} // func GetColumnName
+	} // class PpsSqlColumnInfo
 
 	#endregion
 

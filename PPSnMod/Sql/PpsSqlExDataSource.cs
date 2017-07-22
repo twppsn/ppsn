@@ -560,7 +560,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- class SqlJoinExpression -----------------------------------------------
+		#region -- class SqlJoinExpression ----------------------------------------------
 
 		public sealed class SqlJoinExpression : PpsDataJoinExpression<PpsSqlTableInfo>
 		{
@@ -678,13 +678,10 @@ namespace TecWare.PPSn.Server.Sql
 				return (null, null);
 			} // func FindColumn
 
-			public void AppendColumn(StringBuilder commandText, PpsTableExpression table, PpsSqlColumnInfo column)
-			{
-				if (String.IsNullOrEmpty(table.Alias))
-					commandText.Append(table.Table.QuallifiedName + "." + column.Name);
-				else
-					commandText.Append(table.Alias + "." + column.Name);
-			} // proc AppendColumn
+			public StringBuilder AppendColumn(StringBuilder commandText, PpsTableExpression table, PpsSqlColumnInfo column)
+				=> String.IsNullOrEmpty(table.Alias)
+					? column.AppendAsColumn(commandText, true)
+					: column.AppendAsColumn(commandText, table.Alias);
 
 			public string EmitJoin()
 				=> new SqlEmitVisitor().Visit(this);
@@ -747,6 +744,7 @@ namespace TecWare.PPSn.Server.Sql
 			#endregion
 
 			private readonly SqlConnection connection;
+			private bool? isCommitted = null;
 			private readonly SqlTransaction transaction;
 
 			#region -- Ctor/Dtor --------------------------------------------------------
@@ -773,7 +771,8 @@ namespace TecWare.PPSn.Server.Sql
 
 			public override void Commit()
 			{
-				transaction.Commit();
+				if (!IsCommited.HasValue)
+					transaction.Commit();
 				base.Commit();
 			} // proc Commit
 
@@ -781,7 +780,8 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				try
 				{
-					transaction.Rollback();
+					if (!IsCommited.HasValue)
+						transaction.Rollback();
 				}
 				finally
 				{

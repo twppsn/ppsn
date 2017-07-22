@@ -184,12 +184,12 @@ namespace TecWare.PPSn.Server
 
 			// commit all to orignal
 			data.Commit();
-			
-			obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
-			obj.Update(false);
 
 			// actions after push
 			CallTableMethods(LuaOnAfterPush, obj, data);
+
+			obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
+			obj.Update(false);
 
 			return true;
 		} // func PushData
@@ -279,7 +279,7 @@ namespace TecWare.PPSn.Server
 				var firstRow = headTable.First;
 				if (firstRow != null)
 				{
-					var columnId = headTable.Columns.FirstOrDefault(c => String.Compare(c.Name, "Id", StringComparison.OrdinalIgnoreCase) == 0);
+					var columnId = headTable.Columns.FirstOrDefault(c => String.Compare(c.Name, "ObjKId", StringComparison.OrdinalIgnoreCase) == 0);
 					var columnRevId = headTable.Columns.FirstOrDefault(c => String.Compare(c.Name, "RevId", StringComparison.OrdinalIgnoreCase) == 0);
 					if (columnId != null)
 						firstRow[columnId.Index] = obj.Id;

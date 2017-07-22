@@ -67,6 +67,7 @@
 			<xs:enumeration value="nullable" />
 			<xs:enumeration value="default" />
 			<xs:enumeration value="sourceColumn" />
+			<xs:enumeration value="refTable" />
 		</xs:restriction>
 	</xs:simpleType>
 

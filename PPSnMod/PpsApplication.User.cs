@@ -264,6 +264,8 @@ namespace TecWare.PPSn.Server
 			{
 				if (String.IsNullOrEmpty(securityToken) || userId == sysUserId)
 					return true;
+				else if (securityToken == "user")
+					return true;
 
 				lock (connections)
 					return Array.BinarySearch(securityTokens, securityToken.ToLower()) >= 0;

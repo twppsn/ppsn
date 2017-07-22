@@ -1,10 +1,10 @@
 ﻿
-local function GetNextNumber(trans, lastNr, dataset) : string
+local function GetNextNumber(lastNr, dataset) : string
 	local curNr = lastNr and lastNr:sub(2) or 0;
 	return "K" .. (curNr + 1):ToString("000000");
 end;
 
-local function mergeToSql(obj, data)
+function mergeContactToSql(obj, data)
 
 	trans = Db.Main;
 
@@ -31,4 +31,4 @@ end;
 NextNumber = GetNextNumber;
 
 -- auto merge data
-OnAfterPush["sds.contacts"] = mergeToSql;
+OnAfterPush["sds.contacts"] = mergeContactToSql;

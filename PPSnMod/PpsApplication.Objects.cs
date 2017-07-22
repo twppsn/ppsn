@@ -168,7 +168,7 @@ namespace TecWare.PPSn.Server
 	/// <summary>This class defines a interface to access pps-object model. Some properties are late bound. So, wait for closing the transaction.</summary>
 	public sealed class PpsObjectAccess : LuaTable
 	{
-		private readonly PpsDataTransaction transaction;
+		private readonly PpsApplication application;
 		private readonly IPropertyReadOnlyDictionary defaultData;
 		private long objectId;
 
@@ -178,9 +178,9 @@ namespace TecWare.PPSn.Server
 		private List<PpsObjectLinkAccess> linksTo = null;
 		private List<PpsObjectTagAccess> tags = null;
 
-		internal PpsObjectAccess(PpsDataTransaction transaction, IPropertyReadOnlyDictionary defaultData)
+		internal PpsObjectAccess(PpsApplication application, IPropertyReadOnlyDictionary defaultData)
 		{
-			this.transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+			this.application = application;
 			this.defaultData = defaultData;
 
 			this.objectId = defaultData.GetProperty(nameof(Id), -1L);
@@ -213,7 +213,7 @@ namespace TecWare.PPSn.Server
 				}
 			};
 
-			var r = transaction.ExecuteSingleRow(cmd);
+			var r = application.Database.Main.ExecuteSingleRow(cmd);
 
 			isRev = (bool)r[nameof(IsRev), true];
 			revId = (long)(r[nameof(HeadRevId), true] ?? -1);
@@ -253,6 +253,8 @@ namespace TecWare.PPSn.Server
 		public void Update(bool updateObjectOnly = true)
 		{
 			LuaTable cmd;
+			var trans = application.Database.Main;
+
 			// prepare stmt
 			if (objectId > 0) // exists an id for the object
 			{
@@ -287,7 +289,7 @@ namespace TecWare.PPSn.Server
 				}
 			}
 
-			transaction.ExecuteNoneResult(cmd);
+			trans.ExecuteNoneResult(cmd);
 
 			// update values
 			if (IsNew)
@@ -315,6 +317,7 @@ namespace TecWare.PPSn.Server
 					{
 						{ "upsert", "dbo.ObjT" }
 					};
+
 					foreach (var t in tags)
 					{
 						if (t.IsRemoved && t.Id > 0)
@@ -326,7 +329,7 @@ namespace TecWare.PPSn.Server
 								{ "Id", t.Id }
 							};
 
-							transaction.ExecuteNoneResult(deleteCmd);
+							trans.ExecuteNoneResult(deleteCmd);
 
 							#endregion
 						}
@@ -344,7 +347,7 @@ namespace TecWare.PPSn.Server
 								{ "UserId", t.UserId }
 							};
 
-							transaction.ExecuteNoneResult(insertCmd);
+							trans.ExecuteNoneResult(insertCmd);
 
 							t.Id = ((LuaTable)insertCmd[1]).GetOptionalValue("Id", -1L);
 
@@ -365,7 +368,7 @@ namespace TecWare.PPSn.Server
 								{ "UserId", t.UserId }
 							};
 
-							transaction.ExecuteNoneResult(upsertCmd);
+							trans.ExecuteNoneResult(upsertCmd);
 
 							#endregion
 						}
@@ -389,7 +392,7 @@ namespace TecWare.PPSn.Server
 								{ "Id", l.Id }
 							};
 
-							transaction.ExecuteNoneResult(cmd);
+							trans.ExecuteNoneResult(cmd);
 						}
 					}
 
@@ -411,7 +414,7 @@ namespace TecWare.PPSn.Server
 								}
 							};
 
-							transaction.ExecuteNoneResult(cmd);
+							trans.ExecuteNoneResult(cmd);
 
 							l.Id = ((LuaTable)cmd[1]).GetOptionalValue("Id", -1L);
 						}
@@ -431,7 +434,7 @@ namespace TecWare.PPSn.Server
 								}
 							};
 
-							transaction.ExecuteNoneResult(cmd);
+							trans.ExecuteNoneResult(cmd);
 						}
 					}
 					#endregion
@@ -554,7 +557,7 @@ namespace TecWare.PPSn.Server
 				};
 			}
 
-			transaction.ExecuteNoneResult(cmd);
+			application.Database.Main.ExecuteNoneResult(cmd);
 			var newRevId = (long)args["Id"];
 
 			// update
@@ -585,7 +588,7 @@ namespace TecWare.PPSn.Server
 				}
 			};
 
-			var row = transaction.ExecuteSingleRow(cmd);
+			var row = application.Database.Main.ExecuteSingleRow(cmd);
 			if (row == null)
 				throw new ArgumentException($"Could not read revision '{revId}'.");
 
@@ -720,7 +723,7 @@ namespace TecWare.PPSn.Server
 				};
 
 					tags = new List<PpsObjectTagAccess>();
-					foreach (var c in transaction.ExecuteSingleResult(cmd))
+					foreach (var c in application.Database.Main.ExecuteSingleResult(cmd))
 						tags.Add(new PpsObjectTagAccess(this, c));
 				}
 			}
@@ -759,7 +762,7 @@ namespace TecWare.PPSn.Server
 				};
 
 				links = new List<PpsObjectLinkAccess>();
-				foreach (var c in transaction.ExecuteSingleResult(cmd))
+				foreach (var c in application.Database.Main.ExecuteSingleResult(cmd))
 					links.Add(new PpsObjectLinkAccess(this, c));
 			}
 			return links;
@@ -898,7 +901,7 @@ namespace TecWare.PPSn.Server
 		} // func PullDataSet
 
 		[
-		DEConfigHttpAction("pull", IsSafeCall = false),
+		DEConfigHttpAction("pull", IsSafeCall = false, SecurityToken = "user"),
 		Description("Reads the revision from the server.")
 		]
 		private void HttpPullAction(long id, long rev = -1)
@@ -1103,7 +1106,7 @@ namespace TecWare.PPSn.Server
 	/// <summary>Function to store and load object related data.</summary>
 	public partial class PpsApplication
 	{
-		#region -- class PpsObjectsLibrary ------------------------------------------------
+		#region -- class PpsObjectsLibrary ----------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
@@ -1175,7 +1178,7 @@ namespace TecWare.PPSn.Server
 			/// <returns></returns>
 			[LuaMember]
 			public PpsObjectAccess CreateNewObject(LuaTable args)
-				=> new PpsObjectAccess(application.Database.Main, new LuaTableProperties(args));
+				=> new PpsObjectAccess(application, new LuaTableProperties(args));
 
 			/// <summary>Opens a object for an update operation.</summary>
 			/// <param name="trans"></param>
@@ -1197,7 +1200,7 @@ namespace TecWare.PPSn.Server
 				// create a new object
 				if (obj == null)
 				{
-					obj = new PpsObjectAccess(trans, PropertyDictionary.EmptyReadOnly);
+					obj = new PpsObjectAccess(application, PropertyDictionary.EmptyReadOnly);
 					if (objectId > 0)
 						throw new ArgumentOutOfRangeException(nameof(objectId), objectId, "Could not found object.");
 					if (objectGuid != Guid.Empty)
@@ -1260,7 +1263,7 @@ namespace TecWare.PPSn.Server
 
 				// return only the first object
 				var r = selector.Select(c => new SimpleDataRow(c)).FirstOrDefault();
-				return r == null ? null : new PpsObjectAccess(application.Database.Main, r);
+				return r == null ? null : new PpsObjectAccess(application, r);
 			} // func GetObject
 
 			[LuaMember]
@@ -1294,7 +1297,7 @@ namespace TecWare.PPSn.Server
 			public IEnumerable<PpsObjectAccess> GetObjects()
 			{
 				foreach (var r in GetObjectSelector())
-					yield return new PpsObjectAccess(application.Database.GetDatabase(), r);
+					yield return new PpsObjectAccess(application, r);
 			} // func GetObjects
 		} // class PpsObjectsLibrary
 
@@ -1345,7 +1348,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- class PpsHttpLibrary ---------------------------------------------------
+		#region -- class PpsHttpLibrary -------------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>

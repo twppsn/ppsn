@@ -30,6 +30,7 @@ using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
+using TecWare.PPSn.Server.Sql;
 using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn.Server.Wpf
@@ -1067,7 +1068,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 						var targetColumn = table.Columns[i];
 						var syncSourceColumnName = targetColumn.Meta.GetProperty(PpsDataColumnMetaData.SourceColumn, targetColumn.Name);
-						var sourceColumnIndex = syncSourceColumnName == "#" ? -1 : ((IDataColumns)rows).FindColumnIndex(syncSourceColumnName);
+						var sourceColumnIndex = syncSourceColumnName == "#" ? -1 : ((IDataColumns)rows).FindColumnIndex(PpsSqlColumnInfo.GetColumnName(syncSourceColumnName));
 						if (sourceColumnIndex == -1)
 						{
 							columnNames[i] = null;
