@@ -1045,6 +1045,9 @@ namespace TecWare.PPSn.Server.Sql
 
 						insertedList.Append("inserted.").Append(columnName);
 					}
+					
+					if (insertedList.Length == 0)
+						throw new ArgumentException("No Columns to update.");
 
 					// generate output clause
 					commandText.Append(" output ").Append(insertedList);
