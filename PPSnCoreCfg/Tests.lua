@@ -243,8 +243,8 @@ function SelectWithNonExistingColumnTest()
     local cmd = 
     {
 	    select = "dbo.ObjK",
-        columnList = {"TestColumn", "Id", "Typ"},
-        default = {}
+        columnList = {"sys.Fields.Int", "Id", "Typ"},
+        defaults = {}
     }
 
     local ret = Db.Main:ExecuteSingleRow(cmd);
@@ -277,6 +277,30 @@ function SelectWithWhereTest()
     AssertIsNotNull(ret, "Nothing was returned.")
 
     AssertAreEqual(validid.Guid, ret.Guid, "A different Item was returned.")
+end;
+
+function SelectWithEmptyDefaultTest() 
+    InitSystem();
+ 
+    local columns = clr.TecWare.DE.Data.SimpleDataColumns(
+        GetFieldDescription("dbo.Adre.Region"),
+        GetFieldDescription("dbo.ObjK.Id")
+    );
+    local cmd = 
+    {
+	    select = "dbo.ObjK",
+        columnList = columns,
+        defaults = {}
+    }
+    local ret = Db.Main:ExecuteSingleResult(cmd);
+    local retenum = ret.GetEnumerator();
+    AssertIsTrue(retenum:MoveNext(), "The select gave no results.");
+
+    AssertAreEqual("dbo.Adre.Region", retenum:Current.Columns[0].Name, "External Column was not returned.");
+    AssertIsNull(retenum:Current[0], "External Column is supposed to be null, but resulted in: ''" .. retenum:Current[0] .. "''.");
+
+    AssertAreEqual("dbo.ObjK.Id", retenum:Current.Columns[1].Name, "Internal Column was not returned.");
+    AssertIsNotNull(retenum:Current[1], "Internal Column is supposed to be not null, but resulted in null.");
 end;
 
 function SelectWithLeftJoinTest()
@@ -483,47 +507,6 @@ function InsertMultiRowTest()
     Db.Main:ExecuteNoneResult({ sql = "DELETE FROM [dbo].[ObjK] WHERE [Id] = " .. validid["Id"]});
 end;
 
-function SelectWithEmptyDefaultTest()
-    InitSystem();
-    local cmd = 
-    {
-	    select = "dbo.ObjK",
-        columnList = { "Testcolumn"},
-        defaults = {}
-    }
-    do
-        local ret = Db.Main:ExecuteSingleResult(cmd);
-        local retenum = ret.GetEnumerator();
-        AssertIsTrue(retenum:MoveNext(), "The select gave no results.");
-    end(function (e: System.ArgumentException) AssertAreNotEqual( e.Message, "Column not found (Testcolumn).", "Empty default resulted not in the ability to select non-existent Columns - an Exception was thrown."); end)
-    
-    AssertIsNotNull(retenum:Current.Testcolumn, "Default was not set on an non-existing column.")
-end;
-
-function SelectWithEmptyDefaultTest() 
-    InitSystem();
- 
-    local columns = clr.TecWare.DE.Data.SimpleDataColumns(
-        GetFieldDescription("dbo.Adre.Region"),
-        GetFieldDescription("dbo.ObjK.Id")
-    );
-    local cmd = 
-    {
-	    select = "dbo.ObjK",
-        columnList = columns,
-        defaults = {}
-    }
-    local ret = Db.Main:ExecuteSingleResult(cmd);
-    local retenum = ret.GetEnumerator();
-    AssertIsTrue(retenum:MoveNext(), "The select gave no results.");
-
-    AssertAreEqual("dbo.Adre.Region", retenum:Current.Columns[0].Name, "External Column was not returned.");
-    AssertIsNull(retenum:Current[0], "External Column is supposed to be null, but resulted in: ''" .. retenum:Current[0] .. "''.");
-
-    AssertAreEqual("dbo.ObjK.Id", retenum:Current.Columns[1].Name, "Internal Column was not returned.");
-    AssertIsNotNull(retenum:Current[1], "Internal Column is supposed to be not null, but resulted in null.");
-end;
-
 local function UpdateMultiRowMultiInputTest()
     InitSystem();
 
@@ -535,8 +518,8 @@ local function UpdateMultiRowMultiInputTest()
     local olddb = Db.Main:ExecuteSingleResult({ sql = "SELECT * FROM [dbo].[ObjR]"});
 
     local tableenum = olddb.GetEnumerator();
-    if tableenum:MoveNext() then old1 = tableenum:Current; else AssertFail("No Testdata."); end;
-    if tableenum:MoveNext() then old2 = tableenum:Current; else AssertFail("No Testdata."); end;
+    if tableenum:MoveNext() then old1 = tableenum:Current; else AssertFail("No Testdata.1"); end;
+    if tableenum:MoveNext() then old2 = tableenum:Current; else AssertFail("No Testdata.2"); end;
     local cmd = 
     {
 	    update = "dbo.ObjR",

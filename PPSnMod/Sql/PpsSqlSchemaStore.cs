@@ -208,7 +208,7 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				var parameter = command.CreateParameter();
 
-				parameter.ParameterName = parameterName ?? "@" + columnDescription.Name;
+				parameter.ParameterName = parameterName ?? "[@" + GetColumnName(columnDescription.Name) + "]";
 
 				parameter.Direction = ParameterDirection.Input;
 				parameter.SourceColumn = columnDescription.Name;
