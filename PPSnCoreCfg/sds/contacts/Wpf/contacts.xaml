@@ -250,6 +250,7 @@
             <TabItem Header="Sonstiges">
                 <uiC:PpsAttachmentsControl VerticalAlignment="Top" HorizontalAlignment="Left"
                                            AddLinkButtonCommand="{Binding testCommand}"
+										   CameraButtonCommand="{Binding cameraModul}"
                                            SeventhButtonVisible="true"
                                            SeventhButtonCaption="Test"
                                            SeventhButtonCommand="{Binding testCommand}">

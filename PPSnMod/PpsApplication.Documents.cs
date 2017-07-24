@@ -38,6 +38,7 @@ namespace TecWare.PPSn.Server
 	{
 		private const string LuaOnBeforePush = "OnBeforePush";
 		private const string LuaOnAfterPush = "OnAfterPush";
+		private const string LuaOnCreateRevision = "OnCreateRevision";
 		private const string LuaOnAfterPull = "OnAfterPull";
 
 		private PpsDataSetServerDefinition datasetDefinition = null;
@@ -113,12 +114,15 @@ namespace TecWare.PPSn.Server
 		protected override PpsDataSetServer PullData(PpsObjectAccess obj)
 		{
 			// get the head or given revision
-			// todo: create rev, if not exists
-			var xDocumentData = XDocument.Parse(obj.GetText());
-
 			// create the dataset
 			var data = (PpsDataSetServer)datasetDefinition.CreateDataSet();
-			data.Read(xDocumentData.Root);
+			if (obj.HeadRevId > 0)
+			{
+				var xDocumentData = XDocument.Parse(obj.GetText());
+				data.Read(xDocumentData.Root);
+			}
+			else
+				CallTableMethods(LuaOnCreateRevision, obj, data);
 
 			// correct id and revision
 			CheckHeadObjectId(obj, data);
@@ -260,6 +264,7 @@ namespace TecWare.PPSn.Server
 				case LuaOnBeforePush:
 				case LuaOnAfterPush:
 				case LuaOnAfterPull:
+				case LuaOnCreateRevision:
 					return true;
 				default:
 					return base.IsMemberTableMethod(key);
