@@ -233,30 +233,6 @@ function SelectWithAliasTest()
     AssertAreEqual(ret["ColumnSameAsId"], validid["Id"], "Target culumn not represented as alias.");
 end;
 
-function SelectWithNonExistingColumnTest()
-    InitSystem();
-    
-    local validid = Db.Main:ExecuteSingleRow({ sql = "SELECT * FROM [dbo].[ObjK]"});
-
-    AssertIsNotNull(validid, "The Table has no data to compare!");
-
-    local cmd = 
-    {
-	    select = "dbo.ObjK",
-        columnList = {"TestColumn", "Id", "Typ"},
-        default = {}
-    }
-
-    local ret = Db.Main:ExecuteSingleRow(cmd);
-
-    local found = false;
-    for i = 0, #(ret.Columns)-1, 1 do
-        if ret.Columns[i].Name == "TestColumn" then found = false; else print(ret.Columns[i].Name) end;
-    end;
-
-    AssertIsTrue(found, "Extra Column not in result.")
-end;
-
 function SelectWithWhereTest()
     InitSystem();
     
@@ -483,21 +459,6 @@ function InsertMultiRowTest()
     Db.Main:ExecuteNoneResult({ sql = "DELETE FROM [dbo].[ObjK] WHERE [Id] = " .. validid["Id"]});
 end;
 
-function SelectWithDefaultFunctionOnNonExistentColumnTest()
-    InitSystem();
-    local cmd = 
-    {
-	    select = "dbo.ObjK",
-        defaults = {
-            Testcolumn = function (x) return (x["Id"] + 42) end;
-        }
-    }
-    local ret = Db.Main:ExecuteSingleResult(cmd);
-    local retenum = ret.GetEnumerator();
-    AssertIsTrue(retenum:MoveNext(), "The select gave no results.");
-    AssertIsNotNull(retenum:Current.Testcolumn, "Default was not set on an non-existing column.")
-end;
-
 function SelectWithEmptyDefaultTest()
     InitSystem();
     local cmd = 
@@ -515,38 +476,28 @@ function SelectWithEmptyDefaultTest()
     AssertIsNotNull(retenum:Current.Testcolumn, "Default was not set on an non-existing column.")
 end;
 
-function Temp()
-    const sdc typeof TecWare.DE.Data.SimpleDataColumn;
-    const sdr typeof TecWare.DE.Data.SimpleDataRow;
-
-local lstColumn = sdc[3];
-InitSystem();
-    --const sdcs typeof sdc[]
-    print("1")
-    const str typeof System.String;
-    print("2")
-    local a = sdc("Herbert1", str:GetType())
-    local b = sdc("Herbert2", str:GetType())
-    local c = sdc("Herbert3", str:GetType())
-    print("3")
-    lstColumn[0] = a;
-    lstColumn[1] = b;
-    lstColumn[2] = c;
-    local row = sdr(lstColumn);
-
-    print (row)
-    
+function SelectWithEmptyDefaultTest() 
+    InitSystem();
+ 
+    local columns = clr.TecWare.DE.Data.SimpleDataColumns(
+        GetFieldDescription("dbo.Adre.Region"),
+        GetFieldDescription("dbo.ObjK.Id")
+    );
     local cmd = 
     {
 	    select = "dbo.ObjK",
-        columnList = {"Test","Id"},
+        columnList = columns,
         defaults = {}
     }
     local ret = Db.Main:ExecuteSingleResult(cmd);
     local retenum = ret.GetEnumerator();
     AssertIsTrue(retenum:MoveNext(), "The select gave no results.");
-    for i = 0, #(retenum:Current.Columns)-1, 1 do
-        print(retenum:Current.Columns[i].Name .. ": "..retenum:Current[i]); end;
+
+    AssertAreEqual("dbo.Adre.Region", retenum:Current.Columns[0].Name, "External Column was not returned.");
+    AssertIsNull(retenum:Current[0], "External Column is supposed to be null, but resulted in: ''" .. retenum:Current[0] .. "''.");
+
+    AssertAreEqual("dbo.ObjK.Id", retenum:Current.Columns[1].Name, "Internal Column was not returned.");
+    AssertIsNotNull(retenum:Current[1], "Internal Column is supposed to be not null, but resulted in null.");
 end;
 
 local function UpdateMultiRowMultiInputTest()
