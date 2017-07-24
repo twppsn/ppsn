@@ -303,6 +303,30 @@ function SelectWithEmptyDefaultTest()
     AssertIsNotNull(retenum:Current[1], "Internal Column is supposed to be not null, but resulted in null.");
 end;
 
+function SelectWithEmptyDefaultAndAliasTest() 
+    InitSystem();
+ 
+    local columns = clr.TecWare.DE.Data.SimpleDataColumns(
+        GetFieldDescription("dbo.Adre.Region"),
+        GetFieldDescription("dbo.ObjK.Id")
+    );
+    local cmd = 
+    {
+	    select = "dbo.ObjK",
+        columnList = columns,
+        defaults = {}
+    }
+    local ret = Db.Main:ExecuteSingleResult(cmd);
+    local retenum = ret.GetEnumerator();
+    AssertIsTrue(retenum:MoveNext(), "The select gave no results.");
+
+    AssertAreEqual("dbo.Adre.Region", retenum:Current.Columns[0].Name, "External Column was not returned.");
+    AssertIsNull(retenum:Current[0], "External Column is supposed to be null, but resulted in: ''" .. retenum:Current[0] .. "''.");
+
+    AssertAreEqual("dbo.ObjK.Id", retenum:Current.Columns[1].Name, "Internal Column was not returned.");
+    AssertIsNotNull(retenum:Current[1], "Internal Column is supposed to be not null, but resulted in null.");
+end;
+
 function SelectWithLeftJoinTest()
     InitSystem();
     
