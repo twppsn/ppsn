@@ -1,12 +1,63 @@
-﻿# Simple Select
+﻿# Select
 
+Most shown functions can be combined.
+
+Select any from the table, return every column
+{
+	select = "dbo.Table"
+}
+
+Select any from the table, return only columns Col1, Col2, Col3
 {
 	select = "dbo.Table",
-	columnList = { "Col1", "Col2", "Coln"},
+	columnList = {
+		"Col1",
+		"Col2",
+		"Col3"
+	}
+}
+
+Select conditional (Col1 must has the value 2), return every column
+{
+	select = "dbo.Table",
 	{
 		Col1 = 2
 	}
 }
+
+Select any from the table, return only columns Col1, Col2, Col3 and rename (''ALIAS'') Col3 to MyColumn
+{
+	select = "dbo.Table",
+	columnList = {
+		"Col1",
+		"Col2",
+		"Col3",
+		Col3 = "MyColumn"
+	}
+}
+
+Select any from the table, if Col3 is null or not existing, return the result of the function
+{
+	select = "dbo.Table"
+	defaults = {
+		Col3 = function (x) return (x["Col2"] + 42) end;
+    }
+}
+
+Select existent and non-existent columns from the table
+{
+	select = "dbo.Table",
+	columnList = { "Col1", "Col2", "Testcolumn" },
+	defaults = { }
+}
+
+Select with Custom ''WHERE''-Clause
+{
+	select = "dbo.Table",
+	columnList = { "Col1", "Col2", "Testcolumn" },
+	where = "[Col1] = 42 AND [Col2] = 'A'""
+}
+
 
 
 select: supports also joins
