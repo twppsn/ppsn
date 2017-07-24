@@ -203,10 +203,15 @@ namespace TecWare.PPSn
 		{
 			object r = null;
 
-			if (frameworkElement is IServiceProvider sp)
+			if (frameworkElement == null)
+				return null;
+			else if (frameworkElement is IServiceProvider sp)
 				r = sp.GetService(serviceType);
-			else if (frameworkElement.GetType().IsAssignableFrom(serviceType))
+			else if (serviceType.IsAssignableFrom(frameworkElement.GetType()))
 				r = frameworkElement;
+
+			if (r != null)
+				return r;
 
 			return GetControlService(frameworkElement.Parent as FrameworkElement, serviceType);
 		} // func GetControlService
