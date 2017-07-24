@@ -57,7 +57,7 @@
     <None Include="sds\contacts\contactsServer.lua" />
     <None Include="sds\contacts\contactTagging.lua" />
     <None Include="stuff\Debug.lua" />
-    <None Include="Tests.lua" />
+    <None Include="Tests\SQLTests.lua" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="constants\Kgrp.xml" />
@@ -80,7 +80,7 @@
     <Content Include="PPSn.all.xml">
       <SubType>Designer</SubType>
     </Content>
-    <Content Include="PPSn.Test.xml" />
+    <Content Include="Tests\PPSn.Test.xml" />
     <Content Include="PPSn.xml">
       <SubType>Designer</SubType>
     </Content>
