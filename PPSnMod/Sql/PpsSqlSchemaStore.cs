@@ -139,14 +139,8 @@ namespace TecWare.PPSn.Server.Sql
 			return false;
 		} // func TryGetProperty
 
-
-		public virtual StringBuilder AppendAsParameter(StringBuilder sb)
-			=> sb.Append('@').Append(Name);
-
 		protected virtual void AppendColumnName(StringBuilder sb)
-		{
-			sb.Append('[').Append(Name).Append(']');
-		} // proc AppendColumnName
+			=> sb.Append('[').Append(Name).Append(']');
 
 		public StringBuilder AppendAsColumn(StringBuilder sb, bool fullQualified = false)
 		{
@@ -182,7 +176,7 @@ namespace TecWare.PPSn.Server.Sql
 			command.Parameters.Add(parameter);
 			return parameter;
 		} // AppendSqlParameter
-		
+
 		public PpsSqlTableInfo Table => table;
 
 		public string TableColumnName => table.QuallifiedName + "." + Name;
@@ -192,6 +186,8 @@ namespace TecWare.PPSn.Server.Sql
 		public bool Nullable => isNullable;
 		public bool IsIdentity => isIdentity;
 		public bool IsPrimary => table.IsPrimaryKeyColumn(this);
+
+		// -- Static ----------------------------------------------------------
 
 		public static string GetColumnName(string columnName)
 		{
@@ -203,6 +199,86 @@ namespace TecWare.PPSn.Server.Sql
 				? columnName
 				: columnName.Substring(pos + 1);
 		} // func GetColumnName
+
+		public static DbParameter AppendSqlParameter(DbCommand command, IDataColumn columnDescription, string parameterName = null, object value = null)
+		{
+			if (columnDescription is IPpsColumnDescription c && c.TryGetColumnDescriptionImplementation<PpsSqlColumnInfo>(out var sqlColumn)) // sql column -> easy to add
+				return sqlColumn.AppendSqlParameter(command);
+			else // other column, create 
+			{
+				var parameter = command.CreateParameter();
+
+				parameter.ParameterName = parameterName ?? "@" + columnDescription.Name;
+
+				parameter.Direction = ParameterDirection.Input;
+				parameter.SourceColumn = columnDescription.Name;
+				parameter.SourceVersion = DataRowVersion.Current;
+
+				var t = columnDescription.DataType;
+				switch (Type.GetTypeCode(t))
+				{
+					case TypeCode.String:
+						parameter.Size = columnDescription.Attributes.GetProperty("maxLength", 32000);
+						parameter.DbType = DbType.String;
+						break;
+					case TypeCode.Boolean:
+						parameter.DbType = DbType.Boolean;
+						break;
+					case TypeCode.DateTime:
+						parameter.DbType = DbType.DateTime2;
+						break;
+
+					case TypeCode.Single:
+						parameter.Precision = columnDescription.Attributes.GetProperty("Precision", (byte)20);
+						parameter.Scale = columnDescription.Attributes.GetProperty("Scale", (byte)10);
+						parameter.DbType = DbType.Single;
+						break;
+					case TypeCode.Double:
+						parameter.Precision = columnDescription.Attributes.GetProperty("Precision", (byte)15);
+						parameter.Scale = columnDescription.Attributes.GetProperty("Scale", (byte)7);
+						parameter.DbType = DbType.Double;
+						break;
+					case TypeCode.Decimal:
+						parameter.Precision = columnDescription.Attributes.GetProperty("Precision", (byte)7);
+						parameter.Scale = columnDescription.Attributes.GetProperty("Scale", (byte)3);
+						parameter.DbType = DbType.Decimal;
+						break;
+
+					case TypeCode.Byte:
+						parameter.DbType = DbType.Byte;
+						break;
+					case TypeCode.SByte:
+						parameter.DbType = DbType.SByte;
+						break;
+					case TypeCode.Int16:
+						parameter.DbType = DbType.Int16;
+						break;
+					case TypeCode.Int32:
+						parameter.DbType = DbType.Int32;
+						break;
+					case TypeCode.Int64:
+						parameter.DbType = DbType.Int64;
+						break;
+					case TypeCode.UInt16:
+						parameter.DbType = DbType.UInt16;
+						break;
+					case TypeCode.UInt32:
+						parameter.DbType = DbType.UInt32;
+						break;
+					case TypeCode.UInt64:
+						parameter.DbType = DbType.UInt64;
+						break;
+
+					case TypeCode.Object:
+						if (t == typeof(Guid))
+							parameter.DbType = DbType.Guid;
+						break;
+				}
+
+				parameter.SetValue(value, columnDescription.DataType);
+				return parameter;
+			}
+		} // func AppendSqlParameter
 	} // class PpsSqlColumnInfo
 
 	#endregion

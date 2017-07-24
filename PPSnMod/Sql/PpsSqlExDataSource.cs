@@ -744,7 +744,6 @@ namespace TecWare.PPSn.Server.Sql
 			#endregion
 
 			private readonly SqlConnection connection;
-			private bool? isCommitted = null;
 			private readonly SqlTransaction transaction;
 
 			#region -- Ctor/Dtor --------------------------------------------------------
@@ -1460,6 +1459,7 @@ namespace TecWare.PPSn.Server.Sql
 					var columnList = parameter.GetMemberValue("columnList");
 					if (columnList == null) // no columns, simulate a select *
 					{
+						#region -- append select * --
 						foreach (var table in tableInfos.GetTables())
 						{
 							foreach (var column in table.Table.Columns)
@@ -1472,22 +1472,32 @@ namespace TecWare.PPSn.Server.Sql
 								tableInfos.AppendColumn(commandText, table, column);
 							}
 						}
+						#endregion
 					}
 					else if (columnList is LuaTable t) // columns are definied in a table
 					{
-						foreach (var item in t.ArrayList)
+						#region -- append select columns
+						void AppendColumnFromTableKey(string columnName)
+						{
+							var (table, column) = tableInfos.FindColumn(columnName, defaults == null);
+							if (column != null) // append table column
+								tableInfos.AppendColumn(commandText, table, column);
+							else // try append empty DbNull column
+							{
+								var field = DataSource.Application.GetFieldDescription(columnName, true);
+								commandText.Append(PpsSqlColumnInfo.AppendSqlParameter(cmd, field).ParameterName);
+							}
+						} // proc AppendColumnFromTableKey
+
+						foreach (var item in t.ArrayList.OfType<string>())
 						{
 							if (first)
 								first = false;
 							else
 								commandText.Append(", ");
-
-							var (table, column) = tableInfos.FindColumn((string)item, true);
-							if (column == null)
-								commandText.Append("NULL AS [").Append(item).Append(']');
-							else
-								tableInfos.AppendColumn(commandText, table, column);
+							AppendColumnFromTableKey(item);
 						}
+
 						foreach (var m in t.Members)
 						{
 							if (first)
@@ -1495,14 +1505,16 @@ namespace TecWare.PPSn.Server.Sql
 							else
 								commandText.Append(", ");
 
-							var (table, column) = tableInfos.FindColumn((string)m.Key, true);
-							tableInfos.AppendColumn(commandText, table, column);
+							AppendColumnFromTableKey(m.Key);
+
 							commandText.Append(" AS [").Append(m.Value).Append(']');
 						}
+						#endregion
 					}
 					else if (columnList is IDataColumns forcedColumns) // column set is forced
 					{
-						foreach(var col in forcedColumns.Columns)
+						#region -- append select columns
+						foreach (var col in forcedColumns.Columns)
 						{
 							if (first)
 								first = false;
@@ -1513,20 +1525,14 @@ namespace TecWare.PPSn.Server.Sql
 								? tableInfos.FindColumn(ppsColumn, defaults == null)
 								: tableInfos.FindColumn(col.Name, defaults == null);
 
-							if (column == null)
-							{
-								if (col is IPpsColumnDescription ppsColumn1 && ppsColumn1.TryGetColumnDescriptionImplementation<PpsSqlColumnInfo>(out var sqlColumn))
-								{
-									sqlColumn.AppendSqlParameter(cmd);
-									sqlColumn.AppendAsParameter(commandText);
-								}
-								else
-									throw new ArgumentException($"Column error {col.Name}");
-							}
-							else
+							if (column != null) // append table column
 								tableInfos.AppendColumn(commandText, table, column);
+							else // try append empty DbNull column
+								commandText.Append(PpsSqlColumnInfo.AppendSqlParameter(cmd, col).ParameterName);
+
 							commandText.Append(" AS [").Append(col.Name).Append(']');
 						}
+						#endregion
 					}
 					else
 						throw new ArgumentException("Unknown columnList definition.");
@@ -1550,10 +1556,10 @@ namespace TecWare.PPSn.Server.Sql
 								commandText.Append(" AND ");
 
 							var (table, column) = tableInfos.FindColumn((string)p.Key, true);
-							column.AppendSqlParameter(cmd, value: p.Value);
+							var parm = column.AppendSqlParameter(cmd, value: p.Value);
 							tableInfos.AppendColumn(commandText, table, column);
-							commandText.Append(" = ");
-							column.AppendAsParameter(commandText);
+							commandText.Append(" = ")
+								.Append(parm.ParameterName);
 						}
 					}
 					else if (parameter.GetMemberValue("where") is string sqlWhere)
@@ -2510,19 +2516,16 @@ namespace TecWare.PPSn.Server.Sql
 		// -- Static --------------------------------------------------------------
 
 		private static SqlConnectionStringBuilder CreateConnectionStringBuilder(string connectionString, string applicationName)
-		{
-			var connectionStringBuilder = new SqlConnectionStringBuilder(connectionString);
+			=> new SqlConnectionStringBuilder(connectionString)
+			{
+				// remove password, and connection information
+				Password = String.Empty,
+				UserID = String.Empty,
+				IntegratedSecurity = false,
 
-			// remove password, and connection information
-			connectionStringBuilder.Password = String.Empty;
-			connectionStringBuilder.UserID = String.Empty;
-			connectionStringBuilder.IntegratedSecurity = false;
-
-			connectionStringBuilder.ApplicationName = applicationName; // add a name
-			connectionStringBuilder.MultipleActiveResultSets = true; // activate MARS
-
-			return connectionStringBuilder;
-		} // func CreateConnectionStringBuilder
+				ApplicationName = applicationName, // add a name
+				MultipleActiveResultSets = true // activate MARS
+			};
 
 		private static bool IsConnectionOpen(SqlConnection connection)
 			=> connection.State != System.Data.ConnectionState.Closed;
