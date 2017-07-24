@@ -1042,7 +1042,7 @@ namespace TecWare.PPSn.Server.Sql
 
 						column.AppendSqlParameter(cmd, parameterName, value);
 
-						insertedList.Append("inserted.").Append(columnName);
+						insertedList.Append("inserted.").Append("[").Append(columnName).Append("]");
 					}
 					
 					if (insertedList.Length == 0)
