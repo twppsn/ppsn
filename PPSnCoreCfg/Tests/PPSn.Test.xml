@@ -4,7 +4,7 @@
 
 	<luaengine>
 		<script id="debugEnv" filename="InitDebug.lua" />
-		<tests id="tests" filename="Tests.lua" />
+		<tests id="tests" filename="SQLTests.lua" />
 	</luaengine>
 		
 	<pps:ppsn name="ppsn">
