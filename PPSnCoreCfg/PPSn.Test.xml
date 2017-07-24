@@ -2,6 +2,11 @@
 <fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
 		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
 
+	<luaengine>
+		<script id="debugEnv" filename="InitDebug.lua" />
+		<tests id="tests" filename="Tests.lua" />
+	</luaengine>
+		
 	<pps:ppsn name="ppsn">
 		<pps:wpf name="wpf">
 			<pps:environment id="testEnvironment" priority="1000000">
