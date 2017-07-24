@@ -1476,7 +1476,7 @@ namespace TecWare.PPSn.Server.Sql
 					}
 					else if (columnList is LuaTable t) // columns are definied in a table
 					{
-						#region -- append select columns
+						#region -- append select columns --
 						void AppendColumnFromTableKey(string columnName)
 						{
 							var (table, column) = tableInfos.FindColumn(columnName, defaults == null);
@@ -1513,7 +1513,7 @@ namespace TecWare.PPSn.Server.Sql
 					}
 					else if (columnList is IDataColumns forcedColumns) // column set is forced
 					{
-						#region -- append select columns
+						#region -- append select columns --
 						foreach (var col in forcedColumns.Columns)
 						{
 							if (first)

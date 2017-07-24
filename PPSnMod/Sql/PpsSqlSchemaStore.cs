@@ -208,7 +208,7 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				var parameter = command.CreateParameter();
 
-				parameter.ParameterName = parameterName ?? "[@" + GetColumnName(columnDescription.Name) + "]";
+				parameter.ParameterName = parameterName ?? "@" + GetColumnName(columnDescription.Name);
 
 				parameter.Direction = ParameterDirection.Input;
 				parameter.SourceColumn = columnDescription.Name;
@@ -276,6 +276,7 @@ namespace TecWare.PPSn.Server.Sql
 				}
 
 				parameter.SetValue(value, columnDescription.DataType);
+				command.Parameters.Add(parameter);
 				return parameter;
 			}
 		} // func AppendSqlParameter

@@ -251,7 +251,7 @@ function SelectWithNonExistingColumnTest()
 
     local found = false;
     for i = 0, #(ret.Columns)-1, 1 do
-        if ret.Columns[i].Name == "TestColumn" then found = true; end;
+        if ret.Columns[i].Name == "_Col0" then found = true; end;
     end;
 
     AssertIsTrue(found, "Extra Column not in result.")
