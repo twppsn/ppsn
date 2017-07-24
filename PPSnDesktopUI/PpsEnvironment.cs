@@ -20,8 +20,10 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -901,8 +903,10 @@ namespace TecWare.PPSn
 							// fetch next state on ws-info
 							if (!await Task.Run(() => backgroundNotifierModeTransmission.Wait(3000)))
 							{
+#if !_SYNC_POLL
 								using (var log = Traces.TraceProgress())
 									await masterData.SynchronizationAsync(log);
+#endif
 							}
 							break;
 
@@ -1035,6 +1039,85 @@ namespace TecWare.PPSn
 
 		private static object environmentCounterLock = new object();
 		private static int environmentCounter = 1;
+
+		private static readonly Regex internalUri = new Regex(@"^ppsn\d+.local$", RegexOptions.Compiled);
+		private static Dictionary<AssemblyName, Uri> referencedAssemblies = new Dictionary<AssemblyName, Uri>(); // list with referenced assemblies for the resolver
+
+		static PpsEnvironment()
+		{
+			// install resolver for referenced assemblies
+			AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+		} // ctor 
+
+		private static Uri FindReferencedAssemblySource(AssemblyName name)
+		{
+			lock (referencedAssemblies)
+			{
+				return (
+					from c in referencedAssemblies
+					where CompareAssemblyName(name, c.Key)
+					select c.Value
+				).FirstOrDefault();
+			}
+		} // func FindReferencedAssemblySource
+
+		private static Assembly FindLoadedAssembly(AssemblyName name)
+			=> (
+				from c in AppDomain.CurrentDomain.GetAssemblies()
+				where CompareAssemblyName(name, c.GetName())
+				select c
+			).FirstOrDefault();
+
+		private static bool CompareAssemblyName(AssemblyName a, AssemblyName b) 
+			=> String.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase) == 0
+				&& a.Version == b.Version;
+
+		private static Assembly RegisterReferencedAssemblySource(Uri baseUri, Assembly assembly)
+		{
+			lock (referencedAssemblies)
+			{
+				foreach (var referenced in assembly.GetReferencedAssemblies())
+				{
+					if (FindLoadedAssembly(referenced) == null
+						&& FindReferencedAssemblySource(referenced) == null)
+					{
+						// we only support DLL-extension
+						var referencedUri = new Uri(baseUri, new Uri(referenced.Name + ".dll", UriKind.Relative));
+						referencedAssemblies[referenced] = referencedUri;
+					}
+				}
+			}
+
+			return assembly;
+		} // func RegisterReferencedAssemblySource
+
+		private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+		{
+			var name = new AssemblyName(args.Name);
+
+			var asm = FindLoadedAssembly(name);
+			if (asm == null)
+			{
+				var uri = FindReferencedAssemblySource(name);
+				if (uri != null)
+					return LoadAssemblyFromUri(uri);
+			}
+
+			return asm;
+		} // func CurrentDomain_AssemblyResolve
+
+		private static Assembly LoadAssemblyFromUri(Uri uri)
+		{
+			// check for environment uri
+			if (!internalUri.IsMatch(uri.Host))
+				throw new ArgumentOutOfRangeException(nameof(uri), uri, "Invalid uri to load an assembly.");
+
+			// get the binary
+			var request = WebRequest.Create(uri);
+			using (var response = request.GetResponse())
+			using (var src = response.GetResponseStream())
+				return RegisterReferencedAssemblySource(uri, Assembly.Load(src.ReadInArray()));
+		} // func LoadAssemblyFromUri
 
 		/// <summary>Get the environment, that is attached to the current ui-element.</summary>
 		/// <param name="ui"></param>

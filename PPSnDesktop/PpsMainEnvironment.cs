@@ -202,8 +202,7 @@ namespace TecWare.PPSn
 		{
 			foreach (var c in Application.Current.Windows)
 			{
-				var w = c as PpsMainWindow;
-				if (w != null && w.WindowIndex == index)
+				if (c is PpsMainWindow w && w.WindowIndex == index)
 					return w;
 			}
 			return null;
@@ -213,11 +212,13 @@ namespace TecWare.PPSn
 		{
 			foreach (var c in Application.Current.Windows)
 			{
-				var w = c as PpsMainWindow;
-				if (w != null)
+				if (c is PpsMainWindow w)
 					yield return w;
 			}
 		} // func GetWindows
+
+		internal Task<bool> ShutdownAsync()
+			=> Task.FromResult<bool>(true);
 
 		[LuaMember(nameof(TestBackgroundProgressState))]
 		public IPpsProgress TestBackgroundProgressState()

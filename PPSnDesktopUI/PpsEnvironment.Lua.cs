@@ -698,9 +698,16 @@ namespace TecWare.PPSn
 			// get the current root
 			var webRequest = self.GetMemberValue(nameof(IPpsLuaRequest.Request)) as BaseWebRequest ?? Request;
 
-			// compile code, synchonize the code to this thread
-			var chunk = CompileAsync(webRequest, new Uri(path, UriKind.Relative), true, new KeyValuePair<string, Type>("self", typeof(LuaTable))).AwaitTask();
-			return RunScript(chunk, self, true, self);
+			if (path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) // load assembly
+			{
+				return new LuaResult(LoadAssemblyFromUri(new Uri(webRequest.BaseUri, new Uri(path, UriKind.Relative))));
+			}
+			else // load lua script
+			{
+				// compile code, synchonize the code to this thread
+				var chunk = CompileAsync(webRequest, new Uri(path, UriKind.Relative), true, new KeyValuePair<string, Type>("self", typeof(LuaTable))).AwaitTask();
+				return RunScript(chunk, self, true, self);
+			}
 		} // proc LuaRequire
 		
 		public async Task<(XDocument xaml, LuaChunk code)> LoadXamlAsync(BaseWebRequest request, LuaTable arguments, Uri xamlUri)
