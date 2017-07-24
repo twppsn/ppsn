@@ -233,6 +233,30 @@ function SelectWithAliasTest()
     AssertAreEqual(ret["ColumnSameAsId"], validid["Id"], "Target culumn not represented as alias.");
 end;
 
+function SelectWithNonExistingColumnTest()
+    InitSystem();
+    
+    local validid = Db.Main:ExecuteSingleRow({ sql = "SELECT * FROM [dbo].[ObjK]"});
+
+    AssertIsNotNull(validid, "The Table has no data to compare!");
+
+    local cmd = 
+    {
+	    select = "dbo.ObjK",
+        columnList = {"TestColumn", "Id", "Typ"},
+        default = {}
+    }
+
+    local ret = Db.Main:ExecuteSingleRow(cmd);
+
+    local found = false;
+    for i = 0, #(ret.Columns)-1, 1 do
+        if ret.Columns[i].Name == "TestColumn" then found = true; end;
+    end;
+
+    AssertIsTrue(found, "Extra Column not in result.")
+end;
+
 function SelectWithWhereTest()
     InitSystem();
     

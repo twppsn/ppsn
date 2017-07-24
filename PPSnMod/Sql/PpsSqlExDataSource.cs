@@ -1482,7 +1482,7 @@ namespace TecWare.PPSn.Server.Sql
 							else
 								commandText.Append(", ");
 
-							var (table, column) = tableInfos.FindColumn((string)item, true);
+							var (table, column) = tableInfos.FindColumn((string)item, false);
 							if (column == null)
 								commandText.Append("NULL AS [").Append(item).Append(']');
 							else
