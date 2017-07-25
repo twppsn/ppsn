@@ -62,4 +62,59 @@ specific language governing permissions and limitations under the Licence.
 		</DrawingImage.Drawing>
 	</DrawingImage>
 
+	<!--camera-->
+	<PathGeometry x:Key="cameraPathGeometry" 
+				  Figures="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z" />
+	<DrawingImage x:Key="cameraDrawingImage">
+		<DrawingImage.Drawing>
+			<GeometryDrawing Brush="{StaticResource PPSnDrawingImageBrush}" Geometry="{StaticResource cameraPathGeometry}"/>
+		</DrawingImage.Drawing>
+	</DrawingImage>
+
+	<!--scanner-->
+	<PathGeometry x:Key="scannerPathGeometry" 
+				  Figures="M19.8,10.7L4.2,5L3.5,6.9L17.6,12H5A2,2 0 0,0 3,14V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V12.5C21,11.7 20.5,10.9 19.8,10.7M7,17H5V15H7V17M19,17H9V15H19V17Z" />
+	<DrawingImage x:Key="scannerDrawingImage">
+		<DrawingImage.Drawing>
+			<GeometryDrawing Brush="{StaticResource PPSnDrawingImageBrush}" Geometry="{StaticResource scannerPathGeometry}"/>
+		</DrawingImage.Drawing>
+	</DrawingImage>
+
+	<!--delete-forever-->
+	<PathGeometry x:Key="deletePathGeometry" 
+				  Figures="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M8.46,11.88L9.87,10.47L12,12.59L14.12,10.47L15.53,11.88L13.41,14L15.53,16.12L14.12,17.53L12,15.41L9.88,17.53L8.47,16.12L10.59,14L8.46,11.88M15.5,4L14.5,3H9.5L8.5,4H5V6H19V4H15.5Z" />
+	<DrawingImage x:Key="deleteDrawingImage">
+		<DrawingImage.Drawing>
+			<GeometryDrawing Brush="{StaticResource PPSnDrawingImageBrush}" Geometry="{StaticResource deletePathGeometry}"/>
+		</DrawingImage.Drawing>
+	</DrawingImage>
+
+	<!--file-plus-->
+	<PathGeometry x:Key="filePlusPathGeometry" 
+				  Figures="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V4C4,2.89 4.89,2 6,2M11,15V12H9V15H6V17H9V20H11V17H14V15H11Z" />
+	<DrawingImage x:Key="filePlusDrawingImage">
+		<DrawingImage.Drawing>
+			<GeometryDrawing Brush="{StaticResource PPSnDrawingImageBrush}" Geometry="{StaticResource filePlusPathGeometry}"/>
+		</DrawingImage.Drawing>
+	</DrawingImage>
+
+	<!--link-variant-->
+	<PathGeometry x:Key="linkPathGeometry" 
+				  Figures="M10.59,13.41C11,13.8 11,14.44 10.59,14.83C10.2,15.22 9.56,15.22 9.17,14.83C7.22,12.88 7.22,9.71 9.17,7.76V7.76L12.71,4.22C14.66,2.27 17.83,2.27 19.78,4.22C21.73,6.17 21.73,9.34 19.78,11.29L18.29,12.78C18.3,11.96 18.17,11.14 17.89,10.36L18.36,9.88C19.54,8.71 19.54,6.81 18.36,5.64C17.19,4.46 15.29,4.46 14.12,5.64L10.59,9.17C9.41,10.34 9.41,12.24 10.59,13.41M13.41,9.17C13.8,8.78 14.44,8.78 14.83,9.17C16.78,11.12 16.78,14.29 14.83,16.24V16.24L11.29,19.78C9.34,21.73 6.17,21.73 4.22,19.78C2.27,17.83 2.27,14.66 4.22,12.71L5.71,11.22C5.7,12.04 5.83,12.86 6.11,13.65L5.64,14.12C4.46,15.29 4.46,17.19 5.64,18.36C6.81,19.54 8.71,19.54 9.88,18.36L13.41,14.83C14.59,13.66 14.59,11.76 13.41,10.59C13,10.2 13,9.56 13.41,9.17Z" />
+	<DrawingImage x:Key="linkDrawingImage">
+		<DrawingImage.Drawing>
+			<GeometryDrawing Brush="{StaticResource PPSnDrawingImageBrush}" Geometry="{StaticResource linkPathGeometry}"/>
+		</DrawingImage.Drawing>
+	</DrawingImage>
+
+	<!--marker-->
+	<PathGeometry x:Key="markerPathGeometry" 
+				  Figures="M18.5,1.15C17.97,1.15 17.46,1.34 17.07,1.73L11.26,7.55L16.91,13.2L22.73,7.39C23.5,6.61 23.5,5.35 22.73,4.56L19.89,1.73C19.5,1.34 19,1.15 18.5,1.15M10.3,8.5L4.34,14.46C3.56,15.24 3.56,16.5 4.36,17.31C3.14,18.54 1.9,19.77 0.67,21H6.33L7.19,20.14C7.97,20.9 9.22,20.89 10,20.12L15.95,14.16" />
+	<DrawingImage x:Key="markerDrawingImage">
+		<DrawingImage.Drawing>
+			<GeometryDrawing Brush="{StaticResource PPSnDrawingImageBrush}" Geometry="{StaticResource markerPathGeometry}"/>
+		</DrawingImage.Drawing>
+	</DrawingImage>
+
+
 </ResourceDictionary>
