@@ -60,6 +60,7 @@
     <None Include="Tests\SQLTests.lua" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="constants\Pers.xml" />
     <Content Include="constants\Kgrp.xml" />
     <Content Include="constants\Land.xml" />
     <Content Include="constants\Mein.xml" />
