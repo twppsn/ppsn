@@ -127,8 +127,8 @@
 					<pps:column name="KgrpId" fieldName="dbo.Kont.KgrpId" />
 					<pps:column name="StIdentNr" fieldName="dbo.Kont.StIdentNr" />
 					<pps:column name="SteuerNr" fieldName="dbo.Kont.SteuerNr" />
-					<pps:column name="FibuNr" fieldName="dbo.Kont.FibuNr" />
-					<pps:column name="Anmerk" fieldName="dbo.Kont.Anmerk" />
+					<!--<pps:column name="FibuNr" fieldName="dbo.Kont.FibuNr" />-->
+					<!--<pps:column name="Anmerk" fieldName="dbo.Kont.Anmerk" />-->
 					<pps:column name="Inaktiv" fieldName="dbo.Kont.Inaktiv" />
 				</pps:table>
 
@@ -148,16 +148,16 @@
 					<pps:column name="Ort" fieldName="dbo.Adre.Ort" />
 					<pps:column name="Region" fieldName="dbo.Adre.Region" />
 					<pps:column name="Plz" fieldName="dbo.Adre.Plz" />
-					<pps:column name="LandId" fieldName="sys.Fields.MasterDataKey">
+					<!--<pps:column name="LandId" fieldName="sys.Fields.MasterDataKey">
 						<pps:meta name="sourceColumn">dbo.Adre.LandId</pps:meta>
 						<pps:meta name="refTable">Land</pps:meta>
 						<pps:meta name="displayName">Land</pps:meta>
-					</pps:column>
+					</pps:column>-->
 					<pps:column name="Adresse" fieldName="dbo.Adre.Adresse" />
-					<pps:column name="Changed" fieldName="dbo.Adre.Changed" />
+					<!--<pps:column name="Changed" fieldName="dbo.Adre.Changed" />-->
 					<pps:column name="Template" fieldName="dbo.Adre.Template" />
-					<pps:column name="Versand" fieldName="dbo.Adre.Versand" />
-					<pps:column name="Rechnung" fieldName="dbo.Adre.Rechnung" />
+					<!--<pps:column name="Versand" fieldName="dbo.Adre.Versand" />-->
+					<!--<pps:column name="Rechnung" fieldName="dbo.Adre.Rechnung" />-->
 				</pps:table>
 
 				<pps:table name="Ansp">
@@ -183,11 +183,11 @@
 					<pps:column name="Adresse" fieldName="dbo.Ansp.Adresse" />
 					<pps:column name="Changed" fieldName="dbo.Ansp.Changed" />
 					<pps:column name="Template" fieldName="dbo.Ansp.Template" />
-					<pps:column name="Angebot" fieldName="dbo.Ansp.Angebot" />
+					<!--<pps:column name="Angebot" fieldName="dbo.Ansp.Angebot" />
 					<pps:column name="Auftrag" fieldName="dbo.Ansp.Auftrag" />
 					<pps:column name="Rechnung" fieldName="dbo.Ansp.Rechnung" />
-					<pps:column name="Anfrage" fieldName="dbo.Ansp.Anfrage" />
-					<pps:column name="Bestellung" fieldName="dbo.Ansp.Bestellung" />
+					<pps:column name="Anfrage" fieldName="dbo.Ansp.Anfrage" />-->
+					<pps:column name="Bestellung" fieldName="sys.Fields.Bit" />
 					<pps:column name="PictureId" fieldName="sys.Fields.ObjectLinkId" />
 				</pps:table>
 			</pps:dataset>
