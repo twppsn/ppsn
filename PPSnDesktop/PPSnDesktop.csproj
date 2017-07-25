@@ -74,7 +74,6 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="PpsMainEnvironment.cs" />
-    <Compile Include="PpsMainEnvironment.Data.cs" />
     <Compile Include="PpsMainEnvironment.Views.cs" />
     <Compile Include="UI\PpsCharmbarControl.xaml.cs">
       <DependentUpon>PpsCharmbarControl.xaml</DependentUpon>

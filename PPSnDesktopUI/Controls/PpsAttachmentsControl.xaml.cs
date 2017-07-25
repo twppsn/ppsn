@@ -71,6 +71,14 @@ namespace TecWare.PPSn.Controls
 
 		#region -- LoadBindings ---------------------------------------------------------
 
+		private void ExecuteCommand(ICommand cmd, IInputElement target)
+		{
+			if (cmd is RoutedCommand r)
+				r.Execute(null, target);
+			else
+				cmd.Execute(null);
+		} // func ExecuteCommand
+
 		private void LoadBindings(object sender, EventArgs e)
 		{
 			if (AddFileButtonCommand == null)
@@ -106,7 +114,7 @@ namespace TecWare.PPSn.Controls
 				)
 			);
 			else
-				CommandBindings.Add(new CommandBinding(AddFileAttachmentCommand, (isender, ie) => AddFileButtonCommand.ExecuteCommand(new UI.PpsCommandContext(Environment, isender, ie))));
+				CommandBindings.Add(new CommandBinding(AddFileAttachmentCommand, (isender, ie) => ExecuteCommand(AddFileButtonCommand, this)));
 
 			if (AddLinkButtonCommand == null)
 				CommandBindings.Add(
@@ -119,7 +127,7 @@ namespace TecWare.PPSn.Controls
 					)
 				);
 			else
-				CommandBindings.Add(new CommandBinding(AddLinkAttachmentCommand, (isender, ie) => AddLinkButtonCommand.ExecuteCommand(new UI.PpsCommandContext(Environment, isender, ie))));
+				CommandBindings.Add(new CommandBinding(AddLinkAttachmentCommand, (isender, ie) => ExecuteCommand(AddLinkButtonCommand, this)));
 
 			if (RemoveButtonCommand == null)
 				CommandBindings.Add(
@@ -134,7 +142,7 @@ namespace TecWare.PPSn.Controls
 						)
 					);
 			else
-				CommandBindings.Add(new CommandBinding(RemoveAttachmentCommand, (isender, ie) => RemoveButtonCommand.ExecuteCommand(new UI.PpsCommandContext(Environment, isender, ie))));
+				CommandBindings.Add(new CommandBinding(RemoveAttachmentCommand, (isender, ie) => ExecuteCommand(RemoveButtonCommand, this)));
 
 			if (ScannerButtonCommand == null)
 				CommandBindings.Add(
@@ -147,7 +155,7 @@ namespace TecWare.PPSn.Controls
 					)
 				);
 			else
-				CommandBindings.Add(new CommandBinding(ScannerAttachmentCommand, (isender, ie) => ScannerButtonCommand.ExecuteCommand(new UI.PpsCommandContext(Environment, isender, ie))));
+				CommandBindings.Add(new CommandBinding(ScannerAttachmentCommand, (isender, ie) => ExecuteCommand(ScannerButtonCommand, this)));
 
 			if (CameraButtonCommand == null)
 				CommandBindings.Add(
@@ -159,7 +167,7 @@ namespace TecWare.PPSn.Controls
 					)
 				);
 			else
-				CommandBindings.Add(new CommandBinding(CameraAttachmentCommand, (isender, ie) => CameraButtonCommand.ExecuteCommand(new UI.PpsCommandContext(Environment, isender, ie))));
+				CommandBindings.Add(new CommandBinding(CameraAttachmentCommand, (isender, ie) => ExecuteCommand(CameraButtonCommand, this)));
 
 			if (SignatureButtonCommand == null)
 				CommandBindings.Add(
@@ -172,12 +180,12 @@ namespace TecWare.PPSn.Controls
 					)
 				);
 			else
-				CommandBindings.Add(new CommandBinding(SignatureAttachmentCommand, (isender, ie) => SignatureButtonCommand.ExecuteCommand(new UI.PpsCommandContext(Environment, isender, ie))));
+				CommandBindings.Add(new CommandBinding(SignatureAttachmentCommand, (isender, ie) => ExecuteCommand(SignatureButtonCommand, this)));
 
 			if (SeventhButtonCommand == null)
 				; // NOP
 			else
-				CommandBindings.Add(new CommandBinding(SeventhButtonAttachmentCommand, (isender, ie) => SeventhButtonCommand.ExecuteCommand(new UI.PpsCommandContext(Environment, isender, ie))));
+				CommandBindings.Add(new CommandBinding(SeventhButtonAttachmentCommand, (isender, ie) => ExecuteCommand(SeventhButtonCommand, this)));
 		}
 
 		#endregion
@@ -188,20 +196,20 @@ namespace TecWare.PPSn.Controls
 		public readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsAttachmentsControl));
 
 		public readonly static DependencyProperty AddFileButtonVisibleProperty = DependencyProperty.Register(nameof(AddFileButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
-		public readonly static DependencyProperty AddFileButtonCommandProperty = DependencyProperty.Register(nameof(AddFileButtonCommand), typeof(TecWare.PPSn.UI.PpsCommand), typeof(PpsAttachmentsControl));
+		public readonly static DependencyProperty AddFileButtonCommandProperty = DependencyProperty.Register(nameof(AddFileButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
 		public readonly static DependencyProperty AddLinkButtonVisibleProperty = DependencyProperty.Register(nameof(AddLinkButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
-		public readonly static DependencyProperty AddLinkButtonCommandProperty = DependencyProperty.Register(nameof(AddLinkButtonCommand), typeof(TecWare.PPSn.UI.PpsCommand), typeof(PpsAttachmentsControl));
+		public readonly static DependencyProperty AddLinkButtonCommandProperty = DependencyProperty.Register(nameof(AddLinkButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
 		public readonly static DependencyProperty RemoveButtonVisibleProperty = DependencyProperty.Register(nameof(RemoveButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
-		public readonly static DependencyProperty RemoveButtonCommandProperty = DependencyProperty.Register(nameof(RemoveButtonCommand), typeof(TecWare.PPSn.UI.PpsCommand), typeof(PpsAttachmentsControl));
+		public readonly static DependencyProperty RemoveButtonCommandProperty = DependencyProperty.Register(nameof(RemoveButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
 		public readonly static DependencyProperty CameraButtonVisibleProperty = DependencyProperty.Register(nameof(CameraButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
-		public readonly static DependencyProperty CameraButtonCommandProperty = DependencyProperty.Register(nameof(CameraButtonCommand), typeof(TecWare.PPSn.UI.PpsCommand), typeof(PpsAttachmentsControl));
+		public readonly static DependencyProperty CameraButtonCommandProperty = DependencyProperty.Register(nameof(CameraButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
 		public readonly static DependencyProperty ScannerButtonVisibleProperty = DependencyProperty.Register(nameof(ScannerButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
-		public readonly static DependencyProperty ScannerButtonCommandProperty = DependencyProperty.Register(nameof(ScannerButtonCommand), typeof(TecWare.PPSn.UI.PpsCommand), typeof(PpsAttachmentsControl));
+		public readonly static DependencyProperty ScannerButtonCommandProperty = DependencyProperty.Register(nameof(ScannerButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
 		public readonly static DependencyProperty SignatureButtonVisibleProperty = DependencyProperty.Register(nameof(SignatureButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
-		public readonly static DependencyProperty SignatureButtonCommandProperty = DependencyProperty.Register(nameof(SignatureButtonCommand), typeof(TecWare.PPSn.UI.PpsCommand), typeof(PpsAttachmentsControl));
+		public readonly static DependencyProperty SignatureButtonCommandProperty = DependencyProperty.Register(nameof(SignatureButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
 		public readonly static DependencyProperty SeventhButtonVisibleProperty = DependencyProperty.Register(nameof(SeventhButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
 		public readonly static DependencyProperty SeventhButtonCaptionProperty = DependencyProperty.Register(nameof(SeventhButtonCaption), typeof(string), typeof(PpsAttachmentsControl), new UIPropertyMetadata(String.Empty));
-		public readonly static DependencyProperty SeventhButtonCommandProperty = DependencyProperty.Register(nameof(SeventhButtonCommand), typeof(TecWare.PPSn.UI.PpsCommand), typeof(PpsAttachmentsControl));
+		public readonly static DependencyProperty SeventhButtonCommandProperty = DependencyProperty.Register(nameof(SeventhButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
 
 		public IPpsAttachments AttachmentsSource { get => (IPpsAttachments)GetValue(AttachmentsSourceProperty); set => SetValue(AttachmentsSourceProperty, value); }
 		public IPpsAttachmentItem SelectedAttachment => (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty);
@@ -209,39 +217,39 @@ namespace TecWare.PPSn.Controls
 		/// <summary>sets the visibility of the AddFileButton - default true</summary>
 		public bool AddFileButtonVisible => (bool)GetValue(AddFileButtonVisibleProperty);
 		/// <summary>overloads the command of the AddFileButton</summary>
-		public TecWare.PPSn.UI.PpsCommand AddFileButtonCommand => (TecWare.PPSn.UI.PpsCommand)GetValue(AddFileButtonCommandProperty);
+		public ICommand AddFileButtonCommand => (ICommand)GetValue(AddFileButtonCommandProperty);
 
 		/// <summary>sets the visibility of the AddLinkButton - default true</summary>
 		public bool AddLinkButtonVisible => (bool)GetValue(AddLinkButtonVisibleProperty);
 		/// <summary>overloads the command of the AddFileButton</summary>
-		public TecWare.PPSn.UI.PpsCommand AddLinkButtonCommand => (TecWare.PPSn.UI.PpsCommand)GetValue(AddLinkButtonCommandProperty);
+		public ICommand AddLinkButtonCommand => (ICommand)GetValue(AddLinkButtonCommandProperty);
 
 		/// <summary>sets the visibility of the RemoveButton - default true</summary>
 		public bool RemoveButtonVisible => (bool)GetValue(RemoveButtonVisibleProperty);
 		/// <summary>overloads the command of the RemoveButton</summary>
-		public TecWare.PPSn.UI.PpsCommand RemoveButtonCommand => (TecWare.PPSn.UI.PpsCommand)GetValue(RemoveButtonCommandProperty);
+		public ICommand RemoveButtonCommand => (ICommand)GetValue(RemoveButtonCommandProperty);
 
 		/// <summary>sets the visibility of the CameraButton - default true</summary>
 		public bool CameraButtonVisible => (bool)GetValue(RemoveButtonVisibleProperty);
 		/// <summary>overloads the command of the CameraButton</summary>
-		public TecWare.PPSn.UI.PpsCommand CameraButtonCommand => (TecWare.PPSn.UI.PpsCommand)GetValue(CameraButtonCommandProperty);
+		public ICommand CameraButtonCommand => (ICommand)GetValue(CameraButtonCommandProperty);
 
 		/// <summary>sets the visibility of the ScannerButton - default true</summary>
 		public bool ScannerButtonVisible => (bool)GetValue(RemoveButtonVisibleProperty);
 		/// <summary>overloads the command of the ScannerButton</summary>
-		public TecWare.PPSn.UI.PpsCommand ScannerButtonCommand => (TecWare.PPSn.UI.PpsCommand)GetValue(ScannerButtonCommandProperty);
+		public ICommand ScannerButtonCommand => (ICommand)GetValue(ScannerButtonCommandProperty);
 
 		/// <summary>sets the visibility of the SignatureButton - default true</summary>
 		public bool SignatureButtonVisible => (bool)GetValue(RemoveButtonVisibleProperty);
 		/// <summary>overloads the command of the SignatureButton</summary>
-		public TecWare.PPSn.UI.PpsCommand SignatureButtonCommand => (TecWare.PPSn.UI.PpsCommand)GetValue(SignatureButtonCommandProperty);
+		public ICommand SignatureButtonCommand => (ICommand)GetValue(SignatureButtonCommandProperty);
 
 		/// <summary>sets the visibility of the SeventhButton - default true</summary>
 		public bool SeventhButtonVisible => (bool)GetValue(SeventhButtonVisibleProperty);
 		/// <summary>sets the caption of the SeventhButton - default true</summary>
 		public string SeventhButtonCaption => (string)GetValue(SeventhButtonCaptionProperty);
 		/// <summary>sets the command of the SeventhButton - default true</summary>
-		public TecWare.PPSn.UI.PpsCommand SeventhButtonCommand => (TecWare.PPSn.UI.PpsCommand)GetValue(SeventhButtonCommandProperty);
+		public ICommand SeventhButtonCommand => (ICommand)GetValue(SeventhButtonCommandProperty);
 
 		#endregion
 

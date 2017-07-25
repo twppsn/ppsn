@@ -1669,6 +1669,7 @@ namespace TecWare.PPSn
 			} // func CreateContentStream
 
 			public override Uri RequestUri => originalUri;
+			public override IWebProxy Proxy { get => null; set { } }
 		} // class PpsLocalStoreRequest
 
 		#endregion
@@ -2767,7 +2768,7 @@ namespace TecWare.PPSn
 			if (HasRequestData) // we have request data, execute always online
 				return InternalGetResponse();
 			else if (environment.TryGetOfflineObject(this, out var task)) // check if the object is local available, cached
-				return task.ForegroundAsync().Result; // block thread
+				return task.ForegroundAsync().AwaitTask(); // block thread
 			else
 				return InternalGetResponse();
 		} // func GetResponse
