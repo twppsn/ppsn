@@ -589,12 +589,13 @@ namespace TecWare.PPSn.Data
 					if (IsExtended)
 					{
 						// check for a internal interface to set a generic value
-						var v = oldValue as IPpsDataRowSetGenericValue;
-						if (v != null)
+						if (oldValue is IPpsDataRowSetGenericValue v)
 						{
 							ret = v.SetGenericValue(initial, value);
 							value = oldValue; // reset old value
 						}
+						else if (initial)
+							value = oldValue;
 						else
 							throw new NotSupportedException($"It is not allowed to change this extended column ({Table.Name}.{Name}).");
 					}
