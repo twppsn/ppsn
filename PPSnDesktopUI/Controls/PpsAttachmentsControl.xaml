@@ -21,9 +21,9 @@ specific language governing permissions and limitations under the Licence.
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="300">
     <UserControl.Resources>
-        <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+		<local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </UserControl.Resources>
-    <Grid Width="300" Height="600">
+    <Grid Width="600" Height="600">
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
             <RowDefinition/>
@@ -39,7 +39,16 @@ specific language governing permissions and limitations under the Licence.
                         <Setter Property="Button.Margin" Value="3,3,3,3"/>
                     </Style>
                 </WrapPanel.Resources>
-                <Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.AddFileAttachmentCommand}" 
+
+				<Button Width="40" Height="40"  Content="{StaticResource filePlusDrawingImage}"  Style="{StaticResource PPSnImageButtonStyle}"/>
+				<Button Width="40" Height="40"  Content="{StaticResource linkDrawingImage}"  Style="{StaticResource PPSnImageButtonStyle}"/>
+				<Button Width="40" Height="40"  Content="{StaticResource deleteDrawingImage}"  Style="{StaticResource PPSnImageButtonStyle}"/>
+				<Button Width="40" Height="40"  Content="{StaticResource cameraDrawingImage}"  Style="{StaticResource PPSnImageButtonStyle}"/>
+				<Button Width="40" Height="40"  Content="{StaticResource scannerDrawingImage}"  Style="{StaticResource PPSnImageButtonStyle}"/>
+				<Button Width="40" Height="40"  Content="{StaticResource markerDrawingImage}"  Style="{StaticResource PPSnImageButtonStyle}"/>
+
+
+				<Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.AddFileAttachmentCommand}" 
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddFileButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">+</Button>
                 <Button Width="60" Height="60" Command="{x:Static local:PpsAttachmentsControl.AddLinkAttachmentCommand}" 
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddLinkButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">~</Button>
