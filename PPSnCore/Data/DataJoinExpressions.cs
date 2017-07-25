@@ -32,6 +32,23 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
+	#region -- class PpsJoinException ---------------------------------------------------
+
+	public class PpsJoinException : FormatException
+	{
+		private readonly int position;
+
+		public PpsJoinException(int position, string message, Exception innerException = null)
+			: base(message, innerException)
+		{
+			this.position = position;
+		} // ctor
+
+		public int Position => position;
+	} // class PpsJoinException
+
+	#endregion
+
 	#region -- enum PpsJoinExpression ---------------------------------------------------
 
 	public abstract class PpsDataJoinExpression<TTABLE>
@@ -113,8 +130,12 @@ namespace TecWare.PPSn.Data
 				this.pos = 0;
 				this.owner = owner;
 				this.expression = expression ?? throw new ArgumentNullException(nameof(expression));
+
 				ParseWhiteSpace();
 			} // ctor
+
+			private Exception CreateException(string message)
+				=> throw new PpsJoinException(pos, message);
 
 			private void ParseIdentifier()
 			{
@@ -171,7 +192,7 @@ namespace TecWare.PPSn.Data
 						pos++;
 
 					if (Cur != ']')
-						throw new ArgumentException("] expected.");
+						throw CreateException("']' expected.");
 					var endAt = pos;
 
 					pos++;
@@ -209,7 +230,7 @@ namespace TecWare.PPSn.Data
 					pos++;
 					var r = ParseExpr();
 					if (Cur != ')')
-						throw new ArgumentException(") is missing");
+						throw CreateException("')' expected.");
 					pos++;
 					return r;
 				}
@@ -229,14 +250,14 @@ namespace TecWare.PPSn.Data
 					return left;
 				}
 				else
-					throw new ArgumentException("Identifier expected.");
+					throw CreateException("Identifier expected.");
 			} // func ParseExpr
 
 			public PpsExpressionPart Parse()
 			{
 				var r = ParseExpr();
 				if (Cur != '\0')
-					throw new ArgumentException("EOF?");
+					throw CreateException("Unexpected end of string.");
 				return r;
 			} // func Parse
 
