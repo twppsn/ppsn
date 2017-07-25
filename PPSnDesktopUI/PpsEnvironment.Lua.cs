@@ -46,6 +46,13 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public interface IPpsLuaTaskParent
 	{
+		/// <summary></summary>
+		/// <param name="flags"></param>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
+		/// <returns></returns>
+		Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null);
+
 		/// <summary>Returns the dispatcher fo the UI thread</summary>
 		Dispatcher Dispatcher { get; }
 		/// <summary>Returns the trace sink.</summary>
@@ -72,16 +79,6 @@ namespace TecWare.PPSn
 	/// <summary>Task wrapper for the lua script code</summary>
 	public sealed class PpsLuaTask : IDisposable
 	{
-		#region -- class ContinueTask ---------------------------------------------------
-
-		private class ContinueTask
-		{
-			public int Id { get; set; }
-			public object Task { get; set; }
-		} // class ContinueTask
-
-		#endregion
-
 		#region -- class PpsLuaTaskSynchronizationContext --------------------------------
 
 		private sealed class PpsLuaTaskSynchronizationContext : PpsSynchronizationContext, IDisposable
@@ -137,11 +134,14 @@ namespace TecWare.PPSn
 		private readonly SynchronizationContext context;
 
 		private int? threadId = null;
-		private int executedTaskId = 0;
-		private int currentTaskId = 0;
-		private int? lastTaskId = null;
 
+		private readonly Queue<object> continueTasks = new Queue<object>();
+		private object onExceptionTask = null;
+		private object onFinallyTask = null;
+		private TaskCompletionSource<LuaResult> onAwaitTask = null;
+		
 		private readonly object executionLock = new object();
+		private bool isQueuedTaskRunning = false;
 		private LuaResult currentResult;
 		private Exception currentException = null;
 		private bool isDisposed = false;
@@ -196,15 +196,6 @@ namespace TecWare.PPSn
 				threadId = Thread.CurrentThread.ManagedThreadId;
 		} // proc VerifyThreadAccess
 
-		private void VerifyContinueTask(int expectedTaskId, int taskId)
-		{
-			lock (executionLock)
-			{
-				if (expectedTaskId != taskId)
-					throw new InvalidOperationException($"Task is not in sequence (the context is multithreaded {context.GetType().Name}, expected id: {expectedTaskId}, actual id: {taskId}");
-			}
-		} // proc VerifyContinueTask
-
 		private LuaResult Invoke(object func, params object[] args)
 		{
 			switch(func)
@@ -215,86 +206,128 @@ namespace TecWare.PPSn
 					return new LuaResult(Lua.RtInvoke(func, args));
 			}
 		} // proc Invoke
-
-		private void ExecuteContinue(object continueWith)
-		{
-			// check thread
-			VerifyThreadAccess();
-
-			var continueTask = (ContinueTask)continueWith;
-			try
-			{
-				// check for cancel or exception
-				if (cancellationToken.IsCancellationRequested || IsFaulted)
-					return;
-
-				// check sequence
-				VerifyContinueTask(executedTaskId + 1, continueTask.Id);
-
-				// execute task
-				try
-				{
-					currentResult = Invoke(continueTask.Task, currentResult.Values);
-				}
-				catch (TaskCanceledException)
-				{
-					if (!cancellationToken.IsCancellationRequested)
-						cancellationTokenSource?.Cancel();
-				}
-				catch (Exception e)
-				{
-					SetException(e);
-				}
-
-				// mark task as executed
-				lock (executionLock)
-					executedTaskId = continueTask.Id;
-			}
-			finally
-			{
-				if (continueTask is IDisposable d)
-					d.Dispose();
-			}
-		} // proc ExecuteContinue
-
+		
 		private void SetException(Exception e)
 		{
 			if (currentException != null)
-				throw new InvalidOperationException(); // should never raised
-			currentException = e;
+			{
+				parent.ShowExceptionAsync(ExceptionShowFlags.None, e, "Handler failed.").AwaitTask();
+				return;
+			} 
+
+			currentException = e ?? throw new ArgumentNullException(nameof(e));
 			parent.Traces.AppendException(e);
 		} // proc SetException
 
-		private void ExecuteException(object state)
+		private void ExecuteTask(object continueWith)
 		{
-			VerifyThreadAccess();
-			VerifyContinueTask(lastTaskId.Value, executedTaskId + 1);
+			isQueuedTaskRunning = true;
+			try
+			{
+				// check for cancel or exception
+				if (!IsCanceled && !IsFaulted)
+				{
+					// execute task
+					try
+					{
+						currentResult = Invoke(continueWith, currentResult.Values);
+					}
+					catch (TaskCanceledException)
+					{
+						if (!cancellationToken.IsCancellationRequested)
+							cancellationTokenSource?.Cancel();
+					}
+					catch (Exception e)
+					{
+						SetException(e);
+					}
+				}
+			}
+			finally
+			{
+				isQueuedTaskRunning = false;
+			}
 
-			Invoke(state, currentException.GetInnerException());
-		} // proc ExecuteException
-
-		private void ExecuteFinally(object state)
-		{
-			VerifyThreadAccess();
-			VerifyContinueTask(lastTaskId.Value, executedTaskId + 1);
-
-			Invoke(state, null);
-		} // proc ExecuteFinally
-
-		private void ExecuteAwait(object state)
-		{
-			VerifyThreadAccess();
-
-			var taskCompletionSource = (TaskCompletionSource<LuaResult>)state;
-			if (cancellationToken.IsCancellationRequested)
-				taskCompletionSource.TrySetCanceled();
-			else if (IsFaulted)
-				taskCompletionSource.TrySetException(currentException.GetInnerException());
+			if (continueTasks.Count > 0 && !IsFaulted)
+			{
+				ExecuteOrQueueTask(continueTasks.Dequeue());
+			}
 			else
 			{
-				VerifyContinueTask(lastTaskId.Value, executedTaskId + 1);
-				taskCompletionSource.SetResult(currentResult);
+				// call exception
+				if (onExceptionTask != null)
+					ExecuteOnExceptionTask();
+
+				// call finally
+				if (onFinallyTask != null)
+					ExecuteOnFinallyTask();
+
+				// call awaitTask
+				if (onAwaitTask != null)
+					ExecuteOnAwaitTask();
 			}
+		} // proc ExecuteTask
+
+		private void ExecuteOrQueueTask(object continueWith)
+		{
+			VerifyThreadAccess();
+
+			if (isQueuedTaskRunning)
+				continueTasks.Enqueue(continueWith);
+			else if(!IsFaulted && !IsCanceled)
+				ExecuteTask(continueWith);
+		} // proc AddContinueTask
+
+		private void ExecuteOrQueueOnExceptionTask(object state)
+		{
+			VerifyThreadAccess();
+
+			if (!isQueuedTaskRunning && currentException != null)
+				ExecuteOnExceptionTask();
+		} // proc ExecuteOnExceptionTask
+
+		private void ExecuteOnExceptionTask()
+			=> Invoke(onExceptionTask, currentException.GetInnerException());
+
+		private void ExecuteOrQueueOnFinallyTask(object state)
+		{
+			VerifyThreadAccess();
+
+			if (!isQueuedTaskRunning)
+				ExecuteOnFinallyTask();
+		} // proc ExecuteOrQueueOnFinallyTask
+
+		private void ExecuteOnFinallyTask()
+		{
+			switch (onFinallyTask)
+			{
+				case null:
+					throw new ArgumentNullException(nameof(onFinallyTask));
+				case IDisposable d:
+					d.Dispose();
+					return;
+				default:
+					Invoke(onFinallyTask);
+					break;
+			}
+		} // proc ExecuteOnFinallyTask
+
+		private void ExecuteOrQueueAwaitTask(object state)
+		{
+			VerifyThreadAccess();
+
+			if (!isQueuedTaskRunning)
+				ExecuteOnAwaitTask();
+		} // proc ExecuteOrQueueAwaitTask
+
+		private void ExecuteOnAwaitTask()
+		{
+			if (cancellationToken.IsCancellationRequested)
+				ThreadPool.QueueUserWorkItem(s => onAwaitTask.SetCanceled());
+			else if (IsFaulted)
+				ThreadPool.QueueUserWorkItem(s => onAwaitTask.SetException((Exception)s), currentException);
+			else
+				ThreadPool.QueueUserWorkItem(s => onAwaitTask.SetResult((LuaResult)s), currentResult);
 
 			// do not call dtor
 			GC.SuppressFinalize(this);
@@ -302,63 +335,65 @@ namespace TecWare.PPSn
 
 			// dispose context
 			DisposeContext();
-		} // proc ExecuteAwait
+		} // proc ExecuteOnAwaitTask
 
 		public PpsLuaTask Continue(object continueWith)
 		{
-			int GetNextId()
+			CheckDisposed();
+
+			lock (executionLock)
 			{
-				lock (executionLock)
-				{
-					if (lastTaskId.HasValue)
-						throw new InvalidOperationException($"The execution thread is closed ({nameof(Await)}, {nameof(OnException)} or {nameof(Await)}).");
-					return ++currentTaskId;
-				}
-			} // func GetNextId
+				if (onExceptionTask != null || onFinallyTask != null || onAwaitTask != null)
+					throw new InvalidOperationException($"The execution thread is closed ({nameof(Await)}, {nameof(OnException)} or {nameof(Await)}).");
+			}
 
 			if (continueWith == null)
 				throw new ArgumentNullException(nameof(continueWith));
-
-			CheckDisposed();
-			context.Post(ExecuteContinue, new ContinueTask() { Id = GetNextId(), Task = continueWith });
+			
+			context.Post(ExecuteOrQueueTask, continueWith);
 			return this;
 		} // proc Continue
-
-		private void CloseTaskList()
+		
+		public PpsLuaTask OnException(object onException)
 		{
 			lock (executionLock)
 			{
-				CheckDisposed();
-				lastTaskId = currentTaskId;
-			}
-		} // proc CloseTaskList
+				if (onExceptionTask != null)
+					throw new InvalidOperationException("OnException already set.");
 
-		public PpsLuaTask OnException(object onException)
-		{
-			CloseTaskList();
-			context.Post(ExecuteException, onException ?? throw new ArgumentNullException(nameof(onException)));
+				onExceptionTask = onException ?? throw new ArgumentNullException(nameof(onException));
+			}
+			context.Post(ExecuteOrQueueOnExceptionTask, null);
 			return this;
 		} // proc OnException
 
-		public PpsLuaTask OnFinally(object onFinish)
+		public PpsLuaTask OnFinally(object onFinally)
 		{
-			CloseTaskList();
-			if (onFinish != null)
-				context.Post(ExecuteFinally, onFinish);
+			lock (executionLock)
+			{
+				if (onFinallyTask != null)
+					throw new InvalidOperationException("OnFinally already set.");
+
+				onFinallyTask = onFinally ?? throw new ArgumentNullException(nameof(onFinally));
+			}
+
+			if (onFinally != null)
+				context.Post(ExecuteOrQueueOnFinallyTask, null);
 			return this;
-		} // proc OnFinish
+		} // proc OnFinally
 
 		public void Cancel()
 			=> cancellationTokenSource?.Cancel();
 
-		public LuaResult Await()
+		public Task<LuaResult> AwaitAsync()
 		{
-			CloseTaskList();
-
-			var taskComletionSource = new TaskCompletionSource<LuaResult>();
-			context.Post(ExecuteAwait, taskComletionSource);
-			return taskComletionSource.Task.AwaitTask();
+			onAwaitTask = new TaskCompletionSource<LuaResult>();
+			context.Post(ExecuteOrQueueAwaitTask, null);
+			return onAwaitTask.Task;
 		} // func Await
+
+		public LuaResult Await()
+			=> AwaitAsync().AwaitTask();
 
 		/// <summary>Is this thread cancelable.</summary>
 		public bool CanCancel => cancellationTokenSource != null;
@@ -370,14 +405,7 @@ namespace TecWare.PPSn
 		/// <summary>Is the execution thread canceled.</summary>
 		public bool IsCanceled => cancellationToken.IsCancellationRequested;
 		/// <summary>Is the execution thread completed.</summary>
-		public bool IsCompleted
-		{
-			get
-			{
-				lock (executionLock)
-					return lastTaskId.HasValue && lastTaskId.Value == currentTaskId;
-			}
-		} // prop IsCompleted
+		public bool IsCompleted => isDisposed;
 	} // class PpsLuaTask
 
 	#endregion

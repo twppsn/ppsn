@@ -2341,7 +2341,7 @@ namespace TecWare.PPSn
 					else if (index == StaticColumns.Length + 0)
 					{
 						if (data == null)
-							data = GetDataAsync<IPpsObjectData>(true).Result;
+							data = GetDataAsync<IPpsObjectData>(true).AwaitTask();
 						return data;
 					}
 					else if (index == StaticColumns.Length + 1)
