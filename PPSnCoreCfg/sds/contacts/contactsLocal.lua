@@ -1,2 +1,2 @@
 ﻿
-require "conactTagging";
+require "contactTagging";
