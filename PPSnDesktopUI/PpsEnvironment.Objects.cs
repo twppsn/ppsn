@@ -3038,7 +3038,7 @@ order by t_liefnr.value desc
 			if (!String.IsNullOrEmpty(paneUri))
 				oi["defaultPane"] = paneUri;
 
-			// mark document as readed
+			// mark document as read
 			var ri = removeObjectInfo.FindIndex(c => String.Compare(objectTyp, c, StringComparison.OrdinalIgnoreCase) == 0);
 			if (ri != -1)
 				removeObjectInfo.RemoveAt(ri);
