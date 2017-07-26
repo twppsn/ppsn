@@ -2449,7 +2449,7 @@ namespace TecWare.PPSn.Server.Sql
 										lastChangeTrackingId = l;
 
 										// notify clients, something has changed
-										FireEvent("ppsn_database_changed", "main");
+										application.FireDataChangedEvent(Name);
 									}
 								}
 							}

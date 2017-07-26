@@ -204,7 +204,7 @@
 				</pps:table>
 
 				<pps:table name="OfflineCache" dataSource="sys">
-					<pps:meta name="syncType">TimeStamp: wpf.sync, ContentLastModification</pps:meta>
+					<pps:meta name="syncType">TimeStamp: wpf.sync, LastWriteTime</pps:meta>
 					<pps:column name="Path" isPrimary="true" isIdentity="false" fieldName="sys.Fields.Path" />
 					<pps:column name="ContentType" fieldName="sys.Fields.ContentType">
 						<pps:meta name="sourceColumn">#</pps:meta>

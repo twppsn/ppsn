@@ -254,6 +254,9 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		public void FireDataChangedEvent(string database)
+			=> FireEvent("ppsn_database_changed", database);
+
 		protected override async Task<bool> OnProcessRequestAsync(IDEWebRequestScope r)
 		{
 			switch (r.RelativeSubPath)
