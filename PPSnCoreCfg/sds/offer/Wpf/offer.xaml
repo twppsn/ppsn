@@ -5,7 +5,8 @@
 						 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
 						 mc:Ignorable="d" 
 						 d:DesignHeight="300" d:DesignWidth="800"
-						 Title="Angebot">
+						 SubTitle="Angebot"
+						 Title="{Binding Data.Head.First.Nr}">
         <x:Code>
 		<![CDATA[
 		self:require 'offer.lua';

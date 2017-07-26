@@ -62,7 +62,9 @@
   <ItemGroup>
     <Content Include="constants\Pers.xml" />
     <Content Include="constants\Kgrp.xml" />
-    <Content Include="constants\Land.xml" />
+    <Content Include="constants\Land.xml">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="constants\Mein.xml" />
     <Content Include="constants\Plzd.xml" />
     <Content Include="constants\Waeh.xml" />

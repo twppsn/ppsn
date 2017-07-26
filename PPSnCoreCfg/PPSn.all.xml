@@ -6,6 +6,7 @@
 	<?des-merge constants/Waeh.xml?>
 	<?des-merge constants/Mein.xml?>
 	<?des-merge mdm/mdm.all.xml?>
+  <?des-merge sds/sds.all.xml?>
 	<!--<?des-merge Contract.xml?>
 	<?des-merge Offer.xml?>-->
 </fragment>
