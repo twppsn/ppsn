@@ -9,110 +9,31 @@
 	<pps:ppsn name="ppsn">
 		<pps:register source="main">
 			<!-- offer fields -->
-			<pps:field name="dbo.Anko.ObjkId" >
-				<pps:attribute name="dataType">long</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anko.Datum" >
-				<pps:attribute name="dataType">datetime</pps:attribute>
-				<pps:attribute name="displayName">Datum</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anko.BisDatum" >
-				<pps:attribute name="dataType">datetime</pps:attribute>
-				<pps:attribute name="displayName">Gültig bis</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anko.AnfDatum" >
-				<pps:attribute name="dataType">datetime</pps:attribute>
-				<pps:attribute name="displayName">Anfragedatum</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anko.AnfNr" >
-				<pps:attribute name="dataType">string</pps:attribute>
-				<pps:attribute name="maxLength">20</pps:attribute>
-				<pps:attribute name="displayName">Anfrage-Nr.</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anko.KontId" >
-				<pps:attribute name="dataType">long</pps:attribute>
-				<pps:attribute name="displayName">Kontakt</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anko.Adresse" >
-				<pps:attribute name="dataType">string</pps:attribute>
-				<pps:attribute name="maxLength">1024</pps:attribute>
-				<pps:attribute name="displayName">Adresse</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anko.Variante" >
-				<pps:attribute name="dataType">int</pps:attribute>
-				<pps:attribute name="displayName">Variante</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anko.Zusatz" >
-				<pps:attribute name="dataType">string</pps:attribute>
-				<pps:attribute name="maxLength">128</pps:attribute>
-				<pps:attribute name="displayName">Bestellangaben</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anko.PersId" >
-				<pps:attribute name="dataType">long</pps:attribute>
-				<pps:attribute name="displayName">Sachbearbeiter</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anko.Ansp" >
-				<pps:attribute name="dataType">long</pps:attribute>
-				<pps:attribute name="displayName">Ansprechpartner</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anko.KopfText" >
-				<pps:attribute name="dataType">string</pps:attribute>
-				<pps:attribute name="maxLength">2048</pps:attribute>
-				<pps:attribute name="displayName">Kopftext</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anko.FussText" >
-				<pps:attribute name="dataType">string</pps:attribute>
-				<pps:attribute name="maxLength">2048</pps:attribute>
-				<pps:attribute name="displayName">Fusstext</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anko.Anmerk" >
-				<pps:attribute name="dataType">string</pps:attribute>
-				<pps:attribute name="maxLength">2048</pps:attribute>
-				<pps:attribute name="displayName">Anmerkungen</pps:attribute>
-			</pps:field>
+			<pps:field name="sds.Anko.ObjkId" />
+			<pps:field name="sds.Anko.Datum" displayName="Datum" />
+			<pps:field name="sds.Anko.BisDatum" displayName="Gültig bis" />
+			<pps:field name="sds.Anko.AnfDatum" displayName="Anfragedatum" />
+			<pps:field name="sds.Anko.AnfNr" displayName="Anfrage-Nr." />
+			<pps:field name="sds.Anko.KontId" displayName="Kontakt" />
+			<pps:field name="sds.Anko.Adresse" displayName="Adresse" />
+			<pps:field name="sds.Anko.Variante" displayName="Variante" />
+			<pps:field name="sds.Anko.Zusatz" displayName="Zusatz" />
+			<pps:field name="sds.Anko.PersId" displayName="Sachbearbeiter" />
+			<pps:field name="sds.Anko.Ansp" displayName="Ansprechpartner" />
+			<pps:field name="sds.Anko.KopfText" displayName="Kopftext" />
+			<pps:field name="sds.Anko.FussText" displayName="Fusstext" />
+			<pps:field name="sds.Anko.Anmerk" displayName="Anmerkungen" />
 
-			<pps:field name="dbo.Anpo.Id" >
-				<pps:attribute name="dataType">long</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anpo.ObjkId" >
-				<pps:attribute name="dataType">long</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anpo.Pos" >
-				<pps:attribute name="dataType">int</pps:attribute>
-				<pps:attribute name="displayName">Position</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anpo.ProdId" >
-				<pps:attribute name="dataType">long</pps:attribute>
-				<pps:attribute name="displayName">Produkt</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anpo.ProdNr" >
-				<pps:attribute name="dataType">string</pps:attribute>
-				<pps:attribute name="maxLength">20</pps:attribute>
-				<pps:attribute name="displayName">Produkt-Nr.</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anpo.Znr" >
-				<pps:attribute name="dataType">string</pps:attribute>
-				<pps:attribute name="maxLength">30</pps:attribute>
-				<pps:attribute name="displayName">Zeich-Nr.</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anpo.Text" >
-				<pps:attribute name="dataType">string</pps:attribute>
-				<pps:attribute name="maxLength">2048</pps:attribute>
-				<pps:attribute name="displayName">Produkttext</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anpo.KontProdNr" >
-				<pps:attribute name="dataType">string</pps:attribute>
-				<pps:attribute name="maxLength">20</pps:attribute>
-				<pps:attribute name="displayName">Kunden-Produkt-Nr.</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anpo.Termin" >
-				<pps:attribute name="dataType">datetime</pps:attribute>
-				<pps:attribute name="displayName">Termin</pps:attribute>
-			</pps:field>
-			<pps:field name="dbo.Anpo.Menge" >
-				<pps:attribute name="dataType">decimal</pps:attribute>
-				<pps:attribute name="displayName">Menge</pps:attribute>
-			</pps:field>
+			<pps:field name="sds.Anpo.Id" />
+			<pps:field name="sds.Anpo.ObjkId" />
+			<pps:field name="sds.Anpo.Pos" displayName="Position" />
+			<pps:field name="sds.Anpo.ProdId" displayName="Produkt" />
+			<pps:field name="sds.Anpo.ProdNr" displayName="Produkt-Nr." />
+			<pps:field name="sds.Anpo.Znr" displayName="Zeich-Nr." />
+			<pps:field name="sds.Anpo.Text" displayName="Produkttext" />
+			<pps:field name="sds.Anpo.KontProdNr" displayName="Kunden-Produkt-Nr." />
+			<pps:field name="sds.Anpo.Termin" displayName="Termin" />
+			<pps:field name="sds.Anpo.Menge" displayName="Menge" />
 
 			<!-- offer mask -->
 			<pps:dataset name="offerDataSet" inherited="coreDataSet" serverScripts="OfferScript">
@@ -121,33 +42,33 @@
 				<pps:autoTag name="Nr" tableName="Head" columnName="Nr" mode="First" />
 
 				<pps:table name="Head">
-					<pps:column name="ObjkId" fieldName="dbo.Anko.ObjkId" />
-					<pps:column name="Datum" fieldName="dbo.Anko.Datum" />
-					<pps:column name="BisDatum" fieldName="dbo.Anko.BisDatum" />
-					<pps:column name="AnfDatum" fieldName="dbo.Anko.AnfDatum" />
-					<pps:column name="AnfNr" fieldName="dbo.Anko.AnfNr" />
-					<pps:column name="KontId" fieldName="dbo.Anko.KontId" />
-					<pps:column name="Adresse" fieldName="dbo.Anko.Adresse" />
-					<pps:column name="Variante" fieldName="dbo.Anko.Variante" />
-					<pps:column name="Zusatz" fieldName="dbo.Anko.Zusatz" />
-					<pps:column name="PersId" fieldName="dbo.Anko.PersId" />
-					<pps:column name="Ansp" fieldName="dbo.Anko.Ansp" />
-					<pps:column name="KopfText" fieldName="dbo.Anko.KopfText" />
-					<pps:column name="FussText" fieldName="dbo.Anko.FussText" />
-					<pps:column name="Anmerk" fieldName="dbo.Anko.Anmerk" />
+					<pps:column name="ObjkId" fieldName="sds.Anko.ObjkId" />
+					<pps:column name="Datum" fieldName="sds.Anko.Datum" />
+					<pps:column name="BisDatum" fieldName="sds.Anko.BisDatum" />
+					<pps:column name="AnfDatum" fieldName="sds.Anko.AnfDatum" />
+					<pps:column name="AnfNr" fieldName="sds.Anko.AnfNr" />
+					<pps:column name="KontId" fieldName="sds.Anko.KontId" />
+					<pps:column name="Adresse" fieldName="sds.Anko.Adresse" />
+					<pps:column name="Variante" fieldName="sds.Anko.Variante" />
+					<pps:column name="Zusatz" fieldName="sds.Anko.Zusatz" />
+					<pps:column name="PersId" fieldName="sds.Anko.PersId" />
+					<pps:column name="Ansp" fieldName="sds.Anko.Ansp" />
+					<pps:column name="KopfText" fieldName="sds.Anko.KopfText" />
+					<pps:column name="FussText" fieldName="sds.Anko.FussText" />
+					<pps:column name="Anmerk" fieldName="sds.Anko.Anmerk" />
 				</pps:table>
 
 				<pps:table name="Anpo">
-					<pps:column name="Id" fieldName="dbo.Anpo.Id" isPrimary="true" />
-					<pps:relation name="ObjkId" fieldName="dbo.Anpo.ObjkId" relationName="AnpoHead" parentTable="Head" parentColumn="Id" parentType="Root" />
-					<pps:column name="Pos" fieldName="dbo.Anpo.Pos" />
-					<pps:column name="ProdId" fieldName="dbo.Anpo.ProdId" />
-					<pps:column name="ProdNr" fieldName="dbo.Anpo.ProdNr" />
-					<pps:column name="Znr" fieldName="dbo.Anpo.Znr" />
-					<pps:column name="Text" fieldName="dbo.Anpo.Text" />
-					<pps:column name="KontProdNr" fieldName="dbo.Anpo.KontProdNr" />
-					<pps:column name="Termin" fieldName="dbo.Anpo.Termin" />
-					<pps:column name="Menge" fieldName="dbo.Anpo.Menge" />
+					<pps:column name="Id" fieldName="sds.Anpo.Id" isPrimary="true" />
+					<pps:relation name="ObjkId" fieldName="sds.Anpo.ObjkId" relationName="AnpoHead" parentTable="Head" parentColumn="Id" parentType="Root" />
+					<pps:column name="Pos" fieldName="sds.Anpo.Pos" />
+					<pps:column name="ProdId" fieldName="sds.Anpo.ProdId" />
+					<pps:column name="ProdNr" fieldName="sds.Anpo.ProdNr" />
+					<pps:column name="Znr" fieldName="sds.Anpo.Znr" />
+					<pps:column name="Text" fieldName="sds.Anpo.Text" />
+					<pps:column name="KontProdNr" fieldName="sds.Anpo.KontProdNr" />
+					<pps:column name="Termin" fieldName="sds.Anpo.Termin" />
+					<pps:column name="Menge" fieldName="sds.Anpo.Menge" />
 				</pps:table>
 
 			</pps:dataset>
@@ -155,6 +76,7 @@
 
 		<pps:wpf name="wpf">
 			<pps:template id="offer" file="offerTemplate.xaml" />
+      <pps:wpfSource id="sds.offer" directory="Wpf" virtualPath="panes" />
 
 			<pps:view name="sdsOffer" displayName="Angebote" displayImage="purchase_orderImage" view="local.objects" filter="Typ:=sdsOffer">
 				<pps:filter name="entwurf" displayName="Entwurf">
