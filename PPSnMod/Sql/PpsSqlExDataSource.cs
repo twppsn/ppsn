@@ -2406,6 +2406,8 @@ namespace TecWare.PPSn.Server.Sql
 
 		private async Task ExecuteDatabaseAsync()
 		{
+			var lastChangeTrackingId = -1L;
+
 			while (databaseMainThread.IsRunning)
 			{
 				var executeStartTick = Environment.TickCount;
@@ -2414,14 +2416,14 @@ namespace TecWare.PPSn.Server.Sql
 					try
 					{
 						// reset connection
-						if (masterConnection.State == System.Data.ConnectionState.Broken)
+						if (masterConnection.State == ConnectionState.Broken)
 						{
 							Log.Warn("Reset connection.");
 							masterConnection.Close();
 						}
 
 						// open connection
-						if (masterConnection.State == System.Data.ConnectionState.Closed)
+						if (masterConnection.State == ConnectionState.Closed)
 						{
 							Log.Info("Open database connection.");
 							await masterConnection.OpenAsync();
@@ -2433,6 +2435,24 @@ namespace TecWare.PPSn.Server.Sql
 							if (!schemInfoInitialized.IsSet)
 								await Task.Run(new Action(InitializeSchema));
 
+							// check for change tracking
+							using (var cmd = masterConnection.CreateCommand())
+							{
+								cmd.CommandText = "SELECT change_tracking_current_version()";
+								var r = await cmd.ExecuteScalarAsync();
+								if(r is long l)
+								{
+									if (lastChangeTrackingId == -1L)
+										lastChangeTrackingId = l;
+									else if (lastChangeTrackingId != l)
+									{
+										lastChangeTrackingId = l;
+
+										// notify clients, something has changed
+										FireEvent("ppsn_database_changed", "main");
+									}
+								}
+							}
 						}
 					}
 					catch (Exception e)
@@ -2461,15 +2481,11 @@ namespace TecWare.PPSn.Server.Sql
 		#endregion
 
 		public override Task<IPpsSelectorToken> CreateSelectorTokenAsync(string name, XElement sourceDescription)
-		{
-			var selectorToken = Task.Run(new Func<IPpsSelectorToken>(() => SqlDataSelectorToken.CreateFromXml(this, name, sourceDescription)));
-			return selectorToken;
-		} // func CreateSelectorTokenAsync
+			=> Task.Run(new Func<IPpsSelectorToken>(() => SqlDataSelectorToken.CreateFromXml(this, name, sourceDescription)));
 
 		public override IPpsColumnDescription GetColumnDescription(string columnName, bool throwException)
 		{
-			SqlColumnInfo column;
-			if (columnStore.TryGetValue(columnName, out column))
+			if (columnStore.TryGetValue(columnName, out var column))
 				return column;
 			else if (throwException)
 				throw new ArgumentException($"Could not resolve column {columnName} to source {Name}.", columnName);
