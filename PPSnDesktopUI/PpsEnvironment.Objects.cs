@@ -1296,7 +1296,7 @@ namespace TecWare.PPSn
 					}
 				}
 
-				if (!PreviewLoaded)
+				if (!PreviewLoaded && preview == null)
 				{
 					if (imageLoaded)
 					{
