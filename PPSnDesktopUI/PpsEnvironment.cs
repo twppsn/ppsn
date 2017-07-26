@@ -931,6 +931,7 @@ namespace TecWare.PPSn
 								SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.ServerConnectFailure);
 								break;
 							case WebExceptionStatus.ProtocolError: // todo: detect Login failure
+								Traces.AppendException(webEx);
 								SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.LoginFailed);
 								break;
 							default:
