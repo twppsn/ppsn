@@ -15,7 +15,7 @@
     <ui:PpsGenericWpfControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../Default.xaml" />
+                <ResourceDictionary Source="..\..\..\ClientWpf\Default.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </ui:PpsGenericWpfControl.Resources>

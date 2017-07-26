@@ -48,14 +48,14 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="sds\contacts\Wpf\contacts.lua" />
+    <None Include="mdm\contacts\Wpf\contacts.lua" />
     <None Include="ClientWpf\Panes\testEnvironment.lua" />
     <None Include="ClientWpf\Panes\hello.lua" />
-    <None Include="ClientWpf\Panes\contract.lua" />
-    <None Include="ClientWpf\Panes\offer.lua" />
-    <None Include="sds\contacts\contactsLocal.lua" />
-    <None Include="sds\contacts\contactsServer.lua" />
-    <None Include="sds\contacts\contactTagging.lua" />
+    <None Include="sds\contract\Wpf\contract.lua" />
+    <None Include="sds\offer\Wpf\offer.lua" />
+    <None Include="mdm\contacts\contactsLocal.lua" />
+    <None Include="mdm\contacts\contactsServer.lua" />
+    <None Include="mdm\contacts\contactTagging.lua" />
     <None Include="stuff\Debug.lua" />
     <None Include="Tests\SQLTests.lua" />
   </ItemGroup>
@@ -66,26 +66,29 @@
     <Content Include="constants\Mein.xml" />
     <Content Include="constants\Plzd.xml" />
     <Content Include="constants\Waeh.xml" />
-    <Content Include="sds\contacts\Contacts.xml">
+    <Content Include="mdm\contacts\Contacts.xml">
       <SubType>Designer</SubType>
     </Content>
-    <None Include="contract\contractServer.lua" />
-    <None Include="offer\offerServer.lua" />
+    <None Include="sds\contract\contractServer.lua" />
+    <None Include="sds\offer\offerServer.lua" />
     <None Include="PPSn.template">
       <SubType>Designer</SubType>
     </None>
-    <Content Include="Contract.xml">
+    <Content Include="sds\contract\Contract.xml">
       <SubType>Designer</SubType>
     </Content>
-    <Content Include="Offer.xml" />
+    <Content Include="sds\offer\Offer.xml">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="PPSn.all.xml">
       <SubType>Designer</SubType>
     </Content>
+    <Content Include="sds\sds.all.xml" />
     <Content Include="Tests\PPSn.Test.xml" />
     <Content Include="PPSn.xml">
       <SubType>Designer</SubType>
     </Content>
-    <Content Include="sds\sds.all.xml" />
+    <Content Include="mdm\mdm.all.xml" />
     <Content Include="System.xml">
       <SubType>Designer</SubType>
     </Content>
@@ -99,7 +102,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Content Include="sds\contacts\Wpf\contacts.xaml">
+    <Content Include="mdm\contacts\Wpf\contacts.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Content>
@@ -107,11 +110,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Content>
-    <Content Include="ClientWpf\Panes\contract.xaml">
+    <Content Include="sds\contract\Wpf\contract.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Content>
-    <Content Include="ClientWpf\Panes\offer.xaml">
+    <Content Include="sds\offer\Wpf\offer.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Content>
@@ -191,15 +194,15 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="sds\contacts\Templates.xaml">
+    <Page Include="mdm\contacts\contactTemplate.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="ClientWpf\Templates\Contract.xaml">
+    <Page Include="sds\contract\contractTemplate.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="ClientWpf\Templates\Offer.xaml">
+    <Page Include="sds\offer\offerTemplate.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -214,7 +217,9 @@
       <Name>PPSnDesktopUI</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="ClientWpf\Templates\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

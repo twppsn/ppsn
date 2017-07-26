@@ -1,8 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
 		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+  
 	<luaengine>
-		<script id="ContractScript" filename="contract\contractServer.lua" />
+		<script id="ContractScript" filename="contractServer.lua" />
 	</luaengine>
 
 	<pps:ppsn name="ppsn">
@@ -117,6 +118,8 @@
 			
 			<!-- contracts mask -->
 			<pps:dataset name="contractDataSet" inherited="coreDataSet" serverScripts="ContractScript">
+        <pps:meta name="DefaultPaneUri" dataType="string">wpf/panes/contract.xaml</pps:meta>
+        
 				<pps:autoTag name="Nr" tableName="Head" columnName="Nr" mode="First" />
 
 				<pps:table name="Head">
@@ -153,7 +156,7 @@
 		</pps:register>
 
 		<pps:wpf name="wpf">
-			<pps:template id="contract" file="ClientWpf\Templates\Contract.xaml" />
+			<pps:template id="contract" file="contractTemplate.xaml" />
 
 			<pps:view name="sdsContract" displayName="Aufträge" displayImage="sales_quotationImage" view="local.objects" filter="Typ:=sdsContract">
 				<pps:filter name="lief" displayName="Entwurf">
@@ -169,11 +172,11 @@
 
 			<pps:action name="contractNew" displayName="Neuer Auftrag" priority="100">
 				<pps:condition><![CDATA[ return CurrentView == Views.sdsContract; ]]></pps:condition>
-				<pps:code><![CDATA[ Window:LoadMask{ document = 'sdsContract', pane = 'wpf/panes/contract.xaml' }; ]]></pps:code>
+				<pps:code><![CDATA[ Window:LoadMask{ createNew = 'sdsContract' }; ]]></pps:code>
 			</pps:action>
 			<pps:action name="contractOpen" displayName="Bearbeiten" priority="200">
 				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "sdsContract" ]]></pps:condition>
-				<pps:code><![CDATA[ Window:LoadMask{ document = 'sdsContract', pane = 'wpf/panes/contract.xaml', guid = CurrentItem.Guid }; ]]> </pps:code>
+				<pps:code><![CDATA[ Window:LoadMask{ object = GetObject(CurrentItem.Id) }; ]]> </pps:code>
 			</pps:action>
 		</pps:wpf>
 

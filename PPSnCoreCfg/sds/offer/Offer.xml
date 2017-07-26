@@ -1,8 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
 		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+  
 	<luaengine>
-		<script id="OfferScript" filename="Offer\offerServer.lua" />
+		<script id="OfferScript" filename="offerServer.lua" />
 	</luaengine>
 
 	<pps:ppsn name="ppsn">
@@ -115,6 +116,8 @@
 
 			<!-- offer mask -->
 			<pps:dataset name="offerDataSet" inherited="coreDataSet" serverScripts="OfferScript">
+        <pps:meta name="DefaultPaneUri" dataType="string">wpf/panes/offer.xaml</pps:meta>
+        
 				<pps:autoTag name="Nr" tableName="Head" columnName="Nr" mode="First" />
 
 				<pps:table name="Head">
@@ -151,7 +154,7 @@
 		</pps:register>
 
 		<pps:wpf name="wpf">
-			<pps:template id="offer" file="ClientWpf\Templates\Offer.xaml" />
+			<pps:template id="offer" file="offerTemplate.xaml" />
 
 			<pps:view name="sdsOffer" displayName="Angebote" displayImage="purchase_orderImage" view="local.objects" filter="Typ:=sdsOffer">
 				<pps:filter name="entwurf" displayName="Entwurf">
@@ -167,11 +170,11 @@
 
 			<pps:action name="offerNew" displayName="Neues Angebot" priority="100">
 				<pps:condition><![CDATA[ return CurrentView == Views.sdsOffer; ]]></pps:condition>
-				<pps:code><![CDATA[ Window:LoadMask{ document = 'sdsOffer', pane = 'wpf/panes/offer.xaml' }; ]]></pps:code>
+				<pps:code><![CDATA[ Window:LoadMask{ createNew = 'sdsOffer' }; ]]></pps:code>
 			</pps:action>
 			<pps:action name="offerOpen" displayName="Bearbeiten" priority="200">
 				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "sdsOffer" ]]></pps:condition>
-				<pps:code><![CDATA[ Window:LoadMask{ document = 'sdsOffer', pane = 'wpf/panes/offer.xaml', guid = CurrentItem.Guid }; ]]> </pps:code>
+				<pps:code><![CDATA[ Window:LoadMask{ object = GetObject(CurrentItem.Id) }; ]]> </pps:code>
 			</pps:action>
 		</pps:wpf>
 
