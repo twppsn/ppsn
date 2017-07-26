@@ -292,6 +292,10 @@ namespace TecWare.PPSn
 		public void ShowException(Exception exception, string alternativeMessage = null)
 			=> ShowException(ExceptionShowFlags.None, exception, alternativeMessage);
 
+		[LuaMember(nameof(ShowExceptionAsync))]
+		public Task ShowExceptionAsync(Exception exception, string alternativeMessage = null)
+			=> ShowExceptionAsync(ExceptionShowFlags.None, exception, alternativeMessage);
+
 		public void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 		{
 			// always add the exception to the list
@@ -309,6 +313,9 @@ namespace TecWare.PPSn
 					Application.Current.Shutdown(1);
 			}
 		} // proc ShowException
+
+		public async Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+			=> await Dispatcher.InvokeAsync(() => ShowException(flags, exception, alternativeMessage));
 
 		public bool ShowExceptionDialog(Window dialogOwner, ExceptionShowFlags flags, Exception exception, string alternativeMessage)
 		{
@@ -328,9 +335,6 @@ namespace TecWare.PPSn
 					return dialog.ShowDialog() ?? false; // show the dialog
 			}
 		} // func ShowExceptionDialog
-
-		public async Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
-			=> await Dispatcher.InvokeAsync(() => ShowException(flags, exception, alternativeMessage));
 
 		/// <summary></summary>
 		/// <param name="owner"></param>

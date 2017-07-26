@@ -2395,7 +2395,7 @@ namespace TecWare.PPSn
 					else if (index == StaticColumns.Length + 0)
 					{
 						if (data == null)
-							data = GetDataAsync<IPpsObjectData>(true).Result;
+							data = GetDataAsync<IPpsObjectData>(true).AwaitTask();
 						return data;
 					}
 					else if (index == StaticColumns.Length + 1)
@@ -3092,7 +3092,7 @@ order by t_liefnr.value desc
 			if (!String.IsNullOrEmpty(paneUri))
 				oi["defaultPane"] = paneUri;
 
-			// mark document as readed
+			// mark document as read
 			var ri = removeObjectInfo.FindIndex(c => String.Compare(objectTyp, c, StringComparison.OrdinalIgnoreCase) == 0);
 			if (ri != -1)
 				removeObjectInfo.RemoveAt(ri);
