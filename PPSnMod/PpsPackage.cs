@@ -39,7 +39,7 @@ namespace TecWare.PPSn.Server
 
 							yield return new PpsApplicationFileItem(path,
 								item.ReturnOptionalValue<long>("length", -1),
-								item.ReturnOptionalValue<DateTime>("lastModified", DateTime.Now)
+								item.ReturnOptionalValue<DateTime>("lastModified", DateTime.MinValue)
 							);
 						}
 					}

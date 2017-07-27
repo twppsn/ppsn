@@ -14,10 +14,6 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TecWare.PPSn.Server
 {
@@ -33,7 +29,7 @@ namespace TecWare.PPSn.Server
 		{
 			this.path = path;
 			this.length = length;
-			this.lastWriteTime = lastWriteTime;
+			this.lastWriteTime = lastWriteTime.Ticks == 0 ? lastWriteTime : new DateTime(lastWriteTime.Ticks - (lastWriteTime.Ticks % TimeSpan.TicksPerSecond), lastWriteTime.Kind);
 		} // ctor
 
 		public string Path => path;
