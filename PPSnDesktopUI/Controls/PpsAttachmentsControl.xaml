@@ -44,11 +44,8 @@ specific language governing permissions and limitations under the Licence.
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddFileButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
 			<Button Command="{x:Static local:PpsAttachmentsControl.AddLinkAttachmentCommand}" 
 						Content="{StaticResource linkPathGeometry}"
-                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddLinkButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
-			<Button Command="{x:Static local:PpsAttachmentsControl.RemoveAttachmentCommand}"
-						Content="{StaticResource deletePathGeometry}"
 						Margin="0,0,48,0"
-                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=RemoveButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddLinkButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
 			<Button Command="{x:Static local:PpsAttachmentsControl.CameraAttachmentCommand}"
 						Content="{StaticResource cameraPathGeometry}"
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=CameraButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
@@ -75,9 +72,10 @@ specific language governing permissions and limitations under the Licence.
 			</ListBox.ItemsPanel>
 			<ListBox.ItemTemplate>
 				<DataTemplate>
-					<Grid Width="96">
+					<Grid Width="112">
 						<Grid.RowDefinitions>
 							<RowDefinition Height="96"/>
+							<RowDefinition Height="Auto"/>
 							<RowDefinition Height="Auto"/>
 						</Grid.RowDefinitions>
 						<Grid.Resources>
@@ -86,7 +84,16 @@ specific language governing permissions and limitations under the Licence.
 						<Border x:Name="border" Grid.Row="0" BorderThickness="1" BorderBrush="{StaticResource PPSnControlBackgroundBrush}" Background="{StaticResource borderBackgroundBrush}">
 							<Image x:Name="image" Source="{Binding Picture, Mode=OneWay}" Stretch="Fill"/>
 						</Border>
-						<TextBlock Grid.Row="1" Text="{Binding Name, Mode=OneWay}" Foreground="{StaticResource PPSnWindowForegroundBrush}" TextWrapping="Wrap"/>
+						<DockPanel x:Name="panCommands" Grid.Row="1" Height="40" LastChildFill="False" Visibility="Collapsed">
+							<Button Command="{x:Static local:PpsAttachmentsControl.RunFileAttachmentCommand}" 
+									Content="{StaticResource openInAppPathGeometry}" Style="{StaticResource PPSnImageButtonStyle}"
+									DockPanel.Dock="Left" Width="40"/>
+							<Button Command="{x:Static local:PpsAttachmentsControl.RemoveAttachmentCommand}"
+									Content="{StaticResource deletePathGeometry}" Style="{StaticResource PPSnImageButtonStyle}"
+									Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=RemoveButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+									DockPanel.Dock="Right" Width="40"/>
+						</DockPanel>
+						<TextBlock Grid.Row="2" Text="{Binding Name, Mode=OneWay}" Foreground="{StaticResource PPSnWindowForegroundBrush}" TextWrapping="Wrap"/>
 					</Grid>
 					<DataTemplate.Triggers>
 						<MultiDataTrigger>
@@ -115,6 +122,7 @@ specific language governing permissions and limitations under the Licence.
 								<Condition Binding="{Binding Path=IsKeyboardFocusWithin, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}" Value="True"/>
 							</MultiDataTrigger.Conditions>
 							<Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
+							<Setter TargetName="panCommands" Property="Visibility" Value="Visible"/>
 						</MultiDataTrigger>
 					</DataTemplate.Triggers>
 				</DataTemplate>
