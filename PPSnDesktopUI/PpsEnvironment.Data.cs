@@ -682,7 +682,7 @@ namespace TecWare.PPSn
 		private bool isSynchronizationStarted = false; // number of sync processes
 
 		private bool isDisposed = false;
-		private bool isInSynchronization = false;
+		private volatile bool isInSynchronization = false;
 		private bool updateUserInfo = false;
 
 		private readonly List<PpsDataEvent> collectedEvents = new List<PpsDataEvent>();
@@ -1311,7 +1311,7 @@ namespace TecWare.PPSn
 					xml.ReadEndElement();
 				}
 				if (objectCounter > 0)
-					Trace.TraceInformation($"Synchonization of {table.Name} finished ({objectCounter:N0} objects.");
+					Trace.TraceInformation($"Synchonization of {table.Name} finished ({objectCounter:N0} objects).");
 			} // proc Parse
 
 			private bool RowExists()
@@ -1384,6 +1384,14 @@ namespace TecWare.PPSn
 							case "batch":
 								 await FetchDataXmlBatchAsync(xml, progess);
 								break;
+							case "error":
+								{
+									var msg =
+										xml.Read()
+											? xml.ReadContentAsString()
+											: "unkown error";
+									throw new Exception($"Synchronization error: {msg}");
+								}
 							case "syncStamp":
 								var timeStamp = xml.ReadElementContent<long>(-1);
 
@@ -1472,7 +1480,7 @@ namespace TecWare.PPSn
 		} // func GetTable
 
 		internal PpsDataTableDefinition FindTable(string tableName)
-			=> schema.FindTable(tableName);
+			=> schema?.FindTable(tableName);
 
 		private bool TryGetTableFromCache(PpsDataTableDefinition tableDefinition, out PpsMasterDataTable table)
 		{
@@ -1486,26 +1494,30 @@ namespace TecWare.PPSn
 
 		public Task StartSynchronization()
 		{
-			return environment.RunAsync(
-				async () =>
-				{
-					using (var progressTracer = environment.Traces.TraceProgress())
-					{
-						try
-						{
-							await SynchronizationAsync(progressTracer);
-						}
-						catch (Exception e)
-						{
-							progressTracer.Except(e);
-							throw;
-						}
-					}
-				}, 
-				"Synchronization", CancellationToken.None
-			);
+			if (IsInSynchronization) // todo: wait
+				return Task.CompletedTask;
+			else
+			{
+				return environment.RunAsync(
+				  async () =>
+				  {
+					  using (var progressTracer = environment.Traces.TraceProgress())
+					  {
+						  try
+						  {
+							  await SynchronizationAsync(progressTracer);
+						  }
+						  catch (Exception e)
+						  {
+							  progressTracer.Except(e);
+							  throw;
+						  }
+					  }
+				  },
+				  "Synchronization", CancellationToken.None
+			  );
+			}
 		} // proc StartSynchronization
-
 
 		internal async Task<bool> SynchronizationAsync(IProgress<string> progress)
 		{
@@ -1520,8 +1532,8 @@ namespace TecWare.PPSn
 			progress?.Report("Synchronization...");
 
 			// Fetch data
-			environment.OnBeforeSynchronization();
 			isInSynchronization = true;
+			environment.OnBeforeSynchronization();
 			try
 			{
 				// update header
@@ -1561,7 +1573,8 @@ namespace TecWare.PPSn
 
 			using (var r = await request.GetResponseAsync())
 			{
-				if (r.GetLastModified().ToUniversalTime() != lastSynchronizationSchema)
+				var schemaDate = r.GetLastModified();
+				if (schemaDate == DateTime.MinValue || schemaDate.ToUniversalTime() != lastSynchronizationSchema)
 				{
 					schemaIsOutDated = true;
 					return true;

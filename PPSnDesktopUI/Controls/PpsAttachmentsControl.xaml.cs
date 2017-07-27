@@ -27,6 +27,7 @@ using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using TecWare.DE.Networking;
 
 namespace TecWare.PPSn.Controls
 {
@@ -38,6 +39,7 @@ namespace TecWare.PPSn.Controls
 		string Name { get; }
 		string MimeType { get; }
 		object Data { get; }
+		void ShellExecute();
 	} // interface IPpsAttachmentItem
 
 	public interface IPpsAttachments : IEnumerable<IPpsAttachmentItem>
@@ -184,6 +186,16 @@ namespace TecWare.PPSn.Controls
 				; // NOP
 			else
 				CommandBindings.Add(new CommandBinding(SeventhButtonAttachmentCommand, (isender, ie) => ExecuteCommand(SeventhButtonCommand, this)));
+
+			CommandBindings.Add(
+					new CommandBinding(RunFileAttachmentCommand,
+						(isender, ie) =>
+						{
+							SelectedAttachment.ShellExecute();
+						},
+						(isender, ie) => ie.CanExecute = SelectedAttachment?.MimeType != MimeTypes.Text.DataSet
+					)
+				);
 		}
 
 		#endregion
@@ -255,6 +267,7 @@ namespace TecWare.PPSn.Controls
 
 		public readonly static RoutedUICommand RemoveAttachmentCommand = new RoutedUICommand("RemoveAttachment", "RemoveAttachment", typeof(PpsAttachmentsControl));
 		public readonly static RoutedUICommand AddFileAttachmentCommand = new RoutedUICommand("AddFileAttachment", "AddFileAttachment", typeof(PpsAttachmentsControl));
+		public readonly static RoutedUICommand RunFileAttachmentCommand = new RoutedUICommand("RunFileAttachment", "RunFileAttachment", typeof(PpsAttachmentsControl));
 		public readonly static RoutedUICommand AddLinkAttachmentCommand = new RoutedUICommand("AddLinkAttachment", "AddLinkAttachment", typeof(PpsAttachmentsControl));
 		public readonly static RoutedUICommand ScannerAttachmentCommand = new RoutedUICommand("ScannerAttachment", "ScannerAttachment", typeof(PpsAttachmentsControl));
 		public readonly static RoutedUICommand CameraAttachmentCommand = new RoutedUICommand("CameraAttachment", "CameraAttachment", typeof(PpsAttachmentsControl));
@@ -291,6 +304,12 @@ namespace TecWare.PPSn.Controls
 				this.linkColumnIndex = linkColumnIndex;
 			} // ctor
 
+			public void ShellExecute()
+			{
+				GetLinkedObject().ShellExecute();
+			}
+
+
 			private PpsObject GetLinkedObject()
 				=> (PpsObject)row[linkColumnIndex];
 
@@ -319,7 +338,15 @@ namespace TecWare.PPSn.Controls
 			private void NotifyPropertyChanged(string propertyName = "")
 				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-			public object Picture => GetLinkedObject().GetDataAsync<PpsObjectImageData>().Result.Preview;
+			public object Picture
+			{
+				get
+				{
+					var obj = GetLinkedObject().GetDataAsync<PpsObjectImageData>().AwaitTask();
+					obj.PropertyChanged += (sender, ob) => NotifyPropertyChanged(nameof(Picture));
+					return obj.Preview;
+				}
+			}
 
 			public string Type => MimeType.StartsWith("image") ? "picture" : "binary";
 		} // class PpsAttachmentItemImplementation

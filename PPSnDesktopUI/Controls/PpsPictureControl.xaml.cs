@@ -119,10 +119,10 @@ namespace TecWare.PPSn.Controls
 					var idx = tobj.Tags.IndexOf("PictureItemType");
 					if (idx >= 0 && (string)tobj.Tags[idx].Value == pictureTag)
 					{
-						this.weakDat.Target = tobj;
+						this.weakObj.Target = tobj;
 					}
 				}
-				weakDat.Target = new PpsObjectImageData(((PpsObject)weakDat.Target));
+				weakDat.Target = new PpsObjectImageData(((PpsObject)weakObj.Target));
 				((PpsObjectImageData)weakDat.Target).PropertyChanged += Dat_PropertyChanged;
 				NotifyPropertyChanged(nameof(Image));
 				NotifyPropertyChanged(nameof(Preview));
