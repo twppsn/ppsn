@@ -95,12 +95,20 @@
 			<pps:dataset name="masterdata">
 				<pps:table name="Kont">
 					<pps:column name="Id" fieldName="dbo.Kont.Id" isPrimary="true" />
+          <pps:column name="ObjkId" fieldName="dbo.Objk.Id" />
 					<pps:column name="Name" fieldName="dbo.Kont.Name" />
 				</pps:table>
 
+        <pps:table name="Adre">
+					<pps:column name="Id" fieldName="dbo.Adre.Id" isPrimary="true" />
+          <pps:relation name="ObjkId" fieldName="dbo.Adre.ObjkId" relationName="AdreKont" parentTable="Kont" parentColumn="ObjkId" parentType="Root" />
+					<pps:column name="Name" fieldName="dbo.Adre.Name" />
+				</pps:table>
+        
 				<pps:table name="Ansp">
 					<pps:column name="Id" fieldName="dbo.Ansp.Id" isPrimary="true" />
-					<pps:column name="Name" fieldName="dbo.Ansp.Id" />
+          <pps:relation name="AdreId" fieldName="dbo.Ansp.AdreId" relationName="AnspAdre" parentTable="Adre" parentColumn="Id" parentType="Root" />
+					<pps:column name="Name" fieldName="dbo.Ansp.Name" />
 				</pps:table>
 			</pps:dataset>
 
