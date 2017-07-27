@@ -738,7 +738,7 @@ namespace TecWare.PPSn.Server
 		
 		private void RegisterDataSet(PpsDataSource source, string name, XElement x)
 		{
-			var datasetDefinition = (source ?? mainDataSource).CreateDataSetDefinition(name, x, DateTime.Now);
+			var datasetDefinition = (source ?? mainDataSource).CreateDataSetDefinition(name, x, Server.Configuration.ConfigurationStamp);
 			lock (datasetDefinitions)
 				datasetDefinitions.Add(datasetDefinition.Name, datasetDefinition);
 		} // void RegisterDataSet
