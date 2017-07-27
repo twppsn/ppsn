@@ -6,7 +6,7 @@ local function GetNextNumber(lastNr, dataset) : string
 end;
 
 function GetContactData(obj, ds)
-	--error("Kontakt nicht gefunden '{1},{0}:{2}":Format(obj.Id, obj.Nr, obj.Guid));
+
 	local trans = Db.Main;
 	do (t = ds:BeginData())
 

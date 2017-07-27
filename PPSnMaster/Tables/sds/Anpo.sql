@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [sds].[Anpo]
 (
-	[Id] BIGINT NOT NULL CONSTRAINT pkAnpotId PRIMARY KEY IDENTITY (1,1), 
-	[ObjkId] BIGINT NOT NULL CONSTRAINT fkAnpoObjkId REFERENCES dbo.ObjK (Id),
+	[Id] BIGINT NOT NULL CONSTRAINT pkAnpoId PRIMARY KEY IDENTITY (1,1), 
+	[AnkoId] BIGINT NOT NULL CONSTRAINT fkAnpoAnkoId REFERENCES sds.Anko (Id),
 	[Pos] INT NOT NULL, 
 	[ProdId] BIGINT NULL, 
 	[ProdNr] NVARCHAR(20) NULL, 
@@ -11,6 +11,8 @@
 	[Termin] NVARCHAR(50) NULL, 
 	[Menge] DECIMAL(15, 4) NULL
 )
+GO
+ALTER TABLE [sds].[Anpo] ENABLE CHANGE_TRACKING;
 
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
@@ -29,7 +31,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1type = N'TABLE',
     @level1name = N'Anpo',
     @level2type = N'COLUMN',
-    @level2name = N'ObjkId'
+    @level2name = N'AnkoId'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Position',
@@ -104,5 +106,5 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level2name = N'Menge'
 GO
 
-CREATE INDEX [idxAnpoObjkId] ON [sds].[Anpo] ([ObjkId])
+CREATE INDEX [idxAnpoAnkoId] ON [sds].[Anpo] ([AnkoId])
 GO

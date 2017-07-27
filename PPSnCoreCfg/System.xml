@@ -156,26 +156,6 @@
 				<pps:source type="view">dbo.objects</pps:source>
 			</pps:view>
 
-			<!-- base dataset, obsolete -->
-			<pps:dataset name="coreDataSet">
-				<!-- define the base table -->
-				<pps:table name="Head">
-					<pps:column name="Id" fieldName="dbo.ObjK.Id" isPrimary="true" />
-					<pps:column name="CurRevId" fieldName="dbo.ObjK.CurRevId" />
-					<pps:column name="HeadRevId" fieldName="dbo.ObjK.HeadRevId" />
-					<pps:column name="Nr" fieldName="dbo.ObjK.Nr" />
-					<pps:column name="Typ" fieldName="dbo.ObjK.Typ" />
-					<pps:column name="MimeType" fieldName="dbo.ObjK.MimeType" />
-					<pps:column name="Guid" fieldName="dbo.ObjK.Guid" />
-				</pps:table>
-
-				<pps:table name="Revision">
-					<pps:column name="Id" fieldName="dbo.ObjR.Id" isPrimary="true" />
-					<pps:relation name="ObjkId" fieldName="dbo.ObjR.ObjkId" parentTable="Head" parentColumn="Id" parentType="Root" relationName="ObjrObjk" />
-				</pps:table>
-
-			</pps:dataset>			
-
 			<pps:dataset name="masterdata">
 				<pps:table name="Header" dataSource="sys">
 					<pps:meta name="syncType">None</pps:meta>

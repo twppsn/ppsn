@@ -33,9 +33,12 @@ function GetOfferData(obj, ds)
 		-- Positionen --
 		ds:Anpo:AddRange(
 			trans:ExecuteSingleResult{
-				select = "sds.Anpo",
+				select = [[
+					sds.Anko
+						=sds.Anpo[Anko.Id = Anpo.AnkoId]
+				]],
 				columnList = ds:Anpo,
-				[1] = { ObjKId = obj.Id }
+				[1] = { ObjkId = obj.Id }
 			}
 		);
 

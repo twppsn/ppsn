@@ -1,6 +1,7 @@
 ﻿CREATE TABLE [sds].[Anko]
 (
-	[ObjkId] BIGINT NOT NULL CONSTRAINT pkAnkotId PRIMARY KEY CONSTRAINT fkAnkoObjkId REFERENCES dbo.ObjK (Id), 
+	[Id] BIGINT NOT NULL CONSTRAINT pkAnkoId PRIMARY KEY IDENTITY (1,1),
+	[ObjkId] BIGINT NOT NULL CONSTRAINT fkAnkoObjkId REFERENCES dbo.ObjK (Id), 
 	[Datum] DATE NULL, 
 	[BisDatum] DATE NULL, 
 	[AnfDatum] DATE NULL, 
@@ -15,6 +16,8 @@
 	[Fusstext] NVARCHAR(MAX) NULL, 
 	[Anmerk] NVARCHAR(MAX) NULL
 )
+GO
+ALTER TABLE [sds].[Anko] ENABLE CHANGE_TRACKING;
 
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
@@ -144,5 +147,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level2name = N'Anmerk'
 GO
 
+CREATE INDEX [idxAnkoObjkId] ON [sds].[Anko] ([ObjkId])
+GO
 CREATE INDEX [idxAnkoKontId] ON [sds].[Anko] ([KontId])
 GO
