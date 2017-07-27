@@ -2236,12 +2236,8 @@ namespace TecWare.PPSn
 
 		public async void ShellExecute()
 		{
-			var filename = String.Empty;
-			foreach (var tg in Tags)
-				if (tg.Name == "Filename")
-				{
-					filename = (string)tg.Value;
-				}
+			var filename = (from t in Tags where t.Name == "Filename" select t).FirstOrDefault()?.Value.ToString();
+			
 			if (String.IsNullOrEmpty(filename))
 				return;
 

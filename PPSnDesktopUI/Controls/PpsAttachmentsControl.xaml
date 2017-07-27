@@ -23,166 +23,143 @@ specific language governing permissions and limitations under the Licence.
 			 BorderThickness="1"
 			 BorderBrush="{StaticResource PPSnSeparatorBrush}"
              d:DesignHeight="300" d:DesignWidth="300">
-    <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-    </UserControl.Resources>
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="auto"/>
-            <RowDefinition/>
-        </Grid.RowDefinitions>
-        <WrapPanel Grid.Row="0">
-            <WrapPanel.Resources>
-                <Style TargetType="{x:Type Button}" BasedOn="{StaticResource PPSnImageButtonStyle}">
-                    <Setter Property="Button.Margin" Value="0,0,8,0"/>
-                    <Setter Property="Width" Value="40"/>
-                    <Setter Property="Height" Value="40"/>
-                </Style>
-            </WrapPanel.Resources>
-            <Button Command="{x:Static local:PpsAttachmentsControl.AddFileAttachmentCommand}" 
+	<UserControl.Resources>
+		<BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+	</UserControl.Resources>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="auto"/>
+			<RowDefinition/>
+		</Grid.RowDefinitions>
+		<WrapPanel Grid.Row="0">
+			<WrapPanel.Resources>
+				<Style TargetType="{x:Type Button}" BasedOn="{StaticResource PPSnImageButtonStyle}">
+					<Setter Property="Button.Margin" Value="0,0,8,0"/>
+					<Setter Property="Width" Value="40"/>
+					<Setter Property="Height" Value="40"/>
+				</Style>
+			</WrapPanel.Resources>
+			<Button Command="{x:Static local:PpsAttachmentsControl.AddFileAttachmentCommand}" 
 						Content="{StaticResource filePlusPathGeometry}"
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddFileButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
-            <Button Command="{x:Static local:PpsAttachmentsControl.AddLinkAttachmentCommand}" 
+			<Button Command="{x:Static local:PpsAttachmentsControl.AddLinkAttachmentCommand}" 
 						Content="{StaticResource linkPathGeometry}"
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddLinkButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
-            <Button Command="{x:Static local:PpsAttachmentsControl.RemoveAttachmentCommand}"
+			<Button Command="{x:Static local:PpsAttachmentsControl.RemoveAttachmentCommand}"
 						Content="{StaticResource deletePathGeometry}"
 						Margin="0,0,48,0"
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=RemoveButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
-            <Button Command="{x:Static local:PpsAttachmentsControl.RunFileAttachmentCommand}"
-						Content="{StaticResource deletePathGeometry}"
-						Margin="0,0,48,0"
-                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=RemoveButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
-            <Button Command="{x:Static local:PpsAttachmentsControl.CameraAttachmentCommand}"
+			<Button Command="{x:Static local:PpsAttachmentsControl.CameraAttachmentCommand}"
 						Content="{StaticResource cameraPathGeometry}"
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=CameraButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-            <Button Command="{x:Static local:PpsAttachmentsControl.ScannerAttachmentCommand}" 
+			<Button Command="{x:Static local:PpsAttachmentsControl.ScannerAttachmentCommand}" 
 						Content="{StaticResource scannerPathGeometry}"
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ScannerButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-            <Button Command="{x:Static local:PpsAttachmentsControl.SignatureAttachmentCommand}"
+			<Button Command="{x:Static local:PpsAttachmentsControl.SignatureAttachmentCommand}"
 						Content="{StaticResource markerPathGeometry}"
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SignatureButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-            <Button Command="{x:Static local:PpsAttachmentsControl.SeventhButtonAttachmentCommand}"
+			<Button Command="{x:Static local:PpsAttachmentsControl.SeventhButtonAttachmentCommand}"
 						Content="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SeventhButtonImagePath, Mode=OneWay}"
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SeventhButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-        </WrapPanel>
-        <ListBox Grid.Row="1"
+		</WrapPanel>
+		<ListBox Grid.Row="1"
 				 ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AttachmentsSource, Mode=OneWay}"
 				 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedAttachment, Mode=OneWayToSource}"
 				 Style="{StaticResource PPSnListBoxStyle}"
 				 Margin="0,8,0,0" Focusable="False"
 				 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
-            <ListBox.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel IsItemsHost="True" Orientation="Horizontal"/>
-                </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <Grid Width="96">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="96"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <Button Grid.Row="0" Focusable="True" FocusVisualStyle="{x:Null}">
-                            <Button.Resources>
-                                <SolidColorBrush x:Key="borderBackgroundBrush" Color="{StaticResource PPSnControlBackgroundColor}" Opacity=".35"/>
-                            </Button.Resources>
-                            <Button.Template>
-                                <ControlTemplate TargetType="{x:Type Button}">
-                                    <Border x:Name="border" BorderThickness="1" BorderBrush="{StaticResource PPSnControlBackgroundBrush}" Background="{StaticResource borderBackgroundBrush}">
-                                        <Image x:Name="image" Source="{Binding Picture, Mode=OneWay}" Stretch="Fill"/>
-                                        <Border.RenderTransformOrigin>
-                                            <Point X="0.5" Y="0.5"/>
-                                        </Border.RenderTransformOrigin>
-                                        <Border.RenderTransform>
-                                            <ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
-                                        </Border.RenderTransform>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <DataTrigger Binding="{Binding Path=Picture, Mode=OneWay}" Value="{x:Null}">
-                                            <Setter TargetName="border" Property="Padding" Value="32"/>
-                                            <Setter TargetName="image" Property="Source" Value="{StaticResource fileOutlineDrawingImage}"/>
-                                            <Setter TargetName="image" Property="Stretch" Value="Uniform"/>
-                                        </DataTrigger>
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}" Value="True"/>
-                                                <Condition Binding="{Binding Path=IsKeyboardFocusWithin, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}" Value="True"/>
-                                            </MultiDataTrigger.Conditions>
-                                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
-                                        </MultiDataTrigger>
-                                        <Trigger Property="IsPressed" Value="True">
-                                            <Trigger.EnterActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="1" To="0.95" Duration="0:00:0.1"/>
-                                                        <DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="1" To="0.95" Duration="0:00:0.1"/>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </Trigger.EnterActions>
-                                            <Trigger.ExitActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="0.95" To="1" Duration="0:00:0.05"/>
-                                                        <DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="0.95" To="1" Duration="0:00:0.05"/>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </Trigger.ExitActions>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
-                        </Button>
-                        <TextBlock Grid.Row="1" Text="{Binding Name, Mode=OneWay}" Foreground="{StaticResource PPSnWindowForegroundBrush}" TextWrapping="Wrap"/>
-                    </Grid>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-            <ListBox.ItemContainerStyle>
-                <Style TargetType="{x:Type ListBoxItem}">
-                    <Setter Property="VerticalAlignment" Value="Top"/>
-                    <Setter Property="Margin" Value="0,0,16,16"/>
-                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                    <Setter Property="Focusable" Value="False"/>
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                                <ContentPresenter />
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                    <Style.Triggers>
-                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                            <Setter Property="IsSelected" Value="True"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </ListBox.ItemContainerStyle>
-        </ListBox>
-        <Grid.Style>
-            <Style TargetType="{x:Type Grid}">
-                <Setter Property="Margin" Value="16,6,0,0" />
-                <Style.Triggers>
-                    <MultiDataTrigger>
-                        <MultiDataTrigger.Conditions>
-                            <Condition  Binding="{Binding Path=BorderThickness.Left, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type UserControl}}}">
-                                <Condition.Value>
-                                    <sys:Double>0</sys:Double>
-                                </Condition.Value>
-                            </Condition>
-                            <Condition  Binding="{Binding Path=BorderThickness.Top, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type UserControl}}}">
-                                <Condition.Value>
-                                    <sys:Double>0</sys:Double>
-                                </Condition.Value>
-                            </Condition>
-                        </MultiDataTrigger.Conditions>
-                        <Setter Property="Margin" Value="0"/>
-                    </MultiDataTrigger>
-                    <!--<DataTrigger Binding="{Binding Path=BorderThickness.Left, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type UserControl}}}" Value="0">
+			<ListBox.ItemsPanel>
+				<ItemsPanelTemplate>
+					<WrapPanel IsItemsHost="True" Orientation="Horizontal"/>
+				</ItemsPanelTemplate>
+			</ListBox.ItemsPanel>
+			<ListBox.ItemTemplate>
+				<DataTemplate>
+					<Grid Width="96">
+						<Grid.RowDefinitions>
+							<RowDefinition Height="96"/>
+							<RowDefinition Height="Auto"/>
+						</Grid.RowDefinitions>
+						<Grid.Resources>
+							<SolidColorBrush x:Key="borderBackgroundBrush" Color="{StaticResource PPSnControlBackgroundColor}" Opacity="1"/>
+						</Grid.Resources>
+						<Border x:Name="border" Grid.Row="0" BorderThickness="1" BorderBrush="{StaticResource PPSnControlBackgroundBrush}" Background="{StaticResource borderBackgroundBrush}">
+							<Image x:Name="image" Source="{Binding Picture, Mode=OneWay}" Stretch="Fill"/>
+						</Border>
+						<TextBlock Grid.Row="1" Text="{Binding Name, Mode=OneWay}" Foreground="{StaticResource PPSnWindowForegroundBrush}" TextWrapping="Wrap"/>
+					</Grid>
+					<DataTemplate.Triggers>
+						<MultiDataTrigger>
+							<MultiDataTrigger.Conditions>
+								<Condition Binding="{Binding Path=Picture, Mode=OneWay}" Value="{x:Null}"/>
+								<Condition Binding="{Binding Path=Type, Mode=OneWay}" Value="picture"/>
+							</MultiDataTrigger.Conditions>
+							<Setter TargetName="border" Property="Padding" Value="32"/>
+							<Setter TargetName="image" Property="Source" Value="{StaticResource imageDrawingImage}"/>
+							<Setter TargetName="image" Property="Stretch" Value="Uniform"/>
+						</MultiDataTrigger>
+
+						<MultiDataTrigger>
+							<MultiDataTrigger.Conditions>
+								<Condition Binding="{Binding Path=Picture, Mode=OneWay}" Value="{x:Null}"/>
+								<Condition Binding="{Binding Path=Type, Mode=OneWay}" Value="binary"/>
+							</MultiDataTrigger.Conditions>
+							<Setter TargetName="border" Property="Padding" Value="32"/>
+							<Setter TargetName="image" Property="Source" Value="{StaticResource fileOutlineDrawingImage}"/>
+							<Setter TargetName="image" Property="Stretch" Value="Uniform"/>
+						</MultiDataTrigger>
+
+						<MultiDataTrigger>
+							<MultiDataTrigger.Conditions>
+								<Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}" Value="True"/>
+								<Condition Binding="{Binding Path=IsKeyboardFocusWithin, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}" Value="True"/>
+							</MultiDataTrigger.Conditions>
+							<Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
+						</MultiDataTrigger>
+					</DataTemplate.Triggers>
+				</DataTemplate>
+			</ListBox.ItemTemplate>
+			<ListBox.ItemContainerStyle>
+				<Style TargetType="{x:Type ListBoxItem}">
+					<Setter Property="VerticalAlignment" Value="Top"/>
+					<Setter Property="Margin" Value="0,0,16,16"/>
+					<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+					<Setter Property="Template">
+						<Setter.Value>
+							<ControlTemplate TargetType="{x:Type ListBoxItem}">
+								<ContentPresenter />
+							</ControlTemplate>
+						</Setter.Value>
+					</Setter>
+					<Style.Triggers>
+						<Trigger Property="IsKeyboardFocusWithin" Value="False">
+							<Setter Property="IsSelected" Value="False"/>
+						</Trigger>
+					</Style.Triggers>
+				</Style>
+			</ListBox.ItemContainerStyle>
+		</ListBox>
+		<Grid.Style>
+			<Style TargetType="{x:Type Grid}">
+				<Setter Property="Margin" Value="16,6,0,0" />
+				<Style.Triggers>
+					<MultiDataTrigger>
+						<MultiDataTrigger.Conditions>
+							<Condition  Binding="{Binding Path=BorderThickness.Left, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type UserControl}}}">
+								<Condition.Value>
+									<sys:Double>0</sys:Double>
+								</Condition.Value>
+							</Condition>
+							<Condition  Binding="{Binding Path=BorderThickness.Top, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type UserControl}}}">
+								<Condition.Value>
+									<sys:Double>0</sys:Double>
+								</Condition.Value>
+							</Condition>
+						</MultiDataTrigger.Conditions>
 						<Setter Property="Margin" Value="0"/>
-					</DataTrigger>-->
-                </Style.Triggers>
-            </Style>
-        </Grid.Style>
-    </Grid>
+					</MultiDataTrigger>
+				</Style.Triggers>
+			</Style>
+		</Grid.Style>
+	</Grid>
 </UserControl>
