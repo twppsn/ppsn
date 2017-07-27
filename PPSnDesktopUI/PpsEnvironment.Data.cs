@@ -1863,8 +1863,8 @@ namespace TecWare.PPSn
 					command.AddParameter("@path", DbType.String).Value = path;
 					command.AddParameter("@contentType", DbType.String).Value = item.ContentType; // split mime from rest
 					command.AddParameter("@contentEncoding", DbType.String).Value = DBNull.Value;
-					command.AddParameter("@contentSize", DbType.Int32).Value = item.ContentLength;
-					command.AddParameter("@lastModified", DbType.DateTime).Value = item.LastModification;
+					command.AddParameter("@contentSize", DbType.Int64).Value = item.ContentLength;
+					command.AddParameter("@lastModified", DbType.Int64).Value = item.LastModification.ToFileTimeUtc();
 					var parameterContent = command.AddParameter("@content", DbType.Binary);
 					var parameterLocalPath = command.AddParameter("@LocalPath", DbType.String);
 
