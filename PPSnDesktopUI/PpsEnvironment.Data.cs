@@ -1494,7 +1494,7 @@ namespace TecWare.PPSn
 
 		public Task StartSynchronization()
 		{
-			if (IsInSynchronization)
+			if (IsInSynchronization) // todo: wait
 				return Task.CompletedTask;
 			else
 			{
