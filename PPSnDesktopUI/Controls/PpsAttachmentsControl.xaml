@@ -54,7 +54,7 @@ specific language governing permissions and limitations under the Licence.
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ScannerButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
 			<Button Command="{x:Static local:PpsAttachmentsControl.SignatureAttachmentCommand}"
 						Content="{StaticResource markerPathGeometry}"
-                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SignatureButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SignatureButto,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
 			<Button Command="{x:Static local:PpsAttachmentsControl.SeventhButtonAttachmentCommand}"
 						Content="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SeventhButtonImagePath, Mode=OneWay}"
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SeventhButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
@@ -63,7 +63,7 @@ specific language governing permissions and limitations under the Licence.
 				 ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AttachmentsSource, Mode=OneWay}"
 				 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedAttachment, Mode=OneWayToSource}"
 				 Style="{StaticResource PPSnListBoxStyle}"
-				 Margin="0,8,0,0" Focusable="False"
+				 Margin="0,6,0,0" Focusable="False"
 				 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
 			<ListBox.ItemsPanel>
 				<ItemsPanelTemplate>
@@ -72,9 +72,9 @@ specific language governing permissions and limitations under the Licence.
 			</ListBox.ItemsPanel>
 			<ListBox.ItemTemplate>
 				<DataTemplate>
-					<Grid Width="112">
+					<Grid Width="109">
 						<Grid.RowDefinitions>
-							<RowDefinition Height="96"/>
+							<RowDefinition Height="90"/>
 							<RowDefinition Height="Auto"/>
 							<RowDefinition Height="Auto"/>
 						</Grid.RowDefinitions>
