@@ -1106,7 +1106,6 @@ namespace TecWare.PPSn.Server.Wpf
 							xml.WriteStartElement(rows.CurrentMode.ToString().ToLower());
 							try
 							{
-								xml.WriteAttributeString("a", (lastSynchronization.ToFileTimeUtc() < rows.CurrentSyncId).ChangeType<string>());
 								for (var i = 0; i < columnNames.Length; i++)
 								{
 									if (columnIndex[i] != -1)
@@ -1195,11 +1194,6 @@ namespace TecWare.PPSn.Server.Wpf
 				}
 				catch (Exception e)
 				{
-					if (xml.WriteState == WriteState.Attribute
-						|| xml.WriteState == WriteState.Element
-						|| xml.WriteState == WriteState.Content)
-						xml.WriteEndElement();
-
 					xml.WriteStartElement("error");
 					xml.WriteValue(e.Message);
 					xml.WriteEndElement();
