@@ -26,6 +26,7 @@ namespace TecWare.PPSn.Controls
 	{
 		private readonly Lazy<PpsEnvironment> getEnvironment;
 
+
 		public PpsPictureControl()
 		{
 			InitializeComponent();
@@ -92,8 +93,8 @@ namespace TecWare.PPSn.Controls
 			private readonly IPpsDataView view;
 			private readonly string pictureTag;
 			private readonly int linkColumnIndex;
-			private PpsObject obj;
-			private PpsObjectImageData dat;
+			private WeakReference weakObj = new WeakReference(null);
+			private WeakReference weakDat = new WeakReference(null);
 
 			public event PropertyChangedEventHandler PropertyChanged;
 
@@ -118,11 +119,11 @@ namespace TecWare.PPSn.Controls
 					var idx = tobj.Tags.IndexOf("PictureItemType");
 					if (idx >= 0 && (string)tobj.Tags[idx].Value == pictureTag)
 					{
-						this.obj = tobj;
+						this.weakDat.Target = tobj;
 					}
 				}
-				dat = new PpsObjectImageData(obj);
-				dat.PropertyChanged += Dat_PropertyChanged;
+				weakDat.Target = new PpsObjectImageData(((PpsObject)weakDat.Target));
+				((PpsObjectImageData)weakDat.Target).PropertyChanged += Dat_PropertyChanged;
 				NotifyPropertyChanged(nameof(Image));
 				NotifyPropertyChanged(nameof(Preview));
 			}
@@ -144,11 +145,11 @@ namespace TecWare.PPSn.Controls
 			{
 				using (var trans = GetUndoManager(view.Table.DataSet).BeginTransaction("Bild bearbeitet."))
 				{
-					if (obj != null)
+					if (((PpsObject)weakObj.Target) != null)
 						for (var i = 0; i < view.Table.AllRows.Count; i++)
 						{
 							var tobj = ((PpsObject)view.Table.AllRows[i][linkColumnIndex]);
-							if (tobj == obj)
+							if (tobj == ((PpsObject)weakObj.Target))
 							{
 								view.Table.RemoveAt(i);
 								continue;
@@ -161,7 +162,7 @@ namespace TecWare.PPSn.Controls
 
 					trans.Commit();
 
-					this.obj = data;
+					this.weakDat.Target = data;
 					data.PropertyChanged += Dat_PropertyChanged;
 				}
 
@@ -174,13 +175,12 @@ namespace TecWare.PPSn.Controls
 				else
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 			}
-			//	=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-			public ImageSource Image => dat.Image;
+			public ImageSource Image => ((PpsObjectImageData)weakDat.Target).Image;
 
-			public ImageSource Preview => dat.Preview;
+			public ImageSource Preview => ((PpsObjectImageData)weakDat.Target).Preview;
 
-			public ImageSource Overlay => dat.Overlay;
+			public ImageSource Overlay => ((PpsObjectImageData)weakDat.Target).Overlay;
 		}
 
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

@@ -1252,6 +1252,12 @@ namespace TecWare.PPSn
 		#endregion
 
 		#region ctor
+
+		~PpsObjectImageData()
+		{
+			image = null;
+		}
+
 		public PpsObjectImageData(PpsObject obj) : base(obj)
 		{
 			this.baseObj = obj;
@@ -1267,7 +1273,7 @@ namespace TecWare.PPSn
 			if (baseObj == null)
 				return;
 
-			// semaphore prevents this imageobject from bein loaded multiple times, it the preview ist getted multiple times
+			// semaphore prevents this imageobject from being loaded multiple times, if the preview ist getted multiple times
 			await LoadPreviewSemaphore.WaitAsync();
 
 			if (!PreviewLoaded)
@@ -1290,21 +1296,25 @@ namespace TecWare.PPSn
 					}
 				}
 
-				if (!PreviewLoaded)
+				if (!PreviewLoaded && preview == null)
 				{
 					if (imageLoaded)
 					{
-						// do not create preview, if baseimage is to huge
-						if (base.RawData.Length > 100000000)
-						{
-							LoadPreviewSemaphore.Release();
-							return;
-						}
-						// create a preview from the image
-						var scale = new ScaleTransform(image.Width / 120, image.Height / 120);
-						var thumb = new TransformedBitmap(BitmapFrame.Create((BitmapSource)image), scale);
 						var enc = new PngBitmapEncoder();
-						enc.Frames.Add(BitmapFrame.Create(thumb));
+						var bI = new BitmapImage();
+
+						using (MemoryStream stream = new MemoryStream(this.RawData))
+						{
+							bI.BeginInit();
+							bI.CacheOption = BitmapCacheOption.OnLoad;
+							bI.StreamSource = stream;
+							bI.DecodePixelHeight = 120;
+							bI.EndInit();
+						}
+
+						bI.Freeze();
+
+						enc.Frames.Add(BitmapFrame.Create(bI));
 
 						var obj = await baseObj.Environment.CreateNewObjectAsync(baseObj.Environment.ObjectInfos[PpsEnvironment.AttachmentObjectTyp]);
 
@@ -1319,6 +1329,11 @@ namespace TecWare.PPSn
 							await data.ReadFromStreamAsync(ms, MimeTypes.Image.Png);
 							await data.CommitAsync();
 						}
+
+						enc = null;
+						bI = null;
+
+						GC.Collect();
 
 						baseObj.Links.AppendLink(obj, PpsObjectLinkRestriction.Delete);
 						await baseObj.UpdateLocalAsync();
@@ -1394,18 +1409,52 @@ namespace TecWare.PPSn
 					bI.BeginInit();
 					bI.CacheOption = BitmapCacheOption.OnLoad;
 					bI.StreamSource = stream;
+					bI.DecodePixelHeight = 600;
 					bI.EndInit();
 				}
+				image = bI.Clone();
+				//image = bI;
 
-				image = bI;
 				ImageLoaded = true;
 			}
 		}
 
 		/// <summary>
+		/// Resize the image to the specified width and height.
+		/// </summary>
+		/// <param name="image">The image to resize.</param>
+		/// <param name="width">The width to resize to.</param>
+		/// <param name="height">The height to resize to.</param>
+		/// <returns>The resized image.</returns>
+		public static Bitmap ResizeImage(Image image, int width, int height)
+		{
+			var destRect = new Rectangle(0, 0, width, height);
+			var destImage = new Bitmap(width, height);
+
+			destImage.SetResolution(image.HorizontalResolution, image.VerticalResolution);
+
+			using (var graphics = Graphics.FromImage(destImage))
+			{
+				graphics.CompositingMode = CompositingMode.SourceCopy;
+				graphics.CompositingQuality = CompositingQuality.HighQuality;
+				graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+				graphics.SmoothingMode = SmoothingMode.HighQuality;
+				graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+				using (var wrapMode = new ImageAttributes())
+				{
+					wrapMode.SetWrapMode(WrapMode.TileFlipXY);
+					graphics.DrawImage(image, destRect, 0, 0, image.Width, image.Height, GraphicsUnit.Pixel, wrapMode);
+				}
+			}
+
+			return destImage;
+		}
+
+		/// <summary>
 		/// true, if loading is finished (does not mean there must be a valid image)
 		/// </summary>
-		public bool ImageLoaded { get { return imageLoaded; } set { imageLoaded = value; base.OnPropertyChanged(nameof(Image)); } }
+		public bool ImageLoaded { get { return imageLoaded; } set { imageLoaded = value; if (value == true) base.OnPropertyChanged(nameof(Image)); } }
 
 		/// <summary>
 		/// returns the Image if loaded - starts the loading otherwise
@@ -1415,7 +1464,9 @@ namespace TecWare.PPSn
 			get
 			{
 				if (!imageLoaded)
+				{
 					LoadImage();
+				}
 
 				return image;
 			}
@@ -1438,11 +1489,13 @@ namespace TecWare.PPSn
 				{
 					preview = ((PpsObjectImageData)sender).Image;
 					PreviewLoaded = true;
+					((PpsObjectImageData)sender).PropertyChanged -= LinkedImage_PropertyChanged;
 				}
 				if ((string)((PpsObjectImageData)sender).baseObj.Tags[idx].Value == OverlayId)
 				{
 					overlay = ((PpsObjectImageData)sender).Image;
 					OverlayLoaded = true;
+					((PpsObjectImageData)sender).PropertyChanged -= LinkedImage_PropertyChanged;
 				}
 			}
 		}
@@ -1602,7 +1655,8 @@ namespace TecWare.PPSn
 
 		public bool IsLoaded => rawData != null;
 
-		public byte[] RawData => rawData;
+		//public byte[] RawData => rawData;
+		public byte[] RawData { get { return rawData; } internal set { this.rawData = value; } }
 	} // class PpsObjectBlobData
 
 	#endregion
@@ -2341,7 +2395,7 @@ namespace TecWare.PPSn
 					else if (index == StaticColumns.Length + 0)
 					{
 						if (data == null)
-							data = GetDataAsync<IPpsObjectData>(true).Result;
+							data = GetDataAsync<IPpsObjectData>(true).AwaitTask();
 						return data;
 					}
 					else if (index == StaticColumns.Length + 1)
