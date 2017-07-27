@@ -1344,6 +1344,7 @@ namespace TecWare.PPSn
 					else
 					{
 						PropertyChanged += CreatePreviewFromImage;
+						LoadImage();
 					}
 				}
 			}
