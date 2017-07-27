@@ -1,13 +1,17 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace TecWare.PPSn.Controls
@@ -117,9 +121,9 @@ namespace TecWare.PPSn.Controls
 	public class SideBarMenuItem : FrameworkContentElement, ICommandSource
 	{
 		private static readonly DependencyProperty DisplayTextProperty = DependencyProperty.Register("DisplayText", typeof(string), typeof(SideBarMenuItem));
-		private static readonly DependencyProperty CommandProperty = DependencyProperty.Register("Command", typeof(ICommand), typeof(SideBarMenuItem), new PropertyMetadata(null));
-		private static readonly DependencyProperty CommandParameterProperty = DependencyProperty.Register("CommandParameter", typeof(object), typeof(SideBarMenuItem), new PropertyMetadata(null));
-		private static readonly DependencyProperty CommandTargetProperty = DependencyProperty.Register("CommandTarget", typeof(IInputElement), typeof(SideBarMenuItem), new PropertyMetadata(null));
+		public static readonly DependencyProperty CommandProperty = ButtonBase.CommandProperty.AddOwner(typeof(SideBarMenuItem));
+		public static readonly DependencyProperty CommandParameterProperty = ButtonBase.CommandParameterProperty.AddOwner(typeof(SideBarMenuItem));
+		public static readonly DependencyProperty CommandTargetProperty = ButtonBase.CommandTargetProperty.AddOwner(typeof(SideBarMenuItem));
 		private static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register("IsVisible", typeof(bool), typeof(SideBarMenuItem), new PropertyMetadata(false));
 		private static readonly DependencyProperty IsChildItemProperty = DependencyProperty.Register("IsChildItem", typeof(bool), typeof(SideBarMenuItem), new PropertyMetadata(false));
 
@@ -173,19 +177,29 @@ namespace TecWare.PPSn.Controls
 			switch (e.Action)
 			{
 				case NotifyCollectionChangedAction.Add:
-					var item = e.NewItems[0] as SideBarMenuItem;
-					if (item == null)
-						throw new ArgumentNullException("SideBarMenu, wrong item.");
-					AddLogicalChild(item);
-					item.IsChildItem = true;
+					{
+						if (e.NewItems[0] is SideBarMenuItem item)
+						{
+							AddLogicalChild(item);
+							item.IsChildItem = true;
+						}
+						else
+							throw new ArgumentNullException("SideBarMenu, wrong item.");
+					}
 					break;
 				case NotifyCollectionChangedAction.Remove:
-					RemoveLogicalChild(e.OldItems[0]);
+					{
+						if (e.OldItems[0] is SideBarMenuItem item && IsChildOf(item))
+							RemoveLogicalChild(item);
+					}
 					break;
 				default:
 					throw new InvalidOperationException();
 			}
 		} // proc Items_CollectionChanged
+
+		protected override IEnumerator LogicalChildren
+			=> items.OfType<SideBarMenuItem>().GetEnumerator();
 
 		private void SetChildItemsVisibility(bool show)
 		{
