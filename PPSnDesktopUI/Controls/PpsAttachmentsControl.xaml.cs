@@ -319,7 +319,7 @@ namespace TecWare.PPSn.Controls
 			private void NotifyPropertyChanged(string propertyName = "")
 				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-			public object Picture => GetLinkedObject().GetDataAsync<PpsObjectImageData>().Result.Preview;
+			public object Picture => Type == "picture" ? GetLinkedObject().GetDataAsync<PpsObjectImageData>().Result.Preview : null;
 
 			public string Type => MimeType.StartsWith("image") ? "picture" : "binary";
 		} // class PpsAttachmentItemImplementation
