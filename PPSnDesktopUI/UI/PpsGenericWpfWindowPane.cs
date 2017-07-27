@@ -108,14 +108,20 @@ namespace TecWare.PPSn.UI
 	/// <summary>Pane that combines a xaml file with lua code.</summary>
 	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane, IPpsIdleAction, IPpsLuaRequest
 	{
-		private readonly PpsWindow window;
+		/// <summary>
+		/// Parent window
+		/// </summary>
+		public readonly PpsWindow window;
 
 		private BaseWebRequest fileSource;
 		private FrameworkElement control;
 
 		private LuaTable arguments; // arguments
 
-		private bool forceUpdateSource = false; // set this to true, to update the document on idle
+		/// <summary>
+		/// set this to true, to update the document on idle
+		/// </summary>
+		private bool forceUpdateSource = false;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -129,7 +135,7 @@ namespace TecWare.PPSn.UI
 		~PpsGenericWpfWindowPane()
 		{
 			Dispose(false);
-		} // ctor
+		} // dtor
 
 		public void Dispose()
 		{
