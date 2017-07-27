@@ -596,7 +596,7 @@ namespace TecWare.PPSn
 					}
 
 				case PpsEnvironmentModeResult.NeedsSynchronization:
-					if (await masterData.SynchronizationAsync(progress))
+					if (await RunAsync(() => masterData.SynchronizationAsync(progress)))
 						goto redoConnect;
 					else
 						return PpsEnvironmentModeResult.NeedsSynchronization;
@@ -903,8 +903,11 @@ namespace TecWare.PPSn
 							// fetch next state on ws-info
 							if (!await Task.Run(() => backgroundNotifierModeTransmission.Wait(3000)))
 							{
-								using (var log = Traces.TraceProgress())
-									await masterData.SynchronizationAsync(log);
+								if (!masterData.IsInSynchronization)
+								{
+									using (var log = Traces.TraceProgress())
+										await masterData.SynchronizationAsync(log);
+								}
 							}
 							break;
 
