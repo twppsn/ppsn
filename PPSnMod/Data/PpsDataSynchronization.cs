@@ -27,12 +27,21 @@ namespace TecWare.PPSn.Server.Data
 	public sealed class PpsDataSynchronizationTimeStampBatch : IPpsDataSynchronizationBatch
 	{
 		private readonly IEnumerator<IDataRow> currentView;
-		private readonly long currentSyncId;
+		private readonly int syncIdColumnIndex;
 
-		public PpsDataSynchronizationTimeStampBatch(IEnumerable<IDataRow> view)
+		private readonly long lastSyncId;
+		private readonly long startTimeStamp;
+
+		private bool beforeFirstRow = true;
+
+		public PpsDataSynchronizationTimeStampBatch(IEnumerable<IDataRow> view, string syncIdColumn, long lastSyncId)
 		{
 			this.currentView = (view ?? throw new ArgumentNullException(nameof(view))).GetEnumerator();
-			this.currentSyncId = DateTime.Now.ToFileTimeUtc();
+			this.syncIdColumnIndex = syncIdColumn == null
+				? -1
+				: ((IDataColumns)currentView).FindColumnIndex(syncIdColumn, true);
+			this.lastSyncId = lastSyncId;
+			this.startTimeStamp = DateTime.Now.ToFileTimeUtc();
 		} // ctor
 
 		public void Dispose()
@@ -41,18 +50,50 @@ namespace TecWare.PPSn.Server.Data
 		} // proc Dispose
 
 		public void Reset()
-			=> currentView.Reset();
+		{
+			beforeFirstRow = true;
+			currentView.Reset();
+		} // proc Reset
 
-		public bool MoveNext() 
-			=> currentView.MoveNext();
+		public bool MoveNext()
+		{
+			beforeFirstRow = false;
+			return currentView.MoveNext();
+		} // func MoveNext
 
-		public IDataRow Current => currentView.Current;
+		public IDataRow Current => beforeFirstRow ? throw new InvalidOperationException() : currentView.Current;
 		object IEnumerator.Current => currentView.Current;
 
 		public IReadOnlyList<IDataColumn> Columns => ((IDataColumns)currentView).Columns;
 
 		public char CurrentMode => 'r';
-		public long CurrentSyncId => currentSyncId;
+
+		public long CurrentSyncId
+		{
+			get
+			{
+				if (syncIdColumnIndex == -1)
+					return startTimeStamp;
+				else
+				{
+					if (beforeFirstRow)
+						return lastSyncId;
+					else
+					{
+						var v = Current[syncIdColumnIndex];
+						if (v is DateTime dt)
+							return dt == DateTime.MinValue
+								? 0
+								: dt.ToFileTimeUtc();
+						else if (v is long l)
+							return l;
+						else
+							throw new ArgumentException(Current.Columns[syncIdColumnIndex].Name);
+					}
+				}
+			}
+		} // prop CurrentSyncId
+
 		public bool IsFullSync => false;
 	} // class PpsDataSynchronizationTimeStampBatch
 
@@ -127,12 +168,19 @@ namespace TecWare.PPSn.Server.Data
 		{
 			var view = application.GetViewDefinition(viewName, true);
 			var selector = view.SelectorToken.CreateSelector(connection, true);
+			if (lastSyncId <= 0 && lastSynchronization > DateTime.MinValue)
+				lastSyncId = lastSynchronization.ToFileTimeUtc();
 			if (lastSyncId > 0)
 			{
 				var timeStampDateTime = DateTime.FromFileTimeUtc(lastSyncId);
-				selector.ApplyFilter(new PpsDataFilterCompareExpression(viewSyncColumn, PpsDataFilterCompareOperator.GreaterOrEqual, new PpsDataFilterCompareDateValue(timeStampDateTime, timeStampDateTime)));
+				selector = selector.ApplyFilter(
+					new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.Or,
+						new PpsDataFilterCompareExpression(viewSyncColumn, PpsDataFilterCompareOperator.LowerOrEqual, new PpsDataFilterCompareDateValue(DateTime.MinValue, DateTime.MinValue)),
+						new PpsDataFilterCompareExpression(viewSyncColumn, PpsDataFilterCompareOperator.Greater, new PpsDataFilterCompareDateValue(timeStampDateTime, timeStampDateTime))
+					)
+				);
 			}
-			return new PpsDataSynchronizationTimeStampBatch(selector);
+			return new PpsDataSynchronizationTimeStampBatch(selector, viewSyncColumn, lastSyncId);
 		} // proc ApplyLastSyncIdFilter
 
 		public virtual IPpsDataSynchronizationBatch GenerateBatch(PpsDataTableDefinition table, string syncType, long lastSyncId)
