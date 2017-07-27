@@ -903,10 +903,8 @@ namespace TecWare.PPSn
 							// fetch next state on ws-info
 							if (!await Task.Run(() => backgroundNotifierModeTransmission.Wait(3000)))
 							{
-#if !_SYNC_POLL
 								using (var log = Traces.TraceProgress())
 									await masterData.SynchronizationAsync(log);
-#endif
 							}
 							break;
 

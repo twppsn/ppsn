@@ -1311,7 +1311,7 @@ namespace TecWare.PPSn
 					xml.ReadEndElement();
 				}
 				if (objectCounter > 0)
-					Trace.TraceInformation($"Synchonization of {table.Name} finished ({objectCounter:N0} objects.");
+					Trace.TraceInformation($"Synchonization of {table.Name} finished ({objectCounter:N0} objects).");
 			} // proc Parse
 
 			private bool RowExists()
@@ -1384,6 +1384,14 @@ namespace TecWare.PPSn
 							case "batch":
 								 await FetchDataXmlBatchAsync(xml, progess);
 								break;
+							case "error":
+								{
+									var msg =
+										xml.Read()
+											? xml.ReadContentAsString()
+											: "unkown error";
+									throw new Exception($"Synchronization error: {msg}");
+								}
 							case "syncStamp":
 								var timeStamp = xml.ReadElementContent<long>(-1);
 
