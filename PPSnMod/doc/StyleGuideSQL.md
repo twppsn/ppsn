@@ -119,8 +119,9 @@
 | fas         | Financial Accounting (Finanzsystem)     |
 | qms         | Quality Management (Qualitätmanagement) |
 | sds         | Sales & Distribution (Einkauf/Verkauf)  |
-| cos         | Controlling															|
-| pss         | Project System													|
-| pms         | Plant Management (Anlagenmanagement)		|
+| cos         | Controlling								|
+| pss         | Project System							|
+| pms         | Plant Management (Anlagenmanagement)	|
 | mms         | Material Management (Materialwirtschaft)|
+| mdm         | Master Data Management (Stammdaten)		|
 

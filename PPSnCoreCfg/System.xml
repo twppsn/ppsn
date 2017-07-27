@@ -10,7 +10,7 @@
 		<prefix>$(webBinding)/</prefix>
 		<access id="root" scheme="ntlm negotiate basic none">$(webBinding)/</access>
 		<access id="ppsnInfo" scheme="none">$(webBinding)/ppsn/info.xml</access>
-		<access id="ppsnWpf" scheme="ntlm negotiate basic none">$(webBinding)/ppsn/wpf/</access>
+		<access id="ppsnWpf" scheme="ntlm basic none">$(webBinding)/ppsn/wpf/</access>
 
 		<mime ext=".dll" mime="application/octet" />
 		<mime ext=".pdb" mime="application/octet" />
@@ -204,7 +204,7 @@
 				</pps:table>
 
 				<pps:table name="OfflineCache" dataSource="sys">
-					<pps:meta name="syncType">TimeStamp: wpf.sync, ContentLastModification</pps:meta>
+					<pps:meta name="syncType">TimeStamp: wpf.sync, LastWriteTime</pps:meta>
 					<pps:column name="Path" isPrimary="true" isIdentity="false" fieldName="sys.Fields.Path" />
 					<pps:column name="ContentType" fieldName="sys.Fields.ContentType">
 						<pps:meta name="sourceColumn">#</pps:meta>

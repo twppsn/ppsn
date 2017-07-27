@@ -921,13 +921,13 @@ namespace TecWare.PPSn.Server.Wpf
 		{
 			var basePath = this.Name;
 
-			yield return new PpsApplicationFileItem(basePath + "/styles.xaml", -1, DateTime.MinValue);
+			yield return new PpsApplicationFileItem(basePath + "/styles.xaml", -1, Server.Configuration.ConfigurationStamp);
 
 			// navigator.xml
-			yield return new PpsApplicationFileItem(basePath + "/environment.xml", -1, DateTime.MinValue);
+			yield return new PpsApplicationFileItem(basePath + "/environment.xml", -1, Server.Configuration.ConfigurationStamp);
 
 			// templates.xml
-			yield return new PpsApplicationFileItem(basePath + "/templates.xaml", -1, DateTime.MinValue);
+			yield return new PpsApplicationFileItem(basePath + "/templates.xaml", -1, Server.Configuration.ConfigurationStamp);
 
 			// schemas from application/documents
 			foreach (var c in application.CollectChildren<IWpfClientApplicationFileProvider>())
@@ -952,13 +952,13 @@ namespace TecWare.PPSn.Server.Wpf
 					var virtualPath = x.GetAttribute("virtualPath", String.Empty);
 
 					foreach (var fi in new DirectoryInfo(directoryPath).GetFiles("*", SearchOption.TopDirectoryOnly))
-						yield return new PpsApplicationFileItem(basePath + "/" + virtualPath + "/" + fi.Name, -1, DateTime.MinValue);
+						yield return new PpsApplicationFileItem(basePath + "/" + virtualPath + "/" + fi.Name, fi.Length, fi.LastWriteTimeUtc);
 				}
 				else if (x.Name == PpsStuff.xnWpfTheme)
 				{
 					var id = x.GetAttribute("id", String.Empty);
 					if (String.Compare(id, "default", StringComparison.OrdinalIgnoreCase) != 0)
-						yield return new PpsApplicationFileItem(basePath + "/styles.xaml?id=" + id, -1, DateTime.MinValue);
+						yield return new PpsApplicationFileItem(basePath + "/styles.xaml?id=" + id, -1, Server.Configuration.ConfigurationStamp);
 				}
 			}
 		} // func GetApplicationFileList

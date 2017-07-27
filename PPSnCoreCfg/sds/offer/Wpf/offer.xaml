@@ -5,17 +5,18 @@
 						 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
 						 mc:Ignorable="d" 
 						 d:DesignHeight="300" d:DesignWidth="800"
-						 Title="Auftrag">
+						 SubTitle="Angebot"
+						 Title="{Binding Data.Head.First.Nr}">
         <x:Code>
 		<![CDATA[
-		self:require 'contract.lua';
+		self:require 'offer.lua';
 		]]>
 	</x:Code>
 
     <ui:PpsGenericWpfControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../Default.xaml" />
+                <ResourceDictionary Source="..\..\..\ClientWpf\Default.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </ui:PpsGenericWpfControl.Resources>
@@ -28,24 +29,24 @@
             <ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="29" />
-            <RowDefinition Height="29"/>
-            <RowDefinition Height="29"/>
-            <RowDefinition Height="29"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        <Label Grid.Column="0" Grid.Row="0" Content="Auftrags-Nr.:" Height="23" VerticalAlignment="Top" />
+		<Grid.RowDefinitions>
+			<RowDefinition Height="29" />
+			<RowDefinition Height="29"/>
+			<RowDefinition Height="29"/>
+			<RowDefinition Height="29"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+        <Label Grid.Column="0" Grid.Row="0" Content="Angebot-Nr.:" Height="23" VerticalAlignment="Top" />
         <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Data.Head.First.Nr}" MaxLength="12" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
         <Label Grid.Column="0" Grid.Row="1" Content="{Binding Data.Head.Datum.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
-        <DatePicker Grid.Column="1" Grid.Row="1" SelectedDate="{Binding Data.Head.First.Datum}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top" Style="{StaticResource PpsDatePickerStyle}"/>
+        <DatePicker Grid.Column="1" Grid.Row="1" SelectedDate="{Binding Data.Head.First.Datum}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
         <Label Grid.Column="0" Grid.Row="2" Content="{Binding Data.Head.KontId.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
         <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Data.Head.First.KontId}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
 
-        <Label Grid.Column="3" Grid.Row="0" Content="{Binding Data.Head.BestDatum.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
-        <DatePicker Grid.Column="4" Grid.Row="0" SelectedDate="{Binding Data.Head.First.BestDatum}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
-        <Label Grid.Column="3" Grid.Row="1" Content="{Binding Data.Head.BestNr.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
-        <TextBox Grid.Column="4" Grid.Row="1" Text="{Binding Data.Head.First.BestNr}" MaxLength="{Binding Data.Head.BestNr.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+        <Label Grid.Column="3" Grid.Row="0" Content="{Binding Data.Head.AnfDatum.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
+        <DatePicker Grid.Column="4" Grid.Row="0" SelectedDate="{Binding Data.Head.First.AnfDatum}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
+        <Label Grid.Column="3" Grid.Row="1" Content="{Binding Data.Head.AnfNr.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
+        <TextBox Grid.Column="4" Grid.Row="1" Text="{Binding Data.Head.First.AnfNr}" MaxLength="{Binding Data.Head.AnfNr.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
         <Label Grid.Column="3" Grid.Row="2" Content="{Binding Data.Head.Zusatz.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
         <TextBox Grid.Column="4" Grid.Row="2" Text="{Binding Data.Head.First.Zusatz}" MaxLength="{Binding Data.Head.Zusatz.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
 
@@ -73,15 +74,12 @@
                     <Label Grid.Column="0" Grid.Row="1" Content="{Binding Data.Head.Adresse.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
                     <TextBox Grid.Column="1" Grid.Row="1" Grid.RowSpan="4" Text="{Binding Data.Head.First.Adresse}" MaxLength="{Binding Data.HeadAdresse.MaxLength, Mode=OneTime}"
 							 AcceptsReturn="True" TextWrapping="Wrap" Height="110" VerticalAlignment="Top"/>
-                    <Label Grid.Column="0" Grid.Row="5" Content="{Binding Data.Head.ReAdre.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
-                    <TextBox Grid.Column="1" Grid.Row="5" Grid.RowSpan="4" Text="{Binding Data.Head.First.ReAdre}" MaxLength="{Binding Data.ReAdre.MaxLength, Mode=OneTime}"
-							 AcceptsReturn="True" TextWrapping="Wrap" Height="110" VerticalAlignment="Top"/>
-                    <Label Grid.Column="3" Grid.Row="1" Content="{Binding Data.Head.VeAdre.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
-                    <TextBox Grid.Column="4" Grid.Row="1" Grid.RowSpan="4" Text="{Binding Data.Head.First.VeAdre}" MaxLength="{Binding Data.VeAdre.MaxLength, Mode=OneTime}"
+                    <Label Grid.Column="3" Grid.Row="1" Content="{Binding Data.Head.Anmerk.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+                    <TextBox Grid.Column="4" Grid.Row="1" Grid.RowSpan="4" Text="{Binding Data.Head.First.Anmerk}" MaxLength="{Binding Data.Anmerk.MaxLength, Mode=OneTime}"
 							 AcceptsReturn="True" TextWrapping="Wrap" Height="110" VerticalAlignment="Top"/>
                 </Grid>
             </TabItem>
-            <TabItem Header="Auftragspositionen">
+            <TabItem Header="Angebotspositionen">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -92,8 +90,8 @@
                         <RowDefinition Height="29"/>
                         <RowDefinition/>
                     </Grid.RowDefinitions>
-                    <Button Content="Neue Position" Command="{Binding newPosition}" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,0,0,0" />
-                    <ListBox x:Name="AupoListbox" Grid.Column="0" Grid.Row="1" IsSynchronizedWithCurrentItem="True" ItemsSource="{Binding Data.Head/AupoHead}">
+                    <Button Content="Neue Position" Command="{Binding newPosition}" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                    <ListBox x:Name="AnpoListbox" Grid.Column="0" Grid.Row="1" IsSynchronizedWithCurrentItem="True" ItemsSource="{Binding Data.Head/AnpoHead}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid>
@@ -105,11 +103,11 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                    <ContentControl Grid.Column="2" Grid.Row="1" Content="{Binding ElementName=AupoListbox, Path=SelectedValue}" Focusable="False">
-						<ContentControl.ContentTemplate>
-							<DataTemplate>
-								<Grid>
-									<Grid.ColumnDefinitions>
+                    <ContentControl Grid.Column="2" Grid.Row="1" Content="{Binding ElementName=AnpoListbox, Path=SelectedValue}" Focusable="False">
+                        <ContentControl.ContentTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
@@ -125,7 +123,7 @@
                         </ContentControl.ContentTemplate>
                     </ContentControl>
                 </Grid>
-			</TabItem>
+            </TabItem>
             <TabItem Header="Formulartexte">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -145,6 +143,7 @@
                 </Grid>
             </TabItem>
         </TabControl>
+
 
     </Grid>
 	
