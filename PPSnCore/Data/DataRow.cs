@@ -452,17 +452,7 @@ namespace TecWare.PPSn.Data
 					else
 					{
 						// Convert the value to the expected type
-						if (value is PpsDataRow && columnInfo.IsRelationColumn)
-						{
-							var parentRow = (PpsDataRow)value;
-							if (parentRow.Table.TableDefinition != columnInfo.ParentColumn.Table)
-								throw new InvalidCastException($"The row (from table '{parentRow.Table.TableName}') is not a member of the parent table ({columnInfo.ParentColumn.Table.Name})");
-							value = parentRow[columnInfo.ParentColumn.Index]; // use key value
-						}
-						else if (value != null)
-						{
-							value = Procs.ChangeType(value, columnInfo.DataType);
-						}
+						value = GetConvertedValue(columnInfo, value);
 
 						// Is the value changed
 						var oldValue = this[columnIndex];
@@ -556,8 +546,17 @@ namespace TecWare.PPSn.Data
 
 		private static object GetConvertedValue(PpsDataColumnDefinition columnInfo, object value)
 		{
-			if (!columnInfo.IsExtended && value != null) // fix data type
-				value = Procs.ChangeType(value, columnInfo.DataType);
+			if (value != null) // unpack data type
+			{
+				if (columnInfo.IsRelationColumn && value is PpsDataRow parentRow)
+				{
+					if (parentRow.Table.TableDefinition != columnInfo.ParentColumn.Table)
+						throw new InvalidCastException($"The row (from table '{parentRow.Table.TableName}') is not a member of the parent table ({columnInfo.ParentColumn.Table.Name})");
+					value = parentRow[columnInfo.ParentColumn.Index];
+				}
+				else if (!columnInfo.IsExtended)
+					value = Procs.ChangeType(value, columnInfo.DataType);
+			}
 			return value;
 		} // func GetConvertedValue
 
