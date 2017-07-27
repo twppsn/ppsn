@@ -63,7 +63,7 @@
 						<Border x:Name="panelBorder" Padding="6,1" Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
 							<ContentPresenter />
 						</Border>
-						<Rectangle x:Name="showSelection" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0" IsHitTestVisible="False"
+						<Rectangle x:Name="selectionRect" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0" IsHitTestVisible="False"
 								   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
 					</Grid>
                     <ControlTemplate.Triggers>
@@ -71,7 +71,7 @@
 							<Setter Property="Background" TargetName="panelBorder" Value="{StaticResource PPSnAlternation1Brush}" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-							<Setter Property="Opacity" TargetName="showSelection" Value="1" />
+							<Setter Property="Opacity" TargetName="selectionRect" Value="1" />
 						</Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
