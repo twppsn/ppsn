@@ -2327,7 +2327,10 @@ namespace TecWare.PPSn
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 		private T GetValue<T>(int index, T empty)
-			=> index == 0 ? (T)(object)objectId : (staticValues[index] ?? empty).ChangeType<T>();
+		{
+			lock (objectLock)
+				return index == 0 ? (T)(object)objectId : (staticValues[index] ?? empty).ChangeType<T>();
+		} // func GetValue
 
 		private void SetValue(PpsStaticObjectColumnIndex index, object newValue, bool setDirty)
 		{
@@ -2405,29 +2408,41 @@ namespace TecWare.PPSn
 		{
 			get
 			{
-				lock (objectLock)
+				if (index < 0)
+					throw new ArgumentOutOfRangeException();
+				else if (index == 0)
 				{
-					if (index < 0)
-						throw new ArgumentOutOfRangeException();
-					else if (index == 0)
+					lock (objectLock)
 						return objectId;
-					else if (index < StaticColumns.Length)
-						return staticValues[index];
-					else if (index == StaticColumns.Length + 0)
-					{
-						if (data == null)
-							data = GetDataAsync<IPpsObjectData>(true).AwaitTask();
-						return data;
-					}
-					else if (index == StaticColumns.Length + 1)
-						return tags;
-					else if (index == StaticColumns.Length + 2)
-						return links;
-					else if (index < StaticColumns.Length + Tags.Count + staticPropertyCount)
-						return tags[index - StaticColumns.Length - staticPropertyCount].Value;
-					else
-						throw new ArgumentOutOfRangeException();
 				}
+				else if (index < StaticColumns.Length)
+				{
+					lock (objectLock)
+						return staticValues[index];
+				}
+				else if (index == StaticColumns.Length + 0)
+				{
+					if (data == null)
+						data = GetDataAsync<IPpsObjectData>(true).AwaitTask();
+					return data;
+				}
+				else if (index == StaticColumns.Length + 1)
+				{
+					lock (objectLock)
+						return tags;
+				}
+				else if (index == StaticColumns.Length + 2)
+				{
+					lock (objectLock)
+						return links;
+				}
+				else if (index < StaticColumns.Length + Tags.Count + staticPropertyCount)
+				{
+					lock (objectLock)
+						return tags[index - StaticColumns.Length - staticPropertyCount].Value;
+				}
+				else
+					throw new ArgumentOutOfRangeException();
 			}
 		} // prop this
 
@@ -3246,7 +3261,7 @@ order by t_liefnr.value desc
 
 		[LuaMember]
 		public PpsObject GetObject(Guid guid, bool throwException = false)
-			=> GetCachedObjectOrRead(objectStoreByGuid, guid, useId, throwException);
+			=> GetCachedObjectOrRead(objectStoreByGuid, guid, useGuid, throwException);
 
 		[LuaMember]
 		public LuaTable GetObjectInfo(string objectTyp)
