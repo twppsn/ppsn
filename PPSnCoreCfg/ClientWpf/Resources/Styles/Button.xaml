@@ -4,6 +4,8 @@
 		<ResourceDictionary Source="../Colors.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
+	<SolidColorBrush x:Key="PPSnButtonStyleBackgroundBrush" Color="{StaticResource PPSnAccentColor}" Opacity="0.15"/>
+
 	<Style x:Key="PPSnSelectionToggleButtonStyle" TargetType="{x:Type ToggleButton}">
 		<Setter Property="Background" Value="Transparent" />
 		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}" />
@@ -30,8 +32,6 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
-
-	<SolidColorBrush x:Key="PPSnButtonStyleBackgroundBrush" Color="{StaticResource PPSnAccentColor}" Opacity="0.15"/>
 
 	<Style x:Key="PPSnButtonStyle" TargetType="{x:Type Button}">
 		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
@@ -123,5 +123,115 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+	<Style x:Key="PPSnImageButtonStyle" TargetType="{x:Type Button}">
+		<Setter Property="Focusable" Value="False"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type Button}">
+					<Border x:Name="border" Background="Transparent" Padding="8">
+						<Path x:Name="imagePath" Data="{TemplateBinding Content}" Fill="{StaticResource PPSnImageBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform">
+							<Path.RenderTransformOrigin>
+								<Point X="0.5" Y="0.5"/>
+							</Path.RenderTransformOrigin>
+							<Path.RenderTransform>
+								<ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
+							</Path.RenderTransform>
+						</Path>
+					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsMouseOver" Value="True">
+							<Setter Property="Fill" TargetName="imagePath" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+						</Trigger>
+						<Trigger Property="IsEnabled" Value="False">
+							<Setter Property="Opacity" Value="0.25"/>
+						</Trigger>
+						<Trigger Property="IsPressed" Value="True">
+							<Trigger.EnterActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="1" To="0.9" Duration="0:00:0.1"/>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="1" To="0.9" Duration="0:00:0.1"/>
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.EnterActions>
+							<Trigger.ExitActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="0.9" To="1" Duration="0:00:0.05"/>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="0.9" To="1" Duration="0:00:0.05"/>
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.ExitActions>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<!--<Style x:Key="PPSnImageButtonStyle" TargetType="{x:Type Button}">
+		<Setter Property="Focusable" Value="False"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type Button}">
+					<Border x:Name="border" Background="Transparent">
+						<Image x:Name="image" Source="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8">
+							<Image.RenderTransformOrigin>
+								<Point X="0.5" Y="0.5"/>
+							</Image.RenderTransformOrigin>
+							<Image.RenderTransform>
+								<ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
+							</Image.RenderTransform>
+						</Image>
+					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsMouseOver" Value="True">
+							<Trigger.EnterActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<ObjectAnimationUsingKeyFrames Storyboard.TargetName="image" Storyboard.TargetProperty="(Image.Source).(DrawingImage.Drawing).(GeometryDrawing.Brush)">
+											<DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+										</ObjectAnimationUsingKeyFrames>
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.EnterActions>
+							<Trigger.ExitActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<ObjectAnimationUsingKeyFrames Storyboard.TargetName="image" Storyboard.TargetProperty="(Image.Source).(DrawingImage.Drawing).(GeometryDrawing.Brush)">
+											<DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnImageBrush}"/>
+										</ObjectAnimationUsingKeyFrames>
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.ExitActions>
+						</Trigger>
+
+						<Trigger Property="IsPressed" Value="True">
+							<Trigger.EnterActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="1" To="0.9" Duration="0:00:0.1"/>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="1" To="0.9" Duration="0:00:0.1"/>
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.EnterActions>
+							<Trigger.ExitActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="0.9" To="1" Duration="0:00:0.05"/>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="0.9" To="1" Duration="0:00:0.05"/>
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.ExitActions>
+						</Trigger>
+						<Trigger Property="IsEnabled" Value="False">
+							<Setter Property="Opacity" Value="0.25"/>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>-->
 
 </ResourceDictionary>
