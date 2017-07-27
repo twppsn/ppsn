@@ -2234,6 +2234,30 @@ namespace TecWare.PPSn
 		public override string ToString()
 			=> $"Object: {Typ}; {objectId} # {Guid}:{PulledRevId}";
 
+		public async void ShellExecute()
+		{
+			var filename = String.Empty;
+			foreach (var tg in Tags)
+				if (tg.Name == "Filename")
+				{
+					filename = (string)tg.Value;
+				}
+			if (String.IsNullOrEmpty(filename))
+				return;
+
+			filename = System.IO.Path.GetTempPath() + "\\" + Path.GetFileName(filename);
+
+			//if (Path.GetExtension(filename) == ".exe") // ToDo: ask if the executeable may run
+
+			using (var fileStream = File.OpenWrite(filename))
+			{
+				var buffer = await LoadRawDataAsync();
+				fileStream.Write(buffer.ReadInArray(), 0, (int)buffer.Length);
+				fileStream.Close();
+				System.Diagnostics.Process.Start(filename);
+			}
+		}
+
 		#endregion
 
 		private XElement ToXml()
