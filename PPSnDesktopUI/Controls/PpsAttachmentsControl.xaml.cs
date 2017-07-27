@@ -63,9 +63,7 @@ namespace TecWare.PPSn.Controls
 		{
 			InitializeComponent();
 
-			// binding overloads are first checkable after the control is finished
 			Loaded += LoadBindings;
-
 			this.getEnvironment = new Lazy<PpsEnvironment>(() => PpsEnvironment.GetEnvironment(this));
 		} // ctor
 
@@ -207,9 +205,9 @@ namespace TecWare.PPSn.Controls
 		public readonly static DependencyProperty ScannerButtonCommandProperty = DependencyProperty.Register(nameof(ScannerButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
 		public readonly static DependencyProperty SignatureButtonVisibleProperty = DependencyProperty.Register(nameof(SignatureButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
 		public readonly static DependencyProperty SignatureButtonCommandProperty = DependencyProperty.Register(nameof(SignatureButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
-		public readonly static DependencyProperty SeventhButtonVisibleProperty = DependencyProperty.Register(nameof(SeventhButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
-		public readonly static DependencyProperty SeventhButtonCaptionProperty = DependencyProperty.Register(nameof(SeventhButtonCaption), typeof(string), typeof(PpsAttachmentsControl), new UIPropertyMetadata(String.Empty));
-		public readonly static DependencyProperty SeventhButtonCommandProperty = DependencyProperty.Register(nameof(SeventhButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
+		private readonly static DependencyProperty SeventhButtonVisibleProperty = DependencyProperty.Register(nameof(SeventhButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
+		private readonly static DependencyProperty SeventhButtonImagePathProperty = DependencyProperty.Register(nameof(SeventhButtonImagePath), typeof(object), typeof(PpsAttachmentsControl));
+		private readonly static DependencyProperty SeventhButtonCommandProperty = DependencyProperty.Register(nameof(SeventhButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
 
 		public IPpsAttachments AttachmentsSource { get => (IPpsAttachments)GetValue(AttachmentsSourceProperty); set => SetValue(AttachmentsSourceProperty, value); }
 		public IPpsAttachmentItem SelectedAttachment => (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty);
@@ -245,17 +243,17 @@ namespace TecWare.PPSn.Controls
 		public ICommand SignatureButtonCommand => (ICommand)GetValue(SignatureButtonCommandProperty);
 
 		/// <summary>sets the visibility of the SeventhButton - default true</summary>
-		public bool SeventhButtonVisible => (bool)GetValue(SeventhButtonVisibleProperty);
-		/// <summary>sets the caption of the SeventhButton - default true</summary>
-		public string SeventhButtonCaption => (string)GetValue(SeventhButtonCaptionProperty);
+		public bool SeventhButtonVisible { get => (bool)GetValue(SeventhButtonVisibleProperty); set => SetValue(SeventhButtonVisibleProperty, value); }
+		/// <summary>sets the path for the image of the SeventhButton</summary>
+		public object SeventhButtonImagePath { get => GetValue(SeventhButtonImagePathProperty); set => SetValue(SeventhButtonImagePathProperty, value); }
 		/// <summary>sets the command of the SeventhButton - default true</summary>
-		public ICommand SeventhButtonCommand => (ICommand)GetValue(SeventhButtonCommandProperty);
+		public ICommand SeventhButtonCommand { get => (ICommand)GetValue(SeventhButtonCommandProperty); set => SetValue(SeventhButtonCommandProperty, value); }
 
-		#endregion
+	#endregion
 
-		#region -- RoutedUICommands -----------------------------------------------------
+	#region -- RoutedUICommands -----------------------------------------------------
 
-		public readonly static RoutedUICommand RemoveAttachmentCommand = new RoutedUICommand("RemoveAttachment", "RemoveAttachment", typeof(PpsAttachmentsControl));
+	public readonly static RoutedUICommand RemoveAttachmentCommand = new RoutedUICommand("RemoveAttachment", "RemoveAttachment", typeof(PpsAttachmentsControl));
 		public readonly static RoutedUICommand AddFileAttachmentCommand = new RoutedUICommand("AddFileAttachment", "AddFileAttachment", typeof(PpsAttachmentsControl));
 		public readonly static RoutedUICommand AddLinkAttachmentCommand = new RoutedUICommand("AddLinkAttachment", "AddLinkAttachment", typeof(PpsAttachmentsControl));
 		public readonly static RoutedUICommand ScannerAttachmentCommand = new RoutedUICommand("ScannerAttachment", "ScannerAttachment", typeof(PpsAttachmentsControl));
@@ -429,25 +427,6 @@ namespace TecWare.PPSn.Controls
 
 		public string LinkColumnName { get; set; }
 	} // class PpsDataTableAttachmentConverter
-
-	#endregion
-
-	#region -- class BoolToVisibilityConverter ------------------------------------------
-
-	public class BoolToVisibilityConverter : IValueConverter
-	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-		{
-			if ((bool)value)
-				return Visibility.Visible;
-			else return Visibility.Collapsed;
-		}
-
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-		{
-			throw new NotSupportedException();
-		}
-	}
 
 	#endregion
 }
