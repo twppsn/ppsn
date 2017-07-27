@@ -305,7 +305,7 @@
 							<RowDefinition/>
 						</Grid.RowDefinitions>
 						<Border Height="24" Background="Transparent" ToolTip="{Binding Type}">
-							<Viewbox Height="22" Opacity=".65">
+							<Viewbox Height="22" Opacity=".75">
 								<ContentControl Focusable="False" >
 									<ContentControl.Template>
 										<ControlTemplate>
