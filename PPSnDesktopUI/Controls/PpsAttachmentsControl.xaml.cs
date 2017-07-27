@@ -249,11 +249,11 @@ namespace TecWare.PPSn.Controls
 		/// <summary>sets the command of the SeventhButton - default true</summary>
 		public ICommand SeventhButtonCommand { get => (ICommand)GetValue(SeventhButtonCommandProperty); set => SetValue(SeventhButtonCommandProperty, value); }
 
-	#endregion
+		#endregion
 
-	#region -- RoutedUICommands -----------------------------------------------------
+		#region -- RoutedUICommands -----------------------------------------------------
 
-	public readonly static RoutedUICommand RemoveAttachmentCommand = new RoutedUICommand("RemoveAttachment", "RemoveAttachment", typeof(PpsAttachmentsControl));
+		public readonly static RoutedUICommand RemoveAttachmentCommand = new RoutedUICommand("RemoveAttachment", "RemoveAttachment", typeof(PpsAttachmentsControl));
 		public readonly static RoutedUICommand AddFileAttachmentCommand = new RoutedUICommand("AddFileAttachment", "AddFileAttachment", typeof(PpsAttachmentsControl));
 		public readonly static RoutedUICommand AddLinkAttachmentCommand = new RoutedUICommand("AddLinkAttachment", "AddLinkAttachment", typeof(PpsAttachmentsControl));
 		public readonly static RoutedUICommand ScannerAttachmentCommand = new RoutedUICommand("ScannerAttachment", "ScannerAttachment", typeof(PpsAttachmentsControl));
