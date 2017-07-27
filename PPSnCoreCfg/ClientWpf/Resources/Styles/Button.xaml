@@ -130,7 +130,8 @@
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type Button}">
 					<Border x:Name="border" Background="Transparent" Padding="8">
-						<Path x:Name="imagePath" Data="{TemplateBinding Content}" Fill="{StaticResource PPSnImageBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform">
+						<Path x:Name="imagePath" Data="{TemplateBinding Content}" Fill="{StaticResource PPSnActionButtonBrush}" Opacity=".75"
+							  HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform">
 							<Path.RenderTransformOrigin>
 								<Point X="0.5" Y="0.5"/>
 							</Path.RenderTransformOrigin>
@@ -140,8 +141,11 @@
 						</Path>
 					</Border>
 					<ControlTemplate.Triggers>
-						<Trigger Property="IsMouseOver" Value="True">
+						<!--<Trigger Property="IsMouseOver" Value="True">
 							<Setter Property="Fill" TargetName="imagePath" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+						</Trigger>-->
+						<Trigger Property="IsMouseOver" Value="True">
+							<Setter Property="Opacity" TargetName="imagePath" Value="1"/>
 						</Trigger>
 						<Trigger Property="IsEnabled" Value="False">
 							<Setter Property="Opacity" Value="0.25"/>
