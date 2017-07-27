@@ -1270,7 +1270,7 @@ namespace TecWare.PPSn
 
 		private async void LoadPreview()
 		{
-			if (baseObj == null)
+			if (baseObj == null || !baseObj.MimeType.StartsWith("image"))
 				return;
 
 			// semaphore prevents this imageobject from being loaded multiple times, if the preview ist getted multiple times
@@ -1396,7 +1396,7 @@ namespace TecWare.PPSn
 		/// </summary>
 		private async void LoadImage()
 		{
-			if (baseObj == null)
+			if (baseObj == null || !baseObj.MimeType.StartsWith("image"))
 				return;
 
 			if (!imageLoaded)
@@ -1510,7 +1510,7 @@ namespace TecWare.PPSn
 		/// </summary>
 		private async void LoadOverlay()
 		{
-			if (baseObj == null)
+			if (baseObj == null || !baseObj.MimeType.StartsWith("image"))
 				return;
 
 			if (!overlayLoaded)
