@@ -153,8 +153,7 @@
             <RowDefinition Height="29"/>
             <RowDefinition Height="29"/>
             <RowDefinition Height="29"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+			<RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <Label x:Name="lblContactNr" Grid.Column="0" Grid.Row="0" Content="Kontakt-Nr.:" Height="23" VerticalAlignment="Top" />
@@ -170,15 +169,6 @@
         <TextBox Grid.Column="4" Grid.Row="1" Text="{Binding Data.Head.First.LiefNr}" MaxLength="{Binding Data.Head.LiefNr.MaxLength, Mode=OneTime}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
         <Label Grid.Column="3" Grid.Row="2" Content="{Binding Data.Head.KundNr.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
         <TextBox Grid.Column="4" Grid.Row="2" Text="{Binding Data.Head.First.KundNr}" MaxLength="{Binding Data.Head.KundNr.MaxLength, Mode=OneTime}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
-        <uiC:PpsPictureControl Grid.Column="0" Grid.Row="0" Grid.RowSpan="4">
-            <uiC:PpsPictureControl.PictureSource>
-                <Binding Path="Data.Head.First.Zusa">
-                    <Binding.Converter>
-                        <uiC:PpsDataObjectPictureConverter LinkColumnName="ObjkId" PictureTag="Grundriss"/>
-                    </Binding.Converter>
-                </Binding>
-            </uiC:PpsPictureControl.PictureSource>
-        </uiC:PpsPictureControl>
         <TabControl Grid.Row="4" Grid.ColumnSpan="5" Style="{StaticResource PPSnPaneTabControlStyle}">
             <TabItem Header="Kopfdaten">
                 <Grid>
@@ -208,7 +198,7 @@
                 </Grid>
             </TabItem>
             <TabItem Header="Adressen / Partner">
-                <Grid>
+                <Grid> 
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="{StaticResource PaneSpaceColumnWidth}"/>
@@ -221,7 +211,8 @@
                     <Button Content="Neue Adresse" Command="{Binding newAddress}" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,0,0,0" />
                     <Button Content="Neuer Partner" Command="{Binding newPartner}" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="108,0,0,0" />
                     <Button Content="Löschen" Command="{Binding delItem}" Padding="10,0" Width="Auto" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="232,0,0,0" />
-                    <uiC:PpsTreeListView x:Name="AdreTreeView" Grid.Column="0" Grid.Row="1" ItemsSource="{Binding Data.Head/AdreHead}" Style="{StaticResource TreeListViewStyle}">
+
+					<uiC:PpsTreeListView x:Name="AdreTreeView" Grid.Column="0" Grid.Row="1" ItemsSource="{Binding Data.Head/AdreHead}" Style="{StaticResource TreeListViewStyle}">
                         <uiC:PpsTreeListView.Resources>
                             <ui:PpsMultiLineStringConverter x:Key="MlStringConverter" />
                         </uiC:PpsTreeListView.Resources>
@@ -248,26 +239,47 @@
                 </Grid>
             </TabItem>
             <TabItem Header="Sonstiges">
-                <uiC:PpsAttachmentsControl VerticalAlignment="Top" HorizontalAlignment="Left"
-                                           AddLinkButtonCommand="{Binding testCommand}"
-										   CameraButtonCommand="{Binding cameraModul}"
-                                           SeventhButtonVisible="true"
-                                           SeventhButtonCaption="Test"
-                                           SeventhButtonCommand="{Binding testCommand}">
-                    <!--one can overload all the predefined Buttons with p.e. AddFileButtonCommand="{Binding testCommand}"-->
-                    <!--one can hide a button with AddFileButtonVisible="false"; all but seventh button are visible by default-->
-                    <!--known buttons AddFileButton,AddLinkButton,RemoveButton,CameraButton,SignatureButton,SeventhButton-->
-                    <uiC:PpsAttachmentsControl.AttachmentsSource>
-                        <Binding Path="Data.Head.First.Zusa">
-                            <Binding.Converter>
-                                <uiC:PpsDataTableAttachmentConverter LinkColumnName="ObjkId" />
-                            </Binding.Converter>
-                        </Binding>
-                    </uiC:PpsAttachmentsControl.AttachmentsSource>
-                </uiC:PpsAttachmentsControl>
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="{StaticResource PaneSpaceColumnWidth}"/>
+						<ColumnDefinition Width="*"/>
+					</Grid.ColumnDefinitions>
+					
+					<uiC:PpsAttachmentsControl Grid.Column="0" BorderThickness="0"
+											   AddLinkButtonCommand="{Binding testCommand}"
+											   CameraButtonCommand="{Binding cameraModul}"
+											   SeventhButtonVisible="True"
+											   SeventhButtonImagePath="{StaticResource helpCircelPathGeometry}"
+											   SeventhButtonCommand="{Binding testCommand}">
+						<!--one can overload all the predefined Buttons with p.e. AddFileButtonCommand="{Binding testCommand}"-->
+						<!--one can hide a button with AddFileButtonVisible="false"; all but seventh button are visible by default-->
+						<!--known buttons AddFileButton,AddLinkButton,RemoveButton,CameraButton,SignatureButton,SeventhButton-->
+						<uiC:PpsAttachmentsControl.AttachmentsSource>
+							<Binding Path="Data.Head.First.Zusa">
+								<Binding.Converter>
+									<uiC:PpsDataTableAttachmentConverter LinkColumnName="ObjkId" />
+								</Binding.Converter>
+							</Binding>
+						</uiC:PpsAttachmentsControl.AttachmentsSource>
+					</uiC:PpsAttachmentsControl>
+				</Grid>
             </TabItem>
         </TabControl>
-    </Grid>
+
+
+		<!--<uiC:PpsPictureControl Grid.Column="0" Grid.Row="0" Grid.RowSpan="4">
+            <uiC:PpsPictureControl.PictureSource>
+                <Binding Path="Data.Head.First.Zusa">
+                    <Binding.Converter>
+                        <uiC:PpsDataObjectPictureConverter LinkColumnName="ObjkId" PictureTag="Grundriss"/>
+                    </Binding.Converter>
+                </Binding>
+            </uiC:PpsPictureControl.PictureSource>
+        </uiC:PpsPictureControl>-->
+
+
+	</Grid>
 
     <ui:PpsGenericWpfControl.Commands>
         <ui:PpsUICommandButton Order="100,100" DisplayText="Veröffentlichen" Image="floppy_diskImage" Command="{Binding pushContact}" />
