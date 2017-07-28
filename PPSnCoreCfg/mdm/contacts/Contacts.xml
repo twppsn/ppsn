@@ -37,6 +37,7 @@
 			<pps:field name="dbo.Ansp.Id" />
 			<pps:field name="dbo.Ansp.AdreId" />
 			<pps:field name="dbo.Ansp.Name" displayName="Name" />
+			<pps:field name="dbo.Ansp.Vorname" displayName="Vorname" />
 			<pps:field name="dbo.Ansp.Titel" displayName="Titel" />
 			<pps:field name="dbo.Ansp.Tel" displayName="Telefon" />
 			<pps:field name="dbo.Ansp.Fax" displayName="Fax" />
@@ -109,6 +110,7 @@
 					<pps:column name="Id" fieldName="dbo.Ansp.Id" isPrimary="true" />
           <pps:relation name="AdreId" fieldName="dbo.Ansp.AdreId" relationName="AnspAdre" parentTable="Adre" parentColumn="Id" parentType="Root" />
 					<pps:column name="Name" fieldName="dbo.Ansp.Name" />
+					<pps:column name="Vorname" fieldName="dbo.Ansp.Vorname" />
 					<pps:column name="Titel" fieldName="dbo.Ansp.Titel" />
 					<pps:column name="Tel" fieldName="dbo.Ansp.Tel" />
 					<pps:column name="Fax" fieldName="dbo.Ansp.Fax" />
@@ -181,6 +183,7 @@
 					<pps:column name="Id" fieldName="dbo.Ansp.Id" isPrimary="true" />
 					<pps:relation name="AdreId" fieldName="dbo.Ansp.AdreId" relationName="AnspAdre" parentTable="Adre" parentColumn="Id" parentType="Root" />
 					<pps:column name="Name" fieldName="dbo.Ansp.Name" />
+					<pps:column name="Vorname" fieldName="dbo.Ansp.Vorname" />
 					<pps:column name="Titel" fieldName="dbo.Ansp.Titel" />
 					<pps:column name="Tel" fieldName="dbo.Ansp.Tel" />
 					<pps:column name="Fax" fieldName="dbo.Ansp.Fax" />

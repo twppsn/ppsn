@@ -3,6 +3,7 @@
 	[Id] BIGINT NOT NULL CONSTRAINT pkAnspId PRIMARY KEY IDENTITY (1,1), 
 	[AdreId] BIGINT NOT NULL CONSTRAINT fkAnspAdreId REFERENCES dbo.Adre (Id),
 	[Name] NVARCHAR(100) NOT NULL, 
+	[Vorname] NVARCHAR(100) NULL,
 	[Titel] NVARCHAR(30) NULL, 
 	[Tel] VARCHAR(30) NULL, 
 	[Fax] VARCHAR(30) NULL, 
@@ -230,3 +231,11 @@ GO
 
 CREATE INDEX [idxAnspAdreId] ON [dbo].[Ansp] ([AdreId])
 GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Vorname',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'Ansp',
+    @level2type = N'COLUMN',
+    @level2name = N'Vorname'
