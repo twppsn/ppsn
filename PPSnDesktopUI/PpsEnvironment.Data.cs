@@ -862,6 +862,9 @@ namespace TecWare.PPSn
 				CreateCommandColumnAttribute(commandText, column);
 				if (column.Attributes.GetProperty<bool>("IsUnique", false))
 					CreateTableIndex(commands, tableName, column.Name, true, localIndexArray);
+				else if (column.Attributes.GetProperty<bool>("IsIndex", false)
+					|| (column is PpsDataColumnDefinition dc && dc.IsRelationColumn))
+					CreateTableIndex(commands, tableName, column.Name, false, localIndexArray);
 
 				commandText.Append(',');
 			}
