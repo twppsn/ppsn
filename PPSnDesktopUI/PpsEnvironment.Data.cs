@@ -2367,24 +2367,33 @@ namespace TecWare.PPSn
 		private void OnCollectedEvents()
 			=> environment.Dispatcher.BeginInvoke(new Action(ProcessEvents), DispatcherPriority.ApplicationIdle);
 
-		private void ProcessEvents()
+		private bool TryDequeueEvent(out PpsDataEvent ev, out PpsDataTableDefinition table)
 		{
-			while(collectedEvents.Count > 0)
+			lock (collectedEvents)
 			{
-				lock (collectedEvents)
+				while (collectedEvents.Count > 0)
 				{
-					var c = collectedEvents[0];
+					ev = collectedEvents[0];
 					collectedEvents.RemoveAt(0);
 
-					var t = FindTable(c.TableName);
-					if (t == null)
-						continue;
-
-					if (c.Operation == PpsDataChangeOperation.Full)
-						OnMasterDataTableChanged(t);
-					else
-						OnMasterDataRowChanged(c.Operation, t, c.RowId, new PpsMasterLazyArguments(this, t, c.RowId));
+					table = FindTable(ev.TableName);
+					if (table != null)
+						return true;
 				}
+				table = null;
+				ev = null;
+				return false;
+			}
+		} // func TryDequeueEvent
+
+		private void ProcessEvents()
+		{
+			while (TryDequeueEvent(out var ev, out var table))
+			{
+				if (ev.Operation == PpsDataChangeOperation.Full)
+					OnMasterDataTableChanged(table);
+				else
+					OnMasterDataRowChanged(ev.Operation, table, ev.RowId, new PpsMasterLazyArguments(this, table, ev.RowId));
 			}
 		} // proc ProcessEvents
 
