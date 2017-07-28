@@ -109,6 +109,15 @@
 					<pps:column name="Id" fieldName="dbo.Ansp.Id" isPrimary="true" />
           <pps:relation name="AdreId" fieldName="dbo.Ansp.AdreId" relationName="AnspAdre" parentTable="Adre" parentColumn="Id" parentType="Root" />
 					<pps:column name="Name" fieldName="dbo.Ansp.Name" />
+					<pps:column name="Titel" fieldName="dbo.Ansp.Titel" />
+					<pps:column name="Tel" fieldName="dbo.Ansp.Tel" />
+					<pps:column name="Fax" fieldName="dbo.Ansp.Fax" />
+					<pps:column name="Mail" fieldName="dbo.Ansp.Mail" />
+					<pps:column name="Mobil" fieldName="dbo.Ansp.Mobil" />
+					<pps:column name="Geschl" fieldName="dbo.Ansp.Geschl" />
+					<pps:column name="Funktion" fieldName="dbo.Ansp.Funktion" />
+					<pps:column name="Brief" fieldName="dbo.Ansp.Brief" />
+					<pps:column name="Anmerk" fieldName="dbo.Ansp.Anmerk" />
 				</pps:table>
 			</pps:dataset>
 
