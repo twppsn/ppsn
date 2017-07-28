@@ -28,7 +28,10 @@ function GetContractData(obj, ds)
 		-- Positionen --
 		ds:Aupo:AddRange(
 			trans:ExecuteSingleResult{
-				select = "sds.Aupo",
+				select = [[
+					sds.Auko
+						=sds.Aupo[Auko.Id = Aupo.AukoId]
+				]],
 				columnList = ds:Aupo,
 				[1] = { ObjKId = obj.Id }
 			}

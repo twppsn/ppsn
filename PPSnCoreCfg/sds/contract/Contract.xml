@@ -9,7 +9,8 @@
 	<pps:ppsn name="ppsn">
 		<pps:register source="main">
 			<!-- contract fields -->
-			<pps:field name="sds.Auko.ObjkId" />
+      <pps:field name="sds.Auko.Id" />
+			<pps:field name="sds.Auko.ObjkId"  inherited="sys.Fields.ObjectId" />
 			<pps:field name="sds.Auko.Datum" displayName="Datum" />
 			<pps:field name="sds.Auko.BestDatum" displayName="Bestelldatum" />
 			<pps:field name="sds.Auko.KontId" displayName="Kontakt" />
@@ -25,7 +26,7 @@
 			<pps:field name="sds.Auko.Anmerk" displayName="Anmerkungen" />
 
 			<pps:field name="sds.Aupo.Id" />
-			<pps:field name="sds.Aupo.ObjkId" />
+			<pps:field name="sds.Aupo.AukoId" />
 			<pps:field name="sds.Aupo.Pos" displayName="Position" />
 			<pps:field name="sds.Aupo.ProdId" displayName="Produkt" />
 			<pps:field name="sds.Aupo.ProdNr" displayName="Produkt-Nr." />
@@ -40,7 +41,8 @@
         <pps:meta name="DefaultPaneUri" dataType="string">wpf/panes/contract.xaml</pps:meta>
         
 				<pps:table name="Head">
-					<pps:column name="ObjkId" fieldName="sds.Auko.ObjkId" isPrimary="true" />
+          <pps:column name="Id" fieldName="sds.Auko.Id" isPrimary="true" />
+					<pps:column name="ObjkId" fieldName="sds.Auko.ObjkId" />
 					<pps:column name="Datum" fieldName="sds.Auko.Datum" />
 					<pps:column name="BestDatum" fieldName="sds.Auko.BestDatum" />
 					<pps:column name="BestNr" fieldName="sds.Auko.BestNr" />
@@ -58,7 +60,7 @@
 
 				<pps:table name="Aupo">
 					<pps:column name="Id" fieldName="sds.Aupo.Id" isPrimary="true" />
-					<pps:relation name="ObjkId" fieldName="sds.Aupo.ObjkId" relationName="AupoHead" parentTable="Head" parentColumn="ObjkId" parentType="Root" />
+					<pps:relation name="AukoId" fieldName="sds.Aupo.AukoId" relationName="AupoHead" parentTable="Head" parentColumn="Id" parentType="Root" />
 					<pps:column name="Pos" fieldName="sds.Aupo.Pos" />
 					<pps:column name="ProdId" fieldName="sds.Aupo.ProdId" />
 					<pps:column name="ProdNr" fieldName="sds.Aupo.ProdNr" />

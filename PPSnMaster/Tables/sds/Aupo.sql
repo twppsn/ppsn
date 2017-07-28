@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [sds].[Aupo]
 (
 	[Id] BIGINT NOT NULL CONSTRAINT pkAupotId PRIMARY KEY IDENTITY (1,1), 
-	[ObjkId] BIGINT NOT NULL CONSTRAINT fkAupoObjkId REFERENCES dbo.ObjK (Id), 
+	[AukoId] BIGINT NOT NULL CONSTRAINT fkAupoAukoId REFERENCES sds.Auko (Id), 
 	[Pos] INT NOT NULL, 
 	[ProdId] BIGINT NULL, 
 	[ProdNr] NVARCHAR(20) NULL, 
@@ -20,7 +20,7 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1type = N'TABLE',
     @level1name = N'Aupo',
     @level2type = N'COLUMN',
-    @level2name = N'ObjkId'
+    @level2name = N'AukoId'
 GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Id',
@@ -104,5 +104,5 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level2name = N'Menge'
 GO
 
-CREATE INDEX [idxAupoObjkId] ON [sds].[Aupo] ([ObjkId])
+CREATE INDEX [idxAupoObjkId] ON [sds].[Aupo] ([AukoId])
 GO
