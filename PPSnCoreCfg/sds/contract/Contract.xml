@@ -13,7 +13,9 @@
 			<pps:field name="sds.Auko.ObjkId"  inherited="sys.Fields.ObjectId" />
 			<pps:field name="sds.Auko.Datum" displayName="Datum" />
 			<pps:field name="sds.Auko.BestDatum" displayName="Bestelldatum" />
-			<pps:field name="sds.Auko.KontId" displayName="Kontakt" />
+			<pps:field name="sds.Auko.KontId" inherited="sys.Fields.MasterDataKey" displayName="Kontakt" >
+				<pps:attribute name="refTable">Kont</pps:attribute>
+			</pps:field>
 			<pps:field name="sds.Auko.Adresse" displayName="Adresse" />
 			<pps:field name="sds.Auko.VeAdre" displayName="Versandadresse" />
 			<pps:field name="sds.Auko.ReAdre" displayName="Rechnungsadresse" />

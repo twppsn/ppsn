@@ -15,7 +15,9 @@
 			<pps:field name="sds.Anko.BisDatum" displayName="Gültig bis" />
 			<pps:field name="sds.Anko.AnfDatum" displayName="Anfragedatum" />
 			<pps:field name="sds.Anko.AnfNr" displayName="Anfrage-Nr." />
-			<pps:field name="sds.Anko.KontId" displayName="Kontakt" />
+			<pps:field name="sds.Anko.KontId" inherited="sys.Fields.MasterDataKey" displayName="Kontakt" >
+				<pps:attribute name="refTable">Kont</pps:attribute>
+			</pps:field>
 			<pps:field name="sds.Anko.Adresse" displayName="Adresse" />
 			<pps:field name="sds.Anko.Variante" displayName="Variante" />
 			<pps:field name="sds.Anko.Zusatz" displayName="Zusatz" />
