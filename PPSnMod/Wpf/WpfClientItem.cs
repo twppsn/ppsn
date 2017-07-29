@@ -1152,7 +1152,7 @@ namespace TecWare.PPSn.Server.Wpf
 			PrepareMasterDataSyncArguments(r, tableName, syncId, syncStamp, out var syncIds, out var syncAllTables, out var lastSynchronization);
 
 			var synchronisationSessions = new Dictionary<PpsDataSource, PpsDataSynchronization>();
-			var msg = Log.CreateScope(LogMsgType.Information, stopTime: true);
+			var msg = Log.CreateScope(LogMsgType.Information, autoFlush: false, stopTime: true);
 
 			var nextSyncStamp = DateTime.Now.ToFileTimeUtc();
 			using (var xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, Encoding.UTF8), Procs.XmlWriterSettings))
@@ -1194,6 +1194,8 @@ namespace TecWare.PPSn.Server.Wpf
 				}
 				catch (Exception e)
 				{
+					msg.AutoFlush(true);
+
 					xml.WriteStartElement("error");
 					xml.WriteValue(e.Message);
 					xml.WriteEndElement();
