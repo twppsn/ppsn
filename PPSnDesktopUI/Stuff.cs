@@ -220,11 +220,10 @@ namespace TecWare.PPSn
 			where T : DependencyObject
 		{
 			var c = VisualTreeHelper.GetChildrenCount(current);
-			for (int i = 0; i < c; i++)
+			for (var i = 0; i < c; i++)
 			{
 				var v = VisualTreeHelper.GetChild(current, i);
-				var child = v as T;
-				if (child != null)
+				if (v is T child)
 					return child;
 				else
 				{

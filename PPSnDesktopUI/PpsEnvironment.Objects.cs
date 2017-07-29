@@ -1600,14 +1600,19 @@ namespace TecWare.PPSn
 
 		public async Task CommitAsync()
 		{
-			baseObj.Tags.UpdateTag(0, "Sha256", PpsObjectTagClass.Text, sha256);
-			await baseObj.SaveRawDataAsync(
-				rawData.Length,
-				mimeType ?? baseObj.MimeType ?? MimeTypes.Application.OctetStream,
-				rawData,
-				true
-			);
-			await baseObj.UpdateLocalAsync();
+			using (var trans = await baseObj.Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.ReadCommited))
+			{
+				baseObj.Tags.UpdateTag(0, "Sha256", PpsObjectTagClass.Text, sha256);
+				await baseObj.SaveRawDataAsync(
+					rawData.Length,
+					mimeType ?? baseObj.MimeType ?? MimeTypes.Application.OctetStream,
+					rawData,
+					true
+				);
+				await baseObj.UpdateLocalAsync();
+
+				trans.Commit();
+			}
 		} // proc CommitAsync
 
 		public async Task PushAsync(Stream dst)

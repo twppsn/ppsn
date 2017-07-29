@@ -669,6 +669,32 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		#region -- class IndexDef -----------------------------------------------------
+
+		private class IndexDef
+		{
+			private readonly string indexName;
+			private bool isUnique;
+			private readonly List<IDataColumn> columns;
+
+			public IndexDef(string indexName)
+			{
+				this.indexName = indexName;
+				this.isUnique = false;
+				this.columns = new List<IDataColumn>();
+			} // ctor
+
+			public string IndexName => indexName;
+			public bool IsUnique
+			{
+				get => isUnique;
+				set => isUnique = isUnique | value;
+			} // prop IsUnique
+			public List<IDataColumn> Columns => columns;
+		} // class IndexDef
+
+		#endregion
+
 		public event PpsDataTableChangedEventHandler DataTableChanged;
 		public event PpsDataRowChangedEventHandler DataRowChanged;
 
@@ -682,7 +708,8 @@ namespace TecWare.PPSn
 		private bool isSynchronizationStarted = false; // number of sync processes
 
 		private bool isDisposed = false;
-		private volatile bool isInSynchronization = false;
+		private readonly object synchronizationLock = new object();
+		private bool isSynchronizationRunning = false;
 		private bool updateUserInfo = false;
 
 		private readonly List<PpsDataEvent> collectedEvents = new List<PpsDataEvent>();
@@ -832,6 +859,8 @@ namespace TecWare.PPSn
 				}
 			} // func IsIntegerType
 
+			var indices = new Dictionary<string, IndexDef>(StringComparer.OrdinalIgnoreCase);
+
 			// add dummy for the create table
 			var createTableIndex = commands.Count;
 			commands.Add(String.Empty);
@@ -856,15 +885,12 @@ namespace TecWare.PPSn
 				if (column.Attributes.GetProperty("IsPrimary", false))
 				{
 					commandText.Append(" PRIMARY KEY");
-					CreateTableIndex(commands, tableName, column.Name, true, localIndexArray);
+					CreateTableIndex(commands, tableName, tableName + "_" + column.Name + "_primaryIndex", true, new IDataColumn[] { column }, localIndexArray);
 				}
 
 				CreateCommandColumnAttribute(commandText, column);
-				if (column.Attributes.GetProperty<bool>("IsUnique", false))
-					CreateTableIndex(commands, tableName, column.Name, true, localIndexArray);
-				else if (column.Attributes.GetProperty<bool>("IsIndex", false)
-					|| (column is PpsDataColumnDefinition dc && dc.IsRelationColumn))
-					CreateTableIndex(commands, tableName, column.Name, false, localIndexArray);
+
+				AddIndexDefinition(tableName, column, indices);
 
 				commandText.Append(',');
 			}
@@ -872,15 +898,20 @@ namespace TecWare.PPSn
 			commandText.Append(";");
 
 			commands[createTableIndex] = commandText.ToString();
+
+			foreach (var idx in indices.Values)
+				CreateTableIndex(commands, tableName, idx.IndexName, idx.IsUnique, idx.Columns, localIndexArray);
 		} // func CreateTableScript
 
 		private static bool CreateAlterTableScript(List<string> commands, string tableName, bool preserveCurrentData, IEnumerable<IDataColumn> localColumns, IEnumerable<Tuple<string, bool>> localIndexes, IEnumerable<IDataColumn> remoteColumns)
 		{
+			var indices = new Dictionary<string, IndexDef>();
 			var localColumnsArray = localColumns.ToArray();
 			var newColumns = new List<IDataColumn>();
 			var sameColumns = new List<string>();   // for String.Join - only Column names are used
 
-			// todo: check index list
+			var newIndices = new List<IndexDef>();
+			var changedIndices = new List<IndexDef>();
 
 			foreach (var remoteColumn in remoteColumns)
 			{
@@ -908,9 +939,23 @@ namespace TecWare.PPSn
 					sameColumns.Add(remoteColumn.Name);
 				else
 					newColumns.Add(remoteColumn);
+
+				AddIndexDefinition(tableName, remoteColumn, indices);
 			}
 
-			if (sameColumns.Count < localColumnsArray.Length || newColumns.Count > 0)
+			foreach (var idx in indices.Values)
+			{
+				var li = localIndexes.FirstOrDefault(c => String.Compare(idx.IndexName, c.Item1, StringComparison.OrdinalIgnoreCase) == 0);
+				if (li != null)
+				{
+					if (idx.IsUnique != li.Item2)
+						changedIndices.Add(idx);
+				}
+				else
+					newIndices.Add(idx);
+			}
+
+			if (newIndices.Count > 0 ||changedIndices.Count > 0 || sameColumns.Count < localColumnsArray.Length || newColumns.Count > 0)
 			{
 				if (!preserveCurrentData) // drop and recreate
 				{
@@ -937,7 +982,7 @@ namespace TecWare.PPSn
 					// drop old local table
 					commands.Add($"DROP TABLE [{tableName}_temp];");  // no IF EXISTS - at this point the table must exist or error
 				}
-				else if (newColumns.Count > 0) // there are no columns, which have to be deleted - check now if there are new columns to add
+				else if (newColumns.Count > 0 ||newIndices.Count > 0 ||changedIndices.Count > 0) // there are no columns, which have to be deleted - check now if there are new columns to add
 				{
 					// todo: rk primary key column changed
 					foreach (var column in newColumns)
@@ -949,6 +994,17 @@ namespace TecWare.PPSn
 						commandText.Append(' ').Append(ConvertDataTypeToSqLite(column.DataType));
 						CreateCommandColumnAttribute(commandText, column);
 						commands.Add(commandText.ToString());
+					}
+					if (newIndices.Count > 0 || changedIndices.Count > 0)
+					{
+						var localIndexArray = localIndexes.Select(c => c.Item1).ToArray();
+						foreach (var idx in changedIndices)
+						{
+							commands.Add($"DROP INDEX IF EXISTS '{idx.IndexName}';");
+							CreateTableIndex(commands, tableName, idx.IndexName, idx.IsUnique, idx.Columns, localIndexArray);
+						}
+						foreach (var idx in newIndices)
+							CreateTableIndex(commands, tableName, idx.IndexName, idx.IsUnique, idx.Columns, localIndexArray);
 					}
 				}
 				else
@@ -965,15 +1021,14 @@ namespace TecWare.PPSn
 			commands.Add($"DROP TABLE IF EXISTS '{tableName}';");
 		} // proc CreateDropScript
 
-		private static void CreateTableIndex(List<string> commands, string tableName, string columnName, bool isUnique, string[] localIndexArray)
+		private static void CreateTableIndex(List<string> commands, string tableName, string indexName, bool isUnique, IEnumerable<IDataColumn> columns, string[] localIndexArray)
 		{
 			var commandText = new StringBuilder("CREATE");
 			if (isUnique)
 				commandText.Append(" UNIQUE");
 			commandText.Append(" INDEX ");
 
-			var baseName = tableName + "_" + columnName + "_index";
-			var indexName = baseName;
+			var baseName = indexName;
 			if (localIndexArray != null)
 			{
 				var nameIndex = 1;
@@ -985,11 +1040,68 @@ namespace TecWare.PPSn
 			commandText.Append(" ON ");
 			AppendSqlIdentifier(commandText, tableName);
 			commandText.Append(" (");
-			AppendSqlIdentifier(commandText, columnName);
+			var first = true;
+			foreach (var col in columns)
+			{
+				if (first)
+					first = false;
+				else
+					commandText.Append(", ");
+				AppendSqlIdentifier(commandText, col.Name);
+			}
 			commandText.Append(");");
 
 			commands.Add(commandText.ToString());
 		} // proc CreateSqLiteIndex
+
+		private static void AddIndexDefinition(string tableName, IDataColumn column, Dictionary<string, IndexDef> indices)
+		{
+			if (IsIndexColumn(tableName, column, out var indexName, out var isUnique))
+			{
+				if (indices.TryGetValue(indexName, out var t))
+				{
+					t.IsUnique = isUnique;
+					t.Columns.Add(column);
+				}
+				else
+				{
+					var idx = new IndexDef(indexName) { IsUnique = isUnique };
+					idx.Columns.Add(column);
+					indices[indexName] = idx;
+				}
+			}
+		} // proc AddIndexDefinition
+
+		private static bool IsIndexColumn(string tableName, IDataColumn column, out string indexName, out bool isUnique)
+		{
+			if (column.Attributes.GetProperty("IsUnique", false))
+			{
+				indexName = GetDefaultIndexName(tableName, column);
+				isUnique = true;
+				return true;
+			}
+			else
+			{
+				indexName = column.Attributes.GetProperty("Index", (string)null);
+				if (indexName != null
+					|| (column is PpsDataColumnDefinition dc && dc.IsRelationColumn))
+				{
+					if (indexName == null || String.Compare(indexName, Boolean.TrueString, StringComparison.OrdinalIgnoreCase) == 0)
+						indexName = GetDefaultIndexName(tableName, column);
+					isUnique = false;
+					return true;
+				}
+				else
+				{
+					isUnique = false;
+					indexName = null;
+					return false;
+				}
+			}
+		} // func IsIndexColumn
+
+		private static string GetDefaultIndexName(string tableName, IDataColumn column) 
+			=> tableName + "_" + column.Name + "_index";
 
 		private static StringBuilder CreateCommandColumnAttribute(StringBuilder commandText, IDataColumn column)
 		{
@@ -1497,70 +1609,79 @@ namespace TecWare.PPSn
 
 		public Task StartSynchronization()
 		{
-			if (IsInSynchronization) // todo: wait
-				return Task.CompletedTask;
-			else
-			{
-				return environment.RunAsync(
-				  async () =>
+			return environment.RunAsync(
+			  async () =>
+			  {
+				  using (var progressTracer = environment.Traces.TraceProgress())
 				  {
-					  using (var progressTracer = environment.Traces.TraceProgress())
+					  try
 					  {
-						  try
-						  {
-							  await SynchronizationAsync(progressTracer);
-						  }
-						  catch (Exception e)
-						  {
-							  progressTracer.Except(e);
-							  throw;
-						  }
+						  await SynchronizationAsync(progressTracer);
 					  }
-				  },
-				  "Synchronization", CancellationToken.None
-			  );
-			}
+					  catch (Exception e)
+					  {
+						  progressTracer.Except(e);
+						  throw;
+					  }
+				  }
+			  },
+			  "Synchronization", CancellationToken.None
+		  );
 		} // proc StartSynchronization
 
 		internal async Task<bool> SynchronizationAsync(IProgress<string> progress)
 		{
-			// synchronize schema
-			if (schemaIsOutDated.HasValue || await CheckSynchronizationStateAsync())
-			{
-				if (schemaIsOutDated.Value)
-					await UpdateSchemaAsync(progress);
-				schemaIsOutDated = false;
-			}
+			// check for single thread sync context, to get the monitor work
+			StuffThreading.VerifySynchronizationContext();
 
-			progress?.Report("Synchronization...");
+			if (isSynchronizationRunning)
+				throw new InvalidOperationException();
 
-			// Fetch data
-			isInSynchronization = true;
-			environment.OnBeforeSynchronization();
+			Monitor.Enter(synchronizationLock);
+			isSynchronizationRunning = true;
 			try
 			{
-				// update header
-				if (updateUserInfo)
+				// synchronize schema
+				if (schemaIsOutDated.HasValue || await CheckSynchronizationStateAsync())
 				{
-					using (var trans = await CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
-					using (var cmd = trans.CreateNativeCommand("UPDATE main.[Header] SET [UserId] = @UserId, [UserName] = @UserName"))
-					{
-						cmd.AddParameter("@UserId", DbType.Int64, environment.UserId);
-						cmd.AddParameter("@UserName", DbType.String, environment.Username);
-						cmd.ExecuteNonQueryEx();
-
-						trans.Commit();
-						updateUserInfo = false;
-					}
+					if (schemaIsOutDated.Value)
+						await UpdateSchemaAsync(progress);
+					schemaIsOutDated = false;
 				}
 
-				// fetch data from server
-				await FetchDataAsync(progress);
+				progress?.Report("Synchronization...");
+
+				// Fetch data
+				environment.OnBeforeSynchronization();
+				try
+				{
+					// update header
+					if (updateUserInfo)
+					{
+						using (var trans = await CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
+						using (var cmd = trans.CreateNativeCommand("UPDATE main.[Header] SET [UserId] = @UserId, [UserName] = @UserName"))
+						{
+							cmd.AddParameter("@UserId", DbType.Int64, environment.UserId);
+							cmd.AddParameter("@UserName", DbType.String, environment.Username);
+							cmd.ExecuteNonQueryEx();
+
+							trans.Commit();
+							updateUserInfo = false;
+						}
+					}
+
+					// fetch data from server
+					await FetchDataAsync(progress);
+				}
+				finally
+				{
+					environment.OnAfterSynchronization();
+				}
 			}
 			finally
 			{
-				isInSynchronization = false;
-				environment.OnAfterSynchronization();
+				isSynchronizationRunning = false;
+				Monitor.Exit(synchronizationLock);
 			}
 			return true;
 		} // func SynchronizationAsync
@@ -1616,7 +1737,7 @@ namespace TecWare.PPSn
 		public void SetUpdateUserInfo()
 			=> updateUserInfo = true;
 
-		public bool IsInSynchronization => isInSynchronization;
+		public bool IsInSynchronization => isSynchronizationRunning;
 
 		#endregion
 
@@ -1785,7 +1906,7 @@ namespace TecWare.PPSn
 		{
 			try
 			{
-				using (var command = new SQLiteCommand("SELECT [Path], [ContentType], [ContentEncoding], [Content], [LocalPath] FROM [main].[OfflineCache] WHERE substr([Path], 1, length(@path)) = @path", connection))
+				using (var command = new SQLiteCommand("SELECT [Path], [ContentType], [ContentEncoding], [Content], [LocalPath] FROM [main].[OfflineCache] WHERE substr([Path], 1, length(@path)) = @path  COLLATE NOCASE", connection))
 				{
 					command.Parameters.Add("@path", DbType.String).Value = requestUri.ParsePath();
 					using (var reader = command.ExecuteReaderEx(CommandBehavior.SingleRow))
@@ -2501,7 +2622,7 @@ namespace TecWare.PPSn
 			(typeof(byte[]), "Blob", DbType.Binary),
 			// alt
 			(typeof(long), "Integer", DbType.Int64),
-			(typeof(PpsObjectExtendedValue), "integer", DbType.Int64)
+			(typeof(PpsObjectExtendedValue), "Integer", DbType.Int64)
 		};
 
 		private static Type ConvertSqLiteToDataType(string dataType)
