@@ -34,6 +34,7 @@ using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.Stuff;
 using TecWare.PPSn.UI;
 using static TecWare.PPSn.StuffUI;
@@ -692,28 +693,30 @@ namespace TecWare.PPSn
 		[LuaMember("toTable")]
 		private LuaTable LuaToTable(object table)
 		{
-			if (table == null)
-				return null;
-			else if (table is LuaTable)
-				return (LuaTable)table;
-			else if (table is IDataRow)
+			switch (table)
 			{
-				var r = new LuaTable();
-				var row = (IDataRow)table;
-				var i = 0;
-				foreach (var c in row.Columns)
-					r[c.Name] = row[i++];
-				return r;
+				case null:
+					return null;
+				case LuaTable t:
+					return t;
+				case IDataRow row:
+					{
+						var r = new LuaTable();
+						var i = 0;
+						foreach (var c in row.Columns)
+							r[c.Name] = row[i++];
+						return r;
+					}
+				case IEnumerable<PropertyValue> props:
+					{
+						var r = new LuaTable();
+						foreach (var p in props)
+							r[p.Name] = p.Value;
+						return r;
+					}
+				default:
+					throw new ArgumentException();
 			}
-			else if (table is IEnumerable<PropertyValue>)
-			{
-				var r = new LuaTable();
-				foreach (var p in (IEnumerable<PropertyValue>)table)
-					r[p.Name] = p.Value;
-				return r;
-			}
-			else
-				throw new ArgumentException();
 		} // func LuaToTable
 
 		[LuaMember("typeof")]
@@ -883,6 +886,24 @@ namespace TecWare.PPSn
 		public PpsMasterDataTransaction CreateTransaction()
 			=> MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.ReadCommited).AwaitTask();
 
+		[LuaMember("getServerRowValue")]
+		public object GetServerRowValue(object v)
+		{
+			if (v == null)
+				return null;
+			else if (v is PpsObject o)
+				return o.Id;
+			else if (v is PpsLinkedObjectExtendedValue l)
+				return l.IsNull ? null : (object)((PpsObject)l.Value).Id;
+			else
+				return v;
+		} // func GetServerRowValue
+
+		[Obsolete("Implemented for a special case, will be removed.")]
+		[LuaMember]
+		public Task<PpsObjectDataSet> PullRevisionAsync(PpsObject obj, long revId)
+			=> obj.PullRevisionAsync<PpsObjectDataSet>(revId);
+		
 		public IDisposable BlockAllUI(DispatcherFrame frame, string message = null)
 		{
 			Thread.Sleep(200); // wait for finish

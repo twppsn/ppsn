@@ -2026,11 +2026,32 @@ namespace TecWare.PPSn
 			}
 		} // proc PullDataAsync
 
-		public async Task PullAsync(long revId = -1)
+		private async Task<IPpsProxyTask> EnqueuePullRevisionAsync(long pulledRevId)
 		{
-			if (revId == -1)
-				revId = RemoteHeadRevId;
+			// check if the environment is online, force online
+			await Environment.ForceOnlineAsync();
 
+			// load the data from the server
+			if (objectId <= 0)
+				throw new ArgumentOutOfRangeException("objectId", "Invalid server id, this is a local only object and has no server representation.");
+
+			if (pulledRevId < 0)
+				pulledRevId = RemoteHeadRevId;
+
+			// check download manager
+			lock (objectLock)
+			{
+				var request = PullDataRequest(pulledRevId);
+				if (environment.WebProxy.TryGet(request, out var task))
+					return task;
+
+				// read the object stream from server
+				return request.Enqueue(PpsLoadPriority.ObjectPrimaryData, true);
+			}
+		} // proc EnqueuePullRevisionAsync
+
+		public async Task PullAsync()
+		{
 			// foreground means a thread transission, we just wait for the task to finish.
 			// that we do not get any deadlocks with the db-transactions, we need to set the transaction of the current thread.
 			using (var r = await (await EnqueuePullAsync(Environment.MasterData.CurrentTransaction)).ForegroundAsync())
@@ -2040,6 +2061,37 @@ namespace TecWare.PPSn
 					await data.LoadAsync();
 			}
 		} // proc PullDataAsync
+
+		[Obsolete("Implemented for a special case, will be removed.")]
+		public async Task<T> PullRevisionAsync<T>(long revId)
+			where T : IPpsObjectData
+		{
+			using (var r = await (await EnqueuePullRevisionAsync(-1)).ForegroundAsync())
+			using (var src = r.GetResponseStream())
+			{
+
+				var headerLengthString = r.Headers["ppsn-header-length"];
+				if (String.IsNullOrEmpty(headerLengthString)
+					|| !Int64.TryParse(headerLengthString, out var headerLength)
+					|| headerLength < 10)
+					throw new ArgumentOutOfRangeException("ppsn-header-length", headerLengthString, "Header is missing.");
+
+				using (var headerData = new WindowStream(src, 0, headerLength, false, true))
+				using (var xmlHeader = XmlReader.Create(headerData, Procs.XmlReaderSettings))
+					XElement.Load(xmlHeader);
+
+				// todo: create object? only implemented for a special sub case
+				// PpsRevisionDataSet?
+				var schema = await Environment.ActiveDataSets.GetDataSetDefinitionAsync(Typ);
+				var ds = new PpsObjectDataSet(schema, this); // wrong object!
+
+				using (var dataSrc = new WindowStream(src, headerLength, r.ContentLength - headerLength, false, true))
+				using (var xmlData = XmlReader.Create(dataSrc, Procs.XmlReaderSettings))
+					ds.Read(XElement.Load(xmlData));
+
+				return (T)(IPpsObjectData)ds;
+			}
+		} // func PullRevisionAsync
 
 		public async Task PushAsync()
 		{
@@ -2103,7 +2155,7 @@ namespace TecWare.PPSn
 					ReadObjectFromXml(xAnswer);
 
 					// repull the whole object
-					await PullAsync(RemoteHeadRevId);
+					await PullAsync();
 
 					foreach (var link in links)
 					{
@@ -2120,7 +2172,7 @@ namespace TecWare.PPSn
 			}
 		} // proc PushAsync
 
-		public async Task<T> GetDataAsync<T>(bool asyncPullData = false)
+		public async Task<T> GetDataAsync<T>()
 			where T : IPpsObjectData
 		{
 			if (data == null)
@@ -2428,7 +2480,7 @@ namespace TecWare.PPSn
 				else if (index == StaticColumns.Length + 0)
 				{
 					if (data == null)
-						data = GetDataAsync<IPpsObjectData>(true).AwaitTask();
+						data = GetDataAsync<IPpsObjectData>().AwaitTask();
 					return data;
 				}
 				else if (index == StaticColumns.Length + 1)
