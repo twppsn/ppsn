@@ -879,6 +879,10 @@ namespace TecWare.PPSn
 		public Task StartSync()
 			=> masterData.StartSynchronization();
 
+		[LuaMember("createTransaction")]
+		public PpsMasterDataTransaction CreateTransaction()
+			=> MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.ReadCommited).AwaitTask();
+
 		public IDisposable BlockAllUI(DispatcherFrame frame, string message = null)
 		{
 			Thread.Sleep(200); // wait for finish

@@ -342,19 +342,15 @@ namespace TecWare.PPSn.UI
 			if (collection is IListSource listSource)
 				collection = listSource.GetList();
 
-			// do we have a factory
-			if (collection is ICollectionViewFactory factory)
-				return factory.CreateView();
-			else if (collection is IBindingList)
-				return new BindingListCollectionView((IBindingList)collection);
-			else if (collection is IList)
-				return new ListCollectionView((IList)collection);
-			else if (collection is IEnumerable)
-				return new CollectionView((IEnumerable)collection);
-			else if (Lua.RtInvokeable(collection))
-				return new CollectionView(new LuaFunctionEnumerator(collection));
-			else
-				throw new ArgumentException("collection is no enumerable.");
+			// function views
+			if (!(collection is IEnumerable) && Lua.RtInvokeable(collection))
+				collection = new LuaFunctionEnumerator(collection);
+
+			var collectionViewSource = new CollectionViewSource()
+			{
+				Source = collection
+			};
+			return collectionViewSource.View;
 		} // func LuaCreateView
 
 		#endregion
