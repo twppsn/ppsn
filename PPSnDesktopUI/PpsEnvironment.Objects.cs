@@ -2049,13 +2049,13 @@ namespace TecWare.PPSn
 					// update local database and object data
 					if (data == null)
 					{
-						await this.GetDataAsync<IPpsObjectData>();
+						this.GetDataAsync<IPpsObjectData>().AwaitTask();
 					}
 					await data.LoadAsync();
 					await data.CommitAsync();
 
 					foreach (var link in this.Links)
-						await link.LinkTo.PushAsync();
+						link.LinkTo.PushAsync().AwaitTask();
 
 					Links.SetDirty();
 					Links.RefreshLinks();
