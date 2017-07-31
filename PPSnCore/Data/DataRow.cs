@@ -923,7 +923,7 @@ namespace TecWare.PPSn.Data
 				return true;
 			}
 		} // func TryGetProperty
-
+		
 		public bool IsValueModified(int index)
 			=> currentValues[index] != NotSet;
 
@@ -1028,8 +1028,7 @@ namespace TecWare.PPSn.Data
 			var val = this[column.Index];
 			if (val != null)
 			{
-				PpsDataRow row;
-				if (!parentRows.TryGetValue(column, out row))
+				if (!parentRows.TryGetValue(column, out var row))
 				{
 					var parentTable = Table.DataSet.Tables[column.ParentColumn.Table];
 					if (column.ParentColumn.IsPrimaryKey)
