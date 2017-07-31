@@ -1740,6 +1740,7 @@ namespace TecWare.PPSn.Server.Sql
 		{
 			private readonly int columnId;
 			private readonly SqlDbType sqlType;
+			private readonly string udtName;
 	
 			public SqlColumnInfo(PpsSqlTableInfo table, SqlDataReader r)
 				: base(table, 
@@ -1753,8 +1754,12 @@ namespace TecWare.PPSn.Server.Sql
 				)
 			{
 				this.columnId = r.GetInt32(1);
-				this.sqlType = GetSqlType(r.GetByte(3));
-
+				var t = r.GetByte(3);
+				this.sqlType = GetSqlType(t);
+				if (t == 240)
+					udtName = "geography";
+				else
+					udtName = null;
 				EndInit();
 			} // ctor
 
@@ -1787,6 +1792,8 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				base.InitSqlParameter(parameter, parameterName, value);
 				((SqlParameter)parameter).SqlDbType = sqlType;
+				if (sqlType == SqlDbType.Udt)
+					((SqlParameter)parameter).UdtTypeName = udtName;
 			} // proc InitSqlParameter
 
 			#region -- GetFieldType, GetSqlType -----------------------------------------------
@@ -1843,6 +1850,9 @@ namespace TecWare.PPSn.Server.Sql
 					case 231: // nvarchar
 					case 239: // nchar
 						return typeof(string);
+
+					case 240: // GEOGRAPHY
+						return typeof(Microsoft.SqlServer.Types.SqlGeography);
 
 					case 241: // xml
 						return typeof(string);
@@ -1918,6 +1928,9 @@ namespace TecWare.PPSn.Server.Sql
 						return SqlDbType.NVarChar;
 					case 239: // nchar
 						return SqlDbType.NChar;
+
+					case 240: // GEOGRAPHY
+						return SqlDbType.Udt;
 
 					case 241: // xml
 						return SqlDbType.Xml;

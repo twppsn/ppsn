@@ -136,6 +136,7 @@
 			<pps:field name="dbo.Adre.Region" displayName="Region" />
 			<pps:field name="dbo.Adre.Plz" displayName="Postleitzahl" />
 			<pps:field name="dbo.Adre.LandId" displayName="Land" />
+			<!--<pps:field name="dbo.Adre.Koord" displayName="Koordinaten" />-->
 			<pps:field name="dbo.Adre.Adresse" displayName="Adresse" />
 			<pps:field name="dbo.Adre.Changed" >
 				<pps:attribute name="dataType">bool</pps:attribute>
