@@ -684,7 +684,17 @@ namespace TecWare.PPSn
 				this.columns = new List<IDataColumn>();
 			} // ctor
 
+			public IndexDef(string indexName, bool isUnique, params IDataColumn[] columns)
+			{
+				this.indexName = indexName;
+				this.isUnique = isUnique;
+				this.columns = new List<IDataColumn>(columns);
+			} // ctor
+
 			public string IndexName => indexName;
+
+			public string QualifiedName => columns.Count > 1 ? indexName + "_" + columns.Count + "_" : indexName;
+
 			public bool IsUnique
 			{
 				get => isUnique;
@@ -845,25 +855,7 @@ namespace TecWare.PPSn
 
 		private static void CreateTableScript(List<string> commands, string tableName, IEnumerable<IDataColumn> remoteColumns, string[] localIndexArray)
 		{
-			bool IsIntegerType(Type t)
-			{
-				switch (Type.GetTypeCode(t))
-				{
-					case TypeCode.Int32:
-					case TypeCode.UInt32:
-					case TypeCode.Int64:
-					case TypeCode.UInt64:
-						return true;
-					default:
-						return false;
-				}
-			} // func IsIntegerType
-
 			var indices = new Dictionary<string, IndexDef>(StringComparer.OrdinalIgnoreCase);
-
-			// add dummy for the create table
-			var createTableIndex = commands.Count;
-			commands.Add(String.Empty);
 
 			// create table
 			var commandText = new StringBuilder("CREATE TABLE ");
@@ -875,18 +867,11 @@ namespace TecWare.PPSn
 					continue; // ignore rowId column
 
 				AppendSqlIdentifier(commandText, column.Name).Append(' ');
-				commandText.Append(
-					column.Attributes.GetProperty("IsIdentity", false) && IsIntegerType(column.DataType)
-						? "INTEGER"
-						: ConvertDataTypeToSqLite(column.DataType)
-				);
+				commandText.Append(ConvertDataTypeToSqLite(column));
 
 				// append primray key
 				if (column.Attributes.GetProperty("IsPrimary", false))
-				{
 					commandText.Append(" PRIMARY KEY");
-					CreateTableIndex(commands, tableName, tableName + "_" + column.Name + "_primaryIndex", true, new IDataColumn[] { column }, localIndexArray);
-				}
 
 				CreateCommandColumnAttribute(commandText, column);
 
@@ -897,21 +882,23 @@ namespace TecWare.PPSn
 			commandText[commandText.Length - 1] = ')'; // replace last comma
 			commandText.Append(";");
 
-			commands[createTableIndex] = commandText.ToString();
+			commands.Add(commandText.ToString());
 
 			foreach (var idx in indices.Values)
-				CreateTableIndex(commands, tableName, idx.IndexName, idx.IsUnique, idx.Columns, localIndexArray);
+				CreateTableIndex(commands, tableName, idx, localIndexArray);
 		} // func CreateTableScript
 
 		private static bool CreateAlterTableScript(List<string> commands, string tableName, bool preserveCurrentData, IEnumerable<IDataColumn> localColumns, IEnumerable<Tuple<string, bool>> localIndexes, IEnumerable<IDataColumn> remoteColumns)
 		{
 			var indices = new Dictionary<string, IndexDef>();
 			var localColumnsArray = localColumns.ToArray();
+			var localIndexArray = localIndexes.ToArray();
 			var newColumns = new List<IDataColumn>();
 			var sameColumns = new List<string>();   // for String.Join - only Column names are used
 
 			var newIndices = new List<IndexDef>();
 			var changedIndices = new List<IndexDef>();
+			var removeIndices = new List<string>();
 
 			foreach (var remoteColumn in remoteColumns)
 			{
@@ -926,7 +913,7 @@ namespace TecWare.PPSn
 
 					// todo: check default
 					if ((remoteColumn.Name == localColumn.Name)
-						&& (ConvertDataTypeToSqLite(remoteColumn.DataType) == ConvertDataTypeToSqLite(localColumn.DataType))
+						&& String.Compare(ConvertDataTypeToSqLite(remoteColumn), localColumn.Attributes.GetProperty("SQLiteType", "Integer"), StringComparison.OrdinalIgnoreCase) == 0
 						&& (remoteColumn.Attributes.GetProperty("Nullable", false) == localColumn.Attributes.GetProperty("Nullable", false))
 						&& (remoteColumn.Attributes.GetProperty("IsPrimary", false) == localColumn.Attributes.GetProperty("IsPrimary", false))
 						)
@@ -945,17 +932,29 @@ namespace TecWare.PPSn
 
 			foreach (var idx in indices.Values)
 			{
-				var li = localIndexes.FirstOrDefault(c => String.Compare(idx.IndexName, c.Item1, StringComparison.OrdinalIgnoreCase) == 0);
-				if (li != null)
+				var li = Array.FindIndex(localIndexArray, c => c != null && CompareIndexName(idx.QualifiedName, c.Item1));
+				if (li != -1)
 				{
-					if (idx.IsUnique != li.Item2)
+					if (idx.IsUnique != localIndexArray[li].Item2)
+					{
+						removeIndices.Add(localIndexArray[li].Item1);
 						changedIndices.Add(idx);
+					}
+					localIndexArray[li] = null;
 				}
 				else
 					newIndices.Add(idx);
 			}
+			for (var i = 0; i < localIndexArray.Length; i++)
+			{
+				if (localIndexArray[i] != null)
+				{
+					removeIndices.Add(localIndexArray[i].Item1);
+					localIndexArray[i] = null;
+				}
+			}
 
-			if (newIndices.Count > 0 ||changedIndices.Count > 0 || sameColumns.Count < localColumnsArray.Length || newColumns.Count > 0)
+			if (newIndices.Count > 0 ||changedIndices.Count > 0 || removeIndices.Count > 0 || sameColumns.Count < localColumnsArray.Length || newColumns.Count > 0)
 			{
 				if (!preserveCurrentData) // drop and recreate
 				{
@@ -982,7 +981,7 @@ namespace TecWare.PPSn
 					// drop old local table
 					commands.Add($"DROP TABLE [{tableName}_temp];");  // no IF EXISTS - at this point the table must exist or error
 				}
-				else if (newColumns.Count > 0 ||newIndices.Count > 0 ||changedIndices.Count > 0) // there are no columns, which have to be deleted - check now if there are new columns to add
+				else if (newColumns.Count > 0 ||newIndices.Count > 0 || changedIndices.Count > 0 || removeIndices.Count > 0) // there are no columns, which have to be deleted - check now if there are new columns to add
 				{
 					// todo: rk primary key column changed
 					foreach (var column in newColumns)
@@ -991,20 +990,24 @@ namespace TecWare.PPSn
 						AppendSqlIdentifier(commandText, tableName);
 						commandText.Append(" ADD COLUMN ");
 						AppendSqlIdentifier(commandText, column.Name);
-						commandText.Append(' ').Append(ConvertDataTypeToSqLite(column.DataType));
+						commandText.Append(' ').Append(ConvertDataTypeToSqLite(column));
 						CreateCommandColumnAttribute(commandText, column);
 						commands.Add(commandText.ToString());
 					}
+
+					if (removeIndices.Count > 0)
+					{
+						foreach (var c in removeIndices)
+							commands.Add($"DROP INDEX IF EXISTS '{c}';");
+					}
+
 					if (newIndices.Count > 0 || changedIndices.Count > 0)
 					{
-						var localIndexArray = localIndexes.Select(c => c.Item1).ToArray();
+						var indexNameArray = localIndexArray.Where(c => c != null).Select(c => c.Item1).ToArray();
 						foreach (var idx in changedIndices)
-						{
-							commands.Add($"DROP INDEX IF EXISTS '{idx.IndexName}';");
-							CreateTableIndex(commands, tableName, idx.IndexName, idx.IsUnique, idx.Columns, localIndexArray);
-						}
+							CreateTableIndex(commands, tableName, idx, indexNameArray);
 						foreach (var idx in newIndices)
-							CreateTableIndex(commands, tableName, idx.IndexName, idx.IsUnique, idx.Columns, localIndexArray);
+							CreateTableIndex(commands, tableName, idx, indexNameArray);
 					}
 				}
 				else
@@ -1021,13 +1024,14 @@ namespace TecWare.PPSn
 			commands.Add($"DROP TABLE IF EXISTS '{tableName}';");
 		} // proc CreateDropScript
 
-		private static void CreateTableIndex(List<string> commands, string tableName, string indexName, bool isUnique, IEnumerable<IDataColumn> columns, string[] localIndexArray)
+		private static void CreateTableIndex(List<string> commands, string tableName, IndexDef idx, string[] localIndexArray)
 		{
 			var commandText = new StringBuilder("CREATE");
-			if (isUnique)
+			if (idx.IsUnique)
 				commandText.Append(" UNIQUE");
 			commandText.Append(" INDEX ");
 
+			var indexName = idx.QualifiedName;
 			var baseName = indexName;
 			if (localIndexArray != null)
 			{
@@ -1041,7 +1045,7 @@ namespace TecWare.PPSn
 			AppendSqlIdentifier(commandText, tableName);
 			commandText.Append(" (");
 			var first = true;
-			foreach (var col in columns)
+			foreach (var col in idx.Columns)
 			{
 				if (first)
 					first = false;
@@ -1054,8 +1058,39 @@ namespace TecWare.PPSn
 			commands.Add(commandText.ToString());
 		} // proc CreateSqLiteIndex
 
+		private static int GetLengthWithoutTrailingNumbers(string n)
+		{
+			if (String.IsNullOrEmpty(n))
+				return 0;
+
+			for (var i = n.Length - 1; i >= 0; i--)
+			{
+				if (!Char.IsDigit(n[i]))
+					return i;
+			}
+
+			return 0;
+		} // func GetLengthWithoutTrailingNumbers
+
+		private static bool CompareIndexName(string name1, string name2)
+		{
+			// find trailing numbers
+			var l1 = GetLengthWithoutTrailingNumbers(name1);
+			var l2 = GetLengthWithoutTrailingNumbers(name2);
+			if (l1 != l2)
+				return false;
+			else
+				return String.Compare(name1, 0, name2, 0, l1, StringComparison.OrdinalIgnoreCase) == 0;
+		} // func CompareIndexName
+
 		private static void AddIndexDefinition(string tableName, IDataColumn column, Dictionary<string, IndexDef> indices)
 		{
+			if(column.Attributes.GetProperty("IsPrimary",true))
+			{
+				var primaryKeyIndexName = tableName + "_" + column.Name + "_primaryIndex";
+				indices.Add(primaryKeyIndexName, new IndexDef(primaryKeyIndexName, true, column));
+			}
+
 			if (IsIndexColumn(tableName, column, out var indexName, out var isUnique))
 			{
 				if (indices.TryGetValue(indexName, out var t))
@@ -1064,11 +1099,7 @@ namespace TecWare.PPSn
 					t.Columns.Add(column);
 				}
 				else
-				{
-					var idx = new IndexDef(indexName) { IsUnique = isUnique };
-					idx.Columns.Add(column);
-					indices[indexName] = idx;
-				}
+					indices[indexName] = new IndexDef(indexName, isUnique, column);
 			}
 		} // proc AddIndexDefinition
 
@@ -2575,6 +2606,8 @@ namespace TecWare.PPSn
 			}
 		} // prop CurrentTransaction
 
+		public static (Type Type, string SqlLite, DbType DbType)[] SqlLiteTypeMapping { get => sqlLiteTypeMapping; set => sqlLiteTypeMapping = value; }
+
 		// -- Static ------------------------------------------------------
 
 		private static readonly MethodInfo getTableMethodInfo;
@@ -2621,7 +2654,7 @@ namespace TecWare.PPSn
 			(typeof(Guid), "Guid", DbType.Guid),
 			(typeof(byte[]), "Blob", DbType.Binary),
 			// alt
-			(typeof(long), "Integer", DbType.Int64),
+			(typeof(long), "integer", DbType.Int64),
 			(typeof(PpsObjectExtendedValue), "Integer", DbType.Int64)
 		};
 
@@ -2630,31 +2663,50 @@ namespace TecWare.PPSn
 				? typeof(string)
 				:
 					(
-						from c in sqlLiteTypeMapping
+						from c in SqlLiteTypeMapping
 						where String.Compare(c.SqlLite, dataType, StringComparison.OrdinalIgnoreCase) == 0
 						select c.Type
 					).FirstOrDefault() ?? throw new ArgumentOutOfRangeException("type", $"No c# type assigned for '{dataType}'.");
 
 		private static int FindSqlLiteTypeMappingByType(Type type)
-			=> Array.FindIndex(sqlLiteTypeMapping, c => c.Type == type);
+			=> Array.FindIndex(SqlLiteTypeMapping, c => c.Type == type);
 
-		private static string ConvertDataTypeToSqLite(Type type)
+		private static bool IsIntegerType(Type t)
 		{
-			var index = FindSqlLiteTypeMappingByType(type);
-			return index >= 0 ? sqlLiteTypeMapping[index].SqlLite : throw new ArgumentOutOfRangeException("type", $"No sqlite type assigned for '{type.Name}'.");
+			switch (Type.GetTypeCode(t))
+			{
+				case TypeCode.Int32:
+				case TypeCode.UInt32:
+				case TypeCode.Int64:
+				case TypeCode.UInt64:
+					return true;
+				default:
+					return false;
+			}
+		} // func IsIntegerType
+		
+		private static string ConvertDataTypeToSqLite(IDataColumn column)
+		{
+			if (column.Attributes.GetProperty("IsIdentity", false) && IsIntegerType(column.DataType))
+				return "Integer";
+			else
+			{
+				var index = FindSqlLiteTypeMappingByType(column.DataType);
+				return index >= 0 ? SqlLiteTypeMapping[index].SqlLite : throw new ArgumentOutOfRangeException("type", $"No sqlite type assigned for '{column.DataType.Name}'.");
+			}
 		} // func ConvertDataTypeToSqLite
 
 		private static DbType ConvertDataTypeToDbType(Type type)
 		{
 			var index = FindSqlLiteTypeMappingByType(type);
-			return index >= 0 ? sqlLiteTypeMapping[index].DbType : throw new ArgumentOutOfRangeException("type", $"No DbType type assigned for '{type.Name}'.");
+			return index >= 0 ? SqlLiteTypeMapping[index].DbType : throw new ArgumentOutOfRangeException("type", $"No DbType type assigned for '{type.Name}'.");
 		} // func ConvertDataTypeToDbType
 
 		private static object ConvertStringToSQLiteValue(string value, DbType type)
 		{
-			var index = Array.FindIndex(sqlLiteTypeMapping, c => c.DbType == type);
+			var index = Array.FindIndex(SqlLiteTypeMapping, c => c.DbType == type);
 			return index >= 0
-				? Procs.ChangeType(value, sqlLiteTypeMapping[index].Type)
+				? Procs.ChangeType(value, SqlLiteTypeMapping[index].Type)
 				: throw new ArgumentOutOfRangeException(nameof(type), type, $"DB-Type {type} is not supported.");
 		} // func ConvertStringToSQLiteValue
 
@@ -2682,6 +2734,7 @@ namespace TecWare.PPSn
 							new PropertyDictionary(
 								new PropertyValue(nameof(PpsDataColumnMetaData.Nullable), r.IsDBNull(3) || !r.GetBoolean(3)),
 								new PropertyValue(nameof(PpsDataColumnMetaData.Default), r.GetValue(4)?.ToString()),
+								new PropertyValue("SQLiteType", r.GetString(2)),
 								new PropertyValue("IsPrimary", !r.IsDBNull(5) && r.GetBoolean(5))
 							)
 						);
@@ -2701,10 +2754,14 @@ namespace TecWare.PPSn
 
 					while (r.Read())
 					{
-						yield return new Tuple<string, bool>(
-							r.GetString(indexName),
-							r.GetBoolean(indexIsUnique)
-						);
+						var indexNameValue = r.GetString(indexName);
+						if (!indexNameValue.StartsWith("sqlite_autoindex_", StringComparison.OrdinalIgnoreCase)) // hide system index
+						{
+							yield return new Tuple<string, bool>(
+							  indexNameValue,
+							  r.GetBoolean(indexIsUnique)
+						  );
+						}
 					}
 				}
 			}
