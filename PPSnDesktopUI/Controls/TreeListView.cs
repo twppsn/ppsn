@@ -9,7 +9,7 @@
 //
 // Unless required by applicable law or agreed to in writing, software distributed
 // under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
-// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// CONDITIONS OF ANY KIND, either express or implied. See the NotifyCollectionChangedAction.Add for the
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
@@ -37,6 +37,7 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public class PpsTreeListView : TreeView
 	{
+		private readonly static DependencyProperty AutoSelectAddedNodeProperty = DependencyProperty.Register("AutoSelectAddedNode", typeof(bool), typeof(PpsTreeListView), new PropertyMetadata(true));
 		private object itemToSelect;
 
 		public PpsTreeListView()
@@ -63,7 +64,7 @@ namespace TecWare.PPSn.Controls
 					AlternationExtensions.SetAlternationIndexRecursively((ItemsControl)this, 0);
 					break;
 				case NotifyCollectionChangedAction.Add:
-					if (e.NewItems.Count > 0 && e.NewItems[0] != null)
+					if (e.NewItems.Count > 0 && e.NewItems[0] != null && AutoSelectAddedNode)
 						SelectNode(e.NewItems[0]);
 					break;
 				case NotifyCollectionChangedAction.Reset:
@@ -84,7 +85,10 @@ namespace TecWare.PPSn.Controls
 				itemToSelect = item;
 				ItemContainerGenerator.StatusChanged += OnItemContainerGeneratorStatusChanged;
 			}
-		}
+		} // proc SelectNode
+
+		/// <summary>Select new node - default true</summary>
+		public bool AutoSelectAddedNode { get => (bool)GetValue(AutoSelectAddedNodeProperty); set => SetValue(AutoSelectAddedNodeProperty, value); }
 
 		private void DoSelectNode(object item)
 		{
@@ -201,14 +205,17 @@ namespace TecWare.PPSn.Controls
 
 		private void SelectAddedNode(object item)
 		{
-			if (ItemContainerGenerator.Status == GeneratorStatus.ContainersGenerated)
+			if(ParentTreeView.AutoSelectAddedNode)
 			{
-				SelectNode(item);
-			}
-			else
-			{
-				itemToSelect = item;
-				ItemContainerGenerator.StatusChanged += OnItemContainerGeneratorStatusChanged;
+				if (ItemContainerGenerator.Status == GeneratorStatus.ContainersGenerated)
+				{
+					SelectNode(item);
+				}
+				else
+				{
+					itemToSelect = item;
+					ItemContainerGenerator.StatusChanged += OnItemContainerGeneratorStatusChanged;
+				}
 			}
 			// ensure new node is visible, also fire StatusChanged
 			ExpandParentNode();
