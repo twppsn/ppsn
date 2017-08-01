@@ -213,9 +213,9 @@ namespace TecWare.PPSn.Controls
 		public readonly static DependencyProperty RemoveButtonCommandProperty = DependencyProperty.Register(nameof(RemoveButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
 		public readonly static DependencyProperty CameraButtonVisibleProperty = DependencyProperty.Register(nameof(CameraButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
 		public readonly static DependencyProperty CameraButtonCommandProperty = DependencyProperty.Register(nameof(CameraButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
-		public readonly static DependencyProperty ScannerButtonVisibleProperty = DependencyProperty.Register(nameof(ScannerButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
+		public readonly static DependencyProperty ScannerButtonVisibleProperty = DependencyProperty.Register(nameof(ScannerButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(false));
 		public readonly static DependencyProperty ScannerButtonCommandProperty = DependencyProperty.Register(nameof(ScannerButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
-		public readonly static DependencyProperty SignatureButtonVisibleProperty = DependencyProperty.Register(nameof(SignatureButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
+		public readonly static DependencyProperty SignatureButtonVisibleProperty = DependencyProperty.Register(nameof(SignatureButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(false));
 		public readonly static DependencyProperty SignatureButtonCommandProperty = DependencyProperty.Register(nameof(SignatureButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
 		private readonly static DependencyProperty SeventhButtonVisibleProperty = DependencyProperty.Register(nameof(SeventhButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(false));
 		private readonly static DependencyProperty SeventhButtonImagePathProperty = DependencyProperty.Register(nameof(SeventhButtonImagePath), typeof(object), typeof(PpsAttachmentsControl));
