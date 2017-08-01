@@ -91,6 +91,7 @@ namespace TecWare.PPSn.Server
 			// register shortcut for text
 			LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
 			LuaType.RegisterTypeAlias("blob", typeof(byte[]));
+			LuaType.RegisterTypeAlias("geography", typeof(Microsoft.SqlServer.Types.SqlGeography));
 
 			InitData();
 			InitUser();
