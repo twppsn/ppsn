@@ -309,8 +309,8 @@ namespace TecWare.PPSn.Data
 			object ReadValueFromElementstring(XElement t)
 				=> t == null || String.IsNullOrEmpty(t.Value) ? null : (object)t.Value.ChangeType<long>();
 
-			originalValue = ReadValueFromElementstring(x.Element("o"));
-			var xV = x.Element("v");
+			originalValue = ReadValueFromElementstring(x?.Element("o"));
+			var xV = x?.Element("v");
 			if (xV == null)
 				value = PpsDataRow.NotSet;
 			else
