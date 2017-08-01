@@ -4069,7 +4069,8 @@ namespace TecWare.PPSn
 			request.Credentials = UserCredential.Wrap(userInfo); // override the current credentials
 			request.Headers.Add("des-multiple-authentifications", "true");
 
-			Debug.Print($"WebRequest: {absoluteUri}");
+			if (!absoluteUri.ToString().EndsWith("/?action=mdata"))
+				Debug.Print($"WebRequest: {absoluteUri}");
 
 			return request;
 		} // func CreateOnlineRequest
