@@ -43,6 +43,7 @@
 				<pps:meta name="DefaultPaneUri" dataType="string">wpf/panes/countries.xaml</pps:meta>
 				
 				<pps:table name="Land">
+					<pps:meta name="SqlTable">dbo.Land</pps:meta>
 					<pps:column name="Id" fieldName="dbo.Land.Id" isPrimary="true" />
 					<pps:column name="ISO" fieldName="dbo.Land.Iso"/>
 					<pps:column name="Name" fieldName="dbo.Land.Name"/>

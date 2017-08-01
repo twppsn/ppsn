@@ -1091,6 +1091,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		[LuaMember]
 		public virtual string ObjectType => Name;
 		public virtual string ObjectSource => null;
 		public virtual string DefaultPane => null;

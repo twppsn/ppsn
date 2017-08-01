@@ -248,10 +248,7 @@
 					
 					<uiC:PpsAttachmentsControl Grid.Column="0" BorderThickness="0"
 											   AddLinkButtonCommand="{Binding testCommand}"
-											   CameraButtonCommand="{Binding cameraModul}"
-											   SeventhButtonVisible="True"
-											   SeventhButtonImagePath="{StaticResource helpCircelPathGeometry}"
-											   SeventhButtonCommand="{Binding testCommand}">
+											   CameraButtonCommand="{Binding cameraModul}">
 						<!--one can overload all the predefined Buttons with p.e. AddFileButtonCommand="{Binding testCommand}"-->
 						<!--one can hide a button with AddFileButtonVisible="false"; all but seventh button are visible by default-->
 						<!--known buttons AddFileButton,AddLinkButton,RemoveButton,CameraButton,SignatureButton,SeventhButton-->
