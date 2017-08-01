@@ -6,7 +6,6 @@ function RegisterConstant(table)
 	-- check table arguments
 	assert(table.Guid, "Guid is empty.");
 	assert(table.Nr, "Nr is empty.");
-	assert(table.Typ, "Typ is empty.");
 	assert(table.Name, "Name is empty.");
 
 	RegisterInitializationAction(
@@ -16,7 +15,7 @@ function RegisterConstant(table)
 				local objData = {
 					Guid = table.Guid,
 					Nr = table.Nr,
-					Typ = table.Typ,
+					Typ = table.Typ or ObjectType,
 					MimeType = "text/dataset",
 					IsRev = true
 				};
@@ -55,4 +54,37 @@ function RegisterConstant(table)
 			end;
 		end
 	);
+end;
+
+OnCreateRevision["mdmConstant"] = function (obj, data)
+
+	for i = 0, #data.Tables - 1, 1 do
+		local dt = data.Tables[i];
+		local sqlTable = dt.SqlTable;
+		if sqlTable then
+			dt:AddRange(
+				Db.Main:ExecuteSingleResult {
+					select = sqlTable,
+					columnList = dt
+				}
+			);
+		end;
+	end;
+
+end;
+
+-- Create update LAND
+OnAfterPush["mdmConstant"] = function (obj, data)
+
+	for i = 0, #data.Tables - 1, 1 do
+		local dt = data.Tables[i];
+		local sqlTable = dt.SqlTable;
+		if sqlTable then
+			Db.Main:ExecuteNoneResult {
+				upsert = sqlTable,
+				rows = dt
+			}
+		end;
+	end;
+
 end;
