@@ -1997,8 +1997,9 @@ namespace TecWare.PPSn
 						foreach (var linked in Links)
 						{
 							var linkTo = linked.LinkTo;
-							if (!linkTo.HasData)
-								linkTo.EnqueuePullAsync(null).AwaitTask(); // not in foreground
+							if (linkTo != null)
+								if (!linkTo.HasData)
+									linkTo.EnqueuePullAsync(null).AwaitTask(); // not in foreground
 						}
 					}
 
