@@ -112,19 +112,19 @@
     <EmbeddedResource Include="Sql\tsql\ConnectionInitScript.sql" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="..\packages\Microsoft.SqlServer.Types.14.0.314.76\nativeBinaries\x64\msvcr120.dll">
+      <Link>x64\msvcr120.dll</Link>
+    </Content>
+    <Content Include="..\packages\Microsoft.SqlServer.Types.14.0.314.76\nativeBinaries\x64\SqlServerSpatial140.dll">
+      <Link>x64\SqlServerSpatial140.dll</Link>
+    </Content>
+    <Content Include="..\packages\Microsoft.SqlServer.Types.14.0.314.76\nativeBinaries\x86\msvcr120.dll">
+      <Link>x86\msvcr120.dll</Link>
+    </Content>
+    <Content Include="..\packages\Microsoft.SqlServer.Types.14.0.314.76\nativeBinaries\x86\SqlServerSpatial140.dll">
+      <Link>x86\SqlServerSpatial140.dll</Link>
+    </Content>
     <Content Include="Sql\SqlServerTypes\readme.htm" />
-    <Content Include="x64\msvcr120.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="x64\SqlServerSpatial140.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="x86\msvcr120.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="x86\SqlServerSpatial140.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
