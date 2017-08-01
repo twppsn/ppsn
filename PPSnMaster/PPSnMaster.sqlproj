@@ -116,4 +116,7 @@
   <ItemGroup>
     <Compile Include="Stuff\GetSyncStamp.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <PostDeploy Include="Database\SystemUser.sql" />
+  </ItemGroup>
 </Project>
