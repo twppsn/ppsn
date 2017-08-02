@@ -71,9 +71,10 @@ namespace TecWare.PPSn.Server
 	{
 		#region -- class PpsStreamAttachmentAccess --------------------------------------
 
-		private sealed class PpsStreamAttachmentAccess : PpsAttachmentAccess 
+		private sealed class PpsStreamAttachmentAccess : PpsAttachmentAccess
 		{
 			private readonly Stream stream;
+			private MemoryStream mStream;
 
 			public PpsStreamAttachmentAccess(Stream stream)
 			{
@@ -85,14 +86,27 @@ namespace TecWare.PPSn.Server
 				base.Dispose(disposing);
 
 				if (disposing)
+				{
 					stream?.Dispose();
+					mStream?.Dispose();
+				}
 			} // proc Dispose
 
 			public override Stream GetStream()
 				=> new WindowStream(stream, 0, -1, false, true);
 
 			public override void CopyTo(Stream dst)
-				=> stream.CopyTo(dst);
+			{
+				if (mStream == null)
+				{
+					mStream = new MemoryStream();
+					stream.Flush();
+					stream.CopyTo(mStream);
+					mStream.Flush();
+				}
+				mStream.Position = 0;
+				mStream.CopyTo(dst);
+			}
 		} // class PpsStreanAttachmentAccess
 
 		#endregion
