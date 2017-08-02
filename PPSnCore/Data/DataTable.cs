@@ -321,7 +321,7 @@ namespace TecWare.PPSn.Data
 			private bool HasColumnSetter
 				=> typeof(IPpsDataRowSetGenericValue).IsAssignableFrom(column.DataType);
 
-			public bool IsNullable => !column.Meta.GetProperty(PpsDataColumnMetaData.Nullable, false);
+			public bool IsNullable => column.Meta.GetProperty(PpsDataColumnMetaData.Nullable, false);
 		} // class PpsColumnPropertyDescriptor
 
 		#endregion
