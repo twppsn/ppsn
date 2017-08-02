@@ -631,8 +631,8 @@ namespace TecWare.PPSn.Data
 					var xOriginal = xValue?.Element(xnDataRowValueOriginal);
 					var xCurrent = xValue?.Element(xnDataRowValueCurrent);
 
-					originalValues[index] = xOriginal == null || xOriginal.IsEmpty ? null : Procs.ChangeType(xOriginal.Value, valueType);
-					currentValues[index] = xCurrent == null ? NotSet : xCurrent.IsEmpty ? null : Procs.ChangeType(xCurrent.Value, valueType);
+					originalValues[index] = xOriginal == null || xOriginal.IsEmpty ? null : GetConvertedValue(column, xOriginal.Value);
+					currentValues[index] = xCurrent == null ? NotSet : xCurrent.IsEmpty ? null : GetConvertedValue(column, xCurrent.Value);
 				}
 
 				// notify
