@@ -156,6 +156,12 @@ namespace TecWare.PPSn
 			base.OnStartup(e);
 		} // proc OnStartup
 
+		protected override void OnExit(ExitEventArgs e)
+		{
+			base.OnExit(e);
+			CloseApplicationAsync().AwaitTask();
+		} // proc  OnExit
+
 		private static void ParseArguments(StartupEventArgs e, out PpsEnvironmentInfo environment, out NetworkCredential userCred)
 		{
 			var userName = (string)null;

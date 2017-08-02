@@ -482,6 +482,7 @@ namespace TecWare.PPSn
 		private readonly int environmentId;             // unique id of the environment
 		private readonly PpsEnvironmentInfo info;       // source information of the environment
 		private readonly NetworkCredential userInfo;    // currently credentials of the user
+		private readonly CancellationTokenSource environmentDisposing;
 
 		private long userId = -1;
 		private string userName = null;                 // display name of the user
@@ -500,6 +501,7 @@ namespace TecWare.PPSn
 		{
 			this.info = info ?? throw new ArgumentNullException("info");
 			this.userInfo = userInfo ?? throw new ArgumentNullException("userInfo");
+			this.environmentDisposing = new CancellationTokenSource();
 
 			this.webProxy = new PpsWebProxy(this);
 
@@ -552,7 +554,7 @@ namespace TecWare.PPSn
 			// Register Service
 			mainResources[EnvironmentService] = this;
 
-			InitBackgroundNotifier(out backgroundNotifier, out backgroundNotifierModeTransmission);
+			InitBackgroundNotifier(environmentDisposing.Token, out backgroundNotifier, out backgroundNotifierModeTransmission);
 		} // ctor
 
 		public async Task<PpsEnvironmentModeResult> InitAsync(IProgress<string> progress, bool bootOffline = false)
@@ -629,13 +631,19 @@ namespace TecWare.PPSn
 		{
 			if (disposing)
 			{
+				if (environmentDisposing.IsCancellationRequested)
+					throw new ObjectDisposedException(nameof(PpsEnvironment));
+
 				SetNewMode(PpsEnvironmentMode.Shutdown);
 
 				services.ForEach(serv => (serv as IDisposable)?.Dispose());
 
 				mainResources.Remove(EnvironmentService);
-
 				inputManager.PreProcessInput -= preProcessInputEventHandler;
+
+				// close tasks
+				webProxy.Dispose();
+				environmentDisposing.Cancel();
 
 				// close handles
 				Lua.Dispose();
@@ -751,10 +759,10 @@ namespace TecWare.PPSn
 		private readonly PpsSynchronizationContext backgroundNotifier;
 		private readonly ManualResetEventSlim backgroundNotifierModeTransmission;
 
-		private void InitBackgroundNotifier(out PpsSynchronizationContext backgroundNotifier, out ManualResetEventSlim backgroundNotifierModeTransmission)
+		private void InitBackgroundNotifier(CancellationToken cancellationToken, out PpsSynchronizationContext backgroundNotifier, out ManualResetEventSlim backgroundNotifierModeTransmission)
 		{
 			backgroundNotifierModeTransmission = new ManualResetEventSlim(false);
-			backgroundNotifier = new PpsSingleThreadSynchronizationContext($"Environment Notify {environmentId}", CancellationToken.None, () => ExecuteNotifierLoopAsync());
+			backgroundNotifier = new PpsSingleThreadSynchronizationContext($"Environment Notify {environmentId}", cancellationToken, () => ExecuteNotifierLoopAsync(cancellationToken));
 		} // proc InitBackgroundNotifier
 
 		private void SetNewMode(PpsEnvironmentMode newMode)
@@ -809,11 +817,11 @@ namespace TecWare.PPSn
 			}
 		} // func TryGetModeTransmission
 
-		private async Task ExecuteNotifierLoopAsync()
+		private async Task ExecuteNotifierLoopAsync(CancellationToken cancellationToken)
 		{
 			var state = PpsEnvironmentState.None;
 			ModeTransission currentTransmission = null;
-			while (true)
+			while (!cancellationToken.IsCancellationRequested)
 			{
 				try
 				{
@@ -901,7 +909,7 @@ namespace TecWare.PPSn
 
 						case PpsEnvironmentState.Online:
 							// fetch next state on ws-info
-							if (!await Task.Run(() => backgroundNotifierModeTransmission.Wait(3000)))
+							if (!await Task.Run(() => backgroundNotifierModeTransmission.Wait(3000), cancellationToken))
 							{
 								if (!masterData.IsInSynchronization)
 								{
@@ -912,6 +920,7 @@ namespace TecWare.PPSn
 							break;
 
 						case PpsEnvironmentState.Shutdown:
+							SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.Shutdown);
 							return; // cancel all connections
 
 						default:
