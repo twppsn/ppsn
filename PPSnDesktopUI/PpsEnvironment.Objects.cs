@@ -699,7 +699,7 @@ namespace TecWare.PPSn
 		public object Value =>
 			localClass.HasValue
 				? localValue
-				: (serverClass.HasValue ? serverClass : null);
+				: (serverClass.HasValue ? serverValue : null);
 
 		/// <summary>User that created this tag, or 0 for system created (like autotagging, states)</summary>
 		public long UserId => userId;
