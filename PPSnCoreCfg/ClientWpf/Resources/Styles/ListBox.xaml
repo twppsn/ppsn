@@ -35,21 +35,6 @@
         </Setter>
     </Style>
 
-	<Style x:Key="PPSnListBoxNoHoriScrollStyle" TargetType="{x:Type ListBox}" BasedOn="{StaticResource PPSnListBoxStyle}">
-		<Setter Property="Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type ListBox}">
-					<Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
-							Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-						<ScrollViewer Focusable="false" Padding="{TemplateBinding Padding}" Style="{StaticResource PPSnScrollViewerStyle}" HorizontalScrollBarVisibility="Disabled">
-							<ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-						</ScrollViewer>
-					</Border>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
-	</Style>
-
 	<Style x:Key="PPSnAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
 		<Setter Property="Background" Value="{StaticResource PPSnAlternation0Brush}"/>
 		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
@@ -101,7 +86,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                    <Label x:Name="PART_Label" Content="{Binding Description}" Height="25" Padding="6,0"/>
+                    <Label x:Name="PART_Label" Content="{Binding Description}" Height="32" Padding="6,0"/>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter Property="Background" TargetName="PART_Label" Value="{StaticResource PPSnSeparatorBrush}"/>
