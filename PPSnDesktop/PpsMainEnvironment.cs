@@ -218,7 +218,10 @@ namespace TecWare.PPSn
 		} // func GetWindows
 
 		internal Task<bool> ShutdownAsync()
-			=> Task.FromResult<bool>(true);
+		{
+			Dispose();
+			return Task.FromResult<bool>(true);
+		} // func ShutdownAsync
 
 		[LuaMember(nameof(TestBackgroundProgressState))]
 		public IPpsProgress TestBackgroundProgressState()

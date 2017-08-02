@@ -182,7 +182,7 @@ namespace TecWare.PPSn
 			this.thread = new Thread(ExecuteMessageLoop)
 			{
 				Name = name,
-				IsBackground = true,
+				IsBackground = false,
 				Priority = ThreadPriority.BelowNormal
 			};
 
