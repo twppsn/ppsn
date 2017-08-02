@@ -699,7 +699,7 @@ namespace TecWare.PPSn
 		public object Value =>
 			localClass.HasValue
 				? localValue
-				: (serverClass.HasValue ? serverClass : null);
+				: (serverClass.HasValue ? serverValue : null);
 
 		/// <summary>User that created this tag, or 0 for system created (like autotagging, states)</summary>
 		public long UserId => userId;
@@ -1930,6 +1930,21 @@ namespace TecWare.PPSn
 			else if (objectId > 0 && objectId != newObjectId)
 				throw new ArgumentOutOfRangeException(nameof(Id), newObjectId, "Object id is different.");
 
+			var parentcache = new List<long>();
+
+			using (var cmd = trans.CreateNativeCommand("SELECT [ParentObjectId] FROM main.[ObjectLinks] WHERE LinkObjectId = @OldId"))
+			{
+				cmd.AddParameter("@OldId", DbType.Int64, objectId);
+				var parents = await cmd.ExecuteReaderExAsync();
+				foreach (DbDataRecord par in parents)
+				{
+					var obj = Environment.GetObject(par.GetInt64(0), true);
+					obj.Links.RemoveLink(objectId);
+					parentcache.Add(obj.Id);
+				}
+			}
+				
+			/*
 			using (var cmd = trans.CreateNativeCommand("UPDATE main.[ObjectLinks] SET LinkObjectId = @Id, LinkObjectDataId = @Id WHERE LinkObjectId = @OldId"))
 			{
 				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
@@ -1943,7 +1958,7 @@ namespace TecWare.PPSn
 				cmd.AddParameter("@OldId", DbType.Int64, objectId);
 				await cmd.ExecuteNonQueryExAsync();
 			}
-
+			*/
 			using (var cmd = trans.CreateNativeCommand("UPDATE main.[Objects] SET Id = @Id WHERE Id = @OldId"))
 			{
 				cmd.AddParameter("@Id", DbType.Int64, newObjectId);
@@ -1958,6 +1973,10 @@ namespace TecWare.PPSn
 				// replace cache
 				Environment.ReplaceObjectId(oldObjectId, newObjectId);
 				trans.AddRollbackOperation(() => Environment.ReplaceObjectId(newObjectId, oldObjectId));
+			}
+			foreach (var par in parentcache)
+			{
+				Environment.GetObject(par, true).Links.AppendLink(this, PpsObjectLinkRestriction.Delete);
 			}
 		} // proc UpdateObjectId
 
@@ -2112,11 +2131,20 @@ namespace TecWare.PPSn
 					await data.LoadAsync();
 					await data.CommitAsync();
 
-					foreach (var link in this.Links)
-						link.LinkTo.PushAsync().AwaitTask();
+					var a = (from lnk in links where lnk.LinkToId < 0 select lnk).FirstOrDefault();
 
-					Links.SetDirty();
-					Links.RefreshLinks();
+					while (a != null)
+					{
+						Environment.GetObject(a.LinkToId, true).PushAsync().AwaitTask();
+						//a.LinkTo.PushAsync().AwaitTask();
+						a = (from lnk in links where lnk.Id < 0 select lnk).FirstOrDefault();
+					}
+
+					//	foreach (var link in this.Links)
+					//	link.LinkTo.PushAsync().AwaitTask();
+
+					//links.SetDirty();
+					//links.RefreshLinks();
 
 					// first build object data
 					var xHeaderData = ToXml();
