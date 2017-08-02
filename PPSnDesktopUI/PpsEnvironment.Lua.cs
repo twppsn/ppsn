@@ -484,7 +484,7 @@ namespace TecWare.PPSn
 			};
 		} // CreateLuaCompileOptions
 
-		#region -- Lua Compiler -----------------------------------------------------------
+		#region -- Lua Compiler ---------------------------------------------------------
 
 		/// <summary>Compiles a chunk in the background.</summary>
 		/// <param name="tr">Chunk source.</param>
@@ -657,7 +657,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- LuaHelper --------------------------------------------------------------
+		#region -- LuaHelper ------------------------------------------------------------
 
 		/// <summary>Show a simple message box.</summary>
 		/// <param name="text"></param>

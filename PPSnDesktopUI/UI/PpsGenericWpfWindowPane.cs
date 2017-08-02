@@ -19,6 +19,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -335,9 +336,16 @@ namespace TecWare.PPSn.UI
 		private ICollectionView LuaGetView(object collection)
 			=> CollectionViewSource.GetDefaultView(collection);
 
-		[LuaMember("createView")]
-		private ICollectionView LuaCreateView(object collection)
+		[LuaMember("createSource")]
+		private CollectionViewSource LuaCreateSource(object collection)
 		{
+			var collectionArgs = collection as LuaTable;
+			if (collectionArgs != null)
+				collection = collectionArgs.GetMemberValue("Source");
+
+			if (collection == null)
+				throw new ArgumentNullException(nameof(collection));
+
 			// get containted list
 			if (collection is IListSource listSource)
 				collection = listSource.GetList();
@@ -346,12 +354,55 @@ namespace TecWare.PPSn.UI
 			if (!(collection is IEnumerable) && Lua.RtInvokeable(collection))
 				collection = new LuaFunctionEnumerator(collection);
 
-			var collectionViewSource = new CollectionViewSource()
+			var collectionViewSource = new CollectionViewSource();
+			using (collectionViewSource.DeferRefresh())
 			{
-				Source = collection
-			};
-			return collectionViewSource.View;
-		} // func LuaCreateView
+				collectionViewSource.Source = collection;
+
+				if (collectionArgs != null)
+				{
+					if (collectionArgs.GetMemberValue("SortDescriptions") is LuaTable t)
+					{
+						foreach (var col in t.ArrayList.OfType<string>())
+						{
+							if (String.IsNullOrEmpty(col))
+								continue;
+
+							string propertyName;
+							ListSortDirection direction;
+
+							if (col[0] == '+')
+							{
+								propertyName = col.Substring(1);
+								direction = ListSortDirection.Ascending;
+							}
+							else if (col[0] == '-')
+							{
+								propertyName = col.Substring(1);
+								direction = ListSortDirection.Descending;
+							}
+							else
+							{
+								propertyName = col;
+								direction = ListSortDirection.Ascending;
+							}
+
+							collectionViewSource.SortDescriptions.Add(new SortDescription(propertyName, direction));
+						}
+					}
+
+					var viewFilter = collectionArgs.GetMemberValue("ViewFilter");
+					if (Lua.RtInvokeable(viewFilter))
+						collectionViewSource.Filter += (sender, e) => e.Accepted = Procs.ChangeType<bool>(new LuaResult(Lua.RtInvoke(viewFilter, e.Item)));
+				}
+			}
+
+
+			if (collectionViewSource.View == null)
+				throw new ArgumentNullException("Could not create a collection view.");
+
+			return collectionViewSource;
+		} // func LuaCreateSource
 
 		#endregion
 
