@@ -15,7 +15,7 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public partial class App : Application
 	{
-	private PpsMainEnvironment currentEnvironment = null;
+		private PpsMainEnvironment currentEnvironment = null;
 
 		public App()
 		{
@@ -212,13 +212,13 @@ namespace TecWare.PPSn
 
 		private static void CoreExceptionHandler(Exception ex)
 		{
-			if (MessageBox.Show(String.Format("Unbehandelte Ausnahme: {0}.\n\nDetails in der Zwischenablage abgelegen?", ex.Message), "Fehler", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+			if (MessageBox.Show(String.Format("Unbehandelte Ausnahme: {0}.\n\nDetails in der Zwischenablage ablegen?", ex.Message), "Fehler", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
 				Clipboard.SetText(ex.GetMessageString());
 		} // proc CoreExceptionHandler
 
 		private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
 		{
-			currentEnvironment.Traces.AppendException(e.Exception);
+			currentEnvironment?.Traces.AppendException(e.Exception);
 			CoreExceptionHandler(e.Exception);
 			e.Handled = true;
 		} // event App_DispatcherUnhandledException
