@@ -30,7 +30,7 @@
 								   AutomationProperties.AutomationId="VerticalScrollBar"
 								   IsTabStop="False"
 								   Cursor="Arrow"
-								   Minimum="0" 
+								   Minimum="0"
 								   Maximum="{TemplateBinding ScrollableHeight}" 
 								   Opacity="0"
 								   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" 
