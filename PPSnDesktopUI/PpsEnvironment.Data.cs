@@ -3544,20 +3544,21 @@ namespace TecWare.PPSn
 
 		private readonly PpsSynchronizationContext executeLoadQueue;
 		private readonly ManualResetEventSlim executeLoadIsRunning = new ManualResetEventSlim(false);
-		private bool isDisposed = false;
+		private readonly CancellationTokenSource disposed;
 
 		public PpsWebProxy(PpsEnvironment environment)
 		{
+			this.disposed = new CancellationTokenSource();
 			this.environment = environment;
-			this.executeLoadQueue = new PpsSingleThreadSynchronizationContext("PpsWebProxy", CancellationToken.None, () => ExecuteLoadQueueAsync());
+			this.executeLoadQueue = new PpsSingleThreadSynchronizationContext("PpsWebProxy", disposed.Token, () => ExecuteLoadQueueAsync(disposed.Token));
 		} // class PpsDownloadManager
 
 		public void Dispose()
 		{
-			if (isDisposed)
+			if (disposed.IsCancellationRequested)
 				throw new ObjectDisposedException(nameof(PpsWebProxy));
 
-			isDisposed = true;
+			disposed.Cancel();
 			executeLoadIsRunning.Set();
 		} // proc Dispose
 
@@ -3614,11 +3615,11 @@ namespace TecWare.PPSn
 				OnCollectionChanged();
 		} // proc RemoveCurrentTask
 
-		private async Task ExecuteLoadQueueAsync()
+		private async Task ExecuteLoadQueueAsync(CancellationToken cancellationToken)
 		{
 			await Task.Yield(); // enque the loop
 
-			while (!isDisposed)
+			while (!cancellationToken.IsCancellationRequested)
 			{
 				var nextTask = TryDequeueTask();
 				if (nextTask != null)
