@@ -64,7 +64,7 @@ specific language governing permissions and limitations under the Licence.
 				 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedAttachment, Mode=OneWayToSource}"
 				 Style="{StaticResource PPSnListBoxStyle}"
 				 Margin="0,6,0,0" Focusable="False"
-				 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
+				 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 			<ListBox.ItemsPanel>
 				<ItemsPanelTemplate>
 					<WrapPanel IsItemsHost="True" Orientation="Horizontal"/>
