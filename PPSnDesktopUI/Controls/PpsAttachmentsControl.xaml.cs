@@ -342,8 +342,10 @@ namespace TecWare.PPSn.Controls
 			{
 				get
 				{
-					var obj = GetLinkedObject().GetDataAsync<PpsObjectImageData>().AwaitTask();
-					obj.PropertyChanged += (sender, ob) => NotifyPropertyChanged(nameof(Picture));
+					var obj = GetLinkedObject()?.GetDataAsync<PpsObjectImageData>().AwaitTask();
+					if (obj == null)
+						return null;
+					obj.PropertyChanged += (sender, ob) => { if (ob.PropertyName == "Preview") NotifyPropertyChanged("Picture"); };
 					return obj.Preview;
 				}
 			}
