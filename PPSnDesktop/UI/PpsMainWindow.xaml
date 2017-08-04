@@ -465,32 +465,52 @@
 			</uiL:PpsNavigatorControl.Style>
 		</uiL:PpsNavigatorControl>
 
-		<Grid x:Name="paneContainer" Grid.Row="1" Grid.ColumnSpan="5" Margin="0,0,0,16">
+		<Grid Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="5" Margin="0,0,0,16">
+			<!--future use
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="*"/>
 				<ColumnDefinition Width="72"/>
-			</Grid.ColumnDefinitions>
+			</Grid.ColumnDefinitions>-->
 			<Grid.RowDefinitions>
 				<RowDefinition Height="auto"/>
 				<RowDefinition Height="*"/>
 			</Grid.RowDefinitions>
 
-			<ToolBar Width="{StaticResource PPSnPaneMaxGridWidth}" Height="36" DataContext="{Binding CurrentPane}" ItemsSource="{Binding Commands}">
-				<ToolBar.Style>
-					<Style TargetType="{x:Type ToolBar}" BasedOn="{StaticResource PaneToolBarStyle}" >
+			<Border Grid.Row="0" DataContext="{Binding CurrentPane}">
+				<Border.Style>
+					<Style TargetType="{x:Type Border}">
+						<Setter Property="Padding" Value="0"/>
 						<Style.Triggers>
-							<DataTrigger Binding="{Binding Path=PaneControl.ProgressStack.IsEnabled}" Value="True">
-								<Setter Property="IsEnabled" Value="False" />
+							<DataTrigger Binding="{Binding Path=HasSideBar}">
+								<DataTrigger.Value>
+									<sys:Boolean>true</sys:Boolean>
+								</DataTrigger.Value>
+								<Setter Property="Padding">
+									<Setter.Value>
+										<Thickness Left="{StaticResource PPSnSideBarIncreasedWidth}" Top="0" Right="0" Bottom="0"/>
+									</Setter.Value>
+								</Setter>
 							</DataTrigger>
-							<Trigger Property="HasItems" Value="False">
-								<Setter Property="Visibility" Value="Collapsed" />
-							</Trigger>
 						</Style.Triggers>
 					</Style>
-				</ToolBar.Style>
-			</ToolBar>
-
-			<ContentPresenter x:Name="panePresenter" Grid.Column="0" Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}">
+				</Border.Style>
+				<ToolBar Width="{StaticResource PPSnPaneMaxGridWidth}" Height="36" ItemsSource="{Binding Commands}">
+					<ToolBar.Style>
+						<Style TargetType="{x:Type ToolBar}" BasedOn="{StaticResource PaneToolBarStyle}" >
+							<Style.Triggers>
+								<DataTrigger Binding="{Binding Path=PaneControl.ProgressStack.IsEnabled}" Value="True">
+									<Setter Property="IsEnabled" Value="False" />
+								</DataTrigger>
+								<Trigger Property="HasItems" Value="False">
+									<Setter Property="Visibility" Value="Collapsed" />
+								</Trigger>
+							</Style.Triggers>
+						</Style>
+					</ToolBar.Style>
+				</ToolBar>
+			</Border>
+			
+			<ContentPresenter Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}">
 				<ContentPresenter.Style>
 					<Style TargetType="{x:Type ContentPresenter}" >
 						<Style.Triggers>
@@ -502,7 +522,8 @@
 				</ContentPresenter.Style>
 			</ContentPresenter>
 
-			<uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right" Margin="24,24,0,0" Visibility="Collapsed" />
+			<uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right"
+									Margin="24,24,0,0" Visibility="Collapsed" />
 
 			<Grid.Style>
 				<Style TargetType="{x:Type Grid}">
