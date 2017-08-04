@@ -3462,9 +3462,12 @@ namespace TecWare.PPSn
 											UpdateProgress(unchecked((int)(readedTotal * 1000 / contentLength)));
 										else if (checkForSwitchToFile && readedTotal > tempFileBorder)
 										{
-											var oldDst = (MemoryCacheStream)dst;
-											dst = new FileCacheStream(oldDst, oldDst.ExpectedLength);
-											oldDst.Dispose();
+											if (dst is MemoryCacheStream)
+											{
+												var oldDst = (MemoryCacheStream)dst;
+												dst = new FileCacheStream(oldDst, oldDst.ExpectedLength);
+												oldDst.Dispose();
+											}
 										}
 									}
 									else

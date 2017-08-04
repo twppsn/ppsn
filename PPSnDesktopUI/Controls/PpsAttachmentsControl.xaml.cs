@@ -45,6 +45,7 @@ namespace TecWare.PPSn.Controls
 	public interface IPpsAttachments : IEnumerable<IPpsAttachmentItem>
 	{
 		void Append(PpsObject data);
+		void RefreshItems();
 	} // interface IPpsAttachments
 
 	public interface IPpsAttachmentSource
@@ -342,13 +343,15 @@ namespace TecWare.PPSn.Controls
 			{
 				get
 				{
-					var obj = GetLinkedObject().GetDataAsync<PpsObjectImageData>().AwaitTask();
-					obj.PropertyChanged += (sender, ob) => NotifyPropertyChanged(nameof(Picture));
+					var obj = GetLinkedObject()?.GetDataAsync<PpsObjectImageData>().AwaitTask();
+					if (obj == null)
+						return null;
+					obj.PropertyChanged += (sender, ob) => { if (ob.PropertyName == "Preview") NotifyPropertyChanged("Picture"); };
 					return obj.Preview;
 				}
 			}
 
-			public string Type => MimeType.StartsWith("image") ? "picture" : "binary";
+			public string Type => MimeType?.StartsWith("image") == true ? "picture" : "binary";
 		} // class PpsAttachmentItemImplementation
 
 		#endregion
@@ -428,6 +431,11 @@ namespace TecWare.PPSn.Controls
 						throw new NotSupportedException();
 				}
 			} // proc OnCollectionChanged
+
+			public void RefreshItems()
+			{
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset)); 
+			}
 
 			public IPpsDataView View => view;
 		} // class PpsAttachmentImplementation

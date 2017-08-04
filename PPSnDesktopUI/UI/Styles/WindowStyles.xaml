@@ -53,9 +53,11 @@ specific language governing permissions and limitations under the Licence.
 	<KeyTime x:Key="PPSnShrinkStoryKeyTime">0:00:.2</KeyTime>
     <Duration x:Key="PPSnShrinkStoryDuration">0:00:.2</Duration>
 
-	<sys:Double x:Key="PPSnPaneMaxGridWidth">1200</sys:Double>
 	<sys:Double x:Key="PPSnSideBarIncreasedWidth">230</sys:Double>
 	<sys:Double x:Key="PPSnSideBarShrinkedWidth">50</sys:Double>
+
+	<sys:Double x:Key="PPSnPaneMaxGridWidth">1200</sys:Double>
+	<sys:Double x:Key="PPSnPaneBorderSize">24</sys:Double>
 
 	<Style x:Key="PpsWindow" TargetType="{x:Type ui:PpsWindow}">
         <Setter Property="WindowStyle" Value="SingleBorderWindow"/>
