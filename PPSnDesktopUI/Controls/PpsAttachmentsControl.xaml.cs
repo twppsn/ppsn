@@ -348,7 +348,7 @@ namespace TecWare.PPSn.Controls
 				}
 			}
 
-			public string Type => MimeType.StartsWith("image") ? "picture" : "binary";
+			public string Type => MimeType?.StartsWith("image") == true ? "picture" : "binary";
 		} // class PpsAttachmentItemImplementation
 
 		#endregion
