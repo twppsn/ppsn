@@ -21,8 +21,15 @@
         </ResourceDictionary>
     </ui:PpsGenericWpfControl.Resources>
 
-    <Grid MaxWidth="{StaticResource PPSnPaneMaxGridWidth}">
-        <Grid.ColumnDefinitions>
+	<Grid MaxWidth="{StaticResource PPSnPaneMaxGridWidth}">
+		<Grid.Margin>
+			<Thickness 
+				Left="{StaticResource PPSnPaneBorderSize}"
+				Top="{StaticResource PPSnPaneBorderSize}"
+				Right="{StaticResource PPSnPaneBorderSize}"
+				Bottom="0"/>
+		</Grid.Margin>
+		<Grid.ColumnDefinitions>
             <ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}" />
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="{StaticResource PaneSpaceColumnWidth}"/>

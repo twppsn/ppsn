@@ -118,7 +118,12 @@
             <DataTemplate x:Key="Seperator">
                 <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Background="{StaticResource PPSnSeparatorBrush}" Margin="6" />
             </DataTemplate>
-        </Style.Resources>
+			<Thickness x:Key="MarginResource" 
+					   Left="{StaticResource PPSnPaneBorderSize}" 
+					   Top="0"
+					   Right="{StaticResource PPSnPaneBorderSize}"
+					   Bottom="0" />
+		</Style.Resources>
         <Setter Property="ItemTemplateSelector">
             <Setter.Value>
                 <uiC:PpsToolbarDataTemplateSelector/>
@@ -126,7 +131,8 @@
         </Setter>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
-        <Setter Property="Template">
+		<Setter Property="Margin" Value="{StaticResource MarginResource}"/>
+		<Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToolBar}">
                     <Border x:Name="border" BorderBrush="{StaticResource PPSnSeparatorBrush}" BorderThickness="0,0,0,1" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
