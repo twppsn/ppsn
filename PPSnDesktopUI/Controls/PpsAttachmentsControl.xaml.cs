@@ -45,6 +45,7 @@ namespace TecWare.PPSn.Controls
 	public interface IPpsAttachments : IEnumerable<IPpsAttachmentItem>
 	{
 		void Append(PpsObject data);
+		void RefreshItems();
 	} // interface IPpsAttachments
 
 	public interface IPpsAttachmentSource
@@ -430,6 +431,11 @@ namespace TecWare.PPSn.Controls
 						throw new NotSupportedException();
 				}
 			} // proc OnCollectionChanged
+
+			public void RefreshItems()
+			{
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset)); 
+			}
 
 			public IPpsDataView View => view;
 		} // class PpsAttachmentImplementation
