@@ -29,7 +29,7 @@
 			<pps:theme id="blue" file="ClientWpf/default.xaml"/>
 			<pps:theme id="green" file="ClientWpf/green.xaml"/>
 
-			<pps:action name="close" displayName="Schließen" priority="-1000" displayGlyph="57639">
+			<pps:action name="close" displayName="Schließen" priority="-1000" displayImage="exit">
 				<pps:code><![CDATA[ Window:Close() ]]></pps:code>
 			</pps:action>
 			<!--<pps:template id="templates" file="ClientWpf\Templates\MasterData.Contacts.xaml"/>-->
