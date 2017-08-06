@@ -596,9 +596,9 @@
 										<xs:documentation>Displayname of the action.</xs:documentation>
 									</xs:annotation>
 								</xs:attribute>
-								<xs:attribute name="displayGlyph" type="xs:string" use="optional">
+								<xs:attribute name="displayImage" type="xs:string" use="optional">
 									<xs:annotation>
-										<xs:documentation>Immage of the command</xs:documentation>
+										<xs:documentation>Displayimage of the action.</xs:documentation>
 									</xs:annotation>
 								</xs:attribute>
 								<xs:attribute name="priority" type="xs:integer" use="optional">
