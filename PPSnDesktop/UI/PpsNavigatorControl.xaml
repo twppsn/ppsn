@@ -11,9 +11,10 @@
              d:DesignHeight="300" d:DesignWidth="600">
 
 	<UserControl.Resources>
-
 		<SolidColorBrush x:Key="SearchBoxBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnAccentColor}, SourcePart=0.95}" />
 		<SolidColorBrush x:Key="ShrinkedSeparatorBackgroundBrush" Color="Transparent" />
+
+		<uiL:PPSnImageResourceKeyConverter x:Key="imageResourceKeyConverter"/>
 
 		<Style x:Key="NavigatorViewsListBoxStyle" TargetType="{x:Type ListBox}" BasedOn="{StaticResource PPSnListBoxStyle}">
 			<Style.Resources>
@@ -32,64 +33,34 @@
 											<ColumnDefinition/>
 										</Grid.ColumnDefinitions>
 										<Rectangle x:Name="selectedMarker" Grid.Column="0" Fill="{StaticResource PPSnMarkerBrush}" Width="4" HorizontalAlignment="Left" Opacity="0"/>
-										<Image x:Name="image" Grid.Column="1" Source="{ui:PpsImageStaticResourceBinding {Binding DisplayImage}}" Height="18"/>
+										<Viewbox x:Name="imageBox" Grid.Column="1" Height="18" Opacity=".75">
+											<Canvas Width="24" Height="24">
+												<Path Data="{Binding DisplayImage, Mode=OneTime, Converter={StaticResource imageResourceKeyConverter}}"
+													  Fill="{StaticResource PPSnActionButtonBrush}"/>
+											</Canvas>
+										</Viewbox>
 										<TextBlock x:Name="description" Grid.Column="2" Text="{Binding DisplayName}" Foreground="{TemplateBinding Foreground}"
 												   Margin="12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="14"/>
 									</Grid>
 								</Border>
 
-								<!--<Border x:Name="contentBorder" BorderThickness="0" Background="Transparent" Padding="16,0" >
-									<Grid>
-										<Grid.ColumnDefinitions>
-											<ColumnDefinition Width="18"/>
-											<ColumnDefinition/>
-										</Grid.ColumnDefinitions>
-										<Image x:Name="image" Grid.Column="0" Source="{ui:PpsImageStaticResourceBinding {Binding DisplayImage}}" Height="18"/>
-										<TextBlock x:Name="description" Grid.Column="1" Text="{Binding DisplayName}" Foreground="{TemplateBinding Foreground}"
-												   Margin="12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="14"/>
-									</Grid>
-								</Border>-->
-
 								<ControlTemplate.Triggers>
 									<Trigger Property="IsMouseOver" Value="True">
 										<Setter TargetName="contentBorder" Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
+										<Setter TargetName="imageBox" Property="Opacity" Value="1" />
 									</Trigger>
 									<Trigger Property="IsPressed" Value="True">
 										<Setter TargetName="contentBorder" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+										<Setter TargetName="imageBox" Property="Opacity" Value="1" />
 									</Trigger>
 									<Trigger Property="IsChecked" Value="True">
-										<!--<Setter Property="Foreground" Value="{StaticResource PPSnMarkerBrush}"/>-->
 										<Setter Property="Opacity" TargetName="selectedMarker" Value="1"/>
 									</Trigger>
-									<DataTrigger Binding="{Binding ElementName=image, Path=(Image.Source)}" Value="{x:Null}">
-										<Setter Property="Visibility" TargetName="image" Value="Hidden" />
-									</DataTrigger>
-									<!--<MultiTrigger>
-										<MultiTrigger.Conditions>
-											<Condition Property="IsChecked" Value="true"/>
-											<Condition Property="Visibility" SourceName="image" Value="Visible"/>
-										</MultiTrigger.Conditions>
-										<MultiTrigger.EnterActions>
-											<BeginStoryboard>
-												<Storyboard>
-													<ObjectAnimationUsingKeyFrames Storyboard.TargetName="image" Storyboard.TargetProperty="(Image.Source).(DrawingImage.Drawing).(GeometryDrawing.Brush)">
-														<DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnMarkerBrush}"/>
-													</ObjectAnimationUsingKeyFrames>
-												</Storyboard>
-											</BeginStoryboard>
-										</MultiTrigger.EnterActions>
-										<MultiTrigger.ExitActions>
-											<BeginStoryboard>
-												<Storyboard>
-													<ObjectAnimationUsingKeyFrames Storyboard.TargetName="image" Storyboard.TargetProperty="(Image.Source).(DrawingImage.Drawing).(GeometryDrawing.Brush)">
-														<DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnImageBrush}"/>
-													</ObjectAnimationUsingKeyFrames>
-												</Storyboard>
-											</BeginStoryboard>
-										</MultiTrigger.ExitActions>
-									</MultiTrigger>-->
-									<DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type ListBox}}, Path=DataContext.ViewsShowDescription}" Value="false">
-										<Setter TargetName="image" Property="ToolTip" Value="{Binding DisplayName}"/>
+									<DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type ListBox}}, Path=DataContext.ViewsShowDescription}">
+										<DataTrigger.Value>
+											<sys:Boolean>false</sys:Boolean>
+										</DataTrigger.Value>
+										<Setter TargetName="contentBorder" Property="ToolTip" Value="{Binding DisplayName}"/>
 									</DataTrigger>
 								</ControlTemplate.Triggers>
 							</ControlTemplate>
@@ -193,58 +164,6 @@
 								</DataTrigger.ExitActions>
 							</DataTrigger>
 						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Setter.Value>
-			</Setter>
-		</Style>
-
-		<Style x:Key="NavigatorActionButtonStyle" TargetType="{x:Type Button}">
-			<Setter Property="FontSize" Value="14"/>
-			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-			<Setter Property="Focusable" Value="False"/>
-			<Setter Property="IsTabStop" Value="False"/>
-			<Setter Property="Foreground" Value="{StaticResource PPSnActionButtonBrush}"/>
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="Height" Value="60"/>
-			<Setter Property="Margin" Value="0,0,24,0"/>
-			<Setter Property="Template">
-				<Setter.Value>
-					<ControlTemplate TargetType="Button">
-						<Grid Background="Transparent">
-							<Grid.RowDefinitions>
-								<RowDefinition Height="38"/>
-								<RowDefinition/>
-							</Grid.RowDefinitions>
-							<Ellipse x:Name="PART_Circle" Grid.Row="0" Height="36" Width="36" SnapsToDevicePixels="True" VerticalAlignment="Top"
-									 Fill="Transparent"
-									 StrokeThickness="1.5"
-									 Stroke="{StaticResource PPSnActionButtonBrush}" >
-							</Ellipse>
-							<TextBlock x:Name="PART_Glyph" Text="{TemplateBinding Tag}" FontFamily="Segoe UI Symbol" FontSize="18.667" Margin="0,5,0,0" HorizontalAlignment="Center"
-									   Foreground="{StaticResource PPSnActionButtonBrush}"/>
-							<Border x:Name="PART_Content" Grid.Row="1" BorderThickness="0" SnapsToDevicePixels="true" IsHitTestVisible="True">
-								<ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Top" />
-							</Border>
-							<VisualStateManager.VisualStateGroups>
-								<VisualStateGroup x:Name="CommonStates">
-									<VisualState x:Name="Normal"/>
-									<VisualState x:Name="MouseOver">
-										<Storyboard>
-											<ObjectAnimationUsingKeyFrames  Storyboard.TargetName="PART_Circle" Storyboard.TargetProperty="Fill">
-												<DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnMouseOverBrush}"/>
-											</ObjectAnimationUsingKeyFrames>
-										</Storyboard>
-									</VisualState>
-									<VisualState x:Name="Pressed">
-										<Storyboard>
-											<ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_Circle" Storyboard.TargetProperty="Fill">
-												<DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnButtonPressedBrush}"/>
-											</ObjectAnimationUsingKeyFrames>
-										</Storyboard>
-									</VisualState>
-								</VisualStateGroup>
-							</VisualStateManager.VisualStateGroups>
-						</Grid>
 					</ControlTemplate>
 				</Setter.Value>
 			</Setter>
@@ -524,7 +443,6 @@
 				</Setter.Value>
 			</Setter>
 		</Style>
-
 	</UserControl.Resources>
 
 	<Grid x:Name="PART_NavigatorGrid">
@@ -541,7 +459,7 @@
 			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
 
-		<ItemsControl x:Name="PART_Filters" Grid.Column="2" Grid.Row="0" ItemsSource="{Binding CurrentFilters}" Focusable="False">
+		<ItemsControl Grid.Column="2" Grid.Row="0" ItemsSource="{Binding CurrentFilters}" Focusable="False">
 			<ItemsControl.ItemsPanel>
 				<ItemsPanelTemplate>
 					<StackPanel Orientation="Horizontal"/>
@@ -555,7 +473,7 @@
 			</ItemsControl.ItemTemplate>
 		</ItemsControl>
 
-		<HeaderedItemsControl x:Name="PART_Orders" Grid.Column="2" Grid.Row="1" ItemsSource="{Binding CurrentOrders}" Focusable="False" Margin="0,2,0,0">
+		<HeaderedItemsControl Grid.Column="2" Grid.Row="1" ItemsSource="{Binding CurrentOrders}" Focusable="False" Margin="0,2,0,0">
 			<HeaderedItemsControl.Header>
 				<TextBlock Text="SORTIERUNG:" Margin="0,0,10,0" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Center"/>
 			</HeaderedItemsControl.Header>
@@ -566,12 +484,12 @@
 							<ColumnDefinition Width="Auto" />
 							<ColumnDefinition />
 						</Grid.ColumnDefinitions>
-						<ContentPresenter x:Name="PART_Header" ContentSource="Header" />
-						<ItemsPresenter x:Name="PART_Items" Grid.Column="1"/>
+						<ContentPresenter x:Name="header" ContentSource="Header" />
+						<ItemsPresenter Grid.Column="1"/>
 					</Grid>
 					<ControlTemplate.Triggers>
 						<DataTrigger Binding="{Binding Path=CurrentOrders}" Value="{x:Null}">
-							<Setter TargetName="PART_Header" Property="Visibility" Value="Collapsed"/>
+							<Setter TargetName="header" Property="Visibility" Value="Collapsed"/>
 						</DataTrigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
@@ -591,40 +509,39 @@
 		<TextBox x:Name="PART_SearchBox" Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" HorizontalAlignment="Right" Width="340" Margin="0,12,0,8"
 				 Style="{StaticResource NavigatorSearchBoxStyle}"
 				 Text="{Binding Path=CurrentSearchText, Delay=300, UpdateSourceTrigger=PropertyChanged}" KeyDown="PART_SearchBox_KeyDown"/>
-
 		<ListBox x:Name="PART_Views" Grid.Column="0" Grid.Row="1" Grid.RowSpan="3"
 				 ItemsSource="{Binding VisibleViews}"
 				 IsSynchronizedWithCurrentItem="True"
 				 Style="{StaticResource NavigatorViewsListBoxStyle}"/>
-
-		<uiC:DataListControl x:Name="PART_Items" Grid.Column="2" Grid.Row="3" AlternationCount="2" IsSynchronizedWithCurrentItem="True" FontSize="14" SnapsToDevicePixels="True"
+		<uiC:DataListControl Grid.Column="2" Grid.Row="3" AlternationCount="2" IsSynchronizedWithCurrentItem="True" FontSize="14" SnapsToDevicePixels="True"
 							 ItemsSource="{Binding Items}"
-							 ScrollViewer.PanningMode="VerticalFirst"
 							 Style="{StaticResource PPSnListBoxStyle}"
 							 ItemContainerStyle="{StaticResource PPSnDataListControlItemStyle}"/>
-		<ItemsControl x:Name="PART_Actions" Grid.Column="2" Grid.Row="4" ItemsSource="{Binding VisibleActions}" IsTabStop="False" >
+		<ItemsControl Grid.Column="2" Grid.Row="4" ItemsSource="{Binding VisibleActions}" VerticalAlignment="Top" IsTabStop="False" >
+			<ItemsControl.Resources>
+				<uiL:PPSnNavigatorPriorityToDockPosition x:Key="priorityToPositionConverter"/>
+			</ItemsControl.Resources>
 			<ItemsControl.ItemsPanel>
 				<ItemsPanelTemplate>
 					<DockPanel LastChildFill="False" Margin="0,16,0,0" IsItemsHost="True"/>
 				</ItemsPanelTemplate>
 			</ItemsControl.ItemsPanel>
-			<ItemsControl.ItemContainerStyle>
-				<Style TargetType="ContentPresenter">
-					<Style.Resources>
-						<uiL:PpsNavigatorPriorityToDockPosition x:Key="PriorityToPositionConverter"/>
-					</Style.Resources>
-					<Setter Property="DockPanel.Dock" Value="{Binding Priority, Converter={StaticResource PriorityToPositionConverter}}"/>
-				</Style>
-			</ItemsControl.ItemContainerStyle>
 			<ItemsControl.ItemTemplate>
 				<DataTemplate>
 					<Button Content="{Binding DisplayName}"
-							Command="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type ItemsControl}}, Path=DataContext.RunAction}"
+							Tag="{Binding DisplayImage, Mode=OneTime, Converter={StaticResource imageResourceKeyConverter}}"
+							Command="{Binding DataContext.RunAction, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type ItemsControl}}}"
 							CommandParameter="{Binding}"
-							Style="{StaticResource NavigatorActionButtonStyle}" Tag="{Binding DisplayGlyph}">
+							Style="{StaticResource PPSnCircleButtonStyle}">
 					</Button>
 				</DataTemplate>
 			</ItemsControl.ItemTemplate>
+			<ItemsControl.ItemContainerStyle>
+				<Style TargetType="ContentPresenter">
+					<Setter Property="DockPanel.Dock" Value="{Binding Priority, Converter={StaticResource priorityToPositionConverter}}"/>
+					<Setter Property="Margin" Value="0,0,24,0"/>
+				</Style>
+			</ItemsControl.ItemContainerStyle>
 		</ItemsControl>
 	</Grid>
 </UserControl>
