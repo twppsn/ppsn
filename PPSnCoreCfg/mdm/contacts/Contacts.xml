@@ -217,7 +217,7 @@
 			<pps:template id="contacts" file="contactTemplate.xaml" />
 			<pps:wpfSource id="mdm.contacts" directory="Wpf" virtualPath="panes" />
 
-			<pps:view name="crmContacts" displayName="Kontakte" displayImage="usersImage" view="local.objects" filter="Typ:=crmContacts">
+			<pps:view name="crmContacts" displayName="Kontakte" displayImage="contacts" view="local.objects" filter="Typ:=crmContacts">
 				<pps:filter name="lief" displayName="Lieferanten">
 					<![CDATA[ LiefNr:! ]]>
 				</pps:filter>
