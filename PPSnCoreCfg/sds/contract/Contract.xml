@@ -80,7 +80,7 @@
 			<pps:template id="contract" file="contractTemplate.xaml" />
       <pps:wpfSource id="sds.contract" directory="Wpf" virtualPath="panes" />
 
-			<pps:view name="sdsContract" displayName="Aufträge" displayImage="sales_quotationImage" view="local.objects" filter="Typ:=sdsContract">
+			<pps:view name="sdsContract" displayName="Aufträge" displayImage="star" view="local.objects" filter="Typ:=sdsContract">
 				<pps:filter name="lief" displayName="Entwurf">
 					<![CDATA[ Datum: ]]>
 				</pps:filter>

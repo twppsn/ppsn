@@ -80,7 +80,7 @@
 			<pps:template id="offer" file="offerTemplate.xaml" />
       <pps:wpfSource id="sds.offer" directory="Wpf" virtualPath="panes" />
 
-			<pps:view name="sdsOffer" displayName="Angebote" displayImage="purchase_orderImage" view="local.objects" filter="Typ:=sdsOffer">
+			<pps:view name="sdsOffer" displayName="Angebote" displayImage="star" view="local.objects" filter="Typ:=sdsOffer">
 				<pps:filter name="entwurf" displayName="Entwurf">
 					<![CDATA[ Datum: ]]>
 				</pps:filter>
