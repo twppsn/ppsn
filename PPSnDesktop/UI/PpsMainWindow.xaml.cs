@@ -38,7 +38,6 @@ namespace TecWare.PPSn.UI
 
 		private readonly static DependencyProperty IsNavigatorVisibleProperty = DependencyProperty.Register("IsNavigatorVisible", typeof(bool), typeof(PpsMainWindow), new PropertyMetadata(true));
 		private readonly static DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register("IsPaneVisible", typeof(bool), typeof(PpsMainWindow), new PropertyMetadata(false));
-		private readonly static DependencyProperty CharmbarActualWidthProperty = DependencyProperty.Register("CharmbarActualWidth", typeof(double), typeof(PpsMainWindow));
 		private readonly static DependencyProperty IsSideBarVisibleProperty = DependencyProperty.Register("IsSideBarVisible", typeof(bool), typeof(PpsMainWindow), new PropertyMetadata(true));
 
 		/// <summary>Readonly property for the current pane.</summary>
@@ -153,8 +152,6 @@ namespace TecWare.PPSn.UI
 			
 			Trace.TraceInformation("MainWindow[{0}] created.", windowIndex);
 
-			var descriptor = DependencyPropertyDescriptor.FromProperty(PpsCharmbarControl.ActualWidthProperty, typeof(PpsCharmbarControl));
-			descriptor.AddValueChanged(PART_Charmbar, OnCharmbarActualWidthChanged);
 		} // ctor
 
 		private Task<bool> unloadTask = null;
@@ -185,6 +182,9 @@ namespace TecWare.PPSn.UI
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
 			base.OnPreviewMouseDown(e);
+
+			ResetCharmbar(e.Source);
+
 			if (!IsNavigatorVisible)
 				return;
 			navigator.OnPreview_MouseDown(e.OriginalSource);
@@ -200,6 +200,8 @@ namespace TecWare.PPSn.UI
 
 		protected override void OnWindowCaptionClicked()
 		{
+			ResetCharmbar(null);
+
 			if (!IsNavigatorVisible)
 				return;
 			navigator.OnPreview_MouseDown(null);
@@ -209,26 +211,24 @@ namespace TecWare.PPSn.UI
 
 		#region -- charmbar -------------------------------------------------------------
 
-		private void OnCharmbarActualWidthChanged(object sender, EventArgs e)
+		private void ResetCharmbar(object mouseDownSource)
 		{
-			SetActualWidth(PART_Charmbar.ActualWidth);
-		}
+			if (PART_Charmbar.CurrentContentType == PPSnCharmbarContentType.Default)
+				return;
+			else if (object.Equals(mouseDownSource, PART_Charmbar))
+				return;
 
-		private void SetActualWidth(double value)
-		{
-			SetValue(CharmbarActualWidthProperty, value);
-		}
+			PART_Charmbar.CurrentContentType = PPSnCharmbarContentType.Default;
+		} // proc ResetCharmbar
 
 		#endregion
-		
+
 		/// <summary>Settings of the current window.</summary>
 		public PpsWindowApplicationSettings Settings => settings;
 		/// <summary>Index of the current window</summary>
 		public int WindowIndex => windowIndex;
 		/// <summary>Access to the current environment,</summary>
 		public new PpsMainEnvironment Environment => (PpsMainEnvironment)base.Environment;
-		/// <summary>Access to current charmbar width</summary>
-		public double CharmbarActualWidth => (double)GetValue(CharmbarActualWidthProperty);
 		/// <summary>Access to the navigator model</summary>
 		public PpsNavigatorModel Navigator => (PpsNavigatorModel)navigator.DataContext;
 		/// <summary>Is the navigator visible.</summary>
