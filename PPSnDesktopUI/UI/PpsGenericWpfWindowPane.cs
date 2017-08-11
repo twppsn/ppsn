@@ -620,6 +620,12 @@ namespace TecWare.PPSn.UI
 		private readonly PpsUICommandCollection commands;
 		private readonly PpsProgressStack progressStack;
 
+		// for corrent Binding this Command must be a Property - not a Field
+		public RoutedCommand SetCharmCommand { get { return setCharmCommand; } }
+
+		private readonly RoutedCommand setCharmCommand = new RoutedCommand("SetCharm", typeof(PpsGenericWpfControl));
+		
+
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		/// <summary></summary>
@@ -632,6 +638,23 @@ namespace TecWare.PPSn.UI
 			progressStack = new PpsProgressStack(Dispatcher);
 
 			Focusable = false;
+			
+			CommandBindings.Add(
+				new CommandBinding(setCharmCommand,
+					(sender, e) =>
+					{
+						//MessageBox.Show("tert");
+						((dynamic)Pane.Window).CharmObject = ((LuaTable)e.Parameter)["Object"];
+					},
+					(sender, e) =>
+					{
+						e.CanExecute = true;
+					}
+				)
+			);
+
+			// set the initial Object for the CharmBar
+			DataContextChanged += (sender,e) => ((dynamic)Pane.Window).CharmObject = ((LuaTable)this.DataContext)["Object"];
 		} // ctor
 
 		#endregion

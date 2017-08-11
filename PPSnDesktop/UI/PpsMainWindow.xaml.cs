@@ -261,5 +261,10 @@ namespace TecWare.PPSn.UI
 			if (show != (bool)GetValue(IsSideBarVisibleProperty))
 				SetValue(IsSideBarVisibleProperty, show);
 		} // proc ShowSideBarBackground
+
+
+		public object CharmObject { get { return GetValue(CharmObjectProperty); } set { SetValue(CharmObjectProperty, value); } }
+
+		private readonly static DependencyProperty CharmObjectProperty = DependencyProperty.Register(nameof(CharmObject), typeof(object), typeof(PpsMainWindow), null);
 	} // class PpsMainWindow
 }
