@@ -116,4 +116,23 @@ namespace TecWare.PPSn.UI
 	} // class PpsMultiLineStringConverter
 
 	#endregion
+
+	public sealed class PpsNotesConverter : IValueConverter
+	{
+		private PpsObject obj;
+
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			this.obj = (PpsObject)value;
+
+			var tag = (from ttag in obj.Tags where ttag.Name == "Notice" select ttag).FirstOrDefault();
+			return tag != null ? tag.Value : String.Empty;
+		}
+
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			obj.Tags.UpdateTag("Notice", Data.PpsObjectTagClass.Text, value).Reset();
+			return obj;
+		}
+	}
 }

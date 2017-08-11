@@ -11,8 +11,9 @@
              d:DesignHeight="300" d:DesignWidth="300">
 	<UserControl.Resources>
 		<uiL:PPSnCharmbarContentTypeToCheckedConverter x:Key="contentTypeToCheckedConverter" />
+        <uiL:PpsNotesConverter x:Key="PpsNotesConverter"/>
 
-		<Style x:Key="charmbarContentBorderStyle" TargetType="{x:Type Border}">
+        <Style x:Key="charmbarContentBorderStyle" TargetType="{x:Type Border}">
 			<Setter Property="Background" Value="{StaticResource PPSnPopUpBackgroundBrush}"/>
 			<Setter Property="BorderThickness" Value="1"/>
 			<Setter Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
@@ -151,7 +152,10 @@
 						<RowDefinition/>
 					</Grid.RowDefinitions>
 					<ContentControl Grid.Row="0" Content="Notizen" Template="{StaticResource charmbarContentHeaderTemplate}"/>
-				</Grid>
+                    <TextBox Grid.Row="1" Text="{Binding Path=DataContext,
+                        RelativeSource={RelativeSource Self},
+                        Converter={StaticResource PpsNotesConverter}}" />
+                </Grid>
 			</Border>
 		</DataTemplate>
 
@@ -163,8 +167,22 @@
 						<RowDefinition/>
 					</Grid.RowDefinitions>
 					<ContentControl Grid.Row="0" Content="Verknüpfungen" Template="{StaticResource charmbarContentHeaderTemplate}"/>
-				</Grid>
-			</Border>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Links}">
+                        <ListBox.ItemTemplate>
+                            <ItemContainerTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="75"/>
+                                        <ColumnDefinition Width="75"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Label Grid.Column="0" Content="{Binding LinkToId}"/>
+                                    <Label Grid.Column="1" Content="{Binding LinkTo}"/>
+                                </Grid>
+                            </ItemContainerTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
 		</DataTemplate>
 
 		<DataTemplate x:Key="revisionTemplate">
@@ -199,8 +217,32 @@
 						<RowDefinition/>
 					</Grid.RowDefinitions>
 					<ContentControl Grid.Row="0" Content="Tags" Template="{StaticResource charmbarContentHeaderTemplate}"/>
-				</Grid>
-			</Border>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Tags}">
+                        <ListBox.ItemTemplate>
+                            <ItemContainerTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="75"/>
+                                        <ColumnDefinition Width="75"/>
+                                        <ColumnDefinition Width="75"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Label Grid.Column="0" Content="{Binding Name}"/>
+                                    <Label Grid.Column="1" Content="{Binding Value}"/>
+                                    <Label Grid.Column="2" Content="{Binding UserId}"/>
+                                </Grid>
+                            </ItemContainerTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <StackPanel Grid.Row="2">
+                        <Label Content="Hinzufügen:"/>
+                        <Label Content="Name:"/>
+                        <TextBox Name="tbnewName"/>
+                        <Label Content="Wert:"/>
+                        <TextBox Name="tbnewValue"/>
+                        <Button Content="Speichern" Command="{Binding AddTagCommand}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
 		</DataTemplate>
 
 		<DataTemplate x:Key="taskTemplate">
