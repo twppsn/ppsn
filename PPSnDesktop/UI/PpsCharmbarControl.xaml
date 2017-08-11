@@ -4,14 +4,12 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
- 			 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
              xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
              mc:Ignorable="d" 
 			 x:Name="ppsnCharmbarControl"
              d:DesignHeight="300" d:DesignWidth="300">
 	<UserControl.Resources>
-		<uiL:PPSnCharmbarContentTypeToCheckedConverter x:Key="contentTypeToCheckedConverter" />
-        <uiL:PpsNotesConverter x:Key="PpsNotesConverter"/>
+        <uiL:PPSnCharmbarContentTypeToCheckedConverter x:Key="contentTypeToCheckedConverter" />
 
         <Style x:Key="charmbarContentBorderStyle" TargetType="{x:Type Border}">
 			<Setter Property="Background" Value="{StaticResource PPSnPopUpBackgroundBrush}"/>
@@ -151,10 +149,8 @@
 						<RowDefinition Height="auto"/>
 						<RowDefinition/>
 					</Grid.RowDefinitions>
-					<ContentControl Grid.Row="0" Content="Notizen" Template="{StaticResource charmbarContentHeaderTemplate}"/>
-                    <TextBox Grid.Row="1" Text="{Binding Path=DataContext,
-                        RelativeSource={RelativeSource Self},
-                        Converter={StaticResource PpsNotesConverter}}" />
+                    <ContentControl Grid.Row="0" Content="Notizen" Template="{StaticResource charmbarContentHeaderTemplate}"/>
+                    <uiL:PpsNotesEditor MasterObject="{Binding}" Grid.Row="1" />
                 </Grid>
 			</Border>
 		</DataTemplate>
