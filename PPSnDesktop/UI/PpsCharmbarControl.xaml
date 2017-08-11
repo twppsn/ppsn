@@ -10,7 +10,9 @@
 			 x:Name="ppsnCharmbarControl"
              d:DesignHeight="300" d:DesignWidth="300">
 	<UserControl.Resources>
-		<Style x:Key="contentBorderStyle" TargetType="{x:Type Border}">
+		<uiL:PPSnCharmbarContentTypeToCheckedConverter x:Key="contentTypeToCheckedConverter" />
+
+		<Style x:Key="charmbarContentBorderStyle" TargetType="{x:Type Border}">
 			<Setter Property="Background" Value="{StaticResource PPSnPopUpBackgroundBrush}"/>
 			<Setter Property="BorderThickness" Value="1"/>
 			<Setter Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
@@ -29,7 +31,10 @@
 					<Trigger.EnterActions>
 						<BeginStoryboard>
 							<Storyboard>
-								<DoubleAnimation Storyboard.TargetProperty="(RenderTransform).(ScaleTransform.ScaleX)" From="0" To="1" Duration="0:00:.2"/>
+								<DoubleAnimation Storyboard.TargetProperty="(RenderTransform).(ScaleTransform.ScaleX)"
+												 To="1"
+												 BeginTime="0:0:0"
+												 Duration="{StaticResource PPSnShrinkStoryDuration}"/>
 							</Storyboard>
 						</BeginStoryboard>
 					</Trigger.EnterActions>
@@ -37,7 +42,78 @@
 			</Style.Triggers>
 		</Style>
 
-		<ControlTemplate x:Key="headerContentTemplate" TargetType="{x:Type ContentControl}">
+		<Style x:Key="charmBarToggleButtonStyle" TargetType="{x:Type ToggleButton}">
+			<Setter Property="Focusable" Value="False"/>
+			<Setter Property="IsThreeState" Value="False"/>
+			<Setter Property="Foreground" Value="{StaticResource PPSnActionButtonBrush}"/>
+			<Setter Property="Command" Value="{x:Static uiL:PpsCharmbarControl.ChangeContentCommand}"/>
+			<Setter Property="CommandParameter" Value="{Binding Tag, RelativeSource={RelativeSource Mode=Self}}" />
+			<Setter Property="IsChecked">
+				<Setter.Value>
+					<MultiBinding Mode="OneWay" Converter="{StaticResource contentTypeToCheckedConverter}" >
+						<Binding ElementName="ppsnCharmbarControl" Path="CurrentContentType"/>
+						<Binding Path="Tag" RelativeSource="{RelativeSource Mode=Self}"/>
+					</MultiBinding>
+				</Setter.Value>
+			</Setter>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ToggleButton}">
+						<Border x:Name="contentBorder" >
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition/>
+									<ColumnDefinition Width="4"/>
+								</Grid.ColumnDefinitions>
+								<Border Grid.Row="0" Background="Transparent" Margin="6,3,0,3" Padding="6">
+									<Viewbox>
+										<Canvas Width="24" Height="24">
+											<Path x:Name="imagePath" Data="{TemplateBinding Content}" Fill="{TemplateBinding Foreground}" Opacity=".65">
+												<Path.RenderTransformOrigin>
+													<Point X="0.5" Y="0.5"/>
+												</Path.RenderTransformOrigin>
+												<Path.RenderTransform>
+													<ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
+												</Path.RenderTransform>
+											</Path>
+										</Canvas>
+									</Viewbox>
+								</Border>
+								<Rectangle x:Name="selectedMarker" Grid.Column="1" Fill="{StaticResource PPSnMarkerBrush}" Opacity="0"/>
+							</Grid>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsChecked" Value="True">
+								<Setter TargetName="selectedMarker" Property="Opacity" Value="1"/>
+							</Trigger>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="imagePath" Property="Opacity" Value="1"/>
+							</Trigger>
+							<Trigger Property="IsPressed" Value="True">
+								<Trigger.EnterActions>
+									<BeginStoryboard>
+										<Storyboard>
+											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="1" To="0.9" Duration="0:00:0.1"/>
+											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="1" To="0.9" Duration="0:00:0.1"/>
+										</Storyboard>
+									</BeginStoryboard>
+								</Trigger.EnterActions>
+								<Trigger.ExitActions>
+									<BeginStoryboard>
+										<Storyboard>
+											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="0.9" To="1" Duration="0:00:0.05"/>
+											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="0.9" To="1" Duration="0:00:0.05"/>
+										</Storyboard>
+									</BeginStoryboard>
+								</Trigger.ExitActions>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<ControlTemplate x:Key="charmbarContentHeaderTemplate" TargetType="{x:Type ContentControl}">
 			<Grid>
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition/>
@@ -68,73 +144,73 @@
 		<DataTemplate x:Key="emptyTemplate"/>
 
 		<DataTemplate x:Key="noteTemplate">
-			<Border Style="{StaticResource contentBorderStyle}">
+			<Border Style="{StaticResource charmbarContentBorderStyle}">
 				<Grid>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="auto"/>
 						<RowDefinition/>
 					</Grid.RowDefinitions>
-					<ContentControl Grid.Row="0" Content="Notizen" Template="{StaticResource headerContentTemplate}"/>
+					<ContentControl Grid.Row="0" Content="Notizen" Template="{StaticResource charmbarContentHeaderTemplate}"/>
 				</Grid>
 			</Border>
 		</DataTemplate>
 
 		<DataTemplate x:Key="linkTemplate">
-			<Border Style="{StaticResource contentBorderStyle}">
+			<Border Style="{StaticResource charmbarContentBorderStyle}">
 				<Grid>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="auto"/>
 						<RowDefinition/>
 					</Grid.RowDefinitions>
-					<ContentControl Grid.Row="0" Content="Verknüpfungen" Template="{StaticResource headerContentTemplate}"/>
+					<ContentControl Grid.Row="0" Content="Verknüpfungen" Template="{StaticResource charmbarContentHeaderTemplate}"/>
 				</Grid>
 			</Border>
 		</DataTemplate>
 
 		<DataTemplate x:Key="revisionTemplate">
-			<Border Style="{StaticResource contentBorderStyle}">
+			<Border Style="{StaticResource charmbarContentBorderStyle}">
 				<Grid>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="auto"/>
 						<RowDefinition/>
 					</Grid.RowDefinitions>
-					<ContentControl Grid.Row="0" Content="Revisionierung" Template="{StaticResource headerContentTemplate}"/>
+					<ContentControl Grid.Row="0" Content="Revisionierung" Template="{StaticResource charmbarContentHeaderTemplate}"/>
 				</Grid>
 			</Border>
 		</DataTemplate>
 
 		<DataTemplate x:Key="qmTemplate">
-			<Border Style="{StaticResource contentBorderStyle}">
+			<Border Style="{StaticResource charmbarContentBorderStyle}">
 				<Grid>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="auto"/>
 						<RowDefinition/>
 					</Grid.RowDefinitions>
-					<ContentControl Grid.Row="0" Content="QM" Template="{StaticResource headerContentTemplate}"/>
+					<ContentControl Grid.Row="0" Content="QM" Template="{StaticResource charmbarContentHeaderTemplate}"/>
 				</Grid>
 			</Border>
 		</DataTemplate>
 
 		<DataTemplate x:Key="tagTemplate">
-			<Border Style="{StaticResource contentBorderStyle}">
+			<Border Style="{StaticResource charmbarContentBorderStyle}">
 				<Grid>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="auto"/>
 						<RowDefinition/>
 					</Grid.RowDefinitions>
-					<ContentControl Grid.Row="0" Content="Tags" Template="{StaticResource headerContentTemplate}"/>
+					<ContentControl Grid.Row="0" Content="Tags" Template="{StaticResource charmbarContentHeaderTemplate}"/>
 				</Grid>
 			</Border>
 		</DataTemplate>
 
 		<DataTemplate x:Key="taskTemplate">
-			<Border Style="{StaticResource contentBorderStyle}">
+			<Border Style="{StaticResource charmbarContentBorderStyle}">
 				<Grid>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="auto"/>
 						<RowDefinition/>
 					</Grid.RowDefinitions>
-					<ContentControl Grid.Row="0" Content="Termine / Aufgaben" Template="{StaticResource headerContentTemplate}"/>
+					<ContentControl Grid.Row="0" Content="Termine / Aufgaben" Template="{StaticResource charmbarContentHeaderTemplate}"/>
 				</Grid>
 			</Border>
 		</DataTemplate>
@@ -182,6 +258,7 @@
 		</Style>
 	</UserControl.Resources>
 
+	<!--Background must be null!-->
 	<Grid>
 		<Grid.Style>
 			<Style TargetType="{x:Type Grid}">
@@ -212,17 +289,8 @@
 			<!--Bindings do use type converters though-->
 			<ColumnDefinition Width="{Binding Source={StaticResource PPSnCharmBarColumnWidth}, Mode=OneTime}"/>
 		</Grid.ColumnDefinitions>
-		<Grid.RowDefinitions>
-			<RowDefinition/>
-			<RowDefinition Height="48"/>
-			<RowDefinition Height="48"/>
-			<RowDefinition Height="48"/>
-			<RowDefinition Height="48"/>
-			<RowDefinition Height="48"/>
-			<RowDefinition Height="48"/>
-		</Grid.RowDefinitions>
 
-		<Border Grid.Column="0" Grid.Row="0" Grid.RowSpan="7" MaxWidth="{StaticResource PPSnPaneMaxGridWidth}">
+		<Border Grid.Column="0" MaxWidth="{StaticResource PPSnPaneMaxGridWidth}">
 			<Border.Margin>
 				<Thickness Left="{StaticResource PPSnPaneBorderSizeLeft}"
 						   Top="0"
@@ -244,35 +312,43 @@
 			<ContentPresenter Content="{Binding}" Style="{StaticResource charmBarContentStyle}"/>
 		</Border>
 
-		<Button Grid.Column="1" Grid.Row="1" Margin="8" Command="{x:Static uiL:PpsCharmbarControl.ChangeContentCommand}">
-			<Button.CommandParameter>
-				<uiL:PPSnCharmbarContentType>Note</uiL:PPSnCharmbarContentType>
-			</Button.CommandParameter>
-		</Button>
-		<Button Grid.Column="1" Grid.Row="2" Margin="8" Command="{x:Static uiL:PpsCharmbarControl.ChangeContentCommand}">
-			<Button.CommandParameter>
-				<uiL:PPSnCharmbarContentType>Link</uiL:PPSnCharmbarContentType>
-			</Button.CommandParameter>
-		</Button>
-		<Button Grid.Column="1" Grid.Row="3" Margin="8" Command="{x:Static uiL:PpsCharmbarControl.ChangeContentCommand}">
-			<Button.CommandParameter>
-				<uiL:PPSnCharmbarContentType>Revision</uiL:PPSnCharmbarContentType>
-			</Button.CommandParameter>
-		</Button>
-		<Button Grid.Column="1" Grid.Row="4" Margin="8" Command="{x:Static uiL:PpsCharmbarControl.ChangeContentCommand}">
-			<Button.CommandParameter>
-				<uiL:PPSnCharmbarContentType>Qm</uiL:PPSnCharmbarContentType>
-			</Button.CommandParameter>
-		</Button>
-		<Button Grid.Column="1" Grid.Row="5" Margin="8" Command="{x:Static uiL:PpsCharmbarControl.ChangeContentCommand}">
-			<Button.CommandParameter>
-				<uiL:PPSnCharmbarContentType>Tag</uiL:PPSnCharmbarContentType>
-			</Button.CommandParameter>
-		</Button>
-		<Button Grid.Column="1" Grid.Row="6" Margin="8" Command="{x:Static uiL:PpsCharmbarControl.ChangeContentCommand}">
-			<Button.CommandParameter>
-				<uiL:PPSnCharmbarContentType>Task</uiL:PPSnCharmbarContentType>
-			</Button.CommandParameter>
-		</Button>
+		<DockPanel Grid.Column="1" LastChildFill="False" VerticalAlignment="Bottom">
+			<DockPanel.Resources>
+				<Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource charmBarToggleButtonStyle}">
+					<Setter Property="Height" Value="48"/>
+					<Setter Property="DockPanel.Dock" Value="Top"/>
+				</Style>
+			</DockPanel.Resources>
+			<ToggleButton Content="{StaticResource noteOutlinePathGeometry}">
+				<ToggleButton.Tag>
+					<uiL:PPSnCharmbarContentType>Note</uiL:PPSnCharmbarContentType>
+				</ToggleButton.Tag>
+			</ToggleButton>
+			<ToggleButton Content="{StaticResource linkPathGeometry}">
+				<ToggleButton.Tag>
+					<uiL:PPSnCharmbarContentType>Link</uiL:PPSnCharmbarContentType>
+				</ToggleButton.Tag>
+			</ToggleButton>
+			<ToggleButton Content="{StaticResource revisionOutlinePathGeometry}">
+				<ToggleButton.Tag>
+					<uiL:PPSnCharmbarContentType>Revision</uiL:PPSnCharmbarContentType>
+				</ToggleButton.Tag>
+			</ToggleButton>
+			<ToggleButton Content="{StaticResource qmClockPathGeometry}">
+				<ToggleButton.Tag>
+					<uiL:PPSnCharmbarContentType>Qm</uiL:PPSnCharmbarContentType>
+				</ToggleButton.Tag>
+			</ToggleButton>
+			<ToggleButton Content="{StaticResource mapMarkerOutlinePathGeometry}">
+				<ToggleButton.Tag>
+					<uiL:PPSnCharmbarContentType>Tag</uiL:PPSnCharmbarContentType>
+				</ToggleButton.Tag>
+			</ToggleButton>
+			<ToggleButton Content="{StaticResource calendarClockPathGeometry}">
+				<ToggleButton.Tag>
+					<uiL:PPSnCharmbarContentType>Task</uiL:PPSnCharmbarContentType>
+				</ToggleButton.Tag>
+			</ToggleButton>
+		</DockPanel>
 	</Grid>
 </UserControl>

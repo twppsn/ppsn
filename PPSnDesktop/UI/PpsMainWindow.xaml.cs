@@ -47,7 +47,7 @@ namespace TecWare.PPSn.UI
 		private int windowIndex = -1;                                       // settings key
 		private PpsWindowApplicationSettings settings;                      // current settings for the window
 
-		#region -- Ctor/Dtor ------------------------------------------------------------
+		#region -- Ctor/Dtor -------------------------------------------------------------
 
 		public PpsMainWindow(int windowIndex)
 		{
@@ -177,7 +177,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Navigator.SearchBox --------------------------------------------------
+		#region -- Navigator.SearchBox & Charmbar-----------------------------------------
 
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
@@ -207,10 +207,6 @@ namespace TecWare.PPSn.UI
 			navigator.OnPreview_MouseDown(null);
 		} // proc OnWindowCaptionClicked
 
-		#endregion
-
-		#region -- charmbar -------------------------------------------------------------
-
 		private void ResetCharmbar(object mouseDownSource)
 		{
 			if (PART_Charmbar.CurrentContentType == PPSnCharmbarContentType.Default)
@@ -220,6 +216,7 @@ namespace TecWare.PPSn.UI
 
 			PART_Charmbar.CurrentContentType = PPSnCharmbarContentType.Default;
 		} // proc ResetCharmbar
+
 
 		#endregion
 
