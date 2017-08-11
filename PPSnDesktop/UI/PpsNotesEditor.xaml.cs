@@ -21,22 +21,17 @@ namespace TecWare.PPSn.UI
     /// </summary>
     public partial class PpsNotesEditor : UserControl
     {
-		private readonly static DependencyProperty MasterObjectProperty =
-			DependencyProperty.Register("MasterObject", typeof(PpsObject), typeof(PpsNotesEditor), null);
-
-		public PpsObject MasterObject { get { return (PpsObject)GetValue(MasterObjectProperty); } set { SetValue(MasterObjectProperty, value); } }
-
 		public string Notice
 		{
 			get
 			{
-				var tag = (from ttag in MasterObject.Tags where ttag.Name == "Notiz" select ttag).FirstOrDefault();
+				var tag = (from ttag in ((PpsObject)DataContext).Tags where ttag.Name == "Notiz" select ttag).FirstOrDefault();
 				return tag != null ? (string)tag.Value : String.Empty;
 			}
 			set
 			{
-				MasterObject.Tags.UpdateTag("Notiz", Data.PpsObjectTagClass.Text, value);
-				MasterObject.UpdateLocalAsync().AwaitTask();
+				((PpsObject)DataContext).Tags.UpdateTag("Notiz", Data.PpsObjectTagClass.Text, value);
+				((PpsObject)DataContext).UpdateLocalAsync().AwaitTask();
 			}
 		}
 

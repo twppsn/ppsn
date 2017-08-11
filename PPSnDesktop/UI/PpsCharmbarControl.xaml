@@ -150,7 +150,7 @@
 						<RowDefinition/>
 					</Grid.RowDefinitions>
                     <ContentControl Grid.Row="0" Content="Notizen" Template="{StaticResource charmbarContentHeaderTemplate}"/>
-                    <uiL:PpsNotesEditor MasterObject="{Binding}" Grid.Row="1" />
+                    <uiL:PpsNotesEditor DataContext="{Binding}" Grid.Row="1" />
                 </Grid>
 			</Border>
 		</DataTemplate>
@@ -210,33 +210,10 @@
 				<Grid>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="auto"/>
-						<RowDefinition/>
-					</Grid.RowDefinitions>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
 					<ContentControl Grid.Row="0" Content="Tags" Template="{StaticResource charmbarContentHeaderTemplate}"/>
-                    <ListBox Grid.Row="1" ItemsSource="{Binding Tags}">
-                        <ListBox.ItemTemplate>
-                            <ItemContainerTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="75"/>
-                                        <ColumnDefinition Width="75"/>
-                                        <ColumnDefinition Width="75"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Label Grid.Column="0" Content="{Binding Name}"/>
-                                    <Label Grid.Column="1" Content="{Binding Value}"/>
-                                    <Label Grid.Column="2" Content="{Binding UserId}"/>
-                                </Grid>
-                            </ItemContainerTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                    <StackPanel Grid.Row="2">
-                        <Label Content="Hinzufügen:"/>
-                        <Label Content="Name:"/>
-                        <TextBox Name="tbnewName"/>
-                        <Label Content="Wert:"/>
-                        <TextBox Name="tbnewValue"/>
-                        <Button Content="Speichern" Command="{Binding AddTagCommand}"/>
-                    </StackPanel>
+                    <uiL:PpsTagsEditor DataContext="{Binding}" />
                 </Grid>
             </Border>
 		</DataTemplate>

@@ -100,6 +100,9 @@
     <Compile Include="UI\PpsSplashWindow.xaml.cs">
       <DependentUpon>PpsSplashWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UI\PpsTagsEditor.xaml.cs">
+      <DependentUpon>PpsTagsEditor.xaml</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="Properties\Resources.en.resx">
       <DependentUpon>Resources.resx</DependentUpon>
     </EmbeddedResource>
@@ -124,6 +127,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="UI\PpsSplashWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\PpsTagsEditor.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

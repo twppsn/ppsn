@@ -1,0 +1,40 @@
+﻿<UserControl x:Class="TecWare.PPSn.UI.PpsTagsEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:TecWare.PPSn.UI"
+             mc:Ignorable="d" 
+             d:DesignHeight="300" d:DesignWidth="300">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="150"/>
+        </Grid.RowDefinitions>
+        <ListBox Grid.Row="0" ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=Tags}">
+            <ListBox.ItemTemplate>
+                <ItemContainerTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="75"/>
+                            <ColumnDefinition Width="{Binding ElementName=tbValue,Path=ActualWidth}"/>
+                            <ColumnDefinition Width="75"/>
+                        </Grid.ColumnDefinitions>
+                        <Label Grid.Column="0" Content="{Binding Name}"/>
+                        <TextBox Grid.Column="1" Text="{Binding Value, Mode=OneWay}" Width="auto" Height="auto" Name="tbValue"/>
+                        <Label Grid.Column="2" Content="{Binding UserId}"/>
+                    </Grid>
+                </ItemContainerTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <StackPanel Grid.Row="1">
+            <Label Content="Hinzufügen:"/>
+            <Label Content="Name:"/>
+            <TextBox Name="tbnewName"/>
+            <Label Content="Wert:"/>
+            <TextBox Name="tbnewValue"/>
+            <Button Content="Speichern" Command="{Binding AddTagCommand}"/>
+        </StackPanel>
+
+    </Grid>
+</UserControl>
