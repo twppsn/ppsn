@@ -206,7 +206,6 @@
 								</BeginStoryboard>
 							</DataTrigger.ExitActions>
 						</DataTrigger>
-
 					</Style.Triggers>
 				</Style>
 			</Rectangle.Style>
@@ -225,7 +224,10 @@
 				<StackPanel.Style>
 					<Style TargetType="{x:Type StackPanel}">
 						<Style.Triggers>
-							<DataTrigger Binding="{Binding Path=IsPaneVisible}" Value="false">
+							<DataTrigger Binding="{Binding Path=IsPaneVisible}">
+								<DataTrigger.Value>
+									<sys:Boolean>false</sys:Boolean>
+								</DataTrigger.Value>
 								<DataTrigger.EnterActions>
 									<BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}"/>
 								</DataTrigger.EnterActions>
@@ -452,7 +454,10 @@
 			<uiL:PpsNavigatorControl.Style>
 				<Style TargetType="{x:Type UserControl}">
 					<Style.Triggers>
-						<DataTrigger Binding="{Binding Path=IsNavigatorVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}" Value="False">
+						<DataTrigger Binding="{Binding Path=IsNavigatorVisible, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow}}">
+							<DataTrigger.Value>
+								<sys:Boolean>false</sys:Boolean>
+							</DataTrigger.Value>
 							<DataTrigger.EnterActions>
 								<BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}" />
 							</DataTrigger.EnterActions>
@@ -466,17 +471,35 @@
 		</uiL:PpsNavigatorControl>
 
 		<Grid Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="5" Margin="0,0,0,16">
-			<!--future use
+			<Grid.Style>
+				<Style TargetType="{x:Type Grid}">
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding Path=IsPaneVisible}">
+							<DataTrigger.Value>
+								<sys:Boolean>false</sys:Boolean>
+							</DataTrigger.Value>
+							<DataTrigger.EnterActions>
+								<BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}" />
+							</DataTrigger.EnterActions>
+							<DataTrigger.ExitActions>
+								<BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}" />
+							</DataTrigger.ExitActions>
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</Grid.Style>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="*"/>
-				<ColumnDefinition Width="72"/>
-			</Grid.ColumnDefinitions>-->
+				<!--Bindings do use type converters though-->
+				<ColumnDefinition Width="{Binding Source={StaticResource PPSnCharmBarColumnWidth}, Mode=OneTime}"/>
+			</Grid.ColumnDefinitions>
 			<Grid.RowDefinitions>
 				<RowDefinition Height="auto"/>
 				<RowDefinition Height="*"/>
 			</Grid.RowDefinitions>
 
-			<Border Grid.Row="0" DataContext="{Binding CurrentPane}">
+			<!--center toolbar, with or without sideBar-->
+			<Border DataContext="{Binding CurrentPane}">
 				<Border.Style>
 					<Style TargetType="{x:Type Border}">
 						<Setter Property="Padding" Value="0"/>
@@ -494,7 +517,7 @@
 						</Style.Triggers>
 					</Style>
 				</Border.Style>
-				<ToolBar Width="{StaticResource PPSnPaneMaxGridWidth}" Height="36" ItemsSource="{Binding Commands}">
+				<ToolBar MaxWidth="{StaticResource PPSnPaneMaxGridWidth}" Height="36" ItemsSource="{Binding Commands}">
 					<ToolBar.Style>
 						<Style TargetType="{x:Type ToolBar}" BasedOn="{StaticResource PaneToolBarStyle}" >
 							<Style.Triggers>
@@ -522,26 +545,20 @@
 				</ContentPresenter.Style>
 			</ContentPresenter>
 
-			<uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right"
-									Margin="24,24,0,0" Visibility="Collapsed" />
-
-			<Grid.Style>
-				<Style TargetType="{x:Type Grid}">
-					<Style.Triggers>
-						<DataTrigger Binding="{Binding Path=IsPaneVisible}" Value="False">
-							<DataTrigger.EnterActions>
-								<BeginStoryboard Storyboard="{StaticResource FadeOutStoryboard}" />
-							</DataTrigger.EnterActions>
-							<DataTrigger.ExitActions>
-								<BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}" />
-							</DataTrigger.ExitActions>
-						</DataTrigger>
-					</Style.Triggers>
-				</Style>
-			</Grid.Style>
+			<uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="0" Grid.RowSpan="2">
+				<uiL:PpsCharmbarControl.Style>
+					<Style TargetType="{x:Type UserControl}">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding Path=CurrentPane, Mode=OneWay}" Value="{x:Null}">
+								<Setter Property="Visibility" Value="Hidden"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</uiL:PpsCharmbarControl.Style>
+			</uiL:PpsCharmbarControl>
 		</Grid>
 
-		<Grid  Grid.Row="2" Grid.ColumnSpan="5" Background="{StaticResource PPSnWindowFooterBrush}">
+		<Grid Grid.Row="2" Grid.ColumnSpan="5" Background="{StaticResource PPSnWindowFooterBrush}">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="2*"/>
 				<ColumnDefinition Width="1*"/>
