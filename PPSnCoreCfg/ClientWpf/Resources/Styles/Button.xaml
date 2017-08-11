@@ -169,9 +169,6 @@
 						</Viewbox>
 					</Border>
 					<ControlTemplate.Triggers>
-						<!--<Trigger Property="IsMouseOver" Value="True">
-							<Setter Property="Fill" TargetName="imagePath" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-						</Trigger>-->
 						<Trigger Property="IsMouseOver" Value="True">
 							<Setter Property="Opacity" TargetName="imagePath" Value="1"/>
 						</Trigger>
