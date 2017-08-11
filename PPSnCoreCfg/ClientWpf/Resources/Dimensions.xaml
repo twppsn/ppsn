@@ -6,7 +6,10 @@
 	<sys:Double x:Key="PPSnSideBarShrinkedWidth">50</sys:Double>
 
 	<sys:Double x:Key="PPSnPaneMaxGridWidth">1200</sys:Double>
-	<sys:Double x:Key="PPSnPaneBorderSize">24</sys:Double>
+	<sys:Double x:Key="PPSnPaneBorderSizeLeft">24</sys:Double>
+	<sys:Double x:Key="PPSnPaneBorderSizeTop">24</sys:Double>
+	<sys:Double x:Key="PPSnPaneBorderSizeRight">0</sys:Double>
+	<sys:Double x:Key="PPSnCharmBarColumnWidth">48</sys:Double>
 
 	<GridLength x:Key="PaneLabelColumnWidth">110</GridLength>
 	<GridLength x:Key="PaneSpaceColumnWidth">55</GridLength>
