@@ -22,11 +22,10 @@
 
 	<Grid MaxWidth="{StaticResource PPSnPaneMaxGridWidth}">
 		<Grid.Margin>
-			<Thickness 
-				Left="{StaticResource PPSnPaneBorderSize}"
-				Top="{StaticResource PPSnPaneBorderSize}"
-				Right="{StaticResource PPSnPaneBorderSize}"
-				Bottom="0"/>
+			<Thickness Left="{StaticResource PPSnPaneBorderSizeLeft}"
+					   Top="{StaticResource PPSnPaneBorderSizeTop}"
+					   Right="{StaticResource PPSnPaneBorderSizeRight}"
+					   Bottom="0"/>
 		</Grid.Margin>
 		<Grid.ColumnDefinitions>
             <ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}" />
