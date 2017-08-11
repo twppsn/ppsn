@@ -549,8 +549,11 @@
 				<uiL:PpsCharmbarControl.Style>
 					<Style TargetType="{x:Type UserControl}">
 						<Style.Triggers>
-							<DataTrigger Binding="{Binding Path=CurrentPane, Mode=OneWay}" Value="{x:Null}">
-								<Setter Property="Visibility" Value="Visible"/>
+							<DataTrigger Binding="{Binding CurrentPane, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow, AncestorLevel=1},	Mode=OneWay}">
+								<DataTrigger.Value>
+									<x:Null/>
+								</DataTrigger.Value>
+								<Setter Property="Visibility" Value="Hidden"/>
 							</DataTrigger>
 						</Style.Triggers>
 					</Style>
