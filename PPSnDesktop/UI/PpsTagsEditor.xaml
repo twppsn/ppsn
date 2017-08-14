@@ -6,35 +6,29 @@
              xmlns:local="clr-namespace:TecWare.PPSn.UI"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
+    <UserControl.Resources>
+        <local:PpsObjectTagsConverter x:Key="PpsObjectTagsConverter"/>
+        <local:PpsMultiParamConverter x:Key="PpsMultiParamConverter"/>
+    </UserControl.Resources>
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition />
-            <RowDefinition Height="150"/>
-        </Grid.RowDefinitions>
-        <ListBox Grid.Row="0" ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=Tags}">
+        <ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=TagsSource, Converter={StaticResource PpsObjectTagsConverter}}">
             <ListBox.ItemTemplate>
                 <ItemContainerTemplate>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="75"/>
-                            <ColumnDefinition Width="{Binding ElementName=tbValue,Path=ActualWidth}"/>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="75"/>
                             <ColumnDefinition Width="75"/>
                         </Grid.ColumnDefinitions>
-                        <Label Grid.Column="0" Content="{Binding Name}"/>
-                        <TextBox Grid.Column="1" Text="{Binding Value, Mode=OneWay}" Width="auto" Height="auto" Name="tbValue"/>
+                        <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay}" IsEnabled="{Binding CreateNewBool}"/>
+                        <TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="auto" MinWidth="200" Height="auto" Name="tbValue" IsEnabled="{Binding IsUserChangeable}"/>
                         <Label Grid.Column="2" Content="{Binding UserId}"/>
+                        <Button Grid.Column="3" Command="{x:Static local:PpsTagsEditor.RemoveTagCommand}" CommandParameter="{Binding}" Content="Löschen" Visibility="{Binding CanDelete}"/>
+                        <Button Name="bAddTag" Grid.Column="3" Command="{x:Static local:PpsTagsEditor.AppendTagCommand}" Content="Hinzufügen" CommandParameter="{Binding}" Visibility="{Binding CreateNewVisibility}"/>
                     </Grid>
                 </ItemContainerTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
-        <StackPanel Grid.Row="1">
-            <Label Content="Hinzufügen:"/>
-            <Label Content="Name:"/>
-            <TextBox Name="tbnewName"/>
-            <Label Content="Wert:"/>
-            <TextBox Name="tbnewValue"/>
-            <Button Content="Speichern" Command="{Binding AddTagCommand}"/>
-        </StackPanel>
-
     </Grid>
 </UserControl>

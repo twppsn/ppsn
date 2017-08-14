@@ -213,7 +213,7 @@
                         <RowDefinition/>
                     </Grid.RowDefinitions>
 					<ContentControl Grid.Row="0" Content="Tags" Template="{StaticResource charmbarContentHeaderTemplate}"/>
-                    <uiL:PpsTagsEditor DataContext="{Binding}" />
+                    <uiL:PpsTagsEditor Grid.Row="1" TagsSource="{Binding}"/>
                 </Grid>
             </Border>
 		</DataTemplate>
