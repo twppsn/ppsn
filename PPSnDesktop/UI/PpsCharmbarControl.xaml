@@ -221,8 +221,8 @@
 								<DataTrigger.Value>
 									<uiL:PPSnCharmbarContentType>Tag</uiL:PPSnCharmbarContentType>
 								</DataTrigger.Value>
-								<Setter TargetName="headerText" Property="Text" Value="Attribute"/>
-								<Setter TargetName="headerImagePath" Property="Data" Value="{StaticResource mapMarkerOutlinePathGeometry}"/>
+								<Setter TargetName="headerText" Property="Text" Value="Tag"/>
+								<Setter TargetName="headerImagePath" Property="Data" Value="{StaticResource hashTagPathGeometry}"/>
 							</DataTrigger>
 							<DataTrigger Binding="{Binding CurrentContentType, ElementName=ppsnCharmbarControl, Mode=OneWay}">
 								<DataTrigger.Value>
@@ -420,7 +420,7 @@
 					<uiL:PPSnCharmbarContentType>Qm</uiL:PPSnCharmbarContentType>
 				</ToggleButton.Tag>
 			</ToggleButton>
-			<ToggleButton Content="{StaticResource mapMarkerOutlinePathGeometry}">
+			<ToggleButton Content="{StaticResource hashTagPathGeometry}">
 				<ToggleButton.Tag>
 					<uiL:PPSnCharmbarContentType>Tag</uiL:PPSnCharmbarContentType>
 				</ToggleButton.Tag>
