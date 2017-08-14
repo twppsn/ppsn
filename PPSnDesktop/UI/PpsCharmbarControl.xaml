@@ -221,7 +221,7 @@
 								<DataTrigger.Value>
 									<uiL:PPSnCharmbarContentType>Tag</uiL:PPSnCharmbarContentType>
 								</DataTrigger.Value>
-								<Setter TargetName="headerText" Property="Text" Value="Tag"/>
+								<Setter TargetName="headerText" Property="Text" Value="Attribute"/>
 								<Setter TargetName="headerImagePath" Property="Data" Value="{StaticResource mapMarkerOutlinePathGeometry}"/>
 							</DataTrigger>
 							<DataTrigger Binding="{Binding CurrentContentType, ElementName=ppsnCharmbarControl, Mode=OneWay}">
