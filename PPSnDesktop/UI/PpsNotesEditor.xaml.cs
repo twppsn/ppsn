@@ -21,6 +21,7 @@ namespace TecWare.PPSn.UI
     /// </summary>
     public partial class PpsNotesEditor : UserControl
     {
+		private string tempNote;
 		public string Notice
 		{
 			get
@@ -30,14 +31,26 @@ namespace TecWare.PPSn.UI
 			}
 			set
 			{
-				((PpsObject)DataContext).Tags.UpdateTag("Notiz", Data.PpsObjectTagClass.Text, value);
-				((PpsObject)DataContext).UpdateLocalAsync().AwaitTask();
+				tempNote = value;
 			}
 		}
 
 		public PpsNotesEditor()
         {
             InitializeComponent();
-        }
-    }
+
+			CommandBindings.Add(
+						new CommandBinding(SaveNoteCommand,
+							(isender, ie) =>
+							{
+								((PpsObject)DataContext).Tags.UpdateTag("Notiz", Data.PpsObjectTagClass.Text, tempNote);
+								((PpsObject)DataContext).UpdateLocalAsync().AwaitTask();
+							},
+							(isender, ie) => ie.CanExecute = tempNote != null
+						)
+					);
+		}
+
+		public readonly static RoutedUICommand SaveNoteCommand = new RoutedUICommand("SaveNote", "SaveNote", typeof(PpsNotesEditor));
+	}
 }
