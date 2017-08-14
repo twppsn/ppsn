@@ -239,11 +239,26 @@
 
 		<DataTemplate x:Key="noteTemplate">
 			<Grid>
+				<uiL:PpsNotesEditor DataContext="{Binding}" />
 			</Grid>
 		</DataTemplate>
 
 		<DataTemplate x:Key="linkTemplate">
 			<Grid>
+				<ListBox ItemsSource="{Binding Links}">
+					<ListBox.ItemTemplate>
+						<ItemContainerTemplate>
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="75"/>
+									<ColumnDefinition Width="75"/>
+								</Grid.ColumnDefinitions>
+								<Label Grid.Column="0" Content="{Binding LinkToId}"/>
+								<Label Grid.Column="1" Content="{Binding LinkTo}"/>
+							</Grid>
+						</ItemContainerTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
 			</Grid>
 		</DataTemplate>
 
@@ -259,6 +274,7 @@
 
 		<DataTemplate x:Key="tagTemplate">
 			<Grid>
+				<uiL:PpsTagsEditor DataContext="{Binding}" />
 			</Grid>
 		</DataTemplate>
 
