@@ -58,7 +58,7 @@ namespace TecWare.PPSn.UI
 								((IPpsTagItem)ie.Parameter).Append();
 								ie.Handled = true;
 							},
-							(isender, ie) => ie.CanExecute = true
+							(isender, ie) => ie.CanExecute = !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name)
 						)
 					);
 		}
@@ -141,7 +141,7 @@ namespace TecWare.PPSn.UI
 			public PpsTagsImplementation(PpsObject obj)
 			{
 				this.obj = obj;
-				foreach (var tag in obj.Tags)
+				foreach (var tag in (from t in obj.Tags where t.Class == PpsObjectTagClass.Text select t))
 					tags.Add(new PpsTagItemImplementation(tag, this));
 				tags.Add(new PpsTagItemImplementation(this));
 			}

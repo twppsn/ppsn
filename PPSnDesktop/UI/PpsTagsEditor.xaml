@@ -21,7 +21,7 @@
                             <ColumnDefinition Width="75"/>
                             <ColumnDefinition Width="75"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay}" IsEnabled="{Binding CreateNewBool}"/>
+                        <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CreateNewBool}"/>
                         <TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="auto" MinWidth="200" Height="auto" Name="tbValue" IsEnabled="{Binding IsUserChangeable}"/>
                         <Label Grid.Column="2" Content="{Binding UserId}"/>
                         <Button Grid.Column="3" Command="{x:Static local:PpsTagsEditor.RemoveTagCommand}" CommandParameter="{Binding}" Content="Löschen" Visibility="{Binding CanDelete}"/>
