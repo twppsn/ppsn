@@ -274,7 +274,7 @@
 
 		<DataTemplate x:Key="tagTemplate">
 			<Grid>
-				<uiL:PpsTagsEditor TagsSource="{Binding}" />
+                <uiL:PpsTagsEditor PTETagsSource="{Binding}" />
 			</Grid>
 		</DataTemplate>
 

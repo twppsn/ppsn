@@ -63,26 +63,11 @@ namespace TecWare.PPSn.UI
 					);
 		}
 
-		public readonly static DependencyProperty TagsSourceProperty = DependencyProperty.Register(nameof(TagsSource), typeof(PpsObject), typeof(PpsTagsEditor));
-		public readonly static DependencyProperty TagsProperty = DependencyProperty.Register(nameof(Tags), typeof(IPpsTags), typeof(PpsTagsEditor));
-		public PpsObject TagsSource { get => (PpsObject)GetValue(TagsSourceProperty); set { SetValue(TagsSourceProperty, value); SetValue(TagsProperty, ((PpsObject)GetValue(TagsSourceProperty)).Tags); } }
-		public IPpsTags Tags { get => (IPpsTags)GetValue(TagsProperty); set => SetValue(TagsProperty, value); }
+		public readonly static DependencyProperty TagsSourceProperty = DependencyProperty.Register(nameof(PTETagsSource), typeof(PpsObject), typeof(PpsTagsEditor));
+		public PpsObject PTETagsSource { get => (PpsObject)GetValue(TagsSourceProperty); set { SetValue(TagsSourceProperty, value); } }
 
 		public readonly static RoutedUICommand AppendTagCommand = new RoutedUICommand("AppendTag", "AppendTag", typeof(PpsTagsEditor));
 		public readonly static RoutedUICommand RemoveTagCommand = new RoutedUICommand("RemoveTag", "RemoveTag", typeof(PpsTagsEditor));
-	}
-
-	public sealed class PpsMultiParamConverter : IMultiValueConverter
-	{
-		public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
-		{
-			return values.Clone();
-		}
-
-		public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-		{
-			throw new NotImplementedException();
-		}
 	}
 
 	public sealed class PpsObjectTagsConverter : IValueConverter

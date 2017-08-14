@@ -8,10 +8,9 @@
              d:DesignHeight="300" d:DesignWidth="300">
     <UserControl.Resources>
         <local:PpsObjectTagsConverter x:Key="PpsObjectTagsConverter"/>
-        <local:PpsMultiParamConverter x:Key="PpsMultiParamConverter"/>
     </UserControl.Resources>
     <Grid>
-        <ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=TagsSource, Converter={StaticResource PpsObjectTagsConverter}}">
+        <ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=PTETagsSource, Converter={StaticResource PpsObjectTagsConverter}}">
             <ListBox.ItemTemplate>
                 <ItemContainerTemplate>
                     <Grid>
