@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -100,9 +101,9 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PPSnCharmbarContentTypeToCheckedConverter ---------------------------
+	#region -- class PPSnCharmbarContentTypeIsCurrentConverter ---------------------------
 
-	internal sealed class PPSnCharmbarContentTypeToCheckedConverter : IMultiValueConverter
+	internal sealed class PPSnCharmbarContentTypeIsCurrentConverter : IMultiValueConverter
 	{
 		public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
 		{
@@ -113,7 +114,7 @@ namespace TecWare.PPSn.UI
 		{
 			throw new NotSupportedException();
 		}
-	} // class PpsMultiLineStringConverter
+	} // class PPSnCharmbarContentTypeIsCurrentConverter
 
 	#endregion
 }
