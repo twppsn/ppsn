@@ -19,8 +19,10 @@ namespace TecWare.PPSn.UI
 	{
 		void Append();
 		void Remove();
+		void Save();
 		string Name { get; }
 		string Value { get; }
+		bool CanSave { get; }
 		PpsObjectTagClass Class { get; }
 	} // interface IPpsTagItem
 
@@ -91,7 +93,24 @@ namespace TecWare.PPSn.UI
 			public string Name { get { return tag != null ? tag.Name : createNewName; } set { createNewName = value; } }
 
 			private string createNewValue = String.Empty;
-			public string Value { get { return tag != null ? (string)tag.Value : createNewValue; } set { if (tag != null) tag.Update(Class, value); else createNewValue = value; } }
+			public string Value
+			{
+				get
+				{
+					return tag != null && String.IsNullOrEmpty(createNewValue) ? (string)tag.Value : createNewValue;
+				}
+
+				set
+				{
+					if ((tag != null) && (tag.Class != PpsObjectTagClass.Note))
+					{
+						tag.Update(Class, value);
+						tags.Commit();
+					}
+					else
+						createNewValue = value;
+				}
+			}
 
 			public PpsObjectTagClass Class => tag != null ? tag.Class : tags.TagClass;
 
@@ -116,6 +135,16 @@ namespace TecWare.PPSn.UI
 				createNewName = String.Empty;
 				createNewValue = String.Empty;
 			}
+
+			public void Save()
+			{
+				tag.Update(Class, createNewValue);
+				tags.Commit();
+				createNewValue = String.Empty;
+			}
+
+			public bool CanSave
+				=> !String.IsNullOrEmpty(createNewValue);
 		}
 
 		private sealed class PpsTagsImplementation : IPpsTags, INotifyCollectionChanged
