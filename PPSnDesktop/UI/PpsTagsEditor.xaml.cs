@@ -63,6 +63,16 @@ namespace TecWare.PPSn.UI
 							(isender, ie) => ie.CanExecute = !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Tag || !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value))
 						)
 					);
+			CommandBindings.Add(
+						new CommandBinding(SaveTagCommand,
+							(isender, ie) =>
+							{
+								((IPpsTagItem)ie.Parameter).Save();
+								ie.Handled = true;
+							},
+							(isender, ie) => ie.CanExecute = ((IPpsTagItem)ie.Parameter).CanSave
+						)
+					);
 		}
 
 		public readonly static DependencyProperty TagsClassProperty = DependencyProperty.Register(nameof(PTETagsClass), typeof(PpsObjectTagClass), typeof(PpsTagsEditor));
@@ -72,6 +82,7 @@ namespace TecWare.PPSn.UI
 		public PpsObject PTETagsSource { get => (PpsObject)GetValue(TagsSourceProperty); set { SetValue(TagsSourceProperty, value); } }
 
 		public readonly static RoutedUICommand AppendTagCommand = new RoutedUICommand("AppendTag", "AppendTag", typeof(PpsTagsEditor));
+		public readonly static RoutedUICommand SaveTagCommand = new RoutedUICommand("SaveTag", "SaveTag", typeof(PpsTagsEditor));
 		public readonly static RoutedUICommand RemoveTagCommand = new RoutedUICommand("RemoveTag", "RemoveTag", typeof(PpsTagsEditor));
 	}
 

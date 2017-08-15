@@ -240,7 +240,7 @@
 
 		<DataTemplate x:Key="noteTemplate">
 			<Grid>
-                <uiL:PpsNotesEditor PNETagsSource="{Binding}" />
+                <uiL:PpsTagsEditor PTETagsSource="{Binding}" PTETagsClass="{x:Static data:PpsObjectTagClass.Note}"/>
 			</Grid>
 		</DataTemplate>
 
