@@ -58,7 +58,7 @@ namespace TecWare.PPSn.UI
 								((IPpsTagItem)ie.Parameter).Append();
 								ie.Handled = true;
 							},
-							(isender, ie) => ie.CanExecute = !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name)
+							(isender, ie) => ie.CanExecute = !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value)
 						)
 					);
 		}
