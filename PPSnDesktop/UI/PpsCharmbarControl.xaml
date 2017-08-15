@@ -282,6 +282,7 @@
 
 		<DataTemplate x:Key="taskTemplate">
 			<Grid>
+                <uiL:PpsTagsEditor TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Date}"/>
 			</Grid>
 		</DataTemplate>
 

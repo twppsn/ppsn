@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
@@ -60,7 +61,10 @@ namespace TecWare.PPSn.UI
 								((IPpsTagItem)ie.Parameter).Append();
 								ie.Handled = true;
 							},
-							(isender, ie) => ie.CanExecute = !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Tag || !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value))
+							(isender, ie) => ie.CanExecute =(((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Tag && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name)) ||
+															(((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Text && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value)) ||
+															(((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Date && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && DateTime.TryParse(((IPpsTagItem)ie.Parameter).Value, out var temp))
+						//!String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Tag || !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value))
 						)
 					);
 			CommandBindings.Add(
@@ -111,7 +115,7 @@ namespace TecWare.PPSn.UI
 			{
 				get
 				{
-					return tag != null && String.IsNullOrEmpty(createNewValue) ? (string)tag.Value : createNewValue;
+					return tag != null && String.IsNullOrEmpty(createNewValue) ? tag.Value.ToString() : createNewValue;
 				}
 
 				set
@@ -122,7 +126,7 @@ namespace TecWare.PPSn.UI
 						tags.Commit();
 					}
 					else
-						createNewValue = value;
+						createNewValue = (string)value;
 				}
 			}
 
@@ -171,8 +175,13 @@ namespace TecWare.PPSn.UI
 			{
 				this.obj = obj;
 				this.tagClass = tagClass;
-				foreach (var tag in (from t in obj.Tags where t.Class == this.tagClass select t))
-					tags.Add(new PpsTagItemImplementation(tag, this));
+
+				if (tagClass == PpsObjectTagClass.Date)
+					foreach (var tag in (from t in obj.Tags where t.Class == this.tagClass select t).OrderBy(t=>(DateTime)t.Value).ThenBy(t=>t.Name))
+						tags.Add(new PpsTagItemImplementation(tag, this));
+				else 
+					foreach (var tag in (from t in obj.Tags where t.Class == this.tagClass select t).OrderBy(t => t.UserId).ThenBy(t=>t.Name))
+						tags.Add(new PpsTagItemImplementation(tag, this));
 				tags.Add(new PpsTagItemImplementation(this));
 			}
 
@@ -197,9 +206,15 @@ namespace TecWare.PPSn.UI
 					case PpsObjectTagClass.Tag:
 						tagValue = null;
 						break;
+					case PpsObjectTagClass.Date:
+						tagValue = DateTime.Parse((string)tagValue).ToUniversalTime().ToString(CultureInfo.InvariantCulture);
+						//tagValue = DateTime.Parse((string)tagValue).ToUniversalTime().ToFileTime();
+						break;
 				}
 				var tag = this.obj.Tags.UpdateTag(tagName, tagClass, tagValue);
 				tags.Insert(tags.Count - 1, new PpsTagItemImplementation(tag, this));
+				//if (tagClass == PpsObjectTagClass.Date)
+					//tags.Sort((a,b)=>((DateTime)a.Value - (DateTime)b.Value))
 				obj.UpdateLocalAsync().AwaitTask();
 				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 			}
