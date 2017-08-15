@@ -112,7 +112,7 @@ namespace TecWare.PPSn.UI
 
 			public void Append()
 			{
-				tags.Append(createNewName, PpsObjectTagClass.Text, createNewValue);
+				tags.Append(createNewName, createNewValue);
 				createNewName = String.Empty;
 				createNewValue = String.Empty;
 			}
