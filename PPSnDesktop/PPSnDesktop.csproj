@@ -103,9 +103,6 @@
     <Compile Include="UI\PpsSplashWindow.xaml.cs">
       <DependentUpon>PpsSplashWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="UI\PpsTagCloud.xaml.cs">
-      <DependentUpon>PpsTagCloud.xaml</DependentUpon>
-    </Compile>
     <Compile Include="UI\PpsTagsEditor.xaml.cs">
       <DependentUpon>PpsTagsEditor.xaml</DependentUpon>
     </Compile>
@@ -137,10 +134,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="UI\PpsSplashWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="UI\PpsTagCloud.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -60,10 +60,13 @@ namespace TecWare.PPSn.UI
 								((IPpsTagItem)ie.Parameter).Append();
 								ie.Handled = true;
 							},
-							(isender, ie) => ie.CanExecute = !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value)
+							(isender, ie) => ie.CanExecute = !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Tag || !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value))
 						)
 					);
 		}
+
+		public readonly static DependencyProperty TagsClassProperty = DependencyProperty.Register(nameof(PTETagsClass), typeof(PpsObjectTagClass), typeof(PpsTagsEditor));
+		public PpsObjectTagClass PTETagsClass { get => (PpsObjectTagClass)GetValue(TagsClassProperty); set { SetValue(TagsClassProperty, value); } }
 
 		public readonly static DependencyProperty TagsSourceProperty = DependencyProperty.Register(nameof(PTETagsSource), typeof(PpsObject), typeof(PpsTagsEditor));
 		public PpsObject PTETagsSource { get => (PpsObject)GetValue(TagsSourceProperty); set { SetValue(TagsSourceProperty, value); } }

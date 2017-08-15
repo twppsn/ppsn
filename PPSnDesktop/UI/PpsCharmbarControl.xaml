@@ -6,6 +6,7 @@
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
  			 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
              xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
+             xmlns:data="clr-namespace:TecWare.PPSn.Data;assembly=PPSn.Core"
              mc:Ignorable="d" 
 			 x:Name="ppsnCharmbarControl"
              d:DesignHeight="300" d:DesignWidth="300">
@@ -269,13 +270,13 @@
 
 		<DataTemplate x:Key="qmTemplate">
 			<Grid>
-                <uiL:PpsTagCloud PTCTagsSource="{Binding}"/>
+                <uiL:PpsTagsEditor PTETagsSource="{Binding}" PTETagsClass="{x:Static data:PpsObjectTagClass.Tag}"/>
             </Grid>
 		</DataTemplate>
 
 		<DataTemplate x:Key="tagTemplate">
 			<Grid>
-                <uiL:PpsTagsEditor PTETagsSource="{Binding}" />
+                <uiL:PpsTagsEditor PTETagsSource="{Binding}" PTETagsClass="{x:Static data:PpsObjectTagClass.Text}"/>
 			</Grid>
 		</DataTemplate>
 
