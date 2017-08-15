@@ -133,8 +133,26 @@ namespace TecWare.PPSn.UI
 
 			public event NotifyCollectionChangedEventHandler CollectionChanged;
 
-			public void Append(string tagName, PpsObjectTagClass tagClass, string tagValue)
+			public PpsObjectTagClass TagClass
+				=> tagClass;
+
+			public void Append(string tagName)
+				=> Append(tagName, tagClass, null);
+			public void Append(string tagName, string tagValue)
+				=> Append(tagName, tagClass, tagValue);
+
+			public void Append(string tagName, PpsObjectTagClass tagClass, object tagValue)
 			{
+				switch (tagClass)
+				{
+					case PpsObjectTagClass.Text:
+						if (!((tagValue is string) && !String.IsNullOrEmpty((string)tagValue)))
+							throw new ArgumentNullException("Tag Value");
+						break;
+					case PpsObjectTagClass.Tag:
+						tagValue = null;
+						break;
+				}
 				var tag = this.obj.Tags.UpdateTag(tagName, tagClass, tagValue);
 				tags.Insert(tags.Count - 1, new PpsTagItemImplementation(tag, this));
 				obj.UpdateLocalAsync().AwaitTask();
