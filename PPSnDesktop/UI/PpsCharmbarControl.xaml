@@ -269,7 +269,8 @@
 
 		<DataTemplate x:Key="qmTemplate">
 			<Grid>
-			</Grid>
+                <uiL:PpsTagCloud PTCTagsSource="{Binding}"/>
+            </Grid>
 		</DataTemplate>
 
 		<DataTemplate x:Key="tagTemplate">
