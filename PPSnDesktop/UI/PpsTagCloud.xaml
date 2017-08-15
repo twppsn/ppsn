@@ -11,20 +11,6 @@
         <local:PpsObjectTagsConverter x:Key="PpsObjectTagsConverter"/>
     </UserControl.Resources>
     <Grid>
-        <!--<Border BorderThickness="2">
-        <ItemsControl ItemsSource="{Binding PTCTagsSource, Converter={StaticResource PpsObjectTagsConverter}}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Button Content="{Binding Name}" Width="auto"/>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </Border>-->
         <ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
                                        Path=PTCTagsSource, 
                                        Converter={StaticResource PpsObjectTagsConverter}, 
