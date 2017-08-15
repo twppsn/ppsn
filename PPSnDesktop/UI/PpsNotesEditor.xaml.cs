@@ -21,36 +21,47 @@ namespace TecWare.PPSn.UI
     /// </summary>
     public partial class PpsNotesEditor : UserControl
     {
-		private string tempNote;
-		public string Notice
-		{
-			get
-			{
-				var tag = (from ttag in ((PpsObject)DataContext).Tags where ttag.Name == "Notiz" select ttag).FirstOrDefault();
-				return tag != null ? (string)tag.Value : String.Empty;
-			}
-			set
-			{
-				tempNote = value;
-			}
-		}
-
 		public PpsNotesEditor()
         {
             InitializeComponent();
 
 			CommandBindings.Add(
-						new CommandBinding(SaveNoteCommand,
+						new CommandBinding(RemoveTagCommand,
 							(isender, ie) =>
 							{
-								((PpsObject)DataContext).Tags.UpdateTag("Notiz", Data.PpsObjectTagClass.Text, tempNote);
-								((PpsObject)DataContext).UpdateLocalAsync().AwaitTask();
+								((IPpsTagItem)ie.Parameter).Remove();
+								ie.Handled = true;
 							},
-							(isender, ie) => ie.CanExecute = tempNote != null
+							(isender, ie) => ie.CanExecute = true
+						)
+					);
+			CommandBindings.Add(
+						new CommandBinding(AppendTagCommand,
+							(isender, ie) =>
+							{
+								((IPpsTagItem)ie.Parameter).Append();
+								ie.Handled = true;
+							},
+							(isender, ie) => ie.CanExecute = !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value)
+						)
+					);
+			CommandBindings.Add(
+						new CommandBinding(SaveTagCommand,
+							(isender, ie) =>
+							{
+								((IPpsTagItem)ie.Parameter).Save();
+								ie.Handled = true;
+							},
+							(isender, ie) => ie.CanExecute = ((IPpsTagItem)ie.Parameter).CanSave
 						)
 					);
 		}
 
-		public readonly static RoutedUICommand SaveNoteCommand = new RoutedUICommand("SaveNote", "SaveNote", typeof(PpsNotesEditor));
+		public readonly static DependencyProperty TagsSourceProperty = DependencyProperty.Register(nameof(PNETagsSource), typeof(PpsObject), typeof(PpsNotesEditor));
+		public PpsObject PNETagsSource { get => (PpsObject)GetValue(TagsSourceProperty); set { SetValue(TagsSourceProperty, value); } }
+
+		public readonly static RoutedUICommand AppendTagCommand = new RoutedUICommand("AppendTag", "AppendTag", typeof(PpsNotesEditor));
+		public readonly static RoutedUICommand SaveTagCommand = new RoutedUICommand("SaveTag", "SaveTag", typeof(PpsNotesEditor));
+		public readonly static RoutedUICommand RemoveTagCommand = new RoutedUICommand("RemoveTag", "RemoveTag", typeof(PpsNotesEditor));
 	}
 }

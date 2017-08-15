@@ -239,7 +239,7 @@
 
 		<DataTemplate x:Key="noteTemplate">
 			<Grid>
-				<uiL:PpsNotesEditor DataContext="{Binding}" />
+                <uiL:PpsNotesEditor PNETagsSource="{Binding}" />
 			</Grid>
 		</DataTemplate>
 
