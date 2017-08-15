@@ -169,6 +169,11 @@ namespace TecWare.PPSn.UI
 				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 			}
 
+			public void Commit()
+			{
+				obj.UpdateLocalAsync().AwaitTask();
+			}
+
 			public IEnumerator<IPpsTagItem> GetEnumerator()
 			{
 				throw new NotImplementedException();
