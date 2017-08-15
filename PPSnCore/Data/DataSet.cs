@@ -74,7 +74,10 @@ namespace TecWare.PPSn.Data
 		/// <summary>Attribute tag, with Date content.</summary>
 		Date = 2,
 		/// <summary>Real tag, no value.</summary>
-		Tag = 3
+		Tag = 3,
+		/// <summary>Note, value is text including linefeeds.</summary>
+		Note = 4
+
 	} // enum PpsObjectTagClass
 
 	#endregion
