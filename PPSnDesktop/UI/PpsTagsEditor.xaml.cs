@@ -75,11 +75,11 @@ namespace TecWare.PPSn.UI
 					);
 		}
 
-		public readonly static DependencyProperty TagsClassProperty = DependencyProperty.Register(nameof(PTETagsClass), typeof(PpsObjectTagClass), typeof(PpsTagsEditor));
-		public PpsObjectTagClass PTETagsClass { get => (PpsObjectTagClass)GetValue(TagsClassProperty); set { SetValue(TagsClassProperty, value); } }
+		public readonly static DependencyProperty TagsClassProperty = DependencyProperty.Register(nameof(TagsClass), typeof(PpsObjectTagClass), typeof(PpsTagsEditor));
+		public PpsObjectTagClass TagsClass { get => (PpsObjectTagClass)GetValue(TagsClassProperty); set { SetValue(TagsClassProperty, value); } }
 
-		public readonly static DependencyProperty TagsSourceProperty = DependencyProperty.Register(nameof(PTETagsSource), typeof(PpsObject), typeof(PpsTagsEditor));
-		public PpsObject PTETagsSource { get => (PpsObject)GetValue(TagsSourceProperty); set { SetValue(TagsSourceProperty, value); } }
+		public readonly static DependencyProperty TagsSourceProperty = DependencyProperty.Register(nameof(TagsSource), typeof(PpsObject), typeof(PpsTagsEditor));
+		public PpsObject TagsSource { get => (PpsObject)GetValue(TagsSourceProperty); set { SetValue(TagsSourceProperty, value); } }
 
 		public readonly static RoutedUICommand AppendTagCommand = new RoutedUICommand("AppendTag", "AppendTag", typeof(PpsTagsEditor));
 		public readonly static RoutedUICommand SaveTagCommand = new RoutedUICommand("SaveTag", "SaveTag", typeof(PpsTagsEditor));

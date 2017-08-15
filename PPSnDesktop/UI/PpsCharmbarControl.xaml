@@ -240,7 +240,7 @@
 
 		<DataTemplate x:Key="noteTemplate">
 			<Grid>
-                <uiL:PpsTagsEditor PTETagsSource="{Binding}" PTETagsClass="{x:Static data:PpsObjectTagClass.Note}"/>
+                <uiL:PpsTagsEditor TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Note}"/>
 			</Grid>
 		</DataTemplate>
 
@@ -270,13 +270,13 @@
 
 		<DataTemplate x:Key="qmTemplate">
 			<Grid>
-                <uiL:PpsTagsEditor PTETagsSource="{Binding}" PTETagsClass="{x:Static data:PpsObjectTagClass.Tag}"/>
+                <uiL:PpsTagsEditor TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Tag}"/>
             </Grid>
 		</DataTemplate>
 
 		<DataTemplate x:Key="tagTemplate">
 			<Grid>
-                <uiL:PpsTagsEditor PTETagsSource="{Binding}" PTETagsClass="{x:Static data:PpsObjectTagClass.Text}"/>
+                <uiL:PpsTagsEditor TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Text}"/>
 			</Grid>
 		</DataTemplate>
 

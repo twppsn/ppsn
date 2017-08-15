@@ -11,7 +11,7 @@
         <local:PpsObjectTagsConverter x:Key="PpsObjectTagsConverter"/>
         <DataTemplate x:Key="TagEditor">
             <ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-                                       Path=PTETagsSource, 
+                                       Path=TagsSource, 
                                        Converter={StaticResource PpsObjectTagsConverter},
                                        ConverterParameter={x:Static data:PpsObjectTagClass.Text}}">
                 <ListBox.ItemTemplate>
@@ -35,7 +35,7 @@
         </DataTemplate>
         <DataTemplate x:Key="TagCloud">
             <ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-                                       Path=PTETagsSource, 
+                                       Path=TagsSource, 
                                        Converter={StaticResource PpsObjectTagsConverter}, 
                                        ConverterParameter={x:Static data:PpsObjectTagClass.Tag}}">
                 <ListBox.ItemsPanel>
@@ -66,7 +66,7 @@
         </DataTemplate>
         <DataTemplate x:Key="NotesEditor">
             <ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-                                       Path=PTETagsSource, 
+                                       Path=TagsSource, 
                                        Converter={StaticResource PpsObjectTagsConverter},
                                        ConverterParameter={x:Static data:PpsObjectTagClass.Note}}">
                 <ListBox.ItemTemplate>
@@ -106,15 +106,15 @@
                 <Style TargetType="{x:Type ContentPresenter}" >
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-                                       Path=PTETagsClass}" Value="{x:Static data:PpsObjectTagClass.Text}">
+                                       Path=TagsClass}" Value="{x:Static data:PpsObjectTagClass.Text}">
                             <Setter Property="ContentTemplate" Value="{StaticResource TagEditor}"/>
                         </DataTrigger>
                         <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-                                       Path=PTETagsClass}" Value="{x:Static data:PpsObjectTagClass.Tag}">
+                                       Path=TagsClass}" Value="{x:Static data:PpsObjectTagClass.Tag}">
                             <Setter Property="ContentTemplate" Value="{StaticResource TagCloud}"/>
                         </DataTrigger>
                         <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-                                       Path=PTETagsClass}" Value="{x:Static data:PpsObjectTagClass.Note}">
+                                       Path=TagsClass}" Value="{x:Static data:PpsObjectTagClass.Note}">
                             <Setter Property="ContentTemplate" Value="{StaticResource NotesEditor}"/>
                         </DataTrigger>
                     </Style.Triggers>
