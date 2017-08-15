@@ -4,13 +4,17 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:TecWare.PPSn.UI"
+             xmlns:data="clr-namespace:TecWare.PPSn.Data;assembly=PPSn.Core"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
     <UserControl.Resources>
         <local:PpsObjectTagsConverter x:Key="PpsObjectTagsConverter"/>
     </UserControl.Resources>
     <Grid>
-        <ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=PTETagsSource, Converter={StaticResource PpsObjectTagsConverter}}">
+        <ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
+                                       Path=PTETagsSource, 
+                                       Converter={StaticResource PpsObjectTagsConverter},
+                                       ConverterParameter={x:Static data:PpsObjectTagClass.Text}}">
             <ListBox.ItemTemplate>
                 <ItemContainerTemplate>
                     <Grid>

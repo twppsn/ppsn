@@ -26,7 +26,7 @@ namespace TecWare.PPSn.UI
 
 	public interface IPpsTags : IEnumerable<IPpsTagItem>
 	{
-		void Append(string tagName, PpsObjectTagClass tagClass, string tagValue);
+		void Append(string tagName, PpsObjectTagClass tagClass, object tagValue);
 		void Remove(IPpsTagItem tag);
 	} // interface IPpsTags
 
@@ -93,7 +93,7 @@ namespace TecWare.PPSn.UI
 			private string createNewValue = String.Empty;
 			public string Value { get { return tag != null ? (string)tag.Value : createNewValue; } set { if (tag != null) tag.Update(Class, value); else createNewValue = value; } }
 
-			public PpsObjectTagClass Class => tag != null ? tag.Class : PpsObjectTagClass.Text;
+			public PpsObjectTagClass Class => tag != null ? tag.Class : tags.TagClass;
 
 			public long UserId => tag != null ? tag.UserId : PpsEnvironment.GetEnvironment().UserId;
 
@@ -121,12 +121,14 @@ namespace TecWare.PPSn.UI
 		private sealed class PpsTagsImplementation : IPpsTags, INotifyCollectionChanged
 		{
 			private PpsObject obj;
+			private PpsObjectTagClass tagClass;
 			private List<PpsTagItemImplementation> tags = new List<PpsTagItemImplementation>();
 
-			public PpsTagsImplementation(PpsObject obj)
+			public PpsTagsImplementation(PpsObject obj, PpsObjectTagClass tagClass)
 			{
 				this.obj = obj;
-				foreach (var tag in (from t in obj.Tags where t.Class == PpsObjectTagClass.Text select t))
+				this.tagClass = tagClass;
+				foreach (var tag in (from t in obj.Tags where t.Class == this.tagClass select t))
 					tags.Add(new PpsTagItemImplementation(tag, this));
 				tags.Add(new PpsTagItemImplementation(this));
 			}
@@ -181,7 +183,7 @@ namespace TecWare.PPSn.UI
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (value is PpsObject obj)
-				return new PpsTagsImplementation(obj);
+				return new PpsTagsImplementation(obj, (PpsObjectTagClass)parameter);
 			return null;
 		}
 
