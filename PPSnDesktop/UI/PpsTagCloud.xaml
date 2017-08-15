@@ -30,7 +30,7 @@
                                     <ColumnDefinition Width="auto"/>
                                     <ColumnDefinition Width="auto"/>
                                 </Grid.ColumnDefinitions>
-                                <Label Grid.Column="0" Content="{Binding UserId}"/><!--here should be an icon, showing ''Me'',''System'' or ''other user''-->
+                                <local:PpsOwnerIdentityIcon Grid.Column="0" Owner="{Binding UserId}"/>
                                 <TextBox Grid.Column="1" Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CreateNewBool}" MinWidth="30"/>
                                 <Button Grid.Column="2" Width="20" Height="20" Content="X" Command="{x:Static local:PpsTagCloud.RemoveTagCommand}" CommandParameter="{Binding}" Visibility="{Binding CanDelete}" Margin="2,0,0,0"/>
                                 <Button Name="bAddTag" Grid.Column="2" Command="{x:Static local:PpsTagCloud.AppendTagCommand}" Content="✓" CommandParameter="{Binding}" Visibility="{Binding CreateNewVisibility}" Margin="2,0,0,0"/>
