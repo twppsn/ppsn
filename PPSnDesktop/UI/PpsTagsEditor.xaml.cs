@@ -34,6 +34,17 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	#region -- enum PpsTagOwnerIdentityIcon ---------------------------------------------
+
+	public enum PpsTagOwnerIdentityIcon
+	{
+		System,
+		Mine,
+		Community
+	} // enum PpsTagOwnerIdentityIcon
+
+	#endregion
+
 	/// <summary>
 	/// Interaction logic for PpsTagsEditor.xaml
 	/// </summary>
@@ -132,9 +143,22 @@ namespace TecWare.PPSn.UI
 
 			public bool IsUserChangeable => tag != null ? tag.UserId == PpsEnvironment.GetEnvironment().UserId : true;
 
-			public Visibility CreateNewVisibility => tag != null ? Visibility.Collapsed : Visibility.Visible;
 			public bool CreateNewBool => tag == null;
-			public Visibility CanDelete => IsUserChangeable && !CreateNewBool ? Visibility.Visible : Visibility.Collapsed;
+
+			public bool CanDelete => IsUserChangeable && !CreateNewBool ? true : false;
+
+			public PpsTagOwnerIdentityIcon OwnerIdentityIcon
+			{
+				get
+				{
+					if (UserId == 0)
+						return PpsTagOwnerIdentityIcon.System;
+					else if (UserId == PpsEnvironment.GetEnvironment().UserId)
+						return PpsTagOwnerIdentityIcon.Mine;
+					else
+						return PpsTagOwnerIdentityIcon.Community;
+				}
+			} // prop OwnerIdentityIcon
 
 			public event PropertyChangedEventHandler PropertyChanged;
 
