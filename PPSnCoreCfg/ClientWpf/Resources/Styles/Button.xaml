@@ -99,6 +99,7 @@
 		<Setter Property="Focusable" Value="False"/>
 		<Setter Property="FontSize" Value="14"/>
 		<Setter Property="MinWidth" Value="36"/>
+		<Setter Property="Padding" Value="7"/>
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
 		<Setter Property="Template">
 			<Setter.Value>
@@ -111,7 +112,7 @@
 						<Grid x:Name="imageGrid" Grid.Row="0" Width="{TemplateBinding MinWidth}" Height="{TemplateBinding MinWidth}" Opacity=".75">
 							<Ellipse x:Name="circle" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
 										 Fill="Transparent" Stroke="{StaticResource PPSnActionButtonBrush}" StrokeThickness="1.5" />
-							<Viewbox SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Margin="7">
+							<Viewbox SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Margin="{TemplateBinding Padding}">
 								<Canvas Width="24" Height="24">
 									<Path Data="{TemplateBinding Tag}" Fill="{StaticResource PPSnActionButtonBrush}"/>
 								</Canvas>
