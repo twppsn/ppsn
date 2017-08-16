@@ -222,8 +222,15 @@
 								<DataTrigger.Value>
 									<uiL:PPSnCharmbarContentType>Tag</uiL:PPSnCharmbarContentType>
 								</DataTrigger.Value>
-								<Setter TargetName="headerText" Property="Text" Value="Tag"/>
+								<Setter TargetName="headerText" Property="Text" Value="Tags"/>
 								<Setter TargetName="headerImagePath" Property="Data" Value="{StaticResource hashTagPathGeometry}"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding CurrentContentType, ElementName=ppsnCharmbarControl, Mode=OneWay}">
+								<DataTrigger.Value>
+									<uiL:PPSnCharmbarContentType>Attribute</uiL:PPSnCharmbarContentType>
+								</DataTrigger.Value>
+								<Setter TargetName="headerText" Property="Text" Value="Attribute"/>
+								<Setter TargetName="headerImagePath" Property="Data" Value="{StaticResource tagTextPathGeometry}"/>
 							</DataTrigger>
 							<DataTrigger Binding="{Binding CurrentContentType, ElementName=ppsnCharmbarControl, Mode=OneWay}">
 								<DataTrigger.Value>
@@ -270,13 +277,16 @@
 
 		<DataTemplate x:Key="qmTemplate">
 			<Grid>
-                <uiL:PpsTagsEditor TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Tag}"/>
             </Grid>
 		</DataTemplate>
 
 		<DataTemplate x:Key="tagTemplate">
+			<uiL:PpsTagsEditor TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Tag}"/>
+		</DataTemplate>
+
+		<DataTemplate x:Key="attribTemplate">
 			<Grid>
-                <uiL:PpsTagsEditor TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Text}"/>
+				<uiL:PpsTagsEditor TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Text}"/>
 			</Grid>
 		</DataTemplate>
 
@@ -388,6 +398,11 @@
 						<uiL:PPSnCharmbarContentType>Tag</uiL:PPSnCharmbarContentType>
 					</ContentControl.Tag>
 				</ContentControl>
+				<ContentControl Content="{Binding}" ContentTemplate="{StaticResource attribTemplate}" Style="{StaticResource charmBarContentControlStyle}">
+					<ContentControl.Tag>
+						<uiL:PPSnCharmbarContentType>Attribute</uiL:PPSnCharmbarContentType>
+					</ContentControl.Tag>
+				</ContentControl>
 				<ContentControl Content="{Binding}" ContentTemplate="{StaticResource taskTemplate}" Style="{StaticResource charmBarContentControlStyle}">
 					<ContentControl.Tag>
 						<uiL:PPSnCharmbarContentType>Task</uiL:PPSnCharmbarContentType>
@@ -425,6 +440,11 @@
 			<ToggleButton Content="{StaticResource hashTagPathGeometry}">
 				<ToggleButton.Tag>
 					<uiL:PPSnCharmbarContentType>Tag</uiL:PPSnCharmbarContentType>
+				</ToggleButton.Tag>
+			</ToggleButton>
+			<ToggleButton Content="{StaticResource tagTextPathGeometry}">
+				<ToggleButton.Tag>
+					<uiL:PPSnCharmbarContentType>Attribute</uiL:PPSnCharmbarContentType>
 				</ToggleButton.Tag>
 			</ToggleButton>
 			<ToggleButton Content="{StaticResource calendarClockPathGeometry}">

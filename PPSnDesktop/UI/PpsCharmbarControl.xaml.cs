@@ -96,6 +96,7 @@ namespace TecWare.PPSn.UI
 		Revision,
 		Qm,
 		Tag,
+		Attribute,
 		Task
 	} // enum PPSnCharmbarContentType
 
