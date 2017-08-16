@@ -108,7 +108,7 @@ namespace TecWare.PPSn.UI
 				this.tags = tags;
 			}
 			private string createNewName = String.Empty;
-			public string Name { get { return tag != null ? tag.Name : createNewName; } set { createNewName = value; } }
+			public string Name { get { return tag != null ? tag.Name : createNewName; } set { createNewName = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name))); } }
 
 			private string createNewValue = String.Empty;
 			public string Value
@@ -148,6 +148,7 @@ namespace TecWare.PPSn.UI
 						case PpsObjectTagClass.Tag:
 							throw new FieldAccessException();
 					}
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
 				}
 			}
 
