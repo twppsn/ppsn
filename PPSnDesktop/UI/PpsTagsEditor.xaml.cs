@@ -115,18 +115,39 @@ namespace TecWare.PPSn.UI
 			{
 				get
 				{
-					return tag != null && String.IsNullOrEmpty(createNewValue) ? tag.Value.ToString() : createNewValue;
+					switch (tags.TagClass)
+					{
+						case PpsObjectTagClass.Text:
+						case PpsObjectTagClass.Note:
+							return tag != null && String.IsNullOrEmpty(createNewValue) ? (string)tag.Value : createNewValue;
+						case PpsObjectTagClass.Date:
+							return tag != null && String.IsNullOrEmpty(createNewValue) ? tag.Value is DateTime ? ((DateTime)tag.Value).ToLocalTime().ToShortDateString() : DateTime.Parse((string)tag.Value, CultureInfo.InvariantCulture).ToLocalTime().ToShortDateString() : createNewValue;
+						case PpsObjectTagClass.Tag:
+							throw new FieldAccessException();
+					}
+					return tag.Value.ToString();
 				}
 
 				set
 				{
-					if ((tag != null) && (tag.Class != PpsObjectTagClass.Note))
+					switch (tags.TagClass)
 					{
-						tag.Update(Class, value);
-						tags.Commit();
+						case PpsObjectTagClass.Text:
+							if (tag != null)
+							{
+								tag.Update(Class, value);
+								tags.Commit();
+							}
+							else
+								createNewValue = (string)value;
+							break;
+						case PpsObjectTagClass.Note:
+						case PpsObjectTagClass.Date:
+							createNewValue = (string)value;
+							break;
+						case PpsObjectTagClass.Tag:
+							throw new FieldAccessException();
 					}
-					else
-						createNewValue = (string)value;
 				}
 			}
 
