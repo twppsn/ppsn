@@ -245,8 +245,7 @@ namespace TecWare.PPSn.UI
 			{
 				obj.Tags.Remove(tag.Name);
 				obj.UpdateLocalAsync().AwaitTask();
-				tags.Remove((from t in tags where t.Name == tag.Name select t).First());
-				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, (from t in tags where t.Name == tag.Name select t).First(), tags.IndexOf((from t in tags where t.Name == tag.Name select t).First())));
 			}
 
 			public void Commit()
