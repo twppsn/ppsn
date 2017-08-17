@@ -20,6 +20,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Xml;
 using Neo.IronLua;
 using TecWare.PPSn.Controls;
@@ -38,6 +39,8 @@ namespace TecWare.PPSn.UI
 
 		private PpsObject obj; // current object, controlled by this mask
 		private PpsObjectDataSet data; // data object
+
+		public readonly static RoutedCommand SetCharmCommand = new RoutedCommand("SetCharm", typeof(PpsMainWindow));
 
 		public PpsGenericMaskWindowPane(PpsEnvironment environment, PpsMainWindow window)
 			: base(environment, window)

@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -37,78 +38,84 @@ namespace TecWare.PPSn.UI
 	/// </summary>
 	public partial class PpsCharmbarControl : UserControl
 	{
-		private static readonly DependencyProperty BoardVisibilityProperty = DependencyProperty.Register("BoardVisibility", typeof(Visibility), typeof(PpsCharmbarControl), new UIPropertyMetadata(Visibility.Collapsed));
-		private ToggleButton curCheckedButton = null;
+		public readonly static RoutedUICommand ChangeContentCommand =
+			new RoutedUICommand("ChangeContent", "ChangeContent", typeof(PpsCharmbarControl));
+		private readonly static DependencyProperty CurrentContentTypeProperty =
+			DependencyProperty.Register("CurrentContentType", typeof(PPSnCharmbarContentType), typeof(PpsCharmbarControl), new PropertyMetadata(PPSnCharmbarContentType.Default));
+
+		#region -- ctor / init --------------------------------------------------------------
 
 		public PpsCharmbarControl()
 		{
 			InitializeComponent();
+			Init();
 		} // ctor
 
-		private void ToggleButton_Click(object sender, RoutedEventArgs e)
+		private void Init()
 		{
-			var button = sender as ToggleButton;
-            if (button == null)
-				return;
-			else if (button.IsChecked == true)
-				ShowBoard(button);
-			else
-			{
-				HideBoard();
-			}
-		}
-		private void ShowBoard(ToggleButton button)
-		{
-			if (curCheckedButton != null)
-				curCheckedButton.IsChecked = false;
-			curCheckedButton = button;
-			PART_ContentInfo.Text = String.Format("{0} ...", button.Content);
-			IsBoardVisible = true;
-		}
-		private void HideBoard()
-		{
-			curCheckedButton = null;
-			IsBoardVisible = false;
-		}
-
-		private bool IsBoardVisible
-		{
-			get
-			{
-				return (Visibility)GetValue(BoardVisibilityProperty) == Visibility.Visible;
-			}
-			set
-			{
-				if (IsBoardVisible != value)
-				{
-					if (value)
+			CommandBindings.Add(
+				new CommandBinding(ChangeContentCommand,
+					(sender, e) =>
 					{
-						SetValue(BoardVisibilityProperty, Visibility.Visible);
-					}
-					else
-					{
-						SetValue(BoardVisibilityProperty, Visibility.Collapsed);
-					}
-				}
-			}
-		}
+						ChangeContent((PPSnCharmbarContentType)e.Parameter);
+						e.Handled = true;
+					},
+					(sender, e) => e.CanExecute = true
+				)
+			);
+		} // proc Init
 
+		#endregion
+
+		private void ChangeContent(PPSnCharmbarContentType type)
+		{
+			var curType = CurrentContentType;
+			var newType = (type != curType) ? type : PPSnCharmbarContentType.Default;
+
+			CurrentContentType = newType;
+		} // proc ChangeContent
+
+		/// <summary>sets the type of the contentPresenter</summary>
+		public PPSnCharmbarContentType CurrentContentType
+		{
+			get => (PPSnCharmbarContentType)GetValue(CurrentContentTypeProperty);
+			set => SetValue(CurrentContentTypeProperty, value);
+		}
 	} // class PpsCharmbarControl
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public class PpsCharmbarWidthToPaddingConverter : IValueConverter
+	#region -- enum PPSnCharmbarContentType ----------------------------------------------
+
+	/// <summary>
+	/// types of CharmBarContent
+	/// </summary>
+	public enum PPSnCharmbarContentType
 	{
-		private const double indentSize = 19.0;
+		Default,
+		Note,
+		Link,
+		Revision,
+		Qm,
+		Tag,
+		Attribute,
+		Task
+	} // enum PPSnCharmbarContentType
 
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-		{
-			return new Thickness(0, 0, System.Convert.ToDouble(value) + 8, 0);  // 8pxl margin to pane
-		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-		{
-			throw new System.NotImplementedException();
-		}
-	} // converter PpsCharmbarWidthToPaddingConverter
+	#endregion
 
+	#region -- class PPSnCharmbarContentTypeIsCurrentConverter ---------------------------
+
+	internal sealed class PPSnCharmbarContentTypeIsCurrentConverter : IMultiValueConverter
+	{
+		public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+		{
+			return object.Equals(values[0], values[1]);
+		}
+
+		public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		}
+	} // class PPSnCharmbarContentTypeIsCurrentConverter
+
+	#endregion
 }

@@ -25,6 +25,20 @@ specific language governing permissions and limitations under the Licence.
              d:DesignHeight="300" d:DesignWidth="300">
 	<UserControl.Resources>
 		<BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+
+		<SolidColorBrush x:Key="attachmentDrawingImageBrush" Color="{StaticResource PPSnAccentColor}" Opacity=".8"/>
+
+		<DrawingImage x:Key="attachmentBinaryFileImage">
+			<DrawingImage.Drawing>
+				<GeometryDrawing Geometry="{StaticResource fileOutlinePathGeometry}" Brush="{StaticResource attachmentDrawingImageBrush}"/>
+			</DrawingImage.Drawing>
+		</DrawingImage>
+
+		<DrawingImage x:Key="attachmentPictureFileImage">
+			<DrawingImage.Drawing>
+				<GeometryDrawing Geometry="{StaticResource imagePathGeometry}" Brush="{StaticResource attachmentDrawingImageBrush}"/>
+			</DrawingImage.Drawing>
+		</DrawingImage>
 	</UserControl.Resources>
 	<Grid>
 		<Grid.RowDefinitions>
@@ -102,7 +116,7 @@ specific language governing permissions and limitations under the Licence.
 								<Condition Binding="{Binding Path=Type, Mode=OneWay}" Value="picture"/>
 							</MultiDataTrigger.Conditions>
 							<Setter TargetName="border" Property="Padding" Value="32"/>
-							<Setter TargetName="image" Property="Source" Value="{StaticResource imageDrawingImage}"/>
+							<Setter TargetName="image" Property="Source" Value="{StaticResource attachmentPictureFileImage}"/>
 							<Setter TargetName="image" Property="Stretch" Value="Uniform"/>
 						</MultiDataTrigger>
 
@@ -112,7 +126,7 @@ specific language governing permissions and limitations under the Licence.
 								<Condition Binding="{Binding Path=Type, Mode=OneWay}" Value="binary"/>
 							</MultiDataTrigger.Conditions>
 							<Setter TargetName="border" Property="Padding" Value="32"/>
-							<Setter TargetName="image" Property="Source" Value="{StaticResource fileOutlineDrawingImage}"/>
+							<Setter TargetName="image" Property="Source" Value="{StaticResource attachmentBinaryFileImage}"/>
 							<Setter TargetName="image" Property="Stretch" Value="Uniform"/>
 						</MultiDataTrigger>
 

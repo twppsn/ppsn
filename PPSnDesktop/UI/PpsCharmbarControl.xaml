@@ -3,157 +3,456 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
  			 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
              xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
+             xmlns:data="clr-namespace:TecWare.PPSn.Data;assembly=PPSn.Core"
              mc:Ignorable="d" 
+			 x:Name="ppsnCharmbarControl"
              d:DesignHeight="300" d:DesignWidth="300">
-    <UserControl.Resources>
-        <SolidColorBrush x:Key="BoardDarkerBackGroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.85}" />
+	<UserControl.Resources>
+		<uiL:PPSnCharmbarContentTypeIsCurrentConverter x:Key="contentTypeIsCurrentConverter" />
 
-		<!--Charmbar notes-->
-        <DrawingImage x:Key="notebookImage">
-            <DrawingImage.Drawing>
-				<GeometryDrawing Brush="{StaticResource PPSnImageBrush}"
-							 Geometry="M2560 7680l5120 0 0 640 -5120 0 0 -640zm0 -3840l5120 0 0 640 -5120 0 0 -640zm0 1280l5120 0 0 640 -5120 0 0 -640zm0 1280l5120 0 0 640 -5120 0 0 -640z
-							 M8960 2240l0 6720c0,353 -287,640 -640,640l-6400 0c-353,0 -640,-287 -640,-640l0 -6720c0,-353 287,-640 640,-640l0 7360 6400 0 0 -7360c353,0 640,287 640,640z
-							 M7360 640l320 0c176,0 320,144 320,320l0 1280c0,176 -144,320 -320,320l-320 0c-176,0 -320,-144 -320,-320l0 -1280c0,-176 144,-320 320,-320zm-4800 0l320 0c176,0 320,144 320,320l0 1280c0,176 -144,320 -320,320l-320 0c-176,0 -320,-144 -320,-320l0 -1280c0,-176 144,-320 320,-320zm1600 0l320 0c176,0 320,144 320,320l0 1280c0,176 -144,320 -320,320l-320 0c-176,0 -320,-144 -320,-320l0 -1280c0,-176 144,-320 320,-320zm1600 0l320 0c176,0 320,144 320,320l0 1280c0,176 -144,320 -320,320l-320 0c-176,0 -320,-144 -320,-320l0 -1280c0,-176 144,-320 320,-320z"/>
-            </DrawingImage.Drawing>
-        </DrawingImage>
+		<Storyboard x:Key="charmObjectSlideInStoryboard">
+			<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+				<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
+			</ObjectAnimationUsingKeyFrames>
+			<DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+							 To="1"
+							 AccelerationRatio=".4"
+							 BeginTime="0:0:0"
+							 Duration="0:0:.2"/>
+		</Storyboard>
 
-        <!--Charmbar appendix-->
-        <DrawingImage x:Key="paperclipImage">
-            <DrawingImage.Drawing>
-				<GeometryDrawing Brush="{StaticResource PPSnImageBrush}"
-							 Geometry="M5440 320c1237,0 2240,1003 2240,2240l0 4960c0,88 -72,160 -160,160l-320 0c-88,0 -160,-72 -160,-160l0 -4960c0,-884 -716,-1600 -1600,-1600 -884,0 -1600,716 -1600,1600l0 5600c0,619 501,1120 1120,1120 619,0 1120,-501 1120,-1120l0 -4320c0,-353 -287,-640 -640,-640 -353,0 -640,287 -640,640l0 3040c0,88 -72,160 -160,160l-320 0c-88,0 -160,-72 -160,-160l0 -3040c0,-707 573,-1280 1280,-1280 707,0 1280,573 1280,1280l0 4320c0,972 -788,1760 -1760,1760 -972,0 -1760,-788 -1760,-1760l0 -5600c0,-1237 1003,-2240 2240,-2240z"/>
-            </DrawingImage.Drawing>
-        </DrawingImage>
+		<Storyboard x:Key="charmObjectSlideOutStoryboard">
+			<DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+							 To="0"
+							 BeginTime="0:0:0"
+							 Duration="0:0:.15"/>
+			<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+				<DiscreteObjectKeyFrame KeyTime="0:0:.15" Value="{x:Static Visibility.Collapsed}"/>
+			</ObjectAnimationUsingKeyFrames>
+		</Storyboard>
 
-        <!--Charmbar history-->
-        <DrawingImage x:Key="historyImage">
-            <DrawingImage.Drawing>
-				<GeometryDrawing Brush="{StaticResource PPSnImageBrush}"
-							 Geometry="M3840 7360l-640 0 0 -656c105,10 212,16 320,16 108,0 215,-5 320,-16l0 656 0 0zm2864 -4160l1936 0c530,0 960,430 960,960 0,530 -430,960 -960,960l0 -640c177,0 320,-143 320,-320 0,-177 -143,-320 -320,-320 -177,0 -320,143 -320,320l0 320 0 585 0 3575c0,530 -430,960 -960,960l-4480 0c-537,0 -971,-441 -960,-979 10,-522 438,-941 960,-941l961 0 3200 0c176,0 320,144 320,320l0 86c0,117 -58,218 -160,277 -96,55 -160,159 -160,277 0,177 143,320 320,320 177,0 320,-143 320,-320l0 -905 0 -3575c0,-112 19,-220 55,-320l-1031 0c10,-105 16,-212 16,-320 0,-108 -5,-215 -16,-320zm-2864 5760l-960 0c-177,0 -320,-143 -320,-320l0 0c0,-176 144,-320 320,-320l960 0 2615 0c-35,100 -55,208 -55,320 0,112 19,220 55,320l-2615 0z
-							 M2849 1721l671 1159c116,0 226,31 320,85l877 -507c142,159 252,347 321,554l-878 508c0,353 -287,640 -640,640 -353,0 -640,-287 -640,-640 0,-116 31,-226 85,-320l-670 -1159c164,-136 351,-245 554,-321z
-							 M3520 640c1591,0 2880,1289 2880,2880 0,1591 -1289,2880 -2880,2880 -1591,0 -2880,-1289 -2880,-2880 0,-1591 1289,-2880 2880,-2880zm0 640c1237,0 2240,1003 2240,2240 0,1237 -1003,2240 -2240,2240 -1237,0 -2240,-1003 -2240,-2240 0,-1237 1003,-2240 2240,-2240z"/>
-            </DrawingImage.Drawing>
-        </DrawingImage>
+		<Storyboard x:Key="charmObjectFadeInStoryboard" FillBehavior="HoldEnd">
+			<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+				<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Visible}"/>
+			</ObjectAnimationUsingKeyFrames>
+			<DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:.4" />
+		</Storyboard>
 
-        <!--Charmbar help-->
-        <DrawingImage x:Key="speech_balloon_questionImage">
-            <DrawingImage.Drawing>
-				<GeometryDrawing Brush="{StaticResource PPSnImageBrush}"
-							 Geometry="M4640 5440l640 0c88,0 160,72 160,160l0 640c0,88 -72,160 -160,160l-640 0c-88,0 -160,-72 -160,-160l0 -640c0,-88 72,-160 160,-160zm-1120 -2080l0 -160c0,-309 126,-589 328,-792 203,-203 483,-328 792,-328l960 0c309,0 589,126 792,328 203,203 328,483 328,792l0 244c0,213 -59,414 -167,589 -107,173 -261,315 -453,411l-572 286c-30,15 -53,35 -67,58 -13,21 -20,51 -20,86l0 84c0,88 -72,160 -160,160l-640 0c-88,0 -160,-72 -160,-160l0 -84c0,-213 59,-414 167,-589 107,-173 261,-315 453,-411l572 -286c30,-15 53,-35 67,-58 13,-21 20,-51 20,-86l0 -244c0,-44 -18,-84 -47,-113 -29,-29 -69,-47 -113,-47l-960 0c-44,0 -84,18 -113,47 -29,29 -47,69 -47,113l0 160c0,88 -72,160 -160,160l-640 0c-88,0 -160,-72 -160,-160z
-							 M5120 640c2474,0 4480,1576 4480,3520 0,911 -440,1740 -1162,2365 -107,93 -173,203 -205,341 -319,1393 -1486,2414 -3112,2414 213,-213 354,-475 449,-761 66,-199 37,-398 -84,-570 -120,-171 -298,-266 -508,-272 -2408,-59 -4338,-1612 -4338,-3518 0,-1944 2006,-3520 4480,-3520zm1119 7774c680,-300 1185,-886 1369,-1690 62,-271 200,-501 410,-682 556,-481 941,-1133 941,-1881 0,-1906 -2203,-2880 -3840,-2880 -1637,0 -3840,974 -3840,2880 0,217 33,431 96,638 452,1477 2191,2205 3617,2240 412,10 778,206 1016,543 175,248 254,540 230,832z"/>
-            </DrawingImage.Drawing>
-        </DrawingImage>
+		<Storyboard x:Key="charmObjectFadeOutStoryboard" FillBehavior="HoldEnd">
+			<DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0"/>
+			<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+				<DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{x:Static Visibility.Hidden}"/>
+			</ObjectAnimationUsingKeyFrames>
+		</Storyboard>
 
-        <Storyboard x:Key="BoardShrinkStoryboard" FillBehavior="HoldEnd">
-            <DoubleAnimation Storyboard.TargetProperty="Width" To="0" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
-            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                <DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{x:Static Visibility.Collapsed}"/>
-            </ObjectAnimationUsingKeyFrames>
-        </Storyboard>
-        <Storyboard x:Key="BoardIncreaseStoryboard" FillBehavior="HoldEnd">
-            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
-            </ObjectAnimationUsingKeyFrames>
-            <DoubleAnimation Storyboard.TargetProperty="Width" To="700" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
-        </Storyboard>
-        <Style x:Key="CharmbarButtonStyle" TargetType="{x:Type ToggleButton}">
-            <Setter Property="Height" Value="70"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Opacity" Value="0.6"/>
-            <Setter Property="Focusable" Value="False"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type ToggleButton}">
-                        <Grid x:Name="PART_Grid">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="50"/>
-                                <RowDefinition/>
-                            </Grid.RowDefinitions>
-                            <Image x:Name="PART_Image" Source="{TemplateBinding Tag}" Width="42" Height="42" HorizontalAlignment="Center" />
-                            <Border x:Name="PART_Content" Grid.Row="1" BorderThickness="0" SnapsToDevicePixels="true" IsHitTestVisible="True">
-                                <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Top"></ContentPresenter>
-                            </Border>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-								<Setter TargetName="PART_Grid"  Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
-                                <Setter Property="Opacity" Value="1.0"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="PART_Grid" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
-                                <Setter Property="Opacity" Value="1.0"/>
-                            </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter Property="Opacity" Value="1.0"/>
-                                <Setter Property="Foreground" Value="{StaticResource PPSnMarkerBrush}"/>
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ObjectAnimationUsingKeyFrames  Storyboard.TargetName="PART_Image" Storyboard.TargetProperty="(Image.Source).(DrawingImage.Drawing).(GeometryDrawing.Brush)">
-                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnMarkerBrush}"/>
-                                            </ObjectAnimationUsingKeyFrames>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="PART_Image" Storyboard.TargetProperty="(Image.Source).(DrawingImage.Drawing).(GeometryDrawing.Brush)">
-                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource PPSnImageBrush}"/>
-                                            </ObjectAnimationUsingKeyFrames>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </UserControl.Resources>
+		<Storyboard x:Key="charmBarAlignRightStoryboard" FillBehavior="HoldEnd">
+			<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="HorizontalAlignment">
+				<DiscreteObjectKeyFrame KeyTime="0:0:.15">
+					<DiscreteObjectKeyFrame.Value>
+						<HorizontalAlignment>Right</HorizontalAlignment>
+					</DiscreteObjectKeyFrame.Value>
+				</DiscreteObjectKeyFrame>
+			</ObjectAnimationUsingKeyFrames>
+		</Storyboard>
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="72"/>
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="64"/>
-            <RowDefinition Height="100"/>
-            <RowDefinition Height="100"/>
-            <RowDefinition Height="100"/>
-            <RowDefinition Height="100"/>
-            <RowDefinition/>
-        </Grid.RowDefinitions>
-        <Border x:Name="PART_ContentHost" Grid.Column="0" Grid.Row="0" Grid.RowSpan="6" Width="0" Visibility="Collapsed">
-            <TextBlock x:Name="PART_ContentInfo" Text="1111111111111111111" Foreground="{StaticResource PPSnWindowForegroundBrush}" Margin="64" FontSize="18.667" FontWeight="Medium"/>
-            <Border.Style>
-                <Style TargetType="{x:Type Border}">
-                    <Setter Property="Background" Value="{StaticResource BoardDarkerBackGroundBrush}"/>
-                    <Setter Property="Margin" Value="0,0,6,0"/>
-                    <Setter Property="BorderThickness" Value="1"/>
-                    <Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}"/>
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding Path=BoardVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsCharmbarControl}}" Value="Visible">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard Storyboard="{StaticResource BoardIncreaseStoryboard}" />
-                            </DataTrigger.EnterActions>
-                            <DataTrigger.ExitActions>
-                                <BeginStoryboard Storyboard="{StaticResource BoardShrinkStoryboard}" />
-                            </DataTrigger.ExitActions>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-        </Border>
-        <ToggleButton x:Name="PART_NotesButton" Grid.Column="1" Grid.Row="1" Content="Notizen" Style="{StaticResource CharmbarButtonStyle}" Tag="{StaticResource notebookImage}" Click="ToggleButton_Click"/>
-        <ToggleButton x:Name="PART_AppendixButton" Grid.Column="1" Grid.Row="2" Content="Anlagen" Style="{StaticResource CharmbarButtonStyle}" Tag="{StaticResource paperclipImage}" Click="ToggleButton_Click"/>
-        <ToggleButton x:Name="PART_HistoryButton" Grid.Column="1" Grid.Row="3" Content="Historie" Style="{StaticResource CharmbarButtonStyle}" Tag="{StaticResource historyImage}" Click="ToggleButton_Click"/>
-        <ToggleButton x:Name="PART_HelpButton" Grid.Column="1" Grid.Row="4" Content="Hilfe" Style="{StaticResource CharmbarButtonStyle}" Tag="{StaticResource speech_balloon_questionImage}" Click="ToggleButton_Click"/>
-    </Grid>
+		<Storyboard x:Key="charmBarAlignStretchStoryboard" FillBehavior="HoldEnd">
+			<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="HorizontalAlignment">
+				<DiscreteObjectKeyFrame KeyTime="0:0:0">
+					<DiscreteObjectKeyFrame.Value>
+						<HorizontalAlignment>Stretch</HorizontalAlignment>
+					</DiscreteObjectKeyFrame.Value>
+				</DiscreteObjectKeyFrame>
+			</ObjectAnimationUsingKeyFrames>
+		</Storyboard>
+
+		<Style x:Key="charmBarToggleButtonStyle" TargetType="{x:Type ToggleButton}">
+			<Setter Property="Focusable" Value="False"/>
+			<Setter Property="IsThreeState" Value="False"/>
+			<Setter Property="Foreground" Value="{StaticResource PPSnActionButtonBrush}"/>
+			<Setter Property="Command" Value="{x:Static uiL:PpsCharmbarControl.ChangeContentCommand}"/>
+			<Setter Property="CommandParameter" Value="{Binding Tag, RelativeSource={RelativeSource Mode=Self}}" />
+			<Setter Property="IsChecked">
+				<Setter.Value>
+					<MultiBinding Mode="OneWay" Converter="{StaticResource contentTypeIsCurrentConverter}" >
+						<Binding ElementName="ppsnCharmbarControl" Path="CurrentContentType"/>
+						<Binding Path="Tag" RelativeSource="{RelativeSource Mode=Self}"/>
+					</MultiBinding>
+				</Setter.Value>
+			</Setter>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ToggleButton}">
+						<Border x:Name="contentBorder" >
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition/>
+									<ColumnDefinition Width="4"/>
+								</Grid.ColumnDefinitions>
+								<Border Grid.Row="0" Background="Transparent" Margin="6,3,0,3" Padding="6">
+									<Viewbox>
+										<Canvas Width="24" Height="24">
+											<Path x:Name="imagePath" Data="{TemplateBinding Content}" Fill="{TemplateBinding Foreground}" Opacity=".65">
+												<Path.RenderTransformOrigin>
+													<Point X="0.5" Y="0.5"/>
+												</Path.RenderTransformOrigin>
+												<Path.RenderTransform>
+													<ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
+												</Path.RenderTransform>
+											</Path>
+										</Canvas>
+									</Viewbox>
+								</Border>
+								<Rectangle x:Name="selectedMarker" Grid.Column="1" Fill="{StaticResource PPSnMarkerBrush}" Opacity="0"/>
+							</Grid>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsChecked" Value="True">
+								<Setter TargetName="selectedMarker" Property="Opacity" Value="1"/>
+							</Trigger>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="imagePath" Property="Opacity" Value="1"/>
+							</Trigger>
+							<Trigger Property="IsPressed" Value="True">
+								<Trigger.EnterActions>
+									<BeginStoryboard>
+										<Storyboard>
+											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="1" To="0.85" Duration="0:00:0.1"/>
+											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="1" To="0.85" Duration="0:00:0.1"/>
+										</Storyboard>
+									</BeginStoryboard>
+								</Trigger.EnterActions>
+								<Trigger.ExitActions>
+									<BeginStoryboard>
+										<Storyboard>
+											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="0.85" To="1" Duration="0:00:0.05"/>
+											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="0.85" To="1" Duration="0:00:0.05"/>
+										</Storyboard>
+									</BeginStoryboard>
+								</Trigger.ExitActions>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<Style x:Key="charmBarContentControlStyle" TargetType="{x:Type ContentControl}">
+			<Setter Property="Visibility" Value="Hidden"/>
+			<Setter Property="Opacity" Value="0"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ContentControl}">
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="32"/>
+								<ColumnDefinition/>
+								<ColumnDefinition Width="40"/>
+							</Grid.ColumnDefinitions>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="40"/>
+								<RowDefinition/>
+							</Grid.RowDefinitions>
+							<Viewbox Grid.Column="0" Grid.Row="0" Margin="4">
+								<Canvas Width="24" Height="24">
+									<Path x:Name="headerImagePath" Data="{StaticResource noteOutlinePathGeometry}"
+										  Fill="{StaticResource PPSnActionButtonBrush}" Opacity=".75"/>
+								</Canvas>
+							</Viewbox>
+							<TextBlock x:Name="headerText" Grid.Column="1" Grid.Row="0" Margin="2,0,0,0"
+									   Text="Notizen"
+									   Foreground="{StaticResource PPSnWindowForegroundBrush}"
+									   VerticalAlignment="Center"
+									   FontSize="18"/>
+							<Button Grid.Column="2" Grid.Row="0" 
+									Command="{x:Static uiL:PpsCharmbarControl.ChangeContentCommand}"
+									Content="{StaticResource windowClosePathGeometry}"
+									Foreground="{StaticResource PPSnWindowForegroundBrush}"
+									Style="{StaticResource PPSnImageButtonStyle}">
+								<Button.CommandParameter>
+									<uiL:PPSnCharmbarContentType>Default</uiL:PPSnCharmbarContentType>
+								</Button.CommandParameter>
+							</Button>
+							<ContentPresenter Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1" Margin="16"
+											  Content="{TemplateBinding Content}"
+											  ContentTemplate="{TemplateBinding ContentTemplate}"/>
+						</Grid>
+						<ControlTemplate.Triggers>
+							<DataTrigger>
+								<DataTrigger.Value>
+									<sys:Boolean>True</sys:Boolean>
+								</DataTrigger.Value>
+								<DataTrigger.Binding>
+									<MultiBinding Mode="OneWay" Converter="{StaticResource contentTypeIsCurrentConverter}" >
+										<Binding ElementName="ppsnCharmbarControl" Path="CurrentContentType"/>
+										<Binding Path="Tag" RelativeSource="{RelativeSource Mode=Self}"/>
+									</MultiBinding>
+								</DataTrigger.Binding>
+								<DataTrigger.EnterActions>
+									<BeginStoryboard Storyboard="{StaticResource charmObjectFadeInStoryboard}"/>
+								</DataTrigger.EnterActions>
+								<DataTrigger.ExitActions>
+									<BeginStoryboard Storyboard="{StaticResource charmObjectFadeOutStoryboard}"/>
+								</DataTrigger.ExitActions>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding CurrentContentType, ElementName=ppsnCharmbarControl, Mode=OneWay}">
+								<DataTrigger.Value>
+									<uiL:PPSnCharmbarContentType>Link</uiL:PPSnCharmbarContentType>
+								</DataTrigger.Value>
+								<Setter TargetName="headerText" Property="Text" Value="Verknüpfungen"/>
+								<Setter TargetName="headerImagePath" Property="Data" Value="{StaticResource linkPathGeometry}"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding CurrentContentType, ElementName=ppsnCharmbarControl, Mode=OneWay}">
+								<DataTrigger.Value>
+									<uiL:PPSnCharmbarContentType>Revision</uiL:PPSnCharmbarContentType>
+								</DataTrigger.Value>
+								<Setter TargetName="headerText" Property="Text" Value="Revisionierung"/>
+								<Setter TargetName="headerImagePath" Property="Data" Value="{StaticResource revisionOutlinePathGeometry}"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding CurrentContentType, ElementName=ppsnCharmbarControl, Mode=OneWay}">
+								<DataTrigger.Value>
+									<uiL:PPSnCharmbarContentType>Qm</uiL:PPSnCharmbarContentType>
+								</DataTrigger.Value>
+								<Setter TargetName="headerText" Property="Text" Value="QM"/>
+								<Setter TargetName="headerImagePath" Property="Data" Value="{StaticResource qmPathGeometry}"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding CurrentContentType, ElementName=ppsnCharmbarControl, Mode=OneWay}">
+								<DataTrigger.Value>
+									<uiL:PPSnCharmbarContentType>Tag</uiL:PPSnCharmbarContentType>
+								</DataTrigger.Value>
+								<Setter TargetName="headerText" Property="Text" Value="Tags"/>
+								<Setter TargetName="headerImagePath" Property="Data" Value="{StaticResource hashTagPathGeometry}"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding CurrentContentType, ElementName=ppsnCharmbarControl, Mode=OneWay}">
+								<DataTrigger.Value>
+									<uiL:PPSnCharmbarContentType>Attribute</uiL:PPSnCharmbarContentType>
+								</DataTrigger.Value>
+								<Setter TargetName="headerText" Property="Text" Value="Attribute"/>
+								<Setter TargetName="headerImagePath" Property="Data" Value="{StaticResource tagTextPathGeometry}"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding CurrentContentType, ElementName=ppsnCharmbarControl, Mode=OneWay}">
+								<DataTrigger.Value>
+									<uiL:PPSnCharmbarContentType>Task</uiL:PPSnCharmbarContentType>
+								</DataTrigger.Value>
+								<Setter TargetName="headerText" Property="Text" Value="Termine / Aufgaben"/>
+								<Setter TargetName="headerImagePath" Property="Data" Value="{StaticResource calendarClockPathGeometry}"/>
+							</DataTrigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<DataTemplate x:Key="noteTemplate">
+			<Grid>
+                <uiL:PpsTagsEditor TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Note}"/>
+			</Grid>
+		</DataTemplate>
+
+		<DataTemplate x:Key="linkTemplate">
+			<Grid>
+				<ListBox ItemsSource="{Binding Links}">
+					<ListBox.ItemTemplate>
+						<ItemContainerTemplate>
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="75"/>
+									<ColumnDefinition Width="75"/>
+								</Grid.ColumnDefinitions>
+								<Label Grid.Column="0" Content="{Binding LinkToId}"/>
+								<Label Grid.Column="1" Content="{Binding LinkTo}"/>
+							</Grid>
+						</ItemContainerTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
+			</Grid>
+		</DataTemplate>
+
+		<DataTemplate x:Key="revisionTemplate">
+			<Grid>
+			</Grid>
+		</DataTemplate>
+
+		<DataTemplate x:Key="qmTemplate">
+			<Grid>
+            </Grid>
+		</DataTemplate>
+
+		<DataTemplate x:Key="tagTemplate">
+			<uiL:PpsTagsEditor TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Tag}"/>
+		</DataTemplate>
+
+		<DataTemplate x:Key="attribTemplate">
+			<Grid>
+				<uiL:PpsTagsEditor TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Text}"/>
+			</Grid>
+		</DataTemplate>
+
+		<DataTemplate x:Key="taskTemplate">
+			<Grid>
+                <uiL:PpsTagsEditor TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Date}"/>
+			</Grid>
+		</DataTemplate>
+
+	</UserControl.Resources>
+
+	<!--Background must be null!-->
+	<Grid>
+		<Grid.Style>
+			<Style TargetType="{x:Type Grid}">
+				<Setter Property="Margin" Value="0,0,0,0"/>
+				<Setter Property="HorizontalAlignment" Value="Stretch"/>
+				<Style.Triggers>
+					<DataTrigger Binding="{Binding CurrentPane.HasSideBar, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow, AncestorLevel=1}, Mode=OneWay}">
+						<DataTrigger.Value>
+							<sys:Boolean>True</sys:Boolean>
+						</DataTrigger.Value>
+						<Setter Property="Margin">
+							<Setter.Value>
+								<Thickness Left="{StaticResource PPSnSideBarIncreasedWidth}" Top="0" Right="0" Bottom="0"/>
+							</Setter.Value>
+						</Setter>
+					</DataTrigger>
+					<DataTrigger Binding="{Binding CurrentContentType, ElementName=ppsnCharmbarControl, Mode=OneWay}">
+						<DataTrigger.Value>
+							<uiL:PPSnCharmbarContentType>Default</uiL:PPSnCharmbarContentType>
+						</DataTrigger.Value>
+						<DataTrigger.EnterActions>
+							<BeginStoryboard Storyboard="{StaticResource charmBarAlignRightStoryboard}"/>
+						</DataTrigger.EnterActions>
+						<DataTrigger.ExitActions>
+							<BeginStoryboard Storyboard="{StaticResource charmBarAlignStretchStoryboard}"/>
+						</DataTrigger.ExitActions>
+					</DataTrigger>
+				</Style.Triggers>
+			</Style>
+		</Grid.Style>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="*"/>
+			<!--Bindings do use type converters though-->
+			<ColumnDefinition Width="{Binding Source={StaticResource PPSnCharmBarColumnWidth}, Mode=OneTime}"/>
+		</Grid.ColumnDefinitions>
+
+		<Border Grid.Column="0" MaxWidth="{StaticResource PPSnPaneMaxGridWidth}"
+				BorderThickness="1" 
+				BorderBrush="{StaticResource PPSnSeparatorBrush}"
+				Background="{StaticResource PPSnPopUpBackgroundBrush}">
+			<Border.Margin>
+				<Thickness Left="{StaticResource PPSnPaneBorderSizeLeft}"
+						   Top="0"
+						   Right="{StaticResource PPSnPaneBorderSizeRight}"
+						   Bottom="0"/>
+			</Border.Margin>
+			<Border.Style>
+				<Style TargetType="{x:Type Border}">
+					<Setter Property="Visibility" Value="Collapsed"/>
+					<Setter Property="RenderTransformOrigin">
+						<Setter.Value>
+							<Point X="1" Y="0.5"/>
+						</Setter.Value>
+					</Setter>
+					<Setter Property="RenderTransform">
+						<Setter.Value>
+							<ScaleTransform ScaleX="0" ScaleY="1"/>
+						</Setter.Value>
+					</Setter>
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding CurrentContentType, ElementName=ppsnCharmbarControl, Mode=OneWay}">
+							<DataTrigger.Value>
+								<uiL:PPSnCharmbarContentType>Default</uiL:PPSnCharmbarContentType>
+							</DataTrigger.Value>
+							<DataTrigger.EnterActions>
+								<BeginStoryboard Storyboard="{StaticResource charmObjectSlideOutStoryboard}"/>
+							</DataTrigger.EnterActions>
+							<DataTrigger.ExitActions>
+								<BeginStoryboard Storyboard="{StaticResource charmObjectSlideInStoryboard}"/>
+							</DataTrigger.ExitActions>
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</Border.Style>
+			<Grid>
+				<ContentControl Content="{Binding}" ContentTemplate="{StaticResource noteTemplate}" Style="{StaticResource charmBarContentControlStyle}">
+					<ContentControl.Tag>
+						<uiL:PPSnCharmbarContentType>Note</uiL:PPSnCharmbarContentType>
+					</ContentControl.Tag>
+				</ContentControl>
+				<ContentControl Content="{Binding}" ContentTemplate="{StaticResource linkTemplate}" Style="{StaticResource charmBarContentControlStyle}">
+					<ContentControl.Tag>
+						<uiL:PPSnCharmbarContentType>Link</uiL:PPSnCharmbarContentType>
+					</ContentControl.Tag>
+				</ContentControl>
+				<ContentControl Content="{Binding}" ContentTemplate="{StaticResource revisionTemplate}" Style="{StaticResource charmBarContentControlStyle}">
+					<ContentControl.Tag>
+						<uiL:PPSnCharmbarContentType>Revision</uiL:PPSnCharmbarContentType>
+					</ContentControl.Tag>
+				</ContentControl>
+				<ContentControl Content="{Binding}" ContentTemplate="{StaticResource qmTemplate}" Style="{StaticResource charmBarContentControlStyle}">
+					<ContentControl.Tag>
+						<uiL:PPSnCharmbarContentType>Qm</uiL:PPSnCharmbarContentType>
+					</ContentControl.Tag>
+				</ContentControl>
+				<ContentControl Content="{Binding}" ContentTemplate="{StaticResource tagTemplate}" Style="{StaticResource charmBarContentControlStyle}">
+					<ContentControl.Tag>
+						<uiL:PPSnCharmbarContentType>Tag</uiL:PPSnCharmbarContentType>
+					</ContentControl.Tag>
+				</ContentControl>
+				<ContentControl Content="{Binding}" ContentTemplate="{StaticResource attribTemplate}" Style="{StaticResource charmBarContentControlStyle}">
+					<ContentControl.Tag>
+						<uiL:PPSnCharmbarContentType>Attribute</uiL:PPSnCharmbarContentType>
+					</ContentControl.Tag>
+				</ContentControl>
+				<ContentControl Content="{Binding}" ContentTemplate="{StaticResource taskTemplate}" Style="{StaticResource charmBarContentControlStyle}">
+					<ContentControl.Tag>
+						<uiL:PPSnCharmbarContentType>Task</uiL:PPSnCharmbarContentType>
+					</ContentControl.Tag>
+				</ContentControl>
+			</Grid>
+		</Border>
+		<DockPanel Grid.Column="1" LastChildFill="False" VerticalAlignment="Bottom">
+			<DockPanel.Resources>
+				<Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource charmBarToggleButtonStyle}">
+					<Setter Property="Height" Value="48"/>
+					<Setter Property="DockPanel.Dock" Value="Top"/>
+				</Style>
+			</DockPanel.Resources>
+			<ToggleButton Content="{StaticResource noteOutlinePathGeometry}">
+				<ToggleButton.Tag>
+					<uiL:PPSnCharmbarContentType>Note</uiL:PPSnCharmbarContentType>
+				</ToggleButton.Tag>
+			</ToggleButton>
+			<ToggleButton Content="{StaticResource linkPathGeometry}">
+				<ToggleButton.Tag>
+					<uiL:PPSnCharmbarContentType>Link</uiL:PPSnCharmbarContentType>
+				</ToggleButton.Tag>
+			</ToggleButton>
+			<ToggleButton Content="{StaticResource revisionOutlinePathGeometry}">
+				<ToggleButton.Tag>
+					<uiL:PPSnCharmbarContentType>Revision</uiL:PPSnCharmbarContentType>
+				</ToggleButton.Tag>
+			</ToggleButton>
+			<ToggleButton Content="{StaticResource qmPathGeometry}">
+				<ToggleButton.Tag>
+					<uiL:PPSnCharmbarContentType>Qm</uiL:PPSnCharmbarContentType>
+				</ToggleButton.Tag>
+			</ToggleButton>
+			<ToggleButton Content="{StaticResource hashTagPathGeometry}">
+				<ToggleButton.Tag>
+					<uiL:PPSnCharmbarContentType>Tag</uiL:PPSnCharmbarContentType>
+				</ToggleButton.Tag>
+			</ToggleButton>
+			<ToggleButton Content="{StaticResource tagTextPathGeometry}">
+				<ToggleButton.Tag>
+					<uiL:PPSnCharmbarContentType>Attribute</uiL:PPSnCharmbarContentType>
+				</ToggleButton.Tag>
+			</ToggleButton>
+			<ToggleButton Content="{StaticResource calendarClockPathGeometry}">
+				<ToggleButton.Tag>
+					<uiL:PPSnCharmbarContentType>Task</uiL:PPSnCharmbarContentType>
+				</ToggleButton.Tag>
+			</ToggleButton>
+		</DockPanel>
+	</Grid>
 </UserControl>

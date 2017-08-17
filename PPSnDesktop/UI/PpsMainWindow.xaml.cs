@@ -38,7 +38,6 @@ namespace TecWare.PPSn.UI
 
 		private readonly static DependencyProperty IsNavigatorVisibleProperty = DependencyProperty.Register("IsNavigatorVisible", typeof(bool), typeof(PpsMainWindow), new PropertyMetadata(true));
 		private readonly static DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register("IsPaneVisible", typeof(bool), typeof(PpsMainWindow), new PropertyMetadata(false));
-		private readonly static DependencyProperty CharmbarActualWidthProperty = DependencyProperty.Register("CharmbarActualWidth", typeof(double), typeof(PpsMainWindow));
 		private readonly static DependencyProperty IsSideBarVisibleProperty = DependencyProperty.Register("IsSideBarVisible", typeof(bool), typeof(PpsMainWindow), new PropertyMetadata(true));
 
 		/// <summary>Readonly property for the current pane.</summary>
@@ -48,7 +47,7 @@ namespace TecWare.PPSn.UI
 		private int windowIndex = -1;                                       // settings key
 		private PpsWindowApplicationSettings settings;                      // current settings for the window
 
-		#region -- Ctor/Dtor ------------------------------------------------------------
+		#region -- Ctor/Dtor -------------------------------------------------------------
 
 		public PpsMainWindow(int windowIndex)
 		{
@@ -153,8 +152,6 @@ namespace TecWare.PPSn.UI
 			
 			Trace.TraceInformation("MainWindow[{0}] created.", windowIndex);
 
-			var descriptor = DependencyPropertyDescriptor.FromProperty(PpsCharmbarControl.ActualWidthProperty, typeof(PpsCharmbarControl));
-			descriptor.AddValueChanged(PART_Charmbar, OnCharmbarActualWidthChanged);
 		} // ctor
 
 		private Task<bool> unloadTask = null;
@@ -180,11 +177,14 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Navigator.SearchBox --------------------------------------------------
+		#region -- Navigator.SearchBox & Charmbar-----------------------------------------
 
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
 			base.OnPreviewMouseDown(e);
+
+			ResetCharmbar(e.Source);
+
 			if (!IsNavigatorVisible)
 				return;
 			navigator.OnPreview_MouseDown(e.OriginalSource);
@@ -200,35 +200,32 @@ namespace TecWare.PPSn.UI
 
 		protected override void OnWindowCaptionClicked()
 		{
+			ResetCharmbar(null);
+
 			if (!IsNavigatorVisible)
 				return;
 			navigator.OnPreview_MouseDown(null);
 		} // proc OnWindowCaptionClicked
 
+		private void ResetCharmbar(object mouseDownSource)
+		{
+			if (PART_Charmbar.CurrentContentType == PPSnCharmbarContentType.Default)
+				return;
+			else if (object.Equals(mouseDownSource, PART_Charmbar))
+				return;
+
+			PART_Charmbar.CurrentContentType = PPSnCharmbarContentType.Default;
+		} // proc ResetCharmbar
+
+
 		#endregion
 
-		#region -- charmbar -------------------------------------------------------------
-
-		private void OnCharmbarActualWidthChanged(object sender, EventArgs e)
-		{
-			SetActualWidth(PART_Charmbar.ActualWidth);
-		}
-
-		private void SetActualWidth(double value)
-		{
-			SetValue(CharmbarActualWidthProperty, value);
-		}
-
-		#endregion
-		
 		/// <summary>Settings of the current window.</summary>
 		public PpsWindowApplicationSettings Settings => settings;
 		/// <summary>Index of the current window</summary>
 		public int WindowIndex => windowIndex;
 		/// <summary>Access to the current environment,</summary>
 		public new PpsMainEnvironment Environment => (PpsMainEnvironment)base.Environment;
-		/// <summary>Access to current charmbar width</summary>
-		public double CharmbarActualWidth => (double)GetValue(CharmbarActualWidthProperty);
 		/// <summary>Access to the navigator model</summary>
 		public PpsNavigatorModel Navigator => (PpsNavigatorModel)navigator.DataContext;
 		/// <summary>Is the navigator visible.</summary>
@@ -264,5 +261,10 @@ namespace TecWare.PPSn.UI
 			if (show != (bool)GetValue(IsSideBarVisibleProperty))
 				SetValue(IsSideBarVisibleProperty, show);
 		} // proc ShowSideBarBackground
+
+
+		public object CharmObject { get { return GetValue(CharmObjectProperty); } set { SetValue(CharmObjectProperty, value); } }
+
+		private readonly static DependencyProperty CharmObjectProperty = DependencyProperty.Register(nameof(CharmObject), typeof(object), typeof(PpsMainWindow), null);
 	} // class PpsMainWindow
 }

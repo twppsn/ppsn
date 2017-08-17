@@ -45,7 +45,7 @@ namespace TecWare.PPSn
 		public static readonly XName xnCode = "code";
 
 		private readonly string displayName;
-		private readonly int displayGlyph;
+		private readonly string displayImage;
 		private readonly bool isHidden;
 		private readonly LuaChunk condition;
 		private readonly LuaChunk code;
@@ -54,7 +54,7 @@ namespace TecWare.PPSn
 			: base(environment, xCur.GetAttribute("name", String.Empty))
 		{
 			this.displayName = xCur.GetAttribute("displayName", this.Name);
-			this.displayGlyph = xCur.GetAttribute("displayGlyph", 57807);
+			this.displayImage = xCur.GetAttribute("displayImage", "star");
 			this.isHidden = xCur.GetAttribute("isHidden", false);
 			this.Priority = priority = xCur.GetAttribute("priority", priority + 1);
 
@@ -81,7 +81,7 @@ namespace TecWare.PPSn
 		} // func Execute
 
 		public string DisplayName => displayName;
-		public string DisplayGlyph => char.ConvertFromUtf32(displayGlyph);
+		public string DisplayImage => displayImage;
 		public int Priority { get; }
 		public bool IsHidden => isHidden;
 	} // class PpsMainActionDefinition

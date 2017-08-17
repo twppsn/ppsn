@@ -119,12 +119,12 @@ namespace TecWare.PPSn.UI
 
 	} // class PpsNavigatorControl
 
-	#region -- class PpsNavigatorPriorityToDockPosition -------------------------------
+	#region -- class PPSnNavigatorPriorityToDockPosition ------------------------------
 
 	/// <summary>
 	/// Converter zum Ermitteln der Dockimg Position aus der Priority Property eines ActionCommands
 	/// </summary>
-	internal class PpsNavigatorPriorityToDockPosition : IValueConverter
+	internal class PPSnNavigatorPriorityToDockPosition : IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
 		{
@@ -139,7 +139,30 @@ namespace TecWare.PPSn.UI
 		{
 			return DependencyProperty.UnsetValue;
 		}
-	} // class PpsNavigatorPriorityToDockPosition
+	} // class PPSnNavigatorPriorityToDockPosition
+
+	#endregion
+
+	#region -- class PPSnImageResourceKeyConverter ------------------------------------
+
+	internal class PPSnImageResourceKeyConverter : IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			if(value is string && !String.IsNullOrEmpty((string)value))
+			{
+				var resName = String.Concat(value, "PathGeometry");
+				return Application.Current.TryFindResource(resName);
+			}
+			return null;
+		} // func Convert
+
+		public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		} // func ConvertBack
+
+	} // class PPSnImageResourceKeyConverter
 
 	#endregion
 

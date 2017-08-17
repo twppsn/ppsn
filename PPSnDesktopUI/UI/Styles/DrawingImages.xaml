@@ -15,43 +15,21 @@ specific language governing permissions and limitations under the Licence.
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-	<SolidColorBrush x:Key="PPSnDrawingImageBrush" Color="{DynamicResource PPSnAccentColor}" Opacity=".8"/>
-
 	<!--arrow-right-bold-->
 	<PathGeometry x:Key="debugPathGeometry" 
 				  Figures="M4,15V9H12V4.16L19.84,12L12,19.84V15H4Z" />
-	<DrawingImage x:Key="debugDrawingImage">
-		<DrawingImage.Drawing>
-			<GeometryDrawing Brush="{StaticResource PPSnDrawingImageBrush}" Geometry="{StaticResource debugPathGeometry}"/>
-		</DrawingImage.Drawing>
-	</DrawingImage>
 
 	<!--information-->
 	<PathGeometry x:Key="informationPathGeometry" 
 				  Figures="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
-	<DrawingImage x:Key="informationDrawingImage">
-		<DrawingImage.Drawing>
-			<GeometryDrawing Brush="{StaticResource PPSnDrawingImageBrush}" Geometry="{StaticResource informationPathGeometry}"/>
-		</DrawingImage.Drawing>
-	</DrawingImage>
 
 	<!--alert-->
 	<PathGeometry x:Key="warningPathGeometry" 
 				  Figures="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z" />
-	<DrawingImage x:Key="warningDrawingImage">
-		<DrawingImage.Drawing>
-			<GeometryDrawing Brush="{StaticResource PPSnDrawingImageBrush}" Geometry="{StaticResource warningPathGeometry}"/>
-		</DrawingImage.Drawing>
-	</DrawingImage>
 
 	<!--close-octagon-->
 	<PathGeometry x:Key="failPathGeometry" 
 				  Figures="M8.27,3L3,8.27V15.73L8.27,21H15.73L21,15.73V8.27L15.73,3M8.41,7L12,10.59L15.59,7L17,8.41L13.41,12L17,15.59L15.59,17L12,13.41L8.41,17L7,15.59L10.59,12L7,8.41" />
-	<DrawingImage x:Key="failDrawingImage">
-		<DrawingImage.Drawing>
-			<GeometryDrawing Brush="{StaticResource PPSnDrawingImageBrush}" Geometry="{StaticResource failPathGeometry}"/>
-		</DrawingImage.Drawing>
-	</DrawingImage>
 
 	<!--bug-->
 	<PathGeometry x:Key="exceptionPathGeometry" 
@@ -59,21 +37,30 @@ specific language governing permissions and limitations under the Licence.
 	<!--camera-->
 	<PathGeometry x:Key="cameraPathGeometry" 
 				  Figures="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z" />
+
 	<!--scanner-->
 	<PathGeometry x:Key="scannerPathGeometry" 
 				  Figures="M19.8,10.7L4.2,5L3.5,6.9L17.6,12H5A2,2 0 0,0 3,14V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V12.5C21,11.7 20.5,10.9 19.8,10.7M7,17H5V15H7V17M19,17H9V15H19V17Z" />
+
 	<!--delete-forever-->
 	<PathGeometry x:Key="deletePathGeometry" 
 				  Figures="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M8.46,11.88L9.87,10.47L12,12.59L14.12,10.47L15.53,11.88L13.41,14L15.53,16.12L14.12,17.53L12,15.41L9.88,17.53L8.47,16.12L10.59,14L8.46,11.88M15.5,4L14.5,3H9.5L8.5,4H5V6H19V4H15.5Z" />
+
 	<!--file-plus-->
 	<PathGeometry x:Key="filePlusPathGeometry"
 				  Figures="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V4C4,2.89 4.89,2 6,2M11,15V12H9V15H6V17H9V20H11V17H14V15H11Z" />
+
+	<!--upload-network-->
+	<PathGeometry x:Key="uploadPathGeometry"
+				  Figures="M17,3A2,2 0 0,1 19,5V15A2,2 0 0,1 17,17H13V19H14A1,1 0 0,1 15,20H22V22H15A1,1 0 0,1 14,23H10A1,1 0 0,1 9,22H2V20H9A1,1 0 0,1 10,19H11V17H7C5.89,17 5,16.1 5,15V5A2,2 0 0,1 7,3H17M12,5.5L7.5,10H11V14H13V10H16.5L12,5.5Z" />
+
 	<!--link-variant-->
 	<PathGeometry x:Key="linkPathGeometry" 
 				  Figures="M10.59,13.41C11,13.8 11,14.44 10.59,14.83C10.2,15.22 9.56,15.22 9.17,14.83C7.22,12.88 7.22,9.71 9.17,7.76V7.76L12.71,4.22C14.66,2.27 17.83,2.27 19.78,4.22C21.73,6.17 21.73,9.34 19.78,11.29L18.29,12.78C18.3,11.96 18.17,11.14 17.89,10.36L18.36,9.88C19.54,8.71 19.54,6.81 18.36,5.64C17.19,4.46 15.29,4.46 14.12,5.64L10.59,9.17C9.41,10.34 9.41,12.24 10.59,13.41M13.41,9.17C13.8,8.78 14.44,8.78 14.83,9.17C16.78,11.12 16.78,14.29 14.83,16.24V16.24L11.29,19.78C9.34,21.73 6.17,21.73 4.22,19.78C2.27,17.83 2.27,14.66 4.22,12.71L5.71,11.22C5.7,12.04 5.83,12.86 6.11,13.65L5.64,14.12C4.46,15.29 4.46,17.19 5.64,18.36C6.81,19.54 8.71,19.54 9.88,18.36L13.41,14.83C14.59,13.66 14.59,11.76 13.41,10.59C13,10.2 13,9.56 13.41,9.17Z" />
 	<!--marker-->
 	<PathGeometry x:Key="markerPathGeometry" 
 				  Figures="M18.5,1.15C17.97,1.15 17.46,1.34 17.07,1.73L11.26,7.55L16.91,13.2L22.73,7.39C23.5,6.61 23.5,5.35 22.73,4.56L19.89,1.73C19.5,1.34 19,1.15 18.5,1.15M10.3,8.5L4.34,14.46C3.56,15.24 3.56,16.5 4.36,17.31C3.14,18.54 1.9,19.77 0.67,21H6.33L7.19,20.14C7.97,20.9 9.22,20.89 10,20.12L15.95,14.16" />
+
 	<!--help-circle-->
 	<PathGeometry x:Key="helpCircelPathGeometry" 
 				  Figures="M15.07,11.25L14.17,12.17C13.45,12.89 13,13.5 13,15H11V14.5C11,13.39 11.45,12.39 12.17,11.67L13.41,10.41C13.78,10.05 14,9.55 14,9C14,7.89 13.1,7 12,7A2,2 0 0,0 10,9H8A4,4 0 0,1 12,5A4,4 0 0,1 16,9C16,9.88 15.64,10.67 15.07,11.25M13,19H11V17H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12C22,6.47 17.5,2 12,2Z" />
@@ -81,24 +68,104 @@ specific language governing permissions and limitations under the Licence.
 	<!--file-outline-->
 	<PathGeometry x:Key="fileOutlinePathGeometry" 
 				  Figures="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V4C4,2.89 4.89,2 6,2M11,4H6V20H11L18,20V11H11V4Z" />
-	<DrawingImage x:Key="fileOutlineDrawingImage">
-		<DrawingImage.Drawing>
-			<GeometryDrawing Brush="{StaticResource PPSnDrawingImageBrush}" Geometry="{StaticResource fileOutlinePathGeometry}"/>
-		</DrawingImage.Drawing>
-	</DrawingImage>
 
 	<!--image-->
 	<PathGeometry x:Key="imagePathGeometry" 
 				  Figures="M8.5,13.5L11,16.5L14.5,12L19,18H5M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19Z" />
-	<DrawingImage x:Key="imageDrawingImage">
-		<DrawingImage.Drawing>
-			<GeometryDrawing Brush="{StaticResource PPSnDrawingImageBrush}" Geometry="{StaticResource imagePathGeometry}"/>
-		</DrawingImage.Drawing>
-	</DrawingImage>
 
 	<!-- open-in-app-->
 	<PathGeometry x:Key="openInAppPathGeometry" 
 				  Figures="M12,10L8,14H11V20H13V14H16M19,4H5C3.89,4 3,4.9 3,6V18A2,2 0 0,0 5,20H9V18H5V8H19V18H15V20H19A2,2 0 0,0 21,18V6A2,2 0 0,0 19,4Z" />
 
+	<!-- cancel-->
+	<PathGeometry x:Key="cancelPathGeometry" 
+				  Figures="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12C4,13.85 4.63,15.55 5.68,16.91L16.91,5.68C15.55,4.63 13.85,4 12,4M12,20A8,8 0 0,0 20,12C20,10.15 19.37,8.45 18.32,7.09L7.09,18.32C8.45,19.37 10.15,20 12,20Z" />
 
+	<!-- checkbox-marked-circle-->
+	<PathGeometry x:Key="checkedCirclePathGeometry" 
+				  Figures="M10,17L5,12L6.41,10.58L10,14.17L17.59,6.58L19,8M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
+
+	<!-- lead-pencil-->
+	<PathGeometry x:Key="pencilPathGeometry" 
+				  Figures="M16.84,2.73C16.45,2.73 16.07,2.88 15.77,3.17L13.65,5.29L18.95,10.6L21.07,8.5C21.67,7.89 21.67,6.94 21.07,6.36L17.9,3.17C17.6,2.88 17.22,2.73 16.84,2.73M12.94,6L4.84,14.11L7.4,14.39L7.58,16.68L9.86,16.85L10.15,19.41L18.25,11.3M4.25,15.04L2.5,21.73L9.2,19.94L8.96,17.78L6.65,17.61L6.47,15.29" />
+
+	<!-- chevron-left-->
+	<PathGeometry x:Key="chevronLeftPathGeometry" 
+				  Figures="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z" />
+
+	<!-- tag-->
+	<PathGeometry x:Key="tagPathGeometry" 
+				  Figures="M5.5,7A1.5,1.5 0 0,1 4,5.5A1.5,1.5 0 0,1 5.5,4A1.5,1.5 0 0,1 7,5.5A1.5,1.5 0 0,1 5.5,7M21.41,11.58L12.41,2.58C12.05,2.22 11.55,2 11,2H4C2.89,2 2,2.89 2,4V11C2,11.55 2.22,12.05 2.59,12.41L11.58,21.41C11.95,21.77 12.45,22 13,22C13.55,22 14.05,21.77 14.41,21.41L21.41,14.41C21.78,14.05 22,13.55 22,13C22,12.44 21.77,11.94 21.41,11.58Z" />
+
+	<!-- tag-plus-->
+	<PathGeometry x:Key="tagPlusPathGeometry" 
+				  Figures="M21.41,11.58L12.41,2.58C12.04,2.21 11.53,2 11,2H4A2,2 0 0,0 2,4V11C2,11.53 2.21,12.04 2.59,12.41L3,12.81C3.9,12.27 4.94,12 6,12A6,6 0 0,1 12,18C12,19.06 11.72,20.09 11.18,21L11.58,21.4C11.95,21.78 12.47,22 13,22C13.53,22 14.04,21.79 14.41,21.41L21.41,14.41C21.79,14.04 22,13.53 22,13C22,12.47 21.79,11.96 21.41,11.58M5.5,7A1.5,1.5 0 0,1 4,5.5A1.5,1.5 0 0,1 5.5,4A1.5,1.5 0 0,1 7,5.5A1.5,1.5 0 0,1 5.5,7M10,19H7V22H5V19H2V17H5V14H7V17H10V19Z" />
+
+	<!-- tag-multiple-->
+	<PathGeometry x:Key="tagMultiplePathGeometry" 
+				  Figures="M5.5,9A1.5,1.5 0 0,0 7,7.5A1.5,1.5 0 0,0 5.5,6A1.5,1.5 0 0,0 4,7.5A1.5,1.5 0 0,0 5.5,9M17.41,11.58C17.77,11.94 18,12.44 18,13C18,13.55 17.78,14.05 17.41,14.41L12.41,19.41C12.05,19.77 11.55,20 11,20C10.45,20 9.95,19.78 9.58,19.41L2.59,12.42C2.22,12.05 2,11.55 2,11V6C2,4.89 2.89,4 4,4H9C9.55,4 10.05,4.22 10.41,4.58L17.41,11.58M13.54,5.71L14.54,4.71L21.41,11.58C21.78,11.94 22,12.45 22,13C22,13.55 21.78,14.05 21.42,14.41L16.04,19.79L15.04,18.79L20.75,13L13.54,5.71Z" />
+
+	<!-- tag-text-outline-->
+	<PathGeometry x:Key="tagTextPathGeometry" 
+				  Figures="M5.5,7A1.5,1.5 0 0,0 7,5.5A1.5,1.5 0 0,0 5.5,4A1.5,1.5 0 0,0 4,5.5A1.5,1.5 0 0,0 5.5,7M21.41,11.58C21.77,11.94 22,12.44 22,13C22,13.55 21.78,14.05 21.41,14.41L14.41,21.41C14.05,21.77 13.55,22 13,22C12.45,22 11.95,21.77 11.58,21.41L2.59,12.41C2.22,12.05 2,11.55 2,11V4C2,2.89 2.89,2 4,2H11C11.55,2 12.05,2.22 12.41,2.58L21.41,11.58M13,20L20,13L11.5,4.5L4.5,11.5L13,20M10.09,8.91L11.5,7.5L17,13L15.59,14.41L10.09,8.91M7.59,11.41L9,10L13,14L11.59,15.41L7.59,11.41Z" />
+
+	<!-- note-outline-->
+	<PathGeometry x:Key="noteOutlinePathGeometry" 
+				  Figures="M14,10H19.5L14,4.5V10M5,3H15L21,9V19A2,2 0 0,1 19,21H5C3.89,21 3,20.1 3,19V5C3,3.89 3.89,3 5,3M5,5V19H19V12H12V5H5Z" />
+
+	<!-- pound (alias hashtag)-->
+	<PathGeometry x:Key="hashTagPathGeometry" 
+				  Figures="M5.41,21L6.12,17H2.12L2.47,15H6.47L7.53,9H3.53L3.88,7H7.88L8.59,3H10.59L9.88,7H15.88L16.59,3H18.59L17.88,7H21.88L21.53,9H17.53L16.47,15H20.47L20.12,17H16.12L15.41,21H13.41L14.12,17H8.12L7.41,21H5.41M9.53,9L8.47,15H14.47L15.53,9H9.53Z" />
+
+	<!-- numeric-3-box-multiple-outline-->
+	<PathGeometry x:Key="revisionOutlinePathGeometry" 
+				  Figures="M17,13V11.5A1.5,1.5 0 0,0 15.5,10A1.5,1.5 0 0,0 17,8.5V7C17,5.89 16.1,5 15,5H11V7H15V9H13V11H15V13H11V15H15A2,2 0 0,0 17,13M3,5H1V21A2,2 0 0,0 3,23H19V21H3M21,17H7V3H21M21,1H7A2,2 0 0,0 5,3V17A2,2 0 0,0 7,19H21A2,2 0 0,0 23,17V3A2,2 0 0,0 21,1Z" />
+
+	<!-- calendar-clock-->
+	<PathGeometry x:Key="calendarClockPathGeometry" 
+				  Figures="M15,13H16.5V15.82L18.94,17.23L18.19,18.53L15,16.69V13M19,8H5V19H9.67C9.24,18.09 9,17.07 9,16A7,7 0 0,1 16,9C17.07,9 18.09,9.24 19,9.67V8M5,21C3.89,21 3,20.1 3,19V5C3,3.89 3.89,3 5,3H6V1H8V3H16V1H18V3H19A2,2 0 0,1 21,5V11.1C22.24,12.36 23,14.09 23,16A7,7 0 0,1 16,23C14.09,23 12.36,22.24 11.1,21H5M16,11.15A4.85,4.85 0 0,0 11.15,16C11.15,18.68 13.32,20.85 16,20.85A4.85,4.85 0 0,0 20.85,16C20.85,13.32 18.68,11.15 16,11.15Z" />
+
+	<!--  certificate-->
+	<PathGeometry x:Key="qmPathGeometry" 
+				  Figures="M4,3C2.89,3 2,3.89 2,5V15A2,2 0 0,0 4,17H12V22L15,19L18,22V17H20A2,2 0 0,0 22,15V8L22,6V5A2,2 0 0,0 20,3H16V3H4M12,5L15,7L18,5V8.5L21,10L18,11.5V15L15,13L12,15V11.5L9,10L12,8.5V5M4,5H9V7H4V5M4,9H7V11H4V9M4,13H9V15H4V13Z" />
+
+	<!-- contacts-->
+	<PathGeometry x:Key="contactsPathGeometry" 
+				  Figures="M20,0H4V2H20V0M4,24H20V22H4V24M20,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4M12,6.75A2.25,2.25 0 0,1 14.25,9A2.25,2.25 0 0,1 12,11.25A2.25,2.25 0 0,1 9.75,9A2.25,2.25 0 0,1 12,6.75M17,17H7V15.5C7,13.83 10.33,13 12,13C13.67,13 17,13.83 17,15.5V17Z" />
+
+	<!-- widgets-->
+	<PathGeometry x:Key="projectPathGeometry" 
+				  Figures="M3,3H11V7.34L16.66,1.69L22.31,7.34L16.66,13H21V21H13V13H16.66L11,7.34V11H3V3M3,13H11V21H3V13Z" />
+
+	<!-- lock-->
+	<PathGeometry x:Key="lockPathGeometry" 
+				  Figures="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z" />
+
+	<!-- plus-->
+	<PathGeometry x:Key="plusPathGeometry" 
+				  Figures="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+
+	<!-- account-->
+	<PathGeometry x:Key="accountPathGeometry" 
+				  Figures="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" />
+
+	<!-- account-multiple-->
+	<PathGeometry x:Key="accountMultiplePathGeometry" 
+				  Figures="M16,13C15.71,13 15.38,13 15.03,13.05C16.19,13.89 17,15 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M8,11A3,3 0 0,0 11,8A3,3 0 0,0 8,5A3,3 0 0,0 5,8A3,3 0 0,0 8,11M16,11A3,3 0 0,0 19,8A3,3 0 0,0 16,5A3,3 0 0,0 13,8A3,3 0 0,0 16,11Z" />
+
+	<!-- settings-->
+	<PathGeometry x:Key="settingsPathGeometry" 
+				  Figures="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z" />
+
+	<!-- window-close-->
+	<PathGeometry x:Key="windowClosePathGeometry" 
+				  Figures="M13.46,12L19,17.54V19H17.54L12,13.46L6.46,19H5V17.54L10.54,12L5,6.46V5H6.46L12,10.54L17.54,5H19V6.46L13.46,12Z" />
+
+	<!-- logout-variant-->
+	<PathGeometry x:Key="logoutPathGeometry" 
+				  Figures="M14.08,15.59L16.67,13H7V11H16.67L14.08,8.41L15.5,7L20.5,12L15.5,17L14.08,15.59M19,3A2,2 0 0,1 21,5V9.67L19,7.67V5H5V19H19V16.33L21,14.33V19A2,2 0 0,1 19,21H5C3.89,21 3,20.1 3,19V5C3,3.89 3.89,3 5,3H19Z" />
+
+	<!-- star-->
+	<PathGeometry x:Key="starPathGeometry" 
+				  Figures="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" />
 </ResourceDictionary>

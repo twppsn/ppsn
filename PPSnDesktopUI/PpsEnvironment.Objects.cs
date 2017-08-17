@@ -1041,7 +1041,7 @@ namespace TecWare.PPSn
 				CheckTagsLoaded();
 
 				var idx = IndexOf(key, userId);
-				if (idx == -1)
+				if (idx == -1 || tags[idx].Class != cls)
 				{
 					var newTag = new PpsObjectTagView(parent, null, key, true, null, null, cls, value, userId, true);
 					tags.Add(newTag);
@@ -1052,6 +1052,7 @@ namespace TecWare.PPSn
 				{
 					var t = tags[idx];
 					t.Update(cls, value);
+					OnCollectionReset();
 					return t;
 				}
 			}

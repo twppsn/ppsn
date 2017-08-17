@@ -1,0 +1,274 @@
+﻿<UserControl x:Class="TecWare.PPSn.UI.PpsTagsEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             xmlns:local="clr-namespace:TecWare.PPSn.UI"
+             xmlns:data="clr-namespace:TecWare.PPSn.Data;assembly=PPSn.Core"
+             mc:Ignorable="d" 
+             d:DesignHeight="300" d:DesignWidth="300">
+
+	<UserControl.Resources>
+        <local:PpsObjectTagsConverter x:Key="PpsObjectTagsConverter"/>
+
+		<Style x:Key="PpsTagTextBoxStyle" TargetType="{x:Type TextBox}">
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="HorizontalContentAlignment" Value="Left"/>
+			<Setter Property="Padding" Value="2,0"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderBrush" Value="Transparent"/>
+			<Setter Property="SelectionBrush" Value="Black"/>
+			<Setter Property="SelectionOpacity" Value=".25"/>
+			<Setter Property="CaretBrush" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type TextBox}">
+						<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+								Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="18"/>
+									<ColumnDefinition/>
+								</Grid.ColumnDefinitions>
+								<Viewbox Grid.Column="0" Opacity=".55">
+									<Canvas Width="24" Height="24">
+										<Path x:Name="imagePath" Data="{StaticResource accountPathGeometry}" Fill="{StaticResource PPSnActionButtonBrush}"/>
+									</Canvas>
+								</Viewbox>
+								<ScrollViewer x:Name="PART_ContentHost" Grid.Column="1" Focusable="false"
+											  HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"/>
+							</Grid>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsEnabled" Value="True">
+								<Setter Property="MinWidth" Value="90"/>
+								<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
+							</Trigger>
+							<DataTrigger Binding="{Binding Path=OwnerIdentityIcon, Mode=OneWay}">
+								<DataTrigger.Value>
+									<local:PpsTagOwnerIdentityIcon>Community</local:PpsTagOwnerIdentityIcon>
+								</DataTrigger.Value>
+								<Setter TargetName="imagePath" Property="Data" Value="{StaticResource accountMultiplePathGeometry}"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding Path=OwnerIdentityIcon, Mode=OneWay}">
+								<DataTrigger.Value>
+									<local:PpsTagOwnerIdentityIcon>System</local:PpsTagOwnerIdentityIcon>
+								</DataTrigger.Value>
+								<Setter TargetName="imagePath" Property="Data" Value="{StaticResource settingsPathGeometry}"/>
+							</DataTrigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<DataTemplate x:Key="TagEditor">
+            <ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
+                                       Path=TagsSource, 
+                                       Converter={StaticResource PpsObjectTagsConverter},
+                                       ConverterParameter={x:Static data:PpsObjectTagClass.Text}}">
+                <ListBox.ItemTemplate>
+                    <ItemContainerTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="75"/>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="75"/>
+                                <ColumnDefinition Width="75"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CreateNewBool}"/>
+                            <TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="auto" MinWidth="200" Height="auto"
+									 IsEnabled="{Binding IsUserChangeable}"/>
+                            <local:PpsOwnerIdentityIcon Grid.Column="2" Owner="{Binding UserId}"/>
+                            <Button Grid.Column="3" Command="{x:Static local:PpsTagsEditor.RemoveTagCommand}" CommandParameter="{Binding}" Content="Löschen" 
+									Visibility="{Binding CanDelete}"/>
+                            <Button Grid.Column="3" Command="{x:Static local:PpsTagsEditor.AppendTagCommand}" Content="Hinzufügen" CommandParameter="{Binding}"
+									Visibility="{Binding CreateNewVisibility}"/>
+                        </Grid>
+                    </ItemContainerTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DataTemplate>
+
+		<DataTemplate x:Key="TagCloud">
+            <ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
+				                   Path=TagsSource, 
+				                   Converter={StaticResource PpsObjectTagsConverter}, 
+				                   ConverterParameter={x:Static data:PpsObjectTagClass.Tag}}"
+					 Style="{StaticResource PPSnListBoxStyle}"
+					 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+					 Focusable="False">
+				<ListBox.ItemsPanel>
+					<ItemsPanelTemplate>
+						<WrapPanel IsItemsHost="True" Orientation="Horizontal"/>
+					</ItemsPanelTemplate>
+				</ListBox.ItemsPanel>
+				<ListBox.ItemTemplate>
+					<DataTemplate>
+						<Grid Height="30" Background="Transparent">
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="auto"/>
+								<ColumnDefinition Width="auto"/>
+							</Grid.ColumnDefinitions>
+							<TextBox x:Name="tagTextBox" Grid.Column="0" Margin="0,2"
+									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 MaxLength="64"
+									 IsEnabled="{Binding CreateNewBool}"
+									 Style="{StaticResource PpsTagTextBoxStyle}">
+								<TextBox.InputBindings>
+									<KeyBinding Key="Return" Command="{x:Static local:PpsTagsEditor.AppendTagCommand}" CommandParameter="{Binding}"/>
+								</TextBox.InputBindings>
+							</TextBox>
+							<Button x:Name="removeButton" Grid.Column="1"
+									Command="{x:Static local:PpsTagsEditor.RemoveTagCommand}" 
+									CommandParameter="{Binding}"
+									Style="{StaticResource PPSnCircleButtonStyle}"
+									Tag="{StaticResource deletePathGeometry}"
+									MinWidth="30" Padding="5" Margin="6,0"
+									Visibility="Hidden"/>
+							<Button x:Name="appendButton" Grid.Column="1"
+									Command="{x:Static local:PpsTagsEditor.AppendTagCommand}"
+									CommandParameter="{Binding}" 
+									Style="{StaticResource PPSnCircleButtonStyle}"
+									Tag="{StaticResource plusPathGeometry}"
+									MinWidth="30" Padding="5" Margin="6,0"
+									Visibility="Hidden"/>
+						</Grid>
+						<DataTemplate.Triggers>
+							<MultiDataTrigger>
+								<MultiDataTrigger.Conditions>
+									<Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}">
+										<Condition.Value>
+											<sys:Boolean>true</sys:Boolean>
+										</Condition.Value>
+									</Condition>
+									<Condition Binding="{Binding Path=CanDelete, Mode=OneWay}">
+										<Condition.Value>
+											<sys:Boolean>true</sys:Boolean>
+										</Condition.Value>
+									</Condition>
+								</MultiDataTrigger.Conditions>
+								<Setter TargetName="removeButton" Property="Visibility" Value="Visible"/>
+								<Setter TargetName="tagTextBox" Property="BorderBrush" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
+							</MultiDataTrigger>
+							<DataTrigger Binding="{Binding Path=CreateNewBool, Mode=OneWay}">
+								<DataTrigger.Value>
+									<sys:Boolean>true</sys:Boolean>
+								</DataTrigger.Value>
+								<Setter TargetName="appendButton" Property="Visibility" Value="Visible"/>
+							</DataTrigger>
+						</DataTemplate.Triggers>
+					</DataTemplate>
+				</ListBox.ItemTemplate>
+				<ListBox.ItemContainerStyle>
+					<Style TargetType="{x:Type ListBoxItem}">
+						<Setter Property="VerticalAlignment" Value="Top"/>
+						<Setter Property="Margin" Value="0,0,6,6"/>
+						<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+						<Setter Property="Template">
+							<Setter.Value>
+								<ControlTemplate TargetType="{x:Type ListBoxItem}">
+									<ContentPresenter />
+								</ControlTemplate>
+							</Setter.Value>
+						</Setter>
+						<Style.Triggers>
+							<Trigger Property="IsKeyboardFocusWithin" Value="True">
+								<Setter Property="IsSelected" Value="True"/>
+							</Trigger>
+						</Style.Triggers>
+					</Style>
+				</ListBox.ItemContainerStyle>
+            </ListBox>
+        </DataTemplate>
+		
+        <DataTemplate x:Key="NotesEditor">
+            <ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
+                                       Path=TagsSource, 
+                                       Converter={StaticResource PpsObjectTagsConverter},
+                                       ConverterParameter={x:Static data:PpsObjectTagClass.Note}}">
+                <ListBox.ItemTemplate>
+                    <ItemContainerTemplate>
+                        <Grid Width="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=ActualWidth}" Background="LightGray" Margin="0,0,0,5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="20" />
+                                <RowDefinition Height="auto"/>
+                                <RowDefinition Height="20"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CreateNewBool}"/>
+                            <TextBox Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="150" AcceptsReturn="True" IsEnabled="{Binding IsUserChangeable}"/>
+                            <local:PpsOwnerIdentityIcon Grid.Column="0" Grid.Row="0" Owner="{Binding UserId}"/>
+                            <Grid Grid.Column="1" Grid.Row="2" HorizontalAlignment="Right">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="auto"/>
+                                    <ColumnDefinition Width="auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Command="{x:Static local:PpsTagsEditor.SaveTagCommand}" CommandParameter="{Binding}" Content="Speichern"/>
+                                <Button Grid.Column="1" Command="{x:Static local:PpsTagsEditor.RemoveTagCommand}" CommandParameter="{Binding}" Content="Löschen" Visibility="{Binding CanDelete}"/>
+                                <Button Grid.Column="1" Command="{x:Static local:PpsTagsEditor.AppendTagCommand}" Content="Hinzufügen" CommandParameter="{Binding}" Visibility="{Binding CreateNewVisibility}"/>
+                            </Grid>
+                        </Grid>
+                    </ItemContainerTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DataTemplate>
+        <DataTemplate x:Key="TasksEditor">
+            <ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
+                                       Path=TagsSource, 
+                                       Converter={StaticResource PpsObjectTagsConverter},
+                                       ConverterParameter={x:Static data:PpsObjectTagClass.Date}}">
+                <ListBox.ItemTemplate>
+                    <ItemContainerTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="75"/>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="75"/>
+                                <ColumnDefinition Width="75"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CreateNewBool}"/>
+                            <TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="auto" MinWidth="200" Height="auto" IsEnabled="{Binding IsUserChangeable}"/>
+                            <local:PpsOwnerIdentityIcon Grid.Column="2" Owner="{Binding UserId}"/>
+                            <Button Grid.Column="3" Command="{x:Static local:PpsTagsEditor.RemoveTagCommand}" CommandParameter="{Binding}" Content="Löschen" Visibility="{Binding CanDelete}"/>
+                            <Button Grid.Column="3" Command="{x:Static local:PpsTagsEditor.AppendTagCommand}" Content="Hinzufügen" CommandParameter="{Binding}" Visibility="{Binding CreateNewVisibility}"/>
+                        </Grid>
+                    </ItemContainerTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DataTemplate>
+    </UserControl.Resources>
+    <Grid>
+        <ContentPresenter>
+            <ContentPresenter.Style>
+                <Style TargetType="{x:Type ContentPresenter}" >
+                    <Style.Triggers>
+						<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
+							                   Path=TagsClass}" Value="{x:Static data:PpsObjectTagClass.Text}">
+							<Setter Property="ContentTemplate" Value="{StaticResource TagEditor}"/>
+                        </DataTrigger>
+						<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
+							                   Path=TagsClass}" Value="{x:Static data:PpsObjectTagClass.Tag}">
+                            <Setter Property="ContentTemplate" Value="{StaticResource TagCloud}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
+							                           Path=TagsClass}" Value="{x:Static data:PpsObjectTagClass.Note}">
+							<Setter Property="ContentTemplate" Value="{StaticResource NotesEditor}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
+                                       Path=TagsClass}" Value="{x:Static data:PpsObjectTagClass.Date}">
+                            <Setter Property="ContentTemplate" Value="{StaticResource TasksEditor}"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ContentPresenter.Style>
+        </ContentPresenter>
+    </Grid>
+</UserControl>
