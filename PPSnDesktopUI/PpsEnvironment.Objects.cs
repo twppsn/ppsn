@@ -1333,8 +1333,6 @@ namespace TecWare.PPSn
 						enc = null;
 						bI = null;
 
-						GC.Collect();
-
 						baseObj.Links.AppendLink(obj, PpsObjectLinkRestriction.Delete);
 						await baseObj.UpdateLocalAsync();
 
