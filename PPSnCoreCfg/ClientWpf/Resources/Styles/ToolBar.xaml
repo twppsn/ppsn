@@ -14,27 +14,29 @@
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="Padding" Value="8,0"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="FontSize" Value="14.667"/>
+        <Setter Property="FontSize" Value="14"/>
         <Setter Property="Focusable" Value="False" />
         <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
-                    <Border x:Name="PART_Border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}"
-							Padding="{TemplateBinding Padding}"
-							SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+					<Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}"
+							BorderBrush="{TemplateBinding BorderBrush}" Background="{TemplateBinding Background}"
+							Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+										  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+										  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="true">
 							<Setter Property="Background" Value="{StaticResource PPSnMouseOverBrush}"/>
-                            <Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}"/>
+							<Setter Property="BorderBrush" Value="{StaticResource PPSnWindowForegroundBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="true">
-                            <Setter Property="Background" TargetName="PART_Border" Value="{StaticResource PPSnButtonPressedBrush}"/>
+                            <Setter Property="Background" TargetName="border" Value="{StaticResource PPSnButtonPressedBrush}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.45"/>
+                            <Setter Property="Opacity" Value="0.35"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -46,23 +48,30 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type uiC:SplitButton}">
-                    <Grid x:Name="PART_LayoutGrid">
+                    <Grid x:Name="layoutGrid">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition/>
                         </Grid.ColumnDefinitions>
-                        <Border x:Name="PART_Border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" Padding="8,0,3,0" SnapsToDevicePixels="True">
+						<Border x:Name="border" Padding="8,0,4,0" BorderThickness="{TemplateBinding BorderThickness}"
+								BorderBrush="{TemplateBinding BorderBrush}"
+								Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
                             <ContentPresenter/>
                         </Border>
-                        <Button x:Name="PART_Dropdown" Grid.Column="1" Width="17" Focusable="False" BorderThickness="0,1,1,1" BorderBrush="{TemplateBinding BorderBrush}" SnapsToDevicePixels="True"
+                        <Button x:Name="PART_Dropdown" Grid.Column="1" Width="21" Focusable="False" 
+								BorderThickness="0,1,1,1" BorderBrush="{TemplateBinding BorderBrush}" SnapsToDevicePixels="True"
 								Foreground="{StaticResource PPSnWindowForegroundBrush}" Background="{TemplateBinding Background}">
                             <Button.Style>
                                 <Style TargetType="{x:Type Button}">
                                     <Setter Property="Template">
                                         <Setter.Value>
                                             <ControlTemplate TargetType="{x:Type Button}">
-                                                <Border x:Name="PART_DropdownBorder" Grid.Column="0" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}">
-                                                    <Path x:Name="PART_DropdownArrow" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{TemplateBinding Foreground}" Data="M 0 3 L 5 10 L 10 3 Z"/>
+                                                <Border BorderBrush="{TemplateBinding BorderBrush}"
+														BorderThickness="{TemplateBinding BorderThickness}" 
+														Background="{TemplateBinding Background}">
+                                                    <Path HorizontalAlignment="Center" VerticalAlignment="Center" Opacity=".9"
+														  Fill="{TemplateBinding Foreground}"
+														  Data="M 0 3 L 5 10 L 10 3 Z"/>
                                                 </Border>
                                             </ControlTemplate>
                                         </Setter.Value>
@@ -73,23 +82,23 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="true">
-							<Setter Property="Background" TargetName="PART_LayoutGrid" Value="{StaticResource PPSnMouseOverBrush}"/>
-                            <Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}"/>
-                            <Setter Property="BorderBrush" TargetName="PART_Dropdown" Value="{StaticResource PPSnSeparatorBrush}"/>
+							<Setter Property="Background" TargetName="layoutGrid" Value="{StaticResource PPSnMouseOverBrush}"/>
+							<Setter Property="BorderBrush" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+							<Setter Property="BorderBrush" TargetName="PART_Dropdown" Value="{StaticResource PPSnWindowForegroundBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Background" TargetName="PART_Border" Value="{StaticResource PPSnButtonPressedBrush}"/>
+							<Setter Property="Background" TargetName="border" Value="{StaticResource PPSnButtonPressedBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" SourceName="PART_Dropdown" Value="True">
                             <Setter Property="Background" TargetName="PART_Dropdown" Value="{StaticResource PPSnButtonPressedBrush}"/>
                         </Trigger>
                         <Trigger Property="IsOpen" Value="True">
-							<Setter Property="Background" TargetName="PART_LayoutGrid" Value="{StaticResource PPSnMouseOverBrush}"/>
-                            <Setter Property="BorderBrush" Value="{StaticResource PPSnSeparatorBrush}"/>
-                            <Setter Property="BorderBrush" TargetName="PART_Dropdown" Value="{StaticResource PPSnSeparatorBrush}"/>
+							<Setter Property="Background" TargetName="layoutGrid" Value="{StaticResource PPSnMouseOverBrush}"/>
+							<Setter Property="BorderBrush" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+							<Setter Property="BorderBrush" TargetName="PART_Dropdown" Value="{StaticResource PPSnWindowForegroundBrush}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.45"/>
+                            <Setter Property="Opacity" Value="0.35"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -97,7 +106,7 @@
         </Setter>
     </Style>
 
-    <Style x:Key="PaneToolBarStyle" TargetType="{x:Type ToolBar}">
+	<Style x:Key="PaneToolBarStyle" TargetType="{x:Type ToolBar}">
         <Style.Resources>
             <DataTemplate x:Key="{x:Type ui:PpsUICommandButton}">
                 <Button Style="{StaticResource ToolBarButtonStyle}" ToolTip="{Binding Description}" Command="{Binding Command}">
@@ -108,7 +117,9 @@
                 </Button>
             </DataTemplate>
             <DataTemplate x:Key="{x:Type ui:PpsUISplitCommandButton}">
-                <uiC:SplitButton Style="{StaticResource ToolBarSplitButtonStyle}" ToolTip="{Binding Description}" Command="{Binding Command}" Popup="{Binding Popup}" ContextMenu="{Binding ContextMenu}">
+                <uiC:SplitButton Style="{StaticResource ToolBarSplitButtonStyle}" ToolTip="{Binding Description}" Command="{Binding Command}"
+								 Popup="{Binding Popup}"
+								 ContextMenu="{Binding ContextMenu}">
                     <StackPanel Orientation="Horizontal" Margin="0">
                         <Image Source="{ui:PpsImageStaticResourceBinding {Binding Image}}" Width="18" Height="18" Margin="0,0,6,0" HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding DisplayText}" VerticalAlignment="Center" Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
@@ -134,7 +145,6 @@
 						   Bottom="0" />
 			</Setter.Value>
 		</Setter>
-		
 		<Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ToolBar}">
