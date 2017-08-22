@@ -381,9 +381,9 @@ namespace TecWare.PPSn.Controls
 			{
 				using (var trans = GetUndoManager(view.Table.DataSet).BeginTransaction("Datei hinzugefügt."))
 				{
-					var row = view.NewRow(null, null);
-					row[linkColumnIndex] = data;
-					view.Add(row);
+					var r = view.Table.Add(new Neo.IronLua.LuaTable());
+					r[linkColumnIndex] = data;
+					r.Commit();
 
 					trans.Commit();
 				}
