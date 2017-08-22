@@ -430,7 +430,7 @@ namespace TecWare.PPSn.Controls
 						throw new NotSupportedException();
 				}
 			} // proc OnCollectionChanged
-			
+
 			public IPpsDataView View => view;
 		} // class PpsAttachmentImplementation
 
