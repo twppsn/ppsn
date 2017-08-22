@@ -72,10 +72,9 @@ namespace TecWare.PPSn.UI
 								((IPpsTagItem)ie.Parameter).Append();
 								ie.Handled = true;
 							},
-							(isender, ie) => ie.CanExecute =(((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Tag && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name)) ||
-															(((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Text && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value)) ||
-															(((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Date && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && DateTime.TryParse(((IPpsTagItem)ie.Parameter).Value, out var temp)) ||
-															(((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Note && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name))
+							(isender, ie) => ie.CanExecute = (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Tag && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name)) ||
+															 (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Text && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value)) ||
+															 (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Date && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && DateTime.TryParse(((IPpsTagItem)ie.Parameter).Value, out var temp))
 						)
 					);
 			CommandBindings.Add(
@@ -220,15 +219,20 @@ namespace TecWare.PPSn.UI
 			public PpsTagsImplementation(PpsObject obj, PpsObjectTagClass tagClass)
 			{
 				this.obj = obj;
+				obj.Tags.RefreshTags();
 				this.tagClass = tagClass;
 
 				if (tagClass == PpsObjectTagClass.Date)
-					foreach (var tag in (from t in obj.Tags where t.Class == this.tagClass select t).OrderBy(t=>(DateTime)t.Value).ThenBy(t=>t.Name))
+					foreach (var tag in (from t in obj.Tags where t.Class == this.tagClass select t).OrderBy(t => (DateTime)t.Value).ThenBy(t => t.Name))
 						tags.Add(new PpsTagItemImplementation(tag, this));
-				else 
-					foreach (var tag in (from t in obj.Tags where t.Class == this.tagClass select t).OrderBy(t => t.UserId).ThenBy(t=>t.Name))
+				else
+					foreach (var tag in (from t in obj.Tags where t.Class == this.tagClass select t).OrderBy(t => t.UserId).ThenBy(t => t.Name))
 						tags.Add(new PpsTagItemImplementation(tag, this));
-				tags.Add(new PpsTagItemImplementation(this));
+
+				if (tagClass == PpsObjectTagClass.Note)
+					tags.Insert(0, new PpsTagItemImplementation(this));
+				else
+					tags.Add(new PpsTagItemImplementation(this));
 			}
 
 			public event NotifyCollectionChangedEventHandler CollectionChanged;
@@ -243,6 +247,8 @@ namespace TecWare.PPSn.UI
 
 			public void Append(string tagName, PpsObjectTagClass tagClass, object tagValue)
 			{
+				if (String.IsNullOrEmpty(tagName))
+					throw new ArgumentNullException("Tag Name");
 				switch (tagClass)
 				{
 					case PpsObjectTagClass.Text:
@@ -267,9 +273,14 @@ namespace TecWare.PPSn.UI
 
 			public void Remove(IPpsTagItem tag)
 			{
+				var remtag = (PpsTagItemImplementation)tag;
+				var remidx = tags.IndexOf(remtag);
+
 				obj.Tags.Remove(tag.Name);
 				obj.UpdateLocalAsync().AwaitTask();
-				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, (from t in tags where t.Name == tag.Name select t).First(), tags.IndexOf((from t in tags where t.Name == tag.Name select t).First())));
+
+				tags.Remove(remtag);
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, remtag, remidx));
 			}
 
 			public void Commit()
