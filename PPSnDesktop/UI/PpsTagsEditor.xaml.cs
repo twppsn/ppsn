@@ -74,8 +74,8 @@ namespace TecWare.PPSn.UI
 							},
 							(isender, ie) => ie.CanExecute =(((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Tag && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name)) ||
 															(((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Text && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value)) ||
-															(((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Date && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && DateTime.TryParse(((IPpsTagItem)ie.Parameter).Value, out var temp))
-						//!String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Tag || !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value))
+															(((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Date && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && DateTime.TryParse(((IPpsTagItem)ie.Parameter).Value, out var temp)) ||
+															(((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Note && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name))
 						)
 					);
 			CommandBindings.Add(
