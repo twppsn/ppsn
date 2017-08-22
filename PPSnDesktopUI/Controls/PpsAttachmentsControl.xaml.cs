@@ -385,6 +385,8 @@ namespace TecWare.PPSn.Controls
 					r[linkColumnIndex] = data;
 					r.Commit();
 
+					OnCollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, new PpsDataRow[] { r }));
+
 					trans.Commit();
 				}
 			} // proc Append
