@@ -186,6 +186,14 @@ namespace TecWare.PPSn
 			}
 		} // ctor
 
+		public override bool Equals(object obj)
+			=> obj is PpsMasterDataRow r 
+				?  (Object.ReferenceEquals(this, obj) || owner.Definition == r.owner.Definition && Object.Equals(Key, r.Key)) 
+				: false;
+
+		public override int GetHashCode()
+			=> owner.Definition.GetHashCode() ^ (Key?.GetHashCode() ?? 0);
+
 		public override IReadOnlyList<IDataColumn> Columns
 			=> owner.Columns;
 
@@ -416,6 +424,8 @@ namespace TecWare.PPSn
 		public override IReadOnlyList<IDataColumn> Columns => definition.Columns;
 		/// <summary>Self</summary>
 		public override PpsMasterDataTable Table => this;
+		/// <summary></summary>
+		public PpsDataTableDefinition Definition => definition;
 		/// <summary>The master data service.</summary>
 		public PpsMasterData MasterData => masterData;
 	} // class PpsMasterDataTable
