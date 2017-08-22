@@ -247,6 +247,8 @@ namespace TecWare.PPSn.UI
 
 			public void Append(string tagName, PpsObjectTagClass tagClass, object tagValue)
 			{
+				if (String.IsNullOrEmpty(tagName))
+					throw new ArgumentNullException("Tag Name");
 				switch (tagClass)
 				{
 					case PpsObjectTagClass.Text:
