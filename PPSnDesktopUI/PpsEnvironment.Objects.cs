@@ -2322,7 +2322,7 @@ namespace TecWare.PPSn
 		public async void ShellExecute()
 		{
 			var filename = (from t in Tags where t.Name == "Filename" select t).FirstOrDefault()?.Value.ToString();
-			
+
 			if (String.IsNullOrEmpty(filename))
 				return;
 
