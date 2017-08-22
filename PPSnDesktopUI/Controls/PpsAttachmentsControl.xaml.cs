@@ -390,7 +390,7 @@ namespace TecWare.PPSn.Controls
 			} // proc Append
 
 			public IEnumerator<IPpsAttachmentItem> GetEnumerator()
-				=> view.Select(c => new PpsAttachmentItemImplementation(c, linkColumnIndex)).GetEnumerator();
+				=> view.Table.Select(c => new PpsAttachmentItemImplementation(c, linkColumnIndex)).GetEnumerator();
 
 			IEnumerator IEnumerable.GetEnumerator()
 				=> GetEnumerator();
