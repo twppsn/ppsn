@@ -267,9 +267,14 @@ namespace TecWare.PPSn.UI
 
 			public void Remove(IPpsTagItem tag)
 			{
+				var remtag = (PpsTagItemImplementation)tag;
+				var remidx = tags.IndexOf(remtag);
+
 				obj.Tags.Remove(tag.Name);
 				obj.UpdateLocalAsync().AwaitTask();
-				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, (from t in tags where t.Name == tag.Name select t).First(), tags.IndexOf((from t in tags where t.Name == tag.Name select t).First())));
+
+				tags.Remove(remtag);
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, remtag, remidx));
 			}
 
 			public void Commit()
