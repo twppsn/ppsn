@@ -1156,7 +1156,7 @@ namespace TecWare.PPSn
 			=> Contains((PpsObjectTag)value);
 
 		int IList.IndexOf(object value)
-			=> IndexOf((PpsObjectTag)value);
+			=> (value is PpsObjectTagView) ? IndexOf((PpsObjectTagView)value) : IndexOf((PpsObjectTag)value);
 
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
