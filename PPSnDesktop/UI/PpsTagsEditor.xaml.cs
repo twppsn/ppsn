@@ -220,6 +220,7 @@ namespace TecWare.PPSn.UI
 			public PpsTagsImplementation(PpsObject obj, PpsObjectTagClass tagClass)
 			{
 				this.obj = obj;
+				obj.Tags.RefreshTags();
 				this.tagClass = tagClass;
 
 				if (tagClass == PpsObjectTagClass.Date)
