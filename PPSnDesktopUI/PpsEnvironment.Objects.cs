@@ -889,7 +889,7 @@ namespace TecWare.PPSn
 
 					foreach (var cur in tags)
 					{
-						if (cur.IsChanged)
+						if (cur.IsChanged || cur.IsRemoved)
 						{
 							if (cur.Id.HasValue)
 							{
