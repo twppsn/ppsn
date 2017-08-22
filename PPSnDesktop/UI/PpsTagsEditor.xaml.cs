@@ -228,7 +228,11 @@ namespace TecWare.PPSn.UI
 				else
 					foreach (var tag in (from t in obj.Tags where t.Class == this.tagClass select t).OrderBy(t => t.UserId).ThenBy(t => t.Name))
 						tags.Add(new PpsTagItemImplementation(tag, this));
-				tags.Add(new PpsTagItemImplementation(this));
+
+				if (tagClass == PpsObjectTagClass.Note)
+					tags.Insert(0, new PpsTagItemImplementation(this));
+				else
+					tags.Add(new PpsTagItemImplementation(this));
 			}
 
 			public event NotifyCollectionChangedEventHandler CollectionChanged;
