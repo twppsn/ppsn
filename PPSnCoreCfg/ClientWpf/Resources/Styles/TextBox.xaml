@@ -36,23 +36,15 @@
 						<Trigger Property="IsEnabled" Value="False">
 							<Setter Property="Foreground" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
 						</Trigger>
+						<Trigger Property="AcceptsReturn" Value="True">
+							<Setter Property="Padding" Value="2,2,2,0"/>
+							<Setter Property="VerticalContentAlignment" Value="Top"/>
+						</Trigger>
+
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
-		<Style.Triggers>
-			<Trigger Property="AcceptsReturn" Value="True">
-				<Setter Property="Padding" Value="2,2,2,0"/>
-				<Setter Property="VerticalContentAlignment" Value="Top"/>
-			</Trigger>
-			<!--<MultiTrigger>
-                <MultiTrigger.Conditions>
-                    <Condition Property="IsInactiveSelectionHighlightEnabled" Value="true"/>
-                    <Condition Property="IsSelectionActive" Value="false"/>
-                </MultiTrigger.Conditions>
-                <Setter Property="SelectionBrush" Value="{DynamicResource {x:Static SystemColors.InactiveSelectionHighlightBrushKey}}"/>
-            </MultiTrigger>-->
-		</Style.Triggers>
 	</Style>
 
 	<Style TargetType="{x:Type TextBox}" BasedOn="{StaticResource PPSnTextBoxStyle}" />
