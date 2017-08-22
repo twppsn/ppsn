@@ -134,7 +134,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		public PpsAttachmentItem(IServiceProvider sp, string name) 
+		public PpsAttachmentItem(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
 		} // ctor
@@ -150,7 +150,7 @@ namespace TecWare.PPSn.Server
 
 		protected override bool IsDataRevision(PpsAttachmentAccess data)
 			=> false;
-		
+
 		protected override bool LuaPush(PpsObjectAccess obj, object data, bool release)
 		{
 			switch (data)
