@@ -249,6 +249,7 @@ namespace TecWare.PPSn.UI
 			{
 				if (String.IsNullOrEmpty(tagName))
 					throw new ArgumentNullException("Tag Name");
+
 				switch (tagClass)
 				{
 					case PpsObjectTagClass.Text:
