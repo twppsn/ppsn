@@ -566,7 +566,7 @@ namespace TecWare.PPSn
 		private bool isChanged;
 		private bool setToDefault = false;
 		private bool userIsNull = false;
-		private WeakReference<PpsMasterDataRow> userRow = null;
+		private PpsMasterDataRow userRow = null;
 
 		internal PpsObjectTagView(PpsObject parent, long? id, string key, bool serverValuesLoaded, PpsObjectTagClass? serverClass, object serverValue, PpsObjectTagClass? localClass, object localValue, long userId, bool isChanged)
 		{
@@ -592,26 +592,13 @@ namespace TecWare.PPSn
 			{
 				if (UserId <= 0 || userIsNull)
 					return null;
-				else if (userRow.TryGetTarget(out var row))
-					return row;
+				else if (userRow != null)
+					return userRow;
 				else
 				{
-					var table = parent.Environment.MasterData.GetTable("User");
-					if (table != null)
-					{
-						row = table.GetRowById(UserId, false);
-						if (row != null)
-						{
-							userRow = new WeakReference<PpsMasterDataRow>(row);
-							userIsNull = false;
-						}
-						else
-							userIsNull = true;
-					}
-					else
-						userIsNull = true;
-
-					return row;
+					userRow = parent.Environment.MasterData.GetTable("User")?.GetRowById(UserId, false);
+					userIsNull = userRow == null;
+					return userRow;
 				}
 			}
 		} // ctor
