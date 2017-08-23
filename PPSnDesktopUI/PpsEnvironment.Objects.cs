@@ -592,7 +592,7 @@ namespace TecWare.PPSn
 			{
 				if (UserId <= 0 || userIsNull)
 					return null;
-				else if (userRow.TryGetTarget(out var row))
+				else if (userRow != null && userRow.TryGetTarget(out var row))
 					return row;
 				else
 				{
