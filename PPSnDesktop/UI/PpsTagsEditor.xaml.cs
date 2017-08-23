@@ -150,11 +150,11 @@ namespace TecWare.PPSn.UI
 								tags.Commit();
 							}
 							else
-								createNewValue = (string)value;
+								newValueHandler = (string)value;
 							break;
 						case PpsObjectTagClass.Note:
 						case PpsObjectTagClass.Date:
-							createNewValue = (string)value;
+							newValueHandler = (string)value;
 							break;
 						case PpsObjectTagClass.Tag:
 							throw new FieldAccessException();
@@ -166,6 +166,8 @@ namespace TecWare.PPSn.UI
 			public PpsObjectTagClass Class => tag != null ? tag.Class : tags.TagClass;
 
 			public long UserId => tag != null ? tag.UserId : PpsEnvironment.GetEnvironment().UserId;
+
+			public string UserName => tag?.User != null ? tag.User.GetProperty("Login", "Unbekannter Nutzer") : "Unbekannter Nutzer";
 
 			public bool IsUserChangeable => tag != null ? tag.UserId == PpsEnvironment.GetEnvironment().UserId : true;
 
@@ -207,8 +209,17 @@ namespace TecWare.PPSn.UI
 				createNewValue = String.Empty;
 			}
 
+			private string newValueHandler
+			{
+				set
+				{
+					createNewValue = value;
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CanSave)));
+				}
+			}
+
 			public bool CanSave
-				=> !String.IsNullOrEmpty(createNewValue);
+				=> tag != null && !String.IsNullOrEmpty(createNewValue);
 		}
 
 		private sealed class PpsTagsImplementation : IPpsTags, INotifyCollectionChanged
