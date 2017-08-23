@@ -275,6 +275,7 @@
 			<Style TargetType="{x:Type Grid}">
 				<Setter Property="Margin" Value="0,0,0,0"/>
 				<Setter Property="HorizontalAlignment" Value="Right"/>
+                <Setter Property="VerticalAlignment" Value="Bottom"/>
 				<Style.Triggers>
 					<DataTrigger Binding="{Binding CurrentPane.HasSideBar, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow, AncestorLevel=1}, Mode=OneWay}">
 						<DataTrigger.Value>
@@ -305,6 +306,10 @@
 			<!--Bindings do use type converters though-->
 			<ColumnDefinition Width="{Binding Source={StaticResource PPSnCharmBarColumnWidth}, Mode=OneTime}"/>
 		</Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+        </Grid.RowDefinitions>
 
 		<Border Grid.Column="0" MaxWidth="{StaticResource PPSnPaneMaxGridWidth}"
 				BorderThickness="1" 
@@ -402,8 +407,12 @@
 				</ContentPresenter.Style>
 			</ContentPresenter>
 		</Border>
-
-		<DockPanel Grid.Column="1" LastChildFill="False" VerticalAlignment="Bottom">
+        <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Nr}">
+            <TextBlock.RenderTransform>
+                <RotateTransform Angle="-90" />
+            </TextBlock.RenderTransform>
+        </TextBlock>
+        <DockPanel Grid.Column="1" Grid.Row="1" LastChildFill="False" VerticalAlignment="Bottom">
 			<DockPanel.Resources>
 				<Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource charmBarToggleButtonStyle}">
 					<Setter Property="Height" Value="48"/>

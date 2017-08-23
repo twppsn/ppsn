@@ -381,16 +381,18 @@ namespace TecWare.PPSn.Controls
 			{
 				using (var trans = GetUndoManager(view.Table.DataSet).BeginTransaction("Datei hinzugefügt."))
 				{
-					var row = view.NewRow(null, null);
-					row[linkColumnIndex] = data;
-					view.Add(row);
+					var r = view.Table.Add(new Neo.IronLua.LuaTable());
+					r[linkColumnIndex] = data;
+					r.Commit();
+
+					OnCollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, new PpsDataRow[] { r }));
 
 					trans.Commit();
 				}
 			} // proc Append
 
 			public IEnumerator<IPpsAttachmentItem> GetEnumerator()
-				=> view.Select(c => new PpsAttachmentItemImplementation(c, linkColumnIndex)).GetEnumerator();
+				=> view.Table.Select(c => new PpsAttachmentItemImplementation(c, linkColumnIndex)).GetEnumerator();
 
 			IEnumerator IEnumerable.GetEnumerator()
 				=> GetEnumerator();
@@ -430,7 +432,7 @@ namespace TecWare.PPSn.Controls
 						throw new NotSupportedException();
 				}
 			} // proc OnCollectionChanged
-			
+
 			public IPpsDataView View => view;
 		} // class PpsAttachmentImplementation
 

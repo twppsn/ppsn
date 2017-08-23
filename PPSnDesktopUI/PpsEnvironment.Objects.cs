@@ -1156,7 +1156,7 @@ namespace TecWare.PPSn
 			=> Contains((PpsObjectTag)value);
 
 		int IList.IndexOf(object value)
-			=> IndexOf((PpsObjectTag)value);
+			=> (value is PpsObjectTagView) ? IndexOf((PpsObjectTagView)value) : IndexOf((PpsObjectTag)value);
 
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
@@ -2322,7 +2322,7 @@ namespace TecWare.PPSn
 		public async void ShellExecute()
 		{
 			var filename = (from t in Tags where t.Name == "Filename" select t).FirstOrDefault()?.Value.ToString();
-			
+
 			if (String.IsNullOrEmpty(filename))
 				return;
 
