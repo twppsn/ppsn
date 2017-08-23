@@ -36,18 +36,11 @@
 			</ControlTemplate.Triggers>
 		</ControlTemplate>
 
-		<Style x:Key="PpsTagTextBoxStyle" TargetType="{x:Type TextBox}">
-			<Setter Property="VerticalContentAlignment" Value="Center"/>
-			<Setter Property="HorizontalContentAlignment" Value="Left"/>
-			<Setter Property="Padding" Value="2,0"/>
-			<Setter Property="FontSize" Value="14"/>
-			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+		<Style x:Key="PpsTagTextBoxStyle" TargetType="{x:Type TextBox}" BasedOn="{StaticResource PPSnTextBoxStyle}">
+			<Setter Property="VerticalAlignment" Value="Stretch"/>
+			<Setter Property="Height" Value="Auto"/>
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderBrush" Value="Transparent"/>
-			<Setter Property="SelectionBrush" Value="Black"/>
-			<Setter Property="SelectionOpacity" Value=".25"/>
-			<Setter Property="CaretBrush" Value="{StaticResource PPSnWindowForegroundBrush}"/>
-			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type TextBox}">
@@ -66,23 +59,12 @@
 						<ControlTemplate.Triggers>
 							<Trigger Property="IsEnabled" Value="True">
 								<Setter Property="MinWidth" Value="100"/>
+								<Setter TargetName="border" Property="BorderBrush" Value="{StaticResource lighterBorderBrush}"/>
+								<Setter TargetName="border" Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
+							</Trigger>
+							<Trigger Property="IsKeyboardFocused" Value="True">
 								<Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
 							</Trigger>
-							<MultiDataTrigger>
-								<MultiDataTrigger.Conditions>
-									<Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}">
-										<Condition.Value>
-											<sys:Boolean>true</sys:Boolean>
-										</Condition.Value>
-									</Condition>
-									<Condition Binding="{Binding Path=IsEnabled, RelativeSource={RelativeSource Mode=Self}, Mode=OneWay}">
-										<Condition.Value>
-											<sys:Boolean>true</sys:Boolean>
-										</Condition.Value>
-									</Condition>
-								</MultiDataTrigger.Conditions>
-								<Setter TargetName="border" Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
-							</MultiDataTrigger>
 						</ControlTemplate.Triggers>
 					</ControlTemplate>
 				</Setter.Value>
@@ -90,28 +72,21 @@
 		</Style>
 
 		<Style x:Key="PpsTagSimpleTextBoxStyle" TargetType="{x:Type TextBox}" BasedOn="{StaticResource PpsTagTextBoxStyle}">
+			<Setter Property="BorderBrush" Value="{StaticResource lighterBorderBrush}"/>
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type TextBox}">
-						<Border x:Name="border" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
-							<ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"/>
+						<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+								Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+							<ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
 						</Border>
 						<ControlTemplate.Triggers>
-							<MultiDataTrigger>
-								<MultiDataTrigger.Conditions>
-									<Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}">
-										<Condition.Value>
-											<sys:Boolean>true</sys:Boolean>
-										</Condition.Value>
-									</Condition>
-									<Condition Binding="{Binding Path=IsEnabled, RelativeSource={RelativeSource Mode=Self}, Mode=OneWay}">
-										<Condition.Value>
-											<sys:Boolean>true</sys:Boolean>
-										</Condition.Value>
-									</Condition>
-								</MultiDataTrigger.Conditions>
+							<Trigger Property="IsEnabled" Value="True">
 								<Setter Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
-							</MultiDataTrigger>
+							</Trigger>
+							<Trigger Property="IsKeyboardFocused" Value="True">
+								<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
+							</Trigger>
 						</ControlTemplate.Triggers>
 					</ControlTemplate>
 				</Setter.Value>
@@ -119,8 +94,10 @@
 		</Style>
 
 		<Style x:Key="PpsTagItemStyle" TargetType="{x:Type ListBoxItem}">
-			<Setter Property="Margin" Value="0,8"/>
+			<Setter Property="Margin" Value="0"/>
+			<Setter Property="Padding" Value="0"/>
 			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="IsTabStop" Value="False"/>
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type ListBoxItem}">
@@ -162,7 +139,7 @@
 								<TextBlock Text="CreationTime" Margin="4" VerticalAlignment="Center" FontSize="14" />
 								<TextBlock Text="OwnerName" Margin="4" VerticalAlignment="Center" FontSize="14"/>
 							</StackPanel>
-							<TextBox Grid.Column="0" Grid.Row="1" Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+							<TextBox Grid.Column="0" Grid.Row="1" Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 AcceptsReturn="True" VerticalContentAlignment="Top"
 									 IsEnabled="{Binding IsUserChangeable}" Style="{StaticResource PpsTagSimpleTextBoxStyle}"/>
 							<Grid Grid.Column="1" Grid.Row="1" Width="50">
@@ -174,7 +151,7 @@
 										Command="{x:Static uiL:PpsTagsEditor.SaveTagCommand}" CommandParameter="{Binding}"
 										Style="{StaticResource PPSnCircleButtonStyle}"
 										Tag="{StaticResource savePathGeometry}"
-										Visibility="Visible"/>
+										Visibility="Collapsed"/>
 								<Button x:Name="removeButton" Grid.Row="1" MinWidth="30" VerticalAlignment="Top" HorizontalAlignment="Center"
 										Command="{x:Static uiL:PpsTagsEditor.RemoveTagCommand}" CommandParameter="{Binding}"
 										Style="{StaticResource PPSnCircleButtonStyle}"
@@ -250,9 +227,11 @@
 									<ColumnDefinition Width="auto"/>
 									<ColumnDefinition Width="auto"/>
 								</Grid.ColumnDefinitions>
-								--><!--<Button Grid.Column="0" Command="{x:Static uiL:PpsTagsEditor.SaveTagCommand}" CommandParameter="{Binding}" Content="Speichern"/>
+								-->
+				<!--<Button Grid.Column="0" Command="{x:Static uiL:PpsTagsEditor.SaveTagCommand}" CommandParameter="{Binding}" Content="Speichern"/>
 								<Button Grid.Column="1" Command="{x:Static uiL:PpsTagsEditor.RemoveTagCommand}" CommandParameter="{Binding}" Content="Löschen" Visibility="{Binding CanDelete}"/>
-								<Button Grid.Column="1" Command="{x:Static uiL:PpsTagsEditor.AppendTagCommand}" Content="Hinzufügen" CommandParameter="{Binding}" Visibility="{Binding CreateNewVisibility}"/>--><!--
+								<Button Grid.Column="1" Command="{x:Static uiL:PpsTagsEditor.AppendTagCommand}" Content="Hinzufügen" CommandParameter="{Binding}" Visibility="{Binding CreateNewVisibility}"/>-->
+				<!--
 								<Button Grid.Column="0" Command="{x:Static uiL:PpsTagsEditor.SaveTagCommand}" CommandParameter="{Binding}" Content="Speichern"/>
 								<Button Grid.Column="1" Command="{x:Static uiL:PpsTagsEditor.RemoveTagCommand}" CommandParameter="{Binding}" Content="Löschen" />
 								<Button Grid.Column="2" Command="{x:Static uiL:PpsTagsEditor.AppendTagCommand}" Content="Hinzufügen" CommandParameter="{Binding}"/>
@@ -272,56 +251,51 @@
 					 Style="{StaticResource PPSnListBoxStyle}"
 					 ItemContainerStyle="{StaticResource PpsTagItemStyle}"
 					 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-					 Focusable="False">
-				<ListBox.ItemsPanel>
-					<ItemsPanelTemplate>
-						<WrapPanel IsItemsHost="True" Orientation="Horizontal"/>
-					</ItemsPanelTemplate>
-				</ListBox.ItemsPanel>
+					 KeyboardNavigation.TabNavigation="Cycle"
+					 Margin="16,16,0,16" Focusable="False">
 				<ListBox.ItemTemplate>
 					<DataTemplate>
 						<Grid Background="Transparent">
 							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="21"/>
-								<ColumnDefinition Width="auto" MinWidth="32"/>
-								<ColumnDefinition Width="auto"/>
-								<ColumnDefinition Width="auto" MinWidth="32"/>
-								<ColumnDefinition Width="auto"/>
+								<ColumnDefinition Width="176"/>
+								<ColumnDefinition/>
+								<ColumnDefinition Width="60"/>
 							</Grid.ColumnDefinitions>
-							<Rectangle x:Name="selectionRect" Grid.Column="0" Grid.ColumnSpan="4" Stroke="Transparent" StrokeThickness="1"
-									   IsHitTestVisible="False" SnapsToDevicePixels="True"/>
-							<Border Grid.Column="0" Background="{Binding Path=Background, ElementName=nameTextBox}" Margin="1,1,0,1" Padding="2,0,0,0">
-								<Control Template="{StaticResource PpsOwnerIdentityImageTemplate}"/>
-							</Border>
-							<TextBox x:Name="nameTextBox" Grid.Column="1" Margin="0,1"
+							<Grid.RowDefinitions>
+								<RowDefinition Height="38" MaxHeight="38"/>
+								<RowDefinition/>
+							</Grid.RowDefinitions>
+							<TextBox x:Name="nameTextBox" Grid.Column="0" Margin="0,5"
 									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"
-									 IsEnabled="{Binding CreateNewBool}"/>
-							<Border Grid.Column="2" Background="{Binding Path=Background, ElementName=nameTextBox}" Margin="0,1" Padding="3,0">
-								<TextBlock Text=":" FontSize="14" FontWeight="ExtraBold" Foreground="{StaticResource PPSnWindowForegroundBrush}" VerticalAlignment="Center"/>
-							</Border>
-							<TextBox Grid.Column="3" Margin="0,1,1,1"
+									 IsEnabled="{Binding CreateNewBool}"
+									 Style="{StaticResource PpsTagTextBoxStyle}"/>
+							<TextBox Grid.Column="1" Grid.RowSpan="2" Margin="6,5"
 									 Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 IsEnabled="{Binding IsUserChangeable}"
 									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"
-									 IsEnabled="{Binding IsUserChangeable}"/>
-							<Button x:Name="removeButton" Grid.Column="4" MinWidth="30" Padding="4" Margin="6,0" VerticalAlignment="Center"
+									 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" MaxHeight="172"/>
+							<Button x:Name="removeButton" Grid.Column="2" MinWidth="32"
+									HorizontalAlignment="Left" VerticalAlignment="Center"
 									Command="{x:Static uiL:PpsTagsEditor.RemoveTagCommand}" CommandParameter="{Binding}"
 									Style="{StaticResource PPSnCircleButtonStyle}"
 									Tag="{StaticResource deletePathGeometry}"
 									Visibility="Hidden"/>
-							<Button x:Name="appendButton" Grid.Column="4" MinWidth="30" Padding="5" Margin="6,0" VerticalAlignment="Center"
+							<Button x:Name="appendButton" Grid.Column="2" MinWidth="32"
+									HorizontalAlignment="Left" VerticalAlignment="Center"
 									Command="{x:Static uiL:PpsTagsEditor.AppendTagCommand}" CommandParameter="{Binding}" 
 									Style="{StaticResource PPSnCircleButtonStyle}"
 									Tag="{StaticResource plusPathGeometry}"
 									Visibility="Hidden"/>
 						</Grid>
 						<DataTemplate.Triggers>
+							<Trigger SourceName="nameTextBox" Property="IsEnabled" Value="True">
+								<Setter TargetName="nameTextBox" Property="BorderBrush" Value="{StaticResource lighterBorderBrush}" />
+							</Trigger>
 							<DataTrigger Binding="{Binding Path=CreateNewBool, Mode=OneWay}">
 								<DataTrigger.Value>
 									<sys:Boolean>true</sys:Boolean>
 								</DataTrigger.Value>
 								<Setter TargetName="appendButton" Property="Visibility" Value="Visible"/>
-								<Setter TargetName="selectionRect" Property="Stroke" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
 							</DataTrigger>
 							<MultiDataTrigger>
 								<MultiDataTrigger.Conditions>
@@ -337,7 +311,6 @@
 									</Condition>
 								</MultiDataTrigger.Conditions>
 								<Setter TargetName="removeButton" Property="Visibility" Value="Visible"/>
-								<Setter TargetName="selectionRect" Property="Stroke" Value="{StaticResource lighterBorderBrush}"/>
 							</MultiDataTrigger>
 						</DataTemplate.Triggers>
 					</DataTemplate>
@@ -353,7 +326,7 @@
 					 Style="{StaticResource PPSnListBoxStyle}"
 					 ItemContainerStyle="{StaticResource PpsTagItemStyle}"
 					 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-					 Focusable="False">
+					 Margin="16,16,0,16" Focusable="False">
 				<ListBox.ItemsPanel>
 					<ItemsPanelTemplate>
 						<WrapPanel IsItemsHost="True" Orientation="Horizontal"/>
@@ -361,26 +334,27 @@
 				</ListBox.ItemsPanel>
 				<ListBox.ItemTemplate>
 					<DataTemplate>
-						<Grid Background="Transparent">
+						<Grid Background="Transparent" Height="38">
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition Width="auto"/>
-								<ColumnDefinition Width="auto"/>
+								<ColumnDefinition Width="60"/>
 							</Grid.ColumnDefinitions>
 							<TextBox x:Name="tagTextBox" Grid.Column="0"
 									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 MaxLength="64"
 									 IsEnabled="{Binding CreateNewBool}"
-									 Style="{StaticResource PpsTagTextBoxStyle}">
+									 Style="{StaticResource PpsTagTextBoxStyle}"
+									 FontSize="14" Margin="0,5">
 								<TextBox.InputBindings>
 									<KeyBinding Key="Return" Command="{x:Static uiL:PpsTagsEditor.AppendTagCommand}" CommandParameter="{Binding}"/>
 								</TextBox.InputBindings>
 							</TextBox>
-							<Button x:Name="removeButton" Grid.Column="1" MinWidth="30" Padding="4" Margin="6,0" VerticalAlignment="Center"
+							<Button x:Name="removeButton" Grid.Column="1" MinWidth="32" Margin="6,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center"
 									Command="{x:Static uiL:PpsTagsEditor.RemoveTagCommand}" CommandParameter="{Binding}"
 									Style="{StaticResource PPSnCircleButtonStyle}"
 									Tag="{StaticResource deletePathGeometry}"
 									Visibility="Hidden"/>
-							<Button x:Name="appendButton" Grid.Column="1" MinWidth="30" Padding="5" Margin="6,0" VerticalAlignment="Center"
+							<Button x:Name="appendButton" Grid.Column="1" MinWidth="32" Margin="6,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center"
 									Command="{x:Static uiL:PpsTagsEditor.AppendTagCommand}" CommandParameter="{Binding}" 
 									Style="{StaticResource PPSnCircleButtonStyle}"
 									Tag="{StaticResource plusPathGeometry}"
@@ -439,7 +413,6 @@
 				</ListBox.ItemTemplate>
 			</ListBox>
 		</ControlTemplate>
-
 	</UserControl.Resources>
 
 	<ContentControl>

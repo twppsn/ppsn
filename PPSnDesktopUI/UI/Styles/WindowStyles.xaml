@@ -86,6 +86,8 @@ specific language governing permissions and limitations under the Licence.
 	<Style x:Key="PPSnScrollViewerStyle" TargetType="{x:Type ScrollViewer}"/>
 	<Style x:Key="PPSnImageButtonStyle" TargetType="{x:Type Button}"/>
 	<Style x:Key="PPSnCircleButtonStyle" TargetType="{x:Type Button}"/>
+	<Style x:Key="PPSnTextBoxStyle" TargetType="{x:Type TextBox}"/>
+
 
 
 	<!--fixed styles (no theme)-->
