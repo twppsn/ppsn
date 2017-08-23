@@ -42,11 +42,11 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Label Grid.Column="0" Grid.Row="0" Content="Auftrags-Nr.:" Height="23" VerticalAlignment="Top" />
-        <TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Data.Head.First.Nr}" MaxLength="12" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
+		<TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Data.Head.First.ObjkId.Nr,Mode=OneWay}" MaxLength="12" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
         <Label Grid.Column="0" Grid.Row="1" Content="{Binding Data.Head.Datum.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
         <DatePicker Grid.Column="1" Grid.Row="1" SelectedDate="{Binding Data.Head.First.Datum}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top" Style="{StaticResource PpsDatePickerStyle}"/>
         <Label Grid.Column="0" Grid.Row="2" Content="{Binding Data.Head.KontId.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
-        <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Data.Head.First.KontId}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
+        <TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Data.Head.First.KontId.Name,Mode=OneWay}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
 
         <Label Grid.Column="3" Grid.Row="0" Content="{Binding Data.Head.BestDatum.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
         <DatePicker Grid.Column="4" Grid.Row="0" SelectedDate="{Binding Data.Head.First.BestDatum}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
