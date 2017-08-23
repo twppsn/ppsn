@@ -167,6 +167,8 @@ namespace TecWare.PPSn.UI
 
 			public long UserId => tag != null ? tag.UserId : PpsEnvironment.GetEnvironment().UserId;
 
+			public string UserName => tag?.User != null ? tag.User.GetProperty("Login", "Unbekannter Nutzer") : "Unbekannter Nutzer";
+
 			public bool IsUserChangeable => tag != null ? tag.UserId == PpsEnvironment.GetEnvironment().UserId : true;
 
 			public bool CreateNewBool => tag == null;
