@@ -71,7 +71,7 @@
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type ToggleButton}">
-						<Border x:Name="contentBorder" >
+						<Border x:Name="contentBorder">
 							<Grid>
 								<Grid.ColumnDefinitions>
 									<ColumnDefinition/>
@@ -148,7 +148,7 @@
 		</Style>
 
 		<ControlTemplate x:Key="charmBarHeaderTemplate" TargetType="{x:Type ContentControl}">
-			<Grid Height="40">
+			<Grid Height="40" TextBlock.Foreground="{StaticResource PPSnWindowForegroundBrush}" TextBlock.FontSize="18">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="32"/>
 					<ColumnDefinition/>
@@ -159,10 +159,8 @@
 						<Path Data="{TemplateBinding Tag}" Fill="{StaticResource PPSnActionButtonBrush}" Opacity=".75"/>
 					</Canvas>
 				</Viewbox>
-				<TextBlock Grid.Column="1" Margin="2,0,0,0" VerticalAlignment="Center"
-						   Text="{TemplateBinding Content}"
-						   Foreground="{StaticResource PPSnWindowForegroundBrush}"
-						   FontSize="18"/>
+				<TextBlock Grid.Column="1" Text="{TemplateBinding Content}" Margin="2,0,0,0" VerticalAlignment="Center"/>
+				<TextBlock Grid.Column="1" Text="{Binding Nr}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 				<Button Grid.Column="2" Command="{x:Static uiL:PpsCharmbarControl.ChangeContentCommand}"
 						Content="{StaticResource windowClosePathGeometry}"
 						Foreground="{StaticResource PPSnWindowForegroundBrush}"
@@ -266,7 +264,6 @@
 				<uiL:PpsTagsEditor Grid.Row="1" TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Date}"/>
 			</Grid>
 		</DataTemplate>
-
 	</UserControl.Resources>
 
 	<!--Background must be null!-->
@@ -275,7 +272,6 @@
 			<Style TargetType="{x:Type Grid}">
 				<Setter Property="Margin" Value="0,0,0,0"/>
 				<Setter Property="HorizontalAlignment" Value="Right"/>
-                <Setter Property="VerticalAlignment" Value="Bottom"/>
 				<Style.Triggers>
 					<DataTrigger Binding="{Binding CurrentPane.HasSideBar, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow, AncestorLevel=1}, Mode=OneWay}">
 						<DataTrigger.Value>
@@ -306,11 +302,6 @@
 			<!--Bindings do use type converters though-->
 			<ColumnDefinition Width="{Binding Source={StaticResource PPSnCharmBarColumnWidth}, Mode=OneTime}"/>
 		</Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
-        </Grid.RowDefinitions>
-
 		<Border Grid.Column="0" MaxWidth="{StaticResource PPSnPaneMaxGridWidth}"
 				BorderThickness="1" 
 				BorderBrush="{StaticResource PPSnSeparatorBrush}"
@@ -407,18 +398,21 @@
 				</ContentPresenter.Style>
 			</ContentPresenter>
 		</Border>
-        <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Nr}">
-            <TextBlock.RenderTransform>
-                <RotateTransform Angle="-90" />
-            </TextBlock.RenderTransform>
-        </TextBlock>
-        <DockPanel Grid.Column="1" Grid.Row="1" LastChildFill="False" VerticalAlignment="Bottom">
+		<DockPanel Grid.Column="1" LastChildFill="False" VerticalAlignment="Bottom">
 			<DockPanel.Resources>
 				<Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource charmBarToggleButtonStyle}">
 					<Setter Property="Height" Value="48"/>
 					<Setter Property="DockPanel.Dock" Value="Top"/>
 				</Style>
 			</DockPanel.Resources>
+
+			<TextBlock DockPanel.Dock="Top" Text="{Binding Nr}" HorizontalAlignment="Center" Margin="0,0,0,12"
+					   Foreground="{StaticResource PPSnWindowForegroundBrush}" FontSize="16">
+				<TextBlock.LayoutTransform>
+					<RotateTransform Angle="-90" />
+				</TextBlock.LayoutTransform>
+			</TextBlock>
+
 			<ToggleButton Content="{StaticResource noteOutlinePathGeometry}">
 				<ToggleButton.Tag>
 					<uiL:PPSnCharmbarContentType>Note</uiL:PPSnCharmbarContentType>
