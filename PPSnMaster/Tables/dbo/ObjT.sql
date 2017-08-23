@@ -7,7 +7,8 @@
 	[Class] INTEGER NOT NULL DEFAULT 0,
 	[Value] NVARCHAR(2048) NULL,
 	[UserId] BIGINT NULL CONSTRAINT fkObjTUserId REFERENCES dbo.[User] (Id)
-	CONSTRAINT uqObjkIdKey UNIQUE ([ObjKId], [Key])
+	CONSTRAINT uqObjkIdKey UNIQUE ([ObjKId], [Key]), 
+    [CreateDate] DATETIME2 NOT NULL CONSTRAINT dfObjTCreateDate DEFAULT getdate()
 );
 GO
 ALTER TABLE [dbo].[ObjT] ENABLE CHANGE_TRACKING;
@@ -81,3 +82,12 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'ObjT',
     @level2type = N'COLUMN',
     @level2name = N'Id'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'Date of creation',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'ObjT',
+    @level2type = N'COLUMN',
+    @level2name = N'CreateDate'
