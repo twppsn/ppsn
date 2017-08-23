@@ -137,7 +137,7 @@
 							</Grid.RowDefinitions>
 							<StackPanel Orientation="Horizontal">
 								<Control Template="{StaticResource PpsOwnerIdentityImageTemplate}" Focusable="False" Margin="4,3"/>
-								<TextBlock Text="OwnerName" VerticalAlignment="Center" FontStyle="Italic"
+								<TextBlock Text="{Binding UserName}" VerticalAlignment="Center" FontStyle="Italic"
 										   Foreground="{StaticResource PPSnWindowForegroundBrush}" Opacity=".75"/>
 							</StackPanel>
 							<TextBox x:Name="valueTextBox" Grid.Row="1"
