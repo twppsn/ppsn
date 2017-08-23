@@ -2329,7 +2329,7 @@ namespace TecWare.PPSn.Server.Sql
 							try
 							{
 								var t = new SqlTableInfo(ResolveColumnById, r);
-								tableStore.Add(t.QuallifiedName, t);
+								tableStore.Add(t.SchemaName + "." + t.TableName, t);
 							}
 							catch (Exception e)
 							{

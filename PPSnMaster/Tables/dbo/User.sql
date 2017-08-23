@@ -6,6 +6,8 @@
 	[LoginVersion] BIGINT NOT NULL CONSTRAINT dfUserLoginVersion DEFAULT 0, 
 )
 GO
+ALTER TABLE [dbo].[User] ENABLE CHANGE_TRACKING;
+GO
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Security mask (tokens),für den Nutzer',
     @level0type = N'SCHEMA',

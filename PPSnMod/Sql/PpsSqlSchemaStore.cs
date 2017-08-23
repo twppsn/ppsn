@@ -179,7 +179,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		public PpsSqlTableInfo Table => table;
 
-		public string TableColumnName => table.QuallifiedName + "." + Name;
+		public string TableColumnName => table.SchemaName + "." + table.TableName + "." + Name;
 		public int MaxLength => maxLength;
 		public byte Precision => precision;
 		public byte Scale => scale;
@@ -357,8 +357,9 @@ namespace TecWare.PPSn.Server.Sql
 
 		public abstract bool IsPrimaryKeyColumn(PpsSqlColumnInfo column);
 
+		public string SchemaName => schemaName;
 		public string TableName => tableName;
-		public string QuallifiedName => schemaName + "." + tableName;
+		public string QuallifiedName => schemaName + ".[" + tableName + "]";
 
 		public abstract PpsSqlColumnInfo PrimaryKey { get; }
 

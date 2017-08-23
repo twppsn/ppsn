@@ -152,6 +152,11 @@
 				<pps:attribute name="displayName">Rechnung</pps:attribute>
 			</pps:field>
 
+			<pps:field name="dbo.User.Id" />
+			<pps:field name="dbo.User.Login" dataType="string" displayName="Nutzer">
+				<pps:attribute name="maxLength">32</pps:attribute>
+			</pps:field>
+
 			<!-- objects -->
 			<pps:view name="dbo.objects">
 				<pps:source type="view">dbo.objects</pps:source>
@@ -307,6 +312,12 @@
 						<pps:meta name="default">0</pps:meta>
 					</pps:column>
 					<pps:column name="OnDelete" fieldName="sys.Fields.Text" />
+				</pps:table>
+
+				<pps:table name="User">
+					<pps:meta name="syncType">ChangeTracking: dbo.ObjK</pps:meta>
+					<pps:column name="Id" fieldName="dbo.User.Id" isPrimary="true" />
+					<pps:column name="Login" fieldName="dbo.User.Login" />
 				</pps:table>
 			</pps:dataset>
 		</pps:register>
