@@ -596,13 +596,14 @@ namespace TecWare.PPSn
 					return row;
 				else
 				{
+					PpsMasterDataRow newRow = null;
 					var table = parent.Environment.MasterData.GetTable("User");
 					if (table != null)
 					{
-						row = table.GetRowById(UserId, false);
-						if (row != null)
+						newRow = table.GetRowById(UserId, false);
+						if (newRow != null)
 						{
-							userRow = new WeakReference<PpsMasterDataRow>(row);
+							userRow = new WeakReference<PpsMasterDataRow>(newRow);
 							userIsNull = false;
 						}
 						else
@@ -611,7 +612,7 @@ namespace TecWare.PPSn
 					else
 						userIsNull = true;
 
-					return row;
+					return newRow;
 				}
 			}
 		} // ctor
