@@ -2848,16 +2848,15 @@ namespace TecWare.PPSn
 							goto case "\0";
 						case "\0":
 							this.keyName = null;
-							this.columnAlias = null;
+							this.columnAlias = "coalesce(" + virtualColumn + ".[LocalValue], " + virtualColumn + ".[Value])";
 
 							switch (classification)
 							{
 								case DateClass:
-									columnAlias = CastToDateExpression(virtualColumn + ".value");
+									columnAlias = CastToDateExpression(columnAlias);
 									break;
-								case NumberClass:
-								default:
-									columnAlias = virtualColumn + ".value";
+								case 0:
+									this.columnAlias = "coalesce(" + virtualColumn + ".[LocalValue], " + virtualColumn + ".[Value], " + virtualColumn + ".[Key])";
 									break;
 							}
 							break;
@@ -2922,10 +2921,10 @@ namespace TecWare.PPSn
 					switch (classification)
 					{
 						case DateClass:
-							return CastToDateExpression(joinAlias + ".value") + " AS " + columnAlias;
+							return CastToDateExpression("coalesce(" + joinAlias + ".[LocalValue]," + joinAlias + ".[Value])") + " AS " + columnAlias;
 						case NumberClass:
 						default:
-							return joinAlias + ".value AS " + columnAlias;
+							return "coalesce(" + joinAlias + ".[LocalValue]," + joinAlias + ".[Value]) AS " + columnAlias;
 					}
 				} // func CreateWhereExpression
 
@@ -2934,17 +2933,17 @@ namespace TecWare.PPSn
 					switch (type)
 					{
 						case ObjectViewColumnType.All:
-							return "LEFT OUTER JOIN ObjectTags AS " + AllColumns + " ON (o.Id = " + AllColumns + ".ObjectId AND " + AllColumns + ".[Class] >= 0)";
+							return "LEFT OUTER JOIN ObjectTags AS " + AllColumns + " ON (o.Id = " + AllColumns + ".ObjectId AND ifnull(" + AllColumns + ".[LocalClass], " + AllColumns + ".[Class]) >= 0)";
 						case ObjectViewColumnType.Date:
-							return "LEFT OUTER JOIN ObjectTags AS " + DateColumns + " ON (o.Id = " + DateColumns + ".ObjectId AND " + AllColumns + ".[Class] >= 0 AND " + DateColumns + ".class = " + DateClass + ")";
+							return "LEFT OUTER JOIN ObjectTags AS " + DateColumns + " ON (o.Id = " + DateColumns + ".ObjectId AND ifnull(" + AllColumns + ".[LocalClass], " + AllColumns + ".[Class]) = " + DateClass + ")";
 						case ObjectViewColumnType.Number:
-							return "LEFT OUTER JOIN ObjectTags AS " + NumberColumns + " ON (o.Id = " + NumberColumns + ".ObjectId AND " + AllColumns + ".[Class] >= 0 AND " + NumberColumns + ".class = " + NumberClass + ")";
+							return "LEFT OUTER JOIN ObjectTags AS " + NumberColumns + " ON (o.Id = " + NumberColumns + ".ObjectId AND ifnull(" + AllColumns + ".[LocalClass], " + AllColumns + ".[Class]) = " + NumberClass + ")";
 
 						case ObjectViewColumnType.Key:
 							if (classification == 0)
-								return "LEFT OUTER JOIN ObjectTags AS " + joinAlias + " ON (o.Id = " + joinAlias + ".ObjectId AND " + AllColumns + ".[Class] >= 0 AND " + joinAlias + ".Key = '" + keyName + "' COLLATE NOCASE)";
+								return "LEFT OUTER JOIN ObjectTags AS " + joinAlias + " ON (o.Id = " + joinAlias + ".ObjectId AND ifnull(" + joinAlias + ".[LocalClass], " + joinAlias + ".[Class]) >= 0 AND " + joinAlias + ".Key = '" + keyName + "' COLLATE NOCASE)";
 							else
-								return "LEFT OUTER JOIN ObjectTags AS " + joinAlias + " ON (o.Id = " + joinAlias + ".ObjectId AND " + AllColumns + ".[Class] >= 0 AND " + joinAlias + ".Class = " + classification + " AND " + joinAlias + ".Key = '" + keyName + "' COLLATE NOCASE)";
+								return "LEFT OUTER JOIN ObjectTags AS " + joinAlias + " ON (o.Id = " + joinAlias + ".ObjectId AND ifnull(" + joinAlias + ".[LocalClass], " + joinAlias + ".[Class]) = " + classification + " AND " + joinAlias + ".Key = '" + keyName + "' COLLATE NOCASE)";
 						default:
 							throw new NotSupportedException();
 					}
@@ -3031,7 +3030,7 @@ namespace TecWare.PPSn
 				}
 
 				// append multi-value column
-				cmd.Append("group_concat('S' || s_all.Id || ':' || s_all.Key || ':' || s_all.Class || ':' || s_all.UserId || '=' || replace(s_all.Value, char(10), ' '), char(10)) as [Values]");
+				cmd.Append("group_concat('S' || s_all.Id || ':' || s_all.Key || ':' || ifnull(s_all.LocalClass , s_all.Class) || ':' || s_all.UserId || '=' || replace(ifnull(s_all.LocalValue, s_all.Value), char(10), ' '), char(10)) as [Values]");
 
 				// generate dynamic columns
 				foreach (var c in GetAllKeyColumns())
