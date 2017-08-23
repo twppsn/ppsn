@@ -25,6 +25,7 @@ namespace TecWare.PPSn.UI
 		string Value { get; }
 		bool CanSave { get; }
 		PpsObjectTagClass Class { get; }
+		DateTime CreationStamp { get; }
 	} // interface IPpsTagItem
 
 	public interface IPpsTags : IEnumerable<IPpsTagItem>
@@ -231,6 +232,8 @@ namespace TecWare.PPSn.UI
 
 			public bool CanSave
 				=> tag != null && !String.IsNullOrEmpty(createNewValue);
+
+			public DateTime CreationStamp => tag != null ? tag.CreationStamp.ToLocalTime() : DateTime.Now.ToLocalTime();
 		}
 
 		private sealed class PpsTagsImplementation : IPpsTags, INotifyCollectionChanged
