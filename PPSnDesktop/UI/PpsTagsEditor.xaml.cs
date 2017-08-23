@@ -119,7 +119,18 @@ namespace TecWare.PPSn.UI
 				this.tags = tags;
 			}
 			private string createNewName = String.Empty;
-			public string Name { get { return tag != null ? tag.Name : createNewName; } set { createNewName = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name))); } }
+			public string Name
+			{
+				get
+				{
+					return (tag != null ? tag.Name : createNewName).Replace("<br/>", "\n");
+				}
+				set
+				{
+					createNewName = value.Replace("\n", "<br/>");
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
+				}
+			}
 
 			private string createNewValue = String.Empty;
 			public string Value
