@@ -560,6 +560,7 @@ namespace TecWare.PPSn
 		private readonly object serverValue;
 		private PpsObjectTagClass? localClass;
 		private object localValue; // the, that is set from the user, and not pushed to the server
+		private DateTime creationStamp;
 
 		private long userId;
 
@@ -579,6 +580,23 @@ namespace TecWare.PPSn
 			this.localClass = localClass;
 			this.localValue = localValue;
 			this.userId = userId;
+			this.creationStamp = DateTime.Now;
+
+			this.isChanged = isChanged;
+		}
+
+		internal PpsObjectTagView(PpsObject parent, long? id, string key, bool serverValuesLoaded, PpsObjectTagClass? serverClass, object serverValue, PpsObjectTagClass? localClass, object localValue, long userId, bool isChanged, DateTime creationStamp)
+		{
+			this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
+			this.id = id;
+			this.key = key ?? throw new ArgumentNullException(nameof(key));
+			this.serverValuesLoaded = serverValuesLoaded;
+			this.serverClass = serverClass;
+			this.serverValue = serverValue;
+			this.localClass = localClass;
+			this.localValue = localValue;
+			this.userId = userId;
+			this.creationStamp = creationStamp;
 
 			this.isChanged = isChanged;
 		} // ctor
@@ -687,6 +705,9 @@ namespace TecWare.PPSn
 			localClass.HasValue
 				? localValue
 				: (serverClass.HasValue ? serverValue : null);
+
+		/// <summary>Returns the Creation DateTime.</summary>
+		public DateTime CreationStamp => creationStamp;
 
 		/// <summary>User that created this tag, or 0 for system created (like autotagging, states)</summary>
 		public long UserId => userId;

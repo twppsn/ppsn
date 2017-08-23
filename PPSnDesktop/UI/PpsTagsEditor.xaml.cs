@@ -25,6 +25,7 @@ namespace TecWare.PPSn.UI
 		string Value { get; }
 		bool CanSave { get; }
 		PpsObjectTagClass Class { get; }
+		DateTime CreationStamp { get; }
 	} // interface IPpsTagItem
 
 	public interface IPpsTags : IEnumerable<IPpsTagItem>
@@ -178,7 +179,7 @@ namespace TecWare.PPSn.UI
 
 			public long UserId => tag != null ? tag.UserId : PpsEnvironment.GetEnvironment().UserId;
 
-			public string UserName => tag?.User != null ? tag.User.GetProperty("Login", "Unbekannter Nutzer") : "Unbekannter Nutzer";
+			public string UserName => tag?.User != null ? tag.User.GetProperty("Login", "Unbekannter Nutzer") : String.Empty;
 
 			public bool IsUserChangeable => tag != null ? tag.UserId == PpsEnvironment.GetEnvironment().UserId : true;
 
@@ -231,6 +232,8 @@ namespace TecWare.PPSn.UI
 
 			public bool CanSave
 				=> tag != null && !String.IsNullOrEmpty(createNewValue);
+
+			public DateTime CreationStamp => tag != null ? tag.CreationStamp.ToLocalTime() : DateTime.Now.ToLocalTime();
 		}
 
 		private sealed class PpsTagsImplementation : IPpsTags, INotifyCollectionChanged
