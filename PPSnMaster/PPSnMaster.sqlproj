@@ -117,6 +117,10 @@
     <Compile Include="Stuff\GetSyncStamp.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PostDeploy Include="Database\SystemUser.sql" />
+    <None Include="Database\SystemUser.sql" />
+    <PostDeploy Include="PostScript.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Database\KonstData.sql" />
   </ItemGroup>
 </Project>
