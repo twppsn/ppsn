@@ -516,7 +516,10 @@
 		<uiC:DataListControl Grid.Column="2" Grid.Row="3" AlternationCount="2" IsSynchronizedWithCurrentItem="True" FontSize="14" SnapsToDevicePixels="True"
 							 ItemsSource="{Binding Items}"
 							 Style="{StaticResource PPSnListBoxStyle}"
-							 ItemContainerStyle="{StaticResource PPSnDataListControlItemStyle}"/>
+							 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}"/>
+		<!--temporary removed-->
+		<!--ItemContainerStyle="{StaticResource PPSnDataListControlItemStyle}"/>-->
+
 		<ItemsControl Grid.Column="2" Grid.Row="4" ItemsSource="{Binding VisibleActions}" VerticalAlignment="Top" IsTabStop="False" >
 			<ItemsControl.Resources>
 				<uiL:PPSnNavigatorPriorityToDockPosition x:Key="priorityToPositionConverter"/>
