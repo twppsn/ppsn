@@ -74,7 +74,8 @@ namespace TecWare.PPSn.UI
 							},
 							(isender, ie) => ie.CanExecute = (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Tag && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name)) ||
 															 (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Text && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value)) ||
-															 (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Date && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && DateTime.TryParse(((IPpsTagItem)ie.Parameter).Value, out var temp))
+															 (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Date && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && DateTime.TryParse(((IPpsTagItem)ie.Parameter).Value, out var temp)) ||
+															 (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Note && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value))
 						)
 					);
 			CommandBindings.Add(
@@ -247,7 +248,10 @@ namespace TecWare.PPSn.UI
 
 			public void Append(string tagName, PpsObjectTagClass tagClass, object tagValue)
 			{
-				if (String.IsNullOrEmpty(tagName))
+				//Q+D, temporary 
+				if (tagClass == PpsObjectTagClass.Note)
+					tagName = "note";
+				else if (String.IsNullOrEmpty(tagName))
 					throw new ArgumentNullException("Tag Name");
 				switch (tagClass)
 				{
@@ -266,7 +270,7 @@ namespace TecWare.PPSn.UI
 				var tag = this.obj.Tags.UpdateTag(tagName, tagClass, tagValue);
 				tags.Insert(tags.Count - 1, new PpsTagItemImplementation(tag, this));
 				//if (tagClass == PpsObjectTagClass.Date)
-					//tags.Sort((a,b)=>((DateTime)a.Value - (DateTime)b.Value))
+				//tags.Sort((a,b)=>((DateTime)a.Value - (DateTime)b.Value))
 				obj.UpdateLocalAsync().AwaitTask();
 				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 			}
