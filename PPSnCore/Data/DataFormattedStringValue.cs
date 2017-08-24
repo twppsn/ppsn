@@ -28,15 +28,19 @@ namespace TecWare.PPSn.Data
 
 		protected override object OnIndex(object key)
 		{
-			if (key is string)
+			if (key is string stringKey)
 			{
-				var column = row.Table.TableDefinition.Columns[(string)key];
+				var column = row.Table.TableDefinition.Columns[stringKey];
 				if (column != null)
 				{
 					if (column.IsRelationColumn)
 						return row.GetParentRow(column);
 					else
 						return row[column.Index];
+				}
+				else if (row.Table.TableDefinition.Relations[stringKey] is PpsDataTableRelationDefinition relation)
+				{
+					return row.GetDefaultRelation(relation);
 				}
 			}
 
@@ -216,8 +220,6 @@ namespace TecWare.PPSn.Data
 		public PpsFormattedStringValue(PpsDataRow row, PpsDataColumnDefinition column) 
 			: base(row, column)
 		{
-			if (column.DataType != typeof(string))
-				throw new ArgumentException("Column must be a string.");
 		} // ctor
 
 		public override string ToString()
@@ -297,9 +299,13 @@ namespace TecWare.PPSn.Data
 			// undo stack
 			if (valueChanged && addUndo)
 			{
-				Row.Table.DataSet.UndoSink?.Append(
-					new PpsTemplateUnoItem(this, oldValue, newValue)
-				);
+				using (var undo = Row.Table.DataSet.UndoSink?.BeginTransaction("Ändere Wert"))
+				{
+					Row.Table.DataSet.UndoSink?.Append(
+						new PpsTemplateUnoItem(this, oldValue, newValue)
+					);
+					undo.Commit();
+				}
 			}
 
 			// refresh values
