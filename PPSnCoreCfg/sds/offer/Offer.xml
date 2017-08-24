@@ -80,7 +80,7 @@
 			<pps:template id="offer" file="offerTemplate.xaml" />
       <pps:wpfSource id="sds.offer" directory="Wpf" virtualPath="panes" />
 
-			<pps:view name="sdsOffer" displayName="Angebote" displayImage="star" view="local.objects" filter="Typ:=sdsOffer">
+			<pps:view name="sdsOffer" displayName="Angebote" displayImage="offer" view="local.objects" filter="Typ:=sdsOffer">
 				<pps:filter name="entwurf" displayName="Entwurf">
 					<![CDATA[ Datum: ]]>
 				</pps:filter>
@@ -92,11 +92,11 @@
 				</pps:order>
 			</pps:view>
 
-			<pps:action name="offerNew" displayName="Neues Angebot" priority="100">
+			<pps:action name="offerNew" displayName="Neues Angebot" displayImage="filePlus" priority="100">
 				<pps:condition><![CDATA[ return CurrentView == Views.sdsOffer; ]]></pps:condition>
 				<pps:code><![CDATA[ Window:LoadMask{ createNew = 'sdsOffer' }; ]]></pps:code>
 			</pps:action>
-			<pps:action name="offerOpen" displayName="Bearbeiten" priority="200">
+			<pps:action name="offerOpen" displayName="Bearbeiten" displayImage="edit" priority="200">
 				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "sdsOffer" ]]></pps:condition>
 				<pps:code><![CDATA[ Window:LoadMask{ object = GetObject(CurrentItem.Id) }; ]]> </pps:code>
 			</pps:action>

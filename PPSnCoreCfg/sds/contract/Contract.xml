@@ -80,7 +80,7 @@
 			<pps:template id="contract" file="contractTemplate.xaml" />
       <pps:wpfSource id="sds.contract" directory="Wpf" virtualPath="panes" />
 
-			<pps:view name="sdsContract" displayName="Aufträge" displayImage="star" view="local.objects" filter="Typ:=sdsContract">
+			<pps:view name="sdsContract" displayName="Aufträge" displayImage="contract" view="local.objects" filter="Typ:=sdsContract">
 				<pps:filter name="lief" displayName="Entwurf">
 					<![CDATA[ Datum: ]]>
 				</pps:filter>
@@ -92,11 +92,11 @@
 				</pps:order>
 			</pps:view>
 
-			<pps:action name="contractNew" displayName="Neuer Auftrag" priority="100">
+			<pps:action name="contractNew" displayName="Neuer Auftrag" displayImage="filePlus"  priority="100">
 				<pps:condition><![CDATA[ return CurrentView == Views.sdsContract; ]]></pps:condition>
 				<pps:code><![CDATA[ Window:LoadMask{ createNew = 'sdsContract' }; ]]></pps:code>
 			</pps:action>
-			<pps:action name="contractOpen" displayName="Bearbeiten" priority="200">
+			<pps:action name="contractOpen" displayName="Bearbeiten" displayImage="edit" priority="200">
 				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "sdsContract" ]]></pps:condition>
 				<pps:code><![CDATA[ Window:LoadMask{ object = GetObject(CurrentItem.Id) }; ]]> </pps:code>
 			</pps:action>

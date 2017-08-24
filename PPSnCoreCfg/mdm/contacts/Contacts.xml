@@ -237,11 +237,11 @@
 				</pps:order>
 			</pps:view>
 
-			<pps:action name="contactNew" displayName="Neuer Kontakt" priority="100">
+			<pps:action name="contactNew" displayName="Neuer Kontakt" displayImage="filePlus" priority="100">
 				<pps:condition><![CDATA[ return CurrentView == Views.crmContacts; ]]></pps:condition>
 				<pps:code><![CDATA[ Window:LoadMask{ createNew = 'crmContacts' }; ]]></pps:code>
 			</pps:action>
-			<pps:action name="contactOpen" displayName="Bearbeiten" priority="200">
+			<pps:action name="contactOpen" displayName="Bearbeiten" displayImage="edit" priority="200">
 				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "crmContacts" ]]></pps:condition>
 				<pps:code><![CDATA[ Window:LoadMask{ object = GetObject(CurrentItem.Id) }; ]]> </pps:code>
 			</pps:action>
