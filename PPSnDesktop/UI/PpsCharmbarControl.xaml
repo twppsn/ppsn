@@ -407,10 +407,19 @@
 			</DockPanel.Resources>
 
 			<TextBlock DockPanel.Dock="Top" Text="{Binding Nr}" HorizontalAlignment="Center" Margin="0,0,0,12"
-					   Foreground="{StaticResource PPSnWindowForegroundBrush}" FontSize="16">
+					   Foreground="{StaticResource PPSnWindowForegroundBrush}" FontSize="16" 
+                       ContextMenuService.PlacementTarget="{Binding RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}">
 				<TextBlock.LayoutTransform>
 					<RotateTransform Angle="-90" />
 				</TextBlock.LayoutTransform>
+                <TextBlock.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Objektnamen kopieren" Command="{x:Static uiL:PpsCharmbarControl.CopyObjectNameCommand}" 
+                                  CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
+                        <MenuItem Header="Objectid kopieren" Command="{x:Static uiL:PpsCharmbarControl.CopyObjectIdCommand}" 
+                                  CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
+                    </ContextMenu>
+                </TextBlock.ContextMenu>
 			</TextBlock>
 
 			<ToggleButton Content="{StaticResource noteOutlinePathGeometry}">
