@@ -71,7 +71,7 @@ namespace TecWare.PPSn.UI
 						new CommandBinding(CopyObjectNameCommand,
 							(isender, ie) =>
 							{
-								Clipboard.SetText(((PpsObject)ie.Parameter).Nr);
+								Clipboard.SetText(((PpsObject)((PpsCharmbarControl)isender).DataContext).Nr);
 								ie.Handled = true;
 							},
 							(isender, ie) => ie.CanExecute = true
@@ -81,7 +81,7 @@ namespace TecWare.PPSn.UI
 						new CommandBinding(CopyObjectIdCommand,
 							(isender, ie) =>
 							{
-								Clipboard.SetText(((PpsObject)ie.Parameter).Id.ToString());
+								Clipboard.SetText(((PpsObject)((PpsCharmbarControl)isender).DataContext).Id.ToString());
 								ie.Handled = true;
 							},
 							(isender, ie) => ie.CanExecute = true
