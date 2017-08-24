@@ -53,7 +53,7 @@
 			<pps:field name="dbo.Ansp.Strasse" displayName="Strasse/Nr" />
 			<pps:field name="dbo.Ansp.Ort" displayName="Ort" />
 			<pps:field name="dbo.Ansp.Region" displayName="Region" />
-			<pps:field name="dbo.Ansp.Plz" dataType="Postleitzahl" />
+			<pps:field name="dbo.Ansp.Plz" displayName="Postleitzahl" />
 			<pps:field name="dbo.Ansp.Adresse" displayName="Adresse" />
 			<pps:field name="dbo.Ansp.Changed" >
 				<pps:attribute name="dataType">bool</pps:attribute>
@@ -170,7 +170,7 @@
 					<pps:column name="LandId" fieldName="dbo.Adre.LandId" />
 					<pps:column name="Adresse" fieldName="dbo.Adre.Adresse" />
 					<!--<pps:column name="Changed" fieldName="dbo.Adre.Changed" />-->
-					<pps:column name="Template" fieldName="dbo.Adre.Template" />
+					<!--<pps:column name="Template" fieldName="dbo.Adre.Template" />-->
 					<!--<pps:column name="Versand" fieldName="dbo.Adre.Versand" />-->
 					<!--<pps:column name="Rechnung" fieldName="dbo.Adre.Rechnung" />-->
 				</pps:table>
