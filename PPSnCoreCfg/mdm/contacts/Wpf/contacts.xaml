@@ -20,8 +20,6 @@
 				<ResourceDictionary Source="../../../ClientWpf/Default.xaml" />
 			</ResourceDictionary.MergedDictionaries>
 
-			<uiC:TemplateTextBoxResultConverter x:Key="TemplateConverter" />
-
 			<DataTemplate x:Key="Adre">
 				<Grid>
 					<Grid.ColumnDefinitions>
@@ -62,25 +60,11 @@
 					<TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Ort}" MaxLength="{Binding Table.Ort.MaxLength, Mode=OneTime}" Height="23" Margin="106,0,0,0" VerticalAlignment="Top"/>
 
 					<Label Grid.Column="0" Grid.Row="7" Content="{Binding Table.Adresse.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
-					<StackPanel Grid.Column="1" Grid.Row="7">
-						<TextBox Text="{Binding Adresse.Value}" Height="110" />
-						<Label Content="{Binding Adresse.FormattedValue, Mode=OneWay}" />
-					</StackPanel>
-					<!--<uiC:PpsTemplateTextBox Grid.Column="1" Grid.Row="7" AcceptsReturn="True" TextWrapping="Wrap" Height="110" VerticalAlignment="Top"
-															Style="{StaticResource TemplateTextBoxStyle}"
-															Text="{Binding Template}" MaxLength="{Binding Table.Template.MaxLength, Mode=OneTime}"															
-															SourceFields="Name;Strasse;Plz;Ort"
-															DestinationField="{Binding Adresse, Mode=OneWayToSource}">
-						<uiC:PpsTemplateTextBox.TemplatePattern>
-							<MultiBinding Mode="OneWay" Converter="{StaticResource TemplateConverter}">
-								<Binding RelativeSource="{RelativeSource Mode=Self}"/>
-								<Binding Path="Name"/>
-								<Binding Path="Strasse"/>
-								<Binding Path="Plz"/>
-								<Binding Path="Ort"/>
-							</MultiBinding>
-						</uiC:PpsTemplateTextBox.TemplatePattern>
-					</uiC:PpsTemplateTextBox>-->
+					<TextBox Grid.Column="1" Grid.Row="7" Height="110" AcceptsReturn="True" TextWrapping="Wrap"
+							 Text="{Binding Adresse.Value}"
+							 uiC:PpsTemplateTextBoxBehavior.FormattedValue="{Binding Adresse.FormattedValue, Mode=OneWay}"
+							 MaxLength="{Binding Table.Adresse.MaxLength, Mode=OneTime}"
+							 Style="{StaticResource PPSnTemplateTextBoxStyle}"/>
 				</Grid>
 			</DataTemplate>
 
