@@ -135,7 +135,7 @@ namespace TecWare.PPSn.Server
 		} // ctor
 
 		internal PpsObjectLinkAccess(PpsObjectAccess obj, IDataRow row)
-			: this(obj, row.GetProperty("Id", -1L), row.GetProperty("ObjKId", -1L), row.GetProperty("RefCount", 0), row.GetProperty("OnDelete", "R")[0])
+			: this(obj, row.GetProperty("Id", -1L), row.GetProperty("LinkObjKId", -1L), row.GetProperty("RefCount", 0), row.GetProperty("OnDelete", "R")[0])
 		{
 		} // ctor
 
