@@ -61,7 +61,7 @@ namespace TecWare.PPSn.Controls
 			var inputType = GetInputType(textBox);
 			var proposedText = GetProposedText(textBox, e.Text);
 
-			if(!ValidateString(proposedText, inputType))
+			if (!ValidateString(proposedText, inputType))
 			{
 				e.Handled = true;
 			}
@@ -151,7 +151,7 @@ namespace TecWare.PPSn.Controls
 
 		private static bool ValidateString(string text, PPSnNumTextBoxInputType inputType)
 		{
-			switch(inputType)
+			switch (inputType)
 			{
 				case PPSnNumTextBoxInputType.Integer:
 					return ValidateInteger(text);
@@ -164,7 +164,7 @@ namespace TecWare.PPSn.Controls
 
 		private static bool ValidateInteger(string text)
 		{
-			if(text == "-")
+			if (text == "-")
 				return true;
 
 			var numberStyles = NumberStyles.AllowLeadingSign | NumberStyles.AllowThousands;
@@ -177,7 +177,7 @@ namespace TecWare.PPSn.Controls
 
 		private static bool ValidateDecimal(string text)
 		{
-			if(text == "-")
+			if (text == "-")
 				return true;
 			var numberStyles = NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign | NumberStyles.AllowThousands;
 			decimal value;
@@ -188,6 +188,27 @@ namespace TecWare.PPSn.Controls
 		}
 
 	} // class PPSnNumTextBoxBehavior
+
+	public class PpsTemplateTextBoxBehavior
+	{
+		public static object GetFormattedValue(TextBox textBox)
+		{
+			return (string)textBox.GetValue(FormattedValueProperty);
+		}
+
+		public static void SetFormattedValue(TextBox textBox, object value)
+		{
+			textBox.SetValue(FormattedValueProperty, value);
+		}
+
+		public static readonly DependencyProperty FormattedValueProperty =
+			DependencyProperty.RegisterAttached(
+				"FormattedValue",
+				typeof(string),
+				typeof(PpsTemplateTextBoxBehavior),
+				new PropertyMetadata(String.Empty)
+				);
+	} // class PpsTemplateTextBoxBehavior
 
 	public enum PPSnNumTextBoxInputType
 	{
