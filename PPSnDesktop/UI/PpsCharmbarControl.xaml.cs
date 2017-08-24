@@ -40,6 +40,10 @@ namespace TecWare.PPSn.UI
 	{
 		public readonly static RoutedUICommand ChangeContentCommand =
 			new RoutedUICommand("ChangeContent", "ChangeContent", typeof(PpsCharmbarControl));
+
+		public readonly static RoutedUICommand CopyObjectNameCommand = new RoutedUICommand("CopyObjectName", "CopyObjectName", typeof(PpsCharmbarControl));
+		public readonly static RoutedUICommand CopyObjectIdCommand = new RoutedUICommand("CopyObjectId", "CopyObjectId", typeof(PpsCharmbarControl));
+
 		private readonly static DependencyProperty CurrentContentTypeProperty =
 			DependencyProperty.Register("CurrentContentType", typeof(PPSnCharmbarContentType), typeof(PpsCharmbarControl), new PropertyMetadata(PPSnCharmbarContentType.Default));
 
@@ -63,6 +67,26 @@ namespace TecWare.PPSn.UI
 					(sender, e) => e.CanExecute = true
 				)
 			);
+			CommandBindings.Add(
+						new CommandBinding(CopyObjectNameCommand,
+							(isender, ie) =>
+							{
+								Clipboard.SetText(((PpsObject)ie.Parameter).Nr);
+								ie.Handled = true;
+							},
+							(isender, ie) => ie.CanExecute = true
+						)
+					);
+			CommandBindings.Add(
+						new CommandBinding(CopyObjectIdCommand,
+							(isender, ie) =>
+							{
+								Clipboard.SetText(((PpsObject)ie.Parameter).Id.ToString());
+								ie.Handled = true;
+							},
+							(isender, ie) => ie.CanExecute = true
+						)
+					);
 		} // proc Init
 
 		#endregion
