@@ -105,16 +105,16 @@
 								<Trigger.EnterActions>
 									<BeginStoryboard>
 										<Storyboard>
-											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="1" To="0.85" Duration="0:00:0.1"/>
-											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="1" To="0.85" Duration="0:00:0.1"/>
+											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="1" To="0.9" Duration="0:00:0.1"/>
+											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="1" To="0.9" Duration="0:00:0.1"/>
 										</Storyboard>
 									</BeginStoryboard>
 								</Trigger.EnterActions>
 								<Trigger.ExitActions>
 									<BeginStoryboard>
 										<Storyboard>
-											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="0.85" To="1" Duration="0:00:0.05"/>
-											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="0.85" To="1" Duration="0:00:0.05"/>
+											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="0.9" To="1" Duration="0:00:0.05"/>
+											<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="0.9" To="1" Duration="0:00:0.05"/>
 										</Storyboard>
 									</BeginStoryboard>
 								</Trigger.ExitActions>
