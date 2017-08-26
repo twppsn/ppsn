@@ -94,7 +94,6 @@
     <Compile Include="Controls\DataListControl.cs" />
     <Compile Include="Controls\SideBarMenu.cs" />
     <Compile Include="Controls\SplitButton.cs" />
-    <Compile Include="Controls\TemplateTextBox.cs" />
     <Compile Include="Controls\TextBoxBehavior.cs" />
     <Compile Include="Controls\Toolbar.cs" />
     <Compile Include="Controls\TreeListView.cs" />
