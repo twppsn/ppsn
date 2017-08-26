@@ -6,8 +6,8 @@
 	[LandId] BIGINT NOT NULL CONSTRAINT fkPlzdLand REFERENCES dbo.Land (Id), 
 	[Vorwahl] CHAR(6) NULL, 
 	[Kfz] CHAR(5) NULL, 
-	[AmtSchl] NVARCHAR(12) NULL, 
-	[RegSchl] NVARCHAR(10) NULL, 
+	[AmtSchl] CHAR(8) NULL, 
+	[RegSchl] CHAR(12) NULL, 
 	[Region] NVARCHAR(50) NULL,
 	[IsActive] BIT NOT NULL CONSTRAINT dfPlzdIsActive DEFAULT  1
 )
