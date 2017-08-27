@@ -569,6 +569,11 @@ namespace TecWare.PPSn.UI
 					return false;
 				return (bool)control.GetValue(PpsGenericWpfControl.HasSideBarProperty);
 			}
+			set
+			{
+				if (control != null)
+					control.SetValue(PpsGenericWpfControl.HasSideBarProperty, value);
+			}
 		} // prop HasSideBar
 
 		/// <summary>Wpf-Control</summary>
@@ -615,7 +620,7 @@ namespace TecWare.PPSn.UI
 	{
 		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PpsGenericWpfControl), new UIPropertyMetadata(String.Empty));
 		public static readonly DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsGenericWpfControl), new UIPropertyMetadata(String.Empty));
-		public static readonly DependencyProperty HasSideBarProperty = DependencyProperty.Register("HasSideBar", typeof(bool), typeof(PpsGenericWpfControl), new PropertyMetadata(false));
+		public static readonly DependencyProperty HasSideBarProperty = DependencyProperty.Register(nameof(HasSideBar), typeof(bool), typeof(PpsGenericWpfControl), new PropertyMetadata(false));
 
 		private readonly PpsUICommandCollection commands;
 		private readonly PpsProgressStack progressStack;

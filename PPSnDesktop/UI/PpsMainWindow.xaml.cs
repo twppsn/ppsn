@@ -36,13 +36,16 @@ namespace TecWare.PPSn.UI
 		public readonly static RoutedCommand GoToPaneCommand = new RoutedCommand("GoToPane", typeof(PpsMainWindow));
 		public readonly static RoutedCommand ClosePaneCommand = new RoutedCommand("ClosePane", typeof(PpsMainWindow));
 
-		private readonly static DependencyProperty IsNavigatorVisibleProperty = DependencyProperty.Register("IsNavigatorVisible", typeof(bool), typeof(PpsMainWindow), new PropertyMetadata(true));
-		private readonly static DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register("IsPaneVisible", typeof(bool), typeof(PpsMainWindow), new PropertyMetadata(false));
-		private readonly static DependencyProperty IsSideBarVisibleProperty = DependencyProperty.Register("IsSideBarVisible", typeof(bool), typeof(PpsMainWindow), new PropertyMetadata(true));
+		public readonly static DependencyProperty CharmObjectProperty = DependencyProperty.Register(nameof(CharmObject), typeof(object), typeof(PpsMainWindow), new FrameworkPropertyMetadata(null));
+
+		public readonly static DependencyProperty IsNavigatorVisibleProperty = DependencyProperty.Register(nameof(IsNavigatorVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(true, NavigatorVisibleChanged));
+		public readonly static DependencyProperty IsPaneVisibleProperty = DependencyProperty.Register(nameof(IsPaneVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(false));
+		private readonly static DependencyPropertyKey IsSideBarVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsSideBarVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(true));
+		public readonly static DependencyProperty IsSideBarVisibleProperty = IsSideBarVisiblePropertyKey.DependencyProperty;
 
 		/// <summary>Readonly property for the current pane.</summary>
-		private readonly static DependencyPropertyKey CurrentPaneKey = DependencyProperty.RegisterReadOnly("CurrentPane", typeof(IPpsWindowPane), typeof(PpsMainWindow), new PropertyMetadata(null));
-		private readonly static DependencyProperty CurrentPaneProperty = CurrentPaneKey.DependencyProperty;
+		private readonly static DependencyPropertyKey CurrentPaneKey = DependencyProperty.RegisterReadOnly("CurrentPane", typeof(IPpsWindowPane), typeof(PpsMainWindow), new FrameworkPropertyMetadata(null, CurrentPaneChanged));
+		public readonly static DependencyProperty CurrentPaneProperty = CurrentPaneKey.DependencyProperty;
 
 		private int windowIndex = -1;                                       // settings key
 		private PpsWindowApplicationSettings settings;                      // current settings for the window
@@ -58,6 +61,10 @@ namespace TecWare.PPSn.UI
 			// initialize settings
 			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
 			navigator.Init(this);
+
+			// set sidebar background logic
+			navigator.NavigatorModel.PropertyChanged += OnCurrentPanePropertyChanged;
+			
 
 			#region -- set basic command bindings --
 			CommandBindings.Add(
@@ -151,7 +158,6 @@ namespace TecWare.PPSn.UI
 			this.DataContext = this;
 			
 			Trace.TraceInformation("MainWindow[{0}] created.", windowIndex);
-
 		} // ctor
 
 		private Task<bool> unloadTask = null;
@@ -220,6 +226,42 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		private void RefreshSideIsVisibleProperty()
+		{
+			var show = (IsNavigatorVisible && navigator.NavigatorModel.ViewsShowDescription) 
+				|| (!IsNavigatorVisible && CurrentPane != null && CurrentPane.HasSideBar);
+			SetValue(IsSideBarVisiblePropertyKey, show);
+		} // proc RefreshSideIsVisibleProperty
+
+		private void OnCurrentPanePropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (e.PropertyName == nameof(IPpsWindowPane.HasSideBar)
+				|| e.PropertyName == nameof(PpsNavigatorModel.ViewsShowDescription))
+				RefreshSideIsVisibleProperty();
+		} // proc OnCurrentPanePropertyChanged
+
+		private void OnCurrentPaneChanged(IPpsWindowPane oldValue, IPpsWindowPane newValue)
+		{
+			if (oldValue != null)
+				oldValue.PropertyChanged -= OnCurrentPanePropertyChanged;
+			if (newValue != null)
+				newValue.PropertyChanged += OnCurrentPanePropertyChanged;
+
+			RefreshSideIsVisibleProperty();
+		} // proc OnCurrentPaneChanged
+
+		private static void CurrentPaneChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsMainWindow)d).OnCurrentPaneChanged((IPpsWindowPane)e.OldValue, (IPpsWindowPane)e.NewValue);
+
+		private void OnNavigatorVisibleChanged(bool oldValue, bool newValue)
+		{
+			RefreshSideIsVisibleProperty();
+			SetValue(IsPaneVisibleProperty, !newValue);
+		} // proc OnNavigatorVisibleChanged
+
+		private static void NavigatorVisibleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsMainWindow)d).OnNavigatorVisibleChanged((bool)e.OldValue, (bool)e.NewValue);
+
 		/// <summary>Settings of the current window.</summary>
 		public PpsWindowApplicationSettings Settings => settings;
 		/// <summary>Index of the current window</summary>
@@ -231,40 +273,18 @@ namespace TecWare.PPSn.UI
 		/// <summary>Is the navigator visible.</summary>
 		public bool IsNavigatorVisible
 		{
-			get
-			{
-				return (bool)GetValue(IsNavigatorVisibleProperty);
-			}
-			set
-			{
-				if (IsNavigatorVisible != value)
-				{
-					if (value)
-					{
-						SetValue(IsNavigatorVisibleProperty, true);
-						SetValue(IsPaneVisibleProperty, false);
-					}
-					else
-					{
-						SetValue(IsNavigatorVisibleProperty, false);
-						SetValue(IsPaneVisibleProperty, true);
-					}
-				}
-				ShowSideBarBackground();
-			}
+			get=>(bool)GetValue(IsNavigatorVisibleProperty);
+			set => SetValue(IsNavigatorVisibleProperty, value);
 		} // prop NavigatorState
 
-		/// <summary>Show SideBarBackground</summary>
-		public void ShowSideBarBackground()
+		public bool IsSideBarVisible => (bool)GetValue(IsNavigatorVisibleProperty);
+
+		public bool IsPaneVisible
 		{
-			var show = (IsNavigatorVisible && navigator.ViewsShowDescriptions) || (!IsNavigatorVisible && ShowPaneSideBar);
-			if (show != (bool)GetValue(IsSideBarVisibleProperty))
-				SetValue(IsSideBarVisibleProperty, show);
-		} // proc ShowSideBarBackground
+			get => (bool)GetValue(IsPaneVisibleProperty);
+			set => SetValue(IsPaneVisibleProperty, value);
+		} // prop NavigatorState
 
-
-		public object CharmObject { get { return GetValue(CharmObjectProperty); } set { SetValue(CharmObjectProperty, value); } }
-
-		private readonly static DependencyProperty CharmObjectProperty = DependencyProperty.Register(nameof(CharmObject), typeof(object), typeof(PpsMainWindow), null);
+		public object CharmObject { get => GetValue(CharmObjectProperty); set => SetValue(CharmObjectProperty, value); }
 	} // class PpsMainWindow
 }

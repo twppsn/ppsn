@@ -361,7 +361,6 @@ namespace TecWare.PPSn.UI
 				panes.RemovePane(pane);
 				pane.Dispose();
 
-				ShowSideBarBackground();
 				return true;
 			}
 			else
@@ -389,8 +388,6 @@ namespace TecWare.PPSn.UI
 		public IPpsWindowPane CurrentPane => (IPpsWindowPane)GetValue(CurrentPaneProperty);
 		/// <summary>List with the current open panes.</summary>
 		public PpsPaneCollection Panes => panes;
-		/// <summary>show the SideBarBackground</summary>
-		public bool ShowPaneSideBar => CurrentPane?.HasSideBar ?? false;
 	} // class PpsMainWindow
 
 	#endregion
