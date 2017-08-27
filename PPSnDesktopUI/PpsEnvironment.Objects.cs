@@ -1717,7 +1717,7 @@ namespace TecWare.PPSn
 					await Environment.Dispatcher.InvokeAsync(
 						() =>
 						{
-							Read(xData);
+							Read(xData, false);
 							ResetDirty();
 						}
 					);
