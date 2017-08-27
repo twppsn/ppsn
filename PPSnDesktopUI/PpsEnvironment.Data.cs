@@ -729,7 +729,7 @@ namespace TecWare.PPSn
 
 		private bool isDisposed = false;
 		private readonly object synchronizationLock = new object();
-		private bool isSynchronizationRunning = false;
+		private ThreadLocal<bool> isSynchronizationRunning = new ThreadLocal<bool>(()=>false, false);
 		private bool updateUserInfo = false;
 
 		private readonly List<PpsDataEvent> collectedEvents = new List<PpsDataEvent>();
@@ -1648,38 +1648,33 @@ namespace TecWare.PPSn
 
 		#region -- Synchronization ------------------------------------------------------
 
-		public Task StartSynchronization()
+		public async Task RunSynchronization()
 		{
-			return environment.RunAsync(
-			  async () =>
-			  {
-				  using (var progressTracer = environment.Traces.TraceProgress())
-				  {
-					  try
-					  {
-						  await SynchronizationAsync(progressTracer);
-					  }
-					  catch (Exception e)
-					  {
-						  progressTracer.Except(e);
-						  throw;
-					  }
-				  }
-			  },
-			  "Synchronization", CancellationToken.None
-		  );
-		} // proc StartSynchronization
+			using (var progressTracer = environment.Traces.TraceProgress())
+			{
+				try
+				{
+					await SynchronizationAsync(progressTracer);
+				}
+				catch (Exception e)
+				{
+					progressTracer.Except(e);
+					throw;
+				}
+			}
+		} // proc RunSynchronization
 
 		internal async Task<bool> SynchronizationAsync(IProgress<string> progress)
 		{
 			// check for single thread sync context, to get the monitor work
 			StuffThreading.VerifySynchronizationContext();
 
-			if (isSynchronizationRunning)
-				throw new InvalidOperationException();
+			if (isSynchronizationRunning.Value)
+				throw new InvalidOperationException("Recursion detected.");
 
-			Monitor.Enter(synchronizationLock);
-			isSynchronizationRunning = true;
+			Monitor.Enter(synchronizationLock); // secure the execution of this function, build a queue
+												// it is safe to use the lock here, because the thread scheduler returns always back to the current thread.
+			isSynchronizationRunning.Value = true;
 			try
 			{
 				// synchronize schema
@@ -1721,7 +1716,7 @@ namespace TecWare.PPSn
 			}
 			finally
 			{
-				isSynchronizationRunning = false;
+				isSynchronizationRunning.Value = false;
 				Monitor.Exit(synchronizationLock);
 			}
 			return true;
@@ -1778,7 +1773,7 @@ namespace TecWare.PPSn
 		public void SetUpdateUserInfo()
 			=> updateUserInfo = true;
 
-		public bool IsInSynchronization => isSynchronizationRunning;
+		public bool IsInSynchronization => isSynchronizationRunning.Value;
 
 		#endregion
 

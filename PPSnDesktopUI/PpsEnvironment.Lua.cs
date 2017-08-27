@@ -878,9 +878,9 @@ namespace TecWare.PPSn
 			return CreateLuaTask(GetUIContext(), func, args);
 		} // func LuaRunBackground
 
-		[LuaMember("startSync")]
-		public Task StartSync()
-			=> masterData.StartSynchronization();
+		[LuaMember("runSync")]
+		public Task RunSynchronization()
+			=> masterData.RunSynchronization();
 
 		[LuaMember("createTransaction")]
 		public PpsMasterDataTransaction CreateTransaction()

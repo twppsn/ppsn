@@ -322,24 +322,25 @@ namespace TecWare.PPSn.UI
 
 			// Build the new pane
 			var newPane = CreateEmptyPane(paneType);
+			var oldPane = CurrentPane;
 
 			try
 			{
+				// add pane and show it, progress handling should be done by the Load
+				panes.AddPane(newPane);
+				Activate(newPane);
+
 				// load the pane
 				await newPane.LoadAsync(arguments);
-				await Dispatcher.InvokeAsync(() => panes.AddPane(newPane));
 			}
 			catch
 			{
+				Activate(oldPane);
 				newPane.Dispose();
 				throw;
 			}
 
 			// Hide Navigator and show the pane
-			await Dispatcher.InvokeAsync(() =>
-			{
-				Activate(newPane);
-			});
 		} // proc LoadPaneInternAsync
 
 		public async Task<bool> UnloadPaneAsync(IPpsWindowPane pane)
