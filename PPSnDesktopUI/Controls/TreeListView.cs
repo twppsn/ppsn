@@ -96,15 +96,12 @@ namespace TecWare.PPSn.Controls
 			if (node == null)
 				return; // todo: noch nicht generiert? throw new ArgumentNullException("SelectNode TreeListViewItem");
 
-			// focus?
-			Dispatcher.BeginInvoke(
-				new Action(() =>
-				{
-					node.IsSelected = true;
-					node.BringIntoView();
-				}),
-					DispatcherPriority.Input
-				);
+			//  reset itemToSelect
+			if (item == itemToSelect)
+				itemToSelect = null;
+
+			node.IsSelected = true;
+			node.BringIntoView();
 		} // proc DoSelectNode
 
 		private void OnItemContainerGeneratorStatusChanged(object sender, EventArgs e)
@@ -118,7 +115,7 @@ namespace TecWare.PPSn.Controls
 
 		private void EnsureSelection()
 		{
-			if (Items.Count == 0 || SelectedItem != null)
+			if (Items.Count == 0 || SelectedItem != null || itemToSelect != null)
 				return;
 			SelectNode(Items[0]);
 		} // proc EnsureSelection
@@ -192,15 +189,8 @@ namespace TecWare.PPSn.Controls
 			if (node == null)
 				throw new ArgumentNullException("SelectNode TreeListViewItem");
 
-			// focus?
-			Dispatcher.BeginInvoke(
-				new Action(() =>
-					{
-						node.IsSelected = true;
-						node.BringIntoView();
-					}),
-					DispatcherPriority.Input
-				);
+			node.IsSelected = true;
+			node.BringIntoView();
 		} // proc SelectNode
 
 		private void SelectAddedNode(object item)
