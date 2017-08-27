@@ -15,7 +15,6 @@
         <ResourceDictionary Source="Resources/Styles/Expander.xaml" />
         <ResourceDictionary Source="Resources/Styles/DatePicker.xaml" />
         <ResourceDictionary Source="Resources/Styles/SideBarMenu.xaml" />
-        <ResourceDictionary Source="Resources/Styles/TemplateTextBox.xaml" />
         <ResourceDictionary Source="Resources/Icons/DrawingImage.xaml" />
         <ResourceDictionary Source="Resources/Styles/TextBox.xaml" />
         <ResourceDictionary Source="Resources/Styles/Label.xaml" />
