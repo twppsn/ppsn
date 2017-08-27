@@ -748,6 +748,10 @@ namespace TecWare.PPSn.Data
 			if (x.Name != xnData)
 				throw new ArgumentException();
 
+			// fix:
+			if (!combineData)
+				combineData = (this.Tables["Head", false]?.Count ?? 0) > 0;
+
 			using (BeginData(true))
 			{
 				// clear current data, for a fresh load
