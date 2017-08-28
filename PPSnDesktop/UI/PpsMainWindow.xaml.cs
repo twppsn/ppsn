@@ -277,7 +277,7 @@ namespace TecWare.PPSn.UI
 			set => SetValue(IsNavigatorVisibleProperty, value);
 		} // prop NavigatorState
 
-		public bool IsSideBarVisible => (bool)GetValue(IsNavigatorVisibleProperty);
+		public bool IsSideBarVisible => (bool)GetValue(IsSideBarVisibleProperty);
 
 		public bool IsPaneVisible
 		{
