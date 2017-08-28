@@ -313,6 +313,9 @@ namespace TecWare.PPSn.Data
 			{
 				OnPropertyChanged(nameof(Value));
 				UpdateFormattedValue();
+
+				// mark row as modified
+				Row.Table.OnRowModified(Row, Column.Index, this, this);
 			}
 		} // proc SetValue
 
@@ -507,6 +510,6 @@ namespace TecWare.PPSn.Data
 			set { SetValue(value, true, true); }
 		} // proc Template
 
-		public override bool IsNull => !String.IsNullOrEmpty(Value);
+		public override bool IsNull => currentTemplate == PpsDataRow.NotSet;
 	} // struct PpsFormattedStringValue
 }
