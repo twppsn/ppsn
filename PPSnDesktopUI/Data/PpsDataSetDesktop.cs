@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows.Data;
@@ -363,9 +364,18 @@ namespace TecWare.PPSn.Data
 		{
 			var row = DataView.NewRow(DataView.Table.GetDataRowValues(values), null);
 			AddNewItem(row);
-			CommitNew();
 			return row;
 		} // func Add
+
+		protected override void OnCollectionChanged(NotifyCollectionChangedEventArgs args)
+		{
+			base.OnCollectionChanged(args);
+			// we do not want the new/edit
+			if (IsAddingNew)
+				CommitNew();
+			else if (IsEditingItem)
+				CommitEdit();
+		} // proc OnCollectionChanged
 
 		public PpsDataRow Parent => (InternalList as PpsDataRelatedFilter)?.Parent;
 
