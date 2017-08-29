@@ -50,7 +50,7 @@ specific language governing permissions and limitations under the Licence.
 		<WrapPanel Grid.Row="0">
 			<WrapPanel.Resources>
 				<Style TargetType="{x:Type Button}" BasedOn="{StaticResource PPSnImageButtonStyle}">
-					<Setter Property="Button.Margin" Value="0,0,8,0"/>
+					<Setter Property="Button.Margin" Value="0,0,6,0"/>
 					<Setter Property="Width" Value="40"/>
 					<Setter Property="Height" Value="40"/>
 				</Style>
@@ -60,7 +60,7 @@ specific language governing permissions and limitations under the Licence.
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddFileButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
 			<Button Command="{x:Static local:PpsAttachmentsControl.AddLinkAttachmentCommand}" 
 						Content="{StaticResource linkPathGeometry}"
-						Margin="0,0,48,0"
+						Margin="0,0,32,0"
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddLinkButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
 			<Button Command="{x:Static local:PpsAttachmentsControl.CameraAttachmentCommand}"
 						Content="{StaticResource cameraPathGeometry}"
