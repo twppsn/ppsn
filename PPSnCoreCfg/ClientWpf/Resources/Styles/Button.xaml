@@ -10,7 +10,7 @@
 		<![CDATA[
 
 		local p = (value - (value / 1.414213562)) / 2;
-		return 1.0 + clr.System.Math:Ceiling(p);
+		return 2.0 + clr.System.Math:Ceiling(p);
 
 		]]>
 	</ui:LuaValueConverter>
@@ -121,7 +121,7 @@
 						</Grid.RowDefinitions>
 						<Grid x:Name="imageGrid" Grid.Row="0" Width="{TemplateBinding MinWidth}" Height="{TemplateBinding MinWidth}" Background="Transparent" Opacity=".75">
 							<Ellipse x:Name="circle" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
-										 Fill="Transparent" Stroke="{StaticResource PPSnActionButtonBrush}" StrokeThickness="1.5" />
+										 Fill="Transparent" Stroke="{StaticResource PPSnActionButtonBrush}" StrokeThickness="1.25" />
 							<Viewbox SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
 									 Margin="{TemplateBinding MinWidth, Converter={StaticResource PaddingFromCircleConverter}}">
 								<Canvas Width="24" Height="24">
