@@ -295,7 +295,7 @@ namespace TecWare.PPSn.UI
 	/// <summary>Baseclass for a UI-Command implementation.</summary>
 	public abstract class PpsUICommand : FrameworkContentElement
 	{
-		public static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register("IsVisible", typeof(bool), typeof(PpsUICommand));
+		public static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register(nameof(IsVisible), typeof(bool), typeof(PpsUICommand));
 		
 		private PpsCommandOrder order;
 		
@@ -382,6 +382,7 @@ namespace TecWare.PPSn.UI
 	/// <summary></summary>
 	public class PpsUICommandCollection : Collection<PpsUICommand>, INotifyCollectionChanged
 	{
+		private static PpsUICommand[] seperator = new PpsUICommand[] { null };
 		/// <summary></summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
@@ -407,7 +408,7 @@ namespace TecWare.PPSn.UI
 			while (Count > 0)
 				RemoveAt(Count - 1);
 		} // proc ClearItems
-		
+
 		/// <summary></summary>
 		/// <param name="index"></param>
 		protected override void RemoveItem(int index)
@@ -415,15 +416,19 @@ namespace TecWare.PPSn.UI
 			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, this[index], index));
 			base.RemoveItem(index);
 			if (index == Count && index > 0 && this[index - 1] == null) // remove group before
-					base.RemoveItem(index - 1);
+			{
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, seperator, index - 1));
+				base.RemoveItem(index - 1);
+			}
 			else if (index < Count && this[index] == null) // remove group after
+			{
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, seperator, index));
 				base.RemoveItem(index);
+			}
 		} // proc RemoveItem
 
 		private static bool IsDifferentGroup(PpsUICommand item, int group)
-		{
-			return item != null && item.Order.Group != group;
-		} // func IsDifferentGroup
+			=> item != null && item.Order.Group != group;
 
 		/// <summary></summary>
 		/// <param name="index"></param>
@@ -468,13 +473,20 @@ namespace TecWare.PPSn.UI
 
 			// create a group before
 			if (index > 0 && IsDifferentGroup(this[index - 1], group))
+			{
 				base.InsertItem(index++, null);
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, seperator, index - 1));
+			}
 			if (index < Count && IsDifferentGroup(this[index], group))
+			{
 				base.InsertItem(index, null);
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, seperator, index));
+			}
 
 			// insert the item
 			base.InsertItem(index, item);
 			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, this[index], index));
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset)); // force rebuild, templates will not show up correctly
 		} // proc InsertItem
 
 		/// <summary></summary>
@@ -482,7 +494,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="item"></param>
 		protected override void SetItem(int index, PpsUICommand item)
 		{
-			RemoveAt(index);
+			RemoveItem(index);
 			InsertItem(index, item);
 		} // proc SetItem
 	} // class PPsUICommandCollection

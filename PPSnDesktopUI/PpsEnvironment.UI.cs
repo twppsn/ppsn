@@ -384,7 +384,7 @@ namespace TecWare.PPSn
 		private void UpdateResource(string keyString, string xamlSource, ParserContext parserContext)
 		{
 			// create the resource
-			object resource = CreateResource(xamlSource, parserContext);
+			var resource = CreateResource(xamlSource, parserContext);
 			object key;
 
 			// check the key

@@ -279,7 +279,7 @@ namespace TecWare.PPSn.UI
 								await newWindow.LoadPaneInternAsync(paneType, arguments);
 							}
 							else
-								await Dispatcher.InvokeAsync(() => loadedPane.Item1.Activate(loadedPane.Item2));
+								loadedPane.Item1.Activate(loadedPane.Item2);
 						}
 						break;
 
