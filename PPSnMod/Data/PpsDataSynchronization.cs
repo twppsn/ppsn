@@ -168,8 +168,6 @@ namespace TecWare.PPSn.Server.Data
 		{
 			var view = application.GetViewDefinition(viewName, true);
 			var selector = view.SelectorToken.CreateSelector(connection, true);
-			if (lastSyncId <= 0 && lastSynchronization > DateTime.MinValue)
-				lastSyncId = lastSynchronization.ToFileTimeUtc();
 			if (lastSyncId > 0)
 			{
 				var timeStampDateTime = DateTime.FromFileTimeUtc(lastSyncId);
