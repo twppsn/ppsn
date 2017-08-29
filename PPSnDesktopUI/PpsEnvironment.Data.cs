@@ -3957,9 +3957,9 @@ namespace TecWare.PPSn
 					))
 				{
 					// read sync tokens
-					using (var commd = new SQLiteCommand("SELECT SchemaStamp, SchemaContent, SyncStamp, UserId, UserName FROM main.Header ", newLocalStore))
+					using (var command = new SQLiteCommand("SELECT SchemaStamp, SchemaContent, SyncStamp, UserId, UserName FROM main.Header ", newLocalStore))
 					{
-						using (var r = commd.ExecuteReaderEx(CommandBehavior.SingleRow))
+						using (var r = command.ExecuteReaderEx(CommandBehavior.SingleRow))
 						{
 							if (r.Read())
 							{

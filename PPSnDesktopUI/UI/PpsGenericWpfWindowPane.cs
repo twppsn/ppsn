@@ -472,6 +472,7 @@ namespace TecWare.PPSn.UI
 			
 			// notify changes on control
 			OnPropertyChanged(nameof(Control));
+			OnPropertyChanged(nameof(PaneControl));
 			OnPropertyChanged(nameof(Commands));
 			OnPropertyChanged(nameof(Title));
 			OnPropertyChanged(nameof(SubTitle));
@@ -491,6 +492,15 @@ namespace TecWare.PPSn.UI
 		{
 			if (Members.ContainsKey("UnloadAsync"))
 				CallMemberDirect("UnloadAsync", new object[] { commit }, throwExceptions: true);
+
+			control = null;
+			OnPropertyChanged(nameof(Control));
+			OnPropertyChanged(nameof(PaneControl));
+			OnPropertyChanged(nameof(Commands));
+			OnPropertyChanged(nameof(Title));
+			OnPropertyChanged(nameof(SubTitle));
+			OnPropertyChanged(nameof(HasSideBar));
+
 			return Task.FromResult(true);
 		} // func UnloadAsync
 
@@ -618,27 +628,28 @@ namespace TecWare.PPSn.UI
 	/// <summary>Base control for the wpf generic pane.</summary>
 	public class PpsGenericWpfControl : ContentControl, ILuaEventSink, IPpsPWindowPaneControl
 	{
-		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PpsGenericWpfControl), new UIPropertyMetadata(String.Empty));
-		public static readonly DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsGenericWpfControl), new UIPropertyMetadata(String.Empty));
-		public static readonly DependencyProperty HasSideBarProperty = DependencyProperty.Register(nameof(HasSideBar), typeof(bool), typeof(PpsGenericWpfControl), new PropertyMetadata(false));
+		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(String.Empty));
+		public static readonly DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(String.Empty));
+		public static readonly DependencyProperty HasSideBarProperty = DependencyProperty.Register(nameof(HasSideBar), typeof(bool), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(false));
+		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
 
-		private readonly PpsUICommandCollection commands;
 		private readonly PpsProgressStack progressStack;
 
 		// for corrent Binding this Command must be a Property - not a Field
+		// todo: change
+		private static readonly RoutedCommand setCharmCommand = new RoutedCommand("SetCharm", typeof(PpsGenericWpfControl));
 		public RoutedCommand SetCharmCommand { get { return setCharmCommand; } }
-
-		private readonly RoutedCommand setCharmCommand = new RoutedCommand("SetCharm", typeof(PpsGenericWpfControl));
 		
-
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		/// <summary></summary>
 		public PpsGenericWpfControl()
 			: base()
 		{
-			commands = new PpsUICommandCollection();
+			var commands = new PpsUICommandCollection();
 			commands.CollectionChanged += Commands_CollectionChanged;
+			SetValue(commandsPropertyKey, commands);
 
 			progressStack = new PpsProgressStack(Dispatcher);
 
@@ -680,10 +691,14 @@ namespace TecWare.PPSn.UI
 			switch (e.Action)
 			{
 				case NotifyCollectionChangedAction.Add:
-					AddLogicalChild(e.NewItems[0]);
+					if (e.NewItems[0] != null)
+						AddLogicalChild(e.NewItems[0]);
 					break;
 				case NotifyCollectionChangedAction.Remove:
-					RemoveLogicalChild(e.OldItems[0]);
+					if (e.OldItems[0] != null)
+						RemoveLogicalChild(e.OldItems[0]);
+					break;
+				case NotifyCollectionChangedAction.Reset:
 					break;
 				default:
 					throw new InvalidOperationException();
@@ -700,8 +715,11 @@ namespace TecWare.PPSn.UI
 					yield return e.Current;
 
 				// enumerate commands
-				foreach (var cmd in commands)
-					yield return cmd;
+				foreach (var cmd in Commands)
+				{
+					if (cmd != null)
+						yield return cmd;
+				}
 			}
 		} // prop LogicalChildren
 
@@ -738,7 +756,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>List of commands for the main toolbar.</summary>
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
-		public PpsUICommandCollection Commands => commands;
+		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
 	} // class PpsGenericWpfControl
 
 	#endregion
