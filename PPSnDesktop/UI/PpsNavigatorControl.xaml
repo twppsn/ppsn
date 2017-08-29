@@ -151,7 +151,9 @@ specific language governing permissions and limitations under the Licence.
 								<DataTrigger.EnterActions>
 									<BeginStoryboard>
 										<Storyboard FillBehavior="HoldEnd">
-											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarShrinkedWidth}" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
+											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarShrinkedWidth}"
+															 AccelerationRatio=".4"
+															 Duration="{StaticResource PPSnShrinkStoryDuration}"/>
 										</Storyboard>
 									</BeginStoryboard>
 									<BeginStoryboard>
@@ -165,7 +167,9 @@ specific language governing permissions and limitations under the Licence.
 								<DataTrigger.ExitActions>
 									<BeginStoryboard>
 										<Storyboard FillBehavior="HoldEnd">
-											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarIncreasedWidth}" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
+											<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarIncreasedWidth}"
+															 AccelerationRatio=".4"
+															 Duration="{StaticResource PPSnShrinkStoryDuration}"/>
 										</Storyboard>
 									</BeginStoryboard>
 									<BeginStoryboard>

@@ -5,7 +5,7 @@
 			  xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
               xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
               xmlns:local="clr-namespace:TecWare.PPSn.UI"
-			  Style="{StaticResource PpsWindow}" 
+			  Style="{StaticResource PpsWindow}"
               MinHeight="600"
               MinWidth="800"
 			  Height="600" Width="800" >
@@ -184,11 +184,16 @@
 				<Style TargetType="Rectangle">
 					<Setter Property="Width" Value="{StaticResource PPSnSideBarIncreasedWidth}" />
 					<Style.Triggers>
-						<DataTrigger Binding="{Binding IsSideBarVisible}" Value="false">
+						<DataTrigger Binding="{Binding IsSideBarVisible}">
+							<DataTrigger.Value>
+								<sys:Boolean>false</sys:Boolean>
+							</DataTrigger.Value>
 							<DataTrigger.EnterActions>
 								<BeginStoryboard>
 									<Storyboard FillBehavior="HoldEnd">
-										<DoubleAnimation Storyboard.TargetProperty="Width" To="0" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
+										<DoubleAnimation Storyboard.TargetProperty="Width" To="0" 
+														 AccelerationRatio=".4"
+														 Duration="{StaticResource PPSnShrinkStoryDuration}"/>
 										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
 											<DiscreteObjectKeyFrame KeyTime="{StaticResource PPSnShrinkStoryKeyTime}" Value="{x:Static Visibility.Collapsed}"/>
 										</ObjectAnimationUsingKeyFrames>
@@ -198,10 +203,12 @@
 							<DataTrigger.ExitActions>
 								<BeginStoryboard>
 									<Storyboard FillBehavior="HoldEnd">
-										<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarIncreasedWidth}" Duration="{StaticResource PPSnShrinkStoryDuration}"/>
 										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
 											<DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
 										</ObjectAnimationUsingKeyFrames>
+										<DoubleAnimation Storyboard.TargetProperty="Width" To="{StaticResource PPSnSideBarIncreasedWidth}"
+														 AccelerationRatio=".4"
+														 Duration="{StaticResource PPSnShrinkStoryDuration}"/>
 									</Storyboard>
 								</BeginStoryboard>
 							</DataTrigger.ExitActions>
