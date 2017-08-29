@@ -381,9 +381,9 @@ namespace TecWare.PPSn.Controls
 			{
 				using (var trans = GetUndoManager(view.Table.DataSet).BeginTransaction("Datei hinzugefügt."))
 				{
-					var r = view.Table.Add(new Neo.IronLua.LuaTable());
+					var r = view.NewRow(null, null);
 					r[linkColumnIndex] = data;
-					r.Commit();
+					view.Add(r);
 
 					OnCollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, new PpsDataRow[] { r }));
 
@@ -392,7 +392,7 @@ namespace TecWare.PPSn.Controls
 			} // proc Append
 
 			public IEnumerator<IPpsAttachmentItem> GetEnumerator()
-				=> view.Table.Select(c => new PpsAttachmentItemImplementation(c, linkColumnIndex)).GetEnumerator();
+				=> view.Select(c => new PpsAttachmentItemImplementation(c, linkColumnIndex)).GetEnumerator();
 
 			IEnumerator IEnumerable.GetEnumerator()
 				=> GetEnumerator();
@@ -420,7 +420,7 @@ namespace TecWare.PPSn.Controls
 							new PpsAttachmentItemImplementation((PpsDataRow)e.OldItems[0], linkColumnIndex),
 							e.OldStartingIndex)
 						);*/
-						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset)); // ToDo
+						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
 						break;
 					case NotifyCollectionChangedAction.Reset:
