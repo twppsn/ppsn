@@ -51,4 +51,28 @@ namespace TecWare.PPSn.Controls
 			command.Execute(selector.SelectedItem);
 		}
 	} // class PPSnSelectionChangedBehavior
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class PPSnComboBoxBehavior
+	{
+		public static object GetIsNullable(ComboBox comboBox)
+		{
+			return (bool)comboBox.GetValue(IsNullableProperty);
+		}
+
+		public static void SetIsNullable(ComboBox comboBox, object value)
+		{
+			comboBox.SetValue(IsNullableProperty, value);
+		}
+
+		public static readonly DependencyProperty IsNullableProperty =
+			DependencyProperty.RegisterAttached(
+				"IsNullable",
+				typeof(bool),
+				typeof(PPSnComboBoxBehavior),
+				new PropertyMetadata(false)
+				);
+	} // class PPSnComboBoxBehavior
+
 }
