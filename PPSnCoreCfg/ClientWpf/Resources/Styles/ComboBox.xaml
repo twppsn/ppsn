@@ -10,7 +10,7 @@
 
 	<ui:LuaValueConverter x:Key="CollapseInaktiveConverter">
 		<![CDATA[
-		if value ~= nil then
+		if value ~= nil and value then
 			return true;
 		else
 			return false;
@@ -28,6 +28,13 @@
 		]]>
 	</ui:LuaValueConverter>
 
+	<PathGeometry x:Key="arrowPathGeometry"
+					  Figures="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z" />
+	<PathGeometry x:Key="clearPathGeometry"
+					  Figures="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
+	<PathGeometry x:Key="filterPathGeometry"
+					  Figures="M3,2H21V2H21V4H20.92L15,9.92V22.91L9,16.91V9.91L3.09,4H3V2M11,16.08L13,18.08V9H13.09L18.09,4H5.92L10.92,9H11V16.08Z" />
+
 	<ControlTemplate x:Key="PPSnComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}">
 		<Grid>
 			<Grid.ColumnDefinitions>
@@ -35,19 +42,19 @@
 				<ColumnDefinition Width="20" />
 			</Grid.ColumnDefinitions>
 			<Border x:Name="border" Grid.ColumnSpan="2" BorderBrush="{TemplateBinding BorderBrush}"	BorderThickness="{TemplateBinding BorderThickness}"	Background="{TemplateBinding Background}" />
-			<Path x:Name="arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity=".75"
-				  Stroke="{StaticResource PPSnWindowForegroundBrush}"
-				  StrokeThickness="1"
-				  StrokeDashCap="Round"
-				  Data="M 0,0 L5.5,5.5 11,0" />
+			<Viewbox x:Name="arrowBox" Grid.Column="1" Opacity=".65">
+				<Canvas Width="24" Height="24">
+					<Path Data="{StaticResource arrowPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}"/>
+				</Canvas>
+			</Viewbox>
 		</Grid>
 		<ControlTemplate.Triggers>
 			<DataTrigger Binding="{Binding Path=IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}" Value="True">
 				<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
-				<Setter Property="Opacity" TargetName="arrow" Value="1.0"/>
+				<Setter Property="Opacity" TargetName="arrowBox" Value="1.0"/>
 			</DataTrigger>
 			<Trigger Property="IsEnabled" Value="False">
-				<Setter Property="Opacity" TargetName="arrow" Value=".45"/>
+				<Setter Property="Opacity" TargetName="arrowBox" Value=".25"/>
 			</Trigger>
 		</ControlTemplate.Triggers>
 	</ControlTemplate>
@@ -67,12 +74,12 @@
 						<Trigger Property="IsHighlighted" Value="True">
 							<Setter Property="Panel.Background" TargetName="border" Value="{StaticResource PPSnMouseOverBrush}"/>
 						</Trigger>
-						<DataTrigger Binding="{Binding Path=Inaktiv, Converter={StaticResource CollapseInaktiveConverter}, Mode=OneWay}">
+						<!--<DataTrigger Binding="{Binding Path=IsActive, Converter={StaticResource CollapseInaktiveConverter}, Mode=OneWay}">
 							<DataTrigger.Value>
-								<sys:Boolean>true</sys:Boolean>
+								<sys:Boolean>false</sys:Boolean>
 							</DataTrigger.Value>
 							<Setter Property="Panel.Visibility" TargetName="border" Value="Collapsed"/>
-						</DataTrigger>
+						</DataTrigger>-->
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
@@ -103,6 +110,39 @@
 										  Content="{TemplateBinding ComboBox.SelectionBoxItem}" 
 										  ContentTemplate="{TemplateBinding ComboBox.SelectionBoxItemTemplate}"
 										  ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
+						<Button x:Name="clearButton" HorizontalAlignment="Right" Width="20" Margin="0,1,20,1" Focusable="False" Visibility="Hidden">
+							<Button.Template>
+								<ControlTemplate TargetType="{x:Type Button}">
+									<Border Background="Transparent">
+										<Viewbox x:Name="clearBox" Opacity=".65">
+											<Canvas Width="24" Height="24">
+												<Path Data="{StaticResource clearPathGeometry}" Fill="Black"/>
+											</Canvas>
+										</Viewbox>
+									</Border>
+									<ControlTemplate.Triggers>
+										<Trigger Property="IsMouseOver" Value="True">
+											<Setter TargetName="clearBox" Property="Opacity" Value="1"/>
+										</Trigger>
+									</ControlTemplate.Triggers>
+								</ControlTemplate>
+							</Button.Template>
+							<Button.Triggers>
+								<EventTrigger RoutedEvent="Button.Click">
+									<EventTrigger.Actions>
+										<BeginStoryboard>
+											<Storyboard>
+												<ObjectAnimationUsingKeyFrames
+														Storyboard.Target="{Binding RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}"
+														Storyboard.TargetProperty="(ComboBox.SelectedItem)">
+													<DiscreteObjectKeyFrame KeyTime="0" Value="{x:Null}"/>
+												</ObjectAnimationUsingKeyFrames>
+											</Storyboard>
+										</BeginStoryboard>
+									</EventTrigger.Actions>
+								</EventTrigger>
+							</Button.Triggers>
+						</Button>
 						<TextBox Name="PART_EditableTextBox" Margin="5,3,23,3" IsReadOnly="{TemplateBinding IsReadOnly}" Visibility="Hidden" Background="Transparent" HorizontalAlignment="Left" VerticalAlignment="Center" Focusable="True" >
 							<TextBox.Template>
 								<ControlTemplate TargetType="{x:Type TextBox}" >
@@ -135,6 +175,41 @@
 							<Setter Property="Visibility" TargetName="PART_EditableTextBox" Value="Visible"/>
 							<Setter Property="Visibility" TargetName="PART_ContentSite" Value="Hidden"/>
 						</Trigger>
+
+						<MultiDataTrigger>
+							<MultiDataTrigger.Conditions>
+								<Condition Binding="{Binding Path=(uiC:PPSnComboBoxBehavior.IsNullable), RelativeSource={RelativeSource Self}, Mode=OneWay}">
+									<Condition.Value>
+										<sys:Boolean>True</sys:Boolean>
+									</Condition.Value>
+								</Condition>
+								<Condition Binding="{Binding Path=(Selector.SelectedIndex), RelativeSource={RelativeSource Self}, Mode=OneWay, Converter={StaticResource SelectedIndexConverter}}">
+									<Condition.Value>
+										<sys:Boolean>True</sys:Boolean>
+									</Condition.Value>
+								</Condition>
+								<Condition Binding="{Binding Path=(ComboBox.IsEditable), RelativeSource={RelativeSource Self}, Mode=OneWay}">
+									<Condition.Value>
+										<sys:Boolean>False</sys:Boolean>
+									</Condition.Value>
+								</Condition>
+								<Condition Binding="{Binding Path=IsEnabled, RelativeSource={RelativeSource Self}, Mode=OneWay}">
+									<Condition.Value>
+										<sys:Boolean>True</sys:Boolean>
+									</Condition.Value>
+								</Condition>
+								<Condition Binding="{Binding Path=IsKeyboardFocusWithin, RelativeSource={RelativeSource Self}, Mode=OneWay}">
+									<Condition.Value>
+										<sys:Boolean>True</sys:Boolean>
+									</Condition.Value>
+								</Condition>
+							</MultiDataTrigger.Conditions>
+							<Setter TargetName="PART_ContentSite" Property="Margin" Value="5,3,43,3"/>
+							<Setter TargetName="clearButton" Property="Visibility" Value="Visible"/>
+						</MultiDataTrigger>
+						<Trigger Property="ComboBox.IsDropDownOpen" Value="True">
+							<Setter TargetName="clearButton" Property="IsHitTestVisible" Value="False"/>
+						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
@@ -146,37 +221,38 @@
 	<ControlTemplate x:Key="PPSnFilterComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}">
 		<Grid>
 			<Grid.ColumnDefinitions>
-				<ColumnDefinition />
+				<ColumnDefinition/>
 				<ColumnDefinition Width="32" />
 				<ColumnDefinition Width="32" />
 			</Grid.ColumnDefinitions>
-			<Border x:Name="border" Grid.ColumnSpan="3" BorderBrush="{TemplateBinding BorderBrush}"	BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" />
+			<Border x:Name="border" Grid.ColumnSpan="3" BorderBrush="{TemplateBinding BorderBrush}"
+					BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" />
 			<TextBlock x:Name="emptyText" Grid.Column="0" Margin="6,3" VerticalAlignment="Center" Visibility="Hidden" Foreground="{StaticResource PPSnWindowForegroundBrush}"
 					   Text="{Binding Path=Tag, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}, Mode=OneTime}"/>
-			<Button x:Name="clearButton" Grid.Column="1" Focusable="False" Margin="0,1"
+			<Button x:Name="clearButton" Grid.Column="1" Margin="0,1" Focusable="False"
 					Command="{Binding Path=(uiC:PPSnSelectionChangedBehavior.Command), RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ComboBox}}, Mode=OneWay}">
 				<Button.Template>
 					<ControlTemplate TargetType="{x:Type Button}">
-						<Border x:Name="border" Background="Transparent" BorderThickness="0" Opacity=".75">
-							<Canvas Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center">
-								<Path Width="13" Height="13" Canvas.Left="1.5" Canvas.Top="1.5" Stretch="Fill" StrokeLineJoin="Round"
-									  Stroke="{StaticResource PPSnWindowForegroundBrush}" 
-									  Data="M 2,2L 14,14M 2,14L 14,2"/>
-							</Canvas>
+						<Border Background="Transparent">
+							<Viewbox x:Name="clearBox" Margin="3" Opacity=".65">
+								<Canvas Width="24" Height="24">
+									<Path Data="{StaticResource clearPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}"/>
+								</Canvas>
+							</Viewbox>
 						</Border>
 						<ControlTemplate.Triggers>
 							<Trigger Property="IsMouseOver" Value="True">
-								<Setter TargetName="border" Property="Opacity" Value="1"/>
+								<Setter TargetName="clearBox" Property="Opacity" Value="1"/>
 							</Trigger>
 						</ControlTemplate.Triggers>
 					</ControlTemplate>
 				</Button.Template>
 			</Button>
-			<Canvas Grid.Column="2" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity=".75">
-				<Path Width="13" Height="13" Canvas.Left="0.5" Canvas.Top="1.5" Stretch="Fill"
-					  StrokeLineJoin="Round" Stroke="{StaticResource PPSnWindowForegroundBrush}"
-					  Data="M 2,2L 7,7L 7,14L 9,14L 9,7L 14,2L 2,2 Z "/>
-			</Canvas>
+			<Viewbox Grid.Column="2" Margin="7" Opacity=".65" >
+				<Canvas Width="24" Height="24">
+					<Path Data="{StaticResource filterPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}"/>
+				</Canvas>
+			</Viewbox>
 		</Grid>
 		<ControlTemplate.Triggers>
 			<DataTrigger Binding="{Binding Path=SelectedIndex, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}, Mode=OneWay, Converter={StaticResource SelectedIndexConverter}}">
@@ -236,6 +312,4 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
-
-
 </ResourceDictionary>
