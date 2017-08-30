@@ -109,7 +109,8 @@
 		<Setter Property="Focusable" Value="False"/>
 		<Setter Property="FontSize" Value="14"/>
 		<Setter Property="MinWidth" Value="36"/>
-		<Setter Property="Padding" Value="7"/>
+		<!--use this as extra-margin for the image-->
+		<Setter Property="Padding" Value="0"/>
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
 		<Setter Property="Template">
 			<Setter.Value>
@@ -121,13 +122,15 @@
 						</Grid.RowDefinitions>
 						<Grid x:Name="imageGrid" Grid.Row="0" Width="{TemplateBinding MinWidth}" Height="{TemplateBinding MinWidth}" Background="Transparent" Opacity=".75">
 							<Ellipse x:Name="circle" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
-										 Fill="Transparent" Stroke="{StaticResource PPSnActionButtonBrush}" StrokeThickness="1.25" />
-							<Viewbox SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+									 Fill="Transparent" Stroke="{StaticResource PPSnActionButtonBrush}" StrokeThickness="1.25" />
+							<Border Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+								<Viewbox SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
 									 Margin="{TemplateBinding MinWidth, Converter={StaticResource PaddingFromCircleConverter}}">
-								<Canvas Width="24" Height="24">
-									<Path Data="{TemplateBinding Tag}" Fill="{StaticResource PPSnActionButtonBrush}"/>
-								</Canvas>
-							</Viewbox>
+									<Canvas Width="24" Height="24">
+										<Path Data="{TemplateBinding Tag}" Fill="{StaticResource PPSnActionButtonBrush}"/>
+									</Canvas>
+								</Viewbox>
+							</Border>
 							<Grid.RenderTransformOrigin>
 								<Point X="0.5" Y="0.5"/>
 							</Grid.RenderTransformOrigin>
