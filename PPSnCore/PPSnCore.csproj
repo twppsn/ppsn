@@ -46,6 +46,7 @@
     <Compile Include="Data\DataUndoRedo.cs" />
     <None Include="Data\DbRowEnumerator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Stuff\Objects.cs" />
     <Compile Include="Stuff\Strings.cs" />
     <Compile Include="Stuff\XmlPosition.cs" />
   </ItemGroup>
