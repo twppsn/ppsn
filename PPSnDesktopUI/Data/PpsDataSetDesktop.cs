@@ -193,7 +193,7 @@ namespace TecWare.PPSn.Data
 
 						// todp: delete should be an option on the column meta data?
 						if (dataset != null)
-							dataset.Object.Links.AppendLink(o, PpsObjectLinkRestriction.Delete);
+							dataset.Object.Links.AppendLink(o);
 
 						return true;
 					}
