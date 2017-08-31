@@ -14,52 +14,72 @@
 //
 #endregion
 using System;
-using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using Microsoft.Win32;
+using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
-using System.Collections.Specialized;
-using System.ComponentModel;
-using TecWare.DE.Networking;
 
 namespace TecWare.PPSn.Controls
 {
-	#region -- Interfaces ---------------------------------------------------------------
+	#region -- interface IPpsAttachmentItem -------------------------------------------
 
+	/// <summary>Representation for the attachments</summary>
 	public interface IPpsAttachmentItem
 	{
+		/// <summary>Remove the current attachment</summary>
+		/// <returns></returns>
 		bool Remove();
+
+		/// <summary>Displayname</summary>
 		string Name { get; }
-		string MimeType { get; }
-		object Data { get; }
-		void ShellExecute();
+		
+		/// <summary>Access the data column.</summary>
+		PpsObject LinkedObject { get; }
 	} // interface IPpsAttachmentItem
 
+	#endregion
+
+	#region -- interface IPpsAttachments ----------------------------------------------
+
+	/// <summary>Access to the attachments of an object, or table.</summary>
 	public interface IPpsAttachments : IEnumerable<IPpsAttachmentItem>
 	{
+		/// <summary>Add's a new attachment to the list.</summary>
+		/// <param name="data">Object to connect.</param>
 		void Append(PpsObject data);
 	} // interface IPpsAttachments
 
+	#endregion
+
+	#region -- interface IPpsAttachmentSource -----------------------------------------
+
+	/// <summary>Attachment provider</summary>
 	public interface IPpsAttachmentSource
 	{
+		/// <summary>Access to the attachments</summary>
 		IPpsAttachments AttachmentsSource { get; }
 	} // interface IPpsAttachmentSource
 
 	#endregion
 
-	/// <summary>
-	/// Interaction logic for PpsAttachmentsControl.xaml
-	/// </summary>
+	#region -- interface IPpsAttachmentSource -----------------------------------------
+
+	/// <summary>Wpf-Control to view attachments</summary>
 	public partial class PpsAttachmentsControl : UserControl, IPpsAttachmentSource
 	{
 		private readonly Lazy<PpsEnvironment> getEnvironment;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		public PpsAttachmentsControl()
 		{
@@ -68,6 +88,13 @@ namespace TecWare.PPSn.Controls
 			Loaded += LoadBindings;
 			this.getEnvironment = new Lazy<PpsEnvironment>(() => PpsEnvironment.GetEnvironment(this));
 		} // ctor
+
+		protected override void OnInitialized(EventArgs e)
+		{
+			base.OnInitialized(e);
+		} // proc OnInitialized
+
+		#endregion
 
 		#region -- LoadBindings ---------------------------------------------------------
 
@@ -191,9 +218,9 @@ namespace TecWare.PPSn.Controls
 					new CommandBinding(RunFileAttachmentCommand,
 						(isender, ie) =>
 						{
-							SelectedAttachment.ShellExecute();
+							SelectedAttachment.LinkedObject.ShellExecute();
 						},
-						(isender, ie) => ie.CanExecute = SelectedAttachment?.MimeType != MimeTypes.Text.DataSet
+						(isender, ie) => ie.CanExecute = SelectedAttachment?.LinkedObject?.MimeType != MimeTypes.Text.DataSet
 					)
 				);
 		}
@@ -279,92 +306,133 @@ namespace TecWare.PPSn.Controls
 		public PpsEnvironment Environment => getEnvironment.Value;
 	} // class PpsAttachmentsControl
 
+	#endregion
+
 	#region -- class PpsDataTableAttachmentConverter ------------------------------------
 
+	/// <summary>Converts a IPpsDataView, PpsDataRow (e.g. column) to the attachment interfaces.</summary>
 	public sealed class PpsDataTableAttachmentConverter : IValueConverter
 	{
 		#region -- class PpsAttachmentItemImplementation --------------------------------
-
+		
 		private sealed class PpsAttachmentItemImplementation : IPpsAttachmentItem, IEquatable<PpsDataRow>, INotifyPropertyChanged
 		{
 			public event PropertyChangedEventHandler PropertyChanged;
 
-			private readonly PpsDataRow row;
-			private readonly int linkColumnIndex;
+			private readonly PpsDataRow row;        // row
+			private readonly bool rowOwner;			// is the object owner of the row
+			private readonly int linkColumnIndex;   // index of the object column
 
-			public PpsAttachmentItemImplementation(PpsDataRow row, string linkColumnName)
+			private PpsObject currentLinkedObject = null;
+
+			#region -- Ctor/Dtor --------------------------------------------------------
+
+			public PpsAttachmentItemImplementation(PpsDataRow row, string linkColumnName, bool rowOwner)
 			{
 				this.row = row;
+				this.rowOwner = rowOwner;
 				this.linkColumnIndex = row.Table.TableDefinition.FindColumnIndex(linkColumnName ?? throw new ArgumentNullException(nameof(linkColumnName)), true);
+
+				AttachRowPropertyChanged();
 			} // ctor
 
-			public PpsAttachmentItemImplementation(PpsDataRow row, int linkColumnIndex)
+			public PpsAttachmentItemImplementation(PpsDataRow row, int linkColumnIndex, bool rowOwner)
 			{
 				this.row = row;
+				this.rowOwner = rowOwner;
 				this.linkColumnIndex = linkColumnIndex;
+
+				AttachRowPropertyChanged();
 			} // ctor
 
-			public void ShellExecute()
-			{
-				GetLinkedObject().ShellExecute();
-			}
-
-
-			private PpsObject GetLinkedObject()
-				=> (PpsObject)row[linkColumnIndex];
-
-			private PpsObject GetParentObject()
-				=> ((IPpsObjectBasedDataSet)(row.Table.DataSet)).Object;
-
-			public bool Remove()
-			{
-				if (row.Remove())
-				{
-					GetParentObject().Links.RemoveLink(GetLinkedObject().Id);
-					return true;
-				}
-
-				return false;
-			}
+			public override int GetHashCode() 
+				=> row.GetHashCode();
 
 			public bool Equals(PpsDataRow other)
 				=> other == row;
 
-			public string Name => GetLinkedObject()?.GetProperty("Filename", "noname");
-			public string MimeType => GetLinkedObject()?.MimeType;
-
-			public object Data => GetLinkedObject();
-
-			private void NotifyPropertyChanged(string propertyName = "")
-				=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
-			public object Picture
+			private void AttachRowPropertyChanged()
 			{
-				get
-				{
-					var obj = GetLinkedObject()?.GetDataAsync<PpsObjectImageData>().AwaitTask();
-					if (obj == null)
-						return null;
-					obj.PropertyChanged += (sender, ob) => { if (ob.PropertyName == "Preview") NotifyPropertyChanged("Picture"); };
-					return obj.Preview;
-				}
-			}
+				AttachObjectPropertyChanged();
 
-			public string Type => MimeType?.StartsWith("image") == true ? "picture" : "binary";
+				WeakEventManager<INotifyPropertyChanged, PropertyChangedEventArgs>.AddHandler(
+					row, nameof(PropertyChanged), ForwardRowPropertyChanged
+				);
+			} // proc AttachRowPropertyChanged
+
+			private void AttachObjectPropertyChanged()
+			{
+				// disconnect old
+				if (currentLinkedObject != null)
+					currentLinkedObject.PropertyChanged -= ForwarObjectPropertyChanged;
+
+				// connect to new
+				currentLinkedObject = row[linkColumnIndex] as PpsObject;
+				if (currentLinkedObject != null)
+					currentLinkedObject.PropertyChanged += ForwarObjectPropertyChanged;
+
+				// raise events
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LinkedObject)));
+			} // proc AttachObjectPropertyChanged
+
+			private void ForwardRowPropertyChanged(object sender, PropertyChangedEventArgs args)
+			{
+				if(args.PropertyName == row.Table.Columns[linkColumnIndex].Name)
+				{
+					if(currentLinkedObject != row[linkColumnIndex])
+					{
+						AttachObjectPropertyChanged();
+					}
+				}
+			} // proc ForwardRowPropertyChanged
+
+			private void ForwarObjectPropertyChanged(object sender, PropertyChangedEventArgs args)
+			{
+				switch(args.PropertyName)
+				{
+					case nameof(PpsObject.Nr):
+					case "Name":
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
+						break;
+				}
+			} // proc ForwarObjectPropertyChanged
+
+			#endregion
+
+			public bool Remove()
+			{
+				if (rowOwner)
+					return row.Remove();
+				else
+				{
+					row[linkColumnIndex] = null;
+					return true;
+				}
+			} // proc Remove
+			
+			/// <summary>Access to the object.</summary>
+			public PpsObject LinkedObject => (PpsObject)row[linkColumnIndex];
+
+			/// <summary>Displayname for the object</summary>
+			public string Name
+				=> LinkedObject == null
+					? null
+					: (LinkedObject.GetProperty<string>("Name", null) ?? LinkedObject.Nr);
 		} // class PpsAttachmentItemImplementation
 
 		#endregion
 
-		#region -- class PpsAttachmentImplementation ------------------------------------
+		#region -- class PpsAttachmentsImplementation -----------------------------------
 
-		private sealed class PpsAttachmentImplementation : IPpsAttachments, INotifyCollectionChanged
+		private sealed class PpsAttachmentsImplementation : IPpsAttachments, INotifyCollectionChanged
 		{
 			public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 			private readonly IPpsDataView view;
 			private readonly int linkColumnIndex;
 
-			public PpsAttachmentImplementation(IPpsDataView view, string linkColumnName)
+			public PpsAttachmentsImplementation(IPpsDataView view, string linkColumnName)
 			{
 				this.view = view;
 				this.linkColumnIndex = view.Table.TableDefinition.FindColumnIndex(linkColumnName ?? throw new ArgumentNullException(nameof(linkColumnName)), true);
@@ -374,12 +442,12 @@ namespace TecWare.PPSn.Controls
 				);
 			} // ctor
 
-			private PpsUndoManagerBase GetUndoManager(PpsDataSet ds)
-				=> (PpsUndoManagerBase)ds.UndoSink;
+			private IPpsUndoSink GetUndoManager()
+				=> view.Table.DataSet.UndoSink;
 
 			public void Append(PpsObject data)
 			{
-				using (var trans = GetUndoManager(view.Table.DataSet).BeginTransaction("Datei hinzugefügt."))
+				using (var trans = GetUndoManager()?.BeginTransaction("Datei hinzugefügt."))
 				{
 					var r = view.NewRow(null, null);
 					r[linkColumnIndex] = data;
@@ -392,7 +460,7 @@ namespace TecWare.PPSn.Controls
 			} // proc Append
 
 			public IEnumerator<IPpsAttachmentItem> GetEnumerator()
-				=> view.Select(c => new PpsAttachmentItemImplementation(c, linkColumnIndex)).GetEnumerator();
+				=> view.Select(c => new PpsAttachmentItemImplementation(c, linkColumnIndex, true)).GetEnumerator();
 
 			IEnumerator IEnumerable.GetEnumerator()
 				=> GetEnumerator();
@@ -407,7 +475,7 @@ namespace TecWare.PPSn.Controls
 
 						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(
 							NotifyCollectionChangedAction.Add,
-							new PpsAttachmentItemImplementation((PpsDataRow)e.NewItems[0], linkColumnIndex),
+							new PpsAttachmentItemImplementation((PpsDataRow)e.NewItems[0], linkColumnIndex, true),
 							e.NewStartingIndex)
 						);
 						break;
@@ -415,13 +483,11 @@ namespace TecWare.PPSn.Controls
 						if (e.OldItems.Count > 1)
 							throw new NotSupportedException();
 
-						/*CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(
+						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(
 							NotifyCollectionChangedAction.Remove,
-							new PpsAttachmentItemImplementation((PpsDataRow)e.OldItems[0], linkColumnIndex),
+							new PpsAttachmentItemImplementation((PpsDataRow)e.OldItems[0], linkColumnIndex, true),
 							e.OldStartingIndex)
-						);*/
-						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-
+						);
 						break;
 					case NotifyCollectionChangedAction.Reset:
 						CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -440,22 +506,25 @@ namespace TecWare.PPSn.Controls
 
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			if (value is IPpsDataView v)
-				return new PpsAttachmentImplementation(v, LinkColumnName);
-			else if (value is PpsDataRow i)
-				return new PpsAttachmentItemImplementation(i, LinkColumnName);
-			else
-				throw new NotSupportedException();
+			switch (value)
+			{
+				case IPpsDataView v:
+					return new PpsAttachmentsImplementation(v, LinkColumnName);
+				case PpsDataRow i:
+					return new PpsAttachmentItemImplementation(i, LinkColumnName, false);
+				case null:
+					throw new ArgumentNullException(nameof(value));
+				default:
+					throw new NotSupportedException($"Convert '{value.GetType().Name}' to a attachment interface.");
+			}
 		} // func Convert
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-		{
-			if (value is PpsAttachmentImplementation v)
-				return v.View;
-			else
-				throw new NotSupportedException();
-		} // func ConvertBack
+			=> value is PpsAttachmentsImplementation v
+				? v.View
+				: throw new NotSupportedException();
 
+		/// <summary>Column that contains the PpsObject's</summary>
 		public string LinkColumnName { get; set; }
 	} // class PpsDataTableAttachmentConverter
 

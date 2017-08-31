@@ -45,6 +45,7 @@ namespace TecWare.PPSn
 {
 	#region -- enum PpsObjectServerIndex ------------------------------------------------
 
+	/// <summary>Server site columns.</summary>
 	internal enum PpsObjectServerIndex : int
 	{
 		Id = 0,
@@ -62,10 +63,14 @@ namespace TecWare.PPSn
 
 	#region -- enum PpsObjectLinkRestriction --------------------------------------------
 
+	/// <summary>Restriction to the object link</summary>
 	public enum PpsObjectLinkRestriction
 	{
+		/// <summary>Set the link to null.</summary>
 		Null,
+		/// <summary>Do not delete the object.</summary>
 		Restrict,
+		/// <summary>Remove the link.</summary>
 		Delete
 	} // enum PpsObjectLinkRestriction
 
@@ -73,20 +78,20 @@ namespace TecWare.PPSn
 
 	#region -- class PpsObjectLink ------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Represents a link</summary>
 	public sealed class PpsObjectLink
 	{
 		private readonly PpsObjectLinks parent;
-		private long? id;                       // local id
-		private readonly long linkToId;         // id of the linked object
-		private readonly long? linkToLocalId;   // id for the object, that was used within the dataset (only neg numbers are allowed, it is for replacing before push)
+		private long? id;							// local id
+		private readonly long linkToId;				// id of the linked object
+		private readonly long? linkToLocalId;       // id for the object, that was used within the dataset (only neg numbers are allowed, it is for replacing before push)
+
+		private int refCount;                       // how often is this link used
 		private PpsObjectLinkRestriction onDelete;  // is delete cascade possible
 
 		private WeakReference<PpsObject> linkToCache; // weak ref to the actual object
-		private int refCount; // how often is this link used
-
-		private bool isChanged;
+		
+		private bool isDirty;	// is the link changed
 
 		internal PpsObjectLink(PpsObjectLinks parent, long? id, long linkToId, long? linkToLocalId, int refCount, PpsObjectLinkRestriction onDelete)
 		{
@@ -96,7 +101,7 @@ namespace TecWare.PPSn
 			this.linkToId = linkToId;
 			this.linkToLocalId = linkToLocalId;
 			this.refCount = refCount;
-			this.isChanged = !id.HasValue;
+			this.isDirty = !id.HasValue;
 
 			this.onDelete = onDelete;
 		} // ctor
@@ -130,13 +135,13 @@ namespace TecWare.PPSn
 
 		internal void SetDirty()
 		{
-			isChanged = true;
+			isDirty = true;
 			parent.SetDirty();
 		} // proc SetDirty
 
 		internal void ResetDirty()
 		{
-			isChanged = false;
+			isDirty = false;
 		} // proc ResetDirty
 
 		private PpsObject GetLinkedObject()
@@ -164,7 +169,7 @@ namespace TecWare.PPSn
 		public int RefCount => refCount;
 		public PpsObjectLinkRestriction OnDelete => onDelete;
 
-		public bool IsChanged => isChanged;
+		public bool IsChanged => isDirty;
 	} // class PpsObjectLink
 
 	#endregion
@@ -1220,16 +1225,31 @@ namespace TecWare.PPSn
 
 	#region -- interface IPpsObjectData -------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Basis implementation for the data-model.</summary>
 	public interface IPpsObjectData : INotifyPropertyChanged
 	{
+		/// <summary>Load data.</summary>
+		/// <returns></returns>
 		Task LoadAsync();
+		/// <summary>Commit the data to the local database.</summary>
+		/// <returns></returns>
 		Task CommitAsync();
+		/// <summary>Pack the data for the server.</summary>
+		/// <param name="dst"></param>
+		/// <returns></returns>
 		Task PushAsync(Stream dst);
+		/// <summary>Unload the data.</summary>
+		/// <returns></returns>
 		Task UnloadAsync();
+		
+		/// <summary>Returns or generates a preview image from the data.</summary>
+		/// <returns></returns>
+		Task<object> GetPreviewImageAsync();
 
+		/// <summary>Is the data loaded.</summary>
 		bool IsLoaded { get; }
+		/// <summary>Is the data change</summary>
+		bool IsReadOnly { get; }
 	} // interface IPpsObjectData
 
 	#endregion
@@ -1666,7 +1686,11 @@ namespace TecWare.PPSn
 			return Task.CompletedTask;
 		}
 
+		public Task<object> GetPreviewImageAsync() 
+			=> Task.FromResult<object>(null);
+
 		public bool IsLoaded => rawData != null;
+		public bool IsReadOnly => true;
 
 		//public byte[] RawData => rawData;
 		public byte[] RawData { get { return rawData; } internal set { this.rawData = value; } }
@@ -1766,10 +1790,15 @@ namespace TecWare.PPSn
 		public Task UnloadAsync()
 			=> Task.CompletedTask;
 
+		public Task<object> GetPreviewImageAsync()
+			=> Task.FromResult<object>(null);
+
 		/// <summary>The document it self implements the undo-manager.</summary>
 		public PpsUndoManager UndoManager => undoManager;
 		/// <summary>Is the document fully loaded.</summary>
 		public bool IsLoaded => IsInitialized;
+		/// <summary>Is the data set readonly.</summary>
+		public bool IsReadOnly => false;
 		/// <summary>This document is connected with ...</summary>
 		public PpsObject Object => baseObj;
 	} // class PpsObjectDataSet
@@ -2643,7 +2672,6 @@ namespace TecWare.PPSn
 
 	#region -- class PpsObjectInfo ------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Special environment table, that holds information about the 
 	/// object class.</summary>
 	public sealed class PpsObjectInfo : LuaEnvironmentTable, IPpsEnvironmentDefinition

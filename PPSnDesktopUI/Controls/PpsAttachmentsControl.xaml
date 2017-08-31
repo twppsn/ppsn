@@ -96,7 +96,7 @@ specific language governing permissions and limitations under the Licence.
 						<Border x:Name="border" Grid.Row="0" BorderThickness="1"
 								BorderBrush="{StaticResource PPSnControlBackgroundBrush}"
 								Background="{StaticResource PPSnControlBackgroundBrush}">
-							<Image x:Name="image" Source="{Binding Picture, Mode=OneWay}" Stretch="Fill"/>
+							<Image x:Name="image" Source="{Binding LinkedObject.Data.PreviewImage, Mode=OneWay}" Stretch="Fill"/>
 						</Border>
 						<DockPanel x:Name="panCommands" Grid.Row="1" Height="40" LastChildFill="False" Visibility="Collapsed">
 							<Button Command="{x:Static local:PpsAttachmentsControl.RunFileAttachmentCommand}" 
