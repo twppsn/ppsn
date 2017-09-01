@@ -1826,7 +1826,7 @@ namespace TecWare.PPSn.Server.Sql
 					case 59: // real
 						return typeof(double);
 					case 62: // float
-						return typeof(float);
+						return typeof(double); // float seems to be a double
 					case 98: // sql_variant
 						return typeof(object);
 					case 104: // bit
