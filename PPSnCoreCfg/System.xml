@@ -304,16 +304,10 @@
 					</pps:column>
 					<pps:relation name="ParentObjectId" fieldName="sys.Fields.Long" relationName="LinkedTo" parentTable="Objects" parentColumn="Id" parentType="Root" />
 					<pps:relation name="LinkObjectId" fieldName="sys.Fields.Long" relationName="LinkedFrom" parentTable="Objects" parentColumn="Id" parentType="Cascade" />
-					<!-- id used in the dataset -->
-					<pps:column name="LinkObjectDataId" fieldName="sys.Fields.Long">
-						<pps:meta name="default">NULL</pps:meta>
-						<pps:meta name="nullable">true</pps:meta>
-					</pps:column>
 					<pps:column name="RefCount" fieldName="sys.Fields.Int">
 						<pps:meta name="nullable">false</pps:meta>
 						<pps:meta name="default">0</pps:meta>
 					</pps:column>
-					<pps:column name="OnDelete" fieldName="sys.Fields.Text" />
 				</pps:table>
 
 				<pps:table name="User">
