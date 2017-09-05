@@ -128,7 +128,7 @@
 			<!-- address fields -->
 			<pps:field name="dbo.Adre.Id" />
 			<pps:field name="dbo.Adre.ObjkId" />
-			<pps:field name="dbo.Adre.Name" displayName="Name" />
+			<pps:field name="dbo.Adre.Name" displayName="Anschrift" />
 			<pps:field name="dbo.Adre.Postfach" displayName="Postfach" />
 			<pps:field name="dbo.Adre.Zusatz" displayName="Zusatz" />
 			<pps:field name="dbo.Adre.Strasse" displayName="Straße / Nr." />
