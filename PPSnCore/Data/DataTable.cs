@@ -19,7 +19,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -923,6 +922,13 @@ namespace TecWare.PPSn.Data
 		{
 			if (rows.Count == 1)
 				OnPropertyChanged(nameof(First));
+
+			for (var i = 0; i < TableDefinition.Columns.Count; i++)
+			{
+				if (row.GetRowValueCore(i, rawValue: true) is IPpsDataRowExtendedEvents t)
+					t.OnRowAdded();
+			}
+
 			dataset.ExecuteEvent(new PpsDataRowAddedChangedEvent(this, row));
 			OnTableChanged();
 		} // proc OnRowAdded
@@ -932,6 +938,12 @@ namespace TecWare.PPSn.Data
 		/// <param name="oldIndex"></param>
 		protected virtual void OnRowRemoved(PpsDataRow row, int oldIndex)
 		{
+			for (var i = 0; i < TableDefinition.Columns.Count; i++)
+			{
+				if (row.GetRowValueCore(i, rawValue: true) is IPpsDataRowExtendedEvents t)
+					t.OnRowRemoved();
+			}
+
 			dataset.ExecuteEvent(new PpsDataRowRemovedChangedEvent(this, row, -1)); // fire with -1 to support batches (the internal check of ListCollectionView is on the current state *arg*)
 			OnTableChanged();
 		} // proc OnRowModified
@@ -1427,7 +1439,7 @@ namespace TecWare.PPSn.Data
 		public ReadOnlyCollection<PpsDataRow> AllRows => rowsView;
 		/// <summary>Access to all rows, that were loaded.</summary>
 		public ReadOnlyCollection<PpsDataRow> OriginalRows => rowsOriginal;
-
+		
 		/// <summary>Access to the current row at the index.</summary>
 		/// <param name="index"></param>
 		/// <returns></returns>
@@ -1619,8 +1631,8 @@ namespace TecWare.PPSn.Data
 							var oldIndex = rows.IndexOf(row);
 							if (oldIndex != -1)
 							{
-								rows.RemoveAt(oldIndex);
 								OnCollectionRemove(row, oldIndex);
+								rows.RemoveAt(oldIndex);
 							}
 						}
 					}
@@ -1645,8 +1657,8 @@ namespace TecWare.PPSn.Data
 					var oldIndex = rows.IndexOf(e.Row);
 					if (oldIndex != -1)
 					{
-						rows.RemoveAt(oldIndex);
 						OnCollectionRemove(e.Row, oldIndex);
+						rows.RemoveAt(oldIndex);
 					}
 				}
 			}

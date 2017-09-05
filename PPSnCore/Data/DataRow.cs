@@ -411,9 +411,9 @@ namespace TecWare.PPSn.Data
 			{
 			} // ctor
 
-			public override object this[int iColumnIndex]
+			public override object this[int columnIndex]
 			{
-				get { return Row.originalValues[iColumnIndex]; }
+				get => Row.GetRowValueCore(columnIndex, true, false);
 				set { throw new NotSupportedException(); }
 			} // prop this
 		} // class OriginalRowValues
@@ -431,16 +431,9 @@ namespace TecWare.PPSn.Data
 			{
 			} // ctor
 
-			private object GetGenericValue(object v)
-				=> v is IPpsDataRowGetGenericValue t ? t.Value : v;
-
 			public override object this[int columnIndex]
 			{
-				get
-				{
-					var currentValue = Row.currentValues[columnIndex];
-					return currentValue == NotSet ? GetGenericValue(Row.originalValues[columnIndex]) : currentValue;
-				}
+				get => Row.GetRowValueCore(columnIndex, false, false);
 				set
 				{
 					var columnInfo = Row.Table.Columns[columnIndex];
@@ -742,7 +735,7 @@ namespace TecWare.PPSn.Data
 			using (var trans = undo?.BeginTransaction("Delete row."))
 			{
 				var r = table.RemoveInternal(this, false);
-
+				
 				undo?.Append(new PpsDataRowStateChangedItem(this, rowState, PpsDataRowState.Deleted));
 				RowState = PpsDataRowState.Deleted;
 
@@ -809,6 +802,28 @@ namespace TecWare.PPSn.Data
 			var sink = table.DataSet.UndoSink;
 			return sink != null && !sink.InUndoRedoOperation ? sink : null;
 		} // func GetUndoSink
+
+		private static object GetGenericValue(object v)
+			=> v is IPpsDataRowGetGenericValue t ? t.Value : v;
+
+		public object GetRowValueCore(int columnIndex, bool originalValue = false, bool rawValue = false)
+		{
+			if (originalValue)
+			{
+				var value = originalValues[columnIndex];
+				if (!rawValue)
+					value = GetGenericValue(value);
+				return value;
+			}
+			else
+			{
+				var value = currentValues[columnIndex];
+				value = value == NotSet ? originalValues[columnIndex] : value;
+				if (!rawValue)
+					value = GetGenericValue(value);
+				return value;
+			}
+		} // func GetRowValueCore
 
 		private void SetCurrentValue(int columnIndex, object oldValue, object value)
 		{
@@ -967,7 +982,9 @@ namespace TecWare.PPSn.Data
 		} // prop RowState
 
 		/// <summary>Wurde die Datenzeile neu angefügt.</summary>
-		public bool IsAdded => table == null ? false : !table.OriginalRows.Contains(this);
+		public bool IsAdded => !table.OriginalRows.Contains(this);
+		/// <summary>Is this row in the current row set.</summary>
+		public bool IsCurrent => table.Contains(this);
 
 		bool IDataRow.IsDataOwner => true;
 

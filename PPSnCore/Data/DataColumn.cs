@@ -65,7 +65,6 @@ namespace TecWare.PPSn.Data
 
 	#region -- interface IPpsDataRowExtendedValue ---------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Interface that is implement on special values classes.
 	/// It represent a nested structur of values (e.g. value formulas, ...).
 	/// - Special values are instanciated per Value an will not destroyed
@@ -84,6 +83,19 @@ namespace TecWare.PPSn.Data
 
 		bool IsNull { get; }
 	} // interface IPpsDataRowExtendedValue
+
+	#endregion
+
+	#region -- interface IPpsDataRowExtendedEvents ------------------------------------
+
+	/// <summary>Extended value can implement this interface to receive RowAdd and RowRemove events.</summary>
+	public interface IPpsDataRowExtendedEvents : IPpsDataRowExtendedValue
+	{
+		/// <summary></summary>
+		void OnRowAdded();
+		/// <summary></summary>
+		void OnRowRemoved();
+	} //	interface IPpsDataRowExtendedEvents
 
 	#endregion
 
@@ -178,9 +190,16 @@ namespace TecWare.PPSn.Data
 		private void InvokePropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-		protected virtual void OnPropertyChanged(string propertyName)
+		protected virtual void OnPropertyChanged(string propertyName, object oldValue, object newValue, bool firePropertyChanged)
 		{
-			row.Table.DataSet.ExecuteEvent(new PpsDataRowExtentedValueChanged(this, propertyName));
+			if (firePropertyChanged)
+			{
+				// mark row as modified
+				Row.Table.OnRowModified(Row, Column.Index, oldValue, newValue);
+
+				// raise event
+				row.Table.DataSet.ExecuteEvent(new PpsDataRowExtentedValueChanged(this, propertyName));
+			}
 		} // proc OnPropertyChanged
 
 		void IPpsDataRowExtendedValue.Write(XElement x)
@@ -252,7 +271,9 @@ namespace TecWare.PPSn.Data
 				Row.Table.DataSet.UndoSink?.Append(
 					new PpsUndoDataValue(this, value, newValue)
 				);
+				var oldValue = InternalValue;
 				value = newValue;
+				OnPropertyChanged(nameof(Value), oldValue, newValue, firePropertyChanged);
 				return true;
 			}
 		} // proc SetGenericValue
@@ -274,7 +295,7 @@ namespace TecWare.PPSn.Data
 				new PpsUndoDataValue(this, oldValue, PpsDataRow.NotSet)
 			);
 
-			OnPropertyChanged(nameof(Value));
+			OnPropertyChanged(nameof(Value), oldValue, value, true);
 		} // proc Reset
 
 		void IPpsDataRowSetGenericValue.Commit()

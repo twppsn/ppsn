@@ -97,8 +97,9 @@ namespace TecWare.PPSn.Data
 				var r = chunk.Run(new PpsLuaRowEnvironment(Row.Table.DataSet.Properties, Row));
 				if (!Object.Equals(currentValue, r[0]))
 				{
+					var oldValue = currentValue;
 					currentValue = r[0];
-					OnPropertyChanged(nameof(Value));
+					OnPropertyChanged(nameof(Value), oldValue, currentValue, true);
 				}
 			}
 			catch (Exception e)
@@ -309,14 +310,9 @@ namespace TecWare.PPSn.Data
 			}
 
 			// refresh values
+			OnPropertyChanged(nameof(Value), oldValue, currentTemplate, true);
 			if (firePropertyChanged && valueChanged)
-			{
-				OnPropertyChanged(nameof(Value));
 				UpdateFormattedValue();
-
-				// mark row as modified
-				Row.Table.OnRowModified(Row, Column.Index, this, this);
-			}
 		} // proc SetValue
 
 		bool IPpsDataRowSetGenericValue.SetGenericValue(bool inital, object value)
@@ -496,8 +492,9 @@ namespace TecWare.PPSn.Data
 
 			if(newFormattedValue != formattedValue)
 			{
+				var oldValue = formattedValue;
 				formattedValue = newFormattedValue;
-				OnPropertyChanged(nameof(FormattedValue));
+				OnPropertyChanged(nameof(FormattedValue), oldValue, formattedValue, true);
 			}
 		} // proc UpdateFormattedValue
 

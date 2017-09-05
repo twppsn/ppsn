@@ -600,6 +600,7 @@ namespace TecWare.PPSn.Data
 
 		private IPpsUndoSink undoSink;
 		private PpsDeferedConstraintCheck deferredConstraintChecks = null;
+		private bool isReading = false;
 
 		private long lastPrimaryId = 1;
 		private object nextPrimaryLock = new object();
@@ -745,6 +746,9 @@ namespace TecWare.PPSn.Data
 		/// <param name="combineData"><c>true</c>, to combine the data. <c>false</c>, clear the data first.</param>
 		public void Read(XElement x, bool combineData = false)
 		{
+			if (isReading)
+				throw new InvalidOperationException();
+
 			if (x.Name != xnData)
 				throw new ArgumentException();
 
@@ -752,15 +756,23 @@ namespace TecWare.PPSn.Data
 			if (!combineData)
 				combineData = (this.Tables["Head", false]?.Count ?? 0) > 0;
 
-			using (BeginData(true))
+			isReading = true;
+			try
 			{
-				// clear current data, for a fresh load
-				if (!combineData)
-					ClearInternal();
+				using (BeginData(true))
+				{
+					// clear current data, for a fresh load
+					if (!combineData)
+						ClearInternal();
 
-				// fetch the tables
-				foreach (var xTable in x.Elements().Where(c => c.Name.NamespaceName == "table"))
-					this.Tables[xTable.Name.LocalName, true].Read(xTable, combineData);
+					// fetch the tables
+					foreach (var xTable in x.Elements().Where(c => c.Name.NamespaceName == "table"))
+						this.Tables[xTable.Name.LocalName, true].Read(xTable, combineData);
+				}
+			}
+			finally
+			{
+				isReading = false;
 			}
 		} // proc Read
 
@@ -1037,6 +1049,8 @@ namespace TecWare.PPSn.Data
 
 		/// <summary></summary>
 		public IPpsDeferredConstraintCheck DeferredConstraints => deferredConstraintChecks;
+		/// <summary>Dataset currently is in the reading mode.</summary>
+		public bool IsReading => isReading;
 
 		// -- Static --------------------------------------------------------------
 
