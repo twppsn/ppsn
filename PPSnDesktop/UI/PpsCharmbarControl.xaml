@@ -80,7 +80,7 @@
 								<Border Grid.Row="0" Background="Transparent" Margin="6,3,0,3" Padding="6">
 									<Viewbox>
 										<Canvas Width="24" Height="24">
-											<Path x:Name="imagePath" Data="{TemplateBinding Content}" Fill="{TemplateBinding Foreground}" Opacity=".65">
+											<Path x:Name="imagePath" Data="{TemplateBinding Content}" Fill="{TemplateBinding Foreground}" Opacity=".60">
 												<Path.RenderTransformOrigin>
 													<Point X="0.5" Y="0.5"/>
 												</Path.RenderTransformOrigin>
@@ -154,7 +154,7 @@
 					<ColumnDefinition/>
 					<ColumnDefinition Width="40"/>
 				</Grid.ColumnDefinitions>
-				<Viewbox Grid.Column="0" Margin="4">
+				<Viewbox Grid.Column="0" HorizontalAlignment="Left" Margin="4">
 					<Canvas Width="24" Height="24">
 						<Path Data="{TemplateBinding Tag}" Fill="{StaticResource PPSnActionButtonBrush}" Opacity=".75"/>
 					</Canvas>
@@ -407,7 +407,7 @@
 			</DockPanel.Resources>
 
 			<TextBlock DockPanel.Dock="Top" Text="{Binding Nr}" HorizontalAlignment="Center" Margin="0,0,0,12"
-					   Foreground="{StaticResource PPSnWindowForegroundBrush}" FontSize="16" 
+					   Foreground="{StaticResource PPSnActionButtonBrush}" FontSize="16" 
                        ContextMenuService.PlacementTarget="{Binding RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}">
 				<TextBlock.LayoutTransform>
 					<RotateTransform Angle="-90" />
