@@ -24,6 +24,7 @@ using System.Data.SQLite;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -31,6 +32,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Xml;
@@ -40,6 +42,7 @@ using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn
 {
@@ -67,76 +70,90 @@ namespace TecWare.PPSn
 	public sealed class PpsObjectLink
 	{
 		private readonly PpsObjectLinks parent;
-		private long? id;							// local id
-		private readonly long linkToId;				// id of the linked object
-		private readonly long? linkToLocalId;       // id for the object, that was used within the dataset (only neg numbers are allowed, it is for replacing before push)
 
-		private int refCount;                       // how often is this link used
+		private long? id;							// local id of the link
+		private readonly long linkToId;             // id of the linked object
 
-		private WeakReference<PpsObject> linkToCache; // weak ref to the actual object
+		private int refCount = 0;					// how often is this link used within the object
+
+		private WeakReference<PpsObject> linkTo;	// weak ref to the actual object
 		
-		private bool isDirty;	// is the link changed
+		private bool isDirty;   // is the link changed
 
-		internal PpsObjectLink(PpsObjectLinks parent, long? id, long linkToId, long? linkToLocalId, int refCount)
+		#region -- Ctor/Dtor/AddRef/DecRef/Dirty --------------------------------------
+
+		internal PpsObjectLink(PpsObjectLinks parent, long? id, long linkToId, int refCount)
 		{
 			this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
 
 			this.id = id;
 			this.linkToId = linkToId;
-			this.linkToLocalId = linkToLocalId;
 			this.refCount = refCount;
 			this.isDirty = !id.HasValue;
 		} // ctor
 
-		public void AddRef()
+		/// <summary>Changes the reference counter of this link.</summary>
+		internal void AddRef()
 		{
 			refCount++;
 			SetDirty();
 		} // proc AddRef
 
-		public void DecRef()
+		/// <summary>Changes the reference counter of this link.</summary>
+		internal void DecRef()
 		{
 			if (refCount > 0)
 				refCount--;
 			SetDirty();
 		} // proc DecRef
 
+		/// <summary>Marks this link as dirty.</summary>
 		internal void SetDirty()
 		{
 			isDirty = true;
 			parent.SetDirty();
 		} // proc SetDirty
 
+		/// <summary>Reset the dirty flag.</summary>
 		internal void ResetDirty()
 		{
 			isDirty = false;
 		} // proc ResetDirty
 
+		#endregion
+
+		/// <summary>Creates a weak reference to this object.</summary>
+		/// <returns></returns>
 		private PpsObject GetLinkedObject()
 		{
-			if (linkToCache != null && linkToCache.TryGetTarget(out var r))
+			if (linkTo != null && linkTo.TryGetTarget(out var r))
 				return r;
 
 			r = parent.Parent.Environment.GetObject(linkToId);
-			linkToCache = new WeakReference<PpsObject>(r);
+			linkTo = new WeakReference<PpsObject>(r);
 			return r;
 		} // func GetLinkedObject
 
+		/// <summary>DecRef or removes this link from the list.</summary>
 		public void Remove()
 			=> parent.RemoveLink(this);
 
+		/// <summary>Object</summary>
 		public PpsObject Parent => parent.Parent;
 
+		/// <summary>Local database id.</summary>
 		internal long? Id { get => id; set => id = value; }
 
+		/// <summary>Id of the linked object.</summary>
 		public long LinkToId => linkToId;
-		public long? LinkToLocalId => linkToLocalId;
 
+		/// <summary>Object reference to the object.</summary>
 		public PpsObject LinkTo => GetLinkedObject();
 
+		/// <summary>Current ref counter</summary>
 		public int RefCount => refCount;
-
-		public bool IsChanged => isDirty;
+		/// <summary>Is the link data different to the local database.</summary>
+		public bool IsDirty => isDirty;
 	} // class PpsObjectLink
 
 	#endregion
@@ -152,8 +169,8 @@ namespace TecWare.PPSn
 
 		private readonly PpsObject parent;
 
-		private bool isLoaded = false; // marks if the link list is loaded from the local store
-		private bool isChanged = false;
+		private bool isLoaded = false;	// marks if the link list is loaded from the local store
+		private bool isDirty = false;	// the link list needs to persist in the local database
 		private readonly List<PpsObjectLink> links = new List<PpsObjectLink>(); // local active links
 		private readonly List<PpsObjectLink> removedLinks = new List<PpsObjectLink>();
 
@@ -176,7 +193,7 @@ namespace TecWare.PPSn
 
 		internal void SetDirty()
 		{
-			isChanged = true;
+			isDirty = true;
 			parent.SetDirty();
 		} // proc SetDirty
 
@@ -185,7 +202,7 @@ namespace TecWare.PPSn
 			links.Clear();
 			removedLinks.Clear();
 
-			using (var cmd = parent.Environment.MasterData.CreateNativeCommand("SELECT [Id], [LinkObjectId], [LinkObjectDataId], [RefCount] FROM main.[ObjectLinks] WHERE [ParentObjectId] = @ObjectId"))
+			using (var cmd = parent.Environment.MasterData.CreateNativeCommand("SELECT [Id], [LinkObjectId], [RefCount] FROM main.[ObjectLinks] WHERE [ParentObjectId] = @ObjectId"))
 			{
 				cmd.AddParameter("@ObjectId", DbType.Int64, parent.Id);
 
@@ -197,14 +214,13 @@ namespace TecWare.PPSn
 							this,
 							r.GetInt64(0),
 							r.GetInt64(1),
-							r.IsDBNull(2) ? null : new long?(r.GetInt64(2)),
-							r.GetInt32(3)
+							r.GetInt32(2)
 						));
 					}
 				}
 			}
 
-			isChanged = false;
+			isDirty = false;
 			parent.SetDirty();
 		} // proc RefreshLinks
 
@@ -212,24 +228,22 @@ namespace TecWare.PPSn
 		{
 			lock (parent.SyncRoot)
 			{
-				if (!isLoaded || !isChanged)
+				if (!isLoaded || !isDirty)
 					return;
 
-				using (var insertCommand = transaction.CreateNativeCommand("INSERT INTO main.[ObjectLinks] (ParentObjectId, LinkObjectId, LinkObjectDataId, RefCount) " +
-					"VALUES (@ParentObjectId, @LinkObjectId, @LinkObjectDataId, @RefCount)"))
+				using (var insertCommand = transaction.CreateNativeCommand("INSERT INTO main.[ObjectLinks] (ParentObjectId, LinkObjectId, RefCount) " +
+					"VALUES (@ParentObjectId, @LinkObjectId, @RefCount)"))
 				{
 					var insertParentIdParameter = insertCommand.AddParameter("@ParentObjectId", DbType.Int64);
 					var insertLinkIdParameter = insertCommand.AddParameter("@LinkObjectId", DbType.Int64);
-					var insertLinkDataIdParameter = insertCommand.AddParameter("@LinkObjectDataId", DbType.Int64);
 					var insertRefCountParameter = insertCommand.AddParameter("@RefCount", DbType.Int32);
 					
 					foreach (var cur in links)
 					{
-						if (cur.IsChanged)
+						if (cur.IsDirty)
 						{
 							insertParentIdParameter.Value = parent.Id;
 							insertLinkIdParameter.Value = cur.LinkToId;
-							insertLinkDataIdParameter.Value = cur.LinkToLocalId ?? (object)DBNull.Value;
 							insertRefCountParameter.Value = cur.RefCount;
 
 							insertCommand.ExecuteNonQueryEx();
@@ -259,11 +273,11 @@ namespace TecWare.PPSn
 					transaction.AddRollbackOperation(() =>
 					{
 						removedLinks.AddRange(removedLinksArray);
-						isChanged = false;
+						isDirty = false;
 					});
 				}
 
-				isChanged = false;
+				isDirty = false;
 			}
 		} // proc UpdateLocal
 
@@ -283,7 +297,7 @@ namespace TecWare.PPSn
 
 					var linkExists = links.Find(c => c.LinkToId == objectId);
 					if (linkExists == null)
-						links.Add(new PpsObjectLink(this, null, objectId, null, refCount));
+						links.Add(new PpsObjectLink(this, null, objectId, refCount));
 					else
 						notProcessedLinks.Remove(linkExists);
 				}
@@ -296,7 +310,7 @@ namespace TecWare.PPSn
 						removedLinks.Add(cur);
 				}
 
-				isChanged = true;
+				isDirty = true;
 				parent.SetDirty();
 			}
 			OnCollectionReset();
@@ -323,7 +337,10 @@ namespace TecWare.PPSn
 			}
 		} // func AddToXml
 
-		public void AppendLink(PpsObject linkTo)
+		public void AppendLink(long linkToId, bool force = false)
+			=> AppendLink(Parent.Environment.GetObject(linkToId), force);
+
+		public void AppendLink(PpsObject linkTo, bool force = false)
 		{
 			lock (parent.SyncRoot)
 			{
@@ -337,7 +354,11 @@ namespace TecWare.PPSn
 				}
 				else
 				{
-					links.Add(new PpsObjectLink(this, null, linkTo.Id, linkTo.Id < 0 ? new long?(linkTo.Id) : null, 1));
+					var newLink = new PpsObjectLink(this, null, linkTo.Id, 1);
+					var newLinkIndex = links.Count;
+					links.Add(newLink);
+					CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, newLink, newLinkIndex));
+
 					SetDirty();
 				}
 			}
@@ -345,7 +366,7 @@ namespace TecWare.PPSn
 			OnCollectionReset();
 		} // proc AppendLink
 
-		public void RemoveLink(long objectId)
+		public void RemoveLink(long objectId, bool force = false)
 		{
 			lock (parent.SyncRoot)
 			{
@@ -368,7 +389,9 @@ namespace TecWare.PPSn
 				link.DecRef();
 				if (link.RefCount == 0)
 				{
+					CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, link, idx));
 					links.RemoveAt(idx);
+
 					if (link.Id.HasValue)
 					{
 						removedLinks.Add(link);
@@ -379,17 +402,6 @@ namespace TecWare.PPSn
 
 			OnCollectionReset();
 		} // proc RemoveLink
-
-		public long TranslateObjectId(long currentObjectId)
-		{
-			if (currentObjectId >= 0)
-				return currentObjectId;
-			lock (parent.SyncRoot)
-			{
-				CheckLinksLoaded();
-				return links.FirstOrDefault(c => c.LinkToLocalId == currentObjectId)?.LinkToId ?? currentObjectId;
-			}
-		} // func TranslateObjectId
 
 		private void OnCollectionReset()
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -411,6 +423,34 @@ namespace TecWare.PPSn
 				return links.IndexOf(link);
 			}
 		} // func IndexOf
+
+		public PpsObjectLink FindById(long objectId)
+		{
+			lock (parent.SyncRoot)
+			{
+				CheckLinksLoaded();
+				foreach (var l in links)
+				{
+					if (l.LinkToId == objectId)
+						return l;
+				}
+				return null;
+			}
+		} // func FindById
+
+		public PpsObjectLink FindByGuid(Guid objectGuid)
+		{
+			lock (parent.SyncRoot)
+			{
+				CheckLinksLoaded();
+				foreach (var l in links)
+				{
+					if (l.LinkTo.Guid == objectGuid) // time intensive operation
+						return l;
+				}
+				return null;
+			}
+		} // func FindByGuid
 
 		bool IList.Contains(object value)
 			=> IndexOf(value as PpsObjectLink) >= 0;
@@ -1170,15 +1210,169 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		Task UnloadAsync();
 		
-		/// <summary>Returns or generates a preview image from the data.</summary>
-		/// <returns></returns>
-		Task<object> GetPreviewImageAsync();
-
 		/// <summary>Is the data loaded.</summary>
 		bool IsLoaded { get; }
 		/// <summary>Is the data change</summary>
 		bool IsReadOnly { get; }
+
+		/// <summary>Returns a preview image.</summary>
+		object PreviewImage { get; }
 	} // interface IPpsObjectData
+
+	#endregion
+
+	#region -- class PpsObjectBlobData --------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Control byte based data.</summary>
+	public class PpsObjectBlobData : IPpsObjectData
+	{
+		public event PropertyChangedEventHandler PropertyChanged;
+
+		private readonly PpsObject baseObj;
+		private byte[] rawData = null;
+		private string sha256 = String.Empty;
+		private string mimeType = null;
+		private readonly LazyProperty<object> previewImage;
+
+		public PpsObjectBlobData(PpsObject obj)
+		{
+			this.baseObj = obj;
+			this.previewImage = new LazyProperty<object>(() => GetPreviewImageInternal(), () => OnPropertyChanged(nameof(PreviewImage)));
+		} // ctor
+
+		internal void OnPropertyChanged(string propertyName)
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+		public async Task LoadAsync()
+		{
+			using (var src = await baseObj.LoadRawDataAsync())
+			{
+				rawData = src.ReadInArray();
+				sha256 = (string)baseObj.Tags[baseObj.Tags.IndexOf("Sha256")].Value;
+				OnPropertyChanged(nameof(IsLoaded));
+			}
+		} // proc LoadAsync
+
+		public async Task CommitAsync()
+		{
+			using (var trans = await baseObj.Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.ReadCommited))
+			{
+				baseObj.Tags.UpdateTag(0, "Sha256", PpsObjectTagClass.Text, sha256);
+				await baseObj.SaveRawDataAsync(
+					rawData.Length,
+					mimeType ?? baseObj.MimeType ?? MimeTypes.Application.OctetStream,
+					rawData,
+					true
+				);
+				await baseObj.UpdateLocalAsync();
+
+				trans.Commit();
+			}
+		} // proc CommitAsync
+
+		public async Task PushAsync(Stream dst)
+		{
+			if (IsLoaded)
+				await LoadAsync();
+			await dst.WriteAsync(rawData, 0, rawData.Length);
+		} // func PushAsync
+
+		public Task UnloadAsync()
+		{
+			rawData = null;
+			return Task.CompletedTask;
+		} // func UnloadTask
+
+		public Task ReadFromStreamAsync(Stream stream, string mimetype)
+		{
+			mimeType = mimetype;
+
+			using (var hashStream = new HashStream(stream, HashStreamDirection.Read, false, HashAlgorithm.Create("SHA-256")))
+			{
+				rawData = hashStream.ReadInArray();
+				sha256 = StuffIO.CleanHash(BitConverter.ToString(hashStream.CheckSum));
+			}
+			return Task.CompletedTask;
+		}
+
+		public Task ReadFromFileAsync(string filename)
+		{
+			mimeType = StuffIO.MimeTypeFromFilename(filename);
+
+			if (new FileInfo(filename).Length == 0)
+			{
+				rawData = new byte[] { };
+				sha256 = StuffIO.GetStreamHash(new MemoryStream(rawData));
+				return Task.CompletedTask;
+			}
+
+			using (var hashStream = new HashStream(new FileStream(filename, FileMode.Open), HashStreamDirection.Read, false, HashAlgorithm.Create("SHA-256")))
+			{
+				rawData = hashStream.ReadInArray();
+				sha256 = StuffIO.CleanHash(BitConverter.ToString(hashStream.CheckSum));
+			}
+			return Task.CompletedTask;
+		}
+
+		// only quick in dirty
+		private class UpdateBlobStream: HashStream
+		{
+			private readonly PpsObjectBlobData blobData;
+
+			public UpdateBlobStream(PpsObjectBlobData blobData, Stream baseStream)
+				:base(baseStream, HashStreamDirection.Write, false, SHA256.Create())
+			{
+				this.blobData = blobData;
+			} // ctor
+
+			protected override void OnFinished(byte[] bCheckSum)
+			{
+				base.OnFinished(bCheckSum);
+
+				blobData.sha256 = StuffIO.CleanHash(BitConverter.ToString(bCheckSum)); // Convert.ToBase64String(bCheckSum);
+				blobData.rawData = BaseStream.ReadInArray();
+			} // proc OnFinished
+		}
+
+		/// <summary>Creates a data stream for file access.</summary>
+		/// <param name="mode"></param>
+		/// <returns></returns>
+		public async Task<Stream> OpenStreamAsync(FileAccess mode)
+		{
+			
+			switch(mode)
+			{
+				case FileAccess.Read:
+					// open an existing data stream
+					if (!IsLoaded)
+						await LoadAsync();
+					return new MemoryStream(RawData, false);
+				case FileAccess.Write:
+					// open or create the data stream
+					return new UpdateBlobStream(this, new MemoryStream());
+				default:
+					throw new ArgumentOutOfRangeException(nameof(mode));
+			}
+		} // func CreateDataStreamAsync
+
+		protected virtual Task<object> GetPreviewImageInternal()
+			=> Task.FromResult<object>(null);
+
+		protected void ResetPreviewImage()
+			=> previewImage.Reset();
+
+		public Task<object> GetPreviewImageAsync()
+			=> previewImage.GetDataAsync();
+
+		public bool IsLoaded => rawData != null;
+		public bool IsReadOnly => true;
+
+		//public byte[] RawData => rawData;
+		public byte[] RawData { get { return rawData; } internal set { this.rawData = value; } }
+
+		public object PreviewImage => previewImage.GetValue();
+	} // class PpsObjectBlobData
 
 	#endregion
 
@@ -1225,6 +1419,64 @@ namespace TecWare.PPSn
 
 		#region Preview
 
+		protected override async Task<object> GetPreviewImageInternal()
+		{
+			// todo: we will cache the previews local
+
+			// we can only create a preview when the data is local availabe, we will not force a pull
+			if (!baseObj.HasData)
+				return null;
+
+			// get access to the image stream, this will not load the data stream
+			using (var src = await OpenStreamAsync(FileAccess.Read))
+			{
+				var sourceImage = new BitmapImage();
+
+				sourceImage.BeginInit();
+				sourceImage.CacheOption = BitmapCacheOption.OnLoad;
+				sourceImage.StreamSource = src;
+				sourceImage.EndInit();
+				sourceImage.Freeze();
+
+				var aspect = sourceImage.Height / sourceImage.Width;
+				int newWidth;
+				int newHeight;
+				const int previewHeight = 256;
+				if (sourceImage.Height > sourceImage.Width)
+				{
+					newWidth = Convert.ToInt32(previewHeight / aspect);
+					newHeight = previewHeight;
+				}
+				else
+				{
+					newWidth = previewHeight;
+					newHeight = Convert.ToInt32(previewHeight * aspect);
+				}
+
+				// create preview image
+				var group = new DrawingGroup();
+				RenderOptions.SetBitmapScalingMode(group, BitmapScalingMode.HighQuality);
+
+				group.Children.Add(new ImageDrawing(sourceImage, new Rect(0, 0, newWidth, newHeight)));
+
+				// todo: check for over and render it
+				
+				var drawingVisual = new DrawingVisual();
+				using (var dc = drawingVisual.RenderOpen())
+					dc.DrawDrawing(group);
+
+				var resizedImage = new RenderTargetBitmap(
+					newWidth, newHeight,
+					96, 96,
+					PixelFormats.Default);
+				resizedImage.Render(drawingVisual);
+
+				var previewImage = BitmapFrame.Create(resizedImage);
+				previewImage.Freeze();
+				return previewImage;
+			}
+		} // func GetPreviewImageInternal
+		
 		private async void LoadPreview()
 		{
 			if (baseObj == null || !baseObj.MimeType.StartsWith("image"))
@@ -1494,7 +1746,7 @@ namespace TecWare.PPSn
 			}
 		}
 
-		/// <summary>
+		/// <summary>p
 		/// true, if loading is finished (does not mean there must be a valid overlay)
 		/// </summary>
 		public bool OverlayLoaded { get { return overlayLoaded; } set { overlayLoaded = value; OnPropertyChanged(nameof(Overlay)); } }
@@ -1519,110 +1771,6 @@ namespace TecWare.PPSn
 
 		#endregion
 	}
-
-	#endregion
-
-	#region -- class PpsObjectBlobData --------------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Control byte based data.</summary>
-	public class PpsObjectBlobData : IPpsObjectData
-	{
-		public event PropertyChangedEventHandler PropertyChanged;
-
-		private readonly PpsObject baseObj;
-		private byte[] rawData = null;
-		private string sha256 = String.Empty;
-		private string mimeType = null;
-
-		public PpsObjectBlobData(PpsObject obj)
-		{
-			this.baseObj = obj;
-		} // ctor
-
-		internal void OnPropertyChanged(string propertyName)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
-		public async Task LoadAsync()
-		{
-			using (var src = await baseObj.LoadRawDataAsync())
-			{
-				rawData = src.ReadInArray();
-				sha256 = (string)baseObj.Tags[baseObj.Tags.IndexOf("Sha256")].Value;
-				OnPropertyChanged(nameof(IsLoaded));
-			}
-		} // proc LoadAsync
-
-		public async Task CommitAsync()
-		{
-			using (var trans = await baseObj.Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.ReadCommited))
-			{
-				baseObj.Tags.UpdateTag(0, "Sha256", PpsObjectTagClass.Text, sha256);
-				await baseObj.SaveRawDataAsync(
-					rawData.Length,
-					mimeType ?? baseObj.MimeType ?? MimeTypes.Application.OctetStream,
-					rawData,
-					true
-				);
-				await baseObj.UpdateLocalAsync();
-
-				trans.Commit();
-			}
-		} // proc CommitAsync
-
-		public async Task PushAsync(Stream dst)
-		{
-			if (IsLoaded)
-				await LoadAsync();
-			await dst.WriteAsync(rawData, 0, rawData.Length);
-		} // func PushAsync
-
-		public Task UnloadAsync()
-		{
-			rawData = null;
-			return Task.CompletedTask;
-		} // func UnloadTask
-
-		public Task ReadFromStreamAsync(Stream stream, string mimetype)
-		{
-			mimeType = mimetype;
-
-			using (var hashStream = new HashStream(stream, HashStreamDirection.Read, false, HashAlgorithm.Create("SHA-256")))
-			{
-				rawData = hashStream.ReadInArray();
-				sha256 = StuffIO.CleanHash(BitConverter.ToString(hashStream.CheckSum));
-			}
-			return Task.CompletedTask;
-		}
-
-		public Task ReadFromFileAsync(string filename)
-		{
-			mimeType = StuffIO.MimeTypeFromFilename(filename);
-
-			if (new FileInfo(filename).Length == 0)
-			{
-				rawData = new byte[] { };
-				sha256 = StuffIO.GetStreamHash(new MemoryStream(rawData));
-				return Task.CompletedTask;
-			}
-
-			using (var hashStream = new HashStream(new FileStream(filename, FileMode.Open), HashStreamDirection.Read, false, HashAlgorithm.Create("SHA-256")))
-			{
-				rawData = hashStream.ReadInArray();
-				sha256 = StuffIO.CleanHash(BitConverter.ToString(hashStream.CheckSum));
-			}
-			return Task.CompletedTask;
-		}
-
-		public Task<object> GetPreviewImageAsync() 
-			=> Task.FromResult<object>(null);
-
-		public bool IsLoaded => rawData != null;
-		public bool IsReadOnly => true;
-
-		//public byte[] RawData => rawData;
-		public byte[] RawData { get { return rawData; } internal set { this.rawData = value; } }
-	} // class PpsObjectBlobData
 
 	#endregion
 
@@ -1729,6 +1877,8 @@ namespace TecWare.PPSn
 		public bool IsReadOnly => false;
 		/// <summary>This document is connected with ...</summary>
 		public PpsObject Object => baseObj;
+		/// <summary>Returns the icon of this dataset.</summary>
+		public object PreviewImage => null;
 	} // class PpsObjectDataSet
 
 	#endregion
@@ -1780,7 +1930,7 @@ namespace TecWare.PPSn
 		private readonly PpsObjectTags tags;                // list with assigned tags
 		private readonly PpsObjectLinks links;              // linked objects
 
-		private bool isChanged = false;
+		private bool isDirty = false;
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
@@ -2500,19 +2650,19 @@ namespace TecWare.PPSn
 
 		internal void SetDirty()
 		{
-			if (!isChanged)
+			if (!isDirty)
 			{
-				isChanged = true;
+				isDirty = true;
 				OnPropertyChanged(nameof(IsChanged));
 			}
 		} // proc SetDirty
 
 		private void ResetDirty(PpsMasterDataTransaction transaction)
 		{
-			if (isChanged)
+			if (isDirty)
 			{
 				transaction?.AddRollbackOperation(SetDirty);
-				isChanged = false;
+				isDirty = false;
 				OnPropertyChanged(nameof(IsChanged));
 			}
 		} // proc SetDirty
@@ -2541,7 +2691,7 @@ namespace TecWare.PPSn
 		public PpsObjectTags Tags => tags;
 
 		/// <summary>Is the meta data changed and not persisted in the local database.</summary>
-		public bool IsChanged => isChanged;
+		public bool IsChanged => isDirty;
 
 		internal object SyncRoot => objectLock;
 
@@ -3104,6 +3254,50 @@ order by t_liefnr.value desc
 		/// <returns></returns>
 		public async Task<PpsObject> CreateNewObjectAsync(PpsObjectInfo objectInfo, string mimeType = MimeTypes.Application.OctetStream)
 			=> await CreateNewObjectAsync(Guid.NewGuid(), objectInfo.Name, await objectInfo.GetNextNumberAsync(), objectInfo.IsRev, mimeType);
+
+		public async Task<PpsObject> CreateNewObjectFromFileAsync(string fileName)
+		{
+			var lastWriteTime = File.GetLastWriteTimeUtc(fileName);
+
+			using (var trans = await MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
+			using (var src = new FileStream(fileName, FileMode.Open, FileAccess.Read))
+			{
+				var newObject = await CreateNewObjectFromStreamAsync(src, Path.GetFileName(fileName));
+				newObject.Tags.UpdateTag(UserId, "Filename", PpsObjectTagClass.Text, fileName);
+				newObject.Tags.UpdateTag(UserId, "LastWriteTime", PpsObjectTagClass.Date, lastWriteTime.ToString(CultureInfo.InvariantCulture));
+
+				// write changes
+				await newObject.UpdateLocalAsync();
+
+				return newObject;
+			}
+		} // func CreateNewObjectFromFileAsync
+
+		public async Task<PpsObject> CreateNewObjectFromStreamAsync(Stream dataSource, string name, string mimeType = null)
+		{
+			using (var trans = await MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
+			{
+				if (mimeType == null)
+					mimeType = StuffIO.MimeTypeFromFilename(name);
+
+				// create the new empty object
+				var newObject = await CreateNewObjectAsync(ObjectInfos[AttachmentObjectTyp], mimeType);
+				newObject.Tags.UpdateTag(UserId, "Name", PpsObjectTagClass.Text, name);
+
+				// import the data
+				var data = await newObject.GetDataAsync<PpsObjectBlobData>();
+
+				using (var dst = await data.OpenStreamAsync(FileAccess.Write))
+					await dataSource.CopyToAsync(dst);
+				await data.CommitAsync();
+
+				// write changes
+				await newObject.UpdateLocalAsync();
+
+				trans.Commit();
+				return newObject;
+			}
+		} // func CreateNewObjectFromStreamAsync
 
 		/// <summary>Create a new object.</summary>
 		/// <param name="serverId"></param>

@@ -102,6 +102,8 @@ namespace TecWare.PPSn.Data
 	/// <summary>Interface that needs to implement in the base dataset, to support the PpsObjectExtendedColumn.</summary>
 	public interface IPpsObjectBasedDataSet
 	{
+		/// <summary>The dataset reads data.</summary>
+		bool IsReading { get; }
 		/// <summary>Returns the attached object to the dataset.</summary>
 		PpsObject Object { get; }
 	} // interface IPpsObjectBasedDataSet
@@ -143,7 +145,7 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsLinkedObjectExtendedValue ---------------------------------------
 
-	public sealed class PpsLinkedObjectExtendedValue : PpsDataRowObjectExtendedValue
+	public sealed class PpsLinkedObjectExtendedValue : PpsDataRowObjectExtendedValue, IPpsDataRowExtendedEvents
 	{
 		private readonly PpsEnvironment environment;
 		private readonly IPpsObjectBasedDataSet dataset; // optional
@@ -157,6 +159,16 @@ namespace TecWare.PPSn.Data
 			this.dataset = row.Table.DataSet as IPpsObjectBasedDataSet;
 		} // ctor
 
+		protected override void Write(XElement x)
+		{
+			base.Write(x);
+
+			// extra hint, for the object
+			var tmp = (PpsObject)Value;
+			if (tmp != null)
+				x.Add(new XElement("g", tmp.Guid.ToString("D")));
+		} // proc Write
+
 		protected override void Read(XElement x)
 		{
 			base.Read(x);
@@ -166,42 +178,66 @@ namespace TecWare.PPSn.Data
 			{
 				var objectId = (long)InternalValue;
 				if (objectId < 0)
-					base.SetGenericValue(dataset.Object.Links.TranslateObjectId(objectId), false);
+				{
+					var guidString = x.GetNode("g", (string)null);
+					if (guidString != null)
+						base.SetGenericValue(dataset.Object.Links.FindByGuid(new Guid(guidString))?.LinkToId, false);
+					else
+						base.SetGenericValue(dataset.Object.Links.FindById(objectId)?.LinkToId, false);
+				}
 			}
 		} // proc Read
 
+		protected override void OnPropertyChanged(string propertyName, object oldValue, object newValue, bool firePropertyChanged)
+		{
+			if (dataset != null && propertyName == nameof(Value) && Row.IsCurrent)
+			{
+				// remove possible old link
+				if (oldValue != null)
+					dataset.Object.Links.RemoveLink((long)oldValue);
+				// add the new link
+				dataset.Object.Links.AppendLink((long)newValue);
+
+			}
+			base.OnPropertyChanged(propertyName, oldValue, newValue, firePropertyChanged);
+		} // proc OnPropertyChanged
+
+		public void OnRowAdded()
+		{
+			if (dataset != null && !dataset.IsReading && InternalValue != null)
+				dataset.Object.Links.AppendLink((long)InternalValue);
+		} // proc OnRowAdded
+
+		public void OnRowRemoved()
+		{
+			if (dataset != null && !dataset.IsReading && InternalValue != null)
+				dataset.Object.Links.RemoveLink((long)InternalValue);
+		} // proc OnRowRemoved
+
 		protected override bool SetGenericValue(object newValue, bool firePropertyChanged)
 		{
+			// gets also called on undo/redo
 			switch (newValue)
 			{
 				case null:
-					referencedObject = null;
-					var oldValue = InternalValue;
-					if (base.SetGenericValue(null, firePropertyChanged))
 					{
-						if (oldValue != null && dataset != null)
-							dataset.Object.Links.RemoveLink((long)oldValue);
-
-						return true;
+						referencedObject = null;
+						return base.SetGenericValue(null, firePropertyChanged);
 					}
-					else
-						return false;
 				case PpsObject o:
-					if (base.SetGenericValue(o.Id, firePropertyChanged))
 					{
-						referencedObject = new WeakReference<PpsObject>(o);
-
-						// todp: delete should be an option on the column meta data?
-						if (dataset != null)
-							dataset.Object.Links.AppendLink(o);
-
-						return true;
-					}
-					else
-					{
-						if (referencedObject == null || !referencedObject.TryGetTarget(out var t))
+						var oldValue = InternalValue;
+						if (base.SetGenericValue(o.Id, firePropertyChanged))
+						{
 							referencedObject = new WeakReference<PpsObject>(o);
-						return false;
+							return true;
+						}
+						else
+						{
+							if (referencedObject == null || !referencedObject.TryGetTarget(out var t))
+								referencedObject = new WeakReference<PpsObject>(o);
+							return false;
+						}
 					}
 				case int idInt:
 					return SetGenericValue(environment.GetObject(idInt, throwException: true), firePropertyChanged);
@@ -212,7 +248,7 @@ namespace TecWare.PPSn.Data
 			}
 			;
 		}
-		
+
 		public override object Value
 		{
 			get

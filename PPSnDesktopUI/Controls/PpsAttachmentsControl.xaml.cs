@@ -19,7 +19,9 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -72,7 +74,7 @@ namespace TecWare.PPSn.Controls
 
 	#endregion
 
-	#region -- interface IPpsAttachmentSource -----------------------------------------
+	#region -- class PpsAttachmentsControl --------------------------------------------
 
 	/// <summary>Wpf-Control to view attachments</summary>
 	public partial class PpsAttachmentsControl : UserControl, IPpsAttachmentSource
@@ -113,25 +115,25 @@ namespace TecWare.PPSn.Controls
 				new CommandBinding(AddFileAttachmentCommand,
 					async (isender, ie) =>
 					{
-						var ofd = new OpenFileDialog();
-						ofd.Multiselect = true;
-						ofd.CheckFileExists = true;
+						var ofd = new OpenFileDialog
+						{
+							Multiselect = true,
+							CheckFileExists = true
+						};
 						if (ofd.ShowDialog() ?? false)
 						{
-							foreach (var filename in ofd.FileNames)
+							// todo: get parent block provider?
+							// UI should be show something
+
+							foreach (var fileName in ofd.FileNames)
 							{
-								using (var trans = await Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
+								try
 								{
-									var obj = await Environment.CreateNewObjectAsync(Environment.ObjectInfos[PpsEnvironment.AttachmentObjectTyp]);
-									obj.Tags.UpdateTag(Environment.UserId, "Filename", PpsObjectTagClass.Text, filename);
-
-									var data = await obj.GetDataAsync<PpsObjectBlobData>();
-									await data.ReadFromFileAsync(filename);
-									await data.CommitAsync();
-
-									AttachmentsSource.Append(obj);
-
-									trans.Commit();
+									await AttachmentsSource.AppendAsync(Environment, fileName);
+								}
+								catch (Exception ex)
+								{
+									await Environment.ShowExceptionAsync(ex, String.Format("Datei konnte nicht importiert werden.\n" + fileName));
 								}
 							}
 						}
@@ -308,7 +310,7 @@ namespace TecWare.PPSn.Controls
 
 	#endregion
 
-	#region -- class PpsDataTableAttachmentConverter ------------------------------------
+	#region -- class PpsDataTableAttachmentConverter ----------------------------------
 
 	/// <summary>Converts a IPpsDataView, PpsDataRow (e.g. column) to the attachment interfaces.</summary>
 	public sealed class PpsDataTableAttachmentConverter : IValueConverter
@@ -347,6 +349,9 @@ namespace TecWare.PPSn.Controls
 
 			public override int GetHashCode() 
 				=> row.GetHashCode();
+
+			public override bool Equals(object obj)
+				=> obj is PpsAttachmentItemImplementation a ? a.row == row : false;
 
 			public bool Equals(PpsDataRow other)
 				=> other == row;
@@ -452,9 +457,6 @@ namespace TecWare.PPSn.Controls
 					var r = view.NewRow(null, null);
 					r[linkColumnIndex] = data;
 					view.Add(r);
-
-					OnCollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, new PpsDataRow[] { r }));
-
 					trans.Commit();
 				}
 			} // proc Append
@@ -527,6 +529,25 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Column that contains the PpsObject's</summary>
 		public string LinkColumnName { get; set; }
 	} // class PpsDataTableAttachmentConverter
+
+	#endregion
+
+	#region -- class PpsAttachmentsHelper ---------------------------------------------
+
+	public static class PpsAttachmentsHelper
+	{
+		public static async Task<PpsObject> AppendAsync(this IPpsAttachments attachments, PpsEnvironment environment, string fileName)
+		{
+			// every file one transaction, and exception handling
+			using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
+			{
+				var obj = await environment.CreateNewObjectFromFileAsync(fileName);
+				attachments.Append(obj);
+				trans.Commit();
+				return obj;
+			}
+		} // proc AppendAsync
+	} // class PpsAttachmentsHelper
 
 	#endregion
 }

@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Mime;
@@ -72,8 +73,18 @@ namespace TecWare.PPSn
 
 		protected override void Dispose(bool disposing)
 		{
-			if (disposing && !leaveOpen)
-				baseStream?.Close();
+			if (disposing)
+			{
+				// force finish
+				if (!isFinished)
+					FinalBlock(Array.Empty<byte>(), 0, 0);
+
+				// close base stream
+				if (!leaveOpen)
+					baseStream?.Close();
+			}
+			else if (!isFinished)
+				Debug.Print("HashStream not closed correctly."); // maybe an exception?
 
 			base.Dispose(disposing);
 		} // proc Dispose
@@ -426,10 +437,8 @@ namespace TecWare.PPSn
 		}
 
 		public static string MimeTypeFromFilename(string filename)
-		{
-			return MimeTypeFromExtension(Path.GetExtension(filename));
-		}
-
+			=> MimeTypeFromExtension(Path.GetExtension(filename));
+		
 		/// <summary>
 		/// Generates the filter string for FileDialogs
 		/// </summary>
@@ -457,7 +466,6 @@ namespace TecWare.PPSn
 		}
 
 		#endregion
-
 	}
 
 	#endregion
