@@ -58,7 +58,7 @@ specific language governing permissions and limitations under the Licence.
 			<WrapPanel.Style>
 				<Style TargetType="{x:Type WrapPanel}">
 					<Style.Triggers>
-						<Trigger Property="local:PPSnReadOnlyPaneBehavior.IsReadOnly">
+						<Trigger Property="local:PpsReadOnlyPaneBehavior.IsReadOnly">
 							<Trigger.Value>
 								<sys:Boolean>True</sys:Boolean>
 							</Trigger.Value>
