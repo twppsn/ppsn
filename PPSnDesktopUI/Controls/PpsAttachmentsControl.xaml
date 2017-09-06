@@ -103,11 +103,13 @@ specific language governing permissions and limitations under the Licence.
 							<RowDefinition Height="86"/>
 							<RowDefinition Height="Auto"/>
 							<RowDefinition Height="Auto"/>
+							
+							<RowDefinition Height="Auto"/>
 						</Grid.RowDefinitions>
 						<Border x:Name="border" Grid.Row="0" BorderThickness="1"
 								BorderBrush="{StaticResource PPSnControlBackgroundBrush}"
 								Background="{StaticResource PPSnControlBackgroundBrush}">
-							<Image x:Name="image" Source="{Binding LinkedObject.Data.PreviewImage, Mode=OneWay}" Stretch="Fill"/>
+							<Image x:Name="image" Source="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}" Stretch="Uniform"/>
 						</Border>
 						<DockPanel x:Name="panCommands" Grid.Row="1" Height="40" LastChildFill="False" Visibility="Collapsed">
 							<Button Command="{x:Static local:PpsAttachmentsControl.RunFileAttachmentCommand}" 
@@ -119,19 +121,19 @@ specific language governing permissions and limitations under the Licence.
 									DockPanel.Dock="Right" Width="40"/>
 						</DockPanel>
 						<TextBlock Grid.Row="2" Text="{Binding Name, Mode=OneWay}" Foreground="{StaticResource PPSnWindowForegroundBrush}" TextWrapping="Wrap"/>
+						<TextBlock Grid.Row="3" Text="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}" />
 					</Grid>
 					<DataTemplate.Triggers>
 						<MultiDataTrigger>
 							<MultiDataTrigger.Conditions>
-								<Condition Binding="{Binding Path=Picture, Mode=OneWay}" Value="{x:Null}"/>
-								<Condition Binding="{Binding Path=Type, Mode=OneWay}" Value="picture"/>
+								<Condition Binding="{Binding Path=LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}" Value="{x:Null}"/>
 							</MultiDataTrigger.Conditions>
 							<Setter TargetName="border" Property="Padding" Value="32"/>
 							<Setter TargetName="image" Property="Source" Value="{StaticResource attachmentPictureFileImage}"/>
 							<Setter TargetName="image" Property="Stretch" Value="Uniform"/>
 						</MultiDataTrigger>
 
-						<MultiDataTrigger>
+						<!--<MultiDataTrigger>
 							<MultiDataTrigger.Conditions>
 								<Condition Binding="{Binding Path=Picture, Mode=OneWay}" Value="{x:Null}"/>
 								<Condition Binding="{Binding Path=Type, Mode=OneWay}" Value="binary"/>
@@ -139,7 +141,7 @@ specific language governing permissions and limitations under the Licence.
 							<Setter TargetName="border" Property="Padding" Value="32"/>
 							<Setter TargetName="image" Property="Source" Value="{StaticResource attachmentBinaryFileImage}"/>
 							<Setter TargetName="image" Property="Stretch" Value="Uniform"/>
-						</MultiDataTrigger>
+						</MultiDataTrigger>>-->
 
 						<MultiDataTrigger>
 							<MultiDataTrigger.Conditions>

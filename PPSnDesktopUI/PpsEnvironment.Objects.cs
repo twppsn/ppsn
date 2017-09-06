@@ -1217,6 +1217,8 @@ namespace TecWare.PPSn
 
 		/// <summary>Returns a preview image.</summary>
 		object PreviewImage { get; }
+		/// <summary>Returns a preview image.</summary>
+		object PreviewImageLazy { get; }
 	} // interface IPpsObjectData
 
 	#endregion
@@ -1237,7 +1239,7 @@ namespace TecWare.PPSn
 		public PpsObjectBlobData(PpsObject obj)
 		{
 			this.baseObj = obj;
-			this.previewImage = new LazyProperty<object>(() => GetPreviewImageInternal(), () => OnPropertyChanged(nameof(PreviewImage)));
+			this.previewImage = new LazyProperty<object>(() => GetPreviewImageInternal(), () => OnPropertyChanged(nameof(PreviewImageLazy)));
 		} // ctor
 
 		internal void OnPropertyChanged(string propertyName)
@@ -1365,6 +1367,8 @@ namespace TecWare.PPSn
 			if (!baseObj.HasData)
 				return null;
 
+			//await Task.Delay(5000);
+
 			// get access to the image stream, this will not load the data stream
 			using (var src = await OpenStreamAsync(FileAccess.Read))
 			{
@@ -1424,7 +1428,7 @@ namespace TecWare.PPSn
 			=> previewImage.Reset();
 
 		public Task<object> GetPreviewImageAsync()
-			=> previewImage.GetDataAsync();
+			=> previewImage.GetValueAsync();
 
 		#endregion
 
@@ -1436,7 +1440,10 @@ namespace TecWare.PPSn
 		//public byte[] RawData => rawData;
 		public byte[] RawData { get { return rawData; } internal set { this.rawData = value; } }
 
-		public object PreviewImage => previewImage.GetValue();
+		/// <summary>Get preview image synchron.</summary>
+		public object PreviewImage => previewImage.GetValueAsync().AwaitTask();
+		/// <summary>Get preview image asyncron</summary>
+		public object PreviewImageLazy => previewImage.GetValue();
 	} // class PpsObjectBlobData
 
 	#endregion
@@ -1886,6 +1893,8 @@ namespace TecWare.PPSn
 		public PpsObject Object => baseObj;
 		/// <summary>Returns the icon of this dataset.</summary>
 		public object PreviewImage => null;
+		/// <summary>Returns the icon of this dataset.</summary>
+		public object PreviewImageLazy => null;
 	} // class PpsObjectDataSet
 
 	#endregion
@@ -1933,7 +1942,7 @@ namespace TecWare.PPSn
 		private readonly object[] staticValues;             // values of the table
 		private readonly object objectLock = new object();
 
-		private IPpsObjectData data = null;                 // access to the object data
+		private readonly LazyProperty<IPpsObjectData> data;			// access to the object data
 		private readonly PpsObjectTags tags;                // list with assigned tags
 		private readonly PpsObjectLinks links;              // linked objects
 
@@ -1950,7 +1959,7 @@ namespace TecWare.PPSn
 			this.objectId = r.GetInt64(0);
 
 			this.columns = new PpsObjectColumns(this);
-			this.data = null;
+			this.data = new LazyProperty<IPpsObjectData>(() => GetDataCoreAsync(), () => OnPropertyChanged(nameof(DataLazy)));
 			this.staticValues = new object[staticColumns.Length];
 			this.tags = new PpsObjectTags(this);
 			this.links = new PpsObjectLinks(this);
@@ -2198,8 +2207,8 @@ namespace TecWare.PPSn
 			using (var r = await (await EnqueuePullAsync(Environment.MasterData.CurrentTransaction)).ForegroundAsync())
 			{
 				// read prev stored data
-				if (data != null)
-					await data.LoadAsync();
+				var data = await GetDataAsync<IPpsObjectData>();
+				await data.LoadAsync();
 			}
 		} // proc PullDataAsync
 
@@ -2245,10 +2254,7 @@ namespace TecWare.PPSn
 				try
 				{
 					// update local database and object data
-					if (data == null)
-					{
-						this.GetDataAsync<IPpsObjectData>().AwaitTask();
-					}
+					var data = await GetDataAsync<IPpsObjectData>();
 					await data.LoadAsync();
 					await data.CommitAsync();
 
@@ -2322,20 +2328,19 @@ namespace TecWare.PPSn
 			}
 		} // proc PushAsync
 
+		private async Task<IPpsObjectData> GetDataCoreAsync()
+		{
+			// update data from server, if not present (pull head)
+			if (objectId >= 0 && !HasData)
+				await PullAsync();
+
+			// create the core data object
+			return await environment.CreateObjectDataObjectAsync<IPpsObjectData>(this);
+		} // func GetDataCoreAsync
+
 		public async Task<T> GetDataAsync<T>()
 			where T : IPpsObjectData
-		{
-			if (data == null)
-			{
-				// update data from server, if not present (pull head)
-				if (objectId >= 0 && !HasData)
-					await PullAsync();
-
-				// create the core data object
-				data = await environment.CreateObjectDataObjectAsync<T>(this);
-			}
-			return (T)data;
-		} // func GetDataAsync
+			=> (T)await data.GetValueAsync();
 
 		internal async Task<Stream> LoadRawDataAsync()
 		{
@@ -2569,7 +2574,7 @@ namespace TecWare.PPSn
 			} // ctor
 
 			public IEnumerator<IDataColumn> GetEnumerator()
-				=> StaticColumns.Concat(new IDataColumn[] { StaticDataColumn, StaticTagsColumn, StaticLinksColumn }).Concat(obj.Tags.Select(c => CreateSimpleDataColumn(c))).GetEnumerator();
+				=> StaticColumns.Concat(new IDataColumn[] { StaticDataColumn, StaticDataAsyncColumn, StaticTagsColumn, StaticLinksColumn }).Concat(obj.Tags.Select(c => CreateSimpleDataColumn(c))).GetEnumerator();
 
 			IEnumerator IEnumerable.GetEnumerator()
 				=> GetEnumerator();
@@ -2587,8 +2592,10 @@ namespace TecWare.PPSn
 						else if (index == StaticColumns.Length)
 							return StaticDataColumn;
 						else if (index == StaticColumns.Length + 1)
-							return StaticTagsColumn;
+							return StaticDataAsyncColumn;
 						else if (index == StaticColumns.Length + 2)
+							return StaticTagsColumn;
+						else if (index == StaticColumns.Length + 3)
 							return StaticLinksColumn;
 						else if (index < StaticColumns.Length + obj.Tags.Count + staticPropertyCount)
 						{
@@ -2628,17 +2635,15 @@ namespace TecWare.PPSn
 						return staticValues[index];
 				}
 				else if (index == StaticColumns.Length + 0)
-				{
-					if (data == null)
-						data = GetDataAsync<IPpsObjectData>().AwaitTask();
-					return data;
-				}
+					return Data;
 				else if (index == StaticColumns.Length + 1)
+					return DataLazy;
+				else if (index == StaticColumns.Length + 2)
 				{
 					lock (objectLock)
 						return tags;
 				}
-				else if (index == StaticColumns.Length + 2)
+				else if (index == StaticColumns.Length + 3)
 				{
 					lock (objectLock)
 						return links;
@@ -2689,6 +2694,10 @@ namespace TecWare.PPSn
 		/// <summary>Is the local data of the object changed.</summary>
 		public bool IsDocumentChanged => GetValue((int)PpsStaticObjectColumnIndex.IsDocumentChanged, false);
 
+		/// <summary></summary>
+		public IPpsObjectData Data => data.GetValueAsync().AwaitTask();
+		/// <summary></summary>
+		public IPpsObjectData DataLazy => data.GetValue();
 		/// <summary>Has this object local data available.</summary>
 		public bool HasData => GetValue((int)PpsStaticObjectColumnIndex.HasData, false);
 
@@ -2743,12 +2752,13 @@ namespace TecWare.PPSn
 		internal static string GetStaticColumnExpression(int index)
 			=> staticColumns[index].Expression;
 
-		internal const int staticPropertyCount = 3;
+		internal const int staticPropertyCount = 4;
 
 		internal static IDataColumn[] StaticColumns => staticColumns;
 		internal static string StaticColumnsSelect { get; }
 
-		internal static IDataColumn StaticDataColumn { get; } = new SimpleDataColumn("Data", typeof(IPpsObjectData));
+		internal static IDataColumn StaticDataColumn { get; } = new SimpleDataColumn(nameof(Data), typeof(IPpsObjectData));
+		internal static IDataColumn StaticDataAsyncColumn { get; } = new SimpleDataColumn(nameof(DataLazy), typeof(IPpsObjectData));
 		internal static IDataColumn StaticTagsColumn { get; } = new SimpleDataColumn(nameof(Tags), typeof(PpsObjectTags));
 		internal static IDataColumn StaticLinksColumn { get; } = new SimpleDataColumn(nameof(Links), typeof(PpsObjectLinks));
 	} // class PpsObject
