@@ -75,7 +75,7 @@ namespace TecWare.PPSn.Stuff
 			return value;
 		} // func SetValueIntern
 
-		public Task<T> GetDataAsync()
+		public Task<T> GetValueAsync()
 		{
 			lock(getValue)
 			{
@@ -94,7 +94,7 @@ namespace TecWare.PPSn.Stuff
 						throw new InvalidOperationException();
 				}
 			}
-		} // func GetDataAsync
+		} // func GetValueAsync
 
 		public T GetValue()
 		{
