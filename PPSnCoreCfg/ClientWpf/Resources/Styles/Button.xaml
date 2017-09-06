@@ -109,7 +109,8 @@
 		<Setter Property="Focusable" Value="False"/>
 		<Setter Property="FontSize" Value="14"/>
 		<Setter Property="MinWidth" Value="36"/>
-		<Setter Property="Padding" Value="7"/>
+		<!--use this as extra-margin for the image-->
+		<Setter Property="Padding" Value="0"/>
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
 		<Setter Property="Template">
 			<Setter.Value>
@@ -119,15 +120,17 @@
 							<RowDefinition Height="auto"/>
 							<RowDefinition Height="auto"/>
 						</Grid.RowDefinitions>
-						<Grid x:Name="imageGrid" Grid.Row="0" Width="{TemplateBinding MinWidth}" Height="{TemplateBinding MinWidth}" Background="Transparent" Opacity=".75">
-							<Ellipse x:Name="circle" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
-										 Fill="Transparent" Stroke="{StaticResource PPSnActionButtonBrush}" StrokeThickness="1.25" />
-							<Viewbox SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
-									 Margin="{TemplateBinding MinWidth, Converter={StaticResource PaddingFromCircleConverter}}">
-								<Canvas Width="24" Height="24">
-									<Path Data="{TemplateBinding Tag}" Fill="{StaticResource PPSnActionButtonBrush}"/>
-								</Canvas>
-							</Viewbox>
+						<Grid Width="{TemplateBinding MinWidth}" Height="{TemplateBinding MinWidth}" Background="Transparent">
+							<Ellipse x:Name="circle" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Opacity=".75"
+									 Fill="Transparent" Stroke="{StaticResource PPSnActionButtonBrush}" StrokeThickness="1.25" />
+							<Border Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+								<Viewbox x:Name="imageBox" Margin="{TemplateBinding MinWidth, Converter={StaticResource PaddingFromCircleConverter}}" Opacity=".65"
+										 SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+									<Canvas Width="24" Height="24">
+										<Path Data="{TemplateBinding Tag}" Fill="{StaticResource PPSnActionButtonBrush}"/>
+									</Canvas>
+								</Viewbox>
+							</Border>
 							<Grid.RenderTransformOrigin>
 								<Point X="0.5" Y="0.5"/>
 							</Grid.RenderTransformOrigin>
@@ -140,11 +143,11 @@
 					</Grid>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsMouseOver" Value="True">
-							<Setter TargetName="imageGrid" Property="Opacity" Value="1"/>
+							<Setter TargetName="imageBox" Property="Opacity" Value="1"/>
+							<Setter TargetName="circle" Property="Opacity" Value="1"/>
 							<Setter TargetName="circle" Property="Fill" Value="{StaticResource PPSnMouseOverBrush}"/>
 						</Trigger>
 						<Trigger Property="IsPressed" Value="True">
-							<Setter TargetName="imageGrid" Property="Opacity" Value="1"/>
 							<Setter TargetName="circle" Property="Fill" Value="{StaticResource PPSnButtonPressedBrush}"/>
 							<Trigger.EnterActions>
 								<BeginStoryboard>
@@ -191,7 +194,7 @@
 					<Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
 						<Viewbox>
 							<Canvas Width="24" Height="24">
-								<Path x:Name="imagePath" Data="{TemplateBinding Content}" Fill="{TemplateBinding Foreground}" Opacity=".75">
+								<Path x:Name="imagePath" Data="{TemplateBinding Content}" Fill="{TemplateBinding Foreground}" Opacity=".65">
 									<Path.RenderTransformOrigin>
 										<Point X="0.5" Y="0.5"/>
 									</Path.RenderTransformOrigin>
