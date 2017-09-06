@@ -49,7 +49,7 @@
 				<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
 				<Setter TargetName="arrowBox" Property="Opacity" Value="1"/>
 			</DataTrigger>
-			<DataTrigger Binding="{Binding Path=(uiC:PPSnReadOnlyPaneBehavior.IsReadOnly), RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}">
+			<DataTrigger Binding="{Binding Path=(uiC:PpsReadOnlyPaneBehavior.IsReadOnly), RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}">
 				<DataTrigger.Value>
 					<sys:Boolean>True</sys:Boolean>
 				</DataTrigger.Value>
@@ -179,7 +179,7 @@
 							<Setter Property="Foreground" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
 						</Trigger>
 
-						<Trigger Property="uiC:PPSnReadOnlyPaneBehavior.IsReadOnly">
+						<Trigger Property="uiC:PpsReadOnlyPaneBehavior.IsReadOnly">
 							<Trigger.Value>
 								<sys:Boolean>True</sys:Boolean>
 							</Trigger.Value>
@@ -190,7 +190,7 @@
 
 						<MultiDataTrigger>
 							<MultiDataTrigger.Conditions>
-								<Condition Binding="{Binding Path=(uiC:PPSnComboBoxBehavior.IsNullable), RelativeSource={RelativeSource Self}, Mode=OneWay}">
+								<Condition Binding="{Binding Path=(uiC:PpsComboBoxBehavior.IsNullable), RelativeSource={RelativeSource Self}, Mode=OneWay}">
 									<Condition.Value>
 										<sys:Boolean>True</sys:Boolean>
 									</Condition.Value>
@@ -210,7 +210,7 @@
 										<sys:Boolean>True</sys:Boolean>
 									</Condition.Value>
 								</Condition>
-								<Condition Binding="{Binding Path=(uiC:PPSnReadOnlyPaneBehavior.IsReadOnly), RelativeSource={RelativeSource Self}, Mode=OneWay}">
+								<Condition Binding="{Binding Path=(uiC:PpsReadOnlyPaneBehavior.IsReadOnly), RelativeSource={RelativeSource Self}, Mode=OneWay}">
 									<Condition.Value>
 										<sys:Boolean>False</sys:Boolean>
 									</Condition.Value>
@@ -248,7 +248,7 @@
 			<TextBlock x:Name="emptyText" Grid.Column="0" Margin="6,3" VerticalAlignment="Center" Visibility="Hidden" Foreground="{StaticResource PPSnWindowForegroundBrush}"
 					   Text="{Binding Path=Tag, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}, Mode=OneTime}"/>
 			<Button x:Name="clearButton" Grid.Column="1" Margin="0,1" Focusable="False"
-					Command="{Binding Path=(uiC:PPSnSelectionChangedBehavior.Command), RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ComboBox}}, Mode=OneWay}">
+					Command="{Binding Path=(uiC:PpsSelectionChangedBehavior.Command), RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ComboBox}}, Mode=OneWay}">
 				<Button.Template>
 					<ControlTemplate TargetType="{x:Type Button}">
 						<Border Background="Transparent">
