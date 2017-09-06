@@ -61,7 +61,7 @@
 							<Setter Property="Opacity" TargetName="optionMark" Value="0"/>
 						</Trigger>
 
-						<Trigger Property="uiC:PPSnReadOnlyPaneBehavior.IsReadOnly">
+						<Trigger Property="uiC:PpsReadOnlyPaneBehavior.IsReadOnly">
 							<Trigger.Value>
 								<sys:Boolean>True</sys:Boolean>
 							</Trigger.Value>
