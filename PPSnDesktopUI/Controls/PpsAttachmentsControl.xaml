@@ -55,6 +55,18 @@ specific language governing permissions and limitations under the Licence.
 					<Setter Property="Height" Value="40"/>
 				</Style>
 			</WrapPanel.Resources>
+			<WrapPanel.Style>
+				<Style TargetType="{x:Type WrapPanel}">
+					<Style.Triggers>
+						<Trigger Property="local:PPSnReadOnlyPaneBehavior.IsReadOnly">
+							<Trigger.Value>
+								<sys:Boolean>True</sys:Boolean>
+							</Trigger.Value>
+							<Setter Property="Visibility" Value="Collapsed"/>
+						</Trigger>
+					</Style.Triggers>
+				</Style>
+			</WrapPanel.Style>
 			<Button Command="{x:Static local:PpsAttachmentsControl.AddFileAttachmentCommand}" 
 						Content="{StaticResource filePlusPathGeometry}"
                         Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddFileButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
@@ -78,8 +90,7 @@ specific language governing permissions and limitations under the Licence.
 		<ListBox Grid.Row="1"
 				 ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AttachmentsSource, Mode=OneWay}"
 				 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedAttachment, Mode=OneWayToSource}"
-				 Style="{StaticResource PPSnListBoxStyle}"
-				 ScrollViewer.HorizontalScrollBarVisibility="Disabled" Focusable="False">
+				 Style="{StaticResource PPSnListBoxStyle}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Focusable="False">
 			<ListBox.ItemsPanel>
 				<ItemsPanelTemplate>
 					<WrapPanel IsItemsHost="True" Orientation="Horizontal"/>
