@@ -916,8 +916,6 @@ namespace TecWare.PPSn
 		} // proc BlockAllUI
 
 		#endregion
-
-		private readonly static MethodInfo convertToLuaResultTask;
 	} // class PpsEnvironment
 }
 	

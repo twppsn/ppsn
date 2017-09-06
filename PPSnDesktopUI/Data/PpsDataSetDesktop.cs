@@ -21,7 +21,6 @@ using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Xml.Linq;
 using Neo.IronLua;
-using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
@@ -458,7 +457,8 @@ namespace TecWare.PPSn.Data
 	#endregion
 
 	#region -- class PpsDataSetDesktop --------------------------------------------------
-
+	
+	// IsLoaded-> Load, Unload should be done by this class, no external call allowed!
 	public class PpsDataSetDesktop : PpsDataSetClient
 	{
 		private readonly object datasetOwnerLock = new object();

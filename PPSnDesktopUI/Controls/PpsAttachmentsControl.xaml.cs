@@ -19,7 +19,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -44,9 +43,11 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>Displayname</summary>
 		string Name { get; }
+		/// <summary>Has the attachment a linked object.</summary>
+		bool IsNull { get; }
 		
 		/// <summary>Access the data column.</summary>
-		PpsObject LinkedObject { get; }
+		PpsObject LinkedObject { get; set; }
 	} // interface IPpsAttachmentItem
 
 	#endregion
@@ -415,9 +416,11 @@ namespace TecWare.PPSn.Controls
 					return true;
 				}
 			} // proc Remove
-			
+
+			public bool IsNull => row[linkColumnIndex] == null;
+
 			/// <summary>Access to the object.</summary>
-			public PpsObject LinkedObject => (PpsObject)row[linkColumnIndex];
+			public PpsObject LinkedObject { get => (PpsObject)row[linkColumnIndex]; set => row[linkColumnIndex] = value; }
 
 			/// <summary>Displayname for the object</summary>
 			public string Name
