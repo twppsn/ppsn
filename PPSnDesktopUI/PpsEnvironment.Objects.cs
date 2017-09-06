@@ -1232,7 +1232,6 @@ namespace TecWare.PPSn
 		private readonly PpsObject baseObj;
 		private byte[] rawData = null;
 		private string sha256 = String.Empty;
-		private string mimeType = null;
 		private readonly LazyProperty<object> previewImage;
 
 		public PpsObjectBlobData(PpsObject obj)
@@ -1261,7 +1260,7 @@ namespace TecWare.PPSn
 				baseObj.Tags.UpdateTag(0, "Sha256", PpsObjectTagClass.Text, sha256);
 				await baseObj.SaveRawDataAsync(
 					rawData.Length,
-					mimeType ?? baseObj.MimeType ?? MimeTypes.Application.OctetStream,
+					baseObj.MimeType ?? MimeTypes.Application.OctetStream,
 					rawData,
 					true
 				);
@@ -1417,7 +1416,7 @@ namespace TecWare.PPSn
 		} // func GetPreviewImageInternal
 
 		protected virtual Task<object> GetPreviewImageInternal()
-			=> mimeType.StartsWith("image/")
+			=> MimeType.StartsWith("image/")
 				? GetPreviewFromImageData()
 				: Task.FromResult<object>(null);
 
@@ -1431,6 +1430,8 @@ namespace TecWare.PPSn
 
 		public bool IsLoaded => rawData != null;
 		public bool IsReadOnly => true;
+
+		public string MimeType => baseObj.MimeType ?? MimeTypes.Application.OctetStream;
 
 		//public byte[] RawData => rawData;
 		public byte[] RawData { get { return rawData; } internal set { this.rawData = value; } }
