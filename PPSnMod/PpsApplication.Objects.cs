@@ -121,21 +121,19 @@ namespace TecWare.PPSn.Server
 		private long id;
 		private readonly long objectId;
 		private int refCount;
-		private char onDelete;
 
 		private bool isRemoved = false;
 
-		internal PpsObjectLinkAccess(PpsObjectAccess obj, long id, long objectId, int refCount, char onDelete)
+		internal PpsObjectLinkAccess(PpsObjectAccess obj, long id, long objectId, int refCount)
 		{
 			this.obj = obj;
 			this.id = id;
 			this.objectId = objectId;
 			this.refCount = refCount;
-			this.onDelete = onDelete;
 		} // ctor
 
 		internal PpsObjectLinkAccess(PpsObjectAccess obj, IDataRow row)
-			: this(obj, row.GetProperty("Id", -1L), row.GetProperty("LinkObjKId", -1L), row.GetProperty("RefCount", 0), row.GetProperty("OnDelete", "R")[0])
+			: this(obj, row.GetProperty("Id", -1L), row.GetProperty("LinkObjKId", -1L), row.GetProperty("RefCount", 0))
 		{
 		} // ctor
 
@@ -147,15 +145,13 @@ namespace TecWare.PPSn.Server
 		public XElement ToXml(string elementName)
 			=> new XElement(elementName,
 				new XAttribute("objectId", objectId),
-				new XAttribute("refCount", refCount),
-				new XAttribute("onDelete", onDelete)
+				new XAttribute("refCount", refCount)
 			);
 
 		public long Id { get => id; set => id = value; }
 		public long ObjectId => objectId;
 
 		public int RefCount { get => refCount; set => refCount = value; }
-		public char OnDelete { get => onDelete; set => onDelete = value; }
 
 		public bool IsNew => id < 0;
 		public bool IsRemoved => isRemoved;
@@ -409,8 +405,7 @@ namespace TecWare.PPSn.Server
 									{ "ParentObjKId", objectId },
 									{ "ParentObjRId", revId},
 									{ "LinkObjKId", l.ObjectId },
-									{ "RefCount", l.RefCount },
-									{ "OnDelete", l.OnDelete }
+									{ "RefCount", l.RefCount }
 								}
 							};
 
@@ -429,8 +424,7 @@ namespace TecWare.PPSn.Server
 									{ "ParentObjKId", objectId },
 									{ "ParentObjRId", revId},
 									{ "LinkObjKId", l.ObjectId },
-									{ "RefCount", l.RefCount },
-									{ "OnDelete", l.OnDelete }
+									{ "RefCount", l.RefCount }
 								}
 							};
 
@@ -668,14 +662,10 @@ namespace TecWare.PPSn.Server
 			var objectId = x.GetAttribute("objectId", -1L);
 			var cur = linksTo.Find(l => l.ObjectId == objectId);
 			var refCount = x.GetAttribute("refCount", 0);
-			var onDelete = x.GetAttribute("onDelete", "R");
 			if (cur == null) // new
-				linksTo.Add(new PpsObjectLinkAccess(this, -1, objectId, refCount, onDelete[0]));
+				linksTo.Add(new PpsObjectLinkAccess(this, -1, objectId, refCount));
 			else
-			{
 				cur.RefCount = refCount;
-				cur.OnDelete = onDelete[0];
-			}
 
 			return null;
 		}
@@ -685,7 +675,7 @@ namespace TecWare.PPSn.Server
 		{
 			var existingLink = GetLinks(true, ref linksTo).FirstOrDefault(c => c.ObjectId == objectId);
 			if (existingLink == null)
-				linksTo.Add(new PpsObjectLinkAccess(this, -1, objectId, 0, 'R'));
+				linksTo.Add(new PpsObjectLinkAccess(this, -1, objectId, 0));
 		} // proc AddLink
 
 		private List<PpsObjectTagAccess> GetTags(ref List<PpsObjectTagAccess> tags)

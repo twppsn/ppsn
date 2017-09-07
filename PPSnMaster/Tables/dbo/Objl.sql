@@ -5,8 +5,7 @@
 	[ParentObjRId] BIGINT NULL CONSTRAINT fkParentObjLObjrId REFERENCES dbo.ObjR ([Id]) ON DELETE CASCADE,
 	[LinkObjKId] BIGINT NULL CONSTRAINT fkLinkObjKId REFERENCES dbo.ObjK ([Id]) ON DELETE NO ACTION,
 	[LinkObjRId] BIGINT NULL CONSTRAINT fkLinkObjRId REFERENCES dbo.ObjR ([Id]) ON DELETE NO ACTION,
-	[RefCount] INT NOT NULL DEFAULT 0,
-	[OnDelete] CHAR(1) NOT NULL DEFAULT 0
+	[RefCount] INT NOT NULL DEFAULT 0
 );
 GO
 ALTER TABLE [dbo].[ObjL] ENABLE CHANGE_TRACKING;
@@ -73,11 +72,3 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level2type = N'COLUMN',
     @level2name = 'RefCount'
 GO
-EXEC sp_addextendedproperty @name = N'MS_Description',
-    @value = N'Action on delete',
-    @level0type = N'SCHEMA',
-    @level0name = N'dbo',
-    @level1type = N'TABLE',
-    @level1name = N'ObjL',
-    @level2type = N'COLUMN',
-    @level2name = N'OnDelete'
