@@ -1285,18 +1285,6 @@ namespace TecWare.PPSn
 			return Task.CompletedTask;
 		} // func UnloadTask
 
-		//public Task ReadFromStreamAsync(Stream stream, string mimetype)
-		//{
-		//	mimeType = mimetype;
-
-		//	using (var hashStream = new HashStream(stream, HashStreamDirection.Read, false, HashAlgorithm.Create("SHA-256")))
-		//	{
-		//		rawData = hashStream.ReadInArray();
-		//		sha256 = StuffIO.CleanHash(BitConverter.ToString(hashStream.CheckSum));
-		//	}
-		//	return Task.CompletedTask;
-		//}
-
 		//public Task ReadFromFileAsync(string filename)
 		//{
 		//	mimeType = StuffIO.MimeTypeFromFilename(filename);

@@ -244,18 +244,10 @@ namespace TecWare.PPSn.UI
 		public static PpsCommandOrder Empty { get { return empty; } }
 
 		public static PpsCommandOrder Parse(string value)
-		{
-			PpsCommandOrder r;
-			if (TryParse(value, out r))
-				return r;
-			else
-				throw new FormatException();
-		} // func Parse
+			=> TryParse(value, out var r) ? r : throw new FormatException();
 
 		public static bool TryParse(string value, out PpsCommandOrder order)
-		{
-			return TryParse(value, CultureInfo.CurrentUICulture, out order);
-		} // func TryParse
+			=> TryParse(value, CultureInfo.CurrentUICulture, out order);
 
 		public static bool TryParse(string value, CultureInfo culture, out PpsCommandOrder order)
 		{
@@ -272,12 +264,11 @@ namespace TecWare.PPSn.UI
 					order = Empty;
 					return true;
 				}
-				else if (parts.Length == 2)
+				else if (parts.Length == 2 
+					&& Int32.TryParse(parts[0], NumberStyles.Integer, culture, out var groupPart) 
+					&& Int32.TryParse(parts[1], NumberStyles.Integer, culture, out var orderPart))
 				{
-					order = new PpsCommandOrder(
-						int.Parse(parts[0], culture),
-						int.Parse(parts[1], culture)
-					);
+					order = new PpsCommandOrder(groupPart, orderPart);
 					return true;
 				}
 			}
@@ -378,12 +369,12 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsUICommandCollection ---------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class PpsUICommandCollection : Collection<PpsUICommand>, INotifyCollectionChanged
 	{
 		private static PpsUICommand[] seperator = new PpsUICommand[] { null };
-		/// <summary></summary>
+
+		/// <summary>Called if the command is changed.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		public PpsUICommandButton AddButton(string order, string image, ICommand command, string displayText, string description)
@@ -497,7 +488,7 @@ namespace TecWare.PPSn.UI
 			RemoveItem(index);
 			InsertItem(index, item);
 		} // proc SetItem
-	} // class PPsUICommandCollection
+	} // class PpsUICommandCollection
 
 	#endregion
 }

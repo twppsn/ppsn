@@ -18,6 +18,7 @@ specific language governing permissions and limitations under the Licence.
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
+			 xmlns:ui="clr-namespace:TecWare.PPSn.UI"
              xmlns:local="clr-namespace:TecWare.PPSn.Controls"
              mc:Ignorable="d"
 			 BorderThickness="1"
@@ -41,6 +42,10 @@ specific language governing permissions and limitations under the Licence.
 			</DrawingImage.Drawing>
 		</DrawingImage>
 	</UserControl.Resources>
+
+	<!--<local:PpsAttachmentsControl.Commands>
+		<ui:PpsUICommandButton Command="{x:Static local:PpsAttachmentsControl.AddFileAttachmentCommand}" Image="filePlusPathGeometry" DisplayText="Hinzufügen" Description="Fügt einen Anhang hinzu" />
+	</local:PpsAttachmentsControl.Commands>-->
 
 	<Grid>
 		<Grid.RowDefinitions>

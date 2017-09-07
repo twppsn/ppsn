@@ -29,6 +29,7 @@ using Microsoft.Win32;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
 {
@@ -80,6 +81,9 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Wpf-Control to view attachments</summary>
 	public partial class PpsAttachmentsControl : UserControl, IPpsAttachmentSource
 	{
+		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsAttachmentsControl), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
+
 		private readonly Lazy<PpsEnvironment> getEnvironment;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -88,16 +92,59 @@ namespace TecWare.PPSn.Controls
 		{
 			InitializeComponent();
 
-			Loaded += LoadBindings;
 			this.getEnvironment = new Lazy<PpsEnvironment>(() => PpsEnvironment.GetEnvironment(this));
+
+			// initialize toolbar
+			var commands = new PpsUICommandCollection();
+			commands.CollectionChanged += Commands_CollectionChanged;
+			SetValue(commandsPropertyKey, commands);
+
+			#region --old--
+			Loaded += LoadBindings;
+			#endregion
 		} // ctor
 
 		protected override void OnInitialized(EventArgs e)
 		{
 			base.OnInitialized(e);
+
+			// add command bindings
+
+			// todo: call environment to add buttons
+
 		} // proc OnInitialized
 
 		#endregion
+
+		protected override IEnumerator LogicalChildren 
+			=> base.LogicalChildren;
+
+		private void Commands_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			switch (e.Action)
+			{
+				case NotifyCollectionChangedAction.Add:
+					if (e.NewItems[0] != null)
+						AddLogicalChild(e.NewItems[0]);
+					break;
+				case NotifyCollectionChangedAction.Remove:
+					if (e.OldItems[0] != null)
+						RemoveLogicalChild(e.OldItems[0]);
+					break;
+				case NotifyCollectionChangedAction.Reset:
+					break;
+				default:
+					throw new InvalidOperationException();
+			}
+		} // proc Commands_CollectionChanged
+
+		/// <summary>List of commands for the toolbar.</summary>
+		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
+
+		/// <summary>Access to the environment.</summary>
+		public PpsEnvironment Environment => getEnvironment.Value;
+
+		#region --old--
 
 		#region -- LoadBindings ---------------------------------------------------------
 
@@ -305,8 +352,7 @@ namespace TecWare.PPSn.Controls
 		public readonly static RoutedUICommand SeventhButtonAttachmentCommand = new RoutedUICommand("SeventhButtonAttachment", "SeventhButtonAttachment", typeof(PpsAttachmentsControl));
 
 		#endregion
-
-		public PpsEnvironment Environment => getEnvironment.Value;
+		#endregion
 	} // class PpsAttachmentsControl
 
 	#endregion
