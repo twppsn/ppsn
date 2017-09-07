@@ -704,7 +704,7 @@ namespace TecWare.PPSn
 						var r = new LuaTable();
 						var i = 0;
 						foreach (var c in row.Columns)
-							r[c.Name] = row[i++];
+							r[c.Name] = GetServerRowValue(row[i++]);
 						return r;
 					}
 				case IEnumerable<PropertyValue> props:

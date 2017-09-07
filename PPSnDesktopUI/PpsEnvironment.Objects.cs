@@ -3346,6 +3346,13 @@ order by t_liefnr.value desc
 				return (T)(IPpsObjectData)new PpsObjectDataSet(schema, obj);
 		} // func CreateObjectDataObjectAsync
 
+
+		[LuaMember]
+		public Task PushObjectAsync(PpsObject obj)
+			=> obj.IsDocumentChanged
+				? obj.PushAsync()
+				: Task.CompletedTask;
+
 		#region -- Object Info ------------------------------------------------------------
 
 		protected object GetObjectInfoSyncObject()
