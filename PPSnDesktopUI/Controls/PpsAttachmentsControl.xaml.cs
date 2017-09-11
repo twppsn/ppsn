@@ -599,4 +599,40 @@ namespace TecWare.PPSn.Controls
 	} // class PpsAttachmentsHelper
 
 	#endregion
+
+	#region -- class PpsAttachmentImageConverter --------------------------------------
+
+	//not currently used
+
+	//public sealed class PpsAttachmentImageConverter : IValueConverter
+	//{
+	//	public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+	//	{
+	//		if (value is System.Windows.Media.ImageSource)
+	//			return value;
+	//		else if (value is string && !String.IsNullOrEmpty((string)value))
+	//		{
+	//			var resName = String.Concat(value, "PathGeometry");
+	//			var geometry = Application.Current.TryFindResource(resName) as System.Windows.Media.Geometry;
+	//			var clr = (System.Windows.Media.Color)Application.Current.TryFindResource("PPSnAccentColor");
+	//			var brush = new System.Windows.Media.SolidColorBrush(clr)
+	//			{
+	//				Opacity = .75
+	//			};
+	//			var geometryDrawing = new System.Windows.Media.GeometryDrawing(brush, null, geometry);
+	//			System.Windows.Media.DrawingImage image = new System.Windows.Media.DrawingImage(geometryDrawing);
+	//			return image;
+	//		}
+	//		return null;
+	//	} // func Convert
+
+	//	public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+	//	{
+	//		throw new NotSupportedException();
+	//	} // func ConvertBack
+
+	//} // class PpsAttachmentImageConverter
+
+	#endregion
+
 }
