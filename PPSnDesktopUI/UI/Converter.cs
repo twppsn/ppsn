@@ -200,6 +200,30 @@ namespace TecWare.PPSn.UI
 			throw new System.NotImplementedException();
 		}
 	}
+
+	#region -- class PpsImageResourceKeyConverter ---------------------------------------
+
+	public sealed class PpsImageResourceKeyConverter : IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			if (value is string && !String.IsNullOrEmpty((string)value))
+			{
+				var resName = String.Concat(value, "PathGeometry");
+				return Application.Current.TryFindResource(resName);
+			}
+			return null;
+		} // func Convert
+
+		public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		} // func ConvertBack
+
+	} // class PpsImageResourceKeyConverter
+
+	#endregion
+
 }
 
 
