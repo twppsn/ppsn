@@ -24,74 +24,41 @@ specific language governing permissions and limitations under the Licence.
 			 BorderThickness="1"
 			 BorderBrush="{StaticResource PPSnSeparatorBrush}"
              d:DesignHeight="300" d:DesignWidth="300">
-	
+
 	<UserControl.Resources>
-		<BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-
-		<SolidColorBrush x:Key="attachmentDrawingImageBrush" Color="{StaticResource PPSnAccentColor}" Opacity=".8"/>
-
-		<DrawingImage x:Key="attachmentBinaryFileImage">
-			<DrawingImage.Drawing>
-				<GeometryDrawing Geometry="{StaticResource fileOutlinePathGeometry}" Brush="{StaticResource attachmentDrawingImageBrush}"/>
-			</DrawingImage.Drawing>
-		</DrawingImage>
-
-		<DrawingImage x:Key="attachmentPictureFileImage">
-			<DrawingImage.Drawing>
-				<GeometryDrawing Geometry="{StaticResource imagePathGeometry}" Brush="{StaticResource attachmentDrawingImageBrush}"/>
-			</DrawingImage.Drawing>
-		</DrawingImage>
+		<ui:PpsImageResourceKeyConverter x:Key="imageResourceKeyConverter"/>
 	</UserControl.Resources>
-
-	<!--<local:PpsAttachmentsControl.Commands>
-		<ui:PpsUICommandButton Command="{x:Static local:PpsAttachmentsControl.AddFileAttachmentCommand}" Image="filePlusPathGeometry" DisplayText="Hinzufügen" Description="Fügt einen Anhang hinzu" />
-	</local:PpsAttachmentsControl.Commands>-->
 
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="auto"/>
 			<RowDefinition/>
 		</Grid.RowDefinitions>
-		<WrapPanel Grid.Row="0">
-			<WrapPanel.Resources>
-				<Style TargetType="{x:Type Button}" BasedOn="{StaticResource PPSnImageButtonStyle}">
-					<Setter Property="Button.Margin" Value="0,0,6,0"/>
-					<Setter Property="Width" Value="40"/>
-					<Setter Property="Height" Value="40"/>
-				</Style>
-			</WrapPanel.Resources>
-			<WrapPanel.Style>
-				<Style TargetType="{x:Type WrapPanel}">
-					<Style.Triggers>
+		<ItemsControl ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=Commands, Mode=OneWay}">
+			<ItemsControl.ItemsPanel>
+				<ItemsPanelTemplate>
+					<WrapPanel Orientation="Horizontal"/>
+				</ItemsPanelTemplate>
+			</ItemsControl.ItemsPanel>
+			<ItemsControl.ItemTemplate>
+				<DataTemplate>
+					<Button Width="38" Height="38" Margin="0,0,6,0"
+							Command="{Binding Command}"
+							Content="{Binding Image, Mode=OneTime, Converter={StaticResource imageResourceKeyConverter}}"
+							ToolTip="{Binding Description}"
+							Style="{StaticResource PPSnImageButtonStyle}"/>
+					<DataTemplate.Triggers>
 						<Trigger Property="local:PpsReadOnlyPaneBehavior.IsReadOnly">
 							<Trigger.Value>
 								<sys:Boolean>True</sys:Boolean>
 							</Trigger.Value>
 							<Setter Property="Visibility" Value="Collapsed"/>
 						</Trigger>
-					</Style.Triggers>
-				</Style>
-			</WrapPanel.Style>
-			<Button Command="{x:Static local:PpsAttachmentsControl.AddFileAttachmentCommand}" 
-						Content="{StaticResource filePlusPathGeometry}"
-                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddFileButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
-			<Button Command="{x:Static local:PpsAttachmentsControl.AddLinkAttachmentCommand}" 
-						Content="{StaticResource linkPathGeometry}"
-						Margin="0,0,32,0"
-                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AddLinkButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
-			<Button Command="{x:Static local:PpsAttachmentsControl.CameraAttachmentCommand}"
-						Content="{StaticResource cameraPathGeometry}"
-                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=CameraButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-			<Button Command="{x:Static local:PpsAttachmentsControl.ScannerAttachmentCommand}" 
-						Content="{StaticResource scannerPathGeometry}"
-                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ScannerButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-			<Button Command="{x:Static local:PpsAttachmentsControl.SignatureAttachmentCommand}"
-						Content="{StaticResource markerPathGeometry}"
-                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SignatureButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-			<Button Command="{x:Static local:PpsAttachmentsControl.SeventhButtonAttachmentCommand}"
-						Content="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SeventhButtonImagePath, Mode=OneWay}"
-                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SeventhButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-		</WrapPanel>
+					</DataTemplate.Triggers>
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+		</ItemsControl>
+
 		<ListBox Grid.Row="1"
 				 ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AttachmentsSource, Mode=OneWay}"
 				 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedAttachment, Mode=OneWayToSource}"
@@ -107,46 +74,55 @@ specific language governing permissions and limitations under the Licence.
 						<Grid.RowDefinitions>
 							<RowDefinition Height="86"/>
 							<RowDefinition Height="Auto"/>
-							<RowDefinition Height="Auto"/>
-							
-							<RowDefinition Height="Auto"/>
 						</Grid.RowDefinitions>
 						<Border x:Name="border" Grid.Row="0" BorderThickness="1"
 								BorderBrush="{StaticResource PPSnControlBackgroundBrush}"
 								Background="{StaticResource PPSnControlBackgroundBrush}">
-							<Image x:Name="image" Source="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}" Stretch="Uniform"/>
+							<Grid>
+								<Image x:Name="image" Margin="1"
+									   Source="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay, IsAsync=True}"
+									   Stretch="Uniform"/>
+								<Viewbox x:Name="symbolBox" Margin="28">
+									<Path x:Name="symbolPath"
+										  Data="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay, IsAsync=True, Converter={StaticResource imageResourceKeyConverter}}"
+										  Fill="{StaticResource PPSnWindowForegroundBrush}" Opacity=".65"/>
+								</Viewbox>
+								<Viewbox x:Name="imageBox" Margin="28" Visibility="Hidden">
+									<Path Data="{StaticResource imagePathGeometry}"
+										  Fill="{StaticResource PPSnWindowForegroundBrush}" Opacity=".65"/>
+								</Viewbox>
+							</Grid>
 						</Border>
-						<DockPanel x:Name="panCommands" Grid.Row="1" Height="40" LastChildFill="False" Visibility="Collapsed">
-							<Button Command="{x:Static local:PpsAttachmentsControl.RunFileAttachmentCommand}" 
-									Content="{StaticResource openInAppPathGeometry}" Style="{StaticResource PPSnImageButtonStyle}"
-									DockPanel.Dock="Left" Width="40"/>
-							<Button Command="{x:Static local:PpsAttachmentsControl.RemoveAttachmentCommand}"
-									Content="{StaticResource deletePathGeometry}" Style="{StaticResource PPSnImageButtonStyle}"
-									Visibility="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=RemoveButtonVisible,Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-									DockPanel.Dock="Right" Width="40"/>
+						<DockPanel x:Name="panCommands" LastChildFill="False" HorizontalAlignment="Right" Margin="0,-6,-6,-6" Visibility="Hidden">
+							<Button Command="{x:Static local:PpsAttachmentsControl.RunFileAttachmentCommand}"
+									MinWidth="34" DockPanel.Dock="Top"
+									Background="{StaticResource PPSnWindowBackgroundBrush}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
+									Tag="{StaticResource openInAppPathGeometry}"
+									Style="{StaticResource PPSnCircleButtonStyle}"/>
+							<Button x:Name="removeButton"
+									Command="{x:Static local:PpsAttachmentsControl.RemoveAttachmentCommand}"
+									MinWidth="34" DockPanel.Dock="Bottom"
+									Background="{StaticResource PPSnWindowBackgroundBrush}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
+									Tag="{StaticResource deletePathGeometry}"
+									Style="{StaticResource PPSnCircleButtonStyle}"/>
 						</DockPanel>
-						<TextBlock Grid.Row="2" Text="{Binding Name, Mode=OneWay}" Foreground="{StaticResource PPSnWindowForegroundBrush}" TextWrapping="Wrap"/>
-						<TextBlock Grid.Row="3" Text="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}" />
+						<TextBlock Grid.Row="1" Text="{Binding Name, Mode=OneWay}" TextWrapping="Wrap" HorizontalAlignment="Center"
+								   Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
 					</Grid>
 					<DataTemplate.Triggers>
-						<MultiDataTrigger>
-							<MultiDataTrigger.Conditions>
-								<Condition Binding="{Binding Path=LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}" Value="{x:Null}"/>
-							</MultiDataTrigger.Conditions>
-							<Setter TargetName="border" Property="Padding" Value="32"/>
-							<Setter TargetName="image" Property="Source" Value="{StaticResource attachmentPictureFileImage}"/>
-							<Setter TargetName="image" Property="Stretch" Value="Uniform"/>
-						</MultiDataTrigger>
-
-						<!--<MultiDataTrigger>
-							<MultiDataTrigger.Conditions>
-								<Condition Binding="{Binding Path=Picture, Mode=OneWay}" Value="{x:Null}"/>
-								<Condition Binding="{Binding Path=Type, Mode=OneWay}" Value="binary"/>
-							</MultiDataTrigger.Conditions>
-							<Setter TargetName="border" Property="Padding" Value="32"/>
-							<Setter TargetName="image" Property="Source" Value="{StaticResource attachmentBinaryFileImage}"/>
-							<Setter TargetName="image" Property="Stretch" Value="Uniform"/>
-						</MultiDataTrigger>>-->
+						<Trigger SourceName="image" Property="Source" Value="{x:Null}">
+							<Setter TargetName="image" Property="Visibility" Value="Hidden"/>
+						</Trigger>
+						<Trigger SourceName="symbolPath" Property="Data" Value="{x:Null}">
+							<Setter TargetName="symbolBox" Property="Visibility" Value="Hidden"/>
+						</Trigger>
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition SourceName="image" Property="Visibility" Value="Hidden"/>
+								<Condition SourceName="symbolBox" Property="Visibility" Value="Hidden"/>
+							</MultiTrigger.Conditions>
+							<Setter TargetName="imageBox" Property="Visibility" Value="Visible"/>
+						</MultiTrigger>
 
 						<MultiDataTrigger>
 							<MultiDataTrigger.Conditions>
@@ -156,6 +132,13 @@ specific language governing permissions and limitations under the Licence.
 							<Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
 							<Setter TargetName="panCommands" Property="Visibility" Value="Visible"/>
 						</MultiDataTrigger>
+
+						<Trigger Property="local:PpsReadOnlyPaneBehavior.IsReadOnly">
+							<Trigger.Value>
+								<sys:Boolean>True</sys:Boolean>
+							</Trigger.Value>
+							<Setter TargetName="removeButton" Property="Visibility" Value="Hidden"/>
+						</Trigger>
 					</DataTemplate.Triggers>
 				</DataTemplate>
 			</ListBox.ItemTemplate>
