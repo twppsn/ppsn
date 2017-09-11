@@ -109,6 +109,8 @@
 		<Setter Property="Focusable" Value="False"/>
 		<Setter Property="FontSize" Value="14"/>
 		<Setter Property="MinWidth" Value="36"/>
+		<Setter Property="Foreground" Value="{StaticResource PPSnActionButtonBrush}"/>
+		<Setter Property="Background" Value="Transparent"/>
 		<!--use this as extra-margin for the image-->
 		<Setter Property="Padding" Value="0"/>
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -122,12 +124,12 @@
 						</Grid.RowDefinitions>
 						<Grid Width="{TemplateBinding MinWidth}" Height="{TemplateBinding MinWidth}" Background="Transparent">
 							<Ellipse x:Name="circle" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Opacity=".75"
-									 Fill="Transparent" Stroke="{StaticResource PPSnActionButtonBrush}" StrokeThickness="1.25" />
+									 Fill="{TemplateBinding Background}" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.25" />
 							<Border Padding="{TemplateBinding Padding}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
 								<Viewbox x:Name="imageBox" Margin="{TemplateBinding MinWidth, Converter={StaticResource PaddingFromCircleConverter}}" Opacity=".65"
 										 SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
 									<Canvas Width="24" Height="24">
-										<Path Data="{TemplateBinding Tag}" Fill="{StaticResource PPSnActionButtonBrush}"/>
+										<Path Data="{TemplateBinding Tag}" Fill="{TemplateBinding Foreground}"/>
 									</Canvas>
 								</Viewbox>
 							</Border>
@@ -138,7 +140,7 @@
 								<ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
 							</Grid.RenderTransform>
 						</Grid>
-						<TextBlock x:Name="description" Grid.Row="1" Text="{TemplateBinding Content}" Foreground="{StaticResource PPSnActionButtonBrush}"
+						<TextBlock x:Name="description" Grid.Row="1" Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
 								   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
 					</Grid>
 					<ControlTemplate.Triggers>
