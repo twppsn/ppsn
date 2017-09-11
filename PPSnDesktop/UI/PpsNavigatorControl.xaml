@@ -28,7 +28,7 @@ specific language governing permissions and limitations under the Licence.
 		<SolidColorBrush x:Key="SearchBoxBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnAccentColor}, SourcePart=0.95}" />
 		<SolidColorBrush x:Key="ShrinkedSeparatorBackgroundBrush" Color="Transparent" />
 
-		<uiL:PPSnImageResourceKeyConverter x:Key="imageResourceKeyConverter"/>
+		<ui:PpsImageResourceKeyConverter x:Key="imageResourceKeyConverter"/>
 
 		<Style x:Key="NavigatorViewsListBoxStyle" TargetType="{x:Type ListBox}" BasedOn="{StaticResource PPSnListBoxStyle}">
 			<Style.Resources>

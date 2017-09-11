@@ -1355,7 +1355,7 @@ namespace TecWare.PPSn
 			if (!baseObj.HasData)
 				return null;
 
-			//await Task.Delay(5000);
+			await Task.Delay(5000);
 
 			// get access to the image stream, this will not load the data stream
 			using (var src = await OpenStreamAsync(FileAccess.Read))
@@ -1407,10 +1407,16 @@ namespace TecWare.PPSn
 			}
 		} // func GetPreviewImageInternal
 
+		//protected virtual Task<object> GetPreviewImageInternal()
+		//	=> MimeType.StartsWith("image/")
+		//		? GetPreviewFromImageData()
+		//		: Task.FromResult<object>(null);
+
 		protected virtual Task<object> GetPreviewImageInternal()
 			=> MimeType.StartsWith("image/")
 				? GetPreviewFromImageData()
-				: Task.FromResult<object>(null);
+				: Task.FromResult<object>("fileOutline");
+
 
 		protected void ResetPreviewImage()
 			=> previewImage.Reset();
