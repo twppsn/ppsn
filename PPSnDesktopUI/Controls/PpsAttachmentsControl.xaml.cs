@@ -98,6 +98,8 @@ namespace TecWare.PPSn.Controls
 			var commands = new PpsUICommandCollection();
 			commands.CollectionChanged += Commands_CollectionChanged;
 			SetValue(commandsPropertyKey, commands);
+			// Q+D
+			AddDefaultCommands();
 
 			#region --old--
 			Loaded += LoadBindings;
@@ -115,6 +117,13 @@ namespace TecWare.PPSn.Controls
 		} // proc OnInitialized
 
 		#endregion
+
+		private void AddDefaultCommands()
+		{
+			Commands.AddButton("100,110", "filePlus", AddFileAttachmentCommand, String.Empty, "Fügt einen Anhang hinzu");
+			Commands.AddButton("100,120", "link", AddLinkAttachmentCommand, String.Empty, "Fügt eine Verknüpfung hinzu");
+			Commands.AddButton("100,130", "camera", CameraAttachmentCommand, String.Empty, "Öffnet das Kameramodul");
+		} // proc AddDefaultCommands
 
 		protected override IEnumerator LogicalChildren 
 			=> base.LogicalChildren;
