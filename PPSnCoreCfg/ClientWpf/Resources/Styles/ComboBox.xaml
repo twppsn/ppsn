@@ -185,6 +185,7 @@
 							</Trigger.Value>
 							<Setter TargetName="PART_ToggleButton" Property="IsEnabled" Value="False"/>
 							<Setter TargetName="PART_EditableTextBox" Property="IsEnabled" Value="False"/>
+							<!--KeyBoard-Selection-->
 							<Setter Property="Focusable" Value="False"/>
 						</Trigger>
 
