@@ -724,7 +724,7 @@ namespace TecWare.PPSn.Server.Sql
 					=> parameter.Value = GetValue(row) ?? (object)DBNull.Value;
 
 				public void UpdateValue(object row, object value)
-					=> updateValue(row, value);
+					=> updateValue?.Invoke(row, value);
 
 				public void AppendParameter(DbCommand cmd, object initialValues)
 				{
@@ -1081,7 +1081,7 @@ namespace TecWare.PPSn.Server.Sql
 			#endregion
 
 			#region -- ExecuteUpsert --------------------------------------------------------
-
+			
 			private (IEnumerator<object> rows, PpsColumnMapping[] mapping) PrepareColumnMapping(PpsSqlTableInfo tableInfo, LuaTable parameter)
 			{
 				var columnMapping = new List<PpsColumnMapping>();
@@ -1113,7 +1113,22 @@ namespace TecWare.PPSn.Server.Sql
 							var idx = dataColumn.Index;
 							var nativeColumn = t.GetColumnDescription<PpsSqlColumnInfo>();
 							if (nativeColumn != null && nativeColumn.Table == tableInfo)
-								columnMapping.Add(new PpsColumnMapping(nativeColumn, row => ((PpsDataRow)row)[idx], (row, value) => ((PpsDataRow)row)[idx] = value));
+							{
+								if (dataColumn.IsExtended)
+								{
+									if( typeof(IPpsDataRowGetGenericValue).IsAssignableFrom(dataColumn.DataType))
+									{
+										var getterFunc = new Func<object, object>(row => ((IPpsDataRowGetGenericValue)((PpsDataRow)row)[idx]).Value);
+										var setterFunc = typeof(IPpsDataRowSetGenericValue).IsAssignableFrom(dataColumn.DataType)
+											? new Action<object, object>((row, value) => ((IPpsDataRowSetGenericValue)((PpsDataRow)row)[idx]).SetGenericValue(false, value))
+											: null;
+
+										columnMapping.Add(new PpsColumnMapping(nativeColumn, getterFunc, setterFunc));
+									}
+								}
+								else
+									columnMapping.Add(new PpsColumnMapping(nativeColumn, row => ((PpsDataRow)row)[idx], (row, value) => ((PpsDataRow)row)[idx] = value));
+							}
 						}
 					}
 				} // proc CreateColumnMapping
@@ -1353,11 +1368,30 @@ namespace TecWare.PPSn.Server.Sql
 
 			private static void ExecuteUpsertAppendOnClause(StringBuilder commandText, PpsSqlColumnInfo col)
 			{
-				commandText.Append("SRC.");
-				col.AppendAsColumn(commandText);
-				commandText.Append(" = ");
-				commandText.Append("DST.");
-				col.AppendAsColumn(commandText);
+				if (col.Nullable)
+				{
+					commandText.Append('(');
+					commandText.Append("SRC.");
+					col.AppendAsColumn(commandText);
+					commandText.Append(" IS NULL AND ");
+					commandText.Append("DST.");
+					col.AppendAsColumn(commandText);
+					commandText.Append(" IS NULL OR ");
+					commandText.Append("SRC.");
+					col.AppendAsColumn(commandText);
+					commandText.Append(" = ");
+					commandText.Append("DST.");
+					col.AppendAsColumn(commandText);
+					commandText.Append(')');
+				}
+				else
+				{
+					commandText.Append("SRC.");
+					col.AppendAsColumn(commandText);
+					commandText.Append(" = ");
+					commandText.Append("DST.");
+					col.AppendAsColumn(commandText);
+				}
 			} // proc ExecuteUpsertAppendOnClause
 
 			#endregion

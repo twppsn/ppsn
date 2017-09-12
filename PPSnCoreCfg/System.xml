@@ -106,6 +106,7 @@
 
 			<pps:field name="dbo.ObjT.Id" />
 			<pps:field name="dbo.ObjT.ObjKId" />
+			<pps:field name="dbo.ObjT.ObjRId" />
 			<pps:field name="dbo.ObjT.Key" />
 			<pps:field name="dbo.ObjT.Class" />
 			<pps:field name="dbo.ObjT.Value" />

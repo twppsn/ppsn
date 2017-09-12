@@ -139,7 +139,7 @@ namespace TecWare.PPSn.Server
 		protected override bool PushData(PpsObjectAccess obj, PpsDataSetServer data, bool release)
 		{
 			// fire triggers
-			CallTableMethods(LuaOnBeforePush, obj, data);
+			CallTableMethodsWithExceptions(LuaOnBeforePush, obj, data);
 
 			// move all to original row
 			data.Commit();
@@ -190,10 +190,10 @@ namespace TecWare.PPSn.Server
 			data.Commit();
 
 			// actions after push
-			CallTableMethods(LuaOnAfterPush, obj, data);
+			CallTableMethodsWithExceptions(LuaOnAfterPush, obj, data);
 
 			obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
-			obj.Update(false);
+			obj.Update(PpsObjectUpdateFlag.None);
 
 			return true;
 		} // func PushData

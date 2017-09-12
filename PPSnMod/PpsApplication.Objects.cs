@@ -41,75 +41,87 @@ namespace TecWare.PPSn.Server
 	{
 		private readonly PpsObjectAccess obj;
 		private long id;
-		private readonly long objectId;
-		private string key;
-		private int tagClass;
+		private readonly string key;
+		private readonly int tagClass;
 		private string value;
-		private long userId;
+		private readonly long userId;
+		private readonly DateTime createDate;
 
 		private bool isRemoved = false;
+		private bool isDirty = false;
 
-		internal PpsObjectTagAccess(PpsObjectAccess obj, long id, long objectId, int tagClass, string key, string value, long userId)
+		internal PpsObjectTagAccess(PpsObjectAccess obj, long id, int tagClass, string key, string value, long userId, DateTime createDate)
 		{
 			this.obj = obj;
 			this.id = id;
-			this.objectId = objectId;
 			this.tagClass = tagClass;
-			this.key = key;
+			this.key = key ?? throw new ArgumentNullException(nameof(key));
 			this.value = value;
 			this.userId = userId;
-		}
+			this.createDate = createDate;
+
+			Reset();
+		} // ctor
 
 		internal PpsObjectTagAccess(PpsObjectAccess obj, IDataRow row)
-			: this(obj, row.GetProperty("Id", -1L), row.GetProperty("ObjKId", -1L), row.GetProperty("Class", 0), row.GetProperty("Key", String.Empty), row.GetProperty("Value", String.Empty), row.GetProperty("UserId", -1L))
+			: this(obj, row.GetProperty("Id", -1L), row.GetProperty("Class", 0), row.GetProperty("Key", String.Empty), row.GetProperty("Value", String.Empty), row.GetProperty("UserId", -1L), row.GetProperty("CreateDate", DateTime.UtcNow))
 		{
-		}
+		} // ctor
 
+		public void Reset()
+			=> isDirty = id < 0;
+
+		/// <summary>Marks the tag as removed</summary>
 		public void Remove()
 		{
 			isRemoved = true;
-		}
+			isDirty = true;
+		} // proc Remove
 
 		public XElement ToXml(string elementName)
 			=> new XElement(elementName,
-				new XAttribute("objectId", objectId),
 				new XAttribute("tagClass", tagClass),
 				new XAttribute("key", key),
 				new XAttribute("value", value),
-				new XAttribute("userId", userId)
+				new XAttribute("userId", userId),
+				new XAttribute("createDate", createDate)
 			);
 
-		public long Id { get { return this.id; } set { this.id = value; } }
-		public long ObjectId { get { return this.objectId; } }
-		public int TagClass { get { return this.tagClass; } set { this.tagClass = value; } }
-		public string Key
-		{
-			get
-			{
-				return this.key;
-			}
-			set
-			{
-				if (String.IsNullOrEmpty(value)) throw new ArgumentNullException();
-				else this.key = value;
-			}
-		}
+		/// <summary>Current Id of the tag</summary>
+		public long Id { get { return id; } internal set { id = value; } }
+
+		/// <summary>Object Id</summary>
+		public long ObjectId => obj.Id;
+		/// <summary>Tag class</summary>
+		public int TagClass => tagClass;
+		/// <summary>Name of the tag</summary>
+		public string Key => key;
+
+		/// <summary>Value of the tag.</summary>
 		public string Value
 		{
-			get
-			{
-				return this.value;
-			}
+			get => value;
 			set
 			{
-				if (String.IsNullOrEmpty(value)) throw new ArgumentNullException();
-				else this.value = value;
+				if (this.value != value)
+				{
+					this.value = value;
+					isDirty = true;
+				}
+				isRemoved = false;
 			}
-		}
-		public long UserId { get { return this.userId; } set { this.userId = value; } }
+		} // prop Value
+
+		public long UserId => userId;
+
+		/// <summary>Is the tag new.</summary>
 		public bool IsNew => id < 0;
+
+		/// <summary>Is the tag dirty</summary>
+		public bool IsDirty => isDirty;
+		/// <summary>Is the tag removed.</summary>
 		public bool IsRemoved => isRemoved;
-	}
+	} // class PpsObjectTagAccess
 
 	#endregion
 
@@ -119,17 +131,20 @@ namespace TecWare.PPSn.Server
 	{
 		private readonly PpsObjectAccess obj;
 		private long id;
-		private readonly long objectId;
+		private readonly long linkId;
 		private int refCount;
 
 		private bool isRemoved = false;
+		private bool isDirty = false;
 
-		internal PpsObjectLinkAccess(PpsObjectAccess obj, long id, long objectId, int refCount)
+		internal PpsObjectLinkAccess(PpsObjectAccess obj, long id, long linkToId, int refCount)
 		{
 			this.obj = obj;
 			this.id = id;
-			this.objectId = objectId;
+			this.linkId = linkToId;
 			this.refCount = refCount;
+
+			Reset();
 		} // ctor
 
 		internal PpsObjectLinkAccess(PpsObjectAccess obj, IDataRow row)
@@ -137,25 +152,65 @@ namespace TecWare.PPSn.Server
 		{
 		} // ctor
 
+		public void Reset()
+			=> isDirty = id < 0;
+
 		public void Remove()
 		{
+			isDirty = true;
 			isRemoved = true;
 		} // proc Remove
 
 		public XElement ToXml(string elementName)
 			=> new XElement(elementName,
-				new XAttribute("objectId", objectId),
+				new XAttribute("linkId", linkId),
 				new XAttribute("refCount", refCount)
 			);
 
-		public long Id { get => id; set => id = value; }
-		public long ObjectId => objectId;
+		/// <summary>Id of the lin</summary>
+		public long Id { get => id; internal set => id = value; }
+		/// <summary>Object, the current object is linked.</summary>
+		public long LinkId => linkId;
 
-		public int RefCount { get => refCount; set => refCount = value; }
+		/// <summary>Reference counter for this link.</summary>
+		public int RefCount
+		{
+			get => refCount;
+			set
+			{
+				if (refCount != value)
+				{
+					refCount = value;
+					isDirty = true;
+				}
+				isRemoved = false;
+			}
+		} // prop RefCount
 
+		/// <summary>Is this link new</summary>
 		public bool IsNew => id < 0;
+
 		public bool IsRemoved => isRemoved;
+		public bool IsDirty => isDirty;
 	} // class PpsObjectLinkAccess
+
+	#endregion
+
+	#region -- enum PpsObjectUpdateFlag -------------------------------------------------
+
+	[Flags]
+	public enum PpsObjectUpdateFlag
+	{
+		/// <summary>Updates only the object record.</summary>
+		None = 0,
+		/// <summary>Updates the tag list.</summary>
+		Tags = 1,
+		/// <summary>Updates the link list.</summary>
+		Links = 2,
+
+		/// <summary>Update links and tags.</summary>
+		All = Tags | Links
+	} // enum PpsObjectUpdateFlag
 
 	#endregion
 
@@ -165,14 +220,17 @@ namespace TecWare.PPSn.Server
 	public sealed class PpsObjectAccess : LuaTable
 	{
 		private readonly PpsApplication application;
-		private readonly IPropertyReadOnlyDictionary defaultData;
-		private long objectId;
+		private readonly IPropertyReadOnlyDictionary defaultData; // default data for new objects
+		private long objectId;  // object id
 
-		private bool? isRev;
-		private long revId;
+		private bool? isRev;    // is this a rev, object (null for not loaded)
+		private long revId;     // current visible rev id
 
-		private List<PpsObjectLinkAccess> linksTo = null;
-		private List<PpsObjectTagAccess> tags = null;
+		private List<PpsObjectLinkAccess> linksTo = null;   // cache list for the links
+		private List<PpsObjectLinkAccess> linksFrom = null; // cache list for the links (from, they are not changable)
+		private List<PpsObjectTagAccess> tags = null;       // cache list for the tags
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		internal PpsObjectAccess(PpsApplication application, IPropertyReadOnlyDictionary defaultData)
 		{
@@ -187,10 +245,21 @@ namespace TecWare.PPSn.Server
 		protected override object OnIndex(object key)
 			=> key is string k && defaultData.TryGetProperty(k, out var t) ? t : base.OnIndex(key);
 
-		private void Reset()
+		#endregion
+
+		#region -- Revision management ------------------------------------------------
+		
+		private void Reset(PpsObjectUpdateFlag refresh = PpsObjectUpdateFlag.All)
 		{
 			// reload links
-			linksTo = null;
+			if ((refresh & PpsObjectUpdateFlag.Links) == PpsObjectUpdateFlag.Links)
+			{
+				linksTo = null;
+				linksFrom = null;
+			}
+			// reload tags
+			if ((refresh & PpsObjectUpdateFlag.Tags) == PpsObjectUpdateFlag.Tags)
+				tags = null;
 		} // proc Reset
 
 		private void CheckRevision()
@@ -214,6 +283,21 @@ namespace TecWare.PPSn.Server
 			isRev = (bool)r[nameof(IsRev), true];
 			revId = (long)(r[nameof(HeadRevId), true] ?? -1);
 		} // proc CheckRevision
+
+		[LuaMember]
+		public void SetRevision(long newRevId, PpsObjectUpdateFlag refresh = PpsObjectUpdateFlag.All)
+		{
+			CheckRevision();
+			if (revId == newRevId)
+				return;
+
+			revId = newRevId;
+			Reset(refresh);
+		} // proc SetRevision
+
+		#endregion
+
+		#region -- Update Object ------------------------------------------------------
 
 		private LuaTable GetObjectArguments(bool forInsert)
 		{
@@ -246,7 +330,7 @@ namespace TecWare.PPSn.Server
 		} // func GetObjectArguments
 
 		[LuaMember]
-		public void Update(bool updateObjectOnly = true)
+		public void Update(PpsObjectUpdateFlag flags = PpsObjectUpdateFlag.All)
 		{
 			LuaTable cmd;
 			var trans = application.Database.Main;
@@ -256,7 +340,7 @@ namespace TecWare.PPSn.Server
 			{
 				cmd = new LuaTable
 				{
-					{"update", "dbo.ObjK" },
+					{ "update", "dbo.ObjK" },
 					GetObjectArguments(false)
 				};
 			}
@@ -264,7 +348,7 @@ namespace TecWare.PPSn.Server
 			{
 				cmd = new LuaTable
 				{
-					{"insert", "dbo.ObjK" },
+					{ "insert", "dbo.ObjK" },
 					GetObjectArguments(true)
 				};
 			}
@@ -295,73 +379,55 @@ namespace TecWare.PPSn.Server
 				this[nameof(Guid)] = args[nameof(Guid)];
 			}
 
-			if (!updateObjectOnly)
+			// process tags
+			if ((flags & PpsObjectUpdateFlag.Tags) == PpsObjectUpdateFlag.Tags)
 			{
-				CheckRevision();
+				CheckRevision(); // referesh current rev.
+
 				// tags changed?
 				if (tags != null)
 				{
+					#region -- prepare structures --
 					var deleteCmd = new LuaTable
 					{
-						{ "delete", "dbo.ObjT" }
-					};
-					var insertCmd = new LuaTable
-					{
-						{ "insert", "dbo.ObjT" }
+						{ "delete", "dbo.ObjT" },
+						new LuaTable { { "Id", null } }
 					};
 					var upsertCmd = new LuaTable
 					{
-						{ "upsert", "dbo.ObjT" }
+						{ "upsert", "dbo.ObjT" },
+						{ "columnList", new LuaTable { "ObjKId", "ObjRId", "Key", "Class", "Value", "UserId", "CreateDate" } },
+						{ "on", new LuaTable { "ObjKId", "ObjRId", "Key", "Class", "UserId" } }
 					};
+					#endregion
 
-					foreach (var t in tags)
+					foreach (var t in tags.Where(c => c.IsDirty))
 					{
-						if (t.IsRemoved && t.Id > 0)
+						if (t.IsRemoved)
 						{
-							#region tag is going to be removed
-
-							deleteCmd[1] = new LuaTable
+							if (t.Id > 0)
 							{
-								{ "Id", t.Id }
-							};
+								#region -- tag is going to be removed --
 
-							trans.ExecuteNoneResult(deleteCmd);
+								((LuaTable)deleteCmd[1])["Id"] = t.Id;
+								trans.ExecuteNoneResult(deleteCmd);
 
-							#endregion
-						}
-						else if (t.IsNew)
-						{
-							#region tag is new
-
-							insertCmd[1] = new LuaTable
-							{
-								{ "ObjKId", objectId },
-								{ "ObjRId", revId },
-								{ "Class", t.TagClass },
-								{ "Key", t.Key },
-								{ "Value", t.Value },
-								{ "UserId", t.UserId }
-							};
-
-							trans.ExecuteNoneResult(insertCmd);
-
-							t.Id = ((LuaTable)insertCmd[1]).GetOptionalValue("Id", -1L);
-
-							#endregion
+								#endregion
+							}
 						}
 						else
 						{
-							#region tag is neither obsolete nor new, so upsert
+							#region -- tag update --
 
 							upsertCmd[1] = new LuaTable
 							{
-								{ "Id", t.Id },
 								{ "ObjKId", objectId },
-								{ "ObjRId", revId },
+								//{ "ObjRId", revId },
 								{ "Class", t.TagClass },
 								{ "Key", t.Key },
 								{ "Value", t.Value },
-								{ "UserId", t.UserId }
+								{ "UserId", t.UserId },
+								{ "CreateDate", DateTime.Now }
 							};
 
 							trans.ExecuteNoneResult(upsertCmd);
@@ -371,42 +437,47 @@ namespace TecWare.PPSn.Server
 					}
 				}
 
-				// links changed?
-				if (linksTo != null)
+				Reset(PpsObjectUpdateFlag.Tags);
+			}
+
+			// process links
+			if ((flags & PpsObjectUpdateFlag.Links) == PpsObjectUpdateFlag.Links && linksTo != null)
+			{
+				CheckRevision();
+
+				if (revId >= 0)
 				{
 					#region -- update links --
 					cmd = new LuaTable
 					{
-						{ "delete", "dbo.ObjL" }
+						{ "delete", "dbo.ObjL" },
+						new LuaTable { {"Id", null } }
 					};
-					foreach (var l in linksTo)
-					{
-						if (l.IsRemoved && l.Id > 0)
-						{
-							cmd[1] = new LuaTable
-							{
-								{ "Id", l.Id }
-							};
-
-							trans.ExecuteNoneResult(cmd);
-						}
-					}
 
 					// upsert, insert links
-					foreach (var l in linksTo)
+					foreach (var l in linksTo.Where(c => c.IsDirty))
 					{
-						if (l.IsNew)
+						if (l.IsRemoved)
+						{
+							if (l.Id > 0)
+							{
+								((LuaTable)cmd[1])["Id"] = l.Id;
+								trans.ExecuteNoneResult(cmd);
+							}
+						}
+						else if (l.IsNew)
 						{
 							cmd = new LuaTable
 							{
-								{ "insert", "dbo.ObjL" },
+								{ "upsert", "dbo.ObjL" },
 								new LuaTable
 								{
 									{ "ParentObjKId", objectId },
 									{ "ParentObjRId", revId},
-									{ "LinkObjKId", l.ObjectId },
+									{ "LinkObjKId", l.LinkId },
 									{ "RefCount", l.RefCount }
-								}
+								},
+								{ "on", new LuaTable { "ParentObjKId", "ParentObjRId", "LinkObjKId" } }
 							};
 
 							trans.ExecuteNoneResult(cmd);
@@ -423,7 +494,7 @@ namespace TecWare.PPSn.Server
 									{ "Id", l.Id },
 									{ "ParentObjKId", objectId },
 									{ "ParentObjRId", revId},
-									{ "LinkObjKId", l.ObjectId },
+									{ "LinkObjKId", l.LinkId },
 									{ "RefCount", l.RefCount }
 								}
 							};
@@ -434,21 +505,13 @@ namespace TecWare.PPSn.Server
 					#endregion
 				}
 
-				Reset();
+				Reset(PpsObjectUpdateFlag.Links);
 			}
 		} // proc Update
 
-		[LuaMember]
-		public void SetRevision(long newRevId, bool refreshLinks = true)
-		{
-			CheckRevision();
-			if (revId == newRevId)
-				return;
+		#endregion
 
-			revId = newRevId;
-			if (refreshLinks)
-				Reset();
-		} // proc SetRevision
+		#region -- Update Revision Data -----------------------------------------------
 
 		private void SetDocumentArguments(LuaTable args, Action<Stream> copyData, long contentLength, bool deflateStream)
 		{
@@ -558,11 +621,15 @@ namespace TecWare.PPSn.Server
 			if (insertNew && changeHead)
 			{
 				this["HeadRevId"] = newRevId;
-				SetRevision(newRevId, false);
+				SetRevision(newRevId, PpsObjectUpdateFlag.None);
 			}
 
 			revId = newRevId;
 		} // proc UpdateData
+
+		#endregion
+
+		#region -- Get Revision Data --------------------------------------------------
 
 		[LuaMember]
 		public Stream GetDataStream()
@@ -572,7 +639,7 @@ namespace TecWare.PPSn.Server
 			var cmd = new LuaTable
 			{
 				{ "select", "dbo.ObjR" },
-				{ "selectList", new LuaTable { "Id", "IsDocumentText","IsDocumentDeflate","Document","DocumentId","DocumentLink" } },
+				{ "selectList", new LuaTable { "Id", "IsDocumentText", "IsDocumentDeflate", "Document", "DocumentId", "DocumentLink" } },
 				revId > -1 ? new LuaTable
 				{
 					{ "Id", revId }
@@ -592,6 +659,7 @@ namespace TecWare.PPSn.Server
 			var src = (Stream)new MemoryStream(rawData, false);
 			if (isDeflated)
 				src = new GZipStream(src, CompressionMode.Decompress, false);
+
 			return src;
 		} // func GetDataStream
 
@@ -609,6 +677,10 @@ namespace TecWare.PPSn.Server
 			using (var tr = Procs.OpenStreamReader(GetDataStream(), DataEncoding))
 				return tr.ReadToEnd();
 		} // func GetText
+
+		#endregion
+
+		#region -- ToXml --------------------------------------------------------------
 
 		[LuaMember]
 		public XElement ToXml(bool onlyObjectData = false)
@@ -639,44 +711,9 @@ namespace TecWare.PPSn.Server
 			return x;
 		} // func ToXml
 
-		public PpsObjectTagAccess AddTag(XElement x)
-		{
-			GetTags(ref tags);
+		#endregion
 
-			var objectId = x.GetAttribute("objectId", -1L);
-			var tagClass = x.GetAttribute("class", -1);
-			var key = x.GetAttribute("key", String.Empty);
-			var value = x.GetAttribute("value", String.Empty);
-			var userId = x.GetAttribute("userId", -1L);
-
-			tags.Add(new PpsObjectTagAccess(this, -1, objectId, tagClass, key, value, userId));
-
-			return null;
-		}
-
-		public PpsObjectLinkAccess AddLinkTo(XElement x)
-		{
-			// refresh link list
-			GetLinks(true, ref linksTo);
-
-			var objectId = x.GetAttribute("objectId", -1L);
-			var cur = linksTo.Find(l => l.ObjectId == objectId);
-			var refCount = x.GetAttribute("refCount", 0);
-			if (cur == null) // new
-				linksTo.Add(new PpsObjectLinkAccess(this, -1, objectId, refCount));
-			else
-				cur.RefCount = refCount;
-
-			return null;
-		}
-
-		[LuaMember]
-		public void AddLink(long objectId)
-		{
-			var existingLink = GetLinks(true, ref linksTo).FirstOrDefault(c => c.ObjectId == objectId);
-			if (existingLink == null)
-				linksTo.Add(new PpsObjectLinkAccess(this, -1, objectId, 0));
-		} // proc AddLink
+		#region -- AddTag -------------------------------------------------------------
 
 		private List<PpsObjectTagAccess> GetTags(ref List<PpsObjectTagAccess> tags)
 		{
@@ -684,52 +721,108 @@ namespace TecWare.PPSn.Server
 				return tags;
 			else if (IsNew)
 			{
-				tags = new List<PpsObjectTagAccess>();
+				tags = new List<PpsObjectTagAccess>(); // create empty tag list
 			}
-			else
+			else // load tag list
 			{
-				{
-					var cmd = new LuaTable
+				CheckRevision();
+
+				var whereClause = $"[ObjKId] = {objectId} AND ";
+
+				if (revId < 0)
+					whereClause += "[ObjRId] IS NULL";
+				else
+					whereClause += $"([ObjRId] = {revId} OR [ObjRId] IS NULL)";
+				
+				var cmd = new LuaTable
 				{
 					{ "select", "dbo.ObjT" },
 					{ "selectList",
 						new LuaTable
 						{
 							"Id",
-							"ObjKId",
-							"ObjRId",
 							"Class",
 							"Key",
 							"Value",
-							"UserId"
+							"UserId",
+							"CreateDate"
 						}
 					},
-
-					new LuaTable
-					{
-						{ "ObjKId", objectId },
-						{ "ObjRId", revId }
-					}
+					{ "where", whereClause }
 				};
 
+				try
+				{
 					tags = new List<PpsObjectTagAccess>();
 					foreach (var c in application.Database.Main.ExecuteSingleResult(cmd))
 						tags.Add(new PpsObjectTagAccess(this, c));
 				}
+				catch
+				{
+					tags = null;
+					throw;
+				}
 			}
 			return tags;
-		}
+		} // func GetTags
+
+		[LuaMember]
+		public PpsObjectTagAccess FindTag(int tagClass, string key, long userId = 0)
+		{
+			GetTags(ref tags);
+			return tags.Find(
+				t => t.TagClass == tagClass && String.Compare(t.Key, key, StringComparison.OrdinalIgnoreCase) == 0 && t.UserId == userId
+			);
+		} // func FindTag
+
+		[LuaMember]
+		private PpsObjectTagAccess AddTag(int tagClass, string key, string value, long userId = 0, DateTime? createDate = null)
+		{
+			var tag = FindTag(tagClass, key, userId);
+
+			if (tag == null)
+				tags.Add(tag = new PpsObjectTagAccess(this, -1, tagClass, key, value, userId, createDate ?? DateTime.Now));
+			else
+				tag.Value = value;
+	
+			return tag;
+		} // proc AddTag
+
+		[LuaMember]
+		public PpsObjectTagAccess AddTag(LuaTable args)
+			=> AddTag(
+				tagClass: args.GetOptionalValue("Class", 0),
+				key: args["Key"] as string,
+				value: args["Value"]?.ToString(),
+				userId: args.GetOptionalValue("UserId", 0),
+				createDate: args.GetOptionalValue("CreateDate", DateTime.Now).ToUniversalTime()
+			);
+
+		public PpsObjectTagAccess AddTag(XElement x)
+			=> AddTag(
+				tagClass: x.GetAttribute("class", -1),
+				key: x.GetAttribute("key", String.Empty),
+				value: x.GetAttribute("value", String.Empty),
+				userId: x.GetAttribute("userId", 0L),
+				createDate: x.GetAttribute("createDate", DateTime.Now)
+			);
+
+		#endregion
+
+		#region -- AddLinkTo ----------------------------------------------------------
 
 		private List<PpsObjectLinkAccess> GetLinks(bool linksToThis, ref List<PpsObjectLinkAccess> links)
 		{
 			if (links != null)
 				return links;
-			else if (IsNew)
+			else if (IsNew || revId < 0)
 			{
 				links = new List<PpsObjectLinkAccess>();
 			}
 			else
 			{
+				CheckRevision();
+
 				var cmd = new LuaTable
 				{
 					{ "select", "dbo.ObjL" },
@@ -739,8 +832,7 @@ namespace TecWare.PPSn.Server
 							"Id",
 							{ linksToThis ? "LinkObjKId" : "ParentObjKId", "ObjKId" },
 							{ linksToThis ? "LinkObjRId" : "ParentObjRId", "ObjRId" },
-							"RefCount",
-							"OnDelete"
+							"RefCount"
 						}
 					},
 
@@ -751,12 +843,57 @@ namespace TecWare.PPSn.Server
 					}
 				};
 
-				links = new List<PpsObjectLinkAccess>();
-				foreach (var c in application.Database.Main.ExecuteSingleResult(cmd))
-					links.Add(new PpsObjectLinkAccess(this, c));
+				try
+				{
+					links = new List<PpsObjectLinkAccess>();
+					foreach (var c in application.Database.Main.ExecuteSingleResult(cmd))
+						links.Add(new PpsObjectLinkAccess(this, c));
+				}
+				catch
+				{
+					links = null;
+					throw;
+				}
 			}
 			return links;
 		} // func GetLinks
+
+		private PpsObjectLinkAccess FindLink(bool linksToThis, ref List<PpsObjectLinkAccess> links, long linkId)
+		{
+			GetLinks(linksToThis, ref links);
+			return links.Find(
+				l => l.LinkId == linkId
+			);
+		} // func FindLink
+
+		[LuaMember]
+		public PpsObjectLinkAccess FindLinkTo(long linkId)
+			=> GetLinks(true, ref linksTo).FirstOrDefault(l => l.LinkId == linkId);
+
+		[LuaMember]
+		public PpsObjectLinkAccess FindLinkFrom(long linkId)
+			=> GetLinks(true, ref linksFrom).FirstOrDefault(l => l.LinkId == linkId);
+
+		[LuaMember]
+		public PpsObjectLinkAccess AddLinkTo(long linkId, int refCount = -1)
+		{
+			CheckRevision();
+			if (revId < 0)
+				throw new ArgumentOutOfRangeException(nameof(RevId), "No revision is set.");
+
+			var link = FindLink(true, ref linksTo, linkId);
+			if (link == null)
+				linksTo.Add(link = new PpsObjectLinkAccess(this, -1, linkId, refCount >= 0 ? refCount : 0));
+			else if (refCount >= 0)
+				link.RefCount = refCount;
+
+			return link;
+		} // proc AddLink
+
+		public PpsObjectLinkAccess AddLinkTo(XElement x)
+			=> AddLinkTo(x.GetAttribute("linkId", -1L), x.GetAttribute("refCount", -1));
+
+		#endregion
 
 		[LuaMember]
 		public long Id => objectId;
@@ -800,9 +937,12 @@ namespace TecWare.PPSn.Server
 		[LuaMember]
 		public long ContentLength => throw new NotImplementedException();
 
-		public IEnumerable<PpsObjectLinkAccess> LinksTo => GetLinks(true, ref linksTo);
-
-		public IEnumerable<PpsObjectTagAccess> Tags => GetTags(ref tags);
+		[LuaMember]
+		public IEnumerable<PpsObjectLinkAccess> LinksTo { get => GetLinks(true, ref linksTo); set { } }
+		[LuaMember]
+		public IEnumerable<PpsObjectLinkAccess> LinksFrom { get => GetLinks(false, ref linksFrom); set { } }
+		[LuaMember]
+		public IEnumerable<PpsObjectTagAccess> Tags { get => GetTags(ref tags); set { } }
 	} // class PpsObjectAccess
 
 	#endregion
@@ -847,7 +987,7 @@ namespace TecWare.PPSn.Server
 		private PpsObjectAccess VerfiyObjectType(PpsObjectAccess obj)
 		{
 			if (String.Compare(obj.Typ, ObjectType, StringComparison.OrdinalIgnoreCase) != 0)
-				throw new ArgumentOutOfRangeException(nameof(obj), obj.Typ, "Object is '{obj.Typ}'. Expected: '{ObjectType}'");
+				throw new ArgumentOutOfRangeException(nameof(obj), obj.Typ, $"Object is '{obj.Typ}'. Expected: '{ObjectType}'");
 			return obj;
 		} // func VerfiyObjectType
 
@@ -971,10 +1111,8 @@ namespace TecWare.PPSn.Server
 			obj.IsRev = IsDataRevision(data);
 			SetNextNumber(application.Database.GetDatabaseAsync().AwaitTask(), obj, data);
 
-			// insert the new object
-			obj.Update(true);
-			obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
-			obj.Update(false);
+			// insert the new object, without rev
+			obj.Update(PpsObjectUpdateFlag.None);
 		} // proc InsertNewObject
 
 		/// <summary>Persist the data in the server</summary>
@@ -985,22 +1123,28 @@ namespace TecWare.PPSn.Server
 		/// <returns></returns>
 		protected virtual bool PushData(PpsObjectAccess obj, T data, bool release)
 		{
+			if (obj == null)
+				throw new ArgumentNullException(nameof(obj));
+			if (data == null)
+				throw new ArgumentNullException(nameof(data));
+
 			// set IsRev
 			if (obj.IsNew)
 				InsertNewObject(obj, data);
 
-			// update database
-			obj.Update(true);
+			// write revision
 			if (data != null)
 				obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
-			obj.Update(false);
+
+			// write object layout
+			obj.Update(PpsObjectUpdateFlag.All);
 
 			return true;
 		} // func PushData
 
 		[LuaMember("Push")]
-		protected virtual bool LuaPush(PpsObjectAccess obj, object data, bool relase)
-			=> PushData(obj, (T)data, relase);
+		protected virtual bool LuaPush(PpsObjectAccess obj, object data, bool release)
+			=> PushData(obj, (T)data, release);
 
 		[
 		DEConfigHttpAction("push", IsSafeCall = false),
