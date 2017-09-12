@@ -508,5 +508,10 @@ namespace TecWare.PPSn.Data
 		} // proc Template
 
 		public override bool IsNull => currentTemplate == PpsDataRow.NotSet;
+
+		/// <summary>Return the formatted value.</summary>
+		/// <param name="v"></param>
+		public static explicit operator string(PpsFormattedStringValue v)
+			=> v.FormattedValue;
 	} // struct PpsFormattedStringValue
 }
