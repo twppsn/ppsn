@@ -2194,15 +2194,16 @@ namespace TecWare.PPSn
 			}
 		} // proc EnqueuePullRevisionAsync
 
-		public async Task PullAsync()
+		public async Task<IPpsObjectData> PullAsync()
 		{
 			// foreground means a thread transission, we just wait for the task to finish.
 			// that we do not get any deadlocks with the db-transactions, we need to set the transaction of the current thread.
 			using (var r = await (await EnqueuePullAsync(Environment.MasterData.CurrentTransaction)).ForegroundAsync())
 			{
 				// read prev stored data
-				var data = await GetDataAsync<IPpsObjectData>();
+				var data = await GetDataCoreAsync();
 				await data.LoadAsync();
+				return data;
 			}
 		} // proc PullDataAsync
 
@@ -2326,7 +2327,7 @@ namespace TecWare.PPSn
 		{
 			// update data from server, if not present (pull head)
 			if (objectId >= 0 && !HasData)
-				await PullAsync();
+				return await PullAsync();
 
 			// create the core data object
 			return await environment.CreateObjectDataObjectAsync<IPpsObjectData>(this);
