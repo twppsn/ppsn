@@ -57,7 +57,7 @@
 
 	<SolidColorBrush x:Key="PPSnImageBrush" Color="{StaticResource PPSnAccentColor}" Opacity=".80"/>
 
-	<SolidColorBrush x:Key="PPSnPopUpBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.85}" />
+	<SolidColorBrush x:Key="PPSnPopUpBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.78}" />
 
 	<SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="{StaticResource PPSnWindowFooterColor}" />
 
