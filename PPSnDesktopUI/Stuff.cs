@@ -95,7 +95,7 @@ namespace TecWare.PPSn
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			if (direction != HashStreamDirection.Read)
-				throw new NotSupportedException("The stream is in read mode.");
+				throw new NotSupportedException("The stream is not in read mode.");
 			else if (isFinished)
 				return 0;
 
