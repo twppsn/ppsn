@@ -49,7 +49,7 @@
 										<ColumnDefinition Width="Auto" />
 										<ColumnDefinition Width="*" />
 									</Grid.ColumnDefinitions>
-									<ToggleButton x:Name="PART_Expander" Grid.Column="0" Style="{StaticResource TreeListViewExpanderButtonStyle}"
+									<ToggleButton x:Name="expander" Grid.Column="0" Style="{StaticResource TreeListViewExpanderButtonStyle}"
 												  Margin="{Binding  RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type uiC:PpsTreeListViewItem}}, Converter={StaticResource LevelToIndentConverter}}"
 												  IsChecked="{Binding Path=IsExpanded, RelativeSource={RelativeSource AncestorType={x:Type uiC:PpsTreeListViewItem}}}"
 												  ClickMode="Press"/>
@@ -58,20 +58,20 @@
 							</Border>
 							<Rectangle x:Name="showSelection" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0" IsHitTestVisible="False" SnapsToDevicePixels="True"/>
 						</Grid>
-						<ItemsPresenter x:Name="PART_ItemsHost" />
+						<ItemsPresenter x:Name="itemsHost" />
 					</StackPanel>
 					<ControlTemplate.Triggers>
-                        <Trigger Property="IsExpanded" Value="false">
-                            <Setter TargetName="PART_ItemsHost" Property="Visibility" Value="Collapsed"/>
+						<Trigger Property="HasItems" Value="false">
+							<Setter TargetName="expander" Property="Visibility" Value="Hidden"/>
+						</Trigger>
+						<Trigger Property="IsExpanded" Value="false">
+							<Setter TargetName="itemsHost" Property="Visibility" Value="Collapsed"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="true">
 							<Setter Property="Opacity" TargetName="showSelection" Value="1"/>
 						</Trigger>
                         <Trigger Property="AlternationIndex" Value="1">
 							<Setter TargetName="panelBorder" Property="Background" Value="{StaticResource PPSnAlternation1Brush}"/>
-                        </Trigger>
-                        <Trigger Property="ItemsControl.HasItems" Value="False">
-                            <Setter TargetName="PART_Expander" Property="Visibility" Value="Hidden"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
