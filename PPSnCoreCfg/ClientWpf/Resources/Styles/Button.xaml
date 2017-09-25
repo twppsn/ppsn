@@ -8,14 +8,12 @@
 
 	<ui:LuaValueConverter x:Key="PaddingFromCircleConverter">
 		<![CDATA[
-
 		local p = (value - (value / 1.414213562)) / 2;
 		return 2.0 + clr.System.Math:Ceiling(p);
-
 		]]>
 	</ui:LuaValueConverter>
 
-	<SolidColorBrush x:Key="PPSnButtonStyleBackgroundBrush" Color="{StaticResource PPSnAccentColor}" Opacity="0.15"/>
+	<SolidColorBrush x:Key="PPSnButtonStyleBackgroundBrush" Color="{StaticResource PPSnAccentColor}" Opacity="0.11"/>
 
 	<Style x:Key="PPSnButtonStyle" TargetType="{x:Type Button}">
 		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
@@ -30,57 +28,86 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type Button}">
-					<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}"
-							SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-						<ContentPresenter x:Name="PART_ContentPresenter" Focusable="False" RecognizesAccessKey="True"
-										  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-										  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-										  Margin="{TemplateBinding Padding}"
-										  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-							<ContentPresenter.Resources>
-								<Style TargetType="{x:Type TextBlock}">
-									<Setter Property="TextWrapping" Value="NoWrap"/>
-									<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-								</Style>
-							</ContentPresenter.Resources>
-						</ContentPresenter>
-						<Border.RenderTransformOrigin>
-							<Point X="0.5" Y="0.5"/>
-						</Border.RenderTransformOrigin>
-						<Border.RenderTransform>
-							<ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
-						</Border.RenderTransform>
+					<Border>
+						<Border x:Name="innerBorder" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+								Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+								Margin="0,0,0,0" Padding="2,0,2,0">
+							<ContentPresenter Focusable="False" RecognizesAccessKey="True"
+											  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+											  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+											  Margin="{TemplateBinding Padding}"
+											  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+								<ContentPresenter.Resources>
+									<Style TargetType="{x:Type TextBlock}">
+										<Setter Property="TextWrapping" Value="NoWrap"/>
+										<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+									</Style>
+								</ContentPresenter.Resources>
+								<ContentPresenter.RenderTransformOrigin>
+									<Point X="0.5" Y="0.5"/>
+								</ContentPresenter.RenderTransformOrigin>
+								<ContentPresenter.RenderTransform>
+									<ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
+								</ContentPresenter.RenderTransform>
+							</ContentPresenter>
+						</Border>
 					</Border>
 					<ControlTemplate.Triggers>
-						<Trigger Property="IsMouseOver" Value="true">
-							<Setter Property="BorderBrush" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="IsMouseOver" Value="True"/>
+								<Condition Property="IsMouseCaptured" Value="False"/>
+							</MultiTrigger.Conditions>
+							<Setter TargetName="innerBorder" Property="BorderBrush" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+						</MultiTrigger>
+						<Trigger Property="IsMouseCaptured" Value="True">
+							<Setter TargetName="innerBorder" Property="BorderBrush" Value="{StaticResource PPSnButtonPressedBrush}"/>
+							<Setter TargetName="innerBorder" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
 						</Trigger>
 						<Trigger Property="IsPressed" Value="true">
 							<Trigger.EnterActions>
 								<BeginStoryboard>
 									<Storyboard>
-										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="BorderBrush">
-											<DiscreteObjectKeyFrame KeyTime="0:0:0:0" Value="{StaticResource PPSnButtonPressedBrush}"/>
-										</ObjectAnimationUsingKeyFrames>
-										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Background">
-											<DiscreteObjectKeyFrame KeyTime="0:0:0:0" Value="{StaticResource PPSnButtonPressedBrush}"/>
-										</ObjectAnimationUsingKeyFrames>
-										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="1" To="0.99" Duration="0:0:0.1"/>
-										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="1" To="0.95" Duration="0:0:0.1"/>
+										<ThicknessAnimationUsingKeyFrames Storyboard.TargetName="innerBorder"
+																		  Storyboard.TargetProperty="Margin"
+																		  AccelerationRatio=".4"
+																		  Duration="0:0:0.15">
+											<SplineThicknessKeyFrame Value="2,1,2,1" />
+										</ThicknessAnimationUsingKeyFrames>
+										<ThicknessAnimationUsingKeyFrames Storyboard.TargetName="innerBorder"
+																		  Storyboard.TargetProperty="Padding"
+																		  AccelerationRatio=".4"
+																		  Duration="0:0:0.15">
+											<SplineThicknessKeyFrame Value="0,0,0,0" />
+										</ThicknessAnimationUsingKeyFrames>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform"
+														 Storyboard.TargetProperty="ScaleX"
+														 To="0.98"
+														 AccelerationRatio=".4"
+														 Duration="0:0:0.15"/>
 									</Storyboard>
 								</BeginStoryboard>
 							</Trigger.EnterActions>
 							<Trigger.ExitActions>
 								<BeginStoryboard>
 									<Storyboard>
-										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="0.99" To="1" Duration="0:0:0.15"/>
-										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="0.95" To="1" Duration="0:0:0.15"/>
-										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="BorderBrush" FillBehavior="Stop">
-											<DiscreteObjectKeyFrame KeyTime="0:0:0.16" Value="Transparent"/>
-										</ObjectAnimationUsingKeyFrames>
-										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Background" FillBehavior="Stop">
-											<DiscreteObjectKeyFrame KeyTime="0:0:0.16" Value="Transparent"/>
-										</ObjectAnimationUsingKeyFrames>
+										<ThicknessAnimationUsingKeyFrames Storyboard.TargetName="innerBorder"
+																		  Storyboard.TargetProperty="Margin"
+																		  Duration="0:0:0.2"
+																		  AccelerationRatio=".4">
+											<SplineThicknessKeyFrame Value="0,0,0,0" />
+										</ThicknessAnimationUsingKeyFrames>
+										<ThicknessAnimationUsingKeyFrames Storyboard.TargetName="innerBorder"
+																		  Storyboard.TargetProperty="Padding"
+																		  Duration="0:0:0.2"
+																		  AccelerationRatio=".4">
+											<SplineThicknessKeyFrame Value="2,0,2,0" />
+										</ThicknessAnimationUsingKeyFrames>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform"
+														 Storyboard.TargetProperty="ScaleX"
+														 To="1.0"
+														 AccelerationRatio=".4"
+														 Duration="0:0:0.2"/>
 									</Storyboard>
 								</BeginStoryboard>
 							</Trigger.ExitActions>
@@ -282,5 +309,115 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+	<!-- window-close-->
+	<PathGeometry x:Key="windowClosePathGeometry" 
+				  Figures="M13.46,12L19,17.54V19H17.54L12,13.46L6.46,19H5V17.54L10.54,12L5,6.46V5H6.46L12,10.54L17.54,5H19V6.46L13.46,12Z" />
+
+	<Style x:Key="PPSnClosePopupButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource PPSnImageButtonStyle}">
+		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+		<Setter Property="Width" Value="32"/>
+		<Setter Property="Height" Value="32"/>
+		<Setter Property="Padding" Value="6"/>
+		<Setter Property="HorizontalAlignment" Value="Right"/>
+		<Setter Property="VerticalAlignment" Value="Top"/>
+		<Setter Property="Content" Value="{StaticResource windowClosePathGeometry}"/>
+		<Setter Property="CommandParameter">
+			<Setter.Value>
+				<sys:Int32>-1</sys:Int32>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	
+	<!--<Style x:Key="PPSnButtonStyle" TargetType="{x:Type Button}">
+		<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+		<Setter Property="Background" Value="{StaticResource PPSnButtonStyleBackgroundBrush}"/>
+		<Setter Property="BorderBrush" Value="{StaticResource PPSnButtonStyleBackgroundBrush}"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="Focusable" Value="False"/>
+		<Setter Property="HorizontalContentAlignment" Value="Center"/>
+		<Setter Property="VerticalContentAlignment" Value="Center"/>
+		<Setter Property="Padding" Value="6,0"/>
+		<Setter Property="SnapsToDevicePixels" Value="True"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type Button}">
+					<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}"
+							SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+						<ContentPresenter x:Name="PART_ContentPresenter" Focusable="False" RecognizesAccessKey="True"
+										  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+										  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+										  Margin="{TemplateBinding Padding}"
+										  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+							<ContentPresenter.Resources>
+								<Style TargetType="{x:Type TextBlock}">
+									<Setter Property="TextWrapping" Value="NoWrap"/>
+									<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+								</Style>
+							</ContentPresenter.Resources>
+						</ContentPresenter>
+						<Border.RenderTransformOrigin>
+							<Point X="0.5" Y="0.5"/>
+						</Border.RenderTransformOrigin>
+						<Border.RenderTransform>
+							<ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
+						</Border.RenderTransform>
+					</Border>
+					<ControlTemplate.Triggers>
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="IsMouseOver" Value="True"/>
+								<Condition Property="IsMouseCaptured" Value="False"/>
+							</MultiTrigger.Conditions>
+							<Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+						</MultiTrigger>
+						<Trigger Property="IsMouseCaptured" Value="True">
+							<Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PPSnButtonPressedBrush}"/>
+							<Setter TargetName="border" Property="Background" Value="{StaticResource PPSnButtonPressedBrush}"/>
+						</Trigger>
+						<Trigger Property="IsPressed" Value="true">
+							<Trigger.EnterActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX"
+														 From="1" 
+														 To="0.98"
+														 AccelerationRatio=".4"
+														 Duration="0:0:0.15"/>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY"
+														 From="1"
+														 To="0.95"
+														 AccelerationRatio=".4"
+														 Duration="0:0:0.15"/>
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.EnterActions>
+							<Trigger.ExitActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX"
+														 From="0.98"
+														 To="1"
+														 AccelerationRatio=".4"
+														 Duration="0:0:0.2"/>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY"
+														 From="0.95"
+														 To="1"
+														 AccelerationRatio=".4"
+														 Duration="0:0:0.2"/>
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.ExitActions>
+						</Trigger>
+						<Trigger Property="IsEnabled" Value="false">
+							<Setter Property="Background" Value="Transparent"/>
+							<Setter Property="Foreground" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>-->
 
 </ResourceDictionary>
