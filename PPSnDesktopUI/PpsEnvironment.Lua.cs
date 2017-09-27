@@ -21,9 +21,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -36,7 +33,6 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Stuff;
-using TecWare.PPSn.UI;
 using static TecWare.PPSn.StuffUI;
 
 namespace TecWare.PPSn

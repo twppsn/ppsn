@@ -57,7 +57,7 @@ namespace TecWare.PPSn
 		private readonly HashStreamDirection direction;
 		private readonly HashAlgorithm hashAlgorithm;
 		private bool isFinished = false;
-
+		
 		public HashStream(Stream baseStream, HashStreamDirection direction, bool leaveOpen, HashAlgorithm hashAlgorithm)
 		{
 			this.baseStream = baseStream ?? throw new ArgumentNullException(nameof(baseStream));
@@ -147,7 +147,26 @@ namespace TecWare.PPSn
 		} // proc Finished
 
 		public override long Seek(long offset, SeekOrigin origin)
-			=> throw new NotSupportedException();
+		{
+			var currentPosition = baseStream.Position;
+			switch (origin)
+			{
+				case SeekOrigin.Begin:
+					if (currentPosition == offset)
+						return currentPosition;
+					goto default;
+				case SeekOrigin.Current:
+					if (offset == 0)
+						return currentPosition;
+					goto default;
+				case SeekOrigin.End:
+					if (baseStream.Length - offset == currentPosition)
+						return currentPosition;
+					goto default;
+				default:
+					throw new NotSupportedException();
+			}
+		} // func Seek
 
 		public override void SetLength(long value)
 		{
@@ -161,7 +180,16 @@ namespace TecWare.PPSn
 		public override bool CanWrite => direction == HashStreamDirection.Write;
 		public override bool CanSeek => false;
 		public override long Length { get { return baseStream.Length; } }
-		public override long Position { get { return baseStream.Position; } set { throw new NotSupportedException(); } }
+		public override long Position
+		{
+			get { return baseStream.Position; }
+			set
+			{
+				if (baseStream.Position == value)
+					return;
+				throw new NotSupportedException();
+			}
+		} // prop Position
 
 		public Stream BaseStream => baseStream;
 		public HashAlgorithm HashAlgorithm => hashAlgorithm;

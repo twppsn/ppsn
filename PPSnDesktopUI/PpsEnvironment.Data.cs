@@ -1324,7 +1324,6 @@ namespace TecWare.PPSn
 					else
 					{
 						using (var cmd = transaction.CreateNativeCommand($"UPDATE main.[{table.Name}] SET [" + refreshColumnName + "] = null WHERE [" + refreshColumnName + "] <> 1"))
-							//using (var cmd = new SQLiteCommand($"DELETE FROM main.[{table.Name}] WHERE [" + refreshColumnName + "] <> 1", connection, transaction))
 							cmd.ExecuteNonQueryEx();
 					}
 				}
@@ -2473,6 +2472,16 @@ namespace TecWare.PPSn
 			}
 		} // proc ClearTransaction
 
+		public PpsMasterDataTransaction GetCurrentTransaction()
+		{
+			lock (currentTransactionLock)
+			{
+				if (currentTransaction != null && currentTransaction.CheckAccess())
+					return currentTransaction;
+			}
+			return null;
+		} // func GetCurrentTransaction
+
 		public DbCommand CreateNativeCommand(string commandText = null)
 			=> new SQLiteCommand(commandText, connection, null);
 
@@ -2485,10 +2494,10 @@ namespace TecWare.PPSn
 		private sealed class DataRowChangedEventItem
 		{
 			private readonly PpsDataTableDefinition table;
-			private readonly long rowId;
+			private readonly long? rowId;
 			private readonly PpsDataRowChangedEventHandler rowChangedEvent;
 
-			public DataRowChangedEventItem(PpsDataTableDefinition table, long rowId, PpsDataRowChangedEventHandler rowChangedEvent)
+			public DataRowChangedEventItem(PpsDataTableDefinition table, long? rowId, PpsDataRowChangedEventHandler rowChangedEvent)
 			{
 				this.table = table;
 				this.rowId = rowId;
@@ -2496,10 +2505,18 @@ namespace TecWare.PPSn
 			} // ctor
 
 			public void Invoke(object sender, PpsDataRowChangedEventArgs e)
-				=> rowChangedEvent.Invoke(sender, e);
+			{
+				if (rowId.HasValue)
+				{
+					if (rowId == e.RowId)
+						rowChangedEvent.Invoke(sender, e);
+				}
+				else
+					rowChangedEvent.Invoke(sender, e);
+			} // proc Invoke
 
 			public PpsDataTableDefinition Table => table;
-			public long RowId => rowId;
+			public long? RowId => rowId;
 		} // class DataRowChangedEventItem
 
 		#endregion
@@ -2519,7 +2536,7 @@ namespace TecWare.PPSn
 				}
 				else
 					collectedEvents.Add(new PpsDataEvent(PpsDataEvent.ConvertEventToOperation(e.Event), e.Database, e.Table, e.RowId));
-
+				
 				OnCollectedEvents();
 			}
 		} // proc Connection_Update
@@ -2557,7 +2574,7 @@ namespace TecWare.PPSn
 			}
 		} // proc ProcessEvents
 
-		public void RegisterWeakDataRowChanged(string tableName, long rowId, PpsDataRowChangedEventHandler handler)
+		public void RegisterWeakDataRowChanged(string tableName, long? rowId, PpsDataRowChangedEventHandler handler)
 		{
 			var table = FindTable(tableName) ?? throw new ArgumentOutOfRangeException(nameof(tableName), tableName, $"Table '{tableName}' not found.");
 
