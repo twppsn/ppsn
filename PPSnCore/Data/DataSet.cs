@@ -67,17 +67,19 @@ namespace TecWare.PPSn.Data
 	{
 		/// <summary>Marks this tag as deleted.</summary>
 		Deleted = -1,
+		
 		/// <summary>Attribute tag, with text content.</summary>
 		Text = 0,
 		/// <summary>Attribute tag, with alpha-numeric content.</summary>
 		Number = 1,
 		/// <summary>Attribute tag, with Date content.</summary>
 		Date = 2,
-		/// <summary>Real tag, no value.</summary>
-		Tag = 3,
-		/// <summary>Note, value is text including linefeeds.</summary>
-		Note = 4
 
+		/// <summary>Real tag, no value.</summary>
+		Tag = 128,
+		
+		/// <summary>Note, value is text including linefeeds.</summary>
+		Note = 256
 	} // enum PpsObjectTagClass
 
 	#endregion
