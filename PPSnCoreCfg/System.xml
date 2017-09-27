@@ -111,6 +111,7 @@
 			<pps:field name="dbo.ObjT.Class" />
 			<pps:field name="dbo.ObjT.Value" />
 			<pps:field name="dbo.ObjT.UserId" />
+			<pps:field name="dbo.ObjT.CreateDate" />
 
 			<pps:field name="dbo.ObjL.Id" />
 			<pps:field name="dbo.ObjL.ParentObjKId" />
@@ -291,6 +292,9 @@
 						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					<pps:column name="UserId" fieldName="dbo.ObjT.UserId">
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="CreateDate" fieldName="dbo.ObjT.CreateDate">
 						<pps:meta name="nullable">true</pps:meta>
 					</pps:column>
 					

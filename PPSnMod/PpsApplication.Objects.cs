@@ -41,6 +41,7 @@ namespace TecWare.PPSn.Server
 	{
 		private readonly PpsObjectAccess obj;
 		private long id;
+		private readonly bool isRev;
 		private readonly string key;
 		private readonly int tagClass;
 		private string value;
@@ -50,10 +51,11 @@ namespace TecWare.PPSn.Server
 		private bool isRemoved = false;
 		private bool isDirty = false;
 
-		internal PpsObjectTagAccess(PpsObjectAccess obj, long id, int tagClass, string key, string value, long userId, DateTime createDate)
+		internal PpsObjectTagAccess(PpsObjectAccess obj, long id, bool isRev, int tagClass, string key, string value, long userId, DateTime createDate)
 		{
 			this.obj = obj;
 			this.id = id;
+			this.isRev = isRev;
 			this.tagClass = tagClass;
 			this.key = key ?? throw new ArgumentNullException(nameof(key));
 			this.value = value;
@@ -64,7 +66,7 @@ namespace TecWare.PPSn.Server
 		} // ctor
 
 		internal PpsObjectTagAccess(PpsObjectAccess obj, IDataRow row)
-			: this(obj, row.GetProperty("Id", -1L), row.GetProperty("Class", 0), row.GetProperty("Key", String.Empty), row.GetProperty("Value", String.Empty), row.GetProperty("UserId", -1L), row.GetProperty("CreateDate", DateTime.UtcNow))
+			: this(obj, row.GetProperty("Id", -1L), row.GetProperty("ObjRId", -1L) > 0, row.GetProperty("Class", 0), row.GetProperty("Key", String.Empty), row.GetProperty("Value", String.Empty), row.GetProperty("UserId", -1L), row.GetProperty("CreateDate", DateTime.UtcNow))
 		{
 		} // ctor
 
@@ -83,8 +85,7 @@ namespace TecWare.PPSn.Server
 				new XAttribute("tagClass", tagClass),
 				new XAttribute("key", key),
 				new XAttribute("value", value),
-				new XAttribute("userId", userId),
-				new XAttribute("createDate", createDate)
+				new XAttribute("userId", userId)
 			);
 
 		/// <summary>Current Id of the tag</summary>
@@ -116,6 +117,8 @@ namespace TecWare.PPSn.Server
 
 		/// <summary>Is the tag new.</summary>
 		public bool IsNew => id < 0;
+		/// <summary>Is this attribute attached to a revision.</summary>
+		public bool IsRev => isRev;
 
 		/// <summary>Is the tag dirty</summary>
 		public bool IsDirty => isDirty;
@@ -190,8 +193,10 @@ namespace TecWare.PPSn.Server
 		/// <summary>Is this link new</summary>
 		public bool IsNew => id < 0;
 
-		public bool IsRemoved => isRemoved;
+		/// <summary>Is the link dirty</summary>
 		public bool IsDirty => isDirty;
+		/// <summary>Is the link removed.</summary>
+		public bool IsRemoved => isRemoved;
 	} // class PpsObjectLinkAccess
 
 	#endregion
@@ -705,7 +710,10 @@ namespace TecWare.PPSn.Server
 
 				// append tags
 				foreach (var cur in Tags)
-					x.Add(cur.ToXml("tag"));
+				{
+					if (cur.IsRev)
+						x.Add(cur.ToXml("tag"));
+				}
 			}
 
 			return x;
@@ -741,6 +749,7 @@ namespace TecWare.PPSn.Server
 						new LuaTable
 						{
 							"Id",
+							"ObjRId",
 							"Class",
 							"Key",
 							"Value",
@@ -781,7 +790,7 @@ namespace TecWare.PPSn.Server
 			var tag = FindTag(tagClass, key, userId);
 
 			if (tag == null)
-				tags.Add(tag = new PpsObjectTagAccess(this, -1, tagClass, key, value, userId, createDate ?? DateTime.Now));
+				tags.Add(tag = new PpsObjectTagAccess(this, -1, false, tagClass, key, value, userId, createDate ?? DateTime.Now));
 			else
 				tag.Value = value;
 	
