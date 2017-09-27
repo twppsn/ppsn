@@ -1007,7 +1007,8 @@ namespace TecWare.PPSn
 								new XAttribute("key", cur.Name),
 								new XAttribute("tagClass", PpsObjectTag.FormatClass(cur.Class)),
 								new XAttribute("value", cur.Value),
-								new XAttribute("userId", cur.UserId)
+								new XAttribute("userId", cur.UserId),
+								new XAttribute("createDate", cur.CreationStamp.ToUniversalTime().ChangeType<string>())
 							)
 						);
 					}
