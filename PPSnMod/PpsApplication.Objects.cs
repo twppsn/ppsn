@@ -427,7 +427,7 @@ namespace TecWare.PPSn.Server
 							upsertCmd[1] = new LuaTable
 							{
 								{ "ObjKId", objectId },
-								//{ "ObjRId", revId },
+								{ "ObjRId", t.IsRev ? (object)revId : null },
 								{ "Class", t.TagClass },
 								{ "Key", t.Key },
 								{ "Value", t.Value },
@@ -785,12 +785,15 @@ namespace TecWare.PPSn.Server
 		} // func FindTag
 
 		[LuaMember]
-		private PpsObjectTagAccess AddTag(int tagClass, string key, string value, long userId = 0, DateTime? createDate = null)
+		private PpsObjectTagAccess AddTag(int tagClass, string key, string value, long userId = 0, DateTime? createDate = null, bool isRevision = false)
 		{
+			if (isRevision)
+				CheckRevision();
+
 			var tag = FindTag(tagClass, key, userId);
 
 			if (tag == null)
-				tags.Add(tag = new PpsObjectTagAccess(this, -1, false, tagClass, key, value, userId, createDate ?? DateTime.Now));
+				tags.Add(tag = new PpsObjectTagAccess(this, -1, isRevision, tagClass, key, value, userId, createDate ?? DateTime.Now));
 			else
 				tag.Value = value;
 	
@@ -809,11 +812,12 @@ namespace TecWare.PPSn.Server
 
 		public PpsObjectTagAccess AddTag(XElement x)
 			=> AddTag(
-				tagClass: x.GetAttribute("class", -1),
+				tagClass: x.GetAttribute("tagClass", -1),
 				key: x.GetAttribute("key", String.Empty),
 				value: x.GetAttribute("value", String.Empty),
 				userId: x.GetAttribute("userId", 0L),
-				createDate: x.GetAttribute("createDate", DateTime.Now)
+				createDate: x.GetAttribute("createDate", DateTime.Now),
+				isRevision: true
 			);
 
 		#endregion
@@ -1185,17 +1189,8 @@ namespace TecWare.PPSn.Server
 				using (var transaction = currentUser.CreateTransactionAsync(application.MainDataSource).AwaitTask())
 				{
 					// first the get the object data
-					var obj = application.Objects.ObjectFromXml(transaction, xObject);
+					var obj = application.Objects.ObjectFromXml(transaction, xObject, pulledId);
 					VerfiyObjectType(obj);
-
-					// revision to update
-					if (obj.HeadRevId != -1 && obj.IsRev)
-					{
-						if (pulledId == -1)
-							throw new ArgumentException("Pulled revId is missing.");
-						else
-							obj.SetRevision(pulledId);
-					}
 
 					// create and load the dataset
 					var data = GetDataFromStream(src);
@@ -1329,7 +1324,7 @@ namespace TecWare.PPSn.Server
 			/// <param name="x"></param>
 			/// <returns></returns>
 			[LuaMember]
-			public PpsObjectAccess ObjectFromXml(PpsDataTransaction trans, XElement x)
+			public PpsObjectAccess ObjectFromXml(PpsDataTransaction trans, XElement x, long setInitRevision)
 			{
 				var objectId = x.GetAttribute(nameof(PpsObjectAccess.Id), -1L);
 				var objectGuid = x.GetAttribute(nameof(PpsObjectAccess.Guid), Guid.Empty);
@@ -1360,11 +1355,20 @@ namespace TecWare.PPSn.Server
 				if (x.TryGetAttribute<string>(nameof(PpsObjectAccess.MimeType), out var mimeType))
 					obj[nameof(PpsObjectAccess.MimeType)] = mimeType;
 
+				// initialize revision
+				if (obj.HeadRevId != -1 && obj.IsRev)
+				{
+					if (setInitRevision == -1)
+						throw new ArgumentException("Pulled revId is missing.");
+					else
+						obj.SetRevision(setInitRevision, PpsObjectUpdateFlag.Tags | PpsObjectUpdateFlag.Links);
+				}
+				
 				// ToDo: maybe provide an Interface and merge these two functions
 				// update tags
 				void UpdateTags(string tagName, IEnumerable<PpsObjectTagAccess> currentTags, Func<XElement, PpsObjectTagAccess> addTag)
 				{
-					var removeList = new List<PpsObjectTagAccess>(currentTags);
+					var removeList = new List<PpsObjectTagAccess>(currentTags.Where(c => c.IsRev));
 					foreach (var c in x.Elements(tagName))
 					{
 						var idx = removeList.IndexOf(addTag(c));

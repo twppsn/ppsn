@@ -193,7 +193,7 @@ namespace TecWare.PPSn.Server
 			CallTableMethodsWithExceptions(LuaOnAfterPush, obj, data);
 
 			obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
-			obj.Update(PpsObjectUpdateFlag.None);
+			obj.Update(PpsObjectUpdateFlag.All);
 
 			return true;
 		} // func PushData

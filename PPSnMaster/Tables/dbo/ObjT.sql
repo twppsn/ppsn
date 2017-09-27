@@ -6,8 +6,7 @@
 	[Key] NVARCHAR(200) NOT NULL,
 	[Class] INTEGER NOT NULL DEFAULT 0,
 	[Value] NVARCHAR(2048) NULL,
-	[UserId] BIGINT NOT NULL CONSTRAINT fkObjTUserId REFERENCES dbo.[User] (Id)
-	CONSTRAINT uqObjkIdKey UNIQUE ([ObjKId], [Key]), 
+	[UserId] BIGINT NOT NULL CONSTRAINT fkObjTUserId REFERENCES dbo.[User] (Id), 
     [CreateDate] DATETIME2 NOT NULL CONSTRAINT dfObjTCreateDate DEFAULT getdate()
 );
 GO
