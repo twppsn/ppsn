@@ -28,35 +28,60 @@
 		]]>
 	</ui:LuaValueConverter>
 
-	<PathGeometry x:Key="arrowPathGeometry"
-					  Figures="M5,9 L6,8 L12,14 L18,8 L19,9 L12,16 L5,9Z" />
-	<PathGeometry x:Key="clearPathGeometry"
-					  Figures="M6,7L 7,6L 12,11L 17,6L 18,7L 13,12L 18,17L 17,18L 12,13L 7,18L 6,17L 11,12L 6,7 Z" />
-	<PathGeometry x:Key="filterPathGeometry"
-					  Figures="M3,2H21V2H21V4H20.92L15,9.92V22.91L9,16.91V9.91L3.09,4H3V2M11,16.08L13,18.08V9H13.09L18.09,4H5.92L10.92,9H11V16.08Z" />
-
 	<ControlTemplate x:Key="PPSnComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}">
 		<Grid>
 			<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}"	BorderThickness="{TemplateBinding BorderThickness}"	Background="{TemplateBinding Background}" />
 			<Viewbox x:Name="arrowBox" HorizontalAlignment="Right" Width="20" Margin="0,0,1,0" Opacity=".5">
 				<Canvas Width="24" Height="24">
-					<Path Data="{StaticResource arrowPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}"/>
+					<Path x:Name="arrowPath" Data="M5,9 L6,8 L12,14 L18,8 L19,9 L12,16 L5,9Z" Fill="{StaticResource PPSnWindowForegroundBrush}"/>
 				</Canvas>
 			</Viewbox>
 		</Grid>
 		<ControlTemplate.Triggers>
-			<DataTrigger Binding="{Binding Path=IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}" Value="True">
-				<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
-				<Setter TargetName="arrowBox" Property="Opacity" Value="1"/>
-			</DataTrigger>
-			<DataTrigger Binding="{Binding Path=(uiC:PpsReadOnlyPaneBehavior.IsReadOnly), RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}">
+			<!-- not ComboBox, used for various controls-->
+			<DataTrigger Binding="{Binding Path=IsKeyboardFocusWithin, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type Control}}}">
 				<DataTrigger.Value>
 					<sys:Boolean>True</sys:Boolean>
 				</DataTrigger.Value>
-				<Setter TargetName="arrowBox" Property="Visibility" Value="Hidden"/>
+				<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
+				<Setter TargetName="arrowBox" Property="Opacity" Value=".75"/>
 			</DataTrigger>
-			<Trigger Property="IsEnabled" Value="False">
+			<Trigger Property="uiC:PpsReadOnlyPaneBehavior.IsReadOnly">
+				<Trigger.Value>
+					<sys:Boolean>True</sys:Boolean>
+				</Trigger.Value>
+				<Setter TargetName="arrowBox" Property="Visibility" Value="Hidden"/>
+			</Trigger>
+			<Trigger Property="IsEnabled">
+				<Trigger.Value>
+					<sys:Boolean>False</sys:Boolean>
+				</Trigger.Value>
 				<Setter TargetName="arrowBox" Property="Opacity" Value=".25"/>
+			</Trigger>
+			<Trigger Property="Tag">
+				<Trigger.Value>
+					<sys:Int32>1</sys:Int32>
+				</Trigger.Value>
+				<Setter TargetName="arrowBox" Property="Width" Value="18"/>
+				<Setter TargetName="arrowBox" Property="Margin" Value="0,0,2,0"/>
+				<Setter TargetName="arrowPath" Property="Data" Value="{DynamicResource magnifyPathGeometry}"/>
+			</Trigger>
+		</ControlTemplate.Triggers>
+	</ControlTemplate>
+
+	<ControlTemplate x:Key="PPSnComboBoxClearButtonTemplate" TargetType="{x:Type Button}">
+		<!--visual margin to dropDownArrow-->
+		<Border Background="Transparent" Padding="0,0,6,0">
+			<Viewbox x:Name="clearBox" Opacity=".75">
+				<Canvas Width="24" Height="24">
+					<Path Data="M6,7L 7,6L 12,11L 17,6L 18,7L 13,12L 18,17L 17,18L 12,13L 7,18L 6,17L 11,12L 6,7 Z"
+						  Fill="{StaticResource PPSnWindowForegroundBrush}"/>
+				</Canvas>
+			</Viewbox>
+		</Border>
+		<ControlTemplate.Triggers>
+			<Trigger Property="IsMouseOver" Value="True">
+				<Setter TargetName="clearBox" Property="Opacity" Value="1"/>
 			</Trigger>
 		</ControlTemplate.Triggers>
 	</ControlTemplate>
@@ -108,27 +133,12 @@
 									  IsChecked="{Binding Path=IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
 									  Template="{StaticResource PPSnComboBoxToggleButtonTemplate}" Background="{TemplateBinding Background}"
 									  BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}" />
-						<ContentPresenter x:Name="PART_ContentSite" Margin="5,3,23,3" IsHitTestVisible="False" HorizontalAlignment="Left" VerticalAlignment="Center"                              
+						<ContentPresenter x:Name="PART_ContentSite" Margin="5,3,23,3" IsHitTestVisible="False" HorizontalAlignment="Left" VerticalAlignment="Center"                           
 										  Content="{TemplateBinding ComboBox.SelectionBoxItem}" 
 										  ContentTemplate="{TemplateBinding ComboBox.SelectionBoxItemTemplate}"
 										  ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
-						<Button x:Name="clearButton" HorizontalAlignment="Right" Width="27" Margin="0,1,18,1" Focusable="False" Visibility="Hidden">
-							<Button.Template>
-								<ControlTemplate TargetType="{x:Type Button}">
-									<Border Background="Transparent" Padding="0,0,6,0">
-										<Viewbox x:Name="clearBox" Opacity=".70">
-											<Canvas Width="24" Height="24">
-												<Path Data="{StaticResource clearPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}"/>
-											</Canvas>
-										</Viewbox>
-									</Border>
-									<ControlTemplate.Triggers>
-										<Trigger Property="IsMouseOver" Value="True">
-											<Setter TargetName="clearBox" Property="Opacity" Value="1"/>
-										</Trigger>
-									</ControlTemplate.Triggers>
-								</ControlTemplate>
-							</Button.Template>
+						<Button x:Name="clearButton" HorizontalAlignment="Right" Width="27" Margin="0,2,18,2" Focusable="False" Visibility="Hidden"
+								Template="{StaticResource PPSnComboBoxClearButtonTemplate}">
 							<Button.Triggers>
 								<EventTrigger RoutedEvent="Button.Click">
 									<EventTrigger.Actions>
@@ -145,17 +155,19 @@
 								</EventTrigger>
 							</Button.Triggers>
 						</Button>
-						<TextBox Name="PART_EditableTextBox" Margin="5,3,23,3" IsReadOnly="{TemplateBinding IsReadOnly}" Visibility="Hidden" Background="Transparent" HorizontalAlignment="Left" VerticalAlignment="Center" Focusable="True" >
+						<TextBox Name="PART_EditableTextBox" Margin="5,3,23,3" IsReadOnly="{TemplateBinding IsReadOnly}" Visibility="Hidden" Background="Transparent"
+								 HorizontalContentAlignment="Left" VerticalContentAlignment="Center" Focusable="True">
 							<TextBox.Template>
 								<ControlTemplate TargetType="{x:Type TextBox}" >
-									<Border x:Name="PART_ContentHost" Focusable="False" />
+									<Border x:Name="PART_ContentHost" Focusable="False"/>
 								</ControlTemplate>
 							</TextBox.Template>
 						</TextBox>
-						<Popup Name="PART_Popup" Placement="Bottom" VerticalOffset="1" Focusable="False" AllowsTransparency="True" IsOpen="{TemplateBinding ComboBox.IsDropDownOpen}" PopupAnimation="Slide">
+						<Popup Name="PART_Popup" Placement="Bottom" VerticalOffset="1" Focusable="False" IsOpen="{TemplateBinding ComboBox.IsDropDownOpen}"
+							    AllowsTransparency="True" PopupAnimation="Slide">
 							<Grid Name="PART_DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding FrameworkElement.ActualWidth}" MaxHeight="{TemplateBinding ComboBox.MaxDropDownHeight}">
-								<Border Name="PART_DropDownBorder" Background="{StaticResource PPSnControlBackgroundBrush}" BorderThickness="1" BorderBrush="{StaticResource PPSnControlFocusedBorderBrush}">
-									<ScrollViewer SnapsToDevicePixels="True" Style="{DynamicResource PPSnScrollViewerStyle}" VerticalScrollBarVisibility="Auto">
+								<Border Name="PART_DropDownBorder" Background="{TemplateBinding Background}" BorderThickness="1" BorderBrush="{StaticResource PPSnControlFocusedBorderBrush}">
+									<ScrollViewer SnapsToDevicePixels="True" Style="{StaticResource PPSnScrollViewerStyle}" VerticalScrollBarVisibility="Auto">
 										<VirtualizingStackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
 									</ScrollViewer>
 								</Border>
@@ -185,6 +197,7 @@
 							</Trigger.Value>
 							<Setter TargetName="PART_ToggleButton" Property="IsEnabled" Value="False"/>
 							<Setter TargetName="PART_EditableTextBox" Property="IsEnabled" Value="False"/>
+							<Setter TargetName="PART_ContentSite" Property="Margin" Value="5,3"/>
 							<!--KeyBoard-Selection-->
 							<Setter Property="Focusable" Value="False"/>
 						</Trigger>
@@ -241,38 +254,24 @@
 		<Grid>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition/>
-				<ColumnDefinition Width="32" />
-				<ColumnDefinition Width="32" />
+				<ColumnDefinition Width="27" />
+				<ColumnDefinition Width="20" />
 			</Grid.ColumnDefinitions>
 			<Border x:Name="border" Grid.ColumnSpan="3" BorderBrush="{TemplateBinding BorderBrush}"
 					BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" />
 			<TextBlock x:Name="emptyText" Grid.Column="0" Margin="6,3" VerticalAlignment="Center" Visibility="Hidden" Foreground="{StaticResource PPSnWindowForegroundBrush}"
 					   Text="{Binding Path=Tag, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}, Mode=OneTime}"/>
-			<Button x:Name="clearButton" Grid.Column="1" Margin="0,1" Focusable="False"
+			<Button x:Name="clearButton" Grid.Column="1" Margin="0,1" Focusable="False" Template="{StaticResource PPSnComboBoxClearButtonTemplate}"
 					Command="{Binding Path=(uiC:PpsSelectionChangedBehavior.Command), RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ComboBox}}, Mode=OneWay}">
-				<Button.Template>
-					<ControlTemplate TargetType="{x:Type Button}">
-						<Border Background="Transparent">
-							<Viewbox x:Name="clearBox" Margin="3" Opacity=".65">
-								<Canvas Width="24" Height="24">
-									<Path Data="{StaticResource clearPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}"/>
-								</Canvas>
-							</Viewbox>
-						</Border>
-						<ControlTemplate.Triggers>
-							<Trigger Property="IsMouseOver" Value="True">
-								<Setter TargetName="clearBox" Property="Opacity" Value="1"/>
-							</Trigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Button.Template>
 			</Button>
-			<Viewbox Grid.Column="2" Margin="8" Opacity=".65" >
+			<Viewbox x:Name="filterBox" Grid.Column="2" Margin="0,0,4,0" Opacity=".5" >
 				<Canvas Width="24" Height="24">
-					<Path Data="{StaticResource filterPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}"/>
+					<Path Data="M3,2H21V2H21V4H20.92L15,9.92V22.91L9,16.91V9.91L3.09,4H3V2M11,16.08L13,18.08V9H13.09L18.09,4H5.92L10.92,9H11V16.08Z" 
+						  Fill="{StaticResource PPSnWindowForegroundBrush}"/>
 				</Canvas>
 			</Viewbox>
 		</Grid>
+
 		<ControlTemplate.Triggers>
 			<DataTrigger Binding="{Binding Path=SelectedIndex, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}, Mode=OneWay, Converter={StaticResource SelectedIndexConverter}}">
 				<DataTrigger.Value>
@@ -289,6 +288,7 @@
 			</DataTrigger>
 			<DataTrigger Binding="{Binding Path=IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}" Value="True">
 				<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
+				<Setter Property="Opacity" TargetName="filterBox" Value=".75"/>
 				<Setter Property="BorderThickness" TargetName="border" Value="1"/>
 			</DataTrigger>
 		</ControlTemplate.Triggers>
@@ -319,8 +319,8 @@
 							   IsOpen="{TemplateBinding ComboBox.IsDropDownOpen}" PopupAnimation="Slide">
 							<Grid Name="PART_DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding FrameworkElement.ActualWidth}"
 								  MaxHeight="{TemplateBinding ComboBox.MaxDropDownHeight}">
-								<Border Name="PART_DropDownBorder" Background="{StaticResource PPSnControlBackgroundBrush}" BorderThickness="1" BorderBrush="{StaticResource PPSnControlFocusedBorderBrush}">
-									<ScrollViewer SnapsToDevicePixels="True" Style="{DynamicResource PPSnScrollViewerStyle}" VerticalScrollBarVisibility="Auto">
+								<Border Name="PART_DropDownBorder" Background="{TemplateBinding Background}" BorderThickness="1" BorderBrush="{StaticResource PPSnControlFocusedBorderBrush}">
+									<ScrollViewer SnapsToDevicePixels="True" Style="{StaticResource PPSnScrollViewerStyle}" VerticalScrollBarVisibility="Auto">
 										<VirtualizingStackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
 									</ScrollViewer>
 								</Border>
