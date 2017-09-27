@@ -19,22 +19,31 @@ specific language governing permissions and limitations under the Licence.
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
 			 xmlns:ui="clr-namespace:TecWare.PPSn.UI"
-             xmlns:local="clr-namespace:TecWare.PPSn.Controls"
+             xmlns:uiL="clr-namespace:TecWare.PPSn.Controls"
              mc:Ignorable="d"
 			 BorderThickness="1"
 			 BorderBrush="{StaticResource PPSnSeparatorBrush}"
              d:DesignHeight="300" d:DesignWidth="300">
-
 	<UserControl.Resources>
 		<ui:PpsImageResourceKeyConverter x:Key="imageResourceKeyConverter"/>
 	</UserControl.Resources>
+
+	<!--<uiL:PpsAttachmentsControl.Commands>
+		<ui:PpsUICommandButton Command="{x:Static uiL:PpsAttachmentsControl.AddFileAttachmentCommand}"
+							   Image="filePlus" Description="Fügt einen Anhang hinzu" />
+		<ui:PpsUICommandButton Command="{x:Static uiL:PpsAttachmentsControl.AddLinkAttachmentCommand}"
+							   Image="link" Description="Fügt eine Verknüpfung hinzu" />
+		<ui:PpsUICommandButton Command="{x:Static uiL:PpsAttachmentsControl.CameraAttachmentCommand}"
+							   Image="camera" Description="Öffnet das Kameramodul" />
+	</uiL:PpsAttachmentsControl.Commands>-->	
 
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="auto"/>
 			<RowDefinition/>
 		</Grid.RowDefinitions>
-		<ItemsControl ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=Commands, Mode=OneWay}">
+
+		<ItemsControl ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=Commands, Mode=OneWay}" Focusable="False">
 			<ItemsControl.ItemsPanel>
 				<ItemsPanelTemplate>
 					<WrapPanel Orientation="Horizontal"/>
@@ -48,7 +57,7 @@ specific language governing permissions and limitations under the Licence.
 							ToolTip="{Binding Description}"
 							Style="{StaticResource PPSnImageButtonStyle}"/>
 					<DataTemplate.Triggers>
-						<Trigger Property="local:PpsReadOnlyPaneBehavior.IsReadOnly">
+						<Trigger Property="uiL:PpsReadOnlyPaneBehavior.IsReadOnly">
 							<Trigger.Value>
 								<sys:Boolean>True</sys:Boolean>
 							</Trigger.Value>
@@ -94,13 +103,13 @@ specific language governing permissions and limitations under the Licence.
 							</Grid>
 						</Border>
 						<DockPanel x:Name="panCommands" LastChildFill="False" HorizontalAlignment="Right" Margin="0,-6,-6,-6" Visibility="Hidden">
-							<Button Command="{x:Static local:PpsAttachmentsControl.RunFileAttachmentCommand}"
+							<Button Command="{x:Static uiL:PpsAttachmentsControl.RunFileAttachmentCommand}"
 									MinWidth="34" DockPanel.Dock="Top"
 									Background="{StaticResource PPSnWindowBackgroundBrush}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
 									Tag="{StaticResource openInAppPathGeometry}"
 									Style="{StaticResource PPSnCircleButtonStyle}"/>
 							<Button x:Name="removeButton"
-									Command="{x:Static local:PpsAttachmentsControl.RemoveAttachmentCommand}"
+									Command="{x:Static uiL:PpsAttachmentsControl.RemoveAttachmentCommand}"
 									MinWidth="34" DockPanel.Dock="Bottom"
 									Background="{StaticResource PPSnWindowBackgroundBrush}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
 									Tag="{StaticResource deletePathGeometry}"
@@ -133,7 +142,7 @@ specific language governing permissions and limitations under the Licence.
 							<Setter TargetName="panCommands" Property="Visibility" Value="Visible"/>
 						</MultiDataTrigger>
 
-						<Trigger Property="local:PpsReadOnlyPaneBehavior.IsReadOnly">
+						<Trigger Property="uiL:PpsReadOnlyPaneBehavior.IsReadOnly">
 							<Trigger.Value>
 								<sys:Boolean>True</sys:Boolean>
 							</Trigger.Value>
