@@ -402,7 +402,7 @@ namespace TecWare.PPSn.Server
 					{
 						{ "upsert", "dbo.ObjT" },
 						{ "columnList", new LuaTable { "ObjKId", "ObjRId", "Key", "Class", "Value", "UserId", "CreateDate" } },
-						{ "on", new LuaTable { "ObjKId", "ObjRId", "Key", "Class", "UserId" } }
+						{ "on", new LuaTable { "ObjKId", "ObjRId", "Key", "UserId" } }
 					};
 					#endregion
 

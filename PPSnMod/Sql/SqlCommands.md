@@ -76,9 +76,14 @@ columnList: alias are allowed, because we can have more than one table
 
 {
 	upsert = "dbo.Table",
-	columnList = { "Col1", "Col2", "Coln"}
+	columnList = { "Col1", "Col2", "Coln" }
+	on = { "Col1", "Col2" }
 	rows
 }
+
+columnList: column/alias list with all columns that will be touched.
+on: optional modification of the on-clause. Compare columns.
+
 
 rows: is possible to set an whole row set
 

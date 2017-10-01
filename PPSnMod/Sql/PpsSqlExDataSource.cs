@@ -1242,13 +1242,17 @@ namespace TecWare.PPSn.Server.Sql
 
 					#region -- on --
 					commandText.Append("ON ");
-					var onClause = GetArguments(parameter.GetMemberValue("on"), false);
-					if (onClause == null) // no on clause use primary key
+					var onClauseValue = parameter.GetMemberValue("on");
+					if (onClauseValue == null) // no on clause use primary key
 					{
 						var col = tableInfo.PrimaryKey ?? throw new ArgumentNullException("primaryKey", $"Table {tableInfo.QuallifiedName} has no primary key (use the onClause).");
 						ExecuteUpsertAppendOnClause(commandText, col);
 					}
-					else // create the on clause from colums
+					else if (onClauseValue is string onClauseString) // on clause is defined as expression
+					{
+						commandText.Append(onClauseString);
+					}
+					else if (onClauseValue is LuaTable onClause) // create the on clause from colums
 					{
 						first = true;
 						foreach (var p in onClause.ArrayList)
@@ -1261,6 +1265,8 @@ namespace TecWare.PPSn.Server.Sql
 							ExecuteUpsertAppendOnClause(commandText, col);
 						}
 					}
+					else
+						throw new ArgumentException("Can not interpret on-clause.");
 					commandText.Append(" ");
 					#endregion
 
@@ -1316,6 +1322,11 @@ namespace TecWare.PPSn.Server.Sql
 					#region -- when not matched by source --
 
 					// delete, or update to deleted?
+					if (parameter.GetMemberValue("nmsrc") is LuaTable notMatchedSource)
+					{
+						if (notMatchedSource["delete"] != null)
+							commandText.Append("WHEN NOT MATCHED BY SOURCE THEN DELETE ");
+					}
 
 					#endregion
 					
@@ -2202,10 +2213,15 @@ namespace TecWare.PPSn.Server.Sql
 				var command = SqlConnection.CreateCommand();
 				try
 				{
-					command.Transaction = transaction;
-					command.CommandText = isFull ?
+					var commandText = isFull ?
 						PrepareFullCommand(table, tableInfo) :
 						PrepareChangeTrackingCommand(table, tableInfo, columnInfo, lastSyncId);
+
+					if (table.Name == "ObjectTags") // special case for tags
+						commandText += " WHERE d.ObjRId is null"; // only no rev tags
+
+					command.Transaction = transaction;
+					command.CommandText = commandText;
 
 					return new SqlSynchronizationBatch(startCurrentSyncId, command, isFull);
 				}

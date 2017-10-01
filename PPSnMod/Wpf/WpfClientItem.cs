@@ -23,6 +23,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Server;
@@ -970,8 +971,8 @@ namespace TecWare.PPSn.Server.Wpf
 		#endregion
 
 		#region -- Master-Data Synchronisation --------------------------------------------
-
-		private static void PrepareMasterDataSyncArguments(IDEWebRequestScope r, string tableName, long syncId, long lastSyncTimeStamp, out Dictionary<string, long> syncIds, out bool syncAllTables, out DateTime lastSynchronization)
+		
+		private static void PrepareMasterDataSyncArguments(IDEWebRequestScope r, string tableName, long syncId, long lastSyncTimeStamp, out Dictionary<string, long> syncIds, out bool syncAllTables, out DateTime lastSynchronization, LuaTable updateTags)
 		{
 			syncIds = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 			if (r.HasInputData)
@@ -998,6 +999,24 @@ namespace TecWare.PPSn.Server.Wpf
 									xml.Skip();
 								else
 									xml.Read();
+							}
+							else if (xml.LocalName == "utag")
+							{
+								updateTags.ArrayList.Add(new LuaTable
+								{
+									["Id"] = xml.GetAttribute("id", -1L),
+									["ObjectId"] = xml.GetAttribute("objectId", -1L),
+									["Key"] = xml.GetAttribute("name", String.Empty),
+									["Class"] = xml.GetAttribute("tagClass", -1),
+									["UserId"] = xml.GetAttribute("userId", -1),
+									["CreateDate"] = xml.GetAttribute("createDate", DateTime.Now),
+									["Value"] = xml.GetElementContent((string)null)
+								});
+
+								if (!xml.IsEmptyElement)
+									xml.Skip();
+								else
+									xml.Read(); // read element
 							}
 							else
 								xml.Skip();
@@ -1149,12 +1168,31 @@ namespace TecWare.PPSn.Server.Wpf
 			if (masterDataSetDefinition == null || !masterDataSetDefinition.IsInitialized)
 				throw new ArgumentException("Masterdata schema not initialized.");
 
+			var updateTags = new LuaTable
+			{
+				["upsert"] = "dbo.ObjT",
+				["columnList"] = new LuaTable { "Id", "ObjKId", "Key", "UserId", "Class", "Value", "CreateDate" },
+				["on"] = new LuaTable { "ObjKId", "Key", "UserId" },
+				["nmsrc"] = new LuaTable { ["delete"] = true }
+			};
+
 			// parse incomming sync id's
-			PrepareMasterDataSyncArguments(r, tableName, syncId, syncStamp, out var syncIds, out var syncAllTables, out var lastSynchronization);
+			PrepareMasterDataSyncArguments(r, tableName, syncId, syncStamp, out var syncIds, out var syncAllTables, out var lastSynchronization, updateTags);
 
 			var synchronisationSessions = new Dictionary<PpsDataSource, PpsDataSynchronization>();
 			var msg = Log.CreateScope(LogMsgType.Information, autoFlush: false, stopTime: true);
 
+			// update tags
+			if (updateTags.ArrayList.Count > 0)
+			{
+				using (var trans = user.CreateTransactionAsync(application.MainDataSource).AwaitTask())
+				{
+					trans.ExecuteSingleResult(updateTags);
+					trans.Commit();
+				}
+			}
+
+			// return changes
 			var nextSyncStamp = DateTime.Now.ToFileTimeUtc();
 			using (var xml = XmlWriter.Create(r.GetOutputTextWriter(MimeTypes.Text.Xml, Encoding.UTF8), Procs.XmlWriterSettings))
 			{

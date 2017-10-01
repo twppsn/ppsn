@@ -18,6 +18,8 @@ CREATE INDEX [idxObjtObjrId] ON [dbo].[ObjT] ([ObjRId])
 GO
 CREATE INDEX [idxObjtUserId] ON [dbo].[ObjT] ([UserId])
 GO
+CREATE UNIQUE INDEX [idxObjTKeyUserId] ON [dbo].[ObjT] ([ObjKId], [ObjRId], [Key], [UserId])
+GO
 
 EXEC sp_addextendedproperty @name = N'MS_Description',
     @value = N'Tag name',
