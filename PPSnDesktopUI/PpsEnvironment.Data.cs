@@ -482,6 +482,8 @@ namespace TecWare.PPSn
 		public const string MasterDataSchema = "masterData";
 		private const string refreshColumnName = "_IsUpdated";
 
+		private const string objectTagsTableName = "ObjectTags";
+
 		#region -- class SqLiteParameterDictionaryWrapper -------------------------------
 
 		private sealed class SqLiteParameterDictionaryWrapper : IPropertyReadOnlyDictionary
@@ -726,6 +728,7 @@ namespace TecWare.PPSn
 		private DateTime lastSynchronizationSchema = DateTime.MinValue; // last synchronization of the schema
 		private DateTime lastSynchronizationStamp = DateTime.MinValue;  // last synchronization stamp
 		private bool isSynchronizationStarted = false; // number of sync processes
+		private bool isObjectTagsDirty = true; // synchronize object tags
 
 		private bool isDisposed = false;
 		private readonly object synchronizationLock = new object();
@@ -1163,17 +1166,319 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- FetchData ------------------------------------------------------------
+		#region -- FetchData ----------------------------------------------------------
 
-		#region -- class ProcessBatch -----------------------------------------------
+		#region -- class ProcessBatchBase ---------------------------------------------
 
-		private sealed class ProcessBatch : IDisposable
+		private abstract class ProcessBatchBase : IDisposable
 		{
 			private readonly PpsMasterData masterData;
 			private readonly PpsDataTableDefinition table;
 			private readonly PpsMasterDataTransaction transaction;
 			private readonly bool isFull;
 
+			private bool isDisposed = false;
+
+			public ProcessBatchBase(PpsMasterDataTransaction transaction, PpsMasterData masterData, string tableName, bool isFull)
+			{
+				this.masterData = masterData;
+				this.transaction = transaction;
+				this.isFull = isFull;
+
+				// check definition
+				this.table = masterData.schema.FindTable(tableName) ?? throw new ArgumentOutOfRangeException(nameof(tableName), tableName, $"Could not find master table '{tableName}.'");
+			} // ctor
+
+			// This code added to correctly implement the disposable pattern.
+			public void Dispose()
+			{
+				Dispose(true);
+			} // proc Dispose
+
+			protected virtual void Dispose(bool disposing)
+			{
+				if (!isDisposed)
+				{
+					if (disposing)
+					{
+					}
+					isDisposed = true;
+				}
+			} // proc Dispose
+
+			public abstract void Prepare();
+
+			public abstract void Clean();
+
+			public void Parse(XmlReader xml, IProgress<string> progress)
+			{
+				var objectCounter = 0;
+				var lastProgress = Environment.TickCount;
+				var parameterValues = new string[ColumnCount];
+
+				while (xml.NodeType == XmlNodeType.Element)
+				{
+					if (xml.IsEmptyElement) // skip empty element
+					{
+						xml.Read();
+						continue;
+					}
+
+					// action to process
+					var actionName = xml.LocalName.ToLower();
+					if (actionName != "r"
+						&& actionName != "u"
+						&& actionName != "i"
+						&& actionName != "d"
+						&& actionName != "syncid")
+						throw new InvalidOperationException($"The operation {actionName} is not supported.");
+
+					if (actionName == "syncid")
+					{
+						#region -- update SyncState --
+						xml.Read(); // read element
+
+						var newSyncId = xml.GetElementContent<long>(-1);
+						if (newSyncId == -1)
+						{
+							using (var cmd = Transaction.CreateNativeCommand("DELETE FROM main.[SyncState] WHERE [Table] = @Table"))
+							{
+								cmd.AddParameter("@Table", DbType.String, Table.Name);
+								cmd.ExecuteNonQueryEx();
+							}
+						}
+						else
+						{
+							using (var cmd = Transaction.CreateNativeCommand(
+								"INSERT OR REPLACE INTO main.[SyncState] ([Table], [SyncId]) " +
+								"VALUES (@Table, @SyncId);"))
+							{
+								cmd.AddParameter("@Table", DbType.String, Table.Name);
+								cmd.AddParameter("@SyncId", DbType.Int64, newSyncId);
+								cmd.ExecuteNonQueryEx();
+							}
+						}
+						#endregion
+					}
+					else
+					{
+						#region -- upsert --
+
+						Array.Clear(parameterValues, 0, parameterValues.Length);
+
+						// collect values
+						xml.Read();
+						while (xml.NodeType == XmlNodeType.Element)
+						{
+							if (xml.IsEmptyElement) // read column data
+								xml.Read();
+							else
+							{
+								var columnName = xml.LocalName;
+								if (columnName.StartsWith("c") && Int32.TryParse(columnName.Substring(1), out var columnIndex))
+								{
+									xml.Read();
+									parameterValues[columnIndex] = xml.ReadContentAsString();
+									xml.ReadEndElement();
+								}
+								else
+									xml.Skip();
+							}
+						}
+
+						ProcessCurrentNode(actionName, parameterValues);
+
+						objectCounter++;
+						if (progress != null && unchecked(Environment.TickCount - lastProgress) > 500)
+						{
+							progress.Report(String.Format(Resources.MasterDataFetchSyncString, Table.Name + " (" + objectCounter.ToString("N0") + ")"));
+							lastProgress = Environment.TickCount;
+						}
+
+						#endregion
+					}
+
+					xml.ReadEndElement();
+				}
+				if (objectCounter > 0)
+					Trace.TraceInformation($"Synchonization of {Table.Name} finished ({objectCounter:N0} objects).");
+			} // proc Parse
+
+			protected abstract void ProcessCurrentNode(string actionName, string[] parameterValues);
+
+			protected abstract int ColumnCount { get; }
+
+			public PpsMasterData MasterData => masterData;
+			public PpsMasterDataTransaction Transaction => transaction;
+			public bool IsFull => isFull;
+			public PpsDataTableDefinition Table => table;
+		} // class ProcessBatchBase
+
+		#endregion
+
+		#region -- class ProcessBatchTags ---------------------------------------------
+
+		private sealed class ProcessBatchTags : ProcessBatchBase
+		{
+			private readonly DbCommand existsCommand;
+			private readonly DbParameter parameterExistsId;
+			private readonly DbParameter parameterExistsObjectId;
+			private readonly DbParameter parameterExistsKey;
+			private readonly DbParameter parameterExistsUserId;
+
+			private readonly DbCommand updateCommand;
+			private readonly DbParameter parameterUpdateOldId;
+			private readonly DbParameter parameterUpdateNewId;
+			private readonly DbParameter parameterUpdateObjectId;
+			private readonly DbParameter parameterUpdateKey;
+			private readonly DbParameter parameterUpdateUserId;
+			private readonly DbParameter parameterUpdateClass;
+			private readonly DbParameter parameterUpdateValue;
+			private readonly DbParameter parameterUpdateCreateDate;
+
+
+			private readonly DbCommand insertCommand;
+			private readonly DbParameter parameterInsertId;
+			private readonly DbParameter parameterInsertObjectId;
+			private readonly DbParameter parameterInsertKey;
+			private readonly DbParameter parameterInsertUserId;
+			private readonly DbParameter parameterInsertClass;
+			private readonly DbParameter parameterInsertValue;
+			private readonly DbParameter parameterInsertCreateDate;
+
+			private readonly DbCommand deleteCommand;
+			private readonly DbParameter parameterDeleteId;
+
+			public ProcessBatchTags(PpsMasterDataTransaction transaction, PpsMasterData masterData, string tableName, bool isFull)
+				: base(transaction, masterData, tableName, isFull)
+			{
+				existsCommand = transaction.CreateNativeCommand("SELECT [Id] FROM main.[ObjectTags] WHERE [Id] = @OldId OR ([ObjectId] = @ObjectId AND [Key] = @Key AND [UserId] = @UserId)");
+				parameterExistsId = existsCommand.AddParameter("@OldId", DbType.Int64);
+				parameterExistsObjectId = existsCommand.AddParameter("@ObjectId", DbType.Int64);
+				parameterExistsKey = existsCommand.AddParameter("@Key", DbType.String);
+				parameterExistsUserId = existsCommand.AddParameter("@UserId", DbType.Int64);
+
+				updateCommand = transaction.CreateNativeCommand("UPDATE main.[ObjectTags] SET " +
+					"[Id] = @NewId, " +
+					"[ObjectId] = @ObjectId, " +
+					"[Key] = @Key, " +
+					"[UserId] = @UserId, " +
+					"[Class] = @Class, " +
+					"[Value] = @Value, " +
+					"[CreateDate] = @CreateDate, " +
+					"[LocalClass] = CASE WHEN [UserId] <> 0 THEN null ELSE [LocalClass] END, " +
+					"[LocalValue] = CASE WHEN [UserId] <> 0 THEN null ELSE [LocalValue] END, " +
+					"[" + refreshColumnName + "] = CASE WHEN [UserId] <> 0 THEN 0 ELSE [" + refreshColumnName + "] END " +
+					"WHERE [Id] = @OldId"
+				);
+				parameterUpdateOldId = updateCommand.AddParameter("@OldId", DbType.Int64);
+				parameterUpdateNewId = updateCommand.AddParameter("@NewId", DbType.Int64);
+				parameterUpdateObjectId = updateCommand.AddParameter("@ObjectId", DbType.Int64);
+				parameterUpdateKey = updateCommand.AddParameter("@Key", DbType.String);
+				parameterUpdateUserId = updateCommand.AddParameter("@UserId", DbType.Int64);
+				parameterUpdateClass = updateCommand.AddParameter("@Class", DbType.Int32);
+				parameterUpdateValue = updateCommand.AddParameter("@Value", DbType.String);
+				parameterUpdateCreateDate = updateCommand.AddParameter("@CreateDate", DbType.DateTime);
+
+				insertCommand = transaction.CreateNativeCommand("INSERT INTO main.[ObjectTags] ([Id], [ObjectId], [Key], [UserId], [Class], [Value], [CreateDate], [LocalClass], [LocalValue], [" + refreshColumnName + "]) VALUES (@Id, @ObjectId, @Key, @UserId, @Class, @Value, @CreateDate, null, null, 0)");
+				parameterInsertId = insertCommand.AddParameter("@Id", DbType.Int64);
+				parameterInsertObjectId = insertCommand.AddParameter("@ObjectId", DbType.Int64);
+				parameterInsertKey = insertCommand.AddParameter("@Key", DbType.String);
+				parameterInsertUserId = insertCommand.AddParameter("@UserId", DbType.Int64);
+				parameterInsertClass = insertCommand.AddParameter("@Class", DbType.Int32);
+				parameterInsertValue = insertCommand.AddParameter("@Value", DbType.String);
+				parameterInsertCreateDate = insertCommand.AddParameter("@CreateDate", DbType.DateTime);
+
+				deleteCommand = transaction.CreateNativeCommand("DELETE FROM main.[ObjectTags] WHERE Id = @Id AND ([UserId] <> 0 OR ([UserId] = 0 AND [LocalClass] IS NULL))");
+				parameterDeleteId = deleteCommand.AddParameter("@Id", DbType.Int64);
+			} // ctor
+
+			public override void Prepare()
+			{
+				if (IsFull)
+				{
+					// mark all columns
+					using (var cmd = Transaction.CreateNativeCommand("UPDATE main.[ObjectTags] SET [" + refreshColumnName + "] = null WHERE [" + refreshColumnName + "] <> 1 AND [LocalClass] IS NULL"))
+						cmd.ExecuteNonQueryEx();
+				}
+			} // proc Prepare
+
+			protected override void ProcessCurrentNode(string actionName, string[] parameterValues)
+			{
+				if (actionName[0] == 'd')
+				{
+					parameterDeleteId.Value = ConvertStringToSQLiteValue(parameterValues[0], DbType.Int64);
+					deleteCommand.ExecuteNonQuery();
+				}
+				else
+				{
+					var remoteId = ConvertStringToSQLiteValue(parameterValues[0], DbType.Int64);
+					var remoteObjectId = ConvertStringToSQLiteValue(parameterValues[1], DbType.Int64);
+					var remoteKey = parameterValues[2];
+					var remoteClass = ConvertStringToSQLiteValue(parameterValues[3], DbType.Int32);
+					var remoteValue = parameterValues[4];
+					var remoteUserId = ConvertStringToSQLiteValue(parameterValues[7], DbType.Int64);
+					var remoteDateTime = ConvertStringToSQLiteValue(parameterValues[8], DbType.DateTime);
+
+
+
+					// check if the row exists
+					parameterExistsId.Value = remoteId;
+					parameterExistsObjectId.Value = remoteObjectId;
+					parameterExistsKey.Value = remoteKey;
+					parameterExistsUserId.Value = remoteUserId;
+
+					long? rowId;
+					using (var r = existsCommand.ExecuteReaderEx())
+						rowId = r.Read() ? r.GetInt64(0) : (long?)null;
+
+					// update row
+					if (rowId.HasValue)
+					{
+						parameterUpdateOldId.Value = rowId.Value;
+						parameterUpdateNewId.Value = remoteId;
+						parameterUpdateObjectId.Value = remoteObjectId;
+						parameterUpdateKey.Value = remoteKey;
+						parameterUpdateUserId.Value = remoteUserId;
+						parameterUpdateClass.Value = remoteClass;
+						parameterUpdateValue.Value = remoteValue;
+						parameterUpdateCreateDate.Value = remoteDateTime;
+
+						updateCommand.ExecuteNonQueryEx();
+					}
+					else // insert row
+					{
+						parameterInsertId.Value = remoteId;
+						parameterInsertObjectId.Value = remoteObjectId;
+						parameterInsertKey.Value = remoteKey;
+						parameterInsertUserId.Value = remoteUserId;
+						parameterInsertClass.Value = remoteClass;
+						parameterInsertValue.Value = remoteValue;
+						parameterInsertCreateDate.Value = remoteDateTime;
+
+						insertCommand.ExecuteNonQueryEx();
+					}
+				}
+			} // proc ProcessCurrentNode
+
+			public override void Clean()
+			{
+				if (IsFull)
+				{
+					using (var cmd = Transaction.CreateNativeCommand("DELETE FROM main.[ObjectTags] WHERE [" + refreshColumnName + "] IS NULL"))
+						cmd.ExecuteNonQueryEx();
+				}
+			} // proc Clean
+
+			protected override int ColumnCount => 9;
+		} // class ProcessBatchTags
+
+		#endregion
+
+		#region -- class ProcessBatchGeneric ------------------------------------------
+
+		private sealed class ProcessBatchGeneric : ProcessBatchBase
+		{
 			private readonly int physPrimaryColumnIndex;
 			private readonly int virtPrimaryColumnIndex;
 			private readonly SQLiteCommand existCommand;
@@ -1192,37 +1497,27 @@ namespace TecWare.PPSn
 
 			#region -- Ctor/Dtor ----------------------------------------------------
 
-			public ProcessBatch(PpsMasterDataTransaction transaction, PpsMasterData masterData, string tableName, bool isFull)
+			public ProcessBatchGeneric(PpsMasterDataTransaction transaction, PpsMasterData masterData, string tableName, bool isFull)
+				: base(transaction, masterData, tableName, isFull)
 			{
-				this.masterData = masterData;
-				this.transaction = transaction;
-				this.isFull = isFull;
+				var physPrimaryKey = Table.PrimaryKey ?? throw new ArgumentException($"Table '{Table.Name}' has no primary key.", nameof(Table.PrimaryKey));
 
-				// check definition
-				this.table = masterData.schema.FindTable(tableName);
-				if (table == null)
-					throw new ArgumentOutOfRangeException(nameof(tableName), tableName, $"Could not find master table '{tableName}.'");
+				var alternativePrimaryKey = Table.Meta.GetProperty<string>("useAsKey", null);
+				var virtPrimaryKey = String.IsNullOrEmpty(alternativePrimaryKey) ? physPrimaryKey : Table.Columns[alternativePrimaryKey];
 
-				var physPrimaryKey = table.PrimaryKey;
-				if (physPrimaryKey == null)
-					throw new ArgumentException($"Table '{table.Name}' has no primary key.", nameof(physPrimaryKey));
-
-				var alternativePrimaryKey = table.Meta.GetProperty<string>("useAsKey", null);
-				var virtPrimaryKey = String.IsNullOrEmpty(alternativePrimaryKey) ? table.PrimaryKey : table.Columns[alternativePrimaryKey];
-
-				refreshColumnIndex = table.FindColumnIndex(refreshColumnName);
+				refreshColumnIndex = Table.FindColumnIndex(refreshColumnName);
 
 				// prepare column parameter
 				insertCommand = (SQLiteCommand)transaction.CreateNativeCommand(String.Empty);
 				updateCommand = (SQLiteCommand)transaction.CreateNativeCommand(String.Empty);
-				insertParameters = new SQLiteParameter[table.Columns.Count];
-				updateParameters = new SQLiteParameter[table.Columns.Count];
+				insertParameters = new SQLiteParameter[Table.Columns.Count];
+				updateParameters = new SQLiteParameter[Table.Columns.Count];
 
 				physPrimaryColumnIndex = -1;
 				virtPrimaryColumnIndex = -1;
-				for (var i = 0; i < table.Columns.Count; i++)
+				for (var i = 0; i < Table.Columns.Count; i++)
 				{
-					var column = table.Columns[i];
+					var column = Table.Columns[i];
 					var syncSourceColumn = column.Meta.GetProperty(PpsDataColumnMetaData.SourceColumn, String.Empty);
 					if (syncSourceColumn == "#")
 					{
@@ -1278,19 +1573,19 @@ namespace TecWare.PPSn
 				}
 
 				insertCommand.CommandText =
-					"INSERT INTO main.[" + table.Name + "] (" + insertColumnList() + ") " +
+					"INSERT INTO main.[" + Table.Name + "] (" + insertColumnList() + ") " +
 					"VALUES (" + insertValueList() + ");";
 
-				updateCommand.CommandText = "UPDATE main.[" + table.Name + "] SET " +
+				updateCommand.CommandText = "UPDATE main.[" + Table.Name + "] SET " +
 					updateColumnValueList() +
 					" WHERE [" + updateParameters[virtPrimaryColumnIndex].SourceColumn + "] = " + updateParameters[virtPrimaryColumnIndex].ParameterName;
 
 				// prepare exists
-				existCommand = (SQLiteCommand)transaction.CreateNativeCommand("SELECT EXISTS(SELECT * FROM main.[" + table.Name + "] WHERE [" + virtPrimaryKey.Name + "] = @Id)");
+				existCommand = (SQLiteCommand)transaction.CreateNativeCommand("SELECT EXISTS(SELECT * FROM main.[" + Table.Name + "] WHERE [" + virtPrimaryKey.Name + "] = @Id)");
 				existIdParameter = existCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(virtPrimaryKey.DataType));
 
 				// prepare delete
-				deleteCommand = (SQLiteCommand)transaction.CreateNativeCommand("DELETE FROM main.[" + table.Name + "] WHERE [" + physPrimaryKey.Name + "] = @Id;");
+				deleteCommand = (SQLiteCommand)transaction.CreateNativeCommand("DELETE FROM main.[" + Table.Name + "] WHERE [" + physPrimaryKey.Name + "] = @Id;");
 				deleteIdParameter = deleteCommand.Parameters.Add("@Id", ConvertDataTypeToDbType(physPrimaryKey.DataType));
 
 				existCommand.Prepare();
@@ -1299,175 +1594,106 @@ namespace TecWare.PPSn
 				deleteCommand.Prepare();
 			} // ctor
 
-			public void Dispose()
+			protected override void Dispose(bool disposing)
 			{
-				existCommand?.Dispose();
-				insertCommand?.Dispose();
-				updateCommand?.Dispose();
-				deleteCommand?.Dispose();
-			} // proc Dispose
+				try
+				{
+					if (disposing)
+					{
+						existCommand?.Dispose();
+						insertCommand?.Dispose();
+						updateCommand?.Dispose();
+						deleteCommand?.Dispose();
+					}
+				}
+				finally
+				{
+					base.Dispose(disposing);
+				}
+			}// proc Dispose
 
 			#endregion
 
 			#region -- Parse --------------------------------------------------------
 
-			public void Prepare()
+			public override void Prepare()
 			{
 				// clear table, is full mode
-				if (isFull)
+				if (IsFull)
 				{
 					if (refreshColumnIndex == -1)
 					{
-						using (var cmd = transaction.CreateNativeCommand($"DELETE FROM main.[{table.Name}]"))
+						using (var cmd = Transaction.CreateNativeCommand($"DELETE FROM main.[{Table.Name}]"))
 							cmd.ExecuteNonQueryEx();
 					}
 					else
 					{
-						using (var cmd = transaction.CreateNativeCommand($"UPDATE main.[{table.Name}] SET [" + refreshColumnName + "] = null WHERE [" + refreshColumnName + "] <> 1"))
+						using (var cmd = Transaction.CreateNativeCommand($"UPDATE main.[{Table.Name}] SET [" + refreshColumnName + "] = null WHERE [" + refreshColumnName + "] <> 1"))
 							cmd.ExecuteNonQueryEx();
 					}
 				}
 			} // proc Prepare
 
-			public void Clean()
+			public override void Clean()
 			{
-				if (isFull && refreshColumnIndex >= 0)
+				if (IsFull && refreshColumnIndex >= 0)
 				{
-					using (var cmd = transaction.CreateNativeCommand($"DELETE FROM main.[{table.Name}] WHERE [" + refreshColumnName + "] is null"))
+					using (var cmd = Transaction.CreateNativeCommand($"DELETE FROM main.[{Table.Name}] WHERE [" + refreshColumnName + "] is null"))
 						cmd.ExecuteNonQueryEx();
 				}
 			} // proc Clean
 
-			public void Parse(XmlReader xml, IProgress<string> progress)
+			protected override void ProcessCurrentNode(string actionName, string[] parameterValues)
 			{
-				var objectCounter = 0;
-				var lastProgress = Environment.TickCount;
+				if (IsFull || actionName[0] == 'i')
+					actionName = refreshColumnIndex == -1 ? "i" : "r";
 
-				while (xml.NodeType == XmlNodeType.Element)
+				existIdParameter.Value = DBNull.Value;
+				deleteIdParameter.Value = DBNull.Value;
+
+				// collect columns
+				for (var i = 0; i < parameterValues.Length; i++)
 				{
-					if (xml.IsEmptyElement) // skip empty element
+					// clear current column set
+					if (updateParameters[i] != null)
+						updateParameters[i].Value = DBNull.Value;
+					if (insertParameters[i] != null)
+						insertParameters[i].Value = DBNull.Value;
+
+					// set values
+					if (parameterValues[i] != null)
 					{
-						xml.Read();
-						continue;
+						var value = ConvertStringToSQLiteValue(parameterValues[i], updateParameters[i].DbType);
+
+						updateParameters[i].Value = value;
+						insertParameters[i].Value = value;
+
+						if (i == virtPrimaryColumnIndex)
+							existIdParameter.Value = value;
+						if (i == physPrimaryColumnIndex)
+							deleteIdParameter.Value = value;
 					}
-
-					// action to process
-					var actionName = xml.LocalName.ToLower();
-					if (actionName != "r"
-						&& actionName != "u"
-						&& actionName != "i"
-						&& actionName != "d"
-						&& actionName != "syncid")
-						throw new InvalidOperationException($"The operation {actionName} is not supported.");
-
-					if (actionName == "syncid")
-					{
-						#region -- update SyncState --
-						xml.Read(); // read element
-
-						var newSyncId = xml.GetElementContent<long>(-1);
-						if (newSyncId == -1)
-						{
-							using (var cmd = transaction.CreateNativeCommand("DELETE FROM main.[SyncState] WHERE [Table] = @Table"))
-							{
-								cmd.AddParameter("@Table", DbType.String, table.Name);
-								cmd.ExecuteNonQueryEx();
-							}
-						}
-						else
-						{
-							using (var cmd = transaction.CreateNativeCommand(
-								"INSERT OR REPLACE INTO main.[SyncState] ([Table], [SyncId]) " +
-								"VALUES (@Table, @SyncId);"))
-							{
-								cmd.AddParameter("@Table", DbType.String, table.Name);
-								cmd.AddParameter("@SyncId", DbType.Int64, newSyncId);
-								cmd.ExecuteNonQueryEx();
-							}
-						}
-						#endregion
-					}
-					else
-					{
-						#region -- upsert --
-						if (isFull || actionName[0] == 'i')
-							actionName = refreshColumnIndex == -1 ? "i" : "r";
-
-						// clear current column set
-						for (var i = 0; i < updateParameters.Length; i++)
-						{
-							if (updateParameters[i] != null)
-								updateParameters[i].Value = DBNull.Value;
-							if (insertParameters[i] != null)
-								insertParameters[i].Value = DBNull.Value;
-						}
-						existIdParameter.Value = DBNull.Value;
-						deleteIdParameter.Value = DBNull.Value;
-
-						// collect columns
-						xml.Read();
-						while (xml.NodeType == XmlNodeType.Element)
-						{
-							if (xml.IsEmptyElement) // read column data
-								xml.Read();
-							else
-							{
-								var columnName = xml.LocalName;
-								if (columnName.StartsWith("c") && Int32.TryParse(columnName.Substring(1), out var columnIndex))
-								{
-									xml.Read();
-
-									var value = ConvertStringToSQLiteValue(xml.ReadContentAsString(), updateParameters[columnIndex].DbType);
-									
-									updateParameters[columnIndex].Value = value;
-									insertParameters[columnIndex].Value = value;
-
-									if (columnIndex == virtPrimaryColumnIndex)
-										existIdParameter.Value = value;
-									if (columnIndex == physPrimaryColumnIndex)
-										deleteIdParameter.Value = value;
-
-									xml.ReadEndElement();
-								}
-								else
-									xml.Skip();
-							}
-						}
-
-						// process action
-						switch (actionName[0])
-						{
-							case 'r':
-								if (RowExists())
-									goto case 'u';
-								else
-									goto case 'i';
-							case 'i':
-								ExecuteCommand(insertCommand);
-								break;
-							case 'u':
-								ExecuteCommand(updateCommand);
-								break;
-							case 'd':
-								ExecuteCommand(deleteCommand);
-								break;
-						}
-
-						objectCounter++;
-						if (progress != null && unchecked(Environment.TickCount - lastProgress) > 500)
-						{
-							progress.Report(String.Format(Resources.MasterDataFetchSyncString, table.Name + " (" + objectCounter.ToString("N0") + ")"));
-							lastProgress = Environment.TickCount;
-						}
-
-						#endregion
-					}
-
-					xml.ReadEndElement();
 				}
-				if (objectCounter > 0)
-					Trace.TraceInformation($"Synchonization of {table.Name} finished ({objectCounter:N0} objects).");
-			} // proc Parse
+
+				// process action
+				switch (actionName[0])
+				{
+					case 'r':
+						if (RowExists())
+							goto case 'u';
+						else
+							goto case 'i';
+					case 'i':
+						ExecuteCommand(insertCommand);
+						break;
+					case 'u':
+						ExecuteCommand(updateCommand);
+						break;
+					case 'd':
+						ExecuteCommand(deleteCommand);
+						break;
+				}
+			} // proc ProcessCurrentNode
 
 			private bool RowExists()
 			{
@@ -1491,7 +1717,7 @@ namespace TecWare.PPSn
 
 			#endregion
 
-			public PpsDataTableDefinition Table => table;
+			protected override int ColumnCount => updateParameters.Length;
 		} // class ProcessBatch
 
 		#endregion
@@ -1502,6 +1728,7 @@ namespace TecWare.PPSn
 			if (lastSynchronizationStamp > DateTime.MinValue)
 				xml.WriteAttributeString("lastSyncTimeStamp", lastSynchronizationStamp.ToFileTimeUtc().ChangeType<string>());
 
+			// write sync state for the tables
 			using (var cmd = new SQLiteCommand("SELECT [Table], [SyncId] FROM main.[SyncState]", connection))
 			using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleResult))
 			{
@@ -1512,6 +1739,38 @@ namespace TecWare.PPSn
 						xml.WriteStartElement("sync");
 						xml.WriteAttributeString("table", r.GetString(0));
 						xml.WriteAttributeString("syncId", r.GetInt64(1).ChangeType<string>());
+						xml.WriteEndElement();
+					}
+				}
+			}
+
+			// write user tags to sync to the server
+			// all system tags are ignored
+			if (isObjectTagsDirty)
+			{
+				isObjectTagsDirty = false; // reset
+
+				// check for changes
+				using (var cmd = new SQLiteCommand("SELECT [Id], [ObjectId], [Key], [LocalClass], [LocalValue], [UserId], [CreateDate] FROM main.[" + objectTagsTableName + "] WHERE [ObjectId] >= 0 AND [" + refreshColumnName + "] <> 0 AND [UserId] > 0 AND [LocalClass] IS NOT NULL", connection))
+				using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleResult))
+				{
+					while (r.Read())
+					{
+						xml.WriteStartElement("utag");
+
+						// ids
+						xml.WriteAttributeString("id", r.GetInt64(0).ChangeType<string>());
+						xml.WriteAttributeString("objectId", r.GetInt64(1).ChangeType<string>());
+
+						// tag info
+						xml.WriteAttributeString("name", r.GetString(2));
+						xml.WriteAttributeString("tagClass", r.GetInt32(3).ChangeType<string>());
+						xml.WriteAttributeString("userId", r.GetInt64(5).ChangeType<string>());
+						xml.WriteAttributeString("createDate", (r.IsDBNull(6) ? DateTime.Now : r.GetDateTime(6)).ToUniversalTime().ChangeType<string>());
+
+						if (!r.IsDBNull(4))
+							xml.WriteValue(r.GetString(4));
+
 						xml.WriteEndElement();
 					}
 				}
@@ -1569,6 +1828,14 @@ namespace TecWare.PPSn
 			isSynchronizationStarted = true;
 		} // proc FetchDataAsync
 
+		private ProcessBatchBase CreateProcessBatch(PpsMasterDataTransaction transaction, string tableName, bool isFull)
+		{
+			if (tableName == "ObjectTags")
+				return new ProcessBatchTags(transaction, this, tableName, isFull);
+			else
+				return new ProcessBatchGeneric(transaction, this, tableName, isFull);
+		} // func CreateProcessBatch
+
 		private async Task FetchDataXmlBatchAsync(XmlReader xml, IProgress<string> progress)
 		{
 			// read batch attributes
@@ -1582,7 +1849,7 @@ namespace TecWare.PPSn
 				xml.Read(); // fetch element
 							// process values
 				using (var transaction = await CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
-				using (var b = new ProcessBatch(transaction, this, tableName, isFull))
+				using (var b = CreateProcessBatch(transaction, tableName, isFull))
 				{
 					// prepare table
 					b.Prepare();
@@ -1601,7 +1868,7 @@ namespace TecWare.PPSn
 			}
 			else // fetch element
 				xml.Read();
-		} // proc FetchDataXmlBatch
+		} // proc FetchDataXmlBatchAsync
 
 		#endregion
 
@@ -2587,6 +2854,10 @@ namespace TecWare.PPSn
 		{
 			var args = new PpsDataRowChangedEventArgs(operation, table, rowId, arguments);
 
+			// set object tags to dirty
+			if (table.Name == "ObjectTags")
+				isObjectTagsDirty = true;
+
 			// raise weak event
 			var i = weakDataRowEvents.Count - 1;
 			while (i >= 0)
@@ -2606,6 +2877,10 @@ namespace TecWare.PPSn
 
 		private void OnMasterDataTableChanged(PpsDataTableDefinition table)
 		{
+			// set object tags to dirty
+			if (table.Name == "ObjectTags")
+				isObjectTagsDirty = true;
+
 			// raise event
 			DataTableChanged?.Invoke(this, new PpsDataTableChangedEventArgs(table));
 			// raise method

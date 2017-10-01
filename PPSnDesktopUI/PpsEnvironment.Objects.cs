@@ -618,7 +618,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- enum PpsObjectTagLoadState -----------------------------------------------
+	#region -- enum PpsObjectTagLoadState ---------------------------------------------
 
 	public enum PpsObjectTagLoadState
 	{
@@ -632,7 +632,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsObjectTagView ---------------------------------------------------
+	#region -- class PpsObjectTagView -------------------------------------------------
 
 	/// <summary>Tag implementation</summary>
 	public sealed class PpsObjectTagView : INotifyPropertyChanged
@@ -1087,7 +1087,7 @@ namespace TecWare.PPSn
 								var userId = r.IsDBNull(6) ? 0 : r.GetInt64(6);
 								var creationDate = r.IsDBNull(7) ? DateTime.Now : r.GetDateTime(7);
 
-								var isRev = isRemoteClassNull && userId == 0;
+								var isRev = !isLocalClassNull && userId == 0;
 
 								var tag = FindTagById(id);
 								if (tag != null && (tag.IsRev != isRev || tag.Name != key))
@@ -1158,7 +1158,7 @@ namespace TecWare.PPSn
 					return;
 
 				using (var updateCommand = transaction.CreateNativeCommand("UPDATE main.[ObjectTags] SET LocalClass = @LClass, LocalValue = @LValue, UserId = @UserId, CreateDate = @CreationDate, _IsUpdated = 1 WHERE Id = @Id"))
-				using (var insertCommand = transaction.CreateNativeCommand("INSERT INTO main.[ObjectTags] (ObjectId, Key, LocalClass, LocalValue, UserId, CreateDate, _IsUpdated) VALUES (@ObjectId, @Key, @LClass, @LValue, @UserId, @CreationDate, 1)"))
+				using (var insertCommand = transaction.CreateNativeCommand("INSERT INTO main.[ObjectTags] (Id, ObjectId, Key, LocalClass, LocalValue, UserId, CreateDate, _IsUpdated) VALUES (@Id, @ObjectId, @Key, @LClass, @LValue, @UserId, @CreationDate, 1)"))
 				using (var deleteCommand = transaction.CreateNativeCommand("DELETE FROM main.[ObjectTags] WHERE Id = @Id"))
 				{
 					var updateIdParameter = updateCommand.AddParameter("@Id", DbType.Int64);
@@ -1167,6 +1167,7 @@ namespace TecWare.PPSn
 					var updateUserIdParameter = updateCommand.AddParameter("@UserId", DbType.Int64);
 					var updateCreationDateParameter = updateCommand.AddParameter("@CreationDate", DbType.DateTime);
 
+					var insertIdParameter = insertCommand.AddParameter("@Id", DbType.Int64);
 					var insertObjectIdParameter = insertCommand.AddParameter("@ObjectId", DbType.Int64);
 					var insertKeyParameter = insertCommand.AddParameter("@Key", DbType.String);
 					var insertClassParameter = insertCommand.AddParameter("@LClass", DbType.Int32);
@@ -1176,6 +1177,8 @@ namespace TecWare.PPSn
 
 					var deleteIdParameter = deleteCommand.AddParameter("@Id", DbType.Int64);
 
+					var nextLocalId = (long?)null;
+
 					foreach (var cur in tags)
 					{
 						if (cur.IsDirty)
@@ -1184,6 +1187,7 @@ namespace TecWare.PPSn
 							{
 								if (cur.IsRev && cur.IsRemoved)
 								{
+									// fix me: what is when there is a remote tag with the same key?
 									deleteIdParameter.Value = cur.Id.Value;
 									deleteCommand.ExecuteNonQueryEx();
 								}
@@ -1200,6 +1204,16 @@ namespace TecWare.PPSn
 							}
 							else
 							{
+								if (nextLocalId.HasValue)
+								{
+									insertIdParameter.Value = nextLocalId.Value;
+									nextLocalId = nextLocalId.Value - 1;
+								}
+								else
+								{
+									nextLocalId = transaction.GetNextLocalId("ObjectTags", "Id");
+									insertIdParameter.Value = nextLocalId;
+								}
 								insertObjectIdParameter.Value = parent.Id;
 								insertKeyParameter.Value = cur.Name;
 								insertClassParameter.Value = (int)cur.Class;
@@ -1525,7 +1539,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- interface IPpsObjectData -------------------------------------------------
+	#region -- interface IPpsObjectData -----------------------------------------------
 
 	/// <summary>Basis implementation for the data-model.</summary>
 	public interface IPpsObjectData : INotifyPropertyChanged
@@ -1557,7 +1571,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsObjectBlobData --------------------------------------------------
+	#region -- class PpsObjectBlobData ------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Control byte based data.</summary>
@@ -1776,7 +1790,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsObjectImageData -------------------------------------------------
+	#region -- class PpsObjectImageData -----------------------------------------------
 
 	//public sealed class PpsObjectImageData : PpsObjectBlobData
 	//{
@@ -2116,7 +2130,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsObjectDataSet ---------------------------------------------------
+	#region -- class PpsObjectDataSet -------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -2227,7 +2241,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsRevisionDataSet -------------------------------------------------
+	#region -- class PpsRevisionDataSet -----------------------------------------------
 
 	public sealed class PpsRevisionDataSet : PpsDataSetDesktop
 	{
