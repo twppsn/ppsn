@@ -79,11 +79,11 @@ specific language governing permissions and limitations under the Licence.
 								Background="{StaticResource PPSnControlBackgroundBrush}">
 							<Grid>
 								<Image x:Name="image" Margin="1"
-									   Source="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay, IsAsync=True}"
+									   Source="{Binding LinkedObject.DataLazy.PreviewImage, Mode=OneWay, IsAsync=True}"
 									   Stretch="Uniform"/>
 								<Viewbox x:Name="symbolBox" Margin="28">
 									<Path x:Name="symbolPath"
-										  Data="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay, IsAsync=True, Converter={StaticResource imageResourceKeyConverter}}"
+										  Data="{Binding LinkedObject.DataLazy.PreviewImage, Mode=OneWay, IsAsync=True, Converter={StaticResource imageResourceKeyConverter}}"
 										  Fill="{StaticResource PPSnWindowForegroundBrush}" Opacity=".65"/>
 								</Viewbox>
 								<Viewbox x:Name="imageBox" Margin="28" Visibility="Hidden">

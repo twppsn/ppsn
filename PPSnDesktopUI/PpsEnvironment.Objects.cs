@@ -30,6 +30,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Ink;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Xml;
@@ -1761,14 +1762,7 @@ namespace TecWare.PPSn
 					dc.DrawDrawing(group);
 
 					// check for overlay and render it
-					if (baseObj.TryGetProperty("overlay", out string overlay))
-					{
-						var strokes = new System.Windows.Ink.StrokeCollection();
-						using (var overlaySource = new MemoryStream(Convert.FromBase64String(overlay), false))
-							strokes = new System.Windows.Ink.StrokeCollection(overlaySource);
-
-						strokes.Draw(dc);
-					}
+					(await GetOverlayAsync())?.Draw(dc);
 				}
 
 				var resizedImage = new RenderTargetBitmap(
@@ -1798,6 +1792,31 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		public async Task SetOverlayAsync(StrokeCollection strokes)
+		{
+			using (var dst = new MemoryStream())
+			{
+				strokes.Save(dst);
+				baseObj.Tags.UpdateRevisionTag("Overlay", PpsObjectTagClass.Text, Convert.ToBase64String(dst.ToArray()));
+				await baseObj.UpdateLocalAsync();
+
+				ResetPreviewImage();
+			}
+		} // proc SetOverlay
+
+		public Task<StrokeCollection> GetOverlayAsync()
+		{
+			if (baseObj.TryGetProperty("Overlay", out string overlay))
+			{
+				var strokes = new StrokeCollection();
+				using (var overlaySource = new MemoryStream(Convert.FromBase64String(overlay), false))
+					strokes = new StrokeCollection(overlaySource);
+
+				return Task.FromResult(strokes);
+			}
+			return Task.FromResult<StrokeCollection>(null);
+		} // func GetOverlay 
+
 		public bool IsLoaded => rawData != null;
 		public bool IsReadOnly => true;
 
@@ -1811,346 +1830,6 @@ namespace TecWare.PPSn
 		/// <summary>Get preview image asyncron</summary>
 		public object PreviewImageLazy => previewImage.GetValue();
 	} // class PpsObjectBlobData
-
-	#endregion
-
-	#region -- class PpsObjectImageData -----------------------------------------------
-
-	//public sealed class PpsObjectImageData : PpsObjectBlobData
-	//{
-	//	#region privates
-	//	private readonly PpsObject baseObj;
-
-	//	private bool imageLoaded = false;
-	//	private bool previewLoaded = false;
-	//	private bool overlayLoaded = false;
-
-	//	private ImageSource image = null;
-	//	private ImageSource preview = null;
-	//	private ImageSource overlay = null;
-	//	#endregion
-
-	//	#region consts
-	//	const string PreviewId = "preview";
-	//	const string OverlayId = "overlay";
-	//	const string PictureItemId = "PictureItemType";
-	//	#endregion
-
-	//	#region syncronisation
-	//	private static SemaphoreSlim LoadPreviewSemaphore = new SemaphoreSlim(1, 1);
-	//	#endregion
-
-	//	#region ctor
-
-	//	~PpsObjectImageData()
-	//	{
-	//		image = null;
-	//	}
-
-	//	public PpsObjectImageData(PpsObject obj) : base(obj)
-	//	{
-	//		this.baseObj = obj;
-	//	}
-	//	#endregion
-
-	//	#region Functionality
-
-	//	#region Preview
-
-	//	private async void LoadPreview()
-	//	{
-	//		if (baseObj == null || !baseObj.MimeType.StartsWith("image"))
-	//			return;
-
-	//		// semaphore prevents this imageobject from being loaded multiple times, if the preview ist getted multiple times
-	//		await LoadPreviewSemaphore.WaitAsync();
-
-	//		if (!PreviewLoaded)
-	//		{
-	//			foreach (var lnk in baseObj.Links)
-	//			{
-	//				var idx = lnk.LinkTo.Tags.IndexOf(PictureItemId);
-	//				if (idx >= 0 && (string)lnk.LinkTo.Tags[idx].Value == PreviewId)
-	//				{
-	//					var imgObj = await lnk.LinkTo.GetDataAsync<PpsObjectImageData>();
-	//					preview = imgObj.Image;
-
-	//					imgObj.PropertyChanged += LinkedImage_PropertyChanged;
-
-	//					if (!imgObj.ImageLoaded)
-	//						PreviewLoaded = false;
-	//					else
-	//						PreviewLoaded = true;
-	//					break;
-	//				}
-	//			}
-
-	//			if (!PreviewLoaded && preview == null)
-	//			{
-	//				if (imageLoaded)
-	//				{
-	//					var enc = new PngBitmapEncoder();
-	//					var bI = new BitmapImage();
-
-	//					using (MemoryStream stream = new MemoryStream(this.RawData))
-	//					{
-	//						bI.BeginInit();
-	//						bI.CacheOption = BitmapCacheOption.OnLoad;
-	//						bI.StreamSource = stream;
-	//						bI.DecodePixelHeight = 120;
-	//						bI.EndInit();
-	//					}
-
-	//					bI.Freeze();
-
-	//					enc.Frames.Add(BitmapFrame.Create(bI));
-
-	//					var obj = await baseObj.Environment.CreateNewObjectAsync(baseObj.Environment.ObjectInfos[PpsEnvironment.AttachmentObjectTyp]);
-
-	//					obj.Tags.UpdateTag(baseObj.Environment.UserId, PictureItemId, PpsObjectTagClass.Text, PreviewId);
-
-	//					using (var ms = new MemoryStream())
-	//					{
-	//						enc.Save(ms);
-	//						ms.Position = 0;
-
-	//						var data = await obj.GetDataAsync<PpsObjectBlobData>();
-	//						await data.ReadFromStreamAsync(ms, MimeTypes.Image.Png);
-	//						await data.CommitAsync();
-	//					}
-
-	//					enc = null;
-	//					bI = null;
-
-	//					baseObj.Links.AppendLink(obj);
-	//					await baseObj.UpdateLocalAsync();
-
-	//					preview = (await obj.GetDataAsync<PpsObjectImageData>()).Image;
-	//					PreviewLoaded = true;
-	//				}
-	//				else
-	//				{
-	//					PropertyChanged += CreatePreviewFromImage;
-	//					LoadImage();
-	//				}
-	//			}
-	//		}
-	//		LoadPreviewSemaphore.Release();
-	//	}
-
-	//	/// <summary>
-	//	/// This handler is called, when the underlying image is loaded, to restart the creation of the preview
-	//	/// </summary>
-	//	/// <param name="sender"></param>
-	//	/// <param name="e"></param>
-	//	private void CreatePreviewFromImage(object sender, PropertyChangedEventArgs e)
-	//	{
-	//		if (e.PropertyName == nameof(Image))
-	//		{
-	//			PropertyChanged -= CreatePreviewFromImage;
-	//			LoadPreview();
-	//		}
-	//	}
-
-	//	/// <summary>
-	//	/// true, if loading is finished (does not mean there must be a valid preview)
-	//	/// </summary>
-	//	public bool PreviewLoaded { get { return previewLoaded; } set { previewLoaded = value; base.OnPropertyChanged(nameof(Preview)); } }
-
-	//	/// <summary>
-	//	/// returns the Preview if loaded - starts the loading otherwise, if preview is not set, returns Image
-	//	/// </summary>
-	//	public ImageSource Preview
-	//	{
-	//		get
-	//		{
-	//			{
-	//				if (!PreviewLoaded)
-	//					LoadPreview();
-	//				else if (preview == null)
-	//					return Image;
-	//				return preview;
-	//			}
-	//		}
-	//	}
-
-	//	#endregion
-
-	//	#region Image
-
-	//	/// <summary>
-	//	/// requests the image from SQLite
-	//	/// </summary>
-	//	private async void LoadImage()
-	//	{
-	//		if (baseObj == null || !baseObj.MimeType.StartsWith("image"))
-	//			return;
-
-	//		if (!imageLoaded)
-	//		{
-	//			await LoadAsync().ConfigureAwait(true);
-
-	//			var bI = new BitmapImage();
-
-	//			using (MemoryStream stream = new MemoryStream(this.RawData))
-	//			{
-	//				bI.BeginInit();
-	//				bI.CacheOption = BitmapCacheOption.OnLoad;
-	//				bI.StreamSource = stream;
-	//				bI.DecodePixelHeight = 600;
-	//				bI.EndInit();
-	//			}
-	//			image = bI.Clone();
-	//			//image = bI;
-
-	//			ImageLoaded = true;
-	//		}
-	//	}
-
-	//	/// <summary>
-	//	/// Resize the image to the specified width and height.
-	//	/// </summary>
-	//	/// <param name="image">The image to resize.</param>
-	//	/// <param name="width">The width to resize to.</param>
-	//	/// <param name="height">The height to resize to.</param>
-	//	/// <returns>The resized image.</returns>
-	//	public static Bitmap ResizeImage(Image image, int width, int height)
-	//	{
-	//		var destRect = new Rectangle(0, 0, width, height);
-	//		var destImage = new Bitmap(width, height);
-
-	//		destImage.SetResolution(image.HorizontalResolution, image.VerticalResolution);
-
-	//		using (var graphics = Graphics.FromImage(destImage))
-	//		{
-	//			graphics.CompositingMode = CompositingMode.SourceCopy;
-	//			graphics.CompositingQuality = CompositingQuality.HighQuality;
-	//			graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-	//			graphics.SmoothingMode = SmoothingMode.HighQuality;
-	//			graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-
-	//			using (var wrapMode = new ImageAttributes())
-	//			{
-	//				wrapMode.SetWrapMode(WrapMode.TileFlipXY);
-	//				graphics.DrawImage(image, destRect, 0, 0, image.Width, image.Height, GraphicsUnit.Pixel, wrapMode);
-	//			}
-	//		}
-
-	//		return destImage;
-	//	}
-
-	//	/// <summary>
-	//	/// true, if loading is finished (does not mean there must be a valid image)
-	//	/// </summary>
-	//	public bool ImageLoaded { get { return imageLoaded; } set { imageLoaded = value; if (value == true) base.OnPropertyChanged(nameof(Image)); } }
-
-	//	/// <summary>
-	//	/// returns the Image if loaded - starts the loading otherwise
-	//	/// </summary>
-	//	public ImageSource Image
-	//	{
-	//		get
-	//		{
-	//			if (!imageLoaded)
-	//			{
-	//				LoadImage();
-	//			}
-
-	//			return image;
-	//		}
-	//	}
-
-	//	/// <summary>
-	//	/// used to propagate through that the underlying imageobject has changed
-	//	/// </summary>
-	//	/// <param name="sender">underlying object</param>
-	//	/// <param name="e">not used</param>
-	//	private void LinkedImage_PropertyChanged(object sender, PropertyChangedEventArgs e)
-	//	{
-	//		if (!((PpsObjectImageData)sender).ImageLoaded)
-	//			return;
-
-	//		var idx = ((PpsObjectImageData)sender).baseObj.Tags.IndexOf(PictureItemId);
-	//		if (idx >= 0)
-	//		{
-	//			if ((string)((PpsObjectImageData)sender).baseObj.Tags[idx].Value == PreviewId)
-	//			{
-	//				preview = ((PpsObjectImageData)sender).Image;
-	//				PreviewLoaded = true;
-	//				((PpsObjectImageData)sender).PropertyChanged -= LinkedImage_PropertyChanged;
-	//			}
-	//			if ((string)((PpsObjectImageData)sender).baseObj.Tags[idx].Value == OverlayId)
-	//			{
-	//				overlay = ((PpsObjectImageData)sender).Image;
-	//				OverlayLoaded = true;
-	//				((PpsObjectImageData)sender).PropertyChanged -= LinkedImage_PropertyChanged;
-	//			}
-	//		}
-	//	}
-
-	//	#endregion
-
-	//	#region Overlay
-
-	//	/// <summary>
-	//	/// requests the overlay from SQLite
-	//	/// </summary>
-	//	private async void LoadOverlay()
-	//	{
-	//		if (baseObj == null || !baseObj.MimeType.StartsWith("image"))
-	//			return;
-
-	//		if (!overlayLoaded)
-	//		{
-	//			foreach (var lnk in baseObj.Links)
-	//			{
-	//				var idx = lnk.LinkTo.Tags.IndexOf(PictureItemId);
-	//				if (idx >= 0)
-	//				{
-	//					if ((string)lnk.LinkTo.Tags[idx].Value == OverlayId)
-	//					{
-	//						var imgObj = await lnk.LinkTo.GetDataAsync<PpsObjectImageData>().ConfigureAwait(false);
-
-	//						if (imgObj.ImageLoaded)
-	//						{
-	//							overlay = imgObj.Image;
-	//							OverlayLoaded = true;
-	//						}
-	//						else
-	//							imgObj.PropertyChanged += LinkedImage_PropertyChanged;
-
-	//						break;
-	//					}
-	//				}
-	//			}
-	//		}
-	//	}
-
-	//	/// <summary>p
-	//	/// true, if loading is finished (does not mean there must be a valid overlay)
-	//	/// </summary>
-	//	public bool OverlayLoaded { get { return overlayLoaded; } set { overlayLoaded = value; OnPropertyChanged(nameof(Overlay)); } }
-
-	//	/// <summary>
-	//	/// returns the Overlay if loaded - starts the loading otherwise
-	//	/// </summary>
-	//	public ImageSource Overlay
-	//	{
-	//		get
-	//		{
-	//			{
-	//				if (!OverlayLoaded)
-	//					LoadOverlay();
-
-	//				return overlay;
-	//			}
-	//		}
-	//	}
-
-	//	#endregion
-
-	//	#endregion
-	//}
 
 	#endregion
 
