@@ -39,6 +39,8 @@ namespace TecWare.PPSn.Stuff
 		{
 			this.state = LazyPropertyState.Nothing;
 			this.value = default(T);
+
+			onPropertyChanged?.Invoke();
 		} // proc Reset
 
 		private async Task<T> GetDataInternalAsync()
