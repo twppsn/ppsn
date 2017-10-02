@@ -1258,6 +1258,7 @@ namespace TecWare.PPSn
 				tag = new PpsObjectTagView(this, null, key, true, tagClass, value, 0, DateTime.Now, true);
 			}
 
+			parent.IsDocumentChanged = true;
 			EnsureTagInList(tag);
 		} // func UpdateRevisionTagCore
 
@@ -3011,7 +3012,12 @@ namespace TecWare.PPSn
 		public long RemoteHeadRevId => GetValue((int)PpsStaticObjectColumnIndex.RemoteHeadRevId, -1L);
 		public long PulledRevId => GetValue((int)PpsStaticObjectColumnIndex.PulledRevId, -1L);
 		/// <summary>Is the local data of the object changed.</summary>
-		public bool IsDocumentChanged => GetValue((int)PpsStaticObjectColumnIndex.IsDocumentChanged, false);
+		public bool IsDocumentChanged
+		{
+			get => GetValue((int)PpsStaticObjectColumnIndex.IsDocumentChanged, false);
+			set => SetValue(PpsStaticObjectColumnIndex.IsDocumentChanged, value, true);
+		} // prop IsDocumentChanged
+
 
 		/// <summary></summary>
 		public IPpsObjectData Data => data.GetValueAsync().AwaitTask();
