@@ -2218,7 +2218,7 @@ namespace TecWare.PPSn.Server.Sql
 						PrepareChangeTrackingCommand(table, tableInfo, columnInfo, lastSyncId);
 
 					if (table.Name == "ObjectTags") // special case for tags
-						commandText += " WHERE d.ObjRId is null"; // only no rev tags
+						commandText += " LEFT OUTER JOIN dbo.ObjK o ON (o.Id = d.ObjKId) WHERE d.ObjRId is null OR (d.ObjRId = o.HeadRevId)"; // only no rev tags
 
 					command.Transaction = transaction;
 					command.CommandText = commandText;

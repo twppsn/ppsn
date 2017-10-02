@@ -239,12 +239,7 @@
 						<ColumnDefinition Width="*"/>
 					</Grid.ColumnDefinitions>
 
-					<uiC:PpsAttachmentsControl Grid.Column="0" BorderThickness="0"
-											   AddLinkButtonCommand="{Binding testCommand}"
-											   CameraButtonCommand="{Binding cameraModul}">
-						<!--one can overload all the predefined Buttons with p.e. AddFileButtonCommand="{Binding testCommand}"-->
-						<!--one can hide a button with AddFileButtonVisible="false"; all but seventh button are visible by default-->
-						<!--known buttons AddFileButton,AddLinkButton,RemoveButton,CameraButton,SignatureButton,SeventhButton-->
+					<uiC:PpsAttachmentsControl Grid.Column="0" BorderThickness="0">
 						<uiC:PpsAttachmentsControl.AttachmentsSource>
 							<Binding Path="Data.Head.First.Zusa">
 								<Binding.Converter>
