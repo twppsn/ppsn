@@ -1730,58 +1730,52 @@ namespace TecWare.PPSn
 				sourceImage.EndInit();
 				sourceImage.Freeze();
 
-				var aspect = sourceImage.Height / sourceImage.Width;
-				int newWidth;
-				int newHeight;
+				var sourceWidth = sourceImage.Width;
+				var sourceHeight = sourceImage.Height;
+				var aspect = sourceHeight / sourceWidth;
+				double scaleWidth;
+				double scaleHeight;
+				double newWidth;
+				double newHeight;
 				const int previewHeight = 256;
-				if (sourceImage.Height > sourceImage.Width)
+				if (sourceHeight > sourceWidth)
 				{
-					newWidth = Convert.ToInt32(previewHeight / aspect);
-					newHeight = previewHeight;
+					scaleWidth = (newWidth = previewHeight / aspect) / sourceWidth;
+					scaleHeight = (newHeight = previewHeight) / sourceHeight;
 				}
 				else
 				{
-					newWidth = previewHeight;
-					newHeight = Convert.ToInt32(previewHeight * aspect);
+					scaleWidth = (newWidth = previewHeight) / sourceWidth;
+					scaleHeight = (newHeight = previewHeight * aspect) / sourceHeight;
 				}
 
 				// create preview image
 				var group = new DrawingGroup();
 				RenderOptions.SetBitmapScalingMode(group, BitmapScalingMode.HighQuality);
-
-				group.Children.Add(new ImageDrawing(sourceImage, new Rect(0, 0, newWidth, newHeight)));
-
-				var strokes = new System.Windows.Ink.StrokeCollection();
-				var overlay = (from tag in baseObj.Tags where tag.Name.Equals("overlay") select tag).FirstOrDefault();
-				if (overlay != null)
-					using (var ms = new MemoryStream())
-					{
-						var bs = Convert.FromBase64String((string)overlay.Value);
-						ms.Write(bs, 0, bs.Length);
-						ms.Position = 0;
-						strokes = new System.Windows.Ink.StrokeCollection(ms);
-						
-					}
-
-				// todo: check for over and render it
+				group.Children.Add(new ImageDrawing(sourceImage, new Rect(0, 0, sourceWidth, sourceHeight)));
 
 				var drawingVisual = new DrawingVisual();
 				using (var dc = drawingVisual.RenderOpen())
 				{
+					dc.PushTransform(new ScaleTransform(scaleWidth, scaleHeight));
 					dc.DrawDrawing(group);
-					var fact = 5.5 ;
-					foreach (var stroke in strokes)
-						for (int i = 1; i < stroke.StylusPoints.Count; i++)
-							dc.DrawLine(
-								new Pen(new SolidColorBrush(stroke.DrawingAttributes.Color), stroke.DrawingAttributes.Width), 
-								new Point(stroke.StylusPoints[i - 1].ToPoint().X/ fact, stroke.StylusPoints[i - 1].ToPoint().Y/ fact),
-								new Point(stroke.StylusPoints[i].ToPoint().X/ fact, stroke.StylusPoints[i].ToPoint().Y/ fact));
+
+					// check for overlay and render it
+					if (baseObj.TryGetProperty("overlay", out string overlay))
+					{
+						var strokes = new System.Windows.Ink.StrokeCollection();
+						using (var overlaySource = new MemoryStream(Convert.FromBase64String(overlay), false))
+							strokes = new System.Windows.Ink.StrokeCollection(overlaySource);
+
+						strokes.Draw(dc);
+					}
 				}
 
 				var resizedImage = new RenderTargetBitmap(
-					newWidth, newHeight,
+					Convert.ToInt32(newWidth), Convert.ToInt32(newHeight),
 					96, 96,
-					PixelFormats.Default);
+					PixelFormats.Default
+				);
 				resizedImage.Render(drawingVisual);
 
 				var previewImage = BitmapFrame.Create(resizedImage);
@@ -1789,11 +1783,6 @@ namespace TecWare.PPSn
 				return previewImage;
 			}
 		} // func GetPreviewImageInternal
-
-		//protected virtual Task<object> GetPreviewImageInternal()
-		//	=> MimeType.StartsWith("image/")
-		//		? GetPreviewFromImageData()
-		//		: Task.FromResult<object>(null);
 
 		protected virtual Task<object> GetPreviewImageInternal()
 			=> MimeType.StartsWith("image/")
@@ -2288,7 +2277,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsObject ----------------------------------------------------------
+	#region -- class PpsObject --------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -3118,7 +3107,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsObjectInfo ------------------------------------------------------
+	#region -- class PpsObjectInfo ----------------------------------------------------
 
 	/// <summary>Special environment table, that holds information about the 
 	/// object class.</summary>
@@ -3179,7 +3168,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsEnvironment -----------------------------------------------------
+	#region -- class PpsEnvironment ---------------------------------------------------
 
 	public partial class PpsEnvironment
 	{
