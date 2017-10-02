@@ -103,4 +103,17 @@ namespace TecWare.PPSn.UI
 	} // interface IPpsPWindowPaneControl
 
 	#endregion
+
+	#region -- class PpsWindowPaneHelper ----------------------------------------------
+
+	public static class PpsWindowPaneHelper
+	{
+		public static IPpsProgress DisableUI(this IPpsPWindowPaneControl control)
+			=> control?.ProgressStack?.CreateProgress() ?? PpsProgressStack.Dummy;
+
+		public static IPpsProgress DisableUI(this IPpsWindowPane pane)
+			=> DisableUI(pane?.PaneControl);
+	} // class PpsWindowPaneHelper
+
+	#endregion
 }

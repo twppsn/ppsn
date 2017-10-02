@@ -35,6 +35,7 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.UI;
 using LExpression = System.Linq.Expressions.Expression;
 
 namespace TecWare.PPSn
@@ -1135,11 +1136,20 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public static PpsEnvironment GetEnvironment(FrameworkElement ui)
 			=> (PpsEnvironment)ui.FindResource(EnvironmentService);
-
+		
 		/// <summary>Get the Environment, that is attached to the current application.</summary>
 		/// <returns></returns>
 		public static PpsEnvironment GetEnvironment()
 			=> (PpsEnvironment)Application.Current.FindResource(EnvironmentService);
+
+		private static IPpsWindowPane GetCurrentPaneCore(FrameworkElement ui)
+			=> (IPpsWindowPane)ui.TryFindResource(WindowPaneService);
+
+		public static IPpsWindowPane GetCurrentPane(FrameworkElement ui)
+			=> GetCurrentPaneCore(ui) ?? GetCurrentPane();
+
+		public static IPpsWindowPane GetCurrentPane()
+			=> GetCurrentPaneCore(Keyboard.FocusedElement as FrameworkElement);
 	} // class PpsEnvironment
 
 	#endregion

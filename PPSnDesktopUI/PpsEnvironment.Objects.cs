@@ -2325,6 +2325,9 @@ namespace TecWare.PPSn
 			ReadObjectInfo(r);
 		} // ctor
 
+		public override string ToString()
+			=> $"Object: {Typ}; {objectId} # {Guid}:{PulledRevId}";
+
 		private void OnObjectDataChanged(object sender, PpsDataRowChangedEventArgs e)
 			=> ReadObjectInfo(e.Arguments);
 
@@ -2762,14 +2765,18 @@ namespace TecWare.PPSn
 			}
 		} // proc SaveRawDataAsync
 
-		public override string ToString()
-			=> $"Object: {Typ}; {objectId} # {Guid}:{PulledRevId}";
+		[Obsolete("falsche verantwortung")]
+		public Task ViewAsync(object target)
+		{
+			ShellExecute();
+			return Task.CompletedTask;
+		} // proc ViewAsync
+
 
 		[Obsolete("falsche verantwortung")]
 		public async void ShellExecute()
 		{
-			var filename = (from t in Tags where t.Name == "Filename" select t).FirstOrDefault()?.Value.ToString();
-
+			var filename = this.GetProperty("FileName", (string)null);
 			if (String.IsNullOrEmpty(filename))
 				return;
 

@@ -130,6 +130,7 @@ namespace TecWare.PPSn.UI
 			: base(environment)
 		{
 			this.window = window;
+			
 			Environment.AddIdleAction(this);
 		} // ctor
 
@@ -329,8 +330,8 @@ namespace TecWare.PPSn.UI
 			=> new LuaDataTemplateSelector(func);
 
 		[LuaMember("disableUI")]
-		public IPpsProgress DisableUI(PpsLuaTask task)
-			=> PaneControl?.ProgressStack?.CreateProgress() ?? PpsProgressStack.Dummy;
+		public IPpsProgress DisableUI()
+			=> PpsWindowPaneHelper.DisableUI(PaneControl);
 
 		[LuaMember("getView")]
 		private ICollectionView LuaGetView(object collection)
@@ -450,6 +451,7 @@ namespace TecWare.PPSn.UI
 			// Create the Wpf-Control
 			var xamlReader = new XamlReader();
 			control = xamlReader.LoadAsync(xaml.CreateReader()) as FrameworkElement;
+			control.Resources[PpsEnvironment.WindowPaneService] = this;
 			OnControlCreated();
 
 			// Initialize the control and run the code in UI-Thread

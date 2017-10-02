@@ -238,22 +238,43 @@ namespace TecWare.PPSn
 			}
 		} // proc CollectNameSpaces
 
-		public static object GetControlService(this FrameworkElement frameworkElement, Type serviceType)
+		public static T GetControlService<T>(this DependencyObject current, bool throwException = false)
+			=> (T)GetControlService(current, typeof(T), throwException);
+
+		public static object GetControlService(this DependencyObject current, Type serviceType, bool throwException = false)
 		{
 			object r = null;
 
-			if (frameworkElement == null)
-				return null;
-			else if (frameworkElement is IServiceProvider sp)
+			if (current == null)
+			{
+				if (throwException)
+					throw new ArgumentException($"Did not find Server ('{serviceType.Name}').");
+				else
+					return null;
+			}
+			else if (current is IServiceProvider sp)
 				r = sp.GetService(serviceType);
-			else if (serviceType.IsAssignableFrom(frameworkElement.GetType()))
-				r = frameworkElement;
+			else if (serviceType.IsAssignableFrom(current.GetType()))
+				r = current;
 
 			if (r != null)
 				return r;
-
-			return GetControlService(frameworkElement.Parent as FrameworkElement, serviceType);
+			
+			return GetControlService(VisualTreeHelper.GetParent(current), serviceType, throwException);
 		} // func GetControlService
+
+		public static DependencyObject GetLocigalParent(this DependencyObject current)
+		{
+			var parent = LogicalTreeHelper.GetParent(current);
+			if (parent == null)
+			{
+				if (current is FrameworkContentElement fce)
+					parent = fce.TemplatedParent;
+				else if (current is FrameworkElement fe)
+					parent = fe.TemplatedParent;
+			}
+			return parent;
+		} // func GetLocigalParent
 
 		public static T GetVisualChild<T>(this DependencyObject current)
 			where T : DependencyObject

@@ -18,6 +18,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -33,14 +34,16 @@ namespace TecWare.PPSn.UI
 	{
 		private readonly PpsEnvironment environment;
 		private readonly object target;
+		private readonly object source;
 		private readonly object parameter;
 
 		private readonly Lazy<object> getDataContext;
 
-		public PpsCommandContext(PpsEnvironment environment, object target, object parameter)
+		public PpsCommandContext(PpsEnvironment environment, object target, object source, object parameter)
 		{
 			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
 			this.target = target ?? throw new ArgumentNullException(nameof(target));
+			this.source = source ?? throw new ArgumentNullException(nameof(source));
 			this.getDataContext = new Lazy<object>(GetDataContext);
 			this.parameter = parameter;
 		} // ctor
@@ -57,14 +60,18 @@ namespace TecWare.PPSn.UI
 				r = sp.GetService(serviceType);
 
 			// next ask controls
-			if (r == null && target is FrameworkElement frameworkElement)
-				r = StuffUI.GetControlService(frameworkElement, serviceType);
-			
+			if (r == null && target is DependencyObject dc1)
+				r = StuffUI.GetControlService(dc1, serviceType);
+
+			if (r == null && target != source && source is DependencyObject dc2)
+				r = StuffUI.GetControlService(dc2, serviceType);
+
 			return r ?? environment.GetService(serviceType);
 		} // func GetService
 
 		public PpsEnvironment Environment => environment;
 		public object Target => target;
+		public object Source => source;
 		public object DataContext => getDataContext.Value;
 		public object Parameter => parameter;
 	} // class PpsCommandContext
@@ -76,10 +83,46 @@ namespace TecWare.PPSn.UI
 	/// <summary>We define a routed command to get the ExecutedEvent,CanExecuteEvent in the root control. The result is we get the command source for free, the drawback is we need to catch the event in the root and call the ExecuteCommand method.</summary>
 	public abstract class PpsCommandBase : RoutedCommand
 	{
+		public static readonly DependencyProperty AsyncCommandIsRunningProperty = DependencyProperty.RegisterAttached("AsyncCommandIsRunning", typeof(PpsCommandBase), typeof(PpsCommandBase), new PropertyMetadata(null));
+
 		protected PpsCommandBase()
+			: base()
 		{
 		} // ctor
-		
+
+		protected PpsCommandBase(string name, Type ownerType)
+			: base(name, ownerType)
+		{
+		} // ctor
+
+		protected PpsCommandBase(string name, Type ownerType, InputGestureCollection inputGestures)
+			: base(name, ownerType, inputGestures)
+		{
+		} // ctor
+
+		public static void SetAsyncCommandIsRunning(UIElement element, PpsCommandBase value)
+			=> element.SetValue(AsyncCommandIsRunningProperty, value);
+
+		public static PpsCommandBase GetAsyncCommandIsRunning(UIElement element)
+			=> (PpsCommandBase)element.GetValue(AsyncCommandIsRunningProperty);
+
+		protected void SetTargetState(object target, bool isExecuting)
+		{
+			if (target is UIElement element)
+			{
+				var currentCommand = GetAsyncCommandIsRunning(element);
+				if (currentCommand != null && currentCommand != this)
+					throw new InvalidOperationException();
+
+				SetAsyncCommandIsRunning(element, isExecuting ? this : null);
+			}
+			else
+				throw new ArgumentException("target must be an UIElement");
+		} // proc SetTargetState
+
+		protected bool GetTargetState(object target)
+			=> target is UIElement element ? GetAsyncCommandIsRunning(element) == this : throw new ArgumentException("target must be an UIElement");
+
 		public virtual bool CanExecuteCommand(PpsCommandContext commandContext) 
 			=> true;
 
@@ -88,32 +131,45 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsCommand ---------------------------------------------------------
+	#region -- class PpsCommandImpl ---------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Implements a command that can call a delegate. This command
-	/// can also be added to the idle collection.</summary>
-	public sealed class PpsCommand : PpsCommandBase
+	/// <summary></summary>
+	public abstract class PpsCommandImpl : PpsCommandBase
 	{
-		private readonly Action<object> command;
-		private readonly Func<object, bool> canExecute;
+		private readonly Func<PpsCommandContext, bool> canExecute;
 
-		public PpsCommand(Action<object> command, Func<object, bool> canExecute = null)
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		public PpsCommandImpl(Func<PpsCommandContext, bool> canExecute = null)
 		{
-			this.command = command;
 			this.canExecute = canExecute;
 		} // ctor
+
+		public PpsCommandImpl(string name, Type ownerType, Func<PpsCommandContext, bool> canExecute = null)
+			: base(name, ownerType)
+		{
+			this.canExecute = canExecute;
+		} // ctor
+
+		public PpsCommandImpl(string name, Type ownerType, InputGestureCollection inputGestures, Func<PpsCommandContext, bool> canExecute = null)
+			: base(name, ownerType, inputGestures)
+		{
+			this.canExecute = canExecute;
+		} // ctor
+
+		#endregion
 
 		#region -- Command Member -------------------------------------------------------
 
 		public override bool CanExecuteCommand(PpsCommandContext commandContext)
-			=> canExecute == null || canExecute(commandContext.Parameter);
+			=> canExecute?.Invoke(commandContext) ?? true;
 
-		public override void ExecuteCommand(PpsCommandContext commandContext)
+		public sealed override void ExecuteCommand(PpsCommandContext commandContext)
 		{
 			try
 			{
-				command(commandContext.Parameter);
+				if (CanExecuteCommand(commandContext))
+					ExecuteCommandCore(commandContext);
 			}
 			catch (PpsDataTableForeignKeyRestriction)
 			{
@@ -126,9 +182,117 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc Execute
 
+		protected abstract void ExecuteCommandCore(PpsCommandContext commandContext);
+
+		#endregion
+	} // class PpsCommandImpl
+
+	#endregion
+
+	#region -- class PpsCommand ---------------------------------------------------------
+
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Implements a command that can call a delegate. This command
+	/// can also be added to the idle collection.</summary>
+	public sealed class PpsCommand : PpsCommandImpl
+	{
+		private readonly Action<PpsCommandContext> command;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		public PpsCommand(Action<PpsCommandContext> command, Func<PpsCommandContext, bool> canExecute = null)
+			: base(canExecute)
+		{
+			this.command = command;
+		} // ctor
+
+		public PpsCommand(string name, Type ownerType, Action<PpsCommandContext> command, Func<PpsCommandContext, bool> canExecute = null)
+			: base(name, ownerType, canExecute)
+		{
+			this.command = command;
+		} // ctor
+
+		public PpsCommand(string name, Type ownerType, InputGestureCollection inputGestures, Action<PpsCommandContext> command, Func<PpsCommandContext, bool> canExecute = null)
+			: base(name, ownerType, inputGestures, canExecute)
+		{
+			this.command = command;
+		} // ctor
+
+		#endregion
+
+		#region -- Command Member -------------------------------------------------------
+
+		protected override void ExecuteCommandCore(PpsCommandContext commandContext)
+		{
+			SetTargetState(commandContext.Target, true);
+			try
+			{
+				command(commandContext);
+			}
+			finally
+			{
+				SetTargetState(commandContext.Target, false);
+			}
+		} // proc ExecuteCommandCore
+
 		#endregion
 	} // class PpsCommand
-	
+
+	#endregion
+
+	#region -- class PpsAsyncCommand --------------------------------------------------
+
+	public sealed class PpsAsyncCommand : PpsCommandImpl
+	{
+
+		private readonly Func<PpsCommandContext, Task> command;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
+		
+		public PpsAsyncCommand(Func<PpsCommandContext, Task> command, Func<PpsCommandContext, bool> canExecute)
+			: base(canExecute)
+		{
+			this.command = command;
+		} // ctor
+
+		public PpsAsyncCommand(string name, Type ownerType, Func<PpsCommandContext, Task> command, Func<PpsCommandContext, bool> canExecute) :
+			base(name, ownerType, canExecute)
+		{
+			this.command = command;
+		} // ctor
+
+		public PpsAsyncCommand(string name, Type ownerType, InputGestureCollection inputGestures, Func<PpsCommandContext, Task> command, Func<PpsCommandContext, bool> canExecute)
+			: base(name, ownerType, inputGestures, canExecute)
+		{
+			this.command = command;
+		} // ctor
+
+		#endregion
+
+		#region -- Command Member -------------------------------------------------------
+
+		public override bool CanExecuteCommand(PpsCommandContext commandContext)
+			=> !GetTargetState(commandContext.Target)
+				&& base.CanExecuteCommand(commandContext);
+
+		protected override void ExecuteCommandCore(PpsCommandContext commandContext)
+		{
+			SetTargetState(commandContext.Target, true);
+			try
+			{
+				command(commandContext)
+					.ContinueWith(t => SetTargetState(commandContext.Target, false), TaskContinuationOptions.ExecuteSynchronously);
+			}
+			catch
+			{
+				SetTargetState(commandContext.Target, false);
+				throw;
+			}
+		} // func ExecuteCommandCore
+
+		#endregion
+	} // class PpsAsyncCommand
+
 	#endregion
 
 	#region -- class PpsCommandOrderConverter -------------------------------------------
@@ -217,17 +381,13 @@ namespace TecWare.PPSn.UI
 		} // ctor
 
 		public override bool Equals(object obj)
-		{
-			var other = obj as PpsCommandOrder;
-			if (other != null)
-				return Equals(other);
-			else
-				return false;
-		} // func Equals
+			=> obj is PpsCommandOrder other ? Equals(other) : false;
 
-		public override int GetHashCode() => group.GetHashCode() ^ order.GetHashCode();
+		public override int GetHashCode() 
+			=> group.GetHashCode() ^ order.GetHashCode();
 
-		public override string ToString() => $"{group},{order}";
+		public override string ToString() 
+			=> $"{group},{order}";
 
 		public bool Equals(PpsCommandOrder other) => group == other.group && order == other.order;
 		public int CompareTo(PpsCommandOrder other) => group == other.group ? order - other.order : group - other.group;
@@ -391,6 +551,7 @@ namespace TecWare.PPSn.UI
 			Add(tmp);
 			return tmp;
 		} // ctor
+		
 
 		/// <summary></summary>
 		protected override void ClearItems()

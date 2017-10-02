@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
+			 xmlns:cm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:TecWare.PPSn.UI"
 			 mc:Ignorable="d" 
@@ -13,6 +14,9 @@
 
 		<CollectionViewSource x:Key="SortedTraces" Source="{Binding Traces}"
 							  IsLiveFilteringRequested="True">
+			<CollectionViewSource.SortDescriptions>
+				<cm:SortDescription PropertyName="Name" Direction="Descending" />
+			</CollectionViewSource.SortDescriptions>
 		</CollectionViewSource>
 
 		<Style x:Key="PPSnTraceAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}">

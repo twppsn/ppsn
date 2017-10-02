@@ -41,7 +41,7 @@ namespace TecWare.PPSn.UI
 		{
 			InitializeComponent();
 
-			((CollectionViewSource)this.Resources["SortedTraces"]).SortDescriptions.Add(new SortDescription("Stamp", ListSortDirection.Descending));
+			Resources[PpsEnvironment.WindowPaneService] = this;
 
 			CommandBindings.Add(
 				new CommandBinding(ApplicationCommands.Copy,

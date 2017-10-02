@@ -37,6 +37,7 @@ namespace TecWare.PPSn
 	public partial class PpsEnvironment
 	{
 		public const string EnvironmentService = "PpsEnvironmentService";
+		public const string WindowPaneService = "PpsWindowPaneService";
 
 		private readonly Dispatcher currentDispatcher; // Synchronisation
 		private readonly InputManager inputManager;
@@ -254,7 +255,7 @@ namespace TecWare.PPSn
 		{
 			if (e.Command is PpsCommandBase c)
 			{
-				e.CanExecute = c.CanExecuteCommand(new PpsCommandContext(environment, e.Source, e.Parameter));
+				e.CanExecute = c.CanExecuteCommand(new PpsCommandContext(environment, e.OriginalSource ?? e.Source, e.Source, e.Parameter));
 				e.Handled = true;
 			}
 		} // func CanExecuteCommandHandlerImpl
@@ -263,7 +264,7 @@ namespace TecWare.PPSn
 		{
 			if (e.Command is PpsCommandBase c)
 			{
-				c.ExecuteCommand(new PpsCommandContext(environment, e.OriginalSource ?? e.Source, e.Parameter));
+				c.ExecuteCommand(new PpsCommandContext(environment, e.OriginalSource ?? e.Source, e.Source, e.Parameter));
 				e.Handled = true;
 			}
 		} // func CanExecuteCommandHandlerImpl

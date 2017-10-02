@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -26,6 +27,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using Microsoft.Win32;
+using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
@@ -82,9 +84,18 @@ namespace TecWare.PPSn.Controls
 	public partial class PpsAttachmentsControl : UserControl, IPpsAttachmentSource
 	{
 		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsAttachmentsControl), new FrameworkPropertyMetadata(null));
+
 		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
+		public static readonly DependencyProperty AttachmentsSourceProperty = DependencyProperty.Register(nameof(AttachmentsSource), typeof(IPpsAttachments), typeof(PpsAttachmentsControl));
+		public static readonly DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsAttachmentsControl));
+
+		public static readonly RoutedCommand AddAttachmentAddFileCommand = new PpsAsyncCommand("Attachments.AddFile", typeof(PpsAttachmentsControl), ctx => AppendAttachmentFromFileDialogAsync(ctx), ctx => IsAttachmentControlEnabled(ctx));
+		public static readonly RoutedCommand AddAttachmentAddLinkCommand = new PpsAsyncCommand("Attachments.AddLink", typeof(PpsAttachmentsControl), ctx => AppendAttachmentFromObjectAsync(ctx), ctx => IsAttachmentControlEnabled(ctx));
+		public static readonly RoutedCommand RemoveAttachmentCommand = new PpsCommand("Attachments.Remove", typeof(IPpsAttachmentItem), ctx => RemoveAttachment(ctx), ctx => IsAttachmentRemovable(ctx));
+		public static readonly RoutedCommand RunAttachmentCommand = new PpsAsyncCommand("Attachments.Run", typeof(IPpsAttachmentItem), ctx => RunAttachmentAsync(ctx), ctx => IsAttachmentControlEnabled(ctx));
 
 		private readonly Lazy<PpsEnvironment> getEnvironment;
+		private readonly Lazy<IPpsWindowPane> getCurrentPane;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
@@ -93,37 +104,92 @@ namespace TecWare.PPSn.Controls
 			InitializeComponent();
 
 			this.getEnvironment = new Lazy<PpsEnvironment>(() => PpsEnvironment.GetEnvironment(this));
+			this.getCurrentPane = new Lazy<IPpsWindowPane>(() => PpsEnvironment.GetCurrentPane(this));
 
 			// initialize toolbar
 			var commands = new PpsUICommandCollection();
 			commands.CollectionChanged += Commands_CollectionChanged;
 			SetValue(commandsPropertyKey, commands);
-			// Q+D
-			AddDefaultCommands();
 
-			#region --old--
-			Loaded += LoadBindings;
-			#endregion
+			// Add default commands
+			Commands.AddButton("100,110", "filePlus", AddAttachmentAddFileCommand, String.Empty, "Fügt einen Anhang hinzu");
+			Commands.AddButton("100,120", "link", AddAttachmentAddLinkCommand, String.Empty, "Fügt eine Verknüpfung hinzu");
+
+			Loaded += PpsAttachmentsControl_Loaded;
 		} // ctor
 
-		protected override void OnInitialized(EventArgs e)
+		private void PpsAttachmentsControl_Loaded(object sender, RoutedEventArgs e)
 		{
-			base.OnInitialized(e);
+			// detach load event
+			Loaded -= PpsAttachmentsControl_Loaded;
 
 			// add command bindings
-
-			// todo: call environment to add buttons
-
-		} // proc OnInitialized
+			Environment.CallMemberDirect("InitalizeAttachmentControl", new object[] { Commands, Tag, this }, ignoreNilFunction: true);
+		} // proc PpsAttachmentsControl_Loaded
 
 		#endregion
 
-		private void AddDefaultCommands()
+		#region -- Command implementations --------------------------------------------
+
+		private static Task AppendAttachmentFromFileDialogAsync(PpsCommandContext context)
+			=> context.GetService<PpsAttachmentsControl>(true).AppendAttachmentFromFileDialogAsync();
+
+		private async Task AppendAttachmentFromFileDialogAsync()
 		{
-			Commands.AddButton("100,110", "filePlus", AddFileAttachmentCommand, String.Empty, "Fügt einen Anhang hinzu");
-			Commands.AddButton("100,120", "link", AddLinkAttachmentCommand, String.Empty, "Fügt eine Verknüpfung hinzu");
-			Commands.AddButton("100,130", "camera", CameraAttachmentCommand, String.Empty, "Öffnet das Kameramodul");
-		} // proc AddDefaultCommands
+			var ofd = new OpenFileDialog
+			{
+				Multiselect = true,
+				CheckFileExists = true
+			};
+
+			if (ofd.ShowDialog() ?? false)
+			{
+				using (var bar = CurrentPane?.DisableUI()) // disable pane ui
+				{
+					foreach (var fileName in ofd.FileNames)
+					{
+						try
+						{
+							bar.Text = String.Format("Füge hinzu {0}...", Path.GetFileName(fileName));
+							await AttachmentsSource.AppendAsync(Environment, fileName);
+						}
+						catch (Exception ex)
+						{
+							await Environment.ShowExceptionAsync(ex, String.Format("Datei konnte nicht importiert werden.\n" + fileName));
+						}
+					}
+				}
+			}
+		} // proc AppendAttachmentFromFileDialogAsync
+
+		private static Task AppendAttachmentFromObjectAsync(PpsCommandContext context)
+			=> context.GetService<PpsAttachmentsControl>(true).AppendAttachmentFromObjectAsync();
+		
+		private Task AppendAttachmentFromObjectAsync()
+		{
+			MessageBox.Show("Todo");
+			return Task.CompletedTask;
+		} // proc AppendAttachmentFromObjectAsync
+
+		private static bool IsAttachmentControlEnabled(PpsCommandContext context)
+			=> true;
+
+		private static IPpsAttachmentItem GetCurrentAttachmentItemFromContext(PpsCommandContext ctx)
+			=> ctx.DataContext is IPpsAttachmentItem item ? item : ctx.GetService<PpsAttachmentsControl>()?.SelectedAttachment;
+
+		private static void RemoveAttachment(PpsCommandContext ctx)
+			=> GetCurrentAttachmentItemFromContext(ctx)?.Remove();
+
+		private static bool IsAttachmentRemovable(PpsCommandContext ctx)
+			=> true; // todo: (isender, ie) => ie.CanExecute = SelectedAttachment != null
+		
+		private static Task RunAttachmentAsync(PpsCommandContext ctx)
+			=> GetCurrentAttachmentItemFromContext(ctx)?.LinkedObject.ViewAsync(ctx.Target);
+			
+
+		#endregion
+
+		#region -- Logical Children ---------------------------------------------------
 
 		protected override IEnumerator LogicalChildren 
 			=> base.LogicalChildren;
@@ -147,221 +213,20 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc Commands_CollectionChanged
 
+		#endregion
+
 		/// <summary>List of commands for the toolbar.</summary>
 		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
 
-		/// <summary>Access to the environment.</summary>
-		public PpsEnvironment Environment => getEnvironment.Value;
-
-		#region --old--
-
-		#region -- LoadBindings ---------------------------------------------------------
-
-		private void ExecuteCommand(ICommand cmd, IInputElement target)
-		{
-			if (cmd is RoutedCommand r)
-				r.Execute(null, target);
-			else
-				cmd.Execute(null);
-		} // func ExecuteCommand
-
-		private void LoadBindings(object sender, EventArgs e)
-		{
-			if (AddFileButtonCommand == null)
-				CommandBindings.Add(
-				new CommandBinding(AddFileAttachmentCommand,
-					async (isender, ie) =>
-					{
-						var ofd = new OpenFileDialog
-						{
-							Multiselect = true,
-							CheckFileExists = true
-						};
-						if (ofd.ShowDialog() ?? false)
-						{
-							// todo: get parent block provider?
-							// UI should be show something
-
-							foreach (var fileName in ofd.FileNames)
-							{
-								try
-								{
-									await AttachmentsSource.AppendAsync(Environment, fileName);
-								}
-								catch (Exception ex)
-								{
-									await Environment.ShowExceptionAsync(ex, String.Format("Datei konnte nicht importiert werden.\n" + fileName));
-								}
-							}
-						}
-						ie.Handled = true;
-					},
-					(isender, ie) => ie.CanExecute = true
-				)
-			);
-			else
-				CommandBindings.Add(new CommandBinding(AddFileAttachmentCommand, (isender, ie) => ExecuteCommand(AddFileButtonCommand, this)));
-
-			if (AddLinkButtonCommand == null)
-				CommandBindings.Add(
-					new CommandBinding(AddLinkAttachmentCommand,
-						(isender, ie) =>
-						{
-							throw new NotImplementedException();
-						},
-						(isender, ie) => ie.CanExecute = true
-					)
-				);
-			else
-				CommandBindings.Add(new CommandBinding(AddLinkAttachmentCommand, (isender, ie) => ExecuteCommand(AddLinkButtonCommand, this)));
-
-			if (RemoveButtonCommand == null)
-				CommandBindings.Add(
-						new CommandBinding(RemoveAttachmentCommand,
-							(isender, ie) =>
-							{
-								if (SelectedAttachment != null)
-									SelectedAttachment.Remove();
-								ie.Handled = true;
-							},
-							(isender, ie) => ie.CanExecute = SelectedAttachment != null
-						)
-					);
-			else
-				CommandBindings.Add(new CommandBinding(RemoveAttachmentCommand, (isender, ie) => ExecuteCommand(RemoveButtonCommand, this)));
-
-			if (ScannerButtonCommand == null)
-				CommandBindings.Add(
-					new CommandBinding(ScannerAttachmentCommand,
-						(isender, ie) =>
-						{
-							throw new NotImplementedException();
-						},
-						(isender, ie) => ie.CanExecute = true
-					)
-				);
-			else
-				CommandBindings.Add(new CommandBinding(ScannerAttachmentCommand, (isender, ie) => ExecuteCommand(ScannerButtonCommand, this)));
-
-			if (CameraButtonCommand == null)
-				CommandBindings.Add(
-					new CommandBinding(CameraAttachmentCommand,
-						(isender, ie) =>
-						{
-						},
-						(isender, ie) => ie.CanExecute = true
-					)
-				);
-			else
-				CommandBindings.Add(new CommandBinding(CameraAttachmentCommand, (isender, ie) => ExecuteCommand(CameraButtonCommand, this)));
-
-			if (SignatureButtonCommand == null)
-				CommandBindings.Add(
-					new CommandBinding(SignatureAttachmentCommand,
-						(isender, ie) =>
-						{
-							throw new NotImplementedException();
-						},
-						(isender, ie) => ie.CanExecute = true
-					)
-				);
-			else
-				CommandBindings.Add(new CommandBinding(SignatureAttachmentCommand, (isender, ie) => ExecuteCommand(SignatureButtonCommand, this)));
-
-			if (SeventhButtonCommand == null)
-				; // NOP
-			else
-				CommandBindings.Add(new CommandBinding(SeventhButtonAttachmentCommand, (isender, ie) => ExecuteCommand(SeventhButtonCommand, this)));
-
-			CommandBindings.Add(
-					new CommandBinding(RunFileAttachmentCommand,
-						(isender, ie) =>
-						{
-							SelectedAttachment.LinkedObject.ShellExecute();
-						},
-						(isender, ie) => ie.CanExecute = SelectedAttachment?.LinkedObject?.MimeType != MimeTypes.Text.DataSet
-					)
-				);
-		}
-
-		#endregion
-
-		#region -- Propertys ------------------------------------------------------------
-
-		public readonly static DependencyProperty AttachmentsSourceProperty = DependencyProperty.Register(nameof(AttachmentsSource), typeof(IPpsAttachments), typeof(PpsAttachmentsControl));
-		public readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsAttachmentsControl));
-
-		public readonly static DependencyProperty AddFileButtonVisibleProperty = DependencyProperty.Register(nameof(AddFileButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
-		public readonly static DependencyProperty AddFileButtonCommandProperty = DependencyProperty.Register(nameof(AddFileButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
-		public readonly static DependencyProperty AddLinkButtonVisibleProperty = DependencyProperty.Register(nameof(AddLinkButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
-		public readonly static DependencyProperty AddLinkButtonCommandProperty = DependencyProperty.Register(nameof(AddLinkButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
-		public readonly static DependencyProperty RemoveButtonVisibleProperty = DependencyProperty.Register(nameof(RemoveButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
-		public readonly static DependencyProperty RemoveButtonCommandProperty = DependencyProperty.Register(nameof(RemoveButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
-		public readonly static DependencyProperty CameraButtonVisibleProperty = DependencyProperty.Register(nameof(CameraButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(true));
-		public readonly static DependencyProperty CameraButtonCommandProperty = DependencyProperty.Register(nameof(CameraButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
-		public readonly static DependencyProperty ScannerButtonVisibleProperty = DependencyProperty.Register(nameof(ScannerButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(false));
-		public readonly static DependencyProperty ScannerButtonCommandProperty = DependencyProperty.Register(nameof(ScannerButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
-		public readonly static DependencyProperty SignatureButtonVisibleProperty = DependencyProperty.Register(nameof(SignatureButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(false));
-		public readonly static DependencyProperty SignatureButtonCommandProperty = DependencyProperty.Register(nameof(SignatureButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
-		private readonly static DependencyProperty SeventhButtonVisibleProperty = DependencyProperty.Register(nameof(SeventhButtonVisible), typeof(bool), typeof(PpsAttachmentsControl), new UIPropertyMetadata(false));
-		private readonly static DependencyProperty SeventhButtonImagePathProperty = DependencyProperty.Register(nameof(SeventhButtonImagePath), typeof(object), typeof(PpsAttachmentsControl));
-		private readonly static DependencyProperty SeventhButtonCommandProperty = DependencyProperty.Register(nameof(SeventhButtonCommand), typeof(ICommand), typeof(PpsAttachmentsControl));
-
+		/// <summary>Attachment source.</summary>
 		public IPpsAttachments AttachmentsSource { get => (IPpsAttachments)GetValue(AttachmentsSourceProperty); set => SetValue(AttachmentsSourceProperty, value); }
+		/// <summary>Current active attachment.</summary>
 		public IPpsAttachmentItem SelectedAttachment => (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty);
 
-		/// <summary>sets the visibility of the AddFileButton - default true</summary>
-		public bool AddFileButtonVisible => (bool)GetValue(AddFileButtonVisibleProperty);
-		/// <summary>overloads the command of the AddFileButton</summary>
-		public ICommand AddFileButtonCommand => (ICommand)GetValue(AddFileButtonCommandProperty);
-
-		/// <summary>sets the visibility of the AddLinkButton - default true</summary>
-		public bool AddLinkButtonVisible => (bool)GetValue(AddLinkButtonVisibleProperty);
-		/// <summary>overloads the command of the AddFileButton</summary>
-		public ICommand AddLinkButtonCommand => (ICommand)GetValue(AddLinkButtonCommandProperty);
-
-		/// <summary>sets the visibility of the RemoveButton - default true</summary>
-		public bool RemoveButtonVisible => (bool)GetValue(RemoveButtonVisibleProperty);
-		/// <summary>overloads the command of the RemoveButton</summary>
-		public ICommand RemoveButtonCommand => (ICommand)GetValue(RemoveButtonCommandProperty);
-
-		/// <summary>sets the visibility of the CameraButton - default true</summary>
-		public bool CameraButtonVisible => (bool)GetValue(RemoveButtonVisibleProperty);
-		/// <summary>overloads the command of the CameraButton</summary>
-		public ICommand CameraButtonCommand => (ICommand)GetValue(CameraButtonCommandProperty);
-
-		/// <summary>sets the visibility of the ScannerButton - default true</summary>
-		public bool ScannerButtonVisible => (bool)GetValue(RemoveButtonVisibleProperty);
-		/// <summary>overloads the command of the ScannerButton</summary>
-		public ICommand ScannerButtonCommand => (ICommand)GetValue(ScannerButtonCommandProperty);
-
-		/// <summary>sets the visibility of the SignatureButton - default true</summary>
-		public bool SignatureButtonVisible => (bool)GetValue(RemoveButtonVisibleProperty);
-		/// <summary>overloads the command of the SignatureButton</summary>
-		public ICommand SignatureButtonCommand => (ICommand)GetValue(SignatureButtonCommandProperty);
-
-		/// <summary>sets the visibility of the SeventhButton - default true</summary>
-		public bool SeventhButtonVisible { get => (bool)GetValue(SeventhButtonVisibleProperty); set => SetValue(SeventhButtonVisibleProperty, value); }
-		/// <summary>sets the path for the image of the SeventhButton</summary>
-		public object SeventhButtonImagePath { get => GetValue(SeventhButtonImagePathProperty); set => SetValue(SeventhButtonImagePathProperty, value); }
-		/// <summary>sets the command of the SeventhButton - default true</summary>
-		public ICommand SeventhButtonCommand { get => (ICommand)GetValue(SeventhButtonCommandProperty); set => SetValue(SeventhButtonCommandProperty, value); }
-
-		#endregion
-
-		#region -- RoutedUICommands -----------------------------------------------------
-
-		public readonly static RoutedUICommand RemoveAttachmentCommand = new RoutedUICommand("RemoveAttachment", "RemoveAttachment", typeof(PpsAttachmentsControl));
-		public readonly static RoutedUICommand AddFileAttachmentCommand = new RoutedUICommand("AddFileAttachment", "AddFileAttachment", typeof(PpsAttachmentsControl));
-		public readonly static RoutedUICommand RunFileAttachmentCommand = new RoutedUICommand("RunFileAttachment", "RunFileAttachment", typeof(PpsAttachmentsControl));
-		public readonly static RoutedUICommand AddLinkAttachmentCommand = new RoutedUICommand("AddLinkAttachment", "AddLinkAttachment", typeof(PpsAttachmentsControl));
-		public readonly static RoutedUICommand ScannerAttachmentCommand = new RoutedUICommand("ScannerAttachment", "ScannerAttachment", typeof(PpsAttachmentsControl));
-		public readonly static RoutedUICommand CameraAttachmentCommand = new RoutedUICommand("CameraAttachment", "CameraAttachment", typeof(PpsAttachmentsControl));
-		public readonly static RoutedUICommand SignatureAttachmentCommand = new RoutedUICommand("SignatureAttachment", "SignatureAttachment", typeof(PpsAttachmentsControl));
-		public readonly static RoutedUICommand SeventhButtonAttachmentCommand = new RoutedUICommand("SeventhButtonAttachment", "SeventhButtonAttachment", typeof(PpsAttachmentsControl));
-
-		#endregion
-		#endregion
+		/// <summary>Access to the environment.</summary>
+		public PpsEnvironment Environment => getEnvironment.Value;
+		/// <summary>Return the current pane.</summary>
+		public IPpsWindowPane CurrentPane => getCurrentPane.Value;
 	} // class PpsAttachmentsControl
 
 	#endregion
@@ -605,43 +470,10 @@ namespace TecWare.PPSn.Controls
 				return obj;
 			}
 		} // proc AppendAsync
+
+		public static IPpsAttachmentSource GetAttachmentSource(this DependencyObject dc)
+			=> StuffUI.GetControlService<IPpsAttachmentSource>(dc, true);
 	} // class PpsAttachmentsHelper
 
 	#endregion
-
-	#region -- class PpsAttachmentImageConverter --------------------------------------
-
-	//not currently used
-
-	//public sealed class PpsAttachmentImageConverter : IValueConverter
-	//{
-	//	public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
-	//	{
-	//		if (value is System.Windows.Media.ImageSource)
-	//			return value;
-	//		else if (value is string && !String.IsNullOrEmpty((string)value))
-	//		{
-	//			var resName = String.Concat(value, "PathGeometry");
-	//			var geometry = Application.Current.TryFindResource(resName) as System.Windows.Media.Geometry;
-	//			var clr = (System.Windows.Media.Color)Application.Current.TryFindResource("PPSnAccentColor");
-	//			var brush = new System.Windows.Media.SolidColorBrush(clr)
-	//			{
-	//				Opacity = .75
-	//			};
-	//			var geometryDrawing = new System.Windows.Media.GeometryDrawing(brush, null, geometry);
-	//			System.Windows.Media.DrawingImage image = new System.Windows.Media.DrawingImage(geometryDrawing);
-	//			return image;
-	//		}
-	//		return null;
-	//	} // func Convert
-
-	//	public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
-	//	{
-	//		throw new NotSupportedException();
-	//	} // func ConvertBack
-
-	//} // class PpsAttachmentImageConverter
-
-	#endregion
-
 }
