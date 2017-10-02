@@ -1751,11 +1751,32 @@ namespace TecWare.PPSn
 
 				group.Children.Add(new ImageDrawing(sourceImage, new Rect(0, 0, newWidth, newHeight)));
 
+				var strokes = new System.Windows.Ink.StrokeCollection();
+				var overlay = (from tag in baseObj.Tags where tag.Name.Equals("overlay") select tag).FirstOrDefault();
+				if (overlay != null)
+					using (var ms = new MemoryStream())
+					{
+						var bs = Convert.FromBase64String((string)overlay.Value);
+						ms.Write(bs, 0, bs.Length);
+						ms.Position = 0;
+						strokes = new System.Windows.Ink.StrokeCollection(ms);
+						
+					}
+
 				// todo: check for over and render it
 
 				var drawingVisual = new DrawingVisual();
 				using (var dc = drawingVisual.RenderOpen())
+				{
 					dc.DrawDrawing(group);
+					var fact = 5.5 ;
+					foreach (var stroke in strokes)
+						for (int i = 1; i < stroke.StylusPoints.Count; i++)
+							dc.DrawLine(
+								new Pen(new SolidColorBrush(stroke.DrawingAttributes.Color), stroke.DrawingAttributes.Width), 
+								new Point(stroke.StylusPoints[i - 1].ToPoint().X/ fact, stroke.StylusPoints[i - 1].ToPoint().Y/ fact),
+								new Point(stroke.StylusPoints[i].ToPoint().X/ fact, stroke.StylusPoints[i].ToPoint().Y/ fact));
+				}
 
 				var resizedImage = new RenderTargetBitmap(
 					newWidth, newHeight,
