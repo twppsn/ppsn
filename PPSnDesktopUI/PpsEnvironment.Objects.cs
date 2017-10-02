@@ -666,8 +666,11 @@ namespace TecWare.PPSn
 
 			this.id = id;
 			this.key = key;
+			this.isRev = isRev;
 
 			RefreshData(tagClass, value, userId, creationStamp, isLocalChanged);
+
+			this.isDirty = !id.HasValue;
 		} // ctor
 
 		internal PpsObjectTagView(PpsObjectTags parent, long id, string key, PpsObjectTagClass tagClass, object value, long userId)
@@ -1206,8 +1209,8 @@ namespace TecWare.PPSn
 							{
 								if (nextLocalId.HasValue)
 								{
-									insertIdParameter.Value = nextLocalId.Value;
 									nextLocalId = nextLocalId.Value - 1;
+									insertIdParameter.Value = nextLocalId.Value;
 								}
 								else
 								{
@@ -1222,6 +1225,10 @@ namespace TecWare.PPSn
 								insertCreationDatedParameter.Value = cur.CreationStamp;
 
 								insertCommand.ExecuteNonQueryEx();
+
+								// update id
+								cur.Id = (long)insertIdParameter.Value;
+								transaction.AddRollbackOperation(() => cur.Id = null);
 							}
 							cur.ResetDirty(transaction);
 						}
@@ -1263,9 +1270,15 @@ namespace TecWare.PPSn
 			
 			lock (SyncRoot)
 			{
+				if (state == PpsObjectTagLoadState.None)
+					CheckTagsState();
+
 				UpdateRevisionTagCore(key, tagClass, value, null);
 			}
 		} // proc UpdateRevisionTag
+
+		public void UpdateRevisionTags(params PpsObjectTag[] tagList)
+			=> UpdateRevisionTags(tagList);
 
 		public void UpdateRevisionTags(IEnumerable<PpsObjectTag> tagList)
 		{
@@ -1703,7 +1716,7 @@ namespace TecWare.PPSn
 			if (!baseObj.HasData)
 				return null;
 
-			await Task.Delay(5000);
+			//await Task.Delay(5000);
 
 			// get access to the image stream, this will not load the data stream
 			using (var src = await OpenStreamAsync(FileAccess.Read))
@@ -3587,8 +3600,8 @@ order by t_liefnr.value desc
 			using (var src = new FileStream(fileName, FileMode.Open, FileAccess.Read))
 			{
 				var newObject = await CreateNewObjectFromStreamAsync(src, Path.GetFileName(fileName));
-				newObject.Tags.UpdateTag(UserId, "Filename", PpsObjectTagClass.Text, fileName);
-				newObject.Tags.UpdateTag(UserId, "LastWriteTime", PpsObjectTagClass.Date, lastWriteTime.ToString(CultureInfo.InvariantCulture));
+				newObject.Tags.UpdateRevisionTag("FileName", PpsObjectTagClass.Text, fileName);
+				newObject.Tags.UpdateRevisionTag("LastWriteTime", PpsObjectTagClass.Date, lastWriteTime.ToString(CultureInfo.InvariantCulture));
 
 				// write changes
 				await newObject.UpdateLocalAsync();
@@ -3606,7 +3619,7 @@ order by t_liefnr.value desc
 
 				// create the new empty object
 				var newObject = await CreateNewObjectAsync(ObjectInfos[AttachmentObjectTyp], mimeType);
-				newObject.Tags.UpdateTag(UserId, "Name", PpsObjectTagClass.Text, name);
+				newObject.Tags.UpdateRevisionTag("Name", PpsObjectTagClass.Text, name);
 
 				// import the data
 				var data = await newObject.GetDataAsync<PpsObjectBlobData>();
