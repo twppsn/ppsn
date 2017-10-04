@@ -15,7 +15,7 @@
 		<CollectionViewSource x:Key="SortedTraces" Source="{Binding Traces}"
 							  IsLiveFilteringRequested="True">
 			<CollectionViewSource.SortDescriptions>
-				<cm:SortDescription PropertyName="Name" Direction="Descending" />
+				<cm:SortDescription PropertyName="Stamp" Direction="Descending" />
 			</CollectionViewSource.SortDescriptions>
 		</CollectionViewSource>
 
