@@ -322,7 +322,7 @@ namespace TecWare.PPSn.UI
 		} // func LuaRequireXaml
 
 		[LuaMember("command")]
-		private object LuaCommand(Action<object> command, Func<object, bool> canExecute = null)
+		private object LuaCommand(Action<PpsCommandContext> command, Func<PpsCommandContext, bool> canExecute = null)
 			=> new PpsCommand(command, canExecute);
 
 		[LuaMember("templateSelector")]
