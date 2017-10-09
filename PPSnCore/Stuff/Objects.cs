@@ -130,7 +130,7 @@ namespace TecWare.PPSn.Stuff
 									SetValueIntern(t.Result, null);
 							}, TaskContinuationOptions.ExecuteSynchronously
 						);
-						return default(T);
+						return state == LazyPropertyState.Loaded ? value : default(T);
 					case LazyPropertyState.Loading:
 						return default(T);
 					case LazyPropertyState.Loaded:
