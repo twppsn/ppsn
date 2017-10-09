@@ -1,11 +1,26 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace TecWare.PPSn.Stuff
 {
+	/// <summary>Property implementation for Lazy via Binding or Task..</summary>
+	/// <typeparam name="T"></typeparam>
 	public sealed class LazyProperty<T>
 	{
 		#region -- enum LazyPropertyState -----------------------------------------------
@@ -79,7 +94,7 @@ namespace TecWare.PPSn.Stuff
 
 		public Task<T> GetValueAsync()
 		{
-			lock(getValue)
+			lock (getValue)
 			{
 				switch(state)
 				{
@@ -105,6 +120,7 @@ namespace TecWare.PPSn.Stuff
 				switch (state)
 				{
 					case LazyPropertyState.Nothing:
+						state = LazyPropertyState.Loading;
 						getValue().ContinueWith(
 							t =>
 							{
