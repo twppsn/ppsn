@@ -253,15 +253,15 @@ namespace TecWare.PPSn.Data
 
 		#region -- Get/Set-Value --------------------------------------------------------
 
-		#region -- class PpsTemplateUnoItem ---------------------------------------------
+		#region -- class PpsTemplateUndoItem ---------------------------------------------
 
-		private sealed class PpsTemplateUnoItem : IPpsUndoItem
+		private sealed class PpsTemplateUndoItem : IPpsUndoItem
 		{
 			private readonly PpsFormattedStringValue value;
 			private readonly object oldValue;
 			private readonly object newValue;
 
-			public PpsTemplateUnoItem(PpsFormattedStringValue value, object oldValue, object newValue)
+			public PpsTemplateUndoItem(PpsFormattedStringValue value, object oldValue, object newValue)
 			{
 				this.value = value;
 				this.oldValue = oldValue;
@@ -275,7 +275,7 @@ namespace TecWare.PPSn.Data
 
 			public void Redo()
 				=> value.SetValue(newValue, true, false);
-		} // class PpsTemplateUnoItem
+		} // class PpsTemplateUndoItem
 
 		#endregion
 
@@ -303,7 +303,7 @@ namespace TecWare.PPSn.Data
 				using (var undo = Row.Table.DataSet.UndoSink?.BeginTransaction("Ändere Wert"))
 				{
 					Row.Table.DataSet.UndoSink?.Append(
-						new PpsTemplateUnoItem(this, oldValue, newValue)
+						new PpsTemplateUndoItem(this, oldValue, newValue)
 					);
 					undo.Commit();
 				}
