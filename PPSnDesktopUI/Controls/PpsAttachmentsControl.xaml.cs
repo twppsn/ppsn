@@ -93,6 +93,8 @@ namespace TecWare.PPSn.Controls
 		public static readonly RoutedCommand AddAttachmentAddLinkCommand = new PpsAsyncCommand("Attachments.AddLink", typeof(PpsAttachmentsControl), ctx => AppendAttachmentFromObjectAsync(ctx), ctx => IsAttachmentControlEnabled(ctx));
 		public static readonly RoutedCommand RemoveAttachmentCommand = new PpsCommand("Attachments.Remove", typeof(IPpsAttachmentItem), ctx => RemoveAttachment(ctx), ctx => IsAttachmentRemovable(ctx));
 		public static readonly RoutedCommand RunAttachmentCommand = new PpsAsyncCommand("Attachments.Run", typeof(IPpsAttachmentItem), ctx => RunAttachmentAsync(ctx), ctx => IsAttachmentControlEnabled(ctx));
+		public static readonly RoutedCommand RunPictureEditorCommand = new PpsAsyncCommand("Attachments.Edit", typeof(PpsAttachmentsControl), ctx => RunEditorAsync(ctx), ctx => IsAttachmentControlEnabled(ctx));
+
 
 		private readonly Lazy<PpsEnvironment> getEnvironment;
 		private readonly Lazy<IPpsWindowPane> getCurrentPane;
@@ -114,6 +116,7 @@ namespace TecWare.PPSn.Controls
 			// Add default commands
 			Commands.AddButton("100,110", "filePlus", AddAttachmentAddFileCommand, String.Empty, "Fügt einen Anhang hinzu");
 			Commands.AddButton("100,120", "link", AddAttachmentAddLinkCommand, String.Empty, "Fügt eine Verknüpfung hinzu");
+			Commands.AddButton("100,120", "link", RunPictureEditorCommand, String.Empty, "Startet die Bearbeitung der Bildanhänge");
 
 			Loaded += PpsAttachmentsControl_Loaded;
 		} // ctor
@@ -131,7 +134,17 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Command implementations --------------------------------------------
 
-		private static Task AppendAttachmentFromFileDialogAsync(PpsCommandContext context)
+		private static Task RunEditorAsync(PpsCommandContext context)
+			=> context.GetService<PpsAttachmentsControl>(true).RunEditorAsync();
+
+		private async Task RunEditorAsync()
+		{
+			var wnd = (PpsWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
+
+			((dynamic)wnd).ShowPane(typeof(PpsPicturePane), new LuaTable() { ["Attachments"] = AttachmentsSource, ["ObjectName"] = CurrentPane.Title });
+		}
+
+			private static Task AppendAttachmentFromFileDialogAsync(PpsCommandContext context)
 			=> context.GetService<PpsAttachmentsControl>(true).AppendAttachmentFromFileDialogAsync();
 
 		private async Task AppendAttachmentFromFileDialogAsync()
