@@ -163,10 +163,7 @@ namespace TecWare.PPSn.UI
 		public IPpsPWindowPaneControl PaneControl => null;
 		public bool IsDirty => false;
 		public bool HasSideBar => false;
-
-		//public readonly static RoutedCommand CopyTraceCommand = new RoutedCommand("CopyTrace", typeof(PpsTracePane));
-
-
+		
 		public object Commands => null;
 	} // class PpsTracePane
 
