@@ -263,7 +263,7 @@ namespace TecWare.PPSn
 			return GetControlService(VisualTreeHelper.GetParent(current), serviceType, throwException);
 		} // func GetControlService
 
-		public static DependencyObject GetLocigalParent(this DependencyObject current)
+		public static DependencyObject GetLogicalParent(this DependencyObject current)
 		{
 			var parent = LogicalTreeHelper.GetParent(current);
 			if (parent == null)
@@ -274,7 +274,7 @@ namespace TecWare.PPSn
 					parent = fe.TemplatedParent;
 			}
 			return parent;
-		} // func GetLocigalParent
+		} // func GetLogicalParent
 
 		public static T GetVisualChild<T>(this DependencyObject current)
 			where T : DependencyObject
