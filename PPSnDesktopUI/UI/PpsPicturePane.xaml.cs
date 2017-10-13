@@ -185,6 +185,8 @@ namespace TecWare.PPSn.UI
 			strokeUndoManager = new PpsUndoManager();
 		}
 
+		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
+
 		public string Title => "Bildeditor";
 
 		// not useable - name of the Object is unknown on creation and after that read-only
@@ -691,6 +693,9 @@ namespace TecWare.PPSn.UI
 		public readonly static DependencyProperty InkEditCursorProperty = DependencyProperty.Register(nameof(InkEditCursor), typeof(Cursor), typeof(PpsPicturePane));
 		public readonly static DependencyProperty ShowToolPropertysProperty = DependencyProperty.Register(nameof(ShowToolPropertys), typeof(bool), typeof(PpsPicturePane));
 		public readonly static DependencyProperty ScaleMatrixProperty = DependencyProperty.Register(nameof(ScaleMatrix), typeof(Matrix), typeof(PpsPicturePane));
+
+		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsPicturePane), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
 
 		public static readonly RoutedUICommand EditOverlayCommand = new RoutedUICommand("EditOverlay", "EditOverlay", typeof(PpsPicturePane));
 		public static readonly RoutedUICommand OverlayEditFreehandCommand = new RoutedUICommand("EditFreeForm", "EditFreeForm", typeof(PpsPicturePane));
