@@ -245,6 +245,46 @@ namespace TecWare.PPSn.UI
 			Commands.Add(redoCommand);
 			#endregion
 
+			var a = new StackPanel();
+			a.Children.Add(new Button() { Content = "rot" });
+			a.Children.Add(new Button() { Content = "blau" });
+
+			var freeformeditCommand = new PpsUISplitCommandButton()
+			{
+				Order = new PpsCommandOrder(200, 140),
+				DisplayText = "Freihand",
+				Description = "Kennzeichnungen hinzufügen",
+				Image = "freeformeditImage",
+				Command = new PpsCommand(
+						(args) =>
+						{
+							InkEditMode = InkCanvasEditingMode.Ink;
+						},
+						(args) => SelectedAttachment != null
+					),
+				Popup = new System.Windows.Controls.Primitives.Popup()
+				{
+					Child = a
+				}
+			};
+			Commands.Add(freeformeditCommand);
+
+			var removestrokeCommand = new PpsUICommandButton()
+			{
+				Order = new PpsCommandOrder(200, 140),
+				DisplayText = "Löschen",
+				Description = "Linienzug entfernen",
+				Image = "removestrokeImage",
+				Command = new PpsCommand(
+						(args) =>
+						{
+							InkEditMode = InkCanvasEditingMode.EraseByStroke;
+						},
+						(args) => SelectedAttachment != null && InkStrokes.Count > 0
+					)
+			};
+
+			Commands.Add(removestrokeCommand);
 		}
 
 		public object UndoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Undo orderby un.Index select un).ToArray();
