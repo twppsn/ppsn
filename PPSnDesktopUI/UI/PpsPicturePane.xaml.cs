@@ -101,6 +101,7 @@ namespace TecWare.PPSn.UI
 			public string Name => name;
 			public Color Color => color;
 			public Brush Brush => new SolidColorBrush(color);
+			public static RoutedUICommand Command => OverlaySetColorCommand;
 		}
 
 		#endregion
@@ -185,7 +186,7 @@ namespace TecWare.PPSn.UI
 			strokeUndoManager = new PpsUndoManager();
 
 			strokeUndoManager.CollectionChanged += (sender, e) => { PropertyChanged?.Invoke(null, new PropertyChangedEventArgs("RedoM")); PropertyChanged?.Invoke(null, new PropertyChangedEventArgs("UndoM")); };
-						
+
 			SetValue(commandsPropertyKey, new PpsUICommandCollection());
 
 			#region Undo/Redo
@@ -245,9 +246,7 @@ namespace TecWare.PPSn.UI
 			Commands.Add(redoCommand);
 			#endregion
 
-			var a = new StackPanel();
-			a.Children.Add(new Button() { Content = "rot" });
-			a.Children.Add(new Button() { Content = "blau" });
+			ListBox lb;
 
 			var freeformeditCommand = new PpsUISplitCommandButton()
 			{
@@ -255,6 +254,7 @@ namespace TecWare.PPSn.UI
 				DisplayText = "Freihand",
 				Description = "Kennzeichnungen hinzufügen",
 				Image = "freeformeditImage",
+				DataContext = this,
 				Command = new PpsCommand(
 						(args) =>
 						{
@@ -264,7 +264,11 @@ namespace TecWare.PPSn.UI
 					),
 				Popup = new System.Windows.Controls.Primitives.Popup()
 				{
-					Child = a
+					Child = lb = new ListBox()
+					{
+						Style = (Style)this.FindResource("PPSnColorListBoxStyle"),
+						ItemsSource = StrokeColors
+					}
 				}
 			};
 			Commands.Add(freeformeditCommand);
@@ -510,7 +514,8 @@ namespace TecWare.PPSn.UI
 					var color = (PpsPecStrokeColor)e.Parameter;
 
 					InkDrawingAttributes.Color = color.Color;
-				}));
+				},
+				(sender, e) => e.CanExecute = true));
 
 			CommandBindings.Add(new CommandBinding(
 				OverlayRevertCommand,

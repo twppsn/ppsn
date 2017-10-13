@@ -18,6 +18,21 @@
 				<clr:String>MimeType</clr:String>
 			</CollectionViewSource.LiveFilteringProperties>
 		</CollectionViewSource>
+
+		<Style x:Key="PPSnColorListBoxStyle" TargetType="{x:Type ListBox}">
+			<Setter Property="ItemTemplate">
+				<Setter.Value>
+					<DataTemplate>
+						<Border BorderThickness="1" BorderBrush="Black">
+							<Border BorderThickness="2" BorderBrush="AntiqueWhite">
+								<Button Content="{Binding Name}"  Command="{Binding Command}" CommandParameter="{Binding}" Background="{Binding Brush}"/>
+							</Border>
+						</Border>
+					</DataTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+		
 	</UserControl.Resources>
 	<Grid>
 		<Grid.RowDefinitions>
