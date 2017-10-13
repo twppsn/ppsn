@@ -116,7 +116,7 @@ namespace TecWare.PPSn.Controls
 			// Add default commands
 			Commands.AddButton("100,110", "filePlus", AddAttachmentAddFileCommand, String.Empty, "Fügt einen Anhang hinzu");
 			Commands.AddButton("100,120", "link", AddAttachmentAddLinkCommand, String.Empty, "Fügt eine Verknüpfung hinzu");
-			Commands.AddButton("100,120", "link", RunPictureEditorCommand, String.Empty, "Startet die Bearbeitung der Bildanhänge");
+			Commands.AddButton("100,130", "camera", RunPictureEditorCommand, String.Empty, "Startet die Bearbeitung der Bildanhänge");
 
 			Loaded += PpsAttachmentsControl_Loaded;
 		} // ctor
