@@ -183,7 +183,72 @@ namespace TecWare.PPSn.UI
 			AddCommandBindings();
 
 			strokeUndoManager = new PpsUndoManager();
+
+			strokeUndoManager.CollectionChanged += (sender, e) => { PropertyChanged?.Invoke(null, new PropertyChangedEventArgs("RedoM")); PropertyChanged?.Invoke(null, new PropertyChangedEventArgs("UndoM")); };
+						
+			SetValue(commandsPropertyKey, new PpsUICommandCollection());
+
+			#region Undo/Redo
+			UndoManagerListBox listBox;
+
+			var undoCommand = new PpsUISplitCommandButton()
+			{
+				Order = new PpsCommandOrder(200, 130),
+				DisplayText = "Rückgängig",
+				Description = "Rückgängig",
+				Image = "undoImage",
+				DataContext = this,
+				Command = new PpsCommand(
+					(args) =>
+					{
+						strokeUndoManager.Undo();
+					},
+					(args) => strokeUndoManager?.CanUndo ?? false
+				),
+				Popup = new System.Windows.Controls.Primitives.Popup()
+				{
+					Child = listBox = new UndoManagerListBox()
+					{
+						Style = (Style)Application.Current.FindResource("UndoManagerListBoxStyle")
+					}
+				}
+			};
+
+			listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.UndoM"));
+			UndoManagerListBox listBox1;
+			var redoCommand = new PpsUISplitCommandButton()
+			{
+				Order = new PpsCommandOrder(200, 140),
+				DisplayText = "Wiederholen",
+				Description = "Wiederholen",
+				Image = "redoImage",
+				DataContext = this,
+				Command = new PpsCommand(
+					(args) =>
+					{
+						strokeUndoManager.Redo();
+					},
+					(args) => strokeUndoManager?.CanRedo ?? false
+				),
+				Popup = new System.Windows.Controls.Primitives.Popup()
+				{
+					Child = listBox1 = new UndoManagerListBox()
+					{
+						Style = (Style)Application.Current.FindResource("UndoManagerListBoxStyle")
+					}
+				}
+			};
+
+			listBox1.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.RedoM"));
+
+			Commands.Add(undoCommand);
+			Commands.Add(redoCommand);
+			#endregion
+
 		}
+
+		public object UndoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Undo orderby un.Index select un).ToArray();
+		public object RedoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Redo orderby un.Index select un).ToArray();
 
 		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
 
