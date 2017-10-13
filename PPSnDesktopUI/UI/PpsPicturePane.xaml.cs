@@ -188,7 +188,7 @@ namespace TecWare.PPSn.UI
 		public string Title => "Bildeditor";
 
 		// not useable - name of the Object is unknown on creation and after that read-only
-		//public string SubTitle => "Objekt...";
+		public string SubTitle => String.Empty;
 
 		public object Control => this;
 
