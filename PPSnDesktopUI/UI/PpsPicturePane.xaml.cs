@@ -31,6 +31,8 @@ namespace TecWare.PPSn.UI
 	{
 		#region -- Helper Classes -------------------------------------------------------
 
+		#region Data Representation
+
 		public class PpsPecCamera
 		{
 			private string name;
@@ -177,13 +179,19 @@ namespace TecWare.PPSn.UI
 			}
 		}
 
-		public PpsUndoManager strokeUndoManager;
+		#endregion
 
 		#endregion
 
-		private readonly PpsEnvironment environment;
+		#region Fields
 
+		private PpsUndoManager strokeUndoManager;
+		private readonly PpsEnvironment environment;
 		private List<string> captureSourceNames = new List<string>();
+
+		#endregion
+
+		#region ctor
 
 		public PpsPicturePane()
 		{
@@ -203,190 +211,13 @@ namespace TecWare.PPSn.UI
 
 			SetValue(commandsPropertyKey, new PpsUICommandCollection());
 
-			#region Undo/Redo
-			UndoManagerListBox listBox;
-
-			var undoCommand = new PpsUISplitCommandButton()
-			{
-				Order = new PpsCommandOrder(200, 130),
-				DisplayText = "Rückgängig",
-				Description = "Rückgängig",
-				Image = "undoImage",
-				DataContext = this,
-				Command = new PpsCommand(
-					(args) =>
-					{
-						strokeUndoManager.Undo();
-					},
-					(args) => strokeUndoManager?.CanUndo ?? false
-				),
-				Popup = new System.Windows.Controls.Primitives.Popup()
-				{
-					Child = listBox = new UndoManagerListBox()
-					{
-						Style = (Style)Application.Current.FindResource("UndoManagerListBoxStyle")
-					}
-				}
-			};
-
-			listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.UndoM"));
-			UndoManagerListBox listBox1;
-			var redoCommand = new PpsUISplitCommandButton()
-			{
-				Order = new PpsCommandOrder(200, 140),
-				DisplayText = "Wiederholen",
-				Description = "Wiederholen",
-				Image = "redoImage",
-				DataContext = this,
-				Command = new PpsCommand(
-					(args) =>
-					{
-						strokeUndoManager.Redo();
-					},
-					(args) => strokeUndoManager?.CanRedo ?? false
-				),
-				Popup = new System.Windows.Controls.Primitives.Popup()
-				{
-					Child = listBox1 = new UndoManagerListBox()
-					{
-						Style = (Style)Application.Current.FindResource("UndoManagerListBoxStyle")
-					}
-				}
-			};
-
-			listBox1.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.RedoM"));
-
-			Commands.Add(undoCommand);
-			Commands.Add(redoCommand);
-			#endregion
-
-			var freeformeditCommandButton = new PpsUISplitCommandButton()
-			{
-				Order = new PpsCommandOrder(200, 140),
-				DisplayText = "Freihand",
-				Description = "Kennzeichnungen hinzufügen",
-				Image = "freeformeditImage",
-				Command = new PpsCommand(
-						(args) =>
-						{
-							InkEditMode = InkCanvasEditingMode.Ink;
-						},
-						(args) => SelectedAttachment != null
-					),
-				Popup = new System.Windows.Controls.Primitives.Popup()
-				{
-					Child = new UserControl()
-					{
-						Style = (Style)this.FindResource("PPSnStrokeSettingsControlStyle"),
-						DataContext = StrokeSettings
-					}
-				}
-			};
-			Commands.Add(freeformeditCommandButton);
-
-			var removestrokeCommandButton = new PpsUICommandButton()
-			{
-				Order = new PpsCommandOrder(200, 140),
-				DisplayText = "Löschen",
-				Description = "Linienzug entfernen",
-				Image = "removestrokeImage",
-				Command = new PpsCommand(
-						(args) =>
-						{
-							InkEditMode = InkCanvasEditingMode.EraseByStroke;
-						},
-						(args) => SelectedAttachment != null && InkStrokes.Count > 0
-					)
-			};
-
-			Commands.Add(removestrokeCommandButton);
-
-			var saveCommandButton = new PpsUICommandButton()
-			{
-				Order = new PpsCommandOrder(200, 140),
-				DisplayText = "Speichern",
-				Description = "Bild speichern",
-				Image = "floppy_diskImage",
-				Command = new PpsCommand(
-						(args) =>
-						{
-							ApplicationCommands.Save.Execute(args, null);
-						},
-						(args) => ApplicationCommands.Save.CanExecute(args, null)
-					)
-			};
-
-			Commands.Add(saveCommandButton);
+			AddToolbarCommands();
 		}
 
-		public object UndoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Undo orderby un.Index select un).ToArray();
-		public object RedoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Redo orderby un.Index select un).ToArray();
+		#endregion
 
-		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
+		#region Commands
 
-		public string Title => "Bildeditor";
-
-		// not useable - name of the Object is unknown on creation and after that read-only
-		public string SubTitle => String.Empty;
-
-		public object Control => this;
-
-		public IPpsPWindowPaneControl PaneControl => null;
-
-		public bool IsDirty => false;
-
-		public bool HasSideBar => false;
-
-		public event PropertyChangedEventHandler PropertyChanged;
-
-		public PpsWindowPaneCompareResult CompareArguments(LuaTable otherArgumens)
-		{
-			return PpsWindowPaneCompareResult.Reload;
-		}
-
-		public void Dispose()
-		{
-			ResetCharmObject();
-		}
-
-		public Task LoadAsync(LuaTable args)
-		{
-			var environment = (args["Environment"] as PpsEnvironment) ?? PpsEnvironment.GetEnvironment(this);
-			//DataContext = environment;
-
-			Attachments = (args["Attachments"] as IPpsAttachments);
-
-			return Task.CompletedTask;
-		} // proc LoadAsync
-
-		public Task<bool> UnloadAsync(bool? commit = null)
-		{
-			if (strokeUndoManager.CanUndo)
-				return Task.FromResult(false);
-
-			ResetCharmObject();
-			return Task.FromResult(true);
-		}
-
-		private PpsObject originalObject;
-
-		private void ResetCharmObject()
-		{
-			var wnd = (PpsWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
-
-			((dynamic)wnd).CharmObject = originalObject;
-		}
-		private void SetCharmObject(PpsObject obj)
-		{
-			var wnd = (PpsWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
-
-			if (originalObject == null)
-				originalObject = ((dynamic)wnd).CharmObject;
-
-			((dynamic)wnd).CharmObject = obj;
-		}
-
-		// -- ORIGINAL PpsPicturePane.xaml.cs --------------------------------------------------------------
 		#region ---- CommandBindings ----------------------------------------------------------
 
 		private void AddCommandBindings()
@@ -543,6 +374,233 @@ namespace TecWare.PPSn.UI
 				(sender, e) => e.CanExecute = true));
 		}
 
+		private async void ShowCamera(VideoCaptureElement preview, string CameraName)
+		{
+			await Task.Run(() =>
+			{
+				var mustwait = true;
+				Dispatcher.Invoke(() => mustwait = preview.IsPlaying);
+				Dispatcher.Invoke(() => preview.Stop());
+				if (mustwait)
+					Thread.Sleep(1000);
+				Dispatcher.Invoke(() => SelectedCamera = CameraName);
+				Dispatcher.Invoke(() => SelectedAttachment = null);
+			});
+		}
+
+		#region UICommands
+
+		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsPicturePane), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
+
+		public static readonly RoutedUICommand EditOverlayCommand = new RoutedUICommand("EditOverlay", "EditOverlay", typeof(PpsPicturePane));
+		public static readonly RoutedUICommand OverlayEditFreehandCommand = new RoutedUICommand("EditFreeForm", "EditFreeForm", typeof(PpsPicturePane));
+		public static readonly RoutedUICommand OverlayRemoveStrokeCommand = new RoutedUICommand("EditRubber", "EditRubber", typeof(PpsPicturePane));
+		public static readonly RoutedUICommand OverlaySetThicknessCommand = new RoutedUICommand("SetThickness", "Set Thickness", typeof(PpsPicturePane));
+		public static readonly RoutedUICommand OverlaySetColorCommand = new RoutedUICommand("SetColor", "Set Color", typeof(PpsPicturePane));
+		public readonly static RoutedUICommand ChangeCameraCommand = new RoutedUICommand("ChangeCamera", "ChangeCamera", typeof(PpsPicturePane));
+
+		#endregion
+
+		#endregion
+
+		#region Toolbar
+
+		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
+
+		private void AddToolbarCommands()
+		{
+			#region Undo/Redo
+			UndoManagerListBox listBox;
+
+			var undoCommand = new PpsUISplitCommandButton()
+			{
+				Order = new PpsCommandOrder(200, 130),
+				DisplayText = "Rückgängig",
+				Description = "Rückgängig",
+				Image = "undoImage",
+				DataContext = this,
+				Command = new PpsCommand(
+					(args) =>
+					{
+						strokeUndoManager.Undo();
+					},
+					(args) => strokeUndoManager?.CanUndo ?? false
+				),
+				Popup = new System.Windows.Controls.Primitives.Popup()
+				{
+					Child = listBox = new UndoManagerListBox()
+					{
+						Style = (Style)Application.Current.FindResource("UndoManagerListBoxStyle")
+					}
+				}
+			};
+			listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.UndoM"));
+
+			var redoCommand = new PpsUISplitCommandButton()
+			{
+				Order = new PpsCommandOrder(200, 140),
+				DisplayText = "Wiederholen",
+				Description = "Wiederholen",
+				Image = "redoImage",
+				DataContext = this,
+				Command = new PpsCommand(
+					(args) =>
+					{
+						strokeUndoManager.Redo();
+					},
+					(args) => strokeUndoManager?.CanRedo ?? false
+				),
+				Popup = new System.Windows.Controls.Primitives.Popup()
+				{
+					Child = listBox = new UndoManagerListBox()
+					{
+						Style = (Style)Application.Current.FindResource("UndoManagerListBoxStyle")
+					}
+				}
+			};
+			listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.RedoM"));
+
+			Commands.Add(undoCommand);
+			Commands.Add(redoCommand);
+			#endregion
+
+			#region Strokes
+
+			var freeformeditCommandButton = new PpsUISplitCommandButton()
+			{
+				Order = new PpsCommandOrder(300, 110),
+				DisplayText = "Freihand",
+				Description = "Kennzeichnungen hinzufügen",
+				Image = "freeformeditImage",
+				Command = new PpsCommand(
+						(args) =>
+						{
+							InkEditMode = InkCanvasEditingMode.Ink;
+						},
+						(args) => SelectedAttachment != null
+					),
+				Popup = new System.Windows.Controls.Primitives.Popup()
+				{
+					Child = new UserControl()
+					{
+						Style = (Style)this.FindResource("PPSnStrokeSettingsControlStyle"),
+						DataContext = StrokeSettings
+					}
+				}
+			};
+			Commands.Add(freeformeditCommandButton);
+
+			var removestrokeCommandButton = new PpsUICommandButton()
+			{
+				Order = new PpsCommandOrder(300, 120),
+				DisplayText = "Löschen",
+				Description = "Linienzug entfernen",
+				Image = "removestrokeImage",
+				Command = new PpsCommand(
+						(args) =>
+						{
+							InkEditMode = InkCanvasEditingMode.EraseByStroke;
+						},
+						(args) => SelectedAttachment != null && InkStrokes.Count > 0
+					)
+			};
+			Commands.Add(removestrokeCommandButton);
+
+			#endregion
+
+			#region Misc
+			var saveCommandButton = new PpsUICommandButton()
+			{
+				Order = new PpsCommandOrder(400, 110),
+				DisplayText = "Speichern",
+				Description = "Bild speichern",
+				Image = "floppy_diskImage",
+				Command = new PpsCommand(
+						(args) =>
+						{
+							ApplicationCommands.Save.Execute(args, null);
+						},
+						(args) => ApplicationCommands.Save.CanExecute(args, null)
+					)
+			};
+			Commands.Add(saveCommandButton);
+
+			#endregion
+		}
+
+		#endregion
+
+		#endregion
+
+		#region IPpsWindowPane
+
+		public string Title => "Bildeditor";
+
+		// not useable - name of the Object is unknown on creation and after that read-only
+		public string SubTitle => String.Empty;
+
+		public object Control => this;
+
+		public IPpsPWindowPaneControl PaneControl => null;
+
+		public bool IsDirty => false;
+
+		public bool HasSideBar => false;
+
+		public event PropertyChangedEventHandler PropertyChanged;
+
+		public PpsWindowPaneCompareResult CompareArguments(LuaTable otherArgumens)
+		{
+			return PpsWindowPaneCompareResult.Reload;
+		}
+
+		public void Dispose()
+		{
+			ResetCharmObject();
+		}
+
+		public Task LoadAsync(LuaTable args)
+		{
+			var environment = (args["Environment"] as PpsEnvironment) ?? PpsEnvironment.GetEnvironment(this);
+			//DataContext = environment;
+
+			Attachments = (args["Attachments"] as IPpsAttachments);
+
+			return Task.CompletedTask;
+		} // proc LoadAsync
+
+		public Task<bool> UnloadAsync(bool? commit = null)
+		{
+			if (strokeUndoManager.CanUndo)
+				return Task.FromResult(false);
+
+			ResetCharmObject();
+			return Task.FromResult(true);
+		}
+
+		#endregion
+
+		#region Charmbar
+
+		private PpsObject originalObject;
+
+		private void ResetCharmObject()
+		{
+			var wnd = (PpsWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
+
+			((dynamic)wnd).CharmObject = originalObject;
+		}
+		private void SetCharmObject(PpsObject obj)
+		{
+			var wnd = (PpsWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
+
+			if (originalObject == null)
+				originalObject = ((dynamic)wnd).CharmObject;
+
+			((dynamic)wnd).CharmObject = obj;
+		}
+
 		#endregion
 
 		#region Development
@@ -598,20 +656,6 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		private async void ShowCamera(VideoCaptureElement preview, string CameraName)
-		{
-			await Task.Run(() =>
-			{
-				var mustwait = true;
-				Dispatcher.Invoke(() => mustwait = preview.IsPlaying);
-				Dispatcher.Invoke(() => preview.Stop());
-				if (mustwait)
-					Thread.Sleep(1000);
-				Dispatcher.Invoke(() => SelectedCamera = CameraName);
-				Dispatcher.Invoke(() => SelectedAttachment = null);
-			});
-		}
-
 		private async Task<PpsObject> IncludePictureAsync(string imagePath)
 		{
 			PpsObject obj;
@@ -635,11 +679,16 @@ namespace TecWare.PPSn.UI
 				&& item.LinkedObject.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
 		} // proc ShowOnlyObjectImageDataFilter
 
+		#region Propertys
+
+		public IEnumerable<object> UndoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Undo orderby un.Index select un).ToArray();
+		public IEnumerable<object> RedoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Redo orderby un.Index select un).ToArray();
+
 		public IPpsAttachments Attachments
 		{
 			get { return (IPpsAttachments)GetValue(AttachmentsProperty); }
 			set { SetValue(AttachmentsProperty, value); }
-		} // prop Attachments
+		}
 
 		public IPpsAttachmentItem SelectedAttachment
 		{
@@ -659,12 +708,6 @@ namespace TecWare.PPSn.UI
 			set { SetValue(CameraEnumProperty, value); }
 		}
 
-		public PpsPecCommand SelectedCommand
-		{
-			get { return (PpsPecCommand)GetValue(SelectedCommandProperty); }
-			set { SetValue(SelectedCommandProperty, value); }
-		}
-
 		public StrokeCollection InkStrokes
 		{
 			get { return (StrokeCollection)GetValue(InkStrokesProperty); }
@@ -674,7 +717,7 @@ namespace TecWare.PPSn.UI
 		public InkCanvasEditingMode InkEditMode
 		{
 			get { return (InkCanvasEditingMode)GetValue(InkEditModeProperty); }
-			set
+			private set
 			{
 				SetValue(InkEditModeProperty, value);
 				switch ((InkCanvasEditingMode)value)
@@ -695,51 +738,49 @@ namespace TecWare.PPSn.UI
 		public Cursor InkEditCursor
 		{
 			get { return (Cursor)GetValue(InkEditCursorProperty); }
-			set { SetValue(InkEditCursorProperty, value); }
+			private set { SetValue(InkEditCursorProperty, value); }
 		}
 
 		public DrawingAttributes InkDrawingAttributes
 		{
 			get { return (DrawingAttributes)GetValue(InkDrawingAttributesProperty); }
-			set { SetValue(InkDrawingAttributesProperty, value); }
+			private set { SetValue(InkDrawingAttributesProperty, value); }
 		}
 
 		public Matrix ScaleMatrix
 		{
 			get { return GetValue(ScaleMatrixProperty) != null ? (Matrix)GetValue(ScaleMatrixProperty) : new Matrix(1, 0, 0, 1, 0, 0); }
-			set { SetValue(ScaleMatrixProperty, value); }
+			private set { SetValue(ScaleMatrixProperty, value); }
 		}
 
 		public PpsPecStrokeSettings StrokeSettings
 		{
 			get { return (PpsPecStrokeSettings)GetValue(StrokeSettingsProperty); }
-			set { SetValue(StrokeSettingsProperty, value); }
+			private set { SetValue(StrokeSettingsProperty, value); }
 		}
 
-		// -- Static --------------------------------------------------------------
+		#region DependencyPropertys
 
 		public static readonly DependencyProperty AttachmentsProperty = DependencyProperty.Register(nameof(Attachments), typeof(IPpsAttachments), typeof(PpsPicturePane));
 		public readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane));
 		public readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(string), typeof(PpsPicturePane));
 		public readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(List<PpsPecCamera>), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkDrawingAttributesProperty = DependencyProperty.Register(nameof(InkDrawingAttributes), typeof(DrawingAttributes), typeof(PpsPicturePane));
-		public readonly static DependencyProperty SelectedCommandProperty = DependencyProperty.Register(nameof(SelectedCommand), typeof(PpsPecCommand), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(StrokeCollection), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkEditModeProperty = DependencyProperty.Register(nameof(InkEditMode), typeof(InkCanvasEditingMode), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkEditCursorProperty = DependencyProperty.Register(nameof(InkEditCursor), typeof(Cursor), typeof(PpsPicturePane));
 		public readonly static DependencyProperty ScaleMatrixProperty = DependencyProperty.Register(nameof(ScaleMatrix), typeof(Matrix), typeof(PpsPicturePane));
 		public readonly static DependencyProperty StrokeSettingsProperty = DependencyProperty.Register(nameof(StrokeSettings), typeof(PpsPecStrokeSettings), typeof(PpsPicturePane));
 
-		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsPicturePane), new FrameworkPropertyMetadata(null));
-		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
+		#endregion
 
-		public static readonly RoutedUICommand EditOverlayCommand = new RoutedUICommand("EditOverlay", "EditOverlay", typeof(PpsPicturePane));
-		public static readonly RoutedUICommand OverlayEditFreehandCommand = new RoutedUICommand("EditFreeForm", "EditFreeForm", typeof(PpsPicturePane));
-		public static readonly RoutedUICommand OverlayRemoveStrokeCommand = new RoutedUICommand("EditRubber", "EditRubber", typeof(PpsPicturePane));
-		public static readonly RoutedUICommand OverlaySetThicknessCommand = new RoutedUICommand("SetThickness", "Set Thickness", typeof(PpsPicturePane));
-		public static readonly RoutedUICommand OverlaySetColorCommand = new RoutedUICommand("SetColor", "Set Color", typeof(PpsPicturePane));
-		public readonly static RoutedUICommand ChangeCameraCommand = new RoutedUICommand("ChangeCamera", "ChangeCamera", typeof(PpsPicturePane));
+		#endregion
 
+		/// <summary>
+		/// THis function calculates the Matrix to overlay the InkCanvas onto the Image
+		/// </summary>
+		/// <param name="sender">main image</param>
+		/// <param name="e">unused</param>
 		private void CurrentObjectImageMax_SizeChanged(object sender, SizeChangedEventArgs e)
 		{
 			var xfact = (((double)GetValue(Window.ActualWidthProperty) / 5) * 4) / ((Image)sender).ActualWidth;
