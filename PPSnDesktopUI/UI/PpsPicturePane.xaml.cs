@@ -598,8 +598,6 @@ namespace TecWare.PPSn.UI
 			{
 				new PpsPecCommand("Speichern", 150, null, ApplicationCommands.Save, null)
 			};
-
-			ShowToolPropertys = false;
 			PictureTools = actCommands;
 		}
 
@@ -735,15 +733,12 @@ namespace TecWare.PPSn.UI
 				{
 					case InkCanvasEditingMode.Ink:
 						InkEditCursor = Cursors.Pen;
-						ShowToolPropertys = true;
 						break;
 					case InkCanvasEditingMode.EraseByStroke:
 						InkEditCursor = Cursors.No;
-						ShowToolPropertys = false;
 						break;
 					case InkCanvasEditingMode.None:
 						InkEditCursor = Cursors.Hand;
-						ShowToolPropertys = false;
 						break;
 				}
 			}
@@ -773,12 +768,6 @@ namespace TecWare.PPSn.UI
 			set { SetValue(InkDrawingAttributesProperty, value); }
 		}
 
-		public bool ShowToolPropertys
-		{
-			get { return (bool)GetValue(ShowToolPropertysProperty) && String.IsNullOrEmpty(SelectedCamera); }
-			set { SetValue(ShowToolPropertysProperty, value); }
-		}
-
 		public Matrix ScaleMatrix
 		{
 			get { return GetValue(ScaleMatrixProperty) != null ? (Matrix)GetValue(ScaleMatrixProperty) : new Matrix(1, 0, 0, 1, 0, 0); }
@@ -799,7 +788,6 @@ namespace TecWare.PPSn.UI
 		public readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(StrokeCollection), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkEditModeProperty = DependencyProperty.Register(nameof(InkEditMode), typeof(InkCanvasEditingMode), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkEditCursorProperty = DependencyProperty.Register(nameof(InkEditCursor), typeof(Cursor), typeof(PpsPicturePane));
-		public readonly static DependencyProperty ShowToolPropertysProperty = DependencyProperty.Register(nameof(ShowToolPropertys), typeof(bool), typeof(PpsPicturePane));
 		public readonly static DependencyProperty ScaleMatrixProperty = DependencyProperty.Register(nameof(ScaleMatrix), typeof(Matrix), typeof(PpsPicturePane));
 
 		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsPicturePane), new FrameworkPropertyMetadata(null));
