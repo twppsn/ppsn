@@ -122,20 +122,6 @@
 					</Style>
 				</Button.Style>
 			</Button>
-			<Button
-				x:Name="RevertAllChangesButton"
-				Content="Abbrechen"
-				Command="{x:Static local:PpsPicturePane.OverlayRevertCommand}">
-				<Button.Style>
-					<Style>
-						<Style.Triggers>
-							<Trigger Property="Button.IsEnabled" Value="False">
-								<Setter Property="Button.Visibility" Value="Collapsed"/>
-							</Trigger>
-						</Style.Triggers>
-					</Style>
-				</Button.Style>
-			</Button>
 		</StackPanel>
 		<Border
 			Grid.Column="0"

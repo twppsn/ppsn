@@ -514,14 +514,6 @@ namespace TecWare.PPSn.UI
 					InkDrawingAttributes.Color = color.Color;
 				},
 				(sender, e) => e.CanExecute = true));
-
-			CommandBindings.Add(new CommandBinding(
-				OverlayRevertCommand,
-				(sender, e) =>
-				{
-					strokeUndoManager.Undo(strokeUndoManager.Count());
-				},
-				(sender, e) => e.CanExecute = strokeUndoManager.CanUndo));
 		}
 
 		#endregion
