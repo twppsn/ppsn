@@ -260,15 +260,12 @@ namespace TecWare.PPSn.UI
 			Commands.Add(redoCommand);
 			#endregion
 
-			ListBox lb;
-
-			var freeformeditCommand = new PpsUISplitCommandButton()
+			var freeformeditCommandButton = new PpsUISplitCommandButton()
 			{
 				Order = new PpsCommandOrder(200, 140),
 				DisplayText = "Freihand",
 				Description = "Kennzeichnungen hinzufügen",
 				Image = "freeformeditImage",
-				DataContext = this,
 				Command = new PpsCommand(
 						(args) =>
 						{
@@ -285,9 +282,9 @@ namespace TecWare.PPSn.UI
 					}
 				}
 			};
-			Commands.Add(freeformeditCommand);
+			Commands.Add(freeformeditCommandButton);
 
-			var removestrokeCommand = new PpsUICommandButton()
+			var removestrokeCommandButton = new PpsUICommandButton()
 			{
 				Order = new PpsCommandOrder(200, 140),
 				DisplayText = "Löschen",
@@ -302,7 +299,7 @@ namespace TecWare.PPSn.UI
 					)
 			};
 
-			Commands.Add(removestrokeCommand);
+			Commands.Add(removestrokeCommandButton);
 		}
 
 		public object UndoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Undo orderby un.Index select un).ToArray();
