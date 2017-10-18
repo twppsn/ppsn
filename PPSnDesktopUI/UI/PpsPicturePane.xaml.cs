@@ -278,7 +278,7 @@ namespace TecWare.PPSn.UI
 					Child = new UserControl()
 					{
 						Style = (Style)this.FindResource("PPSnStrokeSettingsControlStyle"),
-						DataContext = StrokeSettings						
+						DataContext = StrokeSettings
 					}
 				}
 			};
@@ -401,7 +401,7 @@ namespace TecWare.PPSn.UI
 							SelectedAttachment = i;
 							SelectedCamera = null;
 							var imgData = await i.LinkedObject.GetDataAsync<PpsObjectBlobData>();
-							
+
 							var data = await SelectedAttachment.LinkedObject.GetDataAsync<PpsObjectBlobData>();
 							InkStrokes = await data.GetOverlayAsync() ?? new StrokeCollection();
 
@@ -620,7 +620,7 @@ namespace TecWare.PPSn.UI
 			{
 				new PpsPecCommand("Speichern", 150, null, ApplicationCommands.Save, null)
 			};
-			
+
 			PictureTools = actCommands;
 		}
 
@@ -754,9 +754,8 @@ namespace TecWare.PPSn.UI
 		public static readonly RoutedUICommand EditOverlayCommand = new RoutedUICommand("EditOverlay", "EditOverlay", typeof(PpsPicturePane));
 		public static readonly RoutedUICommand OverlayEditFreehandCommand = new RoutedUICommand("EditFreeForm", "EditFreeForm", typeof(PpsPicturePane));
 		public static readonly RoutedUICommand OverlayRemoveStrokeCommand = new RoutedUICommand("EditRubber", "EditRubber", typeof(PpsPicturePane));
-		public static readonly RoutedUICommand OverlaySetThicknessCommand = new RoutedUICommand("SetThickness", "SetThickness", typeof(PpsPicturePane));
-		public static readonly RoutedUICommand OverlaySetColorCommand = new RoutedUICommand("SetColor", "SetColor", typeof(PpsPicturePane));
-		public static readonly RoutedUICommand OverlayRevertCommand = new RoutedUICommand("RevertAllChanges", "RevertAllChanges", typeof(PpsPicturePane));
+		public static readonly RoutedUICommand OverlaySetThicknessCommand = new RoutedUICommand("SetThickness", "Set Thickness", typeof(PpsPicturePane));
+		public static readonly RoutedUICommand OverlaySetColorCommand = new RoutedUICommand("SetColor", "Set Color", typeof(PpsPicturePane));
 		public readonly static RoutedUICommand ChangeCameraCommand = new RoutedUICommand("ChangeCamera", "ChangeCamera", typeof(PpsPicturePane));
 
 		private void CurrentObjectImageMax_SizeChanged(object sender, SizeChangedEventArgs e)
