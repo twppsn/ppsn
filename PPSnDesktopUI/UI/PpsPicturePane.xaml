@@ -135,26 +135,6 @@
 				</Style>
 			</Grid.Style>
 		</Grid>
-		<!-- save/revert buttons -->
-		<StackPanel
-			Grid.Column="0"
-			Grid.Row="1"
-			HorizontalAlignment="Right"
-			VerticalAlignment="Bottom">
-			<Button
-				Content="Speichern"
-				Command="{x:Static ApplicationCommands.Save}">
-				<Button.Style>
-					<Style>
-						<Style.Triggers>
-							<Trigger Property="Button.IsEnabled" Value="False">
-								<Setter Property="Button.Visibility" Value="Collapsed"/>
-							</Trigger>
-						</Style.Triggers>
-					</Style>
-				</Button.Style>
-			</Button>
-		</StackPanel>
 		<Border
 			Grid.Column="0"
 			Grid.ColumnSpan="2"

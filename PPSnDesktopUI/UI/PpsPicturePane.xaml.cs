@@ -300,6 +300,23 @@ namespace TecWare.PPSn.UI
 			};
 
 			Commands.Add(removestrokeCommandButton);
+
+			var saveCommandButton = new PpsUICommandButton()
+			{
+				Order = new PpsCommandOrder(200, 140),
+				DisplayText = "Speichern",
+				Description = "Bild speichern",
+				Image = "floppy_diskImage",
+				Command = new PpsCommand(
+						(args) =>
+						{
+							ApplicationCommands.Save.Execute(args, null);
+						},
+						(args) => ApplicationCommands.Save.CanExecute(args, null)
+					)
+			};
+
+			Commands.Add(saveCommandButton);
 		}
 
 		public object UndoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Undo orderby un.Index select un).ToArray();
