@@ -372,8 +372,7 @@ namespace TecWare.PPSn.UI
 							SelectedAttachment = i;
 							SelectedCamera = null;
 							var imgData = await i.LinkedObject.GetDataAsync<PpsObjectBlobData>();
-
-							ShowEditCommands();
+							
 							var data = await SelectedAttachment.LinkedObject.GetDataAsync<PpsObjectBlobData>();
 							InkStrokes = await data.GetOverlayAsync() ?? new StrokeCollection();
 
@@ -591,64 +590,6 @@ namespace TecWare.PPSn.UI
 				new PpsPecCommand("Speichern", 150, null, ApplicationCommands.Save, null)
 			};
 			PictureTools = actCommands;
-		}
-
-		private void ShowEditCommands()
-		{
-			var actCommands = new List<PpsPecCommand>();
-
-			BezierSegment curve = new BezierSegment(new Point(0, 0), new Point(50, 50), new Point(30, 50), true);
-			BezierSegment curve1 = new BezierSegment(new Point(50, 50), new Point(100, 100), new Point(90, 100), true);
-			// Set up the Path to insert the segments
-			PathGeometry path = new PathGeometry();
-
-			PathFigure pathFigure = new PathFigure
-			{
-				StartPoint = new Point(0, 0),
-				IsClosed = false
-			};
-			path.Figures.Add(pathFigure);
-
-			pathFigure.Segments.Add(curve);
-			pathFigure.Segments.Add(curve1);
-			var p = new System.Windows.Shapes.Path
-			{
-				Data = path,
-				Stroke = new SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 100, 255)),
-				StrokeThickness = 3
-			};
-
-			actCommands.Add(new PpsPecCommand("Freihand", 200, null, OverlayEditFreehandCommand, p));
-			/*
-			var rect = new System.Windows.Shapes.Rectangle();
-			rect.Width = 100;
-			rect.Height = 75;
-			rect.Fill = new SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 100, 255));
-
-			actCommands.Add(new PpsPictureCommand("Rechteck", 200, null, null, rect));
-
-			var line = new System.Windows.Shapes.Polyline();
-			line.Points.Add(new Point(20, 0));
-			line.Points.Add(new Point(20, 40));
-			line.Points.Add(new Point(0, 40));
-			line.Points.Add(new Point(0, 75));
-			line.Points.Add(new Point(30, 100));
-			line.Points.Add(new Point(100, 100));
-			line.Points.Add(new Point(100, 0));
-			line.Points.Add(new Point(30, 0));
-			line.Stroke = new SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 100, 255));
-			line.StrokeThickness = 3;
-
-			actCommands.Add(new PpsPictureCommand("Linie", 200, null, null, line));
-			*/
-			actCommands.Add(new PpsPecCommand("Radiergummi", 200, null, OverlayRemoveStrokeCommand, null));
-
-			actCommands.Add(new PpsPecCommand("Undo", 100, null, ApplicationCommands.Undo, null));
-			actCommands.Add(new PpsPecCommand("Redo", 100, null, ApplicationCommands.Redo, null));
-
-			PictureTools = actCommands;
-
-			InkStrokes = new StrokeCollection(); // if edit mode is entered - empty the strokes
 		}
 
 		private async Task<PpsObject> IncludePictureAsync(string imagePath)
