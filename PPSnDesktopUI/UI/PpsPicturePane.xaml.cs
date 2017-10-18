@@ -101,7 +101,6 @@ namespace TecWare.PPSn.UI
 			public string Name => name;
 			public Color Color => color;
 			public Brush Brush => new SolidColorBrush(color);
-			public static RoutedUICommand Command => OverlaySetColorCommand;
 		}
 
 		#endregion
