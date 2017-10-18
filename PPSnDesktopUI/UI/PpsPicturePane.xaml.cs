@@ -486,7 +486,6 @@ namespace TecWare.PPSn.UI
 					var preview = (VideoCaptureElement)e.OriginalSource;
 
 					ShowCamera(preview, (string)e.Parameter);
-					ShowLiveCommands();
 
 					SetCharmObject(null);
 				}));
@@ -610,18 +609,7 @@ namespace TecWare.PPSn.UI
 					Thread.Sleep(1000);
 				Dispatcher.Invoke(() => SelectedCamera = CameraName);
 				Dispatcher.Invoke(() => SelectedAttachment = null);
-				Dispatcher.Invoke((() => ShowLiveCommands()));
 			});
-		}
-
-		private void ShowLiveCommands()
-		{
-			var actCommands = new List<PpsPecCommand>
-			{
-				new PpsPecCommand("Speichern", 150, null, ApplicationCommands.Save, null)
-			};
-
-			PictureTools = actCommands;
 		}
 
 		private async Task<PpsObject> IncludePictureAsync(string imagePath)
@@ -671,11 +659,6 @@ namespace TecWare.PPSn.UI
 			set { SetValue(CameraEnumProperty, value); }
 		}
 
-		public List<PpsPecCommand> PictureTools
-		{
-			get { return (List<PpsPecCommand>)GetValue(PictureToolsProperty); }
-			set { SetValue(PictureToolsProperty, value); }
-		}
 		public PpsPecCommand SelectedCommand
 		{
 			get { return (PpsPecCommand)GetValue(SelectedCommandProperty); }
@@ -739,7 +722,6 @@ namespace TecWare.PPSn.UI
 		public readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane));
 		public readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(string), typeof(PpsPicturePane));
 		public readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(List<PpsPecCamera>), typeof(PpsPicturePane));
-		public readonly static DependencyProperty PictureToolsProperty = DependencyProperty.Register(nameof(PictureTools), typeof(List<PpsPecCommand>), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkDrawingAttributesProperty = DependencyProperty.Register(nameof(InkDrawingAttributes), typeof(DrawingAttributes), typeof(PpsPicturePane));
 		public readonly static DependencyProperty SelectedCommandProperty = DependencyProperty.Register(nameof(SelectedCommand), typeof(PpsPecCommand), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(StrokeCollection), typeof(PpsPicturePane));
