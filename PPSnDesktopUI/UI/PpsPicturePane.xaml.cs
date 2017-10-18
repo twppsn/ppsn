@@ -318,7 +318,6 @@ namespace TecWare.PPSn.UI
 		public void Dispose()
 		{
 			ResetCharmObject();
-			//throw new NotImplementedException();
 		}
 
 		public Task LoadAsync(LuaTable args)
