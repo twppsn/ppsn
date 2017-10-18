@@ -103,6 +103,21 @@ namespace TecWare.PPSn.UI
 			public Brush Brush => new SolidColorBrush(color);
 		}
 
+		public class PpsPecStrokeSettings
+		{
+			private IEnumerable<PpsPecStrokeColor> colors;
+			private IEnumerable<PpsPecStrokeThickness> thicknesses;
+
+			public PpsPecStrokeSettings(IEnumerable<PpsPecStrokeColor> Colors, IEnumerable<PpsPecStrokeThickness> Thicknesses)
+			{
+				this.colors = Colors;
+				this.thicknesses = Thicknesses;
+			}
+
+			public IEnumerable<PpsPecStrokeColor> Colors => colors;
+			public IEnumerable<PpsPecStrokeThickness> Thicknesses => thicknesses;
+		}
+
 		#endregion
 
 		#region -- UnDo/ReDo ------------------------------------------------------------
@@ -521,7 +536,7 @@ namespace TecWare.PPSn.UI
 
 		private void DevelopmentSetConstants()
 		{
-			StrokeThicknesses = new List<PpsPecStrokeThickness>
+			var StrokeThicknesses = new List<PpsPecStrokeThickness>
 			{
 				new PpsPecStrokeThickness("1", 1),
 				new PpsPecStrokeThickness("5", 5),
@@ -530,7 +545,7 @@ namespace TecWare.PPSn.UI
 			};
 			Debug("added thickness constants");
 
-			StrokeColors = new List<PpsPecStrokeColor>
+			var StrokeColors = new List<PpsPecStrokeColor>
 			{
 				new PpsPecStrokeColor("Weiß", Colors.White),
 				new PpsPecStrokeColor("Schwarz", Colors.Black),
@@ -539,6 +554,8 @@ namespace TecWare.PPSn.UI
 				new PpsPecStrokeColor("Blau", Colors.Blue)
 			};
 			Debug("added color constants");
+
+			StrokeSettings = new PpsPecStrokeSettings(StrokeColors, StrokeThicknesses);
 
 			var cameraPreviews = new List<PpsPecCamera>();
 			var devices = DsDevice.GetDevicesOfCat(DirectShowLib.FilterCategory.VideoInputDevice);
@@ -589,6 +606,7 @@ namespace TecWare.PPSn.UI
 			{
 				new PpsPecCommand("Speichern", 150, null, ApplicationCommands.Save, null)
 			};
+			
 			PictureTools = actCommands;
 		}
 
@@ -683,18 +701,6 @@ namespace TecWare.PPSn.UI
 			set { SetValue(InkEditCursorProperty, value); }
 		}
 
-		public List<PpsPecStrokeThickness> StrokeThicknesses
-		{
-			get { return (List<PpsPecStrokeThickness>)GetValue(StrokeThicknessesProperty); }
-			set { SetValue(StrokeThicknessesProperty, value); }
-		}
-		public List<PpsPecStrokeColor> StrokeColors
-		{
-			get { return (List<PpsPecStrokeColor>)GetValue(StrokeColorsProperty); }
-			set { SetValue(StrokeColorsProperty, value); }
-		}
-
-
 		public DrawingAttributes InkDrawingAttributes
 		{
 			get { return (DrawingAttributes)GetValue(InkDrawingAttributesProperty); }
@@ -707,6 +713,12 @@ namespace TecWare.PPSn.UI
 			set { SetValue(ScaleMatrixProperty, value); }
 		}
 
+		public PpsPecStrokeSettings StrokeSettings
+		{
+			get { return (PpsPecStrokeSettings)GetValue(StrokeSettingsProperty); }
+			set { SetValue(StrokeSettingsProperty, value); }
+		}
+
 		// -- Static --------------------------------------------------------------
 
 		public static readonly DependencyProperty AttachmentsProperty = DependencyProperty.Register(nameof(Attachments), typeof(IPpsAttachments), typeof(PpsPicturePane));
@@ -714,14 +726,13 @@ namespace TecWare.PPSn.UI
 		public readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(string), typeof(PpsPicturePane));
 		public readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(List<PpsPecCamera>), typeof(PpsPicturePane));
 		public readonly static DependencyProperty PictureToolsProperty = DependencyProperty.Register(nameof(PictureTools), typeof(List<PpsPecCommand>), typeof(PpsPicturePane));
-		public readonly static DependencyProperty StrokeThicknessesProperty = DependencyProperty.Register(nameof(StrokeThicknesses), typeof(List<PpsPecStrokeThickness>), typeof(PpsPicturePane));
-		public readonly static DependencyProperty StrokeColorsProperty = DependencyProperty.Register(nameof(StrokeColors), typeof(List<PpsPecStrokeColor>), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkDrawingAttributesProperty = DependencyProperty.Register(nameof(InkDrawingAttributes), typeof(DrawingAttributes), typeof(PpsPicturePane));
 		public readonly static DependencyProperty SelectedCommandProperty = DependencyProperty.Register(nameof(SelectedCommand), typeof(PpsPecCommand), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(StrokeCollection), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkEditModeProperty = DependencyProperty.Register(nameof(InkEditMode), typeof(InkCanvasEditingMode), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkEditCursorProperty = DependencyProperty.Register(nameof(InkEditCursor), typeof(Cursor), typeof(PpsPicturePane));
 		public readonly static DependencyProperty ScaleMatrixProperty = DependencyProperty.Register(nameof(ScaleMatrix), typeof(Matrix), typeof(PpsPicturePane));
+		public readonly static DependencyProperty StrokeSettingsProperty = DependencyProperty.Register(nameof(StrokeSettings), typeof(PpsPecStrokeSettings), typeof(PpsPicturePane));
 
 		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsPicturePane), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
