@@ -275,10 +275,10 @@ namespace TecWare.PPSn.UI
 					),
 				Popup = new System.Windows.Controls.Primitives.Popup()
 				{
-					Child = lb = new ListBox()
+					Child = new UserControl()
 					{
-						Style = (Style)this.FindResource("PPSnColorListBoxStyle"),
-						ItemsSource = StrokeColors
+						Style = (Style)this.FindResource("PPSnStrokeSettingsControlStyle"),
+						DataContext = StrokeSettings						
 					}
 				}
 			};
