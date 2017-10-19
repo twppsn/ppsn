@@ -39,7 +39,7 @@
 					<DataTemplate>
 						<Border BorderThickness="1" BorderBrush="Black">
 							<Border BorderThickness="2" BorderBrush="AntiqueWhite">
-								<Button Command="{x:Static local:PpsPicturePane.OverlaySetThicknessCommand}" CommandTarget="{Binding Path=PlacementTarget, RelativeSource={RelativeSource AncestorType=Popup}}" CommandParameter="{Binding}">
+								<Button Height="20" Command="{x:Static local:PpsPicturePane.OverlaySetThicknessCommand}" CommandTarget="{Binding Path=PlacementTarget, RelativeSource={RelativeSource AncestorType=Popup}}" CommandParameter="{Binding}">
 									<Line Width="20" Height="{Binding Thickness}"/>
 								</Button>
 							</Border>
@@ -141,71 +141,65 @@
 			Grid.Row="2"
 			BorderThickness="1"
 			BorderBrush="Black">
-		<StackPanel
-			Orientation="Horizontal">
-			<ListBox
-				ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-				VirtualizingStackPanel.ScrollUnit="Pixel"
-				Focusable="False"
-				ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=CameraEnum}">
-				<ListBox.ItemTemplate>
-					<DataTemplate>
-						<StackPanel>
-							<mediaKit:VideoCaptureElement
-								DesiredPixelWidth="320"
-								DesiredPixelHeight="240"
-								FPS="5"
-								VideoCaptureSource="{Binding Name, Mode=OneWay}"
-								Stretch="Fill">
-								<mediaKit:VideoCaptureElement.InputBindings>
-									<MouseBinding
-										Command="{x:Static local:PpsPicturePane.ChangeCameraCommand}"
-										CommandParameter="{Binding Name, Mode=OneWay}"
-										MouseAction="LeftClick"/>
-								</mediaKit:VideoCaptureElement.InputBindings>
-							</mediaKit:VideoCaptureElement>
-
-							<TextBlock
-								Foreground="White"
-								TextAlignment="Center"
-								Text="{Binding Path=Name}"/>
-						</StackPanel>
-					</DataTemplate>
-				</ListBox.ItemTemplate>
-			</ListBox>
-			<!-- preview image band -->
-			<ListBox
-				HorizontalAlignment="Stretch"
-				ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+			<ScrollViewer 
+				VerticalScrollBarVisibility="Hidden"
+				HorizontalScrollBarVisibility="Auto">
+				<StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+					<ItemsControl
+						Grid.Column="0"
+					Focusable="False"
+					ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=CameraEnum}">
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<Button Style="{x:Null}" Command="{x:Static local:PpsPicturePane.ChangeCameraCommand}" CommandParameter="{Binding Name, Mode=OneWay}">
+									<StackPanel>
+										<mediaKit:VideoCaptureElement
+										DesiredPixelWidth="320"
+										DesiredPixelHeight="240"
+										FPS="5"
+										VideoCaptureSource="{Binding Name, Mode=OneWay}"
+										Stretch="Uniform"/>
+										<TextBlock
+										TextAlignment="Center"
+										Text="{Binding Path=Name}"/>
+									</StackPanel>
+								</Button>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<UniformGrid Rows="1" />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+					</ItemsControl>
+					<!-- preview image band -->
+					<ItemsControl
+						Grid.Column="1"
 				Focusable="False"
 				x:Name="imagesList"
 				ItemsSource="{Binding Source={StaticResource FilteredAttachments}}">
-				<ListBox.ItemTemplate>
-					<DataTemplate>
-						<StackPanel VerticalAlignment="Stretch">
-							<StackPanel.InputBindings>
-								<MouseBinding
-									Command="{x:Static local:PpsPicturePane.EditOverlayCommand}"
-									CommandParameter="{Binding}"
-									MouseAction="LeftClick"/>
-							</StackPanel.InputBindings>
-							<Image
-								Stretch="Uniform"
-								Source="{Binding Path=LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}"/>
-							<TextBlock
-								Foreground="White"
-								TextAlignment="Center"
-								Text="{Binding Path=Name}"/>
-						</StackPanel>
-					</DataTemplate>
-				</ListBox.ItemTemplate>
-				<ListBox.ItemsPanel>
-					<ItemsPanelTemplate>
-						<StackPanel Orientation="Horizontal" IsItemsHost="True"/>
-					</ItemsPanelTemplate>
-				</ListBox.ItemsPanel>
-			</ListBox>
-		</StackPanel>
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<Button Style="{x:Null}" Command="{x:Static local:PpsPicturePane.EditOverlayCommand}" CommandParameter="{Binding}">
+									<StackPanel>
+										<Image
+									Stretch="Uniform"
+									Source="{Binding Path=LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}"/>
+										<TextBlock
+									TextAlignment="Center"
+									Text="{Binding Path=Name}"/>
+									</StackPanel>
+								</Button>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<UniformGrid Rows="1" />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+					</ItemsControl>
+				</StackPanel>
+			</ScrollViewer>
 		</Border>
 		<Grid
 			Grid.Column="0"
