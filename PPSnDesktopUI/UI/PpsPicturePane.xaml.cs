@@ -310,7 +310,10 @@ namespace TecWare.PPSn.UI
 				ChangeCameraCommand,
 				(sender, e) =>
 				{
-					var preview = (VideoCaptureElement)e.OriginalSource;
+					var preview = (VideoCaptureElement)FindChildElement(typeof(VideoCaptureElement), (Button)e.OriginalSource);
+
+					if (preview == null)
+						return;
 
 					ShowCamera(preview, (string)e.Parameter);
 
@@ -370,6 +373,8 @@ namespace TecWare.PPSn.UI
 				(sender, e) => e.CanExecute = true));
 		}
 
+		#region Helper Functions
+
 		private async void ShowCamera(VideoCaptureElement preview, string CameraName)
 		{
 			await Task.Run(() =>
@@ -381,8 +386,29 @@ namespace TecWare.PPSn.UI
 					Thread.Sleep(1000);
 				Dispatcher.Invoke(() => SelectedCamera = CameraName);
 				Dispatcher.Invoke(() => SelectedAttachment = null);
+				Dispatcher.Invoke(() => PropertyChanged?.Invoke(null, new PropertyChangedEventArgs("SelectedCamera")));
+				Dispatcher.Invoke(() => PropertyChanged?.Invoke(null, new PropertyChangedEventArgs("SelectedAttachment")));
 			});
 		}
+
+		private DependencyObject FindChildElement(Type t, DependencyObject parent)
+		{
+			if (parent.GetType() == t)
+				return parent;
+
+			DependencyObject ret = null;
+			var i = 0;
+
+			while (ret == null && i < VisualTreeHelper.GetChildrenCount(parent))
+			{
+				ret = FindChildElement(t, VisualTreeHelper.GetChild(parent, i));
+				i++;
+			}
+
+			return ret;
+		}
+
+		#endregion
 
 		#region UICommands
 
