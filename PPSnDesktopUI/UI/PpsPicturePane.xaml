@@ -79,7 +79,8 @@
             VideoCaptureSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedCamera, Mode=OneWay}"
 			UnloadedBehavior="Stop"
 			LoadedBehavior="Play"
-            x:Name="videoElement" Stretch="Fill">
+            x:Name="videoElement"
+			Stretch="Fill">
 			<mediaKit:VideoCaptureElement.Style>
 				<Style TargetType="{x:Type mediaKit:VideoCaptureElement}">
 					<Setter Property="Visibility" Value="Visible"/>
@@ -112,8 +113,7 @@
 				</InkCanvas.LayoutTransform>
 			</InkCanvas>
 			<Grid.Style>
-				<Style
-					TargetType="{x:Type Grid}">
+				<Style TargetType="{x:Type Grid}">
 					<Setter Property="Visibility" Value="Visible"/>
 					<Style.Triggers>
 						<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedAttachment, Mode=OneWay}" Value="{x:Null}">
@@ -260,8 +260,7 @@
 			VerticalAlignment="Stretch"
 			Cursor="No">
 			<Grid.Style>
-				<Style
-					TargetType="{x:Type Grid}">
+				<Style TargetType="{x:Type Grid}">
 					<Setter Property="Visibility" Value="Collapsed"/>
 					<Style.Triggers>
 						<DataTrigger Binding="{Binding ElementName=RevertAllChangesButton, Path=IsEnabled, Mode=OneWay}" Value="True">

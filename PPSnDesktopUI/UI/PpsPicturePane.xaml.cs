@@ -232,7 +232,7 @@ namespace TecWare.PPSn.UI
 						if (e.Parameter is IPpsAttachmentItem i)
 						{
 							if (SelectedAttachment != null && strokeUndoManager.CanUndo)
-								switch(MessageBox.Show("Sie haben ungespeicherte Änderungen!\nMöchten Sie diese noch speichern?", "Warnung", MessageBoxButton.YesNoCancel))
+								switch (MessageBox.Show("Sie haben ungespeicherte Änderungen!\nMöchten Sie diese noch speichern?", "Warnung", MessageBoxButton.YesNoCancel))
 								{
 									case MessageBoxResult.Yes:
 										ApplicationCommands.Save.Execute(null, null);
@@ -343,10 +343,10 @@ namespace TecWare.PPSn.UI
 					bmp.Freeze();
 
 					var tmp = new List<PpsPecCamera>() { new PpsPecCamera(preview.VideoCaptureSource, preview.VideoCaptureSource, bmp) };
-					
-					CachedCameras.Insert(0,new PpsPecCamera(preview.VideoCaptureSource, preview.VideoCaptureSource, bmp));
+
+					CachedCameras.Insert(0, new PpsPecCamera(preview.VideoCaptureSource, preview.VideoCaptureSource, bmp));
 					CameraEnum.RemoveAt(0);
-						
+
 					ShowCamera(preview, (string)e.Parameter);
 
 					SetCharmObject(null);
@@ -828,7 +828,7 @@ namespace TecWare.PPSn.UI
 
 		public static readonly DependencyProperty AttachmentsProperty = DependencyProperty.Register(nameof(Attachments), typeof(IPpsAttachments), typeof(PpsPicturePane));
 		public static readonly DependencyProperty CachedCamerasProperty = DependencyProperty.Register(nameof(CachedCameras), typeof(ObservableCollection<PpsPecCamera>), typeof(PpsPicturePane));
-		
+
 		public readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane));
 		public readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(string), typeof(PpsPicturePane));
 		public readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(ObservableCollection<PpsPecCamera>), typeof(PpsPicturePane));
@@ -851,7 +851,7 @@ namespace TecWare.PPSn.UI
 		private void CurrentObjectImageMax_SizeChanged(object sender, SizeChangedEventArgs e)
 		{
 			var xfact = (double)GetValue(Window.ActualWidthProperty) / ((Image)sender).ActualWidth;
-			var yfact = ((double)GetValue(Window.ActualHeightProperty) -200) / ((Image)sender).ActualHeight;
+			var yfact = ((double)GetValue(Window.ActualHeightProperty) - 200) / ((Image)sender).ActualHeight;
 			// the factors may become NaN (sender.Actual was zero) or infinity - thus scaling would fail
 			xfact = (xfact > 0 && xfact < 100) ? xfact : 1;
 			yfact = (yfact > 0 && yfact < 100) ? yfact : 1;
