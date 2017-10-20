@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -230,6 +231,15 @@ namespace TecWare.PPSn.UI
 					{
 						if (e.Parameter is IPpsAttachmentItem i)
 						{
+							if (SelectedAttachment != null && strokeUndoManager.CanUndo)
+								switch(MessageBox.Show("Sie haben ungespeicherte Änderungen!\nMöchten Sie diese noch speichern?", "Warnung", MessageBoxButton.YesNoCancel))
+								{
+									case MessageBoxResult.Yes:
+										ApplicationCommands.Save.Execute(null, null);
+										break;
+									case MessageBoxResult.Cancel:
+										return;
+								}
 							SelectedAttachment = i;
 							SelectedCamera = null;
 							var imgData = await i.LinkedObject.GetDataAsync<PpsObjectBlobData>();
@@ -616,8 +626,15 @@ namespace TecWare.PPSn.UI
 
 		public Task<bool> UnloadAsync(bool? commit = null)
 		{
-			if (strokeUndoManager.CanUndo)
-				return Task.FromResult(false);
+			if (SelectedAttachment != null && strokeUndoManager.CanUndo)
+				switch (MessageBox.Show("Sie haben ungespeicherte Änderungen!\nMöchten Sie diese noch speichern?", "Warnung", MessageBoxButton.YesNoCancel))
+				{
+					case MessageBoxResult.Yes:
+						ApplicationCommands.Save.Execute(null, null);
+						break;
+					case MessageBoxResult.Cancel:
+						return Task.FromResult(false);
+				}
 
 			ResetCharmObject();
 			return Task.FromResult(true);
