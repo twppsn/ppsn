@@ -47,33 +47,7 @@ namespace TecWare.PPSn.UI
 			public string FriendlyName => friendlyName;
 			public object Image { get { return image; } set { this.image = value; } }
 		}
-
-		public class PpsPecCommand
-		{
-
-			private string commandText;
-			private int commandSize;
-			private SolidColorBrush commandColor;
-			private RoutedUICommand command;
-			private UIElement commandIcon;
-
-			public PpsPecCommand(string Text, int Size, SolidColorBrush Color, RoutedUICommand Command, UIElement Icon)
-			{
-				this.commandText = Text;
-				this.commandSize = Size;
-				this.commandColor = Color ?? new SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 100, 255));
-				this.command = Command;
-				this.commandIcon = Icon;
-			}
-
-			public UIElement CommandIcon => commandIcon;
-
-			public int CommandSize => commandSize;
-			public string CommandText => commandText;
-			public RoutedUICommand Command => command;
-			public SolidColorBrush CommandColor => commandColor;
-		}
-
+		
 		public class PpsPecStrokeThickness
 		{
 			private string name;
