@@ -19,46 +19,72 @@
 			</CollectionViewSource.LiveFilteringProperties>
 		</CollectionViewSource>
 
-		<Style x:Key="PPSnColorListBoxStyle" TargetType="{x:Type ListBox}">
+		<Style x:Key="PPSnColorItemsControlStyle" TargetType="{x:Type ItemsControl}">
 			<Setter Property="ItemTemplate">
 				<Setter.Value>
 					<DataTemplate>
-						<Border BorderThickness="1" BorderBrush="Black">
-							<Border BorderThickness="2" BorderBrush="Red">
-								<Button  Content="{Binding Name}"  Command="{x:Static local:PpsPicturePane.OverlaySetColorCommand}" CommandTarget="{Binding Path=PlacementTarget, RelativeSource={RelativeSource AncestorType=Popup}}" CommandParameter="{Binding}" Background="{Binding Brush}"/>
-							</Border>
+						<Border BorderThickness="1" BorderBrush="Black" Margin="5">
+								<Button 
+									Width="30" 
+									Height="30" 
+									Command="{x:Static local:PpsPicturePane.OverlaySetColorCommand}" 
+									CommandTarget="{Binding Path=PlacementTarget, RelativeSource={RelativeSource AncestorType=Popup}}" 
+									CommandParameter="{Binding}" 
+									Background="{Binding Brush}"/>
 						</Border>
 					</DataTemplate>
+				</Setter.Value>
+			</Setter>
+			<Setter Property="ItemsPanel">
+				<Setter.Value>
+					<ItemsPanelTemplate>
+						<UniformGrid Columns="3" />
+					</ItemsPanelTemplate>
 				</Setter.Value>
 			</Setter>
 			<Setter Property="Focusable" Value="False"/>
 		</Style>
-		<Style x:Key="PPSnThicknessListBoxStyle" TargetType="{x:Type ListBox}">
+		<Style x:Key="PPSnThicknessItemsControlStyle" TargetType="{x:Type ItemsControl}">
 			<Setter Property="ItemTemplate">
 				<Setter.Value>
 					<DataTemplate>
-						<Border BorderThickness="1" BorderBrush="Black">
-							<Border BorderThickness="2" BorderBrush="AntiqueWhite">
-								<Button Height="20" Command="{x:Static local:PpsPicturePane.OverlaySetThicknessCommand}" CommandTarget="{Binding Path=PlacementTarget, RelativeSource={RelativeSource AncestorType=Popup}}" CommandParameter="{Binding}">
-									<Line Width="20" Height="{Binding Thickness}"/>
-								</Button>
-							</Border>
-						</Border>
+						<Grid Margin="5">
+							<Button 
+								VerticalAlignment="Stretch"
+								Height="25"
+								Command="{x:Static local:PpsPicturePane.OverlaySetThicknessCommand}" 
+								CommandTarget="{Binding Path=PlacementTarget, RelativeSource={RelativeSource AncestorType=Popup}}" 
+								CommandParameter="{Binding}" HorizontalContentAlignment="Stretch">
+								<Rectangle Fill="Black" Height="{Binding Size}" HorizontalAlignment="Stretch"  Margin="2"/>
+							</Button>
+						</Grid>
 					</DataTemplate>
 				</Setter.Value>
 			</Setter>
+			<Setter Property="VerticalContentAlignment" Value="Stretch"/>
 		</Style>
 
 		<Style x:Key="PPSnStrokeSettingsControlStyle" TargetType="{x:Type UserControl}">
 			<Setter Property="Content">
 				<Setter.Value>
-					<Grid>
+					<Grid Background="{StaticResource PPSnWindowBackgroundBrush}">
 						<Grid.RowDefinitions>
 							<RowDefinition/>
 							<RowDefinition/>
 						</Grid.RowDefinitions>
-						<ListBox Grid.Row="0" Style="{StaticResource PPSnColorListBoxStyle}" ItemsSource="{Binding Colors}"/>
-						<ListBox Grid.Row="1" Style="{StaticResource PPSnThicknessListBoxStyle}" ItemsSource="{Binding Thicknesses}"/>
+						<ItemsControl 
+							Grid.Row="0" 
+							Style="{StaticResource PPSnColorItemsControlStyle}"
+							Margin="5"
+							ItemsSource="{Binding Colors}"
+							Background="{StaticResource PPSnWindowBackgroundBrush}"/>
+						<ItemsControl 
+							Grid.Row="1" 
+							Style="{StaticResource PPSnThicknessItemsControlStyle}"
+							Margin="5"
+							ItemsSource="{Binding Thicknesses}" 
+							VerticalAlignment="Stretch" 
+							VerticalContentAlignment="Stretch"/>
 					</Grid>
 				</Setter.Value>
 			</Setter>
