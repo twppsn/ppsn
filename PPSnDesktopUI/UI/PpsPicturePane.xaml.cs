@@ -36,6 +36,12 @@ namespace TecWare.PPSn.UI
 			private string friendlyName;
 			private object image;
 
+			/// <summary>
+			/// 
+			/// </summary>
+			/// <param name="Name">VideoSourceName</param>
+			/// <param name="FriendlyName">Name shown to the User</param>
+			/// <param name="Image">cached PreviewImage</param>
 			public PpsPecCamera(string Name, string FriendlyName, object Image = null)
 			{
 				this.name = Name;
@@ -43,6 +49,9 @@ namespace TecWare.PPSn.UI
 				this.image = Image;
 			}
 
+			/// <summary>
+			/// VideoSourceName
+			/// </summary>
 			public string Name => name;
 			public string FriendlyName => friendlyName;
 			public object Image { get { return image; } set { this.image = value; } }
@@ -125,6 +134,7 @@ namespace TecWare.PPSn.UI
 				collection.Remove(stroke);
 			}
 		}
+
 		private class PpsRemoveStrokeUndoItem : IPpsUndoItem
 		{
 			private StrokeCollection collection;
@@ -205,6 +215,7 @@ namespace TecWare.PPSn.UI
 					{
 						if (e.Parameter is IPpsAttachmentItem i)
 						{
+							// check if there is already an image displayed and changed
 							if (SelectedAttachment != null && strokeUndoManager.CanUndo)
 								switch (MessageBox.Show("Sie haben ungespeicherte Änderungen!\nMöchten Sie diese noch speichern?", "Warnung", MessageBoxButton.YesNoCancel))
 								{
@@ -217,6 +228,7 @@ namespace TecWare.PPSn.UI
 
 							SelectedAttachment = i;
 							SelectedCamera = null;
+							// request the full-sized image
 							var imgData = await i.LinkedObject.GetDataAsync<PpsObjectBlobData>();
 
 							var data = await SelectedAttachment.LinkedObject.GetDataAsync<PpsObjectBlobData>();
@@ -239,7 +251,6 @@ namespace TecWare.PPSn.UI
 							};
 							SetCharmObject(i.LinkedObject);
 						}
-
 						strokeUndoManager.Clear();
 					}));
 
@@ -256,9 +267,8 @@ namespace TecWare.PPSn.UI
 					}
 					else if (SelectedCamera != null)
 					{
-						// Aufnehmen
 						var path = System.IO.Path.GetTempPath() + DateTime.Now.ToUniversalTime().ToString("yyyy-MM-dd_HHmmss") + ".jpg";
-						// ToDo, RK: clean me
+						
 						RenderTargetBitmap bmp = new RenderTargetBitmap(
 							(int)videoElement.ActualWidth, (int)videoElement.ActualHeight, 96, 96,
 							PixelFormats.Default
@@ -266,6 +276,7 @@ namespace TecWare.PPSn.UI
 						bmp.Render(videoElement);
 						BitmapEncoder encoder = new JpegBitmapEncoder();
 						encoder.Frames.Add(BitmapFrame.Create(bmp));
+
 						using (var fs = new FileStream(path, FileMode.CreateNew))
 							encoder.Save(fs);
 						var obj = await IncludePictureAsync(path);
@@ -276,7 +287,6 @@ namespace TecWare.PPSn.UI
 					}
 				},
 				(sender, e) => e.CanExecute = !String.IsNullOrEmpty(SelectedCamera) || strokeUndoManager.CanUndo));
-
 
 			CommandBindings.Add(new CommandBinding(
 				ApplicationCommands.Delete,
@@ -327,6 +337,7 @@ namespace TecWare.PPSn.UI
 					SetCharmObject(null);
 				}));
 		}
+
 
 		private void AddStrokeCommandBindings()
 		{
@@ -382,6 +393,11 @@ namespace TecWare.PPSn.UI
 
 		#region Helper Functions
 
+		/// <summary>
+		/// Ansync function to disable the preview and enable the full-sized video
+		/// </summary>
+		/// <param name="preview">VideoCaptureElement which is in actual control</param>
+		/// <param name="CameraName">VideoSourceName of the camera</param>
 		private async void ShowCamera(VideoCaptureElement preview, string CameraName)
 		{
 			await Task.Run(() =>
@@ -389,6 +405,7 @@ namespace TecWare.PPSn.UI
 				var mustwait = true;
 				Dispatcher.Invoke(() => mustwait = preview.IsPlaying);
 				Dispatcher.Invoke(() => preview.Stop());
+				// if the camera was used in the preview, one hast to wait that the os can clear the access
 				if (mustwait)
 					Thread.Sleep(1000);
 				Dispatcher.Invoke(() => SelectedCamera = CameraName);
@@ -396,6 +413,12 @@ namespace TecWare.PPSn.UI
 			});
 		}
 
+		/// <summary>
+		/// Finds the UIElement of a given type in the childs of another control
+		/// </summary>
+		/// <param name="t">Type of Control</param>
+		/// <param name="parent">Parent Control</param>
+		/// <returns></returns>
 		private DependencyObject FindChildElement(Type t, DependencyObject parent)
 		{
 			if (parent.GetType() == t)
@@ -438,6 +461,7 @@ namespace TecWare.PPSn.UI
 		private void AddToolbarCommands()
 		{
 			#region Undo/Redo
+
 			UndoManagerListBox listBox;
 
 			var undoCommand = new PpsUISplitCommandButton()
@@ -490,6 +514,7 @@ namespace TecWare.PPSn.UI
 
 			Commands.Add(undoCommand);
 			Commands.Add(redoCommand);
+
 			#endregion
 
 			#region Strokes
@@ -537,6 +562,7 @@ namespace TecWare.PPSn.UI
 			#endregion
 
 			#region Misc
+
 			var saveCommandButton = new PpsUICommandButton()
 			{
 				Order = new PpsCommandOrder(400, 110),
@@ -587,6 +613,11 @@ namespace TecWare.PPSn.UI
 			ResetCharmObject();
 		}
 
+		/// <summary>
+		/// Loads the content of the panel
+		/// </summary>
+		/// <param name="args">The LuaTable must at least contain ''environment'' and ''Attachments''</param>
+		/// <returns></returns>
 		public Task LoadAsync(LuaTable args)
 		{
 			var environment = (args["Environment"] as PpsEnvironment) ?? PpsEnvironment.GetEnvironment(this);
@@ -617,14 +648,25 @@ namespace TecWare.PPSn.UI
 
 		#region Charmbar
 
+		/// <summary>
+		/// variable saving the object, which was loaded before opening the PicturePane
+		/// </summary>
 		private PpsObject originalObject;
 
+		/// <summary>
+		/// restores the object before loading the PicturePane
+		/// </summary>
 		private void ResetCharmObject()
 		{
 			var wnd = (PpsWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
 
 			((dynamic)wnd).CharmObject = originalObject;
 		}
+
+		/// <summary>
+		/// sets the object of the CharmBar - makes a backup, if it was already set (from the pane requesting the PicturePane)
+		/// </summary>
+		/// <param name="obj">new PpsObject</param>
 		private void SetCharmObject(PpsObject obj)
 		{
 			var wnd = (PpsWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
@@ -779,19 +821,6 @@ namespace TecWare.PPSn.UI
 			}
 		}
 
-		private void InkCanvasRemoveHitTest(object sender, MouseEventArgs e)
-		{
-			var hit = false;
-			var pos = e.GetPosition((InkCanvas)sender);
-			foreach (var stroke in InkStrokes)
-				if (stroke.HitTest(pos))
-				{
-					hit = true;
-					break;
-				}
-			InkEditCursor = hit ? Cursors.No : Cursors.Cross;
-		}
-
 		public Cursor InkEditCursor
 		{
 			get { return (Cursor)GetValue(InkEditCursorProperty); }
@@ -848,6 +877,24 @@ namespace TecWare.PPSn.UI
 			xfact = (xfact > 0 && xfact < 100) ? xfact : 1;
 			yfact = (yfact > 0 && yfact < 100) ? yfact : 1;
 			ScaleMatrix = new Matrix(xfact, 0, 0, yfact, 0, 0);
+		}
+
+		/// <summary>
+		/// Checks, if the mouse is over an InkStroke and changes the cursor according
+		/// </summary>
+		/// <param name="sender">InkCanvas</param>
+		/// <param name="e"></param>
+		private void InkCanvasRemoveHitTest(object sender, MouseEventArgs e)
+		{
+			var hit = false;
+			var pos = e.GetPosition((InkCanvas)sender);
+			foreach (var stroke in InkStrokes)
+				if (stroke.HitTest(pos))
+				{
+					hit = true;
+					break;
+				}
+			InkEditCursor = hit ? Cursors.No : Cursors.Cross;
 		}
 	}
 }
