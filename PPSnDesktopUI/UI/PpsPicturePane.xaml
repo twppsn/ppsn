@@ -76,11 +76,6 @@
 			<ColumnDefinition Width="4*"/>
 			<ColumnDefinition Width="1*"/>
 		</Grid.ColumnDefinitions>
-		<Button 
-			Grid.Row="0"
-			Grid.Column="1"
-			Command="{x:Static ApplicationCommands.Close}"
-			Content="X" Margin="5" Width="25" HorizontalAlignment="Right"/>
 		<mediaKit:VideoCaptureElement
 			Grid.Column="0"
 			Grid.Row="0"
