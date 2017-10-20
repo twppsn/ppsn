@@ -123,71 +123,138 @@
 				</Style>
 			</Grid.Style>
 		</Grid>
-		<Border
-			Grid.Row="2"
-			BorderThickness="1"
-			BorderBrush="Black">
-			<ScrollViewer 
-				VerticalScrollBarVisibility="Hidden"
-				HorizontalScrollBarVisibility="Auto">
-				<StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-					<ItemsControl
-						Grid.Column="0"
-					Focusable="False"
-					ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=CameraEnum}">
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<Button Style="{x:Null}" Command="{x:Static local:PpsPicturePane.ChangeCameraCommand}" CommandParameter="{Binding Name, Mode=OneWay}">
-									<StackPanel>
-										<mediaKit:VideoCaptureElement
+		<ScrollViewer 
+			Margin="10,0,0,0"
+			Grid.Row="1"
+			VerticalScrollBarVisibility="Hidden"
+			HorizontalScrollBarVisibility="Auto">
+			<StackPanel Orientation="Horizontal">
+				<ItemsControl
+					Focusable="False" 
+					ItemsSource="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:PpsPicturePane}}, Path=CameraEnum}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<Button 
+								Command="{x:Static local:PpsPicturePane.ChangeCameraCommand}" 
+								CommandParameter="{Binding Name, Mode=OneWay}" 
+								Height="175" 
+								Width="200" 
+								Margin="0,0,10,0" 
+								VerticalContentAlignment="Stretch">
+								<Grid VerticalAlignment="Stretch">
+									<mediaKit:VideoCaptureElement
 										DesiredPixelWidth="320"
 										DesiredPixelHeight="240"
 										FPS="5"
 										VideoCaptureSource="{Binding Name, Mode=OneWay}"
-										Stretch="Uniform"/>
-										<TextBlock
+										Stretch="Uniform"
+										Margin="5,5,5,20"
+										UnloadedBehavior="Stop"
+										LoadedBehavior="Play"/>
+									<Image Width="50" Height="50" Opacity="0.6">
+										<Image.Source>
+											<DrawingImage>
+												<DrawingImage.Drawing>
+													<GeometryDrawing 
+														Brush="AliceBlue"
+														Geometry="{StaticResource cameraPathGeometry}"/>
+												</DrawingImage.Drawing>
+											</DrawingImage>
+										</Image.Source>
+									</Image>
+									<TextBlock
 										TextAlignment="Center"
+										VerticalAlignment="Bottom"
 										Text="{Binding Path=Name}"/>
-									</StackPanel>
-								</Button>
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-						<ItemsControl.ItemsPanel>
-							<ItemsPanelTemplate>
-								<UniformGrid Rows="1" />
-							</ItemsPanelTemplate>
-						</ItemsControl.ItemsPanel>
-					</ItemsControl>
-					<!-- preview image band -->
-					<ItemsControl
-				Focusable="False"
-				x:Name="imagesList"
-				ItemsSource="{Binding Source={StaticResource FilteredAttachments}}">
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<Button Style="{x:Null}" Command="{x:Static local:PpsPicturePane.EditOverlayCommand}" CommandParameter="{Binding}">
-									<StackPanel>
-										<Image
-									Stretch="Uniform"
-									Source="{Binding Path=LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}"/>
-										<TextBlock
-									TextAlignment="Center"
-									Text="{Binding Path=Name}"/>
-									</StackPanel>
-								</Button>
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-						<ItemsControl.ItemsPanel>
-							<ItemsPanelTemplate>
-								<UniformGrid Rows="1" />
-							</ItemsPanelTemplate>
-						</ItemsControl.ItemsPanel>
-					</ItemsControl>
-				</StackPanel>
-			</ScrollViewer>
-		</Border>
-		<Grid
-			Grid.Row="2"
+								</Grid>
+							</Button>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+					<ItemsControl.ItemsPanel>
+						<ItemsPanelTemplate>
+							<UniformGrid Rows="1" />
+						</ItemsPanelTemplate>
+					</ItemsControl.ItemsPanel>
+				</ItemsControl>
+				<ItemsControl
+					Focusable="False" 
+					ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=CachedCameras}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<Button
+								Command="{x:Static local:PpsPicturePane.ChangeCameraCommand}" 
+								CommandParameter="{Binding Name, Mode=OneWay}" 
+								Height="175" 
+								Width="200" 
+								Margin="0,0,10,0" 
+								VerticalContentAlignment="Stretch">
+								<Grid VerticalAlignment="Stretch">
+									<Image
+										Stretch="Uniform"
+										Margin="5,5,5,20"
+										Source="{Binding Path=Image, Mode=OneWay}"/>
+									<Image Width="50" Height="50" Opacity="0.6">
+										<Image.Source>
+											<DrawingImage>
+												<DrawingImage.Drawing>
+													<GeometryDrawing
+														Brush="AliceBlue"
+														Geometry="{StaticResource cameraPathGeometry}"/>
+												</DrawingImage.Drawing>
+											</DrawingImage>
+										</Image.Source>
+									</Image>
+									<TextBlock
+										TextAlignment="Center"
+										VerticalAlignment="Bottom"
+										Text="{Binding Path=Name}"/>
+								</Grid>
+							</Button>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+					<ItemsControl.ItemsPanel>
+						<ItemsPanelTemplate>
+							<UniformGrid Rows="1" />
+						</ItemsPanelTemplate>
+					</ItemsControl.ItemsPanel>
+				</ItemsControl>
+				<!-- preview image band -->
+				<ItemsControl
+					Focusable="False"
+					x:Name="imagesList"
+					ItemsSource="{Binding Source={StaticResource FilteredAttachments}}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<Button 
+								Command="{x:Static local:PpsPicturePane.EditOverlayCommand}" 
+								CommandParameter="{Binding}" 
+								Height="175" 
+								Width="200" 
+								VerticalContentAlignment="Stretch" 
+								Margin="0,0,10,0">
+								<Grid VerticalAlignment="Stretch">
+									<Image
+										Stretch="Uniform"
+										Margin="5,5,5,20"
+										Source="{Binding Path=LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}"/>
+									<TextBlock
+										TextAlignment="Center" 
+										VerticalAlignment="Bottom"
+										Text="{Binding Path=Name}"/>
+								</Grid>
+							</Button>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+					<ItemsControl.ItemsPanel>
+						<ItemsPanelTemplate>
+							<UniformGrid Rows="1" />
+						</ItemsPanelTemplate>
+					</ItemsControl.ItemsPanel>
+				</ItemsControl>
+			</StackPanel>
+		</ScrollViewer>
+		<!--<Grid
+			Grid.Row="1"
 			Opacity="0.8"
 			HorizontalAlignment="Stretch"
 			VerticalAlignment="Stretch"

@@ -33,15 +33,18 @@ namespace TecWare.PPSn.UI
 		{
 			private string name;
 			private string friendlyName;
+			private object image;
 
-			public PpsPecCamera(string Name, string FriendlyName)
+			public PpsPecCamera(string Name, string FriendlyName, object Image = null)
 			{
 				this.name = Name;
 				this.friendlyName = FriendlyName;
+				this.image = Image;
 			}
 
 			public string Name => name;
 			public string FriendlyName => friendlyName;
+			public object Image { get { return image; } set { this.image = value; } }
 		}
 
 		public class PpsPecCommand
@@ -197,6 +200,8 @@ namespace TecWare.PPSn.UI
 
 			environment = PpsEnvironment.GetEnvironment(this) ?? throw new ArgumentNullException("environment");
 
+			CachedCameras = new ObservableCollection<PpsPecCamera>();
+
 			DevelopmentSetConstants();
 
 			AddCommandBindings();
@@ -313,8 +318,25 @@ namespace TecWare.PPSn.UI
 					var preview = (VideoCaptureElement)FindChildElement(typeof(VideoCaptureElement), (Button)e.OriginalSource);
 
 					if (preview == null)
+					{
+						SelectedAttachment = null;
+						SelectedCamera = (string)e.Parameter;
 						return;
+					}
 
+					RenderTargetBitmap bmp = new RenderTargetBitmap(
+							(int)preview.ActualWidth, (int)preview.ActualHeight, 96, 96,
+							PixelFormats.Default
+						);
+					bmp.Render(preview);
+
+					bmp.Freeze();
+
+					var tmp = new List<PpsPecCamera>() { new PpsPecCamera(preview.VideoCaptureSource, preview.VideoCaptureSource, bmp) };
+					
+					CachedCameras.Insert(0,new PpsPecCamera(preview.VideoCaptureSource, preview.VideoCaptureSource, bmp));
+					CameraEnum.RemoveAt(0);
+						
 					ShowCamera(preview, (string)e.Parameter);
 
 					SetCharmObject(null);
@@ -541,9 +563,9 @@ namespace TecWare.PPSn.UI
 				Command = new PpsCommand(
 						(args) =>
 						{
-							ApplicationCommands.Save.Execute(args, null);
+							ApplicationCommands.Save.Execute(args, this);
 						},
-						(args) => ApplicationCommands.Save.CanExecute(args, null)
+						(args) => ApplicationCommands.Save.CanExecute(args, this)
 					)
 			};
 			Commands.Add(saveCommandButton);
@@ -650,7 +672,7 @@ namespace TecWare.PPSn.UI
 
 			StrokeSettings = new PpsPecStrokeSettings(StrokeColors, StrokeThicknesses);
 
-			var cameraPreviews = new List<PpsPecCamera>();
+			var cameraPreviews = new ObservableCollection<PpsPecCamera>();
 			var devices = DsDevice.GetDevicesOfCat(DirectShowLib.FilterCategory.VideoInputDevice);
 			foreach (var dev in devices)
 			{
@@ -712,6 +734,12 @@ namespace TecWare.PPSn.UI
 			set { SetValue(AttachmentsProperty, value); }
 		}
 
+		public ObservableCollection<PpsPecCamera> CachedCameras
+		{
+			get { return (ObservableCollection<PpsPecCamera>)GetValue(CachedCamerasProperty); }
+			set { SetValue(CachedCamerasProperty, value); }
+		}
+
 		public IPpsAttachmentItem SelectedAttachment
 		{
 			get { return (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty); }
@@ -724,9 +752,9 @@ namespace TecWare.PPSn.UI
 			set { SetValue(SelectedCameraProperty, value); }
 		}
 
-		public List<PpsPecCamera> CameraEnum
+		public ObservableCollection<PpsPecCamera> CameraEnum
 		{
-			get { return (List<PpsPecCamera>)GetValue(CameraEnumProperty); }
+			get { return (ObservableCollection<PpsPecCamera>)GetValue(CameraEnumProperty); }
 			set { SetValue(CameraEnumProperty, value); }
 		}
 
@@ -784,9 +812,11 @@ namespace TecWare.PPSn.UI
 		#region DependencyPropertys
 
 		public static readonly DependencyProperty AttachmentsProperty = DependencyProperty.Register(nameof(Attachments), typeof(IPpsAttachments), typeof(PpsPicturePane));
+		public static readonly DependencyProperty CachedCamerasProperty = DependencyProperty.Register(nameof(CachedCameras), typeof(ObservableCollection<PpsPecCamera>), typeof(PpsPicturePane));
+		
 		public readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane));
 		public readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(string), typeof(PpsPicturePane));
-		public readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(List<PpsPecCamera>), typeof(PpsPicturePane));
+		public readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(ObservableCollection<PpsPecCamera>), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkDrawingAttributesProperty = DependencyProperty.Register(nameof(InkDrawingAttributes), typeof(DrawingAttributes), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(StrokeCollection), typeof(PpsPicturePane));
 		public readonly static DependencyProperty InkEditModeProperty = DependencyProperty.Register(nameof(InkEditMode), typeof(InkCanvasEditingMode), typeof(PpsPicturePane));
