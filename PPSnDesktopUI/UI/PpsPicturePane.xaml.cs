@@ -240,6 +240,7 @@ namespace TecWare.PPSn.UI
 									case MessageBoxResult.Cancel:
 										return;
 								}
+
 							SelectedAttachment = i;
 							SelectedCamera = null;
 							var imgData = await i.LinkedObject.GetDataAsync<PpsObjectBlobData>();
@@ -625,7 +626,7 @@ namespace TecWare.PPSn.UI
 		public Task<bool> UnloadAsync(bool? commit = null)
 		{
 			if (SelectedAttachment != null && strokeUndoManager.CanUndo)
-				switch (MessageBox.Show("Sie haben ungespeicherte Änderungen!\nMöchten Sie diese noch speichern?", "Warnung", MessageBoxButton.YesNoCancel))
+				switch (MessageBox.Show("Sie haben ungespeicherte Änderungen!\nMöchten Sie diese vor dem Schließen noch speichern?", "Warnung", MessageBoxButton.YesNoCancel))
 				{
 					case MessageBoxResult.Yes:
 						ApplicationCommands.Save.Execute(null, null);
