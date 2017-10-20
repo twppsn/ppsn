@@ -253,22 +253,5 @@
 				</ItemsControl>
 			</StackPanel>
 		</ScrollViewer>
-		<!--<Grid
-			Grid.Row="1"
-			Opacity="0.8"
-			HorizontalAlignment="Stretch"
-			VerticalAlignment="Stretch"
-			Cursor="No">
-			<Grid.Style>
-				<Style TargetType="{x:Type Grid}">
-					<Setter Property="Visibility" Value="Collapsed"/>
-					<Style.Triggers>
-						<DataTrigger Binding="{Binding ElementName=RevertAllChangesButton, Path=IsEnabled, Mode=OneWay}" Value="True">
-							<Setter Property="Visibility" Value="Visible"/>
-						</DataTrigger>
-					</Style.Triggers>
-				</Style>
-			</Grid.Style>
-		</Grid>-->
 	</Grid>
 </UserControl>
