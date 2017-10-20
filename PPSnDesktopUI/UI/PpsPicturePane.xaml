@@ -68,13 +68,11 @@
 	</UserControl.Resources>
 	<Grid>
 		<Grid.RowDefinitions>
-			<RowDefinition Height="30" />
-			<RowDefinition Height="3*" />
-			<RowDefinition Height="1*"/>
+			<RowDefinition  />
+			<RowDefinition Height="200"/>
 		</Grid.RowDefinitions>
 		<mediaKit:VideoCaptureElement
 			Grid.Row="0"
-			Grid.RowSpan="2"
 			DesiredPixelWidth="1920"
             DesiredPixelHeight="1080"
             FPS="30"
@@ -94,7 +92,7 @@
 			</mediaKit:VideoCaptureElement.Style>
 		</mediaKit:VideoCaptureElement>
 		<Grid
-			Grid.Row="1">
+			Grid.Row="0">
 			<InkCanvas
 				Cursor="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=InkEditCursor}"
 				UseCustomCursor="True"
