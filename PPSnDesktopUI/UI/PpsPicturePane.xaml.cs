@@ -785,19 +785,36 @@ namespace TecWare.PPSn.UI
 			private set
 			{
 				SetValue(InkEditModeProperty, value);
+				var t = (InkCanvas)FindChildElement(typeof(InkCanvas), this);
 				switch ((InkCanvasEditingMode)value)
 				{
 					case InkCanvasEditingMode.Ink:
+						t.MouseMove -= InkCanvasRemoveHitTest;
 						InkEditCursor = Cursors.Pen;
 						break;
 					case InkCanvasEditingMode.EraseByStroke:
-						InkEditCursor = Cursors.No;
+						InkEditCursor = Cursors.Cross;
+						t.MouseMove += InkCanvasRemoveHitTest;
 						break;
 					case InkCanvasEditingMode.None:
+						t.MouseMove -= InkCanvasRemoveHitTest;
 						InkEditCursor = Cursors.Hand;
 						break;
 				}
 			}
+		}
+
+		private void InkCanvasRemoveHitTest(object sender, MouseEventArgs e)
+		{
+			var hit = false;
+			var pos = e.GetPosition((InkCanvas)sender);
+			foreach (var stroke in InkStrokes)
+				if (stroke.HitTest(pos))
+				{
+					hit = true;
+					break;
+				}
+			InkEditCursor = hit ? Cursors.No : Cursors.Cross;
 		}
 
 		public Cursor InkEditCursor
