@@ -418,8 +418,6 @@ namespace TecWare.PPSn.UI
 					Thread.Sleep(1000);
 				Dispatcher.Invoke(() => SelectedCamera = CameraName);
 				Dispatcher.Invoke(() => SelectedAttachment = null);
-				Dispatcher.Invoke(() => PropertyChanged?.Invoke(null, new PropertyChangedEventArgs("SelectedCamera")));
-				Dispatcher.Invoke(() => PropertyChanged?.Invoke(null, new PropertyChangedEventArgs("SelectedAttachment")));
 			});
 		}
 
