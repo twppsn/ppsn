@@ -84,6 +84,7 @@
             DesiredPixelHeight="1080"
             FPS="30"
             VideoCaptureSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedCamera, Mode=OneWay}"
+			UnloadedBehavior="Stop"
 			LoadedBehavior="Play"
             x:Name="videoElement" Stretch="Fill">
 			<mediaKit:VideoCaptureElement.Style>
