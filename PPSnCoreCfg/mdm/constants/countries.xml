@@ -20,6 +20,12 @@
 			<pps:field name="dbo.Land.Zone" />
 			<pps:field name="dbo.Land.PostAdr" />
 			<pps:field name="dbo.Land.IsActive" />
+
+			<pps:view name="masterData.Land" displayName="Länder">
+				<pps:source type="select">
+					<![CDATA[SELECT [Id], [Name], [Iso] FROM dbo.[Land] ]]>
+				</pps:source>
+			</pps:view>
 			
 			<!-- Synchronization data -->
 			<pps:dataset name="masterdata">

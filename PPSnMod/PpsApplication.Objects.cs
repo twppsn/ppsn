@@ -1462,12 +1462,16 @@ namespace TecWare.PPSn.Server
 				this.application = application;
 			} // ctor
 
-			public async Task<PpsDataTransaction> GetDatabaseAsync(string name = null)
+			public Task<PpsDataTransaction> GetDatabaseAsync(string name = null)
 			{
-				var scope = DEScope.GetScopeService<IDECommonScope>(true);
-
 				// find existing source
 				var dataSource = name == null ? application.MainDataSource : application.GetDataSource(name, true);
+				return GetDatabaseAsync(dataSource);
+			} // func GetDatabaseAsync
+
+			public async Task<PpsDataTransaction> GetDatabaseAsync(PpsDataSource dataSource)
+			{
+				var scope = DEScope.GetScopeService<IDECommonScope>(true);
 				if (scope.TryGetGlobal<PpsDataTransaction>(this, dataSource, out var trans))
 					return trans;
 
@@ -1485,11 +1489,26 @@ namespace TecWare.PPSn.Server
 
 				return trans;
 			} // func GetDatabaseAsync
-			
+
 			[LuaMember]
 			public PpsDataTransaction GetDatabase(string name = null)
 				=> GetDatabaseAsync(name).AwaitTask();
 
+			public async Task<(PpsDataSelector selector, PpsViewDescription view)> CreateSelectorAsync(string name)
+			{
+				var view = application.GetViewDefinition(name, true);
+				var trans = await GetDatabaseAsync(view.SelectorToken.DataSource);
+
+				return (view.SelectorToken.CreateSelector(trans.Connection, true), view);
+			} // func CreateSelectorAsync
+
+			[LuaMember]
+			public LuaResult CreateSelector(string name)
+			{
+				var r = CreateSelectorAsync(name).AwaitTask();
+				return new LuaResult(r.selector, r.view);
+			} // func CreateSelector
+			
 			[LuaMember]
 			public PpsDataTransaction Main => GetDatabase();
 		} // class PpsDatabaseLibrary

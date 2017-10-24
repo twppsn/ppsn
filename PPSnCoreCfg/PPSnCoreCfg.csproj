@@ -48,12 +48,17 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\PPSnMod\ppsn.licenseheader">
+      <Link>ppsn.licenseheader</Link>
+    </None>
     <None Include="mdm\constants\constants.lua" />
     <None Include="mdm\constants\countries.lua" />
     <None Include="mdm\contacts\Wpf\contacts.lua" />
     <None Include="ClientWpf\Panes\testEnvironment.lua" />
     <None Include="ClientWpf\Panes\hello.lua" />
     <None Include="reports\.sources" />
+    <None Include="reports\libs\PpsData.lua" />
+    <None Include="reports\libs\PpsStuff.lua" />
     <None Include="reports\server\Test.tex" />
     <None Include="sds\contract\Wpf\contract.lua" />
     <None Include="sds\offer\Wpf\offer.lua" />
@@ -220,7 +225,6 @@
   <ItemGroup>
     <Folder Include="ClientWpf\Templates\" />
     <Folder Include="mdm\constants\Wpf\" />
-    <Folder Include="reports\libs\" />
     <Folder Include="reports\tw\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

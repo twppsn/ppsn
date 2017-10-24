@@ -7,3 +7,8 @@ go
 -- Poduktionsplanungssystem
 CREATE SCHEMA pps;
 go
+
+
+-- MasterData -> view space
+CREATE SCHEMA masterData;
+go

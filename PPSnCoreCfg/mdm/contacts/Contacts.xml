@@ -91,6 +91,13 @@
 				</pps:source>
 				<pps:attribute name="Excel.Report">true</pps:attribute>
 			</pps:view>
+			
+			<!--  Server Site view -->
+			<pps:view name="masterData.Kont" displayName="Kontakte">
+				<pps:source type="select">
+					<![CDATA[SELECT [Id], [Name] FROM [dbo].[Kont]]]>
+				</pps:source>
+			</pps:view>
 
 			<!-- readonly data -->
 			<pps:dataset name="masterdata">

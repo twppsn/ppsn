@@ -1358,5 +1358,7 @@ namespace TecWare.PPSn.Server.Wpf
 		} // proc AddLuaCodeItem
 
 		public string ThemesDirectory => Config.GetAttribute("xamlSource", String.Empty);
+		/// <summary>Masterdata view of the client.</summary>
+		public PpsDataSetServerDefinition MasterDataSetDefinition => masterDataSetDefinition;
 	} // class WpfClientItem
 }

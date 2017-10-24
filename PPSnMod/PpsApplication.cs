@@ -278,9 +278,13 @@ namespace TecWare.PPSn.Server
 				this.application = application ?? throw new ArgumentNullException(nameof(application));
 			} // ctor
 
-			public override Task<IEnumerable<IDataRow>> GetListAsync(string select, string[] columns, PpsDataFilterExpression selector, PpsDataOrderExpression[] order)
+			public override async Task<IEnumerable<IDataRow>> GetListAsync(string select, KeyValuePair<string, string>[] columns, PpsDataFilterExpression selector, PpsDataOrderExpression[] order)
 			{
-				throw new ArgumentNullException("Unknown list.");
+				var (r, v) = await application.Database.CreateSelectorAsync(select);
+
+				return r.ApplySelect(columns)
+					.ApplyFilter(selector, v.LookupFilter)
+					.ApplyOrder(order, v.LookupOrder);
 			} // func GetListAsync
 
 			public override Task<PpsDataSet> GetDataSetAsync(object identitfication, string[] tableFilter)
