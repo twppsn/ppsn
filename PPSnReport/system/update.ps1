@@ -20,6 +20,7 @@
 #rem update filename database for luatex
 #rem C:\Tools\MyContext\data2\tex\texmf-win64\bin\mtxrun.exe --tree="c:\Tools\MyContext\data\tex"  --direct --resolve mktexlsr
 #C:\Tools\MyContext\data2\tex\texmf-win64\bin\mtxrun.exe --tree="c:\Tools\MyContext\data2\tex" --generate
+# nur en ist sinnvoll
 #C:\Tools\MyContext\data2\tex\texmf-win64\bin\mtxrun.exe --tree="c:\Tools\MyContext\data2\tex"  --script context --autogenerate --make --engine=luatex cont-en cont-nl cont-cz cont-de cont-fa cont-it cont-ro cont-uk cont-pe
 #C:\Tools\MyContext\data2\tex\texmf-win64\bin\mtxrun.exe --tree="c:\Tools\MyContext\data2\tex" --generate
 

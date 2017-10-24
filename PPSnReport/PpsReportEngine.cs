@@ -79,7 +79,7 @@ namespace TecWare.PPSn.Reporting
 		/// <summary>Run the report in a safe environment (only no escapes allowed).</summary>
 		public bool NoEscapes { get; set; } = false;
 		/// <summary>Sets the language code.</summary>
-		public string Language { get; set; } = "de";
+		public string Language { get; set; } = "de-DE";
 		/// <summary>Only the base language.</summary>
 		public string LanguagePartOnly
 		{
@@ -212,19 +212,21 @@ namespace TecWare.PPSn.Reporting
 				while ((line = await errorStream.ReadLineAsync()) != null)
 					errorPipeText.AppendLine(line);
 			} // proc ProcessErrorStreamAsync
-			
+
 			protected override async Task<LuaTable> PopPacketCoreAsync()
 			{
 				var state = InputState.Parse;
 
 				var emitEmitLineBefore = false;
+				var categorySeperatorPos = -1;
+				var exceptionSetted = false; // we collect only the first exception
 				var errorInfo = new StringBuilder();
-				
+
 				string line;
 				while ((line = await outputStream.ReadLineAsync()) != null)
 				{
 					var pos = line.IndexOfAny(new char[] { '|', '>' });
-					switch(state)
+					switch (state)
 					{
 						case InputState.Parse:
 							if (pos != -1)
@@ -240,22 +242,28 @@ namespace TecWare.PPSn.Reporting
 									var m = texErrorLineParse.Match(lineData);
 									if (m.Success) // tex error as expected
 									{
-										lastExceptionMessage = m.Groups[3].Value;
+										if (!exceptionSetted)
+										{
+											lastExceptionMessage = m.Groups[3].Value;
 
-										currentErrorInfo = new PpsReportErrorInfo(
-											 fileName: m.Groups[2].Value,
-											 lineNumber: Int32.Parse(m.Groups[1].Value),
-											 extendedInfo: null
-										);
+											currentErrorInfo = new PpsReportErrorInfo(
+												 fileName: m.Groups[2].Value,
+												 lineNumber: Int32.Parse(m.Groups[1].Value),
+												 extendedInfo: null
+											);
+										}
 
+										categorySeperatorPos = pos;
 										state = InputState.BeginCollect; // start collect code block
 										errorInfo.Clear();
 									}
-									else // unexpected format
+									else if (!exceptionSetted) // unexpected format
 									{
 										lastExceptionMessage = lineData.Trim();
 										currentErrorInfo = null;
 									}
+
+									OnDebugOutput(line);
 								}
 								else // unknown prefix -> ignore
 									OnDebugOutput(line);
@@ -264,7 +272,7 @@ namespace TecWare.PPSn.Reporting
 								OnDebugOutput(line);
 							break;
 						case InputState.BeginCollect:
-							if (pos == -1)
+							if (pos != categorySeperatorPos)
 							{
 								if (!String.IsNullOrWhiteSpace(line)) // jump over empty lines
 								{
@@ -280,13 +288,13 @@ namespace TecWare.PPSn.Reporting
 							}
 							break;
 						case InputState.ErrorCollect:
-							if(pos == -1) // collect lines
+							if (pos != categorySeperatorPos) // collect lines
 							{
 								if (String.IsNullOrWhiteSpace(line))
 									emitEmitLineBefore = true;
 								else
 								{
-									if(emitEmitLineBefore) // new line handling
+									if (emitEmitLineBefore) // new line handling
 									{
 										errorInfo.AppendLine();
 										emitEmitLineBefore = false;
@@ -295,10 +303,16 @@ namespace TecWare.PPSn.Reporting
 									// append line
 									errorInfo.AppendLine(line);
 								}
+
+								OnDebugOutput(line);
 							}
 							else // prefix line -> parse normal
 							{
-								currentErrorInfo = new PpsReportErrorInfo(currentErrorInfo.Value.FileName, currentErrorInfo.Value.LineNumber, errorInfo.ToString());
+								if (!exceptionSetted)
+								{
+									currentErrorInfo = new PpsReportErrorInfo(currentErrorInfo.Value.FileName, currentErrorInfo.Value.LineNumber, errorInfo.ToString());
+									exceptionSetted = true;
+								}
 								state = InputState.Parse;
 								goto case InputState.Parse;
 							}
@@ -316,7 +330,7 @@ namespace TecWare.PPSn.Reporting
 				var lineData = t.ToLson(false); // create data
 				return inputStream.WriteLineAsync(lineData);
 			} // proc PushPacketCoreAsync
-
+			
 			public void OnProcessException(Exception exception)
 				=> currentInnerException = exception;
 
@@ -675,7 +689,7 @@ namespace TecWare.PPSn.Reporting
 		{
 			var commandLine = new StringBuilder(
 				"--nonstopmode " +
-				$"--interface={args.LanguagePartOnly ?? "en"} " +
+				"--interface=en " + // how numbers are formatted in the source
 				$"--result={resultSession} "
 			);
 
@@ -729,7 +743,11 @@ namespace TecWare.PPSn.Reporting
 			if (purgeAll)
 			{
 				var dtDeleteOlderThan = cleanBaseDirectory > 0 ? DateTime.UtcNow.AddMinutes(-cleanBaseDirectory) : (DateTime?)null;
-				foreach (var fi in reportBase.EnumerateFiles().Where(c => (c.Attributes & (FileAttributes.ReadOnly | FileAttributes.System | FileAttributes.Hidden | FileAttributes.ReparsePoint | FileAttributes.Hidden)) == (FileAttributes)0))
+				foreach (var fi in reportBase.EnumerateFiles().Where(c =>
+						(c.Attributes & (FileAttributes.ReadOnly | FileAttributes.System | FileAttributes.Hidden)) == (FileAttributes)0
+						&& c.Name[0] != '.'
+					)
+				)
 				{
 					// compare the session key
 					if (fi.Name.StartsWith(resultSession, StringComparison.OrdinalIgnoreCase))
