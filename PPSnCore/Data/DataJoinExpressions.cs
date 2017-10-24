@@ -49,7 +49,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- enum PpsJoinExpression ---------------------------------------------------
+	#region -- class PpsJoinExpression --------------------------------------------------
 
 	public abstract class PpsDataJoinExpression<TTABLE>
 		where TTABLE : IDataColumns

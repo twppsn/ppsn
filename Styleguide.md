@@ -53,3 +53,7 @@
 
 * Zahlen rechtsbündig
 * Datum zentriert
+
+## Dispose pattern
+
+Destructures are only implementated by wrappers of unmanaged resources. Classes that ne to free unmanaged resource must be sealed.
