@@ -1377,6 +1377,9 @@ namespace TecWare.PPSn.Data
 
 		public static IEnumerable<PpsDataOrderExpression> Parse(string order)
 		{
+			if (String.IsNullOrEmpty(order))
+				yield break;
+
 			var orderTokens = order.Split(',');
 			foreach (var _tok in orderTokens)
 			{

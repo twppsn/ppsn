@@ -169,7 +169,7 @@ namespace TecWare.PPSn.Reporting
 			private readonly Process process;
 
 			// streams
-			private readonly StreamWriter inputStream;
+			private readonly Stream inputStream;
 			private readonly StreamReader outputStream;
 			private readonly StreamReader errorStream;
 
@@ -187,7 +187,7 @@ namespace TecWare.PPSn.Reporting
 				
 				this.outputStream = process.StandardOutput;
 				this.errorStream = process.StandardError;
-				this.inputStream = process.StandardInput;
+				this.inputStream = process.StandardInput.BaseStream;
 			} // ctor
 
 			protected override void Dispose(bool disposing)
@@ -325,10 +325,21 @@ namespace TecWare.PPSn.Reporting
 				return null;
 			} // func PopPacketCoreAsync
 
-			protected override Task PushPacketCoreAsync(LuaTable t)
+			protected override async Task PushPacketCoreAsync(LuaTable t)
 			{
 				var lineData = t.ToLson(false); // create data
-				return inputStream.WriteLineAsync(lineData);
+
+				// enforce utf8 with new line
+				var lineBuffer = new char[lineData.Length + 1];
+				lineData.CopyTo(0, lineBuffer, 0, lineData.Length);
+				lineBuffer[lineData.Length] = '\n';
+
+				// convert to utf8
+				var b = Encoding.UTF8.GetBytes(lineBuffer, 0, lineBuffer.Length);
+
+				// write buffer
+				await inputStream.WriteAsync(b, 0, b.Length);
+				await inputStream.FlushAsync();
 			} // proc PushPacketCoreAsync
 			
 			public void OnProcessException(Exception exception)
@@ -504,6 +515,8 @@ namespace TecWare.PPSn.Reporting
 				// redirect output
 				UseShellExecute = false,
 				CreateNoWindow = true,
+				StandardErrorEncoding = Encoding.UTF8,
+				StandardOutputEncoding = Encoding.UTF8,
 				RedirectStandardError = true,
 				RedirectStandardInput = true,
 				RedirectStandardOutput = true

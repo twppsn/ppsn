@@ -66,7 +66,7 @@ namespace TecWare.PPSn.Data
 		protected abstract Task PushPacketCoreAsync(LuaTable t);
 
 		internal Task PushPacketAsync(LuaTable t)
-			=> PushPacketAsync(t);
+			=> PushPacketCoreAsync(t);
 
 		#endregion
 
@@ -107,7 +107,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="selector">A condition to select the rows.</param>
 		/// <param name="order">Row order</param>
 		/// <returns></returns>
-		public abstract Task<IEnumerable<IDataRow>> GetListAsync(string select, string[] columns, PpsDataFilterExpression selector, PpsDataOrderExpression[] order);
+		public abstract Task<IEnumerable<IDataRow>> GetListAsync(string select, KeyValuePair<string, string>[] columns, PpsDataFilterExpression selector, PpsDataOrderExpression[] order);
 		/// <summary>Get's a complete dataset.</summary>
 		/// <param name="identitfication"></param>
 		/// <param name="tableFilter"></param>
@@ -332,7 +332,7 @@ namespace TecWare.PPSn.Data
 			{
 				if (cursors.TryGetValue(id, out var cursor))
 				{
-					if (!cursor.IsDisposed)
+					if (cursor.IsDisposed)
 						cursors.Remove(id);
 					else
 						return cursor;
@@ -355,7 +355,38 @@ namespace TecWare.PPSn.Data
 					throw new ArgumentOutOfRangeException(memberName, $"'{memberName}' should be a string list or a lua array.");
 			}
 		} // func GetStringArray
-		
+
+		private static KeyValuePair<string, string> CreateStringKeyValuePair(object value)
+		{
+			switch (value)
+			{
+				case string str:
+					var p = str.IndexOf('=');
+					return p == -1
+						? new KeyValuePair<string, string>(str, null)
+						: new KeyValuePair<string, string>(str.Substring(0, p), str.Substring(p + 1));
+				default:
+					return CreateStringKeyValuePair(value.ToString());
+			}
+		} // func CreateStringKeyValuePair
+
+		public static KeyValuePair<string, string>[] GetKeyValuePairs(LuaTable table, string memberName)
+		{
+			switch (table.GetMemberValue(memberName))
+			{
+				case string stringList:
+					return stringList.Split(',').Where(s => !String.IsNullOrEmpty(s)).Select(CreateStringKeyValuePair).ToArray();
+				case LuaTable tableArray:
+					return tableArray.ArrayList.Select(CreateStringKeyValuePair)
+						.Union(tableArray.Members.Select(kv => new KeyValuePair<string, string>(kv.Key, kv.Value.ToString())))
+						.ToArray();
+				case null:
+					return Array.Empty<KeyValuePair<string, string>>();
+				default:
+					throw new ArgumentOutOfRangeException(memberName, $"'{memberName}' should be a string list or a lua array.");
+			}
+		} // func GetKeyValuePairs
+
 		private async Task OpenCursorAsync(LuaTable table)
 		{
 			// not optional
@@ -367,7 +398,7 @@ namespace TecWare.PPSn.Data
 				: PpsDataFilterTrueExpression.True;
 
 			// parse optional columns
-			var columns = GetStringArray(table, "columns");
+			var columns = GetKeyValuePairs(table, "columns");
 
 			// parse optional order
 			var orderExpressions = PpsDataOrderExpression.Parse(table.GetOptionalValue("order", (string)null)).ToArray();
