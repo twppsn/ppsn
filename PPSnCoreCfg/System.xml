@@ -23,6 +23,8 @@
 	<pps:ppsn name="ppsn">
 		<pps:sysDataSource name="sys" />
 
+		<pps:reports system="$(reportSystem)" base="reports" storeSuccessLogs="true" zipLogFiles="false" />
+		
 		<pps:wpf name="wpf">
 			<pps:wpfSource id="core" directory="ClientWpf/Panes" virtualPath="panes" />
 			<pps:theme id="default" file="ClientWpf/default.xaml"/>

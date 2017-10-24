@@ -53,6 +53,8 @@
     <None Include="mdm\contacts\Wpf\contacts.lua" />
     <None Include="ClientWpf\Panes\testEnvironment.lua" />
     <None Include="ClientWpf\Panes\hello.lua" />
+    <None Include="reports\.sources" />
+    <None Include="reports\server\Test.tex" />
     <None Include="sds\contract\Wpf\contract.lua" />
     <None Include="sds\offer\Wpf\offer.lua" />
     <None Include="mdm\contacts\contactsLocal.lua" />
@@ -218,6 +220,8 @@
   <ItemGroup>
     <Folder Include="ClientWpf\Templates\" />
     <Folder Include="mdm\constants\Wpf\" />
+    <Folder Include="reports\libs\" />
+    <Folder Include="reports\tw\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

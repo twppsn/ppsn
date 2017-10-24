@@ -18,10 +18,13 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Server;
+using TecWare.DE.Server.Configuration;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Reporting;
 using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server
@@ -77,6 +80,9 @@ namespace TecWare.PPSn.Server
 
 		private List<InitializationTask> initializationTasks = new List<InitializationTask>(); // Action that should be done in the initialization process
 
+		private PpsReportEngine reporting = null;
+		private readonly PpsServerReportProvider reportProvider;
+
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		public PpsApplication(IServiceProvider sp, string name)
@@ -87,7 +93,8 @@ namespace TecWare.PPSn.Server
 			this.databaseLibrary = new PpsDatabaseLibrary(this);
 			this.objectsLibrary = new PpsObjectsLibrary(this);
 			this.httpLibrary = new PpsHttpLibrary(this);
-
+			this.reportProvider = new PpsServerReportProvider(this);
+ 
 			// register shortcut for text
 			LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
 			LuaType.RegisterTypeAlias("blob", typeof(byte[]));
@@ -111,6 +118,7 @@ namespace TecWare.PPSn.Server
 			// parse the configuration
 			BeginReadConfigurationData(config);
 			BeginReadConfigurationUser(config);
+			BeginReadConfigurationReport(config);
 		} // proc OnBeginReadConfiguration
 
 		protected override void OnEndReadConfiguration(IDEConfigLoading config)
@@ -120,7 +128,7 @@ namespace TecWare.PPSn.Server
 			// set the configuration
 			BeginEndConfigurationData(config);
 			BeginEndConfigurationUser(config);
-
+			
 			// restart main thread
 			initializationProcess = Task.Run(new Action(InitializeApplication));
 		} // proc OnEndReadConfiguration
@@ -252,6 +260,73 @@ namespace TecWare.PPSn.Server
 		} // proc RegisterInitializationTask
 
 		public bool IsInitializedSuccessful => isInitializedSuccessful;
+
+		#endregion
+
+		#region -- Reporting ----------------------------------------------------------
+
+		#region -- class PpsServerReportProvider --------------------------------------
+
+		/// <summary></summary>
+		private sealed class PpsServerReportProvider : PpsDataServerProviderBase
+		{
+			private readonly PpsApplication application;
+
+			public PpsServerReportProvider(PpsApplication application)
+			{
+				this.application = application ?? throw new ArgumentNullException(nameof(application));
+			} // ctor
+
+			public override Task<IEnumerable<IDataRow>> GetListAsync(string select, string[] columns, PpsDataFilterExpression selector, PpsDataOrderExpression[] order)
+			{
+				throw new ArgumentNullException("Unknown list.");
+			} // func GetListAsync
+
+			public override Task<PpsDataSet> GetDataSetAsync(object identitfication, string[] tableFilter)
+			{
+				throw new ArgumentNullException("Unknown dataset.");
+			} // func GetDataSetAsync
+
+			public override Task<LuaTable> ExecuteAsync(LuaTable arguments)
+				=> throw new ArgumentException("Unknown command.");
+		} // class PpsServerReportProvider
+
+		#endregion
+		
+		private void BeginReadConfigurationReport(IDEConfigLoading config)
+		{
+			var currentNode = new XConfigNode(Server.Configuration, config.ConfigNew.Element(PpsStuff.xnReports));
+
+			var systemPath = currentNode.GetAttribute<string>("system") ?? throw new DEConfigurationException(currentNode.Element, "@system is empty.");
+			var basePath = currentNode.GetAttribute<string>("base") ?? throw new DEConfigurationException(currentNode.Element, "@base is empty.");
+			var logPath = currentNode.GetAttribute<string>("logs");
+
+			// check for recreate the reporting engine
+			if (reporting == null
+				|| !ProcsDE.IsPathEqual(reporting.ContextPath, systemPath)
+				|| !ProcsDE.IsPathEqual(reporting.BasePath, basePath)
+				|| (logPath != null && !ProcsDE.IsPathEqual(reporting.LogPath, logPath)))
+			{
+				reporting = new PpsReportEngine(systemPath, basePath, reportProvider, logPath);
+			}
+
+			// update values
+			reporting.FontDirectory = currentNode.GetAttribute<string>("fonts");
+			reporting.CleanBaseDirectoryAfter = currentNode.GetAttribute<int>("cleanBaseDirectory");
+			reporting.ZipLogFiles = currentNode.GetAttribute<bool>("zipLogFiles");
+			reporting.StoreSuccessLogs = currentNode.GetAttribute<bool>("storeSuccessLogs");
+		} // proc BeginReadConfigurationReport
+
+		[LuaMember]
+		public string RunReport(LuaTable table)
+			=> RunReportAsync(table).AwaitTask();
+
+		[LuaMember]
+		public Task<string> RunReportAsync(LuaTable table)
+			=> reporting.RunReportAsync(table);
+
+		[LuaMember]
+		public PpsReportEngine Reports => reporting;
 
 		#endregion
 
