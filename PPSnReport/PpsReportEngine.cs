@@ -215,6 +215,9 @@ namespace TecWare.PPSn.Reporting
 
 			protected override async Task<LuaTable> PopPacketCoreAsync()
 			{
+				const string dataCmd = "datacmd";
+				const int dataCmdLength = 7;
+
 				var state = InputState.Parse;
 
 				var emitEmitLineBefore = false;
@@ -233,7 +236,7 @@ namespace TecWare.PPSn.Reporting
 							{
 								var commandPrefix = line.Substring(0, pos).TrimEnd();
 								var lineData = line.Substring(pos + 1);
-								if (commandPrefix == "datacmd")
+								if (commandPrefix == dataCmd)
 								{
 									return LuaTable.FromLson(lineData); // return parsed data
 								}
@@ -272,7 +275,7 @@ namespace TecWare.PPSn.Reporting
 								OnDebugOutput(line);
 							break;
 						case InputState.BeginCollect:
-							if (pos != categorySeperatorPos)
+							if (pos != categorySeperatorPos && (pos != dataCmdLength || String.Compare(line, 0, dataCmd, 0, dataCmdLength) != 0))
 							{
 								if (!String.IsNullOrWhiteSpace(line)) // jump over empty lines
 								{
@@ -288,7 +291,7 @@ namespace TecWare.PPSn.Reporting
 							}
 							break;
 						case InputState.ErrorCollect:
-							if (pos != categorySeperatorPos) // collect lines
+							if (pos != categorySeperatorPos && (pos != dataCmdLength || String.Compare(line, 0, dataCmd, 0, dataCmdLength) != 0)) // collect lines
 							{
 								if (String.IsNullOrWhiteSpace(line))
 									emitEmitLineBefore = true;
