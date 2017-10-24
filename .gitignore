@@ -200,3 +200,4 @@ FakesAssemblies/
 /PPSnCoreCfg/reports/*.pdf
 /PPSnCoreCfg/reports/*.log
 /PPSnCoreCfg/reports/*.tuc
+/PPSnCoreCfg/reports/.logs
