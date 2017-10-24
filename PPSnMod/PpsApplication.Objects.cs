@@ -965,6 +965,16 @@ namespace TecWare.PPSn.Server
 	/// <summary>Description of an object item.</summary>
 	public interface IPpsObjectItem
 	{
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
+		object PullData(PpsObjectAccess obj);
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <param name="data"></param>
+		/// <returns></returns>
+		bool PushData(PpsObjectAccess obj, object data);
+
 		/// <summary>The name or object typ of the object.</summary>
 		string ObjectType { get; }
 		/// <summary>Optional description for the object.</summary>
@@ -1024,6 +1034,9 @@ namespace TecWare.PPSn.Server
 			using (var src = obj.GetDataStream())
 				return GetDataFromStream(src);
 		} // func PullData
+
+		object IPpsObjectItem.PullData(PpsObjectAccess obj)
+			=> PullData(obj);
 
 		[LuaMember("Pull")]
 		private LuaResult LuaPull(long? objectId, Guid? guidId, long? revId)
@@ -1127,6 +1140,9 @@ namespace TecWare.PPSn.Server
 			// insert the new object, without rev
 			obj.Update(PpsObjectUpdateFlag.None);
 		} // proc InsertNewObject
+
+		bool IPpsObjectItem.PushData(PpsObjectAccess obj, object data)
+			=> PushData(obj, (T)data, false);
 
 		/// <summary>Persist the data in the server</summary>
 		/// <param name="transaction">Transaction to the database.</param>
@@ -1447,6 +1463,21 @@ namespace TecWare.PPSn.Server
 				foreach (var r in GetObjectSelector())
 					yield return new PpsObjectAccess(application, r);
 			} // func GetObjects
+
+			#region -- Object Item --------------------------------------------------------
+
+			[LuaMember]
+			public IPpsObjectItem GetObjectItem(string objectType)
+			{
+				IPpsObjectItem item = null;
+				if (application.FirstChildren<IPpsObjectItem>(
+					c => c.ObjectType == objectType, c => item = c, true
+				))
+					return item;
+				return null;
+			} // func GetObjectItem
+
+			#endregion
 		} // class PpsObjectsLibrary
 
 		#endregion

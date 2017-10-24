@@ -112,7 +112,8 @@ end;
 
 --
 -- get a dataset and cache it, in second pass the function will returned the cached data
---   id: list name
+--   id: id of the object 
+--       it is also possible to set a table { Guid = "{guid}", Id = 111, RevId = 111 };
 --   filter: list of tables that should returned
 --
 function data.loadDataSet(settings)

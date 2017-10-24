@@ -30,7 +30,7 @@ using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server
 {
-	#region -- interface IPpsApplicationInitialization ----------------------------------
+	#region -- interface IPpsApplicationInitialization --------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -58,7 +58,7 @@ namespace TecWare.PPSn.Server
 	/// </summary>
 	public partial class PpsApplication : DEConfigLogItem, IPpsApplicationInitialization
 	{
-		#region -- struct InitializationTask ------------------------------------------------
+		#region -- struct InitializationTask ------------------------------------------
 
 		private struct InitializationTask : IComparable<InitializationTask>
 		{
@@ -84,7 +84,7 @@ namespace TecWare.PPSn.Server
 		private PpsReportEngine reporting = null;
 		private readonly PpsServerReportProvider reportProvider;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		public PpsApplication(IServiceProvider sp, string name)
 			: base(sp, name)
@@ -153,7 +153,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- Init -------------------------------------------------------------------
+		#region -- Init ---------------------------------------------------------------
 
 		private void UpdateInitializationState(string state)
 		{
@@ -287,9 +287,32 @@ namespace TecWare.PPSn.Server
 					.ApplyOrder(order, v.LookupOrder);
 			} // func GetListAsync
 
-			public override Task<PpsDataSet> GetDataSetAsync(object identitfication, string[] tableFilter)
+			public override async Task<PpsDataSet> GetDataSetAsync(object identitfication, string[] tableFilter)
 			{
-				throw new ArgumentNullException("Unknown dataset.");
+				PpsObjectAccess GetObjectCore()
+				{
+					switch (identitfication)
+					{
+						case int i:
+							return application.Objects.GetObject(i);
+						case long l:
+							return application.Objects.GetObject(l);
+						case Guid g:
+							return application.Objects.GetObject(g);
+						case LuaTable t:
+							var o = application.Objects.GetObject(t);
+							if (t.TryGetValue<long>("RevId", out var revId))
+								o.SetRevision(revId);
+							return o;
+						default:
+							return application.Objects.GetObject(identitfication.ChangeType<long>());
+					}
+				} // func GetObjectCore
+
+				// initialize object
+				var obj = await Task.Run(() => GetObjectCore());
+				var item = application.Objects.GetObjectItem(obj.Typ);
+				return (PpsDataSet)await Task.Run(() => item.PullData(obj));
 			} // func GetDataSetAsync
 
 			public override Task<LuaTable> ExecuteAsync(LuaTable arguments)
