@@ -95,10 +95,13 @@ namespace TecWare.PPSn.Reporting
 		} // prop LanguagePartOnly
 		  /// <summary>Remove all files, that will be created during this session.</summary>
 		public bool DeleteTempFiles { get; set; } = true;
+	
+		/// <summary>Gets called for every log line, that is not parsed.</summary>
+		public Action<string> DebugOutput { get; set; } = null;
 	} // class PpsReportRunInfo
 
 	#endregion
-	
+
 	#region -- class PpsReportException -----------------------------------------------
 
 	/// <summary>Report generation failed.</summary>
@@ -180,8 +183,8 @@ namespace TecWare.PPSn.Reporting
 
 			public LuaPipeServer(Process process)
 			{
-				this.process = process;
-
+				this.process = process ?? throw new ArgumentNullException(nameof(process));
+				
 				this.outputStream = process.StandardOutput;
 				this.errorStream = process.StandardError;
 				this.inputStream = process.StandardInput;
@@ -232,7 +235,7 @@ namespace TecWare.PPSn.Reporting
 								{
 									return LuaTable.FromLson(lineData); // return parsed data
 								}
-								else if(commandPrefix =="tex error") // tex-error found
+								else if (commandPrefix == "tex error") // tex-error found
 								{
 									var m = texErrorLineParse.Match(lineData);
 									if (m.Success) // tex error as expected
@@ -254,9 +257,11 @@ namespace TecWare.PPSn.Reporting
 										currentErrorInfo = null;
 									}
 								}
-								// unknown prefix -> ignore
+								else // unknown prefix -> ignore
+									OnDebugOutput(line);
 							}
-							// this line can not parsed -> ignore
+							else // this line can not parsed -> ignore
+								OnDebugOutput(line);
 							break;
 						case InputState.BeginCollect:
 							if (pos == -1)
@@ -362,6 +367,11 @@ namespace TecWare.PPSn.Reporting
 
 			#endregion
 
+			private void OnDebugOutput(string text)
+				=> DebugOutput?.Invoke(text);
+
+			public Action<string> DebugOutput { get; set; } = null;
+
 			public bool HasErrorInfo => lastExceptionMessage != null || errorPipeText.Length > 0;
 		} // class LuaPipeServer
 
@@ -465,7 +475,7 @@ namespace TecWare.PPSn.Reporting
 			return File.Exists(binPath);
 		} // proc ResolvePath
 
-		private async Task<(int exitCode, LuaPipeServer pipeServer)> CoreRunContextAsync(string commandLine)
+		private async Task<(int exitCode, LuaPipeServer pipeServer)> CoreRunContextAsync(string commandLine, Action<string> debugOutput)
 		{
 			// find context exe (try first 64bit)
 			if (!TryResolvePath(contextPath64, out var fullPath, out var binPath)
@@ -493,6 +503,7 @@ namespace TecWare.PPSn.Reporting
 			using (var ps = Process.Start(psi))
 			{
 				var pipeServer = new LuaPipeServer(ps);
+				pipeServer.DebugOutput = debugOutput;
 				using (var session = new PpsDataServer(pipeServer, provider, pipeServer.OnProcessException))
 				{
 					await Task.WhenAll(
@@ -515,7 +526,7 @@ namespace TecWare.PPSn.Reporting
 		public async Task BuildCacheFilesAsync()
 		{
 			// execute command
-			var (exitCode, pipeServer) = await CoreRunContextAsync("--generate");
+			var (exitCode, pipeServer) = await CoreRunContextAsync("--generate", null);
 
 			// build exception
 			if(exitCode != 0 || pipeServer.HasErrorInfo)
@@ -798,7 +809,8 @@ namespace TecWare.PPSn.Reporting
 			[nameof(PpsReportRunInfo.DeleteTempFiles)] = (a, v) => a.DeleteTempFiles = v.ChangeType<bool>(),
 			[nameof(PpsReportRunInfo.Language)] = (a, v) => a.Language = v.ChangeType<string>(),
 			[nameof(PpsReportRunInfo.NoEscapes)] = (a, v) => a.NoEscapes = v.ChangeType<bool>(),
-			[nameof(PpsReportRunInfo.UseDate)] = (a, v) => a.UseDate = v.ChangeType<DateTime>()
+			[nameof(PpsReportRunInfo.UseDate)] = (a, v) => a.UseDate = v.ChangeType<DateTime>(),
+			[nameof(PpsReportRunInfo.DebugOutput)] = (a, v) => a.DebugOutput = v as Action<string>,
 		};
 
 		/// <summary>Create the report file.</summary>
@@ -834,7 +846,7 @@ namespace TecWare.PPSn.Reporting
 			using (await LockReportFileAsync(resolvedReportName))
 			{
 				// run context
-				var (exitCode, pipeServer) = await CoreRunContextAsync(commandLine);
+				var (exitCode, pipeServer) = await CoreRunContextAsync(commandLine, args.DebugOutput);
 				var hasError = pipeServer.TryGetError(out var messageText, out var messageInfo, out var innerException);
 
 				// purge generated files in the root folder should not exist any file
