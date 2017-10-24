@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
@@ -320,6 +321,21 @@ namespace TecWare.PPSn.Server
 		[LuaMember]
 		public string RunReport(LuaTable table)
 			=> RunReportAsync(table).AwaitTask();
+
+		[LuaMember]
+		public void DebugReport(LuaTable table)
+		{
+			table["DebugOutput"] = new Action<string>(text => Log.LogMsg(LogMsgType.Debug, text));
+			var resultFile = RunReportAsync(table).AwaitTask();
+
+			// move to a unique name
+			var moveFileTo = table.GetMemberValue("name") as string;
+			var p = moveFileTo.LastIndexOfAny(new char[] { '/', '\\' });
+			moveFileTo = Path.Combine(Path.GetDirectoryName(resultFile), moveFileTo.Substring(p + 1));
+			if (File.Exists(moveFileTo))
+				File.Delete(moveFileTo);
+			File.Move(resultFile, moveFileTo + ".pdf");
+		} // proc DebugReport
 
 		[LuaMember]
 		public Task<string> RunReportAsync(LuaTable table)

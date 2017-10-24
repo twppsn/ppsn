@@ -197,3 +197,6 @@ FakesAssemblies/
 *.opt
 /PPSnMod.VC.db
 /PPSnCoreCfg/PPSn.xml
+/PPSnCoreCfg/reports/*.pdf
+/PPSnCoreCfg/reports/*.log
+/PPSnCoreCfg/reports/*.tuc
