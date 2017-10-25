@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
+using Neo.IronLua;
 
 namespace TecWare.PPSn.UI
 {
@@ -286,5 +287,7 @@ namespace TecWare.PPSn.UI
 		} // prop NavigatorState
 
 		public object CharmObject { get => GetValue(CharmObjectProperty); set => SetValue(CharmObjectProperty, value); }
+
+		public async void ShowPane(Type pane, LuaTable arg) => await LoadPaneAsync(pane, PpsOpenPaneMode.NewPane, arg);
 	} // class PpsMainWindow
 }
