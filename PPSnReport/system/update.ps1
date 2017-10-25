@@ -15,11 +15,11 @@
 #
 
 # path to rsync for windows (cygwin)
-if ($rsync -eq $null) {
+if ([String]::IsNullOrEmpty($rsync)) {
 	$rsync = "rsync.exe";
 }
 # target directory for ConTeXt
-if ($targetDirectory -eq $null) {
+if ([String]::IsNullOrEmpty($targetDirectory)) {
 	$targetDirectory = $pwd;
 }
 
@@ -66,7 +66,7 @@ function rsyncInvoke([string[]] $sources, [string] $target, [string[]] $filter) 
 
 	# --list-only
 	$expr = "&'$rsync' --recursive --compress --times --links --copy-links --verbose --delete --delete-excluded $filterExpr $src $dst";
-	Invoke-Expression $expr | Tee-Object $log;
+	Invoke-Expression $expr | Tee-Object -FilePath $log -Append;
 } # rsyncInvoke
 
 # ###############################################################
@@ -103,7 +103,7 @@ rsyncInvoke -sources 'bin/common/win64/', 'bin/context/win64/', 'bin/metapost/wi
 
 # ###############################################################
 # fix permissions
-icacls.exe "$targetDirectory" /q /c /t /reset  | Tee-Object $log;
+icacls.exe "$targetDirectory" /q /c /t /reset  | Tee-Object -FilePath $log -Append;
 
 # ###############################################################
 # clear cache
@@ -121,9 +121,9 @@ $genCommand1 = [String]::Join('', "& $mtxrun", " --tree='",$targetDirectory,"' -
 $genCommand2 = [String]::Join('', "& $mtxrun", " --tree='",$targetDirectory,"' --script context --autogenerate --make --engine=luatex cont-en");
 
 #rem C:\Tools\MyContext\data2\tex\texmf-win64\bin\mtxrun.exe --tree="c:\Tools\MyContext\data\tex"  --direct --resolve mktexlsr
-Invoke-Expression $genCommand1 | Tee-Object $log;
-Invoke-Expression $genCommand2 | Tee-Object $log;
-Invoke-Expression $genCommand1 | Tee-Object $log;
+Invoke-Expression $genCommand1 | Tee-Object -FilePath $log -Append;
+Invoke-Expression $genCommand2 | Tee-Object -FilePath $log -Append;
+Invoke-Expression $genCommand1 | Tee-Object -FilePath $log -Append;
 
 #rem rsync.exe -n rsync://contextgarden.net/minimals/current/modules/
 #md tex\texmf-modules
