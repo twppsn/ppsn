@@ -697,7 +697,7 @@
 			<xs:documentation>Definies the report settings.</xs:documentation>
 		</xs:annotation>
 		<xs:complexType>
-			<xs:attribute name="system" type="PathType" use="required">
+			<xs:attribute name="system" type="PathType" use="optional">
 				<xs:annotation>
 					<xs:documentation>Root path of the ConTeXt report environent.</xs:documentation>
 				</xs:annotation>

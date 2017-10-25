@@ -34,7 +34,7 @@ module.safeEnvironment = safeEnvironment;
 --
 -- tableToStringCore
 --
-local function tableToStringCore(table, emit, r)
+local function tableToStringCore(table, emit, dumpall, r)
 
 	local function writeValue(type, v)
 		if type == "boolean" then
@@ -49,14 +49,21 @@ local function tableToStringCore(table, emit, r)
 			emit('"');
 			emit(v); -- todo: escape
 			emit('"');
+		elseif dumpall then
+			emit("<data " .. type .. ">");
 		else
 			error("Type is not supported: " .. type);
 		end;
 	end; -- writeValue
 
 	r = r or 0;
-	if r > 100 then
-		error("Table structure is to deep.");
+	if r > 10 then
+		if dumpall then
+			emit("<Table Level to deep>");
+			return;
+		else
+			error("Table structure is to deep.");
+		end;
 	end;
 
 	local currentIndex = 1;
@@ -73,7 +80,7 @@ local function tableToStringCore(table, emit, r)
 
 			local tmp = type(v);
 			if tmp == "table" then
-				tableToStringCore(v, emit, r + 1);
+				tableToStringCore(v, emit, dumpall, r + 1);
 			else
 				writeValue(tmp, v);
 			end;
@@ -89,10 +96,10 @@ end;
 -- extend table
 --
 function table.WriteLson(t, output)
-	tableToStringCore(t, output);
+	tableToStringCore(t, output, false);
 end;
 
-function table.ToLson(t)
+function table.ToLson(t, writeAll)
 
 	local buffer = {};
 
@@ -109,10 +116,10 @@ function table.ToLson(t)
 	end; -- addBuffer
 
 	-- convert
-	tableToStringCore(t, addBuffer);
+	tableToStringCore(t, addBuffer, writeAll);
 
 	-- return buffer
-	return string.concat(buffer);
+	return table.concat(buffer);
 end; -- table.ToLson
 
 function table.FromLson(tableString)
