@@ -434,7 +434,10 @@ namespace TecWare.PPSn.Reporting
 				{
 					var di = new DirectoryInfo(Path.GetFullPath(Path.Combine(reportBase, ".logs")));
 					if (!di.Exists)
+					{
 						di.Create();
+						di.Refresh();
+					}
 					return di;
 				}
 				else if (!Path.IsPathRooted(reportLogPath))
@@ -885,7 +888,7 @@ namespace TecWare.PPSn.Reporting
 
 				// purge generated files in the root folder should not exist any file
 				var result = await RunReportExPurgeTempFilesAsync(resultSession, hasError || exitCode != 0, args.DeleteTempFiles);
-				var logFileName = await RunReportExMoveLogFileAsync(result.logFileInfo, resolvedReportName, hasError);
+				var logFileName = result.logFileInfo == null ? null : await RunReportExMoveLogFileAsync(result.logFileInfo, resolvedReportName, hasError);
 
 				// raise exception
 				if (hasError)
