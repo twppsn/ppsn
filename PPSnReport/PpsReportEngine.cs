@@ -716,7 +716,7 @@ namespace TecWare.PPSn.Reporting
 			if (args.UseDate.HasValue)
 				commandLine.Append("--nodates=\"")
 					.Append(args.UseDate.Value.ToString("yyyy-MM-dd HH:mm"))
-					.Append("\"");
+					.Append("\" ");
 			if (args.Arrange.HasValue)
 				commandLine.Append(args.Arrange.Value ? "--arrange" : "--noarrange ");
 			if (args.NoEscapes)
@@ -724,14 +724,15 @@ namespace TecWare.PPSn.Reporting
 
 			// parse arguments directives
 			if (TryGeneratePattern(args.Arguments.Where(c => c.Name.StartsWith("d:")), 2, out var directives))
-				commandLine.Append("--directives=\"").Append(directives).Append("\"");
+				commandLine.Append("--directives=\"").Append(directives).Append("\" ");
 
 			// parse trackers
 			if (TryGeneratePattern(args.Arguments.Where(c => c.Name.StartsWith("t:")), 2, out var trackers))
-				commandLine.Append("--trackers=\"").Append(directives).Append("\"");
+				commandLine.Append("--trackers=\"").Append(directives).Append("\" ");
 
 			// append file
-			commandLine.Append(resolvedReportName = ResolveReportFileByName(args.ReportName, args.Language));
+			commandLine.Append(resolvedReportName = ResolveReportFileByName(args.ReportName, args.Language))
+				.Append(' ');
 
 			// append parameters
 			foreach (var kv in args.Arguments.Where(c => (c.Name.Length < 2 || c.Name[1] != ':') && c.Value != null))
@@ -740,8 +741,12 @@ namespace TecWare.PPSn.Reporting
 					.Append(kv.Name)
 					.Append("=\"")
 					.Append(kv.Value.ChangeType<string>())
-					.Append("\"");
+					.Append("\" ");
 			}
+
+			// trim end
+			if (commandLine[commandLine.Length - 1] == ' ')
+				commandLine.Remove(commandLine.Length - 1, 1);
 
 			return commandLine.ToString();
 		} // proc RunReportExParameters
