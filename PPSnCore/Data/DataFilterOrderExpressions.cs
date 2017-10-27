@@ -17,14 +17,13 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
+using Neo.IronLua;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- enum PpsDataFilterExpressionType -----------------------------------------
+	#region -- enum PpsDataFilterExpressionType ---------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -51,8 +50,8 @@ namespace TecWare.PPSn.Data
 	} // enum PpsDataFilterExpressionType
 
 	#endregion
-	
-	#region -- enum PpsDataFilterCompareOperator ----------------------------------------
+
+	#region -- enum PpsDataFilterCompareOperator --------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -70,7 +69,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- enum PpsSqlLikeStringEscapeFlag ------------------------------------------
+	#region -- enum PpsSqlLikeStringEscapeFlag ----------------------------------------
 
 	[Flags]
 	public enum PpsSqlLikeStringEscapeFlag
@@ -82,7 +81,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataFilterExpression --------------------------------------------
+	#region -- class PpsDataFilterExpression ------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -328,7 +327,7 @@ namespace TecWare.PPSn.Data
 			 *	base is always an AND concation
 			 */
 			if (expression == null)
-				return PpsDataFilterTrueExpression.True;
+				return PpsDataFilterTrueExpression.Default;
 
 			var returnLogic = inLogic == PpsDataFilterExpressionType.None ? PpsDataFilterExpressionType.And : inLogic;
 			var compareExpressions = new List<PpsDataFilterExpression>();
@@ -344,17 +343,15 @@ namespace TecWare.PPSn.Data
 				}
 
 				var startAt = offset;
-				string identifier;
-				PpsDataFilterExpressionType newLogic;
 
 				// check for native reference
 				var nativeRef = TestExpressionCharacter(expression, offset, ':');
 				if (nativeRef)
 					offset++;
-				
+
 				// check for an identifier
 				ParseIdentifier(expression, ref offset);
-				if (IsStartLogicOperation(expression, startAt, offset, out newLogic))
+				if (IsStartLogicOperation(expression, startAt, offset, out var newLogic))
 				{
 					offset++;
 					var expr = ParseExpression(expression, newLogic, ref offset);
@@ -362,10 +359,10 @@ namespace TecWare.PPSn.Data
 					// optimize: concat same sub expression
 					if (expr.Type == returnLogic)
 						compareExpressions.AddRange(((PpsDataFilterLogicExpression)expr).Arguments);
-					else if (expr != PpsDataFilterTrueExpression.True)
+					else if (expr != PpsDataFilterTrueExpression.Default)
 						compareExpressions.Add(expr);
 				}
-				else if (!nativeRef && IsStartCompareOperation(expression, startAt, offset, out identifier)) // compare operation
+				else if (!nativeRef && IsStartCompareOperation(expression, startAt, offset, out var identifier)) // compare operation
 				{
 					offset++; // step over the colon
 
@@ -399,9 +396,9 @@ namespace TecWare.PPSn.Data
 			if (compareExpressions.Count == 0)
 			{
 				if (inLogic != PpsDataFilterExpressionType.NAnd && inLogic != PpsDataFilterExpressionType.NOr)
-					return new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.NAnd, PpsDataFilterTrueExpression.True);
+					return new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.NAnd, PpsDataFilterTrueExpression.Default);
 				else
-					return PpsDataFilterTrueExpression.True;
+					return PpsDataFilterTrueExpression.Default;
 			}
 			else if (compareExpressions.Count == 1 && (inLogic != PpsDataFilterExpressionType.NAnd && inLogic != PpsDataFilterExpressionType.NOr))
 				return compareExpressions[0];
@@ -411,6 +408,22 @@ namespace TecWare.PPSn.Data
 
 		public static PpsDataFilterExpression Parse(string filterExpression, int offset = 0)
 			=> ParseExpression(filterExpression, PpsDataFilterExpressionType.None, ref offset);
+
+		public static PpsDataFilterExpression Parse(object filterExpression, bool returnAtLeastTrueExpression = true, bool throwException = true)
+		{
+			switch (filterExpression)
+			{
+				case null:
+					return returnAtLeastTrueExpression ? True : null;
+				case string stringExpr:
+					return Parse(stringExpr);
+				default:
+					if (throwException)
+						throw new ArgumentException("Could not parse filter expression.");
+					else
+						return null;
+			}
+		} // func Parse
 
 		public static PpsDataFilterExpression Combine(params PpsDataFilterExpression[] expr)
 			=> new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.And, expr).Reduce();
@@ -429,7 +442,7 @@ namespace TecWare.PPSn.Data
 						return new PpsDataFilterCompareNumberValue(value.ChangeType<string>());
 					case PpsDataFilterCompareValueType.Integer:
 						return new PpsDataFilterCompareIntegerValue(value.ChangeType<long>());
-					case  PpsDataFilterCompareValueType.Date:
+					case PpsDataFilterCompareValueType.Date:
 						var dt = value.ChangeType<DateTime>();
 						return new PpsDataFilterCompareDateValue(dt.Date, dt.Date.AddDays(1));
 					default:
@@ -463,18 +476,27 @@ namespace TecWare.PPSn.Data
 
 			return new PpsDataFilterCompareExpression(operand, op, GetValueExpresion());
 		} // func Compare
+
+		/// <summary>Test if the expression is true or empty.</summary>
+		/// <param name="expr"></param>
+		/// <returns></returns>
+		public static bool IsEmpty(PpsDataFilterExpression expr)
+			=> expr == null || expr == True;
+
+		/// <summary>Returns a expression, that is true.</summary>
+		public static PpsDataFilterExpression True => PpsDataFilterTrueExpression.Default;
 	} // class PpsDataFilterExpression
 
 	#endregion
 
-	#region -- class PpsDataFilterNativeExpression --------------------------------------
+	#region -- class PpsDataFilterNativeExpression ------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public sealed class PpsDataFilterNativeExpression : PpsDataFilterExpression
 	{
 		private readonly string key;
-		
+
 		public PpsDataFilterNativeExpression(string key)
 			: base(PpsDataFilterExpressionType.Native)
 		{
@@ -491,7 +513,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataFilterTrueExpression ----------------------------------------
+	#region -- class PpsDataFilterTrueExpression --------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -504,12 +526,13 @@ namespace TecWare.PPSn.Data
 
 		public override void ToString(StringBuilder sb) { }
 
-		public static PpsDataFilterExpression True => new PpsDataFilterTrueExpression();
+		/// <summary>Returns a expression, that is true.</summary>
+		public static PpsDataFilterExpression Default => new PpsDataFilterTrueExpression();
 	} // class PpsDataFilterTrueExpression
 
 	#endregion
 
-	#region -- enum PpsDataFilterCompareValueType ---------------------------------------
+	#region -- enum PpsDataFilterCompareValueType -------------------------------------
 
 	public enum PpsDataFilterCompareValueType
 	{
@@ -522,7 +545,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareValue ------------------------------------------
+	#region -- class PpsDataFilterCompareValue ----------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -542,7 +565,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareNullValue --------------------------------------
+	#region -- class PpsDataFilterCompareNullValue ------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -560,7 +583,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareTextValue --------------------------------------
+	#region -- class PpsDataFilterCompareTextValue ------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -600,7 +623,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareIntegerValue -----------------------------------
+	#region -- class PpsDataFilterCompareIntegerValue ---------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -622,7 +645,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareDateValue --------------------------------------
+	#region -- class PpsDataFilterCompareDateValue ------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -705,7 +728,7 @@ namespace TecWare.PPSn.Data
 				digits = inputDate.Substring(inputPos, symbolPos - inputPos);
 				inputPos = symbolPos + 1;
 			}
-			
+
 			int r;
 			if (Int32.TryParse(digits, NumberStyles.None, CultureInfo.CurrentUICulture.NumberFormat, out r))
 				return r;
@@ -838,7 +861,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareNumberValue ------------------------------------
+	#region -- class PpsDataFilterCompareNumberValue ----------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -863,7 +886,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataFilterCompareExpression -------------------------------------
+	#region -- class PpsDataFilterCompareExpression -----------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -874,7 +897,7 @@ namespace TecWare.PPSn.Data
 		private readonly PpsDataFilterCompareValue value; // String, DateTime
 
 		public PpsDataFilterCompareExpression(string operand, PpsDataFilterCompareOperator op, PpsDataFilterCompareValue value)
-			:base (PpsDataFilterExpressionType.Compare)
+			: base(PpsDataFilterExpressionType.Compare)
 		{
 			this.operand = operand;
 			this.op = op;
@@ -929,8 +952,8 @@ namespace TecWare.PPSn.Data
 	} // class PpsDataFilterCompareExpression
 
 	#endregion
-	
-	#region -- class PpsDataFilterLogicExpression ---------------------------------------
+
+	#region -- class PpsDataFilterLogicExpression -------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -975,7 +998,7 @@ namespace TecWare.PPSn.Data
 			else if (args.Count == 1)
 				return args[0];
 			else
-				return PpsDataFilterTrueExpression.True;
+				return PpsDataFilterTrueExpression.Default;
 		} // proc Reduce
 
 		public override void ToString(StringBuilder sb)
@@ -1016,7 +1039,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataFilterVisitor<T> --------------------------------------------
+	#region -- class PpsDataFilterVisitor<T> ------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -1048,18 +1071,18 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataFilterVisitorSql --------------------------------------------
+	#region -- class PpsDataFilterVisitorSql ------------------------------------------
 
 	public abstract class PpsDataFilterVisitorSql : PpsDataFilterVisitor<string>
 	{
-		#region -- CreateTrueFilter--------------------------------------------------------
+		#region -- CreateTrueFilter----------------------------------------------------
 
 		public override string CreateTrueFilter()
 			=> "1=1";
 
 		#endregion
 
-		#region -- CreateCompareFilter ----------------------------------------------------
+		#region -- CreateCompareFilter ------------------------------------------------
 
 		public override string CreateCompareFilter(PpsDataFilterCompareExpression expression)
 		{
@@ -1079,7 +1102,7 @@ namespace TecWare.PPSn.Data
 					throw new NotImplementedException();
 			}
 		} // func CreateCompareFilter
-		
+
 		private string CreateDefaultCompareValue(string columnName, PpsDataFilterCompareOperator op, string value, bool useContains)
 		{
 			switch (op)
@@ -1284,7 +1307,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- CreateLogicFilter ------------------------------------------------------
+		#region -- CreateLogicFilter --------------------------------------------------
 
 		public override string CreateLogicFilter(PpsDataFilterExpressionType method, IEnumerable<string> arguments)
 		{
@@ -1337,7 +1360,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- CreateNativeFilter -----------------------------------------------------
+		#region -- CreateNativeFilter -------------------------------------------------
 
 		public override string CreateNativeFilter(PpsDataFilterNativeExpression expression)
 		{
@@ -1355,7 +1378,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataOrderExpression ---------------------------------------------
+	#region -- class PpsDataOrderExpression -------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -1403,9 +1426,95 @@ namespace TecWare.PPSn.Data
 			}
 		} // func Parse
 
+		public static IEnumerable<PpsDataOrderExpression> Parse(object order, bool throwException = true)
+		{
+			switch (order)
+			{
+				case null:
+					return Array.Empty<PpsDataOrderExpression>();
+				case string orderString:
+					return Parse(orderString);
+				default:
+					if (throwException)
+						throw new ArgumentException(nameof(order));
+					else
+						return null;
+			}
+		} // func Parse
+
 		public static string ToString(PpsDataOrderExpression[] orders)
 			=> String.Join(",", from o in orders select (o.Negate ? "-" : "+") + o.Identifier);
+
+		public static bool IsEmpty(PpsDataOrderExpression[] order)
+			=> order == null || order.Length == 0;
 	} // class PpsDataOrderExpression
+
+	#endregion
+
+	#region -- class PpsDataColumnExpression ------------------------------------------
+
+	/// <summary></summary>
+	public sealed class PpsDataColumnExpression
+	{
+		private readonly string columnName;
+		private readonly string columnAlias;
+
+		public PpsDataColumnExpression(string columnName, string columnAlias = null)
+		{
+			this.columnName = columnName ?? throw new ArgumentNullException(nameof(columnName));
+			this.columnAlias = columnAlias;
+		} // ctor
+
+		public string Name => columnName;
+		public string Alias => columnAlias ?? columnName;
+
+		public bool HasAlias => !String.IsNullOrEmpty(columnAlias);
+
+		// -- Static ----------------------------------------------------------
+
+		private static PpsDataColumnExpression CreateStringKeyValuePair(object value)
+		{
+			switch (value)
+			{
+				case string str:
+					var p = str.IndexOfAny(new char[] { '=', ':' });
+					return p == -1
+						? new PpsDataColumnExpression(str)
+						: new PpsDataColumnExpression(str.Substring(0, p), str.Substring(p + 1));
+				default:
+					return CreateStringKeyValuePair(value.ToString());
+			}
+		} // func CreateStringKeyValuePair
+
+		public static IEnumerable<PpsDataColumnExpression> Parse(string columns)
+			=> columns.Split(',').Where(s => !String.IsNullOrEmpty(s)).Select(CreateStringKeyValuePair).ToArray();
+
+		public static IEnumerable<PpsDataColumnExpression> Parse(LuaTable columns)
+			=> columns.ArrayList.Select(CreateStringKeyValuePair)
+				.Union(columns.Members.Select(kv => new PpsDataColumnExpression(kv.Key, kv.Value.ToString())))
+				.ToArray();
+
+		public static IEnumerable<PpsDataColumnExpression> Parse(object columns, bool throwException = true)
+		{
+			switch (columns)
+			{
+				case null:
+					return Array.Empty<PpsDataColumnExpression>();
+				case string columnsString:
+					return Parse(columnsString);
+				case LuaTable columnsArray:
+					return Parse(columnsArray);
+				default:
+					if (throwException)
+						throw new ArgumentException(nameof(columns));
+					else
+						return null;
+			}
+		} // func Parse
+
+		public static bool IsEmpty(PpsDataColumnExpression[] columns)
+			=> columns == null || columns.Length == 0;
+	} // class PpsDataColumnExpression
 
 	#endregion
 }
