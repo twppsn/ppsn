@@ -278,14 +278,8 @@ namespace TecWare.PPSn.Server
 				this.application = application ?? throw new ArgumentNullException(nameof(application));
 			} // ctor
 
-			public override async Task<IEnumerable<IDataRow>> GetListAsync(string select, KeyValuePair<string, string>[] columns, PpsDataFilterExpression selector, PpsDataOrderExpression[] order)
-			{
-				var (r, v) = await application.Database.CreateSelectorAsync(select);
-
-				return r.ApplySelect(columns)
-					.ApplyFilter(selector, v.LookupFilter)
-					.ApplyOrder(order, v.LookupOrder);
-			} // func GetListAsync
+			public async override Task<IEnumerable<IDataRow>> GetListAsync(string select, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter, PpsDataOrderExpression[] order)
+				=> await application.Database.CreateSelectorAsync(select, columns, filter, order);
 
 			public override async Task<PpsDataSet> GetDataSetAsync(object identitfication, string[] tableFilter)
 			{

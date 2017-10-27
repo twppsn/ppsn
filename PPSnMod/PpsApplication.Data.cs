@@ -772,7 +772,7 @@ namespace TecWare.PPSn.Server
 				if (viewController.TryGetValue(name, out viewInfo))
 					return viewInfo;
 				else if (throwException)
-					throw new ArgumentOutOfRangeException(); // todo:
+					throw new ArgumentOutOfRangeException(nameof(name), $"Could not locate view definition: '{name}'");
 				else
 					return null;
 			}
@@ -835,6 +835,7 @@ namespace TecWare.PPSn.Server
 			
 			var selector = ctx.CreateSelectorAsync(
 				r.GetProperty<string>("v", null),
+				r.GetProperty<string>("c", null),
 				r.GetProperty<string>("f", null),
 				r.GetProperty<string>("o", null),
 				true

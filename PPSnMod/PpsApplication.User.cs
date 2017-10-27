@@ -395,7 +395,7 @@ namespace TecWare.PPSn.Server
 				return c != null && await c.EnsureConnectionAsync(throwException) ? c : null;
 			} // func EnsureConnection
 
-			public async Task<PpsDataSelector> CreateSelectorAsync(string name, string filter = null, string order = null, bool throwException = true)
+			public async Task<PpsDataSelector> CreateSelectorAsync(string name, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true)
 			{
 				if (String.IsNullOrEmpty(name))
 					throw new ArgumentNullException("name");
@@ -418,25 +418,21 @@ namespace TecWare.PPSn.Server
 				// create the selector
 				var selector = viewInfo.SelectorToken.CreateSelector(connectionHandle, throwException);
 
+				// column restrictions
+				if (!PpsDataColumnExpression.IsEmpty(columns))
+					selector = selector.ApplyColumns(columns);
+
 				// apply filter rules
-				if (!String.IsNullOrWhiteSpace(filter))
-					selector = selector.ApplyFilter(PpsDataFilterExpression.Parse(filter), viewInfo.LookupFilter);
+				if (!PpsDataFilterExpression.IsEmpty(filter))
+					selector = selector.ApplyFilter(filter, viewInfo.LookupFilter);
 
 				// apply order
-				if (!String.IsNullOrWhiteSpace(order))
-					selector = selector.ApplyOrder(PpsDataOrderExpression.Parse(order), viewInfo.LookupOrder);
+				if (!PpsDataOrderExpression.IsEmpty(order))
+					selector = selector.ApplyOrder(order, viewInfo.LookupOrder);
 
 				return selector;
 			} // func CreateSelector
-
-			public Task<PpsDataSelector> CreateSelectorAsync(LuaTable table)
-			{
-				if (table == null)
-					throw new ArgumentNullException("table");
-
-				return CreateSelectorAsync(table.GetOptionalValue("name", (string)null), table.GetOptionalValue("filter", (string)null), table.GetOptionalValue("order", (string)null), table.GetOptionalValue("throwException", true));
-			} // func CreateSelector
-
+			
 			public Task<PpsDataTransaction> CreateTransactionAsync(string dataSourceName = null, bool throwException = true)
 			{
 				if (String.IsNullOrEmpty(dataSourceName))

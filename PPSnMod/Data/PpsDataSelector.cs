@@ -63,7 +63,7 @@ namespace TecWare.PPSn.Server.Data
 		public virtual PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 			=> this;
 
-		public virtual PpsDataSelector ApplySelect(params KeyValuePair<string, string>[] columns)
+		public virtual PpsDataSelector ApplyColumns(params PpsDataColumnExpression[] columns)
 			=> this;
 		
 		/// <summary>Returns the field description for the name in the resultset</summary>

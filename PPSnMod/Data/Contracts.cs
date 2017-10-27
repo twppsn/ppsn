@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Security;
@@ -25,6 +26,7 @@ using System.Threading.Tasks;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Server.Data
 {
@@ -191,7 +193,7 @@ namespace TecWare.PPSn.Server.Data
 			var p = userName.IndexOf('\\');
 			return p == -1
 				? new PpsWindowsIdentity(null, userName)
-				: new PpsWindowsIdentity(userName.Substring(0, p),userName.Substring(p + 1) );
+				: new PpsWindowsIdentity(userName.Substring(0, p), userName.Substring(p + 1));
 		} // func CreateIntegratedIdentity
 	} // class PpsUserIdentity
 
@@ -314,24 +316,21 @@ namespace TecWare.PPSn.Server.Data
 	{
 		/// <summary>Creates a selector for a view.</summary>
 		/// <param name="name">Name of the view</param>
+		/// <param name="columns">Column definition.</param>
 		/// <param name="filter">Filter rules</param>
 		/// <param name="order">Order rules</param>
 		/// <param name="throwException">Should the method throw on an exception on failure.</param>
 		/// <returns></returns>
-		Task<PpsDataSelector> CreateSelectorAsync(string name, string filter = null, string order = null, bool throwException = true);
-		/// <summary>Create selector for a view (lua tables based).</summary>
-		/// <param name="table">Same arguments, like the c# version.</param>
-		/// <returns></returns>
-		Task<PpsDataSelector> CreateSelectorAsync(LuaTable table);
+		Task<PpsDataSelector> CreateSelectorAsync(string name, PpsDataColumnExpression[] columns = null, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true);
 
 		/// <summary>Creates a transaction to manipulate data.</summary>
 		/// <param name="dataSource"></param>
-		/// <param name="throwException"></param>
+		/// <param name="throwException">Should the method throw on an exception on failure.</param>
 		/// <returns></returns>
 		Task<PpsDataTransaction> CreateTransactionAsync(string dataSourceName, bool throwException = true);
-		/// <summary></summary>
-		/// <param name="dataSource"></param>
-		/// <param name="throwException"></param>
+		/// <summary>Creates a transaction to manipulate data.</summary>
+		/// <param name="dataSource">Datasource specified as object.</param>
+		/// <param name="throwException">Should the method throw on an exception on failure.</param>
 		/// <returns></returns>
 		Task<PpsDataTransaction> CreateTransactionAsync(PpsDataSource dataSource, bool throwException = true);
 
@@ -530,6 +529,31 @@ namespace TecWare.PPSn.Server.Data
 
 		IEnumerable<IPpsColumnDescription> Columns { get; }
 	} // interface IPpsSelectorToken
+
+	#endregion
+
+	#region -- class PpsPrivateDataContextHelper --------------------------------------
+
+	public static class PpsPrivateDataContextHelper
+	{
+		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, string name, string columns = null, string filter = null, string order = null, bool throwException = true)
+			=> ctx.CreateSelectorAsync(
+				name,
+				PpsDataColumnExpression.Parse(columns).ToArray(),
+				PpsDataFilterExpression.Parse(filter),
+				PpsDataOrderExpression.Parse(order).ToArray(),
+				throwException
+			);
+
+		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, LuaTable table, bool throwException = true)
+			=> ctx.CreateSelectorAsync(
+				table.GetOptionalValue("name", (string)null),
+				PpsDataColumnExpression.Parse(table.GetMemberValue("columns")).ToArray(),
+				PpsDataFilterExpression.Parse(table.GetMemberValue("filter")),
+				PpsDataOrderExpression.Parse(table.GetMemberValue("order")).ToArray(),
+				throwException
+			);
+	} // class PpsPrivateDataContextHelper
 
 	#endregion
 }

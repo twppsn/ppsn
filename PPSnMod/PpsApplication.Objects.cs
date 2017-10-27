@@ -1525,21 +1525,26 @@ namespace TecWare.PPSn.Server
 			public PpsDataTransaction GetDatabase(string name = null)
 				=> GetDatabaseAsync(name).AwaitTask();
 
-			public async Task<(PpsDataSelector selector, PpsViewDescription view)> CreateSelectorAsync(string name)
-			{
-				var view = application.GetViewDefinition(name, true);
-				var trans = await GetDatabaseAsync(view.SelectorToken.DataSource);
+			public Task<PpsDataSelector> CreateSelectorAsync(string name, string columns, string filter, string order)
+				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true)
+					.CreateSelectorAsync(name, columns, filter, order, true);
 
-				return (view.SelectorToken.CreateSelector(trans.Connection, true), view);
-			} // func CreateSelectorAsync
+			public Task<PpsDataSelector> CreateSelectorAsync(string name, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter, PpsDataOrderExpression[] order)
+				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true)
+					.CreateSelectorAsync(name, columns, filter, order, true);
+
+			public Task<PpsDataSelector> CreateSelectorAsync(LuaTable table)
+				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true)
+					.CreateSelectorAsync(table, true);
 
 			[LuaMember]
-			public LuaResult CreateSelector(string name)
-			{
-				var r = CreateSelectorAsync(name).AwaitTask();
-				return new LuaResult(r.selector, r.view);
-			} // func CreateSelector
-			
+			public PpsDataSelector CreateSelector(string name, string columns, string filter, string order)
+				=> CreateSelectorAsync(name, columns, filter, order).AwaitTask();
+
+			[LuaMember]
+			public PpsDataSelector CreateSelector(LuaTable table)
+				=> CreateSelectorAsync(table).AwaitTask();
+
 			[LuaMember]
 			public PpsDataTransaction Main => GetDatabase();
 		} // class PpsDatabaseLibrary

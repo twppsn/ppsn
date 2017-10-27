@@ -1358,7 +1358,7 @@ namespace TecWare.PPSn.Server.Sql
 							col.SetParameter(currentRow);
 
 						// exec
-						using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
+						using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleRow))
 						{
 							if (!r.Read())
 								throw new InvalidDataException("Invalid return data from sql command.");
