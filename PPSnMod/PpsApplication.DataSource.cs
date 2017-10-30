@@ -81,12 +81,11 @@ namespace TecWare.PPSn.Server
 			public void InitializeColumns()
 			{
 				var selector = CreateSelector(dataSource.systemConnection, false); // call head
-				var columns = selector as IDataColumns;
-				if (columns != null)
+				if (selector is IDataColumns columns)
 				{
 					columnDescriptions = new IPpsColumnDescription[columns.Columns.Count];
 					for (var i = 0; i < columnDescriptions.Length; i++)
-						columnDescriptions[i] = selector.GetFieldDescription(columns.Columns[i].Name);;
+						columnDescriptions[i] = selector.GetFieldDescription(columns.Columns[i].Name);
 				}
 				else
 					columnDescriptions = null;

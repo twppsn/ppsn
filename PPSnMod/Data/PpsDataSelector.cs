@@ -33,7 +33,7 @@ namespace TecWare.PPSn.Server.Data
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public abstract class PpsDataSelector : IDERangeEnumerable<IDataRow>, IEnumerable<IDataRow>
+	public abstract class PpsDataSelector : IDERangeEnumerable<IDataRow>, IDataRowEnumerable
 	{
 		private readonly PpsDataSource source;
 
@@ -57,13 +57,22 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		public abstract IEnumerator<IDataRow> GetEnumerator(int start, int count);
 
+		IDataRowEnumerable IDataRowEnumerable.ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative)
+			=> ApplyOrder(expressions, lookupNative);
+
 		public virtual PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
 			=> this;
+
+		IDataRowEnumerable IDataRowEnumerable.ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative)
+			=> ApplyFilter(expression, lookupNative);
 
 		public virtual PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 			=> this;
 
-		public virtual PpsDataSelector ApplyColumns(params PpsDataColumnExpression[] columns)
+		IDataRowEnumerable IDataRowEnumerable.ApplyColumns(IEnumerable<PpsDataColumnExpression> columns)
+			=> ApplyColumns(columns);
+
+		public virtual PpsDataSelector ApplyColumns(IEnumerable<PpsDataColumnExpression> columns)
 			=> this;
 		
 		/// <summary>Returns the field description for the name in the resultset</summary>
@@ -84,7 +93,7 @@ namespace TecWare.PPSn.Server.Data
 
 	public sealed class PpsGenericSelector<T> : PpsDataSelector
 	{
-		#region -- class FilterCompiler -------------------------------------------------
+		#region -- class FilterCompiler -----------------------------------------------
 
 		private sealed class FilterCompiler : PpsDataFilterVisitor<Expression>
 		{
