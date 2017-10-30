@@ -1,0 +1,54 @@
+\input Server/Vorlage.tex
+\showframe
+\switchtobodyfont[12pt]
+\starttext
+%{\bf TecWare GmbH} \hfill \externalfigure[TecWare_Logo][width=4cm]
+{\bf TecWare GmbH} \hfill \Logo4
+
+\vskip 3cm
+\setupinterlinespace [line=1.5\bodyfontsize ]
+\hbox to 7cm {\underbar{\tfxx{TecWare GmbH \cdot\ Gewerbegebiet 5 \cdot\ 01689 Niederau OT Ockrilla}}}
+%\hrule width 9cm
+\par{TecWare Gesellschaft für Softwareentwicklung mbH\\
+Gewerbegebiet 5\\\\
+01689 Niederau OT Ockrilla}
+
+\vskip 3cm
+\switchtobodyfont[8pt]
+\par{Sehr geehrte Damen und Herren, \\\\
+folgendes Angebot haben wir für Sie:\\}
+
+\startxtable[option={width},bodyfont=8pt,frame=off]
+    \startxtablehead[background=color,backgroundcolor=\FarbeKopf]
+		\startxrow[bold]
+        \startxcell[width=.7cm] \tfx Pos \stopxcell
+        \startxcell[width=1cm,align=middle] \tfx Anzahl \stopxcell
+        \startxcell[width=1.3cm] \tfx Einheit \stopxcell
+        \startxcell[width=8cm] \tfx Bezeichnung \stopxcell
+        \startxcell[width=1.8cm,align=flushright] \tfx Preisbasis \stopxcell
+        \startxcell[width=2.2cm,align=flushright] \tfx Betrag \stopxcell
+		\stopxrow
+    \stopxtablehead
+		\startxtablebody
+    \directlua {
+        for k,v in pairs(Pos) do
+						if k == 1 then
+							tex.print("\\startxrow[topframe=off]\\startxcell " .. v[1] .." \\stopxcell \\startxcell[align=middle] " .. v[2] .." \\stopxcell \\startxcell " .. v[3] .." \\stopxcell \\startxcell " .. v[4] .." \\stopxcell \\startxcell[align=flushright] " .. v[5] .." \\stopxcell \\startxcell[align=flushright] " .. v[6] .." \\stopxcell \\stopxrow")
+						else
+							tex.print("\\startxrow[topframe=on]\\startxcell " .. v[1] .." \\stopxcell \\startxcell[align=middle] " .. v[2] .." \\stopxcell \\startxcell " .. v[3] .." \\stopxcell \\startxcell " .. v[4] .." \\stopxcell \\startxcell[align=flushright] " .. v[5] .." \\stopxcell \\startxcell[align=flushright] " .. v[6] .." \\stopxcell \\stopxrow")
+						end
+        end
+    }
+		\stopxtablebody
+\stopxtable
+
+\par{Die Realisierung erfolgt ca. 2 Wochen nach Auftragserteilung. \\\\
+Mit freundlichen Grüßen\\
+\Logo6 \\
+Waldemar Hermann\\\\
+TecWare Gesellschaft für Softwareentwicklung mbH\\
+Gewerbegebiet 5\\
+01689 Niederau OT Ockrilla}
+\showbodyfont[12pt]
+\showbodyfontenvironment[ITCOfficinaSans,12pt]
+\stoptext

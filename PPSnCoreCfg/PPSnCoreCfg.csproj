@@ -59,7 +59,10 @@
     <None Include="reports\.sources" />
     <None Include="reports\libs\PpsData.lua" />
     <None Include="reports\libs\PpsStuff.lua" />
+    <None Include="reports\server\Formular.tex" />
+    <None Include="reports\server\Tagebuch.tex" />
     <None Include="reports\server\Test.tex" />
+    <None Include="reports\server\Vorlage.tex" />
     <None Include="sds\contract\Wpf\contract.lua" />
     <None Include="sds\offer\Wpf\offer.lua" />
     <None Include="mdm\contacts\contactsLocal.lua" />
@@ -83,6 +86,7 @@
     <None Include="PPSn.template">
       <SubType>Designer</SubType>
     </None>
+    <None Include="reports\server\BMS.tex" />
     <Content Include="sds\contract\Contract.xml">
       <SubType>Designer</SubType>
     </Content>
