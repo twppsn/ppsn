@@ -66,7 +66,7 @@ end
 
 --
 -- get a list of data and cache it, in second pass the function will returned the cached data
---   select:   list name
+--   name:		list name
 --   columns:  to transfer
 --   selector: todo!
 --   order:
@@ -76,12 +76,13 @@ function data.loadList(settings)
 		error("loadList arguments are missing.");
 	end;
 
-	if not settings.select then
-		error("loadList has no select.");
+	local listName = settings.name;
+	if not listName then
+		error("loadList has no name.");
 	end;
 
 	-- https://tex.stackexchange.com/questions/52067/storing-and-retrieving-data-in-tuc-file
-	local list = job.datasets.getdata("lists", settings.select); -- check cache for data
+	local list = job.datasets.getdata("lists", listName); -- check cache for data
 
 	if not list then
 		
@@ -102,7 +103,7 @@ function data.loadList(settings)
 	-- update cache, should be done in every pass
 	job.datasets.setdata {
 		name = "lists",
-		tag = settings.select,
+		tag = listName,
 		data = list
 	};
 
