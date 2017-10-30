@@ -51,7 +51,7 @@ namespace TecWare.PPSn.Reporting
 	} // struct PpsReportErrorInfo
 
 	#endregion
-	
+
 	#region -- class PpsReportRunInfo -------------------------------------------------
 
 	/// <summary>Report parameter block.</summary>
@@ -95,7 +95,7 @@ namespace TecWare.PPSn.Reporting
 		} // prop LanguagePartOnly
 		  /// <summary>Remove all files, that will be created during this session.</summary>
 		public bool DeleteTempFiles { get; set; } = true;
-	
+
 		/// <summary>Gets called for every log line, that is not parsed.</summary>
 		public Action<string> DebugOutput { get; set; } = null;
 	} // class PpsReportRunInfo
@@ -184,7 +184,7 @@ namespace TecWare.PPSn.Reporting
 			public LuaPipeServer(Process process)
 			{
 				this.process = process ?? throw new ArgumentNullException(nameof(process));
-				
+
 				this.outputStream = process.StandardOutput;
 				this.errorStream = process.StandardError;
 				this.inputStream = process.StandardInput.BaseStream;
@@ -344,7 +344,7 @@ namespace TecWare.PPSn.Reporting
 				await inputStream.WriteAsync(b, 0, b.Length);
 				await inputStream.FlushAsync();
 			} // proc PushPacketCoreAsync
-			
+
 			public void OnProcessException(Exception exception)
 				=> currentInnerException = exception;
 
@@ -414,7 +414,7 @@ namespace TecWare.PPSn.Reporting
 		private int cleanBaseDirectory = 1440; // in min (0 or neg. turns it off)
 		private bool zipLogFiles = true;
 		private bool storeSuccessLogs = false;
-		
+
 		private readonly PpsDataServerProviderBase provider;
 
 		private Dictionary<string, SemaphoreSlim> reportLocks = new Dictionary<string, SemaphoreSlim>();
@@ -463,7 +463,7 @@ namespace TecWare.PPSn.Reporting
 			CheckPath(this.contextPath, nameof(contextPath));
 			CheckPath(this.reportBase, nameof(reportBase));
 			CheckPath(this.reportLogPath, nameof(reportLogPath));
-			
+
 			// check report sources
 			var sourceFile = new FileInfo(Path.Combine(this.reportBase.FullName, ".sources"));
 			if (sourceFile.Exists)
@@ -562,11 +562,11 @@ namespace TecWare.PPSn.Reporting
 			var (exitCode, pipeServer) = await CoreRunContextAsync("--generate", null);
 
 			// build exception
-			if(exitCode != 0 || pipeServer.HasErrorInfo)
+			if (exitCode != 0 || pipeServer.HasErrorInfo)
 			{
 				var sb = new StringBuilder($"Generate cache faild with code {exitCode}.");
 
-				if(pipeServer.TryGetError(out var messageText, out var info, out var innerException))
+				if (pipeServer.TryGetError(out var messageText, out var info, out var innerException))
 				{
 					sb.AppendLine(messageText);
 					if (info.HasValue)
@@ -608,7 +608,7 @@ namespace TecWare.PPSn.Reporting
 			{
 				var path = reportName.Substring(firstSep);
 				var name = reportName.Substring(firstSep + 1);
-				
+
 				return new DirectoryInfo(Path.Combine(reportBase.FullName, path)).EnumerateFiles(name + "*.tex", SearchOption.TopDirectoryOnly);
 			} // func GetFullQualified
 
@@ -926,7 +926,7 @@ namespace TecWare.PPSn.Reporting
 				}
 
 				await semaphoreToWait.WaitAsync();
-			} 
+			}
 		} // func LockReportFileAsync
 
 		private void UnlockReportFile(string reportName)
@@ -950,7 +950,7 @@ namespace TecWare.PPSn.Reporting
 		public string LogPath => reportLogPath.FullName;
 
 		/// <summary>Set the font path.</summary>
-		public string FontDirectory { get=>fontDirectory; set => fontDirectory = Path.GetFullPath(value ?? DefaultFontPath); }
+		public string FontDirectory { get => fontDirectory; set => fontDirectory = Path.GetFullPath(value ?? DefaultFontPath); }
 
 		/// <summary>Is it allowed to clean other files than the session files (in min).</summary>
 		public int CleanBaseDirectoryAfter { get => cleanBaseDirectory; set => cleanBaseDirectory = value; }

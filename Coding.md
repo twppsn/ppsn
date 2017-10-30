@@ -72,7 +72,7 @@ public struct Foo
 ### Use of regions
 
 * Use a region to group functionality
-* A functionality group as the following style, (the minus goes to column 88)
+* A functionality group as the following style, (the minus goes to column 88 not char)
 ```C#
  #region -- GroupName/Methods -------------------
 
@@ -141,8 +141,6 @@ Attribute()
 * Mark the closing bracket if the span is over more then 10 lines
 * Always mark closing methods and types
 
-* type comments start with a line of / to column 80
-
 ### Code
 
 * Lines should be no longer than 160 chars
@@ -192,7 +190,7 @@ e.g. if ((a && b) || (c && d))
 
 * Concat strings with **+**
 * Use Environent.NewLine
-* Do not concat variables, use String.Format
+* Do not concat variables, use String.Format, $
 * Try to use the “@” prefix for string literals instead of escaped strings
 * Use String.Empty
 * Use String.IsNullOrEmpty
@@ -205,7 +203,7 @@ e.g. if ((a && b) || (c && d))
 
 * Use object initializers to simplify object creation
 
-* Use "as", "(cast)" in the right way
+* Use "as", "is", "(cast)" in the right way
 * Only use dynamic if it is unavoidable
 * Do not rely on the variable name to specify the type of the variable. It might not be correct (e.g. the prefix)
 * "tmp" is allowed within 3 lines

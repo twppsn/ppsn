@@ -110,6 +110,8 @@ namespace TecWare.PPSn.Data
 
 		// -- Static --------------------------------------------------------------
 
+		#region -- Parse --------------------------------------------------------------
+
 		private static bool IsLetterOrDigit(char c)
 			=> c == '_' || Char.IsLetterOrDigit(c);
 
@@ -425,6 +427,10 @@ namespace TecWare.PPSn.Data
 			}
 		} // func Parse
 
+		#endregion
+
+		#region -- Combine/Compare ----------------------------------------------------
+
 		public static PpsDataFilterExpression Combine(params PpsDataFilterExpression[] expr)
 			=> new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.And, expr).Reduce();
 
@@ -476,6 +482,8 @@ namespace TecWare.PPSn.Data
 
 			return new PpsDataFilterCompareExpression(operand, op, GetValueExpresion());
 		} // func Compare
+
+		#endregion
 
 		/// <summary>Test if the expression is true or empty.</summary>
 		/// <param name="expr"></param>
@@ -1403,7 +1411,7 @@ namespace TecWare.PPSn.Data
 			if (String.IsNullOrEmpty(order))
 				yield break;
 
-			var orderTokens = order.Split(',');
+			var orderTokens = order.Split(',', ' ');
 			foreach (var _tok in orderTokens)
 			{
 				if (String.IsNullOrEmpty(_tok))

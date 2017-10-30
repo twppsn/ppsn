@@ -23,15 +23,37 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- class DbRowEnumerator ----------------------------------------------------
+	#region -- interface IDataRowEnumerable -------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
+	/// <summary>Interface to provider access to an enumerable, that is filtered 
+	/// and/or sorted.</summary>
+	public interface IDataRowEnumerable : IEnumerable<IDataRow>
+	{
+		/// <summary></summary>
+		/// <param name="expressions"></param>
+		/// <param name="lookupNative"></param>
+		/// <returns></returns>
+		IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null);
+		/// <summary></summary>
+		/// <param name="expression"></param>
+		/// <param name="lookupNative"></param>
+		/// <returns></returns>
+		IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null);
+		/// <summary></summary>
+		/// <param name="columns"></param>
+		/// <returns></returns>
+		IDataRowEnumerable ApplyColumns(IEnumerable<PpsDataColumnExpression> columns);
+	} // interface IDataRowEnumerable
+
+	#endregion
+
+	#region -- class DbRowEnumerator --------------------------------------------------
+
 	/// <summary></summary>
 	public sealed class DbRowEnumerator : IEnumerator<IDataRow>, IDataColumns
 	{
-		#region -- enum ReadingState ------------------------------------------------------
+		#region -- enum ReadingState --------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private enum ReadingState
 		{
@@ -42,9 +64,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class DbDataColumn -----------------------------------------------------
+		#region -- class DbDataColumn -------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private sealed class DbDataColumn : IDataColumn
 		{
@@ -52,7 +73,7 @@ namespace TecWare.PPSn.Data
 			private readonly Type dataType;
 			private readonly IPropertyEnumerableDictionary attributes;
 
-			#region -- Ctor/Dtor --------------------------------------------------------------
+			#region -- Ctor/Dtor ------------------------------------------------------
 
 			public DbDataColumn(string name, Type dataType, IPropertyEnumerableDictionary attributes)
 			{
@@ -66,7 +87,7 @@ namespace TecWare.PPSn.Data
 
 			#endregion
 
-			#region -- IDataColumn ------------------------------------------------------------
+			#region -- IDataColumn ----------------------------------------------------
 
 			public string Name => name;
 			public Type DataType => dataType;
@@ -77,7 +98,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class DbDataRow --------------------------------------------------------
+		#region -- class DbDataRow ----------------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
@@ -86,7 +107,7 @@ namespace TecWare.PPSn.Data
 			private readonly DbRowEnumerator enumerator;
 			private readonly object[] values;
 
-			#region -- Ctor/Dtor --------------------------------------------------------------
+			#region -- Ctor/Dtor ------------------------------------------------------
 
 			public DbDataRow(DbRowEnumerator enumerator, object[] values)
 			{
@@ -96,7 +117,7 @@ namespace TecWare.PPSn.Data
 
 			#endregion
 
-			#region -- override ---------------------------------------------------------------
+			#region -- override -------------------------------------------------------
 
 			public override object this[int index] => values[index];
 			public override bool IsDataOwner => true;
@@ -116,7 +137,7 @@ namespace TecWare.PPSn.Data
 		private IDataRow currentRow;
 		private readonly Lazy<IDataColumn[]> columns;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		private DbRowEnumerator(DbCommand command, DbDataReader reader, bool leaveOpen)
 		{
@@ -184,7 +205,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- IEnumerator<T> ---------------------------------------------------------
+		#region -- IEnumerator<T> -----------------------------------------------------
 
 		private bool MoveNext(bool headerOnly)
 		{
@@ -258,7 +279,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- IDataColumns -----------------------------------------------------------
+		#region -- IDataColumns -------------------------------------------------------
 
 		public IReadOnlyList<IDataColumn> Columns
 		{
@@ -274,7 +295,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class DbRowEnumerable ----------------------------------------------------
+	#region -- class DbRowEnumerable --------------------------------------------------
 
 	public sealed class DbRowEnumerable : IEnumerable<IDataRow>
 	{
@@ -294,7 +315,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class DbRowReaderEnumerable ----------------------------------------------
+	#region -- class DbRowReaderEnumerable --------------------------------------------
 
 	public sealed class DbRowReaderEnumerable : IEnumerable<IDataRow>
 	{
