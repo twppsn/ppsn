@@ -166,6 +166,7 @@ namespace TecWare.PPSn
 
 	#region -- class PpsMasterDataRow ---------------------------------------------------
 
+	/// <summary>Represents a datarow of a master data table.</summary>
 	public sealed class PpsMasterDataRow : DynamicDataRow
 	{
 		private readonly PpsMasterDataTable owner;
@@ -175,6 +176,7 @@ namespace TecWare.PPSn
 		{
 			this.owner = owner;
 			this.values = new object[r.FieldCount];
+
 			var primaryKeyIndex = owner.GetPrimaryKeyColumnIndex();
 			for (var i = 0; i < values.Length; i++)
 			{
@@ -186,14 +188,20 @@ namespace TecWare.PPSn
 			}
 		} // ctor
 
+		/// <summary>Check of the rows are the same.</summary>
+		/// <param name="obj">other object</param>
+		/// <returns></returns>
 		public override bool Equals(object obj)
 			=> obj is PpsMasterDataRow r 
-				?  (Object.ReferenceEquals(this, obj) || owner.Definition == r.owner.Definition && Object.Equals(Key, r.Key)) 
+				?  (ReferenceEquals(this, obj) || owner.Definition == r.owner.Definition && Object.Equals(Key, r.Key)) 
 				: false;
 
+		/// <summary>Hashcode for the current datarow.</summary>
+		/// <returns></returns>
 		public override int GetHashCode()
 			=> owner.Definition.GetHashCode() ^ (Key?.GetHashCode() ?? 0);
 
+		/// <summary>Access the column decriptions.</summary>
 		public override IReadOnlyList<IDataColumn> Columns
 			=> owner.Columns;
 
@@ -227,7 +235,7 @@ namespace TecWare.PPSn
 
 	#region -- class PpsMasterDataSelector ----------------------------------------------
 
-	public abstract class PpsMasterDataSelector : IEnumerable<IDataRow>, IDataColumns
+	public abstract class PpsMasterDataSelector : IDataRowEnumerable, IDataColumns
 	{
 		protected PpsMasterDataSelector()
 		{
@@ -255,6 +263,15 @@ namespace TecWare.PPSn
 
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
+
+		public virtual IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
+			=> this;
+
+		public virtual IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
+			=> this;
+
+		public virtual IDataRowEnumerable ApplyColumns(IEnumerable<PpsDataColumnExpression> columns)
+			=> this;
 
 		/// <summary>Columns of the rows.</summary>
 		public abstract IReadOnlyList<IDataColumn> Columns { get; }
@@ -337,6 +354,8 @@ namespace TecWare.PPSn
 		} // class PpsMasterDataTableResult
 
 		#endregion
+
+		private readonly Dictionary<object, WeakReference<PpsMasterDataRow>> cachedRows = new Dictionary<object, WeakReference<PpsMasterDataRow>>();
 
 		private readonly PpsMasterData masterData;
 		private readonly PpsDataTableDefinition definition;
@@ -1874,18 +1893,28 @@ namespace TecWare.PPSn
 
 		#region -- Table access ---------------------------------------------------------
 
+		private readonly Dictionary<PpsDataTableDefinition, WeakReference<PpsMasterDataTable>> cachedTables = new Dictionary<PpsDataTableDefinition, WeakReference<PpsMasterDataTable>>();
+
 		/// <summary>Creates a master data table result for the table definition</summary>
 		/// <param name="tableDefinition">Table definition for the new result.</param>
-		/// <returns></returns>
+		/// <returns>A new PpsMasterTable or a cache entry.</returns>
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public PpsMasterDataTable GetTable(PpsDataTableDefinition tableDefinition)
 		{
 			if (!schema.TableDefinitions.Contains(tableDefinition))
 				throw new ArgumentOutOfRangeException(nameof(tableDefinition));
 
-			return TryGetTableFromCache(tableDefinition, out var table)
-				? table
-				: new PpsMasterDataTable(this, tableDefinition);
+			lock (cachedTables)
+			{
+				if (cachedTables.TryGetValue(tableDefinition, out var r) && r.TryGetTarget(out var table))
+					return table;
+				else
+				{
+					table = new PpsMasterDataTable(this, tableDefinition);
+					cachedTables[tableDefinition] = new WeakReference<PpsMasterDataTable>(table);
+					return table;
+				}
+			}
 		} // func GetTable
 
 		public PpsMasterDataTable GetTable(string tableName, bool throwException = true)
@@ -1903,13 +1932,7 @@ namespace TecWare.PPSn
 
 		internal PpsDataTableDefinition FindTable(string tableName)
 			=> schema?.FindTable(tableName);
-
-		private bool TryGetTableFromCache(PpsDataTableDefinition tableDefinition, out PpsMasterDataTable table)
-		{
-			table = null;
-			return false;
-		} // func TryGetTableFromCache
-
+		
 		#endregion
 
 		#region -- Synchronization ------------------------------------------------------
