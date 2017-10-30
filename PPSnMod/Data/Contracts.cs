@@ -524,9 +524,12 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		IPpsColumnDescription GetFieldDescription(string selectorColumn);
 
+		/// <summary>Name of the selector.</summary>
 		string Name { get; }
+		/// <summary>Attached datasource</summary>
 		PpsDataSource DataSource { get; }
 
+		/// <summary>Column description of the selector, before execution.</summary>
 		IEnumerable<IPpsColumnDescription> Columns { get; }
 	} // interface IPpsSelectorToken
 
