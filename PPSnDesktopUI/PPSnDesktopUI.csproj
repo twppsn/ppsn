@@ -99,6 +99,9 @@
     <Compile Include="Controls\ComboBoxBehavior.cs" />
     <Compile Include="Controls\DataListControl.cs" />
     <Compile Include="Controls\PopupBehavior.cs" />
+    <Compile Include="Controls\PpsMasterDataSelector.xaml.cs">
+      <DependentUpon>PpsMasterDataSelector.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\ReadOnlyPaneBehavior.cs" />
     <Compile Include="Controls\SideBarMenu.cs" />
     <Compile Include="Controls\SplitButton.cs" />
@@ -190,6 +193,10 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="Controls\PpsAttachmentsControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\PpsMasterDataSelector.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
