@@ -364,7 +364,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsCommandOrder ----------------------------------------------------
+	#region -- class PpsCommandOrder --------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -440,7 +440,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsUICommand -------------------------------------------------------
+	#region -- class PpsUICommand -----------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Baseclass for a UI-Command implementation.</summary>
@@ -474,7 +474,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsUICommandButton -------------------------------------------------
+	#region -- class PpsUICommandButton -----------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -515,7 +515,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsUISplitCommandButton --------------------------------------------
+	#region -- class PpsUISplitCommandButton ------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
@@ -527,7 +527,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsUICommandCollection ---------------------------------------------
+	#region -- class PpsUICommandCollection -------------------------------------------
 
 	/// <summary></summary>
 	public class PpsUICommandCollection : Collection<PpsUICommand>, INotifyCollectionChanged
