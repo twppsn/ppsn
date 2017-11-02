@@ -113,17 +113,7 @@ namespace TecWare.PPSn.Controls
 			InitializeComponent();
 
 
-			const string xamlTemplate = "<DataTemplate xmlns:local=\"clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI\"> <local:SearchHighlightTextBlock Width=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ListBox}, Path=ActualWidth}\" IsEnabled=\"False\" BaseText=\"{Binding Name}\" SearchText=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=FilterText}\"/></DataTemplate>";
-
-			var context = new ParserContext();
-
-			context.XamlTypeMapper = new XamlTypeMapper(new string[0]);
-
-			context.XmlnsDictionary.Add("", "http://schemas.microsoft.com/winfx/2006/xaml/presentation");
-			context.XmlnsDictionary.Add("x", "http://schemas.microsoft.com/winfx/2006/xaml");
-
-			var template = (DataTemplate)XamlReader.Parse(xamlTemplate, context);
-			ListTemplate = template;
+			
 		}
 
 		#endregion
@@ -144,6 +134,22 @@ namespace TecWare.PPSn.Controls
 		public DataTemplate ListTemplate { get => (DataTemplate)GetValue(ListTemplateProperty); set => SetValue(ListTemplateProperty, value); }
 		public static readonly DependencyProperty ListTemplateProperty = DependencyProperty.Register(nameof(ListTemplate), typeof(DataTemplate), typeof(PpsMasterDataSelector));
 
+		public string ListTemplate { get => (string)GetValue(ListTemplateProperty); set { SetValue(ListTemplateProperty, value); PropertyChanged?.Invoke(this,new PropertyChangedEventArgs(nameof(ListTemplateDev))); } }
+		public static readonly DependencyProperty ListTemplateProperty = DependencyProperty.Register(nameof(ListTemplate), typeof(string), typeof(PpsMasterDataSelector));
+
+		public DataTemplate ListTemplateDev { get
+			{
+				string xamlTemplate = !String.IsNullOrEmpty(ListTemplate) ? ListTemplate : "<DataTemplate xmlns:local=\"clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI\"> <local:SearchHighlightTextBlock Width=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ListBox}, Path=ActualWidth}\" IsEnabled=\"False\" BaseText=\"{Binding Name}\" SearchText=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=FilterText}\"/></DataTemplate>";
+
+				var context = new ParserContext();
+
+				context.XamlTypeMapper = new XamlTypeMapper(new string[0]);
+
+				context.XmlnsDictionary.Add("", "http://schemas.microsoft.com/winfx/2006/xaml/presentation");
+				context.XmlnsDictionary.Add("x", "http://schemas.microsoft.com/winfx/2006/xaml");
+
+				return (DataTemplate)XamlReader.Parse(xamlTemplate, context); ;
+			} }
 
 		/// <summary>Current searchstring</summary>
 		public string FilterText

@@ -92,7 +92,7 @@ specific language governing permissions and limitations under the Licence.
 						Grid.Row="1"
 						HorizontalContentAlignment="Stretch" 
 						ScrollViewer.HorizontalScrollBarVisibility="Hidden"
-						ItemTemplate="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=ListTemplate}"
+						ItemTemplate="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=ListTemplateDev}"
 						SelectedItem="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=SelectedValue, Converter={StaticResource masterDataConstantConverter}}">
 						<ListBox.Resources>
 							<local:MasterDataConstantsConverter x:Key="masterDataConstantsConverter" />
