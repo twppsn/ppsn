@@ -126,6 +126,22 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		#region -- Methods ------------------------------------------------------------
+
+		private static ParserContext GetDefaultContext()
+		{
+			var context = new ParserContext();
+
+			context.XamlTypeMapper = new XamlTypeMapper(new string[0]);
+
+			context.XmlnsDictionary.Add("", "http://schemas.microsoft.com/winfx/2006/xaml/presentation");
+			context.XmlnsDictionary.Add("x", "http://schemas.microsoft.com/winfx/2006/xaml");
+
+			return context;
+		}
+
+		#endregion
+
 		#region -- Properties ---------------------------------------------------------
 
 		/// <summary>List of Constants to select from</summary>
@@ -139,28 +155,13 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty DisplayMemberPathProperty = DependencyProperty.Register(nameof(DisplayMemberPath), typeof(string), typeof(PpsMasterDataSelector));
 
 
-		public DataTemplate ListTemplate { get => (DataTemplate)GetValue(ListTemplateProperty); set => SetValue(ListTemplateProperty, value); }
-		public static readonly DependencyProperty ListTemplateProperty = DependencyProperty.Register(nameof(ListTemplate), typeof(DataTemplate), typeof(PpsMasterDataSelector));
+		public IDataRowEnumerable FilteredList { get => (IDataRowEnumerable)GetValue(FilteredListProperty); set => SetValue(FilteredListProperty, value); }
+		public static readonly DependencyProperty FilteredListProperty = DependencyProperty.Register(nameof(FilteredList), typeof(IDataRowEnumerable), typeof(PpsMasterDataSelector));
 
-		public string ListTemplate { get => (string)GetValue(ListTemplateProperty); set { SetValue(ListTemplateProperty, value); PropertyChanged?.Invoke(this,new PropertyChangedEventArgs(nameof(ListTemplateDev))); } }
-		public static readonly DependencyProperty ListTemplateProperty = DependencyProperty.Register(nameof(ListTemplate), typeof(string), typeof(PpsMasterDataSelector));
+		public string ListTemplateString { get => (string)GetValue(ListTemplateStringProperty); set { SetValue(ListTemplateStringProperty, value); PropertyChanged?.Invoke(this,new PropertyChangedEventArgs(nameof(ListTemplate))); } }
+		public static readonly DependencyProperty ListTemplateStringProperty = DependencyProperty.Register(nameof(ListTemplateString), typeof(string), typeof(PpsMasterDataSelector));
 
-		public DataTemplate ListTemplateDev
-		{
-			get
-			{
-				string xamlTemplate = !String.IsNullOrEmpty(ListTemplate) ? ListTemplate : defaultTemplate;
-
-				var context = new ParserContext();
-
-				context.XamlTypeMapper = new XamlTypeMapper(new string[0]);
-
-				context.XmlnsDictionary.Add("", "http://schemas.microsoft.com/winfx/2006/xaml/presentation");
-				context.XmlnsDictionary.Add("x", "http://schemas.microsoft.com/winfx/2006/xaml");
-
-				return (DataTemplate)XamlReader.Parse(xamlTemplate, context); ;
-			}
-		}
+		public DataTemplate ListTemplate => (DataTemplate)XamlReader.Parse(!String.IsNullOrEmpty(ListTemplateString) ? ListTemplateString : defaultTemplate, GetDefaultContext()); 
 
 		/// <summary>Current searchstring</summary>
 		public string FilterText
