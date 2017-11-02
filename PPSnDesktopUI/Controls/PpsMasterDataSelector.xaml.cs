@@ -136,7 +136,7 @@ namespace TecWare.PPSn.Controls
 	#region -- SearchHighlightTextBox -------------------------------------------------
 
 	/// <summary>This TextBox enables highlighting parts of the Text - BaseText is the input text, SearchText is the whitespace-separated list of keywords</summary>
-	public class SearchHighlightTextBlock : RichTextBox
+	public class SearchHighlightTextBlock : TextBlock
 	{
 		#region -- Events -------------------------------------------------------------
 
@@ -146,12 +146,9 @@ namespace TecWare.PPSn.Controls
 			var textBlock = (SearchHighlightTextBlock)source;
 			if (String.IsNullOrWhiteSpace(textBlock.BaseText))
 				return;
+			textBlock.Inlines.Clear();
 
-			textBlock.Document.Blocks.Clear();
-			var paragraph = new Paragraph();
-			paragraph.Inlines.AddRange(HighlightSearch(textBlock.BaseText, textBlock.SearchText, (t) => new Bold(new Italic(t))));
-
-			textBlock.Document.Blocks.Add(paragraph);
+			textBlock.Inlines.AddRange(HighlightSearch(textBlock.BaseText, textBlock.SearchText, (t) => new Bold(new Italic(t))));
 		}
 
 		#endregion
