@@ -24,6 +24,8 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Markup;
+using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Controls
 {
@@ -109,6 +111,19 @@ namespace TecWare.PPSn.Controls
 		public PpsMasterDataSelector()
 		{
 			InitializeComponent();
+
+
+			const string xamlTemplate = "<DataTemplate xmlns:local=\"clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI\"> <local:SearchHighlightTextBlock Width=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ListBox}, Path=ActualWidth}\" IsEnabled=\"False\" BaseText=\"{Binding Name}\" SearchText=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=FilterText}\"/></DataTemplate>";
+
+			var context = new ParserContext();
+
+			context.XamlTypeMapper = new XamlTypeMapper(new string[0]);
+
+			context.XmlnsDictionary.Add("", "http://schemas.microsoft.com/winfx/2006/xaml/presentation");
+			context.XmlnsDictionary.Add("x", "http://schemas.microsoft.com/winfx/2006/xaml");
+
+			var template = (DataTemplate)XamlReader.Parse(xamlTemplate, context);
+			ListTemplate = template;
 		}
 
 		#endregion
@@ -124,6 +139,11 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Property of the Constant to show in the UI - may change to a template</summary>
 		public string DisplayMemberPath { get => (string)GetValue(DisplayMemberPathProperty); set => SetValue(DisplayMemberPathProperty, value); }
 		public static readonly DependencyProperty DisplayMemberPathProperty = DependencyProperty.Register(nameof(DisplayMemberPath), typeof(string), typeof(PpsMasterDataSelector));
+
+
+		public DataTemplate ListTemplate { get => (DataTemplate)GetValue(ListTemplateProperty); set => SetValue(ListTemplateProperty, value); }
+		public static readonly DependencyProperty ListTemplateProperty = DependencyProperty.Register(nameof(ListTemplate), typeof(DataTemplate), typeof(PpsMasterDataSelector));
+
 
 		/// <summary>Current searchstring</summary>
 		public string FilterText
