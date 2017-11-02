@@ -32,6 +32,17 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Extended ComboBox which enables searching, with Highlighting</summary>
 	public partial class PpsMasterDataSelector : UserControl, INotifyPropertyChanged
 	{
+		#region -- Constants ----------------------------------------------------------
+
+		private const string defaultTemplate = "<DataTemplate xmlns:local=\"clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI\">" +
+												"	<local:SearchHighlightTextBlock " +
+												"		Width=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ListBox}, Path=ActualWidth}\"" +
+												"		BaseText=\"{Binding Name}\"" +
+												"		SearchText=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=FilterText}\"/>" +
+												"</DataTemplate>";
+
+		#endregion
+
 		#region -- Helper Classes -----------------------------------------------------
 
 		/// <summary>Interface for handleing the internal representation</summary>
@@ -111,9 +122,6 @@ namespace TecWare.PPSn.Controls
 		public PpsMasterDataSelector()
 		{
 			InitializeComponent();
-
-
-			
 		}
 
 		#endregion
@@ -137,9 +145,11 @@ namespace TecWare.PPSn.Controls
 		public string ListTemplate { get => (string)GetValue(ListTemplateProperty); set { SetValue(ListTemplateProperty, value); PropertyChanged?.Invoke(this,new PropertyChangedEventArgs(nameof(ListTemplateDev))); } }
 		public static readonly DependencyProperty ListTemplateProperty = DependencyProperty.Register(nameof(ListTemplate), typeof(string), typeof(PpsMasterDataSelector));
 
-		public DataTemplate ListTemplateDev { get
+		public DataTemplate ListTemplateDev
+		{
+			get
 			{
-				string xamlTemplate = !String.IsNullOrEmpty(ListTemplate) ? ListTemplate : "<DataTemplate xmlns:local=\"clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI\"> <local:SearchHighlightTextBlock Width=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ListBox}, Path=ActualWidth}\" IsEnabled=\"False\" BaseText=\"{Binding Name}\" SearchText=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=FilterText}\"/></DataTemplate>";
+				string xamlTemplate = !String.IsNullOrEmpty(ListTemplate) ? ListTemplate : defaultTemplate;
 
 				var context = new ParserContext();
 
@@ -149,7 +159,8 @@ namespace TecWare.PPSn.Controls
 				context.XmlnsDictionary.Add("x", "http://schemas.microsoft.com/winfx/2006/xaml");
 
 				return (DataTemplate)XamlReader.Parse(xamlTemplate, context); ;
-			} }
+			}
+		}
 
 		/// <summary>Current searchstring</summary>
 		public string FilterText
