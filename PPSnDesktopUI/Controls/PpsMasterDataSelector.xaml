@@ -93,17 +93,9 @@ specific language governing permissions and limitations under the Licence.
 						HorizontalContentAlignment="Stretch" 
 						ScrollViewer.HorizontalScrollBarVisibility="Hidden"
 						ItemTemplate="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=ListTemplate}"
-						SelectedItem="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=SelectedValue, Converter={StaticResource masterDataConstantConverter}}">
-						<ListBox.Resources>
-							<local:MasterDataConstantsConverter x:Key="masterDataConstantsConverter" />
-						</ListBox.Resources>
-						<ListBox.ItemsSource>
-							<MultiBinding Converter="{StaticResource masterDataConstantsConverter}" Mode="OneWay">
-								<Binding RelativeSource="{RelativeSource Mode=FindAncestor, AncestorType=UserControl}" Path="ConstantsSource" Mode="OneWay"/>
-								<Binding RelativeSource="{RelativeSource Mode=FindAncestor, AncestorType=UserControl}" Path="DisplayMemberPath" Mode="OneWay"/>
-								<Binding ElementName="SearchConstantTextbox" Path="Text" Mode="OneWay"/>
-							</MultiBinding>
-						</ListBox.ItemsSource>
+						SelectedItem="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=SelectedValue}"
+						ItemsSource="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=ConstantsSource}">
+						
 					</ListBox>
 				</Grid>
 			</Border>
