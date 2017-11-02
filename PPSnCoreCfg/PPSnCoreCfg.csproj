@@ -59,6 +59,7 @@
     <None Include="reports\.sources" />
     <None Include="reports\libs\PpsData.lua" />
     <None Include="reports\libs\PpsStuff.lua" />
+    <None Include="reports\Reports.md" />
     <None Include="reports\server\Formular.tex" />
     <None Include="reports\server\Tagebuch.tex" />
     <None Include="reports\server\Test.tex" />
