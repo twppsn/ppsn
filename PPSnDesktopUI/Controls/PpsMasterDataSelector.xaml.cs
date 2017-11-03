@@ -83,7 +83,7 @@ namespace TecWare.PPSn.Controls
 					var selected = (ConstantsListbox.SelectedItem ?? (ConstantsListbox.Items.Count > 0 ? ConstantsListbox.Items[0] : null));
 					if (selected != null)
 					{
-						SelectedValue = selected is PpsMasterDataRow ? (PpsMasterDataRow)selected : ((IPpsConstant)selected).Row;
+						SelectedValue = (PpsMasterDataRow)selected;
 						e.Handled = true;
 						sendingTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
 						return;
@@ -382,17 +382,8 @@ namespace TecWare.PPSn.Controls
 					var a = ((PpsMasterDataRow)values[1])[(string)values[0]];
 					return a;
 				}
-				else return DependencyProperty.UnsetValue;
 
-
-			var ret = new ObservableCollection<PpsConstant>();
-			foreach (PpsMasterDataRow row in (PpsMasterDataTable)values[0])
-			{
-				var pc = new PpsConstant(row, (string)values[1]);
-				if (SearchFilter(row, (values[2] != DependencyProperty.UnsetValue) ? (string)values[2] : String.Empty))
-					ret.Add(pc);
-			}
-			return ret;
+			return DependencyProperty.UnsetValue;
 		}
 
 		public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
