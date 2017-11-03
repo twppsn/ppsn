@@ -36,12 +36,11 @@ namespace TecWare.PPSn.Controls
 		#region -- Constants ----------------------------------------------------------
 
 		private const string defaultTemplate = "<DataTemplate xmlns:local=\"clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI\">" +
-												"<Grid><Grid.ColumnDefinitions><ColumnDefinition Width=\"20\"/><ColumnDefinition/></Grid.ColumnDefinitions><Label Grid.Column=\"0\" Content=\"{Binding Id}\"/>" +
-												"	<local:SearchHighlightTextBlock Grid.Column=\"1\"" +
+												"	<local:SearchHighlightTextBlock" +
 												"		Width=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ListBox}, Path=ActualWidth}\"" +
-												"		BaseText=\"{Binding Name}\"" +
+												"		BaseText=\"{Binding <DisplayMemberName/>}\"" +
 												"		SearchText=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=FilterText}\"/>" +
-												"</Grid></DataTemplate>";
+												"</DataTemplate>";
 
 		#endregion
 
@@ -186,7 +185,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>If a string is passed it is parsed as a DataTemplate for the ListItems</summary>
 		public string ListTemplateString { get => (string)GetValue(ListTemplateStringProperty); set { SetValue(ListTemplateStringProperty, value); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ListTemplate))); } }
 		public static readonly DependencyProperty ListTemplateStringProperty = DependencyProperty.Register(nameof(ListTemplateString), typeof(string), typeof(PpsMasterDataSelector));
-		public DataTemplate ListTemplate => (DataTemplate)XamlReader.Parse(!String.IsNullOrEmpty(ListTemplateString) ? ListTemplateString : defaultTemplate, GetDefaultContext());
+		public DataTemplate ListTemplate => (DataTemplate)XamlReader.Parse(!String.IsNullOrEmpty(ListTemplateString) ? ListTemplateString : defaultTemplate.Replace("<DisplayMemberName/>",DisplayMemberPath), GetDefaultContext());
 
 		/// <summary>Current searchstring</summary>
 		public string FilterText
