@@ -43,25 +43,37 @@
                 <RowDefinition Height="20" />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="40" />
-                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="100" />
                 <ColumnDefinition Width="300" />
                 <ColumnDefinition Width="100"/>
                 <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="300"/>
                 <ColumnDefinition Width="300"/>
             </Grid.ColumnDefinitions>
-
-			<Image Grid.Column="0" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Vorschaubild" Margin="4">
+			<TextBlock Grid.Column="0" FontStretch="Expanded" ToolTip="Mimetyp">
+				<TextBlock.Style>
+					<Style TargetType="{x:Type TextBlock}">
+						<Setter Property="Text" Value="Anhang:" />
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding MimeType}" Value="image/jpeg">
+								<Setter Property="Text" Value="Bilddatei:"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding MimeType}" Value="image/png">
+								<Setter Property="Text" Value="Bilddatei:"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</TextBlock.Style>
+			</TextBlock>			
+			<TextBlock Text="{Binding Nr}" Grid.Column="1" VerticalAlignment="Center" ToolTip="Nummer"/>
+			<TextBlock Text="{Binding Name}" Grid.Column="2" VerticalAlignment="Center" ToolTip="Name"/>
+			<Image Grid.Column="3" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Vorschaubild" Margin="4">
 				<Image.Source>
 					<Binding Path="DataLazy.PreviewImageLazy"
 							 Mode="OneWay"/>
 				</Image.Source>
 			</Image>
-			<TextBlock Text="{Binding Nr}" Grid.Column="1" VerticalAlignment="Center" ToolTip="Nummer"/>
-			<TextBlock Text="{Binding Name}" Grid.Column="2" VerticalAlignment="Center" ToolTip="Name"/>
-			<TextBlock Text="{Binding MimeType}" Grid.Column="3" FontStretch="Expanded" ToolTip="Mimetyp"/>
-			<TextBlock Text="{Binding DataLazy.PreviewImageLazy,Mode=OneWay}" Grid.Column="4" VerticalAlignment="Center" ToolTip="Nummer"/>
 			<!-- Sha256 should not be loaded - otherwise all attachments are loaded <TextBlock Text="{Binding Data.Sha256}" Grid.Column="2" ToolTip="Debitorennummer"/>-->
         </Grid>
 
