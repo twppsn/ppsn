@@ -1092,7 +1092,7 @@ namespace TecWare.PPSn.Data
 			=> "1=0";
 
 		protected virtual string CreateColumnErrorFilter(string columnToken)
-			=> CreateErrorFilter(String.Format("Column '{0}' not found.'", columnToken);
+			=> CreateErrorFilter(String.Format("Column '{0}' not found.'", columnToken));
 
 		#endregion
 
