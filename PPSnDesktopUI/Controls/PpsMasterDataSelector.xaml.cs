@@ -19,6 +19,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -116,6 +117,32 @@ namespace TecWare.PPSn.Controls
 			}
 		}
 
+		protected virtual void OnConstantsSourceChanged()
+		{
+			if (searchBreaker == null)
+			{
+				searchBreaker = new Timer(1000);
+				searchBreaker.AutoReset = false;
+				searchBreaker.Elapsed += (sender, e) =>
+				{
+					System.Media.SystemSounds.Beep.Play();
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("FilteredList"));
+					searchBreaker = null;
+				};
+				searchBreaker.Start();
+			}
+			else
+			{
+				searchBreaker.Interval = 1000;
+			}
+		}
+
+		#endregion
+
+		#region -- Fields -------------------------------------------------------------
+
+		private Timer searchBreaker;
+
 		#endregion
 
 		#region -- Constructors -------------------------------------------------------
@@ -146,8 +173,8 @@ namespace TecWare.PPSn.Controls
 		#region -- Properties ---------------------------------------------------------
 
 		/// <summary>List of Constants to select from</summary>
-		public PpsMasterDataTable ConstantsSource { get => (PpsMasterDataTable)GetValue(ConstantsSourceProperty); set { SetValue(ConstantsSourceProperty, value); } }
-		public static readonly DependencyProperty ConstantsSourceProperty = DependencyProperty.Register(nameof(ConstantsSource), typeof(PpsMasterDataTable), typeof(PpsMasterDataSelector));
+		public PpsMasterDataTable ConstantsSource { get => (PpsMasterDataTable)GetValue(ConstantsSourceProperty); set { SetValue(ConstantsSourceProperty, value); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FilteredList))); } }
+		public static readonly DependencyProperty ConstantsSourceProperty = DependencyProperty.Register(nameof(ConstantsSource), typeof(PpsMasterDataTable), typeof(PpsMasterDataSelector), new FrameworkPropertyMetadata(new PropertyChangedCallback((sender, e) => ((PpsMasterDataSelector)sender)?.OnConstantsSourceChanged())));
 		/// <summary>Actual Constant</summary>
 		public PpsMasterDataRow SelectedValue { get => (PpsMasterDataRow)(GetValue(SelectedValueProperty) ?? DependencyProperty.UnsetValue); set { SetValue(SelectedValueProperty, value); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedValue))); } }
 		private static readonly DependencyProperty SelectedValueProperty = DependencyProperty.Register(nameof(SelectedValue), typeof(PpsMasterDataRow), typeof(PpsMasterDataSelector), new FrameworkPropertyMetadata { BindsTwoWayByDefault = true });
@@ -155,19 +182,17 @@ namespace TecWare.PPSn.Controls
 		public string DisplayMemberPath { get => (string)GetValue(DisplayMemberPathProperty); set => SetValue(DisplayMemberPathProperty, value); }
 		public static readonly DependencyProperty DisplayMemberPathProperty = DependencyProperty.Register(nameof(DisplayMemberPath), typeof(string), typeof(PpsMasterDataSelector));
 
-
-		public IDataRowEnumerable FilteredList { get => (IDataRowEnumerable)GetValue(FilteredListProperty); set => SetValue(FilteredListProperty, value); }
-		public static readonly DependencyProperty FilteredListProperty = DependencyProperty.Register(nameof(FilteredList), typeof(IDataRowEnumerable), typeof(PpsMasterDataSelector));
+		public IDataRowEnumerable FilteredList => ConstantsSource?.ApplyFilter(PpsDataFilterExpression.Parse(FilterText));
 
 		/// <summary>If a string is passed it is parsed as a DataTemplate for the ListItems</summary>
-		public string ListTemplateString { get => (string)GetValue(ListTemplateStringProperty); set { SetValue(ListTemplateStringProperty, value); PropertyChanged?.Invoke(this,new PropertyChangedEventArgs(nameof(ListTemplate))); } }
+		public string ListTemplateString { get => (string)GetValue(ListTemplateStringProperty); set { SetValue(ListTemplateStringProperty, value); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ListTemplate))); } }
 		public static readonly DependencyProperty ListTemplateStringProperty = DependencyProperty.Register(nameof(ListTemplateString), typeof(string), typeof(PpsMasterDataSelector));
-		public DataTemplate ListTemplate => (DataTemplate)XamlReader.Parse(!String.IsNullOrEmpty(ListTemplateString) ? ListTemplateString : defaultTemplate, GetDefaultContext()); 
+		public DataTemplate ListTemplate => (DataTemplate)XamlReader.Parse(!String.IsNullOrEmpty(ListTemplateString) ? ListTemplateString : defaultTemplate, GetDefaultContext());
 
 		/// <summary>Current searchstring</summary>
 		public string FilterText
 		{ get => (string)GetValue(FilterTextProperty); set => SetValue(FilterTextProperty, value); }
-		public static readonly DependencyProperty FilterTextProperty = DependencyProperty.Register(nameof(FilterText), typeof(string), typeof(PpsMasterDataSelector));
+		public static readonly DependencyProperty FilterTextProperty = DependencyProperty.Register(nameof(FilterText), typeof(string), typeof(PpsMasterDataSelector), new FrameworkPropertyMetadata(new PropertyChangedCallback((sender, e) => ((PpsMasterDataSelector)sender)?.OnConstantsSourceChanged())));
 
 		#endregion
 	} // class PpsMasterDataSelector

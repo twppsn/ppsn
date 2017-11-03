@@ -94,7 +94,7 @@ specific language governing permissions and limitations under the Licence.
 						ScrollViewer.HorizontalScrollBarVisibility="Hidden"
 						ItemTemplate="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=ListTemplate}"
 						SelectedItem="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=SelectedValue}"
-						ItemsSource="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=ConstantsSource}">
+						ItemsSource="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=FilteredList}">
 						
 					</ListBox>
 				</Grid>
