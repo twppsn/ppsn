@@ -41,6 +41,7 @@ namespace TecWare.PPSn.Controls
 												"		BaseText=\"{Binding <DisplayMemberName/>}\"" +
 												"		SearchText=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=FilterText}\"/>" +
 												"</DataTemplate>";
+		private const double refreshHoldOff = 400;
 
 		#endregion
 
@@ -120,7 +121,7 @@ namespace TecWare.PPSn.Controls
 		{
 			if (searchBreaker == null)
 			{
-				searchBreaker = new Timer(1000);
+				searchBreaker = new Timer(refreshHoldOff);
 				searchBreaker.AutoReset = false;
 				searchBreaker.Elapsed += (sender, e) =>
 				{
@@ -131,7 +132,7 @@ namespace TecWare.PPSn.Controls
 			}
 			else
 			{
-				searchBreaker.Interval = 1000;
+				searchBreaker.Interval = refreshHoldOff;
 			}
 		}
 
