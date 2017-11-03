@@ -273,9 +273,8 @@ namespace TecWare.PPSn.UI
 
 			public void Append(string tagName, PpsObjectTagClass tagClass, object tagValue)
 			{
-				//Q+D, temporary 
 				if (tagClass == PpsObjectTagClass.Note)
-					tagName = "note";
+					tagName = "Note (" + DateTime.Now.ToUniversalTime().ToString() + ")";
 				else if (String.IsNullOrEmpty(tagName))
 					throw new ArgumentNullException("Tag Name");
 
