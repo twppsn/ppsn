@@ -93,9 +93,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\PPSnCore\PPSnCore\Data\DbRowEnumerator.cs">
-      <Link>Data\DbRowEnumerator.cs</Link>
-    </Compile>
     <Compile Include="Controls\ComboBoxBehavior.cs" />
     <Compile Include="Controls\DataListControl.cs" />
     <Compile Include="Controls\PopupBehavior.cs" />
@@ -109,6 +106,7 @@
     <Compile Include="Controls\Toolbar.cs" />
     <Compile Include="Controls\TreeListView.cs" />
     <Compile Include="Controls\UndoManagerListBox.cs" />
+    <Compile Include="Data\DataFilter.cs" />
     <Compile Include="Data\DataListItemDefinition.cs" />
     <Compile Include="Data\PpsClientLogin.cs" />
     <Compile Include="Data\PpsDataSetDesktop.cs" />
@@ -178,20 +176,6 @@
     <None Include="Controls\text.fx.ps" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\twdes\des\Extern\Core\DESCore\DESCore.csproj">
-      <Project>{67528843-e631-4c05-b6e8-514cc8bec7b6}</Project>
-      <Name>DESCore</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\PPSnCore\PPSnClient\PPSnClient.csproj">
-      <Project>{6b2e2c3c-b2e0-4c9f-a1da-3e78bdb3a141}</Project>
-      <Name>PPSnClient</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\PPSnCore\PPSnCore\PPSnCore.csproj">
-      <Project>{f4609545-6d91-4b2d-a811-3201f4934505}</Project>
-      <Name>PPSnCore</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Page Include="Controls\PpsAttachmentsControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -251,6 +235,20 @@
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\twdes\des\Extern\Core\DESCore\DESCore.csproj">
+      <Project>{67528843-e631-4c05-b6e8-514cc8bec7b6}</Project>
+      <Name>DESCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\PPSnCore\PPSnClient\PPSnClient.csproj">
+      <Project>{6b2e2c3c-b2e0-4c9f-a1da-3e78bdb3a141}</Project>
+      <Name>PPSnClient</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\PPSnCore\PPSnCore\PPSnCore.csproj">
+      <Project>{f4609545-6d91-4b2d-a811-3201f4934505}</Project>
+      <Name>PPSnCore</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\System.Data.SQLite.Core.1.0.105.1\build\net46\System.Data.SQLite.Core.targets" Condition="Exists('..\packages\System.Data.SQLite.Core.1.0.105.1\build\net46\System.Data.SQLite.Core.targets')" />

@@ -287,7 +287,5 @@ namespace TecWare.PPSn.UI
 		} // prop NavigatorState
 
 		public object CharmObject { get => GetValue(CharmObjectProperty); set => SetValue(CharmObjectProperty, value); }
-
-		public async void ShowPane(Type pane, LuaTable arg) => await LoadPaneAsync(pane, PpsOpenPaneMode.NewPane, arg);
 	} // class PpsMainWindow
 }

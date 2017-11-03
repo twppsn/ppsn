@@ -281,40 +281,21 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsMasterDataTable -------------------------------------------------
+	#region -- class PpsMasterDataTable -----------------------------------------------
 
 	public sealed class PpsMasterDataTable : PpsMasterDataSelector
 	{
-		#region -- struct PpsWhereConditionValue ----------------------------------------
-
-		private struct PpsWhereConditionValue
-		{
-			public PpsWhereConditionValue(string name, object value)
-			{
-				this.Name = name;
-				this.Value = value;
-			}
-
-			public string Name { get; }
-			public object Value { get; }
-		} // struct PpsWhereConditionValue 
-
-		#endregion
-
-		#region -- class PpsMasterDataTableResult ---------------------------------------
+		#region -- class PpsMasterDataTableResult -------------------------------------
 
 		private sealed class PpsMasterDataTableResult : PpsMasterDataSelector
 		{
 			private readonly PpsMasterDataTable table;
-			private readonly PpsWhereConditionValue[] whereCondition;
+			private readonly PpsDataFilterExpression filter;
 
-			public PpsMasterDataTableResult(PpsMasterDataTable table, params PpsWhereConditionValue[] whereCondition)
+			public PpsMasterDataTableResult(PpsMasterDataTable table, PpsDataFilterExpression filter)
 			{
 				this.table = table ?? throw new ArgumentNullException(nameof(table));
-				this.whereCondition = whereCondition;
-
-				if (whereCondition == null || whereCondition.Length == 0)
-					throw new ArgumentNullException(nameof(whereCondition));
+				this.filter = filter ?? PpsDataFilterExpression.True;
 			} // ctor
 
 			protected override DbCommand PrepareCommand()
@@ -325,20 +306,7 @@ namespace TecWare.PPSn
 					var commandText = table.PrepareCommandText();
 
 					commandText.Append(" WHERE ");
-					for (var i = 0; i < whereCondition.Length; i++)
-					{
-						if (i != 0)
-							commandText.Append(" AND ");
-
-						var parameterName = "@p" + i.ChangeType<string>();
-						commandText.Append('[')
-							.Append(whereCondition[i].Name)
-							.Append(']')
-							.Append(" = ")
-							.Append(parameterName);
-
-						command.AddParameter(parameterName).Value = whereCondition[i];
-					}
+					commandText.Append(new PpsSqLiteFilterVisitor(table).CreateFilter(filter));
 
 					return command;
 				}
@@ -348,6 +316,9 @@ namespace TecWare.PPSn
 					throw;
 				}
 			} // func PrepareCommand
+
+			public override IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
+				=> new PpsMasterDataTableResult(table, PpsDataFilterExpression.Combine(filter, expression));
 
 			public override PpsMasterDataTable Table => table;
 			public override IReadOnlyList<IDataColumn> Columns => table.Columns;
@@ -428,6 +399,9 @@ namespace TecWare.PPSn
 
 		internal PpsDataColumnDefinition GetColumnDefinition(int index)
 			=> definition.Columns[index];
+
+		public override IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
+			=> new PpsMasterDataTableResult(this, expression);
 
 		/// <summary>Returns a cached row.</summary>
 		/// <param name="key"></param>

@@ -21,6 +21,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -135,16 +136,16 @@ namespace TecWare.PPSn.Controls
 		#region -- Command implementations --------------------------------------------
 
 		private static Task RunEditorAsync(PpsCommandContext context)
-			=> context.GetService<PpsAttachmentsControl>(true).RunEditorAsync();
-
-		private async Task RunEditorAsync()
 		{
-			var wnd = (PpsWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
+			var window = context.GetService<PpsWindow>(true);
+			var control = context.GetService<PpsAttachmentsControl>(true);
 
-			((dynamic)wnd).ShowPane(typeof(PpsPicturePane), new LuaTable() { ["Attachments"] = AttachmentsSource, ["ObjectName"] = CurrentPane.Title });
-		}
+			// todo: interface for window management is missing
+			var mi = window.GetType().GetRuntimeMethods().Where(c => c.IsPublic && !c.IsStatic && c.Name == "LoadPaneAsync" && c.GetParameters().Length == 3).FirstOrDefault();
+			return (Task)mi.Invoke(window, new object[] { typeof(PpsPicturePane), 2, new LuaTable() { ["Attachments"] = control.AttachmentsSource, ["ObjectName"] = control.CurrentPane.Title } });
+		} // func RunEditorAsync
 
-			private static Task AppendAttachmentFromFileDialogAsync(PpsCommandContext context)
+		private static Task AppendAttachmentFromFileDialogAsync(PpsCommandContext context)
 			=> context.GetService<PpsAttachmentsControl>(true).AppendAttachmentFromFileDialogAsync();
 
 		private async Task AppendAttachmentFromFileDialogAsync()
