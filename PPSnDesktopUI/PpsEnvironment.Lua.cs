@@ -893,6 +893,10 @@ namespace TecWare.PPSn
 				return mr.Key;
 			else if (v is PpsLinkedObjectExtendedValue l)
 				return l.IsNull ? null : (object)((PpsObject)l.Value).Id;
+			else if (v is PpsFormattedStringValue fsv)
+				return fsv.IsNull ? null : fsv.FormattedValue;
+			else if (v is IPpsDataRowGetGenericValue gv)
+				return gv.IsNull ? null : gv.Value;
 			else
 				return v;
 		} // func GetServerRowValue
