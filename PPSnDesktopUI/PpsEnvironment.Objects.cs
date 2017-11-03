@@ -1326,7 +1326,7 @@ namespace TecWare.PPSn
 					var idx = IndexOf(key, userId);
 					if (idx == -1 || tags[idx].Class != cls)
 					{
-						var newTag = new PpsObjectTagView(this, null, key, false, PpsObjectTagClass.Text, value, userId, DateTime.Now, true);
+						var newTag = new PpsObjectTagView(this, null, key, false, cls, value, userId, DateTime.Now, true);
 						tags.Add(newTag);
 						return newTag;
 					}
