@@ -1088,6 +1088,12 @@ namespace TecWare.PPSn.Data
 		public override string CreateTrueFilter()
 			=> "1=1";
 
+		protected virtual string CreateErrorFilter(string message)
+			=> "1=0";
+
+		protected virtual string CreateColumnErrorFilter(string columnToken)
+			=> CreateErrorFilter(String.Format("Column '{0}' not found.'", columnToken);
+
 		#endregion
 
 		#region -- CreateCompareFilter ------------------------------------------------
@@ -1147,20 +1153,26 @@ namespace TecWare.PPSn.Data
 		private string CreateCompareFilterText(string columnToken, PpsDataFilterCompareOperator op, string text)
 		{
 			var column = LookupColumn(columnToken);
-			return CreateDefaultCompareValue(column.Item1, op, CreateParsableValue(text, column.Item2), column.Item2 == typeof(string));
+			return column == null
+				? CreateColumnErrorFilter(columnToken)
+				: CreateDefaultCompareValue(column.Item1, op, CreateParsableValue(text, column.Item2), column.Item2 == typeof(string));
 		} // func CreateCompareFilterText
 
 		private string CreateCompareFilterInteger(string columnToken, PpsDataFilterCompareOperator op, long value)
 		{
 			var column = LookupColumn(columnToken);
-			return CreateDefaultCompareValue(column.Item1, op, value.ChangeType<string>(), false);
+			return column == null
+				? CreateColumnErrorFilter(columnToken)
+				: CreateDefaultCompareValue(column.Item1, op, value.ChangeType<string>(), false);
 		} // func CreateCompareFilterText
 
 		private string CreateCompareFilterNumber(string columnToken, PpsDataFilterCompareOperator op, string text)
 		{
 			var column = LookupNumberColumn(columnToken);
-			if (column.Item2 != typeof(string))
-				return "1=0"; // invalid filter for this column -> todo: exception
+			if (column == null)
+				return CreateColumnErrorFilter(columnToken);
+			else if (column.Item2 != typeof(string))
+				return CreateErrorFilter(String.Format("Text expected for column: {0}.", columnToken));
 
 			var value = CreateParsableValue(text, typeof(string));
 			switch (op)
@@ -1178,8 +1190,10 @@ namespace TecWare.PPSn.Data
 		private string CreateCompareFilterDate(string columnToken, PpsDataFilterCompareOperator op, DateTime from, DateTime to)
 		{
 			var column = LookupDateColumn(columnToken);
-			if (column.Item2 != typeof(DateTime))
-				return "1=0"; // invalid filter for this column -> todo: exception
+			if (column == null)
+				return CreateColumnErrorFilter(columnToken);
+			else if (column.Item2 != typeof(DateTime))
+				return CreateErrorFilter(String.Format("Date expected for column: {0}.", columnToken));
 
 			switch (op)
 			{
@@ -1209,19 +1223,26 @@ namespace TecWare.PPSn.Data
 
 		private string CreateCompareFilterNull(string columnToken, PpsDataFilterCompareOperator op)
 		{
+			Tuple<string, Type> column;
 			switch (op)
 			{
 				case PpsDataFilterCompareOperator.Contains:
 				case PpsDataFilterCompareOperator.Equal:
-					return LookupColumn(columnToken).Item1 + " is null";
+					column = LookupColumn(columnToken);
+					return column == null
+						? CreateColumnErrorFilter(columnToken)
+						: column.Item1 + " is null";
 				case PpsDataFilterCompareOperator.NotContains:
 				case PpsDataFilterCompareOperator.NotEqual:
-					return LookupColumn(columnToken).Item1 + " is not null";
+					column = LookupColumn(columnToken);
+					return column == null
+						? CreateColumnErrorFilter(columnToken)
+						: column.Item1 + " is not null";
 				case PpsDataFilterCompareOperator.Greater:
 				case PpsDataFilterCompareOperator.GreaterOrEqual:
 				case PpsDataFilterCompareOperator.Lower:
 				case PpsDataFilterCompareOperator.LowerOrEqual:
-					return "1=0";
+					return CreateColumnErrorFilter("Invalid compare for null filter.");
 				default:
 					throw new NotImplementedException();
 			}
@@ -1353,7 +1374,7 @@ namespace TecWare.PPSn.Data
 			}
 
 			if (first) // no arguments -> return a neutral expression
-				return "1=1";
+				return CreateTrueFilter();
 
 			switch (method)
 			{
@@ -1373,10 +1394,9 @@ namespace TecWare.PPSn.Data
 		public override string CreateNativeFilter(PpsDataFilterNativeExpression expression)
 		{
 			var nativeExpression = LookupNativeExpression(expression.Key);
-			if (String.IsNullOrEmpty(nativeExpression))
-				return CreateTrueFilter();
-			else
-				return "(" + nativeExpression + ")";
+			return String.IsNullOrEmpty(nativeExpression)
+				? CreateErrorFilter(String.Format("Native Expression not found '{0}'.", expression.Key))
+				: "(" + nativeExpression + ")";
 		} // func CreateNativeFilter
 
 		protected abstract string LookupNativeExpression(string key);
