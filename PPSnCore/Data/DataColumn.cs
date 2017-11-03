@@ -27,9 +27,8 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- enum PpsDataColumnMetaData -----------------------------------------------
+	#region -- enum PpsDataColumnMetaData ---------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Vordefinierte Meta-Daten an der Spalte.</summary>
 	public enum PpsDataColumnMetaData
 	{
@@ -49,9 +48,8 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- enum PpsDataColumnValueChangingFlag --------------------------------------
+	#region -- enum PpsDataColumnValueChangingFlag ------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public enum PpsDataColumnValueChangingFlag
 	{
@@ -63,7 +61,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- interface IPpsDataRowExtendedValue ---------------------------------------
+	#region -- interface IPpsDataRowExtendedValue -------------------------------------
 
 	/// <summary>Interface that is implement on special values classes.
 	/// It represent a nested structur of values (e.g. value formulas, ...).
@@ -99,7 +97,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- interface IPpsDataRowSetGenericValue -------------------------------------
+	#region -- interface IPpsDataRowSetGenericValue -----------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Does this extended value supports a generic setter</summary>
@@ -111,6 +109,9 @@ namespace TecWare.PPSn.Data
 		/// <returns><c>true</c>, let fire a notify property changed on the row value</returns>
 		bool SetGenericValue(bool inital, object value);
 
+		/// <summary>Is the value changed.</summary>
+		bool IsValueModified { get; }
+
 		/// <summary>Commit the value to the original</summary>
 		void Commit();
 		/// <summary>Reset the value from the original</summary>
@@ -119,9 +120,8 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- interface IPpsDataRowGetGenericValue -------------------------------------
+	#region -- interface IPpsDataRowGetGenericValue -----------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Does this extended value supports a generic getter</summary>
 	public interface IPpsDataRowGetGenericValue : IPpsDataRowExtendedValue
 	{
@@ -131,9 +131,8 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataRowExtentedValue --------------------------------------------
+	#region -- class PpsDataRowExtentedValue ------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public abstract class PpsDataRowExtentedValue : IPpsDataRowExtendedValue, INotifyPropertyChanged
 	{
@@ -220,11 +219,11 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataRowObjectExtendedValue --------------------------------------
+	#region -- class PpsDataRowObjectExtendedValue ------------------------------------
 
 	public abstract class PpsDataRowObjectExtendedValue : PpsDataRowExtentedValue, IPpsDataRowGetGenericValue, IPpsDataRowSetGenericValue
 	{
-		#region -- class PpsUndoDataValue -----------------------------------------------
+		#region -- class PpsUndoDataValue ---------------------------------------------
 
 		private sealed class PpsUndoDataValue : IPpsUndoItem
 		{
@@ -266,11 +265,17 @@ namespace TecWare.PPSn.Data
 		{
 			if (Object.Equals(InternalValue, newValue))
 				return false;
+			else if (Object.Equals(newValue, originalValue))
+			{
+				Reset();
+				return true;
+			}
 			else
 			{
 				Row.Table.DataSet.UndoSink?.Append(
 					new PpsUndoDataValue(this, value, newValue)
 				);
+
 				var oldValue = InternalValue;
 				value = newValue;
 				OnPropertyChanged(nameof(Value), oldValue, newValue, firePropertyChanged);
@@ -343,6 +348,7 @@ namespace TecWare.PPSn.Data
 
 		protected object InternalValue => value == PpsDataRow.NotSet ? originalValue : value;
 
+		public bool IsValueModified => value != PpsDataRow.NotSet;
 		/// <summary>Equals the internal value <c>null</c>.</summary>
 		public override bool IsNull => InternalValue == null;
 		/// <summary>Value get implementation.</summary>
@@ -351,13 +357,12 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataColumnDefinition --------------------------------------------
+	#region -- class PpsDataColumnDefinition ------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Basisklasse für die Spaltendefinitionen.</summary>
 	public abstract class PpsDataColumnDefinition : IDataColumn, IDynamicMetaObjectProvider
 	{
-		#region -- WellKnownTypes -------------------------------------------------------
+		#region -- WellKnownTypes -----------------------------------------------------
 
 		/// <summary>Definiert die bekannten Meta Informationen.</summary>
 		private static readonly Dictionary<string, Type> wellknownMetaTypes = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
@@ -372,7 +377,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataColumnStaticMetaCollection ------------------------------
+		#region -- class PpsDataColumnStaticMetaCollection ----------------------------
 
 		private sealed class PpsDataColumnStaticMetaCollection : IReadOnlyDictionary<string, object>
 		{
@@ -443,9 +448,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataColumnMetaCollection ------------------------------------
+		#region -- class PpsDataColumnMetaCollection ----------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		public class PpsDataColumnMetaCollection : PpsMetaCollection
 		{
@@ -471,9 +475,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataColumnMetaObject ----------------------------------------
+		#region -- class PpsDataColumnMetaObject --------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private sealed class PpsDataColumnMetaObject : DynamicMetaObject
 		{

@@ -28,9 +28,8 @@ using static TecWare.PPSn.Data.PpsDataHelper;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- enum PpsDataRowState -----------------------------------------------------
+	#region -- enum PpsDataRowState ---------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Status der Zeile.</summary>
 	public enum PpsDataRowState
 	{
@@ -46,9 +45,8 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataRelatedFilter -----------------------------------------------
+	#region -- class PpsDataRelatedFilter ---------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class PpsDataRelatedFilter : PpsDataFilter
 	{
@@ -93,15 +91,13 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataRow ---------------------------------------------------------
+	#region -- class PpsDataRow -------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class PpsDataRow : IDynamicMetaObjectProvider, IDataRow, INotifyPropertyChanged, ICustomTypeDescriptor
 	{
-		#region -- class NotSetValue ------------------------------------------------------
+		#region -- class NotSetValue --------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary>Interne Klasse für Current-Value die anzeigt, ob sich ein Wert zum Original hin geändert hat.</summary>
 		private sealed class NotSetValue
 		{
@@ -119,7 +115,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataRowValueChangedItem ---------------------------------------
+		#region -- class PpsDataRowValueChangedItem -----------------------------------
 
 		private class PpsDataRowValueChangedItem : IPpsUndoItem
 		{
@@ -159,7 +155,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataRowStateChangedItem ---------------------------------------
+		#region -- class PpsDataRowStateChangedItem -----------------------------------
 
 		private class PpsDataRowStateChangedItem : IPpsUndoItem
 		{
@@ -192,9 +188,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataRowMetaObject ---------------------------------------------
+		#region -- class PpsDataRowMetaObject -----------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private abstract class PpsDataRowBaseMetaObject : DynamicMetaObject
 		{
@@ -329,7 +324,6 @@ namespace TecWare.PPSn.Data
 			protected abstract PropertyInfo ItemInfo { get; }
 		} // class PpsDataRowMetaObject
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private sealed class PpsDataRowMetaObject : PpsDataRowBaseMetaObject
 		{
@@ -342,7 +336,6 @@ namespace TecWare.PPSn.Data
 			protected override PropertyInfo ItemInfo { get { return ItemPropertyInfo; } }
 		} // class PpsDataRowMetaObject
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private sealed class PpsDataRowValuesMetaObject : PpsDataRowBaseMetaObject
 		{
@@ -357,15 +350,14 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class RowValues --------------------------------------------------------
+		#region -- class RowValues ----------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		public abstract class RowValues : IDynamicMetaObjectProvider
 		{
 			private readonly PpsDataRow row;
 
-			#region -- Ctor/Dtor ------------------------------------------------------------
+			#region -- Ctor/Dtor ------------------------------------------------------
 
 			protected RowValues(PpsDataRow row)
 			{
@@ -400,9 +392,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class OriginalRowValues ------------------------------------------------
+		#region -- class OriginalRowValues --------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private sealed class OriginalRowValues : RowValues
 		{
@@ -420,9 +411,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class CurrentRowValues -------------------------------------------------
+		#region -- class CurrentRowValues ---------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private sealed class CurrentRowValues : RowValues, INotifyPropertyChanged
 		{
@@ -482,7 +472,7 @@ namespace TecWare.PPSn.Data
 		private List<PpsDataRelatedFilter> relationFilter = null;
 		private Dictionary<PpsDataColumnDefinition, PpsDataRow> parentRows = new Dictionary<PpsDataColumnDefinition, PpsDataRow>();
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		private PpsDataRow(PpsDataTable table)
 		{
@@ -529,7 +519,7 @@ namespace TecWare.PPSn.Data
 				// get the new value
 				var newCurrentValue = currentValues[i] == null ? NotSet : (GetConvertedValue(columnInfo, currentValues[i]) ?? NotSet);
 				if (newCurrentValue != NotSet)
-					table.Columns[i].OnColumnValueChanging(this, PpsDataColumnValueChangingFlag.SetValue, null, ref newCurrentValue);
+					table.Columns[i].OnColumnValueChanging(this, PpsDataColumnValueChangingFlag.SetValue, newOriginalValue, ref newCurrentValue);
 
 				// set the values
 				this.originalValues[i] = newOriginalValue;
@@ -644,7 +634,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- Commit, Reset, Remove --------------------------------------------------
+		#region -- Commit, Reset, Remove ----------------------------------------------
 
 		private void CheckForTable()
 		{
@@ -746,7 +736,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- Write ------------------------------------------------------------------
+		#region -- Write --------------------------------------------------------------
 
 		/// <summary>Schreibt den Inhalt der Datenzeile</summary>
 		/// <param name="row"></param>
@@ -795,7 +785,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- Index Zugriff ----------------------------------------------------------
+		#region -- Index Zugriff ------------------------------------------------------
 
 		private IPpsUndoSink GetUndoSink()
 		{
@@ -938,9 +928,17 @@ namespace TecWare.PPSn.Data
 				return true;
 			}
 		} // func TryGetProperty
-		
+
+		/// <summary></summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
 		public bool IsValueModified(int index)
-			=> currentValues[index] != NotSet;
+		{
+			if (Table.Columns[index].IsExtended)
+				return originalValues[index] is IPpsDataRowSetGenericValue g ? g.IsValueModified : false;
+			else
+				return currentValues[index] != NotSet;
+		} // func IsValueModified
 
 		/// <summary>Zugriff auf den aktuellen Wert.</summary>
 		/// <param name="columnIndex">Spalte</param>
@@ -990,7 +988,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- CreateRelation ---------------------------------------------------------
+		#region -- CreateRelation -----------------------------------------------------
 
 		/// <summary>Creates a new view on data over an relation (parent/child relation)</summary>
 		/// <param name="relation"></param>
@@ -1063,7 +1061,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- ICustomTypeDescriptor members ------------------------------------------
+		#region -- ICustomTypeDescriptor members --------------------------------------
 
 		AttributeCollection ICustomTypeDescriptor.GetAttributes()
 			=> AttributeCollection.Empty;
@@ -1124,7 +1122,7 @@ namespace TecWare.PPSn.Data
 		private static readonly PropertyInfo ValuesPropertyInfo;
 		private static readonly FieldInfo RowFieldInfo;
 
-		#region -- sctor ------------------------------------------------------------------
+		#region -- sctor --------------------------------------------------------------
 
 		static PpsDataRow()
 		{

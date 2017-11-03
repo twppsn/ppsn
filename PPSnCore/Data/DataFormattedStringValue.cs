@@ -1,18 +1,28 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- class PpsLuaRowEnvironment -----------------------------------------------
+	#region -- class PpsLuaRowEnvironment ---------------------------------------------
 
 	/// <summary>Special environment, that gives access of a row for formulas.</summary>
 	public sealed class PpsLuaRowEnvironment : LuaTable
@@ -50,9 +60,8 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsStaticCalculated ------------------------------------------------
+	#region -- class PpsStaticCalculated ----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>The formular to get the result is definied in the column.</summary>
 	public sealed class PpsStaticCalculated : PpsDataRowExtentedValue, IPpsDataRowGetGenericValue
 	{
@@ -115,11 +124,12 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	///////////////////////////////////////////////////////////////////////////////
+	#region -- class PpsFormattedStringValue ------------------------------------------
+
 	/// <summary>Multiline text field, that supports a macro syntax.</summary>
 	public sealed class PpsFormattedStringValue : PpsDataRowExtentedValue, IPpsDataRowSetGenericValue
 	{
-		#region -- class ExpressionBlock ------------------------------------------------
+		#region -- class ExpressionBlock ----------------------------------------------
 
 		public abstract class ExpressionBlock
 		{
@@ -131,7 +141,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class StringBlock ----------------------------------------------------
+		#region -- class StringBlock --------------------------------------------------
 
 		private sealed class StringBlock : ExpressionBlock
 		{
@@ -146,7 +156,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class LuaCodeBlock ---------------------------------------------------
+		#region -- class LuaCodeBlock -------------------------------------------------
 
 		private sealed class LuaCodeBlock : ExpressionBlock
 		{
@@ -216,7 +226,7 @@ namespace TecWare.PPSn.Data
 		private ExpressionBlock[] parsedValue = null;
 		private string formattedValue; // cache for the formatted value
 
-		#region -- Ctor/Dtor ------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		public PpsFormattedStringValue(PpsDataRow row, PpsDataColumnDefinition column) 
 			: base(row, column)
@@ -228,7 +238,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- Read/Write -----------------------------------------------------------
+		#region -- Read/Write ---------------------------------------------------------
 
 		protected override void Read(XElement x)
 		{
@@ -251,9 +261,9 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- Get/Set-Value --------------------------------------------------------
+		#region -- Get/Set-Value ------------------------------------------------------
 
-		#region -- class PpsTemplateUndoItem ---------------------------------------------
+		#region -- class PpsTemplateUndoItem ------------------------------------------
 
 		private sealed class PpsTemplateUndoItem : IPpsUndoItem
 		{
@@ -305,7 +315,7 @@ namespace TecWare.PPSn.Data
 					Row.Table.DataSet.UndoSink?.Append(
 						new PpsTemplateUndoItem(this, oldValue, newValue)
 					);
-					undo.Commit();
+					undo?.Commit();
 				}
 			}
 
@@ -343,7 +353,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- ParseTemplate --------------------------------------------------------
+		#region -- ParseTemplate ------------------------------------------------------
 
 		private ExpressionBlock CreateExpressionBlock(string expr, string fmt)
 		{
@@ -507,11 +517,15 @@ namespace TecWare.PPSn.Data
 			set { SetValue(value, true, true); }
 		} // proc Template
 
-		public override bool IsNull => currentTemplate == PpsDataRow.NotSet;
+		public override bool IsNull => currentTemplate == PpsDataRow.NotSet ? originalTemplate == null : currentTemplate == null;
+
+		public bool IsValueModified => currentTemplate != PpsDataRow.NotSet;
 
 		/// <summary>Return the formatted value.</summary>
 		/// <param name="v"></param>
 		public static explicit operator string(PpsFormattedStringValue v)
 			=> v.FormattedValue;
 	} // struct PpsFormattedStringValue
+
+	#endregion
 }
