@@ -125,7 +125,6 @@ namespace TecWare.PPSn.Controls
 				searchBreaker.AutoReset = false;
 				searchBreaker.Elapsed += (sender, e) =>
 				{
-					System.Media.SystemSounds.Beep.Play();
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("FilteredList"));
 					searchBreaker = null;
 				};
