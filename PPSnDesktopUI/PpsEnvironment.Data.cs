@@ -175,7 +175,7 @@ namespace TecWare.PPSn
 		internal PpsMasterDataRow(PpsMasterDataTable owner, IDataReader r)
 		{
 			this.owner = owner;
-			this.values = new object[r.FieldCount];
+			this.values = new object[owner.Columns.Count];
 
 			var primaryKeyIndex = owner.GetPrimaryKeyColumnIndex();
 			for (var i = 0; i < values.Length; i++)
@@ -285,6 +285,38 @@ namespace TecWare.PPSn
 
 	public sealed class PpsMasterDataTable : PpsMasterDataSelector
 	{
+		#region -- class PpsSqLiteFilterVisitor ---------------
+
+		private sealed class PpsMasterDataFilterVisitor : PpsSqLiteFilterVisitor
+		{
+			private bool needFullTextColumn = false;
+
+			public PpsMasterDataFilterVisitor(IDataColumns columns) 
+				: base(columns)
+			{
+			} // ctor
+
+			protected override Tuple<string, Type> LookupColumn(string columnToken)
+			{
+				if (String.IsNullOrEmpty(columnToken))
+				{
+					needFullTextColumn = true;
+					return new Tuple<string, Type>("__FULLTEXT__", typeof(string));
+				}
+				return base.LookupColumn(columnToken);
+			} // func LookupColumn
+
+			protected override Tuple<string, Type> LookupDateColumn(string columnToken) 
+				=> base.LookupDateColumn(columnToken);
+
+			protected override Tuple<string, Type> LookupNumberColumn(string columnToken) 
+				=> base.LookupNumberColumn(columnToken);
+
+			public bool NeedFullTextColumn => needFullTextColumn;
+		} // class PpsMasterDataFilterVisitor
+
+		#endregion
+
 		#region -- class PpsMasterDataTableResult -------------------------------------
 
 		private sealed class PpsMasterDataTableResult : PpsMasterDataSelector
@@ -303,10 +335,25 @@ namespace TecWare.PPSn
 				var command = Table.MasterData.CreateNativeCommand();
 				try
 				{
-					var commandText = table.PrepareCommandText();
+					var filterVisitor = new PpsMasterDataFilterVisitor(table);
+					var where = filterVisitor.CreateFilter(filter);
+
+					var commandText = table.PrepareCommandText(
+						sb =>
+						{
+							if (filterVisitor.NeedFullTextColumn)
+							{
+								var expr= String.Join(" | ", from c in table.Columns where c.DataType == typeof(string) select c.Name);
+								if (String.IsNullOrEmpty(expr))
+									expr = "null";
+								sb.Append(',').Append(expr).Append(" AS __FULLTEXT__");
+							}
+						}
+					);
 
 					commandText.Append(" WHERE ");
-					commandText.Append(new PpsSqLiteFilterVisitor(table).CreateFilter(filter));
+					commandText.Append(where);
+					command.CommandText = commandText.ToString();
 
 					return command;
 				}
@@ -337,7 +384,7 @@ namespace TecWare.PPSn
 			this.definition = table;
 		} // ctor
 
-		private StringBuilder PrepareCommandText()
+		private StringBuilder PrepareCommandText(Action<StringBuilder> appendVirtualColumns)
 		{
 			var commandText = new StringBuilder("SELECT ");
 
@@ -354,6 +401,8 @@ namespace TecWare.PPSn
 					.Append(']');
 			}
 
+			appendVirtualColumns?.Invoke(commandText);
+
 			// build from
 			commandText.Append(" FROM main.[").Append(definition.Name).Append(']');
 			return commandText;
@@ -361,7 +410,7 @@ namespace TecWare.PPSn
 
 		protected override DbCommand PrepareCommand()
 		{
-			var commandText = PrepareCommandText();
+			var commandText = PrepareCommandText(null);
 
 			return masterData.CreateNativeCommand(commandText.ToString());
 		} // func PrepareCommand
@@ -371,7 +420,7 @@ namespace TecWare.PPSn
 			if (TryGetRowFromCache(key, out var row))
 				return row;
 
-			var commandText = PrepareCommandText();
+			var commandText = PrepareCommandText(null);
 			commandText.Append(" WHERE [")
 				.Append(definition.PrimaryKey.Name)
 				.Append("] = @Key");
