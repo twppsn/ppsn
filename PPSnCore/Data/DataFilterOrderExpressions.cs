@@ -326,7 +326,7 @@ namespace TecWare.PPSn.Data
 			 *		':' native ':'
 			 *		value
 			 *	
-			 *	base is always an AND concation
+			 *	base is always an AND concatenation
 			 */
 			if (expression == null)
 				return PpsDataFilterTrueExpression.Default;
@@ -397,7 +397,7 @@ namespace TecWare.PPSn.Data
 			// generate expression
 			if (compareExpressions.Count == 0)
 			{
-				if (inLogic != PpsDataFilterExpressionType.NAnd && inLogic != PpsDataFilterExpressionType.NOr)
+				if (inLogic == PpsDataFilterExpressionType.NAnd || inLogic == PpsDataFilterExpressionType.NOr)
 					return new PpsDataFilterLogicExpression(PpsDataFilterExpressionType.NAnd, PpsDataFilterTrueExpression.Default);
 				else
 					return PpsDataFilterTrueExpression.Default;
