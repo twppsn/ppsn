@@ -656,8 +656,29 @@ namespace TecWare.PPSn.UI
 
 		public string Title => "Bildeditor";
 
-		// not useable - name of the Object is unknown on creation and after that read-only
-		public string SubTitle => String.Empty;
+		private string subTitle;
+		public string SubTitle
+		{
+			get
+			{
+				if (!String.IsNullOrEmpty(subTitle))
+					return subTitle;
+
+				if (originalObject != null)
+				{
+					subTitle = (string)originalObject["Name"];
+					return subTitle;
+				}
+
+				var window = Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
+				if (window is PpsWindow ppswindow)
+				{
+					subTitle = (string)(((PpsObject)((dynamic)ppswindow).CharmObject) ?? originalObject)?["Name"];
+					return subTitle;
+				}
+				return String.Empty;
+			}
+		}
 
 		public object Control => this;
 
