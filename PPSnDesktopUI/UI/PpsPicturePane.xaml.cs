@@ -191,7 +191,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region Fields
+		#region -- Fields -------------------------------------------------------------------
 
 		private PpsUndoManager strokeUndoManager;
 		private readonly PpsEnvironment environment;
@@ -199,7 +199,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region ctor
+		#region -- Constructor --------------------------------------------------------
 
 		public PpsPicturePane()
 		{
@@ -292,7 +292,7 @@ namespace TecWare.PPSn.UI
 					else if (SelectedCamera != null)
 					{
 						var path = System.IO.Path.GetTempPath() + DateTime.Now.ToUniversalTime().ToString("yyyy-MM-dd_HHmmss") + ".jpg";
-						
+
 						RenderTargetBitmap bmp = new RenderTargetBitmap(
 							(int)videoElement.ActualWidth, (int)videoElement.ActualHeight, 96, 96,
 							PixelFormats.Default
