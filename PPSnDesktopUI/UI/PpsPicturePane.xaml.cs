@@ -534,6 +534,16 @@ namespace TecWare.PPSn.UI
 
 			#region Strokes
 
+			var penSettingsPopup = new System.Windows.Controls.Primitives.Popup()
+			{
+				Child = new UserControl()
+				{
+					Style = (Style)this.FindResource("PPSnStrokeSettingsControlStyle"),
+					DataContext = StrokeSettings
+				}
+			};
+			penSettingsPopup.Opened += (sender, e) => { if (SelectedAttachment != null) InkEditMode = InkCanvasEditingMode.Ink; };
+
 			var freeformeditCommandButton = new PpsUISplitCommandButton()
 			{
 				Order = new PpsCommandOrder(300, 110),
@@ -547,14 +557,7 @@ namespace TecWare.PPSn.UI
 						},
 						(args) => SelectedAttachment != null
 					),
-				Popup = new System.Windows.Controls.Primitives.Popup()
-				{
-					Child = new UserControl()
-					{
-						Style = (Style)this.FindResource("PPSnStrokeSettingsControlStyle"),
-						DataContext = StrokeSettings
-					}
-				}
+				Popup = penSettingsPopup
 			};
 			Commands.Add(freeformeditCommandButton);
 
