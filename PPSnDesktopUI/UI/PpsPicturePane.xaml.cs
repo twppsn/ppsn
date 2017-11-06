@@ -41,7 +41,7 @@ namespace TecWare.PPSn.UI
 	/// </summary>
 	public partial class PpsPicturePane : UserControl, IPpsWindowPane
 	{
-		#region -- Helper Classes -------------------------------------------------------
+		#region -- Helper Classes -----------------------------------------------------
 
 		#region Data Representation
 
@@ -191,7 +191,44 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Fields -------------------------------------------------------------------
+		#region -- Events -------------------------------------------------------------
+
+		/// <summary>
+		/// THis function calculates the Matrix to overlay the InkCanvas onto the Image
+		/// </summary>
+		/// <param name="sender">main image</param>
+		/// <param name="e">unused</param>
+		private void CurrentObjectImageMax_SizeChanged(object sender, SizeChangedEventArgs e)
+		{
+			var xfact = (double)GetValue(Window.ActualWidthProperty) / ((Image)sender).ActualWidth;
+			var yfact = ((double)GetValue(Window.ActualHeightProperty) - 200) / ((Image)sender).ActualHeight;
+			// the factors may become NaN (sender.Actual was zero) or infinity - thus scaling would fail
+			xfact = (xfact > 0 && xfact < 100) ? xfact : 1;
+			yfact = (yfact > 0 && yfact < 100) ? yfact : 1;
+			ScaleMatrix = new Matrix(xfact, 0, 0, yfact, 0, 0);
+		}
+
+		/// <summary>
+		/// Checks, if the mouse is over an InkStroke and changes the cursor according
+		/// </summary>
+		/// <param name="sender">InkCanvas</param>
+		/// <param name="e"></param>
+		private void InkCanvasRemoveHitTest(object sender, MouseEventArgs e)
+		{
+			var hit = false;
+			var pos = e.GetPosition((InkCanvas)sender);
+			foreach (var stroke in InkStrokes)
+				if (stroke.HitTest(pos))
+				{
+					hit = true;
+					break;
+				}
+			InkEditCursor = hit ? Cursors.No : Cursors.Cross;
+		}
+
+		#endregion
+
+		#region -- Fields -------------------------------------------------------------
 
 		private PpsUndoManager strokeUndoManager;
 		private readonly PpsEnvironment environment;
@@ -214,7 +251,7 @@ namespace TecWare.PPSn.UI
 			InitializePenSettings();
 			InitializeCameras();
 			InitializeStrokes();
-			
+
 			AddCommandBindings();
 
 			strokeUndoManager = new PpsUndoManager();
@@ -228,7 +265,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region Commands
+		#region -- Commands -----------------------------------------------------------
 
 		#region ---- CommandBindings ----------------------------------------------------------
 
@@ -615,7 +652,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region IPpsWindowPane
+		#region -- IPpsWindowPane -----------------------------------------------------
 
 		public string Title => "Bildeditor";
 
@@ -675,7 +712,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region Charmbar
+		#region -- Charmbar -----------------------------------------------------------
 
 		/// <summary>
 		/// variable saving the object, which was loaded before opening the PicturePane
@@ -708,7 +745,9 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Pen Settings -------------------------------------------------------------
+		#region -- Methods ------------------------------------------------------------
+
+		#region -- Pen Settings -------------------------------------------------------
 
 		private static LuaTable GetPenColorTable(PpsEnvironment environment)
 			=> (LuaTable)environment.GetMemberValue("pictureEditorPenColorTable");
@@ -753,7 +792,7 @@ namespace TecWare.PPSn.UI
 
 			if (cameraPreviews.Count == 0)
 				environment.Traces.AppendText(PpsTraceItemType.Information, "No Cameras were found.");
-			
+
 			CameraEnum = cameraPreviews;
 		}
 
@@ -793,7 +832,9 @@ namespace TecWare.PPSn.UI
 				&& item.LinkedObject.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
 		} // proc ShowOnlyObjectImageDataFilter
 
-		#region Propertys
+		#endregion
+
+		#region -- Propertys ----------------------------------------------------------
 
 		public IEnumerable<object> UndoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Undo orderby un.Index descending select un).ToArray();
 		public IEnumerable<object> RedoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Redo orderby un.Index select un).ToArray();
@@ -901,38 +942,5 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		#endregion
-
-		/// <summary>
-		/// THis function calculates the Matrix to overlay the InkCanvas onto the Image
-		/// </summary>
-		/// <param name="sender">main image</param>
-		/// <param name="e">unused</param>
-		private void CurrentObjectImageMax_SizeChanged(object sender, SizeChangedEventArgs e)
-		{
-			var xfact = (double)GetValue(Window.ActualWidthProperty) / ((Image)sender).ActualWidth;
-			var yfact = ((double)GetValue(Window.ActualHeightProperty) - 200) / ((Image)sender).ActualHeight;
-			// the factors may become NaN (sender.Actual was zero) or infinity - thus scaling would fail
-			xfact = (xfact > 0 && xfact < 100) ? xfact : 1;
-			yfact = (yfact > 0 && yfact < 100) ? yfact : 1;
-			ScaleMatrix = new Matrix(xfact, 0, 0, yfact, 0, 0);
-		}
-
-		/// <summary>
-		/// Checks, if the mouse is over an InkStroke and changes the cursor according
-		/// </summary>
-		/// <param name="sender">InkCanvas</param>
-		/// <param name="e"></param>
-		private void InkCanvasRemoveHitTest(object sender, MouseEventArgs e)
-		{
-			var hit = false;
-			var pos = e.GetPosition((InkCanvas)sender);
-			foreach (var stroke in InkStrokes)
-				if (stroke.HitTest(pos))
-				{
-					hit = true;
-					break;
-				}
-			InkEditCursor = hit ? Cursors.No : Cursors.Cross;
-		}
 	}
 }
