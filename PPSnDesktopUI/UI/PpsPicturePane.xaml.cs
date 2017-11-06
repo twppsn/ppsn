@@ -213,6 +213,7 @@ namespace TecWare.PPSn.UI
 
 			DevelopmentSetConstants();
 
+			InitializePenSettings();
 			AddCommandBindings();
 
 			strokeUndoManager = new PpsUndoManager();
@@ -713,27 +714,28 @@ namespace TecWare.PPSn.UI
 		private void DevelopmentSetConstants()
 		private static LuaTable GetPenThicknessTable(PpsEnvironment environment)
 			=> (LuaTable)environment.GetMemberValue("pictureEditorPenThicknessTable");
-		{
-			var StrokeThicknesses = new List<PpsPecStrokeThickness>
-			{
-				new PpsPecStrokeThickness("1", 1),
-				new PpsPecStrokeThickness("5", 5),
-				new PpsPecStrokeThickness("10", 10),
-				new PpsPecStrokeThickness("15", 15)
-			};
-			Debug("added thickness constants");
 
-			var StrokeColors = new List<PpsPecStrokeColor>
+		private void InitializePenSettings()
+		{
+			var StrokeThicknesses = new List<PpsPecStrokeThickness>();
+			foreach (var tab in GetPenThicknessTable(environment).ArrayList)
 			{
-				new PpsPecStrokeColor("Weiß", Colors.White),
-				new PpsPecStrokeColor("Schwarz", Colors.Black),
-				new PpsPecStrokeColor("Rot", Colors.Red),
-				new PpsPecStrokeColor("Grün", Colors.Green),
-				new PpsPecStrokeColor("Blau", Colors.Blue)
-			};
-			Debug("added color constants");
+				if (tab is LuaTable lt) StrokeThicknesses.Add(new PpsPecStrokeThickness((string)lt["Name"], (double)lt["Thickness"]));
+			}
+
+			var StrokeColors = new List<PpsPecStrokeColor>();
+			foreach (var tab in GetPenColorTable(environment).ArrayList)
+			{
+				if (tab is LuaTable lt) StrokeColors.Add(new PpsPecStrokeColor((string)lt["Name"], (Brush)lt["Brush"]));
+			}
+
+			if (StrokeColors.Count == 0)
+				environment.Traces.AppendText(PpsTraceItemType.Fail, "Failed to load Brushes for drawing.");
+			if (StrokeThicknesses.Count == 0)
+				environment.Traces.AppendText(PpsTraceItemType.Fail, "Failed to load Thicknesses for drawing.");
 
 			StrokeSettings = new PpsPecStrokeSettings(StrokeColors, StrokeThicknesses);
+		}
 
 			var cameraPreviews = new ObservableCollection<PpsPecCamera>();
 			var devices = DsDevice.GetDevicesOfCat(DirectShowLib.FilterCategory.VideoInputDevice);
