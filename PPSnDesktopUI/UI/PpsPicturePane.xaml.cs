@@ -211,10 +211,10 @@ namespace TecWare.PPSn.UI
 
 			CachedCameras = new ObservableCollection<PpsPecCamera>();
 
-			DevelopmentSetConstants();
-
 			InitializePenSettings();
 			InitializeCameras();
+			InitializeStrokes();
+			
 			AddCommandBindings();
 
 			strokeUndoManager = new PpsUndoManager();
@@ -708,11 +708,11 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region Development
+		#region -- Pen Settings -------------------------------------------------------------
+
 		private static LuaTable GetPenColorTable(PpsEnvironment environment)
 			=> (LuaTable)environment.GetMemberValue("pictureEditorPenColorTable");
 
-		private void DevelopmentSetConstants()
 		private static LuaTable GetPenThicknessTable(PpsEnvironment environment)
 			=> (LuaTable)environment.GetMemberValue("pictureEditorPenThicknessTable");
 
@@ -738,6 +738,8 @@ namespace TecWare.PPSn.UI
 			StrokeSettings = new PpsPecStrokeSettings(StrokeColors, StrokeThicknesses);
 		}
 
+		#endregion
+
 		#region -- Hardware / Cameras -------------------------------------------------
 
 		private void InitializeCameras()
@@ -757,17 +759,14 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-			InkDrawingAttributes = new DrawingAttributes();
-			Debug("init DrawingAttributes");
-		}
+		#region -- Strokes ------------------------------------------------------------
 
-		[Obsolete("Remove Debug Messages")]
-		private void Debug(string msg)
+		private void InitializeStrokes()
 		{
-			if (environment != null)
-				environment.Traces.AppendText(PpsTraceItemType.Debug, msg);
-		}
+			InkStrokes = new StrokeCollection();
 
+			InkDrawingAttributes = new DrawingAttributes();
+		}
 
 		#endregion
 
