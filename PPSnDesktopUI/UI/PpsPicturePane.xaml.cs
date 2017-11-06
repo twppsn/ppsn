@@ -698,8 +698,12 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		#region Development
+		private static LuaTable GetPenColorTable(PpsEnvironment environment)
+			=> (LuaTable)environment.GetMemberValue("pictureEditorPenColorTable");
 
 		private void DevelopmentSetConstants()
+		private static LuaTable GetPenThicknessTable(PpsEnvironment environment)
+			=> (LuaTable)environment.GetMemberValue("pictureEditorPenThicknessTable");
 		{
 			var StrokeThicknesses = new List<PpsPecStrokeThickness>
 			{
