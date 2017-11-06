@@ -43,7 +43,7 @@ namespace TecWare.PPSn.UI
 	{
 		#region -- Helper Classes -----------------------------------------------------
 
-		#region Data Representation
+		#region -- Data Representation ------------------------------------------------
 
 		public class PpsPecCamera
 		{
@@ -839,6 +839,7 @@ namespace TecWare.PPSn.UI
 		public IEnumerable<object> UndoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Undo orderby un.Index descending select un).ToArray();
 		public IEnumerable<object> RedoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Redo orderby un.Index select un).ToArray();
 
+		/// <summary>Binding Point for caller to set the shown attachments</summary>
 		public IPpsAttachments Attachments
 		{
 			get { return (IPpsAttachments)GetValue(AttachmentsProperty); }
@@ -846,36 +847,42 @@ namespace TecWare.PPSn.UI
 		}
 
 		public ObservableCollection<PpsPecCamera> CachedCameras
+		/// <summary>Internal List of Cached Cameras (Preview Image shot)</summary>
 		{
 			get { return (ObservableCollection<PpsPecCamera>)GetValue(CachedCamerasProperty); }
 			set { SetValue(CachedCamerasProperty, value); }
 		}
 
 		public IPpsAttachmentItem SelectedAttachment
+		/// <summary>The Attachmnet which is shown in the editor</summary>
 		{
 			get { return (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty); }
 			set { SetValue(SelectedAttachmentProperty, value); }
 		}
 
 		public string SelectedCamera
+		/// <summary>The camera which is shown in the editor</summary>
 		{
 			get { return (string)GetValue(SelectedCameraProperty); }
 			set { SetValue(SelectedCameraProperty, value); }
 		}
 
 		public ObservableCollection<PpsPecCamera> CameraEnum
+		/// <summary>The List of cameras which are known to the system - after one is selected it moves to ChachedCameras</summary>
 		{
 			get { return (ObservableCollection<PpsPecCamera>)GetValue(CameraEnumProperty); }
 			set { SetValue(CameraEnumProperty, value); }
 		}
 
 		public StrokeCollection InkStrokes
+		/// <summary>The Strokes made on the shown Image</summary>
 		{
 			get { return (StrokeCollection)GetValue(InkStrokesProperty); }
 			set { SetValue(InkStrokesProperty, value); }
 		}
 
 		public InkCanvasEditingMode InkEditMode
+		/// <summary>The state of the Editor</summary>
 		{
 			get { return (InkCanvasEditingMode)GetValue(InkEditModeProperty); }
 			private set
@@ -901,24 +908,28 @@ namespace TecWare.PPSn.UI
 		}
 
 		public Cursor InkEditCursor
+		/// <summary>Binding for the Cursor used by the Editor</summary>
 		{
 			get { return (Cursor)GetValue(InkEditCursorProperty); }
 			private set { SetValue(InkEditCursorProperty, value); }
 		}
 
 		public DrawingAttributes InkDrawingAttributes
+		/// <summary>The Binding point for Color and Thickness for the Pen</summary>
 		{
 			get { return (DrawingAttributes)GetValue(InkDrawingAttributesProperty); }
 			private set { SetValue(InkDrawingAttributesProperty, value); }
 		}
 
 		public Matrix ScaleMatrix
+		/// <summary>This mAtrix handles the Mapping of the Strokes to the Image resolution-wise</summary>
 		{
 			get { return GetValue(ScaleMatrixProperty) != null ? (Matrix)GetValue(ScaleMatrixProperty) : new Matrix(1, 0, 0, 1, 0, 0); }
 			private set { SetValue(ScaleMatrixProperty, value); }
 		}
 
 		public PpsPecStrokeSettings StrokeSettings
+		/// <summary>The Binding point for Color and Thickness possibilities for the Settings Control</summary>
 		{
 			get { return (PpsPecStrokeSettings)GetValue(StrokeSettingsProperty); }
 			private set { SetValue(StrokeSettingsProperty, value); }
