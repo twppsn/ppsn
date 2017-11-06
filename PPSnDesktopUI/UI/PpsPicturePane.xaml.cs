@@ -745,6 +745,9 @@ namespace TecWare.PPSn.UI
 		/// </summary>
 		private void ResetCharmObject()
 		{
+			if (originalObject == null)
+				return;
+
 			var wnd = (PpsWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
 
 			((dynamic)wnd).CharmObject = originalObject;
