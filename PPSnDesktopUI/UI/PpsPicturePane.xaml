@@ -89,8 +89,6 @@
 				</Setter.Value>
 			</Setter>
 		</Style>
-
-		
 	</UserControl.Resources>
 	<Grid>
 		<Grid.RowDefinitions>
