@@ -214,6 +214,7 @@ namespace TecWare.PPSn.UI
 			DevelopmentSetConstants();
 
 			InitializePenSettings();
+			InitializeCameras();
 			AddCommandBindings();
 
 			strokeUndoManager = new PpsUndoManager();
@@ -737,19 +738,24 @@ namespace TecWare.PPSn.UI
 			StrokeSettings = new PpsPecStrokeSettings(StrokeColors, StrokeThicknesses);
 		}
 
+		#region -- Hardware / Cameras -------------------------------------------------
+
+		private void InitializeCameras()
+		{
 			var cameraPreviews = new ObservableCollection<PpsPecCamera>();
 			var devices = DsDevice.GetDevicesOfCat(DirectShowLib.FilterCategory.VideoInputDevice);
 			foreach (var dev in devices)
 			{
 				cameraPreviews.Add(new PpsPecCamera(dev.Name, dev.Name));
-				Debug($"added camera \"{dev.Name}\"");
 			}
 
+			if (cameraPreviews.Count == 0)
+				environment.Traces.AppendText(PpsTraceItemType.Information, "No Cameras were found.");
+			
 			CameraEnum = cameraPreviews;
+		}
 
-			InkStrokes = new StrokeCollection();
-			Debug("init InkStrokes");
-
+		#endregion
 
 			InkDrawingAttributes = new DrawingAttributes();
 			Debug("init DrawingAttributes");
