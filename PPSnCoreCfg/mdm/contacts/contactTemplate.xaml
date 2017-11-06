@@ -13,21 +13,24 @@
 				<RowDefinition Height="20" />
 			</Grid.RowDefinitions>
 			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="100"/>
 				<ColumnDefinition Width="100" />
-				<ColumnDefinition Width="50" />
+				<ColumnDefinition Width="100" />
 				<ColumnDefinition Width="300" />
 				<ColumnDefinition Width="300" />
 				<ColumnDefinition Width="100"/>
 				<ColumnDefinition Width="150"/>
-				<ColumnDefinition Width="300"/>
-				<ColumnDefinition Width="300"/>
 			</Grid.ColumnDefinitions>
-			<TextBlock Text="{Binding Nr}" Grid.RowSpan="2" VerticalAlignment="Center" FontWeight="Bold" ToolTip="Kontaktnummer" />
-			<!--<TextBlock Text="{Binding STATUS}" Grid.Column="1" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Status"/>-->
-			<TextBlock Text="{Binding Name}" Grid.Column="2" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Name"/>
-			<TextBlock Text="{Binding Adresse}" Grid.Column="3" Grid.RowSpan="2" FontStretch="Expanded" ToolTip="Adresse"/>
-			<TextBlock Text="{Binding LiefNr}" Grid.Column="4" ToolTip="Debitorennummer"/>
-			<TextBlock Text="{Binding KundNr}" Grid.Column="4" Grid.Row="2" ToolTip="Kreditorennummer" />
+			<Canvas Grid.Column="0" Grid.RowSpan="2" Width="24" Height="24">
+				<Path Data="{StaticResource contactsPathGeometry}" Fill="{StaticResource PPSnActionButtonBrush}" Opacity=".75"/>
+			</Canvas>
+			<TextBlock Grid.Column="1" Text="Kontakt:"/>
+			<TextBlock Text="{Binding Nr}" Grid.Column="2" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Kontaktnummer" />
+			<!--<TextBlock Text="{Binding STATUS}" Grid.Column="2" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Status"/>-->
+			<TextBlock Text="{Binding Name}" Grid.Column="3" Grid.RowSpan="2" VerticalAlignment="Center" FontWeight="Bold" ToolTip="Name"/>
+			<TextBlock Text="{Binding Adresse}" Grid.Column="4" Grid.RowSpan="2" FontStretch="Expanded" ToolTip="Adresse"/>
+			<TextBlock Text="{Binding LiefNr}" Grid.Column="5" ToolTip="Debitorennummer"/>
+			<TextBlock Text="{Binding KundNr}" Grid.Column="5" Grid.Row="2" ToolTip="Kreditorennummer" />
 			<!--<TextBlock Text="{Binding USTID}" Grid.Column="5" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="USt.-Ident.-Nr."/>-->
 			<TextBlock Text="{Binding Inaktiv,StringFormat='d',ConverterCulture='de-DE'}" Grid.Column="6" ToolTip="InAktiv"/>
 			<!--<TextBlock Text="{Binding TEL}" Grid.Column="6" Grid.Row="2" FontSize="11" ToolTip="Telefonnummer" />
@@ -45,13 +48,16 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="100" />
                 <ColumnDefinition Width="100" />
-                <ColumnDefinition Width="300" />
-                <ColumnDefinition Width="100"/>
-                <ColumnDefinition Width="150"/>
-                <ColumnDefinition Width="300"/>
-                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition />
             </Grid.ColumnDefinitions>
-			<TextBlock Grid.Column="0" FontStretch="Expanded" ToolTip="Mimetyp">
+			<Image Grid.Column="0" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Vorschaubild" Margin="4">
+				<Image.Source>
+					<Binding Path="DataLazy.PreviewImageLazy"
+							 Mode="OneWay"/>
+				</Image.Source>
+			</Image>
+			<TextBlock Grid.Column="1" FontStretch="Expanded" ToolTip="Mimetyp">
 				<TextBlock.Style>
 					<Style TargetType="{x:Type TextBlock}">
 						<Setter Property="Text" Value="Anhang:" />
@@ -66,14 +72,9 @@
 					</Style>
 				</TextBlock.Style>
 			</TextBlock>			
-			<TextBlock Text="{Binding Nr}" Grid.Column="1" VerticalAlignment="Center" ToolTip="Nummer"/>
-			<TextBlock Text="{Binding Name}" Grid.Column="2" VerticalAlignment="Center" ToolTip="Name"/>
-			<Image Grid.Column="3" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Vorschaubild" Margin="4">
-				<Image.Source>
-					<Binding Path="DataLazy.PreviewImageLazy"
-							 Mode="OneWay"/>
-				</Image.Source>
-			</Image>
+			<TextBlock Text="{Binding Nr}" Grid.Column="2" VerticalAlignment="Center" ToolTip="Nummer"/>
+			<TextBlock Text="{Binding Name}" Grid.Column="3" VerticalAlignment="Center" FontWeight="Bold" ToolTip="Name"/>
+			
 			<!-- Sha256 should not be loaded - otherwise all attachments are loaded <TextBlock Text="{Binding Data.Sha256}" Grid.Column="2" ToolTip="Debitorennummer"/>-->
         </Grid>
 
