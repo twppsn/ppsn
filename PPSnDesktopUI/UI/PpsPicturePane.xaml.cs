@@ -90,17 +90,26 @@ namespace TecWare.PPSn.UI
 		public class PpsPecStrokeColor
 		{
 			private string name;
-			private Color color;
+			private Brush brush;
 
-			public PpsPecStrokeColor(string Name, Color Color)
+			public PpsPecStrokeColor(string Name, Brush ColorBrush)
 			{
 				this.name = Name;
-				this.color = Color;
+				this.brush = ColorBrush;
 			}
 
 			public string Name => name;
-			public Color Color => color;
-			public Brush Brush => new SolidColorBrush(color);
+			public Color Color
+			{
+				get
+				{
+					if (brush is SolidColorBrush scb) return scb.Color;
+					if (brush is LinearGradientBrush lgb) return lgb.GradientStops.FirstOrDefault().Color;
+					if (brush is RadialGradientBrush rgb) return rgb.GradientStops.FirstOrDefault().Color;
+					return Colors.Black;
+				}
+			}
+			public Brush Brush => brush;
 		}
 
 		public class PpsPecStrokeSettings
