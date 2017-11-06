@@ -846,46 +846,46 @@ namespace TecWare.PPSn.UI
 			set { SetValue(AttachmentsProperty, value); }
 		}
 
-		public ObservableCollection<PpsPecCamera> CachedCameras
 		/// <summary>Internal List of Cached Cameras (Preview Image shot)</summary>
+		private ObservableCollection<PpsPecCamera> CachedCameras
 		{
 			get { return (ObservableCollection<PpsPecCamera>)GetValue(CachedCamerasProperty); }
 			set { SetValue(CachedCamerasProperty, value); }
 		}
 
-		public IPpsAttachmentItem SelectedAttachment
 		/// <summary>The Attachmnet which is shown in the editor</summary>
+		private IPpsAttachmentItem SelectedAttachment
 		{
 			get { return (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty); }
 			set { SetValue(SelectedAttachmentProperty, value); }
 		}
 
-		public string SelectedCamera
 		/// <summary>The camera which is shown in the editor</summary>
+		private string SelectedCamera
 		{
 			get { return (string)GetValue(SelectedCameraProperty); }
 			set { SetValue(SelectedCameraProperty, value); }
 		}
 
-		public ObservableCollection<PpsPecCamera> CameraEnum
 		/// <summary>The List of cameras which are known to the system - after one is selected it moves to ChachedCameras</summary>
+		private ObservableCollection<PpsPecCamera> CameraEnum
 		{
 			get { return (ObservableCollection<PpsPecCamera>)GetValue(CameraEnumProperty); }
 			set { SetValue(CameraEnumProperty, value); }
 		}
 
-		public StrokeCollection InkStrokes
 		/// <summary>The Strokes made on the shown Image</summary>
+		private StrokeCollection InkStrokes
 		{
 			get { return (StrokeCollection)GetValue(InkStrokesProperty); }
 			set { SetValue(InkStrokesProperty, value); }
 		}
 
-		public InkCanvasEditingMode InkEditMode
 		/// <summary>The state of the Editor</summary>
+		private InkCanvasEditingMode InkEditMode
 		{
 			get { return (InkCanvasEditingMode)GetValue(InkEditModeProperty); }
-			private set
+			set
 			{
 				SetValue(InkEditModeProperty, value);
 				var t = (InkCanvas)FindChildElement(typeof(InkCanvas), this);
@@ -907,32 +907,32 @@ namespace TecWare.PPSn.UI
 			}
 		}
 
-		public Cursor InkEditCursor
 		/// <summary>Binding for the Cursor used by the Editor</summary>
+		private Cursor InkEditCursor
 		{
 			get { return (Cursor)GetValue(InkEditCursorProperty); }
-			private set { SetValue(InkEditCursorProperty, value); }
+			set { SetValue(InkEditCursorProperty, value); }
 		}
 
-		public DrawingAttributes InkDrawingAttributes
 		/// <summary>The Binding point for Color and Thickness for the Pen</summary>
+		private DrawingAttributes InkDrawingAttributes
 		{
 			get { return (DrawingAttributes)GetValue(InkDrawingAttributesProperty); }
-			private set { SetValue(InkDrawingAttributesProperty, value); }
+			set { SetValue(InkDrawingAttributesProperty, value); }
 		}
 
-		public Matrix ScaleMatrix
 		/// <summary>This mAtrix handles the Mapping of the Strokes to the Image resolution-wise</summary>
+		private Matrix ScaleMatrix
 		{
 			get { return GetValue(ScaleMatrixProperty) != null ? (Matrix)GetValue(ScaleMatrixProperty) : new Matrix(1, 0, 0, 1, 0, 0); }
-			private set { SetValue(ScaleMatrixProperty, value); }
+			set { SetValue(ScaleMatrixProperty, value); }
 		}
 
-		public PpsPecStrokeSettings StrokeSettings
 		/// <summary>The Binding point for Color and Thickness possibilities for the Settings Control</summary>
+		private PpsPecStrokeSettings StrokeSettings
 		{
 			get { return (PpsPecStrokeSettings)GetValue(StrokeSettingsProperty); }
-			private set { SetValue(StrokeSettingsProperty, value); }
+			set { SetValue(StrokeSettingsProperty, value); }
 		}
 
 		#region DependencyPropertys
@@ -940,15 +940,15 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty AttachmentsProperty = DependencyProperty.Register(nameof(Attachments), typeof(IPpsAttachments), typeof(PpsPicturePane));
 		public static readonly DependencyProperty CachedCamerasProperty = DependencyProperty.Register(nameof(CachedCameras), typeof(ObservableCollection<PpsPecCamera>), typeof(PpsPicturePane));
 
-		public readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane));
-		public readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(string), typeof(PpsPicturePane));
-		public readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(ObservableCollection<PpsPecCamera>), typeof(PpsPicturePane));
-		public readonly static DependencyProperty InkDrawingAttributesProperty = DependencyProperty.Register(nameof(InkDrawingAttributes), typeof(DrawingAttributes), typeof(PpsPicturePane));
-		public readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(StrokeCollection), typeof(PpsPicturePane));
-		public readonly static DependencyProperty InkEditModeProperty = DependencyProperty.Register(nameof(InkEditMode), typeof(InkCanvasEditingMode), typeof(PpsPicturePane));
-		public readonly static DependencyProperty InkEditCursorProperty = DependencyProperty.Register(nameof(InkEditCursor), typeof(Cursor), typeof(PpsPicturePane));
-		public readonly static DependencyProperty ScaleMatrixProperty = DependencyProperty.Register(nameof(ScaleMatrix), typeof(Matrix), typeof(PpsPicturePane));
-		public readonly static DependencyProperty StrokeSettingsProperty = DependencyProperty.Register(nameof(StrokeSettings), typeof(PpsPecStrokeSettings), typeof(PpsPicturePane));
+		private readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane));
+		private readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(string), typeof(PpsPicturePane));
+		private readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(ObservableCollection<PpsPecCamera>), typeof(PpsPicturePane));
+		private readonly static DependencyProperty InkDrawingAttributesProperty = DependencyProperty.Register(nameof(InkDrawingAttributes), typeof(DrawingAttributes), typeof(PpsPicturePane));
+		private readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(StrokeCollection), typeof(PpsPicturePane));
+		private readonly static DependencyProperty InkEditModeProperty = DependencyProperty.Register(nameof(InkEditMode), typeof(InkCanvasEditingMode), typeof(PpsPicturePane));
+		private readonly static DependencyProperty InkEditCursorProperty = DependencyProperty.Register(nameof(InkEditCursor), typeof(Cursor), typeof(PpsPicturePane));
+		private readonly static DependencyProperty ScaleMatrixProperty = DependencyProperty.Register(nameof(ScaleMatrix), typeof(Matrix), typeof(PpsPicturePane));
+		private readonly static DependencyProperty StrokeSettingsProperty = DependencyProperty.Register(nameof(StrokeSettings), typeof(PpsPecStrokeSettings), typeof(PpsPicturePane));
 
 		#endregion
 
