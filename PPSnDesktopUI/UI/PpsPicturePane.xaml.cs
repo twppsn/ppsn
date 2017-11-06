@@ -71,20 +71,20 @@ namespace TecWare.PPSn.UI
 			public string FriendlyName => friendlyName;
 			public object Image { get { return image; } set { this.image = value; } }
 		}
-		
+
 		public class PpsPecStrokeThickness
 		{
 			private string name;
-			private int thickness;
+			private double thickness;
 
-			public PpsPecStrokeThickness(string Name, int Thickness)
+			public PpsPecStrokeThickness(string Name, double Thickness)
 			{
 				this.name = Name;
 				this.thickness = Thickness;
 			}
 
 			public string Name => name;
-			public int Size => thickness;
+			public double Size => thickness;
 		}
 
 		public class PpsPecStrokeColor
