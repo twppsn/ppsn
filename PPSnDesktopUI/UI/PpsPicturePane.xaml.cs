@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -26,9 +41,9 @@ namespace TecWare.PPSn.UI
 	/// </summary>
 	public partial class PpsPicturePane : UserControl, IPpsWindowPane
 	{
-		#region -- Helper Classes -------------------------------------------------------
+		#region -- Helper Classes -----------------------------------------------------
 
-		#region Data Representation
+		#region -- Data Representation ------------------------------------------------
 
 		public class PpsPecCamera
 		{
@@ -56,36 +71,45 @@ namespace TecWare.PPSn.UI
 			public string FriendlyName => friendlyName;
 			public object Image { get { return image; } set { this.image = value; } }
 		}
-		
+
 		public class PpsPecStrokeThickness
 		{
 			private string name;
-			private int thickness;
+			private double thickness;
 
-			public PpsPecStrokeThickness(string Name, int Thickness)
+			public PpsPecStrokeThickness(string Name, double Thickness)
 			{
 				this.name = Name;
 				this.thickness = Thickness;
 			}
 
 			public string Name => name;
-			public int Size => thickness;
+			public double Size => thickness;
 		}
 
 		public class PpsPecStrokeColor
 		{
 			private string name;
-			private Color color;
+			private Brush brush;
 
-			public PpsPecStrokeColor(string Name, Color Color)
+			public PpsPecStrokeColor(string Name, Brush ColorBrush)
 			{
 				this.name = Name;
-				this.color = Color;
+				this.brush = ColorBrush;
 			}
 
 			public string Name => name;
-			public Color Color => color;
-			public Brush Brush => new SolidColorBrush(color);
+			public Color Color
+			{
+				get
+				{
+					if (brush is SolidColorBrush scb) return scb.Color;
+					if (brush is LinearGradientBrush lgb) return lgb.GradientStops.FirstOrDefault().Color;
+					if (brush is RadialGradientBrush rgb) return rgb.GradientStops.FirstOrDefault().Color;
+					return Colors.Black;
+				}
+			}
+			public Brush Brush => brush;
 		}
 
 		public class PpsPecStrokeSettings
@@ -167,7 +191,44 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region Fields
+		#region -- Events -------------------------------------------------------------
+
+		/// <summary>
+		/// THis function calculates the Matrix to overlay the InkCanvas onto the Image
+		/// </summary>
+		/// <param name="sender">main image</param>
+		/// <param name="e">unused</param>
+		private void CurrentObjectImageMax_SizeChanged(object sender, SizeChangedEventArgs e)
+		{
+			var xfact = (double)GetValue(Window.ActualWidthProperty) / ((Image)sender).ActualWidth;
+			var yfact = ((double)GetValue(Window.ActualHeightProperty) - 200) / ((Image)sender).ActualHeight;
+			// the factors may become NaN (sender.Actual was zero) or infinity - thus scaling would fail
+			xfact = (xfact > 0 && xfact < 100) ? xfact : 1;
+			yfact = (yfact > 0 && yfact < 100) ? yfact : 1;
+			ScaleMatrix = new Matrix(xfact, 0, 0, yfact, 0, 0);
+		}
+
+		/// <summary>
+		/// Checks, if the mouse is over an InkStroke and changes the cursor according
+		/// </summary>
+		/// <param name="sender">InkCanvas</param>
+		/// <param name="e"></param>
+		private void InkCanvasRemoveHitTest(object sender, MouseEventArgs e)
+		{
+			var hit = false;
+			var pos = e.GetPosition((InkCanvas)sender);
+			foreach (var stroke in InkStrokes)
+				if (stroke.HitTest(pos))
+				{
+					hit = true;
+					break;
+				}
+			InkEditCursor = hit ? Cursors.No : Cursors.Cross;
+		}
+
+		#endregion
+
+		#region -- Fields -------------------------------------------------------------
 
 		private PpsUndoManager strokeUndoManager;
 		private readonly PpsEnvironment environment;
@@ -175,7 +236,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region ctor
+		#region -- Constructor --------------------------------------------------------
 
 		public PpsPicturePane()
 		{
@@ -187,7 +248,9 @@ namespace TecWare.PPSn.UI
 
 			CachedCameras = new ObservableCollection<PpsPecCamera>();
 
-			DevelopmentSetConstants();
+			InitializePenSettings();
+			InitializeCameras();
+			InitializeStrokes();
 
 			AddCommandBindings();
 
@@ -202,7 +265,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region Commands
+		#region -- Commands -----------------------------------------------------------
 
 		#region ---- CommandBindings ----------------------------------------------------------
 
@@ -268,7 +331,7 @@ namespace TecWare.PPSn.UI
 					else if (SelectedCamera != null)
 					{
 						var path = System.IO.Path.GetTempPath() + DateTime.Now.ToUniversalTime().ToString("yyyy-MM-dd_HHmmss") + ".jpg";
-						
+
 						RenderTargetBitmap bmp = new RenderTargetBitmap(
 							(int)videoElement.ActualWidth, (int)videoElement.ActualHeight, 96, 96,
 							PixelFormats.Default
@@ -519,6 +582,16 @@ namespace TecWare.PPSn.UI
 
 			#region Strokes
 
+			var penSettingsPopup = new System.Windows.Controls.Primitives.Popup()
+			{
+				Child = new UserControl()
+				{
+					Style = (Style)this.FindResource("PPSnStrokeSettingsControlStyle"),
+					DataContext = StrokeSettings
+				}
+			};
+			penSettingsPopup.Opened += (sender, e) => { if (SelectedAttachment != null) InkEditMode = InkCanvasEditingMode.Ink; };
+
 			var freeformeditCommandButton = new PpsUISplitCommandButton()
 			{
 				Order = new PpsCommandOrder(300, 110),
@@ -532,14 +605,7 @@ namespace TecWare.PPSn.UI
 						},
 						(args) => SelectedAttachment != null
 					),
-				Popup = new System.Windows.Controls.Primitives.Popup()
-				{
-					Child = new UserControl()
-					{
-						Style = (Style)this.FindResource("PPSnStrokeSettingsControlStyle"),
-						DataContext = StrokeSettings
-					}
-				}
+				Popup = penSettingsPopup
 			};
 			Commands.Add(freeformeditCommandButton);
 
@@ -586,12 +652,33 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region IPpsWindowPane
+		#region -- IPpsWindowPane -----------------------------------------------------
 
 		public string Title => "Bildeditor";
 
-		// not useable - name of the Object is unknown on creation and after that read-only
-		public string SubTitle => String.Empty;
+		private string subTitle;
+		public string SubTitle
+		{
+			get
+			{
+				if (!String.IsNullOrEmpty(subTitle))
+					return subTitle;
+
+				if (originalObject != null)
+				{
+					subTitle = (string)originalObject["Name"];
+					return subTitle;
+				}
+
+				var window = Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
+				if (window is PpsWindow ppswindow)
+				{
+					subTitle = (string)(((PpsObject)((dynamic)ppswindow).CharmObject) ?? originalObject)?["Name"];
+					return subTitle;
+				}
+				return String.Empty;
+			}
+		}
 
 		public object Control => this;
 
@@ -646,7 +733,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region Charmbar
+		#region -- Charmbar -----------------------------------------------------------
 
 		/// <summary>
 		/// variable saving the object, which was loaded before opening the PicturePane
@@ -658,6 +745,9 @@ namespace TecWare.PPSn.UI
 		/// </summary>
 		private void ResetCharmObject()
 		{
+			if (originalObject == null)
+				return;
+
 			var wnd = (PpsWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
 
 			((dynamic)wnd).CharmObject = originalObject;
@@ -679,56 +769,67 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region Development
+		#region -- Methods ------------------------------------------------------------
 
-		private void DevelopmentSetConstants()
+		#region -- Pen Settings -------------------------------------------------------
+
+		private static LuaTable GetPenColorTable(PpsEnvironment environment)
+			=> (LuaTable)environment.GetMemberValue("pictureEditorPenColorTable");
+
+		private static LuaTable GetPenThicknessTable(PpsEnvironment environment)
+			=> (LuaTable)environment.GetMemberValue("pictureEditorPenThicknessTable");
+
+		private void InitializePenSettings()
 		{
-			var StrokeThicknesses = new List<PpsPecStrokeThickness>
+			var StrokeThicknesses = new List<PpsPecStrokeThickness>();
+			foreach (var tab in GetPenThicknessTable(environment).ArrayList)
 			{
-				new PpsPecStrokeThickness("1", 1),
-				new PpsPecStrokeThickness("5", 5),
-				new PpsPecStrokeThickness("10", 10),
-				new PpsPecStrokeThickness("15", 15)
-			};
-			Debug("added thickness constants");
+				if (tab is LuaTable lt) StrokeThicknesses.Add(new PpsPecStrokeThickness((string)lt["Name"], (double)lt["Thickness"]));
+			}
 
-			var StrokeColors = new List<PpsPecStrokeColor>
+			var StrokeColors = new List<PpsPecStrokeColor>();
+			foreach (var tab in GetPenColorTable(environment).ArrayList)
 			{
-				new PpsPecStrokeColor("Weiß", Colors.White),
-				new PpsPecStrokeColor("Schwarz", Colors.Black),
-				new PpsPecStrokeColor("Rot", Colors.Red),
-				new PpsPecStrokeColor("Grün", Colors.Green),
-				new PpsPecStrokeColor("Blau", Colors.Blue)
-			};
-			Debug("added color constants");
+				if (tab is LuaTable lt) StrokeColors.Add(new PpsPecStrokeColor((string)lt["Name"], (Brush)lt["Brush"]));
+			}
+
+			if (StrokeColors.Count == 0)
+				environment.Traces.AppendText(PpsTraceItemType.Fail, "Failed to load Brushes for drawing.");
+			if (StrokeThicknesses.Count == 0)
+				environment.Traces.AppendText(PpsTraceItemType.Fail, "Failed to load Thicknesses for drawing.");
 
 			StrokeSettings = new PpsPecStrokeSettings(StrokeColors, StrokeThicknesses);
+		}
 
+		#endregion
+
+		#region -- Hardware / Cameras -------------------------------------------------
+
+		private void InitializeCameras()
+		{
 			var cameraPreviews = new ObservableCollection<PpsPecCamera>();
 			var devices = DsDevice.GetDevicesOfCat(DirectShowLib.FilterCategory.VideoInputDevice);
 			foreach (var dev in devices)
 			{
 				cameraPreviews.Add(new PpsPecCamera(dev.Name, dev.Name));
-				Debug($"added camera \"{dev.Name}\"");
 			}
 
+			if (cameraPreviews.Count == 0)
+				environment.Traces.AppendText(PpsTraceItemType.Information, "No Cameras were found.");
+
 			CameraEnum = cameraPreviews;
+		}
 
+		#endregion
+
+		#region -- Strokes ------------------------------------------------------------
+
+		private void InitializeStrokes()
+		{
 			InkStrokes = new StrokeCollection();
-			Debug("init InkStrokes");
-
 
 			InkDrawingAttributes = new DrawingAttributes();
-			Debug("init DrawingAttributes");
 		}
-
-		[Obsolete("Remove Debug Messages")]
-		private void Debug(string msg)
-		{
-			if (environment != null)
-				environment.Traces.AppendText(PpsTraceItemType.Debug, msg);
-		}
-
 
 		#endregion
 
@@ -755,51 +856,60 @@ namespace TecWare.PPSn.UI
 				&& item.LinkedObject.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
 		} // proc ShowOnlyObjectImageDataFilter
 
-		#region Propertys
+		#endregion
+
+		#region -- Propertys ----------------------------------------------------------
 
 		public IEnumerable<object> UndoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Undo orderby un.Index descending select un).ToArray();
 		public IEnumerable<object> RedoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Redo orderby un.Index select un).ToArray();
 
+		/// <summary>Binding Point for caller to set the shown attachments</summary>
 		public IPpsAttachments Attachments
 		{
 			get { return (IPpsAttachments)GetValue(AttachmentsProperty); }
 			set { SetValue(AttachmentsProperty, value); }
 		}
 
-		public ObservableCollection<PpsPecCamera> CachedCameras
+		/// <summary>Internal List of Cached Cameras (Preview Image shot)</summary>
+		private ObservableCollection<PpsPecCamera> CachedCameras
 		{
 			get { return (ObservableCollection<PpsPecCamera>)GetValue(CachedCamerasProperty); }
 			set { SetValue(CachedCamerasProperty, value); }
 		}
 
-		public IPpsAttachmentItem SelectedAttachment
+		/// <summary>The Attachmnet which is shown in the editor</summary>
+		private IPpsAttachmentItem SelectedAttachment
 		{
 			get { return (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty); }
 			set { SetValue(SelectedAttachmentProperty, value); }
 		}
 
-		public string SelectedCamera
+		/// <summary>The camera which is shown in the editor</summary>
+		private string SelectedCamera
 		{
 			get { return (string)GetValue(SelectedCameraProperty); }
 			set { SetValue(SelectedCameraProperty, value); }
 		}
 
-		public ObservableCollection<PpsPecCamera> CameraEnum
+		/// <summary>The List of cameras which are known to the system - after one is selected it moves to ChachedCameras</summary>
+		private ObservableCollection<PpsPecCamera> CameraEnum
 		{
 			get { return (ObservableCollection<PpsPecCamera>)GetValue(CameraEnumProperty); }
 			set { SetValue(CameraEnumProperty, value); }
 		}
 
-		public StrokeCollection InkStrokes
+		/// <summary>The Strokes made on the shown Image</summary>
+		private StrokeCollection InkStrokes
 		{
 			get { return (StrokeCollection)GetValue(InkStrokesProperty); }
 			set { SetValue(InkStrokesProperty, value); }
 		}
 
-		public InkCanvasEditingMode InkEditMode
+		/// <summary>The state of the Editor</summary>
+		private InkCanvasEditingMode InkEditMode
 		{
 			get { return (InkCanvasEditingMode)GetValue(InkEditModeProperty); }
-			private set
+			set
 			{
 				SetValue(InkEditModeProperty, value);
 				var t = (InkCanvas)FindChildElement(typeof(InkCanvas), this);
@@ -821,28 +931,32 @@ namespace TecWare.PPSn.UI
 			}
 		}
 
-		public Cursor InkEditCursor
+		/// <summary>Binding for the Cursor used by the Editor</summary>
+		private Cursor InkEditCursor
 		{
 			get { return (Cursor)GetValue(InkEditCursorProperty); }
-			private set { SetValue(InkEditCursorProperty, value); }
+			set { SetValue(InkEditCursorProperty, value); }
 		}
 
-		public DrawingAttributes InkDrawingAttributes
+		/// <summary>The Binding point for Color and Thickness for the Pen</summary>
+		private DrawingAttributes InkDrawingAttributes
 		{
 			get { return (DrawingAttributes)GetValue(InkDrawingAttributesProperty); }
-			private set { SetValue(InkDrawingAttributesProperty, value); }
+			set { SetValue(InkDrawingAttributesProperty, value); }
 		}
 
-		public Matrix ScaleMatrix
+		/// <summary>This mAtrix handles the Mapping of the Strokes to the Image resolution-wise</summary>
+		private Matrix ScaleMatrix
 		{
 			get { return GetValue(ScaleMatrixProperty) != null ? (Matrix)GetValue(ScaleMatrixProperty) : new Matrix(1, 0, 0, 1, 0, 0); }
-			private set { SetValue(ScaleMatrixProperty, value); }
+			set { SetValue(ScaleMatrixProperty, value); }
 		}
 
-		public PpsPecStrokeSettings StrokeSettings
+		/// <summary>The Binding point for Color and Thickness possibilities for the Settings Control</summary>
+		private PpsPecStrokeSettings StrokeSettings
 		{
 			get { return (PpsPecStrokeSettings)GetValue(StrokeSettingsProperty); }
-			private set { SetValue(StrokeSettingsProperty, value); }
+			set { SetValue(StrokeSettingsProperty, value); }
 		}
 
 		#region DependencyPropertys
@@ -850,51 +964,18 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty AttachmentsProperty = DependencyProperty.Register(nameof(Attachments), typeof(IPpsAttachments), typeof(PpsPicturePane));
 		public static readonly DependencyProperty CachedCamerasProperty = DependencyProperty.Register(nameof(CachedCameras), typeof(ObservableCollection<PpsPecCamera>), typeof(PpsPicturePane));
 
-		public readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane));
-		public readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(string), typeof(PpsPicturePane));
-		public readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(ObservableCollection<PpsPecCamera>), typeof(PpsPicturePane));
-		public readonly static DependencyProperty InkDrawingAttributesProperty = DependencyProperty.Register(nameof(InkDrawingAttributes), typeof(DrawingAttributes), typeof(PpsPicturePane));
-		public readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(StrokeCollection), typeof(PpsPicturePane));
-		public readonly static DependencyProperty InkEditModeProperty = DependencyProperty.Register(nameof(InkEditMode), typeof(InkCanvasEditingMode), typeof(PpsPicturePane));
-		public readonly static DependencyProperty InkEditCursorProperty = DependencyProperty.Register(nameof(InkEditCursor), typeof(Cursor), typeof(PpsPicturePane));
-		public readonly static DependencyProperty ScaleMatrixProperty = DependencyProperty.Register(nameof(ScaleMatrix), typeof(Matrix), typeof(PpsPicturePane));
-		public readonly static DependencyProperty StrokeSettingsProperty = DependencyProperty.Register(nameof(StrokeSettings), typeof(PpsPecStrokeSettings), typeof(PpsPicturePane));
+		private readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane));
+		private readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(string), typeof(PpsPicturePane));
+		private readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(ObservableCollection<PpsPecCamera>), typeof(PpsPicturePane));
+		private readonly static DependencyProperty InkDrawingAttributesProperty = DependencyProperty.Register(nameof(InkDrawingAttributes), typeof(DrawingAttributes), typeof(PpsPicturePane));
+		private readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(StrokeCollection), typeof(PpsPicturePane));
+		private readonly static DependencyProperty InkEditModeProperty = DependencyProperty.Register(nameof(InkEditMode), typeof(InkCanvasEditingMode), typeof(PpsPicturePane));
+		private readonly static DependencyProperty InkEditCursorProperty = DependencyProperty.Register(nameof(InkEditCursor), typeof(Cursor), typeof(PpsPicturePane));
+		private readonly static DependencyProperty ScaleMatrixProperty = DependencyProperty.Register(nameof(ScaleMatrix), typeof(Matrix), typeof(PpsPicturePane));
+		private readonly static DependencyProperty StrokeSettingsProperty = DependencyProperty.Register(nameof(StrokeSettings), typeof(PpsPecStrokeSettings), typeof(PpsPicturePane));
 
 		#endregion
 
 		#endregion
-
-		/// <summary>
-		/// THis function calculates the Matrix to overlay the InkCanvas onto the Image
-		/// </summary>
-		/// <param name="sender">main image</param>
-		/// <param name="e">unused</param>
-		private void CurrentObjectImageMax_SizeChanged(object sender, SizeChangedEventArgs e)
-		{
-			var xfact = (double)GetValue(Window.ActualWidthProperty) / ((Image)sender).ActualWidth;
-			var yfact = ((double)GetValue(Window.ActualHeightProperty) - 200) / ((Image)sender).ActualHeight;
-			// the factors may become NaN (sender.Actual was zero) or infinity - thus scaling would fail
-			xfact = (xfact > 0 && xfact < 100) ? xfact : 1;
-			yfact = (yfact > 0 && yfact < 100) ? yfact : 1;
-			ScaleMatrix = new Matrix(xfact, 0, 0, yfact, 0, 0);
-		}
-
-		/// <summary>
-		/// Checks, if the mouse is over an InkStroke and changes the cursor according
-		/// </summary>
-		/// <param name="sender">InkCanvas</param>
-		/// <param name="e"></param>
-		private void InkCanvasRemoveHitTest(object sender, MouseEventArgs e)
-		{
-			var hit = false;
-			var pos = e.GetPosition((InkCanvas)sender);
-			foreach (var stroke in InkStrokes)
-				if (stroke.HitTest(pos))
-				{
-					hit = true;
-					break;
-				}
-			InkEditCursor = hit ? Cursors.No : Cursors.Cross;
-		}
 	}
 }

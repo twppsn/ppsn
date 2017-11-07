@@ -186,7 +186,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>If a string is passed it is parsed as a DataTemplate for the ListItems</summary>
 		public string ListTemplateString { get => (string)GetValue(ListTemplateStringProperty); set { SetValue(ListTemplateStringProperty, value); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ListTemplate))); } }
 		public static readonly DependencyProperty ListTemplateStringProperty = DependencyProperty.Register(nameof(ListTemplateString), typeof(string), typeof(PpsMasterDataSelector));
-		public DataTemplate ListTemplate => (DataTemplate)XamlReader.Parse(!String.IsNullOrEmpty(ListTemplateString) ? ListTemplateString : defaultTemplate.Replace("<DisplayMemberName/>",DisplayMemberPath), GetDefaultContext());
+		public DataTemplate ListTemplate => (DataTemplate)XamlReader.Parse(!String.IsNullOrEmpty(ListTemplateString) ? ListTemplateString : defaultTemplate.Replace("<DisplayMemberName/>", DisplayMemberPath), GetDefaultContext());
 
 		/// <summary>Current searchstring</summary>
 		public string FilterText
