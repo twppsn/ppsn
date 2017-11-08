@@ -25,16 +25,14 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- interface IPpsActiveDataSetOwner -----------------------------------------
+	#region -- interface IPpsActiveDataSetOwner ---------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface IPpsActiveDataSetOwner
 	{
 		LuaTable Events { get; }
 	} // interface IPpsActiveDataSetOwner
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class PpsActiveDataSetOwner : LuaTable, IPpsActiveDataSetOwner
 	{
@@ -43,7 +41,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- interface IPpsActiveDataSets ---------------------------------------------
+	#region -- interface IPpsActiveDataSets -------------------------------------------
 
 	public interface IPpsActiveDataSets : IReadOnlyCollection<PpsDataSetDesktop>
 	{
@@ -79,9 +77,8 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataTableDefinitionDesktop --------------------------------------
+	#region -- class PpsDataTableDefinitionDesktop ------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class PpsDataTableDefinitionDesktop : PpsDataTableDefinitionClient
 	{
@@ -96,7 +93,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- interface IPpsObjectBasedDataSet -----------------------------------------
+	#region -- interface IPpsObjectBasedDataSet ---------------------------------------
 
 	/// <summary>Interface that needs to implement in the base dataset, to support the PpsObjectExtendedColumn.</summary>
 	public interface IPpsObjectBasedDataSet
@@ -109,7 +106,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsObjectExtendedValue ---------------------------------------------
+	#region -- class PpsObjectExtendedValue -------------------------------------------
 
 	public sealed class PpsObjectExtendedValue : PpsDataRowExtentedValue, IPpsDataRowGetGenericValue
 	{
@@ -142,7 +139,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsLinkedObjectExtendedValue ---------------------------------------
+	#region -- class PpsLinkedObjectExtendedValue -------------------------------------
 
 	public sealed class PpsLinkedObjectExtendedValue : PpsDataRowObjectExtendedValue, IPpsDataRowExtendedEvents
 	{
@@ -269,7 +266,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsMasterDataExtendedValue -----------------------------------------
+	#region -- class PpsMasterDataExtendedValue ---------------------------------------
 
 	public sealed class PpsMasterDataExtendedValue : PpsDataRowObjectExtendedValue
 	{

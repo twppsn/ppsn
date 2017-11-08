@@ -2742,7 +2742,7 @@ namespace TecWare.PPSn
 				{
 					lock (currentTransactionLock)
 					{
-						if (currentTransaction == null) // currently, no transaction
+						if (currentTransaction == null || currentTransaction.IsDisposed) // currently, no transaction
 						{
 							currentTransactionLock.Reset();
 							currentTransaction = new PpsMasterRootTransaction(this, connection, connection.BeginTransaction());
@@ -2750,16 +2750,13 @@ namespace TecWare.PPSn
 						}
 						else if (currentTransaction.CheckAccess()) // same thread, create a nested transaction
 						{
-							if (currentTransaction.IsDisposed)
-								throw new InvalidOperationException("Transaction is already disposed.");
-
 							return new PpsMasterNestedTransaction(currentTransaction);
 						}
 						else if (currentTransaction.JoinedTransaction != null) // other thread, check for a joined transaction
 						{
 							var threadRootTransaction = currentTransaction.JoinedTransaction;
 							if (threadRootTransaction.IsDisposed)
-								throw new InvalidOperationException("Transaction is already disposed.");
+								throw new InvalidOperationException("JoinedTransaction is already disposed, but current is still alive.");
 
 							return new PpsMasterNestedTransaction(threadRootTransaction);
 						}
