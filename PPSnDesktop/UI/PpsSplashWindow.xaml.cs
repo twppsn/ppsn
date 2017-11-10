@@ -99,6 +99,8 @@ namespace TecWare.PPSn.UI
 							// set dummy password
 							if (currentLogin.PasswordLength > 0)
 								parent.pbPassword.Password = new string('\x01', currentLogin.PasswordLength);
+							if (!IsPasswordEnabled)
+								parent.pbPassword.Password = String.Empty;
 							passwordHasChanged = false;
 						}
 
