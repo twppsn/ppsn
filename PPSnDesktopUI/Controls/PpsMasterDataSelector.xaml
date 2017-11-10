@@ -66,7 +66,7 @@ specific language governing permissions and limitations under the Licence.
 							 Grid.Row="0" 
 							 Margin="20,0,0,0"
 							 KeyUp="SearchConstantTextbox_KeyUp"
-							 ToolTip="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=SearchHelp}">
+							 ToolTip="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=SearchHelp}"
 							 Text="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=FilterText, Mode=OneWayToSource, UpdateSourceTrigger=PropertyChanged}">
 					</TextBox>
 					<Canvas Grid.Row="0">
