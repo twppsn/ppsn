@@ -161,10 +161,7 @@
 				</Viewbox>
 				<TextBlock Grid.Column="1" Text="{TemplateBinding Content}" Margin="2,0,0,0" VerticalAlignment="Center"/>
 				<TextBlock Grid.Column="1" Text="{Binding Nr}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-				<Button Grid.Column="2" Command="{x:Static uiL:PpsCharmbarControl.ChangeContentCommand}"
-						Content="{StaticResource windowClosePathGeometry}"
-						Foreground="{StaticResource PPSnWindowForegroundBrush}"
-						Style="{StaticResource PPSnImageButtonStyle}">
+				<Button Grid.Column="2" Command="{x:Static uiL:PpsCharmbarControl.ChangeContentCommand}" Style="{StaticResource PPSnClosePopupButtonStyle}">
 					<Button.CommandParameter>
 						<uiL:PPSnCharmbarContentType>Default</uiL:PPSnCharmbarContentType>
 					</Button.CommandParameter>
