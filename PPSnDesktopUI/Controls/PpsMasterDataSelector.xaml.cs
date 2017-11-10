@@ -126,6 +126,7 @@ namespace TecWare.PPSn.Controls
 				searchBreaker.Elapsed += (sender, e) =>
 				{
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("FilteredList"));
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("SearchHelp"));
 					searchBreaker = null;
 				};
 				searchBreaker.Start();
@@ -189,9 +190,22 @@ namespace TecWare.PPSn.Controls
 		public DataTemplate ListTemplate => (DataTemplate)XamlReader.Parse(!String.IsNullOrEmpty(ListTemplateString) ? ListTemplateString : defaultTemplate.Replace("<DisplayMemberName/>", DisplayMemberPath), GetDefaultContext());
 
 		/// <summary>Current searchstring</summary>
-		public string FilterText
-		{ get => (string)GetValue(FilterTextProperty); set => SetValue(FilterTextProperty, value); }
+		public string FilterText { get => (string)GetValue(FilterTextProperty); set => SetValue(FilterTextProperty, value); }
 		public static readonly DependencyProperty FilterTextProperty = DependencyProperty.Register(nameof(FilterText), typeof(string), typeof(PpsMasterDataSelector), new FrameworkPropertyMetadata(new PropertyChangedCallback((sender, e) => ((PpsMasterDataSelector)sender)?.OnConstantsSourceChanged())));
+
+		public string SearchHelp
+		{
+			get
+			{
+				if (ConstantsSource == null)
+					return String.Empty;
+				var ret = "Durchsuchbare Felder :" + Environment.NewLine;
+				foreach (var column in ConstantsSource?.Columns)
+					ret += column.Name + ", ";
+				ret = ret.Substring(0, ret.Length - 2) + ".";
+				return ret;
+			}
+		}
 
 		#endregion
 	} // class PpsMasterDataSelector
