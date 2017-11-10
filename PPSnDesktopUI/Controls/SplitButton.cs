@@ -68,8 +68,7 @@ namespace TecWare.PPSn.Controls
 		{
 			base.OnApplyTemplate();
 
-			var button = this.Template.FindName(PartSplitButton, this) as ButtonBase;
-			if (button != null)
+			if (GetTemplateChild(PartSplitButton) is ButtonBase button)
 				button.Click += (sender, e) => OnDropdown();
 		} // proc OnApplyTemplate
 
