@@ -167,7 +167,7 @@
 							    AllowsTransparency="True" PopupAnimation="Slide">
 							<Grid Name="PART_DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding FrameworkElement.ActualWidth}" MaxHeight="{TemplateBinding ComboBox.MaxDropDownHeight}">
 								<Border Name="PART_DropDownBorder" Background="{TemplateBinding Background}" BorderThickness="1" BorderBrush="{StaticResource PPSnControlFocusedBorderBrush}">
-									<ScrollViewer SnapsToDevicePixels="True" Style="{StaticResource PPSnScrollViewerStyle}" VerticalScrollBarVisibility="Auto">
+									<ScrollViewer SnapsToDevicePixels="True" Style="{DynamicResource PPSnScrollViewerStyle}" VerticalScrollBarVisibility="Auto">
 										<VirtualizingStackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
 									</ScrollViewer>
 								</Border>
@@ -320,7 +320,7 @@
 							<Grid Name="PART_DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding FrameworkElement.ActualWidth}"
 								  MaxHeight="{TemplateBinding ComboBox.MaxDropDownHeight}">
 								<Border Name="PART_DropDownBorder" Background="{TemplateBinding Background}" BorderThickness="1" BorderBrush="{StaticResource PPSnControlFocusedBorderBrush}">
-									<ScrollViewer SnapsToDevicePixels="True" Style="{StaticResource PPSnScrollViewerStyle}" VerticalScrollBarVisibility="Auto">
+									<ScrollViewer SnapsToDevicePixels="True" Style="{DynamicResource PPSnScrollViewerStyle}" VerticalScrollBarVisibility="Auto">
 										<VirtualizingStackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
 									</ScrollViewer>
 								</Border>
@@ -331,4 +331,134 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+
+
+	
+
+	<DataTemplate x:Key="PpsDataSelectorDefaultItemTemplate">
+		<uiC:PpsDataSelectorItemTextBlock
+			VerticalAlignment="Center"
+			BaseText="{Binding Name}"
+			SearchText="{Binding Path=FilterText, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiC:PpsDataSelector}}">
+		</uiC:PpsDataSelectorItemTextBlock>
+	</DataTemplate>
+
+	<DataTemplate x:Key="PpsDataSelectorDefaultSelectedValueTemplate">
+		<TextBlock
+			Text="{Binding Name}"
+			TextWrapping="NoWrap"
+			TextTrimming="CharacterEllipsis">
+		</TextBlock>
+	</DataTemplate>
+
+	<Style TargetType="{x:Type uiC:PpsDataSelector}">
+		<Setter Property="Height" Value="23"/>
+		<Setter Property="VerticalAlignment" Value="Top"/>
+		<Setter Property="SelectedValueTemplate" Value="{StaticResource PpsDataSelectorDefaultSelectedValueTemplate}"/>
+		<Setter Property="ItemTemplate" Value="{StaticResource PpsDataSelectorDefaultItemTemplate}"/>
+		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+		<Setter Property="BorderThickness" Value="1"/>
+		<Setter Property="BorderBrush" Value="{StaticResource PPSnControlNormalBorderBrush}"/>
+		<Setter Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
+		<Setter Property="TextElement.Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+		<Setter Property="SnapsToDevicePixels" Value="True"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type uiC:PpsDataSelector}">
+					<Grid>
+						<ToggleButton x:Name="ToggleDropDownButton"
+									  Template="{DynamicResource PPSnComboBoxToggleButtonTemplate}"
+									  IsChecked="{Binding Path=IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+									  ClickMode="Press"
+									  Focusable="False"
+									  BorderThickness="{TemplateBinding BorderThickness}"
+									  BorderBrush="{TemplateBinding BorderBrush}"
+									  Background="{TemplateBinding Background}" />
+
+						<ContentPresenter x:Name="ContentSite" Content="{Binding Path=SelectedValue, RelativeSource={RelativeSource TemplatedParent}}"
+										  ContentTemplate="{TemplateBinding SelectedValueTemplate}"
+										  IsHitTestVisible="False" Margin="5,3,23,3" HorizontalAlignment="Left" VerticalAlignment="Center" />
+
+						<Button x:Name="ClearButton" Template="{DynamicResource PPSnComboBoxClearButtonTemplate}"
+								Command="{x:Static uiC:PpsDataSelector.ClearSelectionCommand}"
+								HorizontalAlignment="Right" Width="27" Margin="0,2,18,2" Focusable="False" Visibility="Hidden">
+						</Button>
+
+						<Popup x:Name="PART_DropDownPopup" Placement="Bottom" VerticalOffset="1" Focusable="False"
+							   IsOpen="{TemplateBinding IsDropDownOpen}" StaysOpen="False"
+							   MinWidth="{Binding Path=ActualWidth, ElementName=ToggleDropDownButton}" MinHeight="122"
+							   uiC:PpsPopupBehavior.ForceFocus="True"
+							   AllowsTransparency="True" PopupAnimation="Slide" >
+							<Border BorderBrush="{StaticResource PPSnControlFocusedBorderBrush}" BorderThickness="1" Background="{TemplateBinding Background}">
+								<Grid>
+									<Grid.RowDefinitions>
+										<RowDefinition Height="33"/>
+										<RowDefinition/>
+									</Grid.RowDefinitions>
+									<Grid Background="White" HorizontalAlignment="Right" Width="250" Margin="6">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition/>
+											<ColumnDefinition Width="20"/>
+										</Grid.ColumnDefinitions>
+										<TextBox x:Name="PART_SearchTextBox" Grid.Column="0"
+												 BorderThickness="0" Background="Transparent" VerticalAlignment="Stretch" Height="Auto"
+												 MaxLength="128"
+												 Text="{Binding Path=FilterText, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWayToSource, UpdateSourceTrigger=PropertyChanged, Delay=400}"/>
+										<Viewbox Grid.Column="1" Margin="0,0,2,0">
+											<Canvas Width="24" Height="24" Opacity=".65">
+												<Path Data="{DynamicResource magnifyPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}"/>
+											</Canvas>
+										</Viewbox>
+									</Grid>
+									<ListBox x:Name="PART_ItemsListBox" Grid.Row="1" Focusable="False" Background="Transparent"
+											 ItemsSource="{Binding Path=FilteredItemsSource, RelativeSource={RelativeSource TemplatedParent}}"
+											 ItemTemplate="{TemplateBinding ItemTemplate}"
+											 IsSynchronizedWithCurrentItem="True"
+											 Style="{DynamicResource PPSnListBoxStyle}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+										<ListBox.ItemContainerStyle>
+											<Style TargetType="{x:Type ListBoxItem}">
+												<Setter Property="Focusable" Value="False"/>
+												<Setter Property="MinHeight" Value="29"/>
+												<Setter Property="Template">
+													<Setter.Value>
+														<ControlTemplate TargetType="{x:Type ListBoxItem}">
+															<Border x:Name="border" Background="Transparent" Padding="6,0">
+																<ContentPresenter />
+															</Border>
+															<ControlTemplate.Triggers>
+																<Trigger Property="IsSelected" Value="True">
+																	<Setter Property="Background" TargetName="border" Value="{StaticResource PPSnMouseOverBrush}" />
+																</Trigger>
+															</ControlTemplate.Triggers>
+														</ControlTemplate>
+													</Setter.Value>
+												</Setter>
+											</Style>
+										</ListBox.ItemContainerStyle>
+									</ListBox>
+								</Grid>
+							</Border>
+						</Popup>
+					</Grid>
+
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsEnabled" Value="False">
+							<Setter Property="TextElement.Foreground" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
+						</Trigger>
+
+						<Trigger Property="IsReadOnly" Value="True">
+							<Setter TargetName="ToggleDropDownButton" Property="IsEnabled" Value="False"/>
+						</Trigger>
+
+						<Trigger Property="IsEnabled" SourceName="ClearButton" Value="True">
+							<Setter TargetName="ContentSite" Property="Margin" Value="5,3,46,3"/>
+							<Setter TargetName="ClearButton" Property="Visibility" Value="Visible"/>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
 </ResourceDictionary>
