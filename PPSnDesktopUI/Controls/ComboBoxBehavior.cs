@@ -25,7 +25,7 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public static class PpsSelectionChangedBehavior
 	{
-		public static readonly DependencyProperty CommandProperty = DependencyProperty.RegisterAttached("Command", typeof(ICommand), typeof(PpsSelectionChangedBehavior), new FrameworkPropertyMetadata(PropertyChangedCallback));
+		public static readonly DependencyProperty CommandProperty = DependencyProperty.RegisterAttached("Command", typeof(ICommand), typeof(PpsSelectionChangedBehavior), new PropertyMetadata(null, PropertyChangedCallback));
 
 		public static void PropertyChangedCallback(DependencyObject depObj, DependencyPropertyChangedEventArgs args)
 		{
@@ -42,7 +42,10 @@ namespace TecWare.PPSn.Controls
 		private static void SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
 			if (sender is Selector selector && selector.GetValue(CommandProperty) is ICommand command)
-				command.Execute(selector.SelectedItem);
+			{
+				//if(selector.SelectedItem != null)
+					command.Execute(selector.SelectedItem);
+			}
 		} // proc SelectionChanged
 	} // class PpsSelectionChangedBehavior
 
