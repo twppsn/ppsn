@@ -23,7 +23,7 @@ specific language governing permissions and limitations under the Licence.
 	<Color x:Key="PPSnWindowInActiveGlowColor">#60728C</Color>
 	<Color x:Key="PPSnActionButtonColor">#FFF</Color>
 	<Color x:Key="PPSnBlackColor">#000</Color>
-	<Color x:Key="PPSnControlBackgroundColor">#FFF</Color>
+	<Color x:Key="PPSnControlBackgroundColor">#F3F3F3</Color>
 
     <sys:String x:Key="PPSnApplicationTitle">PPSn</sys:String>
 
@@ -38,12 +38,12 @@ specific language governing permissions and limitations under the Licence.
 	<SolidColorBrush x:Key="PPSnAlternation0Brush" Color="#96EDEDED"/>
 	<SolidColorBrush x:Key="PPSnAlternation1Brush" Color="#80F3F3F3"/>
 
-	<SolidColorBrush x:Key="PPSnControlNormalBorderBrush" Color="Black"/>
+	<SolidColorBrush x:Key="PPSnControlNormalBorderBrush" Color="#D4D4D4"/>
 	<SolidColorBrush x:Key="PPSnControlBackgroundBrush" Color="{StaticResource PPSnControlBackgroundColor}"/>
-	<SolidColorBrush x:Key="PPSnControlFocusedBorderBrush" Color="Yellow"/>
+	<SolidColorBrush x:Key="PPSnControlFocusedBorderBrush" Color="#637C36"/>
 	<SolidColorBrush x:Key="PPSnWindowDisabledForegroundBrush" Color="Gray"/>
 
-	<SolidColorBrush x:Key="PPSnMouseOverBrush" Color="Blue"/>
+	<SolidColorBrush x:Key="PPSnMouseOverBrush" Color="#D4D4D4"/>
 	<SolidColorBrush x:Key="PPSnButtonPressedBrush" Color="#323E53"/>
 
 	<SolidColorBrush x:Key="PPSnPopUpBackgroundBrush" Color="DarkBlue"/>
@@ -88,7 +88,7 @@ specific language governing permissions and limitations under the Licence.
 	<Style x:Key="PPSnCircleButtonStyle" TargetType="{x:Type Button}"/>
 	<Style x:Key="PPSnTextBoxStyle" TargetType="{x:Type TextBox}"/>
 
-
+	<ControlTemplate x:Key="PPSnComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}"/>
 
 	<!--fixed styles (no theme)-->
 	<Style x:Key="PPSnSysButtonStyle" TargetType="{x:Type Button}">
