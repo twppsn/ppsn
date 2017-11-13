@@ -15,10 +15,14 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
@@ -1403,6 +1407,298 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 	} // class PpsDataFilterVisitorSql
+
+	#endregion
+
+	#region -- class PpsDataFilterVisitorLambda ---------------------------------------
+
+	/// <summary>Creates a predicate from an filter expression.</summary>
+	/// <typeparam name="T"></typeparam>
+	public abstract class PpsDataFilterVisitorLambda : PpsDataFilterVisitor<Expression>
+	{
+		#region -- class PpsDataFilterVisitorTyped ------------------------------------
+
+		private sealed class PpsDataFilterVisitorTyped : PpsDataFilterVisitorLambda
+		{
+			public PpsDataFilterVisitorTyped(ParameterExpression rowParameter)
+				: base(rowParameter)
+			{
+			} // ctor
+
+			protected override Expression GetProperty(string memberName)
+			{
+				var propertyInfo = CurrentRowParameter.Type.GetRuntimeProperty(memberName)
+					?? throw new ArgumentNullException(nameof(memberName), $"Property {memberName} not declared in type {CurrentRowParameter.Type.Name}.");
+				return Expression.Property(CurrentRowParameter, propertyInfo);
+			} // func GetProperty
+		} // class PpsDataFilterVisitorTyped
+
+		#endregion
+		
+		private readonly ParameterExpression currentRowParameter;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		public PpsDataFilterVisitorLambda(ParameterExpression rowParameter)
+		{
+			this.currentRowParameter = rowParameter ?? throw new ArgumentNullException(nameof(rowParameter));
+		} // ctor
+
+		#endregion
+
+		#region -- CreateXXXXFilter ---------------------------------------------------
+
+		private static Exception CreateCompareException(PpsDataFilterCompareExpression expression)
+			=> new ArgumentOutOfRangeException(nameof(expression.Operator), expression.Operator, $"Operator '{expression.Operator}' is not defined for the value type '{expression.Value.Type}'.");
+
+		public sealed override Expression CreateCompareFilter(PpsDataFilterCompareExpression expression)
+		{
+			ExpressionType GetBinaryExpressionType()
+			{
+				switch (expression.Operator)
+				{
+					case PpsDataFilterCompareOperator.Contains:
+					case PpsDataFilterCompareOperator.Equal:
+						return ExpressionType.Equal;
+					case PpsDataFilterCompareOperator.NotContains:
+					case PpsDataFilterCompareOperator.NotEqual:
+						return ExpressionType.NotEqual;
+					case PpsDataFilterCompareOperator.Greater:
+						return ExpressionType.GreaterThan;
+					case PpsDataFilterCompareOperator.GreaterOrEqual:
+						return ExpressionType.GreaterThanOrEqual;
+					case PpsDataFilterCompareOperator.Lower:
+						return ExpressionType.LessThan;
+					case PpsDataFilterCompareOperator.LowerOrEqual:
+						return ExpressionType.LessThanOrEqual;
+					default:
+						throw CreateCompareException(expression);
+				}
+			} // func GetBinaryExpressionType
+
+			// left site
+			var left = GetProperty(expression.Operand);
+
+			// right site depends of the operator
+			switch (expression.Value.Type)
+			{
+				case PpsDataFilterCompareValueType.Text:
+					{
+						var right = Expression.Constant(((PpsDataFilterCompareTextValue)expression.Value).Text);
+						switch (expression.Operator)
+						{
+							case PpsDataFilterCompareOperator.Contains:
+								return Expression.MakeBinary(ExpressionType.GreaterThanOrEqual, Expression.Call(left, stringIndexOfMethodInfo, right, Expression.Constant(StringComparison.OrdinalIgnoreCase)), Expression.Constant(0));
+							case PpsDataFilterCompareOperator.NotContains:
+								return Expression.MakeBinary(ExpressionType.LessThan, Expression.Call(left, stringIndexOfMethodInfo, right, Expression.Constant(StringComparison.OrdinalIgnoreCase)), Expression.Constant(0));
+							default:
+								return Expression.MakeBinary(GetBinaryExpressionType(), Expression.Call(stringCompareMethodInfo, left, right, Expression.Constant(StringComparison.OrdinalIgnoreCase)), Expression.Constant(0));
+						}
+					}
+				case PpsDataFilterCompareValueType.Integer:
+					{
+						var right = Expression.Constant(((PpsDataFilterCompareIntegerValue)expression.Value).Value);
+						return Expression.MakeBinary(GetBinaryExpressionType(), left, right);
+					}
+				case PpsDataFilterCompareValueType.Number:
+					{
+						var right = Expression.Constant(((PpsDataFilterCompareNumberValue)expression.Value).Text);
+						switch (expression.Operator)
+						{
+							case PpsDataFilterCompareOperator.Contains:
+							//	return column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Trailing);
+							case PpsDataFilterCompareOperator.NotContains:
+								//	return "NOT " + column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Trailing);
+								throw new NotImplementedException();
+
+							default:
+								return Expression.MakeBinary(GetBinaryExpressionType(), Expression.Call(stringCompareMethodInfo, left, right, Expression.Constant(StringComparison.OrdinalIgnoreCase)), Expression.Constant(0));
+						}
+					}
+				case PpsDataFilterCompareValueType.Null:
+					{
+						switch (expression.Operator)
+						{
+							case PpsDataFilterCompareOperator.Contains:
+							case PpsDataFilterCompareOperator.Equal:
+								return Expression.MakeBinary(ExpressionType.Equal, left, Expression.Default(left.Type));
+							case PpsDataFilterCompareOperator.NotContains:
+							case PpsDataFilterCompareOperator.NotEqual:
+								return Expression.MakeBinary(ExpressionType.NotEqual, left, Expression.Default(left.Type));
+							case PpsDataFilterCompareOperator.Greater:
+							case PpsDataFilterCompareOperator.GreaterOrEqual:
+							case PpsDataFilterCompareOperator.Lower:
+							case PpsDataFilterCompareOperator.LowerOrEqual:
+								return Expression.Constant(false);
+							default:
+								throw CreateCompareException(expression);
+						}
+
+						throw new NotImplementedException();
+					}
+				case PpsDataFilterCompareValueType.Date:
+					{
+						var a = (PpsDataFilterCompareDateValue)expression.Value;
+						switch (expression.Operator)
+						{
+							case PpsDataFilterCompareOperator.Contains:
+							case PpsDataFilterCompareOperator.Equal:
+								return Expression.AndAlso(Expression.MakeBinary(ExpressionType.GreaterThanOrEqual, left, Expression.Constant(a.From)), Expression.MakeBinary(ExpressionType.LessThanOrEqual, left, Expression.Constant(a.To)));
+							case PpsDataFilterCompareOperator.NotContains:
+							case PpsDataFilterCompareOperator.NotEqual:
+								return Expression.AndAlso(Expression.MakeBinary(ExpressionType.LessThan, left, Expression.Constant(a.From)), Expression.MakeBinary(ExpressionType.GreaterThan, left, Expression.Constant(a.To)));
+							case PpsDataFilterCompareOperator.Greater:
+								return Expression.MakeBinary(ExpressionType.GreaterThan, left, Expression.Constant(a.To));
+							case PpsDataFilterCompareOperator.GreaterOrEqual:
+								return Expression.MakeBinary(ExpressionType.GreaterThanOrEqual, left, Expression.Constant(a.From));
+							case PpsDataFilterCompareOperator.Lower:
+								return Expression.MakeBinary(ExpressionType.LessThan, left, Expression.Constant(a.From));
+							case PpsDataFilterCompareOperator.LowerOrEqual:
+								return Expression.MakeBinary(ExpressionType.LessThanOrEqual, left, Expression.Constant(a.To));
+							default:
+								throw CreateCompareException(expression);
+						}
+					}
+				default:
+					throw CreateCompareException(expression);
+			}
+		} // func CreateCompareFilter
+
+		public sealed override Expression CreateLogicFilter(PpsDataFilterExpressionType method, IEnumerable<Expression> arguments)
+		{
+			var expr = (Expression)null;
+			bool negResult;
+			ExpressionType type;
+			switch (method)
+			{
+				case PpsDataFilterExpressionType.And:
+					type = ExpressionType.AndAlso;
+					negResult = false;
+					break;
+				case PpsDataFilterExpressionType.NAnd:
+					type = ExpressionType.AndAlso;
+					negResult = true;
+					break;
+
+				case PpsDataFilterExpressionType.Or:
+					type = ExpressionType.OrElse;
+					negResult = false;
+					break;
+				case PpsDataFilterExpressionType.NOr:
+					type = ExpressionType.OrElse;
+					negResult = true;
+					break;
+
+				default:
+					throw new ArgumentOutOfRangeException(nameof(method), method, "Invalid operation.");
+			}
+
+			foreach (var a in arguments)
+			{
+				if (expr == null)
+					expr = a;
+				else
+					expr = Expression.MakeBinary(type, expr, a);
+			}
+
+			if (negResult)
+				expr = Expression.Not(expr);
+
+			return expr;
+		} // func CreateLogicFilter
+
+		public sealed override Expression CreateNativeFilter(PpsDataFilterNativeExpression expression)
+			=> throw new NotSupportedException();
+
+		public sealed override Expression CreateTrueFilter()
+			=> Expression.Constant(true);
+
+		#endregion
+
+		protected abstract Expression GetProperty(string memberName);
+
+		/// <summary>Row place holder</summary>
+		public ParameterExpression CurrentRowParameter => currentRowParameter;
+
+		private static readonly MethodInfo stringIndexOfMethodInfo;
+		private static readonly MethodInfo stringCompareMethodInfo;
+
+		static PpsDataFilterVisitorLambda()
+		{
+			stringIndexOfMethodInfo = typeof(string).GetMethod(nameof(String.IndexOf), new Type[] { typeof(string), typeof(StringComparison) });
+			stringCompareMethodInfo = typeof(string).GetMethod(nameof(String.Compare), new Type[] { typeof(string), typeof(string), typeof(StringComparison) });
+		} // stor
+
+		public static Predicate<T> CompileTypedFilter<T>(PpsDataFilterExpression expression)
+		{
+			var filterVisitor = new PpsDataFilterVisitorTyped(ParameterExpression.Parameter(typeof(T)));
+			var filterExpr = filterVisitor.CreateFilter(expression);
+			return LambdaExpression.Lambda<Predicate<T>>(filterExpr, filterVisitor.CurrentRowParameter).Compile();
+		} // func CompileTypedFilter
+
+	} // class PpsDataFilterVisitorLambda
+
+	#endregion
+
+	#region -- class PpsDataFilterVisitorDataRow --------------------------------------
+
+	/// <summary></summary>
+	public sealed class PpsDataFilterVisitorDataRow : PpsDataFilterVisitorLambda
+	{
+		private readonly IDataColumns columns;
+
+		public PpsDataFilterVisitorDataRow(ParameterExpression rowParameter, IDataColumns columns = null)
+			: base(rowParameter)
+		{
+			if (rowParameter.Type != typeof(IDataRow))
+				throw new ArgumentOutOfRangeException(nameof(rowParameter));
+
+			this.columns = columns;
+		} // ctor
+
+		protected override Expression GetProperty(string memberName)
+		{
+			if (columns == null)
+			{
+				return Expression.MakeIndex(CurrentRowParameter, dataRowIndexName,
+					new Expression[]
+					{
+						Expression.Constant(memberName),
+						Expression.Constant(true)
+					}
+				);
+			}
+			else
+			{
+				var index = columns.FindColumnIndex(memberName);
+				if (index == -1)
+					return Expression.Constant(null, typeof(object));
+				else
+				{
+					// todo: cast to nullable type?
+					return Expression.MakeIndex(CurrentRowParameter, dataRowIndexInt, new Expression[] { Expression.Constant(index) });
+				}
+			}
+		} // func GetProperty
+
+		private static PropertyInfo dataRowIndexInt;
+		private static PropertyInfo dataRowIndexName;
+
+		static PpsDataFilterVisitorDataRow()
+		{
+			foreach(var c in typeof(IDataRow).GetTypeInfo().DeclaredProperties.Where(c => c.Name == "Item"))
+			{
+				var pi = c.GetIndexParameters();
+				if (pi.Length == 2 && pi[0].ParameterType == typeof(string) && pi[1].ParameterType == typeof(bool))
+					dataRowIndexName = c;
+				else if (pi.Length == 1 && pi[0].ParameterType == typeof(int))
+					dataRowIndexInt = c;
+			}
+
+			if (dataRowIndexName == null || dataRowIndexInt == null)
+				throw new ArgumentException();
+		} // ctor
+	} // class PpsDataFilterVisitorDataRow
 
 	#endregion
 
