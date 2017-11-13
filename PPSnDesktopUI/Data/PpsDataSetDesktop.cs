@@ -17,10 +17,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
@@ -372,15 +375,14 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataCollectionView ----------------------------------------------
+	#region -- class PpsDataCollectionView --------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public class PpsDataCollectionView : ListCollectionView
+	/// <summary>Special collection view for PpsDataTable</summary>
+	public class PpsDataCollectionView : ListCollectionView, IDataRowEnumerable
 	{
 		private readonly IDisposable detachView;
 
-		public PpsDataCollectionView(IPpsDataView dataTable) 
+		public PpsDataCollectionView(IPpsDataView dataTable)
 			: base(dataTable)
 		{
 			this.detachView = dataTable as IDisposable;
@@ -409,6 +411,44 @@ namespace TecWare.PPSn.Data
 				CommitEdit();
 		} // proc OnCollectionChanged
 
+		public IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
+		{
+			// update search expression
+			SortDescriptions.Clear();
+			foreach (var expr in expressions)
+				SortDescriptions.Add(new SortDescription(expr.Identifier, expr.Negate ? ListSortDirection.Descending : ListSortDirection.Ascending));
+
+			RefreshOrDefer();
+			
+			return this; // we do not create a new collectionview -> it should be unique for the current context
+		} // func ApplyFilter
+
+		public IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
+		{
+			var currentParameter = ParameterExpression.Parameter(typeof(object), "#current");
+			var rowParameter = Expression.Variable(typeof(IDataRow), "#row");
+			var filterExpr = new PpsDataFilterVisitorDataRow(rowParameter, InternalList as IPpsDataView).CreateFilter(expression);
+
+			var predicateExpr = Expression.Lambda<Predicate<object>>(
+				Expression.Block(typeof(bool),
+					new ParameterExpression[] { rowParameter },
+					Expression.Assign(rowParameter, Expression.Convert(currentParameter, typeof(IDataRow))),
+					filterExpr
+				),
+				currentParameter
+			);
+			
+			this.Filter = predicateExpr.Compile();
+
+			return this; // we do not create a new collectionview -> it should be unique for the current context
+		} // func ApplyFilter
+
+		public IDataRowEnumerable ApplyColumns(IEnumerable<PpsDataColumnExpression> columns) 
+			=> throw new NotSupportedException(); // it is not allowed to touch columns
+
+		IEnumerator<IDataRow> IEnumerable<IDataRow>.GetEnumerator()
+			=> this.Cast<IDataRow>().GetEnumerator();
+
 		public PpsDataRow Parent => (InternalList as PpsDataRelatedFilter)?.Parent;
 
 		public IPpsDataView DataView => (IPpsDataView)base.SourceCollection;
@@ -416,9 +456,8 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataRelatedFilterDesktop ----------------------------------------
+	#region -- class PpsDataRelatedFilterDesktop --------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public sealed class PpsDataRelatedFilterDesktop : PpsDataRelatedFilter, ICollectionViewFactory
 	{

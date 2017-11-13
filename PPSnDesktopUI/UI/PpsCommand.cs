@@ -295,7 +295,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsCommandOrderConverter -------------------------------------------
+	#region -- class PpsCommandOrderConverter -----------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
