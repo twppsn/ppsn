@@ -269,7 +269,8 @@ namespace TecWare.PPSn.Server
 
 		private void CheckRevision()
 		{
-			if (isRev.HasValue)
+			if (isRev.HasValue
+				|| IsNew)
 				return;
 
 			// get head rev.
@@ -936,7 +937,7 @@ namespace TecWare.PPSn.Server
 			get
 			{
 				CheckRevision();
-				return isRev.Value;
+				return isRev ?? false;
 			}
 			set
 			{
