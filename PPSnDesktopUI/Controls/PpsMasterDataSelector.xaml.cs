@@ -35,13 +35,21 @@ namespace TecWare.PPSn.Controls
 	{
 		#region -- Constants ----------------------------------------------------------
 
-		private const string defaultTemplate = "<DataTemplate xmlns:local=\"clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI\">" +
-												"	<local:SearchHighlightTextBlock" +
-												"		Width=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ListBox}, Path=ActualWidth}\"" +
-												"		BaseText=\"{Binding <DisplayMemberName/>}\"" +
-												"		SearchText=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=FilterText}\"/>" +
-												"</DataTemplate>";
+
 		private const double refreshHoldOff = 400;
+
+		private List<String> columns;
+		private string Inserter()
+		{
+			var ret = "<DataTemplate xmlns:local=\"clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI\"><StackPanel Orientation=\"Horizontal\">";
+
+			ret += "<local:SearchHighlightTextBlock BaseText=\"{Binding <DisplayMemberName/>}\" SearchText=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=FilterText}\"/>";
+			if (columns?.Count > 0)
+				foreach (var col in columns)
+					if (col != DisplayMemberPath) ret += "<TextBlock Margin=\"5,0,0,0\">" + col + ": </TextBlock><local:SearchHighlightTextBlock BaseText=\"{Binding " + col + "}\" SearchText=\"{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=FilterText}\"/>";
+			ret += "</StackPanel></DataTemplate>";
+			return ret;
+		}
 
 		#endregion
 
@@ -126,6 +134,18 @@ namespace TecWare.PPSn.Controls
 				searchBreaker.Elapsed += (sender, e) =>
 				{
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("FilteredList"));
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("SearchHelp"));
+					PpsDataFilterExpression filter = null;
+					Dispatcher.Invoke(() => filter = PpsDataFilterExpression.Parse(FilterText));
+
+					var s = GetOperands(filter);
+
+					if (columns == null || columns != s.ToList())
+					{
+						columns = s.ToList();
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ListTemplate)));
+					}
+
 					searchBreaker = null;
 				};
 				searchBreaker.Start();
@@ -134,6 +154,20 @@ namespace TecWare.PPSn.Controls
 			{
 				searchBreaker.Interval = refreshHoldOff;
 			}
+		}
+
+		private IEnumerable<string> GetOperands(PpsDataFilterExpression filter)
+		{
+
+			if (filter is PpsDataFilterCompareExpression compare)
+				return new List<string>() { compare.Operand };
+
+			var ret = new List<string>();
+			if (filter is PpsDataFilterLogicExpression logic)
+				foreach (var sub in logic.Arguments)
+					ret.AddRange(GetOperands(sub));
+
+			return ret.Distinct();
 		}
 
 		#endregion
@@ -186,12 +220,25 @@ namespace TecWare.PPSn.Controls
 		/// <summary>If a string is passed it is parsed as a DataTemplate for the ListItems</summary>
 		public string ListTemplateString { get => (string)GetValue(ListTemplateStringProperty); set { SetValue(ListTemplateStringProperty, value); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ListTemplate))); } }
 		public static readonly DependencyProperty ListTemplateStringProperty = DependencyProperty.Register(nameof(ListTemplateString), typeof(string), typeof(PpsMasterDataSelector));
-		public DataTemplate ListTemplate => (DataTemplate)XamlReader.Parse(!String.IsNullOrEmpty(ListTemplateString) ? ListTemplateString : defaultTemplate.Replace("<DisplayMemberName/>", DisplayMemberPath), GetDefaultContext());
+		public DataTemplate ListTemplate => (DataTemplate)XamlReader.Parse(!String.IsNullOrEmpty(ListTemplateString) ? ListTemplateString : Inserter().Replace("<DisplayMemberName/>", DisplayMemberPath), GetDefaultContext());
 
 		/// <summary>Current searchstring</summary>
-		public string FilterText
-		{ get => (string)GetValue(FilterTextProperty); set => SetValue(FilterTextProperty, value); }
+		public string FilterText { get => (string)GetValue(FilterTextProperty); set => SetValue(FilterTextProperty, value); }
 		public static readonly DependencyProperty FilterTextProperty = DependencyProperty.Register(nameof(FilterText), typeof(string), typeof(PpsMasterDataSelector), new FrameworkPropertyMetadata(new PropertyChangedCallback((sender, e) => ((PpsMasterDataSelector)sender)?.OnConstantsSourceChanged())));
+
+		public string SearchHelp
+		{
+			get
+			{
+				if (ConstantsSource == null)
+					return String.Empty;
+				var ret = "Durchsuchbare Felder :" + Environment.NewLine;
+				foreach (var column in ConstantsSource?.Columns)
+					ret += column.Name + ", ";
+				ret = ret.Substring(0, ret.Length - 2) + ".";
+				return ret;
+			}
+		}
 
 		#endregion
 	} // class PpsMasterDataSelector
@@ -201,6 +248,20 @@ namespace TecWare.PPSn.Controls
 	/// <summary>This TextBox enables highlighting parts of the Text - BaseText is the input text, SearchText is the whitespace-separated list of keywords</summary>
 	public class SearchHighlightTextBlock : TextBlock
 	{
+		private static List<string> GetOperators(PpsDataFilterExpression filter)
+		{
+
+			if (filter is PpsDataFilterCompareExpression compare)
+				return new List<string>() { compare.Value.ToString() };
+
+			var ret = new List<string>();
+			if (filter is PpsDataFilterLogicExpression logic)
+				foreach (var sub in logic.Arguments)
+					ret.AddRange(GetOperators(sub));
+
+			return ret.Distinct().ToList();
+		}
+
 		#region -- Events -------------------------------------------------------------
 
 		private static void OnDataChanged(DependencyObject source,
@@ -211,7 +272,7 @@ namespace TecWare.PPSn.Controls
 				return;
 			textBlock.Inlines.Clear();
 
-			textBlock.Inlines.AddRange(HighlightSearch(textBlock.BaseText, textBlock.SearchText, (t) => new Bold(new Italic(t))));
+			textBlock.Inlines.AddRange(HighlightSearch(textBlock.BaseText, GetOperators(PpsDataFilterExpression.Parse(textBlock.SearchText)), (t) => new Bold(new Italic(t))));
 		}
 
 		#endregion
@@ -231,11 +292,11 @@ namespace TecWare.PPSn.Controls
 		/// <param name="Searchtext">Whitespace-separated list of keywords</param>
 		/// <param name="Highlight">Function to Highlight, p.e. ''(t) => new Bold(new Italic(t))''</param>
 		/// <returns>List of Inlines</returns>
-		private static IEnumerable<Inline> HighlightSearch(string Text, string Searchtext, Func<Inline, Inline> Highlight)
+		private static IEnumerable<Inline> HighlightSearch(string Text, List<string> Searchtext, Func<Inline, Inline> Highlight)
 		{
 			var result = new List<Inline>();
 
-			if (String.IsNullOrWhiteSpace(Searchtext))
+			if (Searchtext.Count == 0)
 			{
 				// no searchstring - the whole Text is returned unaltered
 				result.Add(new Run(Text));
@@ -243,22 +304,23 @@ namespace TecWare.PPSn.Controls
 			}
 
 			var i = 0;
-			var searchtexts = Searchtext.Trim(' ').Split(' ');
-			while (i < searchtexts.Count())
-			{
-				// iterate through all search filters
-				var idx = Text.IndexOf(searchtexts[i], StringComparison.CurrentCultureIgnoreCase);
-				if (idx >= 0)
+			//var searchtexts = Searchtext.Trim(' ').Split(' ');
+			foreach (var st in Searchtext)
+				if (!String.IsNullOrEmpty(st))
 				{
-					// recurse in the part before and after the found text and concatenate the searchstring bold
-					result.AddRange(HighlightSearch(Text.Substring(0, idx), Searchtext, Highlight));
-					//ret.Add((Inline)Activator.CreateInstance(Highlight, new Run(Text.Substring(idx, searchtexts[i].Length))));
-					result.Add(Highlight(new Run(Text.Substring(idx, searchtexts[i].Length))));
-					result.AddRange(HighlightSearch(Text.Substring(idx + searchtexts[i].Length), Searchtext, Highlight));
-					return result;
+					// iterate through all search filters
+					var idx = Text.IndexOf(st, StringComparison.CurrentCultureIgnoreCase);
+					if (idx >= 0)
+					{
+						// recurse in the part before and after the found text and concatenate the searchstring bold
+						result.AddRange(HighlightSearch(Text.Substring(0, idx), Searchtext, Highlight));
+						//ret.Add((Inline)Activator.CreateInstance(Highlight, new Run(Text.Substring(idx, searchtexts[i].Length))));
+						result.Add(Highlight(new Run(Text.Substring(idx, st.Length))));
+						result.AddRange(HighlightSearch(Text.Substring(idx + st.Length), Searchtext, Highlight));
+						return result;
+					}
+					i++;
 				}
-				i++;
-			}
 
 			// end of recursion - no search string found in substring
 			result.Add(new Run(Text));
