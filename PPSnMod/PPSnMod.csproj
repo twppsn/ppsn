@@ -53,9 +53,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\PPSnCore\PPSnCore\Data\DbRowEnumerator.cs">
-      <Link>Data\DbRowEnumerator.cs</Link>
-    </Compile>
     <Compile Include="Data\Contracts.cs" />
     <Compile Include="Data\PpsDataSetServer.cs" />
     <Compile Include="Data\PpsDataSynchronization.cs" />
