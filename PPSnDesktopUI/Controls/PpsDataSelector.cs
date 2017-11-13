@@ -136,11 +136,13 @@ namespace TecWare.PPSn.Controls
 
 			if (isopen)
 			{
+				selector.Items.CurrentChanged += selector.Items_CurrentChanged;
 				selector.SetAnchorItem();
 				Mouse.Capture(selector, CaptureMode.SubTree);
 			}
 			else
 			{
+				selector.Items.CurrentChanged -= selector.Items_CurrentChanged;
 				// leave clean
 				selector.ClearFilter();
 
@@ -199,9 +201,13 @@ namespace TecWare.PPSn.Controls
 		{
 			if (Items.Count == 0)
 				return;
+
 			var item = SelectedValue ?? Items.GetItemAt(0);
-			if (Items.MoveCurrentTo(item))
-				itemsListBox.ScrollIntoView(item);
+			Items.MoveCurrentTo(item);
+
+			// clear selection?
+			if (SelectedValue == null)
+				Items.MoveCurrentToPosition(-1);
 		} // proc SetAnchorItem
 
 		private void ApplySelectedItem()
@@ -209,6 +215,12 @@ namespace TecWare.PPSn.Controls
 			if (Items.CurrentItem is IDataRow item)
 				CommitValue(item);
 		} // proc ApplySelectedItem
+
+		private void Items_CurrentChanged(object sender, EventArgs e)
+		{
+			if (Items.CurrentItem is IDataRow item)
+				itemsListBox.ScrollIntoView(item);
+		} // event Items_CurrentChanged
 
 		private void Navigate(FocusNavigationDirection direction)
 		{
@@ -219,8 +231,8 @@ namespace TecWare.PPSn.Controls
 			var curPos = Items.CurrentPosition;
 			var newPos = CalculateNewPos(curPos, items, direction);
 
-			if (newPos != curPos && Items.MoveCurrentToPosition(newPos))
-				itemsListBox.ScrollIntoView(Items.CurrentItem);
+			if (newPos != curPos)
+				Items.MoveCurrentToPosition(newPos);
 		} // proc Navigate
 
 		private void ImmediateSelect(FocusNavigationDirection direction)
@@ -408,7 +420,7 @@ namespace TecWare.PPSn.Controls
 					}
 					break;
 				case Key.Home:
-					if ((e.KeyboardDevice.Modifiers & ModifierKeys.Alt) != ModifierKeys.Alt)
+					if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
 					{
 						e.Handled = true;
 						if (IsDropDownOpen)
@@ -418,7 +430,7 @@ namespace TecWare.PPSn.Controls
 					}
 					break;
 				case Key.End:
-					if ((e.KeyboardDevice.Modifiers & ModifierKeys.Alt) != ModifierKeys.Alt)
+					if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
 					{
 						e.Handled = true;
 						if (IsDropDownOpen)
@@ -488,8 +500,6 @@ namespace TecWare.PPSn.Controls
 		public bool IsNullable { get => (bool)GetValue(IsNullableProperty); set => SetValue(IsNullableProperty, value); }
 
 	} // class PpsDataSelector
-
-
 
 	#region -- class PpsDataSelectorItemTextBlock -------------------------------------
 
