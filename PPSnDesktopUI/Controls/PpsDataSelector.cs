@@ -518,6 +518,20 @@ namespace TecWare.PPSn.Controls
 			IsHitTestVisible = false;
 		} // ctor
 
+		private static List<string> GetOperators(PpsDataFilterExpression filter)
+		{
+
+			if (filter is PpsDataFilterCompareExpression compare)
+				return new List<string>() { compare.Value.ToString() };
+
+			var ret = new List<string>();
+			if (filter is PpsDataFilterLogicExpression logic)
+				foreach (var sub in logic.Arguments)
+					ret.AddRange(GetOperators(sub));
+
+			return ret.Distinct().ToList();
+		} // func GetOperators
+
 		private static void OnDataChanged(DependencyObject source, DependencyPropertyChangedEventArgs e)
 		{
 			var textBlock = (PpsDataSelectorItemTextBlock)source;
@@ -525,41 +539,41 @@ namespace TecWare.PPSn.Controls
 				return;
 
 			textBlock.Inlines.Clear();
-			textBlock.Inlines.AddRange(HighlightSearch(textBlock.BaseText, textBlock.SearchText, (t) => new Bold(new Italic(t))));
-		}
+			textBlock.Inlines.AddRange(HighlightSearch(textBlock.BaseText, GetOperators(PpsDataFilterExpression.Parse(textBlock.SearchText)), (t) => new Bold(new Italic(t))));
+		} // event OnDataChanged
 
 		/// <summary>This function Highlights parts of a string.</summary>
 		/// <param name="Text">Input text to format</param>
 		/// <param name="Searchtext">Whitespace-separated list of keywords</param>
 		/// <param name="Highlight">Function to Highlight, p.e. ''(t) => new Bold(new Italic(t))''</param>
 		/// <returns>List of Inlines</returns>
-		private static IEnumerable<Inline> HighlightSearch(string Text, string Searchtext, Func<Inline, Inline> Highlight)
+		private static IEnumerable<Inline> HighlightSearch(string Text, List<string> Searchtext, Func<Inline, Inline> Highlight)
 		{
 			var result = new List<Inline>();
 
-			if (String.IsNullOrWhiteSpace(Searchtext))
+			if (Searchtext.Count == 0)
 			{
 				// no searchstring - the whole Text is returned unaltered
 				result.Add(new Run(Text));
 				return result;
 			}
 
-			var i = 0;
-			var searchtexts = Searchtext.Trim(' ').Split(' ');
-			while (i < searchtexts.Count())
-			{
-				// iterate through all search filters
-				var idx = Text.IndexOf(searchtexts[i], StringComparison.CurrentCultureIgnoreCase);
-				if (idx >= 0)
+			//var searchtexts = Searchtext.Trim(' ').Split(' ');
+			foreach (var st in Searchtext)
+				if (!String.IsNullOrEmpty(st))
 				{
-					// recurse in the part before and after the found text and concatenate the searchstring bold
-					result.AddRange(HighlightSearch(Text.Substring(0, idx), Searchtext, Highlight));
-					result.Add(Highlight(new Run(Text.Substring(idx, searchtexts[i].Length))));
-					result.AddRange(HighlightSearch(Text.Substring(idx + searchtexts[i].Length), Searchtext, Highlight));
-					return result;
+					// iterate through all search filters
+					var idx = Text.IndexOf(st, StringComparison.CurrentCultureIgnoreCase);
+					if (idx >= 0)
+					{
+						// recurse in the part before and after the found text and concatenate the searchstring bold
+						result.AddRange(HighlightSearch(Text.Substring(0, idx), Searchtext, Highlight));
+						result.Add(Highlight(new Run(Text.Substring(idx, st.Length))));
+						result.AddRange(HighlightSearch(Text.Substring(idx + st.Length), Searchtext, Highlight));
+						return result;
+					}
 				}
-				i++;
-			}
+
 			// end of recursion - no search string found in substring
 			result.Add(new Run(Text));
 			return result;
@@ -571,8 +585,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Original Unformatted Text </summary>
 		public String BaseText { get => (string)GetValue(BaseTextProperty); set => SetValue(BaseTextProperty, value); }
 
-	} // class PpsDataSelectorItemTextBlock
+	} // class SearchHighlightTextBox
 
 	#endregion
-
 }
