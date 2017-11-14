@@ -554,7 +554,7 @@ namespace TecWare.PPSn.Controls
 				return;
 
 			textBlock.Inlines.Clear();
-			textBlock.Inlines.AddRange(HighlightSearch(textBlock.BaseText, GetOperators(PpsDataFilterExpression.Parse(textBlock.SearchText)), (t) => new Bold(new Italic(t))));
+			textBlock.Inlines.AddRange(HighlightSearch(textBlock.BaseText, GetOperators(PpsDataFilterExpression.Parse(textBlock.SearchText)), (t) => new Bold(new Italic(new Run(t)))));
 		} // event OnDataChanged
 
 		/// <summary>This function Highlights parts of a string.</summary>
@@ -562,35 +562,50 @@ namespace TecWare.PPSn.Controls
 		/// <param name="Searchtext">Whitespace-separated list of keywords</param>
 		/// <param name="Highlight">Function to Highlight, p.e. ''(t) => new Bold(new Italic(t))''</param>
 		/// <returns>List of Inlines</returns>
-		private static IEnumerable<Inline> HighlightSearch(string Text, List<string> Searchtext, Func<Inline, Inline> Highlight)
+		private static IEnumerable<Inline> HighlightSearch(string Text, List<string> Searchtext, Func<string, Inline> Highlight)
 		{
 			var result = new List<Inline>();
 
-			if (Searchtext.Count == 0)
+			// mark is the array of characters to highlight
+			var mark = new bool[Text.Length];
+			mark.Initialize();  // play save
+
+			// finf every searchitem
+			foreach (var high in Searchtext.Where((s) => s.Length > 1))
 			{
-				// no searchstring - the whole Text is returned unaltered
+				var start = Text.IndexOf(high, StringComparison.OrdinalIgnoreCase);
+				// find every occurence
+				while (start >= 0)
+				{
+					for (var j = 0; j < high.Length; j++)
+						mark[start + j] = true;
+					start = Text.IndexOf(high, start + 1, StringComparison.OrdinalIgnoreCase);
+				}
+			}
+
+			if (!mark.Contains(true))
+			{
+				// nothing is highlighted - should only happen if nothing is searched for, thus showing the whole list
 				result.Add(new Run(Text));
 				return result;
 			}
 
-			//var searchtexts = Searchtext.Trim(' ').Split(' ');
-			foreach (var st in Searchtext)
-				if (!String.IsNullOrEmpty(st))
-				{
-					// iterate through all search filters
-					var idx = Text.IndexOf(st, StringComparison.CurrentCultureIgnoreCase);
-					if (idx >= 0)
-					{
-						// recurse in the part before and after the found text and concatenate the searchstring bold
-						result.AddRange(HighlightSearch(Text.Substring(0, idx), Searchtext, Highlight));
-						result.Add(Highlight(new Run(Text.Substring(idx, st.Length))));
-						result.AddRange(HighlightSearch(Text.Substring(idx + st.Length), Searchtext, Highlight));
-						return result;
-					}
-				}
-
-			// end of recursion - no search string found in substring
-			result.Add(new Run(Text));
+			var i = 0;
+			// marks if the first character is highlighted or not
+			var highlighting = mark[0];
+			// create new output inlines
+			while (i < mark.Length)
+			{
+				var stop = mark.ToList().IndexOf(!highlighting, i);
+				if (stop < 0)
+					stop = mark.Length;
+				if (highlighting)
+					result.Add(Highlight(Text.Substring(i, stop - i)));
+				else
+					result.Add(new Run(Text.Substring(i, stop - i)));
+				highlighting = !highlighting;
+				i = stop;
+			}
 			return result;
 		} // func HighlightSearch
 
