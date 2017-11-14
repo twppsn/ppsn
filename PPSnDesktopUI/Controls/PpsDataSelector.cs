@@ -476,7 +476,7 @@ namespace TecWare.PPSn.Controls
 					}
 					break;
 				case Key.Delete:
-					if(IsClearSelectionAllowed)
+					if (IsClearSelectionAllowed)
 					{
 						e.Handled = true;
 						ClearSelection();
@@ -533,16 +533,17 @@ namespace TecWare.PPSn.Controls
 			IsHitTestVisible = false;
 		} // ctor
 
-		private static List<string> GetOperators(PpsDataFilterExpression filter)
+		private static List<string> GetPositiveOperators(PpsDataFilterExpression filter)
 		{
-
-			if (filter is PpsDataFilterCompareExpression compare)
+			// if operator is < > ! != it shouldn't be highlighted ( shouldn't be shown anyhow )
+			if (filter is PpsDataFilterCompareExpression compare && (compare.Operator == PpsDataFilterCompareOperator.Contains ||
+																	 compare.Operator == PpsDataFilterCompareOperator.Equal))
 				return new List<string>() { compare.Value.ToString() };
 
 			var ret = new List<string>();
 			if (filter is PpsDataFilterLogicExpression logic)
 				foreach (var sub in logic.Arguments)
-					ret.AddRange(GetOperators(sub));
+					ret.AddRange(GetPositiveOperators(sub));
 
 			return ret.Distinct().ToList();
 		} // func GetOperators
@@ -554,7 +555,7 @@ namespace TecWare.PPSn.Controls
 				return;
 
 			textBlock.Inlines.Clear();
-			textBlock.Inlines.AddRange(HighlightSearch(textBlock.BaseText, GetOperators(PpsDataFilterExpression.Parse(textBlock.SearchText)), (t) => new Bold(new Italic(new Run(t)))));
+			textBlock.Inlines.AddRange(HighlightSearch(textBlock.BaseText, GetPositiveOperators(PpsDataFilterExpression.Parse(textBlock.SearchText)), (t) => new Bold(new Italic(new Run(t)))));
 		} // event OnDataChanged
 
 		/// <summary>This function Highlights parts of a string.</summary>
