@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -83,7 +84,7 @@ namespace TecWare.PPSn.UI
 	/// <summary>We define a routed command to get the ExecutedEvent,CanExecuteEvent in the root control. The result is we get the command source for free, the drawback is we need to catch the event in the root and call the ExecuteCommand method.</summary>
 	public abstract class PpsCommandBase : RoutedCommand
 	{
-		public static readonly DependencyProperty AsyncCommandIsRunningProperty = DependencyProperty.RegisterAttached("AsyncCommandIsRunning", typeof(PpsCommandBase), typeof(PpsCommandBase), new PropertyMetadata(null));
+		public static readonly DependencyProperty AsyncCommandIsRunningProperty = DependencyProperty.RegisterAttached("AsyncCommandIsRunning", typeof(List<PpsCommandBase>), typeof(PpsCommandBase), new FrameworkPropertyMetadata(null));
 
 		protected PpsCommandBase()
 			: base()
@@ -100,28 +101,38 @@ namespace TecWare.PPSn.UI
 		{
 		} // ctor
 
-		public static void SetAsyncCommandIsRunning(UIElement element, PpsCommandBase value)
-			=> element.SetValue(AsyncCommandIsRunningProperty, value);
+		public static List<PpsCommandBase> GetAsyncCommandIsRunning(UIElement element)
+			=> (List<PpsCommandBase>)element.GetValue(AsyncCommandIsRunningProperty);
 
-		public static PpsCommandBase GetAsyncCommandIsRunning(UIElement element)
-			=> (PpsCommandBase)element.GetValue(AsyncCommandIsRunningProperty);
-
-		protected void SetTargetState(object target, bool isExecuting)
+		protected void SetIsRunning(object target, bool isRunning)
 		{
 			if (target is UIElement element)
 			{
-				var currentCommand = GetAsyncCommandIsRunning(element);
-				if (currentCommand != null && currentCommand != this)
-					throw new InvalidOperationException();
+				var runningCommandList = GetAsyncCommandIsRunning(element);
+				if (isRunning)
+				{
+					if (runningCommandList != null
+						&& runningCommandList.Contains(this))
+						throw new ArgumentException("Command is currently running.");
 
-				SetAsyncCommandIsRunning(element, isExecuting ? this : null);
+					// set command list
+					if (runningCommandList == null)
+					{
+						runningCommandList = new List<PpsCommandBase>();
+						element.SetValue(AsyncCommandIsRunningProperty, runningCommandList);
+					}
+
+					runningCommandList.Add(this);
+				}
+				else if (runningCommandList != null)
+					runningCommandList.Remove(this);
 			}
 			else
 				throw new ArgumentException("target must be an UIElement");
-		} // proc SetTargetState
+		} // proc SetRunningState
 
-		protected bool GetTargetState(object target)
-			=> target is UIElement element ? GetAsyncCommandIsRunning(element) == this : throw new ArgumentException("target must be an UIElement");
+		protected bool GetIsRunning(object target)
+			=> target is UIElement element ? GetAsyncCommandIsRunning(element)?.Contains(this) ?? false : throw new ArgumentException("target must be an UIElement");
 
 		public virtual bool CanExecuteCommand(PpsCommandContext commandContext) 
 			=> true;
@@ -189,7 +200,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsCommand ---------------------------------------------------------
+	#region -- class PpsCommand -------------------------------------------------------
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Implements a command that can call a delegate. This command
@@ -220,22 +231,25 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Command Member -------------------------------------------------------
+		#region -- Command Member -----------------------------------------------------
 
 		protected override void ExecuteCommandCore(PpsCommandContext commandContext)
 		{
-			SetTargetState(commandContext.Target, true);
+			SetIsRunning(commandContext.Target, true);
 			try
 			{
 				command(commandContext);
 			}
 			finally
 			{
-				SetTargetState(commandContext.Target, false);
+				SetIsRunning(commandContext.Target, false);
 			}
 		} // proc ExecuteCommandCore
 
 		#endregion
+
+		public override bool CanExecuteCommand(PpsCommandContext commandContext) 
+			=> !GetIsRunning(commandContext.Target) && base.CanExecuteCommand(commandContext);
 	} // class PpsCommand
 
 	#endregion
@@ -272,20 +286,20 @@ namespace TecWare.PPSn.UI
 		#region -- Command Member -------------------------------------------------------
 
 		public override bool CanExecuteCommand(PpsCommandContext commandContext)
-			=> !GetTargetState(commandContext.Target)
+			=> !GetIsRunning(commandContext.Target)
 				&& base.CanExecuteCommand(commandContext);
 
 		protected override void ExecuteCommandCore(PpsCommandContext commandContext)
 		{
-			SetTargetState(commandContext.Target, true);
+			SetIsRunning(commandContext.Target, true);
 			try
 			{
 				command(commandContext)
-					.ContinueWith(t => SetTargetState(commandContext.Target, false), TaskContinuationOptions.ExecuteSynchronously);
+					.ContinueWith(t => SetIsRunning(commandContext.Target, false), TaskContinuationOptions.ExecuteSynchronously);
 			}
 			catch
 			{
-				SetTargetState(commandContext.Target, false);
+				SetIsRunning(commandContext.Target, false);
 				throw;
 			}
 		} // func ExecuteCommandCore

@@ -27,10 +27,15 @@ namespace TecWare.PPSn.Controls
 	{
 		public static readonly DependencyProperty CommandProperty = DependencyProperty.RegisterAttached("Command", typeof(ICommand), typeof(PpsSelectionChangedBehavior), new PropertyMetadata(null, PropertyChangedCallback));
 
-		public static void PropertyChangedCallback(DependencyObject depObj, DependencyPropertyChangedEventArgs args)
+		public static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs args)
 		{
-			if (depObj is Selector selector)
-				selector.SelectionChanged += new SelectionChangedEventHandler(SelectionChanged);
+			if (dependencyObject is Selector selector)
+			{
+				if (args.NewValue == null)
+					selector.SelectionChanged -= SelectionChanged;
+				else
+					selector.SelectionChanged += SelectionChanged;
+			}
 		} // proc PropertyChangedCallback
 
 		public static ICommand GetCommand(UIElement element)
@@ -38,13 +43,14 @@ namespace TecWare.PPSn.Controls
 
 		public static void SetCommand(UIElement element, ICommand command)
 			=> element.SetValue(CommandProperty, command);
-		
+
 		private static void SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
-			if (sender is Selector selector && selector.GetValue(CommandProperty) is ICommand command)
+			if (sender is Selector selector
+				&& selector.GetValue(CommandProperty) is ICommand command
+				&& selector.SelectedItem != null)
 			{
-				//if(selector.SelectedItem != null)
-					command.Execute(selector.SelectedItem);
+				command.Execute(selector.SelectedItem);
 			}
 		} // proc SelectionChanged
 	} // class PpsSelectionChangedBehavior
@@ -60,7 +66,7 @@ namespace TecWare.PPSn.Controls
 
 		public static object GetIsNullable(ComboBox comboBox)
 			=> (bool)comboBox.GetValue(IsNullableProperty);
-		
+
 		public static void SetIsNullable(ComboBox comboBox, object value)
 			=> comboBox.SetValue(IsNullableProperty, value);
 	} // class PpsComboBoxBehavior
