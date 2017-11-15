@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -461,7 +476,7 @@ namespace TecWare.PPSn.Controls
 					}
 					break;
 				case Key.Delete:
-					if(IsClearSelectionAllowed)
+					if (IsClearSelectionAllowed)
 					{
 						e.Handled = true;
 						ClearSelection();
@@ -518,16 +533,17 @@ namespace TecWare.PPSn.Controls
 			IsHitTestVisible = false;
 		} // ctor
 
-		private static List<string> GetOperators(PpsDataFilterExpression filter)
+		private static List<string> GetPositiveOperators(PpsDataFilterExpression filter)
 		{
-
-			if (filter is PpsDataFilterCompareExpression compare)
+			// if operator is < > ! != it shouldn't be highlighted ( shouldn't be shown anyhow )
+			if (filter is PpsDataFilterCompareExpression compare && (compare.Operator == PpsDataFilterCompareOperator.Contains ||
+																	 compare.Operator == PpsDataFilterCompareOperator.Equal))
 				return new List<string>() { compare.Value.ToString() };
 
 			var ret = new List<string>();
 			if (filter is PpsDataFilterLogicExpression logic)
 				foreach (var sub in logic.Arguments)
-					ret.AddRange(GetOperators(sub));
+					ret.AddRange(GetPositiveOperators(sub));
 
 			return ret.Distinct().ToList();
 		} // func GetOperators
@@ -539,7 +555,7 @@ namespace TecWare.PPSn.Controls
 				return;
 
 			textBlock.Inlines.Clear();
-			textBlock.Inlines.AddRange(HighlightSearch(textBlock.BaseText, GetOperators(PpsDataFilterExpression.Parse(textBlock.SearchText)), (t) => new Bold(new Italic(t))));
+			textBlock.Inlines.AddRange(HighlightSearch(textBlock.BaseText, GetPositiveOperators(PpsDataFilterExpression.Parse(textBlock.SearchText)), (t) => new Bold(new Italic(new Run(t)))));
 		} // event OnDataChanged
 
 		/// <summary>This function Highlights parts of a string.</summary>
@@ -547,35 +563,50 @@ namespace TecWare.PPSn.Controls
 		/// <param name="Searchtext">Whitespace-separated list of keywords</param>
 		/// <param name="Highlight">Function to Highlight, p.e. ''(t) => new Bold(new Italic(t))''</param>
 		/// <returns>List of Inlines</returns>
-		private static IEnumerable<Inline> HighlightSearch(string Text, List<string> Searchtext, Func<Inline, Inline> Highlight)
+		private static IEnumerable<Inline> HighlightSearch(string Text, List<string> Searchtext, Func<string, Inline> Highlight)
 		{
 			var result = new List<Inline>();
 
-			if (Searchtext.Count == 0)
+			// mark is the array of characters to highlight
+			var mark = new bool[Text.Length];
+			mark.Initialize();  // play save
+
+			// finf every searchitem
+			foreach (var high in Searchtext.Where((s) => s.Length > 1))
 			{
-				// no searchstring - the whole Text is returned unaltered
+				var start = Text.IndexOf(high, StringComparison.OrdinalIgnoreCase);
+				// find every occurence
+				while (start >= 0)
+				{
+					for (var j = 0; j < high.Length; j++)
+						mark[start + j] = true;
+					start = Text.IndexOf(high, start + 1, StringComparison.OrdinalIgnoreCase);
+				}
+			}
+
+			if (!mark.Contains(true))
+			{
+				// nothing is highlighted - should only happen if nothing is searched for, thus showing the whole list
 				result.Add(new Run(Text));
 				return result;
 			}
 
-			//var searchtexts = Searchtext.Trim(' ').Split(' ');
-			foreach (var st in Searchtext)
-				if (!String.IsNullOrEmpty(st))
-				{
-					// iterate through all search filters
-					var idx = Text.IndexOf(st, StringComparison.CurrentCultureIgnoreCase);
-					if (idx >= 0)
-					{
-						// recurse in the part before and after the found text and concatenate the searchstring bold
-						result.AddRange(HighlightSearch(Text.Substring(0, idx), Searchtext, Highlight));
-						result.Add(Highlight(new Run(Text.Substring(idx, st.Length))));
-						result.AddRange(HighlightSearch(Text.Substring(idx + st.Length), Searchtext, Highlight));
-						return result;
-					}
-				}
-
-			// end of recursion - no search string found in substring
-			result.Add(new Run(Text));
+			var i = 0;
+			// marks if the first character is highlighted or not
+			var highlighting = mark[0];
+			// create new output inlines
+			while (i < mark.Length)
+			{
+				var stop = mark.ToList().IndexOf(!highlighting, i);
+				if (stop < 0)
+					stop = mark.Length;
+				if (highlighting)
+					result.Add(Highlight(Text.Substring(i, stop - i)));
+				else
+					result.Add(new Run(Text.Substring(i, stop - i)));
+				highlighting = !highlighting;
+				i = stop;
+			}
 			return result;
 		} // func HighlightSearch
 
