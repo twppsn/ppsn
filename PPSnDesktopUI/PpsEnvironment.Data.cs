@@ -1990,13 +1990,15 @@ namespace TecWare.PPSn
 
 		#region -- Synchronization ------------------------------------------------------
 
-		public async Task RunSynchronization()
+		/// <summary>Force a foreground synchronization.</summary>
+		/// <returns><c>false</c>, if the sync was cancelled by an blocking transaction.</returns>
+		public async Task<bool> RunSynchronization(bool enforce = true)
 		{
 			using (var progressTracer = environment.Traces.TraceProgress())
 			{
 				try
 				{
-					await SynchronizationAsync(true, progressTracer);
+					return await SynchronizationAsync(enforce, progressTracer);
 				}
 				catch (Exception e)
 				{
