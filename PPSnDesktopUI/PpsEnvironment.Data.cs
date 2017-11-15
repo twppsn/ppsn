@@ -59,6 +59,18 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- enum PpsWriteTransactionState ------------------------------------------
+
+	/// <summary></summary>
+	public enum PpsWriteTransactionState
+	{
+		None,
+		CurrentThread,
+		OtherThread
+	} // enum PpsWriteTransactionState
+
+	#endregion
+
 	#region -- enum PpsLoadPriority -----------------------------------------------------
 
 	public enum PpsLoadPriority
@@ -1248,11 +1260,11 @@ namespace TecWare.PPSn
 				}
 			} // proc Dispose
 
-			public abstract void Prepare();
+			public abstract Task PrepareAsync();
 
-			public abstract void Clean();
+			public abstract Task CleanAsync();
 
-			public void Parse(XmlReader xml, IProgress<string> progress)
+			public async Task ParseAsync(XmlReader xml, IProgress<string> progress)
 			{
 				var objectCounter = 0;
 				var lastProgress = Environment.TickCount;
@@ -1262,7 +1274,7 @@ namespace TecWare.PPSn
 				{
 					if (xml.IsEmptyElement) // skip empty element
 					{
-						xml.Read();
+						await xml.ReadAsync();
 						continue;
 					}
 
@@ -1278,9 +1290,9 @@ namespace TecWare.PPSn
 					if (actionName == "syncid")
 					{
 						#region -- update SyncState --
-						xml.Read(); // read element
+						await xml.ReadAsync(); // read element
 
-						var newSyncId = xml.GetElementContent<long>(-1);
+						var newSyncId = await xml.GetElementContentAsync<long>(-1);
 						if (newSyncId == -1)
 						{
 							using (var cmd = Transaction.CreateNativeCommand("DELETE FROM main.[SyncState] WHERE [Table] = @Table"))
@@ -1297,7 +1309,7 @@ namespace TecWare.PPSn
 							{
 								cmd.AddParameter("@Table", DbType.String, Table.Name);
 								cmd.AddParameter("@SyncId", DbType.Int64, newSyncId);
-								cmd.ExecuteNonQueryEx();
+								await cmd.ExecuteNonQueryExAsync();
 							}
 						}
 						#endregion
@@ -1309,26 +1321,26 @@ namespace TecWare.PPSn
 						Array.Clear(parameterValues, 0, parameterValues.Length);
 
 						// collect values
-						xml.Read();
+						await xml.ReadAsync();
 						while (xml.NodeType == XmlNodeType.Element)
 						{
 							if (xml.IsEmptyElement) // read column data
-								xml.Read();
+								await xml.ReadAsync();
 							else
 							{
 								var columnName = xml.LocalName;
 								if (columnName.StartsWith("c") && Int32.TryParse(columnName.Substring(1), out var columnIndex))
 								{
-									xml.Read();
-									parameterValues[columnIndex] = xml.ReadContentAsString();
-									xml.ReadEndElement();
+									await xml.ReadAsync();
+									parameterValues[columnIndex] = await xml.ReadContentAsStringAsync();
+									await xml.ReadEndElementAsync();
 								}
 								else
-									xml.Skip();
+									await xml.SkipAsync();
 							}
 						}
-
-						ProcessCurrentNode(actionName, parameterValues);
+						
+						await ProcessCurrentNodeAsync(actionName, parameterValues);
 
 						objectCounter++;
 						if (progress != null && unchecked(Environment.TickCount - lastProgress) > 500)
@@ -1340,13 +1352,13 @@ namespace TecWare.PPSn
 						#endregion
 					}
 
-					xml.ReadEndElement();
+					await xml.ReadEndElementAsync();
 				}
 				if (objectCounter > 0)
 					Trace.TraceInformation($"Synchonization of {Table.Name} finished ({objectCounter:N0} objects).");
 			} // proc Parse
 
-			protected abstract void ProcessCurrentNode(string actionName, string[] parameterValues);
+			protected abstract Task ProcessCurrentNodeAsync(string actionName, string[] parameterValues);
 
 			protected abstract int ColumnCount { get; }
 
@@ -1435,22 +1447,22 @@ namespace TecWare.PPSn
 				parameterDeleteId = deleteCommand.AddParameter("@Id", DbType.Int64);
 			} // ctor
 
-			public override void Prepare()
+			public override async Task PrepareAsync()
 			{
 				if (IsFull)
 				{
 					// mark all columns
 					using (var cmd = Transaction.CreateNativeCommand("UPDATE main.[ObjectTags] SET [" + refreshColumnName + "] = null WHERE [" + refreshColumnName + "] <> 1 AND [LocalClass] IS NULL"))
-						cmd.ExecuteNonQueryEx();
+						await cmd.ExecuteNonQueryExAsync();
 				}
-			} // proc Prepare
+			} // proc PrepareAsync
 
-			protected override void ProcessCurrentNode(string actionName, string[] parameterValues)
+			protected override async Task ProcessCurrentNodeAsync(string actionName, string[] parameterValues)
 			{
 				if (actionName[0] == 'd')
 				{
 					parameterDeleteId.Value = ConvertStringToSQLiteValue(parameterValues[0], DbType.Int64);
-					deleteCommand.ExecuteNonQuery();
+					await deleteCommand.ExecuteNonQueryExAsync();
 				}
 				else
 				{
@@ -1461,9 +1473,7 @@ namespace TecWare.PPSn
 					var remoteValue = parameterValues[4];
 					var remoteUserId = ConvertStringToSQLiteValue(parameterValues[7], DbType.Int64);
 					var remoteDateTime = ConvertStringToSQLiteValue(parameterValues[8], DbType.DateTime);
-
-
-
+					
 					// check if the row exists
 					parameterExistsId.Value = remoteId;
 					parameterExistsObjectId.Value = remoteObjectId;
@@ -1471,7 +1481,7 @@ namespace TecWare.PPSn
 					parameterExistsUserId.Value = remoteUserId;
 
 					long? rowId;
-					using (var r = existsCommand.ExecuteReaderEx())
+					using (var r = await existsCommand.ExecuteReaderExAsync())
 						rowId = r.Read() ? r.GetInt64(0) : (long?)null;
 
 					// update row
@@ -1486,7 +1496,7 @@ namespace TecWare.PPSn
 						parameterUpdateValue.Value = remoteValue;
 						parameterUpdateCreateDate.Value = remoteDateTime;
 
-						updateCommand.ExecuteNonQueryEx();
+						await updateCommand.ExecuteNonQueryExAsync();
 					}
 					else // insert row
 					{
@@ -1498,19 +1508,19 @@ namespace TecWare.PPSn
 						parameterInsertValue.Value = remoteValue;
 						parameterInsertCreateDate.Value = remoteDateTime;
 
-						insertCommand.ExecuteNonQueryEx();
+						await insertCommand.ExecuteNonQueryExAsync();
 					}
 				}
-			} // proc ProcessCurrentNode
+			} // proc ProcessCurrentNodeAsync
 
-			public override void Clean()
+			public override async Task CleanAsync()
 			{
 				if (IsFull)
 				{
 					using (var cmd = Transaction.CreateNativeCommand("DELETE FROM main.[ObjectTags] WHERE [" + refreshColumnName + "] IS NULL"))
-						cmd.ExecuteNonQueryEx();
+						await cmd.ExecuteNonQueryExAsync();
 				}
-			} // proc Clean
+			} // proc CleanAsync
 
 			protected override int ColumnCount => 9;
 		} // class ProcessBatchTags
@@ -1658,7 +1668,7 @@ namespace TecWare.PPSn
 
 			#region -- Parse --------------------------------------------------------
 
-			public override void Prepare()
+			public async override Task PrepareAsync()
 			{
 				// clear table, is full mode
 				if (IsFull)
@@ -1666,26 +1676,26 @@ namespace TecWare.PPSn
 					if (refreshColumnIndex == -1)
 					{
 						using (var cmd = Transaction.CreateNativeCommand($"DELETE FROM main.[{Table.Name}]"))
-							cmd.ExecuteNonQueryEx();
+							await cmd.ExecuteNonQueryExAsync();
 					}
 					else
 					{
 						using (var cmd = Transaction.CreateNativeCommand($"UPDATE main.[{Table.Name}] SET [" + refreshColumnName + "] = null WHERE [" + refreshColumnName + "] <> 1"))
-							cmd.ExecuteNonQueryEx();
+							await cmd.ExecuteNonQueryExAsync();
 					}
 				}
-			} // proc Prepare
+			} // proc PrepareAsync
 
-			public override void Clean()
+			public override async Task CleanAsync()
 			{
 				if (IsFull && refreshColumnIndex >= 0)
 				{
 					using (var cmd = Transaction.CreateNativeCommand($"DELETE FROM main.[{Table.Name}] WHERE [" + refreshColumnName + "] is null"))
-						cmd.ExecuteNonQueryEx();
+						await cmd.ExecuteNonQueryExAsync();
 				}
-			} // proc Clean
+			} // proc CleanAsync
 
-			protected override void ProcessCurrentNode(string actionName, string[] parameterValues)
+			protected override async Task ProcessCurrentNodeAsync(string actionName, string[] parameterValues)
 			{
 				if (IsFull || actionName[0] == 'i')
 					actionName = refreshColumnIndex == -1 ? "i" : "r";
@@ -1721,25 +1731,25 @@ namespace TecWare.PPSn
 				switch (actionName[0])
 				{
 					case 'r':
-						if (RowExists())
+						if (await RowExistsAsync())
 							goto case 'u';
 						else
 							goto case 'i';
 					case 'i':
-						ExecuteCommand(insertCommand);
+						await ExecuteCommandAsync(insertCommand);
 						break;
 					case 'u':
-						ExecuteCommand(updateCommand);
+						await ExecuteCommandAsync(updateCommand);
 						break;
 					case 'd':
-						ExecuteCommand(deleteCommand);
+						await ExecuteCommandAsync(deleteCommand);
 						break;
 				}
 			} // proc ProcessCurrentNode
 
-			private bool RowExists()
+			private async Task<bool> RowExistsAsync()
 			{
-				using (var r = existCommand.ExecuteReaderEx(CommandBehavior.SingleRow))
+				using (var r = await existCommand.ExecuteReaderExAsync(CommandBehavior.SingleRow))
 				{
 					if (r.Read())
 						return r.GetBoolean(0);
@@ -1750,12 +1760,10 @@ namespace TecWare.PPSn
 						throw exc;
 					}
 				}
-			} // func RowExists
+			} // func RowExistsAsync
 
-			private void ExecuteCommand(SQLiteCommand command)
-			{
-				command.ExecuteNonQueryEx();
-			} // proc ExecuteCommand
+			private Task ExecuteCommandAsync(SQLiteCommand command)
+				=> command.ExecuteNonQueryExAsync();
 
 			#endregion
 
@@ -1821,15 +1829,17 @@ namespace TecWare.PPSn
 			xml.WriteEndElement();
 		} // proc WriteCurentSyncState
 
-		private async Task FetchDataAsync(IProgress<string> progess = null)
+		private async Task<bool> FetchDataAsync(bool nonBlocking, IProgress<string> progess = null)
 		{
 			// create request
 			var requestString = "/remote/wpf/?action=mdata";
 
 			// parse and process result
-			using (var xml = environment.Request.GetXmlStream(await environment.Request.PutXmlResponseAsync(requestString, MimeTypes.Text.Xml, WriteCurentSyncState)))
+			using (var xml = environment.Request.GetXmlStream(await environment.Request.PutXmlResponseAsync(requestString, MimeTypes.Text.Xml, WriteCurentSyncState),
+				settings: new XmlReaderSettings() { IgnoreComments = true, IgnoreWhitespace = true, Async = true })
+			)
 			{
-				await Task.Run(() => xml.ReadStartElement("mdata"));
+				await xml.ReadStartElementAsync("mdata");
 				if (!xml.IsEmptyElement)
 				{
 					// read batches
@@ -1838,36 +1848,49 @@ namespace TecWare.PPSn
 						switch (xml.LocalName)
 						{
 							case "batch":
-								 await FetchDataXmlBatchAsync(xml, progess);
+								// the batch is atomar, and uses a new transaction
+								// this conflict with the synchronization lock
+								// so we give the chance to cancel the process
+								if (!await FetchDataXmlBatchAsync(xml, nonBlocking, progess))
+									return false;
 								break;
 							case "error":
 								{
 									var msg =
-										xml.Read()
-											? xml.ReadContentAsString()
+										await xml.ReadAsync()
+											? await xml.ReadContentAsStringAsync()
 											: "unkown error";
 									throw new Exception($"Synchronization error: {msg}");
 								}
 							case "syncStamp":
-								var timeStamp = xml.ReadElementContent<long>(-1);
+								var timeStamp = await xml.ReadElementContentAsync<long>(-1);
 
-								using (var cmd = new SQLiteCommand("UPDATE main.Header SET SyncStamp = IFNULL(@syncStamp, SyncStamp)", connection))
+								using (var transaction = await CreateWriteTransactionAsync(nonBlocking))
 								{
-									cmd.Parameters.Add("@syncStamp", DbType.Int64).Value = timeStamp.DbNullIf(-1L);
+									if (transaction == null)
+										return false;
 
-									cmd.ExecuteNonQueryEx();
-									if (timeStamp >= 0)
-										lastSynchronizationStamp = DateTime.FromFileTimeUtc(timeStamp);
+									using (var cmd = transaction.CreateNativeCommand("UPDATE main.Header SET SyncStamp = IFNULL(@syncStamp, SyncStamp)"))
+									{
+										cmd.AddParameter("@syncStamp", DbType.Int64).Value = timeStamp.DbNullIf(-1L);
+
+										await cmd.ExecuteNonQueryExAsync();
+										if (timeStamp >= 0)
+											lastSynchronizationStamp = DateTime.FromFileTimeUtc(timeStamp);
+
+										transaction.Commit();
+									}
 								}
 								break;
 							default:
-								await Task.Run(new Action(xml.Skip));
+								await xml.SkipAsync();
 								break;
 						}
 					}
 				}
 			}
 			isSynchronizationStarted = true;
+			return true;
 		} // proc FetchDataAsync
 
 		private ProcessBatchBase CreateProcessBatch(PpsMasterDataTransaction transaction, string tableName, bool isFull)
@@ -1878,7 +1901,7 @@ namespace TecWare.PPSn
 				return new ProcessBatchGeneric(transaction, this, tableName, isFull);
 		} // func CreateProcessBatch
 
-		private async Task FetchDataXmlBatchAsync(XmlReader xml, IProgress<string> progress)
+		private async Task<bool> FetchDataXmlBatchAsync(XmlReader xml, bool nonBlocking, IProgress<string> progress)
 		{
 			// read batch attributes
 			var tableName = xml.GetAttribute("table");
@@ -1888,28 +1911,35 @@ namespace TecWare.PPSn
 
 			if (!xml.IsEmptyElement) // batch needs rows
 			{
-				xml.Read(); // fetch element
-							// process values
-				using (var transaction = await CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
-				using (var b = CreateProcessBatch(transaction, tableName, isFull))
+				await xml.ReadAsync();  // fetch element
+										// process values
+				using (var transaction = await CreateWriteTransactionAsync(nonBlocking))
 				{
-					// prepare table
-					b.Prepare();
+					if (transaction == null) // process cancelled
+						return false;
 
-					// parse data
-					b.Parse(xml, progress);
+					using (var b = CreateProcessBatch(transaction, tableName, isFull))
+					{
+						// prepare table
+						await b.PrepareAsync();
 
-					b.Clean();
-					transaction.Commit();
+						// parse data
+						await b.ParseAsync(xml, progress);
 
-					// run outsite the transaction, should not create a new
-					OnMasterDataTableChanged(b.Table);
+						await b.CleanAsync();
+						transaction.Commit(); // commit can block
+
+						// run outsite the transaction, should not create a new
+						OnMasterDataTableChanged(b.Table);
+					}
 				}
 
-				xml.ReadEndElement();
+				await xml.ReadEndElementAsync();
 			}
 			else // fetch element
-				xml.Read();
+				await xml.ReadAsync();
+
+			return true;
 		} // proc FetchDataXmlBatchAsync
 
 		#endregion
@@ -1966,7 +1996,7 @@ namespace TecWare.PPSn
 			{
 				try
 				{
-					await SynchronizationAsync(progressTracer);
+					await SynchronizationAsync(true, progressTracer);
 				}
 				catch (Exception e)
 				{
@@ -1976,13 +2006,44 @@ namespace TecWare.PPSn
 			}
 		} // proc RunSynchronization
 
-		internal async Task<bool> SynchronizationAsync(IProgress<string> progress)
+		/*
+		 *  This is the core synchronization dispatcher.
+		 *  There are global variables:
+		 *  - synchronizationLock: Global lock, that only one request exists at the time.
+		 *  - isSynchronizationRunning: Prevents the code to run recursivly in one thread.
+		 *                              This variable is thread-based, that other threads can enqueue other calls.
+		 *  - updateUserInfo: Writes the UserId, Name to the local database.
+		 *  
+		 *  Locks:
+		 *    1. synchronizationLock
+		 *    2. CreateTransactionAsync
+		 *    
+		 *   Return:
+		 *     true: for full sync process
+		 *     false: sync was cancelled
+		 *  
+		 */
+		internal async Task<bool> SynchronizationAsync(bool enforce, IProgress<string> progress)
 		{
 			// check for single thread sync context, to get the monitor work
 			StuffThreading.VerifySynchronizationContext();
 
 			if (isSynchronizationRunning.Value)
 				throw new InvalidOperationException("Recursion detected.");
+
+			// detect if the is a running transaction in another thread => prevent blocking by setting a timeout to every transaction
+			// if we a within an transaction, run the batch in blocking mode
+			var nonBlocking = true;
+			switch (WriteTransactionState())
+			{
+				case PpsWriteTransactionState.CurrentThread:
+					nonBlocking = false;
+					break;
+				case PpsWriteTransactionState.OtherThread: // cancel, because it will block soon
+					if (enforce)
+						throw new InvalidOperationException("Synchronization will block.");
+					return false;
+			}
 
 			Monitor.Enter(synchronizationLock); // secure the execution of this function, build a queue
 												// it is safe to use the lock here, because the thread scheduler returns always back to the current thread.
@@ -2006,20 +2067,26 @@ namespace TecWare.PPSn
 					// update header
 					if (updateUserInfo)
 					{
-						using (var trans = await CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
-						using (var cmd = trans.CreateNativeCommand("UPDATE main.[Header] SET [UserId] = @UserId, [UserName] = @UserName"))
+						using (var trans = await CreateWriteTransactionAsync(nonBlocking))
 						{
-							cmd.AddParameter("@UserId", DbType.Int64, environment.UserId);
-							cmd.AddParameter("@UserName", DbType.String, environment.Username);
-							cmd.ExecuteNonQueryEx();
+							if (trans == null)
+								return false;
 
-							trans.Commit();
-							updateUserInfo = false;
+							using (var cmd = trans.CreateNativeCommand("UPDATE main.[Header] SET [UserId] = @UserId, [UserName] = @UserName"))
+							{
+								cmd.AddParameter("@UserId", DbType.Int64, environment.UserId);
+								cmd.AddParameter("@UserName", DbType.String, environment.Username);
+								cmd.ExecuteNonQueryEx();
+
+								trans.Commit();
+								updateUserInfo = false;
+							}
 						}
 					}
 
 					// fetch data from server
-					await FetchDataAsync(progress);
+					if (!await FetchDataAsync(nonBlocking, progress))
+						return false;
 				}
 				finally
 				{
@@ -2696,7 +2763,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		private readonly ManualResetEventSlim currentTransactionLock = new ManualResetEventSlim(true);
+		private readonly ManualResetEventAsync currentTransactionLock = new ManualResetEventAsync();
 		private PpsMasterRootTransaction currentTransaction;
 
 		public PpsMasterDataTransaction CreateReadUncommitedTransaction()
@@ -2704,6 +2771,17 @@ namespace TecWare.PPSn
 
 		public Task<PpsMasterDataTransaction> CreateTransactionAsync(PpsMasterDataTransactionLevel level)
 			=> CreateTransactionAsync(level, CancellationToken.None);
+
+		private async Task<PpsMasterDataTransaction> CreateWriteTransactionAsync(bool nonBlocking)
+		{
+			if (nonBlocking)
+			{
+				using (var cts = new CancellationTokenSource(100))
+					return await CreateTransactionAsync(PpsMasterDataTransactionLevel.Write, cts.Token, null);
+			}
+			else
+				return await CreateTransactionAsync(PpsMasterDataTransactionLevel.Write, CancellationToken.None, null);
+		} // func CreateWriteTransactionAsync
 
 		public async Task<PpsMasterDataTransaction> CreateTransactionAsync(PpsMasterDataTransactionLevel level, CancellationToken cancellationToken, PpsMasterDataTransaction transactionJoinTo = null)
 		{
@@ -2763,7 +2841,7 @@ namespace TecWare.PPSn
 					}
 
 					// different thread, block until currentTransaction is zero
-					await Task.Run(() => currentTransactionLock.Wait(cancellationToken), cancellationToken);
+					await currentTransactionLock.WaitAsync(cancellationToken);
 					if (cancellationToken.IsCancellationRequested)
 						return null;
 				}
@@ -2791,6 +2869,19 @@ namespace TecWare.PPSn
 			}
 			return null;
 		} // func GetCurrentTransaction
+
+		public PpsWriteTransactionState WriteTransactionState()
+		{
+			lock (currentTransactionLock)
+			{
+				if (currentTransaction == null)
+					return PpsWriteTransactionState.None;
+				else if (currentTransaction.CheckAccess())
+					return PpsWriteTransactionState.CurrentThread;
+				else
+					return PpsWriteTransactionState.OtherThread;
+			}
+		} // func WriteTransactionState
 
 		public DbCommand CreateNativeCommand(string commandText = null)
 			=> new SQLiteCommand(commandText, connection, null);
@@ -3883,7 +3974,7 @@ namespace TecWare.PPSn
 		private int currentForegroundCount = 0; // web requests, that marked as foreground tasks (MoveToForeground moves to this point)
 
 		private readonly PpsSynchronizationContext executeLoadQueue;
-		private readonly ManualResetEventSlim executeLoadIsRunning = new ManualResetEventSlim(false);
+		private readonly ManualResetEventAsync executeLoadIsRunning = new ManualResetEventAsync(false);
 		private readonly CancellationTokenSource disposed;
 
 		public PpsWebProxy(PpsEnvironment environment)
@@ -3980,7 +4071,7 @@ namespace TecWare.PPSn
 				}
 
 				// wait for next item
-				await Task.Run(new Action(executeLoadIsRunning.Wait));
+				await executeLoadIsRunning.WaitAsync();
 			}
 		} // proc ExecuteLoadQueue
 

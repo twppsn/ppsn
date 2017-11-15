@@ -599,7 +599,7 @@ namespace TecWare.PPSn
 					}
 
 				case PpsEnvironmentModeResult.NeedsSynchronization:
-					if (await RunAsync(() => masterData.SynchronizationAsync(progress)))
+					if (await RunAsync(() => masterData.SynchronizationAsync(true, progress)))
 						goto redoConnect;
 					else
 						return PpsEnvironmentModeResult.NeedsSynchronization;
@@ -758,16 +758,16 @@ namespace TecWare.PPSn
 		private ModeTransission modeTransmission = null;
 
 		private readonly PpsSynchronizationContext backgroundNotifier;
-		private readonly ManualResetEventSlim backgroundNotifierModeTransmission;
+		private readonly ManualResetEventAsync backgroundNotifierModeTransmission;
 
-		private void InitBackgroundNotifier(CancellationToken cancellationToken, out PpsSynchronizationContext backgroundNotifier, out ManualResetEventSlim backgroundNotifierModeTransmission)
+		private void InitBackgroundNotifier(CancellationToken cancellationToken, out PpsSynchronizationContext backgroundNotifier, out ManualResetEventAsync backgroundNotifierModeTransmission)
 		{
-			backgroundNotifierModeTransmission = new ManualResetEventSlim(false);
+			backgroundNotifierModeTransmission = new ManualResetEventAsync(false);
 			backgroundNotifier = new PpsSingleThreadSynchronizationContext($"Environment Notify {environmentId}", cancellationToken, () => ExecuteNotifierLoopAsync(cancellationToken));
 		} // proc InitBackgroundNotifier
 
 		private void SetNewMode(PpsEnvironmentMode newMode)
-			=> WaitForEnvironmentMode(newMode).Wait();
+			=> WaitForEnvironmentMode(newMode).AwaitTask(); // stops here if pending operations are not finished
 
 		private Task<PpsEnvironmentModeResult> WaitForEnvironmentMode(PpsEnvironmentMode desiredMode)
 		{
@@ -854,7 +854,7 @@ namespace TecWare.PPSn
 								currentTransmission.SetResult(PpsEnvironmentModeResult.Offline);
 								currentTransmission = null;
 							}
-							await Task.Run(new Action(backgroundNotifierModeTransmission.Wait));
+							await backgroundNotifierModeTransmission.WaitAsync();
 							break;
 
 						case PpsEnvironmentState.OfflineConnect:
@@ -910,12 +910,12 @@ namespace TecWare.PPSn
 
 						case PpsEnvironmentState.Online:
 							// fetch next state on ws-info
-							if (!await Task.Run(() => backgroundNotifierModeTransmission.Wait(3000), cancellationToken))
+							if (!await backgroundNotifierModeTransmission.WaitAsync(3000))
 							{
 								if (!masterData.IsInSynchronization)
 								{
 									using (var log = Traces.TraceProgress())
-										await masterData.SynchronizationAsync(log);
+										await masterData.SynchronizationAsync(false, log);
 								}
 							}
 							break;

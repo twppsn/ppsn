@@ -23,6 +23,7 @@ using System.IO;
 using System.Net;
 using System.Net.Mime;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows;
@@ -198,6 +199,54 @@ namespace TecWare.PPSn
 
 		public byte[] CheckSum => isFinished ? hashAlgorithm.Hash : null;
 	} // class HashStream
+
+	#endregion
+
+	#region -- class ThreadSafeMonitor ------------------------------------------------
+
+	public sealed class ThreadSafeMonitor : IDisposable
+	{
+		private readonly object threadLock;
+		private readonly int threadId;
+
+		private bool isDisposed = false;
+
+		public ThreadSafeMonitor(object threadLock)
+		{
+			this.threadLock = threadLock;
+			this.threadId = Thread.CurrentThread.ManagedThreadId;
+
+			Monitor.Enter(threadLock);
+		} // ctor
+
+		~ThreadSafeMonitor()
+		{
+			Dispose(false);
+		} // dtor
+
+		public void Dispose()
+		{
+			GC.SuppressFinalize(this);
+			Dispose(true);
+		} // proc Dispose
+
+		private void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				if (isDisposed)
+					throw new ObjectDisposedException(nameof(ThreadSafeMonitor));
+				if (threadId != Thread.CurrentThread.ManagedThreadId)
+					throw new ArgumentException();
+
+				Monitor.Exit(threadLock);
+			}
+			else if (!isDisposed)
+			{
+				throw new ArgumentException();
+			}
+		} // proc Dispose
+	} // class ThreadSafeMonitor
 
 	#endregion
 
