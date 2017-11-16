@@ -69,13 +69,13 @@ namespace TecWare.PPSn
 	{
 		private readonly PpsObjectLinks parent;
 
-		private long? id;							// local id of the link, always positiv equal ROWID(), null if the link is not inserted yet
-		private long linkToId;						// id of the linked object
+		private long? id;                           // local id of the link, always positiv equal ROWID(), null if the link is not inserted yet
+		private long linkToId;                      // id of the linked object
 
-		private int refCount = 0;					// how often is this link used within the object
+		private int refCount = 0;                   // how often is this link used within the object
 
-		private WeakReference<PpsObject> linkTo;	// weak ref to the actual object
-		
+		private WeakReference<PpsObject> linkTo;    // weak ref to the actual object
+
 		private bool isDirty;   // is the link changed
 
 		#region -- Ctor/Dtor/AddRef/DecRef/Dirty --------------------------------------
@@ -213,8 +213,8 @@ namespace TecWare.PPSn
 
 		private readonly PpsObject parent;
 
-		private bool isLoaded = false;	// marks if the link list is loaded from the local store
-		private bool isDirty = false;	// the link list needs to persist in the local database
+		private bool isLoaded = false;  // marks if the link list is loaded from the local store
+		private bool isDirty = false;   // the link list needs to persist in the local database
 		private readonly List<PpsObjectLink> links = new List<PpsObjectLink>(); // local active links
 		private readonly List<PpsObjectLink> removedLinks = new List<PpsObjectLink>();
 
@@ -242,7 +242,7 @@ namespace TecWare.PPSn
 			isDirty = true;
 			parent.SetDirty();
 		} // proc SetDirty
-		
+
 		private void RefreshLinks()
 		{
 			using (var cmd = parent.Environment.MasterData.CreateNativeCommand("SELECT [Id], [LinkObjectId], [RefCount] FROM main.[ObjectLinks] WHERE [ParentObjectId] = @ObjectId"))
@@ -643,7 +643,7 @@ namespace TecWare.PPSn
 		private readonly PpsObjectTags parent;
 
 		private long? id;               // new tags have null
-		private readonly bool isRev;	// is this tag attached to the revision
+		private readonly bool isRev;    // is this tag attached to the revision
 		private readonly string key;    // key for the tag
 
 		private PpsObjectTagLoadState state = PpsObjectTagLoadState.None;
@@ -654,7 +654,7 @@ namespace TecWare.PPSn
 		private PpsMasterDataRow userRow;
 		private DateTime? creationStamp;
 
-		private bool isLocalChanged;	// is the tag changed in the local state
+		private bool isLocalChanged;    // is the tag changed in the local state
 		private bool isDirty;   // is the tag change in memory, an need to persist
 
 		private readonly object lockUserRow = new object();
@@ -664,6 +664,7 @@ namespace TecWare.PPSn
 		internal PpsObjectTagView(PpsObjectTags parent, long? id, string key, bool isRev, PpsObjectTagClass tagClass, object value, long userId, DateTime creationStamp, bool isLocalChanged)
 		{
 			this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
+			CheckKey(key);
 
 			this.id = id;
 			this.key = key;
@@ -677,6 +678,7 @@ namespace TecWare.PPSn
 		internal PpsObjectTagView(PpsObjectTags parent, long id, string key, PpsObjectTagClass tagClass, object value, long userId)
 		{
 			this.parent = parent ?? throw new ArgumentNullException(nameof(parent));
+			CheckKey(key);
 
 			this.id = id;
 			this.key = key;
@@ -692,6 +694,15 @@ namespace TecWare.PPSn
 			this.isLocalChanged = false;
 			this.isDirty = false;
 		} // ctor
+
+		private static void CheckKey(string key)
+		{
+			foreach (var c in key)
+			{
+				if (!Char.IsLetterOrDigit(c))
+					throw new ArgumentOutOfRangeException(nameof(key), $"Invalid char '{c}'.");
+			}
+		} // proc CheckKey
 
 		private bool SetValue<T>(ref T variable, T value, string propertyName)
 		{
@@ -746,9 +757,9 @@ namespace TecWare.PPSn
 			this.isLocalChanged = isLocalChanged;
 			this.isDirty = false;
 		} // proc RefreshData
-		
+
 		#endregion
-		
+
 		private PpsMasterDataRow GetUserRow()
 		{
 			lock (lockUserRow)
@@ -764,17 +775,18 @@ namespace TecWare.PPSn
 
 		private void CheckTagValue(PpsObjectTagClass newClass, object newValue)
 		{
-			if(newClass == PpsObjectTagClass.Tag)
+			if (newClass == PpsObjectTagClass.Tag)
 			{
 				if (newValue != null)
 					throw new ArgumentOutOfRangeException("Tags of the class Tag can not have an value.");
-			}else if(newClass == PpsObjectTagClass.Note)
+			}
+			else if (newClass == PpsObjectTagClass.Note)
 			{
 				if (newValue == null)
 					throw new ArgumentOutOfRangeException("Tags of the class Note must have an value.");
 			}
 		} // proc CheckTagValue
-		
+
 		internal void RefreshTag(PpsObjectTag tagData)
 		{
 			SetValue(ref tagClass, tagData.Class, nameof(Class));
@@ -929,7 +941,7 @@ namespace TecWare.PPSn
 				transaction.AddRollbackOperation(SetDirty);
 			}
 		} // proc ResetDirty
-			
+
 		#endregion
 
 		#region -- Refresh ----------------------------------------------------------------
@@ -962,14 +974,14 @@ namespace TecWare.PPSn
 			}
 			else
 				tag = new PpsObjectTagView(this, databaseId, tagData.Name, tagData.Class, tagData.Value, tagData.UserId);
-			
+
 			EnsureTagInList(tag);
 		} // proc RefreshSingleRevTag
 
 		/// <summary>Reads revision attached tags from a text-blob. (new line separated, id:key:class:userId=value)</summary>
 		/// <param name="tagList"></param>
 		internal void RefreshTagsFromString(string tagList)
-		{	
+		{
 			lock (SyncRoot)
 			{
 				foreach (var c in tagList.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries))
@@ -988,7 +1000,7 @@ namespace TecWare.PPSn
 				if (state == PpsObjectTagLoadState.None)
 					state = PpsObjectTagLoadState.FastLoad;
 			}
-			
+
 			OnCollectionChanged(null);
 		} // proc RefreshTagsFromString
 
@@ -1269,7 +1281,7 @@ namespace TecWare.PPSn
 				&& tagClass != PpsObjectTagClass.Date
 				&& tagClass != PpsObjectTagClass.Number)
 				throw new ArgumentOutOfRangeException(nameof(tagClass));
-			
+
 			lock (SyncRoot)
 			{
 				if (state == PpsObjectTagLoadState.None)
@@ -1402,7 +1414,7 @@ namespace TecWare.PPSn
 				return tags.Find(f) ?? deletedTags.Find(f);
 			}
 		} // func FindTagById
-		
+
 		public int IndexOf(string key)
 		{
 			var idxScore = 0;
@@ -1411,7 +1423,7 @@ namespace TecWare.PPSn
 			lock (SyncRoot)
 			{
 				CheckTagsState();
-				for(var i = 0;i < tags.Count;i++)
+				for (var i = 0; i < tags.Count; i++)
 				{
 					var t = tags[i];
 					if (t.Name == key)
@@ -1515,7 +1527,7 @@ namespace TecWare.PPSn
 
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
-		
+
 		bool IList.IsReadOnly => true;
 		bool IList.IsFixedSize => false;
 		object IList.this[int index] { get { return this[index]; } set => throw new NotSupportedException(); }
@@ -1524,7 +1536,7 @@ namespace TecWare.PPSn
 		public object SyncRoot => parent.SyncRoot;
 
 		#endregion
-		
+
 		public int Count
 		{
 			get
@@ -1535,7 +1547,7 @@ namespace TecWare.PPSn
 				}
 			}
 		} // prop Count
-		
+
 		public bool IsDirty => isDirty;
 
 		public PpsObjectTagView this[int index]
@@ -1572,7 +1584,7 @@ namespace TecWare.PPSn
 		/// <summary>Unload the data.</summary>
 		/// <returns></returns>
 		Task UnloadAsync();
-		
+
 		/// <summary>Is the data loaded.</summary>
 		bool IsLoaded { get; }
 		/// <summary>Is the data change</summary>
@@ -1668,12 +1680,12 @@ namespace TecWare.PPSn
 		//}
 
 		// only quick in dirty
-		private class UpdateBlobStream: HashStream
+		private class UpdateBlobStream : HashStream
 		{
 			private readonly PpsObjectBlobData blobData;
 
 			public UpdateBlobStream(PpsObjectBlobData blobData, Stream baseStream)
-				:base(baseStream, HashStreamDirection.Write, false, SHA256.Create())
+				: base(baseStream, HashStreamDirection.Write, false, SHA256.Create())
 			{
 				this.blobData = blobData;
 			} // ctor
@@ -1692,8 +1704,8 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public async Task<Stream> OpenStreamAsync(FileAccess mode)
 		{
-			
-			switch(mode)
+
+			switch (mode)
 			{
 				case FileAccess.Read:
 					// open an existing data stream
@@ -1987,7 +1999,7 @@ namespace TecWare.PPSn
 		private readonly object[] staticValues;             // values of the table
 		private readonly object objectLock = new object();
 
-		private readonly LazyProperty<IPpsObjectData> data;			// access to the object data
+		private readonly LazyProperty<IPpsObjectData> data;         // access to the object data
 		private readonly PpsObjectTags tags;                // list with assigned tags
 		private readonly PpsObjectLinks links;              // linked objects
 
@@ -2109,8 +2121,8 @@ namespace TecWare.PPSn
 				throw new ArgumentOutOfRangeException(nameof(Id), newObjectId, "Object id is different.");
 
 			using (var cmd = trans.CreateNativeCommand(
-				"UPDATE main.[Objects] SET Id = @Id WHERE Id = @OldId; "+
-				"UPDATE main.[ObjectTags] SET ObjectId = @Id WHERE Id = @OldId; "+
+				"UPDATE main.[Objects] SET Id = @Id WHERE Id = @OldId; " +
+				"UPDATE main.[ObjectTags] SET ObjectId = @Id WHERE Id = @OldId; " +
 				"UPDATE main.[ObjectLinks] SET ParentObjectId = @Id WHERE ParentObjectId = @OldId; " +
 				"UPDATE main.[ObjectLinks] SET LinkObjectId = @Id WHERE LinkObjectId = @OldId; "))
 			{
@@ -2282,12 +2294,12 @@ namespace TecWare.PPSn
 					await data.LoadAsync(); // todo: weg? is the responsibility from PushAsync
 					await data.CommitAsync();
 
-					foreach(var lnk in links)
+					foreach (var lnk in links)
 					{
 						if (lnk.LinkToId < 0 || lnk.LinkTo.IsDocumentChanged)
 							await lnk.LinkTo.PushAsync();
 					}
-					
+
 					// first build object data
 					var xHeaderData = ToXml();
 					var headerData = Encoding.Unicode.GetBytes(xHeaderData.ToString(SaveOptions.DisableFormatting));
@@ -2324,7 +2336,7 @@ namespace TecWare.PPSn
 
 					// update object data
 					ReadObjectInfo(new XAttributesPropertyDictionary(xAnswer));
-					
+
 					// repull the whole object, to get the revision from server (head)
 					await PullAsync();
 
@@ -3099,7 +3111,7 @@ namespace TecWare.PPSn
 					switch (type)
 					{
 						case ObjectViewColumnType.All:
-							return "LEFT OUTER JOIN ObjectTags AS " + AllColumns + " ON (o.Id = " + AllColumns + ".ObjectId AND ifnull(" + AllColumns + ".[LocalClass], " + AllColumns + ".[Class]) >= 0)";
+							return "LEFT OUTER JOIN ObjectTags AS " + AllColumns + " ON (o.Id = " + AllColumns + ".ObjectId AND ifnull(" + AllColumns + ".[LocalClass], " + AllColumns + ".[Class]) BETWEEN 0 AND 127)";
 						case ObjectViewColumnType.Date:
 							return "LEFT OUTER JOIN ObjectTags AS " + DateColumns + " ON (o.Id = " + DateColumns + ".ObjectId AND ifnull(" + AllColumns + ".[LocalClass], " + AllColumns + ".[Class]) = " + DateClass + ")";
 						case ObjectViewColumnType.Number:
@@ -3107,7 +3119,7 @@ namespace TecWare.PPSn
 
 						case ObjectViewColumnType.Key:
 							if (classification == 0)
-								return "LEFT OUTER JOIN ObjectTags AS " + joinAlias + " ON (o.Id = " + joinAlias + ".ObjectId AND ifnull(" + joinAlias + ".[LocalClass], " + joinAlias + ".[Class]) >= 0 AND " + joinAlias + ".Key = '" + keyName + "' COLLATE NOCASE)";
+								return "LEFT OUTER JOIN ObjectTags AS " + joinAlias + " ON (o.Id = " + joinAlias + ".ObjectId AND ifnull(" + joinAlias + ".[LocalClass], " + joinAlias + ".[Class]) BETWEEN 0 AND 127 AND " + joinAlias + ".Key = '" + keyName + "' COLLATE NOCASE)";
 							else
 								return "LEFT OUTER JOIN ObjectTags AS " + joinAlias + " ON (o.Id = " + joinAlias + ".ObjectId AND ifnull(" + joinAlias + ".[LocalClass], " + joinAlias + ".[Class]) = " + classification + " AND " + joinAlias + ".Key = '" + keyName + "' COLLATE NOCASE)";
 						default:
@@ -3156,7 +3168,7 @@ namespace TecWare.PPSn
 
 			public void ApplyFilter(PpsDataFilterExpression filter)
 			{
-				if (filter is PpsDataFilterTrueExpression)
+				if (filter == PpsDataFilterExpression.True)
 					whereCondition = null;
 				else
 					whereCondition = new ObjectViewFilterVisitor(this).CreateFilter(filter);

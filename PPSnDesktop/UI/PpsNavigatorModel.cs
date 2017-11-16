@@ -617,10 +617,9 @@ namespace TecWare.PPSn.UI
 			}
 
 			// add search expression
-			var currentSearchExpression = currentSearchTextExpression as SearchExpression;
-			exprSearch = currentSearchExpression != null ?
-				currentSearchExpression.FilterExpression :
-				PpsDataFilterTrueExpression.True;
+			exprSearch = currentSearchTextExpression is SearchExpression currentSearchExpression
+				? currentSearchExpression.FilterExpression
+				: PpsDataFilterTrueExpression.True;
 
 			// combine the contitions
 			dataSource.Filter = PpsDataFilterExpression.Combine(exprView, exprFilter, exprSearch);
