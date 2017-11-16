@@ -672,6 +672,8 @@ namespace TecWare.PPSn
 			RefreshData(tagClass, value, userId, creationStamp, isLocalChanged);
 
 			this.isDirty = !id.HasValue;
+			if (this.isDirty)
+				parent.SetDirty();
 		} // ctor
 
 		internal PpsObjectTagView(PpsObjectTags parent, long id, string key, PpsObjectTagClass tagClass, object value, long userId)
