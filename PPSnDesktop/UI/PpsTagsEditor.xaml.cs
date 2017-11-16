@@ -274,31 +274,30 @@ namespace TecWare.PPSn.UI
 			public void Append(string tagName, PpsObjectTagClass tagClass, object tagValue)
 			{
 				if (tagClass == PpsObjectTagClass.Note)
-					tagName = "Note (" + Guid.NewGuid().ToString() + ")";
+					tagName = "Note" + Guid.NewGuid().ToString("N");
 				else if (String.IsNullOrEmpty(tagName))
-					throw new ArgumentNullException("Tag Name");
+					throw new ArgumentNullException(nameof(tagName));
 
 				switch (tagClass)
 				{
 					case PpsObjectTagClass.Text:
-						if (!((tagValue is string) && !String.IsNullOrEmpty((string)tagValue)))
-							throw new ArgumentNullException("Tag Value");
+						if (!(tagValue is string tagValueString && String.IsNullOrWhiteSpace(tagValueString)))
+							throw new ArgumentNullException(nameof(tagValue));
 						break;
 					case PpsObjectTagClass.Tag:
 						tagValue = null;
 						break;
 					case PpsObjectTagClass.Date:
-						tagValue = DateTime.Parse((string)tagValue).ToUniversalTime().ToString(CultureInfo.InvariantCulture);
-						//tagValue = DateTime.Parse((string)tagValue).ToUniversalTime().ToFileTime();
+						tagValue = tagValue.ChangeType<DateTime>();
 						break;
 				}
 				var tag = this.obj.Tags.UpdateTag(tagName, tagClass, tagValue);
 				tags.Insert(tags.Count - 1, new PpsTagItemImplementation(tag, this));
 				//if (tagClass == PpsObjectTagClass.Date)
 				//tags.Sort((a,b)=>((DateTime)a.Value - (DateTime)b.Value))
-				obj.UpdateLocalAsync().AwaitTask();
+				
 				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-			}
+			} // proc Append
 
 			public void Remove(IPpsTagItem tag)
 			{
