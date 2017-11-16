@@ -69,7 +69,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="description">Description of the transaction.</param>
 		/// <returns></returns>
 		IPpsUndoTransaction BeginTransaction(string description);
-		/// <summary>Is a transaction aktive.</summary>
+		/// <summary>Is a transaction active.</summary>
 		bool InTransaction { get; }
 	} // interface IPpsUndoSink
 
