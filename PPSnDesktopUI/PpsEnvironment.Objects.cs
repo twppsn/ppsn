@@ -701,7 +701,7 @@ namespace TecWare.PPSn
 		{
 			foreach (var c in key)
 			{
-				if (!Char.IsLetterOrDigit(c))
+				if (c != '_' && !Char.IsLetterOrDigit(c))
 					throw new ArgumentOutOfRangeException(nameof(key), $"Invalid char '{c}'.");
 			}
 		} // proc CheckKey
