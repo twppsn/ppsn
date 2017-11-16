@@ -35,6 +35,15 @@ function GetContactData(obj, ds)
 			}
 		);
 
+		-- Default-Values can not be passed as argument.
+		--   Q&D: set ANSP.Std
+
+		foreach row in ds:Ansp do
+			if row.Std == nil then
+				row.Std = false;
+			end;
+		end;
+
 		-- Ansprechpartner --
 		ds:Ansp:AddRange(
 			trans:ExecuteSingleResult{

@@ -1116,7 +1116,7 @@ namespace TecWare.PPSn.Server.Sql
 							{
 								if (dataColumn.IsExtended)
 								{
-									if( typeof(IPpsDataRowGetGenericValue).IsAssignableFrom(dataColumn.DataType))
+									if (typeof(IPpsDataRowGetGenericValue).IsAssignableFrom(dataColumn.DataType))
 									{
 										var getterFunc = new Func<object, object>(row => ((IPpsDataRowGetGenericValue)((PpsDataRow)row)[idx]).Value);
 										var setterFunc = typeof(IPpsDataRowSetGenericValue).IsAssignableFrom(dataColumn.DataType)
