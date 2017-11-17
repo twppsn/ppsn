@@ -119,6 +119,7 @@
 					 Style="{StaticResource PPSnListBoxStyle}"
 					 ItemContainerStyle="{StaticResource PpsTagItemStyle}"
 					 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+					 IsSynchronizedWithCurrentItem="True"
 					 Margin="16,16,0,16" Focusable="False">
 				<ListBox.ItemTemplate>
 					<DataTemplate>
@@ -137,9 +138,11 @@
 										   Foreground="{StaticResource PPSnWindowForegroundBrush}" Opacity=".75"/>
 							</StackPanel>
 							<TextBox x:Name="valueTextBox" Grid.Row="1"
-									 Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-									 IsEnabled="{Binding IsUserChangeable}"
+									 Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+									 IsEnabled="{Binding IsEditable}"
 									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"
+									 GotFocus="valueTextBox_GotFocus"
+									 LostFocus="valueTextBox_LostFocus"									 
 									 AcceptsReturn="True"
 									 VerticalContentAlignment="Top" Padding="2,5" MaxHeight="268"/>
 							<Grid Grid.Column="1" Grid.Row="1" Margin="6,0,0,0">
