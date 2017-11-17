@@ -115,9 +115,7 @@
 
 		<ControlTemplate x:Key="notesEditorTemplate" TargetType="{x:Type ContentControl}">
 			<ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-				                   Path=TagsSource, 
-				                   Converter={StaticResource PpsObjectTagsConverter},
-				                   ConverterParameter={x:Static data:PpsObjectTagClass.Note}}"
+				                   Path=TagsSource}"
 					 Style="{StaticResource PPSnListBoxStyle}"
 					 ItemContainerStyle="{StaticResource PpsTagItemStyle}"
 					 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -213,10 +211,7 @@
 		</ControlTemplate>
 
 		<ControlTemplate x:Key="tagEditorTemplate" TargetType="{x:Type ContentControl}">
-			<ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl},
-				                   Path=TagsSource, 
-				                   Converter={StaticResource PpsObjectTagsConverter},
-				                   ConverterParameter={x:Static data:PpsObjectTagClass.Text}}"
+			<ListBox ItemsSource="{Binding Path=TagsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
 					 Style="{StaticResource PPSnListBoxStyle}"
 					 ItemContainerStyle="{StaticResource PpsTagItemStyle}"
 					 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -288,10 +283,8 @@
 		</ControlTemplate>
 
 		<ControlTemplate x:Key="tagCloudTemplate">
-			<ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-				                   Path=TagsSource, 
-				                   Converter={StaticResource PpsObjectTagsConverter}, 
-				                   ConverterParameter={x:Static data:PpsObjectTagClass.Tag}}"
+			<ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl},
+				                   Path=TagsSource}"
 					 Style="{StaticResource PPSnListBoxStyle}"
 					 ItemContainerStyle="{StaticResource PpsTagItemStyle}"
 					 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -360,9 +353,7 @@
 
 		<ControlTemplate x:Key="taskEditorTemplate" TargetType="{x:Type ContentControl}">
 			<ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl},
-				                   Path=TagsSource, 
-				                   Converter={StaticResource PpsObjectTagsConverter},
-				                   ConverterParameter={x:Static data:PpsObjectTagClass.Date}}"
+				                   Path=TagsSource}"
 					 Style="{StaticResource PPSnListBoxStyle}"
 					 ItemContainerStyle="{StaticResource PpsTagItemStyle}"
 					 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -439,23 +430,26 @@
 			<Style TargetType="{x:Type ContentControl}" >
 				<Style.Triggers>
 					<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-							                   Path=TagsClass}" Value="{x:Static data:PpsObjectTagClass.Note}">
+						                   Path=TagClass}" Value="{x:Static data:PpsObjectTagClass.Note}">
 						<Setter Property="Template" Value="{StaticResource notesEditorTemplate}"/>
 					</DataTrigger>
 					<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-						                   Path=TagsClass}" Value="{x:Static data:PpsObjectTagClass.Tag}">
+						                   Path=TagClass}" Value="{x:Static data:PpsObjectTagClass.Tag}">
 						<Setter Property="Template" Value="{StaticResource tagCloudTemplate}"/>
 					</DataTrigger>
 					<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-						                   Path=TagsClass}" Value="{x:Static data:PpsObjectTagClass.Text}">
+						                   Path=TagClass}" Value="{x:Static data:PpsObjectTagClass.Text}">
 						<Setter Property="Template" Value="{StaticResource tagEditorTemplate}"/>
 					</DataTrigger>
 					<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-						                   Path=TagsClass}" Value="{x:Static data:PpsObjectTagClass.Date}">
+						                   Path=TagClass}" Value="{x:Static data:PpsObjectTagClass.Date}">
 						<Setter Property="Template" Value="{StaticResource taskEditorTemplate}"/>
 					</DataTrigger>
 				</Style.Triggers>
 			</Style>
 		</ContentControl.Style>
 	</ContentControl>
+
+
+
 </UserControl>
