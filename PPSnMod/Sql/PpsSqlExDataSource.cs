@@ -1325,7 +1325,12 @@ namespace TecWare.PPSn.Server.Sql
 					if (parameter.GetMemberValue("nmsrc") is LuaTable notMatchedSource)
 					{
 						if (notMatchedSource["delete"] != null)
-							commandText.Append("WHEN NOT MATCHED BY SOURCE THEN DELETE ");
+						{
+							if (notMatchedSource["where"] is string whereDelete)
+								commandText.Append("WHEN NOT MATCHED BY SOURCE AND (" + whereDelete + ") THEN DELETE ");
+							else
+								commandText.Append("WHEN NOT MATCHED BY SOURCE THEN DELETE ");
+						}
 					}
 
 					#endregion

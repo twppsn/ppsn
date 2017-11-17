@@ -1002,19 +1002,24 @@ namespace TecWare.PPSn.Server.Wpf
 							}
 							else if (xml.LocalName == "utag")
 							{
-								updateTags.ArrayList.Add(new LuaTable
+								var tagData = new LuaTable
 								{
 									["Id"] = xml.GetAttribute("id", -1L),
-									["ObjectId"] = xml.GetAttribute("objectId", -1L),
+									["ObjKId"] = xml.GetAttribute("objectId", -1L),
 									["Key"] = xml.GetAttribute("name", String.Empty),
 									["Class"] = xml.GetAttribute("tagClass", -1),
 									["UserId"] = xml.GetAttribute("userId", -1),
-									["CreateDate"] = xml.GetAttribute("createDate", DateTime.Now),
-									["Value"] = xml.GetElementContent((string)null)
-								});
+									["CreateDate"] = xml.GetAttribute("createDate", DateTime.Now)
+								};
+								updateTags.ArrayList.Add(tagData);
 
 								if (!xml.IsEmptyElement)
-									xml.Skip();
+								{
+									xml.Read();
+									tagData["Value"] = xml.GetElementContent((string)null);
+									if (xml.NodeType != XmlNodeType.EndElement)
+										xml.Skip();
+								}
 								else
 									xml.Read(); // read element
 							}
@@ -1173,7 +1178,7 @@ namespace TecWare.PPSn.Server.Wpf
 				["upsert"] = "dbo.ObjT",
 				["columnList"] = new LuaTable { "Id", "ObjKId", "Key", "UserId", "Class", "Value", "CreateDate" },
 				["on"] = new LuaTable { "ObjKId", "Key", "UserId" },
-				["nmsrc"] = new LuaTable { ["delete"] = true }
+				["nmsrc"] = new LuaTable { ["delete"] = true, ["where"] = "DST.[Id] = @Id" }
 			};
 
 			// parse incomming sync id's
@@ -1187,7 +1192,7 @@ namespace TecWare.PPSn.Server.Wpf
 			{
 				using (var trans = user.CreateTransactionAsync(application.MainDataSource).AwaitTask())
 				{
-					trans.ExecuteSingleResult(updateTags);
+					trans.ExecuteNoneResult(updateTags);
 					trans.Commit();
 				}
 			}
