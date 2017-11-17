@@ -333,12 +333,16 @@
 	</Style>
 
 
+	<!--DataSelector, like ComboBox with SearchTextBox-->
 
-	
+	<sys:Double x:Key="FixSearchBoxWidth">250</sys:Double>
+	<sys:Double x:Key="FixSelectorWidth">340</sys:Double>
 
 	<DataTemplate x:Key="PpsDataSelectorDefaultItemTemplate">
 		<uiC:PpsDataSelectorItemTextBlock
 			VerticalAlignment="Center"
+			TextWrapping="NoWrap"
+			TextTrimming="CharacterEllipsis"
 			BaseText="{Binding Name}"
 			SearchText="{Binding Path=FilterText, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiC:PpsDataSelector}}">
 		</uiC:PpsDataSelectorItemTextBlock>
@@ -368,7 +372,7 @@
 				<ControlTemplate TargetType="{x:Type uiC:PpsDataSelector}">
 					<Grid>
 						<ToggleButton x:Name="ToggleDropDownButton"
-									  Template="{DynamicResource PPSnComboBoxToggleButtonTemplate}"
+									  Template="{StaticResource PPSnComboBoxToggleButtonTemplate}"
 									  IsChecked="{Binding Path=IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
 									  ClickMode="Press"
 									  Focusable="False"
@@ -380,14 +384,14 @@
 										  ContentTemplate="{TemplateBinding SelectedValueTemplate}"
 										  IsHitTestVisible="False" Margin="5,3,23,3" HorizontalAlignment="Left" VerticalAlignment="Center" />
 
-						<Button x:Name="ClearButton" Template="{DynamicResource PPSnComboBoxClearButtonTemplate}"
+						<Button x:Name="ClearButton" Template="{StaticResource PPSnComboBoxClearButtonTemplate}"
 								Command="{x:Static uiC:PpsDataSelector.ClearSelectionCommand}"
 								HorizontalAlignment="Right" Width="27" Margin="0,2,18,2" Focusable="False" Visibility="Hidden">
 						</Button>
 
 						<Popup x:Name="PART_DropDownPopup" Placement="Bottom" VerticalOffset="1" Focusable="False"
 							   IsOpen="{TemplateBinding IsDropDownOpen}" StaysOpen="False"
-							   MinWidth="{Binding Path=ActualWidth, ElementName=ToggleDropDownButton}" MinHeight="122"
+							   MinWidth="{Binding Path=ActualWidth, ElementName=ToggleDropDownButton}" Width="{StaticResource FixSelectorWidth}" MinHeight="122"
 							   uiC:PpsPopupBehavior.ForceFocus="True"
 							   AllowsTransparency="True" PopupAnimation="Slide" >
 							<Border BorderBrush="{StaticResource PPSnControlFocusedBorderBrush}" BorderThickness="1" Background="{TemplateBinding Background}">
@@ -396,7 +400,7 @@
 										<RowDefinition Height="33"/>
 										<RowDefinition/>
 									</Grid.RowDefinitions>
-									<Grid Background="White" HorizontalAlignment="Right" Width="250" Margin="6">
+									<Grid Background="White" HorizontalAlignment="Right" Width="{StaticResource FixSearchBoxWidth}" Margin="6">
 										<Grid.ColumnDefinitions>
 											<ColumnDefinition/>
 											<ColumnDefinition Width="20"/>
