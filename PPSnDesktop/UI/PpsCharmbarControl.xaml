@@ -236,7 +236,7 @@
 					<RowDefinition/>
 				</Grid.RowDefinitions>
 				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Tags" Tag="{StaticResource hashTagPathGeometry}"/>
-				<!--<uiL:PpsTagsEditor Grid.Row="1" TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Tag}"/>-->
+				<uiL:PpsTagsEditor Grid.Row="1" Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Tag}"/>
 			</Grid>
 		</DataTemplate>
 
@@ -247,7 +247,7 @@
 					<RowDefinition/>
 				</Grid.RowDefinitions>
 				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Attribute" Tag="{StaticResource tagTextPathGeometry}"/>
-				<!--<uiL:PpsTagsEditor Grid.Row="1" TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Text}"/>-->
+				<uiL:PpsTagsEditor Grid.Row="1" Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Text}"/>
 			</Grid>
 		</DataTemplate>
 
@@ -258,7 +258,7 @@
 					<RowDefinition/>
 				</Grid.RowDefinitions>
 				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Termine / Aufgaben" Tag="{StaticResource calendarClockPathGeometry}"/>
-				<!--<uiL:PpsTagsEditor Grid.Row="1" TagsSource="{Binding}" TagsClass="{x:Static data:PpsObjectTagClass.Date}"/>-->
+				<uiL:PpsTagsEditor Grid.Row="1" Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Date}"/>
 			</Grid>
 		</DataTemplate>
 	</UserControl.Resources>
