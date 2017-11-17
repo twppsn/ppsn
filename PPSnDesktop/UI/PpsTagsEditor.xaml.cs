@@ -22,6 +22,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
@@ -97,7 +98,7 @@ namespace TecWare.PPSn.UI
 			if (currentSource == null)
 			{
 				if (obj != null && cls != PpsObjectTagClass.Deleted)
-					SetValue(tagsSourcePropertyKey, new ListCollectionView(new PpsTagsModel(obj, cls)));
+					SetValue(tagsSourcePropertyKey, CreateCollectionView(obj, cls));
 			}
 			else
 			{
@@ -107,10 +108,19 @@ namespace TecWare.PPSn.UI
 					currentSource.DetachObject();
 
 					if (obj != null && cls != PpsObjectTagClass.Deleted)
-						SetValue(tagsSourcePropertyKey, new ListCollectionView(new PpsTagsModel(obj, cls)));
+						SetValue(tagsSourcePropertyKey, CreateCollectionView(obj, cls));
 				}
 			}
 		} // proc RefreshTagsSource
+
+		private static ListCollectionView CreateCollectionView(PpsObject obj, PpsObjectTagClass cls)
+		{
+			var collectionView = new ListCollectionView(new PpsTagsModel(obj, cls))
+			{
+				NewItemPlaceholderPosition = NewItemPlaceholderPosition.AtBeginning
+			};
+			return collectionView;
+		} // func CreateCollectionView
 
 		private static void TagClassChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsTagsEditor)d).RefreshTagsSource();
@@ -122,6 +132,22 @@ namespace TecWare.PPSn.UI
 		public PpsObject Object { get => (PpsObject)GetValue(ObjectProperty); set => SetValue(ObjectProperty, value); }
 
 		public ListCollectionView TagsSource { get => (ListCollectionView)GetValue(TagsSourceProperty); }
+
+		private void valueTextBox_GotFocus(object sender, RoutedEventArgs e)
+		{
+			if (TagsSource.CurrentItem == null)
+				TagsSource.AddNewItem(new PpsTagItemModel(Object, TagClass));
+			else
+				TagsSource.EditItem(TagsSource.CurrentItem);
+		}
+
+		private void valueTextBox_LostFocus(object sender, RoutedEventArgs e)
+		{
+			if (TagsSource.IsAddingNew)
+				TagsSource.CommitNew();
+			else
+				TagsSource.CommitEdit();
+		}
 	} // class PpsTagsEditor
 
 	#endregion
@@ -153,7 +179,7 @@ namespace TecWare.PPSn.UI
 		{
 			this.ppsObject = ppsObject;
 			this.tag = tag;
-
+			
 			this.currentClass = tag.Class;
 		} // ctor
 
@@ -186,7 +212,13 @@ namespace TecWare.PPSn.UI
 
 		private void OnPropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-		
+
+		private void CheckEditMode()
+		{
+			if (!isEditing)
+				throw new InvalidOperationException("Tag is not in edit mode.");
+		} // proc CheckEditMode
+
 		public void BeginEdit()
 		{
 			currentName = tag?.Name;
@@ -198,8 +230,7 @@ namespace TecWare.PPSn.UI
 		public void EndEdit()
 		{
 			// check if in edit mode
-			if (!isEditing)
-				throw new InvalidOperationException("Tag is not in edit mode.");
+			CheckEditMode();
 
 			// update the tag behind
 			if (IsNew)
@@ -216,7 +247,7 @@ namespace TecWare.PPSn.UI
 			}
 			else
 				tag.Update(currentClass, currentValue);
-			
+
 			isEditing = false;
 
 			ppsObject.UpdateLocalAsync().AwaitTask();
@@ -231,6 +262,8 @@ namespace TecWare.PPSn.UI
 
 		private void SetValue<T>(ref T value, T newValue, string propertyName)
 		{
+			CheckEditMode();
+
 			if (!Object.Equals(value, newValue))
 			{
 				value = newValue;
@@ -265,6 +298,8 @@ namespace TecWare.PPSn.UI
 		public bool IsNew => tag == null;
 		/// <summary>Is the tag in editmode</summary>
 		public bool IsEditing => isEditing;
+
+		public string UserName => IsNew ? PpsEnvironment.GetEnvironment().Username : tag.User.GetProperty("Login", "<error>"); // todo:
 
 		public PpsTagOwnerIdentityIcon OwnerIdentityIcon
 		{
@@ -418,8 +453,8 @@ namespace TecWare.PPSn.UI
 		
 		private int Insert(PpsTagItemModel tag, int insertAt)
 		{
-			if (tag.IsNew)
-				throw new ArgumentException("Tag is not in inner tag list.");
+			//if (tag.IsNew)
+			//	throw new ArgumentException("Tag is not in inner tag list.");
 
 			// find index of the tag
 			var idx = items.IndexOf(tag);
@@ -441,7 +476,7 @@ namespace TecWare.PPSn.UI
 					RemoveFromView(tag, idx);
 
 				items.Insert(insertAt, tag);
-				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, tag, insertAt));
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, tag, insertAt));
 			}
 
 			return insertAt;
