@@ -47,7 +47,7 @@ using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn
 {
-	#region -- enum PpsDataChangeOperation ----------------------------------------------
+	#region -- enum PpsDataChangeOperation --------------------------------------------
 
 	public enum PpsDataChangeOperation
 	{
@@ -71,7 +71,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- enum PpsLoadPriority -----------------------------------------------------
+	#region -- enum PpsLoadPriority ---------------------------------------------------
 
 	public enum PpsLoadPriority
 	{
@@ -84,7 +84,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- interface IInternalFileCacheStream ---------------------------------------
+	#region -- interface IInternalFileCacheStream -------------------------------------
 
 	internal interface IInternalFileCacheStream
 	{
@@ -297,7 +297,7 @@ namespace TecWare.PPSn
 
 	public sealed class PpsMasterDataTable : PpsMasterDataSelector
 	{
-		#region -- class PpsSqLiteFilterVisitor ---------------
+		#region -- class PpsSqLiteFilterVisitor ---------------------------------------
 
 		private sealed class PpsMasterDataFilterVisitor : PpsSqLiteFilterVisitor
 		{
@@ -355,7 +355,7 @@ namespace TecWare.PPSn
 						{
 							if (filterVisitor.NeedFullTextColumn)
 							{
-								var expr= String.Join(" | ", from c in table.Columns where c.DataType == typeof(string) select c.Name);
+								var expr = String.Join(" || ' ' || ", from c in table.Columns where c.DataType == typeof(string) select "[" + c.Name + "]");
 								if (String.IsNullOrEmpty(expr))
 									expr = "null";
 								sb.Append(',').Append(expr).Append(" AS __FULLTEXT__");
