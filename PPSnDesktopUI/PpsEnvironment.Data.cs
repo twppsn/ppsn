@@ -538,7 +538,7 @@ namespace TecWare.PPSn
 
 		private const string objectTagsTableName = "ObjectTags";
 
-		#region -- class SqLiteParameterDictionaryWrapper -----------------------------
+		#region -- class SqLiteParameterDictionaryWrapper -------------------------------
 
 		private sealed class SqLiteParameterDictionaryWrapper : IPropertyReadOnlyDictionary
 		{
@@ -565,7 +565,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class PpsMasterDataMetaObject --------------------------------------
+		#region -- class PpsMasterDataMetaObject ----------------------------------------
 
 		private sealed class PpsMasterDataMetaObject : DynamicMetaObject
 		{
@@ -597,7 +597,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class PpsDataEvent -------------------------------------------------
+		#region -- class PpsDataEvent ---------------------------------------------------
 
 		private sealed class PpsDataEvent
 		{
@@ -647,7 +647,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class PpsMasterLazyArguments ---------------------------------------
+		#region -- class PpsMasterLazyArguments -----------------------------------------
 
 		private sealed class PpsMasterLazyArguments : IPropertyEnumerableDictionary
 		{
@@ -791,7 +791,7 @@ namespace TecWare.PPSn
 
 		private readonly List<PpsDataEvent> collectedEvents = new List<PpsDataEvent>();
 
-		#region -- Ctor/Dtor ----------------------------------------------------------
+		#region -- Ctor/Dtor ------------------------------------------------------------
 
 		public PpsMasterData(PpsEnvironment environment, SQLiteConnection connection, PpsDataSetDefinitionDesktop schema, DateTime lastSynchronizationSchema, DateTime lastSynchronizationStamp)
 		{
@@ -819,7 +819,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Local store schema update ------------------------------------------
+		#region -- Local store schema update --------------------------------------------
 
 		private async Task UpdateSchemaAsync(IProgress<string> progress)
 		{

@@ -1,23 +1,10 @@
-﻿#region -- copyright --
-//
-// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
-// European Commission - subsequent versions of the EUPL(the "Licence"); You may
-// not use this work except in compliance with the Licence.
-//
-// You may obtain a copy of the Licence at:
-// http://ec.europa.eu/idabc/eupl
-//
-// Unless required by applicable law or agreed to in writing, software distributed
-// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
-// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
-// specific language governing permissions and limitations under the Licence.
-//
-#endregion
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -27,7 +14,29 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- enum PpsTagOwnerIdentityIcon -------------------------------------------
+	#region -- Interfaces ---------------------------------------------------------------
+
+	public interface IPpsTagItem
+	{
+		void Append();
+		void Remove();
+		void Save();
+		string Name { get; }
+		string Value { get; }
+		bool CanSave { get; }
+		PpsObjectTagClass Class { get; }
+		DateTime CreationStamp { get; }
+	} // interface IPpsTagItem
+
+	public interface IPpsTags : IEnumerable<IPpsTagItem>
+	{
+		void Append(string tagName, PpsObjectTagClass tagClass, object tagValue);
+		void Remove(IPpsTagItem tag);
+	} // interface IPpsTags
+
+	#endregion
+
+	#region -- enum PpsTagOwnerIdentityIcon ---------------------------------------------
 
 	public enum PpsTagOwnerIdentityIcon
 	{
@@ -38,471 +47,297 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsTagsEditor ----------------------------------------------------
-
+	/// <summary>
+	/// Interaction logic for PpsTagsEditor.xaml
+	/// </summary>
 	public partial class PpsTagsEditor : UserControl
 	{
-		public readonly static DependencyProperty TagClassProperty = DependencyProperty.Register(nameof(TagClass), typeof(PpsObjectTagClass), typeof(PpsTagsEditor), new FrameworkPropertyMetadata(PpsObjectTagClass.Deleted, TagClassChanged));
-		public readonly static DependencyProperty ObjectProperty = DependencyProperty.Register(nameof(Object), typeof(PpsObject), typeof(PpsTagsEditor), new FrameworkPropertyMetadata(ObjectChanged));
-
-		private readonly static DependencyPropertyKey tagsSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(TagsSource), typeof(ListCollectionView), typeof(PpsTagsEditor), new FrameworkPropertyMetadata(null));
-		public readonly static DependencyProperty TagsSourceProperty = tagsSourcePropertyKey.DependencyProperty;
-
-		public static readonly RoutedUICommand AppendTagCommand = new RoutedUICommand("AppendTag", "AppendTag", typeof(PpsTagsEditor));
-		public static readonly RoutedUICommand RemoveTagCommand = new RoutedUICommand("RemoveTag", "RemoveTag", typeof(PpsTagsEditor));
-
 		public PpsTagsEditor()
 		{
 			InitializeComponent();
 
 			CommandBindings.Add(
-				new CommandBinding(AppendTagCommand,
-					(sender, e) =>
-					{
-						if (TagsSource != null)
-							TagsSource.AddNewItem(new PpsTagItemModel(Object, TagClass));
-						e.Handled = true;
-					},
-					(sender, e) =>
-					{
-						e.CanExecute = TagsSource != null;
-						e.Handled = true;
-					}
-				)
-			);
+						new CommandBinding(RemoveTagCommand,
+							(isender, ie) =>
+							{
+								((IPpsTagItem)ie.Parameter).Remove();
+								ie.Handled = true;
+							},
+							(isender, ie) => ie.CanExecute = true
+						)
+					);
 			CommandBindings.Add(
-				new CommandBinding(RemoveTagCommand,
-					(sender, e) =>
-					{
-						var currentItem = (PpsTagItemModel)TagsSource.CurrentItem;
-						if (currentItem.IsEditable)
-							TagsSource.Remove(currentItem);
-						e.Handled = true;
-					},
-					(sender, e) =>
-					{
-						e.CanExecute = TagsSource.CurrentItem is PpsTagItemModel tagItem ? tagItem.IsEditable : false;
-						e.Handled = true;
-					}
-				)
-			);
-		} // ctor
+						new CommandBinding(AppendTagCommand,
+							(isender, ie) =>
+							{
+								((IPpsTagItem)ie.Parameter).Append();
+								ie.Handled = true;
+							},
+							(isender, ie) => ie.CanExecute = (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Tag && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name)) ||
+															 (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Text && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value)) ||
+															 (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Date && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Name) && DateTime.TryParse(((IPpsTagItem)ie.Parameter).Value, out var temp)) ||
+															 (((IPpsTagItem)ie.Parameter).Class == PpsObjectTagClass.Note && !String.IsNullOrEmpty(((IPpsTagItem)ie.Parameter).Value))
+						)
+					);
+			CommandBindings.Add(
+						new CommandBinding(SaveTagCommand,
+							(isender, ie) =>
+							{
+								((IPpsTagItem)ie.Parameter).Save();
+								ie.Handled = true;
+							},
+							(isender, ie) => ie.CanExecute = ((IPpsTagItem)ie.Parameter).CanSave
+						)
+					);
+		}
 
-		private void RefreshTagsSource()
+		public readonly static DependencyProperty TagsClassProperty = DependencyProperty.Register(nameof(TagsClass), typeof(PpsObjectTagClass), typeof(PpsTagsEditor));
+		public PpsObjectTagClass TagsClass { get => (PpsObjectTagClass)GetValue(TagsClassProperty); set { SetValue(TagsClassProperty, value); } }
+
+		public readonly static DependencyProperty TagsSourceProperty = DependencyProperty.Register(nameof(TagsSource), typeof(PpsObject), typeof(PpsTagsEditor));
+		public PpsObject TagsSource { get => (PpsObject)GetValue(TagsSourceProperty); set { SetValue(TagsSourceProperty, value); } }
+
+		public readonly static RoutedUICommand AppendTagCommand = new RoutedUICommand("AppendTag", "AppendTag", typeof(PpsTagsEditor));
+		public readonly static RoutedUICommand SaveTagCommand = new RoutedUICommand("SaveTag", "SaveTag", typeof(PpsTagsEditor));
+		public readonly static RoutedUICommand RemoveTagCommand = new RoutedUICommand("RemoveTag", "RemoveTag", typeof(PpsTagsEditor));
+	}
+
+	public sealed class PpsObjectTagsConverter : IValueConverter
+	{
+		private sealed class PpsTagItemImplementation : IPpsTagItem, INotifyPropertyChanged
 		{
-			var currentSource = TagsSource?.SourceCollection as PpsTagsModel;
+			private PpsObjectTagView tag;
+			private PpsTagsImplementation tags;
 
-			var obj = Object;
-			var cls = TagClass;
-
-			if (currentSource == null)
+			public PpsTagItemImplementation(PpsTagsImplementation tags)
 			{
-				if (obj != null && cls != PpsObjectTagClass.Deleted)
-					SetValue(tagsSourcePropertyKey, CreateCollectionView(obj, cls));
+				this.tags = tags;
 			}
-			else
-			{
-				if (currentSource.Object != obj
-					|| currentSource.Filter != cls)
-				{
-					currentSource.DetachObject();
 
-					if (obj != null && cls != PpsObjectTagClass.Deleted)
-						SetValue(tagsSourcePropertyKey, CreateCollectionView(obj, cls));
+			public PpsTagItemImplementation(PpsObjectTagView tag, PpsTagsImplementation tags)
+			{
+				this.tag = tag;
+				this.tags = tags;
+			}
+			private string createNewName = String.Empty;
+			public string Name
+			{
+				get
+				{
+					return (tag != null ? tag.Name : createNewName).Replace("<br/>", "\n");
+				}
+				set
+				{
+					createNewName = value.Replace("\n", "<br/>");
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
 				}
 			}
-		} // proc RefreshTagsSource
 
-		private static ListCollectionView CreateCollectionView(PpsObject obj, PpsObjectTagClass cls)
-		{
-			var collectionView = new ListCollectionView(new PpsTagsModel(obj, cls))
+			private string createNewValue = String.Empty;
+			public string Value
 			{
-				NewItemPlaceholderPosition = NewItemPlaceholderPosition.AtBeginning
-			};
-			return collectionView;
-		} // func CreateCollectionView
+				get
+				{
+					switch (tags.TagClass)
+					{
+						case PpsObjectTagClass.Text:
+						case PpsObjectTagClass.Note:
+							return tag != null && String.IsNullOrEmpty(createNewValue) ? (string)tag.Value : createNewValue;
+						case PpsObjectTagClass.Date:
+							return tag != null && String.IsNullOrEmpty(createNewValue) ? tag.Value is DateTime ? ((DateTime)tag.Value).ToLocalTime().ToShortDateString() : DateTime.Parse((string)tag.Value, CultureInfo.InvariantCulture).ToLocalTime().ToShortDateString() : createNewValue;
+						case PpsObjectTagClass.Tag:
+							throw new FieldAccessException();
+					}
+					return tag.Value.ToString();
+				}
 
-		private static void TagClassChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsTagsEditor)d).RefreshTagsSource();
+				set
+				{
+					switch (tags.TagClass)
+					{
+						case PpsObjectTagClass.Text:
+							if (tag != null)
+							{
+								tag.Update(Class, value);
+								tags.Commit();
+							}
+							else
+								newValueHandler = (string)value;
+							break;
+						case PpsObjectTagClass.Note:
+						case PpsObjectTagClass.Date:
+							newValueHandler = (string)value;
+							break;
+						case PpsObjectTagClass.Tag:
+							throw new FieldAccessException();
+					}
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
+				}
+			}
 
-		private static void ObjectChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsTagsEditor)d).RefreshTagsSource();
+			public PpsObjectTagClass Class => tag != null ? tag.Class : tags.TagClass;
 
-		public PpsObjectTagClass TagClass { get => (PpsObjectTagClass)GetValue(TagClassProperty); set { SetValue(TagClassProperty, value); } }
-		public PpsObject Object { get => (PpsObject)GetValue(ObjectProperty); set => SetValue(ObjectProperty, value); }
+			public long UserId => tag != null ? tag.UserId : PpsEnvironment.GetEnvironment().UserId;
 
-		public ListCollectionView TagsSource { get => (ListCollectionView)GetValue(TagsSourceProperty); }
+			public string UserName => tag?.User != null ? tag.User.GetProperty("Login", "Unbekannter Nutzer") : String.Empty;
 
-		private void valueTextBox_GotFocus(object sender, RoutedEventArgs e)
-		{
-			if (TagsSource.CurrentItem == null)
-				TagsSource.AddNewItem(new PpsTagItemModel(Object, TagClass));
-			else
-				TagsSource.EditItem(TagsSource.CurrentItem);
+			public bool IsUserChangeable => tag != null ? tag.UserId == PpsEnvironment.GetEnvironment().UserId : true;
+
+			public bool CreateNewBool => tag == null;
+
+			public bool CanDelete => IsUserChangeable && !CreateNewBool ? true : false;
+
+			public PpsTagOwnerIdentityIcon OwnerIdentityIcon
+			{
+				get
+				{
+					if (UserId == 0)
+						return PpsTagOwnerIdentityIcon.System;
+					else if (UserId == PpsEnvironment.GetEnvironment().UserId)
+						return PpsTagOwnerIdentityIcon.Mine;
+					else
+						return PpsTagOwnerIdentityIcon.Community;
+				}
+			} // prop OwnerIdentityIcon
+
+			public event PropertyChangedEventHandler PropertyChanged;
+
+			public void Remove()
+			{
+				tags.Remove(this);
+			}
+
+			public void Append()
+			{
+				tags.Append(createNewName, createNewValue);
+				createNewName = String.Empty;
+				createNewValue = String.Empty;
+			}
+
+			public void Save()
+			{
+				tag.Update(Class, createNewValue);
+				tags.Commit();
+				createNewValue = String.Empty;
+			}
+
+			private string newValueHandler
+			{
+				set
+				{
+					createNewValue = value;
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CanSave)));
+				}
+			}
+
+			public bool CanSave
+				=> tag != null && !String.IsNullOrEmpty(createNewValue);
+
+			public DateTime CreationStamp => tag != null ? tag.CreationStamp.ToLocalTime() : DateTime.Now.ToLocalTime();
 		}
 
-		private void valueTextBox_LostFocus(object sender, RoutedEventArgs e)
+		private sealed class PpsTagsImplementation : IPpsTags, INotifyCollectionChanged
 		{
-			if (TagsSource.IsAddingNew)
-				TagsSource.CommitNew();
-			else
-				TagsSource.CommitEdit();
-		}
-	} // class PpsTagsEditor
+			private PpsObject obj;
+			private PpsObjectTagClass tagClass;
+			private List<PpsTagItemImplementation> tags = new List<PpsTagItemImplementation>();
 
-	#endregion
-
-	#region -- class PpsTagItemModel --------------------------------------------------
-
-	/// <summary></summary>
-	public sealed class PpsTagItemModel : IEditableObject, INotifyPropertyChanged
-	{
-		public event PropertyChangedEventHandler PropertyChanged;
-
-		private readonly PpsObject ppsObject;
-		private PpsObjectTagView tag;
-
-		private bool isEditing = false;
-		private string currentName = null;
-		private object currentValue = null;
-		private PpsObjectTagClass currentClass;
-
-		public PpsTagItemModel(PpsObject ppsObject, PpsObjectTagClass newClass)
-		{
-			this.ppsObject = ppsObject;
-			this.tag = null;
-			
-			this.currentClass = newClass;
-		} // ctor
-
-		public PpsTagItemModel(PpsObject ppsObject, PpsObjectTagView tag)
-		{
-			this.ppsObject = ppsObject;
-			this.tag = tag;
-			
-			this.currentClass = tag.Class;
-		} // ctor
-
-		private void TagPropertyChanged(object sender, PropertyChangedEventArgs e)
-		{
-			if (IsEditing)
-				return;
-			switch (e.PropertyName)
+			public PpsTagsImplementation(PpsObject obj, PpsObjectTagClass tagClass)
 			{
-				case nameof(PpsObjectTagView.Name):
-					OnPropertyChanged(nameof(Name));
-					break;
-				case nameof(PpsObjectTagView.Value):
-					OnPropertyChanged(nameof(Value));
-					break;
-				case nameof(PpsObjectTagView.Class):
-					OnPropertyChanged(nameof(Class));
-					break;
-				case nameof(PpsObjectTagView.CreationStamp):
-					OnPropertyChanged(nameof(CreationStamp));
-					break;
-			}
-		} // proc TagPropertyChanged
+				this.obj = obj;
+				obj.Tags.RefreshTags();
+				this.tagClass = tagClass;
 
-		private void AttachPropertyChanged()
-			=> WeakEventManager<PpsObjectTagView, PropertyChangedEventArgs>.AddHandler(tag, nameof(INotifyPropertyChanged.PropertyChanged), TagPropertyChanged);
-
-		public void DetachPropertyChanged()
-			=> WeakEventManager<PpsObjectTagView, PropertyChangedEventArgs>.RemoveHandler(tag, nameof(INotifyPropertyChanged.PropertyChanged), TagPropertyChanged);
-
-		private void OnPropertyChanged(string propertyName)
-			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
-		private void CheckEditMode()
-		{
-			if (!isEditing)
-				throw new InvalidOperationException("Tag is not in edit mode.");
-		} // proc CheckEditMode
-
-		public void BeginEdit()
-		{
-			currentName = tag?.Name;
-			currentValue = tag?.Value;
-
-			isEditing = true;
-		} // proc BeginEdit
-
-		public void EndEdit()
-		{
-			// check if in edit mode
-			CheckEditMode();
-
-			// update the tag behind
-			if (IsNew)
-			{
-				tag = ppsObject.Tags.UpdateTag(currentName, currentClass, currentValue);
-				AttachPropertyChanged();
-			}
-			else if (currentName != tag.Name)
-			{
-				tag.Remove();
-				DetachPropertyChanged();
-				tag = ppsObject.Tags.UpdateTag(currentName, currentClass, currentValue);
-				AttachPropertyChanged();
-			}
-			else
-				tag.Update(currentClass, currentValue);
-
-			isEditing = false;
-
-			ppsObject.UpdateLocalAsync().AwaitTask();
-		} // proc EndEdit
-
-		public void CancelEdit()
-		{
-			currentName = null;
-			currentValue = null;
-			isEditing = false;
-		} // proc CancelEdit
-
-		private void SetValue<T>(ref T value, T newValue, string propertyName)
-		{
-			CheckEditMode();
-
-			if (!Object.Equals(value, newValue))
-			{
-				value = newValue;
-				OnPropertyChanged(propertyName);
-			}
-		} // proc SetValue
-
-		private long CurrentUserId => PpsEnvironment.GetEnvironment().UserId;
-
-		/// <summary>Tag name</summary>
-		public string Name
-		{
-			get => IsEditing || IsNew ? currentName : tag.Name;
-			set => SetValue(ref currentName, value, nameof(Name));
-		} // prop Name
-
-		/// <summary>Value of the tag.</summary>
-		public object Value
-		{
-			get => IsEditing || IsNew ? currentValue : tag.Value;
-			set => SetValue(ref currentValue, value, nameof(Value));
-		} // prop Value
-
-		/// <summary>Tag class</summary>
-		public PpsObjectTagClass Class => IsEditing || IsNew ? currentClass : tag.Class;
-		/// <summary>Tag create time stamp.</summary>
-		public DateTime CreationStamp => tag?.CreationStamp ?? DateTime.Now;
-
-		/// <summary>Is the tag editable</summary>
-		public bool IsEditable => IsNew || tag.UserId == CurrentUserId;
-		/// <summary>Is this tag a new one.</summary>
-		public bool IsNew => tag == null;
-		/// <summary>Is the tag in editmode</summary>
-		public bool IsEditing => isEditing;
-
-		public string UserName => IsNew ? PpsEnvironment.GetEnvironment().Username : tag.User.GetProperty("Login", "<error>"); // todo:
-
-		public PpsTagOwnerIdentityIcon OwnerIdentityIcon
-		{
-			get
-			{
-				if (IsNew)
-					return PpsTagOwnerIdentityIcon.Mine;
-				else if (tag.UserId == 0)
-					return PpsTagOwnerIdentityIcon.System;
-				else if (tag.UserId == CurrentUserId)
-					return PpsTagOwnerIdentityIcon.Mine;
+				if (tagClass == PpsObjectTagClass.Date)
+					foreach (var tag in (from t in obj.Tags where t.Class == this.tagClass select t).OrderBy(t => (DateTime)t.Value).ThenBy(t => t.Name))
+						tags.Add(new PpsTagItemImplementation(tag, this));
 				else
-					return PpsTagOwnerIdentityIcon.Community;
+					foreach (var tag in (from t in obj.Tags where t.Class == this.tagClass select t).OrderBy(t => t.UserId).ThenBy(t => t.Name))
+						tags.Add(new PpsTagItemImplementation(tag, this));
+
+				if (tagClass == PpsObjectTagClass.Note)
+					tags.Insert(0, new PpsTagItemImplementation(this));
+				else
+					tags.Add(new PpsTagItemImplementation(this));
 			}
-		} // prop OwnerIdentityIcon
 
-		/// <summary>Only for internal use.</summary>
-		internal PpsObjectTagView InnerTag => tag;
-	} // class PpsTagItemModel
+			public event NotifyCollectionChangedEventHandler CollectionChanged;
 
-	#endregion
+			public PpsObjectTagClass TagClass
+				=> tagClass;
 
-	#region -- class PpsTagsModel -----------------------------------------------------
+			public void Append(string tagName)
+				=> Append(tagName, tagClass, null);
+			public void Append(string tagName, string tagValue)
+				=> Append(tagName, tagClass, tagValue);
 
-	public sealed class PpsTagsModel : IList, INotifyCollectionChanged
-	{
-		public event NotifyCollectionChangedEventHandler CollectionChanged;
-
-		private readonly PpsObjectTagClass classFilter;
-		private readonly PpsObject ppsObject;
-
-		private readonly List<PpsTagItemModel> items = new List<PpsTagItemModel>(); // shadow list
-
-		public PpsTagsModel(PpsObject ppsObject, PpsObjectTagClass classFilter)
-		{
-			this.ppsObject = ppsObject;
-			this.classFilter = classFilter;
-
-			AttachObject();
-		} // ctor
-
-		private void AttachObject()
-		{ 
-			WeakEventManager<PpsObjectTags, NotifyCollectionChangedEventArgs>.AddHandler(ppsObject.Tags, nameof(INotifyCollectionChanged.CollectionChanged), InnerCollectionChanged);
-
-			Refresh();
-		} // proc AttachObject
-
-		public void DetachObject()
-		{
-			WeakEventManager<PpsObjectTags, NotifyCollectionChangedEventArgs>.RemoveHandler(ppsObject.Tags, nameof(INotifyCollectionChanged.CollectionChanged), InnerCollectionChanged);
-
-			// clear list
-			items.ForEach(c => c.DetachPropertyChanged());
-			items.Clear();
-		} // proc DetachObject
-
-		void ICollection.CopyTo(Array array, int index)
-			=> throw new NotImplementedException("If it is useful. It must clear all items of the type.");
-
-		void IList.Clear() 
-			=> throw new NotImplementedException("If it is useful. It must clear all items of the type.");
-
-		int IList.Add(object value)
-			=> Insert((PpsTagItemModel)value, -1);
-
-		void IList.Insert(int index, object value)
-			=> Insert((PpsTagItemModel)value, index);
-
-		private int IndexOf(PpsObjectTagView tag)
-			=> items.FindIndex(c => tag == c.InnerTag);
-
-		bool IList.Contains(object value)
-			=> items.Contains((PpsTagItemModel)value);
-
-		int IList.IndexOf(object value)
-			=> items.IndexOf((PpsTagItemModel)value);
-
-		void IList.Remove(object value)
-			=> Remove((PpsTagItemModel)value);
-
-		void IList.RemoveAt(int index)
-			=> RemoveAt(index);
-
-		IEnumerator IEnumerable.GetEnumerator()
-			=> items.GetEnumerator();
-
-		private void InnerCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-		{
-			switch(e.Action)
+			public void Append(string tagName, PpsObjectTagClass tagClass, object tagValue)
 			{
-				case NotifyCollectionChangedAction.Add:
-					if (e.NewItems.Count != 1)
-						throw new NotSupportedException();
+				if (tagClass == PpsObjectTagClass.Note)
+					tagName = "Note (" + Guid.NewGuid().ToString() + ")";
+				else if (String.IsNullOrEmpty(tagName))
+					throw new ArgumentNullException("Tag Name");
 
-					{
-						var innerTag = (PpsObjectTagView)e.NewItems[0];
-						if (innerTag.Class != classFilter)
-							return;
-
-						if (IndexOf(innerTag) == -1) // not in list
-							Insert(new PpsTagItemModel(ppsObject, innerTag), -1);
-					}
-					break;
-				case NotifyCollectionChangedAction.Remove:
-					if (e.NewItems.Count != 1)
-						throw new NotSupportedException();
-
-					{
-						var idx = IndexOf((PpsObjectTagView)e.NewItems[0]);
-						if (idx >= 0)
-							RemoveFromView(items[idx], idx);
-					}
-					break;
-
-				case NotifyCollectionChangedAction.Move:
-					throw new NotImplementedException();
-				case NotifyCollectionChangedAction.Reset:
-					Refresh();
-					break;
+				switch (tagClass)
+				{
+					case PpsObjectTagClass.Text:
+						if (!((tagValue is string) && !String.IsNullOrEmpty((string)tagValue)))
+							throw new ArgumentNullException("Tag Value");
+						break;
+					case PpsObjectTagClass.Tag:
+						tagValue = null;
+						break;
+					case PpsObjectTagClass.Date:
+						tagValue = DateTime.Parse((string)tagValue).ToUniversalTime().ToString(CultureInfo.InvariantCulture);
+						//tagValue = DateTime.Parse((string)tagValue).ToUniversalTime().ToFileTime();
+						break;
+				}
+				var tag = this.obj.Tags.UpdateTag(tagName, tagClass, tagValue);
+				tags.Insert(tags.Count - 1, new PpsTagItemImplementation(tag, this));
+				//if (tagClass == PpsObjectTagClass.Date)
+				//tags.Sort((a,b)=>((DateTime)a.Value - (DateTime)b.Value))
+				obj.UpdateLocalAsync().AwaitTask();
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 			}
-		} // proc InnerCollectionChanged
 
-		public void Refresh()
-		{
-			// clear all models
-			items.ForEach(t => t.DetachPropertyChanged());
-			items.Clear();
-
-			// rebuild models
-			foreach(var innerTag in InnerTagList)
+			public void Remove(IPpsTagItem tag)
 			{
-				if (innerTag.Class == classFilter)
-					items.Add(new PpsTagItemModel(ppsObject, innerTag));
+				var remtag = (PpsTagItemImplementation)tag;
+				var remidx = tags.IndexOf(remtag);
+
+				obj.Tags.Remove(tag.Name);
+				obj.UpdateLocalAsync().AwaitTask();
+
+				tags.Remove(remtag);
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, remtag, remidx));
 			}
 
-			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-		} // proc Refresh
-
-		private void Remove(PpsTagItemModel tag)
-		{
-			if (tag.IsNew)
-				throw new ArgumentException("Tag is not in inner tag list.");
-
-			// remove in list -> notify changes the view
-			tag.InnerTag.Remove();
-		} // proc RemoveCore
-
-		private void RemoveAt(int index)
-			=> Remove(items[index]);
-		
-		private int Insert(PpsTagItemModel tag, int insertAt)
-		{
-			//if (tag.IsNew)
-			//	throw new ArgumentException("Tag is not in inner tag list.");
-
-			// find index of the tag
-			var idx = items.IndexOf(tag);
-			if (idx == -1)
+			public void Commit()
 			{
-				idx = IndexOf(tag.InnerTag);
-				if (idx >= 0)
-					items[idx].DetachPropertyChanged();
+				obj.UpdateLocalAsync().AwaitTask();
 			}
 
-			// insert at the end
-			if (insertAt <= -1)
-				insertAt = items.Count;
-
-			// if index changed
-			if(idx != insertAt)
+			public IEnumerator<IPpsTagItem> GetEnumerator()
 			{
-				if (idx != -1)
-					RemoveFromView(tag, idx);
-
-				items.Insert(insertAt, tag);
-				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, tag, insertAt));
+				throw new NotImplementedException();
 			}
 
-			return insertAt;
-		} // proc Insert
+			IEnumerator IEnumerable.GetEnumerator()
+			{
+				return tags.GetEnumerator();
+			}
+		}
 
-		private void RemoveFromView(PpsTagItemModel tag, int idx)
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			items.RemoveAt(idx);
-			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, tag, idx));
-		} // proc RemoveFromView
+			if (value is PpsObject obj)
+				return new PpsTagsImplementation(obj, (PpsObjectTagClass)parameter);
+			return null;
+		}
 
-		bool IList.IsReadOnly => false;
-		bool IList.IsFixedSize => false;
-
-		object ICollection.SyncRoot => null;
-		bool ICollection.IsSynchronized => false;
-
-		int ICollection.Count => items.Count;
-
-		object IList.this[int index] { get => items[index]; set => throw new NotSupportedException(); }
-
-		internal PpsObjectTags InnerTagList => ppsObject.Tags;
-
-		public PpsObjectTagClass Filter => classFilter;
-		public PpsObject Object => ppsObject;
-	} // class PpsTagsModel
-
-	#endregion
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotImplementedException();
+		}
+	}
 }
