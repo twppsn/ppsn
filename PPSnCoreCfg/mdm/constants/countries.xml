@@ -67,7 +67,7 @@
 		<pps:wpf name="wpf">
 			<pps:wpfSource id="mdm.countries" directory="Wpf" virtualPath="panes" />
 
-			<pps:action name="mdmCountriesEdit" displayName="Bearbeiten" priority="200">
+			<pps:action name="mdmCountriesEdit" displayName="Bearbeiten" displayImage="edit" priority="200">
 				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "mdmCountries" ]]></pps:condition>
 				<pps:code><![CDATA[ Window:LoadMask{ object = GetObject(CurrentItem.Id) }; ]]></pps:code>
 			</pps:action>

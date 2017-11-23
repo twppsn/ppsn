@@ -78,7 +78,9 @@
     <Content Include="constants\Mein.xml" />
     <Content Include="constants\Plzd.xml" />
     <Content Include="constants\Waeh.xml" />
-    <Content Include="mdm\constants\countries.xml" />
+    <Content Include="mdm\constants\countries.xml">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="mdm\contacts\Contacts.xml">
       <SubType>Designer</SubType>
     </Content>
@@ -204,6 +206,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="mdm\constants\Wpf\countries.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="mdm\contacts\contactTemplate.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -229,7 +235,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="ClientWpf\Templates\" />
-    <Folder Include="mdm\constants\Wpf\" />
     <Folder Include="reports\tw\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
