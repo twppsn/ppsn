@@ -293,6 +293,9 @@ namespace TecWare.PPSn.Data
 		{
 			var valueChanged = false;
 
+			if (newValue is PpsFormattedStringValue other)
+				newValue = other.currentTemplate;
+
 			var oldValue = currentTemplate;
 			if (newValue == PpsDataRow.NotSet && currentTemplate != PpsDataRow.NotSet)
 			{
