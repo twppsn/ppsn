@@ -1,34 +1,52 @@
-﻿
---ViewAdre = getView(Data:Head:First:AdreHead);
+﻿local landSource = createSource {
+	Source = Data:Land,
+	SortDescriptions = { "+ISO3" }
+};
 
---[[
-pushContact = command(
-    function (args) : void
-    	do (trans = UndoManager:BeginTransaction('Neue Adresse'))
-    		
-    		local ansp = getView(tvw:SelectedItem.AnspAdre);
-    		local newRow = ansp:Add { Name = "Test4" };
-			
-			local tviParent = tvw:ItemContainerGenerator:ContainerFromItem(tvw:SelectedItem);
-			tviParent.IsExpanded = true;
-			
-			local tviNew = tviParent:ItemContainerGenerator:ContainerFromItem(newRow);
-			if tviNew ~= nil then
-				tviNew.IsExpanded = true;
-				tviNew.IsSelected = true;
-			else
-				msgbox("tvi is null");
-			end;			
 
-            trans:Commit();
-        end;
-        
-        -- PushDataAsync();
-    end
+currentView = nil;
+IsDataGridVisible = false;
+
+cmdChangeView = command(
+	function (args) : void
+		ChangeView(args:Parameter);
+	end
 );
-]]
-		
-pushContact = command(
+
+function ChangeView(constName) : void
+
+	UpdateSources();
+
+	-- RootItem
+	if constName == nil then
+		IsDataGridVisible = false;
+		currentView = nil;
+		currentConstName = "";
+		return;
+	end;
+
+	local newView = nil;
+	if constName == "land" then
+		newView = landSource:View;
+	end;
+	if currentView == nil or newView ~= currentView then
+		currentView = newView;
+	end;
+
+	-- new order?
+	currentView:Refresh();
+	-- goto top
+	currentView:MoveCurrentToFirst();
+	-- show
+	IsDataGridVisible = true;
+	-- ensure visibility
+	local currentItem = currentView:CurrentItem;
+	if currentItem ~= nil then
+		listConst:ScrollIntoView(currentItem);
+	end;
+end;
+
+pushCountries = command(
     function (args) : void
 		UpdateSources();
 		if Data:IsDirty or Data:Object:IsDocumentChanged then
@@ -36,62 +54,5 @@ pushContact = command(
 		else
 			msgbox("Es gibt keine Änderungen.", "Information");
 		end
-    end
-);
-
-newAddress = command(
-    function (args) : void
-	    do (trans = UndoManager:BeginTransaction("Neue Adresse"))
-			local viewAdre = getView(Data:Head:First:AdreHead);
-			viewAdre:Add({ Name = "Neue Adresse"});
-			
- 			trans:Commit();
-		end;
-    end
-);
-
-newPartner = command(
-    function (args) : void
-        local cur = AdreTreeView.SelectedValue;
-        if cur ~= nil then
-            do (trans = UndoManager:BeginTransaction("Neuer Partner"))
-                if cur:Table:TableName == "Adre" then
-                    local viewAdre = getView(cur:AnspAdre);
-                    viewAdre:Add({ Name = "Neuer Partner"});
-                else
-                    cur:Table:Add({AdreId = cur:AdreId, Name = "Neuer Partner"});
-                end;
-                trans:Commit();
-            end;
-		end;
-	end
-);
-				
-delItem = command(
-    function (args) : void
-  		local cur = AdreTreeView:SelectedValue;
-        if cur ~= nil then
-			do (trans = UndoManager:BeginTransaction("Löschen"))
- 			    cur:Remove({"Löschen " .. (cur.Name)});
-				trans:Commit();
-			end;
-		end;
-    end
-);
-
-templateSelectorAdr = templateSelector(
-    function (item, container) : object
-    	if item == nil then
-    		return nil;
-		end;
-
-		local resName = item:Table:TableName;
-    	return GetResource(resName);
-    end
-);
-
-testCommand = command(
-    function (args) : void
-  		msgbox("Test");
     end
 );

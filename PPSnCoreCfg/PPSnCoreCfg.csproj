@@ -53,6 +53,7 @@
     </None>
     <None Include="mdm\constants\constants.lua" />
     <None Include="mdm\constants\countries.lua" />
+    <None Include="mdm\constants\Wpf\countries.lua" />
     <None Include="mdm\contacts\Wpf\contacts.lua" />
     <None Include="ClientWpf\Panes\testEnvironment.lua" />
     <None Include="ClientWpf\Panes\hello.lua" />
@@ -203,6 +204,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="ClientWpf\Resources\Styles\TreeView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="mdm\constants\countryTemplate.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

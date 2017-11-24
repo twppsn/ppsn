@@ -65,6 +65,7 @@
 		</pps:register>
 		
 		<pps:wpf name="wpf">
+			<pps:template id="countries" file="countryTemplate.xaml" />
 			<pps:wpfSource id="mdm.countries" directory="Wpf" virtualPath="panes" />
 
 			<pps:action name="mdmCountriesEdit" displayName="Bearbeiten" displayImage="edit" priority="200">
