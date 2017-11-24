@@ -506,6 +506,34 @@ namespace TecWare.PPSn
 			}
 		} // func CompileAsync
 
+		public async Task<T> CompileLambdaAsync<T>(string code, string sourceLocation, bool throwException, params string[] argumentNames)
+			where T : class
+		{
+			try
+			{
+				return await Task.Run(() => Lua.CreateLambda<T>(sourceLocation, code, argumentNames));
+			}
+			catch (LuaParseException e)
+			{
+				if (throwException)
+					throw;
+				else
+				{
+					await ShowExceptionAsync(ExceptionShowFlags.Background, e, $"Compile for {sourceLocation} failed.");
+					return null;
+				}
+			}
+		} // func CompileLambdaAsync
+
+		public Task<T> CompileLambdaAsync<T>(XElement xSource, bool throwException, params string[] argumentNames)
+			where T : class
+		{
+			var code = xSource.Value;
+			var pos = PpsXmlPosition.GetXmlPositionFromAttributes(xSource);
+			return CompileLambdaAsync<T>(code, pos.LineInfo ?? "dummy.lua", throwException, argumentNames);
+		} // func CompileAsync
+
+
 		/// <summary>Compiles a chunk in the background.</summary>
 		/// <param name="sourceCode">Source code of the chunk.</param>
 		/// <param name="sourceLocation">Source location for the debug information.</param>

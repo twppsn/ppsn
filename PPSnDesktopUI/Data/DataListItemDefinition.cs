@@ -40,13 +40,20 @@ namespace TecWare.PPSn.Data
 		private sealed class TemplateItem : IComparable<TemplateItem>
 		{
 			private readonly int priority;
-			private Func<object, bool> condition; // condition if the template is for this item
+			private readonly Func<object, bool> condition; // condition if the template is for this item
 			private readonly string onlineViewId;	// view, that returns extended data for the row
 			private DataTemplate template;				// template of the row
 
 			public TemplateItem(PpsDataListItemDefinition owner, XElement xCur, ParserContext parserContext, ref int priority)
 			{
-				this.condition = null;
+				var xCondition = xCur.Element(XName.Get("condition"));
+				if (xCondition != null)
+				{
+					this.condition = owner.Environment.CompileLambdaAsync<Func<object,bool>>(xCondition, true, "Item").AwaitTask();
+					xCondition.Remove();
+				}
+				else
+					this.condition = null;
 				this.template = owner.Environment.Dispatcher.Invoke(() => (DataTemplate)owner.Environment.CreateResource(xCur.Elements().First().ToString(), parserContext));
 
 				this.priority = priority = xCur.GetAttribute("priority", priority + 1);
@@ -60,7 +67,12 @@ namespace TecWare.PPSn.Data
 			/// <param name="item"></param>
 			/// <returns></returns>
 			public bool SelectTemplate(dynamic item)
-				=> condition == null ? template != null : condition(item);
+			{
+				if (condition == null)
+					return template != null;
+				else
+					return condition(item);
+			} // func SelectTemplate
 
 			public string OnlineViewId => onlineViewId;
 			public int Priority => priority;
@@ -69,7 +81,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		private List<TemplateItem> templates = new List<TemplateItem>();
+		private readonly List<TemplateItem> templates = new List<TemplateItem>();
 
 		internal PpsDataListItemDefinition(PpsEnvironment environment, string key)
 			: base(environment, key)
