@@ -11,8 +11,8 @@
 		</x:Code>
 		<Grid>
 			<Grid.RowDefinitions>
-				<RowDefinition Height="16" />
-				<RowDefinition Height="16" />
+				<RowDefinition Height="18" />
+				<RowDefinition Height="20" />
 			</Grid.RowDefinitions>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="100"/>
@@ -21,8 +21,8 @@
 			<Canvas Grid.Column="0" Grid.RowSpan="2" Width="24" Height="24">
 				<Path Data="{StaticResource settingsPathGeometry}" Fill="{StaticResource PPSnActionButtonBrush}" Opacity=".75"/>
 			</Canvas>
-			<TextBlock Grid.Column="1" Text="Konstanten"/>
-			<TextBlock Grid.Column="1" Grid.Row="1" Text="Ländereinstellungen" FontWeight="Bold"/>
+			<TextBlock Grid.Column="1" Text="Einstellungen" VerticalAlignment="Bottom"/>
+			<TextBlock Grid.Column="1" Grid.Row="1" Text="Ländereinstellungen" FontWeight="Bold" VerticalAlignment="Top"/>
 		</Grid>
 	</DataTemplate>
 
