@@ -5,7 +5,10 @@
 		<ResourceDictionary Source="..\..\ClientWpf\Default.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
-	<DataTemplate x:Key="crmCountries,,100">
+	<DataTemplate x:Key="mdmCountries,,100">
+		<x:Code>
+			<![CDATA[ return Item.Nr == 'LAND' ]]>
+		</x:Code>
 		<Grid>
 			<Grid.RowDefinitions>
 				<RowDefinition Height="16" />
