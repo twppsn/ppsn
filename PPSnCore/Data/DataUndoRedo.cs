@@ -15,15 +15,11 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- interface IPpsUndoItem ---------------------------------------------------
+	#region -- interface IPpsUndoItem -------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Basic interface for all undo/redo elements.</summary>
 	public interface IPpsUndoItem
 	{
@@ -37,9 +33,8 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- interface IPpsUndoTransaction --------------------------------------------
+	#region -- interface IPpsUndoTransaction ------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Records undo operations.</summary>
 	public interface IPpsUndoTransaction : IDisposable
 	{
@@ -51,9 +46,8 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- interface IPpsUndoSink ---------------------------------------------------
+	#region -- interface IPpsUndoSink -------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Implemented by the undo/redo manager to catch all the operations</summary>
 	public interface IPpsUndoSink
 	{
@@ -75,13 +69,13 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsUndoManagerBase -------------------------------------------------
+	#region -- class PpsUndoManagerBase -----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Simple undo manager implementation for that holds only one transaction.</summary>
+	/// <summary>Simple undo manager implementation for that holds only one transaction.
+	/// But does not form the transaction to groups.</summary>
 	public class PpsUndoManagerBase : IPpsUndoSink
 	{
-		#region -- class PpsUndoTransaction -------------------------------------------------
+		#region -- class PpsUndoTransaction -------------------------------------------
 
 		private abstract class PpsUndoTransaction : IPpsUndoTransaction
 		{
@@ -155,7 +149,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsUndoRootTransaction ---------------------------------------------
+		#region -- class PpsUndoRootTransaction ---------------------------------------
 
 		private sealed class PpsUndoRootTransaction : PpsUndoTransaction
 		{
@@ -171,7 +165,7 @@ namespace TecWare.PPSn.Data
 
 			public override void Append(IPpsUndoItem item)
 				=> items.Add(item);
-			
+
 			internal override int GetRollbackIndex()
 				=> items.Count;
 
@@ -180,7 +174,7 @@ namespace TecWare.PPSn.Data
 				manager.SuspendAppend();
 				try
 				{
-					for (int i = items.Count - 1; i >= iRollbackIndex; i--)
+					for (var i = items.Count - 1; i >= iRollbackIndex; i--)
 					{
 						items[i].Undo();
 						items.RemoveAt(i);
@@ -193,9 +187,7 @@ namespace TecWare.PPSn.Data
 			} // proc RollbackToIndex
 
 			internal override void UpdateCurrentTransaction(PpsUndoTransaction trans)
-			{
-				manager.currentUndoTransaction = trans;
-			} // proc UpdateCurrentTransaction
+				=> manager.currentUndoTransaction = trans;
 
 			public override void Commit()
 			{
@@ -216,7 +208,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsUndoParentTransaction -------------------------------------------
+		#region -- class PpsUndoParentTransaction -------------------------------------
 
 		private sealed class PpsUndoParentTransaction : PpsUndoTransaction
 		{
@@ -235,10 +227,10 @@ namespace TecWare.PPSn.Data
 
 			internal override void RollbackToIndex(int rollbackIndex)
 				=> parent.RollbackToIndex(rollbackIndex);
-			internal override int GetRollbackIndex() 
+			internal override int GetRollbackIndex()
 				=> parent.GetRollbackIndex();
 
-			internal override void UpdateCurrentTransaction(PpsUndoTransaction trans) 
+			internal override void UpdateCurrentTransaction(PpsUndoTransaction trans)
 				=> parent.UpdateCurrentTransaction(trans);
 
 			public override void Commit()
@@ -253,8 +245,10 @@ namespace TecWare.PPSn.Data
 		private PpsUndoTransaction currentUndoTransaction = null;
 		private int appendSuspended = 0;
 
-		#region -- Append, Clear ----------------------------------------------------------
+		#region -- Append, Clear ------------------------------------------------------
 
+		/// <summary>Append a undo item to the current transaction.</summary>
+		/// <param name="item">Undo item.</param>
 		public void Append(IPpsUndoItem item)
 		{
 			if (InUndoRedoOperation)
@@ -265,20 +259,26 @@ namespace TecWare.PPSn.Data
 			currentUndoTransaction.Append(item); // append new item to current undo transaction
 		} // proc Append
 
+		/// <summary>Suspend any transaction operations (Append calls will be ignored, <c>InUndoRedoOperation</c> is <c>true</c>).</summary>
 		protected void SuspendAppend()
-		{
-			appendSuspended++;
-		} // proc SuspendAppend
+			=> appendSuspended++;
 
+		/// <summary>Resume to transaction mode.</summary>
 		protected void ResumeAppend()
 		{
-			appendSuspended--; //~todo: throw logic errors
+			appendSuspended--;
+			if (appendSuspended < 0)
+				throw new InvalidOperationException("Logic Error, too many resumes.");
 		} // proc SuspendAppend
 
+		/// <summary>Commit a transaction to an undo/redo group.</summary>
+		/// <param name="description">Description of this group.</param>
+		/// <param name="undoItems">Items within this group.</param>
 		protected virtual void Commit(string description, IPpsUndoItem[] undoItems)
 		{
 		} // proc Commit
 
+		/// <summary>Reset the undo stack to nothing.</summary>
 		public virtual void Clear()
 		{
 			if (currentUndoTransaction != null)
@@ -290,8 +290,11 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- BeginTransaction -------------------------------------------------------
+		#region -- BeginTransaction ---------------------------------------------------
 
+		/// <summary>Creates a new undo/redo transaction.</summary>
+		/// <param name="description">Description of the transaction.</param>
+		/// <returns>Returns the transaction scope.</returns>
 		public IPpsUndoTransaction BeginTransaction(string description)
 		{
 			currentUndoTransaction =
@@ -304,9 +307,9 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		/// <summary></summary>
+		/// <summary>Are we within an open transaction.</summary>
 		public bool InTransaction => currentUndoTransaction != null;
-		/// <summary></summary>
+		/// <summary>Are we within an undo/redo operation.</summary>
 		public bool InUndoRedoOperation => appendSuspended > 0;
 	} // class PpsUndoManagerBase
 

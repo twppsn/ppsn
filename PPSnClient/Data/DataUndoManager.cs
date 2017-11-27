@@ -16,60 +16,52 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- enum PpsUndoStepType -----------------------------------------------------
+	#region -- enum PpsUndoStepType ---------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Type of the current step.</summary>
 	public enum PpsUndoStepType
 	{
-		/// <summary></summary>
+		/// <summary>Undo operation</summary>
 		Undo,
-		/// <summary></summary>
+		/// <summary>Redo operation</summary>
 		Redo
 	} // enum PpsUndoStepType
 
 	#endregion
 
-	#region -- interface IPpsUndoStep ---------------------------------------------------
+	#region -- interface IPpsUndoStep -------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Interface fo an undo step.</summary>
 	public interface IPpsUndoStep
 	{
-		/// <summary></summary>
+		/// <summary>Moves to this step.</summary>
 		void Goto();
 
-		/// <summary></summary>
+		/// <summary>Type of the step undo/redo.</summary>
 		PpsUndoStepType Type { get; }
-		/// <summary></summary>
+		/// <summary>Description of the step.</summary>
 		string Description { get; }
-		/// <summary></summary>
+		/// <summary>Index of the step.</summary>
 		int Index { get; }
 	} // interface IPpsUndoStep
 
 	#endregion
 
-	#region -- class PpsUndoManager -----------------------------------------------------
+	#region -- class PpsUndoManager ---------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Manages the undo/redo elements. The undo operations are collected in transactions.</summary>
-	/// ~todo: Reset,Commit,Rollback müssen UndoManager ändern können, sonst ist er invalid
 	public sealed class PpsUndoManager : PpsUndoManagerBase, IEnumerable<IPpsUndoStep>, INotifyCollectionChanged
 	{
-		#region -- class PpsUndoGroup -------------------------------------------------------
+		#region -- class PpsUndoGroup -------------------------------------------------
 
 		private sealed class PpsUndoGroup : IPpsUndoStep
 		{
-			private PpsUndoManager manager;
-			private string description;
-			private IPpsUndoItem[] items;
+			private readonly PpsUndoManager manager;
+			private readonly string description;
+			private readonly IPpsUndoItem[] items;
 
 			public PpsUndoGroup(PpsUndoManager manager, string description, IPpsUndoItem[] items)
 			{
@@ -121,26 +113,36 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		/// <summary>Notifies if there are undo operations available.</summary>
 		public event EventHandler CanUndoChanged;
+		/// <summary>Notifies if there are redo operations available.</summary>
 		public event EventHandler CanRedoChanged;
 
+		/// <summary>Notifies a change of the operations.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
-		private List<PpsUndoGroup> items = new List<PpsUndoGroup>();
+		private readonly List<PpsUndoGroup> items = new List<PpsUndoGroup>();
 		private int undoBorder = 0;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary>Creates a new undo manager.</summary>
 		public PpsUndoManager()
 		{
 		} // ctor
 
 		#endregion
 
-		#region -- Clear, Commit ----------------------------------------------------------
+		#region -- Clear, Commit ------------------------------------------------------
 
+		/// <summary>Commit a transaction to an undo/redo group.</summary>
+		/// <param name="description">Description of this group.</param>
+		/// <param name="undoItems">Items within this group.</param>
 		protected override void Commit(string description, IPpsUndoItem[] undoItems)
 		{
+			if (undoItems.Length == 0) // no item => no group
+				return; 
+
 			// Remove undo commands
 			items.RemoveRange(undoBorder, items.Count - undoBorder);
 
@@ -153,6 +155,7 @@ namespace TecWare.PPSn.Data
 			RaiseCollectionReset();
 		} // proc Commit
 
+		/// <summary>Reset the undo stack to nothing.</summary>
 		public override void Clear()
 		{
 			base.Clear();
@@ -169,8 +172,10 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- Undo/Redo --------------------------------------------------------------
+		#region -- Undo/Redo ----------------------------------------------------------
 
+		/// <summary>Undo the number of groups.</summary>
+		/// <param name="count">Number of groups to undo (default 1).</param>
 		public void Undo(int count = 1)
 		{
 			if (!CanUndo)
@@ -195,6 +200,8 @@ namespace TecWare.PPSn.Data
 			RaiseCollectionReset();
 		} // proc Undo
 
+		/// <summary>Redo the number of groups.</summary>
+		/// <param name="count">Number of groups to redo (default 1).</param>
 		public void Redo(int count = 1)
 		{
 			if (!CanRedo)
@@ -230,8 +237,10 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- IEnumerator ------------------------------------------------------------
+		#region -- IEnumerator --------------------------------------------------------
 
+		/// <summary>List of all undo/redo operations.</summary>
+		/// <returns></returns>
 		public IEnumerator<IPpsUndoStep> GetEnumerator()
 		{
 			foreach (var c in items)
@@ -243,9 +252,9 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		/// <summary></summary>
+		/// <summary>Is there are a undo operation available.</summary>
 		public bool CanUndo => undoBorder > 0;
-		/// <summary></summary>
+		/// <summary>Is there are a redo operation available.</summary>
 		public bool CanRedo => undoBorder < items.Count;
 	} // class PpsUndoManager
 
