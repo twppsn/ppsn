@@ -299,13 +299,14 @@ namespace TecWare.PPSn.UI
 
 							InkStrokes.StrokesChanged += (chgsender, chge) =>
 							{
-								using (var trans = strokeUndoManager.BeginTransaction("Linie hinzugefügt"))
+								// check for the real change - even empty transactions shown in undo/redo
+								if (chge.Added.Count > 0) using (var trans = strokeUndoManager.BeginTransaction("Linie hinzugefügt"))
 								{
 									foreach (var stroke in chge.Added)
 										strokeUndoManager.Append(new PpsAddStrokeUndoItem((StrokeCollection)GetValue(InkStrokesProperty), stroke));
 									trans.Commit();
 								}
-								using (var trans = strokeUndoManager.BeginTransaction("Linie entfernt"))
+								if (chge.Removed.Count > 0) using (var trans = strokeUndoManager.BeginTransaction("Linie entfernt"))
 								{
 									foreach (var stroke in chge.Removed)
 										strokeUndoManager.Append(new PpsRemoveStrokeUndoItem((StrokeCollection)GetValue(InkStrokesProperty), stroke));
