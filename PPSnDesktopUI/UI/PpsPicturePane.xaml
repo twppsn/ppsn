@@ -18,19 +18,18 @@
 				<clr:String>MimeType</clr:String>
 			</CollectionViewSource.LiveFilteringProperties>
 		</CollectionViewSource>
-
 		<Style x:Key="PPSnColorItemsControlStyle" TargetType="{x:Type ItemsControl}">
 			<Setter Property="ItemTemplate">
 				<Setter.Value>
 					<DataTemplate>
 						<Border BorderThickness="1" BorderBrush="Black" Margin="5">
-								<Button 
-									Width="30" 
-									Height="30" 
-									Command="{x:Static local:PpsPicturePane.OverlaySetColorCommand}" 
-									CommandTarget="{Binding Path=PlacementTarget, RelativeSource={RelativeSource AncestorType=Popup}}" 
-									CommandParameter="{Binding}" 
-									Background="{Binding Brush}"/>
+							<Button 
+								Width="30" 
+								Height="30" 
+								Command="{x:Static local:PpsPicturePane.OverlaySetColorCommand}" 
+								CommandTarget="{Binding Path=PlacementTarget, RelativeSource={RelativeSource AncestorType=Popup}}" 
+								CommandParameter="{Binding}" 
+								Background="{Binding Brush}"/>
 						</Border>
 					</DataTemplate>
 				</Setter.Value>

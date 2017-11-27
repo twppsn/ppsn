@@ -131,6 +131,7 @@ namespace TecWare.PPSn.UI
 
 		#region -- UnDo/ReDo ------------------------------------------------------------
 
+		/// <summary>This StrokeCollection owns a property if ChangedActions should be traced (ref: https://msdn.microsoft.com/en-US/library/aa972158.aspx )</summary>
 		private class PpsDetraceableStrokeCollection : StrokeCollection
 		{
 			private bool disableTracing = false;
@@ -140,6 +141,7 @@ namespace TecWare.PPSn.UI
 
 			}
 
+			/// <summary>If true item changes should not be passed to a UndoManager</summary>
 			public bool DisableTracing
 			{
 				get => disableTracing;
@@ -347,6 +349,7 @@ namespace TecWare.PPSn.UI
 
 							InkStrokes.StrokesChanged += (chgsender, chge) =>
 							{
+								// tracing is disabled, if a undo/redo action caused the changed event, thus preventing it to appear in the undomanager itself
 								if (!InkStrokes.DisableTracing)
 								{
 									using (var trans = strokeUndoManager.BeginTransaction("Linie hinzugefügt"))
