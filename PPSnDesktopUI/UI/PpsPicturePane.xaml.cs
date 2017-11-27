@@ -131,12 +131,28 @@ namespace TecWare.PPSn.UI
 
 		#region -- UnDo/ReDo ------------------------------------------------------------
 
+		private class PpsDetraceableStrokeCollection : StrokeCollection
+		{
+			private bool disableTracing = false;
+
+			public PpsDetraceableStrokeCollection(StrokeCollection strokes) : base(strokes)
+			{
+
+			}
+
+			public bool DisableTracing
+			{
+				get => disableTracing;
+				set => disableTracing = value;
+			}
+		}
+
 		private class PpsAddStrokeUndoItem : IPpsUndoItem
 		{
-			private StrokeCollection collection;
+			private PpsDetraceableStrokeCollection collection;
 			private Stroke stroke;
 
-			public PpsAddStrokeUndoItem(StrokeCollection collection, Stroke strokeAdded)
+			public PpsAddStrokeUndoItem(PpsDetraceableStrokeCollection collection, Stroke strokeAdded)
 			{
 				this.collection = collection;
 				this.stroke = strokeAdded;
@@ -150,21 +166,37 @@ namespace TecWare.PPSn.UI
 
 			public void Redo()
 			{
-				collection.Add(stroke);
+				collection.DisableTracing = true;
+				try
+				{
+					collection.Add(stroke);
+				}
+				finally
+				{
+					collection.DisableTracing = false;
+				}
 			}
 
 			public void Undo()
 			{
-				collection.Remove(stroke);
+				collection.DisableTracing = true;
+				try
+				{
+					collection.Remove(stroke);
+				}
+				finally
+				{
+					collection.DisableTracing = false;
+				}
 			}
 		}
 
 		private class PpsRemoveStrokeUndoItem : IPpsUndoItem
 		{
-			private StrokeCollection collection;
+			private PpsDetraceableStrokeCollection collection;
 			private Stroke stroke;
 
-			public PpsRemoveStrokeUndoItem(StrokeCollection collection, Stroke strokeAdded)
+			public PpsRemoveStrokeUndoItem(PpsDetraceableStrokeCollection collection, Stroke strokeAdded)
 			{
 				this.collection = collection;
 				this.stroke = strokeAdded;
@@ -178,12 +210,28 @@ namespace TecWare.PPSn.UI
 
 			public void Redo()
 			{
-				collection.Remove(stroke);
+				collection.DisableTracing = true;
+				try
+				{
+					collection.Remove(stroke);
+				}
+				finally
+				{
+					collection.DisableTracing = false;
+				}
 			}
 
 			public void Undo()
 			{
-				collection.Add(stroke);
+				collection.DisableTracing = true;
+				try
+				{
+					collection.Add(stroke);
+				}
+				finally
+				{
+					collection.DisableTracing = false;
+				}
 			}
 		}
 
@@ -295,22 +343,24 @@ namespace TecWare.PPSn.UI
 							var imgData = await i.LinkedObject.GetDataAsync<PpsObjectBlobData>();
 
 							var data = await SelectedAttachment.LinkedObject.GetDataAsync<PpsObjectBlobData>();
-							InkStrokes = await data.GetOverlayAsync() ?? new StrokeCollection();
+							InkStrokes = new PpsDetraceableStrokeCollection(await data.GetOverlayAsync() ?? new StrokeCollection());
 
 							InkStrokes.StrokesChanged += (chgsender, chge) =>
 							{
-								// check for the real change - even empty transactions shown in undo/redo
-								if (chge.Added.Count > 0) using (var trans = strokeUndoManager.BeginTransaction("Linie hinzugefügt"))
+								if (!InkStrokes.DisableTracing)
 								{
-									foreach (var stroke in chge.Added)
-										strokeUndoManager.Append(new PpsAddStrokeUndoItem((StrokeCollection)GetValue(InkStrokesProperty), stroke));
-									trans.Commit();
-								}
-								if (chge.Removed.Count > 0) using (var trans = strokeUndoManager.BeginTransaction("Linie entfernt"))
-								{
-									foreach (var stroke in chge.Removed)
-										strokeUndoManager.Append(new PpsRemoveStrokeUndoItem((StrokeCollection)GetValue(InkStrokesProperty), stroke));
-									trans.Commit();
+									using (var trans = strokeUndoManager.BeginTransaction("Linie hinzugefügt"))
+									{
+										foreach (var stroke in chge.Added)
+											strokeUndoManager.Append(new PpsAddStrokeUndoItem((PpsDetraceableStrokeCollection)GetValue(InkStrokesProperty), stroke));
+										trans.Commit();
+									}
+									using (var trans = strokeUndoManager.BeginTransaction("Linie entfernt"))
+									{
+										foreach (var stroke in chge.Removed)
+											strokeUndoManager.Append(new PpsRemoveStrokeUndoItem((PpsDetraceableStrokeCollection)GetValue(InkStrokesProperty), stroke));
+										trans.Commit();
+									}
 								}
 							};
 							SetCharmObject(i.LinkedObject);
@@ -736,14 +786,10 @@ namespace TecWare.PPSn.UI
 
 		#region -- Charmbar -----------------------------------------------------------
 
-		/// <summary>
-		/// variable saving the object, which was loaded before opening the PicturePane
-		/// </summary>
+		/// <summary>variable saving the object, which was loaded before opening the PicturePane</summary>
 		private PpsObject originalObject;
 
-		/// <summary>
-		/// restores the object before loading the PicturePane
-		/// </summary>
+		/// <summary>restores the object before loading the PicturePane</summary>
 		private void ResetCharmObject()
 		{
 			if (originalObject == null)
@@ -754,9 +800,7 @@ namespace TecWare.PPSn.UI
 			((dynamic)wnd).CharmObject = originalObject;
 		}
 
-		/// <summary>
-		/// sets the object of the CharmBar - makes a backup, if it was already set (from the pane requesting the PicturePane)
-		/// </summary>
+		/// <summary>sets the object of the CharmBar - makes a backup, if it was already set (from the pane requesting the PicturePane)</summary>
 		/// <param name="obj">new PpsObject</param>
 		private void SetCharmObject(PpsObject obj)
 		{
@@ -827,7 +871,7 @@ namespace TecWare.PPSn.UI
 
 		private void InitializeStrokes()
 		{
-			InkStrokes = new StrokeCollection();
+			InkStrokes = new PpsDetraceableStrokeCollection(new StrokeCollection());
 
 			InkDrawingAttributes = new DrawingAttributes();
 		}
@@ -900,9 +944,9 @@ namespace TecWare.PPSn.UI
 		}
 
 		/// <summary>The Strokes made on the shown Image</summary>
-		private StrokeCollection InkStrokes
+		private PpsDetraceableStrokeCollection InkStrokes
 		{
-			get { return (StrokeCollection)GetValue(InkStrokesProperty); }
+			get { return (PpsDetraceableStrokeCollection)GetValue(InkStrokesProperty); }
 			set { SetValue(InkStrokesProperty, value); }
 		}
 
@@ -969,7 +1013,7 @@ namespace TecWare.PPSn.UI
 		private readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(string), typeof(PpsPicturePane));
 		private readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(ObservableCollection<PpsPecCamera>), typeof(PpsPicturePane));
 		private readonly static DependencyProperty InkDrawingAttributesProperty = DependencyProperty.Register(nameof(InkDrawingAttributes), typeof(DrawingAttributes), typeof(PpsPicturePane));
-		private readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(StrokeCollection), typeof(PpsPicturePane));
+		private readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(PpsDetraceableStrokeCollection), typeof(PpsPicturePane));
 		private readonly static DependencyProperty InkEditModeProperty = DependencyProperty.Register(nameof(InkEditMode), typeof(InkCanvasEditingMode), typeof(PpsPicturePane));
 		private readonly static DependencyProperty InkEditCursorProperty = DependencyProperty.Register(nameof(InkEditCursor), typeof(Cursor), typeof(PpsPicturePane));
 		private readonly static DependencyProperty ScaleMatrixProperty = DependencyProperty.Register(nameof(ScaleMatrix), typeof(Matrix), typeof(PpsPicturePane));
