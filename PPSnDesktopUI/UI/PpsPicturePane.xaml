@@ -115,6 +115,34 @@
 				</Style>
 			</mediaKit:VideoCaptureElement.Style>
 		</mediaKit:VideoCaptureElement>
+		<Button 
+			Grid.Row="0"
+			Width="200"
+			Height="200"
+			HorizontalAlignment="Right"
+			VerticalAlignment="Bottom"
+			Margin="0,0,10,10" 
+			Command="{x:Static local:PpsPicturePane.SaveCameraImageCommand}" 
+			Cursor="Hand"
+			ToolTip="Bild erstellen">
+			<Button.Template>
+				<ControlTemplate TargetType="Button">
+					<Grid>
+						<Ellipse Fill="AliceBlue" Opacity="0.6"/>
+						<Image HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="30">
+							<Image.Source>
+								<DrawingImage>
+									<DrawingImage.Drawing>
+										<GeometryDrawing Brush="{StaticResource PPSnWindowFooterBrush}"  
+														Geometry="{StaticResource cameraPathGeometry}"/>
+									</DrawingImage.Drawing>
+								</DrawingImage>
+							</Image.Source>
+						</Image>
+					</Grid>
+				</ControlTemplate>
+			</Button.Template>
+		</Button>
 		<Grid
 			Grid.Row="0">
 			<InkCanvas

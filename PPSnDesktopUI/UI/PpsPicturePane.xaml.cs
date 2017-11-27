@@ -382,7 +382,33 @@ namespace TecWare.PPSn.UI
 						await data.SetOverlayAsync(InkStrokes);
 						strokeUndoManager.Clear();
 					}
-					else if (SelectedCamera != null)
+
+				},
+				(sender, e) => e.CanExecute = strokeUndoManager.CanUndo));
+
+			CommandBindings.Add(new CommandBinding(
+				ApplicationCommands.Delete,
+				(sender, e) =>
+				{
+					if (SelectedAttachment is IPpsAttachmentItem item)
+					{
+						item.Remove();
+					}
+				},
+				(sender, e) => e.CanExecute = SelectedAttachment != null));
+
+			AddCameraCommandBindings();
+
+			AddStrokeCommandBindings();
+		}
+
+		private void AddCameraCommandBindings()
+		{
+			CommandBindings.Add(new CommandBinding(
+				SaveCameraImageCommand,
+				async (sender, e) =>
+				{
+					if (SelectedCamera != null)
 					{
 						var path = System.IO.Path.GetTempPath() + DateTime.Now.ToUniversalTime().ToString("yyyy-MM-dd_HHmmss") + ".jpg";
 
@@ -403,26 +429,8 @@ namespace TecWare.PPSn.UI
 						File.Delete(path);
 					}
 				},
-				(sender, e) => e.CanExecute = !String.IsNullOrEmpty(SelectedCamera) || strokeUndoManager.CanUndo));
+				(sender, e) => e.CanExecute = !String.IsNullOrEmpty(SelectedCamera)));
 
-			CommandBindings.Add(new CommandBinding(
-				ApplicationCommands.Delete,
-				(sender, e) =>
-				{
-					if (SelectedAttachment is IPpsAttachmentItem item)
-					{
-						item.Remove();
-					}
-				},
-				(sender, e) => e.CanExecute = SelectedAttachment != null));
-
-			AddCameraCommandBindings();
-
-			AddStrokeCommandBindings();
-		}
-
-		private void AddCameraCommandBindings()
-		{
 			CommandBindings.Add(new CommandBinding(
 				ChangeCameraCommand,
 				(sender, e) =>
@@ -566,6 +574,7 @@ namespace TecWare.PPSn.UI
 		public static readonly RoutedUICommand OverlaySetThicknessCommand = new RoutedUICommand("SetThickness", "Set Thickness", typeof(PpsPicturePane));
 		public static readonly RoutedUICommand OverlaySetColorCommand = new RoutedUICommand("SetColor", "Set Color", typeof(PpsPicturePane));
 		public readonly static RoutedUICommand ChangeCameraCommand = new RoutedUICommand("ChangeCamera", "ChangeCamera", typeof(PpsPicturePane));
+		public readonly static RoutedUICommand SaveCameraImageCommand = new RoutedUICommand("SaveCameraImage", "SaveCameraImage", typeof(PpsPicturePane));
 
 		#endregion
 
