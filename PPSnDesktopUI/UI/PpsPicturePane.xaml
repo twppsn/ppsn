@@ -4,7 +4,6 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:TecWare.PPSn.UI"
-			 xmlns:mediaKit="clr-namespace:WPFMediaKit.DirectShow.Controls;assembly=WPFMediaKit"
 			 xmlns:clr="clr-namespace:System;assembly=mscorlib"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
@@ -89,23 +88,17 @@
 			</Setter>
 		</Style>
 	</UserControl.Resources>
+	<!--this is the control for Camera Settings-->
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition  />
 			<RowDefinition Height="200"/>
 		</Grid.RowDefinitions>
-		<mediaKit:VideoCaptureElement
+		<Image 
 			Grid.Row="0"
-			DesiredPixelWidth="1920"
-            DesiredPixelHeight="1080"
-            FPS="30"
-            VideoCaptureSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedCamera, Mode=OneWay}"
-			UnloadedBehavior="Stop"
-			LoadedBehavior="Play"
-            x:Name="videoElement"
-			Stretch="Fill">
-			<mediaKit:VideoCaptureElement.Style>
-				<Style TargetType="{x:Type mediaKit:VideoCaptureElement}">
+			Source="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedCamera.Preview, Mode=OneWay}">
+			<Image.Style>
+				<Style TargetType="Image">
 					<Setter Property="Visibility" Value="Visible"/>
 					<Style.Triggers>
 						<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedCamera, Mode=OneWay}" Value="{x:Null}">
@@ -113,8 +106,136 @@
 						</DataTrigger>
 					</Style.Triggers>
 				</Style>
-			</mediaKit:VideoCaptureElement.Style>
-		</mediaKit:VideoCaptureElement>
+			</Image.Style>
+		</Image>
+		<Grid
+			Grid.Row="0"
+			VerticalAlignment="Top"
+			HorizontalAlignment="Right" >
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition />
+				<ColumnDefinition />
+			</Grid.ColumnDefinitions>
+			<Border
+				Grid.Column="0" 
+				Grid.ColumnSpan="2" 
+				Background="AliceBlue" 
+				Opacity="0.6"
+				CornerRadius="50,100,100,50">
+				<Border.Style>
+					<Style TargetType="Border">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ElementName=CameraSettingsToggleButton, Path=IsChecked, Mode=OneWay}" Value="False">
+								<Setter Property="Visibility" Value="Collapsed"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Border.Style>
+			</Border>
+			<ListBox 
+				Grid.Column="0" 
+				ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedCamera.Properties}" 
+				Background="{x:Null}" 
+				BorderBrush="{x:Null}">
+				<ListBox.ItemTemplate>
+					<DataTemplate>
+						<Border
+							BorderBrush="{StaticResource PPSnWindowFooterBrush}" 
+							BorderThickness="1" 
+							CornerRadius="8">
+							<Grid Margin="5">
+								<Grid.RowDefinitions>
+									<RowDefinition />
+									<RowDefinition />
+								</Grid.RowDefinitions>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="200"/>
+									<ColumnDefinition/>
+								</Grid.ColumnDefinitions>
+								<TextBlock Grid.ColumnSpan="2" Grid.Row="0" Foreground="{StaticResource PPSnWindowFooterBrush}" Text="{Binding Name}"/>
+								<Slider Grid.Column="0" Grid.Row="1" Minimum="{Binding MinValue}" Maximum="{Binding MaxValue}" Value="{Binding Value}">
+								</Slider>
+								<CheckBox Grid.Column="1" Grid.Row="1" IsChecked="{Binding AutomaticValue}" Content="Auto"/>
+							</Grid>
+						</Border>
+					</DataTemplate>
+				</ListBox.ItemTemplate>
+				<ListBox.Style>
+					<Style TargetType="ListBox">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ElementName=CameraSettingsToggleButton, Path=IsChecked, Mode=OneWay}" Value="False">
+								<Setter Property="Visibility" Value="Collapsed"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</ListBox.Style>
+			</ListBox>
+			<ToggleButton 
+				Grid.Column="1"
+				IsChecked="False"
+				Width="200"
+				Height="200" 
+				Cursor="Hand"
+				ToolTip="Kameraeinstellungen"
+				x:Name="CameraSettingsToggleButton">
+				<ToggleButton.Template>
+					<ControlTemplate TargetType="ToggleButton">
+						<Grid>
+							<Ellipse Fill="AliceBlue" Opacity="0.6"/>
+							<Image HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="30">
+								<Image.Source>
+									<DrawingImage>
+										<DrawingImage.Drawing>
+											<GeometryDrawing
+												Brush="{StaticResource PPSnWindowFooterBrush}"  
+												Geometry="{StaticResource editPathGeometry}"/>
+										</DrawingImage.Drawing>
+									</DrawingImage>
+								</Image.Source>
+							</Image>
+						</Grid>
+					</ControlTemplate>
+				</ToggleButton.Template>
+			</ToggleButton>
+			<Image 
+				Grid.Column="1" 
+				VerticalAlignment="Bottom" 
+				HorizontalAlignment="Right" 
+				Width="50" 
+				Height="50" 
+				Margin="30" 
+				ToolTip="Einige Kameraeinstellungen wurden manuell festgelegt.">
+				<Image.Source>
+					<DrawingImage>
+						<DrawingImage.Drawing>
+							<GeometryDrawing
+								Brush="{StaticResource PPSnWindowFooterBrush}"  
+								Geometry="{StaticResource informationPathGeometry}"/>
+						</DrawingImage.Drawing>
+					</DrawingImage>
+				</Image.Source>
+				<Image.Style>
+					<Style TargetType="Image">
+						<Style.Triggers>
+							<DataTrigger
+								Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedCamera.AutomaticSettings}" Value="True">
+								<Setter Property="Visibility" Value="Collapsed"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Image.Style>
+			</Image>
+			<Grid.Style>
+				<Style TargetType="Grid">
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedCamera}" Value="{x:Null}">
+							<Setter Property="Visibility" Value="Collapsed"/>
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</Grid.Style>
+		</Grid>
+		<!--Button to make a Photo-->
 		<Button 
 			Grid.Row="0"
 			Width="200"
@@ -133,8 +254,9 @@
 							<Image.Source>
 								<DrawingImage>
 									<DrawingImage.Drawing>
-										<GeometryDrawing Brush="{StaticResource PPSnWindowFooterBrush}"  
-														Geometry="{StaticResource cameraPathGeometry}"/>
+										<GeometryDrawing
+											Brush="{StaticResource PPSnWindowFooterBrush}"  
+											Geometry="{StaticResource cameraPathGeometry}"/>
 									</DrawingImage.Drawing>
 								</DrawingImage>
 							</Image.Source>
@@ -142,6 +264,15 @@
 					</Grid>
 				</ControlTemplate>
 			</Button.Template>
+			<Button.Style>
+				<Style TargetType="Button">
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedCamera}" Value="{x:Null}">
+							<Setter Property="Visibility" Value="Collapsed"/>
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</Button.Style>
 		</Button>
 		<Grid
 			Grid.Row="0">
@@ -187,68 +318,18 @@
 						<DataTemplate>
 							<Button 
 								Command="{x:Static local:PpsPicturePane.ChangeCameraCommand}" 
-								CommandParameter="{Binding Name, Mode=OneWay}" 
+								CommandParameter="{Binding}" 
 								Height="175" 
 								Width="200" 
 								Margin="0,0,10,0" 
 								VerticalContentAlignment="Stretch">
 								<Grid VerticalAlignment="Stretch">
-									<mediaKit:VideoCaptureElement
-										DesiredPixelWidth="320"
-										DesiredPixelHeight="240"
-										FPS="5"
-										VideoCaptureSource="{Binding Name, Mode=OneWay}"
-										Stretch="Uniform"
-										Margin="5,5,5,20"
-										UnloadedBehavior="Stop"
-										LoadedBehavior="Play"/>
+									<Image Source="{Binding Preview}"/>
 									<Image Width="50" Height="50" Opacity="0.6">
 										<Image.Source>
 											<DrawingImage>
 												<DrawingImage.Drawing>
 													<GeometryDrawing 
-														Brush="AliceBlue"
-														Geometry="{StaticResource cameraPathGeometry}"/>
-												</DrawingImage.Drawing>
-											</DrawingImage>
-										</Image.Source>
-									</Image>
-									<TextBlock
-										TextAlignment="Center"
-										VerticalAlignment="Bottom"
-										Text="{Binding Path=Name}"/>
-								</Grid>
-							</Button>
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-					<ItemsControl.ItemsPanel>
-						<ItemsPanelTemplate>
-							<UniformGrid Rows="1" />
-						</ItemsPanelTemplate>
-					</ItemsControl.ItemsPanel>
-				</ItemsControl>
-				<ItemsControl
-					Focusable="False" 
-					ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=CachedCameras}">
-					<ItemsControl.ItemTemplate>
-						<DataTemplate>
-							<Button
-								Command="{x:Static local:PpsPicturePane.ChangeCameraCommand}" 
-								CommandParameter="{Binding Name, Mode=OneWay}" 
-								Height="175" 
-								Width="200" 
-								Margin="0,0,10,0" 
-								VerticalContentAlignment="Stretch">
-								<Grid VerticalAlignment="Stretch">
-									<Image
-										Stretch="Uniform"
-										Margin="5,5,5,20"
-										Source="{Binding Path=Image, Mode=OneWay}"/>
-									<Image Width="50" Height="50" Opacity="0.6">
-										<Image.Source>
-											<DrawingImage>
-												<DrawingImage.Drawing>
-													<GeometryDrawing
 														Brush="AliceBlue"
 														Geometry="{StaticResource cameraPathGeometry}"/>
 												</DrawingImage.Drawing>
