@@ -129,34 +129,35 @@
         </Setter>
     </Style>
 
-
-
 	<Style x:Key="PPSnEditableListboxItemStyle" TargetType="{x:Type uiC:PpsEditableListboxItem}">
 		<Setter Property="Margin" Value="0"/>
 		<Setter Property="Padding" Value="0"/>
-		<Setter Property="Background" Value="Beige"/>
 		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
 		<Setter Property="IsTabStop" Value="False"/>
 		<Setter Property="Focusable" Value="True" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type uiC:PpsEditableListboxItem}">
-					<Grid Background="{TemplateBinding Background}">
-
+					<Grid>
 						<Grid.ColumnDefinitions>
 							<ColumnDefinition/>
-							<ColumnDefinition Width="52"/>
+							<ColumnDefinition Width="54"/>
 						</Grid.ColumnDefinitions>
 
 						<ContentPresenter Grid.Column="0" />
 
-						<Button x:Name="appendButton" Grid.Column="1" Content="+++" Margin="6" Width="32" Height="32" VerticalAlignment="Top" Focusable="False" Visibility="Hidden"
-									Command="{x:Static uiC:PpsEditableListbox.AppendNewItemCommand}"
-									CommandParameter="{Binding}"/>
-
-						<Button x:Name="removeButton" Grid.Column="1" Content="---" Margin="6" Width="32" Height="32" VerticalAlignment="Top" Focusable="False" Visibility="Hidden"
-									Command="{x:Static uiC:PpsEditableListbox.RemoveItemCommand}"
-									CommandParameter="{Binding}"/>
+						<Button x:Name="appendButton" Grid.Column="1" MinWidth="32"	HorizontalAlignment="Left" VerticalAlignment="Center"
+								Command="{x:Static uiC:PpsEditableListbox.AppendNewItemCommand}"
+								CommandParameter="{Binding}"
+								Style="{DynamicResource PPSnCircleButtonStyle}"
+								Tag="{StaticResource plusPathGeometry}"
+								Visibility="Hidden"/>
+						<Button x:Name="removeButton" Grid.Column="1" MinWidth="32"	HorizontalAlignment="Left" VerticalAlignment="Center"
+								Command="{x:Static uiC:PpsEditableListbox.RemoveItemCommand}"
+								CommandParameter="{Binding}"
+								Style="{DynamicResource PPSnCircleButtonStyle}"
+								Tag="{StaticResource deletePathGeometry}"
+								Visibility="Hidden"/>
 
 					</Grid>
 					<ControlTemplate.Triggers>
@@ -188,9 +189,6 @@
 		<Style.Triggers>
 			<Trigger Property="IsKeyboardFocusWithin" Value="True">
 				<Setter Property="IsSelected" Value="True"/>
-			</Trigger>
-			<Trigger Property="IsSelected" Value="True">
-				<Setter Property="Background" Value="Red"/>
 			</Trigger>
 		</Style.Triggers>
 	</Style>
