@@ -1944,7 +1944,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Table access ---------------------------------------------------------
+		#region -- Table access -------------------------------------------------------
 
 		private readonly Dictionary<PpsDataTableDefinition, WeakReference<PpsMasterDataTable>> cachedTables = new Dictionary<PpsDataTableDefinition, WeakReference<PpsMasterDataTable>>();
 
@@ -1988,7 +1988,7 @@ namespace TecWare.PPSn
 		
 		#endregion
 
-		#region -- Synchronization ------------------------------------------------------
+		#region -- Synchronization ----------------------------------------------------
 
 		/// <summary>Force a foreground synchronization.</summary>
 		/// <returns><c>false</c>, if the sync was cancelled by an blocking transaction.</returns>
@@ -2158,9 +2158,9 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Offline Data ---------------------------------------------------------
+		#region -- Offline Data -------------------------------------------------------
 
-		#region -- class PpsLocalStoreRequest -------------------------------------------
+		#region -- class PpsLocalStoreRequest -----------------------------------------
 
 		private sealed class PpsLocalStoreRequest : WebRequest
 		{
@@ -2228,7 +2228,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class PpsLocalStoreResponse ------------------------------------------
+		#region -- class PpsLocalStoreResponse ----------------------------------------
 
 		private sealed class PpsLocalStoreResponse : WebResponse
 		{
@@ -2463,9 +2463,9 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Write Access ---------------------------------------------------------
+		#region -- Write Access -------------------------------------------------------
 
-		#region -- class PpsMasterNestedTransaction -------------------------------------
+		#region -- class PpsMasterNestedTransaction -----------------------------------
 
 		private sealed class PpsMasterNestedTransaction : PpsMasterDataTransaction
 		{
@@ -2508,7 +2508,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class PpsMasterThreadSafeTransaction ---------------------------------
+		#region -- class PpsMasterThreadSafeTransaction -------------------------------
 
 		private abstract class PpsMasterThreadSafeTransaction : PpsMasterDataTransaction
 		{
@@ -2584,7 +2584,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class PpsMasterRootTransaction ---------------------------------------
+		#region -- class PpsMasterRootTransaction -------------------------------------
 
 		private sealed class PpsMasterRootTransaction : PpsMasterThreadSafeTransaction
 		{
@@ -2692,7 +2692,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class PpsMasterThreadJoinTransaction ---------------------------------
+		#region -- class PpsMasterThreadJoinTransaction -------------------------------
 
 		private sealed class PpsMasterThreadJoinTransaction : PpsMasterThreadSafeTransaction
 		{
@@ -2732,7 +2732,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class PpsMasterReadTransaction ---------------------------------------
+		#region -- class PpsMasterReadTransaction -------------------------------------
 
 		/// <summary>Dummy transaction that does nothing. Dirty read is always possible.</summary>
 		private sealed class PpsMasterReadTransaction : PpsMasterDataTransaction
@@ -2890,9 +2890,9 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Change Events --------------------------------------------------------
+		#region -- Change Events ------------------------------------------------------
 
-		#region -- class DataRowChangedEventItem ----------------------------------------
+		#region -- class DataRowChangedEventItem --------------------------------------
 
 		private sealed class DataRowChangedEventItem
 		{
@@ -3051,7 +3051,7 @@ namespace TecWare.PPSn
 			getTableMethodInfo = ti.GetMethod(nameof(GetTable), typeof(PpsDataTableDefinition));
 		} // ctor
 
-		#region -- Read/Write Schema ------------------------------------------------
+		#region -- Read/Write Schema --------------------------------------------------
 
 		internal static XElement ReadSchemaValue(IDataReader r, int columnIndex)
 		{
@@ -3061,7 +3061,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Local store primitives -------------------------------------------
+		#region -- Local store primitives ---------------------------------------------
 
 		// according to https://www.sqlite.org/datatype3.html there are only these datatypes - so map everything to these 5 - but we can define new
 

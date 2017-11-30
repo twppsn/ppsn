@@ -221,6 +221,9 @@ namespace TecWare.PPSn.UI
 
 		public void BeginEdit()
 		{
+			if (!IsEditable)
+				throw new InvalidOperationException("This tag is readonly.");
+
 			currentName = tag?.Name;
 			currentValue = tag?.Value;
 
@@ -423,20 +426,33 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc InnerCollectionChanged
 
+		private bool withInRefresh = false;
+
 		public void Refresh()
 		{
-			// clear all models
-			items.ForEach(t => t.DetachPropertyChanged());
-			items.Clear();
+			if (withInRefresh)
+				return;
 
-			// rebuild models
-			foreach(var innerTag in InnerTagList)
+			withInRefresh = true;
+			try
 			{
-				if (innerTag.Class == classFilter)
-					items.Add(new PpsTagItemModel(ppsObject, innerTag));
-			}
+				// clear all models
+				items.ForEach(t => t.DetachPropertyChanged());
+				items.Clear();
 
-			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+				// rebuild models
+				foreach (var innerTag in InnerTagList) // can raise a Reset Event
+				{
+					if (innerTag.Class == classFilter)
+						items.Add(new PpsTagItemModel(ppsObject, innerTag));
+				}
+
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+			}
+			finally
+			{
+				withInRefresh = false;
+			}			
 		} // proc Refresh
 
 		private void Remove(PpsTagItemModel tag)
