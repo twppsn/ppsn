@@ -463,6 +463,7 @@
 	<ContentControl>
 		<ContentControl.Style>
 			<Style TargetType="{x:Type ContentControl}" >
+				<Setter Property="Focusable" Value="False"/>
 				<Style.Triggers>
 					<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
 						                   Path=TagClass}" Value="{x:Static data:PpsObjectTagClass.Note}">
