@@ -17,9 +17,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -28,11 +28,11 @@ using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using DirectShowLib;
+using AForge.Video;
+using AForge.Video.DirectShow;
 using Neo.IronLua;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
-using WPFMediaKit.DirectShow.Controls;
 
 namespace TecWare.PPSn.UI
 {
@@ -45,31 +45,287 @@ namespace TecWare.PPSn.UI
 
 		#region -- Data Representation ------------------------------------------------
 
-		public class PpsPecCamera
+		public class PpsAforgeCamera : INotifyPropertyChanged, IDisposable
 		{
-			private string name;
-			private string friendlyName;
-			private object image;
+			#region ---- Helper Classes ----------------------------------------------------------
 
-			/// <summary>
-			/// 
-			/// </summary>
-			/// <param name="Name">VideoSourceName</param>
-			/// <param name="FriendlyName">Name shown to the User</param>
-			/// <param name="Image">cached PreviewImage</param>
-			public PpsPecCamera(string Name, string FriendlyName, object Image = null)
+			public class CameraProperty : INotifyPropertyChanged
 			{
-				this.name = Name;
-				this.friendlyName = FriendlyName;
-				this.image = Image;
+				#region ---- Readonly ---------------------------------------------------------------
+
+				private readonly AForge.Video.DirectShow.CameraControlProperty property;
+				private readonly VideoCaptureDevice device;
+
+				private readonly int minValue;
+				private readonly int maxValue;
+				private readonly int defaultValue;
+				private readonly int stepSize;
+				private readonly bool flagable;
+
+				#endregion
+
+				#region ---- Events -----------------------------------------------------------------
+
+				public event PropertyChangedEventHandler PropertyChanged;
+
+				#endregion
+
+				#region ---- Constructor ------------------------------------------------------------
+
+				public CameraProperty(VideoCaptureDevice device, AForge.Video.DirectShow.CameraControlProperty property)
+				{
+					this.device = device;
+					this.property = property;
+
+					AForge.Video.DirectShow.CameraControlFlags flags;
+					device.GetCameraPropertyRange(property, out minValue, out maxValue, out stepSize, out defaultValue, out flags);
+					this.flagable = flags != AForge.Video.DirectShow.CameraControlFlags.None;
+				}
+
+				#endregion
+
+				#region ---- Properties -------------------------------------------------------------
+
+				public string Name => Enum.GetName(typeof(AForge.Video.DirectShow.CameraControlProperty), property);
+				public int MinValue => minValue;
+				public int MaxValue => maxValue;
+				public int DefaultValue => defaultValue;
+				public int StepSize => stepSize;
+				public bool Flagable => flagable;
+				public bool AutomaticValue
+				{
+					get
+					{
+						if (!flagable)
+							return true;
+						int tmp;
+						AForge.Video.DirectShow.CameraControlFlags flag;
+						device.GetCameraProperty(property, out tmp, out flag);
+						return (flag == AForge.Video.DirectShow.CameraControlFlags.Auto);
+					}
+					set
+					{
+						if (!flagable)
+							throw new FieldAccessException();
+
+						// there is no use in setting the flag to manual
+						if (value)
+							device.SetCameraProperty(property, defaultValue, AForge.Video.DirectShow.CameraControlFlags.Auto);
+
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AutomaticValue)));
+					}
+				}
+				public int Value
+				{
+					get
+					{
+						int tmp;
+						AForge.Video.DirectShow.CameraControlFlags flag;
+						device.GetCameraProperty(property, out tmp, out flag);
+						return tmp;
+					}
+					set
+					{
+						device.SetCameraProperty(property, value, AForge.Video.DirectShow.CameraControlFlags.Manual);
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AutomaticValue)));
+					}
+				}
+
+				#endregion
 			}
 
-			/// <summary>
-			/// VideoSourceName
-			/// </summary>
+			#endregion
+
+			#region ---- Readonly ----------------------------------------------------------------
+
+			private readonly IEnumerable<CameraProperty> properties;
+
+			#endregion
+
+			#region ---- Events ------------------------------------------------------------------
+
+			public event PropertyChangedEventHandler PropertyChanged;
+
+			#endregion
+
+			#region ---- Fields ------------------------------------------------------------------
+
+			private VideoCaptureDevice device;
+			private BitmapSource preview;
+			private PpsTraceLog traces;
+			private VideoCapabilities previewResolution;
+			private string name;
+			private TaskCompletionSource<BitmapSource> snapshotTaskSource;
+
+			#endregion
+
+			#region ---- Constructor -------------------------------------------------------------
+
+			public PpsAforgeCamera(AForge.Video.DirectShow.FilterInfo deviceFilter, PpsTraceLog traceLog, int previewMaxWidth = 800, int previewMinFPS = 15)
+			{
+				this.traces = traceLog;
+
+				this.name = deviceFilter.Name;
+
+				// initialize the device
+				try
+				{
+					device = new VideoCaptureDevice(deviceFilter.MonikerString);
+				}
+				catch (Exception)
+				{
+					traces.AppendText(PpsTraceItemType.Fail, $"Camera \"{deviceFilter.Name}({deviceFilter.MonikerString})\" is (currently) not useable.");
+					device = null;
+					return;
+				}
+
+				// find a preview resolution - according to the requirements
+				previewResolution = (from vc in device.VideoCapabilities orderby vc.FrameSize.Width descending where vc.FrameSize.Width <= previewMaxWidth where vc.AverageFrameRate >= previewMinFPS select vc).FirstOrDefault();
+				if (previewResolution == null)
+				{
+					// no resolution to the requirements, try to set the highest possible FPS (best for preview)
+					traces.AppendText(PpsTraceItemType.Fail, $"Camera \"{deviceFilter.Name}({deviceFilter.MonikerString})\" does not support required quality. Trying fallback.");
+					previewResolution = (from vc in device.VideoCapabilities orderby vc.AverageFrameRate descending select vc).FirstOrDefault();
+
+					if (previewResolution == null)
+					{
+						traces.AppendText(PpsTraceItemType.Fail, $"Camera \"{deviceFilter.Name}({deviceFilter.MonikerString})\" does not publish useable resolutions.");
+					}
+				}
+
+				if (previewResolution != null)
+				{
+					device.VideoResolution = previewResolution;
+				}
+
+				// find the highest snapshot resolution
+				var maxSnapshotResolution = (from vc in device.SnapshotCapabilities orderby vc.FrameSize.Width * vc.FrameSize.Height descending select vc).FirstOrDefault();
+
+				// there are cameras without snapshot capability
+				if (maxSnapshotResolution != null)
+				{
+					device.ProvideSnapshots = true;
+					device.SnapshotResolution = maxSnapshotResolution;
+
+					// attach the event handler for snapshots
+					device.SnapshotFrame += SnapshotEvent;
+				}
+
+				// attach the handler for incoming images
+				device.NewFrame += PreviewNewframeEvent;
+				device.Start();
+
+				// collect the useable Propertys
+				properties = new List<CameraProperty>();
+				foreach (AForge.Video.DirectShow.CameraControlProperty prop in Enum.GetValues(typeof(AForge.Video.DirectShow.CameraControlProperty)))
+				{
+					var property = new CameraProperty(device, prop);
+					property.PropertyChanged += (sender, e) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AutomaticSettings)));
+					if (property.MinValue != property.MaxValue)
+						((List<CameraProperty>)properties).Add(property);
+				}
+			}
+
+			#endregion
+
+			#region ---- Methods -----------------------------------------------------------------
+
+			public TaskCompletionSource<BitmapSource> MakePhoto()
+			{
+				snapshotTaskSource = new TaskCompletionSource<BitmapSource>();
+				if (device.ProvideSnapshots)
+				{
+					device.SimulateTrigger();
+				}
+				else
+				{
+					// because we're changing the resolution, the device has to be stopped
+					device.Stop();
+
+					// get the highest MPix resolution
+					var maxVideoResolution = (from vc in device.VideoCapabilities orderby vc.FrameSize.Width * vc.FrameSize.Height descending select vc).FirstOrDefault();
+					// set the Capability with the highest MPix value, but allow for longest exposure/data-transmission time (highest quality) thus selecting the lowest FrameRate possible
+					device.VideoResolution = (from vc in device.VideoCapabilities orderby vc.AverageFrameRate ascending where vc.FrameSize.Width == maxVideoResolution.FrameSize.Width where vc.FrameSize.Height == maxVideoResolution.FrameSize.Height select vc).First();
+
+					// attach the Snaphot event to the regular newFrame
+					device.NewFrame += SnapshotEvent;
+
+					// remove the regular Frame handler to suppress UI-flickering caused by the changed resolution
+					device.NewFrame -= PreviewNewframeEvent;
+
+					device.Start();
+				}
+				return snapshotTaskSource;
+			}
+
+			public void Dispose()
+			{
+				device.Stop();
+				device.WaitForStop();
+			}
+
+			#region ---- Event Handler -----------------------------------------------------------
+
+			private void PreviewNewframeEvent(object sender, NewFrameEventArgs eventArgs)
+			{
+				preview = DrawingBitmapToBitmapSource((System.Drawing.Bitmap)eventArgs.Frame.Clone());
+
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Preview)));
+			}
+
+			private void SnapshotEvent(object sender, NewFrameEventArgs eventArgs)
+			{
+				snapshotTaskSource.SetResult(DrawingBitmapToBitmapSource((System.Drawing.Bitmap)eventArgs.Frame.Clone()));
+
+				if (!device.ProvideSnapshots)
+				{
+					device.Stop();
+
+					// remove the Snapshot handler
+					device.NewFrame -= SnapshotEvent;
+					// reattach the regular Frame handler
+					device.NewFrame += PreviewNewframeEvent;
+					// reset to the choosen preview capability
+					device.VideoResolution = previewResolution;
+
+					device.Start();
+				}
+			}
+
+			#endregion
+
+			#region ---- Helper Functions --------------------------------------------------------
+
+			private static BitmapSource DrawingBitmapToBitmapSource(System.Drawing.Bitmap bitmap)
+			{
+				MemoryStream ms = new MemoryStream();
+				bitmap.Save(ms, ImageFormat.Bmp);
+				ms.Seek(0, SeekOrigin.Begin);
+				BitmapImage bi = new BitmapImage();
+				bi.BeginInit();
+				bi.StreamSource = ms;
+				bi.EndInit();
+
+				bi.Freeze();
+
+				return bi;
+			}
+
+			#endregion
+
+			#endregion
+
+			#region ---- Properties --------------------------------------------------------------
+
+			public BitmapSource Preview => preview;
+
 			public string Name => name;
-			public string FriendlyName => friendlyName;
-			public object Image { get { return image; } set { this.image = value; } }
+
+			public IEnumerable<CameraProperty> Properties => properties;
+
+			public bool AutomaticSettings => (from prop in properties where !prop.AutomaticValue select prop).Count() == 0;
+
+			#endregion
 		}
 
 		public class PpsPecStrokeThickness
@@ -296,8 +552,6 @@ namespace TecWare.PPSn.UI
 
 			environment = PpsEnvironment.GetEnvironment(this) ?? throw new ArgumentNullException("environment");
 
-			CachedCameras = new ObservableCollection<PpsPecCamera>();
-
 			InitializePenSettings();
 			InitializeCameras();
 			InitializeStrokes();
@@ -410,15 +664,11 @@ namespace TecWare.PPSn.UI
 				{
 					if (SelectedCamera != null)
 					{
+						var img = await SelectedCamera.MakePhoto().Task;
 						var path = System.IO.Path.GetTempPath() + DateTime.Now.ToUniversalTime().ToString("yyyy-MM-dd_HHmmss") + ".jpg";
 
-						RenderTargetBitmap bmp = new RenderTargetBitmap(
-							(int)videoElement.ActualWidth, (int)videoElement.ActualHeight, 96, 96,
-							PixelFormats.Default
-						);
-						bmp.Render(videoElement);
 						BitmapEncoder encoder = new JpegBitmapEncoder();
-						encoder.Frames.Add(BitmapFrame.Create(bmp));
+						encoder.Frames.Add(BitmapFrame.Create(img));
 
 						using (var fs = new FileStream(path, FileMode.CreateNew))
 							encoder.Save(fs);
@@ -429,36 +679,14 @@ namespace TecWare.PPSn.UI
 						File.Delete(path);
 					}
 				},
-				(sender, e) => e.CanExecute = !String.IsNullOrEmpty(SelectedCamera)));
+				(sender, e) => e.CanExecute = SelectedCamera != null));
 
 			CommandBindings.Add(new CommandBinding(
 				ChangeCameraCommand,
 				(sender, e) =>
 				{
-					var preview = (VideoCaptureElement)FindChildElement(typeof(VideoCaptureElement), (Button)e.OriginalSource);
-
-					if (preview == null)
-					{
-						SelectedAttachment = null;
-						SelectedCamera = (string)e.Parameter;
-						return;
-					}
-
-					RenderTargetBitmap bmp = new RenderTargetBitmap(
-							(int)preview.ActualWidth, (int)preview.ActualHeight, 96, 96,
-							PixelFormats.Default
-						);
-					bmp.Render(preview);
-
-					bmp.Freeze();
-
-					var tmp = new List<PpsPecCamera>() { new PpsPecCamera(preview.VideoCaptureSource, preview.VideoCaptureSource, bmp) };
-
-					CachedCameras.Insert(0, new PpsPecCamera(preview.VideoCaptureSource, preview.VideoCaptureSource, bmp));
-					CameraEnum.RemoveAt(0);
-
-					ShowCamera(preview, (string)e.Parameter);
-
+					SelectedCamera = (PpsAforgeCamera)e.Parameter;
+					SelectedAttachment = null;
 					SetCharmObject(null);
 				}));
 		}
@@ -517,26 +745,6 @@ namespace TecWare.PPSn.UI
 		}
 
 		#region Helper Functions
-
-		/// <summary>
-		/// Ansync function to disable the preview and enable the full-sized video
-		/// </summary>
-		/// <param name="preview">VideoCaptureElement which is in actual control</param>
-		/// <param name="CameraName">VideoSourceName of the camera</param>
-		private async void ShowCamera(VideoCaptureElement preview, string CameraName)
-		{
-			await Task.Run(() =>
-			{
-				var mustwait = true;
-				Dispatcher.Invoke(() => mustwait = preview.IsPlaying);
-				Dispatcher.Invoke(() => preview.Stop());
-				// if the camera was used in the preview, one hast to wait that the os can clear the access
-				if (mustwait)
-					Thread.Sleep(1000);
-				Dispatcher.Invoke(() => SelectedCamera = CameraName);
-				Dispatcher.Invoke(() => SelectedAttachment = null);
-			});
-		}
 
 		/// <summary>
 		/// Finds the UIElement of a given type in the childs of another control
@@ -760,6 +968,8 @@ namespace TecWare.PPSn.UI
 
 		public void Dispose()
 		{
+			foreach (var camera in CameraEnum)
+				camera.Dispose();
 			ResetCharmObject();
 		}
 
@@ -864,16 +1074,10 @@ namespace TecWare.PPSn.UI
 
 		private void InitializeCameras()
 		{
-			var cameraPreviews = new ObservableCollection<PpsPecCamera>();
-			var devices = DsDevice.GetDevicesOfCat(DirectShowLib.FilterCategory.VideoInputDevice);
-			foreach (var dev in devices)
-			{
-				cameraPreviews.Add(new PpsPecCamera(dev.Name, dev.Name));
-			}
-
-			if (cameraPreviews.Count == 0)
-				environment.Traces.AppendText(PpsTraceItemType.Information, "No Cameras were found.");
-
+			var LocalWebCamsCollection = new FilterInfoCollection(AForge.Video.DirectShow.FilterCategory.VideoInputDevice);
+			var cameraPreviews = new ObservableCollection<PpsAforgeCamera>();
+			foreach (AForge.Video.DirectShow.FilterInfo cam in LocalWebCamsCollection)
+				cameraPreviews.Add(new PpsAforgeCamera(cam, environment.Traces));
 			CameraEnum = cameraPreviews;
 		}
 
@@ -927,13 +1131,6 @@ namespace TecWare.PPSn.UI
 			set { SetValue(AttachmentsProperty, value); }
 		}
 
-		/// <summary>Internal List of Cached Cameras (Preview Image shot)</summary>
-		private ObservableCollection<PpsPecCamera> CachedCameras
-		{
-			get { return (ObservableCollection<PpsPecCamera>)GetValue(CachedCamerasProperty); }
-			set { SetValue(CachedCamerasProperty, value); }
-		}
-
 		/// <summary>The Attachmnet which is shown in the editor</summary>
 		private IPpsAttachmentItem SelectedAttachment
 		{
@@ -942,16 +1139,16 @@ namespace TecWare.PPSn.UI
 		}
 
 		/// <summary>The camera which is shown in the editor</summary>
-		private string SelectedCamera
+		private PpsAforgeCamera SelectedCamera
 		{
-			get { return (string)GetValue(SelectedCameraProperty); }
+			get { return (PpsAforgeCamera)GetValue(SelectedCameraProperty); }
 			set { SetValue(SelectedCameraProperty, value); }
 		}
 
 		/// <summary>The List of cameras which are known to the system - after one is selected it moves to ChachedCameras</summary>
-		private ObservableCollection<PpsPecCamera> CameraEnum
+		private ObservableCollection<PpsAforgeCamera> CameraEnum
 		{
-			get { return (ObservableCollection<PpsPecCamera>)GetValue(CameraEnumProperty); }
+			get { return (ObservableCollection<PpsAforgeCamera>)GetValue(CameraEnumProperty); }
 			set { SetValue(CameraEnumProperty, value); }
 		}
 
@@ -1019,11 +1216,10 @@ namespace TecWare.PPSn.UI
 		#region DependencyPropertys
 
 		public static readonly DependencyProperty AttachmentsProperty = DependencyProperty.Register(nameof(Attachments), typeof(IPpsAttachments), typeof(PpsPicturePane));
-		public static readonly DependencyProperty CachedCamerasProperty = DependencyProperty.Register(nameof(CachedCameras), typeof(ObservableCollection<PpsPecCamera>), typeof(PpsPicturePane));
 
 		private readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane));
-		private readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(string), typeof(PpsPicturePane));
-		private readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(ObservableCollection<PpsPecCamera>), typeof(PpsPicturePane));
+		private readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(PpsAforgeCamera), typeof(PpsPicturePane));
+		private readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(ObservableCollection<PpsAforgeCamera>), typeof(PpsPicturePane));
 		private readonly static DependencyProperty InkDrawingAttributesProperty = DependencyProperty.Register(nameof(InkDrawingAttributes), typeof(DrawingAttributes), typeof(PpsPicturePane));
 		private readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(PpsDetraceableStrokeCollection), typeof(PpsPicturePane));
 		private readonly static DependencyProperty InkEditModeProperty = DependencyProperty.Register(nameof(InkEditMode), typeof(InkCanvasEditingMode), typeof(PpsPicturePane));
