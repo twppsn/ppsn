@@ -146,7 +146,7 @@
 				</Trigger>
 			</Style.Triggers>
 		</Style>
-
+		
 		<ControlTemplate x:Key="charmBarHeaderTemplate" TargetType="{x:Type ContentControl}">
 			<Grid Height="40" TextBlock.Foreground="{StaticResource PPSnWindowForegroundBrush}" TextBlock.FontSize="18">
 				<Grid.ColumnDefinitions>
@@ -175,7 +175,7 @@
 					<RowDefinition Height="Auto"/>
 					<RowDefinition/>
 				</Grid.RowDefinitions>
-				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Notizen" Tag="{StaticResource noteOutlinePathGeometry}"/>
+				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Notizen" Tag="{StaticResource noteOutlinePathGeometry}" Focusable="False"/>
 				<uiL:PpsTagsEditor Grid.Row="1" Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Note}"/>
 			</Grid>
 		</DataTemplate>
@@ -186,7 +186,7 @@
 					<RowDefinition Height="Auto"/>
 					<RowDefinition/>
 				</Grid.RowDefinitions>
-				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Verknüpfungen" Tag="{StaticResource linkPathGeometry}"/>
+				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Verknüpfungen" Tag="{StaticResource linkPathGeometry}" Focusable="False"/>
 
 				<ListBox Grid.Row="1" Margin="16" AlternationCount="2" 
 						 ItemsSource="{Binding Links}"
@@ -215,7 +215,7 @@
 					<RowDefinition Height="Auto"/>
 					<RowDefinition/>
 				</Grid.RowDefinitions>
-				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Revisionen" Tag="{StaticResource revisionOutlinePathGeometry}"/>
+				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Revisionen" Tag="{StaticResource revisionOutlinePathGeometry}" Focusable="False"/>
 			</Grid>
 		</DataTemplate>
 
@@ -225,7 +225,7 @@
 					<RowDefinition Height="Auto"/>
 					<RowDefinition/>
 				</Grid.RowDefinitions>
-				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="QM" Tag="{StaticResource qmPathGeometry}"/>
+				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="QM" Tag="{StaticResource qmPathGeometry}" Focusable="False"/>
 			</Grid>
 		</DataTemplate>
 
@@ -235,7 +235,7 @@
 					<RowDefinition Height="Auto"/>
 					<RowDefinition/>
 				</Grid.RowDefinitions>
-				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Tags" Tag="{StaticResource hashTagPathGeometry}"/>
+				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Tags" Tag="{StaticResource hashTagPathGeometry}" Focusable="False"/>
 				<uiL:PpsTagsEditor Grid.Row="1" Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Tag}"/>
 			</Grid>
 		</DataTemplate>
@@ -246,7 +246,7 @@
 					<RowDefinition Height="Auto"/>
 					<RowDefinition/>
 				</Grid.RowDefinitions>
-				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Attribute" Tag="{StaticResource tagTextPathGeometry}"/>
+				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Attribute" Tag="{StaticResource tagTextPathGeometry}" Focusable="False"/>
 				<uiL:PpsTagsEditor Grid.Row="1" Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Text}"/>
 			</Grid>
 		</DataTemplate>
@@ -257,7 +257,7 @@
 					<RowDefinition Height="Auto"/>
 					<RowDefinition/>
 				</Grid.RowDefinitions>
-				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Termine / Aufgaben" Tag="{StaticResource calendarClockPathGeometry}"/>
+				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Termine / Aufgaben" Tag="{StaticResource calendarClockPathGeometry}" Focusable="False"/>
 				<uiL:PpsTagsEditor Grid.Row="1" Object="{Binding}" TagClass="{x:Static data:PpsObjectTagClass.Date}"/>
 			</Grid>
 		</DataTemplate>

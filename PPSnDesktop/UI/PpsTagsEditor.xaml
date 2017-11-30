@@ -5,6 +5,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
              xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
+			 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
+			 
              xmlns:data="clr-namespace:TecWare.PPSn.Data;assembly=PPSn.Core"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
@@ -213,7 +215,7 @@
 			</ListBox>
 		</ControlTemplate>
 
-		<ControlTemplate x:Key="tagEditorTemplate" TargetType="{x:Type ContentControl}">
+		<!--<ControlTemplate x:Key="tagEditorTemplate" TargetType="{x:Type ContentControl}">
 			<ListBox ItemsSource="{Binding Path=TagsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
 					 Style="{StaticResource PPSnListBoxStyle}"
 					 ItemContainerStyle="{StaticResource PpsTagItemStyle}"
@@ -283,7 +285,37 @@
 					</DataTemplate>
 				</ListBox.ItemTemplate>
 			</ListBox>
+		</ControlTemplate>-->
+
+		<ControlTemplate x:Key="tagEditorTemplate" TargetType="{x:Type ContentControl}">
+			<uiC:PpsEditableListbox ItemsSource="{Binding Path=TagsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
+									Margin="16,16,0,16" >
+				<ListBox.ItemTemplate>
+					<DataTemplate>
+						<Grid Background="Transparent">
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="176"/>
+								<ColumnDefinition/>
+							</Grid.ColumnDefinitions>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="38" MaxHeight="38"/>
+								<RowDefinition/>
+							</Grid.RowDefinitions>
+							<TextBox x:Name="nameTextBox" Grid.Column="0" Margin="0,5"
+									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 IsEnabled="{Binding CreateNewBool}"
+									 Style="{StaticResource PpsTagTextBoxStyle}"/>
+							<TextBox Grid.Column="1" Grid.RowSpan="2" Margin="6,5"
+									 Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 IsEnabled="{Binding IsUserChangeable}"
+									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"
+									 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" MaxHeight="172"/>
+						</Grid>
+					</DataTemplate>
+				</ListBox.ItemTemplate>
+			</uiC:PpsEditableListbox>
 		</ControlTemplate>
+
 
 		<ControlTemplate x:Key="tagCloudTemplate">
 			<ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl},
@@ -431,6 +463,7 @@
 	<ContentControl>
 		<ContentControl.Style>
 			<Style TargetType="{x:Type ContentControl}" >
+				<Setter Property="Focusable" Value="False"/>
 				<Style.Triggers>
 					<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
 						                   Path=TagClass}" Value="{x:Static data:PpsObjectTagClass.Note}">
