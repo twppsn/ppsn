@@ -151,11 +151,10 @@ namespace TecWare.PPSn.UI
 			#region ---- Fields ------------------------------------------------------------------
 
 			private VideoCaptureDevice device;
-			private BitmapSource preview;
+			private object preview;
 			private PpsTraceLog traces;
 			private VideoCapabilities previewResolution;
 			private string name;
-			private TaskCompletionSource<BitmapSource> snapshotTaskSource;
 
 			#endregion
 
@@ -182,6 +181,19 @@ namespace TecWare.PPSn.UI
 				// attach failure handling
 				device.VideoSourceError += (sender, e) => traces.AppendText(PpsTraceItemType.Fail, "Camera: " + e.Description);
 
+				// find the highest snapshot resolution
+				var maxSnapshotResolution = (from vc in device.SnapshotCapabilities orderby vc.FrameSize.Width * vc.FrameSize.Height descending select vc).FirstOrDefault();
+
+				// there are cameras without snapshot capability
+				if (maxSnapshotResolution != null)
+				{
+					device.ProvideSnapshots = true;
+					device.SnapshotResolution = maxSnapshotResolution;
+
+					// attach the event handler for snapshots
+					device.SnapshotFrame += SnapshotEvent;
+				}
+
 				// find a preview resolution - according to the requirements
 				previewResolution = (from vc in device.VideoCapabilities orderby vc.FrameSize.Width descending where vc.FrameSize.Width <= previewMaxWidth where vc.AverageFrameRate >= previewMinFPS select vc).FirstOrDefault();
 				if (previewResolution == null)
@@ -196,22 +208,14 @@ namespace TecWare.PPSn.UI
 					}
 				}
 
-				if (previewResolution != null)
+				if (!device.ProvideSnapshots)
+				{
+					traces.AppendText(PpsTraceItemType.Information, $"Camera \"{deviceFilter.Name}({deviceFilter.MonikerString})\" does not have Snapshot functionality. Using Framegrabber instead.");
+					device.VideoResolution = (from vc in device.VideoCapabilities orderby vc.FrameSize.Width * vc.FrameSize.Height descending select vc).First();
+				}
+				else
 				{
 					device.VideoResolution = previewResolution;
-				}
-
-				// find the highest snapshot resolution
-				var maxSnapshotResolution = (from vc in device.SnapshotCapabilities orderby vc.FrameSize.Width * vc.FrameSize.Height descending select vc).FirstOrDefault();
-
-				// there are cameras without snapshot capability
-				if (maxSnapshotResolution != null)
-				{
-					device.ProvideSnapshots = true;
-					device.SnapshotResolution = maxSnapshotResolution;
-
-					// attach the event handler for snapshots
-					device.SnapshotFrame += SnapshotEvent;
 				}
 
 				// attach the handler for incoming images
@@ -233,32 +237,19 @@ namespace TecWare.PPSn.UI
 
 			#region ---- Methods -----------------------------------------------------------------
 
-			public TaskCompletionSource<System.Drawing.Bitmap> MakePhoto()
+			public void MakePhoto()
 			{
-				snapshotTaskSource = new TaskCompletionSource<System.Drawing.Bitmap>();
 				if (device.ProvideSnapshots)
 				{
 					device.SimulateTrigger();
 				}
 				else
 				{
-					// because we're changing the resolution, the device has to be stopped
-					device.Stop();
-
-					// get the highest MPix resolution
-					var maxVideoResolution = (from vc in device.VideoCapabilities orderby vc.FrameSize.Width * vc.FrameSize.Height descending select vc).FirstOrDefault();
-					// set the Capability with the highest MPix value, but allow for longest exposure/data-transmission time (highest quality) thus selecting the lowest FrameRate possible
-					device.VideoResolution = (from vc in device.VideoCapabilities orderby vc.AverageFrameRate ascending where vc.FrameSize.Width == maxVideoResolution.FrameSize.Width where vc.FrameSize.Height == maxVideoResolution.FrameSize.Height select vc).First();
-
-					// attach the Snaphot event to the regular newFrame
-					device.NewFrame += SnapshotEvent;
-
 					// remove the regular Frame handler to suppress UI-flickering caused by the changed resolution
 					device.NewFrame -= PreviewNewframeEvent;
-
-					device.Start();
+					// attach the Snaphot event to the regular newFrame
+					device.NewFrame += SnapshotEvent;
 				}
-				return snapshotTaskSource;
 			}
 
 			public void Dispose()
@@ -284,42 +275,14 @@ namespace TecWare.PPSn.UI
 
 			private void SnapshotEvent(object sender, NewFrameEventArgs eventArgs)
 			{
-					if (!snapshotTaskSource.Task.IsCanceled && !snapshotTaskSource.Task.IsCompleted)
-						snapshotTaskSource.SetResult((System.Drawing.Bitmap)eventArgs.Frame.Clone());
-					
-
+				SnapShot.Invoke(this, eventArgs);
 				if (!device.ProvideSnapshots)
 				{
-					device.Stop();
-
 					// remove the Snapshot handler
 					device.NewFrame -= SnapshotEvent;
 					// reattach the regular Frame handler
 					device.NewFrame += PreviewNewframeEvent;
-					// reset to the choosen preview capability
-					device.VideoResolution = previewResolution;
-
-					device.Start();
 				}
-			}
-
-			#endregion
-
-			#region ---- Helper Functions --------------------------------------------------------
-
-			private static BitmapSource DrawingBitmapToBitmapSource(System.Drawing.Bitmap bitmap)
-			{
-				MemoryStream ms = new MemoryStream();
-				bitmap.Save(ms, ImageFormat.Bmp);
-				ms.Seek(0, SeekOrigin.Begin);
-				BitmapImage bi = new BitmapImage();
-				bi.BeginInit();
-				bi.StreamSource = ms;
-				bi.EndInit();
-
-				bi.Freeze();
-
-				return bi;
 			}
 
 			#endregion
@@ -675,16 +638,7 @@ namespace TecWare.PPSn.UI
 				{
 					if (SelectedCamera != null)
 					{
-						var img = await SelectedCamera.MakePhoto().Task;
-						var path = System.IO.Path.GetTempPath() + DateTime.Now.ToUniversalTime().ToString("yyyy-MM-dd_HHmmss") + ".jpg";
-						
-						img.Save(path, ImageFormat.Jpeg);
-						img.Dispose();
-						var obj = await IncludePictureAsync(path);
-
-						Attachments.Append(obj);
-
-						File.Delete(path);
+						SelectedCamera.MakePhoto();
 					}
 				},
 				(sender, e) => e.CanExecute = SelectedCamera != null));
@@ -1085,7 +1039,26 @@ namespace TecWare.PPSn.UI
 			var LocalWebCamsCollection = new FilterInfoCollection(AForge.Video.DirectShow.FilterCategory.VideoInputDevice);
 			var cameraPreviews = new ObservableCollection<PpsAforgeCamera>();
 			foreach (AForge.Video.DirectShow.FilterInfo cam in LocalWebCamsCollection)
-				cameraPreviews.Add(new PpsAforgeCamera(cam, environment.Traces));
+			{
+				var pac = new PpsAforgeCamera(cam, environment.Traces);
+				pac.SnapShot += (s, e) =>
+				{
+					var path = System.IO.Path.GetTempPath() + DateTime.Now.ToUniversalTime().ToString("yyyy-MM-dd_HHmmss") + ".jpg";
+
+					e.Frame.Save(path, ImageFormat.Jpeg);
+					e.Frame.Dispose();
+					PpsObject obj;
+					Dispatcher.Invoke(async () =>
+					{
+						obj = await IncludePictureAsync(path);
+
+						Attachments.Append(obj);
+
+						File.Delete(path);
+					}).AwaitTask();
+				};
+				cameraPreviews.Add(pac);
+			}
 			CameraEnum = cameraPreviews;
 		}
 
