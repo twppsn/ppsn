@@ -23,6 +23,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
@@ -117,7 +118,7 @@ namespace TecWare.PPSn.UI
 		{
 			var collectionView = new ListCollectionView(new PpsTagsModel(obj, cls))
 			{
-				NewItemPlaceholderPosition = NewItemPlaceholderPosition.AtBeginning
+				NewItemPlaceholderPosition = cls == PpsObjectTagClass.Tag ? NewItemPlaceholderPosition.AtEnd : NewItemPlaceholderPosition.AtBeginning
 			};
 			return collectionView;
 		} // func CreateCollectionView
@@ -148,6 +149,12 @@ namespace TecWare.PPSn.UI
 			else
 				TagsSource.CommitEdit();
 		}
+		
+		private void tagAttributes_AddNewItemFactory(object sender, Controls.AddNewItemFactoryEventArgs args)
+		{
+			args.NewItem = new PpsTagItemModel(Object, PpsObjectTagClass.Text);
+			args.Handled = true;
+		} // event tagAttributes_AddNewItemFactory
 	} // class PpsTagsEditor
 
 	#endregion
@@ -155,7 +162,7 @@ namespace TecWare.PPSn.UI
 	#region -- class PpsTagItemModel --------------------------------------------------
 
 	/// <summary></summary>
-	public sealed class PpsTagItemModel : IEditableObject, INotifyPropertyChanged
+	public sealed class PpsTagItemModel : IPpsEditableObject, INotifyPropertyChanged
 	{
 		public event PropertyChangedEventHandler PropertyChanged;
 
@@ -238,22 +245,25 @@ namespace TecWare.PPSn.UI
 			// update the tag behind
 			if (IsNew)
 			{
-				tag = ppsObject.Tags.UpdateTag(currentName, currentClass, currentValue);
+				ppsObject.Tags.UpdateTag(currentName, currentClass, currentValue, t => tag = t);
 				AttachPropertyChanged();
 			}
 			else if (currentName != tag.Name)
 			{
-				tag.Remove();
+				var tmp = tag;
+				tag = null; // remove tag, that refresh will not remove this item
+				tmp.Remove();
 				DetachPropertyChanged();
-				tag = ppsObject.Tags.UpdateTag(currentName, currentClass, currentValue);
+				ppsObject.Tags.UpdateTag(currentName, currentClass, currentValue, t => tag = t);
 				AttachPropertyChanged();
 			}
-			else
+			else if (!Object.Equals(tag.Value, currentValue))
 				tag.Update(currentClass, currentValue);
 
 			isEditing = false;
 
-			ppsObject.UpdateLocalAsync().AwaitTask();
+			if (ppsObject.IsChanged)
+				ppsObject.UpdateLocalAsync().AwaitTask();
 		} // proc EndEdit
 
 		public void CancelEdit()
@@ -345,10 +355,10 @@ namespace TecWare.PPSn.UI
 		} // ctor
 
 		private void AttachObject()
-		{ 
-			WeakEventManager<PpsObjectTags, NotifyCollectionChangedEventArgs>.AddHandler(ppsObject.Tags, nameof(INotifyCollectionChanged.CollectionChanged), InnerCollectionChanged);
+		{
+			Refresh(true);
 
-			Refresh();
+			WeakEventManager<PpsObjectTags, NotifyCollectionChangedEventArgs>.AddHandler(ppsObject.Tags, nameof(INotifyCollectionChanged.CollectionChanged), InnerCollectionChanged);
 		} // proc AttachObject
 
 		public void DetachObject()
@@ -428,7 +438,7 @@ namespace TecWare.PPSn.UI
 
 		private bool withInRefresh = false;
 
-		public void Refresh()
+		public void Refresh(bool force = false)
 		{
 			if (withInRefresh)
 				return;
@@ -436,15 +446,40 @@ namespace TecWare.PPSn.UI
 			withInRefresh = true;
 			try
 			{
-				// clear all models
-				items.ForEach(t => t.DetachPropertyChanged());
-				items.Clear();
+				var itemsToRemove = new List<PpsTagItemModel>();
+
+				// clear all models, on force
+				if (force)
+				{
+					items.ForEach(t => t.DetachPropertyChanged());
+					items.Clear();
+				}
+				else
+					itemsToRemove.AddRange(items);
 
 				// rebuild models
 				foreach (var innerTag in InnerTagList) // can raise a Reset Event
 				{
 					if (innerTag.Class == classFilter)
-						items.Add(new PpsTagItemModel(ppsObject, innerTag));
+					{
+						if (force)
+							items.Add(new PpsTagItemModel(ppsObject, innerTag));
+						else
+						{
+							var idx = IndexOf(innerTag);
+							if (idx == -1)
+								items.Add(new PpsTagItemModel(ppsObject, innerTag));
+							else
+								itemsToRemove.Remove(items[idx]);
+						}
+					}
+				}
+
+				// remove not updated items
+				foreach (var c in itemsToRemove)
+				{
+					if (c.InnerTag != null)
+						items.Remove(c);
 				}
 
 				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -457,16 +492,23 @@ namespace TecWare.PPSn.UI
 
 		private void Remove(PpsTagItemModel tag)
 		{
-			if (tag.IsNew)
-				throw new ArgumentException("Tag is not in inner tag list.");
-
-			// remove in list -> notify changes the view
-			tag.InnerTag.Remove();
+			var idx = items.IndexOf(tag);
+			if (!tag.IsNew)
+			{
+				// remove in list -> notify changes the view
+				tag.InnerTag.Remove();
+				ppsObject.UpdateLocalAsync().AwaitTask();
+			}
+			else
+				RemoveFromView(tag, idx);
 		} // proc RemoveCore
 
 		private void RemoveAt(int index)
-			=> Remove(items[index]);
-		
+		{
+			if (items.Count > 0) // list is destroyed
+				Remove(items[index]);
+		} // proc RemoveAtt
+
 		private int Insert(PpsTagItemModel tag, int insertAt)
 		{
 			//if (tag.IsNew)

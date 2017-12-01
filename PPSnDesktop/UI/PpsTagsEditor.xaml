@@ -289,7 +289,7 @@
 
 		<ControlTemplate x:Key="tagEditorTemplate" TargetType="{x:Type ContentControl}">
 			<uiC:PpsEditableListbox ItemsSource="{Binding Path=TagsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
-									Margin="16,16,0,16" >
+									Margin="16,16,0,16" AddNewItemFactory="tagAttributes_AddNewItemFactory" >
 				<ListBox.ItemTemplate>
 					<DataTemplate>
 						<Grid Background="Transparent">

@@ -16,6 +16,7 @@
 using System;
 using System.Collections;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -55,6 +56,15 @@ namespace TecWare.PPSn.Controls
 
 	#endregion
 
+	#region -- interface IPpsEditableObject -------------------------------------------
+
+	public interface IPpsEditableObject : IEditableObject
+	{
+		bool IsEditable { get; }
+	} // proc IPpsEditableObject
+
+	#endregion
+
 	#region -- class PpsEditableListbox -----------------------------------------------
 
 	/// <summary>Extended ListBox</summary>
@@ -62,8 +72,9 @@ namespace TecWare.PPSn.Controls
 	{
 		public static readonly RoutedEvent AddNewItemFactoryEvent = EventManager.RegisterRoutedEvent(nameof(AddNewItemFactory), RoutingStrategy.Tunnel, typeof(AddNewItemFactoryHandler), typeof(PpsEditableListbox));
 
-		public static readonly RoutedUICommand AppendNewItemCommand = new RoutedUICommand("AppendNewItem", "AppendNewItem", typeof(PpsEditableListbox));
-		public static readonly RoutedUICommand RemoveItemCommand = new RoutedUICommand("RemoveItem", "RemoveItem", typeof(PpsEditableListbox));
+		public static readonly RoutedUICommand AppendNewItemCommand = new RoutedUICommand("Append", "AppendNewItem", typeof(PpsEditableListbox));
+		public static readonly RoutedUICommand ChangeItemCommand = new RoutedUICommand("Change", "ChangeItem", typeof(PpsEditableListbox));
+		public static readonly RoutedUICommand RemoveItemCommand = new RoutedUICommand("Remove", "RemoveItem", typeof(PpsEditableListbox));
 
 		public event AddNewItemFactoryHandler AddNewItemFactory { add => AddHandler(AddNewItemFactoryEvent, value); remove => RemoveHandler(AddNewItemFactoryEvent, value); }
 
@@ -81,7 +92,20 @@ namespace TecWare.PPSn.Controls
 					},
 					(sender, e) =>
 					{
-						e.CanExecute = true;
+						e.CanExecute = editableCollectionView != null && editableCollectionView.IsAddingNew;
+						e.Handled = true;
+					}
+				)
+			);
+			CommandBindings.Add(
+				new CommandBinding(ChangeItemCommand,
+					(sender, e) =>
+					{
+						TryEndTransaction(e.Parameter, true);
+					},
+					(sender, e) =>
+					{
+						e.CanExecute = editableCollectionView != null && editableCollectionView.IsEditingItem;
 						e.Handled = true;
 					}
 				)
@@ -95,7 +119,10 @@ namespace TecWare.PPSn.Controls
 					},
 					(sender, e) =>
 					{
-						e.CanExecute = true;
+						e.CanExecute =
+							e.Parameter is IPpsEditableObject ppso
+								? ppso.IsEditable
+								: e.Parameter is IEditableObject;
 						e.Handled = true;
 					}
 				)
@@ -106,11 +133,10 @@ namespace TecWare.PPSn.Controls
 		{
 			base.OnItemsSourceChanged(oldValue, newValue);
 
-			editableCollectionView = CollectionViewSource.GetDefaultView(Items) as IEditableCollectionViewAddNewItem;
-			if (editableCollectionView != null)
-			{
-				editableCollectionView.NewItemPlaceholderPosition = NewItemPlaceholderPosition.AtBeginning;
-			}
+			// get the collection view
+			editableCollectionView = newValue == null 
+				? null
+				: CollectionViewSource.GetDefaultView(newValue) as IEditableCollectionViewAddNewItem;
 		} // event OnItemsSourceChanged
 
 		protected override DependencyObject GetContainerForItemOverride()
@@ -121,30 +147,46 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		internal void BeginTransaction(object item, bool addNew)
+		internal bool TryBeginTransaction(object item, bool addNew)
 		{
 			if (addNew)
-			{
-				BeginAddNew();
-			}
+				return BeginAddNew();
 			else
 			{
-				editableCollectionView.EditItem(item);
+				try
+				{
+					editableCollectionView.EditItem(item);
+					return true;
+				}
+				catch (Exception e)
+				{
+					Debug.Print("Failed to enter edit mode: {0}", e.Message);
+					return false;
+				}
 			}
 		} // proc BeginTransaction
 
-		internal void EndTransaction(object item, bool commit)
+		internal bool TryEndTransaction(object item, bool commit)
 		{
 			if (IsCurrentlyAddedItem(item))
 			{
-				FinishAddNew(item, commit);
+				return FinishAddNew(item, commit);
 			}
 			else
 			{
-				if (commit)
-					editableCollectionView.CommitEdit();
-				else
-					editableCollectionView.CancelEdit();
+				try
+				{
+					if (commit)
+						editableCollectionView.CommitEdit();
+					else
+						editableCollectionView.CancelEdit();
+					return true;
+				}
+				catch (Exception e)
+				{
+					Debug.Print("Failed to leave edit mode: {0}", e.Message);
+					return false;
+				}
 			}
 		} // proc EndTransaction
 
@@ -152,12 +194,12 @@ namespace TecWare.PPSn.Controls
 
 		private object AddNewItem()
 		{
-			if (editableCollectionView.CanAddNew)
+			if (editableCollectionView.CanAddNew) // simple AddNew via Default Ctor
 			{
 				return editableCollectionView.AddNew();
 			}
 			else if (editableCollectionView is IEditableCollectionViewAddNewItem editableCollectionViewAddNewItem
-				&& editableCollectionViewAddNewItem.CanAddNewItem)
+				&& editableCollectionViewAddNewItem.CanAddNewItem) // extented AddNew via Event
 			{
 				var e = new AddNewItemFactoryEventArgs(AddNewItemFactoryEvent, this);
 				RaiseEvent(e);
@@ -165,16 +207,16 @@ namespace TecWare.PPSn.Controls
 					return editableCollectionViewAddNewItem.AddNewItem(e.NewItem);
 				// fall through
 			}
-			return null;
+			return null; // no new item
 		} // func AddNewItem
 
-		private void BeginAddNew()
+		private bool BeginAddNew()
 		{
 			var item = AddNewItem();
 			if (item == null)
 			{
 				AnchorNewItemPosition(CollectionView.NewItemPlaceholder, false);
-				return;
+				return false;
 			}
 
 			// collapse
@@ -185,14 +227,23 @@ namespace TecWare.PPSn.Controls
 
 			// keyboard focus to first control
 			AnchorNewItemPosition(item, true);
+			return true;
 		} // proc BeginAddNew
 
-		private void FinishAddNew(object item, bool commit)
+		private bool FinishAddNew(object item, bool commit)
 		{
-			if (commit)
-				editableCollectionView.CommitNew();
-			else
-				editableCollectionView.CancelNew();
+			try
+			{
+				if (commit)
+					editableCollectionView.CommitNew();
+				else
+					editableCollectionView.CancelNew();
+			}
+			catch (Exception e)
+			{
+				Debug.Print("Failed to leave edit mode: {0}", e.Message);
+				return false;
+			}
 
 			// show
 			UpdateNewItemPlaceHolderVisibility(true);
@@ -208,6 +259,8 @@ namespace TecWare.PPSn.Controls
 			// Stay on newitem position
 			if (commit)
 				AnchorNewItemPosition(CollectionView.NewItemPlaceholder, true);
+
+			return true;
 		} // proc FinishAddNew
 
 		public void AnchorNewItemPosition(object item, bool focusChildElement)
@@ -249,7 +302,8 @@ namespace TecWare.PPSn.Controls
 		private void UpdateNewItemPlaceHolderVisibility(bool show)
 		{
 			var listBoxItem = GetListBoxItemFromContent(CollectionView.NewItemPlaceholder);
-			listBoxItem.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+			if (listBoxItem != null)
+				listBoxItem.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
 		} // proc UpdateNewItemPlaceHolderVisibility
 
 		#endregion
@@ -350,8 +404,7 @@ namespace TecWare.PPSn.Controls
 			if (!IsChildOf(e.OriginalSource))
 				return;
 
-			Key key = e.Key;
-			switch (key)
+			switch (e.Key)
 			{
 				case Key.Escape:
 					{
@@ -367,7 +420,7 @@ namespace TecWare.PPSn.Controls
 						if (parent != null && parent.IsCurrentlyAddedItem(Content))
 						{
 							e.Handled = true;
-							parent.EndTransaction(Content, true);
+							parent.TryEndTransaction(Content, true);
 						}
 					}
 					break;
@@ -382,7 +435,7 @@ namespace TecWare.PPSn.Controls
 				// Transaction already started by entering NewItemPlaceHolder.
 				if (!parent.IsCurrentlyAddedItem(Content))
 				{
-					parent.BeginTransaction(Content, IsNewItemPlaceHolder);
+					parent.TryBeginTransaction(Content, IsNewItemPlaceHolder);
 				}
 			}
 		} // proc OnEnter
@@ -397,7 +450,7 @@ namespace TecWare.PPSn.Controls
 			if (parent != null)
 			{
 				var addedItem = parent.IsCurrentlyAddedItem(Content);
-				parent.EndTransaction(Content, !addedItem && !focusedSelf);
+				parent.TryEndTransaction(Content, !addedItem && !focusedSelf);
 				if (addedItem && focusedSelf)
 				{
 					parent.AnchorNewItemPosition(CollectionView.NewItemPlaceholder, false);
@@ -434,11 +487,10 @@ namespace TecWare.PPSn.Controls
 			get
 			{
 				// Because Nullable<bool> unboxing is very slow (uses reflection) first we cast to bool
-				object value = GetValue(IsNewItemProperty);
-				if (value == null)
-					return new Nullable<bool>();
-				else
-					return new Nullable<bool>((bool)value);
+				var value = GetValue(IsNewItemProperty);
+				return value == null
+					? new bool?()
+					: new bool?((bool)value);
 			}
 		} // prop IsNewItem
 

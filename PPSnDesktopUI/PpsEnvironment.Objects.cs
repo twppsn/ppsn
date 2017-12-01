@@ -964,6 +964,7 @@ namespace TecWare.PPSn
 		internal void OnTagRemoved(PpsObjectTagView tag)
 		{
 			EnsureTagInList(tag);
+			OnCollectionChanged();
 		} // proc OnTagRemoved
 
 		private void RefreshSingleRevTag(long databaseId, PpsObjectTag tagData)
@@ -1197,7 +1198,7 @@ namespace TecWare.PPSn
 
 					var nextLocalId = (long?)null;
 
-					foreach (var cur in tags)
+					foreach (var cur in tags.Union(deletedTags))
 					{
 						if (cur.IsDirty)
 						{
@@ -1206,6 +1207,11 @@ namespace TecWare.PPSn
 								if (cur.IsRev && cur.IsRemoved)
 								{
 									// fix me: what is when there is a remote tag with the same key?
+									deleteIdParameter.Value = cur.Id.Value;
+									deleteCommand.ExecuteNonQueryEx();
+								}
+								else if (cur.IsRemoved && cur.Id.Value < 0) // local only
+								{
 									deleteIdParameter.Value = cur.Id.Value;
 									deleteCommand.ExecuteNonQueryEx();
 								}
@@ -1326,10 +1332,10 @@ namespace TecWare.PPSn
 		} // proc RefreshTags
 
 
-		public PpsObjectTagView UpdateTag(string key, PpsObjectTagClass cls, object value)
-			=> UpdateTag(parent.Environment.UserId, key, cls, value);
+		public PpsObjectTagView UpdateTag(string key, PpsObjectTagClass cls, object value, Action<PpsObjectTagView> updateTagBeforeReset = null)
+			=> UpdateTag(parent.Environment.UserId, key, cls, value, updateTagBeforeReset);
 
-		public PpsObjectTagView UpdateTag(long userId, string key, PpsObjectTagClass cls, object value)
+		public PpsObjectTagView UpdateTag(long userId, string key, PpsObjectTagClass cls, object value, Action<PpsObjectTagView> updateTagBeforeReset = null)
 		{
 			try
 			{
@@ -1342,12 +1348,14 @@ namespace TecWare.PPSn
 					{
 						var newTag = new PpsObjectTagView(this, null, key, false, cls, value, userId, DateTime.Now, true);
 						tags.Add(newTag);
+						updateTagBeforeReset?.Invoke(newTag);
 						return newTag;
 					}
 					else
 					{
 						var t = tags[idx];
 						t.Update(cls, value);
+						updateTagBeforeReset?.Invoke(t);
 						return t;
 					}
 				}
