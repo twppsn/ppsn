@@ -179,6 +179,9 @@ namespace TecWare.PPSn.UI
 					return;
 				}
 
+				// attach failure handling
+				device.VideoSourceError += (sender, e) => traces.AppendText(PpsTraceItemType.Fail, "Camera: " + e.Description);
+
 				// find a preview resolution - according to the requirements
 				previewResolution = (from vc in device.VideoCapabilities orderby vc.FrameSize.Width descending where vc.FrameSize.Width <= previewMaxWidth where vc.AverageFrameRate >= previewMinFPS select vc).FirstOrDefault();
 				if (previewResolution == null)
