@@ -299,6 +299,8 @@ namespace TecWare.PPSn.UI
 
 			public bool AutomaticSettings => (from prop in properties where !prop.AutomaticValue select prop).Count() == 0;
 
+			public NewFrameEventHandler SnapShot;
+
 			#endregion
 		}
 
@@ -634,7 +636,7 @@ namespace TecWare.PPSn.UI
 		{
 			CommandBindings.Add(new CommandBinding(
 				SaveCameraImageCommand,
-				async (sender, e) =>
+				(sender, e) =>
 				{
 					if (SelectedCamera != null)
 					{
