@@ -77,8 +77,7 @@ namespace TecWare.PPSn.UI
 					this.device = device;
 					this.property = property;
 
-					AForge.Video.DirectShow.CameraControlFlags flags;
-					device.GetCameraPropertyRange(property, out minValue, out maxValue, out stepSize, out defaultValue, out flags);
+					device.GetCameraPropertyRange(property, out minValue, out maxValue, out stepSize, out defaultValue, out CameraControlFlags flags);
 					this.flagable = flags != AForge.Video.DirectShow.CameraControlFlags.None;
 				}
 
@@ -98,10 +97,8 @@ namespace TecWare.PPSn.UI
 					{
 						if (!flagable)
 							return true;
-						int tmp;
-						AForge.Video.DirectShow.CameraControlFlags flag;
-						device.GetCameraProperty(property, out tmp, out flag);
-						return (flag == AForge.Video.DirectShow.CameraControlFlags.Auto);
+						device.GetCameraProperty(property, out int tmp, out CameraControlFlags flag);
+						return (flag == CameraControlFlags.Auto);
 					}
 					set
 					{
@@ -119,9 +116,7 @@ namespace TecWare.PPSn.UI
 				{
 					get
 					{
-						int tmp;
-						AForge.Video.DirectShow.CameraControlFlags flag;
-						device.GetCameraProperty(property, out tmp, out flag);
+						device.GetCameraProperty(property, out int tmp, out CameraControlFlags flag);
 						return tmp;
 					}
 					set
