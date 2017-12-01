@@ -233,9 +233,9 @@ namespace TecWare.PPSn.UI
 
 			#region ---- Methods -----------------------------------------------------------------
 
-			public TaskCompletionSource<BitmapSource> MakePhoto()
+			public TaskCompletionSource<System.Drawing.Bitmap> MakePhoto()
 			{
-				snapshotTaskSource = new TaskCompletionSource<BitmapSource>();
+				snapshotTaskSource = new TaskCompletionSource<System.Drawing.Bitmap>();
 				if (device.ProvideSnapshots)
 				{
 					device.SimulateTrigger();
@@ -271,14 +271,22 @@ namespace TecWare.PPSn.UI
 
 			private void PreviewNewframeEvent(object sender, NewFrameEventArgs eventArgs)
 			{
-				preview = DrawingBitmapToBitmapSource((System.Drawing.Bitmap)eventArgs.Frame.Clone());
+				using (var ms = new MemoryStream())
+				{
+					eventArgs.Frame.Save(ms, ImageFormat.Bmp);
+					ms.Position = 0;
+					preview = ms.ToArray();
+				}
+				eventArgs.Frame.Dispose();
 
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Preview)));
 			}
 
 			private void SnapshotEvent(object sender, NewFrameEventArgs eventArgs)
 			{
-				snapshotTaskSource.SetResult(DrawingBitmapToBitmapSource((System.Drawing.Bitmap)eventArgs.Frame.Clone()));
+					if (!snapshotTaskSource.Task.IsCanceled && !snapshotTaskSource.Task.IsCompleted)
+						snapshotTaskSource.SetResult((System.Drawing.Bitmap)eventArgs.Frame.Clone());
+					
 
 				if (!device.ProvideSnapshots)
 				{
@@ -320,7 +328,7 @@ namespace TecWare.PPSn.UI
 
 			#region ---- Properties --------------------------------------------------------------
 
-			public BitmapSource Preview => preview;
+			public object Preview => preview;
 
 			public string Name => name;
 
@@ -669,12 +677,9 @@ namespace TecWare.PPSn.UI
 					{
 						var img = await SelectedCamera.MakePhoto().Task;
 						var path = System.IO.Path.GetTempPath() + DateTime.Now.ToUniversalTime().ToString("yyyy-MM-dd_HHmmss") + ".jpg";
-
-						BitmapEncoder encoder = new JpegBitmapEncoder();
-						encoder.Frames.Add(BitmapFrame.Create(img));
-
-						using (var fs = new FileStream(path, FileMode.CreateNew))
-							encoder.Save(fs);
+						
+						img.Save(path, ImageFormat.Jpeg);
+						img.Dispose();
 						var obj = await IncludePictureAsync(path);
 
 						Attachments.Append(obj);
