@@ -102,7 +102,7 @@
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition  />
-			<RowDefinition Height="200"/>
+			<RowDefinition Height="auto"/>
 		</Grid.RowDefinitions>
 		<Image 
 			Grid.Row="0"
@@ -319,7 +319,7 @@
 				</Style>
 			</Grid.Style>
 		</Grid>
-		<ScrollViewer 
+		<ScrollViewer x:Name="existingImagesPanel"
 			Margin="10,0,0,0"
 			Grid.Row="1"
 			VerticalScrollBarVisibility="Hidden"
@@ -399,5 +399,42 @@
 				</ItemsControl>
 			</StackPanel>
 		</ScrollViewer>
+		<ToggleButton VerticalAlignment="Bottom" HorizontalAlignment="Center">
+			<ToggleButton.Triggers>
+				<EventTrigger RoutedEvent="ToggleButton.Checked">
+					<BeginStoryboard>
+						<Storyboard>
+							<DoubleAnimation Storyboard.TargetProperty="Height"                                                     
+                                     Storyboard.TargetName="existingImagesPanel"
+                                     From="200" 
+                                     To="0" 
+                                     Duration="0:0:0.25" />
+						</Storyboard>
+
+					</BeginStoryboard>
+				</EventTrigger>
+				<EventTrigger RoutedEvent="ToggleButton.Unchecked">
+					<BeginStoryboard>
+						<Storyboard>
+							<DoubleAnimation Storyboard.TargetProperty="Height"                                                     
+                                     Storyboard.TargetName="existingImagesPanel"
+                                     From="0" 
+                                     Duration="0:0:0.25"
+                                     To="200" />
+						</Storyboard>
+					</BeginStoryboard>
+				</EventTrigger>
+			</ToggleButton.Triggers>
+			<ToggleButton.Template>
+				<ControlTemplate>
+					<Border
+						Background="AliceBlue" 
+						Opacity="0.6"
+						CornerRadius="5,5,0,0">
+						<TextBlock Text="Kamera- und Bildauswahl" Margin="10"/>
+					</Border>
+				</ControlTemplate>
+			</ToggleButton.Template>
+		</ToggleButton>
 	</Grid>
 </UserControl>
