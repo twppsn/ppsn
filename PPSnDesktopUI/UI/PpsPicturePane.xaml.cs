@@ -226,6 +226,8 @@ namespace TecWare.PPSn.UI
 					if (property.MinValue != property.MaxValue)
 						((List<CameraProperty>)properties).Add(property);
 				}
+				if (properties.Count() <= 0)
+					properties = null;
 
 				device.PlayingFinished += (sender, e) =>
 				{
@@ -299,7 +301,7 @@ namespace TecWare.PPSn.UI
 
 			public IEnumerable<CameraProperty> Properties => properties;
 
-			public bool AutomaticSettings => (from prop in properties where !prop.AutomaticValue select prop).Count() == 0;
+			public bool AutomaticSettings => properties != null ? (from prop in properties where !prop.AutomaticValue select prop).Count() == 0 : true;
 
 			public NewFrameEventHandler SnapShot;
 

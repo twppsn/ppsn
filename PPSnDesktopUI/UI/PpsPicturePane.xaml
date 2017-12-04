@@ -206,6 +206,15 @@
 						</Grid>
 					</ControlTemplate>
 				</ToggleButton.Template>
+				<ToggleButton.Style>
+					<Style TargetType="ToggleButton">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedCamera.Properties}" Value="{x:Null}">
+								<Setter Property="Visibility" Value="Collapsed"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</ToggleButton.Style>
 			</ToggleButton>
 			<Image 
 				Grid.Column="1" 
