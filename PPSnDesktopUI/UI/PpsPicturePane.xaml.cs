@@ -234,7 +234,17 @@ namespace TecWare.PPSn.UI
 					traces.AppendText(PpsTraceItemType.Warning, $"Camera {this.name} unplugged or lost. ");
 					CameraLost.Invoke(this, new EventArgs());
 				};
-
+				var timeout = new System.Timers.Timer(5000);
+				timeout.Elapsed += (s, e) =>
+				{
+					if (Preview == null)
+					{
+						traces.AppendText(PpsTraceItemType.Warning, $"Camera {this.name} unplugged or lost. ");
+						CameraLost.Invoke(this, new EventArgs());
+						((System.Timers.Timer)s).Dispose();
+					}
+				};
+				timeout.Start();
 			}
 
 			#endregion
@@ -480,7 +490,7 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		#region -- Events -------------------------------------------------------------
-		
+
 		/// <summary>
 		/// Checks, if the mouse is over an InkStroke and changes the cursor according
 		/// </summary>
@@ -1055,7 +1065,12 @@ namespace TecWare.PPSn.UI
 						File.Delete(path);
 					}).AwaitTask();
 				};
-				pac.CameraLost += (s, e) => Dispatcher.Invoke(() => CameraEnum.Remove((PpsAforgeCamera)s));
+				pac.CameraLost += (s, e) => Dispatcher.Invoke(() =>
+				{
+					((PpsAforgeCamera)s).Dispose();
+					CameraEnum.Remove((PpsAforgeCamera)s);
+				});
+
 				cameraPreviews.Add(pac);
 			}
 			CameraEnum = cameraPreviews;
