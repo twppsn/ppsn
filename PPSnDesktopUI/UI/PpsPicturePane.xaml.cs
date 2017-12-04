@@ -477,12 +477,11 @@ namespace TecWare.PPSn.UI
 		/// <param name="e">unused</param>
 		private void CurrentObjectImageMax_SizeChanged(object sender, SizeChangedEventArgs e)
 		{
-			var xfact = (double)GetValue(Window.ActualWidthProperty) / ((Image)sender).ActualWidth;
-			var yfact = ((double)GetValue(Window.ActualHeightProperty) - 200) / ((Image)sender).ActualHeight;
+			var aWidth = ((Image)sender).ActualWidth;
+			var fact = aWidth / ((Image)sender).Source.Width;
 			// the factors may become NaN (sender.Actual was zero) or infinity - thus scaling would fail
-			xfact = (xfact > 0 && xfact < 100) ? xfact : 1;
-			yfact = (yfact > 0 && yfact < 100) ? yfact : 1;
-			ScaleMatrix = new Matrix(xfact, 0, 0, yfact, 0, 0);
+			fact = (fact > 0 && fact < 100) ? fact : 1;
+			ScaleMatrix = new Matrix(fact, 0, 0, fact, 0, 0);
 		}
 
 		/// <summary>

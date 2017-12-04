@@ -276,20 +276,22 @@
 		</Button>
 		<Grid
 			Grid.Row="0">
+			<Image
+				x:Name="CurrentObjectImageMax"
+				SizeChanged="CurrentObjectImageMax_SizeChanged"
+				DataContext="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedAttachment, UpdateSourceTrigger=PropertyChanged,Mode=OneWay}"
+				Source="{Binding LinkedObject.DataLazy.RawData}">
+				<!-- RK: Image can handle byte[] as source -->
+			</Image>
 			<InkCanvas
 				Cursor="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=InkEditCursor}"
+				Width="{Binding ElementName=CurrentObjectImageMax, Path=Source.Width}"
+				Height="{Binding ElementName=CurrentObjectImageMax, Path=Source.Height}"
 				UseCustomCursor="True"
 				Background="Transparent"
 				EditingMode="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=InkEditMode, Mode=OneWay}"
 				Strokes="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=InkStrokes, Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
 				DefaultDrawingAttributes="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=InkDrawingAttributes, Mode=OneWay}">
-				<Image
-					x:Name="CurrentObjectImageMax"
-					SizeChanged="CurrentObjectImageMax_SizeChanged"
-					DataContext="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedAttachment, UpdateSourceTrigger=PropertyChanged,Mode=OneWay}"
-					Source="{Binding LinkedObject.DataLazy.RawData}">
-					<!-- RK: Image can handle byte[] as source -->
-				</Image>
 				<InkCanvas.LayoutTransform>
 					<MatrixTransform Matrix="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ScaleMatrix}"/>
 				</InkCanvas.LayoutTransform>
