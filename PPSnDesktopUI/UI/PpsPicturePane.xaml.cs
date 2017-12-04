@@ -229,7 +229,6 @@ namespace TecWare.PPSn.UI
 
 				device.PlayingFinished += (sender, e) =>
 				{
-					device = null;
 					traces.AppendText(PpsTraceItemType.Warning, $"Camera {this.name} unplugged or lost. ");
 					CameraLost.Invoke(this, new EventArgs());
 				};
