@@ -521,6 +521,11 @@ namespace TecWare.PPSn.UI
 			SetValue(commandsPropertyKey, new PpsUICommandCollection());
 
 			AddToolbarCommands();
+
+			if (imagesList.Items.Count > 0)
+				SelectedAttachment = (IPpsAttachmentItem)imagesList.Items[0];
+			else if (CameraEnum.Count > 0)
+				SelectedCamera = CameraEnum[0];
 		}
 
 		#endregion
