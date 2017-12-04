@@ -226,6 +226,14 @@ namespace TecWare.PPSn.UI
 					if (property.MinValue != property.MaxValue)
 						((List<CameraProperty>)properties).Add(property);
 				}
+
+				device.PlayingFinished += (sender, e) =>
+				{
+					device = null;
+					traces.AppendText(PpsTraceItemType.Warning, $"Camera {this.name} unplugged or lost. ");
+					CameraLost.Invoke(this, new EventArgs());
+				};
+
 			}
 
 			#endregion
@@ -295,6 +303,8 @@ namespace TecWare.PPSn.UI
 			public bool AutomaticSettings => (from prop in properties where !prop.AutomaticValue select prop).Count() == 0;
 
 			public NewFrameEventHandler SnapShot;
+
+			public EventHandler CameraLost;
 
 			#endregion
 		}
@@ -1044,6 +1054,7 @@ namespace TecWare.PPSn.UI
 						File.Delete(path);
 					}).AwaitTask();
 				};
+				pac.CameraLost += (s, e) => Dispatcher.Invoke(() => CameraEnum.Remove((PpsAforgeCamera)s));
 				cameraPreviews.Add(pac);
 			}
 			CameraEnum = cameraPreviews;
