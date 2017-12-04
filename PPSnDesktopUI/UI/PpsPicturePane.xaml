@@ -131,7 +131,7 @@
 				Grid.ColumnSpan="2" 
 				Background="AliceBlue" 
 				Opacity="0.6"
-				CornerRadius="50,100,100,50">
+				CornerRadius="50,50,50,50">
 				<Border.Style>
 					<Style TargetType="Border">
 						<Style.Triggers>
@@ -183,8 +183,8 @@
 			<ToggleButton 
 				Grid.Column="1"
 				IsChecked="False"
-				Width="200"
-				Height="200" 
+				Width="100"
+				Height="100" 
 				Cursor="Hand"
 				ToolTip="Kameraeinstellungen"
 				x:Name="CameraSettingsToggleButton">
@@ -198,7 +198,7 @@
 										<DrawingImage.Drawing>
 											<GeometryDrawing
 												Brush="{StaticResource PPSnWindowFooterBrush}"  
-												Geometry="{StaticResource editPathGeometry}"/>
+												Geometry="{StaticResource settingsPathGeometry}"/>
 										</DrawingImage.Drawing>
 									</DrawingImage>
 								</Image.Source>
