@@ -8,6 +8,16 @@
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
 	<UserControl.Resources>
+		<local:LuaValueConverter x:Key="ScaleConverter">
+			<![CDATA[
+					if value[1] ~= clr.System.Windows.DependencyProperty:UnsetValue then
+						local fact = value[0] / value[1];
+						return clr.System.Windows.Media.MatrixTransform(fact, 0, 0, fact, 0, 0);
+					else
+						return clr.System.Windows.Media.MatrixTransform(1, 0, 0, 1, 0, 0);
+					end;
+				]]>
+		</local:LuaValueConverter>
 		<CollectionViewSource
 			x:Key="FilteredAttachments"
 			Filter="ShowOnlyObjectImageDataFilter"
@@ -278,7 +288,6 @@
 			Grid.Row="0">
 			<Image
 				x:Name="CurrentObjectImageMax"
-				SizeChanged="CurrentObjectImageMax_SizeChanged"
 				DataContext="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedAttachment, UpdateSourceTrigger=PropertyChanged,Mode=OneWay}"
 				Source="{Binding LinkedObject.DataLazy.RawData}">
 				<!-- RK: Image can handle byte[] as source -->
@@ -293,7 +302,10 @@
 				Strokes="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=InkStrokes, Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
 				DefaultDrawingAttributes="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=InkDrawingAttributes, Mode=OneWay}">
 				<InkCanvas.LayoutTransform>
-					<MatrixTransform Matrix="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ScaleMatrix}"/>
+					<MultiBinding Mode="OneWay" Converter="{StaticResource ScaleConverter}">
+						<Binding ElementName="CurrentObjectImageMax" Path="ActualWidth"/>
+						<Binding ElementName="CurrentObjectImageMax" Path="Source.Width"/>
+					</MultiBinding>
 				</InkCanvas.LayoutTransform>
 			</InkCanvas>
 			<Grid.Style>

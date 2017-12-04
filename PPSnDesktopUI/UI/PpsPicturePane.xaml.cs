@@ -469,21 +469,7 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		#region -- Events -------------------------------------------------------------
-
-		/// <summary>
-		/// THis function calculates the Matrix to overlay the InkCanvas onto the Image
-		/// </summary>
-		/// <param name="sender">main image</param>
-		/// <param name="e">unused</param>
-		private void CurrentObjectImageMax_SizeChanged(object sender, SizeChangedEventArgs e)
-		{
-			var aWidth = ((Image)sender).ActualWidth;
-			var fact = aWidth / ((Image)sender).Source.Width;
-			// the factors may become NaN (sender.Actual was zero) or infinity - thus scaling would fail
-			fact = (fact > 0 && fact < 100) ? fact : 1;
-			ScaleMatrix = new Matrix(fact, 0, 0, fact, 0, 0);
-		}
-
+		
 		/// <summary>
 		/// Checks, if the mouse is over an InkStroke and changes the cursor according
 		/// </summary>
@@ -1176,13 +1162,6 @@ namespace TecWare.PPSn.UI
 			set { SetValue(InkDrawingAttributesProperty, value); }
 		}
 
-		/// <summary>This mAtrix handles the Mapping of the Strokes to the Image resolution-wise</summary>
-		private Matrix ScaleMatrix
-		{
-			get { return GetValue(ScaleMatrixProperty) != null ? (Matrix)GetValue(ScaleMatrixProperty) : new Matrix(1, 0, 0, 1, 0, 0); }
-			set { SetValue(ScaleMatrixProperty, value); }
-		}
-
 		/// <summary>The Binding point for Color and Thickness possibilities for the Settings Control</summary>
 		private PpsPecStrokeSettings StrokeSettings
 		{
@@ -1201,7 +1180,6 @@ namespace TecWare.PPSn.UI
 		private readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(PpsDetraceableStrokeCollection), typeof(PpsPicturePane));
 		private readonly static DependencyProperty InkEditModeProperty = DependencyProperty.Register(nameof(InkEditMode), typeof(InkCanvasEditingMode), typeof(PpsPicturePane));
 		private readonly static DependencyProperty InkEditCursorProperty = DependencyProperty.Register(nameof(InkEditCursor), typeof(Cursor), typeof(PpsPicturePane));
-		private readonly static DependencyProperty ScaleMatrixProperty = DependencyProperty.Register(nameof(ScaleMatrix), typeof(Matrix), typeof(PpsPicturePane));
 		private readonly static DependencyProperty StrokeSettingsProperty = DependencyProperty.Register(nameof(StrokeSettings), typeof(PpsPecStrokeSettings), typeof(PpsPicturePane));
 
 		#endregion
