@@ -1055,7 +1055,7 @@ namespace TecWare.PPSn.UI
 
 					e.Frame.Save(path, ImageFormat.Jpeg);
 					e.Frame.Dispose();
-					PpsObject obj;
+					PpsObject obj = null;
 					Dispatcher.Invoke(async () =>
 					{
 						obj = await IncludePictureAsync(path);
@@ -1063,6 +1063,14 @@ namespace TecWare.PPSn.UI
 						Attachments.Append(obj);
 
 						File.Delete(path);
+						var i = 0;
+
+						// scroll the new item into view
+						while (i < imagesList.Items.Count && imagesList.Items[i] != obj)
+						{
+							((ContentPresenter)imagesList.ItemContainerGenerator.ContainerFromIndex(i)).BringIntoView();
+							i++;
+						}
 					}).AwaitTask();
 				};
 				pac.CameraLost += (s, e) => Dispatcher.Invoke(() =>
