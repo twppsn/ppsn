@@ -221,9 +221,9 @@
 				Grid.Column="1" 
 				VerticalAlignment="Bottom" 
 				HorizontalAlignment="Right" 
-				Width="50" 
-				Height="50" 
-				Margin="30" 
+				Width="20" 
+				Height="20" 
+				Margin="5" 
 				ToolTip="Einige Kameraeinstellungen wurden manuell festgelegt.">
 				<Image.Source>
 					<DrawingImage>
