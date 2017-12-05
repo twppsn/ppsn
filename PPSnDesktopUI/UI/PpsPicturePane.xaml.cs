@@ -146,8 +146,8 @@ namespace TecWare.PPSn.UI
 			#region ---- Fields ------------------------------------------------------------------
 
 			private VideoCaptureDevice device;
-			private object preview;
 			private PpsTraceLog traces;
+			private byte[] preview;
 			private VideoCapabilities previewResolution;
 			private string name;
 
@@ -303,7 +303,7 @@ namespace TecWare.PPSn.UI
 
 			#region ---- Properties --------------------------------------------------------------
 
-			public object Preview => preview;
+			public byte[] Preview => preview;
 
 			public string Name => name;
 
