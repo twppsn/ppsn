@@ -764,14 +764,18 @@ namespace TecWare.PPSn.UI
 
 			CommandBindings.Add(new CommandBinding(
 				ApplicationCommands.Delete,
-				(sender, e) =>
+				async (sender, e) =>
 				{
-					if (SelectedAttachment is IPpsAttachmentItem item)
+					if (e.Parameter is IPpsAttachmentItem pitem)
 					{
-						item.Remove();
+						pitem.Remove();
+					}
+					else if (SelectedAttachment is IPpsAttachmentItem sitem)
+					{
+						sitem.Remove();
 					}
 				},
-				(sender, e) => e.CanExecute = SelectedAttachment != null));
+				(sender, e) => e.CanExecute = true));
 
 			AddCameraCommandBindings();
 
