@@ -332,6 +332,8 @@ namespace TecWare.PPSn.UI
 
 			public EventHandler CameraInitialized;
 
+			public string MonikerString => device.Source;
+
 			#endregion
 		}
 
