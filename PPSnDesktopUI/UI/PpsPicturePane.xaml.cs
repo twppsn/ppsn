@@ -707,8 +707,7 @@ namespace TecWare.PPSn.UI
 							// if the previous set failed. the user canceled the operation, so exit
 							if (SelectedAttachment != i)
 								return;
-
-							SelectedCamera = null;
+							
 							// request the full-sized image
 							var imgData = await i.LinkedObject.GetDataAsync<PpsObjectBlobData>();
 
@@ -1290,6 +1289,7 @@ namespace TecWare.PPSn.UI
 					AddToolbarCommands();
 				}
 				SetValue(SelectedAttachmentProperty, value);
+				SelectedCamera = null;
 			}
 		}
 
@@ -1304,10 +1304,10 @@ namespace TecWare.PPSn.UI
 					if (!LeaveCurrentImage())
 						return;
 					RemoveToolbarCommands();
+					SelectedAttachment = null;
 				}
 
 				SetValue(SelectedCameraProperty, value);
-				
 			}
 		}
 
