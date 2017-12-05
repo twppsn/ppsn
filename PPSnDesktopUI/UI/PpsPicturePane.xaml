@@ -18,6 +18,17 @@
 					end;
 				]]>
 		</local:LuaValueConverter>
+		<local:LuaValueConverter x:Key="IsListEmptyConverter">
+			<![CDATA[
+					if value == nil then
+						return true;
+					end;
+					if value.Count < 1 then
+						return true;
+					end;
+					return false;
+				]]>
+		</local:LuaValueConverter>
 		<CollectionViewSource
 			x:Key="FilteredAttachments"
 			Filter="ShowOnlyObjectImageDataFilter"
@@ -210,7 +221,7 @@
 				<ToggleButton.Style>
 					<Style TargetType="ToggleButton">
 						<Style.Triggers>
-							<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedCamera.Properties}" Value="{x:Null}">
+							<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedCamera.Properties, Converter={StaticResource IsListEmptyConverter}}" Value="true">
 								<Setter Property="Visibility" Value="Collapsed"/>
 							</DataTrigger>
 						</Style.Triggers>
