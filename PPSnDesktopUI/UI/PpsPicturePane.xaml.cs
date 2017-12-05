@@ -150,6 +150,7 @@ namespace TecWare.PPSn.UI
 
 			private byte[] preview;
 			private VideoCapabilities previewResolution;
+			private bool initialized = false;
 
 			#endregion
 
@@ -243,8 +244,8 @@ namespace TecWare.PPSn.UI
 				{
 					if (Preview == null)
 					{
-						traces.AppendText(PpsTraceItemType.Warning, $"Camera {this.name} unplugged or lost. ");
-						CameraLost.Invoke(this, new EventArgs());
+						traces.AppendText(PpsTraceItemType.Warning, $"Camera {this.name} failed to initialize. ");
+						CameraLost?.Invoke(this, new EventArgs());
 						((System.Timers.Timer)s).Dispose();
 					}
 				};
@@ -280,6 +281,14 @@ namespace TecWare.PPSn.UI
 
 			private void PreviewNewframeEvent(object sender, NewFrameEventArgs eventArgs)
 			{
+				// receiving a frame is the evidence that the device is working properly
+				if (!initialized)
+				{
+					CameraInitialized?.Invoke(this, new EventArgs());
+					traces.AppendText(PpsTraceItemType.Information, $"Camera {this.name} initialized. ");
+				}
+				initialized = true;
+
 				using (var ms = new MemoryStream())
 				{
 					eventArgs.Frame.Save(ms, ImageFormat.Bmp);
@@ -320,6 +329,8 @@ namespace TecWare.PPSn.UI
 			public NewFrameEventHandler SnapShot;
 
 			public EventHandler CameraLost;
+
+			public EventHandler CameraInitialized;
 
 			#endregion
 		}
