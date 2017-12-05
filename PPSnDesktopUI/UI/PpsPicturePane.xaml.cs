@@ -302,7 +302,7 @@ namespace TecWare.PPSn.UI
 
 			private void SnapshotEvent(object sender, NewFrameEventArgs eventArgs)
 			{
-				SnapShot.Invoke(this, eventArgs);
+				SnapShot?.Invoke(this, eventArgs);
 				if (!device.ProvideSnapshots)
 				{
 					// remove the Snapshot handler
