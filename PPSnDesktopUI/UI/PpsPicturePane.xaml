@@ -274,7 +274,7 @@
 			HorizontalAlignment="Right"
 			VerticalAlignment="Bottom"
 			Margin="0,0,10,10" 
-			Command="{x:Static local:PpsPicturePane.SaveCameraImageCommand}" 
+			Command="{x:Static ApplicationCommands.New}" 
 			Cursor="Hand"
 			ToolTip="Bild erstellen">
 			<Button.Template>

@@ -781,7 +781,7 @@ namespace TecWare.PPSn.UI
 		private void AddCameraCommandBindings()
 		{
 			CommandBindings.Add(new CommandBinding(
-				SaveCameraImageCommand,
+				ApplicationCommands.New,
 				(sender, e) =>
 				{
 					if (SelectedCamera != null)
@@ -892,7 +892,6 @@ namespace TecWare.PPSn.UI
 		public static readonly RoutedUICommand OverlaySetThicknessCommand = new RoutedUICommand("SetThickness", "Set Thickness", typeof(PpsPicturePane));
 		public static readonly RoutedUICommand OverlaySetColorCommand = new RoutedUICommand("SetColor", "Set Color", typeof(PpsPicturePane));
 		public readonly static RoutedUICommand ChangeCameraCommand = new RoutedUICommand("ChangeCamera", "ChangeCamera", typeof(PpsPicturePane));
-		public readonly static RoutedUICommand SaveCameraImageCommand = new RoutedUICommand("SaveCameraImage", "SaveCameraImage", typeof(PpsPicturePane));
 
 		#endregion
 
