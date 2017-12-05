@@ -702,18 +702,12 @@ namespace TecWare.PPSn.UI
 					{
 						if (e.Parameter is IPpsAttachmentItem i)
 						{
-							// check if there is already an image displayed and changed
-							if (SelectedAttachment != null && strokeUndoManager.CanUndo)
-								switch (MessageBox.Show("Sie haben ungespeicherte Änderungen!\nMöchten Sie diese noch speichern?", "Warnung", MessageBoxButton.YesNoCancel))
-								{
-									case MessageBoxResult.Yes:
-										ApplicationCommands.Save.Execute(null, null);
-										break;
-									case MessageBoxResult.Cancel:
-										return;
-								}
-
 							SelectedAttachment = i;
+
+							// if the previous set failed. the user canceled the operation, so exit
+							if (SelectedAttachment != i)
+								return;
+
 							SelectedCamera = null;
 							// request the full-sized image
 							var imgData = await i.LinkedObject.GetDataAsync<PpsObjectBlobData>();
@@ -909,6 +903,8 @@ namespace TecWare.PPSn.UI
 
 		private void AddToolbarCommands()
 		{
+			RemoveToolbarCommands();
+
 			#region Undo/Redo
 
 			UndoManagerListBox listBox;
@@ -1104,15 +1100,8 @@ namespace TecWare.PPSn.UI
 
 		public Task<bool> UnloadAsync(bool? commit = null)
 		{
-			if (SelectedAttachment != null && strokeUndoManager.CanUndo)
-				switch (MessageBox.Show("Sie haben ungespeicherte Änderungen!\nMöchten Sie diese vor dem Schließen noch speichern?", "Warnung", MessageBoxButton.YesNoCancel))
-				{
-					case MessageBoxResult.Yes:
-						ApplicationCommands.Save.Execute(null, null);
-						break;
-					case MessageBoxResult.Cancel:
-						return Task.FromResult(false);
-				}
+			if (!LeaveCurrentImage())
+				return Task.FromResult(false);
 
 			ResetCharmObject();
 			return Task.FromResult(true);
@@ -1221,6 +1210,26 @@ namespace TecWare.PPSn.UI
 
 		#region -- Strokes ------------------------------------------------------------
 
+		private bool LeaveCurrentImage()
+		{
+			if (SelectedAttachment != null && strokeUndoManager.CanUndo)
+				switch (MessageBox.Show("Sie haben ungespeicherte Änderungen!\nMöchten Sie diese vor dem Schließen noch speichern?", "Warnung", MessageBoxButton.YesNoCancel))
+				{
+					case MessageBoxResult.Yes:
+						ApplicationCommands.Save.Execute(null, null);
+						SetValue(SelectedAttachmentProperty, null); ;
+						return true;
+					case MessageBoxResult.No:
+						while (strokeUndoManager.CanUndo)
+							strokeUndoManager.Undo();
+						SetValue(SelectedAttachmentProperty, null); ;
+						return true;
+					default:
+						return false;
+				}
+			return true;
+		}
+
 		private void InitializeStrokes()
 		{
 			InkStrokes = new PpsDetraceableStrokeCollection(new StrokeCollection());
@@ -1273,6 +1282,8 @@ namespace TecWare.PPSn.UI
 			get { return (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty); }
 			set
 			{
+				if (!LeaveCurrentImage())
+					return;
 				if (value != null && (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty) == null)
 				{
 					InkEditMode = InkCanvasEditingMode.Ink;
@@ -1288,27 +1299,15 @@ namespace TecWare.PPSn.UI
 			get { return (PpsAforgeCamera)GetValue(SelectedCameraProperty); }
 			set
 			{
-				if (SelectedAttachment != null && strokeUndoManager.CanUndo)
-					switch (MessageBox.Show("Sie haben ungespeicherte Änderungen!\nMöchten Sie diese vor dem Schließen noch speichern?", "Warnung", MessageBoxButton.YesNoCancel))
-					{
-						case MessageBoxResult.Yes:
-							ApplicationCommands.Save.Execute(null, null);
-							SelectedAttachment = null;
-							break;
-						case MessageBoxResult.No:
-							while (strokeUndoManager.CanUndo)
-								strokeUndoManager.Undo();
-							SelectedAttachment = null;
-							break;
-						default:
-							SelectedAttachment = SelectedAttachment;
-							return;
-					}
-				SetValue(SelectedCameraProperty, value);
 				if (value != null)
 				{
+					if (!LeaveCurrentImage())
+						return;
 					RemoveToolbarCommands();
 				}
+
+				SetValue(SelectedCameraProperty, value);
+				
 			}
 		}
 
