@@ -14,8 +14,9 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Drawing.Imaging;
 using System.IO;
@@ -27,7 +28,6 @@ using System.Windows.Data;
 using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using AForge.Video;
 using AForge.Video.DirectShow;
 using Neo.IronLua;
@@ -44,6 +44,129 @@ namespace TecWare.PPSn.UI
 		#region -- Helper Classes -----------------------------------------------------
 
 		#region -- Data Representation ------------------------------------------------
+
+		public class PpsCameraHandler : IEnumerable<PpsAforgeCamera>, INotifyCollectionChanged, IDisposable
+		{
+			#region ---- Readonly ----------------------------------------------------------------
+
+			private readonly System.Timers.Timer refreshTimer;
+			private readonly PpsTraceLog traces;
+			private readonly System.Windows.Threading.Dispatcher dispatcher;
+
+			#endregion
+
+			#region ---- Events ------------------------------------------------------------------
+
+			public event NotifyCollectionChangedEventHandler CollectionChanged;
+
+			private void RefreshTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+			{
+				// the timer may trigger while initialized||lost is called - rendering the list invalid
+				lock (awaitingCameras)
+				{
+					var localWebCamsCollection = new FilterInfoCollection(AForge.Video.DirectShow.FilterCategory.VideoInputDevice);
+					// only camera were initialized, which are not already running (devices) and are not in the process ov initializing (awaitingCameras)
+					foreach (var cam in (from AForge.Video.DirectShow.FilterInfo vc in localWebCamsCollection where !((from c in cameras select c.MonikerString).Contains(vc.MonikerString)) where !((from c in awaitingCameras select c.MonikerString).Contains(vc.MonikerString)) select vc))
+					{
+						awaitingCameras.Add(cam);
+						var acam = new PpsAforgeCamera(cam, traces);
+						acam.CameraInitialized += (ts, te) =>
+						{
+							lock (awaitingCameras)
+							{
+								awaitingCameras.Remove((from tcam in awaitingCameras where tcam.MonikerString == ((PpsAforgeCamera)ts).MonikerString select tcam).First());
+
+								cameras.Add((PpsAforgeCamera)ts);
+
+								dispatcher.Invoke(() => CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, new List<PpsAforgeCamera>() { (PpsAforgeCamera)ts })));
+
+								((PpsAforgeCamera)ts).SnapShot += SnapShot;
+							}
+						};
+						acam.CameraLost += (ts, te) =>
+						{
+							lock (awaitingCameras)
+							{
+								// the camera may fail during initialization -> delete from awaiting thus reininitalizing
+								var waitingCam = (from tcam in awaitingCameras where tcam.MonikerString == ((PpsAforgeCamera)ts).MonikerString select tcam).FirstOrDefault();
+								if (waitingCam != null)
+									awaitingCameras.Remove(waitingCam);
+
+								// the camera may fail during runtime -> delete from list of running cameras
+								var pos = cameras.IndexOf((PpsAforgeCamera)ts);
+								if (pos >= 0)
+								{
+									cameras.Remove((PpsAforgeCamera)ts);
+
+									dispatcher.Invoke(() => CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, (PpsAforgeCamera)ts, pos)));
+								}
+								((PpsAforgeCamera)ts).Dispose();
+							}
+						};
+					}
+				}
+			}
+
+			#endregion
+
+			#region ---- Fields ------------------------------------------------------------------
+
+			// actual working cameras
+			private List<PpsAforgeCamera> cameras;
+			// cameras where initialization already started
+			private List<FilterInfo> awaitingCameras = new List<FilterInfo>();
+
+			#endregion
+
+			#region ---- Constructor/Destructor --------------------------------------------------
+
+			public PpsCameraHandler(PpsTraceLog tracelog, System.Windows.Threading.Dispatcher dispatcher)
+			{
+				this.traces = tracelog;
+				this.dispatcher = dispatcher;
+
+				cameras = new List<PpsAforgeCamera>();
+				refreshTimer = new System.Timers.Timer();
+				refreshTimer.Elapsed += RefreshTimer_Elapsed;
+				refreshTimer.Interval = 1000;
+				refreshTimer.AutoReset = true;
+				refreshTimer.Start();
+
+				RefreshTimer_Elapsed(null, null);
+			}
+
+			~PpsCameraHandler()
+			{
+				Dispose();
+			}
+
+			public void Dispose()
+			{
+				refreshTimer.Stop();
+				refreshTimer.Dispose();
+				foreach (var cam in cameras)
+					cam.Dispose();
+			}
+
+			#endregion
+
+			#region ---- Properties --------------------------------------------------------------
+
+			/// <summary>Event is thrown, when a Camera provides a Snapshot (either requested by the App or by a hardware pushbutton</summary>
+			public NewFrameEventHandler SnapShot;
+
+			public IEnumerator<PpsAforgeCamera> GetEnumerator()
+			{
+				return ((IEnumerable<PpsAforgeCamera>)cameras).GetEnumerator();
+			}
+
+			IEnumerator IEnumerable.GetEnumerator()
+			{
+				return ((IEnumerable<PpsAforgeCamera>)cameras).GetEnumerator();
+			}
+
+			#endregion
+		}
 
 		public class PpsAforgeCamera : INotifyPropertyChanged, IDisposable
 		{
@@ -562,8 +685,8 @@ namespace TecWare.PPSn.UI
 
 			if (imagesList.Items.Count > 0)
 				SelectedAttachment = (IPpsAttachmentItem)imagesList.Items[0];
-			else if (CameraEnum.Count > 0)
-				SelectedCamera = CameraEnum[0];
+			else if (CameraEnum.Count() > 0)
+				SelectedCamera = CameraEnum.First();
 		}
 
 		#endregion
@@ -955,8 +1078,7 @@ namespace TecWare.PPSn.UI
 
 		public void Dispose()
 		{
-			foreach (var camera in CameraEnum)
-				camera.Dispose();
+			CameraEnum.Dispose();
 			ResetCharmObject();
 		}
 
@@ -1061,45 +1183,33 @@ namespace TecWare.PPSn.UI
 
 		private void InitializeCameras()
 		{
-			var LocalWebCamsCollection = new FilterInfoCollection(AForge.Video.DirectShow.FilterCategory.VideoInputDevice);
-			var cameraPreviews = new ObservableCollection<PpsAforgeCamera>();
-			foreach (AForge.Video.DirectShow.FilterInfo cam in LocalWebCamsCollection)
+			CameraEnum = new PpsCameraHandler(environment.Traces, Dispatcher);
+
+			CameraEnum.SnapShot += (s, e) =>
 			{
-				var pac = new PpsAforgeCamera(cam, environment.Traces);
-				pac.SnapShot += (s, e) =>
-				{
-					var path = System.IO.Path.GetTempPath() + DateTime.Now.ToUniversalTime().ToString("yyyy-MM-dd_HHmmss") + ".jpg";
+				var path = System.IO.Path.GetTempPath() + DateTime.Now.ToUniversalTime().ToString("yyyy-MM-dd_HHmmss") + ".jpg";
 
-					e.Frame.Save(path, ImageFormat.Jpeg);
-					e.Frame.Dispose();
-					PpsObject obj = null;
-					Dispatcher.Invoke(async () =>
+				e.Frame.Save(path, ImageFormat.Jpeg);
+				e.Frame.Dispose();
+				PpsObject obj = null;
+				Dispatcher.Invoke(async () =>
+				{
+					obj = await IncludePictureAsync(path);
+
+					Attachments.Append(obj);
+
+					File.Delete(path);
+					var i = 0;
+
+					// scroll the new item into view - 
+					// to find the new item one has to scroll one-by-one, because the itemscontrol is virtualizing so a new item can't be found, because it is not rendered, unless it is near the FOV
+					while (i < imagesList.Items.Count && imagesList.Items[i] != obj)
 					{
-						obj = await IncludePictureAsync(path);
-
-						Attachments.Append(obj);
-
-						File.Delete(path);
-						var i = 0;
-
-						// scroll the new item into view - 
-						// to find the new item one has to scroll one-by-one, because the itemscontrol is virtualizing so a new item can't be found, because it is not rendered, unless it is near the FOV
-						while (i < imagesList.Items.Count && imagesList.Items[i] != obj)
-						{
-							((ContentPresenter)imagesList.ItemContainerGenerator.ContainerFromIndex(i)).BringIntoView();
-							i++;
-						}
-					}).AwaitTask();
-				};
-				pac.CameraLost += (s, e) => Dispatcher.Invoke(() =>
-				{
-					((PpsAforgeCamera)s).Dispose();
-					CameraEnum.Remove((PpsAforgeCamera)s);
-				});
-
-				cameraPreviews.Add(pac);
-			}
-			CameraEnum = cameraPreviews;
+						((ContentPresenter)imagesList.ItemContainerGenerator.ContainerFromIndex(i)).BringIntoView();
+						i++;
+					}
+				}).AwaitTask();
+			};
 		}
 
 		#endregion
@@ -1167,9 +1277,9 @@ namespace TecWare.PPSn.UI
 		}
 
 		/// <summary>The List of cameras which are known to the system - after one is selected it moves to ChachedCameras</summary>
-		private ObservableCollection<PpsAforgeCamera> CameraEnum
+		private PpsCameraHandler CameraEnum
 		{
-			get { return (ObservableCollection<PpsAforgeCamera>)GetValue(CameraEnumProperty); }
+			get { return (PpsCameraHandler)GetValue(CameraEnumProperty); }
 			set { SetValue(CameraEnumProperty, value); }
 		}
 
@@ -1233,7 +1343,7 @@ namespace TecWare.PPSn.UI
 
 		private readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane));
 		private readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(PpsAforgeCamera), typeof(PpsPicturePane));
-		private readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(ObservableCollection<PpsAforgeCamera>), typeof(PpsPicturePane));
+		private readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(PpsCameraHandler), typeof(PpsPicturePane));
 		private readonly static DependencyProperty InkDrawingAttributesProperty = DependencyProperty.Register(nameof(InkDrawingAttributes), typeof(DrawingAttributes), typeof(PpsPicturePane));
 		private readonly static DependencyProperty InkStrokesProperty = DependencyProperty.Register(nameof(InkStrokes), typeof(PpsDetraceableStrokeCollection), typeof(PpsPicturePane));
 		private readonly static DependencyProperty InkEditModeProperty = DependencyProperty.Register(nameof(InkEditMode), typeof(InkCanvasEditingMode), typeof(PpsPicturePane));
