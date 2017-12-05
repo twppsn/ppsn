@@ -905,6 +905,11 @@ namespace TecWare.PPSn.UI
 
 		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
 
+		private void RemoveToolbarCommands()
+		{
+			Commands.Clear();
+		}
+
 		private void AddToolbarCommands()
 		{
 			#region Undo/Redo
