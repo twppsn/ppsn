@@ -134,6 +134,9 @@ namespace TecWare.PPSn.UI
 			#region ---- Readonly ----------------------------------------------------------------
 
 			private readonly IEnumerable<CameraProperty> properties;
+			private readonly string name;
+			private PpsTraceLog traces;
+			private VideoCaptureDevice device;
 
 			#endregion
 
@@ -145,11 +148,8 @@ namespace TecWare.PPSn.UI
 
 			#region ---- Fields ------------------------------------------------------------------
 
-			private VideoCaptureDevice device;
-			private PpsTraceLog traces;
 			private byte[] preview;
 			private VideoCapabilities previewResolution;
-			private string name;
 
 			#endregion
 
@@ -158,7 +158,6 @@ namespace TecWare.PPSn.UI
 			public PpsAforgeCamera(AForge.Video.DirectShow.FilterInfo deviceFilter, PpsTraceLog traceLog, int previewMaxWidth = 800, int previewMinFPS = 15)
 			{
 				this.traces = traceLog;
-
 				this.name = deviceFilter.Name;
 
 				// initialize the device
@@ -222,16 +221,23 @@ namespace TecWare.PPSn.UI
 				foreach (AForge.Video.DirectShow.CameraControlProperty prop in Enum.GetValues(typeof(AForge.Video.DirectShow.CameraControlProperty)))
 				{
 					var property = new CameraProperty(device, prop);
+
+					// if a property is changed, the camera is supposely not in AutoMode anymore
 					property.PropertyChanged += (sender, e) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AutomaticSettings)));
+
+					// if MinValue==MaxValue the Property is not changeable by the user - thus will not be shown
 					if (property.MinValue != property.MaxValue)
 						((List<CameraProperty>)properties).Add(property);
 				}
 
+				// event is thrown, if the camera is unplugged, after working
 				device.PlayingFinished += (sender, e) =>
 				{
 					traces.AppendText(PpsTraceItemType.Warning, $"Camera {this.name} unplugged or lost. ");
 					CameraLost.Invoke(this, new EventArgs());
 				};
+
+				// timeout is thrown if the camera does not provide an image, five seconds after initialization started
 				var timeout = new System.Timers.Timer(5000);
 				timeout.Elapsed += (s, e) =>
 				{
