@@ -1065,7 +1065,8 @@ namespace TecWare.PPSn.UI
 						File.Delete(path);
 						var i = 0;
 
-						// scroll the new item into view
+						// scroll the new item into view - 
+						// to find the new item one has to scroll one-by-one, because the itemscontrol is virtualizing so a new item can't be found, because it is not rendered, unless it is near the FOV
 						while (i < imagesList.Items.Count && imagesList.Items[i] != obj)
 						{
 							((ContentPresenter)imagesList.ItemContainerGenerator.ContainerFromIndex(i)).BringIntoView();
