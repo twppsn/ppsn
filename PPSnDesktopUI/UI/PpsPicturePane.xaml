@@ -406,6 +406,13 @@
 									TextAlignment="Center" 
 									VerticalAlignment="Bottom"
 									Text="{Binding Path=Name}"/>
+								<Button x:Name="removeButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,15,5,0"
+									Command="{x:Static ApplicationCommands.Delete}"
+									CommandParameter="{Binding}"
+									MinWidth="34" DockPanel.Dock="Bottom"
+									Background="{StaticResource PPSnWindowBackgroundBrush}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
+									Tag="{StaticResource deletePathGeometry}"
+									Style="{StaticResource PPSnCircleButtonStyle}"/>
 							</Grid>
 						</Button>
 					</DataTemplate>
