@@ -681,8 +681,6 @@ namespace TecWare.PPSn.UI
 
 			SetValue(commandsPropertyKey, new PpsUICommandCollection());
 
-			AddToolbarCommands();
-
 			if (imagesList.Items.Count > 0)
 				SelectedAttachment = (IPpsAttachmentItem)imagesList.Items[0];
 			else if (CameraEnum.Count() > 0)
@@ -800,7 +798,6 @@ namespace TecWare.PPSn.UI
 				(sender, e) =>
 				{
 					SelectedCamera = (PpsAforgeCamera)e.Parameter;
-					SelectedAttachment = null;
 					SetCharmObject(null);
 				}));
 		}
@@ -992,7 +989,7 @@ namespace TecWare.PPSn.UI
 						{
 							InkEditMode = InkCanvasEditingMode.Ink;
 						},
-						(args) => SelectedAttachment != null
+						(args) => true
 					),
 				Popup = penSettingsPopup
 			};
@@ -1009,7 +1006,7 @@ namespace TecWare.PPSn.UI
 						{
 							InkEditMode = InkCanvasEditingMode.EraseByStroke;
 						},
-						(args) => SelectedAttachment != null && InkStrokes.Count > 0
+						(args) => InkStrokes.Count > 0
 					)
 			};
 			Commands.Add(removestrokeCommandButton);
@@ -1274,14 +1271,45 @@ namespace TecWare.PPSn.UI
 		private IPpsAttachmentItem SelectedAttachment
 		{
 			get { return (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty); }
-			set { SetValue(SelectedAttachmentProperty, value); }
+			set
+			{
+				if (value != null && (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty) == null)
+				{
+					InkEditMode = InkCanvasEditingMode.Ink;
+					AddToolbarCommands();
+				}
+				SetValue(SelectedAttachmentProperty, value);
+			}
 		}
 
 		/// <summary>The camera which is shown in the editor</summary>
 		private PpsAforgeCamera SelectedCamera
 		{
 			get { return (PpsAforgeCamera)GetValue(SelectedCameraProperty); }
-			set { SetValue(SelectedCameraProperty, value); }
+			set
+			{
+				if (SelectedAttachment != null && strokeUndoManager.CanUndo)
+					switch (MessageBox.Show("Sie haben ungespeicherte Änderungen!\nMöchten Sie diese vor dem Schließen noch speichern?", "Warnung", MessageBoxButton.YesNoCancel))
+					{
+						case MessageBoxResult.Yes:
+							ApplicationCommands.Save.Execute(null, null);
+							SelectedAttachment = null;
+							break;
+						case MessageBoxResult.No:
+							while (strokeUndoManager.CanUndo)
+								strokeUndoManager.Undo();
+							SelectedAttachment = null;
+							break;
+						default:
+							SelectedAttachment = SelectedAttachment;
+							return;
+					}
+				SetValue(SelectedCameraProperty, value);
+				if (value != null)
+				{
+					RemoveToolbarCommands();
+				}
+			}
 		}
 
 		/// <summary>The List of cameras which are known to the system - after one is selected it moves to ChachedCameras</summary>
