@@ -1,4 +1,18 @@
-﻿<UserControl x:Class="TecWare.PPSn.UI.PpsPicturePane"
+﻿<!--
+Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+European Commission - subsequent versions of the EUPL(the "Licence"); You may
+not use this work except in compliance with the Licence.
+
+You may obtain a copy of the Licence at:
+http://ec.europa.eu/idabc/eupl
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+specific language governing permissions and limitations under the Licence.
+-->
+
+<UserControl x:Class="TecWare.PPSn.UI.PpsPicturePane"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -122,7 +136,9 @@
 				<Style TargetType="Image">
 					<Setter Property="Visibility" Value="Visible"/>
 					<Style.Triggers>
-						<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedCamera, Mode=OneWay}" Value="{x:Null}">
+						<DataTrigger 
+							Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedCamera, Mode=OneWay}" 
+							Value="{x:Null}">
 							<Setter Property="Visibility" Value="Hidden"/>
 						</DataTrigger>
 					</Style.Triggers>
@@ -333,7 +349,9 @@
 				<Style TargetType="{x:Type Grid}">
 					<Setter Property="Visibility" Value="Visible"/>
 					<Style.Triggers>
-						<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedAttachment, Mode=OneWay}" Value="{x:Null}">
+						<DataTrigger 
+							Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedAttachment, Mode=OneWay}" 
+							Value="{x:Null}">
 							<Setter Property="Visibility" Value="Hidden"/>
 						</DataTrigger>
 					</Style.Triggers>
@@ -360,11 +378,17 @@
 						VerticalContentAlignment="Stretch"
 						ToolTip="Diese Kamera auswählen">
 						<Grid VerticalAlignment="Stretch" Margin="3">
-						<Grid.RowDefinitions>
-							<RowDefinition/>
-							<RowDefinition/>
-						</Grid.RowDefinitions>
-						<Border Grid.RowSpan="2" BorderThickness="1" BorderBrush="{StaticResource PPSnWindowFooterBrush}" Background="AliceBlue" Opacity="0.2" Margin="-5"></Border>
+							<Grid.RowDefinitions>
+								<RowDefinition/>
+								<RowDefinition/>
+							</Grid.RowDefinitions>
+							<Border 
+								Grid.RowSpan="2" 
+								BorderThickness="1" 
+								BorderBrush="{StaticResource PPSnWindowFooterBrush}" 
+								Background="AliceBlue" 
+								Opacity="0.2" 
+								Margin="-5"/>
 							<Image Grid.Row="0" Source="{Binding Preview}"/>
 							<Image Grid.Row="0" Width="50" Height="50" Opacity="0.6">
 								<Image.Source>
@@ -471,7 +495,7 @@
 					<Border
 						Background="AliceBlue" 
 						Opacity="0.6"
-						CornerRadius="5,5,0,0">
+						CornerRadius="15,15,0,0">
 						<Grid Margin="10">
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition/>
@@ -479,7 +503,7 @@
 								<ColumnDefinition/>
 								<ColumnDefinition/>
 							</Grid.ColumnDefinitions>
-							<Image Grid.Column="0" Width="30" Height="30" HorizontalAlignment="Left" Margin="5,0,5,0">
+							<Image Grid.Column="0" Width="30" Height="30" HorizontalAlignment="Left" Margin="10,0,5,0">
 								<Image.Source>
 									<DrawingImage>
 										<DrawingImage.Drawing>
@@ -490,7 +514,7 @@
 									</DrawingImage>
 								</Image.Source>
 								<Image.RenderTransform>
-									<RotateTransform Angle="90"/>
+									<RotateTransform Angle="-90"/>
 								</Image.RenderTransform>
 								<Image.RenderTransformOrigin>
 									<Point X="0.5" Y="0.5"/>
@@ -498,7 +522,9 @@
 								<Image.Style>
 									<Style TargetType="Image">
 										<Style.Triggers>
-											<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ToggleButton}},Path=IsChecked}" Value="true">
+											<DataTrigger 
+												Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ToggleButton}},Path=IsChecked}" 
+												Value="true">
 												<Setter Property="LayoutTransform">
 													<Setter.Value>
 														<RotateTransform Angle="180"/>
@@ -525,7 +551,7 @@
 								Text="Bilderliste"
 								VerticalAlignment="Center"
 								Foreground="{StaticResource PPSnWindowFooterBrush}"/>
-							<Image Grid.Column="3" Width="30" Height="30" HorizontalAlignment="Left" Margin="15,0,5,0">
+							<Image Grid.Column="3" Width="30" Height="30" HorizontalAlignment="Left" Margin="15,0,0,0">
 								<Image.Source>
 									<DrawingImage>
 										<DrawingImage.Drawing>
@@ -542,36 +568,16 @@
 									<Point X="0.5" Y="0.5"/>
 								</Image.RenderTransformOrigin>
 								<Image.Style>
-								<Style TargetType="Image">
-									<Style.Triggers>
-										<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ToggleButton}},Path=IsChecked}" Value="true">
-											<Setter Property="Visibility" Value="Collapsed"/>
-										</DataTrigger>
-									</Style.Triggers>
-									</Style>
-								</Image.Style>
-							</Image>
-							<Image Grid.Column="3" Width="30" Height="30" HorizontalAlignment="Left" Margin="15,0,5,0">
-								<Image.Source>
-									<DrawingImage>
-										<DrawingImage.Drawing>
-											<GeometryDrawing 
-												Brush="{StaticResource PPSnWindowFooterBrush}"  
-												Geometry="{StaticResource goBackPathGeometry}"/>
-										</DrawingImage.Drawing>
-									</DrawingImage>
-								</Image.Source>
-								<Image.RenderTransform>
-									<RotateTransform Angle="90"/>
-								</Image.RenderTransform>
-								<Image.RenderTransformOrigin>
-									<Point X="0.5" Y="0.5"/>
-								</Image.RenderTransformOrigin>
-								<Image.Style>
 									<Style TargetType="Image">
 										<Style.Triggers>
-											<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ToggleButton}},Path=IsChecked}" Value="false">
-												<Setter Property="Visibility" Value="Collapsed"/>
+											<DataTrigger 
+												Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ToggleButton}},Path=IsChecked}" 
+												Value="true">
+												<Setter Property="LayoutTransform">
+													<Setter.Value>
+														<RotateTransform Angle="180"/>
+													</Setter.Value>
+												</Setter>
 											</DataTrigger>
 										</Style.Triggers>
 									</Style>
