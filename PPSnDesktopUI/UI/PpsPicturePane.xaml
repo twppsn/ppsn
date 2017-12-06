@@ -473,7 +473,43 @@
 						Opacity="0.6"
 						CornerRadius="5,5,0,0">
 						<Grid Margin="10">
-							<Image Width="30" Height="30" HorizontalAlignment="Left">
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition/>
+								<ColumnDefinition/>
+								<ColumnDefinition/>
+								<ColumnDefinition/>
+							</Grid.ColumnDefinitions>
+							<Image Grid.Column="0" Width="30" Height="30" HorizontalAlignment="Left" Margin="5,0,5,0">
+								<Image.Source>
+									<DrawingImage>
+										<DrawingImage.Drawing>
+											<GeometryDrawing 
+												Brush="{StaticResource PPSnWindowFooterBrush}"  
+												Geometry="{StaticResource goBackPathGeometry}"/>
+										</DrawingImage.Drawing>
+									</DrawingImage>
+								</Image.Source>
+								<Image.RenderTransform>
+									<RotateTransform Angle="90"/>
+								</Image.RenderTransform>
+								<Image.RenderTransformOrigin>
+									<Point X="0.5" Y="0.5"/>
+								</Image.RenderTransformOrigin>
+								<Image.Style>
+									<Style TargetType="Image">
+										<Style.Triggers>
+											<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ToggleButton}},Path=IsChecked}" Value="true">
+												<Setter Property="LayoutTransform">
+													<Setter.Value>
+														<RotateTransform Angle="180"/>
+													</Setter.Value>
+												</Setter>
+											</DataTrigger>
+										</Style.Triggers>
+									</Style>
+								</Image.Style>
+							</Image>
+							<Image Grid.Column="1" Width="30" Height="30" HorizontalAlignment="Left" Margin="5,0,5,0">
 								<Image.Source>
 									<DrawingImage>
 										<DrawingImage.Drawing>
@@ -485,10 +521,62 @@
 								</Image.Source>
 							</Image>
 							<TextBlock
-								Text="Kamera- und Bilderliste"
-								Margin="35,0,0,0"
+								Grid.Column="2"
+								Text="Bilderliste"
 								VerticalAlignment="Center"
 								Foreground="{StaticResource PPSnWindowFooterBrush}"/>
+							<Image Grid.Column="3" Width="30" Height="30" HorizontalAlignment="Left" Margin="15,0,5,0">
+								<Image.Source>
+									<DrawingImage>
+										<DrawingImage.Drawing>
+											<GeometryDrawing 
+												Brush="{StaticResource PPSnWindowFooterBrush}"  
+												Geometry="{StaticResource goBackPathGeometry}"/>
+										</DrawingImage.Drawing>
+									</DrawingImage>
+								</Image.Source>
+								<Image.RenderTransform>
+									<RotateTransform Angle="-90"/>
+								</Image.RenderTransform>
+								<Image.RenderTransformOrigin>
+									<Point X="0.5" Y="0.5"/>
+								</Image.RenderTransformOrigin>
+								<Image.Style>
+								<Style TargetType="Image">
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ToggleButton}},Path=IsChecked}" Value="true">
+											<Setter Property="Visibility" Value="Collapsed"/>
+										</DataTrigger>
+									</Style.Triggers>
+									</Style>
+								</Image.Style>
+							</Image>
+							<Image Grid.Column="3" Width="30" Height="30" HorizontalAlignment="Left" Margin="15,0,5,0">
+								<Image.Source>
+									<DrawingImage>
+										<DrawingImage.Drawing>
+											<GeometryDrawing 
+												Brush="{StaticResource PPSnWindowFooterBrush}"  
+												Geometry="{StaticResource goBackPathGeometry}"/>
+										</DrawingImage.Drawing>
+									</DrawingImage>
+								</Image.Source>
+								<Image.RenderTransform>
+									<RotateTransform Angle="90"/>
+								</Image.RenderTransform>
+								<Image.RenderTransformOrigin>
+									<Point X="0.5" Y="0.5"/>
+								</Image.RenderTransformOrigin>
+								<Image.Style>
+									<Style TargetType="Image">
+										<Style.Triggers>
+											<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ToggleButton}},Path=IsChecked}" Value="false">
+												<Setter Property="Visibility" Value="Collapsed"/>
+											</DataTrigger>
+										</Style.Triggers>
+									</Style>
+								</Image.Style>
+							</Image>
 						</Grid>
 					</Border>
 				</ControlTemplate>
