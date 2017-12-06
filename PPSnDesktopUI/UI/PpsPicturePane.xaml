@@ -145,6 +145,33 @@ specific language governing permissions and limitations under the Licence.
 				</Style>
 			</Image.Style>
 		</Image>
+		<Image 
+			Grid.RowSpan="2"
+			Width="1"
+			VerticalAlignment="Bottom"
+			HorizontalAlignment="Center"
+			Source="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=LastSnapshot.DataLazy.RawData, Mode=OneWay, NotifyOnTargetUpdated=True}" 
+			Opacity="0">
+			<Image.RenderTransform>
+				<ScaleTransform  />
+			</Image.RenderTransform>
+			<Image.Triggers>
+				<EventTrigger RoutedEvent="Binding.TargetUpdated">
+					<BeginStoryboard>
+						<Storyboard>
+							<DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.5" />
+							<DoubleAnimation Storyboard.TargetProperty="Opacity" From="1" To="0.4" BeginTime="0:0:0.5" Duration="0:0:1" />
+							<DoubleAnimation 
+								Storyboard.TargetProperty="Width" 
+								From="{Binding RelativeSource={RelativeSource AncestorType={x:Type UserControl}, Mode=FindAncestor}, Path=ActualWidth}" 
+								To="0" 
+								BeginTime="0:0:0.5" 
+								Duration="0:0:1"/>
+						</Storyboard>
+					</BeginStoryboard>
+				</EventTrigger>
+			</Image.Triggers>
+		</Image>
 		<Grid
 			Grid.Row="0"
 			Margin="0,10,10,0"

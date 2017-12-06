@@ -1201,6 +1201,8 @@ namespace TecWare.PPSn.UI
 						((ContentPresenter)imagesList.ItemContainerGenerator.ContainerFromIndex(i)).BringIntoView();
 						i++;
 					}
+
+					LastSnapshot = obj;
 				}).AwaitTask();
 			};
 		}
@@ -1311,6 +1313,12 @@ namespace TecWare.PPSn.UI
 			}
 		}
 
+		private PpsObject LastSnapshot
+		{
+			get { return (PpsObject)GetValue(LastSnapshotProperty); }
+			set { SetValue(LastSnapshotProperty, value); }
+		}
+
 		/// <summary>The List of cameras which are known to the system - after one is selected it moves to ChachedCameras</summary>
 		private PpsCameraHandler CameraEnum
 		{
@@ -1376,6 +1384,7 @@ namespace TecWare.PPSn.UI
 
 		public static readonly DependencyProperty AttachmentsProperty = DependencyProperty.Register(nameof(Attachments), typeof(IPpsAttachments), typeof(PpsPicturePane));
 
+		private readonly static DependencyProperty LastSnapshotProperty = DependencyProperty.Register(nameof(LastSnapshot), typeof(PpsObject), typeof(PpsPicturePane));
 		private readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane));
 		private readonly static DependencyProperty SelectedCameraProperty = DependencyProperty.Register(nameof(SelectedCamera), typeof(PpsAforgeCamera), typeof(PpsPicturePane));
 		private readonly static DependencyProperty CameraEnumProperty = DependencyProperty.Register(nameof(CameraEnum), typeof(PpsCameraHandler), typeof(PpsPicturePane));
