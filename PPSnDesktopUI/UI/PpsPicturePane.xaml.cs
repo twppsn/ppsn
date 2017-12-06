@@ -256,6 +256,15 @@ namespace TecWare.PPSn.UI
 
 			#region ---- Readonly ----------------------------------------------------------------
 
+			private const string InitializationComplete = "Camera \"{0}\" initialization successful.";
+			private const string InitializationFailed = "Camera \"{0}\" initialization failed.";
+			private const string DeviceDenied = "Camera \"{0}\" is currently not useable.";
+			private const string DeviceFailed = "Camera \"{0}\" crashed. Error Message: \"{1}\"";
+			private const string DeviceLost = "Camera \"{0}\" unplugged or lost.";
+			private const string PreviewInsufficient = "Camera \"{0}\" does not support required quality. Trying fallback.";
+			private const string PreviewUnavailable = "Camera \"{0}\" does not publish useable resolutions.";
+			private const string NoSnapshotCapability = "Camera \"{0}\" does not have Snapshot functionality. Using Framegrabber instead.";
+
 			private readonly IEnumerable<CameraProperty> properties;
 			private readonly string name;
 			private PpsTraceLog traces;
@@ -291,13 +300,13 @@ namespace TecWare.PPSn.UI
 				}
 				catch (Exception)
 				{
-					traces.AppendText(PpsTraceItemType.Fail, $"Camera \"{deviceFilter.Name}({deviceFilter.MonikerString})\" is (currently) not useable.");
+					traces.AppendText(PpsTraceItemType.Fail, String.Format(DeviceDenied, Name));
 					device = null;
 					return;
 				}
 
 				// attach failure handling
-				device.VideoSourceError += (sender, e) => traces.AppendText(PpsTraceItemType.Fail, "Camera: " + e.Description);
+				device.VideoSourceError += (sender, e) => traces.AppendText(PpsTraceItemType.Fail, String.Format(DeviceFailed, Name, e.Description));
 
 				// find the highest snapshot resolution
 				var maxSnapshotResolution = (from vc in device.SnapshotCapabilities orderby vc.FrameSize.Width * vc.FrameSize.Height descending select vc).FirstOrDefault();
@@ -317,18 +326,18 @@ namespace TecWare.PPSn.UI
 				if (previewResolution == null)
 				{
 					// no resolution to the requirements, try to set the highest possible FPS (best for preview)
-					traces.AppendText(PpsTraceItemType.Fail, $"Camera \"{deviceFilter.Name}({deviceFilter.MonikerString})\" does not support required quality. Trying fallback.");
+					traces.AppendText(PpsTraceItemType.Fail, String.Format(PreviewInsufficient, Name));
 					previewResolution = (from vc in device.VideoCapabilities orderby vc.AverageFrameRate descending select vc).FirstOrDefault();
 
 					if (previewResolution == null)
 					{
-						traces.AppendText(PpsTraceItemType.Fail, $"Camera \"{deviceFilter.Name}({deviceFilter.MonikerString})\" does not publish useable resolutions.");
+						traces.AppendText(PpsTraceItemType.Fail, String.Format(PreviewUnavailable, Name));
 					}
 				}
 
 				if (!device.ProvideSnapshots)
 				{
-					traces.AppendText(PpsTraceItemType.Information, $"Camera \"{deviceFilter.Name}({deviceFilter.MonikerString})\" does not have Snapshot functionality. Using Framegrabber instead.");
+					traces.AppendText(PpsTraceItemType.Information, String.Format(NoSnapshotCapability, Name));
 					device.VideoResolution = (from vc in device.VideoCapabilities orderby vc.FrameSize.Width * vc.FrameSize.Height descending select vc).First();
 				}
 				else
@@ -357,7 +366,7 @@ namespace TecWare.PPSn.UI
 				// event is thrown, if the camera is unplugged, after working
 				device.PlayingFinished += (sender, e) =>
 				{
-					traces.AppendText(PpsTraceItemType.Warning, $"Camera {this.name} unplugged or lost. ");
+					traces.AppendText(PpsTraceItemType.Warning, String.Format(DeviceLost, Name));
 					CameraLost.Invoke(this, new EventArgs());
 				};
 
@@ -367,7 +376,7 @@ namespace TecWare.PPSn.UI
 				{
 					if (Preview == null)
 					{
-						traces.AppendText(PpsTraceItemType.Warning, $"Camera {this.name} failed to initialize. ");
+						traces.AppendText(PpsTraceItemType.Warning, String.Format(InitializationFailed, Name));
 						CameraLost?.Invoke(this, new EventArgs());
 						((System.Timers.Timer)s).Dispose();
 					}
@@ -408,7 +417,7 @@ namespace TecWare.PPSn.UI
 				if (!initialized)
 				{
 					CameraInitialized?.Invoke(this, new EventArgs());
-					traces.AppendText(PpsTraceItemType.Information, $"Camera {this.name} initialized. ");
+					traces.AppendText(PpsTraceItemType.Information, String.Format(InitializationComplete, Name));
 				}
 				initialized = true;
 
