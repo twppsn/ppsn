@@ -452,7 +452,7 @@ namespace TecWare.PPSn.UI
 
 			public byte[] Preview => preview;
 
-			public string Name => name;
+			public string Name => !String.IsNullOrWhiteSpace(name) ? char.ToUpper(name[0]) + name.Substring(1) : "Unbekanntes Gerät";
 
 			public IEnumerable<CameraProperty> Properties => properties;
 
