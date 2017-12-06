@@ -120,10 +120,10 @@ namespace TecWare.PPSn.UI
 
 			#region ---- Constructor/Destructor --------------------------------------------------
 
-			public PpsCameraHandler(PpsTraceLog tracelog, System.Windows.Threading.Dispatcher dispatcher)
+			public PpsCameraHandler(PpsTraceLog tracelog)
 			{
 				this.traces = tracelog;
-				this.dispatcher = dispatcher;
+				this.dispatcher = Application.Current.Dispatcher;
 
 				cameras = new List<PpsAforgeCamera>();
 				refreshTimer = new System.Timers.Timer();
@@ -1176,7 +1176,7 @@ namespace TecWare.PPSn.UI
 
 		private void InitializeCameras()
 		{
-			CameraEnum = new PpsCameraHandler(environment.Traces, Dispatcher);
+			CameraEnum = new PpsCameraHandler(environment.Traces);
 
 			CameraEnum.SnapShot += (s, e) =>
 			{
