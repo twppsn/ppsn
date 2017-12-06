@@ -416,7 +416,7 @@ specific language governing permissions and limitations under the Licence.
 								Background="AliceBlue" 
 								Opacity="0.2" 
 								Margin="-5"/>
-							<Image Grid.Row="0" Source="{Binding Preview}"/>
+							<Image Grid.Row="0" Source="{Binding Preview, TargetNullValue={x:Null}}"/>
 							<Image Grid.Row="0" Width="50" Height="50" Opacity="0.6">
 								<Image.Source>
 									<DrawingImage>
