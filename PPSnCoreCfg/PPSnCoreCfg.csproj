@@ -229,7 +229,7 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\PPSnCore\PPSnClient\PPSnClient.csproj">
+    <ProjectReference Include="..\PPSnCore\PPSnClient\PPSnClient.csproj">
       <Project>{6b2e2c3c-b2e0-4c9f-a1da-3e78bdb3a141}</Project>
       <Name>PPSnClient</Name>
     </ProjectReference>

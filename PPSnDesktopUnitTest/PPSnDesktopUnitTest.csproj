@@ -45,10 +45,10 @@
       <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
     </Reference>
     <Reference Include="PPSn.Client">
-      <HintPath>..\..\PPSnCore\PPSnClient\obj\Debug\PPSn.Client.dll</HintPath>
+      <HintPath>..\PPSnCore\PPSnClient\obj\Debug\PPSn.Client.dll</HintPath>
     </Reference>
     <Reference Include="PPSn.Core">
-      <HintPath>..\..\PPSnCore\PPSnCore\bin\Debug\PPSn.Core.dll</HintPath>
+      <HintPath>..\PPSnCore\PPSnCore\bin\Debug\PPSn.Core.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
@@ -78,7 +78,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\twdes\des\Extern\Core\DESCore\DESCore.csproj">
+    <ProjectReference Include="..\..\twdes\des\Extern\Core\DESCore\DESCore.csproj">
       <Project>{67528843-E631-4C05-B6E8-514CC8BEC7B6}</Project>
       <Name>DESCore</Name>
     </ProjectReference>
