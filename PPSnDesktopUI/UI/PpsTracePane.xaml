@@ -1,0 +1,349 @@
+﻿<UserControl x:Class="TecWare.PPSn.UI.PpsTracePane" x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
+			 xmlns:cm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:TecWare.PPSn.UI"
+			 mc:Ignorable="d" 
+             d:DesignHeight="300" d:DesignWidth="300" Background="Transparent">
+	<UserControl.Resources>
+		<sys:Double x:Key="maxScrollHeight">300</sys:Double>
+		<sys:Double x:Key="collapsedScrollHeight">19</sys:Double>
+
+		<CollectionViewSource x:Key="SortedTraces" Source="{Binding Traces}"
+							  IsLiveFilteringRequested="True">
+			<CollectionViewSource.SortDescriptions>
+				<cm:SortDescription PropertyName="Stamp" Direction="Descending" />
+			</CollectionViewSource.SortDescriptions>
+		</CollectionViewSource>
+
+		<Style x:Key="PPSnTraceAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
+			<Setter Property="Foreground" Value="{StaticResource PPSnWindowForegroundBrush}"/>
+			<Setter Property="Background" Value="{StaticResource PPSnAlternation0Brush}"/>
+			<Setter Property="Margin" Value="0,0,0,1"/>
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="SnapsToDevicePixels" Value="True"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ListBoxItem}">
+						<Grid>
+							<Border x:Name="panelBorder" Padding="6,1" Background="{TemplateBinding Background}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+								<ContentPresenter />
+							</Border>
+							<Rectangle x:Name="showSelection" Stroke="{StaticResource PPSnMarkerBrush}" StrokeThickness="1" Opacity="0" IsHitTestVisible="False"
+								   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+						</Grid>
+						<ControlTemplate.Triggers>
+							<Trigger Property="ItemsControl.AlternationIndex" Value="1">
+								<Setter Property="Background" TargetName="panelBorder" Value="{StaticResource PPSnAlternation1Brush}" />
+							</Trigger>
+							<Trigger Property="IsSelected" Value="True">
+								<Setter Property="Opacity" TargetName="showSelection" Value="1" />
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+
+		<Style x:Key="PPSnTraceScrollViewerStyle" TargetType="{x:Type ScrollViewer}">
+			<Setter Property="PanningMode" Value="Both"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ScrollViewer}">
+						<Grid x:Name="Grid" Background="{TemplateBinding Background}">
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="*"/>
+								<ColumnDefinition Width="Auto"/>
+							</Grid.ColumnDefinitions>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="*"/>
+								<RowDefinition Height="Auto"/>
+							</Grid.RowDefinitions>
+							<ScrollContentPresenter x:Name="PART_ScrollContentPresenter" Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2" Grid.RowSpan="2"
+												CanContentScroll="{TemplateBinding CanContentScroll}" 
+												CanHorizontallyScroll="False"
+												CanVerticallyScroll="False" 
+												ContentTemplate="{TemplateBinding ContentTemplate}" 
+												Content="{TemplateBinding Content}" 
+												Margin="{TemplateBinding Padding}"/>
+							<ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Grid.Row="0" Orientation="Vertical"
+								   AutomationProperties.AutomationId="VerticalScrollBar"
+								   IsTabStop="False"
+								   Cursor="Arrow"
+								   Minimum="0" 
+								   Maximum="{TemplateBinding ScrollableHeight}" 
+								   Opacity="0"
+								   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" 
+								   Value="{Binding VerticalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" 
+								   ViewportSize="{TemplateBinding ViewportHeight}"/>
+							<ScrollBar x:Name="PART_HorizontalScrollBar" Grid.Column="0" Grid.Row="1" Orientation="Horizontal"
+								   AutomationProperties.AutomationId="HorizontalScrollBar"
+								   IsTabStop="False"
+								   Cursor="Arrow"
+								   Minimum="0"
+								   Maximum="{TemplateBinding ScrollableWidth}"
+								   Opacity="0"
+								   Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" 
+								   Value="{Binding HorizontalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" 
+								   ViewportSize="{TemplateBinding ViewportWidth}"/>
+						</Grid>
+						<ControlTemplate.Triggers>
+							<EventTrigger RoutedEvent="ScrollViewer.MouseEnter">
+								<EventTrigger.Actions>
+									<BeginStoryboard>
+										<Storyboard>
+											<DoubleAnimation Storyboard.TargetName="PART_VerticalScrollBar" Storyboard.TargetProperty="Opacity" From="0.0" To="0.75" Duration="0:0:0.4"/>
+											<DoubleAnimation Storyboard.TargetName="PART_HorizontalScrollBar" Storyboard.TargetProperty="Opacity" From="0.0" To="0.75" Duration="0:0:0.4"/>
+										</Storyboard>
+									</BeginStoryboard>
+								</EventTrigger.Actions>
+							</EventTrigger>
+
+							<EventTrigger RoutedEvent="ScrollViewer.MouseLeave">
+								<EventTrigger.Actions>
+									<BeginStoryboard>
+										<Storyboard>
+											<DoubleAnimation Storyboard.TargetName="PART_VerticalScrollBar" Storyboard.TargetProperty="Opacity" From=".75" To="0.0" Duration="0:0:0.2"/>
+											<DoubleAnimation Storyboard.TargetName="PART_HorizontalScrollBar" Storyboard.TargetProperty="Opacity" From=".75" To="0.0" Duration="0:0:0.2"/>
+										</Storyboard>
+									</BeginStoryboard>
+								</EventTrigger.Actions>
+							</EventTrigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<Style x:Key="PPSnTraceListBoxStyle" TargetType="{x:Type ListBox}">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+			<Setter Property="SnapsToDevicePixels" Value="True"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="AlternationCount" Value="2"/>
+			<Setter Property="ItemContainerStyle" Value="{StaticResource PPSnTraceAlternatingListBoxItemStyle}"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="{x:Type ListBox}">
+						<Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}"
+								Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+							<ScrollViewer Focusable="false" Padding="{TemplateBinding Padding}" Style="{StaticResource PPSnTraceScrollViewerStyle}">
+								<ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+							</ScrollViewer>
+						</Border>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<local:TraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
+			<local:TraceItemTemplateSelector.NullTemplate>
+				<DataTemplate>
+					<ScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource collapsedScrollHeight}" Padding="0,0,8,0" VerticalAlignment="Top" Focusable="False" VerticalScrollBarVisibility="Disabled" >
+						<TextBlock x:Name="message" Text="{Binding Message}" TextWrapping="NoWrap"/>
+					</ScrollViewer>
+					<DataTemplate.Triggers>
+						<DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}" Value="true">
+							<Setter TargetName="scrollPane" Property="MaxHeight" Value="{StaticResource maxScrollHeight}" />
+							<Setter TargetName="message" Property="TextWrapping" Value="WrapWithOverflow" />
+						</DataTrigger>
+						<DataTrigger Binding="{Binding ActualHeight, ElementName=scrollPane}" Value="{StaticResource maxScrollHeight}">
+							<Setter TargetName="scrollPane" Property="VerticalScrollBarVisibility" Value="Auto" />
+						</DataTrigger>
+					</DataTemplate.Triggers>
+				</DataTemplate>
+			</local:TraceItemTemplateSelector.NullTemplate>
+
+			<local:TraceItemTemplateSelector.ExceptionTemplate>
+				<DataTemplate>
+					<Grid>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto"/>
+							<RowDefinition/>
+						</Grid.RowDefinitions>
+						<TextBlock Grid.Row="0" x:Name="message" Text="{Binding Message, Mode=OneWay}" TextWrapping="WrapWithOverflow" FontWeight="Bold" />
+						<ItemsControl x:Name="itemsCtl" Grid.Row="1" Focusable="False" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" Visibility="Collapsed">
+							<ItemsControl.ItemsSource>
+								<Binding Path="Exception">
+									<Binding.Converter>
+										<local:ExceptionToPropertyConverter />
+									</Binding.Converter>
+								</Binding>
+							</ItemsControl.ItemsSource>
+							<ItemsControl.Template>
+								<ControlTemplate>
+									<ScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource maxScrollHeight}" Padding="0,0,8,0" VerticalAlignment="Top" Focusable="False" VerticalScrollBarVisibility="Hidden">
+										<VirtualizingStackPanel IsItemsHost="True" />
+									</ScrollViewer>
+									<ControlTemplate.Triggers>
+										<DataTrigger Binding="{Binding ActualHeight, ElementName=scrollPane}" Value="{StaticResource maxScrollHeight}">
+											<Setter TargetName="scrollPane" Property="VerticalScrollBarVisibility" Value="Auto" />
+										</DataTrigger>
+									</ControlTemplate.Triggers>
+								</ControlTemplate>
+							</ItemsControl.Template>
+							<ItemsControl.ItemTemplate>
+								<DataTemplate>
+									<Grid Grid.IsSharedSizeScope="True">
+										<Grid.RowDefinitions>
+											<RowDefinition Height="auto"/>
+											<RowDefinition/>
+										</Grid.RowDefinitions>
+										<ContentControl Grid.Row="0" Focusable="False">
+											<ContentControl.Template>
+												<ControlTemplate>
+													<Grid TextBlock.FontWeight="Bold">
+														<Grid.ColumnDefinitions>
+															<ColumnDefinition Width="auto"/>
+															<ColumnDefinition x:Name="sep1" Width="12"/>
+															<ColumnDefinition Width="auto"/>
+															<ColumnDefinition x:Name="sep2" Width="12"/>
+															<ColumnDefinition />
+														</Grid.ColumnDefinitions>
+														<TextBlock Grid.Column="0" Text="{Binding Title, Mode=OneWay}"/>
+														<TextBlock Grid.Column="2" Text="{Binding Type, Mode=OneWay, Converter={StaticResource TypeStringConverter}}"/>
+														<TextBlock Grid.Column="4" Text="{Binding Text, Mode=OneWay}" TextWrapping="WrapWithOverflow"/>
+													</Grid>
+													<ControlTemplate.Triggers>
+														<DataTrigger Binding="{Binding Title}" Value="{x:Null}">
+															<Setter TargetName="sep1" Property="Width" Value="0"/>
+														</DataTrigger>
+													</ControlTemplate.Triggers>
+												</ControlTemplate>
+											</ContentControl.Template>
+										</ContentControl>
+										<ItemsControl Grid.Row="1" ItemsSource="{Binding}" Focusable="False" Margin="16,0,0,0">
+											<ItemsControl.ItemTemplate>
+												<DataTemplate>
+													<Grid>
+														<Grid.ColumnDefinitions>
+															<ColumnDefinition SharedSizeGroup="ssgExceptionDataName"/>
+															<ColumnDefinition SharedSizeGroup="ssgExceptionDataType"/>
+															<ColumnDefinition Width="*"/>
+														</Grid.ColumnDefinitions>
+														<TextBlock Grid.Column="0" Text="{Binding Name}" />
+														<TextBlock Grid.Column="1" Margin="5,0,5,0" Text="{Binding Type, Converter={StaticResource TypeStringConverter}}" />
+														<TextBlock Grid.Column="2" Text="{Binding Value}" TextWrapping="WrapWithOverflow"/>
+													</Grid>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+									</Grid>
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
+					</Grid>
+					<DataTemplate.Triggers>
+						<DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}" Value="true">
+							<Setter TargetName="itemsCtl" Property="Visibility" Value="Visible" />
+						</DataTrigger>
+					</DataTemplate.Triggers>
+				</DataTemplate>
+			</local:TraceItemTemplateSelector.ExceptionTemplate>
+
+			<local:TraceItemTemplateSelector.TraceItemTemplate>
+				<DataTemplate>
+					<ScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource collapsedScrollHeight}" Padding="0,0,8,0" VerticalAlignment="Top" Focusable="False" VerticalScrollBarVisibility="Disabled" >
+						<StackPanel>
+							<TextBlock x:Name="message" Text="{Binding Message}" TextWrapping="NoWrap"/>
+							<TextBlock Text="{Binding Id}" />
+							<TextBlock Text="{Binding Source}" />
+						</StackPanel>
+					</ScrollViewer>
+					<DataTemplate.Triggers>
+						<DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}" Value="true">
+							<Setter TargetName="scrollPane" Property="MaxHeight" Value="{StaticResource maxScrollHeight}" />
+							<Setter TargetName="message" Property="TextWrapping" Value="WrapWithOverflow" />
+						</DataTrigger>
+						<DataTrigger Binding="{Binding ActualHeight, ElementName=scrollPane}" Value="{StaticResource maxScrollHeight}">
+							<Setter TargetName="scrollPane" Property="VerticalScrollBarVisibility" Value="Auto" />
+						</DataTrigger>
+					</DataTemplate.Triggers>
+				</DataTemplate>
+			</local:TraceItemTemplateSelector.TraceItemTemplate>
+
+			<local:TraceItemTemplateSelector.TextItemTemplate>
+				<DataTemplate>
+					<ScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource collapsedScrollHeight}" Padding="0,0,8,0" VerticalAlignment="Top" Focusable="False" VerticalScrollBarVisibility="Disabled" >
+						<TextBlock x:Name="message" Text="{Binding Message}" TextWrapping="NoWrap"/>
+					</ScrollViewer>
+					<DataTemplate.Triggers>
+						<DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}" Value="true">
+							<Setter TargetName="scrollPane" Property="MaxHeight" Value="{StaticResource maxScrollHeight}" />
+							<Setter TargetName="message" Property="TextWrapping" Value="WrapWithOverflow" />
+						</DataTrigger>
+						<DataTrigger Binding="{Binding ActualHeight, ElementName=scrollPane}" Value="{StaticResource maxScrollHeight}">
+							<Setter TargetName="scrollPane" Property="VerticalScrollBarVisibility" Value="Auto" />
+						</DataTrigger>
+					</DataTemplate.Triggers>
+				</DataTemplate>
+			</local:TraceItemTemplateSelector.TextItemTemplate>
+		</local:TraceItemTemplateSelector>
+	</UserControl.Resources>
+
+	<Grid Margin="16,22,16,10">
+		<ListBox ItemsSource="{Binding Source={StaticResource SortedTraces}}" Style="{StaticResource PPSnTraceListBoxStyle}"  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+			<ListBox.ItemTemplate>
+				<DataTemplate>
+					<Grid>
+						<Grid.ContextMenu>
+							<ContextMenu>
+								<MenuItem Command="ApplicationCommands.Copy" CommandParameter="{Binding}"/>
+								<Separator />
+								<MenuItem Command="ApplicationCommands.SaveAs" CommandParameter="{Binding}"/>
+							</ContextMenu>
+						</Grid.ContextMenu>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="24"/>
+							<ColumnDefinition Width="auto"/>
+							<ColumnDefinition/>
+						</Grid.ColumnDefinitions>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto" MinHeight="26"/>
+							<RowDefinition/>
+						</Grid.RowDefinitions>
+						<Border Height="24" Background="Transparent" ToolTip="{Binding Type}">
+							<Viewbox Height="22" Opacity=".75">
+								<ContentControl Focusable="False" >
+									<ContentControl.Template>
+										<ControlTemplate>
+											<Canvas Width="24" Height="24">
+												<Path x:Name="typeImagePath" Data="{StaticResource debugPathGeometry}" Fill="{StaticResource PPSnWindowForegroundBrush}" />
+											</Canvas>
+											<ControlTemplate.Triggers>
+												<DataTrigger Binding="{Binding Type}" Value="1">
+													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource informationPathGeometry}"/>
+												</DataTrigger>
+												<DataTrigger Binding="{Binding Type}" Value="2">
+													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource warningPathGeometry}"/>
+												</DataTrigger>
+												<DataTrigger Binding="{Binding Type}" Value="3">
+													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource failPathGeometry}"/>
+												</DataTrigger>
+												<DataTrigger Binding="{Binding Type}" Value="4">
+													<Setter TargetName="typeImagePath" Property="Data" Value="{StaticResource exceptionPathGeometry}"/>
+												</DataTrigger>
+											</ControlTemplate.Triggers>
+										</ControlTemplate>
+									</ContentControl.Template>
+								</ContentControl>
+							</Viewbox>
+						</Border>
+						<TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=dd.MM.yyyy  HH:mm:ss}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+						<!--<FrameworkElement x:Name="dummy" Grid.Column="2" Margin="8,0,32,0"/>
+						<ContentControl Grid.Column="2" Grid.RowSpan="2" Content="{Binding}" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}" Focusable="False"
+										HorizontalAlignment="Left" Width="{Binding ElementName=dummy, Path=ActualWidth, Mode=OneWay}" Margin="8,4,0,0" />-->
+						<ContentControl Grid.Column="2" Grid.RowSpan="2" Content="{Binding}" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}" Focusable="False"
+										HorizontalAlignment="Left" Margin="8,4,24,0" />
+					</Grid>
+				</DataTemplate>
+			</ListBox.ItemTemplate>
+		</ListBox>
+	</Grid>
+</UserControl>

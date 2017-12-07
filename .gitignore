@@ -194,5 +194,8 @@ FakesAssemblies/
 
 # Visual Studio 6 workspace options file
 *.opt
+
 /PPSnReport/system/texmf
 /PPSnReport/system/texmf-*
+/PPSnDesktop/Local/Data
+/PPSnDesktop/Local/Masks/*.dxml
