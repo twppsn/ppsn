@@ -82,6 +82,7 @@
     <Compile Include="Stuff.cs" />
     <Compile Include="Wpf\ExcelCientItem.cs" />
     <Compile Include="Wpf\WpfClientItem.cs" />
+    <None Include="TecWare.PPSn.Module.nuspec" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PPSnCore\PPSnCore.csproj">

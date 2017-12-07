@@ -54,6 +54,7 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="ppsn.licenseheader" />
+    <None Include="TecWare.PPSn.Core.nuspec" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="DES.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">

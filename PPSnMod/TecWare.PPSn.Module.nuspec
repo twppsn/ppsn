@@ -1,0 +1,29 @@
+﻿<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+	<metadata>
+		<id>TecWare.PPSn.Module</id>
+		<version>$version$</version>
+		<title>TecWare.PPSn.Module</title>
+		<authors>TecWare</authors>
+		<owners>TecWare</owners>
+		<projectUrl>https://github.com/twdes/des</projectUrl>
+		<requireLicenseAcceptance>false</requireLicenseAcceptance>
+		<description>Base module for the Data Exchange Server.</description>
+		<releaseNotes>todo.</releaseNotes>
+		<copyright>$copyright$</copyright>
+
+		<dependencies>
+			<dependency id="NeoLua" version="1.2.23" />
+			<dependency id="TecWare.DES.Core" version="1.0.0" />
+			<dependency id="TecWare.DES.ServerLib" version="1.0.0" />
+			<dependency id="TecWare.PPSn.Core" version="$version$" />
+			<dependency id="TecWare.PPSn.Report" version="$version$" />
+		</dependencies>
+	</metadata>
+
+	<files>
+		<file src="bin\Release\DEM.PPSn.dll" target="lib\net47" />
+		<file src="bin\Release\DEM.PPSn.pdb" target="lib\net47" />
+		<file src="bin\Release\DEM.PPSn.xml" target="lib\net47" />
+	</files>
+</package>

@@ -20,6 +20,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\PPSn.Report.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -28,6 +29,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\PPSn.Report.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="DES.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -58,6 +60,7 @@
     </None>
     <None Include="packages.config" />
     <None Include="system\update.ps1" />
+    <None Include="TecWare.PPSn.Report.nuspec" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PPSnCore\PPSnCore.csproj">

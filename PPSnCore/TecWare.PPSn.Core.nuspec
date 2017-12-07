@@ -1,0 +1,26 @@
+﻿<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+	<metadata>
+		<id>TecWare.PPSn.Core</id>
+		<version>$version$</version>
+		<title>TecWare.PPSn.Core</title>
+		<authors>TecWare</authors>
+		<owners>TecWare</owners>
+		<projectUrl>https://github.com/twppsn/ppsn</projectUrl>
+		<requireLicenseAcceptance>false</requireLicenseAcceptance>
+		<description>Helper for the ppsn-module client/server.</description>
+		<releaseNotes>todo.</releaseNotes>
+		<copyright>$copyright$</copyright>
+
+		<dependencies>
+			<dependency id="NeoLua" version="1.2.23" />
+			<dependency id="TecWare.DES.Core" version="$version$" />
+		</dependencies>
+	</metadata>
+
+	<files>
+		<file src="bin\Release\PPSn.Core.dll" target="lib\net47" />
+		<file src="bin\Release\PPSn.Core.pdb" target="lib\net47" />
+		<file src="bin\Release\PPSn.Core.xml" target="lib\net47" />
+	</files>
+</package>
