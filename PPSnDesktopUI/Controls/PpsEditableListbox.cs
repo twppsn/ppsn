@@ -70,6 +70,33 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Extended ListBox</summary>
 	public class PpsEditableListbox : ListBox
 	{
+		#region -- enum NewItemContainerActionType ------------------------------------
+
+		[Flags]
+		private enum NewItemContainerActionType
+		{
+			/// <summary>Set NewItemPlaceholder.Visibility to Visible</summary>
+			ShowPlaceHolder,
+			/// <summaryKeyBoardFocus to Container</summary>
+			FocusContainer,
+			/// <summaryKeyBoarFocus to first focusable child</summary>
+			FocusChild
+		} // enum NewItemContainerActionType
+
+		#endregion
+
+		#region -- class GeneratorStatusChangedEventArgs ------------------------------
+
+		private class GeneratorStatusChangedEventArgs : EventArgs
+		{
+			/// <summary>NewItemPlaceholder or CurrentAddItem</summary>
+			public object Item { get; set; }
+			/// <summary>Action with Item</summary>
+			public NewItemContainerActionType Action { get; set; }
+		} // class GeneratorStatusChangedEventArgs
+
+		#endregion
+
 		public static readonly RoutedEvent AddNewItemFactoryEvent = EventManager.RegisterRoutedEvent(nameof(AddNewItemFactory), RoutingStrategy.Tunnel, typeof(AddNewItemFactoryHandler), typeof(PpsEditableListbox));
 
 		public static readonly RoutedUICommand AppendNewItemCommand = new RoutedUICommand("Append", "AppendNewItem", typeof(PpsEditableListbox));
@@ -79,6 +106,8 @@ namespace TecWare.PPSn.Controls
 		public event AddNewItemFactoryHandler AddNewItemFactory { add => AddHandler(AddNewItemFactoryEvent, value); remove => RemoveHandler(AddNewItemFactoryEvent, value); }
 
 		private IEditableCollectionView editableCollectionView;
+		private EventHandler evGeneratorStatusChanged;
+		private GeneratorStatusChangedEventArgs generatorStatusChangedEventArgs;
 
 		#region -- ctor / Init --------------------------------------------------------
 
@@ -88,7 +117,7 @@ namespace TecWare.PPSn.Controls
 				new CommandBinding(AppendNewItemCommand,
 					(sender, e) =>
 					{
-						FinishAddNew(e.Parameter, true);
+						TryEndTransaction(e.Parameter, true);
 					},
 					(sender, e) =>
 					{
@@ -127,25 +156,43 @@ namespace TecWare.PPSn.Controls
 					}
 				)
 			);
+
+			generatorStatusChangedEventArgs = new GeneratorStatusChangedEventArgs();
+			evGeneratorStatusChanged = (s, e)
+				=> OnItemContainerGeneratorStatusChanged(s, e, generatorStatusChangedEventArgs);
 		} // ctor
+
+		#endregion
 
 		protected override void OnItemsSourceChanged(IEnumerable oldValue, IEnumerable newValue)
 		{
 			base.OnItemsSourceChanged(oldValue, newValue);
 
 			// get the collection view
-			editableCollectionView = newValue == null 
+			editableCollectionView = newValue == null
 				? null
 				: CollectionViewSource.GetDefaultView(newValue) as IEditableCollectionViewAddNewItem;
 		} // event OnItemsSourceChanged
 
-		protected override DependencyObject GetContainerForItemOverride()
-			=> new PpsEditableListboxItem();
-
 		protected override bool IsItemItsOwnContainerOverride(object item)
 			=> item is PpsEditableListboxItem;
 
-		#endregion
+		protected override DependencyObject GetContainerForItemOverride()
+			=> new PpsEditableListboxItem();
+
+		protected override void PrepareContainerForItemOverride(DependencyObject element, object item)
+		{
+			base.PrepareContainerForItemOverride(element, item);
+
+			bool? isNewItem = null;
+			if (IsCurrentlyAddedItem(item))
+				isNewItem = true;
+			else if(!item.Equals(CollectionView.NewItemPlaceholder))
+				isNewItem = false;
+
+			var listBoxItem = (PpsEditableListboxItem)element;
+			listBoxItem.IsNewItem = isNewItem;
+		} // proc PrepareContainerForItemOverride
 
 		internal bool TryBeginTransaction(object item, bool addNew)
 		{
@@ -215,18 +262,17 @@ namespace TecWare.PPSn.Controls
 			var item = AddNewItem();
 			if (item == null)
 			{
-				AnchorNewItemPosition(CollectionView.NewItemPlaceholder, false);
+				ForceRefreshNewItemContainer(CollectionView.NewItemPlaceholder, NewItemContainerActionType.FocusContainer);
 				return false;
 			}
 
 			// collapse
-			UpdateNewItemPlaceHolderVisibility(false);
-
+			CollapseNewItemPlaceHolder();
 			// ensure container is generated for new item.
 			UpdateLayout();
+			// Anchor
+			ForceRefreshNewItemContainer(item, NewItemContainerActionType.FocusChild);
 
-			// keyboard focus to first control
-			AnchorNewItemPosition(item, true);
 			return true;
 		} // proc BeginAddNew
 
@@ -245,66 +291,14 @@ namespace TecWare.PPSn.Controls
 				return false;
 			}
 
-			// show
-			UpdateNewItemPlaceHolderVisibility(true);
-
-			// When adding the first item, ListBox use the container, generated from AddNewItem().
-			// Must update the property IsNewItem.
-			// For all other new items the container is null and will be created.
-			// Property then will be set in OnApplyTemplate()
-			var listboxItem = GetListBoxItemFromContent(item);
-			if (listboxItem != null)
-				listboxItem.RefreshItemStatus();
-
-			// Stay on newitem position
+			var actionType = NewItemContainerActionType.ShowPlaceHolder;
+			// Remain in AppendMode				
 			if (commit)
-				AnchorNewItemPosition(CollectionView.NewItemPlaceholder, true);
+				actionType |= NewItemContainerActionType.FocusChild;
+			ForceRefreshNewItemContainer(CollectionView.NewItemPlaceholder, actionType);
 
 			return true;
 		} // proc FinishAddNew
-
-		public void AnchorNewItemPosition(object item, bool focusChildElement)
-			=> SetAnchorItem(item, focusChildElement);
-
-		//public void AnchorNewItemPosition(object item, bool focusChildElement)
-		//{
-		//	//call it out of the current stack ???
-		//	Dispatcher.BeginInvoke(new Action<object, bool>(SetAnchorItem), DispatcherPriority.Input, item, focusChildElement);
-		//} // proc AnchorNewItemPosition
-
-		private void SetAnchorItem(object item, bool focusChildElement)
-		{
-			Items.MoveCurrentTo(item);
-			var listBoxItem = GetListBoxItemFromContent(item);
-			if (listBoxItem != null)
-			{
-				// ??? listBoxItem.IsSelected = true;
-				if (focusChildElement)
-				{
-					var element = GetFocusableDescendant(listBoxItem);
-					if (element != null)
-					{
-						FocusManager.SetFocusedElement(this, element);
-						Keyboard.Focus(element);
-					}
-				}
-				else
-				{
-					FocusManager.SetFocusedElement(this, listBoxItem);
-					Keyboard.Focus(listBoxItem);
-				}
-			}
-		} // proc SetAnchorItem
-
-		internal bool IsCurrentlyAddedItem(object item)
-			=> item.Equals(editableCollectionView.CurrentAddItem);
-
-		private void UpdateNewItemPlaceHolderVisibility(bool show)
-		{
-			var listBoxItem = GetListBoxItemFromContent(CollectionView.NewItemPlaceholder);
-			if (listBoxItem != null)
-				listBoxItem.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
-		} // proc UpdateNewItemPlaceHolderVisibility
 
 		#endregion
 
@@ -317,13 +311,72 @@ namespace TecWare.PPSn.Controls
 			UpdateLayout();
 		} // proc RemoveItem
 
-		private PpsEditableListboxItem GetListBoxItemFromContent(object content)
-			=> (PpsEditableListboxItem)ItemContainerGenerator.ContainerFromItem(content);
+		#region -- Manage NewItemContainer --------------------------------------------
+
+		private void ForceRefreshNewItemContainer(object item, NewItemContainerActionType actionType)
+		{
+			Items.MoveCurrentTo(item);
+			var listBoxItem = GetListBoxItemFromContent(item);
+			if (listBoxItem != null)
+				RefreshNewItemContainer(listBoxItem, actionType);
+			else
+			{
+				generatorStatusChangedEventArgs.Item = item;
+				generatorStatusChangedEventArgs.Action = actionType;
+				ItemContainerGenerator.StatusChanged += evGeneratorStatusChanged;
+				// force
+				ScrollIntoView(item);
+			}
+		} // proc ForceRefreshNewItemContainer
+
+		private void RefreshNewItemContainer(PpsEditableListboxItem listBoxItem, NewItemContainerActionType actionType)
+		{
+			if (actionType.HasFlag(NewItemContainerActionType.ShowPlaceHolder))
+				listBoxItem.Visibility = Visibility.Visible;
+
+			FrameworkElement focusElement = null;
+			if (actionType.HasFlag(NewItemContainerActionType.FocusChild))
+				focusElement = GetFocusableDescendant(listBoxItem);
+			else if (actionType.HasFlag(NewItemContainerActionType.FocusContainer))
+				focusElement = listBoxItem;
+
+			if (focusElement != null)
+			{
+				FocusManager.SetFocusedElement(this, focusElement);
+				Keyboard.Focus(focusElement);
+			}
+		} // proc RefreshNewItemContainer
+
+		private void OnItemContainerGeneratorStatusChanged(object sender, EventArgs e, GeneratorStatusChangedEventArgs args)
+		{
+			if (ItemContainerGenerator.Status == GeneratorStatus.ContainersGenerated)
+			{
+				ItemContainerGenerator.StatusChanged -= evGeneratorStatusChanged;
+				var listBoxItem = GetListBoxItemFromContent(args.Item);
+				RefreshNewItemContainer(listBoxItem, args.Action);
+			}
+		} // event OnItemContainerGeneratorStatusChanged
+
+		internal void FocusNewItemPlaceHolderContainer()
+			=> ForceRefreshNewItemContainer(CollectionView.NewItemPlaceholder, NewItemContainerActionType.FocusContainer);
+
+		// When calling this, NewItemPlaceholder is visible and container is generated
+		private void CollapseNewItemPlaceHolder()
+			=> GetListBoxItemFromContent(CollectionView.NewItemPlaceholder).Visibility = Visibility.Collapsed;
+
+		private bool IsCurrentlyAddedItem(object item)
+			=> item.Equals(editableCollectionView.CurrentAddItem);
+
+		#endregion
+
+		private PpsEditableListboxItem GetListBoxItemFromContent(object item)
+			=> (PpsEditableListboxItem)ItemContainerGenerator.ContainerFromItem(item);
 
 		private static FrameworkElement GetFocusableDescendant(DependencyObject element)
 		{
 			FrameworkElement foundElement = null;
 
+			// ensure that visual tree is complete
 			if (element is FrameworkElement fe)
 				fe.ApplyTemplate();
 
@@ -349,53 +402,47 @@ namespace TecWare.PPSn.Controls
 
 	public class PpsEditableListboxItem : ListBoxItem
 	{
-		private static readonly DependencyPropertyKey isNewItemPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsNewItem), typeof(bool?), typeof(PpsEditableListboxItem), new FrameworkPropertyMetadata((bool?)null));
-		public static readonly DependencyProperty IsNewItemProperty = isNewItemPropertyKey.DependencyProperty;
-
+		public static readonly DependencyProperty IsNewItemProperty = DependencyProperty.Register(nameof(IsNewItem), typeof(bool?), typeof(PpsEditableListboxItem), new FrameworkPropertyMetadata((bool?)null));
+		private static readonly DependencyPropertyKey isEditablePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsEditable), typeof(bool), typeof(PpsEditableListboxItem), new FrameworkPropertyMetadata(true));
+		public static readonly DependencyProperty IsEditableProperty = isEditablePropertyKey.DependencyProperty;
 		private bool isInEditMode = false;
-
-		internal void RefreshItemStatus()
-		{
-			bool? isNew = null;
-
-			var parent = ParentListBox;
-			if (parent != null)
-			{
-				if (parent.IsCurrentlyAddedItem(Content))
-					isNew = true;
-				else if (!IsNewItemPlaceHolder)
-					isNew = false;
-			}
-			SetValue(isNewItemPropertyKey, isNew.HasValue ? (bool?)isNew.Value : null);
-		} // proc RefreshItemStatus
-
-		public override void OnApplyTemplate()
-		{
-			base.OnApplyTemplate();
-			RefreshItemStatus();
-		} // proc OnApplyTemplate
 
 		protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e)
 		{
 			base.OnGotKeyboardFocus(e);
 
-			if (!isInEditMode && IsChildOf(e.NewFocus))
+			if (!isInEditMode && IsEditable && IsChildOf(e.NewFocus))
 			{
+				Debug.Print(String.Format("--- {0}---------------------- gotfocus     {1}", x++, Content));
 				isInEditMode = true;
-				OnEnter();
+				// Ignore when entering currently added item.
+				// Transaction already started by entering NewItemPlaceHolder.
+				if (!IsCurrentlyAddedItem)
+					BeginEdit();
 			}
 		} // proc OnGotKeyboardFocus
 
+		int x = 0;
 		protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e)
 		{
 			base.OnLostKeyboardFocus(e);
 
 			if (isInEditMode && !IsChildOf(e.NewFocus))
 			{
+				Debug.Print(String.Format("--- {0}---------------------- LOSTFOCUS     {1}", x++, Content));
 				isInEditMode = false;
-				OnLeave(this.Equals(e.NewFocus));
+				// Ignore when NewItemPlaceHolder collapsed.
+				// Remains in editing currently added item.
+				if (!IsNewItemPlaceHolder)
+					EndEdit(this.Equals(e.NewFocus));
 			}
 		} // proc OnLostKeyboardFocus
+
+		protected override void OnContentChanged(object oldContent, object newContent)
+		{
+			base.OnContentChanged(oldContent, newContent);
+			UpdateIsEditableFlag(newContent);
+		} // proc OnContentChanged
 
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
@@ -417,7 +464,7 @@ namespace TecWare.PPSn.Controls
 				case Key.Enter:
 					{
 						var parent = ParentListBox;
-						if (parent != null && parent.IsCurrentlyAddedItem(Content))
+						if (parent != null && IsCurrentlyAddedItem)
 						{
 							e.Handled = true;
 							parent.TryEndTransaction(Content, true);
@@ -427,36 +474,37 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc OnKeyDown
 
-		private void OnEnter()
+		private void BeginEdit()
+		{
+			var parent = ParentListBox;
+			if (parent != null)
+				parent.TryBeginTransaction(Content, IsNewItemPlaceHolder);
+		} // proc BeginEdit
+
+		private void EndEdit(bool focusedSelf)
 		{
 			var parent = ParentListBox;
 			if (parent != null)
 			{
-				// Transaction already started by entering NewItemPlaceHolder.
-				if (!parent.IsCurrentlyAddedItem(Content))
-				{
-					parent.TryBeginTransaction(Content, IsNewItemPlaceHolder);
-				}
-			}
-		} // proc OnEnter
-
-		private void OnLeave(bool focusedSelf)
-		{
-			// Occurs when NewItemPlaceHolder is changing visibility.
-			if (IsNewItemPlaceHolder)
-				return;
-
-			var parent = ParentListBox;
-			if (parent != null)
-			{
-				var addedItem = parent.IsCurrentlyAddedItem(Content);
+				var addedItem = IsCurrentlyAddedItem;
 				parent.TryEndTransaction(Content, !addedItem && !focusedSelf);
 				if (addedItem && focusedSelf)
-				{
-					parent.AnchorNewItemPosition(CollectionView.NewItemPlaceholder, false);
-				}
+					parent.FocusNewItemPlaceHolderContainer();
 			}
-		} // proc OnLeave
+		} // proc EndEdit
+
+		private void UpdateIsEditableFlag(object content)
+		{
+			// property IsNewItemPlaceHolder is not yet updated.
+			var isEditable = CollectionView.NewItemPlaceholder.Equals(content);
+			if(!isEditable)
+			{
+				isEditable = content is IPpsEditableObject ppso
+					? ppso.IsEditable
+					: content is IEditableObject;
+			}
+			SetValue(isEditablePropertyKey, isEditable);
+		} // proc UpdateIsEditableFlag
 
 		private bool IsChildOf(object child)
 		{
@@ -486,16 +534,30 @@ namespace TecWare.PPSn.Controls
 		{
 			get
 			{
-				// Because Nullable<bool> unboxing is very slow (uses reflection) first we cast to bool
-				var value = GetValue(IsNewItemProperty);
+				// MS: Because Nullable<bool> unboxing is very slow (uses reflection) first we cast to bool
+				object value = GetValue(IsNewItemProperty);
 				return value == null
-					? new bool?()
-					: new bool?((bool)value);
+					? new Nullable<bool>()
+					: new Nullable<bool>((bool)value);
 			}
+			set => SetValue(IsNewItemProperty, value.HasValue ? (bool?)value.Value : null);
 		} // prop IsNewItem
 
+		/// <summary>Is content editable?</summary>
+		public bool IsEditable
+			=> (bool)GetValue(IsEditableProperty);
+
 		private bool IsNewItemPlaceHolder
-			=> CollectionView.NewItemPlaceholder.Equals(this.Content);
+			=> IsNewItem == null;
+
+		private bool IsCurrentlyAddedItem
+		{
+			get
+			{
+				var value = (bool?)GetValue(IsNewItemProperty);
+				return value.HasValue && value.Value;
+			}
+		} // prop IsCurrentlyAddedItem
 
 		private PpsEditableListbox ParentListBox
 			=> ParentSelector as PpsEditableListbox;
