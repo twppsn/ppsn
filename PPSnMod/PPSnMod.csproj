@@ -84,11 +84,11 @@
     <Compile Include="Wpf\WpfClientItem.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\PPSnCore\PPSnCore\PPSnCore.csproj">
+    <ProjectReference Include="..\PPSnCore\PPSnCore.csproj">
       <Project>{f4609545-6d91-4b2d-a811-3201f4934505}</Project>
       <Name>PPSnCore</Name>
     </ProjectReference>
-    <ProjectReference Include="..\PPSnCore\PPSnReport\PPSnReport.csproj">
+    <ProjectReference Include="..\PPSnReport\PPSnReport.csproj">
       <Project>{bd5faf7d-b1dd-4a54-a481-c46179fcc087}</Project>
       <Name>PPSnReport</Name>
     </ProjectReference>

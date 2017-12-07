@@ -1,0 +1,3 @@
+[submodule "Extern/ppsncfg"]
+	path = Extern/ppsncfg
+	url = https://github.com/twppsn/ppsncfg.git
