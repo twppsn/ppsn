@@ -1,0 +1,126 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Name>PPSnMaster</Name>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectVersion>4.1</ProjectVersion>
+    <ProjectGuid>{cc8bdbcd-f4dc-4f85-b187-2c6e2ea44f82}</ProjectGuid>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql120DatabaseSchemaProvider</DSP>
+    <OutputType>Database</OutputType>
+    <RootPath>
+    </RootPath>
+    <RootNamespace>TecWare.PPSn.Database</RootNamespace>
+    <AssemblyName>PPSnMaster</AssemblyName>
+    <ModelCollation>1033, CI</ModelCollation>
+    <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
+    <DeployToDatabase>True</DeployToDatabase>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <TargetLanguage>CS</TargetLanguage>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <SqlServerVerification>False</SqlServerVerification>
+    <IncludeCompositeObjects>True</IncludeCompositeObjects>
+    <TargetDatabaseSet>True</TargetDatabaseSet>
+    <DefaultSchema>dbo</DefaultSchema>
+    <Trustworthy>True</Trustworthy>
+    <NonTransactedFileStreamAccess>READ_ONLY</NonTransactedFileStreamAccess>
+    <IsChangeTrackingOn>True</IsChangeTrackingOn>
+    <ChangeTrackingRetentionPeriod>30</ChangeTrackingRetentionPeriod>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">11.0</VisualStudioVersion>
+    <!-- Default to the v11.0 targets path if the targets file for the current VS version is not found -->
+    <SSDTExists Condition="Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets')">True</SSDTExists>
+    <VisualStudioVersion Condition="'$(SSDTExists)' == ''">11.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Condition="'$(SQLDBExtensionsRefPath)' != ''" Project="$(SQLDBExtensionsRefPath)\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <ItemGroup>
+    <Folder Include="Properties" />
+    <Folder Include="Tables" />
+    <Folder Include="Tables\dbo" />
+    <Folder Include="Tables\hrs" />
+    <Folder Include="Tables\sds" />
+    <Folder Include="Stuff" />
+    <Folder Include="Database\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\120\SqlSchemas\master.dacpac">
+      <HintPath>$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\120\SqlSchemas\master.dacpac</HintPath>
+      <SuppressMissingDependenciesErrors>False</SuppressMissingDependenciesErrors>
+      <DatabaseVariableLiteralValue>master</DatabaseVariableLiteralValue>
+    </ArtifactReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="PpsMaster.sql" />
+    <Build Include="Tables\Schemas.sql" />
+    <Build Include="Tables\dbo\ObjK.sql" />
+    <Build Include="Tables\dbo\ObjR.sql" />
+    <Build Include="Tables\dbo\Adre.sql" />
+    <Build Include="Tables\dbo\Ansp.sql" />
+    <Build Include="Tables\dbo\User.sql" />
+    <Build Include="Tables\dbo\Kont.sql" />
+    <Build Include="Tables\dbo\Waeh.sql" />
+    <Build Include="Tables\dbo\Land.sql" />
+    <Build Include="Tables\dbo\Plzd.sql" />
+    <Build Include="Tables\dbo\Kgrp.sql" />
+    <Build Include="Tables\sds\Auko.sql" />
+    <Build Include="Tables\sds\Aupo.sql" />
+    <Build Include="Tables\sds\Anko.sql" />
+    <Build Include="Tables\sds\Anpo.sql" />
+    <Build Include="Tables\dbo\ObjF.sql" />
+    <Build Include="Database\FileStreamGroup.sql" />
+    <Build Include="Tables\dbo\ObjL.sql" />
+    <Build Include="Tables\dbo\ObjT.sql" />
+    <Build Include="Stuff\MaxBigInt.sql" />
+    <Build Include="Stuff\Objects.sql" />
+    <Build Include="Tables\dbo\Mein.sql" />
+    <Build Include="Tables\dbo\Pers.sql" />
+    <Build Include="Tables\dbo\Lief.sql" />
+    <Build Include="Tables\dbo\Kund.sql" />
+    <Build Include="Stuff\ObjectRevisions.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <RefactorLog Include="PPSnMaster.refactorlog" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Stuff\GetSyncStamp.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Database\SystemUser.sql" />
+    <PostDeploy Include="PostScript.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Database\KonstData.sql" />
+  </ItemGroup>
+</Project>

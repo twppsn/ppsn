@@ -1,0 +1,274 @@
+﻿<ui:PpsGenericWpfControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+						 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+						 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+						 xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+						 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
+						 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
+						 mc:Ignorable="d" 
+						 d:DesignHeight="300" d:DesignWidth="800"
+						 SubTitle="Kontakt"
+						 Title="{Binding Data.Head.First.Name}">
+	<x:Code>
+		<![CDATA[
+        self:require 'contacts.lua';
+		]]>
+	</x:Code>
+
+	<ui:PpsGenericWpfControl.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceDictionary Source="../../../ClientWpf/Default.xaml" />
+			</ResourceDictionary.MergedDictionaries>
+
+			<DataTemplate x:Key="Adre">
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
+						<ColumnDefinition Width="*"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="*"/>
+					</Grid.RowDefinitions>
+					<Label Grid.Column="0" Grid.Row="0" Content="{Binding Table.Name.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+					<TextBox Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" Text="{Binding Name}" MaxLength="{Binding Table.Name.MaxLength, Mode=OneTime}" AcceptsReturn="True" TextWrapping="Wrap" 
+											 Height="52" VerticalAlignment="Top"/>
+					<Label Grid.Column="0" Grid.Row="2" Content="{Binding Table.LandId.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+					<ComboBox Grid.Column="1" Grid.Row="2" Height="23" VerticalAlignment="Top"
+											  ItemsSource="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType=ui:PpsGenericWpfControl}, Path=DataContext.MasterData.Land}"
+											  SelectedValue="{Binding LandId}"
+											  DisplayMemberPath="Name"/>
+					<Label Grid.Column="0" Grid.Row="3" Content="{Binding Table.Region.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+					<TextBox Grid.Column="1" Grid.Row="3" Text="{Binding Region}" MaxLength="{Binding Table.Region.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+					<Label Grid.Column="0" Grid.Row="4" Content="{Binding Table.Strasse.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+					<TextBox Grid.Column="1" Grid.Row="4" Text="{Binding Strasse}" MaxLength="{Binding Table.Strasse.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+					<Label Grid.Column="0" Grid.Row="5" Content="{Binding Table.Postfach.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+					<TextBox Grid.Column="1" Grid.Row="5" Text="{Binding Postfach}" MaxLength="{Binding Table.Postfach.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+					<TextBlock Grid.Column="0" Grid.Row="6" Height="23" VerticalAlignment="Center">
+						<Run Text="{Binding Table.Plz.displayName, Mode=OneTime}"/>
+						<Run Text=" / "/>
+						<Run Text="{Binding Table.Ort.displayName, Mode=OneTime}"/>
+						<Run Text=":"/>
+					</TextBlock>
+					<TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Plz}" MaxLength="{Binding Table.Plz.MaxLength, Mode=OneTime}" Height="23" Width="100" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+					<TextBox Grid.Column="1" Grid.Row="6" Text="{Binding Ort}" MaxLength="{Binding Table.Ort.MaxLength, Mode=OneTime}" Height="23" Margin="106,0,0,0" VerticalAlignment="Top"/>
+
+					<Label Grid.Column="0" Grid.Row="7" Content="{Binding Table.Adresse.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+					<TextBox Grid.Column="1" Grid.Row="7" Height="110" AcceptsReturn="True" TextWrapping="Wrap"
+							 Text="{Binding Adresse.Value}"
+							 uiC:PpsTemplateTextBoxBehavior.FormattedValue="{Binding Adresse.FormattedValue, Mode=OneWay}"
+							 MaxLength="{Binding Table.Adresse.MaxLength, Mode=OneTime}"
+							 Style="{StaticResource PPSnTemplateTextBoxStyle}"/>
+				</Grid>
+			</DataTemplate>
+
+			<DataTemplate x:Key="Ansp">
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
+						<ColumnDefinition Width="*"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="*"/>
+					</Grid.RowDefinitions>
+					<Label Grid.Column="0" Grid.Row="0" Content="{Binding Table.Name.displayName, Mode=OneWay}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+					<TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Name}" MaxLength="{Binding Table.Name.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+					<Label Grid.Column="0" Grid.Row="1" Content="{Binding Table.Brief.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+					<TextBox Grid.Column="1" Grid.Row="1" Text="{Binding Brief}" MaxLength="{Binding Table.Brief.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+					<Label Grid.Column="0" Grid.Row="2" Content="{Binding Table.Tel.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+					<TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Tel}" MaxLength="{Binding Table.Tel.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+					<Label Grid.Column="0" Grid.Row="3" Content="{Binding Table.Mobil.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+					<TextBox Grid.Column="1" Grid.Row="3" Text="{Binding Mobil}" MaxLength="{Binding Table.Mobil.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+					<Label Grid.Column="0" Grid.Row="4" Content="{Binding Table.Fax.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+					<TextBox Grid.Column="1" Grid.Row="4" Text="{Binding Fax}" MaxLength="{Binding Table.Fax.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+					<Label Grid.Column="0" Grid.Row="5" Content="{Binding Table.Mail.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+					<TextBox Grid.Column="1" Grid.Row="5" Text="{Binding Mail}" MaxLength="{Binding Table.Mail.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+
+					<Expander Grid.Column="0" Grid.Row="6" Grid.ColumnSpan="2" Header="Adresse" Style="{StaticResource SimpleExpanderStyle}">
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
+								<ColumnDefinition Width="*"/>
+							</Grid.ColumnDefinitions>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="29"/>
+								<RowDefinition Height="29"/>
+								<RowDefinition Height="29"/>
+							</Grid.RowDefinitions>
+							<Label Grid.Column="0" Grid.Row="0" Content="{Binding Table.Strasse.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+							<TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Strasse}" MaxLength="{Binding Table.Strasse.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+							<Label Grid.Column="0" Grid.Row="1" Content="{Binding Table.Postfach.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+							<TextBox Grid.Column="1" Grid.Row="1" Text="{Binding Postfach}" MaxLength="{Binding Table.Postfach.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+							<TextBlock Grid.Column="0" Grid.Row="2" Height="23" VerticalAlignment="Center">
+												<Run Text="{Binding Table.Plz.displayName, Mode=OneTime}"/>
+												<Run Text=" / "/>
+												<Run Text="{Binding Table.Ort.displayName, Mode=OneTime}"/>
+												<Run Text=":"/>
+							</TextBlock>
+							<TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Plz}" MaxLength="{Binding Table.Plz.MaxLength, Mode=OneTime}" Height="23" Width="100" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+							<TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Ort}" MaxLength="{Binding Table.Ort.MaxLength, Mode=OneTime}" Height="23" Margin="106,0,0,0" VerticalAlignment="Top"/>
+						</Grid>
+					</Expander>
+				</Grid>
+			</DataTemplate>
+		</ResourceDictionary>
+	</ui:PpsGenericWpfControl.Resources>
+
+	<Grid MaxWidth="{StaticResource PPSnPaneMaxGridWidth}">
+		<Grid.Margin>
+			<Thickness Left="{StaticResource PPSnPaneBorderSizeLeft}"
+					   Top="{StaticResource PPSnPaneBorderSizeTop}"
+					   Right="{StaticResource PPSnPaneBorderSizeRight}"
+					   Bottom="0"/>
+		</Grid.Margin>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
+			<ColumnDefinition Width="*"/>
+			<ColumnDefinition Width="{StaticResource PaneSpaceColumnWidth}"/>
+			<ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
+			<ColumnDefinition Width="*"/>
+		</Grid.ColumnDefinitions>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="29" />
+			<RowDefinition Height="29"/>
+			<RowDefinition Height="29"/>
+			<RowDefinition Height="29"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+
+		<Label x:Name="lblContactNr" Grid.Column="0" Grid.Row="0" Content="Kontakt-Nr.:" Height="23" VerticalAlignment="Top" />
+		<TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Data.Head.First.ObjkId.Nr}" />
+		<!--<TextBox Grid.Column="1" Grid.Row="0" Text="{Binding Data.Head.First.Nr}" MaxLength="12" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>-->
+		<Label Grid.Column="0" Grid.Row="1" Content="{Binding Data.Head.Name.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top"/>
+		<TextBox Grid.Column="1" Grid.Row="1" Grid.RowSpan="2" Text="{Binding Data.Head.First.Name}" MaxLength="{Binding Data.Head.Name.MaxLength, Mode=OneTime}" AcceptsReturn="True" TextWrapping="Wrap" 
+				 Height="52" VerticalAlignment="Top"/>
+
+		<Label Grid.Column="3" Grid.Row="0" Content="{Binding Data.Head.KurzName.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
+		<TextBox Grid.Column="4" Grid.Row="0" Text="{Binding Data.Head.First.KurzName}" MaxLength="{Binding Data.Head.KurzName.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+		<Label Grid.Column="3" Grid.Row="1" Content="{Binding Data.Head.LiefNr.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
+		<TextBox Grid.Column="4" Grid.Row="1" Text="{Binding Data.Head.First.LiefNr}" MaxLength="{Binding Data.Head.LiefNr.MaxLength, Mode=OneTime}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
+		<Label Grid.Column="3" Grid.Row="2" Content="{Binding Data.Head.KundNr.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
+		<TextBox Grid.Column="4" Grid.Row="2" Text="{Binding Data.Head.First.KundNr}" MaxLength="{Binding Data.Head.KundNr.MaxLength, Mode=OneTime}" Width="100" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
+		<TabControl Grid.Row="4" Grid.ColumnSpan="5" Style="{StaticResource PPSnPaneTabControlStyle}">
+			<TabItem Header="Kopfdaten">
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="{StaticResource PaneSpaceColumnWidth}"/>
+						<ColumnDefinition Width="{StaticResource PaneLabelColumnWidth}"/>
+						<ColumnDefinition Width="*"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+						<RowDefinition Height="29"/>
+					</Grid.RowDefinitions>
+					<Label Grid.Column="0" Grid.Row="1" Content="{Binding Data.Head.UstIdNr.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
+					<TextBox Grid.Column="1" Grid.Row="1" Text="{Binding Data.Head.First.UstIdNr}" MaxLength="{Binding Data.Head.UstIdNr.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+					<Label Grid.Column="0" Grid.Row="2" Content="{Binding Data.Head.SteuerNr.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
+					<TextBox Grid.Column="1" Grid.Row="2" Text="{Binding Data.Head.First.SteuerNr}" MaxLength="{Binding Data.Head.SteuerNr.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+
+					<Label Grid.Column="3" Grid.Row="1" Content="{Binding Data.Head.Iban.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
+					<TextBox Grid.Column="4" Grid.Row="1" Text="{Binding Data.Head.First.Iban}" MaxLength="{Binding Data.Head.Iban.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+					<Label Grid.Column="3" Grid.Row="2" Content="{Binding Data.Head.Bic.displayName, Mode=OneTime}" ContentStringFormat="{}{0}:" Height="23" VerticalAlignment="Top" />
+					<TextBox Grid.Column="4" Grid.Row="2" Text="{Binding Data.Head.First.Bic}" MaxLength="{Binding Data.Head.Bic.MaxLength, Mode=OneTime}" Height="23" VerticalAlignment="Top"/>
+				</Grid>
+			</TabItem>
+			<TabItem Header="Adressen / Partner">
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="{StaticResource PaneSpaceColumnWidth}"/>
+						<ColumnDefinition Width="*"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="29"/>
+						<RowDefinition/>
+					</Grid.RowDefinitions>
+					<Button Content="Neue Adresse" Command="{Binding newAddress}" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,0,0,0" />
+					<Button Content="Neuer Partner" Command="{Binding newPartner}" Width="100" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="108,0,0,0" />
+					<Button Content="Löschen" Command="{Binding delItem}" Padding="10,0" Width="Auto" Height="23" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="232,0,0,0" />
+
+					<uiC:PpsTreeListView x:Name="AdreTreeView" Grid.Column="0" Grid.Row="1" ItemsSource="{Binding Data.Head/AdreHead}" Style="{StaticResource TreeListViewStyle}">
+						<uiC:PpsTreeListView.Resources>
+							<ui:PpsMultiLineStringConverter x:Key="MlStringConverter" />
+						</uiC:PpsTreeListView.Resources>
+						<TreeView.ItemTemplate>
+							<HierarchicalDataTemplate ItemsSource="{Binding AnspAdre}">
+								<Border Height="27">
+									<TextBlock Text="{Binding Name, Mode=OneWay, Converter={StaticResource MlStringConverter}}" VerticalAlignment="Center" FontWeight="Bold"/>
+								</Border>
+								<HierarchicalDataTemplate.ItemTemplate>
+									<DataTemplate>
+										<Border Height="27">
+											<TextBlock Text="{Binding Name, Mode=OneWay}" VerticalAlignment="Center"/>
+										</Border>
+									</DataTemplate>
+								</HierarchicalDataTemplate.ItemTemplate>
+							</HierarchicalDataTemplate>
+						</TreeView.ItemTemplate>
+					</uiC:PpsTreeListView>
+
+					<ContentControl Grid.Column="2" Grid.Row="1" 
+									Content="{Binding ElementName=AdreTreeView, Path=SelectedValue}" 
+									ContentTemplateSelector="{Binding templateSelectorAdr}" 
+									Focusable="False"/>
+				</Grid>
+			</TabItem>
+			<TabItem Header="Sonstiges">
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="{StaticResource PaneSpaceColumnWidth}"/>
+						<ColumnDefinition Width="*"/>
+					</Grid.ColumnDefinitions>
+
+					<uiC:PpsAttachmentsControl Grid.Column="0" BorderThickness="0">
+						<uiC:PpsAttachmentsControl.AttachmentsSource>
+							<Binding Path="Data.Head.First.Zusa">
+								<Binding.Converter>
+									<uiC:PpsDataTableAttachmentConverter LinkColumnName="ObjkId" />
+								</Binding.Converter>
+							</Binding>
+						</uiC:PpsAttachmentsControl.AttachmentsSource>
+					</uiC:PpsAttachmentsControl>
+				</Grid>
+			</TabItem>
+		</TabControl>
+
+        <!--<Button Grid.Column="5" Grid.Row="0" Grid.RowSpan="5"  Command="{Binding Path=SetCharmCommand, RelativeSource={RelativeSource AncestorType={x:Type ui:PpsGenericWpfControl}}}" CommandParameter="{Binding}">
+		</Button>-->
+
+		<!--<uiC:PpsPictureControl Grid.Column="0" Grid.Row="0" Grid.RowSpan="4">
+            <uiC:PpsPictureControl.PictureSource>
+                <Binding Path="Data.Head.First.Zusa">
+                    <Binding.Converter>
+                        <uiC:PpsDataObjectPictureConverter LinkColumnName="ObjkId" PictureTag="Grundriss"/>
+                    </Binding.Converter>
+                </Binding>
+            </uiC:PpsPictureControl.PictureSource>
+        </uiC:PpsPictureControl>-->
+
+
+	</Grid>
+
+	<ui:PpsGenericWpfControl.Commands>
+		<ui:PpsUICommandButton Order="100,100" DisplayText="Veröffentlichen" Image="floppy_diskImage" Command="{Binding pushContact}" />
+	</ui:PpsGenericWpfControl.Commands>
+
+</ui:PpsGenericWpfControl>

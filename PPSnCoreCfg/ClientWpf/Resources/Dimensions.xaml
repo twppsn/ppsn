@@ -1,0 +1,17 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+					xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<sys:Double x:Key="PPSnSideBarIncreasedWidth">230</sys:Double>
+	<sys:Double x:Key="PPSnSideBarShrinkedWidth">50</sys:Double>
+
+	<sys:Double x:Key="PPSnPaneMaxGridWidth">1200</sys:Double>
+	<sys:Double x:Key="PPSnPaneBorderSizeLeft">24</sys:Double>
+	<sys:Double x:Key="PPSnPaneBorderSizeTop">24</sys:Double>
+	<sys:Double x:Key="PPSnPaneBorderSizeRight">0</sys:Double>
+	<sys:Double x:Key="PPSnCharmBarColumnWidth">48</sys:Double>
+
+	<GridLength x:Key="PaneLabelColumnWidth">110</GridLength>
+	<GridLength x:Key="PaneSpaceColumnWidth">55</GridLength>
+
+</ResourceDictionary>

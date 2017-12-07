@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
+		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+	
+	<luaengine>
+		<script id="mdmConstants" filename="constants.lua" />
+		<script id="mdmCountriesScript" filename="countries.lua" />
+	</luaengine>
+
+	<pps:ppsn name="ppsn">
+		<pps:register source="main">
+			<!-- definition for countries -->
+			<pps:field name="dbo.Land.Id" />
+			<pps:field name="dbo.Land.Iso" />
+			<pps:field name="dbo.Land.Name" />
+			<pps:field name="dbo.Land.EnglishName" />
+			<pps:field name="dbo.Land.Iso3" />
+			<pps:field name="dbo.Land.Tld" />
+			<pps:field name="dbo.Land.Vorwahl" />
+			<pps:field name="dbo.Land.Zone" />
+			<pps:field name="dbo.Land.PostAdr" />
+			<pps:field name="dbo.Land.IsActive" />
+
+			<pps:view name="masterData.Land" displayName="Länder">
+				<pps:source type="select">
+					<![CDATA[SELECT [Id], [Name], [Iso] FROM dbo.[Land] ]]>
+				</pps:source>
+			</pps:view>
+			
+			<!-- Synchronization data -->
+			<pps:dataset name="masterdata">
+				<pps:table name="Land">
+					<pps:meta name="syncType">ChangeTracking: dbo.Land</pps:meta>
+					<pps:column name="Id" fieldName="dbo.Land.Id" isPrimary="true" />
+					<pps:column name="ISO" fieldName="dbo.Land.Iso"/>
+					<pps:column name="Name" fieldName="dbo.Land.Name"/>
+					<pps:column name="EnglishName" fieldName="dbo.Land.EnglishName"/>
+					<pps:column name="ISO3" fieldName="dbo.Land.Iso3"/>
+					<pps:column name="Tld" fieldName="dbo.Land.Tld"/>
+					<pps:column name="Vorwahl" fieldName="dbo.Land.Vorwahl"/>
+					<pps:column name="EuroZone" fieldName="dbo.Land.Zone"/>
+					<pps:column name="PostAdr" fieldName="dbo.Land.PostAdr"/>
+					<pps:column name="IsActive" fieldName="dbo.Land.IsActive" />
+				</pps:table>
+			</pps:dataset>
+		
+			<!-- Editor data -->
+			<pps:dataset name="mdmCountries" serverScripts="mdmConstants mdmCountriesScript">
+				<pps:meta name="DefaultPaneUri" dataType="string">wpf/panes/countries.xaml</pps:meta>
+				
+				<pps:table name="Land">
+					<pps:meta name="SqlTable">dbo.Land</pps:meta>
+					<pps:column name="Id" fieldName="dbo.Land.Id" isPrimary="true" />
+					<pps:column name="ISO" fieldName="dbo.Land.Iso"/>
+					<pps:column name="Name" fieldName="dbo.Land.Name"/>
+					<pps:column name="EnglishName" fieldName="dbo.Land.EnglishName"/>
+					<pps:column name="ISO3" fieldName="dbo.Land.Iso3"/>
+					<pps:column name="Tld" fieldName="dbo.Land.Tld"/>
+					<pps:column name="Vorwahl" fieldName="dbo.Land.Vorwahl"/>
+					<pps:column name="EuroZone" fieldName="dbo.Land.Zone"/>
+					<pps:column name="PostAdr" fieldName="dbo.Land.PostAdr"/>
+					<pps:column name="IsActive" fieldName="dbo.Land.IsActive" />
+				</pps:table>
+			</pps:dataset>
+		</pps:register>
+		
+		<pps:wpf name="wpf">
+			<pps:template id="countries" file="countryTemplate.xaml" />
+			<pps:wpfSource id="mdm.countries" directory="Wpf" virtualPath="panes" />
+
+			<pps:action name="mdmCountriesEdit" displayName="Bearbeiten" displayImage="edit" priority="200">
+				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "mdmCountries" ]]></pps:condition>
+				<pps:code><![CDATA[ Window:LoadMask{ object = GetObject(CurrentItem.Id) }; ]]></pps:code>
+			</pps:action>
+		</pps:wpf>
+
+		<pps:document name="mdmCountries" dataset="mdmCountries" displayname="Countries" forceNextNumber="false" />
+	</pps:ppsn>
+</fragment>

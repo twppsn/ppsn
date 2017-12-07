@@ -1,0 +1,266 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
+		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+	
+	<?des-merge ../../mdm/constants/countries.xml?>
+	
+	<luaengine>
+		<script id="ContactsScript" filename="contactsServer.lua" />
+	</luaengine>
+
+	<pps:ppsn name="ppsn">
+		<pps:register source="main">
+			<!-- contact fields -->
+			<pps:field name="dbo.Kont.Id" />
+			<pps:field name="dbo.Kont.ObjkId" inherited="sys.Fields.ObjectId" />
+			<pps:field name="dbo.Kont.Name" displayName="Name" />
+			<pps:field name="dbo.Kont.LiefNr" displayName="Lief.-Nr." />
+			<pps:field name="dbo.Kont.KundNr" displayName="Kund.-Nr." />
+			<pps:field name="dbo.Kont.Iban" displayName="IBAN" />
+			<pps:field name="dbo.Kont.Bic" displayName="BIC" />
+			<pps:field name="dbo.Kont.Abc" displayName="ABC-Klass." />
+			<pps:field name="dbo.Kont.SteuerNr" displayName="Steuer-Nr."/>
+			<pps:field name="dbo.Kont.StIdentNr" />
+			<pps:field name="dbo.Kont.UstIdNr" displayName="Umsatzsteuer-Id"/>
+			<pps:field name="dbo.Kont.Inaktiv" />
+			<pps:field name="dbo.Kont.KgrpId" />
+			<pps:field name="dbo.Kont.KurzName" displayName="Kurzname"/>
+			<pps:field name="dbo.Kont.FibuNr" dataType="string">
+				<pps:attribute name="maxLength">20</pps:attribute>
+				<pps:attribute name="displayName">Fibu-Nr</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Kont.Anmerk" dataType="string">
+				<pps:attribute name="maxLength">2048</pps:attribute>
+				<pps:attribute name="displayName">Anmerkung</pps:attribute>
+			</pps:field>
+
+			<pps:field name="dbo.Ansp.Id" />
+			<pps:field name="dbo.Ansp.AdreId" />
+			<pps:field name="dbo.Ansp.Name" displayName="Name" />
+			<pps:field name="dbo.Ansp.Vorname" displayName="Vorname" />
+			<pps:field name="dbo.Ansp.Titel" displayName="Titel" />
+			<pps:field name="dbo.Ansp.Tel" displayName="Telefon" />
+			<pps:field name="dbo.Ansp.Fax" displayName="Fax" />
+			<pps:field name="dbo.Ansp.Mail" displayName="E-Mail" />
+			<pps:field name="dbo.Ansp.Mobil" displayName="Mobil" />
+			<pps:field name="dbo.Ansp.Std" />
+			<pps:field name="dbo.Ansp.Geschl" displayName="Geschlecht" />
+			<pps:field name="dbo.Ansp.Funktion" displayName="Funktion" />
+			<pps:field name="dbo.Ansp.Brief" displayName="Briefanrede" />
+			<pps:field name="dbo.Ansp.Anmerk" displayName="Anmerkung" />
+			<pps:field name="dbo.Ansp.Postfach" displayName="Postfach" />
+			<pps:field name="dbo.Ansp.Zusatz" displayName="Zusatz" />
+			<pps:field name="dbo.Ansp.Strasse" displayName="Strasse/Nr" />
+			<pps:field name="dbo.Ansp.Ort" displayName="Ort" />
+			<pps:field name="dbo.Ansp.Region" displayName="Region" />
+			<pps:field name="dbo.Ansp.Plz" displayName="Postleitzahl" />
+			<pps:field name="dbo.Ansp.Adresse" displayName="Adresse" />
+			<pps:field name="dbo.Ansp.Changed" >
+				<pps:attribute name="dataType">bool</pps:attribute>
+				<pps:attribute name="displayName">Andere Adresse</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Template" >
+				<pps:attribute name="dataType">string</pps:attribute>
+				<pps:attribute name="maxLength">512</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Angebot" >
+				<pps:attribute name="dataType">bool</pps:attribute>
+				<pps:attribute name="displayName">Angebot</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Auftrag" >
+				<pps:attribute name="dataType">bool</pps:attribute>
+				<pps:attribute name="displayName">Auftrag</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Rechnung" >
+				<pps:attribute name="dataType">bool</pps:attribute>
+				<pps:attribute name="displayName">Rechnung</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Anfrage" >
+				<pps:attribute name="dataType">bool</pps:attribute>
+				<pps:attribute name="displayName">Anfrage</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Ansp.Bestellung" >
+				<pps:attribute name="dataType">bool</pps:attribute>
+				<pps:attribute name="displayName">Bestellung</pps:attribute>
+			</pps:field>
+			
+			<!--  Ansprechpartner -->
+			<pps:view name="sds.ansp" displayName="Ansprechpartner">
+				<pps:source type="select">
+					<![CDATA[SELECT [Name],[Titel],[Tel],[Fax],[Mobil],[Mail],[Std],[Geschl],[Funktion],[Brief],[Anmerk],[Postfach],[Zusatz],[Strasse],[Ort],[Region],[Plz],[Adresse] FROM [dbo].[Ansp]]]>
+				</pps:source>
+				<pps:attribute name="Excel.Report">true</pps:attribute>
+			</pps:view>
+			
+			<!--  Server Site view -->
+			<pps:view name="masterData.Kont" displayName="Kontakte">
+				<pps:source type="select">
+					<![CDATA[SELECT [Id], [Name] FROM [dbo].[Kont]]]>
+				</pps:source>
+			</pps:view>
+
+			<!-- readonly data -->
+			<pps:dataset name="masterdata">
+				<pps:table name="Kont">
+					<pps:meta name="syncType">ChangeTracking: dbo.Kont</pps:meta>
+
+					<pps:column name="Id" fieldName="dbo.Kont.Id" isPrimary="true" />
+          <pps:column name="ObjkId" fieldName="dbo.Objk.Id" />
+					<pps:column name="Name" fieldName="dbo.Kont.Name" />
+				</pps:table>
+
+        <pps:table name="Adre">
+					<pps:meta name="syncType">ChangeTracking: dbo.Adre</pps:meta>
+					
+					<pps:column name="Id" fieldName="dbo.Adre.Id" isPrimary="true" />
+          <pps:relation name="ObjkId" fieldName="dbo.Adre.ObjkId" relationName="AdreKont" parentTable="Kont" parentColumn="ObjkId" parentType="Root" />
+					<pps:column name="Name" fieldName="dbo.Adre.Name" />
+				</pps:table>
+        
+				<pps:table name="Ansp">
+					<pps:meta name="syncType">ChangeTracking: dbo.Ansp</pps:meta>
+
+					<pps:column name="Id" fieldName="dbo.Ansp.Id" isPrimary="true" />
+          <pps:relation name="AdreId" fieldName="dbo.Ansp.AdreId" relationName="AnspAdre" parentTable="Adre" parentColumn="Id" parentType="Root" />
+					<pps:column name="Name" fieldName="dbo.Ansp.Name" />
+					<pps:column name="Vorname" fieldName="dbo.Ansp.Vorname" />
+					<pps:column name="Titel" fieldName="dbo.Ansp.Titel" />
+					<pps:column name="Tel" fieldName="dbo.Ansp.Tel" />
+					<pps:column name="Fax" fieldName="dbo.Ansp.Fax" />
+					<pps:column name="Mail" fieldName="dbo.Ansp.Mail" />
+					<pps:column name="Mobil" fieldName="dbo.Ansp.Mobil" />
+					<pps:column name="Geschl" fieldName="dbo.Ansp.Geschl" />
+					<pps:column name="Funktion" fieldName="dbo.Ansp.Funktion" />
+					<pps:column name="Brief" fieldName="dbo.Ansp.Brief" />
+					<pps:column name="Anmerk" fieldName="dbo.Ansp.Anmerk" />
+				</pps:table>
+			</pps:dataset>
+
+			<!-- contacts mask -->
+			<pps:dataset name="contactsDataSet" clientScripts="contactsLocal.lua" serverScripts="ContactsScript">
+				<pps:meta name="DefaultPaneUri" dataType="string">wpf/panes/contacts.xaml</pps:meta>
+				
+				<pps:autoTag name="Name" tableName="Head" columnName="Name" mode="First" />
+				<pps:autoTag name="LiefNr" tableName="Head" columnName="LiefNr" mode="Number" />
+				<pps:autoTag name="KundNr" tableName="Head" columnName="KundNr" mode="Number" />
+				<pps:autoTag name="Inaktiv" tableName="Head" columnName="Inaktiv" mode="First" />
+
+				<pps:table name="Head">
+					<pps:column name="Id" fieldName="dbo.Kont.Id" isPrimary="true" />
+					<pps:column name="ObjkId" fieldName="dbo.Kont.ObjkId" />
+					<pps:column name="Name" fieldName="dbo.Kont.Name" />
+					<pps:column name="LiefNr" fieldName="dbo.Kont.LiefNr" />
+					<pps:column name="KundNr" fieldName="dbo.Kont.KundNr" />
+					<pps:column name="KurzName" fieldName="dbo.Kont.KurzName" />
+					<pps:column name="UstIdNr" fieldName="dbo.Kont.UstIdNr" />
+					<pps:column name="Iban" fieldName="dbo.Kont.Iban" />
+					<pps:column name="Bic" fieldName="dbo.Kont.Bic" />
+					<pps:column name="Abc" fieldName="dbo.Kont.Abc" />
+					<pps:column name="KgrpId" fieldName="dbo.Kont.KgrpId" />
+					<pps:column name="StIdentNr" fieldName="dbo.Kont.StIdentNr" />
+					<pps:column name="SteuerNr" fieldName="dbo.Kont.SteuerNr" />
+					<!--<pps:column name="FibuNr" fieldName="dbo.Kont.FibuNr" />-->
+					<!--<pps:column name="Anmerk" fieldName="dbo.Kont.Anmerk" />-->
+					<pps:column name="Inaktiv" fieldName="dbo.Kont.Inaktiv" />
+				</pps:table>
+
+				<pps:table name="Zusa" dataSource="sys">
+					<pps:column name="Id" fieldName="sys.Fields.PrimaryKey" isPrimary="true" />
+					<pps:relation name="KontId" fieldName="dbo.Kont.Id" relationName="Zusa" parentTable="Head" parentColumn="Id" parentType="Root" />
+					<pps:column name="ObjkId" fieldName="sys.Fields.ObjectLinkId" />
+				</pps:table>
+				
+				<pps:table name="Adre">
+					<pps:column name="Id" fieldName="dbo.Adre.Id" isPrimary="true" />
+					<pps:relation name="ObjkId" fieldName="dbo.Adre.ObjkId" relationName="AdreHead" parentTable="Head" parentColumn="ObjkId" parentType="Root" />
+					<pps:column name="Name" fieldName="dbo.Adre.Name" />
+					<pps:column name="Postfach" fieldName="dbo.Adre.Postfach" />
+					<pps:column name="Zusatz" fieldName="dbo.Adre.Zusatz" />
+					<pps:column name="Strasse" fieldName="dbo.Adre.Strasse" />
+					<pps:column name="Ort" fieldName="dbo.Adre.Ort" />
+					<pps:column name="Region" fieldName="dbo.Adre.Region" />
+					<pps:column name="Plz" fieldName="dbo.Adre.Plz" />
+					<pps:column name="LandId" fieldName="dbo.Adre.LandId" />
+					<pps:column name="Adresse" fieldName="dbo.Adre.Adresse" />
+					<!--<pps:column name="Changed" fieldName="dbo.Adre.Changed" />-->
+					<!--<pps:column name="Template" fieldName="dbo.Adre.Template" />-->
+					<!--<pps:column name="Versand" fieldName="dbo.Adre.Versand" />-->
+					<!--<pps:column name="Rechnung" fieldName="dbo.Adre.Rechnung" />-->
+				</pps:table>
+
+				<pps:table name="Ansp">
+					<pps:column name="Id" fieldName="dbo.Ansp.Id" isPrimary="true" />
+					<pps:relation name="AdreId" fieldName="dbo.Ansp.AdreId" relationName="AnspAdre" parentTable="Adre" parentColumn="Id" parentType="Root" />
+					<pps:column name="Name" fieldName="dbo.Ansp.Name" />
+					<pps:column name="Vorname" fieldName="dbo.Ansp.Vorname" />
+					<pps:column name="Titel" fieldName="dbo.Ansp.Titel" />
+					<pps:column name="Tel" fieldName="dbo.Ansp.Tel" />
+					<pps:column name="Fax" fieldName="dbo.Ansp.Fax" />
+					<pps:column name="Mail" fieldName="dbo.Ansp.Mail" />
+					<pps:column name="Mobil" fieldName="dbo.Ansp.Mobil" />
+					<pps:column name="Std" fieldName="dbo.Ansp.Std" />
+					<pps:column name="Geschl" fieldName="dbo.Ansp.Geschl" />
+					<pps:column name="Funktion" fieldName="dbo.Ansp.Funktion" />
+					<pps:column name="Brief" fieldName="dbo.Ansp.Brief" />
+					<pps:column name="Anmerk" fieldName="dbo.Ansp.Anmerk" />
+					<pps:column name="Postfach" fieldName="dbo.Ansp.Postfach" />
+					<pps:column name="Zusatz" fieldName="dbo.Ansp.Zusatz" />
+					<pps:column name="Strasse" fieldName="dbo.Ansp.Strasse" />
+					<pps:column name="Ort" fieldName="dbo.Ansp.Ort" />
+					<pps:column name="Region" fieldName="dbo.Ansp.Region" />
+					<pps:column name="Plz" fieldName="dbo.Ansp.Plz" />
+					<pps:column name="Adresse" fieldName="dbo.Ansp.Adresse" />
+					<pps:column name="Changed" fieldName="dbo.Ansp.Changed" />
+					<pps:column name="Template" fieldName="dbo.Ansp.Template" />
+					<!--<pps:column name="Angebot" fieldName="dbo.Ansp.Angebot" />
+					<pps:column name="Auftrag" fieldName="dbo.Ansp.Auftrag" />
+					<pps:column name="Rechnung" fieldName="dbo.Ansp.Rechnung" />
+					<pps:column name="Anfrage" fieldName="dbo.Ansp.Anfrage" />-->
+					<pps:column name="Bestellung" fieldName="sys.Fields.Bit" />
+					<pps:column name="PictureId" fieldName="sys.Fields.ObjectLinkId" />
+				</pps:table>
+			</pps:dataset>
+		</pps:register>
+
+		<pps:wpf name="wpf">
+			<pps:template id="contacts" file="contactTemplate.xaml" />
+			<pps:wpfSource id="mdm.contacts" directory="Wpf" virtualPath="panes" />
+
+			<pps:view name="crmContacts" displayName="Kontakte" displayImage="contacts" view="local.objects" filter="Typ:=crmContacts">
+				<pps:filter name="lief" displayName="Lieferanten">
+					<![CDATA[ LiefNr:! ]]>
+				</pps:filter>
+				<pps:filter name="kund" displayName="Kunden">
+					<![CDATA[ KundNr:! ]]>
+				</pps:filter>
+				<pps:filter name="rest" displayName="Sonstige">
+					<![CDATA[ LiefNr: KundNr: ]]>
+				</pps:filter>
+				<pps:order name="Name" displayName="Nummer">
+					<![CDATA[ +Name,+Nr ]]>
+				</pps:order>
+				<pps:order name="nr" displayName="LiefNummer">
+					<![CDATA[ +LIEFNR ]]>
+				</pps:order>
+				<pps:order name="test" displayName="Test">
+					<![CDATA[ +Name ]]>
+				</pps:order>
+				<pps:order name="inaktiv" displayName="Inaktivierungsdatum">
+					<![CDATA[ +Inaktiv ]]>
+				</pps:order>
+			</pps:view>
+
+			<pps:action name="contactNew" displayName="Neuer Kontakt" displayImage="filePlus" priority="100">
+				<pps:condition><![CDATA[ return CurrentView == Views.crmContacts; ]]></pps:condition>
+				<pps:code><![CDATA[ Window:LoadMask{ createNew = 'crmContacts' }; ]]></pps:code>
+			</pps:action>
+			<pps:action name="contactOpen" displayName="Bearbeiten" displayImage="edit" priority="200">
+				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "crmContacts" ]]></pps:condition>
+				<pps:code><![CDATA[ Window:LoadMask{ object = GetObject(CurrentItem.Id) }; ]]> </pps:code>
+			</pps:action>
+		</pps:wpf>
+
+		<pps:document name="crmContacts" dataset="contactsDataSet" displayname="Contacts" forceNextNumber="true">
+		</pps:document>
+	</pps:ppsn>
+</fragment>

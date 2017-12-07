@@ -1,0 +1,767 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="DEMppsn"
+           targetNamespace="http://tecware-gmbh.de/dev/des/2015/ppsn"
+           elementFormDefault="qualified"
+           xmlns="http://tecware-gmbh.de/dev/des/2014"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+					 xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+
+	<xs:import namespace="http://tecware-gmbh.de/dev/des/2014" />
+
+	<xs:complexType name="dataSourceType">
+		<xs:complexContent>
+			<xs:extension base="ConfigItemType">
+				
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+
+	<xs:element name="dataSource" abstract="true" type="pps:dataSourceType">
+		<xs:annotation>
+			<xs:documentation>Abstract base node, for all data source implementations.</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+
+	<xs:element name="sqlExDataSource" substitutionGroup="pps:dataSource">
+		<xs:annotation>
+			<xs:documentation>Implementation for a Sql-Server data source.</xs:documentation>
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.Sql.PpsSqlExDataSource</class>
+			</xs:appinfo>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="pps:dataSourceType">
+					<xs:sequence>
+						<xs:element name="connectionString" type="xs:string" minOccurs="1" maxOccurs="1">
+							<xs:annotation>
+								<xs:documentation>Connection string to the database, this string is used for system connection.</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+					</xs:sequence>
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="sysDataSource" substitutionGroup="pps:dataSource">
+		<xs:annotation>
+			<xs:documentation>Implementation for a Sys data source.</xs:documentation>
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.PpsSysDataSource</class>
+			</xs:appinfo>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="pps:dataSourceType">
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:simpleType name="fieldAttributeNames">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="displayName" />
+			<xs:enumeration value="maxLength" />
+			<xs:enumeration value="dataType" />
+			<xs:enumeration value="nullable" />
+			<xs:enumeration value="default" />
+			<xs:enumeration value="sourceColumn" />
+			<xs:enumeration value="refTable" />
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="viewAttributeNames">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="displayImage" />
+			<xs:enumeration value="shortcut" />
+			<xs:enumeration value="Wpf.MenuItem" />
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:simpleType name="autoTagModes">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="First" />
+			<xs:enumeration value="Number" />
+			<xs:enumeration value="Concat" />
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:attributeGroup name="columnBasicAttributes">
+		<xs:attribute name="name" type="KeyType" use="required">
+		</xs:attribute>
+		<xs:attribute name="fieldName" type="xs:string" use="required">
+		</xs:attribute>
+		<xs:attribute name="isPrimary" type="xs:boolean" use="optional" default="false">
+		</xs:attribute>
+		<xs:attribute name="isIdentity" type="xs:boolean" use="optional" default="false">
+			<xs:annotation>
+				<xs:documentation>(Default: same as isPrimary)</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:attributeGroup>
+
+	<xs:complexType name="fieldAttributeType">
+		<xs:simpleContent>
+			<xs:extension base="xs:string">
+				<xs:attribute name="name" use="required">
+					<xs:simpleType>
+						<xs:union memberTypes="pps:fieldAttributeNames KeyType" />
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="dataType" type="LuaType" use="optional">
+				</xs:attribute>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+
+	<xs:element name="register">
+		<xs:annotation>
+			<xs:documentation>Expands the definition of a specific datasource.</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence minOccurs="0" maxOccurs="unbounded">
+				<xs:element name="field" minOccurs="0" maxOccurs="unbounded">
+					<xs:annotation>
+						<xs:documentation>Registers a field description in the system.</xs:documentation>
+					</xs:annotation>
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="attribute" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType">
+							</xs:element>
+						</xs:sequence>
+						<xs:attribute name="name" type="KeyType" use="required">
+							<xs:annotation>
+								<xs:documentation>Full qualified name of the column.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="displayName" type="xs:string" use="optional">
+						</xs:attribute>
+						<xs:attribute name="dataType" type="LuaType" use="optional">
+						</xs:attribute>
+						<xs:attribute name="inherited" use="optional">
+							<xs:annotation>
+								<xs:documentation>Base description.</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:list itemType="xs:string" />
+							</xs:simpleType>
+						</xs:attribute>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="view" minOccurs="0" maxOccurs="unbounded">
+					<xs:annotation>
+						<xs:documentation>Registers accessable view.</xs:documentation>
+					</xs:annotation>
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="source" minOccurs="1" maxOccurs="1">
+								<xs:annotation>
+									<xs:documentation>Description of the view.</xs:documentation>
+								</xs:annotation>
+								<xs:complexType>
+									<xs:simpleContent>
+										<xs:extension base="xs:string">
+											<xs:attribute name="type" use="required">
+												<xs:annotation>
+													<xs:documentation>How is the code parsed. The actual content depends on the datasource.</xs:documentation>
+												</xs:annotation>
+												<xs:simpleType>
+													<xs:restriction base="xs:string"><!-- todo: union with string -->
+														<xs:enumeration value="select" />
+														<xs:enumeration value="file" />
+														<xs:enumeration value="resource" />
+														<xs:enumeration value="view" />
+													</xs:restriction>
+												</xs:simpleType>
+											</xs:attribute>
+											<xs:anyAttribute processContents="lax" />
+										</xs:extension>
+									</xs:simpleContent>
+								</xs:complexType>
+							</xs:element>
+
+							<xs:element name="attribute" minOccurs="0" maxOccurs="unbounded">
+								<xs:complexType>
+									<xs:simpleContent>
+										<xs:extension base="xs:string">
+											<xs:attribute name="name" use="required">
+												<xs:annotation>
+													<xs:documentation>Name of the attribute.</xs:documentation>
+												</xs:annotation>
+												<xs:simpleType>
+													<xs:union memberTypes="pps:viewAttributeNames KeyType" />
+												</xs:simpleType>
+											</xs:attribute>
+											<xs:attribute name="dataType" type="LuaType" use="optional">
+												<xs:annotation>
+													<xs:documentation>Datetype of the value.</xs:documentation>
+												</xs:annotation>
+											</xs:attribute>
+										</xs:extension>
+									</xs:simpleContent>
+								</xs:complexType>
+							</xs:element>
+
+							<xs:sequence minOccurs="0" maxOccurs="unbounded">
+								<xs:element name="filter" minOccurs="0" maxOccurs="unbounded">
+									<xs:complexType>
+										<xs:simpleContent>
+											<xs:extension base="xs:string">
+												<xs:attribute name="name" use="required" type="KeyType">
+													<xs:annotation>
+														<xs:documentation>Id of this filter</xs:documentation>
+													</xs:annotation>
+												</xs:attribute>
+												<xs:attribute name="displayName" use="optional" type="xs:string">
+													<xs:annotation>
+														<xs:documentation>Filter name</xs:documentation>
+													</xs:annotation>
+												</xs:attribute>
+											</xs:extension>
+										</xs:simpleContent>
+									</xs:complexType>
+								</xs:element>
+								<xs:element name="order" minOccurs="0" maxOccurs="unbounded">
+									<xs:complexType>
+										<xs:simpleContent>
+											<xs:extension base="xs:string">
+												<xs:attribute name="name" use="required" type="KeyType">
+													<xs:annotation>
+														<xs:documentation>Id of this sort description</xs:documentation>
+													</xs:annotation>
+												</xs:attribute>
+												<xs:attribute name="displayName" use="optional" type="xs:string">
+													<xs:annotation>
+														<xs:documentation>Sort display name</xs:documentation>
+													</xs:annotation>
+												</xs:attribute>
+											</xs:extension>
+										</xs:simpleContent>
+									</xs:complexType>
+								</xs:element>
+							</xs:sequence>
+						</xs:sequence>
+						<xs:attribute name="name" use="required" type="KeyType">
+							<xs:annotation>
+								<xs:documentation>Id or name of the view.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="displayName" use="optional" type="xs:string">
+							<xs:annotation>
+								<xs:documentation>Name for the view.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="inherited" use="optional">
+							<xs:annotation>
+								<xs:documentation>Base view.</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:list itemType="xs:string" />
+							</xs:simpleType>
+						</xs:attribute>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="dataset" minOccurs="0" maxOccurs="unbounded">
+					<xs:annotation>
+						<xs:documentation>Definition of a dataset, that will descript later a document, to process complex data.</xs:documentation>
+					</xs:annotation>
+					<xs:complexType>
+						<xs:sequence minOccurs="0" maxOccurs="unbounded">
+							<xs:element name="meta" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType" />
+							<xs:element name="autoTag" minOccurs="0" maxOccurs="unbounded">
+								<xs:complexType>
+									<xs:attribute name="name" type="KeyType" use="required">
+										<xs:annotation>
+											<xs:documentation>Name of the tag</xs:documentation>
+										</xs:annotation>
+									</xs:attribute>
+									<xs:attribute name="tableName" type="xs:string" use="required">
+										<xs:annotation>
+											<xs:documentation></xs:documentation>
+										</xs:annotation>
+									</xs:attribute>
+									<xs:attribute name="columnName" type="xs:string" use="required">
+										<xs:annotation>
+											<xs:documentation></xs:documentation>
+										</xs:annotation>
+									</xs:attribute>
+									<xs:attribute name="mode" type="pps:autoTagModes" use="required">
+										<xs:annotation>
+											<xs:documentation></xs:documentation>
+										</xs:annotation>
+									</xs:attribute>
+								</xs:complexType>
+							</xs:element>
+							
+							<xs:element name="table" minOccurs="0" maxOccurs="unbounded">
+								<xs:complexType>
+									<xs:sequence minOccurs="0" maxOccurs="unbounded">
+										<xs:element name="meta" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType" />
+										<xs:element name="column" minOccurs="0" maxOccurs="unbounded">
+											<xs:complexType>
+												<xs:sequence minOccurs="0" maxOccurs="unbounded">
+													<xs:element name="meta" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType" />
+												</xs:sequence>
+												<xs:attributeGroup ref="pps:columnBasicAttributes" />
+											</xs:complexType>
+										</xs:element>
+										<xs:element name="relation" minOccurs="0" maxOccurs="unbounded">
+											<xs:complexType>
+												<xs:sequence minOccurs="0" maxOccurs="unbounded">
+													<xs:element name="meta" minOccurs="0" maxOccurs="unbounded" type="pps:fieldAttributeType" />
+												</xs:sequence>
+												<xs:attributeGroup ref="pps:columnBasicAttributes" />
+												<xs:attribute name="relationName" type="xs:string" use="required">
+												</xs:attribute>
+												<xs:attribute name="parentTable" type="xs:string" use="required">
+												</xs:attribute>
+												<xs:attribute name="parentColumn" type="xs:string" use="required">
+												</xs:attribute>
+												<xs:attribute name="parentType" use="required">
+													<xs:simpleType>
+														<xs:restriction base="xs:string">
+															<xs:enumeration value="Root" />
+															<xs:enumeration value="Cascade" />
+															<xs:enumeration value="Restricted" />
+															<xs:enumeration value="SetNull" />
+														</xs:restriction>
+													</xs:simpleType>
+												</xs:attribute>
+											</xs:complexType>
+										</xs:element>
+									</xs:sequence>
+									<xs:attribute name="name" type="KeyType" use="required">
+										<xs:annotation>
+											<xs:documentation>Name of the table</xs:documentation>
+										</xs:annotation>
+									</xs:attribute>
+									<xs:attribute name="dataSource" type="xs:string" use="optional">
+										<xs:annotation>
+											<xs:documentation>Defines an alternative data source for this table in the dataset.</xs:documentation>
+										</xs:annotation>
+									</xs:attribute>
+								</xs:complexType>
+							</xs:element>
+						</xs:sequence>
+						<xs:attribute name="name" use="required" type="KeyType">
+							<xs:annotation>
+								<xs:documentation>Id or name of the dataset.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="inherited" use="optional">
+							<xs:annotation>
+								<xs:documentation>Base dataset.</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:list itemType="xs:string" />
+							</xs:simpleType>
+						</xs:attribute>
+						<xs:attribute name="serverScripts" type="ScriptList" use="optional">
+							<xs:annotation>
+								<xs:documentation>Extension for the document.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="clientScripts" type="PathArray" use="optional">
+							<xs:annotation>
+								<xs:documentation>Script files for the local site.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+					</xs:complexType>
+				</xs:element>
+			</xs:sequence>
+			<xs:attribute name="source" type="KeyType" use="required">
+				<xs:annotation>
+					<xs:documentation>Datasource, that will be expanded.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:complexType name="objectItemType">
+		<xs:complexContent>
+			<xs:extension base="ConfigItemType">
+				<xs:attribute name="nrLength" type="xs:integer" use="optional">
+					<xs:annotation>
+						<xs:documentation>Length to generate number, if this value is not set, GetNextNumber must defined.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="forceNextNumber" type="xs:boolean" use="optional" default="false">
+					<xs:annotation>
+						<xs:documentation>Force on new items an new number.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+
+	<xs:element name="objectItem" abstract="true" type="pps:objectItemType" />
+
+	<xs:element name="attachment" type="pps:objectItemType" substitutionGroup="pps:objectItem">
+		<xs:annotation>
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.PpsAttachmentItem</class>
+			</xs:appinfo>
+			<xs:documentation></xs:documentation>
+		</xs:annotation>
+	</xs:element>
+
+	<xs:complexType name="documentType">
+		<xs:complexContent>
+			<xs:extension base="pps:objectItemType">
+				<xs:attribute name="dataset" type="xs:string" use="required">
+					<xs:annotation>
+						<xs:documentation>Connected dataset.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	
+	<xs:element name="document" type="pps:documentType" substitutionGroup="pps:objectItem">
+		<xs:annotation>
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.PpsDocumentItem</class>
+			</xs:appinfo>
+			<xs:documentation></xs:documentation>
+		</xs:annotation>
+	</xs:element>
+
+	<xs:element name="package" substitutionGroup="configItem">
+		<xs:annotation>
+			<xs:documentation>Defines a pps functionality.</xs:documentation>
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.PpsPackage</class>
+			</xs:appinfo>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="ConfigLogItemType">
+					<xs:sequence minOccurs="0" maxOccurs="unbounded">
+						<xs:element ref="pps:objectItem" minOccurs="0" maxOccurs="unbounded" />
+					</xs:sequence>
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="wpf">
+		<xs:annotation>
+			<xs:documentation></xs:documentation>		
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.Wpf.WpfClientItem</class>
+			</xs:appinfo>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="ConfigItemType">
+					<xs:sequence minOccurs="0" maxOccurs="unbounded">
+						<xs:element name="environment" minOccurs="0" maxOccurs="unbounded">
+							<xs:annotation>
+								<xs:documentation>Initialization snippet for the client environment.</xs:documentation>
+							</xs:annotation>
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="code" minOccurs="1" maxOccurs="1" type="xs:string">
+										<xs:annotation>
+											<xs:documentation>Content of the snippet.</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+								</xs:sequence>
+								<xs:attribute name="id" type="KeyType" use="required">
+									<xs:annotation>
+										<xs:documentation>Unique name for the script snippet.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="priority" type="xs:integer" use="optional">
+									<xs:annotation>
+										<xs:documentation>Sort order.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+							</xs:complexType>
+						</xs:element>
+						<xs:element name="view" minOccurs="0" maxOccurs="unbounded">
+							<xs:annotation>
+								<xs:documentation>Creates a view for the wpf navigator</xs:documentation>
+							</xs:annotation>
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="condition" minOccurs="0" maxOccurs="1" type="xs:string">
+										<xs:annotation>
+											<xs:documentation>Visible Condition for the command.</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:sequence  minOccurs="0" maxOccurs="unbounded">
+										<xs:element name="filter" minOccurs="0" maxOccurs="unbounded">
+											<xs:complexType>
+												<xs:simpleContent>
+													<xs:extension base="xs:string">
+														<xs:attribute name="name" type="KeyType" use="required">
+															<xs:annotation>
+																<xs:documentation></xs:documentation>
+															</xs:annotation>
+														</xs:attribute>
+														<xs:attribute name="displayName" type="xs:string" use="optional">
+															<xs:annotation>
+																<xs:documentation></xs:documentation>
+															</xs:annotation>
+														</xs:attribute>
+														<xs:attribute name="priority" type="xs:int" use="optional">
+															<xs:annotation>
+																<xs:documentation></xs:documentation>
+															</xs:annotation>
+														</xs:attribute>
+													</xs:extension>
+												</xs:simpleContent>
+											</xs:complexType>
+										</xs:element>
+										<xs:element name="order" minOccurs="0" maxOccurs="unbounded">
+											<xs:complexType>
+												<xs:simpleContent>
+													<xs:extension base="xs:string">
+														<xs:attribute name="name" type="KeyType" use="required">
+															<xs:annotation>
+																<xs:documentation></xs:documentation>
+															</xs:annotation>
+														</xs:attribute>
+														<xs:attribute name="displayName" type="xs:string" use="optional">
+															<xs:annotation>
+																<xs:documentation></xs:documentation>
+															</xs:annotation>
+														</xs:attribute>
+														<xs:attribute name="priority" type="xs:int" use="optional">
+															<xs:annotation>
+																<xs:documentation></xs:documentation>
+															</xs:annotation>
+														</xs:attribute>
+													</xs:extension>
+												</xs:simpleContent>
+											</xs:complexType>
+										</xs:element>
+									</xs:sequence>
+								</xs:sequence>
+								<xs:attribute name="name" type="KeyType" use="required">
+									<xs:annotation>
+										<xs:documentation>Name for command mode + shortcut.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="displayName" type="xs:string" use="required">
+									<xs:annotation>
+										<xs:documentation>Displayname of the view.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="displayImage" type="xs:string" use="optional">
+									<xs:annotation>
+										<xs:documentation>Displayimage of the view.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="view" type="xs:string" use="required">
+									<xs:annotation>
+										<xs:documentation>View for the data list</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="filter" type="xs:string" use="optional">
+									<xs:annotation>
+										<xs:documentation>Prefilter of the view.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="securityToken" type="xs:string" use="optional">
+									<xs:annotation>
+										<xs:documentation>Security</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+							</xs:complexType>
+						</xs:element>
+						<xs:element name="action" minOccurs="0" maxOccurs="unbounded">
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="condition" minOccurs="0" maxOccurs="1" type="xs:string">
+										<xs:annotation>
+											<xs:documentation>Visible Condition for the command.</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="code" minOccurs="1" maxOccurs="1" type="xs:string">
+										<xs:annotation>
+											<xs:documentation>Command content.</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+								</xs:sequence>
+								<xs:attribute name="name" type="KeyType" use="required">
+									<xs:annotation>
+										<xs:documentation>Unique internal name of the action.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="displayName" type="xs:string" use="optional">
+									<xs:annotation>
+										<xs:documentation>Displayname of the action.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="displayImage" type="xs:string" use="optional">
+									<xs:annotation>
+										<xs:documentation>Displayimage of the action.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="priority" type="xs:integer" use="optional">
+									<xs:annotation>
+										<xs:documentation>Sort order.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="securityToken" type="xs:string" use="optional">
+									<xs:annotation>
+										<xs:documentation>Security</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+							</xs:complexType>
+						</xs:element>
+						<xs:element name="template" minOccurs="0" maxOccurs="unbounded">
+							<xs:annotation>
+								<xs:documentation>Link to template definition.</xs:documentation>
+							</xs:annotation>
+							<xs:complexType>
+								<xs:attribute name="id" type="KeyType" use="required">
+									<xs:annotation>
+										<xs:documentation>Key to identify the template file.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="file" type="PathType" use="required">
+									<xs:annotation>
+										<xs:documentation>Xaml-file that contains the templates.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+							</xs:complexType>
+						</xs:element>
+						<xs:element name="theme" minOccurs="0" maxOccurs="unbounded">
+							<xs:annotation>
+								<xs:documentation>Link to theme definition.</xs:documentation>
+							</xs:annotation>
+							<xs:complexType>
+								<xs:attribute name="id" type="KeyType" use="required">
+									<xs:annotation>
+										<xs:documentation>Key to identify the template file.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="file" type="PathType" use="required">
+									<xs:annotation>
+										<xs:documentation>Xaml-file that contains the theme.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+							</xs:complexType>
+						</xs:element>
+						<xs:element name="wpfSource" minOccurs="0" maxOccurs="unbounded">
+							<xs:annotation>
+								<xs:documentation>Defines a directory that holds xaml-files and lua files.</xs:documentation>
+							</xs:annotation>
+							<xs:complexType>
+								<xs:attribute name="id" type="KeyType" use="required">
+									<xs:annotation>
+										<xs:documentation>Key to identify the template file.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="directory" type="PathType" use="required">
+									<xs:annotation>
+										<xs:documentation>Directory with client related files.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+								<xs:attribute name="virtualPath" type="xs:string" use="optional" default="/">
+									<xs:annotation>
+										<xs:documentation>Virtual request path.</xs:documentation>
+									</xs:annotation>
+								</xs:attribute>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="excel">
+		<xs:annotation>
+			<xs:documentation></xs:documentation>
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.Wpf.ExcelCientItem</class>
+			</xs:appinfo>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="ConfigItemType">
+					<xs:sequence minOccurs="0" maxOccurs="unbounded">
+					</xs:sequence>
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="reports">
+		<xs:annotation>
+			<xs:documentation>Definies the report settings.</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:attribute name="system" type="PathType" use="optional">
+				<xs:annotation>
+					<xs:documentation>Root path of the ConTeXt report environent.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="base" type="PathType" use="required">
+				<xs:annotation>
+					<xs:documentation>Report source path, the base path.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="logs" type="PathType" use="optional">
+				<xs:annotation>
+					<xs:documentation>Path were the reports are moved (default: %base%\.logs)</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="fonts" type="PathType" use="optional">
+				<xs:annotation>
+					<xs:documentation>Path to the system fonts directory (default: %system%\fonts)</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="cleanBaseDirectory" type="xs:int" use="optional" default="1440">
+				<xs:annotation>
+					<xs:documentation>Is it allowed to clean other files than the session files (in min, default: 1440 / 24h).</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="zipLogFiles" type="xs:boolean" use="optional" default="true">
+				<xs:annotation>
+					<xs:documentation>Zip resulting log files, to save space (default: true)</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="storeSuccessLogs" type="xs:boolean" use="optional" default="false">
+				<xs:annotation>
+					<xs:documentation>Store also logs with the result success (default: false)</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="ppsn" substitutionGroup="configItem">
+		<xs:annotation>
+			<xs:documentation>Basic environment for the ERP services.</xs:documentation>
+			<xs:appinfo>
+				<class>TecWare.PPSn.Server.PpsApplication</class>
+			</xs:appinfo>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="ConfigLogItemType">
+					<xs:sequence minOccurs="0" maxOccurs="unbounded">
+						<xs:element ref="pps:dataSource" minOccurs="0" maxOccurs="unbounded" />
+						<xs:element ref="pps:wpf" minOccurs="0" maxOccurs="1" />
+						<xs:element ref="pps:excel" minOccurs="0" maxOccurs="1" />
+						<xs:element ref="pps:register" minOccurs="0" maxOccurs="unbounded" />
+						<xs:element ref="pps:reports" minOccurs="0" maxOccurs="1" />
+						<xs:element ref="pps:objectItem" minOccurs="0" maxOccurs="unbounded" />
+						<xs:element ref="pps:package" minOccurs="0" maxOccurs="unbounded" />
+					</xs:sequence>
+					<xs:attribute name="mainDataSource" type="xs:string" use="optional">
+						<xs:annotation>
+							<xs:documentation>Name of the main datasource, for the initial user list.</xs:documentation>
+						</xs:annotation>
+					</xs:attribute>
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+</xs:schema>

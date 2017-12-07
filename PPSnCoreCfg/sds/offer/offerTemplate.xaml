@@ -1,0 +1,29 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="..\..\ClientWpf\Default.xaml" />
+	</ResourceDictionary.MergedDictionaries>
+
+	<DataTemplate x:Key="sdsOffer,,100">
+		<Grid>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="*" />
+			</Grid.ColumnDefinitions>
+			<TextBlock Grid.Column="0" Text="Angebot: "/>
+			<TextBlock Grid.Column="1" Text="{Binding Nr}" />
+			<TextBlock Grid.Column="2" Text="{Binding Datum,StringFormat='d',ConverterCulture='de-DE'}" Margin="10"  />
+			<TextBlock Grid.Column="3" Text="{Binding AnfNr}" Margin="10"  />
+			<TextBlock Grid.Column="4" Text="{Binding AnfDatum,StringFormat='d',ConverterCulture='de-DE'}" Margin="10"  />
+			<TextBlock Grid.Column="5" Text="{Binding Adresse}" Margin="10"  />
+			<TextBlock Grid.Column="6" Text="{Binding Zusatz}" Margin="10"  />
+		</Grid>
+	</DataTemplate>
+
+</ResourceDictionary>

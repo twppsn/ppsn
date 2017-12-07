@@ -1,0 +1,108 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
+		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+  
+	<luaengine>
+		<script id="ContractScript" filename="contractServer.lua" />
+	</luaengine>
+
+	<pps:ppsn name="ppsn">
+		<pps:register source="main">
+			<!-- contract fields -->
+      <pps:field name="sds.Auko.Id" />
+			<pps:field name="sds.Auko.ObjkId"  inherited="sys.Fields.ObjectId" />
+			<pps:field name="sds.Auko.Datum" displayName="Datum" />
+			<pps:field name="sds.Auko.BestDatum" displayName="Bestelldatum" />
+			<pps:field name="sds.Auko.KontId" inherited="sys.Fields.MasterDataKey" displayName="Kontakt" >
+				<pps:attribute name="refTable">Kont</pps:attribute>
+			</pps:field>
+			<pps:field name="sds.Auko.Adresse" displayName="Adresse" />
+			<pps:field name="sds.Auko.VeAdre" displayName="Versandadresse" />
+			<pps:field name="sds.Auko.ReAdre" displayName="Rechnungsadresse" />
+			<pps:field name="sds.Auko.BestNr" displayName="Bestellnr." />
+			<pps:field name="sds.Auko.Zusatz" displayName="Bestellangaben" />
+			<pps:field name="sds.Auko.PersId" displayName="Sachbearbeiter" />
+			<pps:field name="sds.Auko.Ansp" displayName="Ansprechpartner" />
+			<pps:field name="sds.Auko.KopfText" displayName="Kopftext" />
+			<pps:field name="sds.Auko.FussText" displayName="Fusstext" />
+			<pps:field name="sds.Auko.Anmerk" displayName="Anmerkungen" />
+
+			<pps:field name="sds.Aupo.Id" />
+			<pps:field name="sds.Aupo.AukoId" />
+			<pps:field name="sds.Aupo.Pos" displayName="Position" />
+			<pps:field name="sds.Aupo.ProdId" displayName="Produkt" />
+			<pps:field name="sds.Aupo.ProdNr" displayName="Produkt-Nr." />
+			<pps:field name="sds.Aupo.Znr" displayName="Zeich-Nr." />
+			<pps:field name="sds.Aupo.Text" displayName="Produkttext" />
+			<pps:field name="sds.Aupo.KontProdNr" displayName="Kunden-Produkt-Nr." />
+			<pps:field name="sds.Aupo.Termin" displayName="Termin" />
+			<pps:field name="sds.Aupo.Menge" displayName="Menge" />
+			
+			<!-- contracts mask -->
+			<pps:dataset name="contractDataSet" serverScripts="ContractScript">
+        <pps:meta name="DefaultPaneUri" dataType="string">wpf/panes/contract.xaml</pps:meta>
+        
+				<pps:table name="Head">
+          <pps:column name="Id" fieldName="sds.Auko.Id" isPrimary="true" />
+					<pps:column name="ObjkId" fieldName="sds.Auko.ObjkId" />
+					<pps:column name="Datum" fieldName="sds.Auko.Datum" />
+					<pps:column name="BestDatum" fieldName="sds.Auko.BestDatum" />
+					<pps:column name="BestNr" fieldName="sds.Auko.BestNr" />
+					<pps:column name="KontId" fieldName="sds.Auko.KontId" />
+					<pps:column name="Adresse" fieldName="sds.Auko.Adresse" />
+					<pps:column name="VeAdre" fieldName="sds.Auko.VeAdre" />
+					<pps:column name="ReAdre" fieldName="sds.Auko.ReAdre" />
+					<pps:column name="Zusatz" fieldName="sds.Auko.Zusatz" />
+					<pps:column name="PersId" fieldName="sds.Auko.PersId" />
+					<pps:column name="Ansp" fieldName="sds.Auko.Ansp" />
+					<pps:column name="KopfText" fieldName="sds.Auko.KopfText" />
+					<pps:column name="FussText" fieldName="sds.Auko.FussText" />
+					<pps:column name="Anmerk" fieldName="sds.Auko.Anmerk" />
+				</pps:table>
+
+				<pps:table name="Aupo">
+					<pps:column name="Id" fieldName="sds.Aupo.Id" isPrimary="true" />
+					<pps:relation name="AukoId" fieldName="sds.Aupo.AukoId" relationName="AupoHead" parentTable="Head" parentColumn="Id" parentType="Root" />
+					<pps:column name="Pos" fieldName="sds.Aupo.Pos" />
+					<pps:column name="ProdId" fieldName="sds.Aupo.ProdId" />
+					<pps:column name="ProdNr" fieldName="sds.Aupo.ProdNr" />
+					<pps:column name="Znr" fieldName="sds.Aupo.Znr" />
+					<pps:column name="Text" fieldName="sds.Aupo.Text" />
+					<pps:column name="KontProdNr" fieldName="sds.Aupo.KontProdNr" />
+					<pps:column name="Termin" fieldName="sds.Aupo.Termin" />
+					<pps:column name="Menge" fieldName="sds.Aupo.Menge" />
+				</pps:table>
+
+			</pps:dataset>
+		</pps:register>
+
+		<pps:wpf name="wpf">
+			<pps:template id="contract" file="contractTemplate.xaml" />
+      <pps:wpfSource id="sds.contract" directory="Wpf" virtualPath="panes" />
+
+			<pps:view name="sdsContract" displayName="Aufträge" displayImage="contract" view="local.objects" filter="Typ:=sdsContract">
+				<pps:filter name="lief" displayName="Entwurf">
+					<![CDATA[ Datum: ]]>
+				</pps:filter>
+				<pps:filter name="kund" displayName="Archiv">
+					<![CDATA[ Datum:! ]]>
+				</pps:filter>
+				<pps:order name="Name" displayName="Nummer">
+					<![CDATA[ +Nr ]]>
+				</pps:order>
+			</pps:view>
+
+			<pps:action name="contractNew" displayName="Neuer Auftrag" displayImage="filePlus"  priority="100">
+				<pps:condition><![CDATA[ return CurrentView == Views.sdsContract; ]]></pps:condition>
+				<pps:code><![CDATA[ Window:LoadMask{ createNew = 'sdsContract' }; ]]></pps:code>
+			</pps:action>
+			<pps:action name="contractOpen" displayName="Bearbeiten" displayImage="edit" priority="200">
+				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "sdsContract" ]]></pps:condition>
+				<pps:code><![CDATA[ Window:LoadMask{ object = GetObject(CurrentItem.Id) }; ]]> </pps:code>
+			</pps:action>
+		</pps:wpf>
+
+		<pps:document name="sdsContract" dataset="contractDataSet" displayname="Contract">
+		</pps:document>
+	</pps:ppsn>
+</fragment>

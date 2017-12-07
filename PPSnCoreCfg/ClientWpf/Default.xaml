@@ -1,0 +1,25 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	
+    <!-- blue -->
+	<ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Resources/Colors.xaml" />
+        <ResourceDictionary Source="Resources/Converter.xaml" />
+        <ResourceDictionary Source="Resources/Dimensions.xaml" />
+        <ResourceDictionary Source="Resources/Styles/Button.xaml" />
+        <ResourceDictionary Source="Resources/Styles/ToolBar.xaml" />
+        <ResourceDictionary Source="Resources/Styles/TabControl.xaml" />
+        <ResourceDictionary Source="Resources/Styles/TreeView.xaml" />
+        <ResourceDictionary Source="Resources/Styles/ListBox.xaml" />
+        <ResourceDictionary Source="Resources/Styles/ScrollViewer.xaml" />
+        <ResourceDictionary Source="Resources/Styles/Expander.xaml" />
+        <ResourceDictionary Source="Resources/Styles/DatePicker.xaml" />
+        <ResourceDictionary Source="Resources/Styles/SideBarMenu.xaml" />
+        <ResourceDictionary Source="Resources/Icons/DrawingImage.xaml" />
+        <ResourceDictionary Source="Resources/Styles/TextBox.xaml" />
+        <ResourceDictionary Source="Resources/Styles/Label.xaml" />
+		<ResourceDictionary Source="Resources/Styles/ComboBox.xaml" />
+		<ResourceDictionary Source="Resources/Styles/CheckBox.xaml" />
+	</ResourceDictionary.MergedDictionaries>
+
+</ResourceDictionary>

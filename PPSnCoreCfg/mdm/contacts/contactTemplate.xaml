@@ -1,0 +1,83 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	
+	<ResourceDictionary.MergedDictionaries>
+		<ResourceDictionary Source="..\..\ClientWpf\Default.xaml" />
+	</ResourceDictionary.MergedDictionaries>
+
+	<DataTemplate x:Key="crmContacts,,100">
+		<!--  crmContacts,dbo.contacts,100 -->
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="20" />
+				<RowDefinition Height="20" />
+			</Grid.RowDefinitions>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="100"/>
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="300" />
+				<ColumnDefinition Width="300" />
+				<ColumnDefinition Width="100"/>
+				<ColumnDefinition Width="150"/>
+			</Grid.ColumnDefinitions>
+			<Canvas Grid.Column="0" Grid.RowSpan="2" Width="24" Height="24">
+				<Path Data="{StaticResource contactsPathGeometry}" Fill="{StaticResource PPSnActionButtonBrush}" Opacity=".75"/>
+			</Canvas>
+			<TextBlock Grid.Column="1" Text="Kontakt:"/>
+			<TextBlock Text="{Binding Nr}" Grid.Column="2" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Kontaktnummer" />
+			<!--<TextBlock Text="{Binding STATUS}" Grid.Column="2" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Status"/>-->
+			<TextBlock Text="{Binding Name}" Grid.Column="3" Grid.RowSpan="2" VerticalAlignment="Center" FontWeight="Bold" ToolTip="Name"/>
+			<TextBlock Text="{Binding Adresse}" Grid.Column="4" Grid.RowSpan="2" FontStretch="Expanded" ToolTip="Adresse"/>
+			<TextBlock Text="{Binding LiefNr}" Grid.Column="5" ToolTip="Debitorennummer"/>
+			<TextBlock Text="{Binding KundNr}" Grid.Column="5" Grid.Row="2" ToolTip="Kreditorennummer" />
+			<!--<TextBlock Text="{Binding USTID}" Grid.Column="5" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="USt.-Ident.-Nr."/>-->
+			<TextBlock Text="{Binding Inaktiv,StringFormat='d',ConverterCulture='de-DE'}" Grid.Column="6" ToolTip="InAktiv"/>
+			<!--<TextBlock Text="{Binding TEL}" Grid.Column="6" Grid.Row="2" FontSize="11" ToolTip="Telefonnummer" />
+			<TextBlock Text="{Binding PERS}" Grid.Column="7" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Sachbearbeiter" />-->
+		</Grid>
+
+	</DataTemplate>
+    <DataTemplate x:Key="attachments,,100">
+        <!--  crmContacts,dbo.contacts,100 -->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="20" />
+                <RowDefinition Height="20" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+			<Image Grid.Column="0" Grid.RowSpan="2" VerticalAlignment="Center" ToolTip="Vorschaubild" Margin="4">
+				<Image.Source>
+					<Binding Path="DataLazy.PreviewImageLazy"
+							 Mode="OneWay"/>
+				</Image.Source>
+			</Image>
+			<TextBlock Grid.Column="1" FontStretch="Expanded" ToolTip="Mimetyp">
+				<TextBlock.Style>
+					<Style TargetType="{x:Type TextBlock}">
+						<Setter Property="Text" Value="Anhang:" />
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding MimeType}" Value="image/jpeg">
+								<Setter Property="Text" Value="Bilddatei:"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding MimeType}" Value="image/png">
+								<Setter Property="Text" Value="Bilddatei:"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</TextBlock.Style>
+			</TextBlock>			
+			<TextBlock Text="{Binding Nr}" Grid.Column="2" VerticalAlignment="Center" ToolTip="Nummer"/>
+			<TextBlock Text="{Binding Name}" Grid.Column="3" VerticalAlignment="Center" FontWeight="Bold" ToolTip="Name"/>
+			
+			<!-- Sha256 should not be loaded - otherwise all attachments are loaded <TextBlock Text="{Binding Data.Sha256}" Grid.Column="2" ToolTip="Debitorennummer"/>-->
+        </Grid>
+
+    </DataTemplate>
+
+</ResourceDictionary>

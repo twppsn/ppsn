@@ -1,0 +1,74 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					xmlns:sys="clr-namespace:System;assembly=mscorlib"
+					xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI">
+
+	<!--Theme GrayBlue BackGround-->
+	<Color x:Key="PPSnDesktopColor">#3B4A62</Color>
+	<Color x:Key="PPSnAccentColor">#FFFFFF</Color>
+	<Color x:Key="PPSnMarkerColor">#D2C62B</Color>
+	<Color x:Key="PPSnActionButtonColor">#FFFFFF</Color>
+	<Color x:Key="PPSnControlBackgroundColor">#4E5C71</Color>
+	<Color x:Key="PPSnWindowFooterColor">#007ACC</Color>
+	<Color x:Key="PPSnBlackColor">#000</Color>
+
+	<sys:Single x:Key="Alternation0Transpareny">0.175</sys:Single>
+	<sys:Single x:Key="Alternation1Transpareny">0.098</sys:Single>
+	<sys:Single x:Key="SideBarTranspareny">0.05</sys:Single>
+	
+	<SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="{StaticResource PPSnDesktopColor}" />
+	<SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="{StaticResource PPSnAccentColor}" />
+	<SolidColorBrush x:Key="PPSnMarkerBrush" Color="{StaticResource PPSnMarkerColor}" />
+	<SolidColorBrush x:Key="PPSnActionButtonBrush" Color="{StaticResource PPSnActionButtonColor}" />
+	<SolidColorBrush x:Key="PPSnWindowDisabledForegroundBrush" Color="{StaticResource PPSnAccentColor}" Opacity="0.35" />
+
+	<SolidColorBrush x:Key="PPSnSeparatorBrush">
+		<SolidColorBrush.Color>
+			<ui:TransparencyResultColor BackColor="{StaticResource PPSnDesktopColor}" TransparentColor="{StaticResource PPSnAccentColor}" Transpareny=".15" />
+		</SolidColorBrush.Color>
+	</SolidColorBrush>
+
+	<SolidColorBrush x:Key="PPSnAlternation0Brush">
+		<SolidColorBrush.Color>
+			<ui:TransparencyResultColor BackColor="{StaticResource PPSnDesktopColor}" TransparentColor="{StaticResource PPSnAccentColor}" Transpareny="{StaticResource Alternation0Transpareny}" />
+		</SolidColorBrush.Color>
+	</SolidColorBrush>
+	<SolidColorBrush x:Key="PPSnAlternation1Brush">
+		<SolidColorBrush.Color>
+			<ui:TransparencyResultColor BackColor="{StaticResource PPSnDesktopColor}" TransparentColor="{StaticResource PPSnAccentColor}" Transpareny="{StaticResource Alternation1Transpareny}" />
+		</SolidColorBrush.Color>
+	</SolidColorBrush>
+
+	<SolidColorBrush x:Key="PPSnControlBackgroundBrush" Color="{StaticResource PPSnControlBackgroundColor}"/>
+	<SolidColorBrush x:Key="PPSnControlNormalBorderBrush">
+		<SolidColorBrush.Color>
+			<ui:TransparencyResultColor BackColor="{StaticResource PPSnDesktopColor}" TransparentColor="{StaticResource PPSnAccentColor}" Transpareny=".15" />
+		</SolidColorBrush.Color>
+	</SolidColorBrush>
+	<SolidColorBrush x:Key="PPSnControlFocusedBorderBrush" Color="{StaticResource PPSnMarkerColor}"/>
+
+	<SolidColorBrush x:Key="PPSnMouseOverBrush">
+		<SolidColorBrush.Color>
+			<ui:TransparencyResultColor BackColor="{StaticResource PPSnDesktopColor}" TransparentColor="{StaticResource PPSnAccentColor}" Transpareny=".15" />
+		</SolidColorBrush.Color>
+	</SolidColorBrush>
+
+	<SolidColorBrush x:Key="PPSnButtonPressedBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.45}" />
+
+	<SolidColorBrush x:Key="PPSnImageBrush" Color="{StaticResource PPSnAccentColor}" Opacity=".80"/>
+
+	<SolidColorBrush x:Key="PPSnPopUpBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />
+
+	<SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="{StaticResource PPSnWindowFooterColor}" />
+
+	<SolidColorBrush x:Key="PPSnSideBarBackgroundBrush">
+		<SolidColorBrush.Color>
+			<ui:TransparencyResultColor BackColor="{StaticResource PPSnDesktopColor}" TransparentColor="{StaticResource PPSnAccentColor}" Transpareny="{StaticResource SideBarTranspareny}" />
+		</SolidColorBrush.Color>
+	</SolidColorBrush>
+
+	<!--old-->
+	<Color x:Key="PPSnWindowActiveGlowColor">#007ACC</Color>
+	<Color x:Key="PPSnWindowInActiveGlowColor">#60728C</Color>
+
+</ResourceDictionary>

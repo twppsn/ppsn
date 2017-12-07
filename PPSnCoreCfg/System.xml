@@ -1,0 +1,330 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
+		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+
+	<server>
+		<load>DEM.PPSn</load>
+	</server>
+
+	<http>
+		<prefix>$(webBinding)/</prefix>
+		<access id="root" scheme="ntlm basic none">$(webBinding)/</access>
+		<access id="ppsnInfo" scheme="none">$(webBinding)/ppsn/info.xml</access>
+		<access id="ppsnWpf" scheme="ntlm basic none">$(webBinding)/ppsn/wpf/</access>
+
+		<mime ext=".dll" mime="application/octet" />
+		<mime ext=".pdb" mime="application/octet" />
+	</http>
+
+	<luaengine script="LuaDebug">
+		<script id="LuaDebug" filename="stuff\Debug.lua" />
+	</luaengine>
+
+	<pps:ppsn name="ppsn">
+		<pps:sysDataSource name="sys" />
+
+		<pps:reports system="$(reportSystem)" base="reports" storeSuccessLogs="true" zipLogFiles="false" />
+		
+		<pps:wpf name="wpf">
+			<pps:wpfSource id="core" directory="ClientWpf/Panes" virtualPath="panes" />
+			<pps:theme id="default" file="ClientWpf/default.xaml"/>
+			<pps:theme id="blue" file="ClientWpf/default.xaml"/>
+			<pps:theme id="green" file="ClientWpf/green.xaml"/>
+
+			<pps:action name="close" displayName="Schließen" priority="-1000" displayImage="closeOctagon">
+				<pps:code><![CDATA[ Window:Close() ]]></pps:code>
+			</pps:action>
+			<!--<pps:template id="templates" file="ClientWpf\Templates\MasterData.Contacts.xaml"/>-->
+		</pps:wpf>
+
+		<pps:excel name="excel" />
+
+		<pps:register source="sys">
+			<pps:field name="sys.Fields.ObjectId" dataType="long">
+				<pps:attribute name="clientDataType">ppsObject</pps:attribute>
+				<pps:attribute name="sourceColumn">dbo.ObjK.Id</pps:attribute>
+			</pps:field>
+			<pps:field name="sys.Fields.ObjectLinkId" dataType="long">
+				<pps:attribute name="clientDataType">ppsLinkObject</pps:attribute>
+			</pps:field>
+			<pps:field name="sys.Fields.MasterDataKey" dataType="long">
+				<pps:attribute name="clientDataType">ppsMasterData</pps:attribute>
+			</pps:field>
+
+			<pps:field name="sys.Fields.Path" dataType="string" />
+			<pps:field name="sys.Fields.ContentType" dataType="string" />
+			<pps:field name="sys.Fields.ContentEncoding" dataType="string" />
+			<pps:field name="sys.Fields.ContentSize" dataType="long" />
+			<pps:field name="sys.Fields.LastModificationStamp" dataType="long" />
+			<pps:field name="sys.Fields.IsUpdated" dataType="bit">
+				<pps:attribute name="sourceColumn">#</pps:attribute>
+				<pps:attribute name="nullable">true</pps:attribute>
+			</pps:field>
+			<pps:field name="sys.Fields.PrimaryKey" dataType="long" />
+			<pps:field name="sys.Fields.Text" dataType="string" />
+			<pps:field name="sys.Fields.Int" dataType="int" />
+			<pps:field name="sys.Fields.Long" dataType="long" />
+			<pps:field name="sys.Fields.Bit" dataType="bool" />
+			<pps:field name="sys.Fields.Blob" dataType="blob" />
+
+			<pps:view name="wpf.sync">
+				<pps:source type="view">wpf/GetApplicationFilesSelector</pps:source>
+			</pps:view>
+
+			<pps:field name="wpf.sync.Path" inherited="sys.Fields.Path" />
+			<pps:field name="wpf.sync.Length" inherited="sys.Fields.ContentSize" />
+			<pps:field name="wpf.sync.LastWriteTime" dataType="datetime" />
+
+			<pps:field name="wpf.reports.Type" dataType="string" displayName="Type" />
+			<pps:field name="wpf.reports.ReportId" dataType="string" displayName="Report" />
+			<pps:field name="wpf.reports.DisplayName" dataType="string" displayName="Bezeichnung" />
+
+			<pps:view name="wpf.reports">
+				<pps:source type="view">excel/GetExcelReportItemsSelector</pps:source>
+			</pps:view>
+
+			<pps:field name="sys.views.Name" dataType="string" />
+			<pps:field name="sys.views.DisplayName" dataType="string" />
+			<pps:field name="sys.views.SecurityToken" dataType="string" />
+			<pps:field name="sys.views.IsVisible" dataType="bool" />
+
+			<pps:view name="sys.views">
+				<pps:source type="view">GetViewDefinitionSelector</pps:source>
+			</pps:view>
+		</pps:register>
+
+		<pps:register source="main">
+
+			<!-- object fields -->
+			<pps:field name="dbo.ObjK.Id" inherited="sys.Fields.ObjectId" />
+			<pps:field name="dbo.ObjK.Guid" />
+			<pps:field name="dbo.ObjK.Typ" />
+			<pps:field name="dbo.ObjK.MimeType" />
+			<pps:field name="dbo.ObjK.Nr" />
+			<pps:field name="dbo.ObjK.IsRev" />
+			<pps:field name="dbo.ObjK.IsHidden" />
+			<pps:field name="dbo.ObjK.HeadRevId" />
+			<pps:field name="dbo.ObjK.CurRevId" />
+
+			<pps:field name="dbo.ObjT.Id" />
+			<pps:field name="dbo.ObjT.ObjKId" />
+			<pps:field name="dbo.ObjT.ObjRId" />
+			<pps:field name="dbo.ObjT.Key" />
+			<pps:field name="dbo.ObjT.Class" />
+			<pps:field name="dbo.ObjT.Value" />
+			<pps:field name="dbo.ObjT.UserId" />
+			<pps:field name="dbo.ObjT.CreateDate" />
+
+			<pps:field name="dbo.ObjL.Id" />
+			<pps:field name="dbo.ObjL.ParentObjKId" />
+			<pps:field name="dbo.ObjL.LinkObjKId" />
+			<pps:field name="dbo.ObjL.OnDelete" />
+
+			<!-- revision fields -->
+			<pps:field name="dbo.ObjR.Id" />
+			<pps:field name="dbo.ObjR.ParentId" />
+			<pps:field name="dbo.ObjR.ObjkId" />
+			<pps:field name="dbo.ObjR.Tags" />
+			<pps:field name="dbo.ObjR.Document" />
+			<pps:field name="dbo.ObjR.CreateDate" />
+			<pps:field name="dbo.ObjR.CreateUserId" />
+
+			<!-- address fields -->
+			<pps:field name="dbo.Adre.Id" />
+			<pps:field name="dbo.Adre.ObjkId" />
+			<pps:field name="dbo.Adre.Name" displayName="Anschrift" />
+			<pps:field name="dbo.Adre.Postfach" displayName="Postfach" />
+			<pps:field name="dbo.Adre.Zusatz" displayName="Zusatz" />
+			<pps:field name="dbo.Adre.Strasse" displayName="Straße / Nr." />
+			<pps:field name="dbo.Adre.Ort" displayName="Ort" />
+			<pps:field name="dbo.Adre.Region" displayName="Region" />
+			<pps:field name="dbo.Adre.Plz" displayName="Postleitzahl" />
+			<pps:field name="dbo.Adre.LandId" inherited="sys.Fields.MasterDataKey" displayName="Land">
+				<pps:attribute name="refTable">Land</pps:attribute>
+			</pps:field>
+			<!--<pps:field name="dbo.Adre.Koord" displayName="Koordinaten" />-->
+			<pps:field name="dbo.Adre.Adresse" dataType="text" displayName="Adresse" />
+			<pps:field name="dbo.Adre.Changed" >
+				<pps:attribute name="dataType">bool</pps:attribute>
+				<pps:attribute name="displayName">Andere Adresse</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Adre.Template" />
+			<pps:field name="dbo.Adre.Versand" >
+				<pps:attribute name="dataType">bool</pps:attribute>
+				<pps:attribute name="displayName">Versand</pps:attribute>
+			</pps:field>
+			<pps:field name="dbo.Adre.Rechnung" >
+				<pps:attribute name="dataType">bool</pps:attribute>
+				<pps:attribute name="displayName">Rechnung</pps:attribute>
+			</pps:field>
+
+			<pps:field name="dbo.User.Id" />
+			<pps:field name="dbo.User.Login" dataType="string" displayName="Nutzer">
+				<pps:attribute name="maxLength">32</pps:attribute>
+			</pps:field>
+
+			<!-- objects -->
+			<pps:view name="dbo.objects">
+				<pps:source type="view">dbo.objects</pps:source>
+			</pps:view>
+
+			<pps:dataset name="masterdata">
+				<pps:table name="Header" dataSource="sys">
+					<pps:meta name="syncType">None</pps:meta>
+					<pps:column name="_rowId" fieldName="sys.Fields.PrimaryKey" isPrimary="true" />
+					<pps:column name="SchemaStamp" fieldName="sys.Fields.LastModificationStamp">
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="SchemaContent" fieldName="sys.Fields.Blob">
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="SyncStamp" fieldName="sys.Fields.LastModificationStamp">
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="UserId" fieldName="sys.Fields.Long">
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="UserName" fieldName="sys.Fields.Text">
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+				</pps:table>
+
+				<pps:table name="SyncState" dataSource="sys">
+					<pps:meta name="syncType">None</pps:meta>
+					<pps:column name="Table" fieldName="sys.Fields.Text" isPrimary="true" isIdentity="false" />
+					<pps:column name="SyncId" fieldName="sys.Fields.Long" />
+				</pps:table>
+
+				<pps:table name="OfflineCache" dataSource="sys">
+					<pps:meta name="syncType">TimeStamp: wpf.sync, LastWriteTime</pps:meta>
+					<pps:column name="Path" isPrimary="true" isIdentity="false" fieldName="sys.Fields.Path" />
+					<pps:column name="ContentType" fieldName="sys.Fields.ContentType">
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="ContentEncoding" fieldName="sys.Fields.ContentEncoding">
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="LocalContentSize" fieldName="sys.Fields.ContentSize">
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="ServerContentSize" fieldName="sys.Fields.ContentSize">
+						<pps:meta name="sourceColumn">Length</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="LocalContentLastModification" fieldName="sys.Fields.LastModificationStamp">
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="ServerContentLastModification" fieldName="sys.Fields.LastModificationStamp">
+						<pps:meta name="sourceColumn">LastWriteTime</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="Content" fieldName="sys.Fields.Blob">
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="LocalPath" fieldName="sys.Fields.Path">
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="_IsUpdated" fieldName="sys.Fields.IsUpdated" />
+				</pps:table>
+
+				<pps:table name="Objects">
+					<pps:meta name="syncType">ChangeTracking: dbo.ObjK</pps:meta>
+					<pps:meta name="useAsKey">Guid</pps:meta>
+
+					<pps:column name="Id" fieldName="dbo.ObjK.Id" isPrimary="true" isIdentity="false" />
+					<pps:column name="Guid" fieldName="dbo.ObjK.Guid">
+						<pps:meta name="IsUnique">true</pps:meta>
+					</pps:column>
+					<pps:column name="Typ" fieldName="dbo.ObjK.Typ" />
+					<pps:column name="MimeType" fieldName="dbo.ObjK.MimeType" />
+					<pps:column name="Nr" fieldName="dbo.ObjK.Nr" />
+					<pps:column name="IsRev" fieldName="dbo.ObjK.IsRev" />
+					<pps:column name="IsHidden" fieldName="dbo.ObjK.IsHidden" />
+					<pps:column name="RemoteCurRevId" fieldName="dbo.ObjK.CurRevId">
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="RemoteHeadRevId" fieldName="dbo.ObjK.HeadRevId" >
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="PulledRevId" fieldName="sys.Fields.Long">
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+
+					<pps:column name="DocumentIsChanged" fieldName="sys.Fields.Bit">
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="DocumentIsLinked" fieldName="sys.Fields.Bit">
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="Document" fieldName="sys.Fields.Blob">
+						<pps:meta name="sourceColumn">#</pps:meta>
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+
+					<!-- is set to true, if data is pulled, so data on client will not deleted during an full update -->
+					<pps:column name="_IsUpdated" fieldName="sys.Fields.IsUpdated" />
+				</pps:table>
+
+				<pps:table name="ObjectTags">
+					<pps:meta name="syncType">ChangeTracking: dbo.ObjT</pps:meta>
+					
+					<pps:column name="Id" fieldName="dbo.ObjT.Id" isPrimary="true" isIdentity="false" />
+					<pps:relation name="ObjectId" fieldName="dbo.ObjT.ObjKId" relationName="Tags" parentTable="Objects" parentColumn="Id" parentType="Root" />
+					
+					<pps:column name="Key" fieldName="dbo.ObjT.Key" />
+					<pps:column name="Class" fieldName="dbo.ObjT.Class">
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="Value" fieldName="dbo.ObjT.Value">
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="LocalClass" fieldName="sys.Fields.Int">
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="LocalValue" fieldName="sys.Fields.Text">
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="UserId" fieldName="dbo.ObjT.UserId">
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					<pps:column name="CreateDate" fieldName="dbo.ObjT.CreateDate">
+						<pps:meta name="nullable">true</pps:meta>
+					</pps:column>
+					
+					<pps:column name="_IsUpdated" fieldName="sys.Fields.IsUpdated" />
+				</pps:table>
+
+				<pps:table name="ObjectLinks" dataSource="sys">
+					<!-- no sync, because it is updated with pull/push requests -->
+					<pps:meta name="syncType">None</pps:meta>
+
+						<pps:column name="Id" fieldName="sys.Fields.PrimaryKey" isPrimary="true" isIdentity="true">
+					</pps:column>
+					<pps:relation name="ParentObjectId" fieldName="sys.Fields.Long" relationName="LinkedTo" parentTable="Objects" parentColumn="Id" parentType="Root" />
+					<pps:relation name="LinkObjectId" fieldName="sys.Fields.Long" relationName="LinkedFrom" parentTable="Objects" parentColumn="Id" parentType="Cascade" />
+					<pps:column name="RefCount" fieldName="sys.Fields.Int">
+						<pps:meta name="nullable">false</pps:meta>
+						<pps:meta name="default">0</pps:meta>
+					</pps:column>
+				</pps:table>
+
+				<pps:table name="User">
+					<pps:meta name="syncType">ChangeTracking: dbo.ObjK</pps:meta>
+					<pps:column name="Id" fieldName="dbo.User.Id" isPrimary="true" />
+					<pps:column name="Login" fieldName="dbo.User.Login" />
+				</pps:table>
+			</pps:dataset>
+		</pps:register>
+
+		<pps:attachment name="attachments" nrLength="8" displayname="Attachments" />
+	</pps:ppsn>
+</fragment>

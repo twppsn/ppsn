@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
+		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+
+	<pps:ppsn name="ppsn">
+		<pps:register source="main">
+			<!-- definition for currencies -->
+			<pps:field name="dbo.Waeh.Id" />
+			<pps:field name="dbo.Waeh.Iso" />
+			<pps:field name="dbo.Waeh.Symbol" />
+			<pps:field name="dbo.Waeh.Name" />
+			<pps:field name="dbo.Waeh.Kurs" />
+			<pps:field name="dbo.Waeh.System" />
+			<pps:field name="dbo.Waeh.IsActive" />
+
+			<pps:dataset name="masterdata">
+				<pps:table name="Waeh">
+					<pps:meta name="syncType">ChangeTracking: dbo.Waeh</pps:meta>
+					<pps:column name="Id" fieldName="dbo.Waeh.Id" isPrimary="true" />
+					<pps:column name="ISO" fieldName="dbo.Waeh.Iso"/>
+					<pps:column name="Symbol" fieldName="dbo.Waeh.Symbol"/>
+					<pps:column name="Name" fieldName="dbo.Waeh.Name"/>
+					<pps:column name="Kurs" fieldName="dbo.Waeh.Kurs"/>
+					<pps:column name="System" fieldName="dbo.Waeh.System"/>
+					<pps:column name="IsActive" fieldName="dbo.Waeh.IsActive" />
+				</pps:table>
+			</pps:dataset>
+		</pps:register>
+	</pps:ppsn>
+</fragment>

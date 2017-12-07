@@ -1,0 +1,54 @@
+\setuplayout[paper=A4,width=middle,height=middle,leftmargin=1.5cm,rightmargin=1cm,topspace=1cm,backspace=2cm,header=0cm,footer=1cm]
+\setupexternalfigures [type=png]
+\definefontfamily [ITCOfficinaSans] [serif] [ITCOfficinaSans LT Book]
+%\definefontfamily [ITCOfficinaSansBf] [serif,bold] [ITCOfficinaSans LT Book]
+\setupbodyfont[ITCOfficinaSans,10pt] % Font
+%\definefontfamily [Arial] [serif] [Arial]
+%\setupbodyfont[Arial,10pt] % Font
+\def\FarbeKopf{gray}
+%\definecolor[FarbeKopf][r=0.9, g=0.9, b=0.9] % funktioniert nicht
+
+\def\Logo#1{\externalfigure[TecWare_Logo][width=#1cm]}
+
+\directlua{
+    Pos={
+        {"010",5,"Tage","Einrichtung der Datenbank",560.00,2800.00},
+        {"020",2,"Std","Einrichtung des Druckers",100.00,200.00},
+        {"030",3,"Tage","Schulung PPS",560.00,1680.00},
+        {"040",1,"Tage","einfach so",560.00,560.00},
+        {"050",5,"min","Telefonat",10.00,10.00}
+    }
+}
+
+\definelayer[TW]  % name of the layer
+[x=171mm, y=200mm,  % from upper left corner of paper
+ width=30mm, height=70mm] % let the layer cover the full paper
+
+\setupinterlinespace [line=0.85\bodyfontsize ]
+\setupbodyfont[Arial,11pt]
+\setlayer[TW]	% name of the layer
+ [hoffset=0cm, voffset=0cm]  % placement (from upper left corner of the layer)
+ {\vbox to 7cm{\tfxx{TecWare Gesllschaft für\\
+ Softwareentwicklung mbH\\
+ Gewerbegebiet Nr. 5\\
+ 01689 Niederau OT Ockrilla\\\\
+ Fon: +49(0)3521 82 30 130\\
+ Fax: +49(0)3521 82 30 140\\\\
+ Deutsche Bank 24\\
+ BLZ: 870 700 24\\
+ Konto: 741 116 800\\
+ IBAN: DE04870700240741116800\\
+ BIC: DEUTDEDBCHE\\\\
+ Geschäftsführer:\\
+ Dipl.-Ing. Andreas Schweitzer\\\\
+ HRB 16880 AG Dresden\\
+ Ust-IdNr.: DE198819294}}}  % the actual contents of the layer
+
+\definelayer[TW_Fuss]  % name of the layer
+ [x=0mm, y=270mm,  % from upper left corner of paper
+  width=210mm, height=27mm] 
+
+\setlayer[TW_Fuss][hoffset=0cm, voffset=0cm]
+{\externalfigure[TecWare_Briefbogen-fuss]}
+
+\setupbackgrounds[page][background={TW,TW_Fuss}]

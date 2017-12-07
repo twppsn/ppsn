@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
+		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+
+	<pps:ppsn name="ppsn">
+		<pps:register source="main">
+			<!-- definition for contact groups -->
+			<pps:field name="dbo.Kgrp.Id" />
+			<pps:field name="dbo.Kgrp.Name" />
+			<pps:field name="dbo.Kgrp.IsActive" />
+
+			<pps:dataset name="masterdata">
+				<pps:table name="Kgrp">
+					<pps:meta name="syncType">ChangeTracking: dbo.Kgrp</pps:meta>
+					<pps:column name="Id" fieldName="dbo.Kgrp.Id" isPrimary="true" />
+					<pps:column name="Name" fieldName="dbo.Kgrp.Name"/>
+					<pps:column name="IsActive" fieldName="dbo.Kgrp.IsActive" />
+				</pps:table>
+			</pps:dataset>
+		</pps:register>
+	</pps:ppsn>
+</fragment>

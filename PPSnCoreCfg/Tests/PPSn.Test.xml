@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
+		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+
+	<luaengine>
+		<tests id="tests" filename="SQLTests.lua" />
+	</luaengine>
+		
+	<pps:ppsn name="ppsn">
+		<pps:wpf name="wpf">
+			<pps:environment id="testEnvironment" priority="1000000">
+				<pps:code><![CDATA[ self:require 'wpf/panes/testEnvironment.lua']]></pps:code>
+			</pps:environment>
+			
+			<!-- test -->
+			<pps:action name="hello" displayName="Hallo" priority="1000">
+				<pps:code>
+					<![CDATA[
+
+				if Environment.helloIndex == nil then
+					Environment.helloIndex = 1;
+				else
+					Environment.helloIndex = Environment.helloIndex  + 1;
+				end;
+				
+				Window:LoadPane{ pane = '/wpf/panes/hello.xaml', mode = clr.TecWare.PPSn.UI.PpsOpenPaneMode.NewPane, index = Environment.helloIndex }; 
+
+				]]>
+				</pps:code>
+			</pps:action>
+		</pps:wpf>
+	</pps:ppsn>
+</fragment>

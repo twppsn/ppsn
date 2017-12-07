@@ -162,6 +162,7 @@ ClientBin/
 *.publishsettings
 node_modules/
 bower_components/
+*.jfm
 
 # RIA/Silverlight projects
 Generated_Code/
@@ -194,8 +195,17 @@ FakesAssemblies/
 
 # Visual Studio 6 workspace options file
 *.opt
+<<<<<<< HEAD
 
 /PPSnReport/system/texmf
 /PPSnReport/system/texmf-*
 /PPSnDesktop/Local/Data
 /PPSnDesktop/Local/Masks/*.dxml
+=======
+/PPSnMod.VC.db
+/PPSnCoreCfg/PPSn.xml
+/PPSnCoreCfg/reports/*.pdf
+/PPSnCoreCfg/reports/*.log
+/PPSnCoreCfg/reports/*.tuc
+/PPSnCoreCfg/reports/.logs
+>>>>>>> PPSnMod

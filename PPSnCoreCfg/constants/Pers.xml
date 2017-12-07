@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
+		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+
+	<pps:ppsn name="ppsn">
+		<pps:register source="main">
+			<!-- definition for contact groups -->
+			<pps:field name="dbo.Pers.Id" />
+			<pps:field name="dbo.Pers.Name" />
+			<pps:field name="dbo.Pers.InAktiv" />
+
+			<pps:dataset name="masterdata">
+				<pps:table name="Pers">
+					<pps:meta name="syncType">ChangeTracking: dbo.Pers</pps:meta>
+					<pps:column name="Id" fieldName="dbo.Pers.Id" isPrimary="true" />
+					<pps:column name="Name" fieldName="dbo.Pers.Name"/>
+					<pps:column name="InAktiv" fieldName="dbo.Pers.InAktiv" />
+				</pps:table>
+			</pps:dataset>
+		</pps:register>
+	</pps:ppsn>
+</fragment>

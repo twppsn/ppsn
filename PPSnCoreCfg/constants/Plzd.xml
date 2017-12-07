@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
+		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+
+	<?des-merge Land.xml?>
+	
+	<pps:ppsn name="ppsn">
+		<pps:register source="main">
+			<!-- definition for postal codes -->
+			<pps:field name="dbo.Plzd.Id" />
+			<pps:field name="dbo.Plzd.Plz" />
+			<pps:field name="dbo.Plzd.Ort" />
+			<pps:field name="dbo.Plzd.LandId" />
+			<pps:field name="dbo.Plzd.Vorwahl" />
+			<pps:field name="dbo.Plzd.Kfz" />
+			<pps:field name="dbo.Plzd.AmtSchl" />
+			<pps:field name="dbo.Plzd.RegSchl" />
+			<pps:field name="dbo.Plzd.Region" />
+			<pps:field name="dbo.Plzd.IsActive" />
+
+			<pps:dataset name="masterdata">
+				<pps:table name="Plzd">
+					<pps:meta name="syncType">ChangeTracking: dbo.Plzd</pps:meta>
+					<pps:column name="Id" fieldName="dbo.Plzd.Id" isPrimary="true" />
+					<pps:column name="Plz" fieldName="dbo.Plzd.Plz"/>
+					<pps:column name="Ort" fieldName="dbo.Plzd.Ort"/>
+					<pps:relation name="LandId" fieldName="dbo.Plzd.LandId" relationName="PlzdLand" parentTable="Land" parentColumn="Id" parentType="Root"  />
+					<pps:column name="Vorwahl" fieldName="dbo.Plzd.Vorwahl"/>
+					<pps:column name="Kfz" fieldName="dbo.Plzd.Kfz"/>
+					<pps:column name="AmtSchl" fieldName="dbo.Plzd.AmtSchl"/>
+					<pps:column name="RegSchl" fieldName="dbo.Plzd.RegSchl"/>
+					<pps:column name="Region" fieldName="dbo.Plzd.Region"/>
+					<pps:column name="IsActive" fieldName="dbo.Plzd.IsActive" />
+				</pps:table>
+			</pps:dataset>
+		</pps:register>
+	</pps:ppsn>
+</fragment>

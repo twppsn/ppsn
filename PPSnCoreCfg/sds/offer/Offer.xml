@@ -1,0 +1,108 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<fragment xmlns="http://tecware-gmbh.de/dev/des/2014"
+		xmlns:pps="http://tecware-gmbh.de/dev/des/2015/ppsn">
+  
+	<luaengine>
+		<script id="OfferScript" filename="offerServer.lua" />
+	</luaengine>
+
+	<pps:ppsn name="ppsn">
+		<pps:register source="main">
+			<!-- offer fields -->
+      <pps:field name="sds.Anko.Id" />
+			<pps:field name="sds.Anko.ObjkId" inherited="sys.Fields.ObjectId" />
+			<pps:field name="sds.Anko.Datum" displayName="Datum" />
+			<pps:field name="sds.Anko.BisDatum" displayName="Gültig bis" />
+			<pps:field name="sds.Anko.AnfDatum" displayName="Anfragedatum" />
+			<pps:field name="sds.Anko.AnfNr" displayName="Anfrage-Nr." />
+			<pps:field name="sds.Anko.KontId" inherited="sys.Fields.MasterDataKey" displayName="Kontakt" >
+				<pps:attribute name="refTable">Kont</pps:attribute>
+			</pps:field>
+			<pps:field name="sds.Anko.Adresse" displayName="Adresse" />
+			<pps:field name="sds.Anko.Variante" displayName="Variante" />
+			<pps:field name="sds.Anko.Zusatz" displayName="Zusatz" />
+			<pps:field name="sds.Anko.PersId" displayName="Sachbearbeiter" />
+			<pps:field name="sds.Anko.Ansp" displayName="Ansprechpartner" />
+			<pps:field name="sds.Anko.KopfText" displayName="Kopftext" />
+			<pps:field name="sds.Anko.FussText" displayName="Fusstext" />
+			<pps:field name="sds.Anko.Anmerk" displayName="Anmerkungen" />
+
+			<pps:field name="sds.Anpo.Id" />
+			<pps:field name="sds.Anpo.AnkoId" />
+			<pps:field name="sds.Anpo.Pos" displayName="Position" />
+			<pps:field name="sds.Anpo.ProdId" displayName="Produkt" />
+			<pps:field name="sds.Anpo.ProdNr" displayName="Produkt-Nr." />
+			<pps:field name="sds.Anpo.Znr" displayName="Zeich-Nr." />
+			<pps:field name="sds.Anpo.Text" displayName="Produkttext" />
+			<pps:field name="sds.Anpo.KontProdNr" displayName="Kunden-Produkt-Nr." />
+			<pps:field name="sds.Anpo.Termin" displayName="Termin" />
+			<pps:field name="sds.Anpo.Menge" displayName="Menge" />
+
+			<!-- offer mask -->
+			<pps:dataset name="offerDataSet" serverScripts="OfferScript">
+        <pps:meta name="DefaultPaneUri" dataType="string">wpf/panes/offer.xaml</pps:meta>
+        
+				<pps:table name="Head">
+          <pps:column name="Id" fieldName="sds.Anko.Id" isPrimary="true" />
+					<pps:column name="ObjkId" fieldName="sds.Anko.ObjkId" />
+					<pps:column name="Datum" fieldName="sds.Anko.Datum" />
+					<pps:column name="BisDatum" fieldName="sds.Anko.BisDatum" />
+					<pps:column name="AnfDatum" fieldName="sds.Anko.AnfDatum" />
+					<pps:column name="AnfNr" fieldName="sds.Anko.AnfNr" />
+					<pps:column name="KontId" fieldName="sds.Anko.KontId" />
+					<pps:column name="Adresse" fieldName="sds.Anko.Adresse" />
+					<pps:column name="Variante" fieldName="sds.Anko.Variante" />
+					<pps:column name="Zusatz" fieldName="sds.Anko.Zusatz" />
+					<pps:column name="PersId" fieldName="sds.Anko.PersId" />
+					<pps:column name="Ansp" fieldName="sds.Anko.Ansp" />
+					<pps:column name="KopfText" fieldName="sds.Anko.KopfText" />
+					<pps:column name="FussText" fieldName="sds.Anko.FussText" />
+					<pps:column name="Anmerk" fieldName="sds.Anko.Anmerk" />
+				</pps:table>
+
+				<pps:table name="Anpo">
+					<pps:column name="Id" fieldName="sds.Anpo.Id" isPrimary="true" />
+					<pps:relation name="AnkoId" fieldName="sds.Anpo.AnkoId" relationName="AnpoHead" parentTable="Head" parentColumn="Id" parentType="Root" />
+					<pps:column name="Pos" fieldName="sds.Anpo.Pos" />
+					<pps:column name="ProdId" fieldName="sds.Anpo.ProdId" />
+					<pps:column name="ProdNr" fieldName="sds.Anpo.ProdNr" />
+					<pps:column name="Znr" fieldName="sds.Anpo.Znr" />
+					<pps:column name="Text" fieldName="sds.Anpo.Text" />
+					<pps:column name="KontProdNr" fieldName="sds.Anpo.KontProdNr" />
+					<pps:column name="Termin" fieldName="sds.Anpo.Termin" />
+					<pps:column name="Menge" fieldName="sds.Anpo.Menge" />
+				</pps:table>
+
+			</pps:dataset>
+		</pps:register>
+
+		<pps:wpf name="wpf">
+			<pps:template id="offer" file="offerTemplate.xaml" />
+      <pps:wpfSource id="sds.offer" directory="Wpf" virtualPath="panes" />
+
+			<pps:view name="sdsOffer" displayName="Angebote" displayImage="offer" view="local.objects" filter="Typ:=sdsOffer">
+				<pps:filter name="entwurf" displayName="Entwurf">
+					<![CDATA[ Datum: ]]>
+				</pps:filter>
+				<pps:filter name="archiv" displayName="Archiv">
+					<![CDATA[ Datum:! ]]>
+				</pps:filter>
+				<pps:order name="Name" displayName="Nummer">
+					<![CDATA[ +Nr ]]>
+				</pps:order>
+			</pps:view>
+
+			<pps:action name="offerNew" displayName="Neues Angebot" displayImage="filePlus" priority="100">
+				<pps:condition><![CDATA[ return CurrentView == Views.sdsOffer; ]]></pps:condition>
+				<pps:code><![CDATA[ Window:LoadMask{ createNew = 'sdsOffer' }; ]]></pps:code>
+			</pps:action>
+			<pps:action name="offerOpen" displayName="Bearbeiten" displayImage="edit" priority="200">
+				<pps:condition><![CDATA[ return CurrentItem ~= nil and CurrentItem.Typ == "sdsOffer" ]]></pps:condition>
+				<pps:code><![CDATA[ Window:LoadMask{ object = GetObject(CurrentItem.Id) }; ]]> </pps:code>
+			</pps:action>
+		</pps:wpf>
+
+		<pps:document name="sdsOffer" dataset="offerDataSet" displayname="Offer">
+		</pps:document>
+	</pps:ppsn>
+</fragment>
