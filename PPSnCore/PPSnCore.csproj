@@ -56,6 +56,9 @@
     <None Include="ppsn.licenseheader" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="DES.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\PPSnMod\packages\TecWare.DES.Core.3.4.0\lib\net47\DES.Core.dll</HintPath>
+    </Reference>
     <Reference Include="Neo.Lua, Version=5.3.0.0, Culture=neutral, PublicKeyToken=fdb0cd4fe8a6e3b2, processorArchitecture=MSIL">
       <HintPath>..\packages\NeoLua.1.2.23\lib\net45\Neo.Lua.dll</HintPath>
     </Reference>
@@ -68,12 +71,6 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\twdes\des\Extern\Core\DESCore\DESCore.csproj">
-      <Project>{67528843-e631-4c05-b6e8-514cc8bec7b6}</Project>
-      <Name>DESCore</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
