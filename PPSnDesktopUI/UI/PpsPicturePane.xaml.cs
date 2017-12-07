@@ -1080,7 +1080,7 @@ namespace TecWare.PPSn.UI
 
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		public PpsWindowPaneCompareResult CompareArguments(LuaTable otherArgumens)
+		public PpsWindowPaneCompareResult CompareArguments(LuaTable otherArguments)
 		{
 			return PpsWindowPaneCompareResult.Reload;
 		}
