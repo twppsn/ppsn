@@ -233,10 +233,6 @@
       <Project>{6b2e2c3c-b2e0-4c9f-a1da-3e78bdb3a141}</Project>
       <Name>PPSnClient</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\PPSnWpf\PPSnDesktopUI\PPSnDesktopUI.csproj">
-      <Project>{c7d09a93-da78-4b81-8d3c-260442c61c5f}</Project>
-      <Name>PPSnDesktopUI</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="ClientWpf\Templates\" />
