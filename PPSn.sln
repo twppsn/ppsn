@@ -29,9 +29,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnReport", "PPSnReport\PP
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnMod", "PPSnMod\PPSnMod.csproj", "{56F95A2C-ABDB-49CF-91D9-E01D7E3A23A1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnModCfg", "PPSnModCfg\PPSnModCfg.csproj", "{B306308F-573E-4212-A725-AFF0E36913BD}"
+EndProject
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "PPSnMaster", "Extern\ppsncfg\PPSnMaster\PPSnMaster.sqlproj", "{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		Extern\ppsncfg\PPSnBaseCfg\PPSnBaseCfg.projitems*{320054b5-c87e-4017-bba7-04b1c25415ce}*SharedItemsImports = 13
+		Extern\ppsncfg\PPSnBaseCfg\PPSnBaseCfg.projitems*{b306308f-573e-4212-a725-aff0e36913bd}*SharedItemsImports = 4
 		PPSnClient\PPSnClient.projitems*{c7d09a93-da78-4b81-8d3c-260442c61c5f}*SharedItemsImports = 4
 		PPSnClient\PPSnClient.projitems*{f2dbcbc9-91be-4964-ad72-d51d2d9f73c0}*SharedItemsImports = 13
 	EndGlobalSection
@@ -68,6 +73,16 @@ Global
 		{56F95A2C-ABDB-49CF-91D9-E01D7E3A23A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{56F95A2C-ABDB-49CF-91D9-E01D7E3A23A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{56F95A2C-ABDB-49CF-91D9-E01D7E3A23A1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B306308F-573E-4212-A725-AFF0E36913BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B306308F-573E-4212-A725-AFF0E36913BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B306308F-573E-4212-A725-AFF0E36913BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B306308F-573E-4212-A725-AFF0E36913BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -82,9 +97,11 @@ Global
 		{D4900AD1-E946-470E-BC3F-4F041EB2A89D} = {44AA1057-C75E-4491-A3A4-18D4CDB955B2}
 		{BD5FAF7D-B1DD-4A54-A481-C46179FCC087} = {3AFE3696-3A14-45A8-A079-333850913BFA}
 		{56F95A2C-ABDB-49CF-91D9-E01D7E3A23A1} = {B68139EB-F76B-41BD-B3FE-3ED0B7E8CDC0}
+		{B306308F-573E-4212-A725-AFF0E36913BD} = {B68139EB-F76B-41BD-B3FE-3ED0B7E8CDC0}
+		{CC8BDBCD-F4DC-4F85-B187-2C6E2EA44F82} = {B68139EB-F76B-41BD-B3FE-3ED0B7E8CDC0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		RESX_NeutralResourcesLanguage = de-DE
 		SolutionGuid = {F0AFC2F2-0A01-4CAB-8B21-44C224AFF0A0}
+		RESX_NeutralResourcesLanguage = de-DE
 	EndGlobalSection
 EndGlobal

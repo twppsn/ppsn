@@ -209,3 +209,4 @@ FakesAssemblies/
 /PPSnCoreCfg/reports/*.tuc
 /PPSnCoreCfg/reports/.logs
 >>>>>>> PPSnMod
+/PPSnModCfg/cfg/PPSn.xml
