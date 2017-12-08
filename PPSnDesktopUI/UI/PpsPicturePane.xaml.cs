@@ -307,7 +307,7 @@ namespace TecWare.PPSn.UI
 				}
 
 				// attach failure handling
-				device.VideoSourceError += (sender, e) => 
+				device.VideoSourceError += (sender, e) =>
 				{
 					if (!disposing)
 						traces.AppendText(PpsTraceItemType.Fail, String.Format(DeviceFailed, Name, e.Description));
@@ -722,7 +722,7 @@ namespace TecWare.PPSn.UI
 							// if the previous set failed. the user canceled the operation, so exit
 							if (SelectedAttachment != i)
 								return;
-							
+
 							// request the full-sized image
 							var imgData = await i.LinkedObject.GetDataAsync<PpsObjectBlobData>();
 
@@ -1166,21 +1166,51 @@ namespace TecWare.PPSn.UI
 		private void InitializePenSettings()
 		{
 			var StrokeThicknesses = new List<PpsPecStrokeThickness>();
-			foreach (var tab in GetPenThicknessTable(environment).ArrayList)
+			try
 			{
-				if (tab is LuaTable lt) StrokeThicknesses.Add(new PpsPecStrokeThickness((string)lt["Name"], (double)lt["Thickness"]));
+				foreach (var tab in GetPenThicknessTable(environment)?.ArrayList)
+				{
+					if (tab is LuaTable lt) StrokeThicknesses.Add(new PpsPecStrokeThickness((string)lt["Name"], (double)lt["Thickness"]));
+				}
 			}
+			catch (NullReferenceException)
+			{ }
 
 			var StrokeColors = new List<PpsPecStrokeColor>();
-			foreach (var tab in GetPenColorTable(environment).ArrayList)
+			try
 			{
-				if (tab is LuaTable lt) StrokeColors.Add(new PpsPecStrokeColor((string)lt["Name"], (Brush)lt["Brush"]));
+				foreach (var tab in GetPenColorTable(environment)?.ArrayList)
+				{
+					if (tab is LuaTable lt) StrokeColors.Add(new PpsPecStrokeColor((string)lt["Name"], (Brush)lt["Brush"]));
+				}
 			}
+			catch (NullReferenceException)
+			{ }
 
 			if (StrokeColors.Count == 0)
-				environment.Traces.AppendText(PpsTraceItemType.Fail, "Failed to load Brushes for drawing.");
+			{
+				environment.Traces.AppendText(PpsTraceItemType.Fail, "Failed to load Brushes from environment for drawing. Using Fallback.");
+				StrokeColors = new List<PpsPecStrokeColor>
+				{
+					new PpsPecStrokeColor("Weiß", new SolidColorBrush( Colors.White)),
+					new PpsPecStrokeColor("Schwarz", new SolidColorBrush( Colors.Black)),
+					new PpsPecStrokeColor("Rot",new SolidColorBrush( Colors.Red)),
+					new PpsPecStrokeColor("Grün",new SolidColorBrush( Colors.Green)),
+					new PpsPecStrokeColor("Blau", new SolidColorBrush(Colors.Blue))
+				};
+			}
+
 			if (StrokeThicknesses.Count == 0)
-				environment.Traces.AppendText(PpsTraceItemType.Fail, "Failed to load Thicknesses for drawing.");
+			{
+				environment.Traces.AppendText(PpsTraceItemType.Fail, "Failed to load Thicknesses from environment for drawing. Using Fallback.");
+				StrokeThicknesses = new List<PpsPecStrokeThickness>
+				{
+					new PpsPecStrokeThickness("1", 1),
+					new PpsPecStrokeThickness("5", 5),
+					new PpsPecStrokeThickness("10", 10),
+					new PpsPecStrokeThickness("15", 15)
+				};
+			}
 
 			StrokeSettings = new PpsPecStrokeSettings(StrokeColors, StrokeThicknesses);
 		}
