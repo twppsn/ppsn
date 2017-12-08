@@ -30,12 +30,18 @@ namespace TecWare.PPSn.Data
 		private readonly LuaTable env;
 		private readonly PpsDataRow row;
 
+		/// <summary></summary>
+		/// <param name="env"></param>
+		/// <param name="row"></param>
 		public PpsLuaRowEnvironment(LuaTable env, PpsDataRow row)
 		{
 			this.env = env;
 			this.row = row;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
 		protected override object OnIndex(object key)
 		{
 			if (key is string stringKey)
@@ -68,6 +74,9 @@ namespace TecWare.PPSn.Data
 		private readonly LuaChunk chunk;
 		private object currentValue = null;
 
+		/// <summary></summary>
+		/// <param name="row"></param>
+		/// <param name="column"></param>
 		public PpsStaticCalculated(PpsDataRow row, PpsDataColumnDefinition column)
 			: base(row, column)
 		{
@@ -85,11 +94,15 @@ namespace TecWare.PPSn.Data
 			}
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="x"></param>
 		protected override void Write(XElement x)
 		{
 			x.Add(new XElement("c", currentValue.ChangeType<string>()));
 		} // proc Write
 
+		/// <summary></summary>
+		/// <param name="x"></param>
 		protected override void Read(XElement x)
 		{
 			var t = x?.Element("c")?.Value;
@@ -117,6 +130,7 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc UpdateValue
 		
+		/// <summary></summary>
 		public override bool IsNull => currentValue == null;
 		/// <summary></summary>
 		public object Value => currentValue;
@@ -228,11 +242,16 @@ namespace TecWare.PPSn.Data
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="row"></param>
+		/// <param name="column"></param>
 		public PpsFormattedStringValue(PpsDataRow row, PpsDataColumnDefinition column) 
 			: base(row, column)
 		{
 		} // ctor
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override string ToString()
 			=> Value;
 
@@ -240,6 +259,8 @@ namespace TecWare.PPSn.Data
 
 		#region -- Read/Write ---------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="x"></param>
 		protected override void Read(XElement x)
 		{
 			originalTemplate= x.Element("o")?.Value;
@@ -249,6 +270,8 @@ namespace TecWare.PPSn.Data
 			parsedValue = null; // invalidate the template
 		} // proc Read
 
+		/// <summary></summary>
+		/// <param name="x"></param>
 		protected override void Write(XElement x)
 		{
 			if (originalTemplate != null)
@@ -371,6 +394,10 @@ namespace TecWare.PPSn.Data
 			}
 		} // func CreateExpressionBlock
 
+		/// <summary></summary>
+		/// <param name="template"></param>
+		/// <param name="createExpressionBlock"></param>
+		/// <returns></returns>
 		public static ExpressionBlock[] ParseTemplate(string template, Func<string, string, ExpressionBlock> createExpressionBlock)
 		{
 			var spans = new List<ExpressionBlock>(); // result
@@ -511,17 +538,21 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc UpdateFormattedValue
 
+		/// <summary></summary>
 		public string FormattedValue
 			=> formattedValue;
 
+		/// <summary></summary>
 		public string Value
 		{
 			get { return currentTemplate != PpsDataRow.NotSet ? (string)currentTemplate : (string)originalTemplate; }
 			set { SetValue(value, true, true); }
 		} // proc Template
 
+		/// <summary></summary>
 		public override bool IsNull => currentTemplate == PpsDataRow.NotSet ? originalTemplate == null : currentTemplate == null;
 
+		/// <summary></summary>
 		public bool IsValueModified => currentTemplate != PpsDataRow.NotSet;
 
 		/// <summary>Return the formatted value.</summary>
