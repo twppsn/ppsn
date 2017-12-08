@@ -55,7 +55,7 @@
       <HintPath>..\packages\AForge.Video.DirectShow.2.2.5\lib\AForge.Video.DirectShow.dll</HintPath>
     </Reference>
     <Reference Include="DES.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\TecWare.DES.Core.3.4.0\lib\net47\DES.Core.dll</HintPath>
+      <HintPath>..\packages\TecWare.DES.Core.3.4.1\lib\net47\DES.Core.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Dynamic, Version=1.1.2.22, Culture=neutral, PublicKeyToken=7f709c5b713576e1, processorArchitecture=MSIL">
       <HintPath>..\packages\DynamicLanguageRuntime.1.1.2\lib\Net45\Microsoft.Dynamic.dll</HintPath>
@@ -168,6 +168,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Controls\text.fx" />
+    <None Include="app.config" />
     <None Include="TecWare.PPSn.DesktopUI.nuspec" />
     <Resource Include="Images\SplashLogo.png" />
     <None Include="packages.config" />
