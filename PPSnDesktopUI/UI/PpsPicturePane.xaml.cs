@@ -283,6 +283,7 @@ namespace TecWare.PPSn.UI
 			private byte[] preview;
 			private VideoCapabilities previewResolution;
 			private bool initialized = false;
+			private bool disposing = false;
 
 			#endregion
 
@@ -306,7 +307,11 @@ namespace TecWare.PPSn.UI
 				}
 
 				// attach failure handling
-				device.VideoSourceError += (sender, e) => traces.AppendText(PpsTraceItemType.Fail, String.Format(DeviceFailed, Name, e.Description));
+				device.VideoSourceError += (sender, e) => 
+				{
+					if (!disposing)
+						traces.AppendText(PpsTraceItemType.Fail, String.Format(DeviceFailed, Name, e.Description));
+				};
 
 				// find the highest snapshot resolution
 				var maxSnapshotResolution = (from vc in device.SnapshotCapabilities orderby vc.FrameSize.Width * vc.FrameSize.Height descending select vc).FirstOrDefault();
@@ -405,6 +410,7 @@ namespace TecWare.PPSn.UI
 
 			public void Dispose()
 			{
+				disposing = true;
 				device.Stop();
 				device.WaitForStop();
 			}
