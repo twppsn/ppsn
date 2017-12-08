@@ -1,7 +1,7 @@
 # Installation of the Debug Environment
 ## Pull the Repository
 
-``` bash
+```bash
 
 mkdir PPSn
 cd PPSn
@@ -17,7 +17,7 @@ git clone --recursive --branch development https://github.com/twppsn/ppsn.git
 1. right-click PPSnMaster->Publish
 1. Target database connection -> edit
 1. ->browse
-1. ->Local->MSSQLLocalDB
+1. ->A Microsoft SQL Server 2016 (or creater) Instance
 1. Authentification->Windows Authentification
 1. Database Name->PPSnTestDatabase
 1. ->OK
@@ -26,13 +26,13 @@ git clone --recursive --branch development https://github.com/twppsn/ppsn.git
 ### Create User
 
 1. Visual Studio->Tools->SQL Server->New Query
-1. ->Local->MSSQLLocalDB
+1. ->A Microsoft SQL Server 2016 (or creater) Instance
 1. Database Name->PPSnTestDatabase
 1. ->Connect
 
-``` sql
+```sql
 
-INSERT INTO dbo.[User] ([Login], [Security]) VALUES ('domain\username', 'desSys; Chef');
+INSERT INTO dbo.[User] ([Login], [Security]) VALUES ('domain\username', 'desSys;Chef');
 
 ```
 
@@ -40,7 +40,7 @@ INSERT INTO dbo.[User] ([Login], [Security]) VALUES ('domain\username', 'desSys;
 
 ### Setup ConfigFile
 
-``` bash
+```bash
 
 cp ppsn/PPSnModCfg/cfg/PPSn.template ppsn/PPSnModCfg/cfg/PPSn.xml
 nano ppsn/PPSnModCfg/cfg/PPSn.xml
