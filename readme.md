@@ -67,6 +67,7 @@ nano ppsn/PPSnModCfg/cfg/PPSn.xml
 
 ## Setup of Client
 
+1. open PPSnWpf.sln
 1. Visual Studio->PPSnDesktop->Set as StartUp Project
 1. F5
 
