@@ -79,6 +79,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="x"></param>
 		void Read(XElement x);
 
+		/// <summary>Is the content of the extended value <c>null</c>.</summary>
 		bool IsNull { get; }
 	} // interface IPpsDataRowExtendedValue
 
@@ -136,6 +137,7 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public abstract class PpsDataRowExtentedValue : IPpsDataRowExtendedValue, INotifyPropertyChanged
 	{
+		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		#region -- class PpsDataRowExtentedValueChanged -----------------------------------
@@ -180,6 +182,9 @@ namespace TecWare.PPSn.Data
 		private readonly PpsDataRow row;
 		private readonly PpsDataColumnDefinition column;
 
+		/// <summary></summary>
+		/// <param name="row"></param>
+		/// <param name="column"></param>
 		public PpsDataRowExtentedValue(PpsDataRow row, PpsDataColumnDefinition column)
 		{
 			this.row = row;
@@ -189,6 +194,11 @@ namespace TecWare.PPSn.Data
 		private void InvokePropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
+		/// <summary></summary>
+		/// <param name="propertyName"></param>
+		/// <param name="oldValue"></param>
+		/// <param name="newValue"></param>
+		/// <param name="firePropertyChanged"></param>
 		protected virtual void OnPropertyChanged(string propertyName, object oldValue, object newValue, bool firePropertyChanged)
 		{
 			if (firePropertyChanged)
@@ -207,13 +217,20 @@ namespace TecWare.PPSn.Data
 		void IPpsDataRowExtendedValue.Read(XElement x)
 			=> Read(x);
 
+		/// <summary>Persist the content of the extented value.</summary>
+		/// <param name="x"></param>
 		protected abstract void Write(XElement x);
 
+		/// <summary>Read the content of the extented value</summary>
+		/// <param name="x"></param>
 		protected abstract void Read(XElement x);
 
+		/// <summary>Is the content of the extended value <c>null</c>.</summary>
 		public abstract bool IsNull { get; }
 
+		/// <summary>Access to the row.</summary>
 		public PpsDataRow Row => row;
+		/// <summary>Access to the column definition.</summary>
 		public PpsDataColumnDefinition Column => column;
 	} // class PpsDataRowExtentedValue
 
