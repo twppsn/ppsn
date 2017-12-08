@@ -210,3 +210,4 @@ FakesAssemblies/
 /PPSnCoreCfg/reports/.logs
 >>>>>>> PPSnMod
 /PPSnModCfg/cfg/PPSn.xml
+/Common/AssemblyInfo.cs
