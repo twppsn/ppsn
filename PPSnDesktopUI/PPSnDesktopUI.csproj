@@ -166,6 +166,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Controls\text.fx" />
+    <None Include="TecWare.PPSn.DesktopUI.nuspec" />
     <Resource Include="Images\SplashLogo.png" />
     <None Include="packages.config" />
     <None Include="ppsn.licenseheader" />

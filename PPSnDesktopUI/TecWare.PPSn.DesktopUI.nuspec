@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
 	<metadata>
-		<id>TecWare.PPSn.Module</id>
+		<id>TecWare.PPSn.DesktopUI</id>
 		<version>$version$</version>
-		<title>TecWare.PPSn.Module</title>
+		<title>TecWare.PPSn.DesktopUI</title>
 		<authors>TecWare</authors>
 		<owners>TecWare</owners>
 		<projectUrl>https://github.com/twppsn/ppsn</projectUrl>
@@ -15,15 +15,13 @@
 		<dependencies>
 			<dependency id="NeoLua" version="1.2.23" />
 			<dependency id="TecWare.DES.Core" version="1.0.0" />
-			<dependency id="TecWare.DES.ServerLib" version="1.0.0" />
 			<dependency id="TecWare.PPSn.Core" version="$version$" />
-			<dependency id="TecWare.PPSn.Report" version="$version$" />
 		</dependencies>
 	</metadata>
 
 	<files>
-		<file src="bin\Release\DEM.PPSn.dll" target="lib\net47" />
-		<file src="bin\Release\DEM.PPSn.pdb" target="lib\net47" />
-		<file src="bin\Release\DEM.PPSn.xml" target="lib\net47" />
+		<file src="bin\Release\PPSn.Desktop.UI.dll" target="lib\net47" />
+		<file src="bin\Release\PPSn.Desktop.UI.pdb" target="lib\net47" />
+		<file src="bin\Release\PPSn.Desktop.UI.xml" target="lib\net47" />
 	</files>
 </package>
