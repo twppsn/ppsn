@@ -892,7 +892,7 @@ namespace TecWare.PPSn.Server
 		public PpsObjectLinkAccess AddLinkTo(long linkId, int refCount = -1)
 		{
 			CheckRevision();
-			if (revId < 0)
+			if (IsRev && revId < 0)
 				throw new ArgumentOutOfRangeException(nameof(RevId), "No revision is set.");
 
 			var link = FindLink(true, ref linksTo, linkId);
