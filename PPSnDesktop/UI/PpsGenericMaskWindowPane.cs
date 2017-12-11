@@ -241,7 +241,7 @@ namespace TecWare.PPSn.UI
 			if (data != null && data.IsDirty)
 				await CommitEditAsync();
 
-			data.UnregisterOwner(this);
+			data?.UnregisterOwner(this);
 
 			obj = null;
 			data = null;

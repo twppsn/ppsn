@@ -170,6 +170,7 @@ namespace TecWare.PPSn.UI
 		private PpsObjectTagView tag;
 
 		private bool isEditing = false;
+		private bool isModified = false;
 		private string currentName = null;
 		private object currentValue = null;
 		private PpsObjectTagClass currentClass;
@@ -235,6 +236,7 @@ namespace TecWare.PPSn.UI
 			currentValue = tag?.Value;
 
 			isEditing = true;
+			isModified = false;
 		} // proc BeginEdit
 
 		public void EndEdit()
@@ -261,6 +263,7 @@ namespace TecWare.PPSn.UI
 				tag.Update(currentClass, currentValue);
 
 			isEditing = false;
+			isModified = false;
 
 			if (ppsObject.IsChanged)
 				ppsObject.UpdateLocalAsync().AwaitTask();
@@ -281,6 +284,7 @@ namespace TecWare.PPSn.UI
 			{
 				value = newValue;
 				OnPropertyChanged(propertyName);
+				SetValue(ref isModified, true, nameof(IsModified));
 			}
 		} // proc SetValue
 
@@ -311,7 +315,10 @@ namespace TecWare.PPSn.UI
 		public bool IsNew => tag == null;
 		/// <summary>Is the tag in editmode</summary>
 		public bool IsEditing => isEditing;
+		/// <summary>Is the current data modified.</summary>
+		public bool IsModified => isModified;
 
+		/// <summary>User, that created the tag.</summary>
 		public string UserName => IsNew ? PpsEnvironment.GetEnvironment().Username : tag.User.GetProperty("Login", "<error>"); // todo:
 
 		public PpsTagOwnerIdentityIcon OwnerIdentityIcon
