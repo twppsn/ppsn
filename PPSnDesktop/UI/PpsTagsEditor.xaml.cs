@@ -32,6 +32,7 @@ namespace TecWare.PPSn.UI
 
 	public enum PpsTagOwnerIdentityIcon
 	{
+		New,
 		System,
 		Mine,
 		Community
@@ -49,44 +50,10 @@ namespace TecWare.PPSn.UI
 		private readonly static DependencyPropertyKey tagsSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(TagsSource), typeof(ListCollectionView), typeof(PpsTagsEditor), new FrameworkPropertyMetadata(null));
 		public readonly static DependencyProperty TagsSourceProperty = tagsSourcePropertyKey.DependencyProperty;
 
-		public static readonly RoutedUICommand AppendTagCommand = new RoutedUICommand("AppendTag", "AppendTag", typeof(PpsTagsEditor));
-		public static readonly RoutedUICommand RemoveTagCommand = new RoutedUICommand("RemoveTag", "RemoveTag", typeof(PpsTagsEditor));
-
 		public PpsTagsEditor()
 		{
 			InitializeComponent();
 
-			CommandBindings.Add(
-				new CommandBinding(AppendTagCommand,
-					(sender, e) =>
-					{
-						if (TagsSource != null)
-							TagsSource.AddNewItem(new PpsTagItemModel(Object, TagClass));
-						e.Handled = true;
-					},
-					(sender, e) =>
-					{
-						e.CanExecute = TagsSource != null;
-						e.Handled = true;
-					}
-				)
-			);
-			CommandBindings.Add(
-				new CommandBinding(RemoveTagCommand,
-					(sender, e) =>
-					{
-						var currentItem = (PpsTagItemModel)TagsSource.CurrentItem;
-						if (currentItem.IsEditable)
-							TagsSource.Remove(currentItem);
-						e.Handled = true;
-					},
-					(sender, e) =>
-					{
-						e.CanExecute = TagsSource.CurrentItem is PpsTagItemModel tagItem ? tagItem.IsEditable : false;
-						e.Handled = true;
-					}
-				)
-			);
 		} // ctor
 
 		private void RefreshTagsSource()
@@ -133,22 +100,6 @@ namespace TecWare.PPSn.UI
 		public PpsObject Object { get => (PpsObject)GetValue(ObjectProperty); set => SetValue(ObjectProperty, value); }
 
 		public ListCollectionView TagsSource { get => (ListCollectionView)GetValue(TagsSourceProperty); }
-
-		private void valueTextBox_GotFocus(object sender, RoutedEventArgs e)
-		{
-			if (TagsSource.CurrentItem == null)
-				TagsSource.AddNewItem(new PpsTagItemModel(Object, TagClass));
-			else
-				TagsSource.EditItem(TagsSource.CurrentItem);
-		}
-
-		private void valueTextBox_LostFocus(object sender, RoutedEventArgs e)
-		{
-			if (TagsSource.IsAddingNew)
-				TagsSource.CommitNew();
-			else
-				TagsSource.CommitEdit();
-		}
 		
 		private void tagAttributes_AddNewItemFactory(object sender, Controls.AddNewItemFactoryEventArgs args)
 		{
@@ -319,7 +270,7 @@ namespace TecWare.PPSn.UI
 			get
 			{
 				if (IsNew)
-					return PpsTagOwnerIdentityIcon.Mine;
+					return PpsTagOwnerIdentityIcon.New;
 				else if (tag.UserId == 0)
 					return PpsTagOwnerIdentityIcon.System;
 				else if (tag.UserId == CurrentUserId)
