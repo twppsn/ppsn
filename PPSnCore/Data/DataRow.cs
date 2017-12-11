@@ -37,7 +37,7 @@ namespace TecWare.PPSn.Data
 		Unknown = -1,
 		/// <summary>The row is unchanged</summary>
 		Unchanged = 0,
-		/// <summaryThe row is modified</summary>
+		/// <summary>The row is modified</summary>
 		Modified = 1,
 		/// <summary>The row is deleted</summary>
 		Deleted = 2

@@ -238,6 +238,7 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsDataRowObjectExtendedValue ------------------------------------
 
+	/// <summary>Implementation for an extended value, that is based on an single value.</summary>
 	public abstract class PpsDataRowObjectExtendedValue : PpsDataRowExtentedValue, IPpsDataRowGetGenericValue, IPpsDataRowSetGenericValue
 	{
 		#region -- class PpsUndoDataValue ---------------------------------------------
@@ -269,6 +270,9 @@ namespace TecWare.PPSn.Data
 		private object originalValue = null; // original id
 		private object value = null; // id to the master data row
 		
+		/// <summary></summary>
+		/// <param name="row"></param>
+		/// <param name="column"></param>
 		protected PpsDataRowObjectExtendedValue(PpsDataRow row, PpsDataColumnDefinition column)
 			: base(row, column)
 		{
@@ -300,6 +304,7 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc SetGenericValue
 
+		/// <summary>Commit the current value to the original.</summary>
 		protected virtual void Commit()
 		{
 			if (PpsDataRow.NotSet != value)
@@ -309,6 +314,7 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc Commit
 		
+		/// <summary>Reset the current value to the original.</summary>
 		protected virtual void Reset()
 		{
 			var oldValue = value;
@@ -363,8 +369,10 @@ namespace TecWare.PPSn.Data
 		bool IPpsDataRowSetGenericValue.SetGenericValue(bool inital, object value)
 			=> SetGenericValue(value, !inital);
 
+		/// <summary>Access to the internal value.</summary>
 		protected object InternalValue => value == PpsDataRow.NotSet ? originalValue : value;
 
+		/// <summary>Is the value modified.</summary>
 		public bool IsValueModified => value != PpsDataRow.NotSet;
 		/// <summary>Equals the internal value <c>null</c>.</summary>
 		public override bool IsNull => InternalValue == null;
@@ -472,21 +480,33 @@ namespace TecWare.PPSn.Data
 		{
 			private readonly PpsDataColumnStaticMetaCollection staticMeta;
 
+			/// <summary></summary>
+			/// <param name="column"></param>
 			public PpsDataColumnMetaCollection(PpsDataColumnDefinition column)
 			{
 				this.staticMeta = new PpsDataColumnStaticMetaCollection(column);
 			} // ctor
 
+			/// <summary></summary>
+			/// <param name="column"></param>
+			/// <param name="clone"></param>
 			protected PpsDataColumnMetaCollection(PpsDataColumnDefinition column, PpsDataColumnMetaCollection clone)
 				: base(clone)
 			{
 				this.staticMeta = new PpsDataColumnStaticMetaCollection(column);
 			} // ctor
 
+			/// <summary></summary>
+			/// <typeparam name="T"></typeparam>
+			/// <param name="key"></param>
+			/// <param name="default"></param>
+			/// <returns></returns>
 			public T GetProperty<T>(PpsDataColumnMetaData key, T @default)
 				=> PropertyDictionaryExtensions.GetProperty<T>(this, key.ToString(), @default);
 
+			/// <summary></summary>
 			public override IReadOnlyDictionary<string, Type> WellknownMetaTypes => wellknownMetaTypes;
+			/// <summary></summary>
 			protected override IReadOnlyDictionary<string, object> StaticKeys => staticMeta;
 		} // class PpsDataColumnMetaCollection
 
@@ -541,6 +561,9 @@ namespace TecWare.PPSn.Data
 		private readonly Lazy<bool> isExtendedValue;
 		private PpsDataTableRelationDefinition parentRelation; // relation to the parent column, the current column has a value from the parent column
 
+		/// <summary></summary>
+		/// <param name="table"></param>
+		/// <param name="clone"></param>
 		protected PpsDataColumnDefinition(PpsDataTableDefinition table, PpsDataColumnDefinition clone)
 		{
 			this.table = table;
@@ -580,11 +603,17 @@ namespace TecWare.PPSn.Data
 			this.parentRelation = parentRelation;
 		} // proc SetParentRelation
 
+		/// <summary></summary>
+		/// <param name="tableOwner"></param>
+		/// <returns></returns>
 		public abstract PpsDataColumnDefinition Clone(PpsDataTableDefinition tableOwner);
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override string ToString()
 			=> $"{table.Name}.{columnName}";
 
+		/// <summary>Gets called if all columns are readed.</summary>
 		public virtual void EndInit()
 		{
 		} // proc EndInit
@@ -735,6 +764,8 @@ namespace TecWare.PPSn.Data
 			return parentTable.FindRows(parentRelation.ParentColumn, value).FirstOrDefault() != null;
 		} // func ExistsValueInParentTable
 
+		/// <summary></summary>
+		/// <returns></returns>
 		protected abstract Type GetDataType();
 
 		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
@@ -762,6 +793,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Parent column for the parent child relation.</summary>
 		public PpsDataColumnDefinition ParentColumn => parentRelation.ParentColumn;
 
+		/// <summary></summary>
 		public virtual bool IsInitialized => true;
 
 		/// <summary>Zugriff auf die zugeordneten Meta-Daten der Spalte.</summary>

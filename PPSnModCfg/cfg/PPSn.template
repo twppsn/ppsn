@@ -7,7 +7,6 @@
 	<!-- Change default log path -->
 	<server logpath="..\log">
 		<!-- Update search paths for the assemblies -->
-		<resolve>..\..\PPSnMod\bin\Debug</resolve>
 	</server>
 
 	<!-- Change binding of the webserver here. -->
