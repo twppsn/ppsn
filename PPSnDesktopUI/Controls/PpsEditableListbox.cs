@@ -413,7 +413,6 @@ namespace TecWare.PPSn.Controls
 
 			if (!isInEditMode && IsEditable && IsChildOf(e.NewFocus))
 			{
-				Debug.Print(String.Format("--- {0}---------------------- gotfocus     {1}", x++, Content));
 				isInEditMode = true;
 				// Ignore when entering currently added item.
 				// Transaction already started by entering NewItemPlaceHolder.
@@ -422,14 +421,12 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc OnGotKeyboardFocus
 
-		int x = 0;
 		protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e)
 		{
 			base.OnLostKeyboardFocus(e);
 
 			if (isInEditMode && !IsChildOf(e.NewFocus))
 			{
-				Debug.Print(String.Format("--- {0}---------------------- LOSTFOCUS     {1}", x++, Content));
 				isInEditMode = false;
 				// Ignore when NewItemPlaceHolder collapsed.
 				// Remains in editing currently added item.
