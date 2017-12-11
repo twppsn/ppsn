@@ -624,7 +624,8 @@ namespace TecWare.PPSn.Server
 			var newRevId = (long)args["Id"];
 
 			// update
-			if (insertNew && changeHead)
+			// head should be set, if this revId is new or revId has changed
+			if ((insertNew || revId != newRevId) && changeHead)
 			{
 				this["HeadRevId"] = newRevId;
 				SetRevision(newRevId, PpsObjectUpdateFlag.None);
@@ -1133,6 +1134,9 @@ namespace TecWare.PPSn.Server
 				application.Objects.ValidateNumber(obj.Nr, nextNumber, data);
 		} // func SetNextNumber
 
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <param name="data"></param>
 		protected void InsertNewObject(PpsObjectAccess obj, T data)
 		{
 			obj.IsRev = IsDataRevision(data);
@@ -1146,7 +1150,6 @@ namespace TecWare.PPSn.Server
 			=> PushData(obj, (T)data, false);
 
 		/// <summary>Persist the data in the server</summary>
-		/// <param name="transaction">Transaction to the database.</param>
 		/// <param name="obj">Object information.</param>
 		/// <param name="data">Data to push</param>
 		/// <param name="release">Has this data a release request.</param>
@@ -1172,6 +1175,11 @@ namespace TecWare.PPSn.Server
 			return true;
 		} // func PushData
 
+		/// <summary>Push an object.</summary>
+		/// <param name="obj"></param>
+		/// <param name="data"></param>
+		/// <param name="release"></param>
+		/// <returns></returns>
 		[LuaMember("Push")]
 		protected virtual bool LuaPush(PpsObjectAccess obj, object data, bool release)
 			=> PushData(obj, (T)data, release);
@@ -1286,18 +1294,19 @@ namespace TecWare.PPSn.Server
 			} // proc ValidateNumber
 
 			/// <summary>Gets the next number of an object class</summary>
-			/// <param name="trans"></param>
 			/// <param name="typ"></param>
+			/// <param name="nextNumber"></param>
+			/// <param name="data"></param>
 			/// <returns></returns>
 			[LuaMember(nameof(GetNextNumber))]
 			public string GetNextNumber(string typ, object nextNumber, object data)
 			{
 				// get the highest number
-				var args = Procs.CreateLuaTable(
-					new PropertyValue("sql", "select max(Nr) from dbo.Objk where [Typ] = @Typ")
-				);
-				args[1] = Procs.CreateLuaTable(new PropertyValue("Typ", typ));
-
+				var args = new LuaTable()
+				{
+					["sql"] = "select max(Nr) from dbo.Objk where [Typ] = @Typ",
+					[1] = new LuaTable() { ["Typ"] = typ } 
+				};
 				var row = application.Database.Main.ExecuteSingleRow(args);
 
 				string nr;
