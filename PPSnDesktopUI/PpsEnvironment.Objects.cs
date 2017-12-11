@@ -469,8 +469,14 @@ namespace TecWare.PPSn
 				CheckLinksLoaded();
 				var l = links.Find(c => c.LinkToId == objectId);
 				if (l == null)
-					throw new ArgumentOutOfRangeException(nameof(objectId));
-				RemoveLink(l);
+				{
+					if (force)
+						throw new ArgumentOutOfRangeException(nameof(objectId));
+				}
+				else
+				{
+					RemoveLink(l);
+				}
 			}
 		} // func RemoveLink
 
