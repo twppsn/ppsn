@@ -365,7 +365,7 @@ namespace TecWare.PPSn.Controls
 			=> GetListBoxItemFromContent(CollectionView.NewItemPlaceholder).Visibility = Visibility.Collapsed;
 
 		private bool IsCurrentlyAddedItem(object item)
-			=> item.Equals(editableCollectionView.CurrentAddItem);
+			=> editableCollectionView != null && item.Equals(editableCollectionView.CurrentAddItem);
 
 		#endregion
 

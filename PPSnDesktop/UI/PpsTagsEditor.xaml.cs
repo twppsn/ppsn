@@ -53,7 +53,6 @@ namespace TecWare.PPSn.UI
 		public PpsTagsEditor()
 		{
 			InitializeComponent();
-
 		} // ctor
 
 		private void RefreshTagsSource()
@@ -103,7 +102,7 @@ namespace TecWare.PPSn.UI
 		
 		private void tagAttributes_AddNewItemFactory(object sender, Controls.AddNewItemFactoryEventArgs args)
 		{
-			args.NewItem = new PpsTagItemModel(Object, PpsObjectTagClass.Text);
+			args.NewItem = new PpsTagItemModel(Object, TagClass);
 			args.Handled = true;
 		} // event tagAttributes_AddNewItemFactory
 	} // class PpsTagsEditor
