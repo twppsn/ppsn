@@ -257,10 +257,10 @@
 								<RowDefinition Height="38" MaxHeight="38"/>
 								<RowDefinition/>
 							</Grid.RowDefinitions>
-							<TextBox x:Name="nameTextBox" Grid.Column="0" Margin="0,5" BorderBrush="{StaticResource lighterBorderBrush}"
+							<TextBox x:Name="nameTextBox" Grid.Column="0" Margin="0,5,6,5" BorderBrush="{StaticResource lighterBorderBrush}"
 									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 Style="{StaticResource PpsTagTextBoxStyle}"/>
-							<TextBox Grid.Column="1" Grid.RowSpan="2" Margin="6,5"
+							<TextBox Grid.Column="1" Grid.RowSpan="2" Margin="0,5"
 									 Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" MaxHeight="172"
 									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"/>
@@ -281,12 +281,10 @@
 				<ListBox.ItemTemplate>
 					<DataTemplate>
 						<Grid Background="Transparent" Height="38">
-							<TextBox x:Name="tagTextBox" Grid.Column="0"
+							<TextBox x:Name="tagTextBox" Margin="0,5" FontSize="14"
 									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 MaxLength="64"
-									 Style="{StaticResource PpsTagTextBoxStyle}"
-									 FontSize="14" Margin="0,5">
-							</TextBox>
+									 Style="{StaticResource PpsTagTextBoxStyle}"/>
 						</Grid>
 					</DataTemplate>
 				</ListBox.ItemTemplate>
@@ -321,7 +319,6 @@
 									 IsEnabled="{Binding IsUserChangeable}"
 									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"
 									 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" MaxHeight="172"/>
-
 						</Grid>
 						<DataTemplate.Triggers>
 							<Trigger SourceName="valueTextBox" Property="IsEnabled" Value="True">
