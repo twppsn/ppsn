@@ -1085,6 +1085,7 @@ namespace TecWare.PPSn
 			OnCollectionChanged(null);
 		} // proc RefreshTagsFromXml
 
+		/// <summary>Reads all tags from the local database.</summary>
 		public void RefreshTags()
 		{
 			lock (parent.SyncRoot)
@@ -2259,6 +2260,8 @@ namespace TecWare.PPSn
 			}
 		} // proc EnqueuePullRevisionAsync
 
+		/// <summary>Pull the object from the server.</summary>
+		/// <returns></returns>
 		public async Task<IPpsObjectData> PullAsync()
 		{
 			// foreground means a thread transission, we just wait for the task to finish.
@@ -2303,6 +2306,8 @@ namespace TecWare.PPSn
 			}
 		} // func PullRevisionAsync
 
+		/// <summary>Push the object to server.</summary>
+		/// <returns></returns>
 		public async Task PushAsync()
 		{
 			XElement xAnswer;
