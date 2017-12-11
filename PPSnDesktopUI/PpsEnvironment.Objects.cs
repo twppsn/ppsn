@@ -1547,30 +1547,38 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		/// <summary>Number of tags.</summary>
 		public int Count
 		{
 			get
 			{
 				lock (parent.SyncRoot)
 				{
+					CheckTagsState();
 					return tags.Count;
 				}
 			}
 		} // prop Count
 
+		/// <summary>Is the tag list changed, and not written in the local database.</summary>
 		public bool IsDirty => isDirty;
 
+		/// <summary>Access a tag by index.</summary>
+		/// <param name="index">Index of the tag.</param>
+		/// <returns></returns>
 		public PpsObjectTagView this[int index]
 		{
 			get
 			{
 				lock (parent.SyncRoot)
 				{
+					CheckTagsState();
 					return tags[index];
 				}
 			}
 		} // prop this
 
+		/// <summary>Parent of the tag list.</summary>
 		public PpsObject Parent => parent;
 	} // class PpsObjectTags
 
@@ -1980,7 +1988,6 @@ namespace TecWare.PPSn
 
 	#region -- class PpsObject --------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public sealed class PpsObject : DynamicDataRow, INotifyPropertyChanged
 	{
@@ -2001,6 +2008,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private readonly PpsEnvironment environment;
@@ -2479,28 +2487,27 @@ namespace TecWare.PPSn
 		[Obsolete("falsche verantwortung")]
 		public Task ViewAsync(object target)
 		{
-			ShellExecute();
-			return Task.CompletedTask;
+			return ShellExecute();
 		} // proc ViewAsync
 
 
 		[Obsolete("falsche verantwortung")]
-		public async void ShellExecute()
+		public async Task ShellExecute()
 		{
-			var filename = this.GetProperty("FileName", (string)null);
-			if (String.IsNullOrEmpty(filename))
+			var fileName = this.GetProperty("Name", (string)null);
+			if (String.IsNullOrEmpty(fileName))
+			{
+				await Environment.MsgBoxAsync("Datei kann nicht angezeigt werden. Anzeige Programm konnte nicht zugeordnet werden.");
 				return;
+			}
 
-			filename = System.IO.Path.GetTempPath() + "\\" + Path.GetFileName(filename);
-
-			//if (Path.GetExtension(filename) == ".exe") // ToDo: ask if the executeable may run
-
-			using (var fileStream = File.OpenWrite(filename))
+			fileName = Path.GetTempPath() + "\\" + Path.GetFileName(fileName);
+			using (var fileStream = File.OpenWrite(fileName))
 			{
 				var buffer = await LoadRawDataAsync();
 				fileStream.Write(buffer.ReadInArray(), 0, (int)buffer.Length);
 				fileStream.Close();
-				System.Diagnostics.Process.Start(filename);
+				System.Diagnostics.Process.Start(fileName);
 			}
 		}
 
@@ -2562,6 +2569,8 @@ namespace TecWare.PPSn
 			ResetDirty(transaction);
 		} // proc UpdateLocalInternal
 
+		/// <summary>Update local sqlite.</summary>
+		/// <returns></returns>
 		public async Task UpdateLocalAsync()
 		{
 			using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
@@ -2600,7 +2609,6 @@ namespace TecWare.PPSn
 
 		#region -- class PpsObjectColumns -------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private sealed class PpsObjectColumns : IReadOnlyList<IDataColumn>
 		{
@@ -2654,8 +2662,12 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		/// <summary></summary>
 		public override IReadOnlyList<IDataColumn> Columns => columns;
 
+		/// <summary>Get the content of an tag.</summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
 		public override object this[int index]
 		{
 			get
@@ -2717,9 +2729,12 @@ namespace TecWare.PPSn
 			}
 		} // proc SetDirty
 
+		/// <summary>Access to environment</summary>
 		public PpsEnvironment Environment => environment;
+		/// <summary>This DataRow owns the data.</summary>
 		public override bool IsDataOwner => true;
 
+		/// <summary>Id of the object.</summary>
 		public long Id => objectId;
 		public Guid Guid => GetValue((int)PpsStaticObjectColumnIndex.Guid, Guid.Empty);
 		public string Typ => GetValue((int)PpsStaticObjectColumnIndex.Typ, String.Empty);

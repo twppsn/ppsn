@@ -199,8 +199,7 @@ namespace TecWare.PPSn.Controls
 		
 		private static Task RunAttachmentAsync(PpsCommandContext ctx)
 			=> GetCurrentAttachmentItemFromContext(ctx)?.LinkedObject.ViewAsync(ctx.Target);
-			
-
+		
 		#endregion
 
 		#region -- Logical Children ---------------------------------------------------
