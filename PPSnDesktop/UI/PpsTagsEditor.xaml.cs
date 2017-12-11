@@ -468,9 +468,6 @@ namespace TecWare.PPSn.UI
 
 		private int Insert(PpsTagItemModel tag, int insertAt)
 		{
-			//if (tag.IsNew)
-			//	throw new ArgumentException("Tag is not in inner tag list.");
-
 			// find index of the tag
 			var idx = items.IndexOf(tag);
 			if (idx == -1)
@@ -488,7 +485,11 @@ namespace TecWare.PPSn.UI
 			if(idx != insertAt)
 			{
 				if (idx != -1)
+				{
 					RemoveFromView(tag, idx);
+					if (insertAt > idx)
+						insertAt--;
+				}
 
 				items.Insert(insertAt, tag);
 				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, tag, insertAt));
