@@ -3381,7 +3381,7 @@ order by t_liefnr.value desc
 			{
 				var newObject = await CreateNewObjectFromStreamAsync(src, Path.GetFileName(fileName));
 				newObject.Tags.UpdateRevisionTag("FileName", PpsObjectTagClass.Text, fileName);
-				newObject.Tags.UpdateRevisionTag("LastWriteTime", PpsObjectTagClass.Date, lastWriteTime.ToString(CultureInfo.InvariantCulture));
+				newObject.Tags.UpdateRevisionTag("LastWriteTime", PpsObjectTagClass.Date, lastWriteTime.ChangeType<string>());
 
 				// write changes
 				await newObject.UpdateLocalAsync();

@@ -381,9 +381,9 @@
 	<xs:complexType name="objectItemType">
 		<xs:complexContent>
 			<xs:extension base="ConfigItemType">
-				<xs:attribute name="nrLength" type="xs:integer" use="optional">
+				<xs:attribute name="nextNumber" type="xs:string" use="optional">
 					<xs:annotation>
-						<xs:documentation>Length to generate number, if this value is not set, GetNextNumber must defined.</xs:documentation>
+						<xs:documentation>Length or paddern to generate next number, if this value is not set, GetNextNumber must defined.</xs:documentation>
 					</xs:annotation>
 				</xs:attribute>
 				<xs:attribute name="forceNextNumber" type="xs:boolean" use="optional" default="false">

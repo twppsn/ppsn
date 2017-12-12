@@ -26,13 +26,14 @@ namespace TecWare.PPSn.Controls
 {
 	#region -- class PpsDataListTemplateSelector ----------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Template selector for object templates</summary>
 	public class PpsDataListTemplateSelector : DataTemplateSelector
 	{
 		private readonly PpsEnvironment environment;
 		private readonly DataTemplate defaultTemplate;
 
+		/// <summary></summary>
+		/// <param name="environment"></param>
 		public PpsDataListTemplateSelector(PpsEnvironment environment)
 		{
 			this.environment = environment;
@@ -40,10 +41,21 @@ namespace TecWare.PPSn.Controls
 			defaultTemplate = environment.FindResource<DataTemplate>("DefaultListTemplate");
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="item"></param>
+		/// <param name="container"></param>
+		/// <returns></returns>
 		public override DataTemplate SelectTemplate(object item, DependencyObject container)
 		{
-			var table = item as LuaTable;
-			var key = table != null ? table.GetMemberValue("Typ") : ((dynamic)item).Typ;
+			string key = null;
+
+			if (item is LuaTable t)
+				key = t.GetMemberValue("Typ") as string;
+			else if (item is PpsObject o)
+				key = o.Typ;
+			else
+				key = ((dynamic)item).Typ;
+
 			if (key == null)
 				return null;
 

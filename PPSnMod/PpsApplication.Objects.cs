@@ -21,6 +21,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
@@ -1115,9 +1116,9 @@ namespace TecWare.PPSn.Server
 				return nextNumber;
 
 			// test for length
-			var nrLength = Config.GetAttribute("nrLength", 0);
-			if (nrLength > 0)
-				return nrLength;
+			var nextNumberString = Config.GetAttribute("nextNumber", null);
+			if (!String.IsNullOrEmpty(nextNumberString))
+				return nextNumberString;
 
 			return null;
 		} // func GetNextNumberMethod
@@ -1272,12 +1273,15 @@ namespace TecWare.PPSn.Server
 	{
 		#region -- class PpsObjectsLibrary ----------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		public sealed class PpsObjectsLibrary : LuaTable
 		{
+			private static readonly Regex simpleNextNumberFormat = new Regex(@"(?<prefix>[A-Z-_]*)?(\{(?<var>\d+|\w+)\})*", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
 			private readonly PpsApplication application;
 
+			/// <summary></summary>
+			/// <param name="application"></param>
 			public PpsObjectsLibrary(PpsApplication application)
 			{
 				this.application = application;
@@ -1301,17 +1305,18 @@ namespace TecWare.PPSn.Server
 			[LuaMember(nameof(GetNextNumber))]
 			public string GetNextNumber(string typ, object nextNumber, object data)
 			{
-				// get the highest number
-				var args = new LuaTable()
-				{
-					["sql"] = "select max(Nr) from dbo.Objk where [Typ] = @Typ",
-					[1] = new LuaTable() { ["Typ"] = typ } 
-				};
-				var row = application.Database.Main.ExecuteSingleRow(args);
-
 				string nr;
 				if (nextNumber == null || nextNumber is int) // fill with zeros
 				{
+					// get the highest number
+					var args = new LuaTable()
+					{
+						["sql"] = "select max(Nr) from dbo.Objk where [Typ] = @Typ",
+						[1] = new LuaTable() { ["Typ"] = typ }
+					};
+					var row = application.Database.Main.ExecuteSingleRow(args);
+
+					// get the next number
 					if (row == null || row[0] == null)
 						nr = "1"; // first number
 					else if (Int64.TryParse(row[0].ToString(), out var i))
@@ -1319,17 +1324,64 @@ namespace TecWare.PPSn.Server
 					else
 						throw new ArgumentException($"GetNextNumber failed, could not parse '{row[0]}' to number.");
 
+					// pad zeros
 					if (nextNumber != null)
 						nr = nr.PadLeft((int)nextNumber, '0');
 				}
 				else if (nextNumber is string) // format mask
 				{
-					// V<YY><NR>
-					throw new NotImplementedException();
+					// PREFIX{NR}
+					// is also allowed to add {YY} {MM}
+
+					var selectValue = new StringBuilder();
+					var formatValue = new StringBuilder();
+					var numberOffset = 0;
+					var numberLength = -1;
+					foreach (var seg in ParseSegments(nextNumber))
+					{
+						if (seg is string str)
+						{
+							selectValue.Append(str);
+							formatValue.Append(str);
+							if (numberLength < 0)
+								numberOffset += str.Length;
+						}
+						else if (seg is int counter)
+						{
+							selectValue.Append("%");
+							formatValue.Append("{0:")
+								.Append(new string('0', counter))
+								.Append('}');
+							numberLength = counter;
+						}
+						else
+							throw new ArgumentException();
+					}
+
+					// get the highest number
+					var args = new LuaTable()
+					{
+						["sql"] = "select max(Nr) from dbo.Objk where [Typ] = @Typ and [Nr] LIKE @NRFMT",
+						[1] = new LuaTable() { ["Typ"] = typ, ["NRFMT"] = selectValue.ToString() }
+					};
+					var row = application.Database.Main.ExecuteSingleRow(args);
+
+					var n = 1L;
+					if (row != null && row[0] != null)
+					{
+						var value = row[0].ToString();
+						if (value.Length >= numberOffset + numberLength
+							&& Int64.TryParse(value.Substring(numberOffset, numberLength), out var i))
+							n = i + 1;
+						else
+							throw new ArgumentException($"GetNextNumber failed, could not parse '{row[0]}' to number.");
+					}
+
+					nr = String.Format(formatValue.ToString(), n);
 				}
 				else if (Lua.RtInvokeable(nextNumber)) // use a function
 				{
-					nr = new LuaResult(Lua.RtInvoke(nextNumber, row?[0], data)).ToString();
+					nr = new LuaResult(Lua.RtInvoke(nextNumber, data)).ToString();
 				}
 				else
 					throw new ArgumentException($"Unknown number format '{nextNumber}'.", "nextNumber");
@@ -1337,8 +1389,64 @@ namespace TecWare.PPSn.Server
 				return nr;
 			} // func GetNextNumber
 
+			private static IEnumerable<object> ParseSegments(object nextNumber)
+			{
+				var segments = new List<(int sort, object value)>();
+				var m = simpleNextNumberFormat.Match((string)nextNumber);
+				if (!m.Success)
+					throw new ArgumentException($"GetNextNumber failed, could not parse number format '{nextNumber}'.");
+
+				var hasCounter = false;
+
+				// add prefix
+				var prefixCapture = m.Groups["prefix"];
+				if (prefixCapture.Length > 0)
+					segments.Add((0, prefixCapture.Value));
+
+				// add segments
+				foreach (var _c in m.Groups["var"].Captures)
+				{
+					var c = (Capture)_c;
+					if (Int32.TryParse(c.Value, out var counterLength))
+					{
+						hasCounter = true;
+						segments.Add((c.Index, counterLength));
+					}
+					else
+					{
+						var segmentData = "";
+						switch (c.Value.ToUpper())
+						{
+							case "YY":
+								segmentData = (DateTime.Now.Year % 100).ToString("00");
+								break;
+							case "YYYY":
+								segmentData = DateTime.Now.Year.ToString("0000");
+								break;
+							case "MM":
+								segmentData = DateTime.Now.Month.ToString("00");
+								break;
+							case "DD":
+								segmentData = DateTime.Now.Day.ToString("00");
+								break;
+							default:
+								throw new ArgumentException($"GetNextNumber failed, placeholder '{c.Value}' is unknown.");
+						}
+
+						var insertAt = 0;
+						while (insertAt < segments.Count && segments[insertAt].sort < c.Index)
+							insertAt++;
+
+						segments.Insert(insertAt, (c.Index, segmentData));
+					}
+				}
+				if (!hasCounter)
+					throw new ArgumentException($"GetNextNumber failed, counter is missing.");
+				
+				return from seg in segments select seg.value;
+			} // func ParseSegments
+
 			/// <summary>Create a complete new object.</summary>
-			/// <param name="trans"></param>
 			/// <param name="args"></param>
 			/// <returns></returns>
 			[LuaMember]
