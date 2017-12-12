@@ -33,6 +33,10 @@ git clone --recursive --branch development https://github.com/twppsn/ppsn.git
 ```sql
 
 INSERT INTO dbo.[User] ([Login], [Security]) VALUES ('domain\username', 'desSys;Chef');
+-- if not happened automaticly by the PostScript.sql, the system user has to be manually created:
+SET IDENTITY_INSERT [dbo].[User] ON
+INSERT INTO [dbo].[User] ([Id], [Login], [Security], [LoginVersion]) VALUES (0, N'System', NULL, 0);
+SET IDENTITY_INSERT [dbo].[User] OFF
 
 ```
 

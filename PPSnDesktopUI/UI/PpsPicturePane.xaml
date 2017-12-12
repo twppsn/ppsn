@@ -186,7 +186,7 @@ specific language governing permissions and limitations under the Licence.
 				Grid.ColumnSpan="2" 
 				Background="AliceBlue" 
 				Opacity="0.6"
-				CornerRadius="50,50,50,50">
+				CornerRadius="5,50,50,5">
 				<Border.Style>
 					<Style TargetType="Border">
 						<Style.Triggers>
