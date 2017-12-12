@@ -2323,6 +2323,7 @@ namespace TecWare.PPSn
 						if (lnk.LinkToId < 0 || lnk.LinkTo.IsDocumentChanged)
 							await lnk.LinkTo.PushAsync();
 					}
+					// allow the dataset to update the linkIds
 					await data.LoadAsync();
 
 					// first build object data
