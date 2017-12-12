@@ -259,10 +259,10 @@ namespace TecWare.PPSn.Data
 			public void Freeze() { }
 
 			public void Redo()
-				=> value.SetGenericValue(newKey, false);
+				=> value.SetGenericValue(newKey, true);
 
 			public void Undo()
-				=> value.SetGenericValue(oldKey, false);
+				=> value.SetGenericValue(oldKey, true);
 		} // class PpsUndoDataValue
 
 		#endregion
@@ -300,6 +300,8 @@ namespace TecWare.PPSn.Data
 				var oldValue = InternalValue;
 				value = newValue;
 				OnPropertyChanged(nameof(Value), oldValue, newValue, firePropertyChanged);
+				if (firePropertyChanged) // we need also to call the row property changed, because of the generic set/get
+					Row.OnValueChanged(Column.Index, oldValue, newValue);
 				return true;
 			}
 		} // proc SetGenericValue

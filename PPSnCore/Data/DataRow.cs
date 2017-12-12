@@ -849,7 +849,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="columnIndex"></param>
 		/// <param name="oldValue"></param>
 		/// <param name="value"></param>
-		protected virtual void OnValueChanged(int columnIndex, object oldValue, object value)
+		public virtual void OnValueChanged(int columnIndex, object oldValue, object value)
 		{
 			if (RowState == PpsDataRowState.Unchanged)
 			{
