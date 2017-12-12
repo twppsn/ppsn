@@ -705,6 +705,9 @@ namespace TecWare.PPSn
 
 		private static void CheckKey(string key)
 		{
+			if (String.IsNullOrEmpty(key))
+				throw new ArgumentNullException(nameof(key), "Tag name is empty.");
+
 			foreach (var c in key)
 			{
 				if (c != '_' && !Char.IsLetterOrDigit(c))
@@ -914,6 +917,7 @@ namespace TecWare.PPSn
 	/// <summary>List for lazy load support of tags.</summary>
 	public sealed class PpsObjectTags : IList, IReadOnlyList<PpsObjectTagView>, IPropertyReadOnlyDictionary, INotifyCollectionChanged
 	{
+		/// <summary>Notifies about tag changes.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		private readonly PpsObject parent;
@@ -1015,6 +1019,7 @@ namespace TecWare.PPSn
 
 		/// <summary>Writes revision attached tags</summary>
 		/// <param name="x"></param>
+		/// <param name="tagElementName"></param>
 		internal void WriteTagsToXml(XElement x, XName tagElementName)
 		{
 			lock (SyncRoot)
@@ -1085,6 +1090,7 @@ namespace TecWare.PPSn
 			OnCollectionChanged(null);
 		} // proc RefreshTagsFromXml
 
+		/// <summary>Reads all tags from the local database.</summary>
 		public void RefreshTags()
 		{
 			lock (parent.SyncRoot)
@@ -1289,6 +1295,10 @@ namespace TecWare.PPSn
 			EnsureTagInList(tag);
 		} // func UpdateRevisionTagCore
 
+		/// <summary>Updates a revision attached tag.</summary>
+		/// <param name="key">Key of the tag.</param>
+		/// <param name="tagClass">Classification of the tag.</param>
+		/// <param name="value">Value of the tag.</param>
 		public void UpdateRevisionTag(string key, PpsObjectTagClass tagClass, object value)
 		{
 			if (tagClass != PpsObjectTagClass.Text
@@ -1305,9 +1315,13 @@ namespace TecWare.PPSn
 			}
 		} // proc UpdateRevisionTag
 
+		/// <summary>Merges the revision based tags with the tag-list.</summary>
+		/// <param name="tagList"></param>
 		public void UpdateRevisionTags(params PpsObjectTag[] tagList)
 			=> UpdateRevisionTags(tagList);
 
+		/// <summary>Merges the revision based tags with the tag-list.</summary>
+		/// <param name="tagList"></param>
 		public void UpdateRevisionTags(IEnumerable<PpsObjectTag> tagList)
 		{
 			lock (SyncRoot)
@@ -1337,10 +1351,22 @@ namespace TecWare.PPSn
 			OnCollectionChanged();
 		} // proc RefreshTags
 
-
+		/// <summary>Update a tag for the current user.</summary>
+		/// <param name="key">Key of the tag.</param>
+		/// <param name="cls">Classification of the tag.</param>
+		/// <param name="value">Value of the tag.</param>
+		/// <param name="updateTagBeforeReset">Function is called with the new tag-view before the CollectionReset gets calle.d</param>
+		/// <returns>New or current tag-view of the tag.</returns>
 		public PpsObjectTagView UpdateTag(string key, PpsObjectTagClass cls, object value, Action<PpsObjectTagView> updateTagBeforeReset = null)
 			=> UpdateTag(parent.Environment.UserId, key, cls, value, updateTagBeforeReset);
 
+		/// <summary>Update a tag for a user.</summary>
+		/// <param name="userId">Id of the user.</param>
+		/// <param name="key">Key of the tag.</param>
+		/// <param name="cls">Classification of the tag.</param>
+		/// <param name="value">Value of the tag.</param>
+		/// <param name="updateTagBeforeReset">Function is called with the new tag-view before the CollectionReset gets calle.d</param>
+		/// <returns>New or current tag-view of the tag.</returns>
 		public PpsObjectTagView UpdateTag(long userId, string key, PpsObjectTagClass cls, object value, Action<PpsObjectTagView> updateTagBeforeReset = null)
 		{
 			try
@@ -1372,6 +1398,8 @@ namespace TecWare.PPSn
 			}
 		} // func UpdateTag
 
+		/// <summary>Remove the tag of the current user..</summary>
+		/// <param name="key">Key of the tag.</param>
 		public void Remove(string key)
 		{
 			lock (parent.SyncRoot)
@@ -1384,6 +1412,8 @@ namespace TecWare.PPSn
 			}
 		} // proc Remove
 
+		/// <summary>Get a list of all tags.</summary>
+		/// <returns>Tags</returns>
 		public IEnumerator<PpsObjectTagView> GetEnumerator()
 		{
 			lock (SyncRoot)
@@ -2259,6 +2289,8 @@ namespace TecWare.PPSn
 			}
 		} // proc EnqueuePullRevisionAsync
 
+		/// <summary>Pull the object from the server.</summary>
+		/// <returns></returns>
 		public async Task<IPpsObjectData> PullAsync()
 		{
 			// foreground means a thread transission, we just wait for the task to finish.
@@ -2303,6 +2335,8 @@ namespace TecWare.PPSn
 			}
 		} // func PullRevisionAsync
 
+		/// <summary>Push the object to server.</summary>
+		/// <returns></returns>
 		public async Task PushAsync()
 		{
 			XElement xAnswer;

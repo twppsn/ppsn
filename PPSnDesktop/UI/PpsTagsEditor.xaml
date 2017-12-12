@@ -37,9 +37,11 @@
 						<uiL:PpsTagOwnerIdentityIcon>New</uiL:PpsTagOwnerIdentityIcon>
 					</DataTrigger.Value>
 					<Setter TargetName="imagePath" Property="Data" Value="{StaticResource filePlusPathGeometry}"/>
+					<Setter TargetName="imagePath" Property="Fill" Value="{StaticResource PPSnMarkerBrush}"/>
 				</DataTrigger>
 				<DataTrigger Binding="{Binding}" Value="{x:Static CollectionView.NewItemPlaceholder}">
 					<Setter TargetName="imagePath" Property="Data" Value="{StaticResource filePlusPathGeometry}"/>
+					<Setter TargetName="imagePath" Property="Fill" Value="{StaticResource PPSnMarkerBrush}"/>
 				</DataTrigger>
 
 			</ControlTemplate.Triggers>
@@ -51,6 +53,7 @@
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderBrush" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="IsReadOnly" Value="True"/>
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type TextBox}">
@@ -79,12 +82,20 @@
 							<Trigger Property="IsKeyboardFocused" Value="True">
 								<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
 							</Trigger>
-							<DataTrigger Binding="{Binding Path=IsEditable, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type uiC:PpsEditableListboxItem}}, Mode=OneWay}">
+
+							<DataTrigger Binding="{Binding}" Value="{x:Static CollectionView.NewItemPlaceholder}">
+								<Setter Property="IsReadOnly" Value="False"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding IsNew}" Value="True">
+								<Setter Property="IsReadOnly" Value="False"/>
+							</DataTrigger>
+
+							<!--<DataTrigger Binding="{Binding Path=IsEditable, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type uiC:PpsEditableListboxItem}}, Mode=OneWay}">
 								<DataTrigger.Value>
 									<sys:Boolean>false</sys:Boolean>
 								</DataTrigger.Value>
 								<Setter Property="IsReadOnly" Value="True"/>
-							</DataTrigger>
+							</DataTrigger>-->
 						</ControlTemplate.Triggers>
 					</ControlTemplate>
 				</Setter.Value>
@@ -93,6 +104,7 @@
 
 		<Style x:Key="PpsTagSimpleTextBoxStyle" TargetType="{x:Type TextBox}" BasedOn="{StaticResource PpsTagTextBoxStyle}">
 			<Setter Property="BorderBrush" Value="{StaticResource lighterBorderBrush}"/>
+			<Setter Property="IsReadOnly" Value="False"/>
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type TextBox}">
@@ -146,20 +158,11 @@
 		</Style>
 
 		<ControlTemplate x:Key="NoteEditorTemplate" TargetType="{x:Type ContentControl}">
-			<ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-				                   Path=TagsSource}"
-					 Style="{StaticResource PPSnListBoxStyle}"
-					 ItemContainerStyle="{StaticResource PpsTagItemStyle}"
-					 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-					 IsSynchronizedWithCurrentItem="True"
-					 Margin="16,16,0,16" Focusable="False">
+			<uiC:PpsEditableListbox ItemsSource="{Binding Path=TagsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
+									Margin="16,16,0,16" AddNewItemFactory="tagAttributes_AddNewItemFactory"	>
 				<ListBox.ItemTemplate>
 					<DataTemplate>
 						<Grid Background="Transparent" Margin="0,0,0,6">
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition/>
-								<ColumnDefinition Width="60"/>
-							</Grid.ColumnDefinitions>
 							<Grid.RowDefinitions>
 								<RowDefinition Height="24"/>
 								<RowDefinition/>
@@ -171,76 +174,12 @@
 							</StackPanel>
 							<TextBox x:Name="valueTextBox" Grid.Row="1"
 									 Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-									 IsEnabled="{Binding IsEditable}"
 									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"
-									 AcceptsReturn="True"
-									 VerticalContentAlignment="Top" Padding="2,5" MaxHeight="268"/>
-							<Grid Grid.Column="1" Grid.Row="1" Margin="6,0,0,0">
-								<Grid.RowDefinitions>
-									<RowDefinition Height="auto"/>
-									<RowDefinition/>
-								</Grid.RowDefinitions>
-								<!--<Button x:Name="saveButton" MinWidth="32"
-										HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,0,0,6"
-										Command="{x:Static uiL:PpsTagsEditor.UpdateTagCommand}" CommandParameter="{Binding}"
-										Style="{StaticResource PPSnCircleButtonStyle}"
-										Tag="{StaticResource savePathGeometry}"
-										Visibility="Collapsed"/>
-								<Button x:Name="removeButton" Grid.Row="1" MinWidth="32"
-										HorizontalAlignment="Left" VerticalAlignment="Top" 
-										Command="{x:Static uiL:PpsTagsEditor.RemoveTagCommand}" CommandParameter="{Binding}"
-										Style="{StaticResource PPSnCircleButtonStyle}"
-										Tag="{StaticResource deletePathGeometry}"
-										Visibility="Hidden"/>
-								<Button x:Name="appendButton" Grid.Row="1" MinWidth="32"
-										HorizontalAlignment="Left" VerticalAlignment="Top" 
-										Command="{x:Static uiL:PpsTagsEditor.AppendTagCommand}" CommandParameter="{Binding}"
-										Style="{StaticResource PPSnCircleButtonStyle}"
-										Tag="{StaticResource plusPathGeometry}"
-										Visibility="Hidden"/>-->
-							</Grid>
+									 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" MaxHeight="268"/>
 						</Grid>
-						<!--<DataTemplate.Triggers>
-							<DataTrigger Binding="{Binding Path=CreateNewBool, Mode=OneWay}">
-								<DataTrigger.Value>
-									<sys:Boolean>true</sys:Boolean>
-								</DataTrigger.Value>
-								<Setter TargetName="appendButton" Property="Visibility" Value="Visible"/>
-							</DataTrigger>
-							<MultiDataTrigger>
-								<MultiDataTrigger.Conditions>
-									<Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}">
-										<Condition.Value>
-											<sys:Boolean>true</sys:Boolean>
-										</Condition.Value>
-									</Condition>
-									<Condition Binding="{Binding Path=CanDelete, Mode=OneWay}">
-										<Condition.Value>
-											<sys:Boolean>true</sys:Boolean>
-										</Condition.Value>
-									</Condition>
-								</MultiDataTrigger.Conditions>
-								<Setter TargetName="removeButton" Property="Visibility" Value="Visible"/>
-							</MultiDataTrigger>
-							<MultiDataTrigger>
-								<MultiDataTrigger.Conditions>
-									<Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}">
-										<Condition.Value>
-											<sys:Boolean>true</sys:Boolean>
-										</Condition.Value>
-									</Condition>
-									<Condition Binding="{Binding Path=CanSave, Mode=OneWay}">
-										<Condition.Value>
-											<sys:Boolean>true</sys:Boolean>
-										</Condition.Value>
-									</Condition>
-								</MultiDataTrigger.Conditions>
-								<Setter TargetName="saveButton" Property="Visibility" Value="Visible"/>
-							</MultiDataTrigger>
-						</DataTemplate.Triggers>-->
 					</DataTemplate>
 				</ListBox.ItemTemplate>
-			</ListBox>
+			</uiC:PpsEditableListbox>
 		</ControlTemplate>
 
 		<ControlTemplate x:Key="AttributeEditorTemplate" TargetType="{x:Type ContentControl}">
@@ -257,10 +196,10 @@
 								<RowDefinition Height="38" MaxHeight="38"/>
 								<RowDefinition/>
 							</Grid.RowDefinitions>
-							<TextBox x:Name="nameTextBox" Grid.Column="0" Margin="0,5" BorderBrush="{StaticResource lighterBorderBrush}"
+							<TextBox x:Name="nameTextBox" Grid.Column="0" Margin="0,2,6,8" BorderBrush="{StaticResource lighterBorderBrush}"
 									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 Style="{StaticResource PpsTagTextBoxStyle}"/>
-							<TextBox Grid.Column="1" Grid.RowSpan="2" Margin="6,5"
+							<TextBox Grid.Column="1" Grid.RowSpan="2" Margin="0,2,0,8"
 									 Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" MaxHeight="172"
 									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"/>
@@ -272,7 +211,8 @@
 
 		<ControlTemplate x:Key="TagEditorTemplate" TargetType="{x:Type ContentControl}">
 			<uiC:PpsEditableListbox ItemsSource="{Binding Path=TagsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
-									Margin="16,16,0,16" AddNewItemFactory="tagAttributes_AddNewItemFactory">
+									Margin="16,16,0,16" AddNewItemFactory="tagAttributes_AddNewItemFactory"
+									ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 				<ListBox.ItemsPanel>
 					<ItemsPanelTemplate>
 						<WrapPanel IsItemsHost="True" Orientation="Horizontal"/>
@@ -280,13 +220,11 @@
 				</ListBox.ItemsPanel>
 				<ListBox.ItemTemplate>
 					<DataTemplate>
-						<Grid Background="Transparent" Height="38">
-							<TextBox x:Name="tagTextBox" Grid.Column="0"
+						<Grid Height="38">
+							<TextBox x:Name="tagTextBox" Margin="0,2,0,8" FontSize="14"
 									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 MaxLength="64"
-									 Style="{StaticResource PpsTagTextBoxStyle}"
-									 FontSize="14" Margin="0,5">
-							</TextBox>
+									 Style="{StaticResource PpsTagTextBoxStyle}"/>
 						</Grid>
 					</DataTemplate>
 				</ListBox.ItemTemplate>
@@ -294,6 +232,37 @@
 		</ControlTemplate>
 
 		<ControlTemplate x:Key="TaskEditorTemplate" TargetType="{x:Type ContentControl}">
+			<uiC:PpsEditableListbox ItemsSource="{Binding Path=TagsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
+									Margin="16,16,0,16" AddNewItemFactory="tagAttributes_AddNewItemFactory">
+				<ListBox.ItemTemplate>
+					<DataTemplate>
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="120"/>
+								<ColumnDefinition/>
+							</Grid.ColumnDefinitions>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="38" MaxHeight="38"/>
+								<RowDefinition/>
+							</Grid.RowDefinitions>
+
+							<!--<DatePicker SelectedDate="{Binding Value}" Margin="0,2,6,8"
+										Style="{StaticResource PpsDatePickerStyle}"/>-->
+
+							<TextBox Grid.Column="0" Margin="0,2,6,8"
+									 Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Style="{StaticResource PpsTagTextBoxStyle}"/>
+							<TextBox Grid.Column="1" Grid.RowSpan="2" Margin="0,2,0,8"
+									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"
+									 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" MaxHeight="172"/>
+						</Grid>
+					</DataTemplate>
+				</ListBox.ItemTemplate>
+			</uiC:PpsEditableListbox>
+		</ControlTemplate>
+
+		<ControlTemplate x:Key="TaskEditorTemplate_Old" TargetType="{x:Type ContentControl}">
 			<ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl},
 				                   Path=TagsSource}"
 					 Style="{StaticResource PPSnListBoxStyle}"
@@ -302,7 +271,7 @@
 					 Margin="16,16,0,16" Focusable="False">
 				<ListBox.ItemTemplate>
 					<DataTemplate>
-						<Grid Background="Transparent">
+						<Grid>
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition Width="100"/>
 								<ColumnDefinition/>
@@ -321,7 +290,6 @@
 									 IsEnabled="{Binding IsUserChangeable}"
 									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"
 									 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" MaxHeight="172"/>
-
 						</Grid>
 						<DataTemplate.Triggers>
 							<Trigger SourceName="valueTextBox" Property="IsEnabled" Value="True">

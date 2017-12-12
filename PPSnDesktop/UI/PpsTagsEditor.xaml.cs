@@ -94,17 +94,17 @@ namespace TecWare.PPSn.UI
 
 		private static void ObjectChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsTagsEditor)d).RefreshTagsSource();
+		
+		private void tagAttributes_AddNewItemFactory(object sender, AddNewItemFactoryEventArgs args)
+		{
+			args.NewItem = new PpsTagItemModel(Object, TagClass);
+			args.Handled = true;
+		} // event tagAttributes_AddNewItemFactory
 
 		public PpsObjectTagClass TagClass { get => (PpsObjectTagClass)GetValue(TagClassProperty); set { SetValue(TagClassProperty, value); } }
 		public PpsObject Object { get => (PpsObject)GetValue(ObjectProperty); set => SetValue(ObjectProperty, value); }
 
 		public ListCollectionView TagsSource { get => (ListCollectionView)GetValue(TagsSourceProperty); }
-		
-		private void tagAttributes_AddNewItemFactory(object sender, Controls.AddNewItemFactoryEventArgs args)
-		{
-			args.NewItem = new PpsTagItemModel(Object, TagClass);
-			args.Handled = true;
-		} // event tagAttributes_AddNewItemFactory
 	} // class PpsTagsEditor
 
 	#endregion
@@ -187,6 +187,16 @@ namespace TecWare.PPSn.UI
 
 			isEditing = true;
 			isModified = false;
+
+			if (IsNew && currentName == null)
+			{
+				switch (Class)
+				{
+					case PpsObjectTagClass.Note:
+						Name = "N" + Guid.NewGuid().ToString("N");
+						break;
+				}
+			}
 		} // proc BeginEdit
 
 		public void EndEdit()

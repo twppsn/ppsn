@@ -425,7 +425,7 @@ namespace TecWare.PPSn.Controls
 		{
 			base.OnLostKeyboardFocus(e);
 
-			if (isInEditMode && !IsChildOf(e.NewFocus))
+			if (isInEditMode && !IsChildOf(e.NewFocus) && !HandleCalendarKeyboardFocusChanged(e))
 			{
 				isInEditMode = false;
 				// Ignore when NewItemPlaceHolder collapsed.
@@ -434,6 +434,17 @@ namespace TecWare.PPSn.Controls
 					EndEdit(this.Equals(e.NewFocus));
 			}
 		} // proc OnLostKeyboardFocus
+
+		private bool HandleCalendarKeyboardFocusChanged(KeyboardFocusChangedEventArgs e)
+		{
+			if(e.NewFocus is Calendar || e.NewFocus is CalendarDayButton || e.NewFocus is CalendarButton)
+				return true;
+			// Sometimes mainwindow is e.NewFocus when closing Popup
+			if (e.OldFocus is Calendar || e.OldFocus is CalendarDayButton || e.OldFocus is CalendarButton)
+				return true;
+
+			return false;
+		} // func HandleCalendarKeyboardFocusChanged
 
 		protected override void OnContentChanged(object oldContent, object newContent)
 		{
