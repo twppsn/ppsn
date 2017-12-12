@@ -2049,10 +2049,12 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- class SqlSynchronizationTransaction ----------------------------------
+		#region -- class SqlSynchronizationTransaction --------------------------------
 
 		private sealed class SqlSynchronizationTransaction : PpsDataSynchronization
 		{
+			#region -- class SqlSynchronizationBatch ----------------------------------
+
 			private sealed class SqlSynchronizationBatch : IPpsDataSynchronizationBatch
 			{
 				private readonly SqlCommand command;
@@ -2099,6 +2101,8 @@ namespace TecWare.PPSn.Server.Sql
 				public char CurrentMode => reader.Current[0].ToString()[0];
 				public bool IsFullSync => isFull;
 			} // class SqlSynchronizationBatch
+
+			#endregion
 
 			private readonly long startCurrentSyncId;
 			private readonly bool isForceFull;

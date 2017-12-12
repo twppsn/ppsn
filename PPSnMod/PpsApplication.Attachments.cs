@@ -14,24 +14,21 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server
 {
 	#region -- class PpsAttachmentAccess ------------------------------------------------
 
+	/// <summary>Abstract class for attachment access over the api.</summary>
 	public abstract class PpsAttachmentAccess : IDisposable
 	{
 		private bool isDisposed = false;
 
 		#region -- Ctor/Dtor ------------------------------------------------------------
 
+		/// <summary></summary>
 		public PpsAttachmentAccess()
 		{
 		} // ctor
@@ -41,12 +38,15 @@ namespace TecWare.PPSn.Server
 		//	Dispose(false);
 		//} // dtor
 
+		/// <summary></summary>
 		public void Dispose()
 		{
 			//GC.SuppressFinalize(this);
 			Dispose(true);
 		}
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected virtual void Dispose(bool disposing)
 		{
 			if (isDisposed)
@@ -57,8 +57,12 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		/// <summary>Copy the data.</summary>
+		/// <param name="dst"></param>
 		public abstract void CopyTo(Stream dst);
 
+		/// <summary>Get the data stream of the object.</summary>
+		/// <returns></returns>
 		public abstract Stream GetStream();
 	} // class PpsAttachmentAccess
 
@@ -134,23 +138,43 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		/// <summary></summary>
+		/// <param name="sp"></param>
+		/// <param name="name"></param>
 		public PpsAttachmentItem(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
 		} // ctor
 
+		/// <summary>Get a access object from the stream.</summary>
+		/// <param name="src"></param>
+		/// <returns></returns>
 		protected override PpsAttachmentAccess GetDataFromStream(Stream src)
 			=> new PpsStreamAttachmentAccess(src);
 
+		/// <summary>Write the data to an stream.</summary>
+		/// <param name="data"></param>
+		/// <param name="dst"></param>
 		protected override void WriteDataToStream(PpsAttachmentAccess data, Stream dst)
 			=> data.CopyTo(dst);
 
+		/// <summary>Pull data from the database.</summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
 		protected override PpsAttachmentAccess PullData(PpsObjectAccess obj)
 			=> new PpsObjectAttachmentAccess(obj);
 
+		/// <summary>Attachment do not track revisions.</summary>
+		/// <param name="data"></param>
+		/// <returns></returns>
 		protected override bool IsDataRevision(PpsAttachmentAccess data)
 			=> false;
 
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <param name="data"></param>
+		/// <param name="release"></param>
+		/// <returns></returns>
 		protected override bool LuaPush(PpsObjectAccess obj, object data, bool release)
 		{
 			switch (data)

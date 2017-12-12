@@ -36,14 +36,18 @@ using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn.Server.Wpf
 {
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	#region -- interface IWpfClientApplicationFileProvider ----------------------------
+
+	/// <summary>Interface to register client site files for synchronization.</summary>
 	public interface IWpfClientApplicationFileProvider
 	{
+		/// <summary>Get client site files, that should be synchronizated.</summary>
+		/// <returns></returns>
 		IEnumerable<PpsApplicationFileItem> GetApplicationFiles();
 	} // IWpfClientApplicationFileProvider
 
-	///////////////////////////////////////////////////////////////////////////////
+	#endregion
+
 	/// <summary></summary>
 	public class WpfClientItem : DEConfigItem
 	{
@@ -1274,6 +1278,9 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 		} // proc GetXamlContentType
 
+		/// <summary>Installs handlers for some virtual client files.</summary>
+		/// <param name="r"></param>
+		/// <returns></returns>
 		protected override async Task<bool> OnProcessRequestAsync(IDEWebRequestScope r)
 		{
 			if (r.RelativeSubPath == "styles.xaml")
@@ -1362,6 +1369,7 @@ namespace TecWare.PPSn.Server.Wpf
 			destination.Add(xCode);
 		} // proc AddLuaCodeItem
 
+		/// <summary>Get the themes directory.</summary>
 		public string ThemesDirectory => Config.GetAttribute("xamlSource", String.Empty);
 		/// <summary>Masterdata view of the client.</summary>
 		public PpsDataSetServerDefinition MasterDataSetDefinition => masterDataSetDefinition;

@@ -469,8 +469,14 @@ namespace TecWare.PPSn
 				CheckLinksLoaded();
 				var l = links.Find(c => c.LinkToId == objectId);
 				if (l == null)
-					throw new ArgumentOutOfRangeException(nameof(objectId));
-				RemoveLink(l);
+				{
+					if (force)
+						throw new ArgumentOutOfRangeException(nameof(objectId));
+				}
+				else
+				{
+					RemoveLink(l);
+				}
 			}
 		} // func RemoveLink
 
@@ -1079,6 +1085,7 @@ namespace TecWare.PPSn
 			OnCollectionChanged(null);
 		} // proc RefreshTagsFromXml
 
+		/// <summary>Reads all tags from the local database.</summary>
 		public void RefreshTags()
 		{
 			lock (parent.SyncRoot)
@@ -2253,6 +2260,8 @@ namespace TecWare.PPSn
 			}
 		} // proc EnqueuePullRevisionAsync
 
+		/// <summary>Pull the object from the server.</summary>
+		/// <returns></returns>
 		public async Task<IPpsObjectData> PullAsync()
 		{
 			// foreground means a thread transission, we just wait for the task to finish.
@@ -2297,6 +2306,8 @@ namespace TecWare.PPSn
 			}
 		} // func PullRevisionAsync
 
+		/// <summary>Push the object to server.</summary>
+		/// <returns></returns>
 		public async Task PushAsync()
 		{
 			XElement xAnswer;
@@ -2317,6 +2328,7 @@ namespace TecWare.PPSn
 						if (lnk.LinkToId < 0 || lnk.LinkTo.IsDocumentChanged)
 							await lnk.LinkTo.PushAsync();
 					}
+					await data.LoadAsync();
 
 					// first build object data
 					var xHeaderData = ToXml();
