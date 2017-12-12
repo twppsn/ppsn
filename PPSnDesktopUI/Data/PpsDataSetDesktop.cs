@@ -193,7 +193,7 @@ namespace TecWare.PPSn.Data
 			{
 				// remove possible old link
 				if (oldValue != null)
-					dataset.Object.Links.RemoveLink((long)oldValue);
+					dataset.Object.Links.RemoveLink((long)oldValue, false);
 				// add the new link
 				dataset.Object.Links.AppendLink((long)newValue);
 
