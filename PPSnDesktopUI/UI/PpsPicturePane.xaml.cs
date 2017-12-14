@@ -84,6 +84,7 @@ namespace TecWare.PPSn.UI
 
 		#region -- Data Representation ------------------------------------------------
 
+		/// <summary>This class represents the collection of available cameras</summary>
 		public class PpsCameraHandler : IEnumerable<PpsAforgeCamera>, INotifyCollectionChanged, IDisposable
 		{
 			#region ---- Readonly ----------------------------------------------------------------
@@ -96,6 +97,7 @@ namespace TecWare.PPSn.UI
 
 			#region ---- Events ------------------------------------------------------------------
 
+			/// <summary>Thrown if a Camera was added or removed</summary>
 			public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 			private void RefreshTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
@@ -159,6 +161,8 @@ namespace TecWare.PPSn.UI
 
 			#region ---- Constructor/Destructor --------------------------------------------------
 
+			/// <summary>Initializes the Handler, starts exploration of devices</summary>
+			/// <param name="tracelog">reference to the TraceLog for Status/Warning messages</param>
 			public PpsCameraHandler(PpsTraceLog tracelog)
 			{
 				this.traces = tracelog;
@@ -174,11 +178,13 @@ namespace TecWare.PPSn.UI
 				RefreshTimer_Elapsed(null, null);
 			}
 
+			/// <summary>Destructor disposes all handles to cameras</summary>
 			~PpsCameraHandler()
 			{
 				Dispose();
 			}
 
+			/// <summary>stops the exploration of cameras, disposes all open handles to cameras</summary>
 			public void Dispose()
 			{
 				refreshTimer.Stop();
@@ -194,6 +200,8 @@ namespace TecWare.PPSn.UI
 			/// <summary>Event is thrown, when a Camera provides a Snapshot (either requested by the App or by a hardware pushbutton</summary>
 			public NewFrameEventHandler SnapShot;
 
+			/// <summary>List of available cameras</summary>
+			/// <returns></returns>
 			public IEnumerator<PpsAforgeCamera> GetEnumerator()
 			{
 				return ((IEnumerable<PpsAforgeCamera>)cameras).GetEnumerator();
@@ -207,10 +215,12 @@ namespace TecWare.PPSn.UI
 			#endregion
 		}
 
+		/// <summary>Represents a camera</summary>
 		public class PpsAforgeCamera : INotifyPropertyChanged, IDisposable
 		{
 			#region ---- Helper Classes ----------------------------------------------------------
 
+			/// <summary>Represents a property of the camera</summary>
 			public class CameraProperty : INotifyPropertyChanged
 			{
 				#region ---- Readonly ---------------------------------------------------------------
@@ -228,12 +238,16 @@ namespace TecWare.PPSn.UI
 
 				#region ---- Events -----------------------------------------------------------------
 
+				/// <summary>thrown if a property is changed (only data representation, not if the hardware has done it)</summary>
 				public event PropertyChangedEventHandler PropertyChanged;
 
 				#endregion
 
 				#region ---- Constructor ------------------------------------------------------------
 
+				/// <summary>Data Representation of a single property</summary>
+				/// <param name="device">parent device</param>
+				/// <param name="property">property to represent</param>
 				public CameraProperty(VideoCaptureDevice device, AForge.Video.DirectShow.CameraControlProperty property)
 				{
 					this.device = device;
@@ -245,14 +259,27 @@ namespace TecWare.PPSn.UI
 
 				#endregion
 
+				#region ---- Methods ----------------------------------------------------------------
+
+
+
+				#endregion
+
 				#region ---- Properties -------------------------------------------------------------
 
-				public string Name => Enum.GetName(typeof(AForge.Video.DirectShow.CameraControlProperty), property);
+				/// <summary>Name of the property for the user</summary>
+				public string Name => property.ToString(true);
+				/// <summary>the lowest possible value</summary>
 				public int MinValue => minValue;
+				/// <summary>the highest possible value</summary>
 				public int MaxValue => maxValue;
+				/// <summary>the value which is suggested by the driver</summary>
 				public int DefaultValue => defaultValue;
+				/// <summary>the distance of one possible value to the next</summary>
 				public int StepSize => stepSize;
+				/// <summary>if the property has Flags (p.e. Automatic, Manual...)</summary>
 				public bool Flagable => flagable;
+				/// <summary>true if the value of the property is selected by the camera</summary>
 				public bool AutomaticValue
 				{
 					get
@@ -274,6 +301,7 @@ namespace TecWare.PPSn.UI
 						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AutomaticValue)));
 					}
 				}
+				/// <summary>actual value of the property</summary>
 				public int Value
 				{
 					get
@@ -313,6 +341,7 @@ namespace TecWare.PPSn.UI
 
 			#region ---- Events ------------------------------------------------------------------
 
+			/// <summary>thrown if the status of the camera has changed</summary>
 			public event PropertyChangedEventHandler PropertyChanged;
 
 			#endregion
@@ -328,6 +357,11 @@ namespace TecWare.PPSn.UI
 
 			#region ---- Constructor -------------------------------------------------------------
 
+			/// <summary>creates a new representation of a given camera</summary>
+			/// <param name="deviceFilter">camera to represent</param>
+			/// <param name="traceLog">receives the status messages</param>
+			/// <param name="previewMaxWidth">maximum width of the preview, only used if the camera supports snapshots, default: 800</param>
+			/// <param name="previewMinFPS">minimum framerate the preview has to support, only used if the camera supports snapshots, default: 15</param>
 			public PpsAforgeCamera(AForge.Video.DirectShow.FilterInfo deviceFilter, PpsTraceLog traceLog, int previewMaxWidth = 800, int previewMinFPS = 15)
 			{
 				this.traces = traceLog;
@@ -432,6 +466,7 @@ namespace TecWare.PPSn.UI
 
 			#region ---- Methods -----------------------------------------------------------------
 
+			/// <summary>the process of making a photo is started subscribe to SnapshotEvent first</summary>
 			public void MakePhoto()
 			{
 				if (device.ProvideSnapshots)
@@ -447,6 +482,7 @@ namespace TecWare.PPSn.UI
 				}
 			}
 
+			/// <summary>closes the handle to the hardware</summary>
 			public void Dispose()
 			{
 				disposing = true;
@@ -495,52 +531,65 @@ namespace TecWare.PPSn.UI
 
 			#region ---- Properties --------------------------------------------------------------
 
+			/// <summary>bitmaps of the preview stream</summary>
 			public byte[] Preview => preview;
-
+			/// <summary>friendly name of the camera</summary>
 			public string Name => !String.IsNullOrWhiteSpace(name) ? char.ToUpper(name[0]) + name.Substring(1) : "Unbekanntes Gerät";
-
+			/// <summary>list of propertys which the camera supports</summary>
 			public IEnumerable<CameraProperty> Properties => properties;
-
+			/// <summary>true if the camera chooses the optimal settings</summary>
 			public bool AutomaticSettings => properties != null ? (from prop in properties where !prop.AutomaticValue select prop).Count() == 0 : true;
-
+			/// <summary>thrown if a snapshot was taken - after MakePhoto or a HardwareButtonPress</summary>
 			public NewFrameEventHandler SnapShot;
-
+			/// <summary>thrown if the camera is not useable anymore</summary>
 			public EventHandler CameraLost;
-
+			/// <summary>thrown if the camera is transmitting useable data</summary>
 			public EventHandler CameraInitialized;
-
+			/// <summary>devicepath</summary>
 			public string MonikerString => device.Source;
 
 			#endregion
 		}
 
+		/// <summary>representation for thicknesses</summary>
 		public class PpsPecStrokeThickness
 		{
 			private string name;
 			private double thickness;
 
+			/// <summary>Constructor</summary>
+			/// <param name="Name">friendly name of the Thickness</param>
+			/// <param name="Thickness">value</param>
 			public PpsPecStrokeThickness(string Name, double Thickness)
 			{
 				this.name = Name;
 				this.thickness = Thickness;
 			}
 
+			/// <summary>friendly name</summary>
 			public string Name => name;
+			/// <summary>thickness</summary>
 			public double Size => thickness;
 		}
 
+		/// <summary>representation for the color</summary>
 		public class PpsPecStrokeColor
 		{
 			private string name;
 			private Brush brush;
 
+			/// <summary>Constructor</summary>
+			/// <param name="Name">friendly name</param>
+			/// <param name="ColorBrush">brush</param>
 			public PpsPecStrokeColor(string Name, Brush ColorBrush)
 			{
 				this.name = Name;
 				this.brush = ColorBrush;
 			}
 
+			/// <summary>friendly name</summary>
 			public string Name => name;
+			/// <summary>color of the brush</summary>
 			public Color Color
 			{
 				get
@@ -551,21 +600,28 @@ namespace TecWare.PPSn.UI
 					return Colors.Black;
 				}
 			}
+			/// <summary>brush itself</summary>
 			public Brush Brush => brush;
 		}
 
+		/// <summary>handler for the settings</summary>
 		public class PpsPecStrokeSettings
 		{
 			private IEnumerable<PpsPecStrokeColor> colors;
 			private IEnumerable<PpsPecStrokeThickness> thicknesses;
 
+			/// <summary>Constructor</summary>
+			/// <param name="Colors"></param>
+			/// <param name="Thicknesses"></param>
 			public PpsPecStrokeSettings(IEnumerable<PpsPecStrokeColor> Colors, IEnumerable<PpsPecStrokeThickness> Thicknesses)
 			{
 				this.colors = Colors;
 				this.thicknesses = Thicknesses;
 			}
 
+			/// <summary>list of colors</summary>
 			public IEnumerable<PpsPecStrokeColor> Colors => colors;
+			/// <summary>list of thicknesses</summary>
 			public IEnumerable<PpsPecStrokeThickness> Thicknesses => thicknesses;
 		}
 
@@ -715,6 +771,7 @@ namespace TecWare.PPSn.UI
 
 		#region -- Constructor --------------------------------------------------------
 
+		/// <summary>initializes the cameras, the settings and the events</summary>
 		public PpsPicturePane()
 		{
 			InitializeComponent();
@@ -809,7 +866,7 @@ namespace TecWare.PPSn.UI
 
 			CommandBindings.Add(new CommandBinding(
 				ApplicationCommands.Delete,
-				async (sender, e) =>
+				(sender, e) =>
 				{
 					if (e.Parameter is IPpsAttachmentItem pitem)
 					{
@@ -932,13 +989,20 @@ namespace TecWare.PPSn.UI
 		#region UICommands
 
 		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsPicturePane), new FrameworkPropertyMetadata(null));
+		/// <summary>Commands the Pane supports</summary>
 		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
 
+		/// <summary>sets the Mode to Edit</summary>
 		public static readonly RoutedUICommand EditOverlayCommand = new RoutedUICommand("EditOverlay", "EditOverlay", typeof(PpsPicturePane));
+		/// <summary>sets the Mode to Freehand drawing</summary>
 		public static readonly RoutedUICommand OverlayEditFreehandCommand = new RoutedUICommand("EditFreeForm", "EditFreeForm", typeof(PpsPicturePane));
+		/// <summary>sets the Mode to Delete</summary>
 		public static readonly RoutedUICommand OverlayRemoveStrokeCommand = new RoutedUICommand("EditRubber", "EditRubber", typeof(PpsPicturePane));
+		/// <summary>sets a given Thickness</summary>
 		public static readonly RoutedUICommand OverlaySetThicknessCommand = new RoutedUICommand("SetThickness", "Set Thickness", typeof(PpsPicturePane));
+		/// <summary>sets a given Color</summary>
 		public static readonly RoutedUICommand OverlaySetColorCommand = new RoutedUICommand("SetColor", "Set Color", typeof(PpsPicturePane));
+		/// <summary>changes (to) the given Camera</summary>
 		public readonly static RoutedUICommand ChangeCameraCommand = new RoutedUICommand("ChangeCamera", "ChangeCamera", typeof(PpsPicturePane));
 
 		#endregion
@@ -947,6 +1011,7 @@ namespace TecWare.PPSn.UI
 
 		#region Toolbar
 
+		/// <summary>Collection of Commands this Pane supports</summary>
 		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
 
 		private void RemoveToolbarCommands()
@@ -1089,9 +1154,11 @@ namespace TecWare.PPSn.UI
 
 		#region -- IPpsWindowPane -----------------------------------------------------
 
+		/// <summary>Name of the Pane (German)</summary>
 		public string Title => "Bildeditor";
 
 		private string subTitle;
+		/// <summary>tries to return the Name of the actual item </summary>
 		public string SubTitle
 		{
 			get
@@ -1115,21 +1182,32 @@ namespace TecWare.PPSn.UI
 			}
 		}
 
+		/// <summary>refrence to this, to fulfill interface</summary>
 		public object Control => this;
 
+		/// <summary>null, to fulfill interface</summary>
 		public IPpsPWindowPaneControl PaneControl => null;
 
+		/// <summary>false, to fulfill interface</summary>
 		public bool IsDirty => false;
 
+		/// <summary>false, to fulfill interface</summary>
 		public bool HasSideBar => false;
 
+		/// <summary>thrown if the Pane changes</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
+		/// <summary>
+		/// to fulfill interface, will return reload
+		/// </summary>
+		/// <param name="otherArguments"></param>
+		/// <returns></returns>
 		public PpsWindowPaneCompareResult CompareArguments(LuaTable otherArguments)
 		{
 			return PpsWindowPaneCompareResult.Reload;
 		}
 
+		/// <summary>the Pane has hardware handles to dispose</summary>
 		public void Dispose()
 		{
 			CameraEnum.Dispose();
@@ -1151,6 +1229,9 @@ namespace TecWare.PPSn.UI
 			return Task.CompletedTask;
 		} // proc LoadAsync
 
+		/// <summary>Used to destroy the Panel - if there a unsaved changes the user is asked</summary>
+		/// <param name="commit">to fulfill the interface</param>
+		/// <returns></returns>
 		public Task<bool> UnloadAsync(bool? commit = null)
 		{
 			if (!LeaveCurrentImage())
@@ -1351,7 +1432,9 @@ namespace TecWare.PPSn.UI
 
 		#region -- Propertys ----------------------------------------------------------
 
+		/// <summary>Property for the ToolBar which references the available Undo items</summary>
 		public IEnumerable<object> UndoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Undo orderby un.Index descending select un).ToArray();
+		/// <summary>Property for the ToolBar which references the available Redo items</summary>
 		public IEnumerable<object> RedoM => (from un in strokeUndoManager where un.Type == PpsUndoStepType.Redo orderby un.Index select un).ToArray();
 
 		/// <summary>Binding Point for caller to set the shown attachments</summary>
@@ -1466,6 +1549,7 @@ namespace TecWare.PPSn.UI
 
 		#region DependencyPropertys
 
+		/// <summary>Files attached to the parent object</summary>
 		public static readonly DependencyProperty AttachmentsProperty = DependencyProperty.Register(nameof(Attachments), typeof(IPpsAttachments), typeof(PpsPicturePane));
 
 		private readonly static DependencyProperty LastSnapshotProperty = DependencyProperty.Register(nameof(LastSnapshot), typeof(PpsObject), typeof(PpsPicturePane));
