@@ -279,7 +279,7 @@ namespace TecWare.PPSn.UI
 		public bool IsModified => isModified;
 
 		/// <summary>User, that created the tag.</summary>
-		public string UserName => IsNew ? PpsEnvironment.GetEnvironment().Username : tag.User.GetProperty("Login", "<error>"); // todo:
+		public string UserName => IsNew ? PpsEnvironment.GetEnvironment().Username : tag.User?.GetProperty("Login", "<error>") ?? ""; // todo:
 
 		public PpsTagOwnerIdentityIcon OwnerIdentityIcon
 		{

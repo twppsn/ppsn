@@ -4,8 +4,9 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
- 			 xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
              xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
+			 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
+			 
              xmlns:data="clr-namespace:TecWare.PPSn.Data;assembly=PPSn.Core"
              mc:Ignorable="d" 
 			 x:Name="ppsnCharmbarControl"
@@ -146,7 +147,7 @@
 				</Trigger>
 			</Style.Triggers>
 		</Style>
-		
+
 		<ControlTemplate x:Key="charmBarHeaderTemplate" TargetType="{x:Type ContentControl}">
 			<Grid Height="40" TextBlock.Foreground="{StaticResource PPSnWindowForegroundBrush}" TextBlock.FontSize="18">
 				<Grid.ColumnDefinitions>
@@ -187,22 +188,14 @@
 					<RowDefinition/>
 				</Grid.RowDefinitions>
 				<ContentControl Template="{StaticResource charmBarHeaderTemplate}" Content="Verknüpfungen" Tag="{StaticResource linkPathGeometry}" Focusable="False"/>
-
-				<ListBox Grid.Row="1" Margin="16" AlternationCount="2" 
+				<ListBox Grid.Row="1" AlternationCount="2" Margin="16" 
 						 ItemsSource="{Binding Links}"
-						 Style="{StaticResource PPSnListBoxStyle}"
 						 ItemContainerStyle="{StaticResource PPSnAlternatingListBoxItemStyle}"
+						 Style="{StaticResource PPSnListBoxStyle}"
 						 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 					<ListBox.ItemTemplate>
 						<DataTemplate>
-							<Grid Height="32" TextBlock.Foreground="{StaticResource PPSnWindowForegroundBrush}" TextBlock.FontSize="14">
-								<Grid.ColumnDefinitions>
-									<ColumnDefinition Width="75"/>
-									<ColumnDefinition/>
-								</Grid.ColumnDefinitions>
-								<TextBlock Grid.Column="0" Text="{Binding LinkToId}" VerticalAlignment="Center"/>
-								<TextBlock Grid.Column="1" Text="{Binding LinkTo}" VerticalAlignment="Center"/>
-							</Grid>
+							<ContentPresenter Content="{Binding LinkTo}" ContentTemplateSelector="{Binding Environment.DataListTemplateSelector, Mode=OneTime}" />
 						</DataTemplate>
 					</ListBox.ItemTemplate>
 				</ListBox>
@@ -341,6 +334,7 @@
 			<ContentPresenter Content="{Binding}">
 				<ContentPresenter.Style>
 					<Style TargetType="{x:Type ContentPresenter}" >
+						<Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
 						<!--empty template-->
 						<Setter Property="ContentTemplate">
 							<Setter.Value>
@@ -409,14 +403,14 @@
 				<TextBlock.LayoutTransform>
 					<RotateTransform Angle="-90" />
 				</TextBlock.LayoutTransform>
-                <TextBlock.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="Objektnamen kopieren" Command="{x:Static uiL:PpsCharmbarControl.CopyObjectNameCommand}" 
+				<TextBlock.ContextMenu>
+					<ContextMenu>
+						<MenuItem Header="Objektnamen kopieren" Command="{x:Static uiL:PpsCharmbarControl.CopyObjectNameCommand}" 
                                   CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
-                        <MenuItem Header="Objectid kopieren" Command="{x:Static uiL:PpsCharmbarControl.CopyObjectIdCommand}" 
+						<MenuItem Header="Objectid kopieren" Command="{x:Static uiL:PpsCharmbarControl.CopyObjectIdCommand}" 
                                   CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"/>
-                    </ContextMenu>
-                </TextBlock.ContextMenu>
+					</ContextMenu>
+				</TextBlock.ContextMenu>
 			</TextBlock>
 
 			<ToggleButton Content="{StaticResource noteOutlinePathGeometry}">
@@ -449,11 +443,14 @@
 					<uiL:PPSnCharmbarContentType>Attribute</uiL:PPSnCharmbarContentType>
 				</ToggleButton.Tag>
 			</ToggleButton>
+
+			<!--Temporary removed
 			<ToggleButton Content="{StaticResource calendarClockPathGeometry}">
 				<ToggleButton.Tag>
 					<uiL:PPSnCharmbarContentType>Task</uiL:PPSnCharmbarContentType>
 				</ToggleButton.Tag>
-			</ToggleButton>
+			</ToggleButton>-->
+
 		</DockPanel>
 	</Grid>
 

@@ -6,8 +6,8 @@
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
              xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
 			 xmlns:uiC="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
-			 
              xmlns:data="clr-namespace:TecWare.PPSn.Data;assembly=PPSn.Core"
+			 x:Name="ppsTagsEditor"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
 	<UserControl.Resources>
@@ -105,14 +105,37 @@
 		<Style x:Key="PpsTagSimpleTextBoxStyle" TargetType="{x:Type TextBox}" BasedOn="{StaticResource PpsTagTextBoxStyle}">
 			<Setter Property="BorderBrush" Value="{StaticResource lighterBorderBrush}"/>
 			<Setter Property="IsReadOnly" Value="False"/>
+			<!--Flag for headerPanel is visible-->
+			<Setter Property="Tag">
+				<Setter.Value>
+					<sys:Boolean>false</sys:Boolean>
+				</Setter.Value>
+			</Setter>
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type TextBox}">
-						<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+						<Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
 								Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
-							<ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+							<Grid>
+								<Grid.RowDefinitions>
+									<RowDefinition Height="auto"/>
+									<RowDefinition/>
+								</Grid.RowDefinitions>
+								<StackPanel x:Name="headerPanel" Orientation="Horizontal" Height="22" Visibility="Collapsed">
+									<Control Template="{StaticResource PpsOwnerIdentityImageTemplate}" Focusable="False" Margin="2,2,4,2"/>
+									<TextBlock Text="{Binding UserName}" VerticalAlignment="Center" FontStyle="Italic"
+											   Foreground="{StaticResource PPSnWindowForegroundBrush}" Opacity=".60"/>
+								</StackPanel>
+								<ScrollViewer x:Name="PART_ContentHost" Grid.Row="1" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+							</Grid>
 						</Border>
 						<ControlTemplate.Triggers>
+							<Trigger Property="Tag">
+								<Trigger.Value>
+									<sys:Boolean>true</sys:Boolean>
+								</Trigger.Value>
+								<Setter Property="Visibility" TargetName="headerPanel" Value="Visible"/>
+							</Trigger>
 							<MultiTrigger>
 								<MultiTrigger.Conditions>
 									<Condition Property="IsEnabled" Value="True"/>
@@ -123,7 +146,6 @@
 							<Trigger Property="IsKeyboardFocused" Value="True">
 								<Setter Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
 							</Trigger>
-
 							<DataTrigger Binding="{Binding Path=IsEditable, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type uiC:PpsEditableListboxItem}}, Mode=OneWay}">
 								<DataTrigger.Value>
 									<sys:Boolean>false</sys:Boolean>
@@ -136,70 +158,44 @@
 			</Setter>
 		</Style>
 
-		<Style x:Key="PpsTagItemStyle" TargetType="{x:Type ListBoxItem}">
-			<Setter Property="Margin" Value="0"/>
-			<Setter Property="Padding" Value="0"/>
-			<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-			<Setter Property="IsTabStop" Value="False"/>
-			<Setter Property="Template">
-				<Setter.Value>
-					<ControlTemplate TargetType="{x:Type ListBoxItem}">
-						<Grid>
-							<ContentPresenter />
-						</Grid>
-					</ControlTemplate>
-				</Setter.Value>
-			</Setter>
-			<Style.Triggers>
-				<Trigger Property="IsKeyboardFocusWithin" Value="True">
-					<Setter Property="IsSelected" Value="True"/>
-				</Trigger>
-			</Style.Triggers>
-		</Style>
-
-		<ControlTemplate x:Key="NoteEditorTemplate" TargetType="{x:Type ContentControl}">
-			<uiC:PpsEditableListbox ItemsSource="{Binding Path=TagsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
-									Margin="16,16,0,16" AddNewItemFactory="tagAttributes_AddNewItemFactory"	>
+		<DataTemplate x:Key="NoteEditorTemplate">
+			<uiC:PpsEditableListbox ItemsSource="{Binding ElementName=ppsTagsEditor, Path=TagsSource}"
+									AddNewItemFactory="tagAttributes_AddNewItemFactory"
+									Margin="16,16,0,16">
 				<ListBox.ItemTemplate>
 					<DataTemplate>
-						<Grid Background="Transparent" Margin="0,0,0,6">
-							<Grid.RowDefinitions>
-								<RowDefinition Height="24"/>
-								<RowDefinition/>
-							</Grid.RowDefinitions>
-							<StackPanel Orientation="Horizontal">
-								<Control Template="{StaticResource PpsOwnerIdentityImageTemplate}" Focusable="False" Margin="4,3"/>
-								<TextBlock Text="{Binding UserName}" VerticalAlignment="Center" FontStyle="Italic"
-										   Foreground="{StaticResource PPSnWindowForegroundBrush}" Opacity=".75"/>
-							</StackPanel>
-							<TextBox x:Name="valueTextBox" Grid.Row="1"
-									 Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"
-									 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" MaxHeight="268"/>
-						</Grid>
+						<TextBox x:Name="valueTextBox" Grid.Row="1"
+								 Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+								 Style="{StaticResource PpsTagSimpleTextBoxStyle}"
+								 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" Margin="0,0,0,16" MaxHeight="268">
+							<TextBox.Tag>
+								<sys:Boolean>true</sys:Boolean>
+							</TextBox.Tag>
+						</TextBox>
 					</DataTemplate>
 				</ListBox.ItemTemplate>
 			</uiC:PpsEditableListbox>
-		</ControlTemplate>
+		</DataTemplate>
 
-		<ControlTemplate x:Key="AttributeEditorTemplate" TargetType="{x:Type ContentControl}">
-			<uiC:PpsEditableListbox ItemsSource="{Binding Path=TagsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
-									Margin="16,16,0,16" AddNewItemFactory="tagAttributes_AddNewItemFactory">
+		<DataTemplate x:Key="AttributeEditorTemplate">
+			<uiC:PpsEditableListbox ItemsSource="{Binding ElementName=ppsTagsEditor, Path=TagsSource}"
+									AddNewItemFactory="tagAttributes_AddNewItemFactory"
+									Margin="16,16,0,16">
 				<ListBox.ItemTemplate>
 					<DataTemplate>
-						<Grid Background="Transparent">
+						<Grid>
 							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="176"/>
+								<ColumnDefinition Width="172"/>
 								<ColumnDefinition/>
 							</Grid.ColumnDefinitions>
 							<Grid.RowDefinitions>
-								<RowDefinition Height="38" MaxHeight="38"/>
+								<RowDefinition Height="39" MaxHeight="39"/>
 								<RowDefinition/>
 							</Grid.RowDefinitions>
-							<TextBox x:Name="nameTextBox" Grid.Column="0" Margin="0,2,6,8" BorderBrush="{StaticResource lighterBorderBrush}"
+							<TextBox x:Name="nameTextBox" Grid.Column="0" Margin="0,2,6,9" BorderBrush="{StaticResource lighterBorderBrush}"
 									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 Style="{StaticResource PpsTagTextBoxStyle}"/>
-							<TextBox Grid.Column="1" Grid.RowSpan="2" Margin="0,2,0,8"
+							<TextBox Grid.Column="1" Grid.RowSpan="2" Margin="0,2,0,9"
 									 Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" MaxHeight="172"
 									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"/>
@@ -207,12 +203,13 @@
 					</DataTemplate>
 				</ListBox.ItemTemplate>
 			</uiC:PpsEditableListbox>
-		</ControlTemplate>
+		</DataTemplate>
 
-		<ControlTemplate x:Key="TagEditorTemplate" TargetType="{x:Type ContentControl}">
-			<uiC:PpsEditableListbox ItemsSource="{Binding Path=TagsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
-									Margin="16,16,0,16" AddNewItemFactory="tagAttributes_AddNewItemFactory"
-									ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+		<DataTemplate x:Key="TagEditorTemplate">
+			<uiC:PpsEditableListbox ItemsSource="{Binding ElementName=ppsTagsEditor, Path=TagsSource}"
+									AddNewItemFactory="tagAttributes_AddNewItemFactory"
+									ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+									Margin="16,16,0,16">
 				<ListBox.ItemsPanel>
 					<ItemsPanelTemplate>
 						<WrapPanel IsItemsHost="True" Orientation="Horizontal"/>
@@ -220,8 +217,8 @@
 				</ListBox.ItemsPanel>
 				<ListBox.ItemTemplate>
 					<DataTemplate>
-						<Grid Height="38">
-							<TextBox x:Name="tagTextBox" Margin="0,2,0,8" FontSize="14"
+						<Grid Height="39">
+							<TextBox x:Name="tagTextBox" Margin="0,2,0,9"
 									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 MaxLength="64"
 									 Style="{StaticResource PpsTagTextBoxStyle}"/>
@@ -229,11 +226,12 @@
 					</DataTemplate>
 				</ListBox.ItemTemplate>
 			</uiC:PpsEditableListbox>
-		</ControlTemplate>
+		</DataTemplate>
 
-		<ControlTemplate x:Key="TaskEditorTemplate" TargetType="{x:Type ContentControl}">
-			<uiC:PpsEditableListbox ItemsSource="{Binding Path=TagsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
-									Margin="16,16,0,16" AddNewItemFactory="tagAttributes_AddNewItemFactory">
+		<DataTemplate x:Key="TaskEditorTemplate">
+			<uiC:PpsEditableListbox ItemsSource="{Binding ElementName=ppsTagsEditor, Path=TagsSource}"
+									AddNewItemFactory="tagAttributes_AddNewItemFactory"
+									Margin="16,16,0,16">
 				<ListBox.ItemTemplate>
 					<DataTemplate>
 						<Grid>
@@ -242,17 +240,17 @@
 								<ColumnDefinition/>
 							</Grid.ColumnDefinitions>
 							<Grid.RowDefinitions>
-								<RowDefinition Height="38" MaxHeight="38"/>
+								<RowDefinition Height="39" MaxHeight="39"/>
 								<RowDefinition/>
 							</Grid.RowDefinitions>
 
 							<!--<DatePicker SelectedDate="{Binding Value}" Margin="0,2,6,8"
 										Style="{StaticResource PpsDatePickerStyle}"/>-->
 
-							<TextBox Grid.Column="0" Margin="0,2,6,8"
+							<TextBox Grid.Column="0" Margin="0,2,6,9"
 									 Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 Style="{StaticResource PpsTagTextBoxStyle}"/>
-							<TextBox Grid.Column="1" Grid.RowSpan="2" Margin="0,2,0,8"
+							<TextBox Grid.Column="1" Grid.RowSpan="2" Margin="0,2,0,9"
 									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"
 									 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" MaxHeight="172"/>
@@ -260,75 +258,40 @@
 					</DataTemplate>
 				</ListBox.ItemTemplate>
 			</uiC:PpsEditableListbox>
-		</ControlTemplate>
-
-		<ControlTemplate x:Key="TaskEditorTemplate_Old" TargetType="{x:Type ContentControl}">
-			<ListBox ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl},
-				                   Path=TagsSource}"
-					 Style="{StaticResource PPSnListBoxStyle}"
-					 ItemContainerStyle="{StaticResource PpsTagItemStyle}"
-					 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-					 Margin="16,16,0,16" Focusable="False">
-				<ListBox.ItemTemplate>
-					<DataTemplate>
-						<Grid>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="100"/>
-								<ColumnDefinition/>
-								<ColumnDefinition Width="54"/>
-							</Grid.ColumnDefinitions>
-							<Grid.RowDefinitions>
-								<RowDefinition Height="38" MaxHeight="38"/>
-								<RowDefinition/>
-							</Grid.RowDefinitions>
-							<TextBox x:Name="valueTextBox" Grid.Column="0" Margin="0,5"
-									 Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-									 IsEnabled="{Binding CreateNewBool}"
-									 Style="{StaticResource PpsTagTextBoxStyle}"/>
-							<TextBox Grid.Column="1" Grid.RowSpan="2" Margin="6,5"
-									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-									 IsEnabled="{Binding IsUserChangeable}"
-									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"
-									 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" MaxHeight="172"/>
-						</Grid>
-						<DataTemplate.Triggers>
-							<Trigger SourceName="valueTextBox" Property="IsEnabled" Value="True">
-								<Setter TargetName="valueTextBox" Property="BorderBrush" Value="{StaticResource lighterBorderBrush}" />
-							</Trigger>
-						</DataTemplate.Triggers>
-					</DataTemplate>
-				</ListBox.ItemTemplate>
-			</ListBox>
-		</ControlTemplate>
-
+		</DataTemplate>
 	</UserControl.Resources>
 
-	<ContentControl>
-		<ContentControl.Style>
-			<Style TargetType="{x:Type ContentControl}" >
+	<ContentPresenter>
+		<ContentPresenter.Style>
+			<Style TargetType="{x:Type ContentPresenter}" >
 				<Setter Property="Focusable" Value="False"/>
 				<Style.Triggers>
-					<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-						                   Path=TagClass}" Value="{x:Static data:PpsObjectTagClass.Note}">
-						<Setter Property="Template" Value="{StaticResource NoteEditorTemplate}"/>
+					<DataTrigger Binding="{Binding ElementName=ppsTagsEditor, Path=TagClass}">
+						<DataTrigger.Value>
+							<data:PpsObjectTagClass>Note</data:PpsObjectTagClass>
+						</DataTrigger.Value>
+						<Setter Property="ContentTemplate" Value="{StaticResource NoteEditorTemplate}"/>
 					</DataTrigger>
-					<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-						                   Path=TagClass}" Value="{x:Static data:PpsObjectTagClass.Tag}">
-						<Setter Property="Template" Value="{StaticResource TagEditorTemplate}"/>
+					<DataTrigger Binding="{Binding ElementName=ppsTagsEditor, Path=TagClass}">
+						<DataTrigger.Value>
+							<data:PpsObjectTagClass>Tag</data:PpsObjectTagClass>
+						</DataTrigger.Value>
+						<Setter Property="ContentTemplate" Value="{StaticResource TagEditorTemplate}"/>
 					</DataTrigger>
-					<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-						                   Path=TagClass}" Value="{x:Static data:PpsObjectTagClass.Text}">
-						<Setter Property="Template" Value="{StaticResource AttributeEditorTemplate}"/>
+					<DataTrigger Binding="{Binding ElementName=ppsTagsEditor, Path=TagClass}">
+						<DataTrigger.Value>
+							<data:PpsObjectTagClass>Text</data:PpsObjectTagClass>
+						</DataTrigger.Value>
+						<Setter Property="ContentTemplate" Value="{StaticResource AttributeEditorTemplate}"/>
 					</DataTrigger>
-					<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, 
-						                   Path=TagClass}" Value="{x:Static data:PpsObjectTagClass.Date}">
-						<Setter Property="Template" Value="{StaticResource TaskEditorTemplate}"/>
+					<DataTrigger Binding="{Binding ElementName=ppsTagsEditor, Path=TagClass}">
+						<DataTrigger.Value>
+							<data:PpsObjectTagClass>Date</data:PpsObjectTagClass>
+						</DataTrigger.Value>
+						<Setter Property="ContentTemplate" Value="{StaticResource TaskEditorTemplate}"/>
 					</DataTrigger>
 				</Style.Triggers>
 			</Style>
-		</ContentControl.Style>
-	</ContentControl>
-
-
-
+		</ContentPresenter.Style>
+	</ContentPresenter>
 </UserControl>
