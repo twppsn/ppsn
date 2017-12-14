@@ -291,7 +291,12 @@ namespace TecWare.PPSn.Data
 
 		protected override bool SetGenericValue(object newValue, bool firePropertyChanged)
 		{
-			switch (newValue != TecWare.PPSn.Data.PpsDataRow.NotSet ? newValue : null)
+			if (newValue == PpsDataRow.NotSet)
+			{
+				referencedRow = null;
+				return base.SetGenericValue(newValue, firePropertyChanged);
+			}
+			switch (newValue)
 			{
 				case null:
 					referencedRow = null;
@@ -313,7 +318,7 @@ namespace TecWare.PPSn.Data
 						return false;
 					}
 				default:
-					throw new ArgumentException("Only long or IDataRow is allowed.", nameof(newValue));
+					throw new ArgumentException("Only int, long or IDataRow is allowed.", nameof(newValue));
 			}
 		} // func SetGenericValue
 		

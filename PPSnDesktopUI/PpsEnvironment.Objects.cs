@@ -644,6 +644,7 @@ namespace TecWare.PPSn
 	/// <summary>Tag implementation</summary>
 	public sealed class PpsObjectTagView : INotifyPropertyChanged
 	{
+		/// <summary>Notifies Tag changes.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private readonly PpsObjectTags parent;
@@ -1231,7 +1232,7 @@ namespace TecWare.PPSn
 								{
 									updateIdParameter.Value = cur.Id.Value;
 									updateClassParameter.Value = (int)cur.Class;
-									updateValueParameter.Value = cur.Value ?? DBNull.Value;
+									updateValueParameter.Value = cur.Value == null ? DBNull.Value : (object)cur.Value.ChangeType<string>();
 									updateUserIdParameter.Value = cur.UserId;
 									updateCreationDateParameter.Value = cur.CreationStamp;
 
@@ -1253,7 +1254,7 @@ namespace TecWare.PPSn
 								insertObjectIdParameter.Value = parent.Id;
 								insertKeyParameter.Value = cur.Name;
 								insertClassParameter.Value = (int)cur.Class;
-								insertValueParameter.Value = cur.Value ?? DBNull.Value;
+								insertValueParameter.Value = cur.Value == null ? DBNull.Value : (object)cur.Value.ChangeType<string>();
 								insertUserIdParameter.Value = cur.UserId;
 								insertCreationDatedParameter.Value = cur.CreationStamp;
 
@@ -2063,7 +2064,7 @@ namespace TecWare.PPSn
 
 		/// <summary></summary>
 		/// <param name="environment"></param>
-		/// <param name="localId"></param>
+		/// <param name="r"></param>
 		internal PpsObject(PpsEnvironment environment, IDataReader r)
 		{
 			this.environment = environment;
@@ -2080,6 +2081,8 @@ namespace TecWare.PPSn
 			ReadObjectInfo(r);
 		} // ctor
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override string ToString()
 			=> $"Object: {Typ}; {objectId} # {Guid}:{PulledRevId}";
 
