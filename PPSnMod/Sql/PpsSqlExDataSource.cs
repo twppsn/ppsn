@@ -2161,6 +2161,13 @@ namespace TecWare.PPSn.Server.Sql
 							.Append(" AS [").Append(col.Name).Append(']');
 					}
 				}
+
+				// add revision hint
+				if (table.Name == "ObjectTags")
+				{
+					command.Append(",CASE WHEN d.[ObjRId] IS NOT NULL THEN d.[Class] ELSE NULL END AS [LocalClass]");
+					command.Append(",CASE WHEN d.[ObjRId] IS NOT NULL THEN d.[Value] ELSE NULL END AS [LocalValue]");
+				}
 			} // func PrepareSynchronizationColumns
 
 			private string PrepareChangeTrackingCommand(PpsDataTableDefinition table, PpsSqlTableInfo tableInfo, PpsSqlColumnInfo columnInfo, long lastSyncId)

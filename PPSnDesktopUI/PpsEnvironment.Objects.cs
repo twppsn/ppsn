@@ -903,6 +903,7 @@ namespace TecWare.PPSn
 		/// <summary>Is this tag removed.</summary>
 		public bool IsRemoved => Class == PpsObjectTagClass.Deleted;
 
+		/// <summary>Is this tag attached to an revision.</summary>
 		public bool IsRev => isRev;
 
 		/// <summary>Is this tag changed.</summary>

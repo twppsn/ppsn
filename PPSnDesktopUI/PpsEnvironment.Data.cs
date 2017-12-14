@@ -1398,6 +1398,8 @@ namespace TecWare.PPSn
 			private readonly DbParameter parameterInsertUserId;
 			private readonly DbParameter parameterInsertClass;
 			private readonly DbParameter parameterInsertValue;
+			private readonly DbParameter parameterInsertLClass;
+			private readonly DbParameter parameterInsertLValue;
 			private readonly DbParameter parameterInsertCreateDate;
 
 			private readonly DbCommand deleteCommand;
@@ -1434,13 +1436,15 @@ namespace TecWare.PPSn
 				parameterUpdateValue = updateCommand.AddParameter("@Value", DbType.String);
 				parameterUpdateCreateDate = updateCommand.AddParameter("@CreateDate", DbType.DateTime);
 
-				insertCommand = transaction.CreateNativeCommand("INSERT INTO main.[ObjectTags] ([Id], [ObjectId], [Key], [UserId], [Class], [Value], [CreateDate], [LocalClass], [LocalValue], [" + refreshColumnName + "]) VALUES (@Id, @ObjectId, @Key, @UserId, @Class, @Value, @CreateDate, null, null, 0)");
+				insertCommand = transaction.CreateNativeCommand("INSERT INTO main.[ObjectTags] ([Id], [ObjectId], [Key], [UserId], [Class], [Value], [CreateDate], [LocalClass], [LocalValue], [" + refreshColumnName + "]) VALUES (@Id, @ObjectId, @Key, @UserId, @Class, @Value, @CreateDate, @LClass, @LValue, 0)");
 				parameterInsertId = insertCommand.AddParameter("@Id", DbType.Int64);
 				parameterInsertObjectId = insertCommand.AddParameter("@ObjectId", DbType.Int64);
 				parameterInsertKey = insertCommand.AddParameter("@Key", DbType.String);
 				parameterInsertUserId = insertCommand.AddParameter("@UserId", DbType.Int64);
 				parameterInsertClass = insertCommand.AddParameter("@Class", DbType.Int32);
 				parameterInsertValue = insertCommand.AddParameter("@Value", DbType.String);
+				parameterInsertLClass = insertCommand.AddParameter("@LClass", DbType.Int32);
+				parameterInsertLValue = insertCommand.AddParameter("@LValue", DbType.String);
 				parameterInsertCreateDate = insertCommand.AddParameter("@CreateDate", DbType.DateTime);
 
 				deleteCommand = transaction.CreateNativeCommand("DELETE FROM main.[ObjectTags] WHERE Id = @Id AND ([UserId] <> 0 OR ([UserId] = 0 AND [LocalClass] IS NULL))");
@@ -1506,6 +1510,8 @@ namespace TecWare.PPSn
 						parameterInsertUserId.Value = remoteUserId;
 						parameterInsertClass.Value = remoteClass;
 						parameterInsertValue.Value = remoteValue;
+						parameterInsertLClass.Value = ConvertStringToSQLiteValue(parameterValues[5], DbType.Int32);
+						parameterInsertLValue.Value = parameterValues[6];
 						parameterInsertCreateDate.Value = remoteDateTime;
 
 						await insertCommand.ExecuteNonQueryExAsync();

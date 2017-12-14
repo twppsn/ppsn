@@ -322,6 +322,7 @@ namespace TecWare.PPSn.Data
 			}
 		} // func SetGenericValue
 		
+		/// <summary>Get the row object.</summary>
 		public override object Value
 		{
 			get
