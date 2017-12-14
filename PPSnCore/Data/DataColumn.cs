@@ -286,7 +286,7 @@ namespace TecWare.PPSn.Data
 		{
 			if (Object.Equals(InternalValue, newValue))
 				return false;
-			else if (Object.Equals(newValue, originalValue))
+			else if (Object.Equals(newValue, originalValue) || newValue == PpsDataRow.NotSet)
 			{
 				Reset();
 				return true;
