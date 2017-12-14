@@ -36,6 +36,45 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
+	/// <summary>This Class adds a German Translation to the Enum of CameraControlProperty</summary>
+	public static class CameraControlPropertyExtensions
+	{
+		private static string ToGermanString(this CameraControlProperty property)
+		{
+			switch (property)
+			{
+				case CameraControlProperty.Exposure:
+					return "Belichtung";
+				case CameraControlProperty.Focus:
+					return "Fokus";
+				case CameraControlProperty.Iris:
+					return "Blende";
+				case CameraControlProperty.Pan:
+					return "Schwenkung";
+				case CameraControlProperty.Roll:
+					return "Rotation";
+				case CameraControlProperty.Tilt:
+					return "Neigung";
+				case CameraControlProperty.Zoom:
+					return "Vergrößerung";
+				default:
+					return Enum.GetName(typeof(CameraControlProperty), property);
+			}
+		}
+
+		/// <summary>Returns the Name of the Enum Item</summary>
+		/// <param name="property">Property to print</param>
+		/// <param name="toGerman">default false, if true the German string is returned</param>
+		/// <returns>Coded Name as a string</returns>
+		public static string ToString(this CameraControlProperty property, bool toGerman = false)
+		{
+			if (toGerman)
+				return ToGermanString(property);
+			return Enum.GetName(typeof(CameraControlProperty), property);
+		}
+	}
+
+
 	/// <summary>
 	/// Interaction logic for PpsPicturePane.xaml
 	/// </summary>
