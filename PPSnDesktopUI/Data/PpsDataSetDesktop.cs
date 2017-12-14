@@ -291,7 +291,7 @@ namespace TecWare.PPSn.Data
 
 		protected override bool SetGenericValue(object newValue, bool firePropertyChanged)
 		{
-			switch (newValue)
+			switch (newValue != TecWare.PPSn.Data.PpsDataRow.NotSet ? newValue : null)
 			{
 				case null:
 					referencedRow = null;
