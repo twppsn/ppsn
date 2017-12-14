@@ -347,9 +347,9 @@ namespace TecWare.PPSn.Data
 			if (value != PpsDataRow.NotSet)
 			{
 				if (value == null)
-					x.Add(new XElement("v"));
+					x.Add(new XElement("c"));
 				else
-					x.Add(new XElement("v", value.ChangeType<string>()));
+					x.Add(new XElement("c", value.ChangeType<string>()));
 			}
 		} // proc Write
 
@@ -361,7 +361,7 @@ namespace TecWare.PPSn.Data
 				=> t == null || String.IsNullOrEmpty(t.Value) ? null : (object)t.Value.ChangeType<long>();
 
 			originalValue = ReadValueFromElementstring(x?.Element("o"));
-			var xV = x?.Element("v");
+			var xV = x?.Element("c");
 			if (xV == null)
 				value = PpsDataRow.NotSet;
 			else

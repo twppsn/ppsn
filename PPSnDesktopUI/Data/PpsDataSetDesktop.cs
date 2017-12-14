@@ -144,6 +144,7 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsLinkedObjectExtendedValue -------------------------------------
 
+	/// <summary>Referenz to a linked object.</summary>
 	public sealed class PpsLinkedObjectExtendedValue : PpsDataRowObjectExtendedValue, IPpsDataRowExtendedEvents
 	{
 		private readonly PpsEnvironment environment;
@@ -151,6 +152,9 @@ namespace TecWare.PPSn.Data
 
 		private WeakReference<PpsObject> referencedObject = null;
 
+		/// <summary></summary>
+		/// <param name="row"></param>
+		/// <param name="column"></param>
 		public PpsLinkedObjectExtendedValue(PpsDataRow row, PpsDataColumnDefinition column)
 			: base(row, column)
 		{
@@ -158,6 +162,8 @@ namespace TecWare.PPSn.Data
 			this.dataset = row.Table.DataSet as IPpsObjectBasedDataSet;
 		} // ctor
 
+		/// <summary>Write the value</summary>
+		/// <param name="x"></param>
 		protected override void Write(XElement x)
 		{
 			base.Write(x);
@@ -168,6 +174,8 @@ namespace TecWare.PPSn.Data
 				x.Add(new XElement("g", tmp.Guid.ToString("D")));
 		} // proc Write
 
+		/// <summary></summary>
+		/// <param name="x"></param>
 		protected override void Read(XElement x)
 		{
 			base.Read(x);
@@ -178,7 +186,7 @@ namespace TecWare.PPSn.Data
 				var objectId = (long)InternalValue;
 				if (objectId < 0)
 				{
-					var guidString = x.GetNode("g", (string)null);
+					var guidString = x.GetNode("g", (string)null); // there is no g, when the object comes from server
 					if (guidString != null)
 						base.SetGenericValue(dataset.Object.Links.FindByGuid(new Guid(guidString))?.LinkToId, false);
 					else
@@ -187,6 +195,11 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc Read
 
+		/// <summary></summary>
+		/// <param name="propertyName"></param>
+		/// <param name="oldValue"></param>
+		/// <param name="newValue"></param>
+		/// <param name="firePropertyChanged"></param>
 		protected override void OnPropertyChanged(string propertyName, object oldValue, object newValue, bool firePropertyChanged)
 		{
 			if (dataset != null && propertyName == nameof(Value) && Row.IsCurrent)
@@ -201,18 +214,24 @@ namespace TecWare.PPSn.Data
 			base.OnPropertyChanged(propertyName, oldValue, newValue, firePropertyChanged);
 		} // proc OnPropertyChanged
 
+		/// <summary></summary>
 		public void OnRowAdded()
 		{
 			if (dataset != null && !dataset.IsReading && InternalValue != null)
 				dataset.Object.Links.AppendLink((long)InternalValue);
 		} // proc OnRowAdded
 
+		/// <summary></summary>
 		public void OnRowRemoved()
 		{
 			if (dataset != null && !dataset.IsReading && InternalValue != null)
 				dataset.Object.Links.RemoveLink((long)InternalValue);
 		} // proc OnRowRemoved
 
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="firePropertyChanged"></param>
+		/// <returns></returns>
 		protected override bool SetGenericValue(object newValue, bool firePropertyChanged)
 		{
 			// gets also called on undo/redo
@@ -248,6 +267,7 @@ namespace TecWare.PPSn.Data
 			;
 		}
 
+		/// <summary></summary>
 		public override object Value
 		{
 			get
