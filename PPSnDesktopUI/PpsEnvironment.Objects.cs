@@ -2782,13 +2782,21 @@ namespace TecWare.PPSn
 
 		/// <summary>Id of the object.</summary>
 		public long Id => objectId;
+		/// <summary>Guid of the object.</summary>
 		public Guid Guid => GetValue((int)PpsStaticObjectColumnIndex.Guid, Guid.Empty);
+		/// <summary>Type of the object.</summary>
 		public string Typ => GetValue((int)PpsStaticObjectColumnIndex.Typ, String.Empty);
+		/// <summary>MimeType of the object.</summary>
 		public string MimeType => GetValue((int)PpsStaticObjectColumnIndex.MimeType, String.Empty);
+		/// <summary>Record token of the object.</summary>
 		public string Nr => GetValue((int)PpsStaticObjectColumnIndex.Nr, String.Empty);
+		/// <summary>Is Revisioning enabled.</summary>
 		public bool IsRev => GetValue((int)PpsStaticObjectColumnIndex.IsRev, false);
+		/// <summary>The Revision of the object as last pulled from the server.</summary>
 		public long RemoteCurRevId => GetValue((int)PpsStaticObjectColumnIndex.RemoteCurRevId, -1L);
+		/// <summary>Base Revision of the object on the server.</summary>
 		public long RemoteHeadRevId => GetValue((int)PpsStaticObjectColumnIndex.RemoteHeadRevId, -1L);
+		/// <summary>Revision when last pulled from the server.</summary>
 		public long PulledRevId => GetValue((int)PpsStaticObjectColumnIndex.PulledRevId, -1L);
 		/// <summary>Is the local data of the object changed.</summary>
 		public bool IsDocumentChanged
