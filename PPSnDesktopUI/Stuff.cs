@@ -523,7 +523,7 @@ namespace TecWare.PPSn
 		private static string DefaultMimeType => MimeTypes.Application.OctetStream;
 
 		private static int FindTypeMappingByExtension(string extension)
-			=> Array.FindIndex(mimeTypeMapping, mt => mt.Extension == extension.TrimStart('.'));
+			=> Array.FindIndex(mimeTypeMapping, mt => mt.Extension == extension.TrimStart('.').ToLower());
 
 		private static int FindTypeMappingByMimeType(string mimeType)
 			=> Array.FindIndex(mimeTypeMapping, mt => mt.MimeType == mimeType);
