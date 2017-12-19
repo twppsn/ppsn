@@ -712,6 +712,11 @@
 					<xs:documentation>Path were the reports are moved (default: %base%\.logs)</xs:documentation>
 				</xs:annotation>
 			</xs:attribute>
+			<xs:attribute name="work" type="PathType" use="optional">
+				<xs:annotation>
+					<xs:documentation>Path were the reports are processed (default: %base%\.work)</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
 			<xs:attribute name="fonts" type="PathType" use="optional">
 				<xs:annotation>
 					<xs:documentation>Path to the system fonts directory (default: %system%\fonts)</xs:documentation>

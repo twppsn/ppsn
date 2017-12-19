@@ -322,14 +322,16 @@ namespace TecWare.PPSn.Server
 			var systemPath = currentNode.GetAttribute<string>("system") ?? throw new DEConfigurationException(currentNode.Element, "@system is empty.");
 			var basePath = currentNode.GetAttribute<string>("base") ?? throw new DEConfigurationException(currentNode.Element, "@base is empty.");
 			var logPath = currentNode.GetAttribute<string>("logs");
+			var workPath = currentNode.GetAttribute<string>("work");
 
 			// check for recreate the reporting engine
 			if (reporting == null
-				|| !ProcsDE.IsPathEqual(reporting.ContextPath, systemPath)
+				|| !ProcsDE.IsPathEqual(reporting.EnginePath, systemPath)
 				|| !ProcsDE.IsPathEqual(reporting.BasePath, basePath)
-				|| (logPath != null && !ProcsDE.IsPathEqual(reporting.LogPath, logPath)))
+				|| (logPath != null && !ProcsDE.IsPathEqual(reporting.LogPath, logPath))
+				|| (workPath != null && !ProcsDE.IsPathEqual(reporting.WorkingPath, workPath)))
 			{
-				reporting = new PpsReportEngine(systemPath, basePath, reportProvider, logPath);
+				reporting = new PpsReportEngine(systemPath, basePath, reportProvider, reportWorkingPath: workPath, reportLogPath: logPath);
 			}
 
 			// update values
@@ -339,10 +341,15 @@ namespace TecWare.PPSn.Server
 			reporting.StoreSuccessLogs = currentNode.GetAttribute<bool>("storeSuccessLogs");
 		} // proc BeginReadConfigurationReport
 
+		/// <summary>Run a report.</summary>
+		/// <param name="table"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public string RunReport(LuaTable table)
 			=> RunReportAsync(table).AwaitTask();
 
+		/// <summary>Run a report, with a static name.</summary>
+		/// <param name="table"></param>
 		[LuaMember]
 		public void DebugReport(LuaTable table)
 		{
@@ -352,24 +359,33 @@ namespace TecWare.PPSn.Server
 			// move to a unique name
 			var moveFileTo = table.GetMemberValue("name") as string;
 			var p = moveFileTo.LastIndexOfAny(new char[] { '/', '\\' });
-			moveFileTo = Path.Combine(Path.GetDirectoryName(resultFile), moveFileTo.Substring(p + 1));
+			moveFileTo = Path.Combine(Path.GetDirectoryName(resultFile), moveFileTo.Substring(p + 1)) + ".pdf";
 			if (File.Exists(moveFileTo))
 				File.Delete(moveFileTo);
-			File.Move(resultFile, moveFileTo + ".pdf");
+			File.Move(resultFile, moveFileTo);
 		} // proc DebugReport
 
+		/// <summary>Run a report.</summary>
+		/// <param name="table"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public Task<string> RunReportAsync(LuaTable table)
 			=> reporting.RunReportAsync(table);
 
+		/// <summary>Access to the report engine.</summary>
 		[LuaMember]
 		public PpsReportEngine Reports => reporting;
 
 		#endregion
-
+		
+		/// <summary></summary>
+		/// <param name="database"></param>
 		public void FireDataChangedEvent(string database)
 			=> FireEvent("ppsn_database_changed", database);
 
+		/// <summary></summary>
+		/// <param name="r"></param>
+		/// <returns></returns>
 		protected override async Task<bool> OnProcessRequestAsync(IDEWebRequestScope r)
 		{
 			switch (r.RelativeSubPath)

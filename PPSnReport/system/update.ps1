@@ -22,6 +22,8 @@
 #
 # java -jar C:\Tools\trang\trang.jar share\schema\layoutschema-en.rng share\schema\layoutschema-en.xsd
 #
+# patch: bei foreign-elements <xs:any namespace="##other" minOccurs="0" maxOccurs="unbounded" processContents="skip"/>
+#
 
 Import-Module BitsTransfer
 
@@ -90,9 +92,13 @@ try {
 				$fi.Directory.Create();
 			}
 			
-			if ($fi.LastWriteTime -lt $cur.LastWriteTime.DateTime) {
+			if ($fi.LastWriteTime -lt $cur.LastWriteTime.DateTime -or $fi.Length -ne $cur.Length) {
 
 				Write-Host "Unpack: $($cur.FullName)";
+
+				if ($fi.Exists) {
+					$fi.Delete();
+				}
 
 				$dst = $fi.OpenWrite();
 				$src = $cur.Open();
