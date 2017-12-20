@@ -211,3 +211,8 @@ FakesAssemblies/
 >>>>>>> PPSnMod
 /PPSnModCfg/cfg/PPSn.xml
 /Common/AssemblyInfo.cs
+/PPSnReport/system/bin/
+/PPSnReport/system/sdluatex
+/PPSnReport/system/share/
+/PPSnReport/system/sw/
+

@@ -32,10 +32,13 @@ namespace TecWare.PPSn.Data
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
 		protected PpsDataServerProtocolBase()
 		{
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected virtual void Dispose(bool disposing)
 		{
 			if (!isDisposed)
@@ -44,6 +47,7 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc Disposed
 
+		/// <summary></summary>
 		public void Dispose()
 			=> Dispose(true);
 
@@ -70,6 +74,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		/// <summary>Is disposed called.</summary>
 		public bool IsDisposed => isDisposed;
 	} // class PpsDataServerProtocolBase
 
@@ -84,10 +89,13 @@ namespace TecWare.PPSn.Data
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
 		protected PpsDataServerProviderBase()
 		{
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected virtual void Dispose(bool disposing)
 		{
 			if (!isDisposed)
@@ -96,6 +104,7 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc Disposed
 
+		/// <summary></summary>
 		public void Dispose()
 			=> Dispose(true);
 
@@ -104,7 +113,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Access to a list.</summary>
 		/// <param name="select">Command to choose the this.</param>
 		/// <param name="columns">Columns the should be returned.</param>
-		/// <param name="selector">A condition to select the rows.</param>
+		/// <param name="filter">A condition to select the rows.</param>
 		/// <param name="order">Row order</param>
 		/// <returns></returns>
 		public abstract Task<IEnumerable<IDataRow>> GetListAsync(string select, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter, PpsDataOrderExpression[] order);
@@ -118,6 +127,7 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public abstract Task<LuaTable> ExecuteAsync(LuaTable arguments);
 
+		/// <summary>Is the object disposed.</summary>
 		public bool IsDisposed => isDisposed;
 	} // class PpsDataServerProviderBase
 
@@ -241,6 +251,10 @@ namespace TecWare.PPSn.Data
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary>Create the data server.</summary>
+		/// <param name="protocol">Protocoll implementation.</param>
+		/// <param name="provider">Data provider implementation.</param>
+		/// <param name="processException">Callback for exception handling.</param>
 		public PpsDataServer(PpsDataServerProtocolBase protocol, PpsDataServerProviderBase provider, Action<Exception> processException)
 		{
 			this.protocol = protocol ?? throw new ArgumentNullException(nameof(protocol));
@@ -562,14 +576,16 @@ namespace TecWare.PPSn.Data
 			}
 		} // func RunProtocol
 
+		/// <summary>Process protocol messages.</summary>
+		/// <returns></returns>
 		public Task ProcessMessagesAsync()
 			=> RunProtocol();
 
 		#endregion
 
-		/// <summary></summary>
+		/// <summary>Get the protocol implementation.</summary>
 		public PpsDataServerProtocolBase Protocol => protocol;
-		/// <summary></summary>
+		/// <summary>Get the data provider implementation.</summary>
 		public PpsDataServerProviderBase Provider => provider;
 	} // class PpsDataServerBase
 

@@ -57,6 +57,7 @@ namespace TecWare.PPSn.Server
 
 	#region -- class PpsSysDataSource -------------------------------------------------
 
+	/// <summary></summary>
 	public sealed class PpsSysDataSource : PpsDataSource
 	{
 		#region -- class PpsSysMethodSelectorToken --------------------------------------
@@ -159,6 +160,9 @@ namespace TecWare.PPSn.Server
 		private readonly PpsApplication application;
 		private readonly PpsSysConnectionHandle systemConnection;
 
+		/// <summary></summary>
+		/// <param name="sp"></param>
+		/// <param name="name"></param>
 		public PpsSysDataSource(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
@@ -166,9 +170,17 @@ namespace TecWare.PPSn.Server
 			this.systemConnection = new PpsSysConnectionHandle(this, null);
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="privateUserData"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		public override IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext privateUserData, bool throwException = true)
 			=> new PpsSysConnectionHandle(this, privateUserData);
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="sourceDescription"></param>
+		/// <returns></returns>
 		public override Task<IPpsSelectorToken> CreateSelectorTokenAsync(string name, XElement sourceDescription)
 		{
 			var viewType = sourceDescription.GetAttribute("type", "view");
@@ -200,14 +212,22 @@ namespace TecWare.PPSn.Server
 			return Task.Run<IPpsSelectorToken>(() => { selector.InitializeColumns(); return selector; });
 		} // proc CreateSelectorTokenAsync
 
+		/// <summary></summary>
+		/// <param name="connection"></param>
+		/// <returns></returns>
 		public override PpsDataTransaction CreateTransaction(IPpsConnectionHandle connection)
 		{
 			throw new NotSupportedException();
 		} // proc CreateTransaction
 
+		/// <summary></summary>
+		/// <param name="privateUserData"></param>
+		/// <param name="lastSynchronization"></param>
+		/// <returns></returns>
 		public override PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, DateTime lastSynchronization)
 			=> new PpsDataSynchronization(application, CreateConnection(privateUserData, true), lastSynchronization);
 
+		/// <summary></summary>
 		public override string Type => "Sys";
 	} // class PpsSysDataSource
 

@@ -11,6 +11,14 @@ git clone --recursive --branch development https://github.com/twppsn/ppsn.git
 
 ```
 
+## Pull the [Speedata Publisher](https://www.speedata.de/) as Reporting Engine
+
+Use powershell to execute the download script. Take care of the current directory!
+```bash
+cd .\\ppsn\\PPSnReport\\system\\
+.\update.ps1
+```
+
 ## Setup of the Database
 
 1. open PPSnMod.sln

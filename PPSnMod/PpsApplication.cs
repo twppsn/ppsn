@@ -42,6 +42,9 @@ namespace TecWare.PPSn.Server
 		/// <param name="task"></param>
 		void RegisterInitializationTask(int order, string status, Func<Task> task);
 
+		/// <summary>Wait until all application information are processed.</summary>
+		/// <param name="timeout"></param>
+		/// <returns></returns>
 		bool? WaitForInitializationProcess(int timeout = -1);
 
 		/// <summary></summary>
@@ -86,6 +89,9 @@ namespace TecWare.PPSn.Server
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="sp"></param>
+		/// <param name="name"></param>
 		public PpsApplication(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
@@ -105,6 +111,8 @@ namespace TecWare.PPSn.Server
 			InitUser();
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="config"></param>
 		protected override void OnBeginReadConfiguration(IDEConfigLoading config)
 		{
 			base.OnBeginReadConfiguration(config);
@@ -122,6 +130,8 @@ namespace TecWare.PPSn.Server
 			BeginReadConfigurationReport(config);
 		} // proc OnBeginReadConfiguration
 
+		/// <summary></summary>
+		/// <param name="config"></param>
 		protected override void OnEndReadConfiguration(IDEConfigLoading config)
 		{
 			base.OnEndReadConfiguration(config);
@@ -134,6 +144,8 @@ namespace TecWare.PPSn.Server
 			initializationProcess = Task.Run(new Action(InitializeApplication));
 		} // proc OnEndReadConfiguration
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected override void Dispose(bool disposing)
 		{
 			try
@@ -235,10 +247,18 @@ namespace TecWare.PPSn.Server
 		public bool? WaitForInitializationProcess(int timeout = -1)
 			=> initializationProcess.Wait(timeout) ? new bool?(isInitializedSuccessful) : null;
 
+		/// <summary>Extent the initialization process.</summary>
+		/// <param name="order"></param>
+		/// <param name="status"></param>
+		/// <param name="task"></param>
 		[LuaMember(nameof(RegisterInitializationAction))]
 		public void RegisterInitializationAction(int order, string status, Action task)
 			=> RegisterInitializationTask(order, status, () => Task.Run(task));
 
+		/// <summary>Extent the initialization process.</summary>
+		/// <param name="order"></param>
+		/// <param name="status"></param>
+		/// <param name="task"></param>
 		public void RegisterInitializationTask(int order, string status, Func<Task> task)
 		{
 			if (status == null)
@@ -260,6 +280,7 @@ namespace TecWare.PPSn.Server
 			}
 		} // proc RegisterInitializationTask
 
+		/// <summary></summary>
 		public bool IsInitializedSuccessful => isInitializedSuccessful;
 
 		#endregion
@@ -322,27 +343,40 @@ namespace TecWare.PPSn.Server
 			var systemPath = currentNode.GetAttribute<string>("system") ?? throw new DEConfigurationException(currentNode.Element, "@system is empty.");
 			var basePath = currentNode.GetAttribute<string>("base") ?? throw new DEConfigurationException(currentNode.Element, "@base is empty.");
 			var logPath = currentNode.GetAttribute<string>("logs");
+			var workPath = currentNode.GetAttribute<string>("work");
 
 			// check for recreate the reporting engine
 			if (reporting == null
-				|| !ProcsDE.IsPathEqual(reporting.ContextPath, systemPath)
+				|| !ProcsDE.IsPathEqual(reporting.EnginePath, systemPath)
 				|| !ProcsDE.IsPathEqual(reporting.BasePath, basePath)
-				|| (logPath != null && !ProcsDE.IsPathEqual(reporting.LogPath, logPath)))
+				|| (logPath != null && !ProcsDE.IsPathEqual(reporting.LogPath, logPath))
+				|| (workPath != null && !ProcsDE.IsPathEqual(reporting.WorkingPath, workPath)))
 			{
-				reporting = new PpsReportEngine(systemPath, basePath, reportProvider, logPath);
+				reporting = new PpsReportEngine(systemPath, basePath, reportProvider, reportWorkingPath: workPath, reportLogPath: logPath);
 			}
 
 			// update values
-			reporting.FontDirectory = currentNode.GetAttribute<string>("fonts");
 			reporting.CleanBaseDirectoryAfter = currentNode.GetAttribute<int>("cleanBaseDirectory");
 			reporting.ZipLogFiles = currentNode.GetAttribute<bool>("zipLogFiles");
 			reporting.StoreSuccessLogs = currentNode.GetAttribute<bool>("storeSuccessLogs");
 		} // proc BeginReadConfigurationReport
 
+		/// <summary>Run a report.</summary>
+		/// <param name="table"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public string RunReport(LuaTable table)
 			=> RunReportAsync(table).AwaitTask();
 
+		/// <summary>Run a report data.</summary>
+		/// <param name="table"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public string DebugData(LuaTable table)
+			=> RunDataAsync(table).AwaitTask();
+
+		/// <summary>Run a report, with a static name.</summary>
+		/// <param name="table"></param>
 		[LuaMember]
 		public void DebugReport(LuaTable table)
 		{
@@ -352,24 +386,40 @@ namespace TecWare.PPSn.Server
 			// move to a unique name
 			var moveFileTo = table.GetMemberValue("name") as string;
 			var p = moveFileTo.LastIndexOfAny(new char[] { '/', '\\' });
-			moveFileTo = Path.Combine(Path.GetDirectoryName(resultFile), moveFileTo.Substring(p + 1));
+			moveFileTo = Path.Combine(Path.GetDirectoryName(resultFile), moveFileTo.Substring(p + 1)) + ".pdf";
 			if (File.Exists(moveFileTo))
 				File.Delete(moveFileTo);
-			File.Move(resultFile, moveFileTo + ".pdf");
+			File.Move(resultFile, moveFileTo);
 		} // proc DebugReport
 
+		/// <summary>Run a report.</summary>
+		/// <param name="table"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public Task<string> RunReportAsync(LuaTable table)
 			=> reporting.RunReportAsync(table);
 
+		/// <summary>Run a report data only.</summary>
+		/// <param name="table"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public Task<string> RunDataAsync(LuaTable table)
+			=> reporting.RunDataAsync(table);
+
+		/// <summary>Access to the report engine.</summary>
 		[LuaMember]
 		public PpsReportEngine Reports => reporting;
 
 		#endregion
-
+		
+		/// <summary></summary>
+		/// <param name="database"></param>
 		public void FireDataChangedEvent(string database)
 			=> FireEvent("ppsn_database_changed", database);
 
+		/// <summary></summary>
+		/// <param name="r"></param>
+		/// <returns></returns>
 		protected override async Task<bool> OnProcessRequestAsync(IDEWebRequestScope r)
 		{
 			switch (r.RelativeSubPath)

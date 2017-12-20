@@ -1680,7 +1680,7 @@ namespace TecWare.PPSn
 		{
 			using (var src = await baseObj.LoadRawDataAsync())
 			{
-				rawData = src.ReadInArray();
+				rawData = src.ReadInArray() ?? new byte[] { };
 				sha256 = baseObj.Tags.GetProperty("Sha256", null);
 				OnPropertyChanged(nameof(IsLoaded));
 			}
@@ -1751,7 +1751,7 @@ namespace TecWare.PPSn
 				base.OnFinished(bCheckSum);
 
 				blobData.sha256 = StuffIO.CleanHash(BitConverter.ToString(bCheckSum)); // Convert.ToBase64String(bCheckSum);
-				blobData.rawData = BaseStream.ReadInArray();
+				blobData.rawData = BaseStream.ReadInArray() ?? new byte[] { };
 			} // proc OnFinished
 		}
 

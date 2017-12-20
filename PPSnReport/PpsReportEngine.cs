@@ -23,6 +23,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
@@ -31,23 +33,22 @@ namespace TecWare.PPSn.Reporting
 {
 	#region -- struct PpsReportErrorInfo ----------------------------------------------
 
-	/// <summary></summary>
-	internal struct PpsReportErrorInfo
+	/// <summary>Report error information</summary>
+	public struct PpsReportErrorInfo
 	{
-		private readonly string fileName;
-		private readonly int lineNumber;
-		private readonly string extendedInfo;
+		private readonly string message;
+		private readonly bool isWarning;
 
-		public PpsReportErrorInfo(string fileName, int lineNumber, string extendedInfo)
+		internal PpsReportErrorInfo(string message, bool isWarning)
 		{
-			this.fileName = fileName;
-			this.lineNumber = lineNumber;
-			this.extendedInfo = extendedInfo;
+			this.message = message;
+			this.isWarning = isWarning;
 		} // ctor
 
-		public string FileName => fileName;
-		public int LineNumber => lineNumber;
-		public string ExtendedInfo => extendedInfo;
+		/// <summary>Message of the report</summary>
+		public string Message => message;
+		/// <summary>Is this message only a warning.</summary>
+		public bool IsWarning => isWarning;
 	} // struct PpsReportErrorInfo
 
 	#endregion
@@ -60,6 +61,9 @@ namespace TecWare.PPSn.Reporting
 		private readonly string reportName;
 		private readonly PropertyDictionary arguments;
 
+		/// <summary></summary>
+		/// <param name="reportName"></param>
+		/// <param name="parentProperties"></param>
 		public PpsReportRunInfo(string reportName, PropertyDictionary parentProperties = null)
 		{
 			this.reportName = reportName ?? throw new ArgumentNullException(nameof(reportName));
@@ -69,15 +73,11 @@ namespace TecWare.PPSn.Reporting
 		/// <summary>Name of the report (without the file extension).</summary>
 		public string ReportName => reportName;
 
-		/// <summary>Arguments that will be passed to the report (names that start with 'd:' will passed as directive, 't:' are trackers).</summary>
+		/// <summary>Arguments that will be passed to the report.</summary>
 		public PropertyDictionary Arguments => arguments;
 
 		/// <summary>Do not use the system time for the report generation.</summary>
 		public DateTime? UseDate { get; set; } = null;
-		/// <summary>Run extra imposition pass, given that the style sets up imposition.</summary>
-		public bool? Arrange { get; set; } = null;
-		/// <summary>Run the report in a safe environment (only no escapes allowed).</summary>
-		public bool NoEscapes { get; set; } = false;
 		/// <summary>Sets the language code.</summary>
 		public string Language { get; set; } = "de-DE";
 		/// <summary>Only the base language.</summary>
@@ -108,17 +108,19 @@ namespace TecWare.PPSn.Reporting
 	public class PpsReportException : Exception
 	{
 		private readonly string reportName;
+		private readonly string reportSource;
 		private readonly string logFileName;
 		private readonly int exitCode;
-		private readonly PpsReportErrorInfo? info;
+		private readonly PpsReportErrorInfo[] messages;
 
-		internal PpsReportException(string reportName, string logFileName, int exitCode, string messageText, PpsReportErrorInfo? info, Exception innerException)
+		internal PpsReportException(string reportName, string reportSource, string logFileName, int exitCode, string messageText, PpsReportErrorInfo[] messages, Exception innerException)
 			: base(messageText, innerException)
 		{
 			this.reportName = reportName;
+			this.reportSource = reportSource;
 			this.logFileName = logFileName;
 			this.exitCode = exitCode;
-			this.info = info;
+			this.messages = messages;
 		} // ctor
 
 		/// <summary>Base report file name.</summary>
@@ -127,12 +129,10 @@ namespace TecWare.PPSn.Reporting
 		public string LogFileName => logFileName;
 		/// <summary>ExitCode of the process.</summary>
 		public int ExitCode => exitCode;
-		/// <summary>Extend error info, e.g. code snippets.</summary>
-		public string ExtendedInfo => info.HasValue ? info.Value.ExtendedInfo : null;
 		/// <summary>Filename where the error occured.</summary>
-		public string FileName => info.HasValue ? info.Value.FileName : null;
-		/// <summary>Line number</summary>
-		public int LineNumber => info.HasValue ? info.Value.LineNumber : 0;
+		public string FileName => reportSource;
+		/// <summary>Detailed messages.</summary>
+		public PpsReportErrorInfo[] Messages => messages;
 	} // class PpsReportException
 
 	#endregion
@@ -142,275 +142,148 @@ namespace TecWare.PPSn.Reporting
 	/// <summary>Basic implementation of the LuaTex/ConTeXt reporting engine.</summary>
 	public sealed class PpsReportEngine
 	{
-		private readonly static Regex texErrorLineParse = new Regex(@"tex\serror\son\sline\s(\d+)\sin\sfile\s(.*)\:\s\!\s(.*)", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
-		private readonly static Regex texFileMatch = new Regex(@"(.*?)(\.(\w{2})(-(\w{2}))?)?\.tex$", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
-
-		private const string contextExe = "context.exe";
-		private const string contextPath64 = @"texmf-win64\bin";
-		private const string contextPath32 = @"texmf-win32\bin";
-
-		#region -- class LuaPipeServer ------------------------------------------------
-
 		/// <summary></summary>
-		private sealed class LuaPipeServer : PpsDataServerProtocolBase
+		public static readonly XNamespace ReportDataNamespace = "http://tecware-gmbh.de/dev/des/2015/ppsn/reportData";
+		/// <summary></summary>
+		public static readonly XName DataElement = ReportDataNamespace + "data";
+		/// <summary></summary>
+		public static readonly XName ListElement = ReportDataNamespace + "list";
+		/// <summary></summary>
+		public static readonly XName ListColumnElement = ReportDataNamespace + "column";
+		/// <summary></summary>
+		public static readonly XName ListFilterElement = ReportDataNamespace + "filter";
+		/// <summary></summary>
+		public static readonly XName ListOrderElement = ReportDataNamespace + "order";
+		/// <summary></summary>
+		public static readonly XName DataSetElement = ReportDataNamespace + "dataset";
+		/// <summary></summary>
+		public static readonly XName ExecuteElement = ReportDataNamespace + "execute";
+		/// <summary></summary>
+		public static readonly XName ExecuteParameterElement = ReportDataNamespace + "parameter";
+
+		private const string speedataEnginePath = @"bin\sp.exe";
+		private readonly static Regex xreportFileMatch = new Regex(@"(.*?)(\.(\w{2})(-(\w{2}))?)?\.xreport", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+		#region -- class PpsReportData ------------------------------------------------
+
+		private sealed class PpsReportData : IDisposable
 		{
-			#region -- enum InputState ------------------------------------------------
+			private readonly PpsDataServerProviderBase provider;
+			private readonly TextWriter tw;
+			private readonly string reportFileName;
+			private readonly PropertyDictionary arguments;
 
-			private enum InputState
+			private bool isClosed = false;
+			
+			public PpsReportData(PpsDataServerProviderBase provider, StreamWriter tw, string reportFileName, PropertyDictionary arguments)
 			{
-				Parse,
-				BeginCollect,
-				ErrorCollect
-			} // enum InputState
-
-			#endregion
-
-			// base info
-			private readonly Process process;
-
-			// streams
-			private readonly Stream inputStream;
-			private readonly StreamReader outputStream;
-			private readonly StreamReader errorStream;
-
-			// error info
-			private readonly StringBuilder errorPipeText = new StringBuilder();
-			private string lastExceptionMessage = null;
-			private PpsReportErrorInfo? currentErrorInfo;
-			private Exception currentInnerException = null;
-
-			#region -- Ctor/Dtor ------------------------------------------------------
-
-			public LuaPipeServer(Process process)
-			{
-				this.process = process ?? throw new ArgumentNullException(nameof(process));
-
-				this.outputStream = process.StandardOutput;
-				this.errorStream = process.StandardError;
-				this.inputStream = process.StandardInput.BaseStream;
+				this.provider = provider;
+				this.tw = tw;
+				this.reportFileName = reportFileName;
+				this.arguments = arguments;
 			} // ctor
 
-			protected override void Dispose(bool disposing)
+			public void Dispose()
 			{
-				try
-				{
-					process?.Dispose();
-				}
-				finally
-				{
-					base.Dispose(disposing);
-				}
+				if (!isClosed)
+					tw.Close();
 			} // proc Dispose
 
-			#endregion
-
-			#region -- Process Pipes --------------------------------------------------
-
-			public async Task ProcessErrorStreamAsync()
+			private async Task EmitListElementAsync(XmlWriter xml, XElement xInfo)
 			{
-				string line;
-				while ((line = await errorStream.ReadLineAsync()) != null)
-					errorPipeText.AppendLine(line);
-			} // proc ProcessErrorStreamAsync
+				// parse parameter
+				var listName = xInfo.GetAttribute("select", null);
+				var columns = (
+					from x in xInfo.Elements(ListColumnElement)
+					select new PpsDataColumnExpression(x.GetAttribute("name", null), x.GetAttribute("alias", null))
+				).ToArray();
 
-			protected override async Task<LuaTable> PopPacketCoreAsync()
-			{
-				const string dataCmd = "datacmd";
-				const int dataCmdLength = 7;
+				var filter = PpsDataFilterExpression.Parse(xInfo.GetNode(ListFilterElement, null), variables: arguments);
+				var order = PpsDataOrderExpression.Parse(xInfo.GetNode(ListOrderElement, null)).ToArray();
 
-				var state = InputState.Parse;
-
-				var emitEmitLineBefore = false;
-				var categorySeperatorPos = -1;
-				var exceptionSetted = false; // we collect only the first exception
-				var errorInfo = new StringBuilder();
-
-				string line;
-				while ((line = await outputStream.ReadLineAsync()) != null)
+				// access list
+				var columnList = (string[])null;
+				foreach (var row in await provider.GetListAsync(listName, columns, filter, order))
 				{
-					var pos = line.IndexOfAny(new char[] { '|', '>' });
-					switch (state)
+					await xml.WriteStartElementAsync(null, "r", null);
+
+					if (columnList == null)
 					{
-						case InputState.Parse:
-							if (pos != -1)
-							{
-								var commandPrefix = line.Substring(0, pos).TrimEnd();
-								var lineData = line.Substring(pos + 1);
-								if (commandPrefix == dataCmd)
-								{
-									return LuaTable.FromLson(lineData); // return parsed data
-								}
-								else if (commandPrefix == "tex error") // tex-error found
-								{
-									var m = texErrorLineParse.Match(lineData);
-									if (m.Success) // tex error as expected
-									{
-										if (!exceptionSetted)
-										{
-											lastExceptionMessage = m.Groups[3].Value;
-
-											currentErrorInfo = new PpsReportErrorInfo(
-												 fileName: m.Groups[2].Value,
-												 lineNumber: Int32.Parse(m.Groups[1].Value),
-												 extendedInfo: null
-											);
-										}
-
-										categorySeperatorPos = pos;
-										state = InputState.BeginCollect; // start collect code block
-										errorInfo.Clear();
-									}
-									else if (!exceptionSetted) // unexpected format
-									{
-										lastExceptionMessage = lineData.Trim();
-										currentErrorInfo = null;
-									}
-
-									OnDebugOutput(line);
-								}
-								else // unknown prefix -> ignore
-									OnDebugOutput(line);
-							}
-							else // this line can not parsed -> ignore
-								OnDebugOutput(line);
-							break;
-						case InputState.BeginCollect:
-							if (pos != categorySeperatorPos && (pos != dataCmdLength || String.Compare(line, 0, dataCmd, 0, dataCmdLength) != 0))
-							{
-								if (!String.IsNullOrWhiteSpace(line)) // jump over empty lines
-								{
-									emitEmitLineBefore = false;
-									state = InputState.ErrorCollect;
-									goto case InputState.ErrorCollect;
-								}
-							}
-							else
-							{
-								state = InputState.Parse;
-								goto case InputState.Parse;
-							}
-							break;
-						case InputState.ErrorCollect:
-							if (pos != categorySeperatorPos && (pos != dataCmdLength || String.Compare(line, 0, dataCmd, 0, dataCmdLength) != 0)) // collect lines
-							{
-								if (String.IsNullOrWhiteSpace(line))
-									emitEmitLineBefore = true;
-								else
-								{
-									if (emitEmitLineBefore) // new line handling
-									{
-										errorInfo.AppendLine();
-										emitEmitLineBefore = false;
-									}
-
-									// append line
-									errorInfo.AppendLine(line);
-								}
-
-								OnDebugOutput(line);
-							}
-							else // prefix line -> parse normal
-							{
-								if (!exceptionSetted)
-								{
-									currentErrorInfo = new PpsReportErrorInfo(currentErrorInfo.Value.FileName, currentErrorInfo.Value.LineNumber, errorInfo.ToString());
-									exceptionSetted = true;
-								}
-								state = InputState.Parse;
-								goto case InputState.Parse;
-							}
-							break;
-						default:
-							throw new InvalidOperationException();
+						columnList = new string[row.Columns.Count];
+						for (var i = 0; i < columnList.Length; i++)
+							columnList[i] = row.Columns[i].Name;
 					}
-				}
 
-				return null;
-			} // func PopPacketCoreAsync
-
-			protected override async Task PushPacketCoreAsync(LuaTable t)
-			{
-				var lineData = t.ToLson(false); // create data
-
-				// enforce utf8 with new line
-				var lineBuffer = new char[lineData.Length + 1];
-				lineData.CopyTo(0, lineBuffer, 0, lineData.Length);
-				lineBuffer[lineData.Length] = '\n';
-
-				// convert to utf8
-				var b = Encoding.UTF8.GetBytes(lineBuffer, 0, lineBuffer.Length);
-
-				// write buffer
-				await inputStream.WriteAsync(b, 0, b.Length);
-				await inputStream.FlushAsync();
-			} // proc PushPacketCoreAsync
-
-			public void OnProcessException(Exception exception)
-				=> currentInnerException = exception;
-
-			#endregion
-
-			#region -- TryGetError ----------------------------------------------------
-
-			public bool TryGetError(out string messageText, out PpsReportErrorInfo? info, out Exception innerException)
-			{
-				if (HasErrorInfo)
-				{
-					// set last exception text
-					messageText = String.IsNullOrEmpty(lastExceptionMessage) ? "Report generation failed." : lastExceptionMessage;
-
-					// combine extended info with pipe error
-					if (errorPipeText.Length > 0)
+					for (var i = 0; i < columnList.Length; i++)
 					{
-						if (currentErrorInfo.HasValue)
-						{
-							if (currentErrorInfo.Value.ExtendedInfo != null)
-							{
-								info = new PpsReportErrorInfo(currentErrorInfo.Value.FileName, currentErrorInfo.Value.LineNumber,
-									currentErrorInfo.Value.ExtendedInfo + Environment.NewLine + Environment.NewLine + "Error:" + Environment.NewLine + errorPipeText.ToString()
-								);
-							}
-							else
-							{
-								info = new PpsReportErrorInfo(currentErrorInfo.Value.FileName, currentErrorInfo.Value.LineNumber, errorPipeText.ToString());
-							}
-						}
-						else
-							info = new PpsReportErrorInfo(null, -1, errorPipeText.ToString());
+						await xml.WriteStartElementAsync(null, columnList[i], null);
+						await xml.WriteStringAsync(row[i].ChangeType<string>());
+						await xml.WriteEndElementAsync();
 					}
-					else
-						info = currentErrorInfo;
 
-					innerException = currentInnerException;
-					return true;
+					await xml.WriteEndElementAsync();
 				}
+			} // proc EmitListElementAsync
+			
+			private Task EmitDataSetElementAsync(XmlWriter xml, XElement xInfo)
+			{
+				throw new NotImplementedException();
+			} // proc EmitDataSetElementAsync
+
+			private Task EmitExecuteElementAsync(XmlWriter xml, XElement xInfo) => throw new NotImplementedException();
+
+			public async Task ProcessDataAsync(bool indent)
+			{
+				// process data to the report layout, to find data description block
+				var xData = await FindReportDataAsync(reportFileName, DataElement);
+
+				if (xData == null || !xData.HasElements) // empty data tag, write only a root tag
+					await tw.WriteLineAsync("<data/>");
 				else
 				{
-					messageText = null;
-					info = null;
-					innerException = null;
-					return false;
+					using (var xml = XmlWriter.Create(tw, new XmlWriterSettings() { Async = true, Indent = indent, NewLineHandling = indent ? NewLineHandling.Entitize : NewLineHandling.None }))
+					{
+						await xml.WriteStartElementAsync(null, "data", null);
+
+						foreach(var xEmitInfo in xData.Elements())
+						{
+							var elementName = xEmitInfo.GetAttribute("element", null);
+							if (String.IsNullOrEmpty(elementName))
+								throw new ArgumentNullException("@element", "Element name is missing.");
+
+							await xml.WriteStartElementAsync(null, elementName, null);
+
+							if (xEmitInfo.Name == ListElement)
+								await EmitListElementAsync(xml, xEmitInfo);
+							else if (xEmitInfo.Name == DataSetElement)
+								await EmitDataSetElementAsync(xml, xEmitInfo); 
+							else if (xEmitInfo.Name == ExecuteElement)
+								await EmitExecuteElementAsync(xml, xEmitInfo);
+							else
+								throw new ArgumentOutOfRangeException("dataElement", xEmitInfo.Name.LocalName, "Unknown data element.");
+
+							await xml.WriteEndElementAsync();
+						}
+
+						await xml.WriteEndElementAsync();
+						await xml.FlushAsync();
+					}
 				}
-			} // func TryGetError
-
-			#endregion
-
-			private void OnDebugOutput(string text)
-				=> DebugOutput?.Invoke(text);
-
-			public Action<string> DebugOutput { get; set; } = null;
-
-			public bool HasErrorInfo => lastExceptionMessage != null || errorPipeText.Length > 0;
-		} // class LuaPipeServer
+				
+				// close inputStream
+				isClosed = true;
+				tw.Close();
+			} // proc ProcessDataAsync
+		} // class PpsReportData
 
 		#endregion
 
-		private readonly DirectoryInfo contextPath;
+		private readonly DirectoryInfo engineBase;
 		private readonly DirectoryInfo reportBase;
 		private readonly DirectoryInfo reportLogPath;
+		private readonly DirectoryInfo reportWorkingPath;
 
 		private readonly List<DirectoryInfo> reportSources = new List<DirectoryInfo>();
-		private string fontDirectory;
 		private int cleanBaseDirectory = 1440; // in min (0 or neg. turns it off)
 		private bool zipLogFiles = true;
 		private bool storeSuccessLogs = false;
@@ -422,17 +295,18 @@ namespace TecWare.PPSn.Reporting
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Create the report engine.</summary>
-		/// <param name="contextPath"></param>
+		/// <param name="engineBase"></param>
 		/// <param name="reportBase"></param>
 		/// <param name="provider"></param>
-		/// <param name="fontDirectory"></param>
-		public PpsReportEngine(string contextPath, string reportBase, PpsDataServerProviderBase provider, string reportLogPath = null)
+		/// <param name="reportWorkingPath"></param>
+		/// <param name="reportLogPath"></param>
+		public PpsReportEngine(string engineBase, string reportBase, PpsDataServerProviderBase provider, string reportWorkingPath = null, string reportLogPath = null)
 		{
-			DirectoryInfo GetLogPath()
+			DirectoryInfo GetDefaultPath(string currentPath, string def)
 			{
-				if (reportLogPath == null)
+				if (currentPath == null)
 				{
-					var di = new DirectoryInfo(Path.GetFullPath(Path.Combine(reportBase, ".logs")));
+					var di = new DirectoryInfo(Path.GetFullPath(Path.Combine(reportBase, def)));
 					if (!di.Exists)
 					{
 						di.Create();
@@ -440,10 +314,10 @@ namespace TecWare.PPSn.Reporting
 					}
 					return di;
 				}
-				else if (!Path.IsPathRooted(reportLogPath))
-					return new DirectoryInfo(Path.GetFullPath(Path.Combine(reportBase, reportLogPath)));
+				else if (!Path.IsPathRooted(currentPath))
+					return new DirectoryInfo(Path.GetFullPath(Path.Combine(reportBase, currentPath)));
 				else
-					return new DirectoryInfo(Path.GetFullPath(reportLogPath));
+					return new DirectoryInfo(Path.GetFullPath(currentPath));
 			} // func GetLogPath
 
 			void CheckPath(DirectoryInfo path, string name)
@@ -452,17 +326,18 @@ namespace TecWare.PPSn.Reporting
 					throw new DirectoryNotFoundException($"Could not locate [{name}]: {path})");
 			} // proc CheckPath
 
-			this.contextPath = new DirectoryInfo(Path.GetFullPath(contextPath ?? throw new ArgumentNullException(nameof(contextPath))));
+			this.engineBase = new DirectoryInfo(Path.GetFullPath(engineBase ?? throw new ArgumentNullException(nameof(engineBase))));
 			this.reportBase = new DirectoryInfo(Path.GetFullPath(reportBase ?? throw new ArgumentNullException(nameof(reportBase))));
-			this.reportLogPath = GetLogPath();
-			FontDirectory = null;
+			this.reportLogPath = GetDefaultPath(reportLogPath, ".logs");
+			this.reportWorkingPath = GetDefaultPath(reportWorkingPath, ".work");
 
 			this.provider = provider ?? throw new ArgumentNullException(nameof(provider));
 
 			// check paths
-			CheckPath(this.contextPath, nameof(contextPath));
+			CheckPath(this.engineBase, nameof(engineBase));
 			CheckPath(this.reportBase, nameof(reportBase));
 			CheckPath(this.reportLogPath, nameof(reportLogPath));
+			CheckPath(this.reportWorkingPath, nameof(reportWorkingPath));
 
 			// check report sources
 			var sourceFile = new FileInfo(Path.Combine(this.reportBase.FullName, ".sources"));
@@ -497,85 +372,69 @@ namespace TecWare.PPSn.Reporting
 
 		#endregion
 
-		#region -- CoreRunContextAsync ------------------------------------------------
+		#region -- CoreRunEngineAsync -------------------------------------------------
 
-		private bool TryResolvePath(string path, out string fullPath, out string binPath)
+		private bool TryResolvePath(string path, out string binPath)
 		{
-			fullPath = Path.GetFullPath(Path.Combine(contextPath.FullName, path));
-			binPath = Path.GetFullPath(Path.Combine(fullPath, contextExe));
+			binPath = Path.GetFullPath(Path.Combine(engineBase.FullName, path));
 			return File.Exists(binPath);
 		} // proc ResolvePath
 
-		private async Task<(int exitCode, LuaPipeServer pipeServer)> CoreRunContextAsync(string commandLine, Action<string> debugOutput)
+		private async Task<int> CoreRunEngineAsync(string commandLine, string fullReportFileName, PropertyDictionary arguments, Action<string> debugOutput)
 		{
 			// find context exe (try first 64bit)
-			if (!TryResolvePath(contextPath64, out var fullPath, out var binPath)
-				&& !TryResolvePath(contextPath32, out fullPath, out binPath))
-				throw new ArgumentException($"Could not locate context.exe ('{contextPath}' -> '{contextPath64}' or '{contextPath32}').");
+			if (!TryResolvePath(speedataEnginePath, out var binPath))
+				throw new ArgumentException($"Could not locate sp.exe ('{engineBase.FullName}' -> '{speedataEnginePath}').");
 
 			// prepare startup
 			var psi = new ProcessStartInfo(binPath, commandLine)
 			{
 				// set report directory
-				WorkingDirectory = reportBase.FullName,
+				WorkingDirectory = reportWorkingPath.FullName,
 				// redirect output
 				UseShellExecute = false,
 				CreateNoWindow = true,
-				StandardErrorEncoding = Encoding.UTF8,
-				StandardOutputEncoding = Encoding.UTF8,
-				RedirectStandardError = true,
-				RedirectStandardInput = true,
-				RedirectStandardOutput = true
+				RedirectStandardInput = true
 			};
 
-			// extend environment
-			psi.Environment.Add("PATH", fullPath + ";" + Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User));
-			psi.Environment.Add("OSFONTDIR", fontDirectory);
+			// activate redirect
+			if (debugOutput != null)
+			{
+				psi.StandardErrorEncoding = Encoding.UTF8;
+				psi.StandardOutputEncoding = Encoding.UTF8;
+				psi.RedirectStandardError = true;
+				psi.RedirectStandardOutput = true;
+			}
 
 			// run process
 			using (var ps = Process.Start(psi))
+			using (var data = new PpsReportData(provider, new StreamWriter(ps.StandardInput.BaseStream, Encoding.UTF8, 4069, false), fullReportFileName, arguments))
 			{
-				var pipeServer = new LuaPipeServer(ps);
-				pipeServer.DebugOutput = debugOutput;
-				using (var session = new PpsDataServer(pipeServer, provider, pipeServer.OnProcessException))
+				// function to process output streams to console
+				async Task ProcessOutputStream(TextReader tr, bool isError)
 				{
-					await Task.WhenAll(
-						session.ProcessMessagesAsync(),
-						pipeServer.ProcessErrorStreamAsync(),
-						Task.Run(new Action(ps.WaitForExit))
-					);
+					string line;
+					while ((line = await tr.ReadLineAsync()) != null)
+						debugOutput(line);
+				} // proc ProcessOutputStream
 
-					return (ps.ExitCode, pipeServer);
-				}
-			}
-		} // proc CoreRunContextAsync
-
-		#endregion
-
-		#region -- BuildCacheFilesAsync -----------------------------------------------
-
-		/// <summary>Generate context cache files.</summary>
-		/// <returns></returns>
-		public async Task BuildCacheFilesAsync()
-		{
-			// execute command
-			var (exitCode, pipeServer) = await CoreRunContextAsync("--generate", null);
-
-			// build exception
-			if (exitCode != 0 || pipeServer.HasErrorInfo)
-			{
-				var sb = new StringBuilder($"Generate cache faild with code {exitCode}.");
-
-				if (pipeServer.TryGetError(out var messageText, out var info, out var innerException))
+				// wait for all tasks
+				var tasks = new List<Task>(4)
 				{
-					sb.AppendLine(messageText);
-					if (info.HasValue)
-						sb.AppendLine(info.Value.ExtendedInfo);
+					data.ProcessDataAsync(false),
+					Task.Run(new Action(ps.WaitForExit))
+				};
+				if (debugOutput != null)
+				{
+					tasks.Add(ProcessOutputStream(ps.StandardOutput, false));
+					tasks.Add(ProcessOutputStream(ps.StandardError, true));
 				}
 
-				throw new Exception(sb.ToString());
+				await Task.WhenAll(tasks.ToArray());
+
+				return ps.ExitCode;
 			}
-		} // proc BuildCacheFilesAsync
+		} // proc CoreRunEngineAsync
 
 		#endregion
 
@@ -595,12 +454,12 @@ namespace TecWare.PPSn.Reporting
 
 		#endregion
 
-		private string ResolveReportFileByName(string reportName, string language)
+		private (string reportPath, string reportFileName, string resolvedReportName) ResolveReportFileByName(string reportName, string language)
 		{
 			// report name:
-			//   name.tex
-			//   name.de.tex
-			//   name.de-DE.tex
+			//   name.xreport
+			//   name.de.xreport
+			//   name.de-DE.xreport
 
 			var firstSep = reportName.LastIndexOfAny(new char[] { '/', '\\' });
 
@@ -609,12 +468,12 @@ namespace TecWare.PPSn.Reporting
 				var path = reportName.Substring(firstSep);
 				var name = reportName.Substring(firstSep + 1);
 
-				return new DirectoryInfo(Path.Combine(reportBase.FullName, path)).EnumerateFiles(name + "*.tex", SearchOption.TopDirectoryOnly);
+				return new DirectoryInfo(Path.Combine(reportBase.FullName, path)).EnumerateFiles(name + "*.xreport", SearchOption.TopDirectoryOnly);
 			} // func GetFullQualified
 
 			IEnumerable<FileInfo> GetNotQualified()
 			{
-				var pattern = reportName + "*.tex";
+				var pattern = reportName + "*.xreport";
 				foreach (var di in reportSources)
 				{
 					foreach (var fi in di.EnumerateFiles(pattern, SearchOption.TopDirectoryOnly))
@@ -639,7 +498,7 @@ namespace TecWare.PPSn.Reporting
 
 			foreach (var fi in reportFiles)
 			{
-				var m = texFileMatch.Match(fi.Name);
+				var m = xreportFileMatch.Match(fi.Name);
 				var currentName = m.Groups[1].Value;
 				if (String.Compare(currentName, matchName, StringComparison.OrdinalIgnoreCase) != 0)
 					continue; // wrong name
@@ -669,79 +528,60 @@ namespace TecWare.PPSn.Reporting
 
 			// check result
 			if (currentMatch == null)
-				throw new PpsReportException(reportName, null, 1, "Report file not found.", null, null);
+				throw new PpsReportException(reportName, null, null, 1, "Report file not found.", null, null);
 
 			var fullName = currentMatch.FullName;
 			var p = reportBase.FullName.Length;
 			if (fullName[p] == '\\' || fullName[p] == '/')
 				p++;
 
-			return currentMatch.FullName.Substring(p).Replace('\\', '/');
+			return (currentMatch.Directory.FullName, currentMatch.Name, currentMatch.FullName.Substring(p).Replace('\\', '/'));
 		} // proc ResolveReportFileByName
 
-		private bool TryGeneratePattern(IEnumerable<PropertyValue> list, int ofs, out string result)
+		private string RunReportExCommandLine(string resultSession, PpsReportRunInfo args, out string resolvedReportName, out string fullReportFileName)
 		{
-			var sb = new StringBuilder();
-			var first = true;
-			foreach (var kv in list)
+			string EscapeValue(object v)
 			{
-				if (first)
-					first = false;
-				else
-					sb.Append(',');
+				var str = v.ToString();
+				if (str.IndexOf(' ') >= 0)
+					return "\"" + str + "\"";
+				return v.ToString();
+			} // EscapeValue
 
-				var n = kv.Name.Substring(2);
-				if (kv.Value == null) // append key only
-					sb.Append(n);
-				else // append key value
-				{
-					sb.Append(n)
-						.Append('=')
-						.Append(kv.Value.ToString());
-				}
-			}
-			result = sb.ToString();
-			return !first;
-		} // func TryGeneratePattern
+			// resolve report
+			var r = ResolveReportFileByName(args.ReportName, args.Language);
+			resolvedReportName = r.resolvedReportName;
+			fullReportFileName = Path.Combine(r.reportPath, r.reportFileName);
 
-		private string RunReportExCommandLine(string resultSession, PpsReportRunInfo args, out string resolvedReportName)
-		{
 			var commandLine = new StringBuilder(
-				"--nonstopmode " +
-				"--interface=en " + // how numbers are formatted in the source
-				$"--result={resultSession} "
+				$"--jobname={resultSession} " +
+				"--systemfonts " +
+				$"--layout={EscapeValue(r.reportFileName)} " + // layout file
+				"--data=- " + // data is piped via stdin
+				$"--mainlanguage={args.Language.Replace('-', '_')} " +
+				$"--extra-dir={EscapeValue(r.reportPath)};{reportBase.FullName}"
 			);
 
-			// append switches
-			if (args.UseDate.HasValue)
-				commandLine.Append("--nodates=\"")
-					.Append(args.UseDate.Value.ToString("yyyy-MM-dd HH:mm"))
-					.Append("\" ");
-			if (args.Arrange.HasValue)
-				commandLine.Append(args.Arrange.Value ? "--arrange" : "--noarrange ");
-			if (args.NoEscapes)
-				commandLine.Append("--paranoid ");
-
-			// parse arguments directives
-			if (TryGeneratePattern(args.Arguments.Where(c => c.Name.StartsWith("d:")), 2, out var directives))
-				commandLine.Append("--directives=\"").Append(directives).Append("\" ");
-
-			// parse trackers
-			if (TryGeneratePattern(args.Arguments.Where(c => c.Name.StartsWith("t:")), 2, out var trackers))
-				commandLine.Append("--trackers=\"").Append(directives).Append("\" ");
-
-			// append file
-			commandLine.Append(resolvedReportName = ResolveReportFileByName(args.ReportName, args.Language))
-				.Append(' ');
-
-			// append parameters
-			foreach (var kv in args.Arguments.Where(c => (c.Name.Length < 2 || c.Name[1] != ':') && c.Value != null))
+			// append arguments
+			foreach (var arg in args.Arguments)
 			{
-				commandLine.Append("--")
-					.Append(kv.Name)
-					.Append("=\"")
-					.Append(kv.Value.ChangeType<string>())
-					.Append("\" ");
+				if (arg.Name.StartsWith("c:")) // command line option
+				{
+					var commandLineSwitch = arg.Name.Substring(2);
+					commandLine.Append("--").Append(commandLine);
+					if (arg.Value != null)
+					{
+						commandLine.Append('=')
+							.Append(EscapeValue(arg.Value))
+							.Append(' ');
+					}
+				}
+				else
+				{
+					commandLine.Append("--var=")
+						.Append(EscapeValue($"{arg.Name}={arg.Value.ChangeType<string>()}"))
+						.Append(' ');
+				}
 			}
 
 			// trim end
@@ -760,14 +600,15 @@ namespace TecWare.PPSn.Reporting
 			catch { }
 		} // proc DeleteSecureAsync
 
-		private async Task<(FileInfo resultFileInfo, FileInfo logFileInfo)> RunReportExPurgeTempFilesAsync(string resultSession, bool deleteResult, bool purgeAll)
+		private async Task<(FileInfo resultFileInfo, FileInfo statusFileInfo, FileInfo logFileInfo)> RunReportExPurgeTempFilesAsync(string resultSession, bool deleteResult, bool purgeAll)
 		{
 			var logFileInfo = (FileInfo)null;
 			var resultFileInfo = (FileInfo)null;
+			var statusFileInfo = (FileInfo)null;
 			if (purgeAll)
 			{
 				var dtDeleteOlderThan = cleanBaseDirectory > 0 ? DateTime.UtcNow.AddMinutes(-cleanBaseDirectory) : (DateTime?)null;
-				foreach (var fi in reportBase.EnumerateFiles().Where(c =>
+				foreach (var fi in reportWorkingPath.EnumerateFiles().Where(c =>
 						(c.Attributes & (FileAttributes.ReadOnly | FileAttributes.System | FileAttributes.Hidden)) == (FileAttributes)0
 						&& c.Name[0] != '.'
 					)
@@ -776,8 +617,10 @@ namespace TecWare.PPSn.Reporting
 					// compare the session key
 					if (fi.Name.StartsWith(resultSession, StringComparison.OrdinalIgnoreCase))
 					{
-						if (String.Compare(fi.Extension, ".log", StringComparison.OrdinalIgnoreCase) == 0) // is this the log-file
+						if (String.Compare(fi.Extension, ".protocol", StringComparison.OrdinalIgnoreCase) == 0) // is this the log-file
 							logFileInfo = fi;
+						else if (String.Compare(fi.Extension, ".status", StringComparison.OrdinalIgnoreCase) == 0) // status xml-file
+							statusFileInfo = fi;
 						else if (String.Compare(fi.Extension, ".pdf", StringComparison.OrdinalIgnoreCase) == 0) // this is our expected result
 							resultFileInfo = fi;
 						else
@@ -789,12 +632,12 @@ namespace TecWare.PPSn.Reporting
 			}
 			else
 			{
-				logFileInfo = new FileInfo(Path.Combine(reportBase.FullName, resultSession + ".log"));
+				logFileInfo = new FileInfo(Path.Combine(reportWorkingPath.FullName, resultSession + ".protocol"));
 				if (!logFileInfo.Exists)
 					logFileInfo = null;
 			}
 
-			return (resultFileInfo, logFileInfo);
+			return (resultFileInfo, statusFileInfo, logFileInfo);
 		} // func RunReportExPurgeTempFiles
 
 		private async Task<string> RunReportExMoveLogFileAsync(FileInfo fileInfo, string resolvedReportName, bool containsError)
@@ -847,18 +690,13 @@ namespace TecWare.PPSn.Reporting
 
 		private readonly static Dictionary<string, Action<PpsReportRunInfo, object>> runReportArgsSetter = new Dictionary<string, Action<PpsReportRunInfo, object>>()
 		{
-			[nameof(PpsReportRunInfo.Arrange)] = (a, v) => a.Arrange = v.ChangeType<bool>(),
 			[nameof(PpsReportRunInfo.DeleteTempFiles)] = (a, v) => a.DeleteTempFiles = v.ChangeType<bool>(),
 			[nameof(PpsReportRunInfo.Language)] = (a, v) => a.Language = v.ChangeType<string>(),
-			[nameof(PpsReportRunInfo.NoEscapes)] = (a, v) => a.NoEscapes = v.ChangeType<bool>(),
 			[nameof(PpsReportRunInfo.UseDate)] = (a, v) => a.UseDate = v.ChangeType<DateTime>(),
 			[nameof(PpsReportRunInfo.DebugOutput)] = (a, v) => a.DebugOutput = v as Action<string>,
 		};
 
-		/// <summary>Create the report file.</summary>
-		/// <param name="args"></param>
-		/// <returns>The report target file and a log file.</returns>
-		public Task<string> RunReportAsync(LuaTable table)
+		private static PpsReportRunInfo GetReportRunInfoFromTable(LuaTable table)
 		{
 			var args = new PpsReportRunInfo(table.GetMemberValue("name") as string);
 
@@ -873,8 +711,46 @@ namespace TecWare.PPSn.Reporting
 					args.Arguments.SetProperty(kv.Key, kv.Value);
 			}
 
-			return RunReportExAsync(args);
-		} // func RunReportAsync
+			return args;
+		} // func GetReportRunInfoFromTable
+
+		/// <summary>Create the report file.</summary>
+		/// <param name="table"></param>
+		/// <returns>The report target file and a log file.</returns>
+		public Task<string> RunReportAsync(LuaTable table)
+			=> RunReportExAsync(GetReportRunInfoFromTable(table));
+
+		/// <summary></summary>
+		/// <param name="table"></param>
+		/// <returns></returns>
+		public Task<string> RunDataAsync(LuaTable table)
+			=> RunDataExAsync(GetReportRunInfoFromTable(table));
+
+		private static async Task<(bool hasError, PpsReportErrorInfo[] messages)> ParseErrorInfoAsync(FileInfo statusFileInfo)
+		{
+			var hasError = false;
+
+			if (statusFileInfo != null)
+			{
+				var xStatus = XDocument.Load(statusFileInfo.FullName);
+
+				var errors = new List<PpsReportErrorInfo>();
+				foreach (var xCur in from x in xStatus.Root.Elements() where x.Name == "Warning" && x.Name == "Error" select x)
+				{
+					var isWarning = xCur.Name == "Warning";
+					errors.Add(new PpsReportErrorInfo(xCur.Value, isWarning));
+					if (!isWarning)
+						hasError = true;
+				}
+
+				await DeleteSecureAsync(statusFileInfo);
+
+				return (hasError, errors.ToArray());
+			}
+			else
+				hasError = true;
+			return (hasError, null);
+		} // func ParseErrorInfoAsync
 
 		/// <summary>Create the report file.</summary>
 		/// <param name="args"></param>
@@ -883,28 +759,55 @@ namespace TecWare.PPSn.Reporting
 		{
 			// build command line, put the result unter an different name
 			var resultSession = "_" + Guid.NewGuid().ToString("N");
-			var commandLine = RunReportExCommandLine(resultSession, args, out var resolvedReportName);
+			var commandLine = RunReportExCommandLine(resultSession, args, out var resolvedReportName, out var fullReportFileName);
 
 			using (await LockReportFileAsync(resolvedReportName))
 			{
 				// run context
-				var (exitCode, pipeServer) = await CoreRunContextAsync(commandLine, args.DebugOutput);
-				var hasError = pipeServer.TryGetError(out var messageText, out var messageInfo, out var innerException);
+				var exitCode = await CoreRunEngineAsync(commandLine, fullReportFileName, args.Arguments, args.DebugOutput);
 
 				// purge generated files in the root folder should not exist any file
-				var result = await RunReportExPurgeTempFilesAsync(resultSession, hasError || exitCode != 0, args.DeleteTempFiles);
-				var logFileName = result.logFileInfo == null ? null : await RunReportExMoveLogFileAsync(result.logFileInfo, resolvedReportName, hasError);
+				var (resultFileInfo, statusFileInfo, logFileInfo) = await RunReportExPurgeTempFilesAsync(resultSession, exitCode != 0, args.DeleteTempFiles);
+
+				// read status file for exceptions
+				var (hasError, messages) = await ParseErrorInfoAsync(statusFileInfo);
+				var logFileName = logFileInfo == null ? null : await RunReportExMoveLogFileAsync(logFileInfo, resolvedReportName, hasError);
 
 				// raise exception
 				if (hasError)
-					throw new PpsReportException(resolvedReportName, logFileName, exitCode, messageText, messageInfo, innerException);
+					throw new PpsReportException(resolvedReportName, resolvedReportName, logFileName, exitCode, String.Join(Environment.NewLine, from c in messages where !c.IsWarning select c.Message), messages, null);
 				else if (exitCode != 0)
-					throw new PpsReportException(resolvedReportName, logFileName, exitCode, $"Unknown error: {exitCode}", null, innerException);
+					throw new PpsReportException(resolvedReportName, resolvedReportName, logFileName, exitCode, $"Unknown error: {exitCode}", null, null);
 
 				// build result
-				return result.resultFileInfo.FullName;
+				return resultFileInfo.FullName;
 			}
 		} // proc RunReportExAsync
+
+		/// <summary>Create the report data.</summary>
+		/// <param name="args"></param>
+		/// <returns>The report target file and a log file.</returns>
+		public async Task<string> RunDataExAsync(PpsReportRunInfo args)
+		{
+			// build command line, put the result unter an different name
+			var (reportPath, reportFileName, resolvedReportName) = ResolveReportFileByName(args.ReportName, args.Language);
+			var fullReportFileName = Path.Combine(reportPath, reportFileName);
+
+			var resultFileInfo = new FileInfo(Path.ChangeExtension(Path.Combine(reportWorkingPath.FullName, resolvedReportName.Replace('/', '_')), ".xdata"));
+			if (resultFileInfo.Exists)
+				resultFileInfo.Delete();
+
+			using (await LockReportFileAsync(resolvedReportName))
+			using (var tw = new StreamWriter(resultFileInfo.OpenWrite(), Encoding.UTF8, 4096, false))
+			using (var data = new PpsReportData(provider, tw, fullReportFileName, args.Arguments))
+			{
+				// write xml
+				await data.ProcessDataAsync(true);
+
+				// build result
+				return resultFileInfo.FullName;
+			}
+		} // proc RunDataExAsync
 
 		#endregion
 
@@ -942,15 +845,47 @@ namespace TecWare.PPSn.Reporting
 
 		#endregion
 
+		#region -- Parse report extra data --------------------------------------------
+
+		/// <summary>Find a special extension node.</summary>
+		/// <param name="reportFileName"></param>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public static async Task<XElement> FindReportDataAsync(string reportFileName, XName name)
+		{
+			using (var xml = XmlReader.Create(reportFileName, new XmlReaderSettings() { Async = true, IgnoreComments = true, IgnoreWhitespace = true }))
+			{
+				// move to content
+				if (await xml.MoveToContentAsync() != XmlNodeType.Element)
+					throw new ArgumentException();
+
+				// we expect a layout element
+				if (xml.IsEmptyElement || xml.LocalName != "Layout")
+					return null;
+
+				await xml.ReadStartElementAsync("Layout");
+				while (xml.NodeType == XmlNodeType.Element)
+				{
+					if (xml.LocalName == name.LocalName && xml.NamespaceURI == name.NamespaceName) //read element
+						return await Task.Run(() => (XElement)XNode.ReadFrom(xml));
+					else
+						await xml.SkipAsync();
+				}
+				await xml.ReadEndElementAsync();
+			}
+			return null;
+		} // func FindReportDataAsync
+
+		#endregion
+
 		/// <summary>Defined Environment path.</summary>
-		public string ContextPath => contextPath.FullName;
+		public string EnginePath => engineBase.FullName;
 		/// <summary>Defined report base path</summary>
 		public string BasePath => reportBase.FullName;
 		/// <summary>Defined log path</summary>
 		public string LogPath => reportLogPath.FullName;
-
-		/// <summary>Set the font path.</summary>
-		public string FontDirectory { get => fontDirectory; set => fontDirectory = Path.GetFullPath(value ?? DefaultFontPath); }
+		/// <summary>Working path.</summary>
+		public string WorkingPath => reportWorkingPath.FullName;
 
 		/// <summary>Is it allowed to clean other files than the session files (in min).</summary>
 		public int CleanBaseDirectoryAfter { get => cleanBaseDirectory; set => cleanBaseDirectory = value; }
