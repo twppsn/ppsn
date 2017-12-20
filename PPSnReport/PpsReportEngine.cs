@@ -23,6 +23,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
@@ -37,11 +38,11 @@ namespace TecWare.PPSn.Reporting
 	{
 		private readonly string message;
 		private readonly bool isWarning;
-		
+
 		internal PpsReportErrorInfo(string message, bool isWarning)
 		{
 			this.message = message;
-			this.isWarning= isWarning;
+			this.isWarning = isWarning;
 		} // ctor
 
 		/// <summary>Message of the report</summary>
@@ -141,6 +142,25 @@ namespace TecWare.PPSn.Reporting
 	/// <summary>Basic implementation of the LuaTex/ConTeXt reporting engine.</summary>
 	public sealed class PpsReportEngine
 	{
+		/// <summary></summary>
+		public static readonly XNamespace ReportDataNamespace = "http://tecware-gmbh.de/dev/des/2015/ppsn/reportData";
+		/// <summary></summary>
+		public static readonly XName DataElement = ReportDataNamespace + "data";
+		/// <summary></summary>
+		public static readonly XName ListElement = ReportDataNamespace + "list";
+		/// <summary></summary>
+		public static readonly XName ListColumnElement = ReportDataNamespace + "column";
+		/// <summary></summary>
+		public static readonly XName ListFilterElement = ReportDataNamespace + "filter";
+		/// <summary></summary>
+		public static readonly XName ListOrderElement = ReportDataNamespace + "order";
+		/// <summary></summary>
+		public static readonly XName DataSetElement = ReportDataNamespace + "dataset";
+		/// <summary></summary>
+		public static readonly XName ExecuteElement = ReportDataNamespace + "execute";
+		/// <summary></summary>
+		public static readonly XName ExecuteParameterElement = ReportDataNamespace + "parameter";
+
 		private const string speedataEnginePath = @"bin\sp.exe";
 		private readonly static Regex xreportFileMatch = new Regex(@"(.*?)(\.(\w{2})(-(\w{2}))?)?\.xreport", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
@@ -148,40 +168,122 @@ namespace TecWare.PPSn.Reporting
 
 		private sealed class PpsReportData : IDisposable
 		{
-			private readonly TextWriter tr;
-			private bool isClosed = false;
+			private readonly PpsDataServerProviderBase provider;
+			private readonly TextWriter tw;
+			private readonly string reportFileName;
+			private readonly PropertyDictionary arguments;
 
-			public PpsReportData(StreamWriter tr, string reportFileName)
+			private bool isClosed = false;
+			
+			public PpsReportData(PpsDataServerProviderBase provider, StreamWriter tw, string reportFileName, PropertyDictionary arguments)
 			{
-				this.tr = new StreamWriter(tr.BaseStream, Encoding.UTF8, 4069, true);
+				this.provider = provider;
+				this.tw = tw;
+				this.reportFileName = reportFileName;
+				this.arguments = arguments;
 			} // ctor
 
 			public void Dispose()
 			{
 				if (!isClosed)
-					tr.Close();
+					tw.Close();
 			} // proc Dispose
 
-			public async Task ProcessDataAsync()
+			private async Task EmitListElementAsync(XmlWriter xml, XElement xInfo)
 			{
-				// process data to the report
-				await tr.WriteLineAsync("<root/>");
+				// parse parameter
+				var listName = xInfo.GetAttribute("select", null);
+				var columns = (
+					from x in xInfo.Elements(ListColumnElement)
+					select new PpsDataColumnExpression(x.GetAttribute("name", null), x.GetAttribute("alias", null))
+				).ToArray();
 
+				var filter = PpsDataFilterExpression.Parse(xInfo.GetNode(ListFilterElement, null), variables: arguments);
+				var order = PpsDataOrderExpression.Parse(xInfo.GetNode(ListOrderElement, null)).ToArray();
+
+				// access list
+				var columnList = (string[])null;
+				foreach (var row in await provider.GetListAsync(listName, columns, filter, order))
+				{
+					await xml.WriteStartElementAsync(null, "r", null);
+
+					if (columnList == null)
+					{
+						columnList = new string[row.Columns.Count];
+						for (var i = 0; i < columnList.Length; i++)
+							columnList[i] = row.Columns[i].Name;
+					}
+
+					for (var i = 0; i < columnList.Length; i++)
+					{
+						await xml.WriteStartElementAsync(null, columnList[i], null);
+						await xml.WriteStringAsync(row[i].ChangeType<string>());
+						await xml.WriteEndElementAsync();
+					}
+
+					await xml.WriteEndElementAsync();
+				}
+			} // proc EmitListElementAsync
+			
+			private Task EmitDataSetElementAsync(XmlWriter xml, XElement xInfo)
+			{
+				throw new NotImplementedException();
+			} // proc EmitDataSetElementAsync
+
+			private Task EmitExecuteElementAsync(XmlWriter xml, XElement xInfo) => throw new NotImplementedException();
+
+			public async Task ProcessDataAsync(bool indent)
+			{
+				// process data to the report layout, to find data description block
+				var xData = await FindReportDataAsync(reportFileName, DataElement);
+
+				if (xData == null || !xData.HasElements) // empty data tag, write only a root tag
+					await tw.WriteLineAsync("<data/>");
+				else
+				{
+					using (var xml = XmlWriter.Create(tw, new XmlWriterSettings() { Async = true, Indent = indent, NewLineHandling = indent ? NewLineHandling.Entitize : NewLineHandling.None }))
+					{
+						await xml.WriteStartElementAsync(null, "data", null);
+
+						foreach(var xEmitInfo in xData.Elements())
+						{
+							var elementName = xEmitInfo.GetAttribute("element", null);
+							if (String.IsNullOrEmpty(elementName))
+								throw new ArgumentNullException("@element", "Element name is missing.");
+
+							await xml.WriteStartElementAsync(null, elementName, null);
+
+							if (xEmitInfo.Name == ListElement)
+								await EmitListElementAsync(xml, xEmitInfo);
+							else if (xEmitInfo.Name == DataSetElement)
+								await EmitDataSetElementAsync(xml, xEmitInfo); 
+							else if (xEmitInfo.Name == ExecuteElement)
+								await EmitExecuteElementAsync(xml, xEmitInfo);
+							else
+								throw new ArgumentOutOfRangeException("dataElement", xEmitInfo.Name.LocalName, "Unknown data element.");
+
+							await xml.WriteEndElementAsync();
+						}
+
+						await xml.WriteEndElementAsync();
+						await xml.FlushAsync();
+					}
+				}
+				
 				// close inputStream
 				isClosed = true;
-				tr.Close();
+				tw.Close();
 			} // proc ProcessDataAsync
 		} // class PpsReportData
 
 		#endregion
-		
+
 		private readonly DirectoryInfo engineBase;
 		private readonly DirectoryInfo reportBase;
 		private readonly DirectoryInfo reportLogPath;
 		private readonly DirectoryInfo reportWorkingPath;
 
 		private readonly List<DirectoryInfo> reportSources = new List<DirectoryInfo>();
-		private string fontDirectory;
 		private int cleanBaseDirectory = 1440; // in min (0 or neg. turns it off)
 		private bool zipLogFiles = true;
 		private bool storeSuccessLogs = false;
@@ -228,7 +330,6 @@ namespace TecWare.PPSn.Reporting
 			this.reportBase = new DirectoryInfo(Path.GetFullPath(reportBase ?? throw new ArgumentNullException(nameof(reportBase))));
 			this.reportLogPath = GetDefaultPath(reportLogPath, ".logs");
 			this.reportWorkingPath = GetDefaultPath(reportWorkingPath, ".work");
-			FontDirectory = null;
 
 			this.provider = provider ?? throw new ArgumentNullException(nameof(provider));
 
@@ -279,7 +380,7 @@ namespace TecWare.PPSn.Reporting
 			return File.Exists(binPath);
 		} // proc ResolvePath
 
-		private async Task<int> CoreRunEngineAsync(string commandLine, string fullReportFileName, Action<string> debugOutput)
+		private async Task<int> CoreRunEngineAsync(string commandLine, string fullReportFileName, PropertyDictionary arguments, Action<string> debugOutput)
 		{
 			// find context exe (try first 64bit)
 			if (!TryResolvePath(speedataEnginePath, out var binPath))
@@ -307,7 +408,7 @@ namespace TecWare.PPSn.Reporting
 
 			// run process
 			using (var ps = Process.Start(psi))
-			using (var data = new PpsReportData(ps.StandardInput, fullReportFileName))
+			using (var data = new PpsReportData(provider, new StreamWriter(ps.StandardInput.BaseStream, Encoding.UTF8, 4069, false), fullReportFileName, arguments))
 			{
 				// function to process output streams to console
 				async Task ProcessOutputStream(TextReader tr, bool isError)
@@ -320,7 +421,7 @@ namespace TecWare.PPSn.Reporting
 				// wait for all tasks
 				var tasks = new List<Task>(4)
 				{
-					data.ProcessDataAsync(),
+					data.ProcessDataAsync(false),
 					Task.Run(new Action(ps.WaitForExit))
 				};
 				if (debugOutput != null)
@@ -328,7 +429,7 @@ namespace TecWare.PPSn.Reporting
 					tasks.Add(ProcessOutputStream(ps.StandardOutput, false));
 					tasks.Add(ProcessOutputStream(ps.StandardError, true));
 				}
-				
+
 				await Task.WhenAll(tasks.ToArray());
 
 				return ps.ExitCode;
@@ -448,22 +549,23 @@ namespace TecWare.PPSn.Reporting
 			} // EscapeValue
 
 			// resolve report
-			var r =  ResolveReportFileByName(args.ReportName, args.Language);
+			var r = ResolveReportFileByName(args.ReportName, args.Language);
 			resolvedReportName = r.resolvedReportName;
 			fullReportFileName = Path.Combine(r.reportPath, r.reportFileName);
 
 			var commandLine = new StringBuilder(
 				$"--jobname={resultSession} " +
+				"--systemfonts " +
 				$"--layout={EscapeValue(r.reportFileName)} " + // layout file
 				"--data=- " + // data is piped via stdin
 				$"--mainlanguage={args.Language.Replace('-', '_')} " +
 				$"--extra-dir={EscapeValue(r.reportPath)};{reportBase.FullName}"
 			);
-			
+
 			// append arguments
 			foreach (var arg in args.Arguments)
 			{
-				if(arg.Name.StartsWith("c:")) // command line option
+				if (arg.Name.StartsWith("c:")) // command line option
 				{
 					var commandLineSwitch = arg.Name.Substring(2);
 					commandLine.Append("--").Append(commandLine);
@@ -481,7 +583,7 @@ namespace TecWare.PPSn.Reporting
 						.Append(' ');
 				}
 			}
-		
+
 			// trim end
 			if (commandLine[commandLine.Length - 1] == ' ')
 				commandLine.Remove(commandLine.Length - 1, 1);
@@ -594,10 +696,7 @@ namespace TecWare.PPSn.Reporting
 			[nameof(PpsReportRunInfo.DebugOutput)] = (a, v) => a.DebugOutput = v as Action<string>,
 		};
 
-		/// <summary>Create the report file.</summary>
-		/// <param name="table"></param>
-		/// <returns>The report target file and a log file.</returns>
-		public Task<string> RunReportAsync(LuaTable table)
+		private static PpsReportRunInfo GetReportRunInfoFromTable(LuaTable table)
 		{
 			var args = new PpsReportRunInfo(table.GetMemberValue("name") as string);
 
@@ -612,8 +711,20 @@ namespace TecWare.PPSn.Reporting
 					args.Arguments.SetProperty(kv.Key, kv.Value);
 			}
 
-			return RunReportExAsync(args);
-		} // func RunReportAsync
+			return args;
+		} // func GetReportRunInfoFromTable
+
+		/// <summary>Create the report file.</summary>
+		/// <param name="table"></param>
+		/// <returns>The report target file and a log file.</returns>
+		public Task<string> RunReportAsync(LuaTable table)
+			=> RunReportExAsync(GetReportRunInfoFromTable(table));
+
+		/// <summary></summary>
+		/// <param name="table"></param>
+		/// <returns></returns>
+		public Task<string> RunDataAsync(LuaTable table)
+			=> RunDataExAsync(GetReportRunInfoFromTable(table));
 
 		private static async Task<(bool hasError, PpsReportErrorInfo[] messages)> ParseErrorInfoAsync(FileInfo statusFileInfo)
 		{
@@ -653,7 +764,7 @@ namespace TecWare.PPSn.Reporting
 			using (await LockReportFileAsync(resolvedReportName))
 			{
 				// run context
-				var exitCode = await CoreRunEngineAsync(commandLine, fullReportFileName, args.DebugOutput);
+				var exitCode = await CoreRunEngineAsync(commandLine, fullReportFileName, args.Arguments, args.DebugOutput);
 
 				// purge generated files in the root folder should not exist any file
 				var (resultFileInfo, statusFileInfo, logFileInfo) = await RunReportExPurgeTempFilesAsync(resultSession, exitCode != 0, args.DeleteTempFiles);
@@ -672,6 +783,31 @@ namespace TecWare.PPSn.Reporting
 				return resultFileInfo.FullName;
 			}
 		} // proc RunReportExAsync
+
+		/// <summary>Create the report data.</summary>
+		/// <param name="args"></param>
+		/// <returns>The report target file and a log file.</returns>
+		public async Task<string> RunDataExAsync(PpsReportRunInfo args)
+		{
+			// build command line, put the result unter an different name
+			var (reportPath, reportFileName, resolvedReportName) = ResolveReportFileByName(args.ReportName, args.Language);
+			var fullReportFileName = Path.Combine(reportPath, reportFileName);
+
+			var resultFileInfo = new FileInfo(Path.ChangeExtension(Path.Combine(reportWorkingPath.FullName, resolvedReportName.Replace('/', '_')), ".xdata"));
+			if (resultFileInfo.Exists)
+				resultFileInfo.Delete();
+
+			using (await LockReportFileAsync(resolvedReportName))
+			using (var tw = new StreamWriter(resultFileInfo.OpenWrite(), Encoding.UTF8, 4096, false))
+			using (var data = new PpsReportData(provider, tw, fullReportFileName, args.Arguments))
+			{
+				// write xml
+				await data.ProcessDataAsync(true);
+
+				// build result
+				return resultFileInfo.FullName;
+			}
+		} // proc RunDataExAsync
 
 		#endregion
 
@@ -709,6 +845,39 @@ namespace TecWare.PPSn.Reporting
 
 		#endregion
 
+		#region -- Parse report extra data --------------------------------------------
+
+		/// <summary>Find a special extension node.</summary>
+		/// <param name="reportFileName"></param>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public static async Task<XElement> FindReportDataAsync(string reportFileName, XName name)
+		{
+			using (var xml = XmlReader.Create(reportFileName, new XmlReaderSettings() { Async = true, IgnoreComments = true, IgnoreWhitespace = true }))
+			{
+				// move to content
+				if (await xml.MoveToContentAsync() != XmlNodeType.Element)
+					throw new ArgumentException();
+
+				// we expect a layout element
+				if (xml.IsEmptyElement || xml.LocalName != "Layout")
+					return null;
+
+				await xml.ReadStartElementAsync("Layout");
+				while (xml.NodeType == XmlNodeType.Element)
+				{
+					if (xml.LocalName == name.LocalName && xml.NamespaceURI == name.NamespaceName) //read element
+						return await Task.Run(() => (XElement)XNode.ReadFrom(xml));
+					else
+						await xml.SkipAsync();
+				}
+				await xml.ReadEndElementAsync();
+			}
+			return null;
+		} // func FindReportDataAsync
+
+		#endregion
+
 		/// <summary>Defined Environment path.</summary>
 		public string EnginePath => engineBase.FullName;
 		/// <summary>Defined report base path</summary>
@@ -717,9 +886,6 @@ namespace TecWare.PPSn.Reporting
 		public string LogPath => reportLogPath.FullName;
 		/// <summary>Working path.</summary>
 		public string WorkingPath => reportWorkingPath.FullName;
-
-		/// <summary>Set the font path.</summary>
-		public string FontDirectory { get => fontDirectory; set => fontDirectory = Path.GetFullPath(value ?? DefaultFontPath); }
 
 		/// <summary>Is it allowed to clean other files than the session files (in min).</summary>
 		public int CleanBaseDirectoryAfter { get => cleanBaseDirectory; set => cleanBaseDirectory = value; }

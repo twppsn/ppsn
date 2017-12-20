@@ -59,6 +59,9 @@
       <Link>ppsn.licenseheader</Link>
     </None>
     <None Include="packages.config" />
+    <None Include="PPSnReport.Data.xsd">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="system\share\schema\layoutschema-en.rng" />
     <None Include="system\share\schema\layoutschema-en.xsd">
       <SubType>Designer</SubType>

@@ -180,7 +180,7 @@ namespace TecWare.PPSn.Data
 			return sb.ToString();
 		} // func ParseConstant
 
-		private static PpsDataFilterCompareValue ParseCompareValue(string expression, ref int offset)
+		private static PpsDataFilterCompareValue ParseCompareValue(string expression, IPropertyReadOnlyDictionary variables, ref int offset)
 		{
 			PpsDataFilterCompareValue value;
 
@@ -208,6 +208,43 @@ namespace TecWare.PPSn.Data
 				else if (startAt2 < offset) // Number filter
 					value = new PpsDataFilterCompareNumberValue(expression.Substring(startAt2, offset - startAt2));
 				else // null
+					value = PpsDataFilterCompareNullValue.Default;
+			}
+			else if (variables != null && expression[offset] == '$')
+			{
+				offset++;
+				var startAt2 = offset;
+				while (offset < expression.Length && (Char.IsLetterOrDigit(expression[offset]) || expression[offset] == '_'))
+					offset++;
+
+				if (variables.TryGetProperty(expression.Substring(startAt2, offset - startAt2 - 1), out var tmp))
+				{
+					if (tmp == null)
+						value = PpsDataFilterCompareNullValue.Default;
+					else if (tmp is DateTime dt)
+						value = new PpsDataFilterCompareDateValue(dt.Date, dt.Date.AddDays(1));
+					else if (tmp is long i64)
+						value = new PpsDataFilterCompareIntegerValue(i64);
+					else if (tmp is int i32)
+						value = new PpsDataFilterCompareIntegerValue(i32);
+					else if (tmp is short i16)
+						value = new PpsDataFilterCompareIntegerValue(i16);
+					else if (tmp is sbyte i8)
+						value = new PpsDataFilterCompareIntegerValue(i8);
+					else if (tmp is uint ui32)
+						value = new PpsDataFilterCompareIntegerValue(ui32);
+					else if (tmp is ushort ui16)
+						value = new PpsDataFilterCompareIntegerValue(ui16);
+					else if (tmp is byte ui8)
+						value = new PpsDataFilterCompareIntegerValue(ui8);
+					else if (tmp is string str)
+						value = new PpsDataFilterCompareTextValue(str);
+					else
+					{
+						value = new PpsDataFilterCompareTextValue(tmp.ChangeType<string>());
+					}
+				}
+				else // generate error?
 					value = PpsDataFilterCompareNullValue.Default;
 			}
 			else
@@ -339,7 +376,7 @@ namespace TecWare.PPSn.Data
 			}
 		} // func IsStartNativeReference
 
-		private static PpsDataFilterExpression ParseExpression(string expression, PpsDataFilterExpressionType inLogic, ref int offset)
+		private static PpsDataFilterExpression ParseExpression(string expression, PpsDataFilterExpressionType inLogic, IPropertyReadOnlyDictionary variables, ref int offset)
 		{
 			/*  expr ::=
 			 *		[ identifier ] ( ':' [ '<' | '>' | '<=' | '>=' | '!' | '!=' ) value
@@ -377,7 +414,7 @@ namespace TecWare.PPSn.Data
 				if (IsStartLogicOperation(expression, startAt, offset, out var newLogic))
 				{
 					offset++;
-					var expr = ParseExpression(expression, newLogic, ref offset);
+					var expr = ParseExpression(expression, newLogic, variables, ref offset);
 
 					// optimize: concat same sub expression
 					if (expr.Type == returnLogic)
@@ -393,7 +430,7 @@ namespace TecWare.PPSn.Data
 					if (offset < expression.Length && !Char.IsWhiteSpace(expression[offset]))
 					{
 						var op = ParseCompareOperator(expression, ref offset); // parse the operator
-						var value = ParseCompareValue(expression, ref offset); // parse the value
+						var value = ParseCompareValue(expression, variables, ref offset); // parse the value
 
 						// create expression
 						compareExpressions.Add(new PpsDataFilterCompareExpression(identifier, op, value));
@@ -409,7 +446,7 @@ namespace TecWare.PPSn.Data
 				else
 				{
 					offset = startAt; // nothing special try compare expression
-					var value = ParseCompareValue(expression, ref offset);
+					var value = ParseCompareValue(expression, variables, ref offset);
 					if (value != PpsDataFilterCompareNullValue.Default)
 						compareExpressions.Add(new PpsDataFilterCompareExpression(null, PpsDataFilterCompareOperator.Contains, value));
 				}
@@ -431,10 +468,11 @@ namespace TecWare.PPSn.Data
 
 		/// <summary></summary>
 		/// <param name="filterExpression"></param>
+		/// <param name="variables"></param>
 		/// <param name="offset"></param>
 		/// <returns></returns>
-		public static PpsDataFilterExpression Parse(string filterExpression, int offset = 0)
-			=> ParseExpression(filterExpression, PpsDataFilterExpressionType.None, ref offset);
+		public static PpsDataFilterExpression Parse(string filterExpression, IPropertyReadOnlyDictionary variables = null, int offset = 0)
+			=> ParseExpression(filterExpression, PpsDataFilterExpressionType.None, variables, ref offset);
 
 		/// <summary></summary>
 		/// <param name="filterExpression"></param>

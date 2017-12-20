@@ -17,9 +17,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
@@ -28,8 +25,10 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server
 {
+	/// <summary>Helper function collection.</summary>
 	public static class PpsStuff
 	{
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public readonly static XNamespace PpsNamespace = "http://tecware-gmbh.de/dev/des/2015/ppsn";
 
 		public readonly static XName xnRegister = PpsNamespace + "register";
@@ -61,9 +60,15 @@ namespace TecWare.PPSn.Server
 		public readonly static XName xnWpfCondition = PpsNamespace + "condition";
 
 		public readonly static XName xnReports = PpsNamespace + "reports";
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		#region -- WriteProperty --------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="xml"></param>
+		/// <param name="attributes"></param>
+		/// <param name="propertyName"></param>
+		/// <param name="targetPropertyName"></param>
 		public static void WriteProperty(this XmlWriter xml, IPropertyReadOnlyDictionary attributes, string propertyName, string targetPropertyName = null)
 		{
 			var value = attributes.GetProperty<string>(propertyName, null);
@@ -73,6 +78,11 @@ namespace TecWare.PPSn.Server
 			xml.WriteAttributeString(targetPropertyName ?? propertyName, value);
 		} // proc WriteProperty
 
+		/// <summary></summary>
+		/// <param name="xml"></param>
+		/// <param name="x"></param>
+		/// <param name="attributeName"></param>
+		/// <param name="targetAttributeName"></param>
 		public static void WriteAttributeString(this XmlWriter xml, XElement x, XName attributeName, string targetAttributeName = null)
 		{
 			var attr = x?.Attribute(attributeName);
@@ -80,6 +90,10 @@ namespace TecWare.PPSn.Server
 				xml.WriteAttributeString(targetAttributeName ?? attributeName.LocalName, attr.Value);
 		} // proc WriteAttributeString
 
+		/// <summary>Convert the xml node to an property dictionary.</summary>
+		/// <param name="attributes"></param>
+		/// <param name="wellKnownProperties"></param>
+		/// <returns></returns>
 		public static IPropertyReadOnlyDictionary ToPropertyDictionary(this IEnumerable<XElement> attributes, params KeyValuePair<string, Type>[] wellKnownProperties)
 		{
 			var props = new PropertyDictionary();
@@ -127,6 +141,10 @@ namespace TecWare.PPSn.Server
 			} // func TryGetProperty
 		} // class PropertyReadOnlyDictionaryRecord
 
+		/// <summary>Execute the command and raise a exception with the command text included.</summary>
+		/// <param name="command"></param>
+		/// <param name="commandBehavior"></param>
+		/// <returns></returns>
 		public static DbDataReader ExecuteReaderEx(this DbCommand command, CommandBehavior commandBehavior = CommandBehavior.Default)
 		{
 			try
@@ -139,9 +157,16 @@ namespace TecWare.PPSn.Server
 			}
 		} // func ExecuteReaderEx
 
+		/// <summary></summary>
+		/// <param name="record"></param>
+		/// <returns></returns>
 		public static IPropertyReadOnlyDictionary ToDictionary(this IDataRecord record)
 			=> new PropertyReadOnlyDictionaryRecord(record);
 
+		/// <summary>Set the DbParameter value, <c>null</c> will be converted to <c>DbNull</c>.</summary>
+		/// <param name="parameter"></param>
+		/// <param name="value"></param>
+		/// <param name="parameterType"></param>
 		public static void SetValue(this DbParameter parameter, object value, Type parameterType)
 		{
 			parameter.Value = value == null
@@ -153,9 +178,16 @@ namespace TecWare.PPSn.Server
 
 		#region -- Common Scope ---------------------------------------------------------
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="scope"></param>
+		/// <param name="ns"></param>
+		/// <param name="variable"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static bool TryGetGlobal<T>(this IDECommonScope scope, object ns, object variable, out T value)
 		{
-			if (scope.TryGetGlobal(ns, variable, out object v))
+			if (scope.TryGetGlobal(ns, variable, out var v))
 			{
 				value = (T)v;
 				return true;
@@ -170,16 +202,25 @@ namespace TecWare.PPSn.Server
 		#endregion
 	} // class PpsStuff
 
+	#region -- class CommandException -------------------------------------------------
+
+	/// <summary>Command exception.</summary>
 	public class CommandException : DbException
 	{
 		private readonly string commandText;
 
+		/// <summary></summary>
+		/// <param name="command"></param>
+		/// <param name="innerException"></param>
 		public CommandException(DbCommand command, Exception innerException)
 			: base(innerException.Message, innerException)
 		{
 			this.commandText = command.CommandText;
 		} // ctor
 
+		/// <summary>Command text</summary>
 		public string CommandText => commandText;
 	} // class CommandException
+
+	#endregion
 }

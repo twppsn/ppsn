@@ -717,11 +717,6 @@
 					<xs:documentation>Path were the reports are processed (default: %base%\.work)</xs:documentation>
 				</xs:annotation>
 			</xs:attribute>
-			<xs:attribute name="fonts" type="PathType" use="optional">
-				<xs:annotation>
-					<xs:documentation>Path to the system fonts directory (default: %system%\fonts)</xs:documentation>
-				</xs:annotation>
-			</xs:attribute>
 			<xs:attribute name="cleanBaseDirectory" type="xs:int" use="optional" default="1440">
 				<xs:annotation>
 					<xs:documentation>Is it allowed to clean other files than the session files (in min, default: 1440 / 24h).</xs:documentation>
