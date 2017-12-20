@@ -198,7 +198,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Text that should present the user.</summary>
 		/// <remarks>This member should not return any exception. Dispatching to the UI is done by caller.</remarks>
-		string DisableText => Top?.Text ?? String.Empty;
+		public string DisableText => Top?.Text ?? String.Empty;
 		/// <summary><c>-1</c>, shows a marquee, or use a value between 0 and 1000 for percentage</summary>
 		/// <remarks>This member should not return any exception. Dispatching to the UI is done by caller.</remarks>
 		int DisableProgress => Top?.Value ?? -1;
