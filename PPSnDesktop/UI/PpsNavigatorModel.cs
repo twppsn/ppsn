@@ -119,7 +119,7 @@ namespace TecWare.PPSn.UI
 			{
 				try
 				{
-					this.filterExpression = PpsDataFilterExpression.Parse(searchText, searchTextOffset);
+					this.filterExpression = PpsDataFilterExpression.Parse(searchText, offset: searchTextOffset);
 				}
 				catch (Exception e)
 				{
