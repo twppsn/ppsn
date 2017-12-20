@@ -44,8 +44,7 @@ Add-Type -AssemblyName "System.IO.Compression.FileSystem, Version=4.0.0.0, Cultu
 
 
 if ([String]::IsNullOrEmpty($version)) {
-	Write-Error "Version is missing.";
-	return;
+	$version = "3.1.16";
 }
 
 # target directory for speedata
