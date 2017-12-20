@@ -11,6 +11,16 @@ git clone --recursive --branch development https://github.com/twppsn/ppsn.git
 
 ```
 
+## Pull the [Speedata Publisher](https://www.speedata.de/) as Reporting Engine
+
+```bash
+
+.\\ppsn\\PPSnReport\\system\\update.ps1 -version x.x.xx
+
+```
+
+where '-version x.x.xx' is optional (default is 3.1.16)
+
 ## Setup of the Database
 
 1. open PPSnMod.sln
