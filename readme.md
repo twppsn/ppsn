@@ -11,7 +11,7 @@ git clone --recursive --branch development https://github.com/twppsn/ppsn.git
 
 ```
 
-## Pull the [Speedata Publisher]:https://www.speedata.de/ as Reporting Engine
+## Pull the [Speedata Publisher](https://www.speedata.de/) as Reporting Engine
 
 ```bash
 
