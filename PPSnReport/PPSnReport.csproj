@@ -67,9 +67,6 @@
     <None Include="system\share\schema\layoutschema-en.xsd">
       <SubType>Designer</SubType>
     </None>
-    <None Include="system\share\schema\xml.xsd">
-      <SubType>Designer</SubType>
-    </None>
     <None Include="system\update.ps1" />
     <None Include="TecWare.PPSn.Report.nuspec" />
   </ItemGroup>

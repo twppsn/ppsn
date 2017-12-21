@@ -77,6 +77,9 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="cfg\PPSn.template" />
+    <None Include="cfg\reports\server\Hello.xreport">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

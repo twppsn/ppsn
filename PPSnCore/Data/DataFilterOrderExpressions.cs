@@ -217,7 +217,7 @@ namespace TecWare.PPSn.Data
 				while (offset < expression.Length && (Char.IsLetterOrDigit(expression[offset]) || expression[offset] == '_'))
 					offset++;
 
-				if (variables.TryGetProperty(expression.Substring(startAt2, offset - startAt2 - 1), out var tmp))
+				if (variables.TryGetProperty(expression.Substring(startAt2, offset - startAt2), out var tmp))
 				{
 					if (tmp == null)
 						value = PpsDataFilterCompareNullValue.Default;

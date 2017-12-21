@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Layout xmlns="urn:speedata.de:2009/publisher/en" xmlns:sd="urn:speedata:2009/publisher/functions/en">
+
+	<data xmlns="http://tecware-gmbh.de/dev/des/2015/ppsn/reportData">
+		<list element="land" select="masterData.Land">
+			<column name="Id" />
+			<column name="Name" />
+			<column name="Iso" />
+			<filter>Id:=$Id</filter>
+		</list>
+	</data>
+
+	<Trace grid="yes"/>
+
+	<DefineColor name="weiß" value="#fff"/>
+	<DefineColor name="grau" value="#eee"/>
+
+	<Record element="data">
+		<PlaceObject>
+			<Table stretch="max" padding="4pt" border-collapse="collapse" >
+				<Columns>
+					<Column width="10mm"/>
+					<Column width="1*"/>
+					<Column width="10mm"/>
+				</Columns>
+				<Tablehead page="all">
+					<Tr backgroundcolor="grau">
+						<Td border-bottom="0.25pt" align="left">
+							<Paragraph>
+								<B>
+									<Value>ID</Value>
+								</B>
+							</Paragraph>
+						</Td>
+						<Td border-bottom="0.25pt" align="left">
+							<Paragraph>
+								<B>
+									<Value>Name</Value>
+								</B>
+							</Paragraph>
+						</Td>
+						<Td border-bottom="0.25pt" align="center">
+							<Paragraph>
+								<B>
+									<Value>Iso</Value>
+								</B>
+							</Paragraph>
+						</Td>
+					</Tr>
+				</Tablehead>
+				<ForAll select="land/r">
+					<Tr valign="top" >
+						<Td align="left" border-bottom="0.25pt">
+							<Paragraph>
+								<Value select="Id/."/>
+							</Paragraph>
+						</Td>
+						<Td align="left" border-bottom="0.25pt">
+							<Paragraph>
+								<Value select="Name/."/>
+							</Paragraph>
+						</Td>
+						<Td align="right" border-bottom="0.25pt">
+							<Paragraph>
+								<Value select="Iso/."/>
+							</Paragraph>
+						</Td>
+					</Tr>
+				</ForAll>
+			</Table>
+		</PlaceObject>
+	</Record>
+</Layout>
