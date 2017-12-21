@@ -78,6 +78,7 @@ specific language governing permissions and limitations under the Licence.
         </Setter>
     </Style>
 
+	<!--PlaceHolder-->
     <Style x:Key="PPSnListBoxStyle" TargetType="{x:Type ListBox}"/>
 	<Style x:Key="PPSnAlternatingListBoxItemStyle" TargetType="{x:Type ListBoxItem}"/>
     <Style x:Key="PPSnShrinkButtonStyle" TargetType="{x:Type ToggleButton}"/>
@@ -86,7 +87,9 @@ specific language governing permissions and limitations under the Licence.
 	<Style x:Key="PPSnScrollViewerStyle" TargetType="{x:Type ScrollViewer}"/>
 	<Style x:Key="PPSnImageButtonStyle" TargetType="{x:Type Button}"/>
 	<Style x:Key="PPSnCircleButtonStyle" TargetType="{x:Type Button}"/>
+	<Style x:Key="PPSnClosePopupButtonStyle" TargetType="{x:Type Button}"/>
 	<Style x:Key="PPSnTextBoxStyle" TargetType="{x:Type TextBox}"/>
+	<Style x:Key="PpsProgressRingStyle" TargetType="{x:Type Control}"/>
 
 	<ControlTemplate x:Key="PPSnComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}"/>
 
