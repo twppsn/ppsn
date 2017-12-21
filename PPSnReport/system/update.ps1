@@ -23,6 +23,8 @@
 # java -jar C:\Tools\trang\trang.jar share\schema\layoutschema-en.rng share\schema\layoutschema-en.xsd
 #
 # patch: bei foreign-elements <xs:any namespace="##other" minOccurs="0" maxOccurs="unbounded" processContents="skip"/>
+#        del: <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="xml.xsd"/>
+#        del: <xs:attribute ref="xml:base"/>
 #
 
 Import-Module BitsTransfer
