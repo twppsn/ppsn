@@ -559,7 +559,7 @@ namespace TecWare.PPSn.Reporting
 				$"--layout={EscapeValue(r.reportFileName)} " + // layout file
 				"--data=- " + // data is piped via stdin
 				$"--mainlanguage={args.Language.Replace('-', '_')} " +
-				$"--extra-dir={EscapeValue(r.reportPath)};{reportBase.FullName}"
+				$"--extra-dir={EscapeValue(r.reportPath)};{reportBase.FullName} "
 			);
 
 			// append arguments
@@ -568,7 +568,7 @@ namespace TecWare.PPSn.Reporting
 				if (arg.Name.StartsWith("c:")) // command line option
 				{
 					var commandLineSwitch = arg.Name.Substring(2);
-					commandLine.Append("--").Append(commandLine);
+					commandLine.Append("--").Append(commandLineSwitch);
 					if (arg.Value != null)
 					{
 						commandLine.Append('=')
