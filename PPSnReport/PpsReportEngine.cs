@@ -95,6 +95,8 @@ namespace TecWare.PPSn.Reporting
 		} // prop LanguagePartOnly
 		  /// <summary>Remove all files, that will be created during this session.</summary>
 		public bool DeleteTempFiles { get; set; } = true;
+		/// <summary>Generation runs.</summary>
+		public int Runs { get; set; } = 2;
 
 		/// <summary>Gets called for every log line, that is not parsed.</summary>
 		public Action<string> DebugOutput { get; set; } = null;
@@ -380,7 +382,7 @@ namespace TecWare.PPSn.Reporting
 			return File.Exists(binPath);
 		} // proc ResolvePath
 
-		private async Task<int> CoreRunEngineAsync(string commandLine, string fullReportFileName, PropertyDictionary arguments, Action<string> debugOutput)
+		private async Task<int> CoreRunEngineAsync(string commandLine, Action<string> debugOutput)
 		{
 			// find context exe (try first 64bit)
 			if (!TryResolvePath(speedataEnginePath, out var binPath))
@@ -393,8 +395,7 @@ namespace TecWare.PPSn.Reporting
 				WorkingDirectory = reportWorkingPath.FullName,
 				// redirect output
 				UseShellExecute = false,
-				CreateNoWindow = true,
-				RedirectStandardInput = true
+				CreateNoWindow = true
 			};
 
 			// activate redirect
@@ -408,7 +409,6 @@ namespace TecWare.PPSn.Reporting
 
 			// run process
 			using (var ps = Process.Start(psi))
-			using (var data = new PpsReportData(provider, new StreamWriter(ps.StandardInput.BaseStream, Encoding.UTF8, 4069, false), fullReportFileName, arguments))
 			{
 				// function to process output streams to console
 				async Task ProcessOutputStream(TextReader tr, bool isError)
@@ -419,9 +419,8 @@ namespace TecWare.PPSn.Reporting
 				} // proc ProcessOutputStream
 
 				// wait for all tasks
-				var tasks = new List<Task>(4)
+				var tasks = new List<Task>(3)
 				{
-					data.ProcessDataAsync(false),
 					Task.Run(new Action(ps.WaitForExit))
 				};
 				if (debugOutput != null)
@@ -554,14 +553,15 @@ namespace TecWare.PPSn.Reporting
 			fullReportFileName = Path.Combine(r.reportPath, r.reportFileName);
 
 			var commandLine = new StringBuilder(
-				$"--jobname={resultSession} " +
+				$"--jobname=\"{resultSession}\" " +
 				"--systemfonts " +
+				$"--runs={args.Runs} " +
 				$"--layout={EscapeValue(r.reportFileName)} " + // layout file
-				"--data=- " + // data is piped via stdin
+				$"--data=\"{resultSession}.xml\" " + // data is piped via stdin
 				$"--mainlanguage={args.Language.Replace('-', '_')} " +
 				$"--extra-dir={EscapeValue(r.reportPath)};{reportBase.FullName} "
 			);
-
+			
 			// append arguments
 			foreach (var arg in args.Arguments)
 			{
@@ -587,6 +587,7 @@ namespace TecWare.PPSn.Reporting
 			// trim end
 			if (commandLine[commandLine.Length - 1] == ' ')
 				commandLine.Remove(commandLine.Length - 1, 1);
+			
 
 			return commandLine.ToString();
 		} // proc RunReportExParameters
@@ -693,6 +694,7 @@ namespace TecWare.PPSn.Reporting
 			[nameof(PpsReportRunInfo.DeleteTempFiles)] = (a, v) => a.DeleteTempFiles = v.ChangeType<bool>(),
 			[nameof(PpsReportRunInfo.Language)] = (a, v) => a.Language = v.ChangeType<string>(),
 			[nameof(PpsReportRunInfo.UseDate)] = (a, v) => a.UseDate = v.ChangeType<DateTime>(),
+			[nameof(PpsReportRunInfo.Runs)] = (a, v) => a.Runs = v.ChangeType<int>(),
 			[nameof(PpsReportRunInfo.DebugOutput)] = (a, v) => a.DebugOutput = v as Action<string>,
 		};
 
@@ -763,8 +765,16 @@ namespace TecWare.PPSn.Reporting
 
 			using (await LockReportFileAsync(resolvedReportName))
 			{
+				// write data.xml
+				var dataXml = new FileInfo(Path.Combine(reportWorkingPath.FullName, resultSession + ".xml"));
+				if (dataXml.Exists)
+					dataXml.Delete();
+				using (var tw = new StreamWriter(dataXml.OpenWrite(), Encoding.UTF8, 4096, false))
+				using (var data = new PpsReportData(provider, tw, fullReportFileName, args.Arguments))
+					await data.ProcessDataAsync(false);
+
 				// run context
-				var exitCode = await CoreRunEngineAsync(commandLine, fullReportFileName, args.Arguments, args.DebugOutput);
+				var exitCode = await CoreRunEngineAsync(commandLine, args.DebugOutput);
 
 				// purge generated files in the root folder should not exist any file
 				var (resultFileInfo, statusFileInfo, logFileInfo) = await RunReportExPurgeTempFilesAsync(resultSession, exitCode != 0, args.DeleteTempFiles);
