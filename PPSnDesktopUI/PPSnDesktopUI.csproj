@@ -137,6 +137,7 @@
     <Compile Include="Controls\PpsAttachmentsControl.xaml.cs">
       <DependentUpon>PpsAttachmentsControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UI\LuaUI.cs" />
     <Compile Include="UI\PpsExceptionDialog.xaml.cs">
       <DependentUpon>PpsExceptionDialog.xaml</DependentUpon>
     </Compile>
