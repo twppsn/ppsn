@@ -18,11 +18,15 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Windows;
 using System.Windows.Markup;
 using System.Xaml;
 using System.Xaml.Schema;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
+using static System.Linq.Expressions.Expression;
 
 namespace TecWare.PPSn.UI
 {
@@ -37,7 +41,8 @@ namespace TecWare.PPSn.UI
 		#region -- class LuaWpfServiceProvider ----------------------------------------
 
 		private sealed class LuaWpfServiceProvider : IServiceProvider, 
-			IProvideValueTarget, 
+			IProvideValueTarget,
+			IRootObjectProvider,
 			ITypeDescriptorContext, 
 			IAmbientProvider, 
 			IXamlSchemaContextProvider, 
@@ -53,13 +58,15 @@ namespace TecWare.PPSn.UI
 				this.member = member;
 			} // ctor
 
-			#region -- interface IProvideValueTarget ----------------------------------
+			#region -- interface IProvideValueTarget, IRootObjectProvider -------------
 
 			public object TargetObject => creator.Instance;
 			public object TargetProperty
 				=> member is IProvideValueTarget propertyProvider
 					? propertyProvider.TargetProperty
 					: member.UnderlyingMember;
+
+			public object RootObject => creator.instance;
 
 			#endregion
 
@@ -215,7 +222,27 @@ namespace TecWare.PPSn.UI
 			// convert the value for events
 			if (xamlMember.IsEvent)
 			{
-				throw new NotImplementedException();
+				var eventHandlerType = xamlMember.Type.UnderlyingType;
+				var eventHandlerInvokeMethodInfo = eventHandlerType.GetMethod("Invoke");
+				var eventHandlerInvokeParameters = eventHandlerInvokeMethodInfo.GetParameters();
+				var eventHandlerInvokeExpressions = new ParameterExpression[eventHandlerInvokeParameters.Length];
+
+				// map arguments
+				for (var i = 0; i < eventHandlerInvokeParameters.Length; i++)
+					eventHandlerInvokeExpressions[i] = Parameter(eventHandlerInvokeParameters[i].ParameterType, eventHandlerInvokeParameters[i].Name);
+
+				// Lua.RtInvoke(value, new object[] { arg0, arg1, ... });
+				var exprCaller = Lambda(eventHandlerType,
+					Call(
+						luaRtInvokeMethodInfo,
+						Constant(value, typeof(object)),
+						NewArrayInit(typeof(object), eventHandlerInvokeExpressions)
+					),
+					eventHandlerInvokeExpressions
+				);
+
+				// compile the wrapper
+				value = exprCaller.Compile();
 			}
 			else if (value != null) // convert the value
 			{
@@ -353,6 +380,14 @@ namespace TecWare.PPSn.UI
 				return instance;
 			}
 		} // prop Instance
+
+		private static readonly MethodInfo luaRtInvokeMethodInfo;
+
+		static LuaWpfCreator()
+		{
+			luaRtInvokeMethodInfo = typeof(Lua).GetMethod(nameof(Lua.RtInvoke), BindingFlags.Static | BindingFlags.InvokeMethod | BindingFlags.Public, null, CallingConventions.Standard, new Type[] { typeof(object), typeof(object[]) }, null)
+				?? throw new ArgumentException("RtInvoke not resolved.");
+		} // sctor
 	} // class LuaWpfCreator
 
 	#endregion

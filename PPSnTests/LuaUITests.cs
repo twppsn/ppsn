@@ -29,6 +29,8 @@ namespace PPSnTests
 	[TestClass]
 	public class LuaUITests
 	{
+		public static int externSet = 0;
+
 		private T CreateWpfType<T>(string snippet)
 			where T : class
 		{
@@ -73,9 +75,8 @@ namespace PPSnTests
 		}
 
 		[TestMethod]
-		public void UIChildrenMember()
+		public void UIChildrenMember01()
 		{
-			//TextBlock
 			var p = CreateWpfType<StackPanel>("return UI.StackPanel { UI.Label { 'L1' }, UI.Label { 'L2' } };");
 			Assert.AreEqual(2, p.Children.Count);
 		}
@@ -83,9 +84,18 @@ namespace PPSnTests
 		[TestMethod]
 		public void UIChildrenMember02()
 		{
-			//TextBlock
 			var t = CreateWpfType<TextBlock>("return UI.TextBlock { 'L1', UI.Run { 'L2' } };");
 			Assert.AreEqual(2, t.Inlines.Count);
+		}
+
+		[TestMethod]
+		public void UIEventSet()
+		{
+			//TextBlock
+			externSet = 0;
+			var b = CreateWpfType<Button>("return UI.Button { Click = function () clr.PPSnTests.LuaUITests.externSet = 23 end };");
+			b.RaiseEvent(new System.Windows.RoutedEventArgs(Button.ClickEvent));
+			Assert.AreEqual(23, externSet);
 		}
 
 	}
