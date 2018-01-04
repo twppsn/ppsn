@@ -801,43 +801,63 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		/// <param name="request"></param>
 		/// <param name="arguments"></param>
-		/// <param name="xamlUri"></param>
+		/// <param name="paneUri"></param>
 		/// <returns></returns>
-		public async Task<(XDocument xaml, LuaChunk code)> LoadXamlAsync(BaseWebRequest request, LuaTable arguments, Uri xamlUri)
+		public async Task<(XDocument xaml, LuaChunk paneCode)> LoadPaneDataAsync(BaseWebRequest request, LuaTable arguments, Uri paneUri)
 		{
 			try
 			{
-				XDocument xXaml;
-				using (var r = await request.GetResponseAsync(xamlUri.ToString()))
+				using (var r = await request.GetResponseAsync(paneUri.ToString()))
 				{
 					// read the file name
 					arguments["_filename"] = r.GetContentDisposition().FileName;
 
-					// parse the xaml as xml document
-					using (var sr = request.GetTextReader(r, MimeTypes.Application.Xaml))
+					// check content
+					var contentType = r.GetContentType();
+					if (contentType.MediaType == MimeTypes.Application.Xaml) // load a xaml file
 					{
-						using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, xamlUri.ToString()))
-							xXaml = await Task.Run(() => XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo));
+						XDocument xamlContent;
+
+						// parse the xaml as xml document
+						using (var sr = request.GetTextReader(r, MimeTypes.Application.Xaml))
+						{
+							using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, paneUri.ToString()))
+								xamlContent = await Task.Run(() => XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo));
+						}
+
+						// Load the content of the code-tag, to initialize extended functionality
+						var xCode = xamlContent.Root.Element(xnCode);
+						var paneCode = (LuaChunk)null;
+						if (xCode != null)
+						{
+							paneCode = await CompileAsync(xCode, true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
+							xCode.Remove();
+						}
+
+						return (xamlContent, paneCode);
 					}
+					else if (contentType.MediaType == MimeTypes.Text.Lua
+						|| contentType.MediaType == MimeTypes.Text.Plain) // load a code file
+					{
+						// load an compile the chunk
+						using (var sr = request.GetTextReader(r, null))
+						{
+							return (
+								null,
+								await CompileAsync(sr, paneUri.ToString(), true, new KeyValuePair<string, Type>("self", typeof(LuaTable)))
+							);
+						}
+					}
+					else
+						throw new ArgumentException($"Expected: xaml/lua; received: {contentType.MediaType}");
 				}
-
-				// Load the content of the code-tag, to initialize extended functionality
-				var xCode = xXaml.Root.Element(xnCode);
-				var chunk = (LuaChunk)null;
-				if (xCode != null)
-				{
-					chunk = await CompileAsync(xCode, true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
-					xCode.Remove();
-				}
-
-				return (xXaml, chunk);
 			}
 			catch (Exception e)
 			{
-				throw new ArgumentException("Can not load xaml definition.\n" + xamlUri.ToString(), e);
+				throw new ArgumentException("Can not load pane definition.\n" + paneUri.ToString(), e);
 			}
-		} // func LoadXamlAsync
-		
+		} // func LoadPaneDataAsync
+
 		/// <summary>Creates a wrapper for the task.</summary>
 		/// <param name="func">Function will be executed in the current context as an task. A task will be wrapped and executed.</param>
 		/// <returns></returns>

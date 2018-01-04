@@ -34,10 +34,14 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- class WpfPaneHelper ------------------------------------------------------
+	#region -- class WpfPaneHelper ----------------------------------------------------
 
 	internal static class WpfPaneHelper
 	{
+		/// <summary>Find a control by name.</summary>
+		/// <param name="control"></param>
+		/// <param name="key"></param>
+		/// <returns><c>null</c> if there is no control or the current thread is not in the correct ui-thread.</returns>
 		public static object GetXamlElement(FrameworkElement control, object key)
 			=> key is string && control != null && control.Dispatcher.CheckAccess() ? control.FindName((string)key) : null;
 	} // class WpfPaneHelper
@@ -84,48 +88,50 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class LuaDataTemplateSelector --------------------------------------------
+	#region -- class LuaDataTemplateSelector ------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Helper, to implement a template selector as a lua function.</summary>
 	public sealed class LuaDataTemplateSelector : DataTemplateSelector
 	{
 		private readonly Delegate selectTemplate;
 
+		/// <summary>Helper, to implement a template selector as a lua function.</summary>
+		/// <param name="selectTemplate">Function that gets called.</param>
 		public LuaDataTemplateSelector(Delegate selectTemplate)
 		{
 			this.selectTemplate = selectTemplate;
 		} // ctor
 
+		/// <summary>Calls the template selector function.</summary>
+		/// <param name="item">Current item.</param>
+		/// <param name="container">Container element.</param>
+		/// <returns></returns>
 		public override DataTemplate SelectTemplate(object item, DependencyObject container)
 			=> (DataTemplate)new LuaResult(Lua.RtInvoke(selectTemplate, item, container))[0];
 	} // class LuaDataTemplateSelector
 
 	#endregion
 
-	#region -- class PpsGenericWpfWindowPane --------------------------------------------
+	#region -- class PpsGenericWpfWindowPane ------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Pane that combines a xaml file with lua code.</summary>
+	/// <summary>Pane that loads a xaml file, or an lua script.</summary>
 	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane, IPpsIdleAction, IPpsLuaRequest
 	{
-		/// <summary>
-		/// Parent window
-		/// </summary>
-		public readonly PpsWindow window;
+		private readonly PpsWindow window;
 
 		private BaseWebRequest fileSource;
 		private FrameworkElement control;
 
 		private LuaTable arguments; // arguments
 
-		/// <summary>
-		/// set this to true, to update the document on idle
-		/// </summary>
+		/// <summary>Set this to true, to update the document on idle.</summary>
 		private bool forceUpdateSource = false;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary>Create the pane.</summary>
+		/// <param name="environment"></param>
+		/// <param name="window"></param>
 		public PpsGenericWpfWindowPane(PpsEnvironment environment, PpsWindow window)
 			: base(environment)
 		{
@@ -134,17 +140,21 @@ namespace TecWare.PPSn.UI
 			Environment.AddIdleAction(this);
 		} // ctor
 
+		/// <summary></summary>
 		~PpsGenericWpfWindowPane()
 		{
 			Dispose(false);
 		} // dtor
 
+		/// <summary></summary>
 		public void Dispose()
 		{
 			GC.SuppressFinalize(this);
 			Dispose(true);
 		} // proc Dispose
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected virtual void Dispose(bool disposing)
 		{
 			if (disposing)
@@ -156,7 +166,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Undo/Redo Management ---------------------------------------------------
+		#region -- Undo/Redo Management -----------------------------------------------
 
 		/*
 		 * TextBox default binding is LostFocus, to support changes in long text, we try to
@@ -305,12 +315,20 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Lua-Interface ----------------------------------------------------------
+		#region -- Lua-Interface ------------------------------------------------------
 
+		/// <summary>Get a resource.</summary>
+		/// <param name="key"></param>
+		/// <returns><c>null</c>, if the resource was not found.</returns>
 		[LuaMember]
 		private object GetResource(object key)
 			=> Control.TryFindResource(key);
 
+		/// <summary>Load a sub control panel.</summary>
+		/// <param name="self"></param>
+		/// <param name="path"></param>
+		/// <param name="initialTable"></param>
+		/// <returns></returns>
 		[LuaMember("requireXaml", true)]
 		private LuaResult LuaRequireXaml(LuaTable self, string path, LuaTable initialTable = null)
 		{
@@ -321,22 +339,37 @@ namespace TecWare.PPSn.UI
 			return new LuaResult(new PpsGenericWpfChildPane(this, parts.xaml, parts.code));
 		} // func LuaRequireXaml
 
+		/// <summary>Create a PpsCommand object.</summary>
+		/// <param name="command"></param>
+		/// <param name="canExecute"></param>
+		/// <returns></returns>
 		[LuaMember("command")]
 		private object LuaCommand(Action<PpsCommandContext> command, Func<PpsCommandContext, bool> canExecute = null)
 			=> new PpsCommand(command, canExecute);
 
+		/// <summary>Create a DataTemplateSelector</summary>
+		/// <param name="func"></param>
+		/// <returns></returns>
 		[LuaMember("templateSelector")]
 		private DataTemplateSelector LuaDataTemplateSelectorCreate(Delegate func)
 			=> new LuaDataTemplateSelector(func);
 
+		/// <summary>Disable the current panel.</summary>
+		/// <returns></returns>
 		[LuaMember("disableUI")]
 		public IPpsProgress DisableUI()
 			=> PpsWindowPaneHelper.DisableUI(PaneControl);
 
+		/// <summary>Get the default view of a collection.</summary>
+		/// <param name="collection"></param>
+		/// <returns></returns>
 		[LuaMember("getView")]
 		private ICollectionView LuaGetView(object collection)
 			=> CollectionViewSource.GetDefaultView(collection);
 
+		/// <summary>Create a new CollectionViewSource of a collection.</summary>
+		/// <param name="collection"></param>
+		/// <returns></returns>
 		[LuaMember("createSource")]
 		private CollectionViewSource LuaCreateSource(object collection)
 		{
@@ -407,13 +440,13 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Load/Unload ------------------------------------------------------------
+		#region -- Load/Unload ----------------------------------------------------------
 
-		private Uri GetTemplateUri(LuaTable arguments, bool throwException)
+		private Uri GetPaneUri(LuaTable arguments, bool throwException)
 		{
 			// get the basic template
-			var xamlFile = arguments.GetOptionalValue("pane", String.Empty);
-			if (String.IsNullOrEmpty(xamlFile))
+			var paneFile = arguments.GetOptionalValue("pane", String.Empty);
+			if (String.IsNullOrEmpty(paneFile))
 			{
 				if (throwException)
 					throw new ArgumentException("pane is missing.");
@@ -422,33 +455,48 @@ namespace TecWare.PPSn.UI
 			}
 
 			// prepare the base
-			return Environment.Request.GetFullUri(xamlFile);
-		} // func GetTemplateUri
+			return Environment.Request.GetFullUri(paneFile);
+		} // func GetPaneUri
 
+		/// <summary>Compare the arguments.</summary>
+		/// <param name="otherArgumens"></param>
+		/// <returns></returns>
 		public virtual PpsWindowPaneCompareResult CompareArguments(LuaTable otherArgumens)
 		{
-			var currentXamlUri = GetTemplateUri(arguments, false);
-			var otherXamlUri = GetTemplateUri(otherArgumens, false);
+			var currentPaneUri = GetPaneUri(arguments, false);
+			var otherPaneUri = GetPaneUri(otherArgumens, false);
 
-			if (Uri.Compare(currentXamlUri, otherXamlUri, UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped, StringComparison.Ordinal) == 0)
+			if (Uri.Compare(currentPaneUri, otherPaneUri, UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped, StringComparison.Ordinal) == 0)
 				return PpsWindowPaneCompareResult.Reload;
 
 			return PpsWindowPaneCompareResult.Incompatible;
 		} // func CompareArguments
 
-		public virtual async Task LoadAsync(LuaTable arguments)
+		/// <summary>Load the content of the panel</summary>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public async Task LoadAsync(LuaTable arguments)
+		{
+			await LoadInternAsync(arguments);
+		} // proc LoadAsync
+
+		/// <summary>Load the content of the panel</summary>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		protected virtual async Task LoadInternAsync(LuaTable arguments)
 		{
 			// save the arguments
 			this.arguments = arguments;
 
 			// prepare the base
-			var xamlUri = GetTemplateUri(arguments, true);
-			fileSource = new BaseWebRequest(new Uri(xamlUri, "."), Environment.Encoding);
+			var paneUri = GetPaneUri(arguments, true);
+			fileSource = new BaseWebRequest(new Uri(paneUri, "."), Environment.Encoding);
 
 			// Load the xaml file and code
-			(var xaml, var code) = await Environment.LoadXamlAsync(fileSource, arguments, xamlUri);
+			(var xaml, var code) = await Environment.LoadPaneDataAsync(fileSource, arguments, paneUri);
 
 			// Create the Wpf-Control
+			v
 			var xamlReader = new XamlReader();
 			control = xamlReader.LoadAsync(xaml.CreateReader()) as FrameworkElement;
 			control.Resources[PpsEnvironment.WindowPaneService] = this;
@@ -479,8 +527,9 @@ namespace TecWare.PPSn.UI
 			OnPropertyChanged(nameof(Title));
 			OnPropertyChanged(nameof(SubTitle));
 			OnPropertyChanged(nameof(HasSideBar));
-		} // proc LoadAsync
-		
+		} // proc LoadInternAsync
+
+		/// <summary>Control is created.</summary>
 		protected virtual void OnControlCreated()
 		{
 			Mouse.AddPreviewMouseDownHandler(Control, Control_MouseDownHandler);
@@ -490,6 +539,9 @@ namespace TecWare.PPSn.UI
 			Keyboard.AddPreviewKeyUpHandler(Control, Control_KeyUpHandler);
 		} // proc OnControlCreated
 
+		/// <summary>Unload the control.</summary>
+		/// <param name="commit"></param>
+		/// <returns></returns>
 		public virtual Task<bool> UnloadAsync(bool? commit = default(bool?))
 		{
 			if (Members.ContainsKey("UnloadAsync"))
@@ -508,13 +560,17 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- LuaTable, OnIndex ------------------------------------------------------
+		#region -- LuaTable, OnIndex --------------------------------------------------
 
+		/// <summary>Also adds logic to find a control by name.</summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
 		protected override object OnIndex(object key)
 			=> base.OnIndex(key) ?? WpfPaneHelper.GetXamlElement(control, key);
 
 		#endregion
 
+		/// <summary>Update all bindings. Push pending values to the source.</summary>
 		[LuaMember]
 		public void UpdateSources()
 		{
@@ -594,8 +650,10 @@ namespace TecWare.PPSn.UI
 		/// <summary>This member is resolved dynamic, that is the reason the FrameworkElement Control is public.</summary>
 		object IPpsWindowPane.Control => control;
 
+		/// <summary>Access the containing window.</summary>
 		[LuaMember]
 		public PpsWindow Window => window;
+		/// <summary>Base web request, for the pane.</summary>
 		[LuaMember]
 		public BaseWebRequest Request => fileSource;
 
@@ -607,6 +665,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Access to the current lua compiler</summary>
 		public Lua Lua => Environment.Lua;
 
+		/// <summary>Get the registered commands.</summary>
 		public IEnumerable<object> Commands
 		{
 			get
@@ -619,6 +678,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Interface of the hosted control.</summary>
 		public IPpsPWindowPaneControl PaneControl => control as IPpsPWindowPaneControl;
 
+		/// <summary>Is the current pane dirty.</summary>
 		public virtual bool IsDirty => false;
 	} // class PpsGenericWpfWindowContext
 
@@ -630,16 +690,20 @@ namespace TecWare.PPSn.UI
 	/// <summary>Base control for the wpf generic pane.</summary>
 	public class PpsGenericWpfControl : ContentControl, ILuaEventSink, IPpsPWindowPaneControl
 	{
+		/// <summary>Title of the pane.</summary>
 		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(String.Empty));
+		/// <summary>Sub title of the pane.</summary>
 		public static readonly DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(String.Empty));
+		/// <summary>Has this pane a sidebar on left side.</summary>
 		public static readonly DependencyProperty HasSideBarProperty = DependencyProperty.Register(nameof(HasSideBar), typeof(bool), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(false));
 		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(null));
+		/// <summary>Command list.</summary>
 		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
 
 		private readonly PpsProgressStack progressStack;
 
 		// for corrent Binding this Command must be a Property - not a Field
-		// todo: change
+		// todo: change, Interface and flags for the current options
 		private static readonly RoutedCommand setCharmCommand = new RoutedCommand("SetCharm", typeof(PpsGenericWpfControl));
 		public RoutedCommand SetCharmCommand { get { return setCharmCommand; } }
 		
@@ -649,6 +713,7 @@ namespace TecWare.PPSn.UI
 		public PpsGenericWpfControl()
 			: base()
 		{
+			// initialize commands
 			var commands = new PpsUICommandCollection();
 			commands.CollectionChanged += Commands_CollectionChanged;
 			SetValue(commandsPropertyKey, commands);
@@ -661,7 +726,6 @@ namespace TecWare.PPSn.UI
 				new CommandBinding(setCharmCommand,
 					(sender, e) =>
 					{
-						//MessageBox.Show("tert");
 						((dynamic)Pane.Window).CharmObject = ((LuaTable)e.Parameter)["Object"];
 					},
 					(sender, e) =>
@@ -680,10 +744,8 @@ namespace TecWare.PPSn.UI
 		#region -- ILuaEventSink Member ---------------------------------------------------
 
 		void ILuaEventSink.CallMethod(string methodName, object[] args)
-		{
-			Pane.CallMember(methodName, args);
-		} // proc ILuaEventSink.CallMethod
-
+			=> Pane.CallMember(methodName, args);
+		
 		#endregion
 
 		#region -- Command Handling -------------------------------------------------------
@@ -707,6 +769,7 @@ namespace TecWare.PPSn.UI
 			}
 		} // proc Commands_CollectionChanged
 
+		/// <summary></summary>
 		protected override IEnumerator LogicalChildren
 		{
 			get
@@ -760,29 +823,6 @@ namespace TecWare.PPSn.UI
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
 		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
 	} // class PpsGenericWpfControl
-
-	#endregion
-
-	#region -- class PpsContentTemplateSelector -----------------------------------------
-
-	//public class PpsContentTemplateSelector : DataTemplateSelector
-	//{
-	//	public override DataTemplate SelectTemplate(object item, DependencyObject container)
-	//	{
-	//		var row = item as Data.PpsDataRow;
-	//		if (row == null)
-	//			return null;
-
-	//		var control = container as FrameworkElement;
-	//		if (control == null)
-	//			return null;
-
-	//		var r = (DataTemplate)control.FindResource(row.Table.TableName);
-	//		return r;
-	//		//var r = control.TryFindResource(row.Table.TableName);
-	//		//return r as DataTemplate;
-	//	}
-	//} // class PpsContentTemplateSelector
 
 	#endregion
 }
