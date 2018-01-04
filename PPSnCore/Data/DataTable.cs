@@ -950,6 +950,9 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Notifies if a row is mnodified.</summary>
 		/// <param name="row"></param>
+		/// <param name="columnIndex"></param>
+		/// <param name="oldValue"></param>
+		/// <param name="newValue"></param>
 		protected internal virtual void OnRowModified(PpsDataRow row, int columnIndex, object oldValue, object newValue)
 		{
 			dataset.ExecuteEvent(new PpsDataRowModifiedChangedEvent(this, row, columnIndex, oldValue, newValue));
@@ -1120,6 +1123,9 @@ namespace TecWare.PPSn.Data
 
 		internal void ClearInternal()
 		{
+			for (var i = 0; i < currentRows.Count; i++)
+				OnRowRemoved(currentRows[i], i);
+
 			rows.Clear();
 			currentRows.Clear();
 			originalRows.Clear();
@@ -1374,6 +1380,7 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Reads data of an table.</summary>
 		/// <param name="x"></param>
+		/// <param name="combineData"></param>
 		internal void Read(XElement x, bool combineData)
 		{
 			if (!combineData)
@@ -1407,6 +1414,8 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc Read
 
+		/// <summary>Serialize data as xml.</summary>
+		/// <param name="x"></param>
 		public void Write(XmlWriter x)
 		{
 			// Schreibe die Datenzeilen

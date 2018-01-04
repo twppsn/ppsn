@@ -754,10 +754,6 @@ namespace TecWare.PPSn.Data
 			if (x.Name != xnData)
 				throw new ArgumentException();
 
-			// fix:
-			if (!combineData)
-				combineData = (this.Tables["Head", false]?.Count ?? 0) > 0;
-
 			isReading = true;
 			try
 			{
@@ -778,6 +774,8 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc Read
 
+		/// <summary>Write the dataset in a xml.</summary>
+		/// <param name="x"></param>
 		public void Write(XmlWriter x)
 		{
 			x.WriteStartElement(xnData.LocalName);
@@ -791,6 +789,8 @@ namespace TecWare.PPSn.Data
 			x.WriteEndElement();
 		} // proc Write
 
+		/// <summary>Write the dataset in a xml and return the data as string.</summary>
+		/// <returns></returns>
 		public string GetAsString()
 		{
 			var sb = new StringBuilder();
@@ -800,12 +800,14 @@ namespace TecWare.PPSn.Data
 			return sb.ToString();
 		} // func GetAsString
 
+		/// <summary>Commit current state to original.</summary>
 		public void Commit()
 		{
 			foreach (PpsDataTable t in Tables)
 				t.Commit();
 		} // proc Commit
 
+		/// <summary>Reset the values to the original.</summary>
 		public void Reset()
 		{
 			foreach (PpsDataTable t in Tables)
