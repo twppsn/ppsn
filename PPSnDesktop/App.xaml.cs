@@ -58,16 +58,21 @@ namespace TecWare.PPSn
 						{
 							if (errorInfo != null)
 								await splashWindow.SetErrorAsync(errorInfo, errorEnvironment);
-							var t = await splashWindow.ShowLoginAsync(environment, userInfo);
-							if (t == null)
+
+							try
+							{
+								var t = await splashWindow.ShowLoginAsync(environment, userInfo);
+								if (t == null)
+									return false;
+
+								environment = t.Item1;
+								userInfo = t.Item2;
+								errorInfo = null;
+							}
+							finally
 							{
 								errorEnvironment?.Dispose();
-								return false;
 							}
-
-							environment = t.Item1;
-							userInfo = t.Item2;
-							errorInfo = null;
 						}
 
 						// close the current environment
