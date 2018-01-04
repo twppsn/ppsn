@@ -1180,8 +1180,8 @@ namespace TecWare.PPSn.Server.Wpf
 			var updateTags = new LuaTable
 			{
 				["upsert"] = "dbo.ObjT",
-				["columnList"] = new LuaTable { "Id", "ObjKId", "Key", "UserId", "Class", "Value", "CreateDate" },
-				["on"] = new LuaTable { "ObjKId", "Key", "UserId" },
+				["columnList"] = new LuaTable { "Id", "ObjKId", "ObjRId", "Key", "UserId", "Class", "Value", "CreateDate" },
+				["on"] = new LuaTable { "ObjKId", "ObjRId", "Key", "Class", "UserId" },
 				["nmsrc"] = new LuaTable { ["delete"] = true, ["where"] = "DST.[Id] = @Id" }
 			};
 

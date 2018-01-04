@@ -1377,6 +1377,7 @@ namespace TecWare.PPSn
 			private readonly DbCommand existsCommand;
 			private readonly DbParameter parameterExistsId;
 			private readonly DbParameter parameterExistsObjectId;
+			private readonly DbParameter parameterExistsClass;
 			private readonly DbParameter parameterExistsKey;
 			private readonly DbParameter parameterExistsUserId;
 
@@ -1408,9 +1409,10 @@ namespace TecWare.PPSn
 			public ProcessBatchTags(PpsMasterDataTransaction transaction, PpsMasterData masterData, string tableName, bool isFull)
 				: base(transaction, masterData, tableName, isFull)
 			{
-				existsCommand = transaction.CreateNativeCommand("SELECT [Id] FROM main.[ObjectTags] WHERE [Id] = @OldId OR ([ObjectId] = @ObjectId AND [Key] = @Key AND [UserId] = @UserId)");
+				existsCommand = transaction.CreateNativeCommand("SELECT [Id] FROM main.[ObjectTags] WHERE [Id] = @OldId OR ([ObjectId] = @ObjectId AND [Key] = @Key AND ifnull([LocalClass], [Class]) = @Class AND [UserId] = @UserId)");
 				parameterExistsId = existsCommand.AddParameter("@OldId", DbType.Int64);
 				parameterExistsObjectId = existsCommand.AddParameter("@ObjectId", DbType.Int64);
+				parameterExistsClass = existsCommand.AddParameter("@Class", DbType.Int32);
 				parameterExistsKey = existsCommand.AddParameter("@Key", DbType.String);
 				parameterExistsUserId = existsCommand.AddParameter("@UserId", DbType.Int64);
 
@@ -1481,6 +1483,7 @@ namespace TecWare.PPSn
 					// check if the row exists
 					parameterExistsId.Value = remoteId;
 					parameterExistsObjectId.Value = remoteObjectId;
+					parameterExistsClass.Value = remoteClass;
 					parameterExistsKey.Value = remoteKey;
 					parameterExistsUserId.Value = remoteUserId;
 
@@ -3145,7 +3148,7 @@ namespace TecWare.PPSn
 		{
 			var index = Array.FindIndex(SqlLiteTypeMapping, c => c.DbType == type);
 			return index >= 0
-				? Procs.ChangeType(value, SqlLiteTypeMapping[index].Type)
+				? value == null ? (object)DBNull.Value : (object)Procs.ChangeType(value, SqlLiteTypeMapping[index].Type)
 				: throw new ArgumentOutOfRangeException(nameof(type), type, $"DB-Type {type} is not supported.");
 		} // func ConvertStringToSQLiteValue
 
