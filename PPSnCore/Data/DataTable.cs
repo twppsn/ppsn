@@ -1547,9 +1547,8 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataFilter ------------------------------------------------------
+	#region -- class PpsDataFilter ----------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Base class for a bindable filter of rows in a table.</summary>
 	public abstract class PpsDataFilter : IPpsDataView, IDisposable
 	{
@@ -1565,6 +1564,8 @@ namespace TecWare.PPSn.Data
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
+		/// <summary>Datafilter for a data table-</summary>
+		/// <param name="table">DataTable to filter</param>
 		protected PpsDataFilter(PpsDataTable table)
 		{
 			this.table = table ?? throw new ArgumentNullException();
@@ -1640,8 +1641,8 @@ namespace TecWare.PPSn.Data
 							var oldIndex = rows.IndexOf(row);
 							if (oldIndex != -1)
 							{
-								OnCollectionRemove(row, oldIndex);
 								rows.RemoveAt(oldIndex);
+								OnCollectionRemove(row, oldIndex);
 							}
 						}
 					}
@@ -1666,8 +1667,8 @@ namespace TecWare.PPSn.Data
 					var oldIndex = rows.IndexOf(e.Row);
 					if (oldIndex != -1)
 					{
-						OnCollectionRemove(e.Row, oldIndex);
 						rows.RemoveAt(oldIndex);
+						OnCollectionRemove(e.Row, oldIndex);
 					}
 				}
 			}

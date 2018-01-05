@@ -879,6 +879,8 @@ namespace TecWare.PPSn.Data
 		 * Zuerst werden die Properties ausgelöst, wenn diese sich beruhigt haben started die nächste Ebene.
 		 */
 
+		/// <summary>Raise all events defered.</summary>
+		/// <returns></returns>
 		public IDisposable DeferedEvents()
 		{
 			if (inChanged)

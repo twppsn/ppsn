@@ -33,10 +33,11 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public interface IPpsActiveDataSetOwner
 	{
+		/// <summary></summary>
 		LuaTable Events { get; }
 	} // interface IPpsActiveDataSetOwner
 
-	/// <summary></summary>
+	/// <summary>Lua friendly implementation for IPpsActiveDataSetOwner.</summary>
 	public class PpsActiveDataSetOwner : LuaTable, IPpsActiveDataSetOwner
 	{
 		LuaTable IPpsActiveDataSetOwner.Events => this;
@@ -46,6 +47,7 @@ namespace TecWare.PPSn.Data
 
 	#region -- interface IPpsActiveDataSets -------------------------------------------
 
+	/// <summary></summary>
 	public interface IPpsActiveDataSets : IReadOnlyCollection<PpsDataSetDesktop>
 	{
 		/// <summary>Register a schema source.</summary>
@@ -85,11 +87,17 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public class PpsDataTableDefinitionDesktop : PpsDataTableDefinitionClient
 	{
+		/// <summary></summary>
+		/// <param name="dataset"></param>
+		/// <param name="xTable"></param>
 		public PpsDataTableDefinitionDesktop(PpsDataSetDefinitionClient dataset, XElement xTable)
 			: base(dataset, xTable)
 		{
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="dataset"></param>
+		/// <returns></returns>
 		public override PpsDataTable CreateDataTable(PpsDataSet dataset)
 			=> new PpsDataTableDesktop(this, dataset);
 	} // class PpsDataTableDefinitionDesktop
@@ -111,11 +119,15 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsObjectExtendedValue -------------------------------------------
 
+	/// <summary>Object reference.</summary>
 	public sealed class PpsObjectExtendedValue : PpsDataRowExtentedValue, IPpsDataRowGetGenericValue
 	{
 		private readonly IPpsObjectBasedDataSet dataset;
 		private readonly PpsEnvironment environment;
 
+		/// <summary></summary>
+		/// <param name="row"></param>
+		/// <param name="column"></param>
 		public PpsObjectExtendedValue(PpsDataRow row, PpsDataColumnDefinition column)
 			: base(row, column)
 		{
@@ -123,20 +135,27 @@ namespace TecWare.PPSn.Data
 			this.dataset = (row.Table.DataSet as IPpsObjectBasedDataSet) ?? throw new ArgumentException("Dataset does not implement IPpsObjectBasedDataSet.");
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="x"></param>
 		protected override void Read(XElement x)
 		{
 			// we do not load something
 		} // proc Read
 
+		/// <summary></summary>
+		/// <param name="x"></param>
 		protected override void Write(XElement x)
 		{
 			// should not get called, if isnull is true
 			x.Add(new XElement("o", dataset.Object.Id));
 		} // proc Write
 
+		/// <summary>Get object id.</summary>
 		public long Id => dataset.Object?.Id ?? 0;
+		/// <summary>Get object instance.</summary>
 		public object Value => dataset?.Object;
 
+		/// <summary>Is the value null.</summary>
 		public override bool IsNull => dataset.Object == null;
 	} // class PpsObjectExtendedValue
 
@@ -291,6 +310,7 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsMasterDataExtendedValue ---------------------------------------
 
+	/// <summary>Extent column value, that references PpsMasterDataRow's.</summary>
 	public sealed class PpsMasterDataExtendedValue : PpsDataRowObjectExtendedValue
 	{
 		private readonly PpsEnvironment environment;
@@ -298,6 +318,9 @@ namespace TecWare.PPSn.Data
 
 		private WeakReference<PpsMasterDataRow> referencedRow = null; // pointer to the actual row
 		
+		/// <summary></summary>
+		/// <param name="row"></param>
+		/// <param name="column"></param>
 		public PpsMasterDataExtendedValue(PpsDataRow row, PpsDataColumnDefinition column)
 			: base(row, column)
 		{
@@ -309,6 +332,10 @@ namespace TecWare.PPSn.Data
 			) ?? throw new ArgumentNullException("refTable");
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="firePropertyChanged"></param>
+		/// <returns></returns>
 		protected override bool SetGenericValue(object newValue, bool firePropertyChanged)
 		{
 			if (newValue == PpsDataRow.NotSet)
@@ -364,23 +391,34 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataSetDefinitionDesktop ----------------------------------------
+	#region -- class PpsDataSetDefinitionDesktop --------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Desktop extensions.</summary>
 	public class PpsDataSetDefinitionDesktop : PpsDataSetDefinitionClient
 	{
+		/// <summary></summary>
+		/// <param name="environment"></param>
+		/// <param name="schema"></param>
+		/// <param name="xSchema"></param>
 		public PpsDataSetDefinitionDesktop(PpsEnvironment environment, string schema, XElement xSchema)
 			: base(environment, schema, xSchema)
 		{
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="c"></param>
+		/// <returns></returns>
 		protected override PpsDataTableDefinitionClient CreateDataTable(XElement c)
 			=> new PpsDataTableDefinitionDesktop(this, c);
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override PpsDataSet CreateDataSet()
 			=> new PpsDataSetDesktop(this, (PpsEnvironment)Shell);
 
+		/// <summary>Get client site column types.</summary>
+		/// <param name="dataType">DataType name.</param>
+		/// <returns>Client site column type.</returns>
 		public override Type GetColumnType(string dataType)
 		{
 			if (String.Compare(dataType, "ppsObject", StringComparison.OrdinalIgnoreCase) == 0)
@@ -393,6 +431,7 @@ namespace TecWare.PPSn.Data
 				return base.GetColumnType(dataType);
 		} // func GetColumnType
 
+		/// <summary>Get the base environment.</summary>
 		public PpsEnvironment Environment => (PpsEnvironment)base.Shell;
 
 		internal static PpsEnvironment GetEnvironmentFromColumn(PpsDataColumnDefinition column)
@@ -403,23 +442,29 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsDataCollectionView --------------------------------------------
 
-	/// <summary>Special collection view for PpsDataTable</summary>
+	/// <summary>Special collection view for PpsDataTable, that supports IDataRowEnumerable</summary>
 	public class PpsDataCollectionView : ListCollectionView, IDataRowEnumerable
 	{
 		private readonly IDisposable detachView;
 
+		/// <summary>Collection view for PpsDataTable's.</summary>
+		/// <param name="dataTable"></param>
 		public PpsDataCollectionView(IPpsDataView dataTable)
 			: base(dataTable)
 		{
 			this.detachView = dataTable as IDisposable;
 		} // ctor
 
+		/// <summary>Detach view from CollectionView.</summary>
 		public override void DetachFromSourceCollection()
 		{
 			base.DetachFromSourceCollection();
 			detachView?.Dispose();
 		} // proc DetachFromSourceCollection
 
+		/// <summary>Implement a add method, that supports a LuaTable as argument.</summary>
+		/// <param name="values">Values for the new row.</param>
+		/// <returns>Added row.</returns>
 		public PpsDataRow Add(LuaTable values)
 		{
 			var row = DataView.NewRow(DataView.Table.GetDataRowValues(values), null);
@@ -427,6 +472,8 @@ namespace TecWare.PPSn.Data
 			return row;
 		} // func Add
 
+		/// <summary>Auto Commit rows.</summary>
+		/// <param name="args"></param>
 		protected override void OnCollectionChanged(NotifyCollectionChangedEventArgs args)
 		{
 			base.OnCollectionChanged(args);
@@ -437,6 +484,11 @@ namespace TecWare.PPSn.Data
 				CommitEdit();
 		} // proc OnCollectionChanged
 
+		/// <summary>Apply a sort expression to the collection view.</summary>
+		/// <param name="expressions"></param>
+		/// <param name="lookupNative"></param>
+		/// <returns></returns>
+		/// <remarks>This implementation is not stackable, like on requests.</remarks>
 		public IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
 		{
 			// update search expression
@@ -449,6 +501,11 @@ namespace TecWare.PPSn.Data
 			return this; // we do not create a new collectionview -> it should be unique for the current context
 		} // func ApplyFilter
 
+		/// <summary>Apply a filter to the collection view.</summary>
+		/// <param name="expression"></param>
+		/// <param name="lookupNative"></param>
+		/// <returns></returns>
+		/// <remarks>This implementation is not stackable, like on requests.</remarks>
 		public IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 		{
 			var currentParameter = ParameterExpression.Parameter(typeof(object), "#current");
@@ -469,14 +526,16 @@ namespace TecWare.PPSn.Data
 			return this; // we do not create a new collectionview -> it should be unique for the current context
 		} // func ApplyFilter
 
-		public IDataRowEnumerable ApplyColumns(IEnumerable<PpsDataColumnExpression> columns) 
+		
+		IDataRowEnumerable IDataRowEnumerable.ApplyColumns(IEnumerable<PpsDataColumnExpression> columns) 
 			=> throw new NotSupportedException(); // it is not allowed to touch columns
 
 		IEnumerator<IDataRow> IEnumerable<IDataRow>.GetEnumerator()
 			=> this.Cast<IDataRow>().GetEnumerator();
 
+		/// <summary>Parent row, of the current filter.</summary>
 		public PpsDataRow Parent => (InternalList as PpsDataRelatedFilter)?.Parent;
-
+		/// <summary>Get the DataView, that is filtered.</summary>
 		public IPpsDataView DataView => (IPpsDataView)base.SourceCollection;
 	} // class PpsDataCollectionView
 
@@ -484,55 +543,74 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsDataRelatedFilterDesktop --------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Implements the ICollectionViewFactory to create the PpsDataCollectionView</summary>
 	public sealed class PpsDataRelatedFilterDesktop : PpsDataRelatedFilter, ICollectionViewFactory
 	{
+		/// <summary></summary>
+		/// <param name="parentRow"></param>
+		/// <param name="relation"></param>
 		public PpsDataRelatedFilterDesktop(PpsDataRow parentRow, PpsDataTableRelationDefinition relation) 
 			: base(parentRow, relation)
 		{
 		} // ctor
 
+		/// <summary>Create the PpsDataCollectionView.</summary>
+		/// <returns></returns>
 		public ICollectionView CreateView()
 			=> new PpsDataCollectionView(this);
 	} // class PpsDataRelatedFilterDesktop
 
 	#endregion
 
-	#region -- class PpsDataTableDesktop ------------------------------------------------
+	#region -- class PpsDataTableDesktop ----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Implements the ICollectionViewFactory to create the PpsDataCollectionView</summary>
 	public class PpsDataTableDesktop : PpsDataTable, ICollectionViewFactory
 	{
+		/// <summary></summary>
+		/// <param name="tableDefinition"></param>
+		/// <param name="dataset"></param>
 		public PpsDataTableDesktop(PpsDataTableDefinition tableDefinition, PpsDataSet dataset) 
 			: base(tableDefinition, dataset)
 		{
 		} // ctor
 
+		/// <summary>Create the PpsDataCollectionView.</summary>
+		/// <returns></returns>
 		public ICollectionView CreateView()
 			=> new PpsDataCollectionView(this);
 
+		/// <summary>Create PpsDataRelatedFilterDesktop for the ICollectionViewFactory.</summary>
+		/// <param name="row"></param>
+		/// <param name="relation"></param>
+		/// <returns></returns>
 		public override PpsDataFilter CreateRelationFilter(PpsDataRow row, PpsDataTableRelationDefinition relation)
 			=> new PpsDataRelatedFilterDesktop(row, relation);
 	} // class PpsDataTableDesktop
 
 	#endregion
 
-	#region -- class PpsDataSetDesktop --------------------------------------------------
+	#region -- class PpsDataSetDesktop ------------------------------------------------
 	
 	// IsLoaded-> Load, Unload should be done by this class, no external call allowed!
+	/// <summary>Extents the DataSet with an owner pattern.</summary>
 	public class PpsDataSetDesktop : PpsDataSetClient
 	{
 		private readonly object datasetOwnerLock = new object();
 		private readonly List<IPpsActiveDataSetOwner> datasetOwner = new List<IPpsActiveDataSetOwner>(); // list with document owners
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="definition"></param>
+		/// <param name="environment"></param>
 		public PpsDataSetDesktop(PpsDataSetDefinitionDesktop definition, PpsEnvironment environment)
 			: base(definition, environment)
 		{
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="owner"></param>
 		public void RegisterOwner(IPpsActiveDataSetOwner owner)//<-- verschieben?
 		{
 			lock (datasetOwnerLock)
@@ -548,6 +626,8 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc RegisterOwner
 
+		/// <summary></summary>
+		/// <param name="owner"></param>
 		public void UnregisterOwner(IPpsActiveDataSetOwner owner)
 		{
 			lock (datasetOwnerLock)
