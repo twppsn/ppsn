@@ -95,10 +95,14 @@ namespace TecWare.PPSn
 
 	#region -- enum PpsMasterDataTransactionLevel ---------------------------------------
 
+	/// <summary>Access level for the database transactions</summary>
 	public enum PpsMasterDataTransactionLevel
 	{
+		/// <summary>Read only access.</summary>
 		ReadUncommited,
+		/// <summary>Read only access, only on committed data.</summary>
 		ReadCommited,
+		/// <summary>Write access.</summary>
 		Write
 	} // enum PpsMasterDataTransactionLevel
 
@@ -786,7 +790,7 @@ namespace TecWare.PPSn
 
 		private bool isDisposed = false;
 		private readonly object synchronizationLock = new object();
-		private ThreadLocal<bool> isSynchronizationRunning = new ThreadLocal<bool>(()=>false, false);
+		private ThreadLocal<bool> isSynchronizationRunning = new ThreadLocal<bool>(() => false, false);
 		private bool updateUserInfo = false;
 
 		private readonly List<PpsDataEvent> collectedEvents = new List<PpsDataEvent>();
@@ -2052,7 +2056,13 @@ namespace TecWare.PPSn
 					break;
 				case PpsWriteTransactionState.OtherThread: // cancel, because it will block soon
 					if (enforce)
-						throw new InvalidOperationException("Synchronization will block.");
+					{
+						using (var cancellationSource = new CancellationTokenSource(360000))
+						{
+							if (!await WaitForWriteTransactionAsync(cancellationSource.Token))
+								throw new InvalidOperationException("Transaction is blocked.");
+						}
+					}
 					return false;
 			}
 
@@ -2777,12 +2787,20 @@ namespace TecWare.PPSn
 		private readonly ManualResetEventAsync currentTransactionLock = new ManualResetEventAsync();
 		private PpsMasterRootTransaction currentTransaction;
 
+		/// <summary>Create a simple transaction for read access only..</summary>
+		/// <returns></returns>
 		public PpsMasterDataTransaction CreateReadUncommitedTransaction()
 			=> new PpsMasterReadTransaction(connection);
 
+		/// <summary>Create a transaction with an access level.</summary>
+		/// <param name="level">Level of access.</param>
+		/// <returns></returns>
 		public Task<PpsMasterDataTransaction> CreateTransactionAsync(PpsMasterDataTransactionLevel level)
 			=> CreateTransactionAsync(level, CancellationToken.None);
 
+		/// <summary>Create a transaction with write access.</summary>
+		/// <param name="nonBlocking">Should the call block the execution.</param>
+		/// <returns><c>null</c>, if no transaction was created.</returns>
 		private async Task<PpsMasterDataTransaction> CreateWriteTransactionAsync(bool nonBlocking)
 		{
 			if (nonBlocking)
@@ -2794,6 +2812,11 @@ namespace TecWare.PPSn
 				return await CreateTransactionAsync(PpsMasterDataTransactionLevel.Write, CancellationToken.None, null);
 		} // func CreateWriteTransactionAsync
 
+		/// <summary>Create a database transaction.</summary>
+		/// <param name="level">Level of access.</param>
+		/// <param name="cancellationToken">Cancellation token.</param>
+		/// <param name="transactionJoinTo">Allow the transaction to join with an other transaction on a different thread.</param>
+		/// <returns><c>null</c>, if no transaction was created.</returns>
 		public async Task<PpsMasterDataTransaction> CreateTransactionAsync(PpsMasterDataTransactionLevel level, CancellationToken cancellationToken, PpsMasterDataTransaction transactionJoinTo = null)
 		{
 			if (level == PpsMasterDataTransactionLevel.ReadUncommited) // we done care about any transaction
@@ -2871,6 +2894,8 @@ namespace TecWare.PPSn
 			}
 		} // proc ClearTransaction
 
+		/// <summary>Get the current active transaction of the current thread.</summary>
+		/// <returns></returns>
 		public PpsMasterDataTransaction GetCurrentTransaction()
 		{
 			lock (currentTransactionLock)
@@ -2881,6 +2906,8 @@ namespace TecWare.PPSn
 			return null;
 		} // func GetCurrentTransaction
 
+		/// <summary>Get the state of the current write transaction.</summary>
+		/// <returns></returns>
 		public PpsWriteTransactionState WriteTransactionState()
 		{
 			lock (currentTransactionLock)
@@ -2894,6 +2921,25 @@ namespace TecWare.PPSn
 			}
 		} // func WriteTransactionState
 
+		/// <summary>Wait for write transaction on a different thread.</summary>
+		/// <param name="cancellationToken"></param>
+		/// <returns></returns>
+		public Task<bool> WaitForWriteTransactionAsync(CancellationToken cancellationToken)
+		{
+			lock (currentTransactionLock)
+			{
+				if (currentTransaction == null
+					|| currentTransaction.CheckAccess())
+					return Task.FromResult(true);
+				else
+					return currentTransactionLock.WaitAsync(cancellationToken);
+			}
+		} // func WaitForWriteTransactionAsync
+
+		/// <summary>Create a native command, without any transaction handling</summary>
+		/// <param name="commandText"></param>
+		/// <returns></returns>
+		[EditorBrowsable(EditorBrowsableState.Advanced)]
 		public DbCommand CreateNativeCommand(string commandText = null)
 			=> new SQLiteCommand(commandText, connection, null);
 
