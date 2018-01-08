@@ -33,6 +33,7 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Stuff;
+using TecWare.PPSn.UI;
 using static TecWare.PPSn.StuffUI;
 
 namespace TecWare.PPSn
@@ -1010,6 +1011,10 @@ namespace TecWare.PPSn
 			else
 				return null;
 		} // proc BlockAllUI
+
+		/// <summary>Lua ui-wpf framwework.</summary>
+		[LuaMember("UI")]
+		public LuaUI LuaUI { get; } = new LuaUI();
 
 		#endregion
 	} // class PpsEnvironment

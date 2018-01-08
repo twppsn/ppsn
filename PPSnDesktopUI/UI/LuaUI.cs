@@ -21,6 +21,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Xaml;
 using System.Xaml.Schema;
@@ -33,7 +34,8 @@ namespace TecWare.PPSn.UI
 	#region -- class LuaWpfCreator ----------------------------------------------------
 
 	/// <summary>Table to create new wpf classes.</summary>
-	public class LuaWpfCreator : LuaTable
+	public class LuaWpfCreator<T> : LuaTable
+		where T : class
 	{
 		// it could be also implemented directly through the dynamic language runtime.
 		// currenlty, there is no strong reason for the LuaTable inheritance.
@@ -49,10 +51,10 @@ namespace TecWare.PPSn.UI
 			IXamlTypeResolver, 
 			IXamlNamespaceResolver
 		{
-			private readonly LuaWpfCreator creator;
+			private readonly LuaWpfCreator<T> creator;
 			private readonly XamlMember member;
 
-			public LuaWpfServiceProvider(LuaWpfCreator creator, XamlMember member)
+			public LuaWpfServiceProvider(LuaWpfCreator<T> creator, XamlMember member)
 			{
 				this.creator = creator;
 				this.member = member;
@@ -138,15 +140,23 @@ namespace TecWare.PPSn.UI
 
 		private readonly LuaUI ui;
 		private readonly XamlType type;
-		private object instance;
+		private T instance;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
 		/// <param name="ui"></param>
+		/// <param name="instance"></param>
+		public LuaWpfCreator(LuaUI ui, T instance)
+			:this(ui, ui.GetXamlType(typeof(T)), instance)
+		{
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="ui"></param>
 		/// <param name="type"></param>
 		/// <param name="instance"></param>
-		public LuaWpfCreator(LuaUI ui, XamlType type, object instance = null)
+		public LuaWpfCreator(LuaUI ui, XamlType type, T instance)
 		{
 			this.ui = ui;
 			this.type = type;
@@ -155,7 +165,7 @@ namespace TecWare.PPSn.UI
 
 		private void CreateDefaultInstance()
 		{
-			instance = type.Invoker.CreateInstance(Array.Empty<object>());
+			instance = (T)type.Invoker.CreateInstance(Array.Empty<object>());
 		} // proc CreateDefaultInstance
 
 		#endregion
@@ -252,7 +262,16 @@ namespace TecWare.PPSn.UI
 					if (!xamlValueType.CanAssignTo(xamlMember.Type) && xamlMember.TypeConverter != null) // is there a converter
 					{
 						if (xamlMember.TypeConverter.ConverterType != null) // real converter
-							value = xamlMember.TypeConverter.ConverterInstance.ConvertFrom(new LuaWpfServiceProvider(this, xamlMember), CultureInfo.InvariantCulture, value);
+						{
+							try
+							{
+								value = xamlMember.TypeConverter.ConverterInstance.ConvertFrom(new LuaWpfServiceProvider(this, xamlMember), CultureInfo.InvariantCulture, value);
+							}
+							catch (Exception e)
+							{
+								throw new FormatException($"{type.Name}.{xamlMember.Name} could not set with '{value?.ToString()}'.", e);
+							}
+						}
 						else if (xamlMember.TypeConverter.TargetType != null) // simple converter
 							value = Procs.ChangeType(value, xamlMember.TypeConverter.TargetType.UnderlyingType);
 					}
@@ -263,45 +282,53 @@ namespace TecWare.PPSn.UI
 			xamlMember.Invoker.SetValue(Instance, value);
 		} // func SetXamlMemberValue
 
+		/// <summary></summary>
+		/// <param name="t"></param>
+		public void SetTableMembers(LuaTable t)
+		{
+			// call set member for all value
+			foreach (var kv in t.Values)
+				SetValue(kv.Key, kv.Value);
+		} // proc SetTableMembers
+
+		private void CreateInstanceWithArguments(object[] args)
+		{
+			if (instance != null)
+				throw new ArgumentException("Instance already constructed.");
+
+			// convert the position arguments
+			var argumentTypes = type.GetPositionalParameters(args.Length);
+			var arguments = new object[argumentTypes.Count];
+			for (var i = 0; i < arguments.Length; i++)
+			{
+				var value = args[i];
+				if (value != null)
+				{
+					var xamlValueType = type.SchemaContext.GetXamlType(args[i].GetType());
+					var xamlTypeTo = argumentTypes[i];
+					if (!xamlValueType.CanAssignTo(xamlTypeTo) && xamlTypeTo.TypeConverter != null) // is there a converter
+					{
+						if (xamlTypeTo.TypeConverter != null) // real converter
+							value = xamlTypeTo.TypeConverter.ConverterInstance.ConvertFrom(new LuaWpfServiceProvider(this, null), CultureInfo.InvariantCulture, value);
+						else if (xamlTypeTo.TypeConverter.TargetType != null) // simple converter
+							value = Procs.ChangeType(value, xamlTypeTo.TypeConverter.TargetType.UnderlyingType);
+					}
+				}
+				arguments[i] = value;
+			}
+
+			instance = (T)type.Invoker.CreateInstance(arguments);
+		} // proc CreateInstanceWithArguments
+
 		/// <summary>Initialize the instance with one LuaTable or use the contructor.</summary>
 		/// <param name="args"></param>
 		/// <returns>Instance of the constructed instance.</returns>
 		protected override LuaResult OnCall(object[] args)
 		{
 			if (args.Length == 1 && args[0] is LuaTable t)
-			{
-				// call set member for all value
-				foreach (var kv in t.Values)
-					OnNewIndex(kv.Key, kv.Value);
-			}
+				SetTableMembers(t);
 			else if (args.Length > 0)
-			{
-				if (instance != null)
-					throw new ArgumentException("Instance already constructed.");
-
-				// convert the position arguments
-				var argumentTypes = type.GetPositionalParameters(args.Length);
-				var arguments = new object[argumentTypes.Count];
-				for (var i = 0; i < arguments.Length; i++)
-				{
-					var value = args[i];
-					if (value != null)
-					{
-						var xamlValueType = type.SchemaContext.GetXamlType(args[i].GetType());
-						var xamlTypeTo = argumentTypes[i];
-						if (!xamlValueType.CanAssignTo(xamlTypeTo) && xamlTypeTo.TypeConverter != null) // is there a converter
-						{
-							if (xamlTypeTo.TypeConverter != null) // real converter
-								value = xamlTypeTo.TypeConverter.ConverterInstance.ConvertFrom(new LuaWpfServiceProvider(this, null), CultureInfo.InvariantCulture, value);
-							else if (xamlTypeTo.TypeConverter.TargetType != null) // simple converter
-								value = Procs.ChangeType(value, xamlTypeTo.TypeConverter.TargetType.UnderlyingType);
-						}
-					}
-					arguments[i] = value;
-				}
-
-				instance = type.Invoker.CreateInstance(arguments);
-			}
+				CreateInstanceWithArguments(args);
 
 			return new LuaResult(Instance);
 		} // func OnCall
@@ -342,6 +369,9 @@ namespace TecWare.PPSn.UI
 			else if (key is int index)
 			{
 				var xamlMember = type.ContentProperty;
+				if (xamlMember == null)
+					throw new ArgumentNullException(nameof(XamlType.ContentProperty), $"Type '{type.Name}' has no {nameof(XamlType.ContentProperty)}.");
+
 				if (xamlMember.Type.IsCollection)
 				{
 					var collectionValue = xamlMember.Invoker.GetValue(Instance);
@@ -371,7 +401,7 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		/// <summary>Return the current instance.</summary>
-		public object Instance
+		public T Instance
 		{
 			get
 			{
@@ -381,6 +411,9 @@ namespace TecWare.PPSn.UI
 			}
 		} // prop Instance
 
+		/// <summary></summary>
+		public LuaUI UI => ui;
+
 		private static readonly MethodInfo luaRtInvokeMethodInfo;
 
 		static LuaWpfCreator()
@@ -388,7 +421,89 @@ namespace TecWare.PPSn.UI
 			luaRtInvokeMethodInfo = typeof(Lua).GetMethod(nameof(Lua.RtInvoke), BindingFlags.Static | BindingFlags.InvokeMethod | BindingFlags.Public, null, CallingConventions.Standard, new Type[] { typeof(object), typeof(object[]) }, null)
 				?? throw new ArgumentException("RtInvoke not resolved.");
 		} // sctor
+
+		/// <summary></summary>
+		/// <typeparam name="TINSTANCE"></typeparam>
+		/// <param name="ui"></param>
+		/// <param name="table"></param>
+		/// <returns></returns>
+		public static TINSTANCE CreateInstance<TINSTANCE>(LuaUI ui, LuaTable table)
+			where TINSTANCE : class
+		{
+			var t = new LuaWpfCreator<TINSTANCE>(ui, null);
+			t.SetTableMembers(table);
+			return t.Instance;
+		}
 	} // class LuaWpfCreator
+
+	#endregion
+
+	#region -- class LuaWpfGridCreator ------------------------------------------------
+
+	/// <summary></summary>
+	public class LuaWpfGridCreator : LuaWpfCreator<Grid>
+	{
+		/// <summary></summary>
+		/// <param name="ui"></param>
+		/// <param name="type"></param>
+		/// <param name="instance"></param>
+		public LuaWpfGridCreator(LuaUI ui, XamlType type, Grid instance = null) 
+			: base(ui, type, instance)
+		{
+		}
+
+		/// <summary></summary>
+		[LuaMember]
+		public object RowDefinitions
+		{
+			get => Instance.RowDefinitions;
+			set
+			{
+				if (value is LuaTable t)
+				{
+					foreach(var v in t.ArrayList)
+					{
+						if (v is LuaTable tr)
+							Instance.RowDefinitions.Add(CreateInstance<RowDefinition>(UI, tr));
+						else
+						{
+							var creator = new LuaWpfCreator<RowDefinition>(UI, new RowDefinition());
+							creator.SetMemberValue(nameof(RowDefinition.Height), v);
+							Instance.RowDefinitions.Add(creator.Instance);
+						}
+					}
+				}
+				else
+					throw new ArgumentException();
+			}
+		}
+
+		/// <summary></summary>
+		[LuaMember]
+		public object ColumnDefinitions
+		{
+			get => Instance.ColumnDefinitions;
+			set
+			{
+				if (value is LuaTable t)
+				{
+					foreach (var v in t.ArrayList)
+					{
+						if (v is LuaTable tr)
+							Instance.ColumnDefinitions.Add(CreateInstance<ColumnDefinition>(UI, tr));
+						else
+						{
+							var creator = new LuaWpfCreator<ColumnDefinition>(UI, new ColumnDefinition());
+							creator.SetMemberValue(nameof(ColumnDefinition.Width), v);
+							Instance.ColumnDefinitions.Add(creator.Instance);
+						}
+					}
+				}
+				else
+					throw new ArgumentException();
+			}
+		}
+	} // class LuaWpfGridCreator
 
 	#endregion
 
@@ -422,6 +537,16 @@ namespace TecWare.PPSn.UI
 			return new LuaUI(namespaceName);
 		}
 
+		/// <summary></summary>
+		/// <param name="type"></param>
+		/// <returns></returns>
+		public XamlType GetXamlType(Type type)
+			=> schemaContext.GetXamlType(type);
+
+		/// <summary></summary>
+		[LuaMember]
+		public LuaWpfCreator<Grid> Grid => new LuaWpfGridCreator(this, GetXamlType(typeof(Grid)), null);
+
 		/// <summary>Create the class creator from the context or a preregistered.</summary>
 		/// <param name="key"></param>
 		/// <returns></returns>
@@ -436,7 +561,7 @@ namespace TecWare.PPSn.UI
 			{
 				var xamlType = schemaContext.GetXamlType(new XamlTypeName(currentNamespaceName, typeName));
 				if (xamlType != null)
-					value = new LuaWpfCreator(this, xamlType);
+					value = new LuaWpfCreator<object>(this, xamlType, null);
 			}
 			return value;
 		} // func OnIndex

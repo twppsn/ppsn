@@ -146,7 +146,7 @@ namespace TecWare.PPSn.UI
 			}
 
 			// Load mask
-			await base.LoadAsync(arguments);
+			await base.LoadInternAsync(arguments);
 
 			InitializeData();
 		} // proc LoadInternAsync

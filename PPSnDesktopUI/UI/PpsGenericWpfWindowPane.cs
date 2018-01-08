@@ -50,38 +50,55 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsGenericWpfChildPane ---------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Sub pane implementation</summary>
 	public class PpsGenericWpfChildPane : LuaEnvironmentTable, IPpsLuaRequest
 	{
-		private readonly FrameworkElement control;
 		private readonly BaseWebRequest fileSource;
+		private FrameworkElement control;
 
+		/// <summary></summary>
+		/// <param name="parentPane"></param>
+		/// <param name="xXaml"></param>
+		/// <param name="code"></param>
 		public PpsGenericWpfChildPane(PpsGenericWpfWindowPane parentPane, XDocument xXaml, LuaChunk code)
 			:base(parentPane)
 		{
 			if (parentPane == null)
 				throw new ArgumentNullException("parentPane");
-
-			this.fileSource = new BaseWebRequest(new Uri(new Uri(xXaml.BaseUri), "."), Environment.Encoding);
+			
+			this.fileSource = new BaseWebRequest(new Uri(parentPane.BaseUri, "."), Environment.Encoding);
 
 			// create the control
-			control = (FrameworkElement)parentPane.Environment.CreateResource(xXaml);
-			control.DataContext = this;
+			if (xXaml != null)
+				control = (FrameworkElement)parentPane.Environment.CreateResource(xXaml);
 
 			// run the chunk on the current table
 			code?.Run(this, this);
+
+			control.DataContext = this;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
 		protected override object OnIndex(object key)
 			=> base.OnIndex(key) ?? WpfPaneHelper.GetXamlElement(control, key);
+
+		[LuaMember("setControl")]
+		private FrameworkElement SetControl(FrameworkElement contentElement)
+		{
+			control = contentElement;
+			return control;
+		} // proc UpdateControl
 
 		[LuaMember]
 		private object GetResource(object key)
 			=> Control.TryFindResource(key);
 
+		/// <summary></summary>
 		[LuaMember]
 		public FrameworkElement Control => control;
+		/// <summary></summary>
 		[LuaMember]
 		public BaseWebRequest Request => fileSource;
 	} // class PpsGenericWpfChildPane 
@@ -329,15 +346,18 @@ namespace TecWare.PPSn.UI
 		/// <param name="path"></param>
 		/// <param name="initialTable"></param>
 		/// <returns></returns>
-		[LuaMember("requireXaml", true)]
-		private LuaResult LuaRequireXaml(LuaTable self, string path, LuaTable initialTable = null)
+		[
+		LuaMember("requireXaml", true),
+		LuaMember("requirePane", true)
+		]
+		private LuaResult LuaRequirePane(LuaTable self, string path, LuaTable initialTable = null)
 		{
 			// get the current root
 			var webRequest = self.GetMemberValue(nameof(IPpsLuaRequest.Request)) as BaseWebRequest ?? Request;
 
-			var parts = Task.Run(() => Environment.LoadXamlAsync(webRequest, initialTable ?? new LuaTable(), webRequest.GetFullUri(path))).AwaitTask();
-			return new LuaResult(new PpsGenericWpfChildPane(this, parts.xaml, parts.code));
-		} // func LuaRequireXaml
+			var parts = Task.Run(() => Environment.LoadPaneDataAsync(webRequest, initialTable ?? new LuaTable(), webRequest.GetFullUri(path))).AwaitTask();
+			return new LuaResult(new PpsGenericWpfChildPane(this, parts.xaml, parts.paneCode));
+		} // func LuaRequirePane
 
 		/// <summary>Create a PpsCommand object.</summary>
 		/// <param name="command"></param>
@@ -496,16 +516,18 @@ namespace TecWare.PPSn.UI
 			(var xaml, var code) = await Environment.LoadPaneDataAsync(fileSource, arguments, paneUri);
 
 			// Create the Wpf-Control
-			v
-			var xamlReader = new XamlReader();
-			control = xamlReader.LoadAsync(xaml.CreateReader()) as FrameworkElement;
-			control.Resources[PpsEnvironment.WindowPaneService] = this;
-			OnControlCreated();
+			if (xaml != null)
+			{
+				var xamlReader = new XamlReader();
+				control = xamlReader.LoadAsync(xaml.CreateReader()) as FrameworkElement;
+				control.Resources[PpsEnvironment.WindowPaneService] = this;
+				OnControlCreated();
+			}
 
 			// Initialize the control and run the code in UI-Thread
 			if (code != null)
 				Environment.RunScript(code, this, true, this);
-
+			
 			// init bindings
 			control.DataContext = this;
 
@@ -597,6 +619,27 @@ namespace TecWare.PPSn.UI
 				return forceUpdateSource;
 			}
 		} // proc OnIdle
+
+		[LuaMember("setControl")]
+		private FrameworkElement UpdateControl(object args)
+		{
+			FrameworkElement returnValue;
+			if (args is PpsGenericWpfControl ctrl) //force wpf control
+				returnValue = ctrl;
+			else if (args is LuaTable t)
+			{
+				var creator = new LuaWpfCreator<PpsGenericWpfControl>(Environment.LuaUI, null);
+				creator.SetTableMembers(t);
+				returnValue = creator.Instance;
+			}
+			else
+				throw new ArgumentException(nameof(args));
+
+			control = returnValue;
+			OnControlCreated();
+
+			return control;
+		} // proc UpdateControl
 
 		/// <summary>Arguments of the generic content.</summary>
 		[LuaMember]
