@@ -78,7 +78,7 @@ namespace TecWare.PPSn.UI
 			return r;
 		} // func CompareArguments
 
-		public override async Task LoadAsync(LuaTable arguments)
+		protected override async Task LoadInternAsync(LuaTable arguments)
 		{
 			async Task CreateNewObjectAsync()
 			{
@@ -146,10 +146,10 @@ namespace TecWare.PPSn.UI
 			}
 
 			// Load mask
-			await base.LoadAsync(arguments);
+			await base.LoadInternAsync(arguments);
 
 			InitializeData();
-		} // proc LoadAsync
+		} // proc LoadInternAsync
 
 		private void InitializeData()
 		{

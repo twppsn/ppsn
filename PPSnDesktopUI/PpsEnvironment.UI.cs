@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -20,9 +35,8 @@ using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
-	#region -- interface IPpsIdleAction -------------------------------------------------
+	#region -- interface IPpsIdleAction -----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Implementation for a idle action.</summary>
 	public interface IPpsIdleAction
 	{
@@ -34,9 +48,13 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class PpsEnvironment ---------------------------------------------------
+
 	public partial class PpsEnvironment
 	{
+		/// <summary>Resource key for the environment</summary>
 		public const string EnvironmentService = "PpsEnvironmentService";
+		/// <summary>Resource key for the window pane.</summary>
 		public const string WindowPaneService = "PpsWindowPaneService";
 
 		private readonly Dispatcher currentDispatcher; // Synchronisation
@@ -49,6 +67,8 @@ namespace TecWare.PPSn
 		private readonly List<WeakReference<IPpsIdleAction>> idleActions = new List<WeakReference<IPpsIdleAction>>();
 		private readonly PreProcessInputEventHandler preProcessInputEventHandler;
 
+		/// <summary></summary>
+		/// <param name="lua"></param>
 		public PpsEnvironment(Lua lua)
 			: base(lua)
 		{
@@ -149,9 +169,9 @@ namespace TecWare.PPSn
 			}
 		} // proc UpdateResources
 
-		#region -- Idle service -----------------------------------------------------------
+		#region -- Idle service -------------------------------------------------------
 
-		#region -- class FunctionIdleActionImplementation ---------------------------------
+		#region -- class FunctionIdleActionImplementation -----------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
@@ -161,10 +181,7 @@ namespace TecWare.PPSn
 
 			public FunctionIdleActionImplementation(Func<int, bool> onIdle)
 			{
-				if (onIdle == null)
-					throw new ArgumentNullException("onIdle");
-
-				this.onIdle = onIdle;
+				this.onIdle = onIdle ?? throw new ArgumentNullException(nameof(onIdle));
 			} // ctor
 
 			public bool OnIdle(int elapsed)
@@ -177,17 +194,22 @@ namespace TecWare.PPSn
 		{
 			for (var i = 0; i < idleActions.Count; i++)
 			{
-				IPpsIdleAction t;
-				if (idleActions[i].TryGetTarget(out t) && t == idleAction)
+				if (idleActions[i].TryGetTarget(out var t) && t == idleAction)
 					return i;
 			}
 			return -1;
 		} // func IndexOfIdleAction
 
+		/// <summary>Add a idle action.</summary>
+		/// <param name="onIdle"></param>
+		/// <returns></returns>
 		[LuaMember(nameof(AddIdleAction))]
 		public IPpsIdleAction AddIdleAction(Func<int, bool> onIdle)
 			=> AddIdleAction(new FunctionIdleActionImplementation(onIdle));
 
+		/// <summary>Add a idle action.</summary>
+		/// <param name="idleAction"></param>
+		/// <returns></returns>
 		public IPpsIdleAction AddIdleAction(IPpsIdleAction idleAction)
 		{
 			this.Dispatcher.VerifyAccess();
@@ -197,6 +219,8 @@ namespace TecWare.PPSn
 			return idleAction;
 		} // proc AddIdleAction
 
+		/// <summary>Remove a idle action.</summary>
+		/// <param name="idleAction"></param>
 		[LuaMember(nameof(RemoveIdleAction))]
 		public void RemoveIdleAction(IPpsIdleAction idleAction)
 		{
@@ -216,11 +240,8 @@ namespace TecWare.PPSn
 			var timeSinceRestart = unchecked(Environment.TickCount - restartTime);
 			for (var i = idleActions.Count - 1; i >= 0; i--)
 			{
-				IPpsIdleAction t;
-				if (idleActions[i].TryGetTarget(out t))
-				{
+				if (idleActions[i].TryGetTarget(out var t))
 					stopIdle = stopIdle && !t.OnIdle(timeSinceRestart);
-				}
 				else
 					idleActions.RemoveAt(i);
 			}
@@ -249,7 +270,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Command Service --------------------------------------------------------
+		#region -- Command Service ----------------------------------------------------
 
 		private static void CanExecuteCommandHandlerImpl(object sender, PpsEnvironment environment, CanExecuteRoutedEventArgs e)
 		{
@@ -269,12 +290,14 @@ namespace TecWare.PPSn
 			}
 		} // func CanExecuteCommandHandlerImpl
 
+		/// <summary></summary>
 		public ExecutedRoutedEventHandler DefaultExecutedHandler { get; }
+		/// <summary></summary>
 		public CanExecuteRoutedEventHandler DefaultCanExecuteHandler { get; }
 
 		#endregion
 
-		#region -- UI - Helper ------------------------------------------------------------
+		#region -- UI - Helper --------------------------------------------------------
 
 		void IPpsShell.BeginInvoke(Action action)
 			=> Dispatcher.BeginInvoke(action, DispatcherPriority.ApplicationIdle); // must be idle, that method is invoked after the current changes
@@ -285,18 +308,32 @@ namespace TecWare.PPSn
 		async Task<T> IPpsShell.InvokeAsync<T>(Func<T> func)
 			=> await Dispatcher.InvokeAsync<T>(func);
 
+		/// <summary>Append a exception to the log.</summary>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
 		[LuaMember(nameof(AppendException))]
 		public void AppendException(Exception exception, string alternativeMessage = null)
 			=> ShowException(ExceptionShowFlags.Background, exception, alternativeMessage);
 
+		/// <summary>Display the exception dialog.</summary>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
 		[LuaMember(nameof(ShowException))]
 		public void ShowException(Exception exception, string alternativeMessage = null)
 			=> ShowException(ExceptionShowFlags.None, exception, alternativeMessage);
 
+		/// <summary>Display the exception dialog in the main ui-thread.</summary>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
+		/// <returns></returns>
 		[LuaMember(nameof(ShowExceptionAsync))]
 		public Task ShowExceptionAsync(Exception exception, string alternativeMessage = null)
 			=> ShowExceptionAsync(ExceptionShowFlags.None, exception, alternativeMessage);
 
+		/// <summary>Display the exception dialog.</summary>
+		/// <param name="flags"></param>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
 		public void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 		{
 			// always add the exception to the list
@@ -315,9 +352,20 @@ namespace TecWare.PPSn
 			}
 		} // proc ShowException
 
+		/// <summary>Display the exception dialog in the main ui-thread.</summary>
+		/// <param name="flags"></param>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
+		/// <returns></returns>
 		public async Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
 			=> await Dispatcher.InvokeAsync(() => ShowException(flags, exception, alternativeMessage));
 
+		/// <summary>Display the exception dialog.</summary>
+		/// <param name="dialogOwner"></param>
+		/// <param name="flags"></param>
+		/// <param name="exception"></param>
+		/// <param name="alternativeMessage"></param>
+		/// <returns></returns>
 		public bool ShowExceptionDialog(Window dialogOwner, ExceptionShowFlags flags, Exception exception, string alternativeMessage)
 		{
 			switch (exception)
@@ -368,16 +416,32 @@ namespace TecWare.PPSn
 			}
 		} // func GetMessageCaptionFromImage
 
+		/// <summary>Display a simple messagebox</summary>
+		/// <param name="text"></param>
+		/// <param name="button"></param>
+		/// <param name="image"></param>
+		/// <param name="defaultResult"></param>
+		/// <returns></returns>
 		public MessageBoxResult MsgBox(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
 			=> MessageBox.Show(text, GetMessageCaptionFromImage(image), button, image, defaultResult);
 
+		/// <summary>Display a simple messagebox in the main ui-thread.</summary>
+		/// <param name="text"></param>
+		/// <param name="button"></param>
+		/// <param name="image"></param>
+		/// <param name="defaultResult"></param>
+		/// <returns></returns>
 		public async Task<MessageBoxResult> MsgBoxAsync(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
 			=> await Dispatcher.InvokeAsync(() => MsgBox(text, button, image, defaultResult));
 
 		#endregion
 
-		#region -- Resources --------------------------------------------------------------
+		#region -- Resources ----------------------------------------------------------
 
+		/// <summary>Find a global resource.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="resourceKey"></param>
+		/// <returns></returns>
 		public T FindResource<T>(object resourceKey)
 			where T : class
 			=> mainResources[resourceKey] as T;
@@ -403,6 +467,9 @@ namespace TecWare.PPSn
 			mainResources[key] = resource;
 		} // func UpdateResource
 
+		/// <summary>Create a global resource.</summary>
+		/// <param name="xaml"></param>
+		/// <returns></returns>
 		public object CreateResource(XDocument xaml)
 		{
 			if (xaml == null)
@@ -415,6 +482,10 @@ namespace TecWare.PPSn
 			return CreateResource(xaml.ToString(), parserContext);
 		} // func CreateResource
 
+		/// <summary>Create a global resource.</summary>
+		/// <param name="xamlSource"></param>
+		/// <param name="parserContext"></param>
+		/// <returns></returns>
 		public object CreateResource(string xamlSource, ParserContext parserContext)
 		{
 			// fix ms bug: XamlReader.Parse creates a MemoryStream with the Default-Ansi-CodePage, but in the XamlReader core utf8 is expected 
@@ -425,4 +496,6 @@ namespace TecWare.PPSn
 
 		#endregion
 	} // class PpsEnvironment
+
+	#endregion
 }

@@ -77,9 +77,9 @@ namespace TecWare.PPSn.Controls
 		{
 			/// <summary>Set NewItemPlaceholder.Visibility to Visible</summary>
 			ShowPlaceHolder,
-			/// <summaryKeyBoardFocus to Container</summary>
+			/// <summary>KeyBoardFocus to Container</summary>
 			FocusContainer,
-			/// <summaryKeyBoarFocus to first focusable child</summary>
+			/// <summary>KeyBoarFocus to first focusable child</summary>
 			FocusChild
 		} // enum NewItemContainerActionType
 

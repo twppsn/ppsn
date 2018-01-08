@@ -33,13 +33,13 @@ using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Stuff;
+using TecWare.PPSn.UI;
 using static TecWare.PPSn.StuffUI;
 
 namespace TecWare.PPSn
 {
-	#region -- interface IPpsLuaTaskParent ----------------------------------------------
+	#region -- interface IPpsLuaTaskParent --------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface IPpsLuaTaskParent
 	{
@@ -58,9 +58,8 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- interface IPpsLuaRequest -------------------------------------------------
+	#region -- interface IPpsLuaRequest -----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface IPpsLuaRequest
 	{
@@ -70,9 +69,8 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsLuaTask ---------------------------------------------------------
+	#region -- class PpsLuaTask -------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Task wrapper for the lua script code</summary>
 	public sealed class PpsLuaTask : IDisposable
 	{
@@ -158,6 +156,7 @@ namespace TecWare.PPSn
 			this.cancellationTokenSource = cancellationTokenSource;
 		} // ctor
 
+		/// <summary></summary>
 		~PpsLuaTask()
 		{
 			if (!isDisposed)
@@ -334,6 +333,9 @@ namespace TecWare.PPSn
 			DisposeContext();
 		} // proc ExecuteOnAwaitTask
 
+		/// <summary>Append a action to the current task.</summary>
+		/// <param name="continueWith"></param>
+		/// <returns></returns>
 		public PpsLuaTask Continue(object continueWith)
 		{
 			CheckDisposed();
@@ -351,6 +353,9 @@ namespace TecWare.PPSn
 			return this;
 		} // proc Continue
 		
+		/// <summary>Append a action, that gets called on an exception to the task.</summary>
+		/// <param name="onException"></param>
+		/// <returns></returns>
 		public PpsLuaTask OnException(object onException)
 		{
 			lock (executionLock)
@@ -364,6 +369,9 @@ namespace TecWare.PPSn
 			return this;
 		} // proc OnException
 
+		/// <summary>Append a action, that gets called when task is finished (also in case of an exception).</summary>
+		/// <param name="onFinally"></param>
+		/// <returns></returns>
 		public PpsLuaTask OnFinally(object onFinally)
 		{
 			lock (executionLock)
@@ -379,9 +387,12 @@ namespace TecWare.PPSn
 			return this;
 		} // proc OnFinally
 
+		/// <summary>Cancel the task.</summary>
 		public void Cancel()
 			=> cancellationTokenSource?.Cancel();
 
+		/// <summary>Wait for the task and return the last result.</summary>
+		/// <returns></returns>
 		public Task<LuaResult> AwaitAsync()
 		{
 			onAwaitTask = new TaskCompletionSource<LuaResult>();
@@ -389,6 +400,8 @@ namespace TecWare.PPSn
 			return onAwaitTask.Task;
 		} // func Await
 
+		/// <summary>Wait for the task and return the last result.</summary>
+		/// <returns></returns>
 		public LuaResult Await()
 			=> AwaitAsync().AwaitTask();
 
@@ -409,9 +422,8 @@ namespace TecWare.PPSn
 
 	public partial class PpsEnvironment : IPpsLuaTaskParent, IPpsLuaRequest
 	{
-		#region -- class LuaTraceLineDebugInfo --------------------------------------------
+		#region -- class LuaTraceLineDebugInfo ----------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private sealed class LuaTraceLineDebugInfo : ILuaDebugInfo
 		{
@@ -434,9 +446,8 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class LuaEnvironmentTraceLineDebugger ----------------------------------
+		#region -- class LuaEnvironmentTraceLineDebugger ------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private sealed class LuaEnvironmentTraceLineDebugger : LuaTraceLineDebugger
 		{
@@ -480,7 +491,7 @@ namespace TecWare.PPSn
 			};
 		} // CreateLuaCompileOptions
 
-		#region -- Lua Compiler ---------------------------------------------------------
+		#region -- Lua Compiler -------------------------------------------------------
 
 		/// <summary>Compiles a chunk in the background.</summary>
 		/// <param name="tr">Chunk source.</param>
@@ -506,6 +517,13 @@ namespace TecWare.PPSn
 			}
 		} // func CompileAsync
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="code"></param>
+		/// <param name="sourceLocation">Source location for the debug information.</param>
+		/// <param name="throwException">If the compile fails, should be raised a exception.</param>
+		/// <param name="argumentNames"></param>
+		/// <returns></returns>
 		public async Task<T> CompileLambdaAsync<T>(string code, string sourceLocation, bool throwException, params string[] argumentNames)
 			where T : class
 		{
@@ -525,6 +543,12 @@ namespace TecWare.PPSn
 			}
 		} // func CompileLambdaAsync
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="xSource"></param>
+		/// <param name="throwException"></param>
+		/// <param name="argumentNames"></param>
+		/// <returns></returns>
 		public Task<T> CompileLambdaAsync<T>(XElement xSource, bool throwException, params string[] argumentNames)
 			where T : class
 		{
@@ -536,7 +560,7 @@ namespace TecWare.PPSn
 
 		/// <summary>Compiles a chunk in the background.</summary>
 		/// <param name="sourceCode">Source code of the chunk.</param>
-		/// <param name="sourceLocation">Source location for the debug information.</param>
+		/// <param name="sourceFileName">Source location for the debug information.</param>
 		/// <param name="throwException">If the compile fails, should be raised a exception.</param>
 		/// <param name="arguments">Argument definition for the chunk.</param>
 		/// <returns>Compiled chunk</returns>
@@ -559,6 +583,7 @@ namespace TecWare.PPSn
 		} // func CompileAsync
 
 		/// <summary>Load an compile the file from a remote source.</summary>
+		/// <param name="request"></param>
 		/// <param name="source">Source uri</param>
 		/// <param name="throwException">Throw an exception on fail</param>
 		/// <param name="arguments">Argument definition for the chunk.</param>
@@ -650,24 +675,29 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Async/Await Lua ------------------------------------------------------
+		#region -- Async/Await Lua ----------------------------------------------------
 
 		private Task RunBackgroundInternal(Func<Task> task, string name, CancellationToken cancellationToken)
 			=> new PpsSingleThreadSynchronizationContext(name, cancellationToken, task).Task;
 
 		/// <summary>Creates a new execution thread for the function in the background.</summary>
-		/// <param name="action">Action to run.</param>
+		/// <param name="task">Action to run.</param>
 		/// <param name="name">name of the background thread</param>
 		/// <param name="cancellationToken">cancellation option</param>
 		public Task RunAsync(Func<Task> task, string name, CancellationToken cancellationToken)
 			=> RunBackgroundInternal(task, name, cancellationToken);
 
+		/// <summary></summary>
+		/// <param name="task"></param>
+		/// <returns></returns>
 		public Task RunAsync(Func<Task> task)
 			=> RunAsync(task, "Worker", CancellationToken.None);
 
 		/// <summary>Creates a new execution thread for the function in the background.</summary>
 		/// <typeparam name="T"></typeparam>
-		/// <param name="func"></param>
+		/// <param name="task"></param>
+		/// <param name="name"></param>
+		/// <param name="cancellationToken"></param>
 		/// <returns></returns>
 		public async Task<T> RunAsync<T>(Func<Task<T>> task, string name, CancellationToken cancellationToken)
 		{
@@ -676,12 +706,16 @@ namespace TecWare.PPSn
 			return returnValue;
 		} // proc RunTaskBackground
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="task"></param>
+		/// <returns></returns>
 		public Task<T> RunAsync<T>(Func<Task<T>> task)
 			=> RunAsync(task, "Worker", CancellationToken.None);
 
 		#endregion
 
-		#region -- LuaHelper ------------------------------------------------------------
+		#region -- LuaHelper ----------------------------------------------------------
 
 		/// <summary>Show a simple message box.</summary>
 		/// <param name="text"></param>
@@ -765,44 +799,68 @@ namespace TecWare.PPSn
 			}
 		} // proc LuaRequire
 		
-		public async Task<(XDocument xaml, LuaChunk code)> LoadXamlAsync(BaseWebRequest request, LuaTable arguments, Uri xamlUri)
+		/// <summary></summary>
+		/// <param name="request"></param>
+		/// <param name="arguments"></param>
+		/// <param name="paneUri"></param>
+		/// <returns></returns>
+		public async Task<(XDocument xaml, LuaChunk paneCode)> LoadPaneDataAsync(BaseWebRequest request, LuaTable arguments, Uri paneUri)
 		{
 			try
 			{
-				XDocument xXaml;
-				using (var r = await request.GetResponseAsync(xamlUri.ToString()))
+				using (var r = await request.GetResponseAsync(paneUri.ToString()))
 				{
 					// read the file name
 					arguments["_filename"] = r.GetContentDisposition().FileName;
 
-					// parse the xaml as xml document
-					using (var sr = request.GetTextReader(r, MimeTypes.Application.Xaml))
+					// check content
+					var contentType = r.GetContentType();
+					if (contentType.MediaType == MimeTypes.Application.Xaml) // load a xaml file
 					{
-						using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, xamlUri.ToString()))
-							xXaml = await Task.Run(() => XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo));
+						XDocument xamlContent;
+
+						// parse the xaml as xml document
+						using (var sr = request.GetTextReader(r, MimeTypes.Application.Xaml))
+						{
+							using (var xml = XmlReader.Create(sr, Procs.XmlReaderSettings, paneUri.ToString()))
+								xamlContent = await Task.Run(() => XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo));
+						}
+
+						// Load the content of the code-tag, to initialize extended functionality
+						var xCode = xamlContent.Root.Element(xnCode);
+						var paneCode = (LuaChunk)null;
+						if (xCode != null)
+						{
+							paneCode = await CompileAsync(xCode, true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
+							xCode.Remove();
+						}
+
+						return (xamlContent, paneCode);
 					}
+					else if (contentType.MediaType == MimeTypes.Text.Lua
+						|| contentType.MediaType == MimeTypes.Text.Plain) // load a code file
+					{
+						// load an compile the chunk
+						using (var sr = request.GetTextReader(r, null))
+						{
+							return (
+								null,
+								await CompileAsync(sr, paneUri.ToString(), true, new KeyValuePair<string, Type>("self", typeof(LuaTable)))
+							);
+						}
+					}
+					else
+						throw new ArgumentException($"Expected: xaml/lua; received: {contentType.MediaType}");
 				}
-
-				// Load the content of the code-tag, to initialize extended functionality
-				var xCode = xXaml.Root.Element(xnCode);
-				var chunk = (LuaChunk)null;
-				if (xCode != null)
-				{
-					chunk = await CompileAsync(xCode, true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
-					xCode.Remove();
-				}
-
-				return (xXaml, chunk);
 			}
 			catch (Exception e)
 			{
-				throw new ArgumentException("Can not load xaml definition.\n" + xamlUri.ToString(), e);
+				throw new ArgumentException("Can not load pane definition.\n" + paneUri.ToString(), e);
 			}
-		} // func LoadXamlAsync
-		
+		} // func LoadPaneDataAsync
+
 		/// <summary>Creates a wrapper for the task.</summary>
 		/// <param name="func">Function will be executed in the current context as an task. A task will be wrapped and executed.</param>
-		/// <param name="args"></param>
 		/// <returns></returns>
 		[LuaMember("await")]
 		private LuaResult LuaAwait(object func)
@@ -902,14 +960,21 @@ namespace TecWare.PPSn
 			return CreateLuaTask(GetUIContext(), func, args);
 		} // func LuaRunBackground
 
+		/// <summary></summary>
+		/// <returns></returns>
 		[LuaMember("runSync")]
 		public Task RunSynchronization()
 			=> masterData.RunSynchronization();
 
+		/// <summary></summary>
+		/// <returns></returns>
 		[LuaMember("createTransaction")]
 		public PpsMasterDataTransaction CreateTransaction()
 			=> MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.ReadCommited).AwaitTask();
 
+		/// <summary></summary>
+		/// <param name="v"></param>
+		/// <returns></returns>
 		[LuaMember("getServerRowValue")]
 		public object GetServerRowValue(object v)
 		{
@@ -934,6 +999,10 @@ namespace TecWare.PPSn
 		public Task<PpsObjectDataSet> PullRevisionAsync(PpsObject obj, long revId)
 			=> obj.PullRevisionAsync<PpsObjectDataSet>(revId);
 		
+		/// <summary></summary>
+		/// <param name="frame"></param>
+		/// <param name="message"></param>
+		/// <returns></returns>
 		public IDisposable BlockAllUI(DispatcherFrame frame, string message = null)
 		{
 			Thread.Sleep(200); // wait for finish
@@ -942,6 +1011,10 @@ namespace TecWare.PPSn
 			else
 				return null;
 		} // proc BlockAllUI
+
+		/// <summary>Lua ui-wpf framwework.</summary>
+		[LuaMember("UI")]
+		public LuaUI LuaUI { get; } = new LuaUI();
 
 		#endregion
 	} // class PpsEnvironment

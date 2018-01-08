@@ -217,7 +217,7 @@ namespace TecWare.PPSn.UI
 			var parameterInfo = ctorBest.GetParameters();
 			var paneArguments = new object[parameterInfo.Length];
 
-			for (int i = 0; i < paneArguments.Length; i++)
+			for (var i = 0; i < paneArguments.Length; i++)
 			{
 				var pi = parameterInfo[i];
 				var tiParam = pi.ParameterType.GetTypeInfo();
