@@ -48,7 +48,7 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsGenericWpfChildPane ---------------------------------------------
+	#region -- class PpsGenericWpfChildPane -------------------------------------------
 
 	/// <summary>Sub pane implementation</summary>
 	public class PpsGenericWpfChildPane : LuaEnvironmentTable, IPpsLuaRequest
@@ -132,9 +132,9 @@ namespace TecWare.PPSn.UI
 	#region -- class PpsGenericWpfWindowPane ------------------------------------------
 
 	/// <summary>Pane that loads a xaml file, or an lua script.</summary>
-	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane, IPpsIdleAction, IPpsLuaRequest
+	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane, IPpsIdleAction, IPpsLuaRequest, IServiceProvider
 	{
-		private readonly PpsWindow window;
+		private readonly IPpsWindowPaneManager paneManager;
 
 		private BaseWebRequest fileSource;
 		private FrameworkElement control;
@@ -148,11 +148,11 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Create the pane.</summary>
 		/// <param name="environment"></param>
-		/// <param name="window"></param>
-		public PpsGenericWpfWindowPane(PpsEnvironment environment, PpsWindow window)
+		/// <param name="paneManager"></param>
+		public PpsGenericWpfWindowPane(PpsEnvironment environment, IPpsWindowPaneManager paneManager)
 			: base(environment)
 		{
-			this.window = window;
+			this.paneManager = paneManager;
 			
 			Environment.AddIdleAction(this);
 		} // ctor
@@ -321,7 +321,7 @@ namespace TecWare.PPSn.UI
 
 		private void CheckBindingOnIdle()
 		{
-			if (currentBindingExpression != null && !forceUpdateSource && currentBindingExpression.IsDirty && !Window.IsActive)
+			if (currentBindingExpression != null && !forceUpdateSource && currentBindingExpression.IsDirty && !PaneManager.IsActive)
 			{
 #if DEBUG && NOTIFY_BINDING_SOURCE_UPDATE
 				Debug.Print("TextBox force update on idle.");
@@ -641,6 +641,21 @@ namespace TecWare.PPSn.UI
 			return control;
 		} // proc UpdateControl
 
+		/// <summary></summary>
+		/// <param name="serviceType"></param>
+		/// <returns></returns>
+		public virtual object GetService(Type serviceType)
+		{
+			if (serviceType == typeof(IPpsWindowPane))
+				return this;
+			else if (serviceType == typeof(IPpsWindowPaneManager))
+				return paneManager;
+			else if (serviceType == typeof(IPpsWindowPaneControl))
+				return PaneControl;
+			else
+				return null;
+		} // func GetService
+
 		/// <summary>Arguments of the generic content.</summary>
 		[LuaMember]
 		public LuaTable Arguments { get { return arguments; } }
@@ -695,7 +710,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Access the containing window.</summary>
 		[LuaMember]
-		public PpsWindow Window => window;
+		public IPpsWindowPaneManager PaneManager => paneManager;
 		/// <summary>Base web request, for the pane.</summary>
 		[LuaMember]
 		public BaseWebRequest Request => fileSource;
@@ -719,7 +734,7 @@ namespace TecWare.PPSn.UI
 		} // prop Commands
 
 		/// <summary>Interface of the hosted control.</summary>
-		public IPpsPWindowPaneControl PaneControl => control as IPpsPWindowPaneControl;
+		public IPpsWindowPaneControl PaneControl => control as IPpsWindowPaneControl;
 
 		/// <summary>Is the current pane dirty.</summary>
 		public virtual bool IsDirty => false;
@@ -731,7 +746,7 @@ namespace TecWare.PPSn.UI
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Base control for the wpf generic pane.</summary>
-	public class PpsGenericWpfControl : ContentControl, ILuaEventSink, IPpsPWindowPaneControl
+	public class PpsGenericWpfControl : ContentControl, ILuaEventSink, IPpsWindowPaneControl, IServiceProvider
 	{
 		/// <summary>Title of the pane.</summary>
 		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(String.Empty));
@@ -769,7 +784,7 @@ namespace TecWare.PPSn.UI
 				new CommandBinding(setCharmCommand,
 					(sender, e) =>
 					{
-						((dynamic)Pane.Window).CharmObject = ((LuaTable)e.Parameter)["Object"];
+						//((dynamic)Pane.Wíndow).CharmObject = ((LuaTable)e.Parameter)["Object"]; todo: charm
 					},
 					(sender, e) =>
 					{
@@ -779,7 +794,7 @@ namespace TecWare.PPSn.UI
 			);
 
 			// set the initial Object for the CharmBar
-			DataContextChanged += (sender,e) => ((dynamic)Pane.Window).CharmObject = ((LuaTable)this.DataContext)["Object"];
+			//DataContextChanged += (sender,e) => ((dynamic)Pane.Window).CharmObject = ((LuaTable)this.DataContext)["Object"];
 		} // ctor
 
 		#endregion
@@ -832,6 +847,12 @@ namespace TecWare.PPSn.UI
 		} // prop LogicalChildren
 
 		#endregion
+
+		/// <summary></summary>
+		/// <param name="serviceType"></param>
+		/// <returns></returns>
+		public object GetService(Type serviceType)
+			=> Pane?.GetService(serviceType);
 
 		/// <summary>Access to the owning pane.</summary>
 		public PpsGenericWpfWindowPane Pane => (PpsGenericWpfWindowPane)DataContext;

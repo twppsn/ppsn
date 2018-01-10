@@ -16,20 +16,14 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text;
+using System.Reflection;
 using System.Threading.Tasks;
-using System.Windows.Input;
-using System.Windows.Threading;
 using Neo.IronLua;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- enum PpsWindowPaneCompareResult ------------------------------------------
+	#region -- enum PpsWindowPaneCompareResult ----------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Result for the compare of two panes</summary>
 	public enum PpsWindowPaneCompareResult
 	{
@@ -38,14 +32,13 @@ namespace TecWare.PPSn.UI
 		/// <summary>Reload of data is necessary.</summary>
 		Reload,
 		/// <summary>The same pane, with the same data.</summary>
-    Same
+		Same
 	} // enum PpsWindowPaneCompareResult
 
 	#endregion
 
-	#region -- interface IPpsWindowPane -------------------------------------------------
+	#region -- interface IPpsWindowPane -----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Implements the basic function of a pane for the window client 
 	/// area.</summary>
 	public interface IPpsWindowPane : INotifyPropertyChanged, IDisposable
@@ -67,12 +60,16 @@ namespace TecWare.PPSn.UI
 		/// <summary>Title of the content.</summary>
 		/// <remarks>Can not be implemented hidden, because of the binding.</remarks>
 		string Title { get; }
+		/// <summary></summary>
+		string SubTitle { get; }
 
 		/// <summary>Content control</summary>
 		/// <remarks>Can not be implemented hidden, because of the binding.</remarks>
 		object Control { get; }
 		/// <summary>Returns the optional pane control, if the hosted control is not a pane control, this property is <c>null</c>.</summary>
-		IPpsPWindowPaneControl PaneControl { get; }
+		IPpsWindowPaneControl PaneControl { get; }
+		/// <summary>Access the pane manager.</summary>
+		IPpsWindowPaneManager PaneManager { get; }
 
 		/// <summary>If the pane contains changes, this flag is <c>true</c>.</summary>
 		bool IsDirty { get; }
@@ -83,11 +80,10 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- interface IPpsPWindowPaneControl -----------------------------------------
+	#region -- interface IPpsWindowPaneControl ----------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Optional inferface for the control</summary>
-	public interface IPpsPWindowPaneControl
+	public interface IPpsWindowPaneControl
 	{
 		/// <summary>Title of the pane control</summary>
 		string Title { get; }
@@ -100,17 +96,148 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>has sidebar?</summary>
 		bool HasSideBar { get; }
-	} // interface IPpsPWindowPaneControl
+	} // interface IPpsWindowPaneControl
+
+	#endregion
+		
+	#region -- enum PpsOpenPaneMode ---------------------------------------------------
+
+	/// <summary>Prefered mode to open the pane.</summary>
+	public enum PpsOpenPaneMode
+	{
+		/// <summary>Default</summary>
+		Default,
+		/// <summary>Replace the current pane.</summary>
+		ReplacePane,
+		/// <summary>Create a new pane in the current window (in single window this option will open a new single window).</summary>
+		NewPane,
+		/// <summary>Create a new main window with this pane.</summary>
+		NewMainWindow,
+		/// <summary>Create a new single window with this pane.</summary>
+		NewSingleWindow,
+		/// <summary>Create a new single window with this pane.</summary>
+		NewSingleDialog
+	} // enum PpsOpenPaneMode
+
+	#endregion
+
+	#region -- enum PpsWellknownType --------------------------------------------------
+
+	/// <summary></summary>
+	public enum PpsWellknownType
+	{
+		/// <summary></summary>
+		Generic,
+		/// <summary></summary>
+		Mask
+	} // enum PpsWellknownType
+
+	#endregion
+
+	#region -- interface IPpsWindowPaneManager ----------------------------------------
+
+	/// <summary>Interface to open new panes.</summary>
+	public interface IPpsWindowPaneManager
+	{
+		/// <summary>Activate the pane.</summary>
+		/// <param name="pane"></param>
+		/// <returns></returns>
+		bool ActivatePane(IPpsWindowPane pane);
+		/// <summary>Load a new pane</summary>
+		/// <param name="paneType">Pane type.</param>
+		/// <param name="newPaneMode">Pane create mode.</param>
+		/// <param name="arguments">Arguments for the pane.</param>
+		/// <returns></returns>
+		Task<IPpsWindowPane> OpenPaneAsync(Type paneType, PpsOpenPaneMode newPaneMode = PpsOpenPaneMode.Default, LuaTable arguments = null);
+		/// <summary>Find a pane, that is already open.</summary>
+		/// <param name="paneType"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		IPpsWindowPane FindOpenPane(Type paneType, LuaTable arguments = null);
+
+		/// <summary></summary>
+		/// <param name="wellknownType"></param>
+		/// <returns></returns>
+		Type GetPaneType(PpsWellknownType wellknownType);
+		
+		/// <summary>Pane enumeration.</summary>
+		IEnumerable<IPpsWindowPane> Panes { get; }
+		/// <summary>Access the environment.</summary>
+		PpsEnvironment Environment { get; }
+		/// <summary>Is this pane manager currenty the active pane manager.</summary>
+		bool IsActive { get; }
+	} // interface IPpsWindowPaneManager
 
 	#endregion
 
 	#region -- class PpsWindowPaneHelper ----------------------------------------------
 
+	/// <summary>Extensions for the Pane, or PaneControl</summary>
 	public static class PpsWindowPaneHelper
 	{
-		public static IPpsProgress DisableUI(this IPpsPWindowPaneControl control)
+		/// <summary>Initializes a empty pane, it can only be used by a pane manager.</summary>
+		/// <param name="paneManager"></param>
+		/// <param name="paneType"></param>
+		/// <returns></returns>
+		[EditorBrowsable(EditorBrowsableState.Advanced)]
+		public static IPpsWindowPane CreateEmptyPane(this IPpsWindowPaneManager paneManager, Type paneType)
+		{
+			var ti = paneType.GetTypeInfo();
+			var ctorBest = (ConstructorInfo)null;
+			var ctoreBestParamLength = -1;
+
+			// search for the longest constructor
+			foreach (var ci in ti.GetConstructors())
+			{
+				var pi = ci.GetParameters();
+				if (ctoreBestParamLength < pi.Length)
+				{
+					ctorBest = ci;
+					ctoreBestParamLength = pi.Length;
+				}
+			}
+			if (ctorBest == null)
+				throw new ArgumentException($"'{ti.Name}' has no constructor.");
+
+			// create the argument set
+			var parameterInfo = ctorBest.GetParameters();
+			var paneArguments = new object[parameterInfo.Length];
+
+			for (var i = 0; i < paneArguments.Length; i++)
+			{
+				var pi = parameterInfo[i];
+				var tiParam = pi.ParameterType.GetTypeInfo();
+				if (tiParam.IsAssignableFrom(typeof(PpsEnvironment)))
+					paneArguments[i] = paneManager.Environment;
+				else if (tiParam.IsAssignableFrom(typeof(IPpsWindowPaneManager)))
+					paneArguments[i] = paneManager;
+				else if (pi.HasDefaultValue)
+					paneArguments[i] = pi.DefaultValue;
+				else
+					throw new ArgumentException($"Unsupported argument '{pi.Name}' for type '{ti.Name}'.");
+			}
+
+			// activate the pane
+			return (IPpsWindowPane)Activator.CreateInstance(paneType, paneArguments);
+		} // func CreateEmptyPane
+
+		/// <summary></summary>
+		/// <param name="pane"></param>
+		/// <param name="paneType"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public static bool EqualPane(this IPpsWindowPane pane, Type paneType, LuaTable arguments)
+			=> paneType == pane.GetType() && pane.CompareArguments(arguments ?? new LuaTable()) == PpsWindowPaneCompareResult.Same;
+
+		/// <summary>Disable current ui.</summary>
+		/// <param name="control"></param>
+		/// <returns></returns>
+		public static IPpsProgress DisableUI(this IPpsWindowPaneControl control)
 			=> control?.ProgressStack?.CreateProgress() ?? PpsProgressStack.Dummy;
 
+		/// <summary>Disable current ui.</summary>
+		/// <param name="pane"></param>
+		/// <returns></returns>
 		public static IPpsProgress DisableUI(this IPpsWindowPane pane)
 			=> DisableUI(pane?.PaneControl);
 	} // class PpsWindowPaneHelper

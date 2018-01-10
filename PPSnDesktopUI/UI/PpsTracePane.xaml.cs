@@ -31,14 +31,19 @@ using System.IO;
 
 namespace TecWare.PPSn.UI
 {
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Pane to display trace messages.</summary>
 	internal partial class PpsTracePane : UserControl, IPpsWindowPane
 	{
+		/// <summary>Do not handle any property changed events.</summary>
 		public event PropertyChangedEventHandler PropertyChanged { add { } remove { } }
 
-		public PpsTracePane()
+		private readonly IPpsWindowPaneManager paneManager;
+
+		/// <summary>Trace pane constructor</summary>
+		public PpsTracePane(IPpsWindowPaneManager paneManager)
 		{
+			this.paneManager = paneManager;
+
 			InitializeComponent();
 
 			Resources[PpsEnvironment.WindowPaneService] = this;
@@ -49,14 +54,12 @@ namespace TecWare.PPSn.UI
 					{
 						if (e.Parameter != null)
 							CopyToClipboard(e.Parameter);
-						else if (e.OriginalSource is PpsTracePane)
-							if (((PpsTracePane)e.OriginalSource).Content is Grid)
-								if (((Grid)((PpsTracePane)e.OriginalSource).Content).Children.Count > 0)
-									if (((Grid)((PpsTracePane)e.OriginalSource).Content).Children[0] is ListBox)
-									{
-										var exc = (ListBox)((Grid)((PpsTracePane)e.OriginalSource).Content).Children[0];
-										CopyToClipboard(exc.SelectedItem);
-									}
+						else if (e.OriginalSource is PpsTracePane pt
+								&& pt.Content is Grid grid
+								&& grid.Children.Count > 0
+								&& grid.Children[0] is ListBox exc)
+							CopyToClipboard(exc.SelectedItem);
+
 						e.Handled = true;
 					},
 					(sender, e) => e.CanExecute = true
@@ -160,9 +163,10 @@ namespace TecWare.PPSn.UI
 		public string Title => "Anwendungsereignisse";
 		public string SubTitle => "System";
 		public object Control => this;
-		public IPpsPWindowPaneControl PaneControl => null;
+		public IPpsWindowPaneControl PaneControl => null;
 		public bool IsDirty => false;
 		public bool HasSideBar => false;
+		public IPpsWindowPaneManager PaneManager => paneManager;
 		
 		public object Commands => null;
 	} // class PpsTracePane

@@ -15,29 +15,21 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.IO;
-using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Input;
 using System.Xml.Linq;
 using Neo.IronLua;
-using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
-using TecWare.PPSn.Data;
-using TecWare.PPSn.Stuff;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
-  #region -- class PpsMainActionDefinition --------------------------------------------
+	#region -- class PpsMainActionDefinition --------------------------------------------
 
-  ///////////////////////////////////////////////////////////////////////////////
-  /// <summary></summary>
-  public class PpsMainActionDefinition : PpsEnvironmentDefinition
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class PpsMainActionDefinition : PpsEnvironmentDefinition
 	{
 		public static readonly XName xnActions = "actions";
 		public static readonly XName xnAction = "action";
@@ -61,7 +53,7 @@ namespace TecWare.PPSn
 			// compile condition
 			condition = environment.CreateChunk(xCur.Element(xnCondition), true);
 			// compile action
-			code =  environment.CreateChunk(xCur.Element(xnCode), true);
+			code = environment.CreateChunk(xCur.Element(xnCode), true);
 		} // ctor
 
 		public bool CheckCondition(LuaTable context)
@@ -86,11 +78,10 @@ namespace TecWare.PPSn
 		public bool IsHidden => isHidden;
 	} // class PpsMainActionDefinition
 
-  #endregion
+	#endregion
 
-  ///////////////////////////////////////////////////////////////////////////////
-  /// <summary></summary>
-  public partial class PpsMainEnvironment : PpsEnvironment
+	/// <summary></summary>
+	public partial class PpsMainEnvironment : PpsEnvironment, IPpsWindowPaneManager
 	{
 		private readonly App app;
 		private readonly PpsEnvironmentCollection<PpsMainActionDefinition> actions;
@@ -98,6 +89,8 @@ namespace TecWare.PPSn
 
 		private readonly PpsProgressStack backgroundProgress;
 		private readonly PpsProgressStack forgroundProgress;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		public PpsMainEnvironment(PpsEnvironmentInfo info, NetworkCredential userInfo, App app)
 			: base(info, userInfo, app.Resources)
@@ -111,6 +104,14 @@ namespace TecWare.PPSn
 			this.forgroundProgress = new PpsProgressStack(app.Dispatcher);
 		} // ctor
 
+		internal Task<bool> ShutdownAsync()
+		{
+			Dispose();
+			return Task.FromResult<bool>(true);
+		} // func ShutdownAsync
+
+		#endregion
+
 		protected async override Task OnSystemOnlineAsync()
 		{
 			await base.OnSystemOnlineAsync();
@@ -122,22 +123,6 @@ namespace TecWare.PPSn
 			await base.OnSystemOfflineAsync();
 			await RefreshNavigatorAsync();
 		} // proc OnSystemOfflineAsync
-
-		public async Task<PpsMainWindow> CreateMainWindowAsync()
-		{
-			return await Dispatcher.InvokeAsync(() =>
-				{
-					// find a free window index
-					var freeIndex = 0;
-					while (GetWindow(freeIndex) != null)
-						freeIndex++;
-
-					var window = new PpsMainWindow(freeIndex);
-					window.Show();
-					return window;
-				}
-			);
-		} // proc CreateMainWindow
 
 		private static readonly XName xnEnvironment = "environment";
 		private static readonly XName xnCode = "code";
@@ -156,7 +141,7 @@ namespace TecWare.PPSn
 			{
 				// get the views from storage
 				var xEnvironment = await Request.GetXmlAsync("wpf/environment.xml", rootName: xnEnvironment);
-				
+
 				// read navigator content
 				var xNavigator = xEnvironment.Element(xnNavigator);
 				if (xNavigator != null)
@@ -198,6 +183,24 @@ namespace TecWare.PPSn
 			}
 		} // proc RefreshNavigatorAsync
 
+		#region -- Window Manager -----------------------------------------------------
+
+		public async Task<PpsMainWindow> CreateMainWindowAsync()
+		{
+			return await Dispatcher.InvokeAsync(() =>
+			{
+				// find a free window index
+				var freeIndex = 0;
+				while (GetWindow(freeIndex) != null)
+					freeIndex++;
+
+				var window = new PpsMainWindow(freeIndex);
+				window.Show();
+				return window;
+			}
+			);
+		} // proc CreateMainWindow
+
 		public PpsMainWindow GetWindow(int index)
 		{
 			foreach (var c in Application.Current.Windows)
@@ -217,11 +220,113 @@ namespace TecWare.PPSn
 			}
 		} // func GetWindows
 
-		internal Task<bool> ShutdownAsync()
+		#endregion
+
+		#region -- Pane Manager -------------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="pane"></param>
+		/// <returns></returns>
+		public bool ActivatePane(IPpsWindowPane pane)
+			=> pane?.PaneManager.ActivatePane(pane) ?? false;
+
+		/// <summary></summary>
+		/// <param name="paneType"></param>
+		/// <param name="newPaneMode"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public async Task<IPpsWindowPane> OpenPaneAsync(Type paneType, PpsOpenPaneMode newPaneMode, LuaTable arguments)
 		{
-			Dispose();
-			return Task.FromResult<bool>(true);
-		} // func ShutdownAsync
+			// find pane
+			var pane = FindOpenPane(paneType, arguments);
+			if (pane == null)
+			{
+				// open pane
+				switch (newPaneMode)
+				{
+					case PpsOpenPaneMode.Default:
+					case PpsOpenPaneMode.NewMainWindow:
+						{
+							var window = await CreateMainWindowAsync();
+							return await window.OpenPaneAsync(paneType, PpsOpenPaneMode.Default, arguments);
+						}
+					case PpsOpenPaneMode.NewSingleWindow:
+						{
+							var window = new PpsSingleWindow(this, false);
+							window.Show();
+							return await window.OpenPaneAsync(paneType, PpsOpenPaneMode.Default, arguments);
+						}
+					case PpsOpenPaneMode.NewSingleDialog:
+						{
+							var window = new PpsSingleWindow(this, false);
+							if (arguments?.GetMemberValue("DialogOwner") is Window dialogOwner)
+								window.Owner = dialogOwner;
+							var dlgPane = await window.OpenPaneAsync(paneType, PpsOpenPaneMode.Default, arguments);
+							var r = window.ShowDialog();
+							if (arguments != null && r.HasValue)
+								arguments["DialogResult"] = r;
+							return dlgPane;
+						}
+					default:
+						throw new ArgumentOutOfRangeException(nameof(newPaneMode), newPaneMode, $"Only {nameof(PpsOpenPaneMode.Default)}, {nameof(PpsOpenPaneMode.NewMainWindow)} and {nameof(PpsOpenPaneMode.NewSingleWindow)} is allowed.");
+				}
+			}
+			else
+			{
+				ActivatePane(pane);
+				return pane;
+			}
+		} // func OpenPaneAsync
+
+		/// <summary></summary>
+		/// <param name="paneType"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public IPpsWindowPane FindOpenPane(Type paneType, LuaTable arguments)
+		{
+			foreach (var p in Panes)
+			{
+				if (p.EqualPane(paneType, arguments))
+					return p;
+			}
+			return null;
+		} // func FindOpenPane
+
+		/// <summary></summary>
+		/// <param name="wellknownType"></param>
+		/// <returns></returns>
+		public Type GetPaneType(PpsWellknownType wellknownType)
+		{
+			switch(wellknownType)
+			{
+				case PpsWellknownType.Generic:
+					return typeof(PpsGenericMaskWindowPane);
+				case PpsWellknownType.Mask:
+					return typeof(PpsGenericMaskWindowPane);
+				default:
+					throw new ArgumentOutOfRangeException(nameof(wellknownType), wellknownType, "Invalid argument.");
+			}
+		} // func GetPaneType
+
+		public IEnumerable<IPpsWindowPane> Panes
+		{
+			get
+			{
+				foreach(var w in GetWindows())
+				{
+					if (w is IPpsWindowPaneManager m)
+					{
+						foreach (var p in m.Panes)
+							yield return p;
+					}
+				}
+			}
+		} // prop Panes
+
+		PpsEnvironment IPpsWindowPaneManager.Environment => this;
+		bool IPpsWindowPaneManager.IsActive => false;
+
+		#endregion
 
 		[LuaMember(nameof(TestBackgroundProgressState))]
 		public IPpsProgress TestBackgroundProgressState()

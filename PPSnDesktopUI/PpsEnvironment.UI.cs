@@ -388,14 +388,7 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		/// <param name="owner"></param>
 		public void ShowTrace(Window owner)
-		{
-			var dialog = new PpsTraceDialog();
-			var t = dialog.LoadAsync(this);
-			if (t.IsCompleted)
-				t.Wait();
-			dialog.Owner = owner;
-			dialog.ShowDialog();
-		} // proc ShowTrace
+			=> ((IPpsWindowPaneManager)this).OpenPaneAsync(typeof(PpsTracePane), PpsOpenPaneMode.NewSingleDialog, new LuaTable() { ["DialogOwner"] = owner }).AwaitTask();
 
 		/// <summary>Returns the pane declaration for the trace pane.</summary>
 		public Type TracePane

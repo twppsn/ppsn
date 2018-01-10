@@ -94,7 +94,7 @@ namespace TecWare.PPSn.UI
 					async (sender, e) =>
 					{
 						e.Handled = true;
-						await LoadPaneAsync(Environment.TracePane, PpsOpenPaneMode.NewPane, null);
+						await OpenPaneAsync(Environment.TracePane, PpsOpenPaneMode.NewPane, null);
 					}
 				)
 			);
@@ -108,7 +108,7 @@ namespace TecWare.PPSn.UI
 					},
 					(sender, e) =>
 					{
-						e.CanExecute = Panes.IndexOf(CurrentPane) < Panes.Count - 1;
+						e.CanExecute = panes.IndexOf(CurrentPane) < Panes.Count - 1;
 					}
 				)
 			);
@@ -121,7 +121,7 @@ namespace TecWare.PPSn.UI
 					},
 					(sender, e) =>
 					{
-						e.CanExecute = Panes.IndexOf(CurrentPane) > 0;
+						e.CanExecute = panes.IndexOf(CurrentPane) > 0;
 					}
 				)
 			);
@@ -131,7 +131,7 @@ namespace TecWare.PPSn.UI
 					{
 						e.Handled = true;
 						if (e.Parameter is IPpsWindowPane pane)
-							Activate(pane);
+							ActivatePane(pane);
 					},
 					(sender, e) =>
 					{

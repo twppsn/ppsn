@@ -31,6 +31,7 @@ namespace TecWare.PPSn.UI
 {
 	#region -- class PpsCommandContext --------------------------------------------------
 
+	/// <summary>Command context extension for the service model.</summary>
 	public sealed class PpsCommandContext : IServiceProvider
 	{
 		private readonly PpsEnvironment environment;
@@ -40,6 +41,11 @@ namespace TecWare.PPSn.UI
 
 		private readonly Lazy<object> getDataContext;
 
+		/// <summary></summary>
+		/// <param name="environment"></param>
+		/// <param name="target"></param>
+		/// <param name="source"></param>
+		/// <param name="parameter"></param>
 		public PpsCommandContext(PpsEnvironment environment, object target, object source, object parameter)
 		{
 			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
@@ -52,6 +58,9 @@ namespace TecWare.PPSn.UI
 		private object GetDataContext()
 			=> target is FrameworkElement frameworkElement ? frameworkElement.DataContext : null;
 		
+		/// <summary>GetService implementation</summary>
+		/// <param name="serviceType"></param>
+		/// <returns></returns>
 		public object GetService(Type serviceType)
 		{
 			object r = null;
@@ -70,10 +79,15 @@ namespace TecWare.PPSn.UI
 			return r ?? environment.GetService(serviceType);
 		} // func GetService
 
+		/// <summary>Environment</summary>
 		public PpsEnvironment Environment => environment;
+		/// <summary>Target control</summary>
 		public object Target => target;
+		/// <summary>Source control</summary>
 		public object Source => source;
+		/// <summary>Data context</summary>
 		public object DataContext => getDataContext.Value;
+		/// <summary>Command parameter</summary>
 		public object Parameter => parameter;
 	} // class PpsCommandContext
 

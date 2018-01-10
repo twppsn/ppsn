@@ -42,8 +42,8 @@ namespace TecWare.PPSn.UI
 
 		public readonly static RoutedCommand SetCharmCommand = new RoutedCommand("SetCharm", typeof(PpsMainWindow));
 
-		public PpsGenericMaskWindowPane(PpsEnvironment environment, PpsMainWindow window)
-			: base(environment, window)
+		public PpsGenericMaskWindowPane(PpsEnvironment environment, IPpsWindowPaneManager paneManager)
+			: base(environment, paneManager)
 		{
 			idleActionToken = Environment.AddIdleAction(
 				elapsed =>

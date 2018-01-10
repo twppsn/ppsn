@@ -137,12 +137,18 @@ namespace TecWare.PPSn.Controls
 
 		private static Task RunEditorAsync(PpsCommandContext context)
 		{
-			var window = context.GetService<PpsWindow>(true);
+			var pane = context.GetService<IPpsWindowPane>(true);
 			var control = context.GetService<PpsAttachmentsControl>(true);
 
-			// todo: interface for window management is missing
-			var mi = window.GetType().GetRuntimeMethods().Where(c => c.IsPublic && !c.IsStatic && c.Name == "LoadPaneAsync" && c.GetParameters().Length == 3).FirstOrDefault();
-			return (Task)mi.Invoke(window, new object[] { typeof(PpsPicturePane), 2, new LuaTable() { ["Attachments"] = control.AttachmentsSource, ["ObjectName"] = control.CurrentPane.Title } });
+			return pane.PaneManager.OpenPaneAsync(
+				typeof(PpsPicturePane),
+				PpsOpenPaneMode.NewPane,
+				new LuaTable()
+				{
+					[PpsPicturePane.AttachmentsSourceArgument] = control.AttachmentsSource,
+					[PpsPicturePane.ObjectNameArgument] = control.CurrentPane.Title
+				}
+			);
 		} // func RunEditorAsync
 
 		private static Task AppendAttachmentFromFileDialogAsync(PpsCommandContext context)

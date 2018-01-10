@@ -80,6 +80,11 @@ namespace TecWare.PPSn.UI
 	/// </summary>
 	public partial class PpsPicturePane : UserControl, IPpsWindowPane
 	{
+		/// <summary></summary>
+		public const string AttachmentsSourceArgument = "Attachments";
+		/// <summary></summary>
+		public const string ObjectNameArgument = "ObjectName";
+
 		#region -- Helper Classes -----------------------------------------------------
 
 		#region -- Data Representation ------------------------------------------------
@@ -763,8 +768,10 @@ namespace TecWare.PPSn.UI
 
 		#region -- Fields -------------------------------------------------------------
 
-		private PpsUndoManager strokeUndoManager;
+		private readonly IPpsWindowPaneManager paneManager;
 		private readonly PpsEnvironment environment;
+
+		private PpsUndoManager strokeUndoManager;
 		private List<string> captureSourceNames = new List<string>();
 
 		#endregion
@@ -772,14 +779,15 @@ namespace TecWare.PPSn.UI
 		#region -- Constructor --------------------------------------------------------
 
 		/// <summary>initializes the cameras, the settings and the events</summary>
-		public PpsPicturePane()
+		public PpsPicturePane(IPpsWindowPaneManager paneManager)
 		{
+			this.paneManager = paneManager;
+			this.environment = paneManager.Environment;
+
 			InitializeComponent();
 
 			Resources[PpsEnvironment.WindowPaneService] = this;
-
-			environment = PpsEnvironment.GetEnvironment(this) ?? throw new ArgumentNullException("environment");
-
+			
 			InitializePenSettings();
 			InitializeCameras();
 			InitializeStrokes();
@@ -1168,14 +1176,14 @@ namespace TecWare.PPSn.UI
 
 				if (originalObject != null)
 				{
-					subTitle = (string)originalObject["Name"];
+					subTitle = (string)originalObject[ObjectNameArgument];
 					return subTitle;
 				}
 
 				var window = Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
 				if (window is PpsWindow ppswindow)
 				{
-					subTitle = (string)(((PpsObject)((dynamic)ppswindow).CharmObject) ?? originalObject)?["Name"];
+					subTitle = (string)(((PpsObject)((dynamic)ppswindow).CharmObject) ?? originalObject)?[ObjectNameArgument];
 					return subTitle;
 				}
 				return String.Empty;
@@ -1186,7 +1194,7 @@ namespace TecWare.PPSn.UI
 		public object Control => this;
 
 		/// <summary>null, to fulfill interface</summary>
-		public IPpsPWindowPaneControl PaneControl => null;
+		public IPpsWindowPaneControl PaneControl => null;
 
 		/// <summary>false, to fulfill interface</summary>
 		public bool IsDirty => false;
@@ -1203,9 +1211,9 @@ namespace TecWare.PPSn.UI
 		/// <param name="otherArguments"></param>
 		/// <returns></returns>
 		public PpsWindowPaneCompareResult CompareArguments(LuaTable otherArguments)
-		{
-			return PpsWindowPaneCompareResult.Reload;
-		}
+			=> otherArguments[AttachmentsSourceArgument] == Attachments
+				? PpsWindowPaneCompareResult.Same
+				: PpsWindowPaneCompareResult.Reload;
 
 		/// <summary>the Pane has hardware handles to dispose</summary>
 		public void Dispose()
@@ -1217,15 +1225,11 @@ namespace TecWare.PPSn.UI
 		/// <summary>
 		/// Loads the content of the panel
 		/// </summary>
-		/// <param name="args">The LuaTable must at least contain ''environment'' and ''Attachments''</param>
+		/// <param name="args">The LuaTable must at least contain ''Attachments''</param>
 		/// <returns></returns>
 		public Task LoadAsync(LuaTable args)
 		{
-			var environment = (args["Environment"] as PpsEnvironment) ?? PpsEnvironment.GetEnvironment(this);
-			//DataContext = environment;
-
-			Attachments = (args["Attachments"] as IPpsAttachments);
-
+			Attachments = (args[AttachmentsSourceArgument] as IPpsAttachments);
 			return Task.CompletedTask;
 		} // proc LoadAsync
 
@@ -1563,6 +1567,9 @@ namespace TecWare.PPSn.UI
 		private readonly static DependencyProperty StrokeSettingsProperty = DependencyProperty.Register(nameof(StrokeSettings), typeof(PpsPecStrokeSettings), typeof(PpsPicturePane));
 
 		#endregion
+
+		/// <summary>Get the owning pane manager.</summary>
+		public IPpsWindowPaneManager PaneManager => paneManager;
 
 		#endregion
 	}

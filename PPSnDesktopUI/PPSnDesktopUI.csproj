@@ -157,9 +157,6 @@
       <DependentUpon>PpsPicturePane.xaml</DependentUpon>
     </Compile>
     <Compile Include="UI\PpsProgressStack.cs" />
-    <Compile Include="UI\PpsTraceDialog.xaml.cs">
-      <DependentUpon>PpsTraceDialog.xaml</DependentUpon>
-    </Compile>
     <Compile Include="UI\PpsTracePane.xaml.cs">
       <DependentUpon>PpsTracePane.xaml</DependentUpon>
     </Compile>
@@ -195,10 +192,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="UI\PpsPicturePane.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="UI\PpsTraceDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
