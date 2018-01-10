@@ -80,10 +80,14 @@ namespace TecWare.PPSn.UI
 	/// </summary>
 	public partial class PpsPicturePane : UserControl, IPpsWindowPane
 	{
+		private static readonly DependencyPropertyKey subTitlePropertyKey = DependencyProperty.RegisterReadOnly(nameof(SubTitle), typeof(string), typeof(PpsPicturePane), new FrameworkPropertyMetadata(String.Empty));
+		/// <summary></summary>
+		public static readonly DependencyProperty SubTitleProperty = subTitlePropertyKey.DependencyProperty;
+
 		/// <summary></summary>
 		public const string AttachmentsSourceArgument = "Attachments";
 		/// <summary></summary>
-		public const string ObjectNameArgument = "ObjectName";
+		public const string ParentPaneArgument = "ParentPane";
 
 		#region -- Helper Classes -----------------------------------------------------
 
@@ -771,6 +775,8 @@ namespace TecWare.PPSn.UI
 		private readonly IPpsWindowPaneManager paneManager;
 		private readonly PpsEnvironment environment;
 
+		private IPpsWindowPane parentPane;
+
 		private PpsUndoManager strokeUndoManager;
 		private List<string> captureSourceNames = new List<string>();
 
@@ -1162,33 +1168,10 @@ namespace TecWare.PPSn.UI
 
 		#region -- IPpsWindowPane -----------------------------------------------------
 
-		/// <summary>Name of the Pane (German)</summary>
+		/// <summary>Name of the Pane</summary>
 		public string Title => "Bildeditor";
-
-		private string subTitle;
 		/// <summary>tries to return the Name of the actual item </summary>
-		public string SubTitle
-		{
-			get
-			{
-				if (!String.IsNullOrEmpty(subTitle))
-					return subTitle;
-
-				if (originalObject != null)
-				{
-					subTitle = (string)originalObject[ObjectNameArgument];
-					return subTitle;
-				}
-
-				var window = Application.Current.Windows.OfType<Window>().FirstOrDefault(c => c.IsActive);
-				if (window is PpsWindow ppswindow)
-				{
-					subTitle = (string)(((PpsObject)((dynamic)ppswindow).CharmObject) ?? originalObject)?[ObjectNameArgument];
-					return subTitle;
-				}
-				return String.Empty;
-			}
-		}
+		public string SubTitle => (string)GetValue(SubTitleProperty);
 
 		/// <summary>refrence to this, to fulfill interface</summary>
 		public object Control => this;
@@ -1229,7 +1212,9 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		public Task LoadAsync(LuaTable args)
 		{
-			Attachments = (args[AttachmentsSourceArgument] as IPpsAttachments);
+			Attachments = args[AttachmentsSourceArgument] as IPpsAttachments;
+			parentPane = args[ParentPaneArgument] as IPpsWindowPane;
+			SetValue(subTitlePropertyKey, parentPane?.SubTitle ?? "<none>");
 			return Task.CompletedTask;
 		} // proc LoadAsync
 

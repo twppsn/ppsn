@@ -146,7 +146,7 @@ namespace TecWare.PPSn.Controls
 				new LuaTable()
 				{
 					[PpsPicturePane.AttachmentsSourceArgument] = control.AttachmentsSource,
-					[PpsPicturePane.ObjectNameArgument] = control.CurrentPane.Title
+					[PpsPicturePane.ParentPaneArgument] = control.CurrentPane
 				}
 			);
 		} // func RunEditorAsync
