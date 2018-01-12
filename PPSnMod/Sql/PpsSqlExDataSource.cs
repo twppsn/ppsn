@@ -458,7 +458,7 @@ namespace TecWare.PPSn.Server.Sql
 				if (String.IsNullOrEmpty(addSelectList))
 					return this;
 
-				string newSelectList = AddSelectList(addSelectList);
+				var newSelectList = AddSelectList(addSelectList);
 				return new SqlDataSelector(connection, selectorToken, newSelectList, whereCondition, orderBy);
 			} // func SqlSelect
 
@@ -475,7 +475,7 @@ namespace TecWare.PPSn.Server.Sql
 				if (String.IsNullOrEmpty(addWhereCondition))
 					return this;
 
-				string newWhereCondition = AddWhereCondition(addWhereCondition);
+				var newWhereCondition = AddWhereCondition(addWhereCondition);
 				return new SqlDataSelector(connection, selectorToken, selectList, newWhereCondition, orderBy);
 			} // func SqlWhere
 
@@ -492,7 +492,7 @@ namespace TecWare.PPSn.Server.Sql
 				if (String.IsNullOrEmpty(addOrderBy))
 					return this;
 
-				string newOrderBy = AddOrderBy(addOrderBy);
+				var newOrderBy = AddOrderBy(addOrderBy);
 				return new SqlDataSelector(connection, selectorToken, selectList, whereCondition, newOrderBy);
 			} // func SqlOrderBy
 
@@ -501,9 +501,19 @@ namespace TecWare.PPSn.Server.Sql
 				SqlCommand cmd = null;
 				try
 				{
-					cmd = new SqlCommand();
-					cmd.Connection = connection.Connection;
-					cmd.CommandType = CommandType.Text;
+					var trans = DataSource.Application.Database.GetActiveTransaction(DataSource);
+					if (trans is SqlDataTransaction sqlTrans)
+					{
+						cmd = sqlTrans.CreateCommand(CommandType.Text, false);
+					}
+					else
+					{
+						cmd = new SqlCommand
+						{
+							Connection = connection.Connection,
+							CommandType = CommandType.Text,
+						};
+					}
 
 					var sb = new StringBuilder("select ");
 
@@ -1780,6 +1790,7 @@ namespace TecWare.PPSn.Server.Sql
 			#endregion
 			
 			public PpsSqlExDataSource SqlDataSource => (PpsSqlExDataSource)base.DataSource;
+			public SqlTransaction InternalTransaction => transaction;
 		} // class SqlDataTransaction
 
 		#endregion

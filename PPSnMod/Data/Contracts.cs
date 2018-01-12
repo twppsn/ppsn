@@ -324,7 +324,7 @@ namespace TecWare.PPSn.Server.Data
 		Task<PpsDataSelector> CreateSelectorAsync(string name, PpsDataColumnExpression[] columns = null, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true);
 
 		/// <summary>Creates a transaction to manipulate data.</summary>
-		/// <param name="dataSource"></param>
+		/// <param name="dataSourceName"></param>
 		/// <param name="throwException">Should the method throw on an exception on failure.</param>
 		/// <returns></returns>
 		Task<PpsDataTransaction> CreateTransactionAsync(string dataSourceName, bool throwException = true);

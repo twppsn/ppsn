@@ -1687,6 +1687,14 @@ namespace TecWare.PPSn.Server
 				return trans;
 			} // func GetDatabaseAsync
 
+			public PpsDataTransaction GetActiveTransaction(PpsDataSource dataSource)
+			{
+				var scope = DEScope.GetScopeService<IDECommonScope>(false);
+				return scope != null && scope.TryGetGlobal<PpsDataTransaction>(this, dataSource, out var trans)
+					? trans
+					: null;
+			} // func GetActiveTransaction
+
 			[LuaMember]
 			public PpsDataTransaction GetDatabase(string name = null)
 				=> GetDatabaseAsync(name).AwaitTask();

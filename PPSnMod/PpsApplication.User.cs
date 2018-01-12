@@ -584,6 +584,8 @@ namespace TecWare.PPSn.Server
 			return context;
 		} // func ImpersonateSystemContext
 
+		/// <summary>Create a scope for the system user.</summary>
+		/// <returns></returns>
 		public async Task<IDECommonScope> CreateSystemContextAsync()
 		{
 			var context = new DECommonScope(this, true);
