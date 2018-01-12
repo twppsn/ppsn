@@ -248,6 +248,9 @@ namespace TecWare.PPSn.Server
 			this.isRev = defaultData.TryGetProperty<bool>(nameof(IsRev), out var t) ? (bool?)t : null;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
 		protected override object OnIndex(object key)
 			=> key is string k && defaultData.TryGetProperty(k, out var t) ? t : base.OnIndex(key);
 
@@ -291,6 +294,9 @@ namespace TecWare.PPSn.Server
 			revId = (long)(r[nameof(HeadRevId), true] ?? -1);
 		} // proc CheckRevision
 
+		/// <summary>Change current revision.</summary>
+		/// <param name="newRevId"></param>
+		/// <param name="refresh"></param>
 		[LuaMember]
 		public void SetRevision(long newRevId, PpsObjectUpdateFlag refresh = PpsObjectUpdateFlag.All)
 		{
@@ -336,6 +342,8 @@ namespace TecWare.PPSn.Server
 			return args;
 		} // func GetObjectArguments
 
+		/// <summary>Persist object structure in the database.</summary>
+		/// <param name="flags"></param>
 		[LuaMember]
 		public void Update(PpsObjectUpdateFlag flags = PpsObjectUpdateFlag.All)
 		{
@@ -452,65 +460,64 @@ namespace TecWare.PPSn.Server
 			{
 				CheckRevision();
 
-				if (revId >= 0)
+				#region -- update links --
+				cmd = new LuaTable
 				{
-					#region -- update links --
-					cmd = new LuaTable
+					{ "delete", "dbo.ObjL" },
+					new LuaTable { {"Id", null } }
+				};
+
+				// upsert, insert links
+				foreach (var l in linksTo.Where(c => c.IsDirty))
+				{
+					if (l.IsRemoved)
 					{
-						{ "delete", "dbo.ObjL" },
-						new LuaTable { {"Id", null } }
-					};
-
-					// upsert, insert links
-					foreach (var l in linksTo.Where(c => c.IsDirty))
-					{
-						if (l.IsRemoved)
+						if (l.Id > 0)
 						{
-							if (l.Id > 0)
-							{
-								((LuaTable)cmd[1])["Id"] = l.Id;
-								trans.ExecuteNoneResult(cmd);
-							}
-						}
-						else if (l.IsNew)
-						{
-							cmd = new LuaTable
-							{
-								{ "upsert", "dbo.ObjL" },
-								new LuaTable
-								{
-									{ "ParentObjKId", objectId },
-									{ "ParentObjRId", revId},
-									{ "LinkObjKId", l.LinkId },
-									{ "RefCount", l.RefCount }
-								},
-								{ "on", new LuaTable { "ParentObjKId", "ParentObjRId", "LinkObjKId" } }
-							};
-
-							trans.ExecuteNoneResult(cmd);
-
-							l.Id = ((LuaTable)cmd[1]).GetOptionalValue("Id", -1L);
-						}
-						else
-						{
-							cmd = new LuaTable
-							{
-								{ "upsert", "dbo.ObjL" },
-								new LuaTable
-								{
-									{ "Id", l.Id },
-									{ "ParentObjKId", objectId },
-									{ "ParentObjRId", revId},
-									{ "LinkObjKId", l.LinkId },
-									{ "RefCount", l.RefCount }
-								}
-							};
-
+							((LuaTable)cmd[1])["Id"] = l.Id;
 							trans.ExecuteNoneResult(cmd);
 						}
 					}
-					#endregion
+					else if (l.IsNew)
+					{
+						cmd = new LuaTable
+						{
+							{ "upsert", "dbo.ObjL" },
+							{ "columnList", new LuaTable() { "ParentObjKId", "ParentObjRId", "LinkObjKId", "RefCount" } },
+							new LuaTable
+							{
+								{ "ParentObjKId", objectId },
+								{ "ParentObjRId", revId < 0 ? null : (object)revId },
+								{ "LinkObjKId", l.LinkId },
+								{ "RefCount", l.RefCount }
+							},
+							{ "on", new LuaTable { "ParentObjKId", "ParentObjRId", "LinkObjKId" } }
+						};
+
+						trans.ExecuteNoneResult(cmd);
+
+						l.Id = ((LuaTable)cmd[1]).GetOptionalValue("Id", -1L);
+					}
+					else
+					{
+						cmd = new LuaTable
+						{
+							{ "upsert", "dbo.ObjL" },
+							{ "columnList", new LuaTable() { "ParentObjKId", "ParentObjRId", "LinkObjKId", "RefCount" } },
+							new LuaTable
+							{
+								{ "Id", l.Id },
+								{ "ParentObjKId", objectId },
+								{ "ParentObjRId", revId < 0 ? null : (object)revId },
+								{ "LinkObjKId", l.LinkId },
+								{ "RefCount", l.RefCount }
+							}
+						};
+
+						trans.ExecuteNoneResult(cmd);
+					}
 				}
+				#endregion
 
 				Reset(PpsObjectUpdateFlag.Links);
 			}
