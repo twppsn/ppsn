@@ -911,11 +911,15 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		/// <summary>Id of the object.</summary>
 		[LuaMember]
 		public long Id => objectId;
 
+		/// <summary>Return the guid of the current object.</summary>
 		public Guid Guid => this.TryGetValue<Guid>(nameof(Guid), out var t) ? t : Guid.Empty;
+		/// <summary>Object class</summary>
 		public string Typ => this.TryGetValue<string>(nameof(Typ), out var t) ? t : null;
+		/// <summary>Content mime type.</summary>
 		public string MimeType => this.TryGetValue<string>(nameof(MimeType), out var t) ? t : null;
 		public string Nr => this.TryGetValue<string>(nameof(Nr), out var t) ? t : null;
 		public long CurRevId => this.TryGetValue<long>(nameof(CurRevId), out var t) ? t : -1;
@@ -1000,6 +1004,9 @@ namespace TecWare.PPSn.Server
 
 		#region -- Ctor/Dtor ------------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="sp"></param>
+		/// <param name="name"></param>
 		public PpsObjectItem(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
@@ -1017,21 +1024,35 @@ namespace TecWare.PPSn.Server
 			return obj;
 		} // func VerfiyObjectType
 
+		/// <summary>Get object of the correct class.</summary>
+		/// <param name="id"></param>
+		/// <returns></returns>
+		[LuaMember]
 		public PpsObjectAccess GetObject(long id)
 			=> VerfiyObjectType(application.Objects.GetObject(id));
 
+		/// <summary>Get object of the correct class.</summary>
+		/// <param name="guid"></param>
+		/// <returns></returns>
+		[LuaMember]
 		public PpsObjectAccess GetObject(Guid guid)
 			=> VerfiyObjectType(application.Objects.GetObject(guid));
 
 		/// <summary>Serialize data to an stream of bytes.</summary>
 		protected abstract void WriteDataToStream(T data, Stream dst);
 
+		/// <summary>Get the data from an stream.</summary>
+		/// <param name="src"></param>
+		/// <returns></returns>
 		protected abstract T GetDataFromStream(Stream src);
 
 		#endregion
 
 		#region -- Pull -----------------------------------------------------------------
 
+		/// <summary>Pull object content from the database</summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
 		protected virtual T PullData(PpsObjectAccess obj)
 		{
 			using (var src = obj.GetDataStream())
@@ -1105,6 +1126,9 @@ namespace TecWare.PPSn.Server
 
 		#region -- Push -----------------------------------------------------------------
 
+		/// <summary>Does this object class manage revisions</summary>
+		/// <param name="data"></param>
+		/// <returns></returns>
 		protected virtual bool IsDataRevision(T data)
 			=> false;
 
@@ -1123,6 +1147,10 @@ namespace TecWare.PPSn.Server
 			return null;
 		} // func GetNextNumberMethod
 
+		/// <summary>Create a human readable number for the object.</summary>
+		/// <param name="transaction"></param>
+		/// <param name="obj"></param>
+		/// <param name="data"></param>
 		protected virtual void SetNextNumber(PpsDataTransaction transaction, PpsObjectAccess obj, T data)
 		{
 			// set the object number for new objects
@@ -1135,7 +1163,7 @@ namespace TecWare.PPSn.Server
 				application.Objects.ValidateNumber(obj.Nr, nextNumber, data);
 		} // func SetNextNumber
 
-		/// <summary></summary>
+		/// <summary>Create a new object of this class.</summary>
 		/// <param name="obj"></param>
 		/// <param name="data"></param>
 		protected void InsertNewObject(PpsObjectAccess obj, T data)
@@ -1146,7 +1174,7 @@ namespace TecWare.PPSn.Server
 			// insert the new object, without rev
 			obj.Update(PpsObjectUpdateFlag.None);
 		} // proc InsertNewObject
-
+		
 		bool IPpsObjectItem.PushData(PpsObjectAccess obj, object data)
 			=> PushData(obj, (T)data, false);
 
@@ -1161,6 +1189,7 @@ namespace TecWare.PPSn.Server
 				throw new ArgumentNullException(nameof(obj));
 			if (data == null)
 				throw new ArgumentNullException(nameof(data));
+			VerfiyObjectType(obj);
 
 			// set IsRev
 			if (obj.IsNew)
@@ -1255,13 +1284,18 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		/// <summary>Object class or type</summary>
 		[LuaMember]
 		public virtual string ObjectType => Name;
+		/// <summary>Object source</summary>
 		public virtual string ObjectSource => null;
+		/// <summary>Default pane for the ui.</summary>
 		public virtual string DefaultPane => null;
 
+		/// <summary>Does the object type manages revisions by default</summary>
 		public bool IsRevDefault => IsDataRevision(null);
 
+		/// <summary>Get the application.</summary>
 		public PpsApplication Application => application;
 	} // class PpsObjectItem
 
@@ -1451,7 +1485,14 @@ namespace TecWare.PPSn.Server
 			/// <returns></returns>
 			[LuaMember]
 			public PpsObjectAccess CreateNewObject(LuaTable args)
-				=> new PpsObjectAccess(application, new LuaTableProperties(args));
+			{
+				if (args.GetMemberValue(nameof(PpsObjectAccess.Guid)) == null)
+					args[nameof(PpsObjectAccess.Guid)] = Guid.NewGuid();
+				if (args.GetMemberValue(nameof(PpsObjectAccess.Typ)) == null)
+					throw new ArgumentNullException(nameof(PpsObjectAccess.Typ), "Typ is missing.");
+
+				return new PpsObjectAccess(application, new LuaTableProperties(args));
+			} // func CreateNewObject
 
 			/// <summary>Opens a object for an update operation.</summary>
 			/// <param name="trans"></param>

@@ -53,7 +53,6 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Base service provider, for all pps-moduls:
 	/// - user administration
 	/// - data cache, for commonly used data or states

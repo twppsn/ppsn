@@ -18,6 +18,7 @@
 			<dependency id="TecWare.DES.ServerLib" version="1.0.0" />
 			<dependency id="TecWare.PPSn.Core" version="$version$" />
 			<dependency id="TecWare.PPSn.Report" version="$version$" />
+			<dependency id="Microsoft.SqlServer.Type" version="14.0.314.76" />
 		</dependencies>
 	</metadata>
 

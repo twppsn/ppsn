@@ -744,7 +744,11 @@ namespace TecWare.PPSn.Server
 		} // void RegisterDataSet
 
 		#endregion
-
+		
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public PpsDataSource GetDataSource(string name, bool throwException)
 		{
@@ -950,6 +954,7 @@ namespace TecWare.PPSn.Server
 			}
 		} // func HttpViewGetAction
 
+		/// <summary>Main data source, MS Sql Server</summary>
 		public PpsDataSource MainDataSource => mainDataSource;
 	} // class PpsApplication
 }

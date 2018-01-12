@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.IO;
+using Neo.IronLua;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server
@@ -201,6 +202,22 @@ namespace TecWare.PPSn.Server
 					throw new ArgumentException();
 			}
 		} // func LuaPush
+
+		/// <summary>Creates a new attachment object.</summary>
+		/// <param name="mimeType"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public PpsObjectAccess CreateNewObject(string mimeType)
+		{
+			var obj = Application.Objects.CreateNewObject(
+				new LuaTable()
+				{
+					[nameof(PpsObjectAccess.Typ)] = ObjectType,
+					[nameof(PpsObjectAccess.MimeType)] = mimeType ?? throw new ArgumentNullException(nameof(mimeType))
+				}
+			);
+			return obj;
+		} // func CreateNewObject
 	} // class PpsAttachment
 
 	#endregion
