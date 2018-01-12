@@ -60,13 +60,14 @@ namespace TecWare.PPSn.UI
 		/// <param name="parentPane"></param>
 		/// <param name="xXaml"></param>
 		/// <param name="code"></param>
-		public PpsGenericWpfChildPane(PpsGenericWpfWindowPane parentPane, XDocument xXaml, LuaChunk code)
+		/// <param name="fullUri"></param>
+		public PpsGenericWpfChildPane(PpsGenericWpfWindowPane parentPane, XDocument xXaml, LuaChunk code, Uri fullUri)
 			:base(parentPane)
 		{
 			if (parentPane == null)
 				throw new ArgumentNullException("parentPane");
 			
-			this.fileSource = new BaseWebRequest(new Uri(parentPane.BaseUri, "."), Environment.Encoding);
+			this.fileSource = new BaseWebRequest(new Uri(fullUri, "."), Environment.Encoding);
 
 			// create the control
 			if (xXaml != null)
@@ -354,9 +355,9 @@ namespace TecWare.PPSn.UI
 		{
 			// get the current root
 			var webRequest = self.GetMemberValue(nameof(IPpsLuaRequest.Request)) as BaseWebRequest ?? Request;
-
-			var parts = Task.Run(() => Environment.LoadPaneDataAsync(webRequest, initialTable ?? new LuaTable(), webRequest.GetFullUri(path))).AwaitTask();
-			return new LuaResult(new PpsGenericWpfChildPane(this, parts.xaml, parts.paneCode));
+			var fullUri = webRequest.GetFullUri(path);
+			var parts = Task.Run(() => Environment.LoadPaneDataAsync(webRequest, initialTable ?? new LuaTable(), fullUri)).AwaitTask();
+			return new LuaResult(new PpsGenericWpfChildPane(this, parts.xaml, parts.paneCode, fullUri));
 		} // func LuaRequirePane
 
 		/// <summary>Create a PpsCommand object.</summary>
