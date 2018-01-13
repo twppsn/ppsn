@@ -2550,6 +2550,9 @@ namespace TecWare.PPSn
 			fileName = Path.GetTempPath() + "\\" + Path.GetFileName(fileName);
 			using (var fileStream = File.OpenWrite(fileName))
 			{
+				if (objectId >= 0 && !HasData)
+					await PullAsync();
+
 				var buffer = await LoadRawDataAsync();
 				fileStream.Write(buffer.ReadInArray(), 0, (int)buffer.Length);
 				fileStream.Close();
