@@ -1875,7 +1875,7 @@ namespace TecWare.PPSn.Data
 				return Expression.MakeIndex(CurrentRowParameter, dataRowIndexName,
 					new Expression[]
 					{
-						Expression.Constant(memberName),
+						Expression.Constant(memberName ?? String.Empty),
 						Expression.Constant(true)
 					}
 				);

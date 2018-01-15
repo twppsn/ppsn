@@ -31,6 +31,7 @@ namespace TecWare.PPSn.Controls
 	public class PpsDataSelector : Control
 	{
 		public static readonly DependencyProperty SelectedValueProperty = DependencyProperty.Register(nameof(SelectedValue), typeof(IDataRow), typeof(PpsDataSelector), new FrameworkPropertyMetadata((IDataRow)null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+		public static readonly DependencyProperty SelectedValuePathProperty = DependencyProperty.Register(nameof(SelectedValuePath), typeof(string), typeof(PpsDataSelector));
 		public static readonly DependencyProperty ItemsSourceProperty = ItemsControl.ItemsSourceProperty.AddOwner(typeof(PpsDataSelector), new FrameworkPropertyMetadata(OnItemsSourceChanged));
 
 		private static readonly DependencyPropertyKey FilteredItemsSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(FilteredItemsSource), typeof(IEnumerable<IDataRow>), typeof(PpsDataSelector), new FrameworkPropertyMetadata(null));
@@ -497,7 +498,13 @@ namespace TecWare.PPSn.Controls
 		public DataTemplate ItemTemplate { get => (DataTemplate)GetValue(ItemTemplateProperty); set => SetValue(ItemTemplateProperty, value); }
 
 		/// <summary>Actual Value</summary>
-		public IDataRow SelectedValue { get => (IDataRow)(GetValue(SelectedValueProperty)); set => SetValue(SelectedValueProperty, value); }
+		public object SelectedValue { get {
+				if (String.IsNullOrEmpty(SelectedValuePath))
+					return (IDataRow)(GetValue(SelectedValueProperty));
+				return (IDataColumn)((IDataRow)(GetValue(SelectedValueProperty)))[SelectedValuePath];
+			} set => SetValue(SelectedValueProperty, value); }
+
+		public string SelectedValuePath { get => (string)GetValue(SelectedValuePathProperty); set => SetValue(SelectedValuePathProperty, value); }
 
 		/// <summary>Datatemplate for selected value</summary>
 		public DataTemplate SelectedValueTemplate { get => (DataTemplate)GetValue(SelectedValueTemplateProperty); set => SetValue(SelectedValueTemplateProperty, value); }
