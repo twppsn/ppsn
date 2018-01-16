@@ -244,6 +244,8 @@ namespace TecWare.PPSn.UI
 			{
 				value = newValue;
 				OnPropertyChanged(propertyName);
+				if (propertyName == nameof(Name))
+					OnPropertyChanged(nameof(WillOverwrite));
 				SetValue(ref isModified, true, nameof(IsModified));
 			}
 		} // proc SetValue
@@ -277,6 +279,8 @@ namespace TecWare.PPSn.UI
 		public bool IsEditing => isEditing;
 		/// <summary>Is the current data modified.</summary>
 		public bool IsModified => isModified;
+		/// <summary>Is already a Tag with that Name present, thus overwriting the old value.</summary>
+		public bool WillOverwrite => IsNew && IsEditing && ppsObject.Tags.IndexOf(Name) >= 0;
 
 		/// <summary>User, that created the tag.</summary>
 		public string UserName => IsNew ? PpsEnvironment.GetEnvironment().Username : tag.User?.GetProperty("Login", "<error>") ?? ""; // todo:

@@ -191,6 +191,7 @@
 							<Grid.RowDefinitions>
 								<RowDefinition Height="39" MaxHeight="39"/>
 								<RowDefinition/>
+								<RowDefinition/>
 							</Grid.RowDefinitions>
 							<TextBox x:Name="nameTextBox" Grid.Column="0" Margin="0,2,6,9" BorderBrush="{StaticResource lighterBorderBrush}"
 									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -199,6 +200,22 @@
 									 Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" MaxHeight="172"
 									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"/>
+							<StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,-7,0,7">
+								<Canvas Width="24" Height="24" Margin="0,0,5,0">
+									<Path Data="{StaticResource warningPathGeometry}" Fill="{StaticResource PPSnActionButtonBrush}"/>
+								</Canvas>
+								<TextBlock VerticalAlignment="Center" Text="Dieses Tag existiert bereits - beim Speichern wird der alte Wert überschrieben."/>
+								<StackPanel.Style>
+									<Style TargetType="StackPanel">
+										<Setter Property="Visibility" Value="Collapsed"/>
+										<Style.Triggers>
+											<DataTrigger Binding="{Binding WillOverwrite}" Value="True">
+												<Setter Property="Visibility" Value="Visible"/>
+											</DataTrigger>
+										</Style.Triggers>
+									</Style>
+								</StackPanel.Style>
+							</StackPanel>
 						</Grid>
 					</DataTemplate>
 				</ListBox.ItemTemplate>
@@ -217,11 +234,36 @@
 				</ListBox.ItemsPanel>
 				<ListBox.ItemTemplate>
 					<DataTemplate>
-						<Grid Height="39">
-							<TextBox x:Name="tagTextBox" Margin="0,2,0,9"
+						<Grid>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="39"/>
+								<RowDefinition/>
+							</Grid.RowDefinitions>
+							<TextBox Grid.Row="0" x:Name="tagTextBox" Margin="0,2,0,9"
 									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 MaxLength="64"
 									 Style="{StaticResource PpsTagTextBoxStyle}"/>
+							<StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,-24,0">
+								<Canvas Width="24" Height="24" Margin="0,0,5,0">
+									<Path Data="{StaticResource warningPathGeometry}" Fill="{StaticResource PPSnActionButtonBrush}"/>
+								</Canvas>
+								<TextBlock 
+									VerticalAlignment="Center" 
+									Foreground="{StaticResource PPSnActionButtonBrush}" 
+									Text="Dieses Tag existiert bereits." 
+									TextWrapping="Wrap"
+									MaxWidth="{Binding ElementName=tagTextBox, Path=ActualWidth}"/>
+								<StackPanel.Style>
+									<Style TargetType="StackPanel">
+										<Setter Property="Visibility" Value="Collapsed"/>
+										<Style.Triggers>
+											<DataTrigger Binding="{Binding WillOverwrite}" Value="True">
+												<Setter Property="Visibility" Value="Visible"/>
+											</DataTrigger>
+										</Style.Triggers>
+									</Style>
+								</StackPanel.Style>
+							</StackPanel>
 						</Grid>
 					</DataTemplate>
 				</ListBox.ItemTemplate>
