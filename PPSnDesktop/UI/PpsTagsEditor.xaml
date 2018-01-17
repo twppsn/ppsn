@@ -200,11 +200,14 @@
 									 Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 AcceptsReturn="True" VerticalContentAlignment="Top" Padding="2,5" MaxHeight="172"
 									 Style="{StaticResource PpsTagSimpleTextBoxStyle}"/>
+							<!--Warning, if a Tag will be overwritten-->
 							<StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,-7,0,7">
 								<Canvas Width="24" Height="24" Margin="0,0,5,0">
 									<Path Data="{StaticResource warningPathGeometry}" Fill="{StaticResource PPSnActionButtonBrush}"/>
 								</Canvas>
-								<TextBlock VerticalAlignment="Center" Text="Dieses Tag existiert bereits - beim Speichern wird der alte Wert überschrieben."/>
+								<TextBlock 
+									VerticalAlignment="Center" 
+									Text="Dieses Tag existiert bereits - beim Speichern wird der alte Wert überschrieben."/>
 								<StackPanel.Style>
 									<Style TargetType="StackPanel">
 										<Setter Property="Visibility" Value="Collapsed"/>
@@ -243,6 +246,7 @@
 									 Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 MaxLength="64"
 									 Style="{StaticResource PpsTagTextBoxStyle}"/>
+							<!--Warning, if a Tag will be overwritten-->
 							<StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,-24,0">
 								<Canvas Width="24" Height="24" Margin="0,0,5,0">
 									<Path Data="{StaticResource warningPathGeometry}" Fill="{StaticResource PPSnActionButtonBrush}"/>
