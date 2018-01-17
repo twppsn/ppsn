@@ -785,7 +785,7 @@ namespace TecWare.PPSn.UI
 				new CommandBinding(setCharmCommand,
 					(sender, e) =>
 					{
-						((dynamic)Pane.PaneManager).CharmObject = ((LuaTable)((LuaTable)this.DataContext)["Arguments"])["Object"]; // must be dynamic - type PpsMainWindow would need a reference to PPSnDesktop which is forbidden
+						((dynamic)Pane.PaneManager).CharmObject = ((LuaTable)((LuaTable)this.DataContext)["Arguments"])["Object"] ?? ((LuaTable)this.DataContext)["Object"]; // must be dynamic - type PpsMainWindow would need a reference to PPSnDesktop which is forbidden
 					},
 					(sender, e) =>
 					{
@@ -795,7 +795,7 @@ namespace TecWare.PPSn.UI
 			);
 
 			// set the initial Object for the CharmBar
-			DataContextChanged += (sender, e) => ((dynamic)Pane.PaneManager).CharmObject = ((LuaTable)((LuaTable)this.DataContext)["Arguments"])["Object"]; // must be dynamic - type PpsMainWindow would need a reference to PPSnDesktop which is forbidden
+			DataContextChanged += (sender, e) => ((dynamic)Pane.PaneManager).CharmObject = ((LuaTable)((LuaTable)this.DataContext)["Arguments"])["Object"] ?? ((LuaTable)this.DataContext)["Object"]; // must be dynamic - type PpsMainWindow would need a reference to PPSnDesktop which is forbidden
 		} // ctor
 
 		#endregion
