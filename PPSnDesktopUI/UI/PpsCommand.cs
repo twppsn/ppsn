@@ -196,7 +196,7 @@ namespace TecWare.PPSn.UI
 				if (CanExecuteCommand(commandContext))
 					ExecuteCommandCore(commandContext);
 			}
-			catch (PpsDataTableForeignKeyRestriction)
+			catch (PpsDataTableForeignKeyRestrictionException)
 			{
 				// todo: in lua verlagern
 				commandContext.Environment.MsgBox("Auf diesen Datensatz wird noch verwiesen.\nLöschen nicht möglich.", MessageBoxButton.OK, MessageBoxImage.Information);

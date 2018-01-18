@@ -32,36 +32,33 @@ using static TecWare.PPSn.Data.PpsDataHelper;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- enum PpsRowVersion -------------------------------------------------------
+	#region -- enum PpsRowVersion -----------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Welche Zeilenversionen sollen zurückgegeben werden.</summary>
+	/// <summary>Defines the row versions.</summary>
 	public enum PpsRowVersion
 	{
-		/// <summary>Die Original hinzugefügten Zeilen.</summary>
+		/// <summary>The original loaded rows.</summary>
 		Original,
-		/// <summary>Alle aktiven, nicht gelöschten Zeilen.</summary>
+		/// <summary>All current active rows..</summary>
 		Current,
-		/// <summary>Behält halle Zeilen, auch die gelöschten</summary>
+		/// <summary>All rows, current and deleted rows.</summary>
 		All
 	} // enum PpsRowVersion
 
 	#endregion
 
-	#region -- enum PpsDataTableMetaData ------------------------------------------------
+	#region -- enum PpsDataTableMetaData ----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Vordefinierte Meta-Daten an der Tabelle.</summary>
+	/// <summary>Predefined meta-data for a data table.</summary>
 	public enum PpsDataTableMetaData
 	{
 	} // enum PpsDataTableMetaData
 
 	#endregion
 
-	#region -- enum PpsRelationType -----------------------------------------------------
+	#region -- enum PpsRelationType ---------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Type of a relation.</summary>
 	public enum PpsRelationType
 	{
 		/// <summary>Default behaviour, Cascade.</summary>
@@ -76,14 +73,12 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- enum PpsTablePrimaryKeyType ----------------------------------------------
+	#region -- enum PpsTablePrimaryKeyType --------------------------------------------
 
-	/// <summary>Classification for the primary key.
-	/// - gt 0 database key
-	/// - lt 0 none databse key (server or local)</summary>
+	/// <summary>Classification for the primary key.</summary>
 	public enum PpsTablePrimaryKeyType
 	{
-		/// <summary>Database generated key.</summary>
+		/// <summary>Database generated key (greater than zero).</summary>
 		Database,
 		/// <summary>Server generated key (lower than zero).</summary>
 		Server,
@@ -93,10 +88,9 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataTableRelationDefinition -------------------------------------
+	#region -- class PpsDataTableRelationDefinition -----------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Definition of a relation between two tables (only 1 to n is possible).</summary>
 	public sealed class PpsDataTableRelationDefinition
 	{
 		private readonly string name;
@@ -112,66 +106,85 @@ namespace TecWare.PPSn.Data
 			this.childColumn = childColumn;
 		} // ctor
 
+		/// <summary>Debug representation of the relation.</summary>
+		/// <returns></returns>
 		public override string ToString()
 			=> $"{parentColumn} -> {name}";
 
+		/// <summary>Name of the relation.</summary>
 		public string Name => name;
+		/// <summary>Relation type.</summary>
 		public PpsRelationType Type => type;
+		/// <summary>Parent column of the relation.</summary>
 		public PpsDataColumnDefinition ParentColumn => parentColumn;
+		/// <summary>Child column of the relation.</summary>
 		public PpsDataColumnDefinition ChildColumn => childColumn;
 	} // class PpsDataTableRelationDefinition
 
 	#endregion
 
-	#region -- class PpsDataTableDefinition ---------------------------------------------
+	#region -- class PpsDataTableDefinition -------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Definition of a data table.</summary>
 	public abstract class PpsDataTableDefinition : IDataColumns
 	{
-		#region -- WellKnownTypes ---------------------------------------------------------
+		#region -- WellKnownTypes -----------------------------------------------------
 
 		/// <summary>Definiert die bekannten Meta Informationen.</summary>
 		private static readonly Dictionary<string, Type> wellknownMetaTypes = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
 
 		#endregion
 
-		#region -- class PpsDataTableMetaCollection ---------------------------------------
+		#region -- class PpsDataTableMetaCollection -----------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		public class PpsDataTableMetaCollection : PpsMetaCollection
 		{
+			/// <summary></summary>
 			public PpsDataTableMetaCollection()
 			{
 			} // ctor
 
+			/// <summary></summary>
+			/// <param name="clone"></param>
 			public PpsDataTableMetaCollection(PpsDataTableMetaCollection clone)
 				: base(clone)
 			{
 			} // ctor
 
+			/// <summary></summary>
+			/// <typeparam name="T"></typeparam>
+			/// <param name="key"></param>
+			/// <param name="default"></param>
+			/// <returns></returns>
 			public T GetProperty<T>(PpsDataTableMetaData key, T @default)
 				=> PropertyDictionaryExtensions.GetProperty<T>(this, key.ToString(), @default);
 
+			/// <summary></summary>
 			public override IReadOnlyDictionary<string, Type> WellknownMetaTypes => wellknownMetaTypes;
 
+			/// <summary></summary>
 			public static PpsDataTableMetaCollection Empty { get; } = new PpsDataTableMetaCollection();
 		} // class PpsDataTableMetaCollection
 
 		#endregion
 
-		#region -- class PpsDataTableColumnCollection -------------------------------------
+		#region -- class PpsDataTableColumnCollection ---------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		public sealed class PpsDataTableColumnCollection : ReadOnlyCollection<PpsDataColumnDefinition>
 		{
+			/// <summary></summary>
+			/// <param name="columns"></param>
 			public PpsDataTableColumnCollection(IList<PpsDataColumnDefinition> columns)
 				: base(columns)
 			{
 			} // ctor
 
+			/// <summary></summary>
+			/// <param name="columnName"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
 			public PpsDataColumnDefinition this[string columnName, bool throwException = false]
 			{
 				get
@@ -186,17 +199,22 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataTabbleRelationCollection ----------------------------------
+		#region -- class PpsDataTabbleRelationCollection ------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		public sealed class PpsDataTabbleRelationCollection : ReadOnlyCollection<PpsDataTableRelationDefinition>
 		{
+			/// <summary></summary>
+			/// <param name="relations"></param>
 			public PpsDataTabbleRelationCollection(IList<PpsDataTableRelationDefinition> relations)
 				: base(relations)
 			{
 			} // ctor
 
+			/// <summary></summary>
+			/// <param name="relationName"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
 			public PpsDataTableRelationDefinition this[string relationName, bool throwException = false]
 			{
 				get
@@ -211,10 +229,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsColumnPropertyDescriptor --------------------------------------
+		#region -- class PpsColumnPropertyDescriptor ----------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsColumnPropertyDescriptor : PropertyDescriptor
 		{
 			private readonly PpsDataColumnDefinition column;
@@ -340,8 +356,11 @@ namespace TecWare.PPSn.Data
 
 		private readonly Lazy<PropertyDescriptorCollection> properties;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="dataset"></param>
+		/// <param name="tableName"></param>
 		protected PpsDataTableDefinition(PpsDataSetDefinition dataset, string tableName)
 		{
 			this.name = tableName;
@@ -361,6 +380,9 @@ namespace TecWare.PPSn.Data
 			);
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="dataset"></param>
+		/// <param name="clone"></param>
 		protected PpsDataTableDefinition(PpsDataSetDefinition dataset, PpsDataTableDefinition clone)
 			: this(dataset, clone.Name)
 		{
@@ -373,6 +395,9 @@ namespace TecWare.PPSn.Data
 				AddRelation(relation.Name, relation.Type, Columns[relation.ParentColumn.Name, true], Columns[relation.ChildColumn.Name, true]);
 		} // ctor
 
+		/// <summary>Clone the table definition.</summary>
+		/// <param name="dataset"></param>
+		/// <returns></returns>
 		public abstract PpsDataTableDefinition Clone(PpsDataSetDefinition dataset);
 
 		/// <summary>Ends the initialization.</summary>
@@ -395,6 +420,9 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		/// <summary>Create a instance of this table.</summary>
+		/// <param name="dataset">Dataset for the table.</param>
+		/// <returns>Data table instance</returns>
 		public virtual PpsDataTable CreateDataTable(PpsDataSet dataset)
 		{
 			if (!IsInitialized)
@@ -404,7 +432,7 @@ namespace TecWare.PPSn.Data
 		} // func CreateDataTable
 
 		/// <summary>Add's a new column to the table.</summary>
-		/// <param name="column"></param>
+		/// <param name="column">Column definition.</param>
 		protected void AddColumn(PpsDataColumnDefinition column)
 		{
 			if (IsInitialized)
@@ -423,7 +451,7 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Creates a new relation between two columns.</summary>
 		/// <param name="relationName">Name of the relation</param>
-		/// <param name="relationType"></param>
+		/// <param name="relationType">Type of the relation.</param>
 		/// <param name="parentColumn">Parent column, that must belong to the current table definition.</param>
 		/// <param name="childColumn">Child column.</param>
 		public void AddRelation(string relationName, PpsRelationType relationType, PpsDataColumnDefinition parentColumn, PpsDataColumnDefinition childColumn)
@@ -446,6 +474,10 @@ namespace TecWare.PPSn.Data
 			childColumn.SetParentRelation(relation);
 		} // proc AddRelation
 
+		/// <summary>Find the column index.</summary>
+		/// <param name="columnName">Name of the column.</param>
+		/// <param name="throwException"><c>true</c>, and the function raises an exception, if the column does not exist.</param>
+		/// <returns>Column index or -1</returns>
 		public int FindColumnIndex(string columnName, bool throwException = false)
 		{
 			var index = columns.FindIndex(c => String.Compare(c.Name, columnName, StringComparison.OrdinalIgnoreCase) == 0);
@@ -478,12 +510,16 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- event ColumnValueChangedEventHandler -------------------------------------
+	#region -- event ColumnValueChangedEventHandler -----------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Event arguments for a changed value.</summary>
 	public class ColumnValueChangedEventArgs : EventArgs
 	{
+		/// <summary></summary>
+		/// <param name="row"></param>
+		/// <param name="columnIndex"></param>
+		/// <param name="oldValue"></param>
+		/// <param name="newValue"></param>
 		public ColumnValueChangedEventArgs(PpsDataRow row, int columnIndex, object oldValue, object newValue)
 		{
 			this.Row = row;
@@ -509,35 +545,33 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- interface IPpsDataView ---------------------------------------------------
+	#region -- interface IPpsDataView -------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Basic definition of a data view, that is based on data rows.</summary>
 	public interface IPpsDataView : IList, IDataColumns, IEnumerable<PpsDataRow>, INotifyCollectionChanged
 	{
 		/// <summary>Creates a new unattached data row, that could be add.</summary>
-		/// <param name="originalValues"></param>
-		/// <param name="currentValues"></param>
-		/// <returns></returns>
+		/// <param name="originalValues">Original values for the row.</param>
+		/// <param name="currentValues">Current values for the row.</param>
+		/// <returns>Unattached data row.</returns>
 		PpsDataRow NewRow(object[] originalValues, object[] currentValues);
-		/// <summary>Removes a data row.</summary>
-		/// <param name="row"></param>
-		/// <returns></returns>
+		/// <summary>Remove a datarow from the view.</summary>
+		/// <param name="row">Data row, that should be removed.</param>
+		/// <returns><c>true</c>, if remnoved.</returns>
 		bool Remove(PpsDataRow row);
 
-		/// <summary></summary>
+		/// <summary>The table the view is based on.</summary>
 		PpsDataTable Table { get; }
 	} // interface IPpsDataView
 
 	#endregion
 
-	#region -- class PpsDataTable -------------------------------------------------------
+	#region -- class PpsDataTable -----------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Table</summary>
+	/// <summary>Table for rows.</summary>
 	public class PpsDataTable : IPpsDataView, IDynamicMetaObjectProvider, INotifyPropertyChanged
 	{
-		#region -- class PpsDataTableAddChangeItem ----------------------------------------
+		#region -- class PpsDataTableAddChangeItem ------------------------------------
 
 		private class PpsDataTableAddChangeItem : IPpsUndoItem
 		{
@@ -561,7 +595,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataTableRemoveChangeItem -------------------------------------
+		#region -- class PpsDataTableRemoveChangeItem ---------------------------------
 
 		private class PpsDataTableRemoveChangeItem : IPpsUndoItem
 		{
@@ -585,10 +619,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataTableMetaObject -------------------------------------------
+		#region -- class PpsDataTableMetaObject ---------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private class PpsDataTableMetaObject : DynamicMetaObject
 		{
 			public PpsDataTableMetaObject(Expression expr, object value)
@@ -615,10 +647,9 @@ namespace TecWare.PPSn.Data
 				var columnIndex = table.TableDefinition.FindColumnIndex(name);
 				if (columnIndex == -1)
 				{
-					if (table.TableDefinition.Meta == null)
-						return new DynamicMetaObject(Expression.Constant(null, typeof(object)), GetBindingRestrictions(table));
-					else
-						return new DynamicMetaObject(table.TableDefinition.Meta.GetMetaConstantExpression(name, generateException), GetBindingRestrictions(table));
+					return table.TableDefinition.Meta == null
+						? new DynamicMetaObject(Expression.Constant(null, typeof(object)), GetBindingRestrictions(table))
+						: new DynamicMetaObject(table.TableDefinition.Meta.GetMetaConstantExpression(name, generateException), GetBindingRestrictions(table));
 				}
 				else
 				{
@@ -637,20 +668,14 @@ namespace TecWare.PPSn.Data
 			} // func DynamicMetaObject
 
 			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
-			{
-				if (PpsDataHelper.IsStandardMember(LimitType, binder.Name))
-					return base.BindGetMember(binder);
-				else
-					return BindColumnOrMeta(binder.Name, false);
-			} // func BindGetMember
+				=> IsStandardMember(LimitType, binder.Name)
+					? base.BindGetMember(binder)
+					: BindColumnOrMeta(binder.Name, false);
 
 			public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
-			{
-				if (args.Length > 0 || PpsDataHelper.IsStandardMember(LimitType, binder.Name))
-					return base.BindInvokeMember(binder, args);
-				else
-					return BindColumnOrMeta(binder.Name, true);
-			} // func BindInvokeMember
+				=> args.Length > 0 || IsStandardMember(LimitType, binder.Name)
+					? base.BindInvokeMember(binder, args)
+					: BindColumnOrMeta(binder.Name, true);
 		} // class PpsDataTableMetaObject
 
 		#endregion
@@ -673,17 +698,14 @@ namespace TecWare.PPSn.Data
 		private ReadOnlyCollection<PpsDataRow> rowsView;
 		private ReadOnlyCollection<PpsDataRow> rowsOriginal;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Creates a new table</summary>
 		/// <param name="tableDefinition"></param>
 		/// <param name="dataset"></param>
 		protected internal PpsDataTable(PpsDataTableDefinition tableDefinition, PpsDataSet dataset)
 		{
-			if (dataset == null)
-				throw new ArgumentNullException();
-
-			this.dataset = dataset;
+			this.dataset = dataset ?? throw new ArgumentNullException();
 			this.tableDefinition = tableDefinition;
 
 			this.emptyRow = new PpsDataRow(this, PpsDataRowState.Unchanged, new object[tableDefinition.Columns.Count], null);
@@ -692,21 +714,21 @@ namespace TecWare.PPSn.Data
 		} // ctor
 
 		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
-		{
-			return new PpsDataTableMetaObject(parameter, this);
-		} // func GetMetaObject
+			=> new PpsDataTableMetaObject(parameter, this);
 
+		/// <summary>Create a relation view.</summary>
+		/// <param name="row">Base row for the relation.</param>
+		/// <param name="relation">Relation.</param>
+		/// <returns></returns>
 		public virtual PpsDataFilter CreateRelationFilter(PpsDataRow row, PpsDataTableRelationDefinition relation)
 			=> new PpsDataRelatedFilter(row, relation);
 
 		#endregion
 
-		#region -- Collection Changed -----------------------------------------------------
+		#region -- Collection Changed -------------------------------------------------
 
-		#region -- class PpsDataRowChangedEvent -------------------------------------------
+		#region -- class PpsDataRowChangedEvent ---------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private abstract class PpsDataRowChangedEvent : PpsDataChangedEvent
 		{
 			private readonly PpsDataTable table;
@@ -724,10 +746,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataRowAddedChangedEvent --------------------------------------
+		#region -- class PpsDataRowAddedChangedEvent ----------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private class PpsDataRowAddedChangedEvent : PpsDataRowChangedEvent
 		{
 			public PpsDataRowAddedChangedEvent(PpsDataTable table, PpsDataRow row)
@@ -762,10 +782,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataRowRemovedChangedEvent ------------------------------------
+		#region -- class PpsDataRowRemovedChangedEvent --------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsDataRowRemovedChangedEvent : PpsDataRowChangedEvent
 		{
 			private readonly int oldIndex;
@@ -803,10 +821,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataRowModifiedChangedEvent -----------------------------------
+		#region -- class PpsDataRowModifiedChangedEvent -------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsDataRowModifiedChangedEvent : PpsDataRowChangedEvent
 		{
 			private readonly int columnIndex;
@@ -845,10 +861,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataTableChangedEvent -----------------------------------------
+		#region -- class PpsDataTableChangedEvent -------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsDataTableChangedEvent : PpsDataChangedEvent
 		{
 			private readonly PpsDataTable table;
@@ -859,9 +873,7 @@ namespace TecWare.PPSn.Data
 			} // ctor
 
 			public override void InvokeEvent()
-			{
-				table.dataset.OnTableChanged(table);
-			} // proc InvokeEvent
+				=> table.dataset.OnTableChanged(table);
 
 			public override bool Same(PpsDataChangedEvent ev)
 			{
@@ -881,10 +893,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataTablePropertyChangedEvent ---------------------------------
+		#region -- class PpsDataTablePropertyChangedEvent -----------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsDataTablePropertyChangedEvent : PpsDataChangedEvent
 		{
 			private readonly PpsDataTable table;
@@ -897,9 +907,7 @@ namespace TecWare.PPSn.Data
 			} // ctor
 
 			public override void InvokeEvent()
-			{
-				table.InvokePropertyChanged(propertyName);
-			} // proc InvokeEvent
+				=> table.InvokePropertyChanged(propertyName);
 
 			public override bool Same(PpsDataChangedEvent ev)
 			{
@@ -965,16 +973,17 @@ namespace TecWare.PPSn.Data
 		private void InvokeColumnValueChanged(ColumnValueChangedEventArgs e)
 			=> ColumnValueChanged?.Invoke(this, e);
 
+		/// <summary>Gets called if something was changed in the table data.</summary>
 		protected virtual void OnTableChanged()
 		{
 			dataset.ExecuteEvent(new PpsDataTableChangedEvent(this));
 			dataset.ExecuteDataChanged();
 		} // proc OnTableChanged
 
+		/// <summary>Property of the table was changed.</summary>
+		/// <param name="propertyName"></param>
 		protected virtual void OnPropertyChanged(string propertyName)
-		{
-			dataset.ExecuteEvent(new PpsDataTablePropertyChangedEvent(this, propertyName));
-		} // proc OnPropertyChanged
+			=> dataset.ExecuteEvent(new PpsDataTablePropertyChangedEvent(this, propertyName));
 
 		private void InvokePropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -986,7 +995,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- Add, Remove, Reset, Commit ---------------------------------------------
+		#region -- Add, Remove, Reset, Commit -----------------------------------------
 
 		private IPpsUndoSink GetUndoSink()
 		{
@@ -1060,7 +1069,7 @@ namespace TecWare.PPSn.Data
 							switch (r.Type)
 							{
 								case PpsRelationType.Restricted:
-									throw new PpsDataTableForeignKeyRestriction(row, childTable[i]);
+									throw new PpsDataTableForeignKeyRestrictionException(row, childTable[i]);
 								case PpsRelationType.SetNull:
 									childTable[i][childColumnIndex] = null;
 									break;
@@ -1134,6 +1143,9 @@ namespace TecWare.PPSn.Data
 			originalRows.Clear();
 		} // proc ClearInternal
 
+		/// <summary>Create a datarow-value-array from a property dictionary.</summary>
+		/// <param name="properties">Member for the datarow.</param>
+		/// <returns>Value array.</returns>
 		public object[] GetDataRowValues(IPropertyReadOnlyDictionary properties)
 		{
 			var values = new object[Columns.Count];
@@ -1142,6 +1154,9 @@ namespace TecWare.PPSn.Data
 			return values;
 		} // func GetDataRowValues
 
+		/// <summary>Create a datarow-value-array from a lua table.</summary>
+		/// <param name="table">Table member for the row.</param>
+		/// <returns>Value array.</returns>
 		public object[] GetDataRowValues(LuaTable table)
 		{
 			var values = new object[Columns.Count];
@@ -1150,7 +1165,10 @@ namespace TecWare.PPSn.Data
 			return values;
 		} // func GetDataRowValues
 
-		public object[] CreateDataRowValuesArray(object[] values)
+		/// <summary>Create a datarow-value-array from a value array.</summary>
+		/// <param name="values">Array of values or <c>null</c>.</param>
+		/// <returns>Value array.</returns>
+		public object[] CreateDataRowValuesArray(object[] values = null)
 		{
 			if (values == null || values.Length == 0) // no values 
 			{
@@ -1168,18 +1186,24 @@ namespace TecWare.PPSn.Data
 		private PpsDataRow NewRow(object[] originalValues, object[] currentValues)
 			=> new PpsDataRow(this, PpsDataRowState.Modified, CreateDataRowValuesArray(originalValues), CreateDataRowValuesArray(currentValues));
 
+		/// <summary>Add a row from a table.</summary>
+		/// <param name="values">Members that will be assigned to the datarow columns.</param>
+		/// <returns>Added data row.</returns>
 		public PpsDataRow Add(LuaTable values)
 			=> AddInternal(false, NewRow(GetDataRowValues(values), null));
 
+		/// <summary>Add a row from a property dictionary.</summary>
+		/// <param name="properties">Properties, that will be assigned to the datarow columns.</param>
+		/// <returns>Added data row.</returns>
 		public PpsDataRow Add(IPropertyReadOnlyDictionary properties)
 			=> AddInternal(false, NewRow(GetDataRowValues(properties), null));
 
-		/// <summary>Erzeugt eine neue Zeile.</summary>
-		/// <param name="values">Werte, die in der Zeile enthalten sein sollen.</param>
-		/// <returns>Neue Datenzeile</returns>
+		/// <summary>Add a row from a value array.</summary>
+		/// <param name="values">Value array, that will be assigned by index.</param>
+		/// <returns>Added data row.</returns>
 		public PpsDataRow Add(params object[] values)
 		{
-			if (values.Length == 1)
+			if (values.Length == 1) // some languages may choose the wrong overload.
 			{
 				if (values[0] is LuaTable)
 					return Add((LuaTable)values[0]);
@@ -1215,6 +1239,8 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc AddRangeDataRows
 
+		/// <summary>Add multiple rows from property dictionaries.</summary>
+		/// <param name="newRows">Row collection.</param>
 		public void AddRange(IEnumerable<IPropertyReadOnlyDictionary> newRows)
 		{
 
@@ -1230,26 +1256,25 @@ namespace TecWare.PPSn.Data
 		PpsDataRow IPpsDataView.NewRow(object[] originalValues, object[] currentValues)
 			=> NewRow(originalValues, currentValues);
 
-		/// <summary>Entfernt die Datenzeile</summary>
-		/// <param name="row">Datenzeile, die als Entfernt markiert werden soll.</param>
+		/// <summary>Remove a datarow from the table.</summary>
+		/// <param name="row">Data row, that should be removed.</param>
+		/// <returns><c>true</c>, if removed.</returns>
 		public bool Remove(PpsDataRow row)
 			=> row.Remove();
 
-		/// <summary>Entfernt die Datenzeile</summary>
-		/// <param name="index"></param>
+		/// <summary>Remove a datarow from the table.</summary>
+		/// <param name="index">Index of the data, that should be removed.</param>
 		public void RemoveAt(int index)
-		{
-			currentRows[index].Remove();
-		} // proc RemoveAt
+			=> currentRows[index].Remove();
 
-		/// <summary>Markiert alle Einträge als gelöscht.</summary>
+		/// <summary>Removes all rows from the table.</summary>
 		public void Clear()
 		{
 			for (var i = currentRows.Count - 1; i >= 0; i--)
 				currentRows[i].Remove();
 		} // proc Clear
 
-		/// <summary>Setzt die komplette Datentabelle zurück.</summary>
+		/// <summary>Reset the state to the original values.</summary>
 		public void Reset()
 		{
 			// Setze alle Datenzeilen zurück
@@ -1283,11 +1308,15 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- Find -------------------------------------------------------------------
+		#region -- Find ---------------------------------------------------------------
 
 		private IEnumerable<PpsDataRow> GetRows(bool allRows)
 			=> allRows ? (IEnumerable<PpsDataRow>)AllRows : this;
 
+		/// <summary>Find a data row by primary key.</summary>
+		/// <param name="keyValue">Primarykey value.</param>
+		/// <param name="allRows"><c>true</c> to search also the original and deleted rows.</param>
+		/// <returns>The row or <c>null</c>.</returns>
 		public PpsDataRow FindKey(object keyValue, bool allRows = false)
 		{
 			var primaryKey = TableDefinition.PrimaryKey;
@@ -1297,57 +1326,55 @@ namespace TecWare.PPSn.Data
 			return FindRows(primaryKey, keyValue, allRows).FirstOrDefault();
 		} // func FindKey
 
+		/// <summary>Find data rows by column.</summary>
+		/// <param name="column">Column to search in.</param>
+		/// <param name="value">Value of the column.</param>
+		/// <param name="allRows"><c>true</c> to search also the original and deleted rows.</param>
+		/// <returns>Matching rows.</returns>
 		public IEnumerable<PpsDataRow> FindRows(PpsDataColumnDefinition column, object value, bool allRows = false)
 		{
-			var columnIndex = column.Index;
-			foreach (var row in GetRows(allRows))
-				if (Object.Equals(row[columnIndex], value))
-					yield return row;
+			var columnIndex = column.Index; // index of the column
+			value = GetConvertedValue(column, value); // change type of the value
+
+			return from r in GetRows(allRows)
+				   where Object.Equals(r[columnIndex], value)
+				   select r;
 		} // func FindRows
 
 		#endregion
 
-		#region -- Zugriff der Liste ------------------------------------------------------
+		#region -- Zugriff der Liste --------------------------------------------------
 
-		/// <summary></summary>
-		/// <param name="array"></param>
-		/// <param name="arrayIndex"></param>
+		/// <summary>Copy rows.</summary>
+		/// <param name="array">Target array.</param>
+		/// <param name="arrayIndex">Start within the target array.</param>
 		public void CopyTo(PpsDataRow[] array, int arrayIndex)
-		{
-			currentRows.CopyTo(array, arrayIndex);
-		} // proc CopyTo
+			=> currentRows.CopyTo(array, arrayIndex);
 
-		/// <summary>Gibt den Index der Zeile zurück,</summary>
-		/// <param name="row"></param>
-		/// <returns></returns>
+		/// <summary>Find the index of the row in the current rows..</summary>
+		/// <param name="row">Row to find.</param>
+		/// <returns>Index or -1.</returns>
 		public int IndexOf(PpsDataRow row)
-		{
-			return currentRows.IndexOf(row);
-		} // func IndexOf
+			=> currentRows.IndexOf(row);
 
-		/// <summary></summary>
-		/// <param name="item"></param>
+		/// <summary>Exists the row in the current rows.</summary>
+		/// <param name="row">Row to check.</param>
+		/// <returns><c>true</c>, if the row is in the current row.</returns>
+		public bool Contains(PpsDataRow row)
+			=> currentRows.Contains(row);
+
+		/// <summary>Enumerate all currrent rows.</summary>
 		/// <returns></returns>
-		public bool Contains(PpsDataRow item)
-		{
-			return currentRows.Contains(item);
-		} // func Contains
-
 		public IEnumerator<PpsDataRow> GetEnumerator()
-		{
-			return currentRows.GetEnumerator();
-		} // func GetEnumerator
+			=> currentRows.GetEnumerator();
 
 		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-		{
-			return ((System.Collections.IEnumerable)currentRows).GetEnumerator();
-		} // func System.Collections.IEnumerable.GetEnumerator
+			=> ((System.Collections.IEnumerable)currentRows).GetEnumerator();
 
 		int IList.Add(object value)
 		{
-			if (value is PpsDataRow)
+			if (value is PpsDataRow row)
 			{
-				var row = (PpsDataRow)value;
 				if (row.Table != this)
 					throw new ArgumentException("Row does not belong to the current table.");
 
@@ -1362,24 +1389,29 @@ namespace TecWare.PPSn.Data
 		} // func IListAdd
 		
 		// not supported
-		void IList.Insert(int index, object value) { throw new NotSupportedException(); }
+		void IList.Insert(int index, object value) 
+			=> throw new NotSupportedException();
 
 		// mapped
-		bool IList.Contains(object value) { return Contains((PpsDataRow)value); }
-		int IList.IndexOf(object value) { return IndexOf((PpsDataRow)value); }
-		void IList.Remove(object value) { Remove((PpsDataRow)value); }
-		void ICollection.CopyTo(Array array, int index) { ((IList)currentRows).CopyTo(array, index); }
+		bool IList.Contains(object value) 
+			=> Contains((PpsDataRow)value);
+		int IList.IndexOf(object value) 
+			=> IndexOf((PpsDataRow)value);
+		void IList.Remove(object value) 
+			=> Remove((PpsDataRow)value);
+		void ICollection.CopyTo(Array array, int index)
+			=> ((IList)currentRows).CopyTo(array, index);
 
-		bool IList.IsFixedSize { get { return false; } }
-		bool IList.IsReadOnly { get { return true; } } // es wurde IList.Add, IList.Insert nicht implementiert
-		bool ICollection.IsSynchronized { get { return false; } }
-		object ICollection.SyncRoot { get { return null; } }
+		bool IList.IsFixedSize => false; 
+		bool IList.IsReadOnly => true; // es wurde IList.Add, IList.Insert nicht implementiert
+		bool ICollection.IsSynchronized => false;
+		object ICollection.SyncRoot => null;
 
-		object IList.this[int index] { get { return this[index]; } set { throw new NotSupportedException(); } }
+		object IList.this[int index] { get => this[index]; set => throw new NotSupportedException(); }
 
 		#endregion
 
-		#region -- Read/Write -------------------------------------------------------------
+		#region -- Read/Write ---------------------------------------------------------
 
 		/// <summary>Reads data of an table.</summary>
 		/// <param name="x"></param>
@@ -1418,7 +1450,7 @@ namespace TecWare.PPSn.Data
 		} // proc Read
 
 		/// <summary>Serialize data as xml.</summary>
-		/// <param name="x"></param>
+		/// <param name="x">Destination.</param>
 		public void Write(XmlWriter x)
 		{
 			// Schreibe die Datenzeilen
@@ -1457,8 +1489,8 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public PpsDataRow this[int index]
 		{
-			get { return currentRows[index]; }
-			set { throw new NotSupportedException(); }
+			get => currentRows[index];
+			set => throw new NotSupportedException();
 		} // prop this
 
 		/// <summary>Access to the row at the index.</summary>
@@ -1503,6 +1535,8 @@ namespace TecWare.PPSn.Data
 			if (columnsPropertyInfo == null || tableDefinitionPropertyInfo == null || readOnlyCollectionIndexPropertyInfo == null)
 				throw new InvalidOperationException("Reflection fehlgeschlagen (PpsDataTable)");
 		} // sctor
+
+		#region -- GetKey, MakeKey ----------------------------------------------------
 
 		/// <summary>Split a key value into his components.</summary>
 		/// <param name="key">Encoded key.</param>
@@ -1554,6 +1588,8 @@ namespace TecWare.PPSn.Data
 					throw new ArgumentOutOfRangeException(nameof(type));
 			}
 		} // func MakeKey
+
+		#endregion
 	} // class PpsDataTable
 
 	#endregion
@@ -1573,7 +1609,7 @@ namespace TecWare.PPSn.Data
 		private NotifyCollectionChangedEventHandler evCollectionListener;
 		private ColumnValueChangedEventHandler evColumnListener;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Datafilter for a data table-</summary>
 		/// <param name="table">DataTable to filter</param>
@@ -1590,9 +1626,7 @@ namespace TecWare.PPSn.Data
 
 		/// <summary>Unconnect the filter.</summary>
 		public void Dispose()
-		{
-			Dispose(true);
-		} // proc Dispose
+			=> Dispose(true);
 
 		/// <summary></summary>
 		/// <param name="disposing"></param>
@@ -1608,7 +1642,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- Refresh ----------------------------------------------------------------
+		#region -- Refresh ------------------------------------------------------------
 
 		/// <summary>Rebuilds the current row-index</summary>
 		public void Refresh()
@@ -1701,20 +1735,32 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- IList members ----------------------------------------------------------
+		#region -- IList members ------------------------------------------------------
 
+		/// <summary>Add a row from a table to the view.</summary>
+		/// <param name="values">Members that will be assigned to the datarow columns.</param>
+		/// <returns>Added data row.</returns>
 		public PpsDataRow Add(LuaTable values)
 			=> Add(table.GetDataRowValues(values));
 
+		/// <summary>Add a row from a value array to the view.</summary>
+		/// <param name="values">Value array, that will be assigned by index.</param>
+		/// <returns>Added data row.</returns>
 		public PpsDataRow Add(params object[] values)
 			=> table.Add(InitializeValues(values));
 
 		PpsDataRow IPpsDataView.NewRow(object[] originalValues, object[] currentValues)
 			=> ((IPpsDataView)table).NewRow(InitializeValues(originalValues), currentValues);
 
+		/// <summary>Create a datarow-value-array from a value array.</summary>
+		/// <param name="values">Array of values or <c>null</c>.</param>
+		/// <returns>Value array.</returns>
 		protected virtual object[] InitializeValues(object[] values)
 			=> table.CreateDataRowValuesArray(values);
 
+		/// <summary>Remove a datarow from the view.</summary>
+		/// <param name="row">Data row, that should be removed.</param>
+		/// <returns><c>true</c>, if remnoved.</returns>
 		public bool Remove(PpsDataRow row)
 			=> table.Remove(row);
 
@@ -1774,6 +1820,7 @@ namespace TecWare.PPSn.Data
 		bool ICollection.IsSynchronized => true;
 		object ICollection.SyncRoot => rows;
 
+		/// <summary>Number of rows in this view.</summary>
 		public int Count
 		{
 			get
@@ -1783,6 +1830,9 @@ namespace TecWare.PPSn.Data
 			}
 		} // prop Count
 
+		/// <summary>Access the rows by index.</summary>
+		/// <param name="index">Index of the row.</param>
+		/// <returns></returns>
 		public object this[int index]
 		{
 			get
@@ -1790,7 +1840,7 @@ namespace TecWare.PPSn.Data
 				lock (rows)
 					return rows[index];
 			}
-			set { throw new NotSupportedException(); }
+			set => throw new NotSupportedException();
 		} // func this
 
 		#endregion
@@ -1799,7 +1849,7 @@ namespace TecWare.PPSn.Data
 		public PpsDataTable Table => table;
 		/// <summary>Columns</summary>
 		public IReadOnlyList<IDataColumn> Columns => table.Columns;
-		/// <summary></summary>
+		/// <summary>Is the filter disposed.</summary>
 		public bool IsDisposed => isDisposed;
 	} // class PpsDataFilter
 

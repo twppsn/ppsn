@@ -24,24 +24,30 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- class PpsMetaCollection --------------------------------------------------
+	#region -- class PpsMetaCollection ------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public abstract class PpsMetaCollection : IPropertyEnumerableDictionary
 	{
 		private readonly Dictionary<string, object> metaInfo;
 
+		/// <summary></summary>
 		public PpsMetaCollection()
 		{
 			this.metaInfo = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="clone"></param>
 		protected PpsMetaCollection(PpsMetaCollection clone)
 		{
 			this.metaInfo = new Dictionary<string, object>(clone.metaInfo);
 		} // ctor
 
+		/// <summary>Add a meta info value.</summary>
+		/// <param name="key">Meta key.</param>
+		/// <param name="getDataType">Data type of the value.</param>
+		/// <param name="value">Unconverted value of the meta key.</param>
 		protected void Add(string key, Func<Type> getDataType, object value)
 		{
 			if (String.IsNullOrEmpty(key))
@@ -65,6 +71,8 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc Add
 
+		/// <summary>Combine two meta collections.</summary>
+		/// <param name="otherMeta">Other meta data.</param>
 		public void Merge(PpsMetaCollection otherMeta)
 		{
 			foreach (var c in otherMeta)
@@ -74,9 +82,16 @@ namespace TecWare.PPSn.Data
 			}
 		} // func Merge
 
+		/// <summary>Does the key exists in the meta collection.</summary>
+		/// <param name="key">Meta key.</param>
+		/// <returns></returns>
 		public bool ContainsKey(string key)
 			=> metaInfo.ContainsKey(key) || (StaticKeys?.ContainsKey(key) ?? false);
 
+		/// <summary>Try get a meta property.</summary>
+		/// <param name="name">Key of the meta data.</param>
+		/// <param name="value">Retrieved value.</param>
+		/// <returns><c>true</c>, if the meta key could be found.</returns>
 		public bool TryGetProperty(string name, out object value)
 		{
 			if (metaInfo.TryGetValue(name, out value))
@@ -112,22 +127,32 @@ namespace TecWare.PPSn.Data
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
 
+		/// <summary>Enumerates all meta properties.</summary>
+		/// <returns></returns>
 		public IEnumerator<PropertyValue> GetEnumerator()
 			=> (from c in metaInfo select new PropertyValue(c.Key, c.Value)).GetEnumerator();
 
+		/// <summary>Meta key enumeration.</summary>
 		public IEnumerable<string> Keys => metaInfo.Keys;
+		/// <summary>Returns well known meta properties.</summary>
 		public abstract IReadOnlyDictionary<string, Type> WellknownMetaTypes { get; }
+		/// <summary>Static key values.</summary>
 		protected virtual IReadOnlyDictionary<string, object> StaticKeys => null;
 
+		/// <summary>Get the key.</summary>
+		/// <param name="key">Meta key</param>
+		/// <returns><c>null</c> or the value.</returns>
 		public object this[string key] => TryGetProperty(key, out var v) ? v : null;
 
+		/// <summary>Number of meta properties.</summary>
 		public int Count => metaInfo.Count;
 	} // class PpsMetaCollection
 
 	#endregion
 
-	#region -- class PpsDataHelper ------------------------------------------------------
+	#region -- class PpsDataHelper ----------------------------------------------------
 
+	/// <summary>Extension methods for the DataSet, DataTable, DataRow.</summary>
 	public static class PpsDataHelper
 	{
 		#region -- Element/Atributenamen des Daten-XML --
@@ -162,6 +187,22 @@ namespace TecWare.PPSn.Data
 			return tmp;
 		} // func GetPublicMemberList
 
+		internal static object GetConvertedValue(PpsDataColumnDefinition columnInfo, object value)
+		{
+			if (value != null) // unpack data type
+			{
+				if (columnInfo.IsRelationColumn && value is PpsDataRow parentRow)
+				{
+					if (parentRow.Table.TableDefinition != columnInfo.ParentColumn.Table)
+						throw new InvalidCastException($"The row (from table '{parentRow.Table.TableName}') is not a member of the parent table ({columnInfo.ParentColumn.Table.Name})");
+					value = parentRow[columnInfo.ParentColumn.Index];
+				}
+				else if (!columnInfo.IsExtended)
+					value = Procs.ChangeType(value, columnInfo.DataType);
+			}
+			return value;
+		} // func GetConvertedValue
+
 		internal static bool IsStandardMember(Type type, string memberName)
 		{
 			var p = GetPublicMemberList(type);
@@ -171,23 +212,27 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataTableForeignKeyRestriction ----------------------------------
+	#region -- class PpsDataTableForeignKeyRestrictionException -----------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class PpsDataTableForeignKeyRestriction : ArgumentOutOfRangeException
+	public class PpsDataTableForeignKeyRestrictionException : ArgumentOutOfRangeException
 	{
 		private readonly PpsDataRow parentRow;
 		private readonly PpsDataRow childRow;
 
-		public PpsDataTableForeignKeyRestriction(PpsDataRow parentRow, PpsDataRow childRow)
+		/// <summary></summary>
+		/// <param name="parentRow"></param>
+		/// <param name="childRow"></param>
+		public PpsDataTableForeignKeyRestrictionException(PpsDataRow parentRow, PpsDataRow childRow)
 			:base("row","row", $"Row {parentRow} is referenced by {childRow}.")
 		{
 			this.parentRow = parentRow;
 			this.childRow = childRow;
 		} // ctor
 
+		/// <summary></summary>
 		public PpsDataRow ParentRow => parentRow;
+		/// <summary></summary>
 		public PpsDataRow ChildRow => childRow;
 	} // class PpsDataTableForeignKeyRestriction
 

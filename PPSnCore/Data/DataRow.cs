@@ -527,22 +527,6 @@ namespace TecWare.PPSn.Data
 			}
 		} // ctor
 
-		private static object GetConvertedValue(PpsDataColumnDefinition columnInfo, object value)
-		{
-			if (value != null) // unpack data type
-			{
-				if (columnInfo.IsRelationColumn && value is PpsDataRow parentRow)
-				{
-					if (parentRow.Table.TableDefinition != columnInfo.ParentColumn.Table)
-						throw new InvalidCastException($"The row (from table '{parentRow.Table.TableName}') is not a member of the parent table ({columnInfo.ParentColumn.Table.Name})");
-					value = parentRow[columnInfo.ParentColumn.Index];
-				}
-				else if (!columnInfo.IsExtended)
-					value = Procs.ChangeType(value, columnInfo.DataType);
-			}
-			return value;
-		} // func GetConvertedValue
-
 		internal PpsDataRow(PpsDataTable table, XElement xRow)
 			: this(table)
 		{
