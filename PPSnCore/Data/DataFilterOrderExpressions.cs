@@ -1316,9 +1316,18 @@ namespace TecWare.PPSn.Data
 		private string CreateCompareFilterText(string columnToken, PpsDataFilterCompareOperator op, string text)
 		{
 			var column = LookupColumn(columnToken);
-			return column == null
-				? CreateColumnErrorFilter(columnToken)
-				: CreateDefaultCompareValue(column.Item1, op, CreateParsableValue(text, column.Item2), column.Item2 == typeof(string));
+			if (column == null)
+				return CreateColumnErrorFilter(columnToken);
+			var parseableValue = String.Empty;
+			try
+			{
+				parseableValue = CreateParsableValue(text, column.Item2);
+			}
+			catch(FormatException)
+			{
+				return CreateColumnErrorFilter(columnToken);
+			}
+			return CreateDefaultCompareValue(column.Item1, op, parseableValue, column.Item2 == typeof(string));
 		} // func CreateCompareFilterText
 
 		private string CreateCompareFilterInteger(string columnToken, PpsDataFilterCompareOperator op, long value)
@@ -1875,7 +1884,7 @@ namespace TecWare.PPSn.Data
 				return Expression.MakeIndex(CurrentRowParameter, dataRowIndexName,
 					new Expression[]
 					{
-						Expression.Constant(memberName),
+						Expression.Constant(memberName ?? String.Empty),
 						Expression.Constant(true)
 					}
 				);
