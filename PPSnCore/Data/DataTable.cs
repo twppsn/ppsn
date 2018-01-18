@@ -83,8 +83,11 @@ namespace TecWare.PPSn.Data
 	/// - lt 0 none databse key (server or local)</summary>
 	public enum PpsTablePrimaryKeyType
 	{
+		/// <summary>Database generated key.</summary>
 		Database,
+		/// <summary>Server generated key (lower than zero).</summary>
 		Server,
+		/// <summary>Local generated key (lower than zero).</summary>
 		Local
 	} // enum PpsTablePrimaryKeyType
 
@@ -1501,9 +1504,13 @@ namespace TecWare.PPSn.Data
 				throw new InvalidOperationException("Reflection fehlgeschlagen (PpsDataTable)");
 		} // sctor
 
+		/// <summary>Split a key value into his components.</summary>
+		/// <param name="key">Encoded key.</param>
+		/// <param name="type">Key type.</param>
+		/// <param name="value">Key value.</param>
 		public static void GetKey(long key, out PpsTablePrimaryKeyType type, out long value)
 		{
-			if (key > 0)
+			if (key >= 0)
 			{
 				type = PpsTablePrimaryKeyType.Database;
 				value = key;
@@ -1514,7 +1521,7 @@ namespace TecWare.PPSn.Data
 				if (k >> 62 == 2)
 				{
 					type = PpsTablePrimaryKeyType.Local;
-					value = (long)(~serverKeyBit & (ulong)key);
+					value = (long)(~serverKeyBit & (ulong)key); // serverKeyBit is correct, because we use only the bitmask
 				}
 				else if (k >> 62 == 3)
 				{
@@ -1522,10 +1529,14 @@ namespace TecWare.PPSn.Data
 					value = (long)(~serverKeyBit & (ulong)key);
 				}
 				else
-					throw new ArgumentException(nameof(value));
+					throw new ArgumentException("Could not detect key type.", nameof(value));
 			}
 		} // func GetKey
 
+		/// <summary>Encode a key field.</summary>
+		/// <param name="type">Key type.</param>
+		/// <param name="value">Key value.</param>
+		/// <returns>Encoded key.</returns>
 		public static long MakeKey(PpsTablePrimaryKeyType type, long value)
 		{
 			if ((serverKeyBit & (ulong)value) != 0)
