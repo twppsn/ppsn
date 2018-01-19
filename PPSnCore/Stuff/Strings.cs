@@ -1,16 +1,34 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace TecWare.PPSn.Stuff
 {
-	public static partial class PpsProcs
+	/// <summary></summary>
+	public static partial class ProcsPps
 	{
+		/// <summary></summary>
+		/// <param name="ss1"></param>
+		/// <param name="ss2"></param>
+		/// <returns></returns>
 		public unsafe static bool SecureStringCompare(SecureString ss1, SecureString ss2)
 		{
 			if (ss1 == null || ss2 == null)
@@ -52,50 +70,69 @@ namespace TecWare.PPSn.Stuff
 				if (bstr1 != IntPtr.Zero)
 					Marshal.ZeroFreeBSTR(bstr1);
 			}
-		}
-		
+		} // func SecureStringCompare
+
+		/// <summary></summary>
+		/// <param name="length"></param>
+		/// <param name="validChars"></param>
+		/// <returns></returns>
 		public static string GeneratePassword(int length, char[] validChars)
 		{
-			var ret = String.Empty;
+			var sb = new StringBuilder();
 
-			using (var secureRandomNumberGenerator = System.Security.Cryptography.RandomNumberGenerator.Create())
-				while (ret.Length < length)
+			using (var secureRandomNumberGenerator = RandomNumberGenerator.Create())
+			{
+				while (sb.Length < length)
 				{
 					var buffer = new byte[128];
 					secureRandomNumberGenerator.GetBytes(buffer);
-					foreach (char chr in buffer)
-						if (ret.Length < length && validChars.Contains(chr))
-							ret += chr;
+					foreach (char c in buffer)
+					{
+						if (sb.Length < length && validChars.Contains(c))
+							sb.Append(c);
+					}
 				}
+			}
 
-			return ret;
-		}
+			return sb.ToString();
+		} // func GeneratePassword
 
+		/// <summary></summary>
+		/// <param name="input"></param>
+		/// <returns></returns>
 		public static string StringCypher(string input)
 		{
+			if (String.IsNullOrWhiteSpace(input))
+				return String.Empty;
+
 			var ch = 'r';
-			var ret = String.Empty;
+			var ret = new char[input.Length];
 			for (var i = 0; i < input.Length; i++)
 			{
 				var ch_ = (char)(input[i] ^ ch);
-				ret += ch_;
+				ret[i] = ch_;
 				ch = ch_;
 			}
-			return ret;
-		}
 
+			return new string(ret, 0, input.Length);
+		} // func StringCypher
+
+		/// <summary></summary>
+		/// <param name="input"></param>
+		/// <returns></returns>
 		public static string StringDecypher(string input)
 		{
-			var ret = String.Empty;
-
 			if (String.IsNullOrWhiteSpace(input))
-				return ret;
+				return String.Empty;
+
+			var ret = new char[input.Length];
 
 			for (var i = input.Length - 1; i > 0; i--)
-				ret = (char)(input[i] ^ input[i - 1]) + ret;
+				ret[i] = (char)(input[i] ^ input[i - 1]);
 
-			ret = ((char)(input[0] ^ 'r')) + ret;
-			return ret;
-		}
-	}
+			ret[0] = (char)(input[0] ^ 'r');
+
+			return new string(ret, 0, input.Length);
+		} // func StringDecypher
+	} // class ProcsPps
 }
