@@ -1621,7 +1621,6 @@ namespace TecWare.PPSn.Server
 				});
 
 			/// <summary>Returns a view on the objects.</summary>
-			/// <param name="trans"></param>
 			/// <returns></returns>
 			[LuaMember(nameof(GetObjects))]
 			public IEnumerable<PpsObjectAccess> GetObjects()

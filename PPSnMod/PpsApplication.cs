@@ -453,8 +453,11 @@ namespace TecWare.PPSn.Server
 								xLoginData.SetAttributeValue(UserContextInitials, initials);
 
 							// execute script based extensions
-							CallTableMethods("Login", ctx, xLoginData);
-
+							var t = new LuaTable();
+							CallMemberDirect("OnExtentLogin", new object[] { ctx, t }, ignoreNilFunction: true);
+							foreach (var kv in t.Members)
+								xLoginData.SetAttributeValue(kv.Key, kv.Value);
+							
 							r.WriteObject(xLoginData);
 						}
 					);
