@@ -436,12 +436,28 @@ namespace TecWare.PPSn.Server
 					// r.DemandToken("USER");
 					
 					var ctx = r.GetUser<IPpsPrivateDataContext>();
-					await Task.Run(() => r.WriteObject(
-						new XElement("user",
-							new XAttribute("userId", ctx.UserId),
-							new XAttribute("displayName", ctx.UserName)
-						)
-					));
+					await Task.Run(() =>
+						{
+							// basic login data
+							var xLoginData = new XElement("user",
+								new XAttribute("userId", ctx.UserId),
+								new XAttribute("displayName", ctx.UserName)
+							);
+
+							// update optional values
+							if (ctx.TryGetProperty<long>(UserContextKtKtId, out var ktktId))
+								xLoginData.SetAttributeValue(UserContextKtKtId, ktktId.ChangeType<string>());
+							if (ctx.TryGetProperty(UserContextFullName, out var fullName))
+								xLoginData.SetAttributeValue(UserContextFullName, fullName);
+							if (ctx.TryGetProperty(UserContextInitials, out var initials))
+								xLoginData.SetAttributeValue(UserContextInitials, initials);
+
+							// execute script based extensions
+							CallTableMethods("Login", ctx, xLoginData);
+
+							r.WriteObject(xLoginData);
+						}
+					);
 					return true;
 				default:
 					return await base.OnProcessRequestAsync(r);

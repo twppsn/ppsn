@@ -283,7 +283,7 @@ namespace TecWare.PPSn.UI
 		public bool WillOverwrite => IsNew && IsEditing && ppsObject.Tags.IndexOf(Name) >= 0;
 
 		/// <summary>User, that created the tag.</summary>
-		public string UserName => IsNew ? PpsEnvironment.GetEnvironment().Username : tag.User?.GetProperty("Login", "<error>") ?? ""; // todo:
+		public string UserName => IsNew ? PpsEnvironment.GetEnvironment().GetMemberValue("UserName") as string : tag.User?.GetProperty("Login", "<error>") ?? ""; // todo:
 
 		public PpsTagOwnerIdentityIcon OwnerIdentityIcon
 		{

@@ -2093,10 +2093,41 @@ namespace TecWare.PPSn
 							if (trans == null)
 								return false;
 
-							using (var cmd = trans.CreateNativeCommand("UPDATE main.[Header] SET [UserId] = @UserId, [UserName] = @UserName"))
+
+							// update header
+							using (var cmd = trans.CreateNativeCommand())
 							{
-								cmd.AddParameter("@UserId", DbType.Int64, environment.UserId);
-								cmd.AddParameter("@UserName", DbType.String, environment.Username);
+								var commandText = new StringBuilder("UPDATE main.[Header] SET ");
+								var idx = 1;
+
+								// create command for properties
+								foreach (var col in GetLocalTableColumns(connection, "Header"))
+								{
+									if (col.Name == "SchemaStamp"
+										|| col.Name == "SchemaContent"
+										|| col.Name == "SyncStamp")
+										continue;
+
+									if (idx > 1)
+										commandText.Append(", ");
+
+									commandText.Append('[')
+										.Append(col.Name)
+										.Append("] = @v")
+										.Append(idx);
+
+									var v = environment[col.Name];
+									if (v == null)
+										v = DBNull.Value;
+									else
+										v = Procs.ChangeType(v, col.DataType);
+
+									cmd.AddParameter("@v" + idx.ToString(), ConvertDataTypeToDbType(col.DataType),  v);
+
+									idx++;
+								}
+
+								cmd.CommandText = commandText.ToString();
 								cmd.ExecuteNonQueryEx();
 
 								trans.Commit();
@@ -2170,9 +2201,11 @@ namespace TecWare.PPSn
 			}
 		} // proc CheckOfflineCache
 
+		/// <summary>Mark user info invalid, to update the sqlite database.</summary>
 		public void SetUpdateUserInfo()
 			=> updateUserInfo = true;
 
+		/// <summary>Is a synchronization in progess.</summary>
 		public bool IsInSynchronization => isSynchronizationRunning.Value;
 
 		#endregion
@@ -4371,7 +4404,7 @@ namespace TecWare.PPSn
 		#region -- Passwording ----------------------------------------------------------
 
 		public Task<string> ReadPasswordFile(string fileName)
-			=> Task.Run(() => PpsProcs.StringDecypher(File.ReadAllText(fileName)));
+			=> Task.Run(() => ProcsPps.StringDecypher(File.ReadAllText(fileName)));
 
 		public Task<string> CreatePasswordFile(string fileName, int passwordLength, byte passwordLowerBoundary = 32, byte passwordUpperBoundary = 126)
 		{
@@ -4385,7 +4418,7 @@ namespace TecWare.PPSn
 		{
 			if (File.Exists(fileName))
 				File.Delete(fileName);
-			File.WriteAllText(fileName, PpsProcs.StringCypher(PpsProcs.GeneratePassword(passwordLength, passwordValidChars)));
+			File.WriteAllText(fileName, ProcsPps.StringCypher(ProcsPps.GeneratePassword(passwordLength, passwordValidChars)));
 			return ReadPasswordFile(fileName);
 		} // func CreatePasswordFile
 
@@ -4435,12 +4468,27 @@ namespace TecWare.PPSn
 					new SimpleDataColumn("SchemaStamp", typeof(long)),
 					new SimpleDataColumn("SchemaContent", typeof(byte[])),
 					new SimpleDataColumn("SyncStamp", typeof(long)),
-					new SimpleDataColumn("UserId", typeof(long)),
-					new SimpleDataColumn("UserName", typeof(string))
+					new SimpleDataColumn("UserId", typeof(long))
 					))
 				{
+					var commandText = new StringBuilder("SELECT ");
+					var first = true;
+					foreach (var col in PpsMasterData.GetLocalTableColumns(newLocalStore, "Header"))
+					{
+						if (first)
+							first = false;
+						else
+							commandText.Append(", ");
+
+						commandText.Append('[')
+							.Append(col.Name)
+							.Append(']');
+					}
+
+					commandText.Append(" FROM main.[Header]");
+
 					// read sync tokens
-					using (var command = new SQLiteCommand("SELECT SchemaStamp, SchemaContent, SyncStamp, UserId, UserName FROM main.Header ", newLocalStore))
+					using (var command = new SQLiteCommand(commandText.ToString(), newLocalStore))
 					{
 						using (var r = command.ExecuteReaderEx(CommandBehavior.SingleRow))
 						{
@@ -4454,11 +4502,16 @@ namespace TecWare.PPSn
 									isSchemaUseable = true;
 								}
 								// check data and user info
-								if (!r.IsDBNull(2) && !r.IsDBNull(3) && !r.IsDBNull(4))
+								if (!r.IsDBNull(2) && !r.IsDBNull(3))
 								{
 									lastSynchronizationStamp = DateTime.FromFileTimeUtc(r.GetInt64(2));
 									userId = r.GetInt64(3);
-									userName = r.GetString(4);
+
+									for (var i = 4; i < r.FieldCount; i++)
+									{
+										if (!r.IsDBNull(i))
+											SetMemberValue(r.GetName(i), r.GetValue(i));
+									}
 
 									isDataUseable = true;
 								}

@@ -474,7 +474,6 @@ namespace TecWare.PPSn
 
 	#region -- class PpsEnvironment -----------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Base class for application data. Holds information about view
 	/// classes, exception, connection, synchronisation and the script 
 	/// engine.</summary>
@@ -486,7 +485,6 @@ namespace TecWare.PPSn
 		private readonly CancellationTokenSource environmentDisposing;
 
 		private long userId = -1;
-		private string userName = null;                 // display name of the user
 		private readonly DirectoryInfo localDirectory = null;   // local directory for the user data
 
 		private PpsTraceLog logData = new PpsTraceLog();
@@ -509,9 +507,10 @@ namespace TecWare.PPSn
 			this.DefaultExecutedHandler = new ExecutedRoutedEventHandler((sender, e) => ExecutedCommandHandlerImpl(sender, this, e));
 			this.DefaultCanExecuteHandler = new CanExecuteRoutedEventHandler((sender, e) => CanExecuteCommandHandlerImpl(sender, this, e));
 
-			this.userName = PpsEnvironmentInfo.GetUserNameFromCredentials(userInfo);
+			var userName = PpsEnvironmentInfo.GetUserNameFromCredentials(userInfo);
+			SetMemberValue("UserName", userName);
 
-			this.localDirectory = new DirectoryInfo(Path.Combine(info.LocalPath.FullName, this.Username));
+			this.localDirectory = new DirectoryInfo(Path.Combine(info.LocalPath.FullName, userName));
 			if (!localDirectory.Exists)
 				localDirectory.Create();
 
@@ -879,25 +878,33 @@ namespace TecWare.PPSn
 
 								// sync will write the header
 								var newUserId = xUser.GetAttribute("userId", -1);
-								var newUserName = xUser.GetAttribute("displayName", userName);
+
+								foreach(var xAttr in xUser.Attributes())
+								{
+									var name = xAttr.Name.LocalName;
+									if (name != "userId")
+									{
+										if(name.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+											SetMemberValue(name, xAttr.Value.ChangeType<long>());
+										else
+											SetMemberValue(name, xAttr.Value);
+									}
+								}
+								OnPropertyChanged(nameof(UsernameDisplay));
 
 								if (newUserId == -1)
 									throw new ArgumentOutOfRangeException("@userid", userId, "UID is missing.");
 
-								if (userId != newUserId || newUserName != userName)
+								if (userId != newUserId )
 								{
 									userId = newUserId;
-									userName = newUserName;
 
-									masterData.SetUpdateUserInfo();
 									await Dispatcher.BeginInvoke(
-										new Action(() =>
-										{
-											OnPropertyChanged(nameof(UserId));
-											OnPropertyChanged(nameof(Username));
-											OnPropertyChanged(nameof(UsernameDisplay));
-										}));
+										new Action(() => OnPropertyChanged(nameof(UserId)))
+									);
 								}
+								// after connect, refresh properties
+								masterData.SetUpdateUserInfo();
 
 								// start synchronization
 								if (!masterData.IsSynchronizationStarted || masterData.CheckSynchronizationStateAsync().Result)
@@ -1011,20 +1018,22 @@ namespace TecWare.PPSn
 		[LuaMember]
 		public int EnvironmentId => environmentId;
 
+		/// <summary>User Id, not the contact id.</summary>
 		[LuaMember]
 		public long UserId => userId;
-		/// <summary>Current user the is logged in.</summary>
+		/// <summary>Displayname for UI.</summary>
 		[LuaMember]
-		public string Username => userName ?? String.Empty;
-		/// <summary>Display name for the user.</summary>
-		[LuaMember]
-		public string UsernameDisplay => userName;
+		public string UsernameDisplay =>
+			GetMemberValue("FullName", rawGet: true) as string ??
+			GetMemberValue("displayName", rawGet: true) as string ??
+			$"User:{UserId}";
 
 		/// <summary>The current mode of the environment.</summary>
 		public PpsEnvironmentMode CurrentMode => currentMode;
 		/// <summary>The current state of the environment.</summary>
 		public PpsEnvironmentState CurrentState => currentState;
 
+		/// <summary>Current state of the environment</summary>
 		[LuaMember]
 		public bool IsOnline => CurrentState == PpsEnvironmentState.Online;
 
@@ -1145,36 +1154,47 @@ namespace TecWare.PPSn
 		private static IPpsWindowPane GetCurrentPaneCore(FrameworkElement ui)
 			=> (IPpsWindowPane)ui.TryFindResource(WindowPaneService);
 
+		/// <summary>Get the current pane from the ui element.</summary>
+		/// <param name="ui"></param>
+		/// <returns></returns>
 		public static IPpsWindowPane GetCurrentPane(FrameworkElement ui)
 			=> GetCurrentPaneCore(ui) ?? GetCurrentPane();
 
+		/// <summary>Get the current pane from the focused element.</summary>
+		/// <returns></returns>
 		public static IPpsWindowPane GetCurrentPane()
 			=> GetCurrentPaneCore(Keyboard.FocusedElement as FrameworkElement);
 	} // class PpsEnvironment
 
 	#endregion
 
-	#region -- class LuaEnvironmentTable ------------------------------------------------
+	#region -- class LuaEnvironmentTable ----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Connects the current table with the Environment</summary>
 	public class LuaEnvironmentTable : LuaTable
 	{
 		private readonly PpsEnvironment environment;
 		private readonly LuaEnvironmentTable parentTable;
 
+		/// <summary></summary>
+		/// <param name="parentTable"></param>
 		public LuaEnvironmentTable(LuaEnvironmentTable parentTable)
 		{
 			this.environment = parentTable.Environment;
 			this.parentTable = parentTable;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="environment"></param>
 		public LuaEnvironmentTable(PpsEnvironment environment)
 		{
 			this.environment = environment;
 			this.parentTable = null;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
 		protected override object OnIndex(object key)
 			=> base.OnIndex(key) ?? ((LuaTable)parentTable ?? environment).GetValue(key);
 
@@ -1193,10 +1213,10 @@ namespace TecWare.PPSn
 		} // proc SetDeclaredMember
 
 		/// <summary>Optional parent table.</summary>
-		[LuaMember()]
+		[LuaMember]
 		public LuaEnvironmentTable Parent => parentTable;
 		/// <summary>Access to the current environemnt.</summary>
-		[LuaMember()]
+		[LuaMember]
 		public PpsEnvironment Environment => environment;
 	} // class LuaEnvironmentTable
 

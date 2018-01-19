@@ -30,6 +30,13 @@ namespace TecWare.PPSn.Server
 {
 	public partial class PpsApplication
 	{
+		/// <summary>User context optional wellknown property: Contact id.</summary>
+		public const string UserContextKtKtId = "KtKtId";
+		/// <summary>User context optional wellknown property: Full name of the contact or user.</summary>
+		public const string UserContextFullName = "FullName";
+		/// <summary>User context optional wellknown property: Initals of the contact or user.</summary>
+		public const string UserContextInitials = "Initials";
+
 		private const int noUserId = -1;
 		private const int sysUserId = Int32.MinValue;
 
@@ -45,7 +52,6 @@ namespace TecWare.PPSn.Server
 
 			private readonly long userId;           // unique id of the user
 			private LoggerProxy log;                // current log interface for the user
-			private string fullName = null;         // full name of the user
 			private int currentVersion = -1;
 			private string[] securityTokens = null; // access rights
 
@@ -73,7 +79,7 @@ namespace TecWare.PPSn.Server
 
 					userIdentity =
 						localIdentity = PpsUserIdentity.System;
-					fullName = "System";
+					this[UserContextFullName] = "System";
 				}
 				this.userIdentity = userIdentity;
 
@@ -284,7 +290,14 @@ namespace TecWare.PPSn.Server
 
 				// currently service is for local stuff
 				localIdentity = application.systemUser.userIdentity;
-				this.fullName = r.GetProperty("Name", userIdentity.Name);
+
+				// update optinal values
+				SetMemberValue(UserContextFullName, r.GetProperty("Name", userIdentity.Name));
+				if (r.TryGetProperty<long>("KtKtId", out var ktktId))
+					SetMemberValue(UserContextKtKtId, ktktId) ;
+				if (r.TryGetProperty<string>("Initials", out var initials))
+					SetMemberValue(UserContextInitials, initials);
+
 				this.securityTokens = application.Server.BuildSecurityTokens(r.GetProperty("Security", "User"));
 			} // proc UpdateData
 
@@ -321,8 +334,6 @@ namespace TecWare.PPSn.Server
 			string IDEUser.DisplayName => userIdentity.Name;
 			IIdentity IDEUser.Identity => userIdentity;
 
-			[LuaMember]
-			public string FullName { get { return fullName ?? Name; } set { fullName = value; } }
 			[LuaMember]
 			public LoggerProxy Log => log;
 
