@@ -1,7 +1,7 @@
 ﻿SELECT 
 		u.Id			AS Id
 		,ISNULL(p.Name, s.name) AS Name
-		,null           AS [Initial]
+		,cast(null as char(2))	AS [Initials]
 		,u.[Security]	AS [Security]
 		,u.LoginVersion	AS LoginVersion
 		,s.[type]		AS LoginType
