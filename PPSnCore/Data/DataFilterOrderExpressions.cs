@@ -1907,17 +1907,32 @@ namespace TecWare.PPSn.Data
 
 		static PpsDataFilterVisitorDataRow()
 		{
-			foreach(var c in typeof(IDataRow).GetTypeInfo().DeclaredProperties.Where(c => c.Name == "Item"))
-			{
-				var pi = c.GetIndexParameters();
-				if (pi.Length == 2 && pi[0].ParameterType == typeof(string) && pi[1].ParameterType == typeof(bool))
-					dataRowIndexName = c;
-				else if (pi.Length == 1 && pi[0].ParameterType == typeof(int))
-					dataRowIndexInt = c;
-			}
+			dataRowIndexName = typeof(IDataRow).GetRuntimeProperties().Where(
+				c =>
+				{
+					if (c.Name == "Item")
+					{
+						var pi = c.GetIndexParameters();
+						return pi.Length == 2 && pi[0].ParameterType == typeof(string) && pi[1].ParameterType == typeof(bool);
+					}
+					else
+						return false;
+				}
+			).FirstOrDefault() ?? throw new ArgumentException();
 
-			if (dataRowIndexName == null || dataRowIndexInt == null)
-				throw new ArgumentException();
+
+			dataRowIndexInt = typeof(IDataValues).GetRuntimeProperties().Where(
+				c =>
+				{
+					if (c.Name == "Item")
+					{
+						var pi = c.GetIndexParameters();
+						return pi.Length == 1 && pi[0].ParameterType == typeof(int);
+					}
+					else
+						return false;
+				}
+			).FirstOrDefault() ?? throw new ArgumentException();
 		} // ctor
 	} // class PpsDataFilterVisitorDataRow
 
