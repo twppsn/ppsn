@@ -79,13 +79,13 @@
 
 * Syntax: `<Typ><Spaltenname>[<NameFKSpalte>]`
 * `<Typ>` -> pk (Primary Key), fk (Foreign Key)
-* Bsp.: pkKontId, fkKontWaehIdWaehId
+* Bsp.: pkKtktId, fkKtktWaehId
 
 ### Indizes / Checks 
 
 * Syntax: `<Typ><Spaltenname>[<Spaltennname>]`
 * `<Typ>` -> idx - Index, chk - Check, 
-* Bsp.: idxKontIdKontName, chkKontName
+* Bsp.: idxKtktName, chkKtktName
 
 ### Views
 
