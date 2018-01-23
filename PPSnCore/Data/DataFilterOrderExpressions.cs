@@ -1621,9 +1621,33 @@ namespace TecWare.PPSn.Data
 
 			protected override Expression GetProperty(string memberName)
 			{
-				var propertyInfo = CurrentRowParameter.Type.GetRuntimeProperty(memberName)
-					?? throw new ArgumentNullException(nameof(memberName), $"Property {memberName} not declared in type {CurrentRowParameter.Type.Name}.");
-				return Expression.Property(CurrentRowParameter, propertyInfo);
+				if (String.IsNullOrEmpty(memberName))
+				{
+					// create a concat of all string columns
+					var type = CurrentRowParameter.Type;
+
+					// build String.Join("\t", new string[] { } );
+					var properties = from pi in type.GetRuntimeProperties()
+									 where pi.PropertyType == typeof(string)
+									 select Expression.Property(CurrentRowParameter, pi);
+					if (properties.Any())
+					{
+						return Expression.Call(stringJoinMethodInfo, new Expression[]
+							{
+								Expression.Constant("\t"),
+								Expression.NewArrayInit(typeof(string), properties)
+							}
+						);
+					}
+					else
+						return Expression.Constant(String.Empty);
+				}
+				else // select spezific column
+				{
+					var propertyInfo = CurrentRowParameter.Type.GetRuntimeProperty(memberName)
+						?? throw new ArgumentNullException(nameof(memberName), $"Property {memberName} not declared in type {CurrentRowParameter.Type.Name}.");
+					return Expression.Property(CurrentRowParameter, propertyInfo);
+				}
 			} // func GetProperty
 		} // class PpsDataFilterVisitorTyped
 
@@ -1647,63 +1671,68 @@ namespace TecWare.PPSn.Data
 		private static Exception CreateCompareException(PpsDataFilterCompareExpression expression)
 			=> new ArgumentOutOfRangeException(nameof(expression.Operator), expression.Operator, $"Operator '{expression.Operator}' is not defined for the value type '{expression.Value.Type}'.");
 
-		private Expression ConvertTo(Expression expr, Type typeTo)
-			=> Expression.Convert(Expression.Call(procsChangeTypeMethodInfo, expr, Expression.Constant(typeTo)), typeTo);
-
-		private Expression CreateCompareTextFilter(ExpressionType expressionType, Expression left, ConstantExpression right)
+		private static ExpressionType GetBinaryExpressionType(PpsDataFilterCompareExpression expression)
 		{
-			if (left != null)
+			switch (expression.Operator)
 			{
-				return Expression.MakeBinary(expressionType,
-					Expression.Call(
-						ConvertTo(left, typeof(string)), stringIndexOfMethodInfo,
-							right,
-							Expression.Constant(StringComparison.OrdinalIgnoreCase)
-						),
-						Expression.Constant(0)
-					);
+				case PpsDataFilterCompareOperator.Contains:
+				case PpsDataFilterCompareOperator.Equal:
+					return ExpressionType.Equal;
+				case PpsDataFilterCompareOperator.NotContains:
+				case PpsDataFilterCompareOperator.NotEqual:
+					return ExpressionType.NotEqual;
+				case PpsDataFilterCompareOperator.Greater:
+					return ExpressionType.GreaterThan;
+				case PpsDataFilterCompareOperator.GreaterOrEqual:
+					return ExpressionType.GreaterThanOrEqual;
+				case PpsDataFilterCompareOperator.Lower:
+					return ExpressionType.LessThan;
+				case PpsDataFilterCompareOperator.LowerOrEqual:
+					return ExpressionType.LessThanOrEqual;
+				default:
+					throw CreateCompareException(expression);
 			}
+		} // func GetBinaryExpressionType
+
+		private static Expression ConvertTo(Expression expr, Type typeTo)
+		{
+			if (typeTo == expr.Type)
+				return expr;
+			else if (typeTo.IsAssignableFrom(expr.Type))
+				return Expression.Convert(expr, typeTo);
 			else
-			{
-				return Expression.Call(fullTextSearchMethodInfo,
-					currentRowParameter,
-					Expression.Constant(expressionType),
-					right
+				return Expression.Convert(Expression.Call(procsChangeTypeMethodInfo, expr, Expression.Constant(typeTo)), typeTo);
+		} // func ConvertTo
+
+		private static Expression CreateCompareTextFilterStartsWith(Expression left, ConstantExpression right)
+			=> Expression.Call(
+				Expression.Coalesce(ConvertTo(left, typeof(string)), Expression.Constant(String.Empty)), stringStartsWithMethodInfo,
+					ConvertTo(right, typeof(string)),
+					Expression.Constant(StringComparison.OrdinalIgnoreCase)
+			);
+
+		private static Expression CreateCompareTextFilterContains(ExpressionType expressionType, Expression left, ConstantExpression right)
+			=> Expression.MakeBinary(expressionType,
+				Expression.Call(
+					Expression.Coalesce(ConvertTo(left, typeof(string)), Expression.Constant(String.Empty)), stringIndexOfMethodInfo,
+						ConvertTo(right, typeof(string)),
+						Expression.Constant(StringComparison.OrdinalIgnoreCase)
+				),
+				Expression.Constant(0)
+			);
+
+		private static Expression CreateCompareTextFilterCompare(ExpressionType expressionType, Expression left, ConstantExpression right)
+			=> Expression.MakeBinary(expressionType,
+				Expression.Call(stringCompareMethodInfo,
+						ConvertTo(left, typeof(string)),
+						ConvertTo(right, typeof(string)),
+						Expression.Constant(StringComparison.OrdinalIgnoreCase)
+					),
+					Expression.Constant(0)
 				);
-			}
-		} // func CreateCompareTextFilter
 
-		/// <summary></summary>
-		/// <param name="expression"></param>
-		/// <returns></returns>
-		public sealed override Expression CreateCompareFilter(PpsDataFilterCompareExpression expression)
+		private static Expression CreateCompareFilterForProperty(PpsDataFilterCompareExpression expression, Expression left)
 		{
-			ExpressionType GetBinaryExpressionType()
-			{
-				switch (expression.Operator)
-				{
-					case PpsDataFilterCompareOperator.Contains:
-					case PpsDataFilterCompareOperator.Equal:
-						return ExpressionType.Equal;
-					case PpsDataFilterCompareOperator.NotContains:
-					case PpsDataFilterCompareOperator.NotEqual:
-						return ExpressionType.NotEqual;
-					case PpsDataFilterCompareOperator.Greater:
-						return ExpressionType.GreaterThan;
-					case PpsDataFilterCompareOperator.GreaterOrEqual:
-						return ExpressionType.GreaterThanOrEqual;
-					case PpsDataFilterCompareOperator.Lower:
-						return ExpressionType.LessThan;
-					case PpsDataFilterCompareOperator.LowerOrEqual:
-						return ExpressionType.LessThanOrEqual;
-					default:
-						throw CreateCompareException(expression);
-				}
-			} // func GetBinaryExpressionType
-
-			// left site
-			var left = expression.Operand != null ? GetProperty(expression.Operand) : null;
-
 			// right site depends of the operator
 			switch (expression.Value.Type)
 			{
@@ -1713,20 +1742,17 @@ namespace TecWare.PPSn.Data
 						switch (expression.Operator)
 						{
 							case PpsDataFilterCompareOperator.Contains:
-								return CreateCompareTextFilter(ExpressionType.GreaterThanOrEqual, left, right);
+								return CreateCompareTextFilterContains(ExpressionType.GreaterThanOrEqual, left, right);
 							case PpsDataFilterCompareOperator.NotContains:
-								return CreateCompareTextFilter(ExpressionType.LessThan, left, right);
+								return CreateCompareTextFilterContains(ExpressionType.LessThan, left, right);
 							default:
-								return Expression.MakeBinary(GetBinaryExpressionType(), Expression.Call(stringCompareMethodInfo, ConvertTo(left, typeof(string)), right, Expression.Constant(StringComparison.OrdinalIgnoreCase)), Expression.Constant(0));
+								return CreateCompareTextFilterCompare(GetBinaryExpressionType(expression), left, right);
 						}
 					}
 				case PpsDataFilterCompareValueType.Integer:
 					{
-						if (left == null)
-							throw new ArgumentException("Fulltext column is only allowed for text.");
-
 						var right = Expression.Constant(((PpsDataFilterCompareIntegerValue)expression.Value).Value);
-						return Expression.MakeBinary(GetBinaryExpressionType(), ConvertTo(left, typeof(long)), right);
+						return Expression.MakeBinary(GetBinaryExpressionType(expression), ConvertTo(left, typeof(long)), right);
 					}
 				case PpsDataFilterCompareValueType.Number:
 					{
@@ -1734,20 +1760,18 @@ namespace TecWare.PPSn.Data
 						switch (expression.Operator)
 						{
 							case PpsDataFilterCompareOperator.Contains:
-							//	return column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Trailing);
+								return CreateCompareTextFilterStartsWith(left, right);
 							case PpsDataFilterCompareOperator.NotContains:
-								//	return "NOT " + column.Item1 + " LIKE " + CreateLikeString(value, PpsSqlLikeStringEscapeFlag.Trailing);
-								throw new NotImplementedException();
+								return Expression.Not(CreateCompareTextFilterStartsWith(left, right));
 
 							default:
-								return Expression.MakeBinary(GetBinaryExpressionType(), Expression.Call(stringCompareMethodInfo, ConvertTo(left, typeof(string)), right, Expression.Constant(StringComparison.OrdinalIgnoreCase)), Expression.Constant(0));
+								return CreateCompareTextFilterCompare(GetBinaryExpressionType(expression), left, right);
 						}
+
+						throw new NotImplementedException();
 					}
 				case PpsDataFilterCompareValueType.Null:
 					{
-						if (left == null)
-							throw new ArgumentException("Fulltext column is only allowed for text.");
-
 						switch (expression.Operator)
 						{
 							case PpsDataFilterCompareOperator.Contains:
@@ -1789,9 +1813,106 @@ namespace TecWare.PPSn.Data
 							default:
 								throw CreateCompareException(expression);
 						}
+
+						throw new NotImplementedException();
 					}
 				default:
 					throw CreateCompareException(expression);
+			}
+		} // func CreateCompareFilterForProperty
+
+		/// <summary></summary>
+		/// <param name="expression"></param>
+		/// <returns></returns>
+		protected virtual Expression CreateCompareFilterFullText(PpsDataFilterCompareExpression expression)
+		{
+			var type = CurrentRowParameter.Type;
+			var typeCompareInterface = type.GetInterfaces().FirstOrDefault(i => i == typeof(ICompareFulltext));
+			if (typeCompareInterface != null)
+			{
+				var expr = (Expression)Expression.Call(
+					Expression.Convert(CurrentRowParameter, typeof(ICompareFulltext)), compareFullTextSearchTextMethodInfo,
+						Expression.Constant(((PpsDataFilterCompareTextValue)expression.Value).Text),
+						Expression.Constant(expression.Value.Type == PpsDataFilterCompareValueType.Number)
+				);
+
+				if (expression.Operator == PpsDataFilterCompareOperator.NotContains
+					|| expression.Operator == PpsDataFilterCompareOperator.NotEqual)
+					expr = Expression.Not(expr);
+
+				return expr;
+			}
+			else
+			{
+				var left = GetProperty(null);
+				if (left == null)
+					return Expression.Constant(false);
+
+				return CreateCompareFilterForProperty(expression, left);
+			}
+		} // func CreateCompareFilterFullText
+
+		/// <summary></summary>
+		/// <param name="expression"></param>
+		/// <returns></returns>
+		protected virtual Expression CreateCompareFilterFullDate(PpsDataFilterCompareExpression expression)
+		{
+			var type = CurrentRowParameter.Type;
+			var typeCompareInterface = type.GetInterfaces().FirstOrDefault(i => i == typeof(ICompareDateTime));
+			if (typeCompareInterface != null)
+			{
+				var expr = (Expression)Expression.Call(
+					Expression.Convert(CurrentRowParameter, typeof(ICompareDateTime)), compareDateTimeSearchDateMethodInfo,
+						Expression.Constant(((PpsDataFilterCompareDateValue)expression.Value).From),
+						Expression.Constant(((PpsDataFilterCompareDateValue)expression.Value).To)
+				);
+
+				if (expression.Operator == PpsDataFilterCompareOperator.NotContains
+					|| expression.Operator == PpsDataFilterCompareOperator.NotEqual)
+					expr = Expression.Not(expr);
+
+				return expr;
+			}
+			else
+			{
+				var left = GetProperty(null);
+				if (left == null)
+					return Expression.Constant(false);
+
+				return CreateCompareFilterForProperty(expression, left);
+			}
+		} // func CreateCompareFilterFullDate
+
+		/// <summary></summary>
+		/// <param name="expression"></param>
+		/// <returns></returns>
+		public sealed override Expression CreateCompareFilter(PpsDataFilterCompareExpression expression)
+		{
+			if (String.IsNullOrEmpty(expression.Operand)) // compare over all fields
+			{
+				switch (expression.Value.Type)
+				{
+					case PpsDataFilterCompareValueType.Text:
+					case PpsDataFilterCompareValueType.Number:
+						return CreateCompareFilterFullText(expression);
+
+					case PpsDataFilterCompareValueType.Date:
+						{
+							return CreateCompareFilterFullDate(expression);
+						}
+
+					default:
+						throw CreateCompareException(expression);
+				}
+			}
+			else // compare a explicit column
+			{
+				// left site
+				var left = GetProperty(expression.Operand);
+				if (left == null)
+					return Expression.Constant(false); // property does not exist
+
+				return CreateCompareFilterForProperty(expression, left);
 			}
 		} // func CreateCompareFilter
 
@@ -1855,9 +1976,9 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		/// <summary></summary>
-		/// <param name="memberName"></param>
-		/// <returns></returns>
+		/// <summary>Get the requested property.</summary>
+		/// <param name="memberName">Name of the property or an empty string, for a full text seach</param>
+		/// <returns>Should return a expression or a property with a comparable value.</returns>
 		protected abstract Expression GetProperty(string memberName);
 
 		/// <summary>Row place holder</summary>
@@ -1865,33 +1986,24 @@ namespace TecWare.PPSn.Data
 
 		private static readonly MethodInfo stringIndexOfMethodInfo;
 		private static readonly MethodInfo stringCompareMethodInfo;
+		private static readonly MethodInfo stringStartsWithMethodInfo;
+		private static readonly MethodInfo stringJoinMethodInfo;
 		private static readonly MethodInfo procsChangeTypeMethodInfo;
-		private static readonly MethodInfo fullTextSearchMethodInfo;
+		private static readonly MethodInfo compareFullTextSearchTextMethodInfo;
+		private static readonly MethodInfo compareDateTimeSearchDateMethodInfo;
 
 		static PpsDataFilterVisitorLambda()
 		{
-			stringIndexOfMethodInfo = typeof(string).GetMethod(nameof(String.IndexOf), new Type[] { typeof(string), typeof(StringComparison) });
-			stringCompareMethodInfo = typeof(string).GetMethod(nameof(String.Compare), new Type[] { typeof(string), typeof(string), typeof(StringComparison) });
-			procsChangeTypeMethodInfo = typeof(Procs).GetMethod(nameof(Procs.ChangeType), new Type[] { typeof(object), typeof(Type) });
-			fullTextSearchMethodInfo = typeof(PpsDataFilterVisitorLambda).GetMethod(nameof(PpsDataFilterVisitorLambda.RtFullTextSearch));
-		} // stor
+			stringIndexOfMethodInfo = typeof(string).GetMethod(nameof(String.IndexOf), new Type[] { typeof(string), typeof(StringComparison) }) ?? throw new ArgumentNullException("String.IndexOf");
+			stringCompareMethodInfo = typeof(string).GetMethod(nameof(String.Compare), new Type[] { typeof(string), typeof(string), typeof(StringComparison) }) ?? throw new ArgumentNullException("String.Compare");
+			stringStartsWithMethodInfo = typeof(string).GetMethod(nameof(String.StartsWith), new Type[] { typeof(string), typeof(StringComparison) }) ?? throw new ArgumentNullException("String.StartsWith");
+			stringJoinMethodInfo = typeof(string).GetMethod(nameof(String.Join), new Type[] { typeof(string), typeof(string[]) }) ?? throw new ArgumentNullException("String.Join");
 
-		/// <summary>Internal use only.</summary>
-		/// <param name="row"></param>
-		/// <param name="expressionType"></param>
-		/// <param name="text"></param>
-		/// <returns></returns>
-		[EditorBrowsable(EditorBrowsableState.Never)]
-		public static bool RtFullTextSearch(IDataRow row, ExpressionType expressionType, string text)
-		{
-			for (var i = 0; i < row.Columns.Count; i++)
-			{
-				var v = row[i];
-				if (v != null && v.ChangeType<string>().IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
-					return true;
-			}
-			return false;
-		} // func RtFullTextSearch
+			procsChangeTypeMethodInfo = typeof(Procs).GetMethod(nameof(Procs.ChangeType), new Type[] { typeof(object), typeof(Type) }) ?? throw new ArgumentNullException("Procs.ChangeType");
+
+			compareFullTextSearchTextMethodInfo = typeof(ICompareFulltext).GetMethod(nameof(ICompareFulltext.SearchText), new Type[] { typeof(string), typeof(bool) }) ?? throw new ArgumentNullException("ICompareFulltext.SearchText");
+			compareDateTimeSearchDateMethodInfo = typeof(ICompareDateTime).GetMethod(nameof(ICompareDateTime.SearchDate), new Type[] { typeof(DateTime), typeof(DateTime) }) ?? throw new ArgumentNullException("ICompareDateTime.SearchDate");
+		} // stor
 
 		/// <summary></summary>
 		/// <typeparam name="T"></typeparam>
@@ -1927,21 +2039,53 @@ namespace TecWare.PPSn.Data
 			this.columns = columns;
 		} // ctor
 
+		private Expression CreateCompareFilterFullOperator(PpsDataFilterCompareExpression expression, Expression expr)
+		{
+			if (expression.Operator == PpsDataFilterCompareOperator.NotContains
+				|| expression.Operator == PpsDataFilterCompareOperator.NotEqual)
+				expr = Expression.Not(expr);
+			return expr;
+		} // func CreateCompareFilterFullOperator
+
+		/// <summary></summary>
+		/// <param name="expression"></param>
+		/// <returns></returns>
+		protected override Expression CreateCompareFilterFullText(PpsDataFilterCompareExpression expression)
+			=> CreateCompareFilterFullOperator(expression,
+				Expression.Call(datarowSearchFullTextMethodInfo,
+					Expression.Convert(CurrentRowParameter, typeof(IDataRow)),
+					Expression.Constant(((PpsDataFilterCompareTextValue)expression.Value).Text),
+					Expression.Constant(expression.Value.Type == PpsDataFilterCompareValueType.Number)
+				)
+			);
+
+		/// <summary></summary>
+		/// <param name="expression"></param>
+		/// <returns></returns>
+		protected override Expression CreateCompareFilterFullDate(PpsDataFilterCompareExpression expression)
+			=> CreateCompareFilterFullOperator(expression,
+				Expression.Call(datarowSearchFullDateMethodInfo,
+					Expression.Convert(CurrentRowParameter, typeof(IDataRow)),
+					Expression.Constant(((PpsDataFilterCompareDateValue)expression.Value).From),
+					Expression.Constant(((PpsDataFilterCompareDateValue)expression.Value).To)
+				)
+			);
+
 		/// <summary></summary>
 		/// <param name="memberName"></param>
 		/// <returns></returns>
 		protected override Expression GetProperty(string memberName)
 		{
-			if (String.IsNullOrEmpty(memberName)) // use full text column
-				return Expression.Constant("todo");
+			if (String.IsNullOrEmpty(memberName))
+				throw new ArgumentNullException(nameof(memberName));
 
 			if (columns == null)
 			{
-				return Expression.MakeIndex(CurrentRowParameter, dataRowIndexName,
+				return Expression.MakeIndex(CurrentRowParameter, dataRowIndexNamePropertyInfo,
 					new Expression[]
 					{
 						Expression.Constant(memberName),
-						Expression.Constant(true)
+						Expression.Constant(false)
 					}
 				);
 			}
@@ -1951,19 +2095,18 @@ namespace TecWare.PPSn.Data
 				if (index == -1)
 					return Expression.Constant(null, typeof(object));
 				else
-				{
-					// todo: cast to nullable type?
-					return Expression.MakeIndex(CurrentRowParameter, dataRowIndexInt, new Expression[] { Expression.Constant(index) });
-				}
+					return Expression.MakeIndex(CurrentRowParameter, dataRowIndexIntPropertyInfo, new Expression[] { Expression.Constant(index) });
 			}
 		} // func GetProperty
 
-		private static PropertyInfo dataRowIndexInt;
-		private static PropertyInfo dataRowIndexName;
+		private static PropertyInfo dataRowIndexIntPropertyInfo;
+		private static PropertyInfo dataRowIndexNamePropertyInfo;
+		private static MethodInfo datarowSearchFullTextMethodInfo;
+		private static MethodInfo datarowSearchFullDateMethodInfo;
 
 		static PpsDataFilterVisitorDataRow()
 		{
-			dataRowIndexName = typeof(IDataRow).GetRuntimeProperties().Where(
+			dataRowIndexNamePropertyInfo = typeof(IDataRow).GetRuntimeProperties().Where(
 				c =>
 				{
 					if (c.Name == "Item")
@@ -1977,7 +2120,7 @@ namespace TecWare.PPSn.Data
 			).FirstOrDefault() ?? throw new ArgumentException();
 
 
-			dataRowIndexInt = typeof(IDataValues).GetRuntimeProperties().Where(
+			dataRowIndexIntPropertyInfo = typeof(IDataValues).GetRuntimeProperties().Where(
 				c =>
 				{
 					if (c.Name == "Item")
@@ -1989,7 +2132,56 @@ namespace TecWare.PPSn.Data
 						return false;
 				}
 			).FirstOrDefault() ?? throw new ArgumentException();
+
+			datarowSearchFullTextMethodInfo = typeof(PpsDataFilterVisitorDataRow).GetMethod(nameof(PpsDataFilterVisitorDataRow.RtDataRowSearchFullText)) ?? throw new ArgumentNullException("PpsDataFilterVisitorDataRow.RtDataRowSearchFullText");
+			datarowSearchFullDateMethodInfo = typeof(PpsDataFilterVisitorDataRow).GetMethod(nameof(PpsDataFilterVisitorDataRow.RtDataRowSearchFullDate)) ?? throw new ArgumentNullException("PpsDataFilterVisitorDataRow.RtDataRowSearchFullDate");
 		} // ctor
+
+		/// <summary>Only for internal use.</summary>
+		/// <param name="row"></param>
+		/// <param name="text"></param>
+		/// <param name="startsWith"></param>
+		/// <returns></returns>
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public static bool RtDataRowSearchFullText(IDataRow row, string text, bool startsWith)
+		{
+			for (var i = 0; i < row.Columns.Count; i++)
+			{
+				var v = row[i];
+				if (v == null)
+					continue;
+
+				var s = v.ChangeType<string>();
+				if (startsWith && s.StartsWith(text, StringComparison.OrdinalIgnoreCase))
+					return true;
+				else if (!startsWith && String.Compare(s, text, StringComparison.OrdinalIgnoreCase) == 0)
+					return true;
+			}
+
+			return false;
+		} // func RtDataRowSearchFullText
+
+		/// <summary>Only for internal use.</summary>
+		/// <param name="row"></param>
+		/// <param name="from"></param>
+		/// <param name="to"></param>
+		/// <returns></returns>
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public static bool RtDataRowSearchFullDate(IDataRow row, DateTime from, DateTime to)
+		{
+			for (var i = 0; i < row.Columns.Count; i++)
+			{
+				if (row.Columns[i].DataType != typeof(DateTime)
+					|| row[i] == null)
+					continue;
+
+				var dt = (DateTime)row[i];
+				if (from <= dt && dt <= to)
+					return true;
+			}
+
+			return false;
+		} // func RtDataRowSearchFullDate
 	} // class PpsDataFilterVisitorDataRow
 
 	#endregion

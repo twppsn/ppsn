@@ -45,6 +45,34 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
+	#region -- interface ICompareFulltext ---------------------------------------------
+
+	/// <summary>Interface to compare with an fulltext expression.</summary>
+	public interface ICompareFulltext
+	{
+		/// <summary>Find the text within the all attributes.</summary>
+		/// <param name="text">Text to search.</param>
+		/// <param name="startsWith">Text with Startswith</param>
+		/// <returns></returns>
+		bool SearchText(string text, bool startsWith);
+	} // interface ICompareFulltext
+
+	#endregion
+
+	#region -- interface ICompareDateTime ---------------------------------------------
+
+	/// <summary>Interface to compare with an date expression.</summary>
+	public interface ICompareDateTime
+	{
+		/// <summary>Find the text within the all attributes.</summary>
+		/// <param name="minDate"></param>
+		/// <param name="maxDate"></param>
+		/// <returns></returns>
+		bool SearchDate(DateTime minDate, DateTime maxDate);
+	} // interface ICompareDateTime
+
+	#endregion
+
 	#region -- class PpsDataRelatedFilter ---------------------------------------------
 
 	/// <summary></summary>
@@ -454,6 +482,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		/// <summary>Placeholder for not setted values.</summary>
 		public static readonly object NotSet = new NotSetValue();
 
 		/// <summary>Wird ausgelöst, wenn sich eine Eigenschaft geändert hat</summary>
@@ -538,14 +567,19 @@ namespace TecWare.PPSn.Data
 			UpdateRowValues(xRow);
 		} // ctor
 
+		/// <summary>Compare the data rows.</summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
 		public override bool Equals(object obj)
 			=> obj is IEquatable<PpsDataRow> obj2
 				? obj2.Equals(this)
 				: base.Equals(obj);
 
+		/// <summary>Get hash code for this data row.</summary>
+		/// <returns></returns>
 		public override int GetHashCode() 
 			=> base.GetHashCode();
-
+		
 		private static PpsDataRowState ReadRowState(XElement xRow)
 		{
 			var rowState = xRow.GetAttribute(xnDataRowState, 0); // optional state of the row
