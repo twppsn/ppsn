@@ -121,7 +121,9 @@ namespace TecWare.PPSn.Data
 				{
 					var oldValue = currentValue;
 					currentValue = r[0];
+					// notify changed value
 					OnPropertyChanged(nameof(Value), oldValue, currentValue, true);
+					Row.OnValueChanged(Column.Index, oldValue, currentValue);
 				}
 			}
 			catch (Exception e)
