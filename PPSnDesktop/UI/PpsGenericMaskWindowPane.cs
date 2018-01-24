@@ -180,7 +180,7 @@ namespace TecWare.PPSn.UI
 					Order = new PpsCommandOrder(200, 130),
 					DisplayText = "Rückgängig",
 					Description = "Rückgängig",
-					Image = "undoImage",
+					Image = "undo",
 					Command = new PpsCommand(
 						(args) =>
 						{
@@ -205,7 +205,7 @@ namespace TecWare.PPSn.UI
 					Order = new PpsCommandOrder(200, 140),
 					DisplayText = "Wiederholen",
 					Description = "Wiederholen",
-					Image = "redoImage",
+					Image = "redo",
 					Command = new PpsCommand(
 						(args) =>
 						{
