@@ -16,7 +16,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Dynamic;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
@@ -2154,7 +2153,7 @@ namespace TecWare.PPSn.Data
 				var s = v.ChangeType<string>();
 				if (startsWith && s.StartsWith(text, StringComparison.OrdinalIgnoreCase))
 					return true;
-				else if (!startsWith && String.Compare(s, text, StringComparison.OrdinalIgnoreCase) == 0)
+				else if (!startsWith && s.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
 					return true;
 			}
 
