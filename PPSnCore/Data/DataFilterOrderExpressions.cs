@@ -16,7 +16,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Dynamic;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
@@ -1823,8 +1822,9 @@ namespace TecWare.PPSn.Data
 
 		/// <summary></summary>
 		/// <param name="expression"></param>
+		/// <param name="expressionValue"></param>
 		/// <returns></returns>
-		protected virtual Expression CreateCompareFilterFullText(PpsDataFilterCompareExpression expression)
+		protected virtual Expression CreateCompareFilterFullText(PpsDataFilterCompareExpression expression, string expressionValue)
 		{
 			var type = CurrentRowParameter.Type;
 			var typeCompareInterface = type.GetInterfaces().FirstOrDefault(i => i == typeof(ICompareFulltext));
@@ -1832,7 +1832,7 @@ namespace TecWare.PPSn.Data
 			{
 				var expr = (Expression)Expression.Call(
 					Expression.Convert(CurrentRowParameter, typeof(ICompareFulltext)), compareFullTextSearchTextMethodInfo,
-						Expression.Constant(((PpsDataFilterCompareTextValue)expression.Value).Text),
+						Expression.Constant(expressionValue),
 						Expression.Constant(expression.Value.Type == PpsDataFilterCompareValueType.Number)
 				);
 
@@ -1893,8 +1893,9 @@ namespace TecWare.PPSn.Data
 				switch (expression.Value.Type)
 				{
 					case PpsDataFilterCompareValueType.Text:
+						return CreateCompareFilterFullText(expression, ((PpsDataFilterCompareTextValue)expression.Value).Text);
 					case PpsDataFilterCompareValueType.Number:
-						return CreateCompareFilterFullText(expression);
+						return CreateCompareFilterFullText(expression, ((PpsDataFilterCompareNumberValue)expression.Value).Text);
 
 					case PpsDataFilterCompareValueType.Date:
 						{
@@ -2049,12 +2050,13 @@ namespace TecWare.PPSn.Data
 
 		/// <summary></summary>
 		/// <param name="expression"></param>
+		/// <param name="expressionValue"></param>
 		/// <returns></returns>
-		protected override Expression CreateCompareFilterFullText(PpsDataFilterCompareExpression expression)
+		protected override Expression CreateCompareFilterFullText(PpsDataFilterCompareExpression expression, string expressionValue)
 			=> CreateCompareFilterFullOperator(expression,
 				Expression.Call(datarowSearchFullTextMethodInfo,
 					Expression.Convert(CurrentRowParameter, typeof(IDataRow)),
-					Expression.Constant(((PpsDataFilterCompareTextValue)expression.Value).Text),
+					Expression.Constant(expressionValue),
 					Expression.Constant(expression.Value.Type == PpsDataFilterCompareValueType.Number)
 				)
 			);
@@ -2154,7 +2156,7 @@ namespace TecWare.PPSn.Data
 				var s = v.ChangeType<string>();
 				if (startsWith && s.StartsWith(text, StringComparison.OrdinalIgnoreCase))
 					return true;
-				else if (!startsWith && String.Compare(s, text, StringComparison.OrdinalIgnoreCase) == 0)
+				else if (!startsWith && s.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
 					return true;
 			}
 
