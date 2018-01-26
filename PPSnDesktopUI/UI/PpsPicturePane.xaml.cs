@@ -345,6 +345,7 @@ namespace TecWare.PPSn.UI
 			private readonly string name;
 			private PpsTraceLog traces;
 			private VideoCaptureDevice device;
+			private readonly double previewVideoRatio;
 
 			#endregion
 
@@ -421,6 +422,9 @@ namespace TecWare.PPSn.UI
 						traces.AppendText(PpsTraceItemType.Fail, String.Format(PreviewUnavailable, Name));
 					}
 				}
+
+				if (previewResolution != null)
+					previewVideoRatio = previewResolution.FrameSize.Width / previewResolution.FrameSize.Height;
 
 				if (!device.ProvideSnapshots)
 				{
@@ -556,6 +560,8 @@ namespace TecWare.PPSn.UI
 			public EventHandler CameraInitialized;
 			/// <summary>devicepath</summary>
 			public string MonikerString => device.Source;
+			/// <summary>returns the ratio of width/height of the previewimage</summary>
+			public double PreviewVideoRatio => previewVideoRatio;
 
 			#endregion
 		}
