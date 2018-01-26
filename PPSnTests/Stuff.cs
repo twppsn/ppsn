@@ -47,7 +47,7 @@ namespace TecWare.PPSn
 				var ss1 = new SecureString(s1, strs[0].Length);
 				var ss2 = new SecureString(s2, strs[0].Length);
 
-				Assert.IsTrue(PpsProcs.SecureStringCompare(ss1, ss2), "Same strings were not equal");
+				Assert.IsTrue(ProcsPps.SecureStringCompare(ss1, ss2), "Same strings were not equal");
 
 				ss1.Dispose();
 				ss2.Dispose();
@@ -59,7 +59,7 @@ namespace TecWare.PPSn
 				var ss1 = new SecureString(s1, strs[1].Length);
 				var ss2 = new SecureString(s2, strs[1].Length);
 
-				Assert.IsTrue(PpsProcs.SecureStringCompare(ss1, ss2), "Empty strings were not equal");
+				Assert.IsTrue(ProcsPps.SecureStringCompare(ss1, ss2), "Empty strings were not equal");
 
 				ss1.Dispose();
 				ss2.Dispose();
@@ -72,7 +72,7 @@ namespace TecWare.PPSn
 				var ss1 = new SecureString(s1, strs[0].Length);
 				var ss2 = new SecureString(s2, strs[1].Length);
 
-				Assert.IsFalse(PpsProcs.SecureStringCompare(ss1, ss2), "String and empty string were equal");
+				Assert.IsFalse(ProcsPps.SecureStringCompare(ss1, ss2), "String and empty string were equal");
 
 				ss1.Dispose();
 				ss2.Dispose();
@@ -84,7 +84,7 @@ namespace TecWare.PPSn
 				var ss1 = new SecureString(s1, strs[0].Length);
 				var ss2 = new SecureString(s2, strs[2].Length);
 
-				Assert.IsFalse(PpsProcs.SecureStringCompare(ss1, ss2), "String and Substring were equal");
+				Assert.IsFalse(ProcsPps.SecureStringCompare(ss1, ss2), "String and Substring were equal");
 
 				ss1.Dispose();
 				ss2.Dispose();
@@ -96,7 +96,7 @@ namespace TecWare.PPSn
 				var ss1 = new SecureString(s1, strs[0].Length);
 				SecureString ss2 = null;
 
-				Assert.IsFalse(PpsProcs.SecureStringCompare(ss1, ss2), "String and null were equal");
+				Assert.IsFalse(ProcsPps.SecureStringCompare(ss1, ss2), "String and null were equal");
 
 				ss1.Dispose();
 			}
@@ -107,7 +107,7 @@ namespace TecWare.PPSn
 				var ss1 = new SecureString(s1, strs[3].Length);
 				var ss2 = new SecureString(s2, strs[3].Length); ;
 
-				Assert.IsTrue(PpsProcs.SecureStringCompare(ss1, ss2), "Long strings were not equal");
+				Assert.IsTrue(ProcsPps.SecureStringCompare(ss1, ss2), "Long strings were not equal");
 
 				ss1.Dispose();
 				ss2.Dispose();
@@ -119,7 +119,7 @@ namespace TecWare.PPSn
 				var ss1 = new SecureString(s1, strs[4].Length);
 				var ss2 = new SecureString(s2, strs[4].Length); ;
 
-				Assert.IsTrue(PpsProcs.SecureStringCompare(ss1, ss2), "Full-ASCII strings were not equal");
+				Assert.IsTrue(ProcsPps.SecureStringCompare(ss1, ss2), "Full-ASCII strings were not equal");
 
 				ss1.Dispose();
 				ss2.Dispose();
@@ -137,21 +137,21 @@ namespace TecWare.PPSn
 			for (var i = 0; i < 1024; i++)
 				testString += (char)(i % 256);
 
-			Assert.AreEqual(emptyString, PpsProcs.StringCypher(emptyString));
-			Assert.AreEqual(emptyString, PpsProcs.StringDecypher(emptyString));
+			Assert.AreEqual(emptyString, ProcsPps.StringCypher(emptyString));
+			Assert.AreEqual(emptyString, ProcsPps.StringDecypher(emptyString));
 
-			Assert.AreEqual("3", PpsProcs.StringCypher(aString));
-			Assert.AreEqual("0", PpsProcs.StringCypher(bString));
-			Assert.AreEqual("3q", PpsProcs.StringCypher(aString+bString));
+			Assert.AreEqual("3", ProcsPps.StringCypher(aString));
+			Assert.AreEqual("0", ProcsPps.StringCypher(bString));
+			Assert.AreEqual("3q", ProcsPps.StringCypher(aString+bString));
 
-			Assert.AreEqual(aString, PpsProcs.StringDecypher(PpsProcs.StringDecypher(aString)));
-			Assert.AreEqual(bString, PpsProcs.StringDecypher(PpsProcs.StringDecypher(bString)));
-			Assert.AreEqual(aString+bString, PpsProcs.StringDecypher(PpsProcs.StringCypher(aString+bString)));
-			Assert.AreEqual(emptyString, PpsProcs.StringDecypher(PpsProcs.StringDecypher(emptyString)));
+			Assert.AreEqual(aString, ProcsPps.StringDecypher(ProcsPps.StringDecypher(aString)));
+			Assert.AreEqual(bString, ProcsPps.StringDecypher(ProcsPps.StringDecypher(bString)));
+			Assert.AreEqual(aString+bString, ProcsPps.StringDecypher(ProcsPps.StringCypher(aString+bString)));
+			Assert.AreEqual(emptyString, ProcsPps.StringDecypher(ProcsPps.StringDecypher(emptyString)));
 			
-			Assert.AreEqual(testString, PpsProcs.StringDecypher(PpsProcs.StringCypher(testString)));
+			Assert.AreEqual(testString, ProcsPps.StringDecypher(ProcsPps.StringCypher(testString)));
 
-			foreach (var charA in PpsProcs.GeneratePassword(128, "a".ToCharArray()))
+			foreach (var charA in ProcsPps.GeneratePassword(128, "a".ToCharArray()))
 				Assert.AreEqual('a', charA);
 		}
 	}

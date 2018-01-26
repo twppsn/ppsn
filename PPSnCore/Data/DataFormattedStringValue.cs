@@ -16,8 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
@@ -62,6 +64,9 @@ namespace TecWare.PPSn.Data
 
 			return env[key] ?? base.OnIndex(key);
 		} // proc OnIndex
+
+		/// <summary>Return assigned row.</summary>
+		public PpsDataRow Row => row;
 	} // class PpsLuaRowEnvironment
 
 	#endregion
@@ -131,7 +136,7 @@ namespace TecWare.PPSn.Data
 				System.Diagnostics.Debug.Print(e.ToString()); // todo:
 			}
 		} // proc UpdateValue
-		
+
 		/// <summary></summary>
 		public override bool IsNull => currentValue == null;
 		/// <summary></summary>
@@ -147,11 +152,58 @@ namespace TecWare.PPSn.Data
 	{
 		#region -- class ExpressionBlock ----------------------------------------------
 
+		/// <summary>Part of the text value.</summary>
 		public abstract class ExpressionBlock
 		{
+			/// <summary></summary>
+			/// <returns></returns>
 			public sealed override string ToString()
 				=> GetType().Name;
 
+			/// <summary></summary>
+			/// <param name="r"></param>
+			/// <param name="fmt"></param>
+			/// <returns></returns>
+			protected static string ConvertToText(object r, string fmt)
+			{
+				if (r == null)
+					return String.Empty;
+				else if (fmt == null)
+					return r.ToString();
+				else
+				{
+					switch (Type.GetTypeCode(r.GetType()))
+					{
+						case TypeCode.SByte:
+						case TypeCode.Byte:
+						case TypeCode.Int16:
+						case TypeCode.UInt16:
+						case TypeCode.Int32:
+						case TypeCode.UInt32:
+						case TypeCode.Int64:
+						case TypeCode.UInt64:
+							return r.ChangeType<long>().ToString(fmt);
+						case TypeCode.DateTime:
+							return ((DateTime)r).ToString(fmt);
+						case TypeCode.Decimal:
+							return ((decimal)r).ToString(fmt);
+						case TypeCode.Double:
+							return ((double)r).ToString(fmt);
+						case TypeCode.Single:
+							return ((float)r).ToString(fmt);
+
+						default:
+							if (r is IFormattable f)
+								return f.ToString(fmt, CultureInfo.CurrentCulture);
+							else
+								return r.ToString();
+					}
+				}
+			} // func ConvertToText
+
+			/// <summary>Get the content of the current block.</summary>
+			/// <param name="env"></param>
+			/// <returns></returns>
 			public abstract string ToString(PpsLuaRowEnvironment env);
 		} // class ExpressionBlock
 
@@ -166,9 +218,67 @@ namespace TecWare.PPSn.Data
 			public StringBlock(string part)
 				=> this.part = part;
 
-			public override string ToString(PpsLuaRowEnvironment env) 
+			public override string ToString(PpsLuaRowEnvironment env)
 				=> part;
 		} // class StringBlock
+
+		#endregion
+
+		#region -- class MemberChainBlock ---------------------------------------------
+
+		private sealed class MemberChainBlock : ExpressionBlock
+		{
+			private readonly string[] members;
+			private readonly string fmt;
+
+			public MemberChainBlock(string[] members, string fmt)
+			{
+				this.members = members;
+				this.fmt = fmt;
+			} // ctor
+
+			private static int FindColumnIndex(IDataRow row, string memberName)
+			{
+				for (var i = 0; i < row.Columns.Count; i++)
+				{
+					var c = row.Columns[i];
+					if (String.Compare(c.Name, memberName, StringComparison.OrdinalIgnoreCase) == 0)
+						return i;
+					else if (c.Attributes.TryGetProperty<string>("displayName", out var dn)
+						&& String.Compare(dn, memberName, StringComparison.OrdinalIgnoreCase) == 0)
+						return i;
+				}
+				return -1;
+			} // func FindColumnIndex
+
+			private object GetNextMember(IDataRow row, int memberIdx)
+			{
+				var memberName = members[memberIdx];
+				var i = FindColumnIndex(row, memberName);
+				if (i == -1)
+					throw new Exception(String.Format("'{0}' nicht gefunden.", memberName));
+
+				var v = row[i];
+				if (memberIdx >= members.Length - 1)
+					return v;
+				else if (v is IDataRow nextRow)
+					return GetNextMember(nextRow, memberIdx + 1);
+				else
+					throw new Exception(String.Format("'{0}' keine Struktur.", memberName));
+			} // func GetNextMember
+
+			public override string ToString(PpsLuaRowEnvironment env)
+			{
+				try
+				{
+					return ConvertToText(GetNextMember(env.Row, 0), fmt);
+				}
+				catch (Exception e)
+				{
+					return "{EX=" + e.Message + "}";
+				}
+			} // func ToString
+		} // class MemberChainBlock
 
 		#endregion
 
@@ -189,40 +299,7 @@ namespace TecWare.PPSn.Data
 			{
 				try
 				{
-					var r = chunk.Run(env)[0];
-					if (r == null)
-						return String.Empty;
-					else if (fmt == null)
-						return r.ToString();
-					else
-					{
-						switch (Type.GetTypeCode(r.GetType()))
-						{
-							case TypeCode.SByte:
-							case TypeCode.Byte:
-							case TypeCode.Int16:
-							case TypeCode.UInt16:
-							case TypeCode.Int32:
-							case TypeCode.UInt32:
-							case TypeCode.Int64:
-							case TypeCode.UInt64:
-								return r.ChangeType<long>().ToString(fmt);
-							case TypeCode.DateTime:
-								return ((DateTime)r).ToString(fmt);
-							case TypeCode.Decimal:
-								return ((decimal)r).ToString(fmt);
-							case TypeCode.Double:
-								return ((double)r).ToString(fmt);
-							case TypeCode.Single:
-								return ((float)r).ToString(fmt);
-
-							default:
-								if (r is IFormattable f)
-									return f.ToString(fmt, CultureInfo.CurrentCulture);
-								else
-									return r.ToString();
-						}
-					}
+					return ConvertToText(chunk.Run(env)[0], fmt);
 				}
 				catch (LuaRuntimeException e)
 				{
@@ -230,7 +307,7 @@ namespace TecWare.PPSn.Data
 				}
 				catch (Exception e)
 				{
-					return "{RE=" + e.Message + "}";
+					return "{EX=" + e.Message + "}";
 				}
 			} // proc ToString
 		} // class LuaCodeBlock
@@ -247,7 +324,7 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		/// <param name="row"></param>
 		/// <param name="column"></param>
-		public PpsFormattedStringValue(PpsDataRow row, PpsDataColumnDefinition column) 
+		public PpsFormattedStringValue(PpsDataRow row, PpsDataColumnDefinition column)
 			: base(row, column)
 		{
 		} // ctor
@@ -265,7 +342,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="x"></param>
 		protected override void Read(XElement x)
 		{
-			originalTemplate= x.Element("o")?.Value;
+			originalTemplate = x.Element("o")?.Value;
 			currentTemplate = x.Element("c")?.Value ?? PpsDataRow.NotSet;
 			formattedValue = x.Element("f")?.Value;
 
@@ -328,7 +405,7 @@ namespace TecWare.PPSn.Data
 				parsedValue = null;
 				valueChanged = true;
 			}
-			else if(!Object.Equals(Value, newValue))
+			else if (!Object.Equals(Value, newValue))
 			{
 				currentTemplate = newValue;
 				parsedValue = null;
@@ -385,6 +462,11 @@ namespace TecWare.PPSn.Data
 
 		private ExpressionBlock CreateExpressionBlock(string expr, string fmt)
 		{
+			// check for identifier chain
+			var members = ParseIdentifiers(expr).ToArray();
+			if (members.Length > 0 && members[members.Length - 1] != null) // member list
+				return new MemberChainBlock(members, fmt);
+
 			// all is lua, currently
 			try
 			{
@@ -395,6 +477,76 @@ namespace TecWare.PPSn.Data
 				return new StringBlock("{PE=" + e.Message + "}");
 			}
 		} // func CreateExpressionBlock
+
+		internal static IEnumerable<string> ParseIdentifiers(string expr)
+		{
+			var s = 0;
+			var p = 0;
+			var startAt = -1;
+			while (p < expr.Length)
+			{
+				var c = expr[p];
+				switch (s)
+				{
+					case 0: // wait for identifier
+						if (Char.IsLetter(c))
+						{
+							startAt = p;
+							s = 1;
+						}
+						else if (c == '"')
+						{
+							startAt = p + 1;
+							s = 10;
+						}
+						else if (!Char.IsWhiteSpace(c))
+						{
+							yield return null;
+							yield break;
+						}
+						break;
+					case 1: // collect identifier
+						if (!Char.IsLetterOrDigit(c))
+						{
+							var ident = expr.Substring(startAt, p - startAt);
+							startAt = -1;
+							s = 2;
+							yield return ident;
+						}
+						break;
+					case 2: // whitespaces
+						if (!Char.IsWhiteSpace(c))
+							goto case 3;
+						break;
+					case 3:
+						if (c == '.')
+							s = 0;
+						else
+							yield return null;
+						break;
+
+					case 10:
+						if (c == '"') // escape of " is missing
+						{
+							var ident = expr.Substring(startAt, p - startAt);
+							startAt = -1;
+							s = 2;
+							if (String.IsNullOrEmpty(ident))
+							{
+								yield return null;
+								yield break;
+							}
+							yield return ident;
+						}
+						break;
+				}
+
+				p++;
+			}
+
+			if (startAt >= 0 && startAt < p)
+				yield return expr.Substring(startAt, p - startAt);
+		} // func ParseIdentifiers
 
 		/// <summary></summary>
 		/// <param name="template"></param>
@@ -419,7 +571,7 @@ namespace TecWare.PPSn.Data
 
 			void EmitExprBlock(int endAt)
 			{
-				var expr = template.Substring(startAt,( formatAt == -1 ? endAt : formatAt) - startAt);
+				var expr = template.Substring(startAt, (formatAt == -1 ? endAt : formatAt) - startAt);
 				var fmt = formatAt == -1 ? null : template.Substring(formatAt + 2, endAt - formatAt - 2);
 
 				spans.Add(createExpressionBlock(expr.Trim(), fmt?.Trim()));
@@ -464,7 +616,7 @@ namespace TecWare.PPSn.Data
 					case 4: // start of format
 						if (c == ':')
 						{
-							formatAt = p -1;
+							formatAt = p - 1;
 							s = 5;
 						}
 						else
@@ -486,13 +638,13 @@ namespace TecWare.PPSn.Data
 					default:
 						throw new InvalidOperationException();
 				}
-				
+
 				p++;
 			}
 
 			if (spans.Count > 0)
 				EmitTextBlock(p);
-			
+
 			return spans.ToArray();
 		} // func ParseTemplate
 
@@ -532,7 +684,7 @@ namespace TecWare.PPSn.Data
 				newFormattedValue = String.Concat(parts);
 			}
 
-			if(newFormattedValue != formattedValue)
+			if (newFormattedValue != formattedValue)
 			{
 				var oldValue = formattedValue;
 				formattedValue = newFormattedValue;
@@ -540,21 +692,21 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc UpdateFormattedValue
 
-		/// <summary></summary>
+		/// <summary>Calculated value of the template.</summary>
 		public string FormattedValue
 			=> formattedValue;
 
-		/// <summary></summary>
+		/// <summary>Value of the template.</summary>
 		public string Value
 		{
 			get { return currentTemplate != PpsDataRow.NotSet ? (string)currentTemplate : (string)originalTemplate; }
 			set { SetValue(value, true, true); }
 		} // proc Template
 
-		/// <summary></summary>
+		/// <summary><c>true</c>, if the template is empty.</summary>
 		public override bool IsNull => currentTemplate == PpsDataRow.NotSet ? originalTemplate == null : currentTemplate == null;
 
-		/// <summary></summary>
+		/// <summary>Returns <c>true</c>, if the template was modified.</summary>
 		public bool IsValueModified => currentTemplate != PpsDataRow.NotSet;
 
 		/// <summary>Return the formatted value.</summary>
