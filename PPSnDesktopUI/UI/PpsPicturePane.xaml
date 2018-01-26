@@ -43,6 +43,13 @@ specific language governing permissions and limitations under the Licence.
 					return false;
 				]]>
 		</local:LuaValueConverter>
+
+		<local:LuaValueConverter x:Key="PreviewHeightConverter">
+			<![CDATA[
+				return 220.0;
+			]]>
+		</local:LuaValueConverter>
+
 		<CollectionViewSource
 			x:Key="FilteredAttachments"
 			Filter="ShowOnlyObjectImageDataFilter"
@@ -126,7 +133,7 @@ specific language governing permissions and limitations under the Licence.
 	<!--this is the control for Camera Settings-->
 	<Grid>
 		<Grid.RowDefinitions>
-			<RowDefinition  />
+			<RowDefinition />
 			<RowDefinition Height="auto"/>
 		</Grid.RowDefinitions>
 		<Image 
@@ -271,6 +278,7 @@ specific language governing permissions and limitations under the Licence.
 					</Style>
 				</ToggleButton.Style>
 			</ToggleButton>
+
 			<Image 
 				Grid.Column="1" 
 				VerticalAlignment="Bottom" 
@@ -385,7 +393,8 @@ specific language governing permissions and limitations under the Licence.
 				</Style>
 			</Grid.Style>
 		</Grid>
-		<ItemsControl
+		
+		<!--<ItemsControl
 			Grid.Row="0"
 			VerticalAlignment="Top"
 			HorizontalAlignment="Left"
@@ -398,7 +407,7 @@ specific language governing permissions and limitations under the Licence.
 						Command="{x:Static local:PpsPicturePane.ChangeCameraCommand}" 
 						CommandParameter="{Binding}" 
 						MaxHeight="280" 
-						Width="200" 
+						Width="180" 
 						Margin="10" 
 						Background="Transparent"
 						BorderThickness="0"
@@ -445,53 +454,133 @@ specific language governing permissions and limitations under the Licence.
 					</Button>
 				</DataTemplate>
 			</ItemsControl.ItemTemplate>
-		</ItemsControl>
-		<ScrollViewer x:Name="existingImagesPanel"
-			Margin="10,0,0,0"
-			Grid.Row="1"
-			VerticalScrollBarVisibility="Hidden"
-			HorizontalScrollBarVisibility="Auto">
-			<!-- preview image band -->
-			<ItemsControl
-				Focusable="False"
-				x:Name="imagesList"
-				ItemsSource="{Binding Source={StaticResource FilteredAttachments}}">
-				<ItemsControl.ItemTemplate>
+		</ItemsControl>-->
+
+		<ListBox ItemsSource="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:PpsPicturePane}}, Path=CameraEnum}"
+				 SelectedItem="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:PpsPicturePane}}, Path=SelectedCamera, Mode=OneWay}"
+				 Style="{StaticResource PPSnListBoxStyle}"
+				 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+				 HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,0,0,0"
+				 Focusable="False">
+			<ListBox.ItemTemplate>
+				<DataTemplate>
+					<Button x:Name="cameraButton"
+							Command="{x:Static local:PpsPicturePane.ChangeCameraCommand}" 
+							CommandParameter="{Binding}" 
+							Background="Transparent"
+							Width="180"
+							Padding="1,3,1,0"
+							HorizontalContentAlignment="Stretch"
+							VerticalContentAlignment="Stretch"
+							ToolTip="Diese Kamera auswählen">
+						<!--<Button.Height>
+							<MultiBinding Mode="OneWay" Converter="{StaticResource PreviewHeightConverter}">
+								<Binding ElementName="cameraButton" Path="Width"/>
+								<Binding ElementName="cameraButton" Path="Width"/>
+							</MultiBinding>
+						</Button.Height>-->
+						<Grid>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="21"/>
+							</Grid.RowDefinitions>
+							<Image x:Name="previewImage" Grid.Row="0" Source="{Binding Preview, TargetNullValue={x:Null}}"/>
+							<Viewbox Grid.Row="0" Width="48" Height="48" VerticalAlignment="Center" HorizontalAlignment="Center" Opacity=".75">
+								<Canvas Width="24" Height="24">
+									<Path Data="{StaticResource cameraPathGeometry}" Fill="WhiteSmoke"/>
+								</Canvas>
+							</Viewbox>
+							<TextBlock Grid.Row="1" Text="{Binding ElementName=previewImage, Path=ActualHeight}"
+									   TextAlignment="Center" VerticalAlignment="Center"
+									   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+						</Grid>
+					</Button>
+					<DataTemplate.Triggers>
+						<DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ListBoxItem}}}" Value="True">
+							<Setter TargetName="cameraButton" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
+						</DataTrigger>
+					</DataTemplate.Triggers>
+				</DataTemplate>
+			</ListBox.ItemTemplate>
+			<ListBox.ItemContainerStyle>
+				<Style TargetType="{x:Type ListBoxItem}">
+					<Setter Property="Margin" Value="0,0,0,16"/>
+					<Setter Property="Focusable" Value="False"/>
+					<Setter Property="Template">
+						<Setter.Value>
+							<ControlTemplate TargetType="{x:Type ListBoxItem}">
+								<ContentPresenter />
+							</ControlTemplate>
+						</Setter.Value>
+					</Setter>
+				</Style>
+			</ListBox.ItemContainerStyle>
+		</ListBox>
+
+		<Border x:Name="existingImagesPanel" Grid.Row="1" Height="156" Padding="16,16,0,0">
+			<ListBox x:Name="imagesList" 
+					 ItemsSource="{Binding Source={StaticResource FilteredAttachments}}"
+					 SelectedItem="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:PpsPicturePane}}, Path=SelectedAttachment, Mode=OneWay}"
+					 Style="{StaticResource PPSnListBoxStyle}"
+					 ScrollViewer.VerticalScrollBarVisibility="Disabled"
+					 Focusable="False">
+				<ListBox.ItemsPanel>
+					<ItemsPanelTemplate>
+						<StackPanel Orientation="Horizontal"/>
+					</ItemsPanelTemplate>
+				</ListBox.ItemsPanel>
+				<ListBox.ItemTemplate>
 					<DataTemplate>
-						<Button 
+						<Button x:Name="imageButton"
 							Command="{x:Static local:PpsPicturePane.EditOverlayCommand}" 
 							CommandParameter="{Binding}" 
-							Height="175" 
-							Width="200" 
-							VerticalContentAlignment="Stretch" 
-							Margin="0,0,10,0">
-							<Grid VerticalAlignment="Stretch">
-								<Image
-									Stretch="Uniform"
-									Margin="5,5,5,20"
-									Source="{Binding Path=LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}"/>
-								<TextBlock
-									TextAlignment="Center" 
-									VerticalAlignment="Bottom"
-									Text="{Binding Path=Name}"/>
-								<Button x:Name="removeButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,15,5,0"
+							Background="Transparent"
+							Width="180" 
+							Padding="1,3,1,0"
+							HorizontalContentAlignment="Stretch"
+							VerticalContentAlignment="Stretch">
+							<Grid>
+								<Grid.RowDefinitions>
+									<RowDefinition/>
+									<RowDefinition Height="21"/>
+								</Grid.RowDefinitions>
+								<Image Source="{Binding Path=LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay}"
+								   Stretch="Uniform"  />
+								<TextBlock Grid.Row="1" Text="{Binding Path=Name}"
+									   TextAlignment="Center" VerticalAlignment="Center"
+									   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+								<Button x:Name="removeButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0" MinWidth="36"
 									Command="{x:Static ApplicationCommands.Delete}"
 									CommandParameter="{Binding}"
-									MinWidth="34" DockPanel.Dock="Bottom"
 									Background="{StaticResource PPSnWindowBackgroundBrush}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
 									Tag="{StaticResource deletePathGeometry}"
-									Style="{StaticResource PPSnCircleButtonStyle}"/>
+									Style="{StaticResource PPSnCircleButtonStyle}"
+									Visibility="Hidden"/>
 							</Grid>
 						</Button>
+						<DataTemplate.Triggers>
+							<DataTrigger Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}}" Value="True">
+								<Setter TargetName="imageButton" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
+								<Setter TargetName="removeButton" Property="Visibility" Value="Visible"/>
+							</DataTrigger>
+						</DataTemplate.Triggers>
 					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-				<ItemsControl.ItemsPanel>
-					<ItemsPanelTemplate>
-						<UniformGrid Rows="1" />
-					</ItemsPanelTemplate>
-				</ItemsControl.ItemsPanel>
-			</ItemsControl>
-		</ScrollViewer>
+				</ListBox.ItemTemplate>
+				<ListBox.ItemContainerStyle>
+					<Style TargetType="{x:Type ListBoxItem}">
+						<Setter Property="Margin" Value="0,0,16,0"/>
+						<Setter Property="Focusable" Value="False"/>
+						<Setter Property="Template">
+							<Setter.Value>
+								<ControlTemplate TargetType="{x:Type ListBoxItem}">
+									<ContentPresenter />
+								</ControlTemplate>
+							</Setter.Value>
+						</Setter>
+					</Style>
+				</ListBox.ItemContainerStyle>
+			</ListBox>
+		</Border>
+	
 		<ToggleButton VerticalAlignment="Bottom" HorizontalAlignment="Center">
 			<ToggleButton.Triggers>
 				<EventTrigger RoutedEvent="ToggleButton.Checked">
@@ -499,7 +588,6 @@ specific language governing permissions and limitations under the Licence.
 						<Storyboard>
 							<DoubleAnimation Storyboard.TargetProperty="Height"                                                     
                                      Storyboard.TargetName="existingImagesPanel"
-                                     From="200" 
                                      To="0" 
                                      Duration="0:0:0.25" />
 						</Storyboard>
@@ -510,9 +598,8 @@ specific language governing permissions and limitations under the Licence.
 						<Storyboard>
 							<DoubleAnimation Storyboard.TargetProperty="Height"                                                     
                                      Storyboard.TargetName="existingImagesPanel"
-                                     From="0" 
-                                     Duration="0:0:0.25"
-                                     To="200" />
+                                     To="156" 
+                                     Duration="0:0:0.25" />
 						</Storyboard>
 					</BeginStoryboard>
 				</EventTrigger>

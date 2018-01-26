@@ -827,6 +827,9 @@ namespace TecWare.PPSn.UI
 					{
 						if (e.Parameter is IPpsAttachmentItem i)
 						{
+							if (i == SelectedAttachment)
+								return;
+
 							SelectedAttachment = i;
 
 							// if the previous set failed. the user canceled the operation, so exit
@@ -890,6 +893,7 @@ namespace TecWare.PPSn.UI
 					{
 						sitem.Remove();
 					}
+					SelectedAttachment = null;
 				},
 				(sender, e) => e.CanExecute = true));
 
@@ -1352,7 +1356,7 @@ namespace TecWare.PPSn.UI
 					// to find the new item one has to scroll one-by-one, because the itemscontrol is virtualizing so a new item can't be found, because it is not rendered, unless it is near the FOV
 					while (i < imagesList.Items.Count && imagesList.Items[i] != obj)
 					{
-						((ContentPresenter)imagesList.ItemContainerGenerator.ContainerFromIndex(i)).BringIntoView();
+						((ListBoxItem)imagesList.ItemContainerGenerator.ContainerFromIndex(i)).BringIntoView();
 						i++;
 					}
 
@@ -1439,7 +1443,7 @@ namespace TecWare.PPSn.UI
 			get { return (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty); }
 			set
 			{
-				if (!LeaveCurrentImage())
+				if (value != null && !LeaveCurrentImage())
 					return;
 				if (value != null && (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty) == null)
 				{
