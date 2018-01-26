@@ -251,8 +251,10 @@ namespace TecWare.PPSn
 
 	#region -- class PpsMasterDataSelector ----------------------------------------------
 
+	/// <summary>Base implementation of a data selector.</summary>
 	public abstract class PpsMasterDataSelector : IDataRowEnumerable, IDataColumns
 	{
+		/// <summary></summary>
 		protected PpsMasterDataSelector()
 		{
 		} // ctor
@@ -280,12 +282,23 @@ namespace TecWare.PPSn
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
 
+		/// <summary>Apply an order to the data selector</summary>
+		/// <param name="expressions">Order expression.</param>
+		/// <param name="lookupNative">Native lookup.</param>
+		/// <returns></returns>
 		public virtual IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
 			=> this;
 
+		/// <summary>Apply a filter to the data selector.</summary>
+		/// <param name="expression">Filter expression.</param>
+		/// <param name="lookupNative"></param>
+		/// <returns></returns>
 		public virtual IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 			=> this;
 
+		/// <summary>Apply a column reduction.</summary>
+		/// <param name="columns">Columns to return.</param>
+		/// <returns></returns>
 		public virtual IDataRowEnumerable ApplyColumns(IEnumerable<PpsDataColumnExpression> columns)
 			=> this;
 
@@ -299,6 +312,7 @@ namespace TecWare.PPSn
 
 	#region -- class PpsMasterDataTable -----------------------------------------------
 
+	/// <summary>Proxy Table to select master data tables from the sqlite database.</summary>
 	public sealed class PpsMasterDataTable : PpsMasterDataSelector
 	{
 		#region -- class PpsSqLiteFilterVisitor ---------------------------------------
@@ -359,7 +373,7 @@ namespace TecWare.PPSn
 						{
 							if (filterVisitor.NeedFullTextColumn)
 							{
-								var expr = String.Join(" || ' ' || ", from c in table.Columns where c.DataType == typeof(string) select "[" + c.Name + "]");
+								var expr = String.Join(" || ' ' || ", from c in table.Columns where c.DataType == typeof(string) select "COALESCE([" + c.Name + "],'')");
 								if (String.IsNullOrEmpty(expr))
 									expr = "null";
 								sb.Append(',').Append(expr).Append(" AS __FULLTEXT__");
@@ -394,6 +408,9 @@ namespace TecWare.PPSn
 		private readonly PpsMasterData masterData;
 		private readonly PpsDataTableDefinition definition;
 
+		/// <summary></summary>
+		/// <param name="masterData"></param>
+		/// <param name="table"></param>
 		public PpsMasterDataTable(PpsMasterData masterData, PpsDataTableDefinition table)
 		{
 			this.masterData = masterData;
@@ -424,6 +441,8 @@ namespace TecWare.PPSn
 			return commandText;
 		} // proc PrepareCommandText
 
+		/// <summary>Prepare command.</summary>
+		/// <returns></returns>
 		protected override DbCommand PrepareCommand()
 		{
 			var commandText = PrepareCommandText(null);
@@ -431,6 +450,10 @@ namespace TecWare.PPSn
 			return masterData.CreateNativeCommand(commandText.ToString());
 		} // func PrepareCommand
 
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		public PpsMasterDataRow GetRowById(object key, bool throwException = false)
 		{
 			if (TryGetRowFromCache(key, out var row))
@@ -465,6 +488,10 @@ namespace TecWare.PPSn
 		internal PpsDataColumnDefinition GetColumnDefinition(int index)
 			=> definition.Columns[index];
 
+		/// <summary></summary>
+		/// <param name="expression"></param>
+		/// <param name="lookupNative"></param>
+		/// <returns></returns>
 		public override IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 			=> new PpsMasterDataTableResult(this, expression);
 
