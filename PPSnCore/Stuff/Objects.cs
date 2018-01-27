@@ -19,6 +19,8 @@ using System.Threading.Tasks;
 
 namespace TecWare.PPSn.Stuff
 {
+	#region -- class LazyProperty -----------------------------------------------------
+
 	/// <summary>Property implementation for Lazy via Binding or Task..</summary>
 	/// <typeparam name="T"></typeparam>
 	public sealed class LazyProperty<T>
@@ -42,6 +44,9 @@ namespace TecWare.PPSn.Stuff
 
 		private List<TaskCompletionSource<T>> valueListener = new List<TaskCompletionSource<T>>();
 
+		/// <summary></summary>
+		/// <param name="getValue"></param>
+		/// <param name="onPropertyChanged"></param>
 		public LazyProperty(Func<Task<T>> getValue, Action onPropertyChanged)
 		{
 			this.getValue = getValue;
@@ -50,6 +55,7 @@ namespace TecWare.PPSn.Stuff
 			Reset();
 		} // ctor
 
+		/// <summary>Clear value of the property.</summary>
 		public void Reset()
 		{
 			this.state = LazyPropertyState.Nothing;
@@ -92,6 +98,8 @@ namespace TecWare.PPSn.Stuff
 			return value;
 		} // func SetValueIntern
 
+		/// <summary>Get the value in async mode.</summary>
+		/// <returns></returns>
 		public Task<T> GetValueAsync()
 		{
 			lock (getValue)
@@ -113,6 +121,8 @@ namespace TecWare.PPSn.Stuff
 			}
 		} // func GetValueAsync
 
+		/// <summary>Get current value, or start loading of the value.</summary>
+		/// <returns></returns>
 		public T GetValue()
 		{
 			lock (getValue)
@@ -141,4 +151,6 @@ namespace TecWare.PPSn.Stuff
 			}
 		} // func GetValue
 	} // class LazyProperty
+
+	#endregion
 }

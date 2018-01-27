@@ -75,7 +75,7 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsDataRelatedFilter ---------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>View implementation for relations.</summary>
 	public class PpsDataRelatedFilter : PpsDataFilter
 	{
 		private readonly PpsDataTableRelationDefinition relation;
@@ -83,6 +83,9 @@ namespace TecWare.PPSn.Data
 		private readonly int parentColumnIndex;
 		private readonly int childColumnIndex;
 
+		/// <summary></summary>
+		/// <param name="parentRow"></param>
+		/// <param name="relation"></param>
 		public PpsDataRelatedFilter(PpsDataRow parentRow, PpsDataTableRelationDefinition relation)
 			 : base(parentRow.Table.DataSet.Tables[relation.ChildColumn.Table])
 		{
@@ -99,6 +102,9 @@ namespace TecWare.PPSn.Data
 			Refresh();
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="values"></param>
+		/// <returns></returns>
 		protected override object[] InitializeValues(object[] values)
 		{
 			values = base.InitializeValues(values);
@@ -108,6 +114,9 @@ namespace TecWare.PPSn.Data
 			return values;
 		} // proc InitializeValues
 
+		/// <summary></summary>
+		/// <param name="row"></param>
+		/// <returns></returns>
 		protected sealed override bool FilterRow(PpsDataRow row)
 			=> Object.Equals(parentRow[parentColumnIndex], row[childColumnIndex]);
 
@@ -121,7 +130,7 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsDataRow -------------------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>DataRow implementation for DataTables.</summary>
 	public class PpsDataRow : IDynamicMetaObjectProvider, IDataRow, INotifyPropertyChanged, ICustomTypeDescriptor
 	{
 		#region -- class NotSetValue --------------------------------------------------
@@ -387,6 +396,8 @@ namespace TecWare.PPSn.Data
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
+			/// <summary></summary>
+			/// <param name="row"></param>
 			protected RowValues(PpsDataRow row)
 			{
 				this.row = row;
@@ -441,7 +452,6 @@ namespace TecWare.PPSn.Data
 
 		#region -- class CurrentRowValues ---------------------------------------------
 
-		/// <summary></summary>
 		private sealed class CurrentRowValues : RowValues, INotifyPropertyChanged
 		{
 			public CurrentRowValues(PpsDataRow row)
@@ -647,6 +657,8 @@ namespace TecWare.PPSn.Data
 		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
 			=> new PpsDataRowMetaObject(parameter, this);
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override string ToString()
 			=> $"{table.TableName}[pk: {this[table.TableDefinition.PrimaryKey.Index]?.ToString() ?? "<null>"}]";
 
