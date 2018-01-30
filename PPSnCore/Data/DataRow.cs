@@ -769,7 +769,7 @@ namespace TecWare.PPSn.Data
 		#region -- Write --------------------------------------------------------------
 
 		/// <summary>Schreibt den Inhalt der Datenzeile</summary>
-		/// <param name="row"></param>
+		/// <param name="x"></param>
 		internal void Write(XmlWriter x)
 		{
 			// Status
@@ -826,6 +826,11 @@ namespace TecWare.PPSn.Data
 		private static object GetGenericValue(object v)
 			=> v is IPpsDataRowGetGenericValue t ? t.Value : v;
 
+		/// <summary></summary>
+		/// <param name="columnIndex"></param>
+		/// <param name="originalValue"></param>
+		/// <param name="rawValue"></param>
+		/// <returns></returns>
 		public object GetRowValueCore(int columnIndex, bool originalValue = false, bool rawValue = false)
 		{
 			if (originalValue)
@@ -932,6 +937,11 @@ namespace TecWare.PPSn.Data
 			public override PpsDataChangeLevel Level => PpsDataChangeLevel.PropertyValue;
 		} // class PpsDataRowPropertyChangedEvent
 
+		/// <summary></summary>
+		/// <param name="columnIndex"></param>
+		/// <param name="propertyName"></param>
+		/// <param name="oldValue"></param>
+		/// <param name="newValue"></param>
 		protected virtual void OnPropertyChanged(int columnIndex, string propertyName, object oldValue, object newValue)
 		{
 			table.DataSet.ExecuteEvent(new PpsDataRowPropertyChangedEvent(this, propertyName, oldValue, newValue));
@@ -944,6 +954,10 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public bool TryGetProperty(string name, out object value)
 		{
 			var idx = table.TableDefinition.FindColumnIndex(name);
@@ -1026,6 +1040,9 @@ namespace TecWare.PPSn.Data
 		public PpsDataFilter CreateRelation(PpsDataTableRelationDefinition relation)
 			=> table.CreateRelationFilter(this, relation);
 
+		/// <summary></summary>
+		/// <param name="relation"></param>
+		/// <returns></returns>
 		public PpsDataFilter GetDefaultRelation(PpsDataTableRelationDefinition relation)
 		{
 			lock (relationFilterLock)
@@ -1068,6 +1085,9 @@ namespace TecWare.PPSn.Data
 				parentRows.Remove(column);
 		} // func ClearParentRowCache
 
+		/// <summary></summary>
+		/// <param name="column"></param>
+		/// <returns></returns>
 		public PpsDataRow GetParentRow(PpsDataColumnDefinition column)
 		{
 			var val = this[column.Index];
