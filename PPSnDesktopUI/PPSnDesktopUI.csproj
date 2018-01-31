@@ -104,6 +104,7 @@
     <Compile Include="Controls\ComboBoxBehavior.cs" />
     <Compile Include="Controls\DataListControl.cs" />
     <Compile Include="Controls\PopupBehavior.cs" />
+    <Compile Include="Controls\PpsDataFilterBox.cs" />
     <Compile Include="Controls\PpsDataSelector.cs" />
     <Compile Include="Controls\PpsEditableListbox.cs" />
     <Compile Include="Controls\ReadOnlyPaneBehavior.cs" />
