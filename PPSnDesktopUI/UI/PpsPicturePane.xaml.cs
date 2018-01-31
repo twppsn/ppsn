@@ -74,7 +74,6 @@ namespace TecWare.PPSn.UI
 		}
 	}
 
-
 	/// <summary>
 	/// Interaction logic for PpsPicturePane.xaml
 	/// </summary>
@@ -83,6 +82,14 @@ namespace TecWare.PPSn.UI
 		private static readonly DependencyPropertyKey subTitlePropertyKey = DependencyProperty.RegisterReadOnly(nameof(SubTitle), typeof(string), typeof(PpsPicturePane), new FrameworkPropertyMetadata(String.Empty));
 		/// <summary></summary>
 		public static readonly DependencyProperty SubTitleProperty = subTitlePropertyKey.DependencyProperty;
+
+		private static readonly DependencyPropertyKey currentStrokeColorPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentStrokeColor), typeof(PpsPecStrokeColor), typeof(PpsPicturePane), new FrameworkPropertyMetadata(null));
+		/// <summary></summary>
+		public static readonly DependencyProperty CurrentStrokeColorProperty = currentStrokeColorPropertyKey.DependencyProperty;
+
+		private static readonly DependencyPropertyKey currentStrokeThicknessPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentStrokeThickness), typeof(PpsPecStrokeThickness), typeof(PpsPicturePane), new FrameworkPropertyMetadata(null));
+		/// <summary></summary>
+		public static readonly DependencyProperty CurrentStrokeThicknessProperty = currentStrokeThicknessPropertyKey.DependencyProperty;
 
 		/// <summary></summary>
 		public const string AttachmentsSourceArgument = "Attachments";
@@ -423,9 +430,6 @@ namespace TecWare.PPSn.UI
 					}
 				}
 
-				if (previewResolution != null)
-					previewVideoRatio = previewResolution.FrameSize.Width / previewResolution.FrameSize.Height;
-
 				if (!device.ProvideSnapshots)
 				{
 					traces.AppendText(PpsTraceItemType.Information, String.Format(NoSnapshotCapability, Name));
@@ -435,6 +439,9 @@ namespace TecWare.PPSn.UI
 				{
 					device.VideoResolution = previewResolution;
 				}
+
+				if (device.VideoResolution != null)
+					previewVideoRatio = 1.0 * device.VideoResolution.FrameSize.Width / device.VideoResolution.FrameSize.Height;
 
 				// attach the handler for incoming images
 				device.NewFrame += PreviewNewframeEvent;
@@ -816,7 +823,7 @@ namespace TecWare.PPSn.UI
 				SelectedAttachment = (IPpsAttachmentItem)imagesList.Items[0];
 			else if (CameraEnum.Count() > 0)
 				SelectedCamera = CameraEnum.First();
-		}
+		} // ctor
 
 		#endregion
 
@@ -930,7 +937,6 @@ namespace TecWare.PPSn.UI
 				}));
 		}
 
-
 		private void AddStrokeCommandBindings()
 		{
 			CommandBindings.Add(new CommandBinding(
@@ -945,7 +951,16 @@ namespace TecWare.PPSn.UI
 				(sender, e) =>
 				{
 					InkEditMode = InkCanvasEditingMode.EraseByStroke;
-				}));
+				},
+				(sender, e) => e.CanExecute = InkStrokes.Count > 0));
+
+			CommandBindings.Add(new CommandBinding(
+				OverlayCancelEditModeCommand,
+				(sender, e) =>
+				{
+					InkEditMode = InkCanvasEditingMode.None;
+				},
+				(sender, e) => e.CanExecute = true));
 
 			CommandBindings.Add(new CommandBinding(
 				ApplicationCommands.Undo,
@@ -953,7 +968,7 @@ namespace TecWare.PPSn.UI
 				{
 					strokeUndoManager.Undo();
 				},
-				(sender, e) => e.CanExecute = strokeUndoManager.CanUndo));
+				(sender, e) => e.CanExecute = strokeUndoManager?.CanUndo ?? false));
 
 			CommandBindings.Add(new CommandBinding(
 				ApplicationCommands.Redo,
@@ -961,24 +976,25 @@ namespace TecWare.PPSn.UI
 				{
 					strokeUndoManager.Redo();
 				},
-				(sender, e) => e.CanExecute = strokeUndoManager.CanRedo));
+				(sender, e) => e.CanExecute = strokeUndoManager?.CanRedo ?? false));
 
 			CommandBindings.Add(new CommandBinding(
 				OverlaySetThicknessCommand,
 				(sender, e) =>
 				{
 					var thickness = (PpsPecStrokeThickness)e.Parameter;
-
 					InkDrawingAttributes.Width = InkDrawingAttributes.Height = (double)thickness.Size;
-				}));
+					SetValue(currentStrokeThicknessPropertyKey, thickness);
+				},
+				(sender, e) => e.CanExecute = true));
 
 			CommandBindings.Add(new CommandBinding(
 				OverlaySetColorCommand,
 				(sender, e) =>
 				{
 					var color = (PpsPecStrokeColor)e.Parameter;
-
 					InkDrawingAttributes.Color = color.Color;
+					SetValue(currentStrokeColorPropertyKey, color);
 				},
 				(sender, e) => e.CanExecute = true));
 		}
@@ -1022,6 +1038,8 @@ namespace TecWare.PPSn.UI
 		public static readonly RoutedUICommand OverlayEditFreehandCommand = new RoutedUICommand("EditFreeForm", "EditFreeForm", typeof(PpsPicturePane));
 		/// <summary>sets the Mode to Delete</summary>
 		public static readonly RoutedUICommand OverlayRemoveStrokeCommand = new RoutedUICommand("EditRubber", "EditRubber", typeof(PpsPicturePane));
+		/// <summary>sets the Mode to None</summary>
+		public static readonly RoutedUICommand OverlayCancelEditModeCommand = new RoutedUICommand("CancelEdit", "CancelEdit", typeof(PpsPicturePane));
 		/// <summary>sets a given Thickness</summary>
 		public static readonly RoutedUICommand OverlaySetThicknessCommand = new RoutedUICommand("SetThickness", "Set Thickness", typeof(PpsPicturePane));
 		/// <summary>sets a given Color</summary>
@@ -1045,7 +1063,28 @@ namespace TecWare.PPSn.UI
 
 		private void AddToolbarCommands()
 		{
-			RemoveToolbarCommands();
+			if (Commands.Count > 0)
+				return;
+
+			#region Misc
+
+			var saveCommandButton = new PpsUICommandButton()
+			{
+				Order = new PpsCommandOrder(100, 110),
+				DisplayText = "Speichern",
+				Description = "Bild speichern",
+				Image = "save",
+				Command = new PpsCommand(
+					(args) =>
+					{
+						ApplicationCommands.Save.Execute(args, this);
+					},
+					(args) => ApplicationCommands.Save.CanExecute(args, this)
+				)
+			};
+			Commands.Add(saveCommandButton);
+
+			#endregion
 
 			#region Undo/Redo
 
@@ -1056,12 +1095,12 @@ namespace TecWare.PPSn.UI
 				Order = new PpsCommandOrder(200, 130),
 				DisplayText = "Rückgängig",
 				Description = "Rückgängig",
-				Image = "undoImage",
+				Image = "undo",
 				DataContext = this,
 				Command = new PpsCommand(
 					(args) =>
 					{
-						strokeUndoManager.Undo();
+						ApplicationCommands.Undo.Execute(args, this);
 					},
 					(args) => strokeUndoManager?.CanUndo ?? false
 				),
@@ -1080,12 +1119,12 @@ namespace TecWare.PPSn.UI
 				Order = new PpsCommandOrder(200, 140),
 				DisplayText = "Wiederholen",
 				Description = "Wiederholen",
-				Image = "redoImage",
+				Image = "redo",
 				DataContext = this,
 				Command = new PpsCommand(
 					(args) =>
 					{
-						strokeUndoManager.Redo();
+						ApplicationCommands.Redo.Execute(args, this);
 					},
 					(args) => strokeUndoManager?.CanRedo ?? false
 				),
@@ -1104,72 +1143,6 @@ namespace TecWare.PPSn.UI
 
 			#endregion
 
-			#region Strokes
-
-			var penSettingsPopup = new System.Windows.Controls.Primitives.Popup()
-			{
-				Child = new UserControl()
-				{
-					Style = (Style)this.FindResource("PPSnStrokeSettingsControlStyle"),
-					DataContext = StrokeSettings
-				}
-			};
-			penSettingsPopup.Opened += (sender, e) => { if (SelectedAttachment != null) InkEditMode = InkCanvasEditingMode.Ink; };
-
-			var freeformeditCommandButton = new PpsUISplitCommandButton()
-			{
-				Order = new PpsCommandOrder(300, 110),
-				DisplayText = "Freihand",
-				Description = "Kennzeichnungen hinzufügen",
-				Image = "freeformeditImage",
-				Command = new PpsCommand(
-						(args) =>
-						{
-							InkEditMode = InkCanvasEditingMode.Ink;
-						},
-						(args) => true
-					),
-				Popup = penSettingsPopup
-			};
-			Commands.Add(freeformeditCommandButton);
-
-			var removestrokeCommandButton = new PpsUICommandButton()
-			{
-				Order = new PpsCommandOrder(300, 120),
-				DisplayText = "Löschen",
-				Description = "Linienzug entfernen",
-				Image = "removestrokeImage",
-				Command = new PpsCommand(
-						(args) =>
-						{
-							InkEditMode = InkCanvasEditingMode.EraseByStroke;
-						},
-						(args) => InkStrokes.Count > 0
-					)
-			};
-			Commands.Add(removestrokeCommandButton);
-
-			#endregion
-
-			#region Misc
-
-			var saveCommandButton = new PpsUICommandButton()
-			{
-				Order = new PpsCommandOrder(400, 110),
-				DisplayText = "Speichern",
-				Description = "Bild speichern",
-				Image = "floppy_diskImage",
-				Command = new PpsCommand(
-						(args) =>
-						{
-							ApplicationCommands.Save.Execute(args, this);
-						},
-						(args) => ApplicationCommands.Save.CanExecute(args, this)
-					)
-			};
-			Commands.Add(saveCommandButton);
-
-			#endregion
 		}
 
 		#endregion
@@ -1319,6 +1292,7 @@ namespace TecWare.PPSn.UI
 				};
 			}
 
+
 			if (StrokeThicknesses.Count == 0)
 			{
 				environment.Traces.AppendText(PpsTraceItemType.Fail, "Failed to load Thicknesses from environment for drawing. Using Fallback.");
@@ -1332,7 +1306,11 @@ namespace TecWare.PPSn.UI
 			}
 
 			StrokeSettings = new PpsPecStrokeSettings(StrokeColors, StrokeThicknesses);
-		}
+			// start values
+			SetValue(currentStrokeColorPropertyKey, StrokeColors[0]);
+			SetValue(currentStrokeThicknessPropertyKey, StrokeThicknesses[0]);
+
+		} // proc InitializePenSettings
 
 		#endregion
 
@@ -1451,11 +1429,12 @@ namespace TecWare.PPSn.UI
 			{
 				if (value != null && !LeaveCurrentImage())
 					return;
-				if (value != null && (IPpsAttachmentItem)GetValue(SelectedAttachmentProperty) == null)
-				{
-					InkEditMode = InkCanvasEditingMode.Ink;
+
+				if (value != null)
 					AddToolbarCommands();
-				}
+				else
+					RemoveToolbarCommands();
+
 				SetValue(SelectedAttachmentProperty, value);
 				SelectedCamera = null;
 			}
@@ -1471,10 +1450,8 @@ namespace TecWare.PPSn.UI
 				{
 					if (!LeaveCurrentImage())
 						return;
-					RemoveToolbarCommands();
 					SelectedAttachment = null;
 				}
-
 				SetValue(SelectedCameraProperty, value);
 			}
 		}
@@ -1519,7 +1496,7 @@ namespace TecWare.PPSn.UI
 						break;
 					case InkCanvasEditingMode.None:
 						t.MouseMove -= InkCanvasRemoveHitTest;
-						InkEditCursor = Cursors.Hand;
+						InkEditCursor = Cursors.Arrow;
 						break;
 				}
 			}
@@ -1550,6 +1527,10 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Files attached to the parent object</summary>
 		public static readonly DependencyProperty AttachmentsProperty = DependencyProperty.Register(nameof(Attachments), typeof(IPpsAttachments), typeof(PpsPicturePane));
+		/// <summary></summary>
+		public PpsPecStrokeColor CurrentStrokeColor => (PpsPecStrokeColor)GetValue(CurrentStrokeColorProperty);
+		/// <summary></summary>
+		public PpsPecStrokeThickness CurrentStrokeThickness => (PpsPecStrokeThickness)GetValue(CurrentStrokeThicknessProperty);
 
 		private readonly static DependencyProperty LastSnapshotProperty = DependencyProperty.Register(nameof(LastSnapshot), typeof(PpsObject), typeof(PpsPicturePane));
 		private readonly static DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsPicturePane));
@@ -1567,5 +1548,5 @@ namespace TecWare.PPSn.UI
 		public IPpsWindowPaneManager PaneManager => paneManager;
 
 		#endregion
-	}
+	} // class PpsPicturePane
 }
