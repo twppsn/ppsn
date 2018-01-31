@@ -551,7 +551,7 @@ namespace TecWare.PPSn
 				CheckLinksLoaded();
 				foreach (var l in links)
 				{
-					if (l.LinkTo.Guid == objectGuid) // time intensive operation
+					if (l.LinkTo != null && l.LinkTo.Guid == objectGuid) // time intensive operation
 						return l;
 				}
 				return null;

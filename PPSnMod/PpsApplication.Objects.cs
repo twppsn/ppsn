@@ -1596,10 +1596,16 @@ namespace TecWare.PPSn.Server
 				return r == null ? null : new PpsObjectAccess(application, r);
 			} // func GetObject
 
+			/// <summary>Get the object from an id.</summary>
+			/// <param name="id"></param>
+			/// <returns></returns>
 			[LuaMember]
 			public PpsObjectAccess GetObject(long id)
 				=> GetObject(s => s.ApplyFilter(PpsDataFilterExpression.Compare("Id", PpsDataFilterCompareOperator.Equal, id)));
 
+			/// <summary>Get the object from an guid.</summary>
+			/// <param name="guid"></param>
+			/// <returns></returns>
 			[LuaMember]
 			public PpsObjectAccess GetObject(Guid guid)
 				=> GetObject(s => s.ApplyFilter(PpsDataFilterExpression.Compare("Guid", PpsDataFilterCompareOperator.Equal, guid)));
@@ -1607,7 +1613,7 @@ namespace TecWare.PPSn.Server
 			/// <summary>Returns object data.</summary>
 			/// <param name="args"></param>
 			/// <returns></returns>
-			[LuaMember(nameof(GetObject))]
+			[LuaMember]
 			public PpsObjectAccess GetObject(LuaTable args)
 				=> GetObject(s =>
 				{
