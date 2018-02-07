@@ -2274,7 +2274,7 @@ namespace TecWare.PPSn
 					await baseObj.PullAsync();
 
 				// load info
-				var objectInfo = baseObj.LoadObjectDataInformationAsync();
+				var objectInfo = await baseObj.LoadObjectDataInformationAsync();
 				if (objectInfo == null)
 					throw new ArgumentNullException("Data is missing.");
 
@@ -3322,7 +3322,7 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		public Type DocumentDefinitionType
 		{
-			get => GetMemberValue(nameof(DocumentDefinitionType)) as Type;
+			get => GetMemberValue(nameof(DocumentDefinitionType)) as Type ?? typeof(PpsDataSetDefinitionDesktop);
 			set => SetMemberValue(nameof(DocumentDefinitionType), value);
 		} // prop DataSetDefinition
 

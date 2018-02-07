@@ -17,20 +17,24 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using Neo.IronLua;
 
 namespace TecWare.PPSn.UI
 {
-	/// <summary></summary>
+	/// <summary>Single Window to show one pane.</summary>
 	public partial class PpsSingleWindow : PpsWindow, IPpsWindowPaneManager
 	{
 		private readonly static DependencyPropertyKey isDialogModePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsDialogMode), typeof(bool), typeof(PpsSingleWindow), new FrameworkPropertyMetadata(false));
-		/// <summary></summary>
+		/// <summary>Dialog mode of the window.</summary>
 		public readonly static DependencyProperty IsDialogModeProperty = isDialogModePropertyKey.DependencyProperty;
 
 		private readonly PpsEnvironment environment;
 		private IPpsWindowPane currentPane = null;
 		
+		/// <summary></summary>
+		/// <param name="environment"></param>
+		/// <param name="dialogMode"></param>
 		public PpsSingleWindow(PpsEnvironment environment, bool dialogMode)
 		{
 			this.environment = environment;
@@ -41,12 +45,17 @@ namespace TecWare.PPSn.UI
 			if (dialogMode)
 			{
 				WindowStartupLocation = WindowStartupLocation.CenterOwner;
+				
 			}
 			else
 			{
 
 			}
 		} // ctor
+
+		private void Close_Executed(object sender, ExecutedRoutedEventArgs e)
+			=> Close();
+
 
 		private IPpsWindowPane FindOpenPane(Type paneType, LuaTable arguments)
 			=> currentPane != null && currentPane.EqualPane(paneType, arguments) ? currentPane : null;
@@ -73,7 +82,7 @@ namespace TecWare.PPSn.UI
 			return pane;
 		} // func CreatePaneAsync
 
-		/// <summary></summary>
+		/// <summary>Open pane within the window.</summary>
 		/// <param name="paneType"></param>
 		/// <param name="newPaneMode"></param>
 		/// <param name="arguments"></param>

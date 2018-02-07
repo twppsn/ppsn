@@ -4,7 +4,15 @@
 				xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
         Title="{Binding Title}" Height="700" Width="700"
 		Background="{StaticResource PPSnWindowBackgroundBrush}">
-    <Grid>
+	<ui:PpsWindow.CommandBindings>
+		<CommandBinding Command="{x:Static ApplicationCommands.Close}" Executed="Close_Executed" />
+	</ui:PpsWindow.CommandBindings>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition />
+			<RowDefinition Height="50" />
+		</Grid.RowDefinitions>
 		<ContentPresenter Content="{Binding}"/>
+		<Button Grid.Row="1" Content="Schließen" HorizontalAlignment="Right" Margin="4,4,16,16" Width="100" Command="{x:Static ApplicationCommands.Close}" />
 	</Grid>
 </ui:PpsWindow>
