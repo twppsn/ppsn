@@ -42,11 +42,12 @@ namespace TecWare.PPSn
 {
 	#region -- class IPpsEnvironmentDefinition ------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface IPpsEnvironmentDefinition
 	{
+		/// <summary>Active environment</summary>
 		PpsEnvironment Environment { get; }
+		/// <summary>Name of the entry.</summary>
 		string Name { get; }
 	} // interface IPpsEnvironmentDefinition
 
@@ -514,7 +515,7 @@ namespace TecWare.PPSn
 			if (!localDirectory.Exists)
 				localDirectory.Create();
 
-			this.activeDataSets = new PpsActiveDataSetsImplementation(this);
+			this.activeObjectData = new PpsActiveObjectDataImplementation(this);
 			this.objectInfo = new PpsEnvironmentCollection<PpsObjectInfo>(this);
 
 			Neo.IronLua.LuaType.RegisterTypeAlias("text", typeof(PpsFormattedStringValue));
@@ -549,7 +550,13 @@ namespace TecWare.PPSn
 			request = new BaseWebRequest(baseUri, Encoding);
 
 			// Register new Data Schemes from, the server
-			ActiveDataSets.RegisterDataSetSchema("masterdata", "remote/wpf/masterdata.xml", typeof(PpsDataSetDefinitionDesktop));
+			RegisterObjectInfoSchema(PpsMasterData.MasterDataSchema, 
+				new LuaTable()
+				{
+					[nameof(PpsObjectInfo.DocumentUri)] = "remote/wpf/masterdata.xml",
+					[nameof(PpsObjectInfo.DocumentDefinitionType)] = typeof(PpsDataSetDefinitionDesktop)
+				}
+			);
 
 			// Register Service
 			mainResources[EnvironmentService] = this;

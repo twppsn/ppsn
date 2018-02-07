@@ -23,6 +23,7 @@ using System.IO;
 using System.Net;
 using System.Net.Mime;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -36,20 +37,22 @@ using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn
 {
-	#region -- enum HashStreamDirection --------------------------------------------------
+	#region -- enum HashStreamDirection -----------------------------------------------
 
+	/// <summary>Basic direction of the hash stream.</summary>
 	public enum HashStreamDirection
 	{
+		/// <summary>Stream can only read data.</summary>
 		Read,
+		/// <summary>Stream can only write data.</summary>
 		Write
 	} // enum HashStreamDirection
 
 	#endregion
 
-	#region -- class HashStream ----------------------------------------------------------
+	#region -- class HashStream -------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Stream that calculates a hash sum during the read/write.</summary>
 	public class HashStream : Stream
 	{
 		private readonly Stream baseStream;
@@ -58,7 +61,12 @@ namespace TecWare.PPSn
 		private readonly HashStreamDirection direction;
 		private readonly HashAlgorithm hashAlgorithm;
 		private bool isFinished = false;
-		
+
+		/// <summary>Stream that calculates a hash sum during the read/write.</summary>
+		/// <param name="baseStream"></param>
+		/// <param name="direction"></param>
+		/// <param name="leaveOpen"></param>
+		/// <param name="hashAlgorithm"></param>
 		public HashStream(Stream baseStream, HashStreamDirection direction, bool leaveOpen, HashAlgorithm hashAlgorithm)
 		{
 			this.baseStream = baseStream ?? throw new ArgumentNullException(nameof(baseStream));
@@ -72,6 +80,8 @@ namespace TecWare.PPSn
 				throw new ArgumentException("baseStream is not readable.");
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing)
@@ -90,9 +100,15 @@ namespace TecWare.PPSn
 			base.Dispose(disposing);
 		} // proc Dispose
 
+		/// <summary></summary>
 		public override void Flush()
 			=> baseStream.Flush();
 
+		/// <summary></summary>
+		/// <param name="buffer"></param>
+		/// <param name="offset"></param>
+		/// <param name="count"></param>
+		/// <returns></returns>
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			if (direction != HashStreamDirection.Read)
@@ -112,6 +128,10 @@ namespace TecWare.PPSn
 			return readed;
 		} // func Read
 
+		/// <summary></summary>
+		/// <param name="buffer"></param>
+		/// <param name="offset"></param>
+		/// <param name="count"></param>
 		public override void Write(byte[] buffer, int offset, int count)
 		{
 			if (direction != HashStreamDirection.Write)
@@ -127,6 +147,8 @@ namespace TecWare.PPSn
 				hashAlgorithm.TransformBlock(buffer, offset, count, buffer, offset);
 		} // proc Write
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public byte[] CalcHash()
 		{
 			if (!isFinished)
@@ -143,10 +165,16 @@ namespace TecWare.PPSn
 			OnFinished(hashAlgorithm.Hash);
 		} // proc FinalBlock
 
-		protected virtual void OnFinished(byte[] bCheckSum)
+		/// <summary>Gets called if the stream is finished.</summary>
+		/// <param name="hash"></param>
+		protected virtual void OnFinished(byte[] hash)
 		{
 		} // proc Finished
 
+		/// <summary></summary>
+		/// <param name="offset"></param>
+		/// <param name="origin"></param>
+		/// <returns></returns>
 		public override long Seek(long offset, SeekOrigin origin)
 		{
 			var currentPosition = baseStream.Position;
@@ -169,6 +197,8 @@ namespace TecWare.PPSn
 			}
 		} // func Seek
 
+		/// <summary></summary>
+		/// <param name="value"></param>
 		public override void SetLength(long value)
 		{
 			if (direction == HashStreamDirection.Write)
@@ -177,13 +207,18 @@ namespace TecWare.PPSn
 				throw new NotSupportedException();
 		} // proc SetLength
 
+		/// <summary></summary>
 		public override bool CanRead => direction == HashStreamDirection.Read;
+		/// <summary></summary>
 		public override bool CanWrite => direction == HashStreamDirection.Write;
+		/// <summary></summary>
 		public override bool CanSeek => false;
-		public override long Length { get { return baseStream.Length; } }
+		/// <summary></summary>
+		public override long Length => baseStream.Length;
+		/// <summary></summary>
 		public override long Position
 		{
-			get { return baseStream.Position; }
+			get => baseStream.Position;
 			set
 			{
 				if (baseStream.Position == value)
@@ -192,18 +227,23 @@ namespace TecWare.PPSn
 			}
 		} // prop Position
 
+		/// <summary>Base stream</summary>
 		public Stream BaseStream => baseStream;
+		/// <summary>Hash function/algorithm.</summary>
 		public HashAlgorithm HashAlgorithm => hashAlgorithm;
 
+		/// <summary>Is the stream fully read/written.</summary>
 		public bool IsFinished => isFinished;
 
-		public byte[] CheckSum => isFinished ? hashAlgorithm.Hash : null;
+		/// <summary>Hash sum</summary>
+		public byte[] HashSum => isFinished ? hashAlgorithm.Hash : null;
 	} // class HashStream
 
 	#endregion
 
 	#region -- class ThreadSafeMonitor ------------------------------------------------
 
+	/// <summary>Build a monitor, that raises an exception, if the exit gets called in the wrong thread.</summary>
 	public sealed class ThreadSafeMonitor : IDisposable
 	{
 		private readonly object threadLock;
@@ -211,6 +251,8 @@ namespace TecWare.PPSn
 
 		private bool isDisposed = false;
 
+		/// <summary>Enter lock</summary>
+		/// <param name="threadLock"></param>
 		public ThreadSafeMonitor(object threadLock)
 		{
 			this.threadLock = threadLock;
@@ -219,11 +261,13 @@ namespace TecWare.PPSn
 			Monitor.Enter(threadLock);
 		} // ctor
 
+		/// <summary></summary>
 		~ThreadSafeMonitor()
 		{
 			Dispose(false);
 		} // dtor
 
+		/// <summary>Exit lock</summary>
 		public void Dispose()
 		{
 			GC.SuppressFinalize(this);
@@ -308,7 +352,7 @@ namespace TecWare.PPSn
 
 			if (r != null)
 				return r;
-			
+
 			return GetControlService(VisualTreeHelper.GetParent(current), serviceType, throwException);
 		} // func GetControlService
 
@@ -475,26 +519,49 @@ namespace TecWare.PPSn
 
 	public static class StuffIO
 	{
-		public static string GetFileHash(string filename)
-		{
-			using (FileStream filestream = File.OpenRead(filename))
-			{
-				return GetStreamHash(filestream);
-			}
-		}
+		//public static string GetStreamHash(Stream stream)
+		//{
+		//	var bstream = new BufferedStream(stream, 1024 * 32); // no using, because we want to keep the stream alive
+		//	var ret = BitConverter.ToString(new SHA256Managed().ComputeHash(bstream)).Replace("-", String.Empty).ToLower();
+		//	bstream.Flush();
+		//	return ret;
+		//}
 
-		public static string GetStreamHash(Stream stream)
+		/// <summary>We only use sha256, the prefix should be useful, if the algorithm will be changed in future.</summary>
+		/// <returns></returns>
+		public static string GetHashPrefix(HashAlgorithm algorithm)
 		{
-			var bstream = new BufferedStream(stream, 1024 * 32); // no using, because we want to keep the stream alive
-			var ret = BitConverter.ToString(new SHA256Managed().ComputeHash(bstream)).Replace("-", String.Empty).ToLower();
-			bstream.Flush();
-			return ret;
-		}
+			if (algorithm is SHA256
+				|| algorithm is SHA256Managed)
+				return "sha256";
+			else
+				throw new ArgumentOutOfRangeException(nameof(algorithm), "Only sha256 is allowed.");
+		} // func GetHashPrefix
+		
+		/// <summary>Build hash information from hash.</summary>
+		/// <param name="hash"></param>
+		/// <param name="algorithm"></param>
+		/// <returns></returns>
+		public static string ConvertHashToString(HashAlgorithm algorithm, byte[] hash)
+		{
+			if(hash == null ||hash.Length == 0)
+				return null;
 
-		public static string CleanHash(string hash)
+			var sb = new StringBuilder(GetHashPrefix(algorithm)).Append(':');
+			for (var i = 0; i < hash.Length; i++)
+				sb.Append(hash[i].ToString("X2"));
+			return sb.ToString();
+		} // func ConvertHashToString
+
+		/// <summary>Convert a hash string to the algorithm and hash value.</summary>
+		/// <param name="hashString"></param>
+		/// <param name="algorithm"></param>
+		/// <param name="hash"></param>
+		/// <returns></returns>
+		public static bool TryConvertStringToHash(string hashString, out HashAlgorithm algorithm, out byte[] hash)
 		{
-			return hash.Replace("-", String.Empty).ToLower();
-		}
+			throw new NotImplementedException();
+		} // func TryConvertStringToHash
 
 		#region ---- MimeTypes ----------------------------------------------------------
 
@@ -536,7 +603,7 @@ namespace TecWare.PPSn
 
 		public static string MimeTypeFromFilename(string filename)
 			=> MimeTypeFromExtension(Path.GetExtension(filename));
-		
+
 		/// <summary>
 		/// Generates the filter string for FileDialogs
 		/// </summary>

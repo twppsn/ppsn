@@ -433,9 +433,15 @@ namespace TecWare.PPSn
 
 		#region -- AppendLink/RemoveLink ----------------------------------------------
 
+		/// <summary>Append link to an object</summary>
+		/// <param name="linkToId"></param>
+		/// <param name="force"></param>
 		public void AppendLink(long linkToId, bool force = false)
 			=> AppendLink(Parent.Environment.GetObject(linkToId), force);
 
+		/// <summary>Append link to an object</summary>
+		/// <param name="linkTo"></param>
+		/// <param name="force"></param>
 		public void AppendLink(PpsObject linkTo, bool force = false)
 		{
 			lock (parent.SyncRoot)
@@ -462,6 +468,9 @@ namespace TecWare.PPSn
 			OnCollectionReset();
 		} // proc AppendLink
 
+		/// <summary>Remove a link from this object.</summary>
+		/// <param name="objectId"></param>
+		/// <param name="force"></param>
 		public void RemoveLink(long objectId, bool force = false)
 		{
 			lock (parent.SyncRoot)
@@ -480,6 +489,8 @@ namespace TecWare.PPSn
 			}
 		} // func RemoveLink
 
+		/// <summary>Remove a link from this object.</summary>
+		/// <param name="link"></param>
 		public void RemoveLink(PpsObjectLink link)
 		{
 			lock (parent.SyncRoot)
@@ -518,9 +529,15 @@ namespace TecWare.PPSn
 			((ICollection)links).CopyTo(array, index);
 		} // proc ICollection.CopyTo
 
+		/// <summary></summary>
+		/// <param name="link"></param>
+		/// <returns></returns>
 		public bool Constains(PpsObjectLink link)
 			=> IndexOf(link) >= 0;
 
+		/// <summary>Get index of an link.</summary>
+		/// <param name="link"></param>
+		/// <returns></returns>
 		public int IndexOf(PpsObjectLink link)
 		{
 			lock (parent.SyncRoot)
@@ -530,6 +547,9 @@ namespace TecWare.PPSn
 			}
 		} // func IndexOf
 
+		/// <summary>Find a link of an object.</summary>
+		/// <param name="objectId"></param>
+		/// <returns></returns>
 		public PpsObjectLink FindById(long objectId)
 		{
 			lock (parent.SyncRoot)
@@ -544,6 +564,9 @@ namespace TecWare.PPSn
 			}
 		} // func FindById
 
+		/// <summary>Find a link of an object.</summary>
+		/// <param name="objectGuid"></param>
+		/// <returns></returns>
 		public PpsObjectLink FindByGuid(Guid objectGuid)
 		{
 			lock (parent.SyncRoot)
@@ -575,6 +598,8 @@ namespace TecWare.PPSn
 		void IList.RemoveAt(int index)
 			=> throw new NotSupportedException();
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public IEnumerator<PpsObjectLink> GetEnumerator()
 		{
 			lock (parent.SyncRoot)
@@ -593,6 +618,9 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		/// <summary></summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
 		public PpsObjectLink this[int index]
 		{
 			get
@@ -605,6 +633,7 @@ namespace TecWare.PPSn
 			}
 		} // prop this 
 
+		/// <summary></summary>
 		public int Count
 		{
 			get
@@ -620,6 +649,7 @@ namespace TecWare.PPSn
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
 
+		/// <summary></summary>
 		public PpsObject Parent => parent;
 	} // class PpsObjectLinks
 
@@ -627,6 +657,7 @@ namespace TecWare.PPSn
 
 	#region -- enum PpsObjectTagLoadState ---------------------------------------------
 
+	/// <summary>Load state of the object tags.</summary>
 	public enum PpsObjectTagLoadState
 	{
 		/// <summary>Nothing loaded.</summary>
@@ -1427,15 +1458,28 @@ namespace TecWare.PPSn
 			}
 		} // func GetEnumerator
 
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
 		public bool Contains(string key)
 			=> IndexOf(key) >= 0;
 
+		/// <summary></summary>
+		/// <param name="tag"></param>
+		/// <returns></returns>
 		public bool Contains(PpsObjectTag tag)
 			=> IndexOf(tag.Name) >= 0;
 
+		/// <summary></summary>
+		/// <param name="tag"></param>
+		/// <returns></returns>
 		public bool Contains(PpsObjectTagView tag)
 			=> IndexOf(tag.Name) >= 0;
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public bool TryGetProperty(string name, out object value)
 		{
 			lock (SyncRoot)
@@ -1463,6 +1507,9 @@ namespace TecWare.PPSn
 			}
 		} // func FindTagById
 
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
 		public int IndexOf(string key)
 		{
 			var idxScore = 0;
@@ -1508,6 +1555,10 @@ namespace TecWare.PPSn
 			return idxFound;
 		} // func IndexOf
 
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <param name="userId"></param>
+		/// <returns></returns>
 		public int IndexOf(string key, long userId)
 		{
 			lock (parent.SyncRoot)
@@ -1517,9 +1568,15 @@ namespace TecWare.PPSn
 			}
 		} // func Contains
 
+		/// <summary></summary>
+		/// <param name="tag"></param>
+		/// <returns></returns>
 		public int IndexOf(PpsObjectTagView tag)
 			=> IndexOf(tag.Name, tag.UserId);
 
+		/// <summary></summary>
+		/// <param name="tag"></param>
+		/// <returns></returns>
 		public int IndexOf(PpsObjectTag tag)
 			=> IndexOf(tag.Name, tag.UserId);
 
@@ -1581,6 +1638,8 @@ namespace TecWare.PPSn
 		object IList.this[int index] { get { return this[index]; } set => throw new NotSupportedException(); }
 
 		bool ICollection.IsSynchronized => true;
+
+		/// <summary></summary>
 		public object SyncRoot => parent.SyncRoot;
 
 		#endregion
@@ -1622,166 +1681,419 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- interface IPpsObjectDataAccess -----------------------------------------
+
+	/// <summary></summary>
+	public interface IPpsObjectDataAccess : IDisposable
+	{
+		/// <summary>Gets call if the data was changed.</summary>
+		event EventHandler DataChanged;
+		/// <summary>Set the UI-Disable method.</summary>
+		Func<IDisposable> DisableUI { get; set; }
+
+		/// <summary>Commit the data to the local database.</summary>
+		/// <returns></returns>
+		Task CommitAsync();
+	} // interface IPpsObjectDataAccess
+
+	#endregion
+
+	#region -- interface IPpsObjectDataAccessNotify -----------------------------------
+
+	/// <summary></summary>
+	public interface IPpsObjectDataAccessNotify
+	{
+		/// <summary>Commit the data to the local database.</summary>
+		/// <returns></returns>
+		Task CommitAsync();
+
+		/// <summary></summary>
+		void OnAccessDataChanged();
+		/// <summary></summary>
+		/// <returns></returns>
+		Task UnloadDataAsync();
+	} // interface IPpsObjectDataAccessNotify
+
+	#endregion
+
+	#region -- interface IPpsActiveObjectDataTable ------------------------------------
+
+	/// <summary>Registration for all active object data.</summary>
+	public interface IPpsActiveObjectDataTable : IEnumerable<IPpsObjectData>
+	{
+		/// <summary></summary>
+		/// <param name="data"></param>
+		/// <returns></returns>
+		IPpsObjectDataAccess RegisterDataAccess(IPpsObjectData data);
+
+		/// <summary>Disable all object data accessors.</summary>
+		/// <param name="data"></param>
+		/// <returns></returns>
+		IDisposable DisableUI(IPpsObjectData data);
+		/// <summary>Notify data changed to all data accessors</summary>
+		/// <param name="data"></param>
+		void NotifyDataChanged(IPpsObjectData data);
+	} // interface IPpsActiveObjectDataTable
+
+	#endregion
+
 	#region -- interface IPpsObjectData -----------------------------------------------
 
 	/// <summary>Basis implementation for the data-model.</summary>
 	public interface IPpsObjectData : INotifyPropertyChanged
 	{
-		/// <summary>Load data.</summary>
+		/// <summary>Access object-data.</summary>
+		/// <param name="arguments"></param>
 		/// <returns></returns>
-		Task LoadAsync();
-		/// <summary>Commit the data to the local database.</summary>
-		/// <returns></returns>
-		Task CommitAsync();
+		Task<IPpsObjectDataAccess> AccessAsync(LuaTable arguments);
+
 		/// <summary>Pack the data for the server.</summary>
 		/// <param name="dst"></param>
 		/// <returns></returns>
 		Task PushAsync(Stream dst);
-		/// <summary>Unload the data.</summary>
-		/// <returns></returns>
-		Task UnloadAsync();
 
-		/// <summary>Is the data loaded.</summary>
-		bool IsLoaded { get; }
-		/// <summary>Is the data change</summary>
+		/// <summary>Is the data changable</summary>
 		bool IsReadOnly { get; }
 
-		/// <summary>Returns a preview image.</summary>
+		/// <summary>Returns a preview image, without loading the whole object.</summary>
 		object PreviewImage { get; }
 		/// <summary>Returns a preview image.</summary>
 		object PreviewImageLazy { get; }
+
+		/// <summary>Owning object.</summary>
+		PpsObject Object { get; }
 	} // interface IPpsObjectData
+
+	#endregion
+
+	#region -- class PpsObjectWriteStream ---------------------------------------------
+
+	internal sealed class PpsObjectWriteStream : Stream
+	{
+		private const long toDiskWaterMark = 1 << 19;
+
+		private readonly PpsObject obj;
+
+		private Stream currentBaseStream;
+		private string targetFileName;
+		private long position = 0;
+
+		public PpsObjectWriteStream(PpsObject obj, long expectedLength)
+		{
+			this.obj = obj;
+
+			if (expectedLength < toDiskWaterMark)
+				currentBaseStream = new MemoryStream();
+			else
+				CreateFileStream();
+		} // ctor
+
+		private void CreateFileStream()
+		{
+			// todo: preserve extension?
+			targetFileName = obj.Environment.MasterData.GetLocalPath("data\\" + Guid.NewGuid() + ".dat");
+
+			var fi = new FileInfo(targetFileName);
+			if (!fi.Directory.Exists)
+				fi.Directory.Create();
+
+			currentBaseStream = fi.Open(FileMode.Create, FileAccess.Write);
+		} // proc CreateFileStream
+
+		public override void Flush()
+			=> currentBaseStream.Flush();
+
+		public override Task FlushAsync(CancellationToken cancellationToken)
+			=> currentBaseStream.FlushAsync(cancellationToken);
+
+		public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+			=> throw new NotSupportedException();
+
+		public override int Read(byte[] buffer, int offset, int count)
+			=> throw new NotSupportedException();
+
+		private bool CheckForSwap(int count, out MemoryStream stream)
+		{
+			if (currentBaseStream is MemoryStream mstream)
+			{
+				if (position + count > toDiskWaterMark)
+				{
+					CreateFileStream();
+					stream = mstream;
+					return true;
+				}
+			}
+			stream = null;
+			return false;
+		} // func CheckForSwap
+
+		public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+		{
+			// check for swap
+			if (CheckForSwap(count, out var mstream))
+				await mstream.CopyToAsync(currentBaseStream);
+
+			// write data
+			await currentBaseStream.WriteAsync(buffer, offset, count);
+			position += count;
+		} // proc WriteAsync
+
+		public override void Write(byte[] buffer, int offset, int count)
+		{
+			// check for swap
+			if (CheckForSwap(count, out var mstream))
+				mstream.CopyTo(currentBaseStream);
+
+			// write data
+			currentBaseStream.Write(buffer, offset, count);
+			position += count;
+		} // proc Write
+
+		public override void SetLength(long value)
+			=> throw new NotSupportedException();
+
+		public override long Seek(long offset, SeekOrigin origin)
+		{
+			long GetNewPosition()
+			{
+				switch (origin)
+				{
+					case SeekOrigin.Begin:
+						return offset;
+					case SeekOrigin.Current:
+						return position + offset;
+					case SeekOrigin.End:
+						return position - offset;
+					default:
+						throw new ArgumentOutOfRangeException(nameof(origin), origin, "Out of range.");
+				}
+			}
+
+			var newPosition = GetNewPosition();
+			if (newPosition != position)
+				throw new NotSupportedException();
+
+			return newPosition;
+		} // func Seek
+
+		public object Result
+		{
+			get
+			{
+				Flush();
+				return currentBaseStream is MemoryStream mstream
+					? (object)mstream.ToArray()
+					: (object)targetFileName;
+			}
+		} // func Result
+
+		public override bool CanRead => false;
+		public override bool CanSeek => false;
+		public override bool CanWrite => true;
+		public override long Length => position;
+
+		public override long Position { get => position; set => Seek(value, SeekOrigin.Begin); }
+	} // class PpsObjectWriteStream
+
+	#endregion
+
+	#region -- class PpsObjectBlobHashWriteStream -------------------------------------
+
+	internal sealed class PpsObjectBlobHashWriteStream : HashStream
+	{
+		private readonly PpsObjectBlobData blobData;
+
+		public PpsObjectBlobHashWriteStream(PpsObjectBlobData blobData, long expectedLength)
+			: base(new PpsObjectWriteStream(blobData.Object, expectedLength), HashStreamDirection.Write, false, SHA256.Create())
+		{
+			this.blobData = blobData;
+		} // ctor
+
+		protected override void OnFinished(byte[] hash)
+		{
+			base.OnFinished(hash);
+
+			blobData.SetNewData(
+				((PpsObjectWriteStream)BaseStream).Result,
+				StuffIO.ConvertHashToString(HashAlgorithm, hash)
+			);
+		} // proc OnFinished
+	} // class PpsObjectBlobHashWriteStream
 
 	#endregion
 
 	#region -- class PpsObjectBlobData ------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Control byte based data.</summary>
-	public class PpsObjectBlobData : IPpsObjectData
+	public class PpsObjectBlobData : IPpsObjectData, IPpsObjectDataAccessNotify
 	{
+		private const string hashTagName = "Sha256";
+
+		/// <summary>Notify property changed.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
+		private readonly IPpsActiveObjectDataTable aot;
 		private readonly PpsObject baseObj;
-		private byte[] rawData = null;
-		private string sha256 = String.Empty;
 		private readonly LazyProperty<object> previewImage;
 
+		private object loadedRawData = null;
+		private object newRawData = null;
+		private string loadedHash = null;
+		private string newHash = null;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="obj"></param>
 		public PpsObjectBlobData(PpsObject obj)
 		{
-			this.baseObj = obj;
+			this.aot = baseObj.Environment.ActiveObjectData;
+			this.baseObj = obj ?? throw new ArgumentNullException(nameof(obj));
 			this.previewImage = new LazyProperty<object>(() => GetPreviewImageInternal(), () => OnPropertyChanged(nameof(PreviewImageLazy)));
 		} // ctor
 
-		internal void OnPropertyChanged(string propertyName)
+		private void OnPropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-		public async Task LoadAsync()
-		{
-			using (var src = await baseObj.LoadRawDataAsync())
-			{
-				rawData = src.ReadInArray() ?? new byte[] { };
-				sha256 = baseObj.Tags.GetProperty("Sha256", null);
-				OnPropertyChanged(nameof(IsLoaded));
-			}
-		} // proc LoadAsync
+		#endregion
 
+		#region -- Load/Unload/Access -------------------------------------------------
+
+		private async Task LoadDataAsync()
+		{
+			loadedRawData = await baseObj.LoadObjectDataInformationAsync();
+			loadedHash = baseObj.Tags.GetProperty(hashTagName, null);
+			newRawData = null;
+			newHash = null;
+
+			OnPropertyChanged(nameof(IsLoaded));
+		} // func LoadDataAsync
+
+		void IPpsObjectDataAccessNotify.OnAccessDataChanged() { }
+
+		async Task IPpsObjectDataAccessNotify.UnloadDataAsync()
+		{
+			if (IsLoaded)
+			{
+				// is local data changed, write first into database
+				if (IsDataChanged)
+					await CommitAsync();
+
+				// clear data
+				loadedRawData = null;
+				loadedHash = null;
+			}
+		} // proc UnloadDataAsync
+
+		/// <summary>Create a access token for the blob data.</summary>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public async Task<IPpsObjectDataAccess> AccessAsync(LuaTable arguments)
+		{
+			if (!IsLoaded)
+				await LoadDataAsync(); // load data
+
+			return aot.RegisterDataAccess(this);
+		} // func AccessAsync
+
+		#endregion
+
+		#region -- CommitAsync, PushAsync ---------------------------------------------
+
+		private static void RemoveUnusedFile(object currentValue, object newValue)
+		{
+			if (currentValue != newValue && currentValue is string oldFile)
+			{
+				try { File.Delete(oldFile); }
+				catch (IOException) { }
+			}
+		} // proc RemoveUnusedFile
+
+		internal void SetNewData(object rawData, string hash)
+		{
+			RemoveUnusedFile(newRawData, rawData);
+
+			this.newRawData = rawData;
+			this.newHash = hash;
+		} // proc SetNewData
+
+		/// <summary>Write the changed data to the local data store.</summary>
+		/// <returns></returns>
 		public async Task CommitAsync()
 		{
+			if (!IsDataChanged)
+				return;
+
 			using (var trans = await baseObj.Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.ReadCommited))
 			{
-				baseObj.Tags.UpdateRevisionTag("Sha256", PpsObjectTagClass.Text, sha256);
-				await baseObj.SaveRawDataAsync(
-					rawData.Length,
-					baseObj.MimeType ?? MimeTypes.Application.OctetStream,
-					rawData,
-					true
-				);
+				// update database
+				await baseObj.SaveObjectDataInformationAsync(newRawData, baseObj.MimeType ?? MimeTypes.Application.OctetStream, true);
+				// update hash
+				baseObj.Tags.UpdateRevisionTag(hashTagName, PpsObjectTagClass.Text, newHash);
+				// update tags
 				await baseObj.UpdateLocalAsync();
 
 				trans.Commit();
 			}
-		} // proc CommitAsync
 
+			// remove possible old file
+			RemoveUnusedFile(loadedRawData, newRawData);
+
+			loadedRawData = newRawData;
+			loadedHash = newHash;
+
+			newRawData = null;
+			newHash = null;
+		} // func CommitAsync
+
+		/// <summary>Send the local data to the server database.</summary>
+		/// <param name="dst"></param>
+		/// <returns></returns>
 		public async Task PushAsync(Stream dst)
 		{
-			if (IsLoaded)
-				await LoadAsync();
-			await dst.WriteAsync(rawData, 0, rawData.Length);
-		} // func PushAsync
+			if (IsDataChanged)
+				await CommitAsync();
 
-		public Task UnloadAsync()
-		{
-			rawData = null;
-			return Task.CompletedTask;
-		} // func UnloadTask
+			var data = IsLoaded
+				? loadedRawData
+				: await baseObj.LoadObjectDataInformationAsync();
 
-		//public Task ReadFromFileAsync(string filename)
-		//{
-		//	mimeType = StuffIO.MimeTypeFromFilename(filename);
+			using (var src = PpsObject.OpenReadStream(data))
+				await src.CopyToAsync(dst);
+		} // proc PushAsync
 
-		//	if (new FileInfo(filename).Length == 0)
-		//	{
-		//		rawData = new byte[] { };
-		//		sha256 = StuffIO.GetStreamHash(new MemoryStream(rawData));
-		//		return Task.CompletedTask;
-		//	}
+		#endregion
 
-		//	using (var hashStream = new HashStream(new FileStream(filename, FileMode.Open), HashStreamDirection.Read, false, HashAlgorithm.Create("SHA-256")))
-		//	{
-		//		rawData = hashStream.ReadInArray();
-		//		sha256 = StuffIO.CleanHash(BitConverter.ToString(hashStream.CheckSum));
-		//	}
-		//	return Task.CompletedTask;
-		//}
-
-		// only quick in dirty
-		private class UpdateBlobStream : HashStream
-		{
-			private readonly PpsObjectBlobData blobData;
-
-			public UpdateBlobStream(PpsObjectBlobData blobData, Stream baseStream)
-				: base(baseStream, HashStreamDirection.Write, false, SHA256.Create())
-			{
-				this.blobData = blobData;
-			} // ctor
-
-			protected override void OnFinished(byte[] bCheckSum)
-			{
-				base.OnFinished(bCheckSum);
-
-				blobData.sha256 = StuffIO.CleanHash(BitConverter.ToString(bCheckSum)); // Convert.ToBase64String(bCheckSum);
-				blobData.rawData = BaseStream.ReadInArray() ?? new byte[] { };
-			} // proc OnFinished
-		}
+		#region -- OpenStream ---------------------------------------------------------
 
 		/// <summary>Creates a data stream for file access.</summary>
 		/// <param name="mode"></param>
+		/// <param name="expectedLength"></param>
 		/// <returns></returns>
-		public async Task<Stream> OpenStreamAsync(FileAccess mode)
+		public Stream OpenStream(FileAccess mode, long expectedLength = -1)
 		{
+			if (!IsLoaded)
+				throw new ArgumentException("Object data is not loaded.");
 
 			switch (mode)
 			{
 				case FileAccess.Read:
 					// open an existing data stream
-					if (!IsLoaded)
-						await LoadAsync();
-					return new MemoryStream(RawData, false);
+					return PpsObject.OpenReadStream(loadedRawData);
 				case FileAccess.Write:
 					// open or create the data stream
-					return new UpdateBlobStream(this, new MemoryStream());
+					return new PpsObjectBlobHashWriteStream(this, expectedLength);
 				default:
 					throw new ArgumentOutOfRangeException(nameof(mode));
 			}
 		} // func CreateDataStreamAsync
 
-		#region -- GetPreviewImageInternal --------------------------------------------
+		#endregion
 
-		protected async Task<object> GetPreviewFromImageData()
+		#region -- GetPreviewImageAsync -----------------------------------------------
+
+		private async Task<object> RenderPreviewAsync()
 		{
-			// todo: we will cache the previews local
-
 			// we can only create a preview when the data is local availabe, we will not force a pull
 			if (!baseObj.HasData)
 				return null;
@@ -1789,14 +2101,14 @@ namespace TecWare.PPSn
 			//await Task.Delay(5000);
 
 			// get access to the image stream, this will not load the data stream
-			using (var src = await OpenStreamAsync(FileAccess.Read))
+			using (var src = OpenStream(FileAccess.Read))
 			{
 				var sourceImage = new BitmapImage();
 
 				sourceImage.BeginInit();
 				sourceImage.CacheOption = BitmapCacheOption.OnLoad;
 				sourceImage.StreamSource = src;
-				sourceImage.EndInit();
+				await Task.Run(() => sourceImage.EndInit());
 				sourceImage.Freeze();
 
 				var sourceWidth = sourceImage.Width;
@@ -1838,7 +2150,7 @@ namespace TecWare.PPSn
 					96, 96,
 					PixelFormats.Default
 				);
-				resizedImage.Render(drawingVisual);
+				await Task.Run(() => resizedImage.Render(drawingVisual));
 
 				var previewImage = BitmapFrame.Create(resizedImage);
 				previewImage.Freeze();
@@ -1846,20 +2158,29 @@ namespace TecWare.PPSn
 			}
 		} // func GetPreviewImageInternal
 
+		/// <summary>Calculate the preview image.</summary>
+		/// <returns></returns>
 		protected virtual Task<object> GetPreviewImageInternal()
-			=> MimeType.StartsWith("image/")
-				? GetPreviewFromImageData()
+			=> Object.MimeType.StartsWith("image/")
+				? RenderPreviewAsync()
 				: Task.FromResult<object>("fileOutline");
 
-
+		/// <summary>Reset the current preview image.</summary>
 		protected void ResetPreviewImage()
 			=> previewImage.Reset();
 
+		/// <summary>Get the preview image.</summary>
+		/// <returns></returns>
 		public Task<object> GetPreviewImageAsync()
 			=> previewImage.GetValueAsync();
 
 		#endregion
 
+		#region -- Overlay Property ---------------------------------------------------
+
+		/// <summary>Update overlay strokes.</summary>
+		/// <param name="strokes"></param>
+		/// <returns></returns>
 		public async Task SetOverlayAsync(StrokeCollection strokes)
 		{
 			using (var dst = new MemoryStream())
@@ -1872,31 +2193,37 @@ namespace TecWare.PPSn
 			}
 		} // proc SetOverlay
 
-		public Task<StrokeCollection> GetOverlayAsync()
+		private StrokeCollection ParseOverlayStrokes(string overlayData)
 		{
-			if (baseObj.TryGetProperty("Overlay", out string overlay))
-			{
-				var strokes = new StrokeCollection();
-				using (var overlaySource = new MemoryStream(Convert.FromBase64String(overlay), false))
-					strokes = new StrokeCollection(overlaySource);
+			var strokes = new StrokeCollection();
+			using (var overlaySource = new MemoryStream(Convert.FromBase64String(overlayData), false))
+				strokes = new StrokeCollection(overlaySource);
+			return strokes;
+		} // func ParseOverlayStrokes
 
-				return Task.FromResult(strokes);
-			}
-			return Task.FromResult<StrokeCollection>(null);
-		} // func GetOverlay 
+		/// <summary>Get the overlay data for the image</summary>
+		/// <returns></returns>
+		public Task<StrokeCollection> GetOverlayAsync()
+			=> baseObj.TryGetProperty<string>("Overlay", out var overlay)
+				? Task.Run(() => ParseOverlayStrokes(overlay))
+				: Task.FromResult<StrokeCollection>(null);
 
-		public bool IsLoaded => rawData != null;
+		#endregion
+
+		/// <summary>Is the blob data changed.</summary>
+		public bool IsDataChanged => newRawData != null;
+		/// <summary>Is the data currently loaded.</summary>
+		public bool IsLoaded => loadedRawData != null;
+		/// <summary>Is this object defined as changable.</summary>
 		public bool IsReadOnly => true;
-
-		public string MimeType => baseObj.MimeType ?? MimeTypes.Application.OctetStream;
-
-		//public byte[] RawData => rawData;
-		public byte[] RawData { get { return rawData; } internal set { this.rawData = value; } }
 
 		/// <summary>Get preview image synchron.</summary>
 		public object PreviewImage => previewImage.GetValueAsync().AwaitTask();
 		/// <summary>Get preview image asyncron</summary>
 		public object PreviewImageLazy => previewImage.GetValue();
+
+		/// <summary>Access to the base object.</summary>
+		public PpsObject Object => baseObj;
 	} // class PpsObjectBlobData
 
 	#endregion
@@ -1905,9 +2232,10 @@ namespace TecWare.PPSn
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public sealed class PpsObjectDataSet : PpsDataSetDesktop, IPpsObjectData, IPpsObjectBasedDataSet
+	public sealed class PpsObjectDataSet : PpsDataSetClient, IPpsObjectData, IPpsObjectDataAccessNotify, IPpsObjectBasedDataSet
 	{
 		private readonly PpsObject baseObj;
+		private readonly IPpsActiveObjectDataTable activeObjectTable;
 		private readonly PpsUndoManager undoManager;
 		private readonly List<PpsRevisionDataSet> revisions = new List<PpsRevisionDataSet>();
 
@@ -1915,12 +2243,16 @@ namespace TecWare.PPSn
 			: base(definition, obj.Environment)
 		{
 			this.baseObj = obj;
+			this.activeObjectTable = obj.Environment.ActiveObjectData;
 			this.RegisterUndoSink(this.undoManager = new PpsUndoManager());
 		} // ctor
 
+		/// <summary>add the basic head table and update the object data.</summary>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
 		public override async Task OnNewAsync(LuaTable arguments)
 		{
-			// add the basic head table and update the object data
+			// 
 			var head = Tables["Head", false];
 			if (head != null)
 			{
@@ -1931,41 +2263,63 @@ namespace TecWare.PPSn
 			await base.OnNewAsync(arguments);
 		} // proc OnNewAsync
 
-		public async Task LoadAsync()
+		/// <summary>Aquire access to the dataset.</summary>
+		/// <returns></returns>
+		public async Task<IPpsObjectDataAccess> AccessAsync(LuaTable arguments)
 		{
-			using (var src = await baseObj.LoadRawDataAsync())
+			if (!IsInitialized)
 			{
-				if (src == null)
+				// pull current data
+				if (!baseObj.HasData)
+					await baseObj.PullAsync();
+
+				// load info
+				var objectInfo = baseObj.LoadObjectDataInformationAsync();
+				if (objectInfo == null)
 					throw new ArgumentNullException("Data is missing.");
 
-				using (var xml = XmlReader.Create(src, Procs.XmlReaderSettings))
+				if (baseObj.HasData)
 				{
-					var xData = XDocument.Load(xml).Root;
-					await Environment.Dispatcher.InvokeAsync(
-						() =>
-						{
-							Read(xData, false);
-							ResetDirty();
-						}
-					);
+					using (var xml = XmlReader.Create(PpsObject.OpenReadStream(objectInfo), Procs.XmlReaderSettings))
+					{
+						var xData = XDocument.Load(xml).Root;
+						await Object.Environment.Dispatcher.InvokeAsync(
+							() =>
+							{
+								Read(xData, false);
+								ResetDirty();
+							}
+						);
+						await OnLoadedAsync(arguments);
+					}
+					await OnNewAsync(arguments);
 				}
 			}
-		} // proc LoadAsync
+			return activeObjectTable.RegisterDataAccess(this);
+		} // func AccessAsync
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public async Task CommitAsync()
 		{
-			using (var trans = await Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
+			if (!IsDirty)
+				return;
+
+			using (var trans = await Object.Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
 			{
-				await baseObj.SaveRawDataAsync(-1, MimeTypes.Text.DataSet,
-					dst =>
-					{
-						var settings = Procs.XmlWriterSettings;
-						settings.CloseOutput = false;
-						using (var xml = XmlWriter.Create(dst, settings))
-							Write(xml);
-					},
-					true
-				);
+				// we currently using only in-memory save
+				using (var dst = new MemoryStream())
+				{
+					// persist structure
+					using (var xml = XmlWriter.Create(dst, Procs.XmlWriterSettings))
+						Write(xml);
+
+					// write local database
+					await baseObj.SaveObjectDataInformationAsync(dst.ToArray(),
+						MimeTypes.Text.DataSet,
+						true
+					);
+				}
 
 				// update tags
 				baseObj.Tags.UpdateRevisionTags(GetAutoTags().ToList());
@@ -1979,22 +2333,26 @@ namespace TecWare.PPSn
 
 			// mark not dirty anymore
 			ResetDirty();
-		} // proc CommitAsync
+		} // func CommitAsync
 
+		/// <summary></summary>
+		/// <param name="dst"></param>
+		/// <returns></returns>
 		public async Task PushAsync(Stream dst)
 		{
 			if (IsDirty)
 				await CommitAsync();
 
+			//	todo: reload für object link ids
+
 			using (var xml = XmlWriter.Create(dst, Procs.XmlWriterSettings))
 				Write(xml);
-		} // proc PushAsync
+		} // func PushAsync
 
-		public Task UnloadAsync()
+		void IPpsObjectDataAccessNotify.OnAccessDataChanged() { }
+
+		Task IPpsObjectDataAccessNotify.UnloadDataAsync()
 			=> Task.CompletedTask;
-
-		public Task<object> GetPreviewImageAsync()
-			=> Task.FromResult<object>(null);
 
 		/// <summary>The document it self implements the undo-manager.</summary>
 		public PpsUndoManager UndoManager => undoManager;
@@ -2014,10 +2372,11 @@ namespace TecWare.PPSn
 
 	#region -- class PpsRevisionDataSet -----------------------------------------------
 
-	public sealed class PpsRevisionDataSet : PpsDataSetDesktop
+	/// <summary></summary>
+	public sealed class PpsRevisionDataSet : PpsDataSetClient
 	{
 		internal PpsRevisionDataSet(PpsObjectDataSet parent, long revisionId)
-			: base((PpsDataSetDefinitionDesktop)parent.DataSetDefinition, parent.Environment)
+			: base((PpsDataSetDefinitionDesktop)parent.DataSetDefinition, (PpsEnvironment)parent.Shell)
 		{
 		} // ctor
 	} // class PpsRevisionDataSet
@@ -2055,7 +2414,7 @@ namespace TecWare.PPSn
 		private readonly object[] staticValues;             // values of the table
 		private readonly object objectLock = new object();
 
-		private readonly LazyProperty<IPpsObjectData> data;         // access to the object data
+		private readonly LazyProperty<IPpsObjectData> data; // access to the object data
 		private readonly PpsObjectTags tags;                // list with assigned tags
 		private readonly PpsObjectLinks links;              // linked objects
 
@@ -2248,11 +2607,14 @@ namespace TecWare.PPSn
 					// update data block
 					using (var trans = Environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write, CancellationToken.None, foregroundTransaction).AwaitTask())
 					{
-						SaveRawDataAsync(c.ContentLength - headerLength, MimeType,
-							dst => c.Content.CopyTo(dst),
-							false
-						).AwaitTask();
+						// download content
+						using (var dst = new PpsObjectWriteStream(this, c.ContentLength - headerLength))
+						{
+							c.Content.CopyToAsync(dst).AwaitTask();
+							SaveObjectDataInformationAsync(dst.Result, MimeType, false).AwaitTask();
+						}
 
+						// update pulled id
 						SetValue(PpsStaticObjectColumnIndex.PulledRevId, pulledRevId, true);
 
 						// persist current object state
@@ -2302,12 +2664,14 @@ namespace TecWare.PPSn
 			using (var r = await (await EnqueuePullAsync(Environment.MasterData.CurrentTransaction)).ForegroundAsync())
 			{
 				// read prev stored data
-				var data = await GetDataCoreAsync();
-				await data.LoadAsync();
-				return data;
+				return await GetDataCoreAsync();
 			}
 		} // proc PullDataAsync
 
+		/// <summary>Implemented for a special case, will be removed.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="revId"></param>
+		/// <returns></returns>
 		[Obsolete("Implemented for a special case, will be removed.")]
 		public async Task<T> PullRevisionAsync<T>(long revId)
 			where T : IPpsObjectData
@@ -2328,7 +2692,7 @@ namespace TecWare.PPSn
 
 				// todo: create object? only implemented for a special sub case
 				// PpsRevisionDataSet?
-				var schema = await Environment.ActiveDataSets.GetDataSetDefinitionAsync(Typ);
+				var schema = await Environment.GetDocumentDefinitionAsync(Typ);
 				var ds = new PpsObjectDataSet(schema, this); // wrong object!
 
 				using (var dataSrc = new WindowStream(src, headerLength, r.ContentLength - headerLength, false, true))
@@ -2348,21 +2712,16 @@ namespace TecWare.PPSn
 			{
 				var request = PushDataRequest();
 
-				Monitor.Enter(objectLock);
-				try
+				using (new ThreadSafeMonitor(objectLock))
 				{
 					// update local database and object data
 					var data = await GetDataAsync<IPpsObjectData>();
-					await data.LoadAsync(); // todo: weg? is the responsibility from PushAsync
-					await data.CommitAsync();
 
 					foreach (var lnk in links)
 					{
 						if (lnk.LinkToId < 0 || lnk.LinkTo.IsDocumentChanged)
 							await lnk.LinkTo.PushAsync();
 					}
-					// allow the dataset to update the linkIds
-					await data.LoadAsync();
 
 					// first build object data
 					var xHeaderData = ToXml();
@@ -2380,10 +2739,6 @@ namespace TecWare.PPSn
 						// write the content
 						await data.PushAsync(dst);
 					}
-				}
-				finally
-				{
-					Monitor.Exit(objectLock);
 				}
 
 				// get the result
@@ -2424,11 +2779,34 @@ namespace TecWare.PPSn
 			return await environment.CreateObjectDataObjectAsync<IPpsObjectData>(this);
 		} // func GetDataCoreAsync
 
+		/// <summary>Get the data object.</summary>
+		/// <typeparam name="T"></typeparam>
+		/// <returns></returns>
 		public async Task<T> GetDataAsync<T>()
 			where T : IPpsObjectData
 			=> (T)await data.GetValueAsync();
 
-		internal async Task<Stream> LoadRawDataAsync()
+		/// <summary></summary>
+		/// <param name="data"></param>
+		/// <returns></returns>
+		internal static Stream OpenReadStream(object data)
+		{
+			switch (data)
+			{
+				case string s:
+					return new FileStream(s, FileMode.Open, FileAccess.Read);
+				case byte[] b:
+					return new MemoryStream(b, false);
+				case null:
+					return new MemoryStream(Array.Empty<byte>(), false);
+				default:
+					throw new ArgumentOutOfRangeException(nameof(data), "Invalid format.");
+			}
+		} // func OpenReadStream
+
+		/// <summary></summary>
+		/// <returns><c>byte[]</c> for embedded or <c>string</c> for linked data.</returns>
+		internal async Task<object> LoadObjectDataInformationAsync()
 		{
 			using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.ReadUncommited))
 			using (var cmd = trans.CreateNativeCommand("SELECT Document, DocumentIsLinked, length(Document) FROM main.Objects WHERE Id = @Id"))
@@ -2445,21 +2823,40 @@ namespace TecWare.PPSn
 						if (!r.IsDBNull(1) && r.GetValue(1).ChangeType<bool>()) // linked document
 						{
 							var path = Encoding.Unicode.GetString(data);
-							return new FileStream(environment.MasterData.GetLocalPath(path), FileMode.Open);
+							return environment.MasterData.GetLocalPath(path);
 						}
 						else
-							return new MemoryStream(data, false);
+							return data;
 					}
 					else
 						return null;
 				}
 			}
-		} // func LoadRawDataAsync
+		} // func GetObjectDataInformationAsync
 
-		[Obsolete("falsche verantwortung")]
-		internal async Task SaveRawDataAsync(long contentLength, string mimeType, byte[] data, bool isDocumentChanged)
+		internal async Task SaveObjectDataInformationAsync(object data, string mimeType, bool isDocumentChanged)
 		{
-			// store the value
+			byte[] byteData;
+
+			// convert data object to byte data
+			switch (data)
+			{
+				case string s:
+					if (environment.MasterData.MakeRelativePath(s, out var r))
+						s = r;
+					byteData = Encoding.Unicode.GetBytes(s);
+					break;
+				case byte[] b:
+					byteData = b;
+					break;
+				case null:
+					byteData = null;
+					break;
+				default:
+					throw new ArgumentOutOfRangeException(nameof(data), "Invalid data format.");
+			}
+
+			// store the values
 			using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
 			using (var cmd = trans.CreateNativeCommand("UPDATE main.[Objects] " +
 				"SET " +
@@ -2472,65 +2869,21 @@ namespace TecWare.PPSn
 			{
 				cmd.AddParameter("@Id", DbType.Int64, objectId);
 				cmd.AddParameter("@MimeType", DbType.String, mimeType);
-				cmd.AddParameter("@Document", DbType.Binary, data ?? (object)DBNull.Value);
+				cmd.AddParameter("@Document", DbType.Binary, byteData ?? (object)DBNull.Value);
 				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, isDocumentChanged);
 
 				await cmd.ExecuteNonQueryAsync();
 
-				// set HasData to true
+				// set HasData to the correct value
 				SetValue(PpsStaticObjectColumnIndex.MimeType, mimeType, false);
 				SetValue(PpsStaticObjectColumnIndex.IsDocumentChanged, isDocumentChanged, false);
-				SetValue(PpsStaticObjectColumnIndex.HasData, true, false);
+				SetValue(PpsStaticObjectColumnIndex.HasData, byteData != null, false);
 
 				trans.Commit();
 			}
-		} // proc SaveRawDataAsync
+		} // proc SaveObjectDataInformationAsync
 
-		internal async Task SaveRawDataAsync(long contentLength, string mimeType, Action<Stream> data, bool isDocumentChanged)
-		{
-			byte[] bData = null;
-
-			// read the data into a memory stream
-			if (data != null)
-			{
-				using (var dst = new MemoryStream())
-				{
-					await Task.Run(() => data(dst));
-					dst.Position = 0;
-					bData = dst.ToArray();
-				}
-			}
-			else
-				isDocumentChanged = false;
-
-			// store the value
-			using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
-			using (var cmd = trans.CreateNativeCommand("UPDATE main.[Objects] " +
-				"SET " +
-					"MimeType = @MimeType, " +
-					"Document = @Document, " +
-					"DocumentIsLinked = 0, " +
-					"DocumentIsChanged = @DocumentIsChanged, " +
-					"_IsUpdated = 1 " +
-				"WHERE Id = @Id"))
-			{
-				cmd.AddParameter("@Id", DbType.Int64, objectId);
-				cmd.AddParameter("@MimeType", DbType.String, mimeType);
-				cmd.AddParameter("@Document", DbType.Binary, bData ?? (object)DBNull.Value);
-				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, isDocumentChanged);
-
-				await cmd.ExecuteNonQueryAsync();
-
-				// set HasData to true
-				SetValue(PpsStaticObjectColumnIndex.MimeType, mimeType, false);
-				SetValue(PpsStaticObjectColumnIndex.IsDocumentChanged, isDocumentChanged, false);
-				SetValue(PpsStaticObjectColumnIndex.HasData, true, false);
-
-				trans.Commit();
-			}
-		} // proc SaveRawDataAsync
-
-		[Obsolete("falsche verantwortung")]
+		[Obsolete("falsche verantwortung, sollte eine command action machen")]
 		public Task ViewAsync(object target)
 		{
 			return ShellExecute();
@@ -2547,17 +2900,17 @@ namespace TecWare.PPSn
 				return;
 			}
 
-			fileName = Path.GetTempPath() + "\\" + Path.GetFileName(fileName);
-			using (var fileStream = File.OpenWrite(fileName))
-			{
-				if (objectId >= 0 && !HasData)
-					await PullAsync();
+			//fileName = Path.GetTempPath() + "\\" + Path.GetFileName(fileName);
+			//using (var fileStream = File.OpenWrite(fileName))
+			//{
+			//	if (objectId >= 0 && !HasData)
+			//		await PullAsync();
 
-				var buffer = await LoadRawDataAsync();
-				fileStream.Write(buffer.ReadInArray(), 0, (int)buffer.Length);
-				fileStream.Close();
-				System.Diagnostics.Process.Start(fileName);
-			}
+			//	var buffer = await LoadRawDataAsync();
+			//	fileStream.Write(buffer.ReadInArray(), 0, (int)buffer.Length);
+			//	fileStream.Close();
+			//	System.Diagnostics.Process.Start(fileName);
+			//}
 		}
 
 		#endregion
@@ -2890,14 +3243,21 @@ namespace TecWare.PPSn
 		private bool createServerSiteOnly = false;
 		private bool isRev = false;
 
+		/// <summary></summary>
+		/// <param name="environemnt"></param>
+		/// <param name="name"></param>
 		public PpsObjectInfo(PpsEnvironment environemnt, string name)
 			: base(environemnt)
 		{
 			this.name = name;
 		} // ctor
 
+		/// <summary></summary>
+		/// <returns></returns>
+		public override string ToString()
+			=> $"ObjectInfo[{name}]";
+
 		/// <summary>Creates a new local number for the document.</summary>
-		/// <param name="transaction">Database transaction.</param>
 		/// <returns><c>null</c>, or a temporary local number for the user.</returns>
 		[LuaMember]
 		public async Task<string> GetNextNumberAsync()
@@ -2911,6 +3271,25 @@ namespace TecWare.PPSn
 			}
 		} // func GetNextNumber
 
+		/// <summary>Load the document definition.</summary>
+		/// <returns></returns>
+		public async Task<PpsDataSetDefinitionDesktop> GetDocumentDefinitionAsync()
+		{
+			var definition = DocumentDefinition;
+			if (definition != null)
+				return definition;
+
+			// load the schema
+			var xSchema = await Environment.Request.GetXmlAsync(DocumentUri);
+			definition = (PpsDataSetDefinitionDesktop)Activator.CreateInstance(DocumentDefinitionType, Environment, Name, xSchema);
+			definition.EndInit();
+
+			DocumentDefinition = definition; // cache schema
+
+			return definition;
+		} // func GetDocumentDefinitionAsync
+
+		/// <summary>Name of the object</summary>
 		[LuaMember]
 		public string Name
 		{
@@ -2927,8 +3306,26 @@ namespace TecWare.PPSn
 		} // prop CreateServerSiteOnly
 
 		/// <summary>Holds the document uri for loading a schema.</summary>
-		[LuaMember]
-		public string DocumentUri => Environment.ActiveDataSets.GetDataSetSchemaUri(name);
+		public string DocumentUri
+		{
+			get => GetMemberValue(nameof(DocumentUri)) as string;
+			set => SetMemberValue(nameof(DocumentUri), value);
+		} // prop DocumentUri
+
+		/// <summary></summary>
+		public PpsDataSetDefinitionDesktop DocumentDefinition
+		{
+			get => GetMemberValue(nameof(DocumentDefinition)) as PpsDataSetDefinitionDesktop;
+			set => SetMemberValue(nameof(DocumentDefinition), value);
+		} // prop DataSetDefinition
+
+		/// <summary></summary>
+		public Type DocumentDefinitionType
+		{
+			get => GetMemberValue(nameof(DocumentDefinitionType)) as Type;
+			set => SetMemberValue(nameof(DocumentDefinitionType), value);
+		} // prop DataSetDefinition
+
 
 		/// <summary>Will this object have revision.</summary>
 		[LuaMember]
@@ -2945,9 +3342,193 @@ namespace TecWare.PPSn
 
 	public partial class PpsEnvironment
 	{
+		#region -- class PpsActiveObjectDataImplementation ----------------------------
+
+		private sealed class PpsActiveObjectDataImplementation : IPpsActiveObjectDataTable
+		{
+			#region -- class PpsObjectDataAccessImplementation ------------------------
+
+			private sealed class PpsObjectDataAccessImplementation : IPpsObjectDataAccess
+			{
+				/// <summary>Event to notify data changed.</summary>
+				public event EventHandler DataChanged;
+
+				private readonly PpsActiveObjectDataImplementation table;
+				private readonly IPpsObjectData data;
+				private readonly IPpsObjectDataAccessNotify notify;
+
+				/// <summary></summary>
+				/// <param name="table"></param>
+				/// <param name="data"></param>
+				public PpsObjectDataAccessImplementation(PpsActiveObjectDataImplementation table, IPpsObjectData data)
+				{
+					this.table = table ?? throw new ArgumentNullException(nameof(table));
+					this.data = data ?? throw new ArgumentNullException(nameof(data));
+					this.notify = data as IPpsObjectDataAccessNotify;
+
+					table.OnObjectDataActivated(this);
+				} // ctor
+
+				/// <summary></summary>
+				~PpsObjectDataAccessImplementation()
+				{
+					Dispose(false);
+				} // dtor
+
+				/// <summary></summary>
+				public void Dispose()
+				{
+					GC.SuppressFinalize(this);
+					Dispose(true);
+				} // proc Dispose
+
+				/// <summary></summary>
+				/// <param name="disposing"></param>
+				private void Dispose(bool disposing)
+				{
+					table.OnObjectDataRemoved(this);
+				} // proc Dispose
+
+				public Task CommitAsync()
+					=> notify?.CommitAsync() ?? Task.CompletedTask;
+
+				/// <summary>Fire a complete change of the referenced data.</summary>
+				public void OnDataChanged()
+					=> DataChanged?.Invoke(data, EventArgs.Empty);
+
+				/// <summary>Disables all ui-objects</summary>
+				public IDisposable OnDisableUI()
+					=> DisableUI?.Invoke();
+
+				/// <summary>Function that disables the ui.</summary>
+				public Func<IDisposable> DisableUI { get; set; }
+
+				public IPpsObjectData ObjectData => data;
+			} // class PpsObjectDataAccessImplementation
+
+			#endregion
+
+			#region -- class MultiDisposable ------------------------------------------
+
+			private sealed class MultiDisposable : IDisposable
+			{
+				private readonly IDisposable[] dispables;
+
+				public MultiDisposable(IDisposable[] dispables)
+				{
+					this.dispables = dispables;
+				} // ctor
+
+				public void Dispose()
+					=> Array.ForEach(dispables, c => c.Dispose());
+			} // class MultiDisposable
+
+			#endregion
+
+			private PpsEnvironment environment;
+			private List<WeakReference<PpsObjectDataAccessImplementation>> dataAccess = new List<WeakReference<PpsObjectDataAccessImplementation>>();
+
+			#region -- Ctor/Dtor ------------------------------------------------------
+
+			public PpsActiveObjectDataImplementation(PpsEnvironment environment)
+			{
+				this.environment = environment;
+			} // ctor
+
+			#endregion
+
+			#region -- Object Data Registration ---------------------------------------
+
+			public IPpsObjectDataAccess RegisterDataAccess(IPpsObjectData data)
+			{
+				lock (dataAccess)
+					return new PpsObjectDataAccessImplementation(this, data);
+			} // func RegisterDataAccess
+
+			private void OnObjectDataActivated(PpsObjectDataAccessImplementation token)
+			{
+				// add token to access list
+				lock (dataAccess)
+					dataAccess.Add(new WeakReference<PpsObjectDataAccessImplementation>(token));
+			} // proc OnObjectDataActivated
+
+			private void OnObjectDataRemoved(PpsObjectDataAccessImplementation token)
+			{
+				foreach (var (idx, tok) in GetDataAccessTokens(null))
+				{
+					if (tok == token)
+						dataAccess.RemoveAt(idx);
+				}
+			} // proc OnObjectDataRemoved
+
+			private IEnumerable<(int idx, PpsObjectDataAccessImplementation tok)> GetDataAccessTokens(IPpsObjectData filterObjectData)
+			{
+				lock (dataAccess)
+				{
+					var i = 0;
+					while (i < dataAccess.Count)
+					{
+						var v = dataAccess[i];
+						if (v.TryGetTarget(out var token) && token != null)
+						{
+							if (filterObjectData is null
+								|| Object.ReferenceEquals(token.ObjectData, filterObjectData))
+							{
+								yield return (i, token);
+								if (i < dataAccess.Count && Object.ReferenceEquals(v, dataAccess[i])) // token removed?
+									i++;
+							}
+							else
+								i++;
+						}
+						else
+							dataAccess.RemoveAt(i);
+					}
+				}
+			} // func GetDataAccessTokens
+
+			#endregion
+
+			#region -- Object Data Events/Services ------------------------------------
+
+			public IDisposable DisableUI(IPpsObjectData data)
+			{
+				var multiDispose = GetDataAccessTokens(data).Select(c => c.tok.OnDisableUI()).Where(c => c != null).ToArray();
+				return multiDispose.Length == 0 ? null : new MultiDisposable(multiDispose);
+			} // func DisableUI
+
+			public void NotifyDataChanged(IPpsObjectData data)
+			{
+				foreach (var (idx, tok) in GetDataAccessTokens(data))
+					tok.OnDataChanged();
+			} // proc NotifyDataChanged
+
+			public IEnumerator<IPpsObjectData> GetEnumerator()
+			{
+				var returnData = new List<IPpsObjectData>();
+				foreach (var (idx, tok) in GetDataAccessTokens(null))
+				{
+					var od = tok.ObjectData;
+					if (returnData.IndexOf(od) == -1)
+					{
+						returnData.Add(od);
+						yield return od;
+					}
+				}
+			} // func GetEnumerator
+
+			IEnumerator IEnumerable.GetEnumerator()
+				=> GetEnumerator();
+
+			#endregion
+		} // class PpsActiveObjectDataImplementation
+
+		#endregion
+
+		/// <summary>Object typ for blob data.</summary>
 		public static string AttachmentObjectTyp = "attachments";
 
-		private readonly PpsActiveDataSetsImplementation activeDataSets;
+		private readonly PpsActiveObjectDataImplementation activeObjectData;
 
 		// point of improvement: a structure equal to LuaTable-Hash should be created on perf. issues
 		private readonly object objectStoreLock = new object();
@@ -3381,13 +3962,18 @@ order by t_liefnr.value desc
 
 		#endregion
 
+		#region -- Create New Object --------------------------------------------------
+
 		/// <summary>Create a new object in the local database.</summary>
-		/// <param name="transaction"></param>
 		/// <param name="objectInfo"></param>
+		/// <param name="mimeType"></param>
 		/// <returns></returns>
 		public async Task<PpsObject> CreateNewObjectAsync(PpsObjectInfo objectInfo, string mimeType = MimeTypes.Application.OctetStream)
 			=> await CreateNewObjectAsync(Guid.NewGuid(), objectInfo.Name, await objectInfo.GetNextNumberAsync(), objectInfo.IsRev, mimeType);
 
+		/// <summary></summary>
+		/// <param name="fileName"></param>
+		/// <returns></returns>
 		public async Task<PpsObject> CreateNewObjectFromFileAsync(string fileName)
 		{
 			var lastWriteTime = File.GetLastWriteTimeUtc(fileName);
@@ -3406,6 +3992,11 @@ order by t_liefnr.value desc
 			}
 		} // func CreateNewObjectFromFileAsync
 
+		/// <summary></summary>
+		/// <param name="dataSource"></param>
+		/// <param name="name"></param>
+		/// <param name="mimeType"></param>
+		/// <returns></returns>
 		public async Task<PpsObject> CreateNewObjectFromStreamAsync(Stream dataSource, string name, string mimeType = null)
 		{
 			using (var trans = await MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
@@ -3420,7 +4011,7 @@ order by t_liefnr.value desc
 				// import the data
 				var data = await newObject.GetDataAsync<PpsObjectBlobData>();
 
-				using (var dst = await data.OpenStreamAsync(FileAccess.Write))
+				using (var dst = data.OpenStream(FileAccess.Write))
 					await dataSource.CopyToAsync(dst);
 				await data.CommitAsync();
 
@@ -3433,13 +4024,11 @@ order by t_liefnr.value desc
 		} // func CreateNewObjectFromStreamAsync
 
 		/// <summary>Create a new object.</summary>
-		/// <param name="serverId"></param>
 		/// <param name="guid"></param>
 		/// <param name="typ"></param>
 		/// <param name="nr"></param>
 		/// <param name="isRev"></param>
-		/// <param name="remoteRevId"></param>
-		/// <param name="syncToken"></param>
+		/// <param name="mimeType"></param>
 		/// <returns></returns>
 		[LuaMember]
 		public async Task<PpsObject> CreateNewObjectAsync(Guid guid, string typ, string nr, bool isRev, string mimeType = MimeTypes.Application.OctetStream)
@@ -3468,28 +4057,43 @@ order by t_liefnr.value desc
 		internal async Task<T> CreateObjectDataObjectAsync<T>(PpsObject obj)
 			where T : IPpsObjectData
 		{
-			var schema = await ActiveDataSets.GetDataSetDefinitionAsync(obj.Typ);
+			var schema = await GetDocumentDefinitionAsync(obj.Typ);
 			if (schema == null)
 				return (T)(IPpsObjectData)new PpsObjectBlobData(obj);
 			else
 				return (T)(IPpsObjectData)new PpsObjectDataSet(schema, obj);
 		} // func CreateObjectDataObjectAsync
 
+		#endregion
 
+		#region -- PushObject ---------------------------------------------------------
+
+		/// <summary>Call push function of an object.</summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public Task PushObjectAsync(PpsObject obj)
 			=> obj.IsDocumentChanged
 				? obj.PushAsync()
 				: Task.CompletedTask;
 
+		#endregion
+
 		#region -- Object Info ------------------------------------------------------------
 
+		/// <summary>Get object info list synchronization object.</summary>
+		/// <returns></returns>
 		protected object GetObjectInfoSyncObject()
 			=> objectInfo;
 
-		protected List<string> GetRemoveObjectInfo()
+		/// <summary>Remove list for object infos</summary>
+		/// <returns></returns>
+		protected List<string> GetRemoveListObjectInfo()
 			=> ((IDictionary<string, PpsObjectInfo>)objectInfo).Keys.ToList();
 
+		/// <summary>Update object info structur.</summary>
+		/// <param name="x"></param>
+		/// <param name="removeObjectInfo"></param>
 		protected void UpdateObjectInfo(XElement x, List<string> removeObjectInfo)
 		{
 			var objectTyp = x.GetAttribute("name", String.Empty);
@@ -3501,10 +4105,13 @@ order by t_liefnr.value desc
 				return;
 
 			// update dataset definitions
-			if (!String.IsNullOrEmpty(sourceUri))
-				ActiveDataSets.RegisterDataSetSchema(objectTyp, sourceUri, typeof(PpsDataSetDefinitionDesktop));
 
 			var oi = new PpsObjectInfo(this, objectTyp) { IsRev = isRevDefault };
+			if (!String.IsNullOrEmpty(sourceUri))
+			{
+				oi.DocumentUri = sourceUri;
+				oi.DocumentDefinitionType = typeof(PpsDataSetDefinitionDesktop);
+			}
 			objectInfo.AppendItem(oi);
 
 			// update pane hint
@@ -3517,15 +4124,51 @@ order by t_liefnr.value desc
 				removeObjectInfo.RemoveAt(ri);
 		} // proc UpdateObjectInfo
 
+		/// <summary>Remove object infos.</summary>
+		/// <param name="removeObjectInfo"></param>
 		protected void ClearObjectInfo(List<string> removeObjectInfo)
 		{
-			foreach (var d in removeObjectInfo)
-				ActiveDataSets.UnregisterDataSetSchema(d);
 		} // proc ClearObjectInfo
+
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public PpsObjectInfo RegisterObjectInfoSchema(string name, LuaTable arguments)
+		{
+			var oi = new PpsObjectInfo(this, name ?? throw new ArgumentNullException(nameof(name)));
+
+			// copy attributes
+			foreach (var kv in arguments)
+				oi[kv.Key] = kv.Value;
+
+			objectInfo.AppendItem(oi);
+			return oi;
+		} // func RegisterObjectInfoSchema
+
+		/// <summary>Get the uri for a document definition.</summary>
+		/// <param name="schema"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public string GetDocumentUri(string schema)
+			=> ObjectInfos[schema, false]?.DocumentUri;
+
+		/// <summary></summary>
+		/// <param name="schema"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public Task<PpsDataSetDefinitionDesktop> GetDocumentDefinitionAsync(string schema)
+		{
+			var objectInfo = ObjectInfos[schema, false];
+			if (objectInfo == null)
+				return Task.FromResult<PpsDataSetDefinitionDesktop>(null);
+			return objectInfo.GetDocumentDefinitionAsync();
+		} // func GetDocumentDefinitionAsync
 
 		#endregion
 
-		#region -- Object Cache -----------------------------------------------------------
+		#region -- Object Cache -------------------------------------------------------
 
 		private PpsObject ReadObject(object key, bool useGuid, bool throwException = false)
 		{
@@ -3639,38 +4282,38 @@ order by t_liefnr.value desc
 			}
 		} // func ReplaceObjectCacheId
 
+		/// <summary></summary>
+		/// <param name="localId"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public PpsObject GetObject(long localId, bool throwException = false)
 			=> GetCachedObjectOrRead(objectStoreById, localId, useId, throwException);
 
+		/// <summary></summary>
+		/// <param name="guid"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public PpsObject GetObject(Guid guid, bool throwException = false)
 			=> GetCachedObjectOrRead(objectStoreByGuid, guid, useGuid, throwException);
 
+		/// <summary></summary>
+		/// <param name="objectTyp"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public LuaTable GetObjectInfo(string objectTyp)
 			=> objectInfo[objectTyp, false];
 
 		#endregion
 
-		#region -- ActiveDataSets ---------------------------------------------------------
+		#region -- Object Info --------------------------------------------------------
 
-		internal void OnDataSetActivated(PpsDataSetDesktop dataset)
-		{
-			if (activeDataSets.IndexOf(dataset) >= 0)
-				throw new ArgumentException("DataSet already registered.");
-
-			activeDataSets.Add(dataset);
-		} // proc OnDataSetActivated
-
-		internal void OnDataSetDeactivated(PpsDataSetDesktop dataset)
-		{
-			activeDataSets.Remove(dataset);
-		} // proc OnDataSetDeactivated
-
+		/// <summary>Active objects data.</summary>
 		[LuaMember]
-		public IPpsActiveDataSets ActiveDataSets => activeDataSets;
+		public IPpsActiveObjectDataTable ActiveObjectData => activeObjectData;
 
+		/// <summary>Object info structure.</summary>
 		[LuaMember]
 		public PpsEnvironmentCollection<PpsObjectInfo> ObjectInfos => objectInfo;
 

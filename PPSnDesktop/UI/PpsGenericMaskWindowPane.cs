@@ -31,7 +31,7 @@ namespace TecWare.PPSn.UI
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Inhalt, welcher aus einem dynamisch geladenen Xaml besteht
 	/// und einer Dataset</summary>
-	public class PpsGenericMaskWindowPane : PpsGenericWpfWindowPane, IPpsActiveDataSetOwner
+	public class PpsGenericMaskWindowPane : PpsGenericWpfWindowPane
 	{
 		private readonly IPpsIdleAction idleActionToken;
 		private CollectionViewSource undoView;
@@ -39,6 +39,7 @@ namespace TecWare.PPSn.UI
 
 		private PpsObject obj; // current object, controlled by this mask
 		private PpsObjectDataSet data; // data object
+		private IPpsObjectDataAccess dataAccess; // access token to the data object
 
 		public readonly static RoutedCommand SetCharmCommand = new RoutedCommand("SetCharm", typeof(PpsMainWindow));
 
@@ -108,22 +109,8 @@ namespace TecWare.PPSn.UI
 				data = await obj.GetDataAsync<PpsObjectDataSet>();
 
 				// register events, owner, and in the openDocuments dictionary
-				data.RegisterOwner(this);
-
-				// load data
-				if (!data.IsLoaded)
-				{
-					// call initalization hook
-					if (obj.HasData) // existing data
-					{
-						await data.LoadAsync();
-						await data.OnLoadedAsync(arguments);
-					}
-					else // new data
-					{
-						await data.OnNewAsync(arguments);
-					}
-				}
+				dataAccess = await data.AccessAsync(arguments);
+				dataAccess.DisableUI = DisableUI;
 
 				transaction.Commit();
 			}
@@ -241,10 +228,11 @@ namespace TecWare.PPSn.UI
 			if (data != null && data.IsDirty)
 				await CommitEditAsync();
 
-			data?.UnregisterOwner(this);
+			dataAccess?.Dispose();
 
-			obj = null;
+			dataAccess = null;
 			data = null;
+			obj = null;
 
 			return await base.UnloadAsync(commit);
 		} // func UnloadAsync
@@ -260,7 +248,7 @@ namespace TecWare.PPSn.UI
 		public async Task CommitEditAsync()
 		{
 			UpdateSources();
-			await data.CommitAsync();
+			await dataAccess.CommitAsync();
 
 			Debug.Print("Saved Document.");
 		} // proc CommitEdit
@@ -292,7 +280,5 @@ namespace TecWare.PPSn.UI
 		public PpsDataSet Data => data;
 		[LuaMember]
 		public PpsObject Object => obj;
-
-		LuaTable IPpsActiveDataSetOwner.Events => this;
 	} // class PpsGenericMaskWindowPane
 }

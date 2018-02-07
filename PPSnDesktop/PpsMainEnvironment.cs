@@ -159,7 +159,7 @@ namespace TecWare.PPSn
 					// update document info
 					lock (GetObjectInfoSyncObject())
 					{
-						var removeList = GetRemoveObjectInfo();
+						var removeList = GetRemoveListObjectInfo();
 						foreach (var cur in xNavigator.Elements(XName.Get("document")))
 							UpdateObjectInfo(cur, removeList);
 						ClearObjectInfo(removeList);

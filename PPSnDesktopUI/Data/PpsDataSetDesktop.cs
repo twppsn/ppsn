@@ -19,7 +19,6 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Xml.Linq;
 using Neo.IronLua;
@@ -28,60 +27,6 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- interface IPpsActiveDataSetOwner ---------------------------------------
-
-	/// <summary></summary>
-	public interface IPpsActiveDataSetOwner
-	{
-		/// <summary></summary>
-		LuaTable Events { get; }
-	} // interface IPpsActiveDataSetOwner
-
-	/// <summary>Lua friendly implementation for IPpsActiveDataSetOwner.</summary>
-	public class PpsActiveDataSetOwner : LuaTable, IPpsActiveDataSetOwner
-	{
-		LuaTable IPpsActiveDataSetOwner.Events => this;
-	} // class PpsActiveDataSetOwner
-
-	#endregion
-
-	#region -- interface IPpsActiveDataSets -------------------------------------------
-
-	/// <summary></summary>
-	public interface IPpsActiveDataSets : IReadOnlyCollection<PpsDataSetDesktop>
-	{
-		/// <summary>Register a schema source.</summary>
-		/// <param name="schema">Name of the schema.</param>
-		/// <param name="uri">Relative uri of the schema</param>
-		/// <param name="datasetDefinitionType"></param>
-		/// <returns><c>true</c>, if the registration is changed.</returns>
-		bool RegisterDataSetSchema(string schema, string uri, Type datasetDefinitionType = null);
-		/// <summary></summary>
-		/// <param name="schema"></param>
-		void UnregisterDataSetSchema(string schema);
-		/// <summary>Returns the schema source.</summary>
-		/// <param name="schema">Name of the schema.</param>
-		/// <returns></returns>
-		string GetDataSetSchemaUri(string schema);
-
-		/// <summary>Returns a dataset definition for the schema (not registered, empty id).</summary>
-		/// <param name="schema">Name of the schema</param>
-		/// <returns>DataSet definition</returns>
-		Task<PpsDataSetDefinitionDesktop> GetDataSetDefinitionAsync(string schema);
-
-		/// <summary>Returns open datasets of a specific type.</summary>
-		/// <param name="schema"></param>
-		/// <typeparam name="T"></typeparam>
-		/// <returns></returns>
-		IEnumerable<T> GetKnownDataSets<T>(string schema = null)
-			where T : PpsDataSetDesktop;
-		
-		/// <summary>Returns a list of registered definitions.</summary>
-		IEnumerable<string> KnownSchemas { get; }
-	} // interface IPpsActiveDataSets
-
-	#endregion
-
 	#region -- class PpsDataTableDefinitionDesktop ------------------------------------
 
 	/// <summary></summary>
@@ -414,7 +359,7 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		/// <returns></returns>
 		public override PpsDataSet CreateDataSet()
-			=> new PpsDataSetDesktop(this, (PpsEnvironment)Shell);
+			=> new PpsDataSetClient(this, (PpsEnvironment)Shell);
 
 		/// <summary>Get client site column types.</summary>
 		/// <param name="dataType">DataType name.</param>
@@ -587,68 +532,6 @@ namespace TecWare.PPSn.Data
 		public override PpsDataFilter CreateRelationFilter(PpsDataRow row, PpsDataTableRelationDefinition relation)
 			=> new PpsDataRelatedFilterDesktop(row, relation);
 	} // class PpsDataTableDesktop
-
-	#endregion
-
-	#region -- class PpsDataSetDesktop ------------------------------------------------
-	
-	// IsLoaded-> Load, Unload should be done by this class, no external call allowed!
-	/// <summary>Extents the DataSet with an owner pattern.</summary>
-	public class PpsDataSetDesktop : PpsDataSetClient
-	{
-		private readonly object datasetOwnerLock = new object();
-		private readonly List<IPpsActiveDataSetOwner> datasetOwner = new List<IPpsActiveDataSetOwner>(); // list with document owners
-
-		#region -- Ctor/Dtor ----------------------------------------------------------
-
-		/// <summary></summary>
-		/// <param name="definition"></param>
-		/// <param name="environment"></param>
-		public PpsDataSetDesktop(PpsDataSetDefinitionDesktop definition, PpsEnvironment environment)
-			: base(definition, environment)
-		{
-		} // ctor
-
-		/// <summary></summary>
-		/// <param name="owner"></param>
-		public void RegisterOwner(IPpsActiveDataSetOwner owner)//<-- verschieben?
-		{
-			lock (datasetOwnerLock)
-			{
-				if (datasetOwner.IndexOf(owner) >= 0)
-					throw new InvalidOperationException("Already registered.");
-
-				if (datasetOwner.Count == 0)
-					Environment.OnDataSetActivated(this);
-
-				RegisterEventSink(owner.Events);
-				datasetOwner.Add(owner);
-			}
-		} // proc RegisterOwner
-
-		/// <summary></summary>
-		/// <param name="owner"></param>
-		public void UnregisterOwner(IPpsActiveDataSetOwner owner)
-		{
-			lock (datasetOwnerLock)
-			{
-				var index = datasetOwner.IndexOf(owner);
-				if (index == -1)
-					throw new InvalidOperationException("Owner not registered.");
-
-				datasetOwner.RemoveAt(index);
-				UnregisterEventSink(owner.Events);
-
-				if (datasetOwner.Count == 0)
-					Environment.OnDataSetDeactivated(this);
-			}
-		} // proc Unregister
-
-		#endregion
-
-		/// <summary>Environment.</summary>
-		public PpsEnvironment Environment => (PpsEnvironment)Shell;
-	} // class PpsDataSetDesktop
 
 	#endregion
 }
