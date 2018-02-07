@@ -19,10 +19,8 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- class PpsDataColumnMetaCollectionClient ----------------------------------
+	#region -- class PpsDataColumnMetaCollectionClient --------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
 	internal sealed class PpsDataColumnMetaCollectionClient : PpsDataColumnDefinition.PpsDataColumnMetaCollection
 	{
 		public PpsDataColumnMetaCollectionClient(PpsDataColumnDefinition column, PpsDataColumnMetaCollectionClient clone)
@@ -39,10 +37,9 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsDataValueColumnDefinitionClient ---------------------------------
+	#region -- class PpsDataValueColumnDefinitionClient -------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Client site data column definition.</summary>
 	public sealed class PpsDataColumnDefinitionClient : PpsDataColumnDefinition
 	{
 		private readonly PpsDataColumnMetaCollectionClient metaInfo;
@@ -65,6 +62,9 @@ namespace TecWare.PPSn.Data
 			this.parentColumn = clone.parentColumn;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="table"></param>
+		/// <param name="xColumn"></param>
 		public PpsDataColumnDefinitionClient(PpsDataTableDefinitionClient table, XElement xColumn)
 			: base(table, xColumn.GetAttribute("name", (string)null), xColumn.GetAttribute("isPrimary", false), xColumn.GetAttribute("isIdentity", false))
 		{
@@ -77,12 +77,18 @@ namespace TecWare.PPSn.Data
 			this.parentColumn = xColumn.GetAttribute<string>("parentColumn", null);
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="tableOwner"></param>
+		/// <returns></returns>
 		public override PpsDataColumnDefinition Clone(PpsDataTableDefinition tableOwner)
 			=> new PpsDataColumnDefinitionClient(tableOwner, this);
 
+		/// <summary></summary>
+		/// <returns></returns>
 		protected override Type GetDataType()
 			=> dataType;
 
+		/// <summary></summary>
 		public override void EndInit()
 		{
 			if (parentRelationName != null)
@@ -93,6 +99,7 @@ namespace TecWare.PPSn.Data
 			base.EndInit();
 		} // proc EndInit
 
+		/// <summary></summary>
 		public override PpsDataColumnMetaCollection Meta => metaInfo;
 	} // class PpsDataColumnDefinitionClient
 

@@ -155,7 +155,7 @@ namespace TecWare.PPSn.Data
 				this.propertyName = propertyName;
 			} // ctor
 
-			public override bool Same(PpsDataChangedEvent ev)
+			public override bool Equals(PpsDataChangedEvent ev)
 			{
 				if (ev == this)
 					return true;

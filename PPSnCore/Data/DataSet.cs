@@ -33,9 +33,8 @@ using static TecWare.PPSn.Data.PpsDataHelper;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- enum PpsDataSetMetaData --------------------------------------------------
+	#region -- enum PpsDataSetMetaData ------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Meta attributes that can be defined at the dataset.</summary>
 	public enum PpsDataSetMetaData
 	{
@@ -47,20 +46,22 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- enum PpsDataSetAutoTagMode -----------------------------------------------
+	#region -- enum PpsDataSetAutoTagMode ---------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Auto tag mode</summary>
 	public enum PpsDataSetAutoTagMode
 	{
+		/// <summary>First row value.</summary>
 		First,
+		/// <summary>Format as number.</summary>
 		Number,
+		/// <summary>Concat all row values.</summary>
 		Conact
 	} // enum PpsDataSetAutoTagMode
 
 	#endregion
 
-	#region -- enum PpsObjectTagClass ---------------------------------------------------
+	#region -- enum PpsObjectTagClass -------------------------------------------------
 
 	/// <summary>Classification of the tag.</summary>
 	public enum PpsObjectTagClass : int
@@ -84,7 +85,7 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsObjectTag -------------------------------------------------------
+	#region -- class PpsObjectTag -----------------------------------------------------
 
 	/// <summary>Tag that is attached to an object or document</summary>
 	public sealed class PpsObjectTag
@@ -107,9 +108,14 @@ namespace TecWare.PPSn.Data
 			this.userId = userId;
 		} // ctor
 
+		/// <summary>Format tag.</summary>
+		/// <returns></returns>
 		public override string ToString()
 			=> FormatTag(this);
 
+		/// <summary>Is the tag value equal.</summary>
+		/// <param name="otherValue"></param>
+		/// <returns></returns>
 		public bool IsValueEqual(object otherValue)
 			=> Object.Equals(value, Procs.ChangeType(otherValue, GetTypeFromClass(cls)));
 
@@ -126,6 +132,9 @@ namespace TecWare.PPSn.Data
 
 		private static Regex regAttributeLine = new Regex(@"(?<n>\w+)(\:(?<c>\d*)(\:(?<u>\d*))?)?\=(?<v>.*)", RegexOptions.Singleline);
 
+		/// <summary>Parse tag, return from sqlite db.</summary>
+		/// <param name="attributeLine"></param>
+		/// <returns></returns>
 		public static PpsObjectTag ParseTag(string attributeLine)
 		{
 			// name:class:user=value
@@ -150,6 +159,9 @@ namespace TecWare.PPSn.Data
 			return new PpsObjectTag(m.Groups["n"].Value, classHint, value, String.IsNullOrEmpty(m.Groups["u"].Value) ? -1 : Int64.Parse(m.Groups["u"].Value));
 		} // func ParseTag
 
+		/// <summary>Format tag for sqlite db.</summary>
+		/// <param name="tag"></param>
+		/// <returns></returns>
 		public static string FormatTag(PpsObjectTag tag)
 		{
 			string GetUserId()
@@ -196,6 +208,9 @@ namespace TecWare.PPSn.Data
 		public static Type GetTypeFromClass(PpsObjectTagClass classHint)
 			=> classHint == PpsObjectTagClass.Date ? typeof(DateTime) : typeof(string);
 
+		/// <summary>Parse the tag class.</summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static PpsObjectTagClass ParseClass(int value)
 		{
 			var r = (PpsObjectTagClass)value;
@@ -204,16 +219,18 @@ namespace TecWare.PPSn.Data
 			return r;
 		} // func ParseClass
 
+		/// <summary>Format tag class to int.</summary>
+		/// <param name="cls"></param>
+		/// <returns></returns>
 		public static int FormatClass(PpsObjectTagClass cls)
 			=> (int)cls;
 	} // class PpsObjectTag
 
 	#endregion
 
-	#region -- class PpsDataSetAutoTagDefinition ----------------------------------------
+	#region -- class PpsDataSetAutoTagDefinition --------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Autotag definition.</summary>
 	public class PpsDataSetAutoTagDefinition
 	{
 		private readonly PpsDataSetDefinition datasetDefinition;
@@ -223,24 +240,29 @@ namespace TecWare.PPSn.Data
 		private readonly PpsDataSetAutoTagMode mode;
 		private PpsDataColumnDefinition column;
 
+		/// <summary></summary>
+		/// <param name="datasetDefinition"></param>
+		/// <param name="tagName"></param>
+		/// <param name="tableName"></param>
+		/// <param name="columnName"></param>
+		/// <param name="mode"></param>
 		public PpsDataSetAutoTagDefinition(PpsDataSetDefinition datasetDefinition, string tagName, string tableName, string columnName, PpsDataSetAutoTagMode mode)
 		{
-			if (datasetDefinition == null)
-				throw new ArgumentNullException("datasetDefinition");
-			if (String.IsNullOrEmpty( tagName ))
+			if (String.IsNullOrEmpty(tagName))
 				throw new ArgumentNullException("tagName");
-			if (String.IsNullOrEmpty(tableName ))
+			if (String.IsNullOrEmpty(tableName))
 				throw new ArgumentNullException("tableName");
 			if (String.IsNullOrEmpty(columnName))
 				throw new ArgumentNullException("columnName");
 
-			this.datasetDefinition = datasetDefinition;
+			this.datasetDefinition = datasetDefinition ?? throw new ArgumentNullException("datasetDefinition");
 			this.tagName = tagName;
 			this.tableName = tableName;
 			this.columnName = columnName;
 			this.mode = mode;
 		} // ctor
 
+		/// <summary>Validate auto tag definition.</summary>
 		public virtual void EndInit()
 		{
 			var tableDef = datasetDefinition.FindTable(tableName);
@@ -252,6 +274,9 @@ namespace TecWare.PPSn.Data
 				throw new ArgumentException($"Tag '{tagName}' could not initalized. Column '{tableName}.{columnName}' not found.");
 		} // proc EndInit
 
+		/// <summary>Generate value from dataset.</summary>
+		/// <param name="dataset"></param>
+		/// <returns></returns>
 		public PpsObjectTag GenerateTagValue(PpsDataSet dataset)
 		{
 			if (column == null)
@@ -271,53 +296,69 @@ namespace TecWare.PPSn.Data
 			}
 		} // func GenerateTagValue
 
+		/// <summary>DataSet definition.</summary>
 		public PpsDataSetDefinition DataSet => datasetDefinition;
 
+		/// <summary>Tag name.</summary>
 		public string Name => tagName;
+		/// <summary>Table name.</summary>
 		public string TableName => tableName;
+		/// <summary>Column name.</summary>
 		public string ColumnName => columnName;
+		/// <summary>Tag mode.</summary>
 		public PpsDataSetAutoTagMode Mode => mode;
 	} // class PpsDataSetAutoTagDefinition
 
 	#endregion
 
-	#region -- enum PpsDataChangeLevel --------------------------------------------------
+	#region -- enum PpsDataChangeLevel ------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Change level order.</summary>
 	public enum PpsDataChangeLevel
 	{
+		/// <summary>Extended value was changed.</summary>
 		ExtentedValue = 1,
+		/// <summary>Property/Column value was changed.</summary>
 		PropertyValue = 2,
+		/// <summary>Row was changed.</summary>
 		RowAdded = 3,
+		/// <summary>Row was removed.</summary>
 		RowRemoved = 3,
+		/// <summary>Row was modified.</summary>
 		RowModified = 4,
+		/// <summary>Table was modified.</summary>
 		TableModifed = 5,
+		/// <summary>Dataset was modified.</summary>
 		DataSetModified = 6
 	} // enum PpsDataChangeLevel
 
 	#endregion
 
-	#region -- class PpsDataChangedEvent ------------------------------------------------
+	#region -- class PpsDataChangedEvent ----------------------------------------------
 
-	public abstract class PpsDataChangedEvent
+	/// <summary>Base class for change events.</summary>
+	public abstract class PpsDataChangedEvent : IEquatable<PpsDataChangedEvent>
 	{
+		/// <summary>Invoke the event.</summary>
 		public abstract void InvokeEvent();
 
-		public abstract bool Same(PpsDataChangedEvent ev);
+		/// <summary>Compare Events.</summary>
+		/// <param name="ev"></param>
+		/// <returns></returns>
+		public abstract bool Equals(PpsDataChangedEvent ev);
 
+		/// <summary>Order of this event.</summary>
 		public abstract PpsDataChangeLevel Level { get; }
 	} // class PpsDataChangedEvent
 
 	#endregion
 
-	#region -- class PpsDataSetDefinition -----------------------------------------------
+	#region -- class PpsDataSetDefinition ---------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Schema of the collection of data that is arrange in tables.</summary>
 	public abstract class PpsDataSetDefinition
 	{
-		#region -- WellKnownTypes ---------------------------------------------------------
+		#region -- WellKnownTypes -------------------------------------------------------
 
 		private static readonly Dictionary<string, Type> wellKnownMetaTypes = new Dictionary<string, Type>()
 		{
@@ -326,26 +367,32 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataSetMetaCollection -----------------------------------------
+		#region -- class PpsDataSetMetaCollection ---------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
+		/// <summary>Meta collection for dataset.</summary>
 		public class PpsDataSetMetaCollection : PpsMetaCollection
 		{
+			/// <summary></summary>
+			/// <typeparam name="T"></typeparam>
+			/// <param name="key"></param>
+			/// <param name="default"></param>
+			/// <returns></returns>
 			public T GetProperty<T>(PpsDataSetMetaData key, T @default)
-				=> PropertyDictionaryExtensions.GetProperty<T>(this, key.ToString(), @default);
+				=> PropertyDictionaryExtensions.GetProperty(this, key.ToString(), @default);
 
+			/// <summary></summary>
 			public override IReadOnlyDictionary<string, Type> WellknownMetaTypes => wellKnownMetaTypes;
 		} // class PpsDataSetMetaCollection
 
 		#endregion
 
 		private bool isInitialized = false;
-		private List<PpsDataTableDefinition> tables;
-		private ReadOnlyCollection<PpsDataTableDefinition> tableDefinitions;
-		private List<PpsDataSetAutoTagDefinition> tags;
-		private ReadOnlyCollection<PpsDataSetAutoTagDefinition> tagDefinitions;
+		private readonly List<PpsDataTableDefinition> tables;
+		private readonly ReadOnlyCollection<PpsDataTableDefinition> tableDefinitions;
+		private readonly List<PpsDataSetAutoTagDefinition> tags;
+		private readonly ReadOnlyCollection<PpsDataSetAutoTagDefinition> tagDefinitions;
 
+		/// <summary></summary>
 		protected PpsDataSetDefinition()
 		{
 			this.tables = new List<PpsDataTableDefinition>();
@@ -381,6 +428,8 @@ namespace TecWare.PPSn.Data
 			tables.Add(table);
 		} // proc Add
 
+		/// <summary>Add auto tag definition.</summary>
+		/// <param name="tag"></param>
 		protected void Add(PpsDataSetAutoTagDefinition tag)
 		{
 			if (isInitialized)
@@ -403,49 +452,57 @@ namespace TecWare.PPSn.Data
 			return new PpsDataSet(this);
 		} // func CreateDataSet
 
+		/// <summary>Find table by name.</summary>
+		/// <param name="name"></param>
+		/// <returns></returns>
 		public PpsDataTableDefinition FindTable(string name)
 			=> tables.Find(c => String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
 
+		/// <summary>Find tag by name.</summary>
+		/// <param name="name"></param>
+		/// <returns></returns>
 		public PpsDataSetAutoTagDefinition FindTag(string name)
 			=> tags.Find(c => String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
 
+		/// <summary>Auto increment key type.</summary>
 		public abstract PpsTablePrimaryKeyType KeyType { get; }
 
-		/// <summary></summary>
+		/// <summary>Auto tag definitions</summary>
 		public ReadOnlyCollection<PpsDataSetAutoTagDefinition> TagDefinitions => tagDefinitions;
 		/// <summary>Access to the table definitions.</summary>
 		public ReadOnlyCollection<PpsDataTableDefinition> TableDefinitions => tableDefinitions;
-		/// <summary>Zugriff auf die MetaInformationen</summary>
+		/// <summary>Access meta data of dataset.</summary>
 		public abstract PpsDataSetMetaCollection Meta { get; }
 		/// <summary>Is the dataset initialized.</summary>
 		public bool IsInitialized => isInitialized;
+
 		/// <summary>Access to a lua frame work.</summary>
 		public abstract Lua Lua { get; }
 	} // class PpsDataSetDefinition
 
 	#endregion
 
-	#region -- interface IPpsDeferedConstraintCheck -------------------------------------
+	#region -- interface IPpsDeferedConstraintCheck -----------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Interface to register deferred validations.</summary>
 	public interface IPpsDeferredConstraintCheck
 	{
+		/// <summary>Register a new validation rule.</summary>
+		/// <param name="check"></param>
+		/// <param name="failText"></param>
+		/// <param name="arguments"></param>
 		void Register(Delegate check, string failText, params object[] arguments);
 	} // interface IPpsDeferedConstraintCheck
 
 	#endregion
 
-	#region -- class PpsDataSet ---------------------------------------------------------
+	#region -- class PpsDataSet -------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>DataSet instance.</summary>
 	public class PpsDataSet : IDynamicMetaObjectProvider
 	{
-		#region -- class PpsDataSetMetaObject ---------------------------------------------
+		#region -- class PpsDataSetMetaObject -----------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsDataSetMetaObject : DynamicMetaObject
 		{
 			public PpsDataSetMetaObject(Expression expression, object value)
@@ -459,7 +516,7 @@ namespace TecWare.PPSn.Data
 					Expression.AndAlso(
 						Expression.TypeIs(Expression, typeof(PpsDataSet)),
 						Expression.Equal(
-							Expression.Property(Expression.Convert(Expression, typeof(PpsDataSet)), DefinitionPropertyInfo),
+							Expression.Property(Expression.Convert(Expression, typeof(PpsDataSet)), definitionPropertyInfo),
 							Expression.Constant(dataset.DataSetDefinition)
 						)
 					)
@@ -469,48 +526,45 @@ namespace TecWare.PPSn.Data
 			private DynamicMetaObject BindTableOrMeta(string name, bool generateException)
 			{
 				Expression expr;
-				PpsDataSet dataset = (PpsDataSet)Value;
+				var dataset = (PpsDataSet)Value;
 
 				// find the table
 				var tableIndex = Array.FindIndex(dataset.tables, c => String.Compare(c.TableName, name, StringComparison.OrdinalIgnoreCase) == 0);
 				if (tableIndex == -1) // find meta data
 					expr = dataset.DataSetDefinition.Meta.GetMetaConstantExpression(name, generateException);
 				else
-					expr = Expression.ArrayIndex(Expression.Field(Expression.Convert(Expression, typeof(PpsDataSet)), TableFieldInfo), Expression.Constant(tableIndex));
+					expr = Expression.ArrayIndex(Expression.Field(Expression.Convert(Expression, typeof(PpsDataSet)), tableFieldInfo), Expression.Constant(tableIndex));
 
 				return new DynamicMetaObject(expr, GetRestrictions(dataset));
 			} // func BindTableOrMeta
 
 			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
-			{
-				if (PpsDataHelper.IsStandardMember(LimitType, binder.Name))
-					return base.BindGetMember(binder);
-				else
-					return BindTableOrMeta(binder.Name, false);
-			} // func BindGetMember
+				=> IsStandardMember(LimitType, binder.Name)
+					? base.BindGetMember(binder)
+					: BindTableOrMeta(binder.Name, false);
 
 			public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
-			{
-				if (args.Length > 0 || PpsDataHelper.IsStandardMember(LimitType, binder.Name))
-					return base.BindInvokeMember(binder, args);
-				else
-					return BindTableOrMeta(binder.Name, true);
-			} // func BindInvokeMember
-
+				=> args.Length > 0 || IsStandardMember(LimitType, binder.Name)
+					? base.BindInvokeMember(binder, args)
+					: BindTableOrMeta(binder.Name, true);
+			
 			public override IEnumerable<string> GetDynamicMemberNames()
 			{
-				PpsDataSet dataset = (PpsDataSet)Value;
+				var dataset = (PpsDataSet)Value;
 
-				return
-					(from t in dataset.Tables select t.TableName)
-					.Concat(from key in dataset.DataSetDefinition.Meta.Keys select key);
+				return (
+					from t in dataset.Tables select t.TableName
+				).Concat(
+					from key in dataset.DataSetDefinition.Meta.Keys select key
+				);
 			} // func GetDynamicMemberNames
 		} // class PpsDataSetMetaObject
 
 		#endregion
 
-		#region -- class TableCollection --------------------------------------------------
+		#region -- class TableCollection ----------------------------------------------
 
+		/// <summary>Access all tables.</summary>
 		public class TableCollection : ReadOnlyCollection<PpsDataTable>
 		{
 			internal TableCollection(PpsDataTable[] tables)
@@ -518,6 +572,10 @@ namespace TecWare.PPSn.Data
 			{
 			} // ctor
 
+			/// <summary>Find table by name.</summary>
+			/// <param name="tableName"></param>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
 			public PpsDataTable this[string tableName, bool throwException = false]
 			{
 				get
@@ -529,15 +587,16 @@ namespace TecWare.PPSn.Data
 				}
 			} // func this
 
+			/// <summary>Find table by definition.</summary>
+			/// <param name="tableDefinition"></param>
+			/// <returns></returns>
 			public PpsDataTable this[PpsDataTableDefinition tableDefinition] => this.First(c => c.TableDefinition == tableDefinition);
 		} // class TableCollection
 
 		#endregion
 
-		#region -- class DynamicRuntimeTable ----------------------------------------------
+		#region -- class DynamicRuntimeTable ------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private class DynamicRuntimeTable : LuaTable
 		{
 			private readonly PpsDataSet dataset;
@@ -559,10 +618,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDeferedConstraintCheck ----------------------------------------
+		#region -- class PpsDeferedConstraintCheck ------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsDeferedConstraintCheck : IPpsDeferredConstraintCheck
 		{
 			private List<Tuple<Delegate, string, object[]>> checks = new List<Tuple<Delegate, string, object[]>>();
@@ -586,9 +643,7 @@ namespace TecWare.PPSn.Data
 			} // proc ExecuteAll
 
 			public void Register(Delegate check, string failText, params object[] arguments)
-			{
-				checks.Add(new Tuple<Delegate, string, object[]>(check, failText, arguments));
-			} // proc Register
+				=> checks.Add(new Tuple<Delegate, string, object[]>(check, failText, arguments));
 		} // class PpsDeferedConstraintCheck
 
 		#endregion
@@ -596,9 +651,9 @@ namespace TecWare.PPSn.Data
 		/// <summary>Raised, if any data is changed.</summary>
 		public event EventHandler DataChanged;
 
-		private PpsDataSetDefinition datasetDefinition;
-		private PpsDataTable[] tables;
-		private TableCollection tableCollection;
+		private readonly PpsDataSetDefinition datasetDefinition;
+		private readonly PpsDataTable[] tables;
+		private readonly TableCollection tableCollection;
 
 		private IPpsUndoSink undoSink;
 		private PpsDeferedConstraintCheck deferredConstraintChecks = null;
@@ -612,13 +667,15 @@ namespace TecWare.PPSn.Data
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="datasetDefinition"></param>
 		public PpsDataSet(PpsDataSetDefinition datasetDefinition)
 		{
 			this.datasetDefinition = datasetDefinition;
 			this.undoSink = new PpsUndoManagerBase();
 			this.tables = new PpsDataTable[datasetDefinition.TableDefinitions.Count];
 
-			for (int i = 0; i < tables.Length; i++)
+			for (var i = 0; i < tables.Length; i++)
 				tables[i] = datasetDefinition.TableDefinitions[i].CreateDataTable(this);
 
 			this.tableCollection = new TableCollection(tables);
@@ -627,31 +684,28 @@ namespace TecWare.PPSn.Data
 		} // ctor
 
 		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
-		{
-			return new PpsDataSetMetaObject(parameter, this);
-		} // func GetMetaObject
+			=> new PpsDataSetMetaObject(parameter, this);
 
 		#endregion
 
 		#region -- Environment, EventSink -------------------------------------------------
 
+		/// <summary>Overwrite to build a path to an environment definition.</summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
 		protected virtual object GetEnvironmentValue(object key)
 			=> null;
 		
 		/// <summary>Registers a new event sink.</summary>
 		/// <param name="eventSink"></param>
 		public void RegisterEventSink(LuaTable eventSink)
-		{
-			eventSinks.Add(eventSink);
-		} // proc RegisterEventSink
-
+			=> eventSinks.Add(eventSink);
+		
 		/// <summary>Unregisters an event sink.</summary>
 		/// <param name="eventSink"></param>
 		public void UnregisterEventSink(LuaTable eventSink)
-		{
-			eventSinks.Remove(eventSink);
-		} // proc UnregisterEventSink
-
+			=> eventSinks.Remove(eventSink);
+		
 		/// <summary>Get all event sinks.</summary>
 		/// <returns></returns>
 		private LuaTable[] GetEventSinks()
@@ -660,6 +714,11 @@ namespace TecWare.PPSn.Data
 		private Task AsyncLua(LuaResult r)
 			=> r[0] as Task ?? Task.FromResult<int>(0);
 
+		/// <summary>Invoke lua event handler.</summary>
+		/// <param name="t"></param>
+		/// <param name="methodName"></param>
+		/// <param name="args"></param>
+		/// <returns></returns>
 		public LuaResult InvokeLuaFunction(LuaTable t, string methodName, params object[] args)
 		{
 			var handler = t.GetMemberValue(methodName, rawGet: true);
@@ -668,6 +727,9 @@ namespace TecWare.PPSn.Data
 			return LuaResult.Empty;
 		} // func InvokeClientFunction
 
+		/// <summary>Invoke event handler.</summary>
+		/// <param name="methodName"></param>
+		/// <param name="args"></param>
 		public void InvokeEventHandler(string methodName, params object[] args)
 		{
 			// call the local function
@@ -678,6 +740,10 @@ namespace TecWare.PPSn.Data
 				InvokeLuaFunction(s, methodName, args);
 		} // proc InvokeEventHandler
 
+		/// <summary>Invoke event handler async.</summary>
+		/// <param name="methodName"></param>
+		/// <param name="args"></param>
+		/// <returns></returns>
 		public async Task InvokeEventHandlerAsync(string methodName, params object[] args)
 		{
 			// call the local function
@@ -803,14 +869,14 @@ namespace TecWare.PPSn.Data
 		/// <summary>Commit current state to original.</summary>
 		public void Commit()
 		{
-			foreach (PpsDataTable t in Tables)
+			foreach (var t in Tables)
 				t.Commit();
 		} // proc Commit
 
 		/// <summary>Reset the values to the original.</summary>
 		public void Reset()
 		{
-			foreach (PpsDataTable t in Tables)
+			foreach (var t in Tables)
 				t.Reset();
 		} // proc Reset
 
@@ -837,12 +903,10 @@ namespace TecWare.PPSn.Data
 				return PpsDataTable.MakeKey(DataSetDefinition.KeyType, ++lastPrimaryId);
 		} // func GetNextId
 
-		#region -- ExecuteEvent -----------------------------------------------------------
+		#region -- ExecuteEvent -------------------------------------------------------
 
-		#region -- class ExecuteEvents ----------------------------------------------------
+		#region -- class ExecuteEvents ------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class ExecuteEvents : IPpsUndoItem
 		{
 			private PpsDataSet dataset;
@@ -913,7 +977,7 @@ namespace TecWare.PPSn.Data
 				PpsDataChangedEvent cur;
 				while (i < length && (cur = changedEvents[i]).Level <= ev.Level)
 				{
-					if (cur.Same(ev))
+					if (cur.Equals(ev))
 						return; // same event, no add needed
 					i++;
 				}
@@ -979,10 +1043,8 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- class PpsDataSetChangedEvent -------------------------------------------
+		#region -- class PpsDataSetChangedEvent ---------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsDataSetChangedEvent : PpsDataChangedEvent
 		{
 			private readonly PpsDataSet dataset;
@@ -995,7 +1057,7 @@ namespace TecWare.PPSn.Data
 			public override void InvokeEvent()
 				=> dataset.OnDataChanged();
 			
-			public override bool Same(PpsDataChangedEvent ev)
+			public override bool Equals(PpsDataChangedEvent ev)
 				=> true;
 
 			public override PpsDataChangeLevel Level => PpsDataChangeLevel.DataSetModified;
@@ -1003,37 +1065,61 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- Events -----------------------------------------------------------------
+		#region -- Events -------------------------------------------------------------
 
 		internal void ExecuteDataChanged()
 			=> ExecuteEvent(new PpsDataSetChangedEvent(this));
 
+		/// <summary>Gets called if something was changed.</summary>
 		protected virtual void OnDataChanged()
 		{
 			DataChanged?.Invoke(this, EventArgs.Empty);
 			InvokeEventHandler("OnDataChanged", this);
 		} // proc OnDataChanged
 
+		/// <summary>Table was changed.</summary>
+		/// <param name="table"></param>
 		protected internal virtual void OnTableChanged(PpsDataTable table)
 			=> InvokeEventHandler("OnTableChanged", table);
 		
+		/// <summary>Row was added.</summary>
+		/// <param name="table"></param>
+		/// <param name="row"></param>
 		protected internal virtual void OnTableRowAdded(PpsDataTable table, PpsDataRow row)
 			=> InvokeEventHandler("OnTableRowAdded", table, row);
 
+		/// <summary>Row was removed.</summary>
+		/// <param name="table"></param>
+		/// <param name="row"></param>
 		protected internal virtual void OnTableRowDeleted(PpsDataTable table, PpsDataRow row)
 			=> InvokeEventHandler("OnTableRowDeleted", table, row);
 
+		/// <summary>Row was changed.</summary>
+		/// <param name="table"></param>
+		/// <param name="row"></param>
 		protected internal virtual void OnTableRowChanged(PpsDataTable table, PpsDataRow row)
 			=> InvokeEventHandler("OnTableRowChanged", table, row);
 
+		/// <summary>Property/Column value was changed.</summary>
+		/// <param name="row"></param>
+		/// <param name="propertyName"></param>
+		/// <param name="oldValue"></param>
+		/// <param name="value"></param>
 		protected internal virtual void OnTableColumnValueChanged(PpsDataRow row, string propertyName, object oldValue, object value)
 			=> InvokeEventHandler("OnTableColumnValueChanged", row, propertyName, oldValue, value);
 
+		/// <summary>Property of an extend value was changed.</summary>
+		/// <param name="row"></param>
+		/// <param name="columnName"></param>
+		/// <param name="value"></param>
+		/// <param name="propertyName"></param>
 		protected internal virtual void OnTableColumnExtendedValueChanged(PpsDataRow row, string columnName, object value, string propertyName)
 			=> InvokeEventHandler("OnTableColumnExtendedValueChanged", row, columnName, value, propertyName);
 
 		#endregion
 
+		/// <summary>Return all auto tags.</summary>
+		/// <returns></returns>
 		public virtual IEnumerable<PpsObjectTag> GetAutoTags()
 		{
 			foreach (var tag in DataSetDefinition.TagDefinitions)
@@ -1053,7 +1139,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Local properties and functions for the dataset.</summary>
 		public LuaTable Properties => properties;
 
-		/// <summary></summary>
+		/// <summary>Deferred contraints registration.</summary>
 		public IPpsDeferredConstraintCheck DeferredConstraints => deferredConstraintChecks;
 		/// <summary>Dataset currently is in the reading mode.</summary>
 		public bool IsReading => isReading;
@@ -1061,27 +1147,17 @@ namespace TecWare.PPSn.Data
 		// -- Static --------------------------------------------------------------
 
 		// private static readonly ConstructorInfo ArgumentOutOfRangeExceptionConstructorInfo;
-		private static readonly FieldInfo TableFieldInfo;
-		private static readonly PropertyInfo DefinitionPropertyInfo;
+		private static readonly FieldInfo tableFieldInfo;
+		private static readonly PropertyInfo definitionPropertyInfo;
 
 		static PpsDataSet()
 		{
-			var typeInfo = typeof(ArgumentOutOfRangeException).GetTypeInfo();
-
-			// ArgumentOutOfRangeExceptionConstructorInfo =
-			//	(
-			//		from ci in typeInfo.DeclaredConstructors
-			//		let pi = ci.GetParameters()
-			//		where pi.Length == 2 && pi[0].ParameterType == typeof(string) && pi[1].ParameterType == typeof(string)
-			//		select ci
-			//	).FirstOrDefault(); ArgumentOutOfRangeExceptionConstructorInfo == null ||
-
-			typeInfo = typeof(PpsDataSet).GetTypeInfo();
-			TableFieldInfo = typeInfo.GetDeclaredField("tables");
-			DefinitionPropertyInfo = typeInfo.GetDeclaredProperty("DataSetDefinition");
+			var typeInfo = typeof(PpsDataSet).GetTypeInfo();
+			tableFieldInfo = typeInfo.GetDeclaredField("tables");
+			definitionPropertyInfo = typeInfo.GetDeclaredProperty("DataSetDefinition");
 
 
-			if (TableFieldInfo == null || DefinitionPropertyInfo == null)
+			if (tableFieldInfo == null || definitionPropertyInfo == null)
 				throw new ArgumentException("sctor @ PpsDataSet");
 		} // sctor
 	} // class PpsDataSet

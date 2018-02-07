@@ -20,66 +20,10 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Xml.Linq;
 using Neo.IronLua;
-using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
 {
-	#region -- class PpsMainActionDefinition --------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public class PpsMainActionDefinition : PpsEnvironmentDefinition
-	{
-		public static readonly XName xnActions = "actions";
-		public static readonly XName xnAction = "action";
-		public static readonly XName xnCondition = "condition";
-		public static readonly XName xnCode = "code";
-
-		private readonly string displayName;
-		private readonly string displayImage;
-		private readonly bool isHidden;
-		private readonly LuaChunk condition;
-		private readonly LuaChunk code;
-
-		internal PpsMainActionDefinition(PpsMainEnvironment environment, XElement xCur, ref int priority)
-			: base(environment, xCur.GetAttribute("name", String.Empty))
-		{
-			this.displayName = xCur.GetAttribute("displayName", this.Name);
-			this.displayImage = xCur.GetAttribute("displayImage", "star");
-			this.isHidden = xCur.GetAttribute("isHidden", false);
-			this.Priority = priority = xCur.GetAttribute("priority", priority + 1);
-
-			// compile condition
-			condition = environment.CreateChunk(xCur.Element(xnCondition), true);
-			// compile action
-			code = environment.CreateChunk(xCur.Element(xnCode), true);
-		} // ctor
-
-		public bool CheckCondition(LuaTable context)
-			=> condition == null ? true : (bool)Environment.RunScriptWithReturn<bool>(condition, context, false);
-
-		public LuaResult Execute(LuaTable context)
-		{
-			try
-			{
-				return new LuaResult(true, Environment.RunScript(code, context, true));
-			}
-			catch (Exception e)
-			{
-				Environment.ShowException(ExceptionShowFlags.None, e);
-				return new LuaResult(false);
-			}
-		} // func Execute
-
-		public string DisplayName => displayName;
-		public string DisplayImage => displayImage;
-		public int Priority { get; }
-		public bool IsHidden => isHidden;
-	} // class PpsMainActionDefinition
-
-	#endregion
-
 	/// <summary></summary>
 	public partial class PpsMainEnvironment : PpsEnvironment, IPpsWindowPaneManager
 	{
@@ -159,7 +103,7 @@ namespace TecWare.PPSn
 					// update document info
 					lock (GetObjectInfoSyncObject())
 					{
-						var removeList = GetRemoveObjectInfo();
+						var removeList = GetRemoveListObjectInfo();
 						foreach (var cur in xNavigator.Elements(XName.Get("document")))
 							UpdateObjectInfo(cur, removeList);
 						ClearObjectInfo(removeList);
@@ -328,18 +272,26 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		[LuaMember(nameof(TestBackgroundProgressState))]
+		/// <summary>List of actions defined for an context.</summary>
+		[LuaMember(nameof(Actions))]
+		public PpsEnvironmentCollection<PpsMainActionDefinition> Actions => actions;
+		/// <summary>Navigator views.</summary>
+		[LuaMember(nameof(Views))]
+		public PpsEnvironmentCollection<PpsMainViewDefinition> Views => views;
+		
+		[
+		LuaMember(nameof(TestBackgroundProgressState)),
+		Obsolete("Only test propose.")
+		]
 		public IPpsProgress TestBackgroundProgressState()
 			=> BackgroundProgressState.CreateProgress();
 
-		[LuaMember(nameof(TestForegroundProgressState))]
+		[
+		LuaMember(nameof(TestForegroundProgressState)),
+		Obsolete("Only test propose.")
+		]
 		public IPpsProgress TestForegroundProgressState()
 			=> ForegroundProgressState.CreateProgress();
-
-		[LuaMember(nameof(Actions))]
-		public PpsEnvironmentCollection<PpsMainActionDefinition> Actions => actions;
-		[LuaMember(nameof(Views))]
-		public PpsEnvironmentCollection<PpsMainViewDefinition> Views => views;
 
 		[LuaMember(nameof(BackgroundProgressState))]
 		public PpsProgressStack BackgroundProgressState => backgroundProgress;

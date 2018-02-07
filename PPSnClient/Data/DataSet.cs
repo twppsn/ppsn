@@ -24,16 +24,13 @@ using static TecWare.PPSn.Data.PpsDataHelperClient;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- class PpsDataSetDefinitionClient -----------------------------------------
+	#region -- class PpsDataSetDefinitionClient ---------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Client site dataset definition.</summary>
 	public class PpsDataSetDefinitionClient : PpsDataSetDefinition
 	{
-		#region -- class PpsDataSetMetaCollectionClient -----------------------------------
+		#region -- class PpsDataSetMetaCollectionClient -------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsDataSetMetaCollectionClient : PpsDataSetMetaCollection
 		{
 			public PpsDataSetMetaCollectionClient(XElement xMetaGroup)
@@ -48,6 +45,10 @@ namespace TecWare.PPSn.Data
 		private readonly string schema;
 		private PpsDataSetMetaCollectionClient metaInfo;
 
+		/// <summary></summary>
+		/// <param name="shell"></param>
+		/// <param name="schema"></param>
+		/// <param name="xSchema"></param>
 		public PpsDataSetDefinitionClient(IPpsShell shell, string schema, XElement xSchema)
 		{
 			this.shell = shell;
@@ -69,6 +70,9 @@ namespace TecWare.PPSn.Data
 				metaInfo = new PpsDataSetMetaCollectionClient(new XElement("meta"));
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="c"></param>
+		/// <returns></returns>
 		protected virtual PpsDataTableDefinitionClient CreateDataTable(XElement c)
 			=> new PpsDataTableDefinitionClient(this, c);
 		
@@ -82,9 +86,14 @@ namespace TecWare.PPSn.Data
 			return new PpsDataSetAutoTagDefinition(this, tagName, tableName, columnName, tagMode);
 		} // func CreateAutoTagDefinition
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override PpsDataSet CreateDataSet()
 			=> new PpsDataSetClient(this, shell);
 
+		/// <summary></summary>
+		/// <param name="dataType"></param>
+		/// <returns></returns>
 		public virtual Type GetColumnType(string dataType)
 		{
 			if (String.Compare(dataType, "formular", StringComparison.OrdinalIgnoreCase) == 0)
@@ -95,29 +104,30 @@ namespace TecWare.PPSn.Data
 				return LuaType.GetType(dataType, lateAllowed: false).Type;
 		} // func GetColumnType
 
+		/// <summary></summary>
 		public sealed override PpsTablePrimaryKeyType KeyType => PpsTablePrimaryKeyType.Local;
 
+		/// <summary></summary>
 		public string SchemaType => schema;
 
+		/// <summary></summary>
 		public IPpsShell Shell => shell;
 		/// <summary>Give access to the shell lua engine.</summary>
 		public override Lua Lua => shell.Lua;
 
+		/// <summary></summary>
 		public override PpsDataSetMetaCollection Meta => metaInfo;
 	} // class PpsDataSetDefinitionClient
 
 	#endregion
 
-	#region -- class PpsDataSetClient ---------------------------------------------------
+	#region -- class PpsDataSetClient -------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>DataSet for the client.</summary>
 	public class PpsDataSetClient : PpsDataSet, INotifyPropertyChanged
 	{
-		#region -- class PpsDataSetTable --------------------------------------------------
+		#region -- class PpsDataSetTable ----------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsDataSetTable : LuaTable
 		{
 			private readonly PpsDataSetClient document;
@@ -128,16 +138,12 @@ namespace TecWare.PPSn.Data
 			} // ctor
 
 			private object GetDocumentTable(string key)
-			{
-				return null;
-			} // func GetDocumentTable
+				=> null;
 
 			protected override object OnIndex(object key)
-			{
-				return base.OnIndex(key) ??
+				=> base.OnIndex(key) ??
 					GetDocumentTable(key as string) ??
 					document.shell.LuaLibrary.GetValue(key);
-			} // func OnIndex
 
 			[LuaMember(nameof(Arguments))]
 			public LuaTable Arguments => document.arguments;
@@ -145,6 +151,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		private LuaTable arguments;
@@ -152,17 +159,28 @@ namespace TecWare.PPSn.Data
 
 		private bool isDirty = false;             // is this document changed since the last dump
 
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="datasetDefinition"></param>
+		/// <param name="shell"></param>
 		protected internal PpsDataSetClient(PpsDataSetDefinition datasetDefinition, IPpsShell shell)
 			: base(datasetDefinition)
 		{
 			this.shell = shell;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
 		protected override object GetEnvironmentValue(object key)
 			=> shell.LuaLibrary?.GetValue(key);
 
-		#region -- Dirty Flag -------------------------------------------------------------
+		#endregion
 
+		#region -- Dirty Flag ---------------------------------------------------------
+
+		/// <summary>Mark dataset as dirty.</summary>
 		public void SetDirty()
 		{
 			if (!isDirty)
@@ -172,6 +190,7 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc SetDirty
 
+		/// <summary>Reset dirty flag.</summary>
 		public void ResetDirty()
 		{
 			if (isDirty)
@@ -181,6 +200,7 @@ namespace TecWare.PPSn.Data
 			}
 		} // proc ResetDirty
 
+		/// <summary></summary>
 		protected override void OnDataChanged()
 		{
 			base.OnDataChanged();
@@ -190,6 +210,8 @@ namespace TecWare.PPSn.Data
 		#endregion
 		
 		/// <summary>Initialize a new dataset</summary>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
 		public virtual async Task OnNewAsync(LuaTable arguments)
 		{
 			this.arguments = arguments;
@@ -197,6 +219,9 @@ namespace TecWare.PPSn.Data
 			await InvokeEventHandlerAsync("OnNewAsync");
 		} // proc OnNewAsync
 
+		/// <summary></summary>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
 		public virtual async Task OnLoadedAsync(LuaTable arguments)
 		{
 			this.arguments = arguments;
@@ -205,6 +230,8 @@ namespace TecWare.PPSn.Data
 			await InvokeEventHandlerAsync("OnLoadedAsync");
 		} // proc OnLoadedAsync
 
+		/// <summary></summary>
+		/// <param name="propertyName"></param>
 		protected void OnPropertyChanged(string propertyName)
 			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 

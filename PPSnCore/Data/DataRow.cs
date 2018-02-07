@@ -921,7 +921,7 @@ namespace TecWare.PPSn.Data
 				row.InvokePropertyChanged(propertyName);
 			} // proc InvokeEvent
 
-			public override bool Same(PpsDataChangedEvent ev)
+			public override bool Equals(PpsDataChangedEvent ev)
 			{
 				if (ev == this)
 					return true;
