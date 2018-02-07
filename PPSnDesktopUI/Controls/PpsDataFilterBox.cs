@@ -39,6 +39,7 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty ListBoxStyleProperty = DependencyProperty.Register(nameof(ListBoxStyle), typeof(Style), typeof(PpsDataFilterBox), new FrameworkPropertyMetadata((Style)null));
 		public static readonly DependencyProperty IsNullableProperty = DependencyProperty.Register(nameof(IsNullable), typeof(bool), typeof(PpsDataFilterBox));
 		public static readonly DependencyProperty IsDropDownOpenProperty = DependencyProperty.Register(nameof(IsDropDownOpen), typeof(bool), typeof(PpsDataFilterBox), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, new PropertyChangedCallback(OnIsDropDownOpenChanged)));
+		public static readonly DependencyProperty IsReadOnlyProperty = DependencyProperty.Register(nameof(IsReadOnly), typeof(bool), typeof(PpsDataFilterBox), new FrameworkPropertyMetadata(false));
 
 		public readonly static RoutedCommand ClearSelectionCommand = new RoutedCommand("ClearSelection", typeof(PpsDataFilterBox));
 
@@ -48,7 +49,7 @@ namespace TecWare.PPSn.Controls
 
 		private TextBox searchTextBox;
 		private ListBox itemsListBox;
-		private Popup comboPopup;
+		private PpsDataFilterBox highestLevel;
 		private bool hasMouseEnteredItemsList;
 		private Point lastMousePosition = new Point();
 
@@ -64,25 +65,15 @@ namespace TecWare.PPSn.Controls
 		{
 			if (ItemsSource == null)
 				return;
-			
+
 			var expr = String.IsNullOrWhiteSpace(FilterText) ? PpsDataFilterExpression.True : PpsDataFilterExpression.Parse(FilterText);
 			FilteredItemsSource = (expr == PpsDataFilterExpression.True) ? ItemsSource : ItemsSource.ApplyFilter(expr);
 		} // proc UpdateFilteredList
 
 		public override void OnApplyTemplate()
 		{
-			var tsearchTextBox = GetTemplateChild(SearchBoxTemplateName) as TextBox;
-			if (tsearchTextBox != null)
-				searchTextBox = tsearchTextBox;
-			var titemsListBox = GetTemplateChild(ListBoxTemplateName) as ListBox;
-			if (titemsListBox != null)
-				itemsListBox = titemsListBox;
-			// popup may be null - if it is no combobox ancestor
-			comboPopup = GetTemplateChild(PopupTemplateName) as Popup;
-			//if (searchTextBox != null)
-			//	searchTextBox.KeyUp += SearchTextBox_KeyUp;
-
-			
+			searchTextBox = searchTextBox ?? GetTemplateChild(SearchBoxTemplateName) as TextBox;
+			itemsListBox = itemsListBox ?? GetTemplateChild(ListBoxTemplateName) as ListBox;
 		}
 
 		public PpsDataFilterBox()
@@ -90,58 +81,35 @@ namespace TecWare.PPSn.Controls
 			AddClearCommand();
 		}
 
-		/// <summary>
-		/// Finds the UIElement of a given type in the childs of another control
-		/// </summary>
-		/// <param name="t">Type of Control</param>
-		/// <param name="parent">Parent Control</param>
-		/// <returns></returns>
-		private static DependencyObject FindChildElement(string name, DependencyObject parent)
-		{
-			if (!(parent is Control))
-				return null;
-
-			if (((Control)parent).Name == name)
-				return parent;
-
-			DependencyObject ret = null;
-			var i = 0;
-
-			while (ret == null && i < VisualTreeHelper.GetChildrenCount(parent))
-			{
-				ret = FindChildElement(name, VisualTreeHelper.GetChild(parent, i));
-				i++;
-			}
-
-			return ret;
-		}
-
 		private void DropDownChanged(bool status)
 		{
-			itemsListBox = GetTemplateChild(ListBoxTemplateName) as ListBox ?? itemsListBox; 
-			
-			if (itemsListBox == null)
+			// if the PpsDataFilterBox has no Children it is the PpsSearchableListBox, thus not handling dropdown
+			if (this.GetTemplateChild("PART_DropDownPopup") == null)
 				return;
 
-			var isopen = status;
+			if (highestLevel != null)
+				highestLevel = this;
+
+			if (itemsListBox == null)
+			{
+				var ppsSearchableListBox = ((Popup)this.GetTemplateChild("PART_DropDownPopup")).Child.GetVisualChild<PpsDataFilterBox>();
+				itemsListBox = ppsSearchableListBox.Template.LoadContent().GetVisualChild<ListBox>();
+			}
 
 			this.hasMouseEnteredItemsList = false;
 
-			if (isopen)
+			if (status)
 			{
 				itemsListBox.Items.CurrentChanged += this.Items_CurrentChanged;
 				this.SetAnchorItem();
-				Mouse.Capture(this, CaptureMode.SubTree);
+				if (((PpsDataFilterBox)this).VisualChildrenCount > 0)
+					Mouse.Capture(this, CaptureMode.SubTree);
 			}
 			else
 			{
 				itemsListBox.Items.CurrentChanged -= this.Items_CurrentChanged;
 				// leave clean
 				this.ClearFilter();
-
-				// Otherwise focus is in the disposed hWnd
-				if (this.IsKeyboardFocusWithin)
-					((PpsDataFilterBox)this.TemplatedParent).Focus();
 
 				// Release
 				if (Mouse.Captured == this)
@@ -153,14 +121,17 @@ namespace TecWare.PPSn.Controls
 
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
+			if (!IsDropDownOpen)
+			{
+				base.OnMouseDown(e);
+				return;
+			}
+
 			if (!IsKeyboardFocusWithin)
 				Focus();
 
 			// always handle
 			e.Handled = true;
-
-			if (!IsDropDownOpen)
-				return;
 
 			// Then the click was outside of Popup
 			if (Mouse.Captured == this && e.OriginalSource == this)
@@ -172,12 +143,13 @@ namespace TecWare.PPSn.Controls
 			if (!IsDropDownOpen || !hasMouseEnteredItemsList)
 				return;
 
-			if (ItemFromPoint(e) != null)
+			if (ItemFromPoint(e) != null && IsWriteable)
 			{
 				e.Handled = true;
 				CloseDropDown(true);
 			}
 		} // event OnMouseLeftButtonUp
+
 
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
@@ -229,8 +201,8 @@ namespace TecWare.PPSn.Controls
 		private void KeyDownHandler(KeyEventArgs e)
 		{
 			// stop
-			//if (IsReadOnly)
-			//	return;
+			if (IsReadOnly)
+				return;
 
 			Key key = e.Key;
 			if (key == Key.System)
@@ -308,25 +280,10 @@ namespace TecWare.PPSn.Controls
 					}
 					break;
 				case Key.Delete:
-					if (IsNullable)
+					if (IsNullable && IsWriteable)
 					{
 						e.Handled = true;
 						ClearSelection();
-					}
-					break;
-				case Key.F:
-					if (e.KeyboardDevice.Modifiers == ModifierKeys.Control)
-					{
-						if (IsDropDownOpen)
-						{
-							e.Handled = true;
-							((TextBox)((PpsDataFilterBox)((Grid)((PpsDataFilterBox)this.GetTemplateChild("PART_SearchFilterControl")).GetVisualChild(0)).Children[0]).GetTemplateChild(SearchBoxTemplateName)).Focus();
-						}
-						else
-						{
-							e.Handled = true;
-							((TextBox)((PpsDataFilterBox)((Grid)((PpsDataFilterBox)itemsListBox.TemplatedParent).GetVisualChild(0)).Children[0]).GetTemplateChild(SearchBoxTemplateName)).Focus();
-						}
 					}
 					break;
 			}
@@ -343,7 +300,7 @@ namespace TecWare.PPSn.Controls
 						ClearSelection();
 						e.Handled = true;
 					},
-					(sender, e) => e.CanExecute = true
+					(sender, e) => e.CanExecute = IsNullable && IsWriteable && (SelectedValue != null)
 				)
 			);
 		} // proc AddClearCommand
@@ -352,7 +309,7 @@ namespace TecWare.PPSn.Controls
 		{
 			SelectedValue = null;
 		}
-		
+
 		private void Navigate(FocusNavigationDirection direction)
 		{
 			var Items = (PpsDataCollectionView)ItemsSource;
@@ -482,33 +439,17 @@ namespace TecWare.PPSn.Controls
 
 		public void ClearFilter()
 		=> FilterText = null;
-		
+
 		private void CloseDropDown(bool commit)
 		{
 			if (!IsDropDownOpen)
 				return;
 
+			if(commit)
+				SelectedValue = itemsListBox.SelectedValue;
+
 			IsDropDownOpen = false;
 		} // proc CloseDropDown
-
-		private static DependencyObject UpFindTemplateChild(string name, DependencyObject control)
-		{
-			try
-			{
-				var parent = (Control)((Control)control).TemplatedParent;
-				while (parent != null)
-				{
-					if (((dynamic)parent).GetTemplateChild(name) != null)
-						return ((dynamic)parent).GetTemplateChild(name);
-					parent = (Control)parent.TemplatedParent;
-				}
-				return null;
-			}
-			catch (Exception e)
-			{
-				return null;
-			}
-		}
 
 		/// <summary>incoming list with all items</summary>
 		public IDataRowEnumerable ItemsSource { get => (IDataRowEnumerable)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
@@ -530,5 +471,9 @@ namespace TecWare.PPSn.Controls
 		public bool IsNullable { get => (bool)GetValue(IsNullableProperty); set => SetValue(IsNullableProperty, value); }
 		/// <summary>Is PART_Popup open?</summary>
 		public bool IsDropDownOpen { get => (bool)GetValue(IsDropDownOpenProperty); set => SetValue(IsDropDownOpenProperty, value); }
+		/// <summary>Can user select content?</summary>
+		public bool IsReadOnly { get => (bool)GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, value); }
+		/// <summary>Can user select content?</summary>
+		public bool IsWriteable { get => !(bool)GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, !value); }
 	}
 }
