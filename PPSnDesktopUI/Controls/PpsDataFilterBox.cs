@@ -39,6 +39,7 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty ListBoxStyleProperty = DependencyProperty.Register(nameof(ListBoxStyle), typeof(Style), typeof(PpsDataFilterBox), new FrameworkPropertyMetadata((Style)null));
 		public static readonly DependencyProperty IsNullableProperty = DependencyProperty.Register(nameof(IsNullable), typeof(bool), typeof(PpsDataFilterBox));
 		public static readonly DependencyProperty IsDropDownOpenProperty = DependencyProperty.Register(nameof(IsDropDownOpen), typeof(bool), typeof(PpsDataFilterBox), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, new PropertyChangedCallback(OnIsDropDownOpenChanged)));
+		public static readonly DependencyProperty IsReadOnlyProperty = DependencyProperty.Register(nameof(IsReadOnly), typeof(bool), typeof(PpsDataFilterBox), new FrameworkPropertyMetadata(false));
 
 		public readonly static RoutedCommand ClearSelectionCommand = new RoutedCommand("ClearSelection", typeof(PpsDataFilterBox));
 
@@ -229,8 +230,8 @@ namespace TecWare.PPSn.Controls
 		private void KeyDownHandler(KeyEventArgs e)
 		{
 			// stop
-			//if (IsReadOnly)
-			//	return;
+			if (IsReadOnly)
+				return;
 
 			Key key = e.Key;
 			if (key == Key.System)
@@ -343,7 +344,7 @@ namespace TecWare.PPSn.Controls
 						ClearSelection();
 						e.Handled = true;
 					},
-					(sender, e) => e.CanExecute = true
+					(sender, e) => e.CanExecute = IsNullable && IsWriteable && (SelectedValue != null)
 				)
 			);
 		} // proc AddClearCommand
@@ -352,7 +353,7 @@ namespace TecWare.PPSn.Controls
 		{
 			SelectedValue = null;
 		}
-		
+
 		private void Navigate(FocusNavigationDirection direction)
 		{
 			var Items = (PpsDataCollectionView)ItemsSource;
@@ -482,7 +483,7 @@ namespace TecWare.PPSn.Controls
 
 		public void ClearFilter()
 		=> FilterText = null;
-		
+
 		private void CloseDropDown(bool commit)
 		{
 			if (!IsDropDownOpen)
@@ -530,5 +531,9 @@ namespace TecWare.PPSn.Controls
 		public bool IsNullable { get => (bool)GetValue(IsNullableProperty); set => SetValue(IsNullableProperty, value); }
 		/// <summary>Is PART_Popup open?</summary>
 		public bool IsDropDownOpen { get => (bool)GetValue(IsDropDownOpenProperty); set => SetValue(IsDropDownOpenProperty, value); }
+		/// <summary>Can user select content?</summary>
+		public bool IsReadOnly { get => (bool)GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, value); }
+		/// <summary>Can user select content?</summary>
+		public bool IsWriteable { get => !(bool)GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, !value); }
 	}
 }
