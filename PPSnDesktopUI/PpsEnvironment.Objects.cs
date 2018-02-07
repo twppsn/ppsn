@@ -1745,7 +1745,7 @@ namespace TecWare.PPSn
 		/// <summary>Access object-data.</summary>
 		/// <param name="arguments"></param>
 		/// <returns></returns>
-		Task<IPpsObjectDataAccess> AccessAsync(LuaTable arguments);
+		Task<IPpsObjectDataAccess> AccessAsync(LuaTable arguments = null);
 
 		/// <summary>Pack the data for the server.</summary>
 		/// <param name="dst"></param>
@@ -1797,11 +1797,18 @@ namespace TecWare.PPSn
 			}
 			base.Dispose(disposing);
 		} // proc Dispose
-		
+
 		private void CreateFileStream()
 		{
-			// todo: preserve extension?
-			targetFileName = obj.Environment.MasterData.GetLocalPath("data\\" + Guid.NewGuid() + ".dat");
+			// get a correct extension
+			string extension = null;
+
+			if (obj.TryGetProperty<string>("Name", out var name))
+				extension = Path.GetExtension(name);
+			if (String.IsNullOrEmpty(extension))
+				extension = StuffIO.MimeTypeFromExtension(obj.MimeType);
+
+			targetFileName = obj.Environment.MasterData.GetLocalPath("data\\" + Guid.NewGuid() + extension);
 
 			var fi = new FileInfo(targetFileName);
 			if (!fi.Directory.Exists)
@@ -1963,6 +1970,8 @@ namespace TecWare.PPSn
 		private string loadedHash = null;
 		private string newHash = null;
 
+		private readonly LazyProperty<object> rawData;
+		
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
@@ -1972,6 +1981,18 @@ namespace TecWare.PPSn
 			this.aot = obj.Environment.ActiveObjectData;
 			this.baseObj = obj ?? throw new ArgumentNullException(nameof(obj));
 			this.previewImage = new LazyProperty<object>(() => GetPreviewImageInternal(), () => OnPropertyChanged(nameof(PreviewImageLazy)));
+
+			this.rawData = new LazyProperty<object>(
+				() =>
+				{
+					if (newRawData != null)
+						return Task.FromResult(newRawData);
+					else if (loadedRawData != null)
+						return Task.FromResult(loadedRawData);
+					else
+						return baseObj.LoadObjectDataInformationAsync();
+				}, 
+				() => OnPropertyChanged(nameof(RawData)));
 		} // ctor
 
 		private void OnPropertyChanged(string propertyName)
@@ -1987,6 +2008,8 @@ namespace TecWare.PPSn
 			loadedHash = baseObj.Tags.GetProperty(hashTagName, null);
 			newRawData = null;
 			newHash = null;
+
+			rawData.Reset();
 
 			OnPropertyChanged(nameof(IsLoaded));
 		} // func LoadDataAsync
@@ -2039,6 +2062,7 @@ namespace TecWare.PPSn
 			this.newHash = hash;
 
 			ResetPreviewImage();
+			this.rawData.Reset();
 		} // proc SetNewData
 
 		/// <summary>Write the changed data to the local data store.</summary>
@@ -2068,6 +2092,8 @@ namespace TecWare.PPSn
 
 			newRawData = null;
 			newHash = null;
+
+			rawData.Reset();
 		} // func CommitAsync
 
 		/// <summary>Send the local data to the server database.</summary>
@@ -2234,6 +2260,9 @@ namespace TecWare.PPSn
 				: Task.FromResult<StrokeCollection>(null);
 
 		#endregion
+
+		/// <summary>Binding Source attribute in wpf.</summary>
+		public object RawData => rawData.GetValue();
 
 		/// <summary>Is the blob data changed.</summary>
 		public bool IsDataChanged => newRawData != null;
@@ -2931,18 +2960,29 @@ namespace TecWare.PPSn
 				return;
 			}
 
-			//fileName = Path.GetTempPath() + "\\" + Path.GetFileName(fileName);
-			//using (var fileStream = File.OpenWrite(fileName))
-			//{
-			//	if (objectId >= 0 && !HasData)
-			//		await PullAsync();
-
-			//	var buffer = await LoadRawDataAsync();
-			//	fileStream.Write(buffer.ReadInArray(), 0, (int)buffer.Length);
-			//	fileStream.Close();
-			//	System.Diagnostics.Process.Start(fileName);
-			//}
-		}
+			var data = await GetDataAsync<IPpsObjectData>();
+			if (data is PpsObjectBlobData blob)
+			{
+				using (var dataAccess = data.AccessAsync())
+				{
+					if (blob.RawData is string f)
+						fileName = f;
+					else if (blob.RawData is byte[] b)
+					{
+						fileName = Path.GetTempPath() + "\\" + Path.GetFileName(fileName);
+						File.WriteAllBytes(fileName, b);
+					}
+					else
+					{
+						await Environment.MsgBoxAsync("Datei kann nicht angezeigt werden. Keine Daten gefunden.");
+						return;
+					}
+				}
+				System.Diagnostics.Process.Start(fileName);
+			}
+			else
+				await Environment.MsgBoxAsync("Datei kann nicht angezeigt werden. Daten können nicht gelesen werden.");
+		} // proc ShellExecute
 
 		#endregion
 

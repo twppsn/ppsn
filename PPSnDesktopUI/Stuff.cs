@@ -568,45 +568,68 @@ namespace TecWare.PPSn
 		// ToDo: may need translation
 		private static (string Extension, string MimeType, string FriendlyName)[] mimeTypeMapping =
 		{
-			("bmp", MimeTypes.Image.Bmp, "Bilddatei"),
-			("css", MimeTypes.Text.Css, "Textdatei"),
-			("exe", MimeTypes.Application.OctetStream, "Binärdatei"),
-			("gif", MimeTypes.Image.Gif, "Bilddatei"),
-			("htm", MimeTypes.Text.Html, "Textdatei"),
-			("html", MimeTypes.Text.Html, "Textdatei"),
-			("ico", MimeTypes.Image.Icon, "Bilddatei"),
-			("js", MimeTypes.Text.JavaScript, "Textdatei"),
-			("jpeg", MimeTypes.Image.Jpeg, "Bilddatei"),
-			("jpg", MimeTypes.Image.Jpeg, "Bilddatei"),
-			("json", MimeTypes.Text.Json, "Textdatei"),
-			("log", MimeTypes.Text.Plain, "Textdatei"),
-			("lua", MimeTypes.Text.Lua, "Textdatei"),
-			("png", MimeTypes.Image.Png, "Bilddatei"),
-			("txt", MimeTypes.Text.Plain, "Textdatei"),
-			("xaml", MimeTypes.Application.Xaml, "Textdatei"),
-			("xml", MimeTypes.Text.Xml, "Textdatei"),
+			( "bmp", MimeTypes.Image.Bmp, "Bilddatei" ),
+			( "css", MimeTypes.Text.Css, "Textdatei" ),
+			( "exe", MimeTypes.Application.OctetStream, "Binärdatei" ),
+			( "gif", MimeTypes.Image.Gif, "Bilddatei" ),
+			( "htm", MimeTypes.Text.Html, "Textdatei" ),
+			( "html", MimeTypes.Text.Html, "Textdatei" ),
+			( "ico", MimeTypes.Image.Icon, "Bilddatei" ),
+			( "js", MimeTypes.Text.JavaScript, "Textdatei" ),
+			( "jpeg", MimeTypes.Image.Jpeg, "Bilddatei" ),
+			( "jpg", MimeTypes.Image.Jpeg, "Bilddatei" ),
+			( "json", MimeTypes.Text.Json, "Textdatei" ),
+			( "log", MimeTypes.Text.Plain, "Textdatei" ),
+			( "lua", MimeTypes.Text.Lua, "Textdatei" ),
+			( "png", MimeTypes.Image.Png, "Bilddatei" ),
+			( "txt", MimeTypes.Text.Plain, "Textdatei" ),
+			( "xaml", MimeTypes.Application.Xaml, "Textdatei" ),
+			( "xml", MimeTypes.Text.Xml, "Textdatei" ),
 		};
 
-		private static string DefaultMimeType => MimeTypes.Application.OctetStream;
-
 		private static int FindTypeMappingByExtension(string extension)
-			=> Array.FindIndex(mimeTypeMapping, mt => mt.Extension == extension.TrimStart('.').ToLower());
+		{
+			if (String.IsNullOrEmpty(extension))
+				return -1;
+
+			if (extension[0] == '.')
+				extension = extension.Substring(1);
+			
+			return Array.FindIndex(mimeTypeMapping, mt => String.Compare(mt.Extension, extension, StringComparison.OrdinalIgnoreCase) == 0);
+		} // func FindTypeMappingByExtension
 
 		private static int FindTypeMappingByMimeType(string mimeType)
 			=> Array.FindIndex(mimeTypeMapping, mt => mt.MimeType == mimeType);
 
+		/// <summary>Returns the correct mime-type from an file extension.</summary>
+		/// <param name="extension"></param>
+		/// <returns>MimeType or the <c>DefaultMimeType</c></returns>
 		public static string MimeTypeFromExtension(string extension)
 		{
 			var typeIndex = FindTypeMappingByExtension(extension);
-			return (typeIndex >= 0) ? mimeTypeMapping[typeIndex].MimeType : DefaultMimeType;
-		}
+			return typeIndex >= 0
+				? mimeTypeMapping[typeIndex].MimeType 
+				: DefaultMimeType;
+		} // func MimeTypeFromExtension
 
+		/// <summary>Returns the correct mime-type from an file.</summary>
+		/// <param name="filename"></param>
+		/// <returns>MimeType or the <c>DefaultMimeType</c></returns>
 		public static string MimeTypeFromFilename(string filename)
 			=> MimeTypeFromExtension(Path.GetExtension(filename));
 
-		/// <summary>
-		/// Generates the filter string for FileDialogs
-		/// </summary>
+		/// <summary>Returns a extension for the givven mime-type.</summary>
+		/// <param name="mimeType"></param>
+		/// <returns></returns>
+		public static string ExtensionFromMimeType(string mimeType)
+		{
+			var idx = FindTypeMappingByMimeType(mimeType); // first index
+			return idx >= 0
+				? "." + mimeTypeMapping[idx].Extension
+				: ".dat";
+		} // func ExtensionFromMimeType
+
+		/// <summary>Generates the filter string for FileDialogs</summary>
 		/// <param name="mimeType">Mimetypes to include - can also be just the starts p.e. 'image'</param>
 		/// <param name="excludeMimeType">Mimetypes to exclude</param>
 		/// <returns>a string for the filter</returns>
@@ -614,8 +637,11 @@ namespace TecWare.PPSn
 		{
 			var names = new List<string>();
 			var extensions = new List<string>();
+
 			foreach (var mt in mimeTypeMapping)
+			{
 				foreach (var m in mimeType)
+				{
 					if ((excludeMimeType != null ? Array.IndexOf(excludeMimeType, mt.MimeType) == -1 : true) && mt.MimeType.StartsWith(m))
 					{
 						if (!names.Exists(i => i == mt.FriendlyName))
@@ -623,15 +649,20 @@ namespace TecWare.PPSn
 						if (!extensions.Exists(i => i == "*." + mt.Extension))
 							extensions.Add("*." + mt.Extension);
 					}
+				}
+			}
 
 			names.Sort((a, b) => a.CompareTo(b));
 			extensions.Sort((a, b) => a.CompareTo(b));
 
 			return String.Join("/", names) + '|' + String.Join(";", extensions);
-		}
+		} // func FilterFromMimeType
+
+		/// <summary>Returns always octetstream</summary>
+		public static string DefaultMimeType => MimeTypes.Application.OctetStream;
 
 		#endregion
-	}
+	} // class StuffIO
 
 	#endregion
 
