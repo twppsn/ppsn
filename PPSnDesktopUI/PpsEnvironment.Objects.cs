@@ -4049,6 +4049,7 @@ order by t_liefnr.value desc
 		/// <summary></summary>
 		/// <param name="fileName"></param>
 		/// <returns></returns>
+		[LuaMember]
 		public async Task<PpsObject> CreateNewObjectFromFileAsync(string fileName)
 		{
 			var lastWriteTime = File.GetLastWriteTimeUtc(fileName);
