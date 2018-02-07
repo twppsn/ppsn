@@ -3388,6 +3388,7 @@ order by t_liefnr.value desc
 		public async Task<PpsObject> CreateNewObjectAsync(PpsObjectInfo objectInfo, string mimeType = MimeTypes.Application.OctetStream)
 			=> await CreateNewObjectAsync(Guid.NewGuid(), objectInfo.Name, await objectInfo.GetNextNumberAsync(), objectInfo.IsRev, mimeType);
 
+		[LuaMember]
 		public async Task<PpsObject> CreateNewObjectFromFileAsync(string fileName)
 		{
 			var lastWriteTime = File.GetLastWriteTimeUtc(fileName);
@@ -3433,13 +3434,11 @@ order by t_liefnr.value desc
 		} // func CreateNewObjectFromStreamAsync
 
 		/// <summary>Create a new object.</summary>
-		/// <param name="serverId"></param>
 		/// <param name="guid"></param>
 		/// <param name="typ"></param>
 		/// <param name="nr"></param>
 		/// <param name="isRev"></param>
-		/// <param name="remoteRevId"></param>
-		/// <param name="syncToken"></param>
+		/// <param name="mimeType"></param>
 		/// <returns></returns>
 		[LuaMember]
 		public async Task<PpsObject> CreateNewObjectAsync(Guid guid, string typ, string nr, bool isRev, string mimeType = MimeTypes.Application.OctetStream)
@@ -3463,7 +3462,7 @@ order by t_liefnr.value desc
 
 				return GetObject(newObjectId);
 			}
-		} // func CreateNewObject
+		} // func CreateNewObjectAsync
 
 		internal async Task<T> CreateObjectDataObjectAsync<T>(PpsObject obj)
 			where T : IPpsObjectData
