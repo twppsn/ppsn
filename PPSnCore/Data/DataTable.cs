@@ -764,7 +764,7 @@ namespace TecWare.PPSn.Data
 				Table.dataset.OnTableRowAdded(Table, Row);
 			} // proc InvokeEvent
 			
-			public override bool Same(PpsDataChangedEvent ev)
+			public override bool Equals(PpsDataChangedEvent ev)
 			{
 				if (ev == this)
 					return true;
@@ -803,7 +803,7 @@ namespace TecWare.PPSn.Data
 				Table.dataset.OnTableRowDeleted(Table, Row);
 			} // proc InvokeEvent
 
-			public override bool Same(PpsDataChangedEvent ev)
+			public override bool Equals(PpsDataChangedEvent ev)
 			{
 				if (ev == this)
 					return true;
@@ -843,7 +843,7 @@ namespace TecWare.PPSn.Data
 				Table.InvokeColumnValueChanged(new ColumnValueChangedEventArgs(Row, columnIndex, oldValue, newValue));
 			} // proc InvokeEvent
 
-			public override bool Same(PpsDataChangedEvent ev)
+			public override bool Equals(PpsDataChangedEvent ev)
 			{
 				if (ev == this)
 					return true;
@@ -875,7 +875,7 @@ namespace TecWare.PPSn.Data
 			public override void InvokeEvent()
 				=> table.dataset.OnTableChanged(table);
 
-			public override bool Same(PpsDataChangedEvent ev)
+			public override bool Equals(PpsDataChangedEvent ev)
 			{
 				if (ev == this)
 					return true;
@@ -909,7 +909,7 @@ namespace TecWare.PPSn.Data
 			public override void InvokeEvent()
 				=> table.InvokePropertyChanged(propertyName);
 
-			public override bool Same(PpsDataChangedEvent ev)
+			public override bool Equals(PpsDataChangedEvent ev)
 			{
 				if (ev == this)
 					return true;

@@ -29,17 +29,17 @@ namespace TecWare.PPSn.Data
 	/// and/or sorted.</summary>
 	public interface IDataRowEnumerable : IEnumerable<IDataRow>
 	{
-		/// <summary></summary>
+		/// <summary>Apply an order and return a filtered enumerator.</summary>
 		/// <param name="expressions"></param>
 		/// <param name="lookupNative"></param>
 		/// <returns></returns>
 		IDataRowEnumerable ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null);
-		/// <summary></summary>
+		/// <summary>Apply a filter and return a filtered enumerator.</summary>
 		/// <param name="expression"></param>
 		/// <param name="lookupNative"></param>
 		/// <returns></returns>
 		IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null);
-		/// <summary></summary>
+		/// <summary>Select columns and return a filtered enumerator.</summary>
 		/// <param name="columns"></param>
 		/// <returns></returns>
 		IDataRowEnumerable ApplyColumns(IEnumerable<PpsDataColumnExpression> columns);
@@ -49,12 +49,11 @@ namespace TecWare.PPSn.Data
 
 	#region -- class DbRowEnumerator --------------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Base implementation of a row enumerator for a DbCommand.</summary>
 	public sealed class DbRowEnumerator : IEnumerator<IDataRow>, IDataColumns
 	{
 		#region -- enum ReadingState --------------------------------------------------
 
-		/// <summary></summary>
 		private enum ReadingState
 		{
 			Unread,
@@ -66,7 +65,6 @@ namespace TecWare.PPSn.Data
 
 		#region -- class DbDataColumn -------------------------------------------------
 
-		/// <summary></summary>
 		private sealed class DbDataColumn : IDataColumn
 		{
 			private readonly string name;
@@ -99,9 +97,7 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		#region -- class DbDataRow ----------------------------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
+		
 		private sealed class DbDataRow : DynamicDataRow
 		{
 			private readonly DbRowEnumerator enumerator;
@@ -111,8 +107,8 @@ namespace TecWare.PPSn.Data
 
 			public DbDataRow(DbRowEnumerator enumerator, object[] values)
 			{
-				this.enumerator = enumerator;
-				this.values = values;
+				this.enumerator = enumerator ?? throw new ArgumentNullException(nameof(enumerator));
+				this.values = values ?? throw new ArgumentNullException(nameof(values));
 			} // ctor
 
 			#endregion
@@ -148,6 +144,21 @@ namespace TecWare.PPSn.Data
 			this.columns = new Lazy<IDataColumn[]>(RetrieveColumnDescriptions);
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="command"></param>
+		public DbRowEnumerator(DbCommand command)
+			: this(command, null, false)
+		{
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="reader"></param>
+		/// <param name="leaveOpen"></param>
+		public DbRowEnumerator(DbDataReader reader, bool leaveOpen)
+			: this(null, reader, leaveOpen)
+		{
+		} // ctor
+
 		private IDataColumn[] RetrieveColumnDescriptions()
 		{
 			CheckDisposed();
@@ -170,16 +181,7 @@ namespace TecWare.PPSn.Data
 			return tmp;
 		} // func RetrieveColumnDescriptions
 
-		public DbRowEnumerator(DbCommand command)
-			: this(command, null, false)
-		{
-		} // ctor
-
-		public DbRowEnumerator(DbDataReader reader, bool leaveOpen)
-			: this(null, reader, leaveOpen)
-		{
-		} // ctor
-
+		/// <summary></summary>
 		public void Dispose()
 			=> Dispose(true);
 
@@ -235,8 +237,8 @@ namespace TecWare.PPSn.Data
 						else
 						{
 							var o = reader.GetValue(i);
-							if (o is string)
-								values[i] = ((String)o).TrimEnd(' ');
+							if (o is string s)
+								values[i] = s.TrimEnd(' ');
 							else
 								values[i] = o;
 						}
@@ -254,6 +256,8 @@ namespace TecWare.PPSn.Data
 			} // switch state
 		} // func MoveNext
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public bool MoveNext()
 			=> MoveNext(false);
 
@@ -264,6 +268,7 @@ namespace TecWare.PPSn.Data
 				throw new InvalidOperationException("The state of the object forbids the calling of this method.");
 		} // proc Reset
 
+		/// <summary></summary>
 		public IDataRow Current
 		{
 			get
@@ -281,6 +286,7 @@ namespace TecWare.PPSn.Data
 
 		#region -- IDataColumns -------------------------------------------------------
 
+		/// <summary></summary>
 		public IReadOnlyList<IDataColumn> Columns
 		{
 			get
@@ -297,15 +303,20 @@ namespace TecWare.PPSn.Data
 
 	#region -- class DbRowEnumerable --------------------------------------------------
 
+	/// <summary>Enumerable implementation to wrap a DbCommand.</summary>
 	public sealed class DbRowEnumerable : IEnumerable<IDataRow>
 	{
 		private readonly DbCommand command;
 
+		/// <summary></summary>
+		/// <param name="command"></param>
 		public DbRowEnumerable(DbCommand command)
 		{
 			this.command = command;
 		} // ctor
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public IEnumerator<IDataRow> GetEnumerator()
 			=> new DbRowEnumerator(command);
 
@@ -317,15 +328,20 @@ namespace TecWare.PPSn.Data
 
 	#region -- class DbRowReaderEnumerable --------------------------------------------
 
+	/// <summary>Enumerable implementation to wrap a DbDataReader.</summary>
 	public sealed class DbRowReaderEnumerable : IEnumerable<IDataRow>
 	{
 		private readonly DbDataReader reader;
 
+		/// <summary></summary>
+		/// <param name="reader"></param>
 		public DbRowReaderEnumerable(DbDataReader reader)
 		{
 			this.reader = reader;
 		} // ctor
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public IEnumerator<IDataRow> GetEnumerator()
 			=> new DbRowEnumerator(reader, true);
 
