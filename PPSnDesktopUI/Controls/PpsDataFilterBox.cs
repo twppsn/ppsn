@@ -50,6 +50,7 @@ namespace TecWare.PPSn.Controls
 		private TextBox searchTextBox;
 		private ListBox itemsListBox;
 		private Popup comboPopup;
+		private PpsDataFilterBox highestLevel;
 		private bool hasMouseEnteredItemsList;
 		private Point lastMousePosition = new Point();
 
@@ -65,25 +66,15 @@ namespace TecWare.PPSn.Controls
 		{
 			if (ItemsSource == null)
 				return;
-			
+
 			var expr = String.IsNullOrWhiteSpace(FilterText) ? PpsDataFilterExpression.True : PpsDataFilterExpression.Parse(FilterText);
 			FilteredItemsSource = (expr == PpsDataFilterExpression.True) ? ItemsSource : ItemsSource.ApplyFilter(expr);
 		} // proc UpdateFilteredList
 
 		public override void OnApplyTemplate()
 		{
-			var tsearchTextBox = GetTemplateChild(SearchBoxTemplateName) as TextBox;
-			if (tsearchTextBox != null)
-				searchTextBox = tsearchTextBox;
-			var titemsListBox = GetTemplateChild(ListBoxTemplateName) as ListBox;
-			if (titemsListBox != null)
-				itemsListBox = titemsListBox;
-			// popup may be null - if it is no combobox ancestor
-			comboPopup = GetTemplateChild(PopupTemplateName) as Popup;
-			//if (searchTextBox != null)
-			//	searchTextBox.KeyUp += SearchTextBox_KeyUp;
-
-			
+			searchTextBox = searchTextBox ?? GetTemplateChild(SearchBoxTemplateName) as TextBox;
+			itemsListBox = itemsListBox ?? GetTemplateChild(ListBoxTemplateName) as ListBox;
 		}
 
 		public PpsDataFilterBox()
@@ -91,58 +82,35 @@ namespace TecWare.PPSn.Controls
 			AddClearCommand();
 		}
 
-		/// <summary>
-		/// Finds the UIElement of a given type in the childs of another control
-		/// </summary>
-		/// <param name="t">Type of Control</param>
-		/// <param name="parent">Parent Control</param>
-		/// <returns></returns>
-		private static DependencyObject FindChildElement(string name, DependencyObject parent)
-		{
-			if (!(parent is Control))
-				return null;
-
-			if (((Control)parent).Name == name)
-				return parent;
-
-			DependencyObject ret = null;
-			var i = 0;
-
-			while (ret == null && i < VisualTreeHelper.GetChildrenCount(parent))
-			{
-				ret = FindChildElement(name, VisualTreeHelper.GetChild(parent, i));
-				i++;
-			}
-
-			return ret;
-		}
-
 		private void DropDownChanged(bool status)
 		{
-			itemsListBox = GetTemplateChild(ListBoxTemplateName) as ListBox ?? itemsListBox; 
-			
-			if (itemsListBox == null)
+			// if the PpsDataFilterBox has no Children it is the PpsSearchableListBox, thus not handling dropdown
+			if (this.GetTemplateChild("PART_DropDownPopup") == null)
 				return;
 
-			var isopen = status;
+			if (highestLevel != null)
+				highestLevel = this;
+
+			if (itemsListBox == null)
+			{
+				var ppsSearchableListBox = ((Popup)this.GetTemplateChild("PART_DropDownPopup")).Child.GetVisualChild<PpsDataFilterBox>();
+				itemsListBox = ppsSearchableListBox.Template.LoadContent().GetVisualChild<ListBox>();
+			}
 
 			this.hasMouseEnteredItemsList = false;
 
-			if (isopen)
+			if (status)
 			{
 				itemsListBox.Items.CurrentChanged += this.Items_CurrentChanged;
 				this.SetAnchorItem();
-				Mouse.Capture(this, CaptureMode.SubTree);
+				if (((PpsDataFilterBox)this).VisualChildrenCount > 0)
+					Mouse.Capture(this, CaptureMode.SubTree);
 			}
 			else
 			{
 				itemsListBox.Items.CurrentChanged -= this.Items_CurrentChanged;
 				// leave clean
 				this.ClearFilter();
-
-				// Otherwise focus is in the disposed hWnd
-				if (this.IsKeyboardFocusWithin)
-					((PpsDataFilterBox)this.TemplatedParent).Focus();
 
 				// Release
 				if (Mouse.Captured == this)
@@ -154,14 +122,17 @@ namespace TecWare.PPSn.Controls
 
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
+			if (!IsDropDownOpen)
+			{
+				base.OnMouseDown(e);
+				return;
+			}
+
 			if (!IsKeyboardFocusWithin)
 				Focus();
 
 			// always handle
 			e.Handled = true;
-
-			if (!IsDropDownOpen)
-				return;
 
 			// Then the click was outside of Popup
 			if (Mouse.Captured == this && e.OriginalSource == this)
@@ -179,6 +150,7 @@ namespace TecWare.PPSn.Controls
 				CloseDropDown(true);
 			}
 		} // event OnMouseLeftButtonUp
+
 
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
@@ -309,7 +281,7 @@ namespace TecWare.PPSn.Controls
 					}
 					break;
 				case Key.Delete:
-					if (IsNullable)
+					if (IsNullable && IsWriteable)
 					{
 						e.Handled = true;
 						ClearSelection();
