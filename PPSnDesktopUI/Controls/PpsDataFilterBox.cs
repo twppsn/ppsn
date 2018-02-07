@@ -49,7 +49,6 @@ namespace TecWare.PPSn.Controls
 
 		private TextBox searchTextBox;
 		private ListBox itemsListBox;
-		private Popup comboPopup;
 		private PpsDataFilterBox highestLevel;
 		private bool hasMouseEnteredItemsList;
 		private Point lastMousePosition = new Point();
@@ -144,7 +143,7 @@ namespace TecWare.PPSn.Controls
 			if (!IsDropDownOpen || !hasMouseEnteredItemsList)
 				return;
 
-			if (ItemFromPoint(e) != null)
+			if (ItemFromPoint(e) != null && IsWriteable)
 			{
 				e.Handled = true;
 				CloseDropDown(true);
@@ -445,6 +444,9 @@ namespace TecWare.PPSn.Controls
 		{
 			if (!IsDropDownOpen)
 				return;
+
+			if(commit)
+				SelectedValue = itemsListBox.SelectedValue;
 
 			IsDropDownOpen = false;
 		} // proc CloseDropDown
