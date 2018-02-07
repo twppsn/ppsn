@@ -287,21 +287,6 @@ namespace TecWare.PPSn.Controls
 						ClearSelection();
 					}
 					break;
-				case Key.F:
-					if (e.KeyboardDevice.Modifiers == ModifierKeys.Control)
-					{
-						if (IsDropDownOpen)
-						{
-							e.Handled = true;
-							((TextBox)((PpsDataFilterBox)((Grid)((PpsDataFilterBox)this.GetTemplateChild("PART_SearchFilterControl")).GetVisualChild(0)).Children[0]).GetTemplateChild(SearchBoxTemplateName)).Focus();
-						}
-						else
-						{
-							e.Handled = true;
-							((TextBox)((PpsDataFilterBox)((Grid)((PpsDataFilterBox)itemsListBox.TemplatedParent).GetVisualChild(0)).Children[0]).GetTemplateChild(SearchBoxTemplateName)).Focus();
-						}
-					}
-					break;
 			}
 		} // proc KeyDownHandler
 
@@ -463,25 +448,6 @@ namespace TecWare.PPSn.Controls
 
 			IsDropDownOpen = false;
 		} // proc CloseDropDown
-
-		private static DependencyObject UpFindTemplateChild(string name, DependencyObject control)
-		{
-			try
-			{
-				var parent = (Control)((Control)control).TemplatedParent;
-				while (parent != null)
-				{
-					if (((dynamic)parent).GetTemplateChild(name) != null)
-						return ((dynamic)parent).GetTemplateChild(name);
-					parent = (Control)parent.TemplatedParent;
-				}
-				return null;
-			}
-			catch (Exception e)
-			{
-				return null;
-			}
-		}
 
 		/// <summary>incoming list with all items</summary>
 		public IDataRowEnumerable ItemsSource { get => (IDataRowEnumerable)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
