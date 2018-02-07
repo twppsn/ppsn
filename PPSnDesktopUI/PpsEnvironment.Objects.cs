@@ -1788,6 +1788,16 @@ namespace TecWare.PPSn
 				CreateFileStream();
 		} // ctor
 
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				currentBaseStream?.Dispose();
+				currentBaseStream = null;
+			}
+			base.Dispose(disposing);
+		} // proc Dispose
+		
 		private void CreateFileStream()
 		{
 			// todo: preserve extension?
@@ -1831,7 +1841,10 @@ namespace TecWare.PPSn
 		{
 			// check for swap
 			if (CheckForSwap(count, out var mstream))
+			{
+				mstream.Position = 0;
 				await mstream.CopyToAsync(currentBaseStream);
+			}
 
 			// write data
 			await currentBaseStream.WriteAsync(buffer, offset, count);
@@ -1842,7 +1855,10 @@ namespace TecWare.PPSn
 		{
 			// check for swap
 			if (CheckForSwap(count, out var mstream))
+			{
+				mstream.Position = 0;
 				mstream.CopyTo(currentBaseStream);
+			}
 
 			// write data
 			currentBaseStream.Write(buffer, offset, count);
@@ -1913,8 +1929,14 @@ namespace TecWare.PPSn
 		{
 			base.OnFinished(hash);
 
+			var result = ((PpsObjectWriteStream)BaseStream).Result;
+
+			// close base stream, to calc preview
+			BaseStream.Dispose();
+
+			// reset data and preview
 			blobData.SetNewData(
-				((PpsObjectWriteStream)BaseStream).Result,
+				result,
 				StuffIO.ConvertHashToString(HashAlgorithm, hash)
 			);
 		} // proc OnFinished
@@ -1947,7 +1969,7 @@ namespace TecWare.PPSn
 		/// <param name="obj"></param>
 		public PpsObjectBlobData(PpsObject obj)
 		{
-			this.aot = baseObj.Environment.ActiveObjectData;
+			this.aot = obj.Environment.ActiveObjectData;
 			this.baseObj = obj ?? throw new ArgumentNullException(nameof(obj));
 			this.previewImage = new LazyProperty<object>(() => GetPreviewImageInternal(), () => OnPropertyChanged(nameof(PreviewImageLazy)));
 		} // ctor
@@ -1961,7 +1983,7 @@ namespace TecWare.PPSn
 
 		private async Task LoadDataAsync()
 		{
-			loadedRawData = await baseObj.LoadObjectDataInformationAsync();
+			loadedRawData = await baseObj.LoadObjectDataInformationAsync() ?? DBNull.Value;
 			loadedHash = baseObj.Tags.GetProperty(hashTagName, null);
 			newRawData = null;
 			newHash = null;
@@ -1988,7 +2010,7 @@ namespace TecWare.PPSn
 		/// <summary>Create a access token for the blob data.</summary>
 		/// <param name="arguments"></param>
 		/// <returns></returns>
-		public async Task<IPpsObjectDataAccess> AccessAsync(LuaTable arguments)
+		public async Task<IPpsObjectDataAccess> AccessAsync(LuaTable arguments = null)
 		{
 			if (!IsLoaded)
 				await LoadDataAsync(); // load data
@@ -2015,6 +2037,8 @@ namespace TecWare.PPSn
 
 			this.newRawData = rawData;
 			this.newHash = hash;
+
+			ResetPreviewImage();
 		} // proc SetNewData
 
 		/// <summary>Write the changed data to the local data store.</summary>
@@ -2079,7 +2103,7 @@ namespace TecWare.PPSn
 			{
 				case FileAccess.Read:
 					// open an existing data stream
-					return PpsObject.OpenReadStream(loadedRawData);
+					return PpsObject.OpenReadStream(newRawData ?? loadedRawData);
 				case FileAccess.Write:
 					// open or create the data stream
 					return new PpsObjectBlobHashWriteStream(this, expectedLength);
@@ -2101,6 +2125,7 @@ namespace TecWare.PPSn
 			//await Task.Delay(5000);
 
 			// get access to the image stream, this will not load the data stream
+			using (var dataAccess = await AccessAsync())
 			using (var src = OpenStream(FileAccess.Read))
 			{
 				var sourceImage = new BitmapImage();
@@ -2108,7 +2133,7 @@ namespace TecWare.PPSn
 				sourceImage.BeginInit();
 				sourceImage.CacheOption = BitmapCacheOption.OnLoad;
 				sourceImage.StreamSource = src;
-				await Task.Run(() => sourceImage.EndInit());
+				sourceImage.EndInit();
 				sourceImage.Freeze();
 
 				var sourceWidth = sourceImage.Width;
@@ -2150,7 +2175,7 @@ namespace TecWare.PPSn
 					96, 96,
 					PixelFormats.Default
 				);
-				await Task.Run(() => resizedImage.Render(drawingVisual));
+				resizedImage.Render(drawingVisual);
 
 				var previewImage = BitmapFrame.Create(resizedImage);
 				previewImage.Freeze();
@@ -2797,6 +2822,7 @@ namespace TecWare.PPSn
 					return new FileStream(s, FileMode.Open, FileAccess.Read);
 				case byte[] b:
 					return new MemoryStream(b, false);
+				case DBNull db:
 				case null:
 					return new MemoryStream(Array.Empty<byte>(), false);
 				default:
@@ -2837,6 +2863,7 @@ namespace TecWare.PPSn
 		internal async Task SaveObjectDataInformationAsync(object data, string mimeType, bool isDocumentChanged)
 		{
 			byte[] byteData;
+			bool isLinked;
 
 			// convert data object to byte data
 			switch (data)
@@ -2845,12 +2872,15 @@ namespace TecWare.PPSn
 					if (environment.MasterData.MakeRelativePath(s, out var r))
 						s = r;
 					byteData = Encoding.Unicode.GetBytes(s);
+					isLinked = true;
 					break;
 				case byte[] b:
 					byteData = b;
+					isLinked = false;
 					break;
 				case null:
 					byteData = null;
+					isLinked = false;
 					break;
 				default:
 					throw new ArgumentOutOfRangeException(nameof(data), "Invalid data format.");
@@ -2862,7 +2892,7 @@ namespace TecWare.PPSn
 				"SET " +
 					"MimeType = @MimeType, " +
 					"Document = @Document, " +
-					"DocumentIsLinked = 0, " +
+					"DocumentIsLinked = @DocumentIsLinked, " +
 					"DocumentIsChanged = @DocumentIsChanged, " +
 					"_IsUpdated = 1 " +
 				"WHERE Id = @Id"))
@@ -2870,6 +2900,7 @@ namespace TecWare.PPSn
 				cmd.AddParameter("@Id", DbType.Int64, objectId);
 				cmd.AddParameter("@MimeType", DbType.String, mimeType);
 				cmd.AddParameter("@Document", DbType.Binary, byteData ?? (object)DBNull.Value);
+				cmd.AddParameter("@DocumentIsLinked", DbType.Boolean, isLinked);
 				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, isDocumentChanged);
 
 				await cmd.ExecuteNonQueryAsync();
@@ -3280,7 +3311,11 @@ namespace TecWare.PPSn
 				return definition;
 
 			// load the schema
-			var xSchema = await Environment.Request.GetXmlAsync(DocumentUri);
+			var documentUri = DocumentUri;
+			if (documentUri == null)
+				return null;
+
+			var xSchema = await Environment.Request.GetXmlAsync(documentUri);
 			definition = (PpsDataSetDefinitionDesktop)Activator.CreateInstance(DocumentDefinitionType, Environment, Name, xSchema);
 			definition.EndInit();
 
@@ -4012,9 +4047,12 @@ order by t_liefnr.value desc
 				// import the data
 				var data = await newObject.GetDataAsync<PpsObjectBlobData>();
 
-				using (var dst = data.OpenStream(FileAccess.Write))
-					await dataSource.CopyToAsync(dst);
-				await data.CommitAsync();
+				using (var dataAccess = await data.AccessAsync())
+				{
+					using (var dst = data.OpenStream(FileAccess.Write))
+						await dataSource.CopyToAsync(dst);
+					await dataAccess.CommitAsync();
+				}
 
 				// write changes
 				await newObject.UpdateLocalAsync();
