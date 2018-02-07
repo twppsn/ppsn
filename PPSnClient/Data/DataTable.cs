@@ -14,10 +14,6 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 using TecWare.DE.Stuff;
 
@@ -25,16 +21,13 @@ using static TecWare.PPSn.Data.PpsDataHelperClient;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- class PpsDataTableClientDefinition ---------------------------------------
+	#region -- class PpsDataTableClientDefinition -------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class PpsDataTableDefinitionClient : PpsDataTableDefinition
 	{
-		#region -- class PpsDataTableMetaCollectionClient ---------------------------------
+		#region -- class PpsDataTableMetaCollectionClient -----------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsDataTableMetaCollectionClient : PpsDataTableMetaCollection
 		{
 			public PpsDataTableMetaCollectionClient()
@@ -62,6 +55,9 @@ namespace TecWare.PPSn.Data
 			this.metaInfo = new PpsDataTableMetaCollectionClient(clone.metaInfo);
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="dataset"></param>
+		/// <param name="xTable"></param>
 		public PpsDataTableDefinitionClient(PpsDataSetDefinitionClient dataset, XElement xTable)
 			: base(dataset, xTable.GetAttribute("name", String.Empty))
 		{
@@ -78,6 +74,7 @@ namespace TecWare.PPSn.Data
 			this.metaInfo = metaInfo ?? new PpsDataTableMetaCollectionClient();
 		} // ctor
 
+		/// <summary></summary>
 		protected override void EndInit()
 		{
 			foreach (var c in Columns)
@@ -86,9 +83,13 @@ namespace TecWare.PPSn.Data
 			base.EndInit();
 		} // proc EndInit
 
+		/// <summary></summary>
+		/// <param name="dataset"></param>
+		/// <returns></returns>
 		public override PpsDataTableDefinition Clone(PpsDataSetDefinition dataset)
 			=> new PpsDataTableDefinitionClient((PpsDataSetDefinitionClient)dataset, this);
 
+		/// <summary></summary>
 		public override PpsDataTableMetaCollection Meta => metaInfo ?? PpsDataTableMetaCollection.Empty;
 	} // class PpsDataTableDefinitionClient
 

@@ -14,34 +14,31 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Stuff
 {
-	#region -- class PpsXmlPosition -----------------------------------------------------
+	#region -- class PpsXmlPosition ---------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Class to read source file hints from an xml-element.</summary>
 	public sealed class PpsXmlPosition : IXmlLineInfo
 	{
+		/// <summary>Namespace that defines source file hints.</summary>
 		public readonly static XNamespace XmlPositionNamespace = "http://tecware-gmbh.de/dev/ppsn/2014/source";
 
+		/// <summary>Tag to write the line number.</summary>
 		public readonly static XName xnLineNumber = XmlPositionNamespace + "l";
+		/// <summary>Tag to write the line position (column).</summary>
 		public readonly static XName xnLinePosition = XmlPositionNamespace + "p";
+		/// <summary>Tag to write the file name.</summary>
 		public readonly static XName xnFileName = XmlPositionNamespace + "f";
 
 		private readonly int lineNumber;
 		private readonly int linePosition;
 		private readonly string fileName;
 
-		/// <summary></summary>
-		/// <param name="x"></param>
 		private PpsXmlPosition(string fileName, int lineNumber, int linePosition)
 		{
 			this.fileName = fileName;
@@ -49,9 +46,13 @@ namespace TecWare.PPSn.Stuff
 			this.linePosition = linePosition;
 		} // ctor
 
+		/// <summary>Format the line informations.</summary>
+		/// <returns></returns>
 		public override string ToString()
 			=> String.Format("{0} ({1},{2})", FileName, lineNumber, linePosition);
 
+		/// <summary>Copy the annotations to an <c>XElement</c> as attributes.</summary>
+		/// <param name="x">Element to set the current source information.</param>
 		public void WriteAttributes(XElement x)
 		{
 			// todo: recursiv absteigen, damit nicht daurnt der dateiname gesetzt wird
@@ -62,12 +63,16 @@ namespace TecWare.PPSn.Stuff
 				x.SetAttributeValue(xnLinePosition, linePosition);
 		} // proc WriteAttribute
 
+		/// <summary>Copy the annotations to an <c>XElement</c> as attributes.</summary>
+		/// <param name="x">Element to set the current source information.</param>
 		public void WriteLineInfo(XElement x)
 		{
 			// todo: Annotations setzen
 			throw new NotImplementedException();
 		} // proc WriteLineInfo
 
+		/// <summary>Create a comment from the source file information.</summary>
+		/// <returns></returns>
 		public XComment GetComment()
 			=> new XComment("L=" + LineInfo);
 
@@ -76,28 +81,32 @@ namespace TecWare.PPSn.Stuff
 		public bool HasLineInfo()
 			=> lineNumber >= 0;
 
+		/// <summary>Line number</summary>
 		public int LineNumber => lineNumber;
+		/// <summary>Line position (column)</summary>
 		public int LinePosition => linePosition;
+		/// <summary>Source file name</summary>
 		public string FileName => fileName ?? "unknown.xml";
 
+		/// <summary>Is the file name set.</summary>
 		public bool HasFileName
 			=> fileName != null;
 
+		/// <summary>Get the source file information in a pretty format.</summary>
 		public string LineInfo
 			=> lineNumber >= 0 ? FileName + "," + lineNumber.ToString() : FileName;
 
+		/// <summary>Is the source file information empty.</summary>
 		public bool IsEmpty
 			=> fileName == null && lineNumber == -1 && linePosition == -1;
 
 		// -- Static --------------------------------------------------------------
 
-		private static readonly PpsXmlPosition empty = new PpsXmlPosition(null, -1, -1);
-
 		private static string GetFileNameFromUri(string baseUri)
 		{
 			if (String.IsNullOrEmpty(baseUri))
 				return null;
-			return Procs.GetFileName(new System.Uri(baseUri));
+			return Procs.GetFileName(new Uri(baseUri));
 		} // func GetFileNameFromUri
 
 		private static IXmlLineInfo GetXmlLineInfo(XNode x)
@@ -105,8 +114,7 @@ namespace TecWare.PPSn.Stuff
 			var c = x;
 			while (c != null)
 			{
-				var r = c as IXmlLineInfo;
-				if (r != null)
+				if (c is IXmlLineInfo r)
 					return r;
 				else if (c is XElement)
 					return null;
@@ -157,9 +165,9 @@ namespace TecWare.PPSn.Stuff
 		/// <returns></returns>
 		public static PpsXmlPosition GetXmlPositionFromAttributes(XNode x)
 		{
-			string fileName = null;
-			int lineNumber = -1;
-			int linePosition = -1;
+			var fileName = (string)null;
+			var lineNumber = -1;
+			var linePosition = -1;
 
 			var xCur = x == null ? null : (x is XElement ? (XElement)x : x.Parent);
 
@@ -176,8 +184,8 @@ namespace TecWare.PPSn.Stuff
 				return new PpsXmlPosition(fileName, lineNumber, linePosition);
 		} // func GetXmlPositionFromAttributes
 
-		/// <summary></summary>
-		/// <param name="x"></param>
+		/// <summary>Remove source file information attributes.</summary>
+		/// <param name="x">Element to remove annotations.</param>
 		public static void RemoveAttributes(XElement x)
 		{
 			var attr = x.Attribute(xnLineNumber);
@@ -191,8 +199,8 @@ namespace TecWare.PPSn.Stuff
 				attr.Remove();
 		} // proc Remove
 
-		/// <summary></summary>
-		public static PpsXmlPosition Empty => empty;
+		/// <summary>Empty information</summary>
+		public static PpsXmlPosition Empty { get; } = new PpsXmlPosition(null, -1, -1);
 	} // class PpsXmlPosition
 
 	#endregion

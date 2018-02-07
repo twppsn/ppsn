@@ -579,14 +579,16 @@ namespace TecWare.PPSn.UI
 			Add(tmp);
 			return tmp;
 		} // ctor
-		
 
 		/// <summary></summary>
 		protected override void ClearItems()
 		{
-			// remove item by item
+			//remove item by item
 			while (Count > 0)
 				RemoveAt(Count - 1);
+
+			// refresh the property ItemsControl.HasItems
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 		} // proc ClearItems
 
 		/// <summary></summary>

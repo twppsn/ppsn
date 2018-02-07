@@ -538,12 +538,13 @@
 						</Style.Triggers>
 					</Style>
 				</Border.Style>
-				<ToolBar MaxWidth="{StaticResource PPSnPaneMaxGridWidth}" Height="36" ItemsSource="{Binding Commands}">
+				<ToolBar MaxWidth="{StaticResource PPSnPaneMaxGridWidth}" Height="{StaticResource PPSnPaneToolBarHeight}" ItemsSource="{Binding Commands}">
 					<ToolBar.Style>
 						<Style TargetType="{x:Type ToolBar}" BasedOn="{StaticResource PaneToolBarStyle}" >
+							<Setter Property="Visibility" Value="Collapsed"/>
 							<Style.Triggers>
-								<Trigger Property="HasItems" Value="False">
-									<Setter Property="Visibility" Value="Collapsed" />
+								<Trigger Property="HasItems" Value="true">
+									<Setter Property="Visibility" Value="Visible"/>
 								</Trigger>
 							</Style.Triggers>
 						</Style>

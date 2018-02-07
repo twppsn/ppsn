@@ -160,6 +160,9 @@ namespace TecWare.PPSn.Data
 			public sealed override string ToString()
 				=> GetType().Name;
 
+			private static string ReplaceNewLine(string fmt)
+				=> fmt.Replace("\\n", Environment.NewLine);
+
 			/// <summary></summary>
 			/// <param name="r"></param>
 			/// <param name="fmt"></param>
@@ -172,31 +175,36 @@ namespace TecWare.PPSn.Data
 					return r.ToString();
 				else
 				{
-					switch (Type.GetTypeCode(r.GetType()))
+					if (fmt.StartsWith("{}"))
+						return String.Format(ReplaceNewLine(fmt.Substring(2)), r);
+					else
 					{
-						case TypeCode.SByte:
-						case TypeCode.Byte:
-						case TypeCode.Int16:
-						case TypeCode.UInt16:
-						case TypeCode.Int32:
-						case TypeCode.UInt32:
-						case TypeCode.Int64:
-						case TypeCode.UInt64:
-							return r.ChangeType<long>().ToString(fmt);
-						case TypeCode.DateTime:
-							return ((DateTime)r).ToString(fmt);
-						case TypeCode.Decimal:
-							return ((decimal)r).ToString(fmt);
-						case TypeCode.Double:
-							return ((double)r).ToString(fmt);
-						case TypeCode.Single:
-							return ((float)r).ToString(fmt);
+						switch (Type.GetTypeCode(r.GetType()))
+						{
+							case TypeCode.SByte:
+							case TypeCode.Byte:
+							case TypeCode.Int16:
+							case TypeCode.UInt16:
+							case TypeCode.Int32:
+							case TypeCode.UInt32:
+							case TypeCode.Int64:
+							case TypeCode.UInt64:
+								return r.ChangeType<long>().ToString(fmt);
+							case TypeCode.DateTime:
+								return ((DateTime)r).ToString(fmt);
+							case TypeCode.Decimal:
+								return ((decimal)r).ToString(fmt);
+							case TypeCode.Double:
+								return ((double)r).ToString(fmt);
+							case TypeCode.Single:
+								return ((float)r).ToString(fmt);
 
-						default:
-							if (r is IFormattable f)
-								return f.ToString(fmt, CultureInfo.CurrentCulture);
-							else
-								return r.ToString();
+							default:
+								if (r is IFormattable f)
+									return f.ToString(fmt, CultureInfo.CurrentCulture);
+								else
+									return r.ToString();
+						}
 					}
 				}
 			} // func ConvertToText
@@ -512,6 +520,7 @@ namespace TecWare.PPSn.Data
 							startAt = -1;
 							s = 2;
 							yield return ident;
+							goto case 2;
 						}
 						break;
 					case 2: // whitespaces
@@ -522,7 +531,10 @@ namespace TecWare.PPSn.Data
 						if (c == '.')
 							s = 0;
 						else
+						{
 							yield return null;
+							yield break;
+						}
 						break;
 
 					case 10:

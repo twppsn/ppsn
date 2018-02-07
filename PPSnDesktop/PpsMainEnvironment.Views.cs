@@ -16,8 +16,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
@@ -25,10 +23,9 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn
 {
-	#region -- class PpsMainViewOrder ---------------------------------------------------
+	#region -- class PpsMainViewOrder -------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>View order definition for the navigator</summary>
 	public sealed class PpsMainViewOrder
 	{
 		private readonly string name;
@@ -49,19 +46,22 @@ namespace TecWare.PPSn
 			this.orderExpression = String.IsNullOrWhiteSpace(t) ? name : t;
 		} // ctor
 
+		/// <summary>Internal name for the order.</summary>
 		public string Name => name;
+		/// <summary>Display name for the order.</summary>
 		public string DisplayName => displayName;
+		/// <summary>Sort order.</summary>
 		public int Priority => priority;
 
+		/// <summary>Order expression.</summary>
 		public string OrderExpression => orderExpression;
 	} // class PpsMainViewSort
 
 	#endregion
 
-	#region -- class PpsMainViewFilter --------------------------------------------------
+	#region -- class PpsMainViewFilter ------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Predefined filter definition for the navigator.</summary>
 	public sealed class PpsMainViewFilter
 	{
 		private readonly string name;
@@ -73,34 +73,43 @@ namespace TecWare.PPSn
 		{
 			this.name = x.GetAttribute("name", String.Empty);
 			if (String.IsNullOrEmpty(name))
-        throw new ArgumentNullException("@name");
+				throw new ArgumentNullException("@name");
 
-      this.displayName = x.GetAttribute("displayName", name);
+			this.displayName = x.GetAttribute("displayName", name);
 			this.priority = priority = x.GetAttribute("priority", priority + 1);
 
 			var expr = x.Value;
 			this.filterExpression = String.IsNullOrEmpty(expr) ? new PpsDataFilterNativeExpression(name) : PpsDataFilterExpression.Parse(expr);
 		} // ctor
 
+		/// <summary>Internal filter name.</summary>
 		public string Name => name;
+		/// <summary>Display name for the filter</summary>
 		public string DisplayName => displayName;
-		public PpsDataFilterExpression FilterExpression => filterExpression;
+		/// <summary>Sort order.</summary>
 		public int Priority => priority;
+
+		/// <summary>Filter expression.</summary>
+		public PpsDataFilterExpression FilterExpression => filterExpression;
 	} // class PpsMainViewFilter
 
 	#endregion
 
-	#region -- class PpsMainViewDefinition ----------------------------------------------
+	#region -- class PpsMainViewDefinition --------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>View definition for the navigator.</summary>
 	public sealed class PpsMainViewDefinition : PpsEnvironmentDefinition
 	{
+		/// <summary>Xml-Tag to define views.</summary>
 		public static readonly XName xnViews = "views";
+		/// <summary>Xml-Tag to define one view.</summary>
 		public static readonly XName xnView = "view";
+		/// <summary>Lua rule for the visibility of this view.</summary>
 		public static readonly XName xnVisible = "visible";
 
+		/// <summary>Filter expression of the view.</summary>
 		public static readonly XName xnFilter = "filter";
+		/// <summary>Order expression of the view.</summary>
 		public static readonly XName xnOrder = "order";
 
 		private readonly string viewId;
@@ -110,8 +119,8 @@ namespace TecWare.PPSn
 
 		private readonly LuaChunk visibleCondition;
 
-		private PpsMainViewOrder[] sortOrders;
-		private PpsMainViewFilter[] filters;
+		private readonly PpsMainViewOrder[] sortOrders;
+		private readonly PpsMainViewFilter[] filters;
 
 		internal PpsMainViewDefinition(PpsMainEnvironment environment, XElement xDefinition)
 			: base(environment, xDefinition.GetAttribute("name", null))
@@ -128,20 +137,104 @@ namespace TecWare.PPSn
 
 			// parse the filters
 			var priority = 0;
-			this.filters = (from c in xDefinition.Elements(xnFilter) select new PpsMainViewFilter(c, ref priority)).OrderBy(c => c.Priority).ToArray();
+			this.filters = (
+				from c in xDefinition.Elements(xnFilter)
+				select new PpsMainViewFilter(c, ref priority)
+			).OrderBy(c => c.Priority).ToArray();
+
 			// parse orders
 			priority = 0;
-			this.sortOrders = (from c in xDefinition.Elements(xnOrder) select new PpsMainViewOrder(c, ref priority)).OrderBy(c => c.Priority).ToArray();
+			this.sortOrders = (
+				from c in xDefinition.Elements(xnOrder)
+				select new PpsMainViewOrder(c, ref priority)
+			).OrderBy(c => c.Priority).ToArray();
 		} // ctor
-		
+
+		/// <summary>Internal name of the view.</summary>
 		public string ViewId => viewId;
-		public PpsDataFilterExpression ViewFilterExpression => viewBaseFilter;
+		/// <summary>Display name of the view.</summary>
 		public string DisplayName => displayName;
+		/// <summary>Display image of the view.</summary>
 		public string DisplayImage => displayImage;
+
+		/// <summary>Expression to define the view.</summary>
+		public PpsDataFilterExpression ViewFilterExpression => viewBaseFilter;
+		/// <summary>Is this view visible</summary>
 		public bool IsVisible => visibleCondition == null ? true : (bool)Environment.RunScriptWithReturn<bool>(visibleCondition, Environment, false);
+
+		/// <summary>Predefined filter rules.</summary>
 		public IEnumerable<PpsMainViewFilter> Filters => filters;
+		/// <summary>Predefined orders.</summary>
 		public IEnumerable<PpsMainViewOrder> SortOrders => sortOrders;
 	} // class PpsMainViewDefinition
+
+	#endregion
+
+	#region -- class PpsMainActionDefinition ------------------------------------------
+
+	/// <summary>Global action definitions.</summary>
+	public class PpsMainActionDefinition : PpsEnvironmentDefinition
+	{
+		/// <summary>Xml-Tag to define actions.</summary>
+		public static readonly XName xnActions = "actions";
+		/// <summary>Xml-Tag to define one action.</summary>
+		public static readonly XName xnAction = "action";
+		/// <summary>Lua rule to define the visibility of the action.</summary>
+		public static readonly XName xnCondition = "condition";
+		/// <summary>Lua code of the action.</summary>
+		public static readonly XName xnCode = "code";
+
+		private readonly string displayName;
+		private readonly string displayImage;
+		private readonly bool isHidden;
+		private readonly LuaChunk condition;
+		private readonly LuaChunk code;
+
+		internal PpsMainActionDefinition(PpsMainEnvironment environment, XElement xCur, ref int priority)
+			: base(environment, xCur.GetAttribute("name", String.Empty))
+		{
+			this.displayName = xCur.GetAttribute("displayName", this.Name);
+			this.displayImage = xCur.GetAttribute("displayImage", "star");
+			this.isHidden = xCur.GetAttribute("isHidden", false);
+			this.Priority = priority = xCur.GetAttribute("priority", priority + 1);
+
+			// compile condition
+			condition = environment.CreateChunk(xCur.Element(xnCondition), true);
+			// compile action
+			code = environment.CreateChunk(xCur.Element(xnCode), true);
+		} // ctor
+
+		/// <summary>Can this command applied to this context.</summary>
+		/// <param name="context"></param>
+		/// <returns></returns>
+		public bool CheckCondition(LuaTable context)
+			=> condition == null ? true : (bool)Environment.RunScriptWithReturn<bool>(condition, context, false);
+
+		/// <summary>Execute command on this context.</summary>
+		/// <param name="context"></param>
+		/// <returns></returns>
+		public LuaResult Execute(LuaTable context)
+		{
+			try
+			{
+				return new LuaResult(true, Environment.RunScript(code, context, true));
+			}
+			catch (Exception e)
+			{
+				Environment.ShowException(ExceptionShowFlags.None, e);
+				return new LuaResult(false);
+			}
+		} // func Execute
+
+		/// <summary>Display name of the command.</summary>
+		public string DisplayName => displayName;
+		/// <summary>Display image of the command.</summary>
+		public string DisplayImage => displayImage;
+		/// <summary>Sort order of the command.</summary>
+		public int Priority { get; }
+		/// <summary>Is this an always hidden command.</summary>
+		public bool IsHidden => isHidden;
+	} // class PpsMainActionDefinition
 
 	#endregion
 }

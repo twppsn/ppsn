@@ -111,6 +111,7 @@ namespace TecWare.PPSn.Data
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
 		/// <summary>Creates a list, that will fetch the data in pages.</summary>
+		/// <param name="context"></param>
 		/// <param name="windowSize"></param>
 		public PpsDataList(IPpsShell context, int windowSize = 50)
 		{
@@ -438,6 +439,8 @@ namespace TecWare.PPSn.Data
 				Array.Copy(rows, 0, array, arrayIndex, array.Length);
 		} // func ICollection<dynamic>.CopyTo
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public IEnumerator GetEnumerator()
 		{
 			DebugPrint("GetEnumerator");
@@ -475,6 +478,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
+		/// <summary></summary>
 		public IPpsShell Shell => shell;
 
 		/// <summary>Zugriff auf das angegebene Element</summary>
