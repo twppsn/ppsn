@@ -91,9 +91,8 @@ namespace TecWare.PPSn.Controls
 			if (itemsListBox != null && itemsListBox.Items.Count > 0)
 				return true;
 
-			if (this.GetTemplateChild("PART_DropDownPopup") != null)
+			if (GetTemplateChild("PART_DropDownPopup") is Popup popup)
 			{
-				var popup = (Popup)this.GetTemplateChild("PART_DropDownPopup");
 				popup.ApplyTemplate();
 				var childDataFilterBox = popup.Child.GetVisualChild<PpsDataFilterBox>();
 				childDataFilterBox.ApplyTemplate();
@@ -117,30 +116,29 @@ namespace TecWare.PPSn.Controls
 
 		private void DropDownChanged(bool status)
 		{
-			// if the PpsDataFilterBox has no Children it is the PpsSearchableListBox, thus not handling dropdown
-			if (this.GetTemplateChild("PART_DropDownPopup") == null || !ReferenceListBox())
+			if (!ReferenceListBox())
 				return;
 
 			this.hasMouseEnteredItemsList = false;
 
 			if (status)
 			{
-				itemsListBox.Items.CurrentChanged += this.Items_CurrentChanged;
+				itemsListBox.Items.CurrentChanged += Items_CurrentChanged;
 				this.SetAnchorItem();
-				if (((PpsDataFilterBox)this).VisualChildrenCount > 0)
+				if (VisualChildrenCount > 0)
 					Mouse.Capture(this, CaptureMode.SubTree);
 			}
 			else
 			{
-				itemsListBox.Items.CurrentChanged -= this.Items_CurrentChanged;
+				itemsListBox.Items.CurrentChanged -= Items_CurrentChanged;
 				// leave clean
-				this.ClearFilter();
+				ClearFilter();
 
 				// Release
 				if (Mouse.Captured == this)
 					Mouse.Capture(null);
 
-				this.Focus();
+				Focus();
 			}
 		} // delegate OnIsDropDownOpenChanged
 
@@ -237,7 +235,7 @@ namespace TecWare.PPSn.Controls
 			if (IsReadOnly)
 				return;
 
-			Key key = e.Key;
+			var key = e.Key;
 			if (key == Key.System)
 				key = e.SystemKey;
 
@@ -348,12 +346,12 @@ namespace TecWare.PPSn.Controls
 			if (!ReferenceListBox())
 				return;
 
-			var items = itemsListBox.Items.Count;
-			if (items == 0)
+			var itemsCount = itemsListBox.Items.Count;
+			if (itemsCount == 0)
 				return;
 
 			var curPos = itemsListBox.Items.CurrentPosition;
-			var newPos = CalculateNewPos(curPos, items, direction);
+			var newPos = CalculateNewPos(curPos, itemsCount, direction);
 
 			if (newPos != curPos)
 				itemsListBox.Items.MoveCurrentToPosition(newPos);
@@ -364,8 +362,8 @@ namespace TecWare.PPSn.Controls
 			if (!ReferenceListBox())
 				return;
 
-			var items = itemsListBox.Items.Count;
-			if (items == 0)
+			var itemsCount = itemsListBox.Items.Count;
+			if (itemsCount == 0)
 				return;
 
 			var curIndex = -1;
@@ -376,7 +374,7 @@ namespace TecWare.PPSn.Controls
 					return;
 			}
 
-			var newIndex = CalculateNewPos(curIndex, items, direction);
+			var newIndex = CalculateNewPos(curIndex, itemsCount, direction);
 
 			if (newIndex != curIndex)
 			{
