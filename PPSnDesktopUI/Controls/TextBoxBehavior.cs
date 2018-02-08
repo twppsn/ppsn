@@ -38,9 +38,9 @@ namespace TecWare.PPSn.Controls
 				return;
 
 			var inputType = e.NewValue;
-			textBox.PreviewTextInput -= textBox_PreviewTextInput;
-			textBox.PreviewKeyDown -= textBox_PreviewKeyDown;
-			DataObject.RemovePastingHandler(textBox, textBox_PastingEventHandler);
+			textBox.PreviewTextInput -= TextBox_PreviewTextInput;
+			textBox.PreviewKeyDown -= TextBox_PreviewKeyDown;
+			DataObject.RemovePastingHandler(textBox, TextBox_PastingEventHandler);
 
 			if (inputType == null)
 			{
@@ -49,13 +49,13 @@ namespace TecWare.PPSn.Controls
 			else
 			{
 				SetInputType(textBox, (PPSnNumTextBoxInputType)inputType);
-				textBox.PreviewTextInput += textBox_PreviewTextInput;
-				textBox.PreviewKeyDown += textBox_PreviewKeyDown;
-				DataObject.AddPastingHandler(textBox, textBox_PastingEventHandler);
+				textBox.PreviewTextInput += TextBox_PreviewTextInput;
+				textBox.PreviewKeyDown += TextBox_PreviewKeyDown;
+				DataObject.AddPastingHandler(textBox, TextBox_PastingEventHandler);
 			}
 		}
 
-		private static void textBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+		private static void TextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
 		{
 			var textBox = sender as TextBox;
 			var inputType = GetInputType(textBox);
@@ -68,7 +68,7 @@ namespace TecWare.PPSn.Controls
 		}
 
 		// pressing space and backspace doesn't raise PreviewTextInput
-		private static void textBox_PreviewKeyDown(object sender, KeyEventArgs e)
+		private static void TextBox_PreviewKeyDown(object sender, KeyEventArgs e)
 		{
 			var textBox = sender as TextBox;
 			var inputType = GetInputType(textBox);
@@ -95,7 +95,7 @@ namespace TecWare.PPSn.Controls
 			}
 		}
 
-		private static void textBox_PastingEventHandler(object sender, DataObjectPastingEventArgs e)
+		private static void TextBox_PastingEventHandler(object sender, DataObjectPastingEventArgs e)
 		{
 			if (e.DataObject.GetDataPresent(typeof(string)))
 			{
