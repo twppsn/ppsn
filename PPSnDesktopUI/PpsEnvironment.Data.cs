@@ -180,7 +180,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsMasterDataRow ---------------------------------------------------
+	#region -- class PpsMasterDataRow -------------------------------------------------
 
 	/// <summary>Represents a datarow of a master data table.</summary>
 	public sealed class PpsMasterDataRow : DynamicDataRow
@@ -221,6 +221,9 @@ namespace TecWare.PPSn
 		public override IReadOnlyList<IDataColumn> Columns
 			=> owner.Columns;
 
+		/// <summary>Return a column of this datarow.</summary>
+		/// <param name="index"></param>
+		/// <returns></returns>
 		public override object this[int index]
 		{
 			get
@@ -242,8 +245,10 @@ namespace TecWare.PPSn
 			}
 		} // prop this
 
+		/// <summary>Master data rows, own there data.</summary>
 		public override bool IsDataOwner => true;
 
+		/// <summary>Return key value for this row.</summary>
 		public object Key => values[owner.GetPrimaryKeyColumnIndex()];
 	} // class PpsMasterDataRow
 
@@ -804,7 +809,9 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		/// <summary>Data table changed in local database.</summary>
 		public event PpsDataTableChangedEventHandler DataTableChanged;
+		/// <summary>Data row changed in local database.</summary>
 		public event PpsDataRowChangedEventHandler DataRowChanged;
 
 		private readonly PpsEnvironment environment;
@@ -4437,6 +4444,7 @@ namespace TecWare.PPSn
 								{
 									lastSynchronizationSchema = DateTime.FromFileTimeUtc(r.GetInt64(0));
 									newDataSet = new PpsDataSetDefinitionDesktop(this, PpsMasterData.MasterDataSchema, PpsMasterData.ReadSchemaValue(r, 1));
+									newDataSet.EndInit();
 									isSchemaUseable = true;
 								}
 								// check data and user info
