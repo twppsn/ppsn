@@ -47,7 +47,6 @@ namespace TecWare.PPSn.Controls
 		private const string PopupTemplateName = "PART_DropDownPopup";
 
 		private ListBox itemsListBox;
-		private bool initializing;
 		private bool hasMouseEnteredItemsList;
 		private Point lastMousePosition = new Point();
 
@@ -68,25 +67,29 @@ namespace TecWare.PPSn.Controls
 			FilteredItemsSource = (expr == PpsDataFilterExpression.True) ? ItemsSource : ItemsSource.ApplyFilter(expr);
 		} // proc UpdateFilteredList
 
+		protected override void OnGotFocus(RoutedEventArgs e)
+		{
+			ReferenceListBox();
+			base.OnGotFocus(e);
+		}
+
 		private bool ReferenceListBox()
 		{
-			if (itemsListBox != null)
+			if (itemsListBox != null && itemsListBox.Items.Count > 0)
 				return true;
 
 			if (this.GetTemplateChild("PART_DropDownPopup") != null)
 			{
-				initializing = true;
 				var popup = (Popup)this.GetTemplateChild("PART_DropDownPopup");
-				popup.Visibility = Visibility.Hidden;
-				popup.IsOpen = true;
-				itemsListBox = (ListBox)popup.Child.GetVisualChild<PpsDataFilterBox>().GetTemplateChild(ListBoxTemplateName);
-				popup.IsOpen = false;
-				popup.Visibility = Visibility.Visible;
-				initializing = false;
+				popup.ApplyTemplate();
+				var childDataFilterBox = popup.Child.GetVisualChild<PpsDataFilterBox>();
+				childDataFilterBox.ApplyTemplate();
+				itemsListBox = (ListBox)childDataFilterBox.GetTemplateChild(ListBoxTemplateName);
 				this.Focus();
 			}
 			else
 			{
+				this.ApplyTemplate();
 				itemsListBox = (ListBox)this.GetTemplateChild(ListBoxTemplateName);
 			}
 
@@ -101,15 +104,8 @@ namespace TecWare.PPSn.Controls
 		private void DropDownChanged(bool status)
 		{
 			// if the PpsDataFilterBox has no Children it is the PpsSearchableListBox, thus not handling dropdown
-			if (this.GetTemplateChild("PART_DropDownPopup") == null || initializing || (itemsListBox == null && !status))
+			if (this.GetTemplateChild("PART_DropDownPopup") == null || !ReferenceListBox())
 				return;
-
-			if (itemsListBox == null)
-			{
-				var popup = (Popup)this.GetTemplateChild("PART_DropDownPopup");
-				popup.IsOpen = status;
-				itemsListBox = (ListBox)popup.Child.GetVisualChild<PpsDataFilterBox>().GetTemplateChild(ListBoxTemplateName);
-			}
 
 			this.hasMouseEnteredItemsList = false;
 
