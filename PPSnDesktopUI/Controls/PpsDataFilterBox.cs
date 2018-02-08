@@ -14,7 +14,6 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -47,9 +46,8 @@ namespace TecWare.PPSn.Controls
 		private const string ListBoxTemplateName = "PART_ItemsListBox";
 		private const string PopupTemplateName = "PART_DropDownPopup";
 
-		private TextBox searchTextBox;
 		private ListBox itemsListBox;
-		private PpsDataFilterBox highestLevel;
+		private bool initializing;
 		private bool hasMouseEnteredItemsList;
 		private Point lastMousePosition = new Point();
 
@@ -70,10 +68,29 @@ namespace TecWare.PPSn.Controls
 			FilteredItemsSource = (expr == PpsDataFilterExpression.True) ? ItemsSource : ItemsSource.ApplyFilter(expr);
 		} // proc UpdateFilteredList
 
-		public override void OnApplyTemplate()
+		private bool ReferenceListBox()
 		{
-			searchTextBox = searchTextBox ?? GetTemplateChild(SearchBoxTemplateName) as TextBox;
-			itemsListBox = itemsListBox ?? GetTemplateChild(ListBoxTemplateName) as ListBox;
+			if (itemsListBox != null)
+				return true;
+
+			if (this.GetTemplateChild("PART_DropDownPopup") != null)
+			{
+				initializing = true;
+				var popup = (Popup)this.GetTemplateChild("PART_DropDownPopup");
+				popup.Visibility = Visibility.Hidden;
+				popup.IsOpen = true;
+				itemsListBox = (ListBox)popup.Child.GetVisualChild<PpsDataFilterBox>().GetTemplateChild(ListBoxTemplateName);
+				popup.IsOpen = false;
+				popup.Visibility = Visibility.Visible;
+				initializing = false;
+				this.Focus();
+			}
+			else
+			{
+				itemsListBox = (ListBox)this.GetTemplateChild(ListBoxTemplateName);
+			}
+
+			return (itemsListBox != null);
 		}
 
 		public PpsDataFilterBox()
@@ -84,17 +101,14 @@ namespace TecWare.PPSn.Controls
 		private void DropDownChanged(bool status)
 		{
 			// if the PpsDataFilterBox has no Children it is the PpsSearchableListBox, thus not handling dropdown
-			if (this.GetTemplateChild("PART_DropDownPopup") == null)
+			if (this.GetTemplateChild("PART_DropDownPopup") == null || initializing || (itemsListBox == null && !status))
 				return;
 
-			if (highestLevel != null)
-				highestLevel = this;
-
-			if (itemsListBox == null && status)
+			if (itemsListBox == null)
 			{
 				var popup = (Popup)this.GetTemplateChild("PART_DropDownPopup");
 				popup.IsOpen = status;
-				itemsListBox = (ListBox)popup.Child.GetVisualChild<PpsDataFilterBox>().GetTemplateChild(ListBoxTemplateName); ;
+				itemsListBox = (ListBox)popup.Child.GetVisualChild<PpsDataFilterBox>().GetTemplateChild(ListBoxTemplateName);
 			}
 
 			this.hasMouseEnteredItemsList = false;
@@ -313,29 +327,33 @@ namespace TecWare.PPSn.Controls
 
 		private void Navigate(FocusNavigationDirection direction)
 		{
-			var Items = (PpsDataCollectionView)ItemsSource;
-			var items = Items.Count;
+			if (!ReferenceListBox())
+				return;
+
+			var items = itemsListBox.Items.Count;
 			if (items == 0)
 				return;
 
-			var curPos = Items.CurrentPosition;
+			var curPos = itemsListBox.Items.CurrentPosition;
 			var newPos = CalculateNewPos(curPos, items, direction);
 
 			if (newPos != curPos)
-				Items.MoveCurrentToPosition(newPos);
+				itemsListBox.Items.MoveCurrentToPosition(newPos);
 		} // proc Navigate
 
 		private void ImmediateSelect(FocusNavigationDirection direction)
 		{
-			var Items = (PpsDataCollectionView)ItemsSource;
-			var items = Items.Count;
+			if (!ReferenceListBox())
+				return;
+
+			var items = itemsListBox.Items.Count;
 			if (items == 0)
 				return;
 
 			var curIndex = -1;
 			if (SelectedValue != null)
 			{
-				curIndex = Items.IndexOf(SelectedValue);
+				curIndex = itemsListBox.Items.IndexOf(SelectedValue);
 				if (curIndex < 0)
 					return;
 			}
@@ -344,7 +362,7 @@ namespace TecWare.PPSn.Controls
 
 			if (newIndex != curIndex)
 			{
-				if (Items.GetItemAt(newIndex) is IDataRow item)
+				if (itemsListBox.Items.GetItemAt(newIndex) is IDataRow item)
 					CommitValue(item);
 			}
 		} // proc ImmediateSelect
@@ -397,7 +415,7 @@ namespace TecWare.PPSn.Controls
 
 		private ListBoxItem ItemFromPoint(MouseEventArgs e)
 		{
-			if (itemsListBox == null)
+			if (!ReferenceListBox())
 				return null;
 
 			var point = e.GetPosition(itemsListBox);
@@ -415,7 +433,7 @@ namespace TecWare.PPSn.Controls
 
 		private void Items_CurrentChanged(object sender, EventArgs e)
 		{
-			if (itemsListBox == null)
+			if (!ReferenceListBox())
 				return;
 
 			if (itemsListBox.Items.CurrentItem is IDataRow item)
@@ -424,10 +442,7 @@ namespace TecWare.PPSn.Controls
 
 		private void SetAnchorItem()
 		{
-			if (itemsListBox == null)
-				return;
-
-			if (itemsListBox.Items.Count == 0)
+			if (!ReferenceListBox() || itemsListBox.Items.Count <= 0)
 				return;
 
 			var item = SelectedValue ?? itemsListBox.Items.GetItemAt(0);
@@ -438,18 +453,21 @@ namespace TecWare.PPSn.Controls
 				itemsListBox.Items.MoveCurrentToPosition(-1);
 		} // proc SetAnchorItem
 
+		/// <summary>Empties the string for filtering</summary>
 		public void ClearFilter()
-		=> FilterText = null;
+			=> FilterText = null;
 
 		private void CloseDropDown(bool commit)
 		{
 			if (!IsDropDownOpen)
 				return;
 
-			if(commit)
+			if (commit)
 				SelectedValue = itemsListBox.SelectedValue;
 
 			IsDropDownOpen = false;
+
+			ClearFilter();
 		} // proc CloseDropDown
 
 		/// <summary>incoming list with all items</summary>
