@@ -125,6 +125,8 @@ namespace TecWare.PPSn.Controls
 				// Release
 				if (Mouse.Captured == this)
 					Mouse.Capture(null);
+
+				this.Focus();
 			}
 		} // delegate OnIsDropDownOpenChanged
 
