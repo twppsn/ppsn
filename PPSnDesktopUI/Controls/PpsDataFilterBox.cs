@@ -27,19 +27,30 @@ namespace TecWare.PPSn.Controls
 	/// <summary>This Filterbox is used to filter a List</summary>
 	public class PpsDataFilterBox : Control
 	{
+		/// <summary>DependencyProperty for connecting the ItemsSource</summary>
 		public static readonly DependencyProperty ItemsSourceProperty = ItemsControl.ItemsSourceProperty.AddOwner(typeof(PpsDataFilterBox), new FrameworkPropertyMetadata(OnItemsSourceChanged));
+		/// <summary>DependencyProperty for connecting the Filtered Items</summary>
 		public static readonly DependencyProperty FilteredItemsSourceProperty = DependencyProperty.Register(nameof(FilteredItemsSource), typeof(IDataRowEnumerable), typeof(PpsDataFilterBox));
-
+		/// <summary>DependencyProperty for conntecting the FilterTex</summary>
 		public static readonly DependencyProperty FilterTextProperty = DependencyProperty.Register(nameof(FilterText), typeof(string), typeof(PpsDataFilterBox), new FrameworkPropertyMetadata(OnFilterTextChanged));
+		/// <summary>DependencyProperty for the Selected(committed) Value</summary>
 		public static readonly DependencyProperty SelectedValueProperty = DependencyProperty.Register(nameof(SelectedValue), typeof(object), typeof(PpsDataFilterBox));
+		/// <summary>DependencyProperty for the Template of the Selected item</summary>
 		public static readonly DependencyProperty SelectedValueTemplateProperty = DependencyProperty.Register(nameof(SelectedValueTemplate), typeof(DataTemplate), typeof(PpsDataFilterBox), new FrameworkPropertyMetadata((DataTemplate)null));
+		/// <summary>DependencyProperty for the Template for the Items in the ListBox</summary>
 		public static readonly DependencyProperty ItemTemplateProperty = DependencyProperty.Register(nameof(ItemTemplate), typeof(DataTemplate), typeof(PpsDataFilterBox), new FrameworkPropertyMetadata((DataTemplate)null));
+		/// <summary>DependencyProperty for the ItemCOntainerStyle of the ListBox</summary>
 		public static readonly DependencyProperty ItemContainerStyleProperty = DependencyProperty.Register(nameof(ItemContainerStyle), typeof(Style), typeof(PpsDataFilterBox), new FrameworkPropertyMetadata((Style)null));
+		/// <summary>DependencyProperty for the Style of the ListBox</summary>
 		public static readonly DependencyProperty ListBoxStyleProperty = DependencyProperty.Register(nameof(ListBoxStyle), typeof(Style), typeof(PpsDataFilterBox), new FrameworkPropertyMetadata((Style)null));
+		/// <summary>DependencyProperty for the Nullable state</summary>
 		public static readonly DependencyProperty IsNullableProperty = DependencyProperty.Register(nameof(IsNullable), typeof(bool), typeof(PpsDataFilterBox));
+		/// <summary>DependencyProperty for DropDown state</summary>
 		public static readonly DependencyProperty IsDropDownOpenProperty = DependencyProperty.Register(nameof(IsDropDownOpen), typeof(bool), typeof(PpsDataFilterBox), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, new PropertyChangedCallback(OnIsDropDownOpenChanged)));
+		/// <summary>DependencyProperty for the Write-Protection state</summary>
 		public static readonly DependencyProperty IsReadOnlyProperty = DependencyProperty.Register(nameof(IsReadOnly), typeof(bool), typeof(PpsDataFilterBox), new FrameworkPropertyMetadata(false));
 
+		/// <summary>Command for clearing the Value</summary>
 		public readonly static RoutedCommand ClearSelectionCommand = new RoutedCommand("ClearSelection", typeof(PpsDataFilterBox));
 
 		private const string SearchBoxTemplateName = "PART_SearchBox";
@@ -47,7 +58,6 @@ namespace TecWare.PPSn.Controls
 		private const string PopupTemplateName = "PART_DropDownPopup";
 
 		private ListBox itemsListBox;
-		private bool initializing;
 		private bool hasMouseEnteredItemsList;
 		private Point lastMousePosition = new Point();
 
@@ -68,31 +78,38 @@ namespace TecWare.PPSn.Controls
 			FilteredItemsSource = (expr == PpsDataFilterExpression.True) ? ItemsSource : ItemsSource.ApplyFilter(expr);
 		} // proc UpdateFilteredList
 
+		/// <summary>loads the List when the Control is used</summary>
+		/// <param name="e">unused/sent to base class</param>
+		protected override void OnGotFocus(RoutedEventArgs e)
+		{
+			ReferenceListBox();
+			base.OnGotFocus(e);
+		}
+
 		private bool ReferenceListBox()
 		{
-			if (itemsListBox != null)
+			if (itemsListBox != null && itemsListBox.Items.Count > 0)
 				return true;
 
 			if (this.GetTemplateChild("PART_DropDownPopup") != null)
 			{
-				initializing = true;
 				var popup = (Popup)this.GetTemplateChild("PART_DropDownPopup");
-				popup.Visibility = Visibility.Hidden;
-				popup.IsOpen = true;
-				itemsListBox = (ListBox)popup.Child.GetVisualChild<PpsDataFilterBox>().GetTemplateChild(ListBoxTemplateName);
-				popup.IsOpen = false;
-				popup.Visibility = Visibility.Visible;
-				initializing = false;
+				popup.ApplyTemplate();
+				var childDataFilterBox = popup.Child.GetVisualChild<PpsDataFilterBox>();
+				childDataFilterBox.ApplyTemplate();
+				itemsListBox = (ListBox)childDataFilterBox.GetTemplateChild(ListBoxTemplateName);
 				this.Focus();
 			}
 			else
 			{
+				this.ApplyTemplate();
 				itemsListBox = (ListBox)this.GetTemplateChild(ListBoxTemplateName);
 			}
 
 			return (itemsListBox != null);
 		}
 
+		/// <summary>Constructor - initializes the Commands</summary>
 		public PpsDataFilterBox()
 		{
 			AddClearCommand();
@@ -101,15 +118,8 @@ namespace TecWare.PPSn.Controls
 		private void DropDownChanged(bool status)
 		{
 			// if the PpsDataFilterBox has no Children it is the PpsSearchableListBox, thus not handling dropdown
-			if (this.GetTemplateChild("PART_DropDownPopup") == null || initializing || (itemsListBox == null && !status))
+			if (this.GetTemplateChild("PART_DropDownPopup") == null || !ReferenceListBox())
 				return;
-
-			if (itemsListBox == null)
-			{
-				var popup = (Popup)this.GetTemplateChild("PART_DropDownPopup");
-				popup.IsOpen = status;
-				itemsListBox = (ListBox)popup.Child.GetVisualChild<PpsDataFilterBox>().GetTemplateChild(ListBoxTemplateName);
-			}
 
 			this.hasMouseEnteredItemsList = false;
 
@@ -129,11 +139,15 @@ namespace TecWare.PPSn.Controls
 				// Release
 				if (Mouse.Captured == this)
 					Mouse.Capture(null);
+
+				this.Focus();
 			}
 		} // delegate OnIsDropDownOpenChanged
 
 		#region -- Evaluate MouseEvents -----------------------------------------------
 
+		/// <summary>Handles the Mouseclicks - mainly for closing the Popup</summary>
+		/// <param name="e"></param>
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
 			if (!IsDropDownOpen)
@@ -153,6 +167,8 @@ namespace TecWare.PPSn.Controls
 				CloseDropDown(false);
 		} // event OnMouseDown
 
+		/// <summary>Handles the Mouseclicks - mainly for selecting in the ItemList</summary>
+		/// <param name="e"></param>
 		protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
 		{
 			if (!IsDropDownOpen || !hasMouseEnteredItemsList)
@@ -165,7 +181,8 @@ namespace TecWare.PPSn.Controls
 			}
 		} // event OnMouseLeftButtonUp
 
-
+		/// <summary>Handles the Movement of the Mouse - used for UI-Feedback of the ''would-be'' selected Item</summary>
+		/// <param name="e"></param>
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
 			if (!IsDropDownOpen)
@@ -209,8 +226,9 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Evaluate KeyboardEvents --------------------------------------------
 
-		// cannot use OnKeyDown, (searchTextBox handled navigation keys)
-		protected override void OnPreviewKeyDown(KeyEventArgs e)
+		/// <summary>Handles the Navigation by Keyboard</summary>
+		/// <param name="e">pressed Keys</param>
+		protected override void OnKeyDown(KeyEventArgs e)
 			=> KeyDownHandler(e);
 
 		private void KeyDownHandler(KeyEventArgs e)
