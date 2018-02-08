@@ -1803,7 +1803,7 @@ namespace TecWare.PPSn
 			// get a correct extension
 			string extension = null;
 
-			if (obj.TryGetProperty<string>("Name", out var name))
+			if (obj.TryGetProperty<string>(PpsObjectBlobData.fileNameTag, out var name))
 				extension = Path.GetExtension(name);
 			if (String.IsNullOrEmpty(extension))
 				extension = StuffIO.MimeTypeFromExtension(obj.MimeType);
@@ -1956,7 +1956,10 @@ namespace TecWare.PPSn
 	/// <summary>Control byte based data.</summary>
 	public class PpsObjectBlobData : IPpsObjectData, IPpsObjectDataAccessNotify
 	{
-		private const string hashTagName = "Sha256";
+		/// <summary>Tag for hash value</summary>
+		public const string hashTag = "Sha256";
+		/// <summary>Tag for filename</summary>
+		public const string fileNameTag = "Name";
 
 		/// <summary>Notify property changed.</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
@@ -2005,7 +2008,7 @@ namespace TecWare.PPSn
 		private async Task LoadDataAsync()
 		{
 			loadedRawData = await baseObj.LoadObjectDataInformationAsync() ?? DBNull.Value;
-			loadedHash = baseObj.Tags.GetProperty(hashTagName, null);
+			loadedHash = baseObj.Tags.GetProperty(hashTag, null);
 			newRawData = null;
 			newHash = null;
 
@@ -2077,7 +2080,7 @@ namespace TecWare.PPSn
 				// update database
 				await baseObj.SaveObjectDataInformationAsync(newRawData, baseObj.MimeType ?? MimeTypes.Application.OctetStream, true);
 				// update hash
-				baseObj.Tags.UpdateRevisionTag(hashTagName, PpsObjectTagClass.Text, newHash);
+				baseObj.Tags.UpdateRevisionTag(hashTag, PpsObjectTagClass.Text, newHash);
 				// update tags
 				await baseObj.UpdateLocalAsync();
 
@@ -2953,7 +2956,7 @@ namespace TecWare.PPSn
 		[Obsolete("falsche verantwortung")]
 		public async Task ShellExecute()
 		{
-			var fileName = this.GetProperty("Name", (string)null);
+			var fileName = this.GetProperty(PpsObjectBlobData.fileNameTag, (string)null);
 			if (String.IsNullOrEmpty(fileName))
 			{
 				await Environment.MsgBoxAsync("Datei kann nicht angezeigt werden. Anzeige Programm konnte nicht zugeordnet werden.");
@@ -4082,7 +4085,7 @@ order by t_liefnr.value desc
 
 				// create the new empty object
 				var newObject = await CreateNewObjectAsync(ObjectInfos[AttachmentObjectTyp], mimeType);
-				newObject.Tags.UpdateRevisionTag("Name", PpsObjectTagClass.Text, name);
+				newObject.Tags.UpdateRevisionTag(PpsObjectBlobData.fileNameTag, PpsObjectTagClass.Text, name);
 
 				// import the data
 				var data = await newObject.GetDataAsync<PpsObjectBlobData>();

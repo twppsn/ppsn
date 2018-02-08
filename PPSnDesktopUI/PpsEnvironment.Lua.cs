@@ -1004,6 +1004,26 @@ namespace TecWare.PPSn
 				return v;
 		} // func GetServerRowValue
 
+		/// <summary>Create a local tempfile name for this objekt</summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public FileInfo GetLocalTempFileInfo(PpsObject obj)
+		{
+			// create temp directory
+			var tempDirectory = new DirectoryInfo(Path.Combine(LocalPath.FullName, "tmp"));
+			if (!tempDirectory.Exists)
+				tempDirectory.Create();
+
+			// build filename
+			if (obj.TryGetProperty<string>(PpsObjectBlobData.fileNameTag, out var fileName))
+				fileName = obj.Guid.ToString("N") + "_" + fileName;
+			else
+				fileName = obj.Guid.ToString("N") + StuffIO.ExtensionFromMimeType(obj.MimeType);
+
+			return new FileInfo(Path.Combine(tempDirectory.FullName, fileName));
+		} // func GetLocalTempFileInfo
+
 		[Obsolete("Implemented for a special case, will be removed.")]
 		[LuaMember]
 		public Task<PpsObjectDataSet> PullRevisionAsync(PpsObject obj, long revId)
