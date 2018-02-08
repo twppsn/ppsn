@@ -61,14 +61,7 @@ namespace TecWare.PPSn.Controls
 		private bool hasMouseEnteredItemsList;
 		private Point lastMousePosition = new Point();
 
-		private static void OnItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsDataFilterBox)d).UpdateFilteredList();
-		private static void OnFilterTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsDataFilterBox)d).UpdateFilteredList();
-		private static void OnIsDropDownOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsDataFilterBox)d).DropDownChanged((bool)e.NewValue);
-
-
+		
 		private void UpdateFilteredList()
 		{
 			if (ItemsSource == null)
@@ -510,5 +503,12 @@ namespace TecWare.PPSn.Controls
 		public bool IsReadOnly { get => (bool)GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, value); }
 		/// <summary>Can user select content?</summary>
 		public bool IsWriteable { get => !(bool)GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, !value); }
+
+		private static void OnItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataFilterBox)d).UpdateFilteredList();
+		private static void OnFilterTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataFilterBox)d).UpdateFilteredList();
+		private static void OnIsDropDownOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataFilterBox)d).DropDownChanged((bool)e.NewValue);
 	}
 }
