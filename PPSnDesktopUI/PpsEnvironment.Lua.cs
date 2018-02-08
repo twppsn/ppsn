@@ -139,7 +139,7 @@ namespace TecWare.PPSn
 		private bool isQueuedTaskRunning = false;
 		private LuaResult currentResult;
 		private Exception currentException = null;
-		private bool isDisposed = false;
+		private int isDisposed = 0;
 		
 		internal PpsLuaTask(IPpsLuaTaskParent parent, SynchronizationContext context, CancellationToken cancellationToken, LuaResult startArguments)
 		{
@@ -159,9 +159,9 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		~PpsLuaTask()
 		{
-			if (!isDisposed)
+			if (isDisposed == 0)
 			{
-				isDisposed = true;
+				isDisposed = -1;
 				DisposeContext();
 			}
 		} // dtor
@@ -177,7 +177,7 @@ namespace TecWare.PPSn
 
 		private void CheckDisposed()
 		{
-			if (isDisposed)
+			if (isDisposed != 0)
 				throw new ObjectDisposedException(nameof(PpsLuaTask));
 		} // proc CheckDisposed
 
@@ -311,24 +311,34 @@ namespace TecWare.PPSn
 		private void ExecuteOrQueueAwaitTask(object state)
 		{
 			VerifyThreadAccess();
-
+			
 			if (!isQueuedTaskRunning)
 				ExecuteOnAwaitTask();
 		} // proc ExecuteOrQueueAwaitTask
 
 		private void ExecuteOnAwaitTask()
 		{
+			// check if already set
+			var state = onAwaitTask.Task.Status;
+			if (state == TaskStatus.RanToCompletion
+				|| state == TaskStatus.Faulted
+				|| state == TaskStatus.Canceled)
+				return;
+
+			// check if dispoose is pending
+			if (Interlocked.CompareExchange(ref isDisposed, -1, isDisposed) != 0)
+				return;
+			// do not call dtor
+			GC.SuppressFinalize(this);
+
+			// set final state
 			if (cancellationToken.IsCancellationRequested)
 				ThreadPool.QueueUserWorkItem(s => onAwaitTask.SetCanceled());
 			else if (IsFaulted)
 				ThreadPool.QueueUserWorkItem(s => onAwaitTask.SetException((Exception)s), currentException);
 			else
 				ThreadPool.QueueUserWorkItem(s => onAwaitTask.SetResult((LuaResult)s), currentResult);
-
-			// do not call dtor
-			GC.SuppressFinalize(this);
-			isDisposed = true;
-
+						
 			// dispose context
 			DisposeContext();
 		} // proc ExecuteOnAwaitTask
@@ -415,7 +425,7 @@ namespace TecWare.PPSn
 		/// <summary>Is the execution thread canceled.</summary>
 		public bool IsCanceled => cancellationToken.IsCancellationRequested;
 		/// <summary>Is the execution thread completed.</summary>
-		public bool IsCompleted => isDisposed;
+		public bool IsCompleted => isDisposed != 0;
 	} // class PpsLuaTask
 
 	#endregion
