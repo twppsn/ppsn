@@ -310,6 +310,11 @@ namespace TecWare.PPSn.Controls
 						ClearSelection();
 					}
 					break;
+				case Key.Left:
+				case Key.Right:
+					// disable visual Navigation on the Form
+					e.Handled = true;
+					break;
 			}
 		} // proc KeyDownHandler
 
