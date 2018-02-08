@@ -90,10 +90,11 @@ namespace TecWare.PPSn.Controls
 			if (highestLevel != null)
 				highestLevel = this;
 
-			if (itemsListBox == null)
+			if (itemsListBox == null && status)
 			{
-				var ppsSearchableListBox = ((Popup)this.GetTemplateChild("PART_DropDownPopup")).Child.GetVisualChild<PpsDataFilterBox>();
-				itemsListBox = ppsSearchableListBox.Template.LoadContent().GetVisualChild<ListBox>();
+				var popup = (Popup)this.GetTemplateChild("PART_DropDownPopup");
+				popup.IsOpen = status;
+				itemsListBox = (ListBox)popup.Child.GetVisualChild<PpsDataFilterBox>().GetTemplateChild(ListBoxTemplateName); ;
 			}
 
 			this.hasMouseEnteredItemsList = false;
