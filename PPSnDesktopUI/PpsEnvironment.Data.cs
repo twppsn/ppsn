@@ -254,7 +254,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsMasterDataSelector ----------------------------------------------
+	#region -- class PpsMasterDataSelector --------------------------------------------
 
 	/// <summary>Base implementation of a data selector.</summary>
 	public abstract class PpsMasterDataSelector : IDataRowEnumerable, IDataColumns
