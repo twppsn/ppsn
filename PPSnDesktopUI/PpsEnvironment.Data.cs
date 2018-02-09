@@ -3816,10 +3816,28 @@ namespace TecWare.PPSn
 			} // proc Write
 
 			public override long Seek(long offset, SeekOrigin origin)
-				=> Seek(offset, origin);
+			{
+				switch (origin)
+				{
+					case SeekOrigin.Begin:
+					if (offset != Length)
+							throw new NotSupportedException();
+						return currentLength;
+					case SeekOrigin.Current:
+						if (offset != 0)
+							throw new NotSupportedException();
+						return currentLength;
+					case SeekOrigin.End:
+					default:
+						throw new NotSupportedException();
+				}
+			} // func Seek
 
 			public override void SetLength(long value)
-				=> throw new NotSupportedException();
+			{
+				if (value != currentLength)
+					throw new NotSupportedException();
+			} // proc SetLength
 
 			public override bool CanRead => true;
 			public override bool CanSeek => true;
