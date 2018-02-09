@@ -219,7 +219,7 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>Handles the Navigation by Keyboard</summary>
 		/// <param name="e">pressed Keys</param>
-		protected override void OnKeyDown(KeyEventArgs e)
+		protected override void OnPreviewKeyDown(KeyEventArgs e)
 			=> KeyDownHandler(e);
 
 		private void KeyDownHandler(KeyEventArgs e)
