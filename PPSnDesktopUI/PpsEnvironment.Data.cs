@@ -108,49 +108,69 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsMasterDataTransaction -------------------------------------------
+	#region -- class PpsMasterDataTransaction -----------------------------------------
 
+	/// <summary>Transaction for the sqlite data manipulation.</summary>
 	public abstract class PpsMasterDataTransaction : IDbTransaction, IDisposable
 	{
 		#region -- Ctor/Dtor/Commit/Rollback --------------------------------------------
 
+		/// <summary>Transaction for the sqlite data manipulation.</summary>
 		protected PpsMasterDataTransaction()
 		{
 		} // ctor
 
+		/// <summary></summary>
 		~PpsMasterDataTransaction()
 		{
 			Dispose(false);
 		} // dtor
 
+		/// <summary></summary>
 		public void Dispose()
 		{
 			GC.SuppressFinalize(this);
 			Dispose(true);
 		} // proc Dispose
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected virtual void Dispose(bool disposing)
 		{
 		} // proc Dispose
 
+		/// <summary>Override to do commit actions.</summary>
 		protected virtual void CommitCore() { }
+		/// <summary>Override to do rollback actions.</summary>
 		protected virtual void RollbackCore() { }
 
+		/// <summary>Commit current transaction.</summary>
 		public void Commit()
 			=> CommitCore();
 
+		/// <summary>Rollback current transaction.</summary>
 		public void Rollback()
 			=> RollbackCore();
 
 		#endregion
 
+		/// <summary>Add a action to the rollback.</summary>
+		/// <param name="rollback"></param>
 		public abstract void AddRollbackOperation(Action rollback);
 
+		/// <summary></summary>
+		/// <param name="commandText"></param>
+		/// <returns></returns>
 		public DbCommand CreateNativeCommand(string commandText = null)
 			=> new SQLiteCommand(commandText, ConnectionCore, TransactionCore);
 
+		/// <summary>Get the next local id.</summary>
+		/// <param name="tableName">Table name.</param>
+		/// <param name="primaryKey">Primary key field.</param>
+		/// <returns></returns>
 		public long GetNextLocalId(string tableName, string primaryKey)
 		{
+			// local id's are negative (--> min)
 			using (var cmd = CreateNativeCommand("SELECT min([" + primaryKey + "]) FROM main.[" + tableName + "]"))
 			{
 				var nextIdObject = cmd.ExecuteScalarEx();
@@ -164,17 +184,24 @@ namespace TecWare.PPSn
 			}
 		} // func GetNextLocalId
 
+		/// <summary>Last inserted id.</summary>
 		public long LastInsertRowId => ConnectionCore.LastInsertRowId;
 
+		/// <summary>Access the the local database connection.</summary>
 		protected abstract SQLiteConnection ConnectionCore { get; }
+		/// <summary>Access the the local database transaciton.</summary>
 		protected abstract SQLiteTransaction TransactionCore { get; }
 
 		IDbConnection IDbTransaction.Connection => ConnectionCore;
 
+		/// <summary>Connection of this transaction.</summary>
 		public DbConnection Connection => ConnectionCore;
+		/// <summary>Transaction isolation level.</summary>
 		public IsolationLevel IsolationLevel => TransactionCore.IsolationLevel;
 
+		/// <summary>Is the transaction disposed.</summary>
 		public abstract bool IsDisposed { get; }
+		/// <summary>Is the transaction commited/rollbacked.</summary>
 		public abstract bool IsCommited { get; }
 	} // class PpsMasterTransaction
 
@@ -833,6 +860,12 @@ namespace TecWare.PPSn
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="environment"></param>
+		/// <param name="connection"></param>
+		/// <param name="schema"></param>
+		/// <param name="lastSynchronizationSchema"></param>
+		/// <param name="lastSynchronizationStamp"></param>
 		public PpsMasterData(PpsEnvironment environment, SQLiteConnection connection, PpsDataSetDefinitionDesktop schema, DateTime lastSynchronizationSchema, DateTime lastSynchronizationStamp)
 		{
 			this.environment = environment;
@@ -845,6 +878,7 @@ namespace TecWare.PPSn
 			this.lastSynchronizationStamp = lastSynchronizationStamp;
 		} // ctor
 
+		/// <summary></summary>
 		public void Dispose()
 		{
 			if (!isDisposed)
@@ -854,7 +888,7 @@ namespace TecWare.PPSn
 			}
 		} // proc Dispose
 
-		public DynamicMetaObject GetMetaObject(Expression parameter)
+		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(Expression parameter)
 			=> new PpsMasterDataMetaObject(this, parameter);
 
 		#endregion
