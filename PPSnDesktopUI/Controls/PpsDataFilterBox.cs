@@ -336,7 +336,7 @@ namespace TecWare.PPSn.Controls
 
 		private void ClearSelection()
 		{
-			SelectedValue = null;
+			CommitValue(null);
 		}
 
 		private void Navigate(FocusNavigationDirection direction)
@@ -477,7 +477,7 @@ namespace TecWare.PPSn.Controls
 				return;
 
 			if (commit)
-				SelectedValue = itemsListBox.SelectedValue;
+				CommitValue((IDataRow)itemsListBox.SelectedValue);
 
 			IsDropDownOpen = false;
 
