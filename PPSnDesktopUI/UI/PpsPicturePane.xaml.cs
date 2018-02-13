@@ -123,7 +123,7 @@ namespace TecWare.PPSn.UI
 				{
 					var localWebCamsCollection = new FilterInfoCollection(AForge.Video.DirectShow.FilterCategory.VideoInputDevice);
 					// only camera were initialized, which are not already running (devices) and are not in the process ov initializing (awaitingCameras)
-					foreach (var cam in (from AForge.Video.DirectShow.FilterInfo vc in localWebCamsCollection where !((from c in cameras select c.MonikerString).Contains(vc.MonikerString)) where !((from c in awaitingCameras select c.MonikerString).Contains(vc.MonikerString)) where vc.MonikerString.Contains("vid") where vc.MonikerString.Contains("pid") select vc))
+					foreach (var cam in (from AForge.Video.DirectShow.FilterInfo vc in localWebCamsCollection where !((from c in cameras select c.MonikerString).Contains(vc.MonikerString)) where !((from c in awaitingCameras select c.MonikerString).Contains(vc.MonikerString)) where (vc.MonikerString.Contains("vid") || vc.MonikerString.Contains("pnp:\\\\?\\display")) select vc))
 					{
 						awaitingCameras.Add(cam);
 						var acam = new PpsAforgeCamera(cam, traces);
