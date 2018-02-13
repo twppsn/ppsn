@@ -304,7 +304,7 @@ namespace TecWare.PPSn.Controls
 					}
 					break;
 				case Key.Delete:
-					if (IsNullable && IsWriteable)
+					if (IsNullable && IsWriteable && IsDropDownOpen)
 					{
 						e.Handled = true;
 						ClearSelection();
