@@ -3732,7 +3732,10 @@ namespace TecWare.PPSn
 				=> nestedMemoryStream.Flush();
 
 			public override void SetLength(long value)
-				=> throw new NotSupportedException();
+			{
+				if (value != Length)
+					throw new NotSupportedException();
+			} // proc SetLength
 
 			public override long Seek(long offset, SeekOrigin origin)
 				=> nestedMemoryStream.Seek(offset, origin);
@@ -3816,22 +3819,7 @@ namespace TecWare.PPSn
 			} // proc Write
 
 			public override long Seek(long offset, SeekOrigin origin)
-			{
-				switch (origin)
-				{
-					case SeekOrigin.Begin:
-					if (offset != Length)
-							throw new NotSupportedException();
-						return currentLength;
-					case SeekOrigin.Current:
-						if (offset != 0)
-							throw new NotSupportedException();
-						return currentLength;
-					case SeekOrigin.End:
-					default:
-						throw new NotSupportedException();
-				}
-			} // func Seek
+				=> nestedFileStream.Seek(offset, origin);
 
 			public override void SetLength(long value)
 			{
@@ -4091,9 +4079,8 @@ namespace TecWare.PPSn
 											UpdateProgress(unchecked((int)(readedTotal * 1000 / contentLength)));
 										else if (checkForSwitchToFile && readedTotal > tempFileBorder)
 										{
-											if (dst is MemoryCacheStream)
+											if (dst is MemoryCacheStream oldDst)
 											{
-												var oldDst = (MemoryCacheStream)dst;
 												dst = new FileCacheStream(oldDst, oldDst.ExpectedLength);
 												oldDst.Dispose();
 											}
