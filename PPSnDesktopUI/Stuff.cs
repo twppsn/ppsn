@@ -20,6 +20,7 @@ using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Mime;
 using System.Security.Cryptography;
@@ -391,10 +392,16 @@ namespace TecWare.PPSn
 
 	#region -- class StuffDB ------------------------------------------------------------
 
+	/// <summary>Db-Extensions</summary>
 	public static class StuffDB
 	{
+		/// <summary>Key for extended exception attribute.</summary>
 		public const string CommandTextKey = "CommandText";
 
+		/// <summary>Add parameter to an DbCommand</summary>
+		/// <param name="command"></param>
+		/// <param name="parameterName"></param>
+		/// <returns></returns>
 		public static DbParameter AddParameter(this DbCommand command, string parameterName)
 		{
 			var param = command.CreateParameter();
@@ -403,6 +410,12 @@ namespace TecWare.PPSn
 			return param;
 		} // func AddParameter
 
+		/// <summary>Add parameter to an DbCommand</summary>
+		/// <param name="command"></param>
+		/// <param name="parameterName"></param>
+		/// <param name="dbType"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static DbParameter AddParameter(this DbCommand command, string parameterName, DbType dbType, object value = null)
 		{
 			var param = AddParameter(command, parameterName);
@@ -411,6 +424,9 @@ namespace TecWare.PPSn
 			return param;
 		} // func AddParameter
 
+		/// <summary>Execute with CommandText-Attribute.</summary>
+		/// <param name="command"></param>
+		/// <returns></returns>
 		public static int ExecuteNonQueryEx(this DbCommand command)
 		{
 			try
@@ -424,6 +440,9 @@ namespace TecWare.PPSn
 			}
 		} // func ExecuteReaderEx
 
+		/// <summary>Execute with CommandText-Attribute.</summary>
+		/// <param name="command"></param>
+		/// <returns></returns>
 		public static async Task<int> ExecuteNonQueryExAsync(this DbCommand command)
 		{
 			try
@@ -437,6 +456,10 @@ namespace TecWare.PPSn
 			}
 		} // func ExecuteReaderEx
 
+		/// <summary>Execute with CommandText-Attribute.</summary>
+		/// <param name="command"></param>
+		/// <param name="commandBehavior"></param>
+		/// <returns></returns>
 		public static DbDataReader ExecuteReaderEx(this DbCommand command, CommandBehavior commandBehavior = CommandBehavior.Default)
 		{
 			try
@@ -450,6 +473,10 @@ namespace TecWare.PPSn
 			}
 		} // func ExecuteReaderEx
 
+		/// <summary>Execute with CommandText-Attribute.</summary>
+		/// <param name="command"></param>
+		/// <param name="commandBehavior"></param>
+		/// <returns></returns>
 		public static async Task<DbDataReader> ExecuteReaderExAsync(this DbCommand command, CommandBehavior commandBehavior = CommandBehavior.Default)
 		{
 			try
@@ -463,6 +490,9 @@ namespace TecWare.PPSn
 			}
 		} // func ExecuteReaderEx
 
+		/// <summary>Execute with CommandText-Attribute.</summary>
+		/// <param name="command"></param>
+		/// <returns></returns>
 		public static object ExecuteScalarEx(this DbCommand command)
 		{
 			try
@@ -476,6 +506,9 @@ namespace TecWare.PPSn
 			}
 		} // func ExecuteScalarEx
 
+		/// <summary>Execute with CommandText-Attribute.</summary>
+		/// <param name="command"></param>
+		/// <returns></returns>
 		public static async Task<object> ExecuteScalarExAsync(this DbCommand command)
 		{
 			try
@@ -489,44 +522,102 @@ namespace TecWare.PPSn
 			}
 		} // func ExecuteScalarEx
 
-		public static void UpdateExceptionWithCommandInfo(this Exception e, DbCommand cmd)
+		/// <summary>Add CommandText-Attribute to the exception.</summary>
+		/// <param name="e"></param>
+		/// <param name="command"></param>
+		/// <returns></returns>
+		public static void UpdateExceptionWithCommandInfo(this Exception e, DbCommand command)
 		{
-			var ret = cmd.CommandText;
-#pragma warning disable IDE0007 // Use implicit type
-			foreach (DbParameter parameter in cmd.Parameters)
-#pragma warning restore IDE0007 // Use implicit type
+			var ret = command.CommandText;
+			foreach (var parameter in command.Parameters.Cast<DbParameter>())
 				ret = ret.Replace(parameter.ParameterName, parameter.Value.ToString());
-
 			e.Data[CommandTextKey] = ret;
 		} // proc UpdateExceptionWithCommandInfo
 
+		/// <summary></summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static bool DbNullOnNeg(long value)
 			=> value < 0;
 
+		/// <summary></summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static object DbNullIfString(this string value)
 			=> String.IsNullOrEmpty(value) ? (object)DBNull.Value : value;
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="value"></param>
+		/// <param name="null"></param>
+		/// <returns></returns>
 		public static object DbNullIf<T>(this T value, T @null)
 			=> Object.Equals(value, @null) ? (object)DBNull.Value : value;
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="value"></param>
+		/// <param name="null"></param>
+		/// <returns></returns>
 		public static object DbNullIf<T>(this T value, Func<T, bool> @null)
 			=> @null(value) ? (object)DBNull.Value : value;
+
+		/// <summary></summary>
+		/// <param name="r"></param>
+		/// <param name="columnName"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		public static int FindColumnIndex(this IDataRecord r, string columnName, bool throwException = true)
+		{
+			for(var i = 0;i< r.FieldCount;i++)
+			{
+				if (String.Compare(r.GetName(i), columnName, StringComparison.OrdinalIgnoreCase) == 0)
+					return i;
+			}
+			if (throwException)
+				throw new ArgumentOutOfRangeException(nameof(columnName), columnName, $"Column '{columnName}' not found.");
+			return -1;
+		} // func FindColumnIndex
+
+		/// <summary></summary>
+		/// <param name="r"></param>
+		/// <param name="throwException"></param>
+		/// <param name="columnNames"></param>
+		/// <returns></returns>
+		public static int[] FindColumnIndices(this IDataRecord r, bool throwException, params string[] columnNames)
+		{
+			// init result
+			var idx = new int[columnNames.Length];
+			for (var i = 0; i < idx.Length; i++)
+				idx[i] = -1;
+
+			// match columns
+			for (var i = 0; i < r.FieldCount; i++)
+			{
+				var n = r.GetName(i);
+				var j = Array.FindIndex(columnNames, c => String.Compare(n, c, StringComparison.OrdinalIgnoreCase) == 0);
+				if(j != -1)
+					idx[j] = i;
+			}
+
+			// return values
+			for (var i = 0; i < idx.Length; i++)
+			{
+				if (idx[i] == -1)
+					throw new ArgumentOutOfRangeException(nameof(columnNames), columnNames[i], $"Column '{columnNames[i]}' not found.");
+			}
+
+			return idx;
+		} // func FindColumnIndices
 	} // class StuffDB
 
 	#endregion
 
 	#region -- class StuffIO ------------------------------------------------------------
 
+	/// <summary></summary>
 	public static class StuffIO
 	{
-		//public static string GetStreamHash(Stream stream)
-		//{
-		//	var bstream = new BufferedStream(stream, 1024 * 32); // no using, because we want to keep the stream alive
-		//	var ret = BitConverter.ToString(new SHA256Managed().ComputeHash(bstream)).Replace("-", String.Empty).ToLower();
-		//	bstream.Flush();
-		//	return ret;
-		//}
-
 		/// <summary>We only use sha256, the prefix should be useful, if the algorithm will be changed in future.</summary>
 		/// <returns></returns>
 		public static string GetHashPrefix(HashAlgorithm algorithm)

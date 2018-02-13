@@ -16,6 +16,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security;
 using System.Text;
@@ -129,30 +130,14 @@ namespace TecWare.PPSn
 		[TestMethod]
 		public void DbPasswordStoreTest()
 		{
-			var emptyString = String.Empty;
-			var aString = "A";
-			var bString = "B";
-			var testString = String.Empty;
-
-			for (var i = 0; i < 1024; i++)
-				testString += (char)(i % 256);
-
-			Assert.AreEqual(emptyString, ProcsPps.StringCypher(emptyString));
-			Assert.AreEqual(emptyString, ProcsPps.StringDecypher(emptyString));
-
-			Assert.AreEqual("3", ProcsPps.StringCypher(aString));
-			Assert.AreEqual("0", ProcsPps.StringCypher(bString));
-			Assert.AreEqual("3q", ProcsPps.StringCypher(aString+bString));
-
-			Assert.AreEqual(aString, ProcsPps.StringDecypher(ProcsPps.StringDecypher(aString)));
-			Assert.AreEqual(bString, ProcsPps.StringDecypher(ProcsPps.StringDecypher(bString)));
-			Assert.AreEqual(aString+bString, ProcsPps.StringDecypher(ProcsPps.StringCypher(aString+bString)));
-			Assert.AreEqual(emptyString, ProcsPps.StringDecypher(ProcsPps.StringDecypher(emptyString)));
-			
-			Assert.AreEqual(testString, ProcsPps.StringDecypher(ProcsPps.StringCypher(testString)));
-
-			foreach (var charA in ProcsPps.GeneratePassword(128, "a".ToCharArray()))
-				Assert.AreEqual('a', charA);
+			for (var i = 0; i < 100; i++)
+			{
+				var pwd = PpsEnvironment.GenerateSqlitePassword();
+				Console.WriteLine("Password: {0}", pwd);
+				var encrypted = PpsEnvironment.EncryptSqlitePassword(pwd);
+				var pwd2 = PpsEnvironment.DecryptSqlitePassword(encrypted);
+				Assert.AreEqual(pwd, pwd2);
+			}
 		}
 	}
 }

@@ -235,8 +235,8 @@ namespace TecWare.PPSn
 		/// <param name="obj">other object</param>
 		/// <returns></returns>
 		public override bool Equals(object obj)
-			=> obj is PpsMasterDataRow r 
-				?  (ReferenceEquals(this, obj) || owner.Definition == r.owner.Definition && Object.Equals(Key, r.Key)) 
+			=> obj is PpsMasterDataRow r
+				? (ReferenceEquals(this, obj) || owner.Definition == r.owner.Definition && Object.Equals(Key, r.Key))
 				: false;
 
 		/// <summary>Hashcode for the current datarow.</summary>
@@ -353,7 +353,7 @@ namespace TecWare.PPSn
 		{
 			private bool needFullTextColumn = false;
 
-			public PpsMasterDataFilterVisitor(IDataColumns columns) 
+			public PpsMasterDataFilterVisitor(IDataColumns columns)
 				: base(columns)
 			{
 			} // ctor
@@ -368,10 +368,10 @@ namespace TecWare.PPSn
 				return base.LookupColumn(columnToken);
 			} // func LookupColumn
 
-			protected override Tuple<string, Type> LookupDateColumn(string columnToken) 
+			protected override Tuple<string, Type> LookupDateColumn(string columnToken)
 				=> base.LookupDateColumn(columnToken);
 
-			protected override Tuple<string, Type> LookupNumberColumn(string columnToken) 
+			protected override Tuple<string, Type> LookupNumberColumn(string columnToken)
 				=> base.LookupNumberColumn(columnToken);
 
 			public bool NeedFullTextColumn => needFullTextColumn;
@@ -696,7 +696,7 @@ namespace TecWare.PPSn
 
 			public static PpsDataChangeOperation ConvertEventToOperation(UpdateEventType type)
 			{
-				switch(type)
+				switch (type)
 				{
 					case UpdateEventType.Delete:
 						return PpsDataChangeOperation.Delete;
@@ -1095,7 +1095,7 @@ namespace TecWare.PPSn
 				}
 			}
 
-			if (newIndices.Count > 0 ||changedIndices.Count > 0 || removeIndices.Count > 0 || sameColumns.Count < localColumnsArray.Length || newColumns.Count > 0)
+			if (newIndices.Count > 0 || changedIndices.Count > 0 || removeIndices.Count > 0 || sameColumns.Count < localColumnsArray.Length || newColumns.Count > 0)
 			{
 				if (!preserveCurrentData) // drop and recreate
 				{
@@ -1122,7 +1122,7 @@ namespace TecWare.PPSn
 					// drop old local table
 					commands.Add($"DROP TABLE [{tableName}_temp];");  // no IF EXISTS - at this point the table must exist or error
 				}
-				else if (newColumns.Count > 0 ||newIndices.Count > 0 || changedIndices.Count > 0 || removeIndices.Count > 0) // there are no columns, which have to be deleted - check now if there are new columns to add
+				else if (newColumns.Count > 0 || newIndices.Count > 0 || changedIndices.Count > 0 || removeIndices.Count > 0) // there are no columns, which have to be deleted - check now if there are new columns to add
 				{
 					// todo: rk primary key column changed
 					foreach (var column in newColumns)
@@ -1226,7 +1226,7 @@ namespace TecWare.PPSn
 
 		private static void AddIndexDefinition(string tableName, IDataColumn column, Dictionary<string, IndexDef> indices)
 		{
-			if(column.Attributes.GetProperty("IsPrimary",true))
+			if (column.Attributes.GetProperty("IsPrimary", true))
 			{
 				var primaryKeyIndexName = tableName + "_" + column.Name + "_primaryIndex";
 				indices.Add(primaryKeyIndexName, new IndexDef(primaryKeyIndexName, true, column));
@@ -1272,7 +1272,7 @@ namespace TecWare.PPSn
 			}
 		} // func IsIndexColumn
 
-		private static string GetDefaultIndexName(string tableName, IDataColumn column) 
+		private static string GetDefaultIndexName(string tableName, IDataColumn column)
 			=> tableName + "_" + column.Name + "_index";
 
 		private static StringBuilder CreateCommandColumnAttribute(StringBuilder commandText, IDataColumn column)
@@ -1413,7 +1413,7 @@ namespace TecWare.PPSn
 									await xml.SkipAsync();
 							}
 						}
-						
+
 						await ProcessCurrentNodeAsync(actionName, parameterValues);
 
 						objectCounter++;
@@ -1553,7 +1553,7 @@ namespace TecWare.PPSn
 					var remoteValue = parameterValues[4];
 					var remoteUserId = ConvertStringToSQLiteValue(parameterValues[7], DbType.Int64);
 					var remoteDateTime = ConvertStringToSQLiteValue(parameterValues[8], DbType.DateTime);
-					
+
 					// check if the row exists
 					parameterExistsId.Value = remoteId;
 					parameterExistsObjectId.Value = remoteObjectId;
@@ -2068,7 +2068,7 @@ namespace TecWare.PPSn
 
 		internal PpsDataTableDefinition FindTable(string tableName)
 			=> schema?.FindTable(tableName);
-		
+
 		#endregion
 
 		#region -- Synchronization ----------------------------------------------------
@@ -2192,7 +2192,7 @@ namespace TecWare.PPSn
 									else
 										v = Procs.ChangeType(v, col.DataType);
 
-									cmd.AddParameter("@v" + idx.ToString(), ConvertDataTypeToDbType(col.DataType),  v);
+									cmd.AddParameter("@v" + idx.ToString(), ConvertDataTypeToDbType(col.DataType), v);
 
 									idx++;
 								}
@@ -2810,13 +2810,13 @@ namespace TecWare.PPSn
 				}
 			} // proc RollbackCore
 
-			internal override void SetCommitOnDisposeUnsafe() 
+			internal override void SetCommitOnDisposeUnsafe()
 				=> commitOnDispose = true;
 
-			internal override void AddRefUnsafe() 
+			internal override void AddRefUnsafe()
 				=> Interlocked.Increment(ref nestedTransactionCounter);
 
-			internal override void DecRefUnsafe() 
+			internal override void DecRefUnsafe()
 				=> Interlocked.Decrement(ref nestedTransactionCounter);
 
 			protected override SQLiteConnection ConnectionCore => connection;
@@ -3112,8 +3112,8 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		private readonly List<WeakReference<DataRowChangedEventItem>> weakDataRowEvents = new List<WeakReference<DataRowChangedEventItem>>(); 
-		
+		private readonly List<WeakReference<DataRowChangedEventItem>> weakDataRowEvents = new List<WeakReference<DataRowChangedEventItem>>();
+
 		private void Connection_Update(object sender, UpdateEventArgs e)
 		{
 			lock (collectedEvents)
@@ -3127,7 +3127,7 @@ namespace TecWare.PPSn
 				}
 				else
 					collectedEvents.Add(new PpsDataEvent(PpsDataEvent.ConvertEventToOperation(e.Event), e.Database, e.Table, e.RowId));
-				
+
 				OnCollectedEvents();
 			}
 		} // proc Connection_Update
@@ -3305,7 +3305,7 @@ namespace TecWare.PPSn
 					return false;
 			}
 		} // func IsIntegerType
-		
+
 		private static string ConvertDataTypeToSqLite(IDataColumn column)
 		{
 			if (column.Attributes.GetProperty("IsIdentity", false) && IsIntegerType(column.DataType))
@@ -3390,22 +3390,20 @@ namespace TecWare.PPSn
 
 		internal static bool TestTableColumns(SQLiteConnection connection, string tableName, params SimpleDataColumn[] columns)
 		{
-			using (var e = GetLocalTableColumns(connection, tableName).GetEnumerator())
-			{
-				for (var i = 0; i < columns.Length; i++)
-				{
-					if (!e.MoveNext())
-						return false;
+			var foundColumnCount = 0;
 
-					var textColumn = e.Current;
-					var expectedColumn = columns[i];
-					if (String.Compare(textColumn.Name, expectedColumn.Name, StringComparison.OrdinalIgnoreCase) != 0)
+			foreach (var expectedColumn in GetLocalTableColumns(connection, tableName))
+			{
+				var testColumn = columns.FirstOrDefault(c => String.Compare(expectedColumn.Name, c.Name, StringComparison.OrdinalIgnoreCase) == 0);
+				if (testColumn != null)
+				{
+					if (testColumn.DataType != expectedColumn.DataType)
 						return false;
-					else if (textColumn.DataType != expectedColumn.DataType)
-						return false;
+					foundColumnCount++;
 				}
 			}
-			return true;
+
+			return foundColumnCount == columns.Length;
 		} // func TestLocalTableColumns
 
 		#endregion
@@ -4378,36 +4376,91 @@ namespace TecWare.PPSn
 
 		#region -- Init -----------------------------------------------------------------
 
-		private Task<string> GetLocalStorePassword()
+		private const string simpleEncryptionKey = "ppsn_sqlite_dau_key";
+		private const string validSqlitePasswordChars =
+			"ABCDEFGHIJKLMNOPQRSTUVWXYZ_.0123456789" +
+			"abcdefghijklmnopqrstuvwxyz_.0123456789";
+
+		internal static string DecryptSqlitePassword(byte[] cryptedPassword)
 		{
-			var passwordFile = Path.Combine(LocalPath.FullName, "localStore.dat");
-			return File.Exists(passwordFile)
-				? ReadPasswordFile(passwordFile)
-				: CreatePasswordFile(passwordFile, 256);
+			if (cryptedPassword == null)
+				return null;
+
+			var encryptedPassword = new char[cryptedPassword.Length - 1];
+			for (var i = 1; i < cryptedPassword.Length; i++)
+			{
+				var c = (char)(cryptedPassword[i] ^ cryptedPassword[i - 1]);
+				if (validSqlitePasswordChars.IndexOf(c) == -1)
+					throw new ArgumentOutOfRangeException("char", c, "Encrypted Password is invalid.");
+				encryptedPassword[i - 1] = c;
+			}
+
+			return new string(encryptedPassword);
+		} // func DecryptSqlitePassword
+
+		internal static byte[] EncryptSqlitePassword(string encryptedPassword)
+		{
+			if (encryptedPassword == null)
+				return null;
+
+			var cryptedPassword = new byte[encryptedPassword.Length + 1];
+			cryptedPassword[0] = (byte)new Random(Environment.TickCount).Next(1, 255);
+			for (var i = 0; i < encryptedPassword.Length; i++)
+				cryptedPassword[i + 1] = (byte)(cryptedPassword[i] ^ (byte)encryptedPassword[i]);
+
+			return cryptedPassword;
+		} // func EncryptSqlitePassword
+
+		private static Random randomNumberGenerator = new Random();
+
+		internal static string GenerateSqlitePassword()
+		{
+			var pwd = new char[simpleEncryptionKey.Length];
+
+			for (var i = 0; i < pwd.Length; i++)
+			{
+				var j = randomNumberGenerator.Next(0, validSqlitePasswordChars.Length - 1);
+				pwd[i] = validSqlitePasswordChars[j];
+			}
+
+			return new string(pwd);
+		} // func GenerateSqlitePassword
+
+		[LuaMember("__getpwd")]
+		private string LuaGetLocalStorePassword(string fileName = null)
+			=> GetLocalStorePassword(fileName ?? Path.Combine(LocalPath.FullName, "localStore.db"), false);
+		
+		private string GetLocalStorePassword(string databaseFile, bool canGeneratePassword)
+		{
+			// generate password file
+			var passwordFile = new FileInfo(Path.ChangeExtension(databaseFile, ".dat"));
+
+			// test if file exists
+			if (passwordFile.Exists)
+			{
+				if (passwordFile.Length > 1024)
+					throw new ArgumentOutOfRangeException(nameof(passwordFile), passwordFile.Length, "Password file is to big.");
+				return DecryptSqlitePassword(File.ReadAllBytes(passwordFile.FullName));
+			}
+			else if (canGeneratePassword)
+			{
+				var pwd =
+#if DEBUG
+					(string)null;
+#else
+					GenerateSqlitePassword();
+#endif
+				if (pwd != null)
+				{
+					if (!passwordFile.Directory.Exists)
+						passwordFile.Directory.Create();
+					File.WriteAllBytes(passwordFile.FullName, EncryptSqlitePassword(pwd));
+				}
+				return pwd;
+			}
+			else
+				return null;
 		} // func GetLocalStorePassword
-
-		#region -- Passwording ----------------------------------------------------------
-
-		public Task<string> ReadPasswordFile(string fileName)
-			=> Task.Run(() => ProcsPps.StringDecypher(File.ReadAllText(fileName)));
-
-		public Task<string> CreatePasswordFile(string fileName, int passwordLength, byte passwordLowerBoundary = 32, byte passwordUpperBoundary = 126)
-		{
-			var passwordChars = String.Empty;
-			for (var i = passwordLowerBoundary; i <= passwordUpperBoundary; i++)
-				passwordChars += (char)i;
-			return CreatePasswordFile(fileName, passwordLength, passwordChars.ToCharArray());
-		} // func CreatePasswordFile
-
-		public Task<string> CreatePasswordFile(string fileName, int passwordLength, char[] passwordValidChars)
-		{
-			if (File.Exists(fileName))
-				File.Delete(fileName);
-			File.WriteAllText(fileName, ProcsPps.StringCypher(ProcsPps.GeneratePassword(passwordLength, passwordValidChars)));
-			return ReadPasswordFile(fileName);
-		} // func CreatePasswordFile
-
-		#endregion
 
 		/// <summary></summary>
 		/// <returns><c>true</c>, if a valid database is present.</returns>
@@ -4425,13 +4478,13 @@ namespace TecWare.PPSn
 				// open the local database
 				progress.Report("Lokale Datenbank öffnen...");
 				var dataPath = Path.Combine(LocalPath.FullName, "localStore.db");
-				var connectionString = "Data Source=" + dataPath + ";DateTimeKind=Utc"
-#if !DEBUG
-					+ "Password=Pps" + GetLocalStorePassword()
-#endif
-					;
+				var connectionString = "Data Source=" + dataPath + ";DateTimeKind=Utc";
+				var pwd = GetLocalStorePassword(dataPath, !File.Exists(dataPath));
+				if (pwd != null)
+					connectionString += ";Password=Pps" + pwd;
+
 				newLocalStore = new SQLiteConnection(connectionString); // foreign keys=true;
-				
+
 				newLocalStore.StateChange += (sender, e) =>
 				{
 					if (e.CurrentState == ConnectionState.Closed | e.CurrentState == ConnectionState.Broken)
@@ -4477,25 +4530,33 @@ namespace TecWare.PPSn
 					{
 						using (var r = command.ExecuteReaderEx(CommandBehavior.SingleRow))
 						{
+							var columnIndices = r.FindColumnIndices(true,
+								"SchemaStamp",
+								"SchemaContent",
+								"SyncStamp",
+								"UserId"
+							);
+
 							if (r.Read())
 							{
 								// check schema
-								if (!r.IsDBNull(0) && !r.IsDBNull(1))
+								if (!r.IsDBNull(columnIndices[0]) && !r.IsDBNull(columnIndices[1]))
 								{
-									lastSynchronizationSchema = DateTime.FromFileTimeUtc(r.GetInt64(0));
-									newDataSet = new PpsDataSetDefinitionDesktop(this, PpsMasterData.MasterDataSchema, PpsMasterData.ReadSchemaValue(r, 1));
+									lastSynchronizationSchema = DateTime.FromFileTimeUtc(r.GetInt64(columnIndices[0]));
+									newDataSet = new PpsDataSetDefinitionDesktop(this, PpsMasterData.MasterDataSchema, PpsMasterData.ReadSchemaValue(r, columnIndices[1]));
 									newDataSet.EndInit();
 									isSchemaUseable = true;
 								}
 								// check data and user info
-								if (!r.IsDBNull(2) && !r.IsDBNull(3))
+								if (!r.IsDBNull(columnIndices[2]) && !r.IsDBNull(columnIndices[3]))
 								{
-									lastSynchronizationStamp = DateTime.FromFileTimeUtc(r.GetInt64(2));
-									userId = r.GetInt64(3);
+									lastSynchronizationStamp = DateTime.FromFileTimeUtc(r.GetInt64(columnIndices[2]));
+									userId = r.GetInt64(columnIndices[3]);
 
-									for (var i = 4; i < r.FieldCount; i++)
+									for (var i = 0; i < r.FieldCount; i++)
 									{
-										if (!r.IsDBNull(i))
+										if (!columnIndices.Contains(i)
+											&& !r.IsDBNull(i))
 											SetMemberValue(r.GetName(i), r.GetValue(i));
 									}
 
@@ -4505,6 +4566,8 @@ namespace TecWare.PPSn
 						}
 					}
 				}
+				else
+					Trace.WriteLine("[MasterData] Header table hast different schema.");
 
 				// reset values
 				if (!isSchemaUseable)
