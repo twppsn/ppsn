@@ -19,8 +19,11 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using Microsoft.Scripting.Utils;
 using TecWare.DE.Data;
 using TecWare.PPSn.Data;
+using System.Linq;
+using System.Collections;
 
 namespace TecWare.PPSn.Controls
 {
@@ -90,7 +93,14 @@ namespace TecWare.PPSn.Controls
 				var childDataFilterBox = popup.Child.GetVisualChild<PpsDataFilterBox>();
 				childDataFilterBox.ApplyTemplate();
 				itemsListBox = (ListBox)childDataFilterBox.GetTemplateChild(ListBoxTemplateName);
-				this.Focus();
+				if (itemsListBox?.Items.Count > 0)
+					itemsListBox.ItemContainerGenerator.StatusChanged += (sender, e) => {
+						var container = (ListBoxItem)(from IDataRow itm in itemsListBox.Items where itemsListBox.ItemContainerGenerator.ContainerFromItem(itm) != null select itemsListBox.ItemContainerGenerator.ContainerFromItem(itm)).FirstOrDefault();
+						if (container != null && container.ActualHeight>0)
+							popup.MaxHeight = CalculateMaxDropDownHeight(((ListBoxItem)container).ActualHeight);
+					};
+				if (popup.IsOpen)
+					this.Focus();
 			}
 			else
 			{
@@ -103,6 +113,17 @@ namespace TecWare.PPSn.Controls
 
 				return (itemsListBox != null);
 		}
+
+		private double CalculateMaxDropDownHeight(double itemHeight)
+		{
+			// like ComboBox
+			var height = SystemParameters.PrimaryScreenHeight / 3;
+			// no partially visible items for itemHeight
+			height += itemHeight - (height % itemHeight);
+			// add header (33) and border (2)
+			height += 35;
+			return height;
+		} // func CalculateMaxDropDownHeight
 
 		/// <summary>Constructor - initializes the Commands</summary>
 		public PpsDataFilterBox()
