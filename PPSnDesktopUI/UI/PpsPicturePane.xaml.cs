@@ -121,9 +121,13 @@ namespace TecWare.PPSn.UI
 				// the timer may trigger while initialized||lost is called - rendering the list invalid
 				lock (awaitingCameras)
 				{
-					var localWebCamsCollection = new FilterInfoCollection(AForge.Video.DirectShow.FilterCategory.VideoInputDevice);
-					// only camera were initialized, which are not already running (devices) and are not in the process ov initializing (awaitingCameras)
-					foreach (var cam in (from AForge.Video.DirectShow.FilterInfo vc in localWebCamsCollection where !((from c in cameras select c.MonikerString).Contains(vc.MonikerString)) where !((from c in awaitingCameras select c.MonikerString).Contains(vc.MonikerString)) where (vc.MonikerString.Contains("vid") || vc.MonikerString.Contains("pnp:\\\\?\\display")) select vc))
+					// list all webcams
+					var localWebcamCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
+					// subtract webcams which are already known (running or being initialized)
+					var localUninitializedWebcamCollection = from FilterInfo vc in localWebcamCollection where !((from c in cameras select c.MonikerString).Contains(vc.MonikerString)) select vc;
+					// subtract webcams which are neither usb nor pnp:display(directly on cpu/bus)
+					var localValidWebcamCollection = from FilterInfo vc in localUninitializedWebcamCollection where (vc.MonikerString.Contains("vid") || vc.MonikerString.Contains("pnp:\\\\?\\display")) select vc;
+					foreach (var cam in localValidWebcamCollection)
 					{
 						awaitingCameras.Add(cam);
 						var acam = new PpsAforgeCamera(cam, traces);
