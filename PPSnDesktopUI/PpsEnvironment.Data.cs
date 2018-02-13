@@ -4112,6 +4112,7 @@ namespace TecWare.PPSn
 							catch
 							{
 								dst.Dispose(); // dispose because error
+								throw;
 							}// using src,dst
 						}
 					} // using response
