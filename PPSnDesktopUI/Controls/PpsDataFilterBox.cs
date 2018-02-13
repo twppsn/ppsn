@@ -81,7 +81,7 @@ namespace TecWare.PPSn.Controls
 
 		private bool ReferenceListBox()
 		{
-			if (itemsListBox != null && itemsListBox.Items.Count > 0)
+			if (itemsListBox != null)
 				return true;
 
 			if (GetTemplateChild("PART_DropDownPopup") is Popup popup)
@@ -98,7 +98,10 @@ namespace TecWare.PPSn.Controls
 				itemsListBox = (ListBox)this.GetTemplateChild(ListBoxTemplateName);
 			}
 
-			return (itemsListBox != null);
+			if (itemsListBox != null && itemsListBox.Items.Count <= 0)
+				itemsListBox = null;
+
+				return (itemsListBox != null);
 		}
 
 		/// <summary>Constructor - initializes the Commands</summary>
@@ -304,7 +307,7 @@ namespace TecWare.PPSn.Controls
 					}
 					break;
 				case Key.Delete:
-					if (IsNullable && IsWriteable)
+					if (IsNullable && IsWriteable && IsDropDownOpen)
 					{
 						e.Handled = true;
 						ClearSelection();
