@@ -117,7 +117,7 @@ namespace TecWare.PPSn.Controls
 		private double CalculateMaxDropDownHeight(double itemHeight)
 		{
 			// like ComboBox
-			var height = SystemParameters.PrimaryScreenHeight / 3;
+			var height = Application.Current.Windows[0].ActualHeight / 3;
 			// no partially visible items for itemHeight
 			height += itemHeight - (height % itemHeight);
 			// add header (33) and border (2)
