@@ -146,7 +146,9 @@ namespace TecWare.PPSn.Controls
 
 			if (status)
 			{
-				itemsListBox.Items.CurrentChanged += Items_CurrentChanged;
+				
+
+					itemsListBox.Items.CurrentChanged += Items_CurrentChanged;
 				this.SetAnchorItem();
 				if (VisualChildrenCount > 0)
 					Mouse.Capture(this, CaptureMode.SubTree);
