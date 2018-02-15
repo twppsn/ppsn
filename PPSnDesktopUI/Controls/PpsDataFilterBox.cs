@@ -106,18 +106,18 @@ namespace TecWare.PPSn.Controls
 				{
 					popup.HorizontalOffset = (((FrameworkElement)popup.PlacementTarget).ActualWidth) - itemsListBox.ActualWidth;
 				};
-				
 			}
 			else
 			{
 				this.ApplyTemplate();
 				itemsListBox = (ListBox)this.GetTemplateChild(ListBoxTemplateName);
+				itemsListBox.MouseEnter += (sender, e) => ((TextBox)((PpsDataFilterBox)((Grid)this.GetVisualChild(0)).GetVisualChild<PpsDataFilterBox>()).GetTemplateChild("PART_SearchBox")).Focus();
 			}
 
 			if (itemsListBox != null && itemsListBox.Items.Count <= 0)
 				itemsListBox = null;
 
-				return (itemsListBox != null);
+			return (itemsListBox != null);
 		}
 
 		private double CalculateMaxDropDownHeight(double itemHeight)
@@ -146,9 +146,7 @@ namespace TecWare.PPSn.Controls
 
 			if (status)
 			{
-				
-
-					itemsListBox.Items.CurrentChanged += Items_CurrentChanged;
+				itemsListBox.Items.CurrentChanged += Items_CurrentChanged;
 				this.SetAnchorItem();
 				if (VisualChildrenCount > 0)
 					Mouse.Capture(this, CaptureMode.SubTree);
