@@ -101,6 +101,12 @@ namespace TecWare.PPSn.Controls
 					};
 				if (popup.IsOpen)
 					this.Focus();
+
+				((FrameworkElement)popup.Child).SizeChanged += (sender, e) =>
+				{
+					popup.HorizontalOffset = (((FrameworkElement)popup.PlacementTarget).ActualWidth) - itemsListBox.ActualWidth;
+				};
+				
 			}
 			else
 			{
