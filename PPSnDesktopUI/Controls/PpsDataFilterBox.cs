@@ -408,6 +408,8 @@ namespace TecWare.PPSn.Controls
 			{
 				if (itemsListBox.Items.GetItemAt(newIndex) is IDataRow item)
 					CommitValue(item);
+
+				itemsListBox.ScrollIntoView(SelectedValue);
 			}
 		} // proc ImmediateSelect
 
