@@ -2925,6 +2925,7 @@ namespace TecWare.PPSn
 					"Document = @Document, " +
 					"DocumentIsLinked = @DocumentIsLinked, " +
 					"DocumentIsChanged = @DocumentIsChanged, " +
+					"DocumentLastWrite = @DocumentLastWrite, " +
 					"_IsUpdated = 1 " +
 				"WHERE Id = @Id"))
 			{
@@ -2933,6 +2934,7 @@ namespace TecWare.PPSn
 				cmd.AddParameter("@Document", DbType.Binary, byteData ?? (object)DBNull.Value);
 				cmd.AddParameter("@DocumentIsLinked", DbType.Boolean, isLinked);
 				cmd.AddParameter("@DocumentIsChanged", DbType.Boolean, isDocumentChanged);
+				cmd.AddParameter("@DocumentLastWrite", DbType.DateTime, DateTime.Now);
 
 				await cmd.ExecuteNonQueryAsync();
 
@@ -3990,7 +3992,7 @@ namespace TecWare.PPSn
 				// order by condition
 				cmd.AppendLine();
 				if (String.IsNullOrEmpty(orderCondition))
-					orderCondition = ColumnStaticPrefix + "Id DESC";
+					orderCondition = "o.DocumentLastWrite DESC";
 				cmd.Append("ORDER BY ").Append(orderCondition);
 
 				// add limit
