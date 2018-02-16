@@ -193,11 +193,16 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
 		{
-			if (!IsDropDownOpen || !hasMouseEnteredItemsList)
+			if (!hasMouseEnteredItemsList)
 				return;
 
-			if (ItemFromPoint(e) != null && IsWriteable)
+			var hoveredItem = ItemFromPoint(e);
+
+			if (hoveredItem != null && IsWriteable)
 			{
+				// this case is for Searchable List, where the hovered item is not selected but the clicked
+				if (!hoveredItem.IsSelected)
+					hoveredItem.IsSelected = true;
 				e.Handled = true;
 				CloseDropDown(true);
 			}
