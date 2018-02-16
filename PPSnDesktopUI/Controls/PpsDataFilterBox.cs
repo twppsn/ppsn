@@ -541,7 +541,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>incoming list with all items</summary>
 		public IDataRowEnumerable ItemsSource { get => (IDataRowEnumerable)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
 		/// <summary>filtered list for binding</summary>
-		public IDataRowEnumerable FilteredItemsSource { get => (IDataRowEnumerable)GetValue(FilteredItemsSourceProperty); set => SetValue(FilteredItemsSourceProperty, value); }
+		public IDataRowEnumerable FilteredItemsSource { get => (IDataRowEnumerable)GetValue(FilteredItemsSourceProperty); private set => SetValue(FilteredItemsSourceProperty, value); }
 		/// <summary>Current searchstring</summary>
 		public string FilterText { get => (string)GetValue(FilterTextProperty); set => SetValue(FilterTextProperty, value); }
 		/// <summary>Value which is Selected</summary>
