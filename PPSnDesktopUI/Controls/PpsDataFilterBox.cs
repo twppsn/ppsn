@@ -111,7 +111,8 @@ namespace TecWare.PPSn.Controls
 			{
 				this.ApplyTemplate();
 				itemsListBox = (ListBox)this.GetTemplateChild(ListBoxTemplateName);
-				itemsListBox.MouseEnter += (sender, e) => ((TextBox)((PpsDataFilterBox)((Grid)this.GetVisualChild(0)).GetVisualChild<PpsDataFilterBox>()).GetTemplateChild("PART_SearchBox")).Focus();
+				if (itemsListBox != null)
+					itemsListBox.MouseEnter += (sender, e) => ((TextBox)((PpsDataFilterBox)((Grid)this.GetVisualChild(0)).GetVisualChild<PpsDataFilterBox>()).GetTemplateChild("PART_SearchBox")).Focus();
 			}
 
 			if (itemsListBox != null && itemsListBox.Items.Count <= 0)
