@@ -29,6 +29,8 @@ namespace TecWare.PPSn.Controls
 	/// <summary>This Filterbox is used to filter a List</summary>
 	public class PpsDataFilterBox : Control
 	{
+		#region ---- Dependency Propteries-----------------------------------------------
+
 		/// <summary>DependencyProperty for connecting the ItemsSource</summary>
 		public static readonly DependencyProperty ItemsSourceProperty = ItemsControl.ItemsSourceProperty.AddOwner(typeof(PpsDataFilterBox), new FrameworkPropertyMetadata(OnItemsSourceChanged));
 		/// <summary>DependencyProperty for connecting the Filtered Items</summary>
@@ -52,17 +54,32 @@ namespace TecWare.PPSn.Controls
 		/// <summary>DependencyProperty for the Write-Protection state</summary>
 		public static readonly DependencyProperty IsReadOnlyProperty = DependencyProperty.Register(nameof(IsReadOnly), typeof(bool), typeof(PpsDataFilterBox), new FrameworkPropertyMetadata(false));
 
+		#endregion
+
+		#region ---- Statics ------------------------------------------------------------
+
 		/// <summary>Command for clearing the Value</summary>
 		public readonly static RoutedCommand ClearSelectionCommand = new RoutedCommand("ClearSelection", typeof(PpsDataFilterBox));
+
+		#endregion
+
+		#region ---- Constants ----------------------------------------------------------
 
 		private const string SearchBoxTemplateName = "PART_SearchBox";
 		private const string ListBoxTemplateName = "PART_ItemsListBox";
 		private const string PopupTemplateName = "PART_DropDownPopup";
 
+		#endregion
+
+		#region ---- Fields -------------------------------------------------------------
+
 		private ListBox itemsListBox;
 		private bool hasMouseEnteredItemsList;
 		private Point lastMousePosition = new Point();
 
+		#endregion
+
+		#region ---- Events -------------------------------------------------------------
 
 		private void UpdateFilteredList()
 		{
@@ -80,6 +97,75 @@ namespace TecWare.PPSn.Controls
 			ReferenceListBox();
 			base.OnGotFocus(e);
 		}
+
+		/// <summary>Constructor - initializes the Commands</summary>
+		public PpsDataFilterBox()
+		{
+			AddClearCommand();
+		}
+
+		private void DropDownChanged(bool status)
+		{
+			if (!ReferenceListBox())
+				return;
+
+			this.hasMouseEnteredItemsList = false;
+
+			if (status)
+			{
+				itemsListBox.Items.CurrentChanged += Items_CurrentChanged;
+				this.SetAnchorItem();
+				if (VisualChildrenCount > 0)
+					Mouse.Capture(this, CaptureMode.SubTree);
+			}
+			else
+			{
+				itemsListBox.Items.CurrentChanged -= Items_CurrentChanged;
+				// leave clean
+				ClearFilter();
+
+				// Release
+				if (Mouse.Captured == this)
+					Mouse.Capture(null);
+
+				Focus();
+			}
+		} // delegate OnIsDropDownOpenChanged
+		
+		private void Items_CurrentChanged(object sender, EventArgs e)
+		{
+			if (!ReferenceListBox())
+				return;
+
+			if (itemsListBox.Items.CurrentItem is IDataRow item)
+				itemsListBox.ScrollIntoView(item);
+		} // event Items_CurrentChanged
+
+		private static void OnItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataFilterBox)d).UpdateFilteredList();
+		private static void OnFilterTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataFilterBox)d).UpdateFilteredList();
+		private static void OnIsDropDownOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataFilterBox)d).DropDownChanged((bool)e.NewValue);
+
+		#endregion
+
+		#region ---- Helper Functions ---------------------------------------------------
+		
+		private void ClearSelection()
+		{
+			CommitValue(null);
+		}
+
+		private void CommitValue(IDataRow value)
+		{
+			if (!object.Equals(value, SelectedValue))
+				SelectedValue = value;
+		} // proc CommitValue
+
+		// <summary>Empties the string for filtering</summary>
+		public void ClearFilter()
+			=> FilterText = null;
 
 		private bool ReferenceListBox()
 		{
@@ -131,41 +217,68 @@ namespace TecWare.PPSn.Controls
 			return height;
 		} // func CalculateMaxDropDownHeight
 
-		/// <summary>Constructor - initializes the Commands</summary>
-		public PpsDataFilterBox()
-		{
-			AddClearCommand();
-		}
+		#endregion
 
-		private void DropDownChanged(bool status)
+		#region ---- UI interaction -----------------------------------------------------
+		
+		private void AddClearCommand()
 		{
-			if (!ReferenceListBox())
+			CommandBindings.Add(
+				new CommandBinding(ClearSelectionCommand,
+					(sender, e) =>
+					{
+						ClearSelection();
+						e.Handled = true;
+					},
+					(sender, e) => e.CanExecute = IsNullable && IsWriteable && (SelectedValue != null)
+				)
+			);
+		} // proc AddClearCommand
+
+		private void ToggleDropDownStatus(bool commit)
+		{
+			if (IsDropDownOpen)
+				CloseDropDown(commit);
+			else
+				OpenDropDown();
+		} // proc ToggleDropDown
+
+		private void OpenDropDown()
+		{
+			if (IsDropDownOpen)
+				return;
+			IsDropDownOpen = true;
+		} // proc OpenDropDown
+
+		private void SetAnchorItem()
+		{
+			if (!ReferenceListBox() || itemsListBox.Items.Count <= 0)
 				return;
 
-			this.hasMouseEnteredItemsList = false;
+			var item = SelectedValue ?? itemsListBox.Items.GetItemAt(0);
+			itemsListBox.Items.MoveCurrentTo(item);
 
-			if (status)
-			{
-				itemsListBox.Items.CurrentChanged += Items_CurrentChanged;
-				this.SetAnchorItem();
-				if (VisualChildrenCount > 0)
-					Mouse.Capture(this, CaptureMode.SubTree);
-			}
-			else
-			{
-				itemsListBox.Items.CurrentChanged -= Items_CurrentChanged;
-				// leave clean
-				ClearFilter();
+			// clear selection?
+			if (SelectedValue == null)
+				itemsListBox.Items.MoveCurrentToPosition(-1);
+		} // proc SetAnchorItem
 
-				// Release
-				if (Mouse.Captured == this)
-					Mouse.Capture(null);
+		private void CloseDropDown(bool commit)
+		{
+			if (!IsDropDownOpen)
+				return;
 
-				Focus();
-			}
-		} // delegate OnIsDropDownOpenChanged
+			if (commit)
+				CommitValue((IDataRow)itemsListBox.SelectedValue);
 
-		#region -- Evaluate MouseEvents -----------------------------------------------
+			IsDropDownOpen = false;
+
+			ClearFilter();
+		} // proc CloseDropDown
+
+		#endregion
+
+		#region ---- Mouse interaction --------------------------------------------------
 
 		/// <summary>Handles the Mouseclicks - mainly for closing the Popup</summary>
 		/// <param name="e"></param>
@@ -260,12 +373,104 @@ namespace TecWare.PPSn.Controls
 			return false;
 		} // func HasMouseMoved
 
+		private ListBoxItem ItemFromPoint(MouseEventArgs e)
+		{
+			if (!ReferenceListBox())
+				return null;
+
+			var point = e.GetPosition(itemsListBox);
+			var element = itemsListBox.InputHitTest(point) as UIElement;
+			while (element != null)
+			{
+				if (element is ListBoxItem)
+				{
+					return (ListBoxItem)element;
+				}
+				element = VisualTreeHelper.GetParent(element) as UIElement;
+			}
+			return null;
+		} // func ItemFromPoint
+
 		#endregion
 
-		#region -- Evaluate KeyboardEvents --------------------------------------------
+		#region ---- Keyboard interaction -----------------------------------------------
 
-		/// <summary>Handles the Navigation by Keyboard</summary>
-		/// <param name="e">pressed Keys</param>
+		private int CalculateNewPos(int currentPos, int items, FocusNavigationDirection direction)
+		{
+			var newPos = currentPos;
+			switch (direction)
+			{
+				case FocusNavigationDirection.First:
+					newPos = 0;
+					break;
+				case FocusNavigationDirection.Last:
+					newPos = items - 1;
+					break;
+				case FocusNavigationDirection.Next:
+					newPos++;
+					if (newPos >= items)
+						newPos = items - 1;
+					break;
+				case FocusNavigationDirection.Previous:
+					newPos--;
+					if (newPos < 0)
+						newPos = 0;
+					break;
+			}
+			return newPos;
+		} // func CalculateNewPos
+
+		private void ImmediateSelect(FocusNavigationDirection direction)
+		{
+			if (!ReferenceListBox())
+				return;
+
+			var itemsCount = itemsListBox.Items.Count;
+			if (itemsCount == 0)
+				return;
+
+			var curIndex = -1;
+			if (itemsListBox.SelectedItem != null)
+			{
+				curIndex = itemsListBox.SelectedIndex;
+			}
+			else if (SelectedValue != null)
+			{
+				curIndex = itemsListBox.Items.IndexOf(SelectedValue);
+				if (curIndex < 0)
+					return;
+			}
+
+			var newIndex = CalculateNewPos(curIndex, itemsCount, direction);
+
+			if (newIndex != curIndex)
+			{
+				itemsListBox.SelectedIndex = newIndex;
+				if (itemsListBox.Items.GetItemAt(newIndex) is IDataRow item)
+					CommitValue(item);
+
+				itemsListBox.ScrollIntoView(SelectedValue);
+			}
+		} // proc ImmediateSelect
+
+		private void Navigate(FocusNavigationDirection direction)
+		{
+			if (!ReferenceListBox())
+				return;
+
+			var itemsCount = itemsListBox.Items.Count;
+			if (itemsCount == 0)
+				return;
+
+			var curPos = itemsListBox.Items.CurrentPosition;
+			var newPos = CalculateNewPos(curPos, itemsCount, direction);
+
+			if (newPos != curPos)
+				itemsListBox.Items.MoveCurrentToPosition(newPos);
+		} // proc Navigate
+
+		  /// <summary>Handles the Navigation by Keyboard</summary>
+		  /// <param name="e">pressed Keys</param>
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
 			=> KeyDownHandler(e);
 
@@ -367,176 +572,7 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		private void AddClearCommand()
-		{
-			CommandBindings.Add(
-				new CommandBinding(ClearSelectionCommand,
-					(sender, e) =>
-					{
-						ClearSelection();
-						e.Handled = true;
-					},
-					(sender, e) => e.CanExecute = IsNullable && IsWriteable && (SelectedValue != null)
-				)
-			);
-		} // proc AddClearCommand
-
-		private void ClearSelection()
-		{
-			CommitValue(null);
-		}
-
-		private void Navigate(FocusNavigationDirection direction)
-		{
-			if (!ReferenceListBox())
-				return;
-
-			var itemsCount = itemsListBox.Items.Count;
-			if (itemsCount == 0)
-				return;
-
-			var curPos = itemsListBox.Items.CurrentPosition;
-			var newPos = CalculateNewPos(curPos, itemsCount, direction);
-
-			if (newPos != curPos)
-				itemsListBox.Items.MoveCurrentToPosition(newPos);
-		} // proc Navigate
-
-		private void ImmediateSelect(FocusNavigationDirection direction)
-		{
-			if (!ReferenceListBox())
-				return;
-
-			var itemsCount = itemsListBox.Items.Count;
-			if (itemsCount == 0)
-				return;
-
-			var curIndex = -1;
-			if (itemsListBox.SelectedItem != null)
-			{
-				curIndex = itemsListBox.SelectedIndex;
-			}
-			else if (SelectedValue != null)
-			{
-				curIndex = itemsListBox.Items.IndexOf(SelectedValue);
-				if (curIndex < 0)
-					return;
-			}
-
-			var newIndex = CalculateNewPos(curIndex, itemsCount, direction);
-
-			if (newIndex != curIndex)
-			{
-				itemsListBox.SelectedIndex = newIndex;
-				if (itemsListBox.Items.GetItemAt(newIndex) is IDataRow item)
-					CommitValue(item);
-
-				itemsListBox.ScrollIntoView(SelectedValue);
-			}
-		} // proc ImmediateSelect
-
-		private void CommitValue(IDataRow value)
-		{
-			if (!object.Equals(value, SelectedValue))
-				SelectedValue = value;
-		} // proc CommitValue
-
-		private int CalculateNewPos(int currentPos, int items, FocusNavigationDirection direction)
-		{
-			var newPos = currentPos;
-			switch (direction)
-			{
-				case FocusNavigationDirection.First:
-					newPos = 0;
-					break;
-				case FocusNavigationDirection.Last:
-					newPos = items - 1;
-					break;
-				case FocusNavigationDirection.Next:
-					newPos++;
-					if (newPos >= items)
-						newPos = items - 1;
-					break;
-				case FocusNavigationDirection.Previous:
-					newPos--;
-					if (newPos < 0)
-						newPos = 0;
-					break;
-			}
-			return newPos;
-		} // func CalculateNewPos
-
-		private void ToggleDropDownStatus(bool commit)
-		{
-			if (IsDropDownOpen)
-				CloseDropDown(commit);
-			else
-				OpenDropDown();
-		} // proc ToggleDropDown
-
-		private void OpenDropDown()
-		{
-			if (IsDropDownOpen)
-				return;
-			IsDropDownOpen = true;
-		} // proc OpenDropDown
-
-		private ListBoxItem ItemFromPoint(MouseEventArgs e)
-		{
-			if (!ReferenceListBox())
-				return null;
-
-			var point = e.GetPosition(itemsListBox);
-			var element = itemsListBox.InputHitTest(point) as UIElement;
-			while (element != null)
-			{
-				if (element is ListBoxItem)
-				{
-					return (ListBoxItem)element;
-				}
-				element = VisualTreeHelper.GetParent(element) as UIElement;
-			}
-			return null;
-		} // func ItemFromPoint
-
-		private void Items_CurrentChanged(object sender, EventArgs e)
-		{
-			if (!ReferenceListBox())
-				return;
-
-			if (itemsListBox.Items.CurrentItem is IDataRow item)
-				itemsListBox.ScrollIntoView(item);
-		} // event Items_CurrentChanged
-
-		private void SetAnchorItem()
-		{
-			if (!ReferenceListBox() || itemsListBox.Items.Count <= 0)
-				return;
-
-			var item = SelectedValue ?? itemsListBox.Items.GetItemAt(0);
-			itemsListBox.Items.MoveCurrentTo(item);
-
-			// clear selection?
-			if (SelectedValue == null)
-				itemsListBox.Items.MoveCurrentToPosition(-1);
-		} // proc SetAnchorItem
-
-		/// <summary>Empties the string for filtering</summary>
-		public void ClearFilter()
-			=> FilterText = null;
-
-		private void CloseDropDown(bool commit)
-		{
-			if (!IsDropDownOpen)
-				return;
-
-			if (commit)
-				CommitValue((IDataRow)itemsListBox.SelectedValue);
-
-			IsDropDownOpen = false;
-
-			ClearFilter();
-		} // proc CloseDropDown
+		#region ---- Properties ---------------------------------------------------------
 
 		/// <summary>incoming list with all items</summary>
 		public IDataRowEnumerable ItemsSource { get => (IDataRowEnumerable)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
@@ -563,11 +599,6 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Can user select content?</summary>
 		public bool IsWriteable { get => !(bool)GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, !value); }
 
-		private static void OnItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsDataFilterBox)d).UpdateFilteredList();
-		private static void OnFilterTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsDataFilterBox)d).UpdateFilteredList();
-		private static void OnIsDropDownOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsDataFilterBox)d).DropDownChanged((bool)e.NewValue);
+		#endregion
 	}
 }
