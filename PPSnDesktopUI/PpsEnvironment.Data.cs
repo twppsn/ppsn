@@ -2974,8 +2974,8 @@ namespace TecWare.PPSn
 
 				var threadRootTransaction = GetRootTransaction();
 				return threadRootTransaction.CheckAccess()
-					? (PpsMasterDataTransaction)new PpsMasterNestedTransaction(currentTransaction)
-					: (PpsMasterDataTransaction)new PpsMasterThreadJoinTransaction(currentTransaction);
+					? (PpsMasterDataTransaction)new PpsMasterNestedTransaction(threadRootTransaction)
+					: (PpsMasterDataTransaction)new PpsMasterThreadJoinTransaction((PpsMasterRootTransaction)threadRootTransaction);
 			}
 			else // ReadCommit is thread as write for sqlite
 			{

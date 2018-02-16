@@ -21,7 +21,6 @@ using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Data.SQLite;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;

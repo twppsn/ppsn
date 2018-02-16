@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -236,6 +237,8 @@ namespace TecWare.PPSn.Server
 					UpdateInitializationState("Failed");
 					msg.NewLine()
 						.WriteException(e);
+
+					Server.LogMsg(EventLogEntryType.Error, "Configuration not initialized. See log for details.");
 				}
 			}
 		} // proc InitializeApplication
@@ -279,7 +282,7 @@ namespace TecWare.PPSn.Server
 			}
 		} // proc RegisterInitializationTask
 
-		/// <summary></summary>
+		/// <summary>Is the ppsn configuration initialized.</summary>
 		public bool IsInitializedSuccessful => isInitializedSuccessful;
 
 		#endregion
