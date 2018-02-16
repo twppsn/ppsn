@@ -562,6 +562,26 @@ namespace TecWare.PPSn.Controls
 						ClearSelection();
 					}
 					break;
+				case Key.PageDown:
+					if (ReferenceListBox())
+					{
+						e.Handled = true;
+						var visibleindexes = from idx in Enumerable.Range(0, itemsListBox.Items.Count) where itemsListBox.ItemContainerGenerator.ContainerFromIndex(idx) != null && ((ListBoxItem)itemsListBox.ItemContainerGenerator.ContainerFromIndex(idx)).IsVisible select idx;
+						var newLast = Math.Min(itemsListBox.SelectedIndex + visibleindexes.Count() - 3, itemsListBox.Items.Count - 1);
+						itemsListBox.SelectedIndex = newLast;
+						itemsListBox.ScrollIntoView(itemsListBox.Items[newLast]);
+					}
+					break;
+				case Key.PageUp:
+					if (ReferenceListBox())
+					{
+						e.Handled = true;
+						var visibleindexes = from idx in Enumerable.Range(0, itemsListBox.Items.Count) where itemsListBox.ItemContainerGenerator.ContainerFromIndex(idx) != null && ((ListBoxItem)itemsListBox.ItemContainerGenerator.ContainerFromIndex(idx)).IsVisible select idx;
+						var newLast = Math.Max(itemsListBox.SelectedIndex - visibleindexes.Count() + 3, 0);
+						itemsListBox.SelectedIndex = newLast;
+						itemsListBox.ScrollIntoView(itemsListBox.Items[newLast]);
+					}
+					break;
 				case Key.Left:
 				case Key.Right:
 					// disable visual Navigation on the Form
