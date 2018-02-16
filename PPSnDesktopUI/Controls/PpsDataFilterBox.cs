@@ -23,7 +23,6 @@ using Microsoft.Scripting.Utils;
 using TecWare.DE.Data;
 using TecWare.PPSn.Data;
 using System.Linq;
-using System.Collections;
 
 namespace TecWare.PPSn.Controls
 {
@@ -64,7 +63,7 @@ namespace TecWare.PPSn.Controls
 		private bool hasMouseEnteredItemsList;
 		private Point lastMousePosition = new Point();
 
-		
+
 		private void UpdateFilteredList()
 		{
 			if (ItemsSource == null)
@@ -90,13 +89,15 @@ namespace TecWare.PPSn.Controls
 			if (GetTemplateChild("PART_DropDownPopup") is Popup popup)
 			{
 				popup.ApplyTemplate();
+
 				var childDataFilterBox = popup.Child.GetVisualChild<PpsDataFilterBox>();
 				childDataFilterBox.ApplyTemplate();
 				itemsListBox = (ListBox)childDataFilterBox.GetTemplateChild(ListBoxTemplateName);
 				if (itemsListBox?.Items.Count > 0)
-					itemsListBox.ItemContainerGenerator.StatusChanged += (sender, e) => {
+					itemsListBox.ItemContainerGenerator.StatusChanged += (sender, e) =>
+					{
 						var container = (ListBoxItem)(from IDataRow itm in itemsListBox.Items where itemsListBox.ItemContainerGenerator.ContainerFromItem(itm) != null select itemsListBox.ItemContainerGenerator.ContainerFromItem(itm)).FirstOrDefault();
-						if (container != null && container.ActualHeight>0)
+						if (container != null && container.ActualHeight > 0)
 							popup.MaxHeight = CalculateMaxDropDownHeight(((ListBoxItem)container).ActualHeight);
 					};
 				if (popup.IsOpen)
@@ -111,8 +112,6 @@ namespace TecWare.PPSn.Controls
 			{
 				this.ApplyTemplate();
 				itemsListBox = (ListBox)this.GetTemplateChild(ListBoxTemplateName);
-				if (itemsListBox != null)
-					itemsListBox.MouseEnter += (sender, e) => ((TextBox)((PpsDataFilterBox)((Grid)this.GetVisualChild(0)).GetVisualChild<PpsDataFilterBox>()).GetTemplateChild("PART_SearchBox")).Focus();
 			}
 
 			if (itemsListBox != null && itemsListBox.Items.Count <= 0)
@@ -208,13 +207,23 @@ namespace TecWare.PPSn.Controls
 			}
 		} // event OnMouseLeftButtonUp
 
+		private void SetFocus()
+		{
+			var actualfocus = Keyboard.FocusedElement;
+
+			if (actualfocus != null)
+				// the mouse is over the window, but the window is not focused
+				if (!this.IsAncestorOf((FrameworkElement)actualfocus))
+					// the searchbox is not already focused
+					if (((Visual)actualfocus).IsAncestorOf(this))
+						// the actual focus is more general - do not catch the focus if a sibling is focused
+						((TextBox)((PpsDataFilterBox)((Grid)this.GetVisualChild(0)).GetVisualChild<PpsDataFilterBox>()).GetTemplateChild("PART_SearchBox")).Focus();
+		}
+
 		/// <summary>Handles the Movement of the Mouse - used for UI-Feedback of the ''would-be'' selected Item</summary>
 		/// <param name="e"></param>
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
-			if (!IsDropDownOpen)
-				return;
-
 			e.Handled = true;
 
 			var item = ItemFromPoint(e);
