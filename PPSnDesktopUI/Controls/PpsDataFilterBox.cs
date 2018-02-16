@@ -412,7 +412,11 @@ namespace TecWare.PPSn.Controls
 				return;
 
 			var curIndex = -1;
-			if (SelectedValue != null)
+			if (itemsListBox.SelectedItem != null)
+			{
+				curIndex = itemsListBox.SelectedIndex;
+			}
+			else if (SelectedValue != null)
 			{
 				curIndex = itemsListBox.Items.IndexOf(SelectedValue);
 				if (curIndex < 0)
@@ -423,6 +427,7 @@ namespace TecWare.PPSn.Controls
 
 			if (newIndex != curIndex)
 			{
+				itemsListBox.SelectedIndex = newIndex;
 				if (itemsListBox.Items.GetItemAt(newIndex) is IDataRow item)
 					CommitValue(item);
 
