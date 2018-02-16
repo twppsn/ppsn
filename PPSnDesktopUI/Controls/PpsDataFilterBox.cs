@@ -231,7 +231,9 @@ namespace TecWare.PPSn.Controls
 			}
 			else
 			{
-				if (HasMouseMoved() && !item.IsSelected)
+				SetFocus();
+
+				if (IsDropDownOpen && HasMouseMoved() && !item.IsSelected)
 				{
 					item.IsSelected = true;
 				}
