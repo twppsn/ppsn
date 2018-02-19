@@ -131,7 +131,7 @@ namespace TecWare.PPSn.Controls
 				Focus();
 			}
 		} // delegate OnIsDropDownOpenChanged
-		
+
 		private void Items_CurrentChanged(object sender, EventArgs e)
 		{
 			if (!ReferenceListBox())
@@ -151,7 +151,7 @@ namespace TecWare.PPSn.Controls
 		#endregion
 
 		#region ---- Helper Functions ---------------------------------------------------
-		
+
 		private void ClearSelection()
 		{
 			CommitValue(null);
@@ -180,12 +180,19 @@ namespace TecWare.PPSn.Controls
 				childDataFilterBox.ApplyTemplate();
 				itemsListBox = (ListBox)childDataFilterBox.GetTemplateChild(ListBoxTemplateName);
 				if (itemsListBox?.Items.Count > 0)
-					itemsListBox.ItemContainerGenerator.StatusChanged += (sender, e) =>
+				{
+					void MaxHeightHandler(object sender, EventArgs e)
 					{
 						var container = (ListBoxItem)(from IDataRow itm in itemsListBox.Items where itemsListBox.ItemContainerGenerator.ContainerFromItem(itm) != null select itemsListBox.ItemContainerGenerator.ContainerFromItem(itm)).FirstOrDefault();
 						if (container != null && container.ActualHeight > 0)
+						{
+							itemsListBox.ItemContainerGenerator.StatusChanged -= MaxHeightHandler;
 							popup.MaxHeight = CalculateMaxDropDownHeight(((ListBoxItem)container).ActualHeight);
-					};
+						}
+					}
+
+					itemsListBox.ItemContainerGenerator.StatusChanged += MaxHeightHandler;
+				}
 				if (popup.IsOpen)
 					this.Focus();
 
@@ -221,7 +228,7 @@ namespace TecWare.PPSn.Controls
 		#endregion
 
 		#region ---- UI interaction -----------------------------------------------------
-		
+
 		private void AddClearCommand()
 		{
 			CommandBindings.Add(
@@ -470,8 +477,8 @@ namespace TecWare.PPSn.Controls
 				itemsListBox.Items.MoveCurrentToPosition(newPos);
 		} // proc Navigate
 
-		  /// <summary>Handles the Navigation by Keyboard</summary>
-		  /// <param name="e">pressed Keys</param>
+		/// <summary>Handles the Navigation by Keyboard</summary>
+		/// <param name="e">pressed Keys</param>
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
 			=> KeyDownHandler(e);
 
