@@ -24,10 +24,14 @@ namespace TecWare.PPSn.Data
 {
 	#region -- enum PpsClientLoginSaveOptions -------------------------------------------
 
+	/// <summary>Local save options for the login data.</summary>
 	public enum PpsClientLoginSaveOptions
 	{
+		/// <summary>Save nothing</summary>
 		None = 0,
+		/// <summary>User name only.</summary>
 		UserName = 1,
+		/// <summary>User name and password.</summary>
 		Password = 2
 	} // enum PpsClientLoginSaveOptions
 
@@ -35,7 +39,6 @@ namespace TecWare.PPSn.Data
 
 	#region -- class PpsClientLogin -----------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public sealed class PpsClientLogin : IDisposable
 	{
@@ -52,6 +55,10 @@ namespace TecWare.PPSn.Data
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="target"></param>
+		/// <param name="realm"></param>
+		/// <param name="showErrorMessage"></param>
 		public PpsClientLogin(string target, string realm, bool showErrorMessage)
 		{
 			this.target = target;
@@ -82,17 +89,21 @@ namespace TecWare.PPSn.Data
 			}
 		} // ctor
 
+		/// <summary></summary>
 		~PpsClientLogin()
 		{
 			Dispose(false);
 		} // dtor
 
+		/// <summary></summary>
 		public void Dispose()
 		{
 			GC.SuppressFinalize(this);
 			Dispose(true);
 		} // proc Dispose
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		private void Dispose(bool disposing)
 		{
 			SecureFreeCoTaskMem(ref password, passwordLength);
@@ -290,6 +301,8 @@ namespace TecWare.PPSn.Data
 				new SecureString((char*)password.ToPointer(), passwordLength) :
 				null;
 
+		/// <summary>Set credentials.</summary>
+		/// <param name="credentials"></param>
 		public void SetCredentials(NetworkCredential credentials)
 		{
 			if (credentials == CredentialCache.DefaultNetworkCredentials

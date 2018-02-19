@@ -40,9 +40,9 @@ using LExpression = System.Linq.Expressions.Expression;
 
 namespace TecWare.PPSn
 {
-	#region -- class IPpsEnvironmentDefinition ------------------------------------------
+	#region -- class IPpsEnvironmentDefinition ----------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Defines basic set of properties for an environment definition.</summary>
 	public interface IPpsEnvironmentDefinition
 	{
 		/// <summary>Active environment</summary>
@@ -53,15 +53,17 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsEnvironmentDefinition -------------------------------------------
+	#region -- class PpsEnvironmentDefinition -----------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Base class of sort and accessable environment items.</summary>
 	public abstract class PpsEnvironmentDefinition : IPpsEnvironmentDefinition
 	{
 		private readonly PpsEnvironment environment;
 		private readonly string name;           // internal name of the item
 
+		/// <summary></summary>
+		/// <param name="environment"></param>
+		/// <param name="name"></param>
 		protected PpsEnvironmentDefinition(PpsEnvironment environment, string name)
 		{
 			if (String.IsNullOrEmpty(name))
@@ -78,10 +80,9 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- interface IPpsEnvironmentCollectionInternal ------------------------------
+	#region -- interface IPpsEnvironmentCollectionInternal ----------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Interface for management dynamic property access.</summary>
 	internal interface IPpsEnvironmentCollectionInternal
 	{
 		int FindItemIndex(string name);
@@ -94,17 +95,14 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsEnvironmentCollection -------------------------------------------
+	#region -- class PpsEnvironmentCollection -----------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public sealed class PpsEnvironmentCollection<T> : IPpsEnvironmentCollectionInternal, ICollection, IDictionary<string, T>, INotifyCollectionChanged, IDynamicMetaObjectProvider
 		where T : class, IPpsEnvironmentDefinition
 	{
-		#region -- class ValueCollection --------------------------------------------------
+		#region -- class ValueCollection ----------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private class ValueCollection : ICollection<T>
 		{
 			private PpsEnvironmentCollection<T> owner;
@@ -115,11 +113,11 @@ namespace TecWare.PPSn
 			} // ctor
 
 			public void Add(T item)
-			{ throw new NotSupportedException(); }
+				=> throw new NotSupportedException();
 			public void Clear()
-			{ throw new NotSupportedException(); }
+				=> throw new NotSupportedException();
 			public bool Remove(T item)
-			{ throw new NotSupportedException(); }
+				=> throw new NotSupportedException();
 
 			public void CopyTo(T[] array, int arrayIndex)
 			{
@@ -148,7 +146,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class PpsEnvironmentMetaObjectProvider ---------------------------------
+		#region -- class PpsEnvironmentMetaObjectProvider -----------------------------
 
 		private sealed class PpsEnvironmentMetaObjectProvider : DynamicMetaObject
 		{
@@ -235,6 +233,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		/// <summary>Collection content has changed.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		private readonly PpsEnvironment environment;
@@ -242,18 +241,22 @@ namespace TecWare.PPSn
 		private List<T> items = new List<T>(); // list with all items
 		private Dictionary<string, int> keys = new Dictionary<string, int>(); // list with all active items
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="environment"></param>
 		public PpsEnvironmentCollection(PpsEnvironment environment)
 		{
 			this.environment = environment;
 		} // ctor
 
-		public DynamicMetaObject GetMetaObject(LExpression parameter)
+		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(LExpression parameter)
 			=> new PpsEnvironmentMetaObjectProvider(parameter, this);
 
 		#endregion
 
+		/// <summary>Append a new item to the collection.</summary>
+		/// <param name="item"></param>
 		public void AppendItem(T item)
 		{
 			var indexAdded = -1;
@@ -274,6 +277,7 @@ namespace TecWare.PPSn
 				OnAddCollection(item);
 		} // proc AppendItem
 
+		/// <summary>Clear all items in the collection.</summary>
 		public void Clear()
 		{
 			lock (items)
@@ -300,7 +304,7 @@ namespace TecWare.PPSn
 		private void OnAddCollection(object added)
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, added));
 
-		#region -- IDictionary, IList, ... ------------------------------------------------
+		#region -- IDictionary, IList, ... --------------------------------------------
 
 		bool IDictionary<string, T>.TryGetValue(string key, out T value)
 		{
@@ -351,6 +355,8 @@ namespace TecWare.PPSn
 				return keys.ContainsKey(key);
 		} // func IDictionary<string, T>.ContainsKey
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public IEnumerator GetEnumerator()
 		{
 			lock (items)
@@ -377,19 +383,19 @@ namespace TecWare.PPSn
 		#endregion
 
 		int IPpsEnvironmentCollectionInternal.FindItemIndex(string name)
-		{
-			int index;
-			return keys.TryGetValue(name, out index) ? index : -1;
-		} // func FindItemIndex
+			=> keys.TryGetValue(name, out var index) ? index : -1;
 
+		/// <summary>Get a item by name.</summary>
+		/// <param name="name"></param>
+		/// <param name="throwExpression"></param>
+		/// <returns></returns>
 		public T this[string name, bool throwExpression = false]
 		{
 			get
 			{
 				lock (items)
 				{
-					var index = 0;
-					if (keys.TryGetValue(name, out index))
+					if (keys.TryGetValue(name, out var index))
 						return items[index];
 					else if (throwExpression)
 						throw new ArgumentOutOfRangeException(name);
@@ -401,7 +407,7 @@ namespace TecWare.PPSn
 
 		/// <summary>Number of items</summary>
 		public int Count => keys.Count;
-		/// <summary></summary>
+		/// <summary>Access the environment</summary>
 		public PpsEnvironment Environment => environment;
 
 		int IPpsEnvironmentCollectionInternal.CurrentVersion => currentVersion;
@@ -410,9 +416,8 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- enum PpsEnvironmentState -------------------------------------------------
+	#region -- enum PpsEnvironmentState -----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Current state of the environment.</summary>
 	public enum PpsEnvironmentState
 	{
@@ -430,9 +435,8 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- enum PpsEnvironmentMode --------------------------------------------------
+	#region -- enum PpsEnvironmentMode ------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Current mode of the environment.</summary>
 	public enum PpsEnvironmentMode
 	{
@@ -448,9 +452,8 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- enum PpsEnvironmentModeResult --------------------------------------------
+	#region -- enum PpsEnvironmentModeResult ------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public enum PpsEnvironmentModeResult
 	{
@@ -473,7 +476,7 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsEnvironment -----------------------------------------------------
+	#region -- class PpsEnvironment ---------------------------------------------------
 
 	/// <summary>Base class for application data. Holds information about view
 	/// classes, exception, connection, synchronisation and the script 
@@ -496,6 +499,10 @@ namespace TecWare.PPSn
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="info"></param>
+		/// <param name="userInfo"></param>
+		/// <param name="mainResources"></param>
 		public PpsEnvironment(PpsEnvironmentInfo info, NetworkCredential userInfo, ResourceDictionary mainResources)
 			: base(new Lua())
 		{
@@ -564,6 +571,10 @@ namespace TecWare.PPSn
 			InitBackgroundNotifier(environmentDisposing.Token, out backgroundNotifier, out backgroundNotifierModeTransmission);
 		} // ctor
 
+		/// <summary>Initialize environmnet.</summary>
+		/// <param name="progress"></param>
+		/// <param name="bootOffline"></param>
+		/// <returns></returns>
 		public async Task<PpsEnvironmentModeResult> InitAsync(IProgress<string> progress, bool bootOffline = false)
 		{
 			// initialize the local database
@@ -629,11 +640,14 @@ namespace TecWare.PPSn
 			return Task.FromResult(true);
 		} // proc UpdateAsync
 
+		/// <summary>Destroy environment.</summary>
 		public void Dispose()
 		{
 			Dispose(true);
 		} // proc Dispose
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected virtual void Dispose(bool disposing)
 		{
 			if (disposing)
@@ -661,17 +675,21 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		/// <summary>Test if Network is present.</summary>
 		public bool IsNetworkPresent
 			=> true;
 
-		#region -- Services ---------------------------------------------------------------
+		#region -- Services -----------------------------------------------------------
 
+		/// <summary>Register Service to the environment root.</summary>
+		/// <param name="key"></param>
+		/// <param name="service"></param>
 		public void RegisterService(string key, object service)
 		{
 			if (services.Exists(c => c.GetType() == service.GetType()))
-				throw new InvalidOperationException("service");
+				throw new InvalidOperationException(nameof(service));
 			if (this.ContainsKey(key))
-				throw new InvalidOperationException("key");
+				throw new InvalidOperationException(nameof(key));
 
 			// dynamic interface
 			this[key] = service;
@@ -680,6 +698,9 @@ namespace TecWare.PPSn
 			services.Add(service);
 		} // proc RegisterService
 
+		/// <summary></summary>
+		/// <param name="serviceType"></param>
+		/// <returns></returns>
 		public object GetService(Type serviceType)
 		{
 			foreach (var service in services)
@@ -697,11 +718,10 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Background Notifier ----------------------------------------------------
+		#region -- Background Notifier ------------------------------------------------
 
-		#region -- class ModeTransission --------------------------------------------------
+		#region -- class ModeTransission ----------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private sealed class ModeTransission
 		{
@@ -860,7 +880,9 @@ namespace TecWare.PPSn
 								currentTransmission.SetResult(PpsEnvironmentModeResult.Offline);
 								currentTransmission = null;
 							}
-							await backgroundNotifierModeTransmission.WaitAsync();
+							if (!await backgroundNotifierModeTransmission.WaitAsync(30000)
+								&& IsNetworkPresent)
+								state = PpsEnvironmentState.OfflineConnect;
 							break;
 
 						case PpsEnvironmentState.OfflineConnect:
@@ -969,7 +991,7 @@ namespace TecWare.PPSn
 					else
 					{
 						if (ex is WebException webEx && webEx.Status == WebExceptionStatus.ConnectFailure)
-							state = PpsEnvironmentState.OfflineConnect;
+							state = PpsEnvironmentState.Offline;
 						else
 							Traces.AppendException(ex, traceItemType: PpsTraceItemType.Warning);
 						await Task.Delay(500);
