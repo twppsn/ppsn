@@ -199,7 +199,10 @@ namespace TecWare.PPSn.Controls
 				((FrameworkElement)popup.Child).SizeChanged += (sender, e) =>
 				{
 					if (itemsListBox != null)
+					{
 						popup.HorizontalOffset = (((FrameworkElement)popup.PlacementTarget).ActualWidth) - itemsListBox.ActualWidth;
+						itemsListBox.MinWidth = itemsListBox.ActualWidth;
+					}
 				};
 			}
 			else
