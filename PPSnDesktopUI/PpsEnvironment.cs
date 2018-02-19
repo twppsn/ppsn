@@ -597,7 +597,7 @@ namespace TecWare.PPSn
 					await OnSystemOnlineAsync(); // mark as online
 					break;
 				case PpsEnvironmentModeResult.Offline:
-					OnSystemOfflineAsync().AwaitTask();
+				 	await OnSystemOfflineAsync();
 					break;
 
 				case PpsEnvironmentModeResult.NeedsUpdate:
@@ -846,6 +846,15 @@ namespace TecWare.PPSn
 
 		private async Task ExecuteNotifierLoopAsync(CancellationToken cancellationToken)
 		{
+			async Task RunSyncAsync()
+			{
+				if (!masterData.IsInSynchronization)
+				{
+					using (var log = Traces.TraceProgress())
+						await masterData.SynchronizationAsync(false, log);
+				}
+			}
+
 			var state = PpsEnvironmentState.None;
 			ModeTransission currentTransmission = null;
 			while (!cancellationToken.IsCancellationRequested)
@@ -870,7 +879,7 @@ namespace TecWare.PPSn
 					}
 
 					// process current state
-					UpdatePulicState(state);
+					var changedTo = UpdatePulicState(state);
 					switch (state)
 					{
 						case PpsEnvironmentState.None: // nothing to do wait for a state
@@ -880,6 +889,9 @@ namespace TecWare.PPSn
 								currentTransmission.SetResult(PpsEnvironmentModeResult.Offline);
 								currentTransmission = null;
 							}
+							else if (changedTo)
+								await Dispatcher.InvokeAsync(() => OnSystemOfflineAsync().AwaitTask());
+
 							if (!await backgroundNotifierModeTransmission.WaitAsync(30000)
 								&& IsNetworkPresent)
 								state = PpsEnvironmentState.OfflineConnect;
@@ -898,7 +910,8 @@ namespace TecWare.PPSn
 							{
 								// application needs a update
 								state = PpsEnvironmentState.None;
-								SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsUpdate);
+								if (!SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsUpdate))
+									state = PpsEnvironmentState.Offline; // todo: User message to update client
 							}
 							else
 							{
@@ -908,12 +921,12 @@ namespace TecWare.PPSn
 								// sync will write the header
 								var newUserId = xUser.GetAttribute("userId", -1);
 
-								foreach(var xAttr in xUser.Attributes())
+								foreach (var xAttr in xUser.Attributes())
 								{
 									var name = xAttr.Name.LocalName;
 									if (name != "userId")
 									{
-										if(name.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+										if (name.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
 											SetMemberValue(name, xAttr.Value.ChangeType<long>());
 										else
 											SetMemberValue(name, xAttr.Value);
@@ -924,7 +937,7 @@ namespace TecWare.PPSn
 								if (newUserId == -1)
 									throw new ArgumentOutOfRangeException("@userid", userId, "UID is missing.");
 
-								if (userId != newUserId )
+								if (userId != newUserId)
 								{
 									userId = newUserId;
 
@@ -936,10 +949,19 @@ namespace TecWare.PPSn
 								masterData.SetUpdateUserInfo();
 
 								// start synchronization
-								if (!masterData.IsSynchronizationStarted || masterData.CheckSynchronizationStateAsync().Result)
-									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsSynchronization);
+								if (!masterData.IsSynchronizationStarted || masterData.CheckSynchronizationStateAsync().AwaitTask())
+								{
+									if (!SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsSynchronization))
+									{
+										await RunSyncAsync();
+										await Dispatcher.InvokeAsync(() => OnSystemOnlineAsync().AwaitTask());
+									}
+								}
 								else // mark the system online
-									SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.Online);
+								{
+									if (!SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.Online))
+										await Dispatcher.InvokeAsync(() => OnSystemOnlineAsync().AwaitTask());
+								}
 							}
 							state = PpsEnvironmentState.Online;
 							break;
@@ -947,13 +969,7 @@ namespace TecWare.PPSn
 						case PpsEnvironmentState.Online:
 							// fetch next state on ws-info
 							if (!await backgroundNotifierModeTransmission.WaitAsync(3000))
-							{
-								if (!masterData.IsInSynchronization)
-								{
-									using (var log = Traces.TraceProgress())
-										await masterData.SynchronizationAsync(false, log);
-								}
-							}
+								await RunSyncAsync();
 							break;
 
 						case PpsEnvironmentState.Shutdown:
@@ -1000,20 +1016,22 @@ namespace TecWare.PPSn
 			}
 		} // proc ExecuteNotifierLoopAsync
 
-		private void SetTransmissionResult(ref ModeTransission currentTransmission, PpsEnvironmentModeResult result)
+		private bool SetTransmissionResult(ref ModeTransission currentTransmission, PpsEnvironmentModeResult result)
 		{
 			if (currentTransmission != null)
 			{
 				currentTransmission.SetResult(result);
 				currentTransmission = null;
+				return true;
 			}
 			else
 			{
 				// todo: Notify state change to UI (Online vs Offline)
+				return false;
 			}
 		} // proc SetTransmissionResult
 
-		private void UpdatePulicState(PpsEnvironmentState state)
+		private bool UpdatePulicState(PpsEnvironmentState state)
 		{
 			if (currentState != state)
 			{
@@ -1038,7 +1056,10 @@ namespace TecWare.PPSn
 						OnPropertyChanged(nameof(CurrentState));
 					})
 				);
+				return true;
 			}
+			else
+				return false;
 		} // proc UpdatePulicState
 
 		#endregion
