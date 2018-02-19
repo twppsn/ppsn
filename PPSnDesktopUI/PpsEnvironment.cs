@@ -677,7 +677,7 @@ namespace TecWare.PPSn
 
 		/// <summary>Test if Network is present.</summary>
 		public bool IsNetworkPresent
-			=> true;
+			=> System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
 
 		#region -- Services -----------------------------------------------------------
 
