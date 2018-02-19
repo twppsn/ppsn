@@ -212,7 +212,7 @@ namespace TecWare.PPSn.Controls
 			}
 
 			return (itemsListBox != null);
-		}
+		} // func ReferenceListBox
 
 		private double CalculateMaxDropDownHeight(double itemHeight)
 		{
@@ -339,7 +339,7 @@ namespace TecWare.PPSn.Controls
 					if (((Visual)actualfocus).IsAncestorOf(this))
 						// the actual focus is more general - do not catch the focus if a sibling is focused
 						((TextBox)((PpsDataFilterBox)((Grid)this.GetVisualChild(0)).GetVisualChild<PpsDataFilterBox>()).GetTemplateChild("PART_SearchBox")).Focus();
-		}
+		} // proc SetFocus
 
 		/// <summary>Handles the Movement of the Mouse - used for UI-Feedback of the ''would-be'' selected Item</summary>
 		/// <param name="e"></param>
