@@ -272,7 +272,6 @@ namespace TecWare.PPSn.UI
 
 	public sealed class PpsAsyncCommand : PpsCommandImpl
 	{
-
 		private readonly Func<PpsCommandContext, Task> command;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
@@ -308,8 +307,11 @@ namespace TecWare.PPSn.UI
 			SetIsRunning(commandContext.Target, true);
 			try
 			{
-				command(commandContext)
-					.ContinueWith(t => SetIsRunning(commandContext.Target, false), TaskContinuationOptions.ExecuteSynchronously);
+				var task = command(commandContext);
+				if (task == null)
+					SetIsRunning(commandContext.Target, false);
+				else
+					task.ContinueWith(t => SetIsRunning(commandContext.Target, false), TaskContinuationOptions.ExecuteSynchronously);
 			}
 			catch
 			{

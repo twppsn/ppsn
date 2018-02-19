@@ -204,7 +204,7 @@ namespace TecWare.PPSn.Controls
 			=> true; // todo: (isender, ie) => ie.CanExecute = SelectedAttachment != null
 		
 		private static Task RunAttachmentAsync(PpsCommandContext ctx)
-			=> GetCurrentAttachmentItemFromContext(ctx)?.LinkedObject.ViewAsync(ctx.Target);
+			=> GetCurrentAttachmentItemFromContext(ctx)?.LinkedObject.ViewAsync(ctx.Target) ?? Task.CompletedTask;
 		
 		#endregion
 
