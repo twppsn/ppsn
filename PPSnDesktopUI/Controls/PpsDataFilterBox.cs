@@ -208,9 +208,6 @@ namespace TecWare.PPSn.Controls
 				itemsListBox = (ListBox)this.GetTemplateChild(ListBoxTemplateName);
 			}
 
-			if (itemsListBox != null && itemsListBox.Items.Count <= 0)
-				itemsListBox = null;
-
 			return (itemsListBox != null);
 		}
 
