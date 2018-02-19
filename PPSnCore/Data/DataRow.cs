@@ -817,7 +817,9 @@ namespace TecWare.PPSn.Data
 
 		#region -- Index Zugriff ------------------------------------------------------
 
-		private IPpsUndoSink GetUndoSink()
+		/// <summary>Get current undo sink, for this row.</summary>
+		/// <returns></returns>
+		public IPpsUndoSink GetUndoSink()
 		{
 			var sink = table.DataSet.UndoSink;
 			return sink != null && !sink.InUndoRedoOperation ? sink : null;

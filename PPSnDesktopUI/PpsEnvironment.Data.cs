@@ -3218,6 +3218,7 @@ namespace TecWare.PPSn
 		[Obsolete("ConnectionAccess")]
 		public SQLiteConnection Connection => connection;
 
+		/// <summary>Return the current transaction.</summary>
 		public PpsMasterDataTransaction CurrentTransaction
 		{
 			get
@@ -3227,6 +3228,7 @@ namespace TecWare.PPSn
 			}
 		} // prop CurrentTransaction
 
+		/// <summary>Data type mapping for sqlite.</summary>
 		public static (Type Type, string SqlLite, DbType DbType)[] SqlLiteTypeMapping { get => sqlLiteTypeMapping; set => sqlLiteTypeMapping = value; }
 
 		// -- Static ------------------------------------------------------
@@ -4824,8 +4826,9 @@ namespace TecWare.PPSn
 		}
 
 		public event PropertyChangedEventHandler PropertyChanged;
+
 		private void OnPropertyChanged(string propertyName)
-		=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+			=> PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 		private void WebProxyChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{

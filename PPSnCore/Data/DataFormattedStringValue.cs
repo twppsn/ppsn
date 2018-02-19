@@ -124,11 +124,16 @@ namespace TecWare.PPSn.Data
 				var r = chunk.Run(new PpsLuaRowEnvironment(Row.Table.DataSet.Properties, Row));
 				if (!Object.Equals(currentValue, r[0]))
 				{
-					var oldValue = currentValue;
-					currentValue = r[0];
-					// notify changed value
-					OnPropertyChanged(nameof(Value), oldValue, currentValue, true);
-					Row.OnValueChanged(Column.Index, oldValue, currentValue);
+					using (var t = Row.GetUndoSink()?.BeginTransaction("Update Calculated Value"))
+					{
+						var oldValue = currentValue;
+						currentValue = r[0];
+						// notify changed value
+						OnPropertyChanged(nameof(Value), oldValue, currentValue, true);
+						Row.OnValueChanged(Column.Index, oldValue, currentValue);
+
+						t?.Commit();
+					}
 				}
 			}
 			catch (Exception e)
