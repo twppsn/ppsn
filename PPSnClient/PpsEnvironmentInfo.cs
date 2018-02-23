@@ -17,19 +17,15 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+using System.Reflection;
 using System.Xml.Linq;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn
 {
-	#region -- class PpsEnvironmentInfo -------------------------------------------------
+	#region -- class PpsEnvironmentInfo -----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Class for the local environment information.</summary>
 	public sealed class PpsEnvironmentInfo : IEquatable<PpsEnvironmentInfo>
 	{
@@ -58,19 +54,27 @@ namespace TecWare.PPSn
 			ReadInfoFile();
 		} // ctor
 
+		/// <summary>Check if this is same environment</summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
 		public override bool Equals(object obj)
 			=> Equals(obj as PpsEnvironmentInfo);
 
+		/// <summary>Check if this is same environment</summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
 		public bool Equals(PpsEnvironmentInfo other)
 		{
-			if (Object.ReferenceEquals(this, other))
+			if (ReferenceEquals(this, other))
 				return true;
-			else if (Object.ReferenceEquals(other, null))
+			else if (other is null)
 				return false;
 			else
 				return localPath.FullName.Equals(other.LocalPath.FullName);
 		} // func Equals
 
+		/// <summary>Create a hashcode for the environment info.</summary>
+		/// <returns></returns>
 		public override int GetHashCode()
 			=> localPath.FullName.GetHashCode();
 
@@ -84,7 +88,7 @@ namespace TecWare.PPSn
 		} // proc
 		
 
-		/// <summary>Update the local environment info.</summary>
+		/// <summary>Update the local environment info with tags from the server login.</summary>
 		/// <param name="xNewInfo"></param>
 		public void Update(XElement xNewInfo)
 		{
@@ -92,6 +96,7 @@ namespace TecWare.PPSn
 			Procs.MergeAttributes(content.Root, xNewInfo, ref isModified);
 		} // proc UpdateInfoFile
 
+		/// <summary>Save changes to the info file.</summary>
 		public void Save()
 		{
 			content.Save(infoFile.FullName);
@@ -134,6 +139,7 @@ namespace TecWare.PPSn
 			}
 		} // prop Uri
 
+		/// <summary>Information modified.</summary>
 		public bool IsModified => isModified;
 		/// <summary>Version of the server</summary>
 		public Version Version { get { return new Version(content.Root.GetAttribute("version", "0.0.0.0")); } set { content.Root.SetAttributeValue("version", value.ToString()); } }
@@ -141,6 +147,7 @@ namespace TecWare.PPSn
 		/// <summary>Local store for the user data of the instance.</summary>
 		public DirectoryInfo LocalPath => localPath;
 
+		/// <summary>Check application version.</summary>
 		public bool IsApplicationLatest => Version  <= AppVersion;
 
 		// -- static --------------------------------------------------------------
@@ -159,15 +166,24 @@ namespace TecWare.PPSn
 			return String.IsNullOrEmpty(versionString) ?
 				new Version() : 
 				new Version(versionString);
+
 		} // func GetAppVersion
 
+		/// <summary></summary>
+		/// <param name="a"></param>
+		/// <param name="b"></param>
+		/// <returns></returns>
 		public static bool operator ==(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
-			=> Object.ReferenceEquals(a, null) && Object.ReferenceEquals(b, null) ||
-			!Object.ReferenceEquals(a, null) && a.Equals(b);
+			=> a is null && b is null 
+			|| !(a is null) && a.Equals(b);
 
+		/// <summary></summary>
+		/// <param name="a"></param>
+		/// <param name="b"></param>
+		/// <returns></returns>
 		public static bool operator !=(PpsEnvironmentInfo a, PpsEnvironmentInfo b)
-			=> Object.ReferenceEquals(a, null) && !Object.ReferenceEquals(b, null) ||
-			!Object.ReferenceEquals(a, null) && !a.Equals(b);
+			=> a is null && !(b is null)
+			|| !(a is null) && !a.Equals(b);
 
 		/// <summary>Create a new environment information.</summary>
 		/// <param name="serverName"></param>
@@ -208,6 +224,9 @@ namespace TecWare.PPSn
 		private static string GetDomainUserName(string domain, string userName)
 				=> String.IsNullOrEmpty(domain) ? userName : domain + "\\" + userName;
 
+		/// <summary>Get the user name from the credentials.</summary>
+		/// <param name="userInfo"></param>
+		/// <returns></returns>
 		public static string GetUserNameFromCredentials(ICredentials userInfo)
 		{
 			if (userInfo == null)
@@ -224,6 +243,7 @@ namespace TecWare.PPSn
 			} // func GetUserNameFromCredentials
 		} // func GetUserNameFromCredentials
 
+		/// <summary>Application version.</summary>
 		public static Version AppVersion => appVersion.Value;
 	} // class PpsEnvironmentInfo
 
