@@ -14,8 +14,10 @@
 //
 #endregion
 using System;
+using System.Linq;
 using System.Xml.Linq;
 using Microsoft.Office.Tools.Ribbon;
+using TecWare.PPSn;
 using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
@@ -26,9 +28,7 @@ namespace PPSnExcel
 		private Excel.Application application;
 
 		//private bool isEnvironmentInitialized = false;
-		//private bool isMenuLoaded = false;
-
-		//private EventHandler usernameChanged;
+		private bool isMenuLoaded = false;
 
 		#region -- Load ---------------------------------------------------------------
 
@@ -42,8 +42,14 @@ namespace PPSnExcel
 			application.WorkbookDeactivate += wb => WorkbookStateChanged(wb, false);
 
 			application.SheetSelectionChange += (sh, target) => Refresh();
+
+			Globals.ThisAddIn.CurrentEnvironmentChanged += (s, _e) => RefreshUsername();
 			
-			//isMenuLoaded = true;
+			// init environment
+			RefreshEnvironments();
+			RefreshUsername();
+
+			isMenuLoaded = true;
 		} // event PpsMenu_Load
 
 		#endregion
@@ -54,10 +60,10 @@ namespace PPSnExcel
 
 		private void RefreshUsername()
 		{
-			//loginMenu.Label = environment == null ? "Keine Umgebung" : environment.UsernameDisplay;
-			//loginGalery.Label = environment?.Info?.DisplayName ?? "Keine Umgebung";
-			//loginButton.Enabled = environment != null;
-			//loginButton.Label = environment != null && environment.IsAuthentificated ? "Abmelden" : "Anmelden";
+			var currentEnvironment = Globals.ThisAddIn.CurrentEnvironment;
+			loginMenu.Label = currentEnvironment is null ? "Keine Umgebung" : $"{currentEnvironment.Name} ({currentEnvironment.UserName})";
+			loginGalery.Label = currentEnvironment is null ? "Keine Umgebung" : $"{currentEnvironment.Info.Name} ({currentEnvironment.Info.DisplayName})";
+			logoutButton.Enabled = !(currentEnvironment is null);
 		} // proc RefreshUsername
 
 		private void RefreshEnvironments()
@@ -66,15 +72,17 @@ namespace PPSnExcel
 			loginGalery.Items.Clear();
 
 			// readd them
-			//foreach (var cur in PpsEnvironmentInfo.GetLocalEnvironments().OrderBy(c => c.DisplayName))
-			//{
-			//	var ribbonButton = Factory.CreateRibbonDropDownItem();
-			//	ribbonButton.Label = cur.DisplayName;
-			//	ribbonButton.ScreenTip = String.Format("{0} ({1})", cur.DisplayName, cur.Name);
-			//	ribbonButton.SuperTip = String.Format("Version {0}\nUri: {1}", cur.Version, cur.Uri.ToString());
-			//	ribbonButton.Tag = cur;
-			//	loginGalery.Items.Add(ribbonButton);
-			//}
+			foreach (var cur in PpsEnvironmentInfo.GetLocalEnvironments().OrderBy(c => c.DisplayName))
+			{
+				var ribbonButton = Factory.CreateRibbonDropDownItem();
+				ribbonButton.Label = cur.Name ?? cur.DisplayName;
+				ribbonButton.ScreenTip = $"{ cur.Name} ({cur.DisplayName})";
+				ribbonButton.SuperTip = String.Format("Version {0}\nUri: {1}", cur.Version, cur.Uri.ToString());
+				ribbonButton.Tag = cur;
+				var env = Globals.ThisAddIn.GetEnvironmentFromInfo(cur);
+				ribbonButton.Image = env != null && env.IsAuthentificated ? Properties.Resources.EnvironmentAuthImage : Properties.Resources.EnvironmentImage;
+				loginGalery.Items.Add(ribbonButton);
+			}
 		} // proc RefreshEnvironments
 
 		private void WorkbookStateChanged(Excel._Workbook wb, bool activate)
@@ -142,34 +150,23 @@ namespace PPSnExcel
 
 		private void cmdRefresh_Click(object sender, RibbonControlEventArgs e)
 		{
-			var xDoc = XDocument.Load(@"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktop\Local\Data\contacts.xml");
-			xDoc.Root.Element("columns").Remove();
+			//var xDoc = XDocument.Load(@"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktop\Local\Data\contacts.xml");
+			//xDoc.Root.Element("columns").Remove();
 
-			var map = Globals.ThisAddIn.Application.ActiveWorkbook.XmlMaps.Item[1];
-			map.ImportXml(xDoc.ToString(SaveOptions.None), true);
+			//var map = Globals.ThisAddIn.Application.ActiveWorkbook.XmlMaps.Item[1];
+			//map.ImportXml(xDoc.ToString(SaveOptions.None), true);
 		}
 
 		private void loginGalery_ItemsLoading(object sender, RibbonControlEventArgs e)
-		{
-			RefreshEnvironments();
-		}
-
+			=> RefreshEnvironments();
+		
 		private void loginGalery_Click(object sender, RibbonControlEventArgs e)
-		{
-			if (loginGalery.SelectedItem == null)
-				return;
-			//Globals.ThisAddIn.LoginEnvironment(loginGalery.SelectedItem.Tag as PpsEnvironmentInfo);
-		} // event loginGalery_Click
+			=> Globals.ThisAddIn.ActivateEnvironment(loginGalery.SelectedItem?.Tag as PpsEnvironmentInfo);
 
-		private void loginButton_Click(object sender, RibbonControlEventArgs e)
-		{
-			//if (environment == null)
-			//	return;
-
-			//if (environment.IsAuthentificated)
-			//	Globals.ThisAddIn.RunUISynchron(environment.LogoutUserAsync());
-			//else
-			//	Globals.ThisAddIn.RunUISynchron(environment.LoginUserAsync());
-		} // event loginButton_Click
+		private void logoutButton_Click(object sender, RibbonControlEventArgs e)
+			=> Globals.ThisAddIn.DeactivateEnvironment();
+		
+		/// <summary>Was Loaded called.</summary>
+		public bool IsMenuLoaded => isMenuLoaded;
 	} // class PpsMenu
 }

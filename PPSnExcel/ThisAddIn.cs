@@ -1,23 +1,91 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using TecWare.PPSn;
 using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
 {
 	public partial class ThisAddIn
 	{
+		/// <summary>Current environment has changed.</summary>
+		public event EventHandler CurrentEnvironmentChanged;
 
-		private void ThisAddIn_Startup(object sender, System.EventArgs e)
+		private readonly List<PpsEnvironment> openEnvironments = new List<PpsEnvironment>();
+		private PpsEnvironment currentEnvironment = null;
+
+		private void ThisAddIn_Startup(object sender, EventArgs e)
 		{
+		//Globals.Ribbons.PpsMenu.
 		} // ctor
 
-		private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
+		private void ThisAddIn_Shutdown(object sender, EventArgs e)
 		{
 		} // event ThisAddIn_Shutdown
+
+		private PpsEnvironment FindOrCreateEnvironment(PpsEnvironmentInfo info)
+		{
+			var env = GetEnvironmentFromInfo(info);
+			if (env == null)
+			{
+				env = new PpsEnvironment(info);
+				openEnvironments.Add(env);
+			}
+			return env;
+		} // func FindOrCreateEnvironment
+
+		public void ActivateEnvironment(PpsEnvironmentInfo info)
+		{
+			if (info is null)
+				return;
+
+			var env = FindOrCreateEnvironment(info);
+			if (env.IsAuthentificated)
+				SetCurrentEnvironment(env);
+			else // try to authentificate the environment
+			{
+
+			}
+		} // proc ActivateEnvironment
+
+		public void DeactivateEnvironment(PpsEnvironment environment = null)
+		{
+			environment = environment ?? currentEnvironment;
+			if (environment != null)
+			{
+				environment.ClearCredentials();
+
+				if (currentEnvironment == environment)
+					SetCurrentEnvironment(null);
+			}
+		} // proc DeactivateCurrentEnvironment
+
+		private void SetCurrentEnvironment(PpsEnvironment env)
+		{
+			currentEnvironment = env;
+			CurrentEnvironmentChanged?.Invoke(this, EventArgs.Empty);
+		} // proc SetCurrentEnvironment
+
+		public PpsEnvironment GetEnvironmentFromInfo(PpsEnvironmentInfo info)
+			=> openEnvironments.Find(c => c.Info == info);
 
 		#region -- ImportTable ------------------------------------------------------------
 
@@ -148,6 +216,9 @@ namespace PPSnExcel
 		}
 
 		#endregion
+
+		/// <summary>Current active, authentificated environment.</summary>
+		public PpsEnvironment CurrentEnvironment => currentEnvironment;
 
 		// -- Static --------------------------------------------------------------
 

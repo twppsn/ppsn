@@ -86,7 +86,10 @@ namespace TecWare.PPSn
 					new XDocument(new XElement("ppsn"));
 			isModified = false;
 		} // proc
-		
+
+		/// <summary>Reread info file.</summary>
+		public void Refresh()
+			=> ReadInfoFile();
 
 		/// <summary>Update the local environment info with tags from the server login.</summary>
 		/// <param name="xNewInfo"></param>

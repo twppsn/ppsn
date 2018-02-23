@@ -46,7 +46,7 @@
 			this.loginMenu = this.Factory.CreateRibbonMenu();
 			this.loginGalery = this.Factory.CreateRibbonGallery();
 			this.separator2 = this.Factory.CreateRibbonSeparator();
-			this.loginButton = this.Factory.CreateRibbonButton();
+			this.logoutButton = this.Factory.CreateRibbonButton();
 			this.cmdExtended = this.Factory.CreateRibbonMenu();
 			this.cmdStyles = this.Factory.CreateRibbonButton();
 			this.separator1 = this.Factory.CreateRibbonSeparator();
@@ -132,9 +132,10 @@
 			// 
 			// loginMenu
 			// 
+			this.loginMenu.Dynamic = true;
 			this.loginMenu.Items.Add(this.loginGalery);
 			this.loginMenu.Items.Add(this.separator2);
-			this.loginMenu.Items.Add(this.loginButton);
+			this.loginMenu.Items.Add(this.logoutButton);
 			this.loginMenu.Label = "menu1";
 			this.loginMenu.Name = "loginMenu";
 			// 
@@ -150,12 +151,13 @@
 			// 
 			this.separator2.Name = "separator2";
 			// 
-			// loginButton
+			// logoutButton
 			// 
-			this.loginButton.Label = "button2";
-			this.loginButton.Name = "loginButton";
-			this.loginButton.ShowImage = true;
-			this.loginButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.loginButton_Click);
+			this.logoutButton.Description = "Meldet den Nutzer vom aktuellen Environment ab.";
+			this.logoutButton.Label = "Abmelden";
+			this.logoutButton.Name = "logoutButton";
+			this.logoutButton.ShowImage = true;
+			this.logoutButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.logoutButton_Click);
 			// 
 			// cmdExtended
 			// 
@@ -220,7 +222,7 @@
 		internal Microsoft.Office.Tools.Ribbon.RibbonGallery loginGalery;
 		internal Microsoft.Office.Tools.Ribbon.RibbonMenu loginMenu;
 		internal Microsoft.Office.Tools.Ribbon.RibbonSeparator separator2;
-		internal Microsoft.Office.Tools.Ribbon.RibbonButton loginButton;
+		internal Microsoft.Office.Tools.Ribbon.RibbonButton logoutButton;
 	}
 
 	partial class ThisRibbonCollection
