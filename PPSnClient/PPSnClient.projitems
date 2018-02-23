@@ -15,6 +15,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Data\DataSet.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Data\DataTable.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Data\DataUndoManager.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Data\PpsClientLogin.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)NativeMethods.Credential.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)PpsEnvironmentInfo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Shell.cs" />
   </ItemGroup>

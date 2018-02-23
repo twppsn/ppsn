@@ -116,9 +116,7 @@
     <Compile Include="Controls\UndoManagerListBox.cs" />
     <Compile Include="Data\DataFilter.cs" />
     <Compile Include="Data\DataListItemDefinition.cs" />
-    <Compile Include="Data\PpsClientLogin.cs" />
     <Compile Include="Data\PpsDataSetDesktop.cs" />
-    <Compile Include="NativeMethods.Credential.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="PpsEnvironment.Data.cs" />
     <Compile Include="PpsEnvironment.Exceptions.cs" />
