@@ -126,7 +126,6 @@
     <Compile Include="PpsEnvironment.Objects.cs" />
     <Compile Include="PpsEnvironment.Trace.cs" />
     <Compile Include="PpsEnvironment.UI.cs" />
-    <Compile Include="PpsEnvironmentInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
