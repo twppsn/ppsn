@@ -142,8 +142,6 @@
       <HintPath>..\packages\NeoLua.1.2.17-beta\lib\net45\Neo.Lua.Desktop.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="PresentationCore" />
-    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Data.SQLite, Version=1.0.103.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
@@ -158,7 +156,6 @@
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Office.Tools.v4.0.Framework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
@@ -196,10 +193,6 @@
     can be found.
   -->
   <ItemGroup>
-    <Compile Include="App.xaml.cs">
-      <DependentUpon>App.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="PpsExcelEnvironment.cs" />
     <Compile Include="PpsMenu.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -208,12 +201,6 @@
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Wpf\PpsReportSelectWindow.xaml.cs">
-      <DependentUpon>PpsReportSelectWindow.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Wpf\PpsTableImportWindow.xaml.cs">
-      <DependentUpon>PpsTableImportWindow.xaml</DependentUpon>
     </Compile>
     <EmbeddedResource Include="PpsMenu.resx">
       <DependentUpon>PpsMenu.cs</DependentUpon>
@@ -228,6 +215,9 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
+    <None Include="..\PPSnDesktopUI\ppsn.licenseheader">
+      <Link>ppsn.licenseheader</Link>
+    </None>
     <None Include="packages.config" />
     <None Include="PPSnExcel_TemporaryKey.pfx" />
     <None Include="Properties\Settings.settings">
@@ -249,20 +239,6 @@
       <DependentUpon>ThisAddIn.Designer.xml</DependentUpon>
     </Compile>
     <AppDesigner Include="Properties\" />
-  </ItemGroup>
-  <ItemGroup>
-    <Page Include="App.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Wpf\PpsReportSelectWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Wpf\PpsTableImportWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

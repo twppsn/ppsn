@@ -1,0 +1,46 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2036
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{3AFE3696-3A14-45A8-A079-333850913BFA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Excel", "Excel", "{44AA1057-C75E-4491-A3A4-18D4CDB955B2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnCore", "PPSnCore\PPSnCore.csproj", "{F4609545-6D91-4B2D-A811-3201F4934505}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "PPSnClient", "PPSnClient\PPSnClient.shproj", "{F2DBCBC9-91BE-4964-AD72-D51D2D9F73C0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PPSnExcel", "PPSnExcel\PPSnExcel.csproj", "{D4900AD1-E946-470E-BC3F-4F041EB2A89D}"
+EndProject
+Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		PPSnClient\PPSnClient.projitems*{f2dbcbc9-91be-4964-ad72-d51d2d9f73c0}*SharedItemsImports = 13
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F4609545-6D91-4B2D-A811-3201F4934505}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4609545-6D91-4B2D-A811-3201F4934505}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4609545-6D91-4B2D-A811-3201F4934505}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4609545-6D91-4B2D-A811-3201F4934505}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D4900AD1-E946-470E-BC3F-4F041EB2A89D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4900AD1-E946-470E-BC3F-4F041EB2A89D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4900AD1-E946-470E-BC3F-4F041EB2A89D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4900AD1-E946-470E-BC3F-4F041EB2A89D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F4609545-6D91-4B2D-A811-3201F4934505} = {3AFE3696-3A14-45A8-A079-333850913BFA}
+		{F2DBCBC9-91BE-4964-AD72-D51D2D9F73C0} = {3AFE3696-3A14-45A8-A079-333850913BFA}
+		{D4900AD1-E946-470E-BC3F-4F041EB2A89D} = {44AA1057-C75E-4491-A3A4-18D4CDB955B2}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		RESX_NeutralResourcesLanguage = de-DE
+		SolutionGuid = {F0AFC2F2-0A01-4CAB-8B21-44C224AFF0A0}
+	EndGlobalSection
+EndGlobal

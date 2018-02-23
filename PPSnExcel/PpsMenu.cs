@@ -1,74 +1,50 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Windows.Interop;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Xml.Linq;
 using Microsoft.Office.Tools.Ribbon;
-using TecWare.DE.Data;
-using TecWare.DE.Stuff;
-using TecWare.PPSn;
 using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
 {
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public partial class PpsMenu
 	{
 		private Excel.Application application;
 
-		private PpsEnvironment environment = null;
-		private bool isEnvironmentInitialized = false;
-		private bool isMenuLoaded = false;
+		//private bool isEnvironmentInitialized = false;
+		//private bool isMenuLoaded = false;
 
-		private EventHandler usernameChanged;
+		//private EventHandler usernameChanged;
 
-		#region -- Load, Init, Done -------------------------------------------------------
+		#region -- Load ---------------------------------------------------------------
 
 		private void PpsMenu_Load(object sender, RibbonUIEventArgs e)
 		{
 			application = Globals.ThisAddIn.Application;
 			cmdExtended.Visible = Globals.ThisAddIn.Application.ShowDevTools;
-
-			// init events
-			usernameChanged = (s1, e1) => App.Current.Dispatcher.BeginInvoke(new Action(RefreshUsername));
-
+						
 			// connection to the excel application
 			application.WorkbookActivate += wb => WorkbookStateChanged(wb, true);
 			application.WorkbookDeactivate += wb => WorkbookStateChanged(wb, false);
 
 			application.SheetSelectionChange += (sh, target) => Refresh();
-
-			// initialize environment
-			if (!isEnvironmentInitialized)
-				InitEnvironment();
-
-			RefreshUsername();
-			RefreshEnvironments();
-			Refresh();
-
-			isMenuLoaded = true;
+			
+			//isMenuLoaded = true;
 		} // event PpsMenu_Load
-
-		private void InitEnvironment()
-		{
-			if (environment == null || !isMenuLoaded)
-				return;
-
-			environment.UsernameChanged += usernameChanged;
-
-			RefreshUsername();
-
-			isEnvironmentInitialized = true;
-		} // proc InitMenu
-
-		private void DoneEnvironment(PpsEnvironment oldEnvironment)
-		{
-			environment.UsernameChanged -= usernameChanged;
-		} // proc DoneEnvironment
 
 		#endregion
 
@@ -78,10 +54,10 @@ namespace PPSnExcel
 
 		private void RefreshUsername()
 		{
-			loginMenu.Label = environment == null ? "Keine Umgebung" : environment.UsernameDisplay;
-			loginGalery.Label = environment?.Info?.DisplayName ?? "Keine Umgebung";
-			loginButton.Enabled = environment != null;
-			loginButton.Label = environment != null && environment.IsAuthentificated ? "Abmelden" : "Anmelden";
+			//loginMenu.Label = environment == null ? "Keine Umgebung" : environment.UsernameDisplay;
+			//loginGalery.Label = environment?.Info?.DisplayName ?? "Keine Umgebung";
+			//loginButton.Enabled = environment != null;
+			//loginButton.Label = environment != null && environment.IsAuthentificated ? "Abmelden" : "Anmelden";
 		} // proc RefreshUsername
 
 		private void RefreshEnvironments()
@@ -90,15 +66,15 @@ namespace PPSnExcel
 			loginGalery.Items.Clear();
 
 			// readd them
-			foreach (var cur in PpsEnvironmentInfo.GetLocalEnvironments().OrderBy(c => c.DisplayName))
-			{
-				var ribbonButton = Factory.CreateRibbonDropDownItem();
-				ribbonButton.Label = cur.DisplayName;
-				ribbonButton.ScreenTip = String.Format("{0} ({1})", cur.DisplayName, cur.Name);
-				ribbonButton.SuperTip = String.Format("Version {0}\nUri: {1}", cur.Version, cur.Uri.ToString());
-				ribbonButton.Tag = cur;
-				loginGalery.Items.Add(ribbonButton);
-			}
+			//foreach (var cur in PpsEnvironmentInfo.GetLocalEnvironments().OrderBy(c => c.DisplayName))
+			//{
+			//	var ribbonButton = Factory.CreateRibbonDropDownItem();
+			//	ribbonButton.Label = cur.DisplayName;
+			//	ribbonButton.ScreenTip = String.Format("{0} ({1})", cur.DisplayName, cur.Name);
+			//	ribbonButton.SuperTip = String.Format("Version {0}\nUri: {1}", cur.Version, cur.Uri.ToString());
+			//	ribbonButton.Tag = cur;
+			//	loginGalery.Items.Add(ribbonButton);
+			//}
 		} // proc RefreshEnvironments
 
 		private void WorkbookStateChanged(Excel._Workbook wb, bool activate)
@@ -123,57 +99,41 @@ namespace PPSnExcel
 		//	//t.IsBackground = true;
 		//	//t.Start();
 		//} // event cmdDataImport_Click
-
-		public PpsEnvironment Environment
-		{
-			get { return environment; }
-			set
-			{
-				environment = value;
-				if (environment != null)
-				{
-					isEnvironmentInitialized = false;
-					if (isMenuLoaded)
-						InitEnvironment();
-				}
-				else if (isMenuLoaded)
-					Refresh();
-			}
-		} // prop Environment
+		
 
 		private void cmdReport_Click(object sender, RibbonControlEventArgs e)
 		{
 
-			using (var en = Environment.GetViewData(new PpsShellGetList("wpf.reports")).GetEnumerator())
-			{
-				while (en.MoveNext())
-					Debug.Print("REPORT: {0}, {1}, {2}", en.Current["Type"], en.Current["ReportId"], en.Current["DisplayName"]);
-			}
+			//using (var en = Environment.GetViewData(new PpsShellGetList("wpf.reports")).GetEnumerator())
+			//{
+			//	while (en.MoveNext())
+			//		Debug.Print("REPORT: {0}, {1}, {2}", en.Current["Type"], en.Current["ReportId"], en.Current["DisplayName"]);
+			//}
 
-			using (var en = Environment.GetViewData(new PpsShellGetList("sds.ansp") { Count = 10, AttributeSelector = "*" }).GetEnumerator())
-			{
-				var columns = (IDataColumns)en;
+			//using (var en = Environment.GetViewData(new PpsShellGetList("sds.ansp") { Count = 10, AttributeSelector = "*" }).GetEnumerator())
+			//{
+			//	var columns = (IDataColumns)en;
 
-				foreach (var col in columns.Columns)
-					Debug.Print("Column: {0} => {1} ", col.Name, col.Attributes.GetProperty("displayName", col.Name));
+			//	foreach (var col in columns.Columns)
+			//		Debug.Print("Column: {0} => {1} ", col.Name, col.Attributes.GetProperty("displayName", col.Name));
 
-				while (en.MoveNext())
-					Debug.Print("ANSP: {0}, {1}, {2}", en.Current["Name"], en.Current["Tel"], en.Current["Fax"]);
-			}
+			//	while (en.MoveNext())
+			//		Debug.Print("ANSP: {0}, {1}, {2}", en.Current["Name"], en.Current["Tel"], en.Current["Fax"]);
+			//}
 
-			var w = new Wpf.PpsReportSelectWindow();
-			var wh = new WindowInteropHelper(w);
-			wh.Owner = new IntPtr(application.Hwnd);
-			w.ShowDialog();
+			//var w = new Wpf.PpsReportSelectWindow();
+			//var wh = new WindowInteropHelper(w);
+			//wh.Owner = new IntPtr(application.Hwnd);
+			//w.ShowDialog();
 		}
 
 		private void cmdTable_Click(object sender, RibbonControlEventArgs e)
 		{
-			var w = new Wpf.PpsTableImportWindow();
-			var wh = new WindowInteropHelper(w);
-			wh.Owner = new IntPtr(application.Hwnd);
-			if (w.ShowDialog() ?? false)
-				Globals.ThisAddIn.ImportTable(w.TableName, w.TableSourceId);
+			//var w = new Wpf.PpsTableImportWindow();
+			//var wh = new WindowInteropHelper(w);
+			//wh.Owner = new IntPtr(application.Hwnd);
+			//if (w.ShowDialog() ?? false)
+			//	Globals.ThisAddIn.ImportTable(w.TableName, w.TableSourceId);
 		} // event cmdTable_Click
 
 		private void cmdStyles_Click(object sender, RibbonControlEventArgs e)
@@ -198,18 +158,18 @@ namespace PPSnExcel
 		{
 			if (loginGalery.SelectedItem == null)
 				return;
-			Globals.ThisAddIn.LoginEnvironment(loginGalery.SelectedItem.Tag as PpsEnvironmentInfo);
+			//Globals.ThisAddIn.LoginEnvironment(loginGalery.SelectedItem.Tag as PpsEnvironmentInfo);
 		} // event loginGalery_Click
 
 		private void loginButton_Click(object sender, RibbonControlEventArgs e)
 		{
-			if (environment == null)
-				return;
+			//if (environment == null)
+			//	return;
 
-			if (environment.IsAuthentificated)
-				Globals.ThisAddIn.RunUISynchron(environment.LogoutUserAsync());
-			else
-				Globals.ThisAddIn.RunUISynchron(environment.LoginUserAsync());
+			//if (environment.IsAuthentificated)
+			//	Globals.ThisAddIn.RunUISynchron(environment.LogoutUserAsync());
+			//else
+			//	Globals.ThisAddIn.RunUISynchron(environment.LoginUserAsync());
 		} // event loginButton_Click
 	} // class PpsMenu
 }
