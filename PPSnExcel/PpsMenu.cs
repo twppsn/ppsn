@@ -65,9 +65,9 @@ namespace PPSnExcel
 			{
 				action();
 			}
-			catch(Exception e)
+			catch (Exception e)
 			{
-				MessageBox.Show(e.ToString(), "Fehler", MessageBoxButtons.OK);
+				Globals.ThisAddIn.ShowException(ExceptionShowFlags.None, e);
 			}
 		} // proc RunActionSafe
 
@@ -110,12 +110,7 @@ namespace PPSnExcel
 			}
 		} // proc RefreshEnvironments
 
-		private void WorkbookStateChanged(Excel._Workbook wb, bool activate)
-		{
-			Refresh();
-		} // proc WorkbookStateChanged
-		
-		private void cmdReport_Click(object sender, RibbonControlEventArgs e)
+		private static void InsertReport()
 		{
 			var env = Globals.ThisAddIn.CurrentEnvironment;
 			if (env != null)
@@ -124,21 +119,16 @@ namespace PPSnExcel
 				{
 					if (frm.ShowDialog(Globals.ThisAddIn) == DialogResult.OK)
 					{
-						env.Spawn(
-							() => 
-							{
-								if (frm.ReportSource is PpsShellGetList args)
-									Globals.ThisAddIn.ImportTable(env, frm.ReportName, args);
-								else
-									MessageBox.Show("todo");
-							}
-						);
+						if (frm.ReportSource is PpsShellGetList args)
+							Globals.ThisAddIn.ImportTable(env, frm.ReportName, args);
+						else
+							MessageBox.Show("todo");
 					}
 				}
 			}
-		} // event cmdReport_Click
+		} // proc InsertReport
 
-		private void cmdTable_Click(object sender, RibbonControlEventArgs e)
+		private static void InsertTable()
 		{
 			var env = Globals.ThisAddIn.CurrentEnvironment;
 			if (env != null)
@@ -146,23 +136,28 @@ namespace PPSnExcel
 				using (var frm = new TableInsertForm(env))
 				{
 					if (frm.ShowDialog(Globals.ThisAddIn) == DialogResult.OK)
-						env.Spawn(() => Globals.ThisAddIn.ImportTable(env, frm.ReportName, frm.ReportSource));
+						Globals.ThisAddIn.ImportTable(env, frm.ReportName, frm.ReportSource);
 				}
 			}
-		} // event cmdTable_Click
+		} // proc InsertTable
+
+		private void WorkbookStateChanged(Excel._Workbook wb, bool activate)
+		{
+			Refresh();
+		} // proc WorkbookStateChanged
+
+		private void cmdReport_Click(object sender, RibbonControlEventArgs e)
+			=> RunActionSafe(InsertReport);
+
+		private void cmdTable_Click(object sender, RibbonControlEventArgs e)
+			=> RunActionSafe(InsertTable);
 
 		private void cmdStyles_Click(object sender, RibbonControlEventArgs e)
 		{
 		}
 
 		private void cmdRefresh_Click(object sender, RibbonControlEventArgs e)
-		{
-			//var xDoc = XDocument.Load(@"C:\Projects\PPSnOS\twppsn\PPSnWpf\PPSnDesktop\Local\Data\contacts.xml");
-			//xDoc.Root.Element("columns").Remove();
-
-			//var map = Globals.ThisAddIn.Application.ActiveWorkbook.XmlMaps.Item[1];
-			//map.ImportXml(xDoc.ToString(SaveOptions.None), true);
-		}
+			=> RunActionSafe(Globals.ThisAddIn.ShowTableInfo);
 
 		private void loginGalery_ItemsLoading(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(RefreshEnvironments);

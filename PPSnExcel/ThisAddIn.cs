@@ -57,12 +57,18 @@ namespace PPSnExcel
 		{
 		} // event ThisAddIn_Shutdown
 
+		#region -- ShowMessage, ShowException -----------------------------------------
 
 		IEnumerable<IDataRow> IPpsShell.GetViewData(PpsShellGetList arguments)
 			=> throw new NotSupportedException();
 
 		public void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
-			=> MessageBox.Show(this, alternativeMessage ?? exception.ToString());
+		{
+			if (exception is ExcelException ee)
+				MessageBox.Show(this, alternativeMessage ?? exception.Message, "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			else
+				MessageBox.Show(this, alternativeMessage ?? exception.ToString());
+		} // proc ShowException
 
 		public void ShowMessage(string message)
 			=> MessageBox.Show(this, message, "PPSnExcel", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -72,6 +78,8 @@ namespace PPSnExcel
 
 		public Task ShowMessageAsync(string message)
 			=> InvokeAsync(() => ShowMessage(message));
+
+		#endregion
 
 		#region -- Threading helper ---------------------------------------------------
 
@@ -142,6 +150,8 @@ namespace PPSnExcel
 
 		#endregion
 
+		#region -- Environment Handling -----------------------------------------------
+
 		private PpsEnvironment FindOrCreateEnvironment(PpsEnvironmentInfo info)
 		{
 			var env = GetEnvironmentFromInfo(info);
@@ -185,14 +195,14 @@ namespace PPSnExcel
 		public PpsEnvironment GetEnvironmentFromInfo(PpsEnvironmentInfo info)
 			=> openEnvironments.Find(c => c.Info == info);
 
-		#region -- ImportTable ------------------------------------------------------------
+		#endregion
 
-		private readonly XNamespace namespaceName = XNamespace.Get("http://www.w3.org/2001/XMLSchema");
+		#region -- ImportTable --------------------------------------------------------
 
-		internal void ImportTable(PpsEnvironment env, string tableName, PpsShellGetList tableSource)
+		private static readonly XNamespace namespaceName = XNamespace.Get("http://www.w3.org/2001/XMLSchema");
+
+		private static (string schemaData, IDataColumns columnInfo, string xmlData) GetImportTable(PpsEnvironment env, string rootElementName, PpsShellGetList tableSource)
 		{
-			//var progress = GetAwaitProgress();
-			var rootElementName = "data";
 			var xmlData = String.Empty;
 			var schemaData = String.Empty;
 			var columnInfo = new List<SimpleDataColumn>();
@@ -250,7 +260,7 @@ namespace PPSnExcel
 				#endregion
 
 				if (columnInfo.Count == 0)
-					return;
+					throw new ExcelException("Ergebnismenge hat keine Spalten.");
 
 				schemaData = xSchema.ToString(SaveOptions.DisableFormatting);
 
@@ -283,28 +293,33 @@ namespace PPSnExcel
 				xmlData = tw.GetStringBuilder().ToString();
 			}
 
-			Invoke(() => ImportTableUI(rootElementName, schemaData, columnInfo, xmlData));
+			return (schemaData, new SimpleDataColumns(columnInfo.ToArray()), schemaData);
+		} // func GetImportTable
 
-			//// todo: use the parameters
-			//// todo: feedback for the user
-			//// todo: exception handling
-		} // proc ImportTable
-
-		private static void ImportTableUI(string rootElementName, string schemaData, List<SimpleDataColumn> columnInfo, string xmlData)
+		internal void ImportTable(PpsEnvironment env, string tableName, PpsShellGetList tableSource)
 		{
 			// get active workbook and worksheet
 			var worksheet = Globals.Factory.GetVstoObject((Excel._Worksheet)Globals.ThisAddIn.Application.ActiveSheet);
 			var workbook = Globals.Factory.GetVstoObject((Excel._Workbook)worksheet.Parent);
 
+			//var progress = GetAwaitProgress();
+			var rootElementName = "data";
+
+			var (schemaData, columnInfo, xmlData) = Await(Task.Run(() => GetImportTable(env, rootElementName, tableSource)));
+
 			// add created schema for XML mapping
 			// todo: check for schema existence (duplicates!)
 			var map = workbook.XmlMaps.Add(schemaData, rootElementName);
+			map.Name = rootElementName;
 
 			// create list object and add header
+			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && range.ListObject != null)
+				throw new ExcelException("Tabelle darf nicht innerhalb einer anderen Tabelle eingefügt werden.");
+
 			// todo: exception occurs if the selected cell is already part of a table
 			var list = Globals.Factory.GetVstoObject((Excel.ListObject)worksheet.ListObjects.Add());
 			var flag = true;
-			foreach (var column in columnInfo)
+			foreach (var column in columnInfo.Columns)
 			{
 				var columnName = column.Name;
 				var listColumn = flag ? list.ListColumns[1] : list.ListColumns.Add();
@@ -317,12 +332,43 @@ namespace PPSnExcel
 			switch (map.ImportXml(xmlData, true))
 			{
 				case Excel.XlXmlImportResult.xlXmlImportElementsTruncated:
-					throw new Exception("Zu viele Element, nicht alle Zeilen wurden geladen.");
+					throw new ExcelException("Zu viele Element, nicht alle Zeilen wurden geladen.");
 				case Excel.XlXmlImportResult.xlXmlImportValidationFailed:
-					throw new Exception("Validierung der Rohdaten fehlgeschlagen.");
+					throw new ExcelException("Validierung der Rohdaten fehlgeschlagen.");
 			}
-		} // proc ImportTableUI
 
+			//// todo: use the parameters
+			//// todo: feedback for the user
+			//// todo: exception handling
+		} // proc ImportTable
+
+		internal void ShowTableInfo()
+		{
+			var worksheet = Globals.Factory.GetVstoObject((Excel._Worksheet)Globals.ThisAddIn.Application.ActiveSheet);
+			var workbook = Globals.Factory.GetVstoObject((Excel._Workbook)worksheet.Parent);
+
+			//worksheet.ListObjects
+			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && range.ListObject != null)
+			{
+				ShowMessage($"{range.ListObject.XmlMap.Schemas[1].XML} --- {range.ListObject.SourceType}");
+			}
+
+			var sb = new StringBuilder();
+
+			for (var i = 1; i <= workbook.XmlMaps.Count; i++)
+			{
+				var map = workbook.XmlMaps[i];
+				sb.AppendLine($"{i}: name={map.Name}, root={map.RootElementName}, schemas={map.Schemas.Count}");
+				for (var j = 1; j <= map.Schemas.Count; j++)
+				{
+					var schema = map.Schemas[j];
+					sb.AppendLine($"  {j}: name={schema.Name}, uri={schema.Namespace.Uri.ToString()}");
+				}
+			}
+
+			ShowMessage(sb.ToString());
+		} // func ShowTableInfo
+		
 		#endregion
 
 		#region Von VSTO generierter Code
