@@ -427,6 +427,9 @@ namespace TecWare.PPSn
 		public async Task<MessageBoxResult> MsgBoxAsync(string text, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information, MessageBoxResult defaultResult = MessageBoxResult.OK)
 			=> await Dispatcher.InvokeAsync(() => MsgBox(text, button, image, defaultResult));
 
+		Task IPpsShell.ShowMessageAsync(string message)
+			=> MsgBoxAsync(message);
+
 		#endregion
 
 		#region -- Resources ----------------------------------------------------------
