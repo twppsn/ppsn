@@ -22,7 +22,7 @@ using System.Text;
 
 namespace TecWare.PPSn.Data
 {
-	#region -- enum PpsClientLoginSaveOptions -------------------------------------------
+	#region -- enum PpsClientLoginSaveOptions -----------------------------------------
 
 	/// <summary>Local save options for the login data.</summary>
 	public enum PpsClientLoginSaveOptions
@@ -37,28 +37,27 @@ namespace TecWare.PPSn.Data
 
 	#endregion
 
-	#region -- class PpsClientLogin -----------------------------------------------------
+	#region -- class PpsClientLogin ---------------------------------------------------
 
 	/// <summary></summary>
 	public sealed class PpsClientLogin : IDisposable
 	{
 		private readonly string target;
 		private readonly string realm;
-		private readonly bool showErrorMessage;
-
+		
 		private NativeMethods.CREDENTIAL credential = new NativeMethods.CREDENTIAL();
 		private IntPtr password = IntPtr.Zero;
 		private int passwordLength = 0;
 
 		private PpsClientLoginSaveOptions saveOptions = PpsClientLoginSaveOptions.None;
+		private bool showErrorMessage;
 		private bool isLoaded;	// is the credential blob loaded
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
 		/// <param name="target"></param>
 		/// <param name="realm"></param>
-		/// <param name="showErrorMessage"></param>
 		public PpsClientLogin(string target, string realm, bool showErrorMessage)
 		{
 			this.target = target;
@@ -152,7 +151,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- ShowWindowsLogin -------------------------------------------------------
+		#region -- ShowWindowsLogin ---------------------------------------------------
 
 		/// <summary>Show the default windows login dialog.</summary>
 		/// <param name="hwndParent"></param>
@@ -174,17 +173,39 @@ namespace TecWare.PPSn.Data
 				// pack the arguments
 				if (isLoaded)
 				{
-					if (!NativeMethods.CredPackAuthenticationBuffer(4 /*CRED_PACK_GENERIC_CREDENTIALS*/, credential.UserName, password, inCredBuffer, ref inCredBufferSize))
+					var emptyPasswordSet = false;
+					var emptyPassword = IntPtr.Zero;
+					try
 					{
-						hr = Marshal.GetLastWin32Error();
-						if (hr == 122)
+						if (password == IntPtr.Zero)
 						{
-							inCredBuffer = Marshal.AllocCoTaskMem((int)inCredBufferSize);
-							if (!NativeMethods.CredPackAuthenticationBuffer(4, credential.UserName, password, inCredBuffer, ref inCredBufferSize))
-								throw new Win32Exception();
+							emptyPassword = Marshal.AllocCoTaskMem(2);
+							UnsafeNativeMethods.ZeroMemory(emptyPassword, 2);
+
+							password = emptyPassword;
+							emptyPasswordSet = true;
 						}
-						else
-							throw new Win32Exception(hr);
+
+						if (!NativeMethods.CredPackAuthenticationBuffer(4 /*CRED_PACK_GENERIC_CREDENTIALS*/, credential.UserName, password, inCredBuffer, ref inCredBufferSize))
+						{
+							hr = Marshal.GetLastWin32Error();
+							if (hr == 122)
+							{
+								inCredBuffer = Marshal.AllocCoTaskMem((int)inCredBufferSize);
+								if (!NativeMethods.CredPackAuthenticationBuffer(4, credential.UserName, password, inCredBuffer, ref inCredBufferSize))
+									throw new Win32Exception();
+							}
+							else
+								throw new Win32Exception(hr);
+						}
+					}
+					finally
+					{
+						if (emptyPasswordSet)
+						{
+							password = IntPtr.Zero;
+							Marshal.FreeCoTaskMem(emptyPassword);
+						}
 					}
 				}
 
@@ -193,16 +214,18 @@ namespace TecWare.PPSn.Data
 				var messageText = target;
 				if (messageText != null)
 				{
-					int iPos = messageText.IndexOf(':');
-					if (iPos != -1)
-						messageText = messageText.Substring(iPos + 1);
+					var pos = messageText.IndexOf(':');
+					if (pos != -1)
+						messageText = messageText.Substring(pos + 1);
 				}
-				var info = new NativeMethods.CREDUI_INFO();
-				info.cbSize = Marshal.SizeOf(typeof(NativeMethods.CREDUI_INFO));
-				info.hwndParent = hwndParent;
-				info.pszMessageText = String.Format("{0} ({1}).", messageText, realm);
-				info.pszCaptionText = "Anmeldung";
-				info.hbmBanner = IntPtr.Zero;
+				var info = new NativeMethods.CREDUI_INFO
+				{
+					cbSize = Marshal.SizeOf(typeof(NativeMethods.CREDUI_INFO)),
+					hwndParent = hwndParent,
+					pszMessageText = String.Format("{0} ({1}).", messageText, realm),
+					pszCaptionText = "Anmeldung",
+					hbmBanner = IntPtr.Zero
+				};
 
 				// show the dialog
 				var flags = NativeMethods.CredUIFlags.Generic | NativeMethods.CredUIFlags.CheckBox;
@@ -236,7 +259,7 @@ namespace TecWare.PPSn.Data
 				var oldPassword = password;
 				var oldPasswordLength = passwordLength;
 
-				if (newPasswordLength == 0)
+				if (newPasswordLength <= 1)
 				{
 					password = IntPtr.Zero;
 					passwordLength = 0;
@@ -273,7 +296,7 @@ namespace TecWare.PPSn.Data
 
 		#endregion
 
-		#region -- SetPassword, GetPassword, GetCredentials -------------------------------
+		#region -- SetPassword, GetPassword, GetCredentials ---------------------------
 
 		/// <summary>Set a new password.</summary>
 		/// <param name="newPassword"></param>
@@ -368,7 +391,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Realm from the web-server.</summary>
 		public string Realm => realm;
 		/// <summary>Show the windows login error message (LoginFailure).</summary>
-		public bool ShowErrorMessage => showErrorMessage;
+		public bool ShowErrorMessage { get => showErrorMessage; set => showErrorMessage = true; }
 
 		/// <summary>User name</summary>
 		public string UserName { get { return credential.UserName; } set { credential.UserName = value; } }

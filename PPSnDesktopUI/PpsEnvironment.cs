@@ -23,6 +23,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,6 +32,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
@@ -1064,6 +1066,12 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		void IPpsShell.Await(Task task)
+			=> task.AwaitTask();
+
+		T IPpsShell.Await<T>(Task<T> task)
+			=> task.AwaitTask();
+		
 		/// <summary>Internal Id of the environment.</summary>
 		[LuaMember]
 		public int EnvironmentId => environmentId;
@@ -1105,7 +1113,7 @@ namespace TecWare.PPSn
 		public DirectoryInfo LocalPath => localDirectory;
 
 		LuaTable IPpsShell.LuaLibrary => this;
-
+		
 		// -- Static --------------------------------------------------------------
 
 		private static object environmentCounterLock = new object();

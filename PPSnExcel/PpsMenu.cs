@@ -15,6 +15,8 @@
 #endregion
 using System;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 using System.Xml.Linq;
 using Microsoft.Office.Tools.Ribbon;
 using TecWare.PPSn;
@@ -35,7 +37,7 @@ namespace PPSnExcel
 		private void PpsMenu_Load(object sender, RibbonUIEventArgs e)
 		{
 			application = Globals.ThisAddIn.Application;
-			cmdExtended.Visible = Globals.ThisAddIn.Application.ShowDevTools;
+			cmdExtended.Visible = false; // Globals.ThisAddIn.Application.ShowDevTools;
 						
 			// connection to the excel application
 			application.WorkbookActivate += wb => WorkbookStateChanged(wb, true);
@@ -43,19 +45,39 @@ namespace PPSnExcel
 
 			application.SheetSelectionChange += (sh, target) => Refresh();
 
-			Globals.ThisAddIn.CurrentEnvironmentChanged += (s, _e) => RefreshUsername();
+			Globals.ThisAddIn.CurrentEnvironmentChanged += (s, _e) => { RefreshUsername(); Refresh(); };
 			
 			// init environment
 			RefreshEnvironments();
 			RefreshUsername();
+			Refresh();
 
 			isMenuLoaded = true;
 		} // event PpsMenu_Load
 
 		#endregion
 
+		#region -- RunActionSafe ------------------------------------------------------
+
+		private void RunActionSafe(Action action)
+		{
+			try
+			{
+				action();
+			}
+			catch(Exception e)
+			{
+				MessageBox.Show(e.ToString(), "Fehler", MessageBoxButtons.OK);
+			}
+		} // proc RunActionSafe
+
+		#endregion
+
 		public void Refresh()
 		{
+			var currentEnvironment = Globals.ThisAddIn.CurrentEnvironment;
+			cmdReport.Enabled = 
+				cmdTable.Enabled = currentEnvironment != null;
 		} // proc Refresh
 
 		private void RefreshUsername()
@@ -74,12 +96,15 @@ namespace PPSnExcel
 			// readd them
 			foreach (var cur in PpsEnvironmentInfo.GetLocalEnvironments().OrderBy(c => c.DisplayName))
 			{
+				var env = Globals.ThisAddIn.GetEnvironmentFromInfo(cur);
 				var ribbonButton = Factory.CreateRibbonDropDownItem();
 				ribbonButton.Label = cur.Name ?? cur.DisplayName;
 				ribbonButton.ScreenTip = $"{ cur.Name} ({cur.DisplayName})";
-				ribbonButton.SuperTip = String.Format("Version {0}\nUri: {1}", cur.Version, cur.Uri.ToString());
+				ribbonButton.SuperTip =
+					env == null 
+						? String.Format("Version {0}\nUri: {1}", cur.Version, cur.Uri.ToString())
+						: String.Format("Angemeldet: {2}\nVersion {0}\nUri: {1}", cur.Version, cur.Uri.ToString(), env.UserName);
 				ribbonButton.Tag = cur;
-				var env = Globals.ThisAddIn.GetEnvironmentFromInfo(cur);
 				ribbonButton.Image = env != null && env.IsAuthentificated ? Properties.Resources.EnvironmentAuthImage : Properties.Resources.EnvironmentImage;
 				loginGalery.Items.Add(ribbonButton);
 			}
@@ -87,61 +112,43 @@ namespace PPSnExcel
 
 		private void WorkbookStateChanged(Excel._Workbook wb, bool activate)
 		{
-			cmdTable.Enabled = activate;
+			Refresh();
 		} // proc WorkbookStateChanged
-
-		//private void cmdDataImport_Click(object sender, RibbonControlEventArgs e)
-		//{
-		//	var w = new Wpf.PpsReportSelectWindow();
-		//	w.ShowDialog();
-
-		//	//var t = new Thread(() =>
-		//	//{
-		//	//	var w = new Wpf.PpsExcelDataWindow();
-		//	//	w.Show();
-		//	//	w.Closed += (s1, e2) => w.Dispatcher.InvokeShutdown();
-		//	//	System.Windows.Threading.Dispatcher.Run();
-		//	//});
-
-		//	//t.SetApartmentState(ApartmentState.STA);
-		//	//t.IsBackground = true;
-		//	//t.Start();
-		//} // event cmdDataImport_Click
 		
-
 		private void cmdReport_Click(object sender, RibbonControlEventArgs e)
 		{
-
-			//using (var en = Environment.GetViewData(new PpsShellGetList("wpf.reports")).GetEnumerator())
-			//{
-			//	while (en.MoveNext())
-			//		Debug.Print("REPORT: {0}, {1}, {2}", en.Current["Type"], en.Current["ReportId"], en.Current["DisplayName"]);
-			//}
-
-			//using (var en = Environment.GetViewData(new PpsShellGetList("sds.ansp") { Count = 10, AttributeSelector = "*" }).GetEnumerator())
-			//{
-			//	var columns = (IDataColumns)en;
-
-			//	foreach (var col in columns.Columns)
-			//		Debug.Print("Column: {0} => {1} ", col.Name, col.Attributes.GetProperty("displayName", col.Name));
-
-			//	while (en.MoveNext())
-			//		Debug.Print("ANSP: {0}, {1}, {2}", en.Current["Name"], en.Current["Tel"], en.Current["Fax"]);
-			//}
-
-			//var w = new Wpf.PpsReportSelectWindow();
-			//var wh = new WindowInteropHelper(w);
-			//wh.Owner = new IntPtr(application.Hwnd);
-			//w.ShowDialog();
-		}
+			var env = Globals.ThisAddIn.CurrentEnvironment;
+			if (env != null)
+			{
+				using (var frm = new ReportInsertForm(env))
+				{
+					if (frm.ShowDialog(Globals.ThisAddIn) == DialogResult.OK)
+					{
+						env.Spawn(
+							() => 
+							{
+								if (frm.ReportSource is PpsShellGetList args)
+									Globals.ThisAddIn.ImportTable(env, frm.ReportName, args);
+								else
+									MessageBox.Show("todo");
+							}
+						);
+					}
+				}
+			}
+		} // event cmdReport_Click
 
 		private void cmdTable_Click(object sender, RibbonControlEventArgs e)
 		{
-			//var w = new Wpf.PpsTableImportWindow();
-			//var wh = new WindowInteropHelper(w);
-			//wh.Owner = new IntPtr(application.Hwnd);
-			//if (w.ShowDialog() ?? false)
-			//	Globals.ThisAddIn.ImportTable(w.TableName, w.TableSourceId);
+			var env = Globals.ThisAddIn.CurrentEnvironment;
+			if (env != null)
+			{
+				using (var frm = new TableInsertForm(env))
+				{
+					if (frm.ShowDialog(Globals.ThisAddIn) == DialogResult.OK)
+						env.Spawn(() => Globals.ThisAddIn.ImportTable(env, frm.ReportName, frm.ReportSource));
+				}
+			}
 		} // event cmdTable_Click
 
 		private void cmdStyles_Click(object sender, RibbonControlEventArgs e)
@@ -158,13 +165,13 @@ namespace PPSnExcel
 		}
 
 		private void loginGalery_ItemsLoading(object sender, RibbonControlEventArgs e)
-			=> RefreshEnvironments();
-		
+			=> RunActionSafe(RefreshEnvironments);
+
 		private void loginGalery_Click(object sender, RibbonControlEventArgs e)
-			=> Globals.ThisAddIn.ActivateEnvironment(loginGalery.SelectedItem?.Tag as PpsEnvironmentInfo);
+			=> RunActionSafe(() => Globals.ThisAddIn.ActivateEnvironment(loginGalery.SelectedItem?.Tag as PpsEnvironmentInfo));
 
 		private void logoutButton_Click(object sender, RibbonControlEventArgs e)
-			=> Globals.ThisAddIn.DeactivateEnvironment();
+			=> RunActionSafe(() => Globals.ThisAddIn.DeactivateEnvironment());
 		
 		/// <summary>Was Loaded called.</summary>
 		public bool IsMenuLoaded => isMenuLoaded;

@@ -82,7 +82,7 @@
     <Compile Include="Sql\PpsSqlDataSource.cs" />
     <Compile Include="Sql\PpsSqlSchemaStore.cs" />
     <Compile Include="Stuff.cs" />
-    <Compile Include="Wpf\ExcelCientItem.cs" />
+    <Compile Include="Wpf\DatawareHouseCientItem.cs" />
     <Compile Include="Wpf\WpfClientItem.cs" />
     <None Include="TecWare.PPSn.Module.nuspec" />
   </ItemGroup>

@@ -860,7 +860,7 @@ namespace TecWare.PPSn.Server
 				// execute the complete statemet
 				using (var enumerator = selector.GetEnumerator(startAt, count))
 				{
-					bool emitCurrentRow = false;
+					var emitCurrentRow = false;
 					
 					// extract the columns, optional before the fetch operation
 					var columnDefinition = enumerator as IDataColumns;

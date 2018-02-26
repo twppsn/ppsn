@@ -203,6 +203,24 @@
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ReportInsertForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ReportInsertForm.Designer.cs">
+      <DependentUpon>ReportInsertForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="TableInsertForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TableInsertForm.Designer.cs">
+      <DependentUpon>TableInsertForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="WaitForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="WaitForm.Designer.cs">
+      <DependentUpon>WaitForm.cs</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="PpsMenu.resx">
       <DependentUpon>PpsMenu.cs</DependentUpon>
     </EmbeddedResource>
@@ -216,6 +234,15 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
+    <EmbeddedResource Include="ReportInsertForm.resx">
+      <DependentUpon>ReportInsertForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TableInsertForm.resx">
+      <DependentUpon>TableInsertForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="WaitForm.resx">
+      <DependentUpon>WaitForm.cs</DependentUpon>
+    </EmbeddedResource>
     <None Include="..\PPSnDesktopUI\ppsn.licenseheader">
       <Link>ppsn.licenseheader</Link>
     </None>
@@ -254,6 +281,8 @@
   <ItemGroup>
     <Content Include="Resources\r16x16\server.png" />
     <Content Include="Resources\r16x16\server_ok.png" />
+    <Content Include="Resources\r32x32\line-chart.png" />
+    <Content Include="Resources\r32x32\table.png" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

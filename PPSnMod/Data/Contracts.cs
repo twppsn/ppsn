@@ -537,8 +537,17 @@ namespace TecWare.PPSn.Server.Data
 
 	#region -- class PpsPrivateDataContextHelper --------------------------------------
 
+	/// <summary>Simple helpder for Data Context</summary>
 	public static class PpsPrivateDataContextHelper
 	{
+		/// <summary>Create a selector.</summary>
+		/// <param name="ctx"></param>
+		/// <param name="name"></param>
+		/// <param name="columns"></param>
+		/// <param name="filter"></param>
+		/// <param name="order"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, string name, string columns = null, string filter = null, string order = null, bool throwException = true)
 			=> ctx.CreateSelectorAsync(
 				name,
@@ -548,6 +557,11 @@ namespace TecWare.PPSn.Server.Data
 				throwException
 			);
 
+		/// <summary>Create a selector.</summary>
+		/// <param name="ctx"></param>
+		/// <param name="table"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, LuaTable table, bool throwException = true)
 			=> ctx.CreateSelectorAsync(
 				table.GetOptionalValue("name", (string)null),

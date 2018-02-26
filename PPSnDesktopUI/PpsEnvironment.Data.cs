@@ -4711,23 +4711,7 @@ namespace TecWare.PPSn
 				}
 			}
 			else
-			{
-				var sb = new StringBuilder("remote/?action=viewget&v=");
-				sb.Append(arguments.ViewId);
-
-				if (arguments.Filter != null && arguments.Filter != PpsDataFilterTrueExpression.True)
-					sb.Append("&f=").Append(Uri.EscapeDataString(arguments.Filter.ToString()));
-				if (arguments.Order != null && arguments.Order.Length > 0)
-					sb.Append("&o=").Append(Uri.EscapeDataString(PpsDataOrderExpression.ToString(arguments.Order)));
-				if (arguments.Start != -1)
-					sb.Append("&s=").Append(arguments.Start);
-				if (arguments.Count != -1)
-					sb.Append("&c=").Append(arguments.Count);
-				if (!String.IsNullOrEmpty(arguments.AttributeSelector))
-					sb.Append("&a=").Append(arguments.AttributeSelector);
-
-				return Request.CreateViewDataReader(sb.ToString());
-			}
+				return Request.CreateViewDataReader(arguments.ToQuery("remote/"));
 		} // func GetRemoteViewData
 
 		#endregion

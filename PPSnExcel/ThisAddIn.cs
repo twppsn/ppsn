@@ -15,25 +15,39 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Xml;
 using System.Xml.Linq;
+using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.PPSn;
+using TecWare.PPSn.Data;
 using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
 {
-	public partial class ThisAddIn
+	public partial class ThisAddIn : IWin32Window, IPpsShell
 	{
 		/// <summary>Current environment has changed.</summary>
 		public event EventHandler CurrentEnvironmentChanged;
 
 		private readonly List<PpsEnvironment> openEnvironments = new List<PpsEnvironment>();
+		private readonly Lua lua = new Lua();
 		private PpsEnvironment currentEnvironment = null;
+
+		private WaitForm waitForm;
 
 		private void ThisAddIn_Startup(object sender, EventArgs e)
 		{
+			// create wait form
+			this.waitForm = new WaitForm(Application);
+
 		//Globals.Ribbons.PpsMenu.
 		} // ctor
 
@@ -41,12 +55,97 @@ namespace PPSnExcel
 		{
 		} // event ThisAddIn_Shutdown
 
+
+		IEnumerable<IDataRow> IPpsShell.GetViewData(PpsShellGetList arguments)
+			=> throw new NotSupportedException();
+
+		public void ShowException(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+			=> MessageBox.Show(this, alternativeMessage ?? exception.ToString());
+
+		public void ShowMessage(string message)
+			=> MessageBox.Show(this, message, "PPSnExcel", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+		public Task ShowExceptionAsync(ExceptionShowFlags flags, Exception exception, string alternativeMessage = null)
+			=> InvokeAsync(() => ShowException(flags, exception, alternativeMessage));
+
+		public Task ShowMessageAsync(string message)
+			=> InvokeAsync(() => ShowMessage(message));
+
+		#region -- Threading helper ---------------------------------------------------
+
+		public void Await(Task task)
+			=> waitForm.Await(task);
+
+		public T Await<T>(Task<T> task)
+		{
+			Await((Task)task);
+			return task.Result;
+		} // func Await
+
+		public void Invoke(Action action)
+		{
+			if (waitForm.InvokeRequired)
+				waitForm.Invoke(action);
+			else
+				action();
+		} // proc Invoke
+
+		public Task InvokeAsync(Action action)
+		{
+			if (waitForm.InvokeRequired)
+			{
+				return Task.Factory.FromAsync(
+					waitForm.BeginInvoke(action),
+					waitForm.EndInvoke
+				);
+			}
+			else
+			{
+				action();
+				return Task.CompletedTask;
+			}
+		} // proc Invoke
+
+		public T Invoke<T>(Func<T> func)
+		{
+			if (waitForm.InvokeRequired)
+				return (T)waitForm.Invoke(func);
+			else
+				return func();
+		} // proc Invoke
+
+		public Task<T> InvokeAsync<T>(Func<T> func)
+		{
+			if (waitForm.InvokeRequired)
+			{
+				return Task.Factory.FromAsync(
+					waitForm.BeginInvoke(func),
+					ar => (T)waitForm.EndInvoke(ar)
+				);
+			}
+			else
+				return Task.FromResult(func());
+		} // proc Invoke
+		
+		public void BeginInvoke(Action action)
+		{
+			if (waitForm.InvokeRequired)
+				waitForm.BeginInvoke(action);
+			else
+				action();
+		} // proc BeginInvoke
+
+		public IProgress<string> GetAwaitProgress()
+			=> waitForm.CreateProgress();
+
+		#endregion
+
 		private PpsEnvironment FindOrCreateEnvironment(PpsEnvironmentInfo info)
 		{
 			var env = GetEnvironmentFromInfo(info);
 			if (env == null)
 			{
-				env = new PpsEnvironment(info);
+				env = new PpsEnvironment(this, info);
 				openEnvironments.Add(env);
 			}
 			return env;
@@ -58,12 +157,9 @@ namespace PPSnExcel
 				return;
 
 			var env = FindOrCreateEnvironment(info);
-			if (env.IsAuthentificated)
+			if (env.IsAuthentificated // is authentificated
+				|| Await(env.LoginAsync(this))) // try to authentificate the environment
 				SetCurrentEnvironment(env);
-			else // try to authentificate the environment
-			{
-
-			}
 		} // proc ActivateEnvironment
 
 		public void DeactivateEnvironment(PpsEnvironment environment = null)
@@ -89,117 +185,141 @@ namespace PPSnExcel
 
 		#region -- ImportTable ------------------------------------------------------------
 
-		internal void ImportTable(object tableName, object tableSourceId)
+		private readonly XNamespace namespaceName = XNamespace.Get("http://www.w3.org/2001/XMLSchema");
+
+		internal void ImportTable(PpsEnvironment env, string tableName, PpsShellGetList tableSource)
 		{
+			//var progress = GetAwaitProgress();
+			var rootElementName = "data";
+			var xmlData = String.Empty;
+			var schemaData = String.Empty;
+			var columnInfo = new List<SimpleDataColumn>();
+
+			using (var tw = new StringWriter(CultureInfo.InvariantCulture))
+			using (var x = XmlWriter.Create(tw, new XmlWriterSettings() { Encoding = Encoding.Default, NewLineHandling = NewLineHandling.None }))
+			using (var e = env.GetViewData(tableSource).GetEnumerator())
+			{
+				var columns = e as IDataColumns;
+
+				const string namespaceShortcut = "xs";
+
+				XElement xColumns;
+				#region -- base schema --
+				var xSchema =
+					new XElement(namespaceName + "schema",
+						new XAttribute("elementFormDefault", "qualified"),
+						new XAttribute(XNamespace.Xmlns + namespaceShortcut, namespaceName),
+						new XElement(namespaceName + "annotation",
+							new XElement(namespaceName + "documentation", "todo")
+						),
+						new XElement(namespaceName + "element",
+							new XAttribute("name", rootElementName),
+							new XElement(namespaceName + "complexType",
+								new XElement(namespaceName + "sequence",
+									new XElement(namespaceName + "element",
+										new XAttribute("name", "r"),
+										new XAttribute("minOccurs", "0"),
+										new XAttribute("maxOccurs", "unbounded"),
+										new XElement(namespaceName + "complexType",
+											xColumns = new XElement(namespaceName + "sequence")
+										)
+									)
+								)
+							)
+						)
+				);
+				#endregion
+
+				#region -- read column information --
+
+				for (var i = 0; i < columns.Columns.Count; i++)
+				{
+					var dataColumn = columns.Columns[i];
+
+					// add column
+					columnInfo.Add(new SimpleDataColumn(dataColumn));
+
+					// set schema
+					xColumns.Add(new XElement(namespaceName + "element",
+						new XAttribute("name", dataColumn.Name),
+						new XAttribute("type", namespaceShortcut + ":" + typeToXsdType[dataColumn.DataType])
+					));
+				}
+				#endregion
+
+				if (columnInfo.Count == 0)
+					return;
+
+				schemaData = xSchema.ToString(SaveOptions.DisableFormatting);
+
+				#region -- Fetch data --
+				x.WriteStartElement(rootElementName);
+
+				while (e.MoveNext())
+				{
+					var r = e.Current;
+					x.WriteStartElement("r");
+
+					for (var i = 0; i < columnInfo.Count; i++)
+					{
+						x.WriteStartElement(columnInfo[i].Name);
+						x.WriteValue(r[i]);
+						x.WriteEndElement();
+					}
+
+					x.WriteEndElement();
+
+				}
+
+				x.WriteEndElement();
+
+				#endregion
+
+				x.Flush();
+				tw.Flush();
+
+				xmlData = tw.GetStringBuilder().ToString();
+			}
+
+			Invoke(() => ImportTableUI(rootElementName, schemaData, columnInfo, xmlData));
+
 			//// todo: use the parameters
 			//// todo: feedback for the user
 			//// todo: exception handling
-
-			//if (environment == null)
-			//	return;
-
-			//if (!environment.IsAuthentificated)
-			//	return;
-
-			//var columns = new List<KeyValuePair<string, Type>>();
-			//var rows = new List<XElement>();
-			//#region -- get columns and rows --
-			//using (var e = environment.Request.CreateViewDataReader("remote/?action=viewget&v=dbo.objects").GetEnumerator())
-			//{
-			//	if (e.MoveNext())
-			//	{
-			//		for (var i = 0; i < e.Current.Columns.Count; i++)
-			//			columns.Add(new KeyValuePair<string, Type>(e.Current.Columns[i].Name, e.Current.Columns[i].DataType));
-
-			//		do
-			//		{
-			//			var row = new XElement("r");
-			//			for (var i = 0; i < e.Current.Columns.Count; i++)
-			//			{
-			//				if (e.Current[i] != null)
-			//				{
-			//					row.Add(new XElement(e.Current.Columns[i].Name,
-			//						Procs.ChangeType<string>(e.Current[i])
-			//					));
-			//				}
-			//			}
-			//			rows.Add(row);
-			//		} while (e.MoveNext());
-			//	} // if e.MoveNext
-			//} // using e
-			//#endregion
-
-			//if (columns.Count < 1)
-			//	return;
-
-			//var schema = string.Empty;
-			//#region -- create schema for XML mapping --
-			//var xsdNamespace = XNamespace.Get("http://www.w3.org/2001/XMLSchema");
-			//var xsdNamespaceShortcut = "xs";
-			//schema = new XElement(xsdNamespace + "schema",
-			//	new XAttribute("elementFormDefault", "qualified"),
-			//	new XAttribute(XNamespace.Xmlns + xsdNamespaceShortcut, xsdNamespace),
-			//	new XElement(xsdNamespace + "element",
-			//		new XAttribute("name", "view"),
-			//		new XElement(xsdNamespace + "complexType",
-			//			new XElement(xsdNamespace + "sequence",
-			//				new XElement(xsdNamespace + "element",
-			//					new XAttribute("name", "rows"),
-			//					new XElement(xsdNamespace + "complexType",
-			//						new XElement(xsdNamespace + "sequence",
-			//							new XElement(xsdNamespace + "element",
-			//								new XAttribute("name", "r"),
-			//								new XAttribute("minOccurs", "0"),
-			//								new XAttribute("maxOccurs", "unbounded"),
-			//								new XElement(xsdNamespace + "complexType",
-			//									new XElement(xsdNamespace + "sequence",
-			//										from c in columns select new XElement(xsdNamespace + "element",
-			//											new XAttribute("name", c.Key),
-			//											new XAttribute("type", String.Format("{0}:{1}", xsdNamespaceShortcut, typeToXsdType[c.Value]))
-			//										)
-			//									)
-			//								)
-			//							)
-			//						)
-			//					)
-			//				)
-			//			)
-			//		)
-			//	)
-			//).ToString();
-			//#endregion
-
-			//var data = new XElement("view",
-			//	new XElement("rows",
-			//		rows
-			//	)
-			//).ToString();
-
-			//// get active workbook and worksheet
-			//var worksheet = Globals.Factory.GetVstoObject((Excel._Worksheet)Globals.ThisAddIn.Application.ActiveSheet);
-			//var workbook = Globals.Factory.GetVstoObject((Excel._Workbook)worksheet.Parent);
-
-			//// add created schema for XML mapping
-			//// todo: check for schema existence (duplicates!)
-			//var map = workbook.XmlMaps.Add(schema, "view");
-
-			//// create list object and add header
-			//// todo: exception occurs if the selected cell is already part of a table
-			//var list = Globals.Factory.GetVstoObject((Excel.ListObject)worksheet.ListObjects.Add());
-			//var flag = true;
-			//foreach (var column in columns)
-			//{
-			//	var columnName = column.Key;
-			//	var listColumn = flag ? list.ListColumns[1] : list.ListColumns.Add();
-			//	flag = false;
-			//	listColumn.Name = columnName;
-			//	listColumn.XPath.SetValue(map, "/view/rows/r/" + columnName);
-			//}
-
-			//// import data
-			//var result = map.ImportXml(data, true);
-			//// todo: check result
 		} // proc ImportTable
+
+		private static void ImportTableUI(string rootElementName, string schemaData, List<SimpleDataColumn> columnInfo, string xmlData)
+		{
+			// get active workbook and worksheet
+			var worksheet = Globals.Factory.GetVstoObject((Excel._Worksheet)Globals.ThisAddIn.Application.ActiveSheet);
+			var workbook = Globals.Factory.GetVstoObject((Excel._Workbook)worksheet.Parent);
+
+			// add created schema for XML mapping
+			// todo: check for schema existence (duplicates!)
+			var map = workbook.XmlMaps.Add(schemaData, rootElementName);
+
+			// create list object and add header
+			// todo: exception occurs if the selected cell is already part of a table
+			var list = Globals.Factory.GetVstoObject((Excel.ListObject)worksheet.ListObjects.Add());
+			var flag = true;
+			foreach (var column in columnInfo)
+			{
+				var columnName = column.Name;
+				var listColumn = flag ? list.ListColumns[1] : list.ListColumns.Add();
+				flag = false;
+				listColumn.Name = columnName;
+				listColumn.XPath.SetValue(map, "/" + rootElementName + "/r/" + columnName);
+			}
+
+			// import data
+			switch(map.ImportXml(xmlData, true))
+			{
+				case Excel.XlXmlImportResult.xlXmlImportElementsTruncated:
+					throw new Exception("Zu viele Element, nicht alle Zeilen wurden geladen.");
+				case Excel.XlXmlImportResult.xlXmlImportValidationFailed:
+					throw new Exception("Validierung der Rohdaten fehlgeschlagen.");
+			}
+		} // proc ImportTableUI
 
 		#endregion
 
@@ -219,7 +339,19 @@ namespace PPSnExcel
 
 		/// <summary>Current active, authentificated environment.</summary>
 		public PpsEnvironment CurrentEnvironment => currentEnvironment;
+		/// <summary>Lua environment.</summary>
+		public Lua Lua => lua;
+		/// <summary>Base encoding.</summary>
+		public Encoding Encoding => Encoding.Default;
+		/// <summary></summary>
+		public SynchronizationContext Context => waitForm.SynchronizationContext;
 
+		IntPtr IWin32Window.Handle => new IntPtr(Application.Hwnd);
+
+		LuaTable IPpsShell.LuaLibrary => throw new NotSupportedException();
+		Uri IPpsShell.BaseUri => throw new NotSupportedException();
+
+		
 		// -- Static --------------------------------------------------------------
 
 		private static readonly Dictionary<Type, string> typeToXsdType = new Dictionary<Type, string>

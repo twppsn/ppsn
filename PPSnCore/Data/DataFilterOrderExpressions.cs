@@ -2323,7 +2323,9 @@ namespace TecWare.PPSn.Data
 		/// <param name="columns"></param>
 		/// <returns></returns>
 		public static IEnumerable<PpsDataColumnExpression> Parse(string columns)
-			=> columns.Split(',').Where(s => !String.IsNullOrEmpty(s)).Select(CreateStringKeyValuePair).ToArray();
+			=> String.IsNullOrEmpty(columns)
+				? Array.Empty<PpsDataColumnExpression>()
+				: columns.Split(',').Where(s => !String.IsNullOrEmpty(s)).Select(CreateStringKeyValuePair).ToArray();
 
 		/// <summary></summary>
 		/// <param name="columns"></param>

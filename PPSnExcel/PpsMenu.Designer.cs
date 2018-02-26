@@ -36,13 +36,13 @@
 		{
 			this.tabPPSn = this.Factory.CreateRibbonTab();
 			this.groupData = this.Factory.CreateRibbonGroup();
+			this.group2 = this.Factory.CreateRibbonGroup();
+			this.group1 = this.Factory.CreateRibbonGroup();
 			this.cmdReport = this.Factory.CreateRibbonButton();
 			this.cmdTable = this.Factory.CreateRibbonButton();
-			this.group2 = this.Factory.CreateRibbonGroup();
 			this.cmdRefresh = this.Factory.CreateRibbonButton();
 			this.cmdEditTable = this.Factory.CreateRibbonButton();
 			this.button1 = this.Factory.CreateRibbonButton();
-			this.group1 = this.Factory.CreateRibbonGroup();
 			this.loginMenu = this.Factory.CreateRibbonMenu();
 			this.loginGalery = this.Factory.CreateRibbonGallery();
 			this.separator2 = this.Factory.CreateRibbonSeparator();
@@ -74,27 +74,6 @@
 			this.groupData.Label = "Importieren";
 			this.groupData.Name = "groupData";
 			// 
-			// cmdReport
-			// 
-			this.cmdReport.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
-			this.cmdReport.Label = "Report";
-			this.cmdReport.Name = "cmdReport";
-			this.cmdReport.ScreenTip = "Report öffnen";
-			this.cmdReport.ShowImage = true;
-			this.cmdReport.SuperTip = "Öffnet einen vorgefertigten Report";
-			this.cmdReport.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdReport_Click);
-			// 
-			// cmdTable
-			// 
-			this.cmdTable.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
-			this.cmdTable.KeyTip = "T";
-			this.cmdTable.Label = "Tabelle";
-			this.cmdTable.Name = "cmdTable";
-			this.cmdTable.ScreenTip = "Datentabelle verknüpfen";
-			this.cmdTable.ShowImage = true;
-			this.cmdTable.SuperTip = "Verknüpft eine Datentabelle mit dem aktuellen Arbeitsblatt";
-			this.cmdTable.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdTable_Click);
-			// 
 			// group2
 			// 
 			this.group2.Items.Add(this.cmdRefresh);
@@ -103,11 +82,45 @@
 			this.group2.Label = "Bearbeiten";
 			this.group2.Name = "group2";
 			// 
+			// group1
+			// 
+			this.group1.Items.Add(this.loginMenu);
+			this.group1.Items.Add(this.cmdExtended);
+			this.group1.Label = "Verbindung";
+			this.group1.Name = "group1";
+			// 
+			// cmdReport
+			// 
+			this.cmdReport.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
+			this.cmdReport.Enabled = false;
+			this.cmdReport.KeyTip = "R";
+			this.cmdReport.Label = "Report";
+			this.cmdReport.Name = "cmdReport";
+			this.cmdReport.OfficeImageId = "PropertySheet";
+			this.cmdReport.ScreenTip = "Report öffnen";
+			this.cmdReport.ShowImage = true;
+			this.cmdReport.SuperTip = "Öffnet einen vorgefertigten Report";
+			this.cmdReport.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdReport_Click);
+			// 
+			// cmdTable
+			// 
+			this.cmdTable.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
+			this.cmdTable.Enabled = false;
+			this.cmdTable.KeyTip = "T";
+			this.cmdTable.Label = "Tabelle";
+			this.cmdTable.Name = "cmdTable";
+			this.cmdTable.OfficeImageId = "TableInsert";
+			this.cmdTable.ScreenTip = "Datentabelle verknüpfen";
+			this.cmdTable.ShowImage = true;
+			this.cmdTable.SuperTip = "Verknüpft eine Datentabelle mit dem aktuellen Arbeitsblatt";
+			this.cmdTable.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdTable_Click);
+			// 
 			// cmdRefresh
 			// 
 			this.cmdRefresh.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
 			this.cmdRefresh.Label = "Aktualisieren";
 			this.cmdRefresh.Name = "cmdRefresh";
+			this.cmdRefresh.OfficeImageId = "Refresh";
 			this.cmdRefresh.ShowImage = true;
 			this.cmdRefresh.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdRefresh_Click);
 			// 
@@ -116,19 +129,14 @@
 			this.cmdEditTable.Label = "Spalten bearbeiten";
 			this.cmdEditTable.Name = "cmdEditTable";
 			this.cmdEditTable.ShowImage = true;
+			this.cmdEditTable.Visible = false;
 			// 
 			// button1
 			// 
 			this.button1.Label = "Als Report speichern";
 			this.button1.Name = "button1";
 			this.button1.ShowImage = true;
-			// 
-			// group1
-			// 
-			this.group1.Items.Add(this.loginMenu);
-			this.group1.Items.Add(this.cmdExtended);
-			this.group1.Label = "Verbindung";
-			this.group1.Name = "group1";
+			this.button1.Visible = false;
 			// 
 			// loginMenu
 			// 
