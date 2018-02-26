@@ -49,7 +49,7 @@ namespace PPSnExcel
 		private async Task RefreshViewAsync()
 		{
 			var dt = await env.GetViewDataAsync(
-				new PpsShellGetList("dw.reports")
+				new PpsShellGetList("bi.reports")
 				{
 					Columns = new PpsDataColumnExpression[]
 					{

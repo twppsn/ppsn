@@ -15,9 +15,11 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,7 +50,7 @@ namespace PPSnExcel
 			// create wait form
 			this.waitForm = new WaitForm(Application);
 
-		//Globals.Ribbons.PpsMenu.
+			//Globals.Ribbons.PpsMenu.
 		} // ctor
 
 		private void ThisAddIn_Shutdown(object sender, EventArgs e)
@@ -126,7 +128,7 @@ namespace PPSnExcel
 			else
 				return Task.FromResult(func());
 		} // proc Invoke
-		
+
 		public void BeginInvoke(Action action)
 		{
 			if (waitForm.InvokeRequired)
@@ -312,7 +314,7 @@ namespace PPSnExcel
 			}
 
 			// import data
-			switch(map.ImportXml(xmlData, true))
+			switch (map.ImportXml(xmlData, true))
 			{
 				case Excel.XlXmlImportResult.xlXmlImportElementsTruncated:
 					throw new Exception("Zu viele Element, nicht alle Zeilen wurden geladen.");
@@ -351,7 +353,17 @@ namespace PPSnExcel
 		LuaTable IPpsShell.LuaLibrary => throw new NotSupportedException();
 		Uri IPpsShell.BaseUri => throw new NotSupportedException();
 
-		
+		public Rectangle ApplicationBounds
+		{
+			get
+			{
+				if (GetWindowRect(new IntPtr(Application.Hwnd), out var rc))
+					return new Rectangle(rc.Left, rc.Top, rc.Right - rc.Left, rc.Bottom - rc.Top);
+				else
+					return Screen.PrimaryScreen.WorkingArea;
+			}
+		} // func ApplicationBounds
+
 		// -- Static --------------------------------------------------------------
 
 		private static readonly Dictionary<Type, string> typeToXsdType = new Dictionary<Type, string>
@@ -383,5 +395,18 @@ namespace PPSnExcel
 			// todo: Check functionality. Try to find better type match.
 			{ typeof(byte[]), "string" }
 		};
+
+		[DllImport("user32.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+		[StructLayout(LayoutKind.Sequential)]
+		struct RECT
+		{
+			public int Left;
+			public int Top;
+			public int Right;
+			public int Bottom;
+		}
 	} // class ThisAddIn
 }

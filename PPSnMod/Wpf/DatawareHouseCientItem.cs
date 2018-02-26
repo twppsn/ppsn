@@ -55,7 +55,7 @@ namespace TecWare.PPSn.Server.Wpf
 		{
 			foreach (var v in application.GetViewDefinitions())
 			{
-				if (v.Attributes.GetProperty("dw.visible", false))
+				if (v.Attributes.GetProperty("bi.visible", false))
 					yield return new PpsExcelReportItem("table", v.Name, v.DisplayName, v.Attributes.GetProperty("description", (string)null));
 			}
 		} // func GetExcelReportItems
@@ -65,7 +65,7 @@ namespace TecWare.PPSn.Server.Wpf
 		/// <param name="privateUserData"></param>
 		/// <returns></returns>
 		public PpsDataSelector GetReportItemsSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
-			=> new PpsGenericSelector<PpsExcelReportItem>(dataSource, "dw.reports", GetExcelReportItems(privateUserData));
+			=> new PpsGenericSelector<PpsExcelReportItem>(dataSource, "bi.reports", GetExcelReportItems(privateUserData));
 
 		#endregion
 	} // class ExcelCientItem

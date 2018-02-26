@@ -91,8 +91,9 @@ namespace PPSnExcel
 				throw new InvalidOperationException();
 
 			// position
-			Left = 100;
-			Top = 100;
+			var rc = Globals.ThisAddIn.ApplicationBounds;
+			Left = rc.Left + rc.Width / 10;
+			Top = rc.Top + rc.Height / 5;
 
 			// run message loop
 			try
