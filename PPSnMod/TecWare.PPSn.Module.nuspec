@@ -26,5 +26,6 @@
 		<file src="bin\Release\DEM.PPSn.dll" target="lib\net47" />
 		<file src="bin\Release\DEM.PPSn.pdb" target="lib\net47" />
 		<file src="bin\Release\DEM.PPSn.xml" target="lib\net47" />
+		<file src="Xsd\PPSn.xsd" target="content\Schema" />
 	</files>
 </package>
