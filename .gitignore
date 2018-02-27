@@ -216,3 +216,8 @@ FakesAssemblies/
 /PPSnReport/system/share/
 /PPSnReport/system/sw/
 
+/PPSnModCfg/Schema/Configuration/DESconfigItem.xsd
+/PPSnModCfg/Schema/Configuration/DEScore.xsd
+/PPSnModCfg/Schema/Configuration/DEScron.xsd
+/PPSnModCfg/Schema/Configuration/DESprocess.xsd
+/PPSnModCfg/Schema/DES.xsd
