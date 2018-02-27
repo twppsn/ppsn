@@ -507,9 +507,6 @@ namespace TecWare.PPSn.Controls
 				default:
 					return (from partition in validPartitions orderby PartitionSpan(elements, partition) ascending select partition).First();
 			}
-			// get the result with the lowest span
-			//var bestPartitioning =
-			//return bestPartitioning;
 		}
 
 		private static int PartitionMaxHeight(List<int> elements, List<int> partitions)
