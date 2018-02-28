@@ -89,16 +89,16 @@ namespace TecWare.PPSn.Controls
 		#region Label
 		// todo: kein string?
 		/// <summary>DependencyProperty</summary>
-		public static readonly DependencyProperty LabelProperty = DependencyProperty.RegisterAttached("Label", typeof(string), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(String.Empty, new PropertyChangedCallback(LabelChangedCallback)));
+		public static readonly DependencyProperty LabelProperty = DependencyProperty.RegisterAttached("Label", typeof(object), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(String.Empty, new PropertyChangedCallback(LabelChangedCallback)));
 		/// <summary>Returns the Label of the Control</summary>
 		/// <param name="d">Control</param>
 		/// <returns></returns>
-		public static string GetLabel(DependencyObject d)
-			=> (string)d.GetValue(LabelProperty);
+		public static object GetLabel(DependencyObject d)
+			=> d.GetValue(LabelProperty);
 		/// <summary>Sets the Label of the Control</summary>
 		/// <param name="d">Control</param>
 		/// <param name="value"></param>
-		public static void SetLabel(DependencyObject d, string value)
+		public static void SetLabel(DependencyObject d, object value)
 			=> d.SetValue(LabelProperty, value);
 		#endregion
 
@@ -156,13 +156,12 @@ namespace TecWare.PPSn.Controls
 		private void UpdateLabelInformation(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
 			var element = (UIElement)d;
-			var oldValue = e.OldValue as string;
-			var newValue = e.NewValue as string;
+			var newValue = e.NewValue;
 
 			// because UpdateLabelInformation must not delete a Element, each Control gets its label even if it's empty
 			if (labels.TryGetValue(element, out var lbl))
 			{
-				if (!(lbl.Content is string content) || content != newValue) // change
+				if (lbl.Content != newValue) // change
 					lbl.Content = newValue;
 			}
 			else // new
