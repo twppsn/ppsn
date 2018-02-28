@@ -159,21 +159,27 @@ namespace TecWare.PPSn.Controls
 			var oldValue = e.OldValue as string;
 			var newValue = e.NewValue as string;
 
+			// because UpdateLabelInformation must not delete a Element, each Control gets its label even if it's empty
 			if (labels.TryGetValue(element, out var lbl))
 			{
-				if (!String.IsNullOrEmpty(newValue)) // change
+				if (!(lbl.Content is string content) || content != newValue) // change
 					lbl.Content = newValue;
-				else // remove
-				{
-					InternalChildren.Remove(lbl);
-					labels.Remove(lbl);
-				}
 			}
-			else if (!String.IsNullOrEmpty(newValue)) // new
+			else // new
 			{
 				lbl = new Label() { Content = newValue, Target = element };
 				labels.Add(element, lbl);
 				InternalChildren.Add(lbl);
+			}
+		}
+
+		private void RemoveLabel(DependencyObject d)
+		{
+			var element = (UIElement)d;
+			if (labels.TryGetValue(element, out var lbl))
+			{
+				InternalChildren.Remove(lbl);
+				labels.Remove(lbl);
 			}
 		}
 
@@ -190,7 +196,7 @@ namespace TecWare.PPSn.Controls
 			public override int Add(UIElement element)
 			{
 				panel.InvalidateColumnDefinitions();
-				if (!panel.labels.ContainsKey(element))
+				if (!panel.labels.ContainsKey(element) && !(element is Label))
 					panel.UpdateLabelInformation(element, new DependencyPropertyChangedEventArgs(LabelProperty, null, GetLabel(element)));
 				return base.Add(element);
 			}
@@ -198,8 +204,8 @@ namespace TecWare.PPSn.Controls
 			public override void Remove(UIElement element)
 			{
 				panel.InvalidateColumnDefinitions();
-				if (!panel.labels.ContainsKey(element))
-					panel.UpdateLabelInformation(element, new DependencyPropertyChangedEventArgs(LabelProperty, GetLabel(element), null));
+				if (panel.labels.ContainsKey(element))
+					panel.RemoveLabel(element);
 				base.Remove(element);
 			}
 		} // class class PpsDataFieldPanelCollection
