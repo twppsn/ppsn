@@ -247,9 +247,9 @@ namespace TecWare.PPSn.Controls
 			returnSize.Height = height;
 
 			if (availableSize.Width == double.PositiveInfinity)
-				returnSize.Width = ColumnCount * (300 + ColumnMargin);   // ToDo: arbitrary value
+				returnSize.Width = ColumnCount * (250 + ColumnMargin);   // ToDo: arbitrary value
 			else
-				returnSize.Width = Math.Max(ColumnCount * (300 + ColumnMargin), availableSize.Width);
+				returnSize.Width = Math.Max(ColumnCount * (250 + ColumnMargin), availableSize.Width);
 
 			return returnSize;
 		}
@@ -276,7 +276,7 @@ namespace TecWare.PPSn.Controls
 
 			returnSize.Height = height;
 
-			returnSize.Width = Math.Max(finalSize.Width, ColumnCount * (300 + ColumnMargin));
+			returnSize.Width = Math.Max(finalSize.Width, ColumnCount * (250 + ColumnMargin));
 
 			var columnWidth = (returnSize.Width - ((ColumnCount - 1) * ColumnMargin)) / ColumnCount;
 
