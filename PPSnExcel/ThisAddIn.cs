@@ -27,7 +27,9 @@ using System.Windows.Forms;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
+using PPSnExcel.Data;
 using TecWare.DE.Data;
+using TecWare.DE.Stuff;
 using TecWare.PPSn;
 using TecWare.PPSn.Data;
 using Excel = Microsoft.Office.Interop.Excel;
@@ -275,7 +277,8 @@ namespace PPSnExcel
 					for (var i = 0; i < columnInfo.Count; i++)
 					{
 						x.WriteStartElement(columnInfo[i].Name);
-						x.WriteValue(r[i]);
+						if (r[i] != null)
+							x.WriteValue(r[i]);
 						x.WriteEndElement();
 					}
 
@@ -293,7 +296,7 @@ namespace PPSnExcel
 				xmlData = tw.GetStringBuilder().ToString();
 			}
 
-			return (schemaData, new SimpleDataColumns(columnInfo.ToArray()), schemaData);
+			return (schemaData, new SimpleDataColumns(columnInfo.ToArray()), xmlData);
 		} // func GetImportTable
 
 		internal void ImportTable(PpsEnvironment env, string tableName, PpsShellGetList tableSource)
@@ -310,7 +313,7 @@ namespace PPSnExcel
 			// add created schema for XML mapping
 			// todo: check for schema existence (duplicates!)
 			var map = workbook.XmlMaps.Add(schemaData, rootElementName);
-			map.Name = rootElementName;
+			//map.Name = rootElementName;
 
 			// create list object and add header
 			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && range.ListObject != null)
@@ -324,8 +327,24 @@ namespace PPSnExcel
 				var columnName = column.Name;
 				var listColumn = flag ? list.ListColumns[1] : list.ListColumns.Add();
 				flag = false;
-				listColumn.Name = columnName;
-				listColumn.XPath.SetValue(map, "/" + rootElementName + "/r/" + columnName);
+				
+				// set caption
+				listColumn.Name = column.Attributes.GetProperty("displayName", columnName);
+
+				// update range
+				XlConverter.UpdateRange(listColumn.Range, column.DataType, column.Attributes);
+
+				// set totals calculation
+				listColumn.TotalsCalculation = XlConverter.ConvertToTotalsCalculation(column.Attributes.GetProperty("bi.totals", String.Empty));
+				
+				try
+				{
+					listColumn.XPath.SetValue(map, "/" + rootElementName + "/r/" + columnName);
+				}
+				catch (COMException e) when (e.HResult == unchecked((int)0x800A03EC))
+				{
+					ShowMessage(String.Format("Spaltenzuordnung von '{0}' ist fehlgeschlagen.", columnName));
+				}
 			}
 
 			// import data
@@ -424,12 +443,10 @@ namespace PPSnExcel
 			{ typeof(long), "long" },
 			// todo: Check functionality.
 			{ typeof(float), "float" },
-			// todo: Check functionality.
 			{ typeof(double), "double" },
-			// todo: Check functionality.
 			{ typeof(decimal), "decimal" },
 			// todo: Check functionality. Try to find better type match.
-			{ typeof(DateTime), "string" },
+			{ typeof(DateTime), "dateTime" },
 			// todo: Check functionality. Try to find better type match.
 			{ typeof(char), "string" },
 			{ typeof(string), "string" },
