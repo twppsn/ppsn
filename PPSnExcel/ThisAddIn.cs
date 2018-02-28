@@ -319,9 +319,9 @@ namespace PPSnExcel
 			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && range.ListObject != null)
 				throw new ExcelException("Tabelle darf nicht innerhalb einer anderen Tabelle eingefügt werden.");
 
-			// todo: exception occurs if the selected cell is already part of a table
 			var list = Globals.Factory.GetVstoObject((Excel.ListObject)worksheet.ListObjects.Add());
 			var flag = true;
+			var showTotals = false;
 			foreach (var column in columnInfo.Columns)
 			{
 				var columnName = column.Name;
@@ -335,8 +335,11 @@ namespace PPSnExcel
 				XlConverter.UpdateRange(listColumn.Range, column.DataType, column.Attributes);
 
 				// set totals calculation
-				listColumn.TotalsCalculation = XlConverter.ConvertToTotalsCalculation(column.Attributes.GetProperty("bi.totals", String.Empty));
-				
+				var totalsCalculation = XlConverter.ConvertToTotalsCalculation(column.Attributes.GetProperty("bi.totals", String.Empty));
+				listColumn.TotalsCalculation = totalsCalculation;
+				if (totalsCalculation != Excel.XlTotalsCalculation.xlTotalsCalculationNone)
+					showTotals = true;
+
 				try
 				{
 					listColumn.XPath.SetValue(map, "/" + rootElementName + "/r/" + columnName);
@@ -356,9 +359,7 @@ namespace PPSnExcel
 					throw new ExcelException("Validierung der Rohdaten fehlgeschlagen.");
 			}
 
-			//// todo: use the parameters
-			//// todo: feedback for the user
-			//// todo: exception handling
+			list.ShowTotals = showTotals;
 		} // proc ImportTable
 
 		internal void ShowTableInfo()

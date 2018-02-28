@@ -45,7 +45,7 @@ namespace PPSnExcel.Data
 			baseCellType = baseCellType ?? typeof(object);
 
 			// set number format
-			if (attributes.TryGetProperty("bi.format", out string tmp))
+			if (attributes.TryGetProperty("xl.format", out string tmp))
 				range.NumberFormat = tmp;
 			else if (attributes.TryGetProperty("format", out tmp))
 				range.NumberFormat = ConvertNetToExcelFormat(baseCellType, tmp, CultureInfo.CurrentUICulture);
@@ -54,7 +54,7 @@ namespace PPSnExcel.Data
 			if (attributes.TryGetProperty("halign", out tmp))
 				range.HorizontalAlignment = GetAlignment(true, tmp);
 			if (attributes.TryGetProperty("valign", out tmp))
-				range.HorizontalAlignment = GetAlignment(true, tmp);
+				range.HorizontalAlignment = GetAlignment(false, tmp);
 
 			//range.ColumnWidth;
 			//range.RowHeight;
