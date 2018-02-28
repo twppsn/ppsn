@@ -89,16 +89,16 @@ namespace TecWare.PPSn.Controls
 		#region Label
 		// todo: kein string?
 		/// <summary>DependencyProperty</summary>
-		public static readonly DependencyProperty LabelProperty = DependencyProperty.RegisterAttached("Label", typeof(string), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(String.Empty, new PropertyChangedCallback(LabelChangedCallback)));
+		public static readonly DependencyProperty LabelProperty = DependencyProperty.RegisterAttached("Label", typeof(object), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(String.Empty, new PropertyChangedCallback(LabelChangedCallback)));
 		/// <summary>Returns the Label of the Control</summary>
 		/// <param name="d">Control</param>
 		/// <returns></returns>
-		public static string GetLabel(DependencyObject d)
-			=> (string)d.GetValue(LabelProperty);
+		public static object GetLabel(DependencyObject d)
+			=> d.GetValue(LabelProperty);
 		/// <summary>Sets the Label of the Control</summary>
 		/// <param name="d">Control</param>
 		/// <param name="value"></param>
-		public static void SetLabel(DependencyObject d, string value)
+		public static void SetLabel(DependencyObject d, object value)
 			=> d.SetValue(LabelProperty, value);
 		#endregion
 
@@ -156,24 +156,29 @@ namespace TecWare.PPSn.Controls
 		private void UpdateLabelInformation(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
 			var element = (UIElement)d;
-			var oldValue = e.OldValue as string;
-			var newValue = e.NewValue as string;
+			var newValue = e.NewValue;
 
+			// because UpdateLabelInformation must not delete a Element, each Control gets its label even if it's empty
 			if (labels.TryGetValue(element, out var lbl))
 			{
-				if (!String.IsNullOrEmpty(newValue)) // change
+				if (lbl.Content != newValue) // change
 					lbl.Content = newValue;
-				else // remove
-				{
-					InternalChildren.Remove(lbl);
-					labels.Remove(lbl);
-				}
 			}
-			else if (!String.IsNullOrEmpty(newValue)) // new
+			else // new
 			{
 				lbl = new Label() { Content = newValue, Target = element };
 				labels.Add(element, lbl);
 				InternalChildren.Add(lbl);
+			}
+		}
+
+		private void RemoveLabel(DependencyObject d)
+		{
+			var element = (UIElement)d;
+			if (labels.TryGetValue(element, out var lbl))
+			{
+				InternalChildren.Remove(lbl);
+				labels.Remove(lbl);
 			}
 		}
 
@@ -190,7 +195,7 @@ namespace TecWare.PPSn.Controls
 			public override int Add(UIElement element)
 			{
 				panel.InvalidateColumnDefinitions();
-				if (!panel.labels.ContainsKey(element))
+				if (!panel.labels.ContainsKey(element) && !(element is Label))
 					panel.UpdateLabelInformation(element, new DependencyPropertyChangedEventArgs(LabelProperty, null, GetLabel(element)));
 				return base.Add(element);
 			}
@@ -198,8 +203,8 @@ namespace TecWare.PPSn.Controls
 			public override void Remove(UIElement element)
 			{
 				panel.InvalidateColumnDefinitions();
-				if (!panel.labels.ContainsKey(element))
-					panel.UpdateLabelInformation(element, new DependencyPropertyChangedEventArgs(LabelProperty, GetLabel(element), null));
+				if (panel.labels.ContainsKey(element))
+					panel.RemoveLabel(element);
 				base.Remove(element);
 			}
 		} // class class PpsDataFieldPanelCollection
@@ -241,9 +246,9 @@ namespace TecWare.PPSn.Controls
 			returnSize.Height = height;
 
 			if (availableSize.Width == double.PositiveInfinity)
-				returnSize.Width = ColumnCount * (300 + ColumnMargin);   // ToDo: arbitrary value
+				returnSize.Width = ColumnCount * (250 + ColumnMargin);   // ToDo: arbitrary value
 			else
-				returnSize.Width = Math.Max(ColumnCount * (300 + ColumnMargin), availableSize.Width);
+				returnSize.Width = Math.Max(ColumnCount * (250 + ColumnMargin), availableSize.Width);
 
 			return returnSize;
 		}
@@ -270,7 +275,7 @@ namespace TecWare.PPSn.Controls
 
 			returnSize.Height = height;
 
-			returnSize.Width = Math.Max(finalSize.Width, ColumnCount * (300 + ColumnMargin));
+			returnSize.Width = Math.Max(finalSize.Width, ColumnCount * (250 + ColumnMargin));
 
 			var columnWidth = (returnSize.Width - ((ColumnCount - 1) * ColumnMargin)) / ColumnCount;
 
@@ -285,26 +290,28 @@ namespace TecWare.PPSn.Controls
 				while (line < columnHeight)
 				{
 					var child = childrenToArrange[i];
+					var controlLines = GetGridLines(child);
 
 					var controlRect = new Rect(columnX + LabelWidth,
 											   line * (RowHeight + RowMargin),
 											   columnWidth - (LabelWidth),
-											   GetGridLines(child) * RowHeight);
+											   controlLines * RowHeight + (controlLines - 1) * RowMargin);
 					child.Arrange(controlRect);
+					((FrameworkElement)child).Height = controlRect.Height;
 
 					if (labels.TryGetValue(child, out var lbl))
 					{
 						var labelRect = new Rect(columnX,
-												 line * (RowHeight + RowMargin),
+												 controlRect.Top,
 												 LabelWidth,
-												 GetGridLines(child) * RowHeight);
+												 controlRect.Height);
 						lbl.Arrange(labelRect);
 					}
 
 					// next child
 					i++;
 					// increase line
-					line += GetGridLines(child);
+					line += controlLines;
 				}
 			}
 
