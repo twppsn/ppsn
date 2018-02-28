@@ -291,26 +291,27 @@ namespace TecWare.PPSn.Controls
 				while (line < columnHeight)
 				{
 					var child = childrenToArrange[i];
+					var controlLines = GetGridLines(child);
 
 					var controlRect = new Rect(columnX + LabelWidth,
 											   line * (RowHeight + RowMargin),
 											   columnWidth - (LabelWidth),
-											   GetGridLines(child) * RowHeight);
+											   controlLines * RowHeight + (controlLines - 1) * RowMargin);
 					child.Arrange(controlRect);
 
 					if (labels.TryGetValue(child, out var lbl))
 					{
 						var labelRect = new Rect(columnX,
-												 line * (RowHeight + RowMargin),
+												 controlRect.Top,
 												 LabelWidth,
-												 GetGridLines(child) * RowHeight);
+												 controlRect.Height);
 						lbl.Arrange(labelRect);
 					}
 
 					// next child
 					i++;
 					// increase line
-					line += GetGridLines(child);
+					line += controlLines;
 				}
 			}
 
