@@ -298,6 +298,7 @@ namespace TecWare.PPSn.Controls
 											   columnWidth - (LabelWidth),
 											   controlLines * RowHeight + (controlLines - 1) * RowMargin);
 					child.Arrange(controlRect);
+					((FrameworkElement)child).Height = controlRect.Height;
 
 					if (labels.TryGetValue(child, out var lbl))
 					{
