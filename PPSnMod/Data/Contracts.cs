@@ -30,14 +30,14 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Server.Data
 {
-	#region -- class PpsUserIdentity ----------------------------------------------------
+	#region -- class PpsUserIdentity --------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Special Identity, for the system user.</summary>
 	public abstract class PpsUserIdentity : IIdentity, IEquatable<IIdentity>, IDisposable
 	{
-		#region -- class PpsSystemIdentity ----------------------------------------------
+		#region -- class PpsSystemIdentity --------------------------------------------
 
+		/// <summary>System identity</summary>
 		public sealed class PpsSystemIdentity : PpsUserIdentity
 		{
 			private const string name = "system";
@@ -46,19 +46,27 @@ namespace TecWare.PPSn.Server.Data
 			{
 			} // ctor
 
+			/// <summary></summary>
+			/// <param name="other"></param>
+			/// <returns></returns>
 			public override bool Equals(IIdentity other)
 				=> other is PpsSystemIdentity;
 
+			/// <summary></summary>
+			/// <param name="identity"></param>
+			/// <returns></returns>
 			protected override PpsCredentials GetCredentialsFromIdentityCore(IIdentity identity)
 				=> Equals(identity) ? new PpsIntegratedCredentials(WindowsIdentity.GetCurrent(), false) : null;
 
+			/// <summary></summary>
 			public override bool IsAuthenticated => true;
+			/// <summary></summary>
 			public override string Name => "des\\" + name;
 		} // class PpsSystemIdentity
 
 		#endregion
 
-		#region -- class PpsBasicIdentity -----------------------------------------------
+		#region -- class PpsBasicIdentity ---------------------------------------------
 
 		private sealed class PpsBasicIdentity : PpsUserIdentity
 		{
@@ -104,7 +112,7 @@ namespace TecWare.PPSn.Server.Data
 
 		#endregion
 
-		#region -- class PpsWindowsIdentity ---------------------------------------------
+		#region -- class PpsWindowsIdentity -------------------------------------------
 
 		private sealed class PpsWindowsIdentity : PpsUserIdentity
 		{
@@ -140,22 +148,30 @@ namespace TecWare.PPSn.Server.Data
 		{
 		} // ctor
 
+		/// <summary></summary>
 		public void Dispose()
 		{
 			GC.SuppressFinalize(this);
 			Dispose(true);
 		} // proc Dispose
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected virtual void Dispose(bool disposing)
 		{
 		} // proc Dispose
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override int GetHashCode()
 			=> Name.GetHashCode();
 
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
 		public override bool Equals(object obj)
 		{
-			if (Object.ReferenceEquals(this, obj))
+			if (ReferenceEquals(this, obj))
 				return true;
 			else if (obj is IIdentity i)
 				return Equals(i);
@@ -163,6 +179,9 @@ namespace TecWare.PPSn.Server.Data
 				return false;
 		} // func Equals
 
+		/// <summary></summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
 		public abstract bool Equals(IIdentity other);
 
 		internal PpsCredentials GetCredentialsFromIdentity(IIdentity identity)
@@ -173,6 +192,9 @@ namespace TecWare.PPSn.Server.Data
 			return GetCredentialsFromIdentityCore(identity) ?? throw new ArgumentException($"Identity from type {identity.GetType().Name} is not compatible.", nameof(identity));
 		} // func GetCredentialsFromIdentity
 
+		/// <summary></summary>
+		/// <param name="identity"></param>
+		/// <returns></returns>
 		protected abstract PpsCredentials GetCredentialsFromIdentityCore(IIdentity identity);
 
 		/// <summary>des</summary>
@@ -199,22 +221,27 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
-	#region -- class PpsCredentials -----------------------------------------------------
+	#region -- class PpsCredentials ---------------------------------------------------
 
+	/// <summary>Generice pps credentials</summary>
 	public abstract class PpsCredentials : IDisposable
 	{
+		/// <summary></summary>
 		public void Dispose()
 		{
 			Dispose(true);
 		} // proc Dispose
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected virtual void Dispose(bool disposing) { }
 	} // class PpsCredentials
 
 	#endregion
 
-	#region -- class PpsIntegratedCredentials -------------------------------------------
+	#region -- class PpsIntegratedCredentials -----------------------------------------
 
+	/// <summary>LDAP credentials</summary>
 	public sealed class PpsIntegratedCredentials : PpsCredentials
 	{
 		private readonly WindowsIdentity identity;
@@ -227,6 +254,8 @@ namespace TecWare.PPSn.Server.Data
 			this.identity = doClone ? (WindowsIdentity)identity.Clone() : identity;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected override void Dispose(bool disposing)
 		{
 			base.Dispose(disposing);
@@ -234,6 +263,8 @@ namespace TecWare.PPSn.Server.Data
 				identity.Dispose();
 		} // proc Dispose
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public IDisposable Impersonate()
 			=> WindowsIdentity.GetCurrent().User != identity.User
 				? identity.Impersonate()
@@ -242,8 +273,9 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
-	#region -- class PpsUserCredentials -------------------------------------------------
+	#region -- class PpsUserCredentials -----------------------------------------------
 
+	/// <summary>Basic user credentials.</summary>
 	public sealed class PpsUserCredentials : PpsCredentials
 	{
 		private readonly string userName;
@@ -274,6 +306,8 @@ namespace TecWare.PPSn.Server.Data
 			this.password.MakeReadOnly();
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected override void Dispose(bool disposing)
 		{
 			base.Dispose(disposing);
@@ -281,18 +315,20 @@ namespace TecWare.PPSn.Server.Data
 				password?.Dispose();
 		} // proc Dispose
 
+		/// <summary></summary>
 		public string UserName => userName;
+		/// <summary></summary>
 		public SecureString Password => password;
 	} // class PpsUserCredentials
 
 	#endregion
 
-	#region -- interface IPpsConnectionHandle -------------------------------------------
+	#region -- interface IPpsConnectionHandle -----------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Represents a connection of a data source</summary>
 	public interface IPpsConnectionHandle : IDisposable
 	{
+		/// <summary></summary>
 		event EventHandler Disposed;
 
 		/// <summary>Enforces the connection.</summary>
@@ -308,9 +344,8 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
-	#region -- interface IPpsPrivateDataContext -----------------------------------------
+	#region -- interface IPpsPrivateDataContext ---------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Hold's the connection and context data for one user.</summary>
 	public interface IPpsPrivateDataContext : IPropertyReadOnlyDictionary, IDisposable
 	{
@@ -351,9 +386,8 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
-	#region -- interface IPpsColumnDescription ------------------------------------------
+	#region -- interface IPpsColumnDescription ----------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Description for a column.</summary>
 	public interface IPpsColumnDescription : IDataColumn
 	{
@@ -365,8 +399,9 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
-	#region -- class PpsColumnDescription -----------------------------------------------
+	#region -- class PpsColumnDescription ---------------------------------------------
 
+	/// <summary></summary>
 	[DebuggerDisplay("{DebuggerDisplay,nq}")]
 	public class PpsColumnDescription : IPpsColumnDescription
 	{
@@ -376,6 +411,10 @@ namespace TecWare.PPSn.Server.Data
 		private readonly string name;
 		private readonly Type dataType;
 
+		/// <summary></summary>
+		/// <param name="parent"></param>
+		/// <param name="name"></param>
+		/// <param name="dataType"></param>
 		public PpsColumnDescription(IPpsColumnDescription parent, string name, Type dataType)
 		{
 			this.parent = parent;
@@ -385,19 +424,28 @@ namespace TecWare.PPSn.Server.Data
 			this.dataType = dataType ?? throw new ArgumentNullException(nameof(dataType));
 		} // ctor
 
+		/// <summary></summary>
+		/// <returns></returns>
 		protected virtual IPropertyEnumerableDictionary CreateAttributes()
 			=> parent == null ? PropertyDictionary.EmptyReadOnly : parent.Attributes;
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <returns></returns>
 		public T GetColumnDescription<T>() where T : IPpsColumnDescription
 			=> this.GetColumnDescriptionParentImplementation<T>(parent);
 
 		private string DebuggerDisplay
 			=> $"Column: {Name} : {DataType.Name}";
 
+		/// <summary></summary>
 		public string Name => name;
+		/// <summary></summary>
 		public Type DataType => dataType;
 
+		/// <summary></summary>
 		public IPpsColumnDescription Parent => parent;
+		/// <summary></summary>
 		public IPropertyEnumerableDictionary Attributes => attributes;
 	} // class PpsColumnDescription
 
@@ -511,12 +559,15 @@ namespace TecWare.PPSn.Server.Data
 
 	#endregion
 
-	#region -- interface IPpsSelectorToken ----------------------------------------------
+	#region -- interface IPpsSelectorToken --------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public interface IPpsSelectorToken
 	{
+		/// <summary></summary>
+		/// <param name="connection"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		PpsDataSelector CreateSelector(IPpsConnectionHandle connection, bool throwException = true);
 
 		/// <summary>Get the defintion for a column from the native column name.</summary>

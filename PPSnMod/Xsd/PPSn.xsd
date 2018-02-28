@@ -73,9 +73,10 @@
 
 	<xs:simpleType name="viewAttributeNames">
 		<xs:restriction base="xs:string">
-			<xs:enumeration value="displayImage" />
-			<xs:enumeration value="shortcut" />
+			<xs:enumeration value="description" />
+			
 			<xs:enumeration value="Wpf.MenuItem" />
+			<xs:enumeration value="bi.visible" />
 		</xs:restriction>
 	</xs:simpleType>
 

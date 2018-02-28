@@ -511,10 +511,8 @@ namespace TecWare.PPSn.Server
 	/// <summary></summary>
 	public partial class PpsApplication
 	{
-		#region -- class PpsViewDefinitionInit --------------------------------------------
+		#region -- class PpsViewDefinitionInit ----------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class PpsViewDescriptionInit
 		{
 			private readonly PpsDataSource source;
@@ -536,13 +534,16 @@ namespace TecWare.PPSn.Server
 					throw new DEConfigurationException(xDefinition, "source definition is missing.");
 
 				var selectorToken = await source.CreateSelectorTokenAsync(name, sourceDescription);
-				
+
 				var view = new PpsViewDescription(
 					selectorToken,
 					xDefinition.GetAttribute("displayName", (string)null),
 					xDefinition.Elements(xnFilter).Select(x => new PpsViewParameterDefinition(x)).ToArray(),
 					xDefinition.Elements(xnOrder).Select(x => new PpsViewParameterDefinition(x)).ToArray(),
-					xDefinition.Elements(xnAttribute).ToPropertyDictionary()
+					xDefinition.Elements(xnAttribute).ToPropertyDictionary(
+						new KeyValuePair<string, Type>("description", typeof(string)),
+						new KeyValuePair<string, Type>("bi.visible", typeof(bool))
+					)
 				);
 
 				return view;
