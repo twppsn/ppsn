@@ -288,7 +288,7 @@ namespace TecWare.PPSn.Controls
 				returnSize.Width = Math.Max(ColumnCount * (MinColumnWidth + ColumnMargin), availableSize.Width);
 
 			return returnSize;
-		}
+		} // func MeasurrOverride
 
 		/// <summary>
 		/// Arranges the children in the given Size - returns a size different of finalSize if needed
@@ -370,7 +370,7 @@ namespace TecWare.PPSn.Controls
 			}
 
 			return returnSize;
-		}
+		} // func ArrangeOverride
 
 		#endregion
 
@@ -418,7 +418,7 @@ namespace TecWare.PPSn.Controls
 			}
 
 			return columnDefinitions;
-		}
+		} // func PartitionDataFields
 
 		/// <summary>this function partitions the elements to a specific columncount - the result with the least difference between highest and lowest will be returned</summary>
 		/// <param name="elements">the heights of the elements</param>
@@ -557,7 +557,7 @@ namespace TecWare.PPSn.Controls
 				default:
 					return (from partition in validPartitions orderby PartitionSpan(elements, partition) ascending select partition).First();
 			}
-		}
+		} // func Partition
 
 		private static int PartitionMaxHeight(List<int> elements, List<int> partitions)
 		{
@@ -568,7 +568,7 @@ namespace TecWare.PPSn.Controls
 				max = Math.Max(count, max);
 			}
 			return max;
-		}
+		} // func PartitionMaxHeight
 
 		private static int PartitionSpan(List<int> elements, List<int> partitions)
 		{
@@ -581,7 +581,7 @@ namespace TecWare.PPSn.Controls
 				max = Math.Max(count, max);
 			}
 			return max - min;
-		}
+		} // func PartitionMaxHeight
 
 		#endregion
 	}
