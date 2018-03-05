@@ -139,19 +139,20 @@ namespace TecWare.PPSn.Controls
 			=> d.SetValue(IsSeparatorProperty, value);
 		#endregion
 
-		#region GroupID
+		#region GroupName
 		/// <summary>DependencyProperty</summary>
-		public static readonly DependencyProperty GroupIDProperty = DependencyProperty.RegisterAttached("GroupID", typeof(int), typeof(PpsDataFieldPanel), new PropertyMetadata(-1));
+		public static readonly DependencyProperty GroupNameProperty = DependencyProperty.RegisterAttached("GroupName", typeof(string), typeof(PpsDataFieldPanel), new PropertyMetadata(String.Empty));
+		
 		/// <summary>Returns the GroupID of the Control (-1 means ungrouped)</summary>
 		/// <param name="d">Control</param>
 		/// <returns></returns>
-		public static int GetGroupID(DependencyObject d)
-		=> (int)d.GetValue(GroupIDProperty);
+		public static string GetGroupName(DependencyObject d)
+			=> (string)d.GetValue(GroupNameProperty);
 		/// <summary>Sets the GroupID of the Control (-1 means ungrouped)</summary>
 		/// <param name="d">Control</param>
 		/// <param name="value"></param>
-		public static void SetGroupID(DependencyObject d, int value)
-		=> d.SetValue(GroupIDProperty, value);
+		public static void SetGroupName(DependencyObject d, string value)
+			=> d.SetValue(GroupNameProperty, value);
 		#endregion
 
 		#endregion
@@ -334,18 +335,18 @@ namespace TecWare.PPSn.Controls
 		/// <param name="columnCount"></param>
 		/// <param name="optimisation"></param>
 		/// <returns></returns>
-		private static List<int> PartitionDataFields(List<UIElement> children, int columnCount, Optimization optimisation)
+		private static List<int> PartitionDataFields(UIElement[] children, int columnCount, Optimization optimisation)
 		{
 			var groupedInput = new List<int>();
 
 			// group the items
-			var actualGroup = -1;
-			for (var i = 0; i < children.Count; i++)
+			var actualGroup = String.Empty;
+			for (var i = 0; i < children.Length; i++)
 			{
-				var newGroup = GetGroupID(children[i]);
+				var newGroup = GetGroupName(children[i]);
 
 				// if ungrouped (-1) just add an entity
-				if (newGroup == -1)
+				if (newGroup == String.Empty)
 					groupedInput.Add(GetGridLines(children[i]));
 
 				// if new group starts, add a list element
