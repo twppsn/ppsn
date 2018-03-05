@@ -47,11 +47,18 @@ namespace TecWare.PPSn.Controls
 																										 typeof(Optimization),
 																										 typeof(PpsDataFieldPanel),
 																										 new FrameworkPropertyMetadata(Optimization.TightestSpan, FrameworkPropertyMetadataOptions.AffectsMeasure, new PropertyChangedCallback(InvalidateColumnDefinitionsCallback)));
+		/// <summary>DependencyProperty</summary>
+		public static readonly DependencyProperty IndentGroupChildrenProperty = DependencyProperty.Register(nameof(IndentGroupChildren), typeof(int), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(5, FrameworkPropertyMetadataOptions.AffectsArrange));
+
+		/// <summary>DependencyProperty</summary>
+		public static readonly DependencyProperty MinColumnWidthProperty = DependencyProperty.Register(nameof(MinColumnWidth), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(250.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 
 		/// <summary>the count of Columns the Panel shold arrage the items</summary>
 		public int ColumnCount { get => (int)GetValue(ColumnCountProperty); set => SetValue(ColumnCountProperty, value); }
 		/// <summary>the margin between the Columns</summary>
 		public double ColumnMargin { get => (double)GetValue(ColumnMarginProperty); set => SetValue(ColumnMarginProperty, value); }
+		/// <summary>Sets the minium Width of the Label and Control - AffectsMeasure</summary>
+		public double MinColumnWidth { get => (double)GetValue(MinColumnWidthProperty); set => SetValue(MinColumnWidthProperty, value); }
 		/// <summary>the width reserved for the Label</summary>
 		public double LabelWidth { get => (double)GetValue(LabelWidthProperty); set => SetValue(LabelWidthProperty, value); }
 		/// <summary>the Margin between rows</summary>
@@ -245,10 +252,10 @@ namespace TecWare.PPSn.Controls
 
 			returnSize.Height = height;
 
-			if (availableSize.Width == double.PositiveInfinity)
-				returnSize.Width = ColumnCount * (250 + ColumnMargin);   // ToDo: arbitrary value
+			if (availableSize.Width == Double.PositiveInfinity)
+				returnSize.Width = ColumnCount * (MinColumnWidth + ColumnMargin);
 			else
-				returnSize.Width = Math.Max(ColumnCount * (250 + ColumnMargin), availableSize.Width);
+				returnSize.Width = Math.Max(ColumnCount * (MinColumnWidth + ColumnMargin), availableSize.Width);
 
 			return returnSize;
 		}
@@ -275,7 +282,7 @@ namespace TecWare.PPSn.Controls
 
 			returnSize.Height = height;
 
-			returnSize.Width = Math.Max(finalSize.Width, ColumnCount * (250 + ColumnMargin));
+			returnSize.Width = Math.Max(finalSize.Width, ColumnCount * (MinColumnWidth + ColumnMargin));
 
 			var columnWidth = (returnSize.Width - ((ColumnCount - 1) * ColumnMargin)) / ColumnCount;
 
