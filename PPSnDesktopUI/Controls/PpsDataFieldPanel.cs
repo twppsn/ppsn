@@ -147,22 +147,22 @@ namespace TecWare.PPSn.Controls
 		
 		#endregion
 
-		#region IsSeparator
+		#region FullWidth
 		
 		/// <summary>DependencyProperty</summary>
-		public static readonly DependencyProperty IsSeparatorProperty = DependencyProperty.RegisterAttached("IsSeparator", typeof(bool), typeof(PpsDataFieldPanel), new PropertyMetadata(false));
+		public static readonly DependencyProperty FullWidthProperty = DependencyProperty.RegisterAttached("FullWidth", typeof(bool), typeof(PpsDataFieldPanel), new PropertyMetadata(false));
 		
 		/// <summary>Returns if the Control is a Separator (unsused)</summary>
 		/// <param name="d">Control</param>
 		/// <returns></returns>
-		public static bool GetIsSeparator(DependencyObject d)
-			=> (bool)d.GetValue(IsSeparatorProperty);
+		public static bool GetFullWidth(DependencyObject d)
+			=> (bool)d.GetValue(FullWidthProperty);
 		
 		/// <summary>Marks the Control as a Separator</summary>
 		/// <param name="d">Control</param>
 		/// <param name="value"></param>
-		public static void SetIsSeparator(DependencyObject d, bool value)
-			=> d.SetValue(IsSeparatorProperty, value);
+		public static void SetFullWidth(DependencyObject d, bool value)
+			=> d.SetValue(FullWidthProperty, value);
 		
 		#endregion
 
@@ -271,7 +271,7 @@ namespace TecWare.PPSn.Controls
 
 			if (columnDefinitions == null)
 			{
-				var childrenToArrange = (from UIElement child in InternalChildren where !labels.ContainsKey(child) select child).ToArray();
+				var childrenToArrange = (from UIElement child in InternalChildren where labels.ContainsKey(child) select child).ToArray();
 
 				columnDefinitions = PartitionDataFields(childrenToArrange, ColumnCount, ArrangeOptimization);
 			}
