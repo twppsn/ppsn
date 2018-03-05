@@ -27,6 +27,21 @@ namespace TecWare.PPSn.Controls
 	/// </summary>
 	public class PpsDataFieldPanel : Panel
 	{
+		#region -- enum Optimization --------------------------------------------------
+
+		/// <summary>Selects the Optimization strategy</summary>
+		public enum Optimization
+		{
+			/// <summary>the result has the lowest difference between the tallest and smallest column</summary>
+			TightestSpan,
+			/// <summary>the result has the lowest difference between the tallest and smallest column - the last column is omitted</summary>
+			TightestSpanWithoutLast,
+			/// <summary>the result has the smallest column heights overall</summary>
+			LowestHeight
+		} // enum Optimization
+
+		#endregion
+
 		#region ---- Properties ---------------------------------------------------------
 
 		/// <summary>DependencyProperty</summary>
@@ -37,7 +52,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty ColumnMarginProperty = DependencyProperty.Register(nameof(ColumnMargin), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(30.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 		/// <summary>DependencyProperty</summary>
-		public static readonly DependencyProperty LabelWidthProperty = DependencyProperty.Register(nameof(LabelWidth), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(80.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
+		public static readonly DependencyProperty LabelWidthProperty = DependencyProperty.Register(nameof(LabelWidth), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(80.0, FrameworkPropertyMetadataOptions.AffectsArrange));
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty RowMarginProperty = DependencyProperty.Register(nameof(RowMargin), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(5.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 		/// <summary>DependencyProperty</summary>
@@ -75,7 +90,7 @@ namespace TecWare.PPSn.Controls
 		#region ---- Callbacks ----------------------------------------------------------
 
 		private static void InvalidateColumnDefinitionsCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
-		=> ((PpsDataFieldPanel)d).InvalidateColumnDefinitions();
+			=> ((PpsDataFieldPanel)d).InvalidateColumnDefinitions();
 
 		private static void LabelChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
@@ -85,7 +100,7 @@ namespace TecWare.PPSn.Controls
 				if (pa is PpsDataFieldPanel p)
 					p.UpdateLabelInformation(d, e);
 			}
-		}
+		} // proc LabelChangedCallback
 
 		#endregion
 
@@ -96,9 +111,10 @@ namespace TecWare.PPSn.Controls
 		#region ---- Attached Properties ------------------------------------------------
 
 		#region Label
-		// todo: kein string?
+
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty LabelProperty = DependencyProperty.RegisterAttached("Label", typeof(object), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(String.Empty, new PropertyChangedCallback(LabelChangedCallback)));
+		
 		/// <summary>Returns the Label of the Control</summary>
 		/// <param name="d">Control</param>
 		/// <returns></returns>
@@ -109,36 +125,45 @@ namespace TecWare.PPSn.Controls
 		/// <param name="value"></param>
 		public static void SetLabel(DependencyObject d, object value)
 			=> d.SetValue(LabelProperty, value);
+		
 		#endregion
 
 		#region GridLines
+		
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty GridLinesProperty = DependencyProperty.RegisterAttached("GridLines", typeof(int), typeof(PpsDataFieldPanel), new PropertyMetadata((int)1));
+		
 		/// <summary>Returns the requested LineCount of the Control</summary>
 		/// <param name="d">Control</param>
 		/// <returns></returns>
 		public static int GetGridLines(DependencyObject d)
 			=> (int)d.GetValue(GridLinesProperty);
+		
 		/// <summary>Sets the amount of lines the Control should fill</summary>
 		/// <param name="d">Control</param>
 		/// <param name="value"></param>
 		public static void SetGridLines(DependencyObject d, int value)
 			=> d.SetValue(GridLinesProperty, value);
+		
 		#endregion
 
 		#region IsSeparator
+		
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty IsSeparatorProperty = DependencyProperty.RegisterAttached("IsSeparator", typeof(bool), typeof(PpsDataFieldPanel), new PropertyMetadata(false));
+		
 		/// <summary>Returns if the Control is a Separator (unsused)</summary>
 		/// <param name="d">Control</param>
 		/// <returns></returns>
 		public static bool GetIsSeparator(DependencyObject d)
 			=> (bool)d.GetValue(IsSeparatorProperty);
+		
 		/// <summary>Marks the Control as a Separator</summary>
 		/// <param name="d">Control</param>
 		/// <param name="value"></param>
 		public static void SetIsSeparator(DependencyObject d, bool value)
 			=> d.SetValue(IsSeparatorProperty, value);
+		
 		#endregion
 
 		#region GroupName
@@ -159,7 +184,38 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region ---- Handling of Labels -------------------------------------------------
+		#region ---- Handling of Labels -----------------------------------------------
+
+		#region -- class PpsDataFieldPanelCollection-----------------------------------
+
+		private sealed class PpsDataFieldPanelCollection : UIElementCollection
+		{
+			private PpsDataFieldPanel panel;
+
+			public PpsDataFieldPanelCollection(UIElement visualParent, FrameworkElement logicalParent)
+				: base(visualParent, logicalParent)
+			{
+				this.panel = (PpsDataFieldPanel)visualParent;
+			}
+
+			public override int Add(UIElement element)
+			{
+				panel.InvalidateColumnDefinitions();
+				if (!panel.labels.ContainsKey(element) && !(element is Label))
+					panel.UpdateLabelInformation(element, new DependencyPropertyChangedEventArgs(LabelProperty, null, GetLabel(element)));
+				return base.Add(element);
+			}
+
+			public override void Remove(UIElement element)
+			{
+				panel.InvalidateColumnDefinitions();
+				if (panel.labels.ContainsKey(element))
+					panel.RemoveLabel(element);
+				base.Remove(element);
+			}
+		} // class class PpsDataFieldPanelCollection
+
+		#endregion
 
 		private readonly Dictionary<UIElement, Label> labels = new Dictionary<UIElement, Label>();
 
@@ -192,36 +248,7 @@ namespace TecWare.PPSn.Controls
 			}
 		}
 
-		private sealed class PpsDataFieldPanelCollection : UIElementCollection
-		{
-			private PpsDataFieldPanel panel;
-
-			public PpsDataFieldPanelCollection(UIElement visualParent, FrameworkElement logicalParent)
-				: base(visualParent, logicalParent)
-			{
-				this.panel = (PpsDataFieldPanel)visualParent;
-			}
-
-			public override int Add(UIElement element)
-			{
-				panel.InvalidateColumnDefinitions();
-				if (!panel.labels.ContainsKey(element) && !(element is Label))
-					panel.UpdateLabelInformation(element, new DependencyPropertyChangedEventArgs(LabelProperty, null, GetLabel(element)));
-				return base.Add(element);
-			}
-
-			public override void Remove(UIElement element)
-			{
-				panel.InvalidateColumnDefinitions();
-				if (panel.labels.ContainsKey(element))
-					panel.RemoveLabel(element);
-				base.Remove(element);
-			}
-		} // class class PpsDataFieldPanelCollection
-
-		/// <summary>
-		/// 
-		/// </summary>
+		/// <summary></summary>
 		/// <param name="logicalParent"></param>
 		/// <returns></returns>
 		protected override UIElementCollection CreateUIElementCollection(FrameworkElement logicalParent)
@@ -244,7 +271,7 @@ namespace TecWare.PPSn.Controls
 
 			if (columnDefinitions == null)
 			{
-				var childrenToArrange = (from UIElement child in InternalChildren where !(child is Label) select child).ToList();
+				var childrenToArrange = (from UIElement child in InternalChildren where !labels.ContainsKey(child) select child).ToArray();
 
 				columnDefinitions = PartitionDataFields(childrenToArrange, ColumnCount, ArrangeOptimization);
 			}
@@ -272,7 +299,7 @@ namespace TecWare.PPSn.Controls
 		{
 			var returnSize = new Size();
 
-			var childrenToArrange = (from UIElement child in InternalChildren where !(child is Label) select child).ToList();
+			var childrenToArrange = (from UIElement child in InternalChildren where !(child is Label) select child).ToArray();
 
 			if (columnDefinitions == null)
 			{
@@ -391,17 +418,6 @@ namespace TecWare.PPSn.Controls
 			}
 
 			return columnDefinitions;
-		}
-
-		/// <summary>Selects the Optimization strategy</summary>
-		public enum Optimization
-		{
-			/// <summary>the result has the lowest difference between the tallest and smallest column</summary>
-			TightestSpan,
-			/// <summary>the result has the lowest difference between the tallest and smallest column - the last column is omitted</summary>
-			TightestSpanWithoutLast,
-			/// <summary>the result has the smallest column heights overall</summary>
-			LowestHeight
 		}
 
 		/// <summary>this function partitions the elements to a specific columncount - the result with the least difference between highest and lowest will be returned</summary>
@@ -556,7 +572,7 @@ namespace TecWare.PPSn.Controls
 
 		private static int PartitionSpan(List<int> elements, List<int> partitions)
 		{
-			var min = int.MaxValue;
+			var min = Int32.MaxValue;
 			var max = 0;
 			for (var i = 0; i < partitions.Count; i++)
 			{
