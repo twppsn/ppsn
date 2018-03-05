@@ -332,9 +332,11 @@ namespace TecWare.PPSn.Controls
 					var child = childrenToArrange[i];
 					var controlLines = GetGridLines(child);
 
-					var controlRect = new Rect(columnX + LabelWidth,
+					var thisLabelWidth = GetFullWidth(child) ? 0 : LabelWidth;
+
+					var controlRect = new Rect(columnX + thisLabelWidth,
 											   line * (RowHeight + RowMargin),
-											   columnWidth - (LabelWidth),
+											   columnWidth - thisLabelWidth,
 											   controlLines * RowHeight + (controlLines - 1) * RowMargin);
 					child.Arrange(controlRect);
 
@@ -353,7 +355,7 @@ namespace TecWare.PPSn.Controls
 						groupName = GetGroupName(child);
 					}
 
-					if (labels.TryGetValue(child, out var lbl))
+					if (!GetFullWidth(child) && labels.TryGetValue(child, out var lbl))
 					{
 						var labelRect = new Rect(columnX + indentation,
 												 controlRect.Top,
