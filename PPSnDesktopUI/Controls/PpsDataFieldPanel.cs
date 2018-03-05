@@ -67,6 +67,8 @@ namespace TecWare.PPSn.Controls
 		public double RowHeight { get => (double)GetValue(RowHeightProperty); set => SetValue(RowHeightProperty, value); }
 		/// <summary>selection of the desired appearance</summary>
 		public Optimization ArrangeOptimization { get => (Optimization)GetValue(ArrangeOptimizationProperty); set => SetValue(ArrangeOptimizationProperty, value); }
+		/// <summary>if >0 children of a group are indented by the value</summary>
+		public int IndentGroupChildren { get => (int)GetValue(IndentGroupChildrenProperty); set => SetValue(IndentGroupChildrenProperty, value); }
 
 		#endregion
 
@@ -288,6 +290,9 @@ namespace TecWare.PPSn.Controls
 			var columnWidth = (returnSize.Width - ((ColumnCount - 1) * ColumnMargin)) / ColumnCount;
 
 			var i = 0;
+
+			var groupName = String.Empty;
+
 			for (var column = 0; column < columnDefinitions.Count; column++)
 			{
 				var columnHeight = columnDefinitions[column];
@@ -305,11 +310,25 @@ namespace TecWare.PPSn.Controls
 											   columnWidth - (LabelWidth),
 											   controlLines * RowHeight + (controlLines - 1) * RowMargin);
 					child.Arrange(controlRect);
+
 					((FrameworkElement)child).Height = controlRect.Height;
+
+					// indentation
+					var indentation = 0;
+					if (IndentGroupChildren > 0)
+					{
+						if (groupName == String.Empty) // no group
+							indentation = 0;
+						else if (GetGroupName(child) != groupName) // group header
+							indentation = 0;
+						else
+							indentation = 5;
+						groupName = GetGroupName(child);
+					}
 
 					if (labels.TryGetValue(child, out var lbl))
 					{
-						var labelRect = new Rect(columnX,
+						var labelRect = new Rect(columnX + indentation,
 												 controlRect.Top,
 												 LabelWidth,
 												 controlRect.Height);
