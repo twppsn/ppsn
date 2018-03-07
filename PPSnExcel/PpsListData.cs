@@ -470,7 +470,17 @@ namespace PPSnExcel
 
 			try
 			{
-				listColumn.XPath.SetValue(xlMap, "/" + xlMap.RootElementName + "/r/" + columnName);
+				var columnSelector = "/" + xlMap.RootElementName + "/r/" + columnName;
+				if (listColumn.XPath.Value != null)
+				{
+					if (listColumn.XPath.Value != columnSelector)
+					{
+						listColumn.XPath.Clear();
+						listColumn.XPath.SetValue(xlMap, columnSelector);
+					}
+				}
+				else
+					listColumn.XPath.SetValue(xlMap, columnSelector);
 			}
 			catch (COMException e) when (e.HResult == unchecked((int)0x800A03EC))
 			{
@@ -500,6 +510,10 @@ namespace PPSnExcel
 			for (var i = 0; i < columnInfo.Columns.Count; i++)
 			{
 				var listColumn = i < List.ListColumns.Count ? xlList.ListColumns[i + 1] : xlList.ListColumns.Add();
+
+				// clear cell format -> XPath values
+				listColumn.Range.NumberFormat = "General";
+
 				ImportLayoutUpdateColumn(xlMap, listColumn, columnInfo.Columns[i], columnNames[i], true, ref showTotals);
 			}
 
@@ -518,7 +532,7 @@ namespace PPSnExcel
 
 				var idx = String.IsNullOrEmpty(columnName) ? -1 : Array.FindIndex(columnNames, c => c == columnName);
 				if (idx == -1) // clear xpath
-					listColumn.XPath.SetValue(null, null);
+					listColumn.XPath.Clear();
 				else // update format
 					ImportLayoutUpdateColumn(xlMap, listColumn, columnInfo.Columns[idx], columnNames[idx], false, ref showTotals);
 			}

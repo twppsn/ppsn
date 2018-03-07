@@ -110,6 +110,7 @@ namespace PPSnExcel
 
 		private string currentProgressText = null;
 		private int currentProgressValue = -1;
+		private IntPtr wnd;
 
 		public WaitForm(Excel.Application application)
 		{
@@ -118,7 +119,7 @@ namespace PPSnExcel
 
 			InitializeComponent();
 
-			CreateHandle();
+			wnd = Handle;
 		} // ctor
 
 		#region -- ShowWait/CloseWait -------------------------------------------------
