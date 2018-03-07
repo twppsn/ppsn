@@ -16,28 +16,33 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Xml;
-using System.Xml.Linq;
+using Microsoft.Office.Tools.Excel;
 using Neo.IronLua;
-using PPSnExcel.Data;
 using TecWare.DE.Data;
-using TecWare.DE.Stuff;
 using TecWare.PPSn;
-using TecWare.PPSn.Data;
 using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
 {
 	public partial class ThisAddIn : IWin32Window, IPpsShell
 	{
+		#region -- enum RefreshContext ------------------------------------------------
+
+		internal enum RefreshContext
+		{
+			ActiveWorkBook,
+			ActiveWorkSheet,
+			ActiveListObject,
+			ActiveListObjectLayout
+		} // enum RefreshContext
+
+		#endregion
+
 		/// <summary>Current environment has changed.</summary>
 		public event EventHandler CurrentEnvironmentChanged;
 
@@ -85,6 +90,12 @@ namespace PPSnExcel
 
 		#region -- Threading helper ---------------------------------------------------
 
+		public void Run(Func<Task> t)
+			=> waitForm.Run(t);
+
+		public T Run<T>(Func<Task<T>> t)
+			=> waitForm.Run(t).Result;
+
 		public void Await(Task task)
 			=> waitForm.Await(task);
 
@@ -94,7 +105,7 @@ namespace PPSnExcel
 			return task.Result;
 		} // func Await
 
-		public void Invoke(Action action)
+		public void Invoke(System.Action action)
 		{
 			if (waitForm.InvokeRequired)
 				waitForm.Invoke(action);
@@ -102,7 +113,7 @@ namespace PPSnExcel
 				action();
 		} // proc Invoke
 
-		public Task InvokeAsync(Action action)
+		public Task InvokeAsync(System.Action action)
 		{
 			if (waitForm.InvokeRequired)
 			{
@@ -139,7 +150,7 @@ namespace PPSnExcel
 				return Task.FromResult(func());
 		} // proc Invoke
 
-		public void BeginInvoke(Action action)
+		public void BeginInvoke(System.Action action)
 		{
 			if (waitForm.InvokeRequired)
 				waitForm.BeginInvoke(action);
@@ -147,7 +158,7 @@ namespace PPSnExcel
 				action();
 		} // proc BeginInvoke
 
-		public IProgress<string> GetAwaitProgress()
+		public IProgressBar CreateAwaitProgress()
 			=> waitForm.CreateProgress();
 
 		#endregion
@@ -165,14 +176,58 @@ namespace PPSnExcel
 			return env;
 		} // func FindOrCreateEnvironment
 
+		public PpsEnvironment AuthentificateEnvironment(PpsEnvironment environment)
+		{
+			if (environment != null
+				&& (environment.IsAuthentificated // is authentificated
+				|| Await(environment.LoginAsync(this)))) // try to authentificate the environment
+				return environment;
+			else
+				return null;
+		} // func AuthentificateEnvironment
+
+		public PpsEnvironment FindEnvironment(string name, Uri uri)
+			=> Invoke(() =>
+			{
+				PpsEnvironment envByName = null;
+				PpsEnvironmentInfo infoByName = null;
+				PpsEnvironmentInfo infoByUri = null;
+
+				foreach (var oe in openEnvironments)
+				{
+					if (oe.Info.Name == name)
+					{
+						envByName = oe;
+						break;
+					}
+				}
+
+				if (envByName != null)
+					return AuthentificateEnvironment(envByName);
+
+				foreach (var info in PpsEnvironmentInfo.GetLocalEnvironments())
+				{
+					if (info.Name == name)
+					{
+						infoByName = info;
+						break;
+					}
+					else if (info.Uri == uri)
+					{
+						infoByUri = info;
+					}
+				}
+
+				return AuthentificateEnvironment(FindOrCreateEnvironment(infoByName ?? infoByUri)) ?? CurrentEnvironment;
+			});
+
 		public void ActivateEnvironment(PpsEnvironmentInfo info)
 		{
 			if (info is null)
 				return;
 
 			var env = FindOrCreateEnvironment(info);
-			if (env.IsAuthentificated // is authentificated
-				|| Await(env.LoginAsync(this))) // try to authentificate the environment
+			if (AuthentificateEnvironment(env) != null)
 				SetCurrentEnvironment(env);
 		} // proc ActivateEnvironment
 
@@ -201,173 +256,95 @@ namespace PPSnExcel
 
 		#region -- ImportTable --------------------------------------------------------
 
-		private static readonly XNamespace namespaceName = XNamespace.Get("http://www.w3.org/2001/XMLSchema");
-
-		private static (string schemaData, IDataColumns columnInfo, string xmlData) GetImportTable(PpsEnvironment env, string rootElementName, PpsShellGetList tableSource)
-		{
-			var xmlData = String.Empty;
-			var schemaData = String.Empty;
-			var columnInfo = new List<SimpleDataColumn>();
-
-			using (var tw = new StringWriter(CultureInfo.InvariantCulture))
-			using (var x = XmlWriter.Create(tw, new XmlWriterSettings() { Encoding = Encoding.Default, NewLineHandling = NewLineHandling.None }))
-			using (var e = env.GetViewData(tableSource).GetEnumerator())
-			{
-				var columns = e as IDataColumns;
-
-				const string namespaceShortcut = "xs";
-
-				XElement xColumns;
-				#region -- base schema --
-				var xSchema =
-					new XElement(namespaceName + "schema",
-						new XAttribute("elementFormDefault", "qualified"),
-						new XAttribute(XNamespace.Xmlns + namespaceShortcut, namespaceName),
-						new XElement(namespaceName + "annotation",
-							new XElement(namespaceName + "documentation", "todo")
-						),
-						new XElement(namespaceName + "element",
-							new XAttribute("name", rootElementName),
-							new XElement(namespaceName + "complexType",
-								new XElement(namespaceName + "sequence",
-									new XElement(namespaceName + "element",
-										new XAttribute("name", "r"),
-										new XAttribute("minOccurs", "0"),
-										new XAttribute("maxOccurs", "unbounded"),
-										new XElement(namespaceName + "complexType",
-											xColumns = new XElement(namespaceName + "sequence")
-										)
-									)
-								)
-							)
-						)
-				);
-				#endregion
-
-				#region -- read column information --
-
-				for (var i = 0; i < columns.Columns.Count; i++)
-				{
-					var dataColumn = columns.Columns[i];
-
-					// add column
-					columnInfo.Add(new SimpleDataColumn(dataColumn));
-
-					// set schema
-					xColumns.Add(new XElement(namespaceName + "element",
-						new XAttribute("name", dataColumn.Name),
-						new XAttribute("type", namespaceShortcut + ":" + typeToXsdType[dataColumn.DataType])
-					));
-				}
-				#endregion
-
-				if (columnInfo.Count == 0)
-					throw new ExcelException("Ergebnismenge hat keine Spalten.");
-
-				schemaData = xSchema.ToString(SaveOptions.DisableFormatting);
-
-				#region -- Fetch data --
-				x.WriteStartElement(rootElementName);
-
-				while (e.MoveNext())
-				{
-					var r = e.Current;
-					x.WriteStartElement("r");
-
-					for (var i = 0; i < columnInfo.Count; i++)
-					{
-						x.WriteStartElement(columnInfo[i].Name);
-						if (r[i] != null)
-							x.WriteValue(r[i]);
-						x.WriteEndElement();
-					}
-
-					x.WriteEndElement();
-
-				}
-
-				x.WriteEndElement();
-
-				#endregion
-
-				x.Flush();
-				tw.Flush();
-
-				xmlData = tw.GetStringBuilder().ToString();
-			}
-
-			return (schemaData, new SimpleDataColumns(columnInfo.ToArray()), xmlData);
-		} // func GetImportTable
-
-		internal void ImportTable(PpsEnvironment env, string tableName, PpsShellGetList tableSource)
+		private static void GetActiveXlObjects(out Worksheet worksheet, out Workbook workbook)
 		{
 			// get active workbook and worksheet
-			var worksheet = Globals.Factory.GetVstoObject((Excel._Worksheet)Globals.ThisAddIn.Application.ActiveSheet);
-			var workbook = Globals.Factory.GetVstoObject((Excel._Workbook)worksheet.Parent);
+			worksheet = Globals.Factory.GetVstoObject((Excel._Worksheet)Globals.ThisAddIn.Application.ActiveSheet);
+			workbook = Globals.Factory.GetVstoObject((Excel._Workbook)worksheet.Parent);
+		} // func GetActiveXlObjects
 
-			//var progress = GetAwaitProgress();
-			var rootElementName = "data";
+		/// <summary>Create Table</summary>
+		/// <param name="environment"></param>
+		/// <param name="map"></param>
+		internal async Task ImportTableAsync(Excel.Range range, PpsListMapping map, string reportName)
+		{
+			GetActiveXlObjects(out var worksheet, out var workbook);
 
-			var (schemaData, columnInfo, xmlData) = Await(Task.Run(() => GetImportTable(env, rootElementName, tableSource)));
-
-			// add created schema for XML mapping
-			// todo: check for schema existence (duplicates!)
-			var map = workbook.XmlMaps.Add(schemaData, rootElementName);
-			//map.Name = rootElementName;
-
-			// create list object and add header
-			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && range.ListObject != null)
+			// prepare target
+			if (range == null)
+				range = Globals.ThisAddIn.Application.Selection;
+			if (range is null)
+				throw new ExcelException("Keine Tabellen-Ziel (Range) definiert.");
+			if (range.ListObject != null)
 				throw new ExcelException("Tabelle darf nicht innerhalb einer anderen Tabelle eingefügt werden.");
 
-			var list = Globals.Factory.GetVstoObject((Excel.ListObject)worksheet.ListObjects.Add());
-			var flag = true;
-			var showTotals = false;
-			foreach (var column in columnInfo.Columns)
+			using (var progress = CreateAwaitProgress())
 			{
-				var columnName = column.Name;
-				var listColumn = flag ? list.ListColumns[1] : list.ListColumns.Add();
-				flag = false;
-				
-				// set caption
-				listColumn.Name = column.Attributes.GetProperty("displayName", columnName);
+				progress.Report(String.Format("Importiere '{0}'...", reportName));
 
-				// update range
-				XlConverter.UpdateRange(listColumn.Range, column.DataType, column.Attributes);
+				await PpsListObject.CreateAsync(range, map);
+			}
+		} // func ImportTableAsync
 
-				// set totals calculation
-				var totalsCalculation = XlConverter.ConvertToTotalsCalculation(column.Attributes.GetProperty("bi.totals", String.Empty));
-				listColumn.TotalsCalculation = totalsCalculation;
-				if (totalsCalculation != Excel.XlTotalsCalculation.xlTotalsCalculationNone)
-					showTotals = true;
+		internal Task RefreshTableAsync(RefreshContext context = RefreshContext.ActiveWorkBook)
+		{
+			using (var progress = CreateAwaitProgress())
+			{
+				progress.Report("Aktualisiere Tabellen...");
 
-				try
+				switch (context)
 				{
-					listColumn.XPath.SetValue(map, "/" + rootElementName + "/r/" + columnName);
-				}
-				catch (COMException e) when (e.HResult == unchecked((int)0x800A03EC))
-				{
-					ShowMessage(String.Format("Spaltenzuordnung von '{0}' ist fehlgeschlagen.", columnName));
+					case RefreshContext.ActiveWorkBook:
+						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveWorkbook);
+					case RefreshContext.ActiveWorkSheet:
+						return RefreshTableAsync(Globals.ThisAddIn.Application.ActiveSheet);
+					default:
+						if (Globals.ThisAddIn.Application.Selection is Excel.Range r && !(r.ListObject is null))
+							return RefreshTableAsync(r.ListObject, context == RefreshContext.ActiveListObjectLayout);
+						return Task.CompletedTask;
 				}
 			}
+		} // func RefreshTableAsync
 
-			// import data
-			switch (map.ImportXml(xmlData, true))
+		private async Task RefreshTableAsync(Excel.Workbook workbook)
+		{
+			for (var i = 1; i <= workbook.Sheets.Count; i++)
 			{
-				case Excel.XlXmlImportResult.xlXmlImportElementsTruncated:
-					throw new ExcelException("Zu viele Element, nicht alle Zeilen wurden geladen.");
-				case Excel.XlXmlImportResult.xlXmlImportValidationFailed:
-					throw new ExcelException("Validierung der Rohdaten fehlgeschlagen.");
+				if (workbook.Sheets[i] is Excel.Worksheet worksheet)
+					await RefreshTableAsync(worksheet);
 			}
+		} // func RefreshTableAsync
 
-			list.ShowTotals = showTotals;
-		} // proc ImportTable
+		private async Task RefreshTableAsync(Excel.Worksheet worksheet)
+		{
+			for (var i = 1; i <= worksheet.ListObjects.Count; i++)
+				await RefreshTableAsync(worksheet.ListObjects[i], false);
+		} // func RefreshTableAsync
+
+		private async Task RefreshTableAsync(Excel.ListObject _xlList, bool refreshColumnLayout)
+		{
+			using (var progress = CreateAwaitProgress())
+			{
+				var xlList = Globals.Factory.GetVstoObject(_xlList);
+
+				progress.Report(String.Format("Aktualisiere {0}...", xlList.Name ?? "Tabelle"));
+
+				if (PpsListObject.TryGet(FindEnvironment, xlList, out var ppsList))
+					await ppsList.RefreshAsync(refreshColumnLayout);
+				else
+				{
+					//if (refreshColumnLayout)
+					//	;
+
+					xlList.Refresh();
+				}
+			}
+		} // func RefreshTableAsync
 
 		internal void ShowTableInfo()
 		{
-			var worksheet = Globals.Factory.GetVstoObject((Excel._Worksheet)Globals.ThisAddIn.Application.ActiveSheet);
-			var workbook = Globals.Factory.GetVstoObject((Excel._Workbook)worksheet.Parent);
+			GetActiveXlObjects(out var worksheet, out var workbook);
 
-			//worksheet.ListObjects
 			if (Globals.ThisAddIn.Application.Selection is Excel.Range range && range.ListObject != null)
 			{
 				ShowMessage($"{range.ListObject.XmlMap.Schemas[1].XML} --- {range.ListObject.SourceType}");
@@ -388,7 +365,7 @@ namespace PPSnExcel
 
 			ShowMessage(sb.ToString());
 		} // func ShowTableInfo
-		
+
 		#endregion
 
 		#region Von VSTO generierter Code
@@ -432,33 +409,17 @@ namespace PPSnExcel
 
 		// -- Static --------------------------------------------------------------
 
-		private static readonly Dictionary<Type, string> typeToXsdType = new Dictionary<Type, string>
-		{
-			{ typeof(byte), "unsignedByte" },
-			{ typeof(sbyte), "byte" },
-			{ typeof(ushort), "unsignedShort" },
-			{ typeof(short), "short" },
-			{ typeof(uint), "unsignedInt" },
-			{ typeof(int), "int" },
-			{ typeof(ulong), "unsignedLong" },
-			{ typeof(long), "long" },
-			// todo: Check functionality.
-			{ typeof(float), "float" },
-			{ typeof(double), "double" },
-			{ typeof(decimal), "decimal" },
-			// todo: Check functionality. Try to find better type match.
-			{ typeof(DateTime), "dateTime" },
-			// todo: Check functionality. Try to find better type match.
-			{ typeof(char), "string" },
-			{ typeof(string), "string" },
-			{ typeof(bool), "boolean" },
-			// todo: Check functionality. Try to find better type match.
-			{ typeof(Guid), "string" },
-			// todo: Check functionality. Try to find better type match.
-			{ typeof(XDocument), "string" },
-			// todo: Check functionality. Try to find better type match.
-			{ typeof(byte[]), "string" }
-		};
+		public static Worksheet GetWorksheet(Excel.Range range)
+			=> Globals.Factory.GetVstoObject(range.Worksheet);
+
+		public static Worksheet GetWorksheet(Excel.ListObject xlList)
+			=> Globals.Factory.GetVstoObject((Excel._Worksheet)xlList.Parent);
+
+		public static Workbook GetWorkbook(Worksheet worksheet)
+			=> Globals.Factory.GetVstoObject((Excel._Workbook)worksheet.Parent);
+
+		public static Workbook GetWorkbook(Excel._Worksheet worksheet)
+			=> Globals.Factory.GetVstoObject((Excel._Workbook)worksheet.Parent);
 
 		[DllImport("user32.dll")]
 		[return: MarshalAs(UnmanagedType.Bool)]

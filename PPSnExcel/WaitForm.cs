@@ -15,14 +15,10 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using TecWare.PPSn;
 using Excel = Microsoft.Office.Interop.Excel;
 
 namespace PPSnExcel
@@ -31,18 +27,54 @@ namespace PPSnExcel
 	{
 		#region -- class ProgressBar --------------------------------------------------
 
-		private sealed class ProgressBar : IProgress<string>
+		private sealed class ProgressBar : IProgressBar
 		{
 			private readonly WaitForm form;
+
+			private string currentText = null;
+			private int currentValue = -1;
 
 			public ProgressBar(WaitForm form)
 			{
 				this.form = form;
+				form.AddToStack(this);
 			} // ctor
+
+			public void Dispose()
+			{
+				form.RemoveFromStack(this);
+			} // proc Dispose
 
 			public void Report(string value)
 			{
+				this.currentText = value;
+				form.UpdateProgress();
 			} // proc Report
+
+			public void UpdateProgress(int value, int minimum, int maximum)
+			{
+				if (minimum != -1 && maximum != -1)
+					value = (value - minimum) * 1000 / (maximum - minimum);
+
+				int newValue;
+				if (value == -1)
+					newValue = -1;
+				else if (value < -1)
+					newValue = 0;
+				else if (value > 1000)
+					newValue = 1000;
+				else
+					newValue = value;
+
+				if (newValue != currentValue)
+				{
+					currentValue = newValue;
+					form.UpdateProgress();
+				}
+			} // proc UpdateProgress
+
+			public string Text => currentText;
+			public int Value => currentValue;
 		} // proc ProgressBar
 
 		#endregion
@@ -72,8 +104,12 @@ namespace PPSnExcel
 
 		private readonly Excel.Application application;
 		private readonly SynchronizationContext synchronizationContext;
+		private readonly List<ProgressBar> progressStack = new List<ProgressBar>();
 		private bool inMessageLoop = false;
 		private int awaitingTasks = 0;
+
+		private string currentProgressText = null;
+		private int currentProgressValue = -1;
 
 		public WaitForm(Excel.Application application)
 		{
@@ -84,6 +120,8 @@ namespace PPSnExcel
 
 			CreateHandle();
 		} // ctor
+
+		#region -- ShowWait/CloseWait -------------------------------------------------
 
 		private void ShowWait()
 		{
@@ -115,6 +153,82 @@ namespace PPSnExcel
 				Close();
 		} // proc CloseWait
 
+		#endregion
+
+		#region -- Update Progres -----------------------------------------------------
+
+		private void AddToStack(ProgressBar sender)
+		{
+			progressStack.Add(sender);
+			UpdateProgress();
+		} // proc AddToStack
+
+		private void RemoveFromStack(ProgressBar sender)
+		{
+			progressStack.Remove(sender);
+			UpdateProgress();
+		} // proc AddToStack
+
+		private void UpdateProgress()
+		{
+			string newProgressText;
+			int newProgressValue;
+			lock (progressStack)
+			{
+				newProgressText = progressStack.FindLast(p => !String.IsNullOrEmpty(p.Text))?.Text ?? "Daten werden verarbeitet...";
+				newProgressValue = progressStack.FindLast(p => p.Value >= 0)?.Value ?? -1;
+			}
+
+			if (newProgressText != currentProgressText)
+				UpdateProgressText(newProgressText);
+			if (newProgressValue != currentProgressValue)
+				UpdateProgressValue(newProgressValue);
+		} // proc UpdateProgress
+
+		private void UpdateProgressText(string newProgressText)
+		{
+			if (InvokeRequired)
+				Invoke(new Action<string>(UpdateProgressText), newProgressText);
+			else
+			{
+				currentProgressText = newProgressText;
+				label1.Text = currentProgressText;
+			}
+		} // proc UpdateProgressText
+
+		private void UpdateProgressValue(int newProgressValue)
+		{
+			if (InvokeRequired)
+				Invoke(new Action<int>(UpdateProgressValue), newProgressValue);
+			else
+			{
+				currentProgressValue = newProgressValue;
+				if (currentProgressValue < 0)
+				{
+					progressBar1.Style = ProgressBarStyle.Marquee;
+				}
+				else
+				{
+					progressBar1.Style = ProgressBarStyle.Continuous;
+					progressBar1.Value = currentProgressValue;
+				}
+			}
+		} // proc UpdateProgressValue
+
+		#endregion
+
+		public T Run<T>(Func<T> func)
+			where T : Task
+		{
+			if (!(System.Threading.SynchronizationContext.Current is WindowsFormsSynchronizationContext))
+				System.Threading.SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
+
+			var t = func();
+			Await(t);
+			t.Wait();
+			return t;
+		} // func Run
+
 		public void Await(Task task)
 		{
 			if (task.IsCompleted)
@@ -124,8 +238,11 @@ namespace PPSnExcel
 				task.Wait();
 			else if (inMessageLoop)
 			{
-				awaitingTasks++;
-				task.GetAwaiter().OnCompleted(() => Invoke(new Action(CloseWait)));
+				throw new InvalidOperationException();
+				// todo: wait
+				//awaitingTasks++;
+				//task.GetAwaiter().OnCompleted(() => Invoke(new Action(CloseWait)));
+				//Application.DoEvents();
 			}
 			else if (!task.Wait(200))
 			{
@@ -134,7 +251,7 @@ namespace PPSnExcel
 			}
 		} // proc Await
 
-		public IProgress<string> CreateProgress()
+		public IProgressBar CreateProgress()
 			=> new ProgressBar(this);
 
 		public SynchronizationContext SynchronizationContext => synchronizationContext;

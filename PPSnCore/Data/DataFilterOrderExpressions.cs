@@ -2266,14 +2266,14 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		/// <param name="orders"></param>
 		/// <returns></returns>
-		public static string ToString(PpsDataOrderExpression[] orders)
-			=> String.Join(",", from o in orders select (o.Negate ? "-" : "+") + o.Identifier);
+		public static string ToString(IEnumerable<PpsDataOrderExpression> orders)
+			=> IsEmpty(orders) ? null : String.Join(",", from o in orders select (o.Negate ? "-" : "+") + o.Identifier);
 
 		/// <summary></summary>
 		/// <param name="order"></param>
 		/// <returns></returns>
-		public static bool IsEmpty(PpsDataOrderExpression[] order)
-			=> order == null || order.Length == 0;
+		public static bool IsEmpty(IEnumerable<PpsDataOrderExpression> order)
+			=> order == null || (order is PpsDataOrderExpression[] a && a.Length == 0);
 	} // class PpsDataOrderExpression
 
 	#endregion
@@ -2294,6 +2294,13 @@ namespace TecWare.PPSn.Data
 			this.columnName = columnName ?? throw new ArgumentNullException(nameof(columnName));
 			this.columnAlias = columnAlias;
 		} // ctor
+
+		/// <summary>String from column expression.</summary>
+		/// <returns></returns>
+		public override string ToString()
+			=> String.IsNullOrEmpty(columnAlias)
+				? columnName
+				: columnName + ":" + columnAlias;
 
 		/// <summary></summary>
 		public string Name => columnName;
@@ -2318,7 +2325,7 @@ namespace TecWare.PPSn.Data
 					return CreateStringKeyValuePair(value.ToString());
 			}
 		} // func CreateStringKeyValuePair
-
+		
 		/// <summary></summary>
 		/// <param name="columns"></param>
 		/// <returns></returns>
@@ -2357,11 +2364,17 @@ namespace TecWare.PPSn.Data
 			}
 		} // func Parse
 
+		/// <summary>String from columns</summary>
+		/// <param name="columns"></param>
+		/// <returns></returns>
+		public static string ToString(IEnumerable<PpsDataColumnExpression> columns)
+			=> IsEmpty(columns) ? null : String.Join(",", columns.Select(c => c.ToString()));
+
 		/// <summary></summary>
 		/// <param name="columns"></param>
 		/// <returns></returns>
-		public static bool IsEmpty(PpsDataColumnExpression[] columns)
-			=> columns == null || columns.Length == 0;
+		public static bool IsEmpty(IEnumerable<PpsDataColumnExpression> columns)
+			=> columns == null || (columns is PpsDataColumnExpression[] a && a.Length == 0);
 	} // class PpsDataColumnExpression
 
 	#endregion

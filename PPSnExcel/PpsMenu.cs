@@ -15,9 +15,7 @@
 #endregion
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Xml.Linq;
 using Microsoft.Office.Tools.Ribbon;
 using TecWare.PPSn;
 using Excel = Microsoft.Office.Interop.Excel;
@@ -29,7 +27,6 @@ namespace PPSnExcel
 	{
 		private Excel.Application application;
 
-		//private bool isEnvironmentInitialized = false;
 		private bool isMenuLoaded = false;
 
 		#region -- Load ---------------------------------------------------------------
@@ -37,8 +34,8 @@ namespace PPSnExcel
 		private void PpsMenu_Load(object sender, RibbonUIEventArgs e)
 		{
 			application = Globals.ThisAddIn.Application;
-			cmdExtended.Visible = false; // Globals.ThisAddIn.Application.ShowDevTools;
-						
+			cmdExtended.Visible = Globals.ThisAddIn.Application.ShowDevTools;
+
 			// connection to the excel application
 			application.WorkbookActivate += wb => WorkbookStateChanged(wb, true);
 			application.WorkbookDeactivate += wb => WorkbookStateChanged(wb, false);
@@ -46,7 +43,7 @@ namespace PPSnExcel
 			application.SheetSelectionChange += (sh, target) => Refresh();
 
 			Globals.ThisAddIn.CurrentEnvironmentChanged += (s, _e) => { RefreshUsername(); Refresh(); };
-			
+
 			// init environment
 			RefreshEnvironments();
 			RefreshUsername();
@@ -76,8 +73,11 @@ namespace PPSnExcel
 		public void Refresh()
 		{
 			var currentEnvironment = Globals.ThisAddIn.CurrentEnvironment;
-			cmdReport.Enabled = 
+			cmdReport.Enabled =
 				cmdTable.Enabled = currentEnvironment != null;
+
+			cmdRefresh.Enabled =
+				cmdRefreshLayout.Enabled = Globals.ThisAddIn.Application.Selection is Excel.Range r && !(r.ListObject is null);
 		} // proc Refresh
 
 		private void RefreshUsername()
@@ -101,7 +101,7 @@ namespace PPSnExcel
 				ribbonButton.Label = cur.Name ?? cur.DisplayName;
 				ribbonButton.ScreenTip = $"{ cur.Name} ({cur.DisplayName})";
 				ribbonButton.SuperTip =
-					env == null 
+					env == null
 						? String.Format("Version {0}\nUri: {1}", cur.Version, cur.Uri.ToString())
 						: String.Format("Angemeldet: {2}\nVersion {0}\nUri: {1}", cur.Version, cur.Uri.ToString(), env.UserName);
 				ribbonButton.Tag = cur;
@@ -109,6 +109,9 @@ namespace PPSnExcel
 				loginGalery.Items.Add(ribbonButton);
 			}
 		} // proc RefreshEnvironments
+
+		private static void ImportTableCommand(string reportName, PpsListMapping map)
+			=> Globals.ThisAddIn.Run(() => Globals.ThisAddIn.ImportTableAsync(Globals.ThisAddIn.Application.Selection as Excel.Range, map, reportName));
 
 		private static void InsertReport()
 		{
@@ -119,8 +122,8 @@ namespace PPSnExcel
 				{
 					if (frm.ShowDialog(Globals.ThisAddIn) == DialogResult.OK)
 					{
-						if (frm.ReportSource is PpsShellGetList args)
-							Globals.ThisAddIn.ImportTable(env, frm.ReportName, args);
+						if (frm.ReportSource is PpsListMapping map)
+							ImportTableCommand(frm.ReportName, map);
 						else
 							MessageBox.Show("todo");
 					}
@@ -136,7 +139,7 @@ namespace PPSnExcel
 				using (var frm = new TableInsertForm(env))
 				{
 					if (frm.ShowDialog(Globals.ThisAddIn) == DialogResult.OK)
-						Globals.ThisAddIn.ImportTable(env, frm.ReportName, frm.ReportSource);
+						ImportTableCommand(frm.ReportName, frm.ReportSource);
 				}
 			}
 		} // proc InsertTable
@@ -156,8 +159,20 @@ namespace PPSnExcel
 		{
 		}
 
-		private void cmdRefresh_Click(object sender, RibbonControlEventArgs e)
+		private void cmdListObjectInfo_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(Globals.ThisAddIn.ShowTableInfo);
+
+		private void RunRefreshTableCommand(ThisAddIn.RefreshContext refreshContext)
+			=> RunActionSafe(() => Globals.ThisAddIn.Run(() => Globals.ThisAddIn.RefreshTableAsync(refreshContext)));
+
+		private void cmdRefresh_Click(object sender, RibbonControlEventArgs e)
+			=> RunRefreshTableCommand(ThisAddIn.RefreshContext.ActiveListObject);
+
+		private void cmdRefreshLayout_Click(object sender, RibbonControlEventArgs e)
+			=> RunRefreshTableCommand(ThisAddIn.RefreshContext.ActiveListObjectLayout);
+
+		private void cmdRefreshAll_Click(object sender, RibbonControlEventArgs e)
+			=> RunRefreshTableCommand(ThisAddIn.RefreshContext.ActiveWorkBook);
 
 		private void loginGalery_ItemsLoading(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(RefreshEnvironments);
@@ -167,7 +182,7 @@ namespace PPSnExcel
 
 		private void logoutButton_Click(object sender, RibbonControlEventArgs e)
 			=> RunActionSafe(() => Globals.ThisAddIn.DeactivateEnvironment());
-		
+
 		/// <summary>Was Loaded called.</summary>
 		public bool IsMenuLoaded => isMenuLoaded;
 	} // class PpsMenu

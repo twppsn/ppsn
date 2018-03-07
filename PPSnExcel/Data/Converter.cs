@@ -36,7 +36,7 @@ namespace PPSnExcel.Data
 			return m.Success;
 		} // func TryMatchRegex
 
-		public static void UpdateRange(Excel.Range range, Type baseCellType, IPropertyReadOnlyDictionary attributes)
+		public static void UpdateRange(Excel.Range range, Type baseCellType, IPropertyReadOnlyDictionary attributes, bool styleUpdate)
 		{
 			if (range == null)
 				throw new ArgumentNullException(nameof(range));
@@ -49,6 +49,9 @@ namespace PPSnExcel.Data
 				range.NumberFormat = tmp;
 			else if (attributes.TryGetProperty("format", out tmp))
 				range.NumberFormat = ConvertNetToExcelFormat(baseCellType, tmp, CultureInfo.CurrentUICulture);
+
+			if (!styleUpdate)
+				return;
 
 			// set alignment
 			if (attributes.TryGetProperty("halign", out tmp))

@@ -14,9 +14,18 @@
 //
 #endregion
 using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace TecWare.PPSn
 {
+	/// <summary>Simple progress representation.</summary>
+	public interface IProgressBar : IProgress<string>, IDisposable
+	{
+		void UpdateProgress(int value, int minimum = -1, int maximum = -1);
+	} // interface IProgressBar
+
 	/// <summary></summary>
 	public class ExcelException : Exception
 	{
@@ -27,4 +36,62 @@ namespace TecWare.PPSn
 		{
 		} // ctor
 	} // class ExcelException
+
+	public static class XlProcs
+	{
+		private static readonly Regex lineProperties = new Regex(@"^\s*@@(?<k>\w+)\s*\=\s*(?<v>.*)\s*$", RegexOptions.Compiled);
+		private static readonly Regex lineSplitter = new Regex(@"\r\n|\r|\n", RegexOptions.Compiled);
+
+		public static string UpdateProperties(string comment, params KeyValuePair<string, string>[] args)
+		{
+			var sb = new StringBuilder();
+
+			void AppendKeyValue(KeyValuePair<string, string> kv)
+			{
+				if (!String.IsNullOrEmpty(kv.Value))
+					sb.Append("@@").Append(kv.Key).Append('=').AppendLine(kv.Value.Replace("\n", "\\n"));
+			} // proc AppendKeyValue
+
+			var updated = new bool[args.Length];
+			for (var i = 0; i < updated.Length; i++)
+				updated[i] = false;
+
+			foreach (var l in lineSplitter.Split(comment ?? String.Empty))
+			{
+				var m = lineProperties.Match(l);
+				if (m.Success)
+				{
+					var k = m.Groups["k"].Value;
+					var i = Array.FindIndex(args, kv => kv.Key == k);
+					if (i == -1)
+						sb.AppendLine(l);
+					else
+					{
+						updated[i] = true;
+						AppendKeyValue(args[i]);
+					}
+				}
+				else
+					sb.AppendLine(l);
+			}
+
+			for (var i = 0; i < updated.Length; i++)
+			{
+				if (!updated[i])
+					AppendKeyValue(args[i]);
+			}
+
+			return sb.ToString();
+		} // func UpdateProperties
+
+		public static IEnumerable<KeyValuePair<string, string>> GetLineProperties(string comment)
+		{
+			foreach (var l in lineSplitter.Split(comment ?? String.Empty))
+			{
+				var m = lineProperties.Match(l);
+				if (m.Success)
+					yield return new KeyValuePair<string, string>(m.Groups["k"].Value, m.Groups["v"].Value);
+			}
+		} // func GetLineProperties
+	} // class XlProcs
 }

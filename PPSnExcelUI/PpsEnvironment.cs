@@ -16,7 +16,6 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -139,16 +138,16 @@ namespace TecWare.PPSn
 			return dt.Columns.Count == 0 ? null : dt;
 		} // func GetViewDataAsync
 
-		public void BeginInvoke(Action action) 
+		public void BeginInvoke(Action action)
 			=> baseShell.BeginInvoke(action);
 
-		public Task InvokeAsync(Action action) 
+		public Task InvokeAsync(Action action)
 			=> baseShell.InvokeAsync(action);
 
 		public Task<T> InvokeAsync<T>(Func<T> func)
 			=> baseShell.InvokeAsync(func);
 
-		public void Await(Task task) 
+		public void Await(Task task)
 			=> baseShell.Await(task);
 
 		public T Await<T>(Task<T> task)
@@ -175,7 +174,7 @@ namespace TecWare.PPSn
 
 		public Task ShowMessageAsync(string message)
 			=> baseShell.ShowMessageAsync(message);
-		
+
 		/// <summary>Name of the environment.</summary>
 		public string Name => info.Name;
 		/// <summary>Authentificated user.</summary>
