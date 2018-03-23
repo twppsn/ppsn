@@ -108,6 +108,7 @@
     <Compile Include="Controls\PpsDataFilterBox.cs" />
     <Compile Include="Controls\PpsDataSelector.cs" />
     <Compile Include="Controls\PpsEditableListbox.cs" />
+    <Compile Include="Controls\PpsStackSectionPanel.cs" />
     <Compile Include="Controls\ReadOnlyPaneBehavior.cs" />
     <Compile Include="Controls\SideBarMenu.cs" />
     <Compile Include="Controls\SplitButton.cs" />
