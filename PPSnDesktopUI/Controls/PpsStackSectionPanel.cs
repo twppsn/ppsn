@@ -30,6 +30,11 @@ namespace TecWare.PPSn.Controls
 		/// <summary>The Titlebar is the Expander, the Template is mandatory, and must at least handle the IsOpen status.</summary>
 		public DataTemplate TitleBarTemplate { get => (DataTemplate)GetValue(TitleBarTemplateProperty); set => SetValue(TitleBarTemplateProperty, value); }
 
+		/// <summary>DependencyProperty</summary>
+		public static readonly DependencyProperty VerticalMarginProperty = DependencyProperty.Register(nameof(VerticalMargin), typeof(double), typeof(PpsStackSectionPanel), new FrameworkPropertyMetadata(5, FrameworkPropertyMetadataOptions.AffectsMeasure));
+		/// <summary>The Vertical Margin is inserted between each Presenter</summary>
+		public double VerticalMargin { get => (double)GetValue(VerticalMarginProperty); set => SetValue(VerticalMarginProperty, value); }
+
 		#region ---- Callbacks ----------------------------------------------------------
 
 		private static void IsOpenChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -270,7 +275,7 @@ namespace TecWare.PPSn.Controls
 		/// <returns>the estimated Size of the Control</returns>
 		protected override Size MeasureOverride(Size availableSize)
 		{
-			var height = 0.0;
+			var verticalposition = 0.0;
 
 			// the Children of the Control contains both Presenter an UIElements, so enumerate the Presenter
 			foreach (var presenter in presenterCollection)
@@ -280,15 +285,17 @@ namespace TecWare.PPSn.Controls
 					continue;
 
 				presenter.Value.Measure(availableSize);
-				height += presenter.Value.DesiredSize.Height;
+				verticalposition += presenter.Value.DesiredSize.Height;
 				// if the item is set to collapsed, it does not need vertical space
 				if (GetIsOpen(presenter.Key))
 				{
-					height += presenter.Key.DesiredSize.Height;
+					verticalposition += presenter.Key.DesiredSize.Height;
 				}
+
+				verticalposition += VerticalMargin;
 			}
 
-			var requestSize = new Size(availableSize.Width, height);
+			var requestSize = new Size(availableSize.Width, verticalposition);
 
 			return requestSize;
 		}
@@ -342,7 +349,7 @@ namespace TecWare.PPSn.Controls
 				}
 
 				// add a spacer between Items
-				verticalposition += 5;
+				verticalposition += VerticalMargin;
 			}
 
 			return new Size(finalSize.Width, verticalposition);
