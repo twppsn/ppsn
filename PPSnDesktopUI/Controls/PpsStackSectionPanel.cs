@@ -31,7 +31,7 @@ namespace TecWare.PPSn.Controls
 		public DataTemplate TitleBarTemplate { get => (DataTemplate)GetValue(TitleBarTemplateProperty); set => SetValue(TitleBarTemplateProperty, value); }
 
 		/// <summary>DependencyProperty</summary>
-		public static readonly DependencyProperty VerticalMarginProperty = DependencyProperty.Register(nameof(VerticalMargin), typeof(double), typeof(PpsStackSectionPanel), new FrameworkPropertyMetadata(5, FrameworkPropertyMetadataOptions.AffectsMeasure));
+		public static readonly DependencyProperty VerticalMarginProperty = DependencyProperty.Register(nameof(VerticalMargin), typeof(double), typeof(PpsStackSectionPanel), new FrameworkPropertyMetadata(5.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 		/// <summary>The Vertical Margin is inserted between each Presenter</summary>
 		public double VerticalMargin { get => (double)GetValue(VerticalMarginProperty); set => SetValue(VerticalMarginProperty, value); }
 
