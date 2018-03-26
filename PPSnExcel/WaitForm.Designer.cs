@@ -35,25 +35,25 @@
 			// progressBar1
 			// 
 			this.progressBar1.Location = new System.Drawing.Point(16, 31);
+			this.progressBar1.Maximum = 1000;
 			this.progressBar1.Name = "progressBar1";
 			this.progressBar1.Size = new System.Drawing.Size(284, 16);
-			this.progressBar1.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
+			this.progressBar1.Style = System.Windows.Forms.ProgressBarStyle.Marquee;
 			this.progressBar1.TabIndex = 0;
 			// 
 			// label1
 			// 
-			this.label1.AutoSize = true;
+			this.label1.AutoEllipsis = true;
 			this.label1.Location = new System.Drawing.Point(16, 13);
 			this.label1.Name = "label1";
-			this.label1.Size = new System.Drawing.Size(136, 13);
+			this.label1.Size = new System.Drawing.Size(284, 13);
 			this.label1.TabIndex = 1;
-			this.label1.Text = "Daten werden verarbeitet...";
 			// 
 			// WaitForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(316, 64);
+			this.ClientSize = new System.Drawing.Size(312, 60);
 			this.ControlBox = false;
 			this.Controls.Add(this.label1);
 			this.Controls.Add(this.progressBar1);
@@ -64,7 +64,6 @@
 			this.ShowInTaskbar = false;
 			this.Text = "Warten...";
 			this.ResumeLayout(false);
-			this.PerformLayout();
 
 		}
 

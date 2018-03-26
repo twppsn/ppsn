@@ -36,12 +36,13 @@
 		{
 			this.tabPPSn = this.Factory.CreateRibbonTab();
 			this.groupData = this.Factory.CreateRibbonGroup();
-			this.group2 = this.Factory.CreateRibbonGroup();
 			this.group1 = this.Factory.CreateRibbonGroup();
 			this.cmdReport = this.Factory.CreateRibbonButton();
 			this.cmdTable = this.Factory.CreateRibbonButton();
+			this.cmdRefreshAll = this.Factory.CreateRibbonSplitButton();
+			this.cmdRefreshLayout = this.Factory.CreateRibbonButton();
+			this.separator3 = this.Factory.CreateRibbonSeparator();
 			this.cmdRefresh = this.Factory.CreateRibbonButton();
-			this.cmdEditTable = this.Factory.CreateRibbonButton();
 			this.button1 = this.Factory.CreateRibbonButton();
 			this.loginMenu = this.Factory.CreateRibbonMenu();
 			this.loginGalery = this.Factory.CreateRibbonGallery();
@@ -49,11 +50,11 @@
 			this.logoutButton = this.Factory.CreateRibbonButton();
 			this.cmdExtended = this.Factory.CreateRibbonMenu();
 			this.cmdStyles = this.Factory.CreateRibbonButton();
-			this.separator1 = this.Factory.CreateRibbonSeparator();
+			this.cmdListObjectInfo = this.Factory.CreateRibbonButton();
 			this.cmdOptions = this.Factory.CreateRibbonButton();
+			this.separator1 = this.Factory.CreateRibbonSeparator();
 			this.tabPPSn.SuspendLayout();
 			this.groupData.SuspendLayout();
-			this.group2.SuspendLayout();
 			this.group1.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -61,7 +62,6 @@
 			// 
 			this.tabPPSn.ControlId.ControlIdType = Microsoft.Office.Tools.Ribbon.RibbonControlIdType.Office;
 			this.tabPPSn.Groups.Add(this.groupData);
-			this.tabPPSn.Groups.Add(this.group2);
 			this.tabPPSn.Groups.Add(this.group1);
 			this.tabPPSn.KeyTip = "N";
 			this.tabPPSn.Label = "PPSn";
@@ -71,16 +71,11 @@
 			// 
 			this.groupData.Items.Add(this.cmdReport);
 			this.groupData.Items.Add(this.cmdTable);
-			this.groupData.Label = "Importieren";
+			this.groupData.Items.Add(this.separator1);
+			this.groupData.Items.Add(this.cmdRefreshAll);
+			this.groupData.Items.Add(this.button1);
+			this.groupData.Label = "Auswertungen";
 			this.groupData.Name = "groupData";
-			// 
-			// group2
-			// 
-			this.group2.Items.Add(this.cmdRefresh);
-			this.group2.Items.Add(this.cmdEditTable);
-			this.group2.Items.Add(this.button1);
-			this.group2.Label = "Bearbeiten";
-			this.group2.Name = "group2";
 			// 
 			// group1
 			// 
@@ -113,23 +108,43 @@
 			this.cmdTable.ScreenTip = "Datentabelle verknüpfen";
 			this.cmdTable.ShowImage = true;
 			this.cmdTable.SuperTip = "Verknüpft eine Datentabelle mit dem aktuellen Arbeitsblatt";
+			this.cmdTable.Visible = false;
 			this.cmdTable.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdTable_Click);
+			// 
+			// cmdRefreshAll
+			// 
+			this.cmdRefreshAll.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
+			this.cmdRefreshAll.Items.Add(this.cmdRefreshLayout);
+			this.cmdRefreshAll.Items.Add(this.separator3);
+			this.cmdRefreshAll.Items.Add(this.cmdRefresh);
+			this.cmdRefreshAll.Label = "Aktualisieren";
+			this.cmdRefreshAll.Name = "cmdRefreshAll";
+			this.cmdRefreshAll.OfficeImageId = "RefreshAll";
+			this.cmdRefreshAll.ScreenTip = "Alles aktualisieren";
+			this.cmdRefreshAll.SuperTip = "Aktualisiert die komplette Arbeitsmappe";
+			this.cmdRefreshAll.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdRefreshAll_Click);
+			// 
+			// cmdRefreshLayout
+			// 
+			this.cmdRefreshLayout.Label = "Layout aktualisieren";
+			this.cmdRefreshLayout.Name = "cmdRefreshLayout";
+			this.cmdRefreshLayout.ShowImage = true;
+			this.cmdRefreshLayout.SuperTip = "Aktualisiert von der gewählten Liste die Spalten und das Layout";
+			this.cmdRefreshLayout.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdRefreshLayout_Click);
+			// 
+			// separator3
+			// 
+			this.separator3.Name = "separator3";
 			// 
 			// cmdRefresh
 			// 
-			this.cmdRefresh.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
-			this.cmdRefresh.Label = "Aktualisieren";
+			this.cmdRefresh.Label = "Tabelle aktualisieren";
 			this.cmdRefresh.Name = "cmdRefresh";
 			this.cmdRefresh.OfficeImageId = "Refresh";
+			this.cmdRefresh.ScreenTip = "Tabelle aktualisieren";
 			this.cmdRefresh.ShowImage = true;
+			this.cmdRefresh.SuperTip = "Aktualisiert die ausgewählte Tabelle";
 			this.cmdRefresh.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdRefresh_Click);
-			// 
-			// cmdEditTable
-			// 
-			this.cmdEditTable.Label = "Spalten bearbeiten";
-			this.cmdEditTable.Name = "cmdEditTable";
-			this.cmdEditTable.ShowImage = true;
-			this.cmdEditTable.Visible = false;
 			// 
 			// button1
 			// 
@@ -170,11 +185,13 @@
 			// cmdExtended
 			// 
 			this.cmdExtended.Items.Add(this.cmdStyles);
-			this.cmdExtended.Items.Add(this.separator1);
+			this.cmdExtended.Items.Add(this.cmdListObjectInfo);
 			this.cmdExtended.Items.Add(this.cmdOptions);
 			this.cmdExtended.Label = "Erweitert";
 			this.cmdExtended.Name = "cmdExtended";
+			this.cmdExtended.OfficeImageId = "PropertySheet";
 			this.cmdExtended.ShowImage = true;
+			this.cmdExtended.SuperTip = "Erweiterte Menüpunkte";
 			// 
 			// cmdStyles
 			// 
@@ -183,17 +200,26 @@
 			this.cmdStyles.ScreenTip = "Formatvorlagen exportieren, importieren";
 			this.cmdStyles.ShowImage = true;
 			this.cmdStyles.SuperTip = "Ermöglicht das verwalten von Formatvorlagen.";
+			this.cmdStyles.Visible = false;
 			this.cmdStyles.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdStyles_Click);
 			// 
-			// separator1
+			// cmdListObjectInfo
 			// 
-			this.separator1.Name = "separator1";
+			this.cmdListObjectInfo.Label = "Smart Table Daten";
+			this.cmdListObjectInfo.Name = "cmdListObjectInfo";
+			this.cmdListObjectInfo.ShowImage = true;
+			this.cmdListObjectInfo.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.cmdListObjectInfo_Click);
 			// 
 			// cmdOptions
 			// 
 			this.cmdOptions.Label = "Optionen";
 			this.cmdOptions.Name = "cmdOptions";
 			this.cmdOptions.ShowImage = true;
+			this.cmdOptions.Visible = false;
+			// 
+			// separator1
+			// 
+			this.separator1.Name = "separator1";
 			// 
 			// PpsMenu
 			// 
@@ -205,8 +231,6 @@
 			this.tabPPSn.PerformLayout();
 			this.groupData.ResumeLayout(false);
 			this.groupData.PerformLayout();
-			this.group2.ResumeLayout(false);
-			this.group2.PerformLayout();
 			this.group1.ResumeLayout(false);
 			this.group1.PerformLayout();
 			this.ResumeLayout(false);
@@ -222,15 +246,17 @@
 		internal Microsoft.Office.Tools.Ribbon.RibbonMenu cmdExtended;
 		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdStyles;
 		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdTable;
-		internal Microsoft.Office.Tools.Ribbon.RibbonGroup group2;
-		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdRefresh;
-		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdEditTable;
 		internal Microsoft.Office.Tools.Ribbon.RibbonButton button1;
-		internal Microsoft.Office.Tools.Ribbon.RibbonSeparator separator1;
 		internal Microsoft.Office.Tools.Ribbon.RibbonGallery loginGalery;
 		internal Microsoft.Office.Tools.Ribbon.RibbonMenu loginMenu;
 		internal Microsoft.Office.Tools.Ribbon.RibbonSeparator separator2;
 		internal Microsoft.Office.Tools.Ribbon.RibbonButton logoutButton;
+		internal Microsoft.Office.Tools.Ribbon.RibbonSplitButton cmdRefreshAll;
+		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdRefreshLayout;
+		internal Microsoft.Office.Tools.Ribbon.RibbonSeparator separator3;
+		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdRefresh;
+		internal Microsoft.Office.Tools.Ribbon.RibbonButton cmdListObjectInfo;
+		internal Microsoft.Office.Tools.Ribbon.RibbonSeparator separator1;
 	}
 
 	partial class ThisRibbonCollection

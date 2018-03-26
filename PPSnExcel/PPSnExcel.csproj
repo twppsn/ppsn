@@ -194,6 +194,7 @@
   -->
   <ItemGroup>
     <Compile Include="Data\Converter.cs" />
+    <Compile Include="PpsListData.cs" />
     <Compile Include="PpsMenu.cs">
       <SubType>Component</SubType>
     </Compile>
