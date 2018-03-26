@@ -4283,6 +4283,18 @@ order by t_liefnr.value desc
 			return !c.TryGetTarget(out var o);
 		} // func IsEmptyObject
 
+		private void RemoveKeyByIndex<T>(Dictionary<T, int> store, int valueIndex)
+		{
+			foreach (var kv in store)
+			{
+				if (kv.Value == valueIndex)
+				{
+					store.Remove(kv.Key);
+					break;
+				}
+			}
+		} // proc RemoveKeyByIndex
+
 		private PpsObject UpdateCacheItem(PpsObject obj)
 		{
 			lock (objectStoreLock)
@@ -4295,6 +4307,11 @@ order by t_liefnr.value desc
 					{
 						cacheIndex = objectStore.Count;
 						objectStore.Add(null);
+					}
+					else
+					{
+						RemoveKeyByIndex(objectStoreById, cacheIndex);
+						RemoveKeyByIndex(objectStoreByGuid, cacheIndex);
 					}
 				}
 
@@ -4387,6 +4404,43 @@ order by t_liefnr.value desc
 		[LuaMember]
 		public LuaTable GetObjectInfo(string objectTyp)
 			=> objectInfo[objectTyp, false];
+
+		[LuaMember]
+		private string DumpCacheInfo()
+		{
+			lock (objectStoreLock)
+			{
+				var fileName = Path.Combine(Path.GetTempPath(), $"ppsn.{Environment.TickCount}.txt");
+				using (var sw = new StreamWriter(fileName, false, Encoding.UTF8))
+				{
+					void WriteObj(int i)
+					{
+						if (objectStore[i] != null && objectStore[i].TryGetTarget(out var obj) && obj != null)
+							sw.WriteLine($"id={obj.Id}, guid={obj.Guid}, nr={obj.Nr}, type={obj.Typ}");
+						else
+							sw.WriteLine("<NULL>");
+					}
+
+					for (var i = 0; i < objectStore.Count; i++)
+					{
+						sw.Write($"ST[{i:00000000}]: ");
+						WriteObj(i);
+					}
+
+					foreach (var kv in objectStoreByGuid)
+					{
+						sw.Write($"SG[{kv.Key}, {kv.Value}]:");
+						WriteObj(kv.Value);
+					}
+					foreach (var kv in objectStoreById)
+					{
+						sw.Write($"SI[{kv.Key}, {kv.Value}]");
+						WriteObj(kv.Value);
+					}
+				}
+				return fileName;
+			}
+		} // DumpCacheInfo
 
 		#endregion
 
