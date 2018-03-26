@@ -27,12 +27,6 @@ namespace TecWare.PPSn.Controls
 
 		public DataTemplate TitleBarTemplate { get => (DataTemplate)GetValue(TitleBarTemplateProperty); set => SetValue(TitleBarTemplateProperty, value); }
 
-		public PpsStackSectionPanel()
-		{
-			SetCurrentValue(TitleBarTemplateProperty, new DataTemplate());
-			//TitleBarTemplate = new DataTemplate();
-		}
-
 		#region ---- Callbacks ----------------------------------------------------------
 
 		private static void IsOpenChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -135,7 +129,8 @@ namespace TecWare.PPSn.Controls
 			=> d.SetValue(IsOpenProperty, value);
 
 		#endregion
-		
+
+
 		#region ContentPresenterTemplate
 
 		/// <summary>DependencyProperty</summary>
@@ -210,15 +205,6 @@ namespace TecWare.PPSn.Controls
 				=> throw new FieldAccessException();
 
 			#endregion
-		} // class class PpsDataFieldPanelCollection
-
-		private void RemovePresenter(DependencyObject d)
-		{
-			var element = (UIElement)d;
-
-			presenterCollection.Remove(element);
-			this.InvalidateMeasure();
-		}
 
 		#endregion
 
@@ -252,6 +238,14 @@ namespace TecWare.PPSn.Controls
 		}
 
 		/// <summary></summary>
+		private void RemovePresenter(DependencyObject d)
+		{
+			var element = (UIElement)d;
+
+			presenterCollection.Remove(element);
+			this.InvalidateMeasure();
+		} // proc RemovePresenter
+
 		/// <param name="logicalParent"></param>
 		/// <returns></returns>
 		protected override UIElementCollection CreateUIElementCollection(FrameworkElement logicalParent)
@@ -282,50 +276,50 @@ namespace TecWare.PPSn.Controls
 
 		protected override Size ArrangeOverride(Size finalSize)
 		{
-			var i = 0.0;
+			var verticalposition = 0.0;
 
-			foreach (var item in presenterCollection)
+			foreach (var presenter in presenterCollection)
 			{
-				if (item.Key.IsMeasureValid && item.Key.RenderSize.Height <= 0)
+				if (presenter.Key.IsMeasureValid && presenter.Key.RenderSize.Height <= 0)
 				{
-					item.Value.Visibility = Visibility.Collapsed;
+					presenter.Value.Visibility = Visibility.Collapsed;
 					continue;
 				}
 				else
 				{
-					item.Value.Visibility = Visibility.Visible;
+					presenter.Value.Visibility = Visibility.Visible;
 				}
 
-				if (item.Value != null)
+				if (presenter.Value != null)
 				{
-					item.Value.Measure(finalSize);
-					var positionRect = new Rect(0, i, finalSize.Width, item.Value.DesiredSize.Height);
-					item.Value.Arrange(positionRect);
+					presenter.Value.Measure(finalSize);
+					var positionRect = new Rect(0, verticalposition, finalSize.Width, presenter.Value.DesiredSize.Height);
+					presenter.Value.Arrange(positionRect);
+
+					presenter.Value.DataContext = presenter.Key;
+
+					verticalposition += presenter.Value.DesiredSize.Height;
 				}
-				i += item.Value.DesiredSize.Height;
 
-				item.Value.DataContext = item.Key;
-
-
-				if (GetIsOpen(item.Key))
+				if (GetIsOpen(presenter.Key))
 				{
-					item.Key.Measure(finalSize);
+					presenter.Key.Measure(finalSize);
 
-					var childRect = new Rect(0, i, finalSize.Width, item.Key.DesiredSize.Height);
+					var childRect = new Rect(0, verticalposition, finalSize.Width, presenter.Key.DesiredSize.Height);
 
-					item.Key.Arrange(childRect);
-					i += childRect.Height;
+					presenter.Key.Arrange(childRect);
+					verticalposition += childRect.Height;
 				}
 				else
 				{
 					var childRect = new Rect(0, 0, 0, 0);
-					item.Key.Arrange(childRect);
+					presenter.Key.Arrange(childRect);
 				}
-				i += 5;
 			}
 
-			return new Size(finalSize.Width, i);
 		}
+				verticalposition += 5;
 
+			return new Size(finalSize.Width, verticalposition);
 	}
 }
