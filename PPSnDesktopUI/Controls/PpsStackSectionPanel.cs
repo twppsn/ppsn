@@ -21,10 +21,13 @@ using System.Windows.Media;
 
 namespace TecWare.PPSn.Controls
 {
+	/// <summary>This Panel shows it's children in Expaners/Accordeon style</summary>
 	public class PpsStackSectionPanel : Panel
 	{
+		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty TitleBarTemplateProperty = DependencyProperty.Register(nameof(TitleBarTemplate), typeof(DataTemplate), typeof(PpsStackSectionPanel), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsMeasure));
 
+		/// <summary>The Titlebar is the Expander, the Template is mandatory, and must at least handle the IsOpen status.</summary>
 		public DataTemplate TitleBarTemplate { get => (DataTemplate)GetValue(TitleBarTemplateProperty); set => SetValue(TitleBarTemplateProperty, value); }
 
 		#region ---- Callbacks ----------------------------------------------------------
@@ -70,7 +73,7 @@ namespace TecWare.PPSn.Controls
 			{
 				presenter.ContentTemplate = newvalue;
 			}
-		}
+		} // proc ChangePresenterTemplate
 
 		#endregion
 
@@ -81,14 +84,14 @@ namespace TecWare.PPSn.Controls
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty TitleProperty = DependencyProperty.RegisterAttached("Title", typeof(object), typeof(PpsStackSectionPanel));
 
-		/// <summary>Returns the Title of the Control</summary>
-		/// <param name="d">Control</param>
-		/// <returns></returns>
+		/// <summary>Contains the Title of a ChildItem</summary>
+		/// <param name="d">ChildItem</param>
+		/// <returns>Main Tile</returns>
 		public static object GetTitle(DependencyObject d)
 			=> (object)d.GetValue(TitleProperty);
-		/// <summary>Sets the Title of the Control</summary>
-		/// <param name="d">Control</param>
-		/// <param name="value"></param>
+		/// <summary>Sets the Title of a ChildItem</summary>
+		/// <param name="d">ChildItem</param>
+		/// <param name="value">new Ttile</param>
 		public static void SetTitle(DependencyObject d, object value)
 			=> d.SetValue(TitleProperty, value);
 
@@ -98,15 +101,14 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty SubtitleProperty = DependencyProperty.RegisterAttached("Subtitle", typeof(object), typeof(PpsStackSectionPanel));
-
-		/// <summary>Returns the Subtitle of the Control</summary>
-		/// <param name="d">Control</param>
-		/// <returns></returns>
+		/// <summary>Returns the Subtitle of a ChildItem</summary>
+		/// <param name="d">ChildItem</param>
+		/// <returns>Subtitle</returns>
 		public static object GetSubtitle(DependencyObject d)
 			=> d.GetValue(SubtitleProperty);
-		/// <summary>Sets the Subtitle of the Control</summary>
-		/// <param name="d">Control</param>
-		/// <param name="value"></param>
+		/// <summary>Sets the Subtitle of a ChildItem</summary>
+		/// <param name="d">ChildItem</param>
+		/// <param name="value">new Subtitle</param>
 		public static void SetSubtitle(DependencyObject d, object value)
 			=> d.SetValue(SubtitleProperty, value);
 
@@ -116,15 +118,14 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty IsOpenProperty = DependencyProperty.RegisterAttached("IsOpen", typeof(bool), typeof(PpsStackSectionPanel), new FrameworkPropertyMetadata(false, new PropertyChangedCallback(IsOpenChangedCallback)));
-
-		/// <summary>Returns the Subtitle of the Control</summary>
-		/// <param name="d">Control</param>
-		/// <returns></returns>
+		/// <summary>Returns the OpenedState of a ChildItem</summary>
+		/// <param name="d">ChildItem</param>
+		/// <returns>Opened State</returns>
 		public static bool GetIsOpen(DependencyObject d)
 			=> (bool)d.GetValue(IsOpenProperty);
-		/// <summary>Sets the Subtitle of the Control</summary>
-		/// <param name="d">Control</param>
-		/// <param name="value"></param>
+		/// <summary>Sets the OpenedState of a ChildItem</summary>
+		/// <param name="d">ChildItem</param>
+		/// <param name="value">new Opened State</param>
 		public static void SetIsOpen(DependencyObject d, bool value)
 			=> d.SetValue(IsOpenProperty, value);
 
@@ -135,15 +136,14 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty ContentPresenterTemplateProperty = DependencyProperty.RegisterAttached("ContentPresenterTemplate", typeof(DataTemplate), typeof(PpsStackSectionPanel), new FrameworkPropertyMetadata(new PropertyChangedCallback(ContentPresenterTemplateChangedCallback)));
-
-		/// <summary>Returns the Title of the Control</summary>
-		/// <param name="d">Control</param>
-		/// <returns></returns>
+		/// <summary>Returns the individual TitlebarTemplate</summary>
+		/// <param name="d">ChildItem</param>
+		/// <returns>individual ContentPresenter</returns>
 		public static DataTemplate GetContentPresenterTemplate(DependencyObject d)
 			=> (DataTemplate)d.GetValue(ContentPresenterTemplateProperty);
-		/// <summary>Sets the Title of the Control</summary>
-		/// <param name="d">Control</param>
-		/// <param name="value"></param>
+		/// <summary>Sets a individual ContentPresenterTemplate for this ChildItem</summary>
+		/// <param name="d">ChildItem</param>
+		/// <param name="value">new DataTemplate</param>
 		public static void SetContentPresenterTemplate(DependencyObject d, DataTemplate value)
 			=> d.SetValue(ContentPresenterTemplateProperty, value);
 
@@ -151,11 +151,11 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		#region ---- Handling of Labels -------------------------------------------------
 
-		#region ---- Handling of Labels -----------------------------------------------
+		#region ---- class PpsDataFieldPanelCollection ----------------------------------
 
-		#region -- class PpsDataFieldPanelCollection-----------------------------------
-
+		/// <summary>The standart UIElementCollection is overload to attach the ContentPresenters to the UIElements</summary>
 		private sealed class PpsDataFieldPanelCollection : UIElementCollection
 		{
 			private PpsStackSectionPanel panel;
@@ -168,15 +168,18 @@ namespace TecWare.PPSn.Controls
 
 			public override int Add(UIElement element)
 			{
+				// if the item is a new Control, create a ContentPresenter for it
 				if (!panel.HasPresenter(element) && !(element is ContentPresenter cp && panel.IsPresenter(cp)))
 				{
 					panel.AddPresenter(element);
 				}
+				// add the item to the Children of the Panel
 				return base.Add(element);
 			}
 
 			public override void Remove(UIElement element)
 			{
+				// if a UIElement is deleted - also delete its Presenter
 				if (panel.HasPresenter(element))
 				{
 					panel.RemovePresenter(element);
@@ -186,28 +189,36 @@ namespace TecWare.PPSn.Controls
 
 			#region ---- Invalid Functions ----------------------------------------------
 
+			/// <summary>Do not use - indexes are invalid</summary>
 			public override void Insert(int index, UIElement element)
 				=> throw new FieldAccessException();
 
+			/// <summary>Do not use - indexes are invalid</summary>
 			public override void RemoveAt(int index)
 				=> throw new FieldAccessException();
 
+			/// <summary>Do not use - indexes are invalid</summary>
 			public override void RemoveRange(int index, int count)
 				=> throw new FieldAccessException();
 
+			/// <summary>Do not use - indexes are invalid</summary>
 			public override int IndexOf(UIElement element)
 				=> throw new FieldAccessException();
 
+			/// <summary>Do not use - indexes are invalid</summary>
 			public override void CopyTo(Array array, int index)
 				=> throw new FieldAccessException();
 
+			/// <summary>Do not use - indexes are invalid</summary>
 			public override void CopyTo(UIElement[] array, int index)
 				=> throw new FieldAccessException();
 
 			#endregion
+		} // class PpsDataFieldPanelCollection
 
 		#endregion
 
+		// this is the hidden List connecting the UIElements with their ContentPresenters
 		private readonly Dictionary<UIElement, ContentPresenter> presenterCollection = new Dictionary<UIElement, ContentPresenter>();
 
 		private bool IsPresenter(DependencyObject d)
@@ -215,14 +226,14 @@ namespace TecWare.PPSn.Controls
 			var element = (ContentPresenter)d;
 
 			return presenterCollection.ContainsValue(element);
-		}
+		} // func IsPresenter
 
 		private bool HasPresenter(DependencyObject d)
 		{
 			var element = (UIElement)d;
 
 			return presenterCollection.ContainsKey(element);
-		}
+		} // func HasPresener
 
 		private void AddPresenter(DependencyObject d)
 		{
@@ -230,14 +241,14 @@ namespace TecWare.PPSn.Controls
 
 			var cp = new ContentPresenter() { ContentTemplate = GetContentPresenterTemplate(element) ?? TitleBarTemplate };
 
+			// the Eventhandler is attached to hide the ContentPresenter if the UIElement is hidden
 			element.IsVisibleChanged += (s, e) => cp.Visibility = (bool)e.NewValue ? Visibility.Visible : Visibility.Collapsed;
 
 			presenterCollection.Add(element, cp);
 			InternalChildren.Add(cp);
 			this.InvalidateMeasure();
-		}
+		} // proc AddPresenter
 
-		/// <summary></summary>
 		private void RemovePresenter(DependencyObject d)
 		{
 			var element = (UIElement)d;
@@ -246,6 +257,7 @@ namespace TecWare.PPSn.Controls
 			this.InvalidateMeasure();
 		} // proc RemovePresenter
 
+		/// <summary>The Collection has to be overriden to handle the Creation of ContentPreseners</summary>
 		/// <param name="logicalParent"></param>
 		/// <returns></returns>
 		protected override UIElementCollection CreateUIElementCollection(FrameworkElement logicalParent)
@@ -253,16 +265,23 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		/// <summary>Function to estimate the needed Space of the Control</summary>
+		/// <param name="availableSize">maximum space</param>
+		/// <returns>the estimated Size of the Control</returns>
 		protected override Size MeasureOverride(Size availableSize)
 		{
 			var height = 0.0;
+
+			// the Children of the Control contains both Presenter an UIElements, so enumerate the Presenter
 			foreach (var presenter in presenterCollection)
 			{
+				// if a UIElement does not request any vertical space, it is empty thus not shown
 				if (presenter.Key.IsMeasureValid && presenter.Key.RenderSize.Height <= 0)
 					continue;
 
 				presenter.Value.Measure(availableSize);
 				height += presenter.Value.DesiredSize.Height;
+				// if the item is set to collapsed, it does not need vertical space
 				if (GetIsOpen(presenter.Key))
 				{
 					height += presenter.Key.DesiredSize.Height;
@@ -274,12 +293,16 @@ namespace TecWare.PPSn.Controls
 			return requestSize;
 		}
 
+		/// <summary>Function to arrange the Children and their Expanders</summary>
+		/// <param name="finalSize">vertical Space the Control should use</param>
+		/// <returns>>true needed vertical space</returns>
 		protected override Size ArrangeOverride(Size finalSize)
 		{
 			var verticalposition = 0.0;
 
 			foreach (var presenter in presenterCollection)
 			{
+				// if a UIElement does not request any vertical space, it is empty thus not shown
 				if (presenter.Key.IsMeasureValid && presenter.Key.RenderSize.Height <= 0)
 				{
 					presenter.Value.Visibility = Visibility.Collapsed;
@@ -301,6 +324,7 @@ namespace TecWare.PPSn.Controls
 					verticalposition += presenter.Value.DesiredSize.Height;
 				}
 
+				// if the Item is not Collapsed, show it
 				if (GetIsOpen(presenter.Key))
 				{
 					presenter.Key.Measure(finalSize);
@@ -312,14 +336,16 @@ namespace TecWare.PPSn.Controls
 				}
 				else
 				{
+					// otherwise do not show it
 					var childRect = new Rect(0, 0, 0, 0);
 					presenter.Key.Arrange(childRect);
 				}
+
+				// add a spacer between Items
+				verticalposition += 5;
 			}
 
-		}
-				verticalposition += 5;
-
 			return new Size(finalSize.Width, verticalposition);
+		} // func ArrangeOverride
 	}
 }
