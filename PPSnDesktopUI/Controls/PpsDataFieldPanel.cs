@@ -22,26 +22,26 @@ using System.Windows.Media;
 
 namespace TecWare.PPSn.Controls
 {
+	#region -- enum Optimization --------------------------------------------------
+
+	/// <summary>Selects the Optimization strategy</summary>
+	public enum Optimization
+	{
+		/// <summary>the result has the lowest difference between the tallest and smallest column</summary>
+		TightestSpan,
+		/// <summary>the result has the lowest difference between the tallest and smallest column - the last column is omitted</summary>
+		TightestSpanWithoutLast,
+		/// <summary>the result has the smallest column heights overall</summary>
+		LowestHeight
+	} // enum Optimization
+
+	#endregion
+
 	/// <summary>
 	/// This panel sorts its children in Columns. One can define the ColumnCount and the optimisation strategy.
 	/// </summary>
 	public class PpsDataFieldPanel : Panel
 	{
-		#region -- enum Optimization --------------------------------------------------
-
-		/// <summary>Selects the Optimization strategy</summary>
-		public enum Optimization
-		{
-			/// <summary>the result has the lowest difference between the tallest and smallest column</summary>
-			TightestSpan,
-			/// <summary>the result has the lowest difference between the tallest and smallest column - the last column is omitted</summary>
-			TightestSpanWithoutLast,
-			/// <summary>the result has the smallest column heights overall</summary>
-			LowestHeight
-		} // enum Optimization
-
-		#endregion
-
 		#region ---- Properties ---------------------------------------------------------
 
 		/// <summary>DependencyProperty</summary>
