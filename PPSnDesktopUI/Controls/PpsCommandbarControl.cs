@@ -101,9 +101,9 @@ namespace TecWare.PPSn.Controls
 					break;
 				default:
 					throw new ArgumentException("Commands changed in an invalid action.");
-			}
-		}
-	}
+			} // switch (e.Action)
+		} // proc CommandsChanged
+	} // class CommandbarControl
 
 	/// <summary>This DataTemplateSelector selects the Template according to the type of CommandButton</summary>
 	public class PpsCommandbarDataTemplateSelector : DataTemplateSelector
