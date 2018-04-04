@@ -1,27 +1,39 @@
-﻿using System;
+﻿#region -- copyright --
+//
+// Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+// European Commission - subsequent versions of the EUPL(the "Licence"); You may
+// not use this work except in compliance with the Licence.
+//
+// You may obtain a copy of the Licence at:
+// http://ec.europa.eu/idabc/eupl
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+// specific language governing permissions and limitations under the Licence.
+//
+#endregion
+using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
 using System.Windows.Input;
 
 namespace TecWare.PPSn.Controls
 {
 	#region -- class SideBarMenu ------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
+	[Obsolete]
 	public class SideBarMenu : ListBox, INotifyPropertyChanged
 	{
+		//public static readonly DependencyProperty PaneTitleText;
+
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 		private string paneTitleText = String.Empty;
@@ -116,8 +128,8 @@ namespace TecWare.PPSn.Controls
 
 	#region -- class SideBarMenuItem --------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
+	[Obsolete]
 	public class SideBarMenuItem : FrameworkContentElement, ICommandSource
 	{
 		private static readonly DependencyProperty DisplayTextProperty = DependencyProperty.Register("DisplayText", typeof(string), typeof(SideBarMenuItem));
@@ -160,6 +172,7 @@ namespace TecWare.PPSn.Controls
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
+	[Obsolete]
 	public class SideBarMenuRootItem : SideBarMenuItem
 	{
 		private static readonly DependencyProperty IsExpandedProperty = DependencyProperty.Register("IsExpanded", typeof(bool), typeof(SideBarMenuItem), new PropertyMetadata(false));
@@ -222,7 +235,7 @@ namespace TecWare.PPSn.Controls
 		} // prop IsExpanded
 
 		/// <summary></summary>
-		public bool IsChildOf(SideBarMenuItem item)	=> items.Contains(item);
+		public bool IsChildOf(SideBarMenuItem item) => items.Contains(item);
 
 		/// <summary></summary>
 		public bool HasChildItems => items.Count > 0;
@@ -237,6 +250,7 @@ namespace TecWare.PPSn.Controls
 
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
+	[Obsolete]
 	public class SideBarMenuItemCollection : Collection<SideBarMenuItem>, INotifyCollectionChanged
 	{
 		/// <summary>INotifyCollectionChanged member</summary>
