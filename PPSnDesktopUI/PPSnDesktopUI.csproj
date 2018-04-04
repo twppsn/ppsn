@@ -104,6 +104,9 @@
     <Compile Include="Controls\ComboBoxBehavior.cs" />
     <Compile Include="Controls\DataListControl.cs" />
     <Compile Include="Controls\PopupBehavior.cs" />
+    <Compile Include="Controls\PpsCommandBarControl.xaml.cs">
+      <DependentUpon>PpsCommandBarControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\PpsDataFieldPanel.cs" />
     <Compile Include="Controls\PpsDataFilterBox.cs" />
     <Compile Include="Controls\PpsDataSelector.cs" />
@@ -184,6 +187,10 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="Controls\PpsAttachmentsControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\PpsCommandBarControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

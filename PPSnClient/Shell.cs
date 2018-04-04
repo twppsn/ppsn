@@ -15,9 +15,11 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.PPSn.Data;
@@ -66,16 +68,15 @@ namespace TecWare.PPSn
 			this.Count = copy.Count;
 		} // ctor
 
-		/// <summary>Create request path.</summary>
-		/// <param name="path"></param>
-		/// <returns></returns>
-		public string ToQuery(string path = null)
+		private StringBuilder ToString(StringBuilder sb )
 		{
-			var sb = new StringBuilder((path ?? String.Empty) + "?action=viewget&v=");
+			sb.Append("v=");
 			sb.Append(ViewId);
 
-			if (Filter != null && Filter != PpsDataFilterTrueExpression.True)
+			if (Filter != null && Filter != PpsDataFilterExpression.True)
 				sb.Append("&f=").Append(Uri.EscapeDataString(Filter.ToString()));
+			if (Columns != null && Columns.Length > 0)
+				sb.Append("&l=").Append(PpsDataColumnExpression.ToString(Columns));
 			if (Order != null && Order.Length > 0)
 				sb.Append("&o=").Append(Uri.EscapeDataString(PpsDataOrderExpression.ToString(Order)));
 			if (Start != -1)
@@ -85,8 +86,19 @@ namespace TecWare.PPSn
 			if (!String.IsNullOrEmpty(AttributeSelector))
 				sb.Append("&a=").Append(AttributeSelector);
 
-			return sb.ToString();
-		} // func ToQuery
+			return sb;
+		} // func ToString
+
+		/// <summary>Gets a uri-style query string for the properties.</summary>
+		/// <returns></returns>
+		public override string ToString()
+			=> ToString(new StringBuilder()).ToString();
+
+		/// <summary>Create request path.</summary>
+		/// <param name="path"></param>
+		/// <returns></returns>
+		public string ToQuery(string path = null)
+			=> ToString(new StringBuilder((path ?? String.Empty) + "?action=viewget&")).ToString();
 
 		/// <summary>View to select.</summary>
 		public string ViewId { get; }
@@ -105,12 +117,62 @@ namespace TecWare.PPSn
 
 		/// <summary>Empty parameter.</summary>
 		public bool IsEmpty => String.IsNullOrEmpty(ViewId);
-		
+
+		/// <summary>Parse string representation from ToString.</summary>
+		/// <param name="data"></param>
+		/// <param name="list"></param>
+		/// <returns></returns>
+		public static bool TryParse(string data, out PpsShellGetList list)
+		{
+			var arguments = HttpUtility.ParseQueryString(data, Encoding.UTF8);
+			var viewId = arguments["v"];
+			if (String.IsNullOrEmpty(viewId))
+			{
+				list = null;
+				return false;
+			}
+
+			list = new PpsShellGetList(viewId);
+
+			var f = arguments["f"];
+			if (!String.IsNullOrEmpty(f))
+				list.Filter = PpsDataFilterExpression.Parse(f);
+
+			var l = arguments["l"];
+			if (!String.IsNullOrEmpty(l))
+				list.Columns = PpsDataColumnExpression.Parse(l).ToArray();
+
+			var o = arguments["o"];
+			if (!String.IsNullOrEmpty(o))
+				list.Order = PpsDataOrderExpression.Parse(o).ToArray();
+
+			var s = arguments["s"];
+			if (!String.IsNullOrEmpty(s))
+				list.Start = Int32.Parse(s);
+			var c = arguments["c"];
+			if (!String.IsNullOrEmpty(c))
+				list.Count = Int32.Parse(c);
+
+			var a = arguments["a"];
+			if (!String.IsNullOrEmpty(a))
+				list.AttributeSelector = a;
+
+			return true;
+		} // func TryParse
+
+		/// <summary>Parse string representation from ToString.</summary>
+		/// <param name="data"></param>
+		/// <returns></returns>
+		public static PpsShellGetList Parse(string data)
+			=> TryParse(data, out var t) ? t : throw new FormatException();
+
 		/// <summary>Representation of an empty selector.</summary>
 		public static PpsShellGetList Empty { get; } = new PpsShellGetList((string)null);
 	} // class PpsShellGetList
 
 	#endregion
+
+	#region -- interface IPpsShell ----------------------------------------------------
 
 	/// <summary>Basic UI functions that must provider to use this library.</summary>
 	public interface IPpsShell
@@ -164,4 +226,6 @@ namespace TecWare.PPSn
 		/// <summary>Returns the default Encoding for the Application.</summary>
 		Encoding Encoding { get; }
 	} // interface IPpsShell
+
+	#endregion
 }

@@ -18,17 +18,42 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Linq;
 
 namespace TecWare.PPSn.Controls
 {
-	/// <summary>This Panel shows it's children in Expaners/Accordeon style</summary>
+	#region ---- Enum ExpanderStyles ----------------------------------------------------
+
+	/// <summary>these Styles are used to enrich the Default Behavior of Collapsing/Expanding</summary>
+	public enum ExpanderStyles
+	{
+		/// <summary>All items are open at the beginning, the user may close any</summary>
+		AllOpen,
+		/// <summary>All items are closed at the beginning, the user may expand any</summary>
+		AllClosed,
+		/// <summary>Only the first item is open at the beginning, if the user expands an item, all other will be closed</summary>
+		Accordeon
+	}
+
+	#endregion
+
+	/// <summary>This Panel shows it's children in Expanders/Accordeon style</summary>
 	public class PpsStackSectionPanel : Panel
 	{
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty TitleBarTemplateProperty = DependencyProperty.Register(nameof(TitleBarTemplate), typeof(DataTemplate), typeof(PpsStackSectionPanel), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsMeasure));
-
 		/// <summary>The Titlebar is the Expander, the Template is mandatory, and must at least handle the IsOpen status.</summary>
 		public DataTemplate TitleBarTemplate { get => (DataTemplate)GetValue(TitleBarTemplateProperty); set => SetValue(TitleBarTemplateProperty, value); }
+
+		/// <summary>DependencyProperty</summary>
+		public static readonly DependencyProperty VerticalMarginProperty = DependencyProperty.Register(nameof(VerticalMargin), typeof(double), typeof(PpsStackSectionPanel), new FrameworkPropertyMetadata(5.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
+		/// <summary>The Vertical Margin is inserted between each Presenter</summary>
+		public double VerticalMargin { get => (double)GetValue(VerticalMarginProperty); set => SetValue(VerticalMarginProperty, value); }
+
+		/// <summary>DependencyProperty</summary>
+		public static readonly DependencyProperty ExpanderStyleProperty = DependencyProperty.Register(nameof(ExpanderStyle), typeof(ExpanderStyles), typeof(PpsStackSectionPanel), new FrameworkPropertyMetadata(ExpanderStyles.AllClosed, FrameworkPropertyMetadataOptions.AffectsMeasure));
+		/// <summary>The Style of the Expanders</summary>
+		public ExpanderStyles ExpanderStyle { get => (ExpanderStyles)GetValue(ExpanderStyleProperty); set => SetValue(ExpanderStyleProperty, value); }
 
 		#region ---- Callbacks ----------------------------------------------------------
 
@@ -38,9 +63,26 @@ namespace TecWare.PPSn.Controls
 			{
 				var pa = VisualTreeHelper.GetParent(v);
 				if (pa is PpsStackSectionPanel p)
-					p.InvalidateMeasure();
+					p.ChangeIsOpen(d, e);
 			}
 		} // proc TitleChangedCallback
+
+		private void ChangeIsOpen(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		{
+			var element = (UIElement)d;
+			var newvalue = (bool)e.NewValue;
+
+			if (ExpanderStyle == ExpanderStyles.Accordeon && newvalue)
+			{
+				var openElements = from uielement in presenterCollection where GetIsOpen(uielement.Key) select uielement.Key;
+
+				foreach (var openElement in openElements)
+					if (openElement != element)
+						SetIsOpen(openElement, false);
+			}
+
+			InvalidateMeasure();
+		} // proc ChangeIsOpen
 
 		private static void IsEmptyChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
@@ -246,6 +288,20 @@ namespace TecWare.PPSn.Controls
 
 			presenterCollection.Add(element, cp);
 			InternalChildren.Add(cp);
+
+			switch (ExpanderStyle)
+			{
+				case ExpanderStyles.AllOpen:
+					SetIsOpen(d, true);
+					break;
+				case ExpanderStyles.AllClosed:
+					SetIsOpen(d, false);
+					break;
+				case ExpanderStyles.Accordeon:
+					SetIsOpen(d, presenterCollection.Count == 1);
+					break;
+			}
+
 			this.InvalidateMeasure();
 		} // proc AddPresenter
 
@@ -270,7 +326,7 @@ namespace TecWare.PPSn.Controls
 		/// <returns>the estimated Size of the Control</returns>
 		protected override Size MeasureOverride(Size availableSize)
 		{
-			var height = 0.0;
+			var verticalposition = 0.0;
 
 			// the Children of the Control contains both Presenter an UIElements, so enumerate the Presenter
 			foreach (var presenter in presenterCollection)
@@ -280,15 +336,17 @@ namespace TecWare.PPSn.Controls
 					continue;
 
 				presenter.Value.Measure(availableSize);
-				height += presenter.Value.DesiredSize.Height;
+				verticalposition += presenter.Value.DesiredSize.Height;
 				// if the item is set to collapsed, it does not need vertical space
 				if (GetIsOpen(presenter.Key))
 				{
-					height += presenter.Key.DesiredSize.Height;
+					verticalposition += presenter.Key.DesiredSize.Height;
 				}
+
+				verticalposition += VerticalMargin;
 			}
 
-			var requestSize = new Size(availableSize.Width, height);
+			var requestSize = new Size(availableSize.Width, verticalposition);
 
 			return requestSize;
 		}
@@ -342,7 +400,7 @@ namespace TecWare.PPSn.Controls
 				}
 
 				// add a spacer between Items
-				verticalposition += 5;
+				verticalposition += VerticalMargin;
 			}
 
 			return new Size(finalSize.Width, verticalposition);

@@ -62,12 +62,62 @@
 	<xs:simpleType name="fieldAttributeNames">
 		<xs:restriction base="xs:string">
 			<xs:enumeration value="displayName" />
-			<xs:enumeration value="maxLength" />
-			<xs:enumeration value="dataType" />
-			<xs:enumeration value="nullable" />
-			<xs:enumeration value="default" />
+			<xs:enumeration value="description">
+				<xs:annotation>
+					<xs:documentation>Long field description.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="format">
+				<xs:annotation>
+					<xs:documentation>Format for the raw field</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="halign">
+				<xs:annotation>
+					<xs:documentation>Horizontal alignment (left, center, right, justify)</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="valign">
+				<xs:annotation>
+					<xs:documentation>Vertical alignment (top, center, bottom, justify)</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+
+			<xs:enumeration value="maxLength">
+				<xs:annotation>
+					<xs:documentation>Maximal length for the field in chars/bytes/...</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="dataType">
+				<xs:annotation>
+					<xs:documentation>Data type for the field</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="nullable">
+				<xs:annotation>
+					<xs:documentation>Is the field nullable.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="default">
+				<xs:annotation>
+					<xs:documentation>Default value of the field.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
 			<xs:enumeration value="sourceColumn" />
+			
 			<xs:enumeration value="refTable" />
+			
+			<xs:enumeration value="bi.totals">
+				<xs:annotation>
+					<xs:documentation>Default calculation for table footer (sum, avg, count, countnums, min, max, stddev, var)</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+
+			<xs:enumeration value="xl.format">
+				<xs:annotation>
+					<xs:documentation>Excel format for the field.</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
 		</xs:restriction>
 	</xs:simpleType>
 
@@ -77,6 +127,7 @@
 			
 			<xs:enumeration value="Wpf.MenuItem" />
 			<xs:enumeration value="bi.visible" />
+			<xs:enumeration value="joinGroup" />
 		</xs:restriction>
 	</xs:simpleType>
 
@@ -115,6 +166,15 @@
 			</xs:extension>
 		</xs:simpleContent>
 	</xs:complexType>
+
+	<xs:simpleType name="viewSourceType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="select" />
+			<xs:enumeration value="file" />
+			<xs:enumeration value="resource" />
+			<xs:enumeration value="view" />
+		</xs:restriction>
+	</xs:simpleType>
 
 	<xs:element name="register">
 		<xs:annotation>
@@ -168,12 +228,7 @@
 													<xs:documentation>How is the code parsed. The actual content depends on the datasource.</xs:documentation>
 												</xs:annotation>
 												<xs:simpleType>
-													<xs:restriction base="xs:string"><!-- todo: union with string -->
-														<xs:enumeration value="select" />
-														<xs:enumeration value="file" />
-														<xs:enumeration value="resource" />
-														<xs:enumeration value="view" />
-													</xs:restriction>
+													<xs:union memberTypes="pps:viewSourceType xs:string" />
 												</xs:simpleType>
 											</xs:attribute>
 											<xs:anyAttribute processContents="lax" />

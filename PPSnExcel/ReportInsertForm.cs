@@ -25,7 +25,7 @@ using TecWare.PPSn.Data;
 
 namespace PPSnExcel
 {
-	public partial class ReportInsertForm : Form
+	internal partial class ReportInsertForm : Form
 	{
 		private readonly PpsEnvironment env;
 
@@ -105,7 +105,7 @@ namespace PPSnExcel
 				var reportName = row["DisplayName"] as string ?? reportId;
 				if ((string)row["Type"] == "table")
 				{
-					var rpt = new PpsShellGetList(reportId);
+					var rpt = new PpsListMapping(env, reportId, null, null, null);
 					ReportName = reportName;
 					ReportSource = rpt;
 				}

@@ -26,7 +26,7 @@ using TecWare.PPSn;
 
 namespace PPSnExcel
 {
-	public partial class TableInsertForm : Form
+	internal partial class TableInsertForm : Form
 	{
 		public TableInsertForm(PpsEnvironment env)
 		{
@@ -34,6 +34,6 @@ namespace PPSnExcel
 		} // ctor
 
 		public string ReportName { get; private set; } = null;
-		public PpsShellGetList ReportSource { get; private set; } = null;
+		public PpsListMapping ReportSource { get; private set; } = null;
 	} // class TableInsertForm
 }

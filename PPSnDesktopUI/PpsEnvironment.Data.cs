@@ -4753,6 +4753,9 @@ namespace TecWare.PPSn
 			}
 		} // proc OnMasterDataTableChanged
 
+		/// <summary>Enforce online mode and return true, if the operation was successfull.</summary>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		public async Task<bool> ForceOnlineAsync(bool throwException = true)
 		{
 			if (CurrentMode == PpsEnvironmentMode.Online)
@@ -4765,7 +4768,9 @@ namespace TecWare.PPSn
 						return true;
 				}
 			}
-			throw new PpsEnvironmentOnlineFailedException();
+			return throwException
+				? throw new PpsEnvironmentOnlineFailedException()
+				: false;
 		} // func ForceOnlineMode
 
 		/// <summary></summary>

@@ -22,26 +22,26 @@ using System.Windows.Media;
 
 namespace TecWare.PPSn.Controls
 {
+	#region -- enum Optimization --------------------------------------------------
+
+	/// <summary>Selects the Optimization strategy</summary>
+	public enum Optimization
+	{
+		/// <summary>the result has the lowest difference between the tallest and smallest column</summary>
+		TightestSpan,
+		/// <summary>the result has the lowest difference between the tallest and smallest column - the last column is omitted</summary>
+		TightestSpanWithoutLast,
+		/// <summary>the result has the smallest column heights overall</summary>
+		LowestHeight
+	} // enum Optimization
+
+	#endregion
+
 	/// <summary>
 	/// This panel sorts its children in Columns. One can define the ColumnCount and the optimisation strategy.
 	/// </summary>
 	public class PpsDataFieldPanel : Panel
 	{
-		#region -- enum Optimization --------------------------------------------------
-
-		/// <summary>Selects the Optimization strategy</summary>
-		public enum Optimization
-		{
-			/// <summary>the result has the lowest difference between the tallest and smallest column</summary>
-			TightestSpan,
-			/// <summary>the result has the lowest difference between the tallest and smallest column - the last column is omitted</summary>
-			TightestSpanWithoutLast,
-			/// <summary>the result has the smallest column heights overall</summary>
-			LowestHeight
-		} // enum Optimization
-
-		#endregion
-
 		#region ---- Properties ---------------------------------------------------------
 
 		/// <summary>DependencyProperty</summary>
@@ -114,7 +114,7 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty LabelProperty = DependencyProperty.RegisterAttached("Label", typeof(object), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(String.Empty, new PropertyChangedCallback(LabelChangedCallback)));
-		
+
 		/// <summary>Returns the Label of the Control</summary>
 		/// <param name="d">Control</param>
 		/// <returns></returns>
@@ -125,51 +125,51 @@ namespace TecWare.PPSn.Controls
 		/// <param name="value"></param>
 		public static void SetLabel(DependencyObject d, object value)
 			=> d.SetValue(LabelProperty, value);
-		
+
 		#endregion
 
 		#region GridLines
-		
+
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty GridLinesProperty = DependencyProperty.RegisterAttached("GridLines", typeof(int), typeof(PpsDataFieldPanel), new PropertyMetadata((int)1));
-		
+
 		/// <summary>Returns the requested LineCount of the Control</summary>
 		/// <param name="d">Control</param>
 		/// <returns></returns>
 		public static int GetGridLines(DependencyObject d)
 			=> (int)d.GetValue(GridLinesProperty);
-		
+
 		/// <summary>Sets the amount of lines the Control should fill</summary>
 		/// <param name="d">Control</param>
 		/// <param name="value"></param>
 		public static void SetGridLines(DependencyObject d, int value)
 			=> d.SetValue(GridLinesProperty, value);
-		
+
 		#endregion
 
 		#region FullWidth
-		
+
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty FullWidthProperty = DependencyProperty.RegisterAttached("FullWidth", typeof(bool), typeof(PpsDataFieldPanel), new PropertyMetadata(false));
-		
+
 		/// <summary>Returns if the Control is a Separator (unsused)</summary>
 		/// <param name="d">Control</param>
 		/// <returns></returns>
 		public static bool GetFullWidth(DependencyObject d)
 			=> (bool)d.GetValue(FullWidthProperty);
-		
+
 		/// <summary>Marks the Control as a Separator</summary>
 		/// <param name="d">Control</param>
 		/// <param name="value"></param>
 		public static void SetFullWidth(DependencyObject d, bool value)
 			=> d.SetValue(FullWidthProperty, value);
-		
+
 		#endregion
 
 		#region GroupName
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty GroupNameProperty = DependencyProperty.RegisterAttached("GroupName", typeof(string), typeof(PpsDataFieldPanel), new PropertyMetadata(String.Empty));
-		
+
 		/// <summary>Returns the GroupID of the Control (-1 means ungrouped)</summary>
 		/// <param name="d">Control</param>
 		/// <returns></returns>
