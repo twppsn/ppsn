@@ -544,6 +544,8 @@ namespace TecWare.PPSn.UI
 		} // func OnNewIndex
 
 		#endregion
+		
+		//private object Resources { get => null; set { } }
 
 		/// <summary>Return scope servie</summary>
 		/// <param name="serviceType"></param>

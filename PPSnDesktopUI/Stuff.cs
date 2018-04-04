@@ -295,6 +295,94 @@ namespace TecWare.PPSn
 
 	#endregion
 
+	#region -- class BooleanBox -------------------------------------------------------
+
+	internal static class BooleanBox
+	{
+		public static object GetObject(bool value)
+			=> value ? True : False;
+
+		public static object GetObject(bool? value)
+			=> value.HasValue ? GetObject(value.Value) : null;
+
+		public static bool GetBool(object value)
+			=> Object.Equals(value, True);
+
+		public static bool? GetBoolNullable(object value)
+			=> value == null ? (bool?)null : Object.Equals(value, True);
+
+		public static object True { get; } = true;
+		public static object False { get; } = false;
+	} // class BooleanBox
+
+	#endregion
+
+	#region -- class LogicalElementEnumerator -----------------------------------------
+
+	internal class LogicalElementEnumerator : System.Collections.IEnumerator
+	{
+		private int state = -1;
+		private readonly System.Collections.IEnumerator baseItems;
+		private readonly object content;
+		private readonly Func<object> getContent;
+
+		public LogicalElementEnumerator(System.Collections.IEnumerator baseItems, Func<object> getContent)
+		{
+			this.baseItems = baseItems;
+			this.content = getContent();
+			this.getContent = getContent;
+		} // ctor
+
+		private object GetContent()
+		{
+			if (content != getContent())
+				throw new InvalidOperationException();
+			return content;
+		} // func GetContent
+
+		public object Current
+			=> state <= 0
+				? GetContent()
+				: baseItems?.Current;
+
+		public bool MoveNext()
+		{
+			if (++state <= 0)
+				return true;
+			else if (state > 0)
+				return baseItems?.MoveNext() ?? false;
+			return false;
+		} // func MoveNext
+
+		public void Reset()
+		{
+			state = -1;
+			baseItems?.Reset();
+		} // proc Reset
+
+		internal static System.Collections.IEnumerator GetLogicalEnumerator(FrameworkElement d, System.Collections.IEnumerator logicalChildren, Func<object> getContent)
+		{
+			var content = getContent();
+			if (content != null)
+			{
+				var templatedParent = d.TemplatedParent;
+				if (templatedParent != null)
+				{
+					if (content is DependencyObject obj)
+					{
+						var p = LogicalTreeHelper.GetParent(obj);
+						if (p != null && p != d)
+							return logicalChildren;
+					}
+				}
+				return new LogicalElementEnumerator(logicalChildren, getContent);
+			}
+			return logicalChildren;
+		} // func GetLogicalEnumerator
+	} // class LogicalElementEnumerator
+
+	#endregion
+
 	internal static class StuffUI
 	{
 		public static readonly XNamespace PresentationNamespace = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
