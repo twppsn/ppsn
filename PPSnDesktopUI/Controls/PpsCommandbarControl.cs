@@ -32,11 +32,12 @@ namespace TecWare.PPSn.Controls
 		Rectangle
 	}
 
+	/// <summary>This Control maps PpsUICommandButtons in a Template</summary>
 	public class PpsCommandbarControl : ItemsControl
 	{
 		/// <summary>PpsUICommandCollection of the available Commands</summary>
 		public static DependencyProperty CommandsProperty = DependencyProperty.Register(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsCommandbarControl));
-		
+
 		/// <summary>PpsUICommandCollection of the available Commands</summary>
 		public PpsUICommandCollection Commands { get => (PpsUICommandCollection)GetValue(CommandsProperty); private set => SetValue(CommandsProperty, value); }
 
@@ -48,7 +49,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>standard constructor</summary>
 		public PpsCommandbarControl()
 		{
-			var commands = new PpsUICommandCollection() ;
+			var commands = new PpsUICommandCollection();
 			commands.CollectionChanged += CommandsChanged;
 			Commands = commands;
 		}
@@ -127,7 +128,7 @@ namespace TecWare.PPSn.Controls
 				});
 
 				// set the Template
-				var template = element.TryFindResource(item.GetType().Name+Enum.GetName(typeof(CommandbarMode),commandbar.Mode)+"Template");
+				var template = element.TryFindResource(item.GetType().Name + Enum.GetName(typeof(CommandbarMode), commandbar.Mode) + "Template");
 				if (template is DataTemplate)
 					return (DataTemplate)template;
 				return (DataTemplate)element.FindResource("PpsUICommandbarDefaultButton" + Enum.GetName(typeof(CommandbarMode), commandbar.Mode) + "Template");
