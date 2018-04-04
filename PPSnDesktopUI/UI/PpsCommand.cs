@@ -510,8 +510,11 @@ namespace TecWare.PPSn.UI
 	/// <summary></summary>
 	public class PpsUICommandButton : PpsUICommand, IUriContext
 	{
+		/// <summary>Text to be shown on the Button</summary>
 		public static readonly DependencyProperty DisplayTextProperty = DependencyProperty.Register(nameof(DisplayText), typeof(string), typeof(PpsUICommandButton));
+		/// <summary>meaningful explanation of the Button, may be shown in ToolTip</summary>
 		public static readonly DependencyProperty DescriptionProperty = DependencyProperty.Register(nameof(Description), typeof(string), typeof(PpsUICommandButton));
+		/// <summary>Name of the Image for the Button</summary>
 		public static readonly DependencyProperty ImageProperty = DependencyProperty.Register(nameof(Image), typeof(string), typeof(PpsUICommandButton));
 
 		//public static readonly DependencyProperty ImageProperty = DependencyProperty.Register("Image", typeof(object), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(ImagePropertyChanged));
@@ -531,14 +534,19 @@ namespace TecWare.PPSn.UI
 		//	}
 		//} // proc ImagePropertyChanged
 
+		/// <summary>The Command the Button schould execute</summary>
 		public static readonly DependencyProperty CommandProperty = DependencyProperty.Register(nameof(Command), typeof(ICommand), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(null));
 
 		private Uri baseUri;
 
+		/// <summary>Text to be shown on the Button</summary>
 		public string DisplayText { get { return (string)GetValue(DisplayTextProperty); } set { SetValue(DisplayTextProperty, value); } }
+		/// <summary>meaningful explanation of the Button, may be shown in ToolTip</summary>
 		public string Description { get { return (string)GetValue(DescriptionProperty); } set { SetValue(DescriptionProperty, value); } }
+		/// <summary>Name of the Image for the Button</summary>
 		public string Image { get { return (string)GetValue(ImageProperty); } set { SetValue(ImageProperty, value); } }
 		//public object Image { get { return GetValue(ImageProperty); } set { SetValue(ImageProperty, value); } }
+		/// <summary>The Command the Button schould execute</summary>
 		public ICommand Command { get { return (ICommand)GetValue(CommandProperty); } set { SetValue(CommandProperty, value); } }
 		public Uri BaseUri { get { return baseUri; } set { baseUri = value; } }
 	} // class PpsUICommandButton
