@@ -773,9 +773,7 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		[LuaMember("Namespace")]
 		public LuaUI GetNamespace(string namespaceName)
-		{
-			return new LuaUI(namespaceName);
-		}
+			=> new LuaUI(namespaceName);
 
 		/// <summary></summary>
 		/// <param name="type"></param>
@@ -793,6 +791,9 @@ namespace TecWare.PPSn.UI
 
 		private IPpsDataFieldResolver CreateFieldResolver(object def, object source)
 		{
+			if (def == null && source == null)
+				return null;
+
 			switch (def)
 			{
 				case PpsDataSetDefinition dsd:
@@ -872,9 +873,43 @@ namespace TecWare.PPSn.UI
 
 		} // func DataBinding
 
+		#region -- SideBar ------------------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="scope"></param>
+		/// <param name="source"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public LuaWpfCreator<PpsSideBarControl> SideBar(object scope, object source = null)
+			=> InitDataFieldScope(new PpsDataFieldScope<PpsSideBarControl>(this, GetXamlType(typeof(PpsSideBarControl)), null), CreateFieldResolver(scope, source));
+
+		/// <summary></summary>
+		/// <returns></returns>
+		[LuaMember]
+		public LuaWpfCreator<PpsSideBarGroup> SideBarGroup
+			=> new LuaWpfCreator<PpsSideBarGroup>(this, GetXamlType(typeof(PpsSideBarGroup)), null);
+
+		/// <summary></summary>
+		/// <returns></returns>
+		[LuaMember]
+		public LuaWpfCreator<PpsSideBarPanel> SideBarPanel
+			=> new LuaWpfCreator<PpsSideBarPanel>(this, GetXamlType(typeof(PpsSideBarPanel)), null);
+
+		/// <summary></summary>
+		/// <returns></returns>
+		[LuaMember]
+		public LuaWpfCreator<PpsSideBarPanelFilter> SideBarPanelFilter
+			=> new LuaWpfCreator<PpsSideBarPanelFilter>(this, GetXamlType(typeof(PpsSideBarPanelFilter)), null);
+
+		#endregion
+
 		/// <summary></summary>
 		[LuaMember]
 		public LuaWpfCreator<Grid> Grid => new LuaWpfGridCreator(this, GetXamlType(typeof(Grid)), null);
+
+		/// <summary></summary>
+		[LuaMember]
+		public LuaUI Pps => GetNamespace("http://tecare-gmbh.de/ppsn/wpf/2015");
 
 		/// <summary>Create the class creator from the context or a preregistered.</summary>
 		/// <param name="key"></param>

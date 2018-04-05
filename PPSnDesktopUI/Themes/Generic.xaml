@@ -1,0 +1,8 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
+	<ResourceDictionary.MergedDictionaries>
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsSideBarControl.xaml" />
+	</ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

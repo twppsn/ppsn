@@ -354,6 +354,11 @@ namespace TecWare.PPSn.Controls
 			=> item is PpsSideBarGroup
 			|| item is PpsSideBarPanel
 			|| item is PpsSideBarPanelFilter;
+
+		static PpsSideBarControl()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsSideBarControl), new FrameworkPropertyMetadata(typeof(PpsSideBarControl)));
+		}
 	} // class PpsSideBarControl
 
 	#endregion
@@ -372,6 +377,7 @@ namespace TecWare.PPSn.Controls
 
 		static PpsSideBarGroup()
 		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsSideBarGroup), new FrameworkPropertyMetadata(typeof(PpsSideBarGroup)));
 			IsSelectedProperty.OverrideMetadata(typeof(PpsSideBarGroup), new FrameworkPropertyMetadata(BooleanBox.False, OnSelectedPropertyChanged));
 		} // sctor
 
@@ -612,6 +618,11 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>Is the current panel selected.</summary>
 		public bool IsSelected { get => BooleanBox.GetBool(GetValue(IsSelectedProperty)); set => SetValue(IsSelectedProperty, BooleanBox.GetObject(value)); }
+
+		static PpsSideBarPanel()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsSideBarPanel), new FrameworkPropertyMetadata(typeof(PpsSideBarPanel)));
+		}
 	} // class PpsSideBarPanel
 
 	#endregion
@@ -703,6 +714,11 @@ namespace TecWare.PPSn.Controls
 		public bool HasHeader { get => BooleanBox.GetBool(GetValue(HasHeaderProperty)); set => SetValue(hasHeaderPropertyKey, BooleanBox.GetObject(value)); }
 		/// <summary>Filter object.</summary>
 		public object Filter { get => GetValue(FilterProperty); set => SetValue(FilterProperty, value); }
+
+		static PpsSideBarPanelFilter()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(typeof(PpsSideBarPanelFilter)));
+		}
 	} // class PpsSideBarPanelFilter
 
 	#endregion
