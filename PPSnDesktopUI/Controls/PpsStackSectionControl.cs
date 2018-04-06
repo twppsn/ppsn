@@ -60,7 +60,7 @@ namespace TecWare.PPSn.Controls
 
 		public PpsStackSectionControl()
 		{
-			if (((dynamic)DefaultStyleKey).Name != nameof(PpsStackSectionControl))  // ToDo: remove strcmp, but DefeaultKey must not be set twice
+			if (((Type)DefaultStyleKey).UnderlyingSystemType != typeof(PpsStackSectionControl))
 				DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsStackSectionControl), new FrameworkPropertyMetadata(typeof(PpsStackSectionControl)));
 		}
 
