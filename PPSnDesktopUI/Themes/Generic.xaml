@@ -4,5 +4,6 @@
 	xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsSideBarControl.xaml" />
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsStackSectionControl.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>
