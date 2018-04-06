@@ -38,7 +38,7 @@ specific language governing permissions and limitations under the Licence.
 							<ItemsPresenter />
 						</Border>
 
-						<ContentPresenter Grid.Column="1" 
+						<ContentPresenter Grid.Column="1" VerticalAlignment="Top" HorizontalAlignment="Left"
 							Content="{TemplateBinding SelectedContent}" 
 							ContentTemplate="{TemplateBinding SelectedContentTemplate}" 
 							ContentTemplateSelector="{TemplateBinding SelectedContentTemplateSelector}"

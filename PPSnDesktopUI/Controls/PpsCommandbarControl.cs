@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
@@ -53,6 +54,25 @@ namespace TecWare.PPSn.Controls
 			commands.CollectionChanged += CommandsChanged;
 			Commands = commands;
 		}
+
+		protected override IEnumerator LogicalChildren
+		{
+			get
+			{
+				// enumerate normal children
+				var e = base.LogicalChildren;
+				while (e.MoveNext())
+					yield return e.Current;
+
+				// enumerate commands
+				foreach (var cmd in Commands)
+				{
+					if (cmd != null)
+						yield return cmd;
+				}
+			}
+		}
+
 
 		private void CommandsChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
@@ -121,11 +141,11 @@ namespace TecWare.PPSn.Controls
 			else
 			{
 				// set the DataContext to the DataContext of the CommandbarControl - neccessary because PpsUICommandButton is not in the Logical Tree
-				((PpsUICommandButton)item).SetBinding(PpsUICommandButton.DataContextProperty, new Binding()
+				/*((PpsUICommandButton)item).SetBinding(PpsUICommandButton.DataContextProperty, new Binding()
 				{
 					Source = commandbar,
 					Path = new PropertyPath("DataContext")
-				});
+				});*/
 
 				// set the Template
 				var template = element.TryFindResource(item.GetType().Name + Enum.GetName(typeof(CommandbarMode), commandbar.Mode) + "Template");

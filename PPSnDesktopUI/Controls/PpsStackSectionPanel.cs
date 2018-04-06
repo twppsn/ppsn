@@ -33,7 +33,7 @@ namespace TecWare.PPSn.Controls
 		AllClosed,
 		/// <summary>Only the first item is open at the beginning, if the user expands an item, all other will be closed</summary>
 		Accordeon
-	}
+	} // enum ExpanderStyles
 
 	#endregion
 
@@ -70,15 +70,17 @@ namespace TecWare.PPSn.Controls
 		private void ChangeIsOpen(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
 			var element = (UIElement)d;
-			var newvalue = (bool)e.NewValue;
+			var newvalue = BooleanBox.GetBool(e.NewValue);
 
 			if (ExpanderStyle == ExpanderStyles.Accordeon && newvalue)
 			{
 				var openElements = from uielement in presenterCollection where GetIsOpen(uielement.Key) select uielement.Key;
 
 				foreach (var openElement in openElements)
+				{
 					if (openElement != element)
 						SetIsOpen(openElement, false);
+				}
 			}
 
 			InvalidateMeasure();
@@ -130,7 +132,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="d">ChildItem</param>
 		/// <returns>Main Tile</returns>
 		public static object GetTitle(DependencyObject d)
-			=> (object)d.GetValue(TitleProperty);
+			=> d.GetValue(TitleProperty);
 		/// <summary>Sets the Title of a ChildItem</summary>
 		/// <param name="d">ChildItem</param>
 		/// <param name="value">new Ttile</param>
@@ -164,12 +166,12 @@ namespace TecWare.PPSn.Controls
 		/// <param name="d">ChildItem</param>
 		/// <returns>Opened State</returns>
 		public static bool GetIsOpen(DependencyObject d)
-			=> (bool)d.GetValue(IsOpenProperty);
+			=> BooleanBox.GetBool(d.GetValue(IsOpenProperty));
 		/// <summary>Sets the OpenedState of a ChildItem</summary>
 		/// <param name="d">ChildItem</param>
 		/// <param name="value">new Opened State</param>
 		public static void SetIsOpen(DependencyObject d, bool value)
-			=> d.SetValue(IsOpenProperty, value);
+			=> d.SetValue(IsOpenProperty, BooleanBox.GetObject(value));
 
 		#endregion
 

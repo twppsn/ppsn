@@ -503,7 +503,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
-			if (SetSelected(!IsSelected))
+			if (e.Source == this && SetSelected(!IsSelected))
 				e.Handled = true;
 
 			base.OnMouseLeftButtonDown(e);
@@ -610,7 +610,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
-			if (SetSelected(!IsSelected))
+			if (e.Source == this && SetSelected(!IsSelected))
 				e.Handled = true;
 
 			base.OnMouseLeftButtonDown(e);
@@ -696,7 +696,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
-			if (SetSelected(!IsSelected))
+			if (e.Source == this && SetSelected(!IsSelected))
 				e.Handled = true;
 
 			base.OnMouseLeftButtonDown(e);
