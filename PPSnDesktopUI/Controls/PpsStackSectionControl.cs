@@ -64,11 +64,17 @@ namespace TecWare.PPSn.Controls
 				DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsStackSectionControl), new FrameworkPropertyMetadata(typeof(PpsStackSectionControl)));
 		}
 
+		/// <summary>Function override to allow Templating of UIElements</summary>
+		/// <param name="item">unused</param>
+		/// <returns></returns>
 		protected override bool IsItemItsOwnContainerOverride(object item)
 		{
 			return false;
 		}
 
+		/// <summary>Procedure override to template the Items with ItemTemplate</summary>
+		/// <param name="element">Parent PpsStackSectionControl</param>
+		/// <param name="item">Single Item to Template</param>
 		protected override void PrepareContainerForItemOverride(DependencyObject element, object item)
 		{
 			base.PrepareContainerForItemOverride(element, item);
@@ -136,7 +142,7 @@ namespace TecWare.PPSn.Controls
 
 				FindParentStackSectionControl(d)?.ChangeIsOpen(pss, e);
 			}
-		} // proc TitleChangedCallback
+		} // proc IsOpenChangedCallback
 
 		private static PpsStackSectionControl FindParentStackSectionControl(DependencyObject d)
 		{
@@ -150,7 +156,7 @@ namespace TecWare.PPSn.Controls
 			}
 
 			return null;
-		}
+		} // func FindParentStackSectionControl
 
 		private static PpsStackSection FindParentStackSection(DependencyObject d)
 		{
@@ -164,7 +170,7 @@ namespace TecWare.PPSn.Controls
 			}
 
 			return null;
-		}
+		} // func FindParentStackSection
 
 		private void ChangeIsOpen(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
