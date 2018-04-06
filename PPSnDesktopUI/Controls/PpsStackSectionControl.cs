@@ -129,25 +129,42 @@ namespace TecWare.PPSn.Controls
 			=> d.SetValue(IsOpenProperty, BooleanBox.GetObject(value));
 		private static void IsOpenChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
-			if (d is Visual v)
+			var pss = FindParentStackSection(d);
+			if (pss != null)
 			{
-				var pa = VisualTreeHelper.GetParent(v);
-				while (!(pa is PpsStackSection) && pa != null)
-					pa = VisualTreeHelper.GetParent(pa);
-				if (pa is PpsStackSection p)
-				{
-					SetIsOpen(p, BooleanBox.GetBool(e.NewValue));
-					pa = VisualTreeHelper.GetParent(v);
-					while (!(pa is PpsStackSectionControl) && pa != null)
-						pa = VisualTreeHelper.GetParent(pa);
-					if (pa is PpsStackSectionControl pssc)
-						pssc.ChangeIsOpen(p, e);
-				}
+				SetIsOpen(pss, BooleanBox.GetBool(e.NewValue));
 
-				//if (v is FrameworkElement fe)
-				//	fe.Visibility = GetIsOpen(d) ? Visibility.Visible : Visibility.Collapsed;
+				FindParentStackSectionControl(d)?.ChangeIsOpen(pss, e);
 			}
 		} // proc TitleChangedCallback
+
+		private static PpsStackSectionControl FindParentStackSectionControl(DependencyObject d)
+		{
+			if (d is Visual v)
+			{
+				var parent = VisualTreeHelper.GetParent(v);
+				while (!(parent is PpsStackSectionControl) && parent != null)
+					parent = VisualTreeHelper.GetParent(parent);
+				if (parent is PpsStackSectionControl pssc)
+					return pssc;
+			}
+
+			return null;
+		}
+
+		private static PpsStackSection FindParentStackSection(DependencyObject d)
+		{
+			if (d is Visual v)
+			{
+				var parent = VisualTreeHelper.GetParent(v);
+				while (!(parent is PpsStackSection) && parent != null)
+					parent = VisualTreeHelper.GetParent(parent);
+				if (parent is PpsStackSection pss)
+					return pss;
+			}
+
+			return null;
+		}
 
 		private void ChangeIsOpen(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
@@ -156,20 +173,11 @@ namespace TecWare.PPSn.Controls
 
 			if (ExpanderStyle == ExpanderStyles.Accordeon && newvalue)
 			{
-				foreach (var stacksection in Items)
-				{
-					var pa = VisualTreeHelper.GetParent((DependencyObject)stacksection);
-					while (!(pa is PpsStackSection) && pa != null)
-						pa = VisualTreeHelper.GetParent(pa);
-					if (pa is PpsStackSection p)
-						if (p != d)
-							SetIsOpen(p, false);
-				}
-				/*var openElements = from DependencyObject uielement in Items where GetIsOpen(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(VisualTreeHelper.GetParent((DependencyObject)uielement))))) select uielement;
+				var openElements = from DependencyObject uielement in Items where GetIsOpen(FindParentStackSection(uielement)) select FindParentStackSection(uielement);
 
 				foreach (var openElement in openElements)
 					if (openElement != element)
-						SetIsOpen(openElement, false);*/
+						SetIsOpen(openElement, false);
 			}
 		} // proc ChangeIsOpen
 
