@@ -187,8 +187,12 @@ namespace TecWare.PPSn.Controls
 						SetIsOpen(openElement, false);
 			}
 		} // proc ChangeIsOpen
+
+		#endregion
+
+		#endregion
 	}
-	
+
 	#endregion
 
 	#region -- class PpsStackSectionItem ----------------------------------------------

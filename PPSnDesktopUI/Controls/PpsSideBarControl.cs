@@ -371,11 +371,11 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		public static readonly DependencyProperty HeaderProperty = HeaderedContentControl.HeaderProperty.AddOwner(typeof(PpsSideBarGroup), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnHeaderChanged)));
 		/// <summary></summary>
-		public static readonly DependencyProperty HeaderTemplateProperty = HeaderedContentControl.HeaderTemplateProperty.AddOwner(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty HeaderTemplateProperty = HeaderedContentControl.HeaderTemplateProperty.AddOwner(typeof(PpsSideBarGroup), new FrameworkPropertyMetadata(null));
 		/// <summary></summary>
-		public static readonly DependencyProperty HeaderTemplateSelectorProperty = HeaderedContentControl.HeaderTemplateSelectorProperty.AddOwner(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty HeaderTemplateSelectorProperty = HeaderedContentControl.HeaderTemplateSelectorProperty.AddOwner(typeof(PpsSideBarGroup), new FrameworkPropertyMetadata(null));
 		/// <summary></summary>
-		public static readonly DependencyProperty HeaderStringFormatProperty = HeaderedContentControl.HeaderStringFormatProperty.AddOwner(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty HeaderStringFormatProperty = HeaderedContentControl.HeaderStringFormatProperty.AddOwner(typeof(PpsSideBarGroup), new FrameworkPropertyMetadata(null));
 
 		private static readonly DependencyPropertyKey hasHeaderPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasHeader), typeof(bool), typeof(PpsSideBarGroup), new FrameworkPropertyMetadata(BooleanBox.False));
 		/// <summary></summary>

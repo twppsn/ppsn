@@ -833,7 +833,7 @@ namespace TecWare.PPSn.UI
 		{
 			// search field
 			var fieldInfo = CurrentScope?.GetService<IPpsDataFieldResolver>(false)?.ResolveColumn(fieldName)
-				?? throw new ArgumentOutOfRangeException(nameof(fieldName));
+				?? throw new ArgumentOutOfRangeException(nameof(fieldName), fieldName, $"Could not locate field: {fieldName}.");
 
 			var ctrl = new LuaWpfCreator<TextBox>(this, GetXamlType(typeof(TextBox)), new TextBox());
 			ctrl[TextBox.TextProperty.Name] = DataBinding(fieldInfo.FieldInfo, fieldInfo.Source).Finish();
@@ -910,8 +910,8 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		/// <returns></returns>
 		[LuaMember]
-		public LuaWpfCreator<PpsStackSection> StackSectionItem
-			=> new LuaWpfCreator<PpsStackSection>(this, GetXamlType(typeof(PpsStackSection)), null);
+		public LuaWpfCreator<PpsStackSectionItem> StackSectionItem
+			=> new LuaWpfCreator<PpsStackSectionItem>(this, GetXamlType(typeof(PpsStackSectionItem)), null);
 
 		#endregion
 
