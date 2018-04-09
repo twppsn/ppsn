@@ -55,7 +55,10 @@ specific language governing permissions and limitations under the Licence.
 				<ControlTemplate TargetType="{x:Type pps:PpsSideBarGroup}">
 					<Border x:Name="backgroundBorder" Background="LightGreen">
 						<StackPanel>
-							<ContentPresenter Content="{TemplateBinding Header}"/>
+							<ContentPresenter Content="{TemplateBinding Header}" 
+											  ContentTemplate="{TemplateBinding HeaderTemplate}" 
+											  ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}" 
+											  ContentStringFormat="{TemplateBinding HeaderStringFormat}" />
 							<ItemsPresenter Margin="5" />
 						</StackPanel>
 					</Border>
@@ -75,7 +78,10 @@ specific language governing permissions and limitations under the Licence.
 				<ControlTemplate TargetType="{x:Type pps:PpsSideBarPanel}">
 					<Border x:Name="backgroundBorder" Background="LightBlue">
 						<StackPanel>
-							<ContentPresenter Content="{TemplateBinding Header}"/>
+							<ContentPresenter Content="{TemplateBinding Header}" 
+											  ContentTemplate="{TemplateBinding HeaderTemplate}" 
+											  ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}" 
+											  ContentStringFormat="{TemplateBinding HeaderStringFormat}" />
 						</StackPanel>
 					</Border>
 					<ControlTemplate.Triggers>
@@ -94,7 +100,10 @@ specific language governing permissions and limitations under the Licence.
 				<ControlTemplate TargetType="{x:Type pps:PpsSideBarPanelFilter}">
 					<Border x:Name="backgroundBorder" Background="Yellow">
 						<StackPanel>
-							<ContentPresenter Content="{TemplateBinding Header}"/>
+							<ContentPresenter Content="{TemplateBinding Header}" 
+											  ContentTemplate="{TemplateBinding HeaderTemplate}" 
+											  ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}" 
+											  ContentStringFormat="{TemplateBinding HeaderStringFormat}" />
 						</StackPanel>
 					</Border>
 					<ControlTemplate.Triggers>

@@ -901,6 +901,18 @@ namespace TecWare.PPSn.UI
 		public LuaWpfCreator<PpsSideBarPanelFilter> SideBarPanelFilter
 			=> new LuaWpfCreator<PpsSideBarPanelFilter>(this, GetXamlType(typeof(PpsSideBarPanelFilter)), null);
 
+		/// <summary></summary>
+		/// <returns></returns>
+		[LuaMember]
+		public LuaWpfCreator<PpsStackSectionControl> StackSection
+			=> new LuaWpfCreator<PpsStackSectionControl>(this, GetXamlType(typeof(PpsStackSectionControl)), null);
+
+		/// <summary></summary>
+		/// <returns></returns>
+		[LuaMember]
+		public LuaWpfCreator<PpsStackSection> StackSectionItem
+			=> new LuaWpfCreator<PpsStackSection>(this, GetXamlType(typeof(PpsStackSection)), null);
+
 		#endregion
 
 		/// <summary></summary>

@@ -370,6 +370,12 @@ namespace TecWare.PPSn.Controls
 	{
 		/// <summary></summary>
 		public static readonly DependencyProperty HeaderProperty = HeaderedContentControl.HeaderProperty.AddOwner(typeof(PpsSideBarGroup), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnHeaderChanged)));
+		/// <summary></summary>
+		public static readonly DependencyProperty HeaderTemplateProperty = HeaderedContentControl.HeaderTemplateProperty.AddOwner(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null));
+		/// <summary></summary>
+		public static readonly DependencyProperty HeaderTemplateSelectorProperty = HeaderedContentControl.HeaderTemplateSelectorProperty.AddOwner(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null));
+		/// <summary></summary>
+		public static readonly DependencyProperty HeaderStringFormatProperty = HeaderedContentControl.HeaderStringFormatProperty.AddOwner(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null));
 
 		private static readonly DependencyPropertyKey hasHeaderPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasHeader), typeof(bool), typeof(PpsSideBarGroup), new FrameworkPropertyMetadata(BooleanBox.False));
 		/// <summary></summary>
@@ -525,6 +531,12 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Title in sidebar control</summary>
 		public object Header { get => GetValue(HeaderProperty); set => SetValue(HeaderProperty, value); }
 		/// <summary></summary>
+		public DataTemplate HeaderTemplate { get => (DataTemplate)GetValue(HeaderTemplateProperty); set => SetValue(HeaderTemplateProperty, value); }
+		/// <summary></summary>
+		public DataTemplateSelector HeaderTemplateSelector { get => (DataTemplateSelector)GetValue(HeaderTemplateSelectorProperty); set => SetValue(HeaderTemplateSelectorProperty, value); }
+		/// <summary></summary>
+		public string HeaderStringFormat { get => (string)GetValue(HeaderStringFormatProperty); set => SetValue(HeaderStringFormatProperty, value); }
+		/// <summary></summary>
 		public bool HasHeader { get => BooleanBox.GetBool(GetValue(HasHeaderProperty)); set => SetValue(hasHeaderPropertyKey, BooleanBox.GetObject(value)); }
 	} // class PpsSideBarGroup
 
@@ -638,6 +650,12 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty FilterProperty = DependencyProperty.Register(nameof(Filter), typeof(object), typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnFilterChanged)));
 		/// <summary></summary>
 		public static readonly DependencyProperty HeaderProperty = HeaderedContentControl.HeaderProperty.AddOwner(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnHeaderChanged)));
+		/// <summary></summary>
+		public static readonly DependencyProperty HeaderTemplateProperty = HeaderedContentControl.HeaderTemplateProperty.AddOwner(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null));
+		/// <summary></summary>
+		public static readonly DependencyProperty HeaderTemplateSelectorProperty = HeaderedContentControl.HeaderTemplateSelectorProperty.AddOwner(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null));
+		/// <summary></summary>
+		public static readonly DependencyProperty HeaderStringFormatProperty = HeaderedContentControl.HeaderStringFormatProperty.AddOwner(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null));
 
 		private static readonly DependencyPropertyKey hasHeaderPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasHeader), typeof(bool), typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(BooleanBox.False));
 		/// <summary></summary>
@@ -710,6 +728,12 @@ namespace TecWare.PPSn.Controls
 		public bool IsSelected { get => (bool)GetValue(IsSelectedProperty); set => SetValue(IsSelectedProperty, value); }
 		/// <summary>Header of the filter.</summary>
 		public object Header { get => GetValue(HeaderProperty); set => SetValue(HeaderProperty, value); }
+		/// <summary></summary>
+		public DataTemplate HeaderTemplate { get => (DataTemplate)GetValue(HeaderTemplateProperty); set => SetValue(HeaderTemplateProperty, value); }
+		/// <summary></summary>
+		public DataTemplateSelector HeaderTemplateSelector { get => (DataTemplateSelector)GetValue(HeaderTemplateSelectorProperty); set => SetValue(HeaderTemplateSelectorProperty, value); }
+		/// <summary></summary>
+		public string HeaderStringFormat { get => (string)GetValue(HeaderStringFormatProperty); set => SetValue(HeaderStringFormatProperty, value); }
 		/// <summary></summary>
 		public bool HasHeader { get => BooleanBox.GetBool(GetValue(HasHeaderProperty)); set => SetValue(hasHeaderPropertyKey, BooleanBox.GetObject(value)); }
 		/// <summary>Filter object.</summary>
