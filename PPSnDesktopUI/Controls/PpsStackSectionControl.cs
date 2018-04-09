@@ -14,10 +14,8 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -41,6 +39,9 @@ namespace TecWare.PPSn.Controls
 	#endregion
 	*/
 
+	#region -- class PpsStackSectionControl -------------------------------------------
+
+	/// <summary></summary>
 	public class PpsStackSectionControl : ItemsControl
 	{
 		/// <summary>DependencyProperty</summary>
@@ -58,10 +59,10 @@ namespace TecWare.PPSn.Controls
 		/// <summary>The Style of the Expanders</summary>
 		public ExpanderStyles ExpanderStyle { get => (ExpanderStyles)GetValue(ExpanderStyleProperty); set => SetValue(ExpanderStyleProperty, value); }
 
-		public PpsStackSectionControl()
+		/// <summary></summary>
+		static PpsStackSectionControl()
 		{
-			if (((Type)DefaultStyleKey).UnderlyingSystemType != typeof(PpsStackSectionControl))
-				DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsStackSectionControl), new FrameworkPropertyMetadata(typeof(PpsStackSectionControl)));
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsStackSectionControl), new FrameworkPropertyMetadata(typeof(PpsStackSectionControl)));
 		}
 
 		/// <summary>Function override to allow Templating of UIElements</summary>
@@ -158,14 +159,14 @@ namespace TecWare.PPSn.Controls
 			return null;
 		} // func FindParentStackSectionControl
 
-		private static PpsStackSection FindParentStackSection(DependencyObject d)
+		private static PpsStackSectionItem FindParentStackSection(DependencyObject d)
 		{
 			if (d is Visual v)
 			{
 				var parent = VisualTreeHelper.GetParent(v);
-				while (!(parent is PpsStackSection) && parent != null)
+				while (!(parent is PpsStackSectionItem) && parent != null)
 					parent = VisualTreeHelper.GetParent(parent);
-				if (parent is PpsStackSection pss)
+				if (parent is PpsStackSectionItem pss)
 					return pss;
 			}
 
@@ -186,10 +187,68 @@ namespace TecWare.PPSn.Controls
 						SetIsOpen(openElement, false);
 			}
 		} // proc ChangeIsOpen
-
-		#endregion
-
-		#endregion
-
 	}
+	
+	#endregion
+
+	#region -- class PpsStackSectionItem ----------------------------------------------
+
+	/// <summary>Item that represent a section of the PpsStackSectionControl.</summary>
+	public class PpsStackSectionItem : HeaderedContentControl
+	{
+		#region -- Properties --------------------------------------------------------
+
+		/// <summary></summary>
+		public static readonly DependencyProperty SubHeaderProperty = DependencyProperty.Register(nameof(SubHeader), typeof(object), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnUpdateSubHeader)));
+		/// <summary></summary>
+		public static readonly DependencyProperty SubHeaderTemplateProperty = DependencyProperty.Register(nameof(SubHeaderTemplate), typeof(DataTemplate), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(null));
+		/// <summary></summary>
+		public static readonly DependencyProperty SubHeaderTemplateSelectorProperty = DependencyProperty.Register(nameof(SubHeaderTemplateSelector), typeof(DataTemplateSelector), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(null));
+		/// <summary></summary>
+		public static readonly DependencyProperty SubHeaderStringFormatProperty = DependencyProperty.Register(nameof(SubHeaderStringFormat), typeof(string), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(null));
+
+		private static readonly DependencyPropertyKey hasSubHeaderPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasSubHeader), typeof(bool), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(BooleanBox.False));
+		/// <summary></summary>
+		public static readonly DependencyProperty HasSubHeaderProperty = hasSubHeaderPropertyKey.DependencyProperty;
+
+		/// <summary></summary>
+		public object SubHeader { get => GetValue(SubHeaderProperty); set => SetValue(SubHeaderProperty, value); }
+		/// <summary></summary>
+		public DataTemplate SubHeaderTemplate { get => (DataTemplate)GetValue(SubHeaderTemplateProperty); set => SetValue(SubHeaderTemplateProperty, value); }
+		/// <summary></summary>
+		public DataTemplateSelector SubHeaderTemplateSelector { get => (DataTemplateSelector)GetValue(SubHeaderTemplateSelectorProperty); set => SetValue(SubHeaderTemplateSelectorProperty, value); }
+		/// <summary></summary>
+		public string SubHeaderStringFormat { get => (string)GetValue(SubHeaderStringFormatProperty); set => SetValue(SubHeaderStringFormatProperty, value); }
+		/// <summary></summary>
+		public bool HasSubHeader { get => BooleanBox.GetBool(GetValue(HasSubHeaderProperty)); private set => SetValue(hasSubHeaderPropertyKey, BooleanBox.GetObject(value)); }
+
+		private static void OnUpdateSubHeader(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		{
+			var ctrl = (PpsStackSectionItem)d;
+			ctrl.HasSubHeader = e.NewValue != null;
+			ctrl.OnUpdateSubHeader(e.NewValue, e.OldValue);
+		} // proc OnUpdateSubHeader
+
+		#endregion
+
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		protected virtual void OnUpdateSubHeader(object newValue, object oldValue)
+		{
+			RemoveLogicalChild(oldValue);
+			AddLogicalChild(newValue);
+		} // proc OnUpdateSubHeader
+
+		/// <summary></summary>
+		protected override IEnumerator LogicalChildren
+			=> LogicalElementEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => SubHeader);
+
+		/// <summary></summary>
+		public static readonly DependencyProperty IsOpenProperty = DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(PpsStackSectionItem));
+		/// <summary></summary>
+		public bool IsOpen { get => BooleanBox.GetBool(GetValue(IsOpenProperty)); set => SetValue(IsOpenProperty, value); }
+	} // class PpsStackSectionItem
+
+	#endregion
 }

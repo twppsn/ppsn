@@ -19,7 +19,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="ItemTemplate">
 			<Setter.Value>
 				<DataTemplate>
-					<pps:PpsStackSection  
+					<pps:PpsStackSectionItem
 						HeaderTemplate="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type pps:PpsStackSectionControl}}, Path=(pps:PpsStackSectionControl.HeaderTemplate)}"
 						>
 						<ContentPresenter Content="{Binding}">
@@ -33,7 +33,7 @@ specific language governing permissions and limitations under the Licence.
 								</Style>
 							</ContentPresenter.Style>
 						</ContentPresenter>
-					</pps:PpsStackSection>
+					</pps:PpsStackSectionItem>
 				</DataTemplate>
 			</Setter.Value>
 		</Setter>
