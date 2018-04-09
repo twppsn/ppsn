@@ -264,7 +264,7 @@ namespace TecWare.PPSn.Controls
 			=> LogicalElementEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => SubHeader);
 
 		/// <summary></summary>
-		public static readonly DependencyProperty IsOpenProperty = DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(PpsStackSectionItem), new PropertyMetadata(IsOpenChangedCallback));
+		public static readonly DependencyProperty IsOpenProperty = DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(PpsStackSectionItem), new PropertyMetadata(true, IsOpenChangedCallback));
 
 		private static void IsOpenChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
