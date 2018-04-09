@@ -21,6 +21,7 @@ specific language governing permissions and limitations under the Licence.
 				<DataTemplate>
 					<pps:PpsStackSectionItem
 						HeaderTemplate="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type pps:PpsStackSectionControl}}, Path=(pps:PpsStackSectionControl.HeaderTemplate)}"
+						SubHeaderTemplate="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type pps:PpsStackSectionControl}}, Path=(pps:PpsStackSectionControl.SubHeaderTemplate)}"
 						Content="{Binding}">
 					</pps:PpsStackSectionItem>
 				</DataTemplate>

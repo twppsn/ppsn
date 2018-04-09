@@ -50,6 +50,11 @@ namespace TecWare.PPSn.Controls
 		public DataTemplate HeaderTemplate { get => (DataTemplate)GetValue(HeaderTemplateProperty); set => SetValue(HeaderTemplateProperty, value); }
 
 		/// <summary>DependencyProperty</summary>
+		public static readonly DependencyProperty SubHeaderTemplateProperty = DependencyProperty.Register(nameof(SubHeaderTemplate), typeof(DataTemplate), typeof(PpsStackSectionControl), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsMeasure));
+		/// <summary>The Titlebar is the Expander, the Template is mandatory, and must at least handle the IsOpen status.</summary>
+		public DataTemplate SubHeaderTemplate { get => (DataTemplate)GetValue(SubHeaderTemplateProperty); set => SetValue(SubHeaderTemplateProperty, value); }
+
+		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty VerticalMarginProperty = DependencyProperty.Register(nameof(VerticalMargin), typeof(double), typeof(PpsStackSectionControl), new FrameworkPropertyMetadata(5.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 		/// <summary>The Vertical Margin is inserted between each Presenter</summary>
 		public double VerticalMargin { get => (double)GetValue(VerticalMarginProperty); set => SetValue(VerticalMarginProperty, value); }
@@ -75,6 +80,7 @@ namespace TecWare.PPSn.Controls
 			if (item is PpsStackSectionItem pssi)
 			{
 				pssi.HeaderTemplate = HeaderTemplate;
+				pssi.SubHeaderTemplate = SubHeaderTemplate;
 				return true;
 			}
 
