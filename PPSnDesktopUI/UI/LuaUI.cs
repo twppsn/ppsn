@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
@@ -40,6 +41,8 @@ namespace TecWare.PPSn.UI
 	/// <summary>Base Scope interface.</summary>
 	public interface ILuaWpfScope : IServiceProvider
 	{
+		/// <summary>Name of the scope</summary>
+		string Name { get; }
 		/// <summary>Access to the parent scope.</summary>
 		ILuaWpfScope ParentScope { get; }
 		/// <summary>Access the ui.</summary>
@@ -258,7 +261,7 @@ namespace TecWare.PPSn.UI
 		{
 			this.ui = ui ?? throw new ArgumentNullException(nameof(ui));
 			this.parentScope = ui.CurrentScope;
-			this.type = type;
+			this.type = type ?? (instance == null ? null : ui.GetXamlType(instance.GetType()));
 			this.instance = instance;
 
 			ui.PushScope(this);
@@ -266,7 +269,8 @@ namespace TecWare.PPSn.UI
 
 		private void CreateDefaultInstance()
 		{
-			instance = (T)type.Invoker.CreateInstance(Array.Empty<object>());
+			if (type != null)
+				instance = (T)type.Invoker.CreateInstance(Array.Empty<object>());
 		} // proc CreateDefaultInstance
 
 		/// <summary>Gets called, if the scope gets finished.</summary>
@@ -289,6 +293,11 @@ namespace TecWare.PPSn.UI
 
 			return Instance;
 		} // proc FinishScope
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public override string ToString()
+			=> "Wpf: " + typeof(T).Name;
 
 		#endregion
 
@@ -337,6 +346,9 @@ namespace TecWare.PPSn.UI
 
 		private XamlMember GetXamlMember(string memberName)
 		{
+			if (type == null)
+				throw new InvalidOperationException("XamlType is null.");
+
 			// check for attached property
 			var attachedPos = memberName.IndexOf('.');
 			if (attachedPos == -1)
@@ -347,6 +359,9 @@ namespace TecWare.PPSn.UI
 
 		private void SetXamlMemberValue(XamlMember xamlMember, object value)
 		{
+			if (type == null)
+				throw new InvalidOperationException("XamlType is null");
+
 			// check if the values is an extension
 			if (value is MarkupExtension m)
 				value = m.ProvideValue(new LuaWpfServiceProvider(this, xamlMember));
@@ -575,6 +590,9 @@ namespace TecWare.PPSn.UI
 			}
 		} // prop Instance
 
+		/// <summary>Name of the scope</summary>
+		public virtual string Name { get => typeof(T).Name; }
+
 		/// <summary>Get the ui class.</summary>
 		public LuaUI UI => ui;
 		/// <summary>Get the parent scope.</summary>
@@ -717,6 +735,8 @@ namespace TecWare.PPSn.UI
 		} // func GetService
 
 		public IPpsDataFieldResolver FieldResolver { get; set; }
+
+		public override string Name => "scope: " + typeof(T).Name;
 	} // class PpsDataFieldScope
 
 	internal sealed class PpsDataFieldScopeImplementation : PpsDataFieldScope<object>
@@ -755,15 +775,28 @@ namespace TecWare.PPSn.UI
 			this.currentNamespaceName = namespaceName;
 		} // ctor
 
+		[Conditional("_DEBUG")]
+		private static void PrintScopeInfo(bool push, ILuaWpfScope scope)
+			=> Debug.Print($"Scope[{(push ? "push" : "pop")}]: {scope.Name ?? scope.GetType().Name}"); 
+
 		internal void PushScope(ILuaWpfScope scope)
-			=> currentScopes.Push(scope);
+		{
+			PrintScopeInfo(true, scope);
+			currentScopes.Push(scope);
+		} // proc PushScope
 
 		internal void PopScope(ILuaWpfScope scope)
 		{
 			if (CurrentScope == scope)
+			{
+				PrintScopeInfo(false, scope);
 				currentScopes.Pop();
+			}
 			else
-				throw new InvalidOperationException("Scope error (unfinised scope)."); // todo:
+			{
+				var stack = String.Join("->", from c in currentScopes.ToArray().Reverse() select c.Name);
+				throw new InvalidOperationException($"Scope error (unfinised scope '{scope.Name}').\nCurrent Scopes: {stack}");
+			}
 		} // proc PopScope
 
 		internal ILuaWpfScope CurrentScope => currentScopes.Count == 0 ? null : currentScopes.Peek();
