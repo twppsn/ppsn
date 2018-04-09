@@ -70,9 +70,17 @@ namespace TecWare.PPSn.Controls
 		/// <returns></returns>
 		protected override bool IsItemItsOwnContainerOverride(object item)
 		{
+
+
+			if (item is PpsStackSectionItem pssi)
+			{
+				pssi.HeaderTemplate = HeaderTemplate;
+				return true;
+			}
+
 			return false;
 		}
-
+		/*
 		/// <summary>Procedure override to template the Items with ItemTemplate</summary>
 		/// <param name="element">Parent PpsStackSectionControl</param>
 		/// <param name="item">Single Item to Template</param>
@@ -81,6 +89,7 @@ namespace TecWare.PPSn.Controls
 			base.PrepareContainerForItemOverride(element, item);
 			((ContentPresenter)element).ContentTemplate = ItemTemplate;
 		}
+		*/
 
 
 		#region ---- Attached Properties ------------------------------------------------
@@ -249,7 +258,23 @@ namespace TecWare.PPSn.Controls
 			=> LogicalElementEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => SubHeader);
 
 		/// <summary></summary>
-		public static readonly DependencyProperty IsOpenProperty = DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(PpsStackSectionItem));
+		public static readonly DependencyProperty IsOpenProperty = DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(PpsStackSectionItem), new PropertyMetadata(IsOpenChangedCallback));
+
+		private static void IsOpenChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		{
+			if (d is Visual v)
+			{
+				//var pa = VisualTreeHelper.GetParent(v);
+				if (v is PpsStackSectionItem p)
+					p.IsOpenChanged(d, e);
+			}
+		}
+
+		private void IsOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		{
+			((FrameworkElement)Content).Visibility = BooleanBox.GetBool(e.NewValue) ? Visibility.Visible : Visibility.Collapsed;
+		}
+
 		/// <summary></summary>
 		public bool IsOpen { get => BooleanBox.GetBool(GetValue(IsOpenProperty)); set => SetValue(IsOpenProperty, value); }
 	} // class PpsStackSectionItem
