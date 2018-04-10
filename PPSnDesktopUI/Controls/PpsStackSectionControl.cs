@@ -60,8 +60,7 @@ namespace TecWare.PPSn.Controls
 					item.IsExpanded = false;
 			}
 		}
-
-
+		
 		/// <summary></summary>
 		static PpsStackSectionControl()
 		{
@@ -134,6 +133,15 @@ namespace TecWare.PPSn.Controls
 		{
 			base.OnExpanded();
 			((PpsStackSectionControl)this.GetLogicalParent()).OnItemExpanded(this);
+		}
+
+		protected override void OnInitialized(EventArgs e)
+		{
+			base.OnInitialized(e);
+			if (((PpsStackSectionControl)this.GetLogicalParent()).ExpanderStyle == ExpanderStyles.AllOpen)
+				this.IsExpanded = true;
+			else
+				this.IsExpanded = false;
 		}
 
 		public PpsStackSectionItem()
