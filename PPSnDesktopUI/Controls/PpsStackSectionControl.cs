@@ -60,12 +60,6 @@ namespace TecWare.PPSn.Controls
 					item.IsExpanded = false;
 			}
 		}
-		
-		/// <summary></summary>
-		static PpsStackSectionControl()
-		{
-			//DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsStackSectionControl), new FrameworkPropertyMetadata(typeof(PpsStackSectionControl)));
-		}
 
 	}
 
@@ -106,23 +100,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		public bool HasSubheader { get => BooleanBox.GetBool(GetValue(HasSubheaderProperty)); private set => SetValue(hasSubheaderPropertyKey, BooleanBox.GetObject(value)); }
 
-		private static void OnUpdateSubheader(DependencyObject d, DependencyPropertyChangedEventArgs e)
-		{
-			var ctrl = (PpsStackSectionItem)d;
-			ctrl.HasSubheader = e.NewValue != null;
-			ctrl.OnUpdateSubheader(e.NewValue, e.OldValue);
-		} // proc OnUpdateSubheader
-
 		#endregion
-
-		/// <summary></summary>
-		/// <param name="newValue"></param>
-		/// <param name="oldValue"></param>
-		protected virtual void OnUpdateSubheader(object newValue, object oldValue)
-		{
-			RemoveLogicalChild(oldValue);
-			AddLogicalChild(newValue);
-		} // proc OnUpdateSubheader
 
 		protected override IEnumerator LogicalChildren
 		{
@@ -144,10 +122,6 @@ namespace TecWare.PPSn.Controls
 				this.IsExpanded = false;
 		}
 
-		public PpsStackSectionItem()
-		{
-
-		}
 
 		static PpsStackSectionItem()
 		{
