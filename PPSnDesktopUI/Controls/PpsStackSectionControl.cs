@@ -51,7 +51,16 @@ namespace TecWare.PPSn.Controls
 		/// <summary>The Style of the Expanders</summary>
 		public ControlTemplate ExpanderTemplate { get => (ControlTemplate)GetValue(ExpanderTemplateProperty); set => SetValue(ExpanderTemplateProperty, value); }
 
-		
+		public void OnItemExpanded(DependencyObject d)
+		{
+			if (ExpanderStyle == ExpanderStyles.Accordeon)
+			{
+				var openedItems = from PpsStackSectionItem item in Items where ((item.IsExpanded == true) && (item != (PpsStackSectionItem)d)) select item;
+				foreach (var item in openedItems)
+					item.IsExpanded = false;
+			}
+		}
+
 
 		/// <summary></summary>
 		static PpsStackSectionControl()
@@ -115,12 +124,22 @@ namespace TecWare.PPSn.Controls
 			RemoveLogicalChild(oldValue);
 			AddLogicalChild(newValue);
 		} // proc OnUpdateSubheader
-		  
+
 		protected override IEnumerator LogicalChildren
 		{
-			get=>LogicalElementEnumerator.GetLogicalEnumerator(this,  base.LogicalChildren, ()=> Subheader);
+			get => LogicalElementEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Subheader);
 		}
-		
+
+		protected override void OnExpanded()
+		{
+			base.OnExpanded();
+			((PpsStackSectionControl)this.GetLogicalParent()).OnItemExpanded(this);
+		}
+
+		public PpsStackSectionItem()
+		{
+
+		}
 
 		static PpsStackSectionItem()
 		{
