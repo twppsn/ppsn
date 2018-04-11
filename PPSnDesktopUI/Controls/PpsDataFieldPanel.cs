@@ -92,9 +92,9 @@ namespace TecWare.PPSn.Controls
 
 		private void EvaluateContent()
 		{
-			var isempty = !labels.Any(kvp => kvp.Key.IsVisible);
 			if ((isempty != IsEmpty) && IsEmpty)
 				columnDefinitions = null;
+			var isempty = !labels.Any(kvp => kvp.Key.Visibility == Visibility.Visible);
 
 			IsEmpty = isempty;
 		}
