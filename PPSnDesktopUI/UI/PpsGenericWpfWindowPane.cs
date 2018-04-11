@@ -795,7 +795,11 @@ namespace TecWare.PPSn.UI
 			);
 
 			// set the initial Object for the CharmBar
-			DataContextChanged += (sender, e) => ((dynamic)Pane.PaneManager).CharmObject = ((LuaTable)((LuaTable)this.DataContext)["Arguments"])["Object"] ?? ((LuaTable)this.DataContext)["Object"]; // must be dynamic - type PpsMainWindow would need a reference to PPSnDesktop which is forbidden
+			DataContextChanged += (sender, e) =>
+			{
+				if ((DataContext != null) && (Pane != null))
+					((dynamic)Pane.PaneManager).CharmObject = ((LuaTable)((LuaTable)this.DataContext)["Arguments"])["Object"] ?? ((LuaTable)this.DataContext)["Object"]; // must be dynamic - type PpsMainWindow would need a reference to PPSnDesktop which is forbidden
+			};
 		} // ctor
 
 		#endregion
@@ -856,7 +860,15 @@ namespace TecWare.PPSn.UI
 			=> Pane?.GetService(serviceType);
 
 		/// <summary>Access to the owning pane.</summary>
-		public PpsGenericWpfWindowPane Pane => (PpsGenericWpfWindowPane)DataContext;
+		public PpsGenericWpfWindowPane Pane
+		{
+			get
+			{
+				if (DataContext is PpsGenericWpfWindowPane pane)
+					return pane;
+				return null;
+			}
+		}
 
 		/// <summary>Title of the window pane</summary>
 		[
