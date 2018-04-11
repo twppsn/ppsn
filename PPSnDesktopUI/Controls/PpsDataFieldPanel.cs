@@ -202,7 +202,13 @@ namespace TecWare.PPSn.Controls
 			{
 				panel.InvalidateColumnDefinitions();
 				if (!panel.labels.ContainsKey(element) && !(element is Label))
+				{
 					panel.UpdateLabelInformation(element, new DependencyPropertyChangedEventArgs(LabelProperty, null, GetLabel(element)));
+					element.IsVisibleChanged += (s, e) =>
+					{
+						panel.labels[element].Visibility = ((FrameworkElement)s).Visibility;
+					};
+				}
 				return base.Add(element);
 			}
 
@@ -271,7 +277,7 @@ namespace TecWare.PPSn.Controls
 
 			if (columnDefinitions == null)
 			{
-				var childrenToArrange = (from UIElement child in InternalChildren where labels.ContainsKey(child) select child).ToArray();
+				var childrenToArrange = (from UIElement child in InternalChildren where ((child.Visibility == Visibility.Visible) && (labels.ContainsKey(child))) select child).ToArray();
 
 				columnDefinitions = PartitionDataFields(childrenToArrange, ColumnCount, ArrangeOptimization);
 			}
@@ -299,7 +305,10 @@ namespace TecWare.PPSn.Controls
 		{
 			var returnSize = new Size();
 
-			var childrenToArrange = (from UIElement child in InternalChildren where !(child is Label) select child).ToArray();
+			var childrenToArrange = (from UIElement child in InternalChildren where (!(child is Label) && (child.Visibility == Visibility.Visible)) select child).ToArray();
+
+			if (!childrenToArrange.Any())
+				return returnSize;
 
 			if (columnDefinitions == null)
 			{
