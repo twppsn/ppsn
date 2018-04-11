@@ -86,15 +86,15 @@ namespace TecWare.PPSn.Controls
 		public int IndentGroupChildren { get => (int)GetValue(IndentGroupChildrenProperty); set => SetValue(IndentGroupChildrenProperty, value); }
 
 		/// <summary>The Panel has no Content to show</summary>
-		public static readonly DependencyProperty IsEmptyProperty = DependencyProperty.Register(nameof(IsEmpty), typeof(bool), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(false));
+		public static readonly DependencyProperty IsEmptyProperty = DependencyProperty.Register(nameof(IsEmpty), typeof(bool), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(true));
 		/// <summary>The Panel has no Content to show</summary>
 		public bool IsEmpty { get => BooleanBox.GetBool(GetValue(IsEmptyProperty)); private set => SetValue(IsEmptyProperty, value); }
 
 		private void EvaluateContent()
 		{
-			if ((isempty != IsEmpty) && IsEmpty)
-				columnDefinitions = null;
 			var isempty = !labels.Any(kvp => kvp.Key.Visibility == Visibility.Visible);
+			if (isempty != IsEmpty)
+				InvalidateColumnDefinitions();
 
 			IsEmpty = isempty;
 		}
@@ -223,6 +223,7 @@ namespace TecWare.PPSn.Controls
 						panel.labels[element].Visibility = ((FrameworkElement)s).Visibility;
 						if (BooleanBox.GetBool(e.NewValue) == panel.IsEmpty)
 							panel.EvaluateContent();
+						panel.InvalidateColumnDefinitions();
 					};
 				}
 				return base.Add(element);
@@ -257,6 +258,8 @@ namespace TecWare.PPSn.Controls
 				lbl = new Label() { Content = newValue, Target = element };
 				labels.Add(element, lbl);
 				InternalChildren.Add(lbl);
+
+				EvaluateContent();
 			}
 		}
 
@@ -267,6 +270,8 @@ namespace TecWare.PPSn.Controls
 			{
 				InternalChildren.Remove(lbl);
 				labels.Remove(lbl);
+
+				EvaluateContent();
 			}
 		}
 
@@ -290,6 +295,8 @@ namespace TecWare.PPSn.Controls
 		protected override Size MeasureOverride(Size availableSize)
 		{
 			var returnSize = new Size();
+
+			EvaluateContent();
 
 			if (columnDefinitions == null)
 			{
