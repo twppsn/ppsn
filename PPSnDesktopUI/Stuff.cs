@@ -390,6 +390,12 @@ namespace TecWare.PPSn
 		public static readonly XName xnResourceDictionary = PresentationNamespace + "ResourceDictionary";
 		public static readonly XName xnKey = XamlNamespace + "Key";
 		public static readonly XName xnCode = XamlNamespace + "Code";
+		public static readonly XName xnResources = PresentationNamespace + "resources";
+
+		public static readonly XName xnTheme = "theme";
+		public static readonly XName xnTemplates = "templates";
+		public static readonly XName xnTemplate = "template";
+		public static readonly XName xnCondition = "condition";
 
 		public static void AddNamespace(this ParserContext context, string namespacePrefix, string namepsaceName)
 		{

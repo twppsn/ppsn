@@ -26,11 +26,14 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Threading;
+using System.Xaml;
+using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
+using TecWare.PPSn.Stuff;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn
@@ -82,91 +85,115 @@ namespace TecWare.PPSn
 				using (var xml = Request.GetXmlStream(r, isXaml ? MimeTypes.Application.Xaml : MimeTypes.Text.Xml))
 				{
 					var dt = DateTime.MinValue;
-					return new Tuple<XDocument, DateTime>(XDocument.Load(xml), dt);
+					return new Tuple<XDocument, DateTime>(await Task.Run(() => XDocument.Load(xml)), dt);
 				}
 			}
 			catch (WebException e)
 			{
-				if (e.Status == WebExceptionStatus.ProtocolError)
+				if (e.Status == WebExceptionStatus.ProtocolError && isOptional)
 					return null;
 				throw;
 			}
 		} // func GetXmlDocumentAsync
 
+		private async Task<XmlReader> OpenXmlDocumentAsync(string path, bool isXaml, bool isOptional)
+		{
+			try
+			{
+				return await Request.GetXmlStreamAsync(path, isXaml ? MimeTypes.Application.Xaml : MimeTypes.Text.Xml, new XmlReaderSettings() { Async = true });
+			}
+			catch (WebException e)
+			{
+				if (e.Status == WebExceptionStatus.ProtocolError && isOptional)
+					return null;
+				throw;
+			}
+		} // func OpenXmlDocumentAsync
+
 		private async Task RefreshDefaultResourcesAsync()
 		{
 			// update the resources, load a server site resource dictionary
-			var t = await GetXmlDocumentAsync("wpf/styles.xaml", true, true);
-			if (t == null)
-				return;
+			using (var xml = PpsXmlPosition.CreateLinePositionReader(await OpenXmlDocumentAsync("wpf/styles.xaml", true, true)))
+			{
+				if (xml == null)
+					return; // no styles found
 
-			var basicTemplates = t.Item1;
-			var lastTimeStamp = t.Item2;
+				// move to "theme"
+				await xml.ReadStartElementAsync(StuffUI.xnTheme);
 
-			// theme/resources
-			var xTheme = basicTemplates.Root;
+				// parse resources
+				await xml.ReadStartElementAsync(StuffUI.xnResources);
 
-			// build context
-			var parserContext = new ParserContext();
-			parserContext.AddNamespaces(xTheme);
+				await UpdateResourcesAsync(xml);
 
-			UpdateResources(xTheme, parserContext);
+				await xml.ReadEndElementAsync(); // resource
+				await xml.ReadEndElementAsync(); // theme
+			}
 		} // proc RefreshDefaultResourcesAsync
 
 		private async Task RefreshTemplatesAsync()
 		{
-			var t = await GetXmlDocumentAsync("wpf/templates.xaml", true, true);
-			if (t == null)
-				return;
+			var priority = 1;
 
-			var xTemplates = t.Item1.Root;
-
-			// build context
-			var parserContext = new ParserContext();
-			parserContext.AddNamespaces(xTemplates);
-
-			// check for a global resource dictionary, and update the main resources
-			UpdateResources(xTemplates, parserContext);
-
-			// load the templates
-			foreach (var x in xTemplates.Elements("template"))
+			using (var xml = PpsXmlPosition.CreateLinePositionReader(await OpenXmlDocumentAsync("wpf/templates.xaml", true, true)))
 			{
-				var key = x.GetAttribute("key", String.Empty);
-				if (String.IsNullOrEmpty(key))
-					continue;
+				if (xml == null)
+					return; // no templates found
 
-				var templateDefinition = templateDefinitions[key];
-				if (templateDefinition == null)
+				// read root
+				await xml.ReadStartElementAsync(StuffUI.xnTemplates);
+
+				while (xml.NodeType != XmlNodeType.EndElement)
 				{
-					templateDefinition = new PpsDataListItemDefinition(this, key);
-					templateDefinitions.AppendItem(templateDefinition);
+					if (xml.NodeType == XmlNodeType.Element)
+					{
+						if (xml.IsName(StuffUI.xnResources))
+						{
+							if (!await xml.ReadAsync())
+								break; // fetch element
+
+							// check for a global resource dictionary, and update the main resources
+							await UpdateResourcesAsync(xml);
+
+							await xml.ReadEndElementAsync(); // resource
+						}
+						else if (xml.IsName(StuffUI.xnTemplate))
+						{
+							var key = xml.GetAttribute("key", String.Empty);
+							if (String.IsNullOrEmpty(key))
+							{
+								xml.Skip();
+								break;
+							}
+
+							var templateDefinition = templateDefinitions[key];
+							if (templateDefinition == null)
+							{
+								templateDefinition = new PpsDataListItemDefinition(this, key);
+								templateDefinitions.AppendItem(templateDefinition);
+							}
+							priority = await templateDefinition.AppendTemplateAsync(xml, priority);
+
+							await xml.ReadEndElementAsync();
+						}
+						else
+							await xml.SkipAsync();
+					}
+					else
+						await xml.ReadAsync();
 				}
-				templateDefinition.AppendTemplate(x, parserContext);
-			}
+
+				await xml.ReadEndElementAsync(); // templates
+			} // using xml
 
 			// remove unused templates
 			// todo:
 		} // proc RefreshTemplatesAsync
 
-		private void UpdateResources(XElement xRoot, ParserContext parserContext)
+		private async Task UpdateResourcesAsync(XmlReader xml)
 		{
-			var xResources = xRoot.Element(StuffUI.PresentationNamespace + "resources");
-			if (xResources != null)
-			{
-				foreach (var cur in xResources.Elements())
-					Dispatcher.Invoke(() =>
-					{
-						try
-						{
-							UpdateResource(cur.GetAttribute(StuffUI.xnKey, String.Empty), cur.ToString(), parserContext);
-						}
-						catch (Exception e)
-						{
-							Debug.Print(e.ToString()); // todo: exception
-						}
-					}
-			);
-			}
+			while (await xml.MoveToContentAsync() != XmlNodeType.EndElement)
+				await UpdateResourceAsync(xml);
 		} // proc UpdateResources
 
 		#region -- Idle service -------------------------------------------------------
@@ -442,53 +469,79 @@ namespace TecWare.PPSn
 			where T : class
 			=> mainResources[resourceKey] as T;
 
-		private void UpdateResource(string keyString, string xamlSource, ParserContext parserContext)
+		private async Task<object> UpdateResourceAsync(XmlReader xamlSource)
 		{
-			// create the resource
-			var resource = CreateResource(xamlSource, parserContext);
-			object key;
+			var resourceKey = (object)null;
+			object resource;
 
-			// check the key
-			if (String.IsNullOrEmpty(keyString))
+			try
 			{
-				var style = resource as Style;
-				if (style == null)
-					throw new ArgumentNullException("keyString");
+				// create the resource
+				using (var elementReader = await xamlSource.ReadElementAsSubTreeAsync(XmlNamespaceScope.ExcludeXml))
+				{
+					resource = await PpsXamlParser.LoadAsync<object>(elementReader,
+						new PpsXamlReaderSettings()
+						{
+							FilterNode = (reader) =>
+							{
+								switch (reader.NodeType)
+								{
+									case XamlNodeType.StartMember:
+										if (reader.Member == XamlLanguage.Key && resourceKey == null)
+										{
+											resourceKey = reader.ReadMemberValue();
+											return reader.Read();
+										}
+										goto default;
+									default:
+										return true;
+								}
+							},
+							CloseInput = false
+						}
+					);
+				}
 
-				key = style.TargetType;
+				if (resource == null)
+					throw Procs.CreateXmlException(xamlSource, "Resource load failed.");
+
+				// check the key
+				if (resourceKey == null)
+				{
+					var style = resource as Style;
+					if (style == null)
+						throw Procs.CreateXmlException(xamlSource, "x:Key is missing on resource.");
+
+					resourceKey = style.TargetType;
+				}
 			}
-			else
-				key = keyString;
+			catch (XmlException) // no recovery, xml is invalid
+			{
+				throw;
+			}
+			catch (Exception e) // xaml parser error
+			{
+				// check resource key
+				if (resourceKey == null // no resource key to check, do not load
+					|| mainResources[resourceKey] == null) // no resource, might be imported
+					throw;
+				else
+				{
+					var message = $"Could not load resource '{resourceKey}'.";
+					if (e is System.Xaml.XamlParseException)
+						AppendException(e, message);
+					else
+						AppendException(Procs.CreateXmlException(xamlSource, message, e));
 
-			mainResources[key] = resource;
+					return null;
+				}
+			}
+
+			// update resource
+			//Debug.Print("UpdateResouce: ({1}){0}", resourceKey, resourceKey.GetType().Name);
+			mainResources[resourceKey] = resource;
+			return resourceKey;
 		} // func UpdateResource
-
-		/// <summary>Create a global resource.</summary>
-		/// <param name="xaml"></param>
-		/// <returns></returns>
-		public object CreateResource(XDocument xaml)
-		{
-			if (xaml == null)
-				throw new ArgumentNullException("xaml");
-
-			// build context
-			var parserContext = new ParserContext();
-			parserContext.AddNamespaces(xaml.Root);
-
-			return CreateResource(xaml.ToString(), parserContext);
-		} // func CreateResource
-
-		/// <summary>Create a global resource.</summary>
-		/// <param name="xamlSource"></param>
-		/// <param name="parserContext"></param>
-		/// <returns></returns>
-		public object CreateResource(string xamlSource, ParserContext parserContext)
-		{
-			// fix ms bug: XamlReader.Parse creates a MemoryStream with the Default-Ansi-CodePage, but in the XamlReader core utf8 is expected 
-			// the XmlReader overload, has no way to give ParserContext
-			using (var src = new MemoryStream(Encoding.UTF8.GetBytes(xamlSource), false))
-				return XamlReader.Load(src, parserContext);
-		} // func CreateResource
 
 		#endregion
 	} // class PpsEnvironment

@@ -20,9 +20,12 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Markup;
+using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Stuff;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Data
 {
@@ -30,34 +33,24 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public class PpsDataListItemDefinition : PpsEnvironmentDefinition
 	{
-		private static readonly XName xnTemplates = "templates";
-		private static readonly XName xnTemplate = "template";
-
 		#region -- class TemplateItem -----------------------------------------------------
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private sealed class TemplateItem : IComparable<TemplateItem>
 		{
-			private readonly int priority;
-			private readonly Func<object, bool> condition; // condition if the template is for this item
-			private readonly string onlineViewId;	// view, that returns extended data for the row
-			private DataTemplate template;				// template of the row
+			private readonly DataTemplate template;			// template of the row
+			private readonly Func<object, bool> condition;	// condition if the template is for this item
+			private readonly int priority;					// select order
+			private readonly string onlineViewId;			// view, that returns extended data for the row
 
-			public TemplateItem(PpsDataListItemDefinition owner, XElement xCur, ParserContext parserContext, ref int priority)
+			public TemplateItem(int priority, Func<object, bool> condition, string onlineViewId, DataTemplate template)
 			{
-				var xCondition = xCur.Element(XName.Get("condition"));
-				if (xCondition != null)
-				{
-					this.condition = owner.Environment.CompileLambdaAsync<Func<object,bool>>(xCondition, true, "Item").AwaitTask();
-					xCondition.Remove();
-				}
-				else
-					this.condition = null;
-				this.template = owner.Environment.Dispatcher.Invoke(() => (DataTemplate)owner.Environment.CreateResource(xCur.Elements().First().ToString(), parserContext));
+				this.priority = priority;
+				this.condition = condition;
+				this.onlineViewId = onlineViewId;
+				this.template = template ?? throw new ArgumentNullException(nameof(template));
 
-				this.priority = priority = xCur.GetAttribute("priority", priority + 1);
-				this.onlineViewId = xCur.GetAttribute("viewId", String.Empty);
 			} // ctor
 
 			public int CompareTo(TemplateItem other)
@@ -88,19 +81,45 @@ namespace TecWare.PPSn.Data
 		{
 		} // ctor
 
-		/// <summary></summary>
-		/// <param name="xCur"></param>
-		public void AppendTemplate(XElement xCur, ParserContext parserContext)
+		private async Task<Func<object, bool>> ReadConditionAsync(XmlReader xml)
 		{
-			var priority = templates.Count;
-			var template = new TemplateItem(this, xCur, parserContext, ref priority);
+			var condition = await Environment.CompileLambdaAsync<Func<object, bool>>(xml, true, "Item");
+			await xml.ReadEndElementAsync();
+			return condition;
+		} // func ReadConditionAsync
+
+		/// <summary></summary>
+		/// <param name="xml"></param>
+		/// <param name="priority"></param>
+		/// <returns></returns>
+		public async Task<int> AppendTemplateAsync(XmlReader xml, int priority)
+		{
+			// get base attributes
+			priority = xml.GetAttribute("priority", priority + 1);
+			var onlineViewId = xml.GetAttribute("viewId", String.Empty);
+
+			// read start element
+			await xml.ReadAsync();
+
+			// read optional condition
+			var condition =
+				await xml.ReadOptionalStartElementAsync(StuffUI.xnCondition)
+					? await ReadConditionAsync(xml)
+					: null;
+
+			// read template
+			var template = await PpsXamlParser.LoadAsync<DataTemplate>(xml.ReadElementAsSubTree());
+
+			var templateItem = new TemplateItem(priority, condition, onlineViewId, template);
 
 			// insert the item in order of the priority
-			var index = templates.BinarySearch(template);
+			var index = templates.BinarySearch(templateItem);
 			if (index < 0)
-				templates.Insert(~index, template);
+				templates.Insert(~index, templateItem);
 			else
-				templates.Insert(index, template);
+				templates.Insert(index, templateItem);
+
+			return priority;
 		} // proc AppendTemplate
 
 		/// <summary></summary>

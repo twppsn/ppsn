@@ -104,6 +104,7 @@
     <Compile Include="Controls\DataListControl.cs" />
     <Compile Include="Controls\PopupBehavior.cs" />
     <Compile Include="Controls\PpsCommandbarControl.cs" />
+    <Compile Include="Controls\PpsDataField.cs" />
     <Compile Include="Controls\PpsDataFieldPanel.cs" />
     <Compile Include="Controls\PpsDataFilterBox.cs" />
     <Compile Include="Controls\PpsDataSelector.cs" />
@@ -111,6 +112,7 @@
     <Compile Include="Controls\PpsSideBarControl.cs" />
     <Compile Include="Controls\PpsStackSectionControl.cs" />
     <Compile Include="Controls\PpsStackSectionPanel.cs" />
+    <Compile Include="UI\PpsXamlParser.cs" />
     <Compile Include="Controls\ReadOnlyPaneBehavior.cs" />
     <Compile Include="Controls\SideBarMenu.cs" />
     <Compile Include="Controls\SplitButton.cs" />

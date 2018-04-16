@@ -14,43 +14,26 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
-using System.Globalization;
+using System.Dynamic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Markup;
 using System.Xaml;
 using System.Xaml.Schema;
 using Neo.IronLua;
 using TecWare.DE.Data;
-using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
-using static System.Linq.Expressions.Expression;
+using LExpression = System.Linq.Expressions.Expression;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- interface ILuaWpfScope -------------------------------------------------
-
-	/// <summary>Base Scope interface.</summary>
-	public interface ILuaWpfScope : IServiceProvider
-	{
-		/// <summary>Name of the scope</summary>
-		string Name { get; }
-		/// <summary>Access to the parent scope.</summary>
-		ILuaWpfScope ParentScope { get; }
-		/// <summary>Access the ui.</summary>
-		LuaUI UI { get; }
-	} // interface ILuaWpfScope
-
-	#endregion
-
 	#region -- class PpsDataFieldInfo -------------------------------------------------
 
 	/// <summary></summary>
@@ -69,6 +52,8 @@ namespace TecWare.PPSn.UI
 		public IDataColumn FieldInfo { get; private set; }
 		/// <summary></summary>
 		public object Source { get; private set; }
+		/// <summary>Bindpath to use this field.</summary>
+		public string Path { get; private set; }
 	} // struct PpsDataFieldInfo
 
 	#endregion
@@ -133,208 +118,649 @@ namespace TecWare.PPSn.UI
 	#region -- class LuaWpfCreator ----------------------------------------------------
 
 	/// <summary>Table to create new wpf classes.</summary>
-	public class LuaWpfCreator<T> : LuaTable, ILuaWpfScope
-		where T : class
+	public class LuaWpfCreator : IDynamicMetaObjectProvider
 	{
-		// it could be also implemented directly through the dynamic language runtime.
-		// currenlty, there is no strong reason for the LuaTable inheritance.
+		#region -- class LuaWpfCreaterMetaObject --------------------------------------
 
-		#region -- class LuaWpfServiceProvider ----------------------------------------
-
-		private sealed class LuaWpfServiceProvider : IServiceProvider,
-			IProvideValueTarget,
-			IRootObjectProvider,
-			ITypeDescriptorContext,
-			IAmbientProvider,
-			IXamlSchemaContextProvider,
-			IXamlTypeResolver,
-			IXamlNamespaceResolver
+		private class LuaWpfCreaterMetaObject : DynamicMetaObject
 		{
-			private readonly LuaWpfCreator<T> scope;
-			private readonly XamlMember member;
-
-			public LuaWpfServiceProvider(LuaWpfCreator<T> scope, XamlMember member)
+			public LuaWpfCreaterMetaObject(LExpression expression, object value)
+				: base(expression, BindingRestrictions.GetTypeRestriction(expression, value.GetType()), value)
 			{
-				this.scope = scope ?? throw new ArgumentNullException(nameof(scope));
-				this.member = member;
+			}
+
+			private bool IsPublicMember(string propertyName, bool ignoreCase)
+			{
+				var bindingFlags = BindingFlags.Public | BindingFlags.Instance;
+				if (ignoreCase)
+					bindingFlags |= BindingFlags.IgnoreCase;
+
+				var memberInfo = LimitType.GetMember(propertyName, bindingFlags).FirstOrDefault();
+				if (memberInfo == null)
+					return false;
+
+				var browsable = memberInfo.GetCustomAttribute<BrowsableAttribute>();
+				return browsable != null && browsable.Browsable;
+			} // func GetPublicProperty
+
+			#region -- Get/Set/Delete -------------------------------------------------
+
+			private PropertyInfo GetItemPropertyInfo(Type keyType)
+			{
+				if (keyType == typeof(string))
+					return indexStringPropertyInfo;
+				else if (typeof(DependencyProperty).IsAssignableFrom(keyType))
+					return indexDependencyPropertyPropertyInfo;
+				else if (keyType == typeof(sbyte)
+					|| keyType == typeof(byte)
+					|| keyType == typeof(short)
+					|| keyType == typeof(ushort)
+					|| keyType == typeof(int)
+					|| keyType == typeof(uint)
+					|| keyType == typeof(long)
+					|| keyType == typeof(ulong))
+				{
+					return indexIntPropertyInfo;
+				}
+				else
+					return null;
+			} // func GetItemPropertyInfo
+
+			private DynamicMetaObject BindGetProperty(DynamicMetaObject index, Type returnType)
+			{
+				var indexPropertyInfo = GetItemPropertyInfo(index.LimitType);
+				if (indexPropertyInfo == null)
+					return null;
+
+				return new DynamicMetaObject(
+					LExpression.Convert(
+						LExpression.Property(Expression, indexPropertyInfo, LExpression.Convert(index.Expression, indexPropertyInfo.PropertyType)),
+						returnType
+					),
+					Restrictions.Merge(index.Restrictions)
+				);
+			} // func BindGetProperty
+
+			private DynamicMetaObject BindSetProperty(DynamicMetaObject index, DynamicMetaObject value, Type returnType)
+			{
+				var indexPropertyInfo = GetItemPropertyInfo(index.LimitType);
+				if (indexPropertyInfo == null)
+					return null;
+
+				return new DynamicMetaObject(
+					LExpression.Convert(
+						LExpression.Assign(
+							LExpression.Property(Expression, indexPropertyInfo, LExpression.Convert(index.Expression, indexPropertyInfo.PropertyType)),
+							value == null ? (LExpression)LExpression.Constant(null) : LExpression.Convert(value.Expression, typeof(object))
+						),
+						returnType
+					),
+					Restrictions
+				);
+			} // func BindSetProperty
+
+			private DynamicMetaObject GetKeyExceptionExpression(DynamicMetaObject keyInfo, Type returnType)
+			{
+				return new DynamicMetaObject(
+					LExpression.Throw(
+						LExpression.New(notSupportedExceptionConstructorInfo,
+							LExpression.Call(stringFormatMethodInfo2,
+								LExpression.Constant("Key '{0}' of type '{1}' is not supported."),
+								LExpression.Convert(keyInfo.Expression, typeof(object)),
+								LExpression.Constant(keyInfo.LimitType, typeof(object))
+							)
+						),
+						returnType
+					),
+					Restrictions.Merge(keyInfo.Restrictions)
+				);
+			} // func GetKeyExceptionExpression 
+
+			private bool TryGetMemberIndex(string binderName, bool binderIgnoreCase, out DynamicMetaObject index)
+			{
+				if (IsPublicMember(binderName, binderIgnoreCase))
+				{
+					index = null;
+					return false;
+				}
+				else
+				{
+					index = new DynamicMetaObject(LExpression.Constant(binderName), BindingRestrictions.Empty, binderName);
+					return true;
+				}
+			} // func TryGetMemberIndex
+
+			public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
+				=> TryGetMemberIndex(binder.Name, binder.IgnoreCase, out var index)
+					? BindGetProperty(index, binder.ReturnType)
+					: binder.FallbackGetMember(this);
+
+			public override DynamicMetaObject BindSetMember(SetMemberBinder binder, DynamicMetaObject value)
+				=> TryGetMemberIndex(binder.Name, binder.IgnoreCase, out var index)
+					? BindSetProperty(index, value, binder.ReturnType)
+					: binder.FallbackSetMember(this, value);
+
+			public override DynamicMetaObject BindDeleteMember(DeleteMemberBinder binder)
+				=> TryGetMemberIndex(binder.Name, binder.IgnoreCase, out var index)
+					? BindSetProperty(index, null, binder.ReturnType)
+					: binder.FallbackDeleteMember(this);
+
+			public override DynamicMetaObject BindGetIndex(GetIndexBinder binder, DynamicMetaObject[] indexes)
+				=> indexes.Length == 1
+					? BindGetProperty(indexes[0], binder.ReturnType) ?? GetKeyExceptionExpression(indexes[0], binder.ReturnType)
+					: binder.FallbackGetIndex(this, indexes);
+
+			public override DynamicMetaObject BindSetIndex(SetIndexBinder binder, DynamicMetaObject[] indexes, DynamicMetaObject value)
+				=> indexes.Length == 1
+					? BindSetProperty(indexes[0], value, binder.ReturnType) ?? GetKeyExceptionExpression(indexes[0], binder.ReturnType)
+					: binder.FallbackSetIndex(this, indexes, value);
+
+
+			public override DynamicMetaObject BindDeleteIndex(DeleteIndexBinder binder, DynamicMetaObject[] indexes)
+				=> indexes.Length == 1
+					? BindSetProperty(indexes[0], null, binder.ReturnType) ?? GetKeyExceptionExpression(indexes[0], binder.ReturnType)
+					: binder.FallbackDeleteIndex(this, indexes);
+
+			#endregion
+
+			private static BindingRestrictions GetSimpleRestriction(DynamicMetaObject mo)
+				=> mo.HasValue && mo.Value == null
+					? BindingRestrictions.GetInstanceRestriction(mo.Expression, null)
+					: BindingRestrictions.GetTypeRestriction(mo.Expression, mo.LimitType);
+
+			public override DynamicMetaObject BindInvoke(InvokeBinder binder, DynamicMetaObject[] args)
+			{
+				var restrictions = Restrictions.Merge(BindingRestrictions.Combine(args)).Merge(GetSimpleRestriction(args[0]));
+
+				if (args.Length == 1 && typeof(LuaTable).IsAssignableFrom(args[0].LimitType)) // SetTableMembers
+				{
+					return new DynamicMetaObject(
+						LExpression.Convert(
+							LExpression.Call(LExpression.Convert(Expression, typeof(LuaWpfCreator)), setTableMembersMethodInfo,
+								LExpression.Convert(args[0].Expression, typeof(LuaTable))
+							),
+							binder.ReturnType
+						),
+						restrictions
+					);
+				}
+				else
+				{
+					var argumentExpressions = new LExpression[args.Length];
+					for (var i = 0; i < argumentExpressions.Length; i++)
+					{
+						argumentExpressions[i] = LExpression.Convert(args[i].Expression, typeof(object));
+						restrictions = restrictions.Merge(args[i].Restrictions);
+					}
+
+					return new DynamicMetaObject(
+						LExpression.Convert(
+							LExpression.Call(LExpression.Convert(Expression, typeof(LuaWpfCreator)), setPositionalParametersMethodInfo,
+								LExpression.NewArrayInit(typeof(object),
+									argumentExpressions
+								)
+							),
+							binder.ReturnType
+						),
+						restrictions
+					);
+				}
+			} // func BindInvoke
+
+			public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
+				=> base.BindInvokeMember(binder, args);
+
+			public override DynamicMetaObject BindConvert(ConvertBinder binder)
+				=> base.BindConvert(binder);
+
+			public override IEnumerable<string> GetDynamicMemberNames()
+				=> base.GetDynamicMemberNames();
+		} // class LuaWpfCreaterMetaObject
+
+		#endregion
+
+		#region -- class LuaXamlReaderScope -------------------------------------------
+
+		private sealed class LuaXamlReaderState : IDisposable
+		{
+			private readonly XamlMember parentMember;
+			private readonly LuaWpfCreator creator;
+			private readonly IEnumerator positionalParameterEnumerator;
+			private readonly IEnumerator<KeyValuePair<XamlMember, object>> memberEnumerator;
+			private readonly IEnumerator collectionItemsEnumerator;
+			public int state;
+			
+			public LuaXamlReaderState(LuaWpfCreator creator, XamlMember parentMember, int initState)
+			{
+				this.creator = creator;
+				this.parentMember = parentMember;
+				this.state = initState;
+
+				positionalParameterEnumerator = creator.positionalParameter?.GetEnumerator();
+				memberEnumerator = creator.members.GetEnumerator();
+				collectionItemsEnumerator = creator.values.GetEnumerator();
 			} // ctor
 
-			#region -- interface IProvideValueTarget, IRootObjectProvider -------------
-
-			public object TargetObject => scope.Instance;
-			public object TargetProperty
-				=> member is IProvideValueTarget propertyProvider
-					? propertyProvider.TargetProperty
-					: member.UnderlyingMember;
-
-			public object RootObject => scope.instance;
-
-			#endregion
-
-			#region -- interface IProvideValueTarget ----------------------------------
-
-			public IContainer Container => null;
-
-			public object Instance => scope.Instance;
-
-			public PropertyDescriptor PropertyDescriptor => null;
-
-			public void OnComponentChanged() { }
-			public bool OnComponentChanging() => false;
-
-			#endregion
-
-			#region -- interface IProvideValueTarget ----------------------------------
-
-			public IEnumerable<AmbientPropertyValue> GetAllAmbientValues(IEnumerable<XamlType> ceilingTypes, bool searchLiveStackOnly, IEnumerable<XamlType> types, params XamlMember[] properties)
-				=> scope.FindAllAmbientValues(ceilingTypes, searchLiveStackOnly, types, properties);
-
-			public IEnumerable<AmbientPropertyValue> GetAllAmbientValues(IEnumerable<XamlType> ceilingTypes, params XamlMember[] properties)
-				=> scope.FindAllAmbientValues(ceilingTypes, false, null, properties);
-
-			public AmbientPropertyValue GetFirstAmbientValue(IEnumerable<XamlType> ceilingTypes, params XamlMember[] properties)
-				=> scope.FindAllAmbientValues(ceilingTypes, false, null, properties).FirstOrDefault();
-
-			public IEnumerable<object> GetAllAmbientValues(params XamlType[] types)
-				=> from o in scope.FindAllAmbientValues(null, false, types, null) select o.Value;
-
-			public object GetFirstAmbientValue(params XamlType[] types)
-				=> scope.FindAllAmbientValues(null, false, types, null).FirstOrDefault()?.Value;
-
-			#endregion
-
-			#region -- interface IXamlSchemaContextProvider, IXamlTypeResolver, IXamlNamespaceResolver --
-
-			public Type Resolve(string qualifiedTypeName)
-				=> throw new NotImplementedException();
-
-			public string GetNamespace(string prefix)
-				=> throw new NotImplementedException();
-
-			public IEnumerable<NamespaceDeclaration> GetNamespacePrefixes()
-				=> throw new NotImplementedException();
-
-			public XamlSchemaContext SchemaContext => scope.type?.SchemaContext ?? scope.ui.SchemaContext;
-
-			#endregion
-
-			public object GetService(Type serviceType)
+			public void Dispose()
 			{
-				if (serviceType == typeof(IProvideValueTarget)
-					|| serviceType == typeof(ITypeDescriptorContext)
-					|| serviceType == typeof(IAmbientProvider)
-					|| serviceType == typeof(IXamlSchemaContextProvider)
-					|| serviceType == typeof(IXamlTypeResolver)
-					|| serviceType == typeof(IXamlTypeResolver)
-					|| serviceType == typeof(IXamlNamespaceResolver))
-					return this;
-				else
-					return scope.GetService(serviceType);
-			} // func GetService
-		} // class LuaWpfServiceProvider
+				if(positionalParameterEnumerator is IDisposable d1)
+					d1.Dispose();
+				if (collectionItemsEnumerator is IDisposable d2)
+					d2.Dispose();
+
+				memberEnumerator?.Dispose();
+			} // proc Dispose
+
+			public bool NextPositionalParameter()
+				=> positionalParameterEnumerator?.MoveNext() ?? false;
+
+			public object CurrentPositionalParameter => positionalParameterEnumerator.Current;
+
+			public bool NextMember()
+				=> memberEnumerator.MoveNext();
+
+			public XamlMember CurrentMember
+				=> memberEnumerator.Current.Key;
+
+			public object GetMemberValue()
+			{
+				var xamlMember = memberEnumerator.Current.Key;
+				var xamlValue = memberEnumerator.Current.Value;
+
+				return xamlValue;
+				//return xamlValue == null || xamlValue is LuaWpfCreator
+				//	? xamlValue
+				//	: (
+				//	xamlValue is string s
+				//		? s
+				//		: xamlMember.Type.TypeConverter.ConverterInstance.ConvertToInvariantString(xamlValue)
+				//	);
+			} // func GetMemberValue
+
+			public bool NextCollectionItem()
+				=> collectionItemsEnumerator.MoveNext();
+
+			public object CurrentCollectionItem => collectionItemsEnumerator.Current;
+
+			public LuaWpfCreator Creator => creator;
+			public XamlMember ParentMember => parentMember;
+		} // class LuaXamlReaderScope
+
+		#endregion
+
+		#region -- class LuaXamlUsedNamespaceState ------------------------------------
+
+		private sealed class LuaXamlUsedNamespaceState : IDisposable
+		{
+			private readonly LuaWpfCreator creator;
+			private readonly IEnumerator<KeyValuePair<XamlMember, object>> memberEnumerator;
+			private readonly IEnumerator<object> valuesEnumerator;
+			private IEnumerator<XamlType> allowedContentTypes = null;
+			private int state = 0;
+
+			public LuaXamlUsedNamespaceState(LuaWpfCreator creator)
+			{
+				this.creator = creator;
+				this.memberEnumerator = creator.members.GetEnumerator();
+				this.valuesEnumerator = creator.values.GetEnumerator();
+			} // ctor
+
+			public void Dispose()
+			{
+				memberEnumerator.Dispose();
+				valuesEnumerator.Dispose();
+				allowedContentTypes?.Dispose();
+			} // proc Dispose
+
+			public bool NextType(out XamlType type, out LuaWpfCreator value)
+			{
+				switch (state)
+				{
+					case 0:
+						state = 1;
+						type = creator.type;
+						value = null;
+						return true;
+					case 1:
+						if (creator.type.ContentProperty != null)
+						{
+							type = creator.type.ContentProperty.Type;
+							value = null;
+							if (creator.type.AllowedContentTypes != null)
+							{
+								state = 2;
+								allowedContentTypes = creator.type.AllowedContentTypes.GetEnumerator();
+							}
+							else
+								state = 3;
+							return true;
+						}
+						else
+						{
+							state = 3;
+							goto case 3;
+						}
+					case 2:
+						if (allowedContentTypes.MoveNext())
+						{
+							type = allowedContentTypes.Current;
+							value = null;
+							return true;
+						}
+						else
+						{
+							allowedContentTypes.Dispose();
+							allowedContentTypes = null;
+							state = 3;
+							goto case 3;
+						}
+
+					case 3:
+						if (memberEnumerator.MoveNext())
+						{
+							type = memberEnumerator.Current.Key.Type;
+							value = memberEnumerator.Current.Value as LuaWpfCreator;
+							return true;
+						}
+						else
+						{
+							state = 4;
+							goto case 4;
+						}
+					case 4:
+						if (valuesEnumerator.MoveNext())
+						{
+							type = null;
+							value = valuesEnumerator.Current as LuaWpfCreator;
+							if (value == null)
+								goto case 4;
+							return true;
+						}
+						else
+						{
+							state = 5;
+							goto case 5;
+						}
+					case 5:
+						type = null;
+						value = null;
+						return false;
+					default:
+						throw new InvalidOperationException();
+				}
+			} // func NextType
+		} // class LuaXamlUsedNamespaceState
+
+		#endregion
+
+		#region -- class LuaXamlReader ------------------------------------------------
+
+		private class LuaXamlReader : System.Xaml.XamlReader
+		{
+			private readonly Stack<LuaXamlReaderState> states = new Stack<LuaXamlReaderState>();
+			private readonly IEnumerator<NamespaceDeclaration> collectNamespaces;
+
+			private XamlNodeType nodeType = XamlNodeType.None;
+			private NamespaceDeclaration namespaceDeclaration = null;
+			private XamlType xamlType = null;
+			private XamlMember xamlMember = null;
+			private object xamlValue = null;
+
+			public LuaXamlReader(LuaWpfCreator creator)
+			{
+				this.collectNamespaces = CollectNamespaces().GetEnumerator();
+
+				states.Push(new LuaXamlReaderState(creator ?? throw new ArgumentNullException(nameof(creator)), null, -1));
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				base.Dispose(disposing);
+
+				while (states.Count > 0)
+					states.Pop().Dispose();
+			} // proc Dispose
+
+			private IEnumerable<string> GetUsedNamespaces()
+			{
+				var currentNameSpaceStates = new Stack<LuaXamlUsedNamespaceState>();
+				var currentNameSpaceState = new LuaXamlUsedNamespaceState(CurrentState.Creator);
+				while (true)
+				{
+					if (currentNameSpaceState.NextType(out var type, out var childCreator))
+					{
+						if (type != null)
+						{
+							var cur = type.GetXamlNamespaces().FirstOrDefault();
+							if (!String.IsNullOrEmpty(cur))
+								yield return cur;
+						}
+
+						if (childCreator != null)
+						{
+							currentNameSpaceStates.Push(currentNameSpaceState);
+							currentNameSpaceState = new LuaXamlUsedNamespaceState(childCreator);
+						}
+					}
+					else
+					{
+						currentNameSpaceState.Dispose();
+						if (currentNameSpaceStates.Count > 0)
+							currentNameSpaceState = currentNameSpaceStates.Pop();
+						else
+							break;
+					}
+				}
+			} // func GetUsedNamespaces
+
+			private IEnumerable<NamespaceDeclaration> CollectNamespaces()
+			{
+				var emittedNamespaces = new List<string>();
+				var emittedPrefixes = new List<string>();
+
+				foreach (var _ns in GetUsedNamespaces())
+				{
+					var ns = PpsXamlSchemaContext.Default.TryGetCompatibleXamlNamespace(_ns, out var comp)
+						? comp
+						: _ns;
+
+					var nsIdx = emittedNamespaces.BinarySearch(ns, StringComparer.OrdinalIgnoreCase);
+					if (nsIdx < 0)
+					{
+						string preferedPrefix;
+						if (ns == StuffUI.PresentationNamespace.NamespaceName)
+							preferedPrefix = "";
+						else
+						{
+							preferedPrefix = PpsXamlSchemaContext.Default.GetPreferredPrefix(ns);
+							if (String.IsNullOrEmpty(preferedPrefix))
+								preferedPrefix = "local";
+						}
+
+						var prefix = preferedPrefix;
+						var prefixIdx = emittedPrefixes.BinarySearch(prefix, StringComparer.Ordinal);
+						var prefixCounter = 1;
+						while (prefixIdx >= 0)
+						{
+							prefix = preferedPrefix + (prefixCounter++).ToString();
+							prefixIdx = emittedPrefixes.BinarySearch(prefix, StringComparer.Ordinal);
+						}
+
+						emittedPrefixes.Insert(~prefixIdx, prefix);
+						emittedNamespaces.Insert(~nsIdx, ns);
+						yield return new NamespaceDeclaration(ns, prefix);
+					}
+				}
+			} // func CollectNamespaces
+
+			private bool PushState(int newState, LuaXamlReaderState currentState, LuaWpfCreator creator, XamlMember parentMember)
+			{
+				if (creator != null)
+					states.Push(new LuaXamlReaderState(creator, parentMember, 0));
+
+				currentState.state = newState;
+				return Read();
+			} // proc PushState
+
+			private bool PopState()
+			{
+				states.Pop().Dispose();
+				return Read();
+			} // proc PopState
+
+			private bool SetValueState(int loopState, int finishState, LuaXamlReaderState currentState, XamlMember parentMember, Func<bool> moveNext, object value)
+			{
+				var n = moveNext() ? loopState : finishState;
+				return value is LuaWpfCreator subCreator
+					? PushState(n, currentState, subCreator, parentMember)
+					: SetState(n, XamlNodeType.Value, xamlValue: value);
+			} // func SetState
+
+			private bool SetState(int newState, XamlNodeType nodeType, NamespaceDeclaration namespaceDeclaration = null, XamlType xamlType = null, XamlMember xamlMember = null, object xamlValue = null)
+			{
+				CurrentState.state = newState;
+
+				switch (nodeType)
+				{
+					case XamlNodeType.StartMember:
+						if (xamlMember == null)
+							throw new ArgumentNullException(nameof(xamlMember));
+						break;
+					case XamlNodeType.StartObject:
+						if (xamlType == null)
+							throw new ArgumentNullException(nameof(xamlType));
+						break;
+					case XamlNodeType.NamespaceDeclaration:
+						if (namespaceDeclaration == null)
+							throw new ArgumentNullException(nameof(namespaceDeclaration));
+						break;
+				}
+
+				//Debug.Print($"SETSTATE: {newState} -> {nodeType}");
+
+				this.nodeType = nodeType;
+				this.namespaceDeclaration = namespaceDeclaration;
+				this.xamlType = xamlType;
+				this.xamlMember = xamlMember;
+				this.xamlValue = xamlValue;
+
+				return nodeType != XamlNodeType.None;
+			} // func SetState
+
+			public override bool Read()
+			{
+				var currentState = CurrentState;
+				if (currentState == null)
+					return false;
+
+				switch (currentState.state)
+				{
+					case -1: // init namespaces
+						if (collectNamespaces.MoveNext())
+							return SetState(-1, XamlNodeType.NamespaceDeclaration, namespaceDeclaration: collectNamespaces.Current);
+						else
+							goto case 0;
+					case 0: // init object state
+						return currentState.ParentMember != null && currentState.ParentMember.IsReadOnly
+							? SetState(2, XamlNodeType.GetObject)
+							: SetState(2, XamlNodeType.StartObject, xamlType: currentState.Creator.type);
+					case 1: // finish state
+						return states.Count == 0
+							? SetState(1, XamlNodeType.None)
+							: PopState();
+					
+					case 2: // emit member objects
+						if (currentState.NextPositionalParameter())
+							return SetState(10, XamlNodeType.StartMember, xamlMember: XamlLanguage.PositionalParameters);
+						else if(currentState.NextMember())
+							return SetState(20, XamlNodeType.StartMember, xamlMember: currentState.CurrentMember);
+						else if (currentState.NextCollectionItem())
+							return SetState(30, XamlNodeType.StartMember, xamlMember: XamlLanguage.Items);
+						else
+							return SetState(1, XamlNodeType.EndObject); // close this object
+
+
+					case 10:
+						return SetValueState(10, 19, currentState, XamlLanguage.PositionalParameters, currentState.NextPositionalParameter, currentState.CurrentPositionalParameter);
+					case 19:
+						return SetState(2, XamlNodeType.EndMember);
+
+
+					case 20:
+						return SetValueState(21, 29, currentState, currentState.CurrentMember, currentState.NextMember, currentState.GetMemberValue());
+					case 21:
+						return SetState(22, XamlNodeType.EndMember);
+					case 22:
+						return SetState(20, XamlNodeType.StartMember, xamlMember: currentState.CurrentMember);
+					case 29:
+						return SetState(2, XamlNodeType.EndMember);
+
+					case 30:
+						return SetValueState(30, 39, currentState, XamlLanguage.Items, currentState.NextCollectionItem, currentState.CurrentCollectionItem);
+					case 39:
+						return SetState(2, XamlNodeType.EndMember);
+
+					default:
+						throw new ArgumentOutOfRangeException("state");
+				}
+			} // func Read
+
+			private LuaXamlReaderState CurrentState => states.Count > 0 ? states.Peek() : null;
+
+			public override bool IsEof => CurrentState == null;
+
+			public override XamlNodeType NodeType => nodeType;
+			public override NamespaceDeclaration Namespace => namespaceDeclaration;
+			public override XamlType Type => xamlType;
+			public override XamlMember Member => xamlMember;
+			public override object Value => xamlValue;
+
+			public override XamlSchemaContext SchemaContext => PpsXamlSchemaContext.Default;
+		} // class LuaXamlReader
 
 		#endregion
 
 		private readonly LuaUI ui;
-		private readonly ILuaWpfScope parentScope;
-
 		private readonly XamlType type;
-		private T instance;
 
-		private bool scopeFinished = false; // marks the scope as created, is set after the first call
+		private readonly List<object> values = new List<object>();
+		private readonly Dictionary<XamlMember, object> members = new Dictionary<XamlMember, object>();
+		private object[] positionalParameter = null;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
 		/// <param name="ui"></param>
-		/// <param name="instance"></param>
-		public LuaWpfCreator(LuaUI ui, T instance)
-			: this(ui, ui.GetXamlType(typeof(T)), instance)
-		{
-		} // ctor
-
-		/// <summary></summary>
-		/// <param name="ui"></param>
 		/// <param name="type"></param>
-		/// <param name="instance"></param>
-		public LuaWpfCreator(LuaUI ui, XamlType type, T instance)
+		public LuaWpfCreator(LuaUI ui, XamlType type)
 		{
 			this.ui = ui ?? throw new ArgumentNullException(nameof(ui));
-			this.parentScope = ui.CurrentScope;
-			this.type = type ?? (instance == null ? null : ui.GetXamlType(instance.GetType()));
-			this.instance = instance;
-
-			ui.PushScope(this);
+			this.type = type ?? throw new ArgumentNullException(nameof(type));
 		} // ctor
 
-		private void CreateDefaultInstance()
-		{
-			if (type != null)
-				instance = (T)type.Invoker.CreateInstance(Array.Empty<object>());
-		} // proc CreateDefaultInstance
+		DynamicMetaObject IDynamicMetaObjectProvider.GetMetaObject(LExpression parameter)
+			=> new LuaWpfCreaterMetaObject(parameter, this);
 
-		/// <summary>Gets called, if the scope gets finished.</summary>
-		protected virtual void OnFinished() { }
+		/// <summary>Create a reader</summary>
+		/// <param name="context"></param>
+		/// <returns></returns>
+		public System.Xaml.XamlReader CreateReader(IServiceProvider context)
+			=> new LuaXamlReader(this);
 
 		/// <summary></summary>
+		/// <param name="context"></param>
 		/// <returns></returns>
-		public T Finish()
-			=> (T)FinishScope();
-
-		private object FinishScope()
-		{
-			if (scopeFinished)
-				throw new InvalidOperationException("scope error (finish twice)"); // todo:
-
-			ui.PopScope(this);
-			scopeFinished = true;
-
-			OnFinished();
-
-			return Instance;
-		} // proc FinishScope
+		public Task<T> GetInstanceAsync<T>(IServiceProvider context)
+			=> PpsXamlParser.LoadAsync<T>(CreateReader(context));
 
 		/// <summary></summary>
 		/// <returns></returns>
 		public override string ToString()
-			=> "Wpf: " + typeof(T).Name;
+			=> "WpfCreator: " + type.Name;
 
 		#endregion
 
-		#region -- FindAllAmbientValues -----------------------------------------------
-
-		private IEnumerable<AmbientPropertyValue> FindAllAmbientValues(IEnumerable<XamlType> ceilingTypes, bool searchLiveStackOnly, IEnumerable<XamlType> types, params XamlMember[] properties)
-		{
-			if (instance == null)
-				CreateDefaultInstance();
-
-			// find types
-			if (types != null)
-			{
-				foreach (var t in types)
-				{
-					if (type.CanAssignTo(t))
-						yield return new AmbientPropertyValue(null, instance);
-				}
-			}
-
-			// find properties
-			if (properties != null)
-			{
-				foreach (var p in properties)
-				{
-					if (type.CanAssignTo(p.DeclaringType))
-					{
-						if (instance is IQueryAmbient qa && qa.IsAmbientPropertyAvailable(p.Name))
-							yield return new AmbientPropertyValue(p, p.Invoker.GetValue(instance));
-					}
-				}
-			}
-		} // func FindAllAmbientValues
-
-		#endregion
-
-		#region -- OnCall, OnIndex, OnNewIndex ----------------------------------------
+		#region -- Setter/Getter ------------------------------------------------------
 
 		private XamlMember GetXamlAttachedMember(string typeName, string memberName)
 		{
@@ -344,427 +770,416 @@ namespace TecWare.PPSn.UI
 			return attachedType.GetAttachableMember(memberName);
 		} // func GetXamlAttachedMember
 
-		private XamlMember GetXamlMember(string memberName)
+		/// <summary></summary>
+		/// <param name="propertyName"></param>
+		/// <returns></returns>
+		protected XamlMember GetXamlMember(string propertyName)
 		{
-			if (type == null)
-				throw new InvalidOperationException("XamlType is null.");
-
 			// check for attached property
-			var attachedPos = memberName.IndexOf('.');
-			if (attachedPos == -1)
-				return type.GetMember(memberName);
-			
-			return GetXamlAttachedMember(memberName.Substring(0, attachedPos), memberName.Substring(attachedPos + 1));
+			var attachedPos = propertyName.IndexOf('.');
+			return (
+				attachedPos == -1
+					? type.GetMember(propertyName)
+					: GetXamlAttachedMember(propertyName.Substring(0, attachedPos), propertyName.Substring(attachedPos + 1))
+			) ?? throw new ArgumentException($"Could not resolve member '{propertyName}'.", nameof(propertyName));
 		} // func GetXamlMember
 
-		private void SetXamlMemberValue(XamlMember xamlMember, object value)
+		private XamlMember GetXamlMember(DependencyProperty property)
 		{
-			if (type == null)
-				throw new InvalidOperationException("XamlType is null");
+			// todo: AttachedProperties?
+			return GetXamlMember(property.Name);
+		} // func GetXamlMember
 
-			// check if the values is an extension
-			if (value is MarkupExtension m)
-				value = m.ProvideValue(new LuaWpfServiceProvider(this, xamlMember));
-
-			// convert the value for events
-			if (xamlMember.IsEvent)
-			{
-				var eventHandlerType = xamlMember.Type.UnderlyingType;
-				var eventHandlerInvokeMethodInfo = eventHandlerType.GetMethod("Invoke");
-				var eventHandlerInvokeParameters = eventHandlerInvokeMethodInfo.GetParameters();
-				var eventHandlerInvokeExpressions = new ParameterExpression[eventHandlerInvokeParameters.Length];
-
-				// map arguments
-				for (var i = 0; i < eventHandlerInvokeParameters.Length; i++)
-					eventHandlerInvokeExpressions[i] = Parameter(eventHandlerInvokeParameters[i].ParameterType, eventHandlerInvokeParameters[i].Name);
-
-				// Lua.RtInvoke(value, new object[] { arg0, arg1, ... });
-				var exprCaller = Lambda(eventHandlerType,
-					Call(
-						luaRtInvokeMethodInfo,
-						Constant(value, typeof(object)),
-						NewArrayInit(typeof(object), eventHandlerInvokeExpressions)
-					),
-					eventHandlerInvokeExpressions
-				);
-
-				// compile the wrapper
-				value = exprCaller.Compile();
-			}
-			else if (value != null) // convert the value
-			{
-				if (!(value is System.Windows.Expression)) // expression we do not convert expression
-				{
-					var xamlValueType = type.SchemaContext.GetXamlType(value.GetType());
-					if (!xamlValueType.CanAssignTo(xamlMember.Type) && xamlMember.TypeConverter != null) // is there a converter
-					{
-						if (xamlMember.TypeConverter.ConverterType != null) // real converter
-						{
-							try
-							{
-								value = xamlMember.TypeConverter.ConverterInstance.ConvertFrom(new LuaWpfServiceProvider(this, xamlMember), CultureInfo.InvariantCulture, value);
-							}
-							catch (Exception e)
-							{
-								throw new FormatException($"{type.Name}.{xamlMember.Name} could not set with '{value?.ToString()}'.", e);
-							}
-						}
-						else if (xamlMember.TypeConverter.TargetType != null) // simple converter
-							value = Procs.ChangeType(value, xamlMember.TypeConverter.TargetType.UnderlyingType);
-					}
-				}
-			}
-
-			// finally set the value
-			xamlMember.Invoker.SetValue(Instance, value);
-		} // func SetXamlMemberValue
-
-		/// <summary></summary>
-		/// <param name="t"></param>
-		public void SetTableMembers(LuaTable t)
+		private void SetXamlProperty(XamlMember member, object value)
 		{
-			// call set member for all value
-			foreach (var kv in t.Values)
-				SetValue(kv.Key, kv.Value);
-		} // proc SetTableMembers
+			if (member == null)
+				throw new ArgumentNullException(nameof(member));
 
-		private void CreateInstanceWithArguments(object[] args)
-		{
-			if (instance != null)
-				throw new ArgumentException("Instance already constructed.");
-
-			// convert the position arguments
-			var argumentTypes = type.GetPositionalParameters(args.Length);
-			var arguments = new object[argumentTypes.Count];
-			for (var i = 0; i < arguments.Length; i++)
-			{
-				var value = args[i];
-				if (value != null)
-				{
-					var xamlValueType = type.SchemaContext.GetXamlType(args[i].GetType());
-					var xamlTypeTo = argumentTypes[i];
-					if (!xamlValueType.CanAssignTo(xamlTypeTo) && xamlTypeTo.TypeConverter != null) // is there a converter
-					{
-						if (xamlTypeTo.TypeConverter != null) // real converter
-							value = xamlTypeTo.TypeConverter.ConverterInstance.ConvertFrom(new LuaWpfServiceProvider(this, null), CultureInfo.InvariantCulture, value);
-						else if (xamlTypeTo.TypeConverter.TargetType != null) // simple converter
-							value = Procs.ChangeType(value, xamlTypeTo.TypeConverter.TargetType.UnderlyingType);
-					}
-				}
-				arguments[i] = value;
-			}
-
-			instance = (T)type.Invoker.CreateInstance(arguments);
-		} // proc CreateInstanceWithArguments
-
-		/// <summary>Initialize the instance with one LuaTable or use the contructor.</summary>
-		/// <param name="args"></param>
-		/// <param name="offset"></param>
-		/// <param name="count"></param>
-		/// <returns>Instance of the constructed instance.</returns>
-		protected virtual void OnCall(object[] args, int offset, int count)
-		{
-			if (count == 1 && args[offset] is LuaTable t)
-				SetTableMembers(t);
-			else if (args.Length > 0)
-				CreateInstanceWithArguments(args);
-		} // func OnCall
-
-		/// <summary>Call closes the scope.</summary>
-		/// <param name="args"></param>
-		/// <returns></returns>
-		protected sealed override LuaResult OnCall(object[] args)
-		{
-			if (args.Length == 0)
-				return new LuaResult(FinishScope());
-			else if (args[0] == LuaUI.ReturnSelf) // called marked to not finish anything
-			{
-				OnCall(args, 1, args.Length - 1);
-				return new LuaResult(this);
-			}
+			if (value == null || value == DependencyProperty.UnsetValue)
+				members.Remove(member);
 			else
 			{
-				OnCall(args, 0, args.Length);
-				return new LuaResult(FinishScope());
+				// checkk access
+				if (member.IsReadOnly)
+					throw new NotSupportedException($"'{member.Name}' is readonly.");
+
+				if (member.IsEvent)
+				{
+					if (value is string)
+						members[member] = value; // works if the stream is wrapped to an PpsXamlReader
+					else if(value is Delegate dlg)
+						members[member] = PpsXamlParser.CreateEventFromDelegate(member, dlg);
+					else
+						throw new ArgumentException($"Can not set event '{member.Name}' to '{value}'. Only string is allowed.");
+				}
+				else if (value is LuaWpfCreator subCreator)
+				{
+					// todo: check return type, and test for binding
+					members[member] = subCreator;
+				}
+				else
+				{
+					// convert value
+					var valueType = UI.GetXamlType(value.GetType());
+					var valueTypeConverter = valueType.TypeConverter?.ConverterInstance;
+					var memberTypeConverter = member.Type.TypeConverter?.ConverterInstance;
+					if (member.Type.UnderlyingType.IsAssignableFrom(valueType.UnderlyingType))
+						value = Convert.ChangeType(value, member.Type.UnderlyingType);
+					else if (valueTypeConverter?.CanConvertTo(member.Type.UnderlyingType) ?? false)
+						value = valueTypeConverter.ConvertTo(value, member.Type.UnderlyingType);
+					else if (memberTypeConverter?.CanConvertFrom(valueType.UnderlyingType) ?? false)
+						value = memberTypeConverter.ConvertFrom(value);
+					else
+						throw new ArgumentException($"Can not set '{member.Name}' to '{value}'. Type is not assignable.");
+
+					members[member] = value;
+				}
 			}
-		} // proc OnCall
+		} // proc SetXamlProperty
 
-		/// <summary>Get the property of the instance.</summary>
-		/// <param name="key">Member of the instance</param>
-		/// <returns></returns>
-		protected override object OnIndex(object key)
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <param name="value"></param>
+		public void SetProperty(object key, object value)
 		{
-			if (key is string memberName)
+			switch (key)
 			{
-				var xamlMember = GetXamlMember(memberName);
-				if (xamlMember == null)
-					return null;
+				case XamlMember member:
+					SetXamlProperty(member, value);
+					break;
+				case string propertyName:
+					var pi = GetType().GetProperty(propertyName); // todo: cache to speed up
+					if (pi != null)
+						pi.SetValue(this, value);
+					else
+						SetXamlProperty(GetXamlMember(propertyName), value);
+					break;
+				case DependencyProperty property:
+					SetXamlProperty(GetXamlMember(property), value);
+					break;
 
-				return xamlMember.Invoker.GetValue(Instance);
+				case sbyte idxI8:
+					SetXamlIndex(idxI8, value);
+					break;
+				case byte idxU8:
+					SetXamlIndex(idxU8, value);
+					break;
+				case short idxI16:
+					SetXamlIndex(idxI16, value);
+					break;
+				case ushort idxU16:
+					SetXamlIndex(idxU16, value);
+					break;
+				case int idxI32:
+					SetXamlIndex(idxI32, value);
+					break;
+				case uint idxU32:
+					SetXamlIndex((int)idxU32, value);
+					break;
+				case long idxI64:
+					SetXamlIndex((int)idxI64, value);
+					break;
+				case ulong idxU64:
+					SetXamlIndex((int)idxU64, value);
+					break;
+
+				case null:
+					throw new ArgumentNullException(nameof(key));
+				default:
+					throw new NotSupportedException($"Key of type '{key.GetType().Name}' is not supported.");
+			}
+		} // proc SetProperty
+
+		/// <summary></summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
+		public object GetProperty(object key)
+		{
+			switch (key)
+			{
+				case XamlMember member:
+					return GetXamlProperty(member);
+				case string propertyName:
+					// todo: Public Properties!!!
+					return GetXamlProperty(GetXamlMember(propertyName));
+				case DependencyProperty property:
+					return GetXamlProperty(GetXamlMember(property));
+
+				case sbyte idxI8:
+					return GetXamlIndex(idxI8);
+				case byte idxU8:
+					return GetXamlIndex(idxU8);
+				case short idxI16:
+					return GetXamlIndex(idxI16);
+				case ushort idxU16:
+					return GetXamlIndex(idxU16);
+				case int idxI32:
+					return GetXamlIndex(idxI32);
+				case uint idxU32:
+					return GetXamlIndex((int)idxU32);
+				case long idxI64:
+					return GetXamlIndex((int)idxI64);
+				case ulong idxU64:
+					return GetXamlIndex((int)idxU64);
+
+				case null:
+					throw new ArgumentNullException(nameof(key));
+				default:
+					throw new NotSupportedException($"Key of type '{key.GetType().Name}' is not supported.");
+			}
+		} // proc SetProperty
+		private object GetXamlProperty(XamlMember member)
+		{
+			if (member == null)
+				return null;
+			if (members.TryGetValue(member, out var value))
+				return value;
+			else if (member.IsReadOnly)
+			{
+				value = CreateFactory(UI, member.Type);
+				members.Add(member, value);
+				return value;
 			}
 			else
 				return null;
-		} // func OnIndex
+		} // func GetXamlProperty
 
-		/// <summary>Set a property to the instance.</summary>
-		/// <param name="key"></param>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		protected override bool OnNewIndex(object key, object value)
+		private static void CheckIndex(int idx)
 		{
-			if (key == null)
-				throw new ArgumentNullException(nameof(key));
-			else if (key is string memberName)
-			{
-				var xamlMember = GetXamlMember(memberName);
-				if (xamlMember == null)
-					throw new ArgumentException($"Could not resolve member '{memberName}'.", nameof(key));
+			if (idx < 1)
+				throw new ArgumentOutOfRangeException(nameof(idx), "Index is lower than 1.");
+		} // func CheckIndex
 
-				SetXamlMemberValue(xamlMember, value);
-			}
-			else if (key is DependencyProperty property)
-			{
-				return OnNewIndex(property.Name, value);
-			}
-			else if (key is int index)
+		/// <summary></summary>
+		/// <param name="value"></param>
+		public void AddValue(object value)
+		{
+			var idx = values.Count - 1;
+			while (idx >= 0 && values[idx] == null)
+				idx--;
+
+			SetXamlIndex(idx + 2, value);
+		} // proc AddValue
+
+		private int EnsureIndex(int idx)
+		{
+			while (idx >= values.Count)
+				values.Add(null);
+			return idx;
+		} // proc EnsureIndex
+
+		private void SetXamlIndex(int idx, object value)
+		{
+			CheckIndex(idx);
+
+			//type.AllowedContentTypes
+
+			if (type.IsCollection)
+				values[EnsureIndex(idx - 1)] = value;
+			else
 			{
 				var xamlMember = type.ContentProperty;
 				if (xamlMember == null)
 					throw new ArgumentNullException(nameof(XamlType.ContentProperty), $"Type '{type.Name}' has no {nameof(XamlType.ContentProperty)}.");
 
-				if (xamlMember.Type.IsCollection)
+				if (xamlMember.IsReadOnly)
 				{
-					var collectionValue = xamlMember.Invoker.GetValue(Instance);
-
-					if (collectionValue == null && !xamlMember.IsReadOnly && index == 1) // init value?
-						SetXamlMemberValue(xamlMember, value);
+					var subProperty = GetXamlProperty(xamlMember);
+					if (subProperty is LuaWpfCreator subCreator)
+						subCreator.SetXamlIndex(idx, value);
 					else
-					{
-						var collectionType = xamlMember.Type;
-						collectionType.Invoker.AddToCollection(collectionValue, value);
-					}
+						xamlMember.Type.Invoker.AddToCollection(subProperty, value);
 				}
-				else if (index == 1) // first property
+				else if (idx == 1)
 				{
-					SetXamlMemberValue(xamlMember, value);
+					SetXamlProperty(xamlMember, value);
 				}
 				else
-					throw new ArgumentOutOfRangeException(xamlMember.Name, index, $"The Content property '{xamlMember.Name}' does not support multiple values.");
+					throw new ArgumentOutOfRangeException(type.Name, idx, $"The type '{type.Name}' does not support multiple values.");
 			}
-			else
-				throw new NotSupportedException($"Key of type '{key.GetType().Name}' is not supported.");
+		} // proc SetXamlIndex
 
-			// leave the table empty
-			return true;
-		} // func OnNewIndex
+		private object GetXamlIndex(int idx)
+		{
+			CheckIndex(idx);
+			idx--;
+			return idx >= 0 && idx < values.Count ? values[idx] : null;
+		} // proc GetXamlIndex
+
+		/// <summary></summary>
+		/// <param name="t"></param>
+		/// <returns></returns>
+		public LuaWpfCreator SetTableMembers(LuaTable t)
+		{
+			if (t == null)
+				return this;
+
+			// call set member for all value
+			foreach (var kv in t.Values)
+				SetProperty(kv.Key, kv.Value);
+
+			return this;
+		} // proc SetTableMembers
+
+		/// <summary></summary>
+		/// <param name="arguments"></param>
+		/// <returns></returns>
+		public LuaWpfCreator SetPositionalParameters(object[] arguments)
+		{
+			if (positionalParameter == null)
+				positionalParameter = arguments;
+			else
+				throw new InvalidOperationException("Positional parameters already set.");
+			return this;
+		} // proc SetPositionalParameters
 
 		#endregion
-		
-		//private object Resources { get => null; set { } }
 
-		/// <summary>Return scope servie</summary>
-		/// <param name="serviceType"></param>
+		/// <summary></summary>
+		/// <param name="member"></param>
 		/// <returns></returns>
-		public virtual object GetService(Type serviceType)
-		{
-			if (serviceType == typeof(IUriContext))
-				return ui;
-			else
-				return parentScope.GetService(serviceType);
-		} // func GetService
+		public object this[XamlMember member] { get => GetXamlProperty(member); set => SetXamlProperty(member, value); }
+		/// <summary></summary>
+		/// <param name="propertyName"></param>
+		/// <returns></returns>
+		public object this[string propertyName] { get => GetXamlProperty(GetXamlMember(propertyName)); set => SetXamlProperty(GetXamlMember(propertyName), value); }
+		/// <summary></summary>
+		/// <param name="property"></param>
+		/// <returns></returns>
+		public object this[DependencyProperty property] { get => GetXamlProperty(GetXamlMember(property)); set => SetXamlProperty(GetXamlMember(property), value); }
 
-		/// <summary>Return the current instance, does not finish any scope.</summary>
-		public T Instance
-		{
-			get
-			{
-				if (instance == null)
-					CreateDefaultInstance();
-				return instance;
-			}
-			protected set
-			{
-				if (instance != null)
-					throw new InvalidOperationException();
-				instance = value;
-			}
-		} // prop Instance
+		/// <summary></summary>
+		/// <param name="idx"></param>
+		/// <returns></returns>
+		public object this[int idx] { get => GetXamlIndex(idx); set => SetXamlIndex(idx, value); }
 
 		/// <summary>Name of the scope</summary>
-		public virtual string Name { get => typeof(T).Name; }
+		public virtual string Name => type.Name;
 
 		/// <summary>Get the ui class.</summary>
 		public LuaUI UI => ui;
-		/// <summary>Get the parent scope.</summary>
-		public ILuaWpfScope ParentScope => parentScope;
-
-		private static readonly MethodInfo luaRtInvokeMethodInfo;
-
-		static LuaWpfCreator()
-		{
-			luaRtInvokeMethodInfo = typeof(Lua).GetMethod(nameof(Lua.RtInvoke), BindingFlags.Static | BindingFlags.InvokeMethod | BindingFlags.Public, null, CallingConventions.Standard, new Type[] { typeof(object), typeof(object[]) }, null)
-				?? throw new ArgumentException("RtInvoke not resolved.");
-		} // sctor
 
 		/// <summary></summary>
-		/// <typeparam name="TINSTANCE"></typeparam>
 		/// <param name="ui"></param>
 		/// <param name="table"></param>
 		/// <returns></returns>
-		public static TINSTANCE CreateInstance<TINSTANCE>(LuaUI ui, LuaTable table)
-			where TINSTANCE : class
-		{
-			var t = new LuaWpfCreator<TINSTANCE>(ui, null);
-			t.SetTableMembers(table);
-			return t.Instance;
-		} // func CreateInstance
+		public static LuaWpfCreator CreateFactory(LuaUI ui, Type type, LuaTable table = null)
+			=> new LuaWpfCreator(ui, ui.GetXamlType(type)).SetTableMembers(table);
 
-		internal static void SetInstanceFromArgs(LuaWpfCreator<object> creator, object[] args, int offset, int count)
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="ui"></param>
+		/// <param name="xamlType"></param>
+		/// <param name="table"></param>
+		/// <returns></returns>
+		public static LuaWpfCreator CreateFactory(LuaUI ui, XamlType xamlType, LuaTable table = null)
+			=> new LuaWpfCreator(ui, xamlType).SetTableMembers(table);
+
+		private static readonly PropertyInfo indexStringPropertyInfo;
+		private static readonly PropertyInfo indexDependencyPropertyPropertyInfo;
+		private static readonly PropertyInfo indexIntPropertyInfo;
+		private static readonly MethodInfo setTableMembersMethodInfo;
+		private static readonly MethodInfo setPositionalParametersMethodInfo;
+
+		private static readonly ConstructorInfo notSupportedExceptionConstructorInfo;
+		private static readonly MethodInfo stringFormatMethodInfo2;
+
+		static LuaWpfCreator()
 		{
-			if (count == 1)
-				creator.Instance = args[offset];
-			else if (offset == 0 && args.Length == count)
-				creator.Instance = args;
-			else
-			{
-				var r = new object[count];
-				Array.Copy(args, offset, r, 0, count);
-				creator.Instance = r;
-			}
-		} // func SetInstanceFromArgs
+			var type = typeof(LuaWpfCreator);
+			indexStringPropertyInfo = type.GetProperty("Item", BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty, null, typeof(object), new Type[] { typeof(string) }, null) ?? throw new ArgumentNullException();
+			indexDependencyPropertyPropertyInfo = type.GetProperty("Item", BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty, null, typeof(object), new Type[] { typeof(DependencyProperty) }, null) ?? throw new ArgumentNullException();
+			indexIntPropertyInfo = type.GetProperty("Item", BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty, null, typeof(object), new Type[] { typeof(int) }, null) ?? throw new ArgumentNullException();
+			setTableMembersMethodInfo = type.GetMethod(nameof(SetTableMembers), BindingFlags.Public | BindingFlags.Instance | BindingFlags.InvokeMethod, null, new Type[] { typeof(LuaTable) }, null) ?? throw new ArgumentNullException();
+			setPositionalParametersMethodInfo = type.GetMethod(nameof(SetPositionalParameters), BindingFlags.Public | BindingFlags.Instance | BindingFlags.InvokeMethod, null, new Type[] { typeof(object[]) }, null) ?? throw new ArgumentNullException();
+
+			notSupportedExceptionConstructorInfo = typeof(NotSupportedException).GetConstructor(new Type[] { typeof(string) }) ?? throw new ArgumentNullException();
+			stringFormatMethodInfo2 = typeof(string).GetMethod(nameof(String.Format), BindingFlags.Static | BindingFlags.Public | BindingFlags.InvokeMethod, null, new Type[] { typeof(string), typeof(object), typeof(object) }, null) ?? throw new ArgumentNullException();
+		} // sctor
 	} // class LuaWpfCreator
 
 	#endregion
 
 	#region -- class LuaWpfGridCreator ------------------------------------------------
 
-	internal class LuaWpfGridCreator : LuaWpfCreator<Grid>
+	internal class LuaWpfGridCreator : LuaWpfCreator
 	{
+		private readonly Lazy<XamlMember> rowDefinitionsMember;
+		private readonly Lazy<XamlMember> columnDefinitionsMember;
+
 		/// <summary></summary>
 		/// <param name="ui"></param>
-		/// <param name="type"></param>
-		/// <param name="instance"></param>
-		public LuaWpfGridCreator(LuaUI ui, XamlType type, Grid instance = null)
-			: base(ui, type, instance)
+		public LuaWpfGridCreator(LuaUI ui)
+			: base(ui, ui.GetXamlType(typeof(Grid)))
 		{
-		}
+			this.rowDefinitionsMember = new Lazy<XamlMember>(() => GetXamlMember(nameof(Grid.RowDefinitions)));
+			this.columnDefinitionsMember = new Lazy<XamlMember>(() => GetXamlMember(nameof(Grid.ColumnDefinitions)));
+		} // ctor
 
-		/// <summary></summary>
-		[LuaMember]
 		public object RowDefinitions
 		{
-			get => Instance.RowDefinitions;
+			get => this[rowDefinitionsMember.Value];
 			set
 			{
 				if (value is LuaTable t)
 				{
+					var rows = (LuaWpfCreator)this.RowDefinitions;
 					foreach (var v in t.ArrayList)
 					{
 						if (v is LuaTable tr)
-							Instance.RowDefinitions.Add(CreateInstance<RowDefinition>(UI, tr));
+							rows.AddValue(CreateFactory(UI, typeof(RowDefinition), tr));
 						else
 						{
-							var creator = new LuaWpfCreator<RowDefinition>(UI, new RowDefinition());
-							creator.SetMemberValue(nameof(RowDefinition.Height), v);
-							Instance.RowDefinitions.Add(creator.Finish());
+							var row = CreateFactory(UI, typeof(RowDefinition));
+							row[RowDefinition.HeightProperty] = v;
+							rows.AddValue(row);
 						}
 					}
 				}
 				else
 					throw new ArgumentException();
 			}
-		}
+		} // prop RowDefinitions
 
-		/// <summary></summary>
-		[LuaMember]
 		public object ColumnDefinitions
 		{
-			get => Instance.ColumnDefinitions;
+			get => this[columnDefinitionsMember.Value];
 			set
 			{
 				if (value is LuaTable t)
 				{
+					var rows = (LuaWpfCreator)this.ColumnDefinitions;
 					foreach (var v in t.ArrayList)
 					{
 						if (v is LuaTable tr)
-							Instance.ColumnDefinitions.Add(CreateInstance<ColumnDefinition>(UI, tr));
+							rows.AddValue(CreateFactory(UI, typeof(ColumnDefinition), tr));
 						else
 						{
-							var creator = new LuaWpfCreator<ColumnDefinition>(UI, new ColumnDefinition());
-							creator.SetMemberValue(nameof(ColumnDefinition.Width), v);
-							Instance.ColumnDefinitions.Add(creator.Finish());
+							var row = CreateFactory(UI, typeof(ColumnDefinition));
+							row[ColumnDefinition.WidthProperty] = v;
+							rows.AddValue(row);
 						}
 					}
 				}
 				else
 					throw new ArgumentException();
 			}
-		}
+		} // prop RowDefinitions
 	} // class LuaWpfGridCreator
-
-	#endregion
-
-	#region -- class PpsDataFieldScope ------------------------------------------------
-
-	internal class PpsDataFieldScope<T> : LuaWpfCreator<T>, IPpsDataFieldResolver
-		where T : class
-	{
-		public PpsDataFieldScope(LuaUI ui, XamlType type, T instance)
-			: base(ui, type, instance)
-		{
-		} // ctor
-
-		PpsDataFieldInfo IPpsDataFieldResolver.ResolveColumn(string fieldExpression)
-		{
-			if (String.IsNullOrEmpty(fieldExpression))
-				return null;
-
-			//var p = fieldExpression.IndexOf(':');
-			//if(p == -1)
-			// starts with name, check name
-			return FieldResolver?.ResolveColumn(fieldExpression)
-				?? ParentScope?.GetService<IPpsDataFieldResolver>(false)?.ResolveColumn(fieldExpression);
-		} // func IPpsDataFieldResolver.ResolveColumn
-
-		public override object GetService(Type serviceType)
-		{
-			if (serviceType == typeof(IPpsDataFieldResolver))
-				return this;
-			else
-				return base.GetService(serviceType);
-		} // func GetService
-
-		public IPpsDataFieldResolver FieldResolver { get; set; }
-
-		public override string Name => "scope: " + typeof(T).Name;
-	} // class PpsDataFieldScope
-
-	internal sealed class PpsDataFieldScopeImplementation : PpsDataFieldScope<object>
-	{
-		public PpsDataFieldScopeImplementation(LuaUI ui)
-			: base(ui, null, null)
-		{
-		} // ctor
-
-		protected override void OnCall(object[] args, int offset, int count)
-			=> SetInstanceFromArgs(this, args, offset, count);
-	} // class PpsDataFieldScopeImplementation
 
 	#endregion
 
 	#region -- class LuaUI ------------------------------------------------------------
 
 	/// <summary>Library to create a wpf-controls directly in lua.</summary>
-	public class LuaUI : LuaTable, IUriContext, IXamlSchemaContextProvider
+	public class LuaUI : LuaTable, IUriContext
 	{
-		private static XamlSchemaContext schemaContext;
 		private readonly string currentNamespaceName;
-
-		private readonly Stack<ILuaWpfScope> currentScopes = new Stack<ILuaWpfScope>(); // currenttly added control
 
 		/// <summary>Create the creator for the default name space.</summary>
 		public LuaUI()
-			: this("http://schemas.microsoft.com/winfx/2006/xaml/presentation")
+			: this(StuffUI.PresentationNamespace.NamespaceName)
 		{
 		} // ctor
 
@@ -774,187 +1189,6 @@ namespace TecWare.PPSn.UI
 		{
 			this.currentNamespaceName = namespaceName;
 		} // ctor
-
-		[Conditional("_DEBUG")]
-		private static void PrintScopeInfo(bool push, ILuaWpfScope scope)
-			=> Debug.Print($"Scope[{(push ? "push" : "pop")}]: {scope.Name ?? scope.GetType().Name}"); 
-
-		internal void PushScope(ILuaWpfScope scope)
-		{
-			PrintScopeInfo(true, scope);
-			currentScopes.Push(scope);
-		} // proc PushScope
-
-		internal void PopScope(ILuaWpfScope scope)
-		{
-			if (CurrentScope == scope)
-			{
-				PrintScopeInfo(false, scope);
-				currentScopes.Pop();
-			}
-			else
-			{
-				var stack = String.Join("->", from c in currentScopes.ToArray().Reverse() select c.Name);
-				throw new InvalidOperationException($"Scope error (unfinised scope '{scope.Name}').\nCurrent Scopes: {stack}");
-			}
-		} // proc PopScope
-
-		internal ILuaWpfScope CurrentScope => currentScopes.Count == 0 ? null : currentScopes.Peek();
-
-		/// <summary>Switch default namespace.</summary>
-		/// <param name="namespaceName"></param>
-		/// <returns></returns>
-		[LuaMember("Namespace")]
-		public LuaUI GetNamespace(string namespaceName)
-			=> new LuaUI(namespaceName);
-
-		/// <summary></summary>
-		/// <param name="type"></param>
-		/// <returns></returns>
-		public XamlType GetXamlType(Type type)
-			=> schemaContext.GetXamlType(type);
-
-		private LuaWpfCreator<T> InitDataFieldScope<T>(PpsDataFieldScope<T> scope, IPpsDataFieldResolver resolver)
-			where T : class
-		{
-			if (resolver != null)
-				scope.FieldResolver = resolver;
-			return scope;
-		} // func InitDataFieldScope
-
-		private IPpsDataFieldResolver CreateFieldResolver(object def, object source)
-		{
-			if (def == null && source == null)
-				return null;
-
-			switch (def)
-			{
-				case PpsDataSetDefinition dsd:
-					return new PpsDataSetResolver(dsd, null);
-				case PpsDataSet ds:
-					return new PpsDataSetResolver(ds.DataSetDefinition, ds);
-				case PpsDataTableDefinition dtd:
-					return new PpsDataTableResolver(dtd, null);
-				case PpsDataTable dt:
-					return new PpsDataTableResolver(dt.TableDefinition, dt.First);
-				default:
-					throw new ArgumentException(nameof(def));
-			}
-		} // func CreateFieldResolver
-
-		/// <summary></summary>
-		/// <param name="def"></param>
-		/// <param name="source"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public object Scope(object def, object source)
-			=> InitDataFieldScope(new PpsDataFieldScopeImplementation(this), CreateFieldResolver(def, source));
-
-		/// <summary></summary>
-		/// <param name="scope"></param>
-		/// <param name="source"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public LuaWpfCreator<PpsDataFieldPanel> DataFields(object scope, object source)
-			=> InitDataFieldScope(new PpsDataFieldScope<PpsDataFieldPanel>(this, GetXamlType(typeof(PpsDataFieldPanel)), null), CreateFieldResolver(scope, source));
-
-		/// <summary></summary>
-		/// <param name="fieldName"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public object DataField(string fieldName)
-		{
-			// search field
-			var fieldInfo = CurrentScope?.GetService<IPpsDataFieldResolver>(false)?.ResolveColumn(fieldName)
-				?? throw new ArgumentOutOfRangeException(nameof(fieldName), fieldName, $"Could not locate field: {fieldName}.");
-
-			var ctrl = new LuaWpfCreator<TextBox>(this, GetXamlType(typeof(TextBox)), new TextBox());
-			ctrl[TextBox.TextProperty.Name] = DataBinding(fieldInfo.FieldInfo, fieldInfo.Source).Finish();
-
-			if (fieldInfo.FieldInfo.Attributes.TryGetProperty("displayName", out var displayName))
-				ctrl.Instance.SetValue(PpsDataFieldPanel.LabelProperty, displayName + ":"); // todo: design
-
-			return ctrl;
-		} // func DataField
-
-		/// <summary></summary>
-		/// <param name="fieldName"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public LuaWpfCreator<Binding> DataBinding(string fieldName)
-		{
-			// search field
-			var fieldInfo = CurrentScope?.GetService<IPpsDataFieldResolver>(false)?.ResolveColumn(fieldName)
-				?? throw new ArgumentOutOfRangeException(nameof(fieldName));
-
-			return DataBinding(fieldInfo.FieldInfo, fieldInfo.Source);
-		} // func DataBinding
-
-		/// <summary></summary>
-		/// <param name="fieldInfo"></param>
-		/// <param name="source"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public LuaWpfCreator<Binding> DataBinding(IDataColumn fieldInfo, object source)
-		{
-			var b = new Binding
-			{
-				Path = new PropertyPath(fieldInfo.Name),
-				Source = source
-			};
-			return new LuaWpfCreator<Binding>(this, GetXamlType(typeof(Binding)), b);
-
-		} // func DataBinding
-
-		#region -- SideBar ------------------------------------------------------------
-
-		/// <summary></summary>
-		/// <param name="scope"></param>
-		/// <param name="source"></param>
-		/// <returns></returns>
-		[LuaMember]
-		public LuaWpfCreator<PpsSideBarControl> SideBar(object scope, object source = null)
-			=> InitDataFieldScope(new PpsDataFieldScope<PpsSideBarControl>(this, GetXamlType(typeof(PpsSideBarControl)), null), CreateFieldResolver(scope, source));
-
-		/// <summary></summary>
-		/// <returns></returns>
-		[LuaMember]
-		public LuaWpfCreator<PpsSideBarGroup> SideBarGroup
-			=> new LuaWpfCreator<PpsSideBarGroup>(this, GetXamlType(typeof(PpsSideBarGroup)), null);
-
-		/// <summary></summary>
-		/// <returns></returns>
-		[LuaMember]
-		public LuaWpfCreator<PpsSideBarPanel> SideBarPanel
-			=> new LuaWpfCreator<PpsSideBarPanel>(this, GetXamlType(typeof(PpsSideBarPanel)), null);
-
-		/// <summary></summary>
-		/// <returns></returns>
-		[LuaMember]
-		public LuaWpfCreator<PpsSideBarPanelFilter> SideBarPanelFilter
-			=> new LuaWpfCreator<PpsSideBarPanelFilter>(this, GetXamlType(typeof(PpsSideBarPanelFilter)), null);
-
-		/// <summary></summary>
-		/// <returns></returns>
-		[LuaMember]
-		public LuaWpfCreator<PpsStackSectionControl> StackSection
-			=> new LuaWpfCreator<PpsStackSectionControl>(this, GetXamlType(typeof(PpsStackSectionControl)), null);
-
-		/// <summary></summary>
-		/// <returns></returns>
-		[LuaMember]
-		public LuaWpfCreator<PpsStackSectionItem> StackSectionItem
-			=> new LuaWpfCreator<PpsStackSectionItem>(this, GetXamlType(typeof(PpsStackSectionItem)), null);
-
-		#endregion
-
-		/// <summary></summary>
-		[LuaMember]
-		public LuaWpfCreator<Grid> Grid => new LuaWpfGridCreator(this, GetXamlType(typeof(Grid)), null);
-
-		/// <summary></summary>
-		[LuaMember]
-		public LuaUI Pps => GetNamespace("http://tecare-gmbh.de/ppsn/wpf/2015");
 
 		/// <summary>Create the class creator from the context or a preregistered.</summary>
 		/// <param name="key"></param>
@@ -968,25 +1202,160 @@ namespace TecWare.PPSn.UI
 			if (value == null
 				&& key is string typeName)
 			{
-				var xamlType = schemaContext.GetXamlType(new XamlTypeName(currentNamespaceName, typeName));
+				var xamlType = GetXamlType(new XamlTypeName(currentNamespaceName, typeName));
 				if (xamlType != null)
-					value = new LuaWpfCreator<object>(this, xamlType, null);
+					value = new LuaWpfCreator(this, xamlType);
 			}
 			return value;
 		} // func OnIndex
 
 		/// <summary></summary>
-		public XamlSchemaContext SchemaContext => schemaContext;
+		/// <param name="type"></param>
+		/// <returns></returns>
+		public XamlType GetXamlType(Type type)
+			=> PpsXamlSchemaContext.Default.GetXamlType(type);
+
+		/// <summary></summary>
+		/// <param name="typeName"></param>
+		/// <returns></returns>
+		public XamlType GetXamlType(XamlTypeName typeName)
+			=> PpsXamlSchemaContext.Default.GetXamlType(typeName);
+
+		/// <summary>Switch default namespace.</summary>
+		/// <param name="namespaceName"></param>
+		/// <returns></returns>
+		[LuaMember("Namespace")]
+		public LuaUI GetNamespace(string namespaceName)
+			=> new LuaUI(namespaceName);
+
+		#region -- SideBar ------------------------------------------------------------
+
+		/// <summary></summary>
+		[LuaMember]
+		public LuaWpfCreator SideBar
+			=> LuaWpfCreator.CreateFactory(this, typeof(PpsSideBarControl));
+
+		/// <summary></summary>
+		[LuaMember]
+		public LuaWpfCreator SideBarGroup
+			=> LuaWpfCreator.CreateFactory(this, typeof(PpsSideBarGroup));
+
+		/// <summary></summary>
+		[LuaMember]
+		public LuaWpfCreator SideBarPanel
+			=> LuaWpfCreator.CreateFactory(this, typeof(PpsSideBarPanel));
+
+		/// <summary></summary>
+		[LuaMember]
+		public LuaWpfCreator SideBarPanelFilter
+			=> LuaWpfCreator.CreateFactory(this, typeof(PpsSideBarPanelFilter));
+
+		/// <summary></summary>
+		[LuaMember]
+		public LuaWpfCreator StackSection
+			=> LuaWpfCreator.CreateFactory(this, typeof(PpsStackSectionControl));
+
+		/// <summary></summary>
+		[LuaMember]
+		public LuaWpfCreator StackSectionItem
+			=> LuaWpfCreator.CreateFactory(this, typeof(PpsStackSectionItem));
+
+		#endregion
+
+		/// <summary></summary>
+		[LuaMember]
+		public LuaWpfCreator Grid => new LuaWpfGridCreator(this);
+
+		/// <summary></summary>
+		[LuaMember]
+		public LuaUI Pps => GetNamespace("http://tecare-gmbh.de/ppsn/wpf/2015");
+
 		/// <summary>Uri, to load external resources.</summary>
 		public Uri BaseUri { get; set; }
 
-		static LuaUI()
-		{
-			schemaContext = System.Windows.Markup.XamlReader.GetWpfSchemaContext();
-		} // ctor
+		//private IPpsDataFieldResolver CreateFieldResolver(object def, object source)
+		//{
+		//	if (def == null && source == null)
+		//		return null;
 
-		/// <summary>First argument, to mark multiple calls.</summary>
-		public static object ReturnSelf { get; } = new object();
+		//	switch (def)
+		//	{
+		//		case PpsDataSetDefinition dsd:
+		//			return new PpsDataSetResolver(dsd, null);
+		//		case PpsDataSet ds:
+		//			return new PpsDataSetResolver(ds.DataSetDefinition, ds);
+		//		case PpsDataTableDefinition dtd:
+		//			return new PpsDataTableResolver(dtd, null);
+		//		case PpsDataTable dt:
+		//			return new PpsDataTableResolver(dt.TableDefinition, dt.First);
+		//		default:
+		//			throw new ArgumentException(nameof(def));
+		//	}
+		//} // func CreateFieldResolver
+
+		///// <summary></summary>
+		///// <param name="def"></param>
+		///// <param name="source"></param>
+		///// <returns></returns>
+		//[LuaMember]
+		//public object Scope(object def, object source)
+		//	=> InitDataFieldScope(new PpsDataFieldScopeImplementation(this), CreateFieldResolver(def, source));
+
+		///// <summary></summary>
+		///// <param name="scope"></param>
+		///// <param name="source"></param>
+		///// <returns></returns>
+		//[LuaMember]
+		//public LuaWpfCreator<PpsDataFieldPanel> DataFields(object scope, object source)
+		//	=> InitDataFieldScope(new PpsDataFieldScope<PpsDataFieldPanel>(this, GetXamlType(typeof(PpsDataFieldPanel)), null), CreateFieldResolver(scope, source));
+
+		///// <summary></summary>
+		///// <param name="fieldName"></param>
+		///// <returns></returns>
+		//[LuaMember]
+		//public object DataField(string fieldName)
+		//{
+		//	// search field
+		//	var fieldInfo = CurrentScope?.GetService<IPpsDataFieldResolver>(false)?.ResolveColumn(fieldName)
+		//		?? throw new ArgumentOutOfRangeException(nameof(fieldName), fieldName, $"Could not locate field: {fieldName}.");
+
+		//	var ctrl = new LuaWpfCreator<TextBox>(this, GetXamlType(typeof(TextBox)), new TextBox());
+		//	ctrl[TextBox.TextProperty.Name] = DataBinding(fieldInfo.FieldInfo, fieldInfo.Source).Finish();
+
+		//	if (fieldInfo.FieldInfo.Attributes.TryGetProperty("displayName", out var displayName))
+		//		ctrl.Instance.SetValue(PpsDataFieldPanel.LabelProperty, displayName + ":"); // todo: design
+
+		//	return ctrl;
+		//} // func DataField
+
+		///// <summary></summary>
+		///// <param name="fieldName"></param>
+		///// <returns></returns>
+		//[LuaMember]
+		//public LuaWpfCreator<Binding> DataBinding(string fieldName)
+		//{
+		//	// search field
+		//	var fieldInfo = CurrentScope?.GetService<IPpsDataFieldResolver>(false)?.ResolveColumn(fieldName)
+		//		?? throw new ArgumentOutOfRangeException(nameof(fieldName));
+
+		//	return DataBinding(fieldInfo.FieldInfo, fieldInfo.Source);
+		//} // func DataBinding
+
+		///// <summary></summary>
+		///// <param name="fieldInfo"></param>
+		///// <param name="source"></param>
+		///// <returns></returns>
+		//[LuaMember]
+		//public LuaWpfCreator<Binding> DataBinding(IDataColumn fieldInfo, object source)
+		//{
+		//	var b = new Binding
+		//	{
+		//		Path = new PropertyPath(fieldInfo.Name),
+		//		Source = source
+		//	};
+		//	return new LuaWpfCreator<Binding>(this, GetXamlType(typeof(Binding)), b);
+
+		//} // func DataBinding
 	} // class LuaUI
 
 	#endregion

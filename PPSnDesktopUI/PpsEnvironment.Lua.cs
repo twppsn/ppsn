@@ -526,7 +526,7 @@ namespace TecWare.PPSn
 				}
 			}
 		} // func CompileAsync
-
+		
 		/// <summary></summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="code"></param>
@@ -567,6 +567,19 @@ namespace TecWare.PPSn
 			return CompileLambdaAsync<T>(code, pos.LineInfo ?? "dummy.lua", throwException, argumentNames);
 		} // func CompileAsync
 
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="xml"></param>
+		/// <param name="throwException"></param>
+		/// <param name="argumentNames"></param>
+		/// <returns></returns>
+		public async Task<T> CompileLambdaAsync<T>(XmlReader xml, bool throwException, params string[] argumentNames)
+			where T : class
+		{
+			var code = await xml.GetElementContentAsync(String.Empty);
+			return await CompileLambdaAsync<T>(code, xml.BaseURI ?? "dummy.lua", throwException, argumentNames);
+		} // func CompileAsync
+
 
 		/// <summary>Compiles a chunk in the background.</summary>
 		/// <param name="sourceCode">Source code of the chunk.</param>
@@ -587,6 +600,9 @@ namespace TecWare.PPSn
 		/// <returns>Compiled chunk</returns>
 		public Task<LuaChunk> CompileAsync(XElement xSource, bool throwException, params KeyValuePair<string, Type>[] arguments)
 		{
+			if (xSource == null)
+				throw new ArgumentNullException(nameof(xSource));
+
 			var code = xSource.Value;
 			var pos = PpsXmlPosition.GetXmlPositionFromAttributes(xSource);
 			return CompileAsync(code, pos.LineInfo ?? "dummy.lua", throwException, arguments);
@@ -600,6 +616,10 @@ namespace TecWare.PPSn
 		/// <returns>Compiled chunk</returns>
 		public async Task<LuaChunk> CompileAsync(BaseWebRequest request, Uri source, bool throwException, params KeyValuePair<string, Type>[] arguments)
 		{
+			if (request == null)
+				throw new ArgumentNullException(nameof(request));
+			if (source == null)
+				throw new ArgumentNullException(nameof(source));
 			try
 			{
 				using (var r = await request.GetResponseAsync(source.ToString()))
@@ -814,7 +834,7 @@ namespace TecWare.PPSn
 		/// <param name="arguments"></param>
 		/// <param name="paneUri"></param>
 		/// <returns></returns>
-		public async Task<(XDocument xaml, LuaChunk paneCode)> LoadPaneDataAsync(BaseWebRequest request, LuaTable arguments, Uri paneUri)
+		public async Task<object> LoadPaneDataAsync(BaseWebRequest request, LuaTable arguments, Uri paneUri)
 		{
 			try
 			{
@@ -836,28 +856,14 @@ namespace TecWare.PPSn
 								xamlContent = await Task.Run(() => XDocument.Load(xml, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo));
 						}
 
-						// Load the content of the code-tag, to initialize extended functionality
-						var xCode = xamlContent.Root.Element(xnCode);
-						var paneCode = (LuaChunk)null;
-						if (xCode != null)
-						{
-							paneCode = await CompileAsync(xCode, true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
-							xCode.Remove();
-						}
-
-						return (xamlContent, paneCode);
+						return xamlContent;
 					}
 					else if (contentType.MediaType == MimeTypes.Text.Lua
 						|| contentType.MediaType == MimeTypes.Text.Plain) // load a code file
 					{
 						// load an compile the chunk
 						using (var sr = request.GetTextReader(r, null))
-						{
-							return (
-								null,
-								await CompileAsync(sr, paneUri.ToString(), true, new KeyValuePair<string, Type>("self", typeof(LuaTable)))
-							);
-						}
+							return await CompileAsync(sr, paneUri.ToString(), true, new KeyValuePair<string, Type>("self", typeof(LuaTable)));
 					}
 					else
 						throw new ArgumentException($"Expected: xaml/lua; received: {contentType.MediaType}");

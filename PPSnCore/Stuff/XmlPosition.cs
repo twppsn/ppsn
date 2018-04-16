@@ -14,12 +14,16 @@
 //
 #endregion
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using System.Xml.Schema;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Stuff
 {
+
 	#region -- class PpsXmlPosition ---------------------------------------------------
 
 	/// <summary>Class to read source file hints from an xml-element.</summary>
@@ -34,6 +38,205 @@ namespace TecWare.PPSn.Stuff
 		public readonly static XName xnLinePosition = XmlPositionNamespace + "p";
 		/// <summary>Tag to write the file name.</summary>
 		public readonly static XName xnFileName = XmlPositionNamespace + "f";
+
+		#region -- class PpsXmlPositionReader -----------------------------------------
+
+		private sealed class PpsXmlPositionReader : XmlReader, IXmlNamespaceResolver, IXmlLineInfo
+		{
+			private class StackLineInfo
+			{
+				public int lineNumber;
+				public int linePosition;
+				public string baseUri;
+				public int popLevel;
+			} // class StackLineInfo
+
+			private readonly XmlReader xml;
+			private readonly Stack<StackLineInfo> positionStack = new Stack<StackLineInfo>();
+
+			public PpsXmlPositionReader(XmlReader xml)
+			{
+				this.xml = xml ?? throw new ArgumentNullException(nameof(xml));
+			} // ctor
+
+			protected override void Dispose(bool disposing)
+			{
+				base.Dispose(disposing);
+				if (Settings.CloseInput)
+					xml.Dispose();
+			} // proc Dispose
+
+			private bool UpdateLineInfo()
+			{
+				if (xml.NodeType == XmlNodeType.Element)
+				{
+					var newLineNumber = xml.TryGetAttribute<string>(xnLineNumber, out var lineNumberString) && Int32.TryParse(lineNumberString, out var lineNumber) ? lineNumber : -1;
+					var newLinePosition = newLineNumber >= 0 ? xml.TryGetAttribute<string>(xnLinePosition, out var linePositionString) && Int32.TryParse(lineNumberString, out var linePosition) ? linePosition : -1 : -1;
+					var newBaseUri = xml.TryGetAttribute<string>(xnFileName, out var fileName) ? fileName : null;
+
+					if (newBaseUri != null && newLinePosition == -1)
+						positionStack.Push(new StackLineInfo() { lineNumber = 0, linePosition = 0, baseUri = newBaseUri, popLevel = xml.Depth });
+					else
+						positionStack.Push(new StackLineInfo() { lineNumber = newLineNumber, linePosition = newLinePosition >= 0 ? newLinePosition : 0, baseUri = newBaseUri ?? BaseURI, popLevel = xml.Depth });
+				}
+				else if(xml.NodeType == XmlNodeType.EndElement  && positionStack.Count > 0)
+				{
+					var popLevel = positionStack.Peek().popLevel;
+					if (popLevel > xml.Depth)
+						positionStack.Pop();
+				}
+				return true;
+			} // func UpdateLineInfo
+
+			public override bool Read()
+			{
+				return xml.Read() && UpdateLineInfo();
+			} // func Read
+
+			public async override Task<bool> ReadAsync()
+				=> await xml.ReadAsync() && UpdateLineInfo();
+
+			bool IXmlLineInfo.HasLineInfo() => true;
+			int IXmlLineInfo.LineNumber => positionStack.Count > 0 ? positionStack.Peek().lineNumber : (xml is IXmlLineInfo lineInfo ? lineInfo.LineNumber : 0);
+			int IXmlLineInfo.LinePosition => positionStack.Count > 0 ? positionStack.Peek().lineNumber : (xml is IXmlLineInfo lineInfo ? lineInfo.LinePosition : 0);
+
+			#region -- overrides --
+
+			IDictionary<string, string> IXmlNamespaceResolver.GetNamespacesInScope(XmlNamespaceScope scope)
+				=> xml is IXmlNamespaceResolver resolver ? resolver.GetNamespacesInScope(scope) : throw new NotSupportedException();
+			string IXmlNamespaceResolver.LookupNamespace(string prefix)
+				=> xml is IXmlNamespaceResolver resolver ? resolver.LookupNamespace(prefix) : throw new NotSupportedException();
+			string IXmlNamespaceResolver.LookupPrefix(string namespaceName)
+				=> xml is IXmlNamespaceResolver resolver ? resolver.LookupPrefix(namespaceName) : throw new NotSupportedException();
+
+			public override object ReadContentAsObject() => xml.ReadContentAsObject();
+			public override bool ReadContentAsBoolean() => xml.ReadContentAsBoolean();
+			public override DateTime ReadContentAsDateTime() => xml.ReadContentAsDateTime();
+			public override DateTimeOffset ReadContentAsDateTimeOffset() => xml.ReadContentAsDateTimeOffset();
+			public override double ReadContentAsDouble() => xml.ReadContentAsDouble();
+			public override float ReadContentAsFloat() => xml.ReadContentAsFloat();
+			public override decimal ReadContentAsDecimal() => xml.ReadContentAsDecimal();
+			public override int ReadContentAsInt() => xml.ReadContentAsInt();
+			public override long ReadContentAsLong() => xml.ReadContentAsLong();
+			public override string ReadContentAsString() => xml.ReadContentAsString();
+			public override object ReadContentAs(Type returnType, IXmlNamespaceResolver namespaceResolver) => xml.ReadContentAs(returnType, namespaceResolver);
+			public override object ReadElementContentAsObject() => xml.ReadElementContentAsObject();
+			public override object ReadElementContentAsObject(string localName, string namespaceURI) => xml.ReadElementContentAsObject(localName, namespaceURI);
+			public override bool ReadElementContentAsBoolean() => xml.ReadElementContentAsBoolean();
+			public override bool ReadElementContentAsBoolean(string localName, string namespaceURI) => xml.ReadElementContentAsBoolean(localName, namespaceURI);
+			public override DateTime ReadElementContentAsDateTime() => xml.ReadElementContentAsDateTime();
+			public override DateTime ReadElementContentAsDateTime(string localName, string namespaceURI) => xml.ReadElementContentAsDateTime(localName, namespaceURI);
+			public override double ReadElementContentAsDouble() => xml.ReadElementContentAsDouble();
+			public override double ReadElementContentAsDouble(string localName, string namespaceURI) => xml.ReadElementContentAsDouble(localName, namespaceURI);
+			public override float ReadElementContentAsFloat() => xml.ReadElementContentAsFloat();
+			public override float ReadElementContentAsFloat(string localName, string namespaceURI) => xml.ReadElementContentAsFloat(localName, namespaceURI);
+			public override decimal ReadElementContentAsDecimal() => xml.ReadElementContentAsDecimal();
+			public override decimal ReadElementContentAsDecimal(string localName, string namespaceURI) => xml.ReadElementContentAsDecimal(localName, namespaceURI);
+			public override int ReadElementContentAsInt() => xml.ReadElementContentAsInt();
+			public override int ReadElementContentAsInt(string localName, string namespaceURI) => xml.ReadElementContentAsInt(localName, namespaceURI);
+			public override long ReadElementContentAsLong() => xml.ReadElementContentAsLong();
+			public override long ReadElementContentAsLong(string localName, string namespaceURI) => xml.ReadElementContentAsLong(localName, namespaceURI);
+			public override string ReadElementContentAsString() => xml.ReadElementContentAsString();
+			public override string ReadElementContentAsString(string localName, string namespaceURI) => xml.ReadElementContentAsString(localName, namespaceURI);
+			public override object ReadElementContentAs(Type returnType, IXmlNamespaceResolver namespaceResolver) => xml.ReadElementContentAs(returnType, namespaceResolver);
+			public override object ReadElementContentAs(Type returnType, IXmlNamespaceResolver namespaceResolver, string localName, string namespaceURI) => xml.ReadElementContentAs(returnType, namespaceResolver, localName, namespaceURI);
+			public override void MoveToAttribute(int i) => xml.MoveToAttribute(i);
+			public override void Skip() => xml.Skip();
+			public override int ReadContentAsBase64(byte[] buffer, int index, int count) => xml.ReadContentAsBase64(buffer, index, count);
+			public override int ReadElementContentAsBase64(byte[] buffer, int index, int count) => xml.ReadElementContentAsBase64(buffer, index, count);
+			public override int ReadContentAsBinHex(byte[] buffer, int index, int count) => xml.ReadContentAsBinHex(buffer, index, count);
+			public override int ReadElementContentAsBinHex(byte[] buffer, int index, int count) => xml.ReadElementContentAsBinHex(buffer, index, count);
+			public override int ReadValueChunk(char[] buffer, int index, int count) => xml.ReadValueChunk(buffer, index, count);
+			public override string ReadString() => xml.ReadString();
+			public override XmlNodeType MoveToContent() => xml.MoveToContent();
+			public override void ReadStartElement() => xml.ReadStartElement();
+			public override void ReadStartElement(string name) => xml.ReadStartElement(name);
+			public override void ReadStartElement(string localname, string ns) => xml.ReadStartElement(localname, ns);
+			public override string ReadElementString() => xml.ReadElementString();
+			public override string ReadElementString(string name) => xml.ReadElementString(name);
+			public override string ReadElementString(string localname, string ns) => xml.ReadElementString(localname, ns);
+			public override void ReadEndElement() => xml.ReadEndElement();
+			public override bool IsStartElement() => xml.IsStartElement();
+			public override bool IsStartElement(string name) => xml.IsStartElement(name);
+			public override bool IsStartElement(string localname, string ns) => xml.IsStartElement(localname, ns);
+			public override bool ReadToFollowing(string name) => xml.ReadToFollowing(name);
+			public override bool ReadToFollowing(string localName, string namespaceURI) => xml.ReadToFollowing(localName, namespaceURI);
+			public override bool ReadToDescendant(string name) => xml.ReadToDescendant(name);
+			public override bool ReadToDescendant(string localName, string namespaceURI) => xml.ReadToDescendant(localName, namespaceURI);
+			public override bool ReadToNextSibling(string name) => xml.ReadToNextSibling(name);
+			public override bool ReadToNextSibling(string localName, string namespaceURI) => xml.ReadToNextSibling(localName, namespaceURI);
+			public override string ReadInnerXml() => xml.ReadInnerXml();
+			public override string ReadOuterXml() => xml.ReadOuterXml();
+			public override XmlReader ReadSubtree() => xml.ReadSubtree();
+			public override Task<string> GetValueAsync() => xml.GetValueAsync();
+			public override Task<object> ReadContentAsObjectAsync() => xml.ReadContentAsObjectAsync();
+			public override Task<string> ReadContentAsStringAsync() => xml.ReadContentAsStringAsync();
+			public override Task<object> ReadContentAsAsync(Type returnType, IXmlNamespaceResolver namespaceResolver) => xml.ReadContentAsAsync(returnType, namespaceResolver);
+			public override Task<object> ReadElementContentAsObjectAsync() => xml.ReadElementContentAsObjectAsync();
+			public override Task<string> ReadElementContentAsStringAsync() => xml.ReadElementContentAsStringAsync();
+			public override Task<object> ReadElementContentAsAsync(Type returnType, IXmlNamespaceResolver namespaceResolver) => xml.ReadElementContentAsAsync(returnType, namespaceResolver);
+			public override Task SkipAsync() => xml.SkipAsync();
+			public override Task<int> ReadContentAsBase64Async(byte[] buffer, int index, int count) => xml.ReadContentAsBase64Async(buffer, index, count);
+			public override Task<int> ReadElementContentAsBase64Async(byte[] buffer, int index, int count) => xml.ReadElementContentAsBase64Async(buffer, index, count);
+			public override Task<int> ReadContentAsBinHexAsync(byte[] buffer, int index, int count) => xml.ReadContentAsBinHexAsync(buffer, index, count);
+			public override Task<int> ReadElementContentAsBinHexAsync(byte[] buffer, int index, int count) => xml.ReadElementContentAsBinHexAsync(buffer, index, count);
+			public override Task<int> ReadValueChunkAsync(char[] buffer, int index, int count) => xml.ReadValueChunkAsync(buffer, index, count);
+			public override Task<XmlNodeType> MoveToContentAsync() => xml.MoveToContentAsync();
+			public override Task<string> ReadInnerXmlAsync() => xml.ReadInnerXmlAsync();
+			public override Task<string> ReadOuterXmlAsync() => xml.ReadOuterXmlAsync();
+			public override string GetAttribute(int i) => xml.GetAttribute(i);
+			public override string GetAttribute(string name) => xml.GetAttribute(name);
+			public override string GetAttribute(string name, string namespaceURI) => xml.GetAttribute(name, namespaceURI);
+			public override bool MoveToAttribute(string name) => xml.MoveToAttribute(name);
+			public override bool MoveToAttribute(string name, string ns) => xml.MoveToAttribute(name, ns);
+			public override string LookupNamespace(string prefix) => xml.LookupNamespace(prefix);
+			public override bool ReadAttributeValue() => xml.ReadAttributeValue();
+			public override void ResolveEntity() => xml.ResolveEntity();
+
+			public override bool MoveToFirstAttribute() => xml.MoveToFirstAttribute();
+			public override bool MoveToNextAttribute() => xml.MoveToNextAttribute();
+			public override bool MoveToElement() => xml.MoveToElement();
+
+			public override bool CanReadBinaryContent => xml.CanReadBinaryContent;
+			public override bool CanReadValueChunk => xml.CanReadValueChunk;
+			public override bool CanResolveEntity => xml.CanResolveEntity;
+
+			public override int AttributeCount => xml.AttributeCount;
+
+			public override string Name => xml.Name;
+			public override bool HasValue => xml.HasValue;
+			public override string Value => xml.Value;
+			public override string NamespaceURI => xml.NamespaceURI;
+			public override string LocalName => xml.LocalName;
+			public override string Prefix => xml.Prefix;
+			public override bool IsDefault => xml.IsDefault;
+			public override char QuoteChar => xml.QuoteChar;
+			public override Type ValueType => xml.ValueType;
+			public override bool HasAttributes => xml.HasAttributes;
+
+			public override int Depth => xml.Depth;
+			public override string BaseURI => xml.BaseURI;
+
+			public override bool IsEmptyElement => xml.IsEmptyElement;
+
+			public override bool EOF => xml.EOF;
+			public override XmlNodeType NodeType => xml.NodeType;
+			public override ReadState ReadState => xml.ReadState;
+
+			public override XmlSpace XmlSpace => xml.XmlSpace;
+			public override string XmlLang => xml.XmlLang;
+			public override XmlNameTable NameTable => xml.NameTable;
+			public override XmlReaderSettings Settings => xml.Settings;
+			public override IXmlSchemaInfo SchemaInfo => xml.SchemaInfo;
+
+			public override string this[string name, string namespaceURI] => base[name, namespaceURI];
+			public override string this[string name] => base[name];
+			public override string this[int i] => base[i];
+
+			#endregion
+		} // class PpsXmlPositionReader
+
+		#endregion
 
 		private readonly int lineNumber;
 		private readonly int linePosition;
@@ -73,6 +276,7 @@ namespace TecWare.PPSn.Stuff
 
 		/// <summary>Create a comment from the source file information.</summary>
 		/// <returns></returns>
+		[Obsolete("Todo: There is a XmlReader to filter the BaseUri")]
 		public XComment GetComment()
 			=> new XComment("L=" + LineInfo);
 
@@ -198,6 +402,12 @@ namespace TecWare.PPSn.Stuff
 			if (attr != null)
 				attr.Remove();
 		} // proc Remove
+
+		/// <summary></summary>
+		/// <param name="xml"></param>
+		/// <returns></returns>
+		public static XmlReader CreateLinePositionReader(XmlReader xml)
+			=> new PpsXmlPositionReader(xml);
 
 		/// <summary>Empty information</summary>
 		public static PpsXmlPosition Empty { get; } = new PpsXmlPosition(null, -1, -1);
