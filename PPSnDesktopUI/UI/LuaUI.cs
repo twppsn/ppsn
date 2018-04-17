@@ -1053,25 +1053,24 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		public object this[int idx] { get => GetXamlIndex(idx); set => SetXamlIndex(idx, value); }
 
-		/// <summary>Name of the scope</summary>
+		/// <summary>Name of the object</summary>
 		public virtual string Name => type.Name;
 
 		/// <summary>Get the ui class.</summary>
 		public LuaUI UI => ui;
 
-		/// <summary></summary>
-		/// <param name="ui"></param>
-		/// <param name="table"></param>
+		/// <summary>Create a wpf creator for a object-type.</summary>
+		/// <param name="ui">UI reference</param>
+		/// <param name="type">Type of the object.</param>
+		/// <param name="table">Members to initialize</param>
 		/// <returns></returns>
 		public static LuaWpfCreator CreateFactory(LuaUI ui, Type type, LuaTable table = null)
 			=> new LuaWpfCreator(ui, ui.GetXamlType(type)).SetTableMembers(table);
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="ui"></param>
-		/// <param name="xamlType"></param>
-		/// <param name="table"></param>
+		/// <summary>Create a wpf creator for a object-type.</summary>
+		/// <param name="ui">UI reference</param>
+		/// <param name="xamlType">Type of the object.</param>
+		/// <param name="table">Members to initialize</param>
 		/// <returns></returns>
 		public static LuaWpfCreator CreateFactory(LuaUI ui, XamlType xamlType, LuaTable table = null)
 			=> new LuaWpfCreator(ui, xamlType).SetTableMembers(table);

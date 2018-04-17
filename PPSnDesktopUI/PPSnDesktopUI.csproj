@@ -111,7 +111,6 @@
     <Compile Include="Controls\PpsEditableListbox.cs" />
     <Compile Include="Controls\PpsSideBarControl.cs" />
     <Compile Include="Controls\PpsStackSectionControl.cs" />
-    <Compile Include="Controls\PpsStackSectionPanel.cs" />
     <Compile Include="UI\PpsXamlParser.cs" />
     <Compile Include="Controls\ReadOnlyPaneBehavior.cs" />
     <Compile Include="Controls\SideBarMenu.cs" />

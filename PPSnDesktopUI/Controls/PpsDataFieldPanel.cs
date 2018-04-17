@@ -85,6 +85,20 @@ namespace TecWare.PPSn.Controls
 		/// <summary>if >0 children of a group are indented by the value</summary>
 		public int IndentGroupChildren { get => (int)GetValue(IndentGroupChildrenProperty); set => SetValue(IndentGroupChildrenProperty, value); }
 
+		/// <summary>The Panel has no Content to show</summary>
+		public static readonly DependencyProperty IsEmptyProperty = DependencyProperty.Register(nameof(IsEmpty), typeof(bool), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(true));
+		/// <summary>The Panel has no Content to show</summary>
+		public bool IsEmpty { get => BooleanBox.GetBool(GetValue(IsEmptyProperty)); private set => SetValue(IsEmptyProperty, value); }
+
+		private void EvaluateContent()
+		{
+			var isempty = !labels.Any(kvp => kvp.Key.Visibility == Visibility.Visible);
+			if (isempty != IsEmpty)
+				InvalidateColumnDefinitions();
+
+			IsEmpty = isempty;
+		}
+
 		#endregion
 
 		#region ---- Callbacks ----------------------------------------------------------
@@ -202,7 +216,16 @@ namespace TecWare.PPSn.Controls
 			{
 				panel.InvalidateColumnDefinitions();
 				if (!panel.labels.ContainsKey(element) && !(element is Label))
+				{
 					panel.UpdateLabelInformation(element, new DependencyPropertyChangedEventArgs(LabelProperty, null, GetLabel(element)));
+					element.IsVisibleChanged += (s, e) =>
+					{
+						panel.labels[element].Visibility = ((FrameworkElement)s).Visibility;
+						if (BooleanBox.GetBool(e.NewValue) == panel.IsEmpty)
+							panel.EvaluateContent();
+						panel.InvalidateColumnDefinitions();
+					};
+				}
 				return base.Add(element);
 			}
 
@@ -235,6 +258,8 @@ namespace TecWare.PPSn.Controls
 				lbl = new Label() { Content = newValue, Target = element };
 				labels.Add(element, lbl);
 				InternalChildren.Add(lbl);
+
+				EvaluateContent();
 			}
 		}
 
@@ -245,6 +270,8 @@ namespace TecWare.PPSn.Controls
 			{
 				InternalChildren.Remove(lbl);
 				labels.Remove(lbl);
+
+				EvaluateContent();
 			}
 		}
 
@@ -269,9 +296,11 @@ namespace TecWare.PPSn.Controls
 		{
 			var returnSize = new Size();
 
+			EvaluateContent();
+
 			if (columnDefinitions == null)
 			{
-				var childrenToArrange = (from UIElement child in InternalChildren where labels.ContainsKey(child) select child).ToArray();
+				var childrenToArrange = (from UIElement child in InternalChildren where ((child.Visibility == Visibility.Visible) && (labels.ContainsKey(child))) select child).ToArray();
 
 				columnDefinitions = PartitionDataFields(childrenToArrange, ColumnCount, ArrangeOptimization);
 			}
@@ -299,7 +328,10 @@ namespace TecWare.PPSn.Controls
 		{
 			var returnSize = new Size();
 
-			var childrenToArrange = (from UIElement child in InternalChildren where !(child is Label) select child).ToArray();
+			var childrenToArrange = (from UIElement child in InternalChildren where (!(child is Label) && (child.Visibility == Visibility.Visible)) select child).ToArray();
+
+			if (!childrenToArrange.Any())
+				return returnSize;
 
 			if (columnDefinitions == null)
 			{
