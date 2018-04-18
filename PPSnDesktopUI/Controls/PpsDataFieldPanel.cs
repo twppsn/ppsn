@@ -37,12 +37,10 @@ namespace TecWare.PPSn.Controls
 
 	#endregion
 
-	/// <summary>
-	/// This panel sorts its children in Columns. One can define the ColumnCount and the optimisation strategy.
-	/// </summary>
+	/// <summary>This panel sorts its children in Columns. One can define the ColumnCount and the optimisation strategy.</summary>
 	public class PpsDataFieldPanel : Panel
 	{
-		#region ---- Properties ---------------------------------------------------------
+		#region ---- Properties -------------------------------------------------------
 
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty ColumnCountProperty = DependencyProperty.Register(nameof(ColumnCount),
@@ -101,7 +99,7 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region ---- Callbacks ----------------------------------------------------------
+		#region ---- Callbacks --------------------------------------------------------
 
 		private static void InvalidateColumnDefinitionsCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsDataFieldPanel)d).InvalidateColumnDefinitions();
@@ -122,7 +120,7 @@ namespace TecWare.PPSn.Controls
 		public void InvalidateColumnDefinitions()
 			=> columnDefinitions = null;
 
-		#region ---- Attached Properties ------------------------------------------------
+		#region ---- Attached Properties ----------------------------------------------
 
 		#region Label
 
@@ -283,7 +281,7 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region ---- Layouting ----------------------------------------------------------
+		#region ---- Layouting --------------------------------------------------------
 
 		private List<int> columnDefinitions;
 
@@ -408,7 +406,7 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region ---- Partitioning Functions ---------------------------------------------
+		#region ---- Partitioning Functions -------------------------------------------
 
 		/// <summary>returns the heights of the columns</summary>
 		/// <param name="children"></param>
@@ -618,5 +616,5 @@ namespace TecWare.PPSn.Controls
 		} // func PartitionMaxHeight
 
 		#endregion
-	}
+	} // class PpsDataFieldPanel
 }

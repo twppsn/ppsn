@@ -75,11 +75,60 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	#region -- class PpsParserService -------------------------------------------------
+
+	/// <summary></summary>
+	public abstract class PpsParserService : IServiceProvider
+	{
+		private int objectScope = -1;
+		private PpsXamlReader serviceSite = null;
+
+		internal void Initialize(PpsXamlReader serviceSite, int objectScope)
+		{
+			this.serviceSite = serviceSite;
+			this.objectScope = objectScope;
+			OnInitialized();
+		} // proc Initialize
+
+		/// <summary></summary>
+		protected virtual void OnInitialized()
+		{
+		} // proc OnInitialized
+
+		/// <summary></summary>
+		protected void CheckInitialized()
+		{
+			if (serviceSite == null)
+				throw new InvalidOperationException();
+		} // proc CheckInitialized
+
+		/// <summary></summary>
+		/// <param name="serviceType"></param>
+		/// <returns></returns>
+		public object GetParentService(Type serviceType)
+			=> serviceSite?.GetScopeService(objectScope, serviceType);
+
+		/// <summary></summary>
+		/// <param name="serviceType"></param>
+		/// <returns></returns>
+		public abstract object GetService(Type serviceType);
+
+		internal int ObjectScope => objectScope;
+		
+		/// <summary></summary>
+		public bool IsInitialized => serviceSite != null;
+	} // class PpsParserService
+
+
+	#endregion
+
 	#region -- class PpsXamlSchemaContext ---------------------------------------------
 
 	/// <summary>Schema context for the ppsn wpf ui.</summary>
 	public class PpsXamlSchemaContext : XamlSchemaContext
 	{
+		private const string ppsXamlNamespace = "http://tecare-gmbh.de/ppsn/wpf/2015";
+
 		#region -- class PpsXamlDynamicMember -----------------------------------------
 
 		private class PpsXamlDynamicMemberInvoker : XamlMemberInvoker
@@ -258,7 +307,11 @@ namespace TecWare.PPSn.UI
 		/// <param name="name"></param>
 		/// <returns></returns>
 		public override XamlDirective GetXamlDirective(string xamlNamespace, string name)
-			=> baseContext.GetXamlDirective(xamlNamespace, name) ?? base.GetXamlDirective(xamlNamespace, name);
+		{
+			if (xamlNamespace == ppsXamlNamespace && name == ParserService.Name)
+				return ParserService;
+			return baseContext.GetXamlDirective(xamlNamespace, name) ?? base.GetXamlDirective(xamlNamespace, name);
+		} // func GetXamlDirective
 
 		/// <summary></summary>
 		/// <param name="assemblyName"></param>
@@ -268,13 +321,21 @@ namespace TecWare.PPSn.UI
 				? Assembly.GetExecutingAssembly()
 				: base.OnAssemblyResolve(assemblyName);
 
+		private static readonly Lazy<XamlDirective> parserServiceProvider;
+
 		static PpsXamlSchemaContext()
 		{
 			Default = new PpsXamlSchemaContext(System.Windows.Markup.XamlReader.GetWpfSchemaContext());
+
+			parserServiceProvider = new Lazy<XamlDirective>(
+				() => new XamlDirective(new string[] { ppsXamlNamespace }, "ParserService", Default.GetXamlType(typeof(PpsParserService)), null, AllowedMemberLocations.MemberElement)
+			);
 		} // sctor
 
 		/// <summary>Default ppsn wpf schema context.</summary>
 		public static XamlSchemaContext Default { get; }
+		/// <summary>Directive to support service within the parser.</summary>
+		public static XamlDirective ParserService => parserServiceProvider.Value;
 	} // class PpsXamlSchemaContext
 
 	#endregion
@@ -314,6 +375,8 @@ namespace TecWare.PPSn.UI
 		public TextWriter DebugWriter { get; set; } = null;
 		/// <summary></summary>
 		public FilterNodeHandler FilterNode { get; set; }
+		/// <summary></summary>
+		public IServiceProvider ServiceProvider { get; set; }
 	} // class PpsXamlReaderSettings
 
 	#endregion
@@ -456,6 +519,9 @@ namespace TecWare.PPSn.UI
 		private readonly PpsXamlReaderSettings settings;
 		private readonly Stack<PpsReaderStackItem> currentEmitterStack = new Stack<PpsReaderStackItem>();
 
+		private readonly List<PpsParserService> services = new List<PpsParserService>();
+		private int currentObjectLevel = 0;
+
 		private int inReadMethod = 0;
 		private int currentIndent = 0;
 
@@ -469,6 +535,9 @@ namespace TecWare.PPSn.UI
 			this.schemaContext = sourceReader.SchemaContext;
 			this.settings = settings ?? new PpsXamlReaderSettings();
 
+			if (sourceReader is PpsXamlReader)
+				throw new ArgumentException("It is not allowed to create a PpsXamlReader for an PpsXamlReader", nameof(sourceReader));
+
 			currentEmitterStack.Push(new PpsReaderStackItem(null, sourceReader));
 		} // ctor
 
@@ -479,6 +548,11 @@ namespace TecWare.PPSn.UI
 			base.Dispose(disposing);
 			if (disposing)
 			{
+				// remove services
+				currentObjectLevel = 0;
+				PopCurrentServices();
+
+				// remove emitter
 				while (currentEmitterStack.Count > 0)
 					currentEmitterStack.Pop().Reader.Close();
 			}
@@ -701,6 +775,15 @@ namespace TecWare.PPSn.UI
 			return PushEmitterIntern(emitter);
 		} // proc PushEmitter
 
+		/// <summary>Attach a service to the current object level.</summary>
+		/// <param name="parserService"></param>
+		public void PushServiceProvider(PpsParserService parserService)
+		{
+			parserService.Initialize(this, currentObjectLevel);
+			services.Add(parserService ?? throw new ArgumentNullException(nameof(parserService)));
+		} // proc PushServiceProvider
+
+
 		private bool PushEmitterIntern(System.Xaml.XamlReader emitter)
 		{
 			currentEmitterStack.Push(new PpsReaderStackItem(CurrentItem, emitter));
@@ -713,6 +796,21 @@ namespace TecWare.PPSn.UI
 			reader.Reader.Close();
 			return currentEmitterStack.Count > 0;
 		} // proc PopEmitter
+
+		private void PopCurrentServices()
+		{
+			for(var i=services.Count-1;i>=0;i--)
+			{
+				if (services[i].ObjectScope >= currentObjectLevel)
+				{
+					if (services[i] is IDisposable d)
+						d.Dispose();
+					services.RemoveAt(i);
+				}
+				else
+					break;
+			}
+		} // prop PopCurrentServices
 
 		private bool ProcessNode(System.Xaml.XamlReader reader, bool result)
 		{
@@ -751,6 +849,11 @@ namespace TecWare.PPSn.UI
 
 						return Read();
 					}
+					else if (Member == PpsXamlSchemaContext.ParserService)
+					{
+						PushServiceProvider((PpsParserService)ReadMemberValue(reader));
+						return Read();
+					}
 					else if (Member.IsEvent && settings.Code != null && !(reader is PpsXamlMemberEmitter)) // events generate a connection id
 					{
 						var member = Member;
@@ -783,6 +886,14 @@ namespace TecWare.PPSn.UI
 						if (newEmitter != null)
 							return PushEmitterIntern(newEmitter);
 					}
+					currentObjectLevel++;
+					goto default;
+				case XamlNodeType.GetObject:
+					currentObjectLevel++;
+					goto default;
+				case XamlNodeType.EndObject:
+					PopCurrentServices();
+					currentObjectLevel--;
 					goto default;
 				default:
 					return settings.InvokeFilterNode(this);
@@ -820,8 +931,20 @@ namespace TecWare.PPSn.UI
 		/// <param name="serviceType"></param>
 		/// <returns></returns>
 		public object GetService(Type serviceType)
+			=> GetScopeService(currentObjectLevel + 1, serviceType);
+
+		internal object GetScopeService(int currentObjectScope, Type serviceType)
 		{
-			return null;
+			for (var i = services.Count - 1; i >= 0; i--)
+			{
+				if (services[i].ObjectScope < currentObjectScope)
+				{
+					var t = services[i].GetService(serviceType);
+					if (t != null)
+						return t;
+				}
+			}
+			return settings.ServiceProvider?.GetService(serviceType);
 		} // func GetService
 
 		private bool IsTop => currentEmitterStack.Count == 1;

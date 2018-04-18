@@ -23,7 +23,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,7 +31,6 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Neo.IronLua;
-using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
@@ -571,6 +569,8 @@ namespace TecWare.PPSn
 			mainResources[EnvironmentService] = this;
 
 			InitBackgroundNotifier(environmentDisposing.Token, out backgroundNotifier, out backgroundNotifierModeTransmission);
+
+			RegisterService("DataFieldFactory", new PpsDataFieldFactory(this));
 		} // ctor
 
 		/// <summary>Initialize environmnet.</summary>
@@ -710,6 +710,8 @@ namespace TecWare.PPSn
 				var r = (service as IServiceProvider)?.GetService(serviceType);
 				if (r != null)
 					return r;
+				else if (serviceType.IsAssignableFrom(service.GetType()))
+					return service;
 			}
 
 			if (serviceType.IsAssignableFrom(GetType()))

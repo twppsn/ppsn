@@ -210,9 +210,11 @@ namespace TecWare.PPSn.Controls
 
 		private DependencyObject GetContainerItem(object item)
 		{
-			if (IsItemItsOwnContainer(item) && item is DependencyObject d)
+			if (item == null)
+				return null;
+			else if (IsItemItsOwnContainer(item) && item is DependencyObject d)
 				return d;
-			else
+			else 
 			{
 				d = ItemContainerGenerator.ContainerFromItem(item);
 				return d == DependencyProperty.UnsetValue ? null : d;
@@ -296,6 +298,17 @@ namespace TecWare.PPSn.Controls
 			}
 			return new PpsSideBarPanel();
 		} // func GetContainerForItemOverride
+
+		/// <summary></summary>
+		/// <param name="element"></param>
+		/// <param name="item"></param>
+		protected override void PrepareContainerForItemOverride(DependencyObject element, object item)
+		{
+			if (element is PpsSideBarPanel panel) // do not copy TemplateXXX die HeaderTemplateXXX
+				return;
+
+			base.PrepareContainerForItemOverride(element, item);
+		} // proc PrepareContainerForItemOverride
 
 		/// <summary></summary>
 		/// <param name="oldValue"></param>

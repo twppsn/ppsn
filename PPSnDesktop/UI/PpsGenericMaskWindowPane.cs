@@ -39,6 +39,7 @@ namespace TecWare.PPSn.UI
 
 		private PpsObject obj; // current object, controlled by this mask
 		private PpsObjectDataSet data; // data object
+		private PpsDataSetResolver datasetResolver; // field resolver
 		private IPpsObjectDataAccess dataAccess; // access token to the data object
 
 		public readonly static RoutedCommand SetCharmCommand = new RoutedCommand("SetCharm", typeof(PpsMainWindow));
@@ -107,6 +108,7 @@ namespace TecWare.PPSn.UI
 					await CreateNewObjectAsync();
 
 				data = await obj.GetDataAsync<PpsObjectDataSet>();
+				datasetResolver = new PpsDataSetResolver(data.DataSetDefinition);
 
 				// register events, owner, and in the openDocuments dictionary
 				dataAccess = await data.AccessAsync(arguments);
@@ -267,6 +269,15 @@ namespace TecWare.PPSn.UI
 				await Environment.ShowExceptionAsync(ExceptionShowFlags.None, ex, "Veröffentlichung ist fehlgeschlagen.");
 			}
 		} // proc PushDataAsync
+
+		public override object GetService(Type serviceType)
+		{
+			if (serviceType == typeof(IPpsDataFieldResolver)
+				|| serviceType == typeof(PpsDataSetResolver))
+				return datasetResolver;
+			else
+				return base.GetService(serviceType);
+		} // func GetService
 
 		[LuaMember]
 		public PpsUndoManager UndoManager => data.UndoManager;

@@ -23,98 +23,16 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Markup;
 using System.Xaml;
 using System.Xaml.Schema;
 using Neo.IronLua;
-using TecWare.DE.Data;
 using TecWare.PPSn.Controls;
-using TecWare.PPSn.Data;
 using LExpression = System.Linq.Expressions.Expression;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- class PpsDataFieldInfo -------------------------------------------------
-
-	/// <summary></summary>
-	public class PpsDataFieldInfo
-	{
-		/// <summary></summary>
-		/// <param name="fieldInfo"></param>
-		/// <param name="source"></param>
-		public PpsDataFieldInfo(IDataColumn fieldInfo, object source = null)
-		{
-			this.FieldInfo = fieldInfo ?? throw new ArgumentNullException(nameof(fieldInfo));
-			this.Source = source;
-		} // ctor
-
-		/// <summary></summary>
-		public IDataColumn FieldInfo { get; private set; }
-		/// <summary></summary>
-		public object Source { get; private set; }
-		/// <summary>Bindpath to use this field.</summary>
-		public string Path { get; private set; }
-	} // struct PpsDataFieldInfo
-
-	#endregion
-
-	#region -- interface IPpsDataFieldResolver ----------------------------------------
-
-	/// <summary>Marks a datatable scope assignment</summary>
-	public interface IPpsDataFieldResolver
-	{
-		/// <summary></summary>
-		/// <param name="fieldExpression"></param>
-		PpsDataFieldInfo ResolveColumn(string fieldExpression);
-	} // interface IPpsDataFieldResolver
-
-	#endregion
-
-	#region -- class PpsDataSetResolver -----------------------------------------------
-
-	internal class PpsDataSetResolver : IPpsDataFieldResolver
-	{
-		private readonly PpsDataSetDefinition dataset;
-		private readonly object source;
-
-		public PpsDataSetResolver(PpsDataSetDefinition dataset, object source)
-		{
-			this.dataset = dataset ?? throw new ArgumentNullException(nameof(dataset));
-			this.source = source;
-		}
-
-		public PpsDataFieldInfo ResolveColumn(string fieldExpression)
-		{
-			return null;
-		} // func ResolveColumn
-	} // class PpsDataSetResolver
-
-	#endregion
-
-	#region -- class PpsDataTableResolver ---------------------------------------------
-
-	internal class PpsDataTableResolver : IPpsDataFieldResolver
-	{
-		private readonly PpsDataTableDefinition table;
-		private readonly object source;
-
-		public PpsDataTableResolver(PpsDataTableDefinition table, object source)
-		{
-			this.table = table;
-			this.source = source;
-		}
-
-		public PpsDataFieldInfo ResolveColumn(string fieldExpression)
-		{
-			var idx = table.FindColumnIndex(fieldExpression);
-			if (idx != -1)
-				return new PpsDataFieldInfo(table.Columns[idx], source);
-			return null;
-		} // func ResolveColumn
-	} // class PpsDataTableResolver
-
-	#endregion
-
 	#region -- class LuaWpfCreator ----------------------------------------------------
 
 	/// <summary>Table to create new wpf classes.</summary>
@@ -174,7 +92,7 @@ namespace TecWare.PPSn.UI
 
 				return new DynamicMetaObject(
 					LExpression.Convert(
-						LExpression.Property(Expression, indexPropertyInfo, LExpression.Convert(index.Expression, indexPropertyInfo.PropertyType)),
+						LExpression.Property(LExpression.Convert(Expression, typeof(LuaWpfCreator)), indexPropertyInfo, LExpression.Convert(index.Expression, indexPropertyInfo.GetIndexParameters()[0].ParameterType)),
 						returnType
 					),
 					Restrictions.Merge(index.Restrictions)
@@ -190,7 +108,7 @@ namespace TecWare.PPSn.UI
 				return new DynamicMetaObject(
 					LExpression.Convert(
 						LExpression.Assign(
-							LExpression.Property(Expression, indexPropertyInfo, LExpression.Convert(index.Expression, indexPropertyInfo.PropertyType)),
+							LExpression.Property(LExpression.Convert(Expression, typeof(LuaWpfCreator)), indexPropertyInfo, LExpression.Convert(index.Expression, indexPropertyInfo.GetIndexParameters()[0].ParameterType)),
 							value == null ? (LExpression)LExpression.Constant(null) : LExpression.Convert(value.Expression, typeof(object))
 						),
 						returnType
@@ -319,7 +237,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- class LuaXamlReaderScope -------------------------------------------
+		#region -- class LuaXamlReaderState -------------------------------------------
 
 		private sealed class LuaXamlReaderState : IDisposable
 		{
@@ -718,6 +636,54 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		#region -- class LuaXamlReader ------------------------------------------------
+
+		private class LuaXamlCollectionReader : System.Xaml.XamlReader
+		{
+			private readonly IEnumerator<System.Xaml.XamlReader> xamlReader;
+			private System.Xaml.XamlReader currentReader = null;
+
+			public LuaXamlCollectionReader(IEnumerable<System.Xaml.XamlReader> xamlReader)
+				=> this.xamlReader = xamlReader.GetEnumerator();
+
+			protected override void Dispose(bool disposing)
+			{
+				// close reader
+				currentReader?.Close();
+				while (xamlReader.MoveNext())
+					xamlReader.Current.Close();
+
+				// close enum
+				xamlReader?.Dispose();
+
+				base.Dispose(disposing);
+			} // proc Dispose
+
+			public override bool Read()
+			{
+				if (currentReader != null && currentReader.Read())
+					return true;
+
+				currentReader?.Close();
+				if (!xamlReader.MoveNext())
+					return false;
+
+				currentReader = xamlReader.Current;
+				return Read();
+			} // func Read
+
+
+			public override XamlNodeType NodeType => currentReader.NodeType;
+			public override NamespaceDeclaration Namespace => currentReader.Namespace;
+			public override XamlType Type => currentReader.Type;
+			public override XamlMember Member => currentReader.Member;
+			public override object Value => currentReader.Value;
+			public override bool IsEof => currentReader.IsEof;
+			public override XamlSchemaContext SchemaContext => currentReader.SchemaContext;
+		} // class LuaXamlCollectionReader
+
+		#endregion
+
 		private readonly LuaUI ui;
 		private readonly XamlType type;
 
@@ -784,8 +750,13 @@ namespace TecWare.PPSn.UI
 
 		private XamlMember GetXamlMember(DependencyProperty property)
 		{
-			// todo: AttachedProperties?
-			return GetXamlMember(property.Name);
+			if (property.OwnerType != type.UnderlyingType) // attached property
+			{
+				var attachedType = type.SchemaContext.GetXamlType(property.OwnerType);
+				return attachedType.GetAttachableMember(property.Name);
+			}
+			else
+				return GetXamlMember(property.Name);
 		} // func GetXamlMember
 
 		private void SetXamlProperty(XamlMember member, object value)
@@ -822,7 +793,9 @@ namespace TecWare.PPSn.UI
 					var valueTypeConverter = valueType.TypeConverter?.ConverterInstance;
 					var memberTypeConverter = member.Type.TypeConverter?.ConverterInstance;
 					if (member.Type.UnderlyingType.IsAssignableFrom(valueType.UnderlyingType))
-						value = Convert.ChangeType(value, member.Type.UnderlyingType);
+					{
+						//value = Convert.ChangeType(value, member.Type.UnderlyingType);
+					}
 					else if (valueTypeConverter?.CanConvertTo(member.Type.UnderlyingType) ?? false)
 						value = valueTypeConverter.ConvertTo(value, member.Type.UnderlyingType);
 					else if (memberTypeConverter?.CanConvertFrom(valueType.UnderlyingType) ?? false)
@@ -1073,6 +1046,18 @@ namespace TecWare.PPSn.UI
 		public static LuaWpfCreator CreateFactory(LuaUI ui, XamlType xamlType, LuaTable table = null)
 			=> new LuaWpfCreator(ui, xamlType).SetTableMembers(table);
 
+		/// <summary></summary>
+		/// <param name="readers"></param>
+		/// <returns></returns>
+		public static System.Xaml.XamlReader CreateCollectionReader(IEnumerable<System.Xaml.XamlReader> readers)
+			=> new LuaXamlCollectionReader(readers);
+
+		/// <summary></summary>
+		/// <param name="readers"></param>
+		/// <returns></returns>
+		public static System.Xaml.XamlReader CreateCollectionReader(params System.Xaml.XamlReader[] readers)
+			=> new LuaXamlCollectionReader(readers);
+
 		private static readonly PropertyInfo indexStringPropertyInfo;
 		private static readonly PropertyInfo indexDependencyPropertyPropertyInfo;
 		private static readonly PropertyInfo indexIntPropertyInfo;
@@ -1261,7 +1246,13 @@ namespace TecWare.PPSn.UI
 
 		/// <summary></summary>
 		[LuaMember]
+		public LuaWpfCreator Binding => LuaWpfCreator.CreateFactory(this, typeof(Binding));
+		/// <summary></summary>
+		[LuaMember]
 		public LuaWpfCreator Grid => new LuaWpfGridCreator(this);
+		/// <summary></summary>
+		[LuaMember]
+		public LuaWpfCreator DataFieldBinding => LuaWpfCreator.CreateFactory(this, typeof(PpsDataFieldBinding));
 
 		/// <summary></summary>
 		[LuaMember]
@@ -1269,90 +1260,6 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Uri, to load external resources.</summary>
 		public Uri BaseUri { get; set; }
-
-		//private IPpsDataFieldResolver CreateFieldResolver(object def, object source)
-		//{
-		//	if (def == null && source == null)
-		//		return null;
-
-		//	switch (def)
-		//	{
-		//		case PpsDataSetDefinition dsd:
-		//			return new PpsDataSetResolver(dsd, null);
-		//		case PpsDataSet ds:
-		//			return new PpsDataSetResolver(ds.DataSetDefinition, ds);
-		//		case PpsDataTableDefinition dtd:
-		//			return new PpsDataTableResolver(dtd, null);
-		//		case PpsDataTable dt:
-		//			return new PpsDataTableResolver(dt.TableDefinition, dt.First);
-		//		default:
-		//			throw new ArgumentException(nameof(def));
-		//	}
-		//} // func CreateFieldResolver
-
-		///// <summary></summary>
-		///// <param name="def"></param>
-		///// <param name="source"></param>
-		///// <returns></returns>
-		//[LuaMember]
-		//public object Scope(object def, object source)
-		//	=> InitDataFieldScope(new PpsDataFieldScopeImplementation(this), CreateFieldResolver(def, source));
-
-		///// <summary></summary>
-		///// <param name="scope"></param>
-		///// <param name="source"></param>
-		///// <returns></returns>
-		//[LuaMember]
-		//public LuaWpfCreator<PpsDataFieldPanel> DataFields(object scope, object source)
-		//	=> InitDataFieldScope(new PpsDataFieldScope<PpsDataFieldPanel>(this, GetXamlType(typeof(PpsDataFieldPanel)), null), CreateFieldResolver(scope, source));
-
-		///// <summary></summary>
-		///// <param name="fieldName"></param>
-		///// <returns></returns>
-		//[LuaMember]
-		//public object DataField(string fieldName)
-		//{
-		//	// search field
-		//	var fieldInfo = CurrentScope?.GetService<IPpsDataFieldResolver>(false)?.ResolveColumn(fieldName)
-		//		?? throw new ArgumentOutOfRangeException(nameof(fieldName), fieldName, $"Could not locate field: {fieldName}.");
-
-		//	var ctrl = new LuaWpfCreator<TextBox>(this, GetXamlType(typeof(TextBox)), new TextBox());
-		//	ctrl[TextBox.TextProperty.Name] = DataBinding(fieldInfo.FieldInfo, fieldInfo.Source).Finish();
-
-		//	if (fieldInfo.FieldInfo.Attributes.TryGetProperty("displayName", out var displayName))
-		//		ctrl.Instance.SetValue(PpsDataFieldPanel.LabelProperty, displayName + ":"); // todo: design
-
-		//	return ctrl;
-		//} // func DataField
-
-		///// <summary></summary>
-		///// <param name="fieldName"></param>
-		///// <returns></returns>
-		//[LuaMember]
-		//public LuaWpfCreator<Binding> DataBinding(string fieldName)
-		//{
-		//	// search field
-		//	var fieldInfo = CurrentScope?.GetService<IPpsDataFieldResolver>(false)?.ResolveColumn(fieldName)
-		//		?? throw new ArgumentOutOfRangeException(nameof(fieldName));
-
-		//	return DataBinding(fieldInfo.FieldInfo, fieldInfo.Source);
-		//} // func DataBinding
-
-		///// <summary></summary>
-		///// <param name="fieldInfo"></param>
-		///// <param name="source"></param>
-		///// <returns></returns>
-		//[LuaMember]
-		//public LuaWpfCreator<Binding> DataBinding(IDataColumn fieldInfo, object source)
-		//{
-		//	var b = new Binding
-		//	{
-		//		Path = new PropertyPath(fieldInfo.Name),
-		//		Source = source
-		//	};
-		//	return new LuaWpfCreator<Binding>(this, GetXamlType(typeof(Binding)), b);
-
-		//} // func DataBinding
 	} // class LuaUI
 
 	#endregion

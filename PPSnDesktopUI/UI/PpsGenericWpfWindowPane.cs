@@ -541,13 +541,18 @@ namespace TecWare.PPSn.UI
 			// Create the Wpf-Control
 			if (paneData is XDocument xamlCode)
 			{
-				control = await PpsXamlParser.LoadAsync<PpsGenericWpfControl>(xamlCode.CreateReader(), new PpsXamlReaderSettings() { Code = this, BaseUri = paneUri });
+				//PpsXamlParser.DebugTransform = true;
+				control = await PpsXamlParser.LoadAsync<PpsGenericWpfControl>(xamlCode.CreateReader(), new PpsXamlReaderSettings() { Code = this, BaseUri = paneUri, ServiceProvider = this });
+				//PpsXamlParser.DebugTransform = false;
 				control.Resources[PpsEnvironment.WindowPaneService] = this;
 				OnControlCreated();
 			}
 			else if (paneData is LuaChunk luaCode) // run the code to initalize control, setControl should be called.
 				Environment.RunScript(luaCode, this, true, this);
-			
+
+			if (control == null)
+				throw new ArgumentException("No control created.");
+
 			// init bindings
 			control.DataContext = this;
 
@@ -663,7 +668,7 @@ namespace TecWare.PPSn.UI
 			{
 				var creator = LuaWpfCreator.CreateFactory(Environment.LuaUI, typeof(PpsGenericWpfControl));
 				creator.SetTableMembers(t);
-				using (var xamlReader = new PpsXamlReader(creator.CreateReader(this), new PpsXamlReaderSettings() { Code = this, CloseInput = true }))
+				using (var xamlReader = new PpsXamlReader(creator.CreateReader(this), new PpsXamlReaderSettings() { Code = this, CloseInput = true, BaseUri = fileSource.BaseUri, ServiceProvider = this }))
 					returnValue = PpsXamlParser.LoadAsync<PpsGenericWpfControl>(xamlReader).AwaitTask();
 			}
 			else
@@ -711,7 +716,7 @@ namespace TecWare.PPSn.UI
 			else if (serviceType == typeof(IPpsWindowPaneManager))
 				return paneManager;
 			else
-				return null;
+				return Environment.GetService(serviceType);
 		} // func GetService
 
 		/// <summary>Arguments of the generic content.</summary>

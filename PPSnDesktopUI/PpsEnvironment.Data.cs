@@ -2053,6 +2053,10 @@ namespace TecWare.PPSn
 			}
 		} // func GetTable
 
+		/// <summary>Creates a ,master data table result for the table name.</summary>
+		/// <param name="tableName"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		public PpsMasterDataTable GetTable(string tableName, bool throwException = true)
 		{
 			// find schema

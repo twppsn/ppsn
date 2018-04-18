@@ -77,9 +77,9 @@ specific language governing permissions and limitations under the Licence.
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsSideBarPanel}">
 					<Border x:Name="backgroundBorder" Background="LightBlue">
-						<StackPanel>
+						<StackPanel Margin="5">
 							<ContentPresenter Content="{TemplateBinding Header}" 
-											  ContentTemplate="{TemplateBinding HeaderTemplate}" 
+											  ContentTemplate="{TemplateBinding HeaderTemplate}"  			  
 											  ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}" 
 											  ContentStringFormat="{TemplateBinding HeaderStringFormat}" />
 						</StackPanel>

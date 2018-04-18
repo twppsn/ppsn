@@ -14,24 +14,21 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
-using System.Collections;
 
 namespace TecWare.PPSn.UI
 {
-    #region -- class VisibilityConverter ------------------------------------------------
+	#region -- class VisibilityConverter ------------------------------------------------
 
-    ///////////////////////////////////////////////////////////////////////////////
-    /// <summary></summary>
-    public class VisibilityConverter : IValueConverter
+	///////////////////////////////////////////////////////////////////////////////
+	/// <summary></summary>
+	public class VisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
