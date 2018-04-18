@@ -19,9 +19,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TecWare.PPSn.UI
+namespace TecWare.PPSn.Controls
 {
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Dialog window</summary>
 	public class PpsDialogWindow : PpsWindow
 	{

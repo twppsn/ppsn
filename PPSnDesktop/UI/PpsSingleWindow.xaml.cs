@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Neo.IronLua;
+using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn.UI
 {

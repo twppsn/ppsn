@@ -37,4 +37,3 @@ using System.Windows.Markup;
 
 [assembly: XmlnsDefinition("http://tecare-gmbh.de/ppsn/wpf/2015", "TecWare.PPSn.Controls")]
 //[assembly: XmlnsDefinition("http://tecare-gmbh.de/ppsn/wpf/2015", "TecWare.PPSn.Design")]
-[assembly: XmlnsDefinition("http://tecare-gmbh.de/ppsn/wpf/2015", "TecWare.PPSn.UI")]

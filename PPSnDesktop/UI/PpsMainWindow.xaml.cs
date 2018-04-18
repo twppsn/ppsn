@@ -14,15 +14,12 @@
 //
 #endregion
 using System;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Data;
 using System.Windows.Input;
-using Neo.IronLua;
+using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn.UI
 {
@@ -149,7 +146,7 @@ namespace TecWare.PPSn.UI
 					},
 					(sender, e) =>
 					{
-						e.CanExecute = CurrentPane != null && (CurrentPane.PaneControl == null || !CurrentPane.PaneControl.ProgressStack.IsEnabled);
+						e.CanExecute = CurrentPane != null; //&& (CurrentPane.PaneControl == null || !CurrentPane.PaneControl.ProgressStack.IsEnabled);
 					}
 				)
 			);
@@ -218,7 +215,7 @@ namespace TecWare.PPSn.UI
 		{
 			if (PART_Charmbar.CurrentContentType == PPSnCharmbarContentType.Default)
 				return;
-			else if (object.Equals(mouseDownSource, PART_Charmbar))
+			else if (Object.Equals(mouseDownSource, PART_Charmbar))
 				return;
 
 			PART_Charmbar.CurrentContentType = PPSnCharmbarContentType.Default;
@@ -230,14 +227,14 @@ namespace TecWare.PPSn.UI
 		private void RefreshSideIsVisibleProperty()
 		{
 			var show = (IsNavigatorVisible && navigator.NavigatorModel.ViewsShowDescription) 
-				|| (!IsNavigatorVisible && CurrentPane != null && CurrentPane.HasSideBar);
+				|| (!IsNavigatorVisible && CurrentPane != null && false); // && CurrentPane.HasSideBar
 			SetValue(IsSideBarVisiblePropertyKey, show);
 		} // proc RefreshSideIsVisibleProperty
 
 		private void OnCurrentPanePropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
-			if (e.PropertyName == nameof(IPpsWindowPane.HasSideBar)
-				|| e.PropertyName == nameof(PpsNavigatorModel.ViewsShowDescription))
+			if (//e.PropertyName == nameof(IPpsWindowPane.HasSideBar)
+			 e.PropertyName == nameof(PpsNavigatorModel.ViewsShowDescription))
 				RefreshSideIsVisibleProperty();
 		} // proc OnCurrentPanePropertyChanged
 

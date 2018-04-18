@@ -13,18 +13,16 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-using Neo.IronLua;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Input;
+using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.PPSn.Data;
-using System.Diagnostics;
 
 namespace TecWare.PPSn.UI
 {

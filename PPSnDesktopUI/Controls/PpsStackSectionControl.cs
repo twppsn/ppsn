@@ -18,11 +18,10 @@ using System.Linq;
 using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 
 namespace TecWare.PPSn.Controls
 {
-	#region ---- Enum ExpanderStyles ----------------------------------------------------
+	#region ---- Enum ExpanderStyles --------------------------------------------------
 
 	/// <summary>these Styles are used to enrich the Default Behavior of Collapsing/Expanding</summary>
 	public enum ExpanderStyles
@@ -33,7 +32,7 @@ namespace TecWare.PPSn.Controls
 		AllClosed,
 		/// <summary>Only the first item is open at the beginning, if the user expands an item, all other will be closed</summary>
 		Accordeon
-	}
+	} // enum ExpanderStyles
 
 	#endregion
 

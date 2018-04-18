@@ -17,7 +17,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -31,6 +30,7 @@ using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn.UI
 {
@@ -170,7 +170,7 @@ namespace TecWare.PPSn.UI
 		private readonly IPpsWindowPaneManager paneManager;
 
 		private BaseWebRequest fileSource;
-		private FrameworkElement control;
+		private PpsGenericWpfControl control;
 
 		private LuaTable arguments; // arguments
 
@@ -326,8 +326,7 @@ namespace TecWare.PPSn.UI
 
 		private void Control_GotKeyboardFocusHandler(object sender, KeyboardFocusChangedEventArgs e)
 		{
-			var newTextBox = e.NewFocus as TextBox;
-			if (newTextBox != null)
+			if (e.NewFocus is TextBox newTextBox)
 			{
 				var b = BindingOperations.GetBinding(newTextBox, TextBox.TextProperty);
 				var expr = BindingOperations.GetBindingExpression(newTextBox, TextBox.TextProperty);
@@ -411,7 +410,7 @@ namespace TecWare.PPSn.UI
 		/// <returns></returns>
 		[LuaMember("disableUI")]
 		public IPpsProgress DisableUI()
-			=> PpsWindowPaneHelper.DisableUI(PaneControl);
+			=> null; // PpsWindowPaneHelper.DisableUI(PaneControl);
 
 		/// <summary>Get the default view of a collection.</summary>
 		/// <param name="collection"></param>
@@ -542,7 +541,7 @@ namespace TecWare.PPSn.UI
 			// Create the Wpf-Control
 			if (paneData is XDocument xamlCode)
 			{
-				control = await PpsXamlParser.LoadAsync<FrameworkElement>(xamlCode.CreateReader(), new PpsXamlReaderSettings() { Code = this, BaseUri = paneUri });
+				control = await PpsXamlParser.LoadAsync<PpsGenericWpfControl>(xamlCode.CreateReader(), new PpsXamlReaderSettings() { Code = this, BaseUri = paneUri });
 				control.Resources[PpsEnvironment.WindowPaneService] = this;
 				OnControlCreated();
 			}
@@ -552,24 +551,13 @@ namespace TecWare.PPSn.UI
 			// init bindings
 			control.DataContext = this;
 
-			// notify if the title will be changed
-			if (control is PpsGenericWpfControl)
-			{
-				var desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.TitleProperty, typeof(PpsGenericWpfControl));
-				desc.AddValueChanged(control, (sender, e) => OnPropertyChanged(nameof(Title)));
-				desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.SubTitleProperty, typeof(PpsGenericWpfControl));
-				desc.AddValueChanged(control, (sender, e) => OnPropertyChanged(nameof(SubTitle)));
-				desc = DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.HasSideBarProperty, typeof(PpsGenericWpfControl));
-				desc.AddValueChanged(control, (sender, e) => OnPropertyChanged(nameof(HasSideBar)));
-			}
-			
+			DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.TitleProperty, typeof(PpsGenericWpfControl)).AddValueChanged(control, ControlTitleChanged);
+			DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.SubTitleProperty, typeof(PpsGenericWpfControl)).AddValueChanged(control, ControlSubTitleChanged);
+
 			// notify changes on control
 			OnPropertyChanged(nameof(Control));
-			OnPropertyChanged(nameof(PaneControl));
-			OnPropertyChanged(nameof(Commands));
 			OnPropertyChanged(nameof(Title));
 			OnPropertyChanged(nameof(SubTitle));
-			OnPropertyChanged(nameof(HasSideBar));
 		} // proc LoadInternAsync
 
 		/// <summary>Control is created.</summary>
@@ -590,16 +578,25 @@ namespace TecWare.PPSn.UI
 			if (Members.ContainsKey("UnloadAsync"))
 				CallMemberDirect("UnloadAsync", new object[] { commit }, throwExceptions: true);
 
-			control = null;
-			OnPropertyChanged(nameof(Control));
-			OnPropertyChanged(nameof(PaneControl));
-			OnPropertyChanged(nameof(Commands));
-			OnPropertyChanged(nameof(Title));
-			OnPropertyChanged(nameof(SubTitle));
-			OnPropertyChanged(nameof(HasSideBar));
+			if (control != null)
+			{
+				DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.TitleProperty, typeof(PpsGenericWpfControl)).RemoveValueChanged(control, ControlTitleChanged);
+				DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.SubTitleProperty, typeof(PpsGenericWpfControl)).RemoveValueChanged(control, ControlSubTitleChanged);
+
+				control = null;
+				OnPropertyChanged(nameof(Control));
+				OnPropertyChanged(nameof(Title));
+				OnPropertyChanged(nameof(SubTitle));
+			}
 
 			return Task.FromResult(true);
 		} // func UnloadAsync
+
+		private void ControlTitleChanged(object sender, EventArgs e)
+			=> OnPropertyChanged(nameof(Title));
+
+		private void ControlSubTitleChanged(object sender, EventArgs e)
+			=> OnPropertyChanged(nameof(SubTitle));
 
 		#endregion
 
@@ -609,7 +606,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="key"></param>
 		/// <returns></returns>
 		protected override object OnIndex(object key)
-			=> base.OnIndex(key) ?? WpfPaneHelper.GetXamlElement(control, key);
+			=> base.OnIndex(key) ?? WpfPaneHelper.GetXamlElement(control, key); // todo: XamlParser could do this.
 
 		#endregion
 
@@ -647,20 +644,27 @@ namespace TecWare.PPSn.UI
 
 		#region -- UpdateControl (setControl) -----------------------------------------
 
+		private void CheckControl()
+		{
+			if (control == null)
+				throw new InvalidOperationException("Control is not created.");
+		} // proc CheckControl
+
 		/// <summary>Set within lua code the control.</summary>
 		/// <param name="args"></param>
 		/// <returns></returns>
 		[LuaMember("setControl")]
-		private FrameworkElement UpdateControl(object args)
+		private PpsGenericWpfControl UpdateControl(object args)
 		{
-			FrameworkElement returnValue;
-			if (args is PpsGenericWpfControl ctrl) // force wpf control
-				returnValue = ctrl;
+			PpsGenericWpfControl returnValue;
+			if (args is PpsGenericWpfControl paneControl) // force a framework element
+				returnValue = paneControl;
 			else if (args is LuaTable t) // should be properties for the PpsGenericWpfControl
 			{
 				var creator = LuaWpfCreator.CreateFactory(Environment.LuaUI, typeof(PpsGenericWpfControl));
 				creator.SetTableMembers(t);
-				returnValue = creator.GetInstanceAsync<PpsGenericWpfControl>(this).AwaitTask();
+				using (var xamlReader = new PpsXamlReader(creator.CreateReader(this), new PpsXamlReaderSettings() { Code = this, CloseInput = true }))
+					returnValue = PpsXamlParser.LoadAsync<PpsGenericWpfControl>(xamlReader).AwaitTask();
 			}
 			else
 				throw new ArgumentException(nameof(args));
@@ -706,8 +710,6 @@ namespace TecWare.PPSn.UI
 				return this;
 			else if (serviceType == typeof(IPpsWindowPaneManager))
 				return paneManager;
-			else if (serviceType == typeof(IPpsWindowPaneControl))
-				return PaneControl;
 			else
 				return null;
 		} // func GetService
@@ -718,31 +720,31 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Title of the pane</summary>
 		[LuaMember]
-		public string Title { get => (string)control?.GetValue(PpsGenericWpfControl.TitleProperty); set => control?.SetValue(PpsGenericWpfControl.TitleProperty, value); }
-		/// <summary>SubTitle of the pane</summary>
-		[LuaMember]
-		public string SubTitle { get => (string)control?.GetValue(PpsGenericWpfControl.SubTitleProperty); set => control?.SetValue(PpsGenericWpfControl.TitleProperty, value); }
-
-		/// <summary>Has sidebar?</summary>
-		[LuaMember]
-		public bool HasSideBar
+		public string Title
 		{
-			get
-			{
-				if (control == null)
-					return false;
-				return (bool)control.GetValue(PpsGenericWpfControl.HasSideBarProperty);
-			}
+			get => control?.Title;
 			set
 			{
-				if (control != null)
-					control.SetValue(PpsGenericWpfControl.HasSideBarProperty, value);
+				CheckControl();
+				control.Title = value;
 			}
-		} // prop HasSideBar
+		} // prop Title
+
+			/// <summary>SubTitle of the pane</summary>
+		[LuaMember]
+		public string SubTitle
+		{
+			get => control?.SubTitle;
+			set
+			{
+				CheckControl();
+				control.SubTitle = value;
+			}
+		} // prop SubTitle
 
 		/// <summary>Wpf-Control</summary>
 		[LuaMember]
-		public FrameworkElement Control => control;
+		public PpsGenericWpfControl Control => control;
 		/// <summary>This member is resolved dynamic, that is the reason the FrameworkElement Control is public.</summary>
 		object IPpsWindowPane.Control => control;
 
@@ -753,7 +755,6 @@ namespace TecWare.PPSn.UI
 		[LuaMember]
 		public BaseWebRequest Request => fileSource;
 
-
 		/// <summary>BaseUri of the Wpf-Control</summary>
 		public Uri BaseUri { get => fileSource?.BaseUri; set => throw new NotSupportedException(); }
 
@@ -763,158 +764,11 @@ namespace TecWare.PPSn.UI
 		public Lua Lua => Environment.Lua;
 
 		/// <summary>Get the registered commands.</summary>
-		public IEnumerable<object> Commands => control is PpsGenericWpfControl ppsGeneric ? ppsGeneric.Commands : null;
-
-		/// <summary>Interface of the hosted control.</summary>
-		public IPpsWindowPaneControl PaneControl => control as IPpsWindowPaneControl;
+		public IEnumerable<object> Commands => control?.Commands;
 
 		/// <summary>Is the current pane dirty.</summary>
 		public virtual bool IsDirty => false;
 	} // class PpsGenericWpfWindowContext
-
-	#endregion
-
-	#region -- class PpsGenericWpfControl -----------------------------------------------
-
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Base control for the wpf generic pane.</summary>
-	public class PpsGenericWpfControl : ContentControl, IPpsWindowPaneControl, IServiceProvider
-	{
-		/// <summary>Title of the pane.</summary>
-		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(String.Empty));
-		/// <summary>Sub title of the pane.</summary>
-		public static readonly DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(String.Empty));
-		/// <summary>Has this pane a sidebar on left side.</summary>
-		public static readonly DependencyProperty HasSideBarProperty = DependencyProperty.Register(nameof(HasSideBar), typeof(bool), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(false));
-		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(null));
-		/// <summary>Command list.</summary>
-		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
-
-		private readonly PpsProgressStack progressStack;
-
-		// for corrent Binding this Command must be a Property - not a Field
-		// todo: change, Interface and flags for the current options
-		private static readonly RoutedCommand setCharmCommand = new RoutedCommand("SetCharm", typeof(PpsGenericWpfControl));
-		public RoutedCommand SetCharmCommand { get { return setCharmCommand; } }
-		
-		#region -- Ctor/Dtor --------------------------------------------------------------
-
-		/// <summary></summary>
-		public PpsGenericWpfControl()
-			: base()
-		{
-			// initialize commands
-			var commands = new PpsUICommandCollection();
-			commands.CollectionChanged += Commands_CollectionChanged;
-			SetValue(commandsPropertyKey, commands);
-
-			progressStack = new PpsProgressStack(Dispatcher);
-
-			Focusable = false;
-			
-			CommandBindings.Add(
-				new CommandBinding(setCharmCommand,
-					(sender, e) =>
-					{
-						((dynamic)Pane.PaneManager).CharmObject = ((LuaTable)((LuaTable)this.DataContext)["Arguments"])["Object"] ?? ((LuaTable)this.DataContext)["Object"]; // must be dynamic - type PpsMainWindow would need a reference to PPSnDesktop which is forbidden
-					},
-					(sender, e) =>
-					{
-						e.CanExecute = true;
-					}
-				)
-			);
-
-			// set the initial Object for the CharmBar
-			DataContextChanged += (sender, e) => ((dynamic)Pane.PaneManager).CharmObject = ((LuaTable)((LuaTable)this.DataContext)["Arguments"])["Object"] ?? ((LuaTable)this.DataContext)["Object"]; // must be dynamic - type PpsMainWindow would need a reference to PPSnDesktop which is forbidden
-		} // ctor
-
-		#endregion
-
-		#region -- Command Handling -------------------------------------------------------
-
-		private void Commands_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-		{
-			// todo: add command bar collection in logical tree?
-			switch (e.Action)
-			{
-				case NotifyCollectionChangedAction.Add:
-					if (e.NewItems[0] != null)
-						AddLogicalChild(e.NewItems[0]);
-					break;
-				case NotifyCollectionChangedAction.Remove:
-					if (e.OldItems[0] != null)
-						RemoveLogicalChild(e.OldItems[0]);
-					break;
-				case NotifyCollectionChangedAction.Reset:
-					break;
-				default:
-					throw new InvalidOperationException();
-			}
-		} // proc Commands_CollectionChanged
-
-		/// <summary></summary>
-		protected override IEnumerator LogicalChildren
-		{
-			get
-			{
-				// enumerate normal children
-				var e = base.LogicalChildren;
-				while (e.MoveNext())
-					yield return e.Current;
-
-				// enumerate commands
-				foreach (var cmd in Commands)
-				{
-					if (cmd != null)
-						yield return cmd;
-				}
-			}
-		} // prop LogicalChildren
-
-		#endregion
-
-		/// <summary></summary>
-		/// <param name="serviceType"></param>
-		/// <returns></returns>
-		public object GetService(Type serviceType)
-			=> serviceType.IsAssignableFrom(GetType())
-				? this
-				: Pane?.GetService(serviceType);
-
-		/// <summary>Access to the owning pane.</summary>
-		public PpsGenericWpfWindowPane Pane => (PpsGenericWpfWindowPane)DataContext;
-
-		/// <summary>Title of the window pane</summary>
-		[
-		DesignerSerializationVisibility(DesignerSerializationVisibility.Visible),
-		Description("Sets the title of the pane")
-		]
-		public string Title { get { return (string)GetValue(TitleProperty); } set { SetValue(TitleProperty, value); } }
-
-		/// <summary>SubTitle of the window pane</summary>
-		[
-		DesignerSerializationVisibility(DesignerSerializationVisibility.Visible),
-		Description("Sets the subtitle of the pane")
-		]
-		public string SubTitle { get { return (string)GetValue(SubTitleProperty); } set { SetValue(SubTitleProperty, value); } }
-
-		/// <summary>pane with SideBar?</summary>
-		[
-		DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)
-		]
-		public bool HasSideBar { get { return (bool)GetValue(HasSideBarProperty); } set { SetValue(HasSideBarProperty, value); } }
-
-		/// <summary>ProgressStack of the pane</summary>
-		[
-		DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)
-		]
-		public PpsProgressStack ProgressStack => progressStack;
-
-		/// <summary>List of commands for the main toolbar.</summary>
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
-		public PpsUICommandCollection Commands => (PpsUICommandCollection)GetValue(CommandsProperty);
-	} // class PpsGenericWpfControl
 
 	#endregion
 }

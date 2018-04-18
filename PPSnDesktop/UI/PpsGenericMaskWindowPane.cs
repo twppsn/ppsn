@@ -157,65 +157,65 @@ namespace TecWare.PPSn.UI
 				redoView.Filter += (sender, e) => e.Accepted = ((IPpsUndoStep)e.Item).Type == PpsUndoStepType.Redo;
 			}
 
-			// Extent command bar
-			if (PaneControl?.Commands != null)
-			{
-				UndoManagerListBox listBox;
+			//// Extent command bar
+			//if (PaneControl?.Commands != null)
+			//{
+			//	UndoManagerListBox listBox;
 
-				var undoCommand = new PpsUISplitCommandButton()
-				{
-					Order = new PpsCommandOrder(200, 130),
-					DisplayText = "Rückgängig",
-					Description = "Rückgängig",
-					Image = "undo",
-					Command = new PpsCommand(
-						(args) =>
-						{
-							UpdateSources();
-							UndoManager.Undo();
-						},
-						(args) => UndoManager?.CanUndo ?? false
-					),
-					Popup = new System.Windows.Controls.Primitives.Popup()
-					{
-						Child = listBox = new UndoManagerListBox()
-						{
-							Style = (Style)App.Current.FindResource("UndoManagerListBoxStyle")
-						}
-					}
-				};
+			//	var undoCommand = new PpsUISplitCommandButton()
+			//	{
+			//		Order = new PpsCommandOrder(200, 130),
+			//		DisplayText = "Rückgängig",
+			//		Description = "Rückgängig",
+			//		Image = "undo",
+			//		Command = new PpsCommand(
+			//			(args) =>
+			//			{
+			//				UpdateSources();
+			//				UndoManager.Undo();
+			//			},
+			//			(args) => UndoManager?.CanUndo ?? false
+			//		),
+			//		Popup = new System.Windows.Controls.Primitives.Popup()
+			//		{
+			//			Child = listBox = new UndoManagerListBox()
+			//			{
+			//				Style = (Style)App.Current.FindResource("UndoManagerListBoxStyle")
+			//			}
+			//		}
+			//	};
 
-				listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.UndoView"));
+			//	listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.UndoView"));
 
-				var redoCommand = new PpsUISplitCommandButton()
-				{
-					Order = new PpsCommandOrder(200, 140),
-					DisplayText = "Wiederholen",
-					Description = "Wiederholen",
-					Image = "redo",
-					Command = new PpsCommand(
-						(args) =>
-						{
-							UpdateSources();
-							UndoManager.Redo();
-						},
-						(args) => UndoManager?.CanRedo ?? false
-					),
-					Popup = new System.Windows.Controls.Primitives.Popup()
-					{
-						Child = listBox = new UndoManagerListBox()
-						{
-							IsRedoList = true,
-							Style = (Style)App.Current.FindResource("UndoManagerListBoxStyle")
-						}
-					}
-				};
+			//	var redoCommand = new PpsUISplitCommandButton()
+			//	{
+			//		Order = new PpsCommandOrder(200, 140),
+			//		DisplayText = "Wiederholen",
+			//		Description = "Wiederholen",
+			//		Image = "redo",
+			//		Command = new PpsCommand(
+			//			(args) =>
+			//			{
+			//				UpdateSources();
+			//				UndoManager.Redo();
+			//			},
+			//			(args) => UndoManager?.CanRedo ?? false
+			//		),
+			//		Popup = new System.Windows.Controls.Primitives.Popup()
+			//		{
+			//			Child = listBox = new UndoManagerListBox()
+			//			{
+			//				IsRedoList = true,
+			//				Style = (Style)App.Current.FindResource("UndoManagerListBoxStyle")
+			//			}
+			//		}
+			//	};
 
-				listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.RedoView"));
+			//	listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.RedoView"));
 
-				PaneControl.Commands.Add(undoCommand);
-				PaneControl.Commands.Add(redoCommand);
-			}
+			//	PaneControl.Commands.Add(undoCommand);
+			//	PaneControl.Commands.Add(redoCommand);
+			//}
 
 			OnPropertyChanged(nameof(UndoManager));
 			OnPropertyChanged(nameof(UndoView));

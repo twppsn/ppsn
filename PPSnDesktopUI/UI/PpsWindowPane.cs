@@ -60,43 +60,20 @@ namespace TecWare.PPSn.UI
 		/// <summary>Title of the content.</summary>
 		/// <remarks>Can not be implemented hidden, because of the binding.</remarks>
 		string Title { get; }
-		/// <summary></summary>
+		/// <summary>Sub title of the content.</summary>
+		/// <remarks>Can not be implemented hidden, because of the binding.</remarks>
 		string SubTitle { get; }
 
-		/// <summary>Content control</summary>
+		/// <summary>Control for the pane data.</summary>
 		/// <remarks>Can not be implemented hidden, because of the binding.</remarks>
 		object Control { get; }
-		/// <summary>Returns the optional pane control, if the hosted control is not a pane control, this property is <c>null</c>.</summary>
-		IPpsWindowPaneControl PaneControl { get; }
+
 		/// <summary>Access the pane manager.</summary>
 		IPpsWindowPaneManager PaneManager { get; }
 
 		/// <summary>If the pane contains changes, this flag is <c>true</c>.</summary>
 		bool IsDirty { get; }
-
-		/// <summary>has sidebar?</summary>
-		bool HasSideBar { get; }
 	} // interface IPpsWindowPane
-
-	#endregion
-
-	#region -- interface IPpsWindowPaneControl ----------------------------------------
-
-	/// <summary>Optional inferface for the control</summary>
-	public interface IPpsWindowPaneControl
-	{
-		/// <summary>Title of the pane control</summary>
-		string Title { get; }
-
-		/// <summary>Commands of the Pane-Controls</summary>
-		PpsUICommandCollection Commands { get; }
-
-		/// <summary>Optional progress stack</summary>
-		PpsProgressStack ProgressStack { get; }
-
-		/// <summary>has sidebar?</summary>
-		bool HasSideBar { get; }
-	} // interface IPpsWindowPaneControl
 
 	#endregion
 		
@@ -229,17 +206,12 @@ namespace TecWare.PPSn.UI
 		public static bool EqualPane(this IPpsWindowPane pane, Type paneType, LuaTable arguments)
 			=> paneType == pane.GetType() && pane.CompareArguments(arguments ?? new LuaTable()) == PpsWindowPaneCompareResult.Same;
 
-		/// <summary>Disable current ui.</summary>
-		/// <param name="control"></param>
-		/// <returns></returns>
-		public static IPpsProgress DisableUI(this IPpsWindowPaneControl control)
-			=> control?.ProgressStack?.CreateProgress() ?? PpsProgressStack.Dummy;
 
 		/// <summary>Disable current ui.</summary>
 		/// <param name="pane"></param>
 		/// <returns></returns>
 		public static IPpsProgress DisableUI(this IPpsWindowPane pane)
-			=> DisableUI(pane?.PaneControl);
+			=> null; // DisableUI(pane?.PaneControl);
 	} // class PpsWindowPaneHelper
 
 	#endregion

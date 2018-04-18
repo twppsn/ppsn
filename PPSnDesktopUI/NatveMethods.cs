@@ -13,15 +13,11 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
-	using System;
-using System.Collections.Generic;
-using System.Linq;
+using System;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 
-namespace TecWare.PPSn.UI
+namespace TecWare.PPSn
 {
 	internal enum WinMsg : int
 	{
@@ -271,9 +267,7 @@ namespace TecWare.PPSn.UI
 		public byte AlphaFormat;
 	}
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	internal static class NativeMethods
+	internal static partial class NativeMethods
 	{
 		#region -- Win32Constants -----------------------------------------------------------
 

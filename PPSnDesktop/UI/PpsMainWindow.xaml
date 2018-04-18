@@ -2,7 +2,8 @@
               xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			  xmlns:sys="clr-namespace:System;assembly=mscorlib"
-			  xmlns:ui="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
+			  xmlns:ui="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
+              xmlns:uiO="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
               xmlns:uiL="clr-namespace:TecWare.PPSn.UI"
               xmlns:local="clr-namespace:TecWare.PPSn.UI"
 			  Style="{StaticResource PpsWindow}"
@@ -12,14 +13,14 @@
 	<ui:PpsWindow.Title>
 		<MultiBinding FallbackValue="{StaticResource PPSnApplicationTitle}" StringFormat="{}{0} - {1} - {2}">
 			<Binding Path="Text" ElementName="PART_Title" />
-			<Binding Path="CurrentPane.SubTitle"/>
-			<Binding Path="CurrentPane.Title" Converter="{StaticResource MultiLineStringConverter}"/>
+			<Binding Path="CurrentPane.SubHeader"/>
+			<Binding Path="CurrentPane.Header" Converter="{StaticResource MultiLineStringConverter}"/>
 		</MultiBinding>
 	</ui:PpsWindow.Title>
 
 	<ui:PpsWindow.Resources>
-		<SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />
-		<SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnActionButtonColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
+		<SolidColorBrush x:Key="ButtonDarkerBackGroundBrush" Color="{uiO:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnBlackColor}, SourcePart=0.75}" />
+		<SolidColorBrush x:Key="ButtonDarkerBorderBrush" Color="{uiO:AlphaBlendColor Source={StaticResource PPSnActionButtonColor}, Destination={StaticResource PPSnDesktopColor}, SourcePart=0.75}" />
 
 		<Geometry x:Key="PpsWindowCloseButton">M 0.5,0.5L 9.5,9.5M 9.5,0.5L 0.5,9.5</Geometry>
 		<Geometry x:Key="PpsWindowMaximizeButton">M 8.5,1.5L 0.5,1.5L 0.5,9.5L 8.5,9.5L 8.5,1.5 Z M 0.5,9.5L 0.5,3.27777L 8.5,3.27777L 8.5,9.5L 0.5,9.5 Z</Geometry>

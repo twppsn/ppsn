@@ -1163,9 +1163,6 @@ namespace TecWare.PPSn.UI
 		/// <summary>refrence to this, to fulfill interface</summary>
 		public object Control => this;
 
-		/// <summary>null, to fulfill interface</summary>
-		public IPpsWindowPaneControl PaneControl => null;
-
 		/// <summary>false, to fulfill interface</summary>
 		public bool IsDirty => false;
 

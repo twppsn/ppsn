@@ -14,31 +14,31 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
-using System.Globalization;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 
-namespace TecWare.PPSn.UI
+namespace TecWare.PPSn.Controls
 {
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	#region -- class PpsWindowHitTest -------------------------------------------------
+
+	/// <summary>HitTest helper for WinApi</summary>
 	public class PpsWindowHitTest
 	{
+		/// <summary>HitTest return</summary>
 		public int HitTest { get; set; }
 	} // class PpsWindowHitTest
 
-	///////////////////////////////////////////////////////////////////////////////
+	#endregion
+
+	#region -- class PpsWindow --------------------------------------------------------
+
 	/// <summary>Contains the generic layout of all windows of the the application.</summary>
 	public partial class PpsWindow : Window
 	{
@@ -54,6 +54,7 @@ namespace TecWare.PPSn.UI
 		public readonly static RoutedCommand LogoutCommand = new RoutedCommand("Logout", typeof(PpsWindow));
 		/// <summary>Opens a trace pane.</summary>
 		public readonly static RoutedCommand TraceLogCommand = new RoutedCommand("TraceLog", typeof(PpsWindow));
+
 		/// <summary>GlowColor when window is active.</summary>
 		public static readonly DependencyProperty ActiveGlowColorProperty = DependencyProperty.Register("ActiveGlowColor", typeof(Color), typeof(PpsWindow), new FrameworkPropertyMetadata(Colors.Black, new PropertyChangedCallback(OnGlowColorChanged)));
 		/// <summary>GlowColor when window is inactive.</summary>
@@ -61,10 +62,11 @@ namespace TecWare.PPSn.UI
 
 		private PpsEnvironment environment;
 
+		/// <summary>Window</summary>
 		public PpsWindow()
 		{
 			InitChrome();
-
+			
 			CommandBindings.AddRange(
 				new CommandBinding[]
 				{
@@ -77,10 +79,12 @@ namespace TecWare.PPSn.UI
 			CommandManager.AddCanExecuteHandler(this, Environment.DefaultCanExecuteHandler);
 		} // ctor
 
+		/// <summary>Caption clicked</summary>
 		protected virtual void OnWindowCaptionClicked()
 		{
 		}
 
+		/// <summary>Current environment of the window.</summary>
 		public PpsEnvironment Environment
 		{
 			get
@@ -92,9 +96,10 @@ namespace TecWare.PPSn.UI
 		} // prop Environment
 	} // class PpsWindow
 
-	#region -- class PpsWindowApplicationSettings ---------------------------------------
+	#endregion
 
-	///////////////////////////////////////////////////////////////////////////////
+	#region -- class PpsWindowApplicationSettings -------------------------------------
+
 	/// <summary></summary>
 	public class PpsWindowApplicationSettings : ApplicationSettingsBase
 	{
@@ -102,8 +107,11 @@ namespace TecWare.PPSn.UI
 		private DispatcherTimer persistTimer;
 		private bool isResizeable;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="owner"></param>
+		/// <param name="appSettingsKey"></param>
 		public PpsWindowApplicationSettings(PpsWindow owner, string appSettingsKey = "")
 		{
 			this.owner = owner;
@@ -128,33 +136,39 @@ namespace TecWare.PPSn.UI
 
 		private void InitWindowPlacementProperty(DependencyProperty windowProperty, string settingsProperty)
 		{
-			var binding = new Binding();
-			binding.Source = this;
-			binding.Path = new PropertyPath(settingsProperty);
-			binding.Mode = BindingMode.TwoWay;
-			binding.UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged;
+			var binding = new Binding
+			{
+				Source = this,
+				Path = new PropertyPath(settingsProperty),
+				Mode = BindingMode.TwoWay,
+				UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+			};
 			BindingOperations.SetBinding(owner, windowProperty, binding);
 		} // proc InitWindowPlacementProperty
 
+		/// <summary>Initialize window placement bindings.</summary>
 		protected void InitWindowPlacement()
 		{
 			InitWindowPlacementProperty(Window.LeftProperty, nameof(Left));
 			InitWindowPlacementProperty(Window.TopProperty, nameof(Top));
 
-      if (isResizeable)
+			if (isResizeable)
 			{
 				InitWindowPlacementProperty(Window.WidthProperty, nameof(Width));
 				InitWindowPlacementProperty(Window.HeightProperty, nameof(Height));
 			}
 
 			// must be last, because of the maximized state will only appear on the primary screen
-      owner.Dispatcher.BeginInvoke(new Action(() => InitWindowPlacementProperty(Window.WindowStateProperty, nameof(WindowState))), DispatcherPriority.ApplicationIdle);
+			owner.Dispatcher.BeginInvoke(new Action(() => InitWindowPlacementProperty(Window.WindowStateProperty, nameof(WindowState))), DispatcherPriority.ApplicationIdle);
 		} // proc InitWindowPlacement
 
 		#endregion
 
-		#region -- OnSettingsLoaded -------------------------------------------------------
+		#region -- OnSettingsLoaded ---------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
 		protected override void OnSettingsLoaded(object sender, SettingsLoadedEventArgs e)
 		{
 			var updateValue = 0;
@@ -162,7 +176,7 @@ namespace TecWare.PPSn.UI
 			// check if the position is valid
 			var left = Left;
 			var top = Top;
-			var width = Width ;
+			var width = Width;
 			var height = Height;
 
 			if (left == Double.NaN || top == Double.NaN) // location is default
@@ -176,11 +190,13 @@ namespace TecWare.PPSn.UI
 
 			// on which monitor is the window placed
 			var rc = new RECT { Left = (int)left, Top = (int)top, Right = (int)(left + width), Bottom = (int)(top + height) };
-      var hMonitor = NativeMethods.MonitorFromRect(ref rc, MonitorOptions.MONITOR_DEFAULTTONEAREST);
+			var hMonitor = NativeMethods.MonitorFromRect(ref rc, MonitorOptions.MONITOR_DEFAULTTONEAREST);
 
 			// get the metrics of the monitor
-			var monitorInfo = new MONITORINFO();
-			monitorInfo.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+			var monitorInfo = new MONITORINFO
+			{
+				cbSize = Marshal.SizeOf(typeof(MONITORINFO))
+			};
 			if (!NativeMethods.GetMonitorInfo(hMonitor, ref monitorInfo))
 				throw new Win32Exception();
 
@@ -240,8 +256,11 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- OnSettingChanging, Save ------------------------------------------------
+		#region -- OnSettingChanging, Save --------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
 		protected override void OnSettingChanging(object sender, SettingChangingEventArgs e)
 		{
 			if (!Object.Equals(this[e.SettingName], e.NewValue))
@@ -258,6 +277,7 @@ namespace TecWare.PPSn.UI
 			base.OnSettingChanging(sender, e);
 		} // proc OnSettingChanging
 
+		/// <summary></summary>
 		public override void Save()
 		{
 			base.Save();
@@ -266,7 +286,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Window Placement -------------------------------------------------------
+		#region -- Window Placement ---------------------------------------------------
 
 		private void SetDouble(double value, [CallerMemberName] string propertyName = null)
 		{
@@ -276,32 +296,38 @@ namespace TecWare.PPSn.UI
 
 		private double GetDouble([CallerMemberName] string propertyName = null) => this[propertyName] == null ? Double.NaN : (double)this[propertyName];
 
+		/// <summary></summary>
 		[
 		UserScopedSetting,
 		DefaultSettingValue("Maximized")
 		]
-		public WindowState WindowState { get { return (WindowState)this[nameof(WindowState)]; } set { this[nameof(WindowState)] = value; } }
-		[
-		UserScopedSetting,
-    DefaultSettingValue(null)
-		]
-		public double Left { get { return GetDouble(); } set { SetDouble(value);  } }
+		public WindowState WindowState { get => (WindowState)this[nameof(WindowState)]; set => this[nameof(WindowState)] = value; }
+		/// <summary></summary>
 		[
 		UserScopedSetting,
 		DefaultSettingValue(null)
 		]
-		public double Top { get { return GetDouble(); } set { SetDouble(value); } }
+		public double Left { get => GetDouble(); set => SetDouble(value); }
+		/// <summary></summary>
 		[
 		UserScopedSetting,
 		DefaultSettingValue(null)
 		]
-		public double Width { get { return GetDouble(); } set { SetDouble(value); } }
+		public double Top { get => GetDouble(); set => SetDouble(value); }
+		/// <summary></summary>
 		[
 		UserScopedSetting,
 		DefaultSettingValue(null)
 		]
-		public double Height { get { return GetDouble(); } set { SetDouble(value); } }
+		public double Width { get => GetDouble(); set => SetDouble(value); }
+		/// <summary></summary>
+		[
+		UserScopedSetting,
+		DefaultSettingValue(null)
+		]
+		public double Height { get => GetDouble(); set => SetDouble(value); }
 
+		/// <summary></summary>
 		[
 		UserScopedSetting,
 		DefaultSettingValue("True")

@@ -679,13 +679,11 @@ namespace TecWare.PPSn.UI
 						else
 							return SetState(1, XamlNodeType.EndObject); // close this object
 
-
 					case 10:
 						return SetValueState(10, 19, currentState, XamlLanguage.PositionalParameters, currentState.NextPositionalParameter, currentState.CurrentPositionalParameter);
 					case 19:
 						return SetState(2, XamlNodeType.EndMember);
-
-
+						
 					case 20:
 						return SetValueState(21, 29, currentState, currentState.CurrentMember, currentState.NextMember, currentState.GetMemberValue());
 					case 21:

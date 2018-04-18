@@ -28,7 +28,6 @@ using System.Windows.Markup;
 using System.Xaml;
 using System.Xaml.Schema;
 using System.Xml;
-using Neo.IronLua;
 using LExpression = System.Linq.Expressions.Expression;
 
 namespace TecWare.PPSn.UI
@@ -763,6 +762,9 @@ namespace TecWare.PPSn.UI
 						{
 							case string memberName:
 								eventValue = CompileEventConnector(member, eventHandlerType, memberName, settings.Code);
+								break;
+							case Delegate dlg:
+								eventValue = PpsXamlParser.CreateEventFromDelegate(member, dlg);
 								break;
 							default:
 								throw new ArgumentException("Can not assign event member."); // todo:

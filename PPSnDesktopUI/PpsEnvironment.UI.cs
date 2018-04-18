@@ -479,6 +479,8 @@ namespace TecWare.PPSn
 				// create the resource
 				using (var elementReader = await xamlSource.ReadElementAsSubTreeAsync(XmlNamespaceScope.ExcludeXml))
 				{
+					var startObjectCounter = 0 ;
+
 					resource = await PpsXamlParser.LoadAsync<object>(elementReader,
 						new PpsXamlReaderSettings()
 						{
@@ -486,8 +488,15 @@ namespace TecWare.PPSn
 							{
 								switch (reader.NodeType)
 								{
+									case XamlNodeType.GetObject:
+									case XamlNodeType.StartObject:
+										startObjectCounter++;
+										goto default;
+									case XamlNodeType.EndObject:
+										startObjectCounter--;
+										goto default;
 									case XamlNodeType.StartMember:
-										if (reader.Member == XamlLanguage.Key && resourceKey == null)
+										if (startObjectCounter == 1 && reader.Member == XamlLanguage.Key && resourceKey == null)
 										{
 											resourceKey = reader.ReadMemberValue();
 											return reader.Read();
