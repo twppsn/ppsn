@@ -272,6 +272,9 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		public override Type TracePaneType 
+			=> typeof(PpsTracePane);
+
 		/// <summary>List of actions defined for an context.</summary>
 		[LuaMember(nameof(Actions))]
 		public PpsEnvironmentCollection<PpsMainActionDefinition> Actions => actions;

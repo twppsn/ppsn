@@ -144,7 +144,6 @@
     <Compile Include="UI\PpsExceptionDialog.xaml.cs">
       <DependentUpon>PpsExceptionDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="UI\LuaValueConverter.cs" />
     <Compile Include="PpsEnvironment.cs" />
     <Compile Include="PpsTraceLog.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
@@ -160,9 +159,6 @@
       <DependentUpon>PpsPicturePane.xaml</DependentUpon>
     </Compile>
     <Compile Include="UI\PpsProgressStack.cs" />
-    <Compile Include="UI\PpsTracePane.xaml.cs">
-      <DependentUpon>PpsTracePane.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Controls\PpsWindow.Chrome.cs" />
     <Compile Include="Controls\PpsWindow.cs" />
     <Compile Include="UI\PpsWindowPane.cs" />
@@ -212,10 +208,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="UI\PpsPicturePane.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="UI\PpsTracePane.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -104,6 +104,9 @@
     <Compile Include="UI\PpsTagsEditor.xaml.cs">
       <DependentUpon>PpsTagsEditor.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UI\PpsTracePane.xaml.cs">
+      <DependentUpon>PpsTracePane.xaml</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="Properties\Resources.en.resx">
       <DependentUpon>Resources.resx</DependentUpon>
     </EmbeddedResource>
@@ -130,6 +133,10 @@
     <Page Include="UI\PpsTagsEditor.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\PpsTracePane.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
   <ItemGroup>

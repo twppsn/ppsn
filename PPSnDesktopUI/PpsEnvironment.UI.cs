@@ -415,11 +415,10 @@ namespace TecWare.PPSn
 		/// <summary></summary>
 		/// <param name="owner"></param>
 		public void ShowTrace(Window owner)
-			=> ((IPpsWindowPaneManager)this).OpenPaneAsync(typeof(PpsTracePane), PpsOpenPaneMode.NewSingleDialog, new LuaTable() { ["DialogOwner"] = owner }).AwaitTask();
+			=> ((IPpsWindowPaneManager)this).OpenPaneAsync(TracePaneType, PpsOpenPaneMode.NewSingleDialog, new LuaTable() { ["DialogOwner"] = owner }).AwaitTask();
 
 		/// <summary>Returns the pane declaration for the trace pane.</summary>
-		public Type TracePane
-			=> typeof(PpsTracePane);
+		public virtual Type TracePaneType => throw new NotImplementedException();
 
 		private static string GetMessageCaptionFromImage(MessageBoxImage image)
 		{

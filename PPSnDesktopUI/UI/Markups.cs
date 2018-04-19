@@ -14,30 +14,29 @@
 //
 #endregion
 using System;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Windows.Data;
 using System.Windows.Markup;
 using System.Windows.Media;
-using System.Xaml;
-using Neo.IronLua;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- class LuaConvertExtension ------------------------------------------------
+	#region -- class LuaConvertExtension ----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Create a value LuaValueConverter with a ConvertExpression.</summary>
 	public class LuaConvertExtension : MarkupExtension
 	{
-		private string code;
-
+		/// <summary></summary>
+		/// <param name="code"></param>
 		public LuaConvertExtension(string code)
 		{
-			this.code = code;
+			this.Code = code;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="serviceProvider"></param>
+		/// <returns></returns>
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{
 			var target = (IProvideValueTarget)serviceProvider.GetService(typeof(IProvideValueTarget));
@@ -48,115 +47,143 @@ namespace TecWare.PPSn.UI
 			if (!property.PropertyType.IsAssignableFrom(typeof(IValueConverter)))
 				throw new ArgumentException("The property must except IValueConverter's.");
 
-			return new LuaValueConverter() { ConvertExpression = code };
+			return new LuaValueConverter() { ConvertExpression = Code };
 		} // func ProvideValue
 
+		/// <summary>ConvertExpression</summary>
 		[ConstructorArgument("code")]
-		public string Code { get { return code; } set { code = value; } }
+		public string Code { get; set; }
 	} // class LuaConvertExtension
 
 	#endregion
 
-	#region -- class AlphaBlendColor ----------------------------------------------------
+	#region -- Color Markup Extensions ------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Mixes two colors to one color.</summary>
-	public class AlphaBlendColor : MarkupExtension
+	#region -- class ColorMarkupExtension ---------------------------------------------
+
+	/// <summary></summary>
+	public abstract class ColorMarkupExtension : MarkupExtension
 	{
-		public AlphaBlendColor()
-		{
-		} // ctor
+		/// <summary></summary>
+		/// <param name="serviceProvider"></param>
+		/// <returns></returns>
+		protected abstract Color ProvideColor(IServiceProvider serviceProvider);
 
-		public override object ProvideValue(IServiceProvider serviceProvider)
+		/// <summary></summary>
+		/// <param name="serviceProvider"></param>
+		/// <returns></returns>
+		public sealed override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			var target = serviceProvider.GetService<IProvideValueTarget>(true);
+			var color = ProvideColor(serviceProvider);
+
+			return target.TargetProperty is System.Windows.DependencyProperty propertyInfo && propertyInfo.PropertyType == typeof(Brush)
+				? (object)new SolidColorBrush(color)
+				: color;
+		} // func ProvideValue 
+	} // class ColorMarkupExtension
+
+	#endregion
+
+	#region -- class AlphaBlendColor --------------------------------------------------
+
+	/// <summary>Mixes two colors to one color.</summary>
+	public sealed class AlphaBlendColor : ColorMarkupExtension
+	{
+		/// <summary></summary>
+		/// <param name="serviceProvider"></param>
+		/// <returns></returns>
+		protected override Color ProvideColor(IServiceProvider serviceProvider)
 		{
 			var destinationPart = 1.0f - SourcePart;
 
 			if (SourcePart < 0.0f)
-				return ProvideColorValue(serviceProvider, Color.FromScRgb(Alpha, Source.ScR, Source.ScG, Source.ScB));
+				return Color.FromScRgb(Alpha, Source.ScR, Source.ScG, Source.ScB);
 			else if (SourcePart > 1.0f)
-				return ProvideColorValue(serviceProvider, Color.FromScRgb(Alpha, Destination.ScR, Destination.ScG, Destination.ScB));
+				return Color.FromScRgb(Alpha, Destination.ScR, Destination.ScG, Destination.ScB);
+
 			// the scale 0.0 - 1.0 does not map linearly to 0 - 255
-			var color = Color.FromScRgb(
+			return Color.FromScRgb(
 				Alpha,
 				Source.ScR * SourcePart + Destination.ScR * destinationPart,
 				Source.ScG * SourcePart + Destination.ScG * destinationPart,
 				Source.ScB * SourcePart + Destination.ScB * destinationPart
 			);
-			return ProvideColorValue(serviceProvider, color);
-		} // func ProvideValue
+		} // func ProvideColor
 
+		/// <summary>Source color</summary>
 		public Color Source { get; set; } = Colors.Black;
+		/// <summary>Destination color.</summary>
 		public Color Destination { get; set; } = Colors.White;
+		/// <summary>Distance to pick.</summary>
 		public float SourcePart { get; set; } = 0.5f;
+		/// <summary>Alpha value of the result.</summary>
 		public float Alpha { get; set; } = 1.0f;
-
-		internal static object ProvideColorValue(IServiceProvider sp, Color color)
-		{
-			var target = (IProvideValueTarget)sp.GetService(typeof(IProvideValueTarget));
-			var propertyInfo = target.TargetProperty as System.Windows.DependencyProperty;
-
-			if (propertyInfo != null && propertyInfo.PropertyType == typeof(Brush))
-				return new SolidColorBrush(color);
-			else
-				return color;
-		} // func ProvideColorValue
 	} // class AlphaBlendColor
 
 	#endregion
 
-	///////////////////////////////////////////////////////////////////////////////
+	#region -- class TransparencyResultColor ------------------------------------------
+
 	/// <summary>Mixes two colors to one color.</summary>
-	public class TransparencyResultColor : MarkupExtension
+	public sealed class TransparencyResultColor : ColorMarkupExtension
 	{
-		public TransparencyResultColor()
+		/// <summary></summary>
+		/// <param name="serviceProvider"></param>
+		/// <returns></returns>
+		protected override Color ProvideColor(IServiceProvider serviceProvider)
 		{
-		} // ctor
+			var backgroundPart = 1.0f - Transparency;
 
-		public override object ProvideValue(IServiceProvider serviceProvider)
-		{
-			var backgroundPart = 1.0f - Transpareny;
+			if (Transparency < 0.0f)
+				return Color.FromScRgb(1f, BackColor.ScR, BackColor.ScG, BackColor.ScB);
+			else if (Transparency > 1.0f)
+				return Color.FromScRgb(1f, TransparentColor.ScR, TransparentColor.ScG, TransparentColor.ScB);
 
-			if (Transpareny < 0.0f)
-				return AlphaBlendColor.ProvideColorValue(serviceProvider, Color.FromScRgb(1f, BackColor.ScR, BackColor.ScG, BackColor.ScB));
-			else if (Transpareny > 1.0f)
-				return AlphaBlendColor.ProvideColorValue(serviceProvider, Color.FromScRgb(1f, TransparentColor.ScR, TransparentColor.ScG, TransparentColor.ScB));
-			var color = Color.FromArgb(
+			return Color.FromArgb(
 				255,
-				(byte)(BackColor.R * backgroundPart + TransparentColor.R * Transpareny),
-				(byte)(BackColor.G * backgroundPart + TransparentColor.G * Transpareny),
-				(byte)(BackColor.B * backgroundPart + TransparentColor.B * Transpareny)
+				(byte)(BackColor.R * backgroundPart + TransparentColor.R * Transparency),
+				(byte)(BackColor.G * backgroundPart + TransparentColor.G * Transparency),
+				(byte)(BackColor.B * backgroundPart + TransparentColor.B * Transparency)
 			);
-			return AlphaBlendColor.ProvideColorValue(serviceProvider, color);
-		} // func ProvideValue
+		} // func ProvideColor
 
+		/// <summary>Background color</summary>
 		public Color BackColor { get; set; } = Colors.Black;
+		/// <summary>Transparent color</summary>
 		public Color TransparentColor { get; set; } = Colors.White;
-		public float Transpareny { get; set; } = 1.0f;
-
+		/// <summary>Transparency value</summary>
+		public float Transparency { get; set; } = 1.0f;
 	} // class TransparencyResultColor
 
-	#region -- class WeightColor --------------------------------------------------------
+	#endregion
 
-	///////////////////////////////////////////////////////////////////////////////
+	#region -- class WeightColor ------------------------------------------------------
+
 	/// <summary>Makes the color dark.</summary>
-	public class WeightColor : MarkupExtension
+	public sealed class WeightColor : ColorMarkupExtension
 	{
+		/// <summary></summary>
 		public WeightColor()
 		{
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="source"></param>
 		public WeightColor(Color source)
 		{
 			this.Source = source;
 		} // ctor
 
-		public override object ProvideValue(IServiceProvider serviceProvider)
+		/// <summary></summary>
+		/// <param name="serviceProvider"></param>
+		/// <returns></returns>
+		protected override Color ProvideColor(IServiceProvider serviceProvider)
 		{
 			var a = Source.ScA;
 			var r = Source.ScR;
 			var g = Source.ScG;
 			var b = Source.ScB;
-
 
 			if (Factor < 0.0f)
 				r = g = b = 0.0f;
@@ -164,94 +191,57 @@ namespace TecWare.PPSn.UI
 				r = g = b = 1.0f;
 			else
 			{
-				for (int i = 0; i < Times; i++)
+				for (var i = 0; i < Times; i++)
 				{
 					r += Factor * (1 - r);
 					g += Factor * (1 - g);
 					b += Factor * (1 - b);
 				}
 			}
-			return AlphaBlendColor.ProvideColorValue(serviceProvider, Color.FromScRgb(a, r, g, b));
-		} // func ProvideValue
+			return Color.FromScRgb(a, r, g, b);
+		} // func ProvideColor
 
+		/// <summary>Source color.</summary>
 		[ConstructorArgument("source")]
 		public Color Source { get; set; } = Colors.Gray;
 
+		/// <summary>Weight factor.</summary>
 		public float Factor { get; set; } = 0.3f;
+		/// <summary>Number of weight calculations.</summary>
 		public int Times { get; set; } = 1;
 	} // class WeightColor
 
 	#endregion
 
-	#region -- class GrayColor ----------------------------------------------------------
+	#region -- class GrayColor --------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Makes the color dark.</summary>
-	public class GrayColor : MarkupExtension
+	public sealed class GrayColor : ColorMarkupExtension
 	{
-		public GrayColor()
-		{
-		} // ctor
-
+		/// <summary></summary>
+		/// <param name="source"></param>
 		public GrayColor(Color source)
 		{
 			this.Source = source;
 		} // ctor
 
-		public override object ProvideValue(IServiceProvider serviceProvider)
+		/// <summary></summary>
+		/// <param name="serviceProvider"></param>
+		/// <returns></returns>
+		protected override Color ProvideColor(IServiceProvider serviceProvider)
 		{
 			var a = Source.ScA;
 			var c = Source.ScR * 0.2126f + Source.ScG * 0.7152f + Source.ScB * 0.0722f;
 
-			return AlphaBlendColor.ProvideColorValue(serviceProvider, Color.FromScRgb(a, c, c, c));
-		} // func ProvideValue
+			return Color.FromScRgb(a, c, c, c);
+		} // func ProvideColor
 
+		/// <summary>Source color</summary>
 		[ConstructorArgument("source")]
 		public Color Source { get; set; }
 	} // class GrayColor
 
 	#endregion
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary>Binding ImageSourceName.</summary>
-	[MarkupExtensionReturnType(typeof(ImageSource))]
-	public class PpsImageStaticResourceBinding : System.Windows.StaticResourceExtension
-	{
-		public Binding binding { get; set; }
-		private static readonly System.Windows.DependencyProperty dummyProperty;
-
-		public PpsImageStaticResourceBinding(Binding binding)
-		{
-			this.binding = binding;
-			this.binding.Mode = BindingMode.OneWay;
-		}
-
-		static PpsImageStaticResourceBinding()
-		{
-			dummyProperty = System.Windows.DependencyProperty.RegisterAttached("Dummy", typeof(Object), typeof(System.Windows.DependencyObject), new System.Windows.UIPropertyMetadata(null));
-		}
-
-		public override object ProvideValue(IServiceProvider serviceProvider)
-		{
-			var target = (IProvideValueTarget)serviceProvider.GetService(typeof(IProvideValueTarget));
-			var targetObject = (System.Windows.FrameworkElement)target.TargetObject;
-
-			// simuliere Binding
-			binding.Source = targetObject.DataContext;
-			var dummyDO = new System.Windows.DependencyObject();
-
-			BindingOperations.SetBinding(dummyDO, dummyProperty, binding);
-			// todo: checken ob die die source das object hat
-			try
-			{
-				ResourceKey = dummyDO.GetValue(dummyProperty);
-				return base.ProvideValue(serviceProvider);
-			}
-			catch
-			{
-				return null;
-			}
-		}
-	} // class PpsImageStaticResourceBinding
-
+	#endregion
 }

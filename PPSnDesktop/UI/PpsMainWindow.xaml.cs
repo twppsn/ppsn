@@ -90,7 +90,7 @@ namespace TecWare.PPSn.UI
 					async (sender, e) =>
 					{
 						e.Handled = true;
-						await OpenPaneAsync(Environment.TracePane, PpsOpenPaneMode.NewPane, null);
+						await OpenPaneAsync(Environment.TracePaneType, PpsOpenPaneMode.NewPane, null);
 					}
 				)
 			);
