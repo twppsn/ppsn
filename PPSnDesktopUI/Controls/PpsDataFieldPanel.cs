@@ -52,9 +52,9 @@ namespace TecWare.PPSn.Controls
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty LabelWidthProperty = DependencyProperty.Register(nameof(LabelWidth), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(80.0, FrameworkPropertyMetadataOptions.AffectsArrange));
 		/// <summary>DependencyProperty</summary>
-		public static readonly DependencyProperty RowMarginProperty = DependencyProperty.Register(nameof(RowMargin), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(5.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
+		public static readonly DependencyProperty RowMarginProperty = DependencyProperty.Register(nameof(RowMargin), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(6.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 		/// <summary>DependencyProperty</summary>
-		public static readonly DependencyProperty RowHeightProperty = DependencyProperty.Register(nameof(RowHeight), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(32.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
+		public static readonly DependencyProperty RowHeightProperty = DependencyProperty.Register(nameof(RowHeight), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(23.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty ArrangeOptimizationProperty = DependencyProperty.Register(nameof(ArrangeOptimization),
 																										 typeof(Optimization),
@@ -616,5 +616,10 @@ namespace TecWare.PPSn.Controls
 		} // func PartitionMaxHeight
 
 		#endregion
+
+		static PpsDataFieldPanel()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(typeof(PpsDataFieldPanel)));
+		}
 	} // class PpsDataFieldPanel
 }

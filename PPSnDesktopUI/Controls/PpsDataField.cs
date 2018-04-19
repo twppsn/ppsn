@@ -325,6 +325,7 @@ namespace TecWare.PPSn.Controls
 
 			txt.Text = PpsDataFieldBinding.CreateWpfBinding(fieldInfo);
 			txt.Width = 200;
+			
 			if (fieldInfo.TryGetProperty<bool>("IsReadOnly", out var isReadOnly))
 				txt.IsReadOnly = isReadOnly;
 
