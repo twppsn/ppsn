@@ -5,7 +5,8 @@
 			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
 			 xmlns:cm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:TecWare.PPSn.UI"
+             xmlns:ui="http://tecware-gmbh.de/ppsn/wpf/2015"
+			 xmlns:local="clr-namespace:TecWare.PPSn.UI"
 			 mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300" Background="Transparent">
 	<UserControl.Resources>
@@ -47,7 +48,6 @@
 				</Setter.Value>
 			</Setter>
 		</Style>
-
 
 		<Style x:Key="PPSnTraceScrollViewerStyle" TargetType="{x:Type ScrollViewer}">
 			<Setter Property="PanningMode" Value="Both"/>
@@ -142,8 +142,8 @@
 			</Setter>
 		</Style>
 
-		<local:TraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
-			<local:TraceItemTemplateSelector.NullTemplate>
+		<local:PpsTraceItemTemplateSelector x:Key="TraceItemTemplateSelector">
+			<local:PpsTraceItemTemplateSelector.NullTemplate>
 				<DataTemplate>
 					<ScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource collapsedScrollHeight}" Padding="0,0,8,0" VerticalAlignment="Top" Focusable="False" VerticalScrollBarVisibility="Disabled" >
 						<TextBlock x:Name="message" Text="{Binding Message}" TextWrapping="NoWrap"/>
@@ -158,9 +158,9 @@
 						</DataTrigger>
 					</DataTemplate.Triggers>
 				</DataTemplate>
-			</local:TraceItemTemplateSelector.NullTemplate>
+			</local:PpsTraceItemTemplateSelector.NullTemplate>
 
-			<local:TraceItemTemplateSelector.ExceptionTemplate>
+			<local:PpsTraceItemTemplateSelector.ExceptionTemplate>
 				<DataTemplate>
 					<Grid>
 						<Grid.RowDefinitions>
@@ -207,7 +207,7 @@
 															<ColumnDefinition />
 														</Grid.ColumnDefinitions>
 														<TextBlock Grid.Column="0" Text="{Binding Title, Mode=OneWay}"/>
-														<TextBlock Grid.Column="2" Text="{Binding Type, Mode=OneWay, Converter={StaticResource TypeStringConverter}}"/>
+														<TextBlock Grid.Column="2" Text="{Binding Type, Mode=OneWay, Converter={x:Static ui:PpsConverter.LuaTypeString}}"/>
 														<TextBlock Grid.Column="4" Text="{Binding Text, Mode=OneWay}" TextWrapping="WrapWithOverflow"/>
 													</Grid>
 													<ControlTemplate.Triggers>
@@ -228,7 +228,7 @@
 															<ColumnDefinition Width="*"/>
 														</Grid.ColumnDefinitions>
 														<TextBlock Grid.Column="0" Text="{Binding Name}" />
-														<TextBlock Grid.Column="1" Margin="5,0,5,0" Text="{Binding Type, Converter={StaticResource TypeStringConverter}}" />
+														<TextBlock Grid.Column="1" Margin="5,0,5,0" Text="{Binding Type, Converter={x:Static ui:PpsConverter.LuaTypeString}}" />
 														<TextBlock Grid.Column="2" Text="{Binding Value}" TextWrapping="WrapWithOverflow"/>
 													</Grid>
 												</DataTemplate>
@@ -245,9 +245,9 @@
 						</DataTrigger>
 					</DataTemplate.Triggers>
 				</DataTemplate>
-			</local:TraceItemTemplateSelector.ExceptionTemplate>
+			</local:PpsTraceItemTemplateSelector.ExceptionTemplate>
 
-			<local:TraceItemTemplateSelector.TraceItemTemplate>
+			<local:PpsTraceItemTemplateSelector.TraceItemTemplate>
 				<DataTemplate>
 					<ScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource collapsedScrollHeight}" Padding="0,0,8,0" VerticalAlignment="Top" Focusable="False" VerticalScrollBarVisibility="Disabled" >
 						<StackPanel>
@@ -266,9 +266,9 @@
 						</DataTrigger>
 					</DataTemplate.Triggers>
 				</DataTemplate>
-			</local:TraceItemTemplateSelector.TraceItemTemplate>
+			</local:PpsTraceItemTemplateSelector.TraceItemTemplate>
 
-			<local:TraceItemTemplateSelector.TextItemTemplate>
+			<local:PpsTraceItemTemplateSelector.TextItemTemplate>
 				<DataTemplate>
 					<ScrollViewer x:Name="scrollPane" MaxHeight="{StaticResource collapsedScrollHeight}" Padding="0,0,8,0" VerticalAlignment="Top" Focusable="False" VerticalScrollBarVisibility="Disabled" >
 						<TextBlock x:Name="message" Text="{Binding Message}" TextWrapping="NoWrap"/>
@@ -283,8 +283,8 @@
 						</DataTrigger>
 					</DataTemplate.Triggers>
 				</DataTemplate>
-			</local:TraceItemTemplateSelector.TextItemTemplate>
-		</local:TraceItemTemplateSelector>
+			</local:PpsTraceItemTemplateSelector.TextItemTemplate>
+		</local:PpsTraceItemTemplateSelector>
 	</UserControl.Resources>
 
 	<Grid Margin="16,22,16,10">
@@ -336,9 +336,6 @@
 							</Viewbox>
 						</Border>
 						<TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=dd.MM.yyyy  HH:mm:ss}" VerticalAlignment="Center" Margin="8,0,0,0"/>
-						<!--<FrameworkElement x:Name="dummy" Grid.Column="2" Margin="8,0,32,0"/>
-						<ContentControl Grid.Column="2" Grid.RowSpan="2" Content="{Binding}" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}" Focusable="False"
-										HorizontalAlignment="Left" Width="{Binding ElementName=dummy, Path=ActualWidth, Mode=OneWay}" Margin="8,4,0,0" />-->
 						<ContentControl Grid.Column="2" Grid.RowSpan="2" Content="{Binding}" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}" Focusable="False"
 										HorizontalAlignment="Left" Margin="8,4,24,0" />
 					</Grid>

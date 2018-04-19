@@ -586,7 +586,7 @@
 			</Grid.ColumnDefinitions>
 
 			<Button x:Name="showTraceButton" Grid.Column="0" Focusable="False" Foreground="{StaticResource PPSnWindowForegroundBrush}"
-					Content="{Binding Environment.Traces.LastTrace,Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"
+					Content="{Binding Environment.Traces.LastTrace.Message,Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"
 					Command="{x:Static ui:PpsWindow.TraceLogCommand}"
 					ToolTipService.InitialShowDelay="750"
 					ToolTipService.ShowDuration="10000">

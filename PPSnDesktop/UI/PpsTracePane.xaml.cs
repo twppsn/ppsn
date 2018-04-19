@@ -18,26 +18,31 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using Microsoft.Win32;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
-using Microsoft.Win32;
-using System.IO;
 
 namespace TecWare.PPSn.UI
 {
+	#region -- class PpsTracePane -----------------------------------------------------
+
 	/// <summary>Pane to display trace messages.</summary>
-	internal partial class PpsTracePane : UserControl, IPpsWindowPane
+	internal sealed partial class PpsTracePane : UserControl, IPpsWindowPane
 	{
-		/// <summary>Do not handle any property changed events.</summary>
-		public event PropertyChangedEventHandler PropertyChanged { add { } remove { } }
+		// ignore any property changed
+		event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged { add { } remove { } }
 
 		private readonly IPpsWindowPaneManager paneManager;
+		private readonly PpsUICommandCollection commands;
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Trace pane constructor</summary>
 		public PpsTracePane(IPpsWindowPaneManager paneManager)
@@ -47,6 +52,9 @@ namespace TecWare.PPSn.UI
 			InitializeComponent();
 
 			Resources[PpsEnvironment.WindowPaneService] = this;
+
+			this.commands = new PpsUICommandCollection();
+			//commands.AddButton("100:100", "CopySelected", CopySelectedTraceItemsCommand, "InZwischenable", "Kopiert alle markierten Einträge in die Zwischenablage.");
 
 			CommandBindings.Add(
 				new CommandBinding(ApplicationCommands.Copy,
@@ -111,22 +119,37 @@ namespace TecWare.PPSn.UI
 			);
 		} // ctor
 
-		public void Dispose()
+		void IDisposable.Dispose()
 		{
 		} // proc Dispose
 
-		public Task LoadAsync(LuaTable args)
-		{
-			var environment = (args["Environment"] as PpsEnvironment) ?? PpsEnvironment.GetEnvironment(this);
-			DataContext = environment;
+		#endregion
 
+		#region -- IPpsWindowPane members ---------------------------------------------
+
+		PpsWindowPaneCompareResult IPpsWindowPane.CompareArguments(LuaTable args) 
+			=> PpsWindowPaneCompareResult.Same;
+
+		Task IPpsWindowPane.LoadAsync(LuaTable args)
+		{
+			DataContext = Environment; // set environment to DataContext
 			return Task.CompletedTask;
 		} // proc LoadAsync
 
-		public Task<bool> UnloadAsync(bool? commit = default(bool?))
+		Task<bool> IPpsWindowPane.UnloadAsync(bool? commit)
 		{
 			return Task.FromResult(true);
 		} // func UnloadAsync
+
+		public string Title => "System";
+		public string SubTitle => "Anwendungsereignisse";
+
+		public object Control => this;
+		IPpsWindowPaneManager IPpsWindowPane.PaneManager => paneManager;
+
+		public bool IsDirty => false;
+
+		#endregion
 
 		private void CopyToClipboard(object item)
 		{
@@ -158,37 +181,34 @@ namespace TecWare.PPSn.UI
 			}
 		} // func TraceToString
 
-		public PpsWindowPaneCompareResult CompareArguments(LuaTable args) => PpsWindowPaneCompareResult.Same;
-
-		public string Title => "System";
-		public string SubTitle => "Anwendungsereignisse";
-		public object Control => this;
-		public bool IsDirty => false;
-		public IPpsWindowPaneManager PaneManager => paneManager;
-		
-		public object Commands => null;
+		/// <summary>Access the environment</summary>
+		public PpsEnvironment Environment => paneManager.Environment;
 	} // class PpsTracePane
 
-	#region -- class TraceItemTemplateSelector ------------------------------------------
+	#endregion
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	internal sealed class TraceItemTemplateSelector : DataTemplateSelector
+	#region -- class PpsTraceItemTemplateSelector -------------------------------------
+
+	internal sealed class PpsTraceItemTemplateSelector : DataTemplateSelector
 	{
 		public override DataTemplate SelectTemplate(object item, DependencyObject container)
 		{
-			var r = (DataTemplate)null;
-			var resources = container as ContentPresenter;
-			if (item != null && resources != null)
+			DataTemplate GetTemplate()
 			{
-				if (item is PpsExceptionItem || item is Exception)
-					r = ExceptionTemplate;
-				else if (item is PpsTraceItem)
-					r = TraceItemTemplate;
-				else if (item is PpsTextItem)
-					r = TextItemTemplate;
-			}
-			return r ?? NullTemplate;
+				switch (item)
+				{
+					case PpsExceptionItem ei:
+					case Exception e:
+						return ExceptionTemplate;
+					case PpsTraceItem ti:
+						return TraceItemTemplate;
+					case PpsTextItem tt:
+						return TextItemTemplate;
+					default:
+						return null;
+				}
+			} // func GetTemplate
+			return GetTemplate() ?? NullTemplate;
 		} // proc SelectTemplate
 
 		/// <summary>Template for the exception items</summary>
@@ -199,15 +219,15 @@ namespace TecWare.PPSn.UI
 		public DataTemplate TraceItemTemplate { get; set; }
 		/// <summary></summary>
 		public DataTemplate TextItemTemplate { get; set; }
-	} // class TraceItemTemplateSelector
+	} // class PpsTraceItemTemplateSelector
 
 	#endregion
 
-	#region -- class ExceptionToPropertyConverter ---------------------------------------
+	#region -- class ExceptionToPropertyConverter -------------------------------------
 
-	public sealed class ExceptionToPropertyConverter : IValueConverter
+	internal sealed class ExceptionToPropertyConverter : IValueConverter
 	{
-		#region -- class ExceptionView --------------------------------------------------
+		#region -- class ExceptionView ------------------------------------------------
 
 		public sealed class ExceptionView : IEnumerable<PropertyValue>
 		{
@@ -237,7 +257,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- class ExceptionViewArrayFormatter ------------------------------------
+		#region -- class ExceptionViewArrayFormatter ----------------------------------
 
 		private sealed class ExceptionViewArrayFormatter : ExceptionFormatter
 		{
