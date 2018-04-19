@@ -23,10 +23,6 @@ specific language governing permissions and limitations under the Licence.
 			 BorderThickness="1"
 			 BorderBrush="{StaticResource PPSnSeparatorBrush}"
              d:DesignHeight="300" d:DesignWidth="300">
-	<UserControl.Resources>
-		<ui:PpsImageResourceKeyConverter x:Key="imageResourceKeyConverter"/>
-	</UserControl.Resources>
-
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="auto"/>
@@ -43,7 +39,7 @@ specific language governing permissions and limitations under the Licence.
 				<DataTemplate>
 					<Button Width="38" Height="38" Margin="0,0,6,0"
 							Command="{Binding Command}"
-							Content="{Binding Image, Mode=OneTime, Converter={StaticResource imageResourceKeyConverter}}"
+							Content="{Binding Image, Mode=OneTime, Converter={x:Static ui:PpsConverter.ImageToPathGeometry}}"
 							ToolTip="{Binding Description}"
 							Style="{StaticResource PPSnImageButtonStyle}"/>
 					<DataTemplate.Triggers>
@@ -83,7 +79,7 @@ specific language governing permissions and limitations under the Licence.
 									   Stretch="Uniform"/>
 								<Viewbox x:Name="symbolBox" Margin="28">
 									<Path x:Name="symbolPath"
-										  Data="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay, Converter={StaticResource imageResourceKeyConverter}}"
+										  Data="{Binding LinkedObject.DataLazy.PreviewImageLazy, Mode=OneWay, Converter={x:Static ui:PpsConverter.ImageToPathGeometry}}"
 										  Fill="{StaticResource PPSnWindowForegroundBrush}" Opacity=".65"/>
 								</Viewbox>
 								<Viewbox x:Name="imageBox" Margin="28" Visibility="Hidden">

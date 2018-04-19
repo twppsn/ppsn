@@ -23,7 +23,6 @@ using TecWare.PPSn.Controls;
 
 namespace TecWare.PPSn.UI
 {
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public partial class PpsMainWindow : PpsWindow
 	{

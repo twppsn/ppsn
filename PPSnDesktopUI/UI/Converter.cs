@@ -33,11 +33,21 @@ namespace TecWare.PPSn.UI
 		public static IValueConverter NumericValue => NumericValueConverter.Default;
 		/// <summary>Convert between Visibility and bool.</summary>
 		public static IValueConverter Visibility => VisibilityConverter.Default;
+		/// <summary>Removes all new lines.</summary>
+		public static IValueConverter MultiToSingleLine => MultiToSingleLineConverter.Default;
+		/// <summary>Creates a array of objects.</summary>
+		public static IMultiValueConverter MultiValueToArray => MultiValueToArrayConverter.Default;
+		/// <summary>Converts a type to an string via LuaType.</summary>
+		public static IValueConverter LuaTypeString => LuaTypeStringConverter.Default;
+		/// <summary>Converts a string to a PathGeometry.</summary>
+		public static IValueConverter ImageToPathGeometry => ImageToPathGeometryConverter.Default;
+		/// <summary></summary>
+		public static IValueConverter TakeListItems => TakeListItemsConverter.Default;
 	} // class PpsConverter
 
 	#endregion
 
-	#region -- NumericValueConverter --------------------------------------------------
+	#region -- class NumericValueConverter --------------------------------------------
 
 	/// <summary>Parameter for the FloatValueConverter</summary>
 	public sealed class NumericValueConverterParameter
@@ -109,7 +119,7 @@ namespace TecWare.PPSn.UI
 				}
 			}
 			else
-				throw new NotSupportedException();				
+				throw new NotSupportedException();
 		} // func Convert
 
 		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -214,7 +224,7 @@ namespace TecWare.PPSn.UI
 	} // class VisibilityConverterParameter
 
 	internal sealed class VisibilityConverter : IValueConverter
-    {
+	{
 		private VisibilityConverter()
 		{
 		} // ctor
@@ -252,187 +262,216 @@ namespace TecWare.PPSn.UI
 					throw new NotSupportedException();
 			}
 		} // func ConvertBack
-		
+
 		public static IValueConverter Default { get; } = new VisibilityConverter();
 	} // class VisibilityConverter
 
-    #endregion
+	#endregion
 
+	#region -- class MultiToSingleLineConverter  --------------------------------------
 
-
-
-    #region -- class PpsStringConverter -------------------------------------------------
-
-    public sealed class PpsStringConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-            => value == null ? String.Empty : String.Format((string)parameter ?? Text, RemoveNewLines(value));
-
-        object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            throw new NotSupportedException();
-        } // func ConvertBack
-
-        private string RemoveNewLines(object value)
-            => value.ToString().Replace(Environment.NewLine, " ");
-
-        public string Text { get; set; } = "{0}";
-    } // class PpsStringConverter
-
-    #endregion
-
-    #region -- class PpsMultiLineStringConverter ----------------------------------------
-
-    public sealed class PpsMultiLineStringConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-            => value == null ? String.Empty : RemoveNewLines(value);
-
-        object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            throw new NotSupportedException();
-        } // func ConvertBack
-
-        private string RemoveNewLines(object value)
-            => value.ToString().Replace(Environment.NewLine, " ").Replace("\n", " ");
-
-    } // class PpsMultiLineStringConverter
-
-    #endregion
-
-    #region -- class PpsSingleLineConverter ---------------------------------------------
-
-    ///////////////////////////////////////////////////////////////////////////////
-    /// <summary></summary>
-    public sealed class PpsSingleLineConverter : IValueConverter
-    {
-        /// <summary></summary>
-        /// <param name="value"></param>
-        /// <param name="targetType"></param>
-        /// <param name="parameter"></param>
-        /// <param name="culture"></param>
-        /// <returns></returns>
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            if (value == null)
-                return null;
-
-            var ellipse = false;
-            var txt = value.ToString().TrimStart('\n', ' ', '\r');
-            var p = txt.IndexOf('\n');
-
-            if (p >= 0)
-            {
-                txt = txt.Substring(0, p).TrimEnd();
-                ellipse = true;
-            }
-
-            if (parameter != null)
-            {
-                var maxLen = Procs.ChangeType<int>(parameter);
-                if (maxLen > 1 && txt.Length > maxLen)
-                {
-                    txt = txt.Substring(0, maxLen);
-                    ellipse = true;
-                }
-            }
-
-            if (ellipse)
-                txt += "...";
-
-            return txt;
-        } // func Convert
-
-        object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            throw new NotSupportedException();
-        } // func ConvertBack
-    } // class PpsSingleLineConverter
-
-    #endregion
-
-    public sealed class PpsCommandParameterPassthroughConverter : IMultiValueConverter
-    {
-        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
-        {
-            return values.Clone();
-        } // func Convert
-
-        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-        {
-            throw new NotSupportedException();
-        }
-    }
-
-    public sealed class ManyToTopTenConverter : IMultiValueConverter
-    {
-        private static IEnumerable<object> GetLast(IList list, int count)
-        {
-            var end = list.Count - count;
-            for (var i = Math.Max(end, 0); i < list.Count; i++)
-                yield return (object)list[i];
-        }
-
-        //public class III : IEnumerable<PpsTraceItemBase>
-        //{
-        //	private readonly PpsTraceLog trace;
-
-
-        //}
-
-        public object Convert(object[] value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
-        {
-            var ret = new System.Collections.ObjectModel.ObservableCollection<PpsTraceItemBase>();
-
-            if (value == null)
-                return ret;
-
-            if (value[0] is IList)
-                return GetLast((IList)value[0], 10);
-
-            return ret;
-        }
-
-        public object[] ConvertBack(object value, System.Type[] targetType, object parameter, System.Globalization.CultureInfo culture)
-        {
-            throw new System.NotImplementedException();
-        }
-    }
-
-	public sealed class PpsTypeStringConverter : IValueConverter
+	/// <summary>Parameter for multi to single line converter.</summary>
+	public sealed class MultiToSingleLineConverterParameter
 	{
-		public object Convert(object value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
-			=> value is Type t ? LuaType.GetType(t).AliasName ?? t.Name : value?.ToString();
+		/// <summary>Maximal length of the resulting string.</summary>
+		public int MaxStringLength { get; set; } = Int32.MaxValue;
+		/// <summary>Maximal number of lines to scan.</summary>
+		public int MaxLines { get; set; } = Int32.MaxValue;
+		/// <summary><c>true</c>: Is the resulting string longer the MaxStringLength, ... is added.</summary>
+		public bool EndEllipse { get; set; } = false;
 
-		public object ConvertBack(object value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
-		{
-			throw new System.NotImplementedException();
-		}
-	}
+		/// <summary></summary>
+		public static MultiToSingleLineConverterParameter Default { get; } = new MultiToSingleLineConverterParameter();
+	} // class MultiToSingleLineConverterParameter
 
-	#region -- class PpsImageResourceKeyConverter ---------------------------------------
-
-	public sealed class PpsImageResourceKeyConverter : IValueConverter
+	internal sealed class MultiToSingleLineConverter : IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		private MultiToSingleLineConverter()
 		{
-			if (value is string && !String.IsNullOrEmpty((string)value))
+		} // ctor
+
+		private static MultiToSingleLineConverterParameter GetParameter(object parameter)
+			=> parameter is MultiToSingleLineConverterParameter p ? p : MultiToSingleLineConverterParameter.Default;
+
+		private static IEnumerable<string> GetLines(string value, MultiToSingleLineConverterParameter p)
+		{
+			var lineNo = 0;
+			var charCount = 0;
+			foreach (var (startAt, len) in value.SplitNewLinesTokens())
 			{
-				var resName = String.Concat(value, "PathGeometry");
-				return Application.Current.TryFindResource(resName);
+				var r = value.Substring(startAt, len).Trim();
+				if (r.Length == 0)
+					continue; // to not count empty lines
+
+				yield return r;
+
+				// char cancel rule
+				charCount += r.Length;
+				if (charCount > p.MaxStringLength)
+					break;
+
+				// line cancel rule
+				lineNo++;
+				if (lineNo >= p.MaxLines)
+					break;
 			}
-			return null;
-		} // func Convert
+		} // func GetLines
 
-		public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			throw new NotSupportedException();
-		} // func ConvertBack
+			if (value == null)
+				return null;
+			else if (value is string s)
+			{
+				var p = GetParameter(parameter);
+				var r = String.Join(" ", GetLines(s, p));
+				if (p.EndEllipse && r.Length > p.MaxStringLength && p.MaxStringLength > 3)
+					r = r.Substring(0, p.MaxStringLength - 3) + "...";
+				return r;
+			}
+			else
+				throw new NotSupportedException();
+		} // func IValueConverter.Convert
 
-	} // class PpsImageResourceKeyConverter
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+			=> throw new NotSupportedException();
+
+		public static MultiToSingleLineConverter Default { get; } = new MultiToSingleLineConverter();
+	} // class MultiToSingleLineConverter
 
 	#endregion
 
+	#region -- class MultiValueToArrayConverter ---------------------------------------
+
+	internal sealed class MultiValueToArrayConverter : IMultiValueConverter
+	{
+		private MultiValueToArrayConverter()
+		{
+		} // ctor
+
+		object IMultiValueConverter.Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+			=> values.Clone();
+
+		object[] IMultiValueConverter.ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+			=> value is object[] arr ? (object[])arr.Clone() : throw new NotSupportedException();
+
+		public static MultiValueToArrayConverter Default { get; } = new MultiValueToArrayConverter();
+	} // class MultiValueToArrayConverter
+
+	#endregion
+
+	#region -- class LuaTypeStringConverter -------------------------------------------
+
+	internal sealed class LuaTypeStringConverter : IValueConverter
+	{
+		private LuaTypeStringConverter()
+		{
+		} // ctor
+
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			switch (value)
+			{
+				case Type t:
+					return LuaType.GetType(t).AliasOrFullName;
+				case LuaType lt:
+					return lt.AliasOrFullName;
+				case null:
+					return null;
+				default:
+					throw new NotSupportedException();
+			}
+		} // func IValueConverter.Convert
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			switch (value)
+			{
+				case null:
+					return null;
+				case string s:
+					return LuaType.GetType(s);
+				default:
+					throw new NotSupportedException();
+			}
+		} // func IValueConverter.ConvertBack
+
+		public static LuaTypeStringConverter Default { get; } = new LuaTypeStringConverter();
+	} // class LuaTypeStringConverter
+
+	#endregion
+
+	#region -- class ImageToPathGeometryConverter -------------------------------------
+
+	internal sealed class ImageToPathGeometryConverter : IValueConverter
+	{
+		private ImageToPathGeometryConverter()
+		{
+		} // ctor
+
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			switch (value)
+			{
+				case null:
+					return null;
+				case string resName:
+					return Application.Current.TryFindResource(resName + "PathGeometry") ?? Application.Current.TryFindResource(resName);
+				default:
+					throw new NotSupportedException();
+			}
+		} // func Convert
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+			=> throw new NotSupportedException();
+
+		public static ImageToPathGeometryConverter Default { get; } = new ImageToPathGeometryConverter();
+	} // class ImageToPathGeometryConverter
+
+	#endregion
+
+	#region -- class TakeListItemsConverter -------------------------------------------
+
+	/// <summary></summary>
+	public sealed class TakeListItemsConverterParameter
+	{
+		/// <summary></summary>
+		public int MaxItems { get; set; } = 10;
+		/// <summary></summary>
+		public bool LastItems { get; set; } = true;
+
+		/// <summary></summary>
+		public static TakeListItemsConverterParameter Default { get; } = new TakeListItemsConverterParameter();
+	} // class TakeListItemsConverterParameter
+
+	internal sealed class TakeListItemsConverter : IValueConverter
+	{
+		private TakeListItemsConverter()
+		{
+		} // ctor
+
+		private static TakeListItemsConverterParameter GetParameter(object parameter)
+			=> parameter is TakeListItemsConverterParameter p ? p : TakeListItemsConverterParameter.Default;
+
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			switch (value)
+			{
+				case null:
+					return null;
+				case IList l:
+					var p = GetParameter(parameter);
+					return new TakeList(l, p.MaxItems, p.LastItems);
+				default:
+					throw new NotSupportedException();
+			}
+		} // funcIValueConverter.Convert
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+			=> value is TakeList l ? l.SourceList : throw new NotSupportedException();
+
+		public static TakeListItemsConverter Default { get; } = new TakeListItemsConverter();
+	} // class TakeListItemsConverter
+
+	#endregion
 }
-
-

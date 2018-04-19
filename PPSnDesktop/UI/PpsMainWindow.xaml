@@ -13,7 +13,7 @@
 	<ui:PpsWindow.Title>
 		<MultiBinding FallbackValue="{StaticResource PPSnApplicationTitle}" StringFormat="{}{0} - {1} - {2}">
 			<Binding Path="Text" ElementName="PART_Title" />
-			<Binding Path="CurrentPane.Title" Converter="{StaticResource MultiLineStringConverter}"/>
+			<Binding Path="CurrentPane.Title" Converter="{x:Static uiO:PpsConverter.MultiToSingleLine}"/>
 			<Binding Path="CurrentPane.SubTitle"/>
 		</MultiBinding>
 	</ui:PpsWindow.Title>
@@ -310,7 +310,7 @@
 														<TextBlock.Text>
 															<MultiBinding StringFormat="{}{0} - {1}">
 																<Binding Path="SubTitle"/>
-																<Binding Path="Title" Converter="{StaticResource MultiLineStringConverter}"/>
+																<Binding Path="Title" Converter="{x:Static uiO:PpsConverter.MultiToSingleLine}"/>
 															</MultiBinding>
 														</TextBlock.Text>
 													</TextBlock>
@@ -396,7 +396,7 @@
 		<TextBlock Grid.Column="1" Foreground="{StaticResource PPSnWindowForegroundBrush}" Padding="24,2,0,0" VerticalAlignment="Top" Height="32" FontSize="16">
 			<Run Text="{Binding CurrentPane.SubTitle, Mode=OneWay}"/>
 			<Run Text=" "/>
-			<Run Text="{Binding CurrentPane.Title, Mode=OneWay, Converter={StaticResource MultiLineStringConverter}}"/>
+			<Run Text="{Binding CurrentPane.Title, Mode=OneWay, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"/>
 			<TextBlock.Tag>
 				<ui:PpsWindowHitTest HitTest="2" />
 			</TextBlock.Tag>
@@ -586,7 +586,7 @@
 			</Grid.ColumnDefinitions>
 
 			<Button x:Name="showTraceButton" Grid.Column="0" Focusable="False" Foreground="{StaticResource PPSnWindowForegroundBrush}"
-					Content="{Binding Environment.Traces.LastTrace,Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource MultiLineStringConverter}}"
+					Content="{Binding Environment.Traces.LastTrace,Mode=OneWay, UpdateSourceTrigger=PropertyChanged, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"
 					Command="{x:Static ui:PpsWindow.TraceLogCommand}"
 					ToolTipService.InitialShowDelay="750"
 					ToolTipService.ShowDuration="10000">
@@ -594,10 +594,11 @@
 					<ToolTip Placement="Top" VerticalOffset="-16" Margin="16,0" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" FontSize="14">
 						<ListBox Style="{StaticResource PPSnListBoxStyle}" Focusable="False" Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}">
 							<ListBox.ItemsSource>
-								<MultiBinding Converter="{StaticResource ManyToTopTenConverter}">
-									<Binding Path="Environment.Traces"/>
-									<Binding Path="Environment.Traces.Count"/>
-								</MultiBinding>
+								<Binding Path="Environment.Traces" Converter="{x:Static uiO:PpsConverter.TakeListItems}">
+									<Binding.ConverterParameter>
+										<uiO:TakeListItemsConverterParameter MaxItems="10" LastItems="true" />
+									</Binding.ConverterParameter>
+								</Binding>
 							</ListBox.ItemsSource>
 							<ListBox.ItemTemplate>
 								<DataTemplate>
@@ -609,7 +610,7 @@
 										</Grid.ColumnDefinitions>
 										<TextBlock Grid.Column="0" Text="{Binding Path=Type}"/>
 										<TextBlock Grid.Column="1" Text="{Binding Path=Stamp, StringFormat=HH:mm:ss}" Margin="0,0,16,0"/>
-										<TextBlock Grid.Column="2" Text="{Binding Path=Message, Converter={StaticResource MultiLineStringConverter}}" />
+										<TextBlock Grid.Column="2" Text="{Binding Path=Message, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}" />
 									</Grid>
 								</DataTemplate>
 							</ListBox.ItemTemplate>

@@ -8,12 +8,6 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/PPSn.Desktop.UI;component/UI/UI.xaml" />
 			</ResourceDictionary.MergedDictionaries>
-
-			<ui:PpsStringConverter x:Key="StringConverter" />
-			<ui:PpsMultiLineStringConverter x:Key="MultiLineStringConverter" />
-            <ui:ManyToTopTenConverter x:Key="ManyToTopTenConverter" />
-            <ui:PpsTypeStringConverter x:Key="TypeStringConverter" />
-											
 		</ResourceDictionary>
 	</Application.Resources>
 </Application>

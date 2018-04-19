@@ -27,9 +27,7 @@ specific language governing permissions and limitations under the Licence.
 	<UserControl.Resources>
 		<SolidColorBrush x:Key="SearchBoxBackgroundBrush" Color="{ui:AlphaBlendColor Source={StaticResource PPSnDesktopColor}, Destination={StaticResource PPSnAccentColor}, SourcePart=0.95}" />
 		<SolidColorBrush x:Key="ShrinkedSeparatorBackgroundBrush" Color="Transparent" />
-
-		<ui:PpsImageResourceKeyConverter x:Key="imageResourceKeyConverter"/>
-
+		
 		<Style x:Key="NavigatorViewsListBoxStyle" TargetType="{x:Type ListBox}" BasedOn="{StaticResource PPSnListBoxStyle}">
 			<Style.Resources>
 				<Style x:Key="NavigatorViewsToggleButtonStyle" TargetType="{x:Type ToggleButton}">
@@ -49,7 +47,7 @@ specific language governing permissions and limitations under the Licence.
 										<Rectangle x:Name="selectedMarker" Grid.Column="0" Fill="{StaticResource PPSnMarkerBrush}" Width="4" HorizontalAlignment="Left" Opacity="0"/>
 										<Viewbox x:Name="imageBox" Grid.Column="1" Height="18" Opacity=".75">
 											<Canvas Width="24" Height="24">
-												<Path Data="{Binding DisplayImage, Mode=OneTime, Converter={StaticResource imageResourceKeyConverter}}"
+												<Path Data="{Binding DisplayImage, Mode=OneTime, Converter={x:Static ui:PpsConverter.ImageToPathGeometry}}"
 													  Fill="{StaticResource PPSnActionButtonBrush}"/>
 											</Canvas>
 										</Viewbox>
@@ -550,7 +548,7 @@ specific language governing permissions and limitations under the Licence.
 			<ItemsControl.ItemTemplate>
 				<DataTemplate>
 					<Button Content="{Binding DisplayName}"
-							Tag="{Binding DisplayImage, Mode=OneTime, Converter={StaticResource imageResourceKeyConverter}}"
+							Tag="{Binding DisplayImage, Mode=OneTime, Converter={x:Static ui:PpsConverter.ImageToPathGeometry}}"
 							Command="{Binding DataContext.RunAction, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type ItemsControl}}}"
 							CommandParameter="{Binding}"
 							Style="{StaticResource PPSnCircleButtonStyle}">

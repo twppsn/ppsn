@@ -482,6 +482,66 @@ namespace TecWare.PPSn
 			}
 			return default(T);
 		} // func GetVisualChild
+
+		public static IEnumerable<string> SplitNewLines(this string value)
+		{
+			foreach (var (startAt, len) in SplitNewLinesTokens(value))
+				yield return value.Substring(startAt, len);
+		} // func SplitNewLines
+
+		/// <summary></summary>
+		/// <returns>Move to Procs</returns>
+		public static IEnumerable<(int startAt, int len)> SplitNewLinesTokens(this string value)
+		{
+			var startAt = 0;
+			var state = 0;
+
+			var i = 0;
+			var l = value.Length;
+			while (i < l)
+			{
+				var c = value[i];
+				switch (state)
+				{
+					case 0:
+						if (c == '\n')
+							state = 1;
+						else if (c == '\r')
+							state = 2;
+						break;
+					case 1:
+						yield return (startAt: startAt, len: i - startAt - 1);
+						state = 0;
+						if (c == '\r') // \n\r
+						{
+							startAt = i + 1;
+							break;
+						}
+						else
+						{
+							startAt = i;
+							goto case 0;
+						}
+					case 2:
+						yield return (startAt: startAt, len: i - startAt - 1);
+						state = 0;
+						if (c == '\n') // \r\n
+						{
+							startAt = i + 1;
+							break;
+						}
+						else
+						{
+							startAt = i;
+							goto case 0;
+						}
+				}
+				i++;
+			}
+
+			if (startAt < l)
+				yield return (startAt: startAt, len: l - startAt);
+		} // func SplitNewLines
 	} // class StuffUI
 
 	#region -- class StuffDB ------------------------------------------------------------
