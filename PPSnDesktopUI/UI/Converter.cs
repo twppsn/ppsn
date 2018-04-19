@@ -24,30 +24,242 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- class VisibilityConverter ------------------------------------------------
+	#region -- class PpsConverter -----------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
-	public class VisibilityConverter : IValueConverter
+	public static class PpsConverter
+	{
+		/// <summary>Wpf-Value Converter.</summary>
+		public static IValueConverter NumericValue => NumericValueConverter.Default;
+		/// <summary>Convert between Visibility and bool.</summary>
+		public static IValueConverter Visibility => VisibilityConverter.Default;
+	} // class PpsConverter
+
+	#endregion
+
+	#region -- NumericValueConverter --------------------------------------------------
+
+	/// <summary>Parameter for the FloatValueConverter</summary>
+	public sealed class NumericValueConverterParameter
+	{
+		/// <summary>Allow negative numbers.</summary>
+		public bool AllowNeg { get; set; } = true;
+		/// <summary>Digits after the comma.</summary>
+		public int FloatDigits { get; set; } = 2;
+
+		/// <summary>Default parameter</summary>
+		public static NumericValueConverterParameter Default { get; } = new NumericValueConverterParameter();
+	} // class FloatValueConverterParameter
+
+	internal sealed class NumericValueConverter : IValueConverter
+	{
+		private NumericValueConverter()
+		{
+		} // ctor
+
+		private static NumericValueConverterParameter GetParameter(object parameter)
+			=> parameter is NumericValueConverterParameter r ? r : NumericValueConverterParameter.Default;
+
+		private static string GetFormatString(object parameter, bool forInteger)
+		{
+			var p = GetParameter(parameter);
+			return forInteger ? "N0" : "N" + p.FloatDigits.ToString();
+		} // func GetFormatString
+
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (targetType == typeof(string))
+			{
+				if (value == null) // null is null
+					return null;
+				else
+				{
+					switch (Type.GetTypeCode(value.GetType()))
+					{
+						case TypeCode.String:
+							return value;
+						case TypeCode.Single:
+							return ((float)value).ToString(GetFormatString(parameter, false), culture);
+						case TypeCode.Double:
+							return ((double)value).ToString(GetFormatString(parameter, false), culture);
+						case TypeCode.Decimal:
+							return ((decimal)value).ToString(GetFormatString(parameter, false), culture);
+
+						case TypeCode.SByte:
+							return ((sbyte)value).ToString(GetFormatString(parameter, true), culture);
+						case TypeCode.Int16:
+							return ((short)value).ToString(GetFormatString(parameter, true), culture);
+						case TypeCode.Int32:
+							return ((int)value).ToString(GetFormatString(parameter, true), culture);
+						case TypeCode.Int64:
+							return ((long)value).ToString(GetFormatString(parameter, true), culture);
+
+						case TypeCode.Byte:
+							return ((byte)value).ToString(GetFormatString(parameter, true), culture);
+						case TypeCode.UInt16:
+							return ((ushort)value).ToString(GetFormatString(parameter, true), culture);
+						case TypeCode.UInt32:
+							return ((uint)value).ToString(GetFormatString(parameter, true), culture);
+						case TypeCode.UInt64:
+							return ((ulong)value).ToString(GetFormatString(parameter, true), culture);
+
+						default:
+							throw new NotSupportedException();
+					}
+				}
+			}
+			else
+				throw new NotSupportedException();				
+		} // func Convert
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			var p = GetParameter(parameter);
+
+			if (value == null)
+			{
+				switch (Type.GetTypeCode(targetType))
+				{
+					case TypeCode.Single:
+						return 0.0f;
+					case TypeCode.Double:
+						return 0.0;
+					case TypeCode.Decimal:
+						return 0.0m;
+
+					case TypeCode.SByte:
+						return (sbyte)0;
+					case TypeCode.Int16:
+						return (short)0;
+					case TypeCode.Int32:
+						return (int)0;
+					case TypeCode.Int64:
+						return (long)0;
+
+					case TypeCode.Byte:
+						return (byte)0;
+					case TypeCode.UInt16:
+						return (ushort)0;
+					case TypeCode.UInt32:
+						return (uint)0;
+					case TypeCode.UInt64:
+						return (ulong)0;
+
+					case TypeCode.String:
+						return null;
+					default:
+						throw new NotSupportedException();
+				}
+			}
+			else
+			{
+				if (value is string stringValue)
+				{
+					switch (Type.GetTypeCode(targetType))
+					{
+						case TypeCode.Single:
+							return Single.Parse(stringValue, culture);
+						case TypeCode.Double:
+							return Double.Parse(stringValue, culture);
+						case TypeCode.Decimal:
+							return Decimal.Parse(stringValue, culture);
+
+						case TypeCode.SByte:
+							return SByte.Parse(stringValue, culture);
+						case TypeCode.Int16:
+							return Int16.Parse(stringValue, culture);
+						case TypeCode.Int32:
+							return Int32.Parse(stringValue, culture);
+						case TypeCode.Int64:
+							return Int64.Parse(stringValue, culture);
+
+						case TypeCode.Byte:
+							return SByte.Parse(stringValue, culture);
+						case TypeCode.UInt16:
+							return Int16.Parse(stringValue, culture);
+						case TypeCode.UInt32:
+							return Int32.Parse(stringValue, culture);
+						case TypeCode.UInt64:
+							return Int64.Parse(stringValue, culture);
+
+						case TypeCode.String:
+							return null;
+
+						default:
+							throw new NotSupportedException();
+					}
+				}
+				else
+					throw new NotSupportedException();
+			}
+		} // func ConvertBack
+
+		public static IValueConverter Default { get; } = new NumericValueConverter();
+	} // class FloatValueConverter
+
+	#endregion
+
+	#region -- class VisibilityConverter ----------------------------------------------
+
+	/// <summary>Parameter for the Visibility Convert.</summary>
+	public sealed class VisibilityConverterParameter
+	{
+		/// <summary>Convert value for <c>true</c>.</summary>
+		public Visibility TrueValue { get; set; } = Visibility.Visible;
+		/// <summary>Convert value for <c>false</c>.</summary>
+		public Visibility FalseValue { get; set; } = Visibility.Hidden;
+
+		/// <summary>Singelton for the default Parameter.</summary>
+		public static VisibilityConverterParameter Default { get; } = new VisibilityConverterParameter();
+	} // class VisibilityConverterParameter
+
+	internal sealed class VisibilityConverter : IValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            if ((bool)Lua.RtConvertValue(value, typeof(bool)))
-                return TrueValue;
-            else
-                return FalseValue;
-        } // func Convert
+		private VisibilityConverter()
+		{
+		} // ctor
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            return (Visibility)value == TrueValue;
-        } // func ConvertBack
+		private static VisibilityConverterParameter GetParameter(object parameter)
+			=> parameter is VisibilityConverterParameter p ? p : VisibilityConverterParameter.Default;
 
-        public Visibility TrueValue { get; set; } = Visibility.Visible;
-        public Visibility FalseValue { get; set; } = Visibility.Hidden;
-    } // class VisibilityConverter
+		private static bool GetBoolValue(object value)
+		{
+			switch (value)
+			{
+				case bool b:
+					return b;
+				case string s:
+					return String.Compare(s, Boolean.TrueString, StringComparison.OrdinalIgnoreCase) == 0;
+				default:
+					return value != null;
+			}
+		} // func GetBoolValue
+
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			var p = GetParameter(parameter);
+			return GetBoolValue(value) ? p.TrueValue : p.FalseValue;
+		} // func Convert
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			var p = GetParameter(parameter);
+			switch (value)
+			{
+				case Visibility v:
+					return v == p.TrueValue;
+				default:
+					throw new NotSupportedException();
+			}
+		} // func ConvertBack
+		
+		public static IValueConverter Default { get; } = new VisibilityConverter();
+	} // class VisibilityConverter
 
     #endregion
+
+
+
 
     #region -- class PpsStringConverter -------------------------------------------------
 

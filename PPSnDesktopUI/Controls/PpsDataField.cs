@@ -220,7 +220,7 @@ namespace TecWare.PPSn.Controls
 		System.Xaml.XamlReader IPpsXamlEmitter.CreateReader(IServiceProvider context)
 		{
 			var fieldInfo = PpsDataFieldInfo.GetDataFieldInfo(context, FieldName, null, true);
-			return CreateWpfBinding(fieldInfo).CreateReader(context);
+			return CreateWpfBinding(fieldInfo, IsReadOnly).CreateReader(context);
 		} // func CreateReader
 
 		  /// <summary>Field name.</summary>
@@ -228,11 +228,14 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		public bool? IsReadOnly { get; set; } = null;
 
-		internal static LuaWpfCreator CreateWpfBinding(PpsDataFieldInfo fieldInfo)
+		internal static LuaWpfCreator CreateWpfBinding(PpsDataFieldInfo fieldInfo, bool? isReadOnly = null)
 		{
-			var ui = new LuaUI();
-			var binding = ui.Binding;
-			binding[nameof(Binding.Path)] = fieldInfo.BindingPath;
+			dynamic ui = new LuaUI();
+			dynamic binding = ui.Binding;
+
+			binding.Path = fieldInfo.BindingPath;
+			binding.Mode = isReadOnly.HasValue && isReadOnly.Value ? BindingMode.OneWay : BindingMode.Default;
+
 			return binding;
 		} // func CreateBindingForField
 	} // class PpsDataFieldBinding
@@ -318,15 +321,63 @@ namespace TecWare.PPSn.Controls
 				throw new NotImplementedException();
 		} // func CreateDefaultField
 
+		private static void SetNumericBinding(dynamic ui, dynamic textBox, dynamic textBinding, bool allowNeg, int floatDigits)
+		{
+			textBinding.Converter = PpsConverter.NumericValue;
+			textBinding.ConverterParameter = new NumericValueConverterParameter() { AllowNeg = allowNeg, FloatDigits = floatDigits };
+		} // proc SetNumericBinding
+
 		private static LuaWpfCreator CreateTextField(PpsDataFieldInfo fieldInfo)
 		{
 			dynamic ui = new LuaUI();
-			dynamic txt = ui.TextBox;
+			dynamic txt = ui.Pps.PpsTextBox;
 
-			txt.Text = PpsDataFieldBinding.CreateWpfBinding(fieldInfo);
-			txt.Width = 200;
+			var isReadOnly = fieldInfo.TryGetProperty<bool>("IsReadOnly", out var tmpReadOnly) ? (bool?)tmpReadOnly : null;
+
+			var textBinding = PpsDataFieldBinding.CreateWpfBinding(fieldInfo, isReadOnly);
+
+			switch(Type.GetTypeCode( fieldInfo.DataType))
+			{
+				case TypeCode.Decimal:
+					SetNumericBinding(ui, txt, textBinding, true, 2);
+					break;
+				case TypeCode.Single:
+					SetNumericBinding(ui, txt, textBinding, true, 3);
+					break;
+				case TypeCode.Double:
+					SetNumericBinding(ui, txt, textBinding, true, 6);
+					break;
+
+				case TypeCode.SByte:
+					SetNumericBinding(ui, txt, textBinding, true, 0);
+					break;
+				case TypeCode.Int16:
+					SetNumericBinding(ui, txt, textBinding, true, 0);
+					break;
+				case TypeCode.Int32:
+					SetNumericBinding(ui, txt, textBinding, true, 0);
+					break;
+				case TypeCode.Int64:
+					SetNumericBinding(ui, txt, textBinding, true, 0);
+					break;
+
+				case TypeCode.Byte:
+					SetNumericBinding(ui, txt, textBinding, false, 0);
+					break;
+				case TypeCode.UInt16:
+					SetNumericBinding(ui, txt, textBinding, false, 0);
+					break;
+				case TypeCode.UInt32:
+					SetNumericBinding(ui, txt, textBinding, false, 0);
+					break;
+				case TypeCode.UInt64:
+					SetNumericBinding(ui, txt, textBinding, false, 0);
+					break;
+			}
+
+			txt.Text = textBinding;
 			
-			if (fieldInfo.TryGetProperty<bool>("IsReadOnly", out var isReadOnly))
+			if (isReadOnly.HasValue)
 				txt.IsReadOnly = isReadOnly;
 
 			return txt;
