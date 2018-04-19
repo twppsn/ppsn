@@ -112,11 +112,11 @@
     <Compile Include="Controls\PpsSideBarControl.cs" />
     <Compile Include="Controls\PpsStackSectionControl.cs" />
     <Compile Include="Controls\PpsGenericWpfControl.cs" />
+    <Compile Include="Controls\PpsTextBox.cs" />
     <Compile Include="UI\PpsXamlParser.cs" />
     <Compile Include="Controls\ReadOnlyPaneBehavior.cs" />
     <Compile Include="Controls\SideBarMenu.cs" />
     <Compile Include="Controls\SplitButton.cs" />
-    <Compile Include="Controls\TextBoxBehavior.cs" />
     <Compile Include="Controls\Toolbar.cs" />
     <Compile Include="Controls\TreeListView.cs" />
     <Compile Include="Controls\UndoManagerListBox.cs" />
