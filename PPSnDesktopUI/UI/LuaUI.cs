@@ -1256,7 +1256,7 @@ namespace TecWare.PPSn.UI
 
 		/// <summary></summary>
 		[LuaMember]
-		public LuaUI Pps => GetNamespace("http://tecare-gmbh.de/ppsn/wpf/2015");
+		public LuaUI Pps => GetNamespace("http://tecware-gmbh.de/ppsn/wpf/2015");
 
 		/// <summary>Uri, to load external resources.</summary>
 		public Uri BaseUri { get; set; }

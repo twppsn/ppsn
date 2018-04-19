@@ -127,7 +127,7 @@ namespace TecWare.PPSn.UI
 	/// <summary>Schema context for the ppsn wpf ui.</summary>
 	public class PpsXamlSchemaContext : XamlSchemaContext
 	{
-		private const string ppsXamlNamespace = "http://tecare-gmbh.de/ppsn/wpf/2015";
+		private const string ppsXamlNamespace = "http://tecware-gmbh.de/ppsn/wpf/2015";
 
 		#region -- class PpsXamlDynamicMember -----------------------------------------
 
