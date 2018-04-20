@@ -109,7 +109,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Overridden to enqueue the Subheader into the LogigalChildren</summary>
 		protected override IEnumerator LogicalChildren
 		{
-			get => LogicalElementEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Subheader);
+			get => LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Subheader);
 		}
 
 		#region ---- Handler ------------------------------------------------------------

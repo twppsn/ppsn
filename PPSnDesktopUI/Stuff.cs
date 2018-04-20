@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Data;
@@ -29,12 +30,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows;
-using System.Windows.Markup;
 using System.Windows.Media;
-using System.Xml;
 using System.Xml.Linq;
 using TecWare.DE.Networking;
-using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn
 {
@@ -317,16 +315,17 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class LogicalElementEnumerator -----------------------------------------
+	#region -- class LogicalContentEnumerator -----------------------------------------
 
-	internal class LogicalElementEnumerator : System.Collections.IEnumerator
+	internal class LogicalContentEnumerator : IEnumerator
 	{
+	
 		private int state = -1;
-		private readonly System.Collections.IEnumerator baseItems;
+		private readonly IEnumerator baseItems; // base enumerator
 		private readonly object content;
 		private readonly Func<object> getContent;
 
-		public LogicalElementEnumerator(System.Collections.IEnumerator baseItems, Func<object> getContent)
+		private LogicalContentEnumerator(IEnumerator baseItems, Func<object> getContent)
 		{
 			this.baseItems = baseItems;
 			this.content = getContent();
@@ -360,7 +359,7 @@ namespace TecWare.PPSn
 			baseItems?.Reset();
 		} // proc Reset
 
-		internal static System.Collections.IEnumerator GetLogicalEnumerator(FrameworkElement d, System.Collections.IEnumerator logicalChildren, Func<object> getContent)
+		internal static IEnumerator GetLogicalEnumerator(FrameworkElement d, IEnumerator logicalChildren, Func<object> getContent)
 		{
 			var content = getContent();
 			if (content != null)
@@ -375,7 +374,7 @@ namespace TecWare.PPSn
 							return logicalChildren;
 					}
 				}
-				return new LogicalElementEnumerator(logicalChildren, getContent);
+				return new LogicalContentEnumerator(logicalChildren, getContent);
 			}
 			return logicalChildren;
 		} // func GetLogicalEnumerator
@@ -383,8 +382,12 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	internal static class StuffUI
+	#region -- class StuffUI -----------------------------------------------------------
+
+	/// <summary></summary>
+	public static class StuffUI
 	{
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly XNamespace PresentationNamespace = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 		public static readonly XNamespace XamlNamespace = "http://schemas.microsoft.com/winfx/2006/xaml";
 		public static readonly XName xnResourceDictionary = PresentationNamespace + "ResourceDictionary";
@@ -396,6 +399,7 @@ namespace TecWare.PPSn
 		public static readonly XName xnTemplates = "templates";
 		public static readonly XName xnTemplate = "template";
 		public static readonly XName xnCondition = "condition";
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary>Search for a Service on an Dependency-object. It will also lookup, all its 
 		/// parents on the logical tree.</summary>
@@ -406,7 +410,8 @@ namespace TecWare.PPSn
 		public static T GetControlService<T>(this DependencyObject current, bool throwException = false)
 			=> (T)GetControlService(current, typeof(T), throwException);
 
-		/// <summary>Search for a Service on an Dependency-object. It will also lookup, all its 
+		/// <summary>Search for a Service on an Dependency-object. It will also lookup, all its
+		/// parents in the logical tree.</summary>
 		/// <param name="current">Current object in the logical tree.</param>
 		/// <param name="serviceType">Type of the service.</param>
 		/// <param name="throwException"><c>true</c>, to throw an not found exception.</param>
@@ -484,6 +489,11 @@ namespace TecWare.PPSn
 			return default(T);
 		} // func GetVisualChild
 
+		#region -- remove after update DES --
+
+		/// <summary></summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static IEnumerable<string> SplitNewLines(this string value)
 		{
 			foreach (var (startAt, len) in SplitNewLinesTokens(value))
@@ -491,7 +501,8 @@ namespace TecWare.PPSn
 		} // func SplitNewLines
 
 		/// <summary></summary>
-		/// <returns>Move to Procs</returns>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static IEnumerable<(int startAt, int len)> SplitNewLinesTokens(this string value)
 		{
 			var startAt = 0;
@@ -543,7 +554,83 @@ namespace TecWare.PPSn
 			if (startAt < l)
 				yield return (startAt: startAt, len: l - startAt);
 		} // func SplitNewLines
+
+		#region -- CombineEnumerator --------------------------------------------------
+
+		#region -- class ConnectedEnumerator ------------------------------------------
+
+		private sealed class ConnectedEnumerator : IEnumerator, IDisposable
+		{
+			private readonly IEnumerator enumerators;
+			private IEnumerator currentEnumerator = null;
+
+			public ConnectedEnumerator(params IEnumerator[] enumerators)
+			{
+				this.enumerators = enumerators.GetEnumerator();
+			} // ctor
+
+			void IDisposable.Dispose()
+			{
+				// dispose enumerators
+				if (currentEnumerator is IDisposable d)
+					d.Dispose();
+
+				while (enumerators.MoveNext())
+				{
+					if (enumerators.Current is IDisposable d2)
+						d2.Dispose();
+				}
+			} // proc Dispose
+
+			public bool MoveNext()
+			{
+				if (currentEnumerator == null || !currentEnumerator.MoveNext())
+				{
+					if (enumerators.MoveNext())
+					{
+						currentEnumerator = (IEnumerator)enumerators.Current;
+						return MoveNext();
+					}
+					else
+					{
+						currentEnumerator = null;
+						return false;
+					}
+				}
+				else
+					return true;
+			} // func MoveNext
+
+			public void Reset()
+			{
+				currentEnumerator = null;
+				enumerators.Reset();
+			} // proc Reset
+
+			public object Current => currentEnumerator;
+		} // class ConnectedEnumerator
+
+		#endregion
+
+		/// <summary></summary>
+		/// <param name="enumerators"></param>
+		/// <returns></returns>
+		public static IEnumerator CombineEnumerator(params IEnumerator[] enumerators)
+		{
+			if (enumerators.Length == 0)
+				return Array.Empty<IEnumerator>().GetEnumerator();
+			else if (enumerators.Length == 1)
+				return enumerators[1];
+			else
+				return new ConnectedEnumerator(enumerators);
+		} // func Combine
+
+		#endregion
+
+		#endregion
 	} // class StuffUI
+
+	#endregion
 
 	#region -- class StuffDB ------------------------------------------------------------
 

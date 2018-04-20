@@ -350,7 +350,7 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary></summary>
 		protected override System.Collections.IEnumerator LogicalChildren
-			=> HasContent ? LogicalElementEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Content) : base.LogicalChildren;
+			=> HasContent ? LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Content) : base.LogicalChildren;
 	} // class SideBarItemsBase
 
 	#endregion
@@ -557,7 +557,7 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary></summary>
 		protected override System.Collections.IEnumerator LogicalChildren
-			=> HasHeader ? LogicalElementEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Header) : base.LogicalChildren;
+			=> HasHeader ? LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Header) : base.LogicalChildren;
 
 		/// <summary>Is this item selected.</summary>
 		public bool IsSelected { get => (bool)GetValue(IsSelectedProperty); set => SetValue(IsSelectedProperty, value); }
@@ -773,7 +773,7 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary></summary>
 		protected override System.Collections.IEnumerator LogicalChildren
-			=> HasHeader ? LogicalElementEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Header) : base.LogicalChildren;
+			=> HasHeader ? LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Header) : base.LogicalChildren;
 
 		/// <summary>Is the current filter selected</summary>
 		public bool IsSelected { get => BooleanBox.GetBool(GetValue(IsSelectedProperty)); set => SetValue(IsSelectedProperty, BooleanBox.GetObject(value)); }

@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -29,7 +30,7 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- class PpsCommandContext --------------------------------------------------
+	#region -- class PpsCommandContext ------------------------------------------------
 
 	/// <summary>Command context extension for the service model.</summary>
 	public sealed class PpsCommandContext : IServiceProvider
@@ -41,11 +42,11 @@ namespace TecWare.PPSn.UI
 
 		private readonly Lazy<object> getDataContext;
 
-		/// <summary></summary>
-		/// <param name="environment"></param>
-		/// <param name="target"></param>
-		/// <param name="source"></param>
-		/// <param name="parameter"></param>
+		/// <summary>Command context extension for the service model.</summary>
+		/// <param name="environment">Environment</param>
+		/// <param name="target">Command target object</param>
+		/// <param name="source">Command source object</param>
+		/// <param name="parameter">Command parameter</param>
 		public PpsCommandContext(PpsEnvironment environment, object target, object source, object parameter)
 		{
 			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
@@ -56,7 +57,17 @@ namespace TecWare.PPSn.UI
 		} // ctor
 
 		private object GetDataContext()
-			=> target is FrameworkElement frameworkElement ? frameworkElement.DataContext : null;
+		{
+			switch (target)
+			{
+				case FrameworkElement fe:
+					return fe.DataContext;
+				case FrameworkContentElement fce:
+					return fce.DataContext;
+				default:
+					return null;
+			}
+		} // func GetDataContext
 		
 		/// <summary>GetService implementation</summary>
 		/// <param name="serviceType"></param>
@@ -93,31 +104,54 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsCommandBase -----------------------------------------------------
+	#region -- class PpsCommandBase ---------------------------------------------------
 
-	/// <summary>We define a routed command to get the ExecutedEvent,CanExecuteEvent in the root control. The result is we get the command source for free, the drawback is we need to catch the event in the root and call the ExecuteCommand method.</summary>
+	/// <summary>We define a routed command to get the ExecutedEvent,CanExecuteEvent in the root control.
+	/// The result is we get the command source for free, the drawback is we need to catch the event in 
+	/// the root and call the ExecuteCommand method.</summary>
 	public abstract class PpsCommandBase : RoutedCommand
 	{
+		/// <summary>Attached property to mark, that the command is currently executed.</summary>
 		public static readonly DependencyProperty AsyncCommandIsRunningProperty = DependencyProperty.RegisterAttached("AsyncCommandIsRunning", typeof(List<PpsCommandBase>), typeof(PpsCommandBase), new FrameworkPropertyMetadata(null));
 
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		/// <summary></summary>
 		protected PpsCommandBase()
 			: base()
 		{
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="ownerType"></param>
 		protected PpsCommandBase(string name, Type ownerType)
 			: base(name, ownerType)
 		{
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="ownerType"></param>
+		/// <param name="inputGestures"></param>
 		protected PpsCommandBase(string name, Type ownerType, InputGestureCollection inputGestures)
 			: base(name, ownerType, inputGestures)
 		{
 		} // ctor
 
+		#endregion
+
+		#region -- IsRunning ----------------------------------------------------------
+
+		/// <summary>Get the IsRunning property value.</summary>
+		/// <param name="element">UIElement the command is running on.</param>
+		/// <returns></returns>
 		public static List<PpsCommandBase> GetAsyncCommandIsRunning(UIElement element)
 			=> (List<PpsCommandBase>)element.GetValue(AsyncCommandIsRunningProperty);
 
+		/// <summary>Set the IsRunning property for a command execution.</summary>
+		/// <param name="target"></param>
+		/// <param name="isRunning"></param>
 		protected void SetIsRunning(object target, bool isRunning)
 		{
 			if (target is UIElement element)
@@ -145,12 +179,22 @@ namespace TecWare.PPSn.UI
 				throw new ArgumentException("target must be an UIElement");
 		} // proc SetRunningState
 
+		/// <summary>Get the IsRunning property</summary>
+		/// <param name="target"></param>
+		/// <returns></returns>
 		protected bool GetIsRunning(object target)
 			=> target is UIElement element ? GetAsyncCommandIsRunning(element)?.Contains(this) ?? false : throw new ArgumentException("target must be an UIElement");
 
+		#endregion
+
+		/// <summary></summary>
+		/// <param name="commandContext"></param>
+		/// <returns></returns>
 		public virtual bool CanExecuteCommand(PpsCommandContext commandContext) 
 			=> true;
 
+		/// <summary></summary>
+		/// <param name="commandContext"></param>
 		public abstract void ExecuteCommand(PpsCommandContext commandContext);
 	} // class PpsCommandBase
 
@@ -158,24 +202,36 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsCommandImpl ---------------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Implements CanExecute with an function and secure the ExecuteCommand
+	/// with an exception handler.</summary>
 	public abstract class PpsCommandImpl : PpsCommandBase
 	{
 		private readonly Func<PpsCommandContext, bool> canExecute;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="canExecute"></param>
 		public PpsCommandImpl(Func<PpsCommandContext, bool> canExecute = null)
 		{
 			this.canExecute = canExecute;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="ownerType"></param>
+		/// <param name="canExecute"></param>
 		public PpsCommandImpl(string name, Type ownerType, Func<PpsCommandContext, bool> canExecute = null)
 			: base(name, ownerType)
 		{
 			this.canExecute = canExecute;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="ownerType"></param>
+		/// <param name="inputGestures"></param>
+		/// <param name="canExecute"></param>
 		public PpsCommandImpl(string name, Type ownerType, InputGestureCollection inputGestures, Func<PpsCommandContext, bool> canExecute = null)
 			: base(name, ownerType, inputGestures)
 		{
@@ -184,11 +240,16 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Command Member -------------------------------------------------------
+		#region -- Command Member -----------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="commandContext"></param>
+		/// <returns></returns>
 		public override bool CanExecuteCommand(PpsCommandContext commandContext)
 			=> canExecute?.Invoke(commandContext) ?? true;
 
+		/// <summary></summary>
+		/// <param name="commandContext"></param>
 		public sealed override void ExecuteCommand(PpsCommandContext commandContext)
 		{
 			try
@@ -196,17 +257,14 @@ namespace TecWare.PPSn.UI
 				if (CanExecuteCommand(commandContext))
 					ExecuteCommandCore(commandContext);
 			}
-			catch (PpsDataTableForeignKeyRestrictionException)
-			{
-				// todo: in lua verlagern
-				commandContext.Environment.MsgBox("Auf diesen Datensatz wird noch verwiesen.\nLöschen nicht möglich.", MessageBoxButton.OK, MessageBoxImage.Information);
-			}
 			catch (Exception e)
 			{
 				commandContext.Environment.ShowException(ExceptionShowFlags.None, e);
 			}
 		} // proc Execute
 
+		/// <summary></summary>
+		/// <param name="commandContext"></param>
 		protected abstract void ExecuteCommandCore(PpsCommandContext commandContext);
 
 		#endregion
@@ -216,7 +274,6 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsCommand -------------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Implements a command that can call a delegate. This command
 	/// can also be added to the idle collection.</summary>
 	public sealed class PpsCommand : PpsCommandImpl
@@ -225,18 +282,32 @@ namespace TecWare.PPSn.UI
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="command"></param>
+		/// <param name="canExecute"></param>
 		public PpsCommand(Action<PpsCommandContext> command, Func<PpsCommandContext, bool> canExecute = null)
 			: base(canExecute)
 		{
 			this.command = command;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="ownerType"></param>
+		/// <param name="command"></param>
+		/// <param name="canExecute"></param>
 		public PpsCommand(string name, Type ownerType, Action<PpsCommandContext> command, Func<PpsCommandContext, bool> canExecute = null)
 			: base(name, ownerType, canExecute)
 		{
 			this.command = command;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="ownerType"></param>
+		/// <param name="inputGestures"></param>
+		/// <param name="command"></param>
+		/// <param name="canExecute"></param>
 		public PpsCommand(string name, Type ownerType, InputGestureCollection inputGestures, Action<PpsCommandContext> command, Func<PpsCommandContext, bool> canExecute = null)
 			: base(name, ownerType, inputGestures, canExecute)
 		{
@@ -247,6 +318,8 @@ namespace TecWare.PPSn.UI
 
 		#region -- Command Member -----------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="commandContext"></param>
 		protected override void ExecuteCommandCore(PpsCommandContext commandContext)
 		{
 			SetIsRunning(commandContext.Target, true);
@@ -262,6 +335,9 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		/// <summary></summary>
+		/// <param name="commandContext"></param>
+		/// <returns></returns>
 		public override bool CanExecuteCommand(PpsCommandContext commandContext) 
 			=> !GetIsRunning(commandContext.Target) && base.CanExecuteCommand(commandContext);
 	} // class PpsCommand
@@ -270,24 +346,39 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsAsyncCommand --------------------------------------------------
 
+	/// <summary>Executions a Async command method.</summary>
 	public sealed class PpsAsyncCommand : PpsCommandImpl
 	{
 		private readonly Func<PpsCommandContext, Task> command;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 		
+		/// <summary></summary>
+		/// <param name="command"></param>
+		/// <param name="canExecute"></param>
 		public PpsAsyncCommand(Func<PpsCommandContext, Task> command, Func<PpsCommandContext, bool> canExecute)
 			: base(canExecute)
 		{
 			this.command = command;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="ownerType"></param>
+		/// <param name="command"></param>
+		/// <param name="canExecute"></param>
 		public PpsAsyncCommand(string name, Type ownerType, Func<PpsCommandContext, Task> command, Func<PpsCommandContext, bool> canExecute) :
 			base(name, ownerType, canExecute)
 		{
 			this.command = command;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="ownerType"></param>
+		/// <param name="inputGestures"></param>
+		/// <param name="command"></param>
+		/// <param name="canExecute"></param>
 		public PpsAsyncCommand(string name, Type ownerType, InputGestureCollection inputGestures, Func<PpsCommandContext, Task> command, Func<PpsCommandContext, bool> canExecute)
 			: base(name, ownerType, inputGestures, canExecute)
 		{
@@ -296,12 +387,16 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- Command Member -------------------------------------------------------
+		#region -- Command Member -----------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="commandContext"></param>
+		/// <returns></returns>
 		public override bool CanExecuteCommand(PpsCommandContext commandContext)
-			=> !GetIsRunning(commandContext.Target)
-				&& base.CanExecuteCommand(commandContext);
+			=> !GetIsRunning(commandContext.Target) && base.CanExecuteCommand(commandContext);
 
+		/// <summary></summary>
+		/// <param name="commandContext"></param>
 		protected override void ExecuteCommandCore(PpsCommandContext commandContext)
 		{
 			SetIsRunning(commandContext.Target, true);
@@ -327,68 +422,80 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsCommandOrderConverter -----------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Command order converter, to convert a string in the format {group}:{order} to 
+	/// the PpsCommandOrder structure.</summary>
 	public sealed class PpsCommandOrderConverter : TypeConverter
 	{
+		/// <summary>Only string is allowed.</summary>
+		/// <param name="context"></param>
+		/// <param name="sourceType"></param>
+		/// <returns></returns>
 		public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
-		{
-			return sourceType == typeof(string);
-		} // func CanConvertFrom
-
+			=> sourceType == typeof(string);
+		
+		/// <summary>Only string is allowed.</summary>
+		/// <param name="context"></param>
+		/// <param name="destinationType"></param>
+		/// <returns></returns>
 		public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
-		{
-			return destinationType == typeof(System.ComponentModel.Design.Serialization.InstanceDescriptor) || destinationType == typeof(string);
-		} // func CanConvertTo
-
+			=> destinationType == typeof(System.ComponentModel.Design.Serialization.InstanceDescriptor)
+			|| destinationType == typeof(string);
+		
+		/// <summary>Converter implementation.</summary>
+		/// <param name="context"></param>
+		/// <param name="culture"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
 		{
-			if (value == null)
-				return PpsCommandOrder.Empty;
-			else if (value is string)
+			switch (value)
 			{
-				var parts = ((string)value).Split(new char[] { ';', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-				if (parts.Length == 0)
+				case null:
 					return PpsCommandOrder.Empty;
-				else if (parts.Length == 2)
-				{
-					return new PpsCommandOrder(
-						int.Parse(parts[0], culture),
-						int.Parse(parts[1], culture)
-					);
-				}
-				else
+				case string s:
+					if (PpsCommandOrder.TryParse(s, out var order))
+						return order;
+					else
+						goto default;
+				default:
 					throw GetConvertFromException(value);
 			}
-			else 
-				throw GetConvertFromException(value);
 		} // func ConvertFrom
 
+		/// <summary></summary>
+		/// <param name="context"></param>
+		/// <param name="culture"></param>
+		/// <param name="value"></param>
+		/// <param name="destinationType"></param>
+		/// <returns></returns>
 		public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
 		{
-			var order = value as PpsCommandOrder;
-			if (value != null && order == null)
-				throw GetConvertToException(value, destinationType);
-
-			if (destinationType == typeof(string))
+			if (value == null)
 			{
-				if (order == null)
-					return null;
+				if (destinationType == typeof(string))
+					return PpsCommandOrder.Empty;
+				else if (destinationType == typeof(System.ComponentModel.Design.Serialization.InstanceDescriptor))
+				{
+					var ci = typeof(PpsCommandOrder).GetConstructor(new Type[] { typeof(int), typeof(int) });
+					return new System.ComponentModel.Design.Serialization.InstanceDescriptor(ci, new object[] { PpsCommandOrder.Empty.Group, PpsCommandOrder.Empty.Order }, true);
+				}
 				else
-					return String.Format(culture, "{0}; {1}", order.Group, order.Order);
+					throw GetConvertToException(value, destinationType);
 			}
-			else if (destinationType == typeof(System.ComponentModel.Design.Serialization.InstanceDescriptor))
+			else if (value is PpsCommandOrder order)
 			{
-				var ci = typeof(PpsCommandOrder).GetConstructor(new Type[] { typeof(int), typeof(int) });
-				return new System.ComponentModel.Design.Serialization.InstanceDescriptor(ci,
-					order == null ?
-						new object[] { -1, -1 } :
-						new object[] { order.Group, order.Order },
-					true
-				);
+				if (destinationType == typeof(string))
+					return order.ToString();
+				else if (destinationType == typeof(System.ComponentModel.Design.Serialization.InstanceDescriptor))
+				{
+					var ci = typeof(PpsCommandOrder).GetConstructor(new Type[] { typeof(int), typeof(int) });
+					return new System.ComponentModel.Design.Serialization.InstanceDescriptor(ci, new object[] { order.Group, order.Order }, true);
+				}
+				else
+					throw GetConvertToException(value, destinationType);
 			}
-
-			return base.ConvertTo(context, culture, value, destinationType);
+			else
+				throw GetConvertToException(value, destinationType);
 		} // func ConvertTo
 	} // class PpsCommandOrderConverter
 
@@ -396,54 +503,83 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsCommandOrder --------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Command order structure</summary>
 	[TypeConverter(typeof(PpsCommandOrderConverter))]
 	public sealed class PpsCommandOrder : IEquatable<PpsCommandOrder>, IComparable<PpsCommandOrder>
 	{
-		private readonly int group;
-		private readonly int order;
-
+		/// <summary></summary>
+		/// <param name="group"></param>
+		/// <param name="order"></param>
 		public PpsCommandOrder(int group, int order)
 		{
-			this.group = group;
-			this.order = order;
+			Group = group;
+			Order = order;
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
 		public override bool Equals(object obj)
 			=> obj is PpsCommandOrder other ? Equals(other) : false;
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override int GetHashCode() 
-			=> group.GetHashCode() ^ order.GetHashCode();
+			=> Group.GetHashCode() ^ Order.GetHashCode();
 
+		/// <summary></summary>
+		/// <returns></returns>
 		public override string ToString() 
-			=> $"{group},{order}";
+			=> $"{Group},{Order}";
 
-		public bool Equals(PpsCommandOrder other) => group == other.group && order == other.order;
-		public int CompareTo(PpsCommandOrder other) => group == other.group ? order - other.order : group - other.group;
+		/// <summary></summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
+		public bool Equals(PpsCommandOrder other) 
+			=> Group == other.Group && Order == other.Order;
 
-		public int Group { get { return group; } }
-		public int Order { get { return order; } }
+		/// <summary></summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
+		public int CompareTo(PpsCommandOrder other) 
+			=> Group == other.Group ? Order - other.Order : Group - other.Group;
 
-		public bool IsEmpty { get { return order == -1 && group == Int32.MaxValue; } }
+		/// <summary>Group of commands</summary>
+		public int Group { get; }
+		/// <summary>Order of with the group.</summary>
+		public int Order { get; }
 
-		private static readonly PpsCommandOrder empty = new PpsCommandOrder(Int32.MaxValue, -1);
+		/// <summary>Is the command order empty.</summary>
+		public bool IsEmpty => Equals(Empty);
 
 		// -- Static ----------------------------------------------------------------------
 
-		public static PpsCommandOrder Empty { get { return empty; } }
+		/// <summary>Empty command order</summary>
+		public static PpsCommandOrder Empty { get; }= new PpsCommandOrder(Int32.MaxValue, -1);
 
+		/// <summary>Parse command order from a string.</summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static PpsCommandOrder Parse(string value)
 			=> TryParse(value, out var r) ? r : throw new FormatException();
 
+		/// <summary>Parse command order from a string.</summary>
+		/// <param name="value"></param>
+		/// <param name="order"></param>
+		/// <returns></returns>
 		public static bool TryParse(string value, out PpsCommandOrder order)
 			=> TryParse(value, CultureInfo.CurrentUICulture, out order);
 
+		/// <summary>Parse command order from a string.</summary>
+		/// <param name="value"></param>
+		/// <param name="culture"></param>
+		/// <param name="order"></param>
+		/// <returns></returns>
 		public static bool TryParse(string value, CultureInfo culture, out PpsCommandOrder order)
 		{
 			if (value == null)
 			{
-				order = PpsCommandOrder.Empty;
+				order = Empty;
 				return true;
 			}
 			else
@@ -472,18 +608,18 @@ namespace TecWare.PPSn.UI
 
 	#region -- class PpsUICommand -----------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Baseclass for a UI-Command implementation.</summary>
 	public abstract class PpsUICommand : FrameworkContentElement
 	{
+		/// <summary>Is this ui-command visible</summary>
 		public static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register(nameof(IsVisible), typeof(bool), typeof(PpsUICommand));
-		
-		private PpsCommandOrder order;
-		
+
+		private PpsCommandOrder order = PpsCommandOrder.Empty;
+
 		/// <summary>Position of the command.</summary>
 		public PpsCommandOrder Order
 		{
-			get { return order ?? PpsCommandOrder.Empty; }
+			get => order ?? PpsCommandOrder.Empty;
 			set
 			{
 				order = value;
@@ -499,16 +635,15 @@ namespace TecWare.PPSn.UI
 		public PpsUICommandCollection ParentCollection { get; internal set; }
 
 		/// <summary>Is the command currently visible.</summary>
-		public bool IsVisible { get { return (bool)GetValue(IsVisibleProperty); } set { SetValue(IsVisibleProperty, value); } }
+		public bool IsVisible { get => (bool)GetValue(IsVisibleProperty); set => SetValue(IsVisibleProperty, value); }
 	} // class PpsUICommand
 
 	#endregion
 
 	#region -- class PpsUICommandButton -----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public class PpsUICommandButton : PpsUICommand, IUriContext
+	/// <summary>UI-Command button</summary>
+	public class PpsUICommandButton : PpsUICommand
 	{
 		/// <summary>Text to be shown on the Button</summary>
 		public static readonly DependencyProperty DisplayTextProperty = DependencyProperty.Register(nameof(DisplayText), typeof(string), typeof(PpsUICommandButton));
@@ -516,28 +651,8 @@ namespace TecWare.PPSn.UI
 		public static readonly DependencyProperty DescriptionProperty = DependencyProperty.Register(nameof(Description), typeof(string), typeof(PpsUICommandButton));
 		/// <summary>Name of the Image for the Button</summary>
 		public static readonly DependencyProperty ImageProperty = DependencyProperty.Register(nameof(Image), typeof(string), typeof(PpsUICommandButton));
-
-		//public static readonly DependencyProperty ImageProperty = DependencyProperty.Register("Image", typeof(object), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(ImagePropertyChanged));
-		//private static void ImagePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-		//{
-		//	var value = e.NewValue;
-
-		//	var uri = value as Uri;
-		//	if (uri == null && value is string)
-		//		uri = new Uri((string)value, UriKind.RelativeOrAbsolute);
-
-		//	if (uri != null && !uri.IsAbsoluteUri)
-		//	{
-		//		var uriContext = d as IUriContext;
-		//		if (uriContext != null && uriContext.BaseUri != null)
-		//			d.SetValue(e.Property, new Uri(uriContext.BaseUri, uri));
-		//	}
-		//} // proc ImagePropertyChanged
-
 		/// <summary>The Command the Button schould execute</summary>
 		public static readonly DependencyProperty CommandProperty = DependencyProperty.Register(nameof(Command), typeof(ICommand), typeof(PpsUICommandButton), new FrameworkPropertyMetadata(null));
-
-		private Uri baseUri;
 
 		/// <summary>Text to be shown on the Button</summary>
 		public string DisplayText { get { return (string)GetValue(DisplayTextProperty); } set { SetValue(DisplayTextProperty, value); } }
@@ -545,21 +660,20 @@ namespace TecWare.PPSn.UI
 		public string Description { get { return (string)GetValue(DescriptionProperty); } set { SetValue(DescriptionProperty, value); } }
 		/// <summary>Name of the Image for the Button</summary>
 		public string Image { get { return (string)GetValue(ImageProperty); } set { SetValue(ImageProperty, value); } }
-		//public object Image { get { return GetValue(ImageProperty); } set { SetValue(ImageProperty, value); } }
 		/// <summary>The Command the Button schould execute</summary>
 		public ICommand Command { get { return (ICommand)GetValue(CommandProperty); } set { SetValue(CommandProperty, value); } }
-		public Uri BaseUri { get { return baseUri; } set { baseUri = value; } }
 	} // class PpsUICommandButton
 
 	#endregion
 
 	#region -- class PpsUISplitCommandButton ------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>UI-Command split button</summary>
 	public class PpsUISplitCommandButton : PpsUICommandButton
 	{
+		/// <summary>Split button type</summary>
 		public SplitButtonType Mode { get; set; }
+		/// <summary>Popup of the split button</summary>
 		public Popup Popup { get; set; }
 	} // class PpsUISplitCommandButton
 
@@ -568,6 +682,10 @@ namespace TecWare.PPSn.UI
 	#region -- class PpsUICommandCollection -------------------------------------------
 
 	/// <summary></summary>
+	/// <param name="child"></param>
+	public delegate void PpsUICommandLogicalChildDelegate(object child);
+
+	/// <summary>Command collection to hold a list of commands.</summary>
 	public class PpsUICommandCollection : Collection<PpsUICommand>, INotifyCollectionChanged
 	{
 		private static PpsUICommand[] seperator = new PpsUICommand[] { null };
@@ -575,6 +693,18 @@ namespace TecWare.PPSn.UI
 		/// <summary>Called if the command is changed.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
+		/// <summary></summary>
+		public PpsUICommandLogicalChildDelegate AddLogicalChildHandler;
+		/// <summary></summary>
+		public PpsUICommandLogicalChildDelegate RemoveLogicalChildHandler;
+		
+		/// <summary>Add a simple command button to the collection.</summary>
+		/// <param name="order"></param>
+		/// <param name="image"></param>
+		/// <param name="command"></param>
+		/// <param name="displayText"></param>
+		/// <param name="description"></param>
+		/// <returns></returns>
 		public PpsUICommandButton AddButton(string order, string image, ICommand command, string displayText, string description)
 		{
 			var tmp = new PpsUICommandButton()
@@ -590,10 +720,10 @@ namespace TecWare.PPSn.UI
 			return tmp;
 		} // ctor
 
-		/// <summary></summary>
+		/// <summary>Clear all command buttons</summary>
 		protected override void ClearItems()
 		{
-			//remove item by item
+			// remove item by item
 			while (Count > 0)
 				RemoveAt(Count - 1);
 
@@ -605,24 +735,23 @@ namespace TecWare.PPSn.UI
 		/// <param name="index"></param>
 		protected override void RemoveItem(int index)
 		{
-			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, this[index], index));
 			base.RemoveItem(index);
+
+			RemoveLogicalChildHandler?.Invoke(this[index]);
+
 			if (index == Count && index > 0 && this[index - 1] == null) // remove group before
-			{
-				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, seperator, index - 1));
 				base.RemoveItem(index - 1);
-			}
 			else if (index < Count && this[index] == null) // remove group after
-			{
-				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, seperator, index));
 				base.RemoveItem(index);
-			}
+			
+			// force rebuild, templates will not show up correctly
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 		} // proc RemoveItem
 
 		private static bool IsDifferentGroup(PpsUICommand item, int group)
 			=> item != null && item.Order.Group != group;
 
-		/// <summary></summary>
+		/// <summary>Insert a ui-command at the position (force the position by Order).</summary>
 		/// <param name="index"></param>
 		/// <param name="item"></param>
 		protected override void InsertItem(int index, PpsUICommand item)
@@ -665,20 +794,16 @@ namespace TecWare.PPSn.UI
 
 			// create a group before
 			if (index > 0 && IsDifferentGroup(this[index - 1], group))
-			{
 				base.InsertItem(index++, null);
-				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, seperator, index - 1));
-			}
 			if (index < Count && IsDifferentGroup(this[index], group))
-			{
 				base.InsertItem(index, null);
-				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, seperator, index));
-			}
 
 			// insert the item
 			base.InsertItem(index, item);
-			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, this[index], index));
-			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset)); // force rebuild, templates will not show up correctly
+			AddLogicalChildHandler?.Invoke(this[index]);
+
+			// force rebuild, templates will not show up correctly
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 		} // proc InsertItem
 
 		/// <summary></summary>

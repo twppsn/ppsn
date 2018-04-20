@@ -70,6 +70,8 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Access the pane manager.</summary>
 		IPpsWindowPaneManager PaneManager { get; }
+		/// <summary>Commands attached to the pane.</summary>
+		PpsUICommandCollection Commands { get; }
 
 		/// <summary>If the pane contains changes, this flag is <c>true</c>.</summary>
 		bool IsDirty { get; }

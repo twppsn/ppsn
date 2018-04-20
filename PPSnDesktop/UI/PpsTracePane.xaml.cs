@@ -53,7 +53,12 @@ namespace TecWare.PPSn.UI
 
 			Resources[PpsEnvironment.WindowPaneService] = this;
 
-			this.commands = new PpsUICommandCollection();
+			this.commands = new PpsUICommandCollection
+			{
+				AddLogicalChildHandler = AddLogicalChild,
+				RemoveLogicalChildHandler = RemoveLogicalChild
+			};
+
 			//commands.AddButton("100:100", "CopySelected", CopySelectedTraceItemsCommand, "InZwischenable", "Kopiert alle markierten Einträge in die Zwischenablage.");
 
 			CommandBindings.Add(
@@ -146,6 +151,7 @@ namespace TecWare.PPSn.UI
 
 		public object Control => this;
 		IPpsWindowPaneManager IPpsWindowPane.PaneManager => paneManager;
+		public PpsUICommandCollection Commands => commands;
 
 		public bool IsDirty => false;
 
@@ -180,6 +186,9 @@ namespace TecWare.PPSn.UI
 					return String.Empty;
 			}
 		} // func TraceToString
+
+		protected override IEnumerator LogicalChildren
+			=> StuffUI.CombineEnumerator(base.LogicalChildren, commands?.GetEnumerator());
 
 		/// <summary>Access the environment</summary>
 		public PpsEnvironment Environment => paneManager.Environment;

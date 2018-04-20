@@ -56,8 +56,11 @@ namespace TecWare.PPSn.Controls
 			: base()
 		{
 			// initialize commands
-			var commands = new PpsUICommandCollection();
-			commands.CollectionChanged += Commands_CollectionChanged;
+			var commands = new PpsUICommandCollection
+			{
+				AddLogicalChildHandler = AddLogicalChild,
+				RemoveLogicalChildHandler = RemoveLogicalChild
+			};
 			SetValue(commandsPropertyKey, commands);
 
 			progressStack = new PpsProgressStack(Dispatcher);
@@ -87,48 +90,9 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region -- Command Handling -------------------------------------------------------
-
-		private void Commands_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-		{
-			// todo: add command bar collection in logical tree?
-			switch (e.Action)
-			{
-				case NotifyCollectionChangedAction.Add:
-					if (e.NewItems[0] != null)
-						AddLogicalChild(e.NewItems[0]);
-					break;
-				case NotifyCollectionChangedAction.Remove:
-					if (e.OldItems[0] != null)
-						RemoveLogicalChild(e.OldItems[0]);
-					break;
-				case NotifyCollectionChangedAction.Reset:
-					break;
-				default:
-					throw new InvalidOperationException();
-			}
-		} // proc Commands_CollectionChanged
-
 		/// <summary></summary>
 		protected override System.Collections.IEnumerator LogicalChildren
-		{
-			get
-			{
-				// enumerate normal children
-				var e = base.LogicalChildren;
-				while (e.MoveNext())
-					yield return e.Current;
-								
-				// enumerate commands
-				foreach (var cmd in Commands)
-				{
-					if (cmd != null)
-						yield return cmd;
-				}
-			}
-		} // prop LogicalChildren
-
-		#endregion
+			=> StuffUI.CombineEnumerator(base.LogicalChildren, Commands?.GetEnumerator());
 
 		/// <summary></summary>
 		/// <param name="serviceType"></param>

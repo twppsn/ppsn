@@ -752,6 +752,9 @@ namespace TecWare.PPSn.UI
 		public PpsGenericWpfControl Control => control;
 		/// <summary>This member is resolved dynamic, that is the reason the FrameworkElement Control is public.</summary>
 		object IPpsWindowPane.Control => control;
+		/// <summary></summary>
+		[LuaMember]
+		public PpsUICommandCollection Commands => control?.Commands;
 
 		/// <summary>Access the containing window.</summary>
 		[LuaMember]
@@ -767,9 +770,6 @@ namespace TecWare.PPSn.UI
 		public Dispatcher Dispatcher => control == null ? Application.Current.Dispatcher : control.Dispatcher;
 		/// <summary>Access to the current lua compiler</summary>
 		public Lua Lua => Environment.Lua;
-
-		/// <summary>Get the registered commands.</summary>
-		public IEnumerable<object> Commands => control?.Commands;
 
 		/// <summary>Is the current pane dirty.</summary>
 		public virtual bool IsDirty => false;
