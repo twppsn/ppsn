@@ -397,38 +397,20 @@ namespace TecWare.PPSn
 		public static readonly XName xnTemplate = "template";
 		public static readonly XName xnCondition = "condition";
 
-		public static void AddNamespace(this ParserContext context, string namespacePrefix, string namepsaceName)
-		{
-			if (namepsaceName != PpsXmlPosition.XmlPositionNamespace.NamespaceName)
-			{
-				if (namespacePrefix == "xmlns")
-					namespacePrefix = String.Empty; // must be empty
-				context.XmlnsDictionary.Add(namespacePrefix, namepsaceName);
-			}
-		} // proc AddNamespace
-
-		public static void AddNamespaces(this ParserContext context, XmlReader xr)
-		{
-			if (xr.HasAttributes)
-			{
-				while (xr.MoveToNextAttribute())
-					AddNamespace(context, xr.LocalName, xr.Value);
-			}
-			xr.MoveToElement();
-		} // proc CollectNameSpaces
-
-		public static void AddNamespaces(this ParserContext context, XElement x)
-		{
-			foreach (var xAttr in x.Attributes())
-			{
-				if (xAttr.IsNamespaceDeclaration)
-					AddNamespace(context, xAttr.Name.LocalName, xAttr.Value);
-			}
-		} // proc CollectNameSpaces
-
+		/// <summary>Search for a Service on an Dependency-object. It will also lookup, all its 
+		/// parents on the logical tree.</summary>
+		/// <typeparam name="T">Type of the service.</typeparam>
+		/// <param name="current">Current object in the logical tree.</param>
+		/// <param name="throwException"><c>true</c>, to throw an not found exception.</param>
+		/// <returns>The service of the default value.</returns>
 		public static T GetControlService<T>(this DependencyObject current, bool throwException = false)
 			=> (T)GetControlService(current, typeof(T), throwException);
 
+		/// <summary>Search for a Service on an Dependency-object. It will also lookup, all its 
+		/// <param name="current">Current object in the logical tree.</param>
+		/// <param name="serviceType">Type of the service.</param>
+		/// <param name="throwException"><c>true</c>, to throw an not found exception.</param>
+		/// <returns>The service of the default value.</returns>
 		public static object GetControlService(this DependencyObject current, Type serviceType, bool throwException = false)
 		{
 			object r = null;
@@ -436,7 +418,7 @@ namespace TecWare.PPSn
 			if (current == null)
 			{
 				if (throwException)
-					throw new ArgumentException($"Did not find Server ('{serviceType.Name}').");
+					throw new ArgumentException($"Service not found ('{serviceType.Name}').");
 				else
 					return null;
 			}
@@ -448,22 +430,41 @@ namespace TecWare.PPSn
 			if (r != null)
 				return r;
 
-			return GetControlService(VisualTreeHelper.GetParent(current), serviceType, throwException);
+			return GetControlService(GetLogicalParent(current), serviceType, throwException);
 		} // func GetControlService
 
+		/// <summary>Get the logical parent or the template parent.</summary>
+		/// <param name="current"></param>
+		/// <returns></returns>
 		public static DependencyObject GetLogicalParent(this DependencyObject current)
 		{
-			var parent = LogicalTreeHelper.GetParent(current);
-			if (parent == null)
+			switch (current)
 			{
-				if (current is FrameworkContentElement fce)
-					parent = fce.TemplatedParent;
-				else if (current is FrameworkElement fe)
-					parent = fe.TemplatedParent;
+				case FrameworkContentElement fce:
+					return fce.Parent ?? fce.TemplatedParent;
+				case FrameworkElement fe:
+					return fe.Parent ?? fe.TemplatedParent;
+				default:
+					return null;
 			}
-			return parent;
 		} // func GetLogicalParent
 
+		/// <summary>Get the logical parent or the template parent.</summary>
+		/// <param name="current"></param>
+		/// <returns></returns>
+		public static T GetLogicalParent<T>(this DependencyObject current)
+			where T : DependencyObject
+		{
+			var parent = GetLogicalParent(current);
+			return parent is T r
+				? r
+				: GetLogicalParent<T>(parent);
+		} // func GetLogicalParent
+
+		/// <summary>Find a child in the Visual tree.</summary>
+		/// <typeparam name="T">Type of the child</typeparam>
+		/// <param name="current">Current visual element.</param>
+		/// <returns>Child or <c>null</c>.</returns>
 		public static T GetVisualChild<T>(this DependencyObject current)
 			where T : DependencyObject
 		{
