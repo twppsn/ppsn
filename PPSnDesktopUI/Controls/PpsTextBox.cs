@@ -65,6 +65,8 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		public static readonly DependencyProperty IsNullableProperty = DependencyProperty.Register(nameof(IsNullable), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(true));
 
+		/// <summary>Sets the allowed Lines for this Textbox</summary>
+		public static readonly DependencyProperty AllowedLineCountProperty = DependencyProperty.Register(nameof(AllowedLineCount), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(1));
 		/// <summary></summary>
 		public static readonly RoutedCommand ClearTextCommand = new RoutedUICommand("ClearText", "ClearText", typeof(PpsTextBox));
 
@@ -72,6 +74,8 @@ namespace TecWare.PPSn.Controls
 		public bool IsMandatory { get => BooleanBox.GetBool(GetValue(IsMandatoryProperty)); set => SetValue(IsMandatoryProperty, BooleanBox.GetObject(value)); }
 		/// <summary>Is the field nullable.</summary>
 		public bool IsNullable { get => BooleanBox.GetBool(GetValue(IsNullableProperty)); set => SetValue(IsNullableProperty, BooleanBox.GetObject(value)); }
+		/// <summary>Sets the allowed Lines for this Textbox</summary>
+		public int AllowedLineCount { get => (int)GetValue(AllowedLineCountProperty); set => SetValue(AllowedLineCountProperty, value); }
 
 		private static void OnInputTypeChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsTextBox)d).OnInputTypeChanged((PpsTextBoxInputType)e.NewValue, (PpsTextBoxInputType)e.OldValue);
@@ -121,13 +125,15 @@ namespace TecWare.PPSn.Controls
 
 		private void NeatlyCleanText()
 		{
-			// int type is Any nothing is to be checked
 			if (InputType == PpsTextBoxInputType.Any || Text.Length < 1)
 				return;
 
 			var newText = new StringBuilder();
 			var negative = false;
 			var firstColonIndex = -1;
+			var remainingLines = AllowedLineCount - 1;
+			var lastWasNewline = false;
+			var lastWasCarriagereturn = false;
 
 			// while checking the input, the Text is only parsed once
 			foreach (var c in Text)
@@ -141,13 +147,59 @@ namespace TecWare.PPSn.Controls
 					}
 					if (IsMultilineInput(InputType))
 					{
-						if (c == '\n' || c == '\r')
+						if (c == '\n')
 						{
-							newText.Append(c);
-							continue;
+							if (lastWasCarriagereturn)
+								if (remainingLines > 0)
+								{
+									newText.Append(c);
+									lastWasCarriagereturn = false;
+									remainingLines--;
+									continue;
+								}
+								else
+								{
+									lastWasCarriagereturn = false;
+									newText.Remove(newText.Length - 1, 1);
+									continue;
+								}
+							else
+							{
+								if (remainingLines > 0)
+								{
+									newText.Append(c);
+									lastWasNewline = true;
+									remainingLines--;
+									continue;
+								}
+								else
+								{
+									continue;
+								}
+							}
+						}
+						if (c == '\r')
+						{
+							if (lastWasNewline)
+							{
+								newText.Append(c);
+								lastWasNewline = false;
+								continue;
+							}
+							if (remainingLines < 1)
+								continue;
+							else
+							{
+								newText.Append(c);
+								lastWasCarriagereturn = true;
+								continue;
+							}
 						}
 					}
 				}
+
+				lastWasCarriagereturn = false;
+				lastWasNewline = false;
 
 				if (LegalIntegers.Contains(c) || c == CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator[0])
 				{
