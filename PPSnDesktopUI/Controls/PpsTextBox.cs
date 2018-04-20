@@ -14,10 +14,9 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -57,6 +56,8 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Extends Textbox for Number input and a clear button.</summary>
 	public class PpsTextBox : TextBox
 	{
+		private const bool negativeToggling = true;
+
 		/// <summary></summary>
 		public static readonly DependencyProperty InputTypeProperty = DependencyProperty.Register(nameof(InputType), typeof(PpsTextBoxInputType), typeof(PpsTextBox), new FrameworkPropertyMetadata(PpsTextBoxInputType.SingleLine, new PropertyChangedCallback(OnInputTypeChangedCallback)));
 		/// <summary></summary>
@@ -80,33 +81,193 @@ namespace TecWare.PPSn.Controls
 		/// <param name="oldValue"></param>
 		protected virtual void OnInputTypeChanged(PpsTextBoxInputType newValue, PpsTextBoxInputType oldValue)
 		{
-			if (newValue != PpsTextBoxInputType.Text && !TryValidateInput(Text))
+			this.AcceptsReturn = IsMultilineInput(newValue);
+			this.AcceptsTab = newValue == PpsTextBoxInputType.Any;
+
+			/*if (newValue != PpsTextBoxInputType.Text && !TryValidateInput(Text))
 				ClearValue(TextProperty);
 
 			if (oldValue == PpsTextBoxInputType.Text && newValue != PpsTextBoxInputType.Text)
 				DataObject.AddPastingHandler(this, OnClipboardPasting);
 			else
-				DataObject.RemovePastingHandler(this, OnClipboardPasting);
+				DataObject.RemovePastingHandler(this, OnClipboardPasting);*/ // ToDo
 		} // proc OnInputTypeChanged
 
-		/// <summary>Initialize per Input a key filter.</summary>
+		/// <summary>If text is entered my Keyboard do not process illegal chars (TextChanged is not called)</summary>
 		/// <param name="e"></param>
 		protected override void OnPreviewTextInput(TextCompositionEventArgs e)
 		{
-			base.OnPreviewTextInput(e);
-
-			if (InputType != PpsTextBoxInputType.Text)
+			if (!IsTextualInput(InputType))
 			{
-				//e.TextComposition
+				if (!IsNegativeAllowed(InputType))
+					if (e.Text.Except(LegalDecimalChars(false)).Any())
+						e.Handled = true;
+				if (!IsDecimalAllowed(InputType))
+					if (e.Text.Except(LegalIntegerChars(true)).Any())
+						e.Handled = true;
 			}
+
+			base.OnPreviewTextInput(e);
 		} // func OnPreviewTextInput
+
+		private void NeatlyReplaceText(string newText)
+		{
+			var curPos = this.CaretIndex;
+			var curLen = Text.Length;
+			Text = newText;
+			curPos -= curLen - Text.Length;
+			this.CaretIndex = curPos;
+		}
+
+		private void NeatlyCleanText()
+		{
+			// int type is Any nothing is to be checked
+			if (InputType == PpsTextBoxInputType.Any || Text.Length < 1)
+				return;
+
+			var newText = new StringBuilder();
+			var negative = false;
+			var firstColonIndex = -1;
+
+			// while checking the input, the Text is only parsed once
+			foreach (var c in Text)
+			{
+				if (IsTextualInput(InputType))
+				{
+					if (c >= ' ')
+					{
+						newText.Append(c);
+						continue;
+					}
+					if (IsMultilineInput(InputType))
+					{
+						if (c == '\n' || c == '\r')
+						{
+							newText.Append(c);
+							continue;
+						}
+					}
+				}
+
+				if (LegalIntegers.Contains(c) || c == CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator[0])
+				{
+					if (InputType != PpsTextBoxInputType.Number)
+						if (newText.Length == 0)
+							if (c == '0')
+								continue;
+					newText.Append(c);
+					continue;
+				}
+
+				if (IsNegativeAllowed(InputType))
+				{
+					if (c == CultureInfo.CurrentCulture.NumberFormat.NegativeSign[0])
+					{
+						negative = negativeToggling ? !negative : true;
+						continue;
+					}
+				}
+
+				if (IsDecimalAllowed(InputType))
+				{
+					if (c == CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator[0])
+					{
+						if (firstColonIndex < 0)
+						{
+							newText.Append(c);
+							firstColonIndex = newText.Length - 1;
+							continue;
+						}
+						else
+						{
+							newText.Remove(firstColonIndex, 1);
+							newText.Append(c);
+							firstColonIndex = newText.Length - 1;
+							continue;
+						}
+					}
+				}
+			} // foreach(var c in Text)
+
+			if (IsTextualInput(InputType))
+			{
+				if (Text.Length == newText.Length)
+				{
+					// in case of text input if there is no change in length, there was no change in content
+					return;
+				}
+
+				NeatlyReplaceText(newText.ToString());
+				return;
+			}
+
+			if (negative)
+				newText.Insert(0, CultureInfo.CurrentCulture.NumberFormat.NegativeSign);
+
+			if (firstColonIndex == 0)
+				newText.Insert(0, '0');
+
+			var newTextString = newText.ToString();
+
+			if (Text != newTextString)
+				NeatlyReplaceText(newTextString);
+		}
+
+		private static bool IsMultilineInput(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Any || inputType == PpsTextBoxInputType.Multiline;
+
+		private static bool IsTextualInput(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Any ||
+			inputType == PpsTextBoxInputType.SingleLine ||
+			inputType == PpsTextBoxInputType.Multiline;
+
+		private static bool IsDecimalAllowed(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Decimal || inputType == PpsTextBoxInputType.DecimalNegative;
+
+		private static bool IsNegativeAllowed(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.IntegerNegative || inputType == PpsTextBoxInputType.DecimalNegative;
+
+		private bool retriggerHold = false;
+
+		/// <summary>Cleans the Text if it was pasted and in cases of contextual plausibility (p.e. only one minus sign)</summary>
+		/// <param name="e"></param>
+		protected override void OnTextChanged(TextChangedEventArgs e)
+		{
+			if (retriggerHold || InputType == PpsTextBoxInputType.Any)
+				return;
+
+			retriggerHold = true;
+
+			NeatlyCleanText();
+
+			retriggerHold = false;
+		}
 
 		/// <summary></summary>
 		/// <param name="e"></param>
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
 		{
-			base.OnPreviewKeyDown(e);
+
+			if (InputType == PpsTextBoxInputType.Integer)
+			{
+				//var c = GetCharFromKey(e.Key);
+			}
+
 		} // func OnPreviewKeyDown
+
+		/// <summary>Legal chars which can be in a Number</summary>
+		public const string LegalIntegers = "0123456789";
+
+		/// <summary>Legal chars which can be in a Integer</summary>
+		/// <param name="includeNegative">is the minus sign legal</param>
+		/// <returns></returns>
+		public static string LegalIntegerChars(bool includeNegative = false)
+			=> LegalIntegers +
+			   CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator +
+			   (includeNegative ? CultureInfo.CurrentCulture.NumberFormat.NegativeSign : String.Empty);
+
+		/// <summary>Legal chars which can be in a Decimal</summary>
+		/// <param name="includeNegative">is the minus sign legal</param>
+		/// <returns></returns>
+		public static string LegalDecimalChars(bool includeNegative = false)
+			=> LegalIntegerChars(includeNegative) +
+			   CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
 
 		private void OnClipboardPasting(object sender, DataObjectPastingEventArgs e)
 		{
