@@ -445,7 +445,7 @@ namespace TecWare.PPSn.UI
 			=> values.Clone();
 
 		object[] IMultiValueConverter.ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-			=> value is object[] arr ? (object[])arr.Clone() : DependencyProperty.UnsetValue;
+			=> value is object[] arr ? (object[])arr.Clone() : new object[] { DependencyProperty.UnsetValue };
 
 		public static MultiValueToArrayConverter Default { get; } = new MultiValueToArrayConverter();
 	} // class MultiValueToArrayConverter
