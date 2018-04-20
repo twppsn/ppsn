@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Windows.Data;
 using System.Windows.Markup;
 using System.Windows.Media;
+using Neo.IronLua;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
@@ -54,6 +55,51 @@ namespace TecWare.PPSn.UI
 		[ConstructorArgument("code")]
 		public string Code { get; set; }
 	} // class LuaConvertExtension
+
+	#endregion
+
+	#region -- class Constant ---------------------------------------------------------
+
+	/// <summary></summary>
+	public sealed class Constant : MarkupExtension
+	{
+		/// <summary></summary>
+		public Constant()
+		{
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="returnType"></param>
+		/// <param name="value"></param>
+		public Constant(Type returnType, object value)
+		{
+			Type = returnType;
+			Value = value;
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="serviceProvider"></param>
+		/// <returns></returns>
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			var type = Type;
+			if (type == null)
+			{
+				var target = serviceProvider.GetService<IProvideValueTarget>(true);
+				if (target.TargetProperty is PropertyInfo pi)
+					type = pi.PropertyType;
+			}
+
+			return type == null ? Value : Procs.ChangeType(Value, type);
+		} // func ProvideValue
+
+		/// <summary></summary>
+		[ConstructorArgument("returnType")]
+		public Type Type { get; set; }
+		/// <summary></summary>
+		[ConstructorArgument("value")]
+		public object Value { get; set; }
+	} // class Constant
 
 	#endregion
 
