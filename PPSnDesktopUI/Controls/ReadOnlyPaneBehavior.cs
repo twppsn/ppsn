@@ -29,6 +29,8 @@ namespace TecWare.PPSn.Controls
 		//an inheritable property provides its assigned property values to all child elements in the logical tree
 		public static readonly DependencyProperty IsReadOnlyProperty = DependencyProperty.RegisterAttached("IsReadOnly", typeof(bool), typeof(PpsReadOnlyPaneBehavior), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.Inherits, ReadOnlyPropertyChanged));
 
+		// Ingesamt schlechte Idee, da der eigentliche Kontrolstatus nicht beachtet wird?
+
 		public static bool GetIsReadOnly(DependencyObject d)
 			=> (bool)d.GetValue(IsReadOnlyProperty);
 

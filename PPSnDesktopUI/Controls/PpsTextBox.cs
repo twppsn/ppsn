@@ -58,18 +58,11 @@ namespace TecWare.PPSn.Controls
 	{
 		private const bool negativeToggling = true;
 
-		/// <summary></summary>
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty InputTypeProperty = DependencyProperty.Register(nameof(InputType), typeof(PpsTextBoxInputType), typeof(PpsTextBox), new FrameworkPropertyMetadata(PpsTextBoxInputType.SingleLine, new PropertyChangedCallback(OnInputTypeChangedCallback)));
-		/// <summary></summary>
-		public static readonly DependencyProperty IsMandatoryProperty = DependencyProperty.Register(nameof(IsMandatory), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(false));
-		/// <summary></summary>
 		public static readonly DependencyProperty IsNullableProperty = DependencyProperty.Register(nameof(IsNullable), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(true));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
-		/// <summary></summary>
-		public static readonly RoutedCommand ClearTextCommand = new RoutedUICommand("ClearText", "ClearText", typeof(PpsTextBox));
-
-		/// <summary>Mandatory field.</summary>
-		public bool IsMandatory { get => BooleanBox.GetBool(GetValue(IsMandatoryProperty)); set => SetValue(IsMandatoryProperty, BooleanBox.GetObject(value)); }
 		/// <summary>Is the field nullable.</summary>
 		public bool IsNullable { get => BooleanBox.GetBool(GetValue(IsNullableProperty)); set => SetValue(IsNullableProperty, BooleanBox.GetObject(value)); }
 

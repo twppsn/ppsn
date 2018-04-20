@@ -1184,12 +1184,21 @@ namespace TecWare.PPSn.UI
 			if (value == null
 				&& key is string typeName)
 			{
-				var xamlType = GetXamlType(new XamlTypeName(currentNamespaceName, typeName));
-				if (xamlType != null)
-					value = new LuaWpfCreator(this, xamlType);
+				if (currentNamespaceName != "http://tecware-gmbh.de/ppsn/wpf/2015" && typeName.StartsWith("Pps"))
+					value = Pps.GetXamlTypeFromName(typeName);
+				else
+					value = GetXamlTypeFromName(typeName);
 			}
 			return value;
 		} // func OnIndex
+
+		private LuaWpfCreator GetXamlTypeFromName(string typeName)
+		{
+			var xamlType = GetXamlType(new XamlTypeName(currentNamespaceName, typeName));
+			return xamlType != null
+				? new LuaWpfCreator(this, xamlType)
+				: null;
+		} // func GetXamlTypeFromName
 
 		/// <summary></summary>
 		/// <param name="type"></param>

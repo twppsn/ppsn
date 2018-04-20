@@ -18,6 +18,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using Neo.IronLua;
 using TecWare.PPSn.UI;
@@ -29,25 +30,26 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Base control for the wpf generic pane.</summary>
 	public class PpsGenericWpfControl : ContentControl, IServiceProvider
 	{
-		/// <summary></summary>
-		public static DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata("Pane title"));
-		/// <summary></summary>
-		public static DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(null));
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata("Pane title"));
+		public static readonly DependencyProperty SubTitleProperty = DependencyProperty.Register(nameof(SubTitle), typeof(string), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(null));
 
-		/// <summary>Has this pane a sidebar on left side.</summary>
-		public static readonly DependencyProperty HasSideBarProperty = DependencyProperty.Register(nameof(HasSideBar), typeof(bool), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(false));
 		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(null));
-		
-		/// <summary>Command list.</summary>
 		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
 
+		[Obsolete("todo: host?")]
+		public static readonly DependencyProperty HasSideBarProperty = DependencyProperty.Register(nameof(HasSideBar), typeof(bool), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(false));
+		[Obsolete("todo: host?")]
 		private readonly PpsProgressStack progressStack;
-
+		
 		// for corrent Binding this Command must be a Property - not a Field
 		// todo: change, Interface and flags for the current options
 		private static readonly RoutedCommand setCharmCommand = new RoutedCommand("SetCharm", typeof(PpsGenericWpfControl));
-		
+
 		public RoutedCommand SetCharmCommand { get { return setCharmCommand; } }
+
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
 
 		#region -- Ctor/Dtor --------------------------------------------------------------
 

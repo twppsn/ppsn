@@ -113,6 +113,7 @@
     <Compile Include="Controls\PpsStackSectionControl.cs" />
     <Compile Include="Controls\PpsGenericWpfControl.cs" />
     <Compile Include="Controls\PpsTextBox.cs" />
+    <Compile Include="Controls\PpsWindowPaneHost.cs" />
     <Compile Include="UI\PpsXamlParser.cs" />
     <Compile Include="Controls\ReadOnlyPaneBehavior.cs" />
     <Compile Include="Controls\SideBarMenu.cs" />

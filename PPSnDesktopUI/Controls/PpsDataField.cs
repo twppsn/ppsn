@@ -28,7 +28,7 @@ namespace TecWare.PPSn.Controls
 	#region -- class PpsDataFieldInfo -------------------------------------------------
 
 	/// <summary>Result of the resolver.</summary>
-	public class PpsDataFieldInfo : IDataColumn, IPropertyReadOnlyDictionary
+	public class PpsDataFieldInfo : IPropertyReadOnlyDictionary
 	{
 		private readonly IServiceProvider sp;
 		private readonly IPropertyReadOnlyDictionary properties;
@@ -52,14 +52,13 @@ namespace TecWare.PPSn.Controls
 		/// <param name="value"></param>
 		/// <returns></returns>
 		public bool TryGetProperty(string name, out object value)
-			=> properties.TryGetProperty(name, out value);
+			=> properties.TryGetProperty(name, out value)
+				|| dataColumn.Attributes.TryGetProperty(name, out value);
 
 		/// <summary></summary>
 		public string Name => dataColumn.Name;
 		/// <summary></summary>
 		public Type DataType => dataColumn.DataType;
-		/// <summary></summary>
-		public IPropertyEnumerableDictionary Attributes => dataColumn.Attributes;
 
 		/// <summary></summary>
 		public IServiceProvider Context => sp;
@@ -296,7 +295,7 @@ namespace TecWare.PPSn.Controls
 
 			var ctrl = CreateDefaultField(fieldInfo);
 
-			if (fieldInfo.Attributes.TryGetProperty<string>("displayName", out var displayName))
+			if (fieldInfo.TryGetProperty<string>("displayName", out var displayName))
 				ctrl[PpsDataFieldPanel.LabelProperty] = displayName + ":";
 
 			return ctrl.CreateReader(context);
@@ -312,7 +311,7 @@ namespace TecWare.PPSn.Controls
 			else if (fieldInfo.DataType == typeof(PpsMasterDataExtendedValue))
 			{
 				// test for master table
-				if (fieldInfo.Attributes.TryGetProperty<string>("refTable", out var refTable))
+				if (fieldInfo.TryGetProperty<string>("refTable", out var refTable))
 					return CreateMasterDataField(fieldInfo, refTable);
 				else
 					throw new ArgumentNullException("refTable", "refTable is null.");
@@ -336,47 +335,67 @@ namespace TecWare.PPSn.Controls
 
 			var textBinding = PpsDataFieldBinding.CreateWpfBinding(fieldInfo, isReadOnly);
 
-			switch(Type.GetTypeCode( fieldInfo.DataType))
+			var inputType = PpsTextBoxInputType.Any;
+			switch (Type.GetTypeCode(fieldInfo.DataType))
 			{
 				case TypeCode.Decimal:
 					SetNumericBinding(ui, txt, textBinding, true, 2);
+					inputType = PpsTextBoxInputType.DecimalNegative;
 					break;
 				case TypeCode.Single:
 					SetNumericBinding(ui, txt, textBinding, true, 3);
+					inputType = PpsTextBoxInputType.DecimalNegative;
 					break;
 				case TypeCode.Double:
 					SetNumericBinding(ui, txt, textBinding, true, 6);
+					inputType = PpsTextBoxInputType.DecimalNegative;
 					break;
 
 				case TypeCode.SByte:
 					SetNumericBinding(ui, txt, textBinding, true, 0);
+					inputType = PpsTextBoxInputType.IntegerNegative;
 					break;
 				case TypeCode.Int16:
 					SetNumericBinding(ui, txt, textBinding, true, 0);
+					inputType = PpsTextBoxInputType.IntegerNegative;
 					break;
 				case TypeCode.Int32:
 					SetNumericBinding(ui, txt, textBinding, true, 0);
+					inputType = PpsTextBoxInputType.IntegerNegative;
 					break;
 				case TypeCode.Int64:
 					SetNumericBinding(ui, txt, textBinding, true, 0);
+					inputType = PpsTextBoxInputType.IntegerNegative;
 					break;
 
 				case TypeCode.Byte:
 					SetNumericBinding(ui, txt, textBinding, false, 0);
+					inputType = PpsTextBoxInputType.Integer;
 					break;
 				case TypeCode.UInt16:
 					SetNumericBinding(ui, txt, textBinding, false, 0);
+					inputType = PpsTextBoxInputType.Integer;
 					break;
 				case TypeCode.UInt32:
 					SetNumericBinding(ui, txt, textBinding, false, 0);
+					inputType = PpsTextBoxInputType.Integer;
 					break;
 				case TypeCode.UInt64:
 					SetNumericBinding(ui, txt, textBinding, false, 0);
+					inputType = PpsTextBoxInputType.Integer;
 					break;
 			}
 
+			if (fieldInfo.TryGetProperty<PpsTextBoxInputType>("InputType", out var tmpInputType))
+				inputType = tmpInputType;
+
+			txt.InputType = inputType;
 			txt.Text = textBinding;
-			
+
+			if (fieldInfo.TryGetProperty<bool>("IsNullable", out var tmpNullable))
+				txt.IsNullable = tmpNullable;
+
+
 			if (isReadOnly.HasValue)
 				txt.IsReadOnly = isReadOnly;
 
@@ -386,10 +405,9 @@ namespace TecWare.PPSn.Controls
 		private LuaWpfCreator CreateMasterDataField(PpsDataFieldInfo fieldInfo, string refTableName)
 		{
 			dynamic ui = new LuaUI();
-			dynamic combobox = ui.ComboBox;
+			dynamic combobox = ui.Pps.PpsDataSelector;
 			combobox.ItemsSource = environment.MasterData.GetTable(refTableName, true);
 			combobox.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(fieldInfo);
-			combobox.DisplayMemberPath = "Name";
 			return combobox;
 		} // func CreateMasterDataField
 
