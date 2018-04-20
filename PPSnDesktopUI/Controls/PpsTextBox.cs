@@ -29,12 +29,23 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public enum PpsTextBoxInputType
 	{
-		/// <summary>Normal Text Input.</summary>
-		Text = 0,
+		/// <summary>Input is not checked</summary>
+		Any = 0,
+		/// <summary>Single Line of unformatted Text is allowed</summary>
+		SingleLine = 1,
+		/// <summary>Multiple Lines of unformatted Text are allowed</summary>
+		Multiline = 2,
 		/// <summary>Input mask for integer values.</summary>
-		Integer = 1,
+		Integer = 3,
 		/// <summary>Input mask for decimal/float values.</summary>
-		Decimal = 2,
+		Decimal = 4,
+		/// <summary>Integers, including negative Values</summary>
+		IntegerNegative = 5,
+		/// <summary>Decimals, includíng negative Values</summary>
+		DecimalNegative = 6,
+		/// <summary>any Text consisting of Numbers</summary>
+		Number = 7
+
 		///// <summary>Defined input mask e.g. special text numbers.</summary>
 		//Formatted = 3
 	} // enum PpsTextBoxInputType
@@ -47,7 +58,7 @@ namespace TecWare.PPSn.Controls
 	public class PpsTextBox : TextBox
 	{
 		/// <summary></summary>
-		public static readonly DependencyProperty InputTypeProperty = DependencyProperty.Register(nameof(InputType), typeof(PpsTextBoxInputType), typeof(PpsTextBox), new FrameworkPropertyMetadata(PpsTextBoxInputType.Text, new PropertyChangedCallback(OnInputTypeChangedCallback)));
+		public static readonly DependencyProperty InputTypeProperty = DependencyProperty.Register(nameof(InputType), typeof(PpsTextBoxInputType), typeof(PpsTextBox), new FrameworkPropertyMetadata(PpsTextBoxInputType.SingleLine, new PropertyChangedCallback(OnInputTypeChangedCallback)));
 		/// <summary></summary>
 		public static readonly DependencyProperty IsMandatoryProperty = DependencyProperty.Register(nameof(IsMandatory), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(false));
 		/// <summary></summary>
@@ -103,11 +114,11 @@ namespace TecWare.PPSn.Controls
 
 		private bool TryValidateInput(string text)
 		{
-			switch(InputType)
+			switch (InputType)
 			{
 				case PpsTextBoxInputType.Decimal:
 				case PpsTextBoxInputType.Integer:
-				case PpsTextBoxInputType.Text:
+				case PpsTextBoxInputType.Any:
 					break;
 			}
 			return true;
