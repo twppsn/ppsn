@@ -679,7 +679,7 @@ namespace TecWare.PPSn.UI
 
 		#region -- CompileEventConnector ----------------------------------------------
 
-		private static object CompileEventConnector(XamlMember member, Type handlerType, string memberName, object eventTarget)
+		private static object CompileEventConnector(Type handlerType, string memberName, object eventTarget)
 		{
 			var handler = handlerType;
 			var sourceMethodInfo = handler.GetMethod("Invoke");
@@ -783,6 +783,22 @@ namespace TecWare.PPSn.UI
 			services.Add(parserService ?? throw new ArgumentNullException(nameof(parserService)));
 		} // proc PushServiceProvider
 
+		private bool PushDelegate(XamlMember member, Type delegateType, object value)
+		{
+			switch (value)
+			{
+				case string memberName:
+					value = CompileEventConnector(delegateType, memberName, settings.Code);
+					break;
+				case Delegate dlg:
+					value = PpsXamlParser.CreateEventFromDelegate(delegateType, dlg);
+					break;
+				default:
+					throw new ArgumentException("Can not assign event member."); // todo:
+			}
+
+			return PushMember(member, value);
+		} // func PushDelegate
 
 		private bool PushEmitterIntern(System.Xaml.XamlReader emitter)
 		{
@@ -851,28 +867,26 @@ namespace TecWare.PPSn.UI
 					}
 					else if (Member == PpsXamlSchemaContext.ParserService)
 					{
-						PushServiceProvider((PpsParserService)ReadMemberValue(reader));
+						PushServiceProvider((PpsParserService)ReadMemberValue(this));
 						return Read();
 					}
-					else if (Member.IsEvent && settings.Code != null && !(reader is PpsXamlMemberEmitter)) // events generate a connection id
+					else if (settings.Code != null && Member.IsEvent && !(reader is PpsXamlMemberEmitter))
 					{
 						var member = Member;
 						var eventHandlerType = PpsXamlParser.GetEventHandlerType(member);
 						var eventValue = ReadMemberValue(reader);
 						ReadNode(reader);
 
-						switch (eventValue)
-						{
-							case string memberName:
-								eventValue = CompileEventConnector(member, eventHandlerType, memberName, settings.Code);
-								break;
-							case Delegate dlg:
-								eventValue = PpsXamlParser.CreateEventFromDelegate(member, dlg);
-								break;
-							default:
-								throw new ArgumentException("Can not assign event member."); // todo:
-						}
-						return PushMember(member, eventValue);
+						return PushDelegate(member, eventHandlerType, eventValue);
+					}
+					else if (settings.Code != null && typeof(Delegate).IsAssignableFrom(Member.Type.UnderlyingType) && !(reader is PpsXamlMemberEmitter)) // action should be set direct or dynamic
+					{
+						var member = Member;
+						var delegateType = member.Type.UnderlyingType;
+						var delegateValue = ReadMemberValue(reader);
+						ReadNode(reader);
+
+						return PushDelegate(member, delegateType, delegateValue);
 					}
 					goto default;
 				case XamlNodeType.StartObject:
@@ -992,22 +1006,18 @@ namespace TecWare.PPSn.UI
 		} // sctor
 
 		internal static Type GetEventHandlerType(XamlMember member)
-		{
-			// todo: other events?
-			return ((RoutedEvent)wpfXamlMemberPropertyInfo.GetValue(member)).HandlerType;
-		} // func GetEventHandlerType
+			=> ((RoutedEvent)wpfXamlMemberPropertyInfo.GetValue(member)).HandlerType;
 
-		internal static object CreateEventFromDelegate(XamlMember member, Delegate dlg)
+		internal static object CreateEventFromDelegate(Type delegateType, Delegate dlg)
 		{
-			var handlerType = GetEventHandlerType(member);
-			if (handlerType.IsAssignableFrom(dlg.GetType()))
+			if (delegateType.IsAssignableFrom(dlg.GetType()))
 				return dlg;
 			else
 			{
 				var sourceMethodInfo = dlg.GetType().GetMethod("Invoke") ?? throw new ArgumentNullException(nameof(dlg), "Delegate-Invoke not defined.");
 
 				// create convert delegate
-				var targetMethodInfo = handlerType.GetMethod("Invoke") ?? throw new ArgumentNullException(nameof(handlerType), "Handler-Invoke not defined.");
+				var targetMethodInfo = delegateType.GetMethod("Invoke") ?? throw new ArgumentNullException(nameof(delegateType), "Handler-Invoke not defined.");
 
 				var targetParameterInfo = targetMethodInfo.GetParameters();
 				var sourceParameterInfo = sourceMethodInfo.GetParameters();
@@ -1031,7 +1041,7 @@ namespace TecWare.PPSn.UI
 						targetExpression = LExpression.Parameter(currentTargetParameterInfo.ParameterType, currentTargetParameterInfo.Name);
 				}
 
-				return LExpression.Lambda(handlerType,
+				return LExpression.Lambda(delegateType,
 					LExpression.Invoke(LExpression.Constant(dlg),
 						sourceParameterExpressions
 					),

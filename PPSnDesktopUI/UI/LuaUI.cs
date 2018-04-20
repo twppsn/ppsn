@@ -776,8 +776,8 @@ namespace TecWare.PPSn.UI
 				{
 					if (value is string)
 						members[member] = value; // works if the stream is wrapped to an PpsXamlReader
-					else if(value is Delegate dlg)
-						members[member] = PpsXamlParser.CreateEventFromDelegate(member, dlg);
+					else if (value is Delegate dlg)
+						members[member] = PpsXamlParser.CreateEventFromDelegate(PpsXamlParser.GetEventHandlerType(member), dlg);
 					else
 						throw new ArgumentException($"Can not set event '{member.Name}' to '{value}'. Only string is allowed.");
 				}

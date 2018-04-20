@@ -607,7 +607,7 @@ namespace TecWare.PPSn
 				enumerators.Reset();
 			} // proc Reset
 
-			public object Current => currentEnumerator;
+			public object Current => currentEnumerator.Current;
 		} // class ConnectedEnumerator
 
 		#endregion

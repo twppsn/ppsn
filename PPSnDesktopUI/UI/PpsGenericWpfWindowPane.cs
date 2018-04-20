@@ -18,6 +18,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.Design;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -71,7 +72,7 @@ namespace TecWare.PPSn.UI
 			// create the control
 			if (paneData is XDocument xamlCode)
 			{
-				control = PpsXamlParser.LoadAsync<FrameworkElement>(xamlCode.CreateReader(), new PpsXamlReaderSettings() { Code = this, CloseInput = true }).AwaitTask();
+				control = PpsXamlParser.LoadAsync<FrameworkElement>(xamlCode.CreateReader(), new PpsXamlReaderSettings() { Code = this, CloseInput = true, ServiceProvider = (IServiceProvider)Parent }).AwaitTask();
 			}
 			else if (paneData is LuaChunk luaCode) // run the chunk on the current table
 				luaCode.Run(this, this);
@@ -168,7 +169,6 @@ namespace TecWare.PPSn.UI
 	public class PpsGenericWpfWindowPane : LuaEnvironmentTable, IPpsWindowPane, IPpsIdleAction, IPpsLuaRequest, IUriContext, IPpsXamlCode, IPpsXamlDynamicProperties, IServiceProvider
 	{
 		private readonly IPpsWindowPaneManager paneManager;
-
 		private BaseWebRequest fileSource;
 		private PpsGenericWpfControl control;
 
@@ -711,7 +711,7 @@ namespace TecWare.PPSn.UI
 		public virtual object GetService(Type serviceType)
 		{
 			if (serviceType == typeof(IUriContext)
-				||serviceType == typeof(IPpsWindowPane))
+				|| serviceType == typeof(IPpsWindowPane))
 				return this;
 			else if (serviceType == typeof(IPpsWindowPaneManager))
 				return paneManager;

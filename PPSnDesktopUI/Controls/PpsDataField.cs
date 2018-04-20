@@ -74,7 +74,7 @@ namespace TecWare.PPSn.Controls
 		/// <returns></returns>
 		public static PpsDataFieldInfo GetDataFieldInfo(IServiceProvider serviceProvider, string fieldName, IPropertyReadOnlyDictionary properties, bool throwException = true)
 		{
-			var field = serviceProvider.GetService<IPpsDataFieldResolver>(true)?.ResolveColumn(serviceProvider, fieldName, properties);
+			var field = serviceProvider.GetService<IPpsDataFieldResolver>(true)?.ResolveColumn(serviceProvider, fieldName, properties ?? PropertyDictionary.EmptyReadOnly);
 			if (throwException && field == null )
 				throw new ArgumentNullException(nameof(field), $"Could not resolve field '{fieldName}'.");
 			return field;
@@ -116,10 +116,25 @@ namespace TecWare.PPSn.Controls
 	#region -- class PpsDataSetResolver -----------------------------------------------
 
 	/// <summary>Parser service to resolve a dataset.</summary>
-	public class PpsDataSetResolver : IPpsDataFieldResolver, IServiceProvider
+	public class PpsDataSetResolver : PpsParserService, IPpsDataFieldResolver
 	{
-		private readonly PpsDataSetDefinition dataset;
-		
+		/// <summary></summary>
+		public Func<object> GetDataSet { get; set; }
+
+		private PpsDataSetDefinition dataset = null;
+
+		/// <summary></summary>
+		public PpsDataSetResolver()
+		{
+		}
+
+		/// <summary></summary>
+		/// <param name="dataset"></param>
+		public PpsDataSetResolver(PpsDataSet dataset)
+			: this(dataset?.DataSetDefinition)
+		{
+		} // ctor
+
 		/// <summary></summary>
 		/// <param name="dataset"></param>
 		public PpsDataSetResolver(PpsDataSetDefinition dataset)
@@ -127,16 +142,45 @@ namespace TecWare.PPSn.Controls
 			this.dataset = dataset ?? throw new ArgumentNullException(nameof(dataset));
 		} // ctor
 
+		/// <summary></summary>
+		protected override void OnInitialized()
+		{
+			base.OnInitialized();
+
+			if (dataset == null)
+			{
+				switch (GetDataSet?.Invoke())
+				{
+					case PpsDataSet ds:
+						dataset = ds.DataSetDefinition;
+						break;
+					case PpsDataSetDefinition ds:
+						dataset = ds;
+						break;
+					default:
+						throw new ArgumentException("No dataset found.");
+
+				}
+			}
+		} // proc OnInitialized
+
 		PpsDataFieldInfo IPpsDataFieldResolver.ResolveColumn(IServiceProvider serviceProvider, string fieldExpression, IPropertyReadOnlyDictionary properties)
+			=> ReolveDataFieldInfo(serviceProvider, fieldExpression, properties);
+
+		internal PpsDataFieldInfo ReolveDataFieldInfo(IServiceProvider serviceProvider, string fieldExpression, IPropertyReadOnlyDictionary properties)
 		{
 			return null;
-		} // func ResolveColumn
+		} // func ReolveDataFieldInfo
 
-		object IServiceProvider.GetService(Type serviceType)
+		/// <summary></summary>
+		/// <param name="serviceType"></param>
+		/// <returns></returns>
+		public override object GetService(Type serviceType)
 		{
 			if (serviceType == typeof(PpsDataSetDefinition))
 				return dataset;
-			else if (serviceType == typeof(IPpsDataFieldResolver))
+			else if (serviceType == typeof(IPpsDataFieldResolver)
+				|| serviceType == typeof(PpsDataSetResolver))
 				return this;
 			else
 				return null;
@@ -144,6 +188,14 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary></summary>
 		public PpsDataSetDefinition DataSetDefinition => dataset;
+
+		internal static PpsDataFieldInfo GetDataFieldInfo(IServiceProvider serviceProvider, PpsDataColumnDefinition column, IPropertyReadOnlyDictionary properties, string baseBindingPath)
+		{
+			if (!properties.TryGetProperty<string>(nameof(PpsDataField.BindingPath), out var localBindingPath))
+				localBindingPath = column.Name;
+
+			return new PpsDataFieldInfo(serviceProvider, column, properties, baseBindingPath ?? localBindingPath);
+		} // func GetDataFieldInfo
 	} // class PpsDataSetResolver
 
 	#endregion
@@ -166,6 +218,7 @@ namespace TecWare.PPSn.Controls
 		{
 			CheckInitialized();
 
+			// resolve table
 			if (table == null && tableName != null)
 			{
 				datasetResolver = (PpsDataSetResolver)GetParentService(typeof(PpsDataSetResolver)) ?? throw new ArgumentException("DataSet resolve is missing.");
@@ -173,10 +226,9 @@ namespace TecWare.PPSn.Controls
 			}
 
 			var idx = table.FindColumnIndex(fieldExpression);
-			if (idx != -1)
-				return new PpsDataFieldInfo(serviceProvider, table.Columns[idx], properties, bindingPath ?? fieldExpression);
-
-			return null;
+			return idx != -1
+				? PpsDataSetResolver.GetDataFieldInfo(serviceProvider, table.Columns[idx], properties, bindingPath)
+				: datasetResolver.ReolveDataFieldInfo(serviceProvider, fieldExpression, properties);
 		} // func ResolveColumn
 
 		/// <summary></summary>
@@ -266,6 +318,18 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>Field name.</summary>
 		public string FieldName { get; set; }
+		/// <summary>Binding path.</summary>
+		public string BindingPath
+		{
+			get => TryGetProperty(nameof(BindingPath), out var t) ? (string)t : null;
+			set
+			{
+				if (value == null)
+					properties.Remove(nameof(BindingPath));
+				else
+					properties[nameof(BindingPath)] = value;
+			}
+		}
 	} // class PpsDataField
 
 	#endregion
@@ -329,7 +393,7 @@ namespace TecWare.PPSn.Controls
 		private static LuaWpfCreator CreateTextField(PpsDataFieldInfo fieldInfo)
 		{
 			dynamic ui = new LuaUI();
-			dynamic txt = ui.Pps.PpsTextBox;
+			dynamic txt = ui.PpsTextBox;
 
 			var isReadOnly = fieldInfo.TryGetProperty<bool>("IsReadOnly", out var tmpReadOnly) ? (bool?)tmpReadOnly : null;
 
@@ -394,7 +458,6 @@ namespace TecWare.PPSn.Controls
 
 			if (fieldInfo.TryGetProperty<bool>("IsNullable", out var tmpNullable))
 				txt.IsNullable = tmpNullable;
-
 
 			if (isReadOnly.HasValue)
 				txt.IsReadOnly = isReadOnly;
