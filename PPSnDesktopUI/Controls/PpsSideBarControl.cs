@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Drawing;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -26,6 +27,8 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public abstract class PpsSideBarItemsBase : MultiSelector
 	{
+		/// <summary></summary>
+		public static readonly ComponentResourceKey PpsSideBarSeparator = new ComponentResourceKey(typeof(PpsSideBarControl), "PpsSideBarSeparator");
 		private static readonly DependencyProperty isItemTemplateIsItsOwnContainerProperty = DependencyProperty.Register("IsItemTemplateIsItsOwnContainer", typeof(bool), typeof(PpsSideBarItemsBase), new FrameworkPropertyMetadata(BooleanBox.False));
 
 		#region -- Content Properties -------------------------------------------------
@@ -306,6 +309,11 @@ namespace TecWare.PPSn.Controls
 		{
 			if (element is PpsSideBarPanel panel) // do not copy TemplateXXX die HeaderTemplateXXX
 				return;
+			else if (element is Separator sep)
+			{
+				//sep.SetResourceReference(StyleProperty, PpsSideBarSeparator);
+				sep.SetValue(DefaultStyleKeyProperty, PpsSideBarSeparator);
+			}
 
 			base.PrepareContainerForItemOverride(element, item);
 		} // proc PrepareContainerForItemOverride
@@ -369,7 +377,8 @@ namespace TecWare.PPSn.Controls
 		protected override bool IsItemItsOwnContainerOverride(object item)
 			=> item is PpsSideBarGroup
 			|| item is PpsSideBarPanel
-			|| item is PpsSideBarPanelFilter;
+			|| item is PpsSideBarPanelFilter
+			|| item is Separator;
 
 		/// <summary></summary>
 		public bool AllowToggleSelection { get => BooleanBox.GetBool(GetValue(AllowToggleSelectionProperty)); set => SetValue(AllowToggleSelectionProperty, BooleanBox.GetObject(value)); }
@@ -599,6 +608,8 @@ namespace TecWare.PPSn.Controls
 		public string HeaderStringFormat { get => (string)GetValue(HeaderStringFormatProperty); set => SetValue(HeaderStringFormatProperty, value); }
 		/// <summary></summary>
 		public bool HasHeader { get => BooleanBox.GetBool(GetValue(HasHeaderProperty)); set => SetValue(hasHeaderPropertyKey, BooleanBox.GetObject(value)); }
+		/// <summary>Calculate margin</summary>
+		public Thickness Indentation => new Thickness(IndentationLevel * 16, 0, 0, 0);
 		/// <summary>IndentationLevel</summary>
 		public int IndentationLevel => PpsSideBarControl.GetIndentLevel(this);
 	} // class PpsSideBarGroup
@@ -705,6 +716,9 @@ namespace TecWare.PPSn.Controls
 		public bool IsSelected { get => BooleanBox.GetBool(GetValue(IsSelectedProperty)); set => SetValue(IsSelectedProperty, BooleanBox.GetObject(value)); }
 		/// <summary>Is this element the current item.</summary>
 		public bool IsTopSelected => BooleanBox.GetBool(GetValue(IsTopSelectedProperty));
+
+		/// <summary>Calculate margin</summary>
+		public Thickness Indentation => new Thickness(IndentationLevel * 16, 0, 0, 0);
 		/// <summary>IndentationLevel</summary>
 		public int IndentationLevel => PpsSideBarControl.GetIndentLevel(this);
 
@@ -821,6 +835,8 @@ namespace TecWare.PPSn.Controls
 		public bool HasHeader { get => BooleanBox.GetBool(GetValue(HasHeaderProperty)); set => SetValue(hasHeaderPropertyKey, BooleanBox.GetObject(value)); }
 		/// <summary>Filter object.</summary>
 		public object Filter { get => GetValue(FilterProperty); set => SetValue(FilterProperty, value); }
+		/// <summary>Calculate margin</summary>
+		public Thickness Indentation => new Thickness(IndentationLevel * 16, 0, 0, 0);
 		/// <summary>IndentationLevel</summary>
 		public int IndentationLevel => PpsSideBarControl.GetIndentLevel(this);
 
