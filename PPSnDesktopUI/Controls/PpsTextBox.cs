@@ -370,6 +370,15 @@ namespace TecWare.PPSn.Controls
 			retriggerHold = false;
 		} // proc OnTextChanged
 
+		/// <summary>Hides the ErrorTip if the Textbox is not focused</summary>
+		/// <param name="e">unused</param>
+		protected override void OnLostFocus(RoutedEventArgs e)
+		{
+			ErrorMessage = String.Empty;
+			HasErrored = false;
+			base.OnLostFocus(e);
+		}
+
 		/// <summary>public Constructor - initializes the Commands</summary>
 		public PpsTextBox()
 		{
