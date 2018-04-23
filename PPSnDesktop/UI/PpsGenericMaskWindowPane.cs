@@ -18,7 +18,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Xml;
@@ -28,7 +27,6 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Inhalt, welcher aus einem dynamisch geladenen Xaml besteht
 	/// und einer Dataset</summary>
 	public class PpsGenericMaskWindowPane : PpsGenericWpfWindowPane

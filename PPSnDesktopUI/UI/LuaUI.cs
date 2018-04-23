@@ -776,8 +776,8 @@ namespace TecWare.PPSn.UI
 				{
 					if (value is string)
 						members[member] = value; // works if the stream is wrapped to an PpsXamlReader
-					else if(value is Delegate dlg)
-						members[member] = PpsXamlParser.CreateEventFromDelegate(member, dlg);
+					else if (value is Delegate dlg)
+						members[member] = PpsXamlParser.CreateEventFromDelegate(PpsXamlParser.GetEventHandlerType(member), dlg);
 					else
 						throw new ArgumentException($"Can not set event '{member.Name}' to '{value}'. Only string is allowed.");
 				}
@@ -1184,12 +1184,21 @@ namespace TecWare.PPSn.UI
 			if (value == null
 				&& key is string typeName)
 			{
-				var xamlType = GetXamlType(new XamlTypeName(currentNamespaceName, typeName));
-				if (xamlType != null)
-					value = new LuaWpfCreator(this, xamlType);
+				if (currentNamespaceName != "http://tecware-gmbh.de/ppsn/wpf/2015" && typeName.StartsWith("Pps"))
+					value = Pps.GetXamlTypeFromName(typeName);
+				else
+					value = GetXamlTypeFromName(typeName);
 			}
 			return value;
 		} // func OnIndex
+
+		private LuaWpfCreator GetXamlTypeFromName(string typeName)
+		{
+			var xamlType = GetXamlType(new XamlTypeName(currentNamespaceName, typeName));
+			return xamlType != null
+				? new LuaWpfCreator(this, xamlType)
+				: null;
+		} // func GetXamlTypeFromName
 
 		/// <summary></summary>
 		/// <param name="type"></param>

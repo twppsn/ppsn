@@ -45,6 +45,8 @@ namespace TecWare.PPSn.UI
 		public static IValueConverter ImageToPathGeometry => ImageToPathGeometryConverter.Default;
 		/// <summary></summary>
 		public static IValueConverter TakeListItems => TakeListItemsConverter.Default;
+		/// <summary>Multiplies a value with the parameter.</summary>
+		public static IValueConverter Multiply => MultiplyConverter.Default;
 	} // class PpsConverter
 
 	#endregion
@@ -204,12 +206,12 @@ namespace TecWare.PPSn.UI
 							return ((ulong)value).ToString(GetFormatString(parameter, true), culture);
 
 						default:
-							throw new NotSupportedException();
+							return DependencyProperty.UnsetValue;
 					}
 				}
 			}
 			else
-				throw new NotSupportedException();
+				return DependencyProperty.UnsetValue;
 		} // func Convert
 
 		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -248,7 +250,7 @@ namespace TecWare.PPSn.UI
 					case TypeCode.String:
 						return null;
 					default:
-						throw new NotSupportedException();
+						return DependencyProperty.UnsetValue;
 				}
 			}
 			else
@@ -286,11 +288,11 @@ namespace TecWare.PPSn.UI
 							return null;
 
 						default:
-							throw new NotSupportedException();
+							return DependencyProperty.UnsetValue;
 					}
 				}
 				else
-					throw new NotSupportedException();
+					return DependencyProperty.UnsetValue;
 			}
 		} // func ConvertBack
 
@@ -349,7 +351,7 @@ namespace TecWare.PPSn.UI
 				case Visibility v:
 					return v == p.TrueValue;
 				default:
-					throw new NotSupportedException();
+					return DependencyProperty.UnsetValue;
 			}
 		} // func ConvertBack
 
@@ -420,11 +422,11 @@ namespace TecWare.PPSn.UI
 				return r;
 			}
 			else
-				throw new NotSupportedException();
+				return DependencyProperty.UnsetValue;
 		} // func IValueConverter.Convert
 
 		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-			=> throw new NotSupportedException();
+			=> DependencyProperty.UnsetValue;
 
 		public static MultiToSingleLineConverter Default { get; } = new MultiToSingleLineConverter();
 	} // class MultiToSingleLineConverter
@@ -440,10 +442,10 @@ namespace TecWare.PPSn.UI
 		} // ctor
 
 		object IMultiValueConverter.Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
-			=> values.Clone();
+			=> values?.Clone();
 
 		object[] IMultiValueConverter.ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-			=> value is object[] arr ? (object[])arr.Clone() : throw new NotSupportedException();
+			=> value is object[] arr ? (object[])arr.Clone() : new object[] { DependencyProperty.UnsetValue };
 
 		public static MultiValueToArrayConverter Default { get; } = new MultiValueToArrayConverter();
 	} // class MultiValueToArrayConverter
@@ -469,7 +471,7 @@ namespace TecWare.PPSn.UI
 				case null:
 					return null;
 				default:
-					throw new NotSupportedException();
+					return DependencyProperty.UnsetValue;
 			}
 		} // func IValueConverter.Convert
 
@@ -482,7 +484,7 @@ namespace TecWare.PPSn.UI
 				case string s:
 					return LuaType.GetType(s);
 				default:
-					throw new NotSupportedException();
+					return DependencyProperty.UnsetValue;
 			}
 		} // func IValueConverter.ConvertBack
 
@@ -508,12 +510,12 @@ namespace TecWare.PPSn.UI
 				case string resName:
 					return Application.Current.TryFindResource(resName + "PathGeometry") ?? Application.Current.TryFindResource(resName);
 				default:
-					throw new NotSupportedException();
+					return DependencyProperty.UnsetValue;
 			}
 		} // func Convert
 
 		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-			=> throw new NotSupportedException();
+			=> DependencyProperty.UnsetValue;
 
 		public static ImageToPathGeometryConverter Default { get; } = new ImageToPathGeometryConverter();
 	} // class ImageToPathGeometryConverter
@@ -553,15 +555,122 @@ namespace TecWare.PPSn.UI
 					var p = GetParameter(parameter);
 					return new TakeList(l, p.MaxItems, p.LastItems);
 				default:
-					throw new NotSupportedException();
+					return DependencyProperty.UnsetValue;
 			}
 		} // funcIValueConverter.Convert
 
 		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-			=> value is TakeList l ? l.SourceList : throw new NotSupportedException();
+			=> value is TakeList l ? l.SourceList : DependencyProperty.UnsetValue;
 
 		public static TakeListItemsConverter Default { get; } = new TakeListItemsConverter();
 	} // class TakeListItemsConverter
+
+	#endregion
+
+	#region -- class MultiplyConverter ------------------------------------------------
+
+	internal sealed class MultiplyConverter : IValueConverter
+	{
+		private MultiplyConverter()
+		{
+		}
+
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			try
+			{
+				switch (Type.GetTypeCode(targetType))
+				{
+					case TypeCode.Single:
+						return value.ChangeType<float>() * parameter.ChangeType<float>();
+					case TypeCode.Double:
+						return value.ChangeType<double>() * parameter.ChangeType<double>();
+					case TypeCode.Decimal:
+						return value.ChangeType<decimal>() * parameter.ChangeType<decimal>();
+
+					case TypeCode.SByte:
+						return value.ChangeType<sbyte>() * parameter.ChangeType<sbyte>();
+					case TypeCode.Int16:
+						return value.ChangeType<short>() * parameter.ChangeType<short>();
+					case TypeCode.Int32:
+						return value.ChangeType<int>() * parameter.ChangeType<int>();
+					case TypeCode.Int64:
+						return value.ChangeType<long>() * parameter.ChangeType<long>();
+
+					case TypeCode.Byte:
+						return value.ChangeType<byte>() * parameter.ChangeType<byte>();
+					case TypeCode.UInt16:
+						return value.ChangeType<ushort>() * parameter.ChangeType<ushort>();
+					case TypeCode.UInt32:
+						return value.ChangeType<uint>() * parameter.ChangeType<uint>();
+					case TypeCode.UInt64:
+						return value.ChangeType<ulong>() * parameter.ChangeType<ulong>();
+
+					default:
+						return DependencyProperty.UnsetValue;
+				}
+			}
+			catch (OverflowException)
+			{
+				return DependencyProperty.UnsetValue;
+			}
+			catch (InvalidCastException)
+			{
+				return DependencyProperty.UnsetValue;
+			}
+		} // func IValueConverter.Convert
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			try
+			{
+				switch (Type.GetTypeCode(targetType))
+				{
+					case TypeCode.Single:
+						return value.ChangeType<float>() / parameter.ChangeType<float>();
+					case TypeCode.Double:
+						return value.ChangeType<double>() / parameter.ChangeType<double>();
+					case TypeCode.Decimal:
+						return value.ChangeType<decimal>() / parameter.ChangeType<decimal>();
+
+					case TypeCode.SByte:
+						return value.ChangeType<sbyte>() / parameter.ChangeType<sbyte>();
+					case TypeCode.Int16:
+						return value.ChangeType<short>() / parameter.ChangeType<short>();
+					case TypeCode.Int32:
+						return value.ChangeType<int>() / parameter.ChangeType<int>();
+					case TypeCode.Int64:
+						return value.ChangeType<long>() * parameter.ChangeType<long>();
+
+					case TypeCode.Byte:
+						return value.ChangeType<byte>() / parameter.ChangeType<byte>();
+					case TypeCode.UInt16:
+						return value.ChangeType<ushort>() / parameter.ChangeType<ushort>();
+					case TypeCode.UInt32:
+						return value.ChangeType<uint>() / parameter.ChangeType<uint>();
+					case TypeCode.UInt64:
+						return value.ChangeType<ulong>() / parameter.ChangeType<ulong>();
+
+					default:
+						return DependencyProperty.UnsetValue;
+				}
+			}
+			catch (DivideByZeroException)
+			{
+				return DependencyProperty.UnsetValue;
+			}
+			catch (OverflowException)
+			{
+				return DependencyProperty.UnsetValue;
+			}
+			catch (InvalidCastException)
+			{
+				return DependencyProperty.UnsetValue;
+			}
+		} // func IValueConverter.Convert
+
+		public static MultiplyConverter Default { get; } = new MultiplyConverter();
+	} // class MultiplyConverter
 
 	#endregion
 }

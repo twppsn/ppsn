@@ -374,16 +374,42 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		public bool AllowToggleSelection { get => BooleanBox.GetBool(GetValue(AllowToggleSelectionProperty)); set => SetValue(AllowToggleSelectionProperty, BooleanBox.GetObject(value)); }
 
+		internal static PpsSideBarControl GetSideBarControl(DependencyObject d)
+		{
+			switch (ItemsControlFromItemContainer(d))
+			{
+				case PpsSideBarControl r:
+					return r;
+				case PpsSideBarGroup g:
+					return GetSideBarControl(g);
+				default:
+					return null;
+			}
+		} // func GetSideBarControl
+
+		internal static int GetIndentLevel(DependencyObject d)
+		{
+			switch (ItemsControlFromItemContainer(d))
+			{
+				case PpsSideBarControl r:
+					return 0;
+				case PpsSideBarGroup g:
+					return GetIndentLevel(g) + 1;
+				default:
+					return 0;
+			}
+		} // func GetIndentLevel
+
 		internal static bool CanChangeSetSelection(DependencyObject d, bool setActive)
 			=> setActive || GetAllowToggleSelection(d);
 
 		private static bool GetAllowToggleSelection(DependencyObject d)
-			=> d.GetLogicalParent<PpsSideBarControl>()?.AllowToggleSelection ?? BooleanBox.GetBool(AllowToggleSelectionProperty.DefaultMetadata.DefaultValue);
+			=> GetSideBarControl(d)?.AllowToggleSelection ?? BooleanBox.GetBool(AllowToggleSelectionProperty.DefaultMetadata.DefaultValue);
 
 		static PpsSideBarControl()
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsSideBarControl), new FrameworkPropertyMetadata(typeof(PpsSideBarControl)));
-		}
+		} // sctor
 	} // class PpsSideBarControl
 
 	#endregion
@@ -573,6 +599,8 @@ namespace TecWare.PPSn.Controls
 		public string HeaderStringFormat { get => (string)GetValue(HeaderStringFormatProperty); set => SetValue(HeaderStringFormatProperty, value); }
 		/// <summary></summary>
 		public bool HasHeader { get => BooleanBox.GetBool(GetValue(HasHeaderProperty)); set => SetValue(hasHeaderPropertyKey, BooleanBox.GetObject(value)); }
+		/// <summary>IndentationLevel</summary>
+		public int IndentationLevel => PpsSideBarControl.GetIndentLevel(this);
 	} // class PpsSideBarGroup
 
 	#endregion
@@ -677,6 +705,8 @@ namespace TecWare.PPSn.Controls
 		public bool IsSelected { get => BooleanBox.GetBool(GetValue(IsSelectedProperty)); set => SetValue(IsSelectedProperty, BooleanBox.GetObject(value)); }
 		/// <summary>Is this element the current item.</summary>
 		public bool IsTopSelected => BooleanBox.GetBool(GetValue(IsTopSelectedProperty));
+		/// <summary>IndentationLevel</summary>
+		public int IndentationLevel => PpsSideBarControl.GetIndentLevel(this);
 
 		static PpsSideBarPanel()
 		{
@@ -791,6 +821,8 @@ namespace TecWare.PPSn.Controls
 		public bool HasHeader { get => BooleanBox.GetBool(GetValue(HasHeaderProperty)); set => SetValue(hasHeaderPropertyKey, BooleanBox.GetObject(value)); }
 		/// <summary>Filter object.</summary>
 		public object Filter { get => GetValue(FilterProperty); set => SetValue(FilterProperty, value); }
+		/// <summary>IndentationLevel</summary>
+		public int IndentationLevel => PpsSideBarControl.GetIndentLevel(this);
 
 		static PpsSideBarPanelFilter()
 		{

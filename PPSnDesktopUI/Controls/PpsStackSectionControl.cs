@@ -14,7 +14,6 @@
 //
 #endregion
 using System;
-using System.Linq;
 using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
@@ -58,14 +57,13 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>
 		/// Called when a PpsStackSectionItem is expanded - handles the AccordeonStyle</summary>
-		/// <param name="d">Expanded PpsStackSectionItem</param>
-		public void OnItemExpanded(DependencyObject d)
+		/// <param name="item">Expanded PpsStackSectionItem</param>
+		public void OnItemExpanded(PpsStackSectionItem item)
 		{
 			if (ExpanderStyle == ExpanderStyles.Accordeon)
 			{
-				var openedItems = from PpsStackSectionItem item in Items where ((item.IsExpanded == true) && (item != (PpsStackSectionItem)d)) select item;
-				foreach (var item in openedItems)
-					item.IsExpanded = false;
+				foreach (var cur in Items)
+					item.IsExpanded = item != cur;
 			}
 		}
 
@@ -82,57 +80,67 @@ namespace TecWare.PPSn.Controls
 		#region -- Properties --------------------------------------------------------
 
 		/// <summary>Content of the Subheader</summary>
-		public static readonly DependencyProperty SubheaderProperty = DependencyProperty.Register(nameof(Subheader), typeof(object), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty SubHeaderProperty = DependencyProperty.Register(nameof(SubHeader), typeof(object), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnSubHeaderChanged)));
+
+		private static void OnSubHeaderChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		{
+			var item = (PpsStackSectionItem)d;
+			item.HasSubHeader = e.NewValue != null;
+		} // OnSubHeaderChanged
+
 		/// <summary>Content of the Subheader</summary>
-		public object Subheader { get => GetValue(SubheaderProperty); set => SetValue(SubheaderProperty, value); }
+		public object SubHeader { get => GetValue(SubHeaderProperty); set => SetValue(SubHeaderProperty, value); }
+
 		/// <summary>Template for the Subheader</summary>
-		public static readonly DependencyProperty SubheaderTemplateProperty = DependencyProperty.Register(nameof(SubheaderTemplate), typeof(DataTemplate), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty SubHeaderTemplateProperty = DependencyProperty.Register(nameof(SubHeaderTemplate), typeof(DataTemplate), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(null));
 		/// <summary>Template for the Subheader</summary>
-		public DataTemplate SubheaderTemplate { get => (DataTemplate)GetValue(SubheaderTemplateProperty); set => SetValue(SubheaderTemplateProperty, value); }
+		public DataTemplate SubHeaderTemplate { get => (DataTemplate)GetValue(SubHeaderTemplateProperty); set => SetValue(SubHeaderTemplateProperty, value); }
+
 		/// <summary>TemplateSelector for the Subheader</summary>
-		public static readonly DependencyProperty SubheaderTemplateSelectorProperty = DependencyProperty.Register(nameof(SubheaderTemplateSelector), typeof(DataTemplateSelector), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty SubHeaderTemplateSelectorProperty = DependencyProperty.Register(nameof(SubHeaderTemplateSelector), typeof(DataTemplateSelector), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(null));
 		/// <summary>TemplateSelector for the Subheader</summary>
-		public DataTemplateSelector SubheaderTemplateSelector { get => (DataTemplateSelector)GetValue(SubheaderTemplateSelectorProperty); set => SetValue(SubheaderTemplateSelectorProperty, value); }
+		public DataTemplateSelector SubHeaderTemplateSelector { get => (DataTemplateSelector)GetValue(SubHeaderTemplateSelectorProperty); set => SetValue(SubHeaderTemplateSelectorProperty, value); }
+
 		/// <summary>StringFormat for the Subheader</summary>
-		public static readonly DependencyProperty SubheaderStringFormatProperty = DependencyProperty.Register(nameof(SubheaderStringFormat), typeof(string), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty SubHeaderStringFormatProperty = DependencyProperty.Register(nameof(SubHeaderStringFormat), typeof(string), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(null));
 		/// <summary>StringFormat for the Subheader</summary>
-		public string SubheaderStringFormat { get => (string)GetValue(SubheaderStringFormatProperty); set => SetValue(SubheaderStringFormatProperty, value); }
+		public string SubHeaderStringFormat { get => (string)GetValue(SubHeaderStringFormatProperty); set => SetValue(SubHeaderStringFormatProperty, value); }
+
 		/// <summary>Returns if a Subheader is set</summary>
-		private static readonly DependencyPropertyKey hasSubheaderPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasSubheader), typeof(bool), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(BooleanBox.False));
+		private static readonly DependencyPropertyKey hasSubheaderPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasSubHeader), typeof(bool), typeof(PpsStackSectionItem), new FrameworkPropertyMetadata(BooleanBox.False));
 		/// <summary>Returns if a Subheader is set</summary>
 		public static readonly DependencyProperty HasSubheaderProperty = hasSubheaderPropertyKey.DependencyProperty;
 		/// <summary>Returns if a Subheader is set</summary>
-		public bool HasSubheader { get => BooleanBox.GetBool(GetValue(HasSubheaderProperty)); private set => SetValue(hasSubheaderPropertyKey, BooleanBox.GetObject(value)); }
+		public bool HasSubHeader { get => BooleanBox.GetBool(GetValue(HasSubheaderProperty)); private set => SetValue(hasSubheaderPropertyKey, BooleanBox.GetObject(value)); }
 
 		#endregion
 
 		/// <summary>Overridden to enqueue the Subheader into the LogigalChildren</summary>
 		protected override IEnumerator LogicalChildren
-		{
-			get => LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Subheader);
-		}
-
+			=> LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => SubHeader);
+		
 		#region ---- Handler ------------------------------------------------------------
 
 		/// <summary>Overridden to support AccordeonStyle</summary>
 		protected override void OnExpanded()
 		{
 			base.OnExpanded();
-			((PpsStackSectionControl)this.GetLogicalParent()).OnItemExpanded(this);
-		}
+			StackSectionControl.OnItemExpanded(this);
+		} // proc OnExpanded
 
 		/// <summary>Overridden to support ExpanderStyles</summary>
 		/// <param name="e"></param>
 		protected override void OnInitialized(EventArgs e)
 		{
 			base.OnInitialized(e);
-			if (((PpsStackSectionControl)this.GetLogicalParent()).ExpanderStyle == ExpanderStyles.AllOpen)
-				this.IsExpanded = true;
-			else
-				this.IsExpanded = false;
-		}
+
+			IsExpanded = StackSectionControl.ExpanderStyle == ExpanderStyles.AllOpen;
+		} // proc OnInitialized
 
 		#endregion Handler
+
+		private PpsStackSectionControl StackSectionControl
+			=> (PpsStackSectionControl)ItemsControl.ItemsControlFromItemContainer(this);
 
 		static PpsStackSectionItem()
 		{

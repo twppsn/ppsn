@@ -38,7 +38,7 @@ specific language governing permissions and limitations under the Licence.
 												<RowDefinition/>
 											</Grid.RowDefinitions>
 											<ContentPresenter Grid.Row="0" HorizontalAlignment="Left" ContentSource="Header"/>
-											<ContentPresenter Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" ContentSource="Subheader"/>
+											<ContentPresenter Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" ContentSource="SubHeader"/>
 										</Grid>
 									</ToggleButton>
 								</Grid>
