@@ -607,8 +607,6 @@ namespace TecWare.PPSn.Controls
 		public string HeaderStringFormat { get => (string)GetValue(HeaderStringFormatProperty); set => SetValue(HeaderStringFormatProperty, value); }
 		/// <summary></summary>
 		public bool HasHeader { get => BooleanBox.GetBool(GetValue(HasHeaderProperty)); set => SetValue(hasHeaderPropertyKey, BooleanBox.GetObject(value)); }
-		/// <summary>Calculate margin</summary>
-		public Thickness Indentation => new Thickness(IndentationLevel * 16, 0, 0, 0);
 		/// <summary>IndentationLevel</summary>
 		public int IndentationLevel => PpsSideBarControl.GetIndentLevel(this);
 	} // class PpsSideBarGroup
@@ -716,8 +714,6 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Is this element the current item.</summary>
 		public bool IsTopSelected => BooleanBox.GetBool(GetValue(IsTopSelectedProperty));
 
-		/// <summary>Calculate margin</summary>
-		public Thickness Indentation => new Thickness(IndentationLevel * 16, 0, 0, 0);
 		/// <summary>IndentationLevel</summary>
 		public int IndentationLevel => PpsSideBarControl.GetIndentLevel(this);
 
@@ -834,8 +830,6 @@ namespace TecWare.PPSn.Controls
 		public bool HasHeader { get => BooleanBox.GetBool(GetValue(HasHeaderProperty)); set => SetValue(hasHeaderPropertyKey, BooleanBox.GetObject(value)); }
 		/// <summary>Filter object.</summary>
 		public object Filter { get => GetValue(FilterProperty); set => SetValue(FilterProperty, value); }
-		/// <summary>Calculate margin</summary>
-		public Thickness Indentation => new Thickness(IndentationLevel * 16, 0, 0, 0);
 		/// <summary>IndentationLevel</summary>
 		public int IndentationLevel => PpsSideBarControl.GetIndentLevel(this);
 

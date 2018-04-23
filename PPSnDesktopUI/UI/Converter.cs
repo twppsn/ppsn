@@ -13,6 +13,7 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
+using Neo.IronLua;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -21,7 +22,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Markup;
-using Neo.IronLua;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
@@ -577,8 +577,8 @@ namespace TecWare.PPSn.UI
 
 		private static Thickness MultiplyThickness(object _value, object _parameter, bool div)
 		{
-			var value = _value.ChangeType<Thickness>();
-			var parameter = _parameter.ChangeType<Thickness>();
+			var value = _value.ChangeTypeWithConverter<Thickness>();
+			var parameter = _parameter.ChangeTypeWithConverter<Thickness>();
 
 			return div
 				? new Thickness(value.Left / parameter.Left, value.Top / parameter.Top, value.Right / parameter.Right, value.Bottom / parameter.Bottom)

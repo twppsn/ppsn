@@ -71,8 +71,9 @@ specific language governing permissions and limitations under the Licence.
 											  ContentStringFormat="{TemplateBinding HeaderStringFormat}"
 											  TextElement.FontSize="14"
 											  TextElement.Foreground="{DynamicResource PPSnWindowForegroundBrush}"
-											  Margin="{Binding Indentation, RelativeSource={RelativeSource TemplatedParent}, Mode=OneTime}"
-											  VerticalAlignment="Center" />
+											  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent},Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16;1;1;1'}"
+											  VerticalAlignment="Center">
+							</ContentPresenter>
 						</Grid>
 						<ItemsPresenter />
 					</StackPanel>
@@ -111,7 +112,7 @@ specific language governing permissions and limitations under the Licence.
 										  ContentStringFormat="{TemplateBinding HeaderStringFormat}"
 										  TextElement.FontSize="14"
 										  TextElement.Foreground="{DynamicResource PPSnWindowForegroundBrush}"
-										  Margin="{Binding Indentation, RelativeSource={RelativeSource TemplatedParent}, Mode=OneTime}"
+										  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent}, Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16;1;1;1'}"
 										  VerticalAlignment="Center" />
 					</Grid>
 					<ControlTemplate.Triggers>
@@ -149,7 +150,7 @@ specific language governing permissions and limitations under the Licence.
 										  ContentStringFormat="{TemplateBinding HeaderStringFormat}"
 										  TextElement.FontSize="14"
 										  TextElement.Foreground="{DynamicResource PPSnWindowForegroundBrush}"
-										  Margin="{Binding Indentation, RelativeSource={RelativeSource TemplatedParent}, Mode=OneTime}"
+										  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent},Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16;1;1;1'}"
 										  VerticalAlignment="Center" />
 					</Grid>
 					<ControlTemplate.Triggers>
@@ -174,7 +175,7 @@ specific language governing permissions and limitations under the Licence.
 				<ControlTemplate TargetType="{x:Type pps:PpsSideBarSeparator}">
 					<Border Background="{DynamicResource PPSnSeparatorBrush}"
 							Height="1"
-							SnapsToDevicePixels="true" />
+					SnapsToDevicePixels="true" />
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>

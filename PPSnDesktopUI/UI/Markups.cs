@@ -18,7 +18,6 @@ using System.Reflection;
 using System.Windows.Data;
 using System.Windows.Markup;
 using System.Windows.Media;
-using Neo.IronLua;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
@@ -90,7 +89,7 @@ namespace TecWare.PPSn.UI
 					type = pi.PropertyType;
 			}
 
-			return type == null ? Value : Procs.ChangeType(Value, type);
+			return type == null ? Value : StuffUI.ChangeTypeWithConverter(Value, type);
 		} // func ProvideValue
 
 		/// <summary></summary>
