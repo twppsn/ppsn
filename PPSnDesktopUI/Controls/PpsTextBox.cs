@@ -57,6 +57,8 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Extends Textbox for Number input and a clear button.</summary>
 	public class PpsTextBox : TextBox
 	{
+		#region ---- Globals ------------------------------------------------------------
+
 		private const bool negativeToggling = false;
 		private static readonly string noNegavtiveNumbersMessage = "Negative Eingaben sind nicht erlaubt.";
 		private static readonly string onlyIntegerMessage = "Gebrochene Zahlen sind nicht erlaubt.";
@@ -82,6 +84,10 @@ namespace TecWare.PPSn.Controls
 		public static string LegalDecimalChars(bool includeNegative = false)
 			=> LegalIntegerChars(includeNegative) +
 			   CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
+
+		#endregion Globals
+
+		#region ---- DependencyProperties -----------------------------------------------
 
 		/// <summary>Selects the valid input for the Textbox</summary>
 		public static readonly DependencyProperty InputTypeProperty = DependencyProperty.Register(nameof(InputType), typeof(PpsTextBoxInputType), typeof(PpsTextBox), new FrameworkPropertyMetadata(PpsTextBoxInputType.SingleLine, new PropertyChangedCallback(OnInputTypeChangedCallback)));
@@ -114,47 +120,9 @@ namespace TecWare.PPSn.Controls
 		private static void OnInputTypeChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsTextBox)d).OnInputTypeChanged((PpsTextBoxInputType)e.NewValue, (PpsTextBoxInputType)e.OldValue);
 
-		/// <summary></summary>
-		/// <param name="newValue"></param>
-		/// <param name="oldValue"></param>
-		protected virtual void OnInputTypeChanged(PpsTextBoxInputType newValue, PpsTextBoxInputType oldValue)
-		{
-			this.AcceptsReturn = IsMultilineInput(newValue);
-			this.AcceptsTab = newValue == PpsTextBoxInputType.Any;
+		#endregion DependencyProperties
 
-			NeatlyCleanText();
-		} // proc OnInputTypeChanged
-
-		/// <summary>If text is entered by Keyboard do not process illegal chars (TextChanged is not called)</summary>
-		/// <param name="e"></param>
-		protected override void OnPreviewTextInput(TextCompositionEventArgs e)
-		{
-			if (!IsTextualInput(InputType))
-			{
-				if (!IsNegativeAllowed(InputType))
-					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NegativeSign))
-					{
-						e.Handled = true;
-						SetError(noNegavtiveNumbersMessage);
-					}
-				if (!IsDecimalAllowed(InputType))
-					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator))
-					{
-						e.Handled = true;
-						SetError(onlyIntegerMessage);
-					}
-			}
-			else
-			{
-				if (e.Text.Contains(Environment.NewLine))
-				{
-					e.Handled = true;
-					SetError(tooMuchLinesMessage);
-				}
-			}
-
-			base.OnPreviewTextInput(e);
-		} // func OnPreviewTextInput
+		#region ---- Error Handling -----------------------------------------------------
 
 		private Timer fadetimer;
 
@@ -181,6 +149,10 @@ namespace TecWare.PPSn.Controls
 			ErrorMessage = String.Empty;
 			fadetimer.Stop();
 		}
+
+		#endregion Error Handling
+
+		#region ---- Handling of Input --------------------------------------------------
 
 		private void NeatlyReplaceText(string newText)
 		{
@@ -344,6 +316,10 @@ namespace TecWare.PPSn.Controls
 				NeatlyReplaceText(newTextString);
 		} // proc NeatlyCleanText
 
+		#endregion Handling of Input
+
+		#region ---- Helper Functions ---------------------------------------------------
+
 		private static bool IsMultilineInput(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Any || inputType == PpsTextBoxInputType.Multiline;
 
 		private static bool IsTextualInput(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Any ||
@@ -353,6 +329,52 @@ namespace TecWare.PPSn.Controls
 		private static bool IsDecimalAllowed(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Decimal || inputType == PpsTextBoxInputType.DecimalNegative;
 
 		private static bool IsNegativeAllowed(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.IntegerNegative || inputType == PpsTextBoxInputType.DecimalNegative;
+
+		#endregion Helper Functions
+
+		#region ---- Event Handlers -----------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		protected virtual void OnInputTypeChanged(PpsTextBoxInputType newValue, PpsTextBoxInputType oldValue)
+		{
+			this.AcceptsReturn = IsMultilineInput(newValue);
+			this.AcceptsTab = newValue == PpsTextBoxInputType.Any;
+
+			NeatlyCleanText();
+		} // proc OnInputTypeChanged
+
+		/// <summary>If text is entered by Keyboard do not process illegal chars (TextChanged is not called)</summary>
+		/// <param name="e"></param>
+		protected override void OnPreviewTextInput(TextCompositionEventArgs e)
+		{
+			if (!IsTextualInput(InputType))
+			{
+				if (!IsNegativeAllowed(InputType))
+					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NegativeSign))
+					{
+						e.Handled = true;
+						SetError(noNegavtiveNumbersMessage);
+					}
+				if (!IsDecimalAllowed(InputType))
+					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator))
+					{
+						e.Handled = true;
+						SetError(onlyIntegerMessage);
+					}
+			}
+			else
+			{
+				if (e.Text.Contains(Environment.NewLine))
+				{
+					e.Handled = true;
+					SetError(tooMuchLinesMessage);
+				}
+			}
+
+			base.OnPreviewTextInput(e);
+		} // func OnPreviewTextInput
 
 		private bool retriggerHold = false;
 
@@ -378,6 +400,8 @@ namespace TecWare.PPSn.Controls
 			HasErrored = false;
 			base.OnLostFocus(e);
 		}
+
+		#endregion Event Handlers
 
 		/// <summary>public Constructor - initializes the Commands</summary>
 		public PpsTextBox()
