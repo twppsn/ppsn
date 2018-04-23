@@ -369,6 +369,16 @@ namespace TecWare.PPSn.Controls
 
 			retriggerHold = false;
 		} // proc OnTextChanged
+
+		/// <summary>public Constructor - initializes the Commands</summary>
+		public PpsTextBox()
+		{
+			CommandBindings.Add(new CommandBinding(ClearTextCommand,
+				(sender, e) =>
+				{
+					Text = String.Empty;
+				}, (sender, e) => e.CanExecute = !String.IsNullOrEmpty(Text)));
+		}
 	} // class PpsTextBox
 
 	#endregion class PpsTextBox
