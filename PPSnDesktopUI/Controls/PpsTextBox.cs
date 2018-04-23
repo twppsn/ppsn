@@ -58,6 +58,14 @@ namespace TecWare.PPSn.Controls
 	public class PpsTextBox : TextBox
 	{
 		private const bool negativeToggling = false;
+		private static readonly string noNegavtiveNumbersMessage = "Negative Eingaben sind nicht erlaubt.";
+		private static readonly string invalidCharMessage = "Ungültiges Eingabezeichen.";
+		private static readonly string onlyIntegerMessage = "Gebrochene Zahlen sind nicht erlaubt.";
+		private static readonly string colonMovedMessage = "Das Komma wurde verschoben.";
+		private static readonly string tooMuchLinesMessage = $"Dieses Eingabefeld unterstützt nicht so viele Zeilen.";
+		private static readonly char carriageReturnChar = '\r';
+		private static readonly char lineFeedChar = '\n';
+
 		/// <summary>Legal chars which can be in a Number</summary>
 		public const string LegalIntegers = "0123456789";
 
@@ -121,17 +129,25 @@ namespace TecWare.PPSn.Controls
 			if (!IsTextualInput(InputType))
 			{
 				if (!IsNegativeAllowed(InputType))
-					if (e.Text.Except(LegalDecimalChars(false)).Any())
+					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NegativeSign))
 					{
 						e.Handled = true;
-						SetError("der Wert darf nicht negativ werden");
+						SetError(noNegavtiveNumbersMessage);
 					}
 				if (!IsDecimalAllowed(InputType))
-					if (e.Text.Except(LegalIntegerChars(true)).Any())
+					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator))
 					{
 						e.Handled = true;
-						SetError("der Wert darf nicht negativ werden");
+						SetError(onlyIntegerMessage);
 					}
+			}
+			else
+			{
+				if (e.Text.Contains(Environment.NewLine))
+				{
+					e.Handled = true;
+					SetError(tooMuchLinesMessage);
+				}
 			}
 
 			base.OnPreviewTextInput(e);
@@ -148,13 +164,20 @@ namespace TecWare.PPSn.Controls
 					Interval = 5000,
 					AutoReset = false
 				};
-				fadetimer.Elapsed += (s, e) => { Dispatcher.Invoke(() => HasErrored = false); fadetimer.Stop(); };
+				fadetimer.Elapsed += (s, e) => { Dispatcher.Invoke(() => ResetError()); };
 			}
 
 			HasErrored = true;
 			ErrorMessage = message;
 			fadetimer.Start();
 		} // proc SetError
+
+		private void ResetError()
+		{
+			HasErrored = false;
+			ErrorMessage = String.Empty;
+			fadetimer.Stop();
+		}
 
 		private void NeatlyReplaceText(string newText)
 		{
@@ -189,7 +212,7 @@ namespace TecWare.PPSn.Controls
 					}
 					if (IsMultilineInput(InputType))
 					{
-						if (c == '\n')
+						if (c == lineFeedChar)
 						{
 							if (lastWasCarriagereturn)
 								if (remainingLines > 0)
@@ -203,7 +226,7 @@ namespace TecWare.PPSn.Controls
 								{
 									lastWasCarriagereturn = false;
 									newText.Remove(newText.Length - 1, 1);
-									SetError($"Dieses Eingabefeld unterstützt nur {LineCount} Zeilen.");
+									SetError(tooMuchLinesMessage);
 									continue;
 								}
 							else
@@ -217,12 +240,12 @@ namespace TecWare.PPSn.Controls
 								}
 								else
 								{
-									SetError($"Dieses Eingabefeld unterstützt nur {LineCount} Zeilen.");
+									SetError(tooMuchLinesMessage);
 									continue;
 								}
 							}
 						}
-						if (c == '\r')
+						if (c == carriageReturnChar)
 						{
 							if (lastWasNewline)
 							{
@@ -240,7 +263,7 @@ namespace TecWare.PPSn.Controls
 							}
 						}
 					}
-				}
+				} // if(IsTextualInput)
 
 				lastWasCarriagereturn = false;
 				lastWasNewline = false;
@@ -264,7 +287,7 @@ namespace TecWare.PPSn.Controls
 					}
 					else
 					{
-						SetError("Negative Eingaben sind nicht erlaubt.");
+						SetError(noNegavtiveNumbersMessage);
 					}
 				}
 
@@ -283,13 +306,13 @@ namespace TecWare.PPSn.Controls
 							newText.Remove(firstColonIndex, 1);
 							newText.Append(c);
 							firstColonIndex = newText.Length - 1;
-							SetError("Das Komma wurde verschoben.");
+							SetError(colonMovedMessage);
 							continue;
 						}
 					}
 					else
 					{
-						SetError("Es sind nur ganze Zahlen erlaubt.");
+						SetError(onlyIntegerMessage);
 					}
 				}
 			} // foreach(var c in Text)
