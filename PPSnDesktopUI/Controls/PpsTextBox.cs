@@ -25,7 +25,7 @@ namespace TecWare.PPSn.Controls
 {
 	#region -- enum PpsTextBoxInputType -----------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Possible Inputtypes to specify the valid data.</summary>
 	public enum PpsTextBoxInputType
 	{
 		/// <summary>Input is not checked</summary>
@@ -49,7 +49,7 @@ namespace TecWare.PPSn.Controls
 		//Formatted = 3
 	} // enum PpsTextBoxInputType
 
-	#endregion
+	#endregion enum PpsTextBoxInputType
 
 	#region -- class PpsTextBox -------------------------------------------------------
 
@@ -59,20 +59,25 @@ namespace TecWare.PPSn.Controls
 		private const bool negativeToggling = false;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		/// <summary>Selects the valid input for the Textbox</summary>
 		public static readonly DependencyProperty InputTypeProperty = DependencyProperty.Register(nameof(InputType), typeof(PpsTextBoxInputType), typeof(PpsTextBox), new FrameworkPropertyMetadata(PpsTextBoxInputType.SingleLine, new PropertyChangedCallback(OnInputTypeChangedCallback)));
+		/// <summary>Is the field nullable.</summary>
 		public static readonly DependencyProperty IsNullableProperty = DependencyProperty.Register(nameof(IsNullable), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(true));
+		/// <summary>The message presented to the user if the data was invalid</summary>
 		public static readonly DependencyProperty ErrorMessageProperty = DependencyProperty.Register(nameof(ErrorMessage), typeof(string), typeof(PpsTextBox));
-
+		/// <summary>True if there was an invalid entry. Auto-Resets</summary>
 		/// <summary>Sets the allowed Lines for this Textbox</summary>
 		public static readonly DependencyProperty AllowedLineCountProperty = DependencyProperty.Register(nameof(AllowedLineCount), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(1));
 
 		public static readonly RoutedCommand ClearTextCommand = new RoutedUICommand("ClearText", "ClearText", typeof(PpsTextBox));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
+		/// <summary>Defines the input mask for the textbox.</summary>
 		/// <summary>Is the field nullable.</summary>
 		public bool IsNullable { get => BooleanBox.GetBool(GetValue(IsNullableProperty)); set => SetValue(IsNullableProperty, BooleanBox.GetObject(value)); }
 		/// <summary>Sets the allowed Lines for this Textbox</summary>
 		public int AllowedLineCount { get => (int)GetValue(AllowedLineCountProperty); set => SetValue(AllowedLineCountProperty, value); }
+		/// <summary>The message presented to the user if the data was invalid</summary>
 		public string ErrorMessage { get => (string)GetValue(ErrorMessageProperty); set => SetValue(ErrorMessageProperty, value); }
 
 		private static void OnInputTypeChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -86,16 +91,10 @@ namespace TecWare.PPSn.Controls
 			this.AcceptsReturn = IsMultilineInput(newValue);
 			this.AcceptsTab = newValue == PpsTextBoxInputType.Any;
 
-			/*if (newValue != PpsTextBoxInputType.Text && !TryValidateInput(Text))
-				ClearValue(TextProperty);
-
-			if (oldValue == PpsTextBoxInputType.Text && newValue != PpsTextBoxInputType.Text)
-				DataObject.AddPastingHandler(this, OnClipboardPasting);
-			else
-				DataObject.RemovePastingHandler(this, OnClipboardPasting);*/ // ToDo
+			NeatlyCleanText();
 		} // proc OnInputTypeChanged
 
-		/// <summary>If text is entered my Keyboard do not process illegal chars (TextChanged is not called)</summary>
+		/// <summary>If text is entered by Keyboard do not process illegal chars (TextChanged is not called)</summary>
 		/// <param name="e"></param>
 		protected override void OnPreviewTextInput(TextCompositionEventArgs e)
 		{
@@ -119,7 +118,7 @@ namespace TecWare.PPSn.Controls
 			Text = newText;
 			curPos -= curLen - Text.Length;
 			this.CaretIndex = curPos;
-		}
+		} // proc NeatlyReplaceText
 
 		private void NeatlyCleanText()
 		{
@@ -261,7 +260,7 @@ namespace TecWare.PPSn.Controls
 
 			if (Text != newTextString)
 				NeatlyReplaceText(newTextString);
-		}
+		} // proc NeatlyCleanText
 
 		private static bool IsMultilineInput(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Any || inputType == PpsTextBoxInputType.Multiline;
 
@@ -287,45 +286,8 @@ namespace TecWare.PPSn.Controls
 			NeatlyCleanText();
 
 			retriggerHold = false;
-		}
-
-		/// <summary></summary>
-		/// <param name="e"></param>
-		protected override void OnPreviewKeyDown(KeyEventArgs e)
-		{
-
-			if (InputType == PpsTextBoxInputType.Integer)
-			{
-				//var c = GetCharFromKey(e.Key);
-			}
-
-		} // func OnPreviewKeyDown
-
-		/// <summary>Legal chars which can be in a Number</summary>
-		public const string LegalIntegers = "0123456789";
-
-		/// <summary>Legal chars which can be in a Integer</summary>
-		/// <param name="includeNegative">is the minus sign legal</param>
-		/// <returns></returns>
-		public static string LegalIntegerChars(bool includeNegative = false)
-			=> LegalIntegers +
-			   CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator +
-			   (includeNegative ? CultureInfo.CurrentCulture.NumberFormat.NegativeSign : String.Empty);
-
-		/// <summary>Legal chars which can be in a Decimal</summary>
-		/// <param name="includeNegative">is the minus sign legal</param>
-		/// <returns></returns>
-		public static string LegalDecimalChars(bool includeNegative = false)
-			=> LegalIntegerChars(includeNegative) +
-			   CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
-
-		private void OnClipboardPasting(object sender, DataObjectPastingEventArgs e)
-		{
-		} // proc OnClipboardPasting
-
-		/// <summary>Defines the input mask for the textbox.</summary>
-		public PpsTextBoxInputType InputType { get => (PpsTextBoxInputType)GetValue(InputTypeProperty); set => SetValue(InputTypeProperty, value); }
+		} // proc OnTextChanged
 	} // class PpsTextBox
 
-	#endregion
+	#endregion class PpsTextBox
 }
