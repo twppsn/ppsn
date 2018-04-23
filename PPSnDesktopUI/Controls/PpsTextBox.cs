@@ -63,7 +63,7 @@ namespace TecWare.PPSn.Controls
 		private static readonly string noNegavtiveNumbersMessage = "Negative Eingaben sind nicht erlaubt.";
 		private static readonly string onlyIntegerMessage = "Gebrochene Zahlen sind nicht erlaubt.";
 		private static readonly string colonMovedMessage = "Das Komma wurde verschoben.";
-		private static readonly string tooMuchLinesMessage = $"Dieses Eingabefeld unterstützt nicht so viele Zeilen.";
+		private static readonly string tooMuchLinesMessage = "Dieses Eingabefeld unterstützt nicht so viele Zeilen.";
 		private static readonly char carriageReturnChar = '\r';
 		private static readonly char lineFeedChar = '\n';
 
@@ -320,15 +320,19 @@ namespace TecWare.PPSn.Controls
 
 		#region ---- Helper Functions ---------------------------------------------------
 
-		private static bool IsMultilineInput(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Any || inputType == PpsTextBoxInputType.Multiline;
+		private static bool IsMultilineInput(PpsTextBoxInputType inputType) 
+			=> inputType == PpsTextBoxInputType.Any || inputType == PpsTextBoxInputType.Multiline;
 
-		private static bool IsTextualInput(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Any ||
-			inputType == PpsTextBoxInputType.SingleLine ||
-			inputType == PpsTextBoxInputType.Multiline;
+		private static bool IsTextualInput(PpsTextBoxInputType inputType) 
+			=> inputType == PpsTextBoxInputType.Any 
+			|| inputType == PpsTextBoxInputType.SingleLine 
+			|| inputType == PpsTextBoxInputType.Multiline;
 
-		private static bool IsDecimalAllowed(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Decimal || inputType == PpsTextBoxInputType.DecimalNegative;
+		private static bool IsDecimalAllowed(PpsTextBoxInputType inputType)
+			=> inputType == PpsTextBoxInputType.Decimal || inputType == PpsTextBoxInputType.DecimalNegative;
 
-		private static bool IsNegativeAllowed(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.IntegerNegative || inputType == PpsTextBoxInputType.DecimalNegative;
+		private static bool IsNegativeAllowed(PpsTextBoxInputType inputType) 
+			=> inputType == PpsTextBoxInputType.IntegerNegative || inputType == PpsTextBoxInputType.DecimalNegative;
 
 		#endregion Helper Functions
 
@@ -352,17 +356,22 @@ namespace TecWare.PPSn.Controls
 			if (!IsTextualInput(InputType))
 			{
 				if (!IsNegativeAllowed(InputType))
+				{
 					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NegativeSign))
 					{
 						e.Handled = true;
 						SetError(noNegavtiveNumbersMessage);
 					}
+				}
+
 				if (!IsDecimalAllowed(InputType))
+				{
 					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator))
 					{
 						e.Handled = true;
 						SetError(onlyIntegerMessage);
 					}
+				}
 			}
 			else
 			{
@@ -399,7 +408,7 @@ namespace TecWare.PPSn.Controls
 			ErrorMessage = String.Empty;
 			HasErrored = false;
 			base.OnLostFocus(e);
-		}
+		} // proc OnLostFocus
 
 		#endregion Event Handlers
 
