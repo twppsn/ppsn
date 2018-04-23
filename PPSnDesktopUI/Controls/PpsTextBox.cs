@@ -59,7 +59,6 @@ namespace TecWare.PPSn.Controls
 	{
 		private const bool negativeToggling = false;
 		private static readonly string noNegavtiveNumbersMessage = "Negative Eingaben sind nicht erlaubt.";
-		private static readonly string invalidCharMessage = "Ungültiges Eingabezeichen.";
 		private static readonly string onlyIntegerMessage = "Gebrochene Zahlen sind nicht erlaubt.";
 		private static readonly string colonMovedMessage = "Das Komma wurde verschoben.";
 		private static readonly string tooMuchLinesMessage = $"Dieses Eingabefeld unterstützt nicht so viele Zeilen.";
@@ -94,6 +93,8 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty HasErroredProperty = DependencyProperty.Register(nameof(HasErrored), typeof(bool), typeof(PpsTextBox), new PropertyMetadata(false));
 		/// <summary>Sets the allowed Lines for this Textbox</summary>
 		public static readonly DependencyProperty AllowedLineCountProperty = DependencyProperty.Register(nameof(AllowedLineCount), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(1));
+		/// <summary>The Time in Milliseconds an Information is shown.</summary>
+		public static readonly DependencyProperty ErrorVisibleTimeProperty = DependencyProperty.Register(nameof(ErrorVisibleTime), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(5000));
 		/// <summary>The Command empties the TextBox</summary>
 		public static readonly RoutedCommand ClearTextCommand = new RoutedUICommand("ClearText", "ClearText", typeof(PpsTextBox));
 
@@ -107,6 +108,8 @@ namespace TecWare.PPSn.Controls
 		public string ErrorMessage { get => (string)GetValue(ErrorMessageProperty); set => SetValue(ErrorMessageProperty, value); }
 		/// <summary>True if there was an invalid entry. Auto-Resets</summary>
 		public bool HasErrored { get => BooleanBox.GetBool(GetValue(HasErroredProperty)); set => SetValue(HasErroredProperty, value); }
+		/// <summary>The Time in Milliseconds an Information is shown.</summary>
+		public int ErrorVisibleTime { get => (int)GetValue(ErrorVisibleTimeProperty); set => SetValue(ErrorVisibleTimeProperty, value); }
 
 		private static void OnInputTypeChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsTextBox)d).OnInputTypeChanged((PpsTextBoxInputType)e.NewValue, (PpsTextBoxInputType)e.OldValue);
@@ -161,7 +164,7 @@ namespace TecWare.PPSn.Controls
 			{
 				fadetimer = new Timer()
 				{
-					Interval = 5000,
+					Interval = ErrorVisibleTime,
 					AutoReset = false
 				};
 				fadetimer.Elapsed += (s, e) => { Dispatcher.Invoke(() => ResetError()); };
