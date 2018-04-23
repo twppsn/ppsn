@@ -310,7 +310,7 @@ namespace TecWare.PPSn.Controls
 			else if (element is Separator sep)
 			{
 				const string resourceKey = "ppsSideBarSeparator";
-				sep.SetResourceReference(StyleProperty, resourceKey);
+				//sep.SetResourceReference(StyleProperty, resourceKey);
 				sep.SetValue(DefaultStyleKeyProperty, resourceKey);
 			}
 
