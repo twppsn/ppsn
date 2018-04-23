@@ -27,6 +27,8 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public abstract class PpsSideBarItemsBase : MultiSelector
 	{
+		/// <summary></summary>
+		public static readonly ComponentResourceKey PpsSideBarSeparator = new ComponentResourceKey(typeof(PpsSideBarControl), "PpsSideBarSeparator");
 		private static readonly DependencyProperty isItemTemplateIsItsOwnContainerProperty = DependencyProperty.Register("IsItemTemplateIsItsOwnContainer", typeof(bool), typeof(PpsSideBarItemsBase), new FrameworkPropertyMetadata(BooleanBox.False));
 
 		#region -- Content Properties -------------------------------------------------
@@ -309,9 +311,8 @@ namespace TecWare.PPSn.Controls
 				return;
 			else if (element is Separator sep)
 			{
-				const string resourceKey = "ppsSideBarSeparator";
-				//sep.SetResourceReference(StyleProperty, resourceKey);
-				sep.SetValue(DefaultStyleKeyProperty, resourceKey);
+				//sep.SetResourceReference(StyleProperty, PpsSideBarSeparator);
+				sep.SetValue(DefaultStyleKeyProperty, PpsSideBarSeparator);
 			}
 
 			base.PrepareContainerForItemOverride(element, item);
