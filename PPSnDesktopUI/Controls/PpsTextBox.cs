@@ -61,6 +61,9 @@ namespace TecWare.PPSn.Controls
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty InputTypeProperty = DependencyProperty.Register(nameof(InputType), typeof(PpsTextBoxInputType), typeof(PpsTextBox), new FrameworkPropertyMetadata(PpsTextBoxInputType.SingleLine, new PropertyChangedCallback(OnInputTypeChangedCallback)));
 		public static readonly DependencyProperty IsNullableProperty = DependencyProperty.Register(nameof(IsNullable), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(true));
+		public static readonly DependencyProperty ErrorMessageProperty = DependencyProperty.Register(nameof(ErrorMessage), typeof(string), typeof(PpsTextBox));
+
+		/// <summary>Sets the allowed Lines for this Textbox</summary>
 		public static readonly DependencyProperty AllowedLineCountProperty = DependencyProperty.Register(nameof(AllowedLineCount), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(1));
 
 		public static readonly RoutedCommand ClearTextCommand = new RoutedUICommand("ClearText", "ClearText", typeof(PpsTextBox));
@@ -70,6 +73,7 @@ namespace TecWare.PPSn.Controls
 		public bool IsNullable { get => BooleanBox.GetBool(GetValue(IsNullableProperty)); set => SetValue(IsNullableProperty, BooleanBox.GetObject(value)); }
 		/// <summary>Sets the allowed Lines for this Textbox</summary>
 		public int AllowedLineCount { get => (int)GetValue(AllowedLineCountProperty); set => SetValue(AllowedLineCountProperty, value); }
+		public string ErrorMessage { get => (string)GetValue(ErrorMessageProperty); set => SetValue(ErrorMessageProperty, value); }
 
 		private static void OnInputTypeChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsTextBox)d).OnInputTypeChanged((PpsTextBoxInputType)e.NewValue, (PpsTextBoxInputType)e.OldValue);
@@ -318,138 +322,6 @@ namespace TecWare.PPSn.Controls
 		private void OnClipboardPasting(object sender, DataObjectPastingEventArgs e)
 		{
 		} // proc OnClipboardPasting
-
-		private bool TryValidateInput(string text)
-		{
-			switch (InputType)
-			{
-				case PpsTextBoxInputType.Decimal:
-				case PpsTextBoxInputType.Integer:
-				case PpsTextBoxInputType.Any:
-					break;
-			}
-			return true;
-		} // func TryValidateInput
-
-		//private static bool ValidateInteger(string text)
-		//{
-		//	if (text == "-")
-		//		return true;
-
-		//	var numberStyles = NumberStyles.AllowLeadingSign | NumberStyles.AllowThousands;
-		//	int value;
-		//	if (!int.TryParse(text, numberStyles, CultureInfo.CurrentUICulture, out value))
-		//		return false;
-
-		//	return true;
-		//}
-
-		//private static bool ValidateDecimal(string text)
-		//{
-		//	if (text == "-")
-		//		return true;
-		//	var numberStyles = NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign | NumberStyles.AllowThousands;
-		//	decimal value;
-		//	if (!Decimal.TryParse(text, numberStyles, CultureInfo.CurrentUICulture, out value))
-		//		return false;
-
-		//	return true;
-		//}
-
-
-		//private static void TextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
-		//{
-		//	var textBox = sender as TextBox;
-		//	var inputType = GetInputType(textBox);
-		//	var proposedText = GetProposedText(textBox, e.Text);
-
-		//	if (!ValidateString(proposedText, inputType))
-		//	{
-		//		e.Handled = true;
-		//	}
-		//}
-
-		//// pressing space and backspace doesn't raise PreviewTextInput
-		//private static void TextBox_PreviewKeyDown(object sender, KeyEventArgs e)
-		//{
-		//	var textBox = sender as TextBox;
-		//	var inputType = GetInputType(textBox);
-
-		//	string proposedText = null;
-		//	if (e.Key == Key.Space)
-		//	{
-		//		proposedText = GetProposedText(textBox, " ");
-		//	}
-		//	else if (e.Key == Key.Back)
-		//	{
-		//		proposedText = GetProposedTextBackspace(textBox);
-		//	}
-
-		//	if (proposedText == null || proposedText == String.Empty)
-		//	{
-		//		return;
-		//	}
-
-
-		//	if (!ValidateString(proposedText, inputType))
-		//	{
-		//		e.Handled = true;
-		//	}
-		//}
-
-		//private static void TextBox_PastingEventHandler(object sender, DataObjectPastingEventArgs e)
-		//{
-		//	if (e.DataObject.GetDataPresent(typeof(string)))
-		//	{
-		//		var textBox = sender as TextBox;
-		//		var pastedText = e.DataObject.GetData(typeof(string)) as string;
-		//		var proposedText = GetProposedText(textBox, pastedText);
-		//		var inputType = GetInputType(textBox);
-
-		//		if (!ValidateString(proposedText, inputType))
-		//		{
-		//			e.CancelCommand();
-		//		}
-		//	}
-		//	else
-		//	{
-		//		e.CancelCommand();
-		//	}
-		//}
-
-		//private static string GetProposedText(TextBox textBox, string newText)
-		//{
-		//	var text = textBox.Text;
-
-		//	if (textBox.SelectionStart != -1)
-		//	{
-		//		text = text.Remove(textBox.SelectionStart, textBox.SelectionLength);
-		//	}
-
-		//	text = text.Insert(textBox.CaretIndex, newText);
-
-		//	return text;
-		//} // func GetProposedText
-
-		//private static string GetProposedTextBackspace(TextBox textBox)
-		//{
-		//	var text = GetTextWithSelectionRemoved(textBox);
-		//	if (textBox.SelectionStart > 0 && textBox.SelectionLength == 0)
-		//	{
-		//		text = text.Remove(textBox.SelectionStart - 1, 1);
-		//	}
-		//	return text;
-		//}
-
-		//private static string GetTextWithSelectionRemoved(TextBox textBox)
-		//{
-		//	var text = textBox.Text;
-		//	if (textBox.SelectionStart != -1)
-		//	{
-		//		text = text.Remove(textBox.SelectionStart, textBox.SelectionLength);
-		//	}
-		//	return text;
-		//}
 
 		/// <summary>Defines the input mask for the textbox.</summary>
 		public PpsTextBoxInputType InputType { get => (PpsTextBoxInputType)GetValue(InputTypeProperty); set => SetValue(InputTypeProperty, value); }

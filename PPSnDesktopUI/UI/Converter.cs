@@ -575,6 +575,17 @@ namespace TecWare.PPSn.UI
 		{
 		}
 
+		private static Thickness MultiplyThickness(object _value, object _parameter, bool div)
+		{
+			var value = _value.ChangeType<Thickness>();
+			var parameter = _parameter.ChangeType<Thickness>();
+
+			return div
+				? new Thickness(value.Left / parameter.Left, value.Top / parameter.Top, value.Right / parameter.Right, value.Bottom / parameter.Bottom)
+				: new Thickness(value.Left * parameter.Left, value.Top * parameter.Top, value.Right * parameter.Right, value.Bottom * parameter.Bottom);
+		} // func MultiplyThickness
+
+
 		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			try
@@ -606,6 +617,11 @@ namespace TecWare.PPSn.UI
 					case TypeCode.UInt64:
 						return value.ChangeType<ulong>() * parameter.ChangeType<ulong>();
 
+					case TypeCode.Object:
+						if (targetType == typeof(Thickness))
+							return MultiplyThickness(value, parameter,  false);
+						else
+							goto default;
 					default:
 						return DependencyProperty.UnsetValue;
 				}
@@ -650,6 +666,12 @@ namespace TecWare.PPSn.UI
 						return value.ChangeType<uint>() / parameter.ChangeType<uint>();
 					case TypeCode.UInt64:
 						return value.ChangeType<ulong>() / parameter.ChangeType<ulong>();
+
+					case TypeCode.Object:
+						if (targetType == typeof(Thickness))
+							return MultiplyThickness(value, parameter, true);
+						else
+							goto default;
 
 					default:
 						return DependencyProperty.UnsetValue;
