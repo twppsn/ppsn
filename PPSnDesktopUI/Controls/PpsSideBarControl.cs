@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Drawing;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -306,6 +307,11 @@ namespace TecWare.PPSn.Controls
 		{
 			if (element is PpsSideBarPanel panel) // do not copy TemplateXXX die HeaderTemplateXXX
 				return;
+			else if (element is Separator sep)
+			{
+				sep.SetResourceReference(StyleProperty, "ppsSideBarSeparator");
+				//sep.DefaultStyleKey = "ppsSideBarSeparator";
+			}
 
 			base.PrepareContainerForItemOverride(element, item);
 		} // proc PrepareContainerForItemOverride
@@ -369,7 +375,8 @@ namespace TecWare.PPSn.Controls
 		protected override bool IsItemItsOwnContainerOverride(object item)
 			=> item is PpsSideBarGroup
 			|| item is PpsSideBarPanel
-			|| item is PpsSideBarPanelFilter;
+			|| item is PpsSideBarPanelFilter
+			|| item is Separator;
 
 		/// <summary></summary>
 		public bool AllowToggleSelection { get => BooleanBox.GetBool(GetValue(AllowToggleSelectionProperty)); set => SetValue(AllowToggleSelectionProperty, BooleanBox.GetObject(value)); }
@@ -430,6 +437,7 @@ namespace TecWare.PPSn.Controls
 
 		private static readonly DependencyPropertyKey hasHeaderPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasHeader), typeof(bool), typeof(PpsSideBarGroup), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty HasHeaderProperty = hasHeaderPropertyKey.DependencyProperty;
+
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		static PpsSideBarGroup()
@@ -599,6 +607,8 @@ namespace TecWare.PPSn.Controls
 		public string HeaderStringFormat { get => (string)GetValue(HeaderStringFormatProperty); set => SetValue(HeaderStringFormatProperty, value); }
 		/// <summary></summary>
 		public bool HasHeader { get => BooleanBox.GetBool(GetValue(HasHeaderProperty)); set => SetValue(hasHeaderPropertyKey, BooleanBox.GetObject(value)); }
+		/// <summary>Calculate margin</summary>
+		public Thickness Indentation => new Thickness(IndentationLevel * 16, 0, 0, 0);
 		/// <summary>IndentationLevel</summary>
 		public int IndentationLevel => PpsSideBarControl.GetIndentLevel(this);
 	} // class PpsSideBarGroup
@@ -705,6 +715,9 @@ namespace TecWare.PPSn.Controls
 		public bool IsSelected { get => BooleanBox.GetBool(GetValue(IsSelectedProperty)); set => SetValue(IsSelectedProperty, BooleanBox.GetObject(value)); }
 		/// <summary>Is this element the current item.</summary>
 		public bool IsTopSelected => BooleanBox.GetBool(GetValue(IsTopSelectedProperty));
+
+		/// <summary>Calculate margin</summary>
+		public Thickness Indentation => new Thickness(IndentationLevel * 16, 0, 0, 0);
 		/// <summary>IndentationLevel</summary>
 		public int IndentationLevel => PpsSideBarControl.GetIndentLevel(this);
 
@@ -821,6 +834,8 @@ namespace TecWare.PPSn.Controls
 		public bool HasHeader { get => BooleanBox.GetBool(GetValue(HasHeaderProperty)); set => SetValue(hasHeaderPropertyKey, BooleanBox.GetObject(value)); }
 		/// <summary>Filter object.</summary>
 		public object Filter { get => GetValue(FilterProperty); set => SetValue(FilterProperty, value); }
+		/// <summary>Calculate margin</summary>
+		public Thickness Indentation => new Thickness(IndentationLevel * 16, 0, 0, 0);
 		/// <summary>IndentationLevel</summary>
 		public int IndentationLevel => PpsSideBarControl.GetIndentLevel(this);
 
@@ -829,6 +844,19 @@ namespace TecWare.PPSn.Controls
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(typeof(PpsSideBarPanelFilter)));
 		}
 	} // class PpsSideBarPanelFilter
+
+	#endregion
+
+	#region -- class PpsSideBarSeparator ----------------------------------------------
+
+	/// <summary>Separator between SideBarItems.</summary>
+	public class PpsSideBarSeparator : Control
+	{
+		static PpsSideBarSeparator()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsSideBarSeparator), new FrameworkPropertyMetadata(typeof(PpsSideBarSeparator)));
+		}
+	} // class PpsSideBarSeparator
 
 	#endregion
 }
