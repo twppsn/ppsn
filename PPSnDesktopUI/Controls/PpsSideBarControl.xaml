@@ -166,26 +166,11 @@ specific language governing permissions and limitations under the Licence.
 		</Setter>
 	</Style>
 
-	<Style TargetType="pps:PpsSideBarSeparator">
-		<Setter Property="IsEnabled" Value="False" />
-		<Setter Property="IsHitTestVisible" Value="False" />
-		<Setter Property="Margin" Value="16,3,16,3" />
-		<Setter Property="Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type pps:PpsSideBarSeparator}">
-					<Border Background="{DynamicResource PPSnSeparatorBrush}"
-							Height="1"
-					SnapsToDevicePixels="true" />
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
-	</Style>
-
 	<Style x:Key="ppsSideBarSeparator" TargetType="Separator">
 		<Setter Property="Margin" Value="16,3,16,3" />
 		<Setter Property="Template">
 			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type pps:PpsSideBarSeparator}">
+				<ControlTemplate TargetType="{x:Type Separator}">
 					<Border Background="{DynamicResource PPSnSeparatorBrush}"
 							Height="1"
 							SnapsToDevicePixels="true" />

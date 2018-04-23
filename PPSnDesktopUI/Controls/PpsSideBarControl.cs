@@ -309,8 +309,9 @@ namespace TecWare.PPSn.Controls
 				return;
 			else if (element is Separator sep)
 			{
-				sep.SetResourceReference(StyleProperty, "ppsSideBarSeparator");
-				//sep.DefaultStyleKey = "ppsSideBarSeparator";
+				const string resourceKey = "ppsSideBarSeparator";
+				//sep.SetResourceReference(StyleProperty, resourceKey);
+				sep.SetValue(DefaultStyleKeyProperty, resourceKey);
 			}
 
 			base.PrepareContainerForItemOverride(element, item);
@@ -437,7 +438,6 @@ namespace TecWare.PPSn.Controls
 
 		private static readonly DependencyPropertyKey hasHeaderPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasHeader), typeof(bool), typeof(PpsSideBarGroup), new FrameworkPropertyMetadata(BooleanBox.False));
 		public static readonly DependencyProperty HasHeaderProperty = hasHeaderPropertyKey.DependencyProperty;
-
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		static PpsSideBarGroup()
@@ -838,19 +838,6 @@ namespace TecWare.PPSn.Controls
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(typeof(PpsSideBarPanelFilter)));
 		}
 	} // class PpsSideBarPanelFilter
-
-	#endregion
-
-	#region -- class PpsSideBarSeparator ----------------------------------------------
-
-	/// <summary>Separator between SideBarItems.</summary>
-	public class PpsSideBarSeparator : Control
-	{
-		static PpsSideBarSeparator()
-		{
-			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsSideBarSeparator), new FrameworkPropertyMetadata(typeof(PpsSideBarSeparator)));
-		}
-	} // class PpsSideBarSeparator
 
 	#endregion
 }
