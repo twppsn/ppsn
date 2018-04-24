@@ -537,11 +537,11 @@ namespace TecWare.PPSn.Controls
 
 		[LuaMember]
 		private PpsDataFieldInfo GetFieldInfo(IServiceProvider context, string fieldName, object properties)
-			=> PpsDataFieldInfo.GetDataFieldInfo(context, fieldName, StuffUI.GetDictionaryProperties(properties));
+			=> PpsDataFieldInfo.GetDataFieldInfo(context, fieldName, Procs.ToProperties(properties));
 
 		[LuaMember]
 		private PpsDataFieldInfo CreateFieldInfo(IServiceProvider context, string fieldName, Type dataType, string bindingPath, object properties)
-			=> new PpsDataFieldInfo(context, fieldName, dataType, bindingPath, StuffUI.GetDictionaryProperties( properties));
+			=> new PpsDataFieldInfo(context, fieldName, dataType, bindingPath, Procs.ToProperties(properties));
 
 		[LuaMember]
 		private LuaWpfCreator CreateDefaultField(PpsDataFieldInfo fieldInfo)

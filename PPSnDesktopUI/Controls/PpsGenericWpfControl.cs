@@ -21,6 +21,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using Neo.IronLua;
+using TecWare.DE.Stuff;
 using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
@@ -93,7 +94,7 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary></summary>
 		protected override System.Collections.IEnumerator LogicalChildren
-			=> StuffUI.CombineEnumerator(base.LogicalChildren, Commands?.GetEnumerator());
+			=> Procs.CombineEnumerator(base.LogicalChildren, Commands?.GetEnumerator());
 
 		/// <summary></summary>
 		/// <param name="serviceType"></param>

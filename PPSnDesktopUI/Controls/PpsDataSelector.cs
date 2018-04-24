@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -28,9 +29,13 @@ using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.Controls
 {
+	#region -- class PpsDataSelector --------------------------------------------------
+
 	/// <summary>Extended ComboBox which enables searching, with Highlighting</summary>
-	public class PpsDataSelector : Control
+	public class PpsDataSelector : Selector
 	{
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 		public static readonly DependencyProperty SelectedValueProperty = DependencyProperty.Register(nameof(SelectedValue), typeof(IDataRow), typeof(PpsDataSelector), new FrameworkPropertyMetadata((IDataRow)null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
 		public static readonly DependencyProperty SelectedValuePathProperty = DependencyProperty.Register(nameof(SelectedValuePath), typeof(string), typeof(PpsDataSelector));
 		public static readonly DependencyProperty ItemsSourceProperty = ItemsControl.ItemsSourceProperty.AddOwner(typeof(PpsDataSelector), new FrameworkPropertyMetadata(null, new PropertyChangedCallback( OnItemsSourceChanged), new CoerceValueCallback(OnItemsSourceCoerceValue)));
@@ -38,25 +43,36 @@ namespace TecWare.PPSn.Controls
 		private static readonly DependencyPropertyKey FilteredItemsSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(FilteredItemsSource), typeof(IEnumerable<IDataRow>), typeof(PpsDataSelector), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty FilteredItemsSourceProperty = FilteredItemsSourcePropertyKey.DependencyProperty;
 
+
 		public static readonly DependencyProperty FilterTextProperty = DependencyProperty.Register(nameof(FilterText), typeof(string), typeof(PpsDataSelector), new FrameworkPropertyMetadata(OnFilterTextChanged));
-		public static readonly DependencyProperty ItemTemplateProperty = DependencyProperty.Register(nameof(ItemTemplate), typeof(DataTemplate), typeof(PpsDataSelector), new FrameworkPropertyMetadata((DataTemplate)null));
+
+		//public static readonly DependencyProperty ItemTemplateProperty = DependencyProperty.Register(nameof(ItemTemplate), typeof(DataTemplate), typeof(PpsDataSelector), new FrameworkPropertyMetadata((DataTemplate)null));
 		public static readonly DependencyProperty SelectedValueTemplateProperty = DependencyProperty.Register(nameof(SelectedValueTemplate), typeof(DataTemplate), typeof(PpsDataSelector), new FrameworkPropertyMetadata((DataTemplate)null));
-		public static readonly DependencyProperty IsDropDownOpenProperty = DependencyProperty.Register(nameof(IsDropDownOpen), typeof(bool), typeof(PpsDataSelector), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, new PropertyChangedCallback(OnIsDropDownOpenChanged)));
+
+		public static readonly DependencyProperty IsDropDownOpenProperty = ComboBox.IsDropDownOpenProperty.AddOwner(typeof(PpsDataSelector), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, new PropertyChangedCallback(OnIsDropDownOpenChanged)));
+
 		public static readonly DependencyProperty IsReadOnlyProperty = TextBoxBase.IsReadOnlyProperty.AddOwner(typeof(PpsDataSelector));
 		public static readonly DependencyProperty IsNullableProperty = PpsTextBox.IsNullableProperty.AddOwner(typeof(PpsDataSelector));
 
-		public readonly static RoutedCommand ClearSelectionCommand = new RoutedCommand("ClearSelection", typeof(PpsDataSelector));
+		public static readonly RoutedCommand ClearSelectionCommand = new RoutedUICommand("Clear Selection", "ClearSelection", typeof(PpsDataSelector));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
-		private const string PopupTemplateName = "PART_DropDownPopup";
-		private const string SearchBoxTemplateName = "PART_SearchTextBox";
-		private const string ListBoxTemplateName = "PART_ItemsListBox";
+		/// <summary>Template name for the popup</summary>
+		public const string PopupTemplateName = "PART_DropDownPopup";
+		/// <summary>Template name for the search text box.</summary>
+		public const string SearchBoxTemplateName = "PART_SearchTextBox";
+		/// <summary>Template anem for the listbox.</summary>
+		public const string ListBoxTemplateName = "PART_ItemsListBox";
 
-		private TextBox searchTextBox;
-		private ListBox itemsListBox;
+		private TextBox searchTextBox = null;
+		private ListBox itemsListBox = null;
 
-		private bool hasMouseEnteredItemsList;
+		private bool hasMouseEnteredItemsList = false;
 		private Point lastMousePosition = new Point();
 
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		/// <summary></summary>
 		public PpsDataSelector()
 		{
 			AddClearCommand();
@@ -69,15 +85,18 @@ namespace TecWare.PPSn.Controls
 			searchTextBox = GetTemplateChild(SearchBoxTemplateName) as TextBox ?? throw new ArgumentNullException(SearchBoxTemplateName);
 			itemsListBox = GetTemplateChild(ListBoxTemplateName) as ListBox ?? throw new ArgumentNullException(ListBoxTemplateName);
 			var popup = GetTemplateChild(PopupTemplateName) as Popup ?? throw new ArgumentNullException(PopupTemplateName);
+
 			popup.Closed += OnPopupClosed;
 			popup.MaxHeight = CalculateMaxDropDownHeight();
 		} // proc OnApplyTemplate
 
+		#endregion
+
 		#region -- SelectedValue ------------------------------------------------------
 
-		private void CommitValue(IDataRow value)
+		private void CommitValue(object value)
 		{
-			if (!object.Equals(value, SelectedValue))
+			if (!Equals(value, SelectedValue))
 				SelectedValue = value;
 		} // proc CommitValue
 
@@ -104,18 +123,21 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Filter -------------------------------------------------------------
 
+		/// <summary>Clear filter-text and filter.</summary>
 		public void ClearFilter()
 		{
 			ClearFilterText();
 			ClearSearchTextBox();
 		} // proc Clearfilter
 
+		/// <summary>Clear current filter.</summary>
 		public void ClearFilterText()
 			=> FilterText = null;
 
-		/// <summary>SearchBox.Text binding is OneWayToSource</summary>
+		/// <summary>Clear the selection textbox content.</summary>
 		public void ClearSearchTextBox()
 			=> searchTextBox.Clear();
+
 
 		private static object OnItemsSourceCoerceValue(DependencyObject d, object baseValue)
 		{
@@ -128,7 +150,13 @@ namespace TecWare.PPSn.Controls
 			=> ((PpsDataSelector)d).UpdateFilteredList();
 
 		private static void OnFilterTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsDataSelector)d).UpdateFilteredList();
+			=> ((PpsDataSelector)d).OnFilterTextChanged((string)e.NewValue, (string)e.OldValue);
+
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		protected virtual void OnFilterTextChanged(string newValue, string oldValue)
+			=> UpdateFilteredList();
 
 		private void UpdateFilteredList()
 		{
@@ -139,7 +167,7 @@ namespace TecWare.PPSn.Controls
 			SetValue(FilteredItemsSourcePropertyKey,
 				expr == PpsDataFilterExpression.True
 				? ItemsSource
-				: ItemsSource.ApplyFilter(expr)
+				: ((IDataRowEnumerable)ItemsSource).ApplyFilter(expr)
 			);
 		} // proc UpdateFilteredList
 
@@ -152,33 +180,33 @@ namespace TecWare.PPSn.Controls
 			=> CloseDropDown(false);
 
 		private static void OnIsDropDownOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataSelector)d).OnIsDropDownOpenChanged(BooleanBox.GetBool(e.NewValue), BooleanBox.GetBool(e.OldValue));
+
+		private void OnIsDropDownOpenChanged(bool newValue, bool oldValue)
 		{
-			var selector = (PpsDataSelector)d;
-			var isopen = (bool)e.NewValue;
+			hasMouseEnteredItemsList = false;
 
-			selector.hasMouseEnteredItemsList = false;
-
-			if (isopen)
+			if (newValue)
 			{
-				selector.Items.CurrentChanged += selector.Items_CurrentChanged;
-				selector.SetAnchorItem();
-				Mouse.Capture(selector, CaptureMode.SubTree);
+				Items.CurrentChanged += Items_CurrentChanged;
+				SetAnchorItem();
+				Mouse.Capture(this, CaptureMode.SubTree);
 			}
 			else
 			{
-				selector.Items.CurrentChanged -= selector.Items_CurrentChanged;
+				Items.CurrentChanged -= Items_CurrentChanged;
 				// leave clean
-				selector.ClearFilter();
+				ClearFilter();
 
 				// Otherwise focus is in the disposed hWnd
-				if (selector.IsKeyboardFocusWithin)
-					selector.Focus();
+				if (IsKeyboardFocusWithin)
+					Focus();
 
 				// Release
-				if (Mouse.Captured == selector)
+				if (Mouse.Captured == this)
 					Mouse.Capture(null);
 			}
-		} // delegate OnIsDropDownOpenChanged
+		} // proc OnIsDropDownOpenChanged
 
 		private void ToggleDropDownStatus(bool commit)
 		{
@@ -261,21 +289,21 @@ namespace TecWare.PPSn.Controls
 
 		private void ImmediateSelect(FocusNavigationDirection direction)
 		{
-			var items = Items.Count;
-			if (items == 0)
+			var itemsCount = Items.Count;
+			if (itemsCount == 0)
 				return;
 
-			var curIndex = -1;
+			var currentIndex = -1;
 			if (SelectedValue != null)
 			{
-				curIndex = Items.IndexOf(SelectedValue);
-				if (curIndex < 0)
+				currentIndex = Items.IndexOf(SelectedValue);
+				if (currentIndex < 0)
 					return;
 			}
 
-			var newIndex = CalculateNewPos(curIndex, items, direction);
+			var newIndex = CalculateNewPos(currentIndex, itemsCount, direction);
 
-			if (newIndex != curIndex)
+			if (newIndex != currentIndex)
 			{
 				if (Items.GetItemAt(newIndex) is IDataRow item)
 					CommitValue(item);
@@ -322,7 +350,7 @@ namespace TecWare.PPSn.Controls
 			return null;
 		} // func ItemFromPoint
 
-		private ItemCollection Items => itemsListBox.Items;
+		//private ItemCollection Items => itemsListBox.Items;
 
 		#endregion
 
@@ -497,22 +525,22 @@ namespace TecWare.PPSn.Controls
 		#endregion
 
 		/// <summary>List of Data to select from</summary>	
-		public IDataRowEnumerable ItemsSource { get => (IDataRowEnumerable)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
+		//public IDataRowEnumerable ItemsSource { get => (IDataRowEnumerable)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
 
 		/// <summary>Access to the filtered list.</summary>
 		public IEnumerable<IDataRow> FilteredItemsSource => (IEnumerable<IDataRow>)GetValue(FilteredItemsSourceProperty);
 
 		/// <summary>Datatemplate for FilteredItems</summary>
-		public DataTemplate ItemTemplate { get => (DataTemplate)GetValue(ItemTemplateProperty); set => SetValue(ItemTemplateProperty, value); }
+		//public DataTemplate ItemTemplate { get => (DataTemplate)GetValue(ItemTemplateProperty); set => SetValue(ItemTemplateProperty, value); }
 
 		/// <summary>Actual Value</summary>
-		public object SelectedValue { get {
+		/*public object SelectedValue { get {
 				if (String.IsNullOrEmpty(SelectedValuePath))
 					return (IDataRow)(GetValue(SelectedValueProperty));
 				return (IDataColumn)((IDataRow)(GetValue(SelectedValueProperty)))[SelectedValuePath];
 			} set => SetValue(SelectedValueProperty, value); }
-
-		public string SelectedValuePath { get => (string)GetValue(SelectedValuePathProperty); set => SetValue(SelectedValuePathProperty, value); }
+*/
+		//public string SelectedValuePath { get => (string)GetValue(SelectedValuePathProperty); set => SetValue(SelectedValuePathProperty, value); }
 
 		/// <summary>Datatemplate for selected value</summary>
 		public DataTemplate SelectedValueTemplate { get => (DataTemplate)GetValue(SelectedValueTemplateProperty); set => SetValue(SelectedValueTemplateProperty, value); }
@@ -530,6 +558,8 @@ namespace TecWare.PPSn.Controls
 		public bool IsNullable { get => (bool)GetValue(IsNullableProperty); set => SetValue(IsNullableProperty, value); }
 
 	} // class PpsDataSelector
+
+	#endregion
 
 	#region -- class PpsDataSelectorItemTextBlock -------------------------------------
 
@@ -629,9 +659,8 @@ namespace TecWare.PPSn.Controls
 		public string SearchText { get => (string)GetValue(SearchTextProperty); set => SetValue(SearchTextProperty, value); }
 
 		/// <summary>Original Unformatted Text </summary>
-		public String BaseText { get => (string)GetValue(BaseTextProperty); set => SetValue(BaseTextProperty, value); }
-
-	} // class SearchHighlightTextBox
+		public string BaseText { get => (string)GetValue(BaseTextProperty); set => SetValue(BaseTextProperty, value); }
+	} // class PpsDataSelectorItemTextBlock
 
 	#endregion
 }
