@@ -21,6 +21,7 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public class PpsNamedSeparator : Separator
 	{
+		#region ---- DependencyProperties -----------------------------------------------
 		/// <summary>Content/Header of the Separator</summary>
 		public static readonly DependencyProperty ContentProperty = DependencyProperty.Register(nameof(Content), typeof(object), typeof(PpsNamedSeparator));
 		/// <summary>Template for the Content/Header of the Separator</summary>
@@ -38,6 +39,8 @@ namespace TecWare.PPSn.Controls
 		public DataTemplateSelector ContentTemplateSelector { get => (DataTemplateSelector)GetValue(ContentTemplateSelectorProperty); set => SetValue(ContentTemplateSelectorProperty, value); }
 		/// <summary>StringFormat for the Content/Header</summary>
 		public string ContentStringFormat { get => (string)GetValue(ContentStringFormatProperty); set => SetValue(ContentStringFormatProperty, value); }
+
+		#endregion DependencyProperties
 
 		static PpsNamedSeparator()
 		{
