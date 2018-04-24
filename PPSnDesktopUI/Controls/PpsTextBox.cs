@@ -101,6 +101,9 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty AllowedLineCountProperty = DependencyProperty.Register(nameof(AllowedLineCount), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(1));
 		/// <summary>The Time in Milliseconds an Information is shown.</summary>
 		public static readonly DependencyProperty ErrorVisibleTimeProperty = DependencyProperty.Register(nameof(ErrorVisibleTime), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(5000));
+		/// <summary>Binding Point for formatted value</summary>
+		public static readonly DependencyProperty FormattedValueProperty = DependencyProperty.Register(nameof(FormattedValue), typeof(object), typeof(PpsTextBox), new FrameworkPropertyMetadata(null));
+
 		/// <summary>The Command empties the TextBox</summary>
 		public static readonly RoutedCommand ClearTextCommand = new RoutedUICommand("ClearText", "ClearText", typeof(PpsTextBox));
 
@@ -116,6 +119,8 @@ namespace TecWare.PPSn.Controls
 		public bool HasErrored { get => BooleanBox.GetBool(GetValue(HasErroredProperty)); set => SetValue(HasErroredProperty, value); }
 		/// <summary>The Time in Milliseconds an Information is shown.</summary>
 		public int ErrorVisibleTime { get => (int)GetValue(ErrorVisibleTimeProperty); set => SetValue(ErrorVisibleTimeProperty, value); }
+		/// <summary>Binding Point for formatted value</summary>
+		public object FormattedString { get => GetValue(FormattedValueProperty); set => SetValue(FormattedValueProperty, value); }
 
 		private static void OnInputTypeChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsTextBox)d).OnInputTypeChanged((PpsTextBoxInputType)e.NewValue, (PpsTextBoxInputType)e.OldValue);
@@ -320,18 +325,18 @@ namespace TecWare.PPSn.Controls
 
 		#region ---- Helper Functions ---------------------------------------------------
 
-		private static bool IsMultiLineInput(PpsTextBoxInputType inputType) 
+		private static bool IsMultiLineInput(PpsTextBoxInputType inputType)
 			=> inputType == PpsTextBoxInputType.None || inputType == PpsTextBoxInputType.MultiLine;
 
-		private static bool IsTextualInput(PpsTextBoxInputType inputType) 
-			=> inputType == PpsTextBoxInputType.None 
-			|| inputType == PpsTextBoxInputType.SingleLine 
+		private static bool IsTextualInput(PpsTextBoxInputType inputType)
+			=> inputType == PpsTextBoxInputType.None
+			|| inputType == PpsTextBoxInputType.SingleLine
 			|| inputType == PpsTextBoxInputType.MultiLine;
 
 		private static bool IsDecimalAllowed(PpsTextBoxInputType inputType)
 			=> inputType == PpsTextBoxInputType.Decimal || inputType == PpsTextBoxInputType.DecimalNegative;
 
-		private static bool IsNegativeAllowed(PpsTextBoxInputType inputType) 
+		private static bool IsNegativeAllowed(PpsTextBoxInputType inputType)
 			=> inputType == PpsTextBoxInputType.IntegerNegative || inputType == PpsTextBoxInputType.DecimalNegative;
 
 		#endregion Helper Functions
