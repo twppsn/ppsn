@@ -3,6 +3,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:sys="clr-namespace:System;assembly=mscorlib">
 	<ResourceDictionary.MergedDictionaries>
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsNamedSeparator.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsDataFieldPanel.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsSideBarControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsStackSectionControl.xaml" />

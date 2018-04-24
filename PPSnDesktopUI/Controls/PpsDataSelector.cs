@@ -15,6 +15,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -32,7 +33,7 @@ namespace TecWare.PPSn.Controls
 	{
 		public static readonly DependencyProperty SelectedValueProperty = DependencyProperty.Register(nameof(SelectedValue), typeof(IDataRow), typeof(PpsDataSelector), new FrameworkPropertyMetadata((IDataRow)null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
 		public static readonly DependencyProperty SelectedValuePathProperty = DependencyProperty.Register(nameof(SelectedValuePath), typeof(string), typeof(PpsDataSelector));
-		public static readonly DependencyProperty ItemsSourceProperty = ItemsControl.ItemsSourceProperty.AddOwner(typeof(PpsDataSelector), new FrameworkPropertyMetadata(OnItemsSourceChanged));
+		public static readonly DependencyProperty ItemsSourceProperty = ItemsControl.ItemsSourceProperty.AddOwner(typeof(PpsDataSelector), new FrameworkPropertyMetadata(null, new PropertyChangedCallback( OnItemsSourceChanged), new CoerceValueCallback(OnItemsSourceCoerceValue)));
 
 		private static readonly DependencyPropertyKey FilteredItemsSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(FilteredItemsSource), typeof(IEnumerable<IDataRow>), typeof(PpsDataSelector), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty FilteredItemsSourceProperty = FilteredItemsSourcePropertyKey.DependencyProperty;
@@ -115,6 +116,13 @@ namespace TecWare.PPSn.Controls
 		/// <summary>SearchBox.Text binding is OneWayToSource</summary>
 		public void ClearSearchTextBox()
 			=> searchTextBox.Clear();
+
+		private static object OnItemsSourceCoerceValue(DependencyObject d, object baseValue)
+		{
+			if (baseValue is ICollectionViewFactory f)
+				baseValue = f.CreateView();
+			return baseValue;
+		} // func OnItemsSourceCoerceValue
 
 		private static void OnItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsDataSelector)d).UpdateFilteredList();

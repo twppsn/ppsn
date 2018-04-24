@@ -132,6 +132,7 @@ namespace TecWare.PPSn.Controls
 		/// <returns></returns>
 		public static object GetLabel(DependencyObject d)
 			=> d.GetValue(LabelProperty);
+
 		/// <summary>Sets the Label of the Control</summary>
 		/// <param name="d">Control</param>
 		/// <param name="value"></param>
@@ -168,29 +169,29 @@ namespace TecWare.PPSn.Controls
 		/// <param name="d">Control</param>
 		/// <returns></returns>
 		public static bool GetFullWidth(DependencyObject d)
-			=> (bool)d.GetValue(FullWidthProperty);
+			=> BooleanBox.GetBool(d.GetValue(FullWidthProperty));
 
 		/// <summary>Marks the Control as a Separator</summary>
 		/// <param name="d">Control</param>
 		/// <param name="value"></param>
 		public static void SetFullWidth(DependencyObject d, bool value)
-			=> d.SetValue(FullWidthProperty, value);
+			=> d.SetValue(FullWidthProperty, BooleanBox.GetObject(value));
 
 		#endregion
 
 		#region GroupName
 		/// <summary>DependencyProperty</summary>
-		public static readonly DependencyProperty GroupNameProperty = DependencyProperty.RegisterAttached("GroupName", typeof(string), typeof(PpsDataFieldPanel), new PropertyMetadata(String.Empty));
+		public static readonly DependencyProperty GroupNameProperty = DependencyProperty.RegisterAttached("GroupName", typeof(object), typeof(PpsDataFieldPanel), new PropertyMetadata(String.Empty));
 
 		/// <summary>Returns the GroupID of the Control (-1 means ungrouped)</summary>
 		/// <param name="d">Control</param>
 		/// <returns></returns>
-		public static string GetGroupName(DependencyObject d)
-			=> (string)d.GetValue(GroupNameProperty);
+		public static object GetGroupName(DependencyObject d)
+			=> d.GetValue(GroupNameProperty);
 		/// <summary>Sets the GroupID of the Control (-1 means ungrouped)</summary>
 		/// <param name="d">Control</param>
 		/// <param name="value"></param>
-		public static void SetGroupName(DependencyObject d, string value)
+		public static void SetGroupName(DependencyObject d, object value)
 			=> d.SetValue(GroupNameProperty, value);
 		#endregion
 
@@ -216,6 +217,7 @@ namespace TecWare.PPSn.Controls
 				if (!panel.labels.ContainsKey(element) && !(element is Label))
 				{
 					panel.UpdateLabelInformation(element, new DependencyPropertyChangedEventArgs(LabelProperty, null, GetLabel(element)));
+
 					element.IsVisibleChanged += (s, e) =>
 					{
 						panel.labels[element].Visibility = ((FrameworkElement)s).Visibility;
@@ -244,6 +246,9 @@ namespace TecWare.PPSn.Controls
 		{
 			var element = (UIElement)d;
 			var newValue = e.NewValue;
+
+			if(element is PpsNamedSeparator)
+				element.SetValue(FullWidthProperty, BooleanBox.True);
 
 			// because UpdateLabelInformation must not delete a Element, each Control gets its label even if it's empty
 			if (labels.TryGetValue(element, out var lbl))
@@ -348,7 +353,7 @@ namespace TecWare.PPSn.Controls
 
 			var i = 0;
 
-			var groupName = String.Empty;
+			var groupName = (object)null;
 
 			for (var column = 0; column < columnDefinitions.Count; column++)
 			{
@@ -376,9 +381,9 @@ namespace TecWare.PPSn.Controls
 					var indentation = 0;
 					if (IndentGroupChildren > 0)
 					{
-						if (groupName == String.Empty) // no group
+						if (groupName == null) // no group
 							indentation = 0;
-						else if (GetGroupName(child) != groupName) // group header
+						else if (!Equals(GetGroupName(child), groupName)) // group header
 							indentation = 0;
 						else
 							indentation = 5;
@@ -418,17 +423,17 @@ namespace TecWare.PPSn.Controls
 			var groupedInput = new List<int>();
 
 			// group the items
-			var actualGroup = String.Empty;
+			var actualGroup = (object)null;
 			for (var i = 0; i < children.Length; i++)
 			{
 				var newGroup = GetGroupName(children[i]);
 
 				// if ungrouped (-1) just add an entity
-				if (newGroup == String.Empty)
+				if (newGroup == null)
 					groupedInput.Add(GetGridLines(children[i]));
 
 				// if new group starts, add a list element
-				else if (newGroup != actualGroup)
+				else if (!Object.Equals(newGroup, actualGroup))
 					groupedInput.Add(GetGridLines(children[i]));
 
 				// a group was set and this item is in the same group as the item before

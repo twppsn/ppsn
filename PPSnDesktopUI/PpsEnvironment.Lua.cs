@@ -31,6 +31,7 @@ using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Controls;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Stuff;
 using TecWare.PPSn.UI;
@@ -492,6 +493,7 @@ namespace TecWare.PPSn
 		#endregion
 
 		private LuaCompileOptions luaOptions;
+		private PpsDataFieldFactory fieldFactory;
 
 		private void CreateLuaCompileOptions()
 		{
@@ -1051,6 +1053,9 @@ namespace TecWare.PPSn
 		/// <summary>Lua ui-wpf framwework.</summary>
 		[LuaMember("UI")]
 		public LuaUI LuaUI { get; } = new LuaUI();
+		/// <summary></summary>
+		[LuaMember]
+		public LuaTable FieldFactory => fieldFactory;
 
 		#endregion
 	} // class PpsEnvironment
