@@ -164,7 +164,7 @@ namespace TecWare.PPSn.Controls
 				return;
 
 			var expr = String.IsNullOrWhiteSpace(FilterText) ? PpsDataFilterExpression.True : PpsDataFilterExpression.Parse(FilterText);
-			SetValue(filteredItemsSourcePropertyKey,
+			SetValue(FilteredItemsSourcePropertyKey,
 				expr == PpsDataFilterExpression.True
 				? ItemsSource
 				: ((IDataRowEnumerable)ItemsSource).ApplyFilter(expr)
