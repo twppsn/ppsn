@@ -19,8 +19,26 @@ using System.Windows.Controls;
 namespace TecWare.PPSn.Controls
 {
 	/// <summary></summary>
-	public class PpsNamedSeparator : ContentControl
-    {
+	public class PpsNamedSeparator : Separator
+	{
+		/// <summary>Content/Header of the Separator</summary>
+		public static readonly DependencyProperty ContentProperty = DependencyProperty.Register(nameof(Content), typeof(object), typeof(PpsNamedSeparator));
+		/// <summary>Template for the Content/Header of the Separator</summary>
+		public static readonly DependencyProperty ContentTemplateProperty = DependencyProperty.Register(nameof(ContentTemplate), typeof(DataTemplate), typeof(PpsNamedSeparator));
+		/// <summary>Selector for the ContentTemplate </summary>
+		public static readonly DependencyProperty ContentTemplateSelectorProperty = DependencyProperty.Register(nameof(ContentTemplateSelector), typeof(DataTemplateSelector), typeof(PpsNamedSeparator));
+		/// <summary>StringFormat for the Content/Header</summary>
+		public static readonly DependencyProperty ContentStringFormatProperty = DependencyProperty.Register(nameof(ContentStringFormat), typeof(string), typeof(PpsNamedSeparator));
+
+		/// <summary>Content/Header of the Separator</summary>
+		public object Content { get => GetValue(ContentProperty); set => SetValue(ContentProperty, value); }
+		/// <summary>Template for the Content/Header of the Separator</summary>
+		public DataTemplate ContentTemplate { get => (DataTemplate)GetValue(ContentTemplateProperty); set => SetValue(ContentTemplateProperty, value); }
+		/// <summary>Selector for the ContentTemplate </summary>
+		public DataTemplateSelector ContentTemplateSelector { get => (DataTemplateSelector)GetValue(ContentTemplateSelectorProperty); set => SetValue(ContentTemplateSelectorProperty, value); }
+		/// <summary>StringFormat for the Content/Header</summary>
+		public string ContentStringFormat { get => (string)GetValue(ContentStringFormatProperty); set => SetValue(ContentStringFormatProperty, value); }
+
 		static PpsNamedSeparator()
 		{
 
