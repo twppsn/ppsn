@@ -623,7 +623,8 @@ namespace TecWare.PPSn.UI
 			set
 			{
 				order = value;
-				if (ParentCollection != null)
+				if (ParentCollection != null
+					&& ParentCollection.Contains(this))
 				{
 					ParentCollection.Remove(this);
 					ParentCollection.Insert(0, this);
@@ -735,10 +736,12 @@ namespace TecWare.PPSn.UI
 		/// <param name="index"></param>
 		protected override void RemoveItem(int index)
 		{
+			var item = this[index];
+
 			base.RemoveItem(index);
 
-			RemoveLogicalChildHandler?.Invoke(this[index]);
-
+			RemoveLogicalChildHandler?.Invoke(item);
+			
 			if (index == Count && index > 0 && this[index - 1] == null) // remove group before
 				base.RemoveItem(index - 1);
 			else if (index < Count && this[index] == null) // remove group after

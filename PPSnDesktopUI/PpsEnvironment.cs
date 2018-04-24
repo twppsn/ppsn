@@ -570,7 +570,7 @@ namespace TecWare.PPSn
 
 			InitBackgroundNotifier(environmentDisposing.Token, out backgroundNotifier, out backgroundNotifierModeTransmission);
 
-			RegisterService("DataFieldFactory", new PpsDataFieldFactory(this));
+			RegisterService("DataFieldFactory", fieldFactory = new PpsDataFieldFactory(this));
 		} // ctor
 
 		/// <summary>Initialize environmnet.</summary>
