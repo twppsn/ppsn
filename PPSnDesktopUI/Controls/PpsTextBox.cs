@@ -17,10 +17,10 @@ using System;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace TecWare.PPSn.Controls
 {
@@ -99,8 +99,8 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty HasErroredProperty = DependencyProperty.Register(nameof(HasErrored), typeof(bool), typeof(PpsTextBox), new PropertyMetadata(false));
 		/// <summary>Sets the allowed Lines for this Textbox</summary>
 		public static readonly DependencyProperty AllowedLineCountProperty = DependencyProperty.Register(nameof(AllowedLineCount), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(1));
-		/// <summary>The Time in Milliseconds an Information is shown.</summary>
-		public static readonly DependencyProperty ErrorVisibleTimeProperty = DependencyProperty.Register(nameof(ErrorVisibleTime), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(5000));
+		/// <summary>The Time in Seconds an Information is shown.</summary>
+		public static readonly DependencyProperty ErrorVisibleTimeProperty = DependencyProperty.Register(nameof(ErrorVisibleTime), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(5));
 		/// <summary>Binding Point for formatted value</summary>
 		public static readonly DependencyProperty FormattedValueProperty = DependencyProperty.Register(nameof(FormattedValue), typeof(object), typeof(PpsTextBox), new FrameworkPropertyMetadata(null));
 
@@ -129,18 +129,15 @@ namespace TecWare.PPSn.Controls
 
 		#region ---- Error Handling -----------------------------------------------------
 
-		private Timer fadeTimer;
+
+		private DispatcherTimer fadeTimer;
 
 		private void SetError(string message)
 		{
+
 			if (fadeTimer == null)
 			{
-				fadeTimer = new Timer()
-				{
-					Interval = ErrorVisibleTime,
-					AutoReset = false
-				};
-				fadeTimer.Elapsed += (s, e) => { Dispatcher.Invoke(() => ResetError()); };
+				fadeTimer = new DispatcherTimer(new TimeSpan(0, 0, ErrorVisibleTime), DispatcherPriority.Background, ResetError, Dispatcher);
 			}
 
 			HasErrored = true;
@@ -148,7 +145,7 @@ namespace TecWare.PPSn.Controls
 			fadeTimer.Start();
 		} // proc SetError
 
-		private void ResetError()
+		private void ResetError(object sender, EventArgs e)
 		{
 			HasErrored = false;
 			ErrorMessage = String.Empty;
@@ -410,9 +407,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e">unused</param>
 		protected override void OnLostFocus(RoutedEventArgs e)
 		{
-			ErrorMessage = String.Empty;
-			HasErrored = false;
-			base.OnLostFocus(e);
+			ResetError(null, null);
 		} // proc OnLostFocus
 
 		#endregion Event Handlers
