@@ -28,6 +28,7 @@ using System.Windows.Markup;
 using System.Xaml;
 using System.Xaml.Schema;
 using System.Xml;
+using Neo.IronLua;
 using LExpression = System.Linq.Expressions.Expression;
 
 namespace TecWare.PPSn.UI
@@ -893,7 +894,7 @@ namespace TecWare.PPSn.UI
 					if (!Type.IsUnknown && typeof(IPpsXamlEmitter).IsAssignableFrom(Type.UnderlyingType)) // special object to replace
 					{
 						// create a new object writer to build the emitter object
-						var emitterFactory = (IPpsXamlEmitter)XamlServices.Load(reader.ReadSubtree());
+						var emitterFactory = (IPpsXamlEmitter)XamlServices.Load(reader.ReadSubtree()); // todo: own subreader for namespaces
 
 						// create emitter
 						var newEmitter = emitterFactory.CreateReader(this);
@@ -958,7 +959,11 @@ namespace TecWare.PPSn.UI
 						return t;
 				}
 			}
-			return settings.ServiceProvider?.GetService(serviceType);
+
+			if (serviceType == typeof(IPpsXamlCode))
+				return settings.Code;
+			else
+				return settings.ServiceProvider?.GetService(serviceType);
 		} // func GetService
 
 		private bool IsTop => currentEmitterStack.Count == 1;

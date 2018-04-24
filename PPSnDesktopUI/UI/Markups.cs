@@ -13,6 +13,7 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
+using Neo.IronLua;
 using System;
 using System.Reflection;
 using System.Windows.Data;
@@ -70,9 +71,9 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		/// <param name="returnType"></param>
 		/// <param name="value"></param>
-		public Constant(Type returnType, object value)
+		public Constant(string returnType, object value)
 		{
-			Type = returnType;
+			TypeName = returnType;
 			Value = value;
 		} // ctor
 
@@ -84,17 +85,23 @@ namespace TecWare.PPSn.UI
 			var type = Type;
 			if (type == null)
 			{
-				var target = serviceProvider.GetService<IProvideValueTarget>(true);
-				if (target.TargetProperty is PropertyInfo pi)
-					type = pi.PropertyType;
+				if (TypeName == null)
+				{
+					var target = serviceProvider.GetService<IProvideValueTarget>(true);
+					if (target.TargetProperty is PropertyInfo pi)
+						type = pi.PropertyType;
+				}
+				else
+					type = LuaType.GetType(TypeName);
 			}
-
 			return type == null ? Value : StuffUI.ChangeTypeWithConverter(Value, type);
 		} // func ProvideValue
 
 		/// <summary></summary>
+		public Type Type { get; set; } = null;
+		/// <summary></summary>
 		[ConstructorArgument("returnType")]
-		public Type Type { get; set; }
+		public string TypeName { get; set; }
 		/// <summary></summary>
 		[ConstructorArgument("value")]
 		public object Value { get; set; }

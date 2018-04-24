@@ -17,10 +17,10 @@ using System;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace TecWare.PPSn.Controls
 {
@@ -30,11 +30,11 @@ namespace TecWare.PPSn.Controls
 	public enum PpsTextBoxInputType
 	{
 		/// <summary>Input is not checked</summary>
-		Any = 0,
+		None = 0,
 		/// <summary>Single Line of unformatted Text is allowed</summary>
 		SingleLine = 1,
 		/// <summary>Multiple Lines of unformatted Text are allowed</summary>
-		Multiline = 2,
+		MultiLine = 2,
 		/// <summary>Input mask for integer values.</summary>
 		Integer = 3,
 		/// <summary>Input mask for decimal/float values.</summary>
@@ -57,7 +57,16 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Extends Textbox for Number input and a clear button.</summary>
 	public class PpsTextBox : TextBox
 	{
+		#region ---- Globals ------------------------------------------------------------
+
 		private const bool negativeToggling = false;
+		private static readonly string noNegativeNumbersMessage = "Negative Eingaben sind nicht erlaubt.";
+		private static readonly string onlyIntegerMessage = "Gebrochene Zahlen sind nicht erlaubt.";
+		private static readonly string colonMovedMessage = "Das Komma wurde verschoben.";
+		private static readonly string tooMuchLinesMessage = "Dieses Eingabefeld unterstützt nicht so viele Zeilen.";
+		private static readonly char carriageReturnChar = '\r';
+		private static readonly char lineFeedChar = '\n';
+
 		/// <summary>Legal chars which can be in a Number</summary>
 		public const string LegalIntegers = "0123456789";
 
@@ -76,6 +85,10 @@ namespace TecWare.PPSn.Controls
 			=> LegalIntegerChars(includeNegative) +
 			   CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
 
+		#endregion Globals
+
+		#region ---- DependencyProperties -----------------------------------------------
+
 		/// <summary>Selects the valid input for the Textbox</summary>
 		public static readonly DependencyProperty InputTypeProperty = DependencyProperty.Register(nameof(InputType), typeof(PpsTextBoxInputType), typeof(PpsTextBox), new FrameworkPropertyMetadata(PpsTextBoxInputType.SingleLine, new PropertyChangedCallback(OnInputTypeChangedCallback)));
 		/// <summary>Is the field nullable.</summary>
@@ -86,6 +99,11 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty HasErroredProperty = DependencyProperty.Register(nameof(HasErrored), typeof(bool), typeof(PpsTextBox), new PropertyMetadata(false));
 		/// <summary>Sets the allowed Lines for this Textbox</summary>
 		public static readonly DependencyProperty AllowedLineCountProperty = DependencyProperty.Register(nameof(AllowedLineCount), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(1));
+		/// <summary>The Time in Seconds an Information is shown.</summary>
+		public static readonly DependencyProperty ErrorVisibleTimeProperty = DependencyProperty.Register(nameof(ErrorVisibleTime), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(5));
+		/// <summary>Binding Point for formatted value</summary>
+		public static readonly DependencyProperty FormattedValueProperty = DependencyProperty.Register(nameof(FormattedValue), typeof(object), typeof(PpsTextBox), new FrameworkPropertyMetadata(null));
+
 		/// <summary>The Command empties the TextBox</summary>
 		public static readonly RoutedCommand ClearTextCommand = new RoutedUICommand("ClearText", "ClearText", typeof(PpsTextBox));
 
@@ -99,62 +117,44 @@ namespace TecWare.PPSn.Controls
 		public string ErrorMessage { get => (string)GetValue(ErrorMessageProperty); set => SetValue(ErrorMessageProperty, value); }
 		/// <summary>True if there was an invalid entry. Auto-Resets</summary>
 		public bool HasErrored { get => BooleanBox.GetBool(GetValue(HasErroredProperty)); set => SetValue(HasErroredProperty, value); }
+		/// <summary>The Time in Milliseconds an Information is shown.</summary>
+		public int ErrorVisibleTime { get => (int)GetValue(ErrorVisibleTimeProperty); set => SetValue(ErrorVisibleTimeProperty, value); }
+		/// <summary>Binding Point for formatted value</summary>
+		public object FormattedValue { get => GetValue(FormattedValueProperty); set => SetValue(FormattedValueProperty, value); }
 
 		private static void OnInputTypeChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsTextBox)d).OnInputTypeChanged((PpsTextBoxInputType)e.NewValue, (PpsTextBoxInputType)e.OldValue);
 
-		/// <summary></summary>
-		/// <param name="newValue"></param>
-		/// <param name="oldValue"></param>
-		protected virtual void OnInputTypeChanged(PpsTextBoxInputType newValue, PpsTextBoxInputType oldValue)
-		{
-			this.AcceptsReturn = IsMultilineInput(newValue);
-			this.AcceptsTab = newValue == PpsTextBoxInputType.Any;
+		#endregion DependencyProperties
 
-			NeatlyCleanText();
-		} // proc OnInputTypeChanged
+		#region ---- Error Handling -----------------------------------------------------
 
-		/// <summary>If text is entered by Keyboard do not process illegal chars (TextChanged is not called)</summary>
-		/// <param name="e"></param>
-		protected override void OnPreviewTextInput(TextCompositionEventArgs e)
-		{
-			if (!IsTextualInput(InputType))
-			{
-				if (!IsNegativeAllowed(InputType))
-					if (e.Text.Except(LegalDecimalChars(false)).Any())
-					{
-						e.Handled = true;
-						SetError("der Wert darf nicht negativ werden");
-					}
-				if (!IsDecimalAllowed(InputType))
-					if (e.Text.Except(LegalIntegerChars(true)).Any())
-					{
-						e.Handled = true;
-						SetError("der Wert darf nicht negativ werden");
-					}
-			}
 
-			base.OnPreviewTextInput(e);
-		} // func OnPreviewTextInput
-
-		private Timer fadetimer;
+		private DispatcherTimer fadeTimer;
 
 		private void SetError(string message)
 		{
-			if (fadetimer == null)
+
+			if (fadeTimer == null)
 			{
-				fadetimer = new Timer()
-				{
-					Interval = 5000,
-					AutoReset = false
-				};
-				fadetimer.Elapsed += (s, e) => { Dispatcher.Invoke(() => HasErrored = false); fadetimer.Stop(); };
+				fadeTimer = new DispatcherTimer(new TimeSpan(0, 0, ErrorVisibleTime), DispatcherPriority.Background, ResetError, Dispatcher);
 			}
 
 			HasErrored = true;
 			ErrorMessage = message;
-			fadetimer.Start();
+			fadeTimer.Start();
 		} // proc SetError
+
+		private void ResetError(object sender, EventArgs e)
+		{
+			HasErrored = false;
+			ErrorMessage = String.Empty;
+			fadeTimer?.Stop();
+		}
+
+		#endregion Error Handling
+
+		#region ---- Handling of Input --------------------------------------------------
 
 		private void NeatlyReplaceText(string newText)
 		{
@@ -167,7 +167,7 @@ namespace TecWare.PPSn.Controls
 
 		private void NeatlyCleanText()
 		{
-			if (InputType == PpsTextBoxInputType.Any || Text.Length < 1)
+			if (InputType == PpsTextBoxInputType.None || Text.Length < 1)
 				return;
 
 			var newText = new StringBuilder();
@@ -175,7 +175,7 @@ namespace TecWare.PPSn.Controls
 			var firstColonIndex = -1;
 			var remainingLines = AllowedLineCount - 1;
 			var lastWasNewline = false;
-			var lastWasCarriagereturn = false;
+			var lastWasCarriageReturn = false;
 
 			// while checking the input, the Text is only parsed once
 			foreach (var c in Text)
@@ -187,23 +187,23 @@ namespace TecWare.PPSn.Controls
 						newText.Append(c);
 						continue;
 					}
-					if (IsMultilineInput(InputType))
+					if (IsMultiLineInput(InputType))
 					{
-						if (c == '\n')
+						if (c == lineFeedChar)
 						{
-							if (lastWasCarriagereturn)
+							if (lastWasCarriageReturn)
 								if (remainingLines > 0)
 								{
 									newText.Append(c);
-									lastWasCarriagereturn = false;
+									lastWasCarriageReturn = false;
 									remainingLines--;
 									continue;
 								}
 								else
 								{
-									lastWasCarriagereturn = false;
+									lastWasCarriageReturn = false;
 									newText.Remove(newText.Length - 1, 1);
-									SetError($"Dieses Eingabefeld unterstützt nur {LineCount} Zeilen.");
+									SetError(tooMuchLinesMessage);
 									continue;
 								}
 							else
@@ -217,12 +217,12 @@ namespace TecWare.PPSn.Controls
 								}
 								else
 								{
-									SetError($"Dieses Eingabefeld unterstützt nur {LineCount} Zeilen.");
+									SetError(tooMuchLinesMessage);
 									continue;
 								}
 							}
 						}
-						if (c == '\r')
+						if (c == carriageReturnChar)
 						{
 							if (lastWasNewline)
 							{
@@ -235,14 +235,14 @@ namespace TecWare.PPSn.Controls
 							else
 							{
 								newText.Append(c);
-								lastWasCarriagereturn = true;
+								lastWasCarriageReturn = true;
 								continue;
 							}
 						}
 					}
-				}
+				} // if(IsTextualInput)
 
-				lastWasCarriagereturn = false;
+				lastWasCarriageReturn = false;
 				lastWasNewline = false;
 
 				if (LegalIntegers.Contains(c) || c == CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator[0])
@@ -264,7 +264,7 @@ namespace TecWare.PPSn.Controls
 					}
 					else
 					{
-						SetError("Negative Eingaben sind nicht erlaubt.");
+						SetError(noNegativeNumbersMessage);
 					}
 				}
 
@@ -283,13 +283,13 @@ namespace TecWare.PPSn.Controls
 							newText.Remove(firstColonIndex, 1);
 							newText.Append(c);
 							firstColonIndex = newText.Length - 1;
-							SetError("Das Komma wurde verschoben.");
+							SetError(colonMovedMessage);
 							continue;
 						}
 					}
 					else
 					{
-						SetError("Es sind nur ganze Zahlen erlaubt.");
+						SetError(onlyIntegerMessage);
 					}
 				}
 			} // foreach(var c in Text)
@@ -318,15 +318,73 @@ namespace TecWare.PPSn.Controls
 				NeatlyReplaceText(newTextString);
 		} // proc NeatlyCleanText
 
-		private static bool IsMultilineInput(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Any || inputType == PpsTextBoxInputType.Multiline;
+		#endregion Handling of Input
 
-		private static bool IsTextualInput(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Any ||
-			inputType == PpsTextBoxInputType.SingleLine ||
-			inputType == PpsTextBoxInputType.Multiline;
+		#region ---- Helper Functions ---------------------------------------------------
 
-		private static bool IsDecimalAllowed(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Decimal || inputType == PpsTextBoxInputType.DecimalNegative;
+		private static bool IsMultiLineInput(PpsTextBoxInputType inputType)
+			=> inputType == PpsTextBoxInputType.None || inputType == PpsTextBoxInputType.MultiLine;
 
-		private static bool IsNegativeAllowed(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.IntegerNegative || inputType == PpsTextBoxInputType.DecimalNegative;
+		private static bool IsTextualInput(PpsTextBoxInputType inputType)
+			=> inputType == PpsTextBoxInputType.None
+			|| inputType == PpsTextBoxInputType.SingleLine
+			|| inputType == PpsTextBoxInputType.MultiLine;
+
+		private static bool IsDecimalAllowed(PpsTextBoxInputType inputType)
+			=> inputType == PpsTextBoxInputType.Decimal || inputType == PpsTextBoxInputType.DecimalNegative;
+
+		private static bool IsNegativeAllowed(PpsTextBoxInputType inputType)
+			=> inputType == PpsTextBoxInputType.IntegerNegative || inputType == PpsTextBoxInputType.DecimalNegative;
+
+		#endregion Helper Functions
+
+		#region ---- Event Handlers -----------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		protected virtual void OnInputTypeChanged(PpsTextBoxInputType newValue, PpsTextBoxInputType oldValue)
+		{
+			this.AcceptsReturn = IsMultiLineInput(newValue);
+
+			NeatlyCleanText();
+		} // proc OnInputTypeChanged
+
+		/// <summary>If text is entered by Keyboard do not process illegal chars (TextChanged is not called)</summary>
+		/// <param name="e"></param>
+		protected override void OnPreviewTextInput(TextCompositionEventArgs e)
+		{
+			if (!IsTextualInput(InputType))
+			{
+				if (!IsNegativeAllowed(InputType))
+				{
+					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NegativeSign))
+					{
+						e.Handled = true;
+						SetError(noNegativeNumbersMessage);
+					}
+				}
+
+				if (!IsDecimalAllowed(InputType))
+				{
+					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator))
+					{
+						e.Handled = true;
+						SetError(onlyIntegerMessage);
+					}
+				}
+			}
+			else
+			{
+				if (e.Text.Contains(Environment.NewLine))
+				{
+					e.Handled = true;
+					SetError(tooMuchLinesMessage);
+				}
+			}
+
+			base.OnPreviewTextInput(e);
+		} // func OnPreviewTextInput
 
 		private bool retriggerHold = false;
 
@@ -334,7 +392,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnTextChanged(TextChangedEventArgs e)
 		{
-			if (retriggerHold || InputType == PpsTextBoxInputType.Any)
+			if (retriggerHold || InputType == PpsTextBoxInputType.None)
 				return;
 
 			retriggerHold = true;
@@ -343,6 +401,25 @@ namespace TecWare.PPSn.Controls
 
 			retriggerHold = false;
 		} // proc OnTextChanged
+
+		/// <summary>Hides the ErrorTip if the Textbox is not focused</summary>
+		/// <param name="e">unused</param>
+		protected override void OnLostFocus(RoutedEventArgs e)
+		{
+			ResetError(null, null);
+		} // proc OnLostFocus
+
+		#endregion Event Handlers
+
+		/// <summary>public Constructor - initializes the Commands</summary>
+		public PpsTextBox()
+		{
+			CommandBindings.Add(new CommandBinding(ClearTextCommand,
+				(sender, e) =>
+				{
+					Text = String.Empty;
+				}, (sender, e) => e.CanExecute = !String.IsNullOrEmpty(Text)));
+		}
 	} // class PpsTextBox
 
 	#endregion class PpsTextBox

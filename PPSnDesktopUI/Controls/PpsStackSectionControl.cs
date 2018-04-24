@@ -62,8 +62,8 @@ namespace TecWare.PPSn.Controls
 		{
 			if (ExpanderStyle == ExpanderStyles.Accordeon)
 			{
-				foreach (var cur in Items)
-					item.IsExpanded = item != cur;
+				//foreach (var cur in Items)
+				//	item.IsExpanded = item == cur;
 			}
 		}
 

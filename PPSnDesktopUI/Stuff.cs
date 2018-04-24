@@ -33,6 +33,7 @@ using System.Web;
 using System.Windows;
 using System.Windows.Media;
 using System.Xml.Linq;
+using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 
@@ -523,6 +524,24 @@ namespace TecWare.PPSn
 				}
 			}
 		} // func ChangeTypeWithConverter
+
+		/// <summary></summary>
+		/// <param name="properties"></param>
+		/// <returns></returns>
+		public static IPropertyReadOnlyDictionary GetDictionaryProperties(object properties)
+		{	
+			switch(properties)
+			{
+				case null:
+					return PropertyDictionary.EmptyReadOnly;
+				case LuaTable t:
+					return new LuaTableProperties(t);
+				case IPropertyReadOnlyDictionary d:
+					return d;
+				default:
+					throw new ArgumentException(nameof(properties));
+			}
+		} // func GetDictionaryProperties
 
 		#region -- remove after update DES --
 
