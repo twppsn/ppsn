@@ -30,7 +30,7 @@ namespace TecWare.PPSn.Controls
 	public enum PpsTextBoxInputType
 	{
 		/// <summary>Input is not checked</summary>
-		Any = 0,
+		None = 0,
 		/// <summary>Single Line of unformatted Text is allowed</summary>
 		SingleLine = 1,
 		/// <summary>Multiple Lines of unformatted Text are allowed</summary>
@@ -165,7 +165,7 @@ namespace TecWare.PPSn.Controls
 
 		private void NeatlyCleanText()
 		{
-			if (InputType == PpsTextBoxInputType.Any || Text.Length < 1)
+			if (InputType == PpsTextBoxInputType.None || Text.Length < 1)
 				return;
 
 			var newText = new StringBuilder();
@@ -320,11 +320,11 @@ namespace TecWare.PPSn.Controls
 
 		#region ---- Helper Functions ---------------------------------------------------
 
-		private static bool IsMultilineInput(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Any || inputType == PpsTextBoxInputType.Multiline;
+		private static bool IsMultiLineInput(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.None || inputType == PpsTextBoxInputType.MultiLine;
 
-		private static bool IsTextualInput(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Any ||
+		private static bool IsTextualInput(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.None ||
 			inputType == PpsTextBoxInputType.SingleLine ||
-			inputType == PpsTextBoxInputType.Multiline;
+			inputType == PpsTextBoxInputType.MultiLine;
 
 		private static bool IsDecimalAllowed(PpsTextBoxInputType inputType) => inputType == PpsTextBoxInputType.Decimal || inputType == PpsTextBoxInputType.DecimalNegative;
 
@@ -339,8 +339,8 @@ namespace TecWare.PPSn.Controls
 		/// <param name="oldValue"></param>
 		protected virtual void OnInputTypeChanged(PpsTextBoxInputType newValue, PpsTextBoxInputType oldValue)
 		{
-			this.AcceptsReturn = IsMultilineInput(newValue);
-			this.AcceptsTab = newValue == PpsTextBoxInputType.Any;
+			this.AcceptsReturn = IsMultiLineInput(newValue);
+			this.AcceptsTab = newValue == PpsTextBoxInputType.None;
 
 			NeatlyCleanText();
 		} // proc OnInputTypeChanged
@@ -382,7 +382,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnTextChanged(TextChangedEventArgs e)
 		{
-			if (retriggerHold || InputType == PpsTextBoxInputType.Any)
+			if (retriggerHold || InputType == PpsTextBoxInputType.None)
 				return;
 
 			retriggerHold = true;
