@@ -34,7 +34,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Single Line of unformatted Text is allowed</summary>
 		SingleLine = 1,
 		/// <summary>Multiple Lines of unformatted Text are allowed</summary>
-		Multiline = 2,
+		MultiLine = 2,
 		/// <summary>Input mask for integer values.</summary>
 		Integer = 3,
 		/// <summary>Input mask for decimal/float values.</summary>
@@ -60,7 +60,7 @@ namespace TecWare.PPSn.Controls
 		#region ---- Globals ------------------------------------------------------------
 
 		private const bool negativeToggling = false;
-		private static readonly string noNegavtiveNumbersMessage = "Negative Eingaben sind nicht erlaubt.";
+		private static readonly string noNegativeNumbersMessage = "Negative Eingaben sind nicht erlaubt.";
 		private static readonly string onlyIntegerMessage = "Gebrochene Zahlen sind nicht erlaubt.";
 		private static readonly string colonMovedMessage = "Das Komma wurde verschoben.";
 		private static readonly string tooMuchLinesMessage = $"Dieses Eingabefeld unterstützt nicht so viele Zeilen.";
@@ -124,30 +124,30 @@ namespace TecWare.PPSn.Controls
 
 		#region ---- Error Handling -----------------------------------------------------
 
-		private Timer fadetimer;
+		private Timer fadeTimer;
 
 		private void SetError(string message)
 		{
-			if (fadetimer == null)
+			if (fadeTimer == null)
 			{
-				fadetimer = new Timer()
+				fadeTimer = new Timer()
 				{
 					Interval = ErrorVisibleTime,
 					AutoReset = false
 				};
-				fadetimer.Elapsed += (s, e) => { Dispatcher.Invoke(() => ResetError()); };
+				fadeTimer.Elapsed += (s, e) => { Dispatcher.Invoke(() => ResetError()); };
 			}
 
 			HasErrored = true;
 			ErrorMessage = message;
-			fadetimer.Start();
+			fadeTimer.Start();
 		} // proc SetError
 
 		private void ResetError()
 		{
 			HasErrored = false;
 			ErrorMessage = String.Empty;
-			fadetimer.Stop();
+			fadeTimer.Stop();
 		}
 
 		#endregion Error Handling
@@ -173,7 +173,7 @@ namespace TecWare.PPSn.Controls
 			var firstColonIndex = -1;
 			var remainingLines = AllowedLineCount - 1;
 			var lastWasNewline = false;
-			var lastWasCarriagereturn = false;
+			var lastWasCarriageReturn = false;
 
 			// while checking the input, the Text is only parsed once
 			foreach (var c in Text)
@@ -185,21 +185,21 @@ namespace TecWare.PPSn.Controls
 						newText.Append(c);
 						continue;
 					}
-					if (IsMultilineInput(InputType))
+					if (IsMultiLineInput(InputType))
 					{
 						if (c == lineFeedChar)
 						{
-							if (lastWasCarriagereturn)
+							if (lastWasCarriageReturn)
 								if (remainingLines > 0)
 								{
 									newText.Append(c);
-									lastWasCarriagereturn = false;
+									lastWasCarriageReturn = false;
 									remainingLines--;
 									continue;
 								}
 								else
 								{
-									lastWasCarriagereturn = false;
+									lastWasCarriageReturn = false;
 									newText.Remove(newText.Length - 1, 1);
 									SetError(tooMuchLinesMessage);
 									continue;
@@ -233,14 +233,14 @@ namespace TecWare.PPSn.Controls
 							else
 							{
 								newText.Append(c);
-								lastWasCarriagereturn = true;
+								lastWasCarriageReturn = true;
 								continue;
 							}
 						}
 					}
 				} // if(IsTextualInput)
 
-				lastWasCarriagereturn = false;
+				lastWasCarriageReturn = false;
 				lastWasNewline = false;
 
 				if (LegalIntegers.Contains(c) || c == CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator[0])
@@ -262,7 +262,7 @@ namespace TecWare.PPSn.Controls
 					}
 					else
 					{
-						SetError(noNegavtiveNumbersMessage);
+						SetError(noNegativeNumbersMessage);
 					}
 				}
 
@@ -355,7 +355,7 @@ namespace TecWare.PPSn.Controls
 					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NegativeSign))
 					{
 						e.Handled = true;
-						SetError(noNegavtiveNumbersMessage);
+						SetError(noNegativeNumbersMessage);
 					}
 				if (!IsDecimalAllowed(InputType))
 					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator))
