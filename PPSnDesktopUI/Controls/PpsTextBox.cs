@@ -120,7 +120,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>The Time in Milliseconds an Information is shown.</summary>
 		public int ErrorVisibleTime { get => (int)GetValue(ErrorVisibleTimeProperty); set => SetValue(ErrorVisibleTimeProperty, value); }
 		/// <summary>Binding Point for formatted value</summary>
-		public object FormattedString { get => GetValue(FormattedValueProperty); set => SetValue(FormattedValueProperty, value); }
+		public object FormattedValue { get => GetValue(FormattedValueProperty); set => SetValue(FormattedValueProperty, value); }
 
 		private static void OnInputTypeChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsTextBox)d).OnInputTypeChanged((PpsTextBoxInputType)e.NewValue, (PpsTextBoxInputType)e.OldValue);
