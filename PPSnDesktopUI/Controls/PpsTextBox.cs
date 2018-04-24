@@ -149,7 +149,7 @@ namespace TecWare.PPSn.Controls
 		{
 			HasErrored = false;
 			ErrorMessage = String.Empty;
-			fadeTimer.Stop();
+			fadeTimer?.Stop();
 		}
 
 		#endregion Error Handling
