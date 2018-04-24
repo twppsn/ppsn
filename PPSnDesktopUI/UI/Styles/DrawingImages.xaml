@@ -109,6 +109,12 @@ specific language governing permissions and limitations under the Licence.
 	<PathGeometry x:Key="goBackPathGeometry" 
 				  Figures="M15.909999 17.419667 10.341066 12.000001 15.909999 6.5684998 14.195546 4.9 6.9 12.000001 14.195546 19.1Z" />
 
+	<!-- custom-->
+	<PathGeometry x:Key="chevronDownThinPathGeometry" 
+				  Figures="M 4.75,7.75L 12,15L 19.25,7.75L 20,8.5L 12,16.5L 4,8.5L 4.75,7.75 Z" />
+	<!-- custom-->
+	<PathGeometry x:Key="chevronUpThinPathGeometry" 
+				  Figures="M19.25,16.25 L12,9 L4.75,16.25 L4,15.5 L12,7.5 L20,15.5 L19.25,16.25 Z" />
 	<!-- tag-->
 	<PathGeometry x:Key="tagPathGeometry" 
 				  Figures="M5.5,7A1.5,1.5 0 0,1 4,5.5A1.5,1.5 0 0,1 5.5,4A1.5,1.5 0 0,1 7,5.5A1.5,1.5 0 0,1 5.5,7M21.41,11.58L12.41,2.58C12.05,2.22 11.55,2 11,2H4C2.89,2 2,2.89 2,4V11C2,11.55 2.22,12.05 2.59,12.41L11.58,21.41C11.95,21.77 12.45,22 13,22C13.55,22 14.05,21.77 14.41,21.41L21.41,14.41C21.78,14.05 22,13.55 22,13C22,12.44 21.77,11.94 21.41,11.58Z" />
