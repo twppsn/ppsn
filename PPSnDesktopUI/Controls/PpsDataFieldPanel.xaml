@@ -16,6 +16,5 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
 	<Style TargetType="{x:Type pps:PpsDataFieldPanel}">
-		<Setter Property="Margin" Value="16" />
 	</Style>	
 </ResourceDictionary>
