@@ -346,7 +346,6 @@ namespace TecWare.PPSn.Controls
 		protected virtual void OnInputTypeChanged(PpsTextBoxInputType newValue, PpsTextBoxInputType oldValue)
 		{
 			this.AcceptsReturn = IsMultiLineInput(newValue);
-			this.AcceptsTab = newValue == PpsTextBoxInputType.None;
 
 			NeatlyCleanText();
 		} // proc OnInputTypeChanged
