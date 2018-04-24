@@ -399,7 +399,7 @@ namespace TecWare.PPSn.Controls
 
 			var textBinding = PpsDataFieldBinding.CreateWpfBinding(fieldInfo, isReadOnly);
 
-			var inputType = PpsTextBoxInputType.Any;
+			var inputType = PpsTextBoxInputType.None;
 			switch (Type.GetTypeCode(fieldInfo.DataType))
 			{
 				case TypeCode.Decimal:
