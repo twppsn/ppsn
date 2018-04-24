@@ -188,7 +188,7 @@ namespace TecWare.PPSn.UI
 		} // func TraceToString
 
 		protected override IEnumerator LogicalChildren
-			=> StuffUI.CombineEnumerator(base.LogicalChildren, commands?.GetEnumerator());
+			=> Procs.CombineEnumerator(base.LogicalChildren, commands?.GetEnumerator());
 
 		/// <summary>Access the environment</summary>
 		public PpsEnvironment Environment => paneManager.Environment;

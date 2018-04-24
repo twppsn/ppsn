@@ -44,7 +44,6 @@ namespace TecWare.PPSn.Controls
 
 		static PpsNamedSeparator()
 		{
-
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsNamedSeparator), new FrameworkPropertyMetadata(typeof(PpsNamedSeparator)));
 		}
 	} // class PpsNamedSeparator
