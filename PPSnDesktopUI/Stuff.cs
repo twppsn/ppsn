@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
@@ -490,6 +491,39 @@ namespace TecWare.PPSn
 			}
 			return default(T);
 		} // func GetVisualChild
+
+		/// <summary></summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public static T ChangeTypeWithConverter<T>(this object value)
+			=> (T)ChangeTypeWithConverter(value, typeof(T));
+
+		/// <summary></summary>
+		/// <param name="value"></param>
+		/// <param name="typeTo"></param>
+		/// <returns></returns>
+		public static object ChangeTypeWithConverter(this object value, Type typeTo)
+		{
+			if (value == null)
+				return Procs.ChangeType(null, typeTo);
+			else if (typeTo.IsAssignableFrom( value.GetType() ))
+				return value;
+			else
+			{
+				var convTo = TypeDescriptor.GetConverter(value.GetType());
+				if (convTo.CanConvertTo(typeTo))
+					return convTo.ConvertTo(value, typeTo);
+				else
+				{
+					var convFrom = TypeDescriptor.GetConverter(typeTo);
+					if (convFrom.CanConvertFrom(value.GetType()))
+						return convFrom.ConvertFrom(value);
+					else
+						return Procs.ChangeType(value, typeTo);
+				}
+			}
+		} // func ChangeTypeWithConverter
 
 		/// <summary></summary>
 		/// <param name="properties"></param>
