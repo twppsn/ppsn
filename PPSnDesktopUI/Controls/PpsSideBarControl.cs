@@ -310,10 +310,7 @@ namespace TecWare.PPSn.Controls
 			if (element is PpsSideBarPanel panel) // do not copy TemplateXXX die HeaderTemplateXXX
 				return;
 			else if (element is Separator sep)
-			{
-				//sep.SetResourceReference(StyleProperty, PpsSideBarSeparator);
 				sep.SetValue(DefaultStyleKeyProperty, PpsSideBarSeparator);
-			}
 
 			base.PrepareContainerForItemOverride(element, item);
 		} // proc PrepareContainerForItemOverride

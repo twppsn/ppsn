@@ -32,13 +32,17 @@ specific language governing permissions and limitations under the Licence.
 							<ColumnDefinition Width="auto" />
 							<ColumnDefinition />
 						</Grid.ColumnDefinitions>
-						<Border	Width="{DynamicResource PPSnSideBarIncreasedWidth}"
-								Background="{DynamicResource PPSnSideBarBackgroundBrush}">
+						<Border	Width="{DynamicResource PPSnSideBarIncreasedWidth}">
 							<ItemsPresenter />
 						</Border>
+						<!--<Border	Width="{DynamicResource PPSnSideBarIncreasedWidth}"
+								Background="{DynamicResource PPSnSideBarBackgroundBrush}">
+							<ItemsPresenter />
+						</Border>-->
 						<ContentPresenter Grid.Column="1"
 										  VerticalAlignment="Top"
 										  HorizontalAlignment="Left"
+										  Margin="32,0"
 										  Content="{TemplateBinding SelectedContent}" 
 										  ContentTemplate="{TemplateBinding SelectedContentTemplate}" 
 										  ContentTemplateSelector="{TemplateBinding SelectedContentTemplateSelector}"
@@ -178,6 +182,5 @@ specific language governing permissions and limitations under the Licence.
 			</Setter.Value>
 		</Setter>
 	</Style>
-
 
 </ResourceDictionary>
