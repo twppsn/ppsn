@@ -19,6 +19,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Markup;
 
 namespace TecWare.PPSn.Controls
 {
@@ -355,7 +356,7 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary></summary>
 		protected override System.Collections.IEnumerator LogicalChildren
-			=> HasContent ? LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Content) : base.LogicalChildren;
+			=> LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Content);
 	} // class SideBarItemsBase
 
 	#endregion
@@ -801,7 +802,7 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary></summary>
 		protected override System.Collections.IEnumerator LogicalChildren
-			=> HasHeader ? LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Header) : base.LogicalChildren;
+			=> LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Header);
 
 		/// <summary>Is the current filter selected</summary>
 		public bool IsSelected { get => BooleanBox.GetBool(GetValue(IsSelectedProperty)); set => SetValue(IsSelectedProperty, BooleanBox.GetObject(value)); }

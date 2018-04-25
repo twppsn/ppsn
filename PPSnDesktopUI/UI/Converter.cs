@@ -35,6 +35,8 @@ namespace TecWare.PPSn.UI
 		public static IValueConverter NumericValue => NumericValueConverter.Default;
 		/// <summary>Convert between Visibility and bool.</summary>
 		public static IValueConverter Visibility => VisibilityConverter.Default;
+		/// <summary>Convert between Visibility and bool.</summary>
+		public static VisibilityConverterParameter VisibilityCollapsedParameter => VisibilityConverterParameter.Collapsed;
 		/// <summary>Removes all new lines.</summary>
 		public static IValueConverter MultiToSingleLine => MultiToSingleLineConverter.Default;
 		/// <summary>Creates a array of objects.</summary>
@@ -313,6 +315,8 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Singelton for the default Parameter.</summary>
 		public static VisibilityConverterParameter Default { get; } = new VisibilityConverterParameter();
+		/// <summary>Singelton for the default Parameter.</summary>
+		public static VisibilityConverterParameter Collapsed { get; } = new VisibilityConverterParameter() { FalseValue = Visibility.Collapsed };
 	} // class VisibilityConverterParameter
 
 	internal sealed class VisibilityConverter : IValueConverter
