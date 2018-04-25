@@ -35,38 +35,42 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsTextBox}">
-					<Grid>						
-						<Border x:Name="border"
-								BorderBrush="{TemplateBinding BorderBrush}"
-								BorderThickness="{TemplateBinding BorderThickness}"
-								Background="{TemplateBinding Background}"
-								SnapsToDevicePixels="True">
-							<Grid>
-								<Grid.ColumnDefinitions>
-									<ColumnDefinition />
-									<ColumnDefinition Width="Auto" />
-								</Grid.ColumnDefinitions>
-								<ScrollViewer x:Name="PART_ContentHost"
-											  Focusable="False"
-											  HorizontalScrollBarVisibility="Hidden"
-											  VerticalScrollBarVisibility="Hidden" />
-								<Button x:Name="ClearButton"
-										Grid.Column="1"
-										Command="{x:Static pps:PpsTextBox.ClearTextCommand}"
-										Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsClearContentButtonStyle}}"
-										Foreground="{TemplateBinding Foreground}" />
-							</Grid>
-						</Border>
-						<Popup Width="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
-							   AllowsTransparency="True"
-							   Margin="0,-1,0,0"
-							   PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
-							   IsOpen="{Binding HasError, UpdateSourceTrigger=PropertyChanged, RelativeSource={RelativeSource TemplatedParent}}">
-							<Border BorderThickness="1 0 1 1" BorderBrush="Black">
-								<Label Padding="3,1,3,1" Background="AntiqueWhite" Content="{Binding ErrorMessage, RelativeSource={RelativeSource TemplatedParent}}"/>
-							</Border>
-						</Popup>
-					</Grid>
+					<Border x:Name="border"
+							BorderBrush="{TemplateBinding BorderBrush}"
+							BorderThickness="{TemplateBinding BorderThickness}"
+							Background="{TemplateBinding Background}"
+							SnapsToDevicePixels="True">
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition />
+								<ColumnDefinition Width="21" />
+							</Grid.ColumnDefinitions>
+							<Button x:Name="ClearButton"
+									Grid.Column="1"
+									Height="21"
+									VerticalAlignment="Top"
+									Foreground="{TemplateBinding Foreground}"
+									Command="{x:Static pps:PpsTextBox.ClearTextCommand}"
+									Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsClearContentButtonStyle}}" />
+							<ScrollViewer x:Name="PART_ContentHost"
+										  Focusable="False"
+										  HorizontalScrollBarVisibility="Hidden"
+										  VerticalScrollBarVisibility="Hidden" />
+							<ScrollViewer x:Name="FormattedValueViewer"
+										  Focusable="False"
+										  HorizontalScrollBarVisibility="{Binding HorizontalScrollBarVisibility, ElementName=PART_ContentHost}"
+										  VerticalScrollBarVisibility="{Binding VerticalScrollBarVisibility, ElementName=PART_ContentHost}"
+										  CanContentScroll="{Binding CanContentScroll, ElementName=PART_ContentHost}"
+										  Padding="{TemplateBinding Padding}"
+										  Visibility="Hidden">
+								<TextBlock Text="{TemplateBinding FormattedValue}"
+										   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+										   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+										   TextWrapping="{TemplateBinding TextWrapping}"
+										   Margin="2,0,2,0" />
+							</ScrollViewer>
+						</Grid>
+					</Border>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsKeyboardFocused" Value="True">
 							<Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}"/>
@@ -80,7 +84,17 @@ specific language governing permissions and limitations under the Licence.
 						<Trigger Property="AcceptsReturn" Value="True">
 							<Setter Property="Padding" Value="2,2,2,0"/>
 							<Setter Property="VerticalContentAlignment" Value="Top"/>
+							<Setter Property="TextWrapping" Value="Wrap"/>
 						</Trigger>
+
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="IsKeyboardFocused" Value="False"/>
+								<Condition Property="HasFormattedValue" Value="True"/>
+							</MultiTrigger.Conditions>
+							<Setter TargetName="FormattedValueViewer" Property="Visibility" Value="Visible"/>
+							<Setter TargetName="PART_ContentHost" Property="Visibility" Value="Hidden"/>
+						</MultiTrigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
@@ -88,51 +102,17 @@ specific language governing permissions and limitations under the Licence.
 	</Style>
 
 
-	<Style x:Key="PPSnTemplateTextBoxStyle" TargetType="{x:Type TextBox}" BasedOn="{StaticResource PPSnTextBoxStyle}">
-		<Setter Property="Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type TextBox}">
-					<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
-							Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
-						<Grid>
-							<ScrollViewer x:Name="PART_ContentHost" Focusable="false"
-										  HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" 
-										  Visibility="Hidden"/>
-							<!--PART_ContentHost.ScrollContentPresenter used TemplateBinding Padding as Margin (bug?)
-							fix: add extraMargin -->
-							<ScrollViewer x:Name="PART_CalculatedStringViewer"
-										  Focusable="false"
-										  HorizontalScrollBarVisibility="{Binding HorizontalScrollBarVisibility, ElementName=PART_ContentHost}"
-										  VerticalScrollBarVisibility="{Binding VerticalScrollBarVisibility, ElementName=PART_ContentHost}"
-										  CanContentScroll="{Binding CanContentScroll, ElementName=PART_ContentHost}"
-										  Visibility="Visible"
-										  Padding="{TemplateBinding Padding}" Margin="2,0">
-								<!--<TextBlock
-									Text="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type TextBox}},
-									Path=(ui:PpsTemplateTextBoxBehavior.FormattedValue)}"
-									HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-									VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-									TextWrapping="{TemplateBinding TextWrapping}"/>-->
-							</ScrollViewer>
-						</Grid>
-					</Border>
-					<ControlTemplate.Triggers>
-						<Trigger Property="IsKeyboardFocused" Value="True">
-							<Setter TargetName="PART_ContentHost" Property="Visibility" Value="Visible"/>
-							<Setter TargetName="PART_CalculatedStringViewer" Property="Visibility" Value="Hidden"/>
-							<Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
-						</Trigger>
-						<Trigger Property="IsEnabled" Value="false">
-							<Setter Property="Foreground" Value="{StaticResource PPSnWindowDisabledForegroundBrush}"/>
-						</Trigger>
-						<Trigger Property="AcceptsReturn" Value="True">
-							<Setter Property="Padding" Value="2,2,2,0"/>
-							<Setter Property="VerticalContentAlignment" Value="Top"/>
-						</Trigger>
-					</ControlTemplate.Triggers>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
-	</Style>
+	<!--ToDo-->
+	
+	<!--<Popup Width="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+							   AllowsTransparency="True"
+							   Margin="0,-1,0,0"
+							   PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+							   IsOpen="{Binding HasError, UpdateSourceTrigger=PropertyChanged, RelativeSource={RelativeSource TemplatedParent}}">
+		<Border BorderThickness="1 0 1 1" BorderBrush="Black">
+			<Label Padding="3,1,3,1" Background="AntiqueWhite" Content="{Binding ErrorMessage, RelativeSource={RelativeSource TemplatedParent}}"/>
+		</Border>
+	</Popup>-->
+
 
 </ResourceDictionary>
