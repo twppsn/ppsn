@@ -417,19 +417,14 @@ namespace TecWare.PPSn
 		/// parents in the logical tree.</summary>
 		/// <param name="current">Current object in the logical tree.</param>
 		/// <param name="serviceType">Type of the service.</param>
-		/// <param name="throwException"><c>true</c>, to throw an not found exception.</param>
+		/// <param name="useVisualTree"></param>
 		/// <returns>The service of the default value.</returns>
-		public static object GetControlService(this DependencyObject current, Type serviceType, bool throwException = false)
+		public static object GetControlService(this DependencyObject current, Type serviceType, bool useVisualTree = false)
 		{
 			object r = null;
 
 			if (current == null)
-			{
-				if (throwException)
-					throw new ArgumentException($"Service not found ('{serviceType.Name}').");
-				else
-					return null;
-			}
+				return null;
 			else if (current is IServiceProvider sp)
 				r = sp.GetService(serviceType);
 			else if (serviceType.IsAssignableFrom(current.GetType()))
@@ -438,7 +433,11 @@ namespace TecWare.PPSn
 			if (r != null)
 				return r;
 
-			return GetControlService(GetLogicalParent(current), serviceType, throwException);
+			return GetControlService(
+				useVisualTree 
+					? GetVisualParent(current) 
+					: GetLogicalParent(current), serviceType, useVisualTree
+			);
 		} // func GetControlService
 
 		/// <summary>Get the logical parent or the template parent.</summary>
@@ -467,6 +466,25 @@ namespace TecWare.PPSn
 			return parent is T r
 				? r
 				: GetLogicalParent<T>(parent);
+		} // func GetLogicalParent
+
+		/// <summary></summary>
+		/// <param name="current"></param>
+		/// <returns></returns>
+		public static DependencyObject GetVisualParent(this DependencyObject current)
+			=> VisualTreeHelper.GetParent(current);
+
+		/// <summary></summary>
+		/// <param name="current"></param>
+		/// <typeparam name="T"></typeparam>
+		/// <returns></returns>
+		public static T GetVisualParent<T>(this DependencyObject current)
+			where T : DependencyObject
+		{
+			var parent = GetLogicalParent(current);
+			return parent is T r
+				? r
+				: GetVisualParent<T>(parent);
 		} // func GetLogicalParent
 
 		/// <summary>Find a child in the Visual tree.</summary>

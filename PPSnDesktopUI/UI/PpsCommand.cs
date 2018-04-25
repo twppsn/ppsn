@@ -82,10 +82,10 @@ namespace TecWare.PPSn.UI
 
 			// next ask controls
 			if (r == null && target is DependencyObject dc1)
-				r = StuffUI.GetControlService(dc1, serviceType);
+				r = StuffUI.GetControlService(dc1, serviceType, true);
 
 			if (r == null && target != source && source is DependencyObject dc2)
-				r = StuffUI.GetControlService(dc2, serviceType);
+				r = StuffUI.GetControlService(dc2, serviceType, false);
 
 			return r ?? environment.GetService(serviceType);
 		} // func GetService
@@ -653,11 +653,11 @@ namespace TecWare.PPSn.UI
 		/// <summary>Name of the Image for the Button</summary>
 		public static readonly DependencyProperty ImageProperty = DependencyProperty.Register(nameof(Image), typeof(string), typeof(PpsUICommandButton));
 		/// <summary>The Command the Button schould execute</summary>
-		public static readonly DependencyProperty CommandProperty = ButtonBase.CommandProperty.AddOwner(typeof(PpsUICommandButton);
+		public static readonly DependencyProperty CommandProperty = ButtonBase.CommandProperty.AddOwner(typeof(PpsUICommandButton));
 		/// <summary>The Command the Button schould execute</summary>
-		public static readonly DependencyProperty CommandParameterProperty = ButtonBase.CommandParameterProperty.AddOwner(typeof(PpsUICommandButton);
+		public static readonly DependencyProperty CommandParameterProperty = ButtonBase.CommandParameterProperty.AddOwner(typeof(PpsUICommandButton));
 		/// <summary>The Command the Button schould execute</summary>
-		public static readonly DependencyProperty CommandTargetProperty = ButtonBase.CommandTargetProperty.AddOwner(typeof(PpsUICommandButton);
+		public static readonly DependencyProperty CommandTargetProperty = ButtonBase.CommandTargetProperty.AddOwner(typeof(PpsUICommandButton));
 
 		/// <summary>Text to be shown on the Button</summary>
 		public string DisplayText { get => (string)GetValue(DisplayTextProperty); set => SetValue(DisplayTextProperty, value); }

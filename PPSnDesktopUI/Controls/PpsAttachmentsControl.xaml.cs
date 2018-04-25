@@ -110,8 +110,11 @@ namespace TecWare.PPSn.Controls
 			this.getCurrentPane = new Lazy<IPpsWindowPane>(() => PpsEnvironment.GetCurrentPane(this));
 
 			// initialize toolbar
-			var commands = new PpsUICommandCollection();
-			commands.CollectionChanged += Commands_CollectionChanged;
+			var commands = new PpsUICommandCollection
+			{
+				AddLogicalChildHandler = AddLogicalChild,
+				RemoveLogicalChildHandler = RemoveLogicalChild
+			};
 			SetValue(commandsPropertyKey, commands);
 
 			// Add default commands
@@ -205,32 +208,13 @@ namespace TecWare.PPSn.Controls
 		
 		private static Task RunAttachmentAsync(PpsCommandContext ctx)
 			=> GetCurrentAttachmentItemFromContext(ctx)?.LinkedObject.ViewAsync(ctx.Target) ?? Task.CompletedTask;
-		
+
 		#endregion
 
 		#region -- Logical Children ---------------------------------------------------
 
-		protected override IEnumerator LogicalChildren 
-			=> base.LogicalChildren;
-
-		private void Commands_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-		{
-			switch (e.Action)
-			{
-				case NotifyCollectionChangedAction.Add:
-					if (e.NewItems[0] != null)
-						AddLogicalChild(e.NewItems[0]);
-					break;
-				case NotifyCollectionChangedAction.Remove:
-					if (e.OldItems[0] != null)
-						RemoveLogicalChild(e.OldItems[0]);
-					break;
-				case NotifyCollectionChangedAction.Reset:
-					break;
-				default:
-					throw new InvalidOperationException();
-			}
-		} // proc Commands_CollectionChanged
+		protected override IEnumerator LogicalChildren
+			=> Commands == null ? base.LogicalChildren : Procs.CombineEnumerator(base.LogicalChildren, Commands.GetEnumerator());
 
 		#endregion
 
