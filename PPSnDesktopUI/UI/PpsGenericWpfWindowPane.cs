@@ -563,6 +563,7 @@ namespace TecWare.PPSn.UI
 			OnPropertyChanged(nameof(Control));
 			OnPropertyChanged(nameof(Title));
 			OnPropertyChanged(nameof(SubTitle));
+			OnPropertyChanged(nameof(Commands));
 		} // proc LoadInternAsync
 
 		/// <summary>Control is created.</summary>

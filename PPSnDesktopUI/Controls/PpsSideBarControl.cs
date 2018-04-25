@@ -207,7 +207,7 @@ namespace TecWare.PPSn.Controls
 
 		internal static void UpdateParentSelectedContent(DependencyObject d)
 		{
-			if (LogicalTreeHelper.GetParent(d) is PpsSideBarItemsBase sidebar)
+			if (ItemsControlFromItemContainer(d) is PpsSideBarItemsBase sidebar)
 				sidebar.UpdateSelectedContent();
 		} // proc UpdateParentSelectedContent
 
@@ -426,7 +426,7 @@ namespace TecWare.PPSn.Controls
 	public class PpsSideBarGroup : PpsSideBarItemsBase
 	{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-		private static readonly DependencyPropertyKey isTopSelectedPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsTopSelected), typeof(bool), typeof(PpsSideBarGroup), new FrameworkPropertyMetadata(false));
+		private static readonly DependencyPropertyKey isTopSelectedPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsTopSelected), typeof(bool), typeof(PpsSideBarGroup), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
 		public static readonly DependencyProperty IsTopSelectedProperty = isTopSelectedPropertyKey.DependencyProperty;
 
 		public static readonly DependencyProperty HeaderProperty = HeaderedContentControl.HeaderProperty.AddOwner(typeof(PpsSideBarGroup), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnHeaderChanged)));
@@ -519,9 +519,10 @@ namespace TecWare.PPSn.Controls
 				group.OnSelected(new RoutedEventArgs(SelectedEvent, d));
 			else
 			{
-				group.SetValue(isTopSelectedPropertyKey, BooleanBox.False);
 				group.UnselectAll();
 				group.OnUnSelected(new RoutedEventArgs(UnselectedEvent, d));
+
+				group.SetValue(isTopSelectedPropertyKey, BooleanBox.False);
 			}
 		} // proc OnSelectedPropertyChanged
 
@@ -553,6 +554,8 @@ namespace TecWare.PPSn.Controls
 			base.OnSelectionChanged(e);
 			if (HasSelectedItem())
 				IsSelected = true;
+
+			SetValue(isTopSelectedPropertyKey, BooleanBox.False);
 		} // proc OnSelectionChanged
 
 		private bool SetSelected(bool setActive)
@@ -561,12 +564,13 @@ namespace TecWare.PPSn.Controls
 				return false;
 			
 			// mark selected
-			IsSelected = setActive; 
-			SetValue(isTopSelectedPropertyKey, BooleanBox.GetObject(setActive));
+			IsSelected = setActive;
 
 			// unselect childs
 			UnselectAll();
 			UpdateSelectedContent();
+
+			SetValue(isTopSelectedPropertyKey, BooleanBox.GetObject(setActive));
 			return true;
 		} // proc SetSelected
 
@@ -618,9 +622,6 @@ namespace TecWare.PPSn.Controls
 	{
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty IsSelectedProperty = Selector.IsSelectedProperty.AddOwner(typeof(PpsSideBarPanel), new FrameworkPropertyMetadata(BooleanBox.False, OnSelectedPropertyChanged));
-
-		private static readonly DependencyPropertyKey isTopSelectedPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsTopSelected), typeof(bool), typeof(PpsSideBarPanel), new FrameworkPropertyMetadata(false));
-		public static readonly DependencyProperty IsTopSelectedProperty = isTopSelectedPropertyKey.DependencyProperty;
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		/// <summary></summary>
@@ -672,10 +673,7 @@ namespace TecWare.PPSn.Controls
 			if (value)
 				panel.OnSelected(new RoutedEventArgs(Selector.SelectedEvent, d));
 			else
-			{
-				panel.SetValue(isTopSelectedPropertyKey, BooleanBox.False);
 				panel.OnUnSelected(new RoutedEventArgs(Selector.UnselectedEvent, d));
-			}
 		} // proc OnSelectedPropertyChanged
 
 		/// <summary></summary>
@@ -701,7 +699,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
-			if (e.Source == this && SetSelected(!IsTopSelected))
+			if (e.Source == this && SetSelected(!IsSelected))
 				e.Handled = true;
 
 			base.OnMouseLeftButtonDown(e);
@@ -709,8 +707,6 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>Is the current panel selected.</summary>
 		public bool IsSelected { get => BooleanBox.GetBool(GetValue(IsSelectedProperty)); set => SetValue(IsSelectedProperty, BooleanBox.GetObject(value)); }
-		/// <summary>Is this element the current item.</summary>
-		public bool IsTopSelected => BooleanBox.GetBool(GetValue(IsTopSelectedProperty));
 
 		/// <summary>IndentationLevel</summary>
 		public int IndentationLevel => PpsSideBarControl.GetIndentLevel(this);
@@ -731,8 +727,6 @@ namespace TecWare.PPSn.Controls
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty IsSelectedProperty = Selector.IsSelectedProperty.AddOwner(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(BooleanBox.False, OnIsSelectedChanged));
 
-		private static readonly DependencyPropertyKey isTopSelectedPropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsTopSelected), typeof(bool), typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(false));
-		public static readonly DependencyProperty IsTopSelectedProperty = isTopSelectedPropertyKey.DependencyProperty;
 		public static readonly DependencyProperty FilterProperty = DependencyProperty.Register(nameof(Filter), typeof(object), typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnFilterChanged)));
 		public static readonly DependencyProperty HeaderProperty = HeaderedContentControl.HeaderProperty.AddOwner(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnHeaderChanged)));
 		public static readonly DependencyProperty HeaderTemplateProperty = HeaderedContentControl.HeaderTemplateProperty.AddOwner(typeof(PpsSideBarPanelFilter), new FrameworkPropertyMetadata(null));
@@ -750,10 +744,7 @@ namespace TecWare.PPSn.Controls
 			if (value)
 				filter.OnSelected(new RoutedEventArgs(Selector.SelectedEvent, d));
 			else
-			{
-				filter.SetValue(isTopSelectedPropertyKey, BooleanBox.False);
 				filter.OnUnSelected(new RoutedEventArgs(Selector.UnselectedEvent, d));
-			}
 		} // proc OnIsSelectedChanged
 
 		private static void OnFilterChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -802,7 +793,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
-			if (e.Source == this && SetSelected(!IsTopSelected))
+			if (e.Source == this && SetSelected(!IsSelected))
 				e.Handled = true;
 
 			base.OnMouseLeftButtonDown(e);
@@ -814,8 +805,6 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>Is the current filter selected</summary>
 		public bool IsSelected { get => BooleanBox.GetBool(GetValue(IsSelectedProperty)); set => SetValue(IsSelectedProperty, BooleanBox.GetObject(value)); }
-		/// <summary>Is this element the current item.</summary>
-		public bool IsTopSelected => BooleanBox.GetBool(GetValue(IsTopSelectedProperty));
 		/// <summary>Header of the filter.</summary>
 		public object Header { get => GetValue(HeaderProperty); set => SetValue(HeaderProperty, value); }
 		/// <summary></summary>

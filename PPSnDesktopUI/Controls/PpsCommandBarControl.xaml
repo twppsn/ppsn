@@ -1,0 +1,52 @@
+﻿<!--
+Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+European Commission - subsequent versions of the EUPL(the "Licence"); You may
+not use this work except in compliance with the Licence.
+
+You may obtain a copy of the Licence at:
+http://ec.europa.eu/idabc/eupl
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+specific language governing permissions and limitations under the Licence.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					xmlns:uiO="clr-namespace:TecWare.PPSn.UI"
+					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
+
+	<Style TargetType="{x:Type pps:PpsCommandBarControl}">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type pps:PpsCommandBarControl}">
+					<ItemsControl x:Name="PART_ItemsControl" ItemsSource="{TemplateBinding Commands}">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<StackPanel Orientation="Horizontal" />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+					</ItemsControl>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+		<Style.Resources>
+			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Null}}">
+				<Border Width="16"/>
+			</DataTemplate>
+			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Type uiO:PpsUICommandButton}}">
+				<Button Command="{Binding Command}"
+						Content="{Binding DisplayText}" 
+						ToolTip="{Binding Description}" />
+			</DataTemplate>
+			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Rectangle,{x:Null}}">
+				<Border Width="16"/>
+			</DataTemplate>
+			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Rectangle,{x:Type uiO:PpsUICommandButton}}">
+				<Button Command="{Binding Command}"
+						Content="{Binding DisplayText}" 
+						ToolTip="{Binding Description}" />
+			</DataTemplate>
+		</Style.Resources>
+	</Style>
+</ResourceDictionary>

@@ -103,13 +103,14 @@
     <Compile Include="Controls\ComboBoxBehavior.cs" />
     <Compile Include="Controls\DataListControl.cs" />
     <Compile Include="Controls\PopupBehavior.cs" />
-    <Compile Include="Controls\PpsCommandbarControl.cs" />
+    <Compile Include="Controls\PpsCommandBarControl.cs" />
     <Compile Include="Controls\PpsDataField.cs" />
     <Compile Include="Controls\PpsDataFieldPanel.cs" />
     <Compile Include="Controls\PpsDataFilterBox.cs" />
     <Compile Include="Controls\PpsDataSelector.cs" />
     <Compile Include="Controls\PpsEditableListbox.cs" />
     <Compile Include="Controls\PpsNamedSeparator.cs" />
+    <Compile Include="Controls\PpsSharedResourceKey.cs" />
     <Compile Include="Controls\PpsSideBarControl.cs" />
     <Compile Include="Controls\PpsStackSectionControl.cs" />
     <Compile Include="Controls\PpsGenericWpfControl.cs" />
@@ -190,6 +191,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\PpsDataFieldPanel.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\PpsCommandBarControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
