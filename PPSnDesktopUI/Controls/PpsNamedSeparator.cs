@@ -13,9 +13,11 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
+using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Controls
 {
@@ -59,6 +61,10 @@ namespace TecWare.PPSn.Controls
 			AddLogicalChild(newValue);
 		} // proc OnContentChanged
 
+		/// <summary></summary>
+		protected override IEnumerator LogicalChildren 
+			=> LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Content);
+		
 		static PpsNamedSeparator()
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsNamedSeparator), new FrameworkPropertyMetadata(typeof(PpsNamedSeparator)));

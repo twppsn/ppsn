@@ -17,6 +17,7 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
 	<Style TargetType="{x:Type pps:PpsCommandBarControl}">
+		<Setter Property="HorizontalAlignment" Value="Right" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsCommandBarControl}">
