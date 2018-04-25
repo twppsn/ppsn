@@ -15,21 +15,29 @@
 #endregion
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Markup;
 
 namespace TecWare.PPSn.Controls
 {
 	/// <summary></summary>
+	[ContentProperty(name: nameof(Content))]
 	public class PpsNamedSeparator : Separator
 	{
 		#region ---- DependencyProperties -----------------------------------------------
 		/// <summary>Content/Header of the Separator</summary>
-		public static readonly DependencyProperty ContentProperty = DependencyProperty.Register(nameof(Content), typeof(object), typeof(PpsNamedSeparator));
+		public static readonly DependencyProperty ContentProperty = ContentControl.ContentProperty.AddOwner(typeof(PpsNamedSeparator), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnContentChanged)));
 		/// <summary>Template for the Content/Header of the Separator</summary>
-		public static readonly DependencyProperty ContentTemplateProperty = DependencyProperty.Register(nameof(ContentTemplate), typeof(DataTemplate), typeof(PpsNamedSeparator));
+		public static readonly DependencyProperty ContentTemplateProperty = ContentControl.ContentTemplateProperty.AddOwner(typeof(PpsNamedSeparator), new FrameworkPropertyMetadata(null));
 		/// <summary>Selector for the ContentTemplate </summary>
-		public static readonly DependencyProperty ContentTemplateSelectorProperty = DependencyProperty.Register(nameof(ContentTemplateSelector), typeof(DataTemplateSelector), typeof(PpsNamedSeparator));
+		public static readonly DependencyProperty ContentTemplateSelectorProperty = ContentControl.ContentTemplateSelectorProperty.AddOwner(typeof(PpsNamedSeparator), new FrameworkPropertyMetadata(null));
 		/// <summary>StringFormat for the Content/Header</summary>
-		public static readonly DependencyProperty ContentStringFormatProperty = DependencyProperty.Register(nameof(ContentStringFormat), typeof(string), typeof(PpsNamedSeparator));
+		public static readonly DependencyProperty ContentStringFormatProperty = ContentControl.ContentStringFormatProperty.AddOwner(typeof(PpsNamedSeparator), new FrameworkPropertyMetadata(null));
+
+		private static void OnContentChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		{
+			var pns = (PpsNamedSeparator)d;
+			pns.OnContentChanged(e.NewValue, e.OldValue);
+		} // proc OnContentChanged
 
 		/// <summary>Content/Header of the Separator</summary>
 		public object Content { get => GetValue(ContentProperty); set => SetValue(ContentProperty, value); }
@@ -41,6 +49,15 @@ namespace TecWare.PPSn.Controls
 		public string ContentStringFormat { get => (string)GetValue(ContentStringFormatProperty); set => SetValue(ContentStringFormatProperty, value); }
 
 		#endregion DependencyProperties
+
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		public void OnContentChanged(object newValue, object oldValue)
+		{
+			RemoveLogicalChild(oldValue);
+			AddLogicalChild(newValue);
+		} // proc OnContentChanged
 
 		static PpsNamedSeparator()
 		{
