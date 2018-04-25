@@ -102,7 +102,11 @@ namespace TecWare.PPSn.Controls
 		/// <summary>The Time in Seconds an Information is shown.</summary>
 		public static readonly DependencyProperty ErrorVisibleTimeProperty = DependencyProperty.Register(nameof(ErrorVisibleTime), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(5));
 		/// <summary>Binding Point for formatted value</summary>
-		public static readonly DependencyProperty FormattedValueProperty = DependencyProperty.Register(nameof(FormattedValue), typeof(object), typeof(PpsTextBox), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty FormattedValueProperty = DependencyProperty.Register(nameof(FormattedValue), typeof(object), typeof(PpsTextBox), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnFormattedValueChangedCallback)));
+
+		private static readonly DependencyPropertyKey hasFormattedValuePropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasFormattedValue), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(BooleanBox.False));
+		/// <summary>True if FormattedValue is not null</summary>
+		public static readonly DependencyProperty HasFormattedValueProperty = hasFormattedValuePropertyKey.DependencyProperty;
 
 		/// <summary>The Command empties the TextBox</summary>
 		public static readonly RoutedCommand ClearTextCommand = new RoutedUICommand("ClearText", "ClearText", typeof(PpsTextBox));
@@ -121,9 +125,15 @@ namespace TecWare.PPSn.Controls
 		public int ErrorVisibleTime { get => (int)GetValue(ErrorVisibleTimeProperty); set => SetValue(ErrorVisibleTimeProperty, value); }
 		/// <summary>Binding Point for formatted value</summary>
 		public object FormattedValue { get => GetValue(FormattedValueProperty); set => SetValue(FormattedValueProperty, value); }
+		/// <summary>True if FormattedValue is not null</summary>
+		public bool HasFormattedValue { get => BooleanBox.GetBool(GetValue(HasFormattedValueProperty)); private set => SetValue(hasFormattedValuePropertyKey, BooleanBox.GetObject(value)); }
 
 		private static void OnInputTypeChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsTextBox)d).OnInputTypeChanged((PpsTextBoxInputType)e.NewValue, (PpsTextBoxInputType)e.OldValue);
+
+		private static void OnFormattedValueChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsTextBox)d).HasFormattedValue = e.NewValue != null;
+
 
 		#endregion DependencyProperties
 
@@ -397,7 +407,7 @@ namespace TecWare.PPSn.Controls
 
 			retriggerHold = true;
 
-			NeatlyCleanText();
+			//NeatlyCleanText();
 
 			retriggerHold = false;
 		} // proc OnTextChanged
