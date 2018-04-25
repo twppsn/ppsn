@@ -96,7 +96,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>The message presented to the user if the data was invalid</summary>
 		public static readonly DependencyProperty ErrorMessageProperty = DependencyProperty.Register(nameof(ErrorMessage), typeof(string), typeof(PpsTextBox));
 		/// <summary>True if there was an invalid entry. Auto-Resets</summary>
-		public static readonly DependencyProperty HasErroredProperty = DependencyProperty.Register(nameof(HasErrored), typeof(bool), typeof(PpsTextBox), new PropertyMetadata(false));
+		public static readonly DependencyProperty HasErrorProperty = DependencyProperty.Register(nameof(HasError), typeof(bool), typeof(PpsTextBox), new PropertyMetadata(false));
 		/// <summary>Sets the allowed Lines for this Textbox</summary>
 		public static readonly DependencyProperty AllowedLineCountProperty = DependencyProperty.Register(nameof(AllowedLineCount), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(1));
 		/// <summary>The Time in Seconds an Information is shown.</summary>
@@ -116,7 +116,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>The message presented to the user if the data was invalid</summary>
 		public string ErrorMessage { get => (string)GetValue(ErrorMessageProperty); set => SetValue(ErrorMessageProperty, value); }
 		/// <summary>True if there was an invalid entry. Auto-Resets</summary>
-		public bool HasErrored { get => BooleanBox.GetBool(GetValue(HasErroredProperty)); set => SetValue(HasErroredProperty, value); }
+		public bool HasError { get => BooleanBox.GetBool(GetValue(HasErrorProperty)); set => SetValue(HasErrorProperty, value); }
 		/// <summary>The Time in Milliseconds an Information is shown.</summary>
 		public int ErrorVisibleTime { get => (int)GetValue(ErrorVisibleTimeProperty); set => SetValue(ErrorVisibleTimeProperty, value); }
 		/// <summary>Binding Point for formatted value</summary>
@@ -129,7 +129,6 @@ namespace TecWare.PPSn.Controls
 
 		#region ---- Error Handling -----------------------------------------------------
 
-
 		private DispatcherTimer fadeTimer;
 
 		private void SetError(string message)
@@ -140,14 +139,14 @@ namespace TecWare.PPSn.Controls
 				fadeTimer = new DispatcherTimer(new TimeSpan(0, 0, ErrorVisibleTime), DispatcherPriority.Background, ResetError, Dispatcher);
 			}
 
-			HasErrored = true;
+			HasError = true;
 			ErrorMessage = message;
 			fadeTimer.Start();
 		} // proc SetError
 
 		private void ResetError(object sender, EventArgs e)
 		{
-			HasErrored = false;
+			HasError = false;
 			ErrorMessage = String.Empty;
 			fadeTimer?.Stop();
 		}
@@ -392,6 +391,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnTextChanged(TextChangedEventArgs e)
 		{
+			base.OnTextChanged(e);
 			if (retriggerHold || InputType == PpsTextBoxInputType.None)
 				return;
 
@@ -406,6 +406,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e">unused</param>
 		protected override void OnLostFocus(RoutedEventArgs e)
 		{
+			base.OnLostFocus(e);
 			ResetError(null, null);
 		} // proc OnLostFocus
 
@@ -418,7 +419,14 @@ namespace TecWare.PPSn.Controls
 				(sender, e) =>
 				{
 					Text = String.Empty;
-				}, (sender, e) => e.CanExecute = !String.IsNullOrEmpty(Text)));
+				}, (sender, e) => e.CanExecute = AllowClearText));
+		}
+
+		private bool AllowClearText => IsEnabled && !IsReadOnly && IsKeyboardFocusWithin && !String.IsNullOrEmpty(Text);
+
+		static PpsTextBox()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsTextBox), new FrameworkPropertyMetadata(typeof(PpsTextBox)));
 		}
 	} // class PpsTextBox
 

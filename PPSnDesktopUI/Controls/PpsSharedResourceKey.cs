@@ -61,6 +61,9 @@ namespace TecWare.PPSn.Controls
 		public object ResourceId => resourceId;
 		/// <summary></summary>
 		public override Assembly Assembly => typeof(PpsSharedResourceKey).Assembly;
+
+		/// <summary>Style for ClearButton in TextBox, CommboBox...</summary>
+		public static readonly ResourceKey PpsClearContentButtonStyle = new PpsSharedResourceKey(nameof(PpsClearContentButtonStyle));
 	} // class PpsSharedResourceKey
 
 	#endregion

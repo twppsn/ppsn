@@ -1,0 +1,41 @@
+﻿<!--
+Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
+European Commission - subsequent versions of the EUPL(the "Licence"); You may
+not use this work except in compliance with the Licence.
+
+You may obtain a copy of the Licence at:
+http://ec.europa.eu/idabc/eupl
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the Licence is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the Licence for the
+specific language governing permissions and limitations under the Licence.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					xmlns:uiO="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
+					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
+
+	<Style x:Key="{x:Static pps:PpsSharedResourceKey.PpsClearContentButtonStyle}" TargetType="{x:Type Button}">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type Button}">
+					<Border Background="Transparent">
+						<Viewbox x:Name="ClearBox" Opacity=".65">
+							<Canvas Width="24" Height="24">
+								<Path Data="M6,7 L7,6 L12,11 L17,6 L18,7 L13,12 L18,17 L17,18 L12,13 L7,18 L6,17 L11,12 L6,7 Z"
+									  Fill="{TemplateBinding Foreground}" />
+							</Canvas>
+						</Viewbox>
+					</Border>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsMouseOver" Value="True">
+							<Setter TargetName="ClearBox" Property="Opacity" Value="1"/>
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>	
+	
+</ResourceDictionary>

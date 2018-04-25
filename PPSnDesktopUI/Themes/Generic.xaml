@@ -1,12 +1,17 @@
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:pps="clr-namespace:TecWare.PPSn.Controls;assembly=PPSn.Desktop.UI"
 	xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
 	<ResourceDictionary.MergedDictionaries>
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsSharedResourceKey.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsCommandBarControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsNamedSeparator.xaml" />
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsTextBox.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsDataFieldPanel.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsSideBarControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsStackSectionControl.xaml" />
 	</ResourceDictionary.MergedDictionaries>
+
 </ResourceDictionary>

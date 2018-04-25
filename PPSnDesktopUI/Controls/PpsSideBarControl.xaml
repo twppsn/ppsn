@@ -170,7 +170,7 @@ specific language governing permissions and limitations under the Licence.
 		</Setter>
 	</Style>
 
-	<Style x:Key="{ComponentResourceKey {x:Type pps:PpsSideBarControl},PpsSideBarSeparator}" TargetType="Separator">
+	<Style x:Key="{x:Static pps:PpsSideBarItemsBase.PpsSideBarSeparator}" TargetType="Separator">
 		<Setter Property="Margin" Value="16,3,16,3" />
 		<Setter Property="Template">
 			<Setter.Value>
