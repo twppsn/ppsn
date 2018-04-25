@@ -691,18 +691,18 @@ namespace TecWare.PPSn.UI
 				// build parameter info
 				var parameterExpressions = new ParameterExpression[sourceParameterInfo.Length];
 				var dynamicParameterExpressions = new LExpression[sourceParameterInfo.Length + 1];
-				var argumentNames = new string[sourceParameterInfo.Length];
+				//var argumentNames = new string[sourceParameterInfo.Length];
 
 				dynamicParameterExpressions[0] = LExpression.Constant(eventTarget);
 				for (var i = 0; i < sourceParameterInfo.Length; i++)
 				{
 					var pi = sourceParameterInfo[i];
-					argumentNames[i] = pi.Name;
+					//argumentNames[i] = pi.Name;
 					parameterExpressions[i] = LExpression.Parameter(pi.ParameterType, pi.Name);
 					dynamicParameterExpressions[i + 1] = parameterExpressions[i];
 				}
-
-				var callInfo = new CallInfo(sourceParameterInfo.Length, argumentNames);
+				
+				var callInfo = new CallInfo(sourceParameterInfo.Length); // , argumentNames Lua uses Expression.GetDelegateType to create a call-type, this function does not respect parameter names.
 
 				// bind code to target
 				var eventHandler = LExpression.Lambda(handler,
