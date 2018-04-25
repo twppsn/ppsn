@@ -35,10 +35,6 @@ specific language governing permissions and limitations under the Licence.
 						<Border	Width="{DynamicResource PPSnSideBarIncreasedWidth}">
 							<ItemsPresenter />
 						</Border>
-						<!--<Border	Width="{DynamicResource PPSnSideBarIncreasedWidth}"
-								Background="{DynamicResource PPSnSideBarBackgroundBrush}">
-							<ItemsPresenter />
-						</Border>-->
 						<ContentPresenter Grid.Column="1"
 										  VerticalAlignment="Top"
 										  HorizontalAlignment="Left"
@@ -58,7 +54,7 @@ specific language governing permissions and limitations under the Licence.
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsSideBarGroup}">
 					<StackPanel>
-						<Grid x:Name="groupHeaderGrid" Height="36" Background="Transparent">
+						<Grid x:Name="HeaderGrid" Height="36" Background="Transparent">
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition Width="16" />
 								<ColumnDefinition />
@@ -85,8 +81,8 @@ specific language governing permissions and limitations under the Licence.
 						<Trigger Property="IsTopSelected" Value="True">
 							<Setter TargetName="selectionMarker" Property="Visibility" Value="Visible" />
 						</Trigger>
-						<Trigger Property="IsMouseOver" SourceName="groupHeaderGrid" Value="True">
-							<Setter Property="Background" TargetName="groupHeaderGrid" Value="{DynamicResource PPSnMouseOverBrush}" />
+						<Trigger Property="IsMouseOver" SourceName="HeaderGrid" Value="True">
+							<Setter Property="Background" TargetName="HeaderGrid" Value="{DynamicResource PPSnMouseOverBrush}" />
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
@@ -95,11 +91,10 @@ specific language governing permissions and limitations under the Licence.
 	</Style>
 
 	<Style TargetType="pps:PpsSideBarPanel">
-		<Setter Property="Background" Value="Transparent" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsSideBarPanel}">
-					<Grid Height="36" Background="{TemplateBinding Background}">
+					<Grid x:Name="HeaderGrid" Height="36" Background="Transparent">
 						<Grid.ColumnDefinitions>
 							<ColumnDefinition Width="16" />
 							<ColumnDefinition />
@@ -123,8 +118,8 @@ specific language governing permissions and limitations under the Licence.
 						<Trigger Property="IsSelected" Value="True">
 							<Setter TargetName="selectionMarker" Property="Visibility" Value="Visible" />
 						</Trigger>
-						<Trigger Property="IsMouseOver" Value="True">
-							<Setter Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
+						<Trigger Property="IsMouseOver" SourceName="HeaderGrid" Value="True">
+							<Setter Property="Background" TargetName="HeaderGrid" Value="{DynamicResource PPSnMouseOverBrush}" />
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
@@ -133,11 +128,10 @@ specific language governing permissions and limitations under the Licence.
 	</Style>
 
 	<Style TargetType="pps:PpsSideBarPanelFilter">
-		<Setter Property="Background" Value="Transparent" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsSideBarPanelFilter}">
-					<Grid Height="36" Background="{TemplateBinding Background}">
+					<Grid x:Name="HeaderGrid" Height="36" Background="Transparent">
 						<Grid.ColumnDefinitions>
 							<ColumnDefinition Width="16" />
 							<ColumnDefinition />
@@ -161,8 +155,8 @@ specific language governing permissions and limitations under the Licence.
 						<Trigger Property="IsSelected" Value="True">
 							<Setter TargetName="selectionMarker" Property="Visibility" Value="Visible" />
 						</Trigger>
-						<Trigger Property="IsMouseOver" Value="True">
-							<Setter Property="Background" Value="{DynamicResource PPSnMouseOverBrush}" />
+						<Trigger Property="IsMouseOver" SourceName="HeaderGrid" Value="True">
+							<Setter Property="Background" TargetName="HeaderGrid" Value="{DynamicResource PPSnMouseOverBrush}" />
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
