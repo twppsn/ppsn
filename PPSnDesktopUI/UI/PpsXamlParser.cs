@@ -24,6 +24,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Markup;
 using System.Xaml;
 using System.Xaml.Schema;
@@ -437,6 +438,43 @@ namespace TecWare.PPSn.UI
 			public override XamlMember Member => member;
 			public override XamlSchemaContext SchemaContext => member.DeclaringType.SchemaContext;
 		} // class PpsXamlMemberEmitter
+
+		#endregion
+
+		#region -- class PpsXamlNodeEmitter -------------------------------------------
+
+		private sealed class PpsXamlNodeEmitter : System.Xaml.XamlReader
+		{
+			private int state = -1;
+			private readonly XamlMember member;
+			private readonly XamlNodeType nodeType;
+
+			public PpsXamlNodeEmitter(XamlMember member, XamlNodeType nodeType)
+			{
+				this.member = member ?? throw new ArgumentNullException(nameof(member));
+				this.nodeType = nodeType;
+			} // ctor
+
+			public override bool Read()
+			{
+				if (IsEof)
+					return false;
+
+				state++;
+				return state <= 0;
+			} // func Read
+
+			public override bool IsEof => state > 0;
+
+			public override XamlNodeType NodeType => nodeType;
+
+			public override NamespaceDeclaration Namespace => null;
+			public override XamlType Type => null;
+
+			public override object Value => null;
+			public override XamlMember Member => member;
+			public override XamlSchemaContext SchemaContext => member.DeclaringType.SchemaContext;
+		} // class PpsXamlNodeEmitter
 
 		#endregion
 
@@ -879,6 +917,23 @@ namespace TecWare.PPSn.UI
 						ReadNode(reader);
 
 						return PushDelegate(member, eventHandlerType, eventValue);
+					}
+					else if (settings.Code != null && typeof(ICommand).IsAssignableFrom(Member.Type.UnderlyingType) && !(reader is PpsXamlMemberEmitter || reader is PpsXamlNodeEmitter)) // action should be set direct or dynamic
+					{
+						var member = Member;
+						ReadNodeType(reader, XamlNodeType.StartMember);
+
+						if (reader.NodeType == XamlNodeType.Value) // constant
+						{
+							var key = reader.Value;
+							var value = ((LuaTable)settings.Code)[key];
+							ReadNode(reader);
+							ReadNodeType(reader, XamlNodeType.EndMember);
+
+							return PushMember(member, value);
+						}
+						else
+							return PushEmitter(new PpsXamlNodeEmitter(member, XamlNodeType.StartMember));
 					}
 					else if (settings.Code != null && typeof(Delegate).IsAssignableFrom(Member.Type.UnderlyingType) && !(reader is PpsXamlMemberEmitter)) // action should be set direct or dynamic
 					{
