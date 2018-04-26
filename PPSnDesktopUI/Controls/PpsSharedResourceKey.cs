@@ -64,6 +64,9 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>Style for ClearButton in TextBox, CommboBox...</summary>
 		public static readonly ResourceKey PpsClearContentButtonStyle = new PpsSharedResourceKey(nameof(PpsClearContentButtonStyle));
+
+		/// <summary>Style for round Button with image and (optional)text</summary>
+		public static readonly ResourceKey PpsCircleButtonStyle = new PpsSharedResourceKey(nameof(PpsCircleButtonStyle));
 	} // class PpsSharedResourceKey
 
 	#endregion
