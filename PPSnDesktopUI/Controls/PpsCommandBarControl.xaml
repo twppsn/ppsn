@@ -18,6 +18,7 @@ specific language governing permissions and limitations under the Licence.
 
 	<Style TargetType="{x:Type pps:PpsCommandBarControl}">
 		<Setter Property="HorizontalAlignment" Value="Right" />
+		<Setter Property="VerticalAlignment" Value="Top" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsCommandBarControl}">
@@ -33,19 +34,26 @@ specific language governing permissions and limitations under the Licence.
 		</Setter>
 		<Style.Resources>
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Null}}">
-				<Border Width="16"/>
+				<Border Width="32"/>
 			</DataTemplate>
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Type uiO:PpsUICommandButton}}">
 				<Button Command="{Binding Command}"
-						Content="{Binding DisplayText}" 
-						ToolTip="{Binding Description}" />
+						Content="{Binding DisplayText}"
+						ToolTip="{Binding Description}"
+						Tag="{Binding Image}"
+						Margin="12,0,0,0"
+						Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsCircleButtonStyle}}" />
 			</DataTemplate>
+
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Rectangle,{x:Null}}">
-				<Border Width="16"/>
+				<Border Width="32"/>
 			</DataTemplate>
+
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Rectangle,{x:Type uiO:PpsUICommandButton}}">
 				<Button Command="{Binding Command}"
-						Content="{Binding DisplayText}" 
+						Content="{Binding DisplayText}"
+						Background="Red"
+						Margin="12,0,0,0"
 						ToolTip="{Binding Description}" />
 			</DataTemplate>
 		</Style.Resources>
