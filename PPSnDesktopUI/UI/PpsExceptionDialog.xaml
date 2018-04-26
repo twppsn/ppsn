@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="clr-namespace:TecWare.PPSn.UI"
+		xmlns:uiC="clr-namespace:TecWare.PPSn.Controls"
         mc:Ignorable="d"
 		Height="200" Width="500" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
 	<Window.Resources>
@@ -32,10 +33,23 @@
 		<Separator Grid.Row="0" Grid.ColumnSpan="2" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="0"/>
 		<CheckBox Grid.Column="1" Grid.Row="1" Content="Diese Meldung nicht mehr anzeigen" IsChecked="{Binding SkipChecked}" Visibility="{Binding SkipVisible,Converter={x:Static ui:PpsConverter.Visibility}}"
 				  Style="{StaticResource PPSnSysCheckBoxStyle}" HorizontalAlignment="Left" VerticalAlignment="Center"/>
-		<Button Grid.Column="1" Grid.Row="1" Content="Details" Command="{x:Static ApplicationCommands.Properties}" Visibility="{Binding DetailsVisible,Converter={x:Static ui:PpsConverter.Visibility}}"
-				Width="110" Height="23" HorizontalAlignment="Right" Margin="0,0,134,0" Style="{StaticResource PPSnSysButtonStyle}"/>
-		<Button Grid.Column="1" Grid.Row="1" Content="{Binding MessageType, Converter={StaticResource CloseTextConverter}}" Command="{x:Static ApplicationCommands.Close}" 
-				Width="110" Height="23" HorizontalAlignment="Right" Margin="0,0,12,0" Style="{StaticResource PPSnSysButtonStyle}"/>
+		<uiC:PpsButton Grid.Column="1"
+					   Grid.Row="1" 
+					   Content="Details"
+					   Command="{x:Static ApplicationCommands.Properties}"
+					   Visibility="{Binding DetailsVisible,Converter={x:Static ui:PpsConverter.Visibility}}"
+					   Width="110"
+					   Height="23"
+					   HorizontalAlignment="Right"
+					   Margin="0,0,134,0" />
+		<uiC:PpsButton Grid.Column="1" 
+					   Grid.Row="1"
+					   Content="{Binding MessageType, Converter={StaticResource CloseTextConverter}}"
+					   Command="{x:Static ApplicationCommands.Close}" 
+					   Width="110"
+					   Height="23"
+					   HorizontalAlignment="Right"
+					   Margin="0,0,12,0" />
 	</Grid>
 
 </Window>
