@@ -680,10 +680,42 @@ namespace TecWare.PPSn.UI
 	/// <summary>UI-Command split button</summary>
 	public class PpsUISplitCommandButton : PpsUICommandButton
 	{
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public static readonly DependencyProperty PopupProperty = PpsSplitButton.PopupProperty.AddOwner(typeof(PpsUISplitCommandButton), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnPopupChanged)));
+		public static readonly DependencyProperty ModeProperty = PpsSplitButton.ModeProperty.AddOwner(typeof(PpsUISplitCommandButton));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		private static void OnPopupChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsUISplitCommandButton)d).OnPopupChanged((Popup)e.NewValue, (Popup)e.OldValue);
+
+		private void OnPopupChanged(Popup newValue, Popup oldValue)
+		{
+			if (oldValue != null)
+				oldValue.DataContext = DependencyProperty.UnsetValue;
+			RemoveLogicalChild(oldValue);
+
+			AddLogicalChild(newValue);
+			if (newValue != null)
+				newValue.DataContext = DataContext;
+		} // proc OnPopupChanged
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+		{
+			if (e.Property == DataContextProperty && Popup != null)
+				Popup.DataContext = e.NewValue; // we do not want to bind the DataContext to the PlacementTarget
+			base.OnPropertyChanged(e);
+		} // proc OnPropertyChanged
+
+		/// <summary></summary>
+		protected override IEnumerator LogicalChildren
+			=> LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Popup);
+
 		/// <summary>Split button type</summary>
 		public PpsSplitButtonType Mode { get; set; }
 		/// <summary>Popup of the split button</summary>
-		public Popup Popup { get; set; }
+		public Popup Popup { get => (Popup)GetValue(PopupProperty); set => SetValue(PopupProperty, value); }
 	} // class PpsUISplitCommandButton
 
 	#endregion

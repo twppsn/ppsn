@@ -40,6 +40,12 @@ specific language governing permissions and limitations under the Licence.
 						Content="{Binding DisplayText}" 
 						ToolTip="{Binding Description}" />
 			</DataTemplate>
+			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Type uiO:PpsUISplitCommandButton}}">
+				<pps:PpsSplitButton Content="{Binding DisplayText}"
+						ToolTip="{Binding Description}" 
+						Popup="{Binding Popup}"
+						Mode="{Binding Mode}" />
+			</DataTemplate>
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Rectangle,{x:Null}}">
 				<Border Width="16"/>
 			</DataTemplate>

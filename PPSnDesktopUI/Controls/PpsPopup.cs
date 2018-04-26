@@ -13,15 +13,67 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
+using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 
 namespace TecWare.PPSn.Controls
 {
+	#region -- class PpsPopup ------------------------------------------------------------
+
+	/// <summary></summary>
+	public class PpsPopup : Popup
+	{
+		/// <summary></summary>
+		public event CancelEventHandler Opening;
+		/// <summary></summary>
+		public event CancelEventHandler Closing;
+
+		private static object OnIsOpenCoerceValue(DependencyObject d, object baseValue)
+			=> ((PpsPopup)d).OnIsCoerceValue((bool)baseValue);
+
+		private bool OnIsCoerceValue(bool baseValue)
+		{
+			var ev = new CancelEventArgs(false);
+			if (baseValue)
+			{
+				Opening?.Invoke(this, ev);
+				return !ev.Cancel;
+			}
+			else
+			{
+				Closing?.Invoke(this, ev);
+				return ev.Cancel;
+			}
+		} // proc OnIsCoerceValue
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnOpened(EventArgs e)
+		{
+			if (Child != null && !Child.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next)))
+			{
+				Child.Focusable = true;
+				FocusManager.SetFocusedElement(this, Child);
+				Keyboard.Focus(Child);
+			}
+			base.OnOpened(e);
+		} // proc OnOpend
+
+		static PpsPopup()
+		{
+			IsOpenProperty.OverrideMetadata(typeof(PpsPopup), new FrameworkPropertyMetadata(null, new CoerceValueCallback(OnIsOpenCoerceValue)));
+		}
+	} // class PpsPopup
+
+	#endregion
+
 	#region -- class PpsPopupBehavior ----------------------------------------------------
 
 	/// <summary></summary>
+	[Obsolete]
 	public static class PpsPopupBehavior
 	{
 		public static bool GetForceFocus(UIElement element)

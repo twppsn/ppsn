@@ -102,7 +102,7 @@
   <ItemGroup>
     <Compile Include="Controls\ComboBoxBehavior.cs" />
     <Compile Include="Controls\DataListControl.cs" />
-    <Compile Include="Controls\PopupBehavior.cs" />
+    <Compile Include="Controls\PpsPopup.cs" />
     <Compile Include="Controls\PpsButton.cs" />
     <Compile Include="Controls\PpsCommandBarControl.cs" />
     <Compile Include="Controls\PpsDataField.cs" />
@@ -190,6 +190,10 @@
     <Page Include="Controls\PpsAttachmentsControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\PpsSplitButton.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Controls\PpsDataFieldPanel.xaml">
       <Generator>MSBuild:Compile</Generator>

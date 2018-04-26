@@ -1011,8 +1011,10 @@ namespace TecWare.PPSn.UI
 		} // sctor
 
 		internal static Type GetEventHandlerType(XamlMember member)
-			=> ((RoutedEvent)wpfXamlMemberPropertyInfo.GetValue(member)).HandlerType;
-
+			=> wpfXamlMemberPropertyInfo.DeclaringType.IsAssignableFrom(member.GetType())
+				? ((RoutedEvent)wpfXamlMemberPropertyInfo.GetValue(member)).HandlerType
+				: member.Type.UnderlyingType;
+		
 		internal static object CreateEventFromDelegate(Type delegateType, Delegate dlg)
 		{
 			if (delegateType.IsAssignableFrom(dlg.GetType()))

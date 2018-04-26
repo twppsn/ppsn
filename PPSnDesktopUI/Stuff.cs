@@ -362,12 +362,16 @@ namespace TecWare.PPSn
 			baseItems?.Reset();
 		} // proc Reset
 
-		internal static IEnumerator GetLogicalEnumerator(FrameworkElement d, IEnumerator logicalChildren, Func<object> getContent)
+		internal static IEnumerator GetLogicalEnumerator(DependencyObject d, IEnumerator logicalChildren, Func<object> getContent)
 		{
 			var content = getContent();
 			if (content != null)
 			{
-				var templatedParent = d.TemplatedParent;
+				var templatedParent =
+					d is FrameworkElement fe
+						? fe.TemplatedParent
+						: (d is FrameworkContentElement fce ? fce.TemplatedParent : null);
+
 				if (templatedParent != null)
 				{
 					if (content is DependencyObject obj)
