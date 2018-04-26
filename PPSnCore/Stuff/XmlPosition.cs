@@ -45,18 +45,38 @@ namespace TecWare.PPSn.Stuff
 		{
 			private class StackLineInfo
 			{
-				public int lineNumber;
+				public int globalStartLine;
+				public int localStartLine;
 				public int linePosition;
 				public string baseUri;
 				public int popLevel;
+
+				public int GetLineNumber(IXmlLineInfo lineInfo)
+				{
+					if (lineInfo == null)
+						return localStartLine;
+
+					return localStartLine + lineInfo.LineNumber - globalStartLine;
+				} // func GetLineNumber
+
+				public int GetLinePosition(IXmlLineInfo lineInfo)
+				{
+					if (lineInfo == null)
+						return linePosition;
+
+					return lineInfo.LineNumber == globalStartLine ? linePosition : lineInfo.LinePosition;
+				} // func GetLinePosition
 			} // class StackLineInfo
 
 			private readonly XmlReader xml;
+			private readonly IXmlLineInfo lineInfo;
 			private readonly Stack<StackLineInfo> positionStack = new Stack<StackLineInfo>();
 
 			public PpsXmlPositionReader(XmlReader xml)
 			{
 				this.xml = xml ?? throw new ArgumentNullException(nameof(xml));
+
+				lineInfo = xml as IXmlLineInfo;
 			} // ctor
 
 			protected override void Dispose(bool disposing)
@@ -66,6 +86,33 @@ namespace TecWare.PPSn.Stuff
 					xml.Dispose();
 			} // proc Dispose
 
+			private void PopLineInfo()
+			{
+				while (positionStack.Count > 0)
+				{
+					var popLevel = positionStack.Peek().popLevel;
+					if (popLevel >= xml.Depth)
+						positionStack.Pop();
+					else
+						break;
+				}
+			} // proc PopLineInfo
+
+			private void PushLineInfo(string newBaseUri, int newLineNumber, int newLinePosition)
+			{
+				PopLineInfo();
+				positionStack.Push(
+					new StackLineInfo()
+					{
+						baseUri = newBaseUri,
+						globalStartLine = lineInfo?.LineNumber ?? 0,
+						localStartLine = newLineNumber,
+						linePosition = newLinePosition,
+						popLevel = xml.Depth
+					}
+				);
+			} // proc PushLineInfo
+
 			private bool UpdateLineInfo()
 			{
 				if (xml.NodeType == XmlNodeType.Element)
@@ -74,31 +121,26 @@ namespace TecWare.PPSn.Stuff
 					var newLinePosition = newLineNumber >= 0 ? xml.TryGetAttribute<string>(xnLinePosition, out var linePositionString) && Int32.TryParse(lineNumberString, out var linePosition) ? linePosition : -1 : -1;
 					var newBaseUri = xml.TryGetAttribute<string>(xnFileName, out var fileName) ? fileName : null;
 
-					if (newBaseUri != null && newLinePosition == -1)
-						positionStack.Push(new StackLineInfo() { lineNumber = 0, linePosition = 0, baseUri = newBaseUri, popLevel = xml.Depth });
-					else
-						positionStack.Push(new StackLineInfo() { lineNumber = newLineNumber, linePosition = newLinePosition >= 0 ? newLinePosition : 0, baseUri = newBaseUri ?? BaseURI, popLevel = xml.Depth });
+					if (newBaseUri != null && newLinePosition < 0)
+						PushLineInfo(newBaseUri, 0, 0);
+					else if (newLinePosition >= 0)
+						PushLineInfo(newBaseUri, newLineNumber, newLinePosition >= 0 ? newLinePosition : 0);
 				}
-				else if(xml.NodeType == XmlNodeType.EndElement  && positionStack.Count > 0)
-				{
-					var popLevel = positionStack.Peek().popLevel;
-					if (popLevel > xml.Depth)
-						positionStack.Pop();
-				}
+				else if (xml.NodeType == XmlNodeType.EndElement)
+					PopLineInfo();
+
 				return true;
 			} // func UpdateLineInfo
 
 			public override bool Read()
-			{
-				return xml.Read() && UpdateLineInfo();
-			} // func Read
+				=> xml.Read() && UpdateLineInfo();
 
 			public async override Task<bool> ReadAsync()
 				=> await xml.ReadAsync() && UpdateLineInfo();
 
 			bool IXmlLineInfo.HasLineInfo() => true;
-			int IXmlLineInfo.LineNumber => positionStack.Count > 0 ? positionStack.Peek().lineNumber : (xml is IXmlLineInfo lineInfo ? lineInfo.LineNumber : 0);
-			int IXmlLineInfo.LinePosition => positionStack.Count > 0 ? positionStack.Peek().lineNumber : (xml is IXmlLineInfo lineInfo ? lineInfo.LinePosition : 0);
+			int IXmlLineInfo.LineNumber => positionStack.Count > 0 ? positionStack.Peek().GetLineNumber(lineInfo) : lineInfo?.LineNumber ?? 0;
+			int IXmlLineInfo.LinePosition => positionStack.Count > 0 ? positionStack.Peek().GetLinePosition(lineInfo) : lineInfo?.LinePosition ?? 0;
 
 			#region -- overrides --
 
@@ -149,13 +191,9 @@ namespace TecWare.PPSn.Stuff
 			public override int ReadValueChunk(char[] buffer, int index, int count) => xml.ReadValueChunk(buffer, index, count);
 			public override string ReadString() => xml.ReadString();
 			public override XmlNodeType MoveToContent() => xml.MoveToContent();
-			public override void ReadStartElement() => xml.ReadStartElement();
-			public override void ReadStartElement(string name) => xml.ReadStartElement(name);
-			public override void ReadStartElement(string localname, string ns) => xml.ReadStartElement(localname, ns);
 			public override string ReadElementString() => xml.ReadElementString();
 			public override string ReadElementString(string name) => xml.ReadElementString(name);
 			public override string ReadElementString(string localname, string ns) => xml.ReadElementString(localname, ns);
-			public override void ReadEndElement() => xml.ReadEndElement();
 			public override bool IsStartElement() => xml.IsStartElement();
 			public override bool IsStartElement(string name) => xml.IsStartElement(name);
 			public override bool IsStartElement(string localname, string ns) => xml.IsStartElement(localname, ns);
@@ -165,9 +203,6 @@ namespace TecWare.PPSn.Stuff
 			public override bool ReadToDescendant(string localName, string namespaceURI) => xml.ReadToDescendant(localName, namespaceURI);
 			public override bool ReadToNextSibling(string name) => xml.ReadToNextSibling(name);
 			public override bool ReadToNextSibling(string localName, string namespaceURI) => xml.ReadToNextSibling(localName, namespaceURI);
-			public override string ReadInnerXml() => xml.ReadInnerXml();
-			public override string ReadOuterXml() => xml.ReadOuterXml();
-			public override XmlReader ReadSubtree() => xml.ReadSubtree();
 			public override Task<string> GetValueAsync() => xml.GetValueAsync();
 			public override Task<object> ReadContentAsObjectAsync() => xml.ReadContentAsObjectAsync();
 			public override Task<string> ReadContentAsStringAsync() => xml.ReadContentAsStringAsync();
@@ -182,8 +217,7 @@ namespace TecWare.PPSn.Stuff
 			public override Task<int> ReadElementContentAsBinHexAsync(byte[] buffer, int index, int count) => xml.ReadElementContentAsBinHexAsync(buffer, index, count);
 			public override Task<int> ReadValueChunkAsync(char[] buffer, int index, int count) => xml.ReadValueChunkAsync(buffer, index, count);
 			public override Task<XmlNodeType> MoveToContentAsync() => xml.MoveToContentAsync();
-			public override Task<string> ReadInnerXmlAsync() => xml.ReadInnerXmlAsync();
-			public override Task<string> ReadOuterXmlAsync() => xml.ReadOuterXmlAsync();
+
 			public override string GetAttribute(int i) => xml.GetAttribute(i);
 			public override string GetAttribute(string name) => xml.GetAttribute(name);
 			public override string GetAttribute(string name, string namespaceURI) => xml.GetAttribute(name, namespaceURI);

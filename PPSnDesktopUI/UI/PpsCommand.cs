@@ -681,7 +681,7 @@ namespace TecWare.PPSn.UI
 	public class PpsUISplitCommandButton : PpsUICommandButton
 	{
 		/// <summary>Split button type</summary>
-		public SplitButtonType Mode { get; set; }
+		public PpsSplitButtonType Mode { get; set; }
 		/// <summary>Popup of the split button</summary>
 		public Popup Popup { get; set; }
 	} // class PpsUISplitCommandButton
