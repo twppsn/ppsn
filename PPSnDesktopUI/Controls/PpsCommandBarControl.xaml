@@ -19,6 +19,7 @@ specific language governing permissions and limitations under the Licence.
 	<Style TargetType="{x:Type pps:PpsCommandBarControl}">
 		<Setter Property="HorizontalAlignment" Value="Right" />
 		<Setter Property="VerticalAlignment" Value="Top" />
+		<Setter Property="Focusable" Value="False" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsCommandBarControl}">
@@ -46,20 +47,22 @@ specific language governing permissions and limitations under the Licence.
 			</DataTemplate>
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Type uiO:PpsUISplitCommandButton}}">
 				<pps:PpsSplitButton Content="{Binding DisplayText}"
-						ToolTip="{Binding Description}" 
-						Popup="{Binding Popup}"
-						Mode="{Binding Mode}" />
+									ToolTip="{Binding Description}" 
+									Tag="{Binding Image}"
+									Popup="{Binding Popup}"
+									Mode="{Binding Mode}"
+									Margin="12,0,0,0"
+									Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsCircleButtonStyle}}" />
 			</DataTemplate>
+
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Rectangle,{x:Null}}">
 				<Border Width="32"/>
 			</DataTemplate>
-
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Rectangle,{x:Type uiO:PpsUICommandButton}}">
-				<Button Command="{Binding Command}"
-						Content="{Binding DisplayText}"
-						Background="Red"
-						Margin="12,0,0,0"
-						ToolTip="{Binding Description}" />
+				<pps:PpsButton Command="{Binding Command}"
+							   Content="{Binding DisplayText}"
+							   ToolTip="{Binding Description}"
+							   Margin="12,0,0,0" />
 			</DataTemplate>
 		</Style.Resources>
 	</Style>
