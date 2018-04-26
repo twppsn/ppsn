@@ -103,6 +103,7 @@
     <Compile Include="Controls\ComboBoxBehavior.cs" />
     <Compile Include="Controls\DataListControl.cs" />
     <Compile Include="Controls\PopupBehavior.cs" />
+    <Compile Include="Controls\PpsButton.cs" />
     <Compile Include="Controls\PpsCommandBarControl.cs" />
     <Compile Include="Controls\PpsDataField.cs" />
     <Compile Include="Controls\PpsDataFieldPanel.cs" />
@@ -119,7 +120,7 @@
     <Compile Include="UI\PpsXamlParser.cs" />
     <Compile Include="Controls\ReadOnlyPaneBehavior.cs" />
     <Compile Include="Controls\SideBarMenu.cs" />
-    <Compile Include="Controls\SplitButton.cs" />
+    <Compile Include="Controls\PpsSplitButton.cs" />
     <Compile Include="Controls\Toolbar.cs" />
     <Compile Include="Controls\TreeListView.cs" />
     <Compile Include="Controls\UndoManagerListBox.cs" />

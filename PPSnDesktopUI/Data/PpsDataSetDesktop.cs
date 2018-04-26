@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -390,6 +391,35 @@ namespace TecWare.PPSn.Data
 	/// <summary>Special collection view for PpsDataTable, that supports IDataRowEnumerable</summary>
 	public class PpsDataCollectionView : ListCollectionView, IDataRowEnumerable
 	{
+		#region -- class DataRowEnumerator --------------------------------------------
+
+		private sealed class DataRowEnumerator : IEnumerator<IDataRow>
+		{
+			private readonly IEnumerator enumerator;
+
+			public DataRowEnumerator(IEnumerator enumerator)
+			{
+				this.enumerator = enumerator;
+			} // ctor
+
+			public void Dispose()
+			{
+				if (enumerator is IDisposable d)
+					d.Dispose();
+			} // proc Dispose
+
+			public void Reset()
+				=> enumerator.Reset();
+
+			public bool MoveNext()
+				=> enumerator.MoveNext();
+
+			object IEnumerator.Current => enumerator.Current;
+			public IDataRow Current => enumerator.Current as IDataRow;
+		} // class DataRowEnumerator
+
+		#endregion
+
 		private readonly IDisposable detachView;
 
 		/// <summary>Collection view for PpsDataTable's.</summary>
@@ -470,13 +500,12 @@ namespace TecWare.PPSn.Data
 
 			return this; // we do not create a new collectionview -> it should be unique for the current context
 		} // func ApplyFilter
-
-		
+				
 		IDataRowEnumerable IDataRowEnumerable.ApplyColumns(IEnumerable<PpsDataColumnExpression> columns) 
 			=> throw new NotSupportedException(); // it is not allowed to touch columns
 
 		IEnumerator<IDataRow> IEnumerable<IDataRow>.GetEnumerator()
-			=> this.Cast<IDataRow>().GetEnumerator();
+			=> new DataRowEnumerator(base.GetEnumerator());
 
 		/// <summary>Parent row, of the current filter.</summary>
 		public PpsDataRow Parent => (InternalList as PpsDataRelatedFilter)?.Parent;
