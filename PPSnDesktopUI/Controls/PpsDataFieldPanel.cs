@@ -48,9 +48,9 @@ namespace TecWare.PPSn.Controls
 																								   typeof(PpsDataFieldPanel),
 																								   new FrameworkPropertyMetadata(2, FrameworkPropertyMetadataOptions.AffectsMeasure, new PropertyChangedCallback(InvalidateColumnDefinitionsCallback)));
 		/// <summary>DependencyProperty</summary>
-		public static readonly DependencyProperty ColumnMarginProperty = DependencyProperty.Register(nameof(ColumnMargin), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(30.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
+		public static readonly DependencyProperty ColumnMarginProperty = DependencyProperty.Register(nameof(ColumnMargin), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(55.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 		/// <summary>DependencyProperty</summary>
-		public static readonly DependencyProperty LabelWidthProperty = DependencyProperty.Register(nameof(LabelWidth), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(80.0, FrameworkPropertyMetadataOptions.AffectsArrange));
+		public static readonly DependencyProperty LabelWidthProperty = DependencyProperty.Register(nameof(LabelWidth), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(110.0, FrameworkPropertyMetadataOptions.AffectsArrange));
 		/// <summary>DependencyProperty</summary>
 		public static readonly DependencyProperty RowMarginProperty = DependencyProperty.Register(nameof(RowMargin), typeof(double), typeof(PpsDataFieldPanel), new FrameworkPropertyMetadata(6.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 		/// <summary>DependencyProperty</summary>
