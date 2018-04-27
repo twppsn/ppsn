@@ -627,10 +627,22 @@ namespace TecWare.PPSn.Controls
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
 			if (e.Source == this && SetSelected(!IsTopSelected))
+			{
+				Keyboard.ClearFocus();
 				e.Handled = true;
-
+			}
 			base.OnMouseLeftButtonDown(e);
 		} // proc OnMouseLeftButtonDown
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			if (e.Source == this && IsKeyboardFocused && (e.Key == Key.Enter || e.Key == Key.Space) && SetSelected(!IsTopSelected))
+				e.Handled = true;
+			base.OnKeyDown(e);
+		} // proc OnKeyDown
+
 
 		/// <summary></summary>
 		/// <param name="item"></param>
@@ -748,10 +760,21 @@ namespace TecWare.PPSn.Controls
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
 			if (e.Source == this && SetSelected(!IsSelected))
+			{
+				Keyboard.ClearFocus();
 				e.Handled = true;
-
+			}
 			base.OnMouseLeftButtonDown(e);
 		} // proc OnMouseLeftButtonDown
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			if (e.Source == this && IsKeyboardFocused && (e.Key == Key.Enter || e.Key == Key.Space) && SetSelected(!IsSelected))
+				e.Handled = true;
+			base.OnKeyDown(e);
+		} // proc OnKeyDown
 
 		/// <summary>Is the current panel selected.</summary>
 		public bool IsSelected { get => BooleanBox.GetBool(GetValue(IsSelectedProperty)); set => SetValue(IsSelectedProperty, BooleanBox.GetObject(value)); }
@@ -842,10 +865,21 @@ namespace TecWare.PPSn.Controls
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
 			if (e.Source == this && SetSelected(!IsSelected))
+			{
+				Keyboard.ClearFocus();
 				e.Handled = true;
-
+			}
 			base.OnMouseLeftButtonDown(e);
 		} // proc OnMouseLeftButtonDown
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			if (e.Source == this && IsKeyboardFocused && (e.Key == Key.Enter || e.Key == Key.Space) && SetSelected(!IsSelected))
+				e.Handled = true;
+			base.OnKeyDown(e);
+		} // proc OnKeyDown
 
 		/// <summary></summary>
 		protected override System.Collections.IEnumerator LogicalChildren
