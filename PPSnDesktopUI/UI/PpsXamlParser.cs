@@ -1097,13 +1097,13 @@ namespace TecWare.PPSn.UI
 			nodes.Add(XamlNodeType.StartMember, xamlMember: member);
 			nodes.Add(XamlNodeType.StartObject, xamlType: forMultiValue ? codeMultiValueConverterType.Value : codeValueConverterType.Value);
 
-			if (convert == null)
+			if (convert != null)
 			{
 				nodes.Add(XamlNodeType.StartMember, xamlMember: forMultiValue ? codeMultiValueConvertMember.Value : codeValueConvertMember.Value);
 				nodes.Add(XamlNodeType.Value, value: convert);
 				nodes.Add(XamlNodeType.EndMember);
 			}
-			else if (convertBack == null)
+			else if (convertBack != null)
 			{
 				nodes.Add(XamlNodeType.StartMember, xamlMember: forMultiValue ? codeMultiValueConvertBackMember.Value : codeValueConvertBackMember.Value);
 				nodes.Add(XamlNodeType.Value, value: convertBack);
@@ -1422,8 +1422,8 @@ namespace TecWare.PPSn.UI
 			bindingSourceMember = new Lazy<XamlMember>(() => bindingType.Value.GetMember(nameof(Binding.Source)));
 
 			codeValueConverterType = new Lazy<XamlType>(() => PpsXamlSchemaContext.Default.GetXamlType(typeof(CodeValueConverter)));
-			codeValueConvertMember = new Lazy<XamlMember>(() => codeMultiValueConverterType.Value.GetMember(nameof(CodeValueConverter.Convert)));
-			codeValueConvertBackMember = new Lazy<XamlMember>(() => codeMultiValueConverterType.Value.GetMember(nameof(CodeValueConverter.ConvertBack)));
+			codeValueConvertMember = new Lazy<XamlMember>(() => codeValueConverterType.Value.GetMember(nameof(CodeValueConverter.Convert)));
+			codeValueConvertBackMember = new Lazy<XamlMember>(() => codeValueConverterType.Value.GetMember(nameof(CodeValueConverter.ConvertBack)));
 
 			codeMultiValueConverterType = new Lazy<XamlType>(() => PpsXamlSchemaContext.Default.GetXamlType(typeof(CodeMultiValueConverter)));
 			codeMultiValueConvertMember = new Lazy<XamlMember>(() => codeMultiValueConverterType.Value.GetMember(nameof(CodeMultiValueConverter.Convert)));
