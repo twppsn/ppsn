@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Dynamic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -25,6 +26,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Markup;
@@ -142,6 +144,73 @@ namespace TecWare.PPSn.UI
 		{
 		}
 	} // class CodeBinding
+
+	#endregion
+
+	#region -- class LuaValueConverter ------------------------------------------------
+
+	/// <summary></summary>
+	/// <param name="value"></param>
+	/// <param name="targetType"></param>
+	/// <param name="parameter"></param>
+	/// <param name="culture"></param>
+	/// <returns></returns>
+	public delegate object CodeConvertDelegate(object value, Type targetType, object parameter, CultureInfo culture);
+
+	/// <summary>Generic value converter</summary>
+	public class CodeValueConverter : IValueConverter
+	{
+		object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
+			=> Convert?.Invoke(value, targetType, parameter, culture);
+
+		object IValueConverter.ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			try
+			{
+				return ConvertBack?.Invoke(value, targetType, parameter, culture);
+			}
+			catch (Exception e)
+			{
+				return new ValidationResult(false, e);
+			}
+		} // func IValueConverter.Convert
+
+		/// <summary></summary>
+		public CodeConvertDelegate Convert { get; set; }
+		/// <summary></summary>
+		public CodeConvertDelegate ConvertBack { get; set; }
+	} // class CodeValueConverter
+
+	/// <summary></summary>
+	/// <param name="values"></param>
+	/// <param name="targetType"></param>
+	/// <param name="parameter"></param>
+	/// <param name="culture"></param>
+	/// <returns></returns>
+	public delegate object CodeMultiConvertDelegate(object[] values, Type targetType, object parameter, CultureInfo culture);
+
+	/// <summary></summary>
+	/// <param name="value"></param>
+	/// <param name="targetTypes"></param>
+	/// <param name="parameter"></param>
+	/// <param name="culture"></param>
+	/// <returns></returns>
+	public delegate object[] CodeMultiConvertBackDelegate(object value, Type[] targetTypes, object parameter, CultureInfo culture);
+
+	/// <summary>Generic value converter</summary>
+	public class CodeMultiValueConverter : IMultiValueConverter
+	{
+		object IMultiValueConverter.Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+			=> Convert?.Invoke(values, targetType, parameter, culture);
+
+		object[] IMultiValueConverter.ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+			=> ConvertBack?.Invoke(value, targetTypes, parameter, culture);
+
+		/// <summary></summary>
+		public CodeMultiConvertDelegate Convert { get; set; }
+		/// <summary></summary>
+		public CodeMultiConvertBackDelegate ConvertBack { get; set; }
+	} // class CodeMultiValueConverter
 
 	#endregion
 
@@ -1002,6 +1071,51 @@ namespace TecWare.PPSn.UI
 			return PushMember(member, value);
 		} // func PushDelegate
 
+		private bool PushCodeValueConverter(XamlMember member, string memberName, bool forMultiValue)
+		{
+			object convert;
+			object convertBack;
+			
+			var pos = memberName.IndexOf(',');
+			if (pos == -1)
+			{
+				convert = CompileEventConnector(forMultiValue ? typeof(CodeMultiConvertDelegate) : typeof(CodeConvertDelegate), memberName, settings.Code);
+				convertBack = null;
+			}
+			else
+			{
+				var convertMemberName = memberName.Substring(0, pos).Trim();
+				var convertBackMemberName = memberName.Substring(pos + 1).Trim();
+				convert = String.IsNullOrEmpty(convertMemberName) ? CompileEventConnector(forMultiValue ? typeof(CodeMultiConvertDelegate) : typeof(CodeConvertDelegate), convertMemberName, settings.Code) : null;
+				convertBack = String.IsNullOrEmpty(convertBackMemberName) ? CompileEventConnector(forMultiValue ? typeof(CodeMultiConvertBackDelegate) : typeof(CodeConvertDelegate), convertBackMemberName, settings.Code) : null;
+			}
+
+			if (convert == null && convertBack == null)
+				return Read();
+
+			var nodes = new PpsXamlNodeEmitter(SchemaContext);
+			nodes.Add(XamlNodeType.StartMember, xamlMember: member);
+			nodes.Add(XamlNodeType.StartObject, xamlType: forMultiValue ? codeMultiValueConverterType.Value : codeValueConverterType.Value);
+
+			if (convert == null)
+			{
+				nodes.Add(XamlNodeType.StartMember, xamlMember: forMultiValue ? codeMultiValueConvertMember.Value : codeValueConvertMember.Value);
+				nodes.Add(XamlNodeType.Value, value: convert);
+				nodes.Add(XamlNodeType.EndMember);
+			}
+			else if (convertBack == null)
+			{
+				nodes.Add(XamlNodeType.StartMember, xamlMember: forMultiValue ? codeMultiValueConvertBackMember.Value : codeValueConvertBackMember.Value);
+				nodes.Add(XamlNodeType.Value, value: convertBack);
+				nodes.Add(XamlNodeType.EndMember);
+			}
+
+			nodes.Add(XamlNodeType.EndObject);
+			nodes.Add(XamlNodeType.EndMember);
+
+			return PushEmitterIntern(nodes);
+		} // func PushCodeConverter
+
 		private bool PushEmitterIntern(System.Xaml.XamlReader emitter)
 		{
 			currentEmitterStack.Push(new PpsReaderStackItem(CurrentItem, emitter));
@@ -1072,49 +1186,70 @@ namespace TecWare.PPSn.UI
 						PushServiceProvider((PpsParserService)ReadMemberValue(this));
 						return Read();
 					}
-					else if (settings.Code != null && Member.IsEvent && !(reader is PpsXamlMemberEmitter))
+					else if (settings.Code != null && !(reader is PpsXamlMemberEmitter || reader is PpsXamlNodeEmitter))
 					{
-						var member = Member;
-						var eventHandlerType = PpsXamlParser.GetEventHandlerType(member);
-
-						var nodes = new PpsXamlNodeEmitter(SchemaContext);
-						if (ReadSimpleValueOnly(reader, nodes, out var eventValue))
-							return PushDelegate(member, eventHandlerType, eventValue);
-						else
-							return PushEmitterIntern(nodes);
-					}
-					else if (settings.Code != null && typeof(ICommand).IsAssignableFrom(Member.Type.UnderlyingType) && !(reader is PpsXamlMemberEmitter || reader is PpsXamlNodeEmitter)) // action should be set direct or dynamic
-					{
-						var member = Member;
-						var nodes = new PpsXamlNodeEmitter(SchemaContext);
-						if (ReadSimpleValueOnly(reader, nodes, out var value))
+						if (Member.IsEvent)
 						{
-							switch (value)
-							{
-								case string memberName:
-									var binding = new Binding(memberName)
-									{
-										Mode = BindingMode.OneWay,
-										Source = settings.Code
-									};
-									return PushMember(member, binding);
-								default:
-									return PushMember(member, Value);
-							}
-						}
-						else
-							return PushEmitterIntern(nodes);
-					}
-					else if (settings.Code != null && typeof(Delegate).IsAssignableFrom(Member.Type.UnderlyingType) && !(reader is PpsXamlMemberEmitter)) // action should be set direct or dynamic
-					{
-						var member = Member;
-						var delegateType = member.Type.UnderlyingType;
+							var member = Member;
+							var eventHandlerType = PpsXamlParser.GetEventHandlerType(member);
 
-						var nodes = new PpsXamlNodeEmitter(SchemaContext);
-						if (ReadSimpleValueOnly(reader, nodes, out var delegateValue))
-							return PushDelegate(member, delegateType, delegateValue);
-						else
-							return PushEmitterIntern(nodes);
+							var nodes = new PpsXamlNodeEmitter(SchemaContext);
+							if (ReadSimpleValueOnly(reader, nodes, out var eventValue))
+								return PushDelegate(member, eventHandlerType, eventValue);
+							else
+								return PushEmitterIntern(nodes);
+						}
+						else if (typeof(ICommand).IsAssignableFrom(Member.Type.UnderlyingType)) // action should be set direct or dynamic
+						{
+							var member = Member;
+							var nodes = new PpsXamlNodeEmitter(SchemaContext);
+							if (ReadSimpleValueOnly(reader, nodes, out var value))
+							{
+								switch (value)
+								{
+									case string memberName:
+										var binding = new Binding(memberName)
+										{
+											Mode = BindingMode.OneTime,
+											Source = settings.Code
+										};
+										return PushMember(member, binding);
+									default:
+										return PushMember(member, Value);
+								}
+							}
+							else
+								return PushEmitterIntern(nodes);
+						}
+						else if (typeof(IValueConverter) == Member.Type.UnderlyingType 
+							|| typeof(IMultiValueConverter) == Member.Type.UnderlyingType)
+						{
+							var member = Member;
+							var nodes = new PpsXamlNodeEmitter(SchemaContext);
+							if (ReadSimpleValueOnly(reader, nodes, out var value))
+							{
+								switch (value)
+								{
+									case string memberName:
+										return PushCodeValueConverter(member, memberName, typeof(IMultiValueConverter) == Member.Type.UnderlyingType);
+									default:
+										return PushMember(member, Value);
+								}
+							}
+							else
+								return PushEmitterIntern(nodes);
+						}
+						else if (typeof(Delegate).IsAssignableFrom(Member.Type.UnderlyingType)) // action should be set direct or dynamic
+						{
+							var member = Member;
+							var delegateType = member.Type.UnderlyingType;
+
+							var nodes = new PpsXamlNodeEmitter(SchemaContext);
+							if (ReadSimpleValueOnly(reader, nodes, out var delegateValue))
+								return PushDelegate(member, delegateType, delegateValue);
+							else
+								return PushEmitterIntern(nodes);
+						}
 					}
 					goto default;
 				case XamlNodeType.StartObject:
@@ -1273,10 +1408,26 @@ namespace TecWare.PPSn.UI
 		private static readonly Lazy<XamlType> bindingType;
 		private static readonly Lazy<XamlMember> bindingSourceMember;
 
+		private static readonly Lazy<XamlType> codeValueConverterType;
+		private static readonly Lazy<XamlMember> codeValueConvertMember;
+		private static readonly Lazy<XamlMember> codeValueConvertBackMember;
+
+		private static readonly Lazy<XamlType> codeMultiValueConverterType;
+		private static readonly Lazy<XamlMember> codeMultiValueConvertMember;
+		private static readonly Lazy<XamlMember> codeMultiValueConvertBackMember;
+
 		static PpsXamlReader()
 		{
 			bindingType = new Lazy<XamlType>(() => PpsXamlSchemaContext.Default.GetXamlType(typeof(Binding)));
 			bindingSourceMember = new Lazy<XamlMember>(() => bindingType.Value.GetMember(nameof(Binding.Source)));
+
+			codeValueConverterType = new Lazy<XamlType>(() => PpsXamlSchemaContext.Default.GetXamlType(typeof(CodeValueConverter)));
+			codeValueConvertMember = new Lazy<XamlMember>(() => codeMultiValueConverterType.Value.GetMember(nameof(CodeValueConverter.Convert)));
+			codeValueConvertBackMember = new Lazy<XamlMember>(() => codeMultiValueConverterType.Value.GetMember(nameof(CodeValueConverter.ConvertBack)));
+
+			codeMultiValueConverterType = new Lazy<XamlType>(() => PpsXamlSchemaContext.Default.GetXamlType(typeof(CodeMultiValueConverter)));
+			codeMultiValueConvertMember = new Lazy<XamlMember>(() => codeMultiValueConverterType.Value.GetMember(nameof(CodeMultiValueConverter.Convert)));
+			codeMultiValueConvertBackMember = new Lazy<XamlMember>(() => codeMultiValueConverterType.Value.GetMember(nameof(CodeMultiValueConverter.ConvertBack)));
 		}
 	} // class PpsXamlReader
 
