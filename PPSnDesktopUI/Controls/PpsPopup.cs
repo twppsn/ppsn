@@ -64,6 +64,7 @@ namespace TecWare.PPSn.Controls
 
 		static PpsPopup()
 		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsPopup), new FrameworkPropertyMetadata(typeof(PpsPopup)));
 			IsOpenProperty.OverrideMetadata(typeof(PpsPopup), new FrameworkPropertyMetadata(null, new CoerceValueCallback(OnIsOpenCoerceValue)));
 		}
 	} // class PpsPopup
