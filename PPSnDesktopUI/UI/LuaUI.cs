@@ -18,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Dynamic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -797,9 +798,9 @@ namespace TecWare.PPSn.UI
 						//value = Convert.ChangeType(value, member.Type.UnderlyingType);
 					}
 					else if (valueTypeConverter?.CanConvertTo(member.Type.UnderlyingType) ?? false)
-						value = valueTypeConverter.ConvertTo(value, member.Type.UnderlyingType);
+						value = valueTypeConverter.ConvertTo(null, CultureInfo.InvariantCulture, value, member.Type.UnderlyingType);
 					else if (memberTypeConverter?.CanConvertFrom(valueType.UnderlyingType) ?? false)
-						value = memberTypeConverter.ConvertFrom(value);
+						value = memberTypeConverter.ConvertFrom(null, CultureInfo.InvariantCulture, value);
 					else
 						throw new ArgumentException($"Can not set '{member.Name}' to '{value}'. Type is not assignable.");
 
