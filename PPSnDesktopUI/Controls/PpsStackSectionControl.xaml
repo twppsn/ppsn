@@ -33,7 +33,7 @@ specific language governing permissions and limitations under the Licence.
 								<Style TargetType="{x:Type ToggleButton}">
 									<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
 									<Setter Property="Background" Value="Transparent"/>
-									<Setter Property="Focusable" Value="False" />
+									<Setter Property="Focusable" Value="True" />
 									<Setter Property="Template">
 										<Setter.Value>
 											<ControlTemplate TargetType="{x:Type ToggleButton}">
@@ -57,7 +57,7 @@ specific language governing permissions and limitations under the Licence.
 															Grid.Column="1"
 															Grid.Row="0"
 															BorderThickness="0,0,0,4"
-															Margin="0,4,0,0"
+															Margin="0,4,4,0"
 															Padding="0,0,0,1"
 															HorizontalAlignment="Left"
 															VerticalAlignment="Top"
@@ -71,7 +71,7 @@ specific language governing permissions and limitations under the Licence.
 																	  Content="{Binding SubHeader, RelativeSource={RelativeSource AncestorType={x:Type pps:PpsStackSectionItem}}}"
 																	  Grid.Column="1"
 																	  Grid.Row="1"
-																	  Margin="0,-4,0,4"
+																	  Margin="0,-4,4,4"
 																	  HorizontalAlignment="Left"
 																	  Visibility="Collapsed" />
 												</Grid>
