@@ -42,8 +42,8 @@ specific language governing permissions and limitations under the Licence.
 
 	<uiO:LuaValueConverter x:Key="PaddingFromCircleConverter">
 		<![CDATA[
-		local p = (value - (value / 1.414213562)) / 2;
-		return 2.0 + clr.System.Math:Ceiling(p);
+		local v : double = value;
+		return 2.0 + cast(double, clr.System.Math:Ceiling(cast(double, (v - (v / 1.414213562)) / 2.0)));
 		]]>
 	</uiO:LuaValueConverter>
 
