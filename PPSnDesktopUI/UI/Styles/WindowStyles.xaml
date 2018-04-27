@@ -17,7 +17,7 @@ specific language governing permissions and limitations under the Licence.
 	                xmlns:ui="clr-namespace:TecWare.PPSn.Controls">
 
 	<Color x:Key="PPSnDesktopColor">#3B4A62</Color>
-	<Color x:Key="PPSnAccentColor">#FFFFFF</Color>
+	<Color x:Key="PPSnAccentColor">#000000</Color>
 	<Color x:Key="PPSnWindowActiveGlowColor">#007ACC</Color>
 	<Color x:Key="PPSnWindowInActiveGlowColor">#60728C</Color>
 	<Color x:Key="PPSnActionButtonColor">#FFF</Color>
@@ -26,8 +26,8 @@ specific language governing permissions and limitations under the Licence.
 
     <sys:String x:Key="PPSnApplicationTitle">PPSn</sys:String>
 
+	<SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="#000000" />
 	<SolidColorBrush x:Key="PPSnWindowBackgroundBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="PPSnWindowForegroundBrush" Color="#000000" />
 
 	<SolidColorBrush x:Key="PPSnWindowFooterBrush" Color="#007ACC" />
 	<SolidColorBrush x:Key="PPSnMarkerBrush" Color="#000000"/>
@@ -39,11 +39,11 @@ specific language governing permissions and limitations under the Licence.
 
 	<SolidColorBrush x:Key="PPSnControlNormalBorderBrush" Color="#D4D4D4"/>
 	<SolidColorBrush x:Key="PPSnControlBackgroundBrush" Color="{StaticResource PPSnControlBackgroundColor}"/>
-	<SolidColorBrush x:Key="PPSnControlFocusedBorderBrush" Color="#637C36"/>
+	<SolidColorBrush x:Key="PPSnControlFocusedBorderBrush" Color="#000000"/>
 	<SolidColorBrush x:Key="PPSnWindowDisabledForegroundBrush" Color="Gray"/>
 
 	<SolidColorBrush x:Key="PPSnMouseOverBrush" Color="#D4D4D4"/>
-	<SolidColorBrush x:Key="PPSnButtonPressedBrush" Color="#323E53"/>
+	<SolidColorBrush x:Key="PPSnButtonPressedBrush" Color="#999999"/>
 
 	<SolidColorBrush x:Key="PPSnPopUpBackgroundBrush" Color="DarkBlue"/>
 	<SolidColorBrush x:Key="PPSnImageBrush" Color="Brown"/>
@@ -92,40 +92,6 @@ specific language governing permissions and limitations under the Licence.
 	<Style x:Key="PpsProgressRingStyle" TargetType="{x:Type Control}"/>
 
 	<ControlTemplate x:Key="PPSnComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}"/>
-
-	<!--fixed styles (no theme)-->
-	<Style x:Key="PPSnSysButtonStyle" TargetType="{x:Type Button}">
-		<Setter Property="Foreground" Value="#000000"/>
-		<Setter Property="Background" Value="#CCCCCC"/>
-		<Setter Property="BorderBrush" Value="#CCCCCC"/>
-		<Setter Property="BorderThickness" Value="1"/>
-		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-		<Setter Property="Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type Button}">
-					<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
-						<ContentPresenter x:Name="PART_ContentPresenter" Focusable="False" RecognizesAccessKey="True" HorizontalAlignment="Center" VerticalAlignment="Center"
-										  Margin="{TemplateBinding Padding}" SnapsToDevicePixels="True" />
-					</Border>
-					<ControlTemplate.Triggers>
-						<Trigger Property="IsMouseOver" Value="true">
-							<Setter Property="BorderBrush" TargetName="border" Value="#7A7A7A"/>
-						</Trigger>
-						<Trigger Property="IsKeyboardFocused" Value="true">
-							<Setter Property="BorderBrush" TargetName="border" Value="#7A7A7A"/>
-						</Trigger>
-						<Trigger Property="IsPressed" Value="true">
-							<Setter Property="BorderBrush" TargetName="border" Value="#999999"/>
-							<Setter Property="Background" TargetName="border" Value="#999999"/>
-						</Trigger>
-						<Trigger Property="IsEnabled" Value="false">
-							<Setter Property="Foreground" Value="#7A7A7A"/>
-						</Trigger>
-					</ControlTemplate.Triggers>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
-	</Style>
 
 	<Style x:Key="PPSnSysCheckBoxStyle" TargetType="{x:Type CheckBox}">
 		<Setter Property="Foreground" Value="#000000"/>
