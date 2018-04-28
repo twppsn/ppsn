@@ -468,6 +468,8 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		public FilterNodeHandler FilterNode { get; set; }
 		/// <summary></summary>
+		public PpsParserService[] ParserServices { get; set; }
+		/// <summary></summary>
 		public IServiceProvider ServiceProvider { get; set; }
 	} // class PpsXamlReaderSettings
 
@@ -770,6 +772,12 @@ namespace TecWare.PPSn.UI
 
 			if (sourceReader is PpsXamlReader)
 				throw new ArgumentException("It is not allowed to create a PpsXamlReader for an PpsXamlReader", nameof(sourceReader));
+
+			if (this.settings.ParserServices != null)
+			{
+				foreach (var sv in settings.ParserServices)
+					PushServiceProvider(sv);
+			}
 
 			currentEmitterStack.Push(new PpsReaderStackItem(null, sourceReader));
 		} // ctor

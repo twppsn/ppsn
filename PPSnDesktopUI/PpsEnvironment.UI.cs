@@ -53,7 +53,7 @@ namespace TecWare.PPSn
 
 	#region -- class PpsEnvironment ---------------------------------------------------
 
-	public partial class PpsEnvironment
+	public partial class PpsEnvironment : IPpsXamlCode
 	{
 		/// <summary>Resource key for the environment</summary>
 		public const string EnvironmentService = "PpsEnvironmentService";
@@ -505,7 +505,9 @@ namespace TecWare.PPSn
 										return true;
 								}
 							},
-							CloseInput = false
+							CloseInput = false,
+							Code = this,
+							ServiceProvider = this
 						}
 					);
 				}
@@ -550,6 +552,9 @@ namespace TecWare.PPSn
 			mainResources[resourceKey] = resource;
 			return resourceKey;
 		} // func UpdateResource
+
+		void IPpsXamlCode.CompileCode(Uri uri, string code) 
+			=> throw new NotSupportedException(); // todo: load environment extensions
 
 		#endregion
 	} // class PpsEnvironment

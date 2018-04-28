@@ -813,6 +813,11 @@ namespace TecWare.PPSn
 		private Type LuaType(object o)
 			=> o?.GetType();
 
+		[LuaMember("isfunction")]
+		private bool LuaIsFunction(object o)
+			=> Lua.RtInvokeable(o);
+
+
 		[LuaMember("require", true)]
 		private LuaResult LuaRequire(LuaTable self, string path)
 		{

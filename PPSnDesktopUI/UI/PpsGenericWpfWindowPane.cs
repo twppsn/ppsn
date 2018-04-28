@@ -32,6 +32,7 @@ using Neo.IronLua;
 using TecWare.DE.Networking;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Controls;
+using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn.UI
 {
@@ -72,7 +73,7 @@ namespace TecWare.PPSn.UI
 			// create the control
 			if (paneData is XDocument xamlCode)
 			{
-				control = PpsXamlParser.LoadAsync<FrameworkElement>(xamlCode.CreateReader(), new PpsXamlReaderSettings() { Code = this, CloseInput = true, ServiceProvider = (IServiceProvider)Parent }).AwaitTask();
+				control = PpsXamlParser.LoadAsync<FrameworkElement>(PpsXmlPosition.CreateLinePositionReader(xamlCode.CreateReader()), new PpsXamlReaderSettings() { Code = this, CloseInput = true, ServiceProvider = (IServiceProvider)Parent }).AwaitTask();
 			}
 			else if (paneData is LuaChunk luaCode) // run the chunk on the current table
 				luaCode.Run(this, this);
@@ -126,8 +127,15 @@ namespace TecWare.PPSn.UI
 		} // proc UpdateControl
 
 		[LuaMember]
-		private object GetResource(object key)
-			=> Control.TryFindResource(key);
+		private object GetResource(object key, DependencyObject dependencyObject)
+		{
+			if (dependencyObject is FrameworkElement fe)
+				return fe.TryFindResource(key);
+			else if (dependencyObject is FrameworkContentElement fce)
+				return fce.TryFindResource(key);
+			else
+				return Control?.TryFindResource(key);
+		} // func GetResource
 
 		/// <summary></summary>
 		[LuaMember]
@@ -368,10 +376,18 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Get a resource.</summary>
 		/// <param name="key"></param>
+		/// <param name="dependencyObject"></param>
 		/// <returns><c>null</c>, if the resource was not found.</returns>
 		[LuaMember]
-		private object GetResource(object key)
-			=> Control.TryFindResource(key);
+		private object GetResource(object key, DependencyObject dependencyObject = null)
+		{
+			if (dependencyObject is FrameworkElement fe)
+				return fe.TryFindResource(key);
+			else if (dependencyObject is FrameworkContentElement fce)
+				return fce.TryFindResource(key);
+			else
+				return Control?.TryFindResource(key);
+		} // func GetResource
 
 		/// <summary>Load a sub control panel.</summary>
 		/// <param name="self"></param>
@@ -390,6 +406,20 @@ namespace TecWare.PPSn.UI
 			var paneData = Environment.LoadPaneDataAsync(webRequest, initialTable ?? new LuaTable(), fullUri).AwaitTask();
 			return new LuaResult(new PpsGenericWpfChildPane(this, paneData, fullUri));
 		} // func LuaRequirePane
+
+
+		[
+		LuaMember("CreateControl")
+		]
+		private object LuaCreateCrontrol(LuaWpfCreator control, LuaTable services)
+			=> control.GetInstanceAsync<object>(this, 
+				new PpsXamlReaderSettings()
+				{
+					Code = this,
+					ServiceProvider = this,
+					ParserServices = services.ArrayList.Cast<PpsParserService>().ToArray()
+				}
+			).AwaitTask();
 
 		/// <summary>Create a PpsCommand object.</summary>
 		/// <param name="command"></param>
@@ -542,7 +572,7 @@ namespace TecWare.PPSn.UI
 			if (paneData is XDocument xamlCode)
 			{
 				//PpsXamlParser.DebugTransform = true;
-				control = await PpsXamlParser.LoadAsync<PpsGenericWpfControl>(xamlCode.CreateReader(), new PpsXamlReaderSettings() { Code = this, BaseUri = paneUri, ServiceProvider = this });
+				control = await PpsXamlParser.LoadAsync<PpsGenericWpfControl>(PpsXmlPosition.CreateLinePositionReader(xamlCode.CreateReader()), new PpsXamlReaderSettings() { Code = this, BaseUri = paneUri, ServiceProvider = this });
 				//PpsXamlParser.DebugTransform = false;
 				control.Resources[PpsEnvironment.WindowPaneService] = this;
 				OnControlCreated();
@@ -569,6 +599,8 @@ namespace TecWare.PPSn.UI
 		/// <summary>Control is created.</summary>
 		protected virtual void OnControlCreated()
 		{
+			CallMemberDirect(nameof(OnControlCreated), Array.Empty<object>(), ignoreNilFunction: true);
+
 			Mouse.AddPreviewMouseDownHandler(Control, Control_MouseDownHandler);
 			Mouse.AddPreviewMouseDownOutsideCapturedElementHandler(Control, Control_MouseDownHandler);
 			Keyboard.AddPreviewGotKeyboardFocusHandler(Control, Control_GotKeyboardFocusHandler);
@@ -705,7 +737,7 @@ namespace TecWare.PPSn.UI
 			=> this[name];
 
 		#endregion
-
+		
 		/// <summary></summary>
 		/// <param name="serviceType"></param>
 		/// <returns></returns>

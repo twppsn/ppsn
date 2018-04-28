@@ -43,7 +43,9 @@ namespace TecWare.PPSn.Stuff
 
 		private sealed class PpsXmlPositionReader : XmlReader, IXmlNamespaceResolver, IXmlLineInfo
 		{
-			private class StackLineInfo
+			#region -- class StackLineInfo --------------------------------------------
+
+			private sealed class StackLineInfo
 			{
 				public int globalStartLine;
 				public int localStartLine;
@@ -68,9 +70,14 @@ namespace TecWare.PPSn.Stuff
 				} // func GetLinePosition
 			} // class StackLineInfo
 
+			#endregion
+
 			private readonly XmlReader xml;
 			private readonly IXmlLineInfo lineInfo;
 			private readonly Stack<StackLineInfo> positionStack = new Stack<StackLineInfo>();
+
+			private List<int> attributeIndexMap = null;
+			private int attributeIndex = 0;
 
 			public PpsXmlPositionReader(XmlReader xml)
 			{
@@ -129,6 +136,7 @@ namespace TecWare.PPSn.Stuff
 				else if (xml.NodeType == XmlNodeType.EndElement)
 					PopLineInfo();
 
+				attributeIndexMap = null;
 				return true;
 			} // func UpdateLineInfo
 
@@ -145,11 +153,11 @@ namespace TecWare.PPSn.Stuff
 			#region -- overrides --
 
 			IDictionary<string, string> IXmlNamespaceResolver.GetNamespacesInScope(XmlNamespaceScope scope)
-				=> xml is IXmlNamespaceResolver resolver ? resolver.GetNamespacesInScope(scope) : throw new NotSupportedException();
+				=> xml is IXmlNamespaceResolver resolver ? resolver.GetNamespacesInScope(scope) : null;
 			string IXmlNamespaceResolver.LookupNamespace(string prefix)
-				=> xml is IXmlNamespaceResolver resolver ? resolver.LookupNamespace(prefix) : throw new NotSupportedException();
+				=> xml is IXmlNamespaceResolver resolver ? resolver.LookupNamespace(prefix) : null;
 			string IXmlNamespaceResolver.LookupPrefix(string namespaceName)
-				=> xml is IXmlNamespaceResolver resolver ? resolver.LookupPrefix(namespaceName) : throw new NotSupportedException();
+				=> xml is IXmlNamespaceResolver resolver ? resolver.LookupPrefix(namespaceName) : null;
 
 			public override object ReadContentAsObject() => xml.ReadContentAsObject();
 			public override bool ReadContentAsBoolean() => xml.ReadContentAsBoolean();
@@ -218,24 +226,91 @@ namespace TecWare.PPSn.Stuff
 			public override Task<int> ReadValueChunkAsync(char[] buffer, int index, int count) => xml.ReadValueChunkAsync(buffer, index, count);
 			public override Task<XmlNodeType> MoveToContentAsync() => xml.MoveToContentAsync();
 
-			public override string GetAttribute(int i) => xml.GetAttribute(i);
-			public override string GetAttribute(string name) => xml.GetAttribute(name);
-			public override string GetAttribute(string name, string namespaceURI) => xml.GetAttribute(name, namespaceURI);
-			public override bool MoveToAttribute(string name) => xml.MoveToAttribute(name);
-			public override bool MoveToAttribute(string name, string ns) => xml.MoveToAttribute(name, ns);
+			private bool IsPositionAttribute()
+				=> xml.NamespaceURI == XmlPositionNamespace.NamespaceName;
+
+			private void EnforceAttributeIndexMap()
+			{
+				if (attributeIndexMap != null)
+					return;
+
+				if (MoveToFirstAttribute())
+				{
+					while (MoveToNextAttribute()) { }
+					MoveToElement();
+				}
+			} // func EnforceAttributeIndexMap
+
+			public override bool MoveToFirstAttribute()
+			{
+				attributeIndex = 0;
+				attributeIndexMap = new List<int>();
+
+				if (xml.MoveToFirstAttribute())
+				{
+					if (IsPositionAttribute())
+						return MoveToNextAttribute();
+					else
+					{
+						attributeIndexMap.Add(attributeIndex);
+						return true;
+					}
+				}
+				else
+					return false;
+			} // func MoveToFirstAttribute
+
+			public override bool MoveToNextAttribute()
+			{
+				if (xml.MoveToNextAttribute())
+				{
+					attributeIndex++;
+					if (IsPositionAttribute())
+						return MoveToNextAttribute();
+					else
+					{
+						attributeIndexMap.Add(attributeIndex);
+						return true;
+					}
+				}
+				else
+					return false;
+			} // func MoveToNextAttribtue
+
+			public override bool MoveToElement()
+				=> xml.MoveToElement();
+
+			public override string GetAttribute(int i)
+			{
+				EnforceAttributeIndexMap();
+				return xml.GetAttribute(attributeIndexMap[i]);
+			} // func GetAttribute
+
+			public override string GetAttribute(string name)
+				=> xml.GetAttribute(name);
+			public override string GetAttribute(string name, string namespaceURI) 
+				=> xml.GetAttribute(name, namespaceURI);
+			public override bool MoveToAttribute(string name) 
+				=> xml.MoveToAttribute(name);
+			public override bool MoveToAttribute(string name, string ns)
+				=> xml.MoveToAttribute(name, ns);
+
+			public override int AttributeCount
+			{
+				get
+				{
+					EnforceAttributeIndexMap();
+					return attributeIndexMap.Count;
+				}
+			} // prop AttributeCount
+			
 			public override string LookupNamespace(string prefix) => xml.LookupNamespace(prefix);
 			public override bool ReadAttributeValue() => xml.ReadAttributeValue();
 			public override void ResolveEntity() => xml.ResolveEntity();
 
-			public override bool MoveToFirstAttribute() => xml.MoveToFirstAttribute();
-			public override bool MoveToNextAttribute() => xml.MoveToNextAttribute();
-			public override bool MoveToElement() => xml.MoveToElement();
-
 			public override bool CanReadBinaryContent => xml.CanReadBinaryContent;
 			public override bool CanReadValueChunk => xml.CanReadValueChunk;
 			public override bool CanResolveEntity => xml.CanResolveEntity;
-
-			public override int AttributeCount => xml.AttributeCount;
 
 			public override string Name => xml.Name;
 			public override bool HasValue => xml.HasValue;

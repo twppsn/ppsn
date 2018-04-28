@@ -714,9 +714,22 @@ namespace TecWare.PPSn.UI
 
 		/// <summary></summary>
 		/// <param name="context"></param>
+		/// <param name="settings"></param>
 		/// <returns></returns>
-		public Task<T> GetInstanceAsync<T>(IServiceProvider context)
-			=> PpsXamlParser.LoadAsync<T>(CreateReader(context));
+		public Task<T> GetInstanceAsync<T>(IServiceProvider context, PpsXamlReaderSettings settings = null)
+		{
+			var reader = CreateReader(context);
+			if (settings != null)
+				reader = new PpsXamlReader(reader, settings);
+			try
+			{
+				return PpsXamlParser.LoadAsync<T>(reader);
+			}
+			finally
+			{
+				reader.Close();
+			}
+		} // func GetInstanceAsync
 
 		/// <summary></summary>
 		/// <returns></returns>

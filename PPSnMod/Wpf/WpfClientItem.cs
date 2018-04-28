@@ -64,15 +64,12 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#region  -- class ParsedXamlFile --------------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class ParsedXamlFile
 		{
 			private readonly object lockFile = new object();
 
 			private readonly WpfClientItem owner;
 			private readonly ParsedXamlFile parentFile;
-			private readonly bool emitSourceInformationAsAttributes;
 			private readonly XDocument cachedDocument;
 			private readonly XElement xResources;
 
@@ -84,11 +81,10 @@ namespace TecWare.PPSn.Server.Wpf
 
 			#region -- Ctor/Dtor ------------------------------------------------------------
 
-			public ParsedXamlFile(WpfClientItem owner, ParsedXamlFile parentFile, XDocument xBasicFile, XElement xResources, bool emitSourceInformationAsAttributes)
+			public ParsedXamlFile(WpfClientItem owner, ParsedXamlFile parentFile, XDocument xBasicFile, XElement xResources)
 			{
 				this.owner = owner;
 				this.parentFile = parentFile;
-				this.emitSourceInformationAsAttributes = emitSourceInformationAsAttributes;
 				this.cachedDocument = xBasicFile;
 				this.xResources = xResources;
 
@@ -141,10 +137,11 @@ namespace TecWare.PPSn.Server.Wpf
 				var keyName = x.GetAttribute(xnXamlKey, String.Empty);
 				if (String.IsNullOrEmpty(keyName))
 				{
-					// Eventuell gibt es einen TargetType
+					// may we can use the target type -> it is not a 100% correct,
+					// because the same type could have multiple string presentations
 					keyName = x.GetAttribute("TargetType", String.Empty);
 					if (String.IsNullOrEmpty(keyName))
-						return false;
+						return true; // add all unknown content
 				}
 
 				if (parentFile != null && parentFile.ExistsKey(keyName))
@@ -220,12 +217,7 @@ namespace TecWare.PPSn.Server.Wpf
 				XNode xFirstAdded = null;
 
 				if (!position.IsEmpty)
-				{
-					if (emitSourceInformationAsAttributes)
-						position.WriteAttributes(xSource);
-					else
-						xFirstAdded = AddNode(xAddBefore, position.GetComment());
-				}
+					position.WriteAttributes(xSource);
 
 				// Combine namespaces
 				AddNamespaces(xSource);
@@ -275,8 +267,7 @@ namespace TecWare.PPSn.Server.Wpf
 								onlineViewId = keyElements[1].Trim();
 							if (keyElements.Length >= 3)
 							{
-								int t;
-								if (Int32.TryParse(keyElements[2].Trim(), out t))
+								if (Int32.TryParse(keyElements[2].Trim(), out var t))
 									currentTemplatePriority = t;
 								else
 									currentTemplatePriority++;
@@ -317,7 +308,7 @@ namespace TecWare.PPSn.Server.Wpf
 				UpdateLastChanged(fileName);
 
 				// Prüfe die Wurzel
-				var xDoc = WpfClientItem.LoadDocument(fileName);
+				var xDoc = LoadDocument(fileName);
 				return xDoc;
 			} // func LoadDocument
 
@@ -383,9 +374,9 @@ namespace TecWare.PPSn.Server.Wpf
 							CombineResourceDictionary(x, xAddBefore, removeNodes, allowRedefine);
 						else if (AddKey(x, allowRedefine))
 						{
-							var xAdded = xResourceDictionary == xResources ? // do we need to copy the resources
-									x :
-									AddResource(x, xAddBefore);
+							var xAdded = xResourceDictionary == xResources // do we need to copy the resources
+								? x 
+								: AddResource(x, xAddBefore);
 							if (xMergedAddBefore == null)
 								xMergedAddBefore = xAdded;
 						}
@@ -406,7 +397,7 @@ namespace TecWare.PPSn.Server.Wpf
 			{
 				// resolve only ResourceDictionaries
 				var xResourceDictionaries = xMerged.Elements(xnXamlResourceDictionary).ToArray();
-				for (int i = xResourceDictionaries.Length - 1; i >= 0; i--)
+				for (var i = xResourceDictionaries.Length - 1; i >= 0; i--)
 				{
 					CombineResourceDictionary(xResourceDictionaries[i], xAddBefore, removeNodes, allowRedefine);
 					if (removeNodes)
@@ -588,7 +579,7 @@ namespace TecWare.PPSn.Server.Wpf
 			);
 
 			// create the resource file
-			var resourceFile = new ParsedXamlFile(this, isDefaultTheme ? null : GetDefaultTheme(), xTarget, xTargetResources, false);
+			var resourceFile = new ParsedXamlFile(this, isDefaultTheme ? null : GetDefaultTheme(), xTarget, xTargetResources);
 			foreach (var x in Config.Elements(PpsStuff.xnWpfTheme).Where(x => String.Compare(x.GetAttribute("id", String.Empty), theme, StringComparison.OrdinalIgnoreCase) == 0))
 			{
 				var fileName = x.GetAttribute("file", String.Empty);
@@ -618,7 +609,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 			// create the template
 			var currentTemplatePriority = 0;
-			var templateFile = new ParsedXamlFile(this, GetDefaultTheme(), xTarget, xTargetResources, false);
+			var templateFile = new ParsedXamlFile(this, GetDefaultTheme(), xTarget, xTargetResources);
 			foreach (var x in Config.Elements(PpsStuff.xnWpfTemplate))
 			{
 				var fileName = x.GetAttribute("file", String.Empty);
@@ -668,8 +659,7 @@ namespace TecWare.PPSn.Server.Wpf
 		private ParsedXamlFile ParseXaml(string relativePath)
 		{
 			// find the path
-			string fullPath;
-			if (!ResolveXamlPath(relativePath, out fullPath))
+			if (!ResolveXamlPath(relativePath, out var fullPath))
 				return null;
 
 			// load the plain xml-document
@@ -679,13 +669,12 @@ namespace TecWare.PPSn.Server.Wpf
 			var nameRootElement = xTarget.Root.Name;
 			var nameRootResources = XName.Get(nameRootElement.LocalName + ".Resources", nameRootElement.NamespaceName);
 
-			// find code element
-			var xCode = xTarget.Root.Element(xnXamlCode);
-
 			// find root resource element and detach it
+			var xNodeBeforeResources = (XNode)null;
 			var xSourceResources = xTarget.Root.Element(nameRootResources);
 			if (xSourceResources != null)
 			{
+				xNodeBeforeResources = xSourceResources.PreviousNode;
 				Procs.XCopyAnnotations(xSourceResources, xSourceResources);
 				xSourceResources.Remove();
 			}
@@ -695,27 +684,24 @@ namespace TecWare.PPSn.Server.Wpf
 			var xTargetResources = new XElement(nameRootResources, xTargetResourceDictionary);
 
 			// add the resources
-			if (xCode != null)
-				xCode.AddAfterSelf(xTargetResources);
+			if (xNodeBeforeResources != null)
+				xNodeBeforeResources.AddAfterSelf(xTargetResources); // add old position
 			else
-				xTarget.Root.AddFirst(xTargetResources);
+			{
+				// find code element
+				var xCode = xTarget.Root.Element(xnXamlCode);
+				if (xCode != null)
+					xCode.AddAfterSelf(xTargetResources); // after the code directive
+				else
+					xTarget.Root.AddFirst(xTargetResources); // as first elemenet
+			}
 
 			// parse the file
-			var paneFile = new ParsedXamlFile(this, GetDefaultTheme(), xTarget, xTargetResourceDictionary, false);
+			var paneFile = new ParsedXamlFile(this, GetDefaultTheme(), xTarget, xTargetResourceDictionary);
 			paneFile.AddRootFile(fullPath);
 
 			// resolve merged resources
 			paneFile.CombineResourceDictionary(xSourceResources, null, false, false);
-
-			// Gibt die Quelle für den Code an
-			if (xCode != null)
-			{
-				//xDoc.Root.Add(new XAttribute(XNamespace.Xmlns + "s", PpsXmlPosition.xnsNamespace.NamespaceName));
-
-				//XNode first = xCode.FirstNode;
-
-				//owner.ConvertElementSource(first, xCode);
-			}
 
 			return paneFile;
 		} // func ParseXaml
