@@ -40,6 +40,8 @@ specific language governing permissions and limitations under the Licence.
 			</DataTemplate>
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Type uiO:PpsUICommandButton}}">
 				<Button Command="{Binding Command}"
+						CommandParameter="{Binding CommandParameter}"
+						CommandTarget="{Binding CommandTarget}"
 						Content="{Binding DisplayText}"
 						ToolTip="{Binding Description}"
 						Tag="{Binding Image}"
@@ -48,7 +50,10 @@ specific language governing permissions and limitations under the Licence.
 			</DataTemplate>
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Type uiO:PpsUISplitCommandButton}}">
 				<pps:PpsSplitButton Content="{Binding DisplayText}"
-									ToolTip="{Binding Description}" 
+									ToolTip="{Binding Description}"
+									Command="{Binding Command}"
+								    CommandParameter="{Binding CommandParameter}"
+								    CommandTarget="{Binding CommandTarget}"
 									Tag="{Binding Image}"
 									Popup="{Binding Popup}"
 									Mode="{Binding Mode}"
@@ -61,6 +66,8 @@ specific language governing permissions and limitations under the Licence.
 			</DataTemplate>
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Rectangle,{x:Type uiO:PpsUICommandButton}}">
 				<pps:PpsButton Command="{Binding Command}"
+							   CommandParameter="{Binding CommandParameter}"
+							   CommandTarget="{Binding CommandTarget}"
 							   Content="{Binding DisplayText}"
 							   ToolTip="{Binding Description}"
 							   Tag="{Binding Image}"

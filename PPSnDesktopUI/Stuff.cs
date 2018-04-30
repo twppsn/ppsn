@@ -33,6 +33,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Networking;
@@ -520,7 +521,7 @@ namespace TecWare.PPSn
 		/// <param name="current"></param>
 		/// <returns></returns>
 		public static DependencyObject GetVisualParent(this DependencyObject current)
-			=> VisualTreeHelper.GetParent(current);
+			=> current is Visual || current is Visual3D ? VisualTreeHelper.GetParent(current) : null;
 
 		/// <summary></summary>
 		/// <param name="current"></param>
