@@ -631,7 +631,7 @@
 				</Button.Template>
 			</Button>
 
-			<ProgressBar Grid.Column="1" Maximum="1000" Value="{Binding Environment.StatusOfProxy.ActualItem.Progress,Mode=OneWay}" Margin="0,3" BorderThickness="0"
+			<ProgressBar Grid.Column="1" Maximum="1000" Value="{Binding Environment.StatusOfProxy.ActualItem.Progress,Mode=OneWay}" Margin="6,3" BorderThickness="0"
 						 Foreground="{StaticResource ButtonDarkerBorderBrush}" Background="{StaticResource ButtonDarkerBackGroundBrush}"
 						 ToolTipService.InitialShowDelay="750"
 						 ToolTipService.ShowDuration="10000">

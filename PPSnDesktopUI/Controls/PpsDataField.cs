@@ -709,7 +709,6 @@ namespace TecWare.PPSn.Controls
 			if (formattedText)
 			{
 				txt.FormattedValue = PpsDataFieldBinding.CreateWpfBinding(fieldInfo, append: "FormattedValue", isReadOnly: true);
-				txt.Style = environment.FindResource<Style>("PPSnTemplateTextBoxStyle");
 			}
 
 			return txt;

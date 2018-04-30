@@ -54,7 +54,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="Foreground" Value="{DynamicResource PPSnActionButtonBrush}"/>
 		<!--use this as extra-margin for the image-->
 		<Setter Property="Padding" Value="0"/>
-		<Setter Property="FontSize" Value="14"/>
+		<!--<Setter Property="FontSize" Value="14"/>-->
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
 		<Setter Property="Template">
 			<Setter.Value>
