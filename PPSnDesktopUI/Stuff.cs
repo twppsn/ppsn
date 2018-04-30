@@ -21,6 +21,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -535,12 +536,12 @@ namespace TecWare.PPSn
 			{
 				var convTo = TypeDescriptor.GetConverter(value.GetType());
 				if (convTo.CanConvertTo(typeTo))
-					return convTo.ConvertTo(value, typeTo);
+					return convTo.ConvertTo(null, CultureInfo.InvariantCulture, value, typeTo);
 				else
 				{
 					var convFrom = TypeDescriptor.GetConverter(typeTo);
 					if (convFrom.CanConvertFrom(value.GetType()))
-						return convFrom.ConvertFrom(value);
+						return convFrom.ConvertFrom(null, CultureInfo.InvariantCulture, value);
 					else
 						return Procs.ChangeType(value, typeTo);
 				}
