@@ -25,7 +25,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="Background" Value="{StaticResource PpsButtonBackgroundBrush}"/>
 		<Setter Property="BorderThickness" Value="1"/>
 		<Setter Property="BorderBrush" Value="{StaticResource PpsButtonBackgroundBrush}"/>
-		<Setter Property="HorizontalContentAlignment" Value="Center"/>
+		<Setter Property="HorizontalContentAlignment" Value="Left"/>
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
 		<Setter Property="Padding" Value="6,0"/>
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -45,6 +45,17 @@ specific language governing permissions and limitations under the Licence.
 									<ColumnDefinition Width="Auto" />
 									<ColumnDefinition />
 								</Grid.ColumnDefinitions>
+								<Viewbox x:Name="ImageBox"
+										 Width="19"
+										 Height="19"
+										 Opacity=".65"
+										 SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+									<Canvas Width="24" Height="24">
+										<Path Data="{TemplateBinding Tag, Converter={x:Static uiO:PpsConverter.ImageToPathGeometry}}"
+											  Fill="{DynamicResource PPSnActionButtonBrush}" />
+									</Canvas>
+								</Viewbox>
+
 								<ContentPresenter Grid.Column="1"
 												  Focusable="False"
 												  RecognizesAccessKey="True"
@@ -75,6 +86,7 @@ specific language governing permissions and limitations under the Licence.
 								<Condition Property="IsMouseCaptured" Value="False"/>
 							</MultiTrigger.Conditions>
 							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}"/>
+							<Setter TargetName="ImageBox" Property="Opacity" Value="1"/>
 						</MultiTrigger>
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
@@ -86,6 +98,7 @@ specific language governing permissions and limitations under the Licence.
 						<Trigger Property="IsMouseCaptured" Value="True">
 							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnButtonPressedBrush}"/>
 							<Setter TargetName="InnerBorder" Property="Background" Value="{DynamicResource PPSnButtonPressedBrush}"/>
+							<Setter TargetName="ImageBox" Property="Opacity" Value="1"/>
 						</Trigger>
 						<Trigger Property="IsEnabled" Value="False">
 							<Setter Property="Background" Value="Transparent"/>
@@ -138,6 +151,10 @@ specific language governing permissions and limitations under the Licence.
 									</Storyboard>
 								</BeginStoryboard>
 							</Trigger.ExitActions>
+						</Trigger>
+						<Trigger Property="Tag" Value="{x:Null}">
+							<Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
+							<Setter Property="HorizontalContentAlignment" Value="Center" />
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
