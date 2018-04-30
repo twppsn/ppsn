@@ -1239,7 +1239,7 @@ namespace TecWare.PPSn.UI
 								switch (value)
 								{
 									case string memberName:
-										return PushCodeValueConverter(member, memberName, typeof(IMultiValueConverter) == Member.Type.UnderlyingType);
+										return PushCodeValueConverter(member, memberName, typeof(IMultiValueConverter) == member.Type.UnderlyingType);
 									default:
 										return PushMember(member, Value);
 								}

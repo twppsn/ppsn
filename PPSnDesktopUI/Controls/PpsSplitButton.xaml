@@ -15,6 +15,6 @@ specific language governing permissions and limitations under the Licence.
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					xmlns:uiO="clr-namespace:TecWare.PPSn.UI"
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
-	<Style TargetType="{x:Type pps:PpsSplitButton}">
+	<Style TargetType="{x:Type pps:PpsSplitButton}" BasedOn="{StaticResource {x:Type Button}}">
 	</Style>
 </ResourceDictionary>
