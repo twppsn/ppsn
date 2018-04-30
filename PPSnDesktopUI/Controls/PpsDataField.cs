@@ -249,6 +249,13 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		public PpsDataTableResolver() { }
 
+		/// <summary></summary>
+		public PpsDataTableResolver(PpsDataTable table)
+		{
+			this.tableName = table.TableName;
+			this.table = table.TableDefinition;
+		} // ctor
+
 		PpsDataFieldInfo IPpsDataFieldResolver.ResolveColumn(IServiceProvider serviceProvider, string fieldExpression, IPropertyReadOnlyDictionary properties)
 		{
 			CheckInitialized();
@@ -256,8 +263,17 @@ namespace TecWare.PPSn.Controls
 			// resolve table
 			if (table == null && tableName != null)
 			{
-				datasetResolver = (PpsDataSetResolver)GetParentService(typeof(PpsDataSetResolver)) ?? throw new ArgumentException("DataSet resolve is missing.");
-				table = datasetResolver.DataSetDefinition.FindTable(tableName);
+				var pos = tableName.IndexOf('.');
+				if (pos == -1)
+				{
+					datasetResolver = (PpsDataSetResolver)GetParentService(typeof(PpsDataSetResolver)) ?? throw new ArgumentException("DataSet resolve is missing.");
+					table = datasetResolver.DataSetDefinition.FindTable(tableName);
+				}
+				else
+				{
+					var info = serviceProvider.GetService<PpsEnvironment>(true).ObjectInfos[tableName.Substring(0, pos), true];
+					table = info.GetDocumentDefinitionAsync().AwaitTask().FindTable(tableName.Substring(pos + 1));
+				}
 			}
 
 			var idx = table.FindColumnIndex(fieldExpression);
@@ -468,41 +484,54 @@ namespace TecWare.PPSn.Controls
 		{
 			this.environment = environment;
 		} // ctor
-				
+
+		private LuaWpfCreator UpdateDefaultProperties(IPropertyReadOnlyDictionary properties, LuaWpfCreator ctrl, LocalValueEnumerator localProperties)
+		{
+			// update local properties
+			while (localProperties.MoveNext())
+			{
+				var property = localProperties.Current.Property;
+				var value = localProperties.Current.Value;
+
+				if (NameScope.NameScopeProperty != property)
+					ctrl[property] = value;
+			}
+
+			// update known properties
+			if (properties.TryGetProperty<string>("displayName", out var displayName))
+				ctrl[PpsDataFieldPanel.LabelProperty] = displayName + ":";
+			if (properties.TryGetProperty<int>("GridLines", out var gridLines))
+				ctrl[PpsDataFieldPanel.GridLinesProperty] = gridLines;
+			if (properties.TryGetProperty<bool>("GridFullWidth", out var gridFullWidth))
+				ctrl[PpsDataFieldPanel.FullWidthProperty] = gridFullWidth;
+			if (properties.TryGetProperty<object>("GridGroup", out var gridGroup))
+				ctrl[PpsDataFieldPanel.GroupNameProperty] = gridGroup;
+
+			if (properties.TryGetProperty("Margin", out var margin))
+				ctrl["Margin"] = margin;
+
+			return ctrl;
+		} // proc UpdateDefaultProperties
+
 		/// <summary></summary>
 		/// <param name="context"></param>
 		/// <param name="fieldName"></param>
 		/// <param name="properties"></param>
+		/// <param name="localProperties"></param>
 		/// <returns></returns>
 		public System.Xaml.XamlReader CreateField(IServiceProvider context, string fieldName, IPropertyReadOnlyDictionary properties, LocalValueEnumerator localProperties)
 		{
-			if (!TryResolveFieldCreator(context, fieldName, properties, out var ctrl))
+			if (TryResolveFieldCreator(context, fieldName, properties, out var ctrl))
+				UpdateDefaultProperties(properties, ctrl, localProperties);
+			else
 			{
 				var fieldInfo = GetFieldInfo(context, fieldName, properties);
-				ctrl = CreateDefaultField(fieldInfo);
 
-				// update local properties
-				while (localProperties.MoveNext())
-				{
-					var property = localProperties.Current.Property;
-					var value = localProperties.Current.Value;
+				if (!fieldInfo.TryGetProperty<string>("useFieldFactory", out var fieldFactory)
+					|| !TryResolveFieldCreator(context, fieldFactory, fieldInfo, out ctrl))
+					ctrl = CreateDefaultField(fieldInfo);
 
-					if (NameScope.NameScopeProperty != property)
-						ctrl[property] = value;
-				}
-
-				// update known properties
-				if (fieldInfo.TryGetProperty<string>("displayName", out var displayName))
-					ctrl[PpsDataFieldPanel.LabelProperty] = displayName + ":";
-				if(fieldInfo.TryGetProperty<int>("GridLines", out var gridLines))
-					ctrl[PpsDataFieldPanel.GridLinesProperty] = gridLines;
-				if (fieldInfo.TryGetProperty<bool>("GridFullWidth", out var gridFullWidth))
-					ctrl[PpsDataFieldPanel.FullWidthProperty] = gridFullWidth;
-				if (fieldInfo.TryGetProperty<object>("GridGroup", out var gridGroup))
-					ctrl[PpsDataFieldPanel.GroupNameProperty] = gridGroup;
-
-				if (fieldInfo.TryGetProperty("Margin", out var margin))
-					ctrl["Margin"] = margin;
+				UpdateDefaultProperties(fieldInfo, ctrl, localProperties);
 			}
 
 			return ctrl.CreateReader(context);
@@ -512,7 +541,7 @@ namespace TecWare.PPSn.Controls
 		{
 			// resolve complex fieldinformation within the Environment
 			// the member must be registered within the table.
-			var result = CallMemberDirect(fieldName, new object[] { context, new LuaPropertiesTable(properties) }, rawGet: true, throwExceptions: true, ignoreNilFunction: true)[0];
+			var result = CallMemberDirect(fieldName, new object[] { context, new LuaPropertiesTable(properties), properties as PpsDataFieldInfo }, rawGet: true, throwExceptions: true, ignoreNilFunction: true)[0];
 			if (result == null)
 			{
 				creator = null;
@@ -536,6 +565,10 @@ namespace TecWare.PPSn.Controls
 			=> h * 23;
 
 		[LuaMember]
+		private object GetCode(IServiceProvider context)
+			=> context?.GetService<IPpsXamlCode>(false);
+
+		[LuaMember]
 		private PpsDataFieldInfo GetFieldInfo(IServiceProvider context, string fieldName, object properties)
 			=> PpsDataFieldInfo.GetDataFieldInfo(context, fieldName, Procs.ToProperties(properties));
 
@@ -544,11 +577,18 @@ namespace TecWare.PPSn.Controls
 			=> new PpsDataFieldInfo(context, fieldName, dataType, bindingPath, Procs.ToProperties(properties));
 
 		[LuaMember]
+		private LuaWpfCreator CreateFieldBinding(PpsDataFieldInfo fieldInfo, bool? isReadOnly = null, string append = null)
+			=> PpsDataFieldBinding.CreateWpfBinding(fieldInfo, isReadOnly, append);
+
+		[LuaMember]
 		private LuaWpfCreator CreateDefaultField(PpsDataFieldInfo fieldInfo)
 		{
-			// test for datatype
+			// test for creator
 			if (fieldInfo.DataType == typeof(string)
-				|| fieldInfo.DataType == typeof(double))
+				|| fieldInfo.DataType == typeof(int)
+				|| fieldInfo.DataType == typeof(float)
+				|| fieldInfo.DataType == typeof(double)
+				|| fieldInfo.DataType == typeof(decimal))
 				return CreateTextField(fieldInfo);
 			else if (fieldInfo.DataType == typeof(DateTime))
 				return CreateDateTimeField(fieldInfo);
@@ -564,7 +604,7 @@ namespace TecWare.PPSn.Controls
 				return CreateTextField(fieldInfo, true);
 			else if (fieldInfo.ColumnDefinition?.IsRelationColumn ?? false)
 				return CreateRelationField(fieldInfo, fieldInfo.ColumnDefinition);
-			else
+			else 
 				throw new NotImplementedException();
 		} // func CreateDefaultField
 
@@ -718,7 +758,29 @@ namespace TecWare.PPSn.Controls
 
 		[LuaMember]
 		private static LuaWpfCreator CreateDateTimeField(PpsDataFieldInfo fieldInfo)
-			=> throw new NotImplementedException();
+		{
+			dynamic ui = new LuaUI();
+			dynamic date = LuaWpfCreator.CreateFactory(ui, typeof(System.Windows.Controls.DatePicker));
+
+			date.SelectedDate = PpsDataFieldBinding.CreateWpfBinding(fieldInfo);
+
+			return date;
+		} // func CreateDateTimeField
+
+		[LuaMember]
+		private static LuaWpfCreator CreateComboField(PpsDataFieldInfo fieldInfo)
+		{
+			dynamic ui = new LuaUI();
+			dynamic combo = LuaWpfCreator.CreateFactory(ui, typeof(System.Windows.Controls.ComboBox));
+
+			combo.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(fieldInfo);
+
+			return combo;
+		} // func CreateComboField
+
+		/// <summary></summary>
+		[LuaMember]
+		public PpsEnvironment Environment => environment;
 	} // class PpsDataFieldFactory
 
 	#endregion

@@ -7,6 +7,9 @@
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsSharedResourceKey.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsCommandBarControl.xaml" />
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsButton.xaml" />
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsPopup.xaml" />
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsSplitButton.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsNamedSeparator.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsTextBox.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsDataFieldPanel.xaml" />

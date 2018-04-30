@@ -356,7 +356,7 @@ namespace TecWare.PPSn.Controls
 		{
 			this.AcceptsReturn = IsMultiLineInput(newValue);
 
-			NeatlyCleanText();
+			//NeatlyCleanText();
 		} // proc OnInputTypeChanged
 
 		/// <summary>If text is entered by Keyboard do not process illegal chars (TextChanged is not called)</summary>

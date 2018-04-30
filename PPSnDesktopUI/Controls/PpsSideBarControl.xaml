@@ -17,6 +17,7 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
 	<Style TargetType="{x:Type pps:PpsSideBarControl}">
+		<Setter Property="Focusable" Value="False" />
 		<Setter Property="ItemsPanel">
 			<Setter.Value>
 				<ItemsPanelTemplate>
@@ -69,7 +70,7 @@ specific language governing permissions and limitations under the Licence.
 											  ContentStringFormat="{TemplateBinding HeaderStringFormat}"
 											  TextElement.FontSize="14"
 											  TextElement.Foreground="{DynamicResource PPSnWindowForegroundBrush}"
-											  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent},Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16;1;1;1'}"
+											  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent},Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16,1,1,1'}"
 											  VerticalAlignment="Center">
 							</ContentPresenter>
 						</Grid>
@@ -109,7 +110,7 @@ specific language governing permissions and limitations under the Licence.
 										  ContentStringFormat="{TemplateBinding HeaderStringFormat}"
 										  TextElement.FontSize="14"
 										  TextElement.Foreground="{DynamicResource PPSnWindowForegroundBrush}"
-										  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent}, Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16;1;1;1'}"
+										  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent}, Mode=OneTime,Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16,1,1,1'}"
 										  VerticalAlignment="Center" />
 					</Grid>
 					<ControlTemplate.Triggers>
@@ -146,7 +147,7 @@ specific language governing permissions and limitations under the Licence.
 										  ContentStringFormat="{TemplateBinding HeaderStringFormat}"
 										  TextElement.FontSize="14"
 										  TextElement.Foreground="{DynamicResource PPSnWindowForegroundBrush}"
-										  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent},Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16;1;1;1'}"
+										  Margin="{Binding IndentationLevel,RelativeSource={RelativeSource TemplatedParent},Converter={x:Static uiO:PpsConverter.Multiply},ConverterParameter='16,1,1,1'}"
 										  VerticalAlignment="Center" />
 					</Grid>
 					<ControlTemplate.Triggers>

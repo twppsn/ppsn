@@ -21,6 +21,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -362,12 +363,16 @@ namespace TecWare.PPSn
 			baseItems?.Reset();
 		} // proc Reset
 
-		internal static IEnumerator GetLogicalEnumerator(FrameworkElement d, IEnumerator logicalChildren, Func<object> getContent)
+		internal static IEnumerator GetLogicalEnumerator(DependencyObject d, IEnumerator logicalChildren, Func<object> getContent)
 		{
 			var content = getContent();
 			if (content != null)
 			{
-				var templatedParent = d.TemplatedParent;
+				var templatedParent =
+					d is FrameworkElement fe
+						? fe.TemplatedParent
+						: (d is FrameworkContentElement fce ? fce.TemplatedParent : null);
+
 				if (templatedParent != null)
 				{
 					if (content is DependencyObject obj)
@@ -531,12 +536,12 @@ namespace TecWare.PPSn
 			{
 				var convTo = TypeDescriptor.GetConverter(value.GetType());
 				if (convTo.CanConvertTo(typeTo))
-					return convTo.ConvertTo(value, typeTo);
+					return convTo.ConvertTo(null, CultureInfo.InvariantCulture, value, typeTo);
 				else
 				{
 					var convFrom = TypeDescriptor.GetConverter(typeTo);
 					if (convFrom.CanConvertFrom(value.GetType()))
-						return convFrom.ConvertFrom(value);
+						return convFrom.ConvertFrom(null, CultureInfo.InvariantCulture, value);
 					else
 						return Procs.ChangeType(value, typeTo);
 				}

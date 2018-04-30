@@ -25,6 +25,48 @@ namespace TecWare.PPSn.Controls
 {
 	#region -- class SideBarItemsBase -------------------------------------------------
 
+	#region -- class PpsSideBarFilterChangedEventArgs ---------------------------------
+
+	/// <summary></summary>
+	public class PpsSideBarFilterChangedEventArgs : RoutedEventArgs
+	{
+		private readonly object newFilter;
+		private readonly object oldFilter;
+
+		/// <summary></summary>
+		/// <param name="routedEvent"></param>
+		/// <param name="newFilter"></param>
+		/// <param name="oldFilter"></param>
+		public PpsSideBarFilterChangedEventArgs(RoutedEvent routedEvent, object newFilter, object oldFilter)
+			: this(routedEvent, null, newFilter, oldFilter)
+		{
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="routedEvent"></param>
+		/// <param name="source"></param>
+		/// <param name="newFilter"></param>
+		/// <param name="oldFilter"></param>
+		public PpsSideBarFilterChangedEventArgs(RoutedEvent routedEvent, object source, object newFilter, object oldFilter)
+			: base(routedEvent, source)
+		{
+			this.newFilter = newFilter;
+			this.oldFilter = oldFilter;
+		} // ctor
+
+		/// <summary></summary>
+		public object NewFilter => newFilter;
+		/// <summary></summary>
+		public object OldFilter => oldFilter;
+	} // class PpsSideBarFilterChangedEventArgs
+
+	#endregion
+
+	/// <summary></summary>
+	/// <param name="sender"></param>
+	/// <param name="e"></param>
+	public delegate void PpsSideBarFilterChangedEventHandler(object sender, PpsSideBarFilterChangedEventArgs e);
+
 	/// <summary></summary>
 	public abstract class PpsSideBarItemsBase : MultiSelector
 	{
@@ -99,21 +141,19 @@ namespace TecWare.PPSn.Controls
 		private static readonly DependencyPropertyKey selectedFilterPropertyKey = DependencyProperty.RegisterReadOnly(nameof(SelectedFilter), typeof(object), typeof(PpsSideBarItemsBase), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnSelectedFilterChanged)));
 		private static readonly DependencyPropertyKey hasSelectedFilterPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasSelectedFilter), typeof(bool), typeof(PpsSideBarItemsBase), new FrameworkPropertyMetadata(BooleanBox.False));
 
-		/// <summary></summary>
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty SelectedContentProperty = selectedContentPropertyKey.DependencyProperty;
-		/// <summary></summary>
 		public static readonly DependencyProperty SelectedContentTemplateProperty = selectedContentTemplatePropertyKey.DependencyProperty;
-		/// <summary></summary>
 		public static readonly DependencyProperty SelectedContentTemplateSelectorProperty = selectedContentTemplateSelectorPropertyKey.DependencyProperty;
-		/// <summary></summary>
 		public static readonly DependencyProperty SelectedContentStringFormatProperty = selectedContentStringFormatPropertyKey.DependencyProperty;
-		/// <summary></summary>
 		public static readonly DependencyProperty HasSelectedContentProperty = hasSelectedContentPropertyKey.DependencyProperty;
 
-		/// <summary></summary>
 		public static readonly DependencyProperty SelectedFilterProperty = selectedFilterPropertyKey.DependencyProperty;
-		/// <summary></summary>
 		public static readonly DependencyProperty HasSelectedFilterProperty = hasSelectedFilterPropertyKey.DependencyProperty;
+
+		public static readonly RoutedEvent SelectedContentChangedEvent = EventManager.RegisterRoutedEvent(nameof(SelectedContentChanged), RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(PpsSideBarItemsBase));
+		public static readonly RoutedEvent SelectedFilterChangedEvent = EventManager.RegisterRoutedEvent(nameof(SelectedFilterChanged), RoutingStrategy.Bubble, typeof(PpsSideBarFilterChangedEventHandler), typeof(PpsSideBarItemsBase));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		private static void OnSelectedContentChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
@@ -125,7 +165,8 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		/// <param name="newValue"></param>
 		/// <param name="oldValue"></param>
-		protected virtual void OnSelectedContentChanged(object newValue, object oldValue) { }
+		protected virtual void OnSelectedContentChanged(object newValue, object oldValue)
+			=> RaiseEvent(new RoutedEventArgs(SelectedContentChangedEvent, this));
 
 		private static void OnSelectedContentTemplateChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
@@ -170,7 +211,8 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		/// <param name="newValue"></param>
 		/// <param name="oldValue"></param>
-		protected virtual void OnSelectedFilterChanged(object newValue, object oldValue) { }
+		protected virtual void OnSelectedFilterChanged(object newValue, object oldValue)
+			=> RaiseEvent(new PpsSideBarFilterChangedEventArgs(SelectedFilterChangedEvent, this, newValue, oldValue));
 
 		/// <summary></summary>
 		public object SelectedContent { get => GetValue(SelectedContentProperty); private set => SetValue(selectedContentPropertyKey, value); }
@@ -187,6 +229,11 @@ namespace TecWare.PPSn.Controls
 		public object SelectedFilter { get => GetValue(SelectedFilterProperty); private set => SetValue(selectedFilterPropertyKey, value); }
 		/// <summary></summary>
 		public bool HasSelectedFilter { get => BooleanBox.GetBool(GetValue(HasSelectedFilterProperty)); private set => SetValue(hasSelectedFilterPropertyKey, BooleanBox.GetObject(value)); }
+
+		/// <summary></summary>
+		public event RoutedEventHandler SelectedContentChanged { add => AddHandler(SelectedContentChangedEvent, value); remove => RemoveHandler(SelectedContentChangedEvent, value); }
+		/// <summary></summary>
+		public event PpsSideBarFilterChangedEventHandler SelectedFilterChanged { add => AddHandler(SelectedFilterChangedEvent, value); remove => RemoveHandler(SelectedFilterChangedEvent, value); }
 
 		#endregion
 
@@ -580,10 +627,22 @@ namespace TecWare.PPSn.Controls
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
 			if (e.Source == this && SetSelected(!IsTopSelected))
+			{
+				Keyboard.ClearFocus();
 				e.Handled = true;
-
+			}
 			base.OnMouseLeftButtonDown(e);
 		} // proc OnMouseLeftButtonDown
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			if (e.Source == this && IsKeyboardFocused && (e.Key == Key.Enter || e.Key == Key.Space) && SetSelected(!IsTopSelected))
+				e.Handled = true;
+			base.OnKeyDown(e);
+		} // proc OnKeyDown
+
 
 		/// <summary></summary>
 		/// <param name="item"></param>
@@ -701,10 +760,21 @@ namespace TecWare.PPSn.Controls
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
 			if (e.Source == this && SetSelected(!IsSelected))
+			{
+				Keyboard.ClearFocus();
 				e.Handled = true;
-
+			}
 			base.OnMouseLeftButtonDown(e);
 		} // proc OnMouseLeftButtonDown
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			if (e.Source == this && IsKeyboardFocused && (e.Key == Key.Enter || e.Key == Key.Space) && SetSelected(!IsSelected))
+				e.Handled = true;
+			base.OnKeyDown(e);
+		} // proc OnKeyDown
 
 		/// <summary>Is the current panel selected.</summary>
 		public bool IsSelected { get => BooleanBox.GetBool(GetValue(IsSelectedProperty)); set => SetValue(IsSelectedProperty, BooleanBox.GetObject(value)); }
@@ -795,10 +865,21 @@ namespace TecWare.PPSn.Controls
 		protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
 		{
 			if (e.Source == this && SetSelected(!IsSelected))
+			{
+				Keyboard.ClearFocus();
 				e.Handled = true;
-
+			}
 			base.OnMouseLeftButtonDown(e);
 		} // proc OnMouseLeftButtonDown
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			if (e.Source == this && IsKeyboardFocused && (e.Key == Key.Enter || e.Key == Key.Space) && SetSelected(!IsSelected))
+				e.Handled = true;
+			base.OnKeyDown(e);
+		} // proc OnKeyDown
 
 		/// <summary></summary>
 		protected override System.Collections.IEnumerator LogicalChildren

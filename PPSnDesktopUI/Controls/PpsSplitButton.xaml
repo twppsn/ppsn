@@ -13,9 +13,8 @@ specific language governing permissions and limitations under the Licence.
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					xmlns:uiO="clr-namespace:TecWare.PPSn.UI"
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
-
-	<Style TargetType="{x:Type pps:PpsDataFieldPanel}">
-		<Setter Property="VerticalAlignment" Value="Top" />
-	</Style>	
+	<Style TargetType="{x:Type pps:PpsSplitButton}">
+	</Style>
 </ResourceDictionary>

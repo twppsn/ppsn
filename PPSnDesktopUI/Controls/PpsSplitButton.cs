@@ -14,6 +14,7 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -36,14 +37,15 @@ namespace TecWare.PPSn.Controls
 	#region -- class PpsSplitButton ---------------------------------------------------
 
 	/// <summary></summary>
-	[TemplatePart(Name = "PART_DropDdown", Type = typeof(ButtonBase))]
+	[TemplatePart(Name = "PART_SplitButton", Type = typeof(ButtonBase))]
 	public class PpsSplitButton : Button
 	{
-		private const string PartSplitButton = "PART_Dropdown";
+		/// <summary></summary>
+		protected const string PartSplitButton = "PART_SplitButton";
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty ModeProperty = DependencyProperty.Register(nameof(Mode), typeof(PpsSplitButtonType), typeof(PpsSplitButton), new FrameworkPropertyMetadata(PpsSplitButtonType.SplitButton));
-		public static readonly DependencyProperty PopupProperty = DependencyProperty.Register(nameof(Popup), typeof(Popup), typeof(PpsSplitButton), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty PopupProperty = DependencyProperty.Register(nameof(Popup), typeof(Popup), typeof(PpsSplitButton), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnPopupChanged)));
 		public static readonly DependencyProperty IsOpenProperty = DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(PpsSplitButton), new FrameworkPropertyMetadata(false, OnIsOpenChanged));
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
@@ -95,13 +97,13 @@ namespace TecWare.PPSn.Controls
 			{
 				if (newValue)
 					Popup.Closed += OnPopupClosed;
-				Popup.IsOpen = false;
+				Popup.IsOpen = newValue;
 			}
 			else if (ContextMenu != null)
 			{
 				if (newValue)
 					ContextMenu.Closed += OnContextMenuClosed;
-				ContextMenu.IsOpen = false;
+				ContextMenu.IsOpen = newValue;
 			}
 		} // OnIsOpenChanged
 				
@@ -122,21 +124,32 @@ namespace TecWare.PPSn.Controls
 			else if (Popup != null)
 			{
 				Popup.PlacementTarget = this;
-				Popup.Placement = PlacementMode.Bottom;
-				Popup.VerticalOffset = 2;
-				Popup.StaysOpen = false;
 				IsOpen = true;
 			}
 			else if (ContextMenu != null)
 			{
-				ContextMenu.Placement = PlacementMode.Bottom;
 				ContextMenu.PlacementTarget = this;
-				ContextMenu.StaysOpen = false;
 				IsOpen = true;
 			}
 		} // proc OnDropdown
 
 		#endregion
+
+		private static void OnPopupChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsSplitButton)d).OnPopupChanged((Popup)e.NewValue, (Popup)e.OldValue);
+
+		private void OnPopupChanged(Popup newValue, Popup oldValue)
+		{
+			RemoveLogicalChild(oldValue);
+			if (newValue?.Parent == null)
+				AddLogicalChild(newValue);
+		} // proc OnPopupChanged
+
+		/// <summary></summary>
+		protected override IEnumerator LogicalChildren
+			=> Popup == null || Popup.Parent != this  
+				? base.LogicalChildren 
+				: LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Popup);
 
 		/// <summary></summary>
 		public bool IsOpen { get { return (bool)GetValue(IsOpenProperty); } set { SetValue(IsOpenProperty, value); } }

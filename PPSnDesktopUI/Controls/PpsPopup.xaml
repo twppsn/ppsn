@@ -15,7 +15,9 @@ specific language governing permissions and limitations under the Licence.
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
-	<Style TargetType="{x:Type pps:PpsDataFieldPanel}">
-		<Setter Property="VerticalAlignment" Value="Top" />
-	</Style>	
+	<Style TargetType="{x:Type pps:PpsPopup}">
+		<Setter Property="Placement" Value="Left" />
+		<Setter Property="AllowsTransparency" Value="True" />
+		<Setter Property="PopupAnimation" Value="Fade" />
+	</Style>
 </ResourceDictionary>
