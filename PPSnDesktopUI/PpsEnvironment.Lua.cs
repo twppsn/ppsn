@@ -1017,6 +1017,65 @@ namespace TecWare.PPSn
 				return v;
 		} // func GetServerRowValue
 
+		/// <summary></summary>
+		/// <param name="currentControl"></param>
+		/// <param name="control"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public DependencyObject GetVisualParent(DependencyObject currentControl, object control, bool throwException = false)
+		{
+			if (currentControl == null)
+				throw new ArgumentNullException(nameof(currentControl));
+
+			switch (control)
+			{
+				case LuaType lt:
+					return GetVisualParent(currentControl, lt.Type, throwException);
+				case Type t:
+					return currentControl.GetVisualParent(t)
+						?? (throwException ? throw new ArgumentException() : (DependencyObject)null);
+				case string n:
+					return currentControl.GetVisualParent(n)
+						?? (throwException ? throw new ArgumentException() : (DependencyObject)null);
+				case null:
+					return currentControl.GetVisualParent()
+						?? (throwException ? throw new ArgumentException() : (DependencyObject)null);
+				default:
+					throw new ArgumentException(nameof(control));
+			}
+		} // func GetVisualParent
+
+
+		/// <summary></summary>
+		/// <param name="currentControl"></param>
+		/// <param name="control"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		[LuaMember]
+		public DependencyObject GetLogicalParent(DependencyObject currentControl, object control, bool throwException = false)
+		{
+			if (currentControl == null)
+				throw new ArgumentNullException(nameof(currentControl));
+
+			switch (control)
+			{
+				case LuaType lt:
+					return GetLogicalParent(currentControl, lt.Type, throwException);
+				case Type t:
+					return currentControl.GetLogicalParent(t)
+						?? (throwException ? throw new ArgumentException() : (DependencyObject)null);
+				case string n:
+					return currentControl.GetLogicalParent(n)
+						?? (throwException ? throw new ArgumentException() : (DependencyObject)null);
+				case null:
+					return currentControl.GetLogicalParent()
+						?? (throwException ? throw new ArgumentException() : (DependencyObject)null);
+				default:
+					throw new ArgumentException(nameof(control));
+			}
+		} // func GetLogicalParent
+
 		/// <summary>Create a local tempfile name for this objekt</summary>
 		/// <param name="obj"></param>
 		/// <returns></returns>

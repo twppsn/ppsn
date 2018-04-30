@@ -229,7 +229,7 @@ namespace TecWare.PPSn.Controls
 			if (!properties.TryGetProperty<string>(nameof(PpsDataField.BindingPath), out var localBindingPath))
 				localBindingPath = column.Name;
 
-			return new PpsDataFieldInfo(serviceProvider, column, properties, baseBindingPath ?? localBindingPath);
+			return new PpsDataFieldInfo(serviceProvider, column, properties, PpsDataFieldBinding.CombinePath(baseBindingPath, localBindingPath));
 		} // func GetDataFieldInfo
 	} // class PpsDataSetResolver
 

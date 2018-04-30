@@ -445,6 +445,24 @@ namespace TecWare.PPSn
 			);
 		} // func GetControlService
 
+		/// <summary></summary>
+		/// <param name="current"></param>
+		/// <param name="name"></param>
+		/// <param name="comparison"></param>
+		/// <returns></returns>
+		public static int CompareName(this DependencyObject current, string name, StringComparison comparison = StringComparison.Ordinal)
+		{
+			switch(current)
+			{
+				case FrameworkElement fe:
+					return String.Compare(fe.Name, name, comparison);
+				case FrameworkContentElement fce:
+					return String.Compare(fce.Name, name, comparison);
+				default:
+					return -1;
+			}
+		} // func CompareName
+
 		/// <summary>Get the logical parent or the template parent.</summary>
 		/// <param name="current"></param>
 		/// <returns></returns>
@@ -460,6 +478,31 @@ namespace TecWare.PPSn
 					return null;
 			}
 		} // func GetLogicalParent
+
+		/// <summary></summary>
+		/// <param name="current"></param>
+		/// <param name="typeOfParent"></param>
+		/// <returns></returns>
+		public static DependencyObject GetLogicalParent(this DependencyObject current, Type typeOfParent)
+		{
+			var parent = GetLogicalParent(current);
+			return parent == null || typeOfParent == null || typeOfParent.IsAssignableFrom(parent.GetType())
+				? parent
+				: GetLogicalParent(parent, typeOfParent);
+		} // func GetVisualParent
+
+		/// <summary></summary>
+		/// <param name="current"></param>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public static DependencyObject GetLogicalParent(this DependencyObject current, string name)
+		{
+			var parent = GetLogicalParent(current);
+			return parent == null || CompareName(parent, name) == 0
+				? parent
+				: GetLogicalParent(parent, name);
+		} // func GetVisualParent
+
 
 		/// <summary>Get the logical parent or the template parent.</summary>
 		/// <param name="current"></param>
@@ -481,16 +524,43 @@ namespace TecWare.PPSn
 
 		/// <summary></summary>
 		/// <param name="current"></param>
+		/// <param name="typeOfParent"></param>
+		/// <returns></returns>
+		public static DependencyObject GetVisualParent(this DependencyObject current, Type typeOfParent)
+		{
+			var parent = GetVisualParent(current);
+			if (parent == null && current != null && current.GetType().Name == "PopupRoot")
+				parent = GetLogicalParent(current);
+
+			return parent == null || typeOfParent == null || typeOfParent.IsAssignableFrom(parent.GetType())
+				? parent
+				: GetVisualParent(parent, typeOfParent);
+		} // func GetVisualParent
+
+		/// <summary></summary>
+		/// <param name="current"></param>
+		/// <param name="name"></param>
+		/// <returns></returns>
+		public static DependencyObject GetVisualParent(this DependencyObject current, string name)
+		{
+			var parent = GetVisualParent(current);
+			return parent == null || CompareName(parent, name) == 0
+				? parent
+				: GetVisualParent(parent, name);
+		} // func GetVisualParent
+
+		/// <summary></summary>
+		/// <param name="current"></param>
 		/// <typeparam name="T"></typeparam>
 		/// <returns></returns>
 		public static T GetVisualParent<T>(this DependencyObject current)
 			where T : DependencyObject
 		{
-			var parent = GetLogicalParent(current);
+			var parent = GetVisualParent(current);
 			return parent is T r
 				? r
 				: GetVisualParent<T>(parent);
-		} // func GetLogicalParent
+		} // func GetVisualParent
 
 		/// <summary>Find a child in the Visual tree.</summary>
 		/// <typeparam name="T">Type of the child</typeparam>
