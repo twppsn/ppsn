@@ -12,6 +12,7 @@
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsDataFieldPanel.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsSideBarControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsStackSectionControl.xaml" />
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsDataFilterBase.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 </ResourceDictionary>
