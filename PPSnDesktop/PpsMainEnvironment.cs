@@ -58,8 +58,8 @@ namespace TecWare.PPSn
 
 		protected async override Task OnSystemOnlineAsync()
 		{
-			await base.OnSystemOnlineAsync();
 			await RefreshNavigatorAsync();
+			await base.OnSystemOnlineAsync();
 		} // proc OnSystemOnlineAsync
 
 		protected async override Task OnSystemOfflineAsync()

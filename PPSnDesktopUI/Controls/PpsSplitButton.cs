@@ -141,7 +141,7 @@ namespace TecWare.PPSn.Controls
 		private void OnPopupChanged(Popup newValue, Popup oldValue)
 		{
 			RemoveLogicalChild(oldValue);
-			if (newValue.Parent == null)
+			if (newValue?.Parent == null)
 				AddLogicalChild(newValue);
 		} // proc OnPopupChanged
 
