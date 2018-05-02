@@ -29,6 +29,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
 		<Setter Property="Padding" Value="6,0"/>
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
+		<Setter Property="GeometrySize" Value="18" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsButton}">
@@ -49,8 +50,9 @@ specific language governing permissions and limitations under the Licence.
 								<pps:PpsGeometryImage x:Name="ImageBox"
 													  Grid.Column="0"
 													  GeometryName="{TemplateBinding GeometryName}"
-													  GeometryCircled="false" 
-													  Diameter="{TemplateBinding Diameter}" />
+													  GeometryCircled="false"
+													  Width="{TemplateBinding GeometrySize}"
+													  Height="{TemplateBinding GeometrySize}"/>
 
 								<ContentPresenter Grid.Column="1"
 												  Focusable="False"

@@ -44,6 +44,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="Focusable" Value="False"/>
 		<Setter Property="Foreground" Value="{DynamicResource PPSnActionButtonBrush}"/>
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
+		<Setter Property="GeometrySize" Value="36" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsButton}">
@@ -54,7 +55,8 @@ specific language governing permissions and limitations under the Licence.
 						</Grid.RowDefinitions>
 						<pps:PpsGeometryImage x:Name="Circle" 
 											  GeometryName="{TemplateBinding GeometryName}" 
-											  Diameter="{TemplateBinding Diameter}"
+											  Width="{TemplateBinding GeometrySize}"
+											  Height="{TemplateBinding GeometrySize}"
 											  GeometryCircled="True" />
 						<TextBlock x:Name="Description"
 								   Grid.Row="1"

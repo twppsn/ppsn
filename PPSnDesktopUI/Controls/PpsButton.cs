@@ -24,12 +24,12 @@ namespace TecWare.PPSn.Controls
 		/// <summary>The name of the resource</summary>
 		public static readonly DependencyProperty GeometryNameProperty = PpsGeometryImage.GeometryNameProperty.AddOwner(typeof(PpsButton));
 		/// <summary>The diameter of the circle</summary>
-		public static readonly DependencyProperty DiameterProperty = PpsGeometryImage.DiameterProperty.AddOwner(typeof(PpsButton));
+		public static readonly DependencyProperty GeometrySizeProperty = DependencyProperty.Register(nameof(GeometrySize), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(36.0));
 		
 		/// <summary>The property defines the resource to be loaded.</summary>
 		public string GeometryName { get => (string)GetValue(GeometryNameProperty); set => SetValue(GeometryNameProperty, value); }
 		/// <summary>The property defines the diameter of the circle</summary>
-		public double Diameter { get => (double)GetValue(DiameterProperty); set => SetValue(DiameterProperty, value); }
+		public double GeometrySize { get => (double)GetValue(GeometrySizeProperty); set => SetValue(GeometrySizeProperty, value); }
 		
 		static PpsButton()
 		{

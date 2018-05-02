@@ -14,10 +14,6 @@
 //
 #endregion
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -28,23 +24,17 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public class PpsGeometryImage : Control
 	{
-		/// <summary></summary>
-		public static readonly DependencyProperty FillProperty = Shape.FillProperty.AddOwner(typeof(PpsGeometryImage), new FrameworkPropertyMetadata(Brushes.Transparent));
-
-		/// <summary>The name of the resource</summary>
-		public static readonly DependencyProperty GeometryNameProperty = DependencyProperty.Register(nameof(GeometryName), typeof(string), typeof(PpsGeometryImage), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnGeometryNameChanged)));
-
-		/// <summary>The Geometry to draw the image</summary>
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly DependencyProperty GeometryProperty = DependencyProperty.Register(nameof(PpsGeometryImage.Geometry), typeof(Geometry), typeof(PpsGeometryImage), new FrameworkPropertyMetadata(null));
-		/// <summary></summary>
-		public static readonly DependencyProperty GeometryCircledProperty = DependencyProperty.Register(nameof(GeometryCircled), typeof(bool), typeof(PpsGeometryImage), new FrameworkPropertyMetadata(true));
-
 		private static readonly DependencyPropertyKey hasImagePropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasGeometry), typeof(bool), typeof(PpsGeometryImage), new FrameworkPropertyMetadata(BooleanBox.False));
-		/// <summary>Button has an image?</summary>
 		public static readonly DependencyProperty HasGeometryProperty = hasImagePropertyKey.DependencyProperty;
 
-		/// <summary>The diameter of the circle</summary>
-		public static readonly DependencyProperty DiameterProperty = DependencyProperty.Register(nameof(Diameter), typeof(double), typeof(PpsGeometryImage), new FrameworkPropertyMetadata(36.0, new PropertyChangedCallback(OnDiameterChanged)));
+		public static readonly DependencyProperty GeometryNameProperty = DependencyProperty.Register(nameof(GeometryName), typeof(string), typeof(PpsGeometryImage), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnGeometryNameChanged)));
+		public static readonly DependencyProperty GeometryCircledProperty = DependencyProperty.Register(nameof(GeometryCircled), typeof(bool), typeof(PpsGeometryImage), new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.AffectsRender | FrameworkPropertyMetadataOptions.AffectsMeasure));
+
+		public static readonly DependencyProperty FillProperty = Shape.FillProperty.AddOwner(typeof(PpsGeometryImage), new FrameworkPropertyMetadata(Brushes.Transparent));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
 
 		private static readonly DependencyPropertyKey geometrySpacingPropertyKey = DependencyProperty.RegisterReadOnly(nameof(GeometrySpacing), typeof(Thickness), typeof(PpsGeometryImage), new FrameworkPropertyMetadata(new Thickness(8.0)));
 		/// <summary>The inner distance between circle and image</summary>
@@ -61,12 +51,22 @@ namespace TecWare.PPSn.Controls
 			image.HasGeometry = resource != null;
 		} // proc OnImageNameChanged
 
-		private static void OnDiameterChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		/// <summary></summary>
+		/// <param name="sizeInfo"></param>
+		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
 		{
-			var image = (PpsGeometryImage)d;
-			var diameter = (double)e.NewValue;
-			image.GeometrySpacing = new Thickness(2 + Math.Ceiling((diameter - (diameter / Math.Sqrt(2))) / 2));
-		} // proc OnDiameterChanged
+			var width = sizeInfo.NewSize.Width;
+			var height = sizeInfo.NewSize.Height;
+			if (!GeometryCircled || width == Double.NaN || height == Double.NaN || width <= 0.0 || height <= 0.0)
+				GeometrySpacing = new Thickness(0);
+			else
+			{
+				var x = 2 + Math.Ceiling((width - (width / Math.Sqrt(2))) / 2);
+				var y = 2 + Math.Ceiling((height - (height / Math.Sqrt(2))) / 2);
+				GeometrySpacing = new Thickness(x, y, x, y);
+			}
+			base.OnRenderSizeChanged(sizeInfo);
+		} // proc OnRenderSizeChanged
 
 		/// <summary>The property defines the resource to be loaded.</summary>
 		public string GeometryName { get => (string)GetValue(GeometryNameProperty); set => SetValue(GeometryNameProperty, value); }
@@ -76,8 +76,6 @@ namespace TecWare.PPSn.Controls
 		public bool HasGeometry { get => BooleanBox.GetBool(GetValue(HasGeometryProperty)); private set => SetValue(hasImagePropertyKey, BooleanBox.GetObject(value)); }
 		/// <summary></summary>
 		public bool GeometryCircled { get=> BooleanBox.GetBool(GetValue(GeometryCircledProperty)); set => SetValue(GeometryCircledProperty, BooleanBox.GetObject(value)); }
-		/// <summary>The property defines the diameter of the circle</summary>
-		public double Diameter { get => (double)GetValue(DiameterProperty); set => SetValue(DiameterProperty, value); }
 		/// <summary>The property defines the inner distance between circle and image</summary>
 		public Thickness GeometrySpacing { get => (Thickness)GetValue(GeometrySpacingProperty); private set => SetValue(geometrySpacingPropertyKey, value); }
 		/// <summary></summary>
@@ -86,6 +84,7 @@ namespace TecWare.PPSn.Controls
 		static PpsGeometryImage()
 		{
 			OpacityProperty.OverrideMetadata(typeof(PpsGeometryImage), new FrameworkPropertyMetadata(0.65));
+
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsGeometryImage), new FrameworkPropertyMetadata(typeof(PpsGeometryImage)));
 		}
 	} // class class PpsGeometryImage

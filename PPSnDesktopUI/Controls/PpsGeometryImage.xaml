@@ -20,7 +20,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsGeometryImage}">
-					<Grid Width="{TemplateBinding Diameter}" Height="{TemplateBinding Diameter}">
+					<Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
 						<Ellipse x:Name="Circle"
 									 SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
 									 Stroke="{TemplateBinding Foreground}"
@@ -43,6 +43,11 @@ specific language governing permissions and limitations under the Licence.
 							<ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1" />
 						</Grid.RenderTransform>
 					</Grid>
+					<ControlTemplate.Triggers>
+						<Trigger Property="GeometryCircled" Value="false">
+							<Setter TargetName="Circle" Property="Visibility" Value="Hidden" />
+						</Trigger>
+					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
