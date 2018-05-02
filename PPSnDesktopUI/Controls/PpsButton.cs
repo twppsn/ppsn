@@ -14,12 +14,23 @@
 //
 #endregion
 using System.Windows;
+using System.Windows.Controls;
 
 namespace TecWare.PPSn.Controls
 {
 	/// <summary></summary>
-	public class PpsButton : PpsButtonBase
+	public class PpsButton : Button
 	{
+		/// <summary>The name of the resource</summary>
+		public static readonly DependencyProperty GeometryNameProperty = PpsGeometryImage.GeometryNameProperty.AddOwner(typeof(PpsButton));
+		/// <summary>The diameter of the circle</summary>
+		public static readonly DependencyProperty DiameterProperty = PpsGeometryImage.DiameterProperty.AddOwner(typeof(PpsButton));
+		
+		/// <summary>The property defines the resource to be loaded.</summary>
+		public string GeometryName { get => (string)GetValue(GeometryNameProperty); set => SetValue(GeometryNameProperty, value); }
+		/// <summary>The property defines the diameter of the circle</summary>
+		public double Diameter { get => (double)GetValue(DiameterProperty); set => SetValue(DiameterProperty, value); }
+		
 		static PpsButton()
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsButton), new FrameworkPropertyMetadata(typeof(PpsButton)));

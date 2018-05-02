@@ -39,4 +39,65 @@ specific language governing permissions and limitations under the Licence.
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+	<Style x:Key="{x:Static pps:PpsSharedResourceKey.PpsCircleButtonStyle}" TargetType="{x:Type pps:PpsButton}">
+		<Setter Property="Focusable" Value="False"/>
+		<Setter Property="Foreground" Value="{DynamicResource PPSnActionButtonBrush}"/>
+		<Setter Property="SnapsToDevicePixels" Value="True"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type pps:PpsButton}">
+					<Grid x:Name="RootGrid" Background="Transparent">
+						<Grid.RowDefinitions>
+							<RowDefinition Height="auto" />
+							<RowDefinition Height="auto" />
+						</Grid.RowDefinitions>
+						<pps:PpsGeometryImage x:Name="Circle" 
+											  GeometryName="{TemplateBinding GeometryName}" 
+											  Diameter="{TemplateBinding Diameter}"
+											  GeometryCircled="True" />
+						<TextBlock x:Name="Description"
+								   Grid.Row="1"
+								   Text="{TemplateBinding Content}"
+								   Foreground="{TemplateBinding Foreground}"
+								   HorizontalAlignment="Center"
+								   Margin="0,2,0,0"
+								   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+					</Grid>
+					<ControlTemplate.Triggers>
+						<Trigger Property="IsMouseOver" Value="True">
+							<Setter TargetName="Circle" Property="Opacity" Value="1" />
+							<Setter TargetName="Circle" Property="Fill" Value="{DynamicResource PPSnMouseOverBrush}" />
+						</Trigger>
+						<Trigger Property="IsPressed" Value="True">
+							<Setter TargetName="Circle" Property="Fill" Value="{DynamicResource PPSnButtonPressedBrush}"/>
+							<Trigger.EnterActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="1" To="0.95" Duration="0:00:0.1" />
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="1" To="0.95" Duration="0:00:0.1" />
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.EnterActions>
+							<Trigger.ExitActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="0.95" To="1" Duration="0:00:0.15" />
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="0.95" To="1" Duration="0:00:0.15" />
+									</Storyboard>
+								</BeginStoryboard>
+							</Trigger.ExitActions>
+						</Trigger>
+						<Trigger Property="IsEnabled" Value="False">
+							<Setter Property="Opacity" Value="0.35" />
+						</Trigger>
+						<Trigger Property="Text" SourceName="Description" Value="{x:Static sys:String.Empty}">
+							<Setter TargetName="Description" Property="Visibility" Value="Collapsed" />
+							<Setter TargetName="RootGrid" Property="Background" Value="{x:Null}" />
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
 </ResourceDictionary>

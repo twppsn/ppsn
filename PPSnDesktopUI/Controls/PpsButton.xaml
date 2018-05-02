@@ -45,16 +45,12 @@ specific language governing permissions and limitations under the Licence.
 									<ColumnDefinition Width="Auto" />
 									<ColumnDefinition />
 								</Grid.ColumnDefinitions>
-								<Viewbox x:Name="ImageBox"
-										 Width="19"
-										 Height="19"
-										 Opacity=".65"
-										 SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-									<Canvas Width="24" Height="24">
-										<Path Data="{TemplateBinding ImagePathData}"
-											  Fill="{DynamicResource PPSnActionButtonBrush}" />
-									</Canvas>
-								</Viewbox>
+
+								<pps:PpsGeometryImage x:Name="ImageBox"
+													  Grid.Column="0"
+													  GeometryName="{TemplateBinding GeometryName}"
+													  GeometryCircled="false" 
+													  Diameter="{TemplateBinding Diameter}" />
 
 								<ContentPresenter Grid.Column="1"
 												  Focusable="False"
@@ -152,7 +148,7 @@ specific language governing permissions and limitations under the Licence.
 								</BeginStoryboard>
 							</Trigger.ExitActions>
 						</Trigger>
-						<Trigger Property="HasImage" Value="False">
+						<Trigger SourceName="ImageBox" Property="HasGeometry" Value="false">
 							<Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
 							<Setter Property="HorizontalContentAlignment" Value="Center" />
 						</Trigger>

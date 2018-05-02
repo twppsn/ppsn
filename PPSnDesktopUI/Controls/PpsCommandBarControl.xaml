@@ -39,13 +39,14 @@ specific language governing permissions and limitations under the Licence.
 				<Border Width="24"/>
 			</DataTemplate>
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Type uiO:PpsUICommandButton}}">
-				<pps:PpsCircleButton Command="{Binding Command}"
-									 CommandParameter="{Binding CommandParameter}"
-									 CommandTarget="{Binding CommandTarget}"
-									 Content="{Binding DisplayText}"
-									 ToolTip="{Binding Description}"
-									 ImageName="{Binding Image}"
-									 Margin="10,0,0,0" />
+				<pps:PpsButton Command="{Binding Command}"
+							   CommandParameter="{Binding CommandParameter}"
+							   CommandTarget="{Binding CommandTarget}"
+							   Content="{Binding DisplayText}"
+							   ToolTip="{Binding Description}"
+							   GeometryName="{Binding Image}"
+							   Margin="10,0,0,0"
+							   Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsCircleButtonStyle}}"/>
 			</DataTemplate>
 
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Type uiO:PpsUISplitCommandButton}}">
@@ -56,7 +57,7 @@ specific language governing permissions and limitations under the Licence.
 									Mode="{Binding Mode}"
 									Content="{Binding DisplayText}"
 									ToolTip="{Binding Description}"
-									ImageName="{Binding Image}"
+									GeometryName="{Binding Image}"
 									Margin="10,0,0,0"
 									Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsCircleButtonStyle}}" />
 			</DataTemplate>
@@ -70,7 +71,7 @@ specific language governing permissions and limitations under the Licence.
 							   CommandTarget="{Binding CommandTarget}"
 							   Content="{Binding DisplayText}"
 							   ToolTip="{Binding Description}"
-							   ImageName="{Binding Image}"
+							   GeometryName="{Binding Image}"
 							   Margin="10,0,0,0" />
 			</DataTemplate>
 		</Style.Resources>
