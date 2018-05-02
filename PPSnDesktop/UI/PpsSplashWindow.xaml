@@ -243,16 +243,15 @@
 
 				<TextBlock Grid.Row="3" Text="URI:"/>
 				<TextBox Grid.Row="4" Text="{Binding NewEnvironmentUri, Mode=OneWayToSource, UpdateSourceTrigger=PropertyChanged}"/>
-				<StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
+				<StackPanel Grid.Row="6" Orientation="Horizontal" Height="31" HorizontalAlignment="Right" TextElement.FontSize="14">
 					<uiC:PpsButton Content="Anlegen"
 								   Command="{x:Static ApplicationCommands.Save}"
-								   Width="110"
-								   Height="31" />
+								   Width="110" />
 					<uiC:PpsButton Content="Abbrechen"
 								   Command="{x:Static ApplicationCommands.Close}"
 								   Width="110"
-								   Height="31"
-								   Margin="12,0,0,0"/>
+								   Margin="12,0,0,0" />
+
 				</StackPanel>
 			</Grid>
 
@@ -321,15 +320,13 @@
 				<CheckBox Grid.Row="7" IsChecked="{Binding SavePassword}" Content="Password speichern" IsEnabled="{Binding IsPasswordSaveEnabled}" Style="{StaticResource PPSnSysCheckBoxStyle}"
 						  BorderThickness="2" FontSize="14" VerticalAlignment="Top" Margin="0,12,0,0"/>
 
-				<StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Right">
+				<StackPanel Grid.Row="8" Orientation="Horizontal" Height="31" HorizontalAlignment="Right" TextElement.FontSize="14">
 					<uiC:PpsButton Content="Anmelden"
 								   Command="{x:Static ApplicationCommands.Save}"
-								   Width="110"
-								   Height="31" />
+								   Width="110" />
 					<uiC:PpsButton Content="Abbrechen"
 								   Command="{x:Static ApplicationCommands.Close}"
 								   Width="110"
-								   Height="31" 
 								   Margin="12,0,0,0"/>
 				</StackPanel>
 			</Grid>
