@@ -65,6 +65,8 @@ namespace TecWare.PPSn.Controls
 		private static readonly string colonMovedMessage = "Das Komma wurde verschoben.";
 		private static readonly string tooMuchLinesMessage = "Dieses Eingabefeld unterstützt nicht so viele Zeilen.";
 		private static readonly string invalidCharsMessage = "Dieses Eingabefeld unterstützt nur Zahlen.";
+		private static readonly string capsLockMessage = "Die Feststelltaste is aktiv.";
+		private static readonly string numLockDisabledMessage = "Der numerische Tastenblock ist deaktiviert.";
 		private static readonly char carriageReturnChar = '\r';
 		private static readonly char lineFeedChar = '\n';
 
@@ -144,6 +146,12 @@ namespace TecWare.PPSn.Controls
 
 		private void SetError(string message)
 		{
+			if (String.IsNullOrWhiteSpace(message))
+			{
+				HasError = false;
+				ErrorMessage = message;
+				return;
+			}
 
 			if (fadeTimer == null)
 			{
@@ -357,7 +365,7 @@ namespace TecWare.PPSn.Controls
 		protected virtual void OnInputTypeChanged(PpsTextBoxInputType newValue, PpsTextBoxInputType oldValue)
 		{
 			this.AcceptsReturn = IsMultiLineInput(newValue);
-			
+
 			var error = String.Empty;
 			NeatlyReplaceText(NeatlyCleanText(InputType, Text, AllowedLineCount, out error));
 			SetError(error);
@@ -369,6 +377,8 @@ namespace TecWare.PPSn.Controls
 		{
 			if (!IsTextualInput(InputType))
 			{
+				if (!Keyboard.IsKeyToggled(Key.NumLock))
+					SetError(numLockDisabledMessage);
 				if (!IsNegativeAllowed(InputType))
 				{
 					if (e.Text.Contains(CultureInfo.CurrentCulture.NumberFormat.NegativeSign))
@@ -389,11 +399,8 @@ namespace TecWare.PPSn.Controls
 			}
 			else
 			{
-				if (e.Text.Contains(Environment.NewLine))
-				{
-					e.Handled = true;
-					SetError(tooMuchLinesMessage);
-				}
+				if (Keyboard.IsKeyToggled(Key.CapsLock))
+					SetError(capsLockMessage);
 			}
 
 			base.OnPreviewTextInput(e);
