@@ -19,7 +19,6 @@ specific language governing permissions and limitations under the Licence.
 	<SolidColorBrush x:Key="PpsButtonBackgroundBrush" Color="{DynamicResource PPSnAccentColor}" Opacity="0.13"/>
 
 	<Style TargetType="{x:Type pps:PpsButton}">
-		<Setter Property="FontSize" Value="14"/>
 		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
 		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}"/>
 		<Setter Property="Background" Value="{StaticResource PpsButtonBackgroundBrush}"/>
@@ -46,14 +45,13 @@ specific language governing permissions and limitations under the Licence.
 									<ColumnDefinition Width="Auto" />
 									<ColumnDefinition />
 								</Grid.ColumnDefinitions>
-
 								<pps:PpsGeometryImage x:Name="ImageBox"
-													  Grid.Column="0"
 													  GeometryName="{TemplateBinding GeometryName}"
 													  GeometryCircled="false"
 													  Width="{TemplateBinding GeometrySize}"
-													  Height="{TemplateBinding GeometrySize}"/>
-
+													  Height="{TemplateBinding GeometrySize}"
+													  Foreground="{DynamicResource PPSnActionButtonBrush}"
+													  Opacity=".65" />
 								<ContentPresenter Grid.Column="1"
 												  Focusable="False"
 												  RecognizesAccessKey="True"
