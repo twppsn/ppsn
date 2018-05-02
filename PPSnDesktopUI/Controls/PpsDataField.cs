@@ -762,6 +762,7 @@ namespace TecWare.PPSn.Controls
 			dynamic date = LuaWpfCreator.CreateFactory(ui, typeof(System.Windows.Controls.DatePicker));
 
 			date.SelectedDate = PpsDataFieldBinding.CreateWpfBinding(fieldInfo);
+			date.Style = Application.Current.TryFindResource("PpsDatePickerStyle");
 
 			return date;
 		} // func CreateDateTimeField
