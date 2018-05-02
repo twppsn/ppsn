@@ -331,7 +331,7 @@ namespace TecWare.PPSn.Controls
 		{
 			var returnSize = new Size();
 
-			var childrenToArrange = (from UIElement child in InternalChildren where (!(child is Label) && (child.Visibility == Visibility.Visible)) select child).ToArray();
+			var childrenToArrange = (from UIElement child in InternalChildren where ((child.Visibility == Visibility.Visible) && (labels.ContainsKey(child))) select child).ToArray();
 
 			if (!childrenToArrange.Any())
 				return returnSize;
