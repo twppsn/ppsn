@@ -17,7 +17,7 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:uiO="clr-namespace:TecWare.PPSn.UI"
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
-	<Style x:Key="PpsCircleButtonDefaultStyle" TargetType="{x:Type pps:PpsButtonBase}">
+	<Style x:Key="{x:Static pps:PpsSharedResourceKey.PpsCircleButtonStyle}" TargetType="{x:Type pps:PpsButtonBase}">
 		<Setter Property="Focusable" Value="False"/>
 		<Setter Property="Foreground" Value="{DynamicResource PPSnActionButtonBrush}"/>
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -98,6 +98,5 @@ specific language governing permissions and limitations under the Licence.
 		</Setter>
 	</Style>
 
-	<Style TargetType="{x:Type pps:PpsCircleButton}" BasedOn="{StaticResource PpsCircleButtonDefaultStyle}" />
-
+	<Style TargetType="{x:Type pps:PpsCircleButton}" BasedOn="{StaticResource {x:Static pps:PpsSharedResourceKey.PpsCircleButtonStyle}}" />
 </ResourceDictionary>
