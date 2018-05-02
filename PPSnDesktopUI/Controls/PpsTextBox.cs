@@ -371,6 +371,17 @@ namespace TecWare.PPSn.Controls
 			SetError(error);
 		} // proc OnInputTypeChanged
 
+		/// <summary>Overridden to catch the Keys pressed on NumBlock without NumLock</summary>
+		/// <param name="e"></param>
+		protected override void OnPreviewKeyDown(KeyEventArgs e)
+		{
+			base.OnPreviewKeyDown(e);
+
+			if (!IsTextualInput(InputType))
+				if (!Keyboard.IsKeyToggled(Key.NumLock))
+					SetError(numLockDisabledMessage);
+		}
+
 		/// <summary>If text is entered by Keyboard do not process illegal chars (TextChanged is not called)</summary>
 		/// <param name="e"></param>
 		protected override void OnPreviewTextInput(TextCompositionEventArgs e)
