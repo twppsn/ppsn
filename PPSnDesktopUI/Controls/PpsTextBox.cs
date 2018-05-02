@@ -64,6 +64,7 @@ namespace TecWare.PPSn.Controls
 		private static readonly string onlyIntegerMessage = "Gebrochene Zahlen sind nicht erlaubt.";
 		private static readonly string colonMovedMessage = "Das Komma wurde verschoben.";
 		private static readonly string tooMuchLinesMessage = "Dieses Eingabefeld unterstützt nicht so viele Zeilen.";
+		private static readonly string invalidCharsMessage = "Dieses Eingabefeld unterstützt nur Zahlen.";
 		private static readonly char carriageReturnChar = '\r';
 		private static readonly char lineFeedChar = '\n';
 
@@ -174,29 +175,33 @@ namespace TecWare.PPSn.Controls
 			this.CaretIndex = curPos;
 		} // proc NeatlyReplaceText
 
-		private void NeatlyCleanText()
+		private static string NeatlyCleanText(PpsTextBoxInputType inputType, string text, int allowedLineCount, out string error)
 		{
-			if (InputType == PpsTextBoxInputType.None || Text.Length < 1)
-				return;
+			error = String.Empty;
+
+			if (inputType == PpsTextBoxInputType.None || text.Length < 1)
+				return text;
+
+			var cleanText = String.Empty;
 
 			var newText = new StringBuilder();
 			var negative = false;
 			var firstColonIndex = -1;
-			var remainingLines = AllowedLineCount - 1;
+			var remainingLines = allowedLineCount - 1;
 			var lastWasNewline = false;
 			var lastWasCarriageReturn = false;
 
 			// while checking the input, the Text is only parsed once
-			foreach (var c in Text)
+			foreach (var c in text)
 			{
-				if (IsTextualInput(InputType))
+				if (IsTextualInput(inputType))
 				{
-					if (c >= ' ')
+					if (c != '\n' && c != '\r')
 					{
 						newText.Append(c);
 						continue;
 					}
-					if (IsMultiLineInput(InputType))
+					else
 					{
 						if (c == lineFeedChar)
 						{
@@ -212,7 +217,7 @@ namespace TecWare.PPSn.Controls
 								{
 									lastWasCarriageReturn = false;
 									newText.Remove(newText.Length - 1, 1);
-									SetError(tooMuchLinesMessage);
+									error = tooMuchLinesMessage;
 									continue;
 								}
 							else
@@ -226,7 +231,7 @@ namespace TecWare.PPSn.Controls
 								}
 								else
 								{
-									SetError(tooMuchLinesMessage);
+									error = tooMuchLinesMessage;
 									continue;
 								}
 							}
@@ -256,7 +261,7 @@ namespace TecWare.PPSn.Controls
 
 				if (LegalIntegers.Contains(c) || c == CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator[0])
 				{
-					if (InputType != PpsTextBoxInputType.Number)
+					if (inputType != PpsTextBoxInputType.Number)
 						if (newText.Length == 0)
 							if (c == '0')
 								continue;
@@ -266,20 +271,21 @@ namespace TecWare.PPSn.Controls
 
 				if (c == CultureInfo.CurrentCulture.NumberFormat.NegativeSign[0])
 				{
-					if (IsNegativeAllowed(InputType))
+					if (IsNegativeAllowed(inputType))
 					{
 						negative = negativeToggling ? !negative : true;
 						continue;
 					}
 					else
 					{
-						SetError(noNegativeNumbersMessage);
+						error = noNegativeNumbersMessage;
+						continue;
 					}
 				}
 
 				if (c == CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator[0])
 				{
-					if (IsDecimalAllowed(InputType))
+					if (IsDecimalAllowed(inputType))
 					{
 						if (firstColonIndex < 0)
 						{
@@ -292,39 +298,35 @@ namespace TecWare.PPSn.Controls
 							newText.Remove(firstColonIndex, 1);
 							newText.Append(c);
 							firstColonIndex = newText.Length - 1;
-							SetError(colonMovedMessage);
+							error = colonMovedMessage;
 							continue;
 						}
 					}
 					else
 					{
-						SetError(onlyIntegerMessage);
+						error = onlyIntegerMessage;
+						continue;
 					}
 				}
+
+				error = invalidCharsMessage;
 			} // foreach(var c in Text)
 
-			if (IsTextualInput(InputType))
+			if (IsTextualInput(inputType))
 			{
-				if (Text.Length == newText.Length)
-				{
-					// in case of text input if there is no change in length, there was no change in content
-					return;
-				}
-
-				NeatlyReplaceText(newText.ToString());
-				return;
+				return newText.ToString();
 			}
-
-			if (negative)
-				newText.Insert(0, CultureInfo.CurrentCulture.NumberFormat.NegativeSign);
 
 			if (firstColonIndex == 0)
 				newText.Insert(0, '0');
 
-			var newTextString = newText.ToString();
+			if (negative)
+				newText.Insert(0, CultureInfo.CurrentCulture.NumberFormat.NegativeSign);
 
-			if (Text != newTextString)
-				NeatlyReplaceText(newTextString);
+			if (!IsTextualInput(inputType) && newText.Length == 0)
+				newText.Append('0');
+
+			return newText.ToString();
 		} // proc NeatlyCleanText
 
 		#endregion Handling of Input
@@ -355,8 +357,10 @@ namespace TecWare.PPSn.Controls
 		protected virtual void OnInputTypeChanged(PpsTextBoxInputType newValue, PpsTextBoxInputType oldValue)
 		{
 			this.AcceptsReturn = IsMultiLineInput(newValue);
-
-			//NeatlyCleanText();
+			
+			var error = String.Empty;
+			NeatlyReplaceText(NeatlyCleanText(InputType, Text, AllowedLineCount, out error));
+			SetError(error);
 		} // proc OnInputTypeChanged
 
 		/// <summary>If text is entered by Keyboard do not process illegal chars (TextChanged is not called)</summary>
@@ -407,7 +411,9 @@ namespace TecWare.PPSn.Controls
 
 			retriggerHold = true;
 
-			//NeatlyCleanText();
+			var error = String.Empty;
+			NeatlyReplaceText(NeatlyCleanText(InputType, Text, AllowedLineCount, out error));
+			SetError(error);
 
 			retriggerHold = false;
 		} // proc OnTextChanged
