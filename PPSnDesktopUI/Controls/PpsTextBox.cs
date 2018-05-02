@@ -175,7 +175,7 @@ namespace TecWare.PPSn.Controls
 			this.CaretIndex = Math.Max(0, curPos);
 		} // proc NeatlyReplaceText
 
-		private static string NeatlyCleanText(PpsTextBoxInputType inputType, string text, int allowedLineCount, out string error)
+		public static string NeatlyCleanText(PpsTextBoxInputType inputType, string text, int allowedLineCount, out string error)
 		{
 			error = String.Empty;
 
