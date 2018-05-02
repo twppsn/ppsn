@@ -17,12 +17,16 @@ using System.Windows;
 
 namespace TecWare.PPSn.Controls
 {
+	#region -- class PpsCircleButton --------------------------------------------------
+
 	/// <summary></summary>
-	public class PpsButton : PpsButtonBase
+	public class PpsCircleButton : PpsButtonBase
 	{
-		static PpsButton()
+		static PpsCircleButton()
 		{
-			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsButton), new FrameworkPropertyMetadata(typeof(PpsButton)));
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsCircleButton), new FrameworkPropertyMetadata(typeof(PpsCircleButton)));
 		}
-	} // class PpsButton
+	} // class PpsCircleButton
+
+	#endregion
 }
