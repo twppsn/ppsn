@@ -14,12 +14,11 @@
 //
 #endregion
 using System.Windows;
-using System.Windows.Controls;
 
 namespace TecWare.PPSn.Controls
 {
 	/// <summary></summary>
-	public class PpsButton : Button
+	public class PpsButton : PpsButtonBase
 	{
 		static PpsButton()
 		{

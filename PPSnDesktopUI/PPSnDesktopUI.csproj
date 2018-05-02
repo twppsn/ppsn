@@ -102,6 +102,8 @@
   <ItemGroup>
     <Compile Include="Controls\ComboBoxBehavior.cs" />
     <Compile Include="Controls\DataListControl.cs" />
+    <Compile Include="Controls\PpsButtonBase.cs" />
+    <Compile Include="Controls\PpsCircleButton.cs" />
     <Compile Include="Controls\PpsPopup.cs" />
     <Compile Include="Controls\PpsButton.cs" />
     <Compile Include="Controls\PpsCommandBarControl.cs" />
@@ -195,6 +197,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\PpsButton.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\PpsCircleButton.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

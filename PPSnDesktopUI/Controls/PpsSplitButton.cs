@@ -38,7 +38,7 @@ namespace TecWare.PPSn.Controls
 
 	/// <summary></summary>
 	[TemplatePart(Name = "PART_SplitButton", Type = typeof(ButtonBase))]
-	public class PpsSplitButton : Button
+	public class PpsSplitButton : PpsButtonBase
 	{
 		/// <summary></summary>
 		protected const string PartSplitButton = "PART_SplitButton";

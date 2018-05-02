@@ -17,4 +17,5 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 	<Style TargetType="{x:Type pps:PpsSplitButton}" BasedOn="{StaticResource {x:Type Button}}">
 	</Style>
+
 </ResourceDictionary>
