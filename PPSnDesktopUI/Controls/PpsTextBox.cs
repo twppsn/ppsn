@@ -172,7 +172,7 @@ namespace TecWare.PPSn.Controls
 			var curLen = Text.Length;
 			Text = newText;
 			curPos -= curLen - Text.Length;
-			this.CaretIndex = curPos;
+			this.CaretIndex = Math.Max(0, curPos);
 		} // proc NeatlyReplaceText
 
 		private static string NeatlyCleanText(PpsTextBoxInputType inputType, string text, int allowedLineCount, out string error)
