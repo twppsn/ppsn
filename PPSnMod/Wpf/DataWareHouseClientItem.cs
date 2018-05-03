@@ -10,14 +10,14 @@ using TecWare.PPSn.Server.Data;
 namespace TecWare.PPSn.Server.Wpf
 {
 	/// <summary>Excel specific services</summary>
-	public class DatawareHouseCientItem : DEConfigItem
+	public class DataWareHouseClientItem : DEConfigItem
 	{
 		private readonly PpsApplication application;
 
 		/// <summary></summary>
 		/// <param name="sp"></param>
 		/// <param name="name"></param>
-		public DatawareHouseCientItem(IServiceProvider sp, string name)
+		public DataWareHouseClientItem(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
 			this.application = sp.GetService<PpsApplication>(true);
