@@ -110,8 +110,6 @@
     <Compile Include="Controls\PpsDataFieldPanel.cs" />
     <Compile Include="Controls\PpsDataFilterBase.cs" />
     <Compile Include="Controls\PpsDataFilterBox.cs" />
-    <Compile Include="Controls\PpsDataFilterCombo.cs" />
-    <Compile Include="Controls\PpsDataFilterList.cs" />
     <Compile Include="Controls\PpsEditableListbox.cs" />
     <Compile Include="Controls\PpsNamedSeparator.cs" />
     <Compile Include="Controls\PpsSharedResourceKey.cs" />
