@@ -54,7 +54,7 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty IsNullableProperty = DependencyProperty.Register(nameof(IsNullable), typeof(bool), typeof(PpsDataFilterBase), new PropertyMetadata(true));
 		/// <summary>DependencyProperty for the Write-Protection state</summary>
 		public static readonly DependencyProperty IsReadOnlyProperty = DependencyProperty.Register(nameof(IsReadOnly), typeof(bool), typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(false));
-		public static readonly DependencyProperty PreSelectedValueProperty = DependencyProperty.Register(nameof(PreSelectedValue), typeof(object), typeof(PpsDataFilterCombo));
+		public static readonly DependencyProperty PreSelectedValueProperty = DependencyProperty.Register(nameof(PreSelectedValue), typeof(object), typeof(PpsDataFilterBase));
 
 		#endregion
 
@@ -70,8 +70,8 @@ namespace TecWare.PPSn.Controls
 		#region ---- Fields -------------------------------------------------------------
 
 		private const string FilteredItemsListBoxName = "PART_FilteredItemsListBox";
-		internal ListBox filteredListBox;
-		internal bool hasMouseEnteredItemsList;
+		protected ListBox filteredListBox;
+		protected bool hasMouseEnteredItemsList;
 
 		#endregion
 
@@ -348,7 +348,7 @@ namespace TecWare.PPSn.Controls
 			{
 				if (HasMouseMoved() && !item.IsSelected)
 				{
-					item.IsSelected = true;
+					//item.IsSelected = true;
 				}
 			}
 		} // event OnMouseMove
