@@ -17,7 +17,13 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:uiO="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls"
 					xmlns:sys="clr-namespace:System;assembly=mscorlib">
-
+	<DataTemplate x:Key="PpsDataFilterDefaultSelectedValueTemplate">
+		<TextBlock
+			Text="{Binding Name}"
+			TextWrapping="NoWrap"
+			TextTrimming="CharacterEllipsis">
+		</TextBlock>
+	</DataTemplate>
 	<Style TargetType="ListBoxItem" x:Key="PpsDefaultTouchableItemContainerStyle">
 		<Setter Property="Focusable" Value="False" />
 		<Setter Property="Template">
@@ -102,12 +108,13 @@ specific language governing permissions and limitations under the Licence.
 
 	<Style TargetType="{x:Type pps:PpsDataFilterCombo}">
 		<Style.Setters>
+			<Setter Property="SelectedValueTemplate" Value="{StaticResource PpsDataFilterDefaultSelectedValueTemplate}"/>
+			<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterDefaultSelectedValueTemplate}"/>
 			<Setter Property="Height" Value="23"/>
 			<Setter Property="VerticalAlignment" Value="Top"/>
 			<Setter Property="SnapsToDevicePixels" Value="True"/>
 			<Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
 			<Setter Property="TextElement.Foreground" Value="Black"/>
-			<!--<Setter Property="FocusVisualStyle"/>-->
 			<Setter Property="Focusable" Value="True"/>
 			<Setter Property="BorderThickness" Value="1"/>
 			<Setter Property="BorderBrush" Value="{StaticResource PPSnControlNormalBorderBrush}" />
@@ -216,7 +223,7 @@ specific language governing permissions and limitations under the Licence.
 								
 								SelectedValue="{Binding Path=PreSelectedValue, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
 								ItemsSource="{Binding Mode=OneWay, Path=FilteredItemsSource, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
-							
+								ItemTemplate="{Binding Path=ItemTemplate, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
 								ItemContainerStyle="{Binding Path=ItemContainerStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
 								AlternationCount="2"/>
 									</Grid>
@@ -232,6 +239,7 @@ specific language governing permissions and limitations under the Licence.
 	<!-- TextBox which adds to a view and applies Filters -->
 	<Style TargetType="{x:Type pps:PpsDataFilterList}">
 		<Style.Setters>
+			<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterDefaultSelectedValueTemplate}"/>
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate>
@@ -279,7 +287,7 @@ specific language governing permissions and limitations under the Licence.
 								ScrollViewer.HorizontalScrollBarVisibility="Disabled"
 								SelectedValue="{Binding Path=PreSelectedValue, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
 								ItemsSource="{Binding Mode=OneWay, Path=FilteredItemsSource, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
-							
+								ItemTemplate="{Binding Path=ItemTemplate, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
 								ItemContainerStyle="{Binding Path=ItemContainerStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
 								AlternationCount="2"/>
 						</Grid>
