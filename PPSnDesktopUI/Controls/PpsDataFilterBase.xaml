@@ -68,7 +68,7 @@ specific language governing permissions and limitations under the Licence.
 
 	<ControlTemplate x:Key="PPSnDataFilterComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}">
 		<Grid>
-			<Border x:Name="border" BorderBrush="Black"	BorderThickness="{TemplateBinding BorderThickness}" Background="LightGray" />
+			<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}"	BorderThickness="{TemplateBinding BorderThickness}"  Background="{TemplateBinding Background}"/>
 			<Viewbox x:Name="arrowBox" HorizontalAlignment="Right" Width="20" Margin="0,0,1,0" Opacity=".5">
 				<Canvas Width="24" Height="24">
 					<Path x:Name="arrowPath" Data="M5,9 L6,8 L12,14 L18,8 L19,9 L12,16 L5,9Z" Fill="Black"/>
@@ -118,6 +118,7 @@ specific language governing permissions and limitations under the Licence.
 			<Setter Property="Focusable" Value="True"/>
 			<Setter Property="BorderThickness" Value="1"/>
 			<Setter Property="BorderBrush" Value="{StaticResource PPSnControlNormalBorderBrush}" />
+			<Setter Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
 			<Setter Property="Control.Template">
 				<Setter.Value>
 					<ControlTemplate>
@@ -240,6 +241,7 @@ specific language governing permissions and limitations under the Licence.
 	<Style TargetType="{x:Type pps:PpsDataFilterList}">
 		<Style.Setters>
 			<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterDefaultSelectedValueTemplate}"/>
+			<Setter Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate>
