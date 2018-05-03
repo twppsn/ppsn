@@ -21,6 +21,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
@@ -636,4 +637,102 @@ namespace TecWare.PPSn.Controls
 		public override bool IsFilteredListVisible()
 		=> true;
 	}
+
+	public class PpsDataFilterItemTextBlock : TextBlock
+	{
+		public static readonly DependencyProperty SearchTextProperty =
+			DependencyProperty.Register(nameof(SearchText), typeof(string), typeof(PpsDataFilterItemTextBlock), new FrameworkPropertyMetadata(null, OnDataChanged));
+		public static readonly DependencyProperty BaseTextProperty =
+			DependencyProperty.Register(nameof(BaseText), typeof(string), typeof(PpsDataFilterItemTextBlock), new FrameworkPropertyMetadata(null, OnDataChanged));
+
+		public PpsDataFilterItemTextBlock()
+			: base()
+		{
+			// when true, we cannot use VisualTree, to get the ListBoxItem under Mouse
+			IsHitTestVisible = false;
+		} // ctor
+
+		private static List<string> GetPositiveOperators(PpsDataFilterExpression filter)
+		{
+			// if operator is < > ! != it shouldn't be highlighted ( shouldn't be shown anyhow )
+			if (filter is PpsDataFilterCompareExpression compare && (compare.Operator == PpsDataFilterCompareOperator.Contains ||
+																	 compare.Operator == PpsDataFilterCompareOperator.Equal))
+				return new List<string>() { compare.Value.ToString() };
+
+			var ret = new List<string>();
+			if (filter is PpsDataFilterLogicExpression logic)
+				foreach (var sub in logic.Arguments)
+					ret.AddRange(GetPositiveOperators(sub));
+
+			return ret.Distinct().ToList();
+		} // func GetOperators
+
+		private static void OnDataChanged(DependencyObject source, DependencyPropertyChangedEventArgs e)
+		{
+			var textBlock = (PpsDataFilterItemTextBlock)source;
+			if (String.IsNullOrWhiteSpace(textBlock.BaseText))
+				return;
+
+			textBlock.Inlines.Clear();
+			textBlock.Inlines.AddRange(HighlightSearch(textBlock.BaseText, GetPositiveOperators(PpsDataFilterExpression.Parse(textBlock.SearchText)), (t) => new Bold(new Italic(new Run(t)))));
+		} // event OnDataChanged
+
+		/// <summary>This function Highlights parts of a string.</summary>
+		/// <param name="Text">Input text to format</param>
+		/// <param name="Searchtext">Whitespace-separated list of keywords</param>
+		/// <param name="Highlight">Function to Highlight, p.e. ''(t) => new Bold(new Italic(t))''</param>
+		/// <returns>List of Inlines</returns>
+		private static IEnumerable<Inline> HighlightSearch(string Text, List<string> Searchtext, Func<string, Inline> Highlight)
+		{
+			var result = new List<Inline>();
+
+			// mark is the array of characters to highlight
+			var mark = new bool[Text.Length];
+			mark.Initialize();  // play save
+
+			// finf every searchitem
+			foreach (var high in Searchtext.Where((s) => s.Length > 1))
+			{
+				var start = Text.IndexOf(high, StringComparison.OrdinalIgnoreCase);
+				// find every occurence
+				while (start >= 0)
+				{
+					for (var j = 0; j < high.Length; j++)
+						mark[start + j] = true;
+					start = Text.IndexOf(high, start + 1, StringComparison.OrdinalIgnoreCase);
+				}
+			}
+
+			if (!mark.Contains(true))
+			{
+				// nothing is highlighted - should only happen if nothing is searched for, thus showing the whole list
+				result.Add(new Run(Text));
+				return result;
+			}
+
+			var i = 0;
+			// marks if the first character is highlighted or not
+			var highlighting = mark[0];
+			// create new output inlines
+			while (i < mark.Length)
+			{
+				var stop = mark.ToList().IndexOf(!highlighting, i);
+				if (stop < 0)
+					stop = mark.Length;
+				if (highlighting)
+					result.Add(Highlight(Text.Substring(i, stop - i)));
+				else
+					result.Add(new Run(Text.Substring(i, stop - i)));
+				highlighting = !highlighting;
+				i = stop;
+			}
+			return result;
+		} // func HighlightSearch
+
+		/// <summary>Keywords to search for, separated by whitespace</summary>
+		public string SearchText { get => (string)GetValue(SearchTextProperty); set => SetValue(SearchTextProperty, value); }
+
+		/// <summary>Original Unformatted Text </summary>
+		public string BaseText { get => (string)GetValue(BaseTextProperty); set => SetValue(BaseTextProperty, value); }
+	} // class PpsDataFilterItemTextBlock
 }

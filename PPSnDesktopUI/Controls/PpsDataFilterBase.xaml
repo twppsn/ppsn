@@ -18,11 +18,12 @@ specific language governing permissions and limitations under the Licence.
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls"
 					xmlns:sys="clr-namespace:System;assembly=mscorlib">
 	<DataTemplate x:Key="PpsDataFilterDefaultSelectedValueTemplate">
-		<TextBlock
-			Text="{Binding Name}"
+		<pps:PpsDataFilterItemTextBlock
+			BaseText="{Binding Name}"
+			SearchText="{Binding Path=FilterText, Mode=OneWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType=pps:PpsDataFilterBase}}"
 			TextWrapping="NoWrap"
 			TextTrimming="CharacterEllipsis">
-		</TextBlock>
+		</pps:PpsDataFilterItemTextBlock>
 	</DataTemplate>
 	<Style TargetType="ListBoxItem" x:Key="PpsDefaultTouchableItemContainerStyle">
 		<Setter Property="Focusable" Value="False" />
