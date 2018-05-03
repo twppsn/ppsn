@@ -35,8 +35,6 @@ namespace TecWare.PPSn.Controls
 
 			filteredListBox.Items.CurrentChanged += Items_CurrentChanged;
 			SetAnchorItem();
-			if (VisualChildrenCount > 0)
-				Mouse.Capture(this, CaptureMode.SubTree);
 		}
 
 
@@ -45,10 +43,6 @@ namespace TecWare.PPSn.Controls
 			filteredListBox.Items.CurrentChanged -= Items_CurrentChanged;
 			// leave clean
 			ClearFilter();
-
-			// Release
-			if (Mouse.Captured == this)
-				Mouse.Capture(null);
 		}
 
 		public override void HideFilteredList(bool commit)
