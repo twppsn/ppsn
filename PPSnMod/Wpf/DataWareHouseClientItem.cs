@@ -64,7 +64,7 @@ namespace TecWare.PPSn.Server.Wpf
 		/// <param name="dataSource"></param>
 		/// <param name="privateUserData"></param>
 		/// <returns></returns>
-		public PpsDataFilterCombo GetReportItemsSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
+		public PpsDataSelector GetReportItemsSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
 			=> new PpsGenericSelector<PpsExcelReportItem>(dataSource, "bi.reports", GetExcelReportItems(privateUserData));
 
 		#endregion

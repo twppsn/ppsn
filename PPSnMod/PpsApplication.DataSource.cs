@@ -92,9 +92,9 @@ namespace TecWare.PPSn.Server
 					columnDescriptions = null;
 			} // proc InitializeColumnsAsync
 
-			public PpsDataFilterCombo CreateSelector(IPpsConnectionHandle connection, bool throwException = true)
+			public PpsDataSelector CreateSelector(IPpsConnectionHandle connection, bool throwException = true)
 			{
-				PpsDataFilterCombo ret = null;
+				PpsDataSelector ret = null;
 				if (String.IsNullOrEmpty(path))
 					ret = InvokeCreateSelector((PpsSysConnectionHandle)connection, dataSource.application, throwException);
 				else
@@ -112,7 +112,7 @@ namespace TecWare.PPSn.Server
 				return ret;
 			} // func CreateSelector
 
-			private PpsDataFilterCombo InvokeCreateSelector(PpsSysConnectionHandle connection, DEConfigItem c, bool throwException)
+			private PpsDataSelector InvokeCreateSelector(PpsSysConnectionHandle connection, DEConfigItem c, bool throwException)
 			{
 				try
 				{
@@ -130,7 +130,7 @@ namespace TecWare.PPSn.Server
 							throw new NotImplementedException();
 					}
 
-					return (PpsDataFilterCombo)method.Invoke(c, args);
+					return (PpsDataSelector)method.Invoke(c, args);
 				}
 				catch (TargetInvocationException)
 				{

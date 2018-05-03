@@ -406,7 +406,7 @@ namespace TecWare.PPSn.Server
 				return c != null && await c.EnsureConnectionAsync(throwException) ? c : null;
 			} // func EnsureConnection
 
-			public async Task<PpsDataFilterCombo> CreateSelectorAsync(string name, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true)
+			public async Task<PpsDataSelector> CreateSelectorAsync(string name, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true)
 			{
 				if (String.IsNullOrEmpty(name))
 					throw new ArgumentNullException("name");

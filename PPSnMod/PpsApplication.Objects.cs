@@ -1580,13 +1580,13 @@ namespace TecWare.PPSn.Server
 			} // func ObjectFromXml
 
 			[LuaMember]
-			public PpsDataFilterCombo GetObjectSelector()
+			public PpsDataSelector GetObjectSelector()
 			{
 				var selector = application.GetViewDefinition("dbo.objects").SelectorToken;
 				return selector.CreateSelector(application.Database.Main.Connection);
 			} // func GetObjectSelector
 
-			private PpsObjectAccess GetObject(Func<PpsDataFilterCombo, PpsDataFilterCombo> applyFilter)
+			private PpsObjectAccess GetObject(Func<PpsDataSelector, PpsDataSelector> applyFilter)
 			{
 				// create selector
 				var selector = applyFilter(GetObjectSelector());
@@ -1704,24 +1704,24 @@ namespace TecWare.PPSn.Server
 			public PpsDataTransaction GetDatabase(string name = null)
 				=> GetDatabaseAsync(name).AwaitTask();
 
-			public Task<PpsDataFilterCombo> CreateSelectorAsync(string name, string columns, string filter, string order)
+			public Task<PpsDataSelector> CreateSelectorAsync(string name, string columns, string filter, string order)
 				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true)
 					.CreateSelectorAsync(name, columns, filter, order, true);
 
-			public Task<PpsDataFilterCombo> CreateSelectorAsync(string name, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter, PpsDataOrderExpression[] order)
+			public Task<PpsDataSelector> CreateSelectorAsync(string name, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter, PpsDataOrderExpression[] order)
 				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true)
 					.CreateSelectorAsync(name, columns, filter, order, true);
 
-			public Task<PpsDataFilterCombo> CreateSelectorAsync(LuaTable table)
+			public Task<PpsDataSelector> CreateSelectorAsync(LuaTable table)
 				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true)
 					.CreateSelectorAsync(table, true);
 
 			[LuaMember]
-			public PpsDataFilterCombo CreateSelector(string name, string columns, string filter, string order)
+			public PpsDataSelector CreateSelector(string name, string columns, string filter, string order)
 				=> CreateSelectorAsync(name, columns, filter, order).AwaitTask();
 
 			[LuaMember]
-			public PpsDataFilterCombo CreateSelector(LuaTable table)
+			public PpsDataSelector CreateSelector(LuaTable table)
 				=> CreateSelectorAsync(table).AwaitTask();
 
 			[LuaMember]

@@ -356,7 +356,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="order">Order rules</param>
 		/// <param name="throwException">Should the method throw on an exception on failure.</param>
 		/// <returns></returns>
-		Task<PpsDataFilterCombo> CreateSelectorAsync(string name, PpsDataColumnExpression[] columns = null, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true);
+		Task<PpsDataSelector> CreateSelectorAsync(string name, PpsDataColumnExpression[] columns = null, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true);
 
 		/// <summary>Creates a transaction to manipulate data.</summary>
 		/// <param name="dataSourceName"></param>
@@ -568,7 +568,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="connection"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		PpsDataFilterCombo CreateSelector(IPpsConnectionHandle connection, bool throwException = true);
+		PpsDataSelector CreateSelector(IPpsConnectionHandle connection, bool throwException = true);
 
 		/// <summary>Get the defintion for a column from the native column name.</summary>
 		/// <param name="selectorColumn"></param>
@@ -599,7 +599,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="order"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public static Task<PpsDataFilterCombo> CreateSelectorAsync(this IPpsPrivateDataContext ctx, string name, string columns = null, string filter = null, string order = null, bool throwException = true)
+		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, string name, string columns = null, string filter = null, string order = null, bool throwException = true)
 			=> ctx.CreateSelectorAsync(
 				name,
 				PpsDataColumnExpression.Parse(columns).ToArray(),
@@ -613,7 +613,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <param name="table"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public static Task<PpsDataFilterCombo> CreateSelectorAsync(this IPpsPrivateDataContext ctx, LuaTable table, bool throwException = true)
+		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, LuaTable table, bool throwException = true)
 			=> ctx.CreateSelectorAsync(
 				table.GetOptionalValue("name", (string)null),
 				PpsDataColumnExpression.Parse(table.GetMemberValue("columns")).ToArray(),

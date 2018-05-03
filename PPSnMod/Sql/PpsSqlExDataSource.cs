@@ -224,7 +224,7 @@ namespace TecWare.PPSn.Server.Sql
 				this.columnDescriptions = columnDescriptions;
 			} // ctor
 
-			public PpsDataFilterCombo CreateSelector(IPpsConnectionHandle connection, bool throwException = true)
+			public PpsDataSelector CreateSelector(IPpsConnectionHandle connection, bool throwException = true)
 				=> new SqlDataSelector((SqlConnectionHandle)connection, this, null, null, null);
 
 			public IPpsColumnDescription GetFieldDescription(string selectorColumn)
@@ -359,7 +359,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
-		private sealed class SqlDataSelector : PpsDataFilterCombo
+		private sealed class SqlDataSelector : PpsDataSelector
 		{
 			#region -- class SqlDataFilterVisitor ---------------------------------------------
 
@@ -439,10 +439,10 @@ namespace TecWare.PPSn.Server.Sql
 					return column.Name;
 			} // func FormatOrderExpression
 
-			public override PpsDataFilterCombo ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative)
+			public override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative)
 				=> SqlOrderBy(String.Join(", ", from o in expressions select FormatOrderExpression(o, lookupNative, selectorToken.GetFieldDescription)));
 
-			public override PpsDataFilterCombo ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative)
+			public override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative)
 				=> SqlWhere(new SqlDataFilterVisitor(lookupNative, selectorToken.GetFieldDescription).CreateFilter(expression));
 
 			private string AddSelectList(string addSelectList)
