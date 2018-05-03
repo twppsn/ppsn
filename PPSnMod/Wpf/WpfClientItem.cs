@@ -955,7 +955,7 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 		} // func GetApplicationFileList
 
-		public PpsDataSelector GetApplicationFilesSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
+		public PpsDataFilterCombo GetApplicationFilesSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
 			=> new PpsGenericSelector<PpsApplicationFileItem>(dataSource, "wpf.sync", GetApplicationFileList(privateUserData));
 
 		#endregion

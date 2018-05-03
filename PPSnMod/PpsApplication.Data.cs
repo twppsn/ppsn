@@ -792,7 +792,7 @@ namespace TecWare.PPSn.Server
 			}
 		} // func GetViewDefinitions
 
-		public PpsDataSelector GetViewDefinitionSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
+		public PpsDataFilterCombo GetViewDefinitionSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
 			=> new PpsGenericSelector<PpsViewDescription>(dataSource, "sys.views", GetViewDefinitions());
 
 		[LuaMember]
