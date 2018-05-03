@@ -15,6 +15,8 @@
 #endregion
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -29,16 +31,21 @@ using TecWare.PPSn.Data;
 namespace TecWare.PPSn.Controls
 {
 	/// <summary>This Filterbox is used to filter a List</summary>
-	[TemplatePart(Name = "PART_FilteredItemsListBox", Type =typeof(ListBox))]
+	[TemplatePart(Name = "PART_FilteredItemsListBox", Type = typeof(ListBox))]
 	public abstract partial class PpsDataFilterBase : Selector
 	{
 		#region ---- Dependency Propteries-----------------------------------------------
 
+		public static readonly DependencyProperty ItemsSourceProperty = ItemsControl.ItemsSourceProperty.AddOwner(typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnItemsSourceChanged), new CoerceValueCallback(OnItemsSourceCoerceValue)));
+
+		private static readonly DependencyPropertyKey FilteredItemsSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(FilteredItemsSource), typeof(IEnumerable<IDataRow>), typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty FilteredItemsSourceProperty = FilteredItemsSourcePropertyKey.DependencyProperty;
+
 		/// <summary>DependencyProperty for connecting the Filtered Items</summary>
-		public static readonly DependencyProperty FilteredItemsSourceProperty = DependencyProperty.Register(nameof(FilteredItemsSource), typeof(IEnumerable), typeof(PpsDataFilterBase));
+		//public static readonly DependencyProperty FilteredItemsSourceProperty = DependencyProperty.Register(nameof(FilteredItemsSource), typeof(IEnumerable), typeof(PpsDataFilterBase));
 		/// <summary>DependencyProperty for conntecting the FilterTex</summary>
 		public static readonly DependencyProperty FilterTextProperty = DependencyProperty.Register(nameof(FilterText), typeof(string), typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(OnFilterTextChanged));
-		
+
 		/// <summary>DependencyProperty for the Template of the Selected item</summary>
 		public static readonly DependencyProperty SelectedValueTemplateProperty = DependencyProperty.Register(nameof(SelectedValueTemplate), typeof(DataTemplate), typeof(PpsDataFilterBase), new FrameworkPropertyMetadata((DataTemplate)null));
 		/// <summary>DependencyProperty for the Style of the ListBox</summary>
@@ -48,7 +55,6 @@ namespace TecWare.PPSn.Controls
 		/// <summary>DependencyProperty for the Write-Protection state</summary>
 		public static readonly DependencyProperty IsReadOnlyProperty = DependencyProperty.Register(nameof(IsReadOnly), typeof(bool), typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(false));
 		public static readonly DependencyProperty PreSelectedValueProperty = DependencyProperty.Register(nameof(PreSelectedValue), typeof(object), typeof(PpsDataFilterCombo));
-		
 
 		#endregion
 
@@ -83,9 +89,13 @@ namespace TecWare.PPSn.Controls
 		{
 			if (ItemsSource == null)
 				return;
-			
+
 			var expr = String.IsNullOrWhiteSpace(FilterText) ? PpsDataFilterExpression.True : PpsDataFilterExpression.Parse(FilterText);
-			FilteredItemsSource = ((expr == PpsDataFilterExpression.True) || !(ItemsSource is IDataRowEnumerable idre)) ? ItemsSource : idre.ApplyFilter(expr);
+			SetValue(FilteredItemsSourcePropertyKey,
+				expr == PpsDataFilterExpression.True
+				? ItemsSource
+				: ((IDataRowEnumerable)ItemsSource).ApplyFilter(expr)
+			);
 		} // proc UpdateFilteredList
 
 		/// <summary>loads the List when the Control is used</summary>
@@ -102,13 +112,17 @@ namespace TecWare.PPSn.Controls
 		}
 
 		/// <summary>if the ItemsSource changes the Filter is re-applied</summary>
-		/// <param name="oldValue"></param>
-		/// <param name="newValue"></param>
-		protected override void OnItemsSourceChanged(IEnumerable oldValue, IEnumerable newValue)
+		/// <param name="d"></param>
+		/// <param name="e"></param>
+		private static void OnItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataFilterBase)d).UpdateFilteredList();
+
+		private static object OnItemsSourceCoerceValue(DependencyObject d, object baseValue)
 		{
-			base.OnItemsSourceChanged(oldValue, newValue);
-			UpdateFilteredList();
-		}
+			if (baseValue is ICollectionViewFactory f)
+				baseValue = f.CreateView();
+			return baseValue;
+		} // func OnItemsSourceCoerceValue
 
 		private static void OnFilterTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsDataFilterBase)d).UpdateFilteredList();
@@ -250,15 +264,14 @@ namespace TecWare.PPSn.Controls
 			if (filteredListBox.Items.CurrentItem is IDataRow item)
 				filteredListBox.ScrollIntoView(item);
 		} // event Items_CurrentChanged
-		
+
 		internal void SetAnchorItem()
 		{
-			if (!IsFilteredListVisible() || filteredListBox.Items==null || filteredListBox.Items.Count <=0)
+			if (!IsFilteredListVisible() || filteredListBox.Items == null || filteredListBox.Items.Count <= 0)
 				return;
 
-
-
 			var item = SelectedValue ?? filteredListBox.Items.GetItemAt(0);
+
 			filteredListBox.Items.MoveCurrentTo(item);
 
 			// clear selection?
@@ -267,7 +280,7 @@ namespace TecWare.PPSn.Controls
 		} // proc SetAnchorItem
 
 		#region -- Evaluate MouseEvents -----------------------------------------------
-		
+
 
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
