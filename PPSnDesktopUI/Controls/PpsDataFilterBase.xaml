@@ -123,63 +123,56 @@ specific language governing permissions and limitations under the Licence.
 			<Setter Property="Control.Template">
 				<Setter.Value>
 					<ControlTemplate>
-						
 						<Grid>
 							<!--this button opens the popdown-->
 							<ToggleButton 
-                            x:Name="ToggleDropDownButton" 
-                            Template="{StaticResource PPSnDataFilterComboBoxToggleButtonTemplate}" Focusable="False"
-                            ClickMode="Press"
+								x:Name="ToggleDropDownButton" 
+								Template="{StaticResource PPSnDataFilterComboBoxToggleButtonTemplate}" Focusable="False"
+								ClickMode="Press"
 								IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"/>
 							<!--this button clears the value-->
-								<Button 
-                            Template="{StaticResource PPSnDataFilterBoxClearButtonTemplate}"
-                            HorizontalAlignment="Right"
-                            Width="27"
-                            Margin="0,2,18,2"
-                            Focusable="False" 
-									Command="{x:Static pps:PpsDataFilterBase.ClearValueCommand}">
+							<Button 
+								Template="{StaticResource PPSnDataFilterBoxClearButtonTemplate}"
+								HorizontalAlignment="Right"
+								Width="27"
+								Margin="0,2,18,2"
+								Focusable="False" 
+								Command="{x:Static pps:PpsDataFilterBase.ClearValueCommand}">
 								<Button.Style>
 									<Style TargetType="{x:Type Button}">
 										<Setter Property="Visibility" Value="Collapsed"/>
 										<Style.Triggers>
 											<Trigger Property="IsEnabled" Value="True">
-												<!--ToDo: Trigger-->
 												<Setter Property="Visibility" Value="Visible"/>
-												<!--ToDo: Trigger-->
 											</Trigger>
 										</Style.Triggers>
 									</Style>
 								</Button.Style>
 							</Button>
-								<!--this contentpresenter shows the actual value-->
-									<ContentPresenter
+							<!--this contentpresenter shows the actual value-->
+							<ContentPresenter
 								x:Name="PART_Presenter"
 								IsHitTestVisible="False"
-									Focusable="False"
+								Focusable="False"
 								Margin="5,3,50,3"
 								HorizontalAlignment="Left"
 								VerticalAlignment="Center"
 								Content="{Binding Path=SelectedValue, Mode=OneWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
 								ContentTemplate="{Binding Path=SelectedValueTemplate, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"/>
-							
-							
 							<Popup x:Name="PART_DropDownPopup"
-							
 								Focusable="False"
 								StaysOpen="False"
-								   IsOpen="{Binding Path=IsDropDownOpen, Mode=OneWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
+								IsOpen="{Binding Path=IsDropDownOpen, Mode=OneWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
 								MinHeight="122"
-								   MinWidth="100"
+								MinWidth="100"
 								pps:PpsPopupBehavior.ForceFocus="True"
 								AllowsTransparency="True"
 								PopupAnimation="Slide"
 								MaxHeight="300">
 								<Border
-								MinWidth="{Binding Path=ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
-								
-								BorderThickness="1"
-								Focusable="False">
+									MinWidth="{Binding Path=ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
+									BorderThickness="1"
+									Focusable="False">
 									<Grid>
 										<Grid.RowDefinitions>
 											<RowDefinition Height="33"/>
@@ -188,17 +181,17 @@ specific language governing permissions and limitations under the Licence.
 										<Grid Grid.Row="0">
 											<!--this button clears the search-->
 											<TextBox
-									BorderThickness="0"
-									VerticalAlignment="Stretch"
-									Height="Auto"
-									Text="{Binding Path=FilterText, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"/>
+												BorderThickness="0"
+												VerticalAlignment="Stretch"
+												Height="Auto"
+												Text="{Binding Path=FilterText, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"/>
 											<Button 
-									Template="{StaticResource PPSnDataFilterBoxClearButtonTemplate}"
-									HorizontalAlignment="Right"
-									Width="27"
-									Margin="0,2,18,2"
-									Focusable="False"
-									Command="{x:Static pps:PpsDataFilterBase.ClearFilterCommand}">
+												Template="{StaticResource PPSnDataFilterBoxClearButtonTemplate}"
+												HorizontalAlignment="Right"
+												Width="27"
+												Margin="0,2,18,2"
+												Focusable="False"
+												Command="{x:Static pps:PpsDataFilterBase.ClearFilterCommand}">
 												<Button.Style>
 													<Style TargetType="{x:Type Button}">
 														<Setter Property="Visibility" Value="Collapsed"/>
@@ -214,31 +207,30 @@ specific language governing permissions and limitations under the Licence.
 											</Button>
 										</Grid>
 										<ListBox 
-								x:Name="PART_FilteredItemsListBox"
-								Grid.Row="1"
-								MinHeight="50"
-								Focusable="False"
-								IsSynchronizedWithCurrentItem="True"
-								VirtualizingStackPanel.IsVirtualizing="True"
-								VirtualizingStackPanel.VirtualizationMode="Recycling"
-								ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-								
-								SelectedValue="{Binding Path=PreSelectedValue, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
-								ItemsSource="{Binding Mode=OneWay, Path=FilteredItemsSource, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
-								ItemTemplate="{Binding Path=ItemTemplate, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
-								ItemContainerStyle="{Binding Path=ItemContainerStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
-								AlternationCount="2"/>
+											x:Name="PART_FilteredItemsListBox"
+											Grid.Row="1"
+											MinHeight="50"
+											Focusable="False"
+											IsSynchronizedWithCurrentItem="True"
+											VirtualizingStackPanel.IsVirtualizing="True"
+											VirtualizingStackPanel.VirtualizationMode="Recycling"
+											ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+											SelectedValue="{Binding Path=PreSelectedValue, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
+											ItemsSource="{Binding Mode=OneWay, Path=FilteredItemsSource, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
+											ItemTemplate="{Binding Path=ItemTemplate, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
+											ItemContainerStyle="{Binding Path=ItemContainerStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
+											AlternationCount="2"/>
 									</Grid>
 								</Border>
 							</Popup>
 						</Grid>
-						
-					</ControlTemplate></Setter.Value>
+					</ControlTemplate>
+				</Setter.Value>
 			</Setter>
 		</Style.Setters>
 	</Style>
 
-	<!-- TextBox which adds to a view and applies Filters -->
+	<!-- ListBox which applies Filters -->
 	<Style TargetType="{x:Type pps:PpsDataFilterList}">
 		<Style.Setters>
 			<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterDefaultSelectedValueTemplate}"/>
