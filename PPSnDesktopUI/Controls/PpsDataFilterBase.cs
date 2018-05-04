@@ -261,14 +261,18 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		/// <summary>Should be overridden and returns if tha Listbox is active (events schould be attached)</summary>
+		/// <summary>Should be overridden and returns if the Listbox is active (events should be attached)</summary>
 		/// <returns></returns>
-		public abstract bool IsFilteredListVisible();
-		/// <summary>
-		/// 
-		/// </summary>
+		public virtual bool IsFilteredListVisible()
+			=> true;
+
+		/// <summary>Executed if the ListShould be closed</summary>
 		/// <param name="commit"></param>
-		public abstract void HideFilteredList(bool commit);
+		public virtual void HideFilteredList(bool commit)
+		{
+			if (commit)
+				ApplySelectedItem();
+		}
 
 		internal void Items_CurrentChanged(object sender, EventArgs e)
 		{
@@ -607,7 +611,7 @@ namespace TecWare.PPSn.Controls
 		=> IsDropDownOpen;
 
 		/// <summary>Closes the DropDown</summary>
-		/// <param name="commit">true if the pre-selected value schould be committed</param>
+		/// <param name="commit">true if the pre-selected value should be committed</param>
 		public override void HideFilteredList(bool commit)
 		{
 			CloseDropDown(commit);
@@ -638,22 +642,6 @@ namespace TecWare.PPSn.Controls
 			SetAnchorItem();
 		}
 
-		/// <summary>The event has to be de-attached on closing</summary>
-		~PpsDataFilterList()
-		{
-			if (filteredListBox != null)
-				filteredListBox.Items.CurrentChanged -= Items_CurrentChanged;
-			// leave clean
-			ClearFilter();
-		}
-
-		/// <summary>Unused</summary>
-		/// <param name="commit"></param>
-		public override void HideFilteredList(bool commit)
-		{
-
-		}
-
 		/// <summary>If an Item is clicked, it is committed</summary>
 		/// <param name="e"></param>
 		protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
@@ -661,11 +649,6 @@ namespace TecWare.PPSn.Controls
 			base.OnMouseLeftButtonUp(e);
 			base.ApplySelectedItem();
 		}
-
-		/// <summary>Because the Listbox is not collapsible returns true</summary>
-		/// <returns>true</returns>
-		public override bool IsFilteredListVisible()
-		=> true;
 	}
 
 	/// <summary>This textBlock enables Highlighting of text</summary>
