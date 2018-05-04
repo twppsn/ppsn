@@ -129,6 +129,8 @@ specific language governing permissions and limitations under the Licence.
 								x:Name="ToggleDropDownButton" 
 								Template="{StaticResource PPSnDataFilterComboBoxToggleButtonTemplate}" Focusable="False"
 								ClickMode="Press"
+								BorderBrush="{DynamicResource PPSnControlNormalBorderBrush}"
+								Background="{DynamicResource PPSnControlBackgroundBrush}"
 								IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"/>
 							<!--this button clears the value-->
 							<Button 
@@ -172,7 +174,8 @@ specific language governing permissions and limitations under the Licence.
 								<Border
 									MinWidth="{Binding Path=ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
 									BorderThickness="1"
-									Focusable="False">
+									Focusable="False"
+									BorderBrush="{DynamicResource PPSnControlNormalBorderBrush}">
 									<Grid>
 										<Grid.RowDefinitions>
 											<RowDefinition Height="33"/>
