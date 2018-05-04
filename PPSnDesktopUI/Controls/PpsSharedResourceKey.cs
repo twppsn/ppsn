@@ -67,6 +67,10 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>Style for round Button with image and (optional)text</summary>
 		public static readonly ResourceKey PpsCircleButtonStyle = new PpsSharedResourceKey(nameof(PpsCircleButtonStyle));
+
+		/// <summary>Style for round Button with image and (optional)text</summary>
+		public static readonly ResourceKey PpsMandatoryFieldInfoStyle = new PpsSharedResourceKey(nameof(PpsMandatoryFieldInfoStyle));
+
 	} // class PpsSharedResourceKey
 
 	#endregion

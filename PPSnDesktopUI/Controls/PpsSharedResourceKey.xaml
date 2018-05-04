@@ -110,4 +110,27 @@ specific language governing permissions and limitations under the Licence.
 			</Setter.Value>
 		</Setter>
 	</Style>
+
+	<Style x:Key="{x:Static pps:PpsSharedResourceKey.PpsMandatoryFieldInfoStyle}" TargetType="{x:Type Control}">
+		<Setter Property="ForceCursor" Value="True" />
+		<Setter Property="ToolTip" Value="In diesem Feld ist eine Eingabe erforderlich." />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type Control}">
+					<Grid Background="Transparent">
+						<pps:PpsGeometryImage GeometryName="star"
+											  GeometryCircled="False"
+											  Foreground="{DynamicResource PPSnWindowForegroundBrush}"
+											  Width="15"
+											  Height="15"
+											  HorizontalAlignment="Left"
+											  VerticalAlignment="Top"
+											  Margin="3,3,0,0"
+											  Opacity=".4" />
+					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
 </ResourceDictionary>
