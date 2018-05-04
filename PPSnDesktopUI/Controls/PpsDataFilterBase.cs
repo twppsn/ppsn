@@ -618,7 +618,7 @@ namespace TecWare.PPSn.Controls
 
 		~PpsDataFilterList()
 		{
-			if (filteredListBox != null))
+			if (filteredListBox != null)
 				filteredListBox.Items.CurrentChanged -= Items_CurrentChanged;
 			// leave clean
 			ClearFilter();
