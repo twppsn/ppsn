@@ -37,13 +37,13 @@ namespace TecWare.PPSn.Controls
 	{
 		#region ---- Dependency Propteries-----------------------------------------------
 
-		public static readonly DependencyProperty ItemsSourceProperty = ItemsControl.ItemsSourceProperty.AddOwner(typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnItemsSourceChanged), new CoerceValueCallback(OnItemsSourceCoerceValue)));
+		/// <summary>Input to the Control</summary>
+		new public static readonly DependencyProperty ItemsSourceProperty = ItemsControl.ItemsSourceProperty.AddOwner(typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnItemsSourceChanged), new CoerceValueCallback(OnItemsSourceCoerceValue)));
 
 		private static readonly DependencyPropertyKey FilteredItemsSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(FilteredItemsSource), typeof(IEnumerable<IDataRow>), typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(null));
+		/// <summary>Filtered Output</summary>
 		public static readonly DependencyProperty FilteredItemsSourceProperty = FilteredItemsSourcePropertyKey.DependencyProperty;
 
-		/// <summary>DependencyProperty for connecting the Filtered Items</summary>
-		//public static readonly DependencyProperty FilteredItemsSourceProperty = DependencyProperty.Register(nameof(FilteredItemsSource), typeof(IEnumerable), typeof(PpsDataFilterBase));
 		/// <summary>DependencyProperty for conntecting the FilterTex</summary>
 		public static readonly DependencyProperty FilterTextProperty = DependencyProperty.Register(nameof(FilterText), typeof(string), typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(OnFilterTextChanged));
 
@@ -55,6 +55,7 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty IsNullableProperty = DependencyProperty.Register(nameof(IsNullable), typeof(bool), typeof(PpsDataFilterBase), new PropertyMetadata(true));
 		/// <summary>DependencyProperty for the Write-Protection state</summary>
 		public static readonly DependencyProperty IsReadOnlyProperty = DependencyProperty.Register(nameof(IsReadOnly), typeof(bool), typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(false));
+		/// <summary>The Value that is highlighted, but not committed</summary>
 		public static readonly DependencyProperty PreSelectedValueProperty = DependencyProperty.Register(nameof(PreSelectedValue), typeof(object), typeof(PpsDataFilterBase));
 
 		#endregion
@@ -71,13 +72,16 @@ namespace TecWare.PPSn.Controls
 		#region ---- Fields -------------------------------------------------------------
 
 		private const string FilteredItemsListBoxName = "PART_FilteredItemsListBox";
+		/// <summary>The Listbox showing the filtered Elements</summary>
 		protected ListBox filteredListBox;
+		/// <summary>if the Mouse is over the Listbox</summary>
 		protected bool hasMouseEnteredItemsList;
 
 		#endregion
 
 		#region ---- Events -------------------------------------------------------------
 
+		/// <summary>Overridden to catch the filteredListBox</summary>
 		public override void OnApplyTemplate()
 		{
 			base.OnApplyTemplate();
@@ -257,7 +261,13 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		/// <summary>Should be overridden and returns if tha Listbox is active (events schould be attached)</summary>
+		/// <returns></returns>
 		public abstract bool IsFilteredListVisible();
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="commit"></param>
 		public abstract void HideFilteredList(bool commit);
 
 		internal void Items_CurrentChanged(object sender, EventArgs e)
@@ -282,7 +292,8 @@ namespace TecWare.PPSn.Controls
 
 		#region -- Evaluate MouseEvents -----------------------------------------------
 
-
+		/// <summary>Used to close a ListBox, if available</summary>
+		/// <param name="e"></param>
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
 			if (!IsKeyboardFocusWithin)
@@ -314,6 +325,8 @@ namespace TecWare.PPSn.Controls
 			return null;
 		} // func ItemFromPoint
 
+		/// <summary>Used to close a ListBox, if available</summary>
+		/// <param name="e"></param>
 		protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
 		{
 			if (!IsFilteredListVisible() || !hasMouseEnteredItemsList)
@@ -326,6 +339,9 @@ namespace TecWare.PPSn.Controls
 			}
 		} // event OnMouseLeftButtonUp
 		private Point lastMousePosition = new Point();
+
+		/// <summary>Used to pre-select items under the cursor</summary>
+		/// <param name="e"></param>
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
 			if (!IsFilteredListVisible())
@@ -383,11 +399,13 @@ namespace TecWare.PPSn.Controls
 		public bool IsReadOnly { get => (bool)GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, value); }
 		/// <summary>Can user select content?</summary>
 		public bool IsWriteable { get => !(bool)GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, !value); }
+		/// <summary>The Value that is highlighted, but not committed</summary>
 		public object PreSelectedValue { get => GetValue(PreSelectedValueProperty); set => SetValue(PreSelectedValueProperty, value); }
 
 		#endregion
 	}
 
+	/// <summary>Resembles a ComboBox, which is search-able</summary>
 	public partial class PpsDataFilterCombo : PpsDataFilterBase
 	{
 		/// <summary>DependencyProperty for DropDown state</summary>
@@ -583,9 +601,13 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc KeyDownHandler
 
+		/// <summary>Returns te state of IsDropDownOpen</summary>
+		/// <returns></returns>
 		public override bool IsFilteredListVisible()
 		=> IsDropDownOpen;
 
+		/// <summary>Closes the DropDown</summary>
+		/// <param name="commit">true if the pre-selected value schould be committed</param>
 		public override void HideFilteredList(bool commit)
 		{
 			CloseDropDown(commit);
@@ -607,6 +629,7 @@ namespace TecWare.PPSn.Controls
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsDataFilterList), new FrameworkPropertyMetadata(typeof(PpsDataFilterList)));
 		}
 
+		/// <summary>Overridden to attach neccessary events</summary>
 		public override void OnApplyTemplate()
 		{
 			base.OnApplyTemplate();
@@ -615,7 +638,7 @@ namespace TecWare.PPSn.Controls
 			SetAnchorItem();
 		}
 
-
+		/// <summary>The event has to be de-attached on closing</summary>
 		~PpsDataFilterList()
 		{
 			if (filteredListBox != null)
@@ -624,28 +647,38 @@ namespace TecWare.PPSn.Controls
 			ClearFilter();
 		}
 
+		/// <summary>Unused</summary>
+		/// <param name="commit"></param>
 		public override void HideFilteredList(bool commit)
 		{
 
 		}
 
+		/// <summary>If an Item is clicked, it is committed</summary>
+		/// <param name="e"></param>
 		protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
 		{
 			base.OnMouseLeftButtonUp(e);
 			base.ApplySelectedItem();
 		}
 
+		/// <summary>Because the Listbox is not collapsible returns true</summary>
+		/// <returns>true</returns>
 		public override bool IsFilteredListVisible()
 		=> true;
 	}
 
+	/// <summary>This textBlock enables Highlighting of text</summary>
 	public class PpsDataFilterItemTextBlock : TextBlock
 	{
+		/// <summary>The parts of text to highlight, separated by whitespace - may be overlapping</summary>
 		public static readonly DependencyProperty SearchTextProperty =
 			DependencyProperty.Register(nameof(SearchText), typeof(string), typeof(PpsDataFilterItemTextBlock), new FrameworkPropertyMetadata(null, OnDataChanged));
+		/// <summary>Original Unformatted Text </summary>
 		public static readonly DependencyProperty BaseTextProperty =
 			DependencyProperty.Register(nameof(BaseText), typeof(string), typeof(PpsDataFilterItemTextBlock), new FrameworkPropertyMetadata(null, OnDataChanged));
 
+		/// <summary>Sets IsHitTestVisible to false</summary>
 		public PpsDataFilterItemTextBlock()
 			: base()
 		{
@@ -730,7 +763,7 @@ namespace TecWare.PPSn.Controls
 			return result;
 		} // func HighlightSearch
 
-		/// <summary>Keywords to search for, separated by whitespace</summary>
+		/// <summary>The parts of text to highlight, separated by whitespace - may be overlapping</summary>
 		public string SearchText { get => (string)GetValue(SearchTextProperty); set => SetValue(SearchTextProperty, value); }
 
 		/// <summary>Original Unformatted Text </summary>
