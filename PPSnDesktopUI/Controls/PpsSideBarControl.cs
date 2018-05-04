@@ -285,10 +285,10 @@ namespace TecWare.PPSn.Controls
 					SelectedFilter = itemsBase.SelectedFilter ?? null;
 					break;
 				case PpsSideBarPanel panel:
-					SelectedContent = panel.Content;
-					SelectedContentTemplate = panel.ContentTemplate;
-					SelectedContentTemplateSelector = panel.ContentTemplateSelector;
-					SelectedContentStringFormat = panel.ContentStringFormat;
+					SelectedContent = panel.Content ?? Content;
+					SelectedContentTemplate = panel.ContentTemplate ?? ContentTemplate;
+					SelectedContentTemplateSelector = panel.ContentTemplateSelector ?? ContentTemplateSelector;
+					SelectedContentStringFormat = panel.ContentStringFormat ?? ContentStringFormat;
 					SelectedFilter = null;
 					break;
 				case PpsSideBarPanelFilter filter:

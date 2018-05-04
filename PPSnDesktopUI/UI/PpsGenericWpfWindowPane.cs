@@ -81,6 +81,7 @@ namespace TecWare.PPSn.UI
 				throw new ArgumentException(); // todo:
 
 			control.DataContext = this;
+			CallMemberDirect("OnControlCreated", Array.Empty<object>(), rawGet: true, ignoreNilFunction: true);
 		} // ctor
 
 		#region -- IPpsXamlCode members -----------------------------------------------
@@ -218,7 +219,7 @@ namespace TecWare.PPSn.UI
 			if (disposing)
 			{
 				Environment.RemoveIdleAction(this);
-				CallMemberDirect("Dispose", new object[0], throwExceptions: false);
+				CallMemberDirect("Dispose", new object[0], rawGet: true, throwExceptions: false);
 			}
 		} // proc Dispose
 
@@ -599,7 +600,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Control is created.</summary>
 		protected virtual void OnControlCreated()
 		{
-			CallMemberDirect(nameof(OnControlCreated), Array.Empty<object>(), ignoreNilFunction: true);
+			CallMemberDirect(nameof(OnControlCreated), Array.Empty<object>(), rawGet: true, ignoreNilFunction: true);
 
 			Mouse.AddPreviewMouseDownHandler(Control, Control_MouseDownHandler);
 			Mouse.AddPreviewMouseDownOutsideCapturedElementHandler(Control, Control_MouseDownHandler);
@@ -614,7 +615,7 @@ namespace TecWare.PPSn.UI
 		public virtual Task<bool> UnloadAsync(bool? commit = default(bool?))
 		{
 			if (Members.ContainsKey("UnloadAsync"))
-				CallMemberDirect("UnloadAsync", new object[] { commit }, throwExceptions: true);
+				CallMemberDirect("UnloadAsync", new object[] { commit }, rawGet: true, throwExceptions: true);
 
 			if (control != null)
 			{
