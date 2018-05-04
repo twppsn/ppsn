@@ -716,7 +716,7 @@ namespace TecWare.PPSn.Controls
 
 		private LuaWpfCreator CreateSelector(PpsDataFieldInfo fieldInfo)
 		{
-			dynamic combobox = LuaWpfCreator.CreateFactory(new LuaUI(), typeof(PpsDataSelector));
+			dynamic combobox = LuaWpfCreator.CreateFactory(new LuaUI(), typeof(PpsDataFilterCombo));
 
 			if (fieldInfo.TryGetProperty<bool>("IsNullable", out var tmpNullable))
 				combobox.IsNullable = tmpNullable;

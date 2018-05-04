@@ -247,7 +247,7 @@ namespace TecWare.PPSn.Controls
 			var element = (UIElement)d;
 			var newValue = e.NewValue;
 
-			if(element is PpsNamedSeparator)
+			if (element is PpsNamedSeparator)
 				element.SetValue(FullWidthProperty, BooleanBox.True);
 
 			// because UpdateLabelInformation must not delete a Element, each Control gets its label even if it's empty
@@ -303,7 +303,7 @@ namespace TecWare.PPSn.Controls
 
 			if (columnDefinitions == null)
 			{
-				var childrenToArrange = (from UIElement child in InternalChildren where ((child.Visibility == Visibility.Visible) && (labels.ContainsKey(child))) select child).ToArray();
+				var childrenToArrange = PlaceableChildren;
 
 				columnDefinitions = PartitionDataFields(childrenToArrange, ColumnCount, ArrangeOptimization);
 			}
@@ -331,7 +331,7 @@ namespace TecWare.PPSn.Controls
 		{
 			var returnSize = new Size();
 
-			var childrenToArrange = (from UIElement child in InternalChildren where ((child.Visibility == Visibility.Visible) && (labels.ContainsKey(child))) select child).ToArray();
+			var childrenToArrange = PlaceableChildren;
 
 			if (!childrenToArrange.Any())
 				return returnSize;
@@ -621,6 +621,13 @@ namespace TecWare.PPSn.Controls
 		} // func PartitionMaxHeight
 
 		#endregion
+
+		#region ---- Helper Functions ---------------------------------------------------
+
+		private UIElement[] PlaceableChildren
+			=> (from UIElement child in InternalChildren where ((child.Visibility == Visibility.Visible) && (labels.ContainsKey(child) || (child is Label && !labels.ContainsValue((Label)child)))) select child).ToArray();
+
+		#endregion Helper Functions
 
 		static PpsDataFieldPanel()
 		{

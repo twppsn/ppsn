@@ -41,7 +41,7 @@ namespace TecWare.PPSn.Controls
 		{
 			if (d is TextBox tb)
 				tb.IsReadOnly = (bool)e.NewValue;
-			else if (d is PpsDataSelector ds)
+			else if (d is PpsDataFilterCombo ds)
 				ds.IsReadOnly = (bool)e.NewValue;
 		} // proc ReadOnlyPropertyChanged
 	} // class PpsReadOnlyPaneBehavior

@@ -15,10 +15,13 @@
 #endregion
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
@@ -29,16 +32,21 @@ using TecWare.PPSn.Data;
 namespace TecWare.PPSn.Controls
 {
 	/// <summary>This Filterbox is used to filter a List</summary>
-	[TemplatePart(Name = "PART_FilteredItemsListBox", Type =typeof(ListBox))]
+	[TemplatePart(Name = "PART_FilteredItemsListBox", Type = typeof(ListBox))]
 	public abstract partial class PpsDataFilterBase : Selector
 	{
 		#region ---- Dependency Propteries-----------------------------------------------
 
+		public static readonly DependencyProperty ItemsSourceProperty = ItemsControl.ItemsSourceProperty.AddOwner(typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnItemsSourceChanged), new CoerceValueCallback(OnItemsSourceCoerceValue)));
+
+		private static readonly DependencyPropertyKey FilteredItemsSourcePropertyKey = DependencyProperty.RegisterReadOnly(nameof(FilteredItemsSource), typeof(IEnumerable<IDataRow>), typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(null));
+		public static readonly DependencyProperty FilteredItemsSourceProperty = FilteredItemsSourcePropertyKey.DependencyProperty;
+
 		/// <summary>DependencyProperty for connecting the Filtered Items</summary>
-		public static readonly DependencyProperty FilteredItemsSourceProperty = DependencyProperty.Register(nameof(FilteredItemsSource), typeof(IEnumerable), typeof(PpsDataFilterBase));
+		//public static readonly DependencyProperty FilteredItemsSourceProperty = DependencyProperty.Register(nameof(FilteredItemsSource), typeof(IEnumerable), typeof(PpsDataFilterBase));
 		/// <summary>DependencyProperty for conntecting the FilterTex</summary>
 		public static readonly DependencyProperty FilterTextProperty = DependencyProperty.Register(nameof(FilterText), typeof(string), typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(OnFilterTextChanged));
-		
+
 		/// <summary>DependencyProperty for the Template of the Selected item</summary>
 		public static readonly DependencyProperty SelectedValueTemplateProperty = DependencyProperty.Register(nameof(SelectedValueTemplate), typeof(DataTemplate), typeof(PpsDataFilterBase), new FrameworkPropertyMetadata((DataTemplate)null));
 		/// <summary>DependencyProperty for the Style of the ListBox</summary>
@@ -47,8 +55,7 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty IsNullableProperty = DependencyProperty.Register(nameof(IsNullable), typeof(bool), typeof(PpsDataFilterBase), new PropertyMetadata(true));
 		/// <summary>DependencyProperty for the Write-Protection state</summary>
 		public static readonly DependencyProperty IsReadOnlyProperty = DependencyProperty.Register(nameof(IsReadOnly), typeof(bool), typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(false));
-		public static readonly DependencyProperty PreSelectedValueProperty = DependencyProperty.Register(nameof(PreSelectedValue), typeof(object), typeof(PpsDataFilterCombo));
-		
+		public static readonly DependencyProperty PreSelectedValueProperty = DependencyProperty.Register(nameof(PreSelectedValue), typeof(object), typeof(PpsDataFilterBase));
 
 		#endregion
 
@@ -64,8 +71,8 @@ namespace TecWare.PPSn.Controls
 		#region ---- Fields -------------------------------------------------------------
 
 		private const string FilteredItemsListBoxName = "PART_FilteredItemsListBox";
-		internal ListBox filteredListBox;
-		internal bool hasMouseEnteredItemsList;
+		protected ListBox filteredListBox;
+		protected bool hasMouseEnteredItemsList;
 
 		#endregion
 
@@ -83,9 +90,13 @@ namespace TecWare.PPSn.Controls
 		{
 			if (ItemsSource == null)
 				return;
-			
+
 			var expr = String.IsNullOrWhiteSpace(FilterText) ? PpsDataFilterExpression.True : PpsDataFilterExpression.Parse(FilterText);
-			FilteredItemsSource = ((expr == PpsDataFilterExpression.True) || !(ItemsSource is IDataRowEnumerable idre)) ? ItemsSource : idre.ApplyFilter(expr);
+			SetValue(FilteredItemsSourcePropertyKey,
+				expr == PpsDataFilterExpression.True
+				? ItemsSource
+				: ((IDataRowEnumerable)ItemsSource).ApplyFilter(expr)
+			);
 		} // proc UpdateFilteredList
 
 		/// <summary>loads the List when the Control is used</summary>
@@ -102,13 +113,17 @@ namespace TecWare.PPSn.Controls
 		}
 
 		/// <summary>if the ItemsSource changes the Filter is re-applied</summary>
-		/// <param name="oldValue"></param>
-		/// <param name="newValue"></param>
-		protected override void OnItemsSourceChanged(IEnumerable oldValue, IEnumerable newValue)
+		/// <param name="d"></param>
+		/// <param name="e"></param>
+		private static void OnItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataFilterBase)d).UpdateFilteredList();
+
+		private static object OnItemsSourceCoerceValue(DependencyObject d, object baseValue)
 		{
-			base.OnItemsSourceChanged(oldValue, newValue);
-			UpdateFilteredList();
-		}
+			if (baseValue is ICollectionViewFactory f)
+				baseValue = f.CreateView();
+			return baseValue;
+		} // func OnItemsSourceCoerceValue
 
 		private static void OnFilterTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsDataFilterBase)d).UpdateFilteredList();
@@ -250,15 +265,14 @@ namespace TecWare.PPSn.Controls
 			if (filteredListBox.Items.CurrentItem is IDataRow item)
 				filteredListBox.ScrollIntoView(item);
 		} // event Items_CurrentChanged
-		
+
 		internal void SetAnchorItem()
 		{
-			if (!IsFilteredListVisible() || filteredListBox.Items==null || filteredListBox.Items.Count <=0)
+			if (!IsFilteredListVisible() || filteredListBox.Items == null || filteredListBox.Items.Count <= 0)
 				return;
 
-
-
 			var item = SelectedValue ?? filteredListBox.Items.GetItemAt(0);
+
 			filteredListBox.Items.MoveCurrentTo(item);
 
 			// clear selection?
@@ -267,7 +281,7 @@ namespace TecWare.PPSn.Controls
 		} // proc SetAnchorItem
 
 		#region -- Evaluate MouseEvents -----------------------------------------------
-		
+
 
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
@@ -335,7 +349,7 @@ namespace TecWare.PPSn.Controls
 			{
 				if (HasMouseMoved() && !item.IsSelected)
 				{
-					item.IsSelected = true;
+					//item.IsSelected = true;
 				}
 			}
 		} // event OnMouseMove
@@ -373,4 +387,352 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 	}
+
+	public partial class PpsDataFilterCombo : PpsDataFilterBase
+	{
+		/// <summary>DependencyProperty for DropDown state</summary>
+		public static readonly DependencyProperty IsDropDownOpenProperty = DependencyProperty.Register(nameof(IsDropDownOpen), typeof(bool), typeof(PpsDataFilterCombo), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, new PropertyChangedCallback(OnIsDropDownOpenChanged)));
+		/// <summary>Is PART_Popup open?</summary>
+		public bool IsDropDownOpen { get => (bool)GetValue(IsDropDownOpenProperty); set => SetValue(IsDropDownOpenProperty, value); }
+
+		private static void OnIsDropDownOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsDataFilterCombo)d).DropDownChanged((bool)e.NewValue);
+
+		private void DropDownChanged(bool status)
+		{
+			this.hasMouseEnteredItemsList = false;
+
+			if (status)
+			{
+				filteredListBox.Items.CurrentChanged += Items_CurrentChanged;
+				this.SetAnchorItem();
+				if (VisualChildrenCount > 0)
+					Mouse.Capture(this, CaptureMode.SubTree);
+			}
+			else
+			{
+				filteredListBox.Items.CurrentChanged -= Items_CurrentChanged;
+				// leave clean
+				ClearFilter();
+
+				// Release
+				if (Mouse.Captured == this)
+					Mouse.Capture(null);
+
+				Focus();
+			}
+		} // delegate OnIsDropDownOpenChanged
+
+		private double CalculateMaxDropDownHeight(double itemHeight)
+		{
+			// like ComboBox
+			var height = Application.Current.Windows[0].ActualHeight / 3;
+			// no partially visible items for itemHeight
+			height += itemHeight - (height % itemHeight);
+			// add header (33) and border (2)
+			height += 35;
+			return height;
+		} // func CalculateMaxDropDownHeight
+
+		private void CloseDropDown(bool commit)
+		{
+			if (!IsDropDownOpen)
+				return;
+
+			if (commit)
+				ApplySelectedItem();
+
+			IsDropDownOpen = false;
+		} // proc CloseDropDown
+
+		#region ---- Keyboard interaction -----------------------------------------------
+
+		/// <summary>Handles the Navigation by Keyboard</summary>
+		/// <param name="e">pressed Keys</param>
+		protected override void OnPreviewKeyDown(KeyEventArgs e)
+			=> KeyDownHandler(e);
+
+		private void ToggleDropDownStatus(bool commit)
+		{
+			if (IsDropDownOpen)
+				CloseDropDown(commit);
+			else
+				OpenDropDown();
+		} // proc ToggleDropDown
+
+		private void OpenDropDown()
+		{
+			if (IsDropDownOpen)
+				return;
+			IsDropDownOpen = true;
+		} // proc OpenDropDown
+
+		private void KeyDownHandler(KeyEventArgs e)
+		{
+			// stop
+			if (IsReadOnly)
+				return;
+
+			var key = e.Key;
+			if (key == Key.System)
+				key = e.SystemKey;
+
+			switch (key)
+			{
+				case Key.Up:
+					e.Handled = true;
+					if ((e.KeyboardDevice.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt)
+					{
+						ToggleDropDownStatus(true);
+					}
+					else
+					{
+						if (IsDropDownOpen)
+							Navigate(FocusNavigationDirection.Previous);
+						else
+							ImmediateSelect(FocusNavigationDirection.Previous);
+					}
+					break;
+				case Key.Down:
+					e.Handled = true;
+					if ((e.KeyboardDevice.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt)
+					{
+						ToggleDropDownStatus(true);
+					}
+					else
+					{
+						if (IsDropDownOpen)
+							Navigate(FocusNavigationDirection.Next);
+						else
+							ImmediateSelect(FocusNavigationDirection.Next);
+					}
+					break;
+				case Key.Home:
+					if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
+					{
+						e.Handled = true;
+						if (IsDropDownOpen)
+							Navigate(FocusNavigationDirection.First);
+						else
+							ImmediateSelect(FocusNavigationDirection.First);
+					}
+					break;
+				case Key.End:
+					if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
+					{
+						e.Handled = true;
+						if (IsDropDownOpen)
+							Navigate(FocusNavigationDirection.Last);
+						else
+							ImmediateSelect(FocusNavigationDirection.Last);
+					}
+					break;
+				case Key.F4:
+					if ((e.KeyboardDevice.Modifiers & ModifierKeys.Alt) == 0)
+					{
+						e.Handled = true;
+						ToggleDropDownStatus(true);
+					}
+					break;
+				case Key.Enter:
+					if (IsDropDownOpen)
+					{
+						e.Handled = true;
+						CloseDropDown(true);
+					}
+					break;
+				case Key.Escape:
+					if (IsDropDownOpen)
+					{
+						e.Handled = true;
+						CloseDropDown(false);
+					}
+					break;
+				case Key.Delete:
+					if (IsNullable && IsWriteable && IsDropDownOpen)
+					{
+						e.Handled = true;
+						ClearSelection();
+					}
+					break;
+				case Key.PageDown:
+					if (IsDropDownOpen)
+					{
+						e.Handled = true;
+						var visibleindexes = from idx in Enumerable.Range(0, filteredListBox.Items.Count) where filteredListBox.ItemContainerGenerator.ContainerFromIndex(idx) != null && ((ListBoxItem)filteredListBox.ItemContainerGenerator.ContainerFromIndex(idx)).IsVisible select idx;
+						var newLast = Math.Min(filteredListBox.SelectedIndex + visibleindexes.Count() - 3, filteredListBox.Items.Count - 1);
+						filteredListBox.SelectedIndex = newLast;
+						filteredListBox.ScrollIntoView(filteredListBox.Items[newLast]);
+					}
+					break;
+				case Key.PageUp:
+					if (IsDropDownOpen)
+					{
+						e.Handled = true;
+						var visibleindexes = from idx in Enumerable.Range(0, filteredListBox.Items.Count) where filteredListBox.ItemContainerGenerator.ContainerFromIndex(idx) != null && ((ListBoxItem)filteredListBox.ItemContainerGenerator.ContainerFromIndex(idx)).IsVisible select idx;
+						var newLast = Math.Max(filteredListBox.SelectedIndex - visibleindexes.Count() + 3, 0);
+						filteredListBox.SelectedIndex = newLast;
+						filteredListBox.ScrollIntoView(filteredListBox.Items[newLast]);
+					}
+					break;
+				case Key.Left:
+				case Key.Right:
+					// disable visual Navigation on the Form
+					e.Handled = true;
+					break;
+			}
+		} // proc KeyDownHandler
+
+		public override bool IsFilteredListVisible()
+		=> IsDropDownOpen;
+
+		public override void HideFilteredList(bool commit)
+		{
+			CloseDropDown(commit);
+		}
+
+		#endregion
+
+		static PpsDataFilterCombo()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsDataFilterCombo), new FrameworkPropertyMetadata(typeof(PpsDataFilterCombo)));
+		}
+	}
+
+	/// <summary>This Control shows a List of its Items with an applied Filter</summary>
+	public class PpsDataFilterList : PpsDataFilterBase
+	{
+		static PpsDataFilterList()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsDataFilterList), new FrameworkPropertyMetadata(typeof(PpsDataFilterList)));
+		}
+
+		public override void OnApplyTemplate()
+		{
+			base.OnApplyTemplate();
+
+			filteredListBox.Items.CurrentChanged += Items_CurrentChanged;
+			SetAnchorItem();
+		}
+
+
+		~PpsDataFilterList()
+		{
+			filteredListBox.Items.CurrentChanged -= Items_CurrentChanged;
+			// leave clean
+			ClearFilter();
+		}
+
+		public override void HideFilteredList(bool commit)
+		{
+
+		}
+
+		protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
+		{
+			base.OnMouseLeftButtonUp(e);
+			base.ApplySelectedItem();
+		}
+
+		public override bool IsFilteredListVisible()
+		=> true;
+	}
+
+	public class PpsDataFilterItemTextBlock : TextBlock
+	{
+		public static readonly DependencyProperty SearchTextProperty =
+			DependencyProperty.Register(nameof(SearchText), typeof(string), typeof(PpsDataFilterItemTextBlock), new FrameworkPropertyMetadata(null, OnDataChanged));
+		public static readonly DependencyProperty BaseTextProperty =
+			DependencyProperty.Register(nameof(BaseText), typeof(string), typeof(PpsDataFilterItemTextBlock), new FrameworkPropertyMetadata(null, OnDataChanged));
+
+		public PpsDataFilterItemTextBlock()
+			: base()
+		{
+			// when true, we cannot use VisualTree, to get the ListBoxItem under Mouse
+			IsHitTestVisible = false;
+		} // ctor
+
+		private static List<string> GetPositiveOperators(PpsDataFilterExpression filter)
+		{
+			// if operator is < > ! != it shouldn't be highlighted ( shouldn't be shown anyhow )
+			if (filter is PpsDataFilterCompareExpression compare && (compare.Operator == PpsDataFilterCompareOperator.Contains ||
+																	 compare.Operator == PpsDataFilterCompareOperator.Equal))
+				return new List<string>() { compare.Value.ToString() };
+
+			var ret = new List<string>();
+			if (filter is PpsDataFilterLogicExpression logic)
+				foreach (var sub in logic.Arguments)
+					ret.AddRange(GetPositiveOperators(sub));
+
+			return ret.Distinct().ToList();
+		} // func GetOperators
+
+		private static void OnDataChanged(DependencyObject source, DependencyPropertyChangedEventArgs e)
+		{
+			var textBlock = (PpsDataFilterItemTextBlock)source;
+			if (String.IsNullOrWhiteSpace(textBlock.BaseText))
+				return;
+
+			textBlock.Inlines.Clear();
+			textBlock.Inlines.AddRange(HighlightSearch(textBlock.BaseText, GetPositiveOperators(PpsDataFilterExpression.Parse(textBlock.SearchText)), (t) => new Bold(new Italic(new Run(t)))));
+		} // event OnDataChanged
+
+		/// <summary>This function Highlights parts of a string.</summary>
+		/// <param name="Text">Input text to format</param>
+		/// <param name="Searchtext">Whitespace-separated list of keywords</param>
+		/// <param name="Highlight">Function to Highlight, p.e. ''(t) => new Bold(new Italic(t))''</param>
+		/// <returns>List of Inlines</returns>
+		private static IEnumerable<Inline> HighlightSearch(string Text, List<string> Searchtext, Func<string, Inline> Highlight)
+		{
+			var result = new List<Inline>();
+
+			// mark is the array of characters to highlight
+			var mark = new bool[Text.Length];
+			mark.Initialize();  // play save
+
+			// finf every searchitem
+			foreach (var high in Searchtext.Where((s) => s.Length > 1))
+			{
+				var start = Text.IndexOf(high, StringComparison.OrdinalIgnoreCase);
+				// find every occurence
+				while (start >= 0)
+				{
+					for (var j = 0; j < high.Length; j++)
+						mark[start + j] = true;
+					start = Text.IndexOf(high, start + 1, StringComparison.OrdinalIgnoreCase);
+				}
+			}
+
+			if (!mark.Contains(true))
+			{
+				// nothing is highlighted - should only happen if nothing is searched for, thus showing the whole list
+				result.Add(new Run(Text));
+				return result;
+			}
+
+			var i = 0;
+			// marks if the first character is highlighted or not
+			var highlighting = mark[0];
+			// create new output inlines
+			while (i < mark.Length)
+			{
+				var stop = mark.ToList().IndexOf(!highlighting, i);
+				if (stop < 0)
+					stop = mark.Length;
+				if (highlighting)
+					result.Add(Highlight(Text.Substring(i, stop - i)));
+				else
+					result.Add(new Run(Text.Substring(i, stop - i)));
+				highlighting = !highlighting;
+				i = stop;
+			}
+			return result;
+		} // func HighlightSearch
+
+		/// <summary>Keywords to search for, separated by whitespace</summary>
+		public string SearchText { get => (string)GetValue(SearchTextProperty); set => SetValue(SearchTextProperty, value); }
+
+		/// <summary>Original Unformatted Text </summary>
+		public string BaseText { get => (string)GetValue(BaseTextProperty); set => SetValue(BaseTextProperty, value); }
+	} // class PpsDataFilterItemTextBlock
 }
