@@ -511,8 +511,6 @@ namespace TecWare.PPSn.Controls
 					{
 						if (IsDropDownOpen)
 							Navigate(FocusNavigationDirection.Previous);
-						else
-							ImmediateSelect(FocusNavigationDirection.Previous);
 					}
 					break;
 				case Key.Down:
@@ -525,8 +523,6 @@ namespace TecWare.PPSn.Controls
 					{
 						if (IsDropDownOpen)
 							Navigate(FocusNavigationDirection.Next);
-						else
-							ImmediateSelect(FocusNavigationDirection.Next);
 					}
 					break;
 				case Key.Home:
@@ -535,8 +531,6 @@ namespace TecWare.PPSn.Controls
 						e.Handled = true;
 						if (IsDropDownOpen)
 							Navigate(FocusNavigationDirection.First);
-						else
-							ImmediateSelect(FocusNavigationDirection.First);
 					}
 					break;
 				case Key.End:
@@ -545,8 +539,6 @@ namespace TecWare.PPSn.Controls
 						e.Handled = true;
 						if (IsDropDownOpen)
 							Navigate(FocusNavigationDirection.Last);
-						else
-							ImmediateSelect(FocusNavigationDirection.Last);
 					}
 					break;
 				case Key.F4:
