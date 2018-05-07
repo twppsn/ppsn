@@ -194,8 +194,6 @@ namespace TecWare.PPSn.Controls
 
 			if (newPos != curPos)
 				filteredListBox.SelectedIndex = newPos;
-
-			Console.WriteLine(newPos);
 		} // proc Navigate
 
 		private int CalculateNewPos(int currentPos, int items, FocusNavigationDirection direction)
@@ -409,6 +407,58 @@ namespace TecWare.PPSn.Controls
 		public object PreSelectedValue { get => GetValue(PreSelectedValueProperty); set => SetValue(PreSelectedValueProperty, value); }
 
 		#endregion
+
+		/// <summary>Handles the Navigation by Keyboard</summary>
+		/// <param name="e">pressed Keys</param>
+		protected override void OnPreviewKeyDown(KeyEventArgs e)
+			=> KeyDownHandler(e);
+
+		private void KeyDownHandler(KeyEventArgs e)
+		{
+			if (IsReadOnly)
+				return;
+
+			var key = e.Key;
+			if (key == Key.System)
+				key = e.SystemKey;
+
+			switch (key)
+			{
+				case Key.Up:
+					e.Handled = true;
+					if (IsFilteredListVisible())
+						Navigate(FocusNavigationDirection.Previous);
+					break;
+				case Key.Down:
+					e.Handled = true;
+					if (IsFilteredListVisible())
+						Navigate(FocusNavigationDirection.Next);
+
+					break;
+				case Key.Home:
+					if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
+					{
+						e.Handled = true;
+						if (IsFilteredListVisible())
+							Navigate(FocusNavigationDirection.First);
+					}
+					break;
+				case Key.End:
+					if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
+					{
+						e.Handled = true;
+						if (IsFilteredListVisible())
+							Navigate(FocusNavigationDirection.Last);
+					}
+					break;
+				case Key.Enter:
+					if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
+					{
+						ApplySelectedItem();
+					}
+					break;
+			}
+		}
 	}
 
 	/// <summary>Resembles a ComboBox, which is search-able</summary>
@@ -471,10 +521,7 @@ namespace TecWare.PPSn.Controls
 
 		#region ---- Keyboard interaction -----------------------------------------------
 
-		/// <summary>Handles the Navigation by Keyboard</summary>
-		/// <param name="e">pressed Keys</param>
-		protected override void OnPreviewKeyDown(KeyEventArgs e)
-			=> KeyDownHandler(e);
+
 
 		private void ToggleDropDownStatus(bool commit)
 		{
@@ -490,6 +537,11 @@ namespace TecWare.PPSn.Controls
 				return;
 			IsDropDownOpen = true;
 		} // proc OpenDropDown
+
+		/// <summary>Handles the Navigation by Keyboard</summary>
+		/// <param name="e">pressed Keys</param>
+		protected override void OnPreviewKeyDown(KeyEventArgs e)
+			=> KeyDownHandler(e);
 
 		private void KeyDownHandler(KeyEventArgs e)
 		{
