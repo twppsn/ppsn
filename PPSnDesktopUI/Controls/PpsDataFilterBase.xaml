@@ -30,19 +30,26 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ListBoxItem}">
-					<Grid Margin="0,0,20,0">
-						<Border x:Name="panelBorder" Padding="6,1" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" MinHeight="29" BorderThickness="1">
+					<Grid Margin="0,0,20,1">
+						<Border
+							x:Name="panelBorder" 
+							Padding="6,1" 
+							SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
+							MinHeight="29" 
+							BorderThickness="1" 
+							Background="{DynamicResource PPSnAlternation0Brush}">
 							<ContentPresenter />
 						</Border>
 					</Grid>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsMouseOver" Value="True">
 							<Setter Property="BorderBrush" TargetName="panelBorder" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
-							
 						</Trigger>
 						<Trigger Property="IsSelected" Value="True">
 							<Setter Property="BorderBrush" TargetName="panelBorder" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
-
+						</Trigger>
+						<Trigger Property="ItemsControl.AlternationIndex" Value="1">
+							<Setter Property="Background" TargetName="panelBorder" Value="{DynamicResource PPSnAlternation1Brush}" />
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
