@@ -278,8 +278,8 @@ namespace TecWare.PPSn.Controls
 
 		internal void Items_CurrentChanged(object sender, EventArgs e)
 		{
-			if (filteredListBox.Items.CurrentItem is IDataRow item)
-				filteredListBox.ScrollIntoView(item);
+			//if (filteredListBox.Items.CurrentItem is IDataRow item)
+				//filteredListBox.ScrollIntoView(item);
 		} // event Items_CurrentChanged
 
 		internal void SetAnchorItem()
@@ -371,7 +371,7 @@ namespace TecWare.PPSn.Controls
 			{
 				if (HasMouseMoved() && !item.IsSelected)
 				{
-					//item.IsSelected = true;
+					item.IsSelected = true;
 				}
 			}
 		} // event OnMouseMove
