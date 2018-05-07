@@ -99,6 +99,7 @@ specific language governing permissions and limitations under the Licence.
 						<Trigger Property="IsEnabled" Value="False">
 							<Setter Property="Background" Value="Transparent"/>
 							<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}"/>
+							<Setter TargetName="ImageBox" Property="Opacity" Value=".3"/>
 						</Trigger>
 						<Trigger Property="IsPressed" Value="true">
 							<Trigger.EnterActions>
@@ -157,5 +158,7 @@ specific language governing permissions and limitations under the Licence.
 		</Setter>
 	</Style>
 
+	<Style TargetType="{x:Type pps:PpsSplitButton}" BasedOn="{StaticResource {x:Type pps:PpsButton}}">
+	</Style>
 
 </ResourceDictionary>

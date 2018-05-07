@@ -13,11 +13,16 @@
 // specific language governing permissions and limitations under the Licence.
 //
 #endregion
+using System;
+using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 
 namespace TecWare.PPSn.Controls
 {
+	#region -- class PpsButton --------------------------------------------------------
+
 	/// <summary></summary>
 	public class PpsButton : Button
 	{
@@ -36,4 +41,154 @@ namespace TecWare.PPSn.Controls
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsButton), new FrameworkPropertyMetadata(typeof(PpsButton)));
 		}
 	} // class PpsButton
+
+	#endregion
+
+	#region -- enum PpsSplitButtonMode ------------------------------------------------
+
+	/// <summary></summary>
+	public enum PpsSplitButtonType
+	{
+		/// <summary>Only a drop down button.</summary>
+		Dropdown,
+		/// <summary>Drop and command button.</summary>
+		SplitButton
+	} // enum SplitButtonType
+
+	#endregion
+
+	#region -- class PpsSplitButton ---------------------------------------------------
+
+	/// <summary></summary>
+	[TemplatePart(Name = "PART_SplitButton", Type = typeof(ButtonBase))]
+	public class PpsSplitButton : PpsButton
+	{
+		/// <summary></summary>
+		protected const string PartSplitButton = "PART_SplitButton";
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public static readonly DependencyProperty ModeProperty = DependencyProperty.Register(nameof(Mode), typeof(PpsSplitButtonType), typeof(PpsSplitButton), new FrameworkPropertyMetadata(PpsSplitButtonType.SplitButton));
+		public static readonly DependencyProperty PopupProperty = DependencyProperty.Register(nameof(Popup), typeof(Popup), typeof(PpsSplitButton), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnPopupChanged)));
+		public static readonly DependencyProperty IsOpenProperty = DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(PpsSplitButton), new FrameworkPropertyMetadata(false, OnIsOpenChanged));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		/// <summary></summary>
+		public PpsSplitButton()
+		{
+		} // ctor
+
+		/// <summary></summary>
+		public override void OnApplyTemplate()
+		{
+			base.OnApplyTemplate();
+
+			if (GetTemplateChild(PartSplitButton) is ButtonBase button)
+				button.Click += (sender, e) => OnDropdown();
+		} // proc OnApplyTemplate
+
+		#endregion
+
+		#region -- OnDropDown ---------------------------------------------------------
+
+		private void OnPopupClosed(object sender, EventArgs e)
+		{
+			var popup = (Popup)sender;
+			popup.Closed -= OnPopupClosed;
+			if (popup == Popup)
+				IsOpen = false;
+		} // proc OnPopupClosed
+
+		private void OnContextMenuClosed(object sender, RoutedEventArgs e)
+		{
+			var ctx = (ContextMenu)sender;
+			ctx.Closed -= OnContextMenuClosed;
+			if (ctx == ContextMenu)
+				IsOpen = false;
+		} // proc OnContextMenuClosed
+
+		private static void OnIsOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsSplitButton)d).OnIsOpenChanged((bool)e.NewValue, (bool)e.OldValue);
+
+		/// <summary></summary>
+		/// <param name="newValue"></param>
+		/// <param name="oldValue"></param>
+		protected virtual void OnIsOpenChanged(bool newValue, bool oldValue)
+		{
+			if (Popup != null)
+			{
+				if (newValue)
+					Popup.Closed += OnPopupClosed;
+				Popup.IsOpen = newValue;
+			}
+			else if (ContextMenu != null)
+			{
+				if (newValue)
+					ContextMenu.Closed += OnContextMenuClosed;
+				ContextMenu.IsOpen = newValue;
+			}
+		} // OnIsOpenChanged
+
+		/// <summary>Route to DropDown button</summary>
+		protected override void OnClick()
+		{
+			if (Mode == PpsSplitButtonType.Dropdown)
+				OnDropdown();
+			else
+				base.OnClick();
+		} // proc OnClick
+
+		/// <summary>Activate Dropdown</summary>
+		protected virtual void OnDropdown()
+		{
+			if (IsOpen)
+				IsOpen = false;
+			else if (Popup != null)
+			{
+				Popup.PlacementTarget = this;
+				IsOpen = true;
+			}
+			else if (ContextMenu != null)
+			{
+				ContextMenu.PlacementTarget = this;
+				IsOpen = true;
+			}
+		} // proc OnDropdown
+
+		#endregion
+
+		private static void OnPopupChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsSplitButton)d).OnPopupChanged((Popup)e.NewValue, (Popup)e.OldValue);
+
+		private void OnPopupChanged(Popup newValue, Popup oldValue)
+		{
+			RemoveLogicalChild(oldValue);
+			if (newValue?.Parent == null)
+				AddLogicalChild(newValue);
+		} // proc OnPopupChanged
+
+		/// <summary></summary>
+		protected override IEnumerator LogicalChildren
+			=> Popup == null || Popup.Parent != this
+				? base.LogicalChildren
+				: LogicalContentEnumerator.GetLogicalEnumerator(this, base.LogicalChildren, () => Popup);
+
+		/// <summary></summary>
+		public bool IsOpen { get { return (bool)GetValue(IsOpenProperty); } set { SetValue(IsOpenProperty, value); } }
+		/// <summary></summary>
+		public Popup Popup { get { return (Popup)GetValue(PopupProperty); } set { SetValue(PopupProperty, value); } }
+		/// <summary></summary>
+		public PpsSplitButtonType Mode { get { return (PpsSplitButtonType)GetValue(ModeProperty); } set { SetValue(ModeProperty, value); } }
+
+		// -- Static --------------------------------------------------------------
+
+		static PpsSplitButton()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsSplitButton), new FrameworkPropertyMetadata(typeof(PpsSplitButton)));
+		} // ctor
+	} // class SplitButton
+
+	#endregion
+
 }
