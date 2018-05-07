@@ -49,6 +49,8 @@ namespace TecWare.PPSn.UI
 		public static IValueConverter TakeListItems => TakeListItemsConverter.Default;
 		/// <summary>Multiplies a value with the parameter.</summary>
 		public static IValueConverter Multiply => MultiplyConverter.Default;
+		/// <summary>Concats Name,Vorname.</summary>
+		public static IMultiValueConverter Name => NameConverter.Default;
 	} // class PpsConverter
 
 	#endregion
@@ -697,6 +699,44 @@ namespace TecWare.PPSn.UI
 
 		public static MultiplyConverter Default { get; } = new MultiplyConverter();
 	} // class MultiplyConverter
+
+	#endregion
+
+	#region -- class NameConverter ----------------------------------------------------
+
+	internal sealed class NameConverter : IMultiValueConverter
+	{
+		private NameConverter()
+		{
+		} // ctor
+
+		object IMultiValueConverter.Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (values != null && values.Length > 0)
+			{
+				if (values.Length == 1)
+					return (string)values[0];
+				else
+				{
+					if (values[0] is null && values[1] is null)
+						return "<kein Name>";
+					else if (values[0] == null)
+						return (string)values[0];
+					else if (values[1] == null)
+						return (string)values[1];
+					else
+						return String.Format("{0} {1}", values[0], values[1]);
+				}
+			}
+			else
+				return DependencyProperty.UnsetValue;
+		} // func IMultiValueConverter.Convert
+
+		object[] IMultiValueConverter.ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+			=> throw new NotSupportedException();
+
+		public static NameConverter Default { get; } = new NameConverter();
+	} // class LuaTypeStringConverter
 
 	#endregion
 }

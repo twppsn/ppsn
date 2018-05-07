@@ -195,7 +195,7 @@ namespace TecWare.PPSn.Controls
 
 		private void SelectAddedNode(object item)
 		{
-			if(ParentTreeView.AutoSelectAddedNode)
+			if (ParentTreeView.AutoSelectAddedNode)
 			{
 				if (ItemContainerGenerator.Status == GeneratorStatus.ContainersGenerated)
 				{

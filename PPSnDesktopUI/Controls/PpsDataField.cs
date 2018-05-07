@@ -15,6 +15,8 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Markup;
@@ -30,37 +32,29 @@ namespace TecWare.PPSn.Controls
 	#region -- class PpsDataFieldInfo -------------------------------------------------
 
 	/// <summary>Result of the resolver.</summary>
-	public class PpsDataFieldInfo : IPropertyReadOnlyDictionary
+	public sealed class PpsDataFieldInfo : IPropertyReadOnlyDictionary
 	{
-		private readonly IServiceProvider sp;
-		private readonly IPropertyReadOnlyDictionary properties;
 		private readonly IDataColumn dataColumn;
-		
+		private readonly string bindingPath;
+
 		/// <summary></summary>
-		/// <param name="sp"></param>
 		/// <param name="dataColumn"></param>
-		/// <param name="properties"></param>
 		/// <param name="bindingPath"></param>
-		public PpsDataFieldInfo(IServiceProvider sp, IDataColumn dataColumn, IPropertyReadOnlyDictionary properties, string bindingPath)
+		internal PpsDataFieldInfo(IDataColumn dataColumn, string bindingPath)
 		{
-			this.sp = sp;
 			this.dataColumn = dataColumn ?? throw new ArgumentNullException(nameof(dataColumn));
-			this.properties = properties ?? PropertyDictionary.EmptyReadOnly;
-			this.BindingPath = bindingPath ?? throw new ArgumentNullException(nameof(bindingPath));
+			this.bindingPath = bindingPath ?? throw new ArgumentNullException(nameof(bindingPath));
 		} // ctor
 
 		/// <summary></summary>
-		/// <param name="sp"></param>
 		/// <param name="name"></param>
 		/// <param name="dataType"></param>
 		/// <param name="bindingPath"></param>
 		/// <param name="properties"></param>
-		public PpsDataFieldInfo(IServiceProvider sp, string name, Type dataType, string bindingPath, IPropertyReadOnlyDictionary properties)
+		internal PpsDataFieldInfo(string name, Type dataType, string bindingPath, IPropertyEnumerableDictionary properties)
 		{
-			this.sp = sp;
-			this.dataColumn = new SimpleDataColumn(name, dataType);
-			this.properties = properties ?? PropertyDictionary.EmptyReadOnly;
-			this.BindingPath = bindingPath ?? throw new ArgumentNullException(nameof(bindingPath));
+			this.dataColumn = new SimpleDataColumn(name, dataType, properties);
+			this.bindingPath = bindingPath ?? throw new ArgumentNullException(nameof(bindingPath));
 		} // ctor
 
 		/// <summary></summary>
@@ -68,8 +62,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="value"></param>
 		/// <returns></returns>
 		public bool TryGetProperty(string name, out object value)
-			=> properties.TryGetProperty(name, out value)
-				|| dataColumn.Attributes.TryGetProperty(name, out value)
+			=> dataColumn.Attributes.TryGetProperty(name, out value)
 				|| TryGetDefaultProperty(name, out value);
 
 		private bool TryGetDefaultProperty(string name, out object value)
@@ -78,6 +71,15 @@ namespace TecWare.PPSn.Controls
 			{
 				case nameof(BindingPath):
 					value = BindingPath;
+					return true;
+				case nameof(Name):
+					value = Name;
+					return true;
+				case nameof(DataType):
+					value = DataType;
+					return true;
+				case nameof(ColumnDefinition):
+					value = dataColumn;
 					return true;
 				default:
 					value = null;
@@ -92,21 +94,22 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		public PpsDataColumnDefinition ColumnDefinition => dataColumn as PpsDataColumnDefinition;
 
-		/// <summary></summary>
-		public IServiceProvider Context => sp;
-
-		/// <summary>Bindpath to use this field.</summary>
-		public string BindingPath { get; private set; }
+		/// <summary>BindingPath to use this field.</summary>
+		public string BindingPath => bindingPath;
 
 		/// <summary></summary>
 		/// <param name="serviceProvider"></param>
 		/// <param name="fieldName"></param>
-		/// <param name="properties"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public static PpsDataFieldInfo GetDataFieldInfo(IServiceProvider serviceProvider, string fieldName, IPropertyReadOnlyDictionary properties, bool throwException = true)
+		public static PpsDataFieldInfo GetDataFieldInfo(IServiceProvider serviceProvider, string fieldName, bool throwException = true)
 		{
-			var field = serviceProvider.GetService<IPpsDataFieldResolver>(true)?.ResolveColumn(serviceProvider, fieldName, properties ?? PropertyDictionary.EmptyReadOnly);
+			if (serviceProvider == null)
+				throw new ArgumentNullException(nameof(serviceProvider));
+			if (fieldName == null)
+				throw new ArgumentNullException(nameof(fieldName));
+
+			var field = serviceProvider.GetService<IPpsDataFieldResolver>(true)?.ResolveColumn(serviceProvider, fieldName);
 			if (throwException && field == null )
 				throw new ArgumentNullException(nameof(field), $"Could not resolve field '{fieldName}'.");
 			return field;
@@ -123,9 +126,8 @@ namespace TecWare.PPSn.Controls
 		/// <summary></summary>
 		/// <param name="sp"></param>
 		/// <param name="fieldExpression"></param>
-		/// <param name="properties"></param>
 		/// <returns></returns>
-		PpsDataFieldInfo ResolveColumn(IServiceProvider sp, string fieldExpression, IPropertyReadOnlyDictionary properties);
+		PpsDataFieldInfo ResolveColumn(IServiceProvider sp, string fieldExpression);
 	} // interface IPpsDataFieldResolver
 
 	#endregion
@@ -136,12 +138,9 @@ namespace TecWare.PPSn.Controls
 	public interface IPpsDataFieldFactory
 	{
 		/// <summary></summary>
-		/// <param name="context"></param>
-		/// <param name="fieldName"></param>
 		/// <param name="properties"></param>
-		/// <param name="localProperties"></param>
 		/// <returns></returns>
-		System.Xaml.XamlReader CreateField(IServiceProvider context, string fieldName, IPropertyReadOnlyDictionary properties, LocalValueEnumerator localProperties);
+		System.Xaml.XamlReader CreateField(IPpsDataFieldReadOnlyProperties properties);
 	} // interface IPpsDataFieldFactory
 
 	#endregion
@@ -151,9 +150,6 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Parser service to resolve a dataset.</summary>
 	public class PpsDataSetResolver : PpsParserService, IPpsDataFieldResolver
 	{
-		/// <summary></summary>
-		public Func<object> GetDataSet { get; set; }
-
 		private PpsDataSetDefinition dataset = null;
 
 		/// <summary></summary>
@@ -175,6 +171,41 @@ namespace TecWare.PPSn.Controls
 			this.dataset = dataset ?? throw new ArgumentNullException(nameof(dataset));
 		} // ctor
 
+		internal static bool TryResolveByDataSetName(IServiceProvider sp, string datasetName, bool throwException, out PpsDataSetDefinition dataset)
+		{
+			if (datasetName != null)
+			{
+				var info = sp.GetService<PpsEnvironment>(true).ObjectInfos[datasetName, throwException];
+				if (info != null)
+				{
+					dataset = info.GetDocumentDefinitionAsync().AwaitTask();
+					return true;
+				}
+			}
+			else if (throwException)
+				throw new ArgumentNullException(nameof(datasetName));
+
+			dataset = null;
+			return false;
+		} // func TryResolveByDataSetName
+
+		private static bool TryResolveByFunction(IServiceProvider sp, Func<object> getDataSet, out PpsDataSetDefinition dataset)
+		{
+			switch (getDataSet?.Invoke())
+			{
+				case PpsDataSet ds:
+					dataset = ds.DataSetDefinition;
+					return true;
+				case PpsDataSetDefinition ds:
+					dataset = ds;
+					return true;
+				default:
+					dataset = null;
+					return false;
+
+			}
+		} // func TryResolveByFunction
+
 		/// <summary></summary>
 		protected override void OnInitialized()
 		{
@@ -182,27 +213,32 @@ namespace TecWare.PPSn.Controls
 
 			if (dataset == null)
 			{
-				switch (GetDataSet?.Invoke())
-				{
-					case PpsDataSet ds:
-						dataset = ds.DataSetDefinition;
-						break;
-					case PpsDataSetDefinition ds:
-						dataset = ds;
-						break;
-					default:
-						throw new ArgumentException("No dataset found.");
-
-				}
+				if (!TryResolveByDataSetName(this, DataSetName, false, out dataset)
+					&& !TryResolveByFunction(this, GetDataSet, out dataset))
+					throw new ArgumentException("DataSet could not resolved.");
 			}
 		} // proc OnInitialized
 
-		PpsDataFieldInfo IPpsDataFieldResolver.ResolveColumn(IServiceProvider serviceProvider, string fieldExpression, IPropertyReadOnlyDictionary properties)
-			=> ReolveDataFieldInfo(serviceProvider, fieldExpression, properties);
-
-		internal PpsDataFieldInfo ReolveDataFieldInfo(IServiceProvider serviceProvider, string fieldExpression, IPropertyReadOnlyDictionary properties)
+		PpsDataFieldInfo IPpsDataFieldResolver.ResolveColumn(IServiceProvider serviceProvider, string fieldExpression)
 		{
-			return null;
+			CheckInitialized();
+
+			var p = fieldExpression.IndexOf('.');
+			if (p == -1) // we expected Table.Column
+				return null;
+
+			var tableName = fieldExpression.Substring(0, p);
+			var table = dataset.FindTable(tableName) ?? throw new ArgumentOutOfRangeException(nameof(tableName), tableName, "Could not locate table.");
+			var columnExpression = fieldExpression.Substring(p + 1);
+
+			return PpsDataTableResolver.TryResolveColumn(
+				table, 
+				columnExpression, 
+				PpsDataFieldBinding.CombinePath(BindingPath, columnExpression), 
+				out var fieldInfo
+			) 
+				? fieldInfo 
+				: throw new ArgumentOutOfRangeException(nameof(fieldExpression), fieldExpression, "Could not resolve field expression.");
 		} // func ReolveDataFieldInfo
 
 		/// <summary></summary>
@@ -223,14 +259,14 @@ namespace TecWare.PPSn.Controls
 		public string BindingPath { get; set; } = String.Empty;
 		/// <summary></summary>
 		public PpsDataSetDefinition DataSetDefinition => dataset;
+		
+		/// <summary></summary>
+		public Func<object> GetDataSet { get; set; } = null;
+		/// <summary>Name of the dataset.</summary>
+		public string DataSetName { get; set; } = null;
 
-		internal static PpsDataFieldInfo GetDataFieldInfo(IServiceProvider serviceProvider, PpsDataColumnDefinition column, IPropertyReadOnlyDictionary properties, string baseBindingPath)
-		{
-			if (!properties.TryGetProperty<string>(nameof(PpsDataField.BindingPath), out var localBindingPath))
-				localBindingPath = column.Name;
-
-			return new PpsDataFieldInfo(serviceProvider, column, properties, PpsDataFieldBinding.CombinePath(baseBindingPath, localBindingPath));
-		} // func GetDataFieldInfo
+		internal static PpsDataFieldInfo GetDataFieldInfo(PpsDataColumnDefinition column, string baseBindingPath)
+			=> new PpsDataFieldInfo(column, baseBindingPath);
 	} // class PpsDataSetResolver
 
 	#endregion
@@ -243,7 +279,6 @@ namespace TecWare.PPSn.Controls
 		private string tableName = null;
 		private string bindingPath = null;
 
-		private PpsDataSetResolver datasetResolver = null;
 		private PpsDataTableDefinition table = null;
 
 		/// <summary></summary>
@@ -256,37 +291,94 @@ namespace TecWare.PPSn.Controls
 			this.table = table.TableDefinition;
 		} // ctor
 
-		PpsDataFieldInfo IPpsDataFieldResolver.ResolveColumn(IServiceProvider serviceProvider, string fieldExpression, IPropertyReadOnlyDictionary properties)
-		{
-			CheckInitialized();
+		private static PpsDataTableDefinition ResolveDataTable(PpsDataSetDefinition dataset, string tableName)
+			=> dataset.FindTable(tableName) ?? throw new ArgumentOutOfRangeException(nameof(tableName), tableName, "Could not resolve table.");
 
-			// resolve table
-			if (table == null && tableName != null)
+		/// <summary></summary>
+		protected override void OnInitialized()
+		{
+			base.OnInitialized();
+			if (table == null)
 			{
-				var pos = tableName.IndexOf('.');
-				if (pos == -1)
+				if (tableName == null)
+					throw new ArgumentNullException(nameof(tableName));
+				else
 				{
-					datasetResolver = (PpsDataSetResolver)GetParentService(typeof(PpsDataSetResolver)) ?? throw new ArgumentException("DataSet resolve is missing.");
-					table = datasetResolver.DataSetDefinition.FindTable(tableName);
+					var p = tableName.IndexOf('.');
+					if (p == -1)
+					{
+						if (GetParentService(typeof(PpsDataSetResolver)) is PpsDataSetResolver datasetResolver)
+							table = ResolveDataTable(datasetResolver.DataSetDefinition, tableName);
+						else
+							throw new ArgumentOutOfRangeException(nameof(tableName), tableName, "Could not locate DataSetResolver.");
+					}
+					else if (PpsDataSetResolver.TryResolveByDataSetName(this, tableName.Substring(0, p), false, out var dataset))
+						table = ResolveDataTable(dataset, tableName.Substring(p + 1));
+					else
+						throw new ArgumentOutOfRangeException(nameof(tableName), tableName, "Could not resolve table.");
+				}
+			}
+		} // func OnInitialized
+
+		internal static bool TryResolveColumn(PpsDataTableDefinition table, string fieldExpression, string bindingPath, out PpsDataFieldInfo fieldInfo)
+		{
+			var p = fieldExpression.IndexOf('.');
+			if (p == -1)
+			{
+				var columnIndex = table.FindColumnIndex(fieldExpression, false);
+				if (columnIndex == -1)
+				{
+					fieldInfo = null;
+					return false;
 				}
 				else
 				{
-					var info = serviceProvider.GetService<PpsEnvironment>(true).ObjectInfos[tableName.Substring(0, pos), true];
-					table = info.GetDocumentDefinitionAsync().AwaitTask().FindTable(tableName.Substring(pos + 1));
+					fieldInfo = new PpsDataFieldInfo(table.Columns[columnIndex], bindingPath);
+					return true;
 				}
 			}
+			else
+			{
+				var columnIndex = table.FindColumnIndex(fieldExpression.Substring(0, p), false);
+				if (columnIndex == -1)
+				{
+					fieldInfo = null;
+					return false;
+				}
 
-			var idx = table.FindColumnIndex(fieldExpression);
-			return idx != -1
-				? PpsDataSetResolver.GetDataFieldInfo(serviceProvider, table.Columns[idx], properties, bindingPath)
-				: datasetResolver.ReolveDataFieldInfo(serviceProvider, fieldExpression, properties);
+				var column = table.Columns[columnIndex];
+				if (column.IsRelationColumn) // follow path
+				{
+					if (TryResolveColumn(column.ParentColumn.Table, fieldExpression.Substring(p + 1), bindingPath, out fieldInfo))
+						return true;
+					else
+					{
+						fieldInfo = null;
+						return false;
+					}
+				}
+				else // follow object properties of datatype or extended column
+					throw new NotImplementedException();
+			}
+		} // func TryResolveColumn
+		
+		PpsDataFieldInfo IPpsDataFieldResolver.ResolveColumn(IServiceProvider serviceProvider, string fieldExpression)
+		{
+			CheckInitialized();
+
+			if (TryResolveColumn(table, fieldExpression, PpsDataFieldBinding.CombinePath(BindingPath, fieldExpression), out var fieldInfo))
+				return fieldInfo;
+			else if (GetParentService(typeof(IPpsDataFieldResolver)) is IPpsDataFieldResolver resolver)
+				return resolver.ResolveColumn(serviceProvider, fieldExpression);
+			else
+				return null;
 		} // func ResolveColumn
 
 		/// <summary></summary>
 		/// <param name="serviceType"></param>
 		/// <returns></returns>
 		public override object GetService(Type serviceType)
-			=> serviceType == typeof(IPpsDataFieldResolver) ? this : null;
+			=> serviceType == typeof(IPpsDataFieldResolver) ? this : GetParentService(serviceType);
 
 		/// <summary></summary>
 		public string Name { get => tableName; set { tableName = value; table = null; } }
@@ -321,7 +413,7 @@ namespace TecWare.PPSn.Controls
 
 		System.Xaml.XamlReader IPpsXamlEmitter.CreateReader(IServiceProvider context)
 		{
-			var fieldInfo = PpsDataFieldInfo.GetDataFieldInfo(context, FieldName, null, true);
+			var fieldInfo = PpsDataFieldInfo.GetDataFieldInfo(context, FieldName, true);
 			return CreateWpfBinding(fieldInfo, IsReadOnly).CreateReader(context);
 		} // func CreateReader
 
@@ -348,8 +440,13 @@ namespace TecWare.PPSn.Controls
 
 		internal static string CombinePath(string baseBindingPath, string bindingPath)
 		{
+			if (String.IsNullOrEmpty(baseBindingPath))
+				return bindingPath;
+			else if (String.IsNullOrEmpty(bindingPath))
+				return baseBindingPath;
+
 			return baseBindingPath + "." + bindingPath;
-		}
+		} // func CombinePath
 	} // class PpsDataFieldBinding
 
 	#endregion
@@ -359,6 +456,8 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public sealed class PpsDataFieldProperty : MarkupExtension, IPpsXamlEmitter
 	{
+		#region -- class ValueXamlEmiter ----------------------------------------------
+
 		private sealed class ValueXamlEmiter : System.Xaml.XamlReader
 		{
 			private int state = -1;
@@ -383,6 +482,8 @@ namespace TecWare.PPSn.Controls
 			public override XamlSchemaContext SchemaContext => PpsXamlSchemaContext.Default;
 		} // class ValueXamlEmiter
 
+		#endregion
+
 		/// <summary></summary>
 		public PpsDataFieldProperty()
 		{
@@ -405,8 +506,7 @@ namespace TecWare.PPSn.Controls
 
 		System.Xaml.XamlReader IPpsXamlEmitter.CreateReader(IServiceProvider context)
 		{
-			var fieldInfo = PpsDataFieldInfo.GetDataFieldInfo(context, FieldName, null, true);
-
+			var fieldInfo = PpsDataFieldInfo.GetDataFieldInfo(context, FieldName, true);
 			if (PropertyName != null && fieldInfo.TryGetProperty(PropertyName, out var value))
 			{
 				if (!String.IsNullOrEmpty(StringFormat))
@@ -430,43 +530,253 @@ namespace TecWare.PPSn.Controls
 
 	#endregion
 
+	#region -- IPpsDataFieldReadOnlyProperties ----------------------------------------
+
+	/// <summary></summary>
+	public interface IPpsDataFieldReadOnlyProperties : IDynamicMetaObjectProvider, IPropertyReadOnlyDictionary, IServiceProvider
+	{
+		/// <summary></summary>
+		/// <param name="dataField"></param>
+		/// <returns></returns>
+		IPpsDataFieldReadOnlyProperties CreateFieldProperties(PpsDataFieldInfo dataField);
+
+		/// <summary></summary>
+		string FieldName { get; }
+		/// <summary></summary>
+		string UseFieldFactory { get; }
+		/// <summary></summary>
+		Type DataType { get; }
+		
+		/// <summary></summary>
+		IServiceProvider Context { get; }
+
+		/// <summary></summary>
+		/// <returns></returns>
+		IEnumerable<LocalValueEntry> LocalProperties();
+	} // interface IPpsDataFieldReadOnlyProperties
+
+	#endregion
+
 	#region -- class PpsDataField -----------------------------------------------------
 
 	/// <summary>DataField emitter</summary>
-	public sealed class PpsDataField : UIElement, IPpsXamlEmitter, IPpsXamlDynamicProperties, IPropertyReadOnlyDictionary
+	public sealed class PpsDataField : FrameworkElement, IPpsXamlEmitter, IPpsXamlDynamicProperties
 	{
+		#region -- class PpsDataFieldReadOnlyProperties -------------------------------
+
+		/// <summary></summary>
+		private sealed class PpsDataFieldReadOnlyProperties : LuaTable, IPpsDataFieldReadOnlyProperties
+		{
+			private readonly IServiceProvider context;
+			private readonly PpsDataField dataField;
+			private readonly PpsDataFieldInfo dataFieldInfo;
+
+			public PpsDataFieldReadOnlyProperties(IServiceProvider context, PpsDataField dataField, PpsDataFieldInfo dataFieldInfo)
+			{
+				this.context = context ?? throw new ArgumentNullException(nameof(context));
+				this.dataField = dataField ?? throw new ArgumentNullException(nameof(dataField));
+				this.dataFieldInfo = dataFieldInfo ?? throw new ArgumentNullException(nameof(dataFieldInfo));
+			} // ctor
+
+			[LuaMember]
+			public IPpsDataFieldReadOnlyProperties CreateFieldProperties(PpsDataFieldInfo dataFieldInfo)
+				=> new PpsDataFieldReadOnlyProperties(context, dataField, dataFieldInfo);
+
+			private bool TryGetLocalProperty(string memberName, out object value)
+			{
+				var p = memberName.IndexOf('.');
+				if (p == -1)
+				{
+					value = null;
+					return false;
+				}
+
+				var ownerName = memberName.Substring(0, p);
+				var propertyName = memberName.Substring(p + 1);
+
+				foreach (var prop in LocalProperties())
+				{
+					if (prop.Property.OwnerType.Name == ownerName
+						  && prop.Property.Name == propertyName)
+					{
+						value = prop.Value;
+						return true;
+					}
+				}
+
+				value = null;
+				return false;
+			} // func TryGetLocalProperty
+
+			public IEnumerable<LocalValueEntry> LocalProperties()
+			{
+				var e = dataField.GetLocalValueEnumerator();
+				while (e.MoveNext())
+				{
+					if (e.Current.Property != NameScope.NameScopeProperty)
+						yield return e.Current;
+				}
+			} // func LocalProperties
+
+			/// <summary>Do not change properties</summary>
+			/// <param name="key"></param>
+			/// <param name="value"></param>
+			/// <returns></returns>
+			protected override bool OnNewIndex(object key, object value)
+				=> throw new NotSupportedException();
+
+			protected override object OnIndex(object key)
+			{
+				if (key is string memberName)
+				{
+					switch (memberName)
+					{
+						case nameof(FieldName):
+							return dataField.FieldName;
+						case nameof(BindingPath):
+							return dataFieldInfo.BindingPath;
+						case nameof(UseFieldFactory):
+							return dataField.UseFieldFactory;
+						default:
+							if (dataField.properties.TryGetValue(memberName, out var value)
+								|| TryGetLocalProperty(memberName, out value)
+								|| dataFieldInfo.TryGetProperty(memberName, out value))
+								return value;
+							else
+								return null;
+					}
+				}
+				else if (key is DependencyProperty prop)
+				{
+					var value = dataField.GetValue(prop);
+					if (value == null)
+					{
+						if (!dataField.properties.TryGetValue(prop.Name, out value))
+							value = null;
+					}
+					return value;
+				}
+				else if (key is PpsDataFieldInfo dataFieldInfo)
+					return CreateFieldProperties(dataFieldInfo);
+				else
+					return null;
+			} // func OnIndex
+
+			public bool TryGetProperty(string name, out object value)
+				=> (value = GetMemberValue(name)) != null;
+
+			/// <summary></summary>
+			/// <param name="serviceType"></param>
+			/// <returns></returns>
+			[LuaMember]
+			public object GetService(object serviceType)
+			{
+				switch (serviceType)
+				{
+					case string typeName:
+						if (typeName == "DataFieldInfo")
+							return dataFieldInfo;
+						return GetService(LuaType.GetType(typeName));
+					case LuaType luaType:
+						return context.GetService(luaType.Type);
+					case Type type:
+						return context.GetService(type);
+					default:
+						return null;
+				}
+			} // func GetService
+
+			object IServiceProvider.GetService(Type serviceType)
+			{
+				if (serviceType == typeof(PpsDataFieldInfo))
+					return dataFieldInfo;
+				else if (serviceType == typeof(IDataColumn)
+					|| serviceType == typeof(PpsDataColumnDefinition))
+					return dataFieldInfo.ColumnDefinition;
+				else
+					return context.GetService(serviceType);
+			} // func GetService
+
+			public string FieldName => dataField.FieldName;
+			public Type DataType => dataFieldInfo.DataType;
+			public string UseFieldFactory => dataFieldInfo.TryGetProperty<string>(nameof(UseFieldFactory), out var fieldFactory) ? fieldFactory : dataField.UseFieldFactory;
+			public IServiceProvider Context => context;
+		} // class PpsDataFieldReadOnlyProperties
+
+		#endregion
+
+		private static readonly Dictionary<string, DependencyProperty> knownProperties = new Dictionary<string, DependencyProperty>(StringComparer.OrdinalIgnoreCase)
+		{
+			{ "GridLabel", PpsDataFieldPanel.LabelProperty },
+			{ "GridLines", PpsDataFieldPanel.GridLinesProperty },
+			{ "GridFullWidth", PpsDataFieldPanel.FullWidthProperty },
+			{ "GridGroup", PpsDataFieldPanel.GroupNameProperty }
+		};
+
 		private readonly Dictionary<string, object> properties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
 		System.Xaml.XamlReader IPpsXamlEmitter.CreateReader(IServiceProvider context)
-			=> context.GetService<IPpsDataFieldFactory>(true).CreateField(context, FieldName, this, GetLocalValueEnumerator());
+			=> context.GetService<IPpsDataFieldFactory>(true)
+				.CreateField(new PpsDataFieldReadOnlyProperties(context, this, PpsDataFieldInfo.GetDataFieldInfo(context, FieldName, true)));
+
+		private bool TryGetKnownProperty(string name, out object value)
+		{
+			if (knownProperties.TryGetValue(name, out var property))
+			{
+				value = GetValue(property);
+				return true;
+			}
+			else
+			{
+				value = null;
+				return false;
+			}
+		} // prop TryGetKnownProperty
+
+		private bool TrySetKnownProperty(string name, object value)
+		{
+			if (knownProperties.TryGetValue(name, out var property))
+			{
+				SetValue(property, value?.ChangeTypeWithConverter(property.PropertyType));
+				return true;
+			}
+			else
+				return false;
+		} // proc TrySetKnownProperty
 
 		object IPpsXamlDynamicProperties.GetValue(string name)
-			=> properties.TryGetValue(name, out var tmp) ? tmp : null;
+			=> TryGetKnownProperty(name, out var value) ? value : GetPropertyValue(name);
 
 		void IPpsXamlDynamicProperties.SetValue(string name, object value)
-			=> properties[name] = value;
+		{
+			if (!TrySetKnownProperty(name, value))
+				SetPropertyValue(name, value);
+		} // func SetValue
+		private object GetPropertyValue(string name) 
+			=> properties.TryGetValue(name, out var tmp) ? tmp : null;
 
-		/// <summary></summary>
-		/// <param name="name"></param>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		public bool TryGetProperty(string name, out object value)
-			=> properties.TryGetValue(name, out value);
-
+		private void SetPropertyValue(string name, object value)
+		{
+			if (value == null)
+				properties.Remove(name);
+			else
+				properties[name] = value;
+		} // proc SetPropertyValue
+		
 		/// <summary>Field name.</summary>
 		public string FieldName { get; set; }
 		/// <summary>Binding path.</summary>
 		public string BindingPath
 		{
-			get => TryGetProperty(nameof(BindingPath), out var t) ? (string)t : null;
-			set
-			{
-				if (value == null)
-					properties.Remove(nameof(BindingPath));
-				else
-					properties[nameof(BindingPath)] = value;
-			}
-		}
+			get => GetPropertyValue(nameof(BindingPath)) as string;
+			set => SetPropertyValue(nameof(BindingPath), value);
+		} // prop BindingPath
+		  /// <summary>Factory</summary>
+		public string UseFieldFactory
+		{
+			get => GetPropertyValue(nameof(UseFieldFactory)) as string;
+			set => SetPropertyValue(nameof(UseFieldFactory), value);
+		} // prop UseFieldFactory
 	} // class PpsDataField
 
 	#endregion
@@ -485,75 +795,85 @@ namespace TecWare.PPSn.Controls
 			this.environment = environment;
 		} // ctor
 
-		private LuaWpfCreator UpdateDefaultProperties(IPropertyReadOnlyDictionary properties, LuaWpfCreator ctrl, LocalValueEnumerator localProperties)
-		{
-			// update local properties
-			while (localProperties.MoveNext())
-			{
-				var property = localProperties.Current.Property;
-				var value = localProperties.Current.Value;
-
-				if (NameScope.NameScopeProperty != property)
-					ctrl[property] = value;
-			}
-
-			// update known properties
-			if (properties.TryGetProperty<string>("displayName", out var displayName))
-				ctrl[PpsDataFieldPanel.LabelProperty] = displayName + ":";
-			if (properties.TryGetProperty<int>("GridLines", out var gridLines))
-				ctrl[PpsDataFieldPanel.GridLinesProperty] = gridLines;
-			if (properties.TryGetProperty<bool>("GridFullWidth", out var gridFullWidth))
-				ctrl[PpsDataFieldPanel.FullWidthProperty] = gridFullWidth;
-			if (properties.TryGetProperty<object>("GridGroup", out var gridGroup))
-				ctrl[PpsDataFieldPanel.GroupNameProperty] = gridGroup;
-
-			if (properties.TryGetProperty("Margin", out var margin))
-				ctrl["Margin"] = margin;
-
-			return ctrl;
-		} // proc UpdateDefaultProperties
-
 		/// <summary></summary>
-		/// <param name="context"></param>
-		/// <param name="fieldName"></param>
 		/// <param name="properties"></param>
-		/// <param name="localProperties"></param>
 		/// <returns></returns>
-		public System.Xaml.XamlReader CreateField(IServiceProvider context, string fieldName, IPropertyReadOnlyDictionary properties, LocalValueEnumerator localProperties)
+		public System.Xaml.XamlReader CreateField(IPpsDataFieldReadOnlyProperties properties)
 		{
-			if (TryResolveFieldCreator(context, fieldName, properties, out var ctrl))
-				UpdateDefaultProperties(properties, ctrl, localProperties);
-			else
+			// create controls
+			if (!TryResolveFieldCreator(properties, out var controls))
 			{
-				var fieldInfo = GetFieldInfo(context, fieldName, properties);
+				var ctrl = CreateDefaultField(properties);
 
-				if (!fieldInfo.TryGetProperty<string>("useFieldFactory", out var fieldFactory)
-					|| !TryResolveFieldCreator(context, fieldFactory, fieldInfo, out ctrl))
-					ctrl = CreateDefaultField(fieldInfo);
+				// update display name
+				if (ctrl[PpsDataFieldPanel.LabelProperty] == null
+					&& properties.TryGetProperty<string>("displayName", out var displayName)
+					&& !String.IsNullOrEmpty(displayName))
+					ctrl[PpsDataFieldPanel.LabelProperty] = displayName;
 
-				UpdateDefaultProperties(fieldInfo, ctrl, localProperties);
+				controls = new LuaWpfCreator[] { ctrl };
 			}
 
-			return ctrl.CreateReader(context);
+			// update local properties
+			if (controls != null && controls.Length > 0)
+			{
+				foreach (var p in properties.LocalProperties())
+				{
+					foreach (var c in controls)
+						c[p.Property] = p.Value;
+				}
+			}
+
+			// emit code
+			if (controls == null || controls.Length == 0)
+				return null;
+			else if (controls.Length == 0)
+				return controls[0].CreateReader(properties.Context);
+			else
+				return LuaWpfCreator.CreateCollectionReader(from c in controls select c.CreateReader(properties.Context));
 		} // func CreateField
 
-		private bool TryResolveFieldCreator(IServiceProvider context, string fieldName, IPropertyReadOnlyDictionary properties, out LuaWpfCreator creator)
+		private bool TryResolveFieldCreator(IPpsDataFieldReadOnlyProperties properties, out LuaWpfCreator[] creator)
 		{
-			// resolve complex fieldinformation within the Environment
-			// the member must be registered within the table.
-			var result = CallMemberDirect(fieldName, new object[] { context, new LuaPropertiesTable(properties), properties as PpsDataFieldInfo }, rawGet: true, throwExceptions: true, ignoreNilFunction: true)[0];
-			if (result == null)
+			if (String.IsNullOrEmpty(properties.UseFieldFactory))
 			{
 				creator = null;
 				return false;
 			}
-			else if (result is LuaWpfCreator r)
+
+			// resolve complex fieldinformation within the Environment
+			// the member must be registered within the table.
+			var result = new LuaResult(CallMemberDirect(properties.UseFieldFactory, new object[] { properties }, rawGet: true, throwExceptions: true, ignoreNilFunction: true));
+			if (result.Count == 0)
 			{
-				creator = r;
+				creator = null;
+				return false;
+			}
+			else if (result.Count == 1 && result[0] is LuaWpfCreator r)
+			{
+				creator = new LuaWpfCreator[] { r };
+				return true;
+			}
+			else if (result.Count == 1 && result[0] is LuaWpfCreator[] ra)
+			{
+				creator = ra;
+				return true;
+			}
+			else if (result.Count > 1)
+			{
+				var wpfControls = new LuaWpfCreator[result.Count];
+				for (var i = 0; i < wpfControls.Length; i++)
+				{
+					if (result[i] is LuaWpfCreator t)
+						wpfControls[i] = t;
+					else
+						throw new ArgumentNullException(properties.UseFieldFactory, "Return type must be a control creator.");
+				}
+				creator = wpfControls;
 				return true;
 			}
 			else
-				throw new ArgumentNullException(fieldName, "Return type must be a control creator.");
+				throw new ArgumentNullException(properties.UseFieldFactory, "Return type must be a control creator.");
 		} // func TryResolveFieldCreator
 
 		[LuaMember]
@@ -565,47 +885,57 @@ namespace TecWare.PPSn.Controls
 			=> h * 23;
 
 		[LuaMember]
+		private DependencyProperty GridLabel => PpsDataFieldPanel.LabelProperty;
+
+		[LuaMember]
+		private DependencyProperty GridLines => PpsDataFieldPanel.GridLinesProperty;
+
+		[LuaMember]
 		private object GetCode(IServiceProvider context)
 			=> context?.GetService<IPpsXamlCode>(false);
 
 		[LuaMember]
-		private PpsDataFieldInfo GetFieldInfo(IServiceProvider context, string fieldName, object properties)
-			=> PpsDataFieldInfo.GetDataFieldInfo(context, fieldName, Procs.ToProperties(properties));
+		private PpsDataFieldInfo GetFieldInfo(IServiceProvider context, string fieldName, bool throwException = true)
+			=> PpsDataFieldInfo.GetDataFieldInfo(context, fieldName, throwException);
 
 		[LuaMember]
-		private PpsDataFieldInfo CreateFieldInfo(IServiceProvider context, string fieldName, Type dataType, string bindingPath, object properties)
-			=> new PpsDataFieldInfo(context, fieldName, dataType, bindingPath, Procs.ToProperties(properties));
+		private PpsDataFieldInfo CreateFieldInfo(string fieldName, Type dataType, string bindingPath, object properties)
+			=> new PpsDataFieldInfo(fieldName, dataType, bindingPath, Procs.ToProperties(properties));
 
 		[LuaMember]
 		private LuaWpfCreator CreateFieldBinding(PpsDataFieldInfo fieldInfo, bool? isReadOnly = null, string append = null)
 			=> PpsDataFieldBinding.CreateWpfBinding(fieldInfo, isReadOnly, append);
 
 		[LuaMember]
-		private LuaWpfCreator CreateDefaultField(PpsDataFieldInfo fieldInfo)
+		private LuaWpfCreator CreateDefaultField(IPpsDataFieldReadOnlyProperties properties)
 		{
 			// test for creator
-			if (fieldInfo.DataType == typeof(string)
-				|| fieldInfo.DataType == typeof(int)
-				|| fieldInfo.DataType == typeof(float)
-				|| fieldInfo.DataType == typeof(double)
-				|| fieldInfo.DataType == typeof(decimal))
-				return CreateTextField(fieldInfo);
-			else if (fieldInfo.DataType == typeof(DateTime))
-				return CreateDateTimeField(fieldInfo);
-			else if (fieldInfo.DataType == typeof(PpsMasterDataExtendedValue))
+			if (properties.DataType == typeof(string)
+				|| properties.DataType == typeof(int)
+				|| properties.DataType == typeof(float)
+				|| properties.DataType == typeof(double)
+				|| properties.DataType == typeof(decimal))
+				return CreateTextField(properties);
+			else if (properties.DataType == typeof(DateTime))
+				return CreateDateTimeField(properties);
+			else if (properties.DataType == typeof(PpsMasterDataExtendedValue))
 			{
 				// test for master table
-				if (fieldInfo.TryGetProperty<string>("refTable", out var refTable))
-					return CreateMasterDataField(fieldInfo, refTable);
+				if (properties.TryGetProperty<string>("refTable", out var refTable))
+					return CreateMasterDataField(properties, refTable);
 				else
 					throw new ArgumentNullException("refTable", "refTable is null.");
 			}
-			else if (fieldInfo.DataType == typeof(PpsFormattedStringValue))
-				return CreateTextField(fieldInfo, true);
-			else if (fieldInfo.ColumnDefinition?.IsRelationColumn ?? false)
-				return CreateRelationField(fieldInfo, fieldInfo.ColumnDefinition);
-			else 
-				throw new NotImplementedException();
+			else if (properties.DataType == typeof(PpsFormattedStringValue))
+				return CreateTextField(properties, true);
+			else
+			{
+				var columnDefinition = properties.GetService<PpsDataColumnDefinition>(false);
+				if (columnDefinition?.IsRelationColumn ?? false)
+					return CreateRelationField(properties, columnDefinition);
+				else
+					throw new NotImplementedException();
+			}
 		} // func CreateDefaultField
 
 		private static void SetNumericBinding(dynamic ui, dynamic textBox, dynamic textBinding, bool allowNeg, int floatDigits)
@@ -615,17 +945,17 @@ namespace TecWare.PPSn.Controls
 		} // proc SetNumericBinding
 		
 		[LuaMember]
-		private LuaWpfCreator CreateTextField(PpsDataFieldInfo fieldInfo, bool formattedText = false)
+		private LuaWpfCreator CreateTextField(IPpsDataFieldReadOnlyProperties properties, bool formattedText = false)
 		{
 			var ui = new LuaUI();
 			dynamic txt = LuaWpfCreator.CreateFactory(ui, typeof(PpsTextBox));
 
-			var isReadOnly = fieldInfo.TryGetProperty<bool>("IsReadOnly", out var tmpReadOnly) ? (bool?)tmpReadOnly : null;
+			var isReadOnly = properties.TryGetProperty<bool>("IsReadOnly", out var tmpReadOnly) ? (bool?)tmpReadOnly : null;
 
-			var textBinding = PpsDataFieldBinding.CreateWpfBinding(fieldInfo, append: formattedText ? "Value" : null, isReadOnly: isReadOnly);
+			var textBinding = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true), append: formattedText ? "Value" : null, isReadOnly: isReadOnly);
 
 			var inputType = formattedText ? PpsTextBoxInputType.MultiLine : PpsTextBoxInputType.None;
-			switch (Type.GetTypeCode(fieldInfo.DataType))
+			switch (Type.GetTypeCode(properties.DataType))
 			{
 				case TypeCode.Decimal:
 					PpsDataFieldFactory.SetNumericBinding(ui, txt, textBinding, true, 2);
@@ -675,13 +1005,13 @@ namespace TecWare.PPSn.Controls
 					break;
 			}
 
-			if (fieldInfo.TryGetProperty<PpsTextBoxInputType>("InputType", out var tmpInputType))
+			if (properties.TryGetProperty<PpsTextBoxInputType>("InputType", out var tmpInputType))
 				inputType = tmpInputType;
 
 			txt.InputType = inputType;
 			txt.Text = textBinding;
 
-			if (fieldInfo.TryGetProperty<double>("Height", out var height))
+			if (properties.TryGetProperty<double>("TextHeight", out var height))
 			{
 				txt.Height = GetHeight(height);
 				txt.VerticalAlignment = VerticalAlignment.Top;
@@ -689,7 +1019,7 @@ namespace TecWare.PPSn.Controls
 			else
 				txt.VerticalAlignment = VerticalAlignment.Top;
 
-			if (fieldInfo.TryGetProperty<double>("Width", out var width))
+			if (properties.TryGetProperty<double>("TextWidth", out var width))
 			{
 				txt.Width = GetWidth(width);
 				txt.HorizontalAlignment = HorizontalAlignment.Left;
@@ -697,52 +1027,50 @@ namespace TecWare.PPSn.Controls
 			else
 				txt.HorizontalAlignment = HorizontalAlignment.Stretch;
 
-			if (fieldInfo.TryGetProperty<int>("MaxLength", out var maxInputLength))
+			if (properties.TryGetProperty<int>("MaxLength", out var maxInputLength))
 				txt.MaxLength = maxInputLength;
 
-			if (fieldInfo.TryGetProperty<bool>("IsNullable", out var tmpNullable))
+			if (properties.TryGetProperty<bool>("IsNullable", out var tmpNullable))
 				txt.IsNullable = tmpNullable;
 
 			if (isReadOnly.HasValue)
 				txt.IsReadOnly = isReadOnly;
 
 			if (formattedText)
-			{
-				txt.FormattedValue = PpsDataFieldBinding.CreateWpfBinding(fieldInfo, append: "FormattedValue", isReadOnly: true);
-			}
-
+				txt.FormattedValue = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true), append: "FormattedValue", isReadOnly: true);
+	
 			return txt;
 		} // func CreateTextField
 
-		private LuaWpfCreator CreateSelector(PpsDataFieldInfo fieldInfo)
+		private LuaWpfCreator CreateSelector(IPpsDataFieldReadOnlyProperties properties)
 		{
 			dynamic combobox = LuaWpfCreator.CreateFactory(new LuaUI(), typeof(PpsDataFilterCombo));
 
-			if (fieldInfo.TryGetProperty<bool>("IsNullable", out var tmpNullable))
+			if (properties.TryGetProperty<bool>("IsNullable", out var tmpNullable))
 				combobox.IsNullable = tmpNullable;
 
 			return combobox;
 		} // func CreateSelector
 
 		[LuaMember]
-		private LuaWpfCreator CreateMasterDataField(PpsDataFieldInfo fieldInfo, string refTableName)
+		private LuaWpfCreator CreateMasterDataField(IPpsDataFieldReadOnlyProperties properties, string refTableName)
 		{
-			dynamic combobox = CreateSelector(fieldInfo);
+			dynamic combobox = CreateSelector(properties);
 
 			combobox.ItemsSource = environment.MasterData.GetTable(refTableName, true);
-			combobox.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(fieldInfo);
+			combobox.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>());
 
 			return combobox;
 		} // func CreateMasterDataField
 
 		[LuaMember]
-		private LuaWpfCreator CreateRelationField(PpsDataFieldInfo fieldInfo, PpsDataColumnDefinition columnDefinition)
+		private LuaWpfCreator CreateRelationField(IPpsDataFieldReadOnlyProperties properties, PpsDataColumnDefinition columnDefinition)
 		{
-			dynamic combobox = CreateSelector(fieldInfo);
+			dynamic combobox = CreateSelector(properties);
 
 			// bind items source
-			var baseBindingPath = fieldInfo.Context.GetService<PpsDataSetResolver>(true).BindingPath;
-			var codeBase = fieldInfo.Context.GetService<IPpsXamlCode>(true);
+			var baseBindingPath = properties.GetService<PpsDataSetResolver>(true).BindingPath;
+			var codeBase = properties.GetService<IPpsXamlCode>(true);
 
 			dynamic itemsSourceBinding = LuaWpfCreator.CreateFactory(new LuaUI(), typeof(Binding));
 			itemsSourceBinding.Path = PpsDataFieldBinding.CombinePath(baseBindingPath, columnDefinition.ParentColumn.Table.Name);
@@ -750,30 +1078,30 @@ namespace TecWare.PPSn.Controls
 			combobox.ItemsSource = itemsSourceBinding;
 
 			// bind value
-			combobox.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(fieldInfo);
+			combobox.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true));
 
 			return combobox;
 		} // func CreateRelationField
 
 		[LuaMember]
-		private static LuaWpfCreator CreateDateTimeField(PpsDataFieldInfo fieldInfo)
+		private static LuaWpfCreator CreateDateTimeField(IPpsDataFieldReadOnlyProperties properties)
 		{
 			dynamic ui = new LuaUI();
 			dynamic date = LuaWpfCreator.CreateFactory(ui, typeof(System.Windows.Controls.DatePicker));
 
-			date.SelectedDate = PpsDataFieldBinding.CreateWpfBinding(fieldInfo);
+			date.SelectedDate = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true));
 			date.Style = Application.Current.TryFindResource("PpsDatePickerStyle");
 
 			return date;
 		} // func CreateDateTimeField
 
 		[LuaMember]
-		private static LuaWpfCreator CreateComboField(PpsDataFieldInfo fieldInfo)
+		private static LuaWpfCreator CreateComboField(IPpsDataFieldReadOnlyProperties properties)
 		{
 			dynamic ui = new LuaUI();
 			dynamic combo = LuaWpfCreator.CreateFactory(ui, typeof(System.Windows.Controls.ComboBox));
 
-			combo.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(fieldInfo);
+			combo.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true));
 
 			return combo;
 		} // func CreateComboField

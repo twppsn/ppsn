@@ -124,7 +124,6 @@ namespace TecWare.PPSn.UI
 		public bool IsInitialized => serviceSite != null;
 	} // class PpsParserService
 
-
 	#endregion
 
 	#region -- class CodeBinding ------------------------------------------------------

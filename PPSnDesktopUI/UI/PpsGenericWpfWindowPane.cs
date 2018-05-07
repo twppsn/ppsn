@@ -548,6 +548,11 @@ namespace TecWare.PPSn.UI
 			return PpsWindowPaneCompareResult.Incompatible;
 		} // func CompareArguments
 
+		/// <summary></summary>
+		/// <returns></returns>
+		protected virtual PpsParserService[] GetRootParserServices()
+			=> Array.Empty<PpsParserService>();
+
 		/// <summary>Load the content of the panel</summary>
 		/// <param name="arguments"></param>
 		/// <returns></returns>
@@ -573,7 +578,15 @@ namespace TecWare.PPSn.UI
 			if (paneData is XDocument xamlCode)
 			{
 				//PpsXamlParser.DebugTransform = true;
-				control = await PpsXamlParser.LoadAsync<PpsGenericWpfControl>(PpsXmlPosition.CreateLinePositionReader(xamlCode.CreateReader()), new PpsXamlReaderSettings() { Code = this, BaseUri = paneUri, ServiceProvider = this });
+				control = await PpsXamlParser.LoadAsync<PpsGenericWpfControl>(PpsXmlPosition.CreateLinePositionReader(xamlCode.CreateReader()), 
+					new PpsXamlReaderSettings()
+					{
+						BaseUri = paneUri,
+						Code = this,
+						ServiceProvider = this,
+						ParserServices = GetRootParserServices()
+					}
+				);
 				//PpsXamlParser.DebugTransform = false;
 				control.Resources[PpsEnvironment.WindowPaneService] = this;
 				OnControlCreated();

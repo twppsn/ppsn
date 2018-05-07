@@ -21,6 +21,7 @@ using System.Dynamic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -685,6 +686,8 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
+		private static readonly Regex attachedPropertySyntax = new Regex(@"((?<ns>\w+)\:)?(?<type>\w+)\.(?<prop>\w+)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
+
 		private readonly LuaUI ui;
 		private readonly XamlType type;
 
@@ -740,9 +743,14 @@ namespace TecWare.PPSn.UI
 
 		#region -- Setter/Getter ------------------------------------------------------
 
-		private XamlMember GetXamlAttachedMember(string typeName, string memberName)
+		private XamlMember GetXamlAttachedMember(string namespaceName, string typeName, string memberName)
 		{
-			var attachedType = type.SchemaContext.GetXamlType(new XamlTypeName(type.PreferredXamlNamespace, typeName));
+			if (String.IsNullOrEmpty(namespaceName))
+				namespaceName = StuffUI.PresentationNamespace.NamespaceName;
+			else if (namespaceName == "ui")
+				namespaceName = "http://tecware-gmbh.de/ppsn/wpf/2015";
+			
+			var attachedType = type.SchemaContext.GetXamlType(new XamlTypeName(namespaceName, typeName));
 			if (attachedType == null)
 				throw new ArgumentNullException(nameof(typeName), $"Could not resolve '{typeName}'.");
 			return attachedType.GetAttachableMember(memberName);
@@ -754,23 +762,24 @@ namespace TecWare.PPSn.UI
 		protected XamlMember GetXamlMember(string propertyName)
 		{
 			// check for attached property
-			var attachedPos = propertyName.IndexOf('.');
+			var prop = attachedPropertySyntax.Match(propertyName);
 			return (
-				attachedPos == -1
-					? type.GetMember(propertyName)
-					: GetXamlAttachedMember(propertyName.Substring(0, attachedPos), propertyName.Substring(attachedPos + 1))
+				prop.Success
+					? GetXamlAttachedMember(prop.Groups["ns"].Value, prop.Groups["type"].Value, prop.Groups["prop"].Value)
+					: type.GetMember(propertyName)
 			) ?? throw new ArgumentException($"Could not resolve member '{propertyName}'.", nameof(propertyName));
 		} // func GetXamlMember
 
 		private XamlMember GetXamlMember(DependencyProperty property)
 		{
-			if (property.OwnerType != type.UnderlyingType) // attached property
+			if (property.OwnerType.IsAssignableFrom(type.UnderlyingType)) // attached property
+				return GetXamlMember(property.Name);
+			else
 			{
 				var attachedType = type.SchemaContext.GetXamlType(property.OwnerType);
-				return attachedType.GetAttachableMember(property.Name);
+				return attachedType.GetAttachableMember(property.Name)
+					?? throw new ArgumentException($"Could not resolve property '{property}'.", nameof(property));
 			}
-			else
-				return GetXamlMember(property.Name);
 		} // func GetXamlMember
 
 		private void SetXamlProperty(XamlMember member, object value)
