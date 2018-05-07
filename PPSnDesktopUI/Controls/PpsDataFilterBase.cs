@@ -194,6 +194,8 @@ namespace TecWare.PPSn.Controls
 
 			if (newPos != curPos)
 				filteredListBox.SelectedIndex = newPos;
+
+			filteredListBox.ScrollIntoView(filteredListBox.SelectedItem);
 		} // proc Navigate
 
 		private int CalculateNewPos(int currentPos, int items, FocusNavigationDirection direction)
