@@ -118,8 +118,8 @@ specific language governing permissions and limitations under the Licence.
 			<Setter Property="TextElement.Foreground" Value="Black"/>
 			<Setter Property="Focusable" Value="True"/>
 			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="BorderBrush" Value="{StaticResource PPSnControlNormalBorderBrush}" />
-			<Setter Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlNormalBorderBrush}" />
+			<Setter Property="Background" Value="{DynamicResource PPSnControlBackgroundBrush}"/>
 			<Setter Property="Control.Template">
 				<Setter.Value>
 					<ControlTemplate>
@@ -129,8 +129,8 @@ specific language governing permissions and limitations under the Licence.
 								x:Name="ToggleDropDownButton" 
 								Template="{StaticResource PPSnDataFilterComboBoxToggleButtonTemplate}" Focusable="False"
 								ClickMode="Press"
-								BorderBrush="{DynamicResource PPSnControlNormalBorderBrush}"
-								Background="{DynamicResource PPSnControlBackgroundBrush}"
+								BorderBrush="{Binding Path=BorderBrush, Mode=OneWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
+								Background="{Binding Path=Background, Mode=OneWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
 								IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"/>
 							<!--this button clears the value-->
 							<Button 
@@ -175,8 +175,8 @@ specific language governing permissions and limitations under the Licence.
 									MinWidth="{Binding Path=ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
 									BorderThickness="1"
 									Focusable="False"
-									BorderBrush="{DynamicResource PPSnControlNormalBorderBrush}">
-									<Grid>
+									BorderBrush="{Binding Path=BorderBrush, Mode=OneWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}">
+									<Grid Background="{Binding Path=Background, Mode=OneWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}">
 										<Grid.RowDefinitions>
 											<RowDefinition Height="33"/>
 											<RowDefinition/>
@@ -185,10 +185,15 @@ specific language governing permissions and limitations under the Licence.
 											<!--this button clears the search-->
 											<TextBox
 												BorderThickness="0"
-												VerticalAlignment="Stretch"
+												VerticalAlignment="Center"
+												HorizontalAlignment="Right"
+												Width="75"
 												Height="Auto"
+												Grid.Row="0"
+												Margin="3"
 												Text="{Binding Path=FilterText, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"/>
 											<Button 
+												Grid.Row="0"
 												Template="{StaticResource PPSnDataFilterBoxClearButtonTemplate}"
 												HorizontalAlignment="Right"
 												Width="27"
@@ -214,6 +219,8 @@ specific language governing permissions and limitations under the Licence.
 											Grid.Row="1"
 											MinHeight="50"
 											Focusable="False"
+											BorderThickness="0"
+											Style="{DynamicResource PPSnListBoxStyle}"
 											IsSynchronizedWithCurrentItem="True"
 											VirtualizingStackPanel.IsVirtualizing="True"
 											VirtualizingStackPanel.VirtualizationMode="Recycling"
