@@ -485,7 +485,7 @@ namespace TecWare.PPSn.Controls
 			if (status)
 			{
 				filteredListBox.Items.CurrentChanged += Items_CurrentChanged;
-				PreSelectedValue = SelectedValue;
+				filteredListBox.SelectedValue = SelectedValue;
 				this.SetAnchorItem();
 				if (VisualChildrenCount > 0)
 					Mouse.Capture(this, CaptureMode.SubTree);
@@ -584,13 +584,6 @@ namespace TecWare.PPSn.Controls
 						ToggleDropDownStatus(true);
 					}
 					break;
-				/*case Key.Enter:
-					if (IsDropDownOpen)
-					{
-						e.Handled = true;
-						CloseDropDown(true);
-					}
-					break;*/
 				case Key.Escape:
 					if (IsDropDownOpen)
 					{
