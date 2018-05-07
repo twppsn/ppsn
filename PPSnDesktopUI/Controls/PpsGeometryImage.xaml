@@ -28,11 +28,11 @@ specific language governing permissions and limitations under the Licence.
 								 Fill="{TemplateBinding Fill}"
 								 SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
 						<Viewbox x:Name="ImageBox"
-								 Margin="{TemplateBinding GeometrySpacing}"
-								 SnapsToDevicePixels="False" >
+								 Margin="{TemplateBinding GeometrySpacing}">
 							<Canvas Width="24" Height="24">
 								<Path Data="{TemplateBinding Geometry}"
-									  Fill="{TemplateBinding Foreground}" />
+									  Fill="{TemplateBinding Foreground}"
+									  SnapsToDevicePixels="False" />
 							</Canvas>
 						</Viewbox>
 					</Grid>

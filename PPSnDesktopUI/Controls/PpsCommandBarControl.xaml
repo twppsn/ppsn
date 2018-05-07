@@ -28,7 +28,7 @@ specific language governing permissions and limitations under the Licence.
 								  Focusable="{TemplateBinding Focusable}">
 						<ItemsControl.ItemsPanel>
 							<ItemsPanelTemplate>
-								<StackPanel Orientation="Horizontal" />
+								<WrapPanel Orientation="Horizontal" />
 							</ItemsPanelTemplate>
 						</ItemsControl.ItemsPanel>
 					</ItemsControl>
@@ -37,7 +37,7 @@ specific language governing permissions and limitations under the Licence.
 		</Setter>
 		<Style.Resources>
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Null}}">
-				<Border Width="24"/>
+				<Border Width="20"/>
 			</DataTemplate>
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Circle,{x:Type uiO:PpsUICommandButton}}">
 				<pps:PpsButton Command="{Binding Command}"
@@ -46,7 +46,7 @@ specific language governing permissions and limitations under the Licence.
 							   Content="{Binding DisplayText}"
 							   ToolTip="{Binding Description}"
 							   GeometryName="{Binding Image}"
-							   Margin="10,0,0,0"
+							   Margin="12,0,0,0"
 							   Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsCircleButtonStyle}}"/>
 			</DataTemplate>
 
@@ -59,12 +59,12 @@ specific language governing permissions and limitations under the Licence.
 									Content="{Binding DisplayText}"
 									ToolTip="{Binding Description}"
 									GeometryName="{Binding Image}"
-									Margin="10,0,0,0"
+									Margin="12,0,0,0"
 									Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsCircleButtonStyle}}" />
 			</DataTemplate>
 
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Rectangle,{x:Null}}">
-				<Border Width="24"/>
+				<Border Width="20"/>
 			</DataTemplate>
 			<DataTemplate x:Key="{pps:PpsCommandBarTemplateKey Rectangle,{x:Type uiO:PpsUICommandButton}}">
 				<pps:PpsButton Command="{Binding Command}"
@@ -73,7 +73,7 @@ specific language governing permissions and limitations under the Licence.
 							   Content="{Binding DisplayText}"
 							   ToolTip="{Binding Description}"
 							   GeometryName="{Binding Image}"
-							   Margin="10,0,0,0" />
+							   Margin="12,0,0,0" />
 			</DataTemplate>
 		</Style.Resources>
 	</Style>
