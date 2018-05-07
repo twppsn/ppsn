@@ -28,7 +28,7 @@ specific language governing permissions and limitations under the Licence.
 								  Focusable="{TemplateBinding Focusable}">
 						<ItemsControl.ItemsPanel>
 							<ItemsPanelTemplate>
-								<StackPanel Orientation="Horizontal" />
+								<WrapPanel Orientation="Horizontal" />
 							</ItemsPanelTemplate>
 						</ItemsControl.ItemsPanel>
 					</ItemsControl>
