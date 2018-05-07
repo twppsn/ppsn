@@ -218,7 +218,7 @@ specific language governing permissions and limitations under the Licence.
 	<Style TargetType="{x:Type pps:PpsDataFilterList}">
 		<Style.Setters>
 			<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterDefaultSelectedValueTemplate}" />
-			<Setter Property="ItemContainerStyle" Value="{DynamicResource PPSnAlternatingListBoxItemStyle}" />
+			<Setter Property="ItemContainerStyle" Value="{DynamicResource PPSnNoFocusListBoxItemStyle}" />
 			<Setter Property="AlternationCount" Value="2" />
 			<Setter Property="ListBoxStyle" Value="{DynamicResource PPSnListBoxStyle}" />
 			<Setter Property="Template">
