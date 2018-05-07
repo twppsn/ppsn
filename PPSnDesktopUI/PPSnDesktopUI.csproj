@@ -102,6 +102,7 @@
   <ItemGroup>
     <Compile Include="Controls\ComboBoxBehavior.cs" />
     <Compile Include="Controls\DataListControl.cs" />
+    <Compile Include="Controls\PpsComboBox.cs" />
     <Compile Include="Controls\PpsGeometryImage.cs" />
     <Compile Include="Controls\PpsPopup.cs" />
     <Compile Include="Controls\PpsButton.cs" />
@@ -117,6 +118,7 @@
     <Compile Include="Controls\PpsGenericWpfControl.cs" />
     <Compile Include="Controls\PpsTextBox.cs" />
     <Compile Include="Controls\PpsWindowPaneHost.cs" />
+    <Compile Include="Controls\PpsControl.cs" />
     <Compile Include="UI\PpsXamlParser.cs" />
     <Compile Include="Controls\ReadOnlyPaneBehavior.cs" />
     <Compile Include="Controls\SideBarMenu.cs" />

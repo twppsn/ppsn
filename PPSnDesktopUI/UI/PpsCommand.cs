@@ -24,9 +24,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Markup;
 using TecWare.PPSn.Controls;
-using TecWare.PPSn.Data;
 
 namespace TecWare.PPSn.UI
 {

@@ -66,7 +66,7 @@ specific language governing permissions and limitations under the Licence.
 									Padding="1"
 									VerticalAlignment="Center"
 									Foreground="{TemplateBinding Foreground}"
-									Command="{x:Static pps:PpsTextBox.ClearTextCommand}"
+									Command="{x:Static pps:PpsControlCommands.ClearCommand}"
 									Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsClearContentButtonStyle}}" />
 							<ScrollViewer x:Name="PART_ContentHost"
 										  Focusable="False"

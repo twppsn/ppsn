@@ -21,6 +21,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
+using TecWare.PPSn.UI;
 
 namespace TecWare.PPSn.Controls
 {
@@ -55,7 +56,7 @@ namespace TecWare.PPSn.Controls
 	#region -- class PpsTextBox -------------------------------------------------------
 
 	/// <summary>Extends Textbox for Number input and a clear button.</summary>
-	public class PpsTextBox : TextBox
+	public class PpsTextBox : TextBox, IPpsNullableControl
 	{
 		#region ---- Globals ------------------------------------------------------------
 
@@ -110,9 +111,6 @@ namespace TecWare.PPSn.Controls
 		private static readonly DependencyPropertyKey hasFormattedValuePropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasFormattedValue), typeof(bool), typeof(PpsTextBox), new FrameworkPropertyMetadata(BooleanBox.False));
 		/// <summary>True if FormattedValue is not null</summary>
 		public static readonly DependencyProperty HasFormattedValueProperty = hasFormattedValuePropertyKey.DependencyProperty;
-
-		/// <summary>The Command empties the TextBox</summary>
-		public static readonly RoutedCommand ClearTextCommand = new RoutedUICommand("ClearText", "ClearText", typeof(PpsTextBox));
 
 		/// <summary>Defines the input mask for the textbox.</summary>
 		public PpsTextBoxInputType InputType { get => (PpsTextBoxInputType)GetValue(InputTypeProperty); set => SetValue(InputTypeProperty, value); }
@@ -183,7 +181,7 @@ namespace TecWare.PPSn.Controls
 			this.CaretIndex = Math.Max(0, curPos);
 		} // proc NeatlyReplaceText
 
-		public static string NeatlyCleanText(PpsTextBoxInputType inputType, string text, int allowedLineCount, out string error)
+		internal static string NeatlyCleanText(PpsTextBoxInputType inputType, string text, int allowedLineCount, out string error)
 		{
 			error = String.Empty;
 
@@ -342,7 +340,7 @@ namespace TecWare.PPSn.Controls
 		#region ---- Helper Functions ---------------------------------------------------
 
 		private static bool IsMultiLineInput(PpsTextBoxInputType inputType)
-			=> inputType == PpsTextBoxInputType.None || inputType == PpsTextBoxInputType.MultiLine;
+			=> inputType == PpsTextBoxInputType.MultiLine;
 
 		private static bool IsTextualInput(PpsTextBoxInputType inputType)
 			=> inputType == PpsTextBoxInputType.None
@@ -446,21 +444,15 @@ namespace TecWare.PPSn.Controls
 
 		#endregion Event Handlers
 
-		/// <summary>public Constructor - initializes the Commands</summary>
-		public PpsTextBox()
-		{
-			CommandBindings.Add(new CommandBinding(ClearTextCommand,
-				(sender, e) =>
-				{
-					Text = String.Empty;
-				}, (sender, e) => e.CanExecute = AllowClearText));
-		}
+		bool IPpsNullableControl.CanClear => IsEnabled && !IsReadOnly;
 
 		private bool AllowClearText => IsEnabled && !IsReadOnly && IsKeyboardFocusWithin && !String.IsNullOrEmpty(Text);
 
 		static PpsTextBox()
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsTextBox), new FrameworkPropertyMetadata(typeof(PpsTextBox)));
+
+			PpsControlCommands.RegisterClearCommand(typeof(PpsTextBox));
 		}
 	} // class PpsTextBox
 
