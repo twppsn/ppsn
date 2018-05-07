@@ -40,146 +40,6 @@ specific language governing permissions and limitations under the Licence.
 								Margin="0,0,0,0"
 								Padding="2,0,2,0"
 								SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-							<Grid HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}">
-								<Grid.ColumnDefinitions>
-									<ColumnDefinition Width="Auto" />
-									<ColumnDefinition />
-								</Grid.ColumnDefinitions>
-								<pps:PpsGeometryImage x:Name="ImageBox"
-													  GeometryName="{TemplateBinding GeometryName}"
-													  GeometryCircled="false"
-													  Width="{TemplateBinding GeometrySize}"
-													  Height="{TemplateBinding GeometrySize}"
-													  Foreground="{DynamicResource PPSnActionButtonBrush}"
-													  Opacity=".65" />
-								<ContentPresenter Grid.Column="1"
-												  Focusable="False"
-												  RecognizesAccessKey="True"
-												  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-												  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-												  Margin="{TemplateBinding Padding}"
-												  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-									<ContentPresenter.Resources>
-										<Style TargetType="{x:Type TextBlock}">
-											<Setter Property="TextWrapping" Value="NoWrap"/>
-											<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-										</Style>
-									</ContentPresenter.Resources>
-								</ContentPresenter>
-								<Grid.RenderTransformOrigin>
-									<Point X="0.5" Y="0.5"/>
-								</Grid.RenderTransformOrigin>
-								<Grid.RenderTransform>
-									<ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
-								</Grid.RenderTransform>
-							</Grid>
-						</Border>
-					</Border>
-					<ControlTemplate.Triggers>
-						<MultiTrigger>
-							<MultiTrigger.Conditions>
-								<Condition Property="IsMouseOver" Value="True"/>
-								<Condition Property="IsMouseCaptured" Value="False"/>
-							</MultiTrigger.Conditions>
-							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}"/>
-							<Setter TargetName="ImageBox" Property="Opacity" Value="1"/>
-						</MultiTrigger>
-						<MultiTrigger>
-							<MultiTrigger.Conditions>
-								<Condition Property="IsKeyboardFocused" Value="True"/>
-								<Condition Property="IsMouseCaptured" Value="False"/>
-							</MultiTrigger.Conditions>
-							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}"/>
-						</MultiTrigger>
-						<Trigger Property="IsMouseCaptured" Value="True">
-							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnButtonPressedBrush}"/>
-							<Setter TargetName="InnerBorder" Property="Background" Value="{DynamicResource PPSnButtonPressedBrush}"/>
-							<Setter TargetName="ImageBox" Property="Opacity" Value="1"/>
-						</Trigger>
-						<Trigger Property="IsEnabled" Value="False">
-							<Setter Property="Background" Value="Transparent"/>
-							<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}"/>
-						</Trigger>
-						<Trigger Property="IsPressed" Value="true">
-							<Trigger.EnterActions>
-								<BeginStoryboard>
-									<Storyboard>
-										<ThicknessAnimationUsingKeyFrames Storyboard.TargetName="InnerBorder"
-																		  Storyboard.TargetProperty="Margin"
-																		  AccelerationRatio=".4"
-																		  Duration="0:0:0.15">
-											<SplineThicknessKeyFrame Value="2,1,2,1" />
-										</ThicknessAnimationUsingKeyFrames>
-										<ThicknessAnimationUsingKeyFrames Storyboard.TargetName="InnerBorder"
-																		  Storyboard.TargetProperty="Padding"
-																		  AccelerationRatio=".4"
-																		  Duration="0:0:0.15">
-											<SplineThicknessKeyFrame Value="0,0,0,0" />
-										</ThicknessAnimationUsingKeyFrames>
-										<DoubleAnimation Storyboard.TargetName="scaleTransform"
-														 Storyboard.TargetProperty="ScaleX"
-														 To="0.98"
-														 AccelerationRatio=".4"
-														 Duration="0:0:0.15"/>
-									</Storyboard>
-								</BeginStoryboard>
-							</Trigger.EnterActions>
-							<Trigger.ExitActions>
-								<BeginStoryboard>
-									<Storyboard>
-										<ThicknessAnimationUsingKeyFrames Storyboard.TargetName="InnerBorder"
-																		  Storyboard.TargetProperty="Margin"
-																		  Duration="0:0:0.2"
-																		  AccelerationRatio=".4">
-											<SplineThicknessKeyFrame Value="0,0,0,0" />
-										</ThicknessAnimationUsingKeyFrames>
-										<ThicknessAnimationUsingKeyFrames Storyboard.TargetName="InnerBorder"
-																		  Storyboard.TargetProperty="Padding"
-																		  Duration="0:0:0.2"
-																		  AccelerationRatio=".4">
-											<SplineThicknessKeyFrame Value="2,0,2,0" />
-										</ThicknessAnimationUsingKeyFrames>
-										<DoubleAnimation Storyboard.TargetName="scaleTransform"
-														 Storyboard.TargetProperty="ScaleX"
-														 To="1.0"
-														 AccelerationRatio=".4"
-														 Duration="0:0:0.2"/>
-									</Storyboard>
-								</BeginStoryboard>
-							</Trigger.ExitActions>
-						</Trigger>
-						<Trigger SourceName="ImageBox" Property="HasGeometry" Value="false">
-							<Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
-							<!--<Setter Property="HorizontalContentAlignment" Value="Center" />-->
-						</Trigger>
-					</ControlTemplate.Triggers>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
-	</Style>
-
-	<!--<Style TargetType="{x:Type pps:PpsButton}">
-		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}"/>
-		<Setter Property="Background" Value="{StaticResource PpsButtonBackgroundBrush}"/>
-		<Setter Property="BorderThickness" Value="1"/>
-		<Setter Property="BorderBrush" Value="{StaticResource PpsButtonBackgroundBrush}"/>
-		<Setter Property="HorizontalContentAlignment" Value="Left"/>
-		<Setter Property="VerticalContentAlignment" Value="Center"/>
-		<Setter Property="Padding" Value="6,0"/>
-		<Setter Property="SnapsToDevicePixels" Value="True"/>
-		<Setter Property="GeometrySize" Value="18" />
-		<Setter Property="Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type pps:PpsButton}">
-					<Border>
-						<Border x:Name="InnerBorder"
-								BorderThickness="{TemplateBinding BorderThickness}"
-								BorderBrush="{TemplateBinding BorderBrush}"
-								Background="{TemplateBinding Background}"
-								Margin="0,0,0,0"
-								Padding="2,0,2,0"
-								SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
 							<Grid>
 								<Grid.ColumnDefinitions>
 									<ColumnDefinition Width="Auto" />
@@ -290,13 +150,12 @@ specific language governing permissions and limitations under the Licence.
 						</Trigger>
 						<Trigger SourceName="ImageBox" Property="HasGeometry" Value="false">
 							<Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
-							<Setter Property="HorizontalContentAlignment" Value="Center" />
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
-	</Style>-->
+	</Style>
 
 
 </ResourceDictionary>
