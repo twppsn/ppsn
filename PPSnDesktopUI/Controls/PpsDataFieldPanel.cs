@@ -90,11 +90,11 @@ namespace TecWare.PPSn.Controls
 
 		private void EvaluateContent()
 		{
-			var isempty = !labels.Any(kvp => kvp.Key.Visibility == Visibility.Visible);
-			if (isempty != IsEmpty)
+			var isEmpty = !labels.Any(kvp => kvp.Key.Visibility == Visibility.Visible);
+			if (isEmpty != IsEmpty)
 				InvalidateColumnDefinitions();
 
-			IsEmpty = isempty;
+			IsEmpty = isEmpty;
 		}
 
 		#endregion
@@ -181,7 +181,7 @@ namespace TecWare.PPSn.Controls
 
 		#region GroupName
 		/// <summary>DependencyProperty</summary>
-		public static readonly DependencyProperty GroupNameProperty = DependencyProperty.RegisterAttached("GroupName", typeof(object), typeof(PpsDataFieldPanel), new PropertyMetadata(String.Empty));
+		public static readonly DependencyProperty GroupNameProperty = DependencyProperty.RegisterAttached("GroupName", typeof(object), typeof(PpsDataFieldPanel), new PropertyMetadata(null));
 
 		/// <summary>Returns the GroupID of the Control (-1 means ungrouped)</summary>
 		/// <param name="d">Control</param>
@@ -203,7 +203,7 @@ namespace TecWare.PPSn.Controls
 
 		private sealed class PpsDataFieldPanelCollection : UIElementCollection
 		{
-			private PpsDataFieldPanel panel;
+			private readonly PpsDataFieldPanel panel;
 
 			public PpsDataFieldPanelCollection(UIElement visualParent, FrameworkElement logicalParent)
 				: base(visualParent, logicalParent)
@@ -304,7 +304,7 @@ namespace TecWare.PPSn.Controls
 			if (columnDefinitions == null)
 			{
 				var childrenToArrange = PlaceableChildren;
-
+				// todo: UIElement.Measure() wird nicht aufgerufen
 				columnDefinitions = PartitionDataFields(childrenToArrange, ColumnCount, ArrangeOptimization);
 			}
 
@@ -622,7 +622,7 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
-		#region ---- Helper Functions ---------------------------------------------------
+		#region ---- Helper Functions -------------------------------------------------
 
 		private UIElement[] PlaceableChildren
 			=> (from UIElement child in InternalChildren where ((child.Visibility == Visibility.Visible) && (labels.ContainsKey(child) || (child is Label && !labels.ContainsValue((Label)child)))) select child).ToArray();
