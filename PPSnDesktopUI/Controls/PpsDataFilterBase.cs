@@ -425,15 +425,20 @@ namespace TecWare.PPSn.Controls
 			switch (key)
 			{
 				case Key.Up:
-					e.Handled = true;
-					if (IsFilteredListVisible())
-						Navigate(FocusNavigationDirection.Previous);
+					if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
+					{
+						e.Handled = true;
+						if (IsFilteredListVisible())
+							Navigate(FocusNavigationDirection.Previous);
+					}
 					break;
 				case Key.Down:
-					e.Handled = true;
-					if (IsFilteredListVisible())
-						Navigate(FocusNavigationDirection.Next);
-
+					if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
+					{
+						e.Handled = true;
+						if (IsFilteredListVisible())
+							Navigate(FocusNavigationDirection.Next);
+					}
 					break;
 				case Key.Home:
 					if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
@@ -454,7 +459,8 @@ namespace TecWare.PPSn.Controls
 				case Key.Enter:
 					if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
 					{
-						ApplySelectedItem();
+						e.Handled = true;
+						HideFilteredList(true);
 					}
 					break;
 			}
@@ -557,43 +563,18 @@ namespace TecWare.PPSn.Controls
 			switch (key)
 			{
 				case Key.Up:
-					e.Handled = true;
+					
 					if ((e.KeyboardDevice.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt)
 					{
+						e.Handled = true;
 						ToggleDropDownStatus(true);
-					}
-					else
-					{
-						if (IsDropDownOpen)
-							Navigate(FocusNavigationDirection.Previous);
 					}
 					break;
 				case Key.Down:
-					e.Handled = true;
 					if ((e.KeyboardDevice.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt)
 					{
+						e.Handled = true;
 						ToggleDropDownStatus(true);
-					}
-					else
-					{
-						if (IsDropDownOpen)
-							Navigate(FocusNavigationDirection.Next);
-					}
-					break;
-				case Key.Home:
-					if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
-					{
-						e.Handled = true;
-						if (IsDropDownOpen)
-							Navigate(FocusNavigationDirection.First);
-					}
-					break;
-				case Key.End:
-					if (e.KeyboardDevice.Modifiers == ModifierKeys.None)
-					{
-						e.Handled = true;
-						if (IsDropDownOpen)
-							Navigate(FocusNavigationDirection.Last);
 					}
 					break;
 				case Key.F4:
@@ -603,13 +584,13 @@ namespace TecWare.PPSn.Controls
 						ToggleDropDownStatus(true);
 					}
 					break;
-				case Key.Enter:
+				/*case Key.Enter:
 					if (IsDropDownOpen)
 					{
 						e.Handled = true;
 						CloseDropDown(true);
 					}
-					break;
+					break;*/
 				case Key.Escape:
 					if (IsDropDownOpen)
 					{
@@ -650,6 +631,7 @@ namespace TecWare.PPSn.Controls
 					e.Handled = true;
 					break;
 			}
+			base.OnPreviewKeyDown(e);
 		} // proc KeyDownHandler
 
 		/// <summary>Returns te state of IsDropDownOpen</summary>
