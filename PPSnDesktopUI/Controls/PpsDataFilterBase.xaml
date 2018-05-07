@@ -26,24 +26,23 @@ specific language governing permissions and limitations under the Licence.
 		</pps:PpsDataFilterItemTextBlock>
 	</DataTemplate>
 	<Style TargetType="ListBoxItem" x:Key="PpsDefaultTouchableItemContainerStyle">
-		<Setter Property="Focusable" Value="False" />
+		<Setter Property="Focusable" Value="True" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ListBoxItem}">
 					<Grid Margin="0,0,20,0">
-						<Border x:Name="panelBorder" Padding="6,1" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" MinHeight="29">
+						<Border x:Name="panelBorder" Padding="6,1" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" MinHeight="29" BorderThickness="1">
 							<ContentPresenter />
 						</Border>
-						<Rectangle
-							x:Name="selectionRect"
-							StrokeThickness="1"
-							Opacity="0"
-							IsHitTestVisible="False"
-							SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
 					</Grid>
 					<ControlTemplate.Triggers>
+						<Trigger Property="IsMouseOver" Value="True">
+							<Setter Property="BorderBrush" TargetName="panelBorder" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+							
+						</Trigger>
 						<Trigger Property="IsSelected" Value="True">
-							<Setter Property="Opacity" TargetName="selectionRect" Value="1" />
+							<Setter Property="BorderBrush" TargetName="panelBorder" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
+
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
@@ -106,6 +105,16 @@ specific language governing permissions and limitations under the Licence.
 			</Trigger>
 		</ControlTemplate.Triggers>
 	</ControlTemplate>
+
+	<Style x:Key="PPSnDataFilterBaseSearchBoxStyle" TargetType="{x:Type TextBox}">
+		<Style.Setters>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="HorizontalAlignment" Value="Right"/>
+			<Setter Property="Margin" Value="5"/>
+			<Setter Property="Width" Value="150"/>
+			<Setter Property="Height" Value="23"/>
+		</Style.Setters>
+	</Style>
 
 	<Style TargetType="{x:Type pps:PpsDataFilterCombo}">
 		<Style.Setters>
@@ -184,13 +193,8 @@ specific language governing permissions and limitations under the Licence.
 										<Grid Grid.Row="0">
 											<!--this button clears the search-->
 											<TextBox
-												BorderThickness="0"
-												VerticalAlignment="Center"
-												HorizontalAlignment="Right"
-												Width="75"
-												Height="Auto"
+												Style="{StaticResource PPSnDataFilterBaseSearchBoxStyle}"
 												Grid.Row="0"
-												Margin="3"
 												Text="{Binding Path=FilterText, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"/>
 											<Button 
 												Grid.Row="0"
@@ -238,6 +242,11 @@ specific language governing permissions and limitations under the Licence.
 				</Setter.Value>
 			</Setter>
 		</Style.Setters>
+		<Style.Triggers>
+			<DataTrigger Binding="{Binding IsKeyboardFocused}" Value="True">
+				<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}"/>
+			</DataTrigger>
+		</Style.Triggers>
 	</Style>
 
 	<!-- ListBox which applies Filters -->
@@ -245,6 +254,7 @@ specific language governing permissions and limitations under the Licence.
 		<Style.Setters>
 			<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterDefaultSelectedValueTemplate}"/>
 			<Setter Property="Background" Value="{StaticResource PPSnControlBackgroundBrush}"/>
+			<Setter Property="ItemContainerStyle" Value="{StaticResource PpsDefaultTouchableItemContainerStyle}"/>
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate>
@@ -256,9 +266,7 @@ specific language governing permissions and limitations under the Licence.
 							<Grid Grid.Row="0">
 								<!--this button clears the search-->
 								<TextBox
-									BorderThickness="0"
-									VerticalAlignment="Stretch"
-									Height="Auto"
+									Style="{StaticResource PPSnDataFilterBaseSearchBoxStyle}"
 									Text="{Binding Path=FilterText, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"/>
 								<Button 
 									Template="{StaticResource PPSnDataFilterBoxClearButtonTemplate}"
@@ -286,7 +294,7 @@ specific language governing permissions and limitations under the Licence.
 								Grid.Row="1"
 								MinHeight="50"
 								Focusable="False"
-								IsSynchronizedWithCurrentItem="True"
+								Style="{DynamicResource PPSnListBoxStyle}"
 								VirtualizingStackPanel.IsVirtualizing="True"
 								VirtualizingStackPanel.VirtualizationMode="Recycling"
 								ScrollViewer.HorizontalScrollBarVisibility="Disabled"
