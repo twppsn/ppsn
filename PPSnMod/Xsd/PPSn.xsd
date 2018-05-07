@@ -740,7 +740,7 @@
 		<xs:annotation>
 			<xs:documentation></xs:documentation>
 			<xs:appinfo>
-				<class>TecWare.PPSn.Server.Wpf.DatawareHouseCientItem</class>
+				<class>TecWare.PPSn.Server.Wpf.DatawareHouseClientItem</class>
 			</xs:appinfo>
 		</xs:annotation>
 		<xs:complexType>
