@@ -276,13 +276,13 @@ namespace TecWare.PPSn.Controls
 
 		internal void Items_CurrentChanged(object sender, EventArgs e)
 		{
-			//if (filteredListBox.Items.CurrentItem is IDataRow item)
-				//filteredListBox.ScrollIntoView(item);
+			if (filteredListBox.Items.CurrentItem is IDataRow item)
+			filteredListBox.ScrollIntoView(item);
 		} // event Items_CurrentChanged
 
 		internal void SetAnchorItem()
 		{
-			if (!IsFilteredListVisible() || filteredListBox.Items == null || filteredListBox.Items.Count <= 0)
+			if (filteredListBox==null || !IsFilteredListVisible() || filteredListBox.Items == null || filteredListBox.Items.Count <= 0)
 				return;
 
 			var item = SelectedValue ?? filteredListBox.Items.GetItemAt(0);
@@ -479,6 +479,7 @@ namespace TecWare.PPSn.Controls
 			if (status)
 			{
 				filteredListBox.Items.CurrentChanged += Items_CurrentChanged;
+				PreSelectedValue = SelectedValue;
 				this.SetAnchorItem();
 				if (VisualChildrenCount > 0)
 					Mouse.Capture(this, CaptureMode.SubTree);
