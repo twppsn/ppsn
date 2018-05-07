@@ -136,6 +136,7 @@ specific language governing permissions and limitations under the Licence.
 			<Setter Property="BorderThickness" Value="1"/>
 			<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlNormalBorderBrush}" />
 			<Setter Property="Background" Value="{DynamicResource PPSnControlBackgroundBrush}"/>
+			<Setter Property="ItemContainerStyle" Value="{StaticResource PpsDefaultTouchableItemContainerStyle}"/>
 			<Setter Property="Control.Template">
 				<Setter.Value>
 					<ControlTemplate>
@@ -232,7 +233,7 @@ specific language governing permissions and limitations under the Licence.
 											Focusable="False"
 											BorderThickness="0"
 											Style="{DynamicResource PPSnListBoxStyle}"
-											IsSynchronizedWithCurrentItem="True"
+											IsSynchronizedWithCurrentItem="False"
 											VirtualizingStackPanel.IsVirtualizing="True"
 											VirtualizingStackPanel.VirtualizationMode="Recycling"
 											ScrollViewer.HorizontalScrollBarVisibility="Disabled"

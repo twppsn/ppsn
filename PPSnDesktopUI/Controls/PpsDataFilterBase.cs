@@ -189,11 +189,13 @@ namespace TecWare.PPSn.Controls
 			if (itemsCount == 0)
 				return;
 
-			var curPos = filteredListBox.Items.CurrentPosition;
+			var curPos = filteredListBox.SelectedIndex;
 			var newPos = CalculateNewPos(curPos, itemsCount, direction);
 
 			if (newPos != curPos)
-				filteredListBox.Items.MoveCurrentToPosition(newPos);
+				filteredListBox.SelectedIndex = newPos;
+
+			Console.WriteLine(newPos);
 		} // proc Navigate
 
 		private int CalculateNewPos(int currentPos, int items, FocusNavigationDirection direction)
