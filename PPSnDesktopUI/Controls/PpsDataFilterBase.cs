@@ -35,7 +35,7 @@ namespace TecWare.PPSn.Controls
 	[TemplatePart(Name = "PART_FilteredItemsListBox", Type = typeof(ListBox))]
 	public abstract partial class PpsDataFilterBase : Selector
 	{
-		#region ---- Dependency Propteries-----------------------------------------------
+		#region ---- Dependency Properties-----------------------------------------------
 
 		/// <summary>Input to the Control</summary>
 		new public static readonly DependencyProperty ItemsSourceProperty = ItemsControl.ItemsSourceProperty.AddOwner(typeof(PpsDataFilterBase), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnItemsSourceChanged), new CoerceValueCallback(OnItemsSourceCoerceValue)));
