@@ -12,6 +12,7 @@
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsPopup.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsNamedSeparator.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsTextBox.xaml" />
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsComboBox.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsDataFieldPanel.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsSideBarControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsStackSectionControl.xaml" />

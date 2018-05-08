@@ -66,6 +66,7 @@ specific language governing permissions and limitations under the Licence.
 									Padding="1"
 									VerticalAlignment="Center"
 									Foreground="{TemplateBinding Foreground}"
+									Visibility="Collapsed"
 									Command="{x:Static pps:PpsControlCommands.ClearCommand}"
 									Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsClearContentButtonStyle}}" />
 							<ScrollViewer x:Name="PART_ContentHost"
@@ -109,9 +110,13 @@ specific language governing permissions and limitations under the Licence.
 							<Setter Property="Validation.ErrorTemplate" Value="{x:Null}" />
 						</Trigger>
 
-						<Trigger SourceName="ClearButton" Property="IsEnabled" Value="False">
-							<Setter TargetName="ClearButton" Property="Visibility" Value="Collapsed" />
-						</Trigger>
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="IsKeyboardFocused" Value="True" />
+								<Condition SourceName="ClearButton" Property="IsEnabled" Value="True" />
+							</MultiTrigger.Conditions>
+							<Setter TargetName="ClearButton" Property="Visibility" Value="Visible" />
+						</MultiTrigger>
 
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
@@ -153,6 +158,5 @@ specific language governing permissions and limitations under the Licence.
 			<Label Padding="3,1,3,1" Background="AntiqueWhite" Content="{Binding ErrorMessage, RelativeSource={RelativeSource TemplatedParent}}"/>
 		</Border>
 	</Popup>-->
-
 
 </ResourceDictionary>

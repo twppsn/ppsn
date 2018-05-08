@@ -270,7 +270,7 @@ specific language governing permissions and limitations under the Licence.
 									 ItemsSource="{TemplateBinding FilteredItemsSource}"
 									 ItemTemplate="{TemplateBinding ItemTemplate}"
 									 ItemContainerStyle="{TemplateBinding ItemContainerStyle}"
-									 SelectedValue="{Binding Path=PreSelectedValue, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
+									 SelectedValue="{Binding Path=SelectedValue, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
 									 Style="{TemplateBinding ListBoxStyle}"
 									 AlternationCount="{TemplateBinding AlternationCount}"
 									 ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
