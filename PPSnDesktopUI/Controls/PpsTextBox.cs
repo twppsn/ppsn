@@ -426,12 +426,16 @@ namespace TecWare.PPSn.Controls
 				return;
 
 			retriggerHold = true;
-
-			var error = String.Empty;
-			NeatlyReplaceText(NeatlyCleanText(InputType, Text, AllowedLineCount, out error));
-			SetError(error);
-
-			retriggerHold = false;
+			try
+			{
+				var error = String.Empty;
+				NeatlyReplaceText(NeatlyCleanText(InputType, Text, AllowedLineCount, out error));
+				SetError(error);
+			}
+			finally
+			{
+				retriggerHold = false;
+			}
 		} // proc OnTextChanged
 
 		/// <summary>Hides the ErrorTip if the Textbox is not focused</summary>
