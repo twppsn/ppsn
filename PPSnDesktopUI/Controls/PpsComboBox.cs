@@ -31,7 +31,7 @@ namespace TecWare.PPSn.Controls
 			SelectedIndex = -1;
 		} // proc ClearValue
 
-		bool IPpsNullableControl.CanClear => IsEnabled;
+		bool IPpsNullableControl.CanClear => IsEnabled && IsNullable && SelectedIndex >= 0;
 
 		/// <summary>Is this value nullable.</summary>
 		public bool IsNullable { get => BooleanBox.GetBool(GetValue(IsNullableProperty)); set => SetValue(IsNullableProperty, BooleanBox.GetObject(value)); }

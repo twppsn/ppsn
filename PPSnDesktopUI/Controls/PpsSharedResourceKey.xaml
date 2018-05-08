@@ -27,7 +27,7 @@ specific language governing permissions and limitations under the Licence.
 					<Border Background="{TemplateBinding Background}"
 							Padding="{TemplateBinding Padding}">
 						<Viewbox x:Name="ClearBox"
-								 Opacity=".55">
+								 Opacity=".65">
 							<Canvas Width="24" Height="24">
 								<Path Data="M6,7 L7,6 12,11 17,6 18,7 13,12 18,17 17,18 12,13 7,18 6,17 11,12 6,7 Z"
 									  Fill="{TemplateBinding Foreground}"
@@ -136,6 +136,42 @@ specific language governing permissions and limitations under the Licence.
 											  Margin="3,3,0,0"
 											  Opacity=".45" />
 					</Grid>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
+	<Style x:Key="{x:Static pps:PpsSharedResourceKey.PpsComboBoxToggleButtonStyle}" TargetType="{x:Type ToggleButton}">
+		<Setter Property="ClickMode" Value="Press" />
+		<Setter Property="Focusable" Value="False" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type ToggleButton}">
+					<Grid>
+						<Border x:Name="RootBorder"
+								BorderBrush="{TemplateBinding BorderBrush}"
+								BorderThickness="{TemplateBinding BorderThickness}"
+								Background="{TemplateBinding Background}" />
+						<Viewbox x:Name="ArrowBox"
+								 HorizontalAlignment="Right"
+								 Width="20"
+								 Margin="0,0,1,0"
+								 Opacity=".5">
+							<Canvas Width="24" Height="24">
+								<Path x:Name="arrowPath" Data="M5,9 L6,8 12,14 18,8 19,9 12,16 5,9Z "
+									  Fill="{TemplateBinding Foreground}" />
+							</Canvas>
+						</Viewbox>
+					</Grid>
+					<ControlTemplate.Triggers>
+						<DataTrigger Binding="{Binding IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType={x:Type Selector}}}" Value="True">
+							<Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}"/>
+							<Setter TargetName="ArrowBox" Property="Opacity" Value=".65" />
+						</DataTrigger>
+						<Trigger Property="IsEnabled" Value="False">
+							<Setter TargetName="ArrowBox" Property="Opacity" Value=".3" />
+						</Trigger>
+					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
