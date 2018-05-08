@@ -308,6 +308,12 @@ namespace TecWare.PPSn.Controls
 				columnDefinitions = PartitionDataFields(childrenToArrange, ColumnCount, ArrangeOptimization);
 			}
 
+			var childwidth = (availableSize.Width - ((ColumnCount -1) * ColumnMargin) - (ColumnCount * LabelWidth)) / ColumnCount;
+			childwidth = Math.Max(childwidth, MinColumnWidth - LabelWidth);
+
+			foreach (var child in PlaceableChildren)
+				child.Measure(new Size(childwidth + (GetFullWidth(child) ? LabelWidth : 0), GetGridLines(child) * RowHeight));
+
 			var highestColumn = columnDefinitions.Max();
 
 			var height = highestColumn * (RowHeight + RowMargin);
@@ -347,7 +353,7 @@ namespace TecWare.PPSn.Controls
 
 			returnSize.Height = height;
 
-			returnSize.Width = Math.Max(finalSize.Width, ColumnCount * (MinColumnWidth + ColumnMargin));
+			returnSize.Width = Math.Max(finalSize.Width, ColumnCount * MinColumnWidth + ((ColumnCount -1) * ColumnMargin));
 
 			var columnWidth = (returnSize.Width - ((ColumnCount - 1) * ColumnMargin)) / ColumnCount;
 
