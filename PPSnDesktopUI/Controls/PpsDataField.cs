@@ -1030,7 +1030,7 @@ namespace TecWare.PPSn.Controls
 			if (properties.TryGetProperty<int>("MaxLength", out var maxInputLength))
 				txt.MaxLength = maxInputLength;
 
-			if (properties.TryGetProperty<bool>("IsNullable", out var tmpNullable))
+			if (properties.TryGetProperty<bool>("Nullable", out var tmpNullable))
 				txt.IsNullable = tmpNullable;
 
 			if (isReadOnly.HasValue)
@@ -1046,7 +1046,7 @@ namespace TecWare.PPSn.Controls
 		{
 			dynamic combobox = LuaWpfCreator.CreateFactory(new LuaUI(), typeof(PpsDataFilterCombo));
 
-			if (properties.TryGetProperty<bool>("IsNullable", out var tmpNullable))
+			if (properties.TryGetProperty<bool>("Nullable", out var tmpNullable))
 				combobox.IsNullable = tmpNullable;
 
 			return combobox;
