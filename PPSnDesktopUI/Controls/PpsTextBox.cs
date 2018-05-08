@@ -101,7 +101,7 @@ namespace TecWare.PPSn.Controls
 		/// <summary>True if there was an invalid entry. Auto-Resets</summary>
 		public static readonly DependencyProperty HasErrorProperty = DependencyProperty.Register(nameof(HasError), typeof(bool), typeof(PpsTextBox), new PropertyMetadata(false));
 		/// <summary>Sets the allowed Lines for this Textbox</summary>
-		public static readonly DependencyProperty AllowedLineCountProperty = DependencyProperty.Register(nameof(AllowedLineCount), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(1));
+		public static readonly DependencyProperty AllowedLineCountProperty = DependencyProperty.Register(nameof(AllowedLineCount), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(Int32.MaxValue));
 		/// <summary>The Time in Seconds an Information is shown.</summary>
 		public static readonly DependencyProperty ErrorVisibleTimeProperty = DependencyProperty.Register(nameof(ErrorVisibleTime), typeof(int), typeof(PpsTextBox), new FrameworkPropertyMetadata(5));
 		/// <summary>Binding Point for formatted value</summary>
@@ -415,7 +415,7 @@ namespace TecWare.PPSn.Controls
 				if (Keyboard.IsKeyToggled(Key.CapsLock))
 					SetError(capsLockMessage);
 			}
-			if(!e.Handled)
+			if (!e.Handled)
 				base.OnPreviewTextInput(e);
 		} // func OnPreviewTextInput
 
