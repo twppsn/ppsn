@@ -468,9 +468,7 @@ namespace TecWare.PPSn.Controls
 
 		#endregion Event Handlers
 
-		bool IPpsNullableControl.CanClear => IsEnabled && !IsReadOnly;
-
-		private bool AllowClearText => IsEnabled && !IsReadOnly && IsKeyboardFocusWithin && !String.IsNullOrEmpty(Text);
+		bool IPpsNullableControl.CanClear => IsEnabled && !IsReadOnly && !String.IsNullOrEmpty(Text);
 
 		static PpsTextBox()
 		{
