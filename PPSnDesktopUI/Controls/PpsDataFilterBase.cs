@@ -103,13 +103,6 @@ namespace TecWare.PPSn.Controls
 			);
 		} // proc UpdateFilteredList
 
-		/// <summary>loads the List when the Control is used</summary>
-		/// <param name="e">unused/sent to base class</param>
-		protected override void OnGotFocus(RoutedEventArgs e)
-		{
-			base.OnGotFocus(e);
-		}
-
 		/// <summary>Constructor - initializes the Commands</summary>
 		public PpsDataFilterBase()
 		{
@@ -146,6 +139,7 @@ namespace TecWare.PPSn.Controls
 			=> FilterText = null;
 
 		#endregion
+
 		internal void ImmediateSelect(FocusNavigationDirection direction)
 		{
 			var itemsCount = filteredListBox.Items.Count;
@@ -273,12 +267,12 @@ namespace TecWare.PPSn.Controls
 		internal void Items_CurrentChanged(object sender, EventArgs e)
 		{
 			if (filteredListBox.Items.CurrentItem is IDataRow item)
-			filteredListBox.ScrollIntoView(item);
+				filteredListBox.ScrollIntoView(item);
 		} // event Items_CurrentChanged
 
 		internal void SetAnchorItem()
 		{
-			if (filteredListBox==null || !IsFilteredListVisible() || filteredListBox.Items == null || filteredListBox.Items.Count <= 0)
+			if (filteredListBox == null || !IsFilteredListVisible() || filteredListBox.Items == null || filteredListBox.Items.Count <= 0)
 				return;
 
 			var item = SelectedValue ?? filteredListBox.Items.GetItemAt(0);
@@ -290,27 +284,7 @@ namespace TecWare.PPSn.Controls
 				filteredListBox.Items.MoveCurrentToPosition(-1);
 		} // proc SetAnchorItem
 
-		#region -- Evaluate MouseEvents -----------------------------------------------
-
-		/// <summary>Used to close a ListBox, if available</summary>
-		/// <param name="e"></param>
-		protected override void OnMouseDown(MouseButtonEventArgs e)
-		{
-			if (!IsKeyboardFocusWithin)
-				Focus();
-
-			// always handle
-			e.Handled = true;
-
-			if (!IsFilteredListVisible())
-				return;
-
-			// Then the click was outside of Popup
-			if (Mouse.Captured == this && e.OriginalSource == this)
-				HideFilteredList(false);
-		} // event OnMouseDown
-
-		private ListBoxItem ItemFromPoint(MouseEventArgs e)
+		protected ListBoxItem ItemFromPoint(MouseEventArgs e)
 		{
 			var point = e.GetPosition(filteredListBox);
 			var element = filteredListBox.InputHitTest(point) as UIElement;
@@ -324,64 +298,6 @@ namespace TecWare.PPSn.Controls
 			}
 			return null;
 		} // func ItemFromPoint
-
-		/// <summary>Used to close a ListBox, if available</summary>
-		/// <param name="e"></param>
-		protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
-		{
-			if (!IsFilteredListVisible() || !hasMouseEnteredItemsList)
-				return;
-
-			if (ItemFromPoint(e) != null)
-			{
-				e.Handled = true;
-				HideFilteredList(true);
-			}
-		} // event OnMouseLeftButtonUp
-		private Point lastMousePosition = new Point();
-
-		/// <summary>Used to pre-select items under the cursor</summary>
-		/// <param name="e"></param>
-		protected override void OnMouseMove(MouseEventArgs e)
-		{
-			if (!IsFilteredListVisible())
-				return;
-
-			e.Handled = true;
-
-			var item = ItemFromPoint(e);
-			if (item == null)
-				return;
-
-			if (!hasMouseEnteredItemsList)
-			{
-				if (e.LeftButton == MouseButtonState.Released)
-				{
-					lastMousePosition = Mouse.GetPosition(filteredListBox);
-					hasMouseEnteredItemsList = true;
-				}
-			}
-			else
-			{
-				if (HasMouseMoved() && !item.IsSelected)
-				{
-					item.IsSelected = true;
-				}
-			}
-		} // event OnMouseMove
-
-		private bool HasMouseMoved()
-		{
-			var newPosition = Mouse.GetPosition(filteredListBox);
-			if (newPosition != lastMousePosition)
-			{
-				lastMousePosition = newPosition;
-				return true;
-			}
-			return false;
-		} // func HasMouseMoved
-
-		#endregion
 
 		#region ---- Properties ---------------------------------------------------------
 
@@ -474,6 +390,86 @@ namespace TecWare.PPSn.Controls
 		private static void OnIsDropDownOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsDataFilterCombo)d).DropDownChanged((bool)e.NewValue);
 
+		#region -- Evaluate MouseEvents -----------------------------------------------
+
+		/// <summary>Used to close a ListBox, if available</summary>
+		/// <param name="e"></param>
+		protected override void OnMouseDown(MouseButtonEventArgs e)
+		{
+			if (!IsKeyboardFocusWithin)
+				Focus();
+
+			// always handle
+			e.Handled = true;
+
+			if (!IsFilteredListVisible())
+				return;
+
+			// Then the click was outside of Popup
+			if (Mouse.Captured == this && e.OriginalSource == this)
+				HideFilteredList(false);
+		} // event OnMouseDown
+
+		/// <summary>Used to close a ListBox, if available</summary>
+		/// <param name="e"></param>
+		protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
+		{
+			if (!IsFilteredListVisible() || !hasMouseEnteredItemsList)
+				return;
+
+			if (ItemFromPoint(e) != null)
+			{
+				e.Handled = true;
+				HideFilteredList(true);
+			}
+		} // event OnMouseLeftButtonUp
+		private Point lastMousePosition = new Point();
+
+		/// <summary>Used to pre-select items under the cursor</summary>
+		/// <param name="e"></param>
+		protected override void OnMouseMove(MouseEventArgs e)
+		{
+			if (!IsFilteredListVisible())
+				return;
+
+			e.Handled = true;
+
+			var item = ItemFromPoint(e);
+			if (item == null)
+				return;
+
+			if (!hasMouseEnteredItemsList)
+			{
+				if (e.LeftButton == MouseButtonState.Released)
+				{
+					lastMousePosition = Mouse.GetPosition(filteredListBox);
+					hasMouseEnteredItemsList = true;
+				}
+			}
+			else
+			{
+				if (HasMouseMoved() && !item.IsSelected)
+				{
+					item.IsSelected = true;
+				}
+			}
+		} // event OnMouseMove
+
+		private bool HasMouseMoved()
+		{
+			var newPosition = Mouse.GetPosition(filteredListBox);
+			if (newPosition != lastMousePosition)
+			{
+				lastMousePosition = newPosition;
+				return true;
+			}
+			return false;
+		} // func HasMouseMoved
+
+		#endregion
+
+		#region ---- DropDown Interaction -----------------------------------------------
+
 		private void DropDownChanged(bool status)
 		{
 			this.hasMouseEnteredItemsList = false;
@@ -522,8 +518,6 @@ namespace TecWare.PPSn.Controls
 			IsDropDownOpen = false;
 		} // proc CloseDropDown
 
-		#region ---- Keyboard interaction -----------------------------------------------
-
 		private void ToggleDropDownStatus(bool commit)
 		{
 			if (IsDropDownOpen)
@@ -538,6 +532,23 @@ namespace TecWare.PPSn.Controls
 				return;
 			IsDropDownOpen = true;
 		} // proc OpenDropDown
+
+		/// <summary>Returns te state of IsDropDownOpen</summary>
+		/// <returns></returns>
+		public override bool IsFilteredListVisible()
+		=> IsDropDownOpen;
+
+		/// <summary>Closes the DropDown</summary>
+		/// <param name="commit">true if the pre-selected value should be committed</param>
+		public override void HideFilteredList(bool commit)
+		{
+			CloseDropDown(commit);
+		}
+
+
+		#endregion
+
+		#region ---- Keyboard interaction -----------------------------------------------
 
 		/// <summary>Handles the Navigation by Keyboard</summary>
 		/// <param name="e">pressed Keys</param>
@@ -557,7 +568,7 @@ namespace TecWare.PPSn.Controls
 			switch (key)
 			{
 				case Key.Up:
-					
+
 					if ((e.KeyboardDevice.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt)
 					{
 						e.Handled = true;
@@ -621,18 +632,6 @@ namespace TecWare.PPSn.Controls
 			base.OnPreviewKeyDown(e);
 		} // proc KeyDownHandler
 
-		/// <summary>Returns te state of IsDropDownOpen</summary>
-		/// <returns></returns>
-		public override bool IsFilteredListVisible()
-		=> IsDropDownOpen;
-
-		/// <summary>Closes the DropDown</summary>
-		/// <param name="commit">true if the pre-selected value should be committed</param>
-		public override void HideFilteredList(bool commit)
-		{
-			CloseDropDown(commit);
-		}
-
 		#endregion
 
 		static PpsDataFilterCombo()
@@ -662,9 +661,11 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
 		{
-			base.OnMouseLeftButtonUp(e);
-			base.ApplySelectedItem();
+			var selection = ItemFromPoint(e);
+			if (selection != null)
+				selection.IsSelected = true;
 		}
+
 	}
 
 	/// <summary>This textBlock enables Highlighting of text</summary>
