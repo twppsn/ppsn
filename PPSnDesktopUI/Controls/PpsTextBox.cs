@@ -427,8 +427,22 @@ namespace TecWare.PPSn.Controls
 		protected override void OnTextChanged(TextChangedEventArgs e)
 		{
 			base.OnTextChanged(e);
+			if (neatlyReplaceTextTimer == null)
+				neatlyReplaceTextTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(750), DispatcherPriority.ApplicationIdle, (s, ea) => CleanText((DispatcherTimer)s), Dispatcher);
+
+			if (!retriggerHold)
+			{
+				neatlyReplaceTextTimer.Stop();
+				neatlyReplaceTextTimer.Start();
+			}
+		} // proc OnTextChanged
+
+		private void CleanText(DispatcherTimer dt)
+		{
 			if (retriggerHold || InputType == PpsTextBoxInputType.None)
 				return;
+
+			dt.Stop();
 
 			retriggerHold = true;
 			try
@@ -441,7 +455,9 @@ namespace TecWare.PPSn.Controls
 			{
 				retriggerHold = false;
 			}
-		} // proc OnTextChanged
+		}
+
+		private DispatcherTimer neatlyReplaceTextTimer;
 
 		/// <summary>Hides the ErrorTip if the Textbox is not focused</summary>
 		/// <param name="e">unused</param>
