@@ -405,14 +405,19 @@ namespace TecWare.PPSn.Controls
 						SetError(onlyIntegerMessage);
 					}
 				}
+				if (!LegalDecimalChars(true).Contains(e.Text))
+				{
+					e.Handled = true;
+					SetError(invalidCharsMessage);
+				}
 			}
 			else
 			{
 				if (Keyboard.IsKeyToggled(Key.CapsLock))
 					SetError(capsLockMessage);
 			}
-
-			base.OnPreviewTextInput(e);
+			if(!e.Handled)
+				base.OnPreviewTextInput(e);
 		} // func OnPreviewTextInput
 
 		private bool retriggerHold = false;
