@@ -289,7 +289,7 @@ namespace TecWare.PPSn.Controls
 
 			var item = SelectedValue ?? filteredListBox.Items.GetItemAt(0);
 
-			filteredListBox.Items.MoveCurrentTo(item);
+			filteredListBox.ScrollIntoView(item);
 
 			// clear selection?
 			if (SelectedValue == null)
