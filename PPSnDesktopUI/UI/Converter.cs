@@ -36,7 +36,11 @@ namespace TecWare.PPSn.UI
 		/// <summary>Convert between Visibility and bool.</summary>
 		public static IValueConverter Visibility => VisibilityConverter.Default;
 		/// <summary>Convert between Visibility and bool.</summary>
-		public static VisibilityConverterParameter VisibilityCollapsedParameter => VisibilityConverterParameter.Collapsed;
+		public static VisibilityConverterParameter VisibilityCollapsedParameter { get; } = new VisibilityConverterParameter() { FalseValue = System.Windows.Visibility.Collapsed };
+		/// <summary>Convert between Visibility and bool.</summary>
+		public static VisibilityConverterParameter VisibilityOnNullParameter { get; } = new VisibilityConverterParameter() { TrueValue = System.Windows.Visibility.Hidden, FalseValue = System.Windows.Visibility.Visible };
+		/// <summary>Convert between Visibility and bool.</summary>
+		public static VisibilityConverterParameter VisibilityNotNullParameter { get; } = new VisibilityConverterParameter() { TrueValue = System.Windows.Visibility.Visible, FalseValue = System.Windows.Visibility.Hidden };
 		/// <summary>Removes all new lines.</summary>
 		public static IValueConverter MultiToSingleLine => MultiToSingleLineConverter.Default;
 		/// <summary>Creates a array of objects.</summary>
@@ -317,8 +321,6 @@ namespace TecWare.PPSn.UI
 
 		/// <summary>Singelton for the default Parameter.</summary>
 		public static VisibilityConverterParameter Default { get; } = new VisibilityConverterParameter();
-		/// <summary>Singelton for the default Parameter.</summary>
-		public static VisibilityConverterParameter Collapsed { get; } = new VisibilityConverterParameter() { FalseValue = Visibility.Collapsed };
 	} // class VisibilityConverterParameter
 
 	internal sealed class VisibilityConverter : IValueConverter

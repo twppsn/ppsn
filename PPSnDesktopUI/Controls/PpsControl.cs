@@ -44,6 +44,8 @@ namespace TecWare.PPSn.Controls
 	{
 		/// <summary>The Command empties the TextBox</summary>
 		public static readonly RoutedCommand ClearCommand = new RoutedUICommand("Clear", "Clear", typeof(PpsControlCommands));
+		/// <summary></summary>
+		public static readonly RoutedCommand SelectCommand = new RoutedUICommand("Select", "Select", typeof(PpsControlCommands));
 
 		/// <summary></summary>
 		/// <param name="type"></param>
