@@ -1053,7 +1053,7 @@ namespace TecWare.PPSn
 		/// <param name="throwException"></param>
 		/// <returns></returns>
 		[LuaMember]
-		public DependencyObject GetLogicalParent(DependencyObject currentControl, object control, bool throwException = false)
+		public DependencyObject GetLogicalParent(DependencyObject currentControl, object control = null, bool throwException = false)
 		{
 			if (currentControl == null)
 				throw new ArgumentNullException(nameof(currentControl));

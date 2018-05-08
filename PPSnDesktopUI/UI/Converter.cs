@@ -723,9 +723,9 @@ namespace TecWare.PPSn.UI
 					if (values[0] is null && values[1] is null)
 						return "<kein Name>";
 					else if (values[0] == null)
-						return (string)values[0];
-					else if (values[1] == null)
 						return (string)values[1];
+					else if (values[1] == null)
+						return (string)values[0];
 					else
 						return String.Format("{0} {1}", values[0], values[1]);
 				}

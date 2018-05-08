@@ -2326,16 +2326,17 @@ namespace TecWare.PPSn
 			if (!IsInitialized)
 			{
 				// pull current data
-				if (!baseObj.HasData)
+				if (!baseObj.HasData && baseObj.Id > 0)
 					await baseObj.PullAsync();
-
-				// load info
-				var objectInfo = await baseObj.LoadObjectDataInformationAsync();
-				if (objectInfo == null)
-					throw new ArgumentNullException("Data is missing.");
 
 				if (baseObj.HasData)
 				{
+					// load info
+					var objectInfo = await baseObj.LoadObjectDataInformationAsync();
+					if (objectInfo == null)
+						throw new ArgumentNullException("Data is missing.");
+
+					// load content
 					using (var xml = XmlReader.Create(PpsObject.OpenReadStream(objectInfo), Procs.XmlReaderSettings))
 					{
 						var xData = XDocument.Load(xml).Root;
@@ -2348,7 +2349,11 @@ namespace TecWare.PPSn
 						);
 						await OnLoadedAsync(arguments);
 					}
+				}
+				else
+				{
 					await OnNewAsync(arguments);
+					await Object.Environment.Dispatcher.InvokeAsync(ResetDirty);
 				}
 			}
 			return activeObjectTable.RegisterDataAccess(this);

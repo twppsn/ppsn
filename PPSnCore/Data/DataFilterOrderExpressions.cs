@@ -2147,6 +2147,9 @@ namespace TecWare.PPSn.Data
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public static bool RtDataRowSearchFullText(IDataRow row, string text, bool startsWith)
 		{
+			if (row == null)
+				return false;
+
 			for (var i = 0; i < row.Columns.Count; i++)
 			{
 				var v = row[i];

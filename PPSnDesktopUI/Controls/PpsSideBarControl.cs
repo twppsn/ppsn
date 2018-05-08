@@ -589,7 +589,7 @@ namespace TecWare.PPSn.Controls
 			foreach (var cur in Items)
 			{
 				var ctrl = ItemContainerGenerator.ContainerFromItem(cur);
-				if (GetIsSelected(ctrl))
+				if (ctrl != null && GetIsSelected(ctrl))
 					return true;
 			}
 			return false;
