@@ -141,12 +141,6 @@ namespace TecWare.PPSn.Controls
 			CommitValue(null);
 		}
 
-		private void CommitValue(IDataRow value)
-		{
-			if (!object.Equals(value, SelectedValue))
-				SelectedValue = value;
-		} // proc CommitValue
-
 		/// <summary>Empties the string for filtering</summary>
 		public void ClearFilter()
 			=> FilterText = null;
@@ -530,8 +524,6 @@ namespace TecWare.PPSn.Controls
 
 		#region ---- Keyboard interaction -----------------------------------------------
 
-
-
 		private void ToggleDropDownStatus(bool commit)
 		{
 			if (IsDropDownOpen)
@@ -594,7 +586,7 @@ namespace TecWare.PPSn.Controls
 					}
 					break;
 				case Key.Delete:
-					if (IsNullable && IsWriteable && IsDropDownOpen)
+					if (IsNullable && IsWriteable)
 					{
 						e.Handled = true;
 						ClearSelection();
