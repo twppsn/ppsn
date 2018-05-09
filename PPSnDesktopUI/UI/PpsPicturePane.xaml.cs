@@ -437,7 +437,7 @@ namespace TecWare.PPSn.UI
 				if (!device.ProvideSnapshots)
 				{
 					traces.AppendText(PpsTraceItemType.Information, String.Format(NoSnapshotCapability, Name));
-					device.VideoResolution = (from vc in device.VideoCapabilities orderby vc.FrameSize.Width * vc.FrameSize.Height descending select vc).First();
+					device.VideoResolution = (from vc in device.VideoCapabilities orderby vc.FrameSize.Width * vc.FrameSize.Height descending select vc).FirstOrDefault();
 				}
 				else
 				{
@@ -446,6 +446,12 @@ namespace TecWare.PPSn.UI
 
 				if (device.VideoResolution != null)
 					previewVideoRatio = 1.0 * device.VideoResolution.FrameSize.Width / device.VideoResolution.FrameSize.Height;
+				else
+				{
+					traces.AppendText(PpsTraceItemType.Fail, String.Format(InitializationFailed, Name));
+					CameraLost?.Invoke(this, new EventArgs());
+					return;
+				}
 
 				// attach the handler for incoming images
 				device.NewFrame += PreviewNewframeEvent;
