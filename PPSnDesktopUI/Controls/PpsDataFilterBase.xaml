@@ -218,9 +218,10 @@ specific language governing permissions and limitations under the Licence.
 	<Style TargetType="{x:Type pps:PpsDataFilterList}">
 		<Style.Setters>
 			<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterDefaultSelectedValueTemplate}" />
-			<Setter Property="ItemContainerStyle" Value="{DynamicResource PPSnNoFocusListBoxItemStyle}" />
+			<Setter Property="ItemContainerStyle" Value="{DynamicResource PPSnAlternatingListBoxItemStyle}" />
 			<Setter Property="AlternationCount" Value="2" />
 			<Setter Property="ListBoxStyle" Value="{DynamicResource PPSnListBoxStyle}" />
+			<Setter Property="Focusable" Value="False"/>
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type pps:PpsDataFilterList}">
@@ -265,6 +266,8 @@ specific language governing permissions and limitations under the Licence.
 									 ItemContainerStyle="{Binding Path=ItemContainerStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
 									 AlternationCount="2" />-->
 							<ListBox x:Name="PART_FilteredItemsListBox"
+									 Focusable="False"
+									 IsTabStop="False"
 									 Grid.Row="1"
 									 IsSynchronizedWithCurrentItem="False"
 									 ItemsSource="{TemplateBinding FilteredItemsSource}"
