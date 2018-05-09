@@ -165,21 +165,6 @@ specific language governing permissions and limitations under the Licence.
 											</Canvas>
 										</Viewbox>
 									</Grid>
-
-									<!--<ListBox x:Name="PART_FilteredItemsListBox"
-												 Grid.Row="1"
-												 IsSynchronizedWithCurrentItem="True"
-												 VirtualizingStackPanel.IsVirtualizing="True"
-												 VirtualizingStackPanel.VirtualizationMode="Recycling"
-												 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-												 SelectedValue="{Binding Path=PreSelectedValue, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
-												 ItemsSource="{Binding Mode=OneWay, Path=FilteredItemsSource, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
-												 ItemTemplate="{Binding Path=ItemTemplate, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
-												 ItemContainerStyle="{Binding Path=ItemContainerStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterCombo}}}"
-												 MinHeight="50"
-												 Focusable="False">
-									</ListBox>-->
-
 									<ListBox x:Name="PART_FilteredItemsListBox"
 											 Grid.Row="1"
 											 Focusable="False"
@@ -252,19 +237,6 @@ specific language governing permissions and limitations under the Licence.
 									</Canvas>
 								</Viewbox>
 							</Grid>
-							<!--<ListBox x:Name="PART_FilteredItemsListBox"
-									 Grid.Row="1"
-									 MinHeight="50"
-									 Focusable="False"
-									 IsSynchronizedWithCurrentItem="True"
-									 VirtualizingStackPanel.IsVirtualizing="True"
-									 VirtualizingStackPanel.VirtualizationMode="Recycling"
-									 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-									 SelectedValue="{Binding Path=PreSelectedValue, Mode=TwoWay, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
-									 ItemsSource="{Binding Mode=OneWay, Path=FilteredItemsSource, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
-									 ItemTemplate="{Binding Path=ItemTemplate, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
-									 ItemContainerStyle="{Binding Path=ItemContainerStyle, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type pps:PpsDataFilterList}}}"
-									 AlternationCount="2" />-->
 							<ListBox x:Name="PART_FilteredItemsListBox"
 									 Focusable="False"
 									 IsTabStop="False"
