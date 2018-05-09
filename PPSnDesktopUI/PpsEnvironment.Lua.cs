@@ -24,6 +24,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using System.Xml;
 using System.Xml.Linq;
@@ -816,8 +817,7 @@ namespace TecWare.PPSn
 		[LuaMember("isfunction")]
 		private bool LuaIsFunction(object o)
 			=> Lua.RtInvokeable(o);
-
-
+		
 		[LuaMember("require", true)]
 		private LuaResult LuaRequire(LuaTable self, string path)
 		{
@@ -835,7 +835,7 @@ namespace TecWare.PPSn
 				return RunScript(chunk, self, true, self);
 			}
 		} // proc LuaRequire
-		
+
 		/// <summary></summary>
 		/// <param name="request"></param>
 		/// <param name="arguments"></param>
@@ -1075,6 +1075,24 @@ namespace TecWare.PPSn
 					throw new ArgumentException(nameof(control));
 			}
 		} // func GetLogicalParent
+
+		/// <summary>Create a DataTemplateSelector</summary>
+		/// <param name="func"></param>
+		/// <returns></returns>
+		[LuaMember("templateSelector")]
+		private DataTemplateSelector LuaDataTemplateSelectorCreate(Delegate func)
+			=> new LuaDataTemplateSelector(func);
+
+		[LuaMember]
+		public object GetResource(object key, DependencyObject dependencyObject)
+		{
+			if (dependencyObject is FrameworkElement fe)
+				return fe.TryFindResource(key);
+			else if (dependencyObject is FrameworkContentElement fce)
+				return fce.TryFindResource(key);
+			else
+				return Application.Current.TryFindResource(key);
+		} // func GetResource
 
 		/// <summary>Create a local tempfile name for this objekt</summary>
 		/// <param name="obj"></param>

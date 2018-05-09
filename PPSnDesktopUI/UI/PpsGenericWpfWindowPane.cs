@@ -129,14 +129,7 @@ namespace TecWare.PPSn.UI
 
 		[LuaMember]
 		private object GetResource(object key, DependencyObject dependencyObject)
-		{
-			if (dependencyObject is FrameworkElement fe)
-				return fe.TryFindResource(key);
-			else if (dependencyObject is FrameworkContentElement fce)
-				return fce.TryFindResource(key);
-			else
-				return Control?.TryFindResource(key);
-		} // func GetResource
+			=> Environment.GetResource(key, dependencyObject ?? Control);
 
 		/// <summary></summary>
 		[LuaMember]
@@ -381,14 +374,7 @@ namespace TecWare.PPSn.UI
 		/// <returns><c>null</c>, if the resource was not found.</returns>
 		[LuaMember]
 		private object GetResource(object key, DependencyObject dependencyObject = null)
-		{
-			if (dependencyObject is FrameworkElement fe)
-				return fe.TryFindResource(key);
-			else if (dependencyObject is FrameworkContentElement fce)
-				return fce.TryFindResource(key);
-			else
-				return Control?.TryFindResource(key);
-		} // func GetResource
+			=> Environment.GetResource(key, dependencyObject ?? Control);
 
 		/// <summary>Load a sub control panel.</summary>
 		/// <param name="self"></param>
@@ -429,13 +415,6 @@ namespace TecWare.PPSn.UI
 		[LuaMember("command")]
 		private object LuaCommand(Action<PpsCommandContext> command, Func<PpsCommandContext, bool> canExecute = null)
 			=> new PpsCommand(command, canExecute);
-
-		/// <summary>Create a DataTemplateSelector</summary>
-		/// <param name="func"></param>
-		/// <returns></returns>
-		[LuaMember("templateSelector")]
-		private DataTemplateSelector LuaDataTemplateSelectorCreate(Delegate func)
-			=> new LuaDataTemplateSelector(func);
 
 		/// <summary>Disable the current panel.</summary>
 		/// <returns></returns>
