@@ -112,7 +112,11 @@ namespace TecWare.PPSn.Controls
 		/// <param name="d"></param>
 		/// <param name="e"></param>
 		private static void OnItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsDataFilterBase)d).UpdateFilteredList();
+		{
+			((PpsDataFilterBase)d).UpdateFilteredList();
+			if (e.NewValue is PpsDataCollectionView pdcv)
+				pdcv.CurrentChanged += (s, et) => ((PpsDataFilterBase)d).UpdateFilteredList();
+		}
 
 		private static object OnItemsSourceCoerceValue(DependencyObject d, object baseValue)
 		{
