@@ -703,6 +703,11 @@ namespace TecWare.PPSn.Controls
 					FilterText = FilterText.Substring(0, FilterText.Length - 1);
 					e.Handled = true;
 				}
+				if (key == Key.Space)
+				{
+					FilterText += " ";
+					e.Handled = true;
+				}
 			}
 			base.OnPreviewKeyDown(e);
 		} // proc KeyDownHandler
