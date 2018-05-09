@@ -173,7 +173,8 @@ namespace TecWare.PPSn.Controls
 					{
 						try
 						{
-							bar.Text = String.Format("Füge hinzu {0}...", Path.GetFileName(fileName));
+							if (bar != null)
+								bar.Text = String.Format("Füge hinzu {0}...", Path.GetFileName(fileName));
 							await AttachmentsSource.AppendAsync(Environment, fileName);
 						}
 						catch (Exception ex)
