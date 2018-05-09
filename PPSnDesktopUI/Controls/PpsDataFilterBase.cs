@@ -389,7 +389,7 @@ namespace TecWare.PPSn.Controls
 		private static void OnIsDropDownOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsDataFilterCombo)d).DropDownChanged((bool)e.NewValue);
 
-		#region -- Evaluate MouseEvents -----------------------------------------------
+		#region ---- Evaluate MouseEvents -----------------------------------------------
 
 		/// <summary>Used to close a ListBox, if available</summary>
 		/// <param name="e"></param>
