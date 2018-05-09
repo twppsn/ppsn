@@ -67,6 +67,7 @@ specific language governing permissions and limitations under the Licence.
 											  GeometryCircled="True"
 											  Width="{TemplateBinding GeometrySize}"
 											  Height="{TemplateBinding GeometrySize}"
+											  IsHitTestVisible="True"
 											  Opacity=".65">
 							<pps:PpsGeometryImage.RenderTransformOrigin>
 								<Point X="0.5" Y="0.5" />
