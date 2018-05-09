@@ -903,8 +903,8 @@ namespace TecWare.PPSn.Controls
 			=> new PpsDataFieldInfo(fieldName, dataType, bindingPath, Procs.ToProperties(properties));
 
 		[LuaMember]
-		private LuaWpfCreator CreateFieldBinding(PpsDataFieldInfo fieldInfo, bool? isReadOnly = null, string append = null)
-			=> PpsDataFieldBinding.CreateWpfBinding(fieldInfo, isReadOnly, append);
+		private LuaWpfCreator CreateFieldBinding(IPpsDataFieldReadOnlyProperties properties, bool? isReadOnly = null, string append = null)
+			=> PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true), isReadOnly, append);
 
 		[LuaMember]
 		private LuaWpfCreator CreateDefaultField(IPpsDataFieldReadOnlyProperties properties)
@@ -1079,7 +1079,9 @@ namespace TecWare.PPSn.Controls
 			dynamic combobox = CreateSelector(properties);
 
 			// bind items source
-			var baseBindingPath = properties.GetService<PpsDataSetResolver>(true).BindingPath;
+			if (!properties.TryGetProperty<string>("TableBindingPath", out var baseBindingPath))
+				baseBindingPath = properties.GetService<PpsDataSetResolver>(true).BindingPath;
+
 			var codeBase = properties.GetService<IPpsXamlCode>(true);
 
 			dynamic itemsSourceBinding = LuaWpfCreator.CreateFactory(new LuaUI(), typeof(Binding));
