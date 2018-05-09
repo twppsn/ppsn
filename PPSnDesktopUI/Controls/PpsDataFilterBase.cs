@@ -326,7 +326,7 @@ namespace TecWare.PPSn.Controls
 
 		private void KeyDownHandler(KeyEventArgs e)
 		{
-			if (IsReadOnly)
+			if (IsReadOnly || e.Handled)
 				return;
 
 			var key = e.Key;
@@ -389,7 +389,7 @@ namespace TecWare.PPSn.Controls
 		private static void OnIsDropDownOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsDataFilterCombo)d).DropDownChanged((bool)e.NewValue);
 
-		#region -- Evaluate MouseEvents -----------------------------------------------
+		#region ---- Evaluate MouseEvents -----------------------------------------------
 
 		/// <summary>Used to close a ListBox, if available</summary>
 		/// <param name="e"></param>
@@ -665,6 +665,54 @@ namespace TecWare.PPSn.Controls
 				selection.IsSelected = true;
 		}
 
+		#region ---- Keyboard interaction -----------------------------------------------
+
+		/// <summary>Handles the Navigation by Keyboard</summary>
+		/// <param name="e">pressed Keys</param>
+		protected override void OnPreviewKeyDown(KeyEventArgs e)
+			=> KeyDownHandler(e);
+
+		private void KeyDownHandler(KeyEventArgs e)
+		{
+			// stop
+			if (IsReadOnly)
+				return;
+
+			var key = e.Key;
+			if (key == Key.System)
+				key = e.SystemKey;
+
+			switch (key)
+			{
+				case Key.Left:
+				case Key.Right:
+					// disable visual Navigation on the Form
+					e.Handled = true;
+					break;
+			}
+			if (!(e.OriginalSource is PpsTextBox))
+			{
+				if ((key >= Key.A && key <= Key.Z)
+				 || (key >= Key.D0 && key <= Key.D9))
+				{
+					FilterText += e.KeyboardDevice.Modifiers == ModifierKeys.Shift ? key.ToString() : key.ToString().ToLower();
+					e.Handled = true;
+				}
+				if (key == Key.Back)
+				{
+					FilterText = FilterText.Substring(0, FilterText.Length - 1);
+					e.Handled = true;
+				}
+				if (key == Key.Space)
+				{
+					FilterText += " ";
+					e.Handled = true;
+				}
+			}
+			base.OnPreviewKeyDown(e);
+		} // proc KeyDownHandler
+
+		#endregion
 	}
 
 	/// <summary>This textBlock enables Highlighting of text</summary>

@@ -238,7 +238,7 @@ specific language governing permissions and limitations under the Licence.
 								</Viewbox>
 							</Grid>
 							<ListBox x:Name="PART_FilteredItemsListBox"
-									 Focusable="False"
+									 Focusable="True"
 									 IsTabStop="False"
 									 Grid.Row="1"
 									 IsSynchronizedWithCurrentItem="False"
