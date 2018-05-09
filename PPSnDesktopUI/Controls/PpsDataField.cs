@@ -809,7 +809,7 @@ namespace TecWare.PPSn.Controls
 				if (ctrl[PpsDataFieldPanel.LabelProperty] == null
 					&& properties.TryGetProperty<string>("displayName", out var displayName)
 					&& !String.IsNullOrEmpty(displayName))
-					ctrl[PpsDataFieldPanel.LabelProperty] = displayName;
+					ctrl[PpsDataFieldPanel.LabelProperty] = displayName + ":";
 
 				controls = new LuaWpfCreator[] { ctrl };
 			}
@@ -1059,6 +1059,16 @@ namespace TecWare.PPSn.Controls
 
 			combobox.ItemsSource = environment.MasterData.GetTable(refTableName, true);
 			combobox.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>());
+
+			if (properties.TryGetProperty("TemplateResourceKey", out var templateResource))
+			{
+				combobox.ItemTemplate = Environment.FindResource<DataTemplate>(templateResource);
+
+				if (properties.TryGetProperty("SelectedValueTemplateResourceKey", out var selectedValueResourceKey))
+					combobox.SelectedValueTemplate = Environment.FindResource<DataTemplate>(selectedValueResourceKey);
+				else
+					combobox.SelectedValueTemplate = combobox.ItemTemplate;
+			}
 
 			return combobox;
 		} // func CreateMasterDataField
