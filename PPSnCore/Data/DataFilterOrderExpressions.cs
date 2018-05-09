@@ -101,13 +101,11 @@ namespace TecWare.PPSn.Data
 	/// <summary></summary>
 	public abstract class PpsDataFilterExpression
 	{
-		private readonly PpsDataFilterExpressionType method;
-
 		/// <summary></summary>
 		/// <param name="method"></param>
 		public PpsDataFilterExpression(PpsDataFilterExpressionType method)
 		{
-			this.method = method;
+			this.Type = method;
 		} // ctor
 
 		/// <summary></summary>
@@ -127,7 +125,7 @@ namespace TecWare.PPSn.Data
 		} // func ToString
 
 		/// <summary></summary>
-		public PpsDataFilterExpressionType Type => method;
+		public PpsDataFilterExpressionType Type { get; }
 
 		// -- Static --------------------------------------------------------------
 
@@ -622,7 +620,7 @@ namespace TecWare.PPSn.Data
 		public override void ToString(StringBuilder sb) { }
 
 		/// <summary>Returns a expression, that is true.</summary>
-		public static PpsDataFilterExpression Default => new PpsDataFilterTrueExpression();
+		public static PpsDataFilterExpression Default { get; } = new PpsDataFilterTrueExpression();
 	} // class PpsDataFilterTrueExpression
 
 	#endregion
