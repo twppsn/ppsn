@@ -326,7 +326,7 @@ namespace TecWare.PPSn.Controls
 
 		private void KeyDownHandler(KeyEventArgs e)
 		{
-			if (IsReadOnly)
+			if (IsReadOnly || e.Handled)
 				return;
 
 			var key = e.Key;
