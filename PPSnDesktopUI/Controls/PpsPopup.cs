@@ -90,6 +90,12 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Popup panel layout.</summary>
 	public class PpsPopupContent : HeaderedContentControl
 	{
+		/// <summary>The name of the resource</summary>
+		public static readonly DependencyProperty GeometryNameProperty = PpsGeometryImage.GeometryNameProperty.AddOwner(typeof(PpsPopupContent));
+
+		/// <summary>The property defines the resource to be loaded.</summary>
+		public string GeometryName { get => (string)GetValue(GeometryNameProperty); set => SetValue(GeometryNameProperty, value); }
+
 		static PpsPopupContent()
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsPopupContent), new FrameworkPropertyMetadata(typeof(PpsPopupContent)));
