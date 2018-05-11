@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Markup;
 using System.Xaml;
@@ -918,6 +919,8 @@ namespace TecWare.PPSn.Controls
 				return CreateTextField(properties);
 			else if (properties.DataType == typeof(DateTime))
 				return CreateDateTimeField(properties);
+			else if (properties.DataType == typeof(bool))
+				return CreateCheckField(properties);
 			else if (properties.DataType == typeof(PpsMasterDataExtendedValue))
 			{
 				// test for master table
@@ -1111,12 +1114,25 @@ namespace TecWare.PPSn.Controls
 		private static LuaWpfCreator CreateComboField(IPpsDataFieldReadOnlyProperties properties)
 		{
 			dynamic ui = new LuaUI();
-			dynamic combo = LuaWpfCreator.CreateFactory(ui, typeof(System.Windows.Controls.ComboBox));
+			dynamic combo = LuaWpfCreator.CreateFactory(ui, typeof(ComboBox));
 
 			combo.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true));
 
 			return combo;
 		} // func CreateComboField
+
+		[LuaMember]
+		private LuaWpfCreator CreateCheckField(IPpsDataFieldReadOnlyProperties properties)
+		{
+			dynamic ui = new LuaUI();
+			dynamic check = LuaWpfCreator.CreateFactory(ui, typeof(CheckBox));
+
+			//check.Content = properties.displayName;
+			check.IsThreeState = false;
+			check.IsChecked = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true));
+
+			return check;
+		} // func CreateCheckField
 
 		/// <summary></summary>
 		[LuaMember]
