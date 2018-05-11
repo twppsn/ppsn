@@ -1240,7 +1240,7 @@ namespace TecWare.PPSn.UI
 									case string memberName:
 										return PushCodeValueConverter(member, memberName, typeof(IMultiValueConverter) == member.Type.UnderlyingType);
 									default:
-										return PushMember(member, Value);
+										return PushMember(member, value);
 								}
 							}
 							else

@@ -243,8 +243,6 @@ namespace TecWare.PPSn.UI
 
 		private sealed class LuaXamlReaderState : IDisposable
 		{
-			private readonly XamlMember parentMember;
-			private readonly LuaWpfCreator creator;
 			private readonly IEnumerator positionalParameterEnumerator;
 			private readonly IEnumerator<KeyValuePair<XamlMember, object>> memberEnumerator;
 			private readonly IEnumerator collectionItemsEnumerator;
@@ -252,8 +250,8 @@ namespace TecWare.PPSn.UI
 			
 			public LuaXamlReaderState(LuaWpfCreator creator, XamlMember parentMember, int initState)
 			{
-				this.creator = creator;
-				this.parentMember = parentMember;
+				this.Creator = creator;
+				this.ParentMember = parentMember;
 				this.state = initState;
 
 				positionalParameterEnumerator = creator.positionalParameter?.GetEnumerator();
@@ -302,8 +300,8 @@ namespace TecWare.PPSn.UI
 
 			public object CurrentCollectionItem => collectionItemsEnumerator.Current;
 
-			public LuaWpfCreator Creator => creator;
-			public XamlMember ParentMember => parentMember;
+			public LuaWpfCreator Creator { get; }
+			public XamlMember ParentMember { get; }
 		} // class LuaXamlReaderScope
 
 		#endregion
@@ -688,7 +686,6 @@ namespace TecWare.PPSn.UI
 
 		private static readonly Regex attachedPropertySyntax = new Regex(@"((?<ns>\w+)\:)?(?<type>\w+)\.(?<prop>\w+)", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
 
-		private readonly LuaUI ui;
 		private readonly XamlType type;
 
 		private readonly List<object> values = new List<object>();
@@ -702,7 +699,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="type"></param>
 		public LuaWpfCreator(LuaUI ui, XamlType type)
 		{
-			this.ui = ui ?? throw new ArgumentNullException(nameof(ui));
+			this.UI = ui ?? throw new ArgumentNullException(nameof(ui));
 			this.type = type ?? throw new ArgumentNullException(nameof(type));
 		} // ctor
 
@@ -1051,7 +1048,7 @@ namespace TecWare.PPSn.UI
 		public virtual string Name => type.Name;
 
 		/// <summary>Get the ui class.</summary>
-		public LuaUI UI => ui;
+		public LuaUI UI { get; }
 
 		/// <summary>Create a wpf creator for a object-type.</summary>
 		/// <param name="ui">UI reference</param>
