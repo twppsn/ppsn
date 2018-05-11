@@ -344,7 +344,7 @@ namespace TecWare.PPSn.Server
 				return ret;
 			if (TryGetAttributeBasedPropertyLocal(dataTypeAttributeString, typeof(Type), out ret))
 				return ret;
-			if (TryGetAttributeBasedPropertyLocal(maxLengthAttributeString, typeof(Type), out ret))
+			if (TryGetAttributeBasedPropertyLocal(maxLengthAttributeString, typeof(int), out ret))
 				return ret;
 
 			// search for a attribute field, with the specific name

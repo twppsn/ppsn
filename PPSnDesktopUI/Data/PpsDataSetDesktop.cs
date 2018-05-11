@@ -447,6 +447,16 @@ namespace TecWare.PPSn.Data
 			return row;
 		} // func Add
 
+		/// <summary>Implement a add method, that supports a LuaTable as argument.</summary>
+		/// <param name="values">Values for the new row.</param>
+		/// <returns>Added row.</returns>
+		public PpsDataRow Add(IPropertyReadOnlyDictionary values)
+		{
+			var row = DataView.NewRow(DataView.Table.GetDataRowValues(values), null);
+			AddNewItem(row);
+			return row;
+		} // func Add
+
 		/// <summary>Auto Commit rows.</summary>
 		/// <param name="args"></param>
 		protected override void OnCollectionChanged(NotifyCollectionChangedEventArgs args)

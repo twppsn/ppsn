@@ -557,7 +557,7 @@ namespace TecWare.PPSn
 		} // func CreateRow
 
 		internal PpsMasterDataSelector CreateRelation(PpsDataTableRelationDefinition relation, object key)
-			=> new PpsMasterDataTableResult(this, PpsDataFilterExpression.Compare(relation.ChildColumn.Name, PpsDataFilterCompareOperator.Equal, PpsDataFilterCompareValueType.Integer, key));
+			=> new PpsMasterDataTableResult(MasterData.GetTable(relation.ChildColumn.Table), PpsDataFilterExpression.Compare(relation.ChildColumn.Name, PpsDataFilterCompareOperator.Equal, PpsDataFilterCompareValueType.Integer, key));
 
 		/// <summary></summary>
 		/// <param name="expression"></param>
@@ -3262,9 +3262,6 @@ namespace TecWare.PPSn
 			}
 		} // prop CurrentTransaction
 
-		/// <summary>Data type mapping for sqlite.</summary>
-		public static (Type Type, string SqlLite, DbType DbType)[] SqlLiteTypeMapping { get => sqlLiteTypeMapping; set => sqlLiteTypeMapping = value; }
-
 		// -- Static ------------------------------------------------------
 
 		private static readonly MethodInfo getTableMethodInfo;
@@ -3287,9 +3284,8 @@ namespace TecWare.PPSn
 
 		#region -- Local store primitives ---------------------------------------------
 
-		// according to https://www.sqlite.org/datatype3.html there are only these datatypes - so map everything to these 5 - but we can define new
-
-		private static (Type Type, string SqlLite, DbType DbType)[] sqlLiteTypeMapping =
+		/// <summary>Data type mapping for sqlite.</summary>
+		private static (Type Type, string SqlLite, DbType DbType)[] SqlLiteTypeMapping { get; } = 
 		{
 			(typeof(bool), "Boolean", DbType.Boolean),
 			(typeof(DateTime), "DateTime", DbType.DateTime),
@@ -3312,7 +3308,8 @@ namespace TecWare.PPSn
 			(typeof(byte[]), "Blob", DbType.Binary),
 			// alt
 			(typeof(long), "integer", DbType.Int64),
-			(typeof(PpsObjectExtendedValue), "Integer", DbType.Int64)
+			(typeof(PpsObjectExtendedValue), "Integer", DbType.Int64),
+			(typeof(PpsFormattedStringValue), "Text", DbType.String)
 		};
 
 		private static Type ConvertSqLiteToDataType(string dataType)

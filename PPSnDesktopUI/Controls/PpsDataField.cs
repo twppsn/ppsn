@@ -435,6 +435,9 @@ namespace TecWare.PPSn.Controls
 			binding.Path = bindingPath;
 			binding.Mode = isReadOnly.HasValue && isReadOnly.Value ? BindingMode.OneWay : BindingMode.Default;
 
+			if (fieldInfo.DataType == typeof(string))
+				binding.TargetNullValue = String.Empty;
+
 			return binding;
 		} // func CreateBindingForField
 

@@ -1602,10 +1602,7 @@ namespace TecWare.PPSn.Data
 		/// <summary>Notifies about changes in this collection.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
-		private readonly PpsDataTable table;
 		private List<PpsDataRow> rows;
-		private bool isDisposed = false;
-
 		private NotifyCollectionChangedEventHandler evCollectionListener;
 		private ColumnValueChangedEventHandler evColumnListener;
 
@@ -1615,7 +1612,7 @@ namespace TecWare.PPSn.Data
 		/// <param name="table">DataTable to filter</param>
 		protected PpsDataFilter(PpsDataTable table)
 		{
-			this.table = table ?? throw new ArgumentNullException();
+			this.Table = table ?? throw new ArgumentNullException();
 			this.rows = new List<PpsDataRow>();
 
 			evCollectionListener = TableNotifyCollectionChanged;
@@ -1634,9 +1631,9 @@ namespace TecWare.PPSn.Data
 		{
 			if (disposing)
 			{
-				isDisposed = true;
-				table.CollectionChanged -= evCollectionListener;
-				table.ColumnValueChanged -= evColumnListener;
+				IsDisposed = true;
+				Table.CollectionChanged -= evCollectionListener;
+				Table.ColumnValueChanged -= evColumnListener;
 			}
 		} // proc Dispose
 
@@ -1650,7 +1647,7 @@ namespace TecWare.PPSn.Data
 			lock (rows)
 			{
 				rows.Clear();
-				rows.AddRange(from row in table where FilterRow(row) select row);
+				rows.AddRange(from row in Table where FilterRow(row) select row);
 			}
 			OnCollectionReset();
 		} // proc Refresh
@@ -1741,33 +1738,33 @@ namespace TecWare.PPSn.Data
 		/// <param name="values">Members that will be assigned to the datarow columns.</param>
 		/// <returns>Added data row.</returns>
 		public PpsDataRow Add(LuaTable values)
-			=> Add(table.GetDataRowValues(values));
+			=> Add(Table.GetDataRowValues(values));
 
 		/// <summary>Add a row from a value array to the view.</summary>
 		/// <param name="values">Value array, that will be assigned by index.</param>
 		/// <returns>Added data row.</returns>
 		public PpsDataRow Add(params object[] values)
-			=> table.Add(InitializeValues(values));
+			=> Table.Add(InitializeValues(values));
 
 		PpsDataRow IPpsDataView.NewRow(object[] originalValues, object[] currentValues)
-			=> ((IPpsDataView)table).NewRow(InitializeValues(originalValues), currentValues);
+			=> ((IPpsDataView)Table).NewRow(InitializeValues(originalValues), currentValues);
 
 		/// <summary>Create a datarow-value-array from a value array.</summary>
 		/// <param name="values">Array of values or <c>null</c>.</param>
 		/// <returns>Value array.</returns>
 		protected virtual object[] InitializeValues(object[] values)
-			=> table.CreateDataRowValuesArray(values);
+			=> Table.CreateDataRowValuesArray(values);
 
 		/// <summary>Remove a datarow from the view.</summary>
 		/// <param name="row">Data row, that should be removed.</param>
 		/// <returns><c>true</c>, if remnoved.</returns>
 		public bool Remove(PpsDataRow row)
-			=> table.Remove(row);
+			=> Table.Remove(row);
 
 		int IList.Add(object value)
 		{
 			if (value is PpsDataRow row)
-				return rows.IndexOf(table.AddInternal(false, row));
+				return rows.IndexOf(Table.AddInternal(false, row));
 			else if (value is LuaTable t)
 			{
 				lock (rows)
@@ -1791,14 +1788,14 @@ namespace TecWare.PPSn.Data
 		} // func IList.IndexOf
 
 		void IList.Remove(object value)
-			=> table.Remove((PpsDataRow)value);
+			=> Table.Remove((PpsDataRow)value);
 
 		void IList.RemoveAt(int index)
 		{
 			PpsDataRow row;
 			lock (rows)
 				row = rows[index];
-			table.Remove(row);
+			Table.Remove(row);
 		} // proc IList.RemoveAt
 
 		void ICollection.CopyTo(Array array, int index)
@@ -1846,11 +1843,12 @@ namespace TecWare.PPSn.Data
 		#endregion
 
 		/// <summary>Access to the child table.</summary>
-		public PpsDataTable Table => table;
+		public PpsDataTable Table { get; }
+
 		/// <summary>Columns</summary>
-		public IReadOnlyList<IDataColumn> Columns => table.Columns;
+		public IReadOnlyList<IDataColumn> Columns => Table.Columns;
 		/// <summary>Is the filter disposed.</summary>
-		public bool IsDisposed => isDisposed;
+		public bool IsDisposed { get; private set; } = false;
 	} // class PpsDataFilter
 
 	#endregion
