@@ -19,6 +19,7 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 
@@ -175,7 +176,7 @@ namespace TecWare.PPSn.Controls
 		{
 			var curPos = this.CaretIndex;
 			var curLen = Text.Length;
-			Text = newText;
+			//Text = newText;
 			curPos -= curLen - Text.Length;
 			this.CaretIndex = Math.Max(0, curPos);
 		} // proc NeatlyReplaceText
@@ -475,7 +476,7 @@ namespace TecWare.PPSn.Controls
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsTextBox), new FrameworkPropertyMetadata(typeof(PpsTextBox)));
 
 			PpsControlCommands.RegisterClearCommand(typeof(PpsTextBox));
-		}
+		} // sctor
 	} // class PpsTextBox
 
 	#endregion class PpsTextBox
