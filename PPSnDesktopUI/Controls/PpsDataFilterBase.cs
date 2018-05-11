@@ -531,7 +531,7 @@ namespace TecWare.PPSn.Controls
 
 		private void OpenDropDown()
 		{
-			if (IsDropDownOpen)
+			if (IsDropDownOpen || IsReadOnly)
 				return;
 			IsDropDownOpen = true;
 		} // proc OpenDropDown
