@@ -226,9 +226,84 @@ namespace TecWare.PPSn.UI
 		{
 			var p = GetParameter(parameter);
 
-			if (value == null)
+			// get type info
+			TypeCode targetTypeCode;
+			bool isNullable;
+			if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
 			{
-				switch (Type.GetTypeCode(targetType))
+				isNullable = true;
+				targetTypeCode = Type.GetTypeCode(targetType.GetGenericArguments()[0]);
+			}
+			else
+			{
+				isNullable = false;
+				targetTypeCode = Type.GetTypeCode(targetType);
+			}
+
+			if (value == null)
+				return GetNullValue(targetType, targetTypeCode, isNullable);
+			else
+			{
+				if (value is string stringValue)
+				{
+					if (stringValue.Length == 0)
+						return GetNullValue(targetType, targetTypeCode, isNullable);
+					else
+					{
+						try
+						{
+							switch (targetTypeCode)
+							{
+								case TypeCode.Single:
+									return Single.Parse(stringValue, culture);
+								case TypeCode.Double:
+									return Double.Parse(stringValue, culture);
+								case TypeCode.Decimal:
+									return Decimal.Parse(stringValue, culture);
+
+								case TypeCode.SByte:
+									return SByte.Parse(stringValue, culture);
+								case TypeCode.Int16:
+									return Int16.Parse(stringValue, culture);
+								case TypeCode.Int32:
+									return Int32.Parse(stringValue, culture);
+								case TypeCode.Int64:
+									return Int64.Parse(stringValue, culture);
+
+								case TypeCode.Byte:
+									return SByte.Parse(stringValue, culture);
+								case TypeCode.UInt16:
+									return Int16.Parse(stringValue, culture);
+								case TypeCode.UInt32:
+									return Int32.Parse(stringValue, culture);
+								case TypeCode.UInt64:
+									return Int64.Parse(stringValue, culture);
+
+								case TypeCode.String:
+									return null;
+
+								default:
+									return DependencyProperty.UnsetValue;
+							}
+						}
+						catch (FormatException e)
+						{
+							return new ValidationResult(false, e);
+						}
+					}
+				}
+				else
+					return DependencyProperty.UnsetValue;
+			}
+		} // func ConvertBack
+
+		private static object GetNullValue(Type targetType, TypeCode targetTypeCode, bool isNullable)
+		{
+			if (isNullable)
+				return Activator.CreateInstance(targetType);
+			else
+			{
+				switch (targetTypeCode)
 				{
 					case TypeCode.Single:
 						return 0.0f;
@@ -261,48 +336,7 @@ namespace TecWare.PPSn.UI
 						return DependencyProperty.UnsetValue;
 				}
 			}
-			else
-			{
-				if (value is string stringValue)
-				{
-					switch (Type.GetTypeCode(targetType))
-					{
-						case TypeCode.Single:
-							return Single.Parse(stringValue, culture);
-						case TypeCode.Double:
-							return Double.Parse(stringValue, culture);
-						case TypeCode.Decimal:
-							return Decimal.Parse(stringValue, culture);
-
-						case TypeCode.SByte:
-							return SByte.Parse(stringValue, culture);
-						case TypeCode.Int16:
-							return Int16.Parse(stringValue, culture);
-						case TypeCode.Int32:
-							return Int32.Parse(stringValue, culture);
-						case TypeCode.Int64:
-							return Int64.Parse(stringValue, culture);
-
-						case TypeCode.Byte:
-							return SByte.Parse(stringValue, culture);
-						case TypeCode.UInt16:
-							return Int16.Parse(stringValue, culture);
-						case TypeCode.UInt32:
-							return Int32.Parse(stringValue, culture);
-						case TypeCode.UInt64:
-							return Int64.Parse(stringValue, culture);
-
-						case TypeCode.String:
-							return null;
-
-						default:
-							return DependencyProperty.UnsetValue;
-					}
-				}
-				else
-					return DependencyProperty.UnsetValue;
-			}
-		} // func ConvertBack
+		}
 
 		public static IValueConverter Default { get; } = new NumericValueConverter();
 	} // class FloatValueConverter
