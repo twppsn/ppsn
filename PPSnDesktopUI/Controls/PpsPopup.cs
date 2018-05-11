@@ -14,10 +14,14 @@
 //
 #endregion
 using System;
+using System.Collections;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Markup;
+using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Controls
 {
@@ -30,6 +34,16 @@ namespace TecWare.PPSn.Controls
 		public event CancelEventHandler Opening;
 		/// <summary></summary>
 		public event CancelEventHandler Closing;
+
+		/// <summary></summary>
+		public PpsPopup()
+		{
+			CommandBindings.Add(
+				new CommandBinding(PpsControlCommands.ClosePopupCommand,
+					(sender, e) => ((Popup)sender).IsOpen = false
+				)
+			);
+		} // sctor
 
 		private static object OnIsOpenCoerceValue(DependencyObject d, object baseValue)
 			=> ((PpsPopup)d).OnIsCoerceValue((bool)baseValue);
@@ -66,8 +80,21 @@ namespace TecWare.PPSn.Controls
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsPopup), new FrameworkPropertyMetadata(typeof(PpsPopup)));
 			IsOpenProperty.OverrideMetadata(typeof(PpsPopup), new FrameworkPropertyMetadata(null, new CoerceValueCallback(OnIsOpenCoerceValue)));
-		}
+		} // sctor
 	} // class PpsPopup
+
+	#endregion
+
+	#region -- class PpsPopupContent --------------------------------------------------
+
+	/// <summary>Popup panel layout.</summary>
+	public class PpsPopupContent : HeaderedContentControl
+	{
+		static PpsPopupContent()
+		{
+			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsPopupContent), new FrameworkPropertyMetadata(typeof(PpsPopupContent)));
+		} // sctor
+	} // class PpsPopupContent
 
 	#endregion
 

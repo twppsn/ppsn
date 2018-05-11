@@ -20,4 +20,39 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="AllowsTransparency" Value="True" />
 		<Setter Property="PopupAnimation" Value="Fade" />
 	</Style>
+
+	<Style TargetType="{x:Type pps:PpsPopupContent}">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="pps:PpsPopupContent">
+					<Border BorderThickness="1" BorderBrush="Black" Background="White">
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition />
+								<ColumnDefinition Width="32" />
+							</Grid.ColumnDefinitions>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="32" />
+								<RowDefinition />
+							</Grid.RowDefinitions>
+
+							<ContentPresenter Grid.Row="0" Grid.Column="0"
+										  Content="{TemplateBinding Header}"
+										  ContentTemplate="{TemplateBinding HeaderTemplate}"
+										  ContentStringFormat="{TemplateBinding HeaderStringFormat}"
+										  ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}" />
+
+							<Button Grid.Row="0" Grid.Column="1" Content="x" Command="{x:Static pps:PpsControlCommands.ClosePopupCommand}" />
+
+							<ContentPresenter Grid.Row="1" Grid.ColumnSpan="2"
+										  Content="{TemplateBinding Content}"
+										  ContentTemplate="{TemplateBinding ContentTemplate}"
+										  ContentStringFormat="{TemplateBinding ContentStringFormat}"
+										  ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}" />
+						</Grid>
+					</Border>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
 </ResourceDictionary>
