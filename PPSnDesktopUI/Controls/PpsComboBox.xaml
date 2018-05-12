@@ -141,15 +141,23 @@ specific language governing permissions and limitations under the Licence.
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
 								<Condition Property="ComboBox.IsEditable" Value="False" />
-								<Condition Property="IsKeyboardFocusWithin" Value="True" />
 								<Condition SourceName="ClearButton" Property="IsEnabled" Value="True" />
+								<Condition Property="IsKeyboardFocusWithin" Value="True" />
+								<Condition Property="pps:PpsReadOnlyPaneBehavior.IsReadOnly" Value="False" />
 							</MultiTrigger.Conditions>
 							<Setter TargetName="ContentSite" Property="Margin" Value="5,1,46,1" />
 							<Setter TargetName="ClearButton" Property="Visibility" Value="Visible"/>
 						</MultiTrigger>
 						<Trigger Property="ComboBox.IsDropDownOpen" Value="True">
 							<Setter TargetName="ClearButton" Property="IsHitTestVisible" Value="False"/>
-							<Setter TargetName="ClearButton" Property="Opacity" Value=".5"/>
+							<Setter TargetName="ClearButton" Property="Opacity" Value=".4"/>
+						</Trigger>
+
+						<Trigger Property="pps:PpsReadOnlyPaneBehavior.IsReadOnly" Value="True">
+							<Setter TargetName="PART_EditableTextBox" Property="IsEnabled" Value="False"/>
+							<!--<Setter TargetName="ChangeDropDownToggleButton" Property="IsEnabled" Value="False"/>-->
+							<!--KeyBoard-Selection-->
+							<!--<Setter Property="Focusable" Value="False"/>-->
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>

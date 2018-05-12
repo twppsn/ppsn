@@ -31,7 +31,7 @@ specific language governing permissions and limitations under the Licence.
 	</DataTemplate>
 
 	<DataTemplate x:Key="PpsDataFilterDefaultSelectedValueTemplate">
-		<TextBlock Text="{Binding Name}"
+		<TextBlock Text="{Binding Name, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"
 				   TextWrapping="NoWrap"
 				   TextTrimming="CharacterEllipsis" />
 	</DataTemplate>
@@ -55,41 +55,6 @@ specific language governing permissions and limitations under the Licence.
 		</Setter>
 	</Style>
 
-	<ControlTemplate x:Key="PpsDataFilterComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}">
-		<Grid>
-			<Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}"	BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}">
-				<Viewbox x:Name="arrowBox" HorizontalAlignment="Right" Width="20" Margin="0,0,1,0" Opacity=".5">
-					<Canvas Width="24" Height="24">
-						<Path x:Name="arrowPath" Data="M5,9 L6,8 12,14 18,8 19,9 12,16 5,9 Z"
-							  Fill="{TemplateBinding Foreground}"
-							  SnapsToDevicePixels="False" />
-					</Canvas>
-				</Viewbox>
-			</Border>
-		</Grid>
-		<ControlTemplate.Triggers>
-			<DataTrigger Binding="{Binding IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType={x:Type pps:PpsDataFilterCombo}}}">
-				<DataTrigger.Value>
-					<sys:Boolean>True</sys:Boolean>
-				</DataTrigger.Value>
-				<Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}"/>
-				<Setter TargetName="arrowBox" Property="Opacity" Value=".75"/>
-			</DataTrigger>
-			<Trigger Property="pps:PpsReadOnlyPaneBehavior.IsReadOnly">
-				<Trigger.Value>
-					<sys:Boolean>True</sys:Boolean>
-				</Trigger.Value>
-				<Setter TargetName="arrowBox" Property="Visibility" Value="Hidden"/>
-			</Trigger>
-			<Trigger Property="IsEnabled">
-				<Trigger.Value>
-					<sys:Boolean>False</sys:Boolean>
-				</Trigger.Value>
-				<Setter TargetName="arrowBox" Property="Opacity" Value=".25"/>
-			</Trigger>
-		</ControlTemplate.Triggers>
-	</ControlTemplate>
-
 	<Style TargetType="{x:Type pps:PpsDataFilterCombo}">
 		<Setter Property="SelectedValueTemplate" Value="{StaticResource PpsDataFilterDefaultSelectedValueTemplate}" />
 		<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterDefaultItemTemplate}" />
@@ -107,13 +72,11 @@ specific language governing permissions and limitations under the Licence.
 					<Grid>
 						<!--this button opens the popdown-->
 						<ToggleButton x:Name="ToggleDropDownButton"
-									  Template="{StaticResource PpsDataFilterComboBoxToggleButtonTemplate}"
 									  IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
-									  ClickMode="Press"
-									  Focusable="False"
 									  BorderBrush="{TemplateBinding BorderBrush}"
 									  BorderThickness="{TemplateBinding BorderThickness}"
-									  Background="{TemplateBinding Background}" />
+									  Background="{TemplateBinding Background}"
+									  Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsComboBoxToggleButtonStyle}}" />
 						<!--this contentpresenter shows the actual value-->
 						<ContentPresenter x:Name="ContentSite"
 										  Content="{Binding SelectedValue, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}"
@@ -131,7 +94,6 @@ specific language governing permissions and limitations under the Licence.
 								Visibility="Hidden"
 								Command="{x:Static pps:PpsDataFilterBase.ClearValueCommand}"
 								Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsClearContentButtonStyle}}" />
-
 						<pps:PpsPopup Placement="Bottom"
 									  VerticalOffset="1"
 									  StaysOpen="False"
@@ -187,12 +149,16 @@ specific language governing permissions and limitations under the Licence.
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
 								<Condition SourceName="ClearButton" Property="IsEnabled" Value="True" />
-								<Condition Property="IsDropDownOpen" Value="False" />
-								<Condition Property="IsKeyboardFocused" Value="True" />
+								<Condition Property="IsKeyboardFocusWithin" Value="True" />
+								<Condition Property="pps:PpsReadOnlyPaneBehavior.IsReadOnly" Value="False" />
 							</MultiTrigger.Conditions>
 							<Setter TargetName="ContentSite" Property="Margin" Value="5,1,46,1" />
 							<Setter TargetName="ClearButton" Property="Visibility" Value="Visible" />
 						</MultiTrigger>
+						<Trigger Property="pps:PpsDataFilterCombo.IsDropDownOpen" Value="True">
+							<Setter TargetName="ClearButton" Property="IsHitTestVisible" Value="False"/>
+							<Setter TargetName="ClearButton" Property="Opacity" Value=".4"/>
+						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
