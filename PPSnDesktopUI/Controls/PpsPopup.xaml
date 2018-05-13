@@ -26,6 +26,7 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="BorderThickness" Value="1" />
 		<Setter Property="Background" Value="{DynamicResource PPSnPopUpBackgroundBrush}" />
 		<Setter Property="BorderBrush" Value="{DynamicResource PPSnPopUpBorderBrush}" />
+		<Setter Property="Focusable" Value="False" />
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="pps:PpsPopupContent">
