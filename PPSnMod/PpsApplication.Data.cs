@@ -42,15 +42,13 @@ namespace TecWare.PPSn.Server
 		private const string dataTypeAttributeString = "dataType";
 		private const string inheritedAttributeString = "inherited";
 
-		#region -- class PpsFieldAttributesEnumerator -----------------------------------
+		#region -- class PpsFieldAttributesEnumerator ---------------------------------
 
 		private sealed class PpsFieldAttributesEnumerator : IEnumerator<PropertyValue>
 		{
 			private readonly List<string> emittedProperties = new List<string>();
 			private readonly PpsFieldDescription field;
 			private int state = 0;
-
-			private PropertyValue currentProperty;
 
 			private readonly Stack<IPpsColumnDescription> nativeColumnDescriptors = new Stack<IPpsColumnDescription>();
 			private PpsFieldDescription currentField = null;
@@ -84,7 +82,7 @@ namespace TecWare.PPSn.Server
 					return false;
 
 				this.state = nextState;
-				this.currentProperty = v;
+				this.Current = v;
 				return true;
 			} // func EmitPropertyValue
 
@@ -128,7 +126,7 @@ namespace TecWare.PPSn.Server
 							var name = currentFieldEnumerator.Current.GetAttribute<string>("name", null);
 							if (!PropertyEmitted(name))
 							{
-								currentProperty = GetPropertyFromElement(currentFieldEnumerator.Current);
+								Current = GetPropertyFromElement(currentFieldEnumerator.Current);
 								return true;
 							}
 						}
@@ -155,7 +153,7 @@ namespace TecWare.PPSn.Server
 						{
 							if (!PropertyEmitted(currentAttributesEnumerator.Current.Name))
 							{
-								currentProperty = currentAttributesEnumerator.Current;
+								Current = currentAttributesEnumerator.Current;
 								return true;
 							}
 						}
@@ -171,23 +169,22 @@ namespace TecWare.PPSn.Server
 			public void Reset()
 			{
 				state = 0;
-				currentProperty = null;
+				Current = null;
 				currentField = field;
 				currentFieldEnumerator?.Dispose();
 				currentFieldEnumerator = null;
 				currentAttributesEnumerator?.Dispose();
 				currentAttributesEnumerator = null;
 			} // prop Reset
-	
-			public PropertyValue Current 
-				=> currentProperty;
 
-			object IEnumerator.Current => currentProperty;
+			public PropertyValue Current { get; private set; }
+
+			object IEnumerator.Current => Current;
 		} // class PpsFieldAttributesEnumerator
 
 		#endregion
 
-		#region -- class PpsFieldAttributes ---------------------------------------------
+		#region -- class PpsFieldAttributes -------------------------------------------
 
 		private sealed class PpsFieldAttributes : IPropertyEnumerableDictionary
 		{
@@ -222,10 +219,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		private readonly PpsDataSource source;	// attached datasource
-		private readonly string name; // name of the field
 		private readonly string inheritedFieldName; // name for the base field
-		private readonly IPropertyEnumerableDictionary attributes; // attributes
 		private readonly XElement xDefinition; // definition in configuration
 
 		private IPpsColumnDescription nativeColumnDescription = null; // assign field description of the datasource
@@ -237,13 +231,17 @@ namespace TecWare.PPSn.Server
 
 		private bool isInitialzed = false;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="source"></param>
+		/// <param name="name"></param>
+		/// <param name="xDefinition"></param>
 		public PpsFieldDescription(PpsDataSource source, string name, XElement xDefinition)
 		{
-			this.source = source;
-			this.name = name;
-			this.attributes = new PpsFieldAttributes(this);
+			this.DataSource = source;
+			this.Name = name;
+			this.Attributes = new PpsFieldAttributes(this);
 			this.xDefinition = xDefinition;
 
 			this.inheritedFieldName = xDefinition.GetAttribute(inheritedAttributeString, (string)null);
@@ -269,17 +267,17 @@ namespace TecWare.PPSn.Server
 		{
 			// find inheritied column
 			if (!String.IsNullOrEmpty(inheritedFieldName))
-				inheritedDefinition = source.Application.GetFieldDescription(inheritedFieldName, true);
+				inheritedDefinition = DataSource.Application.GetFieldDescription(inheritedFieldName, true);
 			
 			// Resolve a native column description for the field.
-			this.nativeColumnDescription = source.GetColumnDescription(name); // no exception
+			this.nativeColumnDescription = DataSource.GetColumnDescription(Name); // no exception
 
 			isInitialzed = true;
 		} // proc EndInit
 
 		#endregion
 
-		#region -- GetProperty ------------------------------------------------------------
+		#region -- GetProperty --------------------------------------------------------
 
 		private static PropertyValue GetPropertyFromElement(XElement xAttribute)
 		{
@@ -295,7 +293,7 @@ namespace TecWare.PPSn.Server
 				object value;
 				var dataType = LuaType.GetType(xAttribute.GetAttribute("dataType", typeof(string))).Type;
 				if (dataType == typeof(Type))
-					value = (object)LuaType.GetType(xAttribute.Value, lateAllowed: false).Type;
+					value = LuaType.GetType(xAttribute.Value, lateAllowed: false).Type;
 				else
 					value = Procs.ChangeType(xAttribute.Value, dataType);
 
@@ -346,7 +344,7 @@ namespace TecWare.PPSn.Server
 				return ret;
 			if (TryGetAttributeBasedPropertyLocal(dataTypeAttributeString, typeof(Type), out ret))
 				return ret;
-			if (TryGetAttributeBasedPropertyLocal(maxLengthAttributeString, typeof(Type), out ret))
+			if (TryGetAttributeBasedPropertyLocal(maxLengthAttributeString, typeof(int), out ret))
 				return ret;
 
 			// search for a attribute field, with the specific name
@@ -368,7 +366,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- IEnumerable ------------------------------------------------------------
+		#region -- IEnumerable --------------------------------------------------------
 
 		private IEnumerable<PropertyValue> GetAttributesConverted(string attributeSelector)
 		{
@@ -379,13 +377,13 @@ namespace TecWare.PPSn.Server
 			}
 		} // proc GetAttributesConverted
 
+		/// <summary></summary>
+		/// <param name="attributeSelector"></param>
+		/// <returns></returns>
 		public IEnumerable<PropertyValue> GetAttributes(string attributeSelector)
-		{
-			if (attributeSelector == "*")
-				return Attributes;
-			else
-				return GetAttributesConverted(attributeSelector);
-		} // func GetAttributes
+			=> attributeSelector == "*"
+				? Attributes
+				: GetAttributesConverted(attributeSelector);
 
 		#endregion
 
@@ -403,14 +401,22 @@ namespace TecWare.PPSn.Server
 				return inheritedDefinition == null ? default(T) : inheritedDefinition.GetColumnDescription<T>();
 		} // func GetColumnDescription
 
-		public PpsDataSource DataSource => source;
-		public string Name => name;
+		/// <summary>Defined in.</summary>
+		public PpsDataSource DataSource { get; }
+
+		/// <summary>Name of the field.</summary>
+		public string Name { get; }
+
+		/// <summary>Displayname of the field.</summary>
 		public string DisplayName => displayName.Value;
 
+		/// <summary>Max length of the field.</summary>
 		public int MaxLength => Attributes.GetPropertyLate("MaxLength", () => maxLength.Value);
+		/// <summary>DataType of the field.</summary>
 		public Type DataType => dataType?.Value ?? (nativeColumnDescription?.DataType ?? typeof(string));
 
-		public IPropertyEnumerableDictionary Attributes => attributes;
+		/// <summary>Field attributes.</summary>
+		public IPropertyEnumerableDictionary Attributes { get; }
 	} // class PpsFieldDescription
 
 	#endregion

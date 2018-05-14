@@ -215,7 +215,7 @@ namespace TecWare.PPSn
 		private readonly PpsMasterDataTable owner;
 		private readonly object[] values;
 
-		internal PpsMasterDataRow(PpsMasterDataTable owner, IDataReader r)
+		internal PpsMasterDataRow(PpsMasterDataTable owner, IDataRecord r)
 		{
 			this.owner = owner;
 			this.values = new object[owner.Columns.Count];
@@ -236,13 +236,37 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public override bool Equals(object obj)
 			=> obj is PpsMasterDataRow r
-				? (ReferenceEquals(this, obj) || owner.Definition == r.owner.Definition && Object.Equals(Key, r.Key))
+				? (ReferenceEquals(this, obj) || owner.Definition == r.owner.Definition && Equals(Key, r.Key))
 				: false;
 
 		/// <summary>Hashcode for the current datarow.</summary>
 		/// <returns></returns>
 		public override int GetHashCode()
 			=> owner.Definition.GetHashCode() ^ (Key?.GetHashCode() ?? 0);
+
+		/// <summary></summary>
+		/// <param name="columnName"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public override bool TryGetProperty(string columnName, out object value)
+		{
+			if (base.TryGetProperty(columnName, out value))
+				return true;
+			else
+			{
+				var rel = owner.Definition.Relations[columnName, false];
+				if (rel != null)
+				{
+					value = owner.CreateRelation(rel, values[rel.ParentColumn.Index]);
+					return true;
+				}
+				else
+				{
+					value = null;
+					return false;
+				}
+			}
+		} // func TryGetProperty
 
 		/// <summary>Access the column decriptions.</summary>
 		public override IReadOnlyList<IDataColumn> Columns
@@ -304,10 +328,7 @@ namespace TecWare.PPSn
 			{
 				var primaryKeyColumnIndex = Table.GetPrimaryKeyColumnIndex();
 				while (r.Read())
-				{
-					var key = r.GetValue(primaryKeyColumnIndex);
-					yield return Table.TryGetRowFromCache(key, out var row) ? row : new PpsMasterDataRow(Table, r);
-				}
+					yield return Table.CreateRow(primaryKeyColumnIndex, r);
 			}
 		} // func GetEnumerator
 
@@ -351,8 +372,6 @@ namespace TecWare.PPSn
 
 		private sealed class PpsMasterDataFilterVisitor : PpsSqLiteFilterVisitor
 		{
-			private bool needFullTextColumn = false;
-
 			public PpsMasterDataFilterVisitor(IDataColumns columns)
 				: base(columns)
 			{
@@ -362,7 +381,7 @@ namespace TecWare.PPSn
 			{
 				if (String.IsNullOrEmpty(columnToken))
 				{
-					needFullTextColumn = true;
+					NeedFullTextColumn = true;
 					return new Tuple<string, Type>("__FULLTEXT__", typeof(string));
 				}
 				return base.LookupColumn(columnToken);
@@ -374,11 +393,11 @@ namespace TecWare.PPSn
 			protected override Tuple<string, Type> LookupNumberColumn(string columnToken)
 				=> base.LookupNumberColumn(columnToken);
 
-			public bool NeedFullTextColumn => needFullTextColumn;
+			public bool NeedFullTextColumn { get; private set; } = false;
 		} // class PpsMasterDataFilterVisitor
 
 		#endregion
-
+			
 		#region -- class PpsMasterDataTableResult -------------------------------------
 
 		private sealed class PpsMasterDataTableResult : PpsMasterDataSelector
@@ -437,16 +456,13 @@ namespace TecWare.PPSn
 
 		private readonly Dictionary<object, WeakReference<PpsMasterDataRow>> cachedRows = new Dictionary<object, WeakReference<PpsMasterDataRow>>();
 
-		private readonly PpsMasterData masterData;
-		private readonly PpsDataTableDefinition definition;
-
 		/// <summary></summary>
 		/// <param name="masterData"></param>
 		/// <param name="table"></param>
 		public PpsMasterDataTable(PpsMasterData masterData, PpsDataTableDefinition table)
 		{
-			this.masterData = masterData;
-			this.definition = table;
+			this.MasterData = masterData;
+			this.Definition = table;
 		} // ctor
 
 		private StringBuilder PrepareCommandText(Action<StringBuilder> appendVirtualColumns)
@@ -455,7 +471,7 @@ namespace TecWare.PPSn
 
 			// create select
 			var first = true;
-			foreach (var c in definition.Columns)
+			foreach (var c in Definition.Columns)
 			{
 				if (first)
 					first = false;
@@ -469,7 +485,7 @@ namespace TecWare.PPSn
 			appendVirtualColumns?.Invoke(commandText);
 
 			// build from
-			commandText.Append(" FROM main.[").Append(definition.Name).Append(']');
+			commandText.Append(" FROM main.[").Append(Definition.Name).Append(']');
 			return commandText;
 		} // proc PrepareCommandText
 
@@ -479,7 +495,7 @@ namespace TecWare.PPSn
 		{
 			var commandText = PrepareCommandText(null);
 
-			return masterData.CreateNativeCommand(commandText.ToString());
+			return MasterData.CreateNativeCommand(commandText.ToString());
 		} // func PrepareCommand
 
 		/// <summary></summary>
@@ -488,24 +504,28 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public PpsMasterDataRow GetRowById(object key, bool throwException = false)
 		{
-			if (TryGetRowFromCache(key, out var row))
-				return row;
+			lock (cachedRows)
+			{
+				if (cachedRows.TryGetValue(key, out var rowRef) && rowRef.TryGetTarget(out var row) && row != null)
+					return row;
+			}
 
 			var commandText = PrepareCommandText(null);
 			commandText.Append(" WHERE [")
-				.Append(definition.PrimaryKey.Name)
+				.Append(Definition.PrimaryKey.Name)
 				.Append("] = @Key");
 
-			using (var cmd = masterData.CreateNativeCommand(commandText.ToString()))
+			using (var cmd = MasterData.CreateNativeCommand(commandText.ToString()))
 			{
 				cmd.AddParameter("@key").Value = key;
+				var primaryKeyColumnIndex = GetPrimaryKeyColumnIndex();
 
 				using (var r = cmd.ExecuteReaderEx(CommandBehavior.SingleRow))
 				{
 					if (r.Read())
-						return new PpsMasterDataRow(this, r);
+						return CreateRow(primaryKeyColumnIndex, r);
 					else if (throwException)
-						throw new ArgumentException($"Could not seek row with key '{key}' in table '{definition.Name}'.");
+						throw new ArgumentException($"Could not seek row with key '{key}' in table '{Definition.Name}'.");
 					else
 						return null;
 				}
@@ -515,10 +535,29 @@ namespace TecWare.PPSn
 		/// <summary>Returns the primary key index.</summary>
 		/// <returns></returns>
 		internal int GetPrimaryKeyColumnIndex()
-			=> definition.PrimaryKey.Index;
+			=> Definition.PrimaryKey.Index;
 
 		internal PpsDataColumnDefinition GetColumnDefinition(int index)
-			=> definition.Columns[index];
+			=> Definition.Columns[index];
+
+		internal PpsMasterDataRow CreateRow(int primaryKeyColumnIndex, IDataRecord r)
+		{
+			lock (cachedRows)
+			{
+				var key = r.GetValue(primaryKeyColumnIndex);
+				if (cachedRows.TryGetValue(key, out var rowRef) && rowRef.TryGetTarget(out var row) && row != null)
+					return row;
+				else
+				{
+					row = new PpsMasterDataRow(Table, r);
+					cachedRows[key] = new WeakReference<PpsMasterDataRow>(row);
+					return row;
+				}
+			}
+		} // func CreateRow
+
+		internal PpsMasterDataSelector CreateRelation(PpsDataTableRelationDefinition relation, object key)
+			=> new PpsMasterDataTableResult(MasterData.GetTable(relation.ChildColumn.Table), PpsDataFilterExpression.Compare(relation.ChildColumn.Name, PpsDataFilterCompareOperator.Equal, PpsDataFilterCompareValueType.Integer, key));
 
 		/// <summary></summary>
 		/// <param name="expression"></param>
@@ -526,25 +565,16 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public override IDataRowEnumerable ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 			=> new PpsMasterDataTableResult(this, expression);
-
-		/// <summary>Returns a cached row.</summary>
-		/// <param name="key"></param>
-		/// <param name="row"></param>
-		/// <returns></returns>
-		internal bool TryGetRowFromCache(object key, out PpsMasterDataRow row)
-		{
-			row = null;
-			return false;
-		} // func TryGetRowFromCache
-
+		
 		/// <summary>Columns</summary>
-		public override IReadOnlyList<IDataColumn> Columns => definition.Columns;
+		public override IReadOnlyList<IDataColumn> Columns => Definition.Columns;
 		/// <summary>Self</summary>
 		public override PpsMasterDataTable Table => this;
 		/// <summary></summary>
-		public PpsDataTableDefinition Definition => definition;
+		public PpsDataTableDefinition Definition { get; }
+
 		/// <summary>The master data service.</summary>
-		public PpsMasterData MasterData => masterData;
+		public PpsMasterData MasterData { get; }
 	} // class PpsMasterDataTable
 
 	#endregion
@@ -3232,9 +3262,6 @@ namespace TecWare.PPSn
 			}
 		} // prop CurrentTransaction
 
-		/// <summary>Data type mapping for sqlite.</summary>
-		public static (Type Type, string SqlLite, DbType DbType)[] SqlLiteTypeMapping { get => sqlLiteTypeMapping; set => sqlLiteTypeMapping = value; }
-
 		// -- Static ------------------------------------------------------
 
 		private static readonly MethodInfo getTableMethodInfo;
@@ -3257,9 +3284,8 @@ namespace TecWare.PPSn
 
 		#region -- Local store primitives ---------------------------------------------
 
-		// according to https://www.sqlite.org/datatype3.html there are only these datatypes - so map everything to these 5 - but we can define new
-
-		private static (Type Type, string SqlLite, DbType DbType)[] sqlLiteTypeMapping =
+		/// <summary>Data type mapping for sqlite.</summary>
+		private static (Type Type, string SqlLite, DbType DbType)[] SqlLiteTypeMapping { get; } = 
 		{
 			(typeof(bool), "Boolean", DbType.Boolean),
 			(typeof(DateTime), "DateTime", DbType.DateTime),
@@ -3282,7 +3308,8 @@ namespace TecWare.PPSn
 			(typeof(byte[]), "Blob", DbType.Binary),
 			// alt
 			(typeof(long), "integer", DbType.Int64),
-			(typeof(PpsObjectExtendedValue), "Integer", DbType.Int64)
+			(typeof(PpsObjectExtendedValue), "Integer", DbType.Int64),
+			(typeof(PpsFormattedStringValue), "Text", DbType.String)
 		};
 
 		private static Type ConvertSqLiteToDataType(string dataType)

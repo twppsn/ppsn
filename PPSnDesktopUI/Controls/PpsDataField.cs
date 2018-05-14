@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Markup;
 using System.Xaml;
@@ -35,7 +36,6 @@ namespace TecWare.PPSn.Controls
 	public sealed class PpsDataFieldInfo : IPropertyReadOnlyDictionary
 	{
 		private readonly IDataColumn dataColumn;
-		private readonly string bindingPath;
 
 		/// <summary></summary>
 		/// <param name="dataColumn"></param>
@@ -43,7 +43,7 @@ namespace TecWare.PPSn.Controls
 		internal PpsDataFieldInfo(IDataColumn dataColumn, string bindingPath)
 		{
 			this.dataColumn = dataColumn ?? throw new ArgumentNullException(nameof(dataColumn));
-			this.bindingPath = bindingPath ?? throw new ArgumentNullException(nameof(bindingPath));
+			this.BindingPath = bindingPath ?? throw new ArgumentNullException(nameof(bindingPath));
 		} // ctor
 
 		/// <summary></summary>
@@ -54,7 +54,7 @@ namespace TecWare.PPSn.Controls
 		internal PpsDataFieldInfo(string name, Type dataType, string bindingPath, IPropertyEnumerableDictionary properties)
 		{
 			this.dataColumn = new SimpleDataColumn(name, dataType, properties);
-			this.bindingPath = bindingPath ?? throw new ArgumentNullException(nameof(bindingPath));
+			this.BindingPath = bindingPath ?? throw new ArgumentNullException(nameof(bindingPath));
 		} // ctor
 
 		/// <summary></summary>
@@ -95,7 +95,7 @@ namespace TecWare.PPSn.Controls
 		public PpsDataColumnDefinition ColumnDefinition => dataColumn as PpsDataColumnDefinition;
 
 		/// <summary>BindingPath to use this field.</summary>
-		public string BindingPath => bindingPath;
+		public string BindingPath { get; }
 
 		/// <summary></summary>
 		/// <param name="serviceProvider"></param>
@@ -434,6 +434,9 @@ namespace TecWare.PPSn.Controls
 
 			binding.Path = bindingPath;
 			binding.Mode = isReadOnly.HasValue && isReadOnly.Value ? BindingMode.OneWay : BindingMode.Default;
+
+			if (fieldInfo.DataType == typeof(string))
+				binding.TargetNullValue = String.Empty;
 
 			return binding;
 		} // func CreateBindingForField
@@ -786,13 +789,11 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public sealed class PpsDataFieldFactory : LuaTable, IPpsDataFieldFactory
 	{
-		private readonly PpsEnvironment environment;
-
 		/// <summary></summary>
 		/// <param name="environment"></param>
 		public PpsDataFieldFactory(PpsEnvironment environment)
 		{
-			this.environment = environment;
+			this.Environment = environment;
 		} // ctor
 
 		/// <summary></summary>
@@ -827,7 +828,7 @@ namespace TecWare.PPSn.Controls
 			// emit code
 			if (controls == null || controls.Length == 0)
 				return null;
-			else if (controls.Length == 0)
+			else if (controls.Length == 1)
 				return controls[0].CreateReader(properties.Context);
 			else
 				return LuaWpfCreator.CreateCollectionReader(from c in controls select c.CreateReader(properties.Context));
@@ -918,6 +919,8 @@ namespace TecWare.PPSn.Controls
 				return CreateTextField(properties);
 			else if (properties.DataType == typeof(DateTime))
 				return CreateDateTimeField(properties);
+			else if (properties.DataType == typeof(bool))
+				return CreateCheckField(properties);
 			else if (properties.DataType == typeof(PpsMasterDataExtendedValue))
 			{
 				// test for master table
@@ -955,19 +958,23 @@ namespace TecWare.PPSn.Controls
 			var textBinding = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true), append: formattedText ? "Value" : null, isReadOnly: isReadOnly);
 
 			var inputType = formattedText ? PpsTextBoxInputType.MultiLine : PpsTextBoxInputType.None;
+			var setMaxLength = true;
 			switch (Type.GetTypeCode(properties.DataType))
 			{
 				case TypeCode.Decimal:
 					PpsDataFieldFactory.SetNumericBinding(ui, txt, textBinding, true, 2);
 					inputType = PpsTextBoxInputType.DecimalNegative;
+					setMaxLength = false;
 					break;
 				case TypeCode.Single:
 					PpsDataFieldFactory.SetNumericBinding(ui, txt, textBinding, true, 3);
 					inputType = PpsTextBoxInputType.DecimalNegative;
+					setMaxLength = false;
 					break;
 				case TypeCode.Double:
 					PpsDataFieldFactory.SetNumericBinding(ui, txt, textBinding, true, 6);
 					inputType = PpsTextBoxInputType.DecimalNegative;
+					setMaxLength = false;
 					break;
 
 				case TypeCode.SByte:
@@ -1027,7 +1034,7 @@ namespace TecWare.PPSn.Controls
 			else
 				txt.HorizontalAlignment = HorizontalAlignment.Stretch;
 
-			if (properties.TryGetProperty<int>("MaxLength", out var maxInputLength))
+			if (setMaxLength && properties.TryGetProperty<int>("MaxLength", out var maxInputLength))
 				txt.MaxLength = maxInputLength;
 
 			if (properties.TryGetProperty<bool>("Nullable", out var tmpNullable))
@@ -1057,7 +1064,7 @@ namespace TecWare.PPSn.Controls
 		{
 			dynamic combobox = CreateSelector(properties);
 
-			combobox.ItemsSource = environment.MasterData.GetTable(refTableName, true);
+			combobox.ItemsSource = Environment.MasterData.GetTable(refTableName, true);
 			combobox.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>());
 
 			if (properties.TryGetProperty("TemplateResourceKey", out var templateResource))
@@ -1111,16 +1118,29 @@ namespace TecWare.PPSn.Controls
 		private static LuaWpfCreator CreateComboField(IPpsDataFieldReadOnlyProperties properties)
 		{
 			dynamic ui = new LuaUI();
-			dynamic combo = LuaWpfCreator.CreateFactory(ui, typeof(System.Windows.Controls.ComboBox));
+			dynamic combo = LuaWpfCreator.CreateFactory(ui, typeof(ComboBox));
 
 			combo.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true));
 
 			return combo;
 		} // func CreateComboField
 
+		[LuaMember]
+		private LuaWpfCreator CreateCheckField(IPpsDataFieldReadOnlyProperties properties)
+		{
+			dynamic ui = new LuaUI();
+			dynamic check = LuaWpfCreator.CreateFactory(ui, typeof(CheckBox));
+
+			//check.Content = properties.displayName;
+			check.IsThreeState = false;
+			check.IsChecked = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true));
+
+			return check;
+		} // func CreateCheckField
+
 		/// <summary></summary>
 		[LuaMember]
-		public PpsEnvironment Environment => environment;
+		public PpsEnvironment Environment { get; }
 	} // class PpsDataFieldFactory
 
 	#endregion

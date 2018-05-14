@@ -46,6 +46,8 @@ namespace TecWare.PPSn.Controls
 		public static readonly RoutedCommand ClearCommand = new RoutedUICommand("Clear", "Clear", typeof(PpsControlCommands));
 		/// <summary></summary>
 		public static readonly RoutedCommand SelectCommand = new RoutedUICommand("Select", "Select", typeof(PpsControlCommands));
+		/// <summary></summary>
+		public static readonly RoutedCommand ClosePopupCommand = new RoutedUICommand("ClosePopup", "ClosePopup", typeof(PpsControlCommands));
 
 		/// <summary></summary>
 		/// <param name="type"></param>

@@ -35,8 +35,8 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="Control.Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ComboBoxItem}">
-					<Border Name="ContentBorder" Background="Transparent" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Padding="4,0" Height="29">
-						<ContentPresenter VerticalAlignment="Center"/>
+					<Border Name="ContentBorder" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Padding="4,0" MinHeight="29">
+						<ContentPresenter VerticalAlignment="Center" />
 					</Border>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsHighlighted" Value="True">
@@ -53,7 +53,7 @@ specific language governing permissions and limitations under the Licence.
 			</Setter.Value>
 		</Setter>
 	</Style>
-	
+
 	<Style TargetType="{x:Type pps:PpsComboBox}">
 		<Setter Property="ScrollViewer.CanContentScroll" Value="True "/>
 		<Setter Property="TextElement.Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
@@ -86,7 +86,7 @@ specific language governing permissions and limitations under the Licence.
 								Padding="2,1,2,1"
 								Margin="0,1,21,1"
 								Visibility="Hidden"
-								Command="{x:Static pps:PpsDataFilterBase.ClearValueCommand}"
+								Command="{x:Static pps:PpsControlCommands.ClearCommand}"
 								Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsClearContentButtonStyle}}" />
 						<!--ToDo Replace with PpsTextbox-->
 						<TextBox x:Name="PART_EditableTextBox"
@@ -111,7 +111,7 @@ specific language governing permissions and limitations under the Licence.
 							   PopupAnimation="Slide">
 							<Border Name="DropDownBorder"
 									Background="{TemplateBinding Background}"
-									BorderThickness="{TemplateBinding BorderThickness}"
+									BorderThickness="1"
 									BorderBrush="{DynamicResource PPSnControlFocusedBorderBrush}"
 									MinWidth="{TemplateBinding FrameworkElement.ActualWidth}"
 									MaxHeight="{TemplateBinding ComboBox.MaxDropDownHeight}"
