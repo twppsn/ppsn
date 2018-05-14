@@ -40,9 +40,11 @@ namespace TecWare.PPSn.Controls
 		private static void ReadOnlyPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
 			if (d is TextBox tb)
-				tb.IsReadOnly = (bool)e.NewValue;
+				tb.IsReadOnly = BooleanBox.GetBool(e.NewValue);
 			else if (d is PpsDataFilterCombo ds)
-				ds.IsReadOnly = (bool)e.NewValue;
+				ds.IsReadOnly = BooleanBox.GetBool(e.NewValue);
+			else if (d is CheckBox c)
+				c.IsEnabled = !BooleanBox.GetBool(e.NewValue);
 		} // proc ReadOnlyPropertyChanged
 	} // class PpsReadOnlyPaneBehavior
 
