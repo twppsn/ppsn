@@ -3309,6 +3309,7 @@ namespace TecWare.PPSn
 			// alt
 			(typeof(long), "integer", DbType.Int64),
 			(typeof(PpsObjectExtendedValue), "Integer", DbType.Int64),
+			(typeof(PpsMasterDataExtendedValue), "Integer", DbType.Int64),
 			(typeof(PpsFormattedStringValue), "Text", DbType.String)
 		};
 
