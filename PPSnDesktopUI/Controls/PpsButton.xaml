@@ -13,10 +13,9 @@ specific language governing permissions and limitations under the Licence.
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-					xmlns:uiO="clr-namespace:TecWare.PPSn.UI"
  					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
-	<SolidColorBrush x:Key="PpsButtonBackgroundBrush" Color="{DynamicResource PPSnAccentColor}" Opacity="0.13"/>
+	<SolidColorBrush x:Key="PpsButtonBackgroundBrush" Color="{DynamicResource PPSnAccentColor}" Opacity="0.12"/>
 
 	<Style TargetType="{x:Type pps:PpsButton}">
 		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -42,8 +41,8 @@ specific language governing permissions and limitations under the Licence.
 								SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
 							<Grid>
 								<Grid.ColumnDefinitions>
-									<ColumnDefinition Width="Auto" />
-									<ColumnDefinition />
+									<ColumnDefinition x:Name="ImageColumn" Width="Auto" />
+									<ColumnDefinition x:Name="ContentColumn" />
 								</Grid.ColumnDefinitions>
 								<pps:PpsGeometryImage x:Name="ImageBox"
 													  GeometryName="{TemplateBinding GeometryName}"
@@ -52,7 +51,8 @@ specific language governing permissions and limitations under the Licence.
 													  Height="{TemplateBinding GeometrySize}"
 													  Foreground="{DynamicResource PPSnActionButtonBrush}"
 													  Opacity=".65" />
-								<ContentPresenter Grid.Column="1"
+								<ContentPresenter x:Name="ContentSite"
+												  Grid.Column="1"
 												  Focusable="False"
 												  RecognizesAccessKey="True"
 												  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -75,34 +75,44 @@ specific language governing permissions and limitations under the Licence.
 							</Grid>
 						</Border>
 					</Border>
+
 					<ControlTemplate.Triggers>
+						<!--Triggers for standard buttton-->
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
+								<Condition Property="HasContent" Value="True"/>
 								<Condition Property="IsMouseOver" Value="True"/>
 								<Condition Property="IsMouseCaptured" Value="False"/>
 							</MultiTrigger.Conditions>
 							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}"/>
 							<Setter TargetName="ImageBox" Property="Opacity" Value="1"/>
 						</MultiTrigger>
+
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
+								<Condition Property="HasContent" Value="True"/>
 								<Condition Property="IsKeyboardFocused" Value="True"/>
 								<Condition Property="IsMouseCaptured" Value="False"/>
 							</MultiTrigger.Conditions>
 							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}"/>
 						</MultiTrigger>
-						<Trigger Property="IsMouseCaptured" Value="True">
+
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="HasContent" Value="True"/>
+								<Condition Property="IsMouseCaptured" Value="True"/>
+							</MultiTrigger.Conditions>
 							<Setter TargetName="InnerBorder" Property="BorderBrush" Value="{DynamicResource PPSnButtonPressedBrush}"/>
 							<Setter TargetName="InnerBorder" Property="Background" Value="{DynamicResource PPSnButtonPressedBrush}"/>
 							<Setter TargetName="ImageBox" Property="Opacity" Value="1"/>
-						</Trigger>
-						<Trigger Property="IsEnabled" Value="False">
-							<Setter Property="Background" Value="Transparent"/>
-							<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}"/>
-							<Setter TargetName="ImageBox" Property="Opacity" Value=".3"/>
-						</Trigger>
-						<Trigger Property="IsPressed" Value="true">
-							<Trigger.EnterActions>
+						</MultiTrigger>
+
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="HasContent" Value="True"/>
+								<Condition Property="IsPressed" Value="True"/>
+							</MultiTrigger.Conditions>
+							<MultiTrigger.EnterActions>
 								<BeginStoryboard>
 									<Storyboard>
 										<ThicknessAnimationUsingKeyFrames Storyboard.TargetName="InnerBorder"
@@ -124,8 +134,8 @@ specific language governing permissions and limitations under the Licence.
 														 Duration="0:0:0.15"/>
 									</Storyboard>
 								</BeginStoryboard>
-							</Trigger.EnterActions>
-							<Trigger.ExitActions>
+							</MultiTrigger.EnterActions>
+							<MultiTrigger.ExitActions>
 								<BeginStoryboard>
 									<Storyboard>
 										<ThicknessAnimationUsingKeyFrames Storyboard.TargetName="InnerBorder"
@@ -147,18 +157,65 @@ specific language governing permissions and limitations under the Licence.
 														 Duration="0:0:0.2"/>
 									</Storyboard>
 								</BeginStoryboard>
-							</Trigger.ExitActions>
+							</MultiTrigger.ExitActions>
+						</MultiTrigger>
+
+						<!--Triggers for image only button-->
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="HasContent" Value="False"/>
+								<Condition Property="IsMouseOver" Value="True"/>
+							</MultiTrigger.Conditions>
+							<Setter TargetName="ImageBox" Property="Opacity" Value="1"/>
+						</MultiTrigger>
+
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="HasContent" Value="False"/>
+								<Condition Property="IsPressed" Value="True"/>
+							</MultiTrigger.Conditions>
+							<MultiTrigger.EnterActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="1" To="0.9" Duration="0:00:0.1"/>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="1" To="0.9" Duration="0:00:0.1"/>
+									</Storyboard>
+								</BeginStoryboard>
+							</MultiTrigger.EnterActions>
+							<MultiTrigger.ExitActions>
+								<BeginStoryboard>
+									<Storyboard>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" From="0.9" To="1" Duration="0:00:0.15"/>
+										<DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" From="0.9" To="1" Duration="0:00:0.15"/>
+									</Storyboard>
+								</BeginStoryboard>
+							</MultiTrigger.ExitActions>
+						</MultiTrigger>
+
+						<!--Triggers for both styles-->
+						<Trigger Property="IsEnabled" Value="False">
+							<Setter Property="Background" Value="Transparent"/>
+							<Setter Property="Foreground" Value="{DynamicResource PPSnWindowDisabledForegroundBrush}"/>
+							<Setter TargetName="ImageBox" Property="Opacity" Value=".3"/>
 						</Trigger>
+
 						<Trigger SourceName="ImageBox" Property="HasGeometry" Value="false">
 							<Setter TargetName="ImageBox" Property="Visibility" Value="Collapsed" />
 						</Trigger>
+
+						<Trigger Property="HasContent" Value="False">
+							<Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed" />
+							<Setter TargetName="ContentColumn" Property="Width" Value="0" />
+							<Setter TargetName="ImageColumn" Property="Width" Value="*" />
+							<Setter TargetName="ImageBox" Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}" />
+						</Trigger>
+
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
 	</Style>
 
-	<Style TargetType="{x:Type pps:PpsSplitButton}" BasedOn="{StaticResource {x:Type pps:PpsButton}}">
-	</Style>
+	<Style TargetType="{x:Type pps:PpsSplitButton}" BasedOn="{StaticResource {x:Type pps:PpsButton}}" />
 
 </ResourceDictionary>

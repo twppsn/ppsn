@@ -13,7 +13,6 @@ specific language governing permissions and limitations under the Licence.
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-					xmlns:uiO="clr-namespace:TecWare.PPSn.UI"
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
 	<Style TargetType="{x:Type pps:PpsPopup}">
@@ -37,13 +36,13 @@ specific language governing permissions and limitations under the Licence.
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition Width="Auto" />
 								<ColumnDefinition />
-								<ColumnDefinition Width="32" />
+								<!--MaxWidth is necessary-->
+								<ColumnDefinition Width="32" MaxWidth="32" />
 							</Grid.ColumnDefinitions>
 							<Grid.RowDefinitions>
 								<RowDefinition Height="32" />
 								<RowDefinition />
 							</Grid.RowDefinitions>
-
 							<pps:PpsGeometryImage x:Name="ImageBox"
 												  GeometryName="{TemplateBinding GeometryName}"
 												  GeometryCircled="false"
@@ -52,7 +51,6 @@ specific language governing permissions and limitations under the Licence.
 												  Height="20"
 												  Foreground="{DynamicResource PPSnActionButtonBrush}"
 												  Opacity=".65" />
-
 							<ContentPresenter Grid.Column="1"
 											  Content="{TemplateBinding Header}"
 											  ContentTemplate="{TemplateBinding HeaderTemplate}"
@@ -62,9 +60,13 @@ specific language governing permissions and limitations under the Licence.
 											  Margin="6,0,0,0"
 											  TextElement.FontSize="18"
 											  TextElement.Foreground="{DynamicResource PPSnWindowForegroundBrush}"/>
-
-							<Button Grid.Column="2" Command="{x:Static pps:PpsControlCommands.ClosePopupCommand}" Style="{DynamicResource PPSnClosePopupButtonStyle}" />
-							
+							<pps:PpsButton Grid.Column="2"
+										   Command="{x:Static pps:PpsControlCommands.ClosePopupCommand}"
+										   GeometryName="windowClose"
+										   GeometrySize="21"
+										   Background="Transparent"
+										   BorderThickness="0"
+										   Focusable="False" />
 							<ContentPresenter Grid.Row="1" Grid.ColumnSpan="3"
 											  Content="{TemplateBinding Content}"
 											  ContentTemplate="{TemplateBinding ContentTemplate}"
