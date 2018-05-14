@@ -95,11 +95,7 @@ namespace TecWare.PPSn.Controls
 				return;
 
 			var expr = String.IsNullOrWhiteSpace(FilterText) ? PpsDataFilterExpression.True : PpsDataFilterExpression.Parse(FilterText);
-			SetValue(FilteredItemsSourcePropertyKey,
-				expr == PpsDataFilterExpression.True
-				? ItemsSource
-				: ((IDataRowEnumerable)ItemsSource).ApplyFilter(expr)
-			);
+			SetValue(FilteredItemsSourcePropertyKey, ((IDataRowEnumerable)ItemsSource).ApplyFilter(expr));
 		} // proc UpdateFilteredList
 
 		/// <summary>Constructor - initializes the Commands</summary>
