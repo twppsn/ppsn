@@ -326,9 +326,6 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Handles the Navigation by Keyboard</summary>
 		/// <param name="e">pressed Keys</param>
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
-			=> KeyDownHandler(e);
-
-		private void KeyDownHandler(KeyEventArgs e)
 		{
 			if (IsReadOnly || e.Handled)
 				return;
@@ -379,6 +376,7 @@ namespace TecWare.PPSn.Controls
 					}
 					break;
 			}
+			base.OnPreviewKeyDown(e);
 		}
 	}
 
@@ -556,9 +554,6 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Handles the Navigation by Keyboard</summary>
 		/// <param name="e">pressed Keys</param>
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
-			=> KeyDownHandler(e);
-
-		private void KeyDownHandler(KeyEventArgs e)
 		{
 			// stop
 			if (IsReadOnly)
@@ -674,12 +669,9 @@ namespace TecWare.PPSn.Controls
 		/// <summary>Handles the Navigation by Keyboard</summary>
 		/// <param name="e">pressed Keys</param>
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
-			=> KeyDownHandler(e);
-
-		private void KeyDownHandler(KeyEventArgs e)
 		{
 			// stop
-			if (IsReadOnly)
+			if (IsReadOnly || e.Handled)
 				return;
 
 			var key = e.Key;
@@ -696,6 +688,7 @@ namespace TecWare.PPSn.Controls
 			}
 			if (!(e.OriginalSource is PpsTextBox))
 			{
+				var filterText = FilterText;
 				if ((key >= Key.A && key <= Key.Z)
 				 || (key >= Key.D0 && key <= Key.D9))
 				{
@@ -704,12 +697,13 @@ namespace TecWare.PPSn.Controls
 				}
 				if (key == Key.Back)
 				{
-					FilterText = FilterText.Substring(0, FilterText.Length - 1);
+					if (filterText.Length > 0)
+						FilterText = filterText.Substring(0, filterText.Length - 1);
 					e.Handled = true;
 				}
 				if (key == Key.Space)
 				{
-					FilterText += " ";
+					FilterText = filterText + " ";
 					e.Handled = true;
 				}
 			}
