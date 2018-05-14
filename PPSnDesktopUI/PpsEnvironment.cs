@@ -595,13 +595,6 @@ namespace TecWare.PPSn
 			var r = await WaitForEnvironmentMode(bootOffline ? PpsEnvironmentMode.Offline : PpsEnvironmentMode.Online);
 			switch (r)
 			{
-				case PpsEnvironmentModeResult.Online:
-					await OnSystemOnlineAsync(); // mark as online
-					break;
-				case PpsEnvironmentModeResult.Offline:
-				 	await OnSystemOfflineAsync();
-					break;
-
 				case PpsEnvironmentModeResult.NeedsUpdate:
 					if (await MsgBoxAsync("Es steht eine neue Version zur Verfügung.\nUpdate durchführen?", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
 					{
@@ -883,7 +876,15 @@ namespace TecWare.PPSn
 					}
 
 					// process current state
-					var changedTo = UpdatePulicState(state);
+					var oldPuplicState = UpdatePulicState(state);
+					// has the current state changed
+					if(oldPuplicState.HasValue)
+					{
+						if (state == PpsEnvironmentState.Online && oldPuplicState.Value == PpsEnvironmentState.OfflineConnect)
+							await Dispatcher.InvokeAsync(() => OnSystemOnlineAsync().AwaitTask());
+						else if (state == PpsEnvironmentState.Offline && oldPuplicState.Value != PpsEnvironmentState.OfflineConnect)
+							await Dispatcher.InvokeAsync(() => OnSystemOfflineAsync().AwaitTask());
+					}
 					switch (state)
 					{
 						case PpsEnvironmentState.None: // nothing to do wait for a state
@@ -893,9 +894,7 @@ namespace TecWare.PPSn
 								currentTransmission.SetResult(PpsEnvironmentModeResult.Offline);
 								currentTransmission = null;
 							}
-							else if (changedTo)
-								await Dispatcher.InvokeAsync(() => OnSystemOfflineAsync().AwaitTask());
-
+					
 							if (!await backgroundNotifierModeTransmission.WaitAsync(30000)
 								&& IsNetworkPresent)
 								state = PpsEnvironmentState.OfflineConnect;
@@ -956,15 +955,7 @@ namespace TecWare.PPSn
 								if (!masterData.IsSynchronizationStarted || masterData.CheckSynchronizationStateAsync().AwaitTask())
 								{
 									if (!SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.NeedsSynchronization))
-									{
 										await RunSyncAsync();
-										await Dispatcher.InvokeAsync(() => OnSystemOnlineAsync().AwaitTask());
-									}
-								}
-								else // mark the system online
-								{
-									if (!SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.Online))
-										await Dispatcher.InvokeAsync(() => OnSystemOnlineAsync().AwaitTask());
 								}
 							}
 							state = PpsEnvironmentState.Online;
@@ -1035,10 +1026,11 @@ namespace TecWare.PPSn
 			}
 		} // proc SetTransmissionResult
 
-		private bool UpdatePulicState(PpsEnvironmentState state)
+		private PpsEnvironmentState? UpdatePulicState(PpsEnvironmentState state)
 		{
 			if (currentState != state)
 			{
+				var oldState = currentState;
 				currentState = state;
 				switch (state)
 				{
@@ -1060,10 +1052,10 @@ namespace TecWare.PPSn
 						OnPropertyChanged(nameof(CurrentState));
 					})
 				);
-				return true;
+				return oldState;
 			}
 			else
-				return false;
+				return null;
 		} // proc UpdatePulicState
 
 		#endregion
