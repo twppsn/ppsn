@@ -450,6 +450,8 @@ namespace TecWare.PPSn.Server
 							// update optional values
 							if (ctx.TryGetProperty<long>(UserContextKtKtId, out var ktktId))
 								xLoginData.SetAttributeValue(UserContextKtKtId, ktktId.ChangeType<string>());
+							if (ctx.TryGetProperty<long>(UserContextPersId, out var persId))
+								xLoginData.SetAttributeValue(UserContextPersId, persId.ChangeType<string>());
 							if (ctx.TryGetProperty(UserContextFullName, out var fullName))
 								xLoginData.SetAttributeValue(UserContextFullName, fullName);
 							if (ctx.TryGetProperty(UserContextInitials, out var initials))
