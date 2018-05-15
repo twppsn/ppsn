@@ -1033,9 +1033,10 @@ namespace TecWare.PPSn.Data
 
 				cur.InvokeEvent();
 
-				if (sw.ElapsedMilliseconds > 1000)
+				if (sw.ElapsedMilliseconds > 30000)
 				{
 					Debug.WriteLine("PPSDataSet: StopEvent work due timeout.");
+					changedEvents.Clear();
 					break;
 				}
 			}
