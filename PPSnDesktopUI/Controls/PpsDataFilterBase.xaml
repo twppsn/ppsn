@@ -20,7 +20,7 @@ specific language governing permissions and limitations under the Licence.
 
 	<sys:Double x:Key="FixSearchBoxWidth">270</sys:Double>
 
-	<DataTemplate x:Key="PpsDataFilterDefaultItemTemplate">
+	<DataTemplate x:Key="PpsDataFilterComboDefaultItemTemplate">
 		<pps:PpsDataFilterItemTextBlock
 			BaseText="{Binding Name}"
 			SearchText="{Binding Path=FilterText, Mode=OneWay, RelativeSource={RelativeSource AncestorType=pps:PpsDataFilterBase}}"
@@ -36,7 +36,7 @@ specific language governing permissions and limitations under the Licence.
 				   TextTrimming="CharacterEllipsis" />
 	</DataTemplate>
 
-	<Style x:Key="PpsDataFilterDefaultListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
+	<Style x:Key="PpsDataFilterComboDefaultListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
 		<Setter Property="Focusable" Value="False"/>
 		<Setter Property="MinHeight" Value="29"/>
 		<Setter Property="Template">
@@ -55,10 +55,20 @@ specific language governing permissions and limitations under the Licence.
 		</Setter>
 	</Style>
 
+	<DataTemplate x:Key="PpsDataFilterListDefaultItemTemplate">
+		<Grid Height="26">
+			<TextBlock Text="{Binding Name, Mode=OneWay, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"
+					   TextWrapping="NoWrap"
+					   TextTrimming="CharacterEllipsis"
+					   VerticalAlignment="Center"
+					   FontSize="14" />
+		</Grid>
+	</DataTemplate>
+
 	<Style TargetType="{x:Type pps:PpsDataFilterCombo}">
 		<Setter Property="SelectedValueTemplate" Value="{StaticResource PpsDataFilterDefaultSelectedValueTemplate}" />
-		<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterDefaultItemTemplate}" />
-		<Setter Property="ItemContainerStyle" Value="{StaticResource PpsDataFilterDefaultListBoxItemStyle}" />
+		<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterComboDefaultItemTemplate}" />
+		<Setter Property="ItemContainerStyle" Value="{StaticResource PpsDataFilterComboDefaultListBoxItemStyle}" />
 		<Setter Property="ListBoxStyle" Value="{DynamicResource PPSnListBoxStyle}" />
 		<Setter Property="FocusVisualStyle" Value="{x:Null}" />
 		<Setter Property="Foreground" Value="{DynamicResource PPSnWindowForegroundBrush}" />
@@ -168,10 +178,11 @@ specific language governing permissions and limitations under the Licence.
 	<!-- ListBox which applies Filters -->
 	<Style TargetType="{x:Type pps:PpsDataFilterList}">
 		<Style.Setters>
-			<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterDefaultSelectedValueTemplate}" />
+			<Setter Property="ItemTemplate" Value="{StaticResource PpsDataFilterListDefaultItemTemplate}" />
 			<Setter Property="ItemContainerStyle" Value="{DynamicResource PPSnAlternatingListBoxItemStyle}" />
 			<Setter Property="AlternationCount" Value="2" />
 			<Setter Property="ListBoxStyle" Value="{DynamicResource PPSnListBoxStyle}" />
+			<Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
 			<Setter Property="Focusable" Value="False"/>
 			<Setter Property="Template">
 				<Setter.Value>
