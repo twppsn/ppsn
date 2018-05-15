@@ -1106,6 +1106,7 @@ namespace TecWare.PPSn.Server
 				// prepare object data
 				var headerBytes = Encoding.Unicode.GetBytes(obj.ToXml().ToString(SaveOptions.DisableFormatting));
 				ctx.OutputHeaders["ppsn-header-length"] = headerBytes.Length.ChangeType<string>();
+				ctx.OutputHeaders["ppsn-pulled-revId"] = obj.RevId.ChangeType<string>();
 
 				// get content
 				var data = PullData(obj);
