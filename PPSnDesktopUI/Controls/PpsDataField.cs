@@ -1064,14 +1064,18 @@ namespace TecWare.PPSn.Controls
 		{
 			dynamic combobox = CreateSelector(properties);
 
-			combobox.ItemsSource = Environment.MasterData.GetTable(refTableName, true);
-			combobox.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>());
+			var table = Environment.MasterData.GetTable(refTableName, true);
 
-			if (properties.TryGetProperty("TemplateResourceKey", out var templateResource))
+			combobox.ItemsSource = table;
+			combobox.SelectedValue = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>());
+			
+			if (properties.TryGetProperty("TemplateResourceKey", out var templateResource)
+				|| table.Definition.Meta.TryGetProperty("Wpf.TemplateResourceKey", out templateResource))
 			{
 				combobox.ItemTemplate = Environment.FindResource<DataTemplate>(templateResource);
 
-				if (properties.TryGetProperty("SelectedValueTemplateResourceKey", out var selectedValueResourceKey))
+				if (properties.TryGetProperty("SelectedValueTemplateResourceKey", out var selectedValueResourceKey)
+					|| table.Definition.Meta.TryGetProperty("Wpf.SelectedValueTemplateResourceKey", out selectedValueResourceKey))
 					combobox.SelectedValueTemplate = Environment.FindResource<DataTemplate>(selectedValueResourceKey);
 				else
 					combobox.SelectedValueTemplate = combobox.ItemTemplate;
