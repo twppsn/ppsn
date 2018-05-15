@@ -617,11 +617,6 @@ namespace TecWare.PPSn.Controls
 						filteredListBox.ScrollIntoView(filteredListBox.Items[newLast]);
 					}
 					break;
-				case Key.Left:
-				case Key.Right:
-					// disable visual Navigation on the Form
-					e.Handled = true;
-					break;
 			}
 			base.OnPreviewKeyDown(e);
 		} // proc KeyDownHandler
@@ -674,14 +669,6 @@ namespace TecWare.PPSn.Controls
 			if (key == Key.System)
 				key = e.SystemKey;
 
-			switch (key)
-			{
-				case Key.Left:
-				case Key.Right:
-					// disable visual Navigation on the Form
-					e.Handled = true;
-					break;
-			}
 			if (!(e.OriginalSource is PpsTextBox))
 			{
 				var filterText = FilterText;
