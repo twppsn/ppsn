@@ -781,9 +781,6 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		private PpsEnvironmentMode currentMode = PpsEnvironmentMode.None;
-		private PpsEnvironmentState currentState = PpsEnvironmentState.None;
-
 		private readonly object modeTransmissionLock = new object();
 		private ModeTransission modeTransmission = null;
 
@@ -802,9 +799,9 @@ namespace TecWare.PPSn
 		private Task<PpsEnvironmentModeResult> WaitForEnvironmentMode(PpsEnvironmentMode desiredMode)
 		{
 			// is this a new mode
-			if (desiredMode == currentMode
-				&& currentState != PpsEnvironmentState.None
-				&& currentState != PpsEnvironmentState.OfflineConnect)
+			if (desiredMode == CurrentMode
+				&& CurrentState != PpsEnvironmentState.None
+				&& CurrentState != PpsEnvironmentState.OfflineConnect)
 			{
 				switch (desiredMode)
 				{
@@ -888,16 +885,13 @@ namespace TecWare.PPSn
 					{
 						case PpsEnvironmentState.None: // nothing to do wait for a state
 						case PpsEnvironmentState.Offline:
-							if (currentTransmission != null)
+							if (!SetTransmissionResult(ref currentTransmission, PpsEnvironmentModeResult.Offline))
 							{
-								currentTransmission.SetResult(PpsEnvironmentModeResult.Offline);
-								currentTransmission = null;
+								if (changedTo)
+									await Dispatcher.InvokeAsync(() => OnSystemOfflineAsync().AwaitTask());
 							}
-							else if (changedTo)
-								await Dispatcher.InvokeAsync(() => OnSystemOfflineAsync().AwaitTask());
-
-							if (!await backgroundNotifierModeTransmission.WaitAsync(30000)
-								&& IsNetworkPresent)
+							
+							if (!await backgroundNotifierModeTransmission.WaitAsync(30000) && IsNetworkPresent)
 								state = PpsEnvironmentState.OfflineConnect;
 							break;
 
@@ -1029,30 +1023,38 @@ namespace TecWare.PPSn
 				return true;
 			}
 			else
-			{
-				// todo: Notify state change to UI (Online vs Offline)
 				return false;
-			}
 		} // proc SetTransmissionResult
 
 		private bool UpdatePulicState(PpsEnvironmentState state)
 		{
-			if (currentState != state)
+			if (CurrentState != state)
 			{
-				currentState = state;
+				CurrentState = state;
+
+				var isModeChanged = false;
 				switch (state)
 				{
 					case PpsEnvironmentState.Offline:
 					case PpsEnvironmentState.OfflineConnect:
-						currentMode = PpsEnvironmentMode.Offline;
+						if (CurrentMode != PpsEnvironmentMode.Offline)
+						{
+							CurrentMode = PpsEnvironmentMode.Offline;
+							isModeChanged = true;
+						}
 						break;
 					case PpsEnvironmentState.Online:
-						currentMode = PpsEnvironmentMode.Online;
+						if (CurrentMode != PpsEnvironmentMode.Online)
+						{
+							CurrentMode = PpsEnvironmentMode.Online;
+							isModeChanged = true;
+						}
 						break;
 					case PpsEnvironmentState.Shutdown:
-						currentMode = PpsEnvironmentMode.Shutdown;
+						CurrentMode = PpsEnvironmentMode.Shutdown;
 						break;
 				}
+		
 				Dispatcher.BeginInvoke(new Action(
 					() =>
 					{
@@ -1060,7 +1062,8 @@ namespace TecWare.PPSn
 						OnPropertyChanged(nameof(CurrentState));
 					})
 				);
-				return true;
+
+				return isModeChanged;
 			}
 			else
 				return false;
@@ -1089,9 +1092,10 @@ namespace TecWare.PPSn
 			$"User:{UserId}";
 
 		/// <summary>The current mode of the environment.</summary>
-		public PpsEnvironmentMode CurrentMode => currentMode;
+		public PpsEnvironmentMode CurrentMode { get; private set; } = PpsEnvironmentMode.None;
+
 		/// <summary>The current state of the environment.</summary>
-		public PpsEnvironmentState CurrentState => currentState;
+		public PpsEnvironmentState CurrentState { get; private set; } = PpsEnvironmentState.None;
 
 		/// <summary>Current state of the environment</summary>
 		[LuaMember]

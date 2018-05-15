@@ -266,7 +266,7 @@ namespace TecWare.PPSn.Controls
 		internal void Items_CurrentChanged(object sender, EventArgs e)
 		{
 			if (filteredListBox.Items.CurrentItem is IDataRow item)
-				filteredListBox.ScrollIntoView(item);
+				Dispatcher.BeginInvoke(new Action(() => filteredListBox.ScrollIntoView(item)));
 		} // event Items_CurrentChanged
 
 		internal void SetAnchorItem()
