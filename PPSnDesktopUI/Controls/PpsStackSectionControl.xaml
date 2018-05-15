@@ -103,7 +103,7 @@ specific language governing permissions and limitations under the Licence.
 							</ToggleButton.Style>
 						</ToggleButton>
 
-						<Border x:Name="ContentBorder" Grid.Row="1" >
+						<Border x:Name="ContentBorder" Padding="0,16,0,8" Grid.Row="1" >
 							<ContentPresenter />
 						</Border>
 					</Grid>
