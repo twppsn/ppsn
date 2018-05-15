@@ -758,14 +758,17 @@ namespace TecWare.PPSn.UI
 					return (string)values[0];
 				else
 				{
-					if (values[0] is null && values[1] is null)
+					var name = (string)values[0];
+					var vorname = (string)values[1];
+
+					if (String.IsNullOrEmpty(name) && String.IsNullOrEmpty(vorname))
 						return "<kein Name>";
-					else if (values[0] == null)
-						return (string)values[1];
-					else if (values[1] == null)
-						return (string)values[0];
+					else if (String.IsNullOrEmpty(name))
+						return vorname;
+					else if (String.IsNullOrEmpty(vorname))
+						return name;
 					else
-						return String.Format("{0} {1}", values[0], values[1]);
+						return String.Format("{0}, {1}", name, vorname);
 				}
 			}
 			else
