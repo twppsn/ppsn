@@ -286,6 +286,10 @@ namespace TecWare.PPSn.UI
 									return DependencyProperty.UnsetValue;
 							}
 						}
+						catch(OverflowException e)
+						{
+							return new ValidationResult(false, e);
+						}
 						catch (FormatException e)
 						{
 							return new ValidationResult(false, e);

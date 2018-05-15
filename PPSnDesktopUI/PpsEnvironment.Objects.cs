@@ -2648,8 +2648,8 @@ namespace TecWare.PPSn
 
 					// set pulled revId to the pulled data!
 					var tmp = c.GetProperty("ppsn-pulled-revId", pulledRevId);
-					if (tmp < 0)
-						throw new ArgumentOutOfRangeException("ppsn-pulled-revId", tmp, "Pulled revId is invalid.");
+					//if (tmp < 0) todo: Server does not generate any rev.
+					//	throw new ArgumentOutOfRangeException("ppsn-pulled-revId", tmp, "Pulled revId is invalid.");
 					pulledRevId = tmp;
 
 					using (var headerData = new WindowStream(c.Content, 0, headerLength, false, true))

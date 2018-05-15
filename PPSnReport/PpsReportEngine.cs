@@ -209,6 +209,7 @@ namespace TecWare.PPSn.Reporting
 				{
 					await xml.WriteStartElementAsync(null, "r", null);
 
+					// generate column list header
 					if (columnList == null)
 					{
 						columnList = new string[row.Columns.Count];
@@ -216,6 +217,7 @@ namespace TecWare.PPSn.Reporting
 							columnList[i] = row.Columns[i].Name;
 					}
 
+					// write data
 					for (var i = 0; i < columnList.Length; i++)
 					{
 						await xml.WriteStartElementAsync(null, columnList[i], null);
@@ -286,10 +288,6 @@ namespace TecWare.PPSn.Reporting
 		private readonly DirectoryInfo reportWorkingPath;
 
 		private readonly List<DirectoryInfo> reportSources = new List<DirectoryInfo>();
-		private int cleanBaseDirectory = 1440; // in min (0 or neg. turns it off)
-		private bool zipLogFiles = true;
-		private bool storeSuccessLogs = false;
-
 		private readonly PpsDataServerProviderBase provider;
 
 		private Dictionary<string, SemaphoreSlim> reportLocks = new Dictionary<string, SemaphoreSlim>();
@@ -608,7 +606,7 @@ namespace TecWare.PPSn.Reporting
 			var statusFileInfo = (FileInfo)null;
 			if (purgeAll)
 			{
-				var dtDeleteOlderThan = cleanBaseDirectory > 0 ? DateTime.UtcNow.AddMinutes(-cleanBaseDirectory) : (DateTime?)null;
+				var dtDeleteOlderThan = CleanBaseDirectoryAfter > 0 ? DateTime.UtcNow.AddMinutes(-CleanBaseDirectoryAfter) : (DateTime?)null;
 				foreach (var fi in reportWorkingPath.EnumerateFiles().Where(c =>
 						(c.Attributes & (FileAttributes.ReadOnly | FileAttributes.System | FileAttributes.Hidden)) == (FileAttributes)0
 						&& c.Name[0] != '.'
@@ -643,7 +641,7 @@ namespace TecWare.PPSn.Reporting
 
 		private async Task<string> RunReportExMoveLogFileAsync(FileInfo fileInfo, string resolvedReportName, bool containsError)
 		{
-			if (!storeSuccessLogs && !containsError)
+			if (!StoreSuccessLogs && !containsError)
 			{
 				await DeleteSecureAsync(fileInfo);
 				return null;
@@ -651,11 +649,11 @@ namespace TecWare.PPSn.Reporting
 			else
 			{
 				// build log file name
-				var logFileName = resolvedReportName.Replace('/', '.') + (containsError ? ".err" : ".log") + (zipLogFiles ? ".gz" : String.Empty);
+				var logFileName = resolvedReportName.Replace('/', '.') + (containsError ? ".err" : ".log") + (ZipLogFiles ? ".gz" : String.Empty);
 				var targetFile = new FileInfo(Path.Combine(reportLogPath.FullName, logFileName));
 
 				// copy or move current
-				if (zipLogFiles)
+				if (ZipLogFiles)
 				{
 					using (var src = fileInfo.OpenRead())
 					using (var dst = new GZipStream(targetFile.Create(), CompressionMode.Compress, false))
@@ -898,11 +896,13 @@ namespace TecWare.PPSn.Reporting
 		public string WorkingPath => reportWorkingPath.FullName;
 
 		/// <summary>Is it allowed to clean other files than the session files (in min).</summary>
-		public int CleanBaseDirectoryAfter { get => cleanBaseDirectory; set => cleanBaseDirectory = value; }
+		public int CleanBaseDirectoryAfter { get; set; } = 1440;
+
 		/// <summary>Zip resulting log files, to save space.</summary>
-		public bool ZipLogFiles { get => zipLogFiles; set => zipLogFiles = value; }
+		public bool ZipLogFiles { get; set; } = true;
+
 		/// <summary>Store also logs with the result success.</summary>
-		public bool StoreSuccessLogs { get => storeSuccessLogs; set => storeSuccessLogs = value; }
+		public bool StoreSuccessLogs { get; set; } = false;
 
 		private static string DefaultFontPath => Path.Combine(Environment.SystemDirectory, @"..\Fonts");
 	} // class PpsReportEngine
