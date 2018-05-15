@@ -2508,7 +2508,10 @@ namespace TecWare.PPSn
 			=> $"Object: {Typ}; {objectId} # {Guid}:{PulledRevId}";
 
 		private void OnObjectDataChanged(object sender, PpsDataRowChangedEventArgs e)
-			=> ReadObjectInfo(e.Arguments);
+		{
+			ReadObjectInfo(e.Arguments);
+			ResetDirty(null);
+		} // proc OnObjectDataChanged
 
 		/// <summary>Reads the properties from the local database.</summary>
 		/// <param name="r"></param>
@@ -2543,8 +2546,6 @@ namespace TecWare.PPSn
 				SetValue(PpsStaticObjectColumnIndex.RemoteHeadRevId, headRevId, false);
 			if (properties.TryGetProperty<long>("CurRevId", out var curRevId))
 				SetValue(PpsStaticObjectColumnIndex.RemoteCurRevId, curRevId, false);
-
-			ResetDirty(null);
 		} // func ReadObject
 
 		/// <summary>Reads the object from the pull request.</summary>
@@ -2559,8 +2560,6 @@ namespace TecWare.PPSn
 
 			// tags, user tags only
 			tags.ReadTagsFromXml(x.Elements("tag")); // refresh of the pulled system tags, removes current system tags
-
-			ResetDirty(null);
 		} // UpdateObjectFromXml
 
 		#endregion
@@ -2646,6 +2645,12 @@ namespace TecWare.PPSn
 					var headerLength = c.GetProperty("ppsn-header-length", -1L);
 					if (headerLength < 10)
 						throw new ArgumentOutOfRangeException("ppsn-header-length", headerLength, "Header is missing.");
+
+					// set pulled revId to the pulled data!
+					var tmp = c.GetProperty("ppsn-pulled-revId", pulledRevId);
+					if (tmp < 0)
+						throw new ArgumentOutOfRangeException("ppsn-pulled-revId", tmp, "Pulled revId is invalid.");
+					pulledRevId = tmp;
 
 					using (var headerData = new WindowStream(c.Content, 0, headerLength, false, true))
 					using (var xmlHeader = XmlReader.Create(headerData, Procs.XmlReaderSettings))

@@ -32,6 +32,8 @@ namespace TecWare.PPSn.Server
 	{
 		/// <summary>User context optional wellknown property: Contact id.</summary>
 		public const string UserContextKtKtId = "KtKtId";
+		/// <summary>User context optional wellknown property: Personal id.</summary>
+		public const string UserContextPersId = "PersId";
 		/// <summary>User context optional wellknown property: Full name of the contact or user.</summary>
 		public const string UserContextFullName = "FullName";
 		/// <summary>User context optional wellknown property: Initals of the contact or user.</summary>
@@ -293,9 +295,11 @@ namespace TecWare.PPSn.Server
 
 				// update optinal values
 				SetMemberValue(UserContextFullName, r.GetProperty("Name", userIdentity.Name));
-				if (r.TryGetProperty<long>("KtKtId", out var ktktId))
-					SetMemberValue(UserContextKtKtId, ktktId) ;
-				if (r.TryGetProperty<string>("Initials", out var initials))
+				if (r.TryGetProperty<long>(UserContextKtKtId, out var ktktId))
+					SetMemberValue(UserContextKtKtId, ktktId);
+				if (r.TryGetProperty<long>(UserContextPersId, out var persId))
+					SetMemberValue(UserContextPersId, persId);
+				if (r.TryGetProperty<string>(UserContextInitials, out var initials))
 					SetMemberValue(UserContextInitials, initials);
 
 				this.securityTokens = application.Server.BuildSecurityTokens(r.GetProperty("Security", "User"));
