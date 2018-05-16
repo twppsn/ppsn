@@ -750,16 +750,19 @@ namespace TecWare.PPSn.UI
 		{
 		} // ctor
 
+		string GetString(object v)
+			=> v is string s ? s : null;
+
 		object IMultiValueConverter.Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (values != null && values.Length > 0)
 			{
 				if (values.Length == 1)
-					return (string)values[0];
+					return GetString(values[0]);
 				else
 				{
-					var name = (string)values[0];
-					var vorname = (string)values[1];
+					var name = GetString(values[0]);
+					var vorname = GetString(values[1]);
 
 					if (String.IsNullOrEmpty(name) && String.IsNullOrEmpty(vorname))
 						return "<kein Name>";
