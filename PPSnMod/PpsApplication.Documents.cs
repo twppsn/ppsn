@@ -189,6 +189,9 @@ namespace TecWare.PPSn.Server
 			// commit all to orignal
 			data.Commit();
 
+			// update tags
+			obj.UpdateRevisionTags(data.GetAutoTags());
+			
 			// actions after push
 			CallTableMethodsWithExceptions(LuaOnAfterPush, obj, data);
 
@@ -271,7 +274,7 @@ namespace TecWare.PPSn.Server
 			}
 		} // func IsMemberTableMethod
 
-		[LuaMember(nameof(DataSetDefinition))]
+		[LuaMember]
 		public PpsDataSetServerDefinition DataSetDefinition => datasetDefinition;
 
 		public override string ObjectSource => Name + "/schema.xml";

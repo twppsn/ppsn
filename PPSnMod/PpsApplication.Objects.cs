@@ -38,6 +38,7 @@ namespace TecWare.PPSn.Server
 {
 	#region -- class PpsObjectTagAccess -------------------------------------------------
 
+	/// <summary>Tag access class</summary>
 	public sealed class PpsObjectTagAccess
 	{
 		private readonly PpsObjectAccess obj;
@@ -71,6 +72,7 @@ namespace TecWare.PPSn.Server
 		{
 		} // ctor
 
+		/// <summary>Reset the dirty flag.</summary>
 		public void Reset()
 			=> isDirty = id < 0;
 
@@ -81,6 +83,9 @@ namespace TecWare.PPSn.Server
 			isDirty = true;
 		} // proc Remove
 
+		/// <summary>Generate Xml representation of the tag.</summary>
+		/// <param name="elementName"></param>
+		/// <returns></returns>
 		public XElement ToXml(string elementName)
 			=> new XElement(elementName,
 				new XAttribute("tagClass", tagClass),
@@ -114,6 +119,7 @@ namespace TecWare.PPSn.Server
 			}
 		} // prop Value
 
+		/// <summary>Owner of the tag.</summary>
 		public long UserId => userId;
 
 		/// <summary>Is the tag new.</summary>
@@ -785,6 +791,11 @@ namespace TecWare.PPSn.Server
 			return tags;
 		} // func GetTags
 
+		/// <summary>Find a Tag by class, key and user.</summary>
+		/// <param name="tagClass"></param>
+		/// <param name="key"></param>
+		/// <param name="userId"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public PpsObjectTagAccess FindTag(int tagClass, string key, long userId = 0)
 		{
@@ -794,6 +805,14 @@ namespace TecWare.PPSn.Server
 			);
 		} // func FindTag
 
+		/// <summary>Add a single tag to the tag list.</summary>
+		/// <param name="tagClass"></param>
+		/// <param name="key"></param>
+		/// <param name="value"></param>
+		/// <param name="userId"></param>
+		/// <param name="createDate"></param>
+		/// <param name="isRevision"></param>
+		/// <returns></returns>
 		[LuaMember]
 		private PpsObjectTagAccess AddTag(int tagClass, string key, string value, long userId = 0, DateTime? createDate = null, bool isRevision = false)
 		{
@@ -810,6 +829,9 @@ namespace TecWare.PPSn.Server
 			return tag;
 		} // proc AddTag
 
+		/// <summary>Update tag from a table properties (for user and system tags).</summary>
+		/// <param name="args"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public PpsObjectTagAccess AddTag(LuaTable args)
 			=> AddTag(
@@ -820,6 +842,9 @@ namespace TecWare.PPSn.Server
 				createDate: args.GetOptionalValue("CreateDate", DateTime.Now).ToUniversalTime()
 			);
 
+		/// <summary>Add tag from a xml-definition (create revision tags)</summary>
+		/// <param name="x"></param>
+		/// <returns></returns>
 		public PpsObjectTagAccess AddTag(XElement x)
 			=> AddTag(
 				tagClass: x.GetAttribute("tagClass", -1),
@@ -829,6 +854,37 @@ namespace TecWare.PPSn.Server
 				createDate: x.GetAttribute("createDate", DateTime.Now),
 				isRevision: true
 			);
+
+		/// <summary>Synchronize all revision tags.</summary>
+		/// <param name="revisionTags"></param>
+		[LuaMember]
+		public void UpdateRevisionTags(IEnumerable<PpsObjectTag> revisionTags)
+		{
+			var currentRevTags = new List<PpsObjectTagAccess>(Tags.Where(t => t.IsRev));
+
+			foreach (var n in revisionTags)
+			{
+				// update tag
+				var o = currentRevTags.Find(c => c.Key == n.Name);
+				if (o == null
+					|| o.TagClass != (int)n.Class)
+				{
+					o?.Remove();
+					AddTag((int)n.Class, n.Name, n.Value.ChangeType<string>(), 0, DateTime.Now, true);
+				}
+				else
+				{
+					o.Value = n.Value.ChangeType<string>();
+				}
+
+				// remove from work list
+				if (o != null)
+					currentRevTags.Remove(o);
+			}
+
+			// remove none touched tags
+			currentRevTags.ForEach(c => c.Remove());
+		} // UpdateRevisionTags
 
 		#endregion
 
@@ -928,12 +984,17 @@ namespace TecWare.PPSn.Server
 		public string Typ => this.TryGetValue<string>(nameof(Typ), out var t) ? t : null;
 		/// <summary>Content mime type.</summary>
 		public string MimeType => this.TryGetValue<string>(nameof(MimeType), out var t) ? t : null;
+		/// <summary>Human readable number.</summary>
 		public string Nr => this.TryGetValue<string>(nameof(Nr), out var t) ? t : null;
+		/// <summary>Currently active revision in the RDB.</summary>
 		public long CurRevId => this.TryGetValue<long>(nameof(CurRevId), out var t) ? t : -1;
+		/// <summary>Head revision.</summary>
 		public long HeadRevId => this.TryGetValue<long>(nameof(HeadRevId), out var t) ? t : -1;
 
+		/// <summary>Encoding of the Text-DataStream</summary>
 		public Encoding DataEncoding => Encoding.Unicode;
 
+		/// <summary>Active revision of this object.</summary>
 		[LuaMember]
 		public long RevId
 		{
@@ -944,6 +1005,7 @@ namespace TecWare.PPSn.Server
 			}
 		}
 
+		/// <summary>Does the object track revisions.</summary>
 		[LuaMember]
 		public bool IsRev
 		{
@@ -958,16 +1020,21 @@ namespace TecWare.PPSn.Server
 			}
 		} // prop IsRev
 
+		/// <summary>Is this a new object.</summary>
 		[LuaMember]
 		public bool IsNew => objectId < 0;
 
+		/// <summary>Length of the Object-Content.</summary>
 		[LuaMember]
 		public long ContentLength => throw new NotImplementedException();
 
+		/// <summary>The object has links to.</summary>
 		[LuaMember]
 		public IEnumerable<PpsObjectLinkAccess> LinksTo { get => GetLinks(true, ref linksTo); set { } }
+		/// <summary>The object is linked from.</summary>
 		[LuaMember]
 		public IEnumerable<PpsObjectLinkAccess> LinksFrom { get => GetLinks(false, ref linksFrom); set { } }
+		/// <summary>Attachted tags to this objects.</summary>
 		[LuaMember]
 		public IEnumerable<PpsObjectTagAccess> Tags { get => GetTags(ref tags); set { } }
 	} // class PpsObjectAccess
