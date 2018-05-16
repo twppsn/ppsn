@@ -192,13 +192,13 @@ namespace TecWare.PPSn
 					case PpsOpenPaneMode.NewMainWindow:
 						{
 							var window = await CreateMainWindowAsync();
-							return await window.OpenPaneAsync(paneType, PpsOpenPaneMode.Default, arguments);
+							return await window.OpenPaneAsync(paneType, PpsOpenPaneMode.NewPane, arguments);
 						}
 					case PpsOpenPaneMode.NewSingleWindow:
 						{
 							var window = new PpsSingleWindow(this, false);
 							window.Show();
-							return await window.OpenPaneAsync(paneType, PpsOpenPaneMode.Default, arguments);
+							return await window.OpenPaneAsync(paneType, PpsOpenPaneMode.NewPane, arguments);
 						}
 					case PpsOpenPaneMode.NewSingleDialog:
 						{
