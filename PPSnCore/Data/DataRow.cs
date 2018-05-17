@@ -418,11 +418,21 @@ namespace TecWare.PPSn.Data
 
 			/// <summary>Ermöglicht den Zugriff auf die Spalte.</summary>
 			/// <param name="columnName">Name der Spalte</param>
+			/// <param name="throwException"></param>
 			/// <returns>Wert in der Spalte</returns>
-			public object this[string columnName]
+			public object this[string columnName, bool throwException = true]
 			{
-				get { return this[Row.table.TableDefinition.FindColumnIndex(columnName, true)]; }
-				set { this[Row.table.TableDefinition.FindColumnIndex(columnName, true)] = value; }
+				get
+				{
+					var idx = Row.table.TableDefinition.FindColumnIndex(columnName, throwException);
+					return idx >= 0 ? this[idx] : null;
+				}
+				set
+				{
+					var idx = Row.table.TableDefinition.FindColumnIndex(columnName, throwException);
+					if (idx >= 0)
+						this[idx] = value;
+				}
 			} // prop this
 
 			/// <summary>Zugriff auf die Datenzeile.</summary>
@@ -999,10 +1009,10 @@ namespace TecWare.PPSn.Data
 		/// <param name="columnName">Spalte</param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public object this[string columnName, bool throwException = false]
+		public object this[string columnName, bool throwException = true]
 		{
-			get { return currentValuesProxy[columnName]; }
-			set { currentValuesProxy[columnName] = value; }
+			get { return currentValuesProxy[columnName, throwException]; }
+			set { currentValuesProxy[columnName, throwException] = value; }
 		} // prop this
 
 		/// <summary>Zugriff auf die aktuellen Werte</summary>

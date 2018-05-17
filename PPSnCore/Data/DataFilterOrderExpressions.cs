@@ -2092,10 +2092,9 @@ namespace TecWare.PPSn.Data
 			else
 			{
 				var index = columns.FindColumnIndex(memberName);
-				if (index == -1)
-					return Expression.Constant(null, typeof(object));
-				else
-					return Expression.MakeIndex(CurrentRowParameter, dataRowIndexIntPropertyInfo, new Expression[] { Expression.Constant(index) });
+				return index >= 0
+					? Expression.MakeIndex(CurrentRowParameter, dataRowIndexIntPropertyInfo, new Expression[] { Expression.Constant(index) })
+					: null;
 			}
 		} // func GetProperty
 

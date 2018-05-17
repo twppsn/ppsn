@@ -495,7 +495,7 @@ namespace TecWare.PPSn.Data
 		{
 			var currentParameter = ParameterExpression.Parameter(typeof(object), "#current");
 			var rowParameter = Expression.Variable(typeof(IDataRow), "#row");
-			var filterExpr = new PpsDataFilterVisitorDataRow(rowParameter, InternalList as IPpsDataView).CreateFilter(expression);
+			var filterExpr = new PpsDataFilterVisitorDataRow(rowParameter, InternalList as IDataColumns).CreateFilter(expression);
 
 			var predicateExpr = Expression.Lambda<Predicate<object>>(
 				Expression.Block(typeof(bool),
