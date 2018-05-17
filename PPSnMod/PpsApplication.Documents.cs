@@ -195,6 +195,7 @@ namespace TecWare.PPSn.Server
 			// actions after push
 			CallTableMethodsWithExceptions(LuaOnAfterPush, obj, data);
 
+			obj[nameof(PpsObjectAccess.MimeType)] = "text/dataset";
 			obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
 			obj.Update(PpsObjectUpdateFlag.All);
 
