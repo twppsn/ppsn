@@ -13,8 +13,8 @@
 	<ui:PpsWindow.Title>
 		<MultiBinding FallbackValue="{StaticResource PPSnApplicationTitle}" StringFormat="{}{0} - {1} - {2}">
 			<Binding Path="Text" ElementName="PART_Title" />
-			<Binding Path="CurrentPane.Title" Converter="{x:Static uiO:PpsConverter.MultiToSingleLine}"/>
-			<Binding Path="CurrentPane.SubTitle"/>
+			<Binding Path="CurrentPaneHost.Title" Converter="{x:Static uiO:PpsConverter.MultiToSingleLine}"/>
+			<Binding Path="CurrentPaneHost.SubTitle"/>
 		</MultiBinding>
 	</ui:PpsWindow.Title>
 
@@ -142,37 +142,6 @@
 				</Setter.Value>
 			</Setter>
 		</Style>
-
-		<SolidColorBrush x:Key="ProgressBackGroundBrush" Color="{StaticResource PPSnDesktopColor}" Opacity=".75"/>
-
-		<Style x:Key="SignalBusyControlStyle" TargetType="{x:Type ContentControl}">
-			<Setter Property="Visibility" Value="Collapsed"/>
-			<Setter Property="Template">
-				<Setter.Value>
-					<ControlTemplate TargetType="{x:Type ContentControl}">
-						<Grid Background="{StaticResource ProgressBackGroundBrush}">
-							<Grid.RowDefinitions>
-								<RowDefinition/>
-								<RowDefinition Height="72"/>
-								<RowDefinition Height="96"/>
-								<RowDefinition/>
-							</Grid.RowDefinitions>
-							<Control x:Name="ProgressRing" Grid.Row="1" Width="64" Height="64" Style="{StaticResource PpsProgressRingStyle}"/>
-							<TextBlock Grid.Row="2" Text="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Top"
-									   MaxWidth="400" TextAlignment="Center" TextWrapping="WrapWithOverflow"
-									   Foreground="{StaticResource PPSnWindowForegroundBrush}" FontSize="16"/>
-						</Grid>
-						<ControlTemplate.Triggers>
-							<DataTrigger Binding="{Binding Path=CurrentPane.PaneControl.ProgressStack.IsEnabled}" Value="True">
-								<Setter Property="Visibility" Value="Visible"/>
-								<Setter Property="Visibility" TargetName="ProgressRing" Value="Visible"/>
-							</DataTrigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</Setter.Value>
-			</Setter>
-		</Style>
-		
 	</ui:PpsWindow.Resources>
 
 	<Grid x:Name="PART_MainWindowGrid" Background="{StaticResource PPSnWindowBackgroundBrush}">
@@ -261,7 +230,7 @@
 					<ToggleButton.Style>
 						<Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource PaneSelectToggleButtonStyle}">
 							<Style.Triggers>
-								<DataTrigger Binding="{Binding Path=CurrentPane}" Value="{x:Null}">
+								<DataTrigger Binding="{Binding Path=CurrentPaneHost}" Value="{x:Null}">
 									<Setter Property="IsEnabled" Value="False"/>
 								</DataTrigger>
 							</Style.Triggers>
@@ -292,7 +261,7 @@
 						</EventTrigger>
 					</ToggleButton.Triggers>
 				</ToggleButton>
-				<ToggleButton Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}" CommandParameter="{Binding Path=CurrentPane}" Width="36" Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="3"/>
+				<ToggleButton Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}" CommandParameter="{Binding Path=CurrentPaneHost}" Width="36" Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="3"/>
 				<Popup x:Name="paneListPopup" IsOpen="{Binding ElementName=openPaneListButton, Path=IsChecked}" PlacementTarget="{Binding ElementName=openPaneListButton}"
 					   AllowsTransparency="True" PopupAnimation="Slide">
 					<ListBox ItemsSource="{Binding Panes}" Background="{StaticResource PPSnPopUpBackgroundBrush}" BorderBrush="{StaticResource PPSnWindowForegroundBrush}" BorderThickness="1"
@@ -357,7 +326,6 @@
 																			<Setter TargetName="PART_CloseButton" Property="Visibility" Value="Hidden"/>
 																			<Setter TargetName="PART_Progress" Property="Visibility" Value="Visible"/>
 																		</DataTrigger>
-
 																	</ControlTemplate.Triggers>
 																</ControlTemplate>
 															</Setter.Value>
@@ -394,9 +362,9 @@
 		</Grid>
 
 		<TextBlock Grid.Column="1" Foreground="{StaticResource PPSnWindowForegroundBrush}" Padding="24,2,0,0" VerticalAlignment="Top" Height="32" FontSize="16">
-			<Run Text="{Binding CurrentPane.SubTitle, Mode=OneWay}"/>
+			<Run Text="{Binding CurrentPaneHost.SubTitle, Mode=OneWay}"/>
 			<Run Text=" "/>
-			<Run Text="{Binding CurrentPane.Title, Mode=OneWay, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"/>
+			<Run Text="{Binding CurrentPaneHost.Title, Mode=OneWay, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"/>
 			<TextBlock.Tag>
 				<ui:PpsWindowHitTest HitTest="2" />
 			</TextBlock.Tag>
@@ -504,7 +472,7 @@
 								<BeginStoryboard Storyboard="{StaticResource FadeInStoryboard}" />
 							</DataTrigger.ExitActions>
 						</DataTrigger>
-						<DataTrigger Binding="{Binding Path=CurrentPane.PaneControl.ProgressStack.IsEnabled}" Value="True">
+						<DataTrigger Binding="{Binding Path=CurrentPaneHost.PaneProgress.IsActive}" Value="True">
 							<Setter Property="IsEnabled" Value="False"/>
 						</DataTrigger>
 					</Style.Triggers>
@@ -521,7 +489,7 @@
 			</Grid.RowDefinitions>
 
 			<!--center toolbar, with or without sideBar-->
-			<Border DataContext="{Binding CurrentPane}">
+			<Border DataContext="{Binding CurrentPaneHost}">
 				<Border.Style>
 					<Style TargetType="{x:Type Border}">
 						<Setter Property="Padding" Value="0"/>
@@ -553,7 +521,7 @@
 				</ToolBar>
 			</Border>
 
-			<ContentPresenter Grid.Row="1" Content="{Binding CurrentPane.Control, Mode=OneWay}"/>
+			<ContentPresenter Grid.Row="1" Content="{Binding CurrentPaneHost, Mode=OneWay}"/>
 
 			<uiL:PpsCharmbarControl x:Name="PART_Charmbar" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="0" Grid.RowSpan="2" DataContext="{Binding CharmObject}">
 				<uiL:PpsCharmbarControl.Style>
@@ -569,12 +537,6 @@
 					</Style>
 				</uiL:PpsCharmbarControl.Style>
 			</uiL:PpsCharmbarControl>
-
-			<ContentControl Grid.ColumnSpan="2" Grid.RowSpan="2"
-							Content="{Binding Path=CurrentPane.PaneControl.ProgressStack.DisableText}" 
-							Style="{StaticResource SignalBusyControlStyle}">
-			</ContentControl>
-			
 		</Grid>
 
 		<Grid Grid.Row="2" Grid.ColumnSpan="5" Background="{StaticResource PPSnWindowFooterBrush}">

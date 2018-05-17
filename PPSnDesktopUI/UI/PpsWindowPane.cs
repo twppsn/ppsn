@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
 using System.Threading.Tasks;
+using System.Windows.Threading;
 using Neo.IronLua;
 
 namespace TecWare.PPSn.UI
@@ -37,10 +38,24 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
+	#region -- interface IPpsWindowPaneHost -------------------------------------------
+
+	/// <summary>The host of the window pane.</summary>
+	public interface IPpsWindowPaneHost
+	{
+		/// <summary>Dispatcher of the host.</summary>
+		Dispatcher Dispatcher { get; }
+		/// <summary>Progress bar of the host.</summary>
+		IPpsProgressBar Progress { get; }
+		/// <summary>PaneManager</summary>
+		IPpsWindowPaneManager PaneManager { get; }
+	} // interface IPpsWindowPaneHost
+
+	#endregion
+
 	#region -- interface IPpsWindowPane -----------------------------------------------
 
-	/// <summary>Implements the basic function of a pane for the window client 
-	/// area.</summary>
+	/// <summary>Implements the basic function of a pane for the window client area.</summary>
 	public interface IPpsWindowPane : INotifyPropertyChanged, IDisposable
 	{
 		/// <summary>Loads the content of a pane</summary>
@@ -68,8 +83,10 @@ namespace TecWare.PPSn.UI
 		/// <remarks>Can not be implemented hidden, because of the binding.</remarks>
 		object Control { get; }
 
-		/// <summary>Access the pane manager.</summary>
+		/// <summary>Access the pane host.</summary>
 		IPpsWindowPaneManager PaneManager { get; }
+		/// <summary>Access the pane host.</summary>
+		IPpsWindowPaneHost PaneHost { get; }
 		/// <summary>Commands attached to the pane.</summary>
 		PpsUICommandCollection Commands { get; }
 
@@ -78,7 +95,7 @@ namespace TecWare.PPSn.UI
 	} // interface IPpsWindowPane
 
 	#endregion
-		
+
 	#region -- enum PpsOpenPaneMode ---------------------------------------------------
 
 	/// <summary>Prefered mode to open the pane.</summary>
@@ -156,10 +173,11 @@ namespace TecWare.PPSn.UI
 	{
 		/// <summary>Initializes a empty pane, it can only be used by a pane manager.</summary>
 		/// <param name="paneManager"></param>
+		/// <param name="paneHost"></param>
 		/// <param name="paneType"></param>
 		/// <returns></returns>
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
-		public static IPpsWindowPane CreateEmptyPane(this IPpsWindowPaneManager paneManager, Type paneType)
+		public static IPpsWindowPane CreateEmptyPane(this IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost, Type paneType)
 		{
 			var ti = paneType.GetTypeInfo();
 			var ctorBest = (ConstructorInfo)null;
@@ -190,6 +208,8 @@ namespace TecWare.PPSn.UI
 					paneArguments[i] = paneManager.Environment;
 				else if (tiParam.IsAssignableFrom(typeof(IPpsWindowPaneManager)))
 					paneArguments[i] = paneManager;
+				else if (tiParam.IsAssignableFrom(typeof(IPpsWindowPaneHost)))
+					paneArguments[i] = paneHost;
 				else if (pi.HasDefaultValue)
 					paneArguments[i] = pi.DefaultValue;
 				else
@@ -208,12 +228,27 @@ namespace TecWare.PPSn.UI
 		public static bool EqualPane(this IPpsWindowPane pane, Type paneType, LuaTable arguments)
 			=> paneType == pane.GetType() && pane.CompareArguments(arguments ?? new LuaTable()) == PpsWindowPaneCompareResult.Same;
 
-
-		/// <summary>Disable current ui.</summary>
+		/// <summary></summary>
 		/// <param name="pane"></param>
+		/// <param name="progressText"></param>
+		/// <param name="value"></param>
 		/// <returns></returns>
-		public static IPpsProgress DisableUI(this IPpsWindowPane pane)
-			=> null; // DisableUI(pane?.PaneControl);
+		public static IPpsProgress DisableUI(this IPpsWindowPane pane, string progressText = null, int value = -1)
+			=> DisableUI(pane.PaneHost);
+
+		/// <summary></summary>
+		/// <param name="pane"></param>
+		/// <param name="progressText"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public static IPpsProgress DisableUI(this IPpsWindowPaneHost pane, string progressText = null, int value = -1)
+		{
+			var progress = pane.Progress.CreateProgress() ?? PpsProgressStack.Dummy;
+			if (progressText != null)
+				progress.Text = progressText;
+			progress.Value = value;
+			return progress;
+		} // func DisableUI
 	} // class PpsWindowPaneHelper
 
 	#endregion

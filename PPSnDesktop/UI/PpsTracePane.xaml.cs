@@ -40,14 +40,18 @@ namespace TecWare.PPSn.UI
 		event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged { add { } remove { } }
 
 		private readonly IPpsWindowPaneManager paneManager;
+		private readonly IPpsWindowPaneHost paneHost;
 		private readonly PpsUICommandCollection commands;
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary>Trace pane constructor</summary>
-		public PpsTracePane(IPpsWindowPaneManager paneManager)
+		/// <param name="paneManager"></param>
+		/// <param name="paneHost"></param>
+		public PpsTracePane(IPpsWindowPaneManager paneManager,IPpsWindowPaneHost paneHost)
 		{
-			this.paneManager = paneManager;
+			this.paneManager = paneManager ?? throw new ArgumentNullException(nameof(paneManager));
+			this.paneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
 
 			InitializeComponent();
 
@@ -86,17 +90,18 @@ namespace TecWare.PPSn.UI
 						if (e.Source is PpsTracePane)
 							if (((PpsTracePane)e.Source).Content is Grid)
 								if (((Grid)((PpsTracePane)e.Source).Content).Children.Count > 0)
-									if (((Grid)((PpsTracePane)e.Source).Content).Children[0] is ListBox)
+									if (((Grid)((PpsTracePane)e.Source).Content).Children[0] is ListBox exc)
 									{
-										var exc = (ListBox)((Grid)((PpsTracePane)e.Source).Content).Children[0];
 										var list = exc.Items;
 
-										var openFileDialog = new SaveFileDialog();
-										openFileDialog.Filter = "TraceLog | *.csv;";
-										openFileDialog.DefaultExt = ".csv";
-										openFileDialog.CheckFileExists = false;
-										openFileDialog.CheckPathExists = true;
-										openFileDialog.AddExtension = true;
+										var openFileDialog = new SaveFileDialog
+										{
+											Filter = "TraceLog | *.csv;",
+											DefaultExt = ".csv",
+											CheckFileExists = false,
+											CheckPathExists = true,
+											AddExtension = true
+										};
 										if (openFileDialog.ShowDialog() == true)
 										{
 											if (File.Exists(openFileDialog.FileName))
@@ -106,7 +111,7 @@ namespace TecWare.PPSn.UI
 													return;
 												}
 
-											System.IO.StreamWriter file = new System.IO.StreamWriter(openFileDialog.FileName);
+											var file = new StreamWriter(openFileDialog.FileName);
 											foreach (var itm in list)
 											{
 												if (itm is PpsExceptionItem)
@@ -146,22 +151,21 @@ namespace TecWare.PPSn.UI
 			return Task.FromResult(true);
 		} // func UnloadAsync
 
-		public string Title => "System";
-		public string SubTitle => "Anwendungsereignisse";
+		string IPpsWindowPane.Title => "System";
+		string IPpsWindowPane.SubTitle => "Anwendungsereignisse";
 
-		public object Control => this;
+		object IPpsWindowPane.Control => this;
 		IPpsWindowPaneManager IPpsWindowPane.PaneManager => paneManager;
-		public PpsUICommandCollection Commands => commands;
+		IPpsWindowPaneHost IPpsWindowPane.PaneHost => paneHost;
+		PpsUICommandCollection IPpsWindowPane.Commands => commands;
 
-		public bool IsDirty => false;
+		bool IPpsWindowPane.IsDirty => false;
 
 		#endregion
 
 		private void CopyToClipboard(object item)
-		{
-			Clipboard.SetText(TraceToString(item)); // ToDo: enable Html/RichText/PlainText
-		}
-
+			=> Clipboard.SetText(TraceToString(item)); // ToDo: enable Html/RichText/PlainText
+		
 		private string TraceToString(object item)
 		{
 			switch (item)

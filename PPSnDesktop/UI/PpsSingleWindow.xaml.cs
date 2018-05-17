@@ -31,14 +31,13 @@ namespace TecWare.PPSn.UI
 		public readonly static DependencyProperty IsDialogModeProperty = isDialogModePropertyKey.DependencyProperty;
 
 		private readonly PpsEnvironment environment;
-		private IPpsWindowPane currentPane = null;
 		
 		/// <summary></summary>
 		/// <param name="environment"></param>
 		/// <param name="dialogMode"></param>
 		public PpsSingleWindow(PpsEnvironment environment, bool dialogMode)
 		{
-			this.environment = environment;
+			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
 			this.IsDialogMode = dialogMode;
 
 			InitializeComponent();
@@ -57,31 +56,17 @@ namespace TecWare.PPSn.UI
 		private void Close_Executed(object sender, ExecutedRoutedEventArgs e)
 			=> Close();
 
-
 		private IPpsWindowPane FindOpenPane(Type paneType, LuaTable arguments)
-			=> currentPane != null && currentPane.EqualPane(paneType, arguments) ? currentPane : null;
+			=> CurrentPane != null && CurrentPane.EqualPane(paneType, arguments) ? CurrentPane : null;
 
 		bool IPpsWindowPaneManager.ActivatePane(IPpsWindowPane pane)
-				=> pane == currentPane ? Activate() : false;
+				=> pane == CurrentPane ? Activate() : false;
 
 		IPpsWindowPane IPpsWindowPaneManager.FindOpenPane(Type paneType, LuaTable arguments)
 			=> FindOpenPane(paneType, arguments);
 
 		Type IPpsWindowPaneManager.GetPaneType(PpsWellknownType wellknownType)
 			=> ((PpsMainEnvironment)environment).GetPaneType(wellknownType);
-
-		private async Task<IPpsWindowPane> CreatePaneAsync(Type paneType, LuaTable arguments)
-		{
-			arguments = arguments ?? new LuaTable();
-
-			var pane = this.CreateEmptyPane(paneType);
-			await pane.LoadAsync(arguments);
-
-			currentPane = pane;
-			DataContext = currentPane;
-
-			return pane;
-		} // func CreatePaneAsync
 
 		/// <summary>Open pane within the window.</summary>
 		/// <param name="paneType"></param>
@@ -94,8 +79,12 @@ namespace TecWare.PPSn.UI
 			{
 				case PpsOpenPaneMode.Default:
 				case PpsOpenPaneMode.ReplacePane:
-					var pane = FindOpenPane(paneType, arguments);
-					return pane == null ? CreatePaneAsync(paneType, arguments) : Task.FromResult(pane);
+					{
+						var pane = FindOpenPane(paneType, arguments);
+						return pane == null
+							? paneHost.LoadAsync(this, paneType, arguments ?? new LuaTable())
+							: Task.FromResult(pane);
+					}
 				case PpsOpenPaneMode.NewPane:
 					return ((PpsMainEnvironment)environment).OpenPaneAsync(paneType, PpsOpenPaneMode.NewSingleWindow, arguments);
 				default:
@@ -107,10 +96,12 @@ namespace TecWare.PPSn.UI
 		{
 			get
 			{
-				if (currentPane != null)
-					yield return currentPane;
+				if (CurrentPane != null)
+					yield return CurrentPane;
 			}
 		} // prop Panes
+
+		private IPpsWindowPane CurrentPane => paneHost.CurrentPane;
 
 		/// <summary>Is the the single window in dialog mode?</summary>
 		public bool IsDialogMode { get => (bool)GetValue(IsDialogModeProperty); private set => SetValue(isDialogModePropertyKey, value); }

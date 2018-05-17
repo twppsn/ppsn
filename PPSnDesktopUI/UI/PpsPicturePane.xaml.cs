@@ -792,10 +792,7 @@ namespace TecWare.PPSn.UI
 		}
 
 		#endregion
-
 		#region -- Fields -------------------------------------------------------------
-
-		private readonly IPpsWindowPaneManager paneManager;
 		private readonly PpsEnvironment environment;
 
 		private IPpsWindowPane parentPane;
@@ -808,9 +805,12 @@ namespace TecWare.PPSn.UI
 		#region -- Constructor --------------------------------------------------------
 
 		/// <summary>initializes the cameras, the settings and the events</summary>
-		public PpsPicturePane(IPpsWindowPaneManager paneManager)
+		/// <param name="paneManager"></param>
+		/// <param name="paneHost"></param>
+		public PpsPicturePane(IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost)
 		{
-			this.paneManager = paneManager;
+			this.PaneManager = paneManager ?? throw new ArgumentNullException(nameof(paneManager));
+			PaneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
 			this.environment = paneManager.Environment;
 
 			InitializeComponent();
@@ -1552,7 +1552,9 @@ namespace TecWare.PPSn.UI
 		#endregion
 
 		/// <summary>Get the owning pane manager.</summary>
-		public IPpsWindowPaneManager PaneManager => paneManager;
+		public IPpsWindowPaneManager PaneManager { get; }
+		/// <summary></summary>
+		public IPpsWindowPaneHost PaneHost { get; }
 
 		#endregion
 	} // class PpsPicturePane

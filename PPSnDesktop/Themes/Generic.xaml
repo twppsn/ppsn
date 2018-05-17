@@ -1,0 +1,54 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:ui="clr-namespace:TecWare.PPSn.UI"
+	xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+	<Style TargetType="ui:PpsWindowPaneHost">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="ui:PpsWindowPaneHost">
+					<StackPanel>
+						<TextBlock Text="TESSSST"/>
+						<ContentPresenter Content="{TemplateBinding Control}" />
+						<ContentControl Grid.ColumnSpan="2" Grid.RowSpan="2"
+							Content="{Binding Path=Progress.CurrentText}">
+							<ContentControl.Resources>
+								<SolidColorBrush x:Key="ProgressBackGroundBrush" Color="{DynamicResource PPSnDesktopColor}" Opacity=".75"/>
+							</ContentControl.Resources>
+							<ContentControl.Style>
+								<Style TargetType="{x:Type ContentControl}">
+									<Setter Property="Visibility" Value="Collapsed"/>
+									<Setter Property="Template">
+										<Setter.Value>
+											<ControlTemplate TargetType="{x:Type ContentControl}">
+												<Grid Background="{StaticResource ProgressBackGroundBrush}">
+													<Grid.RowDefinitions>
+														<RowDefinition/>
+														<RowDefinition Height="72"/>
+														<RowDefinition Height="96"/>
+														<RowDefinition/>
+													</Grid.RowDefinitions>
+													<Control x:Name="ProgressRing" Grid.Row="1" Width="64" Height="64" Style="{StaticResource PpsProgressRingStyle}"/>
+													<TextBlock Grid.Row="2" Text="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Top"
+															   MaxWidth="400" TextAlignment="Center" TextWrapping="WrapWithOverflow"
+															   Foreground="{StaticResource PPSnWindowForegroundBrush}" FontSize="16"/>
+												</Grid>
+												<ControlTemplate.Triggers>
+													<DataTrigger Binding="{Binding Path=Progress.IsActive}" Value="True">
+														<Setter Property="Visibility" Value="Visible"/>
+														<Setter Property="Visibility" TargetName="ProgressRing" Value="Visible"/>
+													</DataTrigger>
+												</ControlTemplate.Triggers>
+											</ControlTemplate>
+										</Setter.Value>
+									</Setter>
+								</Style>
+							</ContentControl.Style>
+						</ContentControl>
+					</StackPanel>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+</ResourceDictionary>

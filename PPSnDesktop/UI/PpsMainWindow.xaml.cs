@@ -40,10 +40,6 @@ namespace TecWare.PPSn.UI
 		private readonly static DependencyPropertyKey IsSideBarVisiblePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsSideBarVisible), typeof(bool), typeof(PpsMainWindow), new FrameworkPropertyMetadata(true));
 		public readonly static DependencyProperty IsSideBarVisibleProperty = IsSideBarVisiblePropertyKey.DependencyProperty;
 
-		/// <summary>Readonly property for the current pane.</summary>
-		private readonly static DependencyPropertyKey CurrentPaneKey = DependencyProperty.RegisterReadOnly("CurrentPane", typeof(IPpsWindowPane), typeof(PpsMainWindow), new FrameworkPropertyMetadata(null, CurrentPaneChanged));
-		public readonly static DependencyProperty CurrentPaneProperty = CurrentPaneKey.DependencyProperty;
-
 		private int windowIndex = -1;                                       // settings key
 		private PpsWindowApplicationSettings settings;                      // current settings for the window
 
@@ -65,7 +61,7 @@ namespace TecWare.PPSn.UI
 
 			#region -- set basic command bindings --
 			CommandBindings.Add(
-				new CommandBinding(PpsWindow.LoginCommand,
+				new CommandBinding(LoginCommand,
 					(sender, e) =>
 					{
 						e.Handled = true;
@@ -86,7 +82,7 @@ namespace TecWare.PPSn.UI
 			);
 
 			CommandBindings.Add(
-				new CommandBinding(PpsWindow.TraceLogCommand,
+				new CommandBinding(TraceLogCommand,
 					async (sender, e) =>
 					{
 						e.Handled = true;
@@ -96,7 +92,7 @@ namespace TecWare.PPSn.UI
 			);
 
 			CommandBindings.Add(
-				new CommandBinding(PpsMainWindow.NextPaneCommand,
+				new CommandBinding(NextPaneCommand,
 					(sender, e) =>
 					{
 						e.Handled = true;
@@ -104,12 +100,12 @@ namespace TecWare.PPSn.UI
 					},
 					(sender, e) =>
 					{
-						e.CanExecute = panes.IndexOf(CurrentPane) < Panes.Count - 1;
+						e.CanExecute = paneHosts.IndexOf(CurrentPaneHost) < PaneHosts.Count - 1;
 					}
 				)
 			);
 			CommandBindings.Add(
-				new CommandBinding(PpsMainWindow.PrevPaneCommand,
+				new CommandBinding(PrevPaneCommand,
 					(sender, e) =>
 					{
 						e.Handled = true;
@@ -117,17 +113,17 @@ namespace TecWare.PPSn.UI
 					},
 					(sender, e) =>
 					{
-						e.CanExecute = panes.IndexOf(CurrentPane) > 0;
+						e.CanExecute = paneHosts.IndexOf(CurrentPaneHost) > 0;
 					}
 				)
 			);
 			CommandBindings.Add(
-				new CommandBinding(PpsMainWindow.GoToPaneCommand,
+				new CommandBinding(GoToPaneCommand,
 					(sender, e) =>
 					{
 						e.Handled = true;
-						if (e.Parameter is IPpsWindowPane pane)
-							ActivatePane(pane);
+						if (e.Parameter is PpsWindowPaneHost paneHost)
+							ActivatePaneHost(paneHost);
 					},
 					(sender, e) =>
 					{
@@ -136,16 +132,16 @@ namespace TecWare.PPSn.UI
 				)
 			);
 			CommandBindings.Add(
-				new CommandBinding(PpsMainWindow.ClosePaneCommand,
+				new CommandBinding(ClosePaneCommand,
 					(sender, e) =>
 					{
 						e.Handled = true;
-						if (e.Parameter is IPpsWindowPane pane)
-							Remove(pane);
+						if (e.Parameter is PpsWindowPaneHost paneHost)
+							UnloadPaneHostAsync(paneHost, null).AwaitTask();
 					},
 					(sender, e) =>
 					{
-						e.CanExecute = CurrentPane != null; //&& (CurrentPane.PaneControl == null || !CurrentPane.PaneControl.ProgressStack.IsEnabled);
+						e.CanExecute = !(CurrentPaneHost?.PaneProgress.IsActive ?? true);
 					}
 				)
 			);
@@ -163,7 +159,7 @@ namespace TecWare.PPSn.UI
 		{
 			if (unloadTask != null) // currently unloading
 				e.Cancel = !unloadTask.IsCompleted;
-			else if (Panes.Count > 0)
+			else if (PaneHosts.Count > 0)
 			{
 				e.Cancel = true; // cancel operation an start shutdown
 
@@ -226,7 +222,7 @@ namespace TecWare.PPSn.UI
 		private void RefreshSideIsVisibleProperty()
 		{
 			var show = (IsNavigatorVisible && navigator.NavigatorModel.ViewsShowDescription) 
-				|| (!IsNavigatorVisible && CurrentPane != null); // && CurrentPane.HasSideBar
+				|| (!IsNavigatorVisible && CurrentPaneHost != null); // && CurrentPane.HasSideBar
 			SetValue(IsSideBarVisiblePropertyKey, show);
 		} // proc RefreshSideIsVisibleProperty
 
@@ -237,18 +233,18 @@ namespace TecWare.PPSn.UI
 				RefreshSideIsVisibleProperty();
 		} // proc OnCurrentPanePropertyChanged
 
-		private void OnCurrentPaneChanged(IPpsWindowPane oldValue, IPpsWindowPane newValue)
-		{
-			if (oldValue != null)
-				oldValue.PropertyChanged -= OnCurrentPanePropertyChanged;
-			if (newValue != null)
-				newValue.PropertyChanged += OnCurrentPanePropertyChanged;
+		//private void OnCurrentPaneChanged(PpsWindowPaneHost oldValue, PpsWindowPaneHost newValue)
+		//{
+		//	if (oldValue != null)
+		//		oldValue.PropertyChanged -= OnCurrentPanePropertyChanged;
+		//	if (newValue != null)
+		//		newValue.PropertyChanged += OnCurrentPanePropertyChanged;
 
-			RefreshSideIsVisibleProperty();
-		} // proc OnCurrentPaneChanged
+		//	RefreshSideIsVisibleProperty();
+		//} // proc OnCurrentPaneChanged
 
-		private static void CurrentPaneChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			=> ((PpsMainWindow)d).OnCurrentPaneChanged((IPpsWindowPane)e.OldValue, (IPpsWindowPane)e.NewValue);
+		//private static void CurrentPaneChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		//	=> ((PpsMainWindow)d).OnCurrentPaneChanged((PpsWindowPaneHost)e.OldValue, (PpsWindowPaneHost)e.NewValue);
 
 		private void OnNavigatorVisibleChanged(bool oldValue, bool newValue)
 		{
