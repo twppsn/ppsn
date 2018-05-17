@@ -111,7 +111,7 @@ namespace TecWare.PPSn.UI
 	
 				// register events, owner, and in the openDocuments dictionary
 				dataAccess = await data.AccessAsync(arguments);
-				dataAccess.DisableUI = DisableUI;
+				dataAccess.DisableUI = new Func<IDisposable>(() => DisableUI("Verarbeite Daten...", -1));
 
 				transaction.Commit();
 			}

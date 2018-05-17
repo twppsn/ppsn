@@ -230,22 +230,22 @@ namespace TecWare.PPSn.UI
 
 		/// <summary></summary>
 		/// <param name="pane"></param>
-		/// <param name="progressText"></param>
+		/// <param name="text"></param>
 		/// <param name="value"></param>
 		/// <returns></returns>
-		public static IPpsProgress DisableUI(this IPpsWindowPane pane, string progressText = null, int value = -1)
-			=> DisableUI(pane.PaneHost);
+		public static IPpsProgress DisableUI(this IPpsWindowPane pane, string text = null, int value = -1)
+			=> DisableUI(pane.PaneHost, text, value);
 
 		/// <summary></summary>
 		/// <param name="pane"></param>
-		/// <param name="progressText"></param>
+		/// <param name="text"></param>
 		/// <param name="value"></param>
 		/// <returns></returns>
-		public static IPpsProgress DisableUI(this IPpsWindowPaneHost pane, string progressText = null, int value = -1)
+		public static IPpsProgress DisableUI(this IPpsWindowPaneHost pane, string text = null, int value = -1)
 		{
 			var progress = pane.Progress.CreateProgress() ?? PpsProgressStack.Dummy;
-			if (progressText != null)
-				progress.Text = progressText;
+			if (text != null)
+				progress.Text = text;
 			progress.Value = value;
 			return progress;
 		} // func DisableUI

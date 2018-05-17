@@ -414,8 +414,8 @@ namespace TecWare.PPSn.UI
 		/// <summary>Disable the current panel.</summary>
 		/// <returns></returns>
 		[LuaMember("disableUI")]
-		public IPpsProgress DisableUI()
-			=> PaneHost.Progress.CreateProgress(); // PpsWindowPaneHelper.DisableUI(PaneControl);
+		public IPpsProgress DisableUI(string text = null, int value = -1)
+			=> PaneHost.DisableUI(text, value);
 
 		/// <summary>Get the default view of a collection.</summary>
 		/// <param name="collection"></param>
