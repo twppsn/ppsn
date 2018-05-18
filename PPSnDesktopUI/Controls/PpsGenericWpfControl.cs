@@ -38,6 +38,8 @@ namespace TecWare.PPSn.Controls
 		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
 
+		public static readonly DependencyProperty HasSideBarProperty = DependencyProperty.Register(nameof(HasSideBar), typeof(bool), typeof(PpsGenericWpfControl), new FrameworkPropertyMetadata(false));
+
 		// for corrent Binding this Command must be a Property - not a Field
 		// todo: change, Interface and flags for the current options
 		private static readonly RoutedCommand setCharmCommand = new RoutedCommand("SetCharm", typeof(PpsGenericWpfControl));
@@ -109,10 +111,11 @@ namespace TecWare.PPSn.Controls
 		} // prop Pane
 
 		/// <summary>Title of the window pane</summary>
-		public string Title { get { return (string)GetValue(TitleProperty); } set { SetValue(TitleProperty, value); } }
+		public string Title { get => (string)GetValue(TitleProperty);  set => SetValue(TitleProperty, value); } 
 		/// <summary>SubTitle of the window pane</summary>
-		public string SubTitle { get { return (string)GetValue(SubTitleProperty); } set { SetValue(SubTitleProperty, value); } }
-
+		public string SubTitle { get => (string)GetValue(SubTitleProperty);  set => SetValue(SubTitleProperty, value); } 
+		/// <summary>Has this control a sidebar element.</summary>
+		public bool HasSideBar { get => BooleanBox.GetBool(GetValue(HasSideBarProperty)); set => SetValue(HasSideBarProperty, BooleanBox.GetObject(value)); }
 	
 		/// <summary>List of commands for the main toolbar.</summary>
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]

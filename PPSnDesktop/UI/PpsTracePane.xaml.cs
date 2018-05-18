@@ -159,6 +159,7 @@ namespace TecWare.PPSn.UI
 		IPpsWindowPaneHost IPpsWindowPane.PaneHost => paneHost;
 		PpsUICommandCollection IPpsWindowPane.Commands => commands;
 
+		bool IPpsWindowPane.HasSideBar => false;
 		bool IPpsWindowPane.IsDirty => false;
 
 		#endregion

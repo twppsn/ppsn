@@ -78,6 +78,8 @@ namespace TecWare.PPSn.UI
 		/// <summary>Sub title of the content.</summary>
 		/// <remarks>Can not be implemented hidden, because of the binding.</remarks>
 		string SubTitle { get; }
+		/// <summary>Mark the sidebar mode for the control.</summary>
+		bool HasSideBar { get; }
 
 		/// <summary>Control for the pane data.</summary>
 		/// <remarks>Can not be implemented hidden, because of the binding.</remarks>

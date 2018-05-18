@@ -1553,6 +1553,8 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		public IPpsWindowPaneHost PaneHost { get; }
 
+		bool IPpsWindowPane.HasSideBar => false;
+
 		#endregion
 	} // class PpsPicturePane
 }

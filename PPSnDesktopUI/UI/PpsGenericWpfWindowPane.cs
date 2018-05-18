@@ -576,11 +576,13 @@ namespace TecWare.PPSn.UI
 
 			DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.TitleProperty, typeof(PpsGenericWpfControl)).AddValueChanged(Control, ControlTitleChanged);
 			DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.SubTitleProperty, typeof(PpsGenericWpfControl)).AddValueChanged(Control, ControlSubTitleChanged);
+			DependencyPropertyDescriptor.FromProperty(PpsGenericWpfControl.HasSideBarProperty, typeof(PpsGenericWpfControl)).AddValueChanged(Control, ControlHasSideBarChanged);
 
 			// notify changes on control
 			OnPropertyChanged(nameof(Control));
 			OnPropertyChanged(nameof(Title));
 			OnPropertyChanged(nameof(SubTitle));
+			OnPropertyChanged(nameof(IPpsWindowPane.HasSideBar));
 			OnPropertyChanged(nameof(Commands));
 		} // proc LoadInternAsync
 
@@ -623,6 +625,9 @@ namespace TecWare.PPSn.UI
 
 		private void ControlSubTitleChanged(object sender, EventArgs e)
 			=> OnPropertyChanged(nameof(SubTitle));
+
+		private void ControlHasSideBarChanged(object sender, EventArgs e)
+			=> OnPropertyChanged(nameof(IPpsWindowPane.HasSideBar));
 
 		#endregion
 
@@ -767,6 +772,8 @@ namespace TecWare.PPSn.UI
 				Control.SubTitle = value;
 			}
 		} // prop SubTitle
+
+		bool IPpsWindowPane.HasSideBar => Control?.HasSideBar ?? false;
 
 		/// <summary>Wpf-Control</summary>
 		[LuaMember]

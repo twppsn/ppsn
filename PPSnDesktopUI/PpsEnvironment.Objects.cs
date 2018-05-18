@@ -2339,7 +2339,7 @@ namespace TecWare.PPSn
 					// load content
 					using (var xml = XmlReader.Create(PpsObject.OpenReadStream(objectInfo), Procs.XmlReaderSettings))
 					{
-						var xData = XDocument.Load(xml).Root;
+						var xData = (await Task.Run(() => XDocument.Load(xml))).Root;
 						await Object.Environment.Dispatcher.InvokeAsync(
 							() =>
 							{
