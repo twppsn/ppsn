@@ -51,6 +51,8 @@ namespace TecWare.PPSn.UI
 
 			InitializeComponent();
 
+			SetValue(paneHostsPropertyKey, paneHosts);
+
 			// initialize settings
 			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
 			navigator.Init(this);
@@ -139,10 +141,7 @@ namespace TecWare.PPSn.UI
 						if (e.Parameter is PpsWindowPaneHost paneHost)
 							UnloadPaneHostAsync(paneHost, null).AwaitTask();
 					},
-					(sender, e) =>
-					{
-						e.CanExecute = !(CurrentPaneHost?.PaneProgress.IsActive ?? true);
-					}
+					(sender, e) => e.CanExecute = e.Parameter is PpsWindowPaneHost paneHost ? !paneHost.PaneProgress.IsActive : false
 				)
 			);
 

@@ -146,6 +146,9 @@ namespace TecWare.PPSn.UI
 		private readonly static DependencyPropertyKey currentPaneHostPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentPaneHost), typeof(PpsWindowPaneHost), typeof(PpsMainWindow), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnCurrentPaneHostChanged)));
 		internal readonly static DependencyProperty CurrentPaneHostProperty = currentPaneHostPropertyKey.DependencyProperty;
 
+		private readonly static DependencyPropertyKey paneHostsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(PaneHosts), typeof(PpsPaneCollection), typeof(PpsMainWindow), new FrameworkPropertyMetadata(null));
+		internal readonly static DependencyProperty PaneHostsProperty = paneHostsPropertyKey.DependencyProperty;
+
 		private readonly static PropertyDescriptor hasPaneSideBarPropertyDescriptor = DependencyPropertyDescriptor.FromProperty(PpsWindowPaneHost.HasPaneSideBarProperty, typeof(PpsWindowPaneHost));
 #pragma warning restore IDE1006 // Naming Styles
 
@@ -418,7 +421,8 @@ namespace TecWare.PPSn.UI
 		/// <summary>Returns the current view of the pane as a wpf control.</summary>
 		internal PpsWindowPaneHost CurrentPaneHost => (PpsWindowPaneHost)GetValue(CurrentPaneHostProperty);
 		/// <summary>List with the current open panes.</summary>
-		internal IReadOnlyList<PpsWindowPaneHost> PaneHosts => paneHosts;
+		//internal IReadOnlyList<PpsWindowPaneHost> PaneHosts => paneHosts;
+		internal PpsPaneCollection PaneHosts => (PpsPaneCollection)GetValue(PaneHostsProperty);
 
 		IEnumerable<IPpsWindowPane> IPpsWindowPaneManager.Panes
 			=> paneHosts.Select(c => c.CurrentPane);

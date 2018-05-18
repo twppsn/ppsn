@@ -230,7 +230,7 @@
 					<ToggleButton.Style>
 						<Style TargetType="{x:Type ToggleButton}" BasedOn="{StaticResource PaneSelectToggleButtonStyle}">
 							<Style.Triggers>
-								<DataTrigger Binding="{Binding Path=CurrentPaneHost}" Value="{x:Null}">
+								<DataTrigger Binding="{Binding CurrentPaneHost}" Value="{x:Null}">
 									<Setter Property="IsEnabled" Value="False"/>
 								</DataTrigger>
 							</Style.Triggers>
@@ -264,8 +264,11 @@
 				<ToggleButton Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}" CommandParameter="{Binding Path=CurrentPaneHost}" Width="36" Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="3"/>
 				<Popup x:Name="paneListPopup" IsOpen="{Binding ElementName=openPaneListButton, Path=IsChecked}" PlacementTarget="{Binding ElementName=openPaneListButton}"
 					   AllowsTransparency="True" PopupAnimation="Slide">
-					<ListBox ItemsSource="{Binding PaneHosts}" Background="{StaticResource PPSnPopUpBackgroundBrush}" BorderBrush="{StaticResource PPSnWindowForegroundBrush}" BorderThickness="1"
-										 Style="{StaticResource PPSnListBoxStyle}">
+					<ListBox ItemsSource="{Binding PaneHosts}"
+							 Background="{StaticResource PPSnPopUpBackgroundBrush}"
+							 BorderBrush="{StaticResource PPSnWindowForegroundBrush}"
+							 BorderThickness="1"
+							 Style="{StaticResource PPSnListBoxStyle}">
 						<ListBox.ItemContainerStyle>
 							<Style TargetType="{x:Type ListBoxItem}">
 								<Setter Property="Focusable" Value="False"/>
@@ -273,7 +276,7 @@
 								<Setter Property="Template">
 									<Setter.Value>
 										<ControlTemplate TargetType="{x:Type ListBoxItem}">
-											<Button x:Name="PART_Item" BorderThickness="0" Height="36" Command="{x:Static uiL:PpsMainWindow.GoToPaneCommand}" CommandParameter="{Binding}" >
+											<Button x:Name="PART_Item" BorderThickness="0" Height="32" Command="{x:Static uiL:PpsMainWindow.GoToPaneCommand}" CommandParameter="{Binding}" >
 												<Button.Content>
 													<TextBlock>
 														<TextBlock.Text>
@@ -299,32 +302,39 @@
 																			<ColumnDefinition Width="32"/>
 																		</Grid.ColumnDefinitions>
 
-																		<Path x:Name="PART_Marker" Width="20" Height="20" SnapsToDevicePixels="True"
+																		<Path x:Name="MarkCurrentPane" Width="20" Height="20" SnapsToDevicePixels="True"
 																			  Data="M4,10 9,15 15,5, 14,5 9,14 5,10Z"
 																			  StrokeThickness="0.5" StrokeStartLineCap="Flat" StrokeEndLineCap="Flat"
 																			  Stroke="{TemplateBinding Foreground}" Fill="{TemplateBinding Foreground}"/>
 																		<ContentPresenter Grid.Column="1" Margin="0,0,8,2" HorizontalAlignment="Left" VerticalAlignment="Center"/>
-																		<Button x:Name="PART_CloseButton" Grid.Column="2" VerticalAlignment="Center" Visibility="Hidden" 
-																				Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}"
-																				CommandParameter="{Binding}"
-																				Style="{StaticResource PPSnClosePopupButtonStyle}"/>
-																		<Control x:Name="PART_Progress" Grid.Column="2" Width="17" Height="17" 
-																				 VerticalAlignment="Center" HorizontalAlignment="Center"
-																				 Style="{StaticResource PpsProgressRingStyle}"/>
+																		<ui:PpsButton x:Name="ClosePaneButton"
+																					  Grid.Column="2"
+																					  Visibility="Hidden"
+																					  Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}"
+																					  CommandParameter="{Binding}"
+																					  GeometryName="windowClose"
+																					  GeometrySize="20"
+																					  Background="Transparent"
+																					  BorderThickness="0"
+																					  Focusable="False" />
+																		<ui:PpsProgressControl x:Name="PaneProgessControl"
+																							   Grid.Column="2" 
+																							   Width="19"
+																							   Height="19" />
 																	</Grid>
 																	<ControlTemplate.Triggers>
-																		<DataTrigger Binding="{Binding Path=Control.IsVisible}" Value="False">
-																			<Setter TargetName="PART_Marker" Property="Visibility" Value="Hidden"/>
+																		<DataTrigger Binding="{Binding Control.IsVisible}" Value="False">
+																			<Setter TargetName="MarkCurrentPane" Property="Visibility" Value="Hidden"/>
 																		</DataTrigger>
 
-																		<DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
-																			<Setter Property="Background" Value="{StaticResource PPSnMouseOverBrush}"/>
-																			<Setter TargetName="PART_CloseButton" Property="Visibility" Value="Visible"/>
+																		<DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
+																			<Setter Property="Background" Value="{StaticResource PPSnMouseOverBrush}" />
+																			<Setter TargetName="ClosePaneButton" Property="Visibility" Value="Visible" />
 																		</DataTrigger>
-																	
-																		<DataTrigger Binding="{Binding PaneControl.ProgressStack.IsEnabled}" Value="True">
-																			<Setter TargetName="PART_CloseButton" Property="Visibility" Value="Hidden"/>
-																			<Setter TargetName="PART_Progress" Property="Visibility" Value="Visible"/>
+
+																		<DataTrigger Binding="{Binding PaneProgress.IsActive}" Value="True">
+																			<Setter TargetName="ClosePaneButton" Property="Visibility" Value="Hidden"/>
+																			<Setter TargetName="PaneProgessControl" Property="Visibility" Value="Visible"/>
 																		</DataTrigger>
 																	</ControlTemplate.Triggers>
 																</ControlTemplate>
@@ -371,15 +381,14 @@
 		</TextBlock>
 		
 		<Button x:Name="PART_MinButton" Grid.Column="2" Style="{StaticResource PPSnWindowButtonStyle}" VerticalAlignment="Top" ToolTip="Minimieren" Command="{x:Static ui:PpsWindow.MinimizeCommand}" >
-			<Rectangle
-				Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-				Stretch="Fill"
-				RenderOptions.EdgeMode="Aliased" 
-				VerticalAlignment="Bottom"
-				HorizontalAlignment="Center"
-				Margin="0,0,0,1"
-				Width="9" 
-				Height="3" />
+			<Rectangle Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+					   Stretch="Fill"
+					   RenderOptions.EdgeMode="Aliased" 
+					   VerticalAlignment="Bottom"
+					   HorizontalAlignment="Center"
+					   Margin="0,0,0,1"
+					   Width="9"
+					   Height="3" />
 		</Button>
 		<Button x:Name="PART_MaxButton" Grid.Column="3" Command="{x:Static ui:PpsWindow.MaximizeCommand}" >
 			<Path x:Name="PART_MaxButtonPath"
@@ -411,6 +420,7 @@
 				</Style>
 			</Button.Style>
 		</Button>
+		
 		<Button x:Name="PART_CloseButton" Grid.Column="4" Style="{StaticResource PPSnWindowButtonStyle}" VerticalAlignment="Top" ToolTip="Schließen" Command="{x:Static ui:PpsWindow.CloseCommand}" >
 			<Path
 				Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
