@@ -494,7 +494,7 @@
 					<Style TargetType="{x:Type Border}">
 						<Setter Property="Padding" Value="0"/>
 						<Style.Triggers>
-							<DataTrigger Binding="{Binding Path=HasSideBar}">
+							<DataTrigger Binding="{Binding Path=HasPaneSideBar}">
 								<DataTrigger.Value>
 									<sys:Boolean>true</sys:Boolean>
 								</DataTrigger.Value>
@@ -527,7 +527,7 @@
 				<uiL:PpsCharmbarControl.Style>
 					<Style TargetType="{x:Type UserControl}">
 						<Style.Triggers>
-							<DataTrigger Binding="{Binding CurrentPane, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow, AncestorLevel=1},	Mode=OneWay}">
+							<DataTrigger Binding="{Binding CurrentPaneHost, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow, AncestorLevel=1},	Mode=OneWay}">
 								<DataTrigger.Value>
 									<x:Null/>
 								</DataTrigger.Value>

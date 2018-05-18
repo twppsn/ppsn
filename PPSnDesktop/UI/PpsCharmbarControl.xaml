@@ -263,7 +263,7 @@
 				<Setter Property="Margin" Value="0,0,0,0"/>
 				<Setter Property="HorizontalAlignment" Value="Right"/>
 				<Style.Triggers>
-					<DataTrigger Binding="{Binding CurrentPane.HasSideBar, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow, AncestorLevel=1}, Mode=OneWay}">
+					<DataTrigger Binding="{Binding CurrentPaneHost.HasPaneSideBar, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=uiL:PpsMainWindow, AncestorLevel=1}, Mode=OneWay}">
 						<DataTrigger.Value>
 							<sys:Boolean>True</sys:Boolean>
 						</DataTrigger.Value>

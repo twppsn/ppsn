@@ -33,7 +33,7 @@ namespace TecWare.PPSn.UI
 
 		private static readonly DependencyPropertyKey paneProgressPropertyKey = DependencyProperty.RegisterReadOnly(nameof(PaneProgress), typeof(PpsProgressStack), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(null));
 		public static readonly DependencyProperty PaneProgressProperty = paneProgressPropertyKey.DependencyProperty;
-		private static readonly DependencyPropertyKey hasPaneSideBarPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasPaneSideBar), typeof(bool), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(false));
+		private static readonly DependencyPropertyKey hasPaneSideBarPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasPaneSideBar), typeof(bool), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(true));
 		public static readonly DependencyProperty HasPaneSideBarProperty = hasPaneSideBarPropertyKey.DependencyProperty;
 
 		private static readonly DependencyPropertyKey titlePropertyKey = DependencyProperty.RegisterReadOnly(nameof(Title), typeof(string), typeof(PpsWindowPaneHost), new FrameworkPropertyMetadata(null));

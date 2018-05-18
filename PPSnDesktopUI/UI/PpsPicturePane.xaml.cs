@@ -1172,9 +1172,6 @@ namespace TecWare.PPSn.UI
 		/// <summary>false, to fulfill interface</summary>
 		public bool IsDirty => false;
 
-		/// <summary>false, to fulfill interface</summary>
-		public bool HasSideBar => false;
-
 		/// <summary>thrown if the Pane changes</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 

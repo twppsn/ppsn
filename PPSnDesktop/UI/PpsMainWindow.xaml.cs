@@ -221,8 +221,8 @@ namespace TecWare.PPSn.UI
 
 		private void RefreshSideIsVisibleProperty()
 		{
-			var show = (IsNavigatorVisible && navigator.NavigatorModel.ViewsShowDescription) 
-				|| (!IsNavigatorVisible && CurrentPaneHost != null); // && CurrentPane.HasSideBar
+			var show = (IsNavigatorVisible && navigator.NavigatorModel.ViewsShowDescription)
+				|| (!IsNavigatorVisible && CurrentPaneHost != null && CurrentPaneHost.HasPaneSideBar);
 			SetValue(IsSideBarVisiblePropertyKey, show);
 		} // proc RefreshSideIsVisibleProperty
 

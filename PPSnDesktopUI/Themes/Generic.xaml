@@ -17,6 +17,7 @@
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsSideBarControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsStackSectionControl.xaml" />
 		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsDataFilterBase.xaml" />
+		<ResourceDictionary Source="/PPSn.Desktop.UI;component/Controls/PpsProgressControl.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 </ResourceDictionary>
