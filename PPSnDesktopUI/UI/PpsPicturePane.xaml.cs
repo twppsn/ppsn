@@ -21,6 +21,7 @@ using System.ComponentModel;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -1329,9 +1330,30 @@ namespace TecWare.PPSn.UI
 
 			CameraEnum.SnapShot += (s, e) =>
 			{
-				var path = System.IO.Path.GetTempPath() + DateTime.Now.ToUniversalTime().ToString("yyyy-MM-dd_HHmmss") + ".jpg";
+				var path = String.Empty;
+				var runningindex = -1;
+				var written = false;
 
-				e.Frame.Save(path, ImageFormat.Jpeg);
+				// find a useable path
+				while (!written)
+				{
+					runningindex++;
+
+					path = Path.GetTempPath() + DateTime.Now.ToUniversalTime().ToString("yyyy-MM-dd_HHmmss") + (runningindex > 0 ? "_(" + runningindex + ")" : String.Empty) + ".jpg";
+					if (File.Exists(path))
+						continue;
+
+					try
+					{
+						e.Frame.Save(path, ImageFormat.Jpeg);
+						written = true;
+					}
+					catch (ExternalException)
+					{
+						continue;
+					}
+				}
+
 				e.Frame.Dispose();
 				PpsObject obj = null;
 				Dispatcher.Invoke(async () =>
