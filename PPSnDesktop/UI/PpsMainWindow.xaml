@@ -13,8 +13,8 @@
 	<ui:PpsWindow.Title>
 		<MultiBinding FallbackValue="{StaticResource PPSnApplicationTitle}" StringFormat="{}{0} - {1} - {2}">
 			<Binding Path="Text" ElementName="PART_Title" />
-			<Binding Path="CurrentPane.Title" Converter="{x:Static uiO:PpsConverter.MultiToSingleLine}"/>
-			<Binding Path="CurrentPane.SubTitle"/>
+			<Binding Path="CurrentPane.Title" Converter="{x:Static uiO:PpsConverter.MultiToSingleLine}" />
+			<Binding Path="CurrentPane.SubTitle" Converter="{x:Static uiO:PpsConverter.MultiToSingleLine}" />
 		</MultiBinding>
 	</ui:PpsWindow.Title>
 
