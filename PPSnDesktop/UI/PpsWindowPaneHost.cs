@@ -67,6 +67,7 @@ namespace TecWare.PPSn.UI
 				SetValue(subTitlePropertyKey, newPane.SubTitle);
 				SetValue(commandsPropertyKey, newPane.Commands);
 				SetValue(controlPropertyKey, newPane.Control);
+				SetValue(hasPaneSideBarPropertyKey, newPane.HasSideBar);
 
 				SetValue(currentPanePropertyKey, newPane);
 
@@ -94,6 +95,8 @@ namespace TecWare.PPSn.UI
 			pane.PropertyChanged -= CurrentPanePropertyChanged;
 			pane.Dispose();
 
+			SetValue(commandsPropertyKey, null);
+			SetValue(hasPaneSideBarPropertyKey, false);
 			SetValue(currentPanePropertyKey, null);
 
 			return r;
@@ -115,6 +118,9 @@ namespace TecWare.PPSn.UI
 				case nameof(IPpsWindowPane.Control):
 					SetValue(controlPropertyKey, CurrentPane.Control);
 					break;
+				case nameof(IPpsWindowPane.HasSideBar):
+					SetValue(hasPaneSideBarPropertyKey, CurrentPane.HasSideBar);
+					break;
 			}
 		} // proc CurrentPanePropertyChanged
 
@@ -127,7 +133,7 @@ namespace TecWare.PPSn.UI
 		/// <summary></summary>
 		public IPpsWindowPaneManager PaneManager { get; private set; }
 		/// <summary></summary>
-		public bool HasPaneSideBar { get => (bool)GetValue(HasPaneSideBarProperty); private set => SetValue(hasPaneSideBarPropertyKey, value); }
+		public bool HasPaneSideBar => (bool)GetValue(HasPaneSideBarProperty); 
 
 		/// <summary>Current title of the pane.</summary>
 		public string Title => (string)GetValue(TitleProperty);

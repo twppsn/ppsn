@@ -278,7 +278,7 @@
 													<TextBlock>
 														<TextBlock.Text>
 															<MultiBinding StringFormat="{}{0} - {1}">
-																<Binding Path="SubTitle"/>
+																<Binding Path="SubTitle" Converter="{x:Static uiO:PpsConverter.MultiToSingleLine}" />
 																<Binding Path="Title" Converter="{x:Static uiO:PpsConverter.MultiToSingleLine}"/>
 															</MultiBinding>
 														</TextBlock.Text>
@@ -362,7 +362,7 @@
 		</Grid>
 
 		<TextBlock Grid.Column="1" Foreground="{StaticResource PPSnWindowForegroundBrush}" Padding="24,2,0,0" VerticalAlignment="Top" Height="32" FontSize="16">
-			<Run Text="{Binding CurrentPaneHost.SubTitle, Mode=OneWay}"/>
+			<Run Text="{Binding CurrentPaneHost.SubTitle, Mode=OneWay,Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"/>
 			<Run Text=" "/>
 			<Run Text="{Binding CurrentPaneHost.Title, Mode=OneWay, Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}"/>
 			<TextBlock.Tag>
