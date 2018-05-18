@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -141,9 +142,11 @@ namespace TecWare.PPSn.UI
 	/// <summary></summary>
 	public partial class PpsMainWindow : IPpsWindowPaneManager
 	{
-		private readonly static DependencyPropertyKey currentPaneHostKey = DependencyProperty.RegisterReadOnly(nameof(CurrentPaneHost), typeof(PpsWindowPaneHost), typeof(PpsMainWindow), new FrameworkPropertyMetadata(null));
 #pragma warning disable IDE1006 // Naming Styles
-		internal readonly static DependencyProperty CurrentPaneHostProperty = currentPaneHostKey.DependencyProperty;
+		private readonly static DependencyPropertyKey currentPaneHostPropertyKey = DependencyProperty.RegisterReadOnly(nameof(CurrentPaneHost), typeof(PpsWindowPaneHost), typeof(PpsMainWindow), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnCurrentPaneHostChanged)));
+		internal readonly static DependencyProperty CurrentPaneHostProperty = currentPaneHostPropertyKey.DependencyProperty;
+
+		private readonly static PropertyDescriptor hasPaneSideBarPropertyDescriptor = DependencyPropertyDescriptor.FromProperty(PpsWindowPaneHost.HasPaneSideBarProperty, typeof(PpsWindowPaneHost));
 #pragma warning restore IDE1006 // Naming Styles
 
 		private readonly PpsPaneCollection paneHosts = new PpsPaneCollection();
@@ -174,7 +177,7 @@ namespace TecWare.PPSn.UI
 			var r = Activate();
 			if (paneHost != null)
 			{
-				SetValue(currentPaneHostKey, paneHost);
+				SetValue(currentPaneHostPropertyKey, paneHost);
 				IsNavigatorVisible = false;
 			}
 			else
@@ -327,7 +330,7 @@ namespace TecWare.PPSn.UI
 					if (paneHosts.Count > 1)
 						ActivateNextPane(true);
 					else
-						SetValue(currentPaneHostKey, null);
+						SetValue(currentPaneHostPropertyKey, null);
 				}
 
 				paneHosts.RemovePane(paneHost);
@@ -390,6 +393,22 @@ namespace TecWare.PPSn.UI
 		} // func FindOpenPane
 
 		#endregion
+
+		private static void OnCurrentPaneHostChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+			=> ((PpsMainWindow)d).OnCurrentPaneHostChanged((PpsWindowPaneHost)e.NewValue, (PpsWindowPaneHost)e.OldValue);
+
+		private void OnCurrentPaneHostChanged(PpsWindowPaneHost newValue, PpsWindowPaneHost oldValue)
+		{
+			if (oldValue != null)
+				hasPaneSideBarPropertyDescriptor.RemoveValueChanged(oldValue, OnCurrentPaneHostSideBarChanged);
+			if (newValue != null)
+				hasPaneSideBarPropertyDescriptor.AddValueChanged(newValue, OnCurrentPaneHostSideBarChanged);
+
+			RefreshSideIsVisibleProperty();
+		} // proc OnCurrentPaneHostChanged
+
+		private void OnCurrentPaneHostSideBarChanged(object sender, EventArgs e)
+			=> RefreshSideIsVisibleProperty();
 
 		Type IPpsWindowPaneManager.GetPaneType(PpsWellknownType wellknownType)
 			=> Environment.GetPaneType(wellknownType);

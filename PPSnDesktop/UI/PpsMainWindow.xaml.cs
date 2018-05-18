@@ -228,23 +228,9 @@ namespace TecWare.PPSn.UI
 
 		private void OnCurrentPanePropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
-			if (//e.PropertyName == nameof(IPpsWindowPane.HasSideBar)
-			 e.PropertyName == nameof(PpsNavigatorModel.ViewsShowDescription))
+			if (e.PropertyName == nameof(PpsNavigatorModel.ViewsShowDescription))
 				RefreshSideIsVisibleProperty();
 		} // proc OnCurrentPanePropertyChanged
-
-		//private void OnCurrentPaneChanged(PpsWindowPaneHost oldValue, PpsWindowPaneHost newValue)
-		//{
-		//	if (oldValue != null)
-		//		oldValue.PropertyChanged -= OnCurrentPanePropertyChanged;
-		//	if (newValue != null)
-		//		newValue.PropertyChanged += OnCurrentPanePropertyChanged;
-
-		//	RefreshSideIsVisibleProperty();
-		//} // proc OnCurrentPaneChanged
-
-		//private static void CurrentPaneChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-		//	=> ((PpsMainWindow)d).OnCurrentPaneChanged((PpsWindowPaneHost)e.OldValue, (PpsWindowPaneHost)e.NewValue);
 
 		private void OnNavigatorVisibleChanged(bool oldValue, bool newValue)
 		{

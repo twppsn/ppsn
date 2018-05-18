@@ -264,7 +264,7 @@
 				<ToggleButton Command="{x:Static uiL:PpsMainWindow.ClosePaneCommand}" CommandParameter="{Binding Path=CurrentPaneHost}" Width="36" Style="{StaticResource PaneSelectToggleButtonStyle}" Tag="3"/>
 				<Popup x:Name="paneListPopup" IsOpen="{Binding ElementName=openPaneListButton, Path=IsChecked}" PlacementTarget="{Binding ElementName=openPaneListButton}"
 					   AllowsTransparency="True" PopupAnimation="Slide">
-					<ListBox ItemsSource="{Binding Panes}" Background="{StaticResource PPSnPopUpBackgroundBrush}" BorderBrush="{StaticResource PPSnWindowForegroundBrush}" BorderThickness="1"
+					<ListBox ItemsSource="{Binding PaneHosts}" Background="{StaticResource PPSnPopUpBackgroundBrush}" BorderBrush="{StaticResource PPSnWindowForegroundBrush}" BorderThickness="1"
 										 Style="{StaticResource PPSnListBoxStyle}">
 						<ListBox.ItemContainerStyle>
 							<Style TargetType="{x:Type ListBoxItem}">
