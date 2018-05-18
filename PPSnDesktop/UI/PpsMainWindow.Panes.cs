@@ -18,41 +18,40 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using Neo.IronLua;
 using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- class PpsPaneCollection --------------------------------------------------
+	#region -- class PpsPaneCollection ------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	internal sealed class PpsPaneCollection : IList, IReadOnlyList<IPpsWindowPane>, INotifyCollectionChanged
+	internal sealed class PpsPaneCollection : IList, IReadOnlyList<PpsWindowPaneHost>, INotifyCollectionChanged
 	{
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
-		private readonly List<IPpsWindowPane> panes = new List<IPpsWindowPane>();
+		private readonly List<PpsWindowPaneHost> panes = new List<PpsWindowPaneHost>();
 
-		public IEnumerator<IPpsWindowPane> GetEnumerator()
+		#region -- IReadOnlyList<IPpsWindowPane> members ------------------------------
+
+		public IEnumerator<PpsWindowPaneHost> GetEnumerator()
 			=> panes.GetEnumerator();
 
-		public bool Contains(IPpsWindowPane pane)
+		public bool Contains(PpsWindowPaneHost pane)
 			=> panes.Contains(pane);
 
-		public int IndexOf(IPpsWindowPane pane)
+		public int IndexOf(PpsWindowPaneHost pane)
 			=> panes.IndexOf(pane);
 
-		public void AddPane(IPpsWindowPane pane)
+		public void AddPane(PpsWindowPaneHost pane)
 		{
 			panes.Add(pane);
 			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, pane));
 		} // proc AddPane
 
-		public void RemovePane(IPpsWindowPane pane)
+		public void RemovePane(PpsWindowPaneHost pane)
 		{
 			panes.Remove(pane);
 			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, pane));
@@ -70,11 +69,11 @@ namespace TecWare.PPSn.UI
 			{
 				if (p.GetType() == paneType)
 				{
-					var r = p.CompareArguments(arguments);
+					var r = p.CurrentPane.CompareArguments(arguments);
 					if (r == PpsWindowPaneCompareResult.Same)
-						return new Tuple<PpsWindowPaneCompareResult, IPpsWindowPane>(r, p);
+						return new Tuple<PpsWindowPaneCompareResult, IPpsWindowPane>(r, p.CurrentPane);
 					else if (r == PpsWindowPaneCompareResult.Reload && compatiblePane == null)
-						compatiblePane = p;
+						compatiblePane = p.CurrentPane;
 				}
 			}
 
@@ -85,15 +84,26 @@ namespace TecWare.PPSn.UI
 
 		public int Count => panes.Count;
 
-		public IPpsWindowPane this[int index] => panes[index];
+		public PpsWindowPaneHost this[int index] => panes[index];
 
-		#region -- IList members ----------------------------------------------------------
+		#endregion
 
-		int IList.Add(object value) { throw new NotSupportedException(); }
-		void IList.Insert(int index, object value) { throw new NotSupportedException(); }
-		void IList.Clear() { throw new NotSupportedException(); }
-		void IList.Remove(object value) { throw new NotSupportedException(); }
-		void IList.RemoveAt(int index) { throw new NotSupportedException(); }
+		#region -- IList members ------------------------------------------------------
+
+		int IList.Add(object value) 
+			=> throw new NotSupportedException();
+
+		void IList.Insert(int index, object value) 
+			=> throw new NotSupportedException();
+
+		void IList.Clear() 
+			=> throw new NotSupportedException();
+
+		void IList.Remove(object value) 
+			=> throw new NotSupportedException(); 
+
+		void IList.RemoveAt(int index) 
+			=> throw new NotSupportedException(); 
 
 		void ICollection.CopyTo(Array array, int index)
 		{
@@ -102,18 +112,18 @@ namespace TecWare.PPSn.UI
 		} // func ICollection.CopyTo
 
 		bool IList.Contains(object value)
-			=> Contains(value as IPpsWindowPane);
+			=> Contains(value as PpsWindowPaneHost);
 
 		int IList.IndexOf(object value)
-			=> IndexOf(value as IPpsWindowPane);
+			=> IndexOf(value as PpsWindowPaneHost);
 
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
 
 		object IList.this[int index]
 		{
-			get { return this[index]; }
-			set { throw new NotSupportedException(); }
+			get => this[index];
+			set => throw new NotSupportedException();
 		} // func IList.this
 
 		bool IList.IsFixedSize => false;
@@ -126,13 +136,17 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsMainWindow ------------------------------------------------------
+	#region -- class PpsMainWindow ----------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public partial class PpsMainWindow : IPpsWindowPaneManager
 	{
-		private readonly PpsPaneCollection panes = new PpsPaneCollection();
+		private readonly static DependencyPropertyKey currentPaneHostKey = DependencyProperty.RegisterReadOnly(nameof(CurrentPaneHost), typeof(PpsWindowPaneHost), typeof(PpsMainWindow), new FrameworkPropertyMetadata(null));
+#pragma warning disable IDE1006 // Naming Styles
+		internal readonly static DependencyProperty CurrentPaneHostProperty = currentPaneHostKey.DependencyProperty;
+#pragma warning restore IDE1006 // Naming Styles
+
+		private readonly PpsPaneCollection paneHosts = new PpsPaneCollection();
 
 		#region -- Pane Manager  ------------------------------------------------------
 
@@ -147,43 +161,53 @@ namespace TecWare.PPSn.UI
 				return false;
 
 			if (pane.PaneManager == this)
-			{
-				var r = Activate();
-
-				SetValue(CurrentPaneKey, pane);
-				IsNavigatorVisible = false;
-
-				return r;
-			}
+				return ActivatePaneHost(FindPaneHost(pane, true));
 			else
 				return Environment.ActivatePane(pane);
 		} // func ActivatePane
 
+		private bool ActivatePaneHost(PpsWindowPaneHost paneHost)
+		{
+			if (paneHost == null)
+				return false;
+
+			var r = Activate();
+			if (paneHost != null)
+			{
+				SetValue(currentPaneHostKey, paneHost);
+				IsNavigatorVisible = false;
+			}
+			else
+				r = false;
+
+			return r;
+		} // func ActivatePaneHost
+
 		public bool ActivateNextPane(bool forward)
 		{
-			var currentPane = CurrentPane;
-			if (currentPane == null)
+			var currentPaneHost = CurrentPaneHost;
+			if (currentPaneHost == null)
 				return false;
 
 			// get index
-			var index = panes.IndexOf(currentPane);
+			var index = paneHosts.IndexOf(currentPaneHost);
 			if (forward)
 			{
 				index++;
-				if (index >= panes.Count)
+				if (index >= paneHosts.Count)
 					index = 0;
 			}
 			else
 			{
 				index--;
 				if (index < 0)
-					index = panes.Count - 1;
+					index = paneHosts.Count - 1;
 			}
 
-			if (currentPane == panes[index])
+			if (currentPaneHost == paneHosts[index])
 				return false;
 
-			return ActivatePane(panes[index]);
+			return ActivatePaneHost(paneHosts[index]);
 		} // func ActivateNextPane
 
 		#endregion
@@ -195,32 +219,32 @@ namespace TecWare.PPSn.UI
 			if (arguments.mode != null)
 				return Procs.ChangeType<PpsOpenPaneMode>(arguments.mode);
 
-			return Environment.GetOptionalValue<bool>("NewPaneMode", false) ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
+			return Environment.GetOptionalValue("NewPaneMode", false) ? PpsOpenPaneMode.NewPane : PpsOpenPaneMode.ReplacePane;
 		} // func GetDefaultPaneMode
 
 		private async Task<IPpsWindowPane> LoadPaneInternAsync(Type paneType, LuaTable arguments)
 		{
 			arguments = arguments ?? new LuaTable();
 
-			// Build the new pane
-			var newPane = this.CreateEmptyPane(paneType);
-			var oldPane = CurrentPane;
+			var oldPaneHost = CurrentPaneHost;
 
+			// Build the new pane host
+			var newPaneHost = new PpsWindowPaneHost();
+	
 			try
 			{
 				// add pane and show it, progress handling should be done by the Load
-				panes.AddPane(newPane);
-				ActivatePane(newPane);
+				paneHosts.AddPane(newPaneHost);
+				ActivatePaneHost(newPaneHost);
 
 				// load the pane
-				await newPane.LoadAsync(arguments);
+				await newPaneHost.LoadAsync(this, paneType, arguments);
 
-				return newPane;
+				return newPaneHost.CurrentPane;
 			}
 			catch
 			{
-				ActivatePane(oldPane);
-				newPane.Dispose();
+				ActivatePaneHost(oldPaneHost);
 				throw;
 			}
 
@@ -283,44 +307,48 @@ namespace TecWare.PPSn.UI
 
 		#region -- UnloadPaneAsync ----------------------------------------------------
 
-		private void Remove(IPpsWindowPane pane)
-			=> UnloadPaneAsync(pane).AwaitTask();
-
-		public async Task<bool> UnloadPaneAsync(IPpsWindowPane pane)
+		public Task<bool> UnloadPaneAsync(IPpsWindowPane pane)
 		{
 			if (pane == null)
 				throw new ArgumentNullException(nameof(pane));
 
-			if (await pane.UnloadAsync())
+			return UnloadPaneHostAsync(FindPaneHost(pane, true), null);
+		} // func UnloadPaneAsync
+
+		private async Task<bool> UnloadPaneHostAsync(PpsWindowPaneHost paneHost, bool? commit)
+		{
+			if (paneHost == null)
+				throw new ArgumentNullException(nameof(paneHost));
+
+			if (await paneHost.UnloadAsync(commit))
 			{
-				if (CurrentPane == pane)
+				if (CurrentPaneHost == paneHost)
 				{
-					if (panes.Count > 1)
+					if (paneHosts.Count > 1)
 						ActivateNextPane(true);
 					else
-						SetValue(CurrentPaneKey, null);
+						SetValue(currentPaneHostKey, null);
 				}
 
-				panes.RemovePane(pane);
-				pane.Dispose();
+				paneHosts.RemovePane(paneHost);
 
 				return true;
 			}
 			else
 				return false;
-		} // func UnloadPaneAsync
+		}
 
 		/// <summary>Unloads the current pane, to a empty pane.</summary>
 		/// <returns></returns>
 		public async Task<bool> UnloadPanesAsync()
 		{
-			if (panes.Count == 0)
+			if (paneHosts.Count == 0)
 				return true;
 			else
 			{
-				for (var i = panes.Count - 1; i >= 0; i--)
+				for (var i = paneHosts.Count - 1; i >= 0; i--)
 				{
-					if (!await UnloadPaneAsync(panes[i]))
+					if (!await UnloadPaneHostAsync(paneHosts[i], null))
 						return false;
 				}
 				return true;
@@ -331,9 +359,31 @@ namespace TecWare.PPSn.UI
 
 		#region -- FindOpenPane -------------------------------------------------------
 
+		private PpsWindowPaneHost FindPaneHost(IPpsWindowPane pane, bool throwException)
+		{
+			if (pane != null)
+			{
+				foreach (var p in paneHosts)
+				{
+					if (p.CurrentPane == pane)
+						return p;
+				}
+			}
+
+			if (throwException)
+			{
+				if (pane == null)
+					throw new ArgumentNullException(nameof(pane));
+				else
+					throw new ArgumentOutOfRangeException(nameof(pane), "Pane is not a member of this PaneManager.");
+			}
+			else
+			return null;
+		} // func FindPaneHost
+
 		public IPpsWindowPane FindOpenPane(Type paneType, LuaTable arguments)
 		{
-			var r = panes.FindPaneByArguments(paneType, arguments, false);
+			var r = paneHosts.FindPaneByArguments(paneType, arguments, false);
 			return r.Item1 == PpsWindowPaneCompareResult.Same
 				? r.Item2
 				: null;
@@ -347,10 +397,12 @@ namespace TecWare.PPSn.UI
 		#endregion
 		
 		/// <summary>Returns the current view of the pane as a wpf control.</summary>
-		public IPpsWindowPane CurrentPane => (IPpsWindowPane)GetValue(CurrentPaneProperty);
+		internal PpsWindowPaneHost CurrentPaneHost => (PpsWindowPaneHost)GetValue(CurrentPaneHostProperty);
 		/// <summary>List with the current open panes.</summary>
-		public IReadOnlyList<IPpsWindowPane> Panes => panes;
-		IEnumerable<IPpsWindowPane> IPpsWindowPaneManager.Panes => panes;
+		internal IReadOnlyList<PpsWindowPaneHost> PaneHosts => paneHosts;
+
+		IEnumerable<IPpsWindowPane> IPpsWindowPaneManager.Panes
+			=> paneHosts.Select(c => c.CurrentPane);
 	} // class PpsMainWindow
 
 	#endregion

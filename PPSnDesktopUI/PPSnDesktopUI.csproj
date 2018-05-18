@@ -112,12 +112,12 @@
     <Compile Include="Controls\PpsDataFilterBase.cs" />
     <Compile Include="Controls\PpsEditableListbox.cs" />
     <Compile Include="Controls\PpsNamedSeparator.cs" />
+    <Compile Include="Controls\PpsProgressControl.cs" />
     <Compile Include="Controls\PpsSharedResourceKey.cs" />
     <Compile Include="Controls\PpsSideBarControl.cs" />
     <Compile Include="Controls\PpsStackSectionControl.cs" />
     <Compile Include="Controls\PpsGenericWpfControl.cs" />
     <Compile Include="Controls\PpsTextBox.cs" />
-    <Compile Include="Controls\PpsWindowPaneHost.cs" />
     <Compile Include="Controls\PpsControl.cs" />
     <Compile Include="UI\PpsXamlParser.cs" />
     <Compile Include="Controls\ReadOnlyPaneBehavior.cs" />
@@ -217,6 +217,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\PpsNamedSeparator.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\PpsProgressControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

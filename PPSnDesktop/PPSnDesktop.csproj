@@ -107,9 +107,14 @@
     <Compile Include="UI\PpsTracePane.xaml.cs">
       <DependentUpon>PpsTracePane.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UI\PpsWindowPaneHost.cs" />
     <EmbeddedResource Include="Properties\Resources.en.resx">
       <DependentUpon>Resources.resx</DependentUpon>
     </EmbeddedResource>
+    <Page Include="Themes\Generic.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="UI\PpsCharmbarControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

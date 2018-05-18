@@ -41,8 +41,8 @@ namespace TecWare.PPSn.UI
 
 		public readonly static RoutedCommand SetCharmCommand = new RoutedCommand("SetCharm", typeof(PpsMainWindow));
 
-		public PpsGenericMaskWindowPane(PpsEnvironment environment, IPpsWindowPaneManager paneManager)
-			: base(environment, paneManager)
+		public PpsGenericMaskWindowPane(PpsEnvironment environment, IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost)
+			: base(environment, paneManager, paneHost)
 		{
 			idleActionToken = Environment.AddIdleAction(
 				elapsed =>
@@ -111,7 +111,7 @@ namespace TecWare.PPSn.UI
 	
 				// register events, owner, and in the openDocuments dictionary
 				dataAccess = await data.AccessAsync(arguments);
-				dataAccess.DisableUI = DisableUI;
+				dataAccess.DisableUI = new Func<IDisposable>(() => DisableUI("Verarbeite Daten...", -1));
 
 				transaction.Commit();
 			}

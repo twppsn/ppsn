@@ -15,19 +15,15 @@
 #endregion
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Input;
+using System.ComponentModel;
 using System.Windows.Threading;
 using TecWare.DE.Data;
 
 namespace TecWare.PPSn.UI
 {
-	#region -- interface IPpsProgress ---------------------------------------------------
+	#region -- interface IPpsProgress -------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Return a progress control.</summary>
 	public interface IPpsProgress : IDisposable
 	{
 		/// <summary>Statustext</summary>
@@ -38,13 +34,24 @@ namespace TecWare.PPSn.UI
 
 	#endregion
 
-	#region -- class PpsProgressStack ---------------------------------------------------
+	#region -- interface IPpsProgressBar ----------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public sealed class PpsProgressStack : ObservableObject
+	/// <summary>Progress bar contract.</summary>
+	public interface IPpsProgressBar
 	{
-		#region -- class PpsDummyProgress -------------------------------------------------
+		/// <summary>Create a new progress.</summary>
+		/// <returns></returns>
+		IPpsProgress CreateProgress();
+	} // IPpsProgressBar
+
+	#endregion
+
+	#region -- class PpsProgressStack -------------------------------------------------
+
+	/// <summary>Progress stack implementation.</summary>
+	public sealed class PpsProgressStack : ObservableObject, IPpsProgressBar
+	{
+		#region -- class PpsDummyProgress ---------------------------------------------
 
 		private sealed class PpsDummyProgress : IPpsProgress
 		{
@@ -63,7 +70,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- class PpsWindowPaneControlProgressStub ---------------------------------
+		#region -- class PpsWindowPaneControlProgressStub -----------------------------
 
 		private sealed class PpsProgressStub : IPpsProgress
 		{
@@ -80,13 +87,11 @@ namespace TecWare.PPSn.UI
 			} // ctor
 
 			public void Dispose()
-			{
-				stack.UnregisterProgress(this);
-			} // proc Dispose
+				=> stack.UnregisterProgress(this);
 
 			public string Text
 			{
-				get { return currentText; }
+				get => currentText;
 				set
 				{
 					if (currentText != value)
@@ -99,7 +104,7 @@ namespace TecWare.PPSn.UI
 
 			public int Value
 			{
-				get { return currentValue; }
+				get => currentValue;
 				set
 				{
 					if (currentValue != value)
@@ -116,74 +121,90 @@ namespace TecWare.PPSn.UI
 		private readonly Dispatcher dispatcher;
 		private readonly List<IPpsProgress> progressStack;
 
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		/// <summary>Create a progress stack.</summary>
+		/// <param name="dispatcher">Dispatcher to sync events.</param>
 		public PpsProgressStack(Dispatcher dispatcher)
 		{
-			this.dispatcher = dispatcher;
-			this.progressStack = new List<IPpsProgress>();
+			this.dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+
+			progressStack = new List<IPpsProgress>();
 		} // ctor
 
+		#endregion
+
+		#region -- Progress Control ---------------------------------------------------
+
+		/// <summary>Create a new progress item.</summary>
+		/// <returns></returns>
 		public IPpsProgress CreateProgress()
 			=> new PpsProgressStub(this);
 
+		/// <summary>Register progress bar, is call from PpsProgressStub:ctor.</summary>
+		/// <param name="stub"></param>
 		private void RegisterProgress(PpsProgressStub stub)
-		{
-			Dispatcher.Invoke(() =>
-			{
-				var oldCount = -1;
-				lock (progressStack)
-				{
-					oldCount = progressStack.Count;
-					var index = progressStack.IndexOf(stub);
-					if (index >= 0)
-						progressStack.RemoveAt(index);
-					progressStack.Add(stub);
-				}
+			=> dispatcher.Invoke(new Action<PpsProgressStub>(RegisterProgressUI), stub);
 
-				if (oldCount == 0)
-					OnPropertyChanged(nameof(IsEnabled));
-
-				OnPropertyChanged(nameof(DisableText));
-				OnPropertyChanged(nameof(DisableProgress));
-			});
-		} // proc RegisterProgress
-
+		/// <summary>Unregister progress bar, is called from PpsProgressStub:dtor</summary>
+		/// <param name="stub"></param>
 		private void UnregisterProgress(PpsProgressStub stub)
-		{
-			Dispatcher.Invoke(() =>
-			{
-				var updateUI = false;
-				var updateEnabled = false;
-				lock (progressStack)
-				{
-					if (progressStack.Remove(stub))
-					{
-						updateUI = true;
-						updateEnabled = progressStack.Count == 0;
-					}
-				}
+			=> dispatcher.Invoke(new Action<PpsProgressStub>(UnregisterProgressUI), stub);
 
-				if (updateEnabled)
-					OnPropertyChanged(nameof(IsEnabled));
-				if (updateUI)
+		private void RegisterProgressUI(PpsProgressStub stub)
+		{
+			var oldCount = -1;
+			lock (progressStack)
+			{
+				oldCount = progressStack.Count;
+				var index = progressStack.IndexOf(stub);
+				if (index >= 0)
+					progressStack.RemoveAt(index);
+				progressStack.Add(stub);
+			}
+
+			if (oldCount == 0)
+				OnPropertyChanged(nameof(IsActive));
+
+			OnPropertyChanged(nameof(CurrentText));
+			OnPropertyChanged(nameof(CurrentProgress));
+		} // proc RegisterProgressUI
+
+
+		private void UnregisterProgressUI(PpsProgressStub stub)
+		{
+			var updateUI = false;
+			var updateEnabled = false;
+			lock (progressStack)
+			{
+				if (progressStack.Remove(stub))
 				{
-					OnPropertyChanged(nameof(DisableText));
-					OnPropertyChanged(nameof(DisableProgress));
+					updateUI = true;
+					updateEnabled = progressStack.Count == 0;
 				}
-			});
+			}
+
+			if (updateEnabled)
+				OnPropertyChanged(nameof(IsActive));
+			if (updateUI)
+			{
+				OnPropertyChanged(nameof(CurrentText));
+				OnPropertyChanged(nameof(CurrentProgress));
+			}
 		} // proc UnregisterProgress
 
-		private void NotifyProgressText(PpsProgressStub stub)
+		private void NotifyPropertyChanged(PpsProgressStub stub, string propertyName)
 		{
 			if (Top == stub)
-				Dispatcher.Invoke(() => OnPropertyChanged(nameof(DisableText)));
+				dispatcher.Invoke(new Action<string>(OnPropertyChanged), propertyName);
 		} // proc NotifyProgressText
 
+		private void NotifyProgressText(PpsProgressStub stub)
+			=> NotifyPropertyChanged(stub, nameof(CurrentText));
+			
 		private void NotifyProgressValue(PpsProgressStub stub)
-		{
-			if (Top == stub)
-				Dispatcher.Invoke(() => OnPropertyChanged(nameof(DisableProgress)));
-		} // proc NotifyProgressValue
-
+			=> NotifyPropertyChanged(stub, nameof(CurrentProgress));
+		
 		private IPpsProgress Top
 		{
 			get
@@ -193,21 +214,19 @@ namespace TecWare.PPSn.UI
 			}
 		} // prop Top
 
+		#endregion
+
 		/// <summary>Is the ui useable.</summary>
-		public bool IsEnabled => progressStack.Count > 0;
+		public bool IsActive => progressStack.Count > 0;
 
 		/// <summary>Text that should present the user.</summary>
 		/// <remarks>This member should not return any exception. Dispatching to the UI is done by caller.</remarks>
-		public string DisableText => Top?.Text ?? String.Empty;
+		public string CurrentText => Top?.Text ?? null;
 		/// <summary><c>-1</c>, shows a marquee, or use a value between 0 and 1000 for percentage</summary>
 		/// <remarks>This member should not return any exception. Dispatching to the UI is done by caller.</remarks>
-		int DisableProgress => Top?.Value ?? -1;
-		/// <summary></summary>
-		ICommand DisableCancel => null;
-
-		/// <summary>Synchronization context</summary>
-		Dispatcher Dispatcher => dispatcher;
-
+		public int CurrentProgress => Top?.Value ?? -1;
+			
+		/// <summary>Dummy Progress for none progress controls</summary>
 		public static IPpsProgress Dummy { get; } = new PpsDummyProgress();
 	} // class PpsProgressStack
 
