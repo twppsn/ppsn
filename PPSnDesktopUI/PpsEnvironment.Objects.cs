@@ -1805,7 +1805,7 @@ namespace TecWare.PPSn
 			if (obj.TryGetProperty<string>(PpsObjectBlobData.fileNameTag, out var name))
 				extension = Path.GetExtension(name);
 			if (String.IsNullOrEmpty(extension))
-				extension = StuffIO.MimeTypeFromExtension(obj.MimeType);
+				extension = StuffIO.ExtensionFromMimeType(obj.MimeType);
 
 			targetFileName = obj.Environment.MasterData.GetLocalPath("data\\" + Guid.NewGuid() + extension);
 

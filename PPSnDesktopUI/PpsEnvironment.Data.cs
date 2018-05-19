@@ -4379,8 +4379,6 @@ namespace TecWare.PPSn
 
 		#region -- class PpsWebRequestCreate --------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private class PpsWebRequestCreate : IWebRequestCreate
 		{
 			private readonly WeakReference<PpsEnvironment> environmentReference;
