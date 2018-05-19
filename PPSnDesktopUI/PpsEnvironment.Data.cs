@@ -4682,7 +4682,6 @@ namespace TecWare.PPSn
 
 		/// <summary>Is used only internal to create the real request.</summary>
 		/// <param name="relativeUri"></param>
-		/// <param name="absolutePath"></param>
 		/// <returns></returns>
 		internal WebRequest CreateOnlineRequest(Uri relativeUri)
 		{
@@ -4695,6 +4694,8 @@ namespace TecWare.PPSn
 			var absoluteUri = new Uri(info.Uri, relativeUri);
 			var request = WebRequest.Create(absoluteUri);
 			request.Credentials = UserCredential.Wrap(userInfo); // override the current credentials
+			request.Timeout = 7200000;
+			((HttpWebRequest)request).ReadWriteTimeout = 7200000;
 			request.Headers.Add("des-multiple-authentifications", "true");
 
 			if (!absoluteUri.ToString().EndsWith("/?action=mdata"))

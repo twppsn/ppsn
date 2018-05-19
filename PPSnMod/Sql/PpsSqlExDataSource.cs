@@ -808,7 +808,7 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				var cmd = connection.CreateCommand();
 				cmd.Connection = connection;
-				cmd.CommandTimeout = 6000;
+				cmd.CommandTimeout = 7200;
 				cmd.Transaction = noTransaction ? null : transaction;
 				return cmd;
 			} // func CreateCommand

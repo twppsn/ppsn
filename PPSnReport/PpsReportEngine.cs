@@ -36,19 +36,16 @@ namespace TecWare.PPSn.Reporting
 	/// <summary>Report error information</summary>
 	public struct PpsReportErrorInfo
 	{
-		private readonly string message;
-		private readonly bool isWarning;
-
 		internal PpsReportErrorInfo(string message, bool isWarning)
 		{
-			this.message = message;
-			this.isWarning = isWarning;
+			Message = message ?? throw new ArgumentNullException(nameof(message));
+			IsWarning = isWarning;
 		} // ctor
 
 		/// <summary>Message of the report</summary>
-		public string Message => message;
+		public string Message { get; }
 		/// <summary>Is this message only a warning.</summary>
-		public bool IsWarning => isWarning;
+		public bool IsWarning { get; }
 	} // struct PpsReportErrorInfo
 
 	#endregion
@@ -58,23 +55,19 @@ namespace TecWare.PPSn.Reporting
 	/// <summary>Report parameter block.</summary>
 	public sealed class PpsReportRunInfo
 	{
-		private readonly string reportName;
-		private readonly PropertyDictionary arguments;
-
 		/// <summary></summary>
 		/// <param name="reportName"></param>
 		/// <param name="parentProperties"></param>
 		public PpsReportRunInfo(string reportName, PropertyDictionary parentProperties = null)
 		{
-			this.reportName = reportName ?? throw new ArgumentNullException(nameof(reportName));
-			this.arguments = new PropertyDictionary(parentProperties);
+			ReportName = reportName ?? throw new ArgumentNullException(nameof(reportName));
+			Arguments = new PropertyDictionary(parentProperties);
 		} // ctor
 
 		/// <summary>Name of the report (without the file extension).</summary>
-		public string ReportName => reportName;
-
+		public string ReportName { get; }
 		/// <summary>Arguments that will be passed to the report.</summary>
-		public PropertyDictionary Arguments => arguments;
+		public PropertyDictionary Arguments { get; }
 
 		/// <summary>Do not use the system time for the report generation.</summary>
 		public DateTime? UseDate { get; set; } = null;
@@ -109,32 +102,26 @@ namespace TecWare.PPSn.Reporting
 	/// <summary>Report generation failed.</summary>
 	public class PpsReportException : Exception
 	{
-		private readonly string reportName;
-		private readonly string reportSource;
-		private readonly string logFileName;
-		private readonly int exitCode;
-		private readonly PpsReportErrorInfo[] messages;
-
 		internal PpsReportException(string reportName, string reportSource, string logFileName, int exitCode, string messageText, PpsReportErrorInfo[] messages, Exception innerException)
 			: base(messageText, innerException)
 		{
-			this.reportName = reportName;
-			this.reportSource = reportSource;
-			this.logFileName = logFileName;
-			this.exitCode = exitCode;
-			this.messages = messages;
+			ReportName = reportName;
+			FileName = reportSource;
+			LogFileName = logFileName;
+			ExitCode = exitCode;
+			Messages = messages;
 		} // ctor
 
 		/// <summary>Base report file name.</summary>
-		public string ReportName => reportName;
+		public string ReportName { get; }
 		/// <summary>Position of the log file.</summary>
-		public string LogFileName => logFileName;
+		public string LogFileName { get; }
 		/// <summary>ExitCode of the process.</summary>
-		public int ExitCode => exitCode;
+		public int ExitCode { get; }
 		/// <summary>Filename where the error occured.</summary>
-		public string FileName => reportSource;
+		public string FileName { get; }
 		/// <summary>Detailed messages.</summary>
-		public PpsReportErrorInfo[] Messages => messages;
+		public PpsReportErrorInfo[] Messages { get; }
 	} // class PpsReportException
 
 	#endregion
@@ -144,24 +131,17 @@ namespace TecWare.PPSn.Reporting
 	/// <summary>Basic implementation of the LuaTex/ConTeXt reporting engine.</summary>
 	public sealed class PpsReportEngine
 	{
-		/// <summary></summary>
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 		public static readonly XNamespace ReportDataNamespace = "http://tecware-gmbh.de/dev/des/2015/ppsn/reportData";
-		/// <summary></summary>
 		public static readonly XName DataElement = ReportDataNamespace + "data";
-		/// <summary></summary>
 		public static readonly XName ListElement = ReportDataNamespace + "list";
-		/// <summary></summary>
 		public static readonly XName ListColumnElement = ReportDataNamespace + "column";
-		/// <summary></summary>
 		public static readonly XName ListFilterElement = ReportDataNamespace + "filter";
-		/// <summary></summary>
 		public static readonly XName ListOrderElement = ReportDataNamespace + "order";
-		/// <summary></summary>
 		public static readonly XName DataSetElement = ReportDataNamespace + "dataset";
-		/// <summary></summary>
 		public static readonly XName ExecuteElement = ReportDataNamespace + "execute";
-		/// <summary></summary>
 		public static readonly XName ExecuteParameterElement = ReportDataNamespace + "parameter";
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
 		private const string speedataEnginePath = @"bin\sp.exe";
 		private readonly static Regex xreportFileMatch = new Regex(@"(.*?)(\.(\w{2})(-(\w{2}))?)?\.xreport", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase);
@@ -176,7 +156,9 @@ namespace TecWare.PPSn.Reporting
 			private readonly PropertyDictionary arguments;
 
 			private bool isClosed = false;
-			
+
+			#region -- Ctor/Dtor ------------------------------------------------------
+
 			public PpsReportData(PpsDataServerProviderBase provider, StreamWriter tw, string reportFileName, PropertyDictionary arguments)
 			{
 				this.provider = provider;
@@ -190,6 +172,10 @@ namespace TecWare.PPSn.Reporting
 				if (!isClosed)
 					tw.Close();
 			} // proc Dispose
+
+			#endregion
+
+			#region -- EmitListElementAsync -------------------------------------------
 
 			private async Task EmitListElementAsync(XmlWriter xml, XElement xInfo)
 			{
@@ -228,13 +214,25 @@ namespace TecWare.PPSn.Reporting
 					await xml.WriteEndElementAsync();
 				}
 			} // proc EmitListElementAsync
-			
+
+			#endregion
+
+			#region -- EmitDataSetElementAsync ----------------------------------------
+
 			private Task EmitDataSetElementAsync(XmlWriter xml, XElement xInfo)
 			{
+				//provider.GetDataSetAsync();
 				throw new NotImplementedException();
 			} // proc EmitDataSetElementAsync
 
-			private Task EmitExecuteElementAsync(XmlWriter xml, XElement xInfo) => throw new NotImplementedException();
+			#endregion
+
+			#region -- EmitExecuteElementAsync ----------------------------------------
+
+			private Task EmitExecuteElementAsync(XmlWriter xml, XElement xInfo) 
+				=> throw new NotImplementedException();
+
+			#endregion
 
 			public async Task ProcessDataAsync(bool indent)
 			{

@@ -68,7 +68,8 @@ namespace TecWare.PPSn.UI
 
 			foreach (var p in panes)
 			{
-				if (p.GetType() == paneType)
+				// todo: fix cap between create and loading...
+				if (p.CurrentPane?.GetType() == paneType)
 				{
 					var r = p.CurrentPane.CompareArguments(arguments);
 					if (r == PpsWindowPaneCompareResult.Same)

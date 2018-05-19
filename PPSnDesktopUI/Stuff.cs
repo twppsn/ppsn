@@ -912,6 +912,7 @@ namespace TecWare.PPSn
 			( "txt", MimeTypes.Text.Plain, "Textdatei" ),
 			( "xaml", MimeTypes.Application.Xaml, "Textdatei" ),
 			( "xml", MimeTypes.Text.Xml, "Textdatei" ),
+			( "ifc", "text/ifc", "ifc-Datei" ),
 		};
 
 		private static int FindTypeMappingByExtension(string extension)

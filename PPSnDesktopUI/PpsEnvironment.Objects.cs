@@ -4172,7 +4172,7 @@ order by t_liefnr.value desc
 
 		#endregion
 
-		#region -- Object Info ------------------------------------------------------------
+		#region -- Object Info --------------------------------------------------------
 
 		/// <summary>Get object info list synchronization object.</summary>
 		/// <returns></returns>
