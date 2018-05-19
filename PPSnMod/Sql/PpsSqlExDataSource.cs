@@ -245,6 +245,7 @@ namespace TecWare.PPSn.Server.Sql
 				// execute the view once to determine the resultset
 				using (var cmd = connection.CreateCommand())
 				{
+					cmd.CommandTimeout = 6000;
 					cmd.CommandText = "select * from " + name;
 					using (var r = cmd.ExecuteReader(CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo))
 					{
@@ -286,6 +287,7 @@ namespace TecWare.PPSn.Server.Sql
 				// execute the new view
 				using (var cmd = connection.CreateCommand())
 				{
+					cmd.CommandTimeout = 6000;
 					cmd.CommandType = CommandType.Text;
 
 					// drop
@@ -806,6 +808,7 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				var cmd = connection.CreateCommand();
 				cmd.Connection = connection;
+				cmd.CommandTimeout = 6000;
 				cmd.Transaction = noTransaction ? null : transaction;
 				return cmd;
 			} // func CreateCommand
@@ -2132,6 +2135,7 @@ namespace TecWare.PPSn.Server.Sql
 				// get the current sync id
 				using (var cmd = SqlConnection.CreateCommand())
 				{
+					cmd.CommandTimeout = 6000;
 					cmd.Transaction = transaction;
 					cmd.CommandText = "SELECT change_tracking_current_version(), create_date FROM sys.databases WHERE database_id = DB_ID()";
 
