@@ -109,7 +109,7 @@ specific language governing permissions and limitations under the Licence.
 						<Trigger Property="IsEnabled" Value="False">
 							<Setter Property="Opacity" Value="0.35" />
 						</Trigger>
-						<Trigger Property="Text" SourceName="Description" Value="{x:Static sys:String.Empty}">
+						<Trigger Property="HasContent" Value="False" >
 							<Setter TargetName="Description" Property="Visibility" Value="Collapsed" />
 							<Setter TargetName="RootGrid" Property="Background" Value="{x:Null}" />
 						</Trigger>
