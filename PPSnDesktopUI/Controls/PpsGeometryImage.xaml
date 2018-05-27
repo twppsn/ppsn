@@ -25,8 +25,7 @@ specific language governing permissions and limitations under the Licence.
 						<Ellipse x:Name="Circle"
 								 Stroke="{TemplateBinding Foreground}"
 								 StrokeThickness="1.25"
-								 Fill="{TemplateBinding Fill}"
-								 SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+								 Fill="{TemplateBinding Fill}" />
 						<Viewbox x:Name="ImageBox"
 								 Margin="{TemplateBinding GeometrySpacing}">
 							<Canvas Width="24" Height="24">
