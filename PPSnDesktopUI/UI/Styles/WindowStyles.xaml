@@ -43,9 +43,12 @@ specific language governing permissions and limitations under the Licence.
 	<SolidColorBrush x:Key="PPSnWindowDisabledForegroundBrush" Color="Gray"/>
 
 	<SolidColorBrush x:Key="PPSnMouseOverBrush" Color="#D4D4D4"/>
-	<SolidColorBrush x:Key="PPSnButtonPressedBrush" Color="#999999"/>
+	<SolidColorBrush x:Key="PPSnButtonPressedBrush" Color="#ACACAC"/>
 
-	<SolidColorBrush x:Key="PPSnPopUpBackgroundBrush" Color="DarkBlue"/>
+	<SolidColorBrush x:Key="PPSnPopUpBackgroundBrush" Color="Blue"/>
+	<SolidColorBrush x:Key="PPSnPopUpBorderBrush" Color="DarkBlue"/>
+
+
 	<SolidColorBrush x:Key="PPSnImageBrush" Color="Brown"/>
 	<SolidColorBrush x:Key="PPSnSideBarBackgroundBrush" Color="#445369"/>
 
