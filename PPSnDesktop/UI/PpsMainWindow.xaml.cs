@@ -55,10 +55,10 @@ namespace TecWare.PPSn.UI
 
 			// initialize settings
 			settings = new PpsWindowApplicationSettings(this, "main" + windowIndex.ToString());
-			navigator.Init(this);
+			PART_Navigator.Init(this);
 
 			// set sidebar background logic
-			navigator.NavigatorModel.PropertyChanged += OnCurrentPanePropertyChanged;
+			PART_Navigator.NavigatorModel.PropertyChanged += OnCurrentPanePropertyChanged;
 			
 
 			#region -- set basic command bindings --
@@ -124,6 +124,7 @@ namespace TecWare.PPSn.UI
 					(sender, e) =>
 					{
 						e.Handled = true;
+						PART_PaneListPopUp.IsOpen = false;
 						if (e.Parameter is PpsWindowPaneHost paneHost)
 							ActivatePaneHost(paneHost);
 					},
@@ -138,6 +139,7 @@ namespace TecWare.PPSn.UI
 					(sender, e) =>
 					{
 						e.Handled = true;
+						PART_PaneListPopUp.IsOpen = false;
 						if (e.Parameter is PpsWindowPaneHost paneHost)
 							UnloadPaneHostAsync(paneHost, null).AwaitTask();
 					},
@@ -185,7 +187,7 @@ namespace TecWare.PPSn.UI
 
 			if (!IsNavigatorVisible)
 				return;
-			navigator.OnPreview_MouseDown(e.OriginalSource);
+			PART_Navigator.OnPreview_MouseDown(e.OriginalSource);
 		} // event OnPreviewMouseDown
 
 		protected override void OnPreviewTextInput(TextCompositionEventArgs e)
@@ -193,7 +195,7 @@ namespace TecWare.PPSn.UI
 			base.OnPreviewTextInput(e);
 			if (!IsNavigatorVisible)
 				return;
-			navigator.OnPreview_TextInput(e);
+			PART_Navigator.OnPreview_TextInput(e);
 		} // event OnPreviewTextInput
 
 		protected override void OnWindowCaptionClicked()
@@ -202,7 +204,7 @@ namespace TecWare.PPSn.UI
 
 			if (!IsNavigatorVisible)
 				return;
-			navigator.OnPreview_MouseDown(null);
+			PART_Navigator.OnPreview_MouseDown(null);
 		} // proc OnWindowCaptionClicked
 
 		private void ResetCharmbar(object mouseDownSource)
@@ -220,7 +222,7 @@ namespace TecWare.PPSn.UI
 
 		private void RefreshSideIsVisibleProperty()
 		{
-			var show = (IsNavigatorVisible && navigator.NavigatorModel.ViewsShowDescription)
+			var show = (IsNavigatorVisible && PART_Navigator.NavigatorModel.ViewsShowDescription)
 				|| (!IsNavigatorVisible && CurrentPaneHost != null && CurrentPaneHost.HasPaneSideBar);
 			SetValue(IsSideBarVisiblePropertyKey, show);
 		} // proc RefreshSideIsVisibleProperty
@@ -247,7 +249,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Access to the current environment,</summary>
 		public new PpsMainEnvironment Environment => (PpsMainEnvironment)base.Environment;
 		/// <summary>Access to the navigator model</summary>
-		public PpsNavigatorModel Navigator => (PpsNavigatorModel)navigator.DataContext;
+		public PpsNavigatorModel Navigator => (PpsNavigatorModel)PART_Navigator.DataContext;
 		/// <summary>Is the navigator visible.</summary>
 		public bool IsNavigatorVisible
 		{
