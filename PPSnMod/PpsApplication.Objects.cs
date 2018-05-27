@@ -1296,7 +1296,6 @@ namespace TecWare.PPSn.Server
 		private void HttpPushAction(IDEWebRequestScope ctx)
 		{
 			var currentUser = ctx.GetUser<IPpsPrivateDataContext>();
-
 			try
 			{
 				// read header length
@@ -1306,7 +1305,6 @@ namespace TecWare.PPSn.Server
 
 				var pulledId = ctx.GetProperty("ppsn-pulled-revId", -1L);
 				var releaseRequest = ctx.GetProperty("ppsn-release", false);
-				
 				var src = ctx.GetInputStream();
 
 				// parse the object body
@@ -1321,7 +1319,6 @@ namespace TecWare.PPSn.Server
 					// first the get the object data
 					var obj = application.Objects.ObjectFromXml(transaction, xObject, pulledId);
 					VerfiyObjectType(obj);
-
 					// create and load the dataset
 					var data = GetDataFromStream(src);
 
@@ -1342,7 +1339,6 @@ namespace TecWare.PPSn.Server
 							)
 						);
 					}
-
 					transaction.Commit();
 				}
 			}

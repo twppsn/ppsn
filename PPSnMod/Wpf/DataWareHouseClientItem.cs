@@ -37,30 +37,25 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#region -- PpsExcelReportItem -----------------------------------------------------
 
-		/// <summary></summary>
+		/// <summary>Excel Report item.</summary>
 		public sealed class PpsExcelReportItem
 		{
-			private readonly string type;
-			private readonly string reportId;
-			private readonly string displayName;
-			private readonly string description;
-
 			internal PpsExcelReportItem(string type, string reportId, string displayName, string description)
 			{
-				this.type = type;
-				this.reportId = reportId;
-				this.displayName = displayName;
-				this.description = description;
+				this.Type = type;
+				this.ReportId = reportId;
+				this.DisplayName = displayName;
+				this.Description = description;
 			} // ctor
 
 			/// <summary>Type of the excel report item</summary>
-			public string Type => type;
+			public string Type { get; }
 			/// <summary>Id of the report.</summary>
-			public string ReportId => reportId;
+			public string ReportId { get; }
 			/// <summary>Display name for the report.</summary>
-			public string DisplayName => displayName;
+			public string DisplayName { get; }
 			/// <summary>Description of the report</summary>
-			public string Description => description;
+			public string Description { get; }
 		} // PpsExcelReportItem
 
 		private IEnumerable<PpsExcelReportItem> GetExcelReportItems(IPpsPrivateDataContext privateUserData)
@@ -72,7 +67,7 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 		} // func GetExcelReportItems
 
-		/// <summary></summary>
+		/// <summary>View to get all excel reports</summary>
 		/// <param name="dataSource"></param>
 		/// <param name="privateUserData"></param>
 		/// <returns></returns>

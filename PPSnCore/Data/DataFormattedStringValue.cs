@@ -597,66 +597,69 @@ namespace TecWare.PPSn.Data
 				formatAt = -1;
 			} // func EmitExprBlock
 
-			while (p < template.Length)
+			if (template != null)
 			{
-				var c = template[p];
-				switch (s)
+				while (p < template.Length)
 				{
-					case 0:
-						if (c == '%')
-							s = 1;
-						break; // eat all chars
-					case 1: // check for secound %
-						if (c == '%')
-						{
-							EmitTextBlock(p - 1);
-							s = 2; // jump to code
-						}
-						else
-							s = 0;
-						break;
-					case 2: // collect to format or end
-						if (c == '%')
-							s = 3;
-						else if (c == ':')
-							s = 4;
-						break; // eat for code block
-					case 3: // check for end of code
-						if (c == '%')
-						{
-							EmitExprBlock(p - 1);
-							s = 0;
-						}
-						else
-							s = 2;
-						break;
-					case 4: // start of format
-						if (c == ':')
-						{
-							formatAt = p - 1;
-							s = 5;
-						}
-						else
-							s = 2;
-						break;
-					case 5: // collect format
-						if (c == '%')
-							s = 6;
-						break;
-					case 6: // end of format
-						if (c == '%')
-						{
-							EmitExprBlock(p - 1);
-							s = 0;
-						}
-						else
-							s = 5;
-						break;
-					default:
-						throw new InvalidOperationException();
-				}
+					var c = template[p];
+					switch (s)
+					{
+						case 0:
+							if (c == '%')
+								s = 1;
+							break; // eat all chars
+						case 1: // check for secound %
+							if (c == '%')
+							{
+								EmitTextBlock(p - 1);
+								s = 2; // jump to code
+							}
+							else
+								s = 0;
+							break;
+						case 2: // collect to format or end
+							if (c == '%')
+								s = 3;
+							else if (c == ':')
+								s = 4;
+							break; // eat for code block
+						case 3: // check for end of code
+							if (c == '%')
+							{
+								EmitExprBlock(p - 1);
+								s = 0;
+							}
+							else
+								s = 2;
+							break;
+						case 4: // start of format
+							if (c == ':')
+							{
+								formatAt = p - 1;
+								s = 5;
+							}
+							else
+								s = 2;
+							break;
+						case 5: // collect format
+							if (c == '%')
+								s = 6;
+							break;
+						case 6: // end of format
+							if (c == '%')
+							{
+								EmitExprBlock(p - 1);
+								s = 0;
+							}
+							else
+								s = 5;
+							break;
+						default:
+							throw new InvalidOperationException();
+					}
 
-				p++;
+					p++;
+				}
 			}
 
 			if (spans.Count > 0)
