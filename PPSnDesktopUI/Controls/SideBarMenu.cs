@@ -133,8 +133,11 @@ namespace TecWare.PPSn.Controls
 	public class SideBarMenuItem : FrameworkContentElement, ICommandSource
 	{
 		private static readonly DependencyProperty DisplayTextProperty = DependencyProperty.Register("DisplayText", typeof(string), typeof(SideBarMenuItem));
+		/// <summary>Dependcencyproperty the Command</summary>
 		public static readonly DependencyProperty CommandProperty = ButtonBase.CommandProperty.AddOwner(typeof(SideBarMenuItem));
+		/// <summary>Dependcencyproperty the Command Parameters</summary>
 		public static readonly DependencyProperty CommandParameterProperty = ButtonBase.CommandParameterProperty.AddOwner(typeof(SideBarMenuItem));
+		/// <summary>Dependcencyproperty the Command Target</summary>
 		public static readonly DependencyProperty CommandTargetProperty = ButtonBase.CommandTargetProperty.AddOwner(typeof(SideBarMenuItem));
 		private static readonly DependencyProperty IsVisibleProperty = DependencyProperty.Register("IsVisible", typeof(bool), typeof(SideBarMenuItem), new PropertyMetadata(false));
 		private static readonly DependencyProperty IsChildItemProperty = DependencyProperty.Register("IsChildItem", typeof(bool), typeof(SideBarMenuItem), new PropertyMetadata(false));

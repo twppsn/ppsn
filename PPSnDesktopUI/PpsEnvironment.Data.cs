@@ -73,12 +73,18 @@ namespace TecWare.PPSn
 
 	#region -- enum PpsLoadPriority ---------------------------------------------------
 
+	/// <summary>Defines the importance of an item</summary>
 	public enum PpsLoadPriority
 	{
+		/// <summary>Second-most important</summary>
 		Default = 1,
+		/// <summary>Top-most important</summary>
 		ApplicationFile = 0,
+		/// <summary>Third-most important</summary>
 		ObjectPrimaryData = 1,
+		/// <summary>Fourth-most important</summary>
 		ObjectReferencedData = 2,
+		/// <summary>Least important</summary>
 		Background = 3
 	} // enum PpsLoadPriority
 
@@ -3447,12 +3453,18 @@ namespace TecWare.PPSn
 
 	#region -- enum PpsLoadState --------------------------------------------------------
 
+	/// <summary>Defines the actual status of an item</summary>
 	public enum PpsLoadState
 	{
+		/// <summary>Item is queued</summary>
 		Pending,
+		/// <summary>Item is currently loading</summary>
 		Started,
+		/// <summary>Item is fully loaded</summary>
 		Finished,
+		/// <summary>Loading of the item was cancelled</summary>
 		Canceled,
+		/// <summary>Loading of the item failed</summary>
 		Failed
 	} // enum PpsWebLoadState
 
@@ -3589,9 +3601,19 @@ namespace TecWare.PPSn
 			(path, arguments) = relativeUri.ParseUri();
 		} // ctor
 
+		/// <summary>
+		/// Returns whether the given proxy request is for the same object
+		/// </summary>
+		/// <param name="other">Request to compare</param>
+		/// <returns>true if equal</returns>
 		public bool Equals(PpsProxyRequest other)
 			=> Equals(other.relativeUri);
 
+		/// <summary>
+		/// Returns whether the Uri is equal to the given Uri
+		/// </summary>
+		/// <param name="otherUri">Uri to compare</param>
+		/// <returns>true if equal</returns>
 		public bool Equals(Uri otherUri)
 			=> WebRequestHelper.EqualUri(relativeUri, otherUri);
 
@@ -3639,6 +3661,12 @@ namespace TecWare.PPSn
 				return InternalGetResponseAsync();
 		} // func GetResponse
 
+		/// <summary>
+		/// Puts the request of an item on the queue
+		/// </summary>
+		/// <param name="priority">Importance of the item.</param>
+		/// <param name="forceOnline">If true, the object is requested only from the server, not from the cache. Defaults to false.</param>
+		/// <returns></returns>
 		public IPpsProxyTask Enqueue(PpsLoadPriority priority, bool forceOnline = false)
 		{
 			// check for offline item
@@ -3724,11 +3752,14 @@ namespace TecWare.PPSn
 		internal Stream RequestData => requestStream;
 
 		public override string Method { get => method; set => method = value; }
+		/// <summary>The Mime-Type of the item.</summary>
 		public override string ContentType { get => contentType; set => contentType = value; }
+		/// <summary>The count of bytes returned.</summary>
 		public override long ContentLength { get => contentLength; set => contentLength = value; }
 
 		public PpsEnvironment Environment => environment;
 
+		/// <summary>The Uri of the item.</summary>
 		public override Uri RequestUri => originalUri;
 
 		public override IWebProxy Proxy { get => null; set { } } // avoid NotImplementedExceptions
@@ -4195,6 +4226,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
+		/// <summary>Raised if the queue of the proxy has changed.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		private readonly PpsEnvironment environment;
@@ -4707,11 +4739,16 @@ namespace TecWare.PPSn
 
 		/// <summary>Starts a request through the proxy.</summary>
 		/// <param name="uri"></param>
-		/// <param name="priority"></param>
 		/// <returns></returns>
 		public PpsProxyRequest GetProxyRequest(Uri uri)
 			=> new PpsProxyRequest(this, new Uri(BaseUri, uri), uri, CurrentState == PpsEnvironmentState.Offline);
 
+		/// <summary>
+		/// Loads an item from cache.
+		/// </summary>
+		/// <param name="request">Selects the item.</param>
+		/// <param name="task">Out: the Task returning the item.</param>
+		/// <returns>True if successfull.</returns>
 		protected internal virtual bool TryGetOfflineObject(WebRequest request, out IPpsProxyTask task)
 		{
 			return masterData.TryGetOflineCacheFile(BaseUri.MakeRelativeUri(request.RequestUri), out task);

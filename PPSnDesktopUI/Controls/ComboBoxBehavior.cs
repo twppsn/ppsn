@@ -25,8 +25,14 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public static class PpsSelectionChangedBehavior
 	{
+		/// <summary>Dependencyproperty for Command</summary>
 		public static readonly DependencyProperty CommandProperty = DependencyProperty.RegisterAttached("Command", typeof(ICommand), typeof(PpsSelectionChangedBehavior), new PropertyMetadata(null, PropertyChangedCallback));
 
+		/// <summary>
+		/// Callback when the Command has changed.
+		/// </summary>
+		/// <param name="dependencyObject">The related object.</param>
+		/// <param name="args">Arguments of the change.</param>
 		public static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs args)
 		{
 			if (dependencyObject is Selector selector)
@@ -38,9 +44,17 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc PropertyChangedCallback
 
+		/// <summary>Returns the Command connected to the UIElement.</summary>
+		/// <param name="element">Target for requesting the command.</param>
+		/// <returns>ICommand</returns>
 		public static ICommand GetCommand(UIElement element)
 			=> (ICommand)element.GetValue(CommandProperty);
 
+		/// <summary>
+		/// Sets the Command connected to the UIElement.
+		/// </summary>
+		/// <param name="element">Target for the command.</param>
+		/// <param name="command">The command to append.</param>
 		public static void SetCommand(UIElement element, ICommand command)
 			=> element.SetValue(CommandProperty, command);
 

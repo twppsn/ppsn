@@ -86,14 +86,22 @@ namespace TecWare.PPSn.Controls
 	{
 		private static readonly DependencyPropertyKey commandsPropertyKey = DependencyProperty.RegisterReadOnly(nameof(Commands), typeof(PpsUICommandCollection), typeof(PpsAttachmentsControl), new FrameworkPropertyMetadata(null));
 
+		/// <summary>Dependencyproperty for Commands</summary>
 		public static readonly DependencyProperty CommandsProperty = commandsPropertyKey.DependencyProperty;
+		/// <summary>Dependencyproperty for the AttachmentsSource</summary>
 		public static readonly DependencyProperty AttachmentsSourceProperty = DependencyProperty.Register(nameof(AttachmentsSource), typeof(IPpsAttachments), typeof(PpsAttachmentsControl));
+		/// <summary>Dependencyproperty for the selected Attachment</summary>
 		public static readonly DependencyProperty SelectedAttachmentProperty = DependencyProperty.Register(nameof(SelectedAttachment), typeof(IPpsAttachmentItem), typeof(PpsAttachmentsControl));
 
+		/// <summary>Routed command for adding a File</summary>
 		public static readonly RoutedCommand AddAttachmentAddFileCommand = new PpsAsyncCommand("Attachments.AddFile", typeof(PpsAttachmentsControl), ctx => AppendAttachmentFromFileDialogAsync(ctx), ctx => IsAttachmentControlEnabled(ctx));
+		/// <summary>Routed command for adding a Link</summary>
 		public static readonly RoutedCommand AddAttachmentAddLinkCommand = new PpsAsyncCommand("Attachments.AddLink", typeof(PpsAttachmentsControl), ctx => AppendAttachmentFromObjectAsync(ctx), ctx => IsAttachmentControlEnabled(ctx));
+		/// <summary>Routed command for removing an attachment</summary>
 		public static readonly RoutedCommand RemoveAttachmentCommand = new PpsCommand("Attachments.Remove", typeof(IPpsAttachmentItem), ctx => RemoveAttachment(ctx), ctx => IsAttachmentRemovable(ctx));
+		/// <summary>Routed command for executing/showing of an attachment</summary>
 		public static readonly RoutedCommand RunAttachmentCommand = new PpsAsyncCommand("Attachments.Run", typeof(IPpsAttachmentItem), ctx => RunAttachmentAsync(ctx), ctx => IsAttachmentControlEnabled(ctx));
+		/// <summary>Routed command for opening the attachment in the internal editor</summary>
 		public static readonly RoutedCommand RunPictureEditorCommand = new PpsAsyncCommand("Attachments.Edit", typeof(PpsAttachmentsControl), ctx => RunEditorAsync(ctx), ctx => IsAttachmentControlEnabled(ctx));
 
 

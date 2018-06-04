@@ -146,18 +146,24 @@ namespace TecWare.PPSn.Controls
 		private void OnLoaded(object sender, RoutedEventArgs e)
 			=> UpdateAlternationIndex();
 
+		/// <summary>Overridden to update the Alternation index. Passes to base-class</summary>
+		/// <param name="e">Arguments</param>
 		protected override void OnExpanded(RoutedEventArgs e)
 		{
 			base.OnExpanded(e);
 			UpdateAlternationIndex();
 		} // proc OnExpanded
 
+		/// <summary>Overridden to update the Alternation index. Passes to base-class</summary>
+		/// <param name="e">Arguments</param>
 		protected override void OnCollapsed(RoutedEventArgs e)
 		{
 			base.OnCollapsed(e);
 			UpdateAlternationIndex();
 		} // proc OnCollapsed
 
+		/// <summary>Overridden to update the Alternation index or select an added item. Passes to base-class</summary>
+		/// <param name="e">Arguments</param>
 		protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
 		{
 			base.OnItemsChanged(e);

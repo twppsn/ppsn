@@ -99,8 +99,11 @@ namespace TecWare.PPSn.Controls
 
 		public static readonly RoutedEvent AddNewItemFactoryEvent = EventManager.RegisterRoutedEvent(nameof(AddNewItemFactory), RoutingStrategy.Tunnel, typeof(AddNewItemFactoryHandler), typeof(PpsEditableListbox));
 
+		/// <summary>RoutedUICommand for appending a new Item</summary>
 		public static readonly RoutedUICommand AppendNewItemCommand = new RoutedUICommand("Append", "AppendNewItem", typeof(PpsEditableListbox));
+		/// <summary>RoutedUICommand for changing an existing Item</summary>
 		public static readonly RoutedUICommand ChangeItemCommand = new RoutedUICommand("Change", "ChangeItem", typeof(PpsEditableListbox));
+		/// <summary>RoutedUICommand for deleting an existing Item</summary>
 		public static readonly RoutedUICommand RemoveItemCommand = new RoutedUICommand("Remove", "RemoveItem", typeof(PpsEditableListbox));
 
 		public event AddNewItemFactoryHandler AddNewItemFactory { add => AddHandler(AddNewItemFactoryEvent, value); remove => RemoveHandler(AddNewItemFactoryEvent, value); }
@@ -402,11 +405,17 @@ namespace TecWare.PPSn.Controls
 
 	public class PpsEditableListboxItem : ListBoxItem
 	{
+		/// <summary>Dependencyproperty for IsNewItem</summary>
 		public static readonly DependencyProperty IsNewItemProperty = DependencyProperty.Register(nameof(IsNewItem), typeof(bool?), typeof(PpsEditableListboxItem), new FrameworkPropertyMetadata((bool?)null));
 		private static readonly DependencyPropertyKey isEditablePropertyKey = DependencyProperty.RegisterReadOnly(nameof(IsEditable), typeof(bool), typeof(PpsEditableListboxItem), new FrameworkPropertyMetadata(true));
+		/// <summary>Dependencyproperty for IsEditable</summary>
 		public static readonly DependencyProperty IsEditableProperty = isEditablePropertyKey.DependencyProperty;
 		private bool isInEditMode = false;
 
+		/// <summary>
+		/// Overridden to start editing when writeable. Passes to base-class.
+		/// </summary>
+		/// <param name="e">Arguments</param>
 		protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e)
 		{
 			base.OnGotKeyboardFocus(e);
@@ -421,6 +430,10 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc OnGotKeyboardFocus
 
+		/// <summary>
+		/// Overridden to end editing. Passes to base-class.
+		/// </summary>
+		/// <param name="e">Arguments</param>
 		protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e)
 		{
 			base.OnLostKeyboardFocus(e);
@@ -538,6 +551,7 @@ namespace TecWare.PPSn.Controls
 			return false;
 		} // func IsChildOf
 
+		/// <summary>Returns if the item is new</summary>
 		public bool? IsNewItem
 		{
 			get
