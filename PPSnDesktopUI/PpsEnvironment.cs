@@ -1236,6 +1236,8 @@ namespace TecWare.PPSn
 			statisticsTimer.Tick += (s, e) => { foreach (var stat in statistics) stat.Request(); };
 			statisticsTimer.Start();
 		}
+
+		/// <summary>Returns the available Statistics</summary>
 		public List<StatisticElement> Statistics => statistics;
 
 		#endregion Statistics
