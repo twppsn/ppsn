@@ -45,9 +45,10 @@ specific language governing permissions and limitations under the Licence.
 	<PathGeometry x:Key="scannerPathGeometry" 
 				  Figures="M19.8,10.7L4.2,5L3.5,6.9L17.6,12H5A2,2 0 0,0 3,14V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V12.5C21,11.7 20.5,10.9 19.8,10.7M7,17H5V15H7V17M19,17H9V15H19V17Z" />
 
+	<!--delete-forever-->
 	<!--delete-forever(mod)-->
 	<PathGeometry x:Key="deletePathGeometry" 
-				  Figures="M5.5714278 19.311111 a2.1428569 2.0888887 0 0 0 2.1428569 2.088888 H16.285712 A2.1428569 2.0888887 0 0 0 18.42857 19.311111 V6.7777775 H5.5714278 V19.311111 m2.6357142 -7.436445 1.510714 -1.472667 2.282142 2.214223 2.271429 -2.214223 1.510714 1.472667 -2.271429 2.214221 2.271429 2.214224 -1.510714 1.472665 -2.271429 -2.214221 -2.2714278 2.214221 -1.510714 -1.472665 2.2714288 -2.214224 -2.282143 -2.214221 M15.749999 3.6444442 14.67857 2.5999999 H9.3214274 L8.2499991 3.6444442 H4.4999993 v2.088889 H19.499999 v-2.088889Z" />
+	              Figures="M9.14 2 8 3 H3.6 V5 H20.4 V3 H16 L14.86 2 M5 6 V19.715 A2.33 2.286 0 0 0 7.33 22 H16.67 A2.33 2.286 0 0 0 19 19.715 V6 M9.87 10.37 12 12.49 l2.12 -2.12 1.41 1.41 -2.12 2.12 2.12 2.12 -1.41 1.41 L12 15.31 9.88 17.43 8.47 16.02 10.59 13.90 8.46 11.78 Z" />
 
 	<!--file-plus-->
 	<PathGeometry x:Key="filePlusPathGeometry"
@@ -96,6 +97,10 @@ specific language governing permissions and limitations under the Licence.
 	<!-- check-circle-->
 	<PathGeometry x:Key="checkedCirclePathGeometry" 
 				  Figures="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.59,8.09L11,13.67L7.91,10.59L6.5,12L11,16.5Z" />
+
+	<!-- check-->
+	<PathGeometry x:Key="checkedPathGeometry" 
+				  Figures="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" />
 
 	<!-- circle-->
 	<PathGeometry x:Key="circlePathGeometry" 
@@ -223,4 +228,27 @@ specific language governing permissions and limitations under the Licence.
 	<PathGeometry x:Key="windowClosePathGeometry" 
 				  Figures="M13.46,12L19,17.54V19H17.54L12,13.46L6.46,19H5V17.54L10.54,12L5,6.46V5H6.46L12,10.54L17.54,5H19V6.46L13.46,12Z" />
 
+	<PathGeometry x:Key="windowMinimizePathGeometry" 
+				  Figures="M7,13H16V16H7Z" />
+
+	<PathGeometry x:Key="windowMaximizePathGeometry" 
+				  Figures="M7,17V7H17V10H8V17H7M8,17H17V10H16V16H8Z" />
+
+	<PathGeometry x:Key="windowRestorePathGeometry" 
+				  Figures="M7,17V9H15V11H8V17H7M8,17H15V11H14V16H8M10,7H17V16H16V8H10Z" />
+
+	<PathGeometry x:Key="prevPanePathGeometry"
+				  Figures="M11,4.5 L4.5,11 20.5,11 20.5,12 4.5,12 11,18.5 10.5,19 3,11.5 10.5,4 11,4.5Z" />
+
+	<PathGeometry x:Key="nextPanePathGeometry"
+				  Figures="M13,18.5 L19.5,12 3.5,12 3.5,11 19.5,11 13,4.5 13.5,4 21,11.5 13.5,19 13,18.5Z" />
+
+	<PathGeometry x:Key="gotoPanePathGeometry"
+				  Figures="M4,5H20V18H19V6H4V5M4,6V18H19V17H5V6H4M5,8H19V9H5V8Z" />
+				  <!--"M3,4 H21 V19 H20 V5 H3 V4   M3,5 V19 H20 V18 H4 V5 H3   M4,7 H20 V8 H4 V7 Z"-->
+
+	<PathGeometry x:Key="closePanePathGeometry"
+				  Figures="M5,5.5 L5.5,5 12,11.5 18.5,5 19,5.5 12.5,12 19,18.5 18.5,19 12,12.5 5.5,19 5,18.5 11.5,12 5,5.5Z"/>
+
 </ResourceDictionary>
+	

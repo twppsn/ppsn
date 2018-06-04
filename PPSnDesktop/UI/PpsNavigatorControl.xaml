@@ -547,12 +547,12 @@ specific language governing permissions and limitations under the Licence.
 			</ItemsControl.ItemsPanel>
 			<ItemsControl.ItemTemplate>
 				<DataTemplate>
-					<Button Content="{Binding DisplayName}"
-							Tag="{Binding DisplayImage, Mode=OneTime, Converter={x:Static ui:PpsConverter.ImageToPathGeometry}}"
-							Command="{Binding DataContext.RunAction, RelativeSource={RelativeSource Mode=FindAncestor, AncestorLevel=1, AncestorType={x:Type ItemsControl}}}"
-							CommandParameter="{Binding}"
-							Style="{StaticResource PPSnCircleButtonStyle}">
-					</Button>
+					<uiC:PpsButton Command="{Binding DataContext.RunAction, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+								   CommandParameter="{Binding}"
+								   Content="{Binding DisplayName}"
+								   DisplayMode="Circle"
+								   GeometryName="{Binding DisplayImage}"
+								   FontSize="14" />
 				</DataTemplate>
 			</ItemsControl.ItemTemplate>
 			<ItemsControl.ItemContainerStyle>

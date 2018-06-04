@@ -64,9 +64,7 @@ specific language governing permissions and limitations under the Licence.
 										   Command="{x:Static pps:PpsControlCommands.ClosePopupCommand}"
 										   GeometryName="windowClose"
 										   GeometrySize="21"
-										   Background="Transparent"
-										   BorderThickness="0"
-										   Focusable="False" />
+										   DisplayMode="Image" />
 							<ContentPresenter Grid.Row="1" Grid.ColumnSpan="3"
 											  Content="{TemplateBinding Content}"
 											  ContentTemplate="{TemplateBinding ContentTemplate}"

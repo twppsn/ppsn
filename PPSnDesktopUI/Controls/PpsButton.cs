@@ -21,6 +21,21 @@ using System.Windows.Controls.Primitives;
 
 namespace TecWare.PPSn.Controls
 {
+	#region -- class PpsButtonDisplayType ---------------------------------------------
+
+	/// <summary></summary>
+	public enum PpsButtonDisplayType
+	{
+		/// <summary>Show as Rectangle with content and optional image.</summary>
+		Rectangle,
+		/// <summary>Image only, no content.</summary>
+		Image,
+		/// <summary>Image inside circle with optional content.</summary>
+		Circle
+	} // enum PpsButtonDisplayType
+
+	#endregion
+
 	#region -- class PpsButton --------------------------------------------------------
 
 	/// <summary></summary>
@@ -30,12 +45,20 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty GeometryNameProperty = PpsGeometryImage.GeometryNameProperty.AddOwner(typeof(PpsButton));
 		/// <summary>The diameter of the circle</summary>
 		public static readonly DependencyProperty GeometrySizeProperty = DependencyProperty.Register(nameof(GeometrySize), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(36.0));
-		
+		/// <summary>The type of representation</summary>
+		public static readonly DependencyProperty DisplayModeProperty = DependencyProperty.Register(nameof(DisplayMode), typeof(PpsButtonDisplayType), typeof(PpsButton), new FrameworkPropertyMetadata(PpsButtonDisplayType.Rectangle));
+		/// <summary>The type of representation</summary>
+		public static readonly DependencyProperty ImageOpacityProperty = DependencyProperty.Register(nameof(ImageOpacity), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(0.65));
+
 		/// <summary>The property defines the resource to be loaded.</summary>
 		public string GeometryName { get => (string)GetValue(GeometryNameProperty); set => SetValue(GeometryNameProperty, value); }
 		/// <summary>The property defines the diameter of the circle</summary>
 		public double GeometrySize { get => (double)GetValue(GeometrySizeProperty); set => SetValue(GeometrySizeProperty, value); }
-		
+		/// <summary>The property defines the type of representation</summary>
+		public PpsButtonDisplayType DisplayMode { get => (PpsButtonDisplayType)GetValue(DisplayModeProperty); set => SetValue(DisplayModeProperty, value); }
+		/// <summary>The property defines the diameter of the circle</summary>
+		public double ImageOpacity { get => (double)GetValue(ImageOpacityProperty); set => SetValue(ImageOpacityProperty, value); }
+
 		static PpsButton()
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsButton), new FrameworkPropertyMetadata(typeof(PpsButton)));
