@@ -2511,7 +2511,7 @@ namespace TecWare.PPSn
 			return false;
 		} // func MoveReader
 
-		internal bool TryGetOflineCacheFile(Uri requestUri, out IPpsProxyTask task)
+		internal bool TryGetOfflineCacheFile(Uri requestUri, out IPpsProxyTask task)
 		{
 			try
 			{
@@ -4751,7 +4751,7 @@ namespace TecWare.PPSn
 		/// <returns>True if successfull.</returns>
 		protected internal virtual bool TryGetOfflineObject(WebRequest request, out IPpsProxyTask task)
 		{
-			return masterData.TryGetOflineCacheFile(BaseUri.MakeRelativeUri(request.RequestUri), out task);
+			return masterData.TryGetOfflineCacheFile(BaseUri.MakeRelativeUri(request.RequestUri), out task);
 		} // func TryGetOfflineObject
 
 		#endregion
