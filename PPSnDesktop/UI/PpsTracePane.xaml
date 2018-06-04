@@ -288,7 +288,11 @@
 	</UserControl.Resources>
 
 	<Grid Margin="16,22,16,10">
-		<ListBox ItemsSource="{Binding Source={StaticResource SortedTraces}}" Style="{StaticResource PPSnTraceListBoxStyle}"  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+		<Grid.RowDefinitions>
+			<RowDefinition/>
+			<RowDefinition Height="150"/>
+		</Grid.RowDefinitions>
+		<ListBox Grid.Row="0" ItemsSource="{Binding Source={StaticResource SortedTraces}}" Style="{StaticResource PPSnTraceListBoxStyle}"  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 			<ListBox.ItemTemplate>
 				<DataTemplate>
 					<Grid>
@@ -338,6 +342,48 @@
 						<TextBlock Grid.Column="1" Text="{Binding Stamp, StringFormat=dd.MM.yyyy  HH:mm:ss}" VerticalAlignment="Center" Margin="8,0,0,0"/>
 						<ContentControl Grid.Column="2" Grid.RowSpan="2" Content="{Binding}" ContentTemplateSelector="{StaticResource TraceItemTemplateSelector}" Focusable="False"
 										HorizontalAlignment="Left" Margin="8,4,24,0" />
+					</Grid>
+				</DataTemplate>
+			</ListBox.ItemTemplate>
+		</ListBox>
+		<ListBox Grid.Row="1" ItemsSource="{Binding Statistics}">
+			<ListBox.ItemsPanel>
+				<ItemsPanelTemplate>
+					<WrapPanel />
+				</ItemsPanelTemplate>
+			</ListBox.ItemsPanel>
+			<ListBox.ItemTemplate>
+				<DataTemplate>
+					<Grid>
+
+						<ListBox Style="{x:Null}" ItemsSource="{Binding History}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled" Width="510" Height="80">
+							<ListBox.ItemTemplate>
+								<DataTemplate>
+									<Rectangle Fill="Red" StrokeThickness="0"
+                               Height="6" Width="{Binding}" Margin="0,0,0.1,0" 
+                               HorizontalAlignment="Right" VerticalAlignment="Bottom">
+										<Rectangle.LayoutTransform>
+											<ScaleTransform ScaleX="{Binding RelativeSource={RelativeSource AncestorType=ListBox,Mode=FindAncestor}, Path=DataContext.Factor}" />
+										</Rectangle.LayoutTransform>
+									</Rectangle>
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+							<ListBox.ItemsPanel>
+								<ItemsPanelTemplate>
+									<VirtualizingStackPanel IsItemsHost="True" Width="90">
+										<VirtualizingStackPanel.LayoutTransform>
+											<TransformGroup>
+												<RotateTransform Angle="90" />
+												<ScaleTransform ScaleX="-1" ScaleY="-1" />
+											</TransformGroup>
+										</VirtualizingStackPanel.LayoutTransform>
+									</VirtualizingStackPanel>
+								</ItemsPanelTemplate>
+							</ListBox.ItemsPanel>
+						</ListBox>
+						<Label HorizontalAlignment="Center" Content="{Binding Name}"/>
+						<Label HorizontalAlignment="Left" Content="{Binding MaxValue}"/>
+						<Label HorizontalAlignment="Right" Content="{Binding CurrentValue}"/>
 					</Grid>
 				</DataTemplate>
 			</ListBox.ItemTemplate>
