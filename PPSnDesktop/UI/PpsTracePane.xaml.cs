@@ -114,8 +114,8 @@ namespace TecWare.PPSn.UI
 											var file = new StreamWriter(openFileDialog.FileName);
 											foreach (var itm in list)
 											{
-												if (itm is PpsExceptionItem)
-													file.WriteLine($"{((dynamic)itm).Type};{((dynamic)itm).Stamp};\"{ExceptionFormatter.FormatPlainText(((PpsExceptionItem)itm).Exception)}\"");
+												if (itm is PpsExceptionItem pei)
+													file.WriteLine($"{pei.Type};{pei.Stamp};\"{ExceptionFormatter.FormatPlainText(pei.Exception)}\"");
 												else
 													file.WriteLine($"{((dynamic)itm).Type};{((dynamic)itm).Stamp};\"{((dynamic)itm).Message}\"");
 											}
