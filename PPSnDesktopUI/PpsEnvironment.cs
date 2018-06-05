@@ -1269,7 +1269,7 @@ namespace TecWare.PPSn
 			{
 				Interval = new TimeSpan(0, 0, 1)
 			};
-			statisticsTimer.Tick += (s, e) => { foreach (var stat in statistics) stat.Request(); };
+			statisticsTimer.Tick += (s, e) => { if (this["collectStatistics"] is bool collect && collect) foreach (var stat in statistics) stat.Request(); };
 			statisticsTimer.Start();
 		}
 

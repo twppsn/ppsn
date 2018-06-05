@@ -291,7 +291,18 @@
 		<Grid.RowDefinitions>
 			<RowDefinition/>
 			<RowDefinition Height="auto"/>
-			<RowDefinition Height="20"/>
+			<RowDefinition>
+				<RowDefinition.Style>
+					<Style TargetType="{x:Type RowDefinition}">
+						<Setter Property="Height" Value="0" />
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding collectStatistics}" Value="True">
+								<Setter Property="Height" Value="20" />
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</RowDefinition.Style>
+			</RowDefinition>
 			<RowDefinition>
 				<RowDefinition.Style>
 					<Style TargetType="{x:Type RowDefinition}">
