@@ -373,7 +373,7 @@
 		<ListBox Grid.Row="2" ItemsSource="{Binding Statistics}">
 			<ListBox.ItemsPanel>
 				<ItemsPanelTemplate>
-					<WrapPanel />
+					<UniformGrid Columns="3" />
 				</ItemsPanelTemplate>
 			</ListBox.ItemsPanel>
 			<ListBox.ItemTemplate>
