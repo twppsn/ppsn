@@ -39,6 +39,11 @@ namespace TecWare.PPSn.UI
 		// ignore any property changed
 		event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged { add { } remove { } }
 
+		/// <summary>Command to execute Lua-Code on the current Environment</summary>
+		public readonly static RoutedUICommand ExecuteCommandCommand =
+			new RoutedUICommand("ExecuteCommand", "ExecuteCommand", typeof(PpsTracePane));
+
+
 		private readonly IPpsWindowPaneManager paneManager;
 		private readonly IPpsWindowPaneHost paneHost;
 		private readonly PpsUICommandCollection commands;
@@ -65,6 +70,25 @@ namespace TecWare.PPSn.UI
 
 			//commands.AddButton("100:100", "CopySelected", CopySelectedTraceItemsCommand, "InZwischenable", "Kopiert alle markierten Einträge in die Zwischenablage.");
 
+			CommandBindings.Add(
+				new CommandBinding(ExecuteCommandCommand,
+					(sender, e) =>
+					{
+						try
+						{
+							var ret = Environment.DoChunk((string)e.Parameter, "DebugCommand", null);
+							if (String.IsNullOrEmpty(ret.ToString()))
+								Environment.Traces.AppendText(PpsTraceItemType.Debug, $"Command \"{(string)e.Parameter}\" executed without result.");
+							else
+								Environment.Traces.AppendText(PpsTraceItemType.Debug, $"Command \"{(string)e.Parameter}\" returned: \"{ret.ToString()}\".");
+						}
+						catch (Exception ex)
+						{
+							Environment.Traces.AppendException(ex, $"Command \"{(string)e.Parameter}\" threw an Exception.");
+						}
+					}
+				)
+			);
 			CommandBindings.Add(
 				new CommandBinding(ApplicationCommands.Copy,
 					(sender, e) =>

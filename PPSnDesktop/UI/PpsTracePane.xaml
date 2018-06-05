@@ -290,6 +290,7 @@
 	<Grid Margin="16,22,16,10">
 		<Grid.RowDefinitions>
 			<RowDefinition/>
+			<RowDefinition Height="auto"/>
 			<RowDefinition Height="20"/>
 			<RowDefinition>
 				<RowDefinition.Style>
@@ -358,7 +359,17 @@
 				</DataTemplate>
 			</ListBox.ItemTemplate>
 		</ListBox>
-		<ToggleButton Grid.Row="1" x:Name="ShowStatisticsButton" IsChecked="True" Focusable="False">
+		<Grid Grid.Row="1" HorizontalAlignment="Stretch">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="auto"/>
+				<ColumnDefinition/>
+				<ColumnDefinition Width="auto"/>
+			</Grid.ColumnDefinitions>
+			<Label Grid.Column="0" Content="Console: "/>
+			<TextBox Grid.Column="1" x:Name="ConsoleCommandTextBox"/>
+			<Button Grid.Column="2" Content="Ausführen" Command="{x:Static local:PpsTracePane.ExecuteCommandCommand}" CommandParameter="{Binding ElementName=ConsoleCommandTextBox, Path=Text}"/>
+		</Grid>
+		<ToggleButton Grid.Row="2" x:Name="ShowStatisticsButton" IsChecked="True" Focusable="False">
 			<ToggleButton.Style>
 				<Style TargetType="ToggleButton">
 					<Setter Property="Content" Value="Statistiken anzeigen"/>
@@ -370,7 +381,7 @@
 				</Style>
 			</ToggleButton.Style>
 		</ToggleButton>
-		<ListBox Grid.Row="2" ItemsSource="{Binding Statistics}">
+		<ListBox Grid.Row="3" ItemsSource="{Binding Statistics}">
 			<ListBox.ItemsPanel>
 				<ItemsPanelTemplate>
 					<UniformGrid Columns="3" />
