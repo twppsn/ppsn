@@ -86,7 +86,8 @@ namespace TecWare.PPSn.UI
 						{
 							Environment.Traces.AppendException(ex, $"Command \"{(string)e.Parameter}\" threw an Exception.");
 						}
-					}
+					},
+					(sender, e)=>e.CanExecute=!String.IsNullOrWhiteSpace((string)e.Parameter)
 				)
 			);
 			CommandBindings.Add(
