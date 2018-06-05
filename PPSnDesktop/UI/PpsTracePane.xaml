@@ -290,7 +290,19 @@
 	<Grid Margin="16,22,16,10">
 		<Grid.RowDefinitions>
 			<RowDefinition/>
-			<RowDefinition Height="150"/>
+			<RowDefinition Height="20"/>
+			<RowDefinition>
+				<RowDefinition.Style>
+					<Style TargetType="{x:Type RowDefinition}">
+						<Setter Property="Height" Value="Auto" />
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding IsChecked, ElementName=ShowStatisticsButton}" Value="True">
+								<Setter Property="Height" Value="0" />
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</RowDefinition.Style>
+			</RowDefinition>
 		</Grid.RowDefinitions>
 		<ListBox Grid.Row="0" ItemsSource="{Binding Source={StaticResource SortedTraces}}" Style="{StaticResource PPSnTraceListBoxStyle}"  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 			<ListBox.ItemTemplate>
@@ -346,7 +358,19 @@
 				</DataTemplate>
 			</ListBox.ItemTemplate>
 		</ListBox>
-		<ListBox Grid.Row="1" ItemsSource="{Binding Statistics}">
+		<ToggleButton Grid.Row="1" x:Name="ShowStatisticsButton" IsChecked="True" Focusable="False">
+			<ToggleButton.Style>
+				<Style TargetType="ToggleButton">
+					<Setter Property="Content" Value="Statistiken anzeigen"/>
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource Mode=Self}}" Value="False">
+							<Setter Property="Content" Value="Statistiken verstecken" />
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</ToggleButton.Style>
+		</ToggleButton>
+		<ListBox Grid.Row="2" ItemsSource="{Binding Statistics}">
 			<ListBox.ItemsPanel>
 				<ItemsPanelTemplate>
 					<WrapPanel />
@@ -355,7 +379,6 @@
 			<ListBox.ItemTemplate>
 				<DataTemplate>
 					<Grid>
-
 						<ListBox Style="{x:Null}" ItemsSource="{Binding History}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled" Width="510" Height="80">
 							<ListBox.ItemTemplate>
 								<DataTemplate>
