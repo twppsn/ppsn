@@ -58,6 +58,7 @@ namespace TecWare.PPSn.Data
 		/// <summary></summary>
 		/// <param name="target"></param>
 		/// <param name="realm"></param>
+		/// <param name="showErrorMessage">The user will be informed of the type of error.</param>
 		public PpsClientLogin(string target, string realm, bool showErrorMessage)
 		{
 			this.target = target;
