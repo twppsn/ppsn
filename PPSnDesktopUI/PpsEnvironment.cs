@@ -1227,6 +1227,22 @@ namespace TecWare.PPSn
 					for (var i = 0; i <= GC.MaxGeneration; i++)
 						objectCount += GC.CollectionCount(i);
 					return objectCount;
+				}),
+				new StatisticElement("ObjectStore Alive", () =>
+				{
+					var alive = 0;
+					foreach(var obj in objectStore)
+						if (obj.TryGetTarget(out var tmp))
+							alive++;
+					return alive;
+				}),
+				new StatisticElement("ObjectStore Dead", () =>
+				{
+					var alive = 0;
+					foreach(var obj in objectStore)
+						if (!obj.TryGetTarget(out var tmp))
+							alive++;
+					return alive;
 				})
 			};
 			statisticsTimer = new DispatcherTimer(DispatcherPriority.Background)
