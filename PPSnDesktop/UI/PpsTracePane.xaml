@@ -383,7 +383,7 @@
 							<ListBox.ItemTemplate>
 								<DataTemplate>
 									<Rectangle Fill="Red" StrokeThickness="0"
-                               Height="6" Width="{Binding}" Margin="0,0,0.1,0" 
+                               Height="6" Width="{Binding}" MinWidth="1" Margin="0,0,0.1,0" 
                                HorizontalAlignment="Right" VerticalAlignment="Bottom">
 										<Rectangle.LayoutTransform>
 											<ScaleTransform ScaleX="{Binding RelativeSource={RelativeSource AncestorType=ListBox,Mode=FindAncestor}, Path=DataContext.Factor}" />
