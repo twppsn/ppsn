@@ -119,6 +119,17 @@ namespace TecWare.PPSn.UI
 												else
 													file.WriteLine($"{((dynamic)itm).Type};{((dynamic)itm).Stamp};\"{((dynamic)itm).Message}\"");
 											}
+											foreach (var statistic in Environment.Statistics)
+											{
+												var en = statistic.History.GetEnumerator();
+												var historic = 0;
+												en.Reset();
+												while (en.MoveNext())
+												{
+													file.WriteLine($"{statistic.Name};{DateTime.Now.AddSeconds(historic)};{en.Current}");
+													historic--;
+												}
+											}
 											file.Close();
 										}
 									}
