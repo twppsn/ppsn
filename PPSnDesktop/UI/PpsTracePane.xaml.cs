@@ -48,7 +48,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Trace pane constructor</summary>
 		/// <param name="paneManager"></param>
 		/// <param name="paneHost"></param>
-		public PpsTracePane(IPpsWindowPaneManager paneManager,IPpsWindowPaneHost paneHost)
+		public PpsTracePane(IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost)
 		{
 			this.paneManager = paneManager ?? throw new ArgumentNullException(nameof(paneManager));
 			this.paneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
@@ -76,7 +76,6 @@ namespace TecWare.PPSn.UI
 								&& grid.Children.Count > 0
 								&& grid.Children[0] is ListBox exc)
 							CopyToClipboard(exc.SelectedItem);
-
 						e.Handled = true;
 					},
 					(sender, e) => e.CanExecute = true
@@ -148,7 +147,7 @@ namespace TecWare.PPSn.UI
 
 		#region -- IPpsWindowPane members ---------------------------------------------
 
-		PpsWindowPaneCompareResult IPpsWindowPane.CompareArguments(LuaTable args) 
+		PpsWindowPaneCompareResult IPpsWindowPane.CompareArguments(LuaTable args)
 			=> PpsWindowPaneCompareResult.Same;
 
 		Task IPpsWindowPane.LoadAsync(LuaTable args)
@@ -177,7 +176,7 @@ namespace TecWare.PPSn.UI
 
 		private void CopyToClipboard(object item)
 			=> Clipboard.SetText(TraceToString(item)); // ToDo: enable Html/RichText/PlainText
-		
+
 		private string TraceToString(object item)
 		{
 			switch (item)
