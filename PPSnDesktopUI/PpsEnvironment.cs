@@ -1208,7 +1208,7 @@ namespace TecWare.PPSn
 			/// <summary>Returns the maximum Value, formatted as given</summary>
 			public string MaxValue => formatValue != null ? formatValue(max) : max.ToString();
 			/// <summary>Returns the last Value, formatted as given</summary>
-			public string CurrentValue => formatValue != null ? formatValue(history.Last()) : max.ToString();
+			public string CurrentValue => formatValue != null ? formatValue(history.Last()) : history.Last().ToString();
 		}
 
 		private DispatcherTimer statisticsTimer;
