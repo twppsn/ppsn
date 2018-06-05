@@ -2101,6 +2101,8 @@ namespace TecWare.PPSn
 			{
 				if (throwException)
 					throw new ArgumentException($"MasterData table '{tableName}' not found.", nameof(tableName));
+				else
+					return null;
 			}
 
 			return GetTable(tableDefinition);
