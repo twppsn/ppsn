@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
@@ -571,6 +572,8 @@ namespace TecWare.PPSn
 			InitBackgroundNotifier(environmentDisposing.Token, out backgroundNotifier, out backgroundNotifierModeTransmission);
 
 			RegisterService("DataFieldFactory", fieldFactory = new PpsDataFieldFactory(this));
+
+			InitializeStatistics();
 		} // ctor
 
 		/// <summary>Initialize environmnet.</summary>
@@ -1113,6 +1116,167 @@ namespace TecWare.PPSn
 
 		/// <summary>Access to the current collected informations.</summary>
 		public PpsTraceLog Traces => logData;
+
+		#region ---- Statistics ---------------------------------------------------------
+
+		/// <summary>Class for performant keeping of statistical values</summary>
+		public class CircularBuffer : IEnumerable<long>, INotifyCollectionChanged
+		{
+			private readonly Queue<long> queue;
+			private readonly int maxCount;
+			/// <summary>Keeps the UI up to date.</summary>
+			public event NotifyCollectionChangedEventHandler CollectionChanged;
+
+			/// <summary>Public Constructor</summary>
+			/// <param name="elementCount">Amount of datapoints to keep</param>
+			public CircularBuffer(int elementCount)
+			{
+				maxCount = elementCount;
+				queue = new Queue<long>(elementCount);
+				for (var i = 0; i < elementCount; i++) queue.Enqueue((long)0);
+			}
+
+			/// <summary>Adds a new Datapoint (remove the oldest)</summary>
+			/// <param name="item"></param>
+			public void Add(long item)
+			{
+				if (queue.Count == maxCount)
+					queue.Dequeue();
+
+				queue.Enqueue(item);
+				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+			}
+
+			/// <summary>Returns the Enumerator</summary>
+			/// <returns>Enum of the Buffer</returns>
+			public IEnumerator<long> GetEnumerator()
+			{
+				return queue.GetEnumerator();
+			}
+
+			IEnumerator IEnumerable.GetEnumerator()
+			{
+				return GetEnumerator();
+			}
+		}
+
+		/// <summary>Class representing one Statistic Element</summary>
+		public class StatisticElement : INotifyPropertyChanged
+		{
+			private string name;
+			private Func<long> request;
+			private CircularBuffer history;
+			private long max = 0;
+			private Func<long, string> formatValue;
+
+			/// <summary>For keeping the UI up to Date</summary>
+			public event PropertyChangedEventHandler PropertyChanged;
+
+			/// <summary>Constructor</summary>
+			/// <param name="name">Name of the Statistic</param>
+			/// <param name="request">Function to request one value (long)</param>
+			/// <param name="formatValue">Function to Format the Value</param>
+			/// <param name="historyCount">Amount of Datapoinst to keep (default 50)</param>
+			public StatisticElement(string name, Func<long> request, Func<long, string> formatValue = null, int historyCount = 50)
+			{
+				this.name = name;
+				this.request = request;
+				this.history = new CircularBuffer(historyCount);
+				this.formatValue = formatValue;
+			}
+
+			/// <summary>Captures the actual Value</summary>
+			public void Request()
+			{
+				var current = request();
+				history.Add(current);
+				if (current > max)
+				{
+					max = current;
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Factor)));
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(MaxValue)));
+				}
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentValue)));
+			}
+
+			/// <summary>The Label for the Statistic</summary>
+			public string Name => name;
+			/// <summary>Keeps the older values</summary>
+			public CircularBuffer History => history;
+			/// <summary>Returns the scale - should be calculated in the VM</summary>
+			public double Factor => (double)70 / max;
+			/// <summary>Returns the maximum Value, formatted as given</summary>
+			public string MaxValue => formatValue != null ? formatValue(max) : max.ToString();
+			/// <summary>Returns the last Value, formatted as given</summary>
+			public string CurrentValue => formatValue != null ? formatValue(history.Last()) : history.Last().ToString();
+		}
+
+		private DispatcherTimer statisticsTimer;
+		private List<StatisticElement> statistics;
+
+		private void InitializeStatistics()
+		{
+			statistics = new List<StatisticElement>
+			{
+				new StatisticElement("Ram Usage", () => System.Diagnostics.Process.GetCurrentProcess().WorkingSet64, (val) => $"{val / (1024 * 1024)} MB"),
+				new StatisticElement("Handles", () => System.Diagnostics.Process.GetCurrentProcess().HandleCount),
+				new StatisticElement("Threads", () => Process.GetCurrentProcess().Threads.Count),
+				new StatisticElement("Objects", () =>
+				{
+					var objectCount = (long)0;
+					for (var i = 0; i <= GC.MaxGeneration; i++)
+						objectCount += GC.CollectionCount(i);
+					return objectCount;
+				}),
+				new StatisticElement("ObjectStore Alive", () =>
+				{
+					var alive = 0;
+					foreach(var obj in objectStore)
+						if (obj.TryGetTarget(out var tmp))
+							alive++;
+					return alive;
+				}),
+				new StatisticElement("ObjectStore Dead", () =>
+				{
+					var alive = 0;
+					foreach(var obj in objectStore)
+						if (!obj.TryGetTarget(out var tmp))
+							alive++;
+					return alive;
+				}),
+				new StatisticElement("Cached Tables Alive", () =>
+				{
+					var alive = 0;
+					var field = typeof (PpsMasterData).GetField("cachedTables", BindingFlags.NonPublic |BindingFlags.GetField | BindingFlags.Instance);
+					var cachedTables = (Dictionary<PpsDataTableDefinition, WeakReference<PpsMasterDataTable>>)field.GetValue(MasterData);
+					foreach(var obj in cachedTables.Values)
+						if (obj.TryGetTarget(out var tmp))
+							alive++;
+					return alive;
+				}),
+				new StatisticElement("Cached Tables Dead", () =>
+				{
+					var alive = 0;
+					var field = typeof (PpsMasterData).GetField("cachedTables", BindingFlags.NonPublic |BindingFlags.GetField | BindingFlags.Instance);
+					var cachedTables = (Dictionary<PpsDataTableDefinition, WeakReference<PpsMasterDataTable>>)field.GetValue(MasterData);
+					foreach(var obj in cachedTables.Values)
+						if (!obj.TryGetTarget(out var tmp))
+							alive++;
+					return alive;
+				})
+			};
+			statisticsTimer = new DispatcherTimer(DispatcherPriority.Background)
+			{
+				Interval = new TimeSpan(0, 0, 1)
+			};
+			statisticsTimer.Tick += (s, e) => { if (this["collectStatistics"] is bool collect && collect) foreach (var stat in statistics) stat.Request(); };
+			statisticsTimer.Start();
+		}
+
+		/// <summary>Returns the available Statistics</summary>
+		public List<StatisticElement> Statistics => statistics;
+
+		#endregion Statistics
 
 		/// <summary>Path of the local data for the user.</summary>
 		[LuaMember]

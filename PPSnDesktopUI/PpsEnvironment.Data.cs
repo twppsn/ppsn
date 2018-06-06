@@ -73,12 +73,18 @@ namespace TecWare.PPSn
 
 	#region -- enum PpsLoadPriority ---------------------------------------------------
 
+	/// <summary>Defines the importance of an item</summary>
 	public enum PpsLoadPriority
 	{
+		/// <summary>Second-most important</summary>
 		Default = 1,
+		/// <summary>Top-most important</summary>
 		ApplicationFile = 0,
+		/// <summary>Third-most important</summary>
 		ObjectPrimaryData = 1,
+		/// <summary>Fourth-most important</summary>
 		ObjectReferencedData = 2,
+		/// <summary>Least important</summary>
 		Background = 3
 	} // enum PpsLoadPriority
 
@@ -2098,6 +2104,8 @@ namespace TecWare.PPSn
 			{
 				if (throwException)
 					throw new ArgumentException($"MasterData table '{tableName}' not found.", nameof(tableName));
+				else
+					return null;
 			}
 
 			return GetTable(tableDefinition);
@@ -2508,7 +2516,7 @@ namespace TecWare.PPSn
 			return false;
 		} // func MoveReader
 
-		internal bool TryGetOflineCacheFile(Uri requestUri, out IPpsProxyTask task)
+		internal bool TryGetOfflineCacheFile(Uri requestUri, out IPpsProxyTask task)
 		{
 			try
 			{
@@ -3454,15 +3462,15 @@ namespace TecWare.PPSn
 	/// <summary>State of the pps upload task.</summary>
 	public enum PpsLoadState
 	{
-		/// <summary>Waits to processed.</summary>
+		/// <summary>Task is queued</summary>
 		Pending,
-		/// <summary>Request started.</summary>
+		/// <summary>Task is currently loading</summary>
 		Started,
-		/// <summary>Request finished.</summary>
+		/// <summary>Task is fully loaded</summary>
 		Finished,
-		/// <summary>Request canceled.</summary>
+		/// <summary>Loading of the task was cancelled</summary>
 		Canceled,
-		/// <summary>Request failed with exception</summary>
+		/// <summary>Loading of the task failed</summary>
 		Failed
 	} // enum PpsWebLoadState
 
@@ -3622,15 +3630,15 @@ namespace TecWare.PPSn
 			(path, arguments) = relativeUri.ParseUri();
 		} // ctor
 
-		/// <summary>Check the relative uri.</summary>
-		/// <param name="other"></param>
-		/// <returns></returns>
+		/// <summary>Returns whether the given proxy request is for the same object</summary>
+		/// <param name="other">Request to compare</param>
+		/// <returns>true if equal</returns>
 		public bool Equals(PpsProxyRequest other)
 			=> Equals(other.relativeUri);
 
-		/// <summary>Check the relative uri.</summary>
-		/// <param name="otherUri"></param>
-		/// <returns></returns>
+		/// <summary>Returns whether the Uri is equal to the given Uri</summary>
+		/// <param name="otherUri">Uri to compare</param>
+		/// <returns>true if equal</returns>
 		public bool Equals(Uri otherUri)
 			=> WebRequestHelper.EqualUri(relativeUri, otherUri);
 
@@ -3680,9 +3688,9 @@ namespace TecWare.PPSn
 				return InternalGetResponseAsync();
 		} // func GetResponse
 
-		/// <summary>Enqueue the request. And process it later.</summary>
-		/// <param name="priority"></param>
-		/// <param name="forceOnline"></param>
+		/// <summary>Puts the request of an item on the queue</summary>
+		/// <param name="priority">Importance of the item.</param>
+		/// <param name="forceOnline">If true, the object is requested only from the server, not from the cache. Defaults to false.</param>
 		/// <returns></returns>
 		public IPpsProxyTask Enqueue(PpsLoadPriority priority, bool forceOnline = false)
 		{
@@ -3825,7 +3833,7 @@ namespace TecWare.PPSn
 		public string DisplayName => displayName;
 		/// <summary>Request method</summary>
 		public override string Method { get => method; set => method = value; }
-		/// <summary>Content type of the request.</summary>
+		/// <summary>Content type of the request (mime type).</summary>
 		public override string ContentType { get => contentType; set => contentType = value; }
 		/// <summary>Content length, to send.</summary>
 		public override long ContentLength { get => contentLength; set => contentLength = value; }
@@ -4302,7 +4310,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		/// <summary>Proxy tasks changed.</summary>
+		/// <summary>Raised if the queue of the proxy has changed.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		private readonly PpsEnvironment environment;
@@ -4835,10 +4843,10 @@ namespace TecWare.PPSn
 		public PpsProxyRequest GetProxyRequest(Uri uri, string displayName)
 			=> new PpsProxyRequest(this, displayName, new Uri(BaseUri, uri), uri, CurrentState == PpsEnvironmentState.Offline);
 
-		/// <summary>Get a offline object.</summary>
-		/// <param name="request"></param>
-		/// <param name="task"></param>
-		/// <returns></returns>
+		/// <summary>Loads an item from offline cache.</summary>
+		/// <param name="request">Selects the item.</param>
+		/// <param name="task">Out: the Task returning the item.</param>
+		/// <returns>True if successfull.</returns>
 		protected internal virtual bool TryGetOfflineObject(WebRequest request, out IPpsProxyTask task)
 			=> masterData.TryGetOflineCacheFile(BaseUri.MakeRelativeUri(request.RequestUri), out task);
 		

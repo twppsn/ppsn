@@ -39,6 +39,11 @@ namespace TecWare.PPSn.UI
 		// ignore any property changed
 		event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged { add { } remove { } }
 
+		/// <summary>Command to execute Lua-Code on the current Environment</summary>
+		public readonly static RoutedUICommand ExecuteCommandCommand =
+			new RoutedUICommand("ExecuteCommand", "ExecuteCommand", typeof(PpsTracePane));
+
+
 		private readonly IPpsWindowPaneManager paneManager;
 		private readonly IPpsWindowPaneHost paneHost;
 		private readonly PpsUICommandCollection commands;
@@ -48,7 +53,7 @@ namespace TecWare.PPSn.UI
 		/// <summary>Trace pane constructor</summary>
 		/// <param name="paneManager"></param>
 		/// <param name="paneHost"></param>
-		public PpsTracePane(IPpsWindowPaneManager paneManager,IPpsWindowPaneHost paneHost)
+		public PpsTracePane(IPpsWindowPaneManager paneManager, IPpsWindowPaneHost paneHost)
 		{
 			this.paneManager = paneManager ?? throw new ArgumentNullException(nameof(paneManager));
 			this.paneHost = paneHost ?? throw new ArgumentNullException(nameof(paneHost));
@@ -66,6 +71,26 @@ namespace TecWare.PPSn.UI
 			//commands.AddButton("100:100", "CopySelected", CopySelectedTraceItemsCommand, "InZwischenable", "Kopiert alle markierten Einträge in die Zwischenablage.");
 
 			CommandBindings.Add(
+				new CommandBinding(ExecuteCommandCommand,
+					(sender, e) =>
+					{
+						try
+						{
+							var ret = Environment.DoChunk((string)e.Parameter, "DebugCommand", null);
+							if (String.IsNullOrEmpty(ret.ToString()))
+								Environment.Traces.AppendText(PpsTraceItemType.Debug, $"Command \"{(string)e.Parameter}\" executed without result.");
+							else
+								Environment.Traces.AppendText(PpsTraceItemType.Debug, $"Command \"{(string)e.Parameter}\" returned: \"{ret.ToString()}\".");
+						}
+						catch (Exception ex)
+						{
+							Environment.Traces.AppendException(ex, $"Command \"{(string)e.Parameter}\" threw an Exception.");
+						}
+					},
+					(sender, e)=>e.CanExecute=!String.IsNullOrWhiteSpace((string)e.Parameter)
+				)
+			);
+			CommandBindings.Add(
 				new CommandBinding(ApplicationCommands.Copy,
 					(sender, e) =>
 					{
@@ -76,7 +101,6 @@ namespace TecWare.PPSn.UI
 								&& grid.Children.Count > 0
 								&& grid.Children[0] is ListBox exc)
 							CopyToClipboard(exc.SelectedItem);
-
 						e.Handled = true;
 					},
 					(sender, e) => e.CanExecute = true
@@ -114,10 +138,21 @@ namespace TecWare.PPSn.UI
 											var file = new StreamWriter(openFileDialog.FileName);
 											foreach (var itm in list)
 											{
-												if (itm is PpsExceptionItem)
-													file.WriteLine($"{((dynamic)itm).Type};{((dynamic)itm).Stamp};\"{ExceptionFormatter.FormatPlainText(((PpsExceptionItem)itm).Exception)}\"");
+												if (itm is PpsExceptionItem pei)
+													file.WriteLine($"{pei.Type};{pei.Stamp};\"{ExceptionFormatter.FormatPlainText(pei.Exception)}\"");
 												else
 													file.WriteLine($"{((dynamic)itm).Type};{((dynamic)itm).Stamp};\"{((dynamic)itm).Message}\"");
+											}
+											foreach (var statistic in Environment.Statistics)
+											{
+												var en = statistic.History.GetEnumerator();
+												var historic = 0;
+												en.Reset();
+												while (en.MoveNext())
+												{
+													file.WriteLine($"{statistic.Name};{DateTime.Now.AddSeconds(historic)};{en.Current}");
+													historic--;
+												}
 											}
 											file.Close();
 										}
@@ -137,7 +172,7 @@ namespace TecWare.PPSn.UI
 
 		#region -- IPpsWindowPane members ---------------------------------------------
 
-		PpsWindowPaneCompareResult IPpsWindowPane.CompareArguments(LuaTable args) 
+		PpsWindowPaneCompareResult IPpsWindowPane.CompareArguments(LuaTable args)
 			=> PpsWindowPaneCompareResult.Same;
 
 		Task IPpsWindowPane.LoadAsync(LuaTable args)
@@ -166,7 +201,7 @@ namespace TecWare.PPSn.UI
 
 		private void CopyToClipboard(object item)
 			=> Clipboard.SetText(TraceToString(item)); // ToDo: enable Html/RichText/PlainText
-		
+
 		private string TraceToString(object item)
 		{
 			switch (item)

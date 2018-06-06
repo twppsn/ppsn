@@ -70,6 +70,7 @@ namespace TecWare.PPSn.Controls
 	/// <summary>Spezial Control to display data list</summary>
 	public class DataListControl : ListBox
 	{
+		/// <summary>Public constructor</summary>
 		public DataListControl()
 		{
 			// Create a virtual listbox

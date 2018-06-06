@@ -34,10 +34,15 @@ namespace TecWare.PPSn
 	/// <summary></summary>
 	public enum PpsTraceItemType
 	{
+		/// <summary>This TraceItem is only for internal debugging</summary>
 		Debug = 0,
+		/// <summary>This TraceItem is neutral</summary>
 		Information,
+		/// <summary>This TraceItem marks an recoverable error</summary>
 		Warning,
+		/// <summary>This TraceItem marks an event, which may reduce the useability</summary>
 		Fail,
+		/// <summary>This TraceItem shows an Exception</summary>
 		Exception
 	} // enum PpsTraceItemType
 
