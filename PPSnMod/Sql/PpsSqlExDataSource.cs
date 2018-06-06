@@ -19,9 +19,12 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
+using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -33,6 +36,7 @@ using TecWare.DE.Server;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
+using TecWare.PPSn.Stuff;
 
 namespace TecWare.PPSn.Server.Sql
 {
@@ -884,7 +888,7 @@ namespace TecWare.PPSn.Server.Sql
 						foreach (var p in parameterMapping)
 						{
 							var value = args?.GetMemberValue(p.Item1);
-							p.Item2.Value = value == null ? (object)DBNull.Value : value;
+							p.Item2.Value = value ?? DBNull.Value;
 						}
 
 						using (var r = ExecuteReaderCommand(cmd, behavior))
@@ -912,6 +916,262 @@ namespace TecWare.PPSn.Server.Sql
 					} // for (args)
 				} // using cmd
 			} // func ExecuteInsertResult
+
+			#endregion
+
+			#region -- ExecuteCall ----------------------------------------------------------
+
+			private static int ReadStreamData(Stream src, byte[] buf)
+			{
+				var ofs = 0;
+				while (ofs < buf.Length)
+				{
+					var r = src.Read(buf, ofs, buf.Length - ofs);
+					if (r <= 0)
+						break;
+					ofs += r;
+				}
+				return ofs;
+			} // func ReadStreamData
+
+			private IEnumerable<IEnumerable<IDataRow>> ExecuteUpdateRevisionData(LuaTable parameter, PpsDataTransactionExecuteBehavior behavior)
+			{
+				// function to update revision
+				// UpdateRevision(long ObjkId, long RevId, long ParentId, long CreateUserId, [opt] date CreateDate, bool Deflate, bool IsDocumentText)
+
+				var args = GetArguments(parameter, 1, true);
+
+				// read arguments
+				var objkId = args.GetOptionalValue("ObjkId", -1L);
+				if (objkId < 0)
+					throw new ArgumentOutOfRangeException("ObjkId", objkId, "ObjkId is mising.");
+				var revId = args.GetOptionalValue("RevId", -1L);
+				var parentRevId = args.GetOptionalValue("ParentRevId", -1L);
+				var createUserId = args.GetOptionalValue("CreateUserId", 0L);
+				var createDate = args.GetOptionalValue("CreateDate", DateTime.Now);
+				var isDocumentText = args.GetOptionalValue("IsDocumentText", false);
+				var shouldDeflate = args.GetOptionalValue("Deflate", false);
+
+				var srcStream = (Stream)args.GetMemberValue("Content"); // get source stream
+
+				long documentId = -1;
+
+				// read first block
+				var buf = new byte[0x10000];
+				var readed = ReadStreamData(srcStream, buf);
+				var useFileStream = readed >= buf.Length;
+
+				if (useFileStream) // inline data in revision
+				{
+					#region -- insert into objf --
+					using (var cmd = CreateCommand(parameter, CommandType.Text))
+					{
+						cmd.CommandText = "INSERT INTO dbo.[ObjF] ([HashAlgo], [Hash], [Data]) "
+							+ "OUTPUT inserted.Id, inserted.Data.PathName(), GET_FILESTREAM_TRANSACTION_CONTEXT() "
+							+ "VALUES ('SHA2_256', 0x, 0x);";
+
+						using (var r = ExecuteReaderCommand(cmd, PpsDataTransactionExecuteBehavior.SingleRow))
+						{
+							if (r.Read())
+							{
+								// get destination file
+								documentId = r.GetInt64(0);
+								var path = r.GetString(1);
+								var context = r.GetSqlBytes(2).Buffer;
+
+								// pack destination stream
+								using (var dstFileStream = (Stream)new SqlFileStream(path, context, FileAccess.Write))
+								using (var dstHashStream = new HashStream(dstFileStream, HashStreamDirection.Write, false, SHA256.Create()))
+								{
+									var dst = shouldDeflate
+										? (Stream)new GZipStream(dstHashStream, CompressionMode.Compress, true)
+										: (Stream)dstHashStream;
+									try
+									{
+										// copy stream into file
+										dst.Write(buf, 0, readed);
+										srcStream.CopyTo(dst);
+									}
+									finally
+									{
+										dst.Flush();
+										dst.Dispose();
+									}
+
+									dstHashStream.Close();
+
+									args["HashValue"] = dstHashStream.HashSum;
+									args["HashAlgo"] = "SHA2_256";
+								}
+							}
+							else
+								throw new Exception("Insert FileStream failed.");
+						}
+					}
+					#endregion
+					#region -- update objf --
+					using (var cmd = CreateCommand(parameter, CommandType.Text))
+					{
+						cmd.CommandText = "UPDATE dbo.[ObjF] SET [HashAlgo] = @HashAlgo, [Hash] = @HashValue WHERE [Id] = @DocumentId;";
+						cmd.Parameters.Add("@HashValue", SqlDbType.VarBinary).Value = args["HashValue"];
+						cmd.Parameters.Add("@HashAlgo", SqlDbType.VarChar).Value = args["HashAlgo"];
+						cmd.Parameters.Add("@DocumentId", SqlDbType.BigInt).Value = documentId;
+
+						ExecuteReaderCommand(cmd, PpsDataTransactionExecuteBehavior.NoResult);
+					}
+					#endregion
+				}
+				else
+				{
+					#region -- build buf --
+					if (shouldDeflate) // deflate buffer
+					{
+						using (var dstMem = new MemoryStream())
+						using (var dst = new GZipStream(dstMem, CompressionMode.Compress))
+						{
+							dst.Write(buf, 0, readed);
+							dst.Flush();
+							dstMem.Flush();
+							buf = dstMem.ToArray();
+						}
+					}
+					else // create simple byte-array
+					{
+						var newBuf = new byte[readed];
+						buf.CopyTo(newBuf, 0);
+						buf = newBuf;
+					}
+					#endregion
+				}
+
+				// write table or update revision
+				using (var cmd = CreateCommand(parameter, CommandType.Text))
+				{
+					if (revId < 0) // always insert
+					{
+						cmd.CommandText = "INSERT INTO dbo.[ObjR] ([ObjkId], [ParentId], [IsDocumentText], [IsDocumentDeflate], [Document], [DocumentId], [DocumentLink], [CreateDate], [CreateUserId]) "
+							+ "OUTPUT inserted.[Id] "
+							+ " VALUES (@ObjkId, @ParentId, @IsDocumentText, @IsDocumentDeflate, @Document, @DocumentId, NULL, @CreateDate, @CreateUserId);";
+					}
+					else // merge this rev
+					{
+						cmd.CommandText = "MERGE INTO dbo.[ObjR] as dst"
+							+ "USING (SELECT @ObjkId, @RevId, @IsDocumentText, @IsDocumentDeflate, @Document, @DocumentId, @CreateDate, @CreateUserId) as src (NewObjkId, NewRevId, NewIsDocumentText, NewIsDocumentDeflate, NewDocument, NewDocumentId, NewCreateDate, NewCreateUserId) "
+							+ "ON (dst.ObjkId = src.NewObjkId AND dst.Id = src.NewRevId) "
+							+ "WHEN MATCHED THEN"
+							+ "UPDATE SET [IsDocumentText] = src.NewIsDocumentText, [IsDocumentDeflate] = src.NewIsDocumentDeflate, [Document] = src.NewDocument, [CreateDate] = src.NewCreateDate, [CreateUserId] = src.NewCreateUserId"
+							+ "WHEN NOT MATCHED THEN "
+							+ "INSERT ([ObjkId], [IsDocumentText], [IsDocumentDeflate], [Document], [DocumentId], [DocumentLink], [CreateDate], [CreateUserId]) "
+							+ "  VALUES (src.NewObjkId, src.NewIsDocumentText, src.NewIsDocumentDeflate, src.NewDocument, src.NewDocumentId, NULL, src.NewCreateDate, src.NewCreateUserId)"
+							+ "OUTPUT inserted.Id";
+
+						cmd.Parameters.Add("@RevId", SqlDbType.BigInt).Value = revId;
+					}
+
+					cmd.Parameters.Add("@ObjkId", SqlDbType.BigInt).Value = objkId;
+					cmd.Parameters.Add("@ParentId", SqlDbType.BigInt).Value = parentRevId <= 0 ? (object)DBNull.Value : parentRevId;
+					cmd.Parameters.Add("@IsDocumentText", SqlDbType.Bit).Value = isDocumentText;
+					cmd.Parameters.Add("@IsDocumentDeflate", SqlDbType.Bit).Value = shouldDeflate;
+					cmd.Parameters.Add("@Document", SqlDbType.VarBinary).Value = useFileStream ? (object)DBNull.Value : buf;
+					cmd.Parameters.Add("@DocumentId", SqlDbType.BigInt).Value = useFileStream ? documentId : (object)DBNull.Value;
+					cmd.Parameters.Add("@CreateDate", SqlDbType.DateTime2).Value = createDate;
+					cmd.Parameters.Add("@CreateUserId", SqlDbType.BigInt).Value = createUserId;
+
+					using (var r = ExecuteReaderCommand(cmd, PpsDataTransactionExecuteBehavior.SingleRow))
+					{
+						if (r.Read())
+						{
+							args["RevId"] = r.GetInt64(0);
+						}
+						else
+							throw new InvalidOperationException("Merge/Insert failed.");
+					}
+				}
+
+				yield break;
+			} // proc ExecuteUpdateRevisionData
+
+			#endregion
+
+			#region -- ExecuteCall ----------------------------------------------------------
+
+			private IEnumerable<IEnumerable<IDataRow>> ExecuteGetRevisionData(LuaTable parameter, PpsDataTransactionExecuteBehavior behavior)
+			{
+				// function to get revision data
+				// GetRevisionData(long ObjkId oder long RevId)
+
+				var args = GetArguments(parameter, 1, true);
+				var revId = args.GetOptionalValue("RevId", -1L);
+				var objkId = args.GetOptionalValue("ObjkId", -1L);
+
+				if (revId <= 0
+					&& objkId <= 0)
+					throw new ArgumentException("Invalid arguments.", "revId|objkId");
+
+				using (var cmd = CreateCommand(parameter, CommandType.Text))
+				{
+					cmd.CommandText = "SELECT [IsDocumentText], [IsDocumentDeflate], [Document], [DocumentId], [DocumentLink], [HashAlgo], [Hash], [Data].PathName(), GET_FILESTREAM_TRANSACTION_CONTEXT() "
+						+ (revId > 0
+							? "FROM dbo.[ObjR] r LEFT OUTER JOIN dbo.[ObjF] f ON (r.[DocumentId] = f.[Id]) WHERE r.[Id] = @Id;"
+							: "FROM dbo.[ObjK] o INNER JOIN dbo.[ObjR] r ON (o.HeadRevId = r.[Id]) LEFT OUTER JOIN dbo.[ObjF] f ON (r.[DocumentId] = f.[Id]) WHERE o.[Id] = @Id;"
+						);
+
+					cmd.Parameters.Add("@Id", SqlDbType.BigInt).Value = revId > 0 ? revId : objkId;
+
+					using (var r = ExecuteReaderCommand(cmd, PpsDataTransactionExecuteBehavior.SingleRow))
+					{
+						if (!r.Read())
+							yield break;
+
+						var hashAlgo = r.IsDBNull(5) ? null : r.GetString(5);
+						var hashValue = r.IsDBNull(6) ? null : r.GetSqlBytes(6).Buffer;
+
+						// convert stream
+						var isDocumentDeflated = r.GetBoolean(1);
+						Stream src;
+						if (!r.IsDBNull(7)) // file stream
+						{
+							src = new SqlFileStream(r.GetString(7), r.GetSqlBytes(8).Buffer, FileAccess.Read);
+						}
+						else if (!r.IsDBNull(2)) // inline content
+						{
+							src = r.GetSqlBytes(2).Stream;
+						}
+						else if (!r.IsDBNull(3)) // linked content
+						{
+							src = new FileStream(r.GetString(3), FileMode.Open, FileAccess.Read);
+						}
+						else // no content
+						{
+							src = null;
+						}
+
+						if (src != null && isDocumentDeflated)
+							src = new GZipStream(src, CompressionMode.Decompress, false);
+
+						// return result
+						yield return new IDataRow[]
+						{
+							new SimpleDataRow(
+								new object[]
+								{
+									r.GetBoolean(0),
+									src,
+									hashAlgo,
+									hashValue
+								},
+								new SimpleDataColumn[]
+								{
+									new SimpleDataColumn("IsDocumentText", typeof(bool)),
+									new SimpleDataColumn("Document", typeof(Stream)),
+									new SimpleDataColumn("HashAlgo", typeof(string)),
+									new SimpleDataColumn("Hash", typeof(byte[]))
+								}
+							)
+						};
+					}
+				}
+			} // proc ExecuteGetRevisionData
 
 			#endregion
 
@@ -1773,7 +2033,14 @@ namespace TecWare.PPSn.Server.Sql
 			{
 				string name;
 				if ((name = (string)parameter["execute"]) != null)
-					return ExecuteCall(parameter, name, behavior);
+				{
+					if (name == "sys.UpdateRevisionData")
+						return ExecuteUpdateRevisionData(parameter, behavior);
+					else if (name == "sys.GetRevisionData")
+						return ExecuteGetRevisionData(parameter, behavior);
+					else
+						return ExecuteCall(parameter, name, behavior);
+				}
 				else if ((name = (string)parameter["insert"]) != null)
 					return ExecuteInsert(parameter, name, behavior);
 				else if ((name = (string)parameter["update"]) != null)
@@ -1791,7 +2058,7 @@ namespace TecWare.PPSn.Server.Sql
 			} // func ExecuteResult
 
 			#endregion
-			
+
 			public PpsSqlExDataSource SqlDataSource => (PpsSqlExDataSource)base.DataSource;
 			public SqlTransaction InternalTransaction => transaction;
 		} // class SqlDataTransaction

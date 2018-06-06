@@ -20,14 +20,14 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server
 {
-	#region -- class PpsAttachmentAccess ------------------------------------------------
+	#region -- class PpsAttachmentAccess ----------------------------------------------
 
 	/// <summary>Abstract class for attachment access over the api.</summary>
 	public abstract class PpsAttachmentAccess : IDisposable
 	{
 		private bool isDisposed = false;
 
-		#region -- Ctor/Dtor ------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
 		public PpsAttachmentAccess()
@@ -58,10 +58,6 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		/// <summary>Copy the data.</summary>
-		/// <param name="dst"></param>
-		public abstract void CopyTo(Stream dst);
-
 		/// <summary>Get the data stream of the object.</summary>
 		/// <returns></returns>
 		public abstract Stream GetStream();
@@ -69,17 +65,16 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
-	#region -- class PpsAttachmentItem --------------------------------------------------
+	#region -- class PpsAttachmentItem ------------------------------------------------
 
 	/// <summary>Save a binary object on to the server.</summary>
 	public sealed class PpsAttachmentItem : PpsObjectItem<PpsAttachmentAccess>
 	{
-		#region -- class PpsStreamAttachmentAccess --------------------------------------
+		#region -- class PpsStreamAttachmentAccess ------------------------------------
 
 		private sealed class PpsStreamAttachmentAccess : PpsAttachmentAccess
 		{
 			private readonly Stream stream;
-			private MemoryStream mStream;
 
 			public PpsStreamAttachmentAccess(Stream stream)
 			{
@@ -91,32 +86,16 @@ namespace TecWare.PPSn.Server
 				base.Dispose(disposing);
 
 				if (disposing)
-				{
 					stream?.Dispose();
-					mStream?.Dispose();
-				}
 			} // proc Dispose
 
 			public override Stream GetStream()
 				=> new WindowStream(stream, 0, -1, false, true);
-
-			public override void CopyTo(Stream dst)
-			{
-				if (mStream == null)
-				{
-					mStream = new MemoryStream();
-					stream.Flush();
-					stream.CopyTo(mStream);
-					mStream.Flush();
-				}
-				mStream.Position = 0;
-				mStream.CopyTo(dst);
-			}
 		} // class PpsStreanAttachmentAccess
 
 		#endregion
 
-		#region -- class PpsObjectAttachmentAccess --------------------------------------
+		#region -- class PpsObjectAttachmentAccess ------------------------------------
 
 		private sealed class PpsObjectAttachmentAccess : PpsAttachmentAccess
 		{
@@ -126,12 +105,6 @@ namespace TecWare.PPSn.Server
 			{
 				this.obj = obj;
 			} // ctor
-
-			public override void CopyTo(Stream dst)
-			{
-				using (var src = GetStream())
-					src.CopyTo(dst);
-			} // proc CopyTo
 
 			public override Stream GetStream()
 				=> obj.GetDataStream();
@@ -155,9 +128,8 @@ namespace TecWare.PPSn.Server
 
 		/// <summary>Write the data to an stream.</summary>
 		/// <param name="data"></param>
-		/// <param name="dst"></param>
-		protected override void WriteDataToStream(PpsAttachmentAccess data, Stream dst)
-			=> data.CopyTo(dst);
+		protected override Stream GetStreamFromData(PpsAttachmentAccess data)
+			=> data.GetStream();
 
 		/// <summary>Pull data from the database.</summary>
 		/// <param name="obj"></param>
@@ -176,7 +148,7 @@ namespace TecWare.PPSn.Server
 		/// <param name="data"></param>
 		/// <param name="release"></param>
 		/// <returns></returns>
-		protected override bool LuaPush(PpsObjectAccess obj, object data, bool release)
+		protected override PpsPushDataResult LuaPush(PpsObjectAccess obj, object data, bool release)
 		{
 			switch (data)
 			{

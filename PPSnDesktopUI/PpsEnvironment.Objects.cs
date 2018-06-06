@@ -1750,6 +1750,8 @@ namespace TecWare.PPSn
 		/// <param name="dst"></param>
 		/// <returns></returns>
 		Task PushAsync(Stream dst);
+		///// <summary>Size of the data.</summary>
+		//long DataSize { get; }
 
 		/// <summary>Is the data changable</summary>
 		bool IsReadOnly { get; }
@@ -2796,8 +2798,12 @@ namespace TecWare.PPSn
 					if (PulledRevId > 0) // we do not send pulled rev Id in the header
 						request.Headers["ppsn-pulled-revId"] = PulledRevId.ChangeType<string>();
 
+					// the stream has its own format, set header properties for the payload.
+					request.Headers["ppsn-content-type"] = MimeType;
+					//request.Headers["ppsn-content-length"] = data.DataSize.ToString();
+
 					// write data
-					using (var dst = request.GetRequestStream())
+					using (var dst = await Task.Run(() => request.GetRequestStream(true)))
 					{
 						// write object structure
 						await dst.WriteAsync(headerData, 0, headerData.Length);
@@ -2822,8 +2828,12 @@ namespace TecWare.PPSn
 					// update object data
 					ReadObjectInfo(new XAttributesPropertyDictionary(xAnswer));
 
-					// repull the whole object, to get the revision from server (head)
-					await PullAsync();
+					// revision is returned and object is not changed on the server, only update the properties
+					var pulledRevId = xAnswer.GetAttribute("newRevId", -1L);
+					if (pulledRevId > 0)
+						SetValue(PpsStaticObjectColumnIndex.PulledRevId, pulledRevId, true);
+					else // repull the whole object, to get the revision from server (head)
+						await PullAsync();
 
 					// write local database
 					await UpdateLocalAsync();
@@ -3631,7 +3641,7 @@ namespace TecWare.PPSn
 		private const bool useId = false;
 		private const bool useGuid = true;
 
-		#region -- CreateObjectFilter -----------------------------------------------------
+		#region -- CreateObjectFilter -------------------------------------------------
 
 		#region -- class PpsObjectEnumerator -----------------------------------------------
 

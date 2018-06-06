@@ -486,9 +486,8 @@ namespace TecWare.PPSn.UI
 			public XamlNodeType NodeType;
 			public NamespaceDeclaration Namespace;
 			public XamlType Type;
-
-			public object Value;
 			public XamlMember Member;
+			public object Value;
 		} // struct NodeItem
 
 		#endregion

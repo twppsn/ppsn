@@ -228,7 +228,7 @@ namespace TecWare.PPSn.UI
 		/// <param name="arguments"></param>
 		/// <returns></returns>
 		public static bool EqualPane(this IPpsWindowPane pane, Type paneType, LuaTable arguments)
-			=> paneType == pane.GetType() && pane.CompareArguments(arguments ?? new LuaTable()) == PpsWindowPaneCompareResult.Same;
+			=> pane != null && paneType == pane.GetType() && pane.CompareArguments(arguments ?? new LuaTable()) == PpsWindowPaneCompareResult.Same;
 
 		/// <summary></summary>
 		/// <param name="pane"></param>

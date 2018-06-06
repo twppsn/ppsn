@@ -30,27 +30,32 @@ using TecWare.PPSn.Server.Wpf;
 
 namespace TecWare.PPSn.Server
 {
-	#region -- class PpsDocumentItem ----------------------------------------------------
+	#region -- class PpsDocumentItem --------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Document (DataSet) config item, for push and pull requests.</summary>
 	public sealed class PpsDocumentItem : PpsObjectItem<PpsDataSetServer>, IWpfClientApplicationFileProvider
 	{
+#pragma warning disable IDE1006 // Naming Styles
 		private const string LuaOnBeforePush = "OnBeforePush";
 		private const string LuaOnAfterPush = "OnAfterPush";
 		private const string LuaOnCreateRevision = "OnCreateRevision";
 		private const string LuaOnAfterPull = "OnAfterPull";
+#pragma warning restore IDE1006 // Naming Styles
 
-		private PpsDataSetServerDefinition datasetDefinition = null;
 		private ILuaAttachedScript[] currentAttachedScripts = null;
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="sp"></param>
+		/// <param name="name"></param>
 		public PpsDocumentItem(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="config"></param>
 		protected override void OnBeginReadConfiguration(IDEConfigLoading config)
 		{
 			base.OnBeginReadConfiguration(config);
@@ -63,9 +68,11 @@ namespace TecWare.PPSn.Server
 			}
 		} // proc OnBeginReadConfiguration
 
+		/// <summary></summary>
+		/// <param name="config"></param>
 		protected override void OnEndReadConfiguration(IDEConfigLoading config)
 		{
-			if (datasetDefinition == null)
+			if (DataSetDefinition == null)
 				Application.RegisterInitializationTask(12000, "Bind documents", BindDataSetDefinitonAsync);
 
 			base.OnEndReadConfiguration(config);
@@ -73,49 +80,64 @@ namespace TecWare.PPSn.Server
 
 		private async Task BindDataSetDefinitonAsync()
 		{
-			datasetDefinition = Application.GetDataSetDefinition(Config.GetAttribute("dataset", String.Empty));
-			if (!datasetDefinition.IsInitialized) // initialize dataset functionality
-				await datasetDefinition.InitializeAsync();
+			DataSetDefinition = Application.GetDataSetDefinition(Config.GetAttribute("dataset", String.Empty));
+			if (!DataSetDefinition.IsInitialized) // initialize dataset functionality
+				await DataSetDefinition.InitializeAsync();
 
 			// prepare scripts for the the current node
 			var luaEngine = this.GetService<IDELuaEngine>(true);
 
 			var list = new List<ILuaAttachedScript>();
-			foreach (var scriptId in datasetDefinition.ServerScripts)
+			foreach (var scriptId in DataSetDefinition.ServerScripts)
 				list.Add(luaEngine.AttachScript(scriptId, this, true));
 			currentAttachedScripts = list.ToArray();
 		} // proc BindDataSetDefinitonAsync
 
 		#endregion
 
-		#region -- Push/Pull --------------------------------------------------------------
+		#region -- Push/Pull ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="data"></param>
+		/// <returns>Always <c>true.</c></returns>
 		protected override bool IsDataRevision(PpsDataSetServer data)
 			=> true;
 
-		protected override void WriteDataToStream(PpsDataSetServer data, Stream dst)
+		/// <summary>Write content of the dataset to the output stream.</summary>
+		/// <param name="data"></param>
+		protected override Stream GetStreamFromData(PpsDataSetServer data)
 		{
+			using (var dst = new MemoryStream())
 			using (var xml = XmlWriter.Create(dst, Procs.XmlWriterSettings))
 			{
 				xml.WriteStartDocument();
 				data.Write(xml);
 				xml.WriteEndDocument();
+
+				xml.Flush();
+				return new MemoryStream(dst.ToArray(), false);
 			}
 		} // proc WriteDataToStream
 
+		/// <summary>Parse dataset from the input stream.</summary>
+		/// <param name="src"></param>
+		/// <returns></returns>
 		protected override PpsDataSetServer GetDataFromStream(Stream src)
 		{
-			var data = (PpsDataSetServer)datasetDefinition.CreateDataSet();
+			var data = (PpsDataSetServer)DataSetDefinition.CreateDataSet();
 			using (var xml = XmlReader.Create(src, Procs.XmlReaderSettings))
 				data.Read(XDocument.Load(xml).Root);
 			return data;
 		} // func GetDataFromStream
 
+		/// <summary>Pull dataset from the object.</summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
 		protected override PpsDataSetServer PullData(PpsObjectAccess obj)
 		{
 			// get the head or given revision
 			// create the dataset
-			var data = (PpsDataSetServer)datasetDefinition.CreateDataSet();
+			var data = (PpsDataSetServer)DataSetDefinition.CreateDataSet();
 			if (obj.HeadRevId > 0)
 			{
 				var xDocumentData = XDocument.Parse(obj.GetText());
@@ -136,7 +158,12 @@ namespace TecWare.PPSn.Server
 			return data;
 		} // func PullData
 
-		protected override bool PushData(PpsObjectAccess obj, PpsDataSetServer data, bool release)
+		/// <summary>Push dataset to the object.</summary>
+		/// <param name="obj"></param>
+		/// <param name="data"></param>
+		/// <param name="release"></param>
+		/// <returns></returns>
+		protected override PpsPushDataResult PushData(PpsObjectAccess obj, PpsDataSetServer data, bool release)
 		{
 			// fire triggers
 			CallTableMethodsWithExceptions(LuaOnBeforePush, obj, data);
@@ -150,7 +177,7 @@ namespace TecWare.PPSn.Server
 			{
 				var headRevId = obj.HeadRevId;
 				if (headRevId > obj.RevId)
-					return false; // head revision is newer than pulled revision -> return this fact
+					return PpsPushDataResult.PulledRevIsToOld; // head revision is newer than pulled revision -> return this fact
 				else if (headRevId < obj.RevId)
 					throw new ArgumentException($"Push failed. Pulled revision is greater than head revision.");
 			}
@@ -196,10 +223,10 @@ namespace TecWare.PPSn.Server
 			CallTableMethodsWithExceptions(LuaOnAfterPush, obj, data);
 
 			obj[nameof(PpsObjectAccess.MimeType)] = "text/dataset";
-			obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
+			obj.UpdateData(GetStreamFromData(data));
 			obj.Update(PpsObjectUpdateFlag.All);
 
-			return true;
+			return PpsPushDataResult.PushedAndChanged;
 		} // func PushData
 
 		#endregion
@@ -212,17 +239,17 @@ namespace TecWare.PPSn.Server
 			throw new NotImplementedException();
 		} // proc HttpExecuteAction
 
-		#region -- Application Files ----------------------------------------------------
+		#region -- Application Files --------------------------------------------------
 
 		IEnumerable<PpsApplicationFileItem> IWpfClientApplicationFileProvider.GetApplicationFiles()
 		{
 			var baseUri = Name + '/';
 
 			// schema
-			yield return new PpsApplicationFileItem(baseUri + "schema.xml", -1, datasetDefinition.ConfigurationStamp);
+			yield return new PpsApplicationFileItem(baseUri + "schema.xml", -1, DataSetDefinition.ConfigurationStamp);
 
 			// related client scripts
-			foreach (var c in datasetDefinition.ClientScripts)
+			foreach (var c in DataSetDefinition.ClientScripts)
 			{
 				var fi = new FileInfo(c);
 				if (fi.Exists)
@@ -232,7 +259,7 @@ namespace TecWare.PPSn.Server
 
 		private bool GetDatasetResourceFile(string relativeSubPath, out FileInfo fi)
 		{
-			foreach (var c in datasetDefinition.ClientScripts)
+			foreach (var c in DataSetDefinition.ClientScripts)
 			{
 				if (String.Compare(relativeSubPath, Path.GetFileName(c), StringComparison.OrdinalIgnoreCase) == 0)
 				{
@@ -244,11 +271,14 @@ namespace TecWare.PPSn.Server
 			return false;
 		} // func GetDatasetResourceFile
 
+		/// <summary>Process webrequest, return schema.xml and resource files (client scripts).</summary>
+		/// <param name="r"></param>
+		/// <returns></returns>
 		protected override async Task<bool> OnProcessRequestAsync(IDEWebRequestScope r)
 		{
 			if (r.RelativeSubPath == "schema.xml")
 			{
-				await Task.Run(() => datasetDefinition.WriteToDEContext(r, ConfigPath + "/schema.xml"));
+				await Task.Run(() => DataSetDefinition.WriteToDEContext(r, ConfigPath + "/schema.xml"));
 				return true;
 			}
 			else if (GetDatasetResourceFile(r.RelativeSubPath, out var fi))
@@ -261,6 +291,9 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		/// <summary>Extent method dictionaries.</summary>
+		/// <param name="key"></param>
+		/// <returns></returns>
 		protected override bool IsMemberTableMethod(string key)
 		{
 			switch (key)
@@ -275,9 +308,11 @@ namespace TecWare.PPSn.Server
 			}
 		} // func IsMemberTableMethod
 
+		/// <summary>Access the dataset definition.</summary>
 		[LuaMember]
-		public PpsDataSetServerDefinition DataSetDefinition => datasetDefinition;
+		public PpsDataSetServerDefinition DataSetDefinition { get; private set; } = null;
 
+		/// <summary>Schema for the dataset.</summary>
 		public override string ObjectSource => Name + "/schema.xml";
 		
 		private static void CheckHeadObjectId(PpsObjectAccess obj, PpsDataSetServer dataset)

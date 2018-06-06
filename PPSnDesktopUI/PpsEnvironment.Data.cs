@@ -2067,6 +2067,9 @@ namespace TecWare.PPSn
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public PpsMasterDataTable GetTable(PpsDataTableDefinition tableDefinition)
 		{
+			if (tableDefinition == null)
+				throw new ArgumentNullException(nameof(tableDefinition));
+
 			if (!schema.TableDefinitions.Contains(tableDefinition))
 				throw new ArgumentOutOfRangeException(nameof(tableDefinition));
 
@@ -3445,21 +3448,28 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- enum PpsLoadState --------------------------------------------------------
+	#region -- enum PpsLoadState ------------------------------------------------------
 
+	/// <summary>State of the pps upload task.</summary>
 	public enum PpsLoadState
 	{
+		/// <summary>Waits to processed.</summary>
 		Pending,
+		/// <summary>Request started.</summary>
 		Started,
+		/// <summary>Request finished.</summary>
 		Finished,
+		/// <summary>Request canceled.</summary>
 		Canceled,
+		/// <summary>Request failed with exception</summary>
 		Failed
 	} // enum PpsWebLoadState
 
 	#endregion
 
-	#region -- interface IPpsProxyTask --------------------------------------------------
+	#region -- interface IPpsOfflineItemData ------------------------------------------
 
+	/// <summary>For internal use, to give access to the offline data.</summary>
 	[EditorBrowsable(EditorBrowsableState.Advanced)]
 	public interface IPpsOfflineItemData : IPropertyReadOnlyDictionary
 	{
@@ -3473,10 +3483,15 @@ namespace TecWare.PPSn
 		DateTime LastModification { get; }
 	} // interface IPpsOfflineItemData
 
+	#endregion
+
+	#region -- interface IPpsProxyTask ------------------------------------------------
+
+	/// <summary>Access to a queued proxy request.</summary>
 	public interface IPpsProxyTask : INotifyPropertyChanged
 	{
-		/// <summary></summary>
-		/// <param name="response"></param>
+		/// <summary>Append a function to change the default response behaviour.</summary>
+		/// <param name="response">Request response.</param>
 		void AppendResponseSink(Action<WebResponse> response);
 
 		/// <summary>Processes the request in the forground (change priority to first).</summary>
@@ -3487,6 +3502,7 @@ namespace TecWare.PPSn
 
 		/// <summary>State of the download progress</summary>
 		PpsLoadState State { get; }
+
 		/// <summary>Download state of the in percent.</summary>
 		int Progress { get; }
 		/// <summary>Displayname that will be shown in the ui.</summary>
@@ -3495,11 +3511,13 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsDummyProxyHelper ------------------------------------------------
+	#region -- class PpsDummyProxyHelper ----------------------------------------------
 
-	public static class PpsDummyProxyHelper
+	internal static class PpsDummyProxyHelper
 	{
-		private sealed class PpsDummyProxyTask : IPpsProxyTask
+		#region -- class PpsDummyProxyTask ----------------------------------------------
+
+		internal sealed class PpsDummyProxyTask : IPpsProxyTask
 		{
 			event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged { add { } remove { } }
 
@@ -3534,6 +3552,12 @@ namespace TecWare.PPSn
 			public string DisplayName => PpsWebProxy.GetDisplayNameFromRequest(request);
 		} // class PpsDummyProxyTask
 
+		#endregion
+
+		/// <summary>Wrap a webrequest to an proxy task.</summary>
+		/// <param name="request"></param>
+		/// <param name="priority"></param>
+		/// <returns></returns>
 		public static IPpsProxyTask GetProxyTask(this WebRequest request, PpsLoadPriority priority = PpsLoadPriority.Default)
 		   => request is PpsProxyRequest p
 			   ? p.Enqueue(priority)
@@ -3542,10 +3566,10 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsProxyRequest ----------------------------------------------------
+	#region -- class PpsProxyRequest --------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Proxy request to implementation, that is able to switch between offline 
+	/// cache and online mode.</summary>
 	public sealed class PpsProxyRequest : WebRequest, IEquatable<PpsProxyRequest>
 	{
 		private readonly PpsEnvironment environment; // owner, that retrieves a resource
@@ -3559,8 +3583,8 @@ namespace TecWare.PPSn
 		private readonly Func<Stream> procGetRequestStream; // async
 
 		private WebHeaderCollection headers;
-		private string path;
-		private NameValueCollection arguments;
+		private readonly string path;
+		private readonly NameValueCollection arguments;
 
 		private string method = HttpMethod.Get.Method;
 		private string contentType = null;
@@ -3568,12 +3592,13 @@ namespace TecWare.PPSn
 
 		private Func<IPpsOfflineItemData, Stream> updateOfflineCache = null;
 		private MemoryStream requestStream = null;
+		private HttpWebRequest onlineRequest = null;
 
-		#region -- Ctor/Dtor ------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		internal PpsProxyRequest(PpsEnvironment environment, Uri originalUri, Uri relativeUri, bool offlineOnly)
 		{
-			this.environment = environment;
+			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
 			this.originalUri = originalUri ?? throw new ArgumentNullException(nameof(originalUri));
 			this.relativeUri = relativeUri ?? throw new ArgumentNullException(nameof(relativeUri));
 			this.offlineOnly = offlineOnly;
@@ -3589,15 +3614,21 @@ namespace TecWare.PPSn
 			(path, arguments) = relativeUri.ParseUri();
 		} // ctor
 
+		/// <summary>Check the relative uri.</summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
 		public bool Equals(PpsProxyRequest other)
 			=> Equals(other.relativeUri);
 
+		/// <summary>Check the relative uri.</summary>
+		/// <param name="otherUri"></param>
+		/// <returns></returns>
 		public bool Equals(Uri otherUri)
 			=> WebRequestHelper.EqualUri(relativeUri, otherUri);
 
 		#endregion
 
-		#region -- GetResponse ----------------------------------------------------------
+		#region -- GetResponse --------------------------------------------------------
 
 		/// <summary>Handles the request async</summary>
 		/// <param name="callback"></param>
@@ -3617,11 +3648,11 @@ namespace TecWare.PPSn
 		public override WebResponse EndGetResponse(IAsyncResult asyncResult)
 			=> procGetResponse.EndInvoke(asyncResult);
 
-		/// <summary></summary>
+		/// <summary>Get the response and process the request now.</summary>
 		/// <returns></returns>
 		public override WebResponse GetResponse()
 		{
-			if (HasRequestData) // we have request data, execute always online
+			if (UseOnlineRequest) // we have request data, execute always online
 				return InternalGetResponse();
 			else if (environment.TryGetOfflineObject(this, out var task)) // check if the object is local available, cached
 				return task.ForegroundAsync().AwaitTask(); // block thread
@@ -3629,9 +3660,11 @@ namespace TecWare.PPSn
 				return InternalGetResponse();
 		} // func GetResponse
 
+		/// <summary>Get the response and process the request now.</summary>
+		/// <returns></returns>
 		public override Task<WebResponse> GetResponseAsync()
 		{
-			if (HasRequestData) // we have request data, execute always online
+			if (UseOnlineRequest) // we have request data, execute always online
 				return InternalGetResponseAsync();
 			else if (environment.TryGetOfflineObject(this, out var task)) // check if the object is local available, cached
 				return task.ForegroundAsync();
@@ -3639,21 +3672,30 @@ namespace TecWare.PPSn
 				return InternalGetResponseAsync();
 		} // func GetResponse
 
+		/// <summary>Enqueue the request. And process it later.</summary>
+		/// <param name="priority"></param>
+		/// <param name="forceOnline"></param>
+		/// <returns></returns>
 		public IPpsProxyTask Enqueue(PpsLoadPriority priority, bool forceOnline = false)
 		{
 			// check for offline item
 			if (!forceOnline && updateOfflineCache == null && environment.TryGetOfflineObject(this, out var task1))
 				return task1;
-			else if (!HasRequestData && updateOfflineCache == null && environment.WebProxy.TryGet(this, out var task2)) // check for already existing task
+			else if (!UseOnlineRequest && updateOfflineCache == null && environment.WebProxy.TryGet(this, out var task2)) // check for already existing task
 				return task2;
 			else // enqueue the new task
 				return environment.WebProxy.Append(this, priority);
 		} // func Enqueue
 
-		private WebRequest GetOnlineRequest()
+		private void CreateOnlineRequest()
 		{
-			var onlineRequest = environment.CreateOnlineRequest(relativeUri);
+			if (onlineRequest != null)
+				throw new InvalidOperationException("Request always created.");
 
+			// create new online request
+			onlineRequest = environment.CreateOnlineRequest(relativeUri);
+
+			// copy basic request informationen
 			onlineRequest.Method = method;
 			if (contentLength > 0)
 				onlineRequest.ContentLength = contentLength;
@@ -3668,47 +3710,100 @@ namespace TecWare.PPSn
 					onlineRequest.Headers[k] = headers[k];
 			}
 
-			// request data
-			if (HasRequestData)
+			// request data, cached POST-Data
+			if (requestStream != null)
 			{
 				using (var dst = onlineRequest.GetRequestStream())
 				{
-					RequestData.Position = 0;
-					RequestData.CopyTo(dst);
+					requestStream.Position = 0;
+					requestStream.CopyTo(dst);
 				}
 			}
-
-			return onlineRequest;
-		} // func GetOnlineRequest
+		} // func CreateOnlineRequest
 
 		internal WebResponse InternalGetResponse()
-			=> GetOnlineRequest().GetResponse();
+		{
+			if (onlineRequest == null)
+				CreateOnlineRequest();
+			return onlineRequest.GetResponse();
+		} // func InternalGetResponse
 
 		private Task<WebResponse> InternalGetResponseAsync()
-			=> GetOnlineRequest().GetResponseAsync();
+		{
+			if (onlineRequest == null)
+				CreateOnlineRequest();
+			return onlineRequest.GetResponseAsync();
+		} // func InternalGetResponseAsync
+
+		private bool UseOnlineRequest
+			=> requestStream != null || onlineRequest != null;
 
 		#endregion
 
-		#region -- GetRequestStream -----------------------------------------------------
+		#region -- GetRequestStream ---------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="callback"></param>
+		/// <param name="state"></param>
+		/// <returns></returns>
 		public override IAsyncResult BeginGetRequestStream(AsyncCallback callback, object state)
 			=> procGetRequestStream.BeginInvoke(callback, state);
 
+		/// <summary></summary>
+		/// <param name="asyncResult"></param>
+		/// <returns></returns>
 		public override Stream EndGetRequestStream(IAsyncResult asyncResult)
 			=> procGetRequestStream.EndInvoke(asyncResult);
 
+		/// <summary>Create the request online, and now to support request streams.</summary>
+		/// <returns></returns>
 		public override Stream GetRequestStream()
+			=> GetRequestStream(false);
+
+		/// <summary>Create the request online, and now to support request streams.</summary>
+		/// <param name="sendChunked"><c>true</c>, for large data, the request is executed within the GetRequestStream and the inner request stream returned.</param>
+		/// <returns></returns>
+		public Stream GetRequestStream(bool sendChunked)
 		{
 			if (offlineOnly)
 				throw new ArgumentException("Request data is not allowed in offline mode.");
+			if (onlineRequest != null || requestStream != null)
+				throw new InvalidOperationException("GetResponse or GetRequestStream is already invoked.");
 
-			if (requestStream == null)
-				requestStream = new MemoryStream();
-			return new WindowStream(requestStream, 0, -1, true, true);
+			if (sendChunked)
+			{
+				CreateOnlineRequest();
+				if (onlineRequest.Method != HttpMethod.Post.Method
+					&& onlineRequest.Method != HttpMethod.Put.Method)
+					throw new ArgumentException("Only POST/PUT can use GetRequestStream in none buffering mode.");
+
+				// stream the PUT/POST
+				onlineRequest.SendChunked = true;
+				onlineRequest.AllowWriteStreamBuffering = true;
+
+				return onlineRequest.GetRequestStream();
+			}
+			else
+			{
+				if (requestStream == null)
+					requestStream = new MemoryStream();
+
+				// return a window stream with open end, that the memory stream is not closed.
+				return new WindowStream(requestStream, 0, -1, true, true);
+			}
 		} // func GetRequestStream
 
 		#endregion
 
+		/// <summary>Cancel the current request</summary>
+		public override void Abort()
+		{
+			aborted = true;
+			throw new NotImplementedException("todo:");
+		} // proc Abort
+
+		/// <summary>Internal use, method to update offline cache.</summary>
+		/// <param name="updateOfflineCache"></param>
 		[EditorBrowsable(EditorBrowsableState.Advanced)]
 		public void SetUpdateOfflineCache(Func<IPpsOfflineItemData, Stream> updateOfflineCache)
 		{
@@ -3718,46 +3813,48 @@ namespace TecWare.PPSn
 		internal Stream UpdateOfflineCache(IPpsOfflineItemData data)
 			=> updateOfflineCache?.Invoke(data) ?? data.Content;
 
-		/// <summary></summary>
-		internal bool HasRequestData => requestStream != null;
-		/// <summary></summary>
-		internal Stream RequestData => requestStream;
-
+		/// <summary>Request method</summary>
 		public override string Method { get => method; set => method = value; }
+		/// <summary>Content type of the request.</summary>
 		public override string ContentType { get => contentType; set => contentType = value; }
+		/// <summary>Content length, to send.</summary>
 		public override long ContentLength { get => contentLength; set => contentLength = value; }
-
+		
+		/// <summary>Environment access.</summary>
 		public PpsEnvironment Environment => environment;
 
+		/// <summary>Request uri.</summary>
 		public override Uri RequestUri => originalUri;
 
+		/// <summary>We do not use any proxy.</summary>
 		public override IWebProxy Proxy { get => null; set { } } // avoid NotImplementedExceptions
 
 		/// <summary>Arguments of the request</summary>
 		public NameValueCollection Arguments => arguments;
 		/// <summary>Relative path for the request.</summary>
 		public string Path => path;
+
 		/// <summary>Header</summary>
 		public override WebHeaderCollection Headers { get => headers ?? (headers = new WebHeaderCollection()); set => headers = value; }
 	} // class PpsProxyRequest
 
 	#endregion
 
-	#region -- class PpsWebProxy --------------------------------------------------------
+	#region -- class PpsWebProxy ------------------------------------------------------
 
+	/// <summary>Internal proxy to queue download and upload request.</summary>
 	public sealed class PpsWebProxy : IEnumerable<IPpsProxyTask>, INotifyCollectionChanged, IDisposable
 	{
-		#region -- class MemoryCacheStream ----------------------------------------------
+		#region -- class MemoryCacheStream --------------------------------------------
 
 		private sealed class MemoryCacheStream : Stream
 		{
-			private readonly long expectedLength;
 			private readonly MemoryStream nestedMemoryStream;
 
 			public MemoryCacheStream(long expectedLength)
 			{
-				this.expectedLength = expectedLength;
-				this.nestedMemoryStream = new MemoryStream(unchecked((int)(expectedLength > 0 ? expectedLength : 4096)));
+				ExpectedLength = expectedLength;
+				nestedMemoryStream = new MemoryStream(unchecked((int)(expectedLength > 0 ? expectedLength : 4096)));
 			} // ctor
 
 			public override void Flush()
@@ -3785,12 +3882,12 @@ namespace TecWare.PPSn
 			public override long Position { get => nestedMemoryStream.Position; set => nestedMemoryStream.Position = value; }
 			public override long Length => nestedMemoryStream.Length;
 
-			public long ExpectedLength => expectedLength;
+			public long ExpectedLength { get; }
 		} // class MemoryCacheStream
 
 		#endregion
 
-		#region -- class FileCacheStream ------------------------------------------------
+		#region -- class FileCacheStream ----------------------------------------------
 
 		private sealed class FileCacheStream : Stream, IInternalFileCacheStream
 		{
@@ -3802,9 +3899,9 @@ namespace TecWare.PPSn
 
 			public FileCacheStream(long expectedLength)
 			{
-				this.fileName = Path.GetTempFileName();
+				fileName = Path.GetTempFileName();
 				this.expectedLength = expectedLength;
-				this.nestedFileStream = new FileStream(fileName, FileMode.Create);
+				nestedFileStream = new FileStream(fileName, FileMode.Create);
 
 				if (expectedLength > 0)
 					nestedFileStream.SetLength(expectedLength);
@@ -3870,7 +3967,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class CacheResponseStream --------------------------------------------
+		#region -- class CacheResponseStream ------------------------------------------
 
 		private sealed class CacheResponseStream : Stream
 		{
@@ -3943,7 +4040,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class CacheResponseProxy ---------------------------------------------
+		#region -- class CacheResponseProxy -------------------------------------------
 
 		private sealed class CacheResponseProxy : WebResponse
 		{
@@ -3978,7 +4075,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- class WebLoadRequest -------------------------------------------------
+		#region -- class WebLoadRequest -----------------------------------------------
 
 		private sealed class WebLoadRequest : IPpsProxyTask
 		{
@@ -4028,11 +4125,11 @@ namespace TecWare.PPSn
 
 			public WebLoadRequest(PpsWebProxy manager, PpsLoadPriority priority, PpsProxyRequest request)
 			{
-				this.manager = manager;
+				this.manager = manager ?? throw new ArgumentNullException(nameof(manager));
 				this.priority = priority;
 				this.request = request;
 
-				this.task = new TaskCompletionSource<WebResponse>();
+				task = new TaskCompletionSource<WebResponse>();
 			} // ctor
 
 			public bool IsSameRequest(PpsProxyRequest request)
@@ -4190,11 +4287,12 @@ namespace TecWare.PPSn
 			public PpsLoadState State => currentState;
 			public PpsLoadPriority Priority => priority;
 			public int Progress => progress;
-			public string DisplayName => PpsWebProxy.GetDisplayNameFromRequest(request);
+			public string DisplayName => GetDisplayNameFromRequest(request);
 		} // class WebLoadRequest
 
 		#endregion
 
+		/// <summary>Proxy tasks changed.</summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;
 
 		private readonly PpsEnvironment environment;
@@ -4205,7 +4303,11 @@ namespace TecWare.PPSn
 		private readonly ManualResetEventAsync executeLoadIsRunning = new ManualResetEventAsync(false);
 		private readonly CancellationTokenSource disposed;
 
-		public PpsWebProxy(PpsEnvironment environment)
+		#region -- Ctor/Dtor ----------------------------------------------------------
+
+		/// <summary></summary>
+		/// <param name="environment"></param>
+		internal PpsWebProxy(PpsEnvironment environment)
 		{
 			this.disposed = new CancellationTokenSource();
 			this.environment = environment;
@@ -4220,6 +4322,8 @@ namespace TecWare.PPSn
 			disposed.Cancel();
 			executeLoadIsRunning.Set();
 		} // proc Dispose
+
+		#endregion
 
 		private void OnCollectionChanged()
 			=> CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -4342,6 +4446,10 @@ namespace TecWare.PPSn
 			}
 		} // proc AppendTask
 
+		/// <summary>Get proxy task from the proxy request.</summary>
+		/// <param name="request"></param>
+		/// <param name="task"></param>
+		/// <returns></returns>
 		internal bool TryGet(PpsProxyRequest request, out IPpsProxyTask task)
 		{
 			// check, request exists
@@ -4352,6 +4460,10 @@ namespace TecWare.PPSn
 			}
 		} // func TryGet
 
+		/// <summary>Get a proxy task from the request uri.</summary>
+		/// <param name="requestUri"></param>
+		/// <param name="task"></param>
+		/// <returns></returns>
 		public bool TryGet(Uri requestUri, out IPpsProxyTask task)
 		{
 			// check, request exists
@@ -4362,6 +4474,10 @@ namespace TecWare.PPSn
 			}
 		} // func TryGet
 
+		/// <summary>Append a new request to the download/upload list.</summary>
+		/// <param name="request"></param>
+		/// <param name="priority"></param>
+		/// <returns></returns>
 		internal IPpsProxyTask Append(PpsProxyRequest request, PpsLoadPriority priority)
 			=> AppendTask(new WebLoadRequest(this, priority, request));
 
@@ -4377,7 +4493,7 @@ namespace TecWare.PPSn
 	{
 		private const string temporaryTablePrefix = "old_";
 
-		#region -- class PpsWebRequestCreate --------------------------------------------
+		#region -- class PpsWebRequestCreate ------------------------------------------
 
 		private class PpsWebRequestCreate : IWebRequestCreate
 		{
@@ -4634,7 +4750,7 @@ namespace TecWare.PPSn
 
 		#endregion
 
-		#region -- Web Request ----------------------------------------------------------
+		#region -- Web Request --------------------------------------------------------
 
 		/// <summary>Core function that gets called on a request.</summary>
 		/// <param name="uri"></param>
@@ -4681,7 +4797,7 @@ namespace TecWare.PPSn
 		/// <summary>Is used only internal to create the real request.</summary>
 		/// <param name="relativeUri"></param>
 		/// <returns></returns>
-		internal WebRequest CreateOnlineRequest(Uri relativeUri)
+		internal HttpWebRequest CreateOnlineRequest(Uri relativeUri)
 		{
 			if (relativeUri.IsAbsoluteUri)
 				throw new ArgumentException("Uri must be relative.", nameof(relativeUri));
@@ -4690,10 +4806,8 @@ namespace TecWare.PPSn
 
 			// build the remote request with absolute uri and credentials
 			var absoluteUri = new Uri(info.Uri, relativeUri);
-			var request = WebRequest.Create(absoluteUri);
+			var request = WebRequest.CreateHttp(absoluteUri);
 			request.Credentials = UserCredential.Wrap(userInfo); // override the current credentials
-			request.Timeout = 7200000;
-			((HttpWebRequest)request).ReadWriteTimeout = 7200000;
 			request.Headers.Add("des-multiple-authentifications", "true");
 
 			if (!absoluteUri.ToString().EndsWith("/?action=mdata"))
@@ -4702,21 +4816,25 @@ namespace TecWare.PPSn
 			return request;
 		} // func CreateOnlineRequest
 
+		/// <summary>Get a proxy request for the request path.</summary>
+		/// <param name="path"></param>
+		/// <returns></returns>
 		public PpsProxyRequest GetProxyRequest(string path)
 			=> GetProxyRequest(new Uri(path, UriKind.Relative));
 
-		/// <summary>Starts a request through the proxy.</summary>
+		/// <summary>Get a proxy request for the request path.</summary>
 		/// <param name="uri"></param>
-		/// <param name="priority"></param>
 		/// <returns></returns>
 		public PpsProxyRequest GetProxyRequest(Uri uri)
 			=> new PpsProxyRequest(this, new Uri(BaseUri, uri), uri, CurrentState == PpsEnvironmentState.Offline);
 
+		/// <summary>Get a offline object.</summary>
+		/// <param name="request"></param>
+		/// <param name="task"></param>
+		/// <returns></returns>
 		protected internal virtual bool TryGetOfflineObject(WebRequest request, out IPpsProxyTask task)
-		{
-			return masterData.TryGetOflineCacheFile(BaseUri.MakeRelativeUri(request.RequestUri), out task);
-		} // func TryGetOfflineObject
-
+			=> masterData.TryGetOflineCacheFile(BaseUri.MakeRelativeUri(request.RequestUri), out task);
+		
 		#endregion
 
 		#region -- GetViewData ----------------------------------------------------------

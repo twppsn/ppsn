@@ -636,7 +636,7 @@ namespace TecWare.PPSn.UI
 
 		#endregion
 
-		#region -- class LuaXamlReader ------------------------------------------------
+		#region -- class LuaXamlCollectionReader --------------------------------------
 
 		private class LuaXamlCollectionReader : System.Xaml.XamlReader
 		{

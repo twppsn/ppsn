@@ -533,27 +533,36 @@ namespace TecWare.PPSn.Server
 
 		#region -- Update Revision Data -----------------------------------------------
 
-		private void SetDocumentArguments(LuaTable args, Action<Stream> copyData, long contentLength, bool deflateStream)
+		private static Stream ConvertContentToStream(object content, ref bool shouldText, ref bool shouldDeflate)
 		{
-			args["IsDocumentDeflate"] = deflateStream;
-
-			using (var dstMemory = new MemoryStream())
+			switch(content)
 			{
-				if (deflateStream)
-				{
-					using (var dstDeflate = new GZipStream(dstMemory, CompressionMode.Compress))
-						copyData(dstDeflate);
-				}
-				else
-					copyData(dstMemory);
-				dstMemory.Flush();
+				case string s:
+					shouldText = true;
+					shouldDeflate = shouldDeflate || s.Length > 1024;
+					return ConvertContentToStream(Encoding.Unicode.GetBytes(s), ref shouldText, ref shouldDeflate);
+				case StringBuilder sb:
+					return ConvertContentToStream(sb.ToString(), ref shouldText, ref shouldDeflate);
+				case byte[] data:
+					return new MemoryStream(data, false);
+				case Stream copyStream:
+					if (shouldDeflate && copyStream is GZipStream)
+						shouldDeflate = false;
+					return copyStream;
 
-				args["Document"] = dstMemory.ToArray();
+				case null:
+					throw new ArgumentNullException("Document data is missing.");
+				default:
+					throw new ArgumentException("Document data format is unknown (only string, stream or byte[] allowed).");
 			}
-		} // proc SetDocumentArguments
+		} // func ConvertContentToStream
 
+		/// <summary>Persist content data in the database.</summary>
+		/// <param name="content">Content access (string, StringBuilder,byte[],Action[Stream] is allowed).</param>
+		/// <param name="changeHead">Change head revision field.</param>
+		/// <param name="forceReplace">Force a replace of an revision.</param>
 		[LuaMember]
-		public void UpdateData(object content, long contentLength = -1, bool changeHead = true, bool forceReplace = false)
+		public void UpdateData(object content, bool changeHead = true, bool forceReplace = false)
 		{
 			if (objectId < 0)
 				throw new ArgumentOutOfRangeException("Id", "Object Id is invalid.");
@@ -561,82 +570,42 @@ namespace TecWare.PPSn.Server
 			var args = new LuaTable
 			{
 				{ "ObjkId", objectId },
-
+				
 				{ "CreateUserId", DEScope.GetScopeService<IPpsPrivateDataContext>().UserId },
 				{ "CreateDate",  DateTime.Now }
 			};
 
+			// set revId's
+			// - if this object new, always create a new rev
+			// - exists this object, and there is a rev, create a new and link it via parentId
+			// - forceReplace, replaces the current rev
 			var insertNew = isRev.Value || (!forceReplace && revId > 0);
-			if (insertNew && revId > 0)
-				args["ParentId"] = revId;
+			if (insertNew)
+			{
+				if (revId > 0)
+					args["ParentRevId"] = revId;
+			}
+			else if (revId > 0)
+				args["RevId"] = revId;
 
 			// convert data
 			var shouldText = MimeType != null && MimeType.StartsWith("text/", StringComparison.OrdinalIgnoreCase);
 			var shouldDeflate = shouldText;
 
-			if (content != null)
-			{
-				switch (content)
-				{
-					case string s:
-						shouldText = true;
-						SetDocumentArguments(args, dst =>
-							{
-								using (var sr = new StreamWriter(dst, Encoding.Unicode, 4096, true))
-									sr.Write(s);
-							},
-							s.Length, shouldDeflate
-						);
-						break;
-					case StringBuilder sb:
-						shouldText = true;
-						SetDocumentArguments(args, dst =>
-							{
-								using (var sr = new StreamWriter(dst, Encoding.Unicode, 4096, true))
-									sr.Write(sb.ToString());
-							},
-							sb.Length, shouldDeflate
-						);
-						break;
-					case byte[] data:
-						SetDocumentArguments(args, dst => dst.Write(data, 0, data.Length), data.Length, shouldDeflate);
-						break;
-
-					case Action<Stream> copyStream:
-						SetDocumentArguments(args, copyStream, contentLength, shouldDeflate);
-						break;
-					default:
-						throw new ArgumentException("Document data format is unknown (only string or byte[] allowed).");
-				}
-			}
-			else
-				throw new ArgumentNullException("Document data is missing.");
+			args["Content"] = ConvertContentToStream(content, ref shouldText, ref shouldDeflate);
 
 			args["IsDocumentText"] = shouldText;
+			args["Deflate"] = shouldDeflate;
 
-			LuaTable cmd;
-			if (insertNew)
+			var cmd = new LuaTable
 			{
-				cmd = new LuaTable
-				{
-					{  "insert", "dbo.ObjR" },
-					args
-				};
-			}
-			else// upsert current rev
-			{
-				args["Id"] = revId;
-
-				cmd = new LuaTable
-				{
-					{  "upsert", "dbo.ObjR" },
-					args
-				};
-			}
+				{ "execute", "sys.UpdateRevisionData" },
+				args
+			};
 
 			application.Database.Main.ExecuteNoneResult(cmd);
-			var newRevId = (long)args["Id"];
-
+			var newRevId = (long)args["RevId"];
+								
 			// update
 			// head should be set, if this revId is new or revId has changed
 			if ((insertNew || revId != newRevId) && changeHead)
@@ -652,38 +621,37 @@ namespace TecWare.PPSn.Server
 
 		#region -- Get Revision Data --------------------------------------------------
 
-		[LuaMember]
-		public Stream GetDataStream()
+		private IDataRow GetDataRow()
 		{
 			CheckRevision();
 
 			var cmd = new LuaTable
 			{
-				{ "select", "dbo.ObjR" },
-				{ "selectList", new LuaTable { "Id", "IsDocumentText", "IsDocumentDeflate", "Document", "DocumentId", "DocumentLink" } },
-				revId > -1 ? new LuaTable
-				{
-					{ "Id", revId }
-				} : new LuaTable
-				{
-					{ "ObjkId", objectId }
-				}
+				{ "execute", "sys.GetRevisionData" },
+				revId > -1
+					? new LuaTable { { "RevId", revId } }
+					: new LuaTable { { "ObjkId", objectId } }
 			};
 
 			var row = application.Database.Main.ExecuteSingleRow(cmd);
 			if (row == null)
 				throw new ArgumentException($"Could not read revision '{revId}'.");
 
-			var isDeflated = row.GetProperty("IsDocumentDeflate", false);
-			var rawData = (byte[])row["Document"];
+			return row;
+		} // func GetDataRow
 
-			var src = (Stream)new MemoryStream(rawData, false);
-			if (isDeflated)
-				src = new GZipStream(src, CompressionMode.Decompress, false);
+		/// <summary>Get data stream.</summary>
+		/// <returns></returns>
+		[LuaMember]
+		public Stream GetDataStream()
+		{
+			var row = GetDataRow();
 
-			return src;
+			return (Stream)row["Document"];
 		} // func GetDataStream
 
+		/// <summary>Return the data as an byte array.</summary>
+		/// <returns></returns>
 		[LuaMember]
 		public byte[] GetBytes()
 		{
@@ -691,18 +659,28 @@ namespace TecWare.PPSn.Server
 				return src.ReadInArray();
 		} // func GetBytes
 
+		/// <summary>Return the data as an string.</summary>
+		/// <returns></returns>
 		[LuaMember]
 		public string GetText()
 		{
-			// todo: in DESCore\Networking\Requests.cs:BaseWebRequest.CheckMimeType 
-			using (var tr = Procs.OpenStreamReader(GetDataStream(), DataEncoding))
-				return tr.ReadToEnd();
+			var row = GetDataRow();
+			if (row.GetProperty("IsDocumentText", false))
+			{
+				using (var tr = Procs.OpenStreamReader((Stream)row["Document"], DataEncoding))
+					return tr.ReadToEnd();
+			}
+			else
+				throw new ArgumentException("No text content.");
 		} // func GetText
 
 		#endregion
 
 		#region -- ToXml --------------------------------------------------------------
 
+		/// <summary>Convert the object structure to a xml.</summary>
+		/// <param name="onlyObjectData"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public XElement ToXml(bool onlyObjectData = false)
 		{
@@ -1054,7 +1032,7 @@ namespace TecWare.PPSn.Server
 		/// <param name="obj"></param>
 		/// <param name="data"></param>
 		/// <returns></returns>
-		bool PushData(PpsObjectAccess obj, object data);
+		PpsPushDataResult PushData(PpsObjectAccess obj, object data);
 
 		/// <summary>The name or object typ of the object.</summary>
 		string ObjectType { get; }
@@ -1068,15 +1046,30 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
-	#region -- class PpsObjectItem ------------------------------------------------------
+	#region -- enum PpsPushDataResult -------------------------------------------------
+
+	/// <summary>Return value for a push-operation.</summary>
+	public enum PpsPushDataResult
+	{
+		/// <summary>No result</summary>
+		None = 0,
+		/// <summary>Data was pushed, but changed. Pull required.</summary>
+		PushedAndChanged = 0,
+		/// <summary>Data was pushed, and not changed. No pull required.</summary>
+		PushedAndUnchanged = 1,
+		/// <summary>Data was not pushed. Because there was a push operation between pull.</summary>
+		PulledRevIsToOld = -1
+	} // class PpsPushDataResult
+
+	#endregion
+
+	#region -- class PpsObjectItem ----------------------------------------------------
 
 	/// <summary>Base class for all objects, that can be processed from the server.</summary>
 	public abstract class PpsObjectItem<T> : PpsPackage, IPpsObjectItem
 		where T : class
 	{
-		private readonly PpsApplication application;
-
-		#region -- Ctor/Dtor ------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
 		/// <summary></summary>
 		/// <param name="sp"></param>
@@ -1084,12 +1077,12 @@ namespace TecWare.PPSn.Server
 		public PpsObjectItem(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
-			this.application = sp.GetService<PpsApplication>(true);
+			Application = sp.GetService<PpsApplication>(true);
 		} // ctor
 
 		#endregion
 
-		#region -- GetObject ------------------------------------------------------------
+		#region -- GetObject ----------------------------------------------------------
 
 		private PpsObjectAccess VerfiyObjectType(PpsObjectAccess obj)
 		{
@@ -1103,17 +1096,17 @@ namespace TecWare.PPSn.Server
 		/// <returns></returns>
 		[LuaMember]
 		public PpsObjectAccess GetObject(long id)
-			=> VerfiyObjectType(application.Objects.GetObject(id));
+			=> VerfiyObjectType(Application.Objects.GetObject(id));
 
 		/// <summary>Get object of the correct class.</summary>
 		/// <param name="guid"></param>
 		/// <returns></returns>
 		[LuaMember]
 		public PpsObjectAccess GetObject(Guid guid)
-			=> VerfiyObjectType(application.Objects.GetObject(guid));
+			=> VerfiyObjectType(Application.Objects.GetObject(guid));
 
 		/// <summary>Serialize data to an stream of bytes.</summary>
-		protected abstract void WriteDataToStream(T data, Stream dst);
+		protected abstract Stream GetStreamFromData(T data);
 
 		/// <summary>Get the data from an stream.</summary>
 		/// <param name="src"></param>
@@ -1122,7 +1115,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- Pull -----------------------------------------------------------------
+		#region -- Pull ---------------------------------------------------------------
 
 		/// <summary>Pull object content from the database</summary>
 		/// <param name="obj"></param>
@@ -1163,7 +1156,7 @@ namespace TecWare.PPSn.Server
 			var ctx = DEScope.GetScopeService<IDEWebRequestScope>(true);
 			try
 			{
-				var trans = application.Database.GetDatabase();
+				var trans = Application.Database.GetDatabase();
 
 				// get the object and set the correct revision
 				var obj = GetObject(id);
@@ -1174,9 +1167,11 @@ namespace TecWare.PPSn.Server
 				var headerBytes = Encoding.Unicode.GetBytes(obj.ToXml().ToString(SaveOptions.DisableFormatting));
 				ctx.OutputHeaders["ppsn-header-length"] = headerBytes.Length.ChangeType<string>();
 				ctx.OutputHeaders["ppsn-pulled-revId"] = obj.RevId.ChangeType<string>();
-
+				ctx.OutputHeaders["ppsn-content-type"] = obj.MimeType;
+				
 				// get content
 				var data = PullData(obj);
+				//ctx.OutputHeaders["ppsn-content-length"] = o;
 
 				// write all data to the application
 				using (var dst = ctx.GetOutputStream(MimeTypes.Application.OctetStream))
@@ -1185,7 +1180,8 @@ namespace TecWare.PPSn.Server
 					dst.Write(headerBytes, 0, headerBytes.Length);
 
 					// write content
-					WriteDataToStream(data, dst);
+					using (var src = GetStreamFromData(data))
+						src.CopyTo(dst);
 				}
 
 				// commit
@@ -1194,6 +1190,7 @@ namespace TecWare.PPSn.Server
 			catch (Exception e)
 			{
 				ctx.WriteSafeCall(e);
+				Log.Except(e);
 			}
 		} // proc HttpPullAction
 
@@ -1233,9 +1230,9 @@ namespace TecWare.PPSn.Server
 			if (nextNumber == null && obj.Nr == null) // no next number and no number --> error
 				throw new ArgumentException($"The field 'Nr' is null or no nextNumber is given.");
 			else if (Config.GetAttribute("forceNextNumber", false) || obj.Nr == null) // force the next number or there is no number
-				obj["Nr"] = application.Objects.GetNextNumber(obj.Typ, nextNumber, data);
+				obj["Nr"] = Application.Objects.GetNextNumber(obj.Typ, nextNumber, data);
 			else  // check the number format
-				application.Objects.ValidateNumber(obj.Nr, nextNumber, data);
+				Application.Objects.ValidateNumber(obj.Nr, nextNumber, data);
 		} // func SetNextNumber
 
 		/// <summary>Create a new object of this class.</summary>
@@ -1244,13 +1241,13 @@ namespace TecWare.PPSn.Server
 		protected void InsertNewObject(PpsObjectAccess obj, T data)
 		{
 			obj.IsRev = IsDataRevision(data);
-			SetNextNumber(application.Database.GetDatabaseAsync().AwaitTask(), obj, data);
+			SetNextNumber(Application.Database.GetDatabaseAsync().AwaitTask(), obj, data);
 
 			// insert the new object, without rev
 			obj.Update(PpsObjectUpdateFlag.None);
 		} // proc InsertNewObject
-		
-		bool IPpsObjectItem.PushData(PpsObjectAccess obj, object data)
+
+		PpsPushDataResult IPpsObjectItem.PushData(PpsObjectAccess obj, object data)
 			=> PushData(obj, (T)data, false);
 
 		/// <summary>Persist the data in the server</summary>
@@ -1258,12 +1255,13 @@ namespace TecWare.PPSn.Server
 		/// <param name="data">Data to push</param>
 		/// <param name="release">Has this data a release request.</param>
 		/// <returns></returns>
-		protected virtual bool PushData(PpsObjectAccess obj, T data, bool release)
+		protected virtual PpsPushDataResult PushData(PpsObjectAccess obj, T data, bool release)
 		{
 			if (obj == null)
 				throw new ArgumentNullException(nameof(obj));
 			if (data == null)
 				throw new ArgumentNullException(nameof(data));
+
 			VerfiyObjectType(obj);
 
 			// set IsRev
@@ -1272,12 +1270,12 @@ namespace TecWare.PPSn.Server
 
 			// write revision
 			if (data != null)
-				obj.UpdateData(new Action<Stream>(dst => WriteDataToStream(data, dst)));
+				obj.UpdateData(GetStreamFromData(data));
 
 			// write object layout
 			obj.Update(PpsObjectUpdateFlag.All);
 
-			return true;
+			return PpsPushDataResult.PushedAndUnchanged;
 		} // func PushData
 
 		/// <summary>Push an object.</summary>
@@ -1286,7 +1284,7 @@ namespace TecWare.PPSn.Server
 		/// <param name="release"></param>
 		/// <returns></returns>
 		[LuaMember("Push")]
-		protected virtual bool LuaPush(PpsObjectAccess obj, object data, bool release)
+		protected virtual PpsPushDataResult LuaPush(PpsObjectAccess obj, object data, bool release)
 			=> PushData(obj, (T)data, release);
 
 		[
@@ -1295,6 +1293,8 @@ namespace TecWare.PPSn.Server
 		]
 		private void HttpPushAction(IDEWebRequestScope ctx)
 		{
+			long objectId = -1;
+
 			var currentUser = ctx.GetUser<IPpsPrivateDataContext>();
 			try
 			{
@@ -1314,32 +1314,46 @@ namespace TecWare.PPSn.Server
 					xObject = XElement.Load(xmlHeader);
 
 				// read the data
-				using (var transaction = currentUser.CreateTransactionAsync(application.MainDataSource).AwaitTask())
+				using (var transaction = currentUser.CreateTransactionAsync(Application.MainDataSource).AwaitTask())
 				{
 					// first the get the object data
-					var obj = application.Objects.ObjectFromXml(transaction, xObject, pulledId);
+					var obj = Application.Objects.ObjectFromXml(transaction, xObject, pulledId);
 					VerfiyObjectType(obj);
+
+					objectId = obj.Id;
+					
 					// create and load the dataset
 					var data = GetDataFromStream(src);
 
 					// push data in the database
-					if (PushData(obj, data, releaseRequest))
+					var r = PushData(obj, data, releaseRequest);
+					switch (r)
 					{
-						// write the object definition to client
-						using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
-						using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
-							obj.ToXml(true).WriteTo(xml);
-					}
-					else
-					{
-						ctx.WriteSafeCall(
-							new XElement("push",
-								new XAttribute("headRevId", obj.HeadRevId),
-								new XAttribute("pullRequest", Boolean.TrueString)
-							)
-						);
+						case PpsPushDataResult.PulledRevIsToOld:
+							ctx.WriteSafeCall(
+								new XElement("push",
+									new XAttribute("headRevId", obj.HeadRevId),
+									new XAttribute("pullRequest", Boolean.TrueString)
+								)
+							);
+							break;
+						case PpsPushDataResult.PushedAndChanged:
+						case PpsPushDataResult.PushedAndUnchanged:
+							// write the object definition to client
+							using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
+							using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
+							{
+								var xObjInfo = obj.ToXml(true);
+								if (r == PpsPushDataResult.PushedAndUnchanged)
+									xObjInfo.SetAttributeValue("newRevId", obj.RevId);
+								xObjInfo.WriteTo(xml);
+							}
+							break;
+						default:
+							throw new ArgumentOutOfRangeException();
 					}
 					transaction.Commit();
+					Log.Info("Push new object: ObjkId={0},Result={1}", obj.Id, r);
 				}
 			}
 			catch (HttpResponseException)
@@ -1348,7 +1362,7 @@ namespace TecWare.PPSn.Server
 			}
 			catch (Exception e)
 			{
-				Log.Except("Push failed.", e);
+				Log.Except($"Push failed for object ({(objectId <= 0 ? "unknown" : objectId.ToString())}).", e);
 				ctx.WriteSafeCall(e);
 			}
 		} // proc HttpPushAction
@@ -1367,12 +1381,11 @@ namespace TecWare.PPSn.Server
 		public bool IsRevDefault => IsDataRevision(null);
 
 		/// <summary>Get the application.</summary>
-		public PpsApplication Application => application;
+		public PpsApplication Application { get; }
 	} // class PpsObjectItem
 
 	#endregion
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary>Function to store and load object related data.</summary>
 	public partial class PpsApplication
 	{
@@ -1876,7 +1889,7 @@ namespace TecWare.PPSn.Server
 		private readonly PpsObjectsLibrary objectsLibrary;
 		private readonly PpsDatabaseLibrary databaseLibrary;
 		private readonly PpsHttpLibrary httpLibrary;
-
+		
 		/// <summary>Library for access the object store.</summary>
 		[LuaMember("Db")]
 		public PpsDatabaseLibrary Database => databaseLibrary;
