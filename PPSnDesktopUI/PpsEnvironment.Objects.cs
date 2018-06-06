@@ -22,6 +22,7 @@ using System.Data;
 using System.Data.Common;
 using System.Data.SQLite;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -2581,13 +2582,13 @@ namespace TecWare.PPSn
 			var acceptedMimeType = objectInfo?.GetMemberValue("acceptedMimeType") as string;
 
 			// create a proxy request, and enqueue it with high priority
-			return Environment.GetProxyRequest($"{objectUri}/?action=pull&id={objectId}&rev={revisionId}");
+			return Environment.GetProxyRequest($"{objectUri}/?action=pull&id={objectId}&rev={revisionId}", $"Pull:{Nr} ({objectId:N0};{revisionId:N0})");
 		} // proc PullDataAsync
 
 		private PpsProxyRequest PushDataRequest()
 		{
 			GetObjectUri(out var objectInfo, out var objectUri);
-			var request = Environment.GetProxyRequest($"{objectUri}/?action=push");
+			var request = Environment.GetProxyRequest($"{objectUri}/?action=push", $"Push:{Nr} ({Id:N0})");
 			request.Method = HttpMethod.Put.Method;
 			return request;
 		} //func PushDataRequest
@@ -2648,6 +2649,8 @@ namespace TecWare.PPSn
 					if (headerLength < 10)
 						throw new ArgumentOutOfRangeException("ppsn-header-length", headerLength, "Header is missing.");
 
+					//var isContentTransferDeflated = c.GetProperty("ppsn-content-transfer", (string)null) == "gzip";
+
 					// set pulled revId to the pulled data!
 					var tmp = c.GetProperty("ppsn-pulled-revId", pulledRevId);
 					//if (tmp < 0) todo: Server does not generate any rev.
@@ -2678,7 +2681,14 @@ namespace TecWare.PPSn
 						// download content
 						using (var dst = new PpsObjectWriteStream(this, c.ContentLength - headerLength))
 						{
-							c.Content.CopyToAsync(dst).AwaitTask();
+							//if (isContentTransferDeflated)
+							//{
+							//	using (var src = new GZipStream(c.Content, CompressionMode.Decompress, true))
+							//		src.CopyToAsync(dst).AwaitTask();
+							//}
+							//else
+								c.Content.CopyToAsync(dst).AwaitTask();
+
 							SaveObjectDataInformationAsync(dst.Result, MimeType, false).AwaitTask();
 						}
 
@@ -2800,7 +2810,9 @@ namespace TecWare.PPSn
 
 					// the stream has its own format, set header properties for the payload.
 					request.Headers["ppsn-content-type"] = MimeType;
-					//request.Headers["ppsn-content-length"] = data.DataSize.ToString();
+
+					//MimeType.StartsWith("text/");
+					//"ppsn-content-transfer"
 
 					// write data
 					using (var dst = await Task.Run(() => request.GetRequestStream(true)))

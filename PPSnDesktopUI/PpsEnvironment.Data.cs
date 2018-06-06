@@ -2300,7 +2300,7 @@ namespace TecWare.PPSn
 					while (r.Read())
 					{
 						var path = r.GetString(0);
-						var request = environment.GetProxyRequest(new Uri(path, UriKind.Relative));
+						var request = environment.GetProxyRequest(new Uri(path, UriKind.Relative), path);
 						request.SetUpdateOfflineCache(c => UpdateOfflineDataAsync(path, c).AwaitTask());
 						request.Enqueue(PpsLoadPriority.Background, true);
 					}
@@ -2545,7 +2545,8 @@ namespace TecWare.PPSn
 								reader.IsDBNull(4) ? null : GetLocalPath(reader.GetString(4)),
 								contentType,
 								isCompressedContent
-							)
+							),
+							reader.GetString(0)
 						);
 						return true;
 					} // using reader
@@ -3522,10 +3523,14 @@ namespace TecWare.PPSn
 			event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged { add { } remove { } }
 
 			private readonly WebRequest request;
+			private readonly string displayName;
 			private bool responseCalled;
 
-			public PpsDummyProxyTask(WebRequest request)
-				=> this.request = request;
+			public PpsDummyProxyTask(WebRequest request, string displayName)
+			{
+				this.request = request;
+				this.displayName = displayName ?? request.RequestUri.PathAndQuery;
+			} // ctor
 
 			private WebRequest InitResponse()
 			{
@@ -3549,19 +3554,20 @@ namespace TecWare.PPSn
 
 			public PpsLoadState State => PpsLoadState.Started;
 			public int Progress => -1;
-			public string DisplayName => PpsWebProxy.GetDisplayNameFromRequest(request);
+			public string DisplayName => displayName;
 		} // class PpsDummyProxyTask
 
 		#endregion
 
 		/// <summary>Wrap a webrequest to an proxy task.</summary>
 		/// <param name="request"></param>
+		/// <param name="displayName"></param>
 		/// <param name="priority"></param>
 		/// <returns></returns>
-		public static IPpsProxyTask GetProxyTask(this WebRequest request, PpsLoadPriority priority = PpsLoadPriority.Default)
+		public static IPpsProxyTask GetProxyTask(this WebRequest request, string displayName, PpsLoadPriority priority = PpsLoadPriority.Default)
 		   => request is PpsProxyRequest p
 			   ? p.Enqueue(priority)
-			   : new PpsDummyProxyTask(request);
+			   : new PpsDummyProxyTask(request, displayName);
 	} // class PpsDummyProxyHelper
 
 	#endregion
@@ -3573,6 +3579,7 @@ namespace TecWare.PPSn
 	public sealed class PpsProxyRequest : WebRequest, IEquatable<PpsProxyRequest>
 	{
 		private readonly PpsEnvironment environment; // owner, that retrieves a resource
+		private readonly string displayName;
 		private readonly Uri originalUri;
 		private readonly Uri relativeUri; // relative Uri
 
@@ -3596,9 +3603,10 @@ namespace TecWare.PPSn
 
 		#region -- Ctor/Dtor ----------------------------------------------------------
 
-		internal PpsProxyRequest(PpsEnvironment environment, Uri originalUri, Uri relativeUri, bool offlineOnly)
+		internal PpsProxyRequest(PpsEnvironment environment, string displayName, Uri originalUri, Uri relativeUri, bool offlineOnly)
 		{
 			this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
+			this.displayName = displayName ?? relativeUri.ToString();
 			this.originalUri = originalUri ?? throw new ArgumentNullException(nameof(originalUri));
 			this.relativeUri = relativeUri ?? throw new ArgumentNullException(nameof(relativeUri));
 			this.offlineOnly = offlineOnly;
@@ -3813,6 +3821,8 @@ namespace TecWare.PPSn
 		internal Stream UpdateOfflineCache(IPpsOfflineItemData data)
 			=> updateOfflineCache?.Invoke(data) ?? data.Content;
 
+		/// <summary>Description for the ui.</summary>
+		public string DisplayName => displayName;
 		/// <summary>Request method</summary>
 		public override string Method { get => method; set => method = value; }
 		/// <summary>Content type of the request.</summary>
@@ -4287,7 +4297,7 @@ namespace TecWare.PPSn
 			public PpsLoadState State => currentState;
 			public PpsLoadPriority Priority => priority;
 			public int Progress => progress;
-			public string DisplayName => GetDisplayNameFromRequest(request);
+			public string DisplayName => request.DisplayName;
 		} // class WebLoadRequest
 
 		#endregion
@@ -4480,11 +4490,6 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		internal IPpsProxyTask Append(PpsProxyRequest request, PpsLoadPriority priority)
 			=> AppendTask(new WebLoadRequest(this, priority, request));
-
-		// -- Static --------------------------------------------------------------------
-
-		internal static string GetDisplayNameFromRequest(WebRequest request)
-			=> request.RequestUri.AbsolutePath;
 	} // class PpsDownloadManager
 
 	#endregion
@@ -4789,7 +4794,7 @@ namespace TecWare.PPSn
 
 			// create the request proxy
 			if (useCache || useOfflineRequest)
-				return new PpsProxyRequest(this, uri, relativeUri, useOfflineRequest);
+				return new PpsProxyRequest(this, relativeUri.ToString(), uri, relativeUri, useOfflineRequest);
 			else
 				return CreateOnlineRequest(relativeUri);
 		} // func CreateWebRequest
@@ -4818,15 +4823,17 @@ namespace TecWare.PPSn
 
 		/// <summary>Get a proxy request for the request path.</summary>
 		/// <param name="path"></param>
+		/// <param name="displayName"></param>
 		/// <returns></returns>
-		public PpsProxyRequest GetProxyRequest(string path)
-			=> GetProxyRequest(new Uri(path, UriKind.Relative));
+		public PpsProxyRequest GetProxyRequest(string path, string displayName)
+			=> GetProxyRequest(new Uri(path, UriKind.Relative), displayName);
 
 		/// <summary>Get a proxy request for the request path.</summary>
 		/// <param name="uri"></param>
+		/// <param name="displayName"></param>
 		/// <returns></returns>
-		public PpsProxyRequest GetProxyRequest(Uri uri)
-			=> new PpsProxyRequest(this, new Uri(BaseUri, uri), uri, CurrentState == PpsEnvironmentState.Offline);
+		public PpsProxyRequest GetProxyRequest(Uri uri, string displayName)
+			=> new PpsProxyRequest(this, displayName, new Uri(BaseUri, uri), uri, CurrentState == PpsEnvironmentState.Offline);
 
 		/// <summary>Get a offline object.</summary>
 		/// <param name="request"></param>

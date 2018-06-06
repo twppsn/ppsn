@@ -707,7 +707,6 @@ namespace TecWare.PPSn.Server.Sql
 
 		#region -- class SqlDataTransaction ---------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary></summary>
 		private sealed class SqlDataTransaction : PpsDataTransaction
 		{
@@ -919,7 +918,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
-			#region -- ExecuteCall ----------------------------------------------------------
+			#region -- ExecuteUpdateRevisionData --------------------------------------
 
 			private static int ReadStreamData(Stream src, byte[] buf)
 			{
@@ -1093,7 +1092,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			#endregion
 
-			#region -- ExecuteCall ----------------------------------------------------------
+			#region -- ExecuteGetRevisionData -----------------------------------------
 
 			private IEnumerable<IEnumerable<IDataRow>> ExecuteGetRevisionData(LuaTable parameter, PpsDataTransactionExecuteBehavior behavior)
 			{

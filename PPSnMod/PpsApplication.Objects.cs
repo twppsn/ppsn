@@ -1168,20 +1168,40 @@ namespace TecWare.PPSn.Server
 				ctx.OutputHeaders["ppsn-header-length"] = headerBytes.Length.ChangeType<string>();
 				ctx.OutputHeaders["ppsn-pulled-revId"] = obj.RevId.ChangeType<string>();
 				ctx.OutputHeaders["ppsn-content-type"] = obj.MimeType;
-				
+
 				// get content
 				var data = PullData(obj);
-				//ctx.OutputHeaders["ppsn-content-length"] = o;
 
-				// write all data to the application
-				using (var dst = ctx.GetOutputStream(MimeTypes.Application.OctetStream))
+				using (var srcStream = GetStreamFromData(data))
 				{
-					// write header bytes
-					dst.Write(headerBytes, 0, headerBytes.Length);
+					var transferDeflated = false; // obj.MimeType.StartsWith("text/");
 
-					// write content
-					using (var src = GetStreamFromData(data))
-						src.CopyTo(dst);
+					if (srcStream.CanSeek)
+						ctx.OutputHeaders["ppsn-content-length"] = srcStream.Length.ToString();
+					if (transferDeflated)
+						ctx.OutputHeaders["ppsn-content-transfer"] = "gzip";
+
+					// write all data to the application
+					using (var dst = ctx.GetOutputStream(MimeTypes.Application.OctetStream))
+					{
+						// write header bytes
+						dst.Write(headerBytes, 0, headerBytes.Length);
+
+						// write content
+						if (transferDeflated)
+						{
+							if (srcStream is GZipStream srcZip && srcZip.CanRead)
+								srcZip.BaseStream.CopyTo(dst);
+							else
+							{
+								dst.Flush();
+								using (var dstZip = new GZipStream(dst, CompressionMode.Compress, true))
+									srcStream.CopyTo(dstZip);
+							}
+						}
+						else
+							srcStream.CopyTo(dst);
+					}
 				}
 
 				// commit
