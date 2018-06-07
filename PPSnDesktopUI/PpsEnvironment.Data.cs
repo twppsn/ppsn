@@ -4848,7 +4848,7 @@ namespace TecWare.PPSn
 		/// <param name="task">Out: the Task returning the item.</param>
 		/// <returns>True if successfull.</returns>
 		protected internal virtual bool TryGetOfflineObject(WebRequest request, out IPpsProxyTask task)
-			=> masterData.TryGetOflineCacheFile(BaseUri.MakeRelativeUri(request.RequestUri), out task);
+			=> masterData.TryGetOfflineCacheFile(BaseUri.MakeRelativeUri(request.RequestUri), out task);
 		
 		#endregion
 
