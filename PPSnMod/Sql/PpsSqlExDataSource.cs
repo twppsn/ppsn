@@ -1037,7 +1037,7 @@ namespace TecWare.PPSn.Server.Sql
 					else // create simple byte-array
 					{
 						var newBuf = new byte[readed];
-						buf.CopyTo(newBuf, 0);
+						Array.Copy(buf, 0, newBuf, 0, readed);
 						buf = newBuf;
 					}
 					#endregion
