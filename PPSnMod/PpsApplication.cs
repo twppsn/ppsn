@@ -107,7 +107,6 @@ namespace TecWare.PPSn.Server
 			LuaType.RegisterTypeAlias("blob", typeof(byte[]));
 			LuaType.RegisterTypeAlias("geography", typeof(Microsoft.SqlServer.Types.SqlGeography));
 
-			InitData();
 			InitUser();
 		} // ctor
 
@@ -153,8 +152,7 @@ namespace TecWare.PPSn.Server
 				UpdateInitializationState("Shuting down");
 
 				DoneUser();
-				DoneData();
-
+				
 				initializationProgress.Dispose();
 			}
 			finally

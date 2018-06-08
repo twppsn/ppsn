@@ -513,7 +513,6 @@ namespace TecWare.PPSn.Server
 
 	#endregion
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public partial class PpsApplication
 	{
@@ -558,10 +557,8 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 		
-		#region -- class DependencyElement ------------------------------------------------
+		#region -- class DependencyElement --------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private sealed class DependencyElement
 		{
 			private readonly PpsDataSource source;
@@ -645,17 +642,12 @@ namespace TecWare.PPSn.Server
 
 		private PpsSqlExDataSource mainDataSource;
 
-		private Dictionary<string, PpsFieldDescription> fieldDescription = new Dictionary<string, PpsFieldDescription>(StringComparer.OrdinalIgnoreCase);
-		private Dictionary<string, PpsViewDescription> viewController = new Dictionary<string, PpsViewDescription>(StringComparer.OrdinalIgnoreCase);
-		private Dictionary<string, PpsDataSetServerDefinition> datasetDefinitions = new Dictionary<string, PpsDataSetServerDefinition>(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, PpsFieldDescription> fieldDescription = new Dictionary<string, PpsFieldDescription>(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, PpsViewDescription> viewController = new Dictionary<string, PpsViewDescription>(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, PpsDataSetServerDefinition> datasetDefinitions = new Dictionary<string, PpsDataSetServerDefinition>(StringComparer.OrdinalIgnoreCase);
 
 		#region -- Init/Done --------------------------------------------------------------
-
-		private void InitData()
-		{
-			//mainDataSource = new PpsSqlExDataSource(this, "Data Source=Gurke,6444;Initial Catalog=PPSn01;Integrated Security=True");
-		} // proc InitData
-
+		
 		private void BeginReadConfigurationData(IDEConfigLoading config)
 		{
 			// find mainDataSource
@@ -704,13 +696,9 @@ namespace TecWare.PPSn.Server
 			DependencyElement.RegisterList(datasetDeclarationList, RegisterDataSet); // register all datasets
 		} // proc BeginEndConfigurationData
 
-		private void DoneData()
-		{
-		} // proc DoneData
-
 		#endregion
 
-		#region -- Register ---------------------------------------------------------------
+		#region -- Register -----------------------------------------------------------
 
 		private void RegisterField(PpsDataSource source, string name, XElement x)
 		{
@@ -726,10 +714,11 @@ namespace TecWare.PPSn.Server
 			}
 		} // proc RegisterField
 
+		/// <summary>Register a view to the view list.</summary>
+		/// <param name="selectorToken"></param>
+		/// <param name="displayName"></param>
 		public void RegisterView(IPpsSelectorToken selectorToken, string displayName = null)
-		{
-			RegisterView(new PpsViewDescription(selectorToken, displayName, null, null, null));
-		} // func RegisterView
+			=> RegisterView(new PpsViewDescription(selectorToken, displayName, null, null, null));
 
 		private void RegisterView(PpsDataSource source, string name, XElement x)
 		{
@@ -759,10 +748,14 @@ namespace TecWare.PPSn.Server
 		[LuaMember]
 		public PpsDataSource GetDataSource(string name, bool throwException)
 		{
-			using (this.EnterReadLock())
-				return (PpsDataSource)this.UnsafeChildren.FirstOrDefault(c => c is PpsDataSource && String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
+			using (EnterReadLock())
+				return (PpsDataSource)UnsafeChildren.FirstOrDefault(c => c is PpsDataSource && String.Compare(c.Name, name, StringComparison.OrdinalIgnoreCase) == 0);
 		} // func GetDataSource
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public PpsFieldDescription GetFieldDescription(string name, bool throwException = true)
 		{
@@ -774,13 +767,16 @@ namespace TecWare.PPSn.Server
 				return null;
 		} // func GetFieldDescription
 
+		/// <summary>Get a specific view definition.</summary>
+		/// <param name="name"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public PpsViewDescription GetViewDefinition(string name, bool throwException = true)
 		{
-			PpsViewDescription viewInfo;
 			lock (viewController)
 			{
-				if (viewController.TryGetValue(name, out viewInfo))
+				if (viewController.TryGetValue(name, out var viewInfo))
 					return viewInfo;
 				else if (throwException)
 					throw new ArgumentOutOfRangeException(nameof(name), $"Could not locate view definition: '{name}'");
@@ -789,6 +785,8 @@ namespace TecWare.PPSn.Server
 			}
 		} // func GetViewDefinition
 
+		/// <summary>Enumerate all registered view definitions.</summary>
+		/// <returns></returns>
 		public IEnumerable<PpsViewDescription> GetViewDefinitions()
 		{
 			lock (viewController)
@@ -798,16 +796,22 @@ namespace TecWare.PPSn.Server
 			}
 		} // func GetViewDefinitions
 
-		public PpsDataSelector GetViewDefinitionSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
+		/// <summary>Return a selector for all views.</summary>
+		/// <param name="dataSource"></param>
+		/// <returns></returns>
+		public PpsDataSelector GetViewDefinitionSelector(PpsSysDataSource dataSource)
 			=> new PpsGenericSelector<PpsViewDescription>(dataSource, "sys.views", GetViewDefinitions());
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		[LuaMember]
 		public PpsDataSetServerDefinition GetDataSetDefinition(string name, bool throwException = true)
 		{
 			lock (datasetDefinitions)
 			{
-				PpsDataSetServerDefinition datasetDefinition;
-				if (datasetDefinitions.TryGetValue(name, out datasetDefinition))
+				if (datasetDefinitions.TryGetValue(name, out var datasetDefinition))
 					return datasetDefinition;
 				else if (throwException)
 					throw new ArgumentOutOfRangeException($"Dataset definition '{name}' not found.");
@@ -835,7 +839,7 @@ namespace TecWare.PPSn.Server
 		private void HttpViewGetAction(IDEWebRequestScope r)
 		{
 			// v=views,...&f={filterList}&o={orderList}&s={startAt]&c={count}&a={attributeSelector}
-			// ???views => view,view2(c1+c2),view3(c3+c4)
+			// ???views => view,join syntax?
 			// sort: +FIELD,-FIELD,:DEF
 			// ???filter: :DEF-and-not-or-xor-contains-
 

@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using TecWare.DE.Data;
@@ -27,40 +28,46 @@ namespace TecWare.PPSn.Server
 {
 	#region -- class PpsSysConnectionHandle -------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
-	public sealed class PpsSysConnectionHandle : IPpsConnectionHandle
+	internal sealed class PpsSysConnectionHandle : IPpsConnectionHandle
 	{
 		/// <summary></summary>
-		public event EventHandler Disposed { add { } remove { } }
+		public event EventHandler Disposed;
 
 		private readonly PpsSysDataSource dataSource;
-		private readonly IPpsPrivateDataContext privateUserData;
-
-		internal PpsSysConnectionHandle(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
+		private readonly IIdentity identity;
+		private bool isDisposed = false;
+		
+		internal PpsSysConnectionHandle(PpsSysDataSource dataSource, IIdentity identity)
 		{
-			this.dataSource = dataSource;
-			this.privateUserData = privateUserData;
+			this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+			this.identity = identity;
 		} // ctor
 
-		public void Dispose() { }
+		public void Dispose()
+		{
+			if (isDisposed)
+				throw new ObjectDisposedException(nameof(PpsSysConnectionHandle));
+
+			isDisposed = true;
+			Disposed?.Invoke(this, EventArgs.Empty);
+		} // proc Dispose
 
 		public Task<bool> EnsureConnectionAsync(bool throwException = true)
 			=> Task.FromResult(true);
 
 		public PpsDataSource DataSource => dataSource;
-		public IPpsPrivateDataContext PrivateUserData => privateUserData;
-		public bool IsConnected => true;
+		public IIdentity Identity => identity;
+		public bool IsConnected => !isDisposed;
 	} // class PpsSysConnectionHandle
 
 	#endregion
 
 	#region -- class PpsSysDataSource -------------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>System data source, to get access to services.</summary>
 	public sealed class PpsSysDataSource : PpsDataSource
 	{
-		#region -- class PpsSysMethodSelectorToken --------------------------------------
+		#region -- class PpsSysMethodSelectorToken ------------------------------------
 
 		private sealed class PpsSysMethodSelectorToken : IPpsSelectorToken
 		{
@@ -122,12 +129,10 @@ namespace TecWare.PPSn.Server
 					for (var i = 0; i < parameterInfo.Length; i++)
 					{
 						var parameterType = parameterInfo[i].ParameterType;
-						if (parameterType == typeof(IPpsPrivateDataContext))
-							args[i] = connection?.PrivateUserData;
-						else if (parameterType == typeof(PpsDataSource) || parameterType == typeof(PpsSysDataSource))
+						if (parameterType == typeof(PpsDataSource) || parameterType == typeof(PpsSysDataSource))
 							args[i] = connection?.DataSource;
 						else
-							throw new NotImplementedException();
+							throw new ArgumentNullException(parameterInfo[i].Name, $"Could not assign type {parameterType.Name}.");
 					}
 
 					return (PpsDataSelector)method.Invoke(c, args);
@@ -171,11 +176,11 @@ namespace TecWare.PPSn.Server
 		} // ctor
 
 		/// <summary></summary>
-		/// <param name="privateUserData"></param>
+		/// <param name="userData"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public override IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext privateUserData, bool throwException = true)
-			=> new PpsSysConnectionHandle(this, privateUserData);
+		public override IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext userData, bool throwException = true)
+			=> new PpsSysConnectionHandle(this, userData.Identity);
 
 		/// <summary></summary>
 		/// <param name="name"></param>
@@ -216,16 +221,14 @@ namespace TecWare.PPSn.Server
 		/// <param name="connection"></param>
 		/// <returns></returns>
 		public override PpsDataTransaction CreateTransaction(IPpsConnectionHandle connection)
-		{
-			throw new NotSupportedException();
-		} // proc CreateTransaction
+			=> throw new NotSupportedException();
 
 		/// <summary></summary>
-		/// <param name="privateUserData"></param>
+		/// <param name="userData"></param>
 		/// <param name="lastSynchronization"></param>
 		/// <returns></returns>
-		public override PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, DateTime lastSynchronization)
-			=> new PpsDataSynchronization(application, CreateConnection(privateUserData, true), lastSynchronization);
+		public override PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext userData, DateTime lastSynchronization)
+			=> new PpsDataSynchronization(application, CreateConnection(userData, true), lastSynchronization);
 
 		/// <summary></summary>
 		public override string Type => "Sys";
