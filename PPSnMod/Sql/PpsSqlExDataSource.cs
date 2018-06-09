@@ -1032,7 +1032,7 @@ namespace TecWare.PPSn.Server.Sql
 						using (var dst = new GZipStream(dstMem, CompressionMode.Compress))
 						{
 							dst.Write(buf, 0, readed);
-							dst.Flush();
+							dst.Dispose();
 							dstMem.Flush();
 							buf = dstMem.ToArray();
 						}

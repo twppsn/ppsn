@@ -1069,7 +1069,7 @@ namespace TecWare.PPSn
 							new XElement(tagElementName,
 								new XAttribute("key", cur.Name),
 								new XAttribute("tagClass", PpsObjectTag.FormatClass(cur.Class)),
-								new XAttribute("value", cur.Value),
+								Procs.XAttributeCreate("value", cur.Value),
 								new XAttribute("userId", cur.UserId),
 								new XAttribute("createDate", cur.CreationStamp.ToUniversalTime().ChangeType<string>())
 							)
@@ -3102,6 +3102,10 @@ namespace TecWare.PPSn
 
 		private void SetValue(PpsStaticObjectColumnIndex index, object newValue, bool setDirty)
 		{
+			// change type
+			newValue = newValue == null ? null : Procs.ChangeType(newValue, staticColumns[(int)index].DataType);
+
+			// comparer value
 			if (!Object.Equals(staticValues[(int)index], newValue))
 			{
 				staticValues[(int)index] = newValue;
