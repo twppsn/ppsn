@@ -2649,7 +2649,15 @@ namespace TecWare.PPSn
 					if (headerLength < 10)
 						throw new ArgumentOutOfRangeException("ppsn-header-length", headerLength, "Header is missing.");
 
-					//var isContentTransferDeflated = c.GetProperty("ppsn-content-transfer", (string)null) == "gzip";
+					var contentTransferMode = c.GetProperty("ppsn-content-transfer", null);
+					var isContentTransferDeflated = false;
+					if (contentTransferMode != null)
+					{
+						if (contentTransferMode == "gzip")
+							isContentTransferDeflated = true;
+						else
+							throw new ArgumentException("Invalid ppsn-content-transfer");
+					}
 
 					// set pulled revId to the pulled data!
 					var tmp = c.GetProperty("ppsn-pulled-revId", pulledRevId);
@@ -2681,12 +2689,12 @@ namespace TecWare.PPSn
 						// download content
 						using (var dst = new PpsObjectWriteStream(this, c.ContentLength - headerLength))
 						{
-							//if (isContentTransferDeflated)
-							//{
-							//	using (var src = new GZipStream(c.Content, CompressionMode.Decompress, true))
-							//		src.CopyToAsync(dst).AwaitTask();
-							//}
-							//else
+							if (isContentTransferDeflated)
+							{
+								using (var src = new GZipStream(c.Content, CompressionMode.Decompress, true))
+									src.CopyToAsync(dst).AwaitTask();
+							}
+							else
 								c.Content.CopyToAsync(dst).AwaitTask();
 
 							SaveObjectDataInformationAsync(dst.Result, MimeType, false).AwaitTask();
@@ -2801,6 +2809,8 @@ namespace TecWare.PPSn
 							await lnk.LinkTo.PushAsync();
 					}
 
+					var isContentTransferDeflated = MimeTypeMapping.GetIsCompressedContent(MimeType);
+
 					// first build object data
 					var xHeaderData = ToXml();
 					var headerData = Encoding.Unicode.GetBytes(xHeaderData.ToString(SaveOptions.DisableFormatting));
@@ -2810,9 +2820,8 @@ namespace TecWare.PPSn
 
 					// the stream has its own format, set header properties for the payload.
 					request.Headers["ppsn-content-type"] = MimeType;
-
-					//MimeType.StartsWith("text/");
-					//"ppsn-content-transfer"
+					if (isContentTransferDeflated)
+						request.Headers["ppsn-content-transfer"] = "gzip";
 
 					// write data
 					using (var dst = await Task.Run(() => request.GetRequestStream(true)))
@@ -2821,7 +2830,13 @@ namespace TecWare.PPSn
 						await dst.WriteAsync(headerData, 0, headerData.Length);
 
 						// write the content
-						await data.PushAsync(dst);
+						if (isContentTransferDeflated)
+						{
+							using (var dstZip = new GZipStream(dst, CompressionMode.Compress, true))
+								await data.PushAsync(dstZip);
+						}
+						else
+							await data.PushAsync(dst);
 					}
 				}
 
