@@ -292,7 +292,7 @@ namespace TecWare.PPSn.Server
 				else
 					mimeType = MimeTypes.Application.OctetStream;
 
-				await Task.Run(() => r.WriteFile(fi.FullName, ));
+				await Task.Run(() => r.WriteFile(fi.FullName, mimeType));
 				return true;
 			}
 			return await base.OnProcessRequestAsync(r);
