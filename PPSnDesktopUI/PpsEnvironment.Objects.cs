@@ -1808,7 +1808,7 @@ namespace TecWare.PPSn
 			if (obj.TryGetProperty<string>(PpsObjectBlobData.fileNameTag, out var name))
 				extension = Path.GetExtension(name);
 			if (String.IsNullOrEmpty(extension))
-				extension = StuffIO.ExtensionFromMimeType(obj.MimeType);
+				extension = MimeTypeMapping.GetExtensionFromMimeType(obj.MimeType);
 
 			targetFileName = obj.Environment.MasterData.GetLocalPath("data\\" + Guid.NewGuid() + extension);
 
@@ -2808,8 +2808,10 @@ namespace TecWare.PPSn
 						if (lnk.LinkToId < 0 || lnk.LinkTo.IsDocumentChanged)
 							await lnk.LinkTo.PushAsync();
 					}
-
-					var isContentTransferDeflated = MimeTypeMapping.GetIsCompressedContent(MimeType);
+					
+					var isContentTransferDeflated = MimeTypeMapping.TryGetMapping(MimeType, out var mapping)
+						? !mapping.IsCompressedContent
+						: false;
 
 					// first build object data
 					var xHeaderData = ToXml();
@@ -4133,7 +4135,7 @@ order by t_liefnr.value desc
 			using (var trans = await MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
 			{
 				if (mimeType == null)
-					mimeType = StuffIO.MimeTypeFromFilename(name);
+					mimeType = MimeTypeMapping.GetMimeTypeFromExtension(name);
 
 				// create the new empty object
 				var newObject = await CreateNewObjectAsync(ObjectInfos[AttachmentObjectTyp], mimeType);

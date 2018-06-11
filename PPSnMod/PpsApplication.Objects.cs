@@ -1174,7 +1174,9 @@ namespace TecWare.PPSn.Server
 
 				using (var srcStream = GetStreamFromData(data))
 				{
-					var transferDeflated = MimeTypeMapping.GetIsCompressedContent(obj.MimeType);
+					var transferDeflated = MimeTypeMapping.TryGetMapping(obj.MimeType, out var mapping)
+						? !mapping.IsCompressedContent
+						: false;
 
 					if (srcStream.CanSeek)
 						ctx.OutputHeaders["ppsn-content-length"] = srcStream.Length.ToString();
@@ -1216,7 +1218,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- Push -----------------------------------------------------------------
+		#region -- Push ---------------------------------------------------------------
 
 		/// <summary>Does this object class manage revisions</summary>
 		/// <param name="data"></param>
