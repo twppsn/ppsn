@@ -2667,7 +2667,15 @@ namespace TecWare.PPSn
 
 					using (var headerData = new WindowStream(c.Content, 0, headerLength, false, true))
 					using (var xmlHeader = XmlReader.Create(headerData, Procs.XmlReaderSettings))
-						ReadObjectFromXml(XElement.Load(xmlHeader));
+					{
+						var x = XElement.Load(xmlHeader); // object data, or exception
+						if (x.GetAttribute("status", "ok") != "ok")
+							throw new ArgumentException(String.Format("Pull request failed: {0}", x.GetAttribute("text", "unknown")));
+						if (x.Name != "object")
+							throw new ArgumentOutOfRangeException("x", x.Name, "As an pull result is only <object> allowed.");
+
+						ReadObjectFromXml(x);
+					}
 
 					// pull depended objects with lower request
 					if (foregroundTransaction != null)

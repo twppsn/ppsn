@@ -1164,7 +1164,8 @@ namespace TecWare.PPSn.Server
 					obj.SetRevision(rev);
 
 				// prepare object data
-				var headerBytes = Encoding.Unicode.GetBytes(obj.ToXml().ToString(SaveOptions.DisableFormatting));
+				var xObject = SetStatusAttributes(obj.ToXml(), true);
+				var headerBytes = Encoding.Unicode.GetBytes(xObject.ToString(SaveOptions.DisableFormatting));
 				ctx.OutputHeaders["ppsn-header-length"] = headerBytes.Length.ChangeType<string>();
 				ctx.OutputHeaders["ppsn-pulled-revId"] = obj.RevId.ChangeType<string>();
 				ctx.OutputHeaders["ppsn-content-type"] = obj.MimeType;
