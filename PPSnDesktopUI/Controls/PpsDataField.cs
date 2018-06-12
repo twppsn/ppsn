@@ -946,7 +946,26 @@ namespace TecWare.PPSn.Controls
 			textBinding.Converter = PpsConverter.NumericValue;
 			textBinding.ConverterParameter = new NumericValueConverterParameter() { AllowNeg = allowNeg, FloatDigits = floatDigits };
 		} // proc SetNumericBinding
-		
+
+		private void SetTextFieldProperties(dynamic ctrl, IPpsDataFieldReadOnlyProperties properties)
+		{
+			if (properties.TryGetProperty<double>("TextHeight", out var height))
+			{
+				ctrl.Height = GetHeight(height);
+				ctrl.VerticalAlignment = VerticalAlignment.Top;
+			}
+			else
+				ctrl.VerticalAlignment = VerticalAlignment.Top;
+
+			if (properties.TryGetProperty<double>("TextWidth", out var width))
+			{
+				ctrl.Width = GetWidth(width);
+				ctrl.HorizontalAlignment = HorizontalAlignment.Left;
+			}
+			else
+				ctrl.HorizontalAlignment = HorizontalAlignment.Stretch;
+		} // proc SetTextFieldProperties
+
 		[LuaMember]
 		private LuaWpfCreator CreateTextField(IPpsDataFieldReadOnlyProperties properties, bool formattedText = false)
 		{
@@ -1018,21 +1037,7 @@ namespace TecWare.PPSn.Controls
 			txt.InputType = inputType;
 			txt.Text = textBinding;
 
-			if (properties.TryGetProperty<double>("TextHeight", out var height))
-			{
-				txt.Height = GetHeight(height);
-				txt.VerticalAlignment = VerticalAlignment.Top;
-			}
-			else
-				txt.VerticalAlignment = VerticalAlignment.Top;
-
-			if (properties.TryGetProperty<double>("TextWidth", out var width))
-			{
-				txt.Width = GetWidth(width);
-				txt.HorizontalAlignment = HorizontalAlignment.Left;
-			}
-			else
-				txt.HorizontalAlignment = HorizontalAlignment.Stretch;
+			SetTextFieldProperties((object)txt, properties);
 
 			if (setMaxLength && properties.TryGetProperty<int>("MaxLength", out var maxInputLength))
 				txt.MaxLength = maxInputLength;
@@ -1045,7 +1050,7 @@ namespace TecWare.PPSn.Controls
 
 			if (formattedText)
 				txt.FormattedValue = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true), append: "FormattedValue", isReadOnly: true);
-	
+
 			return txt;
 		} // func CreateTextField
 
@@ -1107,13 +1112,15 @@ namespace TecWare.PPSn.Controls
 		} // func CreateRelationField
 
 		[LuaMember]
-		private static LuaWpfCreator CreateDateTimeField(IPpsDataFieldReadOnlyProperties properties)
+		private LuaWpfCreator CreateDateTimeField(IPpsDataFieldReadOnlyProperties properties)
 		{
 			dynamic ui = new LuaUI();
 			dynamic date = LuaWpfCreator.CreateFactory(ui, typeof(System.Windows.Controls.DatePicker));
 
 			date.SelectedDate = PpsDataFieldBinding.CreateWpfBinding(properties.GetService<PpsDataFieldInfo>(true));
 			date.Style = Application.Current.TryFindResource("PpsDatePickerStyle");
+
+			SetTextFieldProperties((object)date, properties);
 
 			return date;
 		} // func CreateDateTimeField

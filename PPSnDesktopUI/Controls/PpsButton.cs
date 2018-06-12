@@ -213,5 +213,4 @@ namespace TecWare.PPSn.Controls
 	} // class SplitButton
 
 	#endregion
-
 }

@@ -1066,8 +1066,8 @@ namespace TecWare.PPSn.Data
 				var i = relationFilter.FindIndex(c => c.Relation == relation);
 				if (i >= 0 && relationFilter[i].IsDisposed)
 				{
-					i = -1;
 					relationFilter.RemoveAt(i);
+					i = -1;
 				}
 
 				// return the relation
