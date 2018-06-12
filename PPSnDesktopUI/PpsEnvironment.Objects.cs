@@ -1069,7 +1069,7 @@ namespace TecWare.PPSn
 							new XElement(tagElementName,
 								new XAttribute("key", cur.Name),
 								new XAttribute("tagClass", PpsObjectTag.FormatClass(cur.Class)),
-								new XAttribute("value", cur.Value),
+								Procs.XAttributeCreate("value", cur.Value),
 								new XAttribute("userId", cur.UserId),
 								new XAttribute("createDate", cur.CreationStamp.ToUniversalTime().ChangeType<string>())
 							)
@@ -1808,7 +1808,7 @@ namespace TecWare.PPSn
 			if (obj.TryGetProperty<string>(PpsObjectBlobData.fileNameTag, out var name))
 				extension = Path.GetExtension(name);
 			if (String.IsNullOrEmpty(extension))
-				extension = StuffIO.ExtensionFromMimeType(obj.MimeType);
+				extension = MimeTypeMapping.GetExtensionFromMimeType(obj.MimeType);
 
 			targetFileName = obj.Environment.MasterData.GetLocalPath("data\\" + Guid.NewGuid() + extension);
 
@@ -2649,7 +2649,15 @@ namespace TecWare.PPSn
 					if (headerLength < 10)
 						throw new ArgumentOutOfRangeException("ppsn-header-length", headerLength, "Header is missing.");
 
-					//var isContentTransferDeflated = c.GetProperty("ppsn-content-transfer", (string)null) == "gzip";
+					var contentTransferMode = c.GetProperty("ppsn-content-transfer", null);
+					var isContentTransferDeflated = false;
+					if (contentTransferMode != null)
+					{
+						if (contentTransferMode == "gzip")
+							isContentTransferDeflated = true;
+						else
+							throw new ArgumentException("Invalid ppsn-content-transfer");
+					}
 
 					// set pulled revId to the pulled data!
 					var tmp = c.GetProperty("ppsn-pulled-revId", pulledRevId);
@@ -2659,7 +2667,15 @@ namespace TecWare.PPSn
 
 					using (var headerData = new WindowStream(c.Content, 0, headerLength, false, true))
 					using (var xmlHeader = XmlReader.Create(headerData, Procs.XmlReaderSettings))
-						ReadObjectFromXml(XElement.Load(xmlHeader));
+					{
+						var x = XElement.Load(xmlHeader); // object data, or exception
+						if (x.GetAttribute("status", "ok") != "ok")
+							throw new ArgumentException(String.Format("Pull request failed: {0}", x.GetAttribute("text", "unknown")));
+						if (x.Name != "object")
+							throw new ArgumentOutOfRangeException("x", x.Name, "As an pull result is only <object> allowed.");
+
+						ReadObjectFromXml(x);
+					}
 
 					// pull depended objects with lower request
 					if (foregroundTransaction != null)
@@ -2681,12 +2697,12 @@ namespace TecWare.PPSn
 						// download content
 						using (var dst = new PpsObjectWriteStream(this, c.ContentLength - headerLength))
 						{
-							//if (isContentTransferDeflated)
-							//{
-							//	using (var src = new GZipStream(c.Content, CompressionMode.Decompress, true))
-							//		src.CopyToAsync(dst).AwaitTask();
-							//}
-							//else
+							if (isContentTransferDeflated)
+							{
+								using (var src = new GZipStream(c.Content, CompressionMode.Decompress, true))
+									src.CopyToAsync(dst).AwaitTask();
+							}
+							else
 								c.Content.CopyToAsync(dst).AwaitTask();
 
 							SaveObjectDataInformationAsync(dst.Result, MimeType, false).AwaitTask();
@@ -2764,6 +2780,16 @@ namespace TecWare.PPSn
 					|| headerLength < 10)
 					throw new ArgumentOutOfRangeException("ppsn-header-length", headerLengthString, "Header is missing.");
 
+				var contentTransferMode = r.Headers["ppsn-content-transfer"];
+				var isContentTransferDeflated = false;
+				if (contentTransferMode != null)
+				{
+					if (contentTransferMode == "gzip")
+						isContentTransferDeflated = true;
+					else
+						throw new ArgumentException("Invalid ppsn-content-transfer");
+				}
+
 				using (var headerData = new WindowStream(src, 0, headerLength, false, true))
 				using (var xmlHeader = XmlReader.Create(headerData, Procs.XmlReaderSettings))
 					XElement.Load(xmlHeader);
@@ -2773,7 +2799,10 @@ namespace TecWare.PPSn
 				var schema = await Environment.GetDocumentDefinitionAsync(Typ);
 				var ds = new PpsObjectDataSet(schema, this); // wrong object!
 
-				using (var dataSrc = new WindowStream(src, headerLength, r.ContentLength - headerLength, false, true))
+				var dataSrc = (Stream)new WindowStream(src, headerLength, r.ContentLength - headerLength, false, true);
+				if (isContentTransferDeflated)
+					dataSrc = new GZipStream(dataSrc, CompressionMode.Decompress, false);
+				using (dataSrc)
 				using (var xmlData = XmlReader.Create(dataSrc, Procs.XmlReaderSettings))
 					ds.Read(XElement.Load(xmlData));
 
@@ -2800,6 +2829,10 @@ namespace TecWare.PPSn
 						if (lnk.LinkToId < 0 || lnk.LinkTo.IsDocumentChanged)
 							await lnk.LinkTo.PushAsync();
 					}
+					
+					var isContentTransferDeflated = MimeTypeMapping.TryGetMapping(MimeType, out var mapping)
+						? !mapping.IsCompressedContent
+						: false;
 
 					// first build object data
 					var xHeaderData = ToXml();
@@ -2810,9 +2843,8 @@ namespace TecWare.PPSn
 
 					// the stream has its own format, set header properties for the payload.
 					request.Headers["ppsn-content-type"] = MimeType;
-
-					//MimeType.StartsWith("text/");
-					//"ppsn-content-transfer"
+					if (isContentTransferDeflated)
+						request.Headers["ppsn-content-transfer"] = "gzip";
 
 					// write data
 					using (var dst = await Task.Run(() => request.GetRequestStream(true)))
@@ -2821,7 +2853,13 @@ namespace TecWare.PPSn
 						await dst.WriteAsync(headerData, 0, headerData.Length);
 
 						// write the content
-						await data.PushAsync(dst);
+						if (isContentTransferDeflated)
+						{
+							using (var dstZip = new GZipStream(dst, CompressionMode.Compress, true))
+								await data.PushAsync(dstZip);
+						}
+						else
+							await data.PushAsync(dst);
 					}
 				}
 
@@ -3102,6 +3140,10 @@ namespace TecWare.PPSn
 
 		private void SetValue(PpsStaticObjectColumnIndex index, object newValue, bool setDirty)
 		{
+			// change type
+			newValue = newValue == null ? null : Procs.ChangeType(newValue, staticColumns[(int)index].DataType);
+
+			// comparer value
 			if (!Object.Equals(staticValues[(int)index], newValue))
 			{
 				staticValues[(int)index] = newValue;
@@ -4114,7 +4156,7 @@ order by t_liefnr.value desc
 			using (var trans = await MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
 			{
 				if (mimeType == null)
-					mimeType = StuffIO.MimeTypeFromFilename(name);
+					mimeType = MimeTypeMapping.GetMimeTypeFromExtension(name);
 
 				// create the new empty object
 				var newObject = await CreateNewObjectAsync(ObjectInfos[AttachmentObjectTyp], mimeType);

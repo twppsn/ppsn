@@ -45,57 +45,60 @@ namespace TecWare.PPSn.Server.Sql
 	{
 		#region -- class SqlConnectionHandle --------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary></summary>
 		private class SqlConnectionHandle : IPpsConnectionHandle
 		{
 			public event EventHandler Disposed;
 
 			private readonly PpsSqlExDataSource dataSource;
 			private readonly SqlConnectionStringBuilder connectionString;
-			private readonly IPpsPrivateDataContext identity;
 			private readonly SqlConnection connection; // sql connection for read data
+			
+			private readonly PpsCredentials credentials;
 
-			public SqlConnectionHandle(PpsSqlExDataSource dataSource, SqlConnectionStringBuilder connectionString, IPpsPrivateDataContext identity)
+			private bool isDisposed = false;
+
+			public SqlConnectionHandle(PpsSqlExDataSource dataSource, SqlConnectionStringBuilder connectionString, PpsCredentials credentials)
 			{
-				this.dataSource = dataSource;
-				this.connectionString = connectionString;
-				this.identity = identity;
-				this.connection = new SqlConnection();
+				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(credentials)); 
+				this.connectionString = connectionString ?? throw new ArgumentNullException(nameof(credentials)); 
+				this.credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
+
+				connection = new SqlConnection();
 			} // ctor
 
 			public void Dispose()
 			{
+				if (isDisposed)
+					throw new ObjectDisposedException(nameof(SqlConnectionHandle));
+
 				// clear connection
-				connection?.Dispose();
+				connection.Dispose();
+				isDisposed = true;
 
 				// invoke disposed
 				Disposed?.Invoke(this, EventArgs.Empty);
 			} // proc Dispose
 
-			private static async Task<bool> ConnectAsync(SqlConnectionStringBuilder connectionString, SqlConnection connection, IPpsPrivateDataContext identity, bool throwException)
+			private static async Task<bool> ConnectAsync(SqlConnectionStringBuilder connectionString, SqlConnection connection, PpsCredentials credentials, bool throwException)
 			{
 				// create the connection
 				try
 				{
-					using (var currentCredentials = identity.GetNetworkCredential())
+					if (credentials is PpsIntegratedCredentials ic)
 					{
-						if (currentCredentials is PpsIntegratedCredentials ic)
-						{
-							connectionString.IntegratedSecurity = true;
-							connection.ConnectionString = connectionString.ToString();
+						connectionString.IntegratedSecurity = true;
+						connection.ConnectionString = connectionString.ToString();
 
-							using (ic.Impersonate()) // is only functional in the admin context
-								await connection.OpenAsync();
-						}
-						else if (currentCredentials is PpsUserCredentials uc) // use network credentials
-						{
-							connectionString.IntegratedSecurity = false;
-							connection.ConnectionString = connectionString.ToString();
-
-							connection.Credential = new SqlCredential(uc.UserName, uc.Password);
+						using (ic.Impersonate()) // is only functional in the admin context
 							await connection.OpenAsync();
-						}
+					}
+					else if (credentials is PpsUserCredentials uc) // use network credentials
+					{
+						connectionString.IntegratedSecurity = false;
+						connection.ConnectionString = connectionString.ToString();
+
+						connection.Credential = new SqlCredential(uc.UserName, uc.Password);
+						await connection.OpenAsync();
 					}
 					return true;
 				}
@@ -118,7 +121,7 @@ namespace TecWare.PPSn.Server.Sql
 				};
 
 				// ensure connection
-				await ConnectAsync(conStr, con, identity, true);
+				await ConnectAsync(conStr, con, credentials, true);
 
 				return con;
 			} // func ForkConnection
@@ -128,7 +131,7 @@ namespace TecWare.PPSn.Server.Sql
 				if (IsConnected)
 					return Task.FromResult(true);
 
-				return ConnectAsync(connectionString, connection, identity, throwException);
+				return ConnectAsync(connectionString, connection, credentials, throwException);
 			} // func EnsureConnection
 
 			public PpsDataSource DataSource => dataSource;
@@ -1029,7 +1032,7 @@ namespace TecWare.PPSn.Server.Sql
 						using (var dst = new GZipStream(dstMem, CompressionMode.Compress))
 						{
 							dst.Write(buf, 0, readed);
-							dst.Flush();
+							dst.Dispose();
 							dstMem.Flush();
 							buf = dstMem.ToArray();
 						}
@@ -2560,8 +2563,6 @@ namespace TecWare.PPSn.Server.Sql
 		private readonly ManualResetEventSlim schemInfoInitialized = new ManualResetEventSlim(false);
 		private DEThread databaseMainThread = null;
 
-		private readonly List<SqlConnectionHandle> currentConnections = new List<SqlConnectionHandle>();
-
 		private readonly Dictionary<string, SqlTableInfo> tableStore = new Dictionary<string, SqlTableInfo>(StringComparer.OrdinalIgnoreCase);
 		private readonly Dictionary<string, SqlColumnInfo> columnStore = new Dictionary<string, SqlColumnInfo>(StringComparer.OrdinalIgnoreCase);
 
@@ -2840,9 +2841,17 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
+		/// <summary></summary>
+		/// <param name="name"></param>
+		/// <param name="sourceDescription"></param>
+		/// <returns></returns>
 		public override Task<IPpsSelectorToken> CreateSelectorTokenAsync(string name, XElement sourceDescription)
 			=> Task.Run(new Func<IPpsSelectorToken>(() => SqlDataSelectorToken.CreateFromXml(this, name, sourceDescription)));
 
+		/// <summary></summary>
+		/// <param name="columnName"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
 		public override IPpsColumnDescription GetColumnDescription(string columnName, bool throwException)
 		{
 			if (columnStore.TryGetValue(columnName, out var column))
@@ -2856,28 +2865,30 @@ namespace TecWare.PPSn.Server.Sql
 		private SqlConnectionHandle GetSqlConnection(IPpsConnectionHandle connection, bool throwException)
 			=> (SqlConnectionHandle)connection;
 
-		/// <summary>Creates a user specific connection.</summary>
-		/// <param name="privateUserData"></param>
+		/// <summary></summary>
+		/// <param name="userContext"></param>
+		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public override IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext privateUserData, bool throwException = true)
-		{
-			lock (currentConnections)
-			{
-				var c = new SqlConnectionHandle(this, CreateConnectionStringBuilder(lastReadedConnectionString, "User"), privateUserData);
-				currentConnections.Add(c);
-				return c;
-			}
-		} // func IPpsConnectionHandle
+		public override IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext userContext, bool throwException = true)
+			=> new SqlConnectionHandle(this, CreateConnectionStringBuilder(lastReadedConnectionString, "User"), userContext.GetNetworkCredential());
 
+		/// <summary></summary>
+		/// <param name="connection"></param>
+		/// <returns></returns>
 		public override PpsDataTransaction CreateTransaction(IPpsConnectionHandle connection)
 		{
 			var c = GetSqlConnection(connection, true);
 			return new SqlDataTransaction(this, c);
 		} // func CreateTransaction
 
+		/// <summary></summary>
+		/// <param name="privateUserData"></param>
+		/// <param name="lastSynchronization"></param>
+		/// <returns></returns>
 		public override PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, DateTime lastSynchronization)
 			=> new SqlSynchronizationTransaction(application, this, privateUserData, lastSynchronization);
 
+		/// <summary>Is the master connection of the data source connected.</summary>
 		public bool IsConnected
 		{
 			get
@@ -2887,6 +2898,7 @@ namespace TecWare.PPSn.Server.Sql
 			}
 		} // prop IsConnected
 
+		/// <summary>Returns always mssql</summary>
 		public override string Type => "mssql";
 
 		// -- Static --------------------------------------------------------------

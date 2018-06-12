@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Server.Http;
 using TecWare.DE.Stuff;
@@ -283,7 +284,15 @@ namespace TecWare.PPSn.Server
 			}
 			else if (GetDatasetResourceFile(r.RelativeSubPath, out var fi))
 			{
-				await Task.Run(() => r.WriteFile(fi.FullName));
+				if (MimeTypeMapping.TryGetMimeTypeFromExtension(fi.Extension, out var mimeType))
+				{
+					if (mimeType == MimeTypes.Text.Lua || mimeType == MimeTypes.Text.Html) // map lua,html to plain text, do not change content
+						mimeType = MimeTypes.Text.Plain;
+				}
+				else
+					mimeType = MimeTypes.Application.OctetStream;
+
+				await Task.Run(() => r.WriteFile(fi.FullName, mimeType));
 				return true;
 			}
 			return await base.OnProcessRequestAsync(r);

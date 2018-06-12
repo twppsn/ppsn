@@ -21,63 +21,74 @@ using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Server.Data
 {
-	#region -- class PpsDataSource ------------------------------------------------------
+	#region -- class PpsDataSource ----------------------------------------------------
 
+	/// <summary>Abstract class for a data source configuration item.</summary>
 	public abstract class PpsDataSource : DEConfigItem
 	{
-		private readonly PpsApplication application;
-
+		/// <summary></summary>
+		/// <param name="sp"></param>
+		/// <param name="name"></param>
 		public PpsDataSource(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
-			this.application = sp.GetService<PpsApplication>(true);
+			Application = sp.GetService<PpsApplication>(true);
 		} // ctor
+		
+		/// <summary>Create a connection for the current active user.</summary>
+		/// <param name="userContext">User context of the current active user (to not create any reference on it).</param>
+		/// <param name="throwException">If the connection could not created it throws an exception.</param>
+		/// <returns></returns>
+		public abstract IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext userContext, bool throwException = true);
 
-		//public virtual bool EnsureConnection(object context)
-		//{
-		//	return true;
-		//}
-
-		//public virtual bool IsConnectionRelatedException(object context, Exception e)
-		//{
-		//	return false;
-		//}
-
-		public abstract IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext privateUserData, bool throwException = true);
-
+		/// <summary>Create a selector token for the view name.</summary>
+		/// <param name="name">Name of the selector.</param>
+		/// <param name="sourceDescription">Description for the token.</param>
+		/// <returns>Selector</returns>
 		public virtual Task<IPpsSelectorToken> CreateSelectorTokenAsync(string name, XElement sourceDescription)
-		{
-			throw new NotImplementedException();
-		} // func CreateSelectorTokenAsync
+			=> throw new NotImplementedException();
+		
+		/// <summary>Create a synchronization session for the client.</summary>
+		/// <param name="userContext"></param>
+		/// <param name="lastSynchronization"></param>
+		/// <returns></returns>
+		public virtual PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext userContext, DateTime lastSynchronization)
+			=> throw new NotImplementedException();
 
-		public virtual PpsDataSynchronization CreateSynchronizationSession(IPpsPrivateDataContext privateUserData, DateTime lastSynchronization)
-		{
-			throw new NotImplementedException();
-		} // func CreateSynchronizationSession
-
+		/// <summary>Create a data manipulation session.</summary>
+		/// <param name="connection"></param>
+		/// <returns></returns>
 		public virtual PpsDataTransaction CreateTransaction(IPpsConnectionHandle connection)
-		{
-			throw new NotImplementedException();
-		}// func CreateTransaction
+			=> throw new NotImplementedException();
 
 		/// <summary>Returns a native column description.</summary>
 		/// <param name="columnName"></param>
+		/// <param name="throwException"></param>
 		/// <returns></returns>
 		public virtual IPpsColumnDescription GetColumnDescription(string columnName, bool throwException = false)
-		{
-			return null;
-		} // func GetColumnDescription
-
+			=> null;
+		
+		/// <summary>Create a data set.</summary>
+		/// <param name="dataSetName"></param>
+		/// <param name="config"></param>
+		/// <param name="configurationStamp"></param>
+		/// <returns></returns>
 		public PpsDataSetServerDefinition CreateDataSetDefinition(string dataSetName, XElement config, DateTime configurationStamp)
 			=> new PpsDataSetServerDefinition(this, dataSetName, config, configurationStamp);
 
+		/// <summary></summary>
+		/// <param name="dataset"></param>
+		/// <param name="tableName"></param>
+		/// <param name="config"></param>
+		/// <returns></returns>
 		public virtual PpsDataTableServerDefinition CreateTableDefinition(PpsDataSetServerDefinition dataset, string tableName, XElement config)
 			=> new PpsDataTableServerDefinition(dataset, tableName, config);
 
+		/// <summary>Base type of the data source.</summary>
 		public abstract string Type { get; }
 
 		/// <summary>Application object.</summary>
-		public PpsApplication Application => application;
+		public PpsApplication Application { get; }
 	} // class PpsDataSource
 
 	#endregion

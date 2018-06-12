@@ -1109,7 +1109,7 @@ namespace TecWare.PPSn
 			if (obj.TryGetProperty<string>(PpsObjectBlobData.fileNameTag, out var fileName))
 				fileName = obj.Guid.ToString("N") + "_" + fileName;
 			else
-				fileName = obj.Guid.ToString("N") + StuffIO.ExtensionFromMimeType(obj.MimeType);
+				fileName = obj.Guid.ToString("N") + MimeTypeMapping.GetExtensionFromMimeType(obj.MimeType);
 
 			return new FileInfo(Path.Combine(tempDirectory.FullName, fileName));
 		} // func GetLocalTempFileInfo

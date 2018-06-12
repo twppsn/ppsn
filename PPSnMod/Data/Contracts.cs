@@ -349,6 +349,12 @@ namespace TecWare.PPSn.Server.Data
 	/// <summary>Hold's the connection and context data for one user.</summary>
 	public interface IPpsPrivateDataContext : IPropertyReadOnlyDictionary, IDisposable
 	{
+		/// <summary>Returns a pooled connection for a datasource</summary>
+		/// <param name="source"></param>
+		/// <param name="throwException"></param>
+		/// <returns></returns>
+		Task<IPpsConnectionHandle> EnsureConnectionAsync(PpsDataSource source, bool throwException = true);
+
 		/// <summary>Creates a selector for a view.</summary>
 		/// <param name="name">Name of the view</param>
 		/// <param name="columns">Column definition.</param>

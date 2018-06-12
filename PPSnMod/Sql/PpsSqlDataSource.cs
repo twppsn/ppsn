@@ -26,14 +26,16 @@ using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server.Sql
 {
-	#region -- class PpsSqlDataSource ---------------------------------------------------
+	#region -- class PpsSqlDataSource -------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
-	/// <summary></summary>
+	/// <summary>Base class for sql-based datasources.</summary>
 	public abstract class PpsSqlDataSource : PpsDataSource
 	{
 		//private DbConnection connection = null;
 
+		/// <summary></summary>
+		/// <param name="sp"></param>
+		/// <param name="name"></param>
 		public PpsSqlDataSource(IServiceProvider sp, string name)
 			: base(sp, name)
 		{

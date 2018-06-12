@@ -183,6 +183,9 @@
 
 	<xs:element name="register">
 		<xs:annotation>
+			<xs:appinfo>
+				<browsable>False</browsable>
+			</xs:appinfo>
 			<xs:documentation>Expands the definition of a specific datasource.</xs:documentation>
 		</xs:annotation>
 		<xs:complexType>

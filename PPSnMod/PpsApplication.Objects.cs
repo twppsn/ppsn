@@ -1164,7 +1164,8 @@ namespace TecWare.PPSn.Server
 					obj.SetRevision(rev);
 
 				// prepare object data
-				var headerBytes = Encoding.Unicode.GetBytes(obj.ToXml().ToString(SaveOptions.DisableFormatting));
+				var xObject = SetStatusAttributes(obj.ToXml(), true);
+				var headerBytes = Encoding.Unicode.GetBytes(xObject.ToString(SaveOptions.DisableFormatting));
 				ctx.OutputHeaders["ppsn-header-length"] = headerBytes.Length.ChangeType<string>();
 				ctx.OutputHeaders["ppsn-pulled-revId"] = obj.RevId.ChangeType<string>();
 				ctx.OutputHeaders["ppsn-content-type"] = obj.MimeType;
@@ -1174,7 +1175,9 @@ namespace TecWare.PPSn.Server
 
 				using (var srcStream = GetStreamFromData(data))
 				{
-					var transferDeflated = false; // obj.MimeType.StartsWith("text/");
+					var transferDeflated = MimeTypeMapping.TryGetMapping(obj.MimeType, out var mapping)
+						? !mapping.IsCompressedContent
+						: false;
 
 					if (srcStream.CanSeek)
 						ctx.OutputHeaders["ppsn-content-length"] = srcStream.Length.ToString();
@@ -1216,7 +1219,7 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
-		#region -- Push -----------------------------------------------------------------
+		#region -- Push ---------------------------------------------------------------
 
 		/// <summary>Does this object class manage revisions</summary>
 		/// <param name="data"></param>
@@ -1307,6 +1310,16 @@ namespace TecWare.PPSn.Server
 		protected virtual PpsPushDataResult LuaPush(PpsObjectAccess obj, object data, bool release)
 			=> PushData(obj, (T)data, release);
 
+		private bool ParseContentTransfer(string value)
+		{
+			if (String.IsNullOrEmpty(value))
+				return false;
+			else if (value == "gzip")
+				return true;
+			else
+				throw new ArgumentException("Invalid ppsn-content-transfer");
+		} // func ParseContentTransfer
+
 		[
 		DEConfigHttpAction("push", IsSafeCall = false),
 		Description("Writes a new revision to the object store.")
@@ -1325,6 +1338,8 @@ namespace TecWare.PPSn.Server
 
 				var pulledId = ctx.GetProperty("ppsn-pulled-revId", -1L);
 				var releaseRequest = ctx.GetProperty("ppsn-release", false);
+				var isContentDeflated = ParseContentTransfer(ctx.GetProperty("ppsn-content-transfer", null));
+
 				var src = ctx.GetInputStream();
 
 				// parse the object body
@@ -1341,8 +1356,10 @@ namespace TecWare.PPSn.Server
 					VerfiyObjectType(obj);
 
 					objectId = obj.Id;
-					
+
 					// create and load the dataset
+					if (isContentDeflated)
+						src = new GZipStream(src, CompressionMode.Decompress, true);
 					var data = GetDataFromStream(src);
 
 					// push data in the database

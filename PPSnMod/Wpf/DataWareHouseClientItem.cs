@@ -58,7 +58,7 @@ namespace TecWare.PPSn.Server.Wpf
 			public string Description { get; }
 		} // PpsExcelReportItem
 
-		private IEnumerable<PpsExcelReportItem> GetExcelReportItems(IPpsPrivateDataContext privateUserData)
+		private IEnumerable<PpsExcelReportItem> GetExcelReportItems()
 		{
 			foreach (var v in application.GetViewDefinitions())
 			{
@@ -69,10 +69,9 @@ namespace TecWare.PPSn.Server.Wpf
 
 		/// <summary>View to get all excel reports</summary>
 		/// <param name="dataSource"></param>
-		/// <param name="privateUserData"></param>
 		/// <returns></returns>
-		public PpsDataSelector GetReportItemsSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
-			=> new PpsGenericSelector<PpsExcelReportItem>(dataSource, "bi.reports", GetExcelReportItems(privateUserData));
+		public PpsDataSelector GetReportItemsSelector(PpsSysDataSource dataSource)
+			=> new PpsGenericSelector<PpsExcelReportItem>(dataSource, "bi.reports", GetExcelReportItems());
 
 		#endregion
 	} // class ExcelCientItem

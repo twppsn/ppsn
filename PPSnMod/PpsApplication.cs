@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
+using TecWare.DE.Networking;
 using TecWare.DE.Server;
 using TecWare.DE.Server.Configuration;
 using TecWare.DE.Server.Http;
@@ -107,7 +108,6 @@ namespace TecWare.PPSn.Server
 			LuaType.RegisterTypeAlias("blob", typeof(byte[]));
 			LuaType.RegisterTypeAlias("geography", typeof(Microsoft.SqlServer.Types.SqlGeography));
 
-			InitData();
 			InitUser();
 		} // ctor
 
@@ -153,8 +153,7 @@ namespace TecWare.PPSn.Server
 				UpdateInitializationState("Shuting down");
 
 				DoneUser();
-				DoneData();
-
+				
 				initializationProgress.Dispose();
 			}
 			finally
@@ -419,6 +418,22 @@ namespace TecWare.PPSn.Server
 		public void FireDataChangedEvent(string database)
 			=> FireEvent("ppsn_database_changed", database);
 
+		private XElement GetMimeTypesInfo()
+		{
+			var x = new XElement("mimeTypes");
+
+			//foreach (var cur in MimeTypeMapping.Mappings)
+			//{
+			//	x.Add(new XElement("mimeType",
+			//		new XAttribute("id", cur.MimeType),
+			//		Procs.XAttributeCreate("isCompressedContent", cur.IsCompressedContent),
+			//		Procs.XAttributeCreate("extensions", String.Join(";", cur.Extensions))
+			//	));
+			//}
+
+			return x;
+		} // func GetMimeTypesInfo
+
 		/// <summary></summary>
 		/// <param name="r"></param>
 		/// <returns></returns>
@@ -431,7 +446,8 @@ namespace TecWare.PPSn.Server
 						new XElement("ppsn",
 							new XAttribute("displayName", DisplayName),
 							new XAttribute("version", "1.0.0.0"),
-							new XAttribute("loginSecurity", "NTLM,Basic")
+							new XAttribute("loginSecurity", "NTLM,Basic"),
+							GetMimeTypesInfo()
 						)
 					));
 					return true;

@@ -780,7 +780,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#endregion
 
-		private string CollectEnvironmentScripts(IPpsPrivateDataContext user, string hostName)
+		private string CollectEnvironmentScripts(string hostName)
 		{
 			var priority = 1;
 			var environmentLoader = new List<Tuple<int, string>>();
@@ -801,7 +801,7 @@ namespace TecWare.PPSn.Server.Wpf
 				priority = priority + 1;
 			}
 
-			var createdScript = CallMemberDirect("OnCollectEnvironmentScripts", new object[] { user, hostName }, ignoreNilFunction: true).ToString();
+			var createdScript = CallMemberDirect("OnCollectEnvironmentScripts", new object[] { hostName }, ignoreNilFunction: true).ToString();
 			if (!String.IsNullOrEmpty(createdScript))
 				environmentLoader.Add(new Tuple<int, string>(Int32.MaxValue, createdScript));
 
@@ -817,7 +817,7 @@ namespace TecWare.PPSn.Server.Wpf
 				xml.WriteStartElement("environment");
 
 				// create environment extentsions
-				var environmentCode = CollectEnvironmentScripts(user, r.GetProperty("ppsn-hostname", String.Empty));
+				var environmentCode = CollectEnvironmentScripts(r.GetProperty("ppsn-hostname", String.Empty));
 				if (environmentCode != null)
 				{
 					xml.WriteStartElement("code");
@@ -909,7 +909,7 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 		} // proc AddApplicationFileItem
 
-		private IEnumerable<PpsApplicationFileItem> GetApplicationFileList(IPpsPrivateDataContext privateUserData)
+		private IEnumerable<PpsApplicationFileItem> GetApplicationFileList()
 		{
 			var basePath = this.Name;
 
@@ -955,8 +955,8 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 		} // func GetApplicationFileList
 
-		public PpsDataSelector GetApplicationFilesSelector(PpsSysDataSource dataSource, IPpsPrivateDataContext privateUserData)
-			=> new PpsGenericSelector<PpsApplicationFileItem>(dataSource, "wpf.sync", GetApplicationFileList(privateUserData));
+		public PpsDataSelector GetApplicationFilesSelector(PpsSysDataSource dataSource)
+			=> new PpsGenericSelector<PpsApplicationFileItem>(dataSource, "wpf.sync", GetApplicationFileList());
 
 		#endregion
 

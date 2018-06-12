@@ -17,7 +17,6 @@ using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Security.Principal;
-using System.Threading;
 using System.Threading.Tasks;
 using Neo.IronLua;
 using TecWare.DE.Data;
@@ -42,37 +41,69 @@ namespace TecWare.PPSn.Server
 		private const int noUserId = -1;
 		private const int sysUserId = Int32.MinValue;
 
-		#region -- class PrivateUserData ------------------------------------------------
+		#region -- class PrivateUserData ----------------------------------------------
 
-		///////////////////////////////////////////////////////////////////////////////
 		/// <summary>This class holds all information for a currently inactive user.</summary>
 		private sealed class PrivateUserData : LuaTable, IDEUser, IDisposable
 		{
+			#region -- class PooledConnection -----------------------------------------
+
+			private sealed class PooledConnection
+			{
+				private readonly int createdAt;
+				private IPpsConnectionHandle connection;
+				private readonly string dataSourceName;
+
+				public PooledConnection(IPpsConnectionHandle connection)
+				{
+					if (connection == null)
+						throw new ArgumentNullException(nameof(connection));
+
+					dataSourceName = connection.DataSource.Name;
+
+					createdAt = Environment.TickCount;
+					connection.Disposed += (sender, e) => Clear();
+
+					this.connection = connection;
+				} // ctor
+
+				public void Clear()
+				{
+					if (connection.IsConnected)
+						connection.Dispose();
+					connection = null;
+				} // proc Clear
+
+				public bool IsAlive
+					=> connection != null && connection.IsConnected && unchecked(Environment.TickCount - createdAt) < connection.DataSource.Application.ConnectionLease;
+				
+				public IPpsConnectionHandle Handle => connection;
+
+				public int CreatedAt => createdAt;
+				public string DataSourceName => dataSourceName;
+			} // class PooledConnection
+
+			#endregion
+
 			private readonly PpsApplication application;
-			private readonly string connectionName;
-			//private readonly ReaderWriterLockSlim connectionLock; // locks the user object -> geht nicht mehr durch thread pooling
 
 			private readonly long userId;           // unique id of the user
-			private LoggerProxy log;                // current log interface for the user
-			private int currentVersion = -1;
+			private readonly LoggerProxy log;       // current log interface for the user
+			private int currentVersion = -1;        // version of the user data
 			private string[] securityTokens = null; // access rights
 
-			private readonly PpsUserIdentity userIdentity = null;	// user identity for the authentification
-			private PpsUserIdentity localIdentity = null;			// user identity to access resources on the server
+			private readonly PpsUserIdentity userIdentity = null;   // user identity for the authentification
+			private PpsUserIdentity localIdentity = null;           // user identity to access resources on the server
 
-			private int lastAccess;   // last dispose of the last active context
-
-			private readonly List<IPpsConnectionHandle> connections = new List<IPpsConnectionHandle>(); // current connections within the sources
+			private readonly List<PooledConnection> pooledConnections = new List<PooledConnection>();
 			private readonly List<WeakReference<PrivateUserDataContext>> currentContexts = new List<WeakReference<PrivateUserDataContext>>(); // current active user contexts
 
-			#region -- Ctor/Dtor/Idle -------------------------------------------------------
+			#region -- Ctor/Dtor/Idle -------------------------------------------------
 
-			public PrivateUserData(PpsApplication application, long userId, PpsUserIdentity userIdentity, string connectionName)
+			public PrivateUserData(PpsApplication application, long userId, PpsUserIdentity userIdentity)
 			{
 				this.application = application ?? throw new ArgumentNullException(nameof(application));
 				this.userId = userId;
-				this.connectionName = connectionName ?? throw new ArgumentNullException(nameof(connectionName));
-				//this.connectionLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
 				if (userId == sysUserId) // mark system user
 				{
@@ -95,94 +126,68 @@ namespace TecWare.PPSn.Server
 				// unregister the user
 				application.Server.UnregisterUser(this);
 
-				// enter write lock
-				//connectionLock.TryEnterWriteLock(30000); // force dispose after 30s
-
-				// dispose lock
-				//connectionLock.Dispose();
-
-				// dispose identity
-				userIdentity.Dispose();
-
-				// dispose connections
-				CloseConnections();
+				// identity is not disposed, because is might used by pending contexts
 			} // proc Dispose
 
-			public void Idle()
-			{
-				if (IsActive && IsExpired)
-					CloseConnections();
-			} // proc Idle
-
 			#endregion
 
-			#region -- Connections ----------------------------------------------------------
+			#region -- User connection pool -------------------------------------------
 
-			private IPpsConnectionHandle GetMainConnectionHandle()
-				=> GetConnectionHandle(application.MainDataSource);
-
-			private int FindConnectionIndexBySource(PpsDataSource source)
-				=> connections.FindIndex(c => c.DataSource == source);
-
-			public IPpsConnectionHandle GetConnectionHandle(PpsDataSource source)
+			private PooledConnection FindPooledConnection(PpsDataSource dataSource)
 			{
-				lock (connections)
+				lock (pooledConnections)
 				{
-					var idx = FindConnectionIndexBySource(source);
-					return idx >= 0 ? connections[idx] : null;
-				}
-			} // func GetConnectionHandle
-
-			public void UpdateConnectionHandle(PpsDataSource source, IPpsConnectionHandle handle)
-			{
-				lock (connections)
-				{
-					var idx = FindConnectionIndexBySource(source);
-					if (idx >= 0)
+					for (var i = pooledConnections.Count - 1; i >= 0; i--)
 					{
-						if (connections[idx].IsConnected)
-							throw new ArgumentException("Connection already registered.");
+						var cur = pooledConnections[i];
+						if (cur.IsAlive)
+						{
+							if (cur.Handle.DataSource == dataSource)
+								return cur;
+						}
 						else
-							connections.RemoveAt(idx);
+						{
+							Log.Info("Remove pooled connection: {0} after {1:N0}", cur.DataSourceName, unchecked(Environment.TickCount - cur.CreatedAt));
+							pooledConnections.RemoveAt(i);
+						}
 					}
-
-					// add the connection
-					connections.Add(handle);
-					handle.Disposed += Handle_Disposed;
+					return null;
 				}
-			} // proc UpdateConnectionHandle
+			} // func FindPooledConnection
 
-			private void Handle_Disposed(object sender, EventArgs e)
+			internal IPpsConnectionHandle GetOrCreatePooledConnection(PpsDataSource dataSource, IPpsPrivateDataContext userData, bool throwException)
 			{
-				lock (connections)
+				lock (pooledConnections)
 				{
-					var idx = connections.FindIndex(c => c == sender);
-					if (idx >= 0)
-						connections.RemoveAt(idx);
-				}
-			} // func handle_Disposed
+					var pooled = FindPooledConnection(dataSource);
+					if (pooled == null)
+					{
+						var handle = dataSource.CreateConnection(userData, throwException);
+						if (handle == null)
+							return null;
 
-			private void CloseConnections()
-			{
-				lock (connections)
-				{
-					connections.ForEach(c => c.Dispose());
-					connections.Clear();
+						pooledConnections.Add(new PooledConnection(handle));
+
+						Log.Info("New pooled connection: {0}", dataSource.Name);
+						return handle;
+					}
+					else
+					{
+						//Log.Info("Reuse pooled connection: {0}", dataSource.Name);
+						return pooled.Handle;
+					}
 				}
-			} // proc CloseConnections
+			} // func GetOrCreatePooledConnection
 
 			#endregion
 
-			#region -- AuthentUser, CreateContext -------------------------------------------
+			#region -- AuthentUser, CreateContext -------------------------------------
 
 			private PrivateUserDataContext CreateContextIntern(IIdentity currentIdentity)
 			{
 				lock (currentContexts)
 				{
-					CleanCurrentContexts();
-
-					//if (currentContexts.Count == 0)
-					//	connectionLock.EnterReadLock();
+					RemoveContext(null);
 
 					var t = new PrivateUserDataContext(this, currentIdentity);
 					currentContexts.Add(new WeakReference<PrivateUserDataContext>(t));
@@ -190,82 +195,58 @@ namespace TecWare.PPSn.Server
 				}
 			} // func CreateContextIntern
 
-			private void CleanCurrentContexts()
-			{
-				var inLock = currentContexts.Count > 0;
-
-				for (var i = currentContexts.Count - 1; i >= 0; i--)
-				{
-					if (!currentContexts[i].TryGetTarget(out var t))
-						currentContexts.RemoveAt(i);
-				}
-
-				//if (inLock && currentContexts.Count == 0)
-				//	connectionLock.ExitReadLock();
-			} // proc CleanCurrentContexts
-
-			internal void ContextDisposed(PrivateUserDataContext context)
+			internal void RemoveContext(PrivateUserDataContext context)
 			{
 				lock (currentContexts)
 				{
-					CleanCurrentContexts();
-
-					var idx = currentContexts.FindIndex(c => c.TryGetTarget(out var t) && t == context);
-					if (idx != -1)
+					for (var i = currentContexts.Count - 1; i >= 0; i--)
 					{
-						currentContexts.RemoveAt(idx);
-						//if (currentContexts.Count == 0)
-						//	connectionLock.ExitReadLock();
+						if (!currentContexts[i].TryGetTarget(out var t)
+							|| t.IsDisposed
+							|| t == context)
+						{
+							currentContexts.RemoveAt(i);
+						}
 					}
-
-					lastAccess = Environment.TickCount;
 				}
-			} // proc ContextDisposed
+			} // proc RemoveContext
 
 			public async Task<IDEAuthentificatedUser> AuthentificateAsync(IIdentity identity)
 			{
-				//connectionLock.EnterReadLock(); durch await, ändert sich der thread!
-				//try
-				//{
-					if (userIdentity == null) // is there a identity
-						return null;
-					if (!userIdentity.Equals(identity)) // check if that the identity matches
-						return null;
-
-					var mainConnectionHandle = GetMainConnectionHandle();
-					if (mainConnectionHandle != null) // main connection is still active
-						return CreateContextIntern(identity);
-					else // no main connection create one
+				if (userIdentity == null) // is there a identity
+					return null;
+				if (!userIdentity.Equals(identity)) // check if that the identity matches
+					return null;
+								
+				// check the user information agains the main user
+				var context = CreateContextIntern(identity); // create new context for this identity
+				try
+				{
+					var newConnection = GetOrCreatePooledConnection(application.MainDataSource, context, false);
+					try
 					{
-						IPpsConnectionHandle newConnection = null;
-						var context = CreateContextIntern(identity);
-						try
+						// ensure the database connection to the main database
+						if (await newConnection.EnsureConnectionAsync(true))
+							return context;
+						else
 						{
-							// check the user information agains the main user
-							newConnection = application.MainDataSource.CreateConnection(context);
-
-							// ensure the database connection to the main database
-							if (await newConnection.EnsureConnectionAsync())
-							{
-								UpdateConnectionHandle(application.MainDataSource, newConnection);
-								return context;
-							}
-							else
-								throw new Exception("Connection lost.");
-						}
-						catch (Exception e)
-						{
-							log.Except(e);
-							newConnection?.Dispose();
 							context.Dispose();
 							return null;
 						}
 					}
-				//}
-				//finally
-				//{
-				//	connectionLock.ExitReadLock();
-				//}
+					catch (Exception e)
+					{
+						log.Except(e);
+						newConnection?.Dispose();
+						return null;
+					}
+				}
+				catch(Exception e)
+				{
+					log.Except(e);
+					context.Dispose();
+					return null;
+				}
 			} // func Authentificate
 
 			public bool DemandToken(string securityToken)
@@ -275,13 +256,12 @@ namespace TecWare.PPSn.Server
 				else if (securityToken == "user")
 					return true;
 
-				lock (connections)
-					return Array.BinarySearch(securityTokens, securityToken.ToLower()) >= 0;
+				return Array.BinarySearch(securityTokens, securityToken.ToLower()) >= 0;
 			} // func DemandToken
 
 			#endregion
 
-			#region -- UpdateData -----------------------------------------------------------
+			#region -- UpdateData -----------------------------------------------------
 
 			public void UpdateData(IDataRow r)
 			{
@@ -292,6 +272,7 @@ namespace TecWare.PPSn.Server
 
 				// currently service is for local stuff
 				localIdentity = application.systemUser.userIdentity;
+				currentVersion = loginVersion;
 
 				// update optinal values
 				SetMemberValue(UserContextFullName, r.GetProperty("Name", userIdentity.Name));
@@ -345,21 +326,6 @@ namespace TecWare.PPSn.Server
 			public PpsUserIdentity User => userIdentity;
 			/// <summary></summary>
 			public PpsUserIdentity LocalIdentity => localIdentity;
-
-			/// <summary>Are the user context expiered and should be cleared.</summary>
-			public bool IsExpired => userId != sysUserId && unchecked(Environment.TickCount - lastAccess) > application.UserLease;
-			/// <summary>Is the context active</summary>
-			public bool IsActive
-			{
-				get
-				{
-					lock (currentContexts)
-					{
-						CleanCurrentContexts();
-						return currentContexts.Count > 0;
-					}
-				}
-			} // prop IsActive
 		} // class PrivateUserData
 
 		#endregion
@@ -372,6 +338,7 @@ namespace TecWare.PPSn.Server
 		{
 			private readonly PrivateUserData privateUser;
 			private readonly IIdentity currentIdentity; // contains the plain identity token from the user
+			private bool isDisposed = false;
 
 			#region -- Ctor/Dtor ------------------------------------------------------------
 
@@ -389,21 +356,26 @@ namespace TecWare.PPSn.Server
 
 			public void Dispose()
 			{
+				if (isDisposed)
+					throw new ObjectDisposedException(nameof(PrivateUserData));
+
+				isDisposed = true;
+
 				// dispose identity
 				if (currentIdentity is IDisposable d)
 					d.Dispose();
 
 				// unregister context
-				privateUser.ContextDisposed(this);
+				privateUser.RemoveContext(this);
 			} // proc Dispose
 
 			#endregion
 
 			#region -- Data Tasks -----------------------------------------------------------
 
-			private async Task<IPpsConnectionHandle> EnsureConnectionAsync(PpsDataSource source, bool throwException)
+			public async Task<IPpsConnectionHandle> EnsureConnectionAsync(PpsDataSource source, bool throwException)
 			{
-				var c = privateUser.GetConnectionHandle(source);
+				var c = privateUser.GetOrCreatePooledConnection(source, this, throwException);
 				if (c == null)
 					c = source.CreateConnection(this, throwException);
 
@@ -500,10 +472,14 @@ namespace TecWare.PPSn.Server
 			public long UserId => privateUser.Id;
 			public string UserName => privateUser.Name;
 
+			public bool IsDisposed => isDisposed;
+
 			IIdentity IPrincipal.Identity => currentIdentity;
 			PpsUserIdentity IPpsPrivateDataContext.Identity => privateUser.User;
 
+			/// <summary>Access the application object.</summary>
 			public PpsApplication Application => privateUser.Application;
+			/// <summary>Main data source for this user.</summary>
 			public PpsDataSource MainDataSource => Application.MainDataSource;
 		} // class PrivateUserDataContext
 
@@ -516,7 +492,7 @@ namespace TecWare.PPSn.Server
 
 		private void InitUser()
 		{
-			systemUser = new PrivateUserData(this, sysUserId, null, "System");
+			systemUser = new PrivateUserData(this, sysUserId, null);
 			userList = new DEList<PrivateUserData>(this, "tw_users", "User list");
 		} // proc InitUser
 
@@ -569,7 +545,7 @@ namespace TecWare.PPSn.Server
 								}
 								else
 								{
-									var user = new PrivateUserData(this, userId, PrivateUserData.CreateUserIdentity(u), "User");
+									var user = new PrivateUserData(this, userId, PrivateUserData.CreateUserIdentity(u));
 									if (UpdateUserData(user, u))
 										userList.Add(user);
 								}
@@ -590,6 +566,8 @@ namespace TecWare.PPSn.Server
 
 		#endregion
 
+		/// <summary>Create user scope for the system user</summary>
+		/// <returns></returns>
 		[LuaMember("ImpersonateSystem")]
 		public IDECommonScope ImpersonateSystemContext()
 		{
@@ -598,7 +576,7 @@ namespace TecWare.PPSn.Server
 			context.RegisterDispose(context.Use());
 			return context;
 		} // func ImpersonateSystemContext
-
+		
 		/// <summary>Create a scope for the system user.</summary>
 		/// <returns></returns>
 		public async Task<IDECommonScope> CreateSystemContextAsync()
@@ -608,6 +586,7 @@ namespace TecWare.PPSn.Server
 			return context;
 		} // proc CreateSystemContextAsync
 
-		public int UserLease => 650000; // todo in ms
+		/// <summary>Time in ms after a good connection is recreated in the pool.</summary>
+		public int ConnectionLease => 1 * 3600 * 1000; // 1h
 	} // class PpsApplication
 }
