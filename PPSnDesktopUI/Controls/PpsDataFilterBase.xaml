@@ -104,6 +104,14 @@ specific language governing permissions and limitations under the Licence.
 								Visibility="Hidden"
 								Command="{x:Static pps:PpsDataFilterBase.ClearValueCommand}"
 								Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsClearContentButtonStyle}}" />
+						<TextBlock x:Name="HintLabel"
+								   Text="{TemplateBinding HintLabelText}"
+								   Margin="7,1,0,1"
+								   HorizontalAlignment="Left"
+								   VerticalAlignment="Center"
+								   Width="Auto"
+								   IsHitTestVisible="False" 
+								   Visibility="Hidden" />
 						<pps:PpsPopup Placement="Bottom"
 									  VerticalOffset="1"
 									  StaysOpen="False"
@@ -169,6 +177,13 @@ specific language governing permissions and limitations under the Licence.
 							<Setter TargetName="ClearButton" Property="IsHitTestVisible" Value="False"/>
 							<Setter TargetName="ClearButton" Property="Opacity" Value=".4"/>
 						</Trigger>
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="Selector.SelectedIndex" Value="-1" />
+								<Condition Property="HasHintLabel" Value="True" />
+							</MultiTrigger.Conditions>
+							<Setter TargetName="HintLabel" Property="Visibility" Value="Visible" />
+						</MultiTrigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
