@@ -40,7 +40,10 @@ namespace TecWare.PPSn.Controls
 		{
 			CommandBindings.Add(
 				new CommandBinding(PpsControlCommands.ClosePopupCommand,
-					(sender, e) => ((Popup)sender).IsOpen = false
+					(sender, e) =>
+					{
+						((Popup)sender).IsOpen = false;
+					}
 				)
 			);
 		} // sctor

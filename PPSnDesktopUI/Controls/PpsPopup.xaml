@@ -32,6 +32,9 @@ specific language governing permissions and limitations under the Licence.
 					<Border BorderThickness="{TemplateBinding BorderThickness}"
 							BorderBrush="{TemplateBinding BorderBrush}"
 							Background="{TemplateBinding Background}">
+						<Border.InputBindings>
+							<KeyBinding Key="Esc" Command="{x:Static pps:PpsControlCommands.ClosePopupCommand}" />
+						</Border.InputBindings>
 						<Grid>
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition Width="Auto" />
