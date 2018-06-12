@@ -26,6 +26,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Mime;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -244,21 +245,27 @@ namespace TecWare.PPSn
 
 		/// <summary></summary>
 		/// <param name="current"></param>
+		/// <returns></returns>
+		public static string GetName(this DependencyObject current)
+		{
+			switch (current)
+			{
+				case FrameworkElement fe:
+					return fe.Name;
+				case FrameworkContentElement fce:
+					return fce.Name;
+				default:
+					return null;
+			}
+		} // func GetName
+
+		/// <summary></summary>
+		/// <param name="current"></param>
 		/// <param name="name"></param>
 		/// <param name="comparison"></param>
 		/// <returns></returns>
 		public static int CompareName(this DependencyObject current, string name, StringComparison comparison = StringComparison.Ordinal)
-		{
-			switch(current)
-			{
-				case FrameworkElement fe:
-					return String.Compare(fe.Name, name, comparison);
-				case FrameworkContentElement fce:
-					return String.Compare(fce.Name, name, comparison);
-				default:
-					return -1;
-			}
-		} // func CompareName
+			=> String.Compare(GetName(current), name, comparison);
 
 		/// <summary>Get the logical parent or the template parent.</summary>
 		/// <param name="current"></param>
@@ -415,8 +422,60 @@ namespace TecWare.PPSn
 			}
 		} // func ChangeTypeWithConverter
 
+		internal static void PrintVisualTreeToConsole(DependencyObject current)
+		{
+			Debug.Print("Visual Tree:");
+			while (current != null)
+			{
+				Debug.Print("V {0}: {1}", current.GetType().Name, current.GetName() ?? "<null>");
+				current = GetVisualParent(current);
+			}
+		} // proc PrintVisualTreeToConsole
+
+		internal static void PrintLogicalTreeToConsole(DependencyObject current)
+		{
+			Debug.Print("Logical Tree:");
+			while (current != null)
+			{
+				Debug.Print("L {0}: {1}", current.GetType().Name, current.GetName() ?? "<null>");
+				current = GetLogicalParent(current);
+			}
+		} // proc PrintVisualTreeToConsole
+
+		private static DependencyObject InvokeGetUIParent<T>(DependencyObject current)
+			where T : class
+		{
+			var mi = typeof(T).GetMethod("GetUIParentCore", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.InvokeMethod, null, Array.Empty<Type>(), null);
+			return (DependencyObject)mi.Invoke(current, Array.Empty<object>());
+		} // proc InvokeGetUIParent
+
+		private static DependencyObject GetUIParent(DependencyObject current)
+		{
+			switch(current)
+			{
+				case UIElement ui:
+					return InvokeGetUIParent<UIElement>(current);
+				case UIElement3D ui3d:
+					return InvokeGetUIParent<UIElement3D>(current);
+				case ContentElement c:;
+					return InvokeGetUIParent<ContentElement>(current);
+				default:
+					return null;
+			}
+		} // func GetUIParent
+
+		internal static void PrintEventTreeToConsole(DependencyObject current)
+		{
+			Debug.Print("UI Tree:");
+			while (current != null)
+			{
+				Debug.Print("U {0}: {1}", current.GetType().Name, current.GetName() ?? "<null>");
+				current = GetUIParent(current);
+			}
+		} // proc PrintVisualTreeToConsole
+
 		#region -- remove after update DES --
-		
+
 		#endregion
 	} // class StuffUI
 

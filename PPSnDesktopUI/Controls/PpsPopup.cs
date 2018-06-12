@@ -48,6 +48,13 @@ namespace TecWare.PPSn.Controls
 			);
 		} // sctor
 
+		/// <summary></summary>
+		/// <returns></returns>
+		protected override DependencyObject GetUIParentCore()
+		{
+			return null; // do not use PlacementTarget or Logical Tree for event routing
+		} // func GetUIParentCore
+
 		private static object OnIsOpenCoerceValue(DependencyObject d, object baseValue)
 			=> ((PpsPopup)d).OnIsCoerceValue((bool)baseValue);
 
@@ -98,6 +105,21 @@ namespace TecWare.PPSn.Controls
 
 		/// <summary>The property defines the resource to be loaded.</summary>
 		public string GeometryName { get => (string)GetValue(GeometryNameProperty); set => SetValue(GeometryNameProperty, value); }
+
+#if DEBUG
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnKeyUp(KeyEventArgs e)
+		{
+			if (e.Key == Key.F9)
+				StuffUI.PrintLogicalTreeToConsole(Keyboard.FocusedElement as DependencyObject);
+			else if (e.Key == Key.F8)
+				StuffUI.PrintVisualTreeToConsole(Keyboard.FocusedElement as DependencyObject);
+			else if (e.Key == Key.F7)
+				StuffUI.PrintEventTreeToConsole(Keyboard.FocusedElement as DependencyObject);
+			base.OnKeyUp(e);
+		}
+#endif
 
 		static PpsPopupContent()
 		{
