@@ -81,12 +81,12 @@ specific language governing permissions and limitations under the Licence.
 				<ControlTemplate TargetType="{x:Type pps:PpsDataFilterCombo}">
 					<Grid>
 						<!--this button opens the popdown-->
-						<ToggleButton x:Name="ToggleDropDownButton"
-									  IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
-									  BorderBrush="{TemplateBinding BorderBrush}"
-									  BorderThickness="{TemplateBinding BorderThickness}"
-									  Background="{TemplateBinding Background}"
-									  Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsComboBoxToggleButtonStyle}}" />
+						<pps:PpsComboBoxToggleButton x:Name="ToggleDropDownButton"
+													 IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+													 GeometryName="comboxBoxChevron"
+													 BorderBrush="{TemplateBinding BorderBrush}"
+													 BorderThickness="{TemplateBinding BorderThickness}"
+													 Background="{TemplateBinding Background}" />
 						<!--this contentpresenter shows the actual value-->
 						<ContentPresenter x:Name="ContentSite"
 										  Content="{Binding SelectedValue, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}"
@@ -98,7 +98,7 @@ specific language governing permissions and limitations under the Licence.
 						<!--this button clears the value-->
 						<Button x:Name="ClearButton"
 								HorizontalAlignment="Right"
-								Width="23"
+								Width="25"
 								Padding="2,1,2,1"
 								Margin="0,1,21,1"
 								Visibility="Hidden"
@@ -162,7 +162,7 @@ specific language governing permissions and limitations under the Licence.
 								<Condition Property="IsKeyboardFocusWithin" Value="True" />
 								<Condition Property="pps:PpsReadOnlyPaneBehavior.IsReadOnly" Value="False" />
 							</MultiTrigger.Conditions>
-							<Setter TargetName="ContentSite" Property="Margin" Value="5,1,46,1" />
+							<Setter TargetName="ContentSite" Property="Margin" Value="5,1,48,1" />
 							<Setter TargetName="ClearButton" Property="Visibility" Value="Visible" />
 						</MultiTrigger>
 						<Trigger Property="pps:PpsDataFilterCombo.IsDropDownOpen" Value="True">
