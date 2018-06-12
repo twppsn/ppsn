@@ -98,7 +98,11 @@ specific language governing permissions and limitations under the Licence.
 							<Setter TargetName="ContentSite" Property="Grid.ColumnSpan" Value="2" />
 						</Trigger>
 
-						<Trigger Property="HasContent" Value="False">
+						<Trigger Property="DisplayMode" Value="Image">
+							<Setter Property="Foreground" Value="{DynamicResource PPSnActionButtonBrush}"/>
+						</Trigger>
+
+							<Trigger Property="HasContent" Value="False">
 							<Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed" />
 						</Trigger>
 
@@ -128,6 +132,7 @@ specific language governing permissions and limitations under the Licence.
 							<Setter Property="ImageOpacity" Value="1" />
 							<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}" />
 						</MultiTrigger>
+								 
 						<MultiTrigger>
 							<MultiTrigger.Conditions>
 								<Condition Property="DisplayMode" Value="Rectangle" />

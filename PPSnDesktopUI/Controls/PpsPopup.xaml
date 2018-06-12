@@ -13,6 +13,7 @@ specific language governing permissions and limitations under the Licence.
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					xmlns:uiO="clr-namespace:TecWare.PPSn.UI;assembly=PPSn.Desktop.UI"
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
 
 	<Style TargetType="{x:Type pps:PpsPopup}">
@@ -59,10 +60,19 @@ specific language governing permissions and limitations under the Licence.
 											  ContentTemplate="{TemplateBinding HeaderTemplate}"
 											  ContentStringFormat="{TemplateBinding HeaderStringFormat}"
 											  ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}"
+											  HorizontalAlignment="Left"
 											  VerticalAlignment="Center"
 											  Margin="6,0,0,0"
 											  TextElement.FontSize="18"
-											  TextElement.Foreground="{DynamicResource PPSnWindowForegroundBrush}"/>
+											  TextElement.Foreground="{DynamicResource PPSnWindowForegroundBrush}">
+								<ContentPresenter.Resources>
+									<Style TargetType="{x:Type TextBlock}">
+										<Setter Property="Text" Value="{Binding Converter={x:Static uiO:PpsConverter.MultiToSingleLine}}" />
+										<Setter Property="TextWrapping" Value="NoWrap" />
+										<Setter Property="TextTrimming" Value="CharacterEllipsis" />
+									</Style>
+								</ContentPresenter.Resources>
+							</ContentPresenter>
 							<pps:PpsButton Grid.Column="2"
 										   Command="{x:Static pps:PpsControlCommands.ClosePopupCommand}"
 										   GeometryName="windowClose"

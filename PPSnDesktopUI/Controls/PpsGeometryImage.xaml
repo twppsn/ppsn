@@ -14,7 +14,6 @@ specific language governing permissions and limitations under the Licence.
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					xmlns:pps="clr-namespace:TecWare.PPSn.Controls">
-
 	<Style TargetType="{x:Type pps:PpsGeometryImage}">
 		<Setter Property="IsEnabled" Value="False" />
 		<Setter Property="IsHitTestVisible" Value="False" />
@@ -28,7 +27,7 @@ specific language governing permissions and limitations under the Licence.
 								 Fill="{TemplateBinding Fill}" />
 						<Viewbox x:Name="ImageBox"
 								 Margin="{TemplateBinding GeometrySpacing}">
-							<Canvas Width="24" Height="24">
+							<Canvas Width="24" Height="24" Margin="{TemplateBinding Padding}">
 								<Path Data="{TemplateBinding Geometry}"
 									  Fill="{TemplateBinding Foreground}"
 									  SnapsToDevicePixels="False" />

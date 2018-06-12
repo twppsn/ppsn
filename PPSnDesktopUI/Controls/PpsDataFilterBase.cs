@@ -383,9 +383,23 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty IsDropDownOpenProperty = DependencyProperty.Register(nameof(IsDropDownOpen), typeof(bool), typeof(PpsDataFilterCombo), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, new PropertyChangedCallback(OnIsDropDownOpenChanged)));
 		/// <summary>Is PART_Popup open?</summary>
 		public bool IsDropDownOpen { get => (bool)GetValue(IsDropDownOpenProperty); set => SetValue(IsDropDownOpenProperty, value); }
+		/// <summary>DependencyProperty for HintLabel</summary>
+		public static readonly DependencyProperty HintLabelTextProperty = DependencyProperty.Register(nameof(HintLabelText), typeof(string), typeof(PpsDataFilterCombo), new FrameworkPropertyMetadata(null, new PropertyChangedCallback(OnHintLabelTextChanged)));
+		private static readonly DependencyPropertyKey hasHintLabelPropertyKey = DependencyProperty.RegisterReadOnly(nameof(HasHintLabel), typeof(bool), typeof(PpsDataFilterCombo), new FrameworkPropertyMetadata(BooleanBox.False));
+		/// <summary>Is HintLabel available?</summary>
+		public static readonly DependencyProperty HasHintLabelProperty = hasHintLabelPropertyKey.DependencyProperty;
 
 		private static void OnIsDropDownOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 			=> ((PpsDataFilterCombo)d).DropDownChanged((bool)e.NewValue);
+
+		private static void OnHintLabelTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		{
+			var filterCombo = (PpsDataFilterCombo)d;
+			if (e.NewValue is string label && !string.IsNullOrEmpty(label))
+				filterCombo.HasHintLabel = true;
+			else
+				filterCombo.HasHintLabel = false;
+		} // proc OnHintLabelTextChanged
 
 		#region ---- Evaluate MouseEvents -----------------------------------------------
 
@@ -623,11 +637,17 @@ namespace TecWare.PPSn.Controls
 
 		#endregion
 
+		/// <summary>Optional text to show, when no value is selected</summary>
+		public string HintLabelText { get => (string)(GetValue(HintLabelTextProperty)); set => SetValue(HintLabelTextProperty, value); }
+
+		/// <summary>Has the Control a HintLabel?</summary>
+		public bool HasHintLabel { get => BooleanBox.GetBool(GetValue(HasHintLabelProperty)); private set => SetValue(hasHintLabelPropertyKey, BooleanBox.GetObject(value)); }
+
 		static PpsDataFilterCombo()
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsDataFilterCombo), new FrameworkPropertyMetadata(typeof(PpsDataFilterCombo)));
 		}
-	}
+	} // class PpsDataFilterCombo
 
 	/// <summary>This Control shows a List of its Items with an applied Filter</summary>
 	public class PpsDataFilterList : PpsDataFilterBase

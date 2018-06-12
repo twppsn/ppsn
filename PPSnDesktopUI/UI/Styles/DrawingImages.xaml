@@ -90,6 +90,10 @@ specific language governing permissions and limitations under the Licence.
 	<PathGeometry x:Key="openFolderPathGeometry" 
 				  Figures="M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21L4,8V18L6.14,10H23.21L20.93,18.5C20.7,19.37 19.92,20 19,20Z" />
 
+	<!-- book-open-->
+	<PathGeometry x:Key="openBookPathGeometry" 
+				  Figures="M13,12H20V13.5H13M13,9.5H20V11H13M13,14.5H20V16H13M21,4H3A2,2 0 0,0 1,6V19A2,2 0 0,0 3,21H21A2,2 0 0,0 23,19V6A2,2 0 0,0 21,4M21,19H12V6H21" />
+
 	<!-- cancel-->
 	<PathGeometry x:Key="cancelPathGeometry" 
 				  Figures="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12C4,13.85 4.63,15.55 5.68,16.91L16.91,5.68C15.55,4.63 13.85,4 12,4M12,20A8,8 0 0,0 20,12C20,10.15 19.37,8.45 18.32,7.09L7.09,18.32C8.45,19.37 10.15,20 12,20Z" />
@@ -109,6 +113,10 @@ specific language governing permissions and limitations under the Licence.
 	<!-- lead-pencil-->
 	<PathGeometry x:Key="editPathGeometry" 
 				  Figures="M16.84,2.73C16.45,2.73 16.07,2.88 15.77,3.17L13.65,5.29L18.95,10.6L21.07,8.5C21.67,7.89 21.67,6.94 21.07,6.36L17.9,3.17C17.6,2.88 17.22,2.73 16.84,2.73M12.94,6L4.84,14.11L7.4,14.39L7.58,16.68L9.86,16.85L10.15,19.41L18.25,11.3M4.25,15.04L2.5,21.73L9.2,19.94L8.96,17.78L6.65,17.61L6.47,15.29" />
+
+	<!-- square-edit-outline-->
+	<PathGeometry x:Key="squareEditPathGeometry" 
+				  Figures="M5,3C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19H5V5H12V3H5M17.78,4C17.61,4 17.43,4.07 17.3,4.2L16.08,5.41L18.58,7.91L19.8,6.7C20.06,6.44 20.06,6 19.8,5.75L18.25,4.2C18.12,4.07 17.95,4 17.78,4M15.37,6.12L8,13.5V16H10.5L17.87,8.62L15.37,6.12Z" />
 
 	<!-- chevron-left(mod)-->
 	<PathGeometry x:Key="goBackPathGeometry" 
@@ -170,7 +178,7 @@ specific language governing permissions and limitations under the Licence.
 
 	<!-- plus-->
 	<PathGeometry x:Key="plusPathGeometry" 
-				  Figures="M19,13 H13 V19 H11 V13 H5 V11 H11 V5 H13 V11 H19 V13Z" />
+				  Figures="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
 
 	<!-- account-->
 	<PathGeometry x:Key="accountPathGeometry" 
@@ -249,6 +257,13 @@ specific language governing permissions and limitations under the Licence.
 
 	<PathGeometry x:Key="closePanePathGeometry"
 				  Figures="M5,5.5 L5.5,5 12,11.5 18.5,5 19,5.5 12.5,12 19,18.5 18.5,19 12,12.5 5.5,19 5,18.5 11.5,12 5,5.5Z"/>
+
+	<PathGeometry x:Key="comboxBoxChevronPathGeometry"
+				  Figures="M5,9 L6,8 12,14 18,8 19,9 12,16 5,9Z"/>
+
+	<!-- filter-outline-->
+	<PathGeometry x:Key="comboxBoxFilterPathGeometry"
+				  Figures="M15,19.88C15.04,20.18 14.94,20.5 14.71,20.71C14.32,21.1 13.69,21.1 13.3,20.71L9.29,16.7C9.06,16.47 8.96,16.16 9,15.87V10.75L4.21,4.62C3.87,4.19 3.95,3.56 4.38,3.22C4.57,3.08 4.78,3 5,3V3H19V3C19.22,3 19.43,3.08 19.62,3.22C20.05,3.56 20.13,4.19 19.79,4.62L15,10.75V19.88M7.04,5L11,10.06V15.58L13,17.58V10.05L16.96,5H7.04Z"/>
 
 </ResourceDictionary>
 	
