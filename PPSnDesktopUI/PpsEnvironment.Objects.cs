@@ -2780,6 +2780,16 @@ namespace TecWare.PPSn
 					|| headerLength < 10)
 					throw new ArgumentOutOfRangeException("ppsn-header-length", headerLengthString, "Header is missing.");
 
+				var contentTransferMode = r.Headers["ppsn-content-transfer"];
+				var isContentTransferDeflated = false;
+				if (contentTransferMode != null)
+				{
+					if (contentTransferMode == "gzip")
+						isContentTransferDeflated = true;
+					else
+						throw new ArgumentException("Invalid ppsn-content-transfer");
+				}
+
 				using (var headerData = new WindowStream(src, 0, headerLength, false, true))
 				using (var xmlHeader = XmlReader.Create(headerData, Procs.XmlReaderSettings))
 					XElement.Load(xmlHeader);
@@ -2789,7 +2799,10 @@ namespace TecWare.PPSn
 				var schema = await Environment.GetDocumentDefinitionAsync(Typ);
 				var ds = new PpsObjectDataSet(schema, this); // wrong object!
 
-				using (var dataSrc = new WindowStream(src, headerLength, r.ContentLength - headerLength, false, true))
+				var dataSrc = (Stream)new WindowStream(src, headerLength, r.ContentLength - headerLength, false, true);
+				if (isContentTransferDeflated)
+					dataSrc = new GZipStream(dataSrc, CompressionMode.Decompress, false);
+				using (dataSrc)
 				using (var xmlData = XmlReader.Create(dataSrc, Procs.XmlReaderSettings))
 					ds.Read(XElement.Load(xmlData));
 
