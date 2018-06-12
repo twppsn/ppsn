@@ -61,18 +61,26 @@ specific language governing permissions and limitations under the Licence.
 		<Setter Property="ItemContainerStyle" Value="{StaticResource PpsComboBoxItemStyle}" />
 		<Setter Property="BorderThickness" Value="1"/>
 		<Setter Property="BorderBrush" Value="{DynamicResource PPSnControlNormalBorderBrush}" />
+		<Setter Property="GeometryName" Value="comboxBoxChevron" />
 		<Setter Property="Background" Value="{DynamicResource PPSnControlBackgroundBrush}" />
-		<Setter Property="SnapsToDevicePixels" Value="True"/>
+		<Setter Property="SnapsToDevicePixels" Value="True" />
 		<Setter Property="Control.Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type pps:PpsComboBox}">
 					<Grid>
-						<ToggleButton x:Name="ChangeDropDownToggleButton"
+						<!--<ToggleButton x:Name="ChangeDropDownToggleButton"
 									  IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
 									  Background="{TemplateBinding Background}"
 									  BorderThickness="{TemplateBinding BorderThickness}"
 									  BorderBrush="{TemplateBinding BorderBrush}"
-									  Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsComboBoxToggleButtonStyle}}" />
+									  Style="{DynamicResource {x:Static pps:PpsSharedResourceKey.PpsComboBoxToggleButtonStyle}}" />-->
+						<pps:PpsComboBoxToggleButton x:Name="ChangeDropDownToggleButton"
+													 IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+													 Padding="{TemplateBinding Padding}"
+													 GeometryName="{TemplateBinding GeometryName}"
+													 Background="{TemplateBinding Background}"
+													 BorderThickness="{TemplateBinding BorderThickness}"
+													 BorderBrush="{TemplateBinding BorderBrush}" />
 						<ContentPresenter x:Name="ContentSite"
 										  Content="{TemplateBinding ComboBox.SelectionBoxItem}" 
 										  ContentTemplate="{TemplateBinding ComboBox.SelectionBoxItemTemplate}"
@@ -82,7 +90,7 @@ specific language governing permissions and limitations under the Licence.
 										  VerticalAlignment="Center" />
 						<Button x:Name="ClearButton"
 								HorizontalAlignment="Right"
-								Width="23"
+								Width="25"
 								Padding="2,1,2,1"
 								Margin="0,1,21,1"
 								Visibility="Hidden"
@@ -103,6 +111,14 @@ specific language governing permissions and limitations under the Licence.
 								</ControlTemplate>
 							</TextBox.Template>
 						</TextBox>
+						<TextBlock x:Name="HintLabel"
+								   Text="{TemplateBinding HintLabelText}"
+								   Margin="7,1,0,1"
+								   HorizontalAlignment="Left"
+								   VerticalAlignment="Center"
+								   Width="Auto"
+								   IsHitTestVisible="False" 
+								   Visibility="Hidden" />
 						<Popup x:Name="PART_Popup"
 							   Placement="Bottom"
 							   VerticalOffset="1"
@@ -142,17 +158,29 @@ specific language governing permissions and limitations under the Licence.
 							<MultiTrigger.Conditions>
 								<Condition Property="ComboBox.IsEditable" Value="False" />
 								<Condition SourceName="ClearButton" Property="IsEnabled" Value="True" />
-								<Condition Property="IsKeyboardFocusWithin" Value="True" />
 								<Condition Property="pps:PpsReadOnlyPaneBehavior.IsReadOnly" Value="False" />
+								<Condition Property="IsClearButtonVisible" Value="True" />
 							</MultiTrigger.Conditions>
-							<Setter TargetName="ContentSite" Property="Margin" Value="5,1,46,1" />
+							<Setter TargetName="ContentSite" Property="Margin" Value="5,1,48,1" />
 							<Setter TargetName="ClearButton" Property="Visibility" Value="Visible"/>
 						</MultiTrigger>
+						<Trigger Property="IsKeyboardFocusWithin" Value="True">
+							<Setter Property="IsClearButtonVisible" Value="True"/>
+						</Trigger>
+
 						<Trigger Property="ComboBox.IsDropDownOpen" Value="True">
 							<Setter TargetName="ClearButton" Property="IsHitTestVisible" Value="False"/>
 							<Setter TargetName="ClearButton" Property="Opacity" Value=".4"/>
 						</Trigger>
 
+						<MultiTrigger>
+							<MultiTrigger.Conditions>
+								<Condition Property="ComboBox.SelectedIndex" Value="-1" />
+								<Condition Property="HasHintLabel" Value="True" />
+							</MultiTrigger.Conditions>
+							<Setter TargetName="HintLabel" Property="Visibility" Value="Visible" />
+						</MultiTrigger>
+						
 						<Trigger Property="pps:PpsReadOnlyPaneBehavior.IsReadOnly" Value="True">
 							<Setter TargetName="PART_EditableTextBox" Property="IsEnabled" Value="False"/>
 							<!--<Setter TargetName="ChangeDropDownToggleButton" Property="IsEnabled" Value="False"/>-->
@@ -164,5 +192,45 @@ specific language governing permissions and limitations under the Licence.
 			</Setter.Value>
 		</Setter>
 	</Style>
-	
+
+	<Style TargetType="{x:Type pps:PpsComboBoxToggleButton}">
+		<Setter Property="ClickMode" Value="Press" />
+		<Setter Property="Focusable" Value="False" />
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="{x:Type pps:PpsComboBoxToggleButton}">
+					<Grid>
+						<Border x:Name="RootBorder"
+								BorderBrush="{TemplateBinding BorderBrush}"
+								BorderThickness="{TemplateBinding BorderThickness}"
+								Background="{TemplateBinding Background}"
+								SnapsToDevicePixels="True"/>
+						<pps:PpsGeometryImage x:Name="ArrowBox"
+											  GeometryName="{TemplateBinding GeometryName}"
+											  GeometryCircled="false"
+											  HorizontalAlignment="Right"
+											  Foreground="{TemplateBinding Foreground}"
+											  Width="20"
+											  Padding="{TemplateBinding Padding}"
+											  Margin="0,0,1,0"
+											  Opacity=".5" />
+					</Grid>
+					<ControlTemplate.Triggers>
+						<DataTrigger Binding="{Binding IsKeyboardFocusWithin, RelativeSource={RelativeSource AncestorType={x:Type Control}}}" Value="True">
+							<Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource PPSnControlFocusedBorderBrush}"/>
+							<Setter TargetName="ArrowBox" Property="Opacity" Value=".65" />
+						</DataTrigger>
+						<Trigger Property="IsEnabled" Value="False">
+							<Setter TargetName="ArrowBox" Property="Opacity" Value=".3" />
+						</Trigger>
+						<Trigger Property="pps:PpsReadOnlyPaneBehavior.IsReadOnly" Value="True">
+							<Setter TargetName="ArrowBox" Property="Visibility" Value="Hidden" />
+							<Setter Property="IsEnabled" Value="False" />
+						</Trigger>
+					</ControlTemplate.Triggers>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+
 </ResourceDictionary>
