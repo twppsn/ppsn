@@ -27,6 +27,10 @@ namespace TecWare.PPSn.Controls
 	/// <summary></summary>
 	public class PpsPopup : Popup
 	{
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+		public static readonly DependencyProperty PreserveFocusProperty = DependencyProperty.Register(nameof(PreserveFocus), typeof(bool), typeof(PpsPopup), new FrameworkPropertyMetadata(BooleanBox.True));
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+
 		/// <summary></summary>
 		public event CancelEventHandler Opening;
 		/// <summary></summary>
@@ -87,7 +91,7 @@ namespace TecWare.PPSn.Controls
 		/// <param name="e"></param>
 		protected override void OnOpened(EventArgs e)
 		{
-			focusedElement = Keyboard.FocusedElement;
+			focusedElement = PreserveFocus ? Keyboard.FocusedElement : null;
 
 			if (Child != null && !Child.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next)))
 			{
@@ -106,6 +110,9 @@ namespace TecWare.PPSn.Controls
 				Keyboard.Focus(focusedElement);
 			base.OnClosed(e);
 		} // proc OnClosed
+
+		/// <summary></summary>
+		public bool PreserveFocus { get => BooleanBox.GetBool(GetValue(PreserveFocusProperty)); set => SetValue(PreserveFocusProperty, BooleanBox.GetObject(value)); }
 
 		static PpsPopup()
 		{

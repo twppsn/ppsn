@@ -118,6 +118,7 @@ specific language governing permissions and limitations under the Licence.
 									  IsOpen="{TemplateBinding IsDropDownOpen}"
 									  MinWidth="{TemplateBinding ActualWidth}"
 									  MinHeight="122"
+									  PreserveFocus="False"
 									  PopupAnimation="Slide"
 									  MaxHeight="300">
 							<Border BorderThickness="{TemplateBinding BorderThickness}"
