@@ -1101,7 +1101,7 @@ namespace TecWare.PPSn.UI
 
 			UndoManagerListBox listBox;
 
-			var undoCommand = new PpsUISplitCommandButton()
+			var undoCommand = new PpsUICommandButton()
 			{
 				Order = new PpsCommandOrder(200, 130),
 				DisplayText = "Rückgängig",
@@ -1115,17 +1115,17 @@ namespace TecWare.PPSn.UI
 					},
 					(args) => strokeUndoManager?.CanUndo ?? false
 				),
-				Popup = new System.Windows.Controls.Primitives.Popup()
-				{
-					Child = listBox = new UndoManagerListBox()
-					{
-						Style = (Style)Application.Current.FindResource("UndoManagerListBoxStyle")
-					}
-				}
+				//Popup = new System.Windows.Controls.Primitives.Popup()
+				//{
+				//	Child = listBox = new UndoManagerListBox()
+				//	{
+				//		Style = (Style)Application.Current.FindResource("UndoManagerListBoxStyle")
+				//	}
+				//}
 			};
-			listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.UndoM"));
+			//listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.UndoM"));
 
-			var redoCommand = new PpsUISplitCommandButton()
+			var redoCommand = new PpsUICommandButton()
 			{
 				Order = new PpsCommandOrder(200, 140),
 				DisplayText = "Wiederholen",
@@ -1139,15 +1139,15 @@ namespace TecWare.PPSn.UI
 					},
 					(args) => strokeUndoManager?.CanRedo ?? false
 				),
-				Popup = new System.Windows.Controls.Primitives.Popup()
-				{
-					Child = listBox = new UndoManagerListBox()
-					{
-						Style = (Style)Application.Current.FindResource("UndoManagerListBoxStyle")
-					}
-				}
+				//Popup = new System.Windows.Controls.Primitives.Popup()
+				//{
+				//	Child = listBox = new UndoManagerListBox()
+				//	{
+				//		Style = (Style)Application.Current.FindResource("UndoManagerListBoxStyle")
+				//	}
+				//}
 			};
-			listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.RedoM"));
+			//listBox.SetBinding(FrameworkElement.DataContextProperty, new Binding("DataContext.RedoM"));
 
 			Commands.Add(undoCommand);
 			Commands.Add(redoCommand);
