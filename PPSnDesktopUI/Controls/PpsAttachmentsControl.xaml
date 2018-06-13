@@ -37,17 +37,18 @@ specific language governing permissions and limitations under the Licence.
 			</ItemsControl.ItemsPanel>
 			<ItemsControl.ItemTemplate>
 				<DataTemplate>
-					<Button Width="38" Height="38" Margin="0,0,6,0"
-							Command="{Binding Command}"
-							Content="{Binding Image, Mode=OneTime, Converter={x:Static ui:PpsConverter.ImageToPathGeometry}}"
-							ToolTip="{Binding Description}"
-							Style="{StaticResource PPSnImageButtonStyle}"/>
+					<uiL:PpsButton Command="{Binding Command}"
+								   ToolTip="{Binding Description}"
+								   DisplayMode="Image"
+								   GeometryName="{Binding Image}"
+								   GeometrySize="24"
+								   Width="38" Height="38" Margin="0,0,6,0" />
 					<DataTemplate.Triggers>
 						<Trigger Property="uiL:PpsReadOnlyPaneBehavior.IsReadOnly">
 							<Trigger.Value>
 								<sys:Boolean>True</sys:Boolean>
 							</Trigger.Value>
-							<Setter Property="Visibility" Value="Collapsed"/>
+							<Setter Property="Visibility" Value="Collapsed" />
 						</Trigger>
 					</DataTemplate.Triggers>
 				</DataTemplate>
@@ -57,10 +58,11 @@ specific language governing permissions and limitations under the Licence.
 		<ListBox Grid.Row="1"
 				 ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=AttachmentsSource, Mode=OneWay}"
 				 SelectedItem="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=SelectedAttachment, Mode=OneWayToSource}"
-				 Style="{StaticResource PPSnListBoxStyle}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Focusable="False">
+				 Style="{StaticResource PPSnListBoxStyle}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+				 KeyboardNavigation.TabNavigation="Continue" Focusable="False">
 			<ListBox.ItemsPanel>
 				<ItemsPanelTemplate>
-					<WrapPanel IsItemsHost="True" Orientation="Horizontal"/>
+					<WrapPanel IsItemsHost="True" Orientation="Horizontal" />
 				</ItemsPanelTemplate>
 			</ListBox.ItemsPanel>
 			<ListBox.ItemTemplate>
@@ -89,17 +91,21 @@ specific language governing permissions and limitations under the Licence.
 							</Grid>
 						</Border>
 						<DockPanel x:Name="panCommands" LastChildFill="False" HorizontalAlignment="Right" Margin="0,-6,-6,-6" Visibility="Hidden">
-							<Button Command="{x:Static uiL:PpsAttachmentsControl.RunAttachmentCommand}"
-									MinWidth="34" DockPanel.Dock="Top"
-									Background="{StaticResource PPSnWindowBackgroundBrush}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
-									Tag="{StaticResource openInAppPathGeometry}"
-									Style="{StaticResource PPSnCircleButtonStyle}"/>
-							<Button x:Name="removeButton"
-									Command="{x:Static uiL:PpsAttachmentsControl.RemoveAttachmentCommand}"
-									MinWidth="34" DockPanel.Dock="Bottom"
-									Background="{StaticResource PPSnWindowBackgroundBrush}" Foreground="{StaticResource PPSnWindowForegroundBrush}"
-									Tag="{StaticResource deletePathGeometry}"
-									Style="{StaticResource PPSnCircleButtonStyle}"/>
+							<uiL:PpsButton Command="{x:Static uiL:PpsAttachmentsControl.RunAttachmentCommand}"
+										   DisplayMode="Circle"
+										   GeometryName="openInApp"
+										   GeometrySize="34"
+										   Foreground="{StaticResource PPSnWindowForegroundBrush}"
+										   Fill="{StaticResource PPSnWindowBackgroundBrush}"
+										   DockPanel.Dock="Top"/>
+							<uiL:PpsButton x:Name="removeButton"
+										   Command="{x:Static uiL:PpsAttachmentsControl.RemoveAttachmentCommand}"
+										   DisplayMode="Circle"
+										   GeometryName="delete"
+										   GeometrySize="34"
+										   Foreground="{StaticResource PPSnWindowForegroundBrush}"
+										   Fill="{StaticResource PPSnWindowBackgroundBrush}"
+										   DockPanel.Dock="Bottom"/>
 						</DockPanel>
 						<TextBlock Grid.Row="1" Text="{Binding Name, Mode=OneWay}" TextWrapping="Wrap" HorizontalAlignment="Center"
 								   Foreground="{StaticResource PPSnWindowForegroundBrush}"/>
@@ -118,16 +124,14 @@ specific language governing permissions and limitations under the Licence.
 							</MultiTrigger.Conditions>
 							<Setter TargetName="imageBox" Property="Visibility" Value="Visible"/>
 						</MultiTrigger>
-
 						<MultiDataTrigger>
 							<MultiDataTrigger.Conditions>
-								<Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}" Value="True"/>
-								<Condition Binding="{Binding Path=IsKeyboardFocusWithin, RelativeSource={RelativeSource Mode=FindAncestor,AncestorType={x:Type ListBoxItem}}, Mode=OneWay}" Value="True"/>
+								<Condition Binding="{Binding Path=IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True"/>
+								<Condition Binding="{Binding Path=IsFocused, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True"/>
 							</MultiDataTrigger.Conditions>
 							<Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PPSnControlFocusedBorderBrush}"/>
 							<Setter TargetName="panCommands" Property="Visibility" Value="Visible"/>
 						</MultiDataTrigger>
-
 						<Trigger Property="uiL:PpsReadOnlyPaneBehavior.IsReadOnly">
 							<Trigger.Value>
 								<sys:Boolean>True</sys:Boolean>
@@ -139,21 +143,21 @@ specific language governing permissions and limitations under the Licence.
 			</ListBox.ItemTemplate>
 			<ListBox.ItemContainerStyle>
 				<Style TargetType="{x:Type ListBoxItem}">
-					<Setter Property="VerticalAlignment" Value="Top"/>
-					<Setter Property="Margin" Value="0,10,16,6"/>
-					<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+					<Setter Property="VerticalAlignment" Value="Top" />
+					<Setter Property="Margin" Value="0,10,16,6" />
+					<Setter Property="FocusVisualStyle" Value="{x:Null}" />
 					<Setter Property="Template">
 						<Setter.Value>
 							<ControlTemplate TargetType="{x:Type ListBoxItem}">
 								<ContentPresenter />
+								<ControlTemplate.Triggers>
+									<Trigger Property="IsFocused" Value="True">
+										<Setter Property="IsSelected" Value="True" />
+									</Trigger>
+								</ControlTemplate.Triggers>
 							</ControlTemplate>
 						</Setter.Value>
 					</Setter>
-					<Style.Triggers>
-						<Trigger Property="IsKeyboardFocusWithin" Value="False">
-							<Setter Property="IsSelected" Value="False"/>
-						</Trigger>
-					</Style.Triggers>
 				</Style>
 			</ListBox.ItemContainerStyle>
 		</ListBox>
