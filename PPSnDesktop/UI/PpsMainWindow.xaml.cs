@@ -217,7 +217,6 @@ namespace TecWare.PPSn.UI
 			PART_Charmbar.CurrentContentType = PPSnCharmbarContentType.Default;
 		} // proc ResetCharmbar
 
-
 		#endregion
 
 		private void RefreshSideIsVisibleProperty()

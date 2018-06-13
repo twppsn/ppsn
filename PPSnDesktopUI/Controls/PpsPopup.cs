@@ -43,7 +43,18 @@ namespace TecWare.PPSn.Controls
 					}
 				)
 			);
-		} // sctor
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnInitialized(EventArgs e)
+		{
+			var env = PpsEnvironment.GetEnvironment(this);
+			CommandManager.AddExecutedHandler(this, env.DefaultExecutedHandler);
+			CommandManager.AddCanExecuteHandler(this, env.DefaultCanExecuteHandler);
+
+			base.OnInitialized(e);
+		} // proc OnInitialized
 
 		/// <summary></summary>
 		/// <returns></returns>
@@ -70,10 +81,14 @@ namespace TecWare.PPSn.Controls
 			}
 		} // proc OnIsCoerceValue
 
+		private IInputElement focusedElement = null;
+
 		/// <summary></summary>
 		/// <param name="e"></param>
 		protected override void OnOpened(EventArgs e)
 		{
+			focusedElement = Keyboard.FocusedElement;
+
 			if (Child != null && !Child.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next)))
 			{
 				Child.Focusable = true;
@@ -82,6 +97,15 @@ namespace TecWare.PPSn.Controls
 			}
 			base.OnOpened(e);
 		} // proc OnOpend
+
+		/// <summary></summary>
+		/// <param name="e"></param>
+		protected override void OnClosed(EventArgs e)
+		{
+			if (focusedElement != null)
+				Keyboard.Focus(focusedElement);
+			base.OnClosed(e);
+		} // proc OnClosed
 
 		static PpsPopup()
 		{
