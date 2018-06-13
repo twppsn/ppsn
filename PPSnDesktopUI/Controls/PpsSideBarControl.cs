@@ -391,8 +391,13 @@ namespace TecWare.PPSn.Controls
 					var container = GetContainerItem(cur);
 					if (cur == item)
 					{
-						SetIsSelected(container, true);
-						return true;
+						if (container is PpsSideBarGroup g)
+							return g.SetSelected(true);
+						else
+						{
+							SetIsSelected(container, true);
+							return true;
+						}
 					}
 					else if (container is PpsSideBarItemsBase g && g.SelectItem(item, filter))
 						return true;
@@ -606,7 +611,7 @@ namespace TecWare.PPSn.Controls
 			SetValue(isTopSelectedPropertyKey, BooleanBox.False);
 		} // proc OnSelectionChanged
 
-		private bool SetSelected(bool setActive)
+		internal bool SetSelected(bool setActive)
 		{
 			if (!PpsSideBarControl.CanChangeSetSelection(this, setActive))
 				return false;
