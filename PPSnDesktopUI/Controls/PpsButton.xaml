@@ -53,6 +53,7 @@ specific language governing permissions and limitations under the Licence.
 													  Grid.ColumnSpan="2"
 													  Width="{TemplateBinding GeometrySize}"
 													  Height="{TemplateBinding GeometrySize}"
+													  Fill="{TemplateBinding Fill}"
 													  Foreground="{TemplateBinding Foreground}"
 													  Opacity="{TemplateBinding ImageOpacity}">
 									<pps:PpsGeometryImage.RenderTransformOrigin>

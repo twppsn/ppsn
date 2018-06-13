@@ -18,6 +18,7 @@ using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Media;
 
 namespace TecWare.PPSn.Controls
 {
@@ -45,6 +46,8 @@ namespace TecWare.PPSn.Controls
 		public static readonly DependencyProperty GeometryNameProperty = PpsGeometryImage.GeometryNameProperty.AddOwner(typeof(PpsButton));
 		/// <summary>The diameter of the circle</summary>
 		public static readonly DependencyProperty GeometrySizeProperty = DependencyProperty.Register(nameof(GeometrySize), typeof(double), typeof(PpsButton), new FrameworkPropertyMetadata(36.0));
+		/// <summary>The Brush to fill the circle</summary>
+		public static readonly DependencyProperty FillProperty = PpsGeometryImage.FillProperty.AddOwner(typeof(PpsButton));
 		/// <summary>The type of representation</summary>
 		public static readonly DependencyProperty DisplayModeProperty = DependencyProperty.Register(nameof(DisplayMode), typeof(PpsButtonDisplayType), typeof(PpsButton), new FrameworkPropertyMetadata(PpsButtonDisplayType.Rectangle));
 		/// <summary>The type of representation</summary>
@@ -54,6 +57,8 @@ namespace TecWare.PPSn.Controls
 		public string GeometryName { get => (string)GetValue(GeometryNameProperty); set => SetValue(GeometryNameProperty, value); }
 		/// <summary>The property defines the diameter of the circle</summary>
 		public double GeometrySize { get => (double)GetValue(GeometrySizeProperty); set => SetValue(GeometrySizeProperty, value); }
+		/// <summary>The property defines the brush to fill the circle.</summary>
+		public Brush Fill { get => (Brush)GetValue(FillProperty); set => SetValue(FillProperty, value); }
 		/// <summary>The property defines the type of representation</summary>
 		public PpsButtonDisplayType DisplayMode { get => (PpsButtonDisplayType)GetValue(DisplayModeProperty); set => SetValue(DisplayModeProperty, value); }
 		/// <summary>The property defines the diameter of the circle</summary>
