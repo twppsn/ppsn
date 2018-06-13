@@ -14,18 +14,15 @@
 //
 #endregion
 using System;
-using System.Collections;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Markup;
-using TecWare.DE.Stuff;
 
 namespace TecWare.PPSn.Controls
 {
-	#region -- class PpsPopup ------------------------------------------------------------
+	#region -- class PpsPopup ---------------------------------------------------------
 
 	/// <summary></summary>
 	public class PpsPopup : Popup
