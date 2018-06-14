@@ -733,19 +733,7 @@ namespace TecWare.PPSn.Data
 			else
 			{
 				for (var i = 0; i < originalValues.Length; i++)
-				{
-					if(table.Columns[i].IsExtended)
-					{
-						if (originalValues[i] is IPpsDataRowSetGenericValue e)
-							e.Commit();
-					}
-					else if (currentValues[i] != NotSet)
-					{
-						originalValues[i] = currentValues[i];
-						currentValues[i] = NotSet;
-
-					}
-				}
+					CommitValue(i);
 				
 				if (IsAdded)
 					table.CommitRow(this);
@@ -753,6 +741,22 @@ namespace TecWare.PPSn.Data
 				RowState = PpsDataRowState.Unchanged;
 			}
 		} // proc Commit
+
+		/// <summary></summary>
+		/// <param name="columnIndex"></param>
+		public void CommitValue(int columnIndex)
+		{
+			if (table.Columns[columnIndex].IsExtended)
+			{
+				if (originalValues[columnIndex] is IPpsDataRowSetGenericValue e)
+					e.Commit();
+			}
+			else if (currentValues[columnIndex] != NotSet)
+			{
+				originalValues[columnIndex] = currentValues[columnIndex];
+				currentValues[columnIndex] = NotSet;
+			}
+		} // proc CommitValue
 
 		/// <summary>Marks the current row as deleted. Supports Undo</summary>
 		/// <returns><c>true</c>, wenn die Zeile als gelöscht markiert werden konnte.</returns>
