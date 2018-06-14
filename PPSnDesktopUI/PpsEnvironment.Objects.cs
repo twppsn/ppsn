@@ -2337,7 +2337,7 @@ namespace TecWare.PPSn
 		{
 			// pull current data
 			if (!baseObj.HasData && baseObj.Id > 0)
-				await baseObj.PullAsync<IPpsObjectData>();
+				await baseObj.PullAsync();
 
 			if (baseObj.HasData)
 			{
@@ -2611,7 +2611,7 @@ namespace TecWare.PPSn
 			var acceptedMimeType = objectInfo?.GetMemberValue("acceptedMimeType") as string;
 
 			// create a proxy request, and enqueue it with high priority
-			return Environment.GetProxyRequest($"{objectUri}/?action=pull&id={objectId}&rev={revisionId}", $"Pull:{Nr} ({objectId:N0};{revisionId:N0})");
+			return Environment.GetProxyRequest($"{objectUri}/?action=pull&id={objectId}&rev={revisionId}", $"Pull:{Nr} (id={objectId:N0};r={revisionId:N0})");
 		} // proc PullDataAsync
 
 		private PpsProxyRequest PushDataRequest()
@@ -2743,8 +2743,7 @@ namespace TecWare.PPSn
 						// persist current object state
 						UpdateLocalAsync().AwaitTask();
 
-						var data = GetDataAsync<IPpsObjectData>().AwaitTask();
-						data?.ReloadAsync().AwaitTask();
+						data.GetValue()?.ReloadAsync().AwaitTask();
 
 						if (foregroundTransaction == null)
 							trans.Commit();
@@ -2783,15 +2782,12 @@ namespace TecWare.PPSn
 
 		/// <summary>Pull the object from the server.</summary>
 		/// <returns></returns>
-		public async Task<T> PullAsync<T>()
-			where T : IPpsObjectData
+		public async Task PullAsync()
 		{
 			// foreground means a thread transission, we just wait for the task to finish.
 			// that we do not get any deadlocks with the db-transactions, we need to set the transaction of the current thread.
 			using (var r = await (await EnqueuePullAsync(Environment.MasterData.CurrentTransaction)).ForegroundAsync())
 			{
-				// read prev stored data
-				return await GetDataAsync<T>();
 			}
 		} // proc PullDataAsync
 
@@ -2916,7 +2912,7 @@ namespace TecWare.PPSn
 					if (pulledRevId > 0)
 						SetValue(PpsStaticObjectColumnIndex.PulledRevId, pulledRevId, true);
 					else // repull the whole object, to get the revision from server (head)
-						await PullAsync<IPpsObjectData>();
+						await PullAsync();
 
 					// write local database
 					await UpdateLocalAsync();
@@ -2932,7 +2928,7 @@ namespace TecWare.PPSn
 		{
 			// update data from server, if not present (pull head)
 			if (objectId >= 0 && !HasData)
-				return await PullAsync<IPpsObjectData>(); // call GetDataCoreAsync
+				await PullAsync(); // call GetDataCoreAsync
 
 			// create the core data object
 			return await environment.CreateObjectDataObjectAsync<IPpsObjectData>(this);

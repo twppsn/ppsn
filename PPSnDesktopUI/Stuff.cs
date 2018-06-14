@@ -832,7 +832,7 @@ namespace TecWare.PPSn
 				: (uri.Substring(0, pos), HttpUtility.ParseQueryString(uri.Substring(pos + 1)));
 		} // func ParseUri
 
-		/// <summary>Compares two Uri<summary>
+		/// <summary>Compares two Uri</summary>
 		/// <param name="uri1">first Uri</param>
 		/// <param name="uri2">second Uri</param>
 		/// <returns>return true if both Uris have the same result</returns>
