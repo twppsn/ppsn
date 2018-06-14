@@ -19,6 +19,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -809,6 +810,29 @@ namespace TecWare.PPSn
 					throw new ArgumentException();
 			}
 		} // func LuaToTable
+
+		[LuaMember("ToNumberUI")]
+		private object LuaToNumber(object value, Type targetType)
+		{
+			if (targetType == null)
+				throw new ArgumentNullException(nameof(targetType));
+
+			var r = PpsConverter.NumericValue.ConvertBack(value, targetType, null, CultureInfo.CurrentUICulture);
+			if (r is ValidationResult
+				|| r == DependencyProperty.UnsetValue)
+				return null;
+			return r;
+		} // func LuaToNumber
+
+		[LuaMember("ToStringUI")]
+		private object LuaToString(object value)
+		{
+			var r = PpsConverter.NumericValue.Convert(value, typeof(string), null, CultureInfo.CurrentUICulture);
+			if (r is ValidationResult
+				|| r == DependencyProperty.UnsetValue)
+				return null;
+			return r;
+		} // func LuaToString
 
 		[LuaMember("typeof")]
 		private Type LuaType(object o)
