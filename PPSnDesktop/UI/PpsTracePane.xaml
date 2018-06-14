@@ -377,7 +377,11 @@
 				<ColumnDefinition Width="auto"/>
 			</Grid.ColumnDefinitions>
 			<Label Grid.Column="0" Content="Console: "/>
-			<TextBox Grid.Column="1" x:Name="ConsoleCommandTextBox"/>
+			<TextBox Grid.Column="1" x:Name="ConsoleCommandTextBox">
+				<TextBox.InputBindings>
+					<KeyBinding Command="{x:Static local:PpsTracePane.ExecuteCommandCommand}" CommandParameter="{Binding ElementName=ConsoleCommandTextBox, Path=Text}" Key="Return" />
+				</TextBox.InputBindings>
+			</TextBox>
 			<Button Grid.Column="2" Content="Ausführen" Command="{x:Static local:PpsTracePane.ExecuteCommandCommand}" CommandParameter="{Binding ElementName=ConsoleCommandTextBox, Path=Text}"/>
 		</Grid>
 		<ToggleButton Grid.Row="2" x:Name="ShowStatisticsButton" IsChecked="True" Focusable="False">
