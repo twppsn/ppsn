@@ -731,17 +731,14 @@ namespace TecWare.PPSn.Data
 
 		private abstract class PpsDataRowChangedEvent : PpsDataChangedEvent
 		{
-			private readonly PpsDataTable table;
-			private readonly PpsDataRow row;
-
 			public PpsDataRowChangedEvent(PpsDataTable table, PpsDataRow row)
 			{
-				this.table = table;
-				this.row = row;
+				this.Table = table ?? throw new ArgumentNullException(nameof(table));
+				this.Row = row;
 			} // ctor
 
-			public PpsDataTable Table => table;
-			public PpsDataRow Row => row;
+			public PpsDataTable Table { get; }
+			public PpsDataRow Row { get; }
 		} // class PpsDataRowChangedEvent
 
 		#endregion
@@ -768,14 +765,11 @@ namespace TecWare.PPSn.Data
 			{
 				if (ev == this)
 					return true;
+				else if (ev is PpsDataTableResetChangedEvent re && re.Table == Table)
+					return true;
 				else
-				{
-					var other = ev as PpsDataRowAddedChangedEvent;
-					return other != null ?
-						other.Row == Row :
-						false;
-				}
-			} // func Same
+					return ev is PpsDataRowAddedChangedEvent other ? other.Row == Row : false;
+			} // func Equals
 
 			public override PpsDataChangeLevel Level => PpsDataChangeLevel.RowAdded;
 		} // class PpsDataRowAddedChangedEvent
@@ -807,17 +801,41 @@ namespace TecWare.PPSn.Data
 			{
 				if (ev == this)
 					return true;
+				else if (ev is PpsDataTableResetChangedEvent re && re.Table == Table)
+					return true;
 				else
-				{
-					var other = ev as PpsDataRowRemovedChangedEvent;
-					return other != null ?
-						other.Row == Row :
-						false;
-				}
-			} // func Same
+					return ev is PpsDataRowRemovedChangedEvent other ? other.Row == Row : false;
+			} // func Equals
 
 			public override PpsDataChangeLevel Level => PpsDataChangeLevel.RowRemoved;
 		} // class PpsDataRowRemovedChangedEvent
+
+		#endregion
+
+		#region -- class PpsDataTableResetChangedEvent --------------------------------
+
+		private sealed class PpsDataTableResetChangedEvent : PpsDataRowChangedEvent
+		{	
+			public PpsDataTableResetChangedEvent(PpsDataTable table)
+				: base(table, null)
+			{
+			} // ctor
+
+			public override string ToString()
+				=> $"Reset: {Table.TableName}";
+
+			public override void InvokeEvent()
+			{
+				Table.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+				Table.dataset.OnTableChanged(Table);
+			} // proc InvokeEvent
+
+			public override bool Equals(PpsDataChangedEvent ev)
+				=> ev == this
+					|| (ev is PpsDataRowChangedEvent other ? other.Table == Table : false);
+
+			public override PpsDataChangeLevel Level => PpsDataChangeLevel.TableReset;
+		} // class PpsDataTableResetChangedEvent
 
 		#endregion
 
@@ -1135,6 +1153,10 @@ namespace TecWare.PPSn.Data
 
 		internal void ClearInternal()
 		{
+			// fire reset
+			dataset.ExecuteEvent(new PpsDataTableResetChangedEvent(this));
+
+			// remove rows
 			for (var i = 0; i < currentRows.Count; i++)
 				OnRowRemoved(currentRows[i], i);
 

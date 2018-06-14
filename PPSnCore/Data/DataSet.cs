@@ -324,6 +324,8 @@ namespace TecWare.PPSn.Data
 		RowAdded = 3,
 		/// <summary>Row was removed.</summary>
 		RowRemoved = 3,
+		/// <summary>Reset whole table.</summary>
+		TableReset = 3,
 		/// <summary>Row was modified.</summary>
 		RowModified = 4,
 		/// <summary>Table was modified.</summary>
@@ -1033,18 +1035,20 @@ namespace TecWare.PPSn.Data
 
 				cur.InvokeEvent();
 
+#if !DEBUG
 				if (sw.ElapsedMilliseconds > 30000)
 				{
 					Debug.WriteLine("PPSDataSet: StopEvent work due timeout.");
 					changedEvents.Clear();
 					break;
 				}
+#endif
 			}
 		} // proc ExecuteQueuedEventsUnsafe
 
-		#endregion
+#endregion
 
-		#region -- class PpsDataSetChangedEvent ---------------------------------------
+#region -- class PpsDataSetChangedEvent ---------------------------------------
 
 		private sealed class PpsDataSetChangedEvent : PpsDataChangedEvent
 		{
@@ -1064,9 +1068,9 @@ namespace TecWare.PPSn.Data
 			public override PpsDataChangeLevel Level => PpsDataChangeLevel.DataSetModified;
 		} // class PpsDataSetChangedEvent
 
-		#endregion
+#endregion
 
-		#region -- Events -------------------------------------------------------------
+#region -- Events -------------------------------------------------------------
 
 		internal void ExecuteDataChanged()
 			=> ExecuteEvent(new PpsDataSetChangedEvent(this));
@@ -1117,7 +1121,7 @@ namespace TecWare.PPSn.Data
 		protected internal virtual void OnTableColumnExtendedValueChanged(PpsDataRow row, string columnName, object value, string propertyName)
 			=> InvokeEventHandler("OnTableColumnExtendedValueChanged", row, columnName, value, propertyName);
 
-		#endregion
+#endregion
 
 		/// <summary>Return all auto tags.</summary>
 		/// <returns></returns>
@@ -1163,5 +1167,5 @@ namespace TecWare.PPSn.Data
 		} // sctor
 	} // class PpsDataSet
 
-	#endregion
+#endregion
 }
