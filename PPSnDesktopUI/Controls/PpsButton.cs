@@ -18,6 +18,7 @@ using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace TecWare.PPSn.Controls
@@ -218,4 +219,18 @@ namespace TecWare.PPSn.Controls
 	} // class SplitButton
 
 	#endregion
+
+	#region -- class PpsCheckBox ------------------------------------------------------
+
+	/// <summary></summary>
+	public class PpsCheckBox : CheckBox
+	{
+		static PpsCheckBox()
+		{
+			//DefaultStyleKeyProperty.OverrideMetadata(typeof(PpsCheckBox), new FrameworkPropertyMetadata(typeof(PpsCheckBox)));
+		}
+	} // class PpsCheckBox
+
+	#endregion
+
 }
