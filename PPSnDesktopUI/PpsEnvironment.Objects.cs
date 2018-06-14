@@ -1751,8 +1751,9 @@ namespace TecWare.PPSn
 		/// <param name="dst"></param>
 		/// <returns></returns>
 		Task PushAsync(Stream dst);
-		///// <summary>Size of the data.</summary>
-		//long DataSize { get; }
+
+		/// <summary>Reload data from store.</summary>
+		Task ReloadAsync();
 
 		/// <summary>Is the data changable</summary>
 		bool IsReadOnly { get; }
@@ -2021,7 +2022,10 @@ namespace TecWare.PPSn
 
 		void IPpsObjectDataAccessNotify.OnAccessDataChanged() { }
 
-		async Task IPpsObjectDataAccessNotify.UnloadDataAsync()
+		Task IPpsObjectDataAccessNotify.UnloadDataAsync()
+			=> UnloadDataAsync();
+		
+		private async Task UnloadDataAsync()
 		{
 			if (IsLoaded)
 			{
@@ -2045,6 +2049,14 @@ namespace TecWare.PPSn
 
 			return aot.RegisterDataAccess(this);
 		} // func AccessAsync
+
+		/// <summary>Reload data from local data store</summary>
+		/// <returns></returns>
+		public async Task ReloadAsync()
+		{
+			await UnloadDataAsync();
+			await LoadDataAsync();
+		} // proc ReloadAsync
 
 		#endregion
 
@@ -2289,7 +2301,6 @@ namespace TecWare.PPSn
 
 	#region -- class PpsObjectDataSet -------------------------------------------------
 
-	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public sealed class PpsObjectDataSet : PpsDataSetClient, IPpsObjectData, IPpsObjectDataAccessNotify, IPpsObjectBasedDataSet
 	{
@@ -2322,45 +2333,63 @@ namespace TecWare.PPSn
 			await base.OnNewAsync(arguments);
 		} // proc OnNewAsync
 
+		private async Task LoadAsync(LuaTable arguments)
+		{
+			// pull current data
+			if (!baseObj.HasData && baseObj.Id > 0)
+				await baseObj.PullAsync<IPpsObjectData>();
+
+			if (baseObj.HasData)
+			{
+				// load info
+				var objectInfo = await baseObj.LoadObjectDataInformationAsync();
+				if (objectInfo == null)
+					throw new ArgumentNullException("Data is missing.");
+
+				// load content
+				using (var xml = XmlReader.Create(PpsObject.OpenReadStream(objectInfo), Procs.XmlReaderSettings))
+				{
+					var xData = (await Task.Run(() => XDocument.Load(xml))).Root;
+					await Object.Environment.Dispatcher.InvokeAsync(
+						() =>
+						{
+							Read(xData, false);
+							ResetDirty();
+						}
+					);
+
+					if (arguments != null)
+						await OnLoadedAsync(arguments);
+				}
+			}
+			else
+			{
+				if (arguments != null)
+					await OnNewAsync(arguments);
+				await Object.Environment.Dispatcher.InvokeAsync(ResetDirty);
+			}
+		} // proc LoadAsync
+
 		/// <summary>Aquire access to the dataset.</summary>
 		/// <returns></returns>
 		public async Task<IPpsObjectDataAccess> AccessAsync(LuaTable arguments)
 		{
-			if (!IsInitialized)
-			{
-				// pull current data
-				if (!baseObj.HasData && baseObj.Id > 0)
-					await baseObj.PullAsync();
+			if (!IsInitialized) // only the first load processes the arguments
+				await LoadAsync(arguments ?? new LuaTable());
 
-				if (baseObj.HasData)
-				{
-					// load info
-					var objectInfo = await baseObj.LoadObjectDataInformationAsync();
-					if (objectInfo == null)
-						throw new ArgumentNullException("Data is missing.");
-
-					// load content
-					using (var xml = XmlReader.Create(PpsObject.OpenReadStream(objectInfo), Procs.XmlReaderSettings))
-					{
-						var xData = (await Task.Run(() => XDocument.Load(xml))).Root;
-						await Object.Environment.Dispatcher.InvokeAsync(
-							() =>
-							{
-								Read(xData, false);
-								ResetDirty();
-							}
-						);
-						await OnLoadedAsync(arguments);
-					}
-				}
-				else
-				{
-					await OnNewAsync(arguments);
-					await Object.Environment.Dispatcher.InvokeAsync(ResetDirty);
-				}
-			}
 			return activeObjectTable.RegisterDataAccess(this);
 		} // func AccessAsync
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public async Task ReloadAsync()
+		{
+			// reload data from local database
+			await LoadAsync(null);
+
+			// notify refresh
+			activeObjectTable.NotifyDataChanged(this);
+		} // func ReloadAsync
 
 		/// <summary></summary>
 		/// <returns></returns>
@@ -2714,6 +2743,9 @@ namespace TecWare.PPSn
 						// persist current object state
 						UpdateLocalAsync().AwaitTask();
 
+						var data = GetDataAsync<IPpsObjectData>().AwaitTask();
+						data?.ReloadAsync().AwaitTask();
+
 						if (foregroundTransaction == null)
 							trans.Commit();
 					}
@@ -2751,14 +2783,15 @@ namespace TecWare.PPSn
 
 		/// <summary>Pull the object from the server.</summary>
 		/// <returns></returns>
-		public async Task<IPpsObjectData> PullAsync()
+		public async Task<T> PullAsync<T>()
+			where T : IPpsObjectData
 		{
 			// foreground means a thread transission, we just wait for the task to finish.
 			// that we do not get any deadlocks with the db-transactions, we need to set the transaction of the current thread.
 			using (var r = await (await EnqueuePullAsync(Environment.MasterData.CurrentTransaction)).ForegroundAsync())
 			{
 				// read prev stored data
-				return await GetDataCoreAsync();
+				return await GetDataAsync<T>();
 			}
 		} // proc PullDataAsync
 
@@ -2883,7 +2916,7 @@ namespace TecWare.PPSn
 					if (pulledRevId > 0)
 						SetValue(PpsStaticObjectColumnIndex.PulledRevId, pulledRevId, true);
 					else // repull the whole object, to get the revision from server (head)
-						await PullAsync();
+						await PullAsync<IPpsObjectData>();
 
 					// write local database
 					await UpdateLocalAsync();
@@ -2899,7 +2932,7 @@ namespace TecWare.PPSn
 		{
 			// update data from server, if not present (pull head)
 			if (objectId >= 0 && !HasData)
-				return await PullAsync();
+				return await PullAsync<IPpsObjectData>(); // call GetDataCoreAsync
 
 			// create the core data object
 			return await environment.CreateObjectDataObjectAsync<IPpsObjectData>(this);

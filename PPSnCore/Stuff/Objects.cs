@@ -104,7 +104,7 @@ namespace TecWare.PPSn.Stuff
 		{
 			lock (getValue)
 			{
-				switch(state)
+				switch (state)
 				{
 					case LazyPropertyState.Nothing:
 						state = LazyPropertyState.Loading;
