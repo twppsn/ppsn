@@ -422,14 +422,14 @@ namespace TecWare.PPSn.Server
 		{
 			var x = new XElement("mimeTypes");
 
-			//foreach (var cur in MimeTypeMapping.Mappings)
-			//{
-			//	x.Add(new XElement("mimeType",
-			//		new XAttribute("id", cur.MimeType),
-			//		Procs.XAttributeCreate("isCompressedContent", cur.IsCompressedContent),
-			//		Procs.XAttributeCreate("extensions", String.Join(";", cur.Extensions))
-			//	));
-			//}
+			foreach (var cur in MimeTypeMapping.Mappings)
+			{
+				x.Add(new XElement("mimeType",
+					new XAttribute("id", cur.MimeType),
+					Procs.XAttributeCreate("isCompressedContent", cur.IsCompressedContent),
+					Procs.XAttributeCreate("extensions", String.Join(";", cur.Extensions))
+				));
+			}
 
 			return x;
 		} // func GetMimeTypesInfo

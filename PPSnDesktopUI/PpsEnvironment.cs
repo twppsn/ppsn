@@ -906,6 +906,23 @@ namespace TecWare.PPSn
 							if (info.IsModified)
 								info.Save();
 
+							#region -- update mime type mappings --
+							var x = xInfo.Element("mimeTypes")?.Elements("mimeType");
+							if (x != null)
+							{
+								foreach (var c in x)
+								{
+									var mimeType = c.GetAttribute("id", (string)null);
+									if (mimeType != null)
+									{
+										var isCompressedContent = c.GetAttribute("isCompressedContent", false);
+										var extensions = c.GetAttribute("extensions", (string)null)?.Split(';') ?? Array.Empty<string>();
+										MimeTypeMapping.Update(mimeType, isCompressedContent, false, extensions);
+									}
+								}
+							}
+							#endregion
+
 							// new version
 							if (!info.IsApplicationLatest)
 							{

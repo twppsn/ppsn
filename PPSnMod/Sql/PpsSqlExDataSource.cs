@@ -2535,6 +2535,7 @@ namespace TecWare.PPSn.Server.Sql
 					if (table.Name == "ObjectTags") // special case for tags
 						commandText += " LEFT OUTER JOIN dbo.ObjK o ON (o.Id = d.ObjKId) WHERE d.ObjRId is null OR (d.ObjRId = o.HeadRevId)"; // only no rev tags
 
+					command.CommandTimeout = 7200;
 					command.Transaction = transaction;
 					command.CommandText = commandText;
 
