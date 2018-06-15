@@ -224,7 +224,8 @@ namespace TecWare.PPSn.Server
 			CallTableMethodsWithExceptions(LuaOnAfterPush, obj, data);
 
 			obj[nameof(PpsObjectAccess.MimeType)] = "text/dataset";
-			obj.UpdateData(GetStreamFromData(data));
+			using (var src = GetStreamFromData(data))
+				obj.UpdateData(src);
 			obj.Update(PpsObjectUpdateFlag.All);
 
 			return PpsPushDataResult.PushedAndChanged;

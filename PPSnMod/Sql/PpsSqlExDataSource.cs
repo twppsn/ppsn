@@ -136,6 +136,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			public PpsDataSource DataSource => dataSource;
 			public SqlConnection Connection => connection;
+			public PpsCredentials Credentials => credentials;
 
 			public bool IsConnected => IsConnectionOpen(connection);
 		} // class SqlConnectionHandle
@@ -762,6 +763,7 @@ namespace TecWare.PPSn.Server.Sql
 			#endregion
 
 			private readonly SqlConnection connection;
+			private readonly PpsCredentials credentials;
 			private readonly SqlTransaction transaction;
 
 			#region -- Ctor/Dtor --------------------------------------------------------
@@ -770,6 +772,7 @@ namespace TecWare.PPSn.Server.Sql
 				: base(dataSource, connectionHandle)
 			{
 				this.connection = connectionHandle.ForkConnectionAsync().AwaitTask();
+				this.credentials = connectionHandle.Credentials;
 
 				// create the sql transaction
 				this.transaction = connection.BeginTransaction(IsolationLevel.ReadUncommitted);
@@ -959,13 +962,15 @@ namespace TecWare.PPSn.Server.Sql
 				long documentId = -1;
 
 				// read first block
-				var buf = new byte[0x10000];
+				var buf = new byte[0x80000];
 				var readed = ReadStreamData(srcStream, buf);
-				var useFileStream = readed >= buf.Length;
+				var integratedUser = credentials as PpsIntegratedCredentials;
+				var useFileStream = integratedUser != null && readed >= buf.Length;
 
 				if (useFileStream) // inline data in revision
 				{
 					#region -- insert into objf --
+					using (integratedUser.Impersonate())
 					using (var cmd = CreateCommand(parameter, CommandType.Text))
 					{
 						cmd.CommandText = "INSERT INTO dbo.[ObjF] ([HashAlgo], [Hash], [Data]) "
@@ -1004,6 +1009,8 @@ namespace TecWare.PPSn.Server.Sql
 
 									args["HashValue"] = dstHashStream.HashSum;
 									args["HashAlgo"] = "SHA2_256";
+
+									dstFileStream.Close();
 								}
 							}
 							else
@@ -1112,7 +1119,9 @@ namespace TecWare.PPSn.Server.Sql
 
 				using (var cmd = CreateCommand(parameter, CommandType.Text))
 				{
-					cmd.CommandText = "SELECT [IsDocumentText], [IsDocumentDeflate], [Document], [DocumentId], [DocumentLink], [HashAlgo], [Hash], [Data].PathName(), GET_FILESTREAM_TRANSACTION_CONTEXT() "
+					var useFileStream = credentials is PpsIntegratedCredentials; // only integrated credentials can use filestream
+
+					cmd.CommandText = "SELECT [IsDocumentText], [IsDocumentDeflate], [Document], [DocumentId], [DocumentLink], [HashAlgo], [Hash], " + (useFileStream ? "[Data].PathName(), GET_FILESTREAM_TRANSACTION_CONTEXT() " : "[Data] ")
 						+ (revId > 0
 							? "FROM dbo.[ObjR] r LEFT OUTER JOIN dbo.[ObjF] f ON (r.[DocumentId] = f.[Id]) WHERE r.[Id] = @Id;"
 							: "FROM dbo.[ObjK] o INNER JOIN dbo.[ObjR] r ON (o.HeadRevId = r.[Id]) LEFT OUTER JOIN dbo.[ObjF] f ON (r.[DocumentId] = f.[Id]) WHERE o.[Id] = @Id;"
@@ -1131,9 +1140,15 @@ namespace TecWare.PPSn.Server.Sql
 						// convert stream
 						var isDocumentDeflated = r.GetBoolean(1);
 						Stream src;
-						if (!r.IsDBNull(7)) // file stream
+						if (!r.IsDBNull(7)) // file stream or bytes
 						{
-							src = new SqlFileStream(r.GetString(7), r.GetSqlBytes(8).Buffer, FileAccess.Read);
+							if (useFileStream)
+							{
+								using (((PpsIntegratedCredentials)credentials).Impersonate())
+									src = new SqlFileStream(r.GetString(7), r.GetSqlBytes(8).Buffer, FileAccess.Read);
+							}
+							else
+								src = r.GetSqlBytes(7).Stream;
 						}
 						else if (!r.IsDBNull(2)) // inline content
 						{

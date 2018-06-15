@@ -667,7 +667,8 @@ namespace TecWare.PPSn.Server
 			var row = GetDataRow();
 			if (row.GetProperty("IsDocumentText", false))
 			{
-				using (var tr = Procs.OpenStreamReader((Stream)row["Document"], DataEncoding))
+				using (var src = (Stream)row["Document"])
+				using (var tr = Procs.OpenStreamReader(src, DataEncoding))
 					return tr.ReadToEnd();
 			}
 			else
@@ -1293,7 +1294,10 @@ namespace TecWare.PPSn.Server
 
 			// write revision
 			if (data != null)
-				obj.UpdateData(GetStreamFromData(data));
+			{
+				using (var src = GetStreamFromData(data))
+					obj.UpdateData(src);
+			}
 
 			// write object layout
 			obj.Update(PpsObjectUpdateFlag.All);
