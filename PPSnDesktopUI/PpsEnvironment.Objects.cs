@@ -2910,7 +2910,10 @@ namespace TecWare.PPSn
 					// revision is returned and object is not changed on the server, only update the properties
 					var pulledRevId = xAnswer.GetAttribute("newRevId", -1L);
 					if (pulledRevId > 0)
+					{
+						await ResetObjectDataInformationAsync();
 						SetValue(PpsStaticObjectColumnIndex.PulledRevId, pulledRevId, true);
+					}
 					else // repull the whole object, to get the revision from server (head)
 						await PullAsync();
 
@@ -2989,6 +2992,22 @@ namespace TecWare.PPSn
 				}
 			}
 		} // func GetObjectDataInformationAsync
+
+		internal async Task ResetObjectDataInformationAsync()
+		{
+			using (var trans = await environment.MasterData.CreateTransactionAsync(PpsMasterDataTransactionLevel.Write))
+			using (var cmd = trans.CreateNativeCommand("UPDATE main.[Objects] SET DocumentIsChanged = 0, _IsUpdated = 0  WHERE Id = @Id"))
+			{
+				cmd.AddParameter("@Id", DbType.Int64, objectId);
+
+				await cmd.ExecuteNonQueryAsync();
+
+				// set HasData to the correct value
+				SetValue(PpsStaticObjectColumnIndex.IsDocumentChanged, false, false);
+
+				trans.Commit();
+			}
+		} // proc ResetObjectDataInformationAsync
 
 		internal async Task SaveObjectDataInformationAsync(object data, string mimeType, bool isDocumentChanged)
 		{
