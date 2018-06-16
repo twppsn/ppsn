@@ -80,7 +80,6 @@
     <None Include="Sql\SqlServerTypes\Loader.cs" />
     <Compile Include="Sql\PpsSqlExDataSource.cs" />
     <Compile Include="Sql\PpsSqlDataSource.cs" />
-    <Compile Include="Sql\PpsSqlSchemaStore.cs" />
     <Compile Include="Stuff.cs" />
     <Compile Include="Wpf\DataWareHouseClientItem.cs" />
     <Compile Include="Wpf\WpfClientItem.cs" />

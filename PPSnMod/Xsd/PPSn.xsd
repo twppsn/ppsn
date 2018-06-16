@@ -11,7 +11,6 @@
 	<xs:complexType name="dataSourceType">
 		<xs:complexContent>
 			<xs:extension base="ConfigItemType">
-				
 			</xs:extension>
 		</xs:complexContent>
 	</xs:complexType>
@@ -22,6 +21,20 @@
 		</xs:annotation>
 	</xs:element>
 
+	<xs:complexType name="sqlDataSourceType">
+		<xs:complexContent>
+			<xs:extension base="pps:dataSourceType">
+				<xs:sequence>
+					<xs:element name="connectionString" type="xs:string" minOccurs="1" maxOccurs="1">
+						<xs:annotation>
+							<xs:documentation>Connection string to the database, this string is used for system connection.</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+
 	<xs:element name="sqlExDataSource" substitutionGroup="pps:dataSource">
 		<xs:annotation>
 			<xs:documentation>Implementation for a Sql-Server data source.</xs:documentation>
@@ -31,14 +44,7 @@
 		</xs:annotation>
 		<xs:complexType>
 			<xs:complexContent>
-				<xs:extension base="pps:dataSourceType">
-					<xs:sequence>
-						<xs:element name="connectionString" type="xs:string" minOccurs="1" maxOccurs="1">
-							<xs:annotation>
-								<xs:documentation>Connection string to the database, this string is used for system connection.</xs:documentation>
-							</xs:annotation>
-						</xs:element>
-					</xs:sequence>
+				<xs:extension base="pps:sqlDataSourceType">
 				</xs:extension>
 			</xs:complexContent>
 		</xs:complexType>

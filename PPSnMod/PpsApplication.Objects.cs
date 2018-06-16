@@ -1869,7 +1869,6 @@ namespace TecWare.PPSn.Server
 			} // func CheckContextArgument
 
 			/// <summary>Creates a XmlWriter for the output stream</summary>
-			/// <param name="r"></param>
 			/// <returns></returns>
 			[LuaMember]
 			public static XmlWriter CreateXmlWriter()
@@ -1880,7 +1879,6 @@ namespace TecWare.PPSn.Server
 			} // func CreateXmlWriter
 
 			/// <summary>Creates a XmlReader for the input stream.</summary>
-			/// <param name="r"></param>
 			/// <returns></returns>
 			[LuaMember]
 			public static XmlReader CreateXmlReader()
@@ -1891,7 +1889,6 @@ namespace TecWare.PPSn.Server
 			} // func CreateXmlReader
 
 			/// <summary>Writes the XElement in the output stream.</summary>
-			/// <param name="r"></param>
 			/// <param name="x"></param>
 			[LuaMember]
 			public static void WriteXml(XElement x)
@@ -1901,7 +1898,6 @@ namespace TecWare.PPSn.Server
 			} // proc WriteXml
 
 			/// <summary>Gets the input stream as an XElement.</summary>
-			/// <param name="r"></param>
 			/// <returns></returns>
 			[LuaMember]
 			public static XElement GetXml()
@@ -1911,14 +1907,12 @@ namespace TecWare.PPSn.Server
 			} // proc WriteXml
 
 			/// <summary>Write the table in the output stream.</summary>
-			/// <param name="r"></param>
 			/// <param name="t"></param>
 			[LuaMember]
 			public static void WriteTable(LuaTable t)
 				=> WriteXml(t.ToXml());
 
 			/// <summary>Gets the input stream as an lua-table.</summary>
-			/// <param name="r"></param>
 			/// <returns></returns>
 			[LuaMember]
 			public static LuaTable GetTable()
