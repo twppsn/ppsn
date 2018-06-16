@@ -18,8 +18,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
 using TecWare.DE.Data;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
@@ -34,6 +32,8 @@ namespace TecWare.PPSn.Server.Data
 	{
 		private readonly PpsDataSource source;
 
+		/// <summary></summary>
+		/// <param name="source"></param>
 		public PpsDataSelector(PpsDataSource source)
 		{
 			this.source = source;
@@ -45,6 +45,8 @@ namespace TecWare.PPSn.Server.Data
 		IEnumerator<IDataRow> IEnumerable<IDataRow>.GetEnumerator()
 			=> GetEnumerator(0, Int32.MaxValue);
 
+		/// <summary>Overwrite to execute selector</summary>
+		/// <returns></returns>
 		public virtual IEnumerator<IDataRow> GetEnumerator()
 			=> GetEnumerator(0, Int32.MaxValue);
 
@@ -57,18 +59,29 @@ namespace TecWare.PPSn.Server.Data
 		IDataRowEnumerable IDataRowEnumerable.ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative)
 			=> ApplyOrder(expressions, lookupNative);
 
+		/// <summary></summary>
+		/// <param name="expressions"></param>
+		/// <param name="lookupNative"></param>
+		/// <returns></returns>
 		public virtual PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative = null)
 			=> this;
 
 		IDataRowEnumerable IDataRowEnumerable.ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative)
 			=> ApplyFilter(expression, lookupNative);
 
+		/// <summary></summary>
+		/// <param name="expression"></param>
+		/// <param name="lookupNative"></param>
+		/// <returns></returns>
 		public virtual PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 			=> this;
 
 		IDataRowEnumerable IDataRowEnumerable.ApplyColumns(IEnumerable<PpsDataColumnExpression> columns)
 			=> ApplyColumns(columns);
 
+		/// <summary></summary>
+		/// <param name="columns"></param>
+		/// <returns></returns>
 		public virtual PpsDataSelector ApplyColumns(IEnumerable<PpsDataColumnExpression> columns)
 			=> this;
 		
@@ -96,6 +109,10 @@ namespace TecWare.PPSn.Server.Data
 		private readonly IEnumerable<T> enumerable;
 		private readonly PpsApplication application;
 
+		/// <summary></summary>
+		/// <param name="source"></param>
+		/// <param name="viewId"></param>
+		/// <param name="enumerable"></param>
 		public PpsGenericSelector(PpsDataSource source, string viewId, IEnumerable<T> enumerable) 
 			: base(source)
 		{
@@ -104,17 +121,32 @@ namespace TecWare.PPSn.Server.Data
 			this.application = source.GetService<PpsApplication>(true);
 		} // ctor
 		
+		/// <summary></summary>
+		/// <param name="start"></param>
+		/// <param name="count"></param>
+		/// <returns></returns>
 		public override IEnumerator<IDataRow> GetEnumerator(int start, int count)
 			=> new GenericDataRowEnumerator<T>(enumerable.GetEnumerator());
 		
+		/// <summary></summary>
+		/// <param name="nativeColumnName"></param>
+		/// <returns></returns>
 		public override IPpsColumnDescription GetFieldDescription(string nativeColumnName)
 				=> application.GetFieldDescription(viewId + "." + nativeColumnName, false);
 
+		/// <summary></summary>
+		/// <param name="expression"></param>
+		/// <param name="lookupNative"></param>
+		/// <returns></returns>
 		public override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative = null)
 		{
 			var predicate = PpsDataFilterVisitorLambda.CompileTypedFilter<T>(expression);
 			return new PpsGenericSelector<T>(DataSource, viewId, enumerable.Where(new Func<T, bool>(predicate)));
 		} // func ApplyFilter
+
+		/// <summary></summary>
+		public override int Count
+			=> enumerable is IList l ? l.Count : base.Count;
 	} // class PpsGenericSelector
 
 	#endregion

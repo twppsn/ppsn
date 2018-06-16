@@ -25,7 +25,7 @@ SELECT
 		LEFT OUTER JOIN sys.index_columns ic ON (pk.object_id = ic.object_id and pk.index_id = ic.index_id and ic.column_id = c.column_id)
 	WHERE t.type = 'U' and c.is_computed = 0
 	order by c.object_id, c.column_id;
-	foreign keys
+-- foreign keys
 SELECT 
 		o.object_id
 		, o.name

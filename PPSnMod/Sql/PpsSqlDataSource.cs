@@ -28,6 +28,7 @@ using System.Xml.Linq;
 using TecWare.DE.Data;
 using TecWare.DE.Server;
 using TecWare.DE.Stuff;
+using TecWare.PPSn.Data;
 using TecWare.PPSn.Server.Data;
 
 namespace TecWare.PPSn.Server.Sql
@@ -223,7 +224,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		/// <summary>Full qualified name of the column for the server.</summary>
 		public string TableColumnName => table.SchemaName + "." + table.TableName + "." + Name;
-		
+
 		/// <summary></summary>
 		public int MaxLength => maxLength;
 		/// <summary></summary>
@@ -239,6 +240,9 @@ namespace TecWare.PPSn.Server.Sql
 
 		// -- Static ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="columnName"></param>
+		/// <returns></returns>
 		public static string GetColumnName(string columnName)
 		{
 			if (String.IsNullOrEmpty(columnName))
@@ -250,6 +254,12 @@ namespace TecWare.PPSn.Server.Sql
 				: columnName.Substring(pos + 1);
 		} // func GetColumnName
 
+		/// <summary></summary>
+		/// <param name="command"></param>
+		/// <param name="columnDescription"></param>
+		/// <param name="parameterName"></param>
+		/// <param name="value"></param>
+		/// <returns></returns>
 		public static DbParameter AppendSqlParameter(DbCommand command, IDataColumn columnDescription, string parameterName = null, object value = null)
 		{
 			if (columnDescription is IPpsColumnDescription c && c.TryGetColumnDescriptionImplementation<PpsSqlColumnInfo>(out var sqlColumn)) // sql column -> easy to add
@@ -379,7 +389,7 @@ namespace TecWare.PPSn.Server.Sql
 					isSinglePrimaryKey = false;
 			}
 		} // proc OnColumnAdded
-	
+
 		internal void AddRelation(PpsSqlRelationInfo relationInfo)
 		{
 			relations.Add(relationInfo);
@@ -462,6 +472,17 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary></summary>
 		public PpsSqlColumnInfo ReferencedColumn => referencedColumn;
 	} // class PpsSqlTableInfo
+
+	#endregion
+
+	#region -- interface IPpsSqlConnectionHandle --------------------------------------
+
+	/// <summary></summary>
+	public interface IPpsSqlConnectionHandle : IPpsConnectionHandle
+	{
+		/// <summary>Access the database connection.</summary>
+		DbConnection Connection { get; }
+	} // interface IPpsSqlConnectionHandle
 
 	#endregion
 
@@ -561,7 +582,7 @@ namespace TecWare.PPSn.Server.Sql
 			/// <param name="throwException"></param>
 			/// <returns></returns>
 			public PpsDataSelector CreateSelector(IPpsConnectionHandle connection, bool throwException = true)
-				=> source.CreateSelector(this, connection);
+				=> new PpsSqlDataSelector((IPpsSqlConnectionHandle)connection, this, null, null, null);
 
 			/// <summary></summary>
 			/// <param name="selectorColumn"></param>
@@ -581,6 +602,288 @@ namespace TecWare.PPSn.Server.Sql
 			/// <summary></summary>
 			public IEnumerable<IPpsColumnDescription> Columns => columnDescriptions;
 		} // class PpsSqlDataSelectorToken
+
+		#endregion
+
+		#region -- class PpsSqlConnectionHandle ---------------------------------------
+
+		/// <summary></summary>
+		protected abstract class PpsSqlConnectionHandle<DBCONNECTION, DBCONNECTIONSTRINGBUILDER> : IPpsSqlConnectionHandle
+			where DBCONNECTION : DbConnection
+			where DBCONNECTIONSTRINGBUILDER : DbConnectionStringBuilder
+		{
+			/// <summary></summary>
+			public event EventHandler Disposed;
+
+			private readonly PpsSqlDataSource dataSource;
+			private readonly DBCONNECTION connection;
+			private readonly DBCONNECTIONSTRINGBUILDER connectionString;
+			private readonly PpsCredentials credentials;
+
+			private bool isDisposed = false;
+
+			#region -- Ctor/Dtor ------------------------------------------------------
+
+			/// <summary></summary>
+			/// <param name="dataSource"></param>
+			/// <param name="credentials"></param>
+			public PpsSqlConnectionHandle(PpsSqlDataSource dataSource, PpsCredentials credentials)
+			{
+				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+				this.credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
+				
+				connection = CreateConnection();
+				connectionString = CreateConnectionStringBuilder(false);
+			} // ctor
+
+			/// <summary></summary>
+			public void Dispose()
+			{
+				if (isDisposed)
+					throw new ObjectDisposedException(GetType().Name);
+
+				// clear connection
+				connection.Dispose();
+				isDisposed = true;
+
+				// invoke disposed
+				Disposed?.Invoke(this, EventArgs.Empty);
+			} // proc Dispose
+
+			/// <summary></summary>
+			/// <returns></returns>
+			protected abstract DBCONNECTION CreateConnection();
+
+			/// <summary></summary>
+			/// <param name="forWrite"></param>
+			/// <returns></returns>
+			protected virtual DBCONNECTIONSTRINGBUILDER CreateConnectionStringBuilder(bool forWrite) 
+				=> dataSource.CreateConnectionStringBuilder<DBCONNECTIONSTRINGBUILDER>(forWrite ? "UserTrans" : "User");
+
+			#endregion
+
+			#region -- Connect --------------------------------------------------------
+
+			/// <summary></summary>
+			/// <returns></returns>
+			protected abstract Task ConnectCoreAsync(DBCONNECTION connection, DBCONNECTIONSTRINGBUILDER connectionString);
+
+			private async Task<bool> ConnectAsync(DBCONNECTION connection, DBCONNECTIONSTRINGBUILDER connectionString, bool throwException)
+			{
+				// create the connection
+				try
+				{
+					await ConnectCoreAsync(connection, connectionString); 
+					return true;
+				}
+				catch (Exception)
+				{
+					if (throwException)
+						throw;
+					return false;
+				}
+			} // func ConnectAsync
+			
+			/// <summary></summary>
+			/// <returns></returns>
+			public async Task<DBCONNECTION> ForkConnectionAsync()
+			{
+				// create a new connection
+				var con = CreateConnection();
+				
+				// ensure connection
+				await ConnectAsync(con, CreateConnectionStringBuilder(true), true);
+
+				return con;
+			} // func ForkConnection
+
+			/// <summary></summary>
+			/// <param name="throwException"></param>
+			/// <returns></returns>
+			public Task<bool> EnsureConnectionAsync(bool throwException)
+			{
+				if (IsConnected)
+					return Task.FromResult(true);
+
+				return ConnectAsync(connection, connectionString, throwException);
+			} // func EnsureConnection
+
+			#endregion
+
+			/// <summary></summary>
+			public PpsSqlDataSource DataSource => dataSource;
+			PpsDataSource IPpsConnectionHandle.DataSource => dataSource;
+
+			/// <summary></summary>
+			public DBCONNECTION Connection => connection;
+			DbConnection IPpsSqlConnectionHandle.Connection => connection;
+			/// <summary></summary>
+			public PpsCredentials Credentials => credentials;
+
+			/// <summary></summary>
+			public abstract bool IsConnected { get; }
+		} // class PpsSqlConnectionHandle
+
+		#endregion
+
+		#region -- class SqlDataSelector ----------------------------------------------
+
+		/// <summary></summary>
+		private sealed class PpsSqlDataSelector : PpsDataSelector
+		{
+			#region -- class SqlDataFilterVisitor -------------------------------------
+
+			private sealed class SqlDataFilterVisitor : PpsDataFilterVisitorSql
+			{
+				private readonly Func<string, string> lookupNative;
+				private readonly Func<string, IPpsColumnDescription> lookupColumn;
+
+				public SqlDataFilterVisitor(Func<string, string> lookupNative, Func<string, IPpsColumnDescription> lookupColumn)
+				{
+					this.lookupNative = lookupNative;
+					this.lookupColumn = lookupColumn;
+				} // ctor
+
+				protected override Tuple<string, Type> LookupColumn(string columnToken)
+				{
+					var column = lookupColumn(columnToken);
+					if (column == null)
+						throw new ArgumentNullException("operand", $"Could not resolve column '{columnToken}'.");
+
+					return new Tuple<string, Type>(column.Name, column.DataType);
+				} // func LookupColumn
+
+				protected override string LookupNativeExpression(string key)
+				{
+					var expr = lookupNative(key);
+					if (String.IsNullOrEmpty(expr))
+						throw new ArgumentNullException("nativeExpression", $"Could not resolve native expression '{key}'.");
+					return expr;
+				} // func LookupNativeExpression
+			} // class SqlDataFilterVisitor
+
+			#endregion
+
+			private readonly IPpsSqlConnectionHandle connection;
+
+			private readonly PpsSqlDataSelectorToken selectorToken;
+			private readonly string selectList;
+			private readonly string whereCondition;
+			private readonly string orderBy;
+
+			/// <summary></summary>
+			/// <param name="connection"></param>
+			/// <param name="selectorToken"></param>
+			/// <param name="selectList"></param>
+			/// <param name="whereCondition"></param>
+			/// <param name="orderBy"></param>
+			public PpsSqlDataSelector(IPpsSqlConnectionHandle connection, PpsSqlDataSelectorToken selectorToken, string selectList, string whereCondition, string orderBy)
+				: base(connection.DataSource)
+			{
+				this.connection = connection;
+				this.selectorToken = selectorToken;
+				this.selectList = selectList;
+				this.whereCondition = whereCondition;
+				this.orderBy = orderBy;
+			} // ctor
+
+			private string FormatOrderExpression(PpsDataOrderExpression o, Func<string, string> lookupNative, Func<string, IPpsColumnDescription> lookupColumn)
+			{
+				// check for native expression
+				if (lookupNative != null)
+				{
+					var expr = lookupNative(o.Identifier);
+					if (expr != null)
+					{
+						if (o.Negate)
+						{
+							// todo: replace asc with desc and desc with asc
+							expr = expr.Replace(" asc", " desc");
+						}
+						return expr;
+					}
+				}
+
+				// checkt the column
+				var column = lookupColumn(o.Identifier);
+
+				if (o.Negate)
+					return column.Name + " DESC";
+				else
+					return column.Name;
+			} // func FormatOrderExpression
+
+			/// <summary></summary>
+			/// <param name="expressions"></param>
+			/// <param name="lookupNative"></param>
+			/// <returns></returns>
+			public sealed override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative)
+				=> SqlOrderBy(String.Join(", ", from o in expressions select FormatOrderExpression(o, lookupNative, selectorToken.GetFieldDescription)));
+
+			/// <summary></summary>
+			/// <param name="expression"></param>
+			/// <param name="lookupNative"></param>
+			/// <returns></returns>
+			public sealed override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative)
+				=> SqlWhere(new SqlDataFilterVisitor(lookupNative, selectorToken.GetFieldDescription).CreateFilter(expression));
+
+			private string AddSelectList(string addSelectList)
+			{
+				if (String.IsNullOrEmpty(addSelectList))
+					return selectList;
+
+				return String.IsNullOrEmpty(selectList) ? addSelectList : selectList + ", " + addSelectList;
+			} // func AddSelectList
+
+			public PpsSqlDataSelector SqlSelect(string addSelectList)
+			{
+				if (String.IsNullOrEmpty(addSelectList))
+					return this;
+
+				var newSelectList = AddSelectList(addSelectList);
+				return new PpsSqlDataSelector(connection, selectorToken, newSelectList, whereCondition, orderBy);
+			} // func SqlSelect
+
+			private string AddWhereCondition(string addWhereCondition)
+			{
+				if (String.IsNullOrEmpty(addWhereCondition))
+					return whereCondition;
+
+				return String.IsNullOrEmpty(whereCondition) ? addWhereCondition : "(" + whereCondition + ") and (" + addWhereCondition + ")";
+			} // func AddWhereCondition
+
+			public PpsSqlDataSelector SqlWhere(string addWhereCondition)
+			{
+				if (String.IsNullOrEmpty(addWhereCondition))
+					return this;
+
+				var newWhereCondition = AddWhereCondition(addWhereCondition);
+				return new PpsSqlDataSelector(connection, selectorToken, selectList, newWhereCondition, orderBy);
+			} // func SqlWhere
+
+			private string AddOrderBy(string addOrderBy)
+			{
+				if (String.IsNullOrEmpty(addOrderBy))
+					return orderBy;
+
+				return String.IsNullOrEmpty(orderBy) ? addOrderBy : orderBy + ", " + addOrderBy;
+			} // func AddOrderBy
+
+			public PpsSqlDataSelector SqlOrderBy(string addOrderBy)
+			{
+				if (String.IsNullOrEmpty(addOrderBy))
+					return this;
+
+				var newOrderBy = AddOrderBy(addOrderBy);
+				return new PpsSqlDataSelector(connection, selectorToken, selectList, whereCondition, newOrderBy);
+			} // func SqlOrderBy
+
+			public override IEnumerator<IDataRow> GetEnumerator(int start, int count)
+				=> new DbRowEnumerator(((PpsSqlDataSource)DataSource).CreateViewCommand(connection, selectList, selectorToken.ViewName, whereCondition, orderBy, start, count));
+
+			public override IPpsColumnDescription GetFieldDescription(string nativeColumnName)
+				=> selectorToken.GetFieldDescription(nativeColumnName);
+		} // class SqlDataSelector
 
 		#endregion
 
@@ -704,7 +1007,7 @@ namespace TecWare.PPSn.Server.Sql
 		/// <summary>Initialize schema</summary>
 		protected void InitializeSchema()
 		{
-			lock(schemaInfoInitialized)
+			lock (schemaInfoInitialized)
 			{
 				if (schemaInfoInitialized.IsSet)
 					throw new InvalidOperationException("Schema is already loaded.");
@@ -714,7 +1017,7 @@ namespace TecWare.PPSn.Server.Sql
 					// load schema
 					InitializeSchemaCore();
 				}
-				catch(Exception e)
+				catch (Exception e)
 				{
 					Log.Except("Schema initialization failed.", e);
 					isSchemaInfoFailed = true;
@@ -736,7 +1039,7 @@ namespace TecWare.PPSn.Server.Sql
 		#endregion
 
 		#region -- Script Management --------------------------------------------------
-		
+
 		/// <summary>Read a sql-script from resource.</summary>
 		/// <param name="resourceName"></param>
 		/// <param name="type"></param>
@@ -769,7 +1072,7 @@ namespace TecWare.PPSn.Server.Sql
 			columns[column.TableColumnName] = column;
 			column.Table.AddColumn(column);
 		} // proc AddColumn
-		
+
 		/// <summary>Add relations to the tables.</summary>
 		/// <param name="relation"></param>
 		protected void AddRelation(PpsSqlRelationInfo relation)
@@ -864,18 +1167,23 @@ namespace TecWare.PPSn.Server.Sql
 		} // pro ExecuteForResultSet
 
 		/// <summary></summary>
-		/// <param name="selectorToken"></param>
 		/// <param name="connection"></param>
+		/// <param name="selectList"></param>
+		/// <param name="viewName"></param>
+		/// <param name="whereCondition"></param>
+		/// <param name="orderBy"></param>
+		/// <param name="start"></param>
+		/// <param name="count"></param>
 		/// <returns></returns>
-		protected abstract PpsDataSelector CreateSelector(PpsSqlDataSelectorToken selectorToken, IPpsConnectionHandle connection);
-
+		protected abstract DbCommand CreateViewCommand(IPpsSqlConnectionHandle connection, string selectList, string viewName, string whereCondition, string orderBy, int start, int count);
+		
 		/// <summary>Generate view in the database.</summary>
 		/// <param name="connection">Database connection</param>
 		/// <param name="name">Name of the view.</param>
 		/// <param name="selectStatement">Select statemate of the view</param>
 		/// <returns></returns>
 		protected abstract Task<string> CreateOrReplaceViewAsync(DbConnection connection, string name, string selectStatement);
-		
+
 		private async Task<IPpsSelectorToken> CreateCoreAsync(string name, Func<DbConnection, Task<string>> createView)
 		{
 			IPpsColumnDescription[] columnDescriptions;
@@ -889,10 +1197,10 @@ namespace TecWare.PPSn.Server.Sql
 
 			return new PpsSqlDataSelectorToken(this, name, viewName, columnDescriptions);
 		} // func CreateCore
-			
+
 		private static async Task<string> LoadSqlFileAsync(string fileName)
 		{
-			using(var src = new FileStream(fileName,FileMode.Open))
+			using (var src = new FileStream(fileName, FileMode.Open))
 			using (var sr = Procs.OpenStreamReader(src, Encoding.UTF8))
 				return await sr.ReadToEndAsync();
 		} // func LoadSqlFileAsync

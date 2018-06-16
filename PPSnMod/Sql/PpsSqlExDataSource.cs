@@ -27,9 +27,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
 using TecWare.DE.Server;
@@ -43,378 +41,52 @@ namespace TecWare.PPSn.Server.Sql
 	/// <summary></summary>
 	public sealed class PpsSqlExDataSource : PpsSqlDataSource
 	{
-		#region -- class SqlConnectionHandle --------------------------------------------
+		#region -- class SqlConnectionHandle ------------------------------------------
 
-		private class SqlConnectionHandle : IPpsConnectionHandle
+		private sealed class SqlConnectionHandle : PpsSqlConnectionHandle<SqlConnection, SqlConnectionStringBuilder>
 		{
-			public event EventHandler Disposed;
-
-			private readonly PpsSqlExDataSource dataSource;
-			private readonly SqlConnectionStringBuilder connectionString;
-			private readonly SqlConnection connection; // sql connection for read data
-			
-			private readonly PpsCredentials credentials;
-
-			private bool isDisposed = false;
-
-			public SqlConnectionHandle(PpsSqlExDataSource dataSource, SqlConnectionStringBuilder connectionString, PpsCredentials credentials)
+			public SqlConnectionHandle(PpsSqlExDataSource dataSource, PpsCredentials credentials)
+				: base(dataSource, credentials)
 			{
-				this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(credentials)); 
-				this.connectionString = connectionString ?? throw new ArgumentNullException(nameof(credentials)); 
-				this.credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
-
-				connection = new SqlConnection();
 			} // ctor
 
-			public void Dispose()
+			protected override SqlConnection CreateConnection()
+				=> new SqlConnection();
+
+			protected override SqlConnectionStringBuilder CreateConnectionStringBuilder(bool forWrite)
 			{
-				if (isDisposed)
-					throw new ObjectDisposedException(nameof(SqlConnectionHandle));
+				var r = base.CreateConnectionStringBuilder(forWrite);
+				r.Pooling = forWrite;
+				return r;
+			} // func CreateConnectionStringBuilder
 
-				// clear connection
-				connection.Dispose();
-				isDisposed = true;
-
-				// invoke disposed
-				Disposed?.Invoke(this, EventArgs.Empty);
-			} // proc Dispose
-
-			private static async Task<bool> ConnectAsync(SqlConnectionStringBuilder connectionString, SqlConnection connection, PpsCredentials credentials, bool throwException)
+			protected override async Task ConnectCoreAsync(SqlConnection connection, SqlConnectionStringBuilder connectionString)
 			{
-				// create the connection
-				try
+				if (Credentials is PpsIntegratedCredentials ic)
 				{
-					if (credentials is PpsIntegratedCredentials ic)
-					{
-						connectionString.IntegratedSecurity = true;
-						connection.ConnectionString = connectionString.ToString();
+					connectionString.IntegratedSecurity = true;
+					connection.ConnectionString = connectionString.ToString();
 
-						using (ic.Impersonate()) // is only functional in the admin context
-							await connection.OpenAsync();
-					}
-					else if (credentials is PpsUserCredentials uc) // use network credentials
-					{
-						connectionString.IntegratedSecurity = false;
-						connection.ConnectionString = connectionString.ToString();
-
-						connection.Credential = new SqlCredential(uc.UserName, uc.Password);
+					using (ic.Impersonate()) // is only functional in the admin context
 						await connection.OpenAsync();
-					}
-					return true;
 				}
-				catch (Exception)
+				else if (Credentials is PpsUserCredentials uc) // use network credentials
 				{
-					if (throwException)
-						throw;
-					return false;
+					connectionString.IntegratedSecurity = false;
+					connection.ConnectionString = connectionString.ToString();
+
+					connection.Credential = new SqlCredential(uc.UserName, uc.Password);
+					await connection.OpenAsync();
 				}
-			} // func Connect
+				else
+					throw new ArgumentOutOfRangeException(nameof(Credentials));
+			} // func ConnectCoreAsync
 
-			public async Task<SqlConnection> ForkConnectionAsync()
-			{
-				// create a new connection
-				var con = new SqlConnection();
-				var conStr = new SqlConnectionStringBuilder(connectionString.ToString())
-				{
-					ApplicationName = "User_Trans",
-					Pooling = true
-				};
-
-				// ensure connection
-				await ConnectAsync(conStr, con, credentials, true);
-
-				return con;
-			} // func ForkConnection
-
-			public Task<bool> EnsureConnectionAsync(bool throwException)
-			{
-				if (IsConnected)
-					return Task.FromResult(true);
-
-				return ConnectAsync(connectionString, connection, credentials, throwException);
-			} // func EnsureConnection
-
-			public PpsDataSource DataSource => dataSource;
-			public SqlConnection Connection => connection;
-			public PpsCredentials Credentials => credentials;
-
-			public bool IsConnected => IsConnectionOpen(connection);
+			public override bool IsConnected => IsConnectionOpen(Connection);
 		} // class SqlConnectionHandle
 
 		#endregion
-
-		#region -- class PpsDataResultColumnDescription ---------------------------------
-
-		///////////////////////////////////////////////////////////////////////////////
-		/// <summary>Simple column description implementation.</summary>
-		private sealed class PpsDataResultColumnDescription : PpsColumnDescription
-		{
-			#region -- class PpsDataResultColumnAttributes ----------------------------------
-
-			private sealed class PpsDataResultColumnAttributes : IPropertyEnumerableDictionary
-			{
-				private readonly PpsDataResultColumnDescription column;
-
-				public PpsDataResultColumnAttributes(PpsDataResultColumnDescription column)
-				{
-					this.column = column;
-				} // ctor
-
-				public bool TryGetProperty(string name, out object value)
-				{
-					if (String.Compare(name, "MaxLength", StringComparison.OrdinalIgnoreCase) == 0)
-					{
-						value = GetDataRowValue(column.row, "ColumnSize", 0);
-						return true;
-					}
-					else
-					{
-						foreach (var c in column.row.Table.Columns.Cast<DataColumn>())
-						{
-							if (String.Compare(c.ColumnName, name, StringComparison.OrdinalIgnoreCase) == 0)
-							{
-								value = column.row[c];
-								return value != DBNull.Value;
-							}
-						}
-					}
-
-					value = null;
-					return false;
-				} // func TryGetProperty
-
-				public IEnumerator<PropertyValue> GetEnumerator()
-				{
-					foreach (var c in column.row.Table.Columns.Cast<DataColumn>())
-					{
-						if (column.row[c] != DBNull.Value)
-							yield return new PropertyValue(c.ColumnName, column.row[c]);
-					}
-				} // func GetEnumerator
-
-				IEnumerator IEnumerable.GetEnumerator()
-					=> GetEnumerator();
-			} // class PpsDataResultColumnAttributes
-
-			#endregion
-
-			private readonly DataRow row;
-
-			public PpsDataResultColumnDescription(IPpsColumnDescription parent, DataRow row, string name, Type dataType)
-				: base(parent, name, dataType)
-			{
-				this.row = row;
-			} // ctor
-
-			protected override IPropertyEnumerableDictionary CreateAttributes()
-				=> PpsColumnDescriptionHelper.GetColumnDescriptionParentAttributes(new PpsDataResultColumnAttributes(this), Parent);
-		} // class PpsDataResultColumnDescription
-
-		#endregion
-
-		#region -- class SqlDataSelector ----------------------------------------------
-
-		private sealed class SqlDataSelector : PpsDataSelector
-		{
-			#region -- class SqlDataFilterVisitor -------------------------------------
-
-			private sealed class SqlDataFilterVisitor : PpsDataFilterVisitorSql
-			{
-				private readonly Func<string, string> lookupNative;
-				private readonly Func<string, IPpsColumnDescription> lookupColumn;
-
-				public SqlDataFilterVisitor(Func<string, string> lookupNative, Func<string, IPpsColumnDescription> lookupColumn)
-				{
-					this.lookupNative = lookupNative;
-					this.lookupColumn = lookupColumn;
-				} // ctor
-
-				protected override Tuple<string, Type> LookupColumn(string columnToken)
-				{
-					var column = lookupColumn(columnToken);
-					if (column == null)
-						throw new ArgumentNullException("operand", $"Could not resolve column '{columnToken}'.");
-
-					return new Tuple<string, Type>(column.Name, column.DataType);
-				} // func LookupColumn
-
-				protected override string LookupNativeExpression(string key)
-				{
-					var expr = lookupNative(key);
-					if (String.IsNullOrEmpty(expr))
-						throw new ArgumentNullException("nativeExpression", $"Could not resolve native expression '{key}'.");
-					return expr;
-				} // func LookupNativeExpression
-			} // class SqlDataFilterVisitor
-
-			#endregion
-
-			private readonly SqlConnectionHandle connection;
-
-			private readonly PpsSqlDataSelectorToken selectorToken;
-			private readonly string selectList;
-			private readonly string whereCondition;
-			private readonly string orderBy;
-
-			public SqlDataSelector(SqlConnectionHandle connection, PpsSqlDataSelectorToken selectorToken, string selectList, string whereCondition, string orderBy)
-				: base(connection.DataSource)
-			{
-				this.connection = connection;
-				this.selectorToken = selectorToken;
-				this.selectList = selectList;
-				this.whereCondition = whereCondition;
-				this.orderBy = orderBy;
-			} // ctor
-
-			private string FormatOrderExpression(PpsDataOrderExpression o, Func<string, string> lookupNative, Func<string, IPpsColumnDescription> lookupColumn)
-			{
-				// check for native expression
-				if (lookupNative != null)
-				{
-					var expr = lookupNative(o.Identifier);
-					if (expr != null)
-					{
-						if (o.Negate)
-						{
-							// todo: replace asc with desc and desc with asc
-							expr = expr.Replace(" asc", " desc");
-						}
-						return expr;
-					}
-				}
-
-				// checkt the column
-				var column = lookupColumn(o.Identifier);
-
-				if (o.Negate)
-					return column.Name + " DESC";
-				else
-					return column.Name;
-			} // func FormatOrderExpression
-
-			public override PpsDataSelector ApplyOrder(IEnumerable<PpsDataOrderExpression> expressions, Func<string, string> lookupNative)
-				=> SqlOrderBy(String.Join(", ", from o in expressions select FormatOrderExpression(o, lookupNative, selectorToken.GetFieldDescription)));
-
-			public override PpsDataSelector ApplyFilter(PpsDataFilterExpression expression, Func<string, string> lookupNative)
-				=> SqlWhere(new SqlDataFilterVisitor(lookupNative, selectorToken.GetFieldDescription).CreateFilter(expression));
-
-			private string AddSelectList(string addSelectList)
-			{
-				if (String.IsNullOrEmpty(addSelectList))
-					return selectList;
-
-				return String.IsNullOrEmpty(selectList) ? addSelectList : selectList + ", " + addSelectList;
-			} // func AddSelectList
-
-			public SqlDataSelector SqlSelect(string addSelectList)
-			{
-				if (String.IsNullOrEmpty(addSelectList))
-					return this;
-
-				var newSelectList = AddSelectList(addSelectList);
-				return new SqlDataSelector(connection, selectorToken, newSelectList, whereCondition, orderBy);
-			} // func SqlSelect
-
-			private string AddWhereCondition(string addWhereCondition)
-			{
-				if (String.IsNullOrEmpty(addWhereCondition))
-					return whereCondition;
-
-				return String.IsNullOrEmpty(whereCondition) ? addWhereCondition : "(" + whereCondition + ") and (" + addWhereCondition + ")";
-			} // func AddWhereCondition
-
-			public SqlDataSelector SqlWhere(string addWhereCondition)
-			{
-				if (String.IsNullOrEmpty(addWhereCondition))
-					return this;
-
-				var newWhereCondition = AddWhereCondition(addWhereCondition);
-				return new SqlDataSelector(connection, selectorToken, selectList, newWhereCondition, orderBy);
-			} // func SqlWhere
-
-			private string AddOrderBy(string addOrderBy)
-			{
-				if (String.IsNullOrEmpty(addOrderBy))
-					return orderBy;
-
-				return String.IsNullOrEmpty(orderBy) ? addOrderBy : orderBy + ", " + addOrderBy;
-			} // func AddOrderBy
-
-			public SqlDataSelector SqlOrderBy(string addOrderBy)
-			{
-				if (String.IsNullOrEmpty(addOrderBy))
-					return this;
-
-				var newOrderBy = AddOrderBy(addOrderBy);
-				return new SqlDataSelector(connection, selectorToken, selectList, whereCondition, newOrderBy);
-			} // func SqlOrderBy
-
-			public override IEnumerator<IDataRow> GetEnumerator(int start, int count)
-			{
-				SqlCommand cmd = null;
-				try
-				{
-					var trans = DataSource.Application.Database.GetActiveTransaction(DataSource);
-					if (trans is SqlDataTransaction sqlTrans)
-					{
-						cmd = sqlTrans.CreateCommand(CommandType.Text, false);
-					}
-					else
-					{
-						cmd = new SqlCommand
-						{
-							Connection = connection.Connection,
-							CommandType = CommandType.Text,
-						};
-					}
-
-					var sb = new StringBuilder("select ");
-
-					// build the select
-					if (String.IsNullOrEmpty(selectList))
-						sb.Append("* ");
-					else
-						sb.Append(selectList).Append(' ');
-
-					// add the view
-					sb.Append("from ").Append(selectorToken.ViewName).Append(' ');
-
-					// add the where
-					if (!String.IsNullOrEmpty(whereCondition))
-						sb.Append("where ").Append(whereCondition).Append(' ');
-
-					// add the orderBy
-					if (!String.IsNullOrEmpty(orderBy))
-					{
-						sb.Append("order by ").Append(orderBy).Append(' ');
-
-						// build the range, without order fetch is not possible
-						if (count >= 0 && start < 0)
-							start = 0;
-						if (start >= 0)
-						{
-							sb.Append("offset ").Append(start).Append(" rows ");
-							if (count >= 0)
-								sb.Append("fetch next ").Append(count).Append(" rows only ");
-						}
-					}
-
-					cmd.CommandText = sb.ToString();
-					return new DbRowEnumerator(cmd);
-				}
-				catch
-				{
-					cmd?.Dispose();
-					throw;
-				}
-			} // func GetEnumerator
-
-			public override IPpsColumnDescription GetFieldDescription(string nativeColumnName)
-				=> selectorToken.GetFieldDescription(nativeColumnName);
-		} // class SqlDataSelector
-
-		#endregion
-
+		
 		#region -- class SqlResultInfo ------------------------------------------------
 
 		private sealed class SqlResultInfo : List<Func<SqlDataReader, IEnumerable<IDataRow>>>
@@ -2632,12 +2304,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		/// <summary></summary>
-		/// <param name="selectorToken"></param>
-		/// <param name="connection"></param>
-		/// <returns></returns>
-		protected override PpsDataSelector CreateSelector(PpsSqlDataSelectorToken selectorToken, IPpsConnectionHandle connection)
-			=> new SqlDataSelector((SqlConnectionHandle)connection, selectorToken, null, null, null);
+		#region -- View Management ----------------------------------------------------
 
 		/// <summary></summary>
 		/// <param name="connection"></param>
@@ -2668,6 +2335,77 @@ namespace TecWare.PPSn.Server.Sql
 			return name;
 		} // func CreateOrReplaceViewAsync
 
+		/// <summary></summary>
+		/// <param name="connection"></param>
+		/// <param name="selectList"></param>
+		/// <param name="viewName"></param>
+		/// <param name="whereCondition"></param>
+		/// <param name="orderBy"></param>
+		/// <param name="start"></param>
+		/// <param name="count"></param>
+		/// <returns></returns>
+		protected override DbCommand CreateViewCommand(IPpsSqlConnectionHandle connection, string selectList, string viewName, string whereCondition, string orderBy, int start, int count)
+		{
+			SqlCommand cmd = null;
+			try
+			{
+				var trans = Application.Database.GetActiveTransaction(connection.DataSource);
+				if (trans is SqlDataTransaction sqlTrans)
+				{
+					cmd = sqlTrans.CreateCommand(CommandType.Text, false);
+				}
+				else
+				{
+					cmd = new SqlCommand
+					{
+						Connection = ((SqlConnectionHandle)connection).Connection,
+						CommandType = CommandType.Text,
+					};
+				}
+
+				var sb = new StringBuilder("SELECT ");
+
+				// build the select
+				if (String.IsNullOrEmpty(selectList))
+					sb.Append("* ");
+				else
+					sb.Append(selectList).Append(' ');
+
+				// add the view
+				sb.Append("FROM ").Append(viewName).Append(' ');
+
+				// add the where
+				if (!String.IsNullOrEmpty(whereCondition))
+					sb.Append("WHERE ").Append(whereCondition).Append(' ');
+
+				// add the orderBy
+				if (!String.IsNullOrEmpty(orderBy))
+				{
+					sb.Append("ORDER BY ").Append(orderBy).Append(' ');
+
+					// build the range, without order fetch is not possible
+					if (count >= 0 && start < 0)
+						start = 0;
+					if (start >= 0)
+					{
+						sb.Append("OFFSET ").Append(start).Append(" ROWS ");
+						if (count >= 0)
+							sb.Append("FETCH NEXT ").Append(count).Append(" ROWS ONLY ");
+					}
+				}
+
+				cmd.CommandText = sb.ToString();
+				return cmd;
+			}
+			catch
+			{
+				cmd?.Dispose();
+				throw;
+			}
+		} // func CreateViewCommand
+
+		#endregion
+
 		private SqlConnectionHandle GetSqlConnection(IPpsConnectionHandle connection, bool throwException)
 			=> (SqlConnectionHandle)connection;
 
@@ -2676,7 +2414,7 @@ namespace TecWare.PPSn.Server.Sql
 		/// <param name="throwException"></param>
 		/// <returns></returns>
 		public override IPpsConnectionHandle CreateConnection(IPpsPrivateDataContext userContext, bool throwException = true)
-			=> new SqlConnectionHandle(this, CreateConnectionStringBuilder<SqlConnectionStringBuilder>("User"), userContext.GetNetworkCredential());
+			=> new SqlConnectionHandle(this, userContext.GetNetworkCredential());
 
 		/// <summary></summary>
 		/// <param name="connection"></param>
