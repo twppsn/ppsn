@@ -454,6 +454,33 @@ namespace TecWare.PPSn.Server.Sql
 				return ofs;
 			} // func ReadStreamData
 
+			private static (string hashName, byte[] hashValue) CopyData(bool shouldDeflate, Stream srcStream, byte[] buf, int readed, Stream dstStream)
+			{
+				// pack destination stream
+				var dst = shouldDeflate
+					? new GZipStream(dstStream, CompressionMode.Compress, true)
+					: dstStream;
+
+				using (var dstHashStream = new HashStream(dst, HashStreamDirection.Write, false, SHA256.Create()))
+				{
+					try
+					{
+						// copy stream into file
+						dstHashStream.Write(buf, 0, readed);
+						srcStream.CopyTo(dst);
+					}
+					finally
+					{
+						dstHashStream.Flush();
+						dstHashStream.Dispose();
+					}
+
+					dstHashStream.Close();
+
+					return ("SHA2_256", dstHashStream.HashSum);
+				}
+			} // func CopyData
+
 			private IEnumerable<IEnumerable<IDataRow>> ExecuteUpdateRevisionData(LuaTable parameter, PpsDataTransactionExecuteBehavior behavior)
 			{
 				// function to update revision
@@ -480,70 +507,82 @@ namespace TecWare.PPSn.Server.Sql
 				var buf = new byte[0x80000];
 				var readed = ReadStreamData(srcStream, buf);
 				var integratedUser = credentials as PpsIntegratedCredentials;
-				var useFileStream = integratedUser != null && readed >= buf.Length;
+				var useFileStream = readed >= buf.Length;
 
 				if (useFileStream) // inline data in revision
 				{
-					#region -- insert into objf --
-					using (integratedUser.Impersonate())
-					using (var cmd = CreateCommand(parameter, CommandType.Text))
+					if (integratedUser != null)
 					{
-						cmd.CommandText = "INSERT INTO dbo.[ObjF] ([HashAlgo], [Hash], [Data]) "
-							+ "OUTPUT inserted.Id, inserted.Data.PathName(), GET_FILESTREAM_TRANSACTION_CONTEXT() "
-							+ "VALUES ('SHA2_256', 0x, 0x);";
-
-						using (var r = ExecuteReaderCommand(cmd, PpsDataTransactionExecuteBehavior.SingleRow))
+						#region -- insert into objf --
+						using (integratedUser.Impersonate())
+						using (var cmd = CreateCommand(parameter, CommandType.Text))
 						{
-							if (r.Read())
+							cmd.CommandText = "INSERT INTO dbo.[ObjF] ([HashAlgo], [Hash], [Data]) "
+								+ "OUTPUT inserted.Id, inserted.Data.PathName(), GET_FILESTREAM_TRANSACTION_CONTEXT() "
+								+ "VALUES ('SHA2_256', 0x, 0x);";
+
+							using (var r = ExecuteReaderCommand(cmd, PpsDataTransactionExecuteBehavior.SingleRow))
 							{
-								// get destination file
-								documentId = r.GetInt64(0);
-								var path = r.GetString(1);
-								var context = r.GetSqlBytes(2).Buffer;
-
-								// pack destination stream
-								using (var dstFileStream = (Stream)new SqlFileStream(path, context, FileAccess.Write))
-								using (var dstHashStream = new HashStream(dstFileStream, HashStreamDirection.Write, false, SHA256.Create()))
+								if (r.Read())
 								{
-									var dst = shouldDeflate
-										? (Stream)new GZipStream(dstHashStream, CompressionMode.Compress, true)
-										: (Stream)dstHashStream;
-									try
+									// get destination file
+									documentId = r.GetInt64(0);
+									var path = r.GetString(1);
+									var context = r.GetSqlBytes(2).Buffer;
+									//throw new Exception();
+
+									using (var dstFileStream = new SqlFileStream(path, context, FileAccess.Write))
 									{
-										// copy stream into file
-										dst.Write(buf, 0, readed);
-										srcStream.CopyTo(dst);
+										var (hashName, hashValue) = CopyData(shouldDeflate, srcStream, buf, readed, dstFileStream);
+										args["HashValue"] = hashValue;
+										args["HashAlgo"] = hashName;
 									}
-									finally
-									{
-										dst.Flush();
-										dst.Dispose();
-									}
-
-									dstHashStream.Close();
-
-									args["HashValue"] = dstHashStream.HashSum;
-									args["HashAlgo"] = "SHA2_256";
-
-									dstFileStream.Close();
 								}
+								else
+									throw new Exception("Insert FileStream failed.");
 							}
-							else
-								throw new Exception("Insert FileStream failed.");
 						}
-					}
-					#endregion
-					#region -- update objf --
-					using (var cmd = CreateCommand(parameter, CommandType.Text))
-					{
-						cmd.CommandText = "UPDATE dbo.[ObjF] SET [HashAlgo] = @HashAlgo, [Hash] = @HashValue WHERE [Id] = @DocumentId;";
-						cmd.Parameters.Add("@HashValue", SqlDbType.VarBinary).Value = args["HashValue"];
-						cmd.Parameters.Add("@HashAlgo", SqlDbType.VarChar).Value = args["HashAlgo"];
-						cmd.Parameters.Add("@DocumentId", SqlDbType.BigInt).Value = documentId;
+						#endregion
+						#region -- update objf --
+						using (var cmd = CreateCommand(parameter, CommandType.Text))
+						{
+							cmd.CommandText = "UPDATE dbo.[ObjF] SET [HashAlgo] = @HashAlgo, [Hash] = @HashValue WHERE [Id] = @DocumentId;";
+							cmd.Parameters.Add("@HashValue", SqlDbType.VarBinary).Value = args["HashValue"];
+							cmd.Parameters.Add("@HashAlgo", SqlDbType.VarChar).Value = args["HashAlgo"];
+							cmd.Parameters.Add("@DocumentId", SqlDbType.BigInt).Value = documentId;
 
-						ExecuteReaderCommand(cmd, PpsDataTransactionExecuteBehavior.NoResult);
+							ExecuteReaderCommand(cmd, PpsDataTransactionExecuteBehavior.NoResult);
+						}
+						#endregion
 					}
-					#endregion
+					else
+					{
+						#region -- insert into obf --
+						using (var cmd = CreateCommand(parameter, CommandType.Text))
+						{
+							cmd.CommandText = "INSERT INTO dbo.[ObjF] ([HashAlgo], [Hash], [Data]) "
+								+ "OUTPUT inserted.Id "
+								+ "VALUES (@HashAlgo, @HashValue, @Data);";
+
+							using (var dstMem = new MemoryStream())
+							{
+								var (hashName, hashValue) = CopyData(shouldDeflate, srcStream, buf, readed, dstMem);
+
+								cmd.Parameters.Add("@HashValue", SqlDbType.VarBinary).Value = hashValue;
+								cmd.Parameters.Add("@HashAlgo", SqlDbType.VarChar).Value = hashName;
+								cmd.Parameters.Add("@Data", SqlDbType.VarBinary).Value = dstMem.ToArray();
+							}
+							
+							using (var r = ExecuteReaderCommand(cmd, PpsDataTransactionExecuteBehavior.SingleResult))
+							{
+								if (r.Read())
+									documentId = r.GetInt64(0);
+								else
+									throw new Exception("Insert FileStream failed.");
+							}
+						}
+						#endregion
+					}
 				}
 				else
 				{
