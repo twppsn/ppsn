@@ -3795,7 +3795,7 @@ namespace TecWare.PPSn
 
 				// stream the PUT/POST
 				onlineRequest.SendChunked = true;
-				onlineRequest.AllowWriteStreamBuffering = true;
+				onlineRequest.AllowWriteStreamBuffering = false;
 
 				return onlineRequest.GetRequestStream();
 			}
@@ -4822,6 +4822,7 @@ namespace TecWare.PPSn
 			var request = WebRequest.CreateHttp(absoluteUri);
 			request.Credentials = UserCredential.Wrap(userInfo); // override the current credentials
 			request.Headers.Add("des-multiple-authentifications", "true");
+			request.Timeout = -1; // 600 * 1000;
 
 			if (!absoluteUri.ToString().EndsWith("/?action=mdata"))
 				Debug.Print($"WebRequest: {absoluteUri}");

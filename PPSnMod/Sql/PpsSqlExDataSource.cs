@@ -529,8 +529,7 @@ namespace TecWare.PPSn.Server.Sql
 									documentId = r.GetInt64(0);
 									var path = r.GetString(1);
 									var context = r.GetSqlBytes(2).Buffer;
-									//throw new Exception();
-
+									
 									using (var dstFileStream = new SqlFileStream(path, context, FileAccess.Write))
 									{
 										var (hashName, hashValue) = CopyData(shouldDeflate, srcStream, buf, readed, dstFileStream);

@@ -1216,7 +1216,7 @@ namespace TecWare.PPSn.Server
 				ctx.WriteSafeCall(e);
 				Log.Except(e);
 
-				DEScope.GetScopeService<IDECommonScope>(true).RollbackAsync().AwaitTask();
+				throw;
 			}
 		} // proc HttpPullAction
 
@@ -1403,7 +1403,7 @@ namespace TecWare.PPSn.Server
 				Log.Except($"Push failed for object ({(objectId <= 0 ? "unknown" : objectId.ToString())}).", e);
 				ctx.WriteSafeCall(e);
 
-				DEScope.GetScopeService<IDECommonScope>(true).RollbackAsync().AwaitTask();
+				throw;
 			}
 		} // proc HttpPushAction
 
