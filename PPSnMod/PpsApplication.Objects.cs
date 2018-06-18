@@ -635,7 +635,7 @@ namespace TecWare.PPSn.Server
 
 			var row = application.Database.Main.ExecuteSingleRow(cmd);
 			if (row == null)
-				throw new ArgumentException($"Could not read revision '{revId}'.");
+				throw new ArgumentException($"Could not read revision '{revId}' of object '{objectId}'.");
 
 			return row;
 		} // func GetDataRow
@@ -1157,7 +1157,7 @@ namespace TecWare.PPSn.Server
 			var ctx = DEScope.GetScopeService<IDEWebRequestScope>(true);
 			try
 			{
-				var trans = Application.Database.GetDatabase();
+				var trans = Application.Database.Main;
 
 				// get the object and set the correct revision
 				var obj = GetObject(id);
@@ -1215,6 +1215,8 @@ namespace TecWare.PPSn.Server
 			{
 				ctx.WriteSafeCall(e);
 				Log.Except(e);
+
+				DEScope.GetScopeService<IDECommonScope>(true).RollbackAsync().AwaitTask();
 			}
 		} // proc HttpPullAction
 
@@ -1332,7 +1334,7 @@ namespace TecWare.PPSn.Server
 		{
 			long objectId = -1;
 
-			var currentUser = ctx.GetUser<IPpsPrivateDataContext>();
+			var currentUser = ctx.GetUser<IPpsPrivateDataContext>(); // ensure user
 			try
 			{
 				// read header length
@@ -1352,50 +1354,45 @@ namespace TecWare.PPSn.Server
 				using (var xmlHeader = XmlReader.Create(headerStream, Procs.XmlReaderSettings))
 					xObject = XElement.Load(xmlHeader);
 
-				// read the data
-				using (var transaction = currentUser.CreateTransactionAsync(Application.MainDataSource).AwaitTask())
+				// first the get the object data
+				var obj = Application.Objects.ObjectFromXml(xObject, pulledId);
+				VerfiyObjectType(obj);
+
+				objectId = obj.Id;
+
+				// create and load the dataset
+				if (isContentDeflated)
+					src = new GZipStream(src, CompressionMode.Decompress, true);
+				var data = GetDataFromStream(src);
+
+				// push data in the database
+				var r = PushData(obj, data, releaseRequest);
+				switch (r)
 				{
-					// first the get the object data
-					var obj = Application.Objects.ObjectFromXml(transaction, xObject, pulledId);
-					VerfiyObjectType(obj);
-
-					objectId = obj.Id;
-
-					// create and load the dataset
-					if (isContentDeflated)
-						src = new GZipStream(src, CompressionMode.Decompress, true);
-					var data = GetDataFromStream(src);
-
-					// push data in the database
-					var r = PushData(obj, data, releaseRequest);
-					switch (r)
-					{
-						case PpsPushDataResult.PulledRevIsToOld:
-							ctx.WriteSafeCall(
-								new XElement("push",
-									new XAttribute("headRevId", obj.HeadRevId),
-									new XAttribute("pullRequest", Boolean.TrueString)
-								)
-							);
-							break;
-						case PpsPushDataResult.PushedAndChanged:
-						case PpsPushDataResult.PushedAndUnchanged:
-							// write the object definition to client
-							using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
-							using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
-							{
-								var xObjInfo = obj.ToXml(true);
-								if (r == PpsPushDataResult.PushedAndUnchanged)
-									xObjInfo.SetAttributeValue("newRevId", obj.RevId);
-								xObjInfo.WriteTo(xml);
-							}
-							break;
-						default:
-							throw new ArgumentOutOfRangeException();
-					}
-					transaction.Commit();
-					Log.Info("Push new object: ObjkId={0},Result={1}", obj.Id, r);
+					case PpsPushDataResult.PulledRevIsToOld:
+						ctx.WriteSafeCall(
+							new XElement("push",
+								new XAttribute("headRevId", obj.HeadRevId),
+								new XAttribute("pullRequest", Boolean.TrueString)
+							)
+						);
+						break;
+					case PpsPushDataResult.PushedAndChanged:
+					case PpsPushDataResult.PushedAndUnchanged:
+						// write the object definition to client
+						using (var tw = ctx.GetOutputTextWriter(MimeTypes.Text.Xml))
+						using (var xml = XmlWriter.Create(tw, GetSettings(tw)))
+						{
+							var xObjInfo = obj.ToXml(true);
+							if (r == PpsPushDataResult.PushedAndUnchanged)
+								xObjInfo.SetAttributeValue("newRevId", obj.RevId);
+							xObjInfo.WriteTo(xml);
+						}
+						break;
+					default:
+						throw new ArgumentOutOfRangeException();
 				}
+				Log.Info("Push new object: ObjkId={0},Result={1}", obj.Id, r);
 			}
 			catch (HttpResponseException)
 			{
@@ -1405,6 +1402,8 @@ namespace TecWare.PPSn.Server
 			{
 				Log.Except($"Push failed for object ({(objectId <= 0 ? "unknown" : objectId.ToString())}).", e);
 				ctx.WriteSafeCall(e);
+
+				DEScope.GetScopeService<IDECommonScope>(true).RollbackAsync().AwaitTask();
 			}
 		} // proc HttpPushAction
 
@@ -1620,11 +1619,11 @@ namespace TecWare.PPSn.Server
 			} // func CreateNewObject
 
 			/// <summary>Opens a object for an update operation.</summary>
-			/// <param name="trans"></param>
 			/// <param name="x"></param>
+			/// <param name="setInitRevision"></param>
 			/// <returns></returns>
 			[LuaMember]
-			public PpsObjectAccess ObjectFromXml(PpsDataTransaction trans, XElement x, long setInitRevision)
+			public PpsObjectAccess ObjectFromXml(XElement x, long setInitRevision)
 			{
 				var objectId = x.GetAttribute(nameof(PpsObjectAccess.Id), -1L);
 				var objectGuid = x.GetAttribute(nameof(PpsObjectAccess.Guid), Guid.Empty);
@@ -1697,6 +1696,8 @@ namespace TecWare.PPSn.Server
 				return obj;
 			} // func ObjectFromXml
 
+			/// <summary>Create a selector for the object view.</summary>
+			/// <returns></returns>
 			[LuaMember]
 			public PpsDataSelector GetObjectSelector()
 			{
@@ -1842,6 +1843,7 @@ namespace TecWare.PPSn.Server
 			public PpsDataSelector CreateSelector(LuaTable table)
 				=> CreateSelectorAsync(table).AwaitTask();
 
+			/// <summary>Get a global transaction to the main database.</summary>
 			[LuaMember]
 			public PpsDataTransaction Main => GetDatabase();
 		} // class PpsDatabaseLibrary
