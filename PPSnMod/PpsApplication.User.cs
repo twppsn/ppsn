@@ -382,13 +382,13 @@ namespace TecWare.PPSn.Server
 				return c != null && await c.EnsureConnectionAsync(throwException) ? c : null;
 			} // func EnsureConnection
 
-			public async Task<PpsDataSelector> CreateSelectorAsync(string name, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true)
+			public async Task<PpsDataSelector> CreateSelectorAsync(string select, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true)
 			{
-				if (String.IsNullOrEmpty(name))
-					throw new ArgumentNullException("name");
+				if (String.IsNullOrEmpty(select))
+					throw new ArgumentNullException(nameof(select));
 
 				// todo: build a joined selector, doppelte spalten müssten entfernt werden, wenn man es machen will
-				var viewInfo = Application.GetViewDefinition(name, throwException);
+				var viewInfo = Application.GetViewDefinition(select, throwException);
 				if (viewInfo == null)
 					return null;
 

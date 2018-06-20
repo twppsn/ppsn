@@ -805,7 +805,8 @@ namespace TecWare.PPSn.Server.Sql
 				}
 
 				// checkt the column
-				var column = lookupColumn(o.Identifier);
+				var column = lookupColumn(o.Identifier)
+					?? throw new ArgumentNullException("orderby", $"Order by column '{o.Identifier} not found.");
 
 				if (o.Negate)
 					return column.Name + " DESC";

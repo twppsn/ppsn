@@ -332,7 +332,13 @@ namespace TecWare.PPSn.Server
 			} // func GetDataSetAsync
 
 			public override Task<LuaTable> ExecuteAsync(LuaTable arguments)
-				=> throw new ArgumentException("Unknown command.");
+			{
+				var functionName = arguments.GetOptionalValue("name", (string)null);
+				if (functionName == null)
+					throw new ArgumentNullException("name", "No function definied.");
+
+				return Task.FromResult(new LuaResult(application.CallMember(functionName, arguments))[0] as LuaTable);
+			} // func ExecuteAsync
 		} // class PpsServerReportProvider
 
 		#endregion

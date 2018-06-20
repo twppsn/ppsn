@@ -12,6 +12,39 @@
 			</xs:annotation>
 		</xs:attribute>
 	</xs:complexType>
+
+	<xs:complexType name="columnType">
+		<xs:attribute name="name" type="xs:string" use="required" />
+		<xs:attribute name="alias" type="xs:string" use="optional" />
+		<xs:attribute name="converter" type="xs:string" use="optional" />
+	</xs:complexType>
+
+	<xs:element name="column" type="columnType">
+		<xs:annotation>
+			<xs:documentation>Column definition.</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+
+	<xs:element name="group">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="column"  minOccurs="0" maxOccurs="unbounded" />
+			</xs:sequence>
+			<xs:attribute name="name" type="xs:string" use="required">
+				<xs:annotation>
+					<xs:documentation>Xml tag name</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="on" use="required">
+				<xs:annotation>
+					<xs:documentation>List of column names</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:list itemType="xs:string" />
+				</xs:simpleType>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
 	
 	<xs:element name="dataElement" abstract="true" type="dataElementType" />
 
@@ -23,15 +56,13 @@
 			<xs:complexContent>
 				<xs:extension base="dataElementType">
 					<xs:sequence>
-						<xs:element name="column" minOccurs="0" maxOccurs="unbounded">
+						<xs:element name="select" minOccurs="0" maxOccurs="1">
 							<xs:annotation>
-								<xs:documentation>Column definition.</xs:documentation>
+								<xs:documentation>Select expression of the view.</xs:documentation>
 							</xs:annotation>
-							<xs:complexType>
-								<xs:attribute name="name" type="xs:string" use="required" />
-								<xs:attribute name="alias" type="xs:string" use="optional" />
-							</xs:complexType>
 						</xs:element>
+						<xs:element ref="column"  minOccurs="0" maxOccurs="unbounded" />
+						<xs:element ref="group"  minOccurs="0" maxOccurs="1" />
 						<xs:element name="filter" minOccurs="0" maxOccurs="1" type="xs:string">
 							<xs:annotation>
 								<xs:documentation>Filter description.</xs:documentation>

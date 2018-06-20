@@ -26,6 +26,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
+using TecWare.DE.Data;
 using TecWare.DE.Stuff;
 using TecWare.PPSn.Data;
 
@@ -135,6 +136,9 @@ namespace TecWare.PPSn.Reporting
 		public static readonly XNamespace ReportDataNamespace = "http://tecware-gmbh.de/dev/des/2015/ppsn/reportData";
 		public static readonly XName DataElement = ReportDataNamespace + "data";
 		public static readonly XName ListElement = ReportDataNamespace + "list";
+		public static readonly XName ListSelectElement = ReportDataNamespace + "select";
+		public static readonly XName ListGroupElement = ReportDataNamespace + "group";
+		public static readonly XName ListExecuteElement = ReportDataNamespace + "execute";
 		public static readonly XName ListColumnElement = ReportDataNamespace + "column";
 		public static readonly XName ListFilterElement = ReportDataNamespace + "filter";
 		public static readonly XName ListOrderElement = ReportDataNamespace + "order";
@@ -177,42 +181,340 @@ namespace TecWare.PPSn.Reporting
 
 			#region -- EmitListElementAsync -------------------------------------------
 
+			#region -- class PpsEmitColumn --------------------------------------------
+
+			private sealed class PpsEmitColumn
+			{
+				private readonly PpsDataColumnExpression columnExpression;
+				private readonly string converterFunc;
+
+				private PpsEmitColumn(PpsDataColumnExpression columnExpression, string converterFunc)
+				{
+					this.columnExpression = columnExpression;
+					this.converterFunc = converterFunc;
+				} // ctor
+
+				public string Converter => converterFunc;
+				public PpsDataColumnExpression Expression => columnExpression;
+
+				public static IEnumerable<PpsEmitColumn> Parse(XElement xColumns)
+				{
+					return
+						from xCol in xColumns.Elements(ListColumnElement)
+						select new PpsEmitColumn(
+							new PpsDataColumnExpression(xCol.GetAttribute("name", null), xCol.GetAttribute("alias", null)), // column expression
+							xCol.GetAttribute("converter", null) // assign column converter
+						);
+				} // func Parse
+			} // class PpsEmitColumn
+
+			#endregion
+
+			#region -- interface IPpsRowColumnMapping ---------------------------------
+
+			private interface IPpsRowEmitter
+			{
+				Task EmitAsync(XmlWriter xml, IDataRow row);
+			} // class PpsRowColumnMapping
+
+			#endregion
+
+			#region -- interface IPpsColumnConverter ----------------------------------
+
+			private interface IPpsColumnEmitter
+			{
+				Task WriteAsync(XmlWriter xml, IDataRow row);
+
+				string ElementName { get; }
+			} // class PpsRowColumnMapping
+
+			#endregion
+			
+			#region -- class PpsEmitRow -----------------------------------------------
+
+			private sealed class PpsEmitRow
+			{
+				private readonly PpsEmitColumn[] columns;
+				private readonly string groupName;
+				private readonly string[] groupColumns;
+				private readonly PpsEmitRow child;
+
+				private PpsEmitRow(PpsEmitColumn[] columns, string groupName, string[] groupColumns, PpsEmitRow child)
+				{
+					this.columns = columns;
+					this.groupName = groupName;
+					this.groupColumns = groupColumns;
+					this.child = child;
+				} // ctor
+
+				public IEnumerable<PpsDataColumnExpression> GetColumns(bool recursive)
+				{
+					var cur = this;
+
+					while (cur != null)
+					{
+						foreach (var c in cur.columns)
+						{
+							if (c.Expression != null)
+								yield return c.Expression;
+						}
+
+						if (recursive)
+							cur = cur.child;
+					}
+				} // func GetColumns
+
+				public IEnumerable<PpsDataOrderExpression> GetOrder()
+				{
+					var cur = this;
+
+					while (cur != null)
+					{
+						if (cur.groupColumns != null)
+						{
+							foreach (var c in cur.groupColumns)
+								yield return new PpsDataOrderExpression(false, c);
+						}
+						cur = cur.child;
+					}
+				} // func GetOrder
+
+				#region -- CreateMapping ----------------------------------------------
+
+				#region -- class SimpleValueEmitter -----------------------------------
+
+				private sealed class SimpleValueEmitter : IPpsColumnEmitter
+				{
+					private readonly string elementName;
+					private readonly int columnIndex;
+
+					public SimpleValueEmitter(PpsDataColumnExpression columnExpression, IDataColumns columns)
+					{
+						this.elementName = columnExpression.HasAlias 
+							? columnExpression.Alias
+							: columnExpression.Name;
+
+						this.columnIndex = columns.FindColumnIndex(elementName, true);
+					} // ctor
+
+					public Task WriteAsync(XmlWriter xml, IDataRow row)
+						=> xml.WriteStringAsync(row[columnIndex].ChangeType<string>());
+
+
+					public string ElementName => elementName;
+				} // class SimpleValueEmitter
+
+				#endregion
+
+				#region -- class ColumnEmitter ----------------------------------------
+
+				private sealed class ColumnEmitter : IPpsRowEmitter
+				{
+					private readonly PpsEmitRow def;
+
+					private readonly IPpsColumnEmitter[] columnList;
+
+					private readonly string elementName;
+					private readonly int[] groupColumns;
+					private readonly object[] groupValues;
+					private readonly IPpsRowEmitter child;
+
+					private bool firstGroup = true;
+					private bool inGroup = false;
+
+					#region -- Ctor/Dtor ----------------------------------------------
+
+					public ColumnEmitter(PpsEmitRow def, IDataColumns columns)
+					{
+						this.def = def ?? throw new ArgumentNullException(nameof(def));
+
+						// prepare columns
+						columnList = new IPpsColumnEmitter[def.columns.Length];
+						for (var i = 0; i < columnList.Length; i++)
+						{
+							IPpsColumnEmitter columnEmitter;
+							var columnDef = def.columns[i];
+
+							if (columnDef.Converter != null)
+								throw new NotImplementedException(); //columnEmitter = ;
+							else if (columnDef.Expression != null)
+								columnEmitter = new SimpleValueEmitter(columnDef.Expression, columns);
+							else
+								throw new ArgumentNullException($"column[{i}]", "Invalid column.");
+							
+							columnList[i] = columnEmitter;
+						}
+
+						// prepare group
+						if (def.child != null)
+						{
+							child = def.child.CreateMapping(columns);
+							elementName = def.groupName ?? "r";
+							groupColumns = new int[def.child.groupColumns.Length];
+							groupValues = new object[groupColumns.Length];
+
+							for (var i = 0; i < groupColumns.Length; i++)
+								groupColumns[i] = columns.FindColumnIndex(def.child.groupColumns[i], true);
+						}
+						else
+						{
+							elementName = def.groupName ?? "r";
+							groupColumns = null;
+							groupValues = null;
+							child = null;
+						}
+					} // ctor
+
+					#endregion
+
+					#region -- EmitAsync ----------------------------------------------
+
+					private bool IsNewGroup(IDataRow row)
+					{
+						if (row == null || groupColumns == null || groupColumns.Length == 0)
+							return true;
+						else
+						{
+							// first group is always new
+							var isNewGroup = firstGroup;
+							if (firstGroup)
+								firstGroup = false;
+							
+							// compare grouping columns
+							for (var i = 0; i < groupColumns.Length; i++)
+							{
+								var c = row[groupColumns[i]];
+
+								if (isNewGroup)
+									groupValues[i] = c;
+								else if (!Equals(groupValues[i], c))
+								{
+									isNewGroup = true;
+									groupValues[i] = c;
+								}
+							}
+
+							// return if a new group is detected
+							return isNewGroup;
+						}
+					} // func IsNewGroup
+
+					public async Task EmitAsync(XmlWriter xml, IDataRow row)
+					{
+						if (IsNewGroup(row))
+						{
+							// close old group
+							if (inGroup)
+							{
+								if (child != null)
+									await child.EmitAsync(xml, null);
+
+								await xml.WriteEndElementAsync();
+								inGroup = false;
+							}
+
+							// emit columns
+							if (row != null)
+							{
+								if (!inGroup)
+								{
+									await xml.WriteStartElementAsync(null, elementName, null);
+									inGroup = true;
+								}
+
+								for (var i = 0; i < columnList.Length; i++)
+								{
+									await xml.WriteStartElementAsync(null, columnList[i].ElementName, null);
+									await columnList[i].WriteAsync(xml, row);
+									await xml.WriteEndElementAsync();
+								}
+							}
+						}
+
+						if (child != null)
+							await child.EmitAsync(xml, row);
+					} // proc EmitAsync
+
+					#endregion
+				} // class ColumnEmitter 
+
+				#endregion
+
+				public IPpsRowEmitter CreateMapping(IDataColumns columns)
+					=> new ColumnEmitter(this, columns);
+
+				#endregion
+
+				public static PpsEmitRow Parse(XElement xRow, bool isGroup)
+				{
+					if (xRow == null)
+						return null;
+
+					// parse columns
+					var columns = PpsEmitColumn.Parse(xRow).ToArray();
+
+					// parse group expression
+					var groupName = (string)null;
+					var groupColumns = (string[])null;
+
+					if (isGroup)
+					{
+						groupName = xRow.GetAttribute("name", null)
+							?? throw new ArgumentNullException("@name", "Group name is missing.");
+
+						// parse columns
+						var groupColumnsExpr = xRow.GetAttribute("on", null)
+							?? throw new ArgumentNullException("@on", "Group columns are missing.");
+
+						groupColumns = groupColumnsExpr.Split(new char[] { ' ', ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
+					}
+
+					// create row
+					return new PpsEmitRow(
+						columns,
+						groupName,
+						groupColumns,
+						Parse(xRow.Element(ListGroupElement), true)
+					);
+				} // func Parse
+			} // class PpsEmitRow
+
+			#endregion
+
 			private async Task EmitListElementAsync(XmlWriter xml, XElement xInfo)
 			{
 				// parse parameter
-				var listName = xInfo.GetAttribute("select", null);
-				var columns = (
-					from x in xInfo.Elements(ListColumnElement)
-					select new PpsDataColumnExpression(x.GetAttribute("name", null), x.GetAttribute("alias", null))
-				).ToArray();
+				var listSelect = xInfo.GetAttribute("select", null);
+				if (listSelect == null)
+					listSelect = xInfo.GetNode(ListSelectElement, null);
 
+				if (listSelect == null)
+					throw new ArgumentNullException("@select", "No select expression.");
+
+				// parse columns
+				var rowInfo = PpsEmitRow.Parse(xInfo, false);
+
+				// parse filter and order
 				var filter = PpsDataFilterExpression.Parse(xInfo.GetNode(ListFilterElement, null), variables: arguments);
-				var order = PpsDataOrderExpression.Parse(xInfo.GetNode(ListOrderElement, null)).ToArray();
+				var parsedOrder = PpsDataOrderExpression.Parse(xInfo.GetNode(ListOrderElement, null));
+
+				// combine with group order
+				var order = rowInfo.GetOrder().Union(parsedOrder, PpsDataOrderExpression.CompareIdentifier).ToArray();
 
 				// access list
-				var columnList = (string[])null;
-				foreach (var row in await provider.GetListAsync(listName, columns, filter, order))
+				var mapping = (IPpsRowEmitter)null;
+
+				foreach (var row in await provider.GetListAsync(listSelect, rowInfo.GetColumns(true).ToArray(), filter, order))
 				{
-					await xml.WriteStartElementAsync(null, "r", null);
-
 					// generate column list header
-					if (columnList == null)
-					{
-						columnList = new string[row.Columns.Count];
-						for (var i = 0; i < columnList.Length; i++)
-							columnList[i] = row.Columns[i].Name;
-					}
+					if (mapping == null)
+						mapping = rowInfo.CreateMapping(row);
 
-					// write data
-					for (var i = 0; i < columnList.Length; i++)
-					{
-						await xml.WriteStartElementAsync(null, columnList[i], null);
-						await xml.WriteStringAsync(row[i].ChangeType<string>());
-						await xml.WriteEndElementAsync();
-					}
-
-					await xml.WriteEndElementAsync();
+					await mapping.EmitAsync(xml, row);
 				}
+
+				if (mapping != null)
+					await mapping.EmitAsync(xml, null); // mark eof
 			} // proc EmitListElementAsync
 
 			#endregion
@@ -229,8 +531,30 @@ namespace TecWare.PPSn.Reporting
 
 			#region -- EmitExecuteElementAsync ----------------------------------------
 
-			private Task EmitExecuteElementAsync(XmlWriter xml, XElement xInfo) 
-				=> throw new NotImplementedException();
+			private static Type GetOptionalType(XElement x, XName typeAttribute)
+				=> LuaType.GetType(x.Attribute(typeAttribute)?.Value ?? "string", lateAllowed: false);
+			
+			private async Task EmitExecuteElementAsync(XmlWriter xml, XElement xInfo)
+			{
+				var callArguments = new PropertyDictionary(arguments);
+				
+				// collect argument for the call
+				foreach(var x in xInfo.Elements(ExecuteParameterElement))
+				{
+					var name = x.GetAttribute("name", null) ?? throw new ArgumentNullException("@name");
+					var type = GetOptionalType(x, "t");
+					callArguments.SetProperty(name, type, x.Value);
+				}
+
+				// add xml writer
+				callArguments.SetProperty("__xml", typeof(XmlWriter), xml);
+
+				// call function
+				var t = await provider.ExecuteAsync(callArguments.ToTable());
+
+				// emit content of the table
+				// todo:
+			} // proc EmitExecuteElementAsync
 
 			#endregion
 
@@ -761,10 +1085,12 @@ namespace TecWare.PPSn.Reporting
 
 			using (await LockReportFileAsync(resolvedReportName))
 			{
-				// write data.xml
+				// remove data of previous session
 				var dataXml = new FileInfo(Path.Combine(reportWorkingPath.FullName, resultSession + ".xml"));
 				if (dataXml.Exists)
 					dataXml.Delete();
+
+				// write data.xml
 				using (var tw = new StreamWriter(dataXml.OpenWrite(), Encoding.UTF8, 4096, false))
 				using (var data = new PpsReportData(provider, tw, fullReportFileName, args.Arguments))
 					await data.ProcessDataAsync(false);

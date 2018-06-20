@@ -1774,15 +1774,19 @@ namespace TecWare.PPSn.Server
 
 		#region -- class PpsDatabaseLibrary ---------------------------------------------
 
+		/// <summary>Library implementation for database access.</summary>
 		public sealed class PpsDatabaseLibrary : LuaTable
 		{
 			private readonly PpsApplication application;
 
-			public PpsDatabaseLibrary(PpsApplication application)
+			internal PpsDatabaseLibrary(PpsApplication application)
 			{
 				this.application = application;
 			} // ctor
 
+			/// <summary>Access a database and connection this transaction with the scope-transaction.</summary>
+			/// <param name="name">Name of the database</param>
+			/// <returns></returns>
 			public Task<PpsDataTransaction> GetDatabaseAsync(string name = null)
 			{
 				// find existing source
@@ -1790,6 +1794,9 @@ namespace TecWare.PPSn.Server
 				return GetDatabaseAsync(dataSource);
 			} // func GetDatabaseAsync
 
+			/// <summary>Access a database and connection this transaction with the scope-transaction.</summary>
+			/// <param name="dataSource">Source of the database</param>
+			/// <returns></returns>
 			public async Task<PpsDataTransaction> GetDatabaseAsync(PpsDataSource dataSource)
 			{
 				var scope = DEScope.GetScopeService<IDECommonScope>(true);
@@ -1811,6 +1818,9 @@ namespace TecWare.PPSn.Server
 				return trans;
 			} // func GetDatabaseAsync
 
+			/// <summary>Get a active transaction of the data source.</summary>
+			/// <param name="dataSource"></param>
+			/// <returns><c>null</c>, if there is no active transaction.</returns>
 			public PpsDataTransaction GetActiveTransaction(PpsDataSource dataSource)
 			{
 				var scope = DEScope.GetScopeService<IDECommonScope>(false);
@@ -1819,26 +1829,53 @@ namespace TecWare.PPSn.Server
 					: null;
 			} // func GetActiveTransaction
 
+			/// <summary>Access a database and connection this transaction with the scope-transaction.</summary>
+			/// <param name="name">Name of the database</param>
+			/// <returns></returns>
 			[LuaMember]
 			public PpsDataTransaction GetDatabase(string name = null)
 				=> GetDatabaseAsync(name).AwaitTask();
 
-			public Task<PpsDataSelector> CreateSelectorAsync(string name, string columns, string filter, string order)
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="select"></param>
+			/// <param name="columns"></param>
+			/// <param name="filter"></param>
+			/// <param name="order"></param>
+			/// <returns></returns>
+			public Task<PpsDataSelector> CreateSelectorAsync(string select, string columns, string filter, string order)
 				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true)
-					.CreateSelectorAsync(name, columns, filter, order, true);
+					.CreateSelectorAsync(select, columns, filter, order, true);
 
-			public Task<PpsDataSelector> CreateSelectorAsync(string name, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter, PpsDataOrderExpression[] order)
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="select"></param>
+			/// <param name="columns"></param>
+			/// <param name="filter"></param>
+			/// <param name="order"></param>
+			/// <returns></returns>
+			public Task<PpsDataSelector> CreateSelectorAsync(string select, PpsDataColumnExpression[] columns, PpsDataFilterExpression filter, PpsDataOrderExpression[] order)
 				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true)
-					.CreateSelectorAsync(name, columns, filter, order, true);
+					.CreateSelectorAsync(select, columns, filter, order, true);
 
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="table"></param>
+			/// <returns></returns>
 			public Task<PpsDataSelector> CreateSelectorAsync(LuaTable table)
 				=> DEScope.GetScopeService<IPpsPrivateDataContext>(true)
 					.CreateSelectorAsync(table, true);
 
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="select"></param>
+			/// <param name="columns"></param>
+			/// <param name="filter"></param>
+			/// <param name="order"></param>
+			/// <returns></returns>
 			[LuaMember]
-			public PpsDataSelector CreateSelector(string name, string columns, string filter, string order)
-				=> CreateSelectorAsync(name, columns, filter, order).AwaitTask();
+			public PpsDataSelector CreateSelector(string select, string columns, string filter, string order)
+				=> CreateSelectorAsync(select, columns, filter, order).AwaitTask();
 
+			/// <summary>Create a selector database views.</summary>
+			/// <param name="table"></param>
+			/// <returns></returns>
 			[LuaMember]
 			public PpsDataSelector CreateSelector(LuaTable table)
 				=> CreateSelectorAsync(table).AwaitTask();

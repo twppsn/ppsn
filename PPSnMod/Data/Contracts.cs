@@ -356,13 +356,13 @@ namespace TecWare.PPSn.Server.Data
 		Task<IPpsConnectionHandle> EnsureConnectionAsync(PpsDataSource source, bool throwException = true);
 
 		/// <summary>Creates a selector for a view.</summary>
-		/// <param name="name">Name of the view</param>
+		/// <param name="select">Name of the view</param>
 		/// <param name="columns">Column definition.</param>
 		/// <param name="filter">Filter rules</param>
 		/// <param name="order">Order rules</param>
 		/// <param name="throwException">Should the method throw on an exception on failure.</param>
 		/// <returns></returns>
-		Task<PpsDataSelector> CreateSelectorAsync(string name, PpsDataColumnExpression[] columns = null, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true);
+		Task<PpsDataSelector> CreateSelectorAsync(string select, PpsDataColumnExpression[] columns = null, PpsDataFilterExpression filter = null, PpsDataOrderExpression[] order = null, bool throwException = true);
 
 		/// <summary>Creates a transaction to manipulate data.</summary>
 		/// <param name="dataSourceName"></param>
@@ -599,15 +599,15 @@ namespace TecWare.PPSn.Server.Data
 	{
 		/// <summary>Create a selector.</summary>
 		/// <param name="ctx"></param>
-		/// <param name="name"></param>
+		/// <param name="select"></param>
 		/// <param name="columns"></param>
 		/// <param name="filter"></param>
 		/// <param name="order"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
-		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, string name, string columns = null, string filter = null, string order = null, bool throwException = true)
+		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, string select, string columns = null, string filter = null, string order = null, bool throwException = true)
 			=> ctx.CreateSelectorAsync(
-				name,
+				select,
 				PpsDataColumnExpression.Parse(columns).ToArray(),
 				PpsDataFilterExpression.Parse(filter),
 				PpsDataOrderExpression.Parse(order).ToArray(),
@@ -621,7 +621,7 @@ namespace TecWare.PPSn.Server.Data
 		/// <returns></returns>
 		public static Task<PpsDataSelector> CreateSelectorAsync(this IPpsPrivateDataContext ctx, LuaTable table, bool throwException = true)
 			=> ctx.CreateSelectorAsync(
-				table.GetOptionalValue("name", (string)null),
+				table.GetOptionalValue("select", table.GetOptionalValue("name", (string)null)),
 				PpsDataColumnExpression.Parse(table.GetMemberValue("columns")).ToArray(),
 				PpsDataFilterExpression.Parse(table.GetMemberValue("filter")),
 				PpsDataOrderExpression.Parse(table.GetMemberValue("order")).ToArray(),

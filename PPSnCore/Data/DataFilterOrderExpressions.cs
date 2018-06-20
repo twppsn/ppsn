@@ -2206,6 +2206,22 @@ namespace TecWare.PPSn.Data
 		} // ctor
 
 		/// <summary></summary>
+		/// <returns></returns>
+		public override int GetHashCode()
+			=> identifier.GetHashCode() ^ negate.GetHashCode();
+
+		/// <summary></summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
+		public override bool Equals(object obj)
+			=> obj is PpsDataOrderExpression o ? o.identifier.Equals(identifier) && o.negate == negate : base.Equals(obj);
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public override string ToString()
+			=> (negate ? "-" : "+") + identifier;
+
+		/// <summary></summary>
 		public bool Negate => negate;
 		/// <summary></summary>
 		public string Identifier => identifier;
@@ -2274,6 +2290,18 @@ namespace TecWare.PPSn.Data
 		/// <returns></returns>
 		public static bool IsEmpty(IEnumerable<PpsDataOrderExpression> order)
 			=> order == null || (order is PpsDataOrderExpression[] a && a.Length == 0);
+
+		private class CompareIdentifierImpl : IEqualityComparer<PpsDataOrderExpression>
+		{
+			public bool Equals(PpsDataOrderExpression x, PpsDataOrderExpression y)
+				=> String.Compare(x.identifier, y.identifier, StringComparison.OrdinalIgnoreCase) == 0;
+
+			public int GetHashCode(PpsDataOrderExpression obj)
+				=> obj.identifier.ToLower().GetHashCode();
+		} // class CompareIdentifierImpl
+
+		/// <summary></summary>
+		public static IEqualityComparer<PpsDataOrderExpression> CompareIdentifier { get; } = new CompareIdentifierImpl();
 	} // class PpsDataOrderExpression
 
 	#endregion
