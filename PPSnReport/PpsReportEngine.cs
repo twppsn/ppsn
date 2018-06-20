@@ -127,6 +127,105 @@ namespace TecWare.PPSn.Reporting
 
 	#endregion
 
+	#region -- interface IPpsReportColumnEmitter --------------------------------------
+
+	/// <summary></summary>
+	public interface IPpsReportColumnEmitter
+	{
+		/// <summary></summary>
+		/// <param name="xml"></param>
+		/// <param name="row"></param>
+		/// <returns></returns>
+		Task WriteAsync(XmlWriter xml, IDataRow row);
+
+		/// <summary></summary>
+		string ElementName { get; }
+	} // class IPpsReportColumnEmitter
+
+	#endregion
+
+	#region -- class PpsReportSession -------------------------------------------------
+
+	/// <summary></summary>
+	public abstract class PpsReportSessionBase : IDisposable
+	{
+		#region -- class SimpleValueEmitter -------------------------------------------
+
+		private sealed class SimpleValueEmitter : IPpsReportColumnEmitter
+		{
+			private readonly int columnIndex;
+
+			public SimpleValueEmitter(string columnName, IDataColumns columns)
+			{
+				this.ElementName = columnName;
+				this.columnIndex = columns.FindColumnIndex(columnName, true);
+			} // ctor
+
+			public Task WriteAsync(XmlWriter xml, IDataRow row)
+				=> xml.WriteStringAsync(row[columnIndex].ChangeType<string>());
+			
+			public string ElementName { get; }
+		} // class SimpleValueEmitter
+
+		#endregion
+
+		private PpsReportEngine engine = null;
+
+		private string reportName = null;
+		private string resultSessionName = null;
+
+		internal void Initialize(PpsReportEngine engine, string reportName, string resultSessionName)
+		{
+			this.engine = engine;
+			this.reportName = reportName;
+			this.resultSessionName = resultSessionName;
+
+			OnInitalized();
+		}
+
+		/// <summary></summary>
+		protected virtual void OnInitalized() { }
+
+		/// <summary></summary>
+		public void Dispose()
+			=> Dispose(true);
+
+		/// <summary></summary>
+		/// <param name="disposing"></param>
+		protected virtual void Dispose(bool disposing)
+		{
+		}
+		
+		/// <summary></summary>
+		/// <param name="fileName"></param>
+		/// <param name="purgeFile"></param>
+		/// <returns></returns>
+		public FileInfo CreateTempFile(string fileName, bool purgeFile = true)
+		{
+			var fi = new FileInfo(Path.Combine(engine.WorkingPath, resultSessionName + ".xml"));
+			// remove file from prev session
+			if (purgeFile && fi.Exists)
+				fi.Delete();
+			return fi;
+		} // func CreateTempFile
+
+		/// <summary></summary>
+		/// <param name="argument"></param>
+		/// <param name="columnName"></param>
+		/// <param name="columns"></param>
+		/// <returns></returns>
+		public virtual IPpsReportColumnEmitter CreateColumnEmitter(string argument, string columnName, IDataColumns columns)
+		{
+			if (argument == null && columnName != null)
+				return new SimpleValueEmitter(columnName, columns);
+			else
+				throw new ArgumentException("Emitter not defined.");
+		} // func CreateColumnEmitter
+
+	} // class PpsReportSession
+
+	#endregion
+
 	#region -- class PpsReportEngine --------------------------------------------------
 
 	/// <summary>Basic implementation of the LuaTex/ConTeXt reporting engine.</summary>
@@ -154,6 +253,7 @@ namespace TecWare.PPSn.Reporting
 
 		private sealed class PpsReportData : IDisposable
 		{
+			private readonly PpsReportSessionBase session;
 			private readonly PpsDataServerProviderBase provider;
 			private readonly TextWriter tw;
 			private readonly string reportFileName;
@@ -163,10 +263,12 @@ namespace TecWare.PPSn.Reporting
 
 			#region -- Ctor/Dtor ------------------------------------------------------
 
-			public PpsReportData(PpsDataServerProviderBase provider, StreamWriter tw, string reportFileName, PropertyDictionary arguments)
+			public PpsReportData(PpsReportSessionBase session, PpsDataServerProviderBase provider, StreamWriter tw, string reportFileName, PropertyDictionary arguments)
 			{
-				this.provider = provider;
-				this.tw = tw;
+				this.session = session ?? throw new ArgumentNullException(nameof(session));
+				this.provider = provider ?? throw new ArgumentNullException(nameof(provider));
+				this.tw = tw ?? throw new ArgumentNullException(nameof(tw));
+
 				this.reportFileName = reportFileName;
 				this.arguments = arguments;
 			} // ctor
@@ -215,17 +317,6 @@ namespace TecWare.PPSn.Reporting
 			private interface IPpsRowEmitter
 			{
 				Task EmitAsync(XmlWriter xml, IDataRow row);
-			} // class PpsRowColumnMapping
-
-			#endregion
-
-			#region -- interface IPpsColumnConverter ----------------------------------
-
-			private interface IPpsColumnEmitter
-			{
-				Task WriteAsync(XmlWriter xml, IDataRow row);
-
-				string ElementName { get; }
 			} // class PpsRowColumnMapping
 
 			#endregion
@@ -281,38 +372,13 @@ namespace TecWare.PPSn.Reporting
 
 				#region -- CreateMapping ----------------------------------------------
 
-				#region -- class SimpleValueEmitter -----------------------------------
-
-				private sealed class SimpleValueEmitter : IPpsColumnEmitter
-				{
-					private readonly string elementName;
-					private readonly int columnIndex;
-
-					public SimpleValueEmitter(PpsDataColumnExpression columnExpression, IDataColumns columns)
-					{
-						this.elementName = columnExpression.HasAlias 
-							? columnExpression.Alias
-							: columnExpression.Name;
-
-						this.columnIndex = columns.FindColumnIndex(elementName, true);
-					} // ctor
-
-					public Task WriteAsync(XmlWriter xml, IDataRow row)
-						=> xml.WriteStringAsync(row[columnIndex].ChangeType<string>());
-
-
-					public string ElementName => elementName;
-				} // class SimpleValueEmitter
-
-				#endregion
-
 				#region -- class ColumnEmitter ----------------------------------------
 
 				private sealed class ColumnEmitter : IPpsRowEmitter
 				{
 					private readonly PpsEmitRow def;
 
-					private readonly IPpsColumnEmitter[] columnList;
+					private readonly IPpsReportColumnEmitter[] columnList;
 
 					private readonly string elementName;
 					private readonly int[] groupColumns;
@@ -324,31 +390,27 @@ namespace TecWare.PPSn.Reporting
 
 					#region -- Ctor/Dtor ----------------------------------------------
 
-					public ColumnEmitter(PpsEmitRow def, IDataColumns columns)
+					public ColumnEmitter(PpsReportSessionBase session, PpsEmitRow def, IDataColumns columns)
 					{
 						this.def = def ?? throw new ArgumentNullException(nameof(def));
 
 						// prepare columns
-						columnList = new IPpsColumnEmitter[def.columns.Length];
+						columnList = new IPpsReportColumnEmitter[def.columns.Length];
 						for (var i = 0; i < columnList.Length; i++)
 						{
-							IPpsColumnEmitter columnEmitter;
+							IPpsReportColumnEmitter columnEmitter;
 							var columnDef = def.columns[i];
+							var elementName = columnDef.Expression == null
+								? null
+								: (columnDef.Expression.HasAlias ? columnDef.Expression.Alias : columnDef.Expression.Name);
 
-							if (columnDef.Converter != null)
-								throw new NotImplementedException(); //columnEmitter = ;
-							else if (columnDef.Expression != null)
-								columnEmitter = new SimpleValueEmitter(columnDef.Expression, columns);
-							else
-								throw new ArgumentNullException($"column[{i}]", "Invalid column.");
-							
-							columnList[i] = columnEmitter;
+							columnList[i] = session.CreateColumnEmitter(columnDef.Converter, elementName, columns);
 						}
 
 						// prepare group
 						if (def.child != null)
 						{
-							child = def.child.CreateMapping(columns);
+							child = def.child.CreateMapping(session, columns);
 							elementName = def.groupName ?? "r";
 							groupColumns = new int[def.child.groupColumns.Length];
 							groupValues = new object[groupColumns.Length];
@@ -440,8 +502,8 @@ namespace TecWare.PPSn.Reporting
 
 				#endregion
 
-				public IPpsRowEmitter CreateMapping(IDataColumns columns)
-					=> new ColumnEmitter(this, columns);
+				public IPpsRowEmitter CreateMapping(PpsReportSessionBase session, IDataColumns columns)
+					=> new ColumnEmitter(session, this, columns);
 
 				#endregion
 
@@ -508,7 +570,7 @@ namespace TecWare.PPSn.Reporting
 				{
 					// generate column list header
 					if (mapping == null)
-						mapping = rowInfo.CreateMapping(row);
+						mapping = rowInfo.CreateMapping(session, row);
 
 					await mapping.EmitAsync(xml, row);
 				}
@@ -611,6 +673,7 @@ namespace TecWare.PPSn.Reporting
 
 		private readonly List<DirectoryInfo> reportSources = new List<DirectoryInfo>();
 		private readonly PpsDataServerProviderBase provider;
+		private readonly Func<PpsReportSessionBase> reportSessionCreator;
 
 		private Dictionary<string, SemaphoreSlim> reportLocks = new Dictionary<string, SemaphoreSlim>();
 
@@ -620,9 +683,10 @@ namespace TecWare.PPSn.Reporting
 		/// <param name="engineBase"></param>
 		/// <param name="reportBase"></param>
 		/// <param name="provider"></param>
+		/// <param name="reportSessionCreator"></param>
 		/// <param name="reportWorkingPath"></param>
 		/// <param name="reportLogPath"></param>
-		public PpsReportEngine(string engineBase, string reportBase, PpsDataServerProviderBase provider, string reportWorkingPath = null, string reportLogPath = null)
+		public PpsReportEngine(string engineBase, string reportBase, PpsDataServerProviderBase provider, Func<PpsReportSessionBase> reportSessionCreator, string reportWorkingPath = null, string reportLogPath = null)
 		{
 			DirectoryInfo GetDefaultPath(string currentPath, string def)
 			{
@@ -654,6 +718,7 @@ namespace TecWare.PPSn.Reporting
 			this.reportWorkingPath = GetDefaultPath(reportWorkingPath, ".work");
 
 			this.provider = provider ?? throw new ArgumentNullException(nameof(provider));
+			this.reportSessionCreator = reportSessionCreator ?? throw new ArgumentNullException(nameof(reportSessionCreator));
 
 			// check paths
 			CheckPath(this.engineBase, nameof(engineBase));
@@ -1084,15 +1149,13 @@ namespace TecWare.PPSn.Reporting
 			var commandLine = RunReportExCommandLine(resultSession, args, out var resolvedReportName, out var fullReportFileName);
 
 			using (await LockReportFileAsync(resolvedReportName))
+			using (var session = CreateReportSession())
 			{
-				// remove data of previous session
-				var dataXml = new FileInfo(Path.Combine(reportWorkingPath.FullName, resultSession + ".xml"));
-				if (dataXml.Exists)
-					dataXml.Delete();
+				session.Initialize(this, resolvedReportName, resultSession);
 
 				// write data.xml
-				using (var tw = new StreamWriter(dataXml.OpenWrite(), Encoding.UTF8, 4096, false))
-				using (var data = new PpsReportData(provider, tw, fullReportFileName, args.Arguments))
+				using (var tw = new StreamWriter(session.CreateTempFile(".xml").OpenWrite(), Encoding.UTF8, 4096, false))
+				using (var data = new PpsReportData(session, provider, tw, fullReportFileName, args.Arguments))
 					await data.ProcessDataAsync(false);
 
 				// run context
@@ -1125,19 +1188,22 @@ namespace TecWare.PPSn.Reporting
 			var (reportPath, reportFileName, resolvedReportName) = ResolveReportFileByName(args.ReportName, args.Language);
 			var fullReportFileName = Path.Combine(reportPath, reportFileName);
 
-			var resultFileInfo = new FileInfo(Path.ChangeExtension(Path.Combine(reportWorkingPath.FullName, resolvedReportName.Replace('/', '_')), ".xdata"));
-			if (resultFileInfo.Exists)
-				resultFileInfo.Delete();
-
 			using (await LockReportFileAsync(resolvedReportName))
-			using (var tw = new StreamWriter(resultFileInfo.OpenWrite(), Encoding.UTF8, 4096, false))
-			using (var data = new PpsReportData(provider, tw, fullReportFileName, args.Arguments))
+			using (var session = CreateReportSession())
 			{
-				// write xml
-				await data.ProcessDataAsync(true);
+				session.Initialize(this, resolvedReportName, Path.GetFileNameWithoutExtension(resolvedReportName.Replace('/', '_')));
 
-				// build result
-				return resultFileInfo.FullName;
+				var resultFileInfo = session.CreateTempFile(".xdata");
+
+				using (var tw = new StreamWriter(resultFileInfo.OpenWrite(), Encoding.UTF8, 4096, false))
+				using (var data = new PpsReportData(session, provider, tw, fullReportFileName, args.Arguments))
+				{
+					// write xml
+					await data.ProcessDataAsync(true);
+
+					// build result
+					return resultFileInfo.FullName;
+				}
 			}
 		} // proc RunDataExAsync
 
@@ -1209,6 +1275,9 @@ namespace TecWare.PPSn.Reporting
 		} // func FindReportDataAsync
 
 		#endregion
+
+		private PpsReportSessionBase CreateReportSession()
+			=> reportSessionCreator() ?? throw new ArgumentNullException(nameof(CreateReportSession));
 
 		/// <summary>Defined Environment path.</summary>
 		public string EnginePath => engineBase.FullName;

@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
 using Neo.IronLua;
 using TecWare.DE.Data;
@@ -342,7 +343,85 @@ namespace TecWare.PPSn.Server
 		} // class PpsServerReportProvider
 
 		#endregion
-		
+
+		#region -- class PpsReportSession ---------------------------------------------
+
+		/// <summary></summary>
+		private sealed class PpsReportSession : PpsReportSessionBase
+		{
+			#region -- class ImageConverter -------------------------------------------
+
+			private sealed class ImageConverter : IPpsReportColumnEmitter
+			{
+				private readonly PpsReportSession session;
+				private readonly int columnIndex;
+
+				public ImageConverter(string columnName, IDataColumns columns)
+				{
+					this.ElementName = columnName;
+					this.columnIndex = columns.FindColumnIndex(columnName, true);
+				} // ctor
+
+				public async Task WriteAsync(XmlWriter xml, IDataRow row)
+				{
+					var objkIdKey = row[columnIndex];
+					if (objkIdKey == null)
+						return;
+
+					var objkId = objkIdKey.ChangeType<long>();
+
+					// check cache
+					if (session.exportedImages.TryGetValue(objkId, out var fi) && fi != null)
+					{
+						await xml.WriteStringAsync(fi.FullName);
+						return;
+					}
+
+					// mark as exported
+					session.exportedImages[objkId] = null;
+
+					// test if the object is an image
+					var obj = session.application.Objects.GetObject(objkId);
+					if (!obj.MimeType.StartsWith("image/"))
+						return;
+
+					// write object to disc
+					// todo: optimize to use direct link
+					fi = session.CreateTempFile(objkId.ToString() + MimeTypeMapping.GetExtensionFromMimeType(obj.MimeType), true);
+
+					using (var dst = fi.OpenWrite())
+					using (var src = obj.GetDataStream())
+						await src.CopyToAsync(dst);
+
+					session.exportedImages[objkId] = fi;
+
+				} // proc WriteAsnyc
+
+				public string ElementName { get; }
+			} // class ImageConverter
+
+			#endregion
+
+			private readonly PpsApplication application;
+
+			private readonly Dictionary<long, FileInfo> exportedImages = new Dictionary<long, FileInfo>();
+
+			public PpsReportSession(PpsApplication application)
+			{
+				this.application = application ?? throw new ArgumentNullException(nameof(application));
+			} // ctor
+
+			public override IPpsReportColumnEmitter CreateColumnEmitter(string argument, string columnName, IDataColumns columns)
+			{
+				if (argument == "image" && columnName != null)
+					return new ImageConverter(columnName, columns);
+				else
+					return base.CreateColumnEmitter(argument, columnName, columns);
+			} // func CreateColumnEmitter
+		} // class PpsReportSession
+
+		#endregion
+
 		private void BeginReadConfigurationReport(IDEConfigLoading config)
 		{
 			var currentNode = XConfigNode.GetElement(Server.Configuration, config.ConfigNew, PpsStuff.xnReports);
@@ -359,7 +438,7 @@ namespace TecWare.PPSn.Server
 				|| (logPath != null && !ProcsDE.IsPathEqual(reporting.LogPath, logPath))
 				|| (workPath != null && !ProcsDE.IsPathEqual(reporting.WorkingPath, workPath)))
 			{
-				reporting = new PpsReportEngine(systemPath, basePath, reportProvider, reportWorkingPath: workPath, reportLogPath: logPath);
+				reporting = new PpsReportEngine(systemPath, basePath, reportProvider, CreateReportSession, reportWorkingPath: workPath, reportLogPath: logPath);
 			}
 
 			// update values
@@ -367,6 +446,9 @@ namespace TecWare.PPSn.Server
 			reporting.ZipLogFiles = currentNode.GetAttribute<bool>("zipLogFiles");
 			reporting.StoreSuccessLogs = currentNode.GetAttribute<bool>("storeSuccessLogs");
 		} // proc BeginReadConfigurationReport
+
+		private PpsReportSessionBase CreateReportSession()
+			=> new PpsReportSession(this);
 
 		/// <summary>Run a report.</summary>
 		/// <param name="table"></param>
