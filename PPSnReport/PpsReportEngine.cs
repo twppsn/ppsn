@@ -127,10 +127,10 @@ namespace TecWare.PPSn.Reporting
 
 	#endregion
 
-	#region -- interface IPpsReportColumnEmitter --------------------------------------
+	#region -- interface IPpsReportValueEmitter ---------------------------------------
 
 	/// <summary></summary>
-	public interface IPpsReportColumnEmitter
+	public interface IPpsReportValueEmitter
 	{
 		/// <summary></summary>
 		/// <param name="xml"></param>
@@ -140,7 +140,41 @@ namespace TecWare.PPSn.Reporting
 
 		/// <summary></summary>
 		string ElementName { get; }
-	} // class IPpsReportColumnEmitter
+	} // class IPpsReportValueEmitter
+
+	#endregion
+
+	#region -- class PpsReportValueEmitter --------------------------------------------
+
+	/// <summary></summary>
+	public abstract class PpsReportValueEmitter : IPpsReportValueEmitter
+	{
+		private readonly int columnIndex;
+
+		/// <summary></summary>
+		/// <param name="columnName"></param>
+		/// <param name="columns"></param>
+		public PpsReportValueEmitter(string columnName, IDataColumns columns)
+		{
+			this.ElementName = columnName;
+			this.columnIndex = columns.FindColumnIndex(columnName, true);
+		} // ctor
+
+		/// <summary></summary>
+		/// <param name="row"></param>
+		/// <returns></returns>
+		protected object GetValue(IDataRow row)
+			=> row[columnIndex];
+
+		/// <summary></summary>
+		/// <param name="xml"></param>
+		/// <param name="row"></param>
+		/// <returns></returns>
+		public abstract Task WriteAsync(XmlWriter xml, IDataRow row);
+
+		/// <summary></summary>
+		public string ElementName { get; }
+	} // class PpsReportValueEmitter
 
 	#endregion
 
@@ -151,21 +185,34 @@ namespace TecWare.PPSn.Reporting
 	{
 		#region -- class SimpleValueEmitter -------------------------------------------
 
-		private sealed class SimpleValueEmitter : IPpsReportColumnEmitter
+		private sealed class SimpleValueEmitter : PpsReportValueEmitter
 		{
-			private readonly int columnIndex;
-
 			public SimpleValueEmitter(string columnName, IDataColumns columns)
+				:base(columnName, columns)
 			{
-				this.ElementName = columnName;
-				this.columnIndex = columns.FindColumnIndex(columnName, true);
 			} // ctor
 
-			public Task WriteAsync(XmlWriter xml, IDataRow row)
-				=> xml.WriteStringAsync(row[columnIndex].ChangeType<string>());
-			
-			public string ElementName { get; }
+			public override Task WriteAsync(XmlWriter xml, IDataRow row)
+				=> xml.WriteStringAsync(GetValue(row).ChangeType<string>());
 		} // class SimpleValueEmitter
+
+		#endregion
+
+		#region -- class MarkdownValueEmitter -----------------------------------------
+
+		private sealed class MarkdownValueEmitter : PpsReportValueEmitter
+		{
+			private readonly Markdig.MarkdownPipeline pipeline;
+
+			public MarkdownValueEmitter(string columnName, IDataColumns columns, Markdig.MarkdownPipeline pipeline)
+				:base(columnName, columns)
+			{
+				this.pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
+			} // ctor
+
+			public override Task WriteAsync(XmlWriter xml, IDataRow row)
+				=> Task.Run(() => Markdown.SpeeDataRenderer.ToXml((string)GetValue(row), xml, pipeline));
+		} // class MarkdownValueEmitter
 
 		#endregion
 
@@ -194,7 +241,7 @@ namespace TecWare.PPSn.Reporting
 		/// <param name="disposing"></param>
 		protected virtual void Dispose(bool disposing)
 		{
-		}
+		} // proc Dispose
 		
 		/// <summary></summary>
 		/// <param name="fileName"></param>
@@ -202,7 +249,7 @@ namespace TecWare.PPSn.Reporting
 		/// <returns></returns>
 		public FileInfo CreateTempFile(string fileName, bool purgeFile = true)
 		{
-			var fi = new FileInfo(Path.Combine(engine.WorkingPath, resultSessionName + ".xml"));
+			var fi = new FileInfo(Path.Combine(engine.WorkingPath, resultSessionName + fileName));
 			// remove file from prev session
 			if (purgeFile && fi.Exists)
 				fi.Delete();
@@ -214,14 +261,15 @@ namespace TecWare.PPSn.Reporting
 		/// <param name="columnName"></param>
 		/// <param name="columns"></param>
 		/// <returns></returns>
-		public virtual IPpsReportColumnEmitter CreateColumnEmitter(string argument, string columnName, IDataColumns columns)
+		public virtual IPpsReportValueEmitter CreateColumnEmitter(string argument, string columnName, IDataColumns columns)
 		{
 			if (argument == null && columnName != null)
 				return new SimpleValueEmitter(columnName, columns);
+			else if (argument == "markdown" && columnName != null)
+				return new MarkdownValueEmitter(columnName, columns, Markdown.SpeeDataRenderer.DefaultPipeLine);
 			else
 				throw new ArgumentException("Emitter not defined.");
 		} // func CreateColumnEmitter
-
 	} // class PpsReportSession
 
 	#endregion
@@ -378,7 +426,7 @@ namespace TecWare.PPSn.Reporting
 				{
 					private readonly PpsEmitRow def;
 
-					private readonly IPpsReportColumnEmitter[] columnList;
+					private readonly IPpsReportValueEmitter[] columnList;
 
 					private readonly string elementName;
 					private readonly int[] groupColumns;
@@ -395,10 +443,10 @@ namespace TecWare.PPSn.Reporting
 						this.def = def ?? throw new ArgumentNullException(nameof(def));
 
 						// prepare columns
-						columnList = new IPpsReportColumnEmitter[def.columns.Length];
+						columnList = new IPpsReportValueEmitter[def.columns.Length];
 						for (var i = 0; i < columnList.Length; i++)
 						{
-							IPpsReportColumnEmitter columnEmitter;
+							IPpsReportValueEmitter columnEmitter;
 							var columnDef = def.columns[i];
 							var elementName = columnDef.Expression == null
 								? null
@@ -1276,8 +1324,21 @@ namespace TecWare.PPSn.Reporting
 
 		#endregion
 
+		#region -- CreateReportSession ------------------------------------------------
+
 		private PpsReportSessionBase CreateReportSession()
 			=> reportSessionCreator() ?? throw new ArgumentNullException(nameof(CreateReportSession));
+
+		/// <summary></summary>
+		/// <returns></returns>
+		public PpsReportSessionBase CreateDebugReportSession()
+		{
+			var session = CreateReportSession();
+			session.Initialize(this, "debug.xreport", "session-debug");
+			return session;
+		} // func CreateDebugReportSession
+
+		#endregion
 
 		/// <summary>Defined Environment path.</summary>
 		public string EnginePath => engineBase.FullName;

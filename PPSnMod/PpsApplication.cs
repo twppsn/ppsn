@@ -351,20 +351,26 @@ namespace TecWare.PPSn.Server
 		{
 			#region -- class ImageConverter -------------------------------------------
 
-			private sealed class ImageConverter : IPpsReportColumnEmitter
+			private sealed class ImageConverter : PpsReportValueEmitter
 			{
 				private readonly PpsReportSession session;
-				private readonly int columnIndex;
 
-				public ImageConverter(string columnName, IDataColumns columns)
+				public ImageConverter(PpsReportSession session, string columnName, IDataColumns columns)
+					: base(columnName, columns)
 				{
-					this.ElementName = columnName;
-					this.columnIndex = columns.FindColumnIndex(columnName, true);
+					this.session = session ?? throw new ArgumentNullException(nameof(session));
 				} // ctor
 
-				public async Task WriteAsync(XmlWriter xml, IDataRow row)
+				private async Task WriteAsync(XmlWriter xml, FileInfo fi)
 				{
-					var objkIdKey = row[columnIndex];
+					await xml.WriteStartElementAsync(null, "ref", null);
+					await xml.WriteAttributeStringAsync(null, "src", null, fi.FullName);
+					await xml.WriteEndElementAsync();
+				} // proc WriteAsync
+
+				public override async Task WriteAsync(XmlWriter xml, IDataRow row)
+				{
+					var objkIdKey = GetValue(row);
 					if (objkIdKey == null)
 						return;
 
@@ -373,7 +379,7 @@ namespace TecWare.PPSn.Server
 					// check cache
 					if (session.exportedImages.TryGetValue(objkId, out var fi) && fi != null)
 					{
-						await xml.WriteStringAsync(fi.FullName);
+						await WriteAsync(xml, fi);
 						return;
 					}
 
@@ -393,11 +399,10 @@ namespace TecWare.PPSn.Server
 					using (var src = obj.GetDataStream())
 						await src.CopyToAsync(dst);
 
+					await WriteAsync(xml, fi);
+
 					session.exportedImages[objkId] = fi;
-
 				} // proc WriteAsnyc
-
-				public string ElementName { get; }
 			} // class ImageConverter
 
 			#endregion
@@ -411,10 +416,10 @@ namespace TecWare.PPSn.Server
 				this.application = application ?? throw new ArgumentNullException(nameof(application));
 			} // ctor
 
-			public override IPpsReportColumnEmitter CreateColumnEmitter(string argument, string columnName, IDataColumns columns)
+			public override IPpsReportValueEmitter CreateColumnEmitter(string argument, string columnName, IDataColumns columns)
 			{
 				if (argument == "image" && columnName != null)
-					return new ImageConverter(columnName, columns);
+					return new ImageConverter(this, columnName, columns);
 				else
 					return base.CreateColumnEmitter(argument, columnName, columns);
 			} // func CreateColumnEmitter
@@ -480,6 +485,46 @@ namespace TecWare.PPSn.Server
 				File.Delete(moveFileTo);
 			File.Move(resultFile, moveFileTo);
 		} // proc DebugReport
+
+		private static SimpleDataRow GetRowContent(LuaTable table)
+		{
+			var columns = new List<SimpleDataColumn>();
+			var values = new List<object>();
+			foreach (var c in table.Members)
+			{
+				columns.Add(new SimpleDataColumn(c.Key, c.Value.GetType()));
+				values.Add(c.Value);
+			}
+			return new SimpleDataRow(values.ToArray(), columns.ToArray());
+		} // func GetRowContent
+
+		/// <summary></summary>
+		/// <param name="table"></param>
+		/// <returns></returns>
+		/// <remarks>return DebugEmitter { converter = "markdown", columnName = "test", row = { test = [[ Hallo **Welt**!]] } }</remarks>
+		/// <remarks>return DebugEmitter { converter = "image", columnName = "test", row = { test = 57006 } }</remarks>
+		[LuaMember]
+		public string DebugEmitter(LuaTable table)
+		{
+			var arguments = table.GetOptionalValue("converter", (string)null);
+			var columnName = table.GetOptionalValue("columnName", (string)null);
+			// create row
+			var row = GetRowContent((table.GetMemberValue("row") as LuaTable) ?? throw new ArgumentNullException("row", "Row information is missing."));
+
+			using (var session = reporting.CreateDebugReportSession())
+			using (var sw = new StringWriter())
+			using (var xml = XmlWriter.Create(sw, new XmlWriterSettings() { NewLineHandling = NewLineHandling.Entitize, IndentChars = "  ", Async = true }))
+			{
+				// emit column
+				var emitter = session.CreateColumnEmitter(arguments, columnName, row);
+				xml.WriteStartElement(emitter.ElementName);
+				emitter.WriteAsync(xml, row).AwaitTask();
+				xml.WriteEndElement();
+				xml.Flush();
+
+				return sw.GetStringBuilder().ToString();
+			}
+		} // func DebugEmitter
 
 		/// <summary>Run a report.</summary>
 		/// <param name="table"></param>
