@@ -62,7 +62,7 @@ namespace TecWare.PPSn.Server.Wpf
 		private static readonly XName xnXamlKey = XamlNamespace + "Key";
 		private static readonly XName xnXamlCode = XamlNamespace + "Code";
 
-		#region  -- class ParsedXamlFile --------------------------------------------------
+		#region  -- class ParsedXamlFile ----------------------------------------------
 
 		private sealed class ParsedXamlFile
 		{
@@ -434,8 +434,11 @@ namespace TecWare.PPSn.Server.Wpf
 		private ParsedXamlFile defaultTheme = null;
 		private List<PpsApplicationFileItem> scriptAddedFiles = new List<PpsApplicationFileItem>();
 
-		#region -- Ctor/Dtor --------------------------------------------------------------
+		#region -- Ctor/Dtor ----------------------------------------------------------
 
+		/// <summary></summary>
+		/// <param name="sp"></param>
+		/// <param name="name"></param>
 		public WpfClientItem(IServiceProvider sp, string name)
 			: base(sp, name)
 		{
@@ -444,6 +447,8 @@ namespace TecWare.PPSn.Server.Wpf
 			sp.GetService<IServiceContainer>(true).AddService(typeof(WpfClientItem), this);
 		} // ctor
 
+		/// <summary></summary>
+		/// <param name="disposing"></param>
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing)
@@ -451,6 +456,8 @@ namespace TecWare.PPSn.Server.Wpf
 			base.Dispose(disposing);
 		} // proc Dispose
 
+		/// <summary></summary>
+		/// <param name="config"></param>
 		protected override void OnEndReadConfiguration(IDEConfigLoading config)
 		{
 			if (masterDataSetDefinition == null)
@@ -468,14 +475,14 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#endregion
 
-		#region -- LoadDocument -----------------------------------------------------------
+		#region -- LoadDocument -------------------------------------------------------
 
 		private static XDocument LoadDocument(string fileName)
 			=> RemoveXamlDebugElements(XDocument.Load(fileName, LoadOptions.SetBaseUri | LoadOptions.SetLineInfo));
 
 		#endregion
 
-		#region -- RemoveXamlDebugElements ------------------------------------------------
+		#region -- RemoveXamlDebugElements --------------------------------------------
 
 		private static XDocument RemoveXamlDebugElements(XDocument xDocument)
 		{
@@ -543,7 +550,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#endregion
 
-		#region -- Wpf Xaml Parser --------------------------------------------------------
+		#region -- Wpf Xaml Parser ----------------------------------------------------
 
 		private void ClearXamlCache()
 		{
@@ -711,7 +718,7 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#endregion
 
-		#region -- ParseNavigator ---------------------------------------------------------
+		#region -- ParseNavigator -----------------------------------------------------
 
 		private void EmitSubViewItem(XmlWriter xml, string name, XElement x, ref int priority)
 		{
@@ -895,8 +902,12 @@ namespace TecWare.PPSn.Server.Wpf
 
 		#endregion
 
-		#region -- Client synchronisation -------------------------------------------------
+		#region -- Client synchronisation ---------------------------------------------
 
+		/// <summary>Add a new file, to synchronize to the client offline cache.</summary>
+		/// <param name="path">Path to the file.</param>
+		/// <param name="length">Length of the file.</param>
+		/// <param name="lastWriteTime">Timestamp of the file.</param>
 		public void AddApplicationFileItem(string path, long length, DateTime lastWriteTime)
 		{
 			lock (scriptAddedFiles)
@@ -955,12 +966,15 @@ namespace TecWare.PPSn.Server.Wpf
 			}
 		} // func GetApplicationFileList
 
+		/// <summary>Return a view to all files that will be offline available on the client.</summary>
+		/// <param name="dataSource"></param>
+		/// <returns></returns>
 		public PpsDataSelector GetApplicationFilesSelector(PpsSysDataSource dataSource)
 			=> new PpsGenericSelector<PpsApplicationFileItem>(dataSource, "wpf.sync", GetApplicationFileList());
 
 		#endregion
 
-		#region -- Master-Data Synchronisation --------------------------------------------
+		#region -- Master-Data Synchronisation ----------------------------------------
 		
 		private static void PrepareMasterDataSyncArguments(IDEWebRequestScope r, string tableName, long syncId, long lastSyncTimeStamp, out Dictionary<string, long> syncIds, out bool syncAllTables, out DateTime lastSynchronization, LuaTable updateTags)
 		{

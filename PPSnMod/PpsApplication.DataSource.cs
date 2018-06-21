@@ -153,8 +153,7 @@ namespace TecWare.PPSn.Server
 				return description;
 			} // func GetFieldDescription
 
-			public IEnumerable<IPpsColumnDescription> Columns
-				=> columnDescriptions;
+			IReadOnlyList<IDataColumn> IDataColumns.Columns => columnDescriptions;
 
 			public PpsDataSource DataSource => dataSource;
 			public string Name => name;

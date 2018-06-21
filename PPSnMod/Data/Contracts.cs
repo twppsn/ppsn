@@ -455,6 +455,7 @@ namespace TecWare.PPSn.Server.Data
 		public IPropertyEnumerableDictionary Attributes => attributes;
 	} // class PpsColumnDescription
 
+	/// <summary></summary>
 	public static class PpsColumnDescriptionHelper
 	{
 		#region -- class PpsColumnDescriptionAttributes ---------------------------------
@@ -568,26 +569,24 @@ namespace TecWare.PPSn.Server.Data
 	#region -- interface IPpsSelectorToken --------------------------------------------
 
 	/// <summary></summary>
-	public interface IPpsSelectorToken
+	public interface IPpsSelectorToken : IDataColumns
 	{
-		/// <summary></summary>
+		/// <summary>Create a real request to the datasource to retrieve the data.</summary>
 		/// <param name="connection"></param>
 		/// <param name="throwException"></param>
 		/// <returns></returns>
 		PpsDataSelector CreateSelector(IPpsConnectionHandle connection, bool throwException = true);
 
 		/// <summary>Get the defintion for a column from the native column name.</summary>
-		/// <param name="selectorColumn"></param>
+		/// <param name="selectorColumn">Get the column information for the result column.</param>
 		/// <returns></returns>
 		IPpsColumnDescription GetFieldDescription(string selectorColumn);
 
 		/// <summary>Name of the selector.</summary>
 		string Name { get; }
+
 		/// <summary>Attached datasource</summary>
 		PpsDataSource DataSource { get; }
-
-		/// <summary>Column description of the selector, before execution.</summary>
-		IEnumerable<IPpsColumnDescription> Columns { get; }
 	} // interface IPpsSelectorToken
 
 	#endregion

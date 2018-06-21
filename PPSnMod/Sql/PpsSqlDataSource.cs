@@ -599,8 +599,7 @@ namespace TecWare.PPSn.Server.Sql
 
 			PpsDataSource IPpsSelectorToken.DataSource => DataSource;
 
-			/// <summary></summary>
-			public IEnumerable<IPpsColumnDescription> Columns => columnDescriptions;
+			IReadOnlyList<IDataColumn> IDataColumns.Columns => columnDescriptions;
 		} // class PpsSqlDataSelectorToken
 
 		#endregion

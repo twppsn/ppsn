@@ -224,7 +224,7 @@ namespace TecWare.PPSn.Server.Sql
 
 		#endregion
 
-		#region -- class SqlDataTransaction ---------------------------------------------
+		#region -- class SqlDataTransaction -------------------------------------------
 
 		/// <summary></summary>
 		private sealed class SqlDataTransaction : PpsDataTransaction

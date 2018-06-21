@@ -446,7 +446,6 @@ namespace TecWare.PPSn.Reporting
 						columnList = new IPpsReportValueEmitter[def.columns.Length];
 						for (var i = 0; i < columnList.Length; i++)
 						{
-							IPpsReportValueEmitter columnEmitter;
 							var columnDef = def.columns[i];
 							var elementName = columnDef.Expression == null
 								? null

@@ -540,6 +540,38 @@ namespace TecWare.PPSn.Server
 		public Task<string> RunDataAsync(LuaTable table)
 			=> reporting.RunDataAsync(table);
 
+		[DEConfigHttpAction("report")]
+		private void HttpRunReport(IDEWebRequestScope r)
+		{
+			var reportName = r.GetProperty("name", null);
+			if (reportName == null)
+				throw new ArgumentNullException("name", "Report name is missing.");
+			// enforce user context
+			var user = r.GetUser<IPpsPrivateDataContext>();
+
+			try
+			{
+				// collection arguments
+				var properties = new List<KeyValuePair<string, object>>();
+				foreach (var p in r.ParameterNames)
+				{
+					var v = r.GetProperty(p, (object)null);
+					if (v != null)
+						properties.Add(new KeyValuePair<string, object>(p, v));
+				}
+
+				// execute report
+				var resultInfo = reporting.RunReportAsync(reportName, properties.ToArray()).AwaitTask();
+				r.OutputHeaders["x-ppsn-reportname"] = reportName;
+				r.WriteFile(resultInfo, MimeTypes.Application.Pdf);
+			}
+			catch (Exception e)
+			{
+				Log.Except(e);
+				throw;
+			}
+		} // proc HttpRunReport
+
 		/// <summary>Access to the report engine.</summary>
 		[LuaMember]
 		public PpsReportEngine Reports => reporting;
