@@ -257,24 +257,28 @@ namespace TecWare.PPSn
 	/// <summary>Thread helper.</summary>
 	public static class StuffThreading
 	{
-		private static void AwaitTaskInternal(TaskAwaiter awaiter)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static void AwaitTaskInternal(Task task)
 		{
+			if (task.IsCompleted)
+				return;
+
 			if (SynchronizationContext.Current is DispatcherSynchronizationContext)
 			{
 				var frame = new DispatcherFrame();
 
 				// get the awaiter
-				awaiter.OnCompleted(() => frame.Continue = false);
+				task.GetAwaiter().OnCompleted(() => frame.Continue = false);
 
 				// block ui for the task
 				using (PpsEnvironment.GetEnvironment().BlockAllUI(frame))
 					Dispatcher.PushFrame(frame);
 			}
 			else if (SynchronizationContext.Current is PpsSynchronizationContext ctx)
-				ctx.ProcessMessageLoop(awaiter);
+				ctx.ProcessMessageLoop(task.GetAwaiter());
 
 			// thread is cancelled, do not wait for finish
-			if (!awaiter.IsCompleted)
+			if (!task.IsCompleted)
 				throw new OperationCanceledException();
 		} // func RunTaskSyncInternal
 
@@ -294,8 +298,7 @@ namespace TecWare.PPSn
 		/// <remarks></remarks>
 		public static void AwaitTask(this Task task)
 		{
-			if (!task.IsCompleted)
-				AwaitTaskInternal(task);
+			AwaitTaskInternal(task);
 			task.Wait();
 		} // proc AwaitTask
 
@@ -305,9 +308,7 @@ namespace TecWare.PPSn
 		/// <returns></returns>
 		public static T AwaitTask<T>(this Task<T> task)
 		{
-			if (!task.IsCompleted)
-				AwaitTaskInternal(task.GetAwaiter());
-
+			AwaitTaskInternal(task);
 			return task.Result;
 		} // proc AwaitTask	
 	} // class StuffThreading

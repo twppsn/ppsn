@@ -693,7 +693,7 @@ namespace TecWare.PPSn
 		private DateTime? creationStamp;
 
 		private bool isLocalChanged;    // is the tag changed in the local state
-		private bool isDirty;   // is the tag change in memory, an need to persist
+		private bool isDirty;			// is the tag change in memory, an need to persist
 
 		private readonly object lockUserRow = new object();
 
@@ -1002,6 +1002,71 @@ namespace TecWare.PPSn
 
 		private void OnTagsChanged(object sender, PpsDataRowChangedEventArgs e)
 		{
+			if (state == PpsObjectTagLoadState.LocalState)
+			{
+				switch (e.Operation)
+				{
+					case PpsDataChangeOperation.Delete: // delete command from server
+						if (e.Arguments is PpsMasterData.IPpsTagChangedProperties)
+						{
+							var t = FindTagById(e.RowId);
+							if (t != null && !t.IsRev)
+							{
+								lock (parent.SyncRoot)
+								{
+									var idx = tags.IndexOf(t);
+									if (idx >= 0)
+									{
+										tags.RemoveAt(idx);
+										OnCollectionChanged();
+									}
+								}
+							}
+						}
+						break;
+					case PpsDataChangeOperation.Insert: // insert from server
+					case PpsDataChangeOperation.Update: // update from server
+						if (e.Arguments is PpsMasterData.IPpsTagChangedProperties)
+						{
+							var objId = e.Arguments.GetProperty("ObjectId", 0);
+							if (objId != parent.Id)
+								return;
+
+							var t = FindTagById(e.RowId);
+							if (t != null)
+							{
+								if (t.Id != e.RowId)
+									t.Id = e.RowId; // update id
+
+								if (!t.IsLocalChanged)
+								{
+									t.RefreshData(
+										e.Arguments.GetProperty("Class", PpsObjectTagClass.Text),
+										e.Arguments.GetProperty("Value", null),
+										e.Arguments.GetProperty("UserId", -1L),
+										e.Arguments.GetProperty("CreateDate", DateTime.Now),
+										false
+									);
+								}
+							}
+							else
+							{
+								EnsureTagInList(
+									new PpsObjectTagView(this, e.RowId,
+										e.Arguments.GetProperty("Key", null),
+										false,
+										e.Arguments.GetProperty("Class", PpsObjectTagClass.Text),
+										e.Arguments.GetProperty("Value", null),
+										e.Arguments.GetProperty("UserId", -1L),
+										e.Arguments.GetProperty("CreateDate", DateTime.Now),
+										false
+									)
+								);
+							}
+						}
+						break;
+				}
+			}
 		} // proc OnTagsChanged
 
 		internal void OnTagRemoved(PpsObjectTagView tag)

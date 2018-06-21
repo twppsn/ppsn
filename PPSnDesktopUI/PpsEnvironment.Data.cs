@@ -49,11 +49,16 @@ namespace TecWare.PPSn
 {
 	#region -- enum PpsDataChangeOperation --------------------------------------------
 
+	/// <summary>Data change operation type</summary>
 	public enum PpsDataChangeOperation
 	{
+		/// <summary>Full refresh</summary>
 		Full,
+		/// <summary>Insert operation</summary>
 		Insert,
+		/// <summary>Delete operation</summary>
 		Delete,
+		/// <summary>Update operation</summary>
 		Update
 	} // enum PpsDataChangeOperation
 
@@ -61,11 +66,14 @@ namespace TecWare.PPSn
 
 	#region -- enum PpsWriteTransactionState ------------------------------------------
 
-	/// <summary></summary>
+	/// <summary>Write transaction state</summary>
 	public enum PpsWriteTransactionState
 	{
+		/// <summary>No transaction active.</summary>
 		None,
+		/// <summary>The current thread has the active write transaction.</summary>
 		CurrentThread,
+		/// <summary>An other thread has the active write transaction.</summary>
 		OtherThread
 	} // enum PpsWriteTransactionState
 
@@ -585,32 +593,45 @@ namespace TecWare.PPSn
 
 	#endregion
 
-	#region -- class PpsDataTableChangedEventArgs ---------------------------------------
+	#region -- class PpsDataTableChangedEventArgs -------------------------------------
 
+	/// <summary></summary>
 	public class PpsDataTableChangedEventArgs : EventArgs
 	{
 		private readonly PpsDataTableDefinition table;
 
+		/// <summary></summary>
+		/// <param name="table"></param>
 		public PpsDataTableChangedEventArgs(PpsDataTableDefinition table)
 		{
 			this.table = table;
 		} // ctor
 
+		/// <summary></summary>
 		public PpsDataTableDefinition Table => table;
 	} // class PpsDataRowChangedEventArgs
 
+	/// <summary></summary>
+	/// <param name="sender"></param>
+	/// <param name="e"></param>
 	public delegate void PpsDataTableChangedEventHandler(object sender, PpsDataTableChangedEventArgs e);
 
 	#endregion
 
-	#region -- class PpsDataRowChangedEventArgs -----------------------------------------
+	#region -- class PpsDataRowChangedEventArgs ---------------------------------------
 
+	/// <summary>Arguments</summary>
 	public class PpsDataRowChangedEventArgs : PpsDataTableChangedEventArgs
 	{
 		private readonly PpsDataChangeOperation operation;
 		private readonly long rowId;
 		private readonly IPropertyReadOnlyDictionary arguments;
 
+		/// <summary></summary>
+		/// <param name="operation"></param>
+		/// <param name="table"></param>
+		/// <param name="rowId"></param>
+		/// <param name="arguments"></param>
 		public PpsDataRowChangedEventArgs(PpsDataChangeOperation operation, PpsDataTableDefinition table, long rowId, IPropertyReadOnlyDictionary arguments)
 			: base(table)
 		{
@@ -619,11 +640,17 @@ namespace TecWare.PPSn
 			this.arguments = arguments;
 		} // ctor
 
+		/// <summary>Database operation</summary>
 		public PpsDataChangeOperation Operation => operation;
+		/// <summary>Primary key of the row.</summary>
 		public long RowId => rowId;
+		/// <summary>Optional column description.</summary>
 		public IPropertyReadOnlyDictionary Arguments => arguments;
 	} // class PpsDataRowChangedEventArgs
 
+	/// <summary></summary>
+	/// <param name="sender"></param>
+	/// <param name="e"></param>
 	public delegate void PpsDataRowChangedEventHandler(object sender, PpsDataRowChangedEventArgs e);
 
 	#endregion
@@ -1482,8 +1509,75 @@ namespace TecWare.PPSn
 
 		#region -- class ProcessBatchTags ---------------------------------------------
 
+		/// <summary></summary>
+		public interface IPpsTagChangedProperties : IPropertyReadOnlyDictionary { }
+
 		private sealed class ProcessBatchTags : ProcessBatchBase
 		{
+			#region -- class PpsTagChangedProperties --------------------------------------
+
+			/// <summary></summary>
+			public sealed class PpsTagChangedProperties : IPpsTagChangedProperties
+			{
+				private long oldId;
+				private object[] values = null;
+
+				public PpsTagChangedProperties(long oldId, string[] parameterValues)
+				{
+					if (parameterValues != null)
+					{
+						values = new object[]
+						{
+							parameterValues[0]?.ChangeType<long>(),
+							parameterValues[1]?.ChangeType<long>(),
+							parameterValues[2],
+							parameterValues[3]?.ChangeType<int>(),
+							parameterValues[4],
+							null,
+							null,
+							parameterValues[7]?.ChangeType<long>(),
+							parameterValues[8]?.ChangeType<DateTime>()
+						};
+					}
+				} // ctor
+
+				public bool TryGetProperty(string name, out object value)
+				{
+					switch (name)
+					{
+						case "OldId":
+							value = oldId;
+							return true;
+						case "Id":
+							value = values != null ? values[0] : oldId;
+							return true;
+						case "ObjectId":
+							value = values[1];
+							return true;
+						case "Key":
+							value = values[2];
+							return true;
+						case "Class":
+							value = values[3];
+							return true;
+						case "Value":
+							value = values[4];
+							return true;
+						case "UserId":
+							value = values[7];
+							return true;
+						case "CreateDate":
+							value = values[8];
+							return true;
+						default:
+							value = null;
+							return false;
+					}
+				} // func TryGetProperty
+			} // class PpsTagChangedProperties
+
+			#endregion
+
 			private readonly DbCommand existsCommand;
 			private readonly DbParameter parameterExistsId;
 			private readonly DbParameter parameterExistsObjectId;
@@ -1579,6 +1673,9 @@ namespace TecWare.PPSn
 				{
 					parameterDeleteId.Value = ConvertStringToSQLiteValue(parameterValues[0], DbType.Int64);
 					await deleteCommand.ExecuteNonQueryExAsync();
+
+					var remoteId = Convert.ToInt64(parameterValues[0]);
+					MasterData.OnMasterDataRowChanged(PpsDataChangeOperation.Delete, Table, remoteId, new PpsTagChangedProperties(remoteId, null));
 				}
 				else
 				{
@@ -1614,6 +1711,8 @@ namespace TecWare.PPSn
 						parameterUpdateCreateDate.Value = remoteDateTime;
 
 						await updateCommand.ExecuteNonQueryExAsync();
+
+						MasterData.OnMasterDataRowChanged(PpsDataChangeOperation.Update, Table, rowId.Value, new PpsTagChangedProperties(rowId.Value, parameterValues));
 					}
 					else // insert row
 					{
@@ -1628,6 +1727,9 @@ namespace TecWare.PPSn
 						parameterInsertCreateDate.Value = remoteDateTime;
 
 						await insertCommand.ExecuteNonQueryExAsync();
+						var newId = ((SQLiteConnection)insertCommand.Connection).LastInsertRowId;
+
+						MasterData.OnMasterDataRowChanged(PpsDataChangeOperation.Insert, Table, newId, new PpsTagChangedProperties(newId, parameterValues));
 					}
 				}
 			} // proc ProcessCurrentNodeAsync
@@ -3211,6 +3313,10 @@ namespace TecWare.PPSn
 			}
 		} // proc ProcessEvents
 
+		/// <summary>Registers a listener to local database changes.</summary>
+		/// <param name="tableName"></param>
+		/// <param name="rowId"></param>
+		/// <param name="handler"></param>
 		public void RegisterWeakDataRowChanged(string tableName, long? rowId, PpsDataRowChangedEventHandler handler)
 		{
 			var table = FindTable(tableName) ?? throw new ArgumentOutOfRangeException(nameof(tableName), tableName, $"Table '{tableName}' not found.");
